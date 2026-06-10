@@ -18,6 +18,10 @@ type RefCounts = {
   domain_receipt_ref_count: number;
   no_regression_ref_count: number;
   owner_chain_ref_count: number;
+  human_gate_ref_count: number;
+  quality_or_export_receipt_ref_count: number;
+  reviewer_receipt_ref_count: number;
+  long_soak_ref_count: number;
   monitor_freshness_ref_count: number;
   runtime_event_ref_count: number;
   typed_blocker_ref_count: number;
@@ -63,6 +67,10 @@ function emptyCounts(): RefCounts {
     domain_receipt_ref_count: 0,
     no_regression_ref_count: 0,
     owner_chain_ref_count: 0,
+    human_gate_ref_count: 0,
+    quality_or_export_receipt_ref_count: 0,
+    reviewer_receipt_ref_count: 0,
+    long_soak_ref_count: 0,
     monitor_freshness_ref_count: 0,
     runtime_event_ref_count: 0,
     typed_blocker_ref_count: 0,
@@ -93,6 +101,10 @@ function refShapes(counts: RefCounts) {
     counts.domain_receipt_ref_count > 0 ? 'domain_receipt_ref' : null,
     counts.no_regression_ref_count > 0 ? 'no_regression_ref' : null,
     counts.owner_chain_ref_count > 0 ? 'owner_chain_ref' : null,
+    counts.human_gate_ref_count > 0 ? 'human_gate_ref' : null,
+    counts.quality_or_export_receipt_ref_count > 0 ? 'quality_or_export_receipt_ref' : null,
+    counts.reviewer_receipt_ref_count > 0 ? 'reviewer_receipt_ref' : null,
+    counts.long_soak_ref_count > 0 ? 'long_soak_ref' : null,
     counts.monitor_freshness_ref_count > 0 ? 'monitor_freshness_ref' : null,
     counts.runtime_event_ref_count > 0 ? 'runtime_event_ref' : null,
     counts.typed_blocker_ref_count > 0 ? 'typed_blocker_ref' : null,
@@ -170,6 +182,18 @@ function addDomainEvidence(
     owner_chain_ref_count:
       entry.observed_ref_counts.owner_chain_ref_count
       + (input.counts.owner_chain_ref_count ?? 0),
+    human_gate_ref_count:
+      entry.observed_ref_counts.human_gate_ref_count
+      + (input.counts.human_gate_ref_count ?? 0),
+    quality_or_export_receipt_ref_count:
+      entry.observed_ref_counts.quality_or_export_receipt_ref_count
+      + (input.counts.quality_or_export_receipt_ref_count ?? 0),
+    reviewer_receipt_ref_count:
+      entry.observed_ref_counts.reviewer_receipt_ref_count
+      + (input.counts.reviewer_receipt_ref_count ?? 0),
+    long_soak_ref_count:
+      entry.observed_ref_counts.long_soak_ref_count
+      + (input.counts.long_soak_ref_count ?? 0),
     monitor_freshness_ref_count:
       entry.observed_ref_counts.monitor_freshness_ref_count
       + (input.counts.monitor_freshness_ref_count ?? 0),
@@ -196,6 +220,10 @@ function addCounts(current: RefCounts, addition: RefCounts) {
   current.domain_receipt_ref_count += addition.domain_receipt_ref_count;
   current.no_regression_ref_count += addition.no_regression_ref_count;
   current.owner_chain_ref_count += addition.owner_chain_ref_count;
+  current.human_gate_ref_count += addition.human_gate_ref_count;
+  current.quality_or_export_receipt_ref_count += addition.quality_or_export_receipt_ref_count;
+  current.reviewer_receipt_ref_count += addition.reviewer_receipt_ref_count;
+  current.long_soak_ref_count += addition.long_soak_ref_count;
   current.monitor_freshness_ref_count += addition.monitor_freshness_ref_count;
   current.runtime_event_ref_count += addition.runtime_event_ref_count;
   current.typed_blocker_ref_count += addition.typed_blocker_ref_count;
@@ -320,6 +348,7 @@ function rcaRepoTrackedEvidence(
       ...emptyCounts(),
       domain_owner_receipt_ref_count: ownerReceiptRefs.length,
       domain_receipt_ref_count: domainReceiptRefs.length,
+      quality_or_export_receipt_ref_count: domainReceiptRefs.length,
       no_regression_ref_count: noRegressionRefs.length,
       typed_blocker_ref_count: typedBlockerRefs.length,
       owner_chain_ref_count: 1,
@@ -425,6 +454,10 @@ function domainOwnerChainProjection(input: {
     entry.observed_receipt_refs = unique([
       ...entry.observed_receipt_refs,
       receipt.receipt_ref,
+      ...receipt.human_gate_refs,
+      ...receipt.quality_or_export_receipt_refs,
+      ...receipt.reviewer_receipt_refs,
+      ...receipt.long_soak_refs,
     ]);
     entry.observed_ref_counts = {
       ...entry.observed_ref_counts,
@@ -440,6 +473,18 @@ function domainOwnerChainProjection(input: {
       owner_chain_ref_count:
         entry.observed_ref_counts.owner_chain_ref_count
         + receipt.owner_chain_refs.length,
+      human_gate_ref_count:
+        entry.observed_ref_counts.human_gate_ref_count
+        + receipt.human_gate_refs.length,
+      quality_or_export_receipt_ref_count:
+        entry.observed_ref_counts.quality_or_export_receipt_ref_count
+        + receipt.quality_or_export_receipt_refs.length,
+      reviewer_receipt_ref_count:
+        entry.observed_ref_counts.reviewer_receipt_ref_count
+        + receipt.reviewer_receipt_refs.length,
+      long_soak_ref_count:
+        entry.observed_ref_counts.long_soak_ref_count
+        + receipt.long_soak_refs.length,
       monitor_freshness_ref_count:
         entry.observed_ref_counts.monitor_freshness_ref_count
         + receipt.monitor_freshness_refs.length,
@@ -482,6 +527,14 @@ function domainOwnerChainProjection(input: {
       current.no_regression_ref_count + receipt.no_regression_evidence_refs.length,
     owner_chain_ref_count:
       current.owner_chain_ref_count + receipt.owner_chain_refs.length,
+    human_gate_ref_count:
+      current.human_gate_ref_count + receipt.human_gate_refs.length,
+    quality_or_export_receipt_ref_count:
+      current.quality_or_export_receipt_ref_count + receipt.quality_or_export_receipt_refs.length,
+    reviewer_receipt_ref_count:
+      current.reviewer_receipt_ref_count + receipt.reviewer_receipt_refs.length,
+    long_soak_ref_count:
+      current.long_soak_ref_count + receipt.long_soak_refs.length,
     monitor_freshness_ref_count:
       current.monitor_freshness_ref_count + receipt.monitor_freshness_refs.length,
     runtime_event_ref_count:
@@ -520,6 +573,12 @@ function domainOwnerChainProjection(input: {
       ),
     observed_receipt_refs: unique([
       ...receipts.map((receipt) => receipt.receipt_ref),
+      ...receipts.flatMap((receipt) => [
+        ...receipt.human_gate_refs,
+        ...receipt.quality_or_export_receipt_refs,
+        ...receipt.reviewer_receipt_refs,
+        ...receipt.long_soak_refs,
+      ]),
       ...repoTrackedEvidences.flatMap((evidence) => evidence.observed_receipt_refs),
     ]),
     observed_ref_counts: counts,

@@ -14,6 +14,10 @@ export type DomainOwnerPayloadSummaryReceipt = {
   domain_receipt_refs: string[];
   no_regression_evidence_refs: string[];
   owner_chain_refs: string[];
+  human_gate_refs: string[];
+  quality_or_export_receipt_refs: string[];
+  reviewer_receipt_refs: string[];
+  long_soak_refs: string[];
   monitor_freshness_refs: string[];
   runtime_event_refs: string[];
   typed_blocker_refs: string[];
@@ -29,6 +33,10 @@ export type DomainOwnerPayloadSummaryReceiptInput = {
   domain_receipt_refs?: string[];
   no_regression_evidence_refs?: string[];
   owner_chain_refs?: string[];
+  human_gate_refs?: string[];
+  quality_or_export_receipt_refs?: string[];
+  reviewer_receipt_refs?: string[];
+  long_soak_refs?: string[];
   monitor_freshness_refs?: string[];
   runtime_event_refs?: string[];
   typed_blocker_refs?: string[];
@@ -51,6 +59,10 @@ const OWNER_SUCCESS_REF_FIELDS = [
   'domain_owner_receipt_refs',
   'no_regression_evidence_refs',
   'owner_chain_refs',
+  'human_gate_refs',
+  'quality_or_export_receipt_refs',
+  'reviewer_receipt_refs',
+  'long_soak_refs',
 ] as const;
 
 const STAGE_SUCCESS_REF_FIELDS = [
@@ -187,6 +199,10 @@ function allEvidenceRefs(input: DomainOwnerPayloadSummaryReceiptInput) {
     ...(input.domain_receipt_refs ?? []),
     ...(input.no_regression_evidence_refs ?? []),
     ...(input.owner_chain_refs ?? []),
+    ...(input.human_gate_refs ?? []),
+    ...(input.quality_or_export_receipt_refs ?? []),
+    ...(input.reviewer_receipt_refs ?? []),
+    ...(input.long_soak_refs ?? []),
     ...(input.monitor_freshness_refs ?? []),
     ...(input.runtime_event_refs ?? []),
     ...(input.typed_blocker_refs ?? []),
@@ -230,6 +246,10 @@ function successRefs(input: DomainOwnerPayloadSummaryReceiptInput, targetIdentit
     ...(input.domain_owner_receipt_refs ?? []),
     ...(input.no_regression_evidence_refs ?? []),
     ...(input.owner_chain_refs ?? []),
+    ...(input.human_gate_refs ?? []),
+    ...(input.quality_or_export_receipt_refs ?? []),
+    ...(input.reviewer_receipt_refs ?? []),
+    ...(input.long_soak_refs ?? []),
   ];
 }
 
@@ -321,6 +341,10 @@ function normalizeReceipt(value: unknown): DomainOwnerPayloadSummaryReceipt | nu
     domain_receipt_refs: uniqueStrings(stringList(value.domain_receipt_refs)),
     no_regression_evidence_refs: uniqueStrings(stringList(value.no_regression_evidence_refs)),
     owner_chain_refs: uniqueStrings(stringList(value.owner_chain_refs)),
+    human_gate_refs: uniqueStrings(stringList(value.human_gate_refs)),
+    quality_or_export_receipt_refs: uniqueStrings(stringList(value.quality_or_export_receipt_refs)),
+    reviewer_receipt_refs: uniqueStrings(stringList(value.reviewer_receipt_refs)),
+    long_soak_refs: uniqueStrings(stringList(value.long_soak_refs)),
     monitor_freshness_refs: uniqueStrings(stringList(value.monitor_freshness_refs)),
     runtime_event_refs: uniqueStrings(stringList(value.runtime_event_refs)),
     typed_blocker_refs: uniqueStrings(stringList(value.typed_blocker_refs)),
@@ -453,6 +477,10 @@ export function preflightDomainOwnerPayloadSummaryReceiptInput(
       domain_receipt_refs: input.domain_receipt_refs?.length ?? 0,
       no_regression_evidence_refs: input.no_regression_evidence_refs?.length ?? 0,
       owner_chain_refs: input.owner_chain_refs?.length ?? 0,
+      human_gate_refs: input.human_gate_refs?.length ?? 0,
+      quality_or_export_receipt_refs: input.quality_or_export_receipt_refs?.length ?? 0,
+      reviewer_receipt_refs: input.reviewer_receipt_refs?.length ?? 0,
+      long_soak_refs: input.long_soak_refs?.length ?? 0,
       monitor_freshness_refs: input.monitor_freshness_refs?.length ?? 0,
       runtime_event_refs: input.runtime_event_refs?.length ?? 0,
       typed_blocker_refs: typedBlockerRefs.length,
@@ -500,6 +528,10 @@ function normalizeInput(
     domain_receipt_refs: uniqueStrings(input.domain_receipt_refs ?? []),
     no_regression_evidence_refs: uniqueStrings(input.no_regression_evidence_refs ?? []),
     owner_chain_refs: uniqueStrings(input.owner_chain_refs ?? []),
+    human_gate_refs: uniqueStrings(input.human_gate_refs ?? []),
+    quality_or_export_receipt_refs: uniqueStrings(input.quality_or_export_receipt_refs ?? []),
+    reviewer_receipt_refs: uniqueStrings(input.reviewer_receipt_refs ?? []),
+    long_soak_refs: uniqueStrings(input.long_soak_refs ?? []),
     monitor_freshness_refs: uniqueStrings(input.monitor_freshness_refs ?? []),
     runtime_event_refs: uniqueStrings(input.runtime_event_refs ?? []),
     typed_blocker_refs: uniqueStrings(input.typed_blocker_refs ?? []),

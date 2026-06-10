@@ -289,6 +289,15 @@ function ownerRouteWorkOrders(
       observed_ref_counts: record(observed?.observed_ref_counts),
       owner_evidence_route:
         stringValue(observed?.evidence_route) ?? action.source_command,
+      owner_evidence_closure_state: lane?.open_count && lane.open_count > 0
+        ? 'owner_evidence_required'
+        : ownerEvidenceObserved
+          ? 'owner_evidence_recorded_not_ready_claim'
+          : 'owner_acceptance_or_typed_blocker_required',
+      owner_acceptance_required: true,
+      ready_claim_authorized: false,
+      open_count_semantics:
+        'open_count_tracks_lane_specific_missing_evidence_only_zero_does_not_authorize_ready_claim',
       accepted_ref_shapes: unique([
         ...(lane?.accepted_closing_ref_shapes ?? []),
         'typed_blocker_ref',
@@ -439,6 +448,15 @@ function foundryAgentOsProductionEvidenceGate(input: {
       open_lane_count: openLaneCount,
       owner_route_work_order_count: workOrders.length,
       open_owner_route_work_order_count: workOrders.filter((entry) => entry.status === 'open').length,
+      owner_evidence_required_work_order_count: workOrders.filter((entry) =>
+        entry.owner_evidence_closure_state === 'owner_evidence_required'
+      ).length,
+      owner_evidence_recorded_not_ready_claim_work_order_count: workOrders.filter((entry) =>
+        entry.owner_evidence_closure_state === 'owner_evidence_recorded_not_ready_claim'
+      ).length,
+      owner_acceptance_required_work_order_count: workOrders.filter((entry) =>
+        entry.owner_acceptance_required === true
+      ).length,
       observed_owner_evidence_lane_count: workOrders.filter((entry) =>
         entry.observed_owner_evidence_status === 'owner_evidence_observed_not_ready_claim'
       ).length,

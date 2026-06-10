@@ -67,6 +67,16 @@ function payloadInput(
         ?? payload.no_regression_refs ?? payload.no_regression_ref,
     ),
     owner_chain_refs: stringList(payload.owner_chain_refs ?? payload.owner_chain_ref),
+    human_gate_refs: stringList(payload.human_gate_refs ?? payload.human_gate_ref),
+    quality_or_export_receipt_refs: stringList(
+      payload.quality_or_export_receipt_refs ?? payload.quality_or_export_receipt_ref
+        ?? payload.quality_gate_receipt_refs ?? payload.quality_gate_receipt_ref
+        ?? payload.export_receipt_refs ?? payload.export_receipt_ref,
+    ),
+    reviewer_receipt_refs: stringList(
+      payload.reviewer_receipt_refs ?? payload.reviewer_receipt_ref,
+    ),
+    long_soak_refs: stringList(payload.long_soak_refs ?? payload.long_soak_ref),
     monitor_freshness_refs: stringList(
       payload.monitor_freshness_refs ?? payload.monitor_freshness_ref,
     ),

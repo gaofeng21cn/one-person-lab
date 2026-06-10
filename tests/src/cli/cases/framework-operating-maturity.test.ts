@@ -323,6 +323,7 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
       'domain_receipt_ref',
       'no_regression_ref',
       'owner_chain_ref',
+      'quality_or_export_receipt_ref',
       'typed_blocker_ref',
     ]);
     assert.equal(
@@ -460,6 +461,21 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
       1,
     );
     assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.summary
+        .owner_evidence_required_work_order_count,
+      5,
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.summary
+        .owner_evidence_recorded_not_ready_claim_work_order_count,
+      0,
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.summary
+        .owner_acceptance_required_work_order_count,
+      6,
+    );
+    assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.authority_boundary.can_claim_production_ready,
       false,
     );
@@ -507,6 +523,10 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
           status: string;
           owner_repo: string | null;
           next_owner_action: string;
+          owner_evidence_closure_state: string;
+          owner_acceptance_required: boolean;
+          ready_claim_authorized: boolean;
+          open_count_semantics: string;
           accepted_ref_shapes: string[];
           closing_ref_source: string;
           typed_blocker_source: string;
@@ -518,6 +538,10 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
           entry.status === 'open'
           && typeof entry.owner_repo === 'string'
           && entry.next_owner_action.length > 0
+          && entry.owner_evidence_closure_state.length > 0
+          && entry.owner_acceptance_required === true
+          && entry.ready_claim_authorized === false
+          && entry.open_count_semantics === 'open_count_tracks_lane_specific_missing_evidence_only_zero_does_not_authorize_ready_claim'
           && entry.accepted_ref_shapes.includes('typed_blocker_ref')
           && entry.closing_ref_source.length > 0
           && entry.typed_blocker_source.length > 0
@@ -536,6 +560,12 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
         entry.work_order_id === 'w7-private-platform-retirement',
     );
     assert.equal(privatePlatformWorkOrder.open_count, maturity.summary.cleanup_retirement_open_decision_count);
+    assert.equal(
+      privatePlatformWorkOrder.owner_evidence_closure_state,
+      'owner_acceptance_or_typed_blocker_required',
+    );
+    assert.equal(privatePlatformWorkOrder.owner_acceptance_required, true);
+    assert.equal(privatePlatformWorkOrder.ready_claim_authorized, false);
     assert.equal(
       privatePlatformWorkOrder.accepted_ref_shapes.includes('physical_delete_authorization_ref'),
       true,
@@ -613,6 +643,41 @@ test('framework operating maturity projects owner evidence ledger refs without r
       '--receipt-ref',
       domainOwnerRecord.receipt_refs[0],
     ], env);
+    const masOwnerEvidenceRecord = runCli([
+      'runtime',
+      'domain-owner-payload-summary',
+      'record',
+      '--target-identity',
+      JSON.stringify({
+        domain_id: 'med-autoscience',
+        source_surface: 'mas_owner_payload_response',
+        summary_kind: 'owner_payload_item',
+        item_id: 'paper_owner_gate_refs',
+        payload_kind: 'domain_owner_receipt_or_typed_blocker_refs',
+      }),
+      '--payload',
+      JSON.stringify({
+        human_gate_refs: [
+          'human-gate:mas/dm-cvd/publication-owner-review',
+        ],
+        quality_gate_receipt_refs: [
+          'quality-gate-receipt:mas/dm-cvd/publication-quality',
+        ],
+        reviewer_receipt_refs: [
+          'reviewer-receipt:mas/dm-cvd/ai-reviewer-current',
+        ],
+        long_soak_refs: [
+          'long-soak:mas/dm-cvd/default-executor-owner-chain',
+        ],
+      }),
+    ], env).domain_owner_payload_summary_ledger_record;
+    runCli([
+      'runtime',
+      'domain-owner-payload-summary',
+      'verify',
+      '--receipt-ref',
+      masOwnerEvidenceRecord.receipt_refs[0],
+    ], env);
 
     const l5Record = runCli([
       'runtime',
@@ -653,17 +718,25 @@ test('framework operating maturity projects owner evidence ledger refs without r
       (entry: { lane: string }) => entry.lane === 'domain_owner_chain_scaleout',
     );
     assert.equal(domainLane.status, 'owner_evidence_observed_not_ready_claim');
-    assert.equal(domainLane.verified_receipt_count, 4);
+    assert.equal(domainLane.verified_receipt_count, 5);
     assert.deepEqual(domainLane.observed_ref_shapes, [
       'domain_owner_receipt_ref',
       'domain_receipt_ref',
       'no_regression_ref',
       'owner_chain_ref',
+      'human_gate_ref',
+      'quality_or_export_receipt_ref',
+      'reviewer_receipt_ref',
+      'long_soak_ref',
       'typed_blocker_ref',
     ]);
     assert.equal(domainLane.observed_ref_counts.typed_blocker_ref_count, 4);
     assert.equal(domainLane.observed_ref_counts.no_regression_ref_count, 2);
     assert.equal(domainLane.observed_ref_counts.owner_chain_ref_count, 3);
+    assert.equal(domainLane.observed_ref_counts.human_gate_ref_count, 1);
+    assert.equal(domainLane.observed_ref_counts.quality_or_export_receipt_ref_count, 2);
+    assert.equal(domainLane.observed_ref_counts.reviewer_receipt_ref_count, 1);
+    assert.equal(domainLane.observed_ref_counts.long_soak_ref_count, 1);
     assert.deepEqual(
       domainLane.observed_domains.map((
         entry: { domain_id: string; status: string; observed_ref_shapes: string[] },
@@ -673,6 +746,16 @@ test('framework operating maturity projects owner evidence ledger refs without r
         observed_ref_shapes: entry.observed_ref_shapes,
       })),
       [
+        {
+          domain_id: 'med-autoscience',
+          status: 'owner_evidence_observed_not_ready_claim',
+          observed_ref_shapes: [
+            'human_gate_ref',
+            'quality_or_export_receipt_ref',
+            'reviewer_receipt_ref',
+            'long_soak_ref',
+          ],
+        },
         {
           domain_id: 'med-autogrant',
           status: 'owner_evidence_observed_not_ready_claim',
@@ -690,6 +773,7 @@ test('framework operating maturity projects owner evidence ledger refs without r
             'domain_receipt_ref',
             'no_regression_ref',
             'owner_chain_ref',
+            'quality_or_export_receipt_ref',
             'typed_blocker_ref',
           ],
         },
@@ -711,7 +795,10 @@ test('framework operating maturity projects owner evidence ledger refs without r
         owner_route_status: entry.owner_route_status,
       })),
       [
-        { domain_id: 'med-autoscience', owner_route_status: 'owner_evidence_required' },
+        {
+          domain_id: 'med-autoscience',
+          owner_route_status: 'owner_evidence_observed_not_ready_claim',
+        },
         {
           domain_id: 'med-autogrant',
           owner_route_status: 'owner_evidence_observed_not_ready_claim',
@@ -726,6 +813,29 @@ test('framework operating maturity projects owner evidence ledger refs without r
         },
       ],
     );
+    const masRoute = domainRoutes.find(
+      (entry: { domain_id: string }) => entry.domain_id === 'med-autoscience',
+    );
+    assert.deepEqual(masRoute.observed_ref_shapes, [
+      'human_gate_ref',
+      'quality_or_export_receipt_ref',
+      'reviewer_receipt_ref',
+      'long_soak_ref',
+    ]);
+    assert.equal(
+      masRoute.observed_receipt_refs.includes(masOwnerEvidenceRecord.receipt_refs[0]),
+      true,
+    );
+    assert.equal(
+      masRoute.observed_receipt_refs.includes('human-gate:mas/dm-cvd/publication-owner-review'),
+      true,
+    );
+    assert.equal(masRoute.observed_ref_counts.human_gate_ref_count, 1);
+    assert.equal(masRoute.observed_ref_counts.quality_or_export_receipt_ref_count, 1);
+    assert.equal(masRoute.observed_ref_counts.reviewer_receipt_ref_count, 1);
+    assert.equal(masRoute.observed_ref_counts.long_soak_ref_count, 1);
+    assert.equal(masRoute.authority_boundary.can_sign_owner_receipt, false);
+    assert.equal(masRoute.authority_boundary.can_create_typed_blocker, false);
     const magRoute = domainRoutes.find(
       (entry: { domain_id: string }) => entry.domain_id === 'med-autogrant',
     );
@@ -753,6 +863,7 @@ test('framework operating maturity projects owner evidence ledger refs without r
       'domain_receipt_ref',
       'no_regression_ref',
       'owner_chain_ref',
+      'quality_or_export_receipt_ref',
       'typed_blocker_ref',
     ]);
     assert.equal(
@@ -797,6 +908,9 @@ test('framework operating maturity projects owner evidence ledger refs without r
       domainWorkOrder.blocker_state,
       'owner_route_refs_observed_not_production_claim',
     );
+    assert.equal(domainWorkOrder.owner_evidence_closure_state, 'owner_evidence_required');
+    assert.equal(domainWorkOrder.owner_acceptance_required, true);
+    assert.equal(domainWorkOrder.ready_claim_authorized, false);
     assert.equal(
       domainWorkOrder.observed_owner_evidence_status,
       'owner_evidence_observed_not_ready_claim',
@@ -806,10 +920,18 @@ test('framework operating maturity projects owner evidence ledger refs without r
       'domain_receipt_ref',
       'no_regression_ref',
       'owner_chain_ref',
+      'human_gate_ref',
+      'quality_or_export_receipt_ref',
+      'reviewer_receipt_ref',
+      'long_soak_ref',
       'typed_blocker_ref',
     ]);
     assert.equal(
       domainWorkOrder.observed_receipt_refs.includes(domainOwnerRecord.receipt_refs[0]),
+      true,
+    );
+    assert.equal(
+      domainWorkOrder.observed_receipt_refs.includes(masOwnerEvidenceRecord.receipt_refs[0]),
       true,
     );
     assert.equal(
@@ -836,6 +958,9 @@ test('framework operating maturity projects owner evidence ledger refs without r
       brandWorkOrder.blocker_state,
       'owner_route_refs_observed_not_production_claim',
     );
+    assert.equal(brandWorkOrder.owner_evidence_closure_state, 'owner_evidence_required');
+    assert.equal(brandWorkOrder.owner_acceptance_required, true);
+    assert.equal(brandWorkOrder.ready_claim_authorized, false);
     assert.equal(
       brandWorkOrder.observed_owner_evidence_status,
       'owner_evidence_observed_not_ready_claim',
@@ -848,6 +973,21 @@ test('framework operating maturity projects owner evidence ledger refs without r
       maturity.foundry_agent_os_production_evidence_gate.summary
         .observed_owner_evidence_lane_count,
       2,
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.summary
+        .owner_evidence_required_work_order_count,
+      5,
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.summary
+        .owner_evidence_recorded_not_ready_claim_work_order_count,
+      0,
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.summary
+        .owner_acceptance_required_work_order_count,
+      6,
     );
     assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.summary.closed_by_opl,
@@ -926,6 +1066,21 @@ test('framework operating maturity consumes verified App release user-path evide
     );
     assert.equal(appReleaseGateLane.open_count, 0);
     assert.equal(appReleaseGateLane.status, 'refs_observed_not_production_ready_claim');
+    const appReleaseWorkOrder = maturity.foundry_agent_os_production_evidence_gate
+      .owner_route_work_orders.find(
+        (entry: { lane: string }) => entry.lane === 'app_release_user_path',
+      );
+    assert.equal(
+      appReleaseWorkOrder.owner_evidence_closure_state,
+      'owner_evidence_recorded_not_ready_claim',
+    );
+    assert.equal(appReleaseWorkOrder.owner_acceptance_required, true);
+    assert.equal(appReleaseWorkOrder.ready_claim_authorized, false);
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.summary
+        .owner_evidence_recorded_not_ready_claim_work_order_count,
+      1,
+    );
     assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.summary.production_ready_claim_authorized,
       false,
@@ -1001,6 +1156,12 @@ test('framework operating maturity surfaces refs-only provider and lifecycle cou
       providerWorkOrder.blocker_state,
       'owner_route_refs_observed_not_production_claim',
     );
+    assert.equal(
+      providerWorkOrder.owner_evidence_closure_state,
+      'owner_evidence_recorded_not_ready_claim',
+    );
+    assert.equal(providerWorkOrder.owner_acceptance_required, true);
+    assert.equal(providerWorkOrder.ready_claim_authorized, false);
     assert.equal(providerWorkOrder.observed_receipt_refs[0], providerRecord.receipt_refs[0]);
     assert.deepEqual(providerWorkOrder.observed_ref_shapes, ['evidence_ref']);
     assert.equal(

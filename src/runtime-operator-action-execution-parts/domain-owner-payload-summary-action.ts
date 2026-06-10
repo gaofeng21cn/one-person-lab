@@ -57,6 +57,26 @@ function domainOwnerPayloadSummaryInput(
       'owner_chain_refs',
       'owner_chain_ref',
     ]),
+    human_gate_refs: refsFromPayload(payload, [
+      'human_gate_refs',
+      'human_gate_ref',
+    ]),
+    quality_or_export_receipt_refs: refsFromPayload(payload, [
+      'quality_or_export_receipt_refs',
+      'quality_or_export_receipt_ref',
+      'quality_gate_receipt_refs',
+      'quality_gate_receipt_ref',
+      'export_receipt_refs',
+      'export_receipt_ref',
+    ]),
+    reviewer_receipt_refs: refsFromPayload(payload, [
+      'reviewer_receipt_refs',
+      'reviewer_receipt_ref',
+    ]),
+    long_soak_refs: refsFromPayload(payload, [
+      'long_soak_refs',
+      'long_soak_ref',
+    ]),
     monitor_freshness_refs: refsFromPayload(payload, [
       'monitor_freshness_refs',
       'monitor_freshness_ref',
