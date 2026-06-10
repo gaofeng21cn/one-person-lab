@@ -226,6 +226,23 @@ function attemptCountForTask(db: DatabaseSync, taskId: string) {
   return row.count;
 }
 
+function attemptCountForTaskCurrentSource(
+  db: DatabaseSync,
+  taskId: string,
+  sourceFingerprint: string | null,
+) {
+  if (!sourceFingerprint) {
+    return attemptCountForTask(db, taskId);
+  }
+  const row = db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM stage_attempts
+    WHERE task_id = ?
+      AND json_extract(workspace_locator_json, '$.domain_source_fingerprint') = ?
+  `).get(taskId, sourceFingerprint) as { count: number };
+  return row.count;
+}
+
 function isExpiredOrUnleasedRunningTask(row: FamilyRuntimeTaskRow) {
   if (row.status !== 'running') {
     return false;
@@ -485,7 +502,7 @@ function autoRedriveBlockedDefaultExecutorProviderTasks(
       });
       continue;
     }
-    const usedAttempts = attemptCountForTask(db, row.task_id);
+    const usedAttempts = attemptCountForTaskCurrentSource(db, row.task_id, sourceFingerprint);
     if (usedAttempts >= row.max_attempts) {
       db.prepare(`
         UPDATE tasks

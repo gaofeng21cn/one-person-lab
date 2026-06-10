@@ -1512,3 +1512,108 @@ test('family-runtime tick dead-letters MAS default executor provider blocker whe
     db.close();
   }
 });
+
+test('family-runtime tick counts default executor retry budget against the current domain source only', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      insertDefaultExecutorTask(db, {
+        taskId: 'task-mas-default-auto-redrive-current-source-budget',
+        sourceFingerprint: 'source-current-provider-blocker',
+        createdAt: '2026-05-25T16:30:00.000Z',
+        status: 'blocked',
+        attempts: 1,
+      });
+      db.prepare(`
+        UPDATE tasks
+        SET last_error = 'temporal_workflow_failed',
+          dead_letter_reason = 'temporal_stage_attempt_failed'
+        WHERE task_id = ?
+      `).run('task-mas-default-auto-redrive-current-source-budget');
+      const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-auto-redrive-current-source-budget',
+      ) as FamilyRuntimeTaskRow;
+      const currentPayload = JSON.parse(row.payload_json) as Record<string, unknown>;
+      for (let index = 0; index < 9; index += 1) {
+        const oldPayload = {
+          ...currentPayload,
+          source_fingerprint: `source-old-provider-blocker-${index}`,
+        };
+        const attempt = ensureProviderHostedStageAttempt(db, row, oldPayload, { newAttempt: true });
+        assert.ok(attempt);
+        db.prepare(`
+          UPDATE stage_attempts
+          SET status = 'completed',
+            provider_run_json = json_set(provider_run_json, '$.provider_status', 'completed')
+          WHERE stage_attempt_id = ?
+        `).run(attempt.stage_attempt_id);
+      }
+      const failedCurrentAttempt = ensureProviderHostedStageAttempt(db, row, currentPayload, {
+        newAttempt: true,
+      });
+      assert.ok(failedCurrentAttempt);
+      db.prepare(`
+        UPDATE stage_attempts
+        SET status = 'failed',
+          blocked_reason = 'temporal_workflow_failed',
+          attempt_count = 1,
+          provider_run_json = json_set(provider_run_json, '$.provider_status', 'failed')
+        WHERE stage_attempt_id = ?
+      `).run(failedCurrentAttempt.stage_attempt_id);
+
+      let dispatchCount = 0;
+      const tick = await runFamilyRuntimeQueueTick(db, familyRuntimePaths(), {
+        source: 'test-auto-redrive-current-source-budget',
+        limit: 2,
+        hydrate: false,
+        taskScope: {
+          domainId: 'medautoscience',
+          taskKind: 'domain_owner/default-executor-dispatch',
+          payloadMatches: [
+            {
+              path: 'study_id',
+              value: '002-dm-china-us-mortality-attribution',
+            },
+          ],
+        },
+      }, {
+        enqueueTask: () => ({ accepted: false }),
+        dispatchTask: (_db, _paths, selectedRow: FamilyRuntimeTaskRow) => {
+          dispatchCount += 1;
+          return { task_id: selectedRow.task_id };
+        },
+      });
+      const task = db.prepare(`
+        SELECT status, last_error, dead_letter_reason
+        FROM tasks
+        WHERE task_id = ?
+      `).get('task-mas-default-auto-redrive-current-source-budget') as {
+        status: string;
+        last_error: string | null;
+        dead_letter_reason: string | null;
+      };
+      const currentAttemptCount = db.prepare(`
+        SELECT COUNT(*) AS count
+        FROM stage_attempts
+        WHERE task_id = ?
+          AND json_extract(workspace_locator_json, '$.domain_source_fingerprint') = ?
+      `).get(
+        'task-mas-default-auto-redrive-current-source-budget',
+        'source-current-provider-blocker',
+      ) as { count: number };
+
+      assert.equal(tick.mas_default_executor_auto_redriven_count, 1);
+      assert.equal(tick.mas_default_executor_auto_dead_lettered_count, 0);
+      assert.equal(tick.selected_count, 1);
+      assert.equal(dispatchCount, 1);
+      assert.equal(tick.dispatches[0].task_id, 'task-mas-default-auto-redrive-current-source-budget');
+      assert.equal(task.status, 'queued');
+      assert.equal(task.last_error, null);
+      assert.equal(task.dead_letter_reason, null);
+      assert.equal(currentAttemptCount.count, 2);
+    });
+  } finally {
+    db.close();
+  }
+});

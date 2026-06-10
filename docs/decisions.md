@@ -7,6 +7,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-06-10
 
+### 决策：Default executor retry budget 按当前 source identity 计算
+
+原因：MAS/DM-CVD 003 暴露出一个 control-plane 缺陷：同一 default-executor task 在 current owner work unit 不变但 source fingerprint 多次刷新时，会保留多个历史 stage attempts。OPL auto-redrive 过去用 task 下 stage attempt 总数判断 retry budget，导致 1 次当前 source 失败被 9 个旧 source 成功/失败 attempt 放大成 `retry_budget_exhausted`，从而把仍可推进的 current work unit 误置 `dead_letter`。
+
+影响：
+
+- Default executor provider transport retry budget 只统计当前 task payload 对应的 `domain_source_fingerprint` / current source identity 下的 stage attempts；旧 source attempts 只能作为 provenance、stage log 和 audit tail，不消耗当前 source 的 retry budget。
+- Auto-redrive 的 `used_attempts`、retry/dead-letter 决策和 operator 判断必须绑定 current MAS owner/work-unit source identity，不能用同一 task 的历史 attempt 总数。
+- 这类问题属于 OPL Runway / family-runtime control-plane 修复，不得通过改 MAS 论文文本、手写 closeout、手写 owner receipt、改 automation prompt 或直接修改 runtime artifacts 解决。
+- 验证口径固定为：构造同一 task 下多个旧 source attempts 加一个当前 source failed attempt；tick 必须 redrive 当前 source 并继续调度，而不是 `retry_budget_exhausted`。
+
 ### 决策：ideal operating model 作为 north-star，active baton 回当前差距文档
 
 原因：`docs/active/opl-family-ideal-operating-model-redesign.md` 需要沉淀 multi-plane operating model、外部成熟工程映射和 OPL 基座优化验收标准，但如果它继续维护 lane 状态、下一步或 dated checklist，会与 `docs/active/current-state-vs-ideal-gap.md` 形成第二 active backlog。OPL family 当前执行需要单一 active baton、单一 ordinary route 和单一 owner evidence intake。
