@@ -1023,6 +1023,88 @@ test('family-runtime rehydrates terminal MAS current-control admission when stag
   }
 });
 
+test('family-runtime enqueue treats concurrent dedupe-key insert as idempotent noop', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    createQueueTables(db);
+    const dedupeKey = 'owner-route::003-dpcc-primary-care-phenotype-treatment-gap::current-control-admission-race';
+    const payload = currentControlAdmissionPayload(
+      'truth-snapshot::dm003-generation-race',
+      'race',
+      'sha256:concurrent-current-control-work-unit',
+    );
+    const concurrentTaskId = 'task-concurrent-current-control-admission';
+    let selectCount = 0;
+    let insertedConcurrentTask = false;
+    const raceDb = new Proxy(db, {
+      get(target, prop, receiver) {
+        if (prop !== 'prepare') {
+          return Reflect.get(target, prop, receiver);
+        }
+        return (sql: string) => {
+          const statement = target.prepare(sql);
+          const normalizedSql = sql.replace(/\s+/g, ' ').trim();
+          if (normalizedSql === 'SELECT * FROM tasks WHERE dedupe_key = ?') {
+            return {
+              get(...args: unknown[]) {
+                selectCount += 1;
+                if (selectCount === 1) {
+                  return undefined;
+                }
+                return statement.get(...args);
+              },
+            };
+          }
+          if (normalizedSql.startsWith('INSERT INTO tasks(')) {
+            return {
+              run(...args: unknown[]) {
+                if (!insertedConcurrentTask) {
+                  insertedConcurrentTask = true;
+                  insertSucceededTask(db, {
+                    taskId: concurrentTaskId,
+                    domainId: 'medautoscience',
+                    taskKind: 'domain_owner/default-executor-dispatch',
+                    payload,
+                    dedupeKey,
+                  });
+                }
+                return statement.run(...args);
+              },
+            };
+          }
+          return statement;
+        };
+      },
+    }) as DatabaseSync;
+
+    const result = enqueueTask(raceDb, {
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload,
+      dedupeKey,
+      source: 'test-current-control-concurrent-intake',
+    });
+    const event = db.prepare(`
+      SELECT payload_json
+      FROM events
+      WHERE task_id = ? AND event_type = 'task_enqueue_dedupe_race_noop'
+      LIMIT 1
+    `).get(concurrentTaskId) as { payload_json: string } | undefined;
+
+    assert.equal(result.accepted, false);
+    assert.equal(result.idempotent_noop, true);
+    assert.equal(result.task?.task_id, concurrentTaskId);
+    assert.equal(result.task?.status, 'succeeded');
+    assert.ok(event);
+    assert.equal(
+      JSON.parse(event.payload_json).reason,
+      'concurrent_enqueue_dedupe_key_won_by_existing_task',
+    );
+  } finally {
+    db.close();
+  }
+});
+
 test('family-runtime intake blocks current-control provider candidates that claim domain completion authority', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-authority-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-authority-'));

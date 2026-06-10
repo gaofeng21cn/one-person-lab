@@ -115,6 +115,11 @@ function recordValue(value: unknown) {
     : null;
 }
 
+function isDedupeUniqueConstraintError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('UNIQUE constraint failed: tasks.dedupe_key');
+}
+
 function defaultExecutorMetadataRefresh(
   existingPayload: Record<string, unknown>,
   nextPayload: Record<string, unknown>,
@@ -1294,18 +1299,56 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
     updated_at: createdAt,
   };
 
-  db.prepare(`
-    INSERT INTO tasks(
-      task_id, domain_id, task_kind, payload_json, dedupe_key, priority, status, attempts, max_attempts,
-      source, requires_approval, approved_at, lease_owner, lease_expires_at, last_error, dead_letter_reason,
-      created_at, updated_at
-    )
-    VALUES (
-      @task_id, @domain_id, @task_kind, @payload_json, @dedupe_key, @priority, @status, @attempts, @max_attempts,
-      @source, @requires_approval, @approved_at, @lease_owner, @lease_expires_at, @last_error, @dead_letter_reason,
-      @created_at, @updated_at
-    )
-  `).run(task);
+  try {
+    db.prepare(`
+      INSERT INTO tasks(
+        task_id, domain_id, task_kind, payload_json, dedupe_key, priority, status, attempts, max_attempts,
+        source, requires_approval, approved_at, lease_owner, lease_expires_at, last_error, dead_letter_reason,
+        created_at, updated_at
+      )
+      VALUES (
+        @task_id, @domain_id, @task_kind, @payload_json, @dedupe_key, @priority, @status, @attempts, @max_attempts,
+        @source, @requires_approval, @approved_at, @lease_owner, @lease_expires_at, @last_error, @dead_letter_reason,
+        @created_at, @updated_at
+      )
+    `).run(task);
+  } catch (error) {
+    if (!dedupeKey || !isDedupeUniqueConstraintError(error)) {
+      throw error;
+    }
+    const existing = db.prepare('SELECT * FROM tasks WHERE dedupe_key = ?').get(dedupeKey) as
+      | FamilyRuntimeTaskRow
+      | undefined;
+    if (!existing) {
+      throw error;
+    }
+    insertEvent(db, {
+      taskId: existing.task_id,
+      domainId: existing.domain_id,
+      eventType: 'task_enqueue_dedupe_race_noop',
+      source: input.source ?? 'opl-cli',
+      payload: {
+        dedupe_key: dedupeKey,
+        attempted_task_id: taskId,
+        retained_status: existing.status,
+        reason: 'concurrent_enqueue_dedupe_key_won_by_existing_task',
+        authority_boundary: {
+          opl: 'queue_dedupe_idempotency_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          domain_truth_mutation: false,
+          publication_quality_mutation: false,
+          artifact_gate_mutation: false,
+          current_package_mutation: false,
+          provider_stage_attempt_started: false,
+        },
+      },
+    });
+    return {
+      accepted: false,
+      idempotent_noop: true,
+      task: taskToPayload(existing),
+    };
+  }
   insertEvent(db, {
     taskId,
     domainId: input.domainId,
