@@ -175,6 +175,71 @@ function ownerRouteWorkOrderAuthorityBoundary() {
   };
 }
 
+function ownerRouteWorkOrderPolicy(lane: string) {
+  const commonForbiddenClaims = [
+    'domain_ready',
+    'app_release_ready',
+    'brand_module_l5_complete',
+    'production_ready',
+    'physical_delete_authorized',
+    'owner_receipt_signed_by_opl',
+    'typed_blocker_created_by_opl',
+    'quality_or_export_ready',
+  ];
+  const policies: Record<string, {
+    owner_repo: string;
+    closing_ref_source: string;
+    typed_blocker_source: string;
+    verification_command: string;
+  }> = {
+    domain_owner_chain_scaleout: {
+      owner_repo: 'MAS/MAG/RCA/OMA domain repositories',
+      closing_ref_source: 'domain_owner_live_owner_receipt_human_gate_quality_export_no_regression_or_long_soak_ref',
+      typed_blocker_source: 'domain_owner_live_progress_typed_blocker_ref',
+      verification_command: 'opl agents conformance --family-defaults --json',
+    },
+    brand_module_l5_operating_maturity: {
+      owner_repo: 'brand module owner surfaces',
+      closing_ref_source: 'brand_module_owner_evidence_ref_or_owner_acceptance_ref',
+      typed_blocker_source: 'brand_module_owner_l5_typed_blocker_ref',
+      verification_command: 'opl brand-modules l5-status --json',
+    },
+    app_release_user_path: {
+      owner_repo: '/Users/gaofeng/workspace/one-person-lab-app',
+      closing_ref_source: 'one_person_lab_app_release_owner_receipt_or_same_cohort_release_evidence_ref',
+      typed_blocker_source: 'one_person_lab_app_release_owner_typed_blocker_ref',
+      verification_command: SOURCE_COMMANDS.app_operator_drilldown,
+    },
+    provider_long_soak: {
+      owner_repo: '/Users/gaofeng/workspace/one-person-lab',
+      closing_ref_source: 'opl_runtime_owner_long_soak_recovery_dead_letter_or_provider_blocker_ref',
+      typed_blocker_source: 'opl_runtime_owner_provider_typed_blocker_ref',
+      verification_command: SOURCE_COMMANDS.app_operator_drilldown,
+    },
+    private_platform_retirement: {
+      owner_repo: 'domain repositories',
+      closing_ref_source: 'domain_owner_physical_delete_authorization_keep_or_typed_blocker',
+      typed_blocker_source: 'domain_owner_private_platform_retirement_typed_blocker_ref',
+      verification_command: 'opl agents default-callers --family-defaults --json',
+    },
+    memory_artifact_lifecycle_apply: {
+      owner_repo: 'domain repositories',
+      closing_ref_source: 'domain_owner_memory_artifact_lifecycle_receipt_ref',
+      typed_blocker_source: 'domain_owner_memory_artifact_lifecycle_typed_blocker_ref',
+      verification_command: SOURCE_COMMANDS.app_operator_drilldown,
+    },
+  };
+  return {
+    ...(policies[lane] ?? {
+      owner_repo: 'owner repository',
+      closing_ref_source: 'owner_receipt_or_typed_blocker_ref',
+      typed_blocker_source: 'owner_typed_blocker_ref',
+      verification_command: 'owner-native verification command',
+    }),
+    forbidden_opl_claims: commonForbiddenClaims,
+  };
+}
+
 function ownerRouteWorkOrders(
   laneStatuses: Array<{
     lane: string;
@@ -205,10 +270,12 @@ function ownerRouteWorkOrders(
       stringValue(observed?.status) === 'owner_evidence_observed_not_ready_claim'
       || observedReceiptRefs.length > 0
       || observedRefShapes.length > 0;
+    const policy = ownerRouteWorkOrderPolicy(action.lane);
     return {
       work_order_id: workOrderIds[action.lane] ?? `w7-${action.lane.replace(/_/g, '-')}`,
       lane: action.lane,
       owner: action.owner,
+      owner_repo: policy.owner_repo,
       status: 'open',
       blocker_state: ownerEvidenceObserved
         ? 'owner_route_refs_observed_not_production_claim'
@@ -228,6 +295,10 @@ function ownerRouteWorkOrders(
         'owner_acceptance_ref',
       ]),
       source_command: action.source_command,
+      closing_ref_source: policy.closing_ref_source,
+      typed_blocker_source: policy.typed_blocker_source,
+      forbidden_opl_claims: policy.forbidden_opl_claims,
+      verification_command: policy.verification_command,
       non_closing_inputs: [
         'conformance_pass',
         'docs_foldback',

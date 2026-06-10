@@ -469,14 +469,25 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
       maturity.foundry_agent_os_production_evidence_gate.owner_route_work_orders.every(
         (entry: {
           status: string;
+          owner_repo: string | null;
           next_owner_action: string;
           accepted_ref_shapes: string[];
+          closing_ref_source: string;
+          typed_blocker_source: string;
+          forbidden_opl_claims: string[];
+          verification_command: string;
           non_closing_inputs: string[];
           authority_boundary: { work_order_can_close_production: boolean; can_claim_l5: boolean };
         }) =>
           entry.status === 'open'
+          && typeof entry.owner_repo === 'string'
           && entry.next_owner_action.length > 0
           && entry.accepted_ref_shapes.includes('typed_blocker_ref')
+          && entry.closing_ref_source.length > 0
+          && entry.typed_blocker_source.length > 0
+          && entry.forbidden_opl_claims.includes('production_ready')
+          && entry.forbidden_opl_claims.includes('domain_ready')
+          && entry.verification_command.length > 0
           && entry.non_closing_inputs.includes('conformance_pass')
           && entry.non_closing_inputs.includes('app_projection')
           && entry.authority_boundary.work_order_can_close_production === false
@@ -496,6 +507,19 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
     assert.equal(
       privatePlatformWorkOrder.accepted_ref_shapes.includes('keep_as_authority_adapter_ref'),
       true,
+    );
+    assert.equal(privatePlatformWorkOrder.owner_repo, 'domain repositories');
+    assert.equal(
+      privatePlatformWorkOrder.closing_ref_source,
+      'domain_owner_physical_delete_authorization_keep_or_typed_blocker',
+    );
+    assert.equal(
+      privatePlatformWorkOrder.typed_blocker_source,
+      'domain_owner_private_platform_retirement_typed_blocker_ref',
+    );
+    assert.equal(
+      privatePlatformWorkOrder.verification_command,
+      'opl agents default-callers --family-defaults --json',
     );
 
     assert.deepEqual(maturity.next_owner_actions.map((entry: { lane: string }) => entry.lane), [
