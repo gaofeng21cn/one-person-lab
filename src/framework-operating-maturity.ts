@@ -227,6 +227,7 @@ function foundryAgentOsProductionEvidenceGate(input: {
   l5RequiredModuleCount: number;
   appReleaseOpenCount: number;
   providerOpenCount: number;
+  cleanupOpenDecisionCount: number;
   lifecycleOpenCount: number;
 }) {
   const laneStatuses = [
@@ -271,6 +272,15 @@ function foundryAgentOsProductionEvidenceGate(input: {
         'recovery_ref',
         'dead_letter_ref',
         'provider_blocker_ref',
+        'typed_blocker_ref',
+      ],
+    },
+    {
+      lane: 'private_platform_retirement',
+      open_count: input.cleanupOpenDecisionCount,
+      accepted_closing_ref_shapes: [
+        'physical_delete_authorization_ref',
+        'keep_as_authority_adapter_ref',
         'typed_blocker_ref',
       ],
     },
@@ -497,6 +507,7 @@ export async function buildFrameworkOperatingMaturityReadout(
     l5RequiredModuleCount,
     appReleaseOpenCount,
     providerOpenCount,
+    cleanupOpenDecisionCount,
     lifecycleOpenCount,
   });
 
@@ -556,6 +567,7 @@ export async function buildFrameworkOperatingMaturityReadout(
         l5_complete_module_ids: stringListValue(brandModuleL5.l5_complete_module_ids),
         evidence_ledger: record(brandModuleL5.evidence_ledger),
         l5_claim_policy: record(brandModuleL5.l5_claim_policy),
+        owner_route_work_order_policy: record(brandModuleL5.owner_route_work_order_policy),
         authority_boundary: record(brandModuleL5.authority_boundary),
       },
       app_release_user_path: {

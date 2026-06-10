@@ -360,6 +360,19 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
       ),
       true,
     );
+    const privatePlatformWorkOrder = maturity.foundry_agent_os_production_evidence_gate.owner_route_work_orders.find(
+      (entry: { work_order_id: string }) =>
+        entry.work_order_id === 'w7-private-platform-retirement',
+    );
+    assert.equal(privatePlatformWorkOrder.open_count, maturity.summary.cleanup_retirement_open_decision_count);
+    assert.equal(
+      privatePlatformWorkOrder.accepted_ref_shapes.includes('physical_delete_authorization_ref'),
+      true,
+    );
+    assert.equal(
+      privatePlatformWorkOrder.accepted_ref_shapes.includes('keep_as_authority_adapter_ref'),
+      true,
+    );
 
     assert.deepEqual(maturity.next_owner_actions.map((entry: { lane: string }) => entry.lane), [
       'domain_owner_chain_scaleout',

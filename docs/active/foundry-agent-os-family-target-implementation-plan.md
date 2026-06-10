@@ -44,7 +44,7 @@ OPL Agent OS
 | `W6-app-cockpit-consumption` | OPL + App | Console/App projection contracts | App cockpit first screen 只显示 owner、delta、accepted answer shape、hard gate、typed blocker 和 drilldown refs。 | App contract tests、manual screenshot when App changed |
 | `W7-production-evidence-soak` | OPL + domain owners | runtime evidence contracts、real owner receipts | 用真实 owner receipt、typed blocker、human gate、long-soak、release/install 和 owner acceptance 关闭 production evidence。 | repo-native soak、owner acceptance refs |
 
-当前已经完成 `W0` 机器读面、`W1/W5` generated/direct parity proof 第一版、`W3` current-delta-bound Capability Registry resolver ABI、`W4` domain kernel manifest、`W6` App cockpit contract 和 `W7` production evidence intake gate 第一版。只有当两条 work order 的写集、source of truth、验证命令和禁止范围完全分离时，才并行开 worktree。`W0-W6` 关闭的是 structural / functional landing；`W7` 当前只关闭 intake / non-closing guard，不关闭 production evidence。真实 production evidence 仍必须来自 owner receipt、typed blocker、human gate、reviewer/quality/export receipt、long-soak、release/install 或 owner acceptance refs。
+当前已经完成 `W0` 机器读面、`W1/W5` generated/direct parity proof 第一版、`W3` current-delta-bound Capability Registry resolver ABI、`W4` domain kernel manifest、`W6` App cockpit contract 和 `W7` production evidence intake / owner-route work-order readout gate 第一版。只有当两条 work order 的写集、source of truth、验证命令和禁止范围完全分离时，才并行开 worktree。`W0-W6` 关闭的是 structural / functional landing；`W7` 当前只关闭 intake、work-order projection 与 non-closing guard，不关闭 production evidence。真实 production evidence 仍必须来自 owner receipt、typed blocker、human gate、reviewer/quality/export receipt、long-soak、release/install 或 owner acceptance refs。
 
 ## 当前落地主入口
 
@@ -66,14 +66,14 @@ OPL Agent OS
 - `W3`：`contracts/opl-framework/capability-registry-resolver.schema.json` 与 `src/capability-registry-resolver.ts` 固定 current-delta-bound resolver ABI；optional capability ref 缺失 fail open，只有 current owner delta route-required hard-boundary 缺失才输出 typed blocker candidate，且 OPL 仍不能创建 domain typed blocker。
 - `W4`：MAS/MAG/RCA/OMA 均新增 `contracts/foundry-agent-os-domain-kernel-manifest.json` 与 focused tests，声明 retained authority kernel、OPL upcollect surfaces、owner receipt / typed blocker signer 和 non-claims。
 - `W6`：App contract/fixture/validator 固定 first screen / ordinary cockpit 只从 `current_owner_delta` 派生 default next action，raw worklist / raw evidence / provider trace / release evidence 只进入 drilldown。
-- `W7`：`opl framework operating-maturity --family-defaults --json` 暴露 `foundry_agent_os_production_evidence_gate`，列出可 intake 的真实 closing ref shapes 与 non-closing inputs；它只证明 intake / projection / false-authority guard，不声明 production evidence closed。
+- `W7`：`opl framework operating-maturity --family-defaults --json` 暴露 `foundry_agent_os_production_evidence_gate.owner_route_work_orders` 与 `domain_owner_chain_scaleout.domain_owner_evidence_routes`，逐项列出 MAS/MAG/RCA/OMA、Brand L5、App release、provider long-soak、private-platform retirement、memory/artifact lifecycle 的 owner、accepted ref shapes、blocker state、next owner action 与 non-closing inputs；它只证明 intake / work-order projection / false-authority guard，不声明 production evidence closed。
 - External-learning：后续优化折回 `W3/W4/W7`，不再在 MAS 或其他 domain 仓另建 selector、第二 active backlog、always-on sidecar 或默认 preflight。
 
 后续最小完成门：
 
 - `W1/W5` 后续必须 scale out 到 MAS/MAG/RCA/OMA 的真实 direct/generated path roundtrip，而不是只停留在 generated descriptor fixture。
 - `W3` 后续必须把 domain pack 中的 external-learning refs 逐步接入 resolver readout，同时继续保持 optional fail-open 和 domain-owned typed blocker 晋级边界。
-- `W7` 后续必须用真实 owner receipt、typed blocker、human gate、reviewer/quality/export receipt、long-soak、release/install 或 owner acceptance refs 关闭 production evidence；conformance pass、App projection、provider completion、verified ledger 和 docs foldback 都不能替代它。
+- `W7` 后续必须用真实 owner receipt、typed blocker、human gate、reviewer/quality/export receipt、long-soak、release/install 或 owner acceptance refs 关闭 production evidence；当前 work-order/readout、conformance pass、App projection、provider completion、verified ledger 和 docs foldback 都不能替代它。
 - 若后续 live `opl agents conformance --family-defaults --json` 仍出现 OMA 或其他 domain blocked，必须分类为 conformance projection、domain target delta、stage boundary drift 或 domain-owned live evidence tail；不能用 suite pass、controlled canary 或 docs foldback 伪关闭。
 
 ## Supervisory acceptance gate
