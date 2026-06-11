@@ -56,11 +56,15 @@ export function buildStageRunCurrentnessIdentity(
   const currentOwnerDelta = input.currentOwnerDelta ?? {};
   const ownerRoute = recordValue(taskPayload.owner_route) ?? {};
   const sourceRefs = recordValue(ownerRoute.source_refs) ?? {};
+  const currentnessContract = recordValue(ownerRoute.currentness_contract) ?? {};
   const basis = recordValue(sourceRefs.owner_route_currentness_basis)
+    ?? recordValue(currentnessContract.basis)
     ?? recordValue(taskPayload.owner_route_currentness_basis)
     ?? recordValue(currentOwnerDelta.currentness_basis)
     ?? {};
-  const workspaceLocator = recordValue(stageAttempt.workspace_locator) ?? {};
+  const workspaceLocator = recordValue(stageAttempt.workspace_locator)
+    ?? recordValue(taskPayload.workspace_locator)
+    ?? {};
   return {
     surface_kind: 'opl_stage_run_currentness_identity',
     schema_version: 1,
@@ -69,30 +73,45 @@ export function buildStageRunCurrentnessIdentity(
       ?? optionalString(taskPayload.quest_id)
       ?? optionalString(currentOwnerDelta.study_id)
       ?? optionalString(currentOwnerDelta.quest_id),
-    stage_id: optionalString(stageAttempt.stage_id) ?? optionalString(taskPayload.stage_id),
+    stage_id: optionalString(stageAttempt.stage_id)
+      ?? optionalString(taskPayload.stage_id)
+      ?? optionalString(workspaceLocator.task_kind),
     stage_attempt_id: optionalString(stageAttempt.stage_attempt_id),
     action_type: optionalString(taskPayload.action_type)
       ?? optionalString(currentOwnerDelta.action_type)
       ?? optionalString(nestedRecord(taskPayload, 'source_action')?.action_type),
     work_unit_id: optionalString(basis.work_unit_id)
       ?? optionalString(taskPayload.work_unit_id)
+      ?? optionalString(workspaceLocator.work_unit_id)
       ?? optionalString(currentOwnerDelta.work_unit_id)
-      ?? optionalString(nestedRecord(taskPayload, 'source_action', 'next_work_unit')?.unit_id),
+      ?? optionalString(nestedRecord(taskPayload, 'source_action', 'next_work_unit')?.unit_id)
+      ?? optionalString(taskPayload.action_type),
     work_unit_fingerprint: optionalString(basis.work_unit_fingerprint)
       ?? optionalString(taskPayload.work_unit_fingerprint)
-      ?? optionalString(currentOwnerDelta.work_unit_fingerprint),
-    source_fingerprint: optionalString(stageAttempt.source_fingerprint)
       ?? optionalString(taskPayload.source_fingerprint)
+      ?? optionalString(workspaceLocator.work_unit_fingerprint)
+      ?? optionalString(workspaceLocator.domain_source_fingerprint)
+      ?? optionalString(currentOwnerDelta.work_unit_fingerprint),
+    source_fingerprint: optionalString(taskPayload.source_fingerprint)
+      ?? optionalString(workspaceLocator.domain_source_fingerprint)
+      ?? optionalString(workspaceLocator.source_fingerprint)
+      ?? optionalString(stageAttempt.source_fingerprint)
       ?? optionalString(currentOwnerDelta.source_fingerprint),
     truth_epoch: optionalString(basis.truth_epoch)
       ?? optionalString(taskPayload.truth_epoch)
-      ?? optionalString(workspaceLocator.truth_epoch),
+      ?? optionalString(workspaceLocator.truth_epoch)
+      ?? optionalString(taskPayload.source_fingerprint)
+      ?? optionalString(workspaceLocator.domain_source_fingerprint),
     runtime_health_epoch: optionalString(basis.runtime_health_epoch)
       ?? optionalString(taskPayload.runtime_health_epoch)
       ?? optionalString(workspaceLocator.runtime_health_epoch),
-    source_eval_id: optionalString(basis.source_eval_id) ?? optionalString(taskPayload.source_eval_id),
+    source_eval_id: optionalString(basis.source_eval_id)
+      ?? optionalString(taskPayload.source_eval_id)
+      ?? optionalString(workspaceLocator.source_eval_id),
     idempotency_key: optionalString(taskPayload.idempotency_key)
-      ?? optionalString(stageAttempt.idempotency_key),
+      ?? optionalString(stageAttempt.idempotency_key)
+      ?? optionalString(taskPayload.source_fingerprint)
+      ?? optionalString(workspaceLocator.domain_source_fingerprint),
     provider_attempt_ref: optionalString(stageAttempt.provider_attempt_ref)
       ?? (
         optionalString(stageAttempt.stage_attempt_id)
@@ -121,6 +140,8 @@ export function missingStageRunCurrentnessIdentityFields(
     'work_unit_fingerprint',
     'source_fingerprint',
     'truth_epoch',
+    'runtime_health_epoch',
+    'source_eval_id',
     'idempotency_key',
   ].filter((key) => !identity[key as keyof StageRunCurrentnessIdentity]);
 }
@@ -143,6 +164,22 @@ function comparisonFields(identity: StageRunCurrentnessIdentity) {
   };
 }
 
+function routeComparisonFields(identity: StageRunCurrentnessIdentity) {
+  return {
+    domain_id: identity.domain_id,
+    study_id_or_quest_id: identity.study_id_or_quest_id,
+    stage_id: identity.stage_id,
+    action_type: identity.action_type,
+    work_unit_id: identity.work_unit_id,
+    work_unit_fingerprint: identity.work_unit_fingerprint,
+    source_fingerprint: identity.source_fingerprint,
+    truth_epoch: identity.truth_epoch,
+    runtime_health_epoch: identity.runtime_health_epoch,
+    source_eval_id: identity.source_eval_id,
+    idempotency_key: identity.idempotency_key,
+  };
+}
+
 export function sameStageRunCurrentnessIdentity(
   left: StageRunCurrentnessIdentity,
   right: StageRunCurrentnessIdentity,
@@ -154,4 +191,30 @@ export function sameStageRunCurrentnessIdentity(
     return false;
   }
   return JSON.stringify(comparisonFields(left)) === JSON.stringify(comparisonFields(right));
+}
+
+export function sameStageRunRouteCurrentnessIdentity(
+  left: StageRunCurrentnessIdentity,
+  right: StageRunCurrentnessIdentity,
+) {
+  const required = [
+    'domain_id',
+    'study_id_or_quest_id',
+    'stage_id',
+    'action_type',
+    'work_unit_id',
+    'work_unit_fingerprint',
+    'source_fingerprint',
+    'truth_epoch',
+    'runtime_health_epoch',
+    'source_eval_id',
+    'idempotency_key',
+  ] as const;
+  if (
+    required.some((key) => !left[key])
+    || required.some((key) => !right[key])
+  ) {
+    return false;
+  }
+  return JSON.stringify(routeComparisonFields(left)) === JSON.stringify(routeComparisonFields(right));
 }

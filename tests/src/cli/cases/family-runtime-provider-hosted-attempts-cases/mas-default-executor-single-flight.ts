@@ -221,6 +221,105 @@ test('family-runtime does not treat unstarted registered MAS default executor at
   }
 });
 
+test('family-runtime does not let stale same-study action attempt block fresh StageRun identity', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      const stalePayload = {
+        ...defaultExecutorPayload('stale-source'),
+        work_unit_id: 'gate-replay',
+        work_unit_fingerprint: 'stale-work-unit-fp',
+        idempotency_key: 'provider-admission::dm002::stale',
+        owner_route: {
+          source_refs: {
+            owner_route_currentness_basis: {
+              work_unit_id: 'gate-replay',
+              work_unit_fingerprint: 'stale-work-unit-fp',
+              truth_epoch: 'truth-stale',
+              runtime_health_epoch: 'runtime-stale',
+              source_eval_id: 'publication-eval::stale',
+            },
+          },
+        },
+      };
+      const freshPayload = {
+        ...defaultExecutorPayload('fresh-source'),
+        work_unit_id: 'gate-replay',
+        work_unit_fingerprint: 'fresh-work-unit-fp',
+        idempotency_key: 'provider-admission::dm002::fresh',
+        owner_route: {
+          source_refs: {
+            owner_route_currentness_basis: {
+              work_unit_id: 'gate-replay',
+              work_unit_fingerprint: 'fresh-work-unit-fp',
+              truth_epoch: 'truth-fresh',
+              runtime_health_epoch: 'runtime-fresh',
+              source_eval_id: 'publication-eval::fresh',
+            },
+          },
+        },
+      };
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-stale-stage-run-first',
+        payload: stalePayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:stale-stage-run-first',
+      });
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-fresh-stage-run-second',
+        payload: freshPayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:fresh-stage-run-second',
+      });
+      db.prepare("UPDATE tasks SET status = 'running', attempts = 1 WHERE task_id = ?").run(
+        'task-mas-default-stale-stage-run-first',
+      );
+      db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id = ?").run(
+        'task-mas-default-fresh-stage-run-second',
+      );
+      const firstRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-stale-stage-run-first',
+      ) as Parameters<typeof ensureProviderHostedStageAttempt>[1];
+      const secondRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-fresh-stage-run-second',
+      ) as Parameters<typeof startDefaultExecutorStageAttempt>[2]['row'];
+      const firstAttempt = ensureProviderHostedStageAttempt(db, firstRow, stalePayload);
+      assert.ok(firstAttempt);
+      db.prepare(`
+        UPDATE stage_attempts
+        SET status = 'running',
+          provider_run_json = json_set(provider_run_json, '$.provider_status', 'running')
+        WHERE stage_attempt_id = ?
+      `).run(firstAttempt.stage_attempt_id);
+      const secondAttempt = ensureProviderHostedStageAttempt(db, secondRow, freshPayload);
+      let temporalStartCount = 0;
+      const result = await startDefaultExecutorStageAttempt(db, familyRuntimePaths(), {
+        row: secondRow,
+        payload: freshPayload,
+        providerHostedAttempt: secondAttempt,
+        temporalProviderModule: async () => ({
+          startTemporalStageAttemptWorkflow: async () => {
+            temporalStartCount += 1;
+            return { surface_kind: 'temporal_stage_attempt_start_receipt' };
+          },
+        }),
+      });
+      const skipEvent = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_default_executor_live_attempt_skip'
+        LIMIT 1
+      `).get('task-mas-default-fresh-stage-run-second') as { payload_json: string } | undefined;
+
+      assert.ok(secondAttempt);
+      assert.equal(result.status, 'running');
+      assert.equal(temporalStartCount, 1);
+      assert.equal(skipEvent, undefined);
+    });
+  } finally {
+    db.close();
+  }
+});
+
 test('family-runtime syncs a terminal same-dispatch MAS default executor attempt before deciding to skip', async () => {
   const db = new DatabaseSync(':memory:');
   try {
@@ -252,6 +351,7 @@ test('family-runtime syncs a terminal same-dispatch MAS default executor attempt
       ) as Parameters<typeof startDefaultExecutorStageAttempt>[2]['row'];
       const firstAttempt = ensureProviderHostedStageAttempt(db, firstRow, firstPayload);
       assert.ok(firstAttempt);
+      assert.equal(firstAttempt.workspace_locator.source_eval_id, 'source-current');
       db.prepare(`
         UPDATE stage_attempts
         SET status = 'running',
@@ -519,6 +619,7 @@ test('family-runtime keeps MAS default executor admission single-flight across s
       ) as Parameters<typeof startDefaultExecutorStageAttempt>[2]['row'];
       const firstAttempt = ensureProviderHostedStageAttempt(db, firstRow, firstPayload);
       assert.ok(firstAttempt);
+      assert.equal(firstAttempt.workspace_locator.source_eval_id, 'source-current');
       db.prepare("UPDATE stage_attempts SET status = 'running' WHERE stage_attempt_id = ?").run(
         firstAttempt.stage_attempt_id,
       );
@@ -637,12 +738,8 @@ test('family-runtime enqueue preserves a newer MAS default executor dispatch whi
       assert.equal(JSON.parse(tasks[1].payload_json).source_fingerprint, 'source-after');
       assert.ok(tasks[0].lease_expires_at);
       assert.ok(Date.parse(tasks[0].lease_expires_at) > Date.now());
-      assert.ok(noopEvent);
-      assert.equal(JSON.parse(noopEvent.payload_json).candidate_source_fingerprint, 'source-after');
-      assert.equal(JSON.parse(noopEvent.payload_json).stage_attempt_id, runningAttempt.stage_attempt_id);
-      assert.ok(deferredEvent);
-      assert.equal(JSON.parse(deferredEvent.payload_json).candidate_source_fingerprint, 'source-after');
-      assert.equal(JSON.parse(deferredEvent.payload_json).stage_attempt_id, runningAttempt.stage_attempt_id);
+      assert.equal(noopEvent, undefined);
+      assert.equal(deferredEvent, undefined);
     });
   } finally {
     db.close();

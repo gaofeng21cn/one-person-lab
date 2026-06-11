@@ -5,6 +5,7 @@ import {
   buildStageRunCurrentnessIdentity,
   missingStageRunCurrentnessIdentityFields,
   sameStageRunCurrentnessIdentity,
+  sameStageRunRouteCurrentnessIdentity,
 } from '../../src/family-runtime-stage-run-currentness-identity.ts';
 
 function baseInput(overrides: Record<string, unknown> = {}) {
@@ -96,6 +97,40 @@ test('compares StageRun currentness identity by domain work unit and attempt ide
 
   assert.equal(sameStageRunCurrentnessIdentity(left, same), true);
   assert.equal(sameStageRunCurrentnessIdentity(left, different), false);
+  assert.equal(sameStageRunRouteCurrentnessIdentity(left, different), true);
+});
+
+test('compares StageRun route currentness without letting stage attempt id split live admission', () => {
+  const base = baseInput();
+  const basePayload = (base.task as Record<string, unknown>).payload as Record<string, unknown>;
+  const admitted = buildStageRunCurrentnessIdentity(baseInput({
+    stageAttempt: {
+      ...baseInput().stageAttempt,
+      stage_attempt_id: 'sat-admitted',
+      workflow_id: 'wf-admitted',
+    },
+  }));
+  const candidate = buildStageRunCurrentnessIdentity(baseInput({
+    stageAttempt: {
+      ...baseInput().stageAttempt,
+      stage_attempt_id: 'sat-candidate',
+      workflow_id: 'wf-candidate',
+    },
+  }));
+  const stale = buildStageRunCurrentnessIdentity(baseInput({
+    task: {
+      ...base.task,
+      payload: {
+        ...basePayload,
+        work_unit_fingerprint: 'sha256:stale',
+        source_fingerprint: 'mas-source:stale',
+      },
+    },
+  }));
+
+  assert.equal(sameStageRunCurrentnessIdentity(admitted, candidate), false);
+  assert.equal(sameStageRunRouteCurrentnessIdentity(admitted, candidate), true);
+  assert.equal(sameStageRunRouteCurrentnessIdentity(admitted, stale), false);
 });
 
 test('fails closed when required StageRun currentness identity fields are missing', () => {
@@ -116,11 +151,13 @@ test('fails closed when required StageRun currentness identity fields are missin
 
   assert.deepEqual(missingStageRunCurrentnessIdentityFields(identity), [
     'stage_id',
-    'work_unit_id',
     'work_unit_fingerprint',
     'source_fingerprint',
     'truth_epoch',
+    'runtime_health_epoch',
+    'source_eval_id',
     'idempotency_key',
   ]);
   assert.equal(sameStageRunCurrentnessIdentity(identity, identity), false);
+  assert.equal(sameStageRunRouteCurrentnessIdentity(identity, identity), false);
 });

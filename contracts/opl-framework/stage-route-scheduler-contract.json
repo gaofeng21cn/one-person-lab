@@ -221,8 +221,29 @@
     ],
     "required_substrate_surfaces": {
       "stage_run_currentness_identity": {
+        "purpose": "OPL-owned strict StageRun route/run currentness identity used for default-executor live skip, terminal closeout reconciliation, and current-control projection without claiming domain authority.",
         "implementation_ref": "src/family-runtime-stage-run-currentness-identity.ts#buildStageRunCurrentnessIdentity",
         "test_ref": "tests/src/family-runtime-stage-run-currentness-identity.test.ts",
+        "test_lane": "fast",
+        "comparison_refs": {
+          "attempt_match_ref": "src/family-runtime-stage-run-currentness-identity.ts#sameStageRunCurrentnessIdentity",
+          "route_currentness_match_ref": "src/family-runtime-stage-run-currentness-identity.ts#sameStageRunRouteCurrentnessIdentity",
+          "route_currentness_match_policy": "sameStageRunRouteCurrentnessIdentity compares route/currentness fields without using stage_attempt_id so an admitted attempt and a fresh candidate for the same route identity can reconcile, while stale work-unit/source/currentness basis mismatch fails closed"
+        },
+        "consumed_by": [
+          {
+            "surface": "default_executor_live_skip",
+            "policy": "live-skip may only reuse an existing provider attempt when sameStageRunRouteCurrentnessIdentity confirms the same domain, study or quest, stage, action, work unit, source, epoch, and idempotency basis"
+          },
+          {
+            "surface": "terminal_closeout_reconcile",
+            "policy": "terminal closeout sync may reconcile a queued or running task to the matching stage attempt only when the same route currentness identity matches or the older provider-admission identity matches"
+          },
+          {
+            "surface": "current_control_projection",
+            "policy": "current-control read models project the StageRun currentness identity and missing fields so stale, terminal, or incomplete transport residue stays diagnostic instead of becoming default progress"
+          }
+        ],
         "required_fields": [
           "domain_id",
           "study_id_or_quest_id",
@@ -239,6 +260,15 @@
         ],
         "match_policy": "all_available_current_owner_delta_fields_must_match_and_missing_identity_fails_closed",
         "missing_identity_effect": "fail_closed_no_stage_run_currentness_match",
+        "authority_boundary": {
+          "opl_can_use_for_live_skip": true,
+          "opl_can_use_for_terminal_closeout_reconcile": true,
+          "opl_can_project_current_control_identity": true,
+          "opl_holds_mas_owner_receipt_authority": false,
+          "opl_holds_mas_typed_blocker_authority": false,
+          "opl_holds_mas_quality_authority": false,
+          "provider_completion_is_domain_ready": false
+        },
         "reset_evidence": [
           "fresh_current_owner_delta",
           "domain_owner_receipt_ref",

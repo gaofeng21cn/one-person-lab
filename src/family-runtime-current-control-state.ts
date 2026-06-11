@@ -14,6 +14,10 @@ import {
   buildStageProgressLog,
   summarizeStageProgressLogs,
 } from './family-runtime-stage-progress-log.ts';
+import {
+  buildStageRunCurrentnessIdentity,
+  missingStageRunCurrentnessIdentityFields,
+} from './family-runtime-stage-run-currentness-identity.ts';
 
 type ControlAttemptRow = StageAttemptRow & { rowid: number };
 type WorkUnitIdentity = {
@@ -500,6 +504,32 @@ function deriveCurrentControlStateFromRows(
 ) {
   const taskPayload = parseRecord(task?.payload_json);
   const latestCloseout = current ? readLatestCloseoutPacket(db, current.stage_attempt_id) : {};
+  const currentWorkspaceLocator = current ? parseRecord(current.workspace_locator_json) : {};
+  const stageRunCurrentnessIdentity = buildStageRunCurrentnessIdentity({
+    task: task
+      ? {
+          domain_id: task.domain_id,
+          task_id: task.task_id,
+          payload: taskPayload,
+        }
+      : null,
+    taskPayload: {
+      ...taskPayload,
+      workspace_locator: currentWorkspaceLocator,
+    },
+    stageAttempt: current
+      ? {
+          domain_id: current.domain_id,
+          stage_id: current.stage_id,
+          stage_attempt_id: current.stage_attempt_id,
+          source_fingerprint: current.source_fingerprint,
+          idempotency_key: current.idempotency_key,
+          workflow_id: current.workflow_id,
+          task_id: current.task_id,
+          workspace_locator: currentWorkspaceLocator,
+        }
+      : null,
+  });
   const providerRun = current ? parseRecord(current.provider_run_json) : {};
   const activityEvents = current ? parseList(current.activity_events_json) : [];
   const livenessProviderRun = latestProviderActivityHeartbeat(activityEvents, providerRun);
@@ -544,6 +574,9 @@ function deriveCurrentControlStateFromRows(
     typed_blocker_refs: typedBlockerRefs,
     stale_epoch_kinds: staleEpochs,
     stale_work_unit_diagnostic: staleWorkUnit,
+    stage_run_currentness_identity: stageRunCurrentnessIdentity,
+    missing_stage_run_currentness_identity_fields:
+      missingStageRunCurrentnessIdentityFields(stageRunCurrentnessIdentity),
     missing_identity_fields: missingIdentity,
     provider_run: {
       provider_status: stringValue(providerRun.provider_status),

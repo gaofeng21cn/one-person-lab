@@ -19,6 +19,10 @@ import {
   listStageAttempts,
   listStageAttemptsForTask,
 } from './family-runtime-stage-attempts.ts';
+import {
+  buildStageRunCurrentnessIdentity,
+  sameStageRunRouteCurrentnessIdentity,
+} from './family-runtime-stage-run-currentness-identity.ts';
 import { buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-gate.ts';
 
 function optionalString(value: unknown) {
@@ -234,8 +238,42 @@ function liveDefaultExecutorAttemptBlocksCandidate(
     return false;
   }
   const candidateLocator = workspaceLocatorForProviderHostedTask(candidateRow, candidatePayload);
-  return isSameDefaultExecutorDispatch(attempt.workspace_locator, candidateLocator)
-    || isSameDefaultExecutorStudyStage(attempt.workspace_locator, candidateLocator);
+  if (
+    isSameDefaultExecutorDispatch(attempt.workspace_locator, candidateLocator)
+    || isSameDefaultExecutorStudyActionStage(attempt.workspace_locator, candidateLocator)
+  ) {
+    return sameDefaultExecutorStageRunIdentity(attempt, candidateRow, candidatePayload);
+  }
+  return isSameDefaultExecutorStudyStage(attempt.workspace_locator, candidateLocator);
+}
+
+function sameDefaultExecutorStageRunIdentity(
+  attempt: ReturnType<typeof listStageAttempts>[number],
+  candidateRow: FamilyRuntimeTaskRow,
+  candidatePayload: Record<string, unknown>,
+) {
+  const candidateIdentity = buildStageRunCurrentnessIdentity({
+    task: {
+      domain_id: candidateRow.domain_id,
+      task_id: candidateRow.task_id,
+      payload: candidatePayload,
+    },
+    taskPayload: {
+      ...candidatePayload,
+      workspace_locator: workspaceLocatorForProviderHostedTask(candidateRow, candidatePayload),
+    },
+    stageAttempt: {},
+  });
+  const attemptIdentity = buildStageRunCurrentnessIdentity({
+    task: {
+      domain_id: attempt.domain_id,
+      task_id: attempt.task_id ?? undefined,
+      payload: attempt.workspace_locator,
+    },
+    taskPayload: attempt.workspace_locator,
+    stageAttempt: attempt,
+  });
+  return sameStageRunRouteCurrentnessIdentity(candidateIdentity, attemptIdentity);
 }
 
 function hasLiveDefaultExecutorLinkedTask(db: DatabaseSync, taskId: string | null) {
@@ -452,6 +490,7 @@ export function findLiveDefaultExecutorDispatchAttempt(
     && attempt.domain_id === row.domain_id
     && attempt.stage_id === stageId
     && isCrossTaskLiveDefaultExecutorAttempt(db, attempt, workspaceLocator)
+    && sameDefaultExecutorStageRunIdentity(attempt, row, payload)
     && isSameDefaultExecutorDispatch(attempt.workspace_locator, workspaceLocator)
   )) ?? null;
 }
@@ -601,6 +640,29 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
     const profileWorkspaceRoot = workspaceRootFromProfile(optionalString(payload.profile));
     if (profileWorkspaceRoot) {
       locator.workspace_root = profileWorkspaceRoot;
+    }
+    const basis = masDefaultExecutorCurrentnessBasis(payload);
+    for (const [targetKey, value] of Object.entries({
+      work_unit_id: optionalString(basis?.work_unit_id)
+        ?? optionalString(payload.work_unit_id)
+        ?? optionalString(payload.action_type),
+      work_unit_fingerprint: optionalString(basis?.work_unit_fingerprint)
+        ?? optionalString(payload.work_unit_fingerprint)
+        ?? optionalString(payload.source_fingerprint),
+      source_eval_id: optionalString(basis?.source_eval_id)
+        ?? optionalString(payload.source_eval_id)
+        ?? optionalString(payload.source_fingerprint),
+      truth_epoch: optionalString(basis?.truth_epoch)
+        ?? optionalString(payload.truth_epoch)
+        ?? optionalString(payload.source_fingerprint),
+      runtime_health_epoch: optionalString(basis?.runtime_health_epoch)
+        ?? optionalString(payload.runtime_health_epoch)
+        ?? optionalString(payload.source_fingerprint),
+      idempotency_key: optionalString(payload.idempotency_key) ?? optionalString(payload.source_fingerprint),
+    })) {
+      if (value) {
+        locator[targetKey] = value;
+      }
     }
   }
   if (row.domain_id === 'medautoscience' && MAS_PAPER_AUTONOMY_TASK_KINDS.has(row.task_kind)) {

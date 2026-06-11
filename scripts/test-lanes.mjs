@@ -57,6 +57,7 @@ const fastTestFiles = [
   'tests/src/family-runtime-attempt-contract.test.ts',
   'tests/src/family-runtime-stage-run-currentness-identity.test.ts',
   'tests/src/family-runtime-current-control-state.test.ts',
+  'tests/src/family-runtime-stage-run-currentness-identity.test.ts',
   'tests/src/family-runtime-effective-current-context.test.ts',
   'tests/src/current-owner-delta-read-model-cache.test.ts',
   'tests/src/family-transition-runner.test.ts',

@@ -9,6 +9,10 @@ import {
   updateStageAttemptsForTask,
 } from '../family-runtime-stage-attempts.ts';
 import {
+  buildStageRunCurrentnessIdentity,
+  sameStageRunRouteCurrentnessIdentity,
+} from '../family-runtime-stage-run-currentness-identity.ts';
+import {
   isDefaultExecutorDispatchTask,
   defaultExecutorDispatchIdentity,
   defaultExecutorDomainSourceFingerprint,
@@ -298,6 +302,27 @@ function completedCloseoutCanReconcileTask(
   payload: Record<string, unknown>,
   attempt: NonNullable<ReturnType<typeof completedAcceptedAttemptForTask>>,
 ) {
+  const taskIdentity = buildStageRunCurrentnessIdentity({
+    task: {
+      domain_id: row.domain_id,
+      task_id: row.task_id,
+      payload,
+    },
+    taskPayload: payload,
+    stageAttempt: {},
+  });
+  const attemptIdentity = buildStageRunCurrentnessIdentity({
+    task: {
+      domain_id: attempt.domain_id,
+      task_id: attempt.task_id ?? undefined,
+      payload: attempt.workspace_locator,
+    },
+    taskPayload: attempt.workspace_locator,
+    stageAttempt: attempt,
+  });
+  if (sameStageRunRouteCurrentnessIdentity(taskIdentity, attemptIdentity)) {
+    return true;
+  }
   const payloadIdentity = providerAdmissionCurrentnessIdentity(payload);
   if (payloadIdentity) {
     const attemptIdentity = providerAdmissionCurrentnessIdentity(
