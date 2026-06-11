@@ -62,6 +62,7 @@ import { buildBrandCommandSpecs } from './public-command-specs-parts/brand.ts';
 import { buildConnectCommandSpecs } from './public-command-specs-parts/connect.ts';
 import { buildFoundryCommandSpecs } from './public-command-specs-parts/foundry.ts';
 import { buildStageCommandSpecs, validateStageDerivedLensCommandSpecs } from './public-command-specs-parts/stages.ts';
+import { buildUpdateCommandSpecs } from './public-command-specs-parts/update.ts';
 import { buildWorkspaceCommandSpecs } from './public-command-specs-parts/workspace.ts';
 
 export function buildPublicCommandSpecs(
@@ -114,6 +115,7 @@ export function buildPublicCommandSpecs(
   const connectCommandSpecs = buildConnectCommandSpecs(commandSpecs, systemCommandSpecs);
   const foundryCommandSpecs = buildFoundryCommandSpecs();
   const stageCommandSpecs = buildStageCommandSpecs(getContracts);
+  const updateCommandSpecs = buildUpdateCommandSpecs(getContracts);
   const workspaceCommandSpecs = buildWorkspaceCommandSpecs(commandSpecs);
 
   const engineInstallSpec = buildEngineActionSpec(
@@ -198,6 +200,7 @@ export function buildPublicCommandSpecs(
     ...brandCommandSpecs,
     ...foundryCommandSpecs,
     ...connectCommandSpecs,
+    ...updateCommandSpecs,
     ...workOrderCommandSpecs,
     'framework locate': {
       usage: 'opl framework locate',

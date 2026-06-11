@@ -4,6 +4,7 @@ import './cli/cases/runtime-index-summary.test.ts';
 import './cli/cases/system-surfaces.test.ts';
 import './cli/cases/package-distribution.test.ts';
 import './cli/cases/package-channel-daily-check.test.ts';
+import './cli/cases/managed-update-kernel.test.ts';
 import './cli/cases/framework-locator.test.ts';
 import './cli/cases/workspace-domain.test.ts';
 import './cli/cases/contracts-help.test.ts';
