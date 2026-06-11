@@ -201,6 +201,77 @@ function observedLedgerRefShapes(receipts: BrandModuleL5EvidenceLedgerReceiptPro
   return unique(shapes);
 }
 
+function l5RequirementWorkOrderId(
+  moduleId: BrandModuleId,
+  classId: BrandModuleL5EvidenceClassId,
+) {
+  return `w7-brand-module-l5-${moduleId}-${classId}`;
+}
+
+function l5TypedBlockerRef(
+  moduleId: BrandModuleId,
+  classId: BrandModuleL5EvidenceClassId,
+) {
+  return `typed-blocker:opl-brand-l5/${moduleId}/${classId}/owner-evidence-pending`;
+}
+
+function l5TypedBlockerReceiptRef(
+  moduleId: BrandModuleId,
+  classId: BrandModuleL5EvidenceClassId,
+) {
+  return `opl://brand-module-l5-evidence/${moduleId}/${classId}/typed-blocker-pending`;
+}
+
+function l5EvidencePlaceholderRef(
+  moduleId: BrandModuleId,
+  classId: BrandModuleL5EvidenceClassId,
+) {
+  return `owner-evidence-ref:opl-brand-l5/${moduleId}/${classId}/<owner-evidence-id>`;
+}
+
+function l5RequirementClosureState(
+  currentState: string,
+  receipts: BrandModuleL5EvidenceLedgerReceiptProjection[],
+) {
+  if (currentState === 'satisfied') {
+    return 'owner_evidence_recorded_not_l5_claim';
+  }
+  if (currentState === 'blocked') {
+    return 'owner_typed_blocker_recorded';
+  }
+  if (receipts.length > 0) {
+    return 'owner_evidence_recorded_not_l5_claim';
+  }
+  return 'owner_acceptance_or_typed_blocker_required';
+}
+
+function l5RequirementTypedBlockerPayload(
+  moduleId: BrandModuleId,
+  classId: BrandModuleL5EvidenceClassId,
+) {
+  return {
+    module_id: moduleId,
+    evidence_class_id: classId,
+    typed_blocker_refs: [
+      l5TypedBlockerRef(moduleId, classId),
+    ],
+    receipt_ref: l5TypedBlockerReceiptRef(moduleId, classId),
+  };
+}
+
+function l5RequirementEvidencePayloadTemplate(
+  moduleId: BrandModuleId,
+  classId: BrandModuleL5EvidenceClassId,
+) {
+  return {
+    module_id: moduleId,
+    evidence_class_id: classId,
+    evidence_refs: [
+      l5EvidencePlaceholderRef(moduleId, classId),
+    ],
+  };
+}
+
 function ownerEvidenceRoutes(
   contract: BrandModuleL5OperatingEvidenceContract,
   entry: BrandModuleL5OperatingEvidenceEntry,
@@ -230,6 +301,28 @@ function ownerEvidenceRoutes(
       next_owner_action: nextOwnerActionWithLedgerReceipts(
         requirement.current_state,
         requirementLedgerReceipts.length,
+      ),
+      work_order_id: l5RequirementWorkOrderId(entry.module_id, requirement.class_id),
+      owner_evidence_closure_state: l5RequirementClosureState(
+        requirement.current_state,
+        requirementLedgerReceipts,
+      ),
+      owner_acceptance_required: true,
+      ready_claim_authorized: false,
+      closing_ref_source:
+        'brand_module_owner_evidence_ref_or_owner_acceptance_ref_for_requirement',
+      typed_blocker_source: 'brand_module_owner_l5_typed_blocker_ref_for_requirement',
+      verification_command:
+        `opl runtime brand-module-l5-evidence verify --receipt-ref ${l5TypedBlockerReceiptRef(entry.module_id, requirement.class_id)}`,
+      record_evidence_command:
+        'opl runtime brand-module-l5-evidence record --payload <json>',
+      typed_blocker_payload_template: l5RequirementTypedBlockerPayload(
+        entry.module_id,
+        requirement.class_id,
+      ),
+      evidence_payload_template: l5RequirementEvidencePayloadTemplate(
+        entry.module_id,
+        requirement.class_id,
       ),
       accepted_ref_shapes: unique([
         ...evidenceClassAcceptedRefShapes(contract, requirement.class_id),

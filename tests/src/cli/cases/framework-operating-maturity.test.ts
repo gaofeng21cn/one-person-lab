@@ -990,6 +990,64 @@ test('framework operating maturity projects owner evidence ledger refs without r
       6,
     );
     assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.summary
+        .brand_module_l5_requirement_work_order_count,
+      120,
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.summary
+        .brand_module_l5_typed_blocker_ready_work_order_count,
+      120,
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.summary
+        .brand_module_l5_owner_acceptance_required_work_order_count,
+      120,
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate
+        .brand_module_l5_requirement_work_orders.length,
+      120,
+    );
+    const charterLivePathWorkOrder = maturity.foundry_agent_os_production_evidence_gate
+      .brand_module_l5_requirement_work_orders.find(
+        (entry: { module_id: string; class_id: string }) =>
+          entry.module_id === 'charter' && entry.class_id === 'live_user_path',
+      );
+    assert.equal(
+      charterLivePathWorkOrder.work_order_id,
+      'w7-brand-module-l5-charter-live_user_path',
+    );
+    assert.equal(
+      charterLivePathWorkOrder.owner_evidence_closure_state,
+      'owner_acceptance_or_typed_blocker_required',
+    );
+    assert.equal(charterLivePathWorkOrder.owner_acceptance_required, true);
+    assert.equal(charterLivePathWorkOrder.ready_claim_authorized, false);
+    assert.deepEqual(charterLivePathWorkOrder.typed_blocker_payload_template, {
+      module_id: 'charter',
+      evidence_class_id: 'live_user_path',
+      typed_blocker_refs: [
+        'typed-blocker:opl-brand-l5/charter/live_user_path/owner-evidence-pending',
+      ],
+      receipt_ref: 'opl://brand-module-l5-evidence/charter/live_user_path/typed-blocker-pending',
+    });
+    assert.deepEqual(charterLivePathWorkOrder.evidence_payload_template, {
+      module_id: 'charter',
+      evidence_class_id: 'live_user_path',
+      evidence_refs: [
+        'owner-evidence-ref:opl-brand-l5/charter/live_user_path/<owner-evidence-id>',
+      ],
+    });
+    assert.equal(
+      charterLivePathWorkOrder.verification_command,
+      'opl runtime brand-module-l5-evidence verify --receipt-ref opl://brand-module-l5-evidence/charter/live_user_path/typed-blocker-pending',
+    );
+    assert.equal(
+      charterLivePathWorkOrder.authority_boundary.route_can_create_typed_blocker,
+      false,
+    );
+    assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.summary.closed_by_opl,
       false,
     );

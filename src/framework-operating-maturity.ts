@@ -326,6 +326,7 @@ function ownerRouteWorkOrders(
 function foundryAgentOsProductionEvidenceGate(input: {
   domainOpenCount: number;
   l5RequiredModuleCount: number;
+  brandModuleL5: Record<string, unknown>;
   appReleaseOpenCount: number;
   providerOpenCount: number;
   cleanupOpenDecisionCount: number;
@@ -399,6 +400,25 @@ function foundryAgentOsProductionEvidenceGate(input: {
   ];
   const workOrders = ownerRouteWorkOrders(laneStatuses, input.ownerEvidenceIntake);
   const openLaneCount = laneStatuses.filter((lane) => lane.open_count > 0).length;
+  const brandModules = recordList(input.brandModuleL5.modules);
+  const brandL5RequirementWorkOrders = brandModules.flatMap((module) =>
+    recordList(module.owner_evidence_routes).map((route) => ({
+      module_id: stringValue(module.module_id),
+      brand_name: stringValue(module.brand_name),
+      work_order_id: stringValue(route.work_order_id),
+      class_id: stringValue(route.class_id),
+      owner: stringValue(route.owner),
+      owner_route_status: stringValue(route.owner_route_status),
+      blocker_state: stringValue(route.blocker_state),
+      owner_evidence_closure_state: stringValue(route.owner_evidence_closure_state),
+      owner_acceptance_required: route.owner_acceptance_required === true,
+      ready_claim_authorized: route.ready_claim_authorized === true,
+      typed_blocker_payload_template: record(route.typed_blocker_payload_template),
+      evidence_payload_template: record(route.evidence_payload_template),
+      verification_command: stringValue(route.verification_command),
+      authority_boundary: record(route.authority_boundary),
+    }))
+  );
   return {
     surface_kind: 'foundry_agent_os_production_evidence_gate',
     owner: 'one-person-lab',
@@ -444,9 +464,20 @@ function foundryAgentOsProductionEvidenceGate(input: {
         : 'refs_observed_not_production_ready_claim',
     })),
     owner_route_work_orders: workOrders,
+    brand_module_l5_requirement_work_orders: brandL5RequirementWorkOrders,
     summary: {
       open_lane_count: openLaneCount,
       owner_route_work_order_count: workOrders.length,
+      brand_module_l5_requirement_work_order_count:
+        brandL5RequirementWorkOrders.length,
+      brand_module_l5_typed_blocker_ready_work_order_count:
+        brandL5RequirementWorkOrders.filter((entry) =>
+          Object.keys(record(entry.typed_blocker_payload_template)).length > 0
+        ).length,
+      brand_module_l5_owner_acceptance_required_work_order_count:
+        brandL5RequirementWorkOrders.filter((entry) =>
+          entry.owner_acceptance_required === true
+        ).length,
       open_owner_route_work_order_count: workOrders.filter((entry) => entry.status === 'open').length,
       owner_evidence_required_work_order_count: workOrders.filter((entry) =>
         entry.owner_evidence_closure_state === 'owner_evidence_required'
@@ -661,6 +692,7 @@ export async function buildFrameworkOperatingMaturityReadout(
   const productionEvidenceGate = foundryAgentOsProductionEvidenceGate({
     domainOpenCount,
     l5RequiredModuleCount,
+    brandModuleL5,
     appReleaseOpenCount,
     providerOpenCount,
     cleanupOpenDecisionCount,

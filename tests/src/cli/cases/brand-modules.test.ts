@@ -432,6 +432,25 @@ test('brand module L5 evidence gate is executable but does not claim production 
           owner_route_status: string;
           blocker_state: string;
           next_owner_action: string;
+          work_order_id: string;
+          owner_evidence_closure_state: string;
+          owner_acceptance_required: boolean;
+          ready_claim_authorized: boolean;
+          closing_ref_source: string;
+          typed_blocker_source: string;
+          record_evidence_command: string;
+          typed_blocker_payload_template: {
+            module_id: string;
+            evidence_class_id: string;
+            typed_blocker_refs: string[];
+            receipt_ref: string;
+          };
+          evidence_payload_template: {
+            module_id: string;
+            evidence_class_id: string;
+            evidence_refs: string[];
+          };
+          verification_command: string;
           accepted_ref_shapes: string[];
           existing_evidence_refs: string[];
           existing_blocker_refs: string[];
@@ -456,8 +475,27 @@ test('brand module L5 evidence gate is executable but does not claim production 
           route.module_id === entry.module_id
           && route.class_id.length > 0
           && route.owner.length > 0
+          && route.work_order_id === `w7-brand-module-l5-${entry.module_id}-${route.class_id}`
           && route.owner_route_status === 'owner_evidence_required'
           && route.blocker_state === 'owner_route_evidence_missing'
+          && route.owner_evidence_closure_state === 'owner_acceptance_or_typed_blocker_required'
+          && route.owner_acceptance_required === true
+          && route.ready_claim_authorized === false
+          && route.closing_ref_source === 'brand_module_owner_evidence_ref_or_owner_acceptance_ref_for_requirement'
+          && route.typed_blocker_source === 'brand_module_owner_l5_typed_blocker_ref_for_requirement'
+          && route.record_evidence_command === 'opl runtime brand-module-l5-evidence record --payload <json>'
+          && route.typed_blocker_payload_template.module_id === entry.module_id
+          && route.typed_blocker_payload_template.evidence_class_id === route.class_id
+          && route.typed_blocker_payload_template.typed_blocker_refs[0]
+            === `typed-blocker:opl-brand-l5/${entry.module_id}/${route.class_id}/owner-evidence-pending`
+          && route.typed_blocker_payload_template.receipt_ref
+            === `opl://brand-module-l5-evidence/${entry.module_id}/${route.class_id}/typed-blocker-pending`
+          && route.evidence_payload_template.module_id === entry.module_id
+          && route.evidence_payload_template.evidence_class_id === route.class_id
+          && route.evidence_payload_template.evidence_refs[0]
+            === `owner-evidence-ref:opl-brand-l5/${entry.module_id}/${route.class_id}/<owner-evidence-id>`
+          && route.verification_command
+            === `opl runtime brand-module-l5-evidence verify --receipt-ref opl://brand-module-l5-evidence/${entry.module_id}/${route.class_id}/typed-blocker-pending`
           && route.next_owner_action === 'record_owner_evidence_ref_or_typed_blocker_for_l5_requirement'
           && Array.isArray(route.existing_evidence_refs)
           && Array.isArray(route.existing_blocker_refs)
