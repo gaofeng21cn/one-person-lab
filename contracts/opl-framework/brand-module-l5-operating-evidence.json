@@ -492,7 +492,9 @@
         "production_ready",
         "generated_surface_writes_domain_truth",
         "pack_compile_is_quality_verdict",
-        "domain_capability_registry_owns_domain_authority"
+        "domain_capability_registry_owns_domain_authority",
+        "tool_result_envelope_is_owner_answer",
+        "tool_availability_is_current_owner_authorization"
       ]
     },
     {

@@ -7,7 +7,7 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 domain 
 
 ## 品牌定位
 
-`OPL Atlas` 是 OPL 的发现与目录模块。它把 Foundry Agents、capabilities、actions、stages、interfaces、owners、dependencies、workspace profiles、runtime surfaces 和 lifecycle state 组织成一个可查询 catalog。
+`OPL Atlas` 是 OPL 的发现与目录模块。它把 Foundry Agents、capabilities、tool cards、actions、stages、interfaces、owners、dependencies、workspace profiles、runtime surfaces 和 lifecycle state 组织成一个可查询 catalog。
 
 一句话：`Atlas` 管“有什么、谁拥有、怎么调用、当前生命周期是什么”。
 
@@ -27,6 +27,7 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 domain 
 | --- | --- |
 | `agent_descriptor` | Foundry Agent 的 identity、owner、domain、entry、truth boundary。 |
 | `capability_card` | 某个 agent 能做什么、需要什么输入、产出什么 artifact/receipt。 |
+| `tool_card` | Agent Tool Arsenal 的 ToolUseCard / invocation metadata ref，说明 tool id、mode、risk、authority boundary、result envelope 和 applicability。 |
 | `action_catalog_entry` | callable action 的 id、owner、effect、schema、supported surfaces。 |
 | `stage_catalog_entry` | stage 的 goal、inputs、outputs、quality gate、authority boundary。 |
 | `surface_descriptor` | CLI、MCP、Skill、OpenAI tool、AI SDK tool、App action 的派生描述。 |
@@ -126,9 +127,9 @@ opl atlas doctor --json
 
 ## Authority Boundary
 
-`Atlas` 持有 OPL-owned catalog schema、descriptor ingestion、refs-only graph、generated interface projection、lifecycle index 和 orphan/ownerless/drift validation。它可以判断某个 agent/action/stage/surface 是否有 descriptor、owner、schema、lifecycle 和 generated interface ref。
+`Atlas` 持有 OPL-owned catalog schema、descriptor ingestion、refs-only graph、generated interface projection、lifecycle index、tool-card catalog 和 orphan/ownerless/drift validation。它可以判断某个 agent/action/stage/surface/tool-card 是否有 descriptor、owner、schema、lifecycle、authority boundary 和 generated interface ref。
 
-它不执行 action，不实现 domain handler，不持有 domain truth、artifact body、memory body、stage semantics、quality verdict、export readiness、runtime completion、owner receipt 或 typed blocker authority。domain descriptor 的 source truth 仍在 domain repo；OPL 只消费、校验和投影。
+它不执行 action，不调用 tool，不实现 domain handler，不持有 domain truth、artifact body、memory body、stage semantics、quality verdict、export readiness、runtime completion、owner receipt 或 typed blocker authority。domain descriptor 和 Tool Arsenal contract 的 source truth 仍在 domain repo；OPL 只消费、校验和投影。
 
 ## 不做什么
 

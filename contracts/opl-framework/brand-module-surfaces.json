@@ -590,6 +590,7 @@
         "delegate_ids": [
           "pack_surface_contract",
           "pack_os_contract",
+          "agent_tool_arsenal_contract",
           "pack_cli_family"
         ],
         "descriptor_refs": [
@@ -598,6 +599,7 @@
           "opl pack interfaces --json",
           "opl agents interfaces --family-defaults --json#generated_interfaces",
           "contracts/opl-framework/domain-pack-compiler-contract.json",
+          "domain_contract:agent_tool_arsenal",
           "contracts/opl-framework/brand-module-registry.json#modules.pack"
         ]
       },
@@ -622,6 +624,7 @@
         "required_refs": [
           "contracts/opl-framework/pack-os-contract.json",
           "contracts/opl-framework/brand-module-surfaces.json#modules.pack",
+          "domain_contract:agent_tool_arsenal",
           "contracts/opl-framework/brand-module-registry.json#modules.pack"
         ]
       },
@@ -664,7 +667,9 @@
           "generated_surface_writes_domain_truth",
           "authority_abi_signs_owner_receipt",
           "domain_capability_registry_owns_domain_authority",
-          "pack_compile_is_quality_verdict"
+          "pack_compile_is_quality_verdict",
+          "tool_result_envelope_is_owner_answer",
+          "tool_availability_is_current_owner_authorization"
         ]
       },
       "authority_boundary": {
@@ -688,9 +693,11 @@
         "generated_surface_writes_domain_truth",
         "authority_abi_signs_owner_receipt",
         "domain_capability_registry_owns_domain_authority",
-        "pack_compile_is_quality_verdict"
+        "pack_compile_is_quality_verdict",
+        "tool_result_envelope_is_owner_answer",
+        "tool_availability_is_current_owner_authorization"
       ],
-      "notes": "Pack owns declarative Domain Pack shape, domain capability registry ABI, authority ABI refs, pack compiler output, and generated surface boundary; it does not own domain truth, artifact body, owner receipt, typed blocker, or quality/export verdict authority."
+      "notes": "Pack owns declarative Domain Pack shape, domain capability registry ABI, Agent Tool Arsenal / Capability Invocation ABI, authority ABI refs, pack compiler output, and generated surface boundary; it does not own domain truth, artifact body, owner receipt, typed blocker, quality/export verdict authority, or current-owner authorization."
     },
     {
       "module_id": "stagecraft",

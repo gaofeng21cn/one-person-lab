@@ -7,7 +7,7 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 App con
 
 ## 品牌定位
 
-`OPL Console` 是 App/operator 工作台模块。它把 OPL Framework、Foundry Agents、Workspace、Runway 和 Vault 的投影转成用户能看懂、能行动、能检查产物的界面。
+`OPL Console` 是 App/operator 工作台模块。它把 OPL Framework、Foundry Agents、Workspace、Runway、Vault 和 capability invocation plan 的投影转成用户能看懂、能行动、能检查产物的界面。
 
 一句话：`Console` 管“用户和 operator 当前应该看什么、点什么、等待谁、检查哪个产物”。
 
@@ -28,6 +28,7 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 App con
 | `runway_panel` | attempt、provider state、heartbeat、human gate、repair route。 |
 | `vault_panel` | receipt、typed blocker、artifact lineage、evidence refs。 |
 | `action_route` | owner-aware safe action、App action 或 human gate action。 |
+| `invocation_plan_card` | 从 `current_owner_delta` 派生的 CapabilityInvocationPlan / next callable projection，供 operator 理解下一步工具或 owner action。 |
 | `diagnostic_drilldown` | full detail、audit refs、provider trace、legacy cleanup。 |
 
 Workspace 级 L4 的 Console 对象模型必须独立于 registry entry 存在。最低模型如下：
@@ -98,6 +99,7 @@ one-person-lab-app/contracts/*
 - `one-person-lab-app` 持有 GUI product truth、release gate、active shell validation 和用户路径 evidence。
 - OPL Framework 持有 runtime projection、workspace/read-model/action catalog 的机器边界。
 - Domain agent 持有 domain truth、quality verdict、owner receipt 和 artifact authority。
+- CapabilityInvocationPlan 和 ToolResultEnvelope 只作为 Console 投影，不是 owner answer、typed blocker、quality verdict 或 current-owner authorization。
 - App release/user-path evidence 只证明 Console 用户路径可用，不替代 runtime long-soak 或 domain ready。
 
 ## Forbidden claims
@@ -109,6 +111,7 @@ one-person-lab-app/contracts/*
 - 不把 Console projection 写成 MAS/MAG/RCA/OMA 已完成。
 - 不把 App action 可点击写成 owner 已接受。
 - 不把本仓 App state/action producer 写成 App GUI release truth。
+- 不把 invocation-plan projection 写成 owner answer 或 domain readiness。
 
 ## L4 structural baseline 成功标准
 

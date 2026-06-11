@@ -7,7 +7,7 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 contrac
 
 ## 品牌定位
 
-`OPL Connect` 是 OPL 的外部接口与分发模块。它把同一套 OPL / Foundry Agent contracts 派生到 CLI、MCP、Skill/plugin、OpenAI tools、AI SDK tools、App actions、Homebrew、installer 和 release artifacts。
+`OPL Connect` 是 OPL 的外部接口与分发模块。它把同一套 OPL / Foundry Agent contracts 派生到 CLI、MCP、Skill/plugin、OpenAI tools、AI SDK tools、ToolResultEnvelope descriptors、App actions、Homebrew、installer 和 release artifacts。
 
 一句话：`Connect` 管“外部系统和用户怎样稳定接入同一套 OPL 能力”。
 
@@ -24,6 +24,7 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 contrac
 | --- | --- |
 | `cli_surface` | `opl` 命令树和 help/spec。 |
 | `mcp_descriptor` | MCP tools/resources/prompts 的描述与 delegate boundary。 |
+| `tool_result_envelope_descriptor` | ToolResultEnvelope / structured result 的 descriptor 和 source ref，保证外部 tool 调用结果可被 agent 稳定消费。 |
 | `skill_pack` | Codex skill/plugin 可见入口。 |
 | `openai_tool_descriptor` | OpenAI tool schema。 |
 | `ai_sdk_tool_descriptor` | AI SDK tool schema。 |
@@ -115,6 +116,7 @@ contracts/opl-framework/public-surface-index.json
 - 不把 release/install pass 写成 App release-ready 之外的 domain ready。
 - 不把 Homebrew transport 写成 semantic authority。
 - 不把 Skill/MCP/OpenAI/AI SDK descriptor 存在写成 handler 可用。
+- 不把 ToolResultEnvelope descriptor 或 structured result presence 写成 domain authority、owner answer 或 handler readiness。
 - 不把单一 channel 安装成功写成全渠道 release complete。
 - 不把 transport/install evidence 写成 semantic surface consistency。
 

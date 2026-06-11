@@ -152,6 +152,29 @@ test('brand modules maturity and validation are contract-derived', () => {
   assert.deepEqual(validation.authority_boundary_violations, []);
 });
 
+test('capability invocation OS stays inside the ten brand-module boundaries', () => {
+  const list = runCli(['brand-modules', 'list']).brand_modules;
+  const contracts = loadFrameworkContracts(repoRoot);
+  const modules = Object.fromEntries(
+    contracts.brandModuleRegistry.modules.map((entry) => [entry.module_id, entry]),
+  );
+
+  assert.equal(list.module_count, 10);
+  assert.deepEqual(
+    list.modules.map((entry: { module_id: string }) => entry.module_id),
+    expectedModuleIds,
+  );
+  assert.match(modules.pack.purpose, /Capability Invocation ABI/);
+  assert.match(modules.pack.machine_boundary, /capability invocation ABI/);
+  assert.equal(modules.pack.contract_refs.includes('domain_contract:agent_tool_arsenal'), true);
+  assert.equal(modules.pack.forbidden_claims.includes('tool_result_envelope_is_owner_answer'), true);
+  assert.equal(modules.pack.forbidden_claims.includes('tool_availability_is_current_owner_authorization'), true);
+  assert.match(modules.atlas.purpose, /tool cards/);
+  assert.match(modules.stagecraft.purpose, /invocation policy/);
+  assert.match(modules.console.purpose, /invocation-plan projection/);
+  assert.match(modules.connect.purpose, /ToolResultEnvelope descriptors/);
+});
+
 test('pack brand module contract shape does not fail-close family evidence worklist', async () => {
   const contracts = loadFrameworkContracts(repoRoot);
   const output = await runFamilyRuntimeEvidenceWorklist(contracts, {
