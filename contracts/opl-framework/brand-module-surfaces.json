@@ -521,6 +521,9 @@
           "generated_surface_bundle",
           "standard_authority_function",
           "pack_compiler_result",
+          "capability_execution_view",
+          "agent_operational_card",
+          "tool_result_envelope",
           "domain_capability_registry_abi",
           "pack_compile_parity_ref"
         ],
@@ -669,7 +672,8 @@
           "domain_capability_registry_owns_domain_authority",
           "pack_compile_is_quality_verdict",
           "tool_result_envelope_is_owner_answer",
-          "tool_availability_is_current_owner_authorization"
+          "tool_availability_is_current_owner_authorization",
+          "pack_contract_detail_is_ordinary_agent_payload"
         ]
       },
       "authority_boundary": {
@@ -695,9 +699,10 @@
         "domain_capability_registry_owns_domain_authority",
         "pack_compile_is_quality_verdict",
         "tool_result_envelope_is_owner_answer",
-        "tool_availability_is_current_owner_authorization"
+        "tool_availability_is_current_owner_authorization",
+        "pack_contract_detail_is_ordinary_agent_payload"
       ],
-      "notes": "Pack owns declarative Domain Pack shape, domain capability registry ABI, Agent Tool Arsenal / Capability Invocation ABI, authority ABI refs, pack compiler output, and generated surface boundary; it does not own domain truth, artifact body, owner receipt, typed blocker, quality/export verdict authority, or current-owner authorization."
+      "notes": "Pack owns declarative Domain Pack shape, domain capability registry ABI, Agent Tool Arsenal / Capability Invocation ABI, authority ABI refs, pack compiler output, generated surface boundary, capability execution view, agent operational card, and ToolResultEnvelope shape. Pack contracts are generation and validation material; the ordinary Agent path consumes execution views, operational cards, and result envelopes, not raw MAS or domain contract details. Pack does not own domain truth, artifact body, owner receipt, typed blocker, quality/export verdict authority, or current-owner authorization."
     },
     {
       "module_id": "stagecraft",
@@ -1305,7 +1310,10 @@
           "current_owner_delta",
           "evidence_next_step",
           "current_owner_delta_default_read_root",
-          "accepted_owner_answer_shape"
+          "accepted_owner_answer_shape",
+          "capability_execution_view_projection",
+          "agent_operational_card_projection",
+          "tool_result_envelope_projection"
         ],
         "canonical_contract_refs": [
           "contracts/opl-framework/family-product-operator-projection.json",
@@ -1357,6 +1365,9 @@
         ],
         "projection_refs": [
           "app_projection:current_owner_delta",
+          "app_projection:capability_execution_view",
+          "app_projection:agent_operational_card",
+          "app_projection:tool_result_envelope",
           "app_projection:evidence_next_steps",
           "app_action:workspace_ensure",
           "app_action:provider_scheduler_status"
@@ -1430,7 +1441,12 @@
           "runtime_provider_truth_owner",
           "production_ready",
           "current_owner_delta_view_signs_owner_answer",
-          "console_projection_is_domain_truth"
+          "console_projection_is_domain_truth",
+          "invocation_plan_projection_is_owner_answer",
+          "capability_execution_view_is_owner_answer",
+          "agent_operational_card_is_current_owner_authorization",
+          "tool_result_envelope_projection_is_domain_truth",
+          "console_consumes_mas_raw_contract_details"
         ]
       },
       "authority_boundary": {
@@ -1453,9 +1469,14 @@
         "runtime_provider_truth_owner",
         "production_ready",
         "current_owner_delta_view_signs_owner_answer",
-        "console_projection_is_domain_truth"
+        "console_projection_is_domain_truth",
+        "invocation_plan_projection_is_owner_answer",
+        "capability_execution_view_is_owner_answer",
+        "agent_operational_card_is_current_owner_authorization",
+        "tool_result_envelope_projection_is_domain_truth",
+        "console_consumes_mas_raw_contract_details"
       ],
-      "notes": "Console owns OPL-produced current_owner_delta default read models, App/operator projections, and safe action descriptors; it does not sign owner answers, own domain truth, or hold App release truth."
+      "notes": "Console owns OPL-produced current_owner_delta default read models, capability execution view projections, agent operational card projections, ToolResultEnvelope projections, App/operator projections, and safe action descriptors. Console ordinary paths consume Pack-produced execution views, operational cards, and result envelopes; they do not consume raw MAS contract details, sign owner answers, own domain truth, or hold App release truth."
     },
     {
       "module_id": "foundry-lab",
@@ -1632,7 +1653,10 @@
           "module_package",
           "skill_sync",
           "install_matrix",
-          "drift_manifest"
+          "drift_manifest",
+          "capability_execution_view_descriptor",
+          "agent_operational_card_descriptor",
+          "tool_result_envelope_descriptor"
         ],
         "canonical_contract_refs": [
           "contracts/opl-framework/public-surface-index.json",
@@ -1693,7 +1717,10 @@
       "descriptor_surface": {
         "delegate_ids": [
           "connect_surface_contract",
-          "connect_cli_family"
+          "connect_cli_family",
+          "capability_execution_view_descriptor",
+          "agent_operational_card_descriptor",
+          "tool_result_envelope_descriptor"
         ],
         "descriptor_refs": [
           "contracts/opl-framework/brand-module-surfaces.json#modules.connect",
@@ -1757,7 +1784,10 @@
           "app_release_ready",
           "domain_ready",
           "quality_verdict",
-          "production_ready"
+          "production_ready",
+          "tool_descriptor_presence_is_handler_readiness",
+          "tool_result_envelope_is_domain_authority",
+          "connect_exports_mas_raw_contract_details"
         ]
       },
       "authority_boundary": {
@@ -1778,9 +1808,12 @@
         "app_release_ready",
         "domain_ready",
         "quality_verdict",
-        "production_ready"
+        "production_ready",
+        "tool_descriptor_presence_is_handler_readiness",
+        "tool_result_envelope_is_domain_authority",
+        "connect_exports_mas_raw_contract_details"
       ],
-      "notes": "Connect owns generated descriptors, package/install surfaces, skill sync, channel, and drift projections; transport success is not semantic authority."
+      "notes": "Connect owns generated descriptors, capability execution view descriptors, agent operational card descriptors, ToolResultEnvelope descriptors, package/install surfaces, skill sync, channel, and drift projections. Connect exports ordinary Agent consumption descriptors derived from Pack contracts; it does not export raw MAS contract details, reinterpret domain semantics, or treat transport success as semantic authority."
     }
   ]
 }

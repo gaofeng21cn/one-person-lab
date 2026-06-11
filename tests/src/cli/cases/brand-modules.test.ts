@@ -175,6 +175,81 @@ test('capability invocation OS stays inside the ten brand-module boundaries', ()
   assert.match(modules.connect.purpose, /ToolResultEnvelope descriptors/);
 });
 
+test('Agent Execution OS ordinary path consumes Pack execution views without raw MAS contract details', () => {
+  const contracts = loadFrameworkContracts(repoRoot);
+  const surfaces = Object.fromEntries(
+    contracts.brandModuleSurfaces.modules.map((entry) => [entry.module_id, entry]),
+  );
+  const consoleInterfaces = runCli(['console', 'interfaces']).opl_console_interfaces;
+  const connectInterfaces = runCli(['connect', 'interfaces']).opl_connect_interfaces;
+
+  assert.deepEqual(
+    contracts.brandModuleSurfaces.modules.map((entry) => entry.module_id),
+    expectedModuleIds,
+  );
+  assert.equal(expectedModuleIds.includes('agent-execution-os'), false);
+  assert.equal(expectedModuleIds.includes('capability-invocation'), false);
+  assert.equal(expectedModuleIds.includes('tool-arsenal'), false);
+
+  for (const objectId of [
+    'capability_execution_view',
+    'agent_operational_card',
+    'tool_result_envelope',
+  ]) {
+    assert.equal(surfaces.pack.object_model.primary_objects.includes(objectId), true);
+  }
+  assert.equal(
+    surfaces.pack.validation.required_refs.includes('domain_contract:agent_tool_arsenal'),
+    true,
+  );
+  assert.equal(
+    surfaces.pack.forbidden_claims.includes('tool_result_envelope_is_owner_answer'),
+    true,
+  );
+
+  for (const projectionRef of [
+    'app_projection:capability_execution_view',
+    'app_projection:agent_operational_card',
+    'app_projection:tool_result_envelope',
+  ]) {
+    assert.equal(surfaces.console.app_read_model.projection_refs.includes(projectionRef), true);
+    assert.equal(consoleInterfaces.app.projection_refs.includes(projectionRef), true);
+  }
+  assert.equal(
+    surfaces.console.forbidden_claims.includes('console_consumes_mas_raw_contract_details'),
+    true,
+  );
+
+  for (const delegateId of [
+    'capability_execution_view_descriptor',
+    'agent_operational_card_descriptor',
+    'tool_result_envelope_descriptor',
+  ]) {
+    assert.equal(surfaces.connect.descriptor_surface.delegate_ids.includes(delegateId), true);
+    assert.equal(connectInterfaces.descriptor.delegate_ids.includes(delegateId), true);
+  }
+  assert.equal(
+    surfaces.connect.forbidden_claims.includes('connect_exports_mas_raw_contract_details'),
+    true,
+  );
+
+  const ordinaryConsumptionRefs = [
+    ...surfaces.console.object_model.primary_objects,
+    ...surfaces.console.object_model.read_model_refs,
+    ...surfaces.console.app_read_model.projection_refs,
+    ...surfaces.connect.object_model.primary_objects,
+    ...surfaces.connect.object_model.read_model_refs,
+    ...surfaces.connect.app_read_model.projection_refs,
+    ...surfaces.connect.descriptor_surface.delegate_ids,
+  ];
+  assert.equal(
+    ordinaryConsumptionRefs.some((ref) =>
+      /mas_raw|mas-original|medautosci.*raw.*contract|med-autoscience.*raw.*contract/.test(ref)
+    ),
+    false,
+  );
+});
+
 test('pack brand module contract shape does not fail-close family evidence worklist', async () => {
   const contracts = loadFrameworkContracts(repoRoot);
   const output = await runFamilyRuntimeEvidenceWorklist(contracts, {

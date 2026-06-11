@@ -36,13 +36,13 @@ OPL 借鉴的是成熟工程的分层原则，不引入外部 runtime dependency
 | [OPL Charter](./charter.md) | 顶层宪章、命名、边界、ADR/RFC 和品牌组合治理。 | OPL Framework |
 | [OPL Atlas](./atlas.md) | Agent、capability、tool-card、surface、owner、dependency 和 lifecycle catalog。 | OPL Framework |
 | [OPL Workspace](./workspace.md) | 用户项目空间、共享素材、stage outputs、handoff 和可检查文件结构。 | OPL Framework + domain workspace owner |
-| [OPL Pack](./pack.md) | Declarative Domain Pack、Capability Invocation ABI、authority ABI、pack compiler、generated/hosted surfaces 和 standard authority functions。 | OPL Framework + Foundry Agent owners |
+| [OPL Pack](./pack.md) | Declarative Domain Pack、Capability Invocation ABI、authority ABI、execution view、operational card、result envelope、pack compiler、generated/hosted surfaces 和 standard authority functions。 | OPL Framework + Foundry Agent owners |
 | [OPL Stagecraft](./stagecraft.md) | Stage 设计、认知计算、capability use policy、tool affordance、quality gate 和 handoff。 | OPL Framework + Foundry Agent |
 | [OPL Runway](./runway.md) | Durable execution、typed queue、lease、retry/dead-letter、wakeup 和 human gate。 | OPL Framework |
 | [OPL Vault](./vault.md) | Evidence、receipt、typed blocker、artifact lineage、restore/provenance 和 refs-only ledger。 | OPL Framework + domain authority owner |
-| [OPL Console](./console.md) | App/operator 工作台、current owner、invocation plan、next action、阻塞、产物和 drilldown。 | One Person Lab App |
+| [OPL Console](./console.md) | App/operator 工作台，消费 execution view、operational card、result envelope、current owner、invocation plan、next action、阻塞、产物和 drilldown。 | One Person Lab App |
 | [OPL Foundry Lab](./foundry-lab.md) | Agent 创建、测试接管、机制改进、canary、promotion 和 rollback。 | OPL Framework + OPL Meta Agent |
-| [OPL Connect](./connect.md) | CLI、MCP、OpenAI/AI SDK tools、ToolResultEnvelope descriptor、Skill/plugin、release/install 分发。 | OPL Framework + App release owner |
+| [OPL Connect](./connect.md) | CLI、MCP、OpenAI/AI SDK tools、execution view / operational card / ToolResultEnvelope descriptor、Skill/plugin、release/install 分发。 | OPL Framework + App release owner |
 
 ## 模块关系
 
@@ -64,15 +64,15 @@ OPL Charter
 - `Charter` 冻结语言、设计原则、ADR/RFC 和品牌组合边界。
 - `Atlas` 是可发现目录和 tool-card catalog，不执行、不签 receipt、不拥有 domain truth。
 - `Workspace` 是用户和 Agent 共同检查文件的默认落点。
-- `Pack` 固定 domain pack、Capability Invocation ABI、authority ABI、pack compiler 和 generated-surface 输入，不接管 domain handler 或 owner verdict。
+- `Pack` 固定 domain pack、Capability Invocation ABI、authority ABI、execution view、operational card、result envelope、pack compiler 和 generated-surface 输入，不接管 domain handler 或 owner verdict。
 - `Stagecraft` 是 stage 内认知工作设计和 capability use policy，不承担 durable runtime。
 - `Runway` 只负责把 stage attempt 跑起来、恢复和收口，不创建 domain verdict。
 - `Vault` 只保存 refs、receipt、blocker、lineage 和 provenance，不保存 memory/artifact body。
-- `Console` 只消费 projection 和 invocation plan，不成为第二 runtime 或第二 domain truth。
+- `Console` 只消费 projection、invocation plan、execution view、operational card 和 result envelope，不读取 MAS 原始合同细节，也不成为第二 runtime 或第二 domain truth。
 - `Foundry Lab` 只改进 agent 机制和生成 work order，不接管 domain authority。
-- `Connect` 只把同一合同投给不同外部调用面，不重新解释语义或把 tool result envelope 写成 authority outcome。
+- `Connect` 只把同一合同派生为不同外部调用面的 descriptors，不导出 MAS 原始合同细节，不重新解释语义或把 tool result envelope 写成 authority outcome。
 
-Agent Tool Arsenal / Capability Invocation OS 不新增品牌模块。它以 `OPL Pack` 为 ABI owner，`Atlas`、`Stagecraft`、`Console`、`Connect` 分别消费 catalog、use-policy、current-owner projection 和 descriptor/export 边界；`Runway` / `Vault` 只承运执行与 refs evidence。
+Agent Tool Arsenal / Capability Invocation OS 不新增品牌模块。它以 `OPL Pack` 为 ABI owner；合同是生成/校验材料，Agent ordinary path 只消费 Pack 派生的 execution view、operational card 和 result envelope。`Atlas`、`Stagecraft`、`Console`、`Connect` 分别消费 catalog、use-policy、current-owner projection / ordinary execution view 和 descriptor/export 边界；`Runway` / `Vault` 只承运执行与 refs evidence。
 
 ## 当前完成度对照
 
