@@ -197,6 +197,56 @@
       "provider_completion_is_domain_ready": false
     }
   },
+  "stage_progress_log_minimum_viability_policy": {
+    "purpose": "Define how OPL treats domain-provided user stage logs when projecting terminal StageRun progress and deciding whether a repeated route can launch again.",
+    "canonical_projection_surface": "stage_progress_log.user_stage_log",
+    "accepted_domain_sources": [
+      "typed_closeout_packet.paper_stage_log",
+      "typed_closeout_packet.user_stage_log",
+      "typed_closeout_packet.stage_log_summary",
+      "route_impact.paper_stage_log",
+      "route_impact.user_stage_log",
+      "route_impact.stage_log_summary"
+    ],
+    "required_domain_fields": [
+      "stage_name",
+      "problem_summary",
+      "stage_goal",
+      "stage_work_done",
+      "changed_stage_surfaces",
+      "outcome",
+      "remaining_blockers",
+      "duration",
+      "token_usage",
+      "cost",
+      "progress_delta_classification",
+      "deliverable_progress_delta",
+      "platform_repair_delta",
+      "next_forced_delta",
+      "evidence_refs"
+    ],
+    "missing_domain_semantics": {
+      "projection_status": "missing_domain_fields",
+      "typed_blocker_reason": "domain_closeout_provided_incomplete_user_stage_log",
+      "counts_as_deliverable_progress": false,
+      "counts_as_domain_ready": false,
+      "may_trigger_default_redrive": false,
+      "allowed_next_evidence": [
+        "fresh_owner_delta",
+        "stable_typed_blocker",
+        "human_decision",
+        "provider_hard_gate_clearance"
+      ]
+    },
+    "authority_boundary": {
+      "opl_can_project_missing_fields": true,
+      "opl_can_freeze_default_launch": true,
+      "opl_can_generate_domain_summary": false,
+      "opl_can_create_typed_blocker": false,
+      "opl_can_write_domain_truth": false,
+      "provider_completion_is_domain_progress": false
+    }
+  },
   "external_patterns_absorbed": [
     {
       "source": "Temporal durable execution",

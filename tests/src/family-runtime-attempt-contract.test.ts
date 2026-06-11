@@ -515,6 +515,47 @@ test('stage route scheduler contract freezes route hydration as OPL reconciliati
   assert.equal(boundary.opl_can_execute_route_as_stage, false);
   assert.equal(boundary.opl_can_sign_domain_owner_receipt, false);
   assert.equal(boundary.opl_can_authorize_quality_verdict, false);
+
+  const currentnessPolicy = contract.current_control_admission_currentness_policy as Record<string, any>;
+  assert.deepEqual(currentnessPolicy.current_admission_statuses, [
+    'queued',
+    'retry_waiting',
+    'running',
+    'waiting_approval',
+  ]);
+  assert.ok(
+    currentnessPolicy.retryable_blocked_dead_letter_reasons.includes(
+      'temporal_stage_attempt_not_completed',
+    ),
+  );
+  assert.ok(
+    currentnessPolicy.blocked_reasons_not_current_admission.includes(
+      'mas_default_executor_superseded_by_current_source',
+    ),
+  );
+  assert.equal(
+    currentnessPolicy.terminal_or_canceled_residue_policy,
+    'audit_or_stale_redrive_filter_only',
+  );
+  assert.equal(currentnessPolicy.authority_boundary.can_write_domain_truth, false);
+
+  const stageLogPolicy = contract.stage_progress_log_minimum_viability_policy as Record<string, any>;
+  assert.equal(stageLogPolicy.canonical_projection_surface, 'stage_progress_log.user_stage_log');
+  assert.ok(stageLogPolicy.accepted_domain_sources.includes('typed_closeout_packet.paper_stage_log'));
+  assert.ok(stageLogPolicy.required_domain_fields.includes('stage_goal'));
+  assert.ok(stageLogPolicy.required_domain_fields.includes('stage_work_done'));
+  assert.ok(stageLogPolicy.required_domain_fields.includes('duration'));
+  assert.ok(stageLogPolicy.required_domain_fields.includes('token_usage'));
+  assert.ok(stageLogPolicy.required_domain_fields.includes('cost'));
+  assert.equal(
+    stageLogPolicy.missing_domain_semantics.typed_blocker_reason,
+    'domain_closeout_provided_incomplete_user_stage_log',
+  );
+  assert.equal(stageLogPolicy.missing_domain_semantics.counts_as_deliverable_progress, false);
+  assert.equal(stageLogPolicy.missing_domain_semantics.may_trigger_default_redrive, false);
+  assert.equal(stageLogPolicy.authority_boundary.opl_can_project_missing_fields, true);
+  assert.equal(stageLogPolicy.authority_boundary.opl_can_create_typed_blocker, false);
+  assert.equal(stageLogPolicy.authority_boundary.provider_completion_is_domain_progress, false);
 });
 
 test('family runtime attempt contract binds attempt ledger fields to the stage route scheduler boundary', () => {
