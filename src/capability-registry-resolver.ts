@@ -98,6 +98,32 @@ export interface CapabilityRegistryBlockerCandidate {
   repair_action: 'domain_or_gate_owner_must_supply_capability_ref_or_signed_typed_blocker';
 }
 
+export type CapabilityInvocationLifecycleLayerId = 'soft_discovery' | 'scored_fit' | 'hard_gate';
+
+export interface CapabilityInvocationLifecycleLayer {
+  layer_id: CapabilityInvocationLifecycleLayerId;
+  owner_modules: string[];
+  authority_role:
+    | 'high_recall_advisory_discovery'
+    | 'explainable_fit_advisory_not_authority'
+    | 'fail_closed_current_owner_delta_gate';
+  source_surfaces: string[];
+  fail_closed_on: string[];
+  forbidden_claims: string[];
+  authority_surface: string | null;
+  runway_can_write_domain_truth: false;
+  runway_can_sign_owner_receipt: false;
+  runway_can_create_typed_blocker: false;
+}
+
+export interface CapabilityInvocationLifecyclePolicy {
+  surface_kind: 'opl_capability_invocation_lifecycle_policy';
+  schema_version: 'capability-invocation-lifecycle.v1';
+  soft_discovery: CapabilityInvocationLifecycleLayer;
+  scored_fit: CapabilityInvocationLifecycleLayer;
+  hard_gate: CapabilityInvocationLifecycleLayer;
+}
+
 export interface CapabilityRegistryResolution {
   surface_kind: 'opl_capability_registry_resolution';
   schema_version: 'capability-registry-resolver.v1';
@@ -142,9 +168,11 @@ export interface CapabilityRegistryReadoutRequest {
 export interface CapabilityRegistryReadout {
   surface_kind: 'opl_capability_registry_readout';
   schema_version: 'capability-registry-resolver.v1';
-  owner_modules: ['atlas', 'pack', 'stagecraft'];
+  owner_modules: ['atlas', 'pack', 'stagecraft', 'runway'];
   default_behavior: 'current_owner_delta_bound_jit_or_fail_open';
   resolver_abi_ref: 'contracts/opl-framework/capability-registry-resolver.schema.json';
+  lifecycle_layers: CapabilityInvocationLifecycleLayer[];
+  invocation_lifecycle_policy: CapabilityInvocationLifecyclePolicy;
   source_families: string[];
   summary: {
     requested_count: number;
@@ -178,6 +206,80 @@ const AUTHORITY_BOUNDARY: CapabilityRegistryAuthorityBoundary = {
   can_create_default_preflight: false,
   can_create_second_active_backlog: false,
 };
+
+const CAPABILITY_INVOCATION_LIFECYCLE: CapabilityInvocationLifecyclePolicy = {
+  surface_kind: 'opl_capability_invocation_lifecycle_policy',
+  schema_version: 'capability-invocation-lifecycle.v1',
+  soft_discovery: {
+    layer_id: 'soft_discovery',
+    owner_modules: ['atlas', 'pack'],
+    authority_role: 'high_recall_advisory_discovery',
+    source_surfaces: [
+      'contracts/opl-framework/brand-module-surfaces.json#modules.atlas',
+      'contracts/opl-framework/brand-module-surfaces.json#modules.pack',
+      'domain_contract:agent_tool_arsenal',
+    ],
+    fail_closed_on: [],
+    forbidden_claims: [
+      'catalog_executes_actions',
+      'capability_registry_owns_domain_authority',
+    ],
+    authority_surface: null,
+    runway_can_write_domain_truth: false,
+    runway_can_sign_owner_receipt: false,
+    runway_can_create_typed_blocker: false,
+  },
+  scored_fit: {
+    layer_id: 'scored_fit',
+    owner_modules: ['pack', 'stagecraft'],
+    authority_role: 'explainable_fit_advisory_not_authority',
+    source_surfaces: [
+      'contracts/opl-framework/capability-registry-resolver.schema.json',
+      'contracts/opl-framework/stage-run-kernel-contract.json',
+      'contracts/opl-framework/brand-module-surfaces.json#modules.stagecraft',
+    ],
+    fail_closed_on: [],
+    forbidden_claims: [
+      'capability_use_policy_is_quality_verdict',
+      'capability_registry_missing_optional_ref_blocks_stage',
+    ],
+    authority_surface: null,
+    runway_can_write_domain_truth: false,
+    runway_can_sign_owner_receipt: false,
+    runway_can_create_typed_blocker: false,
+  },
+  hard_gate: {
+    layer_id: 'hard_gate',
+    owner_modules: ['current_owner_delta', 'stagecraft', 'runway'],
+    authority_role: 'fail_closed_current_owner_delta_gate',
+    source_surfaces: [
+      'contracts/opl-framework/current-owner-delta.schema.json',
+      'contracts/opl-framework/stage-run-kernel-contract.json',
+      'contracts/opl-framework/brand-module-surfaces.json#modules.runway',
+    ],
+    fail_closed_on: [
+      'route_required_missing_capability_ref',
+      'current_owner_delta_missing',
+      'owner_route_identity_mismatch',
+      'forbidden_write_or_irreversible_mutation',
+    ],
+    forbidden_claims: [
+      'runway_writes_domain_truth',
+      'runway_signs_owner_receipt',
+      'runway_creates_typed_blocker',
+    ],
+    authority_surface: 'current_owner_delta',
+    runway_can_write_domain_truth: false,
+    runway_can_sign_owner_receipt: false,
+    runway_can_create_typed_blocker: false,
+  },
+};
+
+const CAPABILITY_INVOCATION_LIFECYCLE_LAYERS = [
+  CAPABILITY_INVOCATION_LIFECYCLE.soft_discovery,
+  CAPABILITY_INVOCATION_LIFECYCLE.scored_fit,
+  CAPABILITY_INVOCATION_LIFECYCLE.hard_gate,
+];
 
 const HARD_BOUNDARIES = new Set<CapabilityHardBoundary>([
   'source_data_evidence',
@@ -358,9 +460,11 @@ export function buildCapabilityRegistryReadout(
   return {
     surface_kind: 'opl_capability_registry_readout',
     schema_version: 'capability-registry-resolver.v1',
-    owner_modules: ['atlas', 'pack', 'stagecraft'],
+    owner_modules: ['atlas', 'pack', 'stagecraft', 'runway'],
     default_behavior: 'current_owner_delta_bound_jit_or_fail_open',
     resolver_abi_ref: 'contracts/opl-framework/capability-registry-resolver.schema.json',
+    lifecycle_layers: CAPABILITY_INVOCATION_LIFECYCLE_LAYERS,
+    invocation_lifecycle_policy: CAPABILITY_INVOCATION_LIFECYCLE,
     source_families: uniqSorted([
       ...request.registry.capabilities.map((entry) => entry.source_family),
       ...domainPackExternalLearningResolutions.map((entry) => entry.selection.source_family),

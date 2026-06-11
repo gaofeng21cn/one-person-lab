@@ -248,6 +248,49 @@
         }
       }
     },
+    "capability_invocation_hard_gate_policy": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind",
+        "authority_surface",
+        "owner_modules",
+        "fail_closed_on",
+        "runway_can_write_domain_truth",
+        "runway_can_sign_owner_receipt",
+        "runway_can_create_typed_blocker"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "opl_capability_invocation_hard_gate_policy"
+        },
+        "authority_surface": {
+          "const": "current_owner_delta"
+        },
+        "owner_modules": {
+          "const": [
+            "current_owner_delta",
+            "stagecraft",
+            "runway"
+          ]
+        },
+        "fail_closed_on": {
+          "type": "array",
+          "contains": {
+            "const": "route_required_missing_capability_ref"
+          }
+        },
+        "runway_can_write_domain_truth": {
+          "const": false
+        },
+        "runway_can_sign_owner_receipt": {
+          "const": false
+        },
+        "runway_can_create_typed_blocker": {
+          "const": false
+        }
+      }
+    },
     "advisory_warnings": {
       "type": "array"
     },

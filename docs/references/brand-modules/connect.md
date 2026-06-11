@@ -7,7 +7,7 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 contrac
 
 ## 品牌定位
 
-`OPL Connect` 是 OPL 的外部接口与分发模块。它把同一套 OPL / Foundry Agent contracts 派生到 CLI、MCP、Skill/plugin、OpenAI tools、AI SDK tools、ToolResultEnvelope descriptors、App actions、Homebrew、installer 和 release artifacts。
+`OPL Connect` 是 OPL 的外部接口与分发模块。它把同一套 OPL / Foundry Agent contracts 派生到 CLI、MCP、Skill/plugin、OpenAI tools、AI SDK tools、Capability Invocation lifecycle descriptors、ToolResultEnvelope descriptors、App actions、Homebrew、installer 和 release artifacts。
 
 一句话：`Connect` 管“外部系统和用户怎样稳定接入同一套 OPL 能力”。
 
@@ -24,6 +24,7 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 contrac
 | --- | --- |
 | `cli_surface` | `opl` 命令树和 help/spec。 |
 | `mcp_descriptor` | MCP tools/resources/prompts 的描述与 delegate boundary。 |
+| `capability_invocation_lifecycle_descriptor` | Capability Invocation OS soft discovery / scored fit / hard gate 的 descriptor 和 source ref，让外部调用面消费同一三层 lifecycle。 |
 | `tool_result_envelope_descriptor` | ToolResultEnvelope / structured result 的 descriptor 和 source ref，保证外部 tool 调用结果可被 agent 稳定消费。 |
 | `skill_pack` | Codex skill/plugin 可见入口。 |
 | `openai_tool_descriptor` | OpenAI tool schema。 |
@@ -47,11 +48,11 @@ Workspace 级 L4 的 Connect 对象模型必须把 semantic authority 与 transp
 
 | 层面 | 目标 refs |
 | --- | --- |
-| `schema / contract` | `contracts/opl-framework/public-surface-index.json`、`contracts/opl-framework/domain-pack-compiler-contract.json`、`contracts/opl-framework/codex-default-profile.json`、`contracts/opl-framework/native-helper-contract.json`、`contracts/opl-framework/fresh-install-test-matrix.json`。 |
+| `schema / contract` | `contracts/opl-framework/public-surface-index.json`、`contracts/opl-framework/domain-pack-compiler-contract.json`、`contracts/opl-framework/capability-registry-resolver.schema.json#/$defs/capability_invocation_lifecycle_policy`、`contracts/opl-framework/codex-default-profile.json`、`contracts/opl-framework/native-helper-contract.json`、`contracts/opl-framework/fresh-install-test-matrix.json`。 |
 | `CLI family` | `opl connect status --json`、`opl connect inspect --json`、`opl connect interfaces --json`、`opl connect validate --json`、`opl connect doctor --json`。 |
 | `current delegate CLI` | `opl connect skills --json`、`opl connect sync-skills --json`、`opl connect modules --json`、`opl connect install --module medautoscience --json`、`opl connect exec --module medautoscience -- doctor entry-modes`、`opl connect packages manifest --json`、`opl agents interfaces --family-defaults --json`、`opl actions export --domain medautoscience --format openai --json`、`opl actions export --domain medautoscience --format ai-sdk --json`、`opl brand-modules inspect --module connect --json`。 |
 | `App action / read-model` | App action descriptors、module health、release/update surface、installed agent capability projection；`connect_read_model` 必须把 semantic source、generated descriptor、transport install 和 release evidence 分开。 |
-| `descriptor` | CLI spec、MCP descriptor、skill/plugin manifest、OpenAI tool descriptor、AI SDK tool descriptor、App action descriptor、source/generated fingerprint manifest。 |
+| `descriptor` | CLI spec、MCP descriptor、Capability Invocation lifecycle descriptor、skill/plugin manifest、OpenAI tool descriptor、AI SDK tool descriptor、App action descriptor、source/generated fingerprint manifest。 |
 | `validation / doctor` | `opl connect validate --json` 检查 descriptor drift、fingerprint、module install contract、fresh-install matrix 和 false authority；`opl connect doctor --json` 区分 transport failure 与 semantic drift。 |
 | `tests` | CLI public spec、generated descriptor fixture、fingerprint drift negative、skill sync/module install/package manifest regression、fresh-install matrix guard、transport-vs-semantic authority guard。 |
 | `status` | `docs/status.md`、`docs/product/opl-public-surface-index.md`、`docs/references/current-support/opl-release-packages-modular-distribution.md`、`docs/references/brand-modules/current-maturity-against-workspace.md`、release/install evidence matrix。 |
@@ -98,7 +99,7 @@ contracts/opl-framework/public-surface-index.json
 
 - `status`：返回 semantic source health、generated descriptor health、module install health、transport channel status、release evidence refs 和 drift summary。
 - `inspect`：返回对象模型、contract refs、transport/install refs、descriptor refs、fingerprints、forbidden claims 和与 `opl skill/module/package/actions/agents` delegate 的 mapping。
-- `interfaces`：输出 CLI/MCP/Skill/OpenAI/AI SDK/App action descriptor bundle，并标明每个 descriptor 的 canonical semantic source 和 generated artifact fingerprint。
+- `interfaces`：输出 CLI/MCP/Skill/OpenAI/AI SDK/App action descriptor bundle，并标明每个 descriptor 的 canonical semantic source 和 generated artifact fingerprint；Capability Invocation lifecycle descriptor 必须指回 Pack/resolver/current-owner-delta refs。
 - `validate`：fail closed 检查 public surface index、domain pack compiler、generated descriptors、fingerprints、module install contract、fresh-install matrix 和 authority flags；不能用 Homebrew/App release/skill sync 成功代替 semantic consistency。
 - `doctor`：把问题分成 `semantic_drift`、`generated_artifact_stale`、`transport_install_failure`、`release_evidence_missing`、`descriptor_missing` 或 `domain_owner_required`，并给出对应 source refs。
 
@@ -106,6 +107,7 @@ contracts/opl-framework/public-surface-index.json
 
 - Connect 持有 external surface generation、descriptor distribution、install transport 和 drift evidence。
 - Atlas、Stagecraft、Workspace、Runway、Vault 持有被派生 surface 的 canonical source。
+- Capability Invocation lifecycle descriptor 只描述 Pack 的三层 lifecycle；soft/scored 层不执行工具，hard gate 只引用 `current_owner_delta`，不让 Connect 判断 domain readiness。
 - App release、Homebrew、Full bundle、skill/plugin sync 只证明 transport/install path；domain ready 继续归 domain owner 和 runtime evidence。
 - 非默认 executor adapter 只能通过显式 descriptor、binding 和 validation refs 暴露。
 
@@ -116,6 +118,7 @@ contracts/opl-framework/public-surface-index.json
 - 不把 release/install pass 写成 App release-ready 之外的 domain ready。
 - 不把 Homebrew transport 写成 semantic authority。
 - 不把 Skill/MCP/OpenAI/AI SDK descriptor 存在写成 handler 可用。
+- 不把 Capability Invocation lifecycle descriptor 写成 handler readiness、owner answer、typed blocker 或 current-owner authorization。
 - 不把 ToolResultEnvelope descriptor 或 structured result presence 写成 domain authority、owner answer 或 handler readiness。
 - 不把单一 channel 安装成功写成全渠道 release complete。
 - 不把 transport/install evidence 写成 semantic surface consistency。

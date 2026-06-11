@@ -143,6 +143,25 @@ test('capability registry resolver readout preserves external-learning refs as c
 
   assert.equal(readout.surface_kind, 'opl_capability_registry_readout');
   assert.equal(readout.default_behavior, 'current_owner_delta_bound_jit_or_fail_open');
+  assert.deepEqual(readout.owner_modules, ['atlas', 'pack', 'stagecraft', 'runway']);
+  assert.deepEqual(
+    readout.lifecycle_layers.map((entry) => entry.layer_id),
+    ['soft_discovery', 'scored_fit', 'hard_gate'],
+  );
+  assert.deepEqual(readout.lifecycle_layers[0].owner_modules, ['atlas', 'pack']);
+  assert.deepEqual(readout.lifecycle_layers[1].owner_modules, ['pack', 'stagecraft']);
+  assert.deepEqual(readout.lifecycle_layers[2].owner_modules, [
+    'current_owner_delta',
+    'stagecraft',
+    'runway',
+  ]);
+  assert.equal(readout.lifecycle_layers[0].authority_role, 'high_recall_advisory_discovery');
+  assert.equal(readout.lifecycle_layers[1].authority_role, 'explainable_fit_advisory_not_authority');
+  assert.equal(readout.lifecycle_layers[2].authority_role, 'fail_closed_current_owner_delta_gate');
+  assert.equal(readout.invocation_lifecycle_policy.hard_gate.authority_surface, 'current_owner_delta');
+  assert.equal(readout.invocation_lifecycle_policy.hard_gate.runway_can_write_domain_truth, false);
+  assert.equal(readout.invocation_lifecycle_policy.hard_gate.runway_can_sign_owner_receipt, false);
+  assert.equal(readout.invocation_lifecycle_policy.hard_gate.runway_can_create_typed_blocker, false);
   assert.equal(readout.summary.resolved_count, 1);
   assert.equal(readout.summary.fail_open_count, 1);
   assert.equal(readout.summary.blocker_candidate_count, 1);

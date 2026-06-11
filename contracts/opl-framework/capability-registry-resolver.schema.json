@@ -4,7 +4,7 @@
   "schema_id": "opl.capability_registry_resolver.v1",
   "surface_kind": "opl_capability_registry_resolver_schema",
   "owner": "one-person-lab",
-  "purpose": "Define the W3 current-owner-delta-bound Capability Registry resolver ABI and readout boundary for Atlas, Pack, and Stagecraft.",
+  "purpose": "Define the W3 current-owner-delta-bound Capability Registry resolver ABI and three-layer invocation lifecycle boundary for Atlas, Pack, Stagecraft, and Runway.",
   "state": "active_contract",
   "machine_boundary": "OPL resolves capability refs and emits advisory readouts or typed blocker candidates only. Domain owners retain capability execution, domain truth, owner receipt, typed blocker, and quality/export authority.",
   "type": "object",
@@ -215,6 +215,8 @@
         "owner_modules",
         "default_behavior",
         "resolver_abi_ref",
+        "lifecycle_layers",
+        "invocation_lifecycle_policy",
         "source_families",
         "summary",
         "domain_pack_external_learning_refs",
@@ -236,7 +238,8 @@
           "const": [
             "atlas",
             "pack",
-            "stagecraft"
+            "stagecraft",
+            "runway"
           ]
         },
         "default_behavior": {
@@ -244,6 +247,40 @@
         },
         "resolver_abi_ref": {
           "const": "contracts/opl-framework/capability-registry-resolver.schema.json"
+        },
+        "lifecycle_layers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/capability_invocation_lifecycle_layer"
+          },
+          "prefixItems": [
+            {
+              "properties": {
+                "layer_id": {
+                  "const": "soft_discovery"
+                }
+              }
+            },
+            {
+              "properties": {
+                "layer_id": {
+                  "const": "scored_fit"
+                }
+              }
+            },
+            {
+              "properties": {
+                "layer_id": {
+                  "const": "hard_gate"
+                }
+              }
+            }
+          ],
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "invocation_lifecycle_policy": {
+          "$ref": "#/$defs/capability_invocation_lifecycle_policy"
         },
         "source_families": {
           "type": "array",
@@ -339,6 +376,109 @@
         "blocker_candidate_count": {
           "type": "integer",
           "minimum": 0
+        }
+      }
+    },
+    "capability_invocation_lifecycle_policy": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind",
+        "schema_version",
+        "soft_discovery",
+        "scored_fit",
+        "hard_gate"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "opl_capability_invocation_lifecycle_policy"
+        },
+        "schema_version": {
+          "const": "capability-invocation-lifecycle.v1"
+        },
+        "soft_discovery": {
+          "$ref": "#/$defs/capability_invocation_lifecycle_layer"
+        },
+        "scored_fit": {
+          "$ref": "#/$defs/capability_invocation_lifecycle_layer"
+        },
+        "hard_gate": {
+          "$ref": "#/$defs/capability_invocation_lifecycle_layer"
+        }
+      }
+    },
+    "capability_invocation_lifecycle_layer": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "layer_id",
+        "owner_modules",
+        "authority_role",
+        "source_surfaces",
+        "fail_closed_on",
+        "forbidden_claims",
+        "authority_surface",
+        "runway_can_write_domain_truth",
+        "runway_can_sign_owner_receipt",
+        "runway_can_create_typed_blocker"
+      ],
+      "properties": {
+        "layer_id": {
+          "enum": [
+            "soft_discovery",
+            "scored_fit",
+            "hard_gate"
+          ]
+        },
+        "owner_modules": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "authority_role": {
+          "enum": [
+            "high_recall_advisory_discovery",
+            "explainable_fit_advisory_not_authority",
+            "fail_closed_current_owner_delta_gate"
+          ]
+        },
+        "source_surfaces": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "fail_closed_on": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "forbidden_claims": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "authority_surface": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "runway_can_write_domain_truth": {
+          "const": false
+        },
+        "runway_can_sign_owner_receipt": {
+          "const": false
+        },
+        "runway_can_create_typed_blocker": {
+          "const": false
         }
       }
     },

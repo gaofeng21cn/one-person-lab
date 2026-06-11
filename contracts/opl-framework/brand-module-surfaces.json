@@ -524,6 +524,7 @@
           "capability_execution_view",
           "agent_operational_card",
           "tool_result_envelope",
+          "capability_invocation_lifecycle",
           "domain_capability_registry_abi",
           "pack_compile_parity_ref"
         ],
@@ -586,7 +587,8 @@
         ],
         "projection_refs": [
           "opl brand-modules interfaces --json#app.descriptors.brand_modules_inspect",
-          "opl app state --profile full --json"
+          "opl app state --profile full --json",
+          "app_projection:capability_invocation_lifecycle"
         ]
       },
       "descriptor_surface": {
@@ -594,6 +596,7 @@
           "pack_surface_contract",
           "pack_os_contract",
           "agent_tool_arsenal_contract",
+          "capability_invocation_lifecycle_descriptor",
           "pack_cli_family"
         ],
         "descriptor_refs": [
@@ -602,6 +605,7 @@
           "opl pack interfaces --json",
           "opl agents interfaces --family-defaults --json#generated_interfaces",
           "contracts/opl-framework/domain-pack-compiler-contract.json",
+          "contracts/opl-framework/capability-registry-resolver.schema.json#/$defs/capability_invocation_lifecycle_policy",
           "domain_contract:agent_tool_arsenal",
           "contracts/opl-framework/brand-module-registry.json#modules.pack"
         ]
@@ -617,6 +621,7 @@
         "checks": [
           "module_surface_contract",
           "pack_os_contract",
+          "capability_invocation_lifecycle",
           "native_cli_family",
           "app_read_model",
           "descriptor_surface",
@@ -626,6 +631,7 @@
         ],
         "required_refs": [
           "contracts/opl-framework/pack-os-contract.json",
+          "contracts/opl-framework/capability-registry-resolver.schema.json#/$defs/capability_invocation_lifecycle_policy",
           "contracts/opl-framework/brand-module-surfaces.json#modules.pack",
           "domain_contract:agent_tool_arsenal",
           "contracts/opl-framework/brand-module-registry.json#modules.pack"
@@ -673,6 +679,7 @@
           "pack_compile_is_quality_verdict",
           "tool_result_envelope_is_owner_answer",
           "tool_availability_is_current_owner_authorization",
+          "capability_invocation_lifecycle_is_domain_authority",
           "pack_contract_detail_is_ordinary_agent_payload"
         ]
       },
@@ -700,9 +707,83 @@
         "pack_compile_is_quality_verdict",
         "tool_result_envelope_is_owner_answer",
         "tool_availability_is_current_owner_authorization",
+        "capability_invocation_lifecycle_is_domain_authority",
         "pack_contract_detail_is_ordinary_agent_payload"
       ],
-      "notes": "Pack owns declarative Domain Pack shape, domain capability registry ABI, Agent Tool Arsenal / Capability Invocation ABI, authority ABI refs, pack compiler output, generated surface boundary, capability execution view, agent operational card, and ToolResultEnvelope shape. Pack contracts are generation and validation material; the ordinary Agent path consumes execution views, operational cards, and result envelopes, not raw MAS or domain contract details. Pack does not own domain truth, artifact body, owner receipt, typed blocker, quality/export verdict authority, or current-owner authorization."
+      "capability_invocation_lifecycle": {
+        "surface_kind": "opl_capability_invocation_lifecycle_policy",
+        "schema_version": "capability-invocation-lifecycle.v1",
+        "layers": [
+          {
+            "layer_id": "soft_discovery",
+            "owner_modules": [
+              "atlas",
+              "pack"
+            ],
+            "authority_role": "high_recall_advisory_discovery",
+            "source_surfaces": [
+              "contracts/opl-framework/brand-module-surfaces.json#modules.atlas",
+              "contracts/opl-framework/brand-module-surfaces.json#modules.pack",
+              "domain_contract:agent_tool_arsenal"
+            ],
+            "fail_closed_on": [],
+            "forbidden_claims": [
+              "catalog_executes_actions",
+              "capability_registry_owns_domain_authority"
+            ],
+            "authority_surface": null
+          },
+          {
+            "layer_id": "scored_fit",
+            "owner_modules": [
+              "pack",
+              "stagecraft"
+            ],
+            "authority_role": "explainable_fit_advisory_not_authority",
+            "source_surfaces": [
+              "contracts/opl-framework/capability-registry-resolver.schema.json",
+              "contracts/opl-framework/stage-run-kernel-contract.json",
+              "contracts/opl-framework/brand-module-surfaces.json#modules.stagecraft"
+            ],
+            "fail_closed_on": [],
+            "forbidden_claims": [
+              "capability_use_policy_is_quality_verdict",
+              "capability_registry_missing_optional_ref_blocks_stage"
+            ],
+            "authority_surface": null
+          },
+          {
+            "layer_id": "hard_gate",
+            "owner_modules": [
+              "current_owner_delta",
+              "stagecraft",
+              "runway"
+            ],
+            "authority_role": "fail_closed_current_owner_delta_gate",
+            "source_surfaces": [
+              "contracts/opl-framework/current-owner-delta.schema.json",
+              "contracts/opl-framework/stage-run-kernel-contract.json",
+              "contracts/opl-framework/brand-module-surfaces.json#modules.runway"
+            ],
+            "fail_closed_on": [
+              "route_required_missing_capability_ref",
+              "current_owner_delta_missing",
+              "owner_route_identity_mismatch",
+              "forbidden_write_or_irreversible_mutation"
+            ],
+            "forbidden_claims": [
+              "runway_writes_domain_truth",
+              "runway_signs_owner_receipt",
+              "runway_creates_typed_blocker"
+            ],
+            "authority_surface": "current_owner_delta",
+            "runway_can_write_domain_truth": false,
+            "runway_can_sign_owner_receipt": false,
+            "runway_can_create_typed_blocker": false
+          }
+        ]
+      },
+      "notes": "Pack owns declarative Domain Pack shape, domain capability registry ABI, Agent Tool Arsenal / Capability Invocation ABI, authority ABI refs, pack compiler output, generated surface boundary, capability execution view, agent operational card, ToolResultEnvelope shape, and the three-layer capability invocation lifecycle policy. Pack contracts are generation and validation material; the ordinary Agent path consumes execution views, operational cards, result envelopes, and lifecycle projections, not raw MAS or domain contract details. Pack does not own domain truth, artifact body, owner receipt, typed blocker, quality/export verdict authority, or current-owner authorization."
     },
     {
       "module_id": "stagecraft",
@@ -886,6 +967,7 @@
           "control_loop",
           "handoff_gate",
           "recovery_repair",
+          "capability_invocation_hard_gate",
           "runtime_provider",
           "stage_attempt",
           "attempt_lease",
@@ -896,6 +978,8 @@
           "contracts/opl-framework/family-runtime-attempt-contract.json",
           "contracts/opl-framework/family-runtime-online-substrate-contract.json",
           "contracts/opl-framework/stage-route-scheduler-contract.json",
+          "contracts/opl-framework/current-owner-delta.schema.json",
+          "contracts/opl-framework/capability-registry-resolver.schema.json#/$defs/capability_invocation_lifecycle_policy",
           "contracts/opl-framework/managed-runtime-three-layer-contract.json",
           "contracts/opl-framework/target-operating-architecture-contract.json"
         ],
@@ -988,6 +1072,7 @@
           "app_projection:runway_control_loop_status",
           "app_projection:runway_readiness",
           "app_projection:runway_reconcile",
+          "app_projection:capability_invocation_hard_gate",
           "app_projection:runway_handoff_gates",
           "app_projection:runway_recovery_repair"
         ]
@@ -1002,6 +1087,8 @@
           "opl runway interfaces --json",
           "contracts/opl-framework/runtime-manager-contract.json",
           "contracts/opl-framework/family-runtime-attempt-contract.json",
+          "contracts/opl-framework/current-owner-delta.schema.json",
+          "contracts/opl-framework/capability-registry-resolver.schema.json#/$defs/capability_invocation_lifecycle_policy",
           "contracts/opl-framework/brand-module-registry.json#modules.runway",
           "contracts/opl-framework/target-operating-architecture-contract.json#resource_model.resource_kinds.RunwayControlLoop",
           "contracts/opl-framework/target-operating-architecture-contract.json#resource_model.resource_kinds.ProgressReconciler"
@@ -1028,12 +1115,15 @@
           "forbidden_claims",
           "control_loop_readiness_surface",
           "progress_reconciler_surface",
+          "capability_invocation_hard_gate_surface",
           "handoff_gate_surface",
           "recovery_repair_surface"
         ],
         "required_refs": [
           "contracts/opl-framework/brand-module-surfaces.json#modules.runway",
           "contracts/opl-framework/brand-module-registry.json#modules.runway",
+          "contracts/opl-framework/current-owner-delta.schema.json",
+          "contracts/opl-framework/capability-registry-resolver.schema.json#/$defs/capability_invocation_lifecycle_policy",
           "contracts/opl-framework/target-operating-architecture-contract.json#resource_model.resource_kinds.RunwayControlLoop",
           "contracts/opl-framework/target-operating-architecture-contract.json#resource_model.resource_kinds.ProgressReconciler"
         ]
@@ -1060,6 +1150,7 @@
           "forbidden_claim_missing",
           "missing_control_loop_readiness_surface",
           "missing_progress_reconciler_surface",
+          "missing_capability_invocation_hard_gate_surface",
           "provider_not_ready_claimed_as_domain_ready",
           "repair_action_claimed_as_l5_evidence",
           "semantic_authority_overclaim"
@@ -1312,12 +1403,14 @@
           "current_owner_delta_default_read_root",
           "accepted_owner_answer_shape",
           "capability_execution_view_projection",
+          "capability_invocation_lifecycle_projection",
           "agent_operational_card_projection",
           "tool_result_envelope_projection"
         ],
         "canonical_contract_refs": [
           "contracts/opl-framework/family-product-operator-projection.json",
           "contracts/opl-framework/current-owner-delta.schema.json",
+          "contracts/opl-framework/capability-registry-resolver.schema.json#/$defs/capability_invocation_lifecycle_policy",
           "contracts/opl-framework/public-surface-index.json",
           "contracts/opl-framework/agent-platform-surface-ownership-contract.json",
           "contracts/opl-framework/target-operating-architecture-contract.json"
@@ -1365,6 +1458,7 @@
         ],
         "projection_refs": [
           "app_projection:current_owner_delta",
+          "app_projection:capability_invocation_lifecycle",
           "app_projection:capability_execution_view",
           "app_projection:agent_operational_card",
           "app_projection:tool_result_envelope",
@@ -1654,6 +1748,7 @@
           "skill_sync",
           "install_matrix",
           "drift_manifest",
+          "capability_invocation_lifecycle_descriptor",
           "capability_execution_view_descriptor",
           "agent_operational_card_descriptor",
           "tool_result_envelope_descriptor"
@@ -1661,6 +1756,7 @@
         "canonical_contract_refs": [
           "contracts/opl-framework/public-surface-index.json",
           "contracts/opl-framework/domain-pack-compiler-contract.json",
+          "contracts/opl-framework/capability-registry-resolver.schema.json#/$defs/capability_invocation_lifecycle_policy",
           "contracts/opl-framework/codex-default-profile.json",
           "contracts/opl-framework/native-helper-contract.json",
           "contracts/opl-framework/fresh-install-test-matrix.json"
@@ -1711,13 +1807,15 @@
         ],
         "projection_refs": [
           "opl brand-modules interfaces --json#app.descriptors.brand_modules_list",
-          "opl app state --profile full --json"
+          "opl app state --profile full --json",
+          "app_projection:capability_invocation_lifecycle"
         ]
       },
       "descriptor_surface": {
         "delegate_ids": [
           "connect_surface_contract",
           "connect_cli_family",
+          "capability_invocation_lifecycle_descriptor",
           "capability_execution_view_descriptor",
           "agent_operational_card_descriptor",
           "tool_result_envelope_descriptor"
@@ -1726,6 +1824,7 @@
           "contracts/opl-framework/brand-module-surfaces.json#modules.connect",
           "opl connect interfaces --json",
           "opl agents interfaces --family-defaults --json",
+          "contracts/opl-framework/capability-registry-resolver.schema.json#/$defs/capability_invocation_lifecycle_policy",
           "opl actions export --domain medautoscience --format openai --json",
           "opl actions export --domain medautoscience --format ai-sdk --json",
           "contracts/opl-framework/brand-module-registry.json#modules.connect"

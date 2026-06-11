@@ -250,6 +250,67 @@ test('Agent Execution OS ordinary path consumes Pack execution views without raw
   );
 });
 
+test('Capability Invocation OS lifecycle folds back into existing Pack Console Connect and Runway surfaces', () => {
+  const contracts = loadFrameworkContracts(repoRoot);
+  const rawSurfaces = JSON.parse(
+    fs.readFileSync(path.join(repoRoot, 'contracts/opl-framework/brand-module-surfaces.json'), 'utf8'),
+  );
+  const surfaces = Object.fromEntries(
+    contracts.brandModuleSurfaces.modules.map((entry) => [entry.module_id, entry]),
+  );
+  const rawSurfaceByModule = Object.fromEntries(
+    rawSurfaces.modules.map((entry: { module_id: string }) => [entry.module_id, entry]),
+  );
+  const packInspect = runCli(['pack', 'inspect']).opl_pack_inspect;
+  const runwayInspect = runCli(['runway', 'inspect']).opl_runway_inspect;
+
+  assert.equal(
+    contracts.brandModuleSurfaces.modules.some((entry: { module_id: string }) =>
+      entry.module_id === 'capability-invocation-os'
+    ),
+    false,
+  );
+  assert.deepEqual(
+    rawSurfaceByModule.pack.capability_invocation_lifecycle.layers.map((entry: { layer_id: string }) => entry.layer_id),
+    ['soft_discovery', 'scored_fit', 'hard_gate'],
+  );
+  assert.deepEqual(rawSurfaceByModule.pack.capability_invocation_lifecycle.layers[0].owner_modules, ['atlas', 'pack']);
+  assert.deepEqual(rawSurfaceByModule.pack.capability_invocation_lifecycle.layers[1].owner_modules, [
+    'pack',
+    'stagecraft',
+  ]);
+  assert.deepEqual(rawSurfaceByModule.pack.capability_invocation_lifecycle.layers[2].owner_modules, [
+    'current_owner_delta',
+    'stagecraft',
+    'runway',
+  ]);
+  assert.equal(
+    rawSurfaceByModule.pack.capability_invocation_lifecycle.layers[2].fail_closed_on.includes('route_required_missing_capability_ref'),
+    true,
+  );
+  assert.equal(
+    rawSurfaceByModule.pack.capability_invocation_lifecycle.layers[2].forbidden_claims.includes('runway_writes_domain_truth'),
+    true,
+  );
+  assert.equal(packInspect.object_model.primary_objects.includes('capability_invocation_lifecycle'), true);
+  assert.equal(
+    surfaces.console.app_read_model.projection_refs.includes('app_projection:capability_invocation_lifecycle'),
+    true,
+  );
+  assert.equal(
+    surfaces.connect.descriptor_surface.delegate_ids.includes('capability_invocation_lifecycle_descriptor'),
+    true,
+  );
+  assert.equal(
+    surfaces.runway.object_model.primary_objects.includes('capability_invocation_hard_gate'),
+    true,
+  );
+  assert.equal(runwayInspect.forbidden_claims.includes('runway_writes_domain_truth'), true);
+  assert.equal(runwayInspect.authority_boundary.can_write_domain_truth, false);
+  assert.equal(runwayInspect.authority_boundary.can_sign_owner_receipt, false);
+  assert.equal(runwayInspect.authority_boundary.can_create_typed_blocker, false);
+});
+
 test('pack brand module contract shape does not fail-close family evidence worklist', async () => {
   const contracts = loadFrameworkContracts(repoRoot);
   const output = await runFamilyRuntimeEvidenceWorklist(contracts, {
