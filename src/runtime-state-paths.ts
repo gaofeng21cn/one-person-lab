@@ -14,6 +14,8 @@ export type OplStatePaths = {
   developer_supervisor_config_file: string;
   external_evidence_ledger_file: string;
   managed_install_update_ledger_file: string;
+  managed_update_component_receipt_ledger_file: string;
+  managed_update_kernel_lock_file: string;
   oma_app_live_path_ledger_file: string;
   oma_production_consumption_ledger_file: string;
   app_release_user_path_evidence_ledger_file: string;
@@ -55,6 +57,11 @@ export function resolveOplStatePaths(): OplStatePaths {
     developer_supervisor_config_file: path.join(stateDir, 'developer-supervisor.json'),
     external_evidence_ledger_file: path.join(stateDir, 'external-evidence-ledger.json'),
     managed_install_update_ledger_file: path.join(stateDir, 'managed-install-update-ledger.json'),
+    managed_update_component_receipt_ledger_file: path.join(
+      stateDir,
+      'managed-update-component-receipts.json',
+    ),
+    managed_update_kernel_lock_file: path.join(stateDir, 'managed-update-kernel.lock'),
     oma_app_live_path_ledger_file: path.join(stateDir, 'oma-app-live-path-ledger.json'),
     oma_production_consumption_ledger_file: path.join(
       stateDir,

@@ -8,13 +8,19 @@ import type {
   GitRepoSnapshot,
 } from './shared.ts';
 import { normalizeOptionalString } from './shared.ts';
+import {
+  computePackageChannelTreeSha256,
+  readPackageChannelLifecycle,
+  type PackageChannelLifecycle,
+} from './module-package-channel.ts';
 
 export type PackagedModuleMarker = {
   source_kind: 'full_runtime' | 'package_channel';
   source_git: GitRepoSnapshot;
+  package_channel_lifecycle: PackageChannelLifecycle | null;
 };
 
-export function readPackagedModuleMarker(repoPath: string, spec: DomainModuleSpec): PackagedModuleMarker | null {
+function readPackagedModuleMarkerRecord(repoPath: string, spec: DomainModuleSpec) {
   const markerPath = path.join(repoPath, PACKAGED_MODULE_MARKER_FILE);
   if (!fs.existsSync(markerPath) || !fs.statSync(markerPath).isFile()) {
     return null;
@@ -30,7 +36,14 @@ export function readPackagedModuleMarker(repoPath: string, spec: DomainModuleSpe
   if (parsed.module_id !== spec.module_id || parsed.repo_name !== spec.repo_name) {
     return null;
   }
+  return parsed;
+}
 
+function markerFromRecord(
+  repoPath: string,
+  spec: DomainModuleSpec,
+  parsed: Record<string, unknown>,
+): PackagedModuleMarker | null {
   const sourceKind = parsed.packaged_runtime === true
     ? 'full_runtime'
     : parsed.package_channel === true
@@ -60,7 +73,15 @@ export function readPackagedModuleMarker(repoPath: string, spec: DomainModuleSpe
       sync_status: 'no_upstream',
       dirty: false,
     },
+    package_channel_lifecycle: sourceKind === 'package_channel'
+      ? readPackageChannelLifecycle(repoPath, spec)
+      : null,
   };
+}
+
+export function readPackagedModuleMarker(repoPath: string, spec: DomainModuleSpec): PackagedModuleMarker | null {
+  const parsed = readPackagedModuleMarkerRecord(repoPath, spec);
+  return parsed ? markerFromRecord(repoPath, spec, parsed) : null;
 }
 
 export function readPackagedModuleGitSnapshot(repoPath: string, spec: DomainModuleSpec): GitRepoSnapshot | null {
@@ -69,6 +90,47 @@ export function readPackagedModuleGitSnapshot(repoPath: string, spec: DomainModu
 
 export function isPackagedModuleCheckout(repoPath: string, spec: DomainModuleSpec) {
   return Boolean(readPackagedModuleMarker(repoPath, spec));
+}
+
+export function packagedModuleDirty(repoPath: string, spec: DomainModuleSpec) {
+  const marker = readPackagedModuleMarker(repoPath, spec);
+  if (!marker) {
+    return null;
+  }
+  if (marker.source_kind !== 'package_channel') {
+    return false;
+  }
+  const expectedTreeSha256 = marker.package_channel_lifecycle?.current.tree_sha256;
+  if (!expectedTreeSha256) {
+    return true;
+  }
+  return computePackageChannelTreeSha256(repoPath) !== expectedTreeSha256;
+}
+
+export function inspectPackagedModule(repoPath: string, spec: DomainModuleSpec) {
+  const parsed = readPackagedModuleMarkerRecord(repoPath, spec);
+  if (!parsed) {
+    return null;
+  }
+  const marker = markerFromRecord(repoPath, spec, parsed);
+  if (!marker) {
+    return null;
+  }
+  const dirty = marker.source_kind === 'package_channel'
+    ? (
+      marker.package_channel_lifecycle?.current.tree_sha256
+        ? computePackageChannelTreeSha256(repoPath) !== marker.package_channel_lifecycle.current.tree_sha256
+        : true
+    )
+    : false;
+  return {
+    marker,
+    git: {
+      ...marker.source_git,
+      dirty,
+    },
+    dirty,
+  };
 }
 
 export function copyManagedModuleFromPackagedRuntime(

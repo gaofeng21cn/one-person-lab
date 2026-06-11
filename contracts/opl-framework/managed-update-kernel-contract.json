@@ -102,17 +102,39 @@
     "status": "read_only_projection",
     "check": "read_only_projection",
     "plan": "read_only_projection",
-    "apply": "controlled_projection",
-    "repair": "controlled_projection",
-    "rollback": "controlled_projection"
+    "apply": "controlled_apply",
+    "repair": "controlled_repair",
+    "rollback": "controlled_rollback"
   },
   "receipt_write_policy": {
     "status": "read_only",
     "check": "read_only",
     "plan": "read_only",
-    "apply": "projection_only_no_receipt_write",
-    "repair": "projection_only_no_receipt_write",
-    "rollback": "projection_only_no_receipt_write"
+    "apply": "recorded_component_receipt",
+    "repair": "recorded_component_receipt",
+    "rollback": "recorded_component_receipt"
+  },
+  "runner_result_shape": {
+    "surface_kind": "opl_managed_update_execution",
+    "lock_status_values": [
+      "acquired",
+      "released",
+      "held"
+    ],
+    "execution_status_values": [
+      "completed",
+      "skipped",
+      "manual_required",
+      "failed_with_repair"
+    ],
+    "adapter_result_status_values": [
+      "completed",
+      "skipped",
+      "manual_required",
+      "failed"
+    ],
+    "receipt_ledger_file": "managed-update-component-receipts.json",
+    "lock_file": "managed-update-kernel.lock"
   },
   "component_receipt_shape": {
     "schema_version": "opl_managed_update_component_receipt.v1",

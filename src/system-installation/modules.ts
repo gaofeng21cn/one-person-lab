@@ -34,6 +34,7 @@ import {
 } from './module-git.ts';
 import {
   copyManagedModuleFromPackagedRuntime,
+  inspectPackagedModule,
   isPackagedModuleCheckout,
   readPackagedModuleGitSnapshot,
   readPackagedModuleMarker,
@@ -151,6 +152,10 @@ function shouldUsePackageChannel(spec: DomainModuleSpec) {
 
 function resolveManagedModulePath(spec: DomainModuleSpec) {
   return path.join(resolveManagedModulesRoot(), spec.repo_name);
+}
+
+export function resolveManagedModuleCheckoutPath(spec: DomainModuleSpec) {
+  return resolveManagedModulePath(spec);
 }
 
 function resolvePackagedModuleSourcePath(spec: DomainModuleSpec) {
@@ -338,8 +343,8 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
       continue;
     }
 
-    const packagedGit = readPackagedModuleGitSnapshot(candidate.path, spec);
-    if (packagedGit) {
+    const packagedModule = inspectPackagedModule(candidate.path, spec);
+    if (packagedModule) {
       if (
         candidate.origin === 'env_override'
         && !pathsReferToSameLocation(candidate.path, managedCheckoutPath)
@@ -359,12 +364,14 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
         install_origin: candidate.origin,
         checkout_path: candidate.path,
         managed_checkout_path: managedCheckoutPath,
-        health_status: 'ready',
-        git: packagedGit,
+        health_status: packagedModule.dirty ? 'dirty' : 'ready',
+        git: packagedModule.git,
         source_policy: sourcePolicy,
         capabilities: buildModuleCapabilities(sourcePolicy, candidate.origin, true),
-        available_actions: candidate.origin === 'managed_root' ? ['update', 'reinstall', 'remove'] : [],
-        recommended_action: candidate.origin === 'managed_root' ? 'update' : null,
+        available_actions: candidate.origin === 'managed_root'
+          ? [...(!packagedModule.dirty ? (['update'] as const) : []), 'reinstall', 'remove']
+          : [],
+        recommended_action: candidate.origin === 'managed_root' && !packagedModule.dirty ? 'update' : null,
       };
     }
 
@@ -478,6 +485,10 @@ function findModuleSpecOrThrow(moduleId: string): DomainModuleRuntimeSpec {
   }
 
   return spec;
+}
+
+export function resolveOplDomainModuleSpec(moduleId: string): DomainModuleRuntimeSpec {
+  return findModuleSpecOrThrow(moduleId);
 }
 
 export function buildOplModules(input: { profile?: ModuleInspectionProfile } = {}) {
@@ -710,6 +721,17 @@ export function runOplModuleAction(
             module_id: spec.module_id,
             checkout_path: current.checkout_path,
             install_origin: current.install_origin,
+          },
+          2,
+        );
+      }
+      if (current.health_status === 'dirty' || current.git?.dirty) {
+        throw new FrameworkContractError(
+          'cli_usage_error',
+          'Module reinstall requires a clean managed checkout.',
+          {
+            module_id: spec.module_id,
+            checkout_path: current.checkout_path,
           },
           2,
         );

@@ -1,4 +1,5 @@
 import { buildManagedUpdateKernelProjection, type ManagedUpdateOperation } from '../../../managed-update-kernel.ts';
+import { runManagedUpdateKernelOperation } from '../../../managed-update-kernel-runner.ts';
 import type { FrameworkContracts } from '../../../types.ts';
 import { buildUsageError } from '../../modules/support.ts';
 import type { CommandSpec } from '../../modules/support.ts';
@@ -49,11 +50,15 @@ function buildUpdateSpec(
     group: 'update',
     handler: async (args) => {
       const parsed = parseUpdateArgs(args, spec);
-      return buildManagedUpdateKernelProjection(getContracts(), {
+      const input = {
         operation,
         componentId: parsed.componentId,
         receiptId: parsed.receiptId,
-      });
+      };
+      if (operation === 'apply' || operation === 'repair' || operation === 'rollback') {
+        return runManagedUpdateKernelOperation(getContracts(), input);
+      }
+      return buildManagedUpdateKernelProjection(getContracts(), input);
     },
   };
   return spec;

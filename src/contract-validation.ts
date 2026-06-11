@@ -12,6 +12,7 @@ export type ErrorCode =
   | 'framework_locator_invalid_root'
   | 'framework_locator_not_found'
   | 'runtime_state_lock_timeout'
+  | 'managed_update_lock_contention'
   | 'cli_usage_error'
   | 'unknown_command'
   | 'codex_command_failed';
@@ -25,6 +26,7 @@ function defaultExitCode(code: ErrorCode): number {
     case 'contract_json_invalid':
     case 'contract_shape_invalid':
     case 'build_command_failed':
+    case 'managed_update_lock_contention':
       return 3;
     case 'launcher_failed':
     case 'workstream_not_found':

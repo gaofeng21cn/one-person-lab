@@ -2,6 +2,11 @@ import { readOplUpdateChannel, readOplWorkspaceRoot } from './system-preferences
 import type { FrameworkContracts } from './types.ts';
 import { buildOplEnvironment } from './system-installation/environment.ts';
 import { buildOplModules } from './system-installation/modules.ts';
+import {
+  findLatestManagedUpdateReceipt,
+  managedUpdateComponentReceiptLedgerFilePath,
+} from './managed-update-component-receipts.ts';
+import { managedUpdateLockFilePath, MANAGED_UPDATE_LOCK_STALE_AFTER_SECONDS } from './managed-update-lock.ts';
 
 export type ManagedUpdateOperation = 'status' | 'check' | 'plan' | 'apply' | 'repair' | 'rollback';
 export type ManagedUpdateProviderId =
@@ -190,6 +195,7 @@ function booleanValue(record: Record<string, unknown> | null, key: string) {
 }
 
 function componentReceipt(options: {
+  component_id: string;
   source_manifest_ref: string | null;
   content_identity_fields: string[];
   post_apply_hooks: string[];
@@ -199,20 +205,21 @@ function componentReceipt(options: {
   to_digest?: string | null;
   repair_action?: string | null;
 }) {
+  const latestReceipt = findLatestManagedUpdateReceipt(options.component_id);
   return {
     schema_version: 'opl_managed_update_component_receipt.v1' as const,
     required: true,
-    last_receipt_ref: null,
+    last_receipt_ref: latestReceipt?.receipt_ref ?? null,
     source_manifest_ref: options.source_manifest_ref,
-    from_version: options.from_version ?? null,
-    from_digest: options.from_digest ?? null,
-    to_version: options.to_version ?? null,
-    to_digest: options.to_digest ?? null,
-    verify_result: 'not_run_projection_only' as const,
-    activated_at: null,
+    from_version: latestReceipt?.from_version ?? options.from_version ?? null,
+    from_digest: latestReceipt?.from_digest ?? options.from_digest ?? null,
+    to_version: latestReceipt?.to_version ?? options.to_version ?? null,
+    to_digest: latestReceipt?.to_digest ?? options.to_digest ?? null,
+    verify_result: latestReceipt?.verify_result ?? 'not_run_projection_only' as const,
+    activated_at: latestReceipt?.activated_at ?? null,
     post_apply_hooks: options.post_apply_hooks,
-    rollback_ref: null,
-    repair_action: options.repair_action ?? null,
+    rollback_ref: latestReceipt?.rollback_ref ?? null,
+    repair_action: latestReceipt?.repair_action ?? options.repair_action ?? null,
     content_identity_fields: options.content_identity_fields,
   };
 }
@@ -254,6 +261,7 @@ function buildAppBinaryComponent(channel: string): ManagedUpdateComponent {
       ],
     },
     receipt: componentReceipt({
+      component_id: 'app_binary',
       source_manifest_ref: 'github_release_standard_updater_metadata',
       post_apply_hooks: postApplyHooks,
       content_identity_fields: ['release_tag', 'asset_sha256', 'updater_metadata_sha256'],
@@ -363,6 +371,7 @@ function buildRuntimeToolchainComponent(systemEnvironment: Record<string, unknow
         ],
     },
     receipt: componentReceipt({
+      component_id: 'runtime_toolchain',
       source_manifest_ref: 'app-runtime-update-channel.json',
       from_version: typeof codex?.version === 'string' ? codex.version : null,
       to_version: typeof codex?.latest_version === 'string' ? codex.latest_version : null,
@@ -537,6 +546,7 @@ function buildAgentPackageComponent(modules: Record<string, unknown>[], channel:
           ],
     },
     receipt: componentReceipt({
+      component_id: 'agent_package_channel',
       source_manifest_ref: 'ghcr.io/gaofeng21cn/one-person-lab-manifest:stable',
       post_apply_hooks: postApplyHooks,
       repair_action: state === 'failed_with_repair' ? 'reconcile_managed_modules' : null,
@@ -623,6 +633,7 @@ function buildCapabilityExposureComponent(agentPackages: ManagedUpdateComponent,
         ],
     },
     receipt: componentReceipt({
+      component_id: 'capability_exposure',
       source_manifest_ref: 'module_post_apply_projection',
       post_apply_hooks: postApplyHooks,
       repair_action: needsReload ? 'sync_codex_skills' : null,
@@ -664,8 +675,14 @@ function summarize(components: ManagedUpdateComponent[]) {
 }
 
 function operationMode(operation: ManagedUpdateOperation) {
-  if (operation === 'apply' || operation === 'repair' || operation === 'rollback') {
-    return 'controlled_projection';
+  if (operation === 'apply') {
+    return 'controlled_apply';
+  }
+  if (operation === 'repair') {
+    return 'controlled_repair';
+  }
+  if (operation === 'rollback') {
+    return 'controlled_rollback';
   }
   return 'read_only_projection';
 }
@@ -674,7 +691,7 @@ function receiptWritePolicy(operation: ManagedUpdateOperation) {
   if (operation === 'status' || operation === 'check' || operation === 'plan') {
     return 'read_only';
   }
-  return 'projection_only_no_receipt_write';
+  return 'recorded_component_receipt';
 }
 
 export async function buildManagedUpdateKernelProjection(
@@ -712,7 +729,8 @@ export async function buildManagedUpdateKernelProjection(
         read_operations: ['status', 'check', 'plan'],
         exclusive_operations: ['apply', 'repair', 'rollback'],
         status: 'not_acquired_for_projection',
-        stale_after_seconds: 1800,
+        lock_file: managedUpdateLockFilePath(),
+        stale_after_seconds: MANAGED_UPDATE_LOCK_STALE_AFTER_SECONDS,
         contention_policy: 'report_in_progress_or_skip_without_parallel_stage_or_plugin_sync',
       },
       summary: summarize(selectedComponents),
@@ -722,6 +740,7 @@ export async function buildManagedUpdateKernelProjection(
         receipt_id: input.receiptId ?? null,
         receipt_store: 'opl_managed_install_update_ledger_and_future_runtime_update_receipts',
         component_receipt_schema: 'opl_managed_update_component_receipt.v1',
+        component_receipt_ledger_file: managedUpdateComponentReceiptLedgerFilePath(),
         required_fields: COMPONENT_RECEIPT_REQUIRED_FIELDS,
         write_policy: receiptWritePolicy(input.operation),
       },

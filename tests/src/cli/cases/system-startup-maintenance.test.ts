@@ -13,6 +13,31 @@ function sha256(filePath: string) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
 
+function readPackageChannelMarker(checkoutPath: string) {
+  return JSON.parse(fs.readFileSync(path.join(checkoutPath, 'opl-runtime-module.json'), 'utf8')) as {
+    package_channel_lifecycle: {
+      staged: { root: string; status: string };
+      current: { root: string; source_git_head_sha: string | null };
+      previous: { root: string; source_git_head_sha: string | null } | null;
+      rollback_ref: string | null;
+    };
+  };
+}
+
+function withCliTimeout<T>(timeoutMs: string, fn: () => T): T {
+  const previous = process.env.OPL_CLI_TEST_TIMEOUT_MS;
+  process.env.OPL_CLI_TEST_TIMEOUT_MS = timeoutMs;
+  try {
+    return fn();
+  } finally {
+    if (previous === undefined) {
+      delete process.env.OPL_CLI_TEST_TIMEOUT_MS;
+    } else {
+      process.env.OPL_CLI_TEST_TIMEOUT_MS = previous;
+    }
+  }
+}
+
 function createDomainModuleRemote(input: {
   repoName: string;
   pluginName: 'mas' | 'mag' | 'rca' | 'opl-meta-agent';
@@ -692,7 +717,7 @@ test('system startup-maintenance silently updates package-channel modules and sy
       });
     }
 
-    const output = runCli(['system', 'startup-maintenance'], {
+    const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_MODULES_ROOT: modulesRoot,
@@ -700,7 +725,7 @@ test('system startup-maintenance silently updates package-channel modules and sy
       OPL_RELEASE_VERSION: '26.6.3',
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       PATH: `${secondChannel.fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
-    }) as {
+    })) as {
       system_action: {
         status: string;
         details: {
@@ -779,6 +804,24 @@ test('system startup-maintenance silently updates package-channel modules and sy
         ),
         true,
       );
+    }
+    for (const [moduleId, repoName, currentHeadSha, previousHeadSha] of [
+      ['medautoscience', 'med-autoscience', 'mas-v2-sha', 'mas-v1-sha'],
+      ['medautogrant', 'med-autogrant', 'mag-v2-sha', 'mag-v1-sha'],
+      ['redcube', 'redcube-ai', 'rca-v2-sha', 'rca-v1-sha'],
+      ['oplmetaagent', 'opl-meta-agent', 'oma-v2-sha', 'oma-v1-sha'],
+    ] as const) {
+      const managedCheckout = path.join(modulesRoot, repoName);
+      const marker = readPackageChannelMarker(managedCheckout);
+      assert.equal(marker.package_channel_lifecycle.staged.root, `${managedCheckout}.stage`);
+      assert.equal(marker.package_channel_lifecycle.staged.status, 'activated');
+      assert.equal(marker.package_channel_lifecycle.current.source_git_head_sha, currentHeadSha);
+      assert.equal(marker.package_channel_lifecycle.previous?.root, `${managedCheckout}.previous`);
+      assert.equal(marker.package_channel_lifecycle.previous?.source_git_head_sha, previousHeadSha);
+      assert.match(marker.package_channel_lifecycle.rollback_ref ?? '', new RegExp(`^opl://managed-module-package-channel/${moduleId}/rollback/`));
+      assert.equal(fs.readFileSync(path.join(managedCheckout, 'README.md'), 'utf8'), `${repoName} 26.6.11-nightly\n`);
+      assert.equal(fs.readFileSync(path.join(`${managedCheckout}.previous`, 'README.md'), 'utf8'), `${repoName} 26.6.10-nightly\n`);
+      assert.equal(fs.existsSync(`${managedCheckout}.stage`), false);
     }
 
     const curlLog = fs.readFileSync(secondChannel.curlLogPath, 'utf8');
@@ -934,7 +977,7 @@ test('system startup-maintenance does not block all modules on a timed-out modul
     runGitFixtureCommand(masRemote.sourceRoot, ['commit', '-m', 'slow mas healthcheck']);
     runGitFixtureCommand(masRemote.sourceRoot, ['push', 'origin', 'main']);
 
-    const output = runCli(['system', 'startup-maintenance'], {
+    const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_MODULES_ROOT: modulesRoot,
@@ -946,7 +989,7 @@ test('system startup-maintenance does not block all modules on a timed-out modul
       OPL_MODULE_ACTION_STEP_TIMEOUT_MS: '100',
       OPL_GIT_RETRY_ATTEMPTS: '1',
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
-    }) as {
+    })) as {
       system_action: {
         status: string;
         details: {
@@ -1180,7 +1223,7 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
     runGitFixtureCommand(workspaceRoot, ['clone', rcaRemote.remoteRoot, siblingCheckouts.redcube]);
     runGitFixtureCommand(workspaceRoot, ['clone', metaRemote.remoteRoot, siblingCheckouts.oplmetaagent]);
 
-    const output = runCli(['system', 'startup-maintenance'], {
+    const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
@@ -1197,7 +1240,7 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
       }),
       OPL_GIT_RETRY_ATTEMPTS: '1',
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
-    }) as {
+    })) as {
       system_action: {
         status: string;
         details: {

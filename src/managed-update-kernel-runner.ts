@@ -1,0 +1,551 @@
+import { buildOplEnvironment } from './system-installation/environment.ts';
+import { runOplEngineAction } from './system-installation/engine-actions.ts';
+import {
+  buildOplModules,
+  resolveManagedModuleCheckoutPath,
+  resolveOplDomainModuleSpec,
+  runOplModuleAction,
+} from './system-installation/modules.ts';
+import { rollbackManagedModulePackageChannel } from './system-installation/module-package-channel.ts';
+import { runOplSystemAction } from './system-installation/system-actions.ts';
+import type { FrameworkContracts } from './types.ts';
+import {
+  buildManagedUpdateKernelProjection,
+  type ManagedUpdateKernelInput,
+  type ManagedUpdateOperation,
+  type ManagedUpdateProviderAdapterId,
+} from './managed-update-kernel.ts';
+import {
+  acquireManagedUpdateLock,
+  MANAGED_UPDATE_LOCK_STALE_AFTER_SECONDS,
+} from './managed-update-lock.ts';
+import {
+  managedUpdateComponentReceiptLedgerFilePath,
+  recordManagedUpdateComponentReceipts,
+  type ManagedUpdateComponentReceiptInput,
+} from './managed-update-component-receipts.ts';
+
+type ManagedUpdateProjection = Awaited<ReturnType<typeof buildManagedUpdateKernelProjection>>;
+type ManagedUpdateProjectionComponent = ManagedUpdateProjection['managed_update']['components'][number];
+
+type AdapterExecutionResult = {
+  component_id: string;
+  adapter_id: ManagedUpdateProviderAdapterId;
+  status: 'completed' | 'skipped' | 'manual_required' | 'failed';
+  reason: string;
+  result_ref: string | null;
+  result: Record<string, unknown> | null;
+  error: Record<string, unknown> | null;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function stringValue(value: unknown) {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function records(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is Record<string, unknown> => isRecord(entry))
+    : [];
+}
+
+function nestedRecord(value: unknown, key: string) {
+  return isRecord(value) && isRecord(value[key]) ? value[key] : null;
+}
+
+function nestedString(value: unknown, key: string) {
+  return isRecord(value) ? stringValue(value[key]) : null;
+}
+
+function adapterResultRef(componentId: string, operation: ManagedUpdateOperation, payload: Record<string, unknown> | null) {
+  const explicitRef = nestedString(payload, 'receipt_ref');
+  if (explicitRef) {
+    return explicitRef;
+  }
+  const resultRef = nestedString(payload, 'result_ref');
+  if (resultRef) {
+    return resultRef;
+  }
+  return `opl://managed-update-adapter/${componentId}/${operation}/${new Date().toISOString()}`;
+}
+
+function normalizeError(error: unknown) {
+  if (error && typeof error === 'object' && 'toJSON' in error && typeof error.toJSON === 'function') {
+    return error.toJSON() as Record<string, unknown>;
+  }
+  return {
+    code: 'managed_update_adapter_failed',
+    message: error instanceof Error ? error.message : String(error),
+  };
+}
+
+function componentMatches(component: ManagedUpdateProjectionComponent, componentId: string) {
+  return component.component_id === componentId || component.provider_id === componentId;
+}
+
+function selectedComponentIds(input: ManagedUpdateKernelInput, projection: ManagedUpdateProjection) {
+  const ids = projection.managed_update.components.map((component) => component.component_id);
+  return input.componentId ? ids : ids.filter((id) => id !== 'app_binary');
+}
+
+async function runRuntimeToolchainAdapter(
+  contracts: FrameworkContracts,
+  operation: ManagedUpdateOperation,
+): Promise<AdapterExecutionResult> {
+  if (operation === 'rollback') {
+    return {
+      component_id: 'runtime_toolchain',
+      adapter_id: 'runtime_toolchain_adapter',
+      status: 'manual_required',
+      reason: 'runtime_pointer_rollback_requires_app_runtime_pointer_support',
+      result_ref: null,
+      result: {
+        repair_action: 'restart_app_with_previous_runtime_pointer_or_run_startup_maintenance',
+      },
+      error: null,
+    };
+  }
+
+  const environment = (await buildOplEnvironment(contracts)).system_environment;
+  const codex = environment.core_engines.codex;
+  if (!codex.installed) {
+    const result = await runOplEngineAction(contracts, 'install', 'codex');
+    return {
+      component_id: 'runtime_toolchain',
+      adapter_id: 'runtime_toolchain_adapter',
+      status: result.engine_action.status === 'completed' ? 'completed' : 'manual_required',
+      reason: 'codex_cli_missing',
+      result_ref: adapterResultRef('runtime_toolchain', operation, result.engine_action as Record<string, unknown>),
+      result: result.engine_action as Record<string, unknown>,
+      error: null,
+    };
+  }
+  if (!codex.update_available) {
+    return {
+      component_id: 'runtime_toolchain',
+      adapter_id: 'runtime_toolchain_adapter',
+      status: 'skipped',
+      reason: 'runtime_toolchain_current',
+      result_ref: null,
+      result: {
+        system_environment: environment as unknown as Record<string, unknown>,
+      },
+      error: null,
+    };
+  }
+
+  const result = await runOplEngineAction(contracts, 'update', 'codex');
+  return {
+    component_id: 'runtime_toolchain',
+    adapter_id: 'runtime_toolchain_adapter',
+    status: result.engine_action.status === 'completed' ? 'completed' : 'manual_required',
+    reason: 'runtime_toolchain_update',
+    result_ref: adapterResultRef('runtime_toolchain', operation, result.engine_action as Record<string, unknown>),
+    result: result.engine_action as Record<string, unknown>,
+    error: null,
+  };
+}
+
+function moduleStatus(result: unknown) {
+  return isRecord(result) && result.status === 'completed' ? 'completed' : 'manual_required';
+}
+
+function runAgentPackageAdapter(operation: ManagedUpdateOperation): AdapterExecutionResult {
+  if (operation === 'rollback') {
+    const modules = buildOplModules().modules.modules.filter((module) => module.default_install);
+    const targets: Record<string, unknown>[] = [];
+    for (const module of modules) {
+      if (module.install_origin !== 'managed_root' || module.health_status !== 'ready') {
+        targets.push({
+          target_type: 'module',
+          target_id: module.module_id,
+          status: 'manual_required',
+          reason: 'rollback_requires_clean_managed_package_root',
+          action: 'rollback',
+          result: null,
+        });
+        continue;
+      }
+      try {
+        const spec = resolveOplDomainModuleSpec(module.module_id);
+        const result = rollbackManagedModulePackageChannel(
+          spec,
+          resolveManagedModuleCheckoutPath(spec),
+        ) as unknown as Record<string, unknown>;
+        targets.push({
+          target_type: 'module',
+          target_id: module.module_id,
+          status: 'completed',
+          reason: 'package_channel_previous_root_restored',
+          action: 'rollback',
+          result,
+        });
+      } catch (error) {
+        const normalized = normalizeError(error);
+        targets.push({
+          target_type: 'module',
+          target_id: module.module_id,
+          status: 'manual_required',
+          reason: 'package_channel_rollback_unavailable',
+          action: 'rollback',
+          result: null,
+          error: normalized,
+        });
+      }
+    }
+    const manualCount = targets.filter((target) => target.status === 'manual_required').length;
+    const completedCount = targets.filter((target) => target.status === 'completed').length;
+    const result = {
+      surface_kind: 'agent_package_channel_rollback_result',
+      targets,
+      summary: {
+        total_targets_count: targets.length,
+        completed_targets_count: completedCount,
+        manual_required_targets_count: manualCount,
+      },
+    };
+    return {
+      component_id: 'agent_package_channel',
+      adapter_id: 'agent_package_channel_adapter',
+      status: completedCount > 0 && manualCount === 0 ? 'completed' : 'manual_required',
+      reason: completedCount > 0 && manualCount === 0
+        ? 'package_channel_previous_roots_restored'
+        : 'package_channel_rollback_partially_available_or_missing_previous_roots',
+      result_ref: completedCount > 0 ? adapterResultRef('agent_package_channel', operation, result) : null,
+      result,
+      error: null,
+    };
+  }
+
+  const modules = buildOplModules().modules.modules.filter((module) => module.default_install);
+  const targets: Record<string, unknown>[] = [];
+  for (const module of modules) {
+    if (!module.installed || module.install_origin === 'missing') {
+      const result = runOplModuleAction('install', module.module_id).module_action as Record<string, unknown>;
+      targets.push({
+        target_type: 'module',
+        target_id: module.module_id,
+        status: moduleStatus(result),
+        reason: 'module_missing',
+        action: 'install',
+        result,
+      });
+      continue;
+    }
+    if (
+      module.install_origin !== 'managed_root'
+      || module.health_status === 'dirty'
+      || module.health_status === 'invalid_checkout'
+      || module.git?.dirty
+      || module.git?.sync_status === 'ahead'
+      || module.git?.sync_status === 'diverged'
+      || module.git?.sync_status === 'unknown'
+    ) {
+      targets.push({
+        target_type: 'module',
+        target_id: module.module_id,
+        status: 'manual_required',
+        reason: 'developer_or_dirty_checkout_visible',
+        action: null,
+        result: null,
+      });
+      continue;
+    }
+
+    const action = module.recommended_action === 'update' && module.available_actions.includes('update')
+      ? 'update'
+      : 'sync';
+    const result = runOplModuleAction(action, module.module_id).module_action as Record<string, unknown>;
+    targets.push({
+      target_type: 'module',
+      target_id: module.module_id,
+      status: moduleStatus(result),
+      reason: action === 'update' ? 'agent_package_channel_refresh' : 'agent_package_channel_post_apply_sync',
+      action,
+      result,
+    });
+  }
+
+  const manualCount = targets.filter((target) => target.status === 'manual_required').length;
+  const completedCount = targets.filter((target) => target.status === 'completed').length;
+  const result = {
+    surface_kind: 'agent_package_channel_adapter_result',
+    targets,
+    summary: {
+      total_targets_count: targets.length,
+      completed_targets_count: completedCount,
+      manual_required_targets_count: manualCount,
+    },
+  };
+  return {
+    component_id: 'agent_package_channel',
+    adapter_id: 'agent_package_channel_adapter',
+    status: manualCount > 0 ? 'manual_required' : 'completed',
+    reason: manualCount > 0 ? 'manual_review_required' : 'managed_modules_reconciled_and_skills_synced',
+    result_ref: adapterResultRef('agent_package_channel', operation, result),
+    result,
+    error: null,
+  };
+}
+
+async function runCapabilityExposureAdapter(
+  contracts: FrameworkContracts,
+  operation: ManagedUpdateOperation,
+): Promise<AdapterExecutionResult> {
+  if (operation === 'rollback') {
+    return {
+      component_id: 'capability_exposure',
+      adapter_id: 'codex_exposure_status_adapter',
+      status: 'skipped',
+      reason: 'capability_exposure_is_derived_projection',
+      result_ref: null,
+      result: null,
+      error: null,
+    };
+  }
+
+  const result = await runOplSystemAction(contracts, 'reconcile_modules');
+  return {
+    component_id: 'capability_exposure',
+    adapter_id: 'codex_exposure_status_adapter',
+    status: result.system_action.status === 'completed' ? 'completed' : 'manual_required',
+    reason: 'reconcile_modules_refreshes_codex_capability_exposure',
+    result_ref: adapterResultRef('capability_exposure', operation, result.system_action as Record<string, unknown>),
+    result: result.system_action as Record<string, unknown>,
+    error: null,
+  };
+}
+
+function runAppBinaryAdapter(operation: ManagedUpdateOperation): AdapterExecutionResult {
+  return {
+    component_id: 'app_binary',
+    adapter_id: 'electron_standard_updater',
+    status: 'manual_required',
+    reason: operation === 'rollback'
+      ? 'desktop_app_rollback_is_app_standard_updater_owned'
+      : 'desktop_app_update_is_app_standard_updater_owned',
+    result_ref: null,
+    result: {
+      repair_action: 'use_one_person_lab_app_standard_updater_or_release_assets',
+    },
+    error: null,
+  };
+}
+
+async function runAdapter(
+  contracts: FrameworkContracts,
+  operation: ManagedUpdateOperation,
+  componentId: string,
+): Promise<AdapterExecutionResult> {
+  try {
+    if (componentId === 'runtime_toolchain') {
+      return await runRuntimeToolchainAdapter(contracts, operation);
+    }
+    if (componentId === 'agent_package_channel') {
+      return runAgentPackageAdapter(operation);
+    }
+    if (componentId === 'capability_exposure') {
+      return await runCapabilityExposureAdapter(contracts, operation);
+    }
+    return runAppBinaryAdapter(operation);
+  } catch (error) {
+    const adapterId: ManagedUpdateProviderAdapterId =
+      componentId === 'runtime_toolchain'
+        ? 'runtime_toolchain_adapter'
+        : componentId === 'agent_package_channel'
+          ? 'agent_package_channel_adapter'
+          : componentId === 'capability_exposure'
+            ? 'codex_exposure_status_adapter'
+            : 'electron_standard_updater';
+    return {
+      component_id: componentId,
+      adapter_id: adapterId,
+      status: 'failed',
+      reason: 'adapter_execution_failed',
+      result_ref: null,
+      result: null,
+      error: normalizeError(error),
+    };
+  }
+}
+
+function receiptInput(
+  operation: ManagedUpdateOperation,
+  component: ManagedUpdateProjectionComponent,
+  result: AdapterExecutionResult,
+): ManagedUpdateComponentReceiptInput {
+  return {
+    operation,
+    component_id: component.component_id,
+    provider_id: component.provider_id,
+    adapter_id: component.adapter_id,
+    source_manifest_ref: component.receipt.source_manifest_ref,
+    from_version: component.receipt.from_version,
+    from_digest: component.receipt.from_digest,
+    to_version: component.receipt.to_version,
+    to_digest: component.receipt.to_digest,
+    verify_result: result.status === 'failed' ? 'failed' : result.status === 'manual_required' ? 'unknown' : 'passed',
+    post_apply_hooks: component.post_apply_hooks,
+    rollback_ref: result.status === 'completed'
+      ? `opl://managed-update/${component.component_id}/rollback/${encodeURIComponent(result.result_ref ?? 'previous')}`
+      : component.receipt.rollback_ref,
+    repair_action: result.status === 'failed' || result.status === 'manual_required'
+      ? component.receipt.repair_action ?? component.plan.command_refs[0]?.action_id ?? null
+      : component.receipt.repair_action,
+    adapter_result_ref: result.result_ref,
+  };
+}
+
+function executionStatus(results: AdapterExecutionResult[]) {
+  if (results.some((entry) => entry.status === 'failed')) {
+    return 'failed_with_repair';
+  }
+  if (results.some((entry) => entry.status === 'manual_required')) {
+    return 'manual_required';
+  }
+  if (results.some((entry) => entry.status === 'completed')) {
+    return 'completed';
+  }
+  return 'skipped';
+}
+
+function applyExecutionToProjection(
+  projection: ManagedUpdateProjection,
+  results: AdapterExecutionResult[],
+  receiptRecord: ReturnType<typeof recordManagedUpdateComponentReceipts>,
+  lock: {
+    lock_id: string;
+    lock_file: string;
+    acquired_at: string;
+  },
+) {
+  const receiptsByComponent = new Map(
+    receiptRecord.receipts.map((receipt) => [receipt.component_id, receipt]),
+  );
+  const components = projection.managed_update.components.map((component) => {
+    const receipt = receiptsByComponent.get(component.component_id);
+    if (!receipt) {
+      return component;
+    }
+    return {
+      ...component,
+      receipt: {
+        ...component.receipt,
+        last_receipt_ref: receipt.receipt_ref,
+        verify_result: receipt.verify_result,
+        activated_at: receipt.activated_at,
+        rollback_ref: receipt.rollback_ref,
+        repair_action: receipt.repair_action,
+      },
+    };
+  });
+
+  return {
+    ...projection,
+    managed_update: {
+      ...projection.managed_update,
+      operation_mode: `controlled_${projection.managed_update.operation}` as const,
+      idempotency_lock: {
+        ...projection.managed_update.idempotency_lock,
+        status: 'released',
+        lock_file: lock.lock_file,
+        acquired_at: lock.acquired_at,
+        released_at: new Date().toISOString(),
+      },
+      summary: {
+        ...projection.managed_update.summary,
+        execution_status: executionStatus(results),
+      },
+      components,
+      receipts: {
+        ...projection.managed_update.receipts,
+        write_policy: 'recorded_component_receipt',
+        component_receipt_ledger_file: managedUpdateComponentReceiptLedgerFilePath(),
+      },
+      execution: {
+        surface_kind: 'opl_managed_update_execution',
+        status: executionStatus(results),
+        adapter_results: results,
+        receipt_record: receiptRecord,
+      },
+      authority_boundary: {
+        ...projection.managed_update.authority_boundary,
+        can_mutate_app_owned_runtime_root: results.some((entry) => entry.component_id === 'runtime_toolchain'),
+        can_silently_update_clean_managed_modules: results.some((entry) => entry.component_id === 'agent_package_channel'),
+        can_sync_codex_plugin_skill_projection: results.some((entry) =>
+          entry.component_id === 'agent_package_channel' || entry.component_id === 'capability_exposure'
+        ),
+      },
+    },
+  };
+}
+
+export async function runManagedUpdateKernelOperation(
+  contracts: FrameworkContracts,
+  input: ManagedUpdateKernelInput,
+) {
+  const initialProjection = await buildManagedUpdateKernelProjection(contracts, input);
+  const lock = acquireManagedUpdateLock({
+    operation: input.operation,
+    componentId: input.componentId,
+    receiptId: input.receiptId,
+  });
+  try {
+    const componentIds = selectedComponentIds(input, initialProjection);
+    const results: AdapterExecutionResult[] = [];
+    for (const componentId of componentIds) {
+      results.push(await runAdapter(contracts, input.operation, componentId));
+    }
+    const componentsById = new Map(
+      initialProjection.managed_update.components.map((component) => [component.component_id, component]),
+    );
+    const receipts = results
+      .map((result) => {
+        const component = componentsById.get(result.component_id);
+        return component ? receiptInput(input.operation, component, result) : null;
+      })
+      .filter((receipt): receipt is ManagedUpdateComponentReceiptInput => Boolean(receipt));
+    const receiptRecord = recordManagedUpdateComponentReceipts(receipts);
+    lock.release();
+    const refreshedProjection = await buildManagedUpdateKernelProjection(contracts, input);
+    const selectedIds = new Set(componentIds);
+    const selectedComponents = refreshedProjection.managed_update.components.filter((component) =>
+      selectedIds.has(component.component_id)
+      || (input.componentId ? componentMatches(component, input.componentId) : false)
+    );
+    return applyExecutionToProjection(
+      {
+        ...refreshedProjection,
+        managed_update: {
+          ...refreshedProjection.managed_update,
+          components: selectedComponents,
+          summary: {
+            total_components_count: selectedComponents.length,
+            current_components_count: selectedComponents.filter((entry) => entry.state === 'current').length,
+            update_available_components_count: selectedComponents.filter((entry) => entry.state === 'update_available').length,
+            staged_components_count: selectedComponents.filter((entry) => entry.state === 'staged').length,
+            restart_required_components_count: selectedComponents.filter((entry) => entry.state === 'needs_restart').length,
+            reload_required_components_count: selectedComponents.filter((entry) => entry.state === 'needs_reload').length,
+            failed_with_repair_components_count: selectedComponents.filter((entry) => entry.state === 'failed_with_repair').length,
+            skipped_manual_required_components_count: selectedComponents.filter((entry) => entry.state === 'skipped_manual_required').length,
+          },
+        },
+      },
+      results,
+      receiptRecord,
+      lock,
+    );
+  } catch (error) {
+    lock.release();
+    throw error;
+  }
+}
+
+export function managedUpdateKernelLockProjection() {
+  return {
+    stale_after_seconds: MANAGED_UPDATE_LOCK_STALE_AFTER_SECONDS,
+  };
+}

@@ -8,14 +8,37 @@ import {
   os,
   path,
   runCli,
+  runCliFailure,
   test,
 } from '../helpers.ts';
+import { rollbackManagedModulePackageChannel } from '../../../../src/system-installation/module-package-channel.ts';
 
 const MODULE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.module.source.v1+gzip';
 const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';
 
+const MAS_MODULE_SPEC = {
+  module_id: 'medautoscience' as const,
+  label: 'Med AutoScience',
+  repo_name: 'med-autoscience',
+  repo_url: 'https://github.com/gaofeng21cn/med-autoscience.git',
+  scope: 'domain_module' as const,
+  default_install: true,
+  description: 'MAS package channel fixture.',
+};
+
 function sha256(filePath: string) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+}
+
+function readPackageChannelMarker(checkoutPath: string) {
+  return JSON.parse(fs.readFileSync(path.join(checkoutPath, 'opl-runtime-module.json'), 'utf8')) as {
+    package_channel_lifecycle: {
+      staged: { root: string; status: string };
+      current: { root: string; source_git_head_sha: string | null };
+      previous: { root: string; source_git_head_sha: string | null } | null;
+      rollback_ref: string | null;
+    };
+  };
 }
 
 function writePackageChannelFixture(input: {
@@ -149,6 +172,7 @@ test('managed module install and update consume the package channel by default',
     version: '26.6.1',
     sourceHeadSha: 'package-channel-sha-v1',
     sourceFiles: {
+      'README.md': 'med-autoscience package fixture v1\n',
       'plugins/mas/.codex-plugin/plugin.json': JSON.stringify({ name: 'mas', skills: './skills/' }, null, 2),
       'plugins/mas/skills/mas/SKILL.md': [
         '---',
@@ -202,6 +226,15 @@ test('managed module install and update consume the package channel by default',
     assert.equal(install.module_action.turnkey.health_check.result.package_channel, true);
     assert.equal(fs.existsSync(path.join(managedCheckout, '.git')), false);
     assert.equal(fs.existsSync(path.join(managedCheckout, 'opl-runtime-module.json')), true);
+    const installMarker = readPackageChannelMarker(managedCheckout);
+    assert.equal(installMarker.package_channel_lifecycle.staged.root, `${managedCheckout}.stage`);
+    assert.equal(installMarker.package_channel_lifecycle.staged.status, 'activated');
+    assert.equal(installMarker.package_channel_lifecycle.current.root, managedCheckout);
+    assert.equal(installMarker.package_channel_lifecycle.current.source_git_head_sha, 'package-channel-sha-v1');
+    assert.equal(installMarker.package_channel_lifecycle.previous, null);
+    assert.equal(installMarker.package_channel_lifecycle.rollback_ref, null);
+    assert.equal(fs.existsSync(`${managedCheckout}.stage`), false);
+    assert.equal(fs.existsSync(`${managedCheckout}.previous`), false);
     assert.match(fs.readFileSync(firstChannel.curlLogPath, 'utf8'), /one-person-lab-modules\/med-autoscience/);
 
     const secondChannel = writePackageChannelFixture({
@@ -211,6 +244,7 @@ test('managed module install and update consume the package channel by default',
       version: '26.6.2',
       sourceHeadSha: 'package-channel-sha-v2',
       sourceFiles: {
+        'README.md': 'med-autoscience package fixture v2\n',
         'plugins/mas/.codex-plugin/plugin.json': JSON.stringify({ name: 'mas', skills: './skills/' }, null, 2),
         'plugins/mas/skills/mas/SKILL.md': [
           '---',
@@ -242,8 +276,30 @@ test('managed module install and update consume the package channel by default',
     assert.equal(update.module_action.turnkey.health_check.status, 'completed');
     assert.equal(update.module_action.turnkey.health_check.result.packaged_runtime, false);
     assert.equal(update.module_action.turnkey.health_check.result.package_channel, true);
-    assert.equal(fs.readFileSync(path.join(managedCheckout, 'README.md'), 'utf8'), 'med-autoscience package fixture\n');
+    assert.equal(fs.readFileSync(path.join(managedCheckout, 'README.md'), 'utf8'), 'med-autoscience package fixture v2\n');
+    assert.equal(fs.readFileSync(path.join(`${managedCheckout}.previous`, 'README.md'), 'utf8'), 'med-autoscience package fixture v1\n');
+    const updateMarker = readPackageChannelMarker(managedCheckout);
+    assert.equal(updateMarker.package_channel_lifecycle.staged.root, `${managedCheckout}.stage`);
+    assert.equal(updateMarker.package_channel_lifecycle.staged.status, 'activated');
+    assert.equal(updateMarker.package_channel_lifecycle.current.root, managedCheckout);
+    assert.equal(updateMarker.package_channel_lifecycle.current.source_git_head_sha, 'package-channel-sha-v2');
+    assert.equal(updateMarker.package_channel_lifecycle.previous?.root, `${managedCheckout}.previous`);
+    assert.equal(updateMarker.package_channel_lifecycle.previous?.source_git_head_sha, 'package-channel-sha-v1');
+    assert.match(updateMarker.package_channel_lifecycle.rollback_ref ?? '', /^opl:\/\/managed-module-package-channel\/medautoscience\/rollback\//);
+    assert.equal(fs.existsSync(`${managedCheckout}.stage`), false);
     assert.match(fs.readFileSync(secondChannel.curlLogPath, 'utf8'), /one-person-lab-manifest/);
+
+    const rollback = rollbackManagedModulePackageChannel(MAS_MODULE_SPEC, managedCheckout);
+    assert.equal(rollback.status, 'completed');
+    assert.equal(rollback.module_id, 'medautoscience');
+    assert.equal(rollback.current.source_git_head_sha, 'package-channel-sha-v1');
+    assert.equal(rollback.previous?.source_git_head_sha, 'package-channel-sha-v2');
+    assert.equal(fs.readFileSync(path.join(managedCheckout, 'README.md'), 'utf8'), 'med-autoscience package fixture v1\n');
+    assert.equal(fs.readFileSync(path.join(`${managedCheckout}.previous`, 'README.md'), 'utf8'), 'med-autoscience package fixture v2\n');
+    const rollbackMarker = readPackageChannelMarker(managedCheckout);
+    assert.equal(rollbackMarker.package_channel_lifecycle.current.source_git_head_sha, 'package-channel-sha-v1');
+    assert.equal(rollbackMarker.package_channel_lifecycle.previous?.source_git_head_sha, 'package-channel-sha-v2');
+    assert.match(rollbackMarker.package_channel_lifecycle.rollback_ref ?? '', /^opl:\/\/managed-module-package-channel\/medautoscience\/rollback\//);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
@@ -310,6 +366,61 @@ test('managed package channel defaults to the latest GHCR manifest independent o
     const curlLog = fs.readFileSync(channel.curlLogPath, 'utf8');
     assert.match(curlLog, /one-person-lab-manifest\/manifests\/latest/);
     assert.doesNotMatch(curlLog, /one-person-lab-manifest\/manifests\/26\.6\.3/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('package-channel update refuses to overwrite a locally modified managed package root', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-package-dirty-home-'));
+  const modulesRoot = path.join(homeRoot, 'managed-modules');
+  const managedCheckout = path.join(modulesRoot, 'med-autoscience');
+  const firstChannel = writePackageChannelFixture({
+    root: path.join(homeRoot, 'channel-v1'),
+    moduleId: 'medautoscience',
+    repoName: 'med-autoscience',
+    version: '26.6.21',
+    sourceHeadSha: 'package-channel-dirty-sha-v1',
+    sourceFiles: {
+      'README.md': 'clean package root\n',
+    },
+  });
+  const secondChannel = writePackageChannelFixture({
+    root: path.join(homeRoot, 'channel-v2'),
+    moduleId: 'medautoscience',
+    repoName: 'med-autoscience',
+    version: '26.6.22',
+    sourceHeadSha: 'package-channel-dirty-sha-v2',
+    sourceFiles: {
+      'README.md': 'replacement package root\n',
+    },
+  });
+  const baseEnv = {
+    HOME: homeRoot,
+    CODEX_HOME: path.join(homeRoot, 'codex-home'),
+    OPL_MODULES_ROOT: modulesRoot,
+    OPL_PACKAGE_CHANNEL_MANIFEST_REF: 'ghcr.io/owner/one-person-lab-manifest:26.6.21',
+    OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+    PATH: `${firstChannel.fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+  };
+
+  try {
+    runCli(['connect', 'install', '--module', 'medautoscience'], baseEnv);
+    fs.writeFileSync(path.join(managedCheckout, 'LOCAL_EDIT.txt'), 'do not overwrite\n', 'utf8');
+
+    const failure = runCliFailure(['connect', 'update', '--module', 'medautoscience'], {
+      ...baseEnv,
+      OPL_PACKAGE_CHANNEL_MANIFEST_REF: 'ghcr.io/owner/one-person-lab-manifest:26.6.22',
+      PATH: `${secondChannel.fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+    });
+
+    assert.equal(failure.status, 2);
+    assert.equal(failure.payload.error.code, 'cli_usage_error');
+    assert.equal(failure.payload.error.details.module_id, 'medautoscience');
+    assert.equal(fs.readFileSync(path.join(managedCheckout, 'README.md'), 'utf8'), 'clean package root\n');
+    assert.equal(fs.readFileSync(path.join(managedCheckout, 'LOCAL_EDIT.txt'), 'utf8'), 'do not overwrite\n');
+    assert.equal(fs.existsSync(`${managedCheckout}.previous`), false);
+    assert.equal(fs.existsSync(`${managedCheckout}.stage`), false);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
