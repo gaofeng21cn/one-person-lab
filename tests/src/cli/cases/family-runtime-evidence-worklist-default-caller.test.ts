@@ -242,6 +242,13 @@ test('family-runtime evidence-worklist keeps family default-caller deletion scop
       )),
       true,
     );
+    const omaDeletionGate = defaultCallers.repo_deletion_gate_summary.find((repo: {
+      domain_id: string;
+    }) => repo.domain_id === 'opl-meta-agent');
+    assert.equal(omaDeletionGate.deletion_evidence_worklist_count, 8);
+    assert.equal(omaDeletionGate.missing_domain_owner_receipt_or_typed_blocker_count, 8);
+    assert.equal(omaDeletionGate.missing_no_forbidden_write_proof_count, 8);
+    assert.equal(omaDeletionGate.missing_tombstone_or_provenance_ref_count, 8);
 
     const fullOutput = runCli([
       'family-runtime',

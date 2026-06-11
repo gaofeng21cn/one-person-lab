@@ -765,7 +765,7 @@ export function configureReadyMetaMorphology(repoDir: string) {
     }),
     stageFromBase(baseStage, {
       stageId: 'target-agent-takeover',
-      stageKind: 'execution',
+      stageKind: 'domain_specific',
       title: 'Target Agent Takeover',
       summary: 'Execute a bounded target-agent takeover work order without owning the target domain.',
       goal: 'Produce target-agent work-order output refs, no-forbidden-write proof, and target-owner handoff refs.',
