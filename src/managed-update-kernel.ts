@@ -9,16 +9,20 @@ export type ManagedUpdateProviderId =
   | 'runtime_toolchain'
   | 'agent_package_channel'
   | 'capability_exposure';
+export type ManagedUpdateProviderAdapterId =
+  | 'electron_standard_updater'
+  | 'runtime_toolchain_adapter'
+  | 'agent_package_channel_adapter'
+  | 'codex_exposure_status_adapter';
 export type ManagedUpdateConditionStatus = 'True' | 'False' | 'Unknown';
 export type ManagedUpdateComponentState =
   | 'current'
   | 'update_available'
-  | 'missing'
-  | 'manual_required'
   | 'staged'
   | 'needs_reload'
   | 'needs_restart'
-  | 'unsupported';
+  | 'failed_with_repair'
+  | 'skipped_manual_required';
 
 export type ManagedUpdateCondition = {
   type: string;
@@ -39,6 +43,8 @@ type ManagedUpdateActionRef = {
 type ManagedUpdateComponent = {
   component_id: string;
   provider_id: ManagedUpdateProviderId;
+  adapter_id: ManagedUpdateProviderAdapterId;
+  policy_id: string;
   label: string;
   state: ManagedUpdateComponentState;
   channel: string;
@@ -46,14 +52,26 @@ type ManagedUpdateComponent = {
   target: Record<string, unknown> | null;
   conditions: ManagedUpdateCondition[];
   lifecycle: string[];
+  post_apply_hooks: string[];
   plan: {
     action: 'none' | 'check' | 'install' | 'update' | 'sync' | 'reload' | 'restart' | 'manual_review';
     summary: string;
     command_refs: ManagedUpdateActionRef[];
   };
   receipt: {
+    schema_version: 'opl_managed_update_component_receipt.v1';
     required: boolean;
     last_receipt_ref: string | null;
+    source_manifest_ref: string | null;
+    from_version: string | null;
+    from_digest: string | null;
+    to_version: string | null;
+    to_digest: string | null;
+    verify_result: 'not_run_projection_only' | 'passed' | 'failed' | 'unknown';
+    activated_at: string | null;
+    post_apply_hooks: string[];
+    rollback_ref: string | null;
+    repair_action: string | null;
     content_identity_fields: string[];
   };
   authority_boundary: Record<string, boolean>;
@@ -71,17 +89,41 @@ const COMPONENT_ALIASES: Record<string, string> = {
   agent_package_channel: 'agent_package_channel',
 };
 
+const MANAGED_UPDATE_KERNEL_ID = 'opl_managed_updater_kernel';
+
 const KERNEL_LIFECYCLE = [
-  'manifest',
-  'current_state',
-  'plan',
-  'fetch',
+  'read_manifest',
+  'read_current_state',
+  'diff_plan',
+  'fetch_artifacts',
   'verify',
   'stage',
   'activate',
   'post_apply',
-  'receipt',
-  'status_projection',
+  'write_receipt',
+  'report_status_or_repair',
+];
+
+const STATE_VOCABULARY: ManagedUpdateComponentState[] = [
+  'current',
+  'update_available',
+  'staged',
+  'needs_restart',
+  'needs_reload',
+  'failed_with_repair',
+  'skipped_manual_required',
+];
+
+const COMPONENT_RECEIPT_REQUIRED_FIELDS = [
+  'source_manifest_ref',
+  'from_version',
+  'from_digest',
+  'to_version',
+  'to_digest',
+  'verify_result',
+  'activated_at',
+  'post_apply_hooks',
+  'rollback_ref',
   'repair_action',
 ];
 
@@ -147,10 +189,41 @@ function booleanValue(record: Record<string, unknown> | null, key: string) {
   return typeof value === 'boolean' ? value : null;
 }
 
+function componentReceipt(options: {
+  source_manifest_ref: string | null;
+  content_identity_fields: string[];
+  post_apply_hooks: string[];
+  from_version?: string | null;
+  from_digest?: string | null;
+  to_version?: string | null;
+  to_digest?: string | null;
+  repair_action?: string | null;
+}) {
+  return {
+    schema_version: 'opl_managed_update_component_receipt.v1' as const,
+    required: true,
+    last_receipt_ref: null,
+    source_manifest_ref: options.source_manifest_ref,
+    from_version: options.from_version ?? null,
+    from_digest: options.from_digest ?? null,
+    to_version: options.to_version ?? null,
+    to_digest: options.to_digest ?? null,
+    verify_result: 'not_run_projection_only' as const,
+    activated_at: null,
+    post_apply_hooks: options.post_apply_hooks,
+    rollback_ref: null,
+    repair_action: options.repair_action ?? null,
+    content_identity_fields: options.content_identity_fields,
+  };
+}
+
 function buildAppBinaryComponent(channel: string): ManagedUpdateComponent {
+  const postApplyHooks = ['replace_desktop_app_bundle_after_standard_updater_download'];
   return {
     component_id: 'app_binary',
     provider_id: 'app_binary',
+    adapter_id: 'electron_standard_updater',
+    policy_id: 'user_visible_release_channel_check',
     label: 'One Person Lab desktop App',
     state: 'current',
     channel,
@@ -168,6 +241,7 @@ function buildAppBinaryComponent(channel: string): ManagedUpdateComponent {
       ),
     ],
     lifecycle: KERNEL_LIFECYCLE,
+    post_apply_hooks: postApplyHooks,
     plan: {
       action: 'none',
       summary: 'Desktop App update checks stay in the App-owned standard updater.',
@@ -179,11 +253,11 @@ function buildAppBinaryComponent(channel: string): ManagedUpdateComponent {
         ),
       ],
     },
-    receipt: {
-      required: true,
-      last_receipt_ref: null,
+    receipt: componentReceipt({
+      source_manifest_ref: 'github_release_standard_updater_metadata',
+      post_apply_hooks: postApplyHooks,
       content_identity_fields: ['release_tag', 'asset_sha256', 'updater_metadata_sha256'],
-    },
+    }),
     authority_boundary: {
       can_update_desktop_app_bundle: true,
       can_update_full_first_install_assets: false,
@@ -210,15 +284,18 @@ function buildRuntimeToolchainComponent(systemEnvironment: Record<string, unknow
   const rollbackPointer = runtimeToolchain?.rollback_pointer ?? null;
   const state: ManagedUpdateComponentState =
     !installed
-      ? 'missing'
+      ? 'failed_with_repair'
       : updateAvailable || runtimeLatestStatus === 'outdated'
         ? 'update_available'
         : 'current';
-  const action = state === 'current' ? 'none' : state === 'missing' ? 'install' : 'update';
+  const action = state === 'current' ? 'none' : state === 'failed_with_repair' ? 'install' : 'update';
+  const postApplyHooks = ['startup_smoke', 'swap_runtime_current_pointer_with_rollback'];
 
   return {
     component_id: 'runtime_toolchain',
     provider_id: 'runtime_toolchain',
+    adapter_id: 'runtime_toolchain_adapter',
+    policy_id: 'silent_background_verified_stage_apply_on_next_restart',
     label: 'App-owned runtime/toolchain layer',
     state,
     channel,
@@ -258,6 +335,7 @@ function buildRuntimeToolchainComponent(systemEnvironment: Record<string, unknow
       ),
     ],
     lifecycle: KERNEL_LIFECYCLE,
+    post_apply_hooks: postApplyHooks,
     plan: {
       action,
       summary: state === 'current'
@@ -284,11 +362,14 @@ function buildRuntimeToolchainComponent(systemEnvironment: Record<string, unknow
           ),
         ],
     },
-    receipt: {
-      required: true,
-      last_receipt_ref: null,
+    receipt: componentReceipt({
+      source_manifest_ref: 'app-runtime-update-channel.json',
+      from_version: typeof codex?.version === 'string' ? codex.version : null,
+      to_version: typeof codex?.latest_version === 'string' ? codex.latest_version : null,
+      post_apply_hooks: postApplyHooks,
+      repair_action: state === 'failed_with_repair' ? 'run_startup_maintenance' : null,
       content_identity_fields: ['runtime_version', 'sha256', 'current_pointer', 'staged_root'],
-    },
+    }),
     authority_boundary: {
       can_mutate_app_owned_runtime_root: true,
       can_swap_current_pointer: true,
@@ -314,7 +395,7 @@ function moduleState(module: Record<string, unknown>): ManagedUpdateComponentSta
   const dirty = booleanValue(git, 'dirty') === true;
   const syncStatus = stringValue(git, 'sync_status');
   if (!installed || healthStatus === 'missing') {
-    return 'missing';
+    return 'failed_with_repair';
   }
   if (
     dirty
@@ -327,7 +408,7 @@ function moduleState(module: Record<string, unknown>): ManagedUpdateComponentSta
     || syncStatus === 'no_upstream'
     || syncStatus === 'unknown'
   ) {
-    return 'manual_required';
+    return 'skipped_manual_required';
   }
   if (recommendedAction === 'update') {
     return 'update_available';
@@ -347,28 +428,37 @@ function buildAgentPackageComponent(modules: Record<string, unknown>[], channel:
     source_policy: entry.source_policy ?? null,
     git: entry.git ?? null,
   }));
-  const missingCount = moduleStates.filter((entry) => entry.state === 'missing').length;
+  const failedWithRepairCount = moduleStates.filter((entry) => entry.state === 'failed_with_repair').length;
   const updateCount = moduleStates.filter((entry) => entry.state === 'update_available').length;
-  const manualCount = moduleStates.filter((entry) => entry.state === 'manual_required').length;
+  const manualCount = moduleStates.filter((entry) => entry.state === 'skipped_manual_required').length;
   const state: ManagedUpdateComponentState =
     manualCount > 0
-      ? 'manual_required'
-      : missingCount > 0
-        ? 'missing'
+      ? 'skipped_manual_required'
+      : failedWithRepairCount > 0
+        ? 'failed_with_repair'
         : updateCount > 0
           ? 'update_available'
           : 'current';
   const action = manualCount > 0
     ? 'manual_review'
-    : missingCount > 0
+    : failedWithRepairCount > 0
       ? 'install'
       : updateCount > 0
         ? 'update'
         : 'none';
+  const postApplyHooks = [
+    'reconcile_modules',
+    'sync_skills',
+    'sync_plugin_registry',
+    'sync_plugin_packaged_skills',
+    'sync_oma_generated_plugin_surface',
+  ];
 
   return {
     component_id: 'agent_package_channel',
     provider_id: 'agent_package_channel',
+    adapter_id: 'agent_package_channel_adapter',
+    policy_id: 'ordinary_user_non_development_silent_background',
     label: 'MAS/MAG/RCA/OMA managed agent packages',
     state,
     channel,
@@ -409,6 +499,7 @@ function buildAgentPackageComponent(modules: Record<string, unknown>[], channel:
       ),
     ],
     lifecycle: KERNEL_LIFECYCLE,
+    post_apply_hooks: postApplyHooks,
     plan: {
       action,
       summary: action === 'none'
@@ -445,11 +536,12 @@ function buildAgentPackageComponent(modules: Record<string, unknown>[], channel:
             ),
           ],
     },
-    receipt: {
-      required: true,
-      last_receipt_ref: null,
+    receipt: componentReceipt({
+      source_manifest_ref: 'ghcr.io/gaofeng21cn/one-person-lab-manifest:stable',
+      post_apply_hooks: postApplyHooks,
+      repair_action: state === 'failed_with_repair' ? 'reconcile_managed_modules' : null,
       content_identity_fields: ['digest', 'sha256', 'source_fingerprint', 'git_head_sha'],
-    },
+    }),
     authority_boundary: {
       can_silently_update_clean_managed_modules: true,
       can_overwrite_dirty_checkout: false,
@@ -467,9 +559,12 @@ function buildAgentPackageComponent(modules: Record<string, unknown>[], channel:
 
 function buildCapabilityExposureComponent(agentPackages: ManagedUpdateComponent, channel: string): ManagedUpdateComponent {
   const needsReload = agentPackages.plan.command_refs.some((entry) => entry.action_id === 'sync_codex_skills');
+  const postApplyHooks = ['sync_plugin_registry', 'sync_plugin_packaged_skills', 'sync_oma_generated_plugin_surface'];
   return {
     component_id: 'capability_exposure',
     provider_id: 'capability_exposure',
+    adapter_id: 'codex_exposure_status_adapter',
+    policy_id: 'display_visibility_and_repair_actions_without_duplicate_semantics',
     label: 'Codex plugin and skill exposure',
     state: needsReload ? 'needs_reload' : 'current',
     channel,
@@ -500,6 +595,7 @@ function buildCapabilityExposureComponent(agentPackages: ManagedUpdateComponent,
       ),
     ],
     lifecycle: KERNEL_LIFECYCLE,
+    post_apply_hooks: postApplyHooks,
     plan: {
       action: needsReload ? 'reload' : 'none',
       summary: needsReload
@@ -526,11 +622,12 @@ function buildCapabilityExposureComponent(agentPackages: ManagedUpdateComponent,
           ),
         ],
     },
-    receipt: {
-      required: true,
-      last_receipt_ref: null,
+    receipt: componentReceipt({
+      source_manifest_ref: 'module_post_apply_projection',
+      post_apply_hooks: postApplyHooks,
+      repair_action: needsReload ? 'sync_codex_skills' : null,
       content_identity_fields: ['plugin_manifest_hash', 'skill_pack_hash', 'generated_surface_hash'],
-    },
+    }),
     authority_boundary: {
       can_sync_plugin_registry: true,
       can_sync_skill_projection: true,
@@ -558,9 +655,11 @@ function summarize(components: ManagedUpdateComponent[]) {
     total_components_count: components.length,
     current_components_count: components.filter((entry) => entry.state === 'current').length,
     update_available_components_count: components.filter((entry) => entry.state === 'update_available').length,
-    missing_components_count: components.filter((entry) => entry.state === 'missing').length,
-    manual_required_components_count: components.filter((entry) => entry.state === 'manual_required').length,
+    staged_components_count: components.filter((entry) => entry.state === 'staged').length,
+    restart_required_components_count: components.filter((entry) => entry.state === 'needs_restart').length,
     reload_required_components_count: components.filter((entry) => entry.state === 'needs_reload').length,
+    failed_with_repair_components_count: components.filter((entry) => entry.state === 'failed_with_repair').length,
+    skipped_manual_required_components_count: components.filter((entry) => entry.state === 'skipped_manual_required').length,
   };
 }
 
@@ -598,7 +697,7 @@ export async function buildManagedUpdateKernelProjection(
   return {
     version: 'g2',
     managed_update: {
-      surface_id: 'opl_managed_update_kernel',
+      surface_id: MANAGED_UPDATE_KERNEL_ID,
       operation: input.operation,
       operation_mode: operationMode(input.operation),
       update_channel: channel,
@@ -606,12 +705,24 @@ export async function buildManagedUpdateKernelProjection(
       requested_component_id: input.componentId ?? null,
       requested_receipt_id: input.receiptId ?? null,
       lifecycle: KERNEL_LIFECYCLE,
+      state_vocabulary: STATE_VOCABULARY,
+      idempotency_lock: {
+        lock_id: `${MANAGED_UPDATE_KERNEL_ID}.global`,
+        lock_scope: 'single_writer_for_fetch_verify_stage_activate_post_apply_write_receipt',
+        read_operations: ['status', 'check', 'plan'],
+        exclusive_operations: ['apply', 'repair', 'rollback'],
+        status: 'not_acquired_for_projection',
+        stale_after_seconds: 1800,
+        contention_policy: 'report_in_progress_or_skip_without_parallel_stage_or_plugin_sync',
+      },
       summary: summarize(selectedComponents),
       components: selectedComponents,
       repair_actions: selectedComponents.flatMap((component) => component.plan.command_refs),
       receipts: {
         receipt_id: input.receiptId ?? null,
         receipt_store: 'opl_managed_install_update_ledger_and_future_runtime_update_receipts',
+        component_receipt_schema: 'opl_managed_update_component_receipt.v1',
+        required_fields: COMPONENT_RECEIPT_REQUIRED_FIELDS,
         write_policy: receiptWritePolicy(input.operation),
       },
       authority_boundary: {

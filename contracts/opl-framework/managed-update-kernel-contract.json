@@ -3,7 +3,7 @@
   "owner": "one-person-lab",
   "purpose": "managed_update_kernel_contract",
   "state": "active",
-  "surface_id": "opl_managed_update_kernel",
+  "surface_id": "opl_managed_updater_kernel",
   "public_cli_surfaces": [
     "opl update status --json",
     "opl update check --json",
@@ -13,21 +13,46 @@
     "opl update rollback --component <component_id> --json"
   ],
   "kernel_lifecycle": [
-    "manifest",
-    "current_state",
-    "plan",
-    "fetch",
+    "read_manifest",
+    "read_current_state",
+    "diff_plan",
+    "fetch_artifacts",
     "verify",
     "stage",
     "activate",
     "post_apply",
-    "receipt",
-    "status_projection",
-    "repair_action"
+    "write_receipt",
+    "report_status_or_repair"
   ],
+  "component_state_vocabulary": [
+    "current",
+    "update_available",
+    "staged",
+    "needs_restart",
+    "needs_reload",
+    "failed_with_repair",
+    "skipped_manual_required"
+  ],
+  "idempotency_lock": {
+    "lock_id": "opl_managed_updater_kernel.global",
+    "lock_scope": "single_writer_for_fetch_verify_stage_activate_post_apply_write_receipt",
+    "read_operations": [
+      "status",
+      "check",
+      "plan"
+    ],
+    "exclusive_operations": [
+      "apply",
+      "repair",
+      "rollback"
+    ],
+    "stale_after_seconds": 1800,
+    "contention_policy": "report_in_progress_or_skip_without_parallel_stage_or_plugin_sync"
+  },
   "providers": [
     {
       "provider_id": "app_binary",
+      "adapter_id": "electron_standard_updater",
       "owner": "one-person-lab-app",
       "role": "desktop_app_standard_updater_projection",
       "authority": "App release metadata and Electron updater assets remain App-owned.",
@@ -36,6 +61,7 @@
     },
     {
       "provider_id": "runtime_toolchain",
+      "adapter_id": "runtime_toolchain_adapter",
       "owner": "one-person-lab-app-and-opl-framework",
       "role": "app_owned_runtime_fallback_and_toolchain_layer",
       "authority": "App-owned runtime roots, current pointer, staged root, health smoke, and rollback pointer.",
@@ -44,6 +70,7 @@
     },
     {
       "provider_id": "agent_package_channel",
+      "adapter_id": "agent_package_channel_adapter",
       "owner": "one-person-lab-managed-modules",
       "role": "GHCR module package channel for MAS/MAG/RCA/OMA ordinary users",
       "authority": "GHCR tag selects a channel target; digest or sha identifies installed content.",
@@ -52,6 +79,7 @@
     },
     {
       "provider_id": "capability_exposure",
+      "adapter_id": "codex_exposure_status_adapter",
       "owner": "one-person-lab-connect",
       "role": "Codex plugin registry, plugin-packaged skills, and generated OMA plugin surface projection",
       "authority": "Derived exposure from managed module state, not a second domain truth source.",
@@ -85,6 +113,33 @@
     "apply": "projection_only_no_receipt_write",
     "repair": "projection_only_no_receipt_write",
     "rollback": "projection_only_no_receipt_write"
+  },
+  "component_receipt_shape": {
+    "schema_version": "opl_managed_update_component_receipt.v1",
+    "required_fields": [
+      "source_manifest_ref",
+      "from_version",
+      "from_digest",
+      "to_version",
+      "to_digest",
+      "verify_result",
+      "activated_at",
+      "post_apply_hooks",
+      "rollback_ref",
+      "repair_action"
+    ],
+    "identity_fields": [
+      "digest",
+      "sha256",
+      "source_fingerprint",
+      "git_head_sha",
+      "runtime_version",
+      "current_pointer",
+      "staged_root",
+      "plugin_manifest_hash",
+      "skill_pack_hash",
+      "generated_surface_hash"
+    ]
   },
   "condition_shape": {
     "required_fields": [
