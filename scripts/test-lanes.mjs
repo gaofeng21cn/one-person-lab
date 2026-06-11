@@ -48,6 +48,7 @@ const fastTestFiles = [
   'tests/src/native-helper-prebuild.test.ts',
   'tests/src/mas-mag-cognitive-kernel-stage-pack-fixtures.test.ts',
   'tests/src/stage-artifact-runtime.test.ts',
+  'tests/src/stage-artifact-contract.test.ts',
   'tests/src/state-index-kernel-contract.test.ts',
   'tests/src/stage-run-kernel-contract.test.ts',
   'tests/src/stage-run-transition-authority-read-model.test.ts',
