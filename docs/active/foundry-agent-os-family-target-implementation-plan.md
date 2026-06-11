@@ -278,6 +278,8 @@ OPL 后续不能把 domain target delta 当成“OPL 已接管完成”。接收
 | `production-conformance` | runtime evidence / soak contracts | real owner receipt / typed blocker / human gate / App consumption | repo-native soak reports、owner acceptance refs | 只用真实 evidence 关闭 production claim，不用 conformance pass 代替。 |
 | `owner-evidence` | MAS/MAG/RCA/OMA/App/brand owner repos + OPL refs-only intake | current owner delta、owner-route work orders、domain/App/brand owner evidence | domain/App repo-native verification、OPL live readout、owner receipt / typed blocker / human gate / release / long-soak refs | 每个 work order 由对应 owner 给出真实 closing ref 或 typed blocker；OPL 只 intake / verify / project。 |
 
+2026-06-11 foldback：W7 的 domain live progress intake 已落成标准合同。MAS/MAG/RCA/OMA 都通过 `contracts/live_stage_run_progress_evidence.json` 暴露 `domain_live_stage_run_progress_evidence`，并把 owner receipt、typed blocker、human gate、quality/export/review、no-regression 和 long-soak refs 作为 OPL refs-only consumption surface。OPL conformance 只在 surface kind、标准 status、`refs_only=true` 与 OPL 不可签 receipt / 不可创建 typed blocker / 不可声明 ready 的 false-authority flags 同时满足时关闭 live-progress open domain；旧私有 surface 或缺字段合同会保持 `blocked_invalid_domain_live_progress_evidence`。
+
 当前 `owner-evidence` 的 OPL 主入口是：
 
 ```bash

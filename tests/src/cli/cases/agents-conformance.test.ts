@@ -11,6 +11,9 @@ import {
 } from './agents-conformance-fixtures.ts';
 import { assertStageOperatingPrincipleChecksPassed } from './agents-conformance-stage-operating-principles-assertions.ts';
 
+const LIVE_STAGE_RUN_PROGRESS_POLICY =
+  'controlled_canary_and_structural_conformance_do_not_close_live_domain_progress_evidence_domain_owner_refs_or_typed_blockers_required';
+
 test('agents conformance reports structural readiness separately from production evidence tail', () => {
   const repoDir = buildReadyAgentRepo();
   const platformSurfaces = runCli([
@@ -113,7 +116,7 @@ test('agents conformance reports structural readiness separately from production
   assert.equal(conformancePayload.live_stage_run_progress_evidence_open_domain_count, 1);
   assert.equal(
     conformancePayload.live_stage_run_progress_evidence_policy,
-    'controlled_canary_and_structural_conformance_do_not_close_live_domain_progress_evidence',
+    LIVE_STAGE_RUN_PROGRESS_POLICY,
   );
   const adoptionReadModel = conformancePayload.stage_run_domain_adoption_read_model;
   assert.deepEqual(adoptionReadModel, report.stage_run_domain_adoption_read_model);
@@ -159,7 +162,7 @@ test('agents conformance reports structural readiness separately from production
   );
   assert.equal(
     adoptionReadModel.live_stage_run_progress_evidence_policy,
-    'controlled_canary_and_structural_conformance_do_not_close_live_domain_progress_evidence',
+    LIVE_STAGE_RUN_PROGRESS_POLICY,
   );
   const liveProgressWorklist = adoptionReadModel.live_stage_run_progress_evidence_worklist;
   assert.equal(liveProgressWorklist.surface_kind, 'opl_live_stage_run_progress_evidence_worklist');
@@ -389,6 +392,130 @@ test('agents conformance reports structural readiness separately from production
   );
   assert.equal(repo.evidence_tail_classification.tail_items[0].repo_path, repoDir);
   assert.equal(repo.evidence_tail_classification.tail_items[0].authority_boundary.conformance_report_can_claim_domain_ready, false);
+});
+
+test('agents conformance consumes domain-owned live StageRun progress evidence without ready claim', () => {
+  const magRepo = buildReadyAgentRepo();
+  retargetReadyRepoToMag(magRepo);
+  configureReadyMagMorphology(magRepo);
+  writeJson(path.join(magRepo, 'contracts', 'live_stage_run_progress_evidence.json'), {
+    surface_kind: 'domain_live_stage_run_progress_evidence',
+    domain_id: 'med-autogrant',
+    owner: 'med-autogrant',
+    status: 'owner_typed_blocker_recorded_not_ready_claim',
+    refs: {
+      owner_receipt_refs: ['receipt:mag/live-stage-owner-answer/2026-06-11'],
+      typed_blocker_refs: ['typed-blocker:mag/submission-human-gate-required/2026-06-11'],
+      no_regression_refs: ['no-regression:mag/generated-surface-no-ready-claim'],
+      doc_refs: ['docs/status.md#live-stage-progress-evidence'],
+      next_verification_command_refs: ['scripts/verify.sh'],
+    },
+    typed_blocker_kind: 'submission_human_gate_required',
+    authority_boundary: {
+      refs_only: true,
+      domain_ready_claimed: false,
+      production_ready_claimed: false,
+      opl_can_sign_owner_receipt: false,
+      opl_can_create_typed_blocker: false,
+      opl_can_claim_domain_ready: false,
+      opl_can_claim_production_ready: false,
+    },
+  });
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `mag=${magRepo}`,
+  ]).standard_domain_agent_conformance;
+  const adoption = report.stage_run_domain_adoption_read_model;
+  const domain = adoption.domains[0];
+  const worklistDomain = adoption.live_stage_run_progress_evidence_worklist.domains[0];
+
+  assert.equal(report.status, 'passed');
+  assert.equal(report.live_domain_progress_status, 'owner_evidence_recorded_not_ready_claim');
+  assert.equal(report.live_stage_run_progress_evidence_open_domain_count, 0);
+  assert.equal(report.summary.live_stage_run_progress_evidence_open_domain_count, 0);
+  assert.equal(adoption.live_stage_run_progress_evidence_status, 'owner_evidence_recorded_not_ready_claim');
+  assert.equal(adoption.live_stage_run_progress_evidence_worklist.status, 'owner_evidence_recorded_not_ready_claim');
+  assert.equal(adoption.live_stage_run_progress_evidence_worklist.open_domain_count, 0);
+  assert.equal(domain.live_stage_run_progress_evidence_contract_status, 'resolved_with_domain_owner_refs');
+  assert.equal(domain.live_stage_run_progress_evidence_status, 'owner_typed_blocker_recorded_not_ready_claim');
+  assert.equal(domain.live_stage_run_progress_evidence_open, false);
+  assert.equal(domain.live_stage_run_progress_typed_blocker_kind, 'submission_human_gate_required');
+  assert.deepEqual(domain.live_stage_run_progress_observed_ref_shapes, [
+    'domain_owner_receipt_ref',
+    'no_regression_ref',
+    'typed_blocker_ref',
+  ]);
+  assert.deepEqual(domain.live_stage_run_progress_observed_receipt_refs, [
+    'receipt:mag/live-stage-owner-answer/2026-06-11',
+    'typed-blocker:mag/submission-human-gate-required/2026-06-11',
+    'no-regression:mag/generated-surface-no-ready-claim',
+  ]);
+  assert.equal(domain.live_stage_run_progress_observed_ref_counts.domain_owner_receipt_ref_count, 1);
+  assert.equal(domain.live_stage_run_progress_observed_ref_counts.typed_blocker_ref_count, 1);
+  assert.equal(domain.live_stage_run_progress_observed_ref_counts.no_regression_ref_count, 1);
+  assert.deepEqual(domain.live_stage_run_progress_doc_refs, ['docs/status.md#live-stage-progress-evidence']);
+  assert.deepEqual(domain.live_stage_run_progress_next_verification_refs, ['scripts/verify.sh']);
+  assert.equal(
+    domain.next_required_owner_action,
+    'domain_owner_typed_blocker_ref_recorded_wait_for_owner_resolution_route_back_or_no_regression_ref',
+  );
+  assert.deepEqual(worklistDomain.observed_ref_shapes, domain.live_stage_run_progress_observed_ref_shapes);
+  assert.equal(worklistDomain.conformance_can_claim_domain_ready, false);
+  assert.equal(worklistDomain.can_create_typed_blocker, false);
+  assert.equal(adoption.authority_boundary.can_claim_domain_ready, false);
+  assert.equal(adoption.authority_boundary.can_claim_production_ready, false);
+});
+
+test('agents conformance does not close live progress from non-standard domain evidence contracts', () => {
+  const magRepo = buildReadyAgentRepo();
+  retargetReadyRepoToMag(magRepo);
+  configureReadyMagMorphology(magRepo);
+  writeJson(path.join(magRepo, 'contracts', 'live_stage_run_progress_evidence.json'), {
+    surface_kind: 'mag_live_stage_run_progress_evidence.v1',
+    domain_id: 'med-autogrant',
+    owner: 'med-autogrant',
+    status: 'blocked_by_mag_owned_typed_blocker',
+    refs: {
+      owner_receipt_refs: ['receipt:mag/live-stage-owner-answer/2026-06-11'],
+      typed_blocker_refs: ['typed-blocker:mag/submission-human-gate-required/2026-06-11'],
+    },
+    authority_boundary: {
+      opl_can_sign_owner_receipt: false,
+      opl_can_create_typed_blocker: false,
+    },
+  });
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `mag=${magRepo}`,
+  ]).standard_domain_agent_conformance;
+  const adoption = report.stage_run_domain_adoption_read_model;
+  const domain = adoption.domains[0];
+
+  assert.equal(report.status, 'passed');
+  assert.equal(report.live_stage_run_progress_evidence_status, 'required_from_domain_owner');
+  assert.equal(report.live_stage_run_progress_evidence_open_domain_count, 1);
+  assert.equal(
+    domain.live_stage_run_progress_evidence_status,
+    'blocked_invalid_domain_live_progress_evidence',
+  );
+  assert.equal(
+    domain.live_stage_run_progress_evidence_contract_status,
+    'resolved_invalid_standard_contract',
+  );
+  assert.equal(domain.live_stage_run_progress_evidence_open, true);
+  assert.deepEqual(domain.live_stage_run_progress_observed_ref_shapes, []);
+  assert.equal(
+    domain.next_required_owner_action,
+    'repair_domain_live_stage_run_progress_evidence_contract',
+  );
+  assert.equal(adoption.live_stage_run_progress_evidence_worklist.open_domain_count, 1);
+  assert.equal(adoption.authority_boundary.can_create_typed_blocker, false);
 });
 
 test('agents conformance exposes a live family probe over generated interfaces, action catalog, stage plane, and admission gates', () => {

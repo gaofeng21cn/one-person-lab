@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/domain-live-stage-run-progress-evidence.schema.json",
+  "title": "DomainLiveStageRunProgressEvidence",
+  "type": "object",
+  "required": [
+    "surface_kind",
+    "domain_id",
+    "owner",
+    "status",
+    "refs",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "domain_live_stage_run_progress_evidence"
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "domain_agent_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "owner_evidence_recorded_not_ready_claim",
+        "owner_typed_blocker_recorded_not_ready_claim",
+        "owner_evidence_required"
+      ]
+    },
+    "refs": {
+      "type": "object",
+      "properties": {
+        "owner_receipt_refs": { "$ref": "#/$defs/refList" },
+        "domain_owner_receipt_refs": { "$ref": "#/$defs/refList" },
+        "domain_receipt_refs": { "$ref": "#/$defs/refList" },
+        "typed_blocker_refs": { "$ref": "#/$defs/refList" },
+        "human_gate_refs": { "$ref": "#/$defs/refList" },
+        "quality_or_export_receipt_refs": { "$ref": "#/$defs/refList" },
+        "quality_gate_receipt_refs": { "$ref": "#/$defs/refList" },
+        "export_receipt_refs": { "$ref": "#/$defs/refList" },
+        "reviewer_receipt_refs": { "$ref": "#/$defs/refList" },
+        "no_regression_refs": { "$ref": "#/$defs/refList" },
+        "long_soak_refs": { "$ref": "#/$defs/refList" },
+        "doc_refs": { "$ref": "#/$defs/refList" },
+        "next_verification_command_refs": { "$ref": "#/$defs/refList" },
+        "next_verification_refs": { "$ref": "#/$defs/refList" },
+        "verification_refs": { "$ref": "#/$defs/refList" }
+      },
+      "additionalProperties": true
+    },
+    "evidence_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ref_shape", "ref"],
+        "properties": {
+          "ref_shape": { "$ref": "#/$defs/acceptedRefShape" },
+          "result_shape": { "$ref": "#/$defs/acceptedRefShape" },
+          "accepted_ref_shape": { "$ref": "#/$defs/acceptedRefShape" },
+          "ref": { "type": "string", "minLength": 1 },
+          "receipt_ref": { "type": "string", "minLength": 1 },
+          "evidence_ref": { "type": "string", "minLength": 1 },
+          "typed_blocker_ref": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": true
+      }
+    },
+    "typed_blocker_kind": {
+      "type": "string"
+    },
+    "authority_boundary": {
+      "type": "object",
+      "required": [
+        "refs_only",
+        "opl_can_sign_owner_receipt",
+        "opl_can_create_typed_blocker",
+        "opl_can_claim_domain_ready",
+        "opl_can_claim_production_ready"
+      ],
+      "properties": {
+        "refs_only": { "const": true },
+        "opl_can_write_domain_truth": { "const": false },
+        "opl_can_sign_owner_receipt": { "const": false },
+        "opl_can_create_typed_blocker": { "const": false },
+        "opl_can_authorize_quality_or_export": { "const": false },
+        "opl_can_claim_domain_ready": { "const": false },
+        "opl_can_claim_production_ready": { "const": false },
+        "provider_completion_counts_as_domain_ready": { "const": false },
+        "structural_conformance_counts_as_live_progress": { "const": false }
+      },
+      "additionalProperties": true
+    },
+    "non_claims": {
+      "type": "object",
+      "properties": {
+        "domain_ready": { "const": false },
+        "production_ready": { "const": false }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "acceptedRefShape": {
+      "type": "string",
+      "enum": [
+        "domain_owner_receipt_ref",
+        "typed_blocker_ref",
+        "human_gate_ref",
+        "quality_or_export_receipt_ref",
+        "no_regression_ref",
+        "long_soak_ref"
+      ]
+    },
+    "refList": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          { "type": "string", "minLength": 1 },
+          {
+            "type": "object",
+            "required": ["ref"],
+            "properties": {
+              "ref": { "type": "string", "minLength": 1 },
+              "role": { "type": "string" },
+              "body_included": { "type": "boolean" }
+            },
+            "additionalProperties": true
+          }
+        ]
+      }
+    }
+  }
+}
