@@ -35,7 +35,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `stage_progress_log` / Temporal completion / provider completed 不能被任何 status、tray、workbench、Runway 或 App read model 表述为 domain ready、owner receipt observed、typed blocker created、quality verdict、artifact ready、paper repaired、publication ready 或 production ready。
 - 该规则与成熟工程经验一致：Temporal workflow history 只应承载可重放的小结果和 refs，Airflow XCom 只适合小元数据，Kubernetes controller 对 desired/current/status 做 reconcile，OpenTelemetry / OpenLineage 用 links / lineage refs 关联事实，不把可观测性事件升格为 domain authority。
 - 验证口径固定为：大 closeout 输入下 compact result 不含 stage log / transcript，JSON payload 保持小于 transport 阈值；stage-route scheduler contract 声明 missing domain stage log 只投影、不由 OPL 生成 typed blocker 或 domain summary。
-- 当前落地提交：`a23a1b59 fix(runtime): compact temporal closeout payloads`。
+- 落地证据归 `contracts/opl-framework/family-runtime-attempt-contract.json`、runtime source、focused tests、CLI/read-model 和 git history；本文不维护单次提交 SHA。
 - 这只修 OPL transport / projection基座，不修改 MAS truth、paper body、publication verdict、domain owner receipt、typed blocker、quality/export verdict、artifact authority、App release verdict 或 production-ready 结论。active attempt 存在时，worker_source_stale 仍必须等 active attempt 为 0 后由 supervisor guard 重启，不能为了加载新代码杀掉运行中 stage。
 
 ## 2026-06-10
