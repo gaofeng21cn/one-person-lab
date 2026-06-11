@@ -11,7 +11,10 @@ import { hydrateDomainTasks } from './family-runtime-domain-intake.ts';
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import { startDefaultExecutorStageAttempt } from './family-runtime-default-executor-start.ts';
 import { queryTemporalStageAttemptReadModel } from './family-runtime-temporal-query.ts';
-import { isDefaultExecutorDispatchTask } from './family-runtime-provider-hosted-attempts.ts';
+import {
+  defaultExecutorProviderAttemptOrLeaseRequired,
+  isDefaultExecutorDispatchTask,
+} from './family-runtime-provider-hosted-attempts.ts';
 import { ensureProviderHostedStageAttempt } from './family-runtime-provider-hosted-attempts.ts';
 import { blockTaskForStageAdmissionGate } from './family-runtime-stage-admission-gate.ts';
 import {
@@ -72,6 +75,67 @@ function providerHostedDispatchRequiresCloseout(row: FamilyRuntimeTaskRow, activ
   return row.domain_id === 'medautoscience'
     && MAS_PAPER_AUTONOMY_TASK_KINDS.has(row.task_kind)
     && activeStageAttemptIds.length > 0;
+}
+
+function isProviderRequiredDefaultExecutorTask(row: FamilyRuntimeTaskRow, payload: Record<string, unknown>) {
+  return row.domain_id === 'medautoscience'
+    && row.task_kind === 'domain_owner/default-executor-dispatch'
+    && defaultExecutorProviderAttemptOrLeaseRequired(payload);
+}
+
+function blockProviderRequiredDefaultExecutorOwnerNotAdmitted(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+) {
+  const blockedAt = nowIso();
+  const reason = 'default_executor_provider_admission_owner_not_admitted';
+  db.prepare(`
+    UPDATE tasks
+    SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
+      last_error = ?, dead_letter_reason = ?, updated_at = ?
+    WHERE task_id = ?
+  `).run(reason, reason, blockedAt, row.task_id);
+  insertEvent(db, {
+    taskId: row.task_id,
+    domainId: row.domain_id,
+    eventType: 'task_dispatch_blocked_provider_required_owner_not_admitted',
+    source: 'opl-family-runtime',
+    payload: {
+      reason,
+      task_kind: row.task_kind,
+      action_type: payload.action_type ?? null,
+      next_executable_owner: payload.next_executable_owner ?? null,
+      work_unit_id: payload.work_unit_id ?? null,
+      work_unit_fingerprint: payload.work_unit_fingerprint ?? null,
+      provider_attempt_or_lease_required: payload.provider_attempt_or_lease_required ?? null,
+      authority_boundary: {
+        opl: 'provider_admission_guard_fail_closed',
+        domain: 'truth_quality_artifact_gate_owner',
+        provider_completion_is_domain_ready: false,
+        domain_truth_mutation: false,
+        publication_quality_mutation: false,
+        artifact_gate_mutation: false,
+        current_package_mutation: false,
+      },
+    },
+  });
+  insertNotification(db, {
+    taskId: row.task_id,
+    severity: 'error',
+    title: 'Family runtime provider admission blocked',
+    body: `${row.domain_id}:${row.task_kind} requires provider admission, but the next owner is not admitted for the default executor.`,
+    payload: {
+      reason,
+      next_executable_owner: payload.next_executable_owner ?? null,
+    },
+  });
+  return {
+    task_id: row.task_id,
+    status: 'blocked',
+    reason,
+    stage_attempts: [],
+  };
 }
 
 function blockTaskForStaleOwnerRoute(
@@ -287,6 +351,9 @@ export async function dispatchFamilyRuntimeTask(
       temporalProviderModule: options.temporalProviderModule,
       queryTemporalStageAttemptReadModel: options.queryTemporalStageAttemptReadModel,
     });
+  }
+  if (isProviderRequiredDefaultExecutorTask(row, payload)) {
+    return blockProviderRequiredDefaultExecutorOwnerNotAdmitted(db, row, payload);
   }
   const activeStageAttempts = listStageAttemptsForTask(db, row.task_id).filter((attempt) => (
     attempt.status === 'queued'

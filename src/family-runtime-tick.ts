@@ -16,6 +16,8 @@ import {
   updateStageAttemptsForTask,
 } from './family-runtime-stage-attempts.ts';
 import {
+  findBlockingLiveDefaultExecutorDispatchAttempt,
+  findBlockingLiveDefaultExecutorStudyAttempt,
   findLiveDefaultExecutorDispatchAttempt,
   findLiveDefaultExecutorStudyAttempt,
   ensureProviderHostedStageAttempt,
@@ -605,8 +607,8 @@ async function dropLiveDefaultExecutorRows(
   const rows: FamilyRuntimeTaskRow[] = [];
   for (const row of candidateRows) {
     const payload = payloadFromTask(row);
-    const liveAttempt = findLiveDefaultExecutorDispatchAttempt(db, row, payload);
-    const liveStudyAttempt = liveAttempt ?? findLiveDefaultExecutorStudyAttempt(db, row, payload);
+    const liveAttempt = findBlockingLiveDefaultExecutorDispatchAttempt(db, row, payload);
+    const liveStudyAttempt = liveAttempt ?? findBlockingLiveDefaultExecutorStudyAttempt(db, row, payload);
     if (!liveStudyAttempt) {
       rows.push(row);
       continue;

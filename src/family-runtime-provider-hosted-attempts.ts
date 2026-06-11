@@ -158,6 +158,7 @@ const DEFAULT_EXECUTOR_NEXT_OWNERS = new Set([
   'write',
   'ai_reviewer',
   'write/ai_reviewer',
+  'analysis-campaign',
   'gate_clearing_batch',
   'medautoscience',
   'publication_gate_owner',
@@ -247,6 +248,37 @@ function liveDefaultExecutorAttemptBlocksCandidate(
   return isSameDefaultExecutorStudyStage(attempt.workspace_locator, candidateLocator);
 }
 
+function blockingLiveDefaultExecutorAttemptBlocksCandidate(
+  attempt: ReturnType<typeof listStageAttempts>[number],
+  candidateRow: FamilyRuntimeTaskRow,
+  candidatePayload: Record<string, unknown>,
+) {
+  if (attempt.blocked_reason === DEFAULT_EXECUTOR_SUPERSEDED_REASON) {
+    return false;
+  }
+  if (
+    optionalString(candidatePayload.action_type) === 'run_quality_repair_batch'
+    && isMasReadinessStageNativeOwnerAction(
+      {
+        domain_id: attempt.domain_id,
+        task_kind: attempt.stage_id,
+      },
+      attempt.workspace_locator,
+    )
+    && masReadinessPayloadReferencesStageNativeOwnerAnswer(attempt.workspace_locator)
+  ) {
+    return false;
+  }
+  const candidateLocator = workspaceLocatorForProviderHostedTask(candidateRow, candidatePayload);
+  if (
+    isSameDefaultExecutorDispatch(attempt.workspace_locator, candidateLocator)
+    || isSameDefaultExecutorStudyActionStage(attempt.workspace_locator, candidateLocator)
+  ) {
+    return sameExplicitDefaultExecutorStageRunIdentityOrUnspecified(attempt, candidateRow, candidatePayload);
+  }
+  return isSameDefaultExecutorStudyStage(attempt.workspace_locator, candidateLocator);
+}
+
 function sameDefaultExecutorStageRunIdentity(
   attempt: ReturnType<typeof listStageAttempts>[number],
   candidateRow: FamilyRuntimeTaskRow,
@@ -274,6 +306,32 @@ function sameDefaultExecutorStageRunIdentity(
     stageAttempt: attempt,
   });
   return sameStageRunRouteCurrentnessIdentity(candidateIdentity, attemptIdentity);
+}
+
+function hasExplicitDefaultExecutorStageRunIdentity(payload: Record<string, unknown>) {
+  const basis = masDefaultExecutorCurrentnessBasis(payload);
+  return Boolean(
+    optionalString(basis?.work_unit_fingerprint)
+    || optionalString(basis?.source_eval_id)
+    || optionalString(basis?.truth_epoch)
+    || optionalString(basis?.runtime_health_epoch)
+    || optionalString(payload.work_unit_fingerprint)
+    || optionalString(payload.source_eval_id)
+    || optionalString(payload.truth_epoch)
+    || optionalString(payload.runtime_health_epoch)
+    || optionalString(payload.idempotency_key),
+  );
+}
+
+function sameExplicitDefaultExecutorStageRunIdentityOrUnspecified(
+  attempt: ReturnType<typeof listStageAttempts>[number],
+  candidateRow: FamilyRuntimeTaskRow,
+  candidatePayload: Record<string, unknown>,
+) {
+  if (!hasExplicitDefaultExecutorStageRunIdentity(candidatePayload)) {
+    return true;
+  }
+  return sameDefaultExecutorStageRunIdentity(attempt, candidateRow, candidatePayload);
 }
 
 function hasLiveDefaultExecutorLinkedTask(db: DatabaseSync, taskId: string | null) {
@@ -386,6 +444,10 @@ function stageAdmissionRequired(payload: Record<string, unknown>) {
     || payload.require_stage_admission === true;
 }
 
+export function defaultExecutorProviderAttemptOrLeaseRequired(payload: Record<string, unknown>) {
+  return payload.provider_attempt_or_lease_required === true;
+}
+
 function familyTransitionResult(payload: Record<string, unknown>) {
   const transition = isRecord(payload.family_transition) ? payload.family_transition : null;
   if (!transition) {
@@ -495,6 +557,32 @@ export function findLiveDefaultExecutorDispatchAttempt(
   )) ?? null;
 }
 
+export function findBlockingLiveDefaultExecutorDispatchAttempt(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+) {
+  if (!isDefaultExecutorDispatchTask(row, payload)) {
+    return null;
+  }
+  const providerKind = resolveFamilyRuntimeProviderKind();
+  const stageId = stageIdForProviderHostedTask(row, payload);
+  if (!stageId) {
+    return null;
+  }
+  const workspaceLocator = workspaceLocatorForProviderHostedTask(row, payload);
+  return listStageAttempts(db).find((attempt) => (
+    attempt.task_id !== row.task_id
+    && attempt.provider_kind === providerKind
+    && attempt.executor_kind === 'codex_cli'
+    && attempt.domain_id === row.domain_id
+    && attempt.stage_id === stageId
+    && isCrossTaskLiveDefaultExecutorAttempt(db, attempt, workspaceLocator)
+    && isSameDefaultExecutorDispatch(attempt.workspace_locator, workspaceLocator)
+    && sameExplicitDefaultExecutorStageRunIdentityOrUnspecified(attempt, row, payload)
+  )) ?? null;
+}
+
 export function findLiveDefaultExecutorStudyAttempt(
   db: DatabaseSync,
   row: FamilyRuntimeTaskRow,
@@ -518,6 +606,32 @@ export function findLiveDefaultExecutorStudyAttempt(
     && isCrossTaskLiveDefaultExecutorAttempt(db, attempt, workspaceLocator)
     && isSameDefaultExecutorStudyStage(attempt.workspace_locator, workspaceLocator)
     && liveDefaultExecutorAttemptBlocksCandidate(attempt, row, payload)
+  )) ?? null;
+}
+
+export function findBlockingLiveDefaultExecutorStudyAttempt(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+) {
+  if (!isDefaultExecutorDispatchTask(row, payload)) {
+    return null;
+  }
+  const providerKind = resolveFamilyRuntimeProviderKind();
+  const stageId = stageIdForProviderHostedTask(row, payload);
+  if (!stageId) {
+    return null;
+  }
+  const workspaceLocator = workspaceLocatorForProviderHostedTask(row, payload);
+  return listStageAttempts(db).find((attempt) => (
+    attempt.task_id !== row.task_id
+    && attempt.provider_kind === providerKind
+    && attempt.executor_kind === 'codex_cli'
+    && attempt.domain_id === row.domain_id
+    && attempt.stage_id === stageId
+    && isCrossTaskLiveDefaultExecutorAttempt(db, attempt, workspaceLocator)
+    && isSameDefaultExecutorStudyStage(attempt.workspace_locator, workspaceLocator)
+    && blockingLiveDefaultExecutorAttemptBlocksCandidate(attempt, row, payload)
   )) ?? null;
 }
 
@@ -823,8 +937,8 @@ export function ensureProviderHostedStageAttempt(
     return null;
   }
   if (!options.newAttempt && isDefaultExecutorDispatchTask(row, payload) && stageId) {
-    const liveDispatchAttempt = findLiveDefaultExecutorDispatchAttempt(db, row, payload);
-    const liveStudyAttempt = liveDispatchAttempt ?? findLiveDefaultExecutorStudyAttempt(db, row, payload);
+    const liveDispatchAttempt = findBlockingLiveDefaultExecutorDispatchAttempt(db, row, payload);
+    const liveStudyAttempt = liveDispatchAttempt ?? findBlockingLiveDefaultExecutorStudyAttempt(db, row, payload);
     if (liveStudyAttempt) {
       insertEvent(db, {
         taskId: row.task_id,

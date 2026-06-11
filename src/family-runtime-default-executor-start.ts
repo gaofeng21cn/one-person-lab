@@ -16,6 +16,8 @@ import {
 } from './family-runtime-stage-attempts.ts';
 import {
   ensureProviderHostedStageAttempt,
+  findBlockingLiveDefaultExecutorDispatchAttempt,
+  findBlockingLiveDefaultExecutorStudyAttempt,
   findLiveDefaultExecutorDispatchAttempt,
   findLiveDefaultExecutorStudyAttempt,
   refreshDefaultExecutorLiveAttemptTaskLease,
@@ -269,7 +271,7 @@ export async function startDefaultExecutorStageAttempt(
       return terminalResult;
     }
   }
-  const liveDispatchAttempt = findLiveDefaultExecutorDispatchAttempt(db, row, payload);
+  const liveDispatchAttempt = findBlockingLiveDefaultExecutorDispatchAttempt(db, row, payload);
   if (liveDispatchAttempt) {
     const syncedLiveDispatchAttempt = await syncLiveAttemptBeforeSkip(db, paths, {
       liveAttempt: liveDispatchAttempt,
@@ -303,7 +305,7 @@ export async function startDefaultExecutorStageAttempt(
       };
     }
   }
-  const liveStudyAttempt = findLiveDefaultExecutorStudyAttempt(db, row, payload);
+  const liveStudyAttempt = findBlockingLiveDefaultExecutorStudyAttempt(db, row, payload);
   if (liveStudyAttempt) {
     const syncedLiveStudyAttempt = await syncLiveAttemptBeforeSkip(db, paths, {
       liveAttempt: liveStudyAttempt,

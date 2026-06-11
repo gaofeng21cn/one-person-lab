@@ -2,6 +2,9 @@ import { DatabaseSync } from 'node:sqlite';
 
 import {
   assert,
+  fs,
+  os,
+  path,
   test,
 } from './helpers.ts';
 import {
@@ -11,6 +14,7 @@ import {
   withIsolatedFamilyRuntimeEnv,
 } from './mas-default-executor-current-source-helpers.ts';
 
+import { dispatchFamilyRuntimeTask } from '../../../../../src/family-runtime-task-dispatch.ts';
 import { runFamilyRuntimeQueueTick } from '../../../../../src/family-runtime-tick.ts';
 import type { FamilyRuntimeTaskScope } from '../../../../../src/family-runtime-command.ts';
 import { ensureProviderHostedStageAttempt } from '../../../../../src/family-runtime-provider-hosted-attempts.ts';
@@ -42,6 +46,22 @@ function studyTaskScope(): FamilyRuntimeTaskScope {
       },
     ],
   };
+}
+
+function createSucceedingDispatchFixture() {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-dispatch-'));
+  const dispatchPath = path.join(fixtureRoot, 'dispatch');
+  fs.writeFileSync(
+    dispatchPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+cat <<'JSON'
+{"accepted":true,"surface_kind":"mas_family_domain_handler_dispatch_receipt","will_start_llm_worker":true}
+JSON
+`,
+    { mode: 0o755 },
+  );
+  return { fixtureRoot, dispatchPath };
 }
 
 test('family-runtime tick does not auto-redrive stale same-action reviewer blocker when current reviewer source row exists', async () => {
@@ -200,5 +220,150 @@ test('family-runtime tick selects only one MAS default executor candidate per st
     });
   } finally {
     db.close();
+  }
+});
+
+test('MAS analysis-campaign default executor admission starts a stage attempt instead of succeeding through domain dispatch', async () => {
+  const db = new DatabaseSync(':memory:');
+  const dispatch = createSucceedingDispatchFixture();
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      const previousDispatch = process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH;
+      process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH = dispatch.dispatchPath;
+      try {
+        createQueueTables(db);
+        fs.mkdirSync(familyRuntimePaths().dispatch_dir, { recursive: true });
+        const payload = defaultExecutorPayloadForOwner({
+          sourceFingerprint: 'publication-blockers::497d1260db522f01',
+          actionType: 'run_quality_repair_batch',
+          nextOwner: 'analysis-campaign',
+          dispatchAuthority: 'consumer_default_executor_dispatch',
+          dispatchRef: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json',
+        });
+        insertDefaultExecutorTaskWithPayload(db, {
+          taskId: 'task-mas-analysis-campaign-provider-admission',
+          payload: {
+            ...payload,
+            work_unit_id: 'analysis_claim_evidence_repair',
+            work_unit_fingerprint: 'publication-blockers::497d1260db522f01',
+            action_fingerprint: 'publication-blockers::497d1260db522f01',
+            provider_attempt_or_lease_required: true,
+            provider_completion_is_domain_completion: false,
+            required_output_surface: 'artifacts/controller/repair_execution_evidence/latest.json',
+          },
+          dedupeKey: 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:analysis-campaign',
+          createdAt: '2026-06-11T17:50:24.262Z',
+          status: 'queued',
+        });
+        const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+          'task-mas-analysis-campaign-provider-admission',
+        ) as FamilyRuntimeTaskRow;
+
+        const result = await dispatchFamilyRuntimeTask(db, familyRuntimePaths(), row, {
+          temporalProviderModule: async () => ({
+            startTemporalStageAttemptWorkflow: async (attempt) => ({
+              workflow_id: `wf_${attempt.stage_attempt_id}`,
+              run_id: 'run-analysis-campaign-test',
+            }),
+          }),
+        });
+        const task = db.prepare('SELECT status FROM tasks WHERE task_id = ?').get(row.task_id) as { status: string };
+        const attempts = db.prepare(`
+          SELECT stage_id, status, executor_kind
+          FROM stage_attempts
+          WHERE task_id = ?
+        `).all(row.task_id) as Array<{ stage_id: string; status: string; executor_kind: string }>;
+
+        assert.equal(result.status, 'running');
+        assert.equal(task.status, 'running');
+        assert.equal(attempts.length, 1);
+        assert.equal(attempts[0].stage_id, 'domain_owner/default-executor-dispatch');
+        assert.equal(attempts[0].status, 'running');
+        assert.equal(attempts[0].executor_kind, 'codex_cli');
+      } finally {
+        if (previousDispatch === undefined) {
+          delete process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH;
+        } else {
+          process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH = previousDispatch;
+        }
+      }
+    });
+  } finally {
+    db.close();
+    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('MAS provider-required default executor task with unknown owner cannot succeed through domain dispatch', async () => {
+  const db = new DatabaseSync(':memory:');
+  const dispatch = createSucceedingDispatchFixture();
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      const previousDispatch = process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH;
+      process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH = dispatch.dispatchPath;
+      try {
+        createQueueTables(db);
+        fs.mkdirSync(familyRuntimePaths().dispatch_dir, { recursive: true });
+        const payload = defaultExecutorPayloadForOwner({
+          sourceFingerprint: 'publication-blockers::future-owner',
+          actionType: 'run_quality_repair_batch',
+          nextOwner: 'future-owner',
+          dispatchAuthority: 'consumer_default_executor_dispatch',
+          dispatchRef: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json',
+        });
+        insertDefaultExecutorTaskWithPayload(db, {
+          taskId: 'task-mas-future-owner-provider-admission',
+          payload: {
+            ...payload,
+            work_unit_id: 'future_owner_repair',
+            work_unit_fingerprint: 'publication-blockers::future-owner',
+            action_fingerprint: 'publication-blockers::future-owner',
+            provider_attempt_or_lease_required: true,
+            provider_completion_is_domain_completion: false,
+          },
+          dedupeKey: 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:future-owner',
+          createdAt: '2026-06-11T18:05:00.000Z',
+          status: 'queued',
+        });
+        const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+          'task-mas-future-owner-provider-admission',
+        ) as FamilyRuntimeTaskRow;
+
+        const result = await dispatchFamilyRuntimeTask(db, familyRuntimePaths(), row, {
+          temporalProviderModule: async () => ({
+            startTemporalStageAttemptWorkflow: async () => {
+              throw new Error('unexpected Temporal start');
+            },
+          }),
+        });
+        const task = db.prepare('SELECT status, dead_letter_reason FROM tasks WHERE task_id = ?').get(row.task_id) as {
+          status: string;
+          dead_letter_reason: string | null;
+        };
+        const dispatchEvents = db.prepare(`
+          SELECT COUNT(*) AS count
+          FROM events
+          WHERE task_id = ? AND event_type = 'task_dispatch_succeeded'
+        `).get(row.task_id) as { count: number };
+
+        assert.equal(result.status, 'blocked');
+        assert.equal(
+          (result as { reason?: string }).reason,
+          'default_executor_provider_admission_owner_not_admitted',
+        );
+        assert.equal(task.status, 'blocked');
+        assert.equal(task.dead_letter_reason, 'default_executor_provider_admission_owner_not_admitted');
+        assert.equal(dispatchEvents.count, 0);
+      } finally {
+        if (previousDispatch === undefined) {
+          delete process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH;
+        } else {
+          process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH = previousDispatch;
+        }
+      }
+    });
+  } finally {
+    db.close();
+    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
   }
 });

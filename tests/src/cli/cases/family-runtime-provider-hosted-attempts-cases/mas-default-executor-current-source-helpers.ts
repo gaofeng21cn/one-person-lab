@@ -53,7 +53,7 @@ export function defaultExecutorPayload(sourceFingerprint: string) {
 export function defaultExecutorPayloadForOwner(input: {
   sourceFingerprint: string;
   actionType: string;
-  nextOwner: 'write' | 'ai_reviewer';
+  nextOwner: string;
   dispatchAuthority: string;
   dispatchRef: string;
 }) {
