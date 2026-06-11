@@ -1158,9 +1158,10 @@ test('Temporal Codex activity compacts typed closeout packets before activity co
   assert.equal(compacted.next_owner, 'med-autoscience');
   assert.equal(compacted.domain_ready_verdict, 'domain_gate_pending');
   assert.deepEqual(compacted.route_impact, { next_owner: 'publication_gate' });
-  assert.equal(compacted.paper_stage_log, undefined);
-  assert.equal(compacted.user_stage_log, undefined);
-  assert.equal(compacted.full_transcript, undefined);
+  const compactedRecord = compacted as Record<string, unknown>;
+  assert.equal(compactedRecord.paper_stage_log, undefined);
+  assert.equal(compactedRecord.user_stage_log, undefined);
+  assert.equal(compactedRecord.full_transcript, undefined);
   assert.equal(compacted.temporal_payload_policy.full_closeout_body_omitted, true);
   assert.equal(JSON.stringify(compacted).includes('must-not-enter-temporal-completion'), false);
   assert.ok(

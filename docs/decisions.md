@@ -5,6 +5,23 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-06-11
+
+### 决策：Temporal activity completion 与 stage_progress_log 固定为 refs-only transport / projection
+
+原因：MAS/DM-CVD 002/003 运行中多次暴露出 Codex stage 已写 closeout，但 Temporal activity completion 因 payload 超过 4MB 失败的卡点。这个问题会把真实 closeout、workflow terminal、MAS DHD consumption 和 operator read-model 拉成四个不一致状态，形成“看起来在跑、最后没有被消费”或“已 terminal 但又回到 pending”的循环。根因不是 domain 文本，也不是自动化 prompt，而是 OPL provider completion payload 把大 closeout body / stage log / transcript 当作 workflow result 运输。
+
+影响：
+
+- `codexStageActivity` 返回给 Temporal 的 `closeout_packet` 必须是 refs-only compact packet：只保留 `stage_attempt_id`、idempotency key、closeout refs、consumed refs、memory/writeback refs、rejected writes summary、next owner、domain-ready verdict、route impact 和 authority boundary。
+- `paper_stage_log`、`user_stage_log`、`stage_log_summary`、`human_stage_log`、transcript、paper/artifact/memory body 和大 detail arrays 不得进入 Temporal activity result、workflow state 或 queue metadata；完整正文留在 domain closeout file / OPL ledger，通过 refs 连接。
+- `stage_progress_log.user_stage_log` 只投影 domain typed closeout 明确给出的语义摘要、duration/token/cost observed/missing 状态和 refs。OPL 不得从 artifact body、memory body、publication verdict body 或 transcript 自行生成“做了什么 / 论文推进了什么”；缺 domain semantic summary 时只显示 missing-domain-fields / missing semantic summary。
+- `stage_progress_log` / Temporal completion / provider completed 不能被任何 status、tray、workbench、Runway 或 App read model 表述为 domain ready、owner receipt observed、typed blocker created、quality verdict、artifact ready、paper repaired、publication ready 或 production ready。
+- 该规则与成熟工程经验一致：Temporal workflow history 只应承载可重放的小结果和 refs，Airflow XCom 只适合小元数据，Kubernetes controller 对 desired/current/status 做 reconcile，OpenTelemetry / OpenLineage 用 links / lineage refs 关联事实，不把可观测性事件升格为 domain authority。
+- 验证口径固定为：大 closeout 输入下 compact result 不含 stage log / transcript，JSON payload 保持小于 transport 阈值；stage-route scheduler contract 声明 missing domain stage log 只投影、不由 OPL 生成 typed blocker 或 domain summary。
+- 当前落地提交：`a23a1b59 fix(runtime): compact temporal closeout payloads`。
+- 这只修 OPL transport / projection基座，不修改 MAS truth、paper body、publication verdict、domain owner receipt、typed blocker、quality/export verdict、artifact authority、App release verdict 或 production-ready 结论。active attempt 存在时，worker_source_stale 仍必须等 active attempt 为 0 后由 supervisor guard 重启，不能为了加载新代码杀掉运行中 stage。
+
 ## 2026-06-10
 
 ### 决策：Default executor retry budget 按当前 source identity 计算
