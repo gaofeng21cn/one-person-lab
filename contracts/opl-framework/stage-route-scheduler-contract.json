@@ -221,6 +221,8 @@
     ],
     "required_substrate_surfaces": {
       "stage_run_currentness_identity": {
+        "implementation_ref": "src/family-runtime-stage-run-currentness-identity.ts#buildStageRunCurrentnessIdentity",
+        "test_ref": "tests/src/family-runtime-stage-run-currentness-identity.test.ts",
         "required_fields": [
           "domain_id",
           "study_id_or_quest_id",
@@ -236,6 +238,7 @@
           "idempotency_key"
         ],
         "match_policy": "all_available_current_owner_delta_fields_must_match_and_missing_identity_fails_closed",
+        "missing_identity_effect": "fail_closed_no_stage_run_currentness_match",
         "reset_evidence": [
           "fresh_current_owner_delta",
           "domain_owner_receipt_ref",

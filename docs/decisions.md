@@ -21,6 +21,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - Trace/span/lineage 只做 refs-only drilldown。它们可解释因果链，但不能成为 planning root、domain truth、owner receipt、typed blocker、quality verdict、publication ready 或 production-ready evidence。
 - 该合同吸收 Kubernetes controller desired/current/status reconcile、Temporal/Airflow 小 payload 与 refs-only transport、Step Functions idempotent execution identity、OpenTelemetry / OpenLineage links/facets 和 Argo retry/exit-handler 的成熟经验；吸收的是边界原则，不复制外部 runtime 形状。
 - 验证口径固定为 contract test：必须断言五项 substrate surface、currentness precedence、false-authority flags 和 current-control admission policy ref；运行态闭环仍用 fresh MAS DHD / study progress / OPL attempt readback 验证，不靠合同本身声明论文进展。
+- 2026-06-11 follow-through：`stage_run_currentness_identity` 已落成 `src/family-runtime-stage-run-currentness-identity.ts#buildStageRunCurrentnessIdentity`，并由 focused test 覆盖完整 identity、mismatch 和缺字段 fail-closed。该对象归 Runway 主责，Console/Vault 只消费其 refs/read-model；这一步不声明所有 tick/current-control call site 已完成迁移，也不授予 OPL 任何 domain owner answer 或 quality authority。
 
 ### 决策：Temporal activity completion 与 stage_progress_log 固定为 refs-only transport / projection
 

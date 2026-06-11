@@ -584,6 +584,14 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
 
   const surfaces = substrate.required_substrate_surfaces as Record<string, any>;
   const identity = surfaces.stage_run_currentness_identity;
+  assert.equal(
+    identity.implementation_ref,
+    'src/family-runtime-stage-run-currentness-identity.ts#buildStageRunCurrentnessIdentity',
+  );
+  assert.equal(
+    identity.test_ref,
+    'tests/src/family-runtime-stage-run-currentness-identity.test.ts',
+  );
   for (const field of [
     'domain_id',
     'study_id_or_quest_id',
@@ -602,6 +610,7 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
     identity.match_policy,
     'all_available_current_owner_delta_fields_must_match_and_missing_identity_fails_closed',
   );
+  assert.equal(identity.missing_identity_effect, 'fail_closed_no_stage_run_currentness_match');
   assert.ok(identity.reset_evidence.includes('domain_owner_receipt_ref'));
   assert.ok(identity.reset_evidence.includes('typed_blocker_ref'));
   assert.ok(identity.reset_evidence.includes('provider_hard_gate_clearance'));
