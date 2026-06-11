@@ -41,6 +41,13 @@ const CURRENT_CONTROL_ADMISSION_CURRENT_STATUSES = new Set([
   'waiting_approval',
   'blocked',
 ]);
+const SUPERSEDING_DEFAULT_EXECUTOR_STATUSES = new Set([
+  'queued',
+  'retry_waiting',
+  'running',
+  'waiting_approval',
+  'blocked',
+]);
 
 export function payloadFromTask(row: FamilyRuntimeTaskRow) {
   return JSON.parse(row.payload_json) as Record<string, unknown>;
@@ -93,9 +100,17 @@ function isPreferredCurrentTask(
   return isNewerTask(row, current);
 }
 
+function canSupersedeDefaultExecutorRows(row: FamilyRuntimeTaskRow) {
+  return SUPERSEDING_DEFAULT_EXECUTOR_STATUSES.has(row.status)
+    && row.dead_letter_reason !== DEFAULT_EXECUTOR_SUPERSEDED_REASON;
+}
+
 export function currentDefaultExecutorTasksByDispatch(rows: FamilyRuntimeTaskRow[]) {
   const currentByIdentity = new Map<string, DefaultExecutorCurrentTask>();
   for (const row of rows) {
+    if (!canSupersedeDefaultExecutorRows(row)) {
+      continue;
+    }
     const payload = payloadFromTask(row);
     const identity = defaultExecutorDispatchIdentity(row, payload);
     if (!identity) {
@@ -112,6 +127,9 @@ export function currentDefaultExecutorTasksByDispatch(rows: FamilyRuntimeTaskRow
 export function currentDefaultExecutorTasksByStudyAction(rows: FamilyRuntimeTaskRow[]) {
   const currentByIdentity = new Map<string, DefaultExecutorCurrentTask>();
   for (const row of rows) {
+    if (!canSupersedeDefaultExecutorRows(row)) {
+      continue;
+    }
     const payload = payloadFromTask(row);
     const identity = defaultExecutorStudyActionIdentity(row, payload);
     if (!identity) {

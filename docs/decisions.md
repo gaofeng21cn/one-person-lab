@@ -17,6 +17,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - Auto-redrive 的 `used_attempts`、retry/dead-letter 决策和 operator 判断必须绑定 current MAS owner/work-unit source identity，不能用同一 task 的历史 attempt 总数。
 - 这类问题属于 OPL Runway / family-runtime control-plane 修复，不得通过改 MAS 论文文本、手写 closeout、手写 owner receipt、改 automation prompt 或直接修改 runtime artifacts 解决。
 - 验证口径固定为：构造同一 task 下多个旧 source attempts 加一个当前 source failed attempt；tick 必须 redrive 当前 source 并继续调度，而不是 `retry_budget_exhausted`。
+- 2026-06-11 follow-through：`mas_default_executor_superseded_by_current_source` 是历史 currentness blocker，只能用于阻止旧 task / attempt 继续 redrive，不能反过来作为 current source 去遮蔽 MAS 刚导出的 current provider admission。OPL supersession current map 只允许 queued / retry_waiting / running / waiting_approval 和非 superseded 的 provider-transport blocker 参与“当前源”裁决；普通 `temporal_stage_attempt_*` blocker 仍可作为 stale-redrive filter 的比较对象，避免旧 provider blocker 被重复 redrive。
 
 ### 决策：ideal operating model 作为 north-star，active baton 回当前差距文档
 

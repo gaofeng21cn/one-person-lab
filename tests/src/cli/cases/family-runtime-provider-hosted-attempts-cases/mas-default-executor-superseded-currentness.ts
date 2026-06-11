@@ -163,3 +163,75 @@ test('family-runtime reconciles historical superseded MAS default executor attem
     db.close();
   }
 });
+
+test('family-runtime does not let historical superseded blocker shadow current MAS admission', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      const stalePayload = defaultExecutorPayload('source-before');
+      const currentPayload = defaultExecutorPayload('source-after');
+      const staleTaskId = 'task-mas-default-superseded-blocker-residue';
+      const currentTaskId = 'task-mas-default-current-admission-after-superseded-blocker';
+      insertSucceededTask(db, {
+        taskId: staleTaskId,
+        domainId: 'medautoscience',
+        taskKind: 'domain_owner/default-executor-dispatch',
+        payload: stalePayload,
+        dedupeKey: 'mas:dm-cvd:003:default-executor:return_to_ai_reviewer_workflow:superseded-blocker',
+      });
+      insertSucceededTask(db, {
+        taskId: currentTaskId,
+        domainId: 'medautoscience',
+        taskKind: 'domain_owner/default-executor-dispatch',
+        payload: currentPayload,
+        dedupeKey: 'mas:dm-cvd:003:default-executor:return_to_ai_reviewer_workflow:current-after-blocker',
+      });
+      db.prepare(`
+        UPDATE tasks
+        SET status = 'queued', created_at = '2026-06-11T00:01:00.000Z'
+        WHERE task_id = ?
+      `).run(currentTaskId);
+      db.prepare(`
+        UPDATE tasks
+        SET status = 'blocked',
+          last_error = 'mas_default_executor_superseded_by_current_source',
+          dead_letter_reason = 'mas_default_executor_superseded_by_current_source',
+          created_at = '2026-06-11T00:02:00.000Z'
+        WHERE task_id = ?
+      `).run(staleTaskId);
+
+      const tick = await runFamilyRuntimeQueueTick(db, familyRuntimePaths(), {
+        source: 'test-superseded-blocker-does-not-shadow-current-admission',
+        limit: 10,
+        hydrate: false,
+      }, {
+        enqueueTask,
+        dispatchTask: async (_db, _paths, row) => ({
+          status: 'selected',
+          task_id: row.task_id,
+        }),
+      });
+      const currentTask = db.prepare(`
+        SELECT status, last_error, dead_letter_reason
+        FROM tasks
+        WHERE task_id = ?
+      `).get(currentTaskId) as { status: string; last_error: string | null; dead_letter_reason: string | null };
+      const supersededEvent = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_default_executor_superseded_by_current_source'
+        LIMIT 1
+      `).get(currentTaskId) as { payload_json: string } | undefined;
+
+      assert.equal(tick.mas_default_executor_superseded_count, 0);
+      assert.deepEqual(tick.dispatches, [{ status: 'selected', task_id: currentTaskId }]);
+      assert.equal(currentTask.status, 'queued');
+      assert.equal(currentTask.last_error, null);
+      assert.equal(currentTask.dead_letter_reason, null);
+      assert.equal(supersededEvent, undefined);
+    });
+  } finally {
+    db.close();
+  }
+});
