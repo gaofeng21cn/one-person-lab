@@ -197,6 +197,140 @@
       "provider_completion_is_domain_ready": false
     }
   },
+  "stage_route_arbiter_substrate_contract": {
+    "surface_kind": "opl_stage_route_arbiter_substrate_contract",
+    "schema_version": 1,
+    "owner": "one-person-lab",
+    "purpose": "Define the OPL-owned substrate guarantees that let domain agents run a single smooth stage-route loop without false running, repeated pending echo, or no-progress redrive loops.",
+    "ordinary_path": [
+      "fresh_current_owner_delta",
+      "domain_provider_admission_identity",
+      "stage_run_currentness_identity",
+      "provider_attempt_or_owner_callable",
+      "terminal_closeout_packet_ref",
+      "domain_closeout_consumption_ref",
+      "next_current_owner_delta_or_typed_blocker"
+    ],
+    "currentness_precedence": [
+      "terminal_closeout_for_same_stage_attempt",
+      "strict_live_attempt_for_same_identity",
+      "accepted_closeout_or_executed_typed_blocker_for_same_identity",
+      "fresh_provider_admission_identity",
+      "stable_domain_typed_blocker",
+      "diagnostic_or_stale_residue"
+    ],
+    "required_substrate_surfaces": {
+      "stage_run_currentness_identity": {
+        "required_fields": [
+          "domain_id",
+          "study_id_or_quest_id",
+          "stage_id",
+          "stage_attempt_id",
+          "action_type",
+          "work_unit_id",
+          "work_unit_fingerprint",
+          "source_fingerprint",
+          "truth_epoch",
+          "runtime_health_epoch",
+          "source_eval_id",
+          "idempotency_key"
+        ],
+        "match_policy": "all_available_current_owner_delta_fields_must_match_and_missing_identity_fails_closed",
+        "reset_evidence": [
+          "fresh_current_owner_delta",
+          "domain_owner_receipt_ref",
+          "quality_gate_receipt_ref",
+          "typed_blocker_ref",
+          "human_gate_ref",
+          "route_back_evidence_ref",
+          "provider_hard_gate_clearance"
+        ]
+      },
+      "terminal_closeout_precedes_live_projection": {
+        "required_observations": [
+          "stage_attempt_ledger_terminal_state",
+          "typed_closeout_packet_ref_or_blocker_ref",
+          "closeout_receipt_status",
+          "linked_queue_task_identity"
+        ],
+        "policy": "before a tick treats a task as live, OPL must sync terminal provider state and suppress older running projections for the same stage_attempt_id or currentness identity",
+        "forbidden_fallbacks": [
+          "active_run_id_non_null",
+          "stale_transport_status",
+          "old_queue_running_without_fresh_terminal_sync"
+        ]
+      },
+      "no_progress_budget_contract": {
+        "budget_scope": [
+          "domain_id",
+          "study_id_or_quest_id",
+          "action_type",
+          "work_unit_id",
+          "work_unit_fingerprint",
+          "source_eval_id"
+        ],
+        "no_progress_classes": [
+          "receipt_only",
+          "read_model_reconcile_only",
+          "stale_route_redrive_only",
+          "platform_repair_only",
+          "owner_output_already_current",
+          "no_deliverable_delta"
+        ],
+        "budget_exhaustion_action": "freeze_default_redrive_and_project_stop_loss_state_until_fresh_owner_delta_domain_answer_human_decision_or_provider_hard_gate_clearance",
+        "counts_as_progress_refs": [
+          "domain_owner_receipt_ref",
+          "quality_gate_receipt_ref",
+          "typed_blocker_ref",
+          "human_gate_ref",
+          "route_back_evidence_ref",
+          "paper_or_artifact_delta_ref",
+          "reviewer_or_gate_delta_ref",
+          "next_current_owner_delta_ref"
+        ]
+      },
+      "worker_source_stale_supervisor_projection": {
+        "status": "fail_closed_supervisor_guard",
+        "automatic_restart_allowed_when": [
+          "explicit_developer_supervisor",
+          "temporal_service_reachable",
+          "stage_attempt_ledger_readable",
+          "active_stage_attempt_count_is_zero"
+        ],
+        "blocked_when_active_attempt_states": [
+          "queued",
+          "running",
+          "checkpointed",
+          "human_gate"
+        ],
+        "ordinary_path_effect": "project_provider_liveness_blocker_without_killing_active_worker_or_claiming_domain_progress"
+      },
+      "trace_span_correlation_refs": {
+        "required_ref_families": [
+          "stage_attempt_ref",
+          "queue_task_ref",
+          "workflow_ref",
+          "closeout_ref",
+          "current_owner_delta_ref",
+          "domain_receipt_or_blocker_ref",
+          "stage_progress_log_ref"
+        ],
+        "policy": "observability links are refs-only drilldown evidence and never a planning root or domain authority source"
+      }
+    },
+    "current_control_admission_currentness_policy_ref": "current_control_admission_currentness_policy",
+    "authority_boundary": {
+      "opl_can_select_transport_task": true,
+      "opl_can_schedule_stage_attempts": true,
+      "opl_can_reconcile_attempt_ledger": true,
+      "opl_can_project_operator_read_model": true,
+      "opl_can_restart_worker_without_supervisor_guard": false,
+      "opl_can_create_domain_owner_receipt": false,
+      "opl_can_create_domain_typed_blocker": false,
+      "opl_can_authorize_quality_or_publication_ready": false,
+      "provider_completion_is_domain_ready": false
+    }
+  },
   "stage_progress_log_minimum_viability_policy": {
     "purpose": "Define how OPL treats domain-provided user stage logs when projecting terminal StageRun progress and deciding whether a repeated route can launch again.",
     "canonical_projection_surface": "stage_progress_log.user_stage_log",

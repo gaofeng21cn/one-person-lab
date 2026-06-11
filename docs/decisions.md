@@ -7,6 +7,21 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-06-11
 
+### 决策：Stage-route arbiter substrate 固定为 OPL 基座合同
+
+原因：MAS/DM-CVD 003 暴露出的坏例不是单一投影字段缺失，而是 stage-route loop 缺少统一裁判：OPL ledger/Temporal 可能已经 running，但 MAS read-model 还停在 provider admission pending；OPL attempt 已 terminal 且 closeout accepted，但同一 identity 又被投回 pending；同一 work unit 多次 closeout/no-op/read-model reconcile，却没有论文、gate、receipt、typed blocker 或 next owner 的实质 delta。根因在于 identity、terminal ordering、no-progress budget、worker stale guard 和 trace refs 分散在多个 surface，operator 只能从 action_queue 或 active_run 字段倒推状态。
+
+影响：
+
+- `contracts/opl-framework/stage-route-scheduler-contract.json#stage_route_arbiter_substrate_contract` 成为 OPL-owned substrate 设计面，面向 MAS/MAG/RCA/OMA 这类 Foundry Agent 提供统一 stage-route currentness 保障。
+- 普通路径固定为 `fresh_current_owner_delta -> domain_provider_admission_identity -> stage_run_currentness_identity -> provider_attempt_or_owner_callable -> terminal_closeout_packet_ref -> domain_closeout_consumption_ref -> next_current_owner_delta_or_typed_blocker`。
+- Currentness 优先级固定为 terminal closeout 压过同 stage attempt live 投影，strict live attempt 压过同 identity pending，accepted closeout / executed typed blocker 压掉同 identity pending，fresh provider admission 才可交给 tick，stable domain typed blocker 可停止默认 redrive，旧 trace/queue/sidecar residue 只进诊断。
+- No-progress budget 以 `domain_id + study/quest + action_type + work_unit_id + work_unit_fingerprint + source_eval_id` 为 scope；`receipt_only`、`read_model_reconcile_only`、`stale_route_redrive_only`、`platform_repair_only`、`owner_output_already_current`、`no_deliverable_delta` 不再被算成交付物推进。预算耗尽后冻结默认 redrive，直到 fresh owner delta、domain answer、human decision 或 provider hard-gate clearance 出现。
+- `worker_source_stale` 是 fail-closed supervisor projection。只有 explicit developer supervisor、Temporal reachable、ledger readable 且 active attempt count 为 0 时才允许 restart；running / checkpointed / human_gate attempt 存在时只能投影 provider liveness blocker，不能为了加载新源码杀 worker。
+- Trace/span/lineage 只做 refs-only drilldown。它们可解释因果链，但不能成为 planning root、domain truth、owner receipt、typed blocker、quality verdict、publication ready 或 production-ready evidence。
+- 该合同吸收 Kubernetes controller desired/current/status reconcile、Temporal/Airflow 小 payload 与 refs-only transport、Step Functions idempotent execution identity、OpenTelemetry / OpenLineage links/facets 和 Argo retry/exit-handler 的成熟经验；吸收的是边界原则，不复制外部 runtime 形状。
+- 验证口径固定为 contract test：必须断言五项 substrate surface、currentness precedence、false-authority flags 和 current-control admission policy ref；运行态闭环仍用 fresh MAS DHD / study progress / OPL attempt readback 验证，不靠合同本身声明论文进展。
+
 ### 决策：Temporal activity completion 与 stage_progress_log 固定为 refs-only transport / projection
 
 原因：MAS/DM-CVD 002/003 运行中多次暴露出 Codex stage 已写 closeout，但 Temporal activity completion 因 payload 超过 4MB 失败的卡点。这个问题会把真实 closeout、workflow terminal、MAS DHD consumption 和 operator read-model 拉成四个不一致状态，形成“看起来在跑、最后没有被消费”或“已 terminal 但又回到 pending”的循环。根因不是 domain 文本，也不是自动化 prompt，而是 OPL provider completion payload 把大 closeout body / stage log / transcript 当作 workflow result 运输。

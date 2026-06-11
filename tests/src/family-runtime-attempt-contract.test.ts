@@ -558,6 +558,116 @@ test('stage route scheduler contract freezes route hydration as OPL reconciliati
   assert.equal(stageLogPolicy.authority_boundary.provider_completion_is_domain_progress, false);
 });
 
+test('stage route scheduler contract declares the OPL arbiter substrate against false running and no-progress loops', () => {
+  const contract = readJson('contracts/opl-framework/stage-route-scheduler-contract.json');
+  const substrate = contract.stage_route_arbiter_substrate_contract as Record<string, any>;
+
+  assert.equal(substrate.surface_kind, 'opl_stage_route_arbiter_substrate_contract');
+  assert.equal(substrate.owner, 'one-person-lab');
+  assert.deepEqual(substrate.ordinary_path, [
+    'fresh_current_owner_delta',
+    'domain_provider_admission_identity',
+    'stage_run_currentness_identity',
+    'provider_attempt_or_owner_callable',
+    'terminal_closeout_packet_ref',
+    'domain_closeout_consumption_ref',
+    'next_current_owner_delta_or_typed_blocker',
+  ]);
+  assert.deepEqual(substrate.currentness_precedence, [
+    'terminal_closeout_for_same_stage_attempt',
+    'strict_live_attempt_for_same_identity',
+    'accepted_closeout_or_executed_typed_blocker_for_same_identity',
+    'fresh_provider_admission_identity',
+    'stable_domain_typed_blocker',
+    'diagnostic_or_stale_residue',
+  ]);
+
+  const surfaces = substrate.required_substrate_surfaces as Record<string, any>;
+  const identity = surfaces.stage_run_currentness_identity;
+  for (const field of [
+    'domain_id',
+    'study_id_or_quest_id',
+    'stage_attempt_id',
+    'action_type',
+    'work_unit_id',
+    'work_unit_fingerprint',
+    'truth_epoch',
+    'runtime_health_epoch',
+    'source_eval_id',
+    'idempotency_key',
+  ]) {
+    assert.ok(identity.required_fields.includes(field));
+  }
+  assert.equal(
+    identity.match_policy,
+    'all_available_current_owner_delta_fields_must_match_and_missing_identity_fails_closed',
+  );
+  assert.ok(identity.reset_evidence.includes('domain_owner_receipt_ref'));
+  assert.ok(identity.reset_evidence.includes('typed_blocker_ref'));
+  assert.ok(identity.reset_evidence.includes('provider_hard_gate_clearance'));
+
+  const terminalOrdering = surfaces.terminal_closeout_precedes_live_projection;
+  assert.ok(terminalOrdering.required_observations.includes('typed_closeout_packet_ref_or_blocker_ref'));
+  assert.ok(terminalOrdering.required_observations.includes('linked_queue_task_identity'));
+  assert.equal(
+    terminalOrdering.forbidden_fallbacks.includes('active_run_id_non_null'),
+    true,
+  );
+  assert.equal(
+    terminalOrdering.forbidden_fallbacks.includes('stale_transport_status'),
+    true,
+  );
+
+  const budget = surfaces.no_progress_budget_contract;
+  assert.deepEqual(budget.budget_scope, [
+    'domain_id',
+    'study_id_or_quest_id',
+    'action_type',
+    'work_unit_id',
+    'work_unit_fingerprint',
+    'source_eval_id',
+  ]);
+  for (const noProgressClass of [
+    'read_model_reconcile_only',
+    'stale_route_redrive_only',
+    'platform_repair_only',
+    'owner_output_already_current',
+    'no_deliverable_delta',
+  ]) {
+    assert.ok(budget.no_progress_classes.includes(noProgressClass));
+  }
+  assert.equal(
+    budget.budget_exhaustion_action,
+    'freeze_default_redrive_and_project_stop_loss_state_until_fresh_owner_delta_domain_answer_human_decision_or_provider_hard_gate_clearance',
+  );
+  assert.ok(budget.counts_as_progress_refs.includes('domain_owner_receipt_ref'));
+  assert.ok(budget.counts_as_progress_refs.includes('paper_or_artifact_delta_ref'));
+
+  const workerStale = surfaces.worker_source_stale_supervisor_projection;
+  assert.equal(workerStale.status, 'fail_closed_supervisor_guard');
+  assert.ok(workerStale.automatic_restart_allowed_when.includes('active_stage_attempt_count_is_zero'));
+  assert.ok(workerStale.blocked_when_active_attempt_states.includes('running'));
+  assert.ok(workerStale.blocked_when_active_attempt_states.includes('human_gate'));
+
+  const traceRefs = surfaces.trace_span_correlation_refs;
+  assert.ok(traceRefs.required_ref_families.includes('workflow_ref'));
+  assert.ok(traceRefs.required_ref_families.includes('domain_receipt_or_blocker_ref'));
+  assert.equal(
+    traceRefs.policy,
+    'observability links are refs-only drilldown evidence and never a planning root or domain authority source',
+  );
+
+  assert.equal(
+    substrate.current_control_admission_currentness_policy_ref,
+    'current_control_admission_currentness_policy',
+  );
+  assert.equal(substrate.authority_boundary.opl_can_reconcile_attempt_ledger, true);
+  assert.equal(substrate.authority_boundary.opl_can_restart_worker_without_supervisor_guard, false);
+  assert.equal(substrate.authority_boundary.opl_can_create_domain_owner_receipt, false);
+  assert.equal(substrate.authority_boundary.opl_can_create_domain_typed_blocker, false);
+  assert.equal(substrate.authority_boundary.provider_completion_is_domain_ready, false);
+});
+
 test('family runtime attempt contract binds attempt ledger fields to the stage route scheduler boundary', () => {
   const contract = readJson('contracts/opl-framework/family-runtime-attempt-contract.json');
 
