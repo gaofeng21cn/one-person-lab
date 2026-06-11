@@ -10,6 +10,7 @@ import {
 import { hydrateDomainTasks } from './family-runtime-domain-intake.ts';
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import { startDefaultExecutorStageAttempt } from './family-runtime-default-executor-start.ts';
+import { queryTemporalStageAttemptReadModel } from './family-runtime-temporal-query.ts';
 import { isDefaultExecutorDispatchTask } from './family-runtime-provider-hosted-attempts.ts';
 import { ensureProviderHostedStageAttempt } from './family-runtime-provider-hosted-attempts.ts';
 import { blockTaskForStageAdmissionGate } from './family-runtime-stage-admission-gate.ts';
@@ -33,6 +34,7 @@ import {
 import { PROGRESS_FIRST_OWNER_DELTA_REQUIRED_REASON } from './family-runtime-progress-first-anti-spin-gate.ts';
 
 type TemporalProviderModule = Parameters<typeof startDefaultExecutorStageAttempt>[2]['temporalProviderModule'];
+type QueryTemporalStageAttemptReadModel = typeof queryTemporalStageAttemptReadModel;
 
 function cleanStringList(value: unknown) {
   return Array.isArray(value)
@@ -236,6 +238,7 @@ export async function dispatchFamilyRuntimeTask(
   row: FamilyRuntimeTaskRow,
   options: {
     temporalProviderModule: TemporalProviderModule;
+    queryTemporalStageAttemptReadModel?: QueryTemporalStageAttemptReadModel;
   },
 ) {
   const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
@@ -282,6 +285,7 @@ export async function dispatchFamilyRuntimeTask(
       payload,
       providerHostedAttempt,
       temporalProviderModule: options.temporalProviderModule,
+      queryTemporalStageAttemptReadModel: options.queryTemporalStageAttemptReadModel,
     });
   }
   const activeStageAttempts = listStageAttemptsForTask(db, row.task_id).filter((attempt) => (

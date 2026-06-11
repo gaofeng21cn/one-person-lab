@@ -15,6 +15,7 @@ import {
   updateStageAttemptsForTask,
 } from './family-runtime-stage-attempts.ts';
 import {
+  ensureProviderHostedStageAttempt,
   findLiveDefaultExecutorDispatchAttempt,
   findLiveDefaultExecutorStudyAttempt,
   refreshDefaultExecutorLiveAttemptTaskLease,
@@ -31,6 +32,7 @@ type TemporalProviderModule = () => Promise<{
 }>;
 
 const LIVE_STAGE_ATTEMPT_STATUSES = new Set(['running', 'checkpointed', 'human_gate']);
+const CROSS_TASK_BLOCKING_ATTEMPT_STATUSES = new Set(['queued', ...LIVE_STAGE_ATTEMPT_STATUSES]);
 
 function contractErrorMessage(error: unknown) {
   if (error instanceof FrameworkContractError) {
@@ -41,6 +43,30 @@ function contractErrorMessage(error: unknown) {
 
 function isLiveStageAttempt(attempt: StageAttemptPayload | null) {
   return Boolean(attempt && LIVE_STAGE_ATTEMPT_STATUSES.has(attempt.status));
+}
+
+function isCrossTaskBlockingAttempt(attempt: StageAttemptPayload | null) {
+  return Boolean(attempt && CROSS_TASK_BLOCKING_ATTEMPT_STATUSES.has(attempt.status));
+}
+
+function hasUnchangedStageAttemptStatus(
+  syncedAttempt: StageAttemptPayload | null,
+  originalAttempt: StageAttemptPayload | null,
+) {
+  return Boolean(
+    syncedAttempt
+    && originalAttempt
+    && syncedAttempt.stage_attempt_id === originalAttempt.stage_attempt_id
+    && syncedAttempt.status === originalAttempt.status,
+  );
+}
+
+function isCrossTaskBlockingAttemptAfterSync(
+  syncedAttempt: StageAttemptPayload | null,
+  originalAttempt: StageAttemptPayload,
+) {
+  return isCrossTaskBlockingAttempt(syncedAttempt)
+    || hasUnchangedStageAttemptStatus(syncedAttempt, originalAttempt);
 }
 
 async function syncTerminalStageAttemptIfObservable(
@@ -84,6 +110,25 @@ function terminalTaskResultAfterProviderSync(
     };
   }
   return null;
+}
+
+async function syncLiveAttemptBeforeSkip(
+  db: DatabaseSync,
+  paths: FamilyRuntimePaths,
+  input: {
+    liveAttempt: StageAttemptPayload;
+    queryStageAttempt: QueryTemporalStageAttemptReadModel;
+  },
+) {
+  if (!LIVE_STAGE_ATTEMPT_STATUSES.has(input.liveAttempt.status)) {
+    return input.liveAttempt;
+  }
+  return syncTerminalStageAttemptIfObservable(
+    db,
+    paths,
+    input.liveAttempt,
+    input.queryStageAttempt,
+  );
 }
 
 function markStageAttemptTemporalStarted(
@@ -195,90 +240,102 @@ export async function startDefaultExecutorStageAttempt(
   )) ?? null;
   if (liveAttempt) {
     const syncedAttempt = await syncTerminalStageAttemptIfObservable(db, paths, liveAttempt, queryStageAttempt);
-    if (!isLiveStageAttempt(syncedAttempt)) {
-      const stageAttempts = listStageAttemptsForTask(db, row.task_id);
-      const terminalResult = terminalTaskResultAfterProviderSync(db, row, stageAttempts);
-      if (terminalResult) {
-        return terminalResult;
-      }
-    }
-    refreshDefaultExecutorLiveAttemptTaskLease(db, {
-      attempt: liveAttempt,
-      reason: 'same_task_live_stage_attempt_exists',
-    });
-    insertEvent(db, {
-      taskId: row.task_id,
-      domainId: row.domain_id,
-      eventType: 'task_default_executor_live_attempt_skip',
-      source: 'opl-family-runtime',
-      payload: {
+    if (isLiveStageAttempt(syncedAttempt)) {
+      refreshDefaultExecutorLiveAttemptTaskLease(db, {
+        attempt: syncedAttempt,
+        reason: 'same_task_live_stage_attempt_exists',
+      });
+      insertEvent(db, {
+        taskId: row.task_id,
+        domainId: row.domain_id,
+        eventType: 'task_default_executor_live_attempt_skip',
+        source: 'opl-family-runtime',
+        payload: {
+          reason: 'live_stage_attempt_exists',
+          stage_attempt_id: syncedAttempt.stage_attempt_id,
+        },
+      });
+      return {
+        task_id: row.task_id,
+        status: 'skipped',
         reason: 'live_stage_attempt_exists',
-        stage_attempt_id: liveAttempt.stage_attempt_id,
-      },
-    });
-    return {
-      task_id: row.task_id,
-      status: 'skipped',
-      reason: 'live_stage_attempt_exists',
-      admitted_stage_attempt: liveAttempt,
-      stage_attempts: listStageAttemptsForTask(db, row.task_id),
-    };
+        admitted_stage_attempt: syncedAttempt,
+        stage_attempts: listStageAttemptsForTask(db, row.task_id),
+      };
+    }
+    const stageAttempts = listStageAttemptsForTask(db, row.task_id);
+    const terminalResult = terminalTaskResultAfterProviderSync(db, row, stageAttempts);
+    if (terminalResult) {
+      return terminalResult;
+    }
   }
   const liveDispatchAttempt = findLiveDefaultExecutorDispatchAttempt(db, row, payload);
   if (liveDispatchAttempt) {
-    refreshDefaultExecutorLiveAttemptTaskLease(db, {
-      attempt: liveDispatchAttempt,
-      reason: 'same_dispatch_live_stage_attempt_exists',
+    const syncedLiveDispatchAttempt = await syncLiveAttemptBeforeSkip(db, paths, {
+      liveAttempt: liveDispatchAttempt,
+      queryStageAttempt,
     });
-    insertEvent(db, {
-      taskId: row.task_id,
-      domainId: row.domain_id,
-      eventType: 'task_default_executor_live_attempt_skip',
-      source: 'opl-family-runtime',
-      payload: {
+    if (isCrossTaskBlockingAttemptAfterSync(syncedLiveDispatchAttempt, liveDispatchAttempt)) {
+      refreshDefaultExecutorLiveAttemptTaskLease(db, {
+        attempt: syncedLiveDispatchAttempt,
+        reason: 'same_dispatch_live_stage_attempt_exists',
+      });
+      insertEvent(db, {
+        taskId: row.task_id,
+        domainId: row.domain_id,
+        eventType: 'task_default_executor_live_attempt_skip',
+        source: 'opl-family-runtime',
+        payload: {
+          reason: 'live_stage_attempt_exists_for_dispatch',
+          stage_attempt_id: syncedLiveDispatchAttempt.stage_attempt_id,
+          task_id: syncedLiveDispatchAttempt.task_id,
+          dispatch_ref: payload.dispatch_ref ?? null,
+          action_type: payload.action_type ?? null,
+          study_id: payload.study_id ?? null,
+        },
+      });
+      return {
+        task_id: row.task_id,
+        status: 'skipped',
         reason: 'live_stage_attempt_exists_for_dispatch',
-        stage_attempt_id: liveDispatchAttempt.stage_attempt_id,
-        task_id: liveDispatchAttempt.task_id,
-        dispatch_ref: payload.dispatch_ref ?? null,
-        action_type: payload.action_type ?? null,
-        study_id: payload.study_id ?? null,
-      },
-    });
-    return {
-      task_id: row.task_id,
-      status: 'skipped',
-      reason: 'live_stage_attempt_exists_for_dispatch',
-      admitted_stage_attempt: liveDispatchAttempt,
-      stage_attempts: listStageAttemptsForTask(db, row.task_id),
-    };
+        admitted_stage_attempt: syncedLiveDispatchAttempt,
+        stage_attempts: listStageAttemptsForTask(db, row.task_id),
+      };
+    }
   }
   const liveStudyAttempt = findLiveDefaultExecutorStudyAttempt(db, row, payload);
   if (liveStudyAttempt) {
-    refreshDefaultExecutorLiveAttemptTaskLease(db, {
-      attempt: liveStudyAttempt,
-      reason: 'same_study_live_stage_attempt_exists',
+    const syncedLiveStudyAttempt = await syncLiveAttemptBeforeSkip(db, paths, {
+      liveAttempt: liveStudyAttempt,
+      queryStageAttempt,
     });
-    insertEvent(db, {
-      taskId: row.task_id,
-      domainId: row.domain_id,
-      eventType: 'task_default_executor_live_attempt_skip',
-      source: 'opl-family-runtime',
-      payload: {
+    if (isCrossTaskBlockingAttemptAfterSync(syncedLiveStudyAttempt, liveStudyAttempt)) {
+      refreshDefaultExecutorLiveAttemptTaskLease(db, {
+        attempt: syncedLiveStudyAttempt,
+        reason: 'same_study_live_stage_attempt_exists',
+      });
+      insertEvent(db, {
+        taskId: row.task_id,
+        domainId: row.domain_id,
+        eventType: 'task_default_executor_live_attempt_skip',
+        source: 'opl-family-runtime',
+        payload: {
+          reason: 'live_stage_attempt_exists_for_study',
+          stage_attempt_id: syncedLiveStudyAttempt.stage_attempt_id,
+          task_id: syncedLiveStudyAttempt.task_id,
+          live_action_type: syncedLiveStudyAttempt.workspace_locator.action_type ?? null,
+          candidate_action_type: payload.action_type ?? null,
+          study_id: payload.study_id ?? null,
+        },
+      });
+      return {
+        task_id: row.task_id,
+        status: 'skipped',
         reason: 'live_stage_attempt_exists_for_study',
-        stage_attempt_id: liveStudyAttempt.stage_attempt_id,
-        task_id: liveStudyAttempt.task_id,
-        live_action_type: liveStudyAttempt.workspace_locator.action_type ?? null,
-        candidate_action_type: payload.action_type ?? null,
-        study_id: payload.study_id ?? null,
-      },
-    });
-    return {
-      task_id: row.task_id,
-      status: 'skipped',
-      reason: 'live_stage_attempt_exists_for_study',
-      admitted_stage_attempt: liveStudyAttempt,
-      stage_attempts: listStageAttemptsForTask(db, row.task_id),
-    };
+        admitted_stage_attempt: syncedLiveStudyAttempt,
+        stage_attempts: listStageAttemptsForTask(db, row.task_id),
+      };
+    }
   }
   const taskClaim = claimDefaultExecutorTask(db, row);
   if (!taskClaim) {
@@ -299,7 +356,9 @@ export async function startDefaultExecutorStageAttempt(
       stage_attempts: listStageAttemptsForTask(db, row.task_id),
     };
   }
-  const launchableAttempt = providerHostedAttempt ?? listStageAttemptsForTask(db, row.task_id).find((attempt) => (
+  const launchableAttempt = providerHostedAttempt
+    ?? ensureProviderHostedStageAttempt(db, row, payload)
+    ?? listStageAttemptsForTask(db, row.task_id).find((attempt) => (
     attempt.provider_kind === 'temporal'
     && attempt.executor_kind === 'codex_cli'
     && attempt.status === 'queued'

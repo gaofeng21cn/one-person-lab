@@ -590,6 +590,8 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 2026-05-21 追加口径：标准 OPL Agent 的默认长跑路径固定为 `opl_temporal_hosted_autonomous`。MAS/MAG/RCA 这类 domain agent 不应内置通用 daemon、scheduler 或 attempt loop；任务启动后默认由 OPL/Temporal provider 管理 stage attempt、typed queue、wakeup、resume/re-query、retry/dead-letter、attempt ledger 和 operator projection。Codex App 只作为启动、观察、介入和展示入口，不作为外围持续驱动任务的主体。该默认 runtime path 不改变领域权威：domain truth、quality/export verdict、artifact authority、memory body accept/reject、owner receipt 和 typed blocker 继续归对应 domain agent。
 
+2026-06-11 追加口径：Temporal-backed provider 的常规调度路径必须在 live-skip 前收敛 terminal observation。`same task`、`same dispatch` 和 `same study` 的 single-flight guard 不得只看本地 stage_attempt `running` 字段；在准备刷新 lease 或跳过当前候选前，先通过 safe Temporal read-model query 同步 completed typed closeout / failed / canceled / blocked terminal 状态。同步后仍 live 或仍处于已 claim queued admission window 时才 skip；同步为 terminal 时先更新 OPL ledger / linked task，再让当前候选继续 claim/start 或返回 terminal closeout。该规则用于关闭 `attempt inspect` 才能解卡的假 running，仍不改变 OPL / domain authority split。
+
 影响：
 
 - `OPL Runtime Manager` 的目标表述从 Hermes-first 改为 Temporal-backed production family runtime；active provider 枚举冻结为 `local_sqlite | temporal`，其中 `temporal` 是 production required provider，`local_sqlite` 是 dev/CI/offline diagnostic baseline。`hermes_legacy` 不再是 provider kind；若环境或旧 fixture 仍选择它，必须 fail-closed。

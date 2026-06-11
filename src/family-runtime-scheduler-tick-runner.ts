@@ -87,6 +87,7 @@ export function runSchedulerQueueTick(
     )(attempt, { paths }),
     dispatchTask: (queueDb, queuePaths, row) => dispatchFamilyRuntimeTask(queueDb, queuePaths, row, {
       temporalProviderModule: options.temporalProviderModule,
+      queryTemporalStageAttemptReadModel: options.queryTemporalStageAttemptReadModel,
     }),
   });
 }

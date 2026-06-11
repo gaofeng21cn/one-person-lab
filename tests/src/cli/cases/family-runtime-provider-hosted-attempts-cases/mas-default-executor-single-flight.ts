@@ -20,6 +20,12 @@ import {
   listStageAttemptsForTask,
 } from '../../../../../src/family-runtime-stage-attempts.ts';
 import { enqueueTask } from '../../../../../src/family-runtime-enqueue.ts';
+import type { TemporalStageAttemptWorkflowState } from '../../../../../src/family-runtime-temporal.ts';
+
+type QueryTemporalStageAttemptReadModel = NonNullable<
+  Parameters<typeof startDefaultExecutorStageAttempt>[2]['queryTemporalStageAttemptReadModel']
+>;
+type TemporalStageAttemptReadModelObservation = Awaited<ReturnType<QueryTemporalStageAttemptReadModel>>;
 
 function readinessPayloadWithStageNativeAnswer(sourceFingerprint: string) {
   return {
@@ -68,6 +74,77 @@ function writeRepairPayloadWithCurrentnessBasisOnly() {
       admission_status: 'ready',
       export_new_default_executor_task: true,
       immutable_dispatch_packet: null,
+    },
+  };
+}
+
+function completedTemporalObservation(input: {
+  stageAttemptId: string;
+  workflowId: string;
+  closeoutRefs: string[];
+  nextOwner?: string;
+}): TemporalStageAttemptReadModelObservation {
+  const closeoutPacket = {
+    surface_kind: 'domain_stage_closeout_packet',
+    closeout_refs: input.closeoutRefs,
+    consumed_refs: ['dispatch:dm-cvd/default-executor'],
+    consumed_memory_refs: [],
+    writeback_receipt_refs: [],
+    rejected_writes: [],
+    next_owner: input.nextOwner ?? 'medautoscience',
+    domain_ready_verdict: 'domain_gate_pending',
+    route_impact: {},
+  };
+  const query = {
+    surface_kind: 'temporal_stage_attempt_query',
+    provider_kind: 'temporal',
+    stage_attempt_id: input.stageAttemptId,
+    workflow_id: input.workflowId,
+    domain_id: 'medautoscience',
+    stage_id: 'domain_owner/default-executor-dispatch',
+    status: 'completed',
+    started_at: '2026-06-11T00:00:00.000Z',
+    updated_at: '2026-06-11T00:01:00.000Z',
+    activity_events: [],
+    stage_progress_log: {
+      surface_kind: 'temporal_workflow_stage_progress_log',
+      planned_work: {},
+      timeline: [],
+      visibility: {},
+    },
+    checkpoint_refs: [],
+    closeout_refs: input.closeoutRefs,
+    consumed_refs: ['dispatch:dm-cvd/default-executor'],
+    consumed_memory_refs: [],
+    writeback_receipt_refs: [],
+    rejected_writes: [],
+    next_owner: input.nextOwner ?? 'medautoscience',
+    route_impact: {},
+    human_gate_refs: [],
+    signals: [],
+    closeout_packet: closeoutPacket,
+    completion_boundary: {
+      provider_completion: 'completed',
+      domain_ready_verdict: 'domain_gate_pending',
+      provider_completion_is_domain_ready: false,
+    },
+    authority_boundary: {
+      opl: 'temporal_workflow_transport_and_control_metadata_only',
+      domain: 'truth_quality_artifact_gate_owner',
+    },
+  } satisfies TemporalStageAttemptWorkflowState;
+  return {
+    surface_kind: 'temporal_stage_attempt_query_receipt',
+    provider_kind: 'temporal',
+    stage_attempt_id: input.stageAttemptId,
+    workflow_id: input.workflowId,
+    run_id: 'test-terminal-run',
+    workflow_status: 'COMPLETED',
+    query_source: 'test_completed_temporal_observation',
+    query,
+    authority_boundary: {
+      opl: 'temporal_workflow_transport_and_control_metadata_only',
+      domain: 'truth_quality_artifact_gate_owner',
     },
   };
 }
@@ -137,6 +214,197 @@ test('family-runtime does not treat unstarted registered MAS default executor at
       assert.equal(secondTask.attempts, 1);
       assert.equal(secondAttempts.length, 1);
       assert.equal(secondAttempts[0].status, 'running');
+      assert.equal(skipEvent, undefined);
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime syncs a terminal same-dispatch MAS default executor attempt before deciding to skip', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      const firstPayload = defaultExecutorPayload('source-current');
+      const secondPayload = defaultExecutorPayload('source-current');
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-same-dispatch-terminal-first',
+        payload: firstPayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:same-dispatch-terminal-first',
+      });
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-same-dispatch-terminal-second',
+        payload: secondPayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:same-dispatch-terminal-second',
+      });
+      db.prepare("UPDATE tasks SET status = 'running', attempts = 1 WHERE task_id = ?").run(
+        'task-mas-default-same-dispatch-terminal-first',
+      );
+      db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id = ?").run(
+        'task-mas-default-same-dispatch-terminal-second',
+      );
+      const firstRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-same-dispatch-terminal-first',
+      ) as Parameters<typeof ensureProviderHostedStageAttempt>[1];
+      const secondRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-same-dispatch-terminal-second',
+      ) as Parameters<typeof startDefaultExecutorStageAttempt>[2]['row'];
+      const firstAttempt = ensureProviderHostedStageAttempt(db, firstRow, firstPayload);
+      assert.ok(firstAttempt);
+      db.prepare(`
+        UPDATE stage_attempts
+        SET status = 'running',
+          provider_run_json = json_set(provider_run_json, '$.provider_status', 'running')
+        WHERE stage_attempt_id = ?
+      `).run(firstAttempt.stage_attempt_id);
+      const blockedSecondAttempt = ensureProviderHostedStageAttempt(db, secondRow, secondPayload);
+      let temporalStartCount = 0;
+
+      const result = await startDefaultExecutorStageAttempt(db, familyRuntimePaths(), {
+        row: secondRow,
+        payload: secondPayload,
+        providerHostedAttempt: blockedSecondAttempt,
+        temporalProviderModule: async () => ({
+          startTemporalStageAttemptWorkflow: async () => {
+            temporalStartCount += 1;
+            return { surface_kind: 'temporal_stage_attempt_start_receipt' };
+          },
+        }),
+        queryTemporalStageAttemptReadModel: async (attempt) => completedTemporalObservation({
+          stageAttemptId: attempt.stage_attempt_id,
+          workflowId: attempt.workflow_id,
+          closeoutRefs: ['receipt:dm002/same-dispatch-terminal-closeout'],
+        }),
+      });
+      const firstTask = db.prepare('SELECT status, last_error FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-same-dispatch-terminal-first',
+      ) as { status: string; last_error: string | null };
+      const [syncedFirstAttempt] = listStageAttemptsForTask(db, 'task-mas-default-same-dispatch-terminal-first');
+      const secondTask = db.prepare('SELECT status, attempts FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-same-dispatch-terminal-second',
+      ) as { status: string; attempts: number };
+      const secondAttempts = listStageAttemptsForTask(db, 'task-mas-default-same-dispatch-terminal-second');
+      const skipEvent = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_default_executor_live_attempt_skip'
+        LIMIT 1
+      `).get('task-mas-default-same-dispatch-terminal-second') as { payload_json: string } | undefined;
+
+      assert.equal(blockedSecondAttempt, null);
+      assert.equal(firstTask.status, 'succeeded');
+      assert.equal(firstTask.last_error, null);
+      assert.equal(syncedFirstAttempt.status, 'completed');
+      assert.equal(syncedFirstAttempt.closeout_receipt_status, 'accepted_typed_closeout');
+      assert.equal(result.status, 'running');
+      assert.equal(temporalStartCount, 1);
+      assert.equal(secondTask.status, 'running');
+      assert.equal(secondTask.attempts, 1);
+      assert.equal(secondAttempts.length, 1);
+      assert.equal(secondAttempts[0].status, 'running');
+      assert.equal(skipEvent, undefined);
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime syncs a terminal same-study MAS default executor attempt before deciding to skip', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      const reviewerPayload = defaultExecutorPayloadForOwner({
+        sourceFingerprint: 'reviewer-source-current',
+        actionType: 'return_to_ai_reviewer_workflow',
+        nextOwner: 'ai_reviewer',
+        dispatchAuthority: 'ai_reviewer_handoff',
+        dispatchRef: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json',
+      });
+      const writePayload = defaultExecutorPayloadForOwner({
+        sourceFingerprint: 'writer-source-after-reviewer',
+        actionType: 'run_quality_repair_batch',
+        nextOwner: 'write',
+        dispatchAuthority: 'quality_repair_batch_writer_handoff',
+        dispatchRef: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json',
+      });
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-same-study-terminal-reviewer',
+        payload: reviewerPayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:return_to_ai_reviewer_workflow:same-study-terminal',
+      });
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-same-study-terminal-writer',
+        payload: writePayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:after-reviewer-terminal',
+      });
+      db.prepare("UPDATE tasks SET status = 'running', attempts = 1 WHERE task_id = ?").run(
+        'task-mas-default-same-study-terminal-reviewer',
+      );
+      db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id = ?").run(
+        'task-mas-default-same-study-terminal-writer',
+      );
+      const reviewerRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-same-study-terminal-reviewer',
+      ) as Parameters<typeof ensureProviderHostedStageAttempt>[1];
+      const writerRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-same-study-terminal-writer',
+      ) as Parameters<typeof startDefaultExecutorStageAttempt>[2]['row'];
+      const reviewerAttempt = ensureProviderHostedStageAttempt(db, reviewerRow, reviewerPayload);
+      assert.ok(reviewerAttempt);
+      db.prepare(`
+        UPDATE stage_attempts
+        SET status = 'running',
+          provider_run_json = json_set(provider_run_json, '$.provider_status', 'running')
+        WHERE stage_attempt_id = ?
+      `).run(reviewerAttempt.stage_attempt_id);
+      const blockedWriterAttempt = ensureProviderHostedStageAttempt(db, writerRow, writePayload);
+      let temporalStartCount = 0;
+
+      const result = await startDefaultExecutorStageAttempt(db, familyRuntimePaths(), {
+        row: writerRow,
+        payload: writePayload,
+        providerHostedAttempt: blockedWriterAttempt,
+        temporalProviderModule: async () => ({
+          startTemporalStageAttemptWorkflow: async () => {
+            temporalStartCount += 1;
+            return { surface_kind: 'temporal_stage_attempt_start_receipt' };
+          },
+        }),
+        queryTemporalStageAttemptReadModel: async (attempt) => completedTemporalObservation({
+          stageAttemptId: attempt.stage_attempt_id,
+          workflowId: attempt.workflow_id,
+          closeoutRefs: ['receipt:dm002/same-study-reviewer-terminal-closeout'],
+          nextOwner: 'write',
+        }),
+      });
+      const reviewerTask = db.prepare('SELECT status, last_error FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-same-study-terminal-reviewer',
+      ) as { status: string; last_error: string | null };
+      const [syncedReviewerAttempt] = listStageAttemptsForTask(db, 'task-mas-default-same-study-terminal-reviewer');
+      const writerTask = db.prepare('SELECT status, attempts FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-same-study-terminal-writer',
+      ) as { status: string; attempts: number };
+      const writerAttempts = listStageAttemptsForTask(db, 'task-mas-default-same-study-terminal-writer');
+      const skipEvent = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_default_executor_live_attempt_skip'
+        LIMIT 1
+      `).get('task-mas-default-same-study-terminal-writer') as { payload_json: string } | undefined;
+
+      assert.equal(blockedWriterAttempt, null);
+      assert.equal(reviewerTask.status, 'succeeded');
+      assert.equal(reviewerTask.last_error, null);
+      assert.equal(syncedReviewerAttempt.status, 'completed');
+      assert.equal(syncedReviewerAttempt.closeout_receipt_status, 'accepted_typed_closeout');
+      assert.equal(result.status, 'running');
+      assert.equal(temporalStartCount, 1);
+      assert.equal(writerTask.status, 'running');
+      assert.equal(writerTask.attempts, 1);
+      assert.equal(writerAttempts.length, 1);
+      assert.equal(writerAttempts[0].status, 'running');
       assert.equal(skipEvent, undefined);
     });
   } finally {
@@ -642,6 +910,127 @@ test('family-runtime keeps MAS default executor admission single-flight across s
       assert.equal(skipPayload.stage_attempt_id, reviewerAttempt.stage_attempt_id);
       assert.equal(skipPayload.live_action_type, 'return_to_ai_reviewer_workflow');
       assert.equal(skipPayload.candidate_action_type, 'run_quality_repair_batch');
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime syncs terminal same-study attempt before live owner-task skip', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      const reviewerPayload = defaultExecutorPayloadForOwner({
+        sourceFingerprint: 'reviewer-source-terminal-before-writer',
+        actionType: 'return_to_ai_reviewer_workflow',
+        nextOwner: 'ai_reviewer',
+        dispatchAuthority: 'ai_reviewer_record_production_handoff',
+        dispatchRef: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/immutable/return_to_ai_reviewer_workflow/reviewer-terminal.json',
+      });
+      const writePayload = defaultExecutorPayloadForOwner({
+        sourceFingerprint: 'writer-source-after-reviewer-terminal',
+        actionType: 'run_quality_repair_batch',
+        nextOwner: 'write',
+        dispatchAuthority: 'quality_repair_batch_writer_handoff',
+        dispatchRef: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/immutable/run_quality_repair_batch/writer-after-terminal.json',
+      });
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-same-study-reviewer-terminal-before-writer',
+        payload: reviewerPayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:return_to_ai_reviewer_workflow:reviewer-terminal-before-writer',
+      });
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-same-study-writer-after-reviewer-terminal',
+        payload: writePayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:writer-after-reviewer-terminal',
+      });
+      db.prepare(`
+        UPDATE tasks
+        SET status = 'running', attempts = 1, lease_owner = 'opl-family-runtime:stale',
+          lease_expires_at = ?
+        WHERE task_id = ?
+      `).run(
+        new Date(Date.now() + 60_000).toISOString(),
+        'task-mas-default-same-study-reviewer-terminal-before-writer',
+      );
+      db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id = ?").run(
+        'task-mas-default-same-study-writer-after-reviewer-terminal',
+      );
+      const reviewerRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-same-study-reviewer-terminal-before-writer',
+      ) as Parameters<typeof ensureProviderHostedStageAttempt>[1];
+      const writerRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-same-study-writer-after-reviewer-terminal',
+      ) as Parameters<typeof startDefaultExecutorStageAttempt>[2]['row'];
+      const reviewerAttempt = ensureProviderHostedStageAttempt(db, reviewerRow, reviewerPayload);
+      assert.ok(reviewerAttempt);
+      db.prepare(`
+        UPDATE stage_attempts
+        SET status = 'running',
+          provider_run_json = json_set(provider_run_json, '$.provider_status', 'running')
+        WHERE stage_attempt_id = ?
+      `).run(reviewerAttempt.stage_attempt_id);
+      const writerAttempt = ensureProviderHostedStageAttempt(db, writerRow, writePayload);
+      let temporalStartCount = 0;
+      let queryCount = 0;
+
+      const result = await startDefaultExecutorStageAttempt(db, familyRuntimePaths(), {
+        row: writerRow,
+        payload: writePayload,
+        providerHostedAttempt: writerAttempt,
+        temporalProviderModule: async () => ({
+          startTemporalStageAttemptWorkflow: async (attempt) => {
+            temporalStartCount += 1;
+            return {
+              surface_kind: 'temporal_stage_attempt_start_receipt',
+              provider_kind: 'temporal',
+              stage_attempt_id: attempt.stage_attempt_id,
+              workflow_id: attempt.workflow_id,
+              first_execution_run_id: 'writer-run-after-reviewer-terminal',
+            };
+          },
+        }),
+        queryTemporalStageAttemptReadModel: async (attempt) => {
+          queryCount += 1;
+          assert.equal(attempt.stage_attempt_id, reviewerAttempt.stage_attempt_id);
+          return completedTemporalObservation({
+            stageAttemptId: reviewerAttempt.stage_attempt_id,
+            workflowId: reviewerAttempt.workflow_id,
+            closeoutRefs: ['receipt:dm003/reviewer-terminal'],
+            nextOwner: 'write',
+          });
+        },
+      });
+      const reviewerTask = db.prepare('SELECT status, lease_owner, lease_expires_at FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-same-study-reviewer-terminal-before-writer',
+      ) as { status: string; lease_owner: string | null; lease_expires_at: string | null };
+      const writerTask = db.prepare('SELECT status, attempts FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-same-study-writer-after-reviewer-terminal',
+      ) as { status: string; attempts: number };
+      const reviewerAttempts = listStageAttemptsForTask(db, 'task-mas-default-same-study-reviewer-terminal-before-writer');
+      const writerAttempts = listStageAttemptsForTask(db, 'task-mas-default-same-study-writer-after-reviewer-terminal');
+      const skipEvent = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_default_executor_live_attempt_skip'
+        LIMIT 1
+      `).get('task-mas-default-same-study-writer-after-reviewer-terminal') as { payload_json: string } | undefined;
+
+      assert.equal(queryCount, 1);
+      assert.equal(result.status, 'running');
+      assert.equal(temporalStartCount, 1);
+      assert.equal(reviewerTask.status, 'succeeded');
+      assert.equal(reviewerTask.lease_owner, null);
+      assert.equal(reviewerTask.lease_expires_at, null);
+      assert.equal(writerTask.status, 'running');
+      assert.equal(writerTask.attempts, 1);
+      assert.equal(reviewerAttempts.length, 1);
+      assert.equal(reviewerAttempts[0].status, 'completed');
+      assert.equal(reviewerAttempts[0].closeout_receipt_status, 'accepted_typed_closeout');
+      assert.equal(writerAttempts.length, 1);
+      assert.equal(writerAttempts[0].status, 'running');
+      assert.equal(skipEvent, undefined);
     });
   } finally {
     db.close();
