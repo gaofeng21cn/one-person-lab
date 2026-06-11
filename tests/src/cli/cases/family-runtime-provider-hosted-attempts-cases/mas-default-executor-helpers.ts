@@ -80,6 +80,51 @@ export function insertSucceededTask(
   );
 }
 
+export function insertQueuedTask(
+  db: DatabaseSync,
+  input: {
+    taskId: string;
+    domainId: string;
+    taskKind: string;
+    payload: Record<string, unknown>;
+    dedupeKey: string;
+    status?: 'queued' | 'waiting_approval';
+    requiresApproval?: boolean;
+    lastError?: string | null;
+  },
+) {
+  const status = input.status ?? 'queued';
+  const requiresApproval = input.requiresApproval ?? status === 'waiting_approval';
+  const createdAt = new Date().toISOString();
+  db.prepare(`
+    INSERT INTO tasks(
+      task_id, domain_id, task_kind, payload_json, dedupe_key, priority, status,
+      attempts, max_attempts, source, requires_approval, approved_at, lease_owner,
+      lease_expires_at, last_error, dead_letter_reason, created_at, updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    input.taskId,
+    input.domainId,
+    input.taskKind,
+    JSON.stringify(input.payload),
+    input.dedupeKey,
+    0,
+    status,
+    0,
+    3,
+    'test',
+    requiresApproval ? 1 : 0,
+    null,
+    null,
+    null,
+    input.lastError ?? null,
+    null,
+    createdAt,
+    createdAt,
+  );
+}
+
 export function defaultExecutorPayload(sourceFingerprint: string) {
   return {
     profile: '/tmp/dm-cvd.profile.toml',

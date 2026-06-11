@@ -257,6 +257,35 @@ function defaultExecutorFreshCurrentControlAdmissionRedriveDecision(
   };
 }
 
+function defaultExecutorQueuedCurrentControlAdmissionRefreshDecision(
+  existing: FamilyRuntimeTaskRow,
+  existingPayload: Record<string, unknown>,
+  nextPayload: Record<string, unknown>,
+) {
+  if (
+    !['queued', 'waiting_approval'].includes(existing.status)
+    || !isDefaultExecutorDispatch(existing, existingPayload)
+    || !isDefaultExecutorDispatch(existing, nextPayload)
+  ) {
+    return null;
+  }
+  const existingIdentity = providerAdmissionCurrentnessIdentity(existingPayload);
+  const nextIdentity = providerAdmissionCurrentnessIdentity(nextPayload);
+  if (!existingIdentity || !nextIdentity) {
+    return null;
+  }
+  if (sameProviderAdmissionCurrentnessIdentity(existingIdentity, nextIdentity)) {
+    return null;
+  }
+  return {
+    reason: 'mas_current_control_provider_admission_fresh_after_queued',
+    previous_currentness_identity: existingIdentity,
+    next_currentness_identity: nextIdentity,
+    previous_source_fingerprint: existingIdentity.source_fingerprint,
+    next_source_fingerprint: nextIdentity.source_fingerprint,
+  };
+}
+
 function defaultExecutorTerminalAttemptCurrentControlAdmissionRedriveDecision(
   existing: FamilyRuntimeTaskRow,
   existingPayload: Record<string, unknown>,
@@ -528,6 +557,10 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
       );
       const freshCurrentControlAdmissionRedrive = defaultExecutorSucceededAdmissionRefresh
         ? defaultExecutorFreshCurrentControlAdmissionRedriveDecision(existing, existingPayload, payload)
+        : null;
+      const queuedCurrentControlAdmissionRefresh = isDefaultExecutorDispatch(existing, existingPayload)
+        && isDefaultExecutorDispatchInput(input.domainId, taskKind, payload)
+        ? defaultExecutorQueuedCurrentControlAdmissionRefreshDecision(existing, existingPayload, payload)
         : null;
       const terminalAttemptCurrentControlAdmissionRedrive = isDefaultExecutorDispatch(existing, existingPayload)
         && isDefaultExecutorDispatchInput(input.domainId, taskKind, payload)
@@ -822,6 +855,69 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
         return {
           accepted: true,
           requeued_from_terminal: true,
+          idempotent_noop: false,
+          task: taskToPayload(refreshed),
+        };
+      }
+      if (queuedCurrentControlAdmissionRefresh) {
+        const retainExistingApprovalGate = existing.status === 'waiting_approval'
+          && existing.requires_approval === 1;
+        const nextRequiresApproval = requiresApproval || retainExistingApprovalGate;
+        const nextStatus: FamilyRuntimeTaskStatus = nextRequiresApproval ? 'waiting_approval' : 'queued';
+        const nextLastError = activeHold?.reason
+          ?? (retainExistingApprovalGate ? existing.last_error : initialLastError);
+        db.prepare(`
+          UPDATE tasks
+          SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
+            attempts = 0, source = ?, requires_approval = ?, approved_at = NULL,
+            lease_owner = NULL, lease_expires_at = NULL, last_error = ?,
+            dead_letter_reason = NULL, updated_at = ?
+          WHERE task_id = ?
+        `).run(
+          input.domainId,
+          taskKind,
+          exportedPayloadJson,
+          input.priority ?? 0,
+          nextStatus,
+          input.source ?? 'opl-cli',
+          nextRequiresApproval ? 1 : 0,
+          nextLastError,
+          createdAt,
+          existing.task_id,
+        );
+        const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
+        insertEvent(db, {
+          taskId: refreshed.task_id,
+          domainId: refreshed.domain_id,
+          eventType: 'task_requeued_from_mas_current_control_provider_admission',
+          source: input.source ?? 'opl-cli',
+          payload: {
+            dedupe_key: dedupeKey,
+            previous_status: existing.status,
+            next_status: nextStatus,
+            active_hold_id: activeHold?.hold_id ?? null,
+            ...queuedCurrentControlAdmissionRefresh,
+            authority_boundary: {
+              opl: 'queue_attempt_provider_transport_rehydrate_from_mas_current_control_only',
+              domain: 'truth_quality_artifact_gate_owner',
+              domain_truth_mutation: false,
+              publication_quality_mutation: false,
+              artifact_gate_mutation: false,
+              current_package_mutation: false,
+              provider_completion_is_domain_ready: false,
+            },
+          },
+        });
+        insertNotification(db, {
+          taskId: refreshed.task_id,
+          severity: 'info',
+          title: 'Family runtime queued task refreshed from MAS current-control admission',
+          body: `${input.domainId}:${taskKind}`,
+          payload: { status: nextStatus, dedupe_key: dedupeKey, active_hold_id: activeHold?.hold_id ?? null },
+        });
+        return {
+          accepted: true,
+          requeued_from_terminal: false,
           idempotent_noop: false,
           task: taskToPayload(refreshed),
         };

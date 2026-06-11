@@ -202,6 +202,8 @@ Medical Research Pack
 
 OPL 对 MAS 的进一步优化重点不是再补 MAS 私有推进器，而是把 `current_execution_envelope`、`current_owner_delta`、StageRun closeout binding、Stage Artifact Unit、source fingerprint、publication quality gate 和 owner answer bridge 做成单一可接力路径。MAS 仍保留医学 source policy、publication quality、paper artifact authority、reviewer verdict、memory accept/reject、owner receipt 和 typed blocker；generic queue、daemon、dashboard、artifact lifecycle shell、source transport、App cockpit 和 evidence telemetry 上收到 OPL。
 
+2026-06-11 implementation foldback：同一 dedupe-key 下 stale `queued` / `waiting_approval` MAS current-control provider admission 被 fresh work-unit/source currentness identity 取代时，属于 OPL `durable_runway_plane` / `reconciler_plane` 的 queue currentness 修复，可原地刷新 payload、重置 attempts，并保留既有 approval gate。owner-answer bridge 仍只接受带完整 StageRun closeout binding 的 domain-owned owner receipt / typed blocker；binding 必须匹配 provider attempt、active lease、execution authorization decision、source fingerprint 与 idempotency。fresh audit 中 `sat_c0348bcfa41849926ebb46f9` 的 MAS typed blocker 是真实业务阻塞证据，但缺少匹配该 StageRun 的 closeout binding，不能由 OPL 绑定成当前 owner answer 或 domain ready。
+
 ### 4. Support Repos
 
 `opl-aion-shell` 和 `opl-doc` 不进入 Foundry Agent core truth set。

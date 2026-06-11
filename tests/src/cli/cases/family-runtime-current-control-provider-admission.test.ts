@@ -5,6 +5,7 @@ import { enqueueTask } from '../../../../src/family-runtime-enqueue.ts';
 import {
   createQueueTables,
   defaultExecutorPayload,
+  insertQueuedTask,
   insertSucceededTask,
 } from './family-runtime-provider-hosted-attempts-cases/mas-default-executor-helpers.ts';
 
@@ -993,8 +994,8 @@ test('family-runtime rehydrates terminal MAS current-control admission when stag
       WHERE task_id = ? AND event_type = 'task_requeued_from_mas_current_control_provider_admission'
       LIMIT 1
     `).get(taskId) as { payload_json: string } | undefined;
-    const eventPayload = requeueEvent ? JSON.parse(requeueEvent.payload_json) : null;
     const payload = JSON.parse(task.payload_json);
+    const eventPayload = requeueEvent ? JSON.parse(requeueEvent.payload_json) : null;
 
     assert.equal(result.accepted, true);
     assert.equal(result.requeued_from_terminal, true);
@@ -1018,6 +1019,196 @@ test('family-runtime rehydrates terminal MAS current-control admission when stag
       eventPayload.next_currentness_identity.source_fingerprint,
       'truth-snapshot::dm003-generation-2',
     );
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime enqueue replaces stale queued MAS current-control admission for newer work-unit fingerprint', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    createQueueTables(db);
+    const taskId = 'task-mas-current-control-queued-stale-admission';
+    const dedupeKey = 'owner-route::003-dpcc-primary-care-phenotype-treatment-gap::current-control-admission';
+    const stalePayload = {
+      ...currentControlAdmissionPayload(
+        'truth-snapshot::dm003-generation-1',
+        '01',
+        'current-ai-reviewer-gate-replay::003::old-record',
+      ),
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      quest_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      action_type: 'run_gate_clearing_batch',
+      next_executable_owner: 'finalize',
+      work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+    };
+    stalePayload.owner_route_currentness_basis = {
+      ...stalePayload.owner_route_currentness_basis,
+      work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+    };
+    const freshPayload = {
+      ...currentControlAdmissionPayload(
+        'truth-snapshot::dm003-generation-2',
+        '02',
+        'current-ai-reviewer-gate-replay::003::20260611T122549Z::sat_64c5fb484e8ee7b3971786ee',
+      ),
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      quest_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      action_type: 'run_gate_clearing_batch',
+      next_executable_owner: 'finalize',
+      work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+    };
+    freshPayload.owner_route_currentness_basis = {
+      ...freshPayload.owner_route_currentness_basis,
+      work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+    };
+    insertQueuedTask(db, {
+      taskId,
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload: stalePayload,
+      dedupeKey,
+    });
+
+    const result = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload: freshPayload,
+      dedupeKey,
+      source: 'test-current-control-replay',
+    });
+    const task = db.prepare('SELECT status, attempts, payload_json FROM tasks WHERE task_id = ?').get(taskId) as {
+      status: string;
+      attempts: number;
+      payload_json: string;
+    };
+    const requeueEvent = db.prepare(`
+      SELECT payload_json
+      FROM events
+      WHERE task_id = ? AND event_type = 'task_requeued_from_mas_current_control_provider_admission'
+      LIMIT 1
+    `).get(taskId) as { payload_json: string } | undefined;
+    const payload = JSON.parse(task.payload_json);
+    const eventPayload = requeueEvent ? JSON.parse(requeueEvent.payload_json) : null;
+
+    assert.equal(result.accepted, true);
+    assert.equal(result.requeued_from_terminal, false);
+    assert.equal(result.idempotent_noop, false);
+    assert.equal(result.task?.status, 'queued');
+    assert.equal(task.status, 'queued');
+    assert.equal(task.attempts, 0);
+    assert.equal(payload.source_fingerprint, 'truth-snapshot::dm003-generation-2');
+    assert.equal(
+      payload.owner_route_currentness_basis.work_unit_fingerprint,
+      'current-ai-reviewer-gate-replay::003::20260611T122549Z::sat_64c5fb484e8ee7b3971786ee',
+    );
+    assert.ok(requeueEvent);
+    assert.equal(
+      eventPayload.reason,
+      'mas_current_control_provider_admission_fresh_after_queued',
+    );
+    assert.equal(
+      eventPayload.previous_currentness_identity.work_unit_fingerprint,
+      'current-ai-reviewer-gate-replay::003::old-record',
+    );
+    assert.equal(eventPayload.next_status, 'queued');
+    assert.equal(eventPayload.authority_boundary.domain_truth_mutation, false);
+    assert.equal(eventPayload.authority_boundary.provider_completion_is_domain_ready, false);
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime enqueue keeps stale queued MAS current-control admission behind approval gate when refreshed', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    createQueueTables(db);
+    const taskId = 'task-mas-current-control-waiting-stale-admission';
+    const dedupeKey = 'owner-route::003-dpcc-primary-care-phenotype-treatment-gap::current-control-admission-held';
+    const stalePayload = {
+      ...currentControlAdmissionPayload(
+        'truth-snapshot::dm003-generation-1',
+        '01',
+        'current-ai-reviewer-gate-replay::003::old-held-record',
+      ),
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      quest_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      action_type: 'run_gate_clearing_batch',
+      next_executable_owner: 'finalize',
+      work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+    };
+    stalePayload.owner_route_currentness_basis = {
+      ...stalePayload.owner_route_currentness_basis,
+      work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+    };
+    const freshPayload = {
+      ...currentControlAdmissionPayload(
+        'truth-snapshot::dm003-generation-2',
+        '02',
+        'current-ai-reviewer-gate-replay::003::held-fresh-record',
+      ),
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      quest_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      action_type: 'run_gate_clearing_batch',
+      next_executable_owner: 'finalize',
+      work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+    };
+    freshPayload.owner_route_currentness_basis = {
+      ...freshPayload.owner_route_currentness_basis,
+      work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+    };
+    insertQueuedTask(db, {
+      taskId,
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload: stalePayload,
+      dedupeKey,
+      status: 'waiting_approval',
+      requiresApproval: true,
+      lastError: 'operator_hold:publication_gate_review',
+    });
+
+    const result = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload: freshPayload,
+      dedupeKey,
+      source: 'test-current-control-replay',
+    });
+    const task = db.prepare('SELECT status, attempts, requires_approval, last_error, payload_json FROM tasks WHERE task_id = ?').get(taskId) as {
+      status: string;
+      attempts: number;
+      requires_approval: number;
+      last_error: string | null;
+      payload_json: string;
+    };
+    const requeueEvent = db.prepare(`
+      SELECT payload_json
+      FROM events
+      WHERE task_id = ? AND event_type = 'task_requeued_from_mas_current_control_provider_admission'
+      LIMIT 1
+    `).get(taskId) as { payload_json: string } | undefined;
+    const payload = JSON.parse(task.payload_json);
+    const eventPayload = requeueEvent ? JSON.parse(requeueEvent.payload_json) : null;
+
+    assert.equal(result.accepted, true);
+    assert.equal(result.requeued_from_terminal, false);
+    assert.equal(result.idempotent_noop, false);
+    assert.equal(result.task?.status, 'waiting_approval');
+    assert.equal(task.status, 'waiting_approval');
+    assert.equal(task.requires_approval, 1);
+    assert.equal(task.last_error, 'operator_hold:publication_gate_review');
+    assert.equal(task.attempts, 0);
+    assert.equal(payload.source_fingerprint, 'truth-snapshot::dm003-generation-2');
+    assert.equal(
+      payload.owner_route_currentness_basis.work_unit_fingerprint,
+      'current-ai-reviewer-gate-replay::003::held-fresh-record',
+    );
+    assert.ok(requeueEvent);
+    assert.equal(eventPayload.previous_status, 'waiting_approval');
+    assert.equal(eventPayload.next_status, 'waiting_approval');
+    assert.equal(eventPayload.authority_boundary.domain_truth_mutation, false);
+    assert.equal(eventPayload.authority_boundary.provider_completion_is_domain_ready, false);
   } finally {
     db.close();
   }
