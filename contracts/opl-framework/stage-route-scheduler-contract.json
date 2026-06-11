@@ -168,6 +168,35 @@
     "reconcile_actual_status_back_to_operator_read_model",
     "route_back_dead_letter_or_wait_for_human_gate_when_unclosed"
   ],
+  "current_control_admission_currentness_policy": {
+    "purpose": "Classify which family-runtime default-executor queue rows may represent the current MAS provider admission during supersession and tick selection.",
+    "current_admission_statuses": [
+      "queued",
+      "retry_waiting",
+      "running",
+      "waiting_approval"
+    ],
+    "retryable_blocked_dead_letter_reasons": [
+      "temporal_stage_attempt_start_failed",
+      "temporal_stage_attempt_not_completed",
+      "temporal_stage_attempt_failed"
+    ],
+    "blocked_reasons_not_current_admission": [
+      "mas_default_executor_superseded_by_current_source",
+      "temporal_stage_attempt_canceled",
+      "temporal_workflow_canceled"
+    ],
+    "terminal_or_canceled_residue_policy": "audit_or_stale_redrive_filter_only",
+    "fresh_admission_precedence": "a fresh MAS current owner-route or current-control provider admission with matching study/action/work-unit identity must not be superseded by canceled, terminal, superseded, or otherwise non-retryable blocked residue",
+    "authority_boundary": {
+      "can_select_transport_task": true,
+      "can_filter_stale_redrive": true,
+      "can_write_domain_truth": false,
+      "can_create_owner_receipt": false,
+      "can_create_typed_blocker": false,
+      "provider_completion_is_domain_ready": false
+    }
+  },
   "external_patterns_absorbed": [
     {
       "source": "Temporal durable execution",

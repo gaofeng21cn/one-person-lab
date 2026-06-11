@@ -454,12 +454,16 @@ function defaultExecutorSupersededCurrentControlAdmissionRedriveDecision(
   ) {
     return null;
   }
-  const nextIdentity = providerAdmissionCurrentnessIdentity(nextPayload);
+  const providerAdmissionIdentity = providerAdmissionCurrentnessIdentity(nextPayload);
+  const nextIdentity = providerAdmissionIdentity
+    ?? providerAdmissionCurrentnessIdentity(nextPayload, { requirePendingStatus: false });
   if (!nextIdentity) {
     return null;
   }
   return {
-    reason: 'mas_current_control_provider_admission_after_superseded_blocker',
+    reason: providerAdmissionIdentity
+      ? 'mas_current_control_provider_admission_after_superseded_blocker'
+      : 'mas_current_owner_route_admission_after_superseded_blocker',
     next_currentness_identity: nextIdentity,
     next_source_fingerprint: nextIdentity.source_fingerprint,
   };

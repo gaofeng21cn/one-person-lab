@@ -256,6 +256,97 @@ test('family-runtime requeues superseded MAS current-control provider admission 
   }
 });
 
+test('family-runtime requeues superseded MAS current owner-route admission without provider identity', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    withIsolatedFamilyRuntimeEnv(() => {
+      createQueueTables(db);
+      const workUnitFingerprint =
+        'current-ai-reviewer-gate-replay::003-dpcc-primary-care-phenotype-treatment-gap::dpcc_publication_gate_replay_after_current_ai_reviewer_record::publication-eval::003-dpcc-primary-care-phenotype-treatment-gap::ai-reviewer-record::20260611T003412Z::sat_3961f4c4b2e9335879a17891';
+      const payload = {
+        ...defaultExecutorPayloadForOwner({
+          sourceFingerprint: '08159ba4e3a62b9c',
+          actionType: 'run_gate_clearing_batch',
+          nextOwner: 'ai_reviewer',
+          dispatchAuthority: 'consumer_default_executor_dispatch',
+          dispatchRef:
+            'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/immutable/run_gate_clearing_batch/e648958ab468d341beecd13e.json',
+        }),
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        quest_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+        work_unit_fingerprint: workUnitFingerprint,
+        action_fingerprint: workUnitFingerprint,
+        owner_route_currentness_basis: {
+          source_eval_id:
+            'publication-eval::003-dpcc-primary-care-phenotype-treatment-gap::ai-reviewer-record::20260611T003412Z::sat_3961f4c4b2e9335879a17891',
+          work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+          work_unit_fingerprint: workUnitFingerprint,
+          truth_epoch: 'truth-event-000032-097fe584ce2a78fb',
+          runtime_health_epoch: 'runtime-health-event-006596-c5963ea7240e495b',
+        },
+      };
+      const dedupeKey =
+        'mas:dm-cvd-mortality-risk:003-dpcc-primary-care-phenotype-treatment-gap:default-executor:run_gate_clearing_batch:consumer_default_executor_dispatch:08159ba4e3a62b9c';
+      insertDefaultExecutorTaskWithPayload(db, {
+        taskId: 'task-mas-superseded-current-owner-route-admission',
+        payload,
+        dedupeKey,
+        createdAt: '2026-06-11T01:30:25.414Z',
+        status: 'blocked',
+      });
+      db.prepare(`
+        UPDATE tasks
+        SET last_error = 'mas_default_executor_superseded_by_current_source',
+          dead_letter_reason = 'mas_default_executor_superseded_by_current_source'
+        WHERE task_id = ?
+      `).run('task-mas-superseded-current-owner-route-admission');
+
+      const result = enqueueTask(db, {
+        domainId: 'medautoscience',
+        taskKind: 'domain_owner/default-executor-dispatch',
+        payload,
+        dedupeKey,
+        priority: 95,
+        source: 'mas-domain-handler-export',
+      });
+      const row = db.prepare(`
+        SELECT status, attempts, last_error, dead_letter_reason, payload_json
+        FROM tasks
+        WHERE task_id = ?
+      `).get('task-mas-superseded-current-owner-route-admission') as {
+        status: string;
+        attempts: number;
+        last_error: string | null;
+        dead_letter_reason: string | null;
+        payload_json: string;
+      };
+      const event = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_requeued_from_mas_current_control_provider_admission'
+        LIMIT 1
+      `).get('task-mas-superseded-current-owner-route-admission') as { payload_json: string } | undefined;
+
+      assert.equal(result.accepted, true);
+      assert.equal(result.requeued_from_terminal, true);
+      assert.equal(result.idempotent_noop, false);
+      assert.equal(row.status, 'queued');
+      assert.equal(row.attempts, 0);
+      assert.equal(row.last_error, null);
+      assert.equal(row.dead_letter_reason, null);
+      assert.equal(JSON.parse(row.payload_json).work_unit_fingerprint, workUnitFingerprint);
+      assert.ok(event);
+      const eventPayload = JSON.parse(event.payload_json);
+      assert.equal(eventPayload.reason, 'mas_current_owner_route_admission_after_superseded_blocker');
+      assert.equal(eventPayload.next_currentness_identity.work_unit_fingerprint, workUnitFingerprint);
+      assert.equal(eventPayload.authority_boundary.domain_truth_mutation, false);
+    });
+  } finally {
+    db.close();
+  }
+});
+
 test('family-runtime tick prefers MAS current-control provider admission over newer transport residue', async () => {
   const db = new DatabaseSync(':memory:');
   try {
@@ -364,6 +455,137 @@ test('family-runtime tick prefers MAS current-control provider admission over ne
       assert.equal(eventPayload.current_task_id, 'task-mas-current-control-admission');
       assert.equal(eventPayload.current_source_fingerprint, 'domain-transition::route-back-current');
       assert.equal(eventPayload.stale_source_fingerprint, 'sha256:stale-transport-residue');
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime tick does not let canceled MAS current-control residue supersede fresh admission', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      const staleWorkUnitFingerprint =
+        'study-progress-current-owner-ticket::003-dpcc-primary-care-phenotype-treatment-gap::dpcc_publication_gate_replay_after_current_ai_reviewer_record::run_gate_clearing_batch';
+      const currentWorkUnitFingerprint =
+        'current-ai-reviewer-gate-replay::003-dpcc-primary-care-phenotype-treatment-gap::dpcc_publication_gate_replay_after_current_ai_reviewer_record::publication-eval::003-dpcc-primary-care-phenotype-treatment-gap::ai-reviewer-record::20260611T003412Z::sat_3961f4c4b2e9335879a17891';
+      const canceledPayload = {
+        ...defaultExecutorPayloadForOwner({
+          sourceFingerprint: staleWorkUnitFingerprint,
+          actionType: 'run_gate_clearing_batch',
+          nextOwner: 'write',
+          dispatchAuthority: 'consumer_default_executor_dispatch',
+          dispatchRef:
+            'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/run_gate_clearing_batch.json',
+        }),
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        quest_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+        work_unit_fingerprint: staleWorkUnitFingerprint,
+        action_fingerprint: staleWorkUnitFingerprint,
+        owner_route_currentness_basis: {
+          work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+          work_unit_fingerprint: staleWorkUnitFingerprint,
+          truth_epoch: 'truth-event-000031-3eb5e3cbb417f102',
+          runtime_health_epoch: 'runtime-health-event-006564-72a736fcabdd01a6',
+        },
+        provider_admission_identity: {
+          status: 'provider_admission_pending',
+          action_fingerprint: staleWorkUnitFingerprint,
+        },
+      };
+      const freshPayload = {
+        ...defaultExecutorPayloadForOwner({
+          sourceFingerprint: '08159ba4e3a62b9c',
+          actionType: 'run_gate_clearing_batch',
+          nextOwner: 'ai_reviewer',
+          dispatchAuthority: 'consumer_default_executor_dispatch',
+          dispatchRef:
+            'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/immutable/run_gate_clearing_batch/e648958ab468d341beecd13e.json',
+        }),
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        quest_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+        work_unit_fingerprint: currentWorkUnitFingerprint,
+        action_fingerprint: currentWorkUnitFingerprint,
+        owner_route_currentness_basis: {
+          source_eval_id:
+            'publication-eval::003-dpcc-primary-care-phenotype-treatment-gap::ai-reviewer-record::20260611T003412Z::sat_3961f4c4b2e9335879a17891',
+          work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+          work_unit_fingerprint: currentWorkUnitFingerprint,
+          truth_epoch: 'truth-event-000032-097fe584ce2a78fb',
+          runtime_health_epoch: 'runtime-health-event-006596-c5963ea7240e495b',
+        },
+      };
+      insertDefaultExecutorTaskWithPayload(db, {
+        taskId: 'task-mas-canceled-current-control-residue',
+        payload: canceledPayload,
+        dedupeKey: 'mas:dm-cvd:003:default-executor:run_gate_clearing_batch:canceled-residue',
+        createdAt: '2026-06-10T06:58:11.767Z',
+        status: 'blocked',
+        attempts: 1,
+      });
+      db.prepare(`
+        UPDATE tasks
+        SET last_error = 'temporal_workflow_canceled',
+          dead_letter_reason = 'temporal_stage_attempt_canceled'
+        WHERE task_id = ?
+      `).run('task-mas-canceled-current-control-residue');
+      insertDefaultExecutorTaskWithPayload(db, {
+        taskId: 'task-mas-fresh-gate-replay-admission',
+        payload: freshPayload,
+        dedupeKey: 'mas:dm-cvd:003:default-executor:run_gate_clearing_batch:08159ba4e3a62b9c',
+        createdAt: '2026-06-11T01:30:25.414Z',
+        status: 'queued',
+      });
+
+      let dispatchCount = 0;
+      const tick = await runFamilyRuntimeQueueTick(db, familyRuntimePaths(), {
+        source: 'test-canceled-current-control-residue-does-not-supersede',
+        limit: 2,
+        hydrate: false,
+        taskScope: {
+          domainId: 'medautoscience',
+          taskKind: 'domain_owner/default-executor-dispatch',
+          payloadMatches: [
+            {
+              path: 'study_id',
+              value: '003-dpcc-primary-care-phenotype-treatment-gap',
+            },
+          ],
+        },
+      }, {
+        enqueueTask: () => ({ accepted: false }),
+        dispatchTask: (_db, _paths, row: FamilyRuntimeTaskRow) => {
+          dispatchCount += 1;
+          return { task_id: row.task_id };
+        },
+      });
+      const freshTask = db.prepare(`
+        SELECT status, last_error, dead_letter_reason
+        FROM tasks
+        WHERE task_id = ?
+      `).get('task-mas-fresh-gate-replay-admission') as {
+        status: string;
+        last_error: string | null;
+        dead_letter_reason: string | null;
+      };
+      const staleSupersededEvent = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_default_executor_superseded_by_current_source'
+        LIMIT 1
+      `).get('task-mas-fresh-gate-replay-admission') as { payload_json: string } | undefined;
+
+      assert.equal(tick.selected_count, 1);
+      assert.equal(dispatchCount, 1);
+      assert.equal(tick.dispatches[0].task_id, 'task-mas-fresh-gate-replay-admission');
+      assert.equal(tick.mas_default_executor_superseded_count, 0);
+      assert.equal(freshTask.status, 'queued');
+      assert.equal(freshTask.last_error, null);
+      assert.equal(freshTask.dead_letter_reason, null);
+      assert.equal(staleSupersededEvent, undefined);
     });
   } finally {
     db.close();

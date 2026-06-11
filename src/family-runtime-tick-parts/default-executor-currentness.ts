@@ -39,7 +39,11 @@ const CURRENT_CONTROL_ADMISSION_CURRENT_STATUSES = new Set([
   'retry_waiting',
   'running',
   'waiting_approval',
-  'blocked',
+]);
+const CURRENT_CONTROL_ADMISSION_RETRYABLE_BLOCKED_REASONS = new Set([
+  'temporal_stage_attempt_start_failed',
+  'temporal_stage_attempt_not_completed',
+  'temporal_stage_attempt_failed',
 ]);
 const SUPERSEDING_DEFAULT_EXECUTOR_STATUSES = new Set([
   'queued',
@@ -67,9 +71,17 @@ function currentnessRankForDefaultExecutorTask(
   row: FamilyRuntimeTaskRow,
   payload: Record<string, unknown>,
 ) {
+  const canRepresentCurrentAdmission = CURRENT_CONTROL_ADMISSION_CURRENT_STATUSES.has(row.status)
+    || (
+      row.status === 'blocked'
+      && CURRENT_CONTROL_ADMISSION_RETRYABLE_BLOCKED_REASONS.has(row.dead_letter_reason ?? '')
+    );
   if (
-    CURRENT_CONTROL_ADMISSION_CURRENT_STATUSES.has(row.status)
-    && providerAdmissionCurrentnessIdentity(payload)
+    canRepresentCurrentAdmission
+    && (
+      providerAdmissionCurrentnessIdentity(payload)
+      || providerAdmissionCurrentnessIdentity(payload, { requirePendingStatus: false })
+    )
   ) {
     return 1;
   }
