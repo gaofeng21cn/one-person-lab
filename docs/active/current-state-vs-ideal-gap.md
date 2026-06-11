@@ -147,6 +147,67 @@ Workspace Protocol 的当前 active 口径只保留结构边界：`Workspace Gro
 | `cleanup_and_retirement` | Wrapper / facade / alias / helper 删除门已收敛到 cleanup lane，default-caller / physical-delete read model 只投影 refs-only owner-decision shape。 | 没有 domain owner physical delete authorization、keep decision 或 typed blocker ref 时，OPL 不物理删除 retained surface，也不保留 compatibility facade。 |
 | `docs_lifecycle` | 本页持有唯一 active owner；core docs、active support、reference、history 和 docs portfolio 的职责已经分层。 | active docs 仍需持续防止 dated proof、receipt 流水、branch/worktree closeout 和 long checklist 回流；本轮 coverage 与未覆盖项继续进入下一轮 prompt。 |
 
+## Active Planning Gap Register
+
+本节是所有 active/support 规划的单一缺口归口。support 文档里的 P0-P5、W0-W7、audit lane、rollout phase、closure matrix row 和 external-practice checklist 只提供标准或证据解释；它们不维护第二 backlog。
+
+2026-06-11 fresh readout:
+
+```text
+opl framework operating-maturity --family-defaults --json
+  status=evidence_required
+  current_owner=med-autoscience
+  current_owner_stage_id=domain_owner/default-executor-dispatch
+  current_owner_delta_owner_answer_missing=true
+  current_owner_delta_owner_answer_still_required=true
+  ready_claim_authorized=false
+  domain_owner_chain_open_domain_count=0
+  brand_module_l5_evidence_required_module_count=10
+  brand_module_l5_verified_receipt_count=1
+  provider_long_soak_open_count=1
+  production_gate_summary.owner_route_work_order_count=6
+  production_gate_summary.brand_module_l5_requirement_work_order_count=120
+```
+
+```text
+opl agents conformance --family-defaults --json
+  passed_count=4
+  blocked_count=0
+  live_stage_run_progress_evidence_open_domain_count=0
+  live_stage_run_progress_evidence_status=owner_evidence_recorded_not_ready_claim
+  MAS/MAG/RCA/OMA status=owner_typed_blocker_recorded_not_ready_claim
+```
+
+```text
+opl brand-modules l5-status --json
+  status=evidence_required
+  all_module_count=10
+  l5_complete_module_count=0
+  evidence_required_module_count=10
+  owner_route_count=120
+```
+
+```text
+opl agents default-callers --family-defaults --json
+  blocked_count=0
+  deletion_evidence_worklist_count=32
+  physical_delete_authorized=false
+  default_caller_delete_ready=false
+  owner_decision_status=owner_decision_observed_refs_only_not_delete_authorized
+```
+
+| active gap | 已落地 | 仍未落地 | owner / closing ref | source of truth |
+| --- | --- | --- | --- | --- |
+| `current_owner_delta_owner_answer` | OPL 已把 default read root 收敛到 `current_owner_delta`，并把 provider admission / closeout binding / currentness identity 缺口回收到 owner-delta gate。 | 当前 owner 仍是 `med-autoscience` 的 `domain_owner/default-executor-dispatch`；仍缺与当前 work unit / StageRun / source fingerprint / idempotency 匹配的 owner answer。 | MAS domain owner；`domain_owner_receipt_ref`、`quality_gate_receipt_ref`、`typed_blocker_ref`、`human_gate_ref` 或 route-back / no-regression ref。 | `opl framework readiness --family-defaults --json`、`opl framework operating-maturity --family-defaults --json`、MAS repo truth。 |
+| `domain_owner_chain_scaleout` | MAS/MAG/RCA/OMA 都有标准 `contracts/live_stage_run_progress_evidence.json`，OPL conformance 已能 refs-only 消费，`open_domain_count=0`。 | 这只是 `owner_typed_blocker_recorded_not_ready_claim`；仍缺真实 MAS paper、MAG grant、RCA visual、OMA target-agent 在 OPL-hosted path 下持续返回可关闭 stage/transition 的 owner evidence。 | MAS/MAG/RCA/OMA domain owners；owner receipt、typed blocker、human gate、quality/export/review receipt、long-soak 或 no-regression ref。 | `opl agents conformance --family-defaults --json` 与各 domain repo live evidence contracts。 |
+| `brand_module_l5_operating_maturity` | L5 evidence matrix、refs-only ledger、模块级 `l5-status`、120 条 requirement-level work order 和 `framework operating-maturity` 聚合已落地。 | 十个品牌模块仍全部 `evidence_required`，`l5_complete_module_count=0`；仍缺真实用户路径、跨 agent scaleout、长跑/恢复、release/install、operator repair loop、owner acceptance、no-second-truth evidence。 | Brand module owners；per-requirement owner evidence ref、owner acceptance ref 或 typed blocker ref。 | `opl brand-modules l5-status --json`、`contracts/opl-framework/brand-module-l5-operating-evidence.json`。 |
+| `provider_long_soak` | Runway / provider projection、provider cadence/capability readout 和 false-authority guard 已落地。 | Fresh `operating-maturity` 显示 `provider_long_soak_open_count=1`；仍缺可重复长窗口 provider cadence/capability、domain owner-chain dispatch、retry/dead-letter 和 recovery/blocker evidence。 | OPL runtime owner；long-soak recovery ref、dead-letter/retry evidence ref 或 provider typed blocker ref。 | `opl runtime app-operator-drilldown --json`、`opl framework operating-maturity --family-defaults --json`。 |
+| `app_release_user_path` | App release/user-path evidence 已进入 maturity readout，open count 可为 0 且 false-positive guard 已落地。 | 仍不是 App release ready；release/install verdict 必须由 App release owner 给出。 | One Person Lab App release owner；release evidence ref、install/user-path receipt、release owner typed blocker。 | App repo release artifacts/contracts + `opl runtime app-operator-drilldown --json`。 |
+| `memory_artifact_lifecycle_apply` | OPL 已能消费 refs-only lifecycle evidence 与 reconcile counters，fresh maturity open count 为 0。 | 仍缺真实 domain-owned memory accepted/rejected receipt、artifact mutation receipt、package/export lifecycle receipt、restore/retention closeout；open count 0 不代表 body accepted 或 artifact ready。 | Domain owners；memory/artifact/package lifecycle receipt 或 typed blocker ref。 | App/operator drilldown lifecycle evidence + domain repos。 |
+| `private_platform_retirement` | default-caller deletion-evidence worklist 32 条结构前置 evidence observed；private residue cleanup lane 为空；physical-delete read model 已明确 refs-only。 | `physical_delete_authorized=false`、`default_caller_delete_ready=false`；没有 domain owner physical delete authorization / keep-as-authority-adapter / typed blocker 时不删 retained surface。 | Domain repo owners；`physical_delete_authorization_ref`、`keep_as_authority_adapter_ref` 或 `typed_blocker_ref`。 | `opl agents default-callers --family-defaults --json`、domain repo tombstone/provenance refs。 |
+| `stage_transition_authority_machine_primitive` | 目标态和 false-authority 边界已折回 active support；StageRun / closeout binding / current owner delta read models 已覆盖当前主链路。 | 完整 append-only Stage Transition Authority 机器 primitive 仍是后续实现项；目前不能把支持文档写成“Stage transition authority fully landed”。 | OPL Framework；append-only authority event log、derived current pointer、StageRun terminal state、`current_owner_delta` projection tests。 | source/contracts/tests when implemented；本文只保留目标和禁止越权口径。 |
+| `docs_active_single_truth` | `docs/active/README.md` 和本文明确唯一 active owner；其余 active 文件均为 support/reference/index。 | 后续仍需防止 support 文档追加 dated proof、long checklist、worktree closeout 或第二 backlog。 | OPL docs governance；active gap 必须折回本文，dated evidence 进 history/runtime ledger。 | docs lifecycle policy、active docs scan、review。 |
+
 ## 抓大放小风险审计
 
 这组风险从 workspace v2 的物理根 / alias / generated projection 治理问题扩展到 OPL Framework、App 和 MAS/MAG/RCA/OMA。目标不是减少约束，而是让约束只卡住真正会走歪的地方。

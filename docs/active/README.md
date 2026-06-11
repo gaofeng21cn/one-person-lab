@@ -32,6 +32,27 @@ OPL Framework current_owner_delta root
 
 OPL 品牌模块的 L4 rollout 计划已退出 active path：当前十模块 `L4_structural_baseline` 与 L5 evidence-required 状态由 `docs/references/brand-modules/current-maturity-against-workspace.md`、`contracts/opl-framework/brand-module-registry.json`、`contracts/opl-framework/brand-module-surfaces.json`、`contracts/opl-framework/brand-module-l5-operating-evidence.json` 和 fresh `opl brand-modules maturity|validate|l5-validate --json` 持有。已完成计划的来龙去脉进入 history/provenance，不在 active 目录保留第二计划。
 
+## Active Planning Inventory
+
+按单一真相原则，`docs/active` 里只有一份 `active_plan`：
+
+| 文档 | 当前角色 | 是否仍有未落地规划 | 缺口归位 |
+| --- | --- | --- | --- |
+| `current-state-vs-ideal-gap.md` | 唯一 active owner / gap register | 是，但只维护当前 live gap，不维护 dated closeout。 | 本文的 `Active Planning Gap Register`、`测试 / 证据差距`、`下一轮 Agent prompt`。 |
+| `ordinary-progress-spine-and-audit-sidecar-plan.md` | ordinary/audit 分层目标规划支撑 | 不作为独立 backlog。P0-P5 只作设计标准和验收词表。 | 已落地与未落地状态折回 `current-state-vs-ideal-gap.md` 的 operating-model / owner-evidence / production-tail gap。 |
+| `foundry-agent-os-family-target-implementation-plan.md` | Foundry Agent OS family target 支撑 | 不作为独立 backlog。W0-W6 structural landing 已折回；W7 只剩 live owner evidence / production evidence。 | `current-state-vs-ideal-gap.md#active-planning-gap-register`。 |
+| `opl-family-ideal-operating-model-redesign.md` | north-star / audit standard | 不作为 active backlog。 | 用 `meets_target` / `needs_demotion` / `needs_retirement` 审计；当前缺口只由唯一 active owner 维护。 |
+| `opl-foundry-agent-target-operating-architecture.md` | 目标架构支撑 | 不作为执行队列。 | 机器落地状态回 `current-state-vs-ideal-gap.md`，长期架构边界仍可作为 review 标准。 |
+| `opl-stage-native-kernel-rollout-plan.md` | Stage Native Kernel 设计支撑 | 不作为独立 rollout。 | StageRun / controlled canary / closeout-binding 状态回唯一 active owner；live domain progression 仍归 domain owner evidence。 |
+| `production-framework-closure-gap-matrix.md` | production closure evidence 矩阵 | 不维护 dated proof ledger。 | 只解释 evidence lane；真实缺口回 active gap register。 |
+| `current-development-lines.md` | owner map 支撑 | 不维护路线图。 | 各工作线回对应 owner；当前下一步仍看唯一 active owner。 |
+| `opl-family-purpose-first-current-design-audit.md` | purpose-first audit 来源 | 不维护新计划。 | 审计分类折回 active gap register 或 history/provenance。 |
+| `standard-agent-private-platform-inventory.md` | private-platform 分类台账 | 不维护拆文件流水。 | cleanup / physical delete 只作为 refs-only owner decision lane 回 active gap register。 |
+| `opl-family-development-reference.md` | 系列开发参考 | 不维护 backlog。 | 新增/迁移按 owner 分层执行；当前 open gap 不在本文冻结。 |
+| `development-document-portfolio.md` | 文档组合治理支撑 | 不维护执行顺序。 | 只管文档归位、降级、归档规则；当前 active 缺口回唯一 active owner。 |
+
+因此，“active 规划未落地”只能按唯一 active owner 的 live gap 读取：domain owner answer / typed blocker、Brand L5 真实运营证据、provider long-soak、App release verdict、memory/artifact lifecycle receipt、private-platform physical-delete owner decision 等。support 文档里残留的 P0-P5、W0-W7、audit lanes、rollout phases、matrix rows 或 external-practice checklist 都不是第二 backlog。
+
 当前真相仍然先看：
 
 - [文档索引](../README.md)
