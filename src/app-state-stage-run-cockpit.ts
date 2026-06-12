@@ -128,8 +128,8 @@ function ownerAnswerKind(currentOwnerDelta: JsonRecord) {
   if (explicitKind === 'typed_blocker' || text(currentOwnerDelta.latest_typed_blocker_ref) || text(hardGate.typed_blocker_ref)) {
     return 'typed_blocker';
   }
-  if (explicitKind === 'quality_gate_receipt') {
-    return null;
+  if (explicitKind === 'quality_gate_receipt' || explicitKind === 'human_gate' || explicitKind === 'route_back_evidence') {
+    return explicitKind;
   }
   return ownerAnswerRef(currentOwnerDelta) ? 'owner_receipt' : null;
 }
@@ -152,16 +152,10 @@ function ownerAnswerKindFromProjection(projection: JsonRecord) {
   if (explicitKind === 'typed_blocker' || text(projection.latest_typed_blocker_ref)) {
     return 'typed_blocker';
   }
-  if (explicitKind === 'quality_gate_receipt') {
-    return null;
+  if (explicitKind === 'quality_gate_receipt' || explicitKind === 'human_gate' || explicitKind === 'route_back_evidence') {
+    return explicitKind;
   }
   return ownerAnswerRefFromProjection(projection) ? 'owner_receipt' : null;
-}
-
-function hasExplicitQualityGateReceiptAnswer(value: JsonRecord) {
-  const hardGate = record(value.hard_gate);
-  return text(hardGate.owner_answer_kind) === 'quality_gate_receipt'
-    || text(value.latest_owner_answer_kind) === 'quality_gate_receipt';
 }
 
 function missingRefsFromBlockerReasons(reasons: string[]) {
@@ -301,11 +295,7 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
   const ownerAnswerProjectionHardGate = record(ownerAnswerProjection.hard_gate);
   const ownerAnswerProjectionCloseoutBinding = record(ownerAnswerProjection.closeout_binding);
   const bridgedOwnerAnswerRef = ownerAnswerRefFromProjection(ownerAnswerProjection);
-  const currentOwnerDeltaHasQualityGateReceipt =
-    hasExplicitQualityGateReceiptAnswer(currentOwnerDelta);
-  const effectiveOwnerAnswerKind = currentOwnerDeltaHasQualityGateReceipt
-    ? null
-    : ownerAnswerKind(currentOwnerDelta)
+  const effectiveOwnerAnswerKind = ownerAnswerKind(currentOwnerDelta)
     ?? latestExecutionAuthorization?.owner_answer_kind
     ?? ownerAnswerKindFromProjection(ownerAnswerProjection);
   const rawOwnerAnswerRef = ownerAnswerRef(currentOwnerDelta)
@@ -318,7 +308,11 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
   const requiredRoleArtifacts = ['owner_delta', 'role_artifacts', 'owner_receipt_or_typed_blocker'];
   const producedRoleArtifacts = [
     ...(acceptedReturnShapes.some((entry) =>
-    entry.includes('owner_receipt') || entry.includes('typed_blocker'))
+    entry.includes('owner_receipt')
+      || entry.includes('quality_gate')
+      || entry.includes('typed_blocker')
+      || entry.includes('human_gate')
+      || entry.includes('route_back'))
       ? ['owner_delta', 'role_artifacts']
       : ['owner_delta']),
     ...(hasOwnerAnswer ? ['owner_receipt_or_typed_blocker'] : []),
@@ -374,6 +368,9 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
     manifest_valid: true,
     produced_role_artifacts: producedRoleArtifacts,
     owner_receipt_refs: effectiveOwnerAnswerKind === 'owner_receipt'
+      || effectiveOwnerAnswerKind === 'quality_gate_receipt'
+      || effectiveOwnerAnswerKind === 'human_gate'
+      || effectiveOwnerAnswerKind === 'route_back_evidence'
       ? stringRefs(effectiveOwnerAnswerRef)
       : [],
     typed_blocker_refs: effectiveOwnerAnswerKind === 'typed_blocker'

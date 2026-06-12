@@ -302,6 +302,39 @@ exit 1
       output.app_state.operator.brand_experience_profile,
       output.app_state.operator.workbench.brand_experience_profile,
     );
+    assert.deepEqual(
+      output.app_state.operator.one_shot_plan_landing,
+      output.app_state.operator.workbench.one_shot_plan_landing,
+    );
+    assert.equal(
+      output.app_state.operator.one_shot_plan_landing.surface_kind,
+      'opl_app_one_shot_plan_landing_profile',
+    );
+    assert.equal(
+      output.app_state.operator.one_shot_plan_landing.status,
+      'opl_surfaces_landed_external_owner_evidence_required',
+    );
+    assert.deepEqual(output.app_state.operator.one_shot_plan_landing.summary, {
+      total_plan_count: 9,
+      opl_landed_count: 2,
+      opl_landed_owner_gated_count: 6,
+      external_owner_gated_count: 1,
+      all_opl_controlled_surfaces_landed: true,
+      external_owner_evidence_still_required: true,
+      ready_claim_authorized: false,
+    });
+    assert.deepEqual(
+      output.app_state.operator.one_shot_plan_landing.owner_gated_plan_ids,
+      ['P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8'],
+    );
+    assert.equal(
+      output.app_state.operator.one_shot_plan_landing.authority_boundary.can_claim_production_ready,
+      false,
+    );
+    assert.equal(
+      output.app_state.operator.one_shot_plan_landing.authority_boundary.can_sign_owner_receipt,
+      false,
+    );
     assert.equal(
       output.app_state.operator.brand_experience_profile.surface_kind,
       'opl_app_brand_experience_profile',

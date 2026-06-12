@@ -98,7 +98,13 @@ export type StageRunExecutionAuthorizationBlocker = {
 
 export type StageRunCloseoutBinding = {
   owner_answer_ref: string | null;
-  owner_answer_kind: 'owner_receipt' | 'typed_blocker' | null;
+  owner_answer_kind:
+    | 'owner_receipt'
+    | 'quality_gate_receipt'
+    | 'typed_blocker'
+    | 'human_gate'
+    | 'route_back_evidence'
+    | null;
   closeout_receipt_ref: string | null;
   bound_to_stage_run: boolean;
   bound_to_stage_manifest: boolean;
@@ -424,11 +430,15 @@ function launchAuthorizationBlockers(input: JsonRecord) {
 function buildCloseoutBinding(input: JsonRecord): StageRunCloseoutBinding {
   const closeoutReceiptRef = optionalRef(input.closeout_receipt_ref);
   const ownerAnswerRef = optionalRef(input.owner_answer_ref) ?? closeoutReceiptRef;
+  const explicitOwnerAnswerKind = optionalRef(input.owner_answer_kind);
   const ownerAnswerKind = ownerAnswerRef === null
     ? null
-    : input.owner_answer_kind === 'typed_blocker'
-      ? 'typed_blocker'
-      : 'owner_receipt';
+    : explicitOwnerAnswerKind === 'typed_blocker'
+      || explicitOwnerAnswerKind === 'quality_gate_receipt'
+      || explicitOwnerAnswerKind === 'human_gate'
+      || explicitOwnerAnswerKind === 'route_back_evidence'
+        ? explicitOwnerAnswerKind
+        : 'owner_receipt';
   const ownerAnswerStageRunId = input.owner_answer_stage_run_id ?? input.closeout_receipt_stage_run_id;
   const ownerAnswerGeneration = input.owner_answer_generation ?? input.closeout_receipt_generation;
   const stageManifestRef = optionalRef(input.stage_manifest_ref);

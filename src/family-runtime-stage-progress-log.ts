@@ -10,6 +10,11 @@ import {
   buildTemporalWebUiRef,
   type TemporalStageAttemptVisibilityReadiness,
 } from './family-runtime-temporal-visibility.ts';
+import {
+  buildProgressDeltaReceipt,
+  progressDeltaReceiptDeltaClassFromStageClassification,
+  type StageProgressDeltaClassification,
+} from './progress-delta-receipt.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -394,11 +399,13 @@ const REQUIRED_DOMAIN_STAGE_LOG_FIELDS = [
   'evidence_refs',
 ] as const;
 
-function normalizedProgressDeltaClassification(value: string | null) {
+function normalizedProgressDeltaClassification(value: string | null): StageProgressDeltaClassification | null {
   if (!value) {
     return null;
   }
-  return PROGRESS_DELTA_CLASSIFICATIONS.has(value) ? value : 'typed_blocker';
+  return PROGRESS_DELTA_CLASSIFICATIONS.has(value)
+    ? value as StageProgressDeltaClassification
+    : 'typed_blocker';
 }
 
 function invalidProgressDeltaClassification(value: string | null) {
@@ -476,6 +483,43 @@ function userStageLogProgressDeltas(
         ? 'domain_user_stage_log_or_typed_blocker_with_lineage_required'
         : 'deliverable_progress_delta_or_typed_blocker_with_lineage_required'),
   };
+}
+
+function progressDeltaReceiptForUserStageLog(input: StageProgressLogInput, userStageLog: ReturnType<typeof buildUserStageLog>) {
+  const producedRefs = uniqueStrings([
+    ...userStageLog.evidence_refs,
+    ...userStageLog.deliverable_progress_delta.delta_refs,
+    ...userStageLog.platform_repair_delta.delta_refs,
+    ...input.humanGateRefs ?? [],
+    `stage_attempt:${input.stageAttemptId}#user_stage_log`,
+  ]);
+  const consumedRefs = uniqueStrings([
+    ...input.consumedRefs,
+    ...input.consumedMemoryRefs,
+    ...refsFromUnknown(input.workspaceLocator.source_refs),
+    ...refsFromUnknown(input.workspaceLocator.dispatch_ref),
+    ...refsFromUnknown(input.workspaceLocator.dispatch_refs),
+    input.sourceFingerprint ? `source_fingerprint:${input.sourceFingerprint}` : null,
+  ].filter((entry): entry is string => Boolean(entry)));
+  return buildProgressDeltaReceipt({
+    receipt_id: `progress-delta:${input.stageAttemptId}`,
+    domain_id: input.domainId,
+    task_or_study_ref: input.taskId ?? stringValue(input.workspaceLocator.study_id) ?? `stage_attempt:${input.stageAttemptId}`,
+    stage_ref: input.stageId,
+    producer: 'opl_stage_progress_log',
+    delta_classification: progressDeltaReceiptDeltaClassFromStageClassification(
+      userStageLog.progress_delta_classification,
+    ),
+    changed_surfaces: userStageLog.changed_stage_surfaces.length > 0
+      ? userStageLog.changed_stage_surfaces
+      : ['stage_progress_log.user_stage_log'],
+    produced_refs: producedRefs,
+    consumed_refs: consumedRefs.length > 0
+      ? consumedRefs
+      : [`stage_attempt:${input.stageAttemptId}`],
+    next_owner: input.nextOwner,
+    next_required_delta: userStageLog.next_forced_delta,
+  });
 }
 
 function domainStageSummary(input: StageProgressLogInput) {
@@ -745,6 +789,7 @@ export function buildStageProgressLog(input: StageProgressLogInput) {
     providerRun: input.providerRun,
     visibilityReadiness: input.temporalVisibilityReadiness,
   });
+  const progressDeltaReceipt = progressDeltaReceiptForUserStageLog(input, userStageLog);
   return {
     surface_kind: 'opl_stage_progress_log',
     projection_scope: input.projectionScope ?? 'stage_attempt',
@@ -813,6 +858,7 @@ export function buildStageProgressLog(input: StageProgressLogInput) {
     usage_telemetry: usageTelemetry(input),
     memory_trace_projection: memoryTraceProjection,
     user_stage_log: userStageLog,
+    progress_delta_receipt: progressDeltaReceipt,
     evidence_refs: {
       checkpoint_refs: input.checkpointRefs,
       closeout_refs: input.closeoutRefs,
@@ -835,6 +881,7 @@ export function buildStageProgressLog(input: StageProgressLogInput) {
       dispatch_refs: dispatchRefs,
       stage_packet_refs: stagePacketRefs(input),
       activity_event_refs: activityEventRefs(input),
+      progress_delta_receipt_refs: [progressDeltaReceipt.receipt_id],
       activity_event_count: activityEvents.length,
     },
     authority_boundary: stageProgressAuthorityBoundary(),
@@ -864,6 +911,9 @@ export function summarizeStageProgressLogs(
   const activityEventRefs = uniqueStrings(projections.flatMap((projection) =>
     projection.evidence_refs.activity_event_refs
   ));
+  const progressDeltaReceiptRefs = uniqueStrings(projections.flatMap((projection) =>
+    projection.evidence_refs.progress_delta_receipt_refs
+  ));
   return {
     surface_kind: 'opl_stage_progress_log_summary',
     projection_scope: projectionScope,
@@ -890,9 +940,11 @@ export function summarizeStageProgressLogs(
       .map((projection) => stringValue(projection.temporal_visibility?.visibility_readiness.readiness_status))
       .filter((entry): entry is string => Boolean(entry))),
     activity_event_ref_count: activityEventRefs.length,
+    progress_delta_receipt_ref_count: progressDeltaReceiptRefs.length,
     attempt_refs: projections.map((projection) =>
       `/stage_attempt_workbench/attempts/${projection.stage_attempt_id}/stage_progress_log`
     ),
+    progress_delta_receipt_refs: progressDeltaReceiptRefs,
     temporal_webui_refs: uniqueStrings(temporalWebUiRefs),
     authority_boundary: stageProgressAuthorityBoundary(),
   };

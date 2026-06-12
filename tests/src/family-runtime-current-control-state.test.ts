@@ -246,6 +246,10 @@ test('current control state carries stage progress log observability for the act
     assert.equal(state.stage_progress_log.surface_kind, 'opl_stage_progress_log_summary');
     assert.equal(state.stage_progress_log.attempt_count, 1);
     assert.equal(state.stage_progress_log.runner_progress_event_count, 1);
+    assert.equal(state.stage_progress_log.progress_delta_receipt_ref_count, 1);
+    assert.deepEqual(state.stage_progress_log.progress_delta_receipt_refs, [
+      `progress-delta:${attempt.stage_attempt_id}`,
+    ]);
     assert.deepEqual(state.stage_progress_log.attempt_refs, [
       `/stage_attempt_workbench/attempts/${attempt.stage_attempt_id}/stage_progress_log`,
     ]);

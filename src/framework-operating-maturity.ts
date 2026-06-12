@@ -463,6 +463,31 @@ function foundryAgentOsProductionEvidenceGate(input: {
         ? 'evidence_required'
         : 'refs_observed_not_production_ready_claim',
     })),
+    final_scaleout_gate: {
+      surface_kind: 'opl_final_scaleout_gate',
+      status: openLaneCount > 0
+        ? 'external_owner_evidence_required'
+        : 'owner_verdict_refs_required_before_ready_claim',
+      open_lane_count: openLaneCount,
+      blocker_refs: [],
+      owner_verdict_refs: [],
+      release_verdict_refs: [],
+      long_soak_refs: [],
+      owner_route_work_order_count: workOrders.length,
+      ready_claim_authorized: false,
+      non_closing_inputs: [
+        'zero_worklist_count',
+        'same_cohort_diagnostic',
+        'long_soak_workorder',
+        'verified_refs_only_ledger',
+      ],
+      authority_boundary: {
+        can_claim_domain_ready: false,
+        can_claim_app_release_ready: false,
+        can_claim_l5: false,
+        can_claim_production_ready: false,
+      },
+    },
     owner_route_work_orders: workOrders,
     brand_module_l5_requirement_work_orders: brandL5RequirementWorkOrders,
     summary: {
@@ -625,6 +650,41 @@ function currentOwnerDeltaBridge(appOperatorDrilldown: Record<string, unknown>) 
   };
 }
 
+function oneShotPlanLandingReadout(contracts: FrameworkContracts) {
+  const model = contracts.targetOperatingArchitecture.one_shot_plan_landing_model;
+  return {
+    surface_kind: 'opl_one_shot_plan_landing_readout',
+    source_contract_ref:
+      'contracts/opl-framework/target-operating-architecture-contract.json#one_shot_plan_landing_model',
+    model_id: model.model_id,
+    status: model.summary.external_owner_evidence_still_required
+      ? 'opl_surfaces_landed_external_owner_evidence_required'
+      : 'opl_surfaces_landed_no_external_owner_gate_observed',
+    summary: model.summary,
+    implementation_slices: model.implementation_slices,
+    owner_gated_plan_ids: model.implementation_slices
+      .filter((slice) => slice.status !== 'opl_landed')
+      .map((slice) => slice.plan_id),
+    remaining_owner_gates: model.implementation_slices
+      .filter((slice) => slice.remaining_owner_gate !== 'none')
+      .map((slice) => ({
+        plan_id: slice.plan_id,
+        title: slice.title,
+        status: slice.status,
+        remaining_owner_gate: slice.remaining_owner_gate,
+      })),
+    non_closing_inputs: [
+      'contract_validation',
+      'docs_foldback',
+      'generated_descriptor_ready',
+      'provider_completion',
+      'verified_refs_only_ledger',
+      'zero_worklist_count',
+    ],
+    authority_boundary: model.authority_boundary,
+  };
+}
+
 export async function buildFrameworkOperatingMaturityReadout(
   contracts: FrameworkContracts,
   args: OperatingMaturityArgs,
@@ -699,6 +759,7 @@ export async function buildFrameworkOperatingMaturityReadout(
     lifecycleOpenCount,
     ownerEvidenceIntake,
   });
+  const oneShotPlanLanding = oneShotPlanLandingReadout(contracts);
 
   return {
     version: 'g2',
@@ -733,6 +794,7 @@ export async function buildFrameworkOperatingMaturityReadout(
         ready_claim_authorized: false,
       },
       current_owner_delta_bridge: ownerDeltaBridge,
+      one_shot_plan_landing: oneShotPlanLanding,
       owner_evidence_intake: ownerEvidenceIntake,
       foundry_agent_os_production_evidence_gate: productionEvidenceGate,
       domain_owner_chain_scaleout: {

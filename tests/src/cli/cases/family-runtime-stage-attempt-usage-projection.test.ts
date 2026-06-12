@@ -181,6 +181,23 @@ db.close();`;
         .model_route_cost_projection.observed_usage_linkage.cost.estimated_cost_usd_observed,
       0.51,
     );
+    const progressDeltaReceipt =
+      query.family_runtime_stage_attempt_query.stage_attempt_query.stage_progress_log.progress_delta_receipt;
+    assert.equal(progressDeltaReceipt.surface_kind, 'opl_progress_delta_receipt');
+    assert.equal(progressDeltaReceipt.receipt_id, `progress-delta:${attemptId}`);
+    assert.equal(progressDeltaReceipt.domain_id, 'medautoscience');
+    assert.equal(progressDeltaReceipt.delta_classification, 'typed_blocker');
+    assert.equal(progressDeltaReceipt.authority_boundary.can_authorize_stage_complete, false);
+    assert.equal(progressDeltaReceipt.authority_boundary.can_sign_owner_receipt, false);
+    assert.equal(
+      progressDeltaReceipt.authority_boundary.platform_repair_counts_as_deliverable_progress,
+      false,
+    );
+    assert.equal(
+      query.family_runtime_stage_attempt_query.stage_attempt_query.stage_progress_log.evidence_refs
+        .progress_delta_receipt_refs.includes(`progress-delta:${attemptId}`),
+      true,
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

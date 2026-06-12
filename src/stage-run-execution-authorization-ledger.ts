@@ -27,7 +27,13 @@ export type StageRunExecutionAuthorizationInput = {
   current_pointer_ref?: string | null;
   stage_manifest_ref?: string | null;
   owner_answer_ref?: string | null;
-  owner_answer_kind?: 'owner_receipt' | 'typed_blocker' | null;
+  owner_answer_kind?:
+    | 'owner_receipt'
+    | 'quality_gate_receipt'
+    | 'typed_blocker'
+    | 'human_gate'
+    | 'route_back_evidence'
+    | null;
   closeout_receipt_ref?: string | null;
   owner_answer_stage_run_id?: string | null;
   owner_answer_generation?: number | null;
@@ -63,7 +69,13 @@ export type StageRunExecutionAuthorizationReceipt = {
   current_pointer_ref: string;
   stage_manifest_ref: string | null;
   owner_answer_ref: string | null;
-  owner_answer_kind: 'owner_receipt' | 'typed_blocker' | null;
+  owner_answer_kind:
+    | 'owner_receipt'
+    | 'quality_gate_receipt'
+    | 'typed_blocker'
+    | 'human_gate'
+    | 'route_back_evidence'
+    | null;
   closeout_receipt_ref: string | null;
   owner_answer_stage_run_id: string | null;
   owner_answer_generation: number | null;
@@ -121,7 +133,13 @@ function ownerAnswerGenerationValue(value: unknown) {
 }
 
 function ownerAnswerKind(value: unknown) {
-  return value === 'typed_blocker' ? 'typed_blocker' : value === 'owner_receipt' ? 'owner_receipt' : null;
+  return value === 'owner_receipt'
+    || value === 'quality_gate_receipt'
+    || value === 'typed_blocker'
+    || value === 'human_gate'
+    || value === 'route_back_evidence'
+    ? value
+    : null;
 }
 
 function refsOnlyAuthorityBoundary() {

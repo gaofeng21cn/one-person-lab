@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { loadFrameworkContracts } from '../../src/contracts.ts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 
@@ -19,6 +21,7 @@ test('target architecture schema contracts keep owner delta root and audit tail 
     'contracts/opl-framework/stage-owner-receipt.schema.json',
     'contracts/opl-framework/stage-typed-blocker.schema.json',
     'contracts/opl-framework/stage-artifact-unit.schema.json',
+    'contracts/opl-framework/progress-delta-receipt.schema.json',
     'contracts/opl-framework/owner-answer.schema.json',
     'contracts/opl-framework/evidence-vault-event.schema.json',
     'contracts/opl-framework/golden-path-profile.schema.json',
@@ -73,8 +76,22 @@ test('target architecture schema contracts keep owner delta root and audit tail 
     'ProgressDeltaReceipt',
   );
   assert.equal(
+    ownerDelta.properties.progress_delta_receipt.properties.schema_ref.const,
+    'contracts/opl-framework/progress-delta-receipt.schema.json',
+  );
+  assert.equal(
     ownerDelta.properties.progress_delta_receipt.properties.stage_transition_requires_owner_receipt_or_typed_blocker.const,
     true,
+  );
+  assert.equal(
+    ownerDelta.properties.progress_delta_receipt.properties.authority_boundary.properties
+      .can_authorize_stage_complete.const,
+    false,
+  );
+  assert.equal(
+    ownerDelta.properties.progress_delta_receipt.properties.authority_boundary.properties
+      .can_sign_owner_receipt.const,
+    false,
   );
   assert.equal(
     ownerDelta.properties.artifact_tier_policy.properties.default_ordinary_tier.const,
@@ -593,150 +610,9 @@ test('target architecture schema contracts keep owner delta root and audit tail 
 });
 
 test('target operating architecture contract freezes resource, authority, lane, and improvement boundaries', () => {
-  const contract = readJson<{
-    contract_kind: string;
-    schema_version: string;
-    design_principles: string[];
-    resource_model: {
-      resource_shape: {
-        required_fields: string[];
-        spec_status_split_required: boolean;
-        status_can_define_desired_state: boolean;
-      };
-      resource_kinds: Array<{ kind: string; owner: string; default_lane: string }>;
-    };
-    stage_transition_authority: {
-      single_writer: boolean;
-      event_log_policy: string;
-      derived_state: string[];
-      forbidden_direct_writers: string[];
-    };
-    domain_pack_authority_abi: {
-      default_agent_shape: string;
-      domain_pack_must_declare: string[];
-      opl_generated_or_hosted_surfaces: string[];
-      authority_functions: string[];
-    };
-    surface_budget_compiler_policy: {
-      ordinary_path_root: string;
-      small_detail_default_lanes: string[];
-      hard_blocker_upgrade_conditions: string[];
-      ordinary_path_must_not_be_overridden_by: string[];
-      accepted_owner_answer_shapes: string[];
-      surface_plane_binding_required: boolean;
-      default_surface_requires_plane_ref: boolean;
-      ordinary_surface_allowed_planes: string[];
-      non_authority_surface_forbidden_outputs: string[];
-    };
-    multi_plane_operating_system: {
-      plane_model_id: string;
-      default_ordinary_route: string;
-      planes: Array<{
-        plane_id: string;
-        owner_modules: string[];
-        default_lane: string;
-        inputs: string[];
-        outputs: string[];
-        forbidden_claims: string[];
-        ordinary_path_eligible: boolean;
-      }>;
-      cross_plane_authority_boundary: Record<string, boolean>;
-    };
-    reconciler_model: {
-      required_loops: string[];
-      loop_authority_boundary: Record<string, boolean>;
-      substrate_policy: {
-        temporal_role: string;
-        worker_supervisor_role: string;
-        progress_reconciler_role: string;
-        false_authority_boundary: string;
-      };
-    };
-    catalog_and_telemetry: {
-      atlas_catalogs: string[];
-      vault_ref_streams: string[];
-      vault_policy: string;
-      telemetry_body_policy: string;
-    };
-    app_console_policy: {
-      default_screen_fields: string[];
-      drilldown_only_fields: string[];
-      gui_truth_owner: string;
-      framework_role: string;
-    };
-    experience_operating_model: {
-      model_id: string;
-      purpose: string;
-      default_user_path: {
-        planning_root: string;
-        first_screen_policy: string;
-        primary_read_surface: string;
-        drilldown_policy: string;
-      };
-      target_axes: Array<{
-        axis_id: string;
-        owner_modules: string[];
-        success_policy: string;
-        machine_checks: string[];
-        forbidden_regressions: string[];
-      }>;
-      flagship_agent_default: {
-        agent_id: string;
-        expected_path: string;
-        domain_pack_role: string;
-        opl_role: string;
-        private_runtime_disposition: string;
-      };
-      authority_boundary: Record<string, boolean>;
-      forbidden_claims: string[];
-    };
-    agent_lab_improvement_plane: {
-      role: string;
-      may_produce: string[];
-      must_not_produce: string[];
-    };
-    foundry_agent_os_standard: {
-      pattern_id: string;
-      source_pattern_ref: string;
-      target_shape: string;
-      applies_to_domain_agents: string[];
-      domain_pack_examples: Record<string, string>;
-      domain_authority_kernel_examples: Record<string, string[]>;
-      opl_module_mapping: Array<{
-        target_capability: string;
-        primary_module: string;
-        supporting_modules: string[];
-        ordinary_lane: string;
-        authority_boundary: string;
-      }>;
-      capability_registry_boundary: {
-        owner_modules: string[];
-        default_behavior: string;
-        resolver_abi_ref: string;
-        selector_helper_ref: string;
-        fail_open_policy: string;
-        optional_ref_missing_default: string;
-        route_required_ref_missing: string;
-        must_not_create: string[];
-      };
-      cross_agent_conformance_required_claims: string[];
-      implementation_lane_refs: string[];
-      authority_boundary: Record<string, boolean>;
-      forbidden_claims: string[];
-    };
-    flagship_experience_mapping: {
-      mapping_id: string;
-      flagship_agent_id: string;
-      standard_agent_shape: string;
-      journey_artifacts: string[];
-      private_platform_residue_inputs: string[];
-      opl_contract_surfaces: string[];
-      false_ready_claims: string[];
-      authority_boundary: Record<string, boolean>;
-    };
-    authority_boundary: Record<string, boolean>;
-    forbidden_claims: string[];
-  }>('contracts/opl-framework/target-operating-architecture-contract.json');
+  const contract = loadFrameworkContracts({
+    contractsDir: path.join(repoRoot, 'contracts', 'opl-framework'),
+  }).targetOperatingArchitecture;
 
   assert.equal(contract.contract_kind, 'opl_target_operating_architecture_contract.v1');
   assert.equal(contract.schema_version, 'target-operating-architecture.v1');
@@ -1076,6 +952,91 @@ test('target operating architecture contract freezes resource, authority, lane, 
     'mas_flagship_mapping_is_paper_done',
   ]) {
     assert.equal(contract.experience_operating_model.forbidden_claims.includes(forbiddenClaim), true);
+  }
+
+  assert.equal(
+    contract.one_shot_plan_landing_model.model_id,
+    'opl_family_one_shot_plan_landing.v1',
+  );
+  assert.deepEqual(
+    contract.one_shot_plan_landing_model.implementation_slices.map((slice) => slice.plan_id),
+    ['P0', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8'],
+  );
+  assert.deepEqual(contract.one_shot_plan_landing_model.summary, {
+    total_plan_count: 9,
+    opl_landed_count: 2,
+    opl_landed_owner_gated_count: 6,
+    external_owner_gated_count: 1,
+    all_opl_controlled_surfaces_landed: true,
+    external_owner_evidence_still_required: true,
+    ready_claim_authorized: false,
+  });
+  const landingSlices = new Map(
+    contract.one_shot_plan_landing_model.implementation_slices.map((slice) => [slice.plan_id, slice]),
+  );
+  assert.equal(landingSlices.get('P1')?.status, 'opl_landed');
+  assert.equal(
+    landingSlices.get('P1')?.opl_landed_surfaces.includes('opl app state --profile fast --json'),
+    true,
+  );
+  assert.equal(landingSlices.get('P2')?.status, 'opl_landed_owner_gated');
+  assert.equal(
+    landingSlices.get('P2')?.false_completion_claims.includes('provider_completion_is_domain_closeout'),
+    true,
+  );
+  assert.equal(landingSlices.get('P3')?.status, 'opl_landed_owner_gated');
+  assert.equal(
+    landingSlices.get('P3')?.opl_landed_surfaces.includes(
+      'contracts/opl-framework/progress-delta-receipt.schema.json',
+    ),
+    true,
+  );
+  assert.equal(
+    landingSlices.get('P3')?.opl_landed_surfaces.includes('src/progress-delta-receipt.ts'),
+    true,
+  );
+  assert.equal(
+    landingSlices.get('P3')?.opl_landed_surfaces.includes('stage_progress_log.progress_delta_receipt'),
+    true,
+  );
+  assert.equal(
+    landingSlices.get('P3')?.opl_landed_surfaces.includes('stage_progress_log_summary.progress_delta_receipt_refs'),
+    true,
+  );
+  assert.equal(
+    landingSlices.get('P3')?.false_completion_claims.includes('progress_delta_receipt_is_owner_receipt'),
+    true,
+  );
+  assert.equal(
+    landingSlices.get('P4')?.opl_landed_surfaces.includes(
+      'contracts/opl-framework/quality-gate-runtime-contract.json',
+    ),
+    true,
+  );
+  assert.equal(
+    landingSlices.get('P4')?.opl_landed_surfaces.includes('src/quality-gate-runtime.ts'),
+    true,
+  );
+  assert.equal(landingSlices.get('P4')?.remaining_owner_gate.includes('quality_or_export'), true);
+  assert.equal(landingSlices.get('P6')?.remaining_owner_gate.includes('physical_delete'), true);
+  assert.equal(landingSlices.get('P8')?.status, 'external_owner_gated');
+  assert.equal(
+    landingSlices.get('P8')?.opl_landed_surfaces.includes(
+      'foundry_agent_os_production_evidence_gate.final_scaleout_gate',
+    ),
+    true,
+  );
+  assert.equal(
+    landingSlices.get('P8')?.false_completion_claims.includes('zero_worklist_count_is_domain_ready'),
+    true,
+  );
+  for (const slice of landingSlices.values()) {
+    assert.notEqual(slice.opl_landed_surfaces.length, 0);
+    assert.notEqual(slice.validation_commands.length, 0);
+    assert.notEqual(slice.false_completion_claims.length, 0);
+  }
+  for (const [claim, allowed] of Object.entries(contract.one_shot_plan_landing_model.authority_boundary)) {
+    assert.equal(allowed, false, `one-shot landing model must not claim ${claim}`);
   }
 
   assert.equal(contract.agent_lab_improvement_plane.role, 'refs_only_improvement_control_plane');

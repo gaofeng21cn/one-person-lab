@@ -91,15 +91,20 @@
       "additionalProperties": true,
       "required": [
         "surface_kind",
+        "schema_ref",
         "ordinary_receipt_kind",
         "ordinary_delta_classes",
         "required_refs",
+        "authority_boundary",
         "cannot_authorize",
         "stage_transition_requires_owner_receipt_or_typed_blocker"
       ],
       "properties": {
         "surface_kind": {
           "const": "opl_progress_delta_receipt_policy"
+        },
+        "schema_ref": {
+          "const": "contracts/opl-framework/progress-delta-receipt.schema.json"
         },
         "ordinary_receipt_kind": {
           "const": "ProgressDeltaReceipt"
@@ -120,6 +125,30 @@
           "type": "array",
           "contains": {
             "const": "production_ready"
+          }
+        },
+        "authority_boundary": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "can_authorize_stage_complete",
+            "can_authorize_publication_ready",
+            "can_sign_owner_receipt",
+            "can_create_typed_blocker"
+          ],
+          "properties": {
+            "can_authorize_stage_complete": {
+              "const": false
+            },
+            "can_authorize_publication_ready": {
+              "const": false
+            },
+            "can_sign_owner_receipt": {
+              "const": false
+            },
+            "can_create_typed_blocker": {
+              "const": false
+            }
           }
         },
         "stage_transition_requires_owner_receipt_or_typed_blocker": {

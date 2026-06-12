@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/progress-delta-receipt.schema.json",
+  "schema_id": "opl.progress_delta_receipt.v1",
+  "surface_kind": "opl_progress_delta_receipt_schema",
+  "owner": "one-person-lab",
+  "purpose": "Define the OPL-owned ordinary progress receipt that records a real delta, refs, and next owner without acting as a stage closeout, domain owner receipt, typed blocker, quality verdict, artifact mutation, or production readiness claim.",
+  "state": "active_contract",
+  "machine_boundary": "OPL owns the refs-only progress receipt envelope and projection. Domain repositories retain stage completion, owner receipt signing, typed blocker creation, artifact authority, memory acceptance, quality/export verdicts, and production readiness.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "receipt_id",
+    "domain_id",
+    "task_or_study_ref",
+    "stage_ref",
+    "producer",
+    "delta_classification",
+    "changed_surfaces",
+    "produced_refs",
+    "consumed_refs",
+    "next_owner",
+    "next_required_delta",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_progress_delta_receipt"
+    },
+    "schema_version": {
+      "const": "progress-delta-receipt.v1"
+    },
+    "receipt_id": {
+      "$ref": "#/$defs/ref"
+    },
+    "domain_id": {
+      "$ref": "#/$defs/ref"
+    },
+    "task_or_study_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "stage_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "producer": {
+      "$ref": "#/$defs/ref"
+    },
+    "delta_classification": {
+      "enum": [
+        "paper_progress_delta",
+        "deliverable_progress_delta",
+        "platform_repair_delta",
+        "advisory_delta",
+        "typed_blocker",
+        "human_gate"
+      ]
+    },
+    "changed_surfaces": {
+      "$ref": "#/$defs/ref_list"
+    },
+    "produced_refs": {
+      "$ref": "#/$defs/ref_list"
+    },
+    "consumed_refs": {
+      "$ref": "#/$defs/ref_list"
+    },
+    "next_owner": {
+      "$ref": "#/$defs/ref"
+    },
+    "next_required_delta": {
+      "$ref": "#/$defs/ref"
+    },
+    "authority_boundary": {
+      "$ref": "#/$defs/authority_boundary"
+    }
+  },
+  "$defs": {
+    "ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ref_list": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/ref"
+      }
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "can_authorize_stage_complete",
+        "can_authorize_publication_ready",
+        "can_authorize_package_ready",
+        "can_mutate_artifact_body",
+        "can_accept_or_reject_memory",
+        "can_claim_production_ready",
+        "can_sign_owner_receipt",
+        "can_create_typed_blocker",
+        "platform_repair_counts_as_deliverable_progress"
+      ],
+      "properties": {
+        "can_authorize_stage_complete": {
+          "const": false
+        },
+        "can_authorize_publication_ready": {
+          "const": false
+        },
+        "can_authorize_package_ready": {
+          "const": false
+        },
+        "can_mutate_artifact_body": {
+          "const": false
+        },
+        "can_accept_or_reject_memory": {
+          "const": false
+        },
+        "can_claim_production_ready": {
+          "const": false
+        },
+        "can_sign_owner_receipt": {
+          "const": false
+        },
+        "can_create_typed_blocker": {
+          "const": false
+        },
+        "platform_repair_counts_as_deliverable_progress": {
+          "const": false
+        }
+      }
+    }
+  }
+}

@@ -480,6 +480,29 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
       false,
     );
     assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.final_scaleout_gate.surface_kind,
+      'opl_final_scaleout_gate',
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.final_scaleout_gate.open_lane_count,
+      maturity.foundry_agent_os_production_evidence_gate.summary.open_lane_count,
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.final_scaleout_gate.ready_claim_authorized,
+      false,
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.final_scaleout_gate.non_closing_inputs.includes(
+        'zero_worklist_count',
+      ),
+      true,
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.final_scaleout_gate.authority_boundary
+        .can_claim_production_ready,
+      false,
+    );
+    assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.owner_route_work_orders.length,
       6,
     );

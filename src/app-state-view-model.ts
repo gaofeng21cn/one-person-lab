@@ -14,6 +14,7 @@ type OplAppOperatorViewModelInput = {
   uiDefaults: JsonRecord;
   runtimeActivityItems: ReadonlyArray<JsonRecord>;
   brandSystemProfile: JsonRecord;
+  targetOperatingArchitecture: JsonRecord;
   currentOwnerDeltaReadModel?: JsonRecord;
 };
 
@@ -668,6 +669,65 @@ function buildBrandExperienceProfile(input: OplAppOperatorViewModelInput) {
   };
 }
 
+function buildOneShotPlanLandingProfile(input: OplAppOperatorViewModelInput) {
+  const model = asRecord(input.targetOperatingArchitecture.one_shot_plan_landing_model);
+  const summary = asRecord(model.summary);
+  const implementationSlices = asRecordArray(model.implementation_slices);
+  return {
+    surface_kind: 'opl_app_one_shot_plan_landing_profile',
+    schema_version: 'one-shot-plan-landing-profile.v1',
+    source_contract_ref:
+      'contracts/opl-framework/target-operating-architecture-contract.json#one_shot_plan_landing_model',
+    model_id: asString(model.model_id) ?? 'opl_family_one_shot_plan_landing.v1',
+    status: summary.external_owner_evidence_still_required === true
+      ? 'opl_surfaces_landed_external_owner_evidence_required'
+      : 'opl_surfaces_landed_no_external_owner_gate_observed',
+    summary: {
+      total_plan_count: asNumber(summary.total_plan_count) ?? implementationSlices.length,
+      opl_landed_count: asNumber(summary.opl_landed_count) ?? 0,
+      opl_landed_owner_gated_count: asNumber(summary.opl_landed_owner_gated_count) ?? 0,
+      external_owner_gated_count: asNumber(summary.external_owner_gated_count) ?? 0,
+      all_opl_controlled_surfaces_landed: summary.all_opl_controlled_surfaces_landed === true,
+      external_owner_evidence_still_required: summary.external_owner_evidence_still_required === true,
+      ready_claim_authorized: false,
+    },
+    owner_gated_plan_ids: implementationSlices
+      .filter((slice) => asString(slice.status) !== 'opl_landed')
+      .map((slice) => asString(slice.plan_id))
+      .filter((entry): entry is string => Boolean(entry)),
+    visible_completion_message:
+      'OPL-controlled contracts, read models, runtime routes, App projection, and evidence routers are landed; domain/App/L5/production readiness still requires owner evidence.',
+    remaining_owner_gates: implementationSlices
+      .filter((slice) => asString(slice.remaining_owner_gate) !== 'none')
+      .map((slice) => ({
+        plan_id: asString(slice.plan_id),
+        title: asString(slice.title),
+        status: asString(slice.status),
+        remaining_owner_gate: asString(slice.remaining_owner_gate),
+      })),
+    validation_commands: [
+      ...new Set(implementationSlices.flatMap((slice) =>
+        Array.isArray(slice.validation_commands)
+          ? slice.validation_commands.filter((entry): entry is string => typeof entry === 'string')
+          : []
+      )),
+    ],
+    authority_boundary: {
+      can_claim_domain_ready: false,
+      can_claim_quality_verdict: false,
+      can_claim_artifact_authority: false,
+      can_claim_app_release_ready: false,
+      can_claim_brand_l5_ready: false,
+      can_claim_production_ready: false,
+      can_claim_mas_paper_done: false,
+      can_write_domain_truth: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_authorize_physical_delete: false,
+    },
+  };
+}
+
 export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput) {
   const temporal = asRecord(asRecord(input.provider).temporal);
   const status = temporal.ready === true ? 'ready' : 'attention_needed';
@@ -679,6 +739,7 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
   const defaultReadSurfacePolicy = buildDefaultReadSurfacePolicy(input);
   const ordinaryCockpit = buildOrdinaryCockpit(currentOwnerDeltaTopline, input);
   const brandExperienceProfile = buildBrandExperienceProfile(input);
+  const oneShotPlanLanding = buildOneShotPlanLandingProfile(input);
   const lazyRefs = [
     {
       ref_id: 'full_app_state_refresh',
@@ -704,12 +765,14 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
     default_read_surface_policy: defaultReadSurfacePolicy,
     ordinary_cockpit: ordinaryCockpit,
     brand_experience_profile: brandExperienceProfile,
+    one_shot_plan_landing: oneShotPlanLanding,
     ...currentOwnerDeltaTopline,
     workbench: {
       view_model_schema: 'opl_app_operator_workbench.v1',
       default_read_surface_policy: defaultReadSurfacePolicy,
       ordinary_cockpit: ordinaryCockpit,
       brand_experience_profile: brandExperienceProfile,
+      one_shot_plan_landing: oneShotPlanLanding,
       ...currentOwnerDeltaTopline,
       summary_cards: buildSummaryCards(input),
       sections: buildSections(input),

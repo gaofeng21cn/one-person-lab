@@ -350,10 +350,15 @@ function progressDeltaReceiptPolicy() {
   return {
     surface_kind: 'opl_progress_delta_receipt_policy',
     receipt_id: 'progress_delta_receipt',
+    schema_ref: 'contracts/opl-framework/progress-delta-receipt.schema.json',
     ordinary_receipt_kind: 'ProgressDeltaReceipt',
     ordinary_delta_classes: [
       'paper_progress_delta',
       'deliverable_progress_delta',
+      'platform_repair_delta',
+      'advisory_delta',
+    ],
+    non_closing_delta_classes: [
       'platform_repair_delta',
       'advisory_delta',
     ],
@@ -366,6 +371,17 @@ function progressDeltaReceiptPolicy() {
       'next_owner',
       'next_required_delta',
     ],
+    authority_boundary: {
+      can_authorize_stage_complete: false,
+      can_authorize_publication_ready: false,
+      can_authorize_package_ready: false,
+      can_mutate_artifact_body: false,
+      can_accept_or_reject_memory: false,
+      can_claim_production_ready: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      platform_repair_counts_as_deliverable_progress: false,
+    },
     cannot_authorize: [
       'stage_complete',
       'publication_ready',
@@ -373,6 +389,8 @@ function progressDeltaReceiptPolicy() {
       'artifact_mutation',
       'memory_accept_reject',
       'production_ready',
+      'owner_receipt_signature',
+      'typed_blocker_creation',
     ],
     stage_transition_requires_owner_receipt_or_typed_blocker: true,
   };

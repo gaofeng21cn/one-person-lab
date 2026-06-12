@@ -18,6 +18,14 @@ function strings(value: unknown) {
     : [];
 }
 
+const ACCEPTED_CLOSEOUT_OWNER_ANSWER_KINDS = [
+  'owner_receipt',
+  'quality_gate_receipt',
+  'typed_blocker',
+  'human_gate',
+  'route_back_evidence',
+] as const;
+
 export function closedStageRunOwnerAnswer(stageRunCockpit: JsonRecord) {
   const authorization = record(stageRunCockpit.execution_authorization);
   const closeoutBinding = record(authorization.closeout_binding);
@@ -30,7 +38,9 @@ export function closedStageRunOwnerAnswer(stageRunCockpit: JsonRecord) {
     || text(authorization.phase) !== 'closeout'
     || closeoutBindingBlockers.length > 0
     || !ownerAnswerRef
-    || (ownerAnswerKind !== 'owner_receipt' && ownerAnswerKind !== 'typed_blocker')
+    || !ACCEPTED_CLOSEOUT_OWNER_ANSWER_KINDS.includes(
+      ownerAnswerKind as typeof ACCEPTED_CLOSEOUT_OWNER_ANSWER_KINDS[number],
+    )
   ) {
     return null;
   }
@@ -39,7 +49,7 @@ export function closedStageRunOwnerAnswer(stageRunCockpit: JsonRecord) {
     ownerAnswerKind,
     stageRunCloseoutBindingRef: '/stage_run_cockpit/execution_authorization/closeout_binding',
     stageRunCloseoutBindingPolicy:
-      'stage_run_closeout_binding_authorized_owner_receipt_or_typed_blocker_refs_only_no_domain_ready_claim',
+      'stage_run_closeout_binding_authorized_domain_owned_owner_answer_refs_only_no_quality_or_domain_ready_claim',
   };
 }
 

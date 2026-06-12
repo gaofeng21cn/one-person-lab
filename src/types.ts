@@ -799,7 +799,7 @@ export interface TargetOperatingArchitectureContract {
     loop_granularity: string;
     required_loops: string[];
     loop_authority_boundary: Record<string, false>;
-    substrate_policy?: {
+    substrate_policy: {
       temporal_role: string;
       worker_supervisor_role: string;
       progress_reconciler_role: string;
@@ -818,10 +818,61 @@ export interface TargetOperatingArchitectureContract {
     gui_truth_owner: string;
     framework_role: string;
   };
+  experience_operating_model: {
+    model_id: string;
+    purpose: string;
+    default_user_path: {
+      planning_root: string;
+      first_screen_policy: string;
+      primary_read_surface: string;
+      drilldown_policy: string;
+    };
+    target_axes: Array<{
+      axis_id: 'running_smoothness' | 'output_quality' | 'brand_feel';
+      owner_modules: BrandModuleId[];
+      success_policy: string;
+      machine_checks: string[];
+      forbidden_regressions: string[];
+    }>;
+    flagship_agent_default: {
+      agent_id: string;
+      expected_path: string;
+      domain_pack_role: string;
+      opl_role: string;
+      private_runtime_disposition: string;
+    };
+    authority_boundary: Record<string, false>;
+    forbidden_claims: string[];
+  };
   agent_lab_improvement_plane: {
     role: string;
     may_produce: string[];
     must_not_produce: string[];
+  };
+  one_shot_plan_landing_model: {
+    model_id: string;
+    purpose: string;
+    source_plan_ref: string;
+    default_completion_semantics: string;
+    implementation_slices: Array<{
+      plan_id: string;
+      title: string;
+      status: 'opl_landed' | 'opl_landed_owner_gated' | 'external_owner_gated';
+      opl_landed_surfaces: string[];
+      validation_commands: string[];
+      remaining_owner_gate: string;
+      false_completion_claims: string[];
+    }>;
+    summary: {
+      total_plan_count: number;
+      opl_landed_count: number;
+      opl_landed_owner_gated_count: number;
+      external_owner_gated_count: number;
+      all_opl_controlled_surfaces_landed: boolean;
+      external_owner_evidence_still_required: boolean;
+      ready_claim_authorized: false;
+    };
+    authority_boundary: Record<string, false>;
   };
   foundry_agent_os_standard: {
     pattern_id: string;
