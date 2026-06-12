@@ -75,6 +75,21 @@ owner-route semantics.
 | `redcube-ai` | Process/history governance is compressed in current RCA indexes. Remaining work is private inventory refresh, generated/default caller thinning evidence tails, production-like no-regression, Temporal visual-stage long soak and concrete source/contract/test retirement lanes. Reopen history bodies only when fresh scan finds a current conflict or uncompressed current rule. |
 | `opl-meta-agent` | Registry/App live consumption, additional target cohorts, real source patch-loop, independent reviewer direct evidence, standard target-agent handoff convergence and actual script-to-pack source reductions remain owner/evidence tails. Do not reopen `external-suite` / external work-order as stale vocabulary without replacement machine truth. |
 
+## Fresh Intake 2026-06-12
+
+This tranche used OPL Doc as a semantic SSOT governance lane across the six default repos. It did not attempt physical source/test/workflow retirement because the readback did not produce no-active-caller, replacement parity, owner receipt / typed blocker roundtrip, and no-forbidden-write proof for any concrete interface.
+
+| Repo | Fresh state / write boundary | SSOT result | Edited / carried forward |
+| --- | --- | --- | --- |
+| `one-person-lab` | Root checkout has concurrent active-doc edits outside this tranche; this lane only updates this history rollup. | Active truth remains `docs/active/current-state-vs-ideal-gap.md`; target/reference support docs must not become a second backlog. | Edited this rollup only. Next OPL write scope remains active/support thinning for `architecture.md`, `decisions.md`, and large active support docs when disjoint from owner edits. |
+| `one-person-lab-app` | Clean before this lane; docs-only release guide compression is safe. | Active truth remains `docs/active/app-ideal-state-gap-plan.md`; release truth remains `contracts/app-release-channel.json`, workflows, validators and release artifacts. | Compressed `docs/release/README.md`, changed active plan date to `Last reviewed`, and folded the release-guide compression rule into App process history. |
+| `med-autoscience` | Root has concurrent currentness source/test edits; docs-only changes avoid that write set. | Active truth remains `docs/active/mas-ideal-state-gap-plan.md`; MAS Agent OS target architecture is support reference, not an active plan. | Reclassified the target architecture doc as `active_support_reference` and narrowed the medical display board role. Status/decisions/display catalog compression remains next scope. |
+| `med-autogrant` | Clean before this lane. | Active truth remains `docs/active/mag-ideal-state-cross-repo-gap-plan.md`; command evidence should use repo-local clean runner unless the shell command source is verified. | Updated Chinese README command wording to avoid treating bare `uv run mag` / PATH `mag` as readiness evidence. Architecture/status thinning remains next scope. |
+| `redcube-ai` | Clean before this lane. | Active truth remains `docs/active/rca-ideal-state-gap-plan.md`; ideal state remains the reference doc; support docs are not readiness truth. | Folded this readback into `docs/history/process/README.md`. Concrete status/architecture/decisions thinning and physical-retirement lanes remain future work. |
+| `opl-meta-agent` | Clean before this lane. | Active truth remains `docs/active/opl-meta-agent-ideal-state-gap-plan.md`; dynamic OPL read-model counts stay out of the active plan. | Compressed active-plan evidence prose around production-consumption and stage-replay typed-blocker evidence. |
+
+The parent OPL Doc `/goal` remains open. This tranche covers high-confidence SSOT compression and role correction; it does not prove full six-repo paragraph coverage or close remaining functional/evidence gaps.
+
 ## Future Record Policy
 
 - Do not create new dated docs-governance coverage-ledger chains for ordinary process, frozen inventory, doctor transcript, branch/worktree state, command transcripts or per-run proof.

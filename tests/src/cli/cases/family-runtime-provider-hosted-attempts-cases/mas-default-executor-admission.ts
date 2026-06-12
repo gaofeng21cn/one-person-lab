@@ -13,6 +13,7 @@ import {
 
 import { ensureProviderHostedStageAttempt } from '../../../../../src/family-runtime-provider-hosted-attempts.ts';
 import { listStageAttemptsForTask } from '../../../../../src/family-runtime-stage-attempts.ts';
+import { buildStageRunCurrentnessIdentity } from '../../../../../src/family-runtime-stage-run-currentness-identity.ts';
 import {
   createQueueTables,
   defaultExecutorPayload,
@@ -117,6 +118,21 @@ test('family-runtime admits MAS publication gate owner default executor dispatch
         domain_owner: 'publication_gate_owner',
         work_unit_id: 'publication_handoff_owner_gate',
         dispatch_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/publication_handoff_owner_gate.json',
+        route_identity_key: 'mas-route::002::publication-gate-owner',
+        attempt_idempotency_key: 'mas-attempt::002::publication-gate-owner',
+        provider_admission_identity: {
+          status: 'provider_admission_pending',
+          route_identity_key: 'mas-route::002::publication-gate-owner',
+          attempt_idempotency_key: 'mas-attempt::002::publication-gate-owner',
+          idempotency_key: 'mas-provider-admission::002::publication-gate-owner',
+        },
+        owner_route_currentness_basis: {
+          work_unit_id: 'publication_handoff_owner_gate',
+          work_unit_fingerprint: 'publication-gate-owner-source',
+          truth_epoch: 'truth-epoch::publication-gate-owner',
+          runtime_health_epoch: 'runtime-health::publication-gate-owner',
+          source_eval_id: 'publication-eval::publication-gate-owner',
+        },
       };
       insertSucceededTask(db, {
         taskId,
@@ -138,6 +154,33 @@ test('family-runtime admits MAS publication gate owner default executor dispatch
       assert.equal(attempt.executor_kind, 'codex_cli');
       assert.equal(attempt.workspace_locator.next_executable_owner, 'publication_gate_owner');
       assert.equal(attempt.workspace_locator.action_type, 'publication_handoff_owner_gate');
+      assert.equal(attempt.workspace_locator.route_identity_key, 'mas-route::002::publication-gate-owner');
+      assert.equal(attempt.workspace_locator.attempt_idempotency_key, 'mas-attempt::002::publication-gate-owner');
+      assert.deepEqual(attempt.workspace_locator.provider_admission_identity, {
+        status: 'provider_admission_pending',
+        route_identity_key: 'mas-route::002::publication-gate-owner',
+        attempt_idempotency_key: 'mas-attempt::002::publication-gate-owner',
+        idempotency_key: 'mas-provider-admission::002::publication-gate-owner',
+      });
+      assert.deepEqual(attempt.workspace_locator.owner_route_currentness_basis, {
+        work_unit_id: 'publication_handoff_owner_gate',
+        work_unit_fingerprint: 'publication-gate-owner-source',
+        truth_epoch: 'truth-epoch::publication-gate-owner',
+        runtime_health_epoch: 'runtime-health::publication-gate-owner',
+        source_eval_id: 'publication-eval::publication-gate-owner',
+      });
+      const identity = buildStageRunCurrentnessIdentity({
+        task: {
+          domain_id: row.domain_id,
+          task_id: row.task_id,
+          payload,
+        },
+        taskPayload: attempt.workspace_locator,
+        stageAttempt: attempt,
+      });
+      assert.equal(identity.route_identity_key, 'mas-route::002::publication-gate-owner');
+      assert.equal(identity.attempt_idempotency_key, 'mas-attempt::002::publication-gate-owner');
+      assert.equal(identity.idempotency_key, 'mas-attempt::002::publication-gate-owner');
       assert.equal(attempts.length, 1);
       assert.equal(attempts[0].stage_attempt_id, attempt.stage_attempt_id);
     });

@@ -33,6 +33,10 @@ export type StageRunCurrentnessIdentity = {
   runtime_health_epoch: string | null;
   source_eval_id: string | null;
   idempotency_key: string | null;
+  route_identity_key: string | null;
+  attempt_idempotency_key: string | null;
+  provider_admission_identity: JsonRecord | null;
+  owner_route_currentness_basis: JsonRecord | null;
   provider_attempt_ref: string | null;
   active_lease_ref: string | null;
   execution_authorization_ref: string | null;
@@ -54,6 +58,8 @@ export function buildStageRunCurrentnessIdentity(
   const taskPayload = input.taskPayload ?? recordValue(task.payload) ?? {};
   const stageAttempt = input.stageAttempt ?? {};
   const currentOwnerDelta = input.currentOwnerDelta ?? {};
+  const providerAdmissionIdentity = recordValue(taskPayload.provider_admission_identity)
+    ?? recordValue(stageAttempt.provider_admission_identity);
   const ownerRoute = recordValue(taskPayload.owner_route) ?? {};
   const sourceRefs = recordValue(ownerRoute.source_refs) ?? {};
   const currentnessContract = recordValue(ownerRoute.currentness_contract) ?? {};
@@ -98,20 +104,37 @@ export function buildStageRunCurrentnessIdentity(
       ?? optionalString(stageAttempt.source_fingerprint)
       ?? optionalString(currentOwnerDelta.source_fingerprint),
     truth_epoch: optionalString(basis.truth_epoch)
+      ?? optionalString(providerAdmissionIdentity?.truth_epoch)
       ?? optionalString(taskPayload.truth_epoch)
       ?? optionalString(workspaceLocator.truth_epoch)
       ?? optionalString(taskPayload.source_fingerprint)
       ?? optionalString(workspaceLocator.domain_source_fingerprint),
     runtime_health_epoch: optionalString(basis.runtime_health_epoch)
+      ?? optionalString(providerAdmissionIdentity?.runtime_health_epoch)
       ?? optionalString(taskPayload.runtime_health_epoch)
       ?? optionalString(workspaceLocator.runtime_health_epoch),
     source_eval_id: optionalString(basis.source_eval_id)
+      ?? optionalString(providerAdmissionIdentity?.source_eval_id)
       ?? optionalString(taskPayload.source_eval_id)
       ?? optionalString(workspaceLocator.source_eval_id),
-    idempotency_key: optionalString(taskPayload.idempotency_key)
+    idempotency_key: optionalString(taskPayload.attempt_idempotency_key)
+      ?? optionalString(taskPayload.idempotency_key)
+      ?? optionalString(providerAdmissionIdentity?.attempt_idempotency_key)
+      ?? optionalString(providerAdmissionIdentity?.idempotency_key)
       ?? optionalString(stageAttempt.idempotency_key)
       ?? optionalString(taskPayload.source_fingerprint)
       ?? optionalString(workspaceLocator.domain_source_fingerprint),
+    route_identity_key: optionalString(taskPayload.route_identity_key)
+      ?? optionalString(providerAdmissionIdentity?.route_identity_key),
+    attempt_idempotency_key: optionalString(taskPayload.attempt_idempotency_key)
+      ?? optionalString(providerAdmissionIdentity?.attempt_idempotency_key)
+      ?? optionalString(taskPayload.idempotency_key)
+      ?? optionalString(providerAdmissionIdentity?.idempotency_key),
+    provider_admission_identity: providerAdmissionIdentity,
+    owner_route_currentness_basis: recordValue(taskPayload.owner_route_currentness_basis)
+      ?? recordValue(sourceRefs.owner_route_currentness_basis)
+      ?? recordValue(currentnessContract.basis)
+      ?? null,
     provider_attempt_ref: optionalString(stageAttempt.provider_attempt_ref)
       ?? (
         optionalString(stageAttempt.stage_attempt_id)
@@ -160,6 +183,8 @@ function comparisonFields(identity: StageRunCurrentnessIdentity) {
     runtime_health_epoch: identity.runtime_health_epoch,
     source_eval_id: identity.source_eval_id,
     idempotency_key: identity.idempotency_key,
+    route_identity_key: identity.route_identity_key,
+    attempt_idempotency_key: identity.attempt_idempotency_key,
     task_id: identity.task_id,
   };
 }
@@ -177,6 +202,8 @@ function routeComparisonFields(identity: StageRunCurrentnessIdentity) {
     runtime_health_epoch: identity.runtime_health_epoch,
     source_eval_id: identity.source_eval_id,
     idempotency_key: identity.idempotency_key,
+    route_identity_key: identity.route_identity_key,
+    attempt_idempotency_key: identity.attempt_idempotency_key,
   };
 }
 

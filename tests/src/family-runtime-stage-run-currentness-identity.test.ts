@@ -25,6 +25,13 @@ function baseInput(overrides: Record<string, unknown> = {}) {
         runtime_health_epoch: 'runtime-health-1',
         source_eval_id: 'publication-eval::current',
         idempotency_key: 'provider-admission::003::sha256:gate-replay-current',
+        route_identity_key: 'route::003::publication-gate-replay',
+        attempt_idempotency_key: 'attempt::003::publication-gate-replay',
+        provider_admission_identity: {
+          status: 'provider_admission_pending',
+          route_identity_key: 'route::003::publication-gate-replay',
+          attempt_idempotency_key: 'attempt::003::publication-gate-replay',
+        },
         owner_route: {
           source_refs: {
             owner_route_currentness_basis: {
@@ -74,7 +81,21 @@ test('builds a reusable StageRun currentness identity from task and attempt refs
     truth_epoch: 'truth-epoch-1',
     runtime_health_epoch: 'runtime-health-1',
     source_eval_id: 'publication-eval::current',
-    idempotency_key: 'provider-admission::003::sha256:gate-replay-current',
+    idempotency_key: 'attempt::003::publication-gate-replay',
+    route_identity_key: 'route::003::publication-gate-replay',
+    attempt_idempotency_key: 'attempt::003::publication-gate-replay',
+    provider_admission_identity: {
+      status: 'provider_admission_pending',
+      route_identity_key: 'route::003::publication-gate-replay',
+      attempt_idempotency_key: 'attempt::003::publication-gate-replay',
+    },
+    owner_route_currentness_basis: {
+      work_unit_id: 'publication_gate_replay',
+      work_unit_fingerprint: 'sha256:gate-replay-current',
+      truth_epoch: 'truth-epoch-1',
+      runtime_health_epoch: 'runtime-health-1',
+      source_eval_id: 'publication-eval::current',
+    },
     provider_attempt_ref: 'opl://stage-attempts/sat-current',
     active_lease_ref: 'opl://stage-attempts/sat-current/leases/frt-current/active',
     execution_authorization_ref:
@@ -131,6 +152,64 @@ test('compares StageRun route currentness without letting stage attempt id split
   assert.equal(sameStageRunCurrentnessIdentity(admitted, candidate), false);
   assert.equal(sameStageRunRouteCurrentnessIdentity(admitted, candidate), true);
   assert.equal(sameStageRunRouteCurrentnessIdentity(admitted, stale), false);
+});
+
+test('preserves explicit MAS provider admission identity fields in StageRun currentness identity', () => {
+  const identity = buildStageRunCurrentnessIdentity({
+    task: {
+      domain_id: 'medautoscience',
+      task_id: 'frt-current',
+      payload: {
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        action_type: 'return_to_ai_reviewer_workflow',
+        source_fingerprint: 'mas-source:fresh',
+      },
+    },
+    taskPayload: {
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      stage_id: 'domain_owner/default-executor-dispatch',
+      action_type: 'return_to_ai_reviewer_workflow',
+      source_fingerprint: 'mas-source:fresh',
+      provider_admission_identity: {
+        status: 'provider_admission_pending',
+        route_identity_key: 'mas-route::003::ai-reviewer',
+        attempt_idempotency_key: 'mas-attempt::003::ai-reviewer',
+        idempotency_key: 'mas-provider-admission::003::ai-reviewer',
+      },
+      owner_route_currentness_basis: {
+        work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+        work_unit_fingerprint: 'sha256:ai-reviewer-current',
+        truth_epoch: 'truth-epoch-current',
+        runtime_health_epoch: 'runtime-health-current',
+        source_eval_id: 'publication-eval::current',
+      },
+    },
+    stageAttempt: {
+      domain_id: 'medautoscience',
+      stage_id: 'domain_owner/default-executor-dispatch',
+      stage_attempt_id: 'sat-current',
+      task_id: 'frt-current',
+    },
+  });
+
+  assert.equal(identity.route_identity_key, 'mas-route::003::ai-reviewer');
+  assert.equal(identity.attempt_idempotency_key, 'mas-attempt::003::ai-reviewer');
+  assert.equal(identity.idempotency_key, 'mas-attempt::003::ai-reviewer');
+  assert.deepEqual(identity.provider_admission_identity, {
+    status: 'provider_admission_pending',
+    route_identity_key: 'mas-route::003::ai-reviewer',
+    attempt_idempotency_key: 'mas-attempt::003::ai-reviewer',
+    idempotency_key: 'mas-provider-admission::003::ai-reviewer',
+  });
+  assert.deepEqual(identity.owner_route_currentness_basis, {
+    work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    work_unit_fingerprint: 'sha256:ai-reviewer-current',
+    truth_epoch: 'truth-epoch-current',
+    runtime_health_epoch: 'runtime-health-current',
+    source_eval_id: 'publication-eval::current',
+  });
+  assert.deepEqual(missingStageRunCurrentnessIdentityFields(identity), []);
 });
 
 test('fails closed when required StageRun currentness identity fields are missing', () => {

@@ -753,6 +753,9 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
     domain_id: row.domain_id,
     task_kind: row.task_kind,
   };
+  const providerAdmissionIdentity = isRecord(payload.provider_admission_identity)
+    ? payload.provider_admission_identity
+    : null;
   if (isMasOwnerRouteTask(row.domain_id, row.task_kind)) {
     locator.route_ref = row.task_kind;
     locator.action_ref = masOwnerRouteActionRef(row.task_kind) ?? MAS_DOMAIN_ROUTE_RECONCILE_APPLY_ACTION;
@@ -799,6 +802,17 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
         ?? optionalString(payload.runtime_health_epoch)
         ?? optionalString(payload.source_fingerprint),
       idempotency_key: optionalString(payload.idempotency_key) ?? optionalString(payload.source_fingerprint),
+    })) {
+      if (value) {
+        locator[targetKey] = value;
+      }
+    }
+    for (const [targetKey, value] of Object.entries({
+      route_identity_key: optionalString(payload.route_identity_key)
+        ?? optionalString(providerAdmissionIdentity?.route_identity_key),
+      attempt_idempotency_key: optionalString(payload.attempt_idempotency_key)
+        ?? optionalString(providerAdmissionIdentity?.attempt_idempotency_key)
+        ?? optionalString(providerAdmissionIdentity?.idempotency_key),
     })) {
       if (value) {
         locator[targetKey] = value;
@@ -889,6 +903,7 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
   for (const key of [
     'owner_route_currentness_basis',
     'owner_route',
+    'provider_admission_identity',
     'progress_first_closeout_admission',
   ]) {
     if (isRecord(payload[key])) {

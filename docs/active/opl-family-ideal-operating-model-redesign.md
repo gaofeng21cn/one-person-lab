@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `opl_family_ideal_operating_model_redesign`
 State: `active_reference`
 Machine boundary: 本文是人读顶层重设计与审计标准。机器真相继续归各 repo 的 contracts、source、tests、CLI/read-model、runtime ledger、provider receipt、domain-owned manifest、owner receipt、typed blocker、release artifact 和真实 workspace/App evidence。
-Date: `2026-06-10`
+Date: `2026-06-12`
 
 ## 读法
 
@@ -13,6 +13,8 @@ Date: `2026-06-10`
 本文中的 lane、plane、primitive 和 support index 都只能作为验收标签或审计口径使用。需要记录当前 gap、执行 owner、下一步 baton、完成口径或 live evidence intake 时，必须折回 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md) 或核心五件套；不能在本文维护第二 active backlog、第二 ordinary route、第二 owner queue 或第二 truth source。
 
 2026-06-10 refresh：本文进一步把 MAS/OPL 的理想形态重设为 `multi-plane operating system`。核心判断是：更丝滑的 MAS 推进不来自更多默认 worklist、更多 proof 或更厚 preflight，而来自一个 ordinary progress contract 加上彼此分离的 durable runtime、artifact、evidence、decision、observability 和 improvement 平面。所有外部成熟工程经验只作为 pattern source；它们不能成为 OPL 第二 runtime、MAS 第二 truth、第二 selector 或第二 active backlog。
+
+2026-06-12 refresh：本文增加 `运行流畅度 / 输出质量 / 品牌感` 三轴重设计。它按理想状态反推 OPL 基座能力，而不是按现有实现补洞。核心判断是：OPL 的品牌感不是额外命名、配色或宣传页，而是用户在 MAS 这类旗舰智能体中持续感受到 `任务能继续、结果能审、证据能查、阻塞能接、交付能收口`。外部成熟实践只作为 engineering pattern：Kubernetes controller 的 desired/observed 分离、Temporal 的 durable execution、OpenAI Agents 的 handoff/guardrail/tracing、Anthropic 的 routing/parallel/evaluator-optimizer patterns、Carbon / Material 等设计系统的 token 化一致性，都必须折回 OPL 自有 owner boundary、surface budget 和 `current_owner_delta` single ordinary route。
 
 评估范围：
 
@@ -70,6 +72,95 @@ supporting planes:
 - `needs_demotion`: 有诊断、审计、history、support 或 production hardening 价值，但不应进入 ordinary App/CLI/operator path。
 - `needs_retirement`: 已被 generated/hosted surface、App contract 或 domain authority function 替代，应走 no-active-caller、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance 删除门。
 
+## 2026-06-12 Ideal Experience Redesign
+
+本节只定义理想体验合同和基座优化方向，不维护 active backlog。所有执行 owner、live gap 和验证口径继续折回 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。
+
+### 1. 运行流畅度
+
+理想 OPL 的体感应像一个专业团队的持续工作台，而不是一个需要用户理解 runtime ledger 的控制台。普通用户和 operator 只看到四件事：当前目标、当前 owner、这轮要产出的 delta、接受的返回形状。平台内部的 provider、attempt、lease、evidence、long-soak、cleanup、release cohort 和 L5 work order 都在后台保持可追溯，但不抢占默认路径。
+
+流畅度目标合同：
+
+| 体验目标 | OPL 基座职责 | MAS 旗舰体现 | 不能做成 |
+| --- | --- | --- | --- |
+| `one_continue_button` | `Console` 从 fresh `current_owner_delta` 生成唯一 Continue / Review / Ask / Repair / Park action。 | DM study / paper line 一键进入下一次 paper、analysis、review 或 typed blocker delta。 | route menu、worklist browser、provider trace browser。 |
+| `durable_autonomy` | `Runway` 用 Temporal-backed StageRun 保持 resume、retry、dead-letter、human gate 和 repair。 | 长论文线不因 worker 重启、网络失败或上下文切换丢进度。 | MAS 私有 scheduler、daemon、第二 attempt loop。 |
+| `artifact_first_progress` | `Workspace` 物化 Stage Artifact Unit，T0/T1/T2/T3 分层。 | 用户能打开 evidence map、analysis pack、manuscript draft、review letter、revision packet。 | 用 receipt count、provider completion 或 schema pass 代替论文进展。 |
+| `jit_readiness` | readiness 只在当前 delta 需要时升级；缺口变成 route-back / typed blocker / next owner delta。 | 写作、分析、review 不被全量 readiness inventory 卡住。 | 先补齐所有 preflight 才允许继续工作。 |
+| `anti_spin` | repeated receipt-only / reconcile-only / stale-redrive-only 进入 stop-loss。 | MAS 若没有 paper/evidence/reviewer/gate delta，就明确转成 domain typed blocker 或 human gate。 | 无交付地反复跑 provider tick、read-model rebuild、evidence accounting。 |
+
+理想状态下，`Runway Progress Reconciler` 每次只允许输出一个普通结论：继续执行、等待 owner、请求 human gate、执行 OPL repair、记录 typed blocker、或把证据留在 sidecar。它不能从 raw evidence 自己生成 MAS 下一步。
+
+### 2. 输出质量
+
+理想 OPL 不把质量写成机械 checklist，也不把质量全交给一次 self-review。它应把 `执行 attempt`、`独立 gate attempt` 和 `owner answer` 分开，让更强的 AI executor 有足够空间创作、比较、审阅和修订，同时让质量结论回到 domain owner。
+
+输出质量目标合同：
+
+| 质量层 | 产物 | Gate owner | OPL 持有 | 禁止外推 |
+| --- | --- | --- | --- | --- |
+| `authoring_quality` | draft / analysis / visual / grant section。 | domain stage owner。 | prompt/skill/knowledge/tool affordance refs、attempt ledger、artifact refs。 | schema complete 等于质量通过。 |
+| `independent_review` | reviewer receipt、critique、revision request。 | independent AI reviewer / human reviewer / domain quality owner。 | isolated attempt record、handoff refs、review packet refs。 | 同一上下文自审自批后直接 close。 |
+| `evidence_quality` | source lineage、analysis replay、negative check、artifact diff。 | domain evidence / source authority owner。 | refs-only Vault、restore/provenance、trace/span correlation。 | Vault verified 等于 publication ready。 |
+| `delivery_quality` | manuscript package、submission package、deck export、grant package。 | domain export / release / human owner。 | package/export lifecycle shell、safe action、owner payload transport。 | package exists 等于可提交。 |
+| `production_quality` | L5 evidence、long-soak、release/install、owner acceptance。 | module / App / domain owner。 | refs-only ledger、work order projection、no-second-truth guard。 | verified ledger 等于 L5。 |
+
+MAS 作为旗舰智能体的目标质量形态是 `medical research quality kernel`：source truth、study design、analysis validity、manuscript argument、journal fit、AI reviewer verdict、revision delta 和 publication handoff 都有独立 artifact / receipt / blocker。OPL 只负责让这些 stage 可启动、可恢复、可审计、可接力；医学结论、paper quality、artifact authority 和 publication readiness 仍归 MAS。
+
+质量提升应优先采用三种 AI 原生模式：
+
+- `parallel_review`: 对同一 artifact 进行方法学、统计、叙事、clinical relevance、journal fit 分面 review，然后由 domain owner 合成 owner answer。
+- `evaluator_optimizer`: authoring attempt 产出 draft，review attempt 给出 critique，revision attempt 生成 delta，直到 owner gate 接受或 typed blocker。
+- `route_by_quality_risk`: 低风险文本修订走轻 gate，高风险分析、结论、submission、release 走独立 reviewer / human gate。
+
+### 3. 品牌感
+
+OPL 的品牌感应从产品行为里长出来：用户每次看到的词、状态、按钮、产物、证据、阻塞和交付动作都一致，并且和 `One Person Lab = hosted professional team for complex knowledge work` 对齐。品牌系统不能停在模块名或视觉 token；它必须成为 product grammar、App cockpit、CLI wording、artifact naming、receipt/blocker language 和 L5 evidence 的共同合同。
+
+品牌目标合同：
+
+| 层 | 用户看见什么 | 机器锚点 | 品牌失败信号 |
+| --- | --- | --- | --- |
+| `product_layer` | `OPL Framework -> One Person Lab App -> Foundry Agents`。 | core docs + brand system profile。 | 用户被迫理解 repo split、provider、executor selector。 |
+| `foundry_line` | Research / Grant / Presentation / Agent Foundry 等专业线。 | domain descriptor + product pack。 | MAS/MAG/RCA 像脚本集合而不是专业智能体。 |
+| `module_language` | Charter / Atlas / Workspace / Pack / Stagecraft / Runway / Vault / Console / Foundry Lab / Connect。 | brand module registry + L5 evidence contract。 | 模块名只出现在 docs，不影响 App/CLI/contract/ownership。 |
+| `status_language` | Continue、Review、Waiting for owner、Typed blocker、Ready to deliver、Needs human decision。 | current owner delta + owner answer shape。 | 用 provider completed、ledger verified、worklist count 当用户状态。 |
+| `visual_language` | tokenized color/type/icon/status/card pattern；专业、安静、可扫描。 | brand-system-profile + App design tokens。 | 每个 surface 自己发明颜色、卡片、文案和状态名。 |
+| `evidence_language` | user path、cross-agent scaleout、long-soak、release/install、owner acceptance。 | Brand L5 evidence matrix。 | 把 docs foldback、contract pass 或 CLI governance 当品牌成熟。 |
+
+MAS 的旗舰品牌感应落在 `Research Foundry` 的完整 journey，而不是“能跑医学脚本”：
+
+```text
+Question / study intent
+  -> Source cohort and evidence map
+  -> Analysis pack
+  -> Manuscript draft
+  -> Independent reviewer letter
+  -> Revision packet
+  -> Publication handoff
+  -> MAS owner receipt / typed blocker / human gate
+```
+
+App 和 CLI 都应使用同一套专业名词，但保持用户面简洁：普通用户看到 `Evidence Map`、`Analysis Pack`、`Manuscript Draft`、`Reviewer Letter`、`Revision Packet`；developer/operator drilldown 才看到 StageRun、source fingerprint、idempotency、lease、Temporal workflow 和 refs-only ledger。
+
+### 4. OPL 基座优化
+
+为了支撑以上三轴，OPL 基座的理想能力应从“更多 surface”转为“少数强 primitive”：
+
+| Primitive | 为什么需要 | 验收口径 |
+| --- | --- | --- |
+| `OwnerDeltaController` | 让所有默认入口只问当前 owner 欠什么。 | `framework readiness`、App fast state、operator drilldown、work order summary 同源 current owner delta。 |
+| `RunwayControlLoop` | 把长跑、恢复、retry/dead-letter、human gate 放到 durable substrate。 | provider failure 不丢 StageRun；repair 输出 OPL runtime blocker，不写 domain truth。 |
+| `StageArtifactKernel` | 让进展以 artifact / manifest / pointer / owner answer 接力。 | T0/T1/T2/T3 分层清楚，platform repair 不混成 paper progress。 |
+| `QualityGateRuntime` | 让执行、审核、修订、owner answer 分离。 | review attempt 独立，receipt/blocker 可绑定 StageRun / artifact / source fingerprint。 |
+| `BrandExperienceProfile` | 让品牌系统从文案和视觉进入合同。 | App/CLI/docs/status/card/token/receipt wording 从同一 profile 派生。 |
+| `PassiveEvidenceVault` | 让证据完整但不驱动默认计划。 | `record everything, plan from current_owner_delta` 成为回归门。 |
+| `L5EvidenceRouter` | 让品牌成熟度可接力而不误闭合。 | 每个 module requirement 有 owner、accepted refs、record/verify、false-authority guard。 |
+| `AgentProductPackCompiler` | 让新 Foundry Agent 从 pack 生成 surface，而不是复制历史 wrapper。 | CLI/MCP/Skill/App/status/workbench 派生一致，domain repo 只保 semantic pack + authority functions。 |
+
+这组 primitive 的共同验收标准是：它们减少普通路径心智负担，同时增强审计、恢复和质量边界；任何 primitive 若只能增加计数、展示更多 refs 或解释历史，而不能缩短 owner delta、保护 authority、物化 artifact、承载 durable execution 或支撑 owner gate，就应降为 diagnostic / support / history。
+
 ## 外部成熟实践吸收
 
 本轮只吸收成熟工程原则，不引入外部 runtime truth。
@@ -83,7 +174,9 @@ supporting planes:
 | [LangGraph durable/stateful agents](https://docs.langchain.com/oss/python/langgraph/overview), [persistence](https://docs.langchain.com/oss/python/langgraph/persistence), [human-in-the-loop](https://docs.langchain.com/oss/python/langchain/human-in-the-loop) | `adopt_template` | 只吸收 checkpoint、pause/resume、human approval/edit/reject/respond、thread state 和 HITL policy shape，用于 OPL human gate 与 StageRun resume 设计。 | 不引入 LangGraph runtime；checkpoint / memory 不成为 MAS truth 或 App default plan root。 |
 | [MLflow Tracking](https://mlflow.org/docs/latest/ml/tracking/) / [Dataset Tracking](https://mlflow.org/docs/latest/ml/dataset/) 与 [DVC dvc.yaml](https://doc.dvc.org/user-guide/project-structure/dvcyaml-files) | `adopt_template` | run metadata、params、metrics、artifact refs、dataset lineage、fingerprint、stage deps/outs 进入 MAS research provenance 和 Vault refs-only lineage。 | MLflow/DVC run 成功不等于 paper progress；dataset lineage 不替代 MAS source truth 或 reviewer/publication gate。 |
 | [OpenAI Agents SDK handoffs](https://openai.github.io/openai-agents-python/handoffs/), [guardrails](https://openai.github.io/openai-agents-python/guardrails/) 与 [tracing](https://openai.github.io/openai-agents-python/tracing/) | `adopt_template` | handoff、guardrail、trace 的分层词汇进入 Stagecraft / Console / Vault；handoff payload 必须绑定 owner answer shape。 | Handoff 不是 owner receipt；guardrail pass 不是 quality verdict；trace 不是 progress truth。 |
+| [Anthropic Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) | `adopt_template` | routing、parallelization、orchestrator-workers、evaluator-optimizer 等模式只作为 Stagecraft 的 AI-first stage strategy refs；用于 MAS independent review、parallel review 和 revision loop。 | 不把这些模式编译成 OPL 固定 workflow script；strategy refs 不替代 domain quality gate。 |
 | [Backstage golden paths](https://backstage.io/docs/golden-path/create-app/) / platform engineering | `adopt_template` | OPL App 只给每个 Foundry Agent 一条 ordinary route；variants、proof、debug、cleanup、release/soak 都显式进入 developer/detail lane。 | 不把平台 catalog 或 template 变成第二 workflow engine。 |
+| [Carbon Design System tokens](https://carbondesignsystem.com/elements/color/tokens/) / [Material Design tokens](https://m3.material.io/foundations/design-tokens/overview) | `adopt_template` | `BrandExperienceProfile` 把颜色、状态、图标、卡片、文案和 evidence language token 化；App、CLI、docs 和 Foundry Agent surfaces 从同一品牌合同派生。 | design token validation 不声明 App release ready、Brand L5、domain ready 或 production ready。 |
 | [Google SRE toil](https://sre.google/sre-book/eliminating-toil/) / DORA feedback metrics | `adopt_template` | receipt-only、reconcile-only、stale-redrive-only、count-accounting-only 进入 anti-spin / stop-loss；L5 看 lead time、owner-answer latency、blocked recovery、release/user-path pass。 | 活动量、counter、open worklist 和 verified ledger 不作为完成证明。 |
 
 这些原则合在一起给出一个架构判断：OPL 应像 `platform golden path + durable controller + passive observability`，而不是把 agent runtime 做成工作流脚本、ledger browser 或多 backend launcher。
