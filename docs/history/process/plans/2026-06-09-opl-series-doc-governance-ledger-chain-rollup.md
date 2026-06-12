@@ -231,6 +231,44 @@ Coverage / carry-forward:
 - Not covered: OMA script-to-pack source reductions, OPL/App registry or live App evidence tails, new target cohort evidence, independent reviewer direct evidence, and any physical source/test/workflow/package/CLI/API retirement.
 - Physical retirement remains gated by OMA machine guards plus replacement-owner, no-active-caller, no-forbidden-write, owner receipt / typed blocker or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
 
+## Fresh Intake 2026-06-12 MAG Private Inventory Retired Register Foldback
+
+This follow-up records the already-pushed MAG private inventory compression in the parent OPL series rollup. It does not create a new dated ledger chain and does not close the parent `/goal`.
+
+Semantic theme: MAG active private implementation inventory retired-register compression.
+
+Single Source of Truth:
+
+- Current private implementation classification and migration gates: `med-autogrant/docs/active/opl-private-implementation-migration-inventory.md`.
+- Retired surface no-resurrection provenance: `med-autogrant/docs/history/docs-portfolio-coverage-ledger/retired-surface-provenance.md`.
+- Machine gates: `contracts/private_functional_surface_policy.json`, `contracts/foundry_agent_series.json`, product-entry manifest / functional audits, source/tests and MAG owner receipt / typed blocker evidence.
+
+Edited / pushed repo-local docs:
+
+| Repo | Commit | Edited docs and result |
+| --- | --- | --- |
+| `med-autogrant` | `c9c7463 docs: compress MAG private retirement register` | `docs/active/opl-private-implementation-migration-inventory.md` now keeps current per-surface status, migration gates and deletion-gate rules instead of a frozen dated register. `docs/history/docs-portfolio-coverage-ledger/README.md` records the retired-register compression as topic-level coverage. |
+
+Fresh readback boundary:
+
+- `one-person-lab`: `main...origin/main`, `HEAD=origin/main=32a05e2c`; this rollup is the only OPL docs write in this follow-up.
+- `med-autogrant`: `main...origin/main`, `HEAD=origin/main=c9c7463`; `opl-doc-doctor` remained `finding_count=0`, `active_truth_health.status=pass`, `markdown_doc_count=51`.
+- `med-autoscience`: `main...origin/main`, `HEAD=origin/main=76457cfd`; unrelated local source edits in `src/med_autoscience/controllers/domain_action_request_materializer_parts/current_action_authority.py` and `src/med_autoscience/controllers/domain_action_request_materializer_parts/fresh_progress_current_action.py` are outside this docs-governance follow-up.
+- `redcube-ai`: `main...origin/main`, `HEAD=origin/main=d6661a86`; no new RCA edit in this follow-up.
+- `opl-meta-agent`: `main...origin/main`, `HEAD=origin/main=68cbc5e`; no new OMA edit in this follow-up.
+- `one-person-lab-app`: `main...origin/main`, `HEAD=origin/main=08402b2`; no new App edit in this follow-up.
+
+Verification:
+
+- MAG already completed `git diff --check`, README/docs conflict-marker scan, `opl-doc-doctor doctor /Users/gaofeng/workspace/med-autogrant --format json`, and a text assertion confirming the retired register rows and frozen `Date` field were removed from the active inventory.
+- Fresh six-repo OPL Doc doctor readback remained `finding_count=0` and `active_truth_health.status=pass` for all six repos.
+
+Coverage / carry-forward:
+
+- Covered: MAG active private inventory section that duplicated retired-surface itemization for stale facade assertions, `frontdoor` wording, old runtime commands, facade / patch-bridge / star-import tails and Sentrux runtime facade as active register content.
+- Not covered: MAG path-level source thinning, default-caller production proof, App/workbench sustained consumption, Temporal long-soak, OPL/App registry consumption, and any physical source/test/workflow/package/CLI/API retirement.
+- Physical retirement remains gated by MAG machine guards plus replacement-owner, no-active-caller, no-forbidden-write, MAG owner receipt / typed blocker or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
+
 ## Future Record Policy
 
 - Do not create new dated docs-governance coverage-ledger chains for ordinary process, frozen inventory, doctor transcript, branch/worktree state, command transcripts or per-run proof.
