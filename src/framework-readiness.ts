@@ -40,69 +40,17 @@ import {
   recordList,
   stringValue,
 } from './framework-readiness-values.ts';
+import {
+  frameworkReadinessAuthorityBoundary,
+  frameworkReadinessDiagnosticFailure,
+} from './framework-readiness-diagnostics.ts';
+import { guardedProviderSloOpenTailCount } from './framework-readiness-provider-slo.ts';
 
 type FrameworkReadinessInput = {
   familyDefaults: boolean;
 };
 
 const FRAMEWORK_READINESS_MANIFEST_COMMAND_TIMEOUT_MS = 5_000;
-
-function routeIsProviderWorkerMutationGuarded(route: JsonRecord) {
-  return stringValue(route.route_status) === 'blocked_by_provider_worker_mutation_guard'
-    || stringValue(route.default_actionability_status) === 'blocked_by_provider_worker_mutation_guard';
-}
-
-function providerSloProductionProofRouteIsMutationGuarded(appOperatorDrilldown: JsonRecord) {
-  const routes = [
-    ...recordList(record(appOperatorDrilldown.app_execution_bridge).safe_action_routes),
-    ...recordList(record(appOperatorDrilldown.operator_action_routing_refs).refs),
-  ];
-  return routes.some((route) => (
-    stringValue(route.action_kind) === 'provider_slo_cadence_execution'
-      || stringValue(route.action_id)?.startsWith('provider-slo:') === true
-  ) && routeIsProviderWorkerMutationGuarded(route));
-}
-
-function guardedProviderSloOpenTailCount(appOperatorDrilldown: JsonRecord) {
-  if (!providerSloProductionProofRouteIsMutationGuarded(appOperatorDrilldown)) {
-    return 0;
-  }
-  return recordList(record(appOperatorDrilldown.production_evidence_tail_ledger).tail_items)
-    .filter((item) =>
-      stringValue(item.status) === 'open'
-      && (
-        stringValue(item.tail_item) === 'provider_long_window_slo_evidence'
-        || stringValue(item.requirement_kind) === 'provider_long_window_slo_evidence'
-        || stringValue(record(item.evidence_requirement).requirement_kind)
-          === 'provider_long_window_slo_evidence'
-      )
-    ).length;
-}
-
-function diagnosticFailure(sourceId: string, sourceCommand: string, error: unknown) {
-  if (error instanceof FrameworkContractError) {
-    return {
-      source_id: sourceId,
-      source_command: sourceCommand,
-      status: 'diagnostic_unavailable',
-      error_code: error.code,
-      message: error.message,
-      exit_code: error.exitCode,
-      details: error.details ?? {},
-      blocking_policy: 'diagnostic_unavailable_is_drilldown_warning_not_framework_kernel_hard_blocker',
-    };
-  }
-  return {
-    source_id: sourceId,
-    source_command: sourceCommand,
-    status: 'diagnostic_unavailable',
-    error_code: 'unexpected_framework_readiness_diagnostic_error',
-    message: error instanceof Error ? error.message : String(error),
-    exit_code: 1,
-    details: {},
-    blocking_policy: 'diagnostic_unavailable_is_drilldown_warning_not_framework_kernel_hard_blocker',
-  };
-}
 
 function stageReadinessSummary(readiness: JsonRecord) {
   return record(readiness.summary);
@@ -137,7 +85,7 @@ function buildStageReadinessDiagnostic(
     };
   } catch (error) {
     if (isDomainManifestConfigAttentionStageDiagnostic(error)) {
-      const diagnostic = diagnosticFailure(`stages_readiness_${domain}`, sourceCommand, error);
+      const diagnostic = frameworkReadinessDiagnosticFailure(`stages_readiness_${domain}`, sourceCommand, error);
       const manifestStatus = record(diagnostic.details).manifest_status;
       return {
         readiness: {
@@ -170,7 +118,7 @@ function buildStageReadinessDiagnostic(
         failure: null,
       };
     }
-    const failure = diagnosticFailure(`stages_readiness_${domain}`, sourceCommand, error);
+    const failure = frameworkReadinessDiagnosticFailure(`stages_readiness_${domain}`, sourceCommand, error);
     return {
       readiness: {
         surface_kind: 'opl_family_stage_readiness_diagnostic_unavailable',
@@ -209,7 +157,7 @@ function buildAgentReadinessDiagnostic() {
       failure: null,
     };
   } catch (error) {
-    const failure = diagnosticFailure('agents_readiness', SOURCE_COMMANDS.agents_readiness, error);
+    const failure = frameworkReadinessDiagnosticFailure('agents_readiness', SOURCE_COMMANDS.agents_readiness, error);
     return {
       readiness: {
         surface_kind: 'opl_agent_readiness_summary',
@@ -253,31 +201,11 @@ function buildAgentReadinessDiagnostic() {
             'attention_payload_reports_operator_work_only_and_emits_no_domain_quality_artifact_or_production_ready_verdict',
         },
         diagnostic_failure: failure,
-        authority_boundary: authorityBoundary(),
+        authority_boundary: frameworkReadinessAuthorityBoundary(),
       },
       failure,
     };
   }
-}
-
-function authorityBoundary() {
-  return {
-    opl_role: 'framework_readiness_summary_and_refs_only_operator_read_model',
-    domain_truth_owner: 'MAS/MAG/RCA domain repositories',
-    provider_slo_owner: 'Temporal provider readiness/proof surfaces',
-    app_operator_safe_action_policy: 'safe_action_routes_request_or_verify_refs_only_without_domain_action_execution',
-    can_claim_domain_ready: false,
-    can_claim_production_ready: false,
-    can_claim_artifact_authority: false,
-    can_authorize_quality_or_export: false,
-    can_write_domain_truth: false,
-    can_read_memory_body: false,
-    can_read_artifact_body: false,
-    can_mutate_domain_artifact: false,
-    provider_completion_is_domain_ready: false,
-    stage_launch_or_attempt_request_is_domain_ready: false,
-    safe_action_route_is_receipt_closure: false,
-  };
 }
 
 export async function buildFrameworkReadinessSummary(
@@ -388,10 +316,10 @@ export async function buildFrameworkReadinessSummary(
     agentReadinessDiagnostic.failure,
     ...Object.values(stageReadinessDiagnostics).map((entry) => entry.failure),
   ]
-    .filter((entry): entry is ReturnType<typeof diagnosticFailure> => entry !== null);
+    .filter((entry): entry is ReturnType<typeof frameworkReadinessDiagnosticFailure> => entry !== null);
   const stageReadinessDiagnosticFailures = Object.values(stageReadinessDiagnostics)
     .map((entry) => entry.failure)
-    .filter((entry): entry is ReturnType<typeof diagnosticFailure> => entry !== null);
+    .filter((entry): entry is ReturnType<typeof frameworkReadinessDiagnosticFailure> => entry !== null);
   const agentReadinessDiagnosticFailureCount = agentReadinessDiagnostic.failure === null ? 0 : 1;
   const stageReadinessDiagnosticFailureCount = stageReadinessDiagnosticFailures.length;
   const diagnosticFailureCount = diagnosticFailures.length;
@@ -809,7 +737,7 @@ export async function buildFrameworkReadinessSummary(
         stage_run_domain_adoption_read_model: stageRunDomainAdoptionReadModel,
         diagnostic_failure: agentReadinessDiagnostic.failure,
         authority_boundary: {
-          ...(agentReadiness.authority_boundary ?? authorityBoundary()),
+          ...(agentReadiness.authority_boundary ?? frameworkReadinessAuthorityBoundary()),
           stage_run_domain_adoption_authority_boundary: stageRunDomainAdoptionReadModel.authority_boundary ?? null,
         },
       },
@@ -817,7 +745,7 @@ export async function buildFrameworkReadinessSummary(
         source_command: SOURCE_COMMANDS.pack_compiler,
         source_kind: packCompiler.source_kind,
         summary: packSummary,
-        authority_boundary: packCompiler.authority_boundary ?? authorityBoundary(),
+        authority_boundary: packCompiler.authority_boundary ?? frameworkReadinessAuthorityBoundary(),
       },
       stages: {
         source_commands: [
@@ -852,7 +780,7 @@ export async function buildFrameworkReadinessSummary(
         app_operator_production_evidence_tail_blocking_item_count:
           numberValue(appSummary.app_operator_production_evidence_tail_blocking_item_count),
         blocking_policy: 'reported_for_operator_attention_without_authorizing_domain_or_production_ready',
-        authority_boundary: appOperatorDrilldown.authority_boundary ?? authorityBoundary(),
+        authority_boundary: appOperatorDrilldown.authority_boundary ?? frameworkReadinessAuthorityBoundary(),
       },
       stage_production_caller_tail: {
         source_command: SOURCE_COMMANDS.app_operator_drilldown,
@@ -869,7 +797,7 @@ export async function buildFrameworkReadinessSummary(
           numberValue(appSummary.stage_production_attempt_request_route_count),
         route_policy:
           'request_route_available_creates_opl_stage_attempt_request_only_without_domain_action_or_owner_receipt_closure',
-        authority_boundary: authorityBoundary(),
+        authority_boundary: frameworkReadinessAuthorityBoundary(),
       },
       evidence_worklist: {
         source_command: SOURCE_COMMANDS.family_runtime_evidence_worklist,
@@ -926,7 +854,7 @@ export async function buildFrameworkReadinessSummary(
         evidence_gate_item_count: numberValue(worklistSummary.evidence_gate_item_count),
         legacy_cleanup_item_count: numberValue(worklistSummary.legacy_cleanup_item_count),
         worklist_item_is_completion_claim: false,
-        authority_boundary: familyRuntimeEvidenceWorklist.authority_boundary ?? authorityBoundary(),
+        authority_boundary: familyRuntimeEvidenceWorklist.authority_boundary ?? frameworkReadinessAuthorityBoundary(),
       },
       evidence_envelope: {
         source_command: SOURCE_COMMANDS.family_runtime_evidence_worklist,
@@ -967,7 +895,7 @@ export async function buildFrameworkReadinessSummary(
         can_claim_domain_ready: false,
         can_claim_production_ready: false,
         can_authorize_quality_or_export: false,
-        authority_boundary: authorityBoundary(),
+        authority_boundary: frameworkReadinessAuthorityBoundary(),
       },
       owner_handoff_packet: {
         source_command: SOURCE_COMMANDS.app_operator_drilldown,
@@ -1035,7 +963,7 @@ export async function buildFrameworkReadinessSummary(
         provider_slo_can_claim_domain_ready: false,
         provider_slo_can_claim_production_ready: false,
       },
-      authority_boundary: authorityBoundary(),
+      authority_boundary: frameworkReadinessAuthorityBoundary(),
       non_goals: [
         'does_not_claim_opl_production_ready',
         'does_not_claim_domain_ready',
