@@ -17,62 +17,17 @@ import {
   resolveDefaultFamilyWorkspaceRoot as resolveDefaultFamilyWorkspaceRootImpl,
   resolveFamilyWorkspaceRootFromRepoRoot as resolveFamilyWorkspaceRootFromRepoRootImpl,
 } from './family-workspace-root.ts';
+import {
+  FAMILY_SKILL_PACK_SPECS,
+  normalizeDomainSelection,
+  type InspectFamilySkillPack,
+  type SkillPackSpec,
+  type SyncFamilySkillPack,
+} from './opl-skills-parts/registry.ts';
 import { resolveOplStatePaths } from './runtime-state-paths.ts';
 
 export const resolveDefaultFamilyWorkspaceRoot = resolveDefaultFamilyWorkspaceRootImpl;
 export const resolveFamilyWorkspaceRootFromRepoRoot = resolveFamilyWorkspaceRootFromRepoRootImpl;
-
-type SkillPackInstallerKind = 'bash' | 'node';
-type SkillPackSourceKind = 'repo_plugin_installer' | 'opl_generated_plugin_surface';
-
-type SkillPackSpec = {
-  domain_id: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent';
-  module_id: 'MEDAUTOSCIENCE' | 'MEDAUTOGRANT' | 'REDCUBE' | 'OPLMETAAGENT';
-  project: string;
-  label: string;
-  plugin_name: string;
-  canonical_plugin_name: 'mas' | 'mag' | 'rca' | 'opl-meta-agent';
-  source_kind: SkillPackSourceKind;
-  installer_kind: SkillPackInstallerKind;
-  installer_relative_paths: string[];
-};
-
-type InspectFamilySkillPack = {
-  domain_id: string;
-  project: string;
-  label: string;
-  plugin_name: string;
-  canonical_plugin_name: string;
-  foundry_agent_series: Record<string, unknown>;
-  command_surface_spine: Record<string, unknown>;
-  mcp_projection: Record<string, unknown>;
-  legacy_implementation_bucket_policy: Record<string, unknown>;
-  plugin_source_path: string;
-  repo_root: string;
-  repo_found: boolean;
-  plugin_manifest_path: string;
-  plugin_manifest_found: boolean;
-  skill_entry_path: string;
-  skill_entry_found: boolean;
-  skill_entry_valid: boolean;
-  skill_entry_errors: string[];
-  installer_path: string;
-  installer_found: boolean;
-  source_kind: SkillPackSourceKind;
-  generated_skill_surface_ready: boolean;
-  generated_skill_surface_status: string | null;
-  ready_to_sync: boolean;
-  installer_kind: SkillPackInstallerKind;
-  command_preview: string[];
-};
-
-type SyncFamilySkillPack = InspectFamilySkillPack & {
-  sync_status: 'synced' | 'skipped';
-  installer_result: Record<string, unknown> | null;
-  registry_repo_root: string | null;
-  stdout: string;
-  stderr: string;
-};
 
 type ReadFamilySkillPacksOptions = {
   domains?: string[];
@@ -83,76 +38,6 @@ type SyncFamilySkillPacksOptions = ReadFamilySkillPacksOptions & {
   companionMode?: OplCompanionSkillApplyMode;
   superpowersProfile?: OplSuperpowersProfile;
 };
-
-const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
-  {
-    domain_id: 'medautoscience',
-    module_id: 'MEDAUTOSCIENCE',
-    project: 'med-autoscience',
-    label: 'Med Auto Science',
-    plugin_name: 'med-autoscience',
-    canonical_plugin_name: 'mas',
-    source_kind: 'repo_plugin_installer',
-    installer_kind: 'bash',
-    installer_relative_paths: [path.join('scripts', 'install-codex-plugin.sh')],
-  },
-  {
-    domain_id: 'medautogrant',
-    module_id: 'MEDAUTOGRANT',
-    project: 'med-autogrant',
-    label: 'Med Auto Grant',
-    plugin_name: 'med-autogrant',
-    canonical_plugin_name: 'mag',
-    source_kind: 'repo_plugin_installer',
-    installer_kind: 'bash',
-    installer_relative_paths: [path.join('scripts', 'install-codex-plugin.sh')],
-  },
-  {
-    domain_id: 'redcube',
-    module_id: 'REDCUBE',
-    project: 'redcube-ai',
-    label: 'RedCube AI',
-    plugin_name: 'redcube-ai',
-    canonical_plugin_name: 'rca',
-    source_kind: 'repo_plugin_installer',
-    installer_kind: 'node',
-    installer_relative_paths: [
-      path.join('scripts', 'install-codex-plugin.ts'),
-      path.join('scripts', 'install-codex-plugin.mjs'),
-    ],
-  },
-  {
-    domain_id: 'oplmetaagent',
-    module_id: 'OPLMETAAGENT',
-    project: 'opl-meta-agent',
-    label: 'OPL Meta Agent',
-    plugin_name: 'opl-meta-agent',
-    canonical_plugin_name: 'opl-meta-agent',
-    source_kind: 'opl_generated_plugin_surface',
-    installer_kind: 'node',
-    installer_relative_paths: [],
-  },
-];
-
-const DOMAIN_ALIAS_MAP = new Map<string, SkillPackSpec['domain_id']>([
-  ['mas', 'medautoscience'],
-  ['medautoscience', 'medautoscience'],
-  ['med-autoscience', 'medautoscience'],
-  ['med_auto_science', 'medautoscience'],
-  ['mag', 'medautogrant'],
-  ['medautogrant', 'medautogrant'],
-  ['med-autogrant', 'medautogrant'],
-  ['med_auto_grant', 'medautogrant'],
-  ['rca', 'redcube'],
-  ['redcube', 'redcube'],
-  ['redcube-ai', 'redcube'],
-  ['redcube_ai', 'redcube'],
-  ['oplmetaagent', 'oplmetaagent'],
-  ['opl-meta-agent', 'oplmetaagent'],
-  ['opl_meta_agent', 'oplmetaagent'],
-  ['meta-agent', 'oplmetaagent'],
-  ['meta_agent', 'oplmetaagent'],
-]);
 
 const FOUNDRY_AGENT_SERIES_CONTRACT_REF = 'contracts/opl-framework/foundry-agent-series-contract.json';
 const FOUNDRY_AGENT_SERIES_CONTRACT_URL = new URL(
@@ -202,31 +87,6 @@ function resolveGeneratedPluginRootForName(canonicalPluginName: string, home?: s
     'plugins',
     canonicalPluginName,
   );
-}
-
-function normalizeDomainSelection(domains: string[] | undefined) {
-  if (!domains || domains.length === 0) {
-    return null;
-  }
-
-  const normalized = new Set<SkillPackSpec['domain_id']>();
-  for (const domain of domains) {
-    const key = domain.trim().toLowerCase();
-    const resolved = DOMAIN_ALIAS_MAP.get(key);
-    if (!resolved) {
-      throw new FrameworkContractError(
-        'cli_usage_error',
-        `Unknown skill pack domain: ${domain}.`,
-        {
-          domain,
-          allowed_domains: [...new Set(DOMAIN_ALIAS_MAP.keys())].sort(),
-        },
-      );
-    }
-    normalized.add(resolved);
-  }
-
-  return normalized;
 }
 
 function resolveRepoRoot(spec: SkillPackSpec) {
