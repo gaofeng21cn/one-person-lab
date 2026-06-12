@@ -1,0 +1,164 @@
+import { assert, fs, os, path, runCli, test } from '../../helpers.ts';
+import { runGitFixtureCommand } from '../../helpers-parts/family-fixtures.ts';
+import {
+  createDomainModuleRemote,
+  createOmaGeneratedSurfaceRemote,
+  withCliTimeout,
+} from './shared.ts';
+
+test('system startup-maintenance uses auto Developer Mode sibling checkouts for domain plugin sync', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-devmode-home-'));
+  const workspaceRoot = path.join(homeRoot, 'workspace');
+  const onePersonLabRoot = path.join(workspaceRoot, 'one-person-lab');
+  const logPath = path.join(homeRoot, 'startup-maintenance-devmode.log');
+  const masRemote = createDomainModuleRemote({
+    repoName: 'med-autoscience',
+    pluginName: 'mas',
+    installerKind: 'bash',
+    logPath,
+  });
+  const magRemote = createDomainModuleRemote({
+    repoName: 'med-autogrant',
+    pluginName: 'mag',
+    installerKind: 'bash',
+    logPath,
+  });
+  const rcaRemote = createDomainModuleRemote({
+    repoName: 'redcube-ai',
+    pluginName: 'rca',
+    installerKind: 'node',
+    logPath,
+  });
+  const metaRemote = createOmaGeneratedSurfaceRemote({
+    logPath,
+  });
+  const siblingCheckouts = {
+    medautoscience: path.join(workspaceRoot, 'med-autoscience'),
+    medautogrant: path.join(workspaceRoot, 'med-autogrant'),
+    redcube: path.join(workspaceRoot, 'redcube-ai'),
+    oplmetaagent: path.join(workspaceRoot, 'opl-meta-agent'),
+  };
+
+  try {
+    fs.mkdirSync(onePersonLabRoot, { recursive: true });
+    runGitFixtureCommand(workspaceRoot, ['clone', masRemote.remoteRoot, siblingCheckouts.medautoscience]);
+    runGitFixtureCommand(workspaceRoot, ['clone', magRemote.remoteRoot, siblingCheckouts.medautogrant]);
+    runGitFixtureCommand(workspaceRoot, ['clone', rcaRemote.remoteRoot, siblingCheckouts.redcube]);
+    runGitFixtureCommand(workspaceRoot, ['clone', metaRemote.remoteRoot, siblingCheckouts.oplmetaagent]);
+
+    const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_DEVELOPER_MODE_GH_FIXTURE: JSON.stringify({
+        login: 'gaofeng21cn',
+        permissions: {
+          'gaofeng21cn/one-person-lab': 'admin',
+          'gaofeng21cn/med-autoscience': 'admin',
+          'gaofeng21cn/med-autogrant': 'admin',
+          'gaofeng21cn/redcube-ai': 'admin',
+          'gaofeng21cn/opl-meta-agent': 'admin',
+        },
+      }),
+      OPL_GIT_RETRY_ATTEMPTS: '1',
+      ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
+    })) as {
+      system_action: {
+        status: string;
+        details: {
+          summary: {
+            completed_targets_count: number;
+            manual_required_targets_count: number;
+          };
+          managed_install_update_receipts: {
+            recorded_receipt_count: number;
+          };
+          module_targets: Array<{
+            target_id: keyof typeof siblingCheckouts;
+            status: string;
+            reason: string;
+            action: string | null;
+            install_origin_before: string;
+            result: {
+              module: {
+                install_origin: string;
+                checkout_path: string;
+                managed_checkout_path: string;
+                source_policy: {
+                  configured_by: string;
+                  effective_install_update_source: string;
+                };
+              };
+              turnkey: {
+                bootstrap: { status: string };
+                skill_sync: { status: string };
+                health_check: { status: string };
+              };
+            };
+          }>;
+          plugin_cache_freshness: {
+            status: string;
+            synced_domain_packs_count: number;
+          };
+          restart_reload_prompt: {
+            required: boolean;
+          };
+        };
+      };
+    };
+
+    assert.equal(output.system_action.status, 'completed');
+    assert.equal(output.system_action.details.summary.completed_targets_count, 4);
+    assert.equal(output.system_action.details.summary.manual_required_targets_count, 0);
+    assert.equal(output.system_action.details.managed_install_update_receipts.recorded_receipt_count, 0);
+    assert.equal(output.system_action.details.plugin_cache_freshness.status, 'freshened');
+    assert.equal(output.system_action.details.plugin_cache_freshness.synced_domain_packs_count, 4);
+    assert.equal(output.system_action.details.restart_reload_prompt.required, true);
+
+    for (const target of output.system_action.details.module_targets) {
+      assert.equal(target.status, 'completed');
+      assert.equal(target.reason, 'developer_checkout_visible_not_app_managed');
+      assert.equal(target.action, 'sync');
+      assert.equal(target.install_origin_before, 'sibling_workspace');
+      assert.equal(target.result.module.install_origin, 'sibling_workspace');
+      assert.equal(target.result.module.checkout_path, siblingCheckouts[target.target_id]);
+      assert.equal(target.result.module.source_policy.configured_by, 'developer_mode');
+      assert.equal(target.result.module.source_policy.effective_install_update_source, 'git_checkout');
+      assert.equal(target.result.turnkey.bootstrap.status, 'skipped');
+      assert.equal(target.result.turnkey.skill_sync.status, 'completed');
+      assert.equal(target.result.turnkey.health_check.status, 'completed');
+    }
+
+    assert.deepEqual(fs.readFileSync(logPath, 'utf8').trim().split('\n'), [
+      'mas-health',
+      'mag-health',
+      'rca-health',
+      'opl-meta-agent-health',
+    ]);
+    const codexConfig = fs.readFileSync(path.join(homeRoot, 'codex-home', 'config.toml'), 'utf8');
+    for (const [moduleId, marketplaceId, pluginId] of [
+      ['medautoscience', 'mas-local', 'mas'],
+      ['medautogrant', 'mag-local', 'mag'],
+      ['redcube', 'rca-local', 'rca'],
+    ] as const) {
+      const checkoutPath = siblingCheckouts[moduleId];
+      const marketplaceRoot = path.join(homeRoot, 'opl-state', 'codex-plugin-marketplaces', marketplaceId);
+      assert.equal(fs.existsSync(path.join(checkoutPath, '.agents', 'plugins', 'marketplace.json')), false);
+      assert.equal(fs.existsSync(path.join(marketplaceRoot, '.agents', 'plugins', 'marketplace.json')), true);
+      assert.equal(
+        fs.realpathSync(path.join(marketplaceRoot, 'plugins', pluginId)),
+        fs.realpathSync(path.join(checkoutPath, 'plugins', pluginId)),
+      );
+      assert.match(codexConfig, new RegExp(`\\[marketplaces\\.${marketplaceId}\\]\\nsource_type = "local"\\nsource = "${marketplaceRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+    }
+    assert.match(codexConfig, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
+    assert.match(codexConfig, /codex-plugin-marketplaces\/opl-meta-agent-local/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(masRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(magRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(rcaRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(metaRemote.fixtureRoot, { recursive: true, force: true });
+  }
+});
