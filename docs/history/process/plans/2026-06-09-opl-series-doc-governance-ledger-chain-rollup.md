@@ -307,6 +307,44 @@ Coverage / carry-forward:
 - Not covered: App release cohort evidence, Full/VM evidence, GUI implementation parity, install exposure live-root validation, candidate implementation, active-shell adoption, or any source/test/workflow/package/CLI/API physical retirement.
 - Physical retirement remains gated by App contracts/source/tests/validators plus replacement-owner, no-active-caller, no-forbidden-write, App owner decision, and retired-surface provenance. This follow-up authorizes no physical deletion.
 
+## Fresh Intake 2026-06-12 RCA Active-Doc Reviewed Header Cleanup
+
+This follow-up reopened `redcube-ai` for a narrow docs-only lane after the repo was clean, aligned to `origin/main`, and OPL Doc doctor was passing. It removed frozen snapshot `Date` fields from current active owner docs. It does not create a new dated ledger chain and does not close the parent `/goal`.
+
+Semantic theme: RCA active-doc reviewed header cleanup.
+
+Single Source of Truth:
+
+- Active completion / gap / baton owner: `redcube-ai/docs/active/rca-ideal-state-gap-plan.md`.
+- Active private implementation inventory owner: `redcube-ai/docs/active/opl-private-implementation-migration-inventory.md`.
+- Topic-level process provenance: `redcube-ai/docs/history/process/README.md`.
+
+Edited / pushed repo-local docs:
+
+| Repo | Commit | Edited docs and result |
+| --- | --- | --- |
+| `redcube-ai` | `e19815b9 docs: mark RCA active docs as reviewed` | `docs/active/rca-ideal-state-gap-plan.md` and `docs/active/opl-private-implementation-migration-inventory.md` now use `Last reviewed: 2026-06-12` instead of frozen `Date` fields. `docs/history/process/README.md` records the cleanup under the existing 2026-06-12 OPL Doc readback row. |
+
+Fresh readback boundary:
+
+- `redcube-ai`: `main...origin/main`, `HEAD=origin/main=e19815b9`; `opl-doc-doctor` remained `finding_count=0`, `active_truth_health.status=pass`, `markdown_doc_count=93`.
+- `one-person-lab`: this rollup is the only OPL docs write for this RCA follow-up.
+- `med-autoscience`: unrelated local source edits remain outside this docs-governance follow-up.
+- `med-autogrant`, `opl-meta-agent`, and `one-person-lab-app`: no new repo-local edit in this RCA follow-up.
+
+Verification:
+
+- RCA docs diff check: `git diff --check -- docs/active/rca-ideal-state-gap-plan.md docs/active/opl-private-implementation-migration-inventory.md docs/history/process/README.md`.
+- RCA README/docs conflict-marker scan.
+- RCA active/current frozen-date scan over `docs/active` and core docs.
+- RCA OPL Doc doctor: `finding_count=0`, `active_truth_health.status=pass`.
+
+Coverage / carry-forward:
+
+- Covered: RCA active plan and private inventory header semantics that were still reading like dated snapshots.
+- Not covered: RCA status/architecture/decisions residual thinning, production-like no-regression, Temporal visual-stage long soak, generated/default caller thinning, concrete source/contract/test retirement lanes, or any physical source/test/workflow/package/CLI/API deletion.
+- Physical retirement remains gated by RCA machine guards plus replacement-owner, no-active-caller, no-forbidden-write, RCA owner receipt / typed blocker or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
+
 ## Future Record Policy
 
 - Do not create new dated docs-governance coverage-ledger chains for ordinary process, frozen inventory, doctor transcript, branch/worktree state, command transcripts or per-run proof.
