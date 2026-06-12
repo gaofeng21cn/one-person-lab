@@ -938,6 +938,54 @@ Coverage / carry-forward:
 - Not covered: future release cohorts, Full/VM evidence, candidate shell technical proof, GUI implementation parity, install exposure live-root validation, App contract/source/test changes, full six-repo paragraph coverage, or any physical retirement lane.
 - Physical retirement remains gated by App replacement-owner, no-active-caller, no-forbidden-write proof, owner receipt / typed blocker or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
 
+## Fresh Intake 2026-06-12 OPL Runtime Architecture Implementation-List Compression
+
+This OPL-only follow-up reopened `one-person-lab/docs/architecture.md` for the
+runtime provider / hosted integration lane after the root checkout was clean,
+aligned to `origin/main`, and OPL Doc doctor was passing. It compresses provider
+queue, attempt ledger, closeout binding, progress log, Temporal visibility,
+Runway, native helper, prebuild/cache and SQLite sidecar implementation lists
+out of the architecture page. It does not create a new dated ledger chain and
+does not close the parent `/goal`.
+
+Semantic theme: OPL architecture should state owner split, product chain and
+runtime-provider responsibility boundaries. Runtime Manager, Runway, State Index,
+native helper and provider field details belong to contracts, runtime support
+docs, source/tests and live CLI/read-model output.
+
+Single Source of Truth:
+
+- Current OPL architecture boundary: `docs/architecture.md`.
+- Runtime boundary support: `docs/runtime/opl-runtime-naming-and-boundary-contract.md`.
+- Runtime Manager detail: `contracts/opl-framework/runtime-manager-contract.json`, `docs/references/runtime-substrate/opl-runtime-manager-target.md`, runtime source/tests and fresh CLI/read-model.
+- Active owner and gap baton: `docs/active/current-state-vs-ideal-gap.md`.
+- Topic-level OPL process provenance: this rollup.
+
+Brand-module scope:
+
+- Primary module: `OPL Runway`, because this lane concerns provider-backed runtime, stage attempt lifecycle and control-loop boundary wording.
+- Coordinating modules: `OPL Charter`, `OPL Console`, `OPL Vault`, `OPL Workspace`, `OPL Foundry Lab` and `OPL Pack`, because the compressed text concerns docs lifecycle, App/operator projection, refs-only evidence, workspace/artifact indexes, Agent Lab control plane and native/helper packaging surfaces.
+- Not touched: runtime implementation, contracts, source/tests/CLI/API/workflows/packages, domain truth, App release truth, owner receipts, typed blockers, quality/export verdicts, artifact authority or physical deletion gates.
+
+Edited docs:
+
+| Repo | Commit | Edited docs and result |
+| --- | --- | --- |
+| `one-person-lab` | pending in this follow-up | `docs/architecture.md` now keeps the runtime provider / hosted integration responsibility boundary without freezing queue/ledger/progress/visibility/native-helper/SQLite implementation detail as architecture prose. This rollup records the topic-level coverage. |
+
+Verification:
+
+- OPL docs diff check: `git diff --check -- docs/architecture.md docs/history/process/plans/2026-06-09-opl-series-doc-governance-ledger-chain-rollup.md`.
+- OPL README/docs conflict-marker scan.
+- OPL residual architecture implementation-list scan for removed runtime provider / native helper / SQLite specifics.
+- OPL Doc doctor: `finding_count=0`, `active_truth_health.status=pass`.
+
+Coverage / carry-forward:
+
+- Covered: OPL `docs/architecture.md` runtime provider / hosted integration bullets that duplicated runtime contracts, support docs, source/tests and CLI/read-model implementation detail.
+- Not covered: full OPL `docs/decisions.md` residual thinning, every support/reference doc paragraph, MAS dirty currentness lanes, full six-repo paragraph coverage, or any physical retirement lane.
+- Physical retirement remains gated by replacement-owner, no-active-caller, no-forbidden-write proof, owner receipt / typed blocker or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
+
 ## Future Record Policy
 
 - Do not create new dated docs-governance coverage-ledger chains for ordinary process, frozen inventory, doctor transcript, branch/worktree state, command transcripts or per-run proof.

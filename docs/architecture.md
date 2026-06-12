@@ -145,30 +145,27 @@ OPL 的三层产品认知说明“面向谁”，当前十个品牌模块说明 
 
 负责：
 
-- family runtime provider 的 provision / version pin / profile wiring
-- provider readiness 的触发、检查与状态报告；Temporal provider 是 production online runtime 的必需 substrate，Hermes-Agent 不作为 provider / Gateway readiness surface
-- `opl family-runtime` typed queue、SQLite stage attempt ledger、idempotency、attempt lease、execution authorization decision、closeout receipt binding、retry、dead-letter、approval、local inbox、event export 与 `stage_progress_log` projection
-- `opl family-runtime attempt create|list|inspect` 的 provider receipt 与 task-bound lifecycle projection；该 ledger 只记录 control metadata、checkpoint/closeout refs、human gate refs 与 blocked reason
-- StageRun execution authorization gate：provider attempt、attempt lease、workspace/artifact scope、source fingerprint、idempotency、execution authorization decision 和 forbidden-write guard 都成立后才允许进入 provider execution；closeout receipt 必须绑定 StageRun、stage manifest、current pointer 和 source fingerprint。缺口只能投影为 OPL runtime blocker，不改变 domain truth，不创建 domain typed blocker，不替 domain owner 签 receipt。
-- `stage_progress_log` 统一投影每个 stage attempt 的 intended work、actual work、timeline、usage、Temporal visibility refs、Temporal Web UI debug ref、evidence refs 和 authority boundary。其 `user_stage_log` 子面向用户回答 stage 目的、问题、实际完成事项、耗时、token、费用、剩余 blocker 与证据 refs：OPL 负责时间/usage/refs 和显式缺失状态，domain agent 负责人话语义摘要。标准 OPL Agent 使用通用 `stage_work_done` / `changed_stage_surfaces` 说明论文、基金、视觉交付或其它 domain deliverable 的人话改动；旧 MAS 论文 alias 不再进入 OPL 标准 contract、runner 或 projection。Temporal provider 承担 durable workflow history、activity heartbeat、workflow query 与 searchable visibility；OPL 从 attempt ledger / provider run / activity events / usage projection / closeout packet 派生 projection，不另建平行 log database，不读取 domain truth/artifact body，也不把 provider completion 解释成 domain ready。
-- `attempt_true_path_proof` 只把同一 `stage_attempt_id/task_id/workflow_id/run_id` 在 `attempt query`、`queue inspect`、App full drilldown、stage progress 和 Temporal debug refs 之间连起来；它不声明 long-soak、domain ready、artifact authority 或 quality verdict。
-- Temporal visibility readiness 是 provider lifecycle 的 fail-closed 前置条件：生产 `temporal` provider 启动 searchable stage attempt 前必须具备 OPL stage attempt Search Attributes，缺失时输出 repair action；Search Attributes 只放可检索摘要和 refs，不放 transcript、artifact body、memory body 或 domain body。
-- `Conflict / Blocker Envelope` 的统一投影：重复 task、identity incomplete、evidence/quality blocker、human gate、retry/dead-letter 和 receipt conflict 都进入 `opl_conflict_or_blocker.v1`，并在 `operator_conflicts[]` 中给 App/operator 消费
-- provider wakeup bridge；生产路径使用 provider-backed signal / tick / hydrate 语义，旧 Gateway / cron bridge 不再属于 active interface
-- domain task registration contract 的 hydration；当前 MAS 通过 `pending_family_tasks[]` 把非终局、非 hard human gate 的 autonomy blocker 交给 OPL queue
-- family runtime supervision contract 的只读发现、导出、一致性检查与产品投影；其中 adapter_id、cadence、last_success / last_tick、lease_freshness、SLO state、repair command、safe reconcile hint 与 source refs 均来自 domain-owned surface
-- runtime status、session、progress、artifact、attention queue 的 OPL 产品级投影
-- `opl status runtime` 顶层报告 provider-backed family runtime、provider set 与 OPL-managed session ledger；旧 Hermes diagnostics、recent sessions 镜像与 process usage 不再作为 active runtime status 字段
-- `opl runtime manager`、doctor、repair、resume 等诊断和恢复入口
-- Runway control-loop runtime：Temporal 是 durable execution substrate，承担 workflow history、task queue、signal/query、retry/timeout、timer 和 replay；worker supervisor / deployment substrate 只保证 worker process liveness；scheduler / cadence surface 只提供 hydrate/tick/reconcile/repair 机会；Progress Reconciler 比较 desired/current 并产生唯一下一 safe action、owner/gate wait 或 OPL runtime blocker。Runway 已落地的可执行读面是 `opl runway readiness|reconcile|handoff-gates|recovery-repair|control-loop status --json` 与对应 App projection；Temporal 未配置、service down、worker not ready 或 scheduler missing 必须读作 `provider_not_ready` / OPL repair action。handoff、human gate、provider observation 和 reconciler output 只能传递 refs、typed blocker requirement、owner answer shape 或 repair command，不得伪造 domain truth、owner receipt、quality verdict、artifact readiness、production-ready 结论或 Runway L5 long-soak closure。
-- `opl agent lab` 目标控制面：统一组织 framework-level eval run、improvement candidate、acceptance evidence、owner route 和 follow-up projection；它只引用 domain-owned proof/eval/receipt/artifact locator，不产生 domain ready、quality、publication、fundability、visual 或 export verdict
-- 可选 Rust `OPL native helper` 的 registry，例如 system probe、native doctor、runtime watch、artifact indexer、state indexer
-- Rust helper 的 package lifecycle：`native:build`、`native:doctor`、`native:repair`、`native:test`，以及随 npm package 分发的 Cargo workspace 与 helper 脚本
-- Rust helper 的 prebuild/cache lifecycle：优先消费匹配平台与 crate version 的 prebuild manifest，把 binaries 安装进 `OPL_STATE_DIR` cache；缺失或无效时回到本地 Cargo build
-- 高频文件/状态索引的 contract-first catalog；workspace 扫描、session ledger 索引、artifact manifest、large JSON 校验与目录 snapshot 优先由 Rust helper 承担
-- `opl index doctor|rebuild|checkpoint|integrity-check|backup --json` 是 OPL-owned SQLite sidecar index 的可执行维护面：`queue.sqlite` 继续承载 typed queue / stage attempt ledger，`lifecycle-index.sqlite` 承载 lifecycle refs / apply receipts，`artifact-index.sqlite` 与 `read-model.sqlite` 只初始化和维护 refs-only projection tables。该命令不扫描或写入 domain artifact body，不生成 owner receipt，不把 SQLite record 解释成 stage completion；标准 Foundry Agent 必须用 `contracts/state_index_kernel_adoption.json` 声明 SQLite 分工，App 只消费 OPL/App read model projection，不直接读写这些 SQLite sidecar。
-- 当 Rust helper 可发现时，OPL hosted integration 通过 JSON stdio 调用 native doctor、state indexer、artifact indexer 与 runtime watch，并把一次聚合 projection 持久化到 OPL 本地 state；该 projection 带 TTL、diff history、failure log、last-success snapshot 与 freshness 判断，只做索引与诊断加速，不替代 domain 仓的 durable truth
-- native family smoke 明确分成本地真实 workspace 模式与 CI fixture 模式；两者都只覆盖 MAS/MAG，不进入 RCA 当前暂缓的 TS/Python 重分层线
+- family runtime provider 的 provision / version pin / profile wiring、readiness
+  触发、检查、报告和 repair action；Temporal provider 是 production online
+  runtime 的必需 substrate，Hermes-Agent 不作为 provider / Gateway readiness
+  surface。
+- stage attempt lifecycle：typed queue、attempt ledger、idempotency、lease、
+  execution authorization、closeout binding、retry/dead-letter、human gate、
+  wakeup、event export、stage progress / true-path projection 和 App/operator
+  drilldown。provider / lease / authorization / closeout binding 缺口只能投影为
+  OPL runtime blocker，不改变 domain truth、不创建 domain typed blocker、不替
+  domain owner 签 receipt。
+- Runtime Manager / Runway / State Index / native helper 这组 provider-backed
+  support surface。它们提供诊断、repair、resume、provider observation、
+  control-loop reconcile、refs-only index、artifact/workspace/session projection
+  和 optional Rust helper 加速；具体命令、字段、cache、prebuild、SQLite sidecar
+  和 helper lifecycle 的机器 truth 回到 runtime contracts、support docs、
+  source/tests 和 live CLI。
+- Agent Lab 与 family runtime supervision 的 refs-only control plane。它们只引用
+  domain-owned proof/eval/receipt/artifact locator、provider observations、
+  safe reconcile hints 和 repair refs，不产生 domain ready、quality、
+  publication、fundability、visual、export verdict、artifact authority 或 Runway L5
+  long-soak closure。
 
 不负责：
 
