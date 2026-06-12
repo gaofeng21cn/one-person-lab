@@ -495,8 +495,46 @@ test('framework operating maturity projects owner evidence ledger refs without r
       charterLivePathWorkOrder.owner_evidence_closure_state,
       'owner_acceptance_or_typed_blocker_required',
     );
+    assert.equal(
+      charterLivePathWorkOrder.owner_repo,
+      '/Users/gaofeng/workspace/one-person-lab#brand-module:charter',
+    );
     assert.equal(charterLivePathWorkOrder.owner_acceptance_required, true);
     assert.equal(charterLivePathWorkOrder.ready_claim_authorized, false);
+    assert.equal(
+      charterLivePathWorkOrder.accepted_ref_shapes.includes('owner_acceptance_ref'),
+      true,
+    );
+    assert.equal(
+      charterLivePathWorkOrder.accepted_ref_shapes.includes('typed_blocker_ref'),
+      true,
+    );
+    assert.equal(
+      charterLivePathWorkOrder.closing_ref_source,
+      'brand_module_owner_evidence_ref_or_owner_acceptance_ref_for_requirement',
+    );
+    assert.equal(
+      charterLivePathWorkOrder.typed_blocker_source,
+      'brand_module_owner_l5_typed_blocker_ref_for_requirement',
+    );
+    assert.equal(
+      charterLivePathWorkOrder.forbidden_opl_claims.includes('brand_module_l5_complete'),
+      true,
+    );
+    assert.equal(
+      charterLivePathWorkOrder.forbidden_opl_claims.includes('production_ready'),
+      true,
+    );
+    assert.equal(
+      charterLivePathWorkOrder.non_closing_inputs.includes('verified_refs_only_ledger'),
+      true,
+    );
+    assert.equal(
+      charterLivePathWorkOrder.stop_loss.includes(
+        'if the requirement needs owner acceptance, request owner_acceptance_ref or typed_blocker_ref from the listed owner repo',
+      ),
+      true,
+    );
     assert.deepEqual(charterLivePathWorkOrder.typed_blocker_payload_template, {
       module_id: 'charter',
       evidence_class_id: 'live_user_path',

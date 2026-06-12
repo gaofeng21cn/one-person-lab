@@ -493,6 +493,7 @@ test('brand module L5 evidence gate is executable but does not claim production 
       module_id: string;
       class_id: string;
       owner: string;
+      owner_repo: string;
       owner_route_status: string;
       blocker_state: string;
       next_owner_action: string;
@@ -556,6 +557,8 @@ test('brand module L5 evidence gate is executable but does not claim production 
       verified_receipt_count: number;
       l5_claim_status: string;
       non_closing_inputs: string[];
+      forbidden_opl_claims: string[];
+      stop_loss: string[];
       authority_boundary: {
         route_is_refs_only: boolean;
         route_can_claim_l5: boolean;
@@ -674,6 +677,7 @@ test('brand module L5 evidence gate is executable but does not claim production 
         assert.equal(route.module_id, entry.module_id);
         assert.equal(route.class_id.length > 0, true);
         assert.equal(route.owner.length > 0, true);
+        assert.equal(route.owner_repo.length > 0, true);
         assert.equal(route.work_order_id, `w7-brand-module-l5-${entry.module_id}-${route.class_id}`);
         assert.equal(route.owner_acceptance_required, true);
         assert.equal(route.ready_claim_authorized, false);
@@ -722,6 +726,15 @@ test('brand module L5 evidence gate is executable but does not claim production 
         assert.equal(route.non_closing_inputs.includes('provider_completion'), true);
         assert.equal(route.non_closing_inputs.includes('app_projection'), true);
         assert.equal(route.non_closing_inputs.includes('verified_refs_only_ledger'), true);
+        assert.equal(route.forbidden_opl_claims.includes('brand_module_l5_complete'), true);
+        assert.equal(route.forbidden_opl_claims.includes('production_ready'), true);
+        assert.equal(route.forbidden_opl_claims.includes('typed_blocker_created_by_opl'), true);
+        assert.equal(
+          route.stop_loss.includes(
+            'if only contract validation, docs foldback, conformance pass, App projection, provider completion, or verified refs-only ledger exists, keep ready_claim_authorized=false',
+          ),
+          true,
+        );
         assert.equal(route.authority_boundary.route_is_refs_only, true);
         assert.equal(route.authority_boundary.route_can_claim_l5, false);
         assert.equal(route.authority_boundary.route_can_claim_production_ready, false);

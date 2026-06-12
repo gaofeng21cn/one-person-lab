@@ -27,6 +27,16 @@ const FALSE_AUTHORITY_BOUNDARY: BrandModuleAuthorityBoundary = {
   can_replace_ai_executor_planning: false,
 };
 
+const L5_REQUIREMENT_FORBIDDEN_OPL_CLAIMS = [
+  'brand_module_l5_complete',
+  'production_ready',
+  'domain_ready',
+  'app_release_ready',
+  'quality_or_export_ready',
+  'owner_receipt_signed_by_opl',
+  'typed_blocker_created_by_opl',
+];
+
 function l5Contract(contracts: FrameworkContracts) {
   return contracts.brandModuleL5OperatingEvidence;
 }
@@ -372,6 +382,27 @@ function l5RequirementEvidencePayloadTemplate(
   };
 }
 
+function ownerRepoForRequirement(owner: string, moduleId: BrandModuleId) {
+  const normalizedOwner = owner.toLowerCase();
+  if (
+    normalizedOwner.includes('app')
+    || normalizedOwner.includes('release')
+    || normalizedOwner.includes('install')
+  ) {
+    return '/Users/gaofeng/workspace/one-person-lab-app';
+  }
+  if (
+    normalizedOwner.includes('domain')
+    || normalizedOwner.includes('target agent')
+    || normalizedOwner.includes('mas')
+    || normalizedOwner.includes('mag')
+    || normalizedOwner.includes('rca')
+  ) {
+    return 'MAS/MAG/RCA/OMA domain repositories';
+  }
+  return `/Users/gaofeng/workspace/one-person-lab#brand-module:${moduleId}`;
+}
+
 function ownerRouteCommandExamples(
   moduleId: BrandModuleId,
   classId: BrandModuleL5EvidenceClassId,
@@ -425,6 +456,7 @@ function ownerEvidenceRoutes(
       module_id: entry.module_id,
       class_id: requirement.class_id,
       owner: requirement.owner,
+      owner_repo: ownerRepoForRequirement(requirement.owner, entry.module_id),
       owner_route_status: routeStatusWithObservedEvidence(
         requirement.current_state,
         observedEvidenceRefs.length,
@@ -486,6 +518,12 @@ function ownerEvidenceRoutes(
           ? 'owner_evidence_refs_observed_not_l5_claimed'
           : 'owner_evidence_required',
       non_closing_inputs: contract.owner_route_work_order_policy.non_closing_inputs,
+      forbidden_opl_claims: L5_REQUIREMENT_FORBIDDEN_OPL_CLAIMS,
+      stop_loss: [
+        'if observed refs exist but l5_can_be_claimed is false, do not add more OPL projection evidence for this requirement',
+        'if the requirement needs owner acceptance, request owner_acceptance_ref or typed_blocker_ref from the listed owner repo',
+        'if only contract validation, docs foldback, conformance pass, App projection, provider completion, or verified refs-only ledger exists, keep ready_claim_authorized=false',
+      ],
       authority_boundary: {
         route_is_refs_only: true,
         route_can_claim_l5: false,
