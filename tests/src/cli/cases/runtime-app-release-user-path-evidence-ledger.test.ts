@@ -310,6 +310,10 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
       evidence.release_owner_verdict_handoff.status,
       'waiting_for_same_cohort_user_path_evidence_or_typed_blocker',
     );
+    assert.deepEqual(
+      evidence.release_owner_verdict_handoff.observed_release_owner_receipt_refs,
+      [],
+    );
     assert.equal(evidence.release_owner_verdict_handoff.release_ready_authorized, false);
     assert.equal(
       evidence.release_owner_verdict_handoff.authority_boundary.can_create_owner_receipt,

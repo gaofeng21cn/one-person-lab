@@ -69,10 +69,10 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
     receipt.receipt_status === 'verified'
   );
   const rawTypedBlockerRefs = refsFromRecords(ledgerReceipts, ['typed_blocker_refs']);
-  const releaseOwnerReceiptRefs = refsFromRecords(ledgerReceipts, [
+  const releaseOwnerReceiptRefs = refsFromRecords(verifiedLedgerReceipts, [
     'release_owner_receipt_refs',
   ]);
-  const installEvidenceRefs = refsFromRecords(ledgerReceipts, ['install_evidence_refs']);
+  const installEvidenceRefs = refsFromRecords(verifiedLedgerReceipts, ['install_evidence_refs']);
   const candidateEvidenceRecords = [
     record(drilldown.package_export_lifecycle_refs),
     record(drilldown.production_evidence_tail_ledger),

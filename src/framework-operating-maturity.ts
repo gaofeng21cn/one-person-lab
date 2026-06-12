@@ -58,17 +58,41 @@ function unique(items: string[]) {
 
 function appReleaseUserPathMaturity() {
   const evidence = record(buildAppReleaseUserPathEvidence({}));
+  const releaseOwnerVerdictHandoff = record(evidence.release_owner_verdict_handoff);
   const productionUserPathReady = evidence.production_user_path_ready === true;
   const pendingVerifyCount = numberValue(evidence.pending_verify_receipt_ref_count);
   const typedBlockerCount = numberValue(evidence.typed_blocker_ref_count);
-  const openGateCount = numberValue(evidence.open_gate_count);
+  const verifiedReceiptCount = numberValue(evidence.verified_ledger_receipt_ref_count);
+  const releaseOwnerReceiptRefCount =
+    stringListValue(releaseOwnerVerdictHandoff.observed_release_owner_receipt_refs).length;
+  const releaseOwnerTypedBlockerRefCount =
+    stringListValue(releaseOwnerVerdictHandoff.observed_typed_blocker_refs).length;
+  const releaseOwnerVerdictObserved = releaseOwnerReceiptRefCount > 0;
+  const verifiedReleaseOwnerTypedBlockerObserved =
+    verifiedReceiptCount > 0 && pendingVerifyCount === 0 && releaseOwnerTypedBlockerRefCount > 0;
+  const releaseOwnerVerdictStatus = releaseOwnerVerdictObserved
+    ? 'release_owner_receipt_recorded_not_release_ready_claim'
+    : verifiedReleaseOwnerTypedBlockerObserved
+      ? 'release_owner_typed_blocker_recorded_not_release_ready_claim'
+      : stringValue(releaseOwnerVerdictHandoff.status)
+        ?? 'waiting_for_same_cohort_user_path_evidence_or_typed_blocker';
+  const releaseOwnerVerdictClosureObserved =
+    releaseOwnerVerdictObserved || verifiedReleaseOwnerTypedBlockerObserved;
   const openEvidenceCount =
-    productionUserPathReady && pendingVerifyCount === 0 && typedBlockerCount === 0
+    (
+      productionUserPathReady && pendingVerifyCount === 0 && typedBlockerCount === 0
+    ) || releaseOwnerVerdictClosureObserved
       ? 0
       : 1;
 
   return {
     evidence,
+    releaseOwnerVerdictHandoff: {
+      ...releaseOwnerVerdictHandoff,
+      status: releaseOwnerVerdictStatus,
+    },
+    releaseOwnerVerdictClosureObserved,
+    releaseOwnerVerdictStatus,
     openEvidenceCount,
     productionUserPathReady,
   };
@@ -1038,11 +1062,15 @@ export async function buildFrameworkOperatingMaturityReadout(
         source_command: SOURCE_COMMANDS.app_operator_drilldown,
         status: appReleaseOpenCount > 0
           ? 'evidence_required'
-          : 'evidence_recorded_not_release_ready_claim',
+          : appReleaseUserPath.releaseOwnerVerdictClosureObserved
+            ? appReleaseUserPath.releaseOwnerVerdictStatus
+            : 'evidence_recorded_not_release_ready_claim',
         latest_release_tag: null,
         next_required_delta: appReleaseOpenCount > 0
           ? 'same_cohort_app_release_user_path_evidence_or_release_owner_typed_blocker'
-          : 'release_owner_verdict_still_not_claimed_by_opl',
+          : appReleaseUserPath.releaseOwnerVerdictClosureObserved
+            ? 'release_owner_verdict_recorded_no_release_ready_claim'
+            : 'release_owner_verdict_still_not_claimed_by_opl',
         production_user_path_ready: appReleaseUserPath.productionUserPathReady,
         evidence_ledger_status: stringValue(appReleaseUserPath.evidence.evidence_ledger_status),
         open_gate_count: numberValue(appReleaseUserPath.evidence.open_gate_count),
@@ -1052,7 +1080,7 @@ export async function buildFrameworkOperatingMaturityReadout(
         verified_ledger_receipt_ref_count:
           numberValue(appReleaseUserPath.evidence.verified_ledger_receipt_ref_count),
         release_owner_verdict_handoff:
-          record(appReleaseUserPath.evidence.release_owner_verdict_handoff),
+          appReleaseUserPath.releaseOwnerVerdictHandoff,
         selected_cohort_id:
           stringValue(record(appReleaseUserPath.evidence.cohort_guard).selected_cohort_id),
         accepted_refs_only_result_shapes: [
