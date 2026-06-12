@@ -786,20 +786,21 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
     }
     const basis = masDefaultExecutorCurrentnessBasis(payload);
     for (const [targetKey, value] of Object.entries({
-      work_unit_id: optionalString(basis?.work_unit_id)
-        ?? optionalString(payload.work_unit_id)
+      work_unit_id: optionalString(payload.work_unit_id)
+        ?? optionalString(basis?.work_unit_id)
         ?? optionalString(payload.action_type),
-      work_unit_fingerprint: optionalString(basis?.work_unit_fingerprint)
-        ?? optionalString(payload.work_unit_fingerprint)
+      work_unit_fingerprint: optionalString(payload.work_unit_fingerprint)
+        ?? optionalString(payload.action_fingerprint)
+        ?? optionalString(basis?.work_unit_fingerprint)
         ?? optionalString(payload.source_fingerprint),
-      source_eval_id: optionalString(basis?.source_eval_id)
-        ?? optionalString(payload.source_eval_id)
+      source_eval_id: optionalString(payload.source_eval_id)
+        ?? optionalString(basis?.source_eval_id)
         ?? optionalString(payload.source_fingerprint),
-      truth_epoch: optionalString(basis?.truth_epoch)
-        ?? optionalString(payload.truth_epoch)
+      truth_epoch: optionalString(payload.truth_epoch)
+        ?? optionalString(basis?.truth_epoch)
         ?? optionalString(payload.source_fingerprint),
-      runtime_health_epoch: optionalString(basis?.runtime_health_epoch)
-        ?? optionalString(payload.runtime_health_epoch)
+      runtime_health_epoch: optionalString(payload.runtime_health_epoch)
+        ?? optionalString(basis?.runtime_health_epoch)
         ?? optionalString(payload.source_fingerprint),
       idempotency_key: optionalString(payload.idempotency_key) ?? optionalString(payload.source_fingerprint),
     })) {

@@ -2,6 +2,8 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { assert, fs, os, path, runCli, shellSingleQuote, test } from '../helpers.ts';
 import { enqueueTask } from '../../../../src/family-runtime-enqueue.ts';
+import { ensureProviderHostedStageAttempt } from '../../../../src/family-runtime-provider-hosted-attempts.ts';
+import type { FamilyRuntimeTaskRow } from '../../../../src/family-runtime-store.ts';
 import {
   createQueueTables,
   defaultExecutorPayload,
@@ -1114,6 +1116,64 @@ test('family-runtime enqueue replaces stale queued MAS current-control admission
     assert.equal(eventPayload.next_status, 'queued');
     assert.equal(eventPayload.authority_boundary.domain_truth_mutation, false);
     assert.equal(eventPayload.authority_boundary.provider_completion_is_domain_ready, false);
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime stage attempt locator keeps fresh MAS payload fingerprint ahead of stale nested owner-route basis', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    createQueueTables(db);
+    const payload = {
+      ...currentControlAdmissionPayload(
+        'sha256:fresh-source',
+        '03',
+        'sha256:fresh-top-level-work-unit',
+      ),
+      owner_route: {
+        currentness_contract: {
+          basis: {
+            work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+            work_unit_fingerprint: 'sha256:stale-nested-owner-route-basis',
+            truth_epoch: 'truth-event-stale',
+            runtime_health_epoch: 'runtime-health-event-stale',
+          },
+        },
+        source_refs: {
+          owner_route_currentness_basis: {
+            work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+            work_unit_fingerprint: 'sha256:fresh-top-level-work-unit',
+            truth_epoch: 'truth-event-03',
+            runtime_health_epoch: 'runtime-health-event-03',
+          },
+        },
+        work_unit_fingerprint: 'sha256:fresh-top-level-work-unit',
+        source_fingerprint: 'sha256:fresh-source',
+      },
+      owner_route_currentness_basis: undefined,
+    };
+    const taskId = 'task-mas-current-control-fresh-payload-over-stale-nested-basis';
+    insertQueuedTask(db, {
+      taskId,
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload,
+      dedupeKey: 'owner-route::003-dpcc-primary-care-phenotype-treatment-gap::fresh-payload-over-stale-nested',
+    });
+    const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as FamilyRuntimeTaskRow;
+    const attempt = ensureProviderHostedStageAttempt(db, row, payload);
+
+    assert.ok(attempt);
+    assert.equal(
+      attempt.workspace_locator.work_unit_fingerprint,
+      'sha256:fresh-top-level-work-unit',
+    );
+    assert.equal(attempt.workspace_locator.domain_source_fingerprint, 'sha256:fresh-source');
+    assert.equal(
+      attempt.workspace_locator.owner_route.currentness_contract.basis.work_unit_fingerprint,
+      'sha256:stale-nested-owner-route-basis',
+    );
   } finally {
     db.close();
   }
