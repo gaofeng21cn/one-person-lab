@@ -458,6 +458,7 @@ function foundryAgentOsProductionEvidenceGate(input: {
       l5_claim_status: stringValue(route.l5_claim_status),
       typed_blocker_payload_template: record(route.typed_blocker_payload_template),
       evidence_payload_template: record(route.evidence_payload_template),
+      owner_route_command_examples: record(route.owner_route_command_examples),
       verification_command: stringValue(route.verification_command),
       authority_boundary: record(route.authority_boundary),
     }))

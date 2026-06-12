@@ -337,6 +337,35 @@ function l5RequirementEvidencePayloadTemplate(
   };
 }
 
+function ownerRouteCommandExamples(
+  moduleId: BrandModuleId,
+  classId: BrandModuleL5EvidenceClassId,
+) {
+  return {
+    record_evidence: {
+      command: 'opl runtime brand-module-l5-evidence record --payload <json> --json',
+      payload_template: l5RequirementEvidencePayloadTemplate(moduleId, classId),
+      closes_l5: false,
+    },
+    record_typed_blocker_ref: {
+      command: 'opl runtime brand-module-l5-evidence record --payload <json> --json',
+      payload_template: l5RequirementTypedBlockerPayload(moduleId, classId),
+      closes_l5: false,
+      creates_typed_blocker: false,
+    },
+    verify_receipt: {
+      command:
+        `opl runtime brand-module-l5-evidence verify --receipt-ref ${l5TypedBlockerReceiptRef(moduleId, classId)} --json`,
+      closes_l5: false,
+    },
+    list_requirement_refs: {
+      command:
+        `opl runtime brand-module-l5-evidence list --module ${moduleId} --evidence-class ${classId} --json`,
+      closes_l5: false,
+    },
+  };
+}
+
 function ownerEvidenceRoutes(
   contract: BrandModuleL5OperatingEvidenceContract,
   entry: BrandModuleL5OperatingEvidenceEntry,
@@ -383,6 +412,10 @@ function ownerEvidenceRoutes(
         `opl runtime brand-module-l5-evidence verify --receipt-ref ${l5TypedBlockerReceiptRef(entry.module_id, requirement.class_id)}`,
       record_evidence_command:
         'opl runtime brand-module-l5-evidence record --payload <json>',
+      owner_route_command_examples: ownerRouteCommandExamples(
+        entry.module_id,
+        requirement.class_id,
+      ),
       typed_blocker_payload_template: l5RequirementTypedBlockerPayload(
         entry.module_id,
         requirement.class_id,
@@ -418,6 +451,67 @@ function ownerEvidenceRoutes(
   });
 }
 
+type BrandModuleL5OwnerEvidenceRoute = ReturnType<typeof ownerEvidenceRoutes>[number];
+
+function missingEvidenceClassGroups(routes: BrandModuleL5OwnerEvidenceRoute[]) {
+  const groups = {
+    missing_owner_evidence_class_ids: [] as BrandModuleL5EvidenceClassId[],
+    observed_refs_not_l5_claim_class_ids: [] as BrandModuleL5EvidenceClassId[],
+    typed_blocker_recorded_class_ids: [] as BrandModuleL5EvidenceClassId[],
+    verified_receipt_class_ids: [] as BrandModuleL5EvidenceClassId[],
+  };
+  for (const route of routes) {
+    if (route.verified_receipt_count > 0) {
+      groups.verified_receipt_class_ids.push(route.class_id);
+    }
+    if (route.blocker_state === 'typed_blocker_recorded') {
+      groups.typed_blocker_recorded_class_ids.push(route.class_id);
+    } else if (route.observed_ref_count > 0) {
+      groups.observed_refs_not_l5_claim_class_ids.push(route.class_id);
+    } else {
+      groups.missing_owner_evidence_class_ids.push(route.class_id);
+    }
+  }
+  return groups;
+}
+
+function nextActionSummary(
+  entry: BrandModuleL5OperatingEvidenceEntry,
+  routes: BrandModuleL5OwnerEvidenceRoute[],
+) {
+  const missingEvidenceGroups = missingEvidenceClassGroups(routes);
+  const firstMissingRoute = routes.find((route) =>
+    route.owner_evidence_closure_state === 'owner_acceptance_or_typed_blocker_required'
+  );
+  return {
+    module_id: entry.module_id,
+    status: entry.l5_can_be_claimed ? 'complete' : entry.l5_completion_status,
+    l5_can_be_claimed: entry.l5_can_be_claimed,
+    next_owner_action: firstMissingRoute
+      ? firstMissingRoute.next_owner_action
+      : 'keep_verified_refs_and_wait_for_all_requirements',
+    next_work_order_id: firstMissingRoute?.work_order_id ?? null,
+    next_evidence_class_id: firstMissingRoute?.class_id ?? null,
+    next_owner: firstMissingRoute?.owner ?? null,
+    next_command_examples: firstMissingRoute?.owner_route_command_examples ?? null,
+    missing_evidence_groups: missingEvidenceGroups,
+    missing_owner_evidence_class_count:
+      missingEvidenceGroups.missing_owner_evidence_class_ids.length,
+    observed_refs_not_l5_claim_class_count:
+      missingEvidenceGroups.observed_refs_not_l5_claim_class_ids.length,
+    typed_blocker_recorded_class_count:
+      missingEvidenceGroups.typed_blocker_recorded_class_ids.length,
+    verified_receipt_class_count:
+      missingEvidenceGroups.verified_receipt_class_ids.length,
+    false_completion_guard: {
+      refs_only_inputs_close_l5: false,
+      work_order_projection_closes_l5: false,
+      verified_ledger_closes_l5: false,
+      ready_claim_authorized: false,
+    },
+  };
+}
+
 function compactModule(
   contract: BrandModuleL5OperatingEvidenceContract,
   entry: BrandModuleL5OperatingEvidenceEntry,
@@ -432,6 +526,7 @@ function compactModule(
   const verifiedModuleLedgerReceipts = moduleLedgerReceipts.filter((receipt) =>
     receipt.receipt_status === 'verified'
   );
+  const routes = ownerEvidenceRoutes(contract, entry, moduleLedgerReceipts);
   return {
     module_id: entry.module_id,
     brand_name: entry.brand_name,
@@ -459,9 +554,10 @@ function compactModule(
       ),
       l5_claim_status: 'ledger_refs_only_not_l5_claimed',
     },
+    next_action_summary: nextActionSummary(entry, routes),
     immediate_enabling_surfaces: entry.immediate_enabling_surfaces,
     evidence_requirements: entry.evidence_requirements,
-    owner_evidence_routes: ownerEvidenceRoutes(contract, entry, moduleLedgerReceipts),
+    owner_evidence_routes: routes,
     not_claims: entry.not_claims,
   };
 }
@@ -678,6 +774,14 @@ export function buildBrandModuleL5ModuleStatus(
 ) {
   const module = l5ModuleOrThrow(contracts, moduleId);
   const evidenceLedger = listBrandModuleL5EvidenceReceipts(contracts);
+  const moduleLedgerReceipts = evidenceLedger.receipts.filter((receipt) =>
+    receipt.module_id === module.module_id
+  );
+  const routes = ownerEvidenceRoutes(
+    l5Contract(contracts),
+    module,
+    moduleLedgerReceipts,
+  );
   const key = `opl_${moduleId.replace(/-/g, '_')}_l5_status`;
   return {
     version: 'g2',
@@ -694,11 +798,8 @@ export function buildBrandModuleL5ModuleStatus(
       owner_route_work_order_policy: l5Contract(contracts).owner_route_work_order_policy,
       evidence_requirement_count: module.evidence_requirements.length,
       evidence_requirements: module.evidence_requirements,
-      owner_evidence_routes: ownerEvidenceRoutes(
-        l5Contract(contracts),
-        module,
-        evidenceLedger.receipts,
-      ),
+      next_action_summary: nextActionSummary(module, routes),
+      owner_evidence_routes: routes,
       immediate_enabling_surfaces: module.immediate_enabling_surfaces,
       not_claims: module.not_claims,
       authority_boundary: FALSE_AUTHORITY_BOUNDARY,

@@ -513,6 +513,22 @@ test('framework operating maturity projects owner evidence ledger refs without r
       ],
     });
     assert.equal(
+      charterLivePathWorkOrder.owner_route_command_examples.record_evidence.command,
+      'opl runtime brand-module-l5-evidence record --payload <json> --json',
+    );
+    assert.equal(
+      charterLivePathWorkOrder.owner_route_command_examples.record_evidence.closes_l5,
+      false,
+    );
+    assert.equal(
+      charterLivePathWorkOrder.owner_route_command_examples.record_typed_blocker_ref.creates_typed_blocker,
+      false,
+    );
+    assert.equal(
+      charterLivePathWorkOrder.owner_route_command_examples.list_requirement_refs.command,
+      'opl runtime brand-module-l5-evidence list --module charter --evidence-class live_user_path --json',
+    );
+    assert.equal(
       charterLivePathWorkOrder.verification_command,
       'opl runtime brand-module-l5-evidence verify --receipt-ref opl://brand-module-l5-evidence/charter/live_user_path/typed-blocker-pending',
     );

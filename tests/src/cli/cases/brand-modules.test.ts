@@ -516,6 +516,36 @@ test('brand module L5 evidence gate is executable but does not claim production 
         evidence_class_id: string;
         evidence_refs: string[];
       };
+      owner_route_command_examples: {
+        record_evidence: {
+          command: string;
+          payload_template: {
+            module_id: string;
+            evidence_class_id: string;
+            evidence_refs: string[];
+          };
+          closes_l5: boolean;
+        };
+        record_typed_blocker_ref: {
+          command: string;
+          payload_template: {
+            module_id: string;
+            evidence_class_id: string;
+            typed_blocker_refs: string[];
+            receipt_ref: string;
+          };
+          closes_l5: boolean;
+          creates_typed_blocker: boolean;
+        };
+        verify_receipt: {
+          command: string;
+          closes_l5: boolean;
+        };
+        list_requirement_refs: {
+          command: string;
+          closes_l5: boolean;
+        };
+      };
       verification_command: string;
       accepted_ref_shapes: string[];
       existing_evidence_refs: string[];
@@ -542,6 +572,32 @@ test('brand module L5 evidence gate is executable but does not claim production 
       l5_completion_status: string;
       open_requirement_count: number;
       blocked_requirement_count: number;
+      next_action_summary: {
+        module_id: string;
+        status: string;
+        l5_can_be_claimed: boolean;
+        next_owner_action: string;
+        next_work_order_id: string | null;
+        next_evidence_class_id: string | null;
+        next_owner: string | null;
+        next_command_examples: L5Route['owner_route_command_examples'] | null;
+        missing_evidence_groups: {
+          missing_owner_evidence_class_ids: string[];
+          observed_refs_not_l5_claim_class_ids: string[];
+          typed_blocker_recorded_class_ids: string[];
+          verified_receipt_class_ids: string[];
+        };
+        missing_owner_evidence_class_count: number;
+        observed_refs_not_l5_claim_class_count: number;
+        typed_blocker_recorded_class_count: number;
+        verified_receipt_class_count: number;
+        false_completion_guard: {
+          refs_only_inputs_close_l5: boolean;
+          work_order_projection_closes_l5: boolean;
+          verified_ledger_closes_l5: boolean;
+          ready_claim_authorized: boolean;
+        };
+      };
       owner_evidence_routes: L5Route[];
     };
 
@@ -552,6 +608,68 @@ test('brand module L5 evidence gate is executable but does not claim production 
       assert.equal(entry.open_requirement_count, 12);
       assert.equal(entry.blocked_requirement_count, 1);
       assert.equal(entry.owner_evidence_routes.length, status.evidence_classes.length);
+      assert.equal(entry.next_action_summary.module_id, entry.module_id);
+      assert.equal(entry.next_action_summary.status, 'evidence_required');
+      assert.equal(entry.next_action_summary.l5_can_be_claimed, false);
+      assert.equal(
+        entry.next_action_summary.next_owner_action,
+        'record_owner_evidence_ref_or_typed_blocker_for_l5_requirement',
+      );
+      assert.equal(
+        entry.next_action_summary.next_work_order_id,
+        `w7-brand-module-l5-${entry.module_id}-live_user_path`,
+      );
+      assert.equal(entry.next_action_summary.next_evidence_class_id, 'live_user_path');
+      assert.equal(entry.next_action_summary.missing_owner_evidence_class_count, 8);
+      assert.equal(entry.next_action_summary.observed_refs_not_l5_claim_class_count, 4);
+      assert.equal(entry.next_action_summary.typed_blocker_recorded_class_count, 1);
+      assert.equal(entry.next_action_summary.verified_receipt_class_count, 0);
+      assert.deepEqual(
+        entry.next_action_summary.missing_evidence_groups.missing_owner_evidence_class_ids,
+        [
+          'live_user_path',
+          'ordinary_app_experience',
+          'cross_agent_scaleout',
+          'long_soak_recovery',
+          'release_install_evidence',
+          'operator_repair_loop',
+          'capability_fail_open_boundary',
+          'cross_agent_foundry_agent_os_adoption',
+        ],
+      );
+      assert.deepEqual(
+        entry.next_action_summary.missing_evidence_groups.observed_refs_not_l5_claim_class_ids,
+        [
+          'no_second_truth_regression',
+          'pack_compile_parity',
+          'current_owner_delta_default_read',
+          'domain_authority_false_boundary',
+        ],
+      );
+      assert.deepEqual(
+        entry.next_action_summary.missing_evidence_groups.typed_blocker_recorded_class_ids,
+        ['owner_acceptance'],
+      );
+      assert.deepEqual(
+        entry.next_action_summary.missing_evidence_groups.verified_receipt_class_ids,
+        [],
+      );
+      assert.equal(entry.next_action_summary.false_completion_guard.refs_only_inputs_close_l5, false);
+      assert.equal(entry.next_action_summary.false_completion_guard.work_order_projection_closes_l5, false);
+      assert.equal(entry.next_action_summary.false_completion_guard.verified_ledger_closes_l5, false);
+      assert.equal(entry.next_action_summary.false_completion_guard.ready_claim_authorized, false);
+      assert.equal(
+        entry.next_action_summary.next_command_examples?.record_evidence.payload_template.evidence_refs[0],
+        `owner-evidence-ref:opl-brand-l5/${entry.module_id}/live_user_path/<owner-evidence-id>`,
+      );
+      assert.equal(
+        entry.next_action_summary.next_command_examples?.record_typed_blocker_ref.creates_typed_blocker,
+        false,
+      );
+      assert.equal(
+        entry.next_action_summary.next_command_examples?.list_requirement_refs.command,
+        `opl runtime brand-module-l5-evidence list --module ${entry.module_id} --evidence-class live_user_path --json`,
+      );
 
       for (const route of entry.owner_evidence_routes) {
         assert.equal(route.module_id, entry.module_id);
@@ -582,6 +700,16 @@ test('brand module L5 evidence gate is executable but does not claim production 
         assert.equal(
           route.verification_command,
           `opl runtime brand-module-l5-evidence verify --receipt-ref opl://brand-module-l5-evidence/${entry.module_id}/${route.class_id}/typed-blocker-pending`,
+        );
+        assert.equal(route.owner_route_command_examples.record_evidence.command, 'opl runtime brand-module-l5-evidence record --payload <json> --json');
+        assert.equal(route.owner_route_command_examples.record_evidence.closes_l5, false);
+        assert.equal(route.owner_route_command_examples.record_typed_blocker_ref.closes_l5, false);
+        assert.equal(route.owner_route_command_examples.record_typed_blocker_ref.creates_typed_blocker, false);
+        assert.equal(route.owner_route_command_examples.verify_receipt.closes_l5, false);
+        assert.equal(route.owner_route_command_examples.list_requirement_refs.closes_l5, false);
+        assert.equal(
+          route.owner_route_command_examples.list_requirement_refs.command,
+          `opl runtime brand-module-l5-evidence list --module ${entry.module_id} --evidence-class ${route.class_id} --json`,
         );
         assert.equal(Array.isArray(route.existing_evidence_refs), true);
         assert.equal(Array.isArray(route.existing_blocker_refs), true);
