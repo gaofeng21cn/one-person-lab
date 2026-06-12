@@ -342,6 +342,7 @@ const lanes = {
       'tests/src/cli/cases/agents-conformance-stage-pack-v2.test.ts',
       'tests/src/cli/cases/agents-conformance-mas-tombstones.test.ts',
       'tests/src/cli/cases/agents-default-callers.test.ts',
+      'tests/src/cli/cases/agents-residue-decisions.test.ts',
       'tests/src/cli/cases/domain-pack-compiler-canonical-targets.test.ts',
       'tests/src/family-product-operator-projection.test.ts',
     ], { batchSize: 10 }),
