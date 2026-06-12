@@ -588,9 +588,15 @@ test('framework operating maturity projects owner evidence ledger refs without r
       'ledger_receipt_ref',
       'typed_blocker_ref',
     ]);
+    assert.equal(runwayLongSoakWorkOrder.observed_typed_blocker_ref_count, 1);
+    assert.equal(runwayLongSoakWorkOrder.blocker_state, 'typed_blocker_recorded');
     assert.equal(
       runwayLongSoakWorkOrder.owner_evidence_closure_state,
-      'owner_evidence_recorded_not_l5_claim',
+      'owner_typed_blocker_recorded',
+    );
+    assert.equal(
+      runwayLongSoakWorkOrder.l5_claim_status,
+      'owner_typed_blocker_recorded_not_l5_claimed',
     );
     assert.equal(runwayLongSoakWorkOrder.ready_claim_authorized, false);
     assert.equal(

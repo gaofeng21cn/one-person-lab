@@ -315,6 +315,7 @@ export function foundryAgentOsProductionEvidenceGate(input: {
       observed_evidence_refs: stringListValue(route.observed_evidence_refs),
       observed_ref_shapes: stringListValue(route.observed_ref_shapes),
       observed_ref_count: numberValue(route.observed_ref_count),
+      observed_typed_blocker_ref_count: numberValue(route.observed_typed_blocker_ref_count),
       observed_receipt_refs: stringListValue(route.observed_receipt_refs),
       observed_receipt_count: numberValue(route.observed_receipt_count),
       verified_receipt_count: numberValue(route.verified_receipt_count),
