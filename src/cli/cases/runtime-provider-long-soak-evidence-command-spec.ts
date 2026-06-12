@@ -193,5 +193,46 @@ export function buildRuntimeProviderLongSoakEvidenceCommandSpecs():
       },
     },
   };
+  const subcommands = [
+    'runtime provider-long-soak-evidence record',
+    'runtime provider-long-soak-evidence verify',
+    'runtime provider-long-soak-evidence list',
+  ].map((command) => {
+    const spec = commandSpecs[command];
+    return {
+      command,
+      usage: spec.usage,
+      summary: spec.summary,
+    };
+  });
+  commandSpecs['runtime provider-long-soak-evidence'] = {
+    usage: 'opl runtime provider-long-soak-evidence <record|verify|list>',
+    summary:
+      'Inspect or update refs-only provider long-soak evidence without claiming provider or production readiness.',
+    examples: [
+      'opl runtime provider-long-soak-evidence list --json',
+      'opl help runtime provider-long-soak-evidence record',
+    ],
+    group: 'runtime',
+    subcommands,
+    handler: (args) => {
+      assertNoArgs(args, commandSpecs['runtime provider-long-soak-evidence']);
+      return {
+        provider_long_soak_evidence_commands: {
+          surface_kind: 'opl_runtime_provider_long_soak_evidence_command_group',
+          usage: 'opl runtime provider-long-soak-evidence <record|verify|list>',
+          accepted_refs_only_result_shapes: [
+            'long_soak_ref',
+            'recovery_ref',
+            'dead_letter_ref',
+            'provider_blocker_ref',
+            'typed_blocker_ref',
+          ],
+          subcommands,
+          authority_boundary: providerLongSoakEvidenceAuthorityBoundary(),
+        },
+      };
+    },
+  };
   return commandSpecs;
 }

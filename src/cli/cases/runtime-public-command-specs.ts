@@ -164,6 +164,15 @@ export function buildPublicRuntimeCommandSpecs(
         ],
         group: 'runtime',
       }),
+    'runtime provider-long-soak-evidence':
+      cloneCommandSpec(commandSpecs['runtime provider-long-soak-evidence'], {
+        usage: 'opl runtime provider-long-soak-evidence <record|verify|list>',
+        examples: [
+          'opl runtime provider-long-soak-evidence list --json',
+          'opl help runtime provider-long-soak-evidence record',
+        ],
+        group: 'runtime',
+      }),
     'runtime provider-long-soak-evidence record':
       cloneCommandSpec(commandSpecs['runtime provider-long-soak-evidence record'], {
         usage:

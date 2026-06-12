@@ -242,6 +242,18 @@ test('framework operating maturity consumes provider long-soak evidence refs wit
   }
 });
 
+test('provider long-soak evidence namespace help exposes record verify and list commands', () => {
+  const help = runCli(['runtime', 'provider-long-soak-evidence', '--help']).help;
+
+  assert.equal(help.command, 'runtime provider-long-soak-evidence');
+  assert.match(help.summary, /provider long-soak evidence/);
+  assert.deepEqual(help.subcommands.map((entry: { command: string }) => entry.command), [
+    'runtime provider-long-soak-evidence record',
+    'runtime provider-long-soak-evidence verify',
+    'runtime provider-long-soak-evidence list',
+  ]);
+});
+
 test('framework operating maturity consumes verified App release user-path evidence without release-ready claims', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-operating-maturity-app-state-'));
   const workspaceRoot = createFamilyDefaultContractWorkspace();
