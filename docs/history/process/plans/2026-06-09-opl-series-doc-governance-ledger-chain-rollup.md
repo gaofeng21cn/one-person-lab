@@ -885,6 +885,59 @@ Coverage / carry-forward:
 - Not covered: production/default-caller evidence, App/workbench sustained consumption, Temporal long-soak, path-level source thinning, private inventory refresh, concrete source/test/workflow/package retirement lanes, or full six-repo paragraph coverage.
 - Physical retirement remains gated by MAG replacement-owner, no-active-caller, no-forbidden-write proof, owner receipt / typed blocker roundtrip or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
 
+## Fresh Intake 2026-06-12 App Runtime Architecture Field-List Compression
+
+This follow-up reopened `one-person-lab-app` for a narrow docs-only architecture
+lane after the repo remained clean, aligned to `origin/main`, and OPL Doc doctor
+was passing. It compresses runtime bridge JSON paths, diagnostic counters,
+forbidden running-task source lists, progress field names and Stage Artifact ref
+lists out of the App architecture page. It does not create a new dated ledger
+chain and does not close the parent `/goal`.
+
+Semantic theme: App architecture should state the runtime page display and
+authority boundary, while field-level runtime bridge and page-state truth
+belongs to App contracts, active-shell validation, release-boundary tests and
+OPL Framework CLI/read-model output.
+
+Single Source of Truth:
+
+- Current App architecture boundary: `one-person-lab-app/docs/architecture.md`.
+- Runtime bridge contract: `one-person-lab-app/contracts/app-runtime-bridge.json`.
+- Page-state and GUI product truth: `one-person-lab-app/contracts/app-page-state-matrix.json` and `one-person-lab-app/contracts/app-gui-product-contract.json`.
+- Active shell / release validation: `one-person-lab-app/scripts/validate-active-shell.ts` and release-boundary tests.
+- Topic-level App process provenance: `one-person-lab-app/docs/history/process/README.md`.
+
+Brand-module scope:
+
+- Primary module: `OPL Console`, because this is App/operator/runtime display semantics.
+- Coordinating modules: `OPL Charter` and `OPL Runway`, because the lane governs docs lifecycle / SSOT and runtime/provider read-model boundary wording.
+- Not touched: App contracts, shell implementation, OPL Framework runtime, domain truth, domain verdicts, artifact authority, owner receipts, typed blockers, source/tests/workflows/packages, or physical deletion gates.
+
+Edited / pushed repo-local docs:
+
+| Repo | Commit | Edited docs and result |
+| --- | --- | --- |
+| `one-person-lab-app` | `920dc28 docs: compress App runtime architecture fields` | `docs/architecture.md` now keeps the runtime page display/authority boundary without freezing App-state JSON paths, diagnostic counters, progress field names or Stage Artifact ref field lists as prose truth. `docs/history/process/README.md` records runtime architecture field-list compression as topic-level coverage. |
+
+Fresh readback boundary:
+
+- `one-person-lab-app`: `main...origin/main`, `HEAD=origin/main=920dc28`; `opl-doc-doctor` remained `finding_count=0`, `active_truth_health.status=pass`, `markdown_doc_count=23`.
+- `one-person-lab`: this rollup is the only OPL docs write for this App architecture follow-up.
+- `med-autoscience`, `med-autogrant`, `redcube-ai`, and `opl-meta-agent`: no repo-local edit in this App architecture follow-up.
+
+Verification:
+
+- App docs diff check: `git diff --check -- docs/architecture.md docs/history/process/README.md`.
+- App README/docs conflict-marker scan.
+- App residual architecture field-list scan for removed runtime bridge / diagnostic / Stage Artifact specifics.
+- App OPL Doc doctor: `finding_count=0`, `active_truth_health.status=pass`.
+
+Coverage / carry-forward:
+
+- Covered: App `docs/architecture.md` runtime page paragraphs that duplicated App-state JSON paths, diagnostic counters, forbidden-source lists, progress field names or Stage Artifact ref field lists as current prose truth.
+- Not covered: future release cohorts, Full/VM evidence, candidate shell technical proof, GUI implementation parity, install exposure live-root validation, App contract/source/test changes, full six-repo paragraph coverage, or any physical retirement lane.
+- Physical retirement remains gated by App replacement-owner, no-active-caller, no-forbidden-write proof, owner receipt / typed blocker or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
+
 ## Future Record Policy
 
 - Do not create new dated docs-governance coverage-ledger chains for ordinary process, frozen inventory, doctor transcript, branch/worktree state, command transcripts or per-run proof.
