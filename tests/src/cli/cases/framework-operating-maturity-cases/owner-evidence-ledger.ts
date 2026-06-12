@@ -342,6 +342,72 @@ test('framework operating maturity projects owner evidence ledger refs without r
       domainWorkOrder.authority_boundary.can_sign_owner_receipt,
       false,
     );
+    assert.equal(
+      maturity.current_owner_delta_bridge.owner_answer_missing,
+      true,
+    );
+    assert.equal(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff.status,
+      'domain_owner_payload_required',
+    );
+    assert.equal(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff.route_kind,
+      'owner_native_refs_only_payload',
+    );
+    assert.equal(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff.target_identity.domain_id,
+      maturity.current_owner_delta_bridge.domain_id,
+    );
+    assert.equal(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff.target_identity
+        .stage_id,
+      maturity.current_owner_delta_bridge.stage_id,
+    );
+    assert.deepEqual(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff
+        .accepted_return_shape.success_refs_path.accepted_answer_shapes,
+      maturity.current_owner_delta_bridge.accepted_answer_shape.filter(
+        (shape: string) => shape !== 'typed_blocker_ref',
+      ),
+    );
+    assert.deepEqual(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff
+        .accepted_return_shape.success_refs_path.required_any_payload_refs,
+      [],
+    );
+    assert.equal(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff
+        .accepted_return_shape.success_refs_path
+        .unsupported_by_domain_owner_payload_summary.length > 0,
+      true,
+    );
+    assert.equal(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff
+        .accepted_return_shape.success_refs_path.required_any_payload_refs.includes(
+          'typed_blocker_refs',
+        ),
+      false,
+    );
+    assert.equal(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff
+        .accepted_return_shape.success_refs_path.typed_blocker_refs_must_be_absent,
+      true,
+    );
+    assert.equal(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff
+        .ready_claim_authorized,
+      false,
+    );
+    assert.equal(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff
+        .authority_boundary.handoff_is_payload_route_only,
+      true,
+    );
+    assert.equal(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff
+        .authority_boundary.can_sign_owner_receipt,
+      false,
+    );
 
     const brandWorkOrder = workOrders.find(
       (entry: { lane: string }) => entry.lane === 'brand_module_l5_operating_maturity',

@@ -143,6 +143,84 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
       maturity.summary.current_owner_delta_owner_answer_still_required,
       maturity.current_owner_delta_bridge.owner_answer_still_required,
     );
+    assert.equal(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff.surface_kind,
+      'opl_current_owner_delta_owner_answer_closure_handoff',
+    );
+    assert.equal(
+      [
+        'refs_only_domain_owner_payload_summary',
+        'owner_native_refs_only_payload',
+      ].includes(maturity.current_owner_delta_bridge.owner_answer_closure_handoff.route_kind),
+      true,
+    );
+    assert.equal(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff.target_identity
+        .current_owner_delta_id,
+      maturity.current_owner_delta_bridge.delta_id,
+    );
+    assert.equal(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff.target_identity
+        .source_fingerprint,
+      maturity.current_owner_delta_bridge.source_fingerprint,
+    );
+    assert.equal(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff
+        .missing_binding_checklist.includes(
+          'stage_run_closeout_binding_policy_satisfied_when_present',
+        ),
+      true,
+    );
+    assert.deepEqual(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff
+        .accepted_return_shape.typed_blocker_path.required_payload_refs,
+      ['typed_blocker_refs'],
+    );
+    assert.deepEqual(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff
+        .accepted_return_shape.typed_blocker_path.accepted_answer_shapes,
+      ['typed_blocker_ref'],
+    );
+    assert.equal(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff
+        .accepted_return_shape.typed_blocker_path.success_claimed,
+      false,
+    );
+    if (
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff.route_kind
+      === 'refs_only_domain_owner_payload_summary'
+    ) {
+      assert.match(
+        maturity.current_owner_delta_bridge.owner_answer_closure_handoff.record_command,
+        /domain-owner-payload-summary record/,
+      );
+      assert.match(
+        maturity.current_owner_delta_bridge.owner_answer_closure_handoff.verify_command,
+        /domain-owner-payload-summary verify/,
+      );
+    }
+    assert.equal(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff
+        .record_target_identity_template.current_owner_delta_ref,
+      '/framework_readiness/attention_first_payload/current_owner_delta',
+    );
+    assert.deepEqual(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff
+        .typed_blocker_payload_template,
+      {
+        typed_blocker_refs: ['<domain-owned-typed-blocker-ref>'],
+      },
+    );
+    assert.equal(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff
+        .non_closing_inputs.includes('stale_attempt_owner_answer_ref'),
+      true,
+    );
+    assert.equal(
+      maturity.current_owner_delta_bridge.owner_answer_closure_handoff
+        .authority_boundary.can_create_typed_blocker,
+      false,
+    );
     assert.equal(maturity.current_owner_delta_bridge.evidence_lanes_are_audit_sidecar, true);
     assert.equal(
       maturity.current_owner_delta_bridge.evidence_lanes_can_generate_default_next_action,

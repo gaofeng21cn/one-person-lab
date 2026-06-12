@@ -192,6 +192,23 @@ function ownerRouteWorkOrderAuthorityBoundary() {
   };
 }
 
+function ownerPayloadFieldForAnswerShape(shape: string) {
+  const shapeToPayloadField: Record<string, string> = {
+    domain_owner_receipt_ref: 'domain_owner_receipt_refs',
+    domain_receipt_ref: 'domain_receipt_refs',
+    quality_gate_receipt_ref: 'quality_or_export_receipt_refs',
+    quality_or_export_receipt_ref: 'quality_or_export_receipt_refs',
+    human_gate_ref: 'human_gate_refs',
+    no_regression_ref: 'no_regression_evidence_refs',
+    reviewer_receipt_ref: 'reviewer_receipt_refs',
+    long_soak_ref: 'long_soak_refs',
+    owner_chain_ref: 'owner_chain_refs',
+    runtime_event_ref: 'runtime_event_refs',
+    typed_blocker_ref: 'typed_blocker_refs',
+  };
+  return shapeToPayloadField[shape];
+}
+
 function ownerRouteWorkOrderPolicy(lane: string) {
   const commonForbiddenClaims = [
     'domain_ready',
@@ -627,24 +644,74 @@ function currentOwnerDeltaBridge(appOperatorDrilldown: Record<string, unknown>) 
   const ownerAnswerRef =
     stringValue(currentOwnerDelta.latest_owner_answer_ref)
     ?? stringValue(hardGate.owner_answer_ref);
+  const deltaId = stringValue(currentOwnerDelta.delta_id);
+  const domainId = stringValue(currentOwnerDelta.domain_id);
+  const stageId = stringValue(currentOwnerDelta.stage_id);
+  const acceptedAnswerShape = stringListValue(currentOwnerDelta.accepted_answer_shape);
+  const acceptedSuccessAnswerShapes = acceptedAnswerShape.filter((shape) =>
+    shape !== 'typed_blocker_ref'
+  );
+  const acceptedSuccessPayloadRefs = unique(
+    acceptedSuccessAnswerShapes
+      .map(ownerPayloadFieldForAnswerShape)
+      .filter((entry): entry is string => Boolean(entry)),
+  );
+  const unsupportedSuccessAnswerShapes = acceptedSuccessAnswerShapes.filter((shape) =>
+    ownerPayloadFieldForAnswerShape(shape) === undefined
+  );
+  const usesDomainOwnerPayloadSummary = acceptedSuccessPayloadRefs.length > 0;
+  const recordCommand = usesDomainOwnerPayloadSummary
+    ? 'opl runtime domain-owner-payload-summary record --target-identity <json> --payload <json>'
+    : 'owner-native refs-only record command for current_owner_delta accepted answer shape';
+  const verifyCommand = usesDomainOwnerPayloadSummary
+    ? 'opl runtime domain-owner-payload-summary verify --receipt-ref <receipt-ref>'
+    : 'owner-native verify command for current_owner_delta owner answer ref';
+  const ownerAnswerMissing =
+    ownerAnswerRef === null
+    && acceptedAnswerShape.length > 0;
+  const ownerAnswerStillRequired =
+    ownerAnswerRef === null
+    && hardGate.human_or_domain_owner_required === true;
+  const targetIdentity = {
+    domain_id: domainId,
+    current_owner: stringValue(currentOwnerDelta.current_owner),
+    stage_id: stageId,
+    task_or_study_ref: stringValue(currentOwnerDelta.task_or_study_ref),
+    lineage_ref: stringValue(currentOwnerDelta.lineage_ref),
+    current_owner_delta_id: deltaId,
+    source_fingerprint: stringValue(currentOwnerDelta.source_fingerprint),
+    stage_run_closeout_binding_ref:
+      stringValue(currentOwnerDelta.stage_run_closeout_binding_ref),
+    stage_run_closeout_binding_policy:
+      stringValue(currentOwnerDelta.stage_run_closeout_binding_policy),
+  };
 
   return {
     surface_kind: 'opl_operating_maturity_current_owner_delta_bridge',
     source_command: 'opl framework readiness --family-defaults --json',
     source_read_model_ref:
       '/framework_readiness/attention_first_payload/current_owner_delta',
+    delta_id: deltaId,
     default_planning_root:
       stringValue(currentOwnerDelta.default_planning_root) ?? 'current_owner_delta',
     current_owner: stringValue(currentOwnerDelta.current_owner),
-    domain_id: stringValue(currentOwnerDelta.domain_id),
-    stage_id: stringValue(currentOwnerDelta.stage_id),
+    domain_id: domainId,
+    stage_id: stageId,
+    task_or_study_ref: stringValue(currentOwnerDelta.task_or_study_ref),
     lineage_ref: stringValue(currentOwnerDelta.lineage_ref),
+    source_fingerprint: stringValue(currentOwnerDelta.source_fingerprint),
     desired_delta_kind: stringValue(currentOwnerDelta.desired_delta_kind),
     desired_delta_description:
       stringValue(currentOwnerDelta.desired_delta_description),
     payload_requirement: stringValue(currentOwnerDelta.payload_requirement),
-    accepted_answer_shape: stringListValue(currentOwnerDelta.accepted_answer_shape),
+    accepted_answer_shape: acceptedAnswerShape,
     required_return_shapes: stringListValue(currentOwnerDelta.required_return_shapes),
+    missing_input_refs: stringListValue(currentOwnerDelta.missing_input_refs),
+    required_ref_shape: record(currentOwnerDelta.required_ref_shape),
+    stage_run_closeout_binding_ref:
+      stringValue(currentOwnerDelta.stage_run_closeout_binding_ref),
+    stage_run_closeout_binding_policy:
+      stringValue(currentOwnerDelta.stage_run_closeout_binding_policy),
     hard_gate: {
       state: stringValue(hardGate.state),
       human_or_domain_owner_required:
@@ -665,16 +732,84 @@ function currentOwnerDeltaBridge(appOperatorDrilldown: Record<string, unknown>) 
     next_safe_action_or_none: Object.keys(nextSafeAction).length > 0
       ? nextSafeAction
       : null,
-    owner_answer_missing:
-      ownerAnswerRef === null
-      && stringListValue(currentOwnerDelta.accepted_answer_shape).length > 0,
-    owner_answer_still_required:
-      ownerAnswerRef === null
-      && hardGate.human_or_domain_owner_required === true,
+    owner_answer_missing: ownerAnswerMissing,
+    owner_answer_still_required: ownerAnswerStillRequired,
+    owner_answer_closure_handoff: {
+      surface_kind: 'opl_current_owner_delta_owner_answer_closure_handoff',
+      status: ownerAnswerMissing || ownerAnswerStillRequired
+        ? 'domain_owner_payload_required'
+        : 'owner_answer_ref_observed_not_ready_claim',
+      route_kind: usesDomainOwnerPayloadSummary
+        ? 'refs_only_domain_owner_payload_summary'
+        : 'owner_native_refs_only_payload',
+      target_identity: targetIdentity,
+      missing_binding_checklist: [
+        'domain_id_matches_current_owner_delta',
+        'current_owner_matches_current_owner_delta',
+        'stage_or_work_unit_matches_current_owner_delta',
+        'source_fingerprint_matches_current_owner_delta',
+        'stage_run_closeout_binding_policy_satisfied_when_present',
+        'idempotency_key_matches_owner_work_unit_or_stage_run',
+      ],
+      accepted_return_shape: {
+        success_refs_path: {
+          accepted_answer_shapes: acceptedSuccessAnswerShapes,
+          required_any_payload_refs: acceptedSuccessPayloadRefs,
+          unsupported_by_domain_owner_payload_summary: unsupportedSuccessAnswerShapes,
+          typed_blocker_refs_must_be_absent: true,
+          closes_domain_ready: false,
+          can_claim_production_ready: false,
+        },
+        typed_blocker_path: {
+          accepted_answer_shapes: ['typed_blocker_ref'],
+          required_payload_refs: ['typed_blocker_refs'],
+          success_claimed: false,
+          closes_domain_ready: false,
+          can_claim_production_ready: false,
+        },
+      },
+      record_command: recordCommand,
+      verify_command: verifyCommand,
+      record_target_identity_template: {
+        domain_id: domainId,
+        source_surface: 'current_owner_delta_bridge',
+        summary_kind: 'owner_payload_item',
+        item_id: deltaId ?? stageId ?? 'current-owner-delta',
+        payload_kind: 'domain_owner_receipt_or_typed_blocker_refs',
+        current_owner_delta_ref:
+          '/framework_readiness/attention_first_payload/current_owner_delta',
+      },
+      success_refs_payload_template: {
+        domain_owner_receipt_refs: ['<domain-owned-owner-receipt-ref>'],
+        quality_or_export_receipt_refs: ['<domain-owned-quality-or-export-receipt-ref>'],
+        human_gate_refs: ['<human-gate-ref>'],
+        no_regression_evidence_refs: ['<no-regression-ref>'],
+        long_soak_refs: ['<long-soak-ref>'],
+      },
+      typed_blocker_payload_template: {
+        typed_blocker_refs: ['<domain-owned-typed-blocker-ref>'],
+      },
+      non_closing_inputs: [
+        'docs_foldback',
+        'conformance_pass',
+        'provider_completion',
+        'verified_refs_only_ledger_without_current_owner_delta_binding',
+        'stale_attempt_owner_answer_ref',
+      ],
+      ready_claim_authorized: false,
+      authority_boundary: {
+        can_write_domain_truth: false,
+        can_sign_owner_receipt: false,
+        can_create_typed_blocker: false,
+        can_claim_domain_ready: false,
+        can_claim_production_ready: false,
+        handoff_is_payload_route_only: true,
+      },
+    },
     evidence_lanes_are_audit_sidecar: true,
     evidence_lanes_can_generate_default_next_action: false,
     required_owner_answer_shapes:
-      stringListValue(currentOwnerDelta.accepted_answer_shape),
+      acceptedAnswerShape,
     authority_boundary: {
       can_write_domain_truth: false,
       can_sign_owner_receipt: false,
