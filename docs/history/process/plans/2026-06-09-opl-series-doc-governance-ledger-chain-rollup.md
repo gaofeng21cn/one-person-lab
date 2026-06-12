@@ -150,6 +150,49 @@ Coverage / carry-forward:
 - Not covered: full OPL `docs/architecture.md` / `docs/decisions.md` thinning, every OPL support/reference doc paragraph, every paragraph in the six repos' full `README*` and `docs/**/*.md` corpus, MAS status/decisions/display catalog compression, MAG architecture/status thinning, RCA status/architecture/decisions thinning, OMA script-to-pack source reductions, and all concrete physical-retirement lanes.
 - No physical source, contract, test, workflow, package, CLI/API or runtime surface deletion is authorized by this follow-up. Concrete retirement still requires replacement-owner, no-active-caller, no-forbidden-write, owner receipt / typed blocker roundtrip or explicit owner decision, and tombstone/provenance evidence.
 
+## Fresh Intake 2026-06-12 MAG/MAS/RCA Docs Compression Follow-up
+
+This follow-up continued the six-repo OPL Doc governance tranche through the highest-confidence docs-only lanes that had disjoint write sets and repo-local SSOT owners. It records only topic-level provenance and carry-forward; it is not a new dated ledger chain and does not close the parent `/goal`.
+
+Fresh six-repo readback after `git fetch`:
+
+| Repo | HEAD | Root state / protection boundary | OPL Doc doctor |
+| --- | --- | --- | --- |
+| `one-person-lab` | `1fc28d12` | `main...origin/main`; concurrent managed-update contract/source/test edits are outside this docs tranche. | `finding_count=0`; `active_truth_health.status=pass`; `markdown_doc_count=230` |
+| `med-autoscience` | `50863df3f` | `main...origin/main`; concurrent current-action source edits are outside the docs-only write set. | `finding_count=0`; `active_truth_health.status=pass`; `markdown_doc_count=273` |
+| `med-autogrant` | `03b3949` | `main...origin/main`; clean after the MAG docs compression commit. | `finding_count=0`; `active_truth_health.status=pass`; `markdown_doc_count=51` |
+| `redcube-ai` | `d6661a86` | `main...origin/main`; clean after the RCA docs compression commit. | `finding_count=0`; `active_truth_health.status=pass`; `markdown_doc_count=93` |
+| `opl-meta-agent` | `d677c08` | `main...origin/main`; no-op readback, clean. | `finding_count=0`; `active_truth_health.status=pass`; `markdown_doc_count=14` |
+| `one-person-lab-app` | `cbbd565` | `main...origin/main`; concurrent App shell validator edit is outside this docs tranche. | `finding_count=0`; `active_truth_health.status=pass`; `markdown_doc_count=23` |
+
+Edited / pushed repo-local docs:
+
+| Repo | Commit | SSOT theme | Edited docs and result |
+| --- | --- | --- | --- |
+| `med-autogrant` | `03b3949 docs: compress MAG doc implementation lists` | MAG active truth remains `docs/active/mag-ideal-state-cross-repo-gap-plan.md`; architecture/status support docs must not preserve dated implementation ledgers as current truth. | `docs/architecture.md` compresses implementation entry/execution lists into an owner/role table; `docs/status.md` compresses dated canary proof into provenance input; `docs/history/docs-portfolio-coverage-ledger/README.md` records coverage and no physical-retirement authorization. |
+| `med-autoscience` | `50863df3f docs: fold display pack compatibility wording` | MAS display-pack current truth remains the active plan, medical display contracts/source/tests and single-figure grammar; legacy `python_plugin` / `figure_spec.json` wording is adapter/provenance, not compatibility policy. | `docs/decisions.md` and `docs/delivery/medical-display/examples/display_pack_v2_e2e_skeleton.md` remove active compatibility reading; `docs/history/program/display_pack_docs_ssot_closeout_2026_06_12.md` and `docs/history/program/README.md` preserve compact provenance. |
+| `redcube-ai` | `d6661a86 docs: compress RCA lifecycle migration list` | RCA process migration truth belongs to the active plan, lifecycle source/contracts/tests and process history index; itemized migration ledgers are provenance. | `docs/docs_portfolio_consolidation.md` compresses the lifecycle migration longlist into current semantic owner/disposition rows; `docs/history/process/README.md` records the topic-level process row. |
+
+No-op / protected repos:
+
+- `opl-meta-agent`: no new edit; tracked human-doc inventory remains small, clean and covered by its active plan / process index shape. Reopen only for a concrete current conflict, new support-doc role pollution, or script-to-pack / target-agent evidence foldback.
+- `one-person-lab-app`: no new docs edit in this follow-up because the root checkout has an unrelated App shell validator write set. App docs governance remains under `docs/active/app-ideal-state-gap-plan.md`, release contracts/workflows/validators and repo-local process provenance.
+- `one-person-lab`: this rollup is the only OPL docs write in this follow-up. Concurrent managed-update files are intentionally not touched or described as docs-governance outputs.
+
+Post-push concurrent activity note: after this OPL rollup closeout was first pushed, `med-autoscience` was observed at `36a41bb9a` with unrelated local docs changes in `docs/runtime/control/progress_first_stage_outcome.md`, `docs/runtime/designs/stage_route_reconcile_target.md` and `docs/status.md`. A later final status readback observed MAS clean at `8f3f8a6fd` with `main...origin/main`; both later MAS states are outside this MAG/MAS/RCA compression follow-up and need their own MAS owner-lane readback before any additional MAS docs-governance claim.
+
+Verification already completed in the edited repos:
+
+- MAG: `git diff --check`, line-start conflict-marker scan, `opl-doc-doctor doctor /Users/gaofeng/workspace/med-autogrant --format json`.
+- MAS: `git diff --check`, line-start conflict-marker scan, `opl-doc-doctor doctor /Users/gaofeng/workspace/med-autoscience --format json`; the branch was rebased over a moving remote before push.
+- RCA: `git diff --check`, line-start conflict-marker scan, `opl-doc-doctor doctor /Users/gaofeng/workspace/redcube-ai --format json`.
+
+Coverage / carry-forward:
+
+- Covered: high-confidence historical-increment compression and active/support role correction in MAG architecture/status, MAS display-pack compatibility wording, and RCA lifecycle migration history.
+- Not covered: full paragraph-level coverage of all six repos' `README*` and `docs/**/*.md`, OPL `architecture.md` / `decisions.md` residual thinning, App release/install/runtime docs beyond existing owners, OMA script-to-pack reductions, and every source/test/workflow/package/CLI/API physical-retirement lane.
+- Physical retirement remains gated by replacement-owner, no-active-caller, no-forbidden-write, owner receipt / typed blocker roundtrip or explicit owner decision, and tombstone/provenance evidence in the owning repo. This docs-only follow-up authorizes no physical deletion.
+
 ## Future Record Policy
 
 - Do not create new dated docs-governance coverage-ledger chains for ordinary process, frozen inventory, doctor transcript, branch/worktree state, command transcripts or per-run proof.
