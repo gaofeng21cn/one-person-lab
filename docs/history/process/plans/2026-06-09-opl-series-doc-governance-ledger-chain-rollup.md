@@ -831,6 +831,60 @@ Coverage / carry-forward:
 - Not covered: production-like no-regression evidence, Temporal visual-stage long soak itself, generated/default caller thinning, concrete source/contract/test retirement lanes, or full six-repo paragraph coverage.
 - Physical retirement remains gated by RCA replacement-owner, no-active-caller, no-forbidden-write proof, owner receipt / typed blocker roundtrip or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
 
+## Fresh Intake 2026-06-12 MAG Status Stage Progress Evidence Compression
+
+This follow-up reopened `med-autogrant` for a narrow docs-only current-status
+lane after the repo remained clean, aligned to `origin/main`, and OPL Doc doctor
+was passing. It compresses live progress refs, Stage Folder / artifact mapping
+detail, package lifecycle ref names and legacy residue refs out of the MAG
+current status page. It does not create a new dated ledger chain and does not
+close the parent `/goal`.
+
+Semantic theme: MAG status is a current readout and evidence-boundary pointer.
+Field-level live-progress refs, Stage Folder Kernel mappings, production
+acceptance payloads, retired residue refs and physical-delete gates belong to
+contracts, active plans, private inventory, source/tests and retired-surface
+provenance.
+
+Single Source of Truth:
+
+- Current MAG status readout: `med-autogrant/docs/status.md`.
+- Current live stage progress owner answer: `med-autogrant/contracts/live_stage_run_progress_evidence.json`.
+- Stage/progress and artifact mapping: `med-autogrant/contracts/stage_control_plane.json`, production acceptance contracts, stage-native artifact contracts, source/builders and focused tests.
+- Active gap and physical-delete gates: `med-autogrant/docs/active/mag-ideal-state-cross-repo-gap-plan.md`, `med-autogrant/docs/active/opl-private-implementation-migration-inventory.md`, `med-autogrant/contracts/private_functional_surface_policy.json` and `med-autogrant/contracts/foundry_agent_series.json`.
+- Topic-level MAG process provenance: `med-autogrant/docs/history/docs-portfolio-coverage-ledger/README.md` and retired-surface provenance.
+
+Brand-module scope:
+
+- Primary module: `OPL Charter`, because this is docs lifecycle / SSOT governance.
+- Coordinating modules: `OPL Runway`, `OPL Foundry Lab` and `OPL Console`, because the compressed text concerns provider/read-model evidence, standard Foundry Agent stage/progress contracts and App/operator readouts.
+- Not touched: MAG grant truth, fundability / quality / export verdicts, artifact authority, owner receipts, typed blockers, contracts/source/tests/CLI/API/workflows/packages, or physical deletion gates.
+
+Edited / pushed repo-local docs:
+
+| Repo | Commit | Edited docs and result |
+| --- | --- | --- |
+| `med-autogrant` | `b62b296 docs: compress MAG status stage progress evidence` | `docs/status.md` now summarizes live progress, Stage Folder / progress contracts and retired residue as current readouts, while routing payload field names, file-level kernel mappings and retired receipt shapes back to contracts, source/tests, active inventory and provenance. `docs/history/docs-portfolio-coverage-ledger/README.md` records status stage-progress compression as topic-level coverage. |
+
+Fresh readback boundary:
+
+- `med-autogrant`: `main...origin/main`, `HEAD=origin/main=b62b296`; `opl-doc-doctor` remained `finding_count=0`, `active_truth_health.status=pass`, `markdown_doc_count=51`.
+- `one-person-lab`: this rollup is the only OPL docs write for this MAG status follow-up. Concurrent `src/workspace-initializer*` source edits are outside this docs-governance tranche.
+- `med-autoscience`, `redcube-ai`, `opl-meta-agent`, and `one-person-lab-app`: no repo-local edit in this MAG status follow-up.
+
+Verification:
+
+- MAG docs diff check: `git diff --check -- docs/status.md docs/history/docs-portfolio-coverage-ledger/README.md`.
+- MAG README/docs conflict-marker scan.
+- MAG residual status field/payload scan for removed Stage Folder / live-progress / retired-residue specifics.
+- MAG OPL Doc doctor: `finding_count=0`, `active_truth_health.status=pass`.
+
+Coverage / carry-forward:
+
+- Covered: MAG `docs/status.md` paragraphs and status-table rows that duplicated live progress refs, Stage Folder / artifact contract fields, production acceptance payloads or retired residue refs as current prose truth.
+- Not covered: production/default-caller evidence, App/workbench sustained consumption, Temporal long-soak, path-level source thinning, private inventory refresh, concrete source/test/workflow/package retirement lanes, or full six-repo paragraph coverage.
+- Physical retirement remains gated by MAG replacement-owner, no-active-caller, no-forbidden-write proof, owner receipt / typed blocker roundtrip or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
+
 ## Future Record Policy
 
 - Do not create new dated docs-governance coverage-ledger chains for ordinary process, frozen inventory, doctor transcript, branch/worktree state, command transcripts or per-run proof.
