@@ -56,6 +56,8 @@ function cohortIdsFromRecord(value: JsonRecord) {
       'operator_long_soak_refs',
       'app_user_path_long_soak_refs',
       'production_long_soak_refs',
+      'install_evidence_refs',
+      'install_receipt_refs',
     ]).map(versionCohortFromRef).filter((entry): entry is string => Boolean(entry)),
   ]);
 }

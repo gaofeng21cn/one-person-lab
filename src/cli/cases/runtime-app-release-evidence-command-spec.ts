@@ -1,4 +1,5 @@
 import {
+  appReleaseUserPathEvidencePayloadPreflight,
   listAppReleaseUserPathEvidenceReceipts,
   recordAppReleaseUserPathEvidenceReceipts,
   verifyAppReleaseUserPathEvidenceReceipt,
@@ -59,12 +60,38 @@ function parseRuntimeAppReleaseEvidencePayload(
     provider_state_linkage_refs: stringList(
       parsed.provider_state_linkage_refs ?? parsed.provider_state_linkage_ref,
     ),
+    install_evidence_refs: stringList(
+      parsed.install_evidence_refs ?? parsed.install_evidence_ref,
+    ),
     long_operator_evidence_refs: stringList(
       parsed.long_operator_evidence_refs ?? parsed.long_operator_evidence_ref,
+    ),
+    release_owner_receipt_refs: stringList(
+      parsed.release_owner_receipt_refs ?? parsed.release_owner_receipt_ref,
     ),
     typed_blocker_refs: stringList(parsed.typed_blocker_refs ?? parsed.typed_blocker_ref),
     receipt_ref: optionalString(parsed.receipt_ref),
   };
+}
+
+function assertRuntimeAppReleaseEvidencePayloadPreflight(
+  payload: AppReleaseUserPathEvidenceReceiptInput,
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  const preflight = appReleaseUserPathEvidencePayloadPreflight(payload);
+  if (preflight.can_record_refs_only_receipt === true) {
+    return payload;
+  }
+  throw buildUsageError(
+    'runtime app-release-evidence record payload must choose exactly one refs-only evidence path.',
+    spec,
+    {
+      error_kind: 'app_release_user_path_evidence_payload_preflight_blocked',
+      receipt_recorded: false,
+      required_any: preflight.required_any,
+      preflight,
+    },
+  );
 }
 
 function parseRuntimeAppReleaseEvidenceRecordArgs(
@@ -306,8 +333,11 @@ export function buildRuntimeAppReleaseEvidenceCommandSpecs(): Record<string, Com
       handler: (args) => ({
         app_release_user_path_evidence_ledger_record:
           recordAppReleaseUserPathEvidenceReceipts([
-            parseRuntimeAppReleaseEvidenceRecordArgs(
-              args,
+            assertRuntimeAppReleaseEvidencePayloadPreflight(
+              parseRuntimeAppReleaseEvidenceRecordArgs(
+                args,
+                commandSpecs['runtime app-release-evidence record'],
+              ),
               commandSpecs['runtime app-release-evidence record'],
             ),
           ]),

@@ -324,6 +324,35 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
   );
   assert.equal(defaultCallers.physical_delete_authority_read_model.physical_delete_authorized, false);
   assert.equal(defaultCallers.physical_delete_authority_read_model.default_caller_delete_ready, false);
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.private_platform_cleanup_lane.status,
+    'empty',
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.private_platform_cleanup_lane
+      .owner_decision_work_order.status,
+    'no_private_residue_classified_not_delete_ready',
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.private_platform_cleanup_lane
+      .owner_decision_work_order.open_decision_count,
+    0,
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.private_platform_cleanup_lane
+      .owner_decision_work_order.physical_delete_authorized,
+    false,
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.private_platform_cleanup_lane
+      .owner_decision_work_order.open_count_semantics,
+    'zero_residue_gate_count_means_no_cleanup_lane_items_not_physical_delete_authorized',
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.private_platform_cleanup_lane
+      .owner_decision_work_order.forbidden_opl_claims.includes('domain_repo_physical_delete_authorization'),
+    true,
+  );
   assert.deepEqual(
     defaultCallersPayload.physical_delete_authority_read_model,
     defaultCallers.physical_delete_authority_read_model,
@@ -834,6 +863,28 @@ test('agents default-callers separates ordinary default lane from private residu
   assert.equal(
     readModel.private_platform_cleanup_lane.residue_gate_summary.owner_typed_blocker,
     1,
+  );
+  assert.equal(
+    readModel.private_platform_cleanup_lane.owner_decision_work_order.status,
+    'owner_delete_keep_or_typed_blocker_decision_required',
+  );
+  assert.equal(
+    readModel.private_platform_cleanup_lane.owner_decision_work_order.open_decision_count,
+    2,
+  );
+  assert.equal(
+    readModel.private_platform_cleanup_lane.owner_decision_work_order.ready_claim_authorized,
+    false,
+  );
+  assert.equal(
+    readModel.private_platform_cleanup_lane.owner_decision_work_order.accepted_refs_only_result_shapes
+      .includes('typed_blocker_ref'),
+    true,
+  );
+  assert.equal(
+    readModel.private_platform_cleanup_lane.owner_decision_work_order.authority_boundary
+      .work_order_can_delete_domain_repo_files,
+    false,
   );
   assert.equal(
     readModel.private_platform_cleanup_lane.next_required_owner_action,

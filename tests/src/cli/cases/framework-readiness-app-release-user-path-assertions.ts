@@ -65,11 +65,16 @@ export function assertFrameworkAppReleaseUserPathAction(
   );
   assert.equal(
     appUserPathAction.payload_workorder.accepted_payload_path_policy,
-    'real_app_release_user_path_refs_or_typed_blocker_path_empty_template_blocks',
+    'same_cohort_release_user_path_refs_release_owner_verdict_or_typed_blocker_path_empty_template_blocks',
   );
   assert.equal(
     appUserPathAction.payload_workorder.accepted_payload_paths
       .app_release_user_path_refs_path.closes_app_release_user_path,
+    false,
+  );
+  assert.equal(
+    appUserPathAction.payload_workorder.accepted_payload_paths
+      .release_owner_verdict_path.success_claimed_by_opl,
     false,
   );
   assert.equal(

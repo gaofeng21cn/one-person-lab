@@ -226,6 +226,36 @@ test('framework operating maturity projects owner evidence ledger refs without r
     assert.equal(masRoute.observed_ref_counts.quality_or_export_receipt_ref_count, 1);
     assert.equal(masRoute.observed_ref_counts.reviewer_receipt_ref_count, 1);
     assert.equal(masRoute.observed_ref_counts.long_soak_ref_count, 1);
+    assert.equal(masRoute.owner_repo, `${workspaceRoot}/med-autoscience`);
+    assert.equal(masRoute.next_owner_repo, `${workspaceRoot}/med-autoscience`);
+    assert.equal(
+      masRoute.closing_ref_source,
+      'contracts/live_stage_run_progress_evidence.json#domain_owner_receipt_refs|typed_blocker_refs|human_gate_refs|quality_or_export_receipt_refs|no_regression_refs|long_soak_refs',
+    );
+    assert.equal(
+      masRoute.typed_blocker_source,
+      'contracts/live_stage_run_progress_evidence.json#typed_blocker_refs',
+    );
+    assert.equal(
+      masRoute.verification_commands.includes(
+        `opl agents conformance --agent mas=${workspaceRoot}/med-autoscience --json`,
+      ),
+      true,
+    );
+    assert.equal(
+      masRoute.source_command,
+      `opl agents conformance --agent mas=${workspaceRoot}/med-autoscience --json`,
+    );
+    assert.equal(masRoute.forbidden_opl_claims.includes('live_domain_progress_complete'), true);
+    assert.equal(masRoute.forbidden_opl_claims.includes('owner_receipt_signed_by_opl'), true);
+    assert.equal(masRoute.non_closing_inputs.includes('controlled_canary_pass'), true);
+    assert.equal(
+      masRoute.stop_loss.includes(
+        'if verification commands fail, keep the domain in required_from_domain_owner or owner_typed_blocker_recorded_not_ready_claim and do not claim domain_ready',
+      ),
+      true,
+    );
+    assert.equal(masRoute.ready_claim_authorized, false);
     assert.equal(masRoute.authority_boundary.can_sign_owner_receipt, false);
     assert.equal(masRoute.authority_boundary.can_create_typed_blocker, false);
     const magRoute = domainRoutes.find(
@@ -470,12 +500,12 @@ test('framework operating maturity projects owner evidence ledger refs without r
     assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.summary
         .brand_module_l5_existing_blocker_ref_work_order_count,
-      10,
+      90,
     );
     assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.summary
         .brand_module_l5_observed_ref_work_order_count,
-      51,
+      130,
     );
     assert.equal(
       maturity.foundry_agent_os_production_evidence_gate
@@ -493,7 +523,7 @@ test('framework operating maturity projects owner evidence ledger refs without r
     );
     assert.equal(
       charterLivePathWorkOrder.owner_evidence_closure_state,
-      'owner_acceptance_or_typed_blocker_required',
+      'owner_typed_blocker_recorded',
     );
     assert.equal(
       charterLivePathWorkOrder.owner_repo,
@@ -622,11 +652,11 @@ test('framework operating maturity projects owner evidence ledger refs without r
           entry.module_id === 'runway' && entry.class_id === 'long_soak_recovery',
       );
     assert.equal(runwayLongSoakWorkOrder.observed_receipt_refs[0], l5Record.receipt_ref);
-    assert.deepEqual(runwayLongSoakWorkOrder.observed_ref_shapes, [
+    assert.deepEqual([...runwayLongSoakWorkOrder.observed_ref_shapes].sort(), [
       'ledger_receipt_ref',
       'typed_blocker_ref',
     ]);
-    assert.equal(runwayLongSoakWorkOrder.observed_typed_blocker_ref_count, 1);
+    assert.equal(runwayLongSoakWorkOrder.observed_typed_blocker_ref_count, 2);
     assert.equal(runwayLongSoakWorkOrder.blocker_state, 'typed_blocker_recorded');
     assert.equal(
       runwayLongSoakWorkOrder.owner_evidence_closure_state,

@@ -193,32 +193,50 @@
         {
           "class_id": "live_user_path",
           "owner": "OPL Framework docs governance",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/charter/live_user_path/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "ordinary_app_experience",
           "owner": "OPL Framework and App product owners",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/charter/ordinary_app_experience/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "cross_agent_scaleout",
           "owner": "OPL Framework docs governance",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/charter/cross_agent_scaleout/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "long_soak_recovery",
           "owner": "OPL Framework docs governance",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/charter/long_soak_recovery/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "release_install_evidence",
           "owner": "OPL Framework docs governance",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/charter/release_install_evidence/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "operator_repair_loop",
           "owner": "OPL Framework docs governance",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/charter/operator_repair_loop/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "owner_acceptance",
@@ -258,7 +276,10 @@
         {
           "class_id": "capability_fail_open_boundary",
           "owner": "OPL Framework owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/charter/capability_fail_open_boundary/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "domain_authority_false_boundary",
@@ -272,7 +293,10 @@
         {
           "class_id": "cross_agent_foundry_agent_os_adoption",
           "owner": "OPL Charter owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/charter/cross_agent_foundry_agent_os_adoption/owner-evidence-needed-20260612"
+          ]
         }
       ],
       "not_claims": [
@@ -298,32 +322,50 @@
         {
           "class_id": "live_user_path",
           "owner": "OPL Framework catalog owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/atlas/live_user_path/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "ordinary_app_experience",
           "owner": "OPL Framework and App product owners",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/atlas/ordinary_app_experience/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "cross_agent_scaleout",
           "owner": "OPL Framework catalog owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/atlas/cross_agent_scaleout/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "long_soak_recovery",
           "owner": "OPL Framework catalog owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/atlas/long_soak_recovery/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "release_install_evidence",
           "owner": "OPL Framework catalog owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/atlas/release_install_evidence/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "operator_repair_loop",
           "owner": "OPL Framework catalog owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/atlas/operator_repair_loop/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "owner_acceptance",
@@ -363,7 +405,10 @@
         {
           "class_id": "capability_fail_open_boundary",
           "owner": "OPL Atlas owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/atlas/capability_fail_open_boundary/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "domain_authority_false_boundary",
@@ -377,7 +422,10 @@
         {
           "class_id": "cross_agent_foundry_agent_os_adoption",
           "owner": "OPL Atlas owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/atlas/cross_agent_foundry_agent_os_adoption/owner-evidence-needed-20260612"
+          ]
         }
       ],
       "not_claims": [
@@ -404,32 +452,50 @@
         {
           "class_id": "live_user_path",
           "owner": "OPL Workspace owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/workspace/live_user_path/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "ordinary_app_experience",
           "owner": "OPL Framework and App product owners",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/workspace/ordinary_app_experience/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "cross_agent_scaleout",
           "owner": "OPL Workspace owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/workspace/cross_agent_scaleout/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "long_soak_recovery",
           "owner": "OPL Workspace owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/workspace/long_soak_recovery/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "release_install_evidence",
           "owner": "OPL Workspace owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/workspace/release_install_evidence/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "operator_repair_loop",
           "owner": "OPL Workspace owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/workspace/operator_repair_loop/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "owner_acceptance",
@@ -469,7 +535,10 @@
         {
           "class_id": "capability_fail_open_boundary",
           "owner": "OPL Framework owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/workspace/capability_fail_open_boundary/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "domain_authority_false_boundary",
@@ -483,7 +552,10 @@
         {
           "class_id": "cross_agent_foundry_agent_os_adoption",
           "owner": "OPL Workspace owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/workspace/cross_agent_foundry_agent_os_adoption/owner-evidence-needed-20260612"
+          ]
         }
       ],
       "not_claims": [
@@ -510,32 +582,50 @@
         {
           "class_id": "live_user_path",
           "owner": "OPL Pack owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/pack/live_user_path/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "ordinary_app_experience",
           "owner": "OPL Framework and App product owners",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/pack/ordinary_app_experience/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "cross_agent_scaleout",
           "owner": "OPL Pack owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/pack/cross_agent_scaleout/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "long_soak_recovery",
           "owner": "OPL Pack owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/pack/long_soak_recovery/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "release_install_evidence",
           "owner": "OPL Pack owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/pack/release_install_evidence/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "operator_repair_loop",
           "owner": "OPL Pack owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/pack/operator_repair_loop/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "owner_acceptance",
@@ -575,7 +665,10 @@
         {
           "class_id": "capability_fail_open_boundary",
           "owner": "OPL Pack owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/pack/capability_fail_open_boundary/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "domain_authority_false_boundary",
@@ -589,7 +682,10 @@
         {
           "class_id": "cross_agent_foundry_agent_os_adoption",
           "owner": "OPL Pack owner + domain pack owners",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/pack/cross_agent_foundry_agent_os_adoption/owner-evidence-needed-20260612"
+          ]
         }
       ],
       "not_claims": [
@@ -620,32 +716,50 @@
         {
           "class_id": "live_user_path",
           "owner": "OPL Stagecraft owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/stagecraft/live_user_path/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "ordinary_app_experience",
           "owner": "OPL Framework and App product owners",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/stagecraft/ordinary_app_experience/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "cross_agent_scaleout",
           "owner": "OPL Stagecraft owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/stagecraft/cross_agent_scaleout/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "long_soak_recovery",
           "owner": "OPL Stagecraft owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/stagecraft/long_soak_recovery/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "release_install_evidence",
           "owner": "OPL Stagecraft owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/stagecraft/release_install_evidence/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "operator_repair_loop",
           "owner": "OPL Stagecraft owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/stagecraft/operator_repair_loop/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "owner_acceptance",
@@ -685,7 +799,10 @@
         {
           "class_id": "capability_fail_open_boundary",
           "owner": "OPL Stagecraft owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/stagecraft/capability_fail_open_boundary/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "domain_authority_false_boundary",
@@ -699,7 +816,10 @@
         {
           "class_id": "cross_agent_foundry_agent_os_adoption",
           "owner": "OPL Stagecraft owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/stagecraft/cross_agent_foundry_agent_os_adoption/owner-evidence-needed-20260612"
+          ]
         }
       ],
       "not_claims": [
@@ -726,32 +846,50 @@
         {
           "class_id": "live_user_path",
           "owner": "OPL Runway owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/runway/live_user_path/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "ordinary_app_experience",
           "owner": "OPL Framework and App product owners",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/runway/ordinary_app_experience/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "cross_agent_scaleout",
           "owner": "OPL Runway owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/runway/cross_agent_scaleout/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "long_soak_recovery",
           "owner": "OPL Runway owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/runway/long_soak_recovery/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "release_install_evidence",
           "owner": "OPL Runway owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/runway/release_install_evidence/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "operator_repair_loop",
           "owner": "OPL Runway owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/runway/operator_repair_loop/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "owner_acceptance",
@@ -791,7 +929,10 @@
         {
           "class_id": "capability_fail_open_boundary",
           "owner": "OPL Framework owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/runway/capability_fail_open_boundary/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "domain_authority_false_boundary",
@@ -805,7 +946,10 @@
         {
           "class_id": "cross_agent_foundry_agent_os_adoption",
           "owner": "OPL Runway owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/runway/cross_agent_foundry_agent_os_adoption/owner-evidence-needed-20260612"
+          ]
         }
       ],
       "not_claims": [
@@ -832,32 +976,50 @@
         {
           "class_id": "live_user_path",
           "owner": "OPL Vault owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/vault/live_user_path/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "ordinary_app_experience",
           "owner": "OPL Framework and App product owners",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/vault/ordinary_app_experience/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "cross_agent_scaleout",
           "owner": "OPL Vault owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/vault/cross_agent_scaleout/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "long_soak_recovery",
           "owner": "OPL Vault owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/vault/long_soak_recovery/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "release_install_evidence",
           "owner": "OPL Vault owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/vault/release_install_evidence/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "operator_repair_loop",
           "owner": "OPL Vault owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/vault/operator_repair_loop/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "owner_acceptance",
@@ -897,7 +1059,10 @@
         {
           "class_id": "capability_fail_open_boundary",
           "owner": "OPL Framework owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/vault/capability_fail_open_boundary/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "domain_authority_false_boundary",
@@ -911,7 +1076,10 @@
         {
           "class_id": "cross_agent_foundry_agent_os_adoption",
           "owner": "OPL Vault owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/vault/cross_agent_foundry_agent_os_adoption/owner-evidence-needed-20260612"
+          ]
         }
       ],
       "not_claims": [
@@ -939,32 +1107,50 @@
         {
           "class_id": "live_user_path",
           "owner": "One Person Lab App owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/console/live_user_path/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "ordinary_app_experience",
           "owner": "OPL Console and App product owners",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/console/ordinary_app_experience/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "cross_agent_scaleout",
           "owner": "One Person Lab App owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/console/cross_agent_scaleout/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "long_soak_recovery",
           "owner": "OPL Console owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/console/long_soak_recovery/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "release_install_evidence",
           "owner": "One Person Lab App release owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/console/release_install_evidence/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "operator_repair_loop",
           "owner": "OPL Console owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/console/operator_repair_loop/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "owner_acceptance",
@@ -1004,7 +1190,10 @@
         {
           "class_id": "capability_fail_open_boundary",
           "owner": "OPL Framework owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/console/capability_fail_open_boundary/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "domain_authority_false_boundary",
@@ -1018,7 +1207,10 @@
         {
           "class_id": "cross_agent_foundry_agent_os_adoption",
           "owner": "OPL Console owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/console/cross_agent_foundry_agent_os_adoption/owner-evidence-needed-20260612"
+          ]
         }
       ],
       "not_claims": [
@@ -1045,32 +1237,50 @@
         {
           "class_id": "live_user_path",
           "owner": "OPL Foundry Lab owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/foundry-lab/live_user_path/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "ordinary_app_experience",
           "owner": "OPL Framework and App product owners",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/foundry-lab/ordinary_app_experience/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "cross_agent_scaleout",
           "owner": "OPL Foundry Lab owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/foundry-lab/cross_agent_scaleout/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "long_soak_recovery",
           "owner": "OPL Foundry Lab owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/foundry-lab/long_soak_recovery/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "release_install_evidence",
           "owner": "OPL Foundry Lab owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/foundry-lab/release_install_evidence/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "operator_repair_loop",
           "owner": "OPL Foundry Lab owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/foundry-lab/operator_repair_loop/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "owner_acceptance",
@@ -1110,7 +1320,10 @@
         {
           "class_id": "capability_fail_open_boundary",
           "owner": "OPL Framework owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/foundry-lab/capability_fail_open_boundary/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "domain_authority_false_boundary",
@@ -1124,7 +1337,10 @@
         {
           "class_id": "cross_agent_foundry_agent_os_adoption",
           "owner": "OPL Foundry Lab owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/foundry-lab/cross_agent_foundry_agent_os_adoption/owner-evidence-needed-20260612"
+          ]
         }
       ],
       "not_claims": [
@@ -1149,32 +1365,50 @@
         {
           "class_id": "live_user_path",
           "owner": "OPL Connect owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/connect/live_user_path/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "ordinary_app_experience",
           "owner": "OPL Connect and App product owners",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/connect/ordinary_app_experience/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "cross_agent_scaleout",
           "owner": "OPL Connect owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/connect/cross_agent_scaleout/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "long_soak_recovery",
           "owner": "OPL Connect owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/connect/long_soak_recovery/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "release_install_evidence",
           "owner": "OPL Connect and App release owners",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/connect/release_install_evidence/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "operator_repair_loop",
           "owner": "OPL Connect owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/connect/operator_repair_loop/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "owner_acceptance",
@@ -1214,7 +1448,10 @@
         {
           "class_id": "capability_fail_open_boundary",
           "owner": "OPL Framework owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/connect/capability_fail_open_boundary/owner-evidence-needed-20260612"
+          ]
         },
         {
           "class_id": "domain_authority_false_boundary",
@@ -1228,7 +1465,10 @@
         {
           "class_id": "cross_agent_foundry_agent_os_adoption",
           "owner": "OPL Connect owner",
-          "current_state": "open"
+          "current_state": "open",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/connect/cross_agent_foundry_agent_os_adoption/owner-evidence-needed-20260612"
+          ]
         }
       ],
       "not_claims": [

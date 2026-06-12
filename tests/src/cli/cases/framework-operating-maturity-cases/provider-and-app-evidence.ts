@@ -305,6 +305,35 @@ test('framework operating maturity consumes verified App release user-path evide
     assert.equal(maturity.app_release_user_path.typed_blocker_ref_count, 0);
     assert.equal(maturity.app_release_user_path.verified_ledger_receipt_ref_count, 1);
     assert.equal(
+      maturity.app_release_user_path.release_owner_verdict_handoff.status,
+      'release_owner_verdict_required',
+    );
+    assert.equal(
+      maturity.app_release_user_path.release_owner_verdict_handoff.owner_repo,
+      '/Users/gaofeng/workspace/one-person-lab-app',
+    );
+    assert.equal(
+      maturity.app_release_user_path.release_owner_verdict_handoff.required_delta,
+      'release_owner_receipt_install_evidence_or_typed_blocker_ref',
+    );
+    assert.deepEqual(
+      maturity.app_release_user_path.release_owner_verdict_handoff.accepted_ref_shapes,
+      [
+        'release_owner_receipt_ref',
+        'install_evidence_ref',
+        'typed_blocker_ref',
+      ],
+    );
+    assert.equal(
+      maturity.app_release_user_path.release_owner_verdict_handoff.release_ready_authorized,
+      false,
+    );
+    assert.equal(
+      maturity.app_release_user_path.release_owner_verdict_handoff.authority_boundary
+        .can_claim_release_ready,
+      false,
+    );
+    assert.equal(
       maturity.app_release_user_path.selected_cohort_id,
       'app-release-cohort:26.5.28-draft.20260527235839',
     );
@@ -360,6 +389,22 @@ test('framework operating maturity consumes verified App release user-path evide
     );
     assert.equal(appReleaseWorkOrder.owner_acceptance_required, true);
     assert.equal(appReleaseWorkOrder.ready_claim_authorized, false);
+    assert.equal(
+      appReleaseWorkOrder.next_owner_action,
+      'same_cohort_release_user_path_receipt_release_owner_receipt_install_evidence_or_release_owner_typed_blocker',
+    );
+    assert.equal(
+      appReleaseWorkOrder.closing_ref_source,
+      'one_person_lab_app_release_owner_receipt_install_evidence_or_same_cohort_release_evidence_ref',
+    );
+    assert.equal(
+      appReleaseWorkOrder.accepted_ref_shapes.includes('release_owner_receipt_ref'),
+      true,
+    );
+    assert.equal(
+      appReleaseWorkOrder.accepted_ref_shapes.includes('install_evidence_ref'),
+      true,
+    );
     assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.summary
         .owner_evidence_recorded_not_ready_claim_work_order_count,

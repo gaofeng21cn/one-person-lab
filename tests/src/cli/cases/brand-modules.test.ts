@@ -501,7 +501,7 @@ test('brand module L5 evidence gate is executable but does not claim production 
       assert.equal(entry.next_action_summary.l5_can_be_claimed, false);
       assert.equal(
         entry.next_action_summary.next_owner_action,
-        'record_owner_evidence_ref_or_typed_blocker_for_l5_requirement',
+        'resolve_typed_blocker_or_record_owner_acceptance_ref',
       );
       assert.equal(
         entry.next_action_summary.next_work_order_id,
@@ -527,22 +527,13 @@ test('brand module L5 evidence gate is executable but does not claim production 
         ),
         true,
       );
-      assert.equal(entry.next_action_summary.missing_owner_evidence_class_count, 8);
+      assert.equal(entry.next_action_summary.missing_owner_evidence_class_count, 0);
       assert.equal(entry.next_action_summary.observed_refs_not_l5_claim_class_count, 4);
-      assert.equal(entry.next_action_summary.typed_blocker_recorded_class_count, 1);
+      assert.equal(entry.next_action_summary.typed_blocker_recorded_class_count, 9);
       assert.equal(entry.next_action_summary.verified_receipt_class_count, 0);
       assert.deepEqual(
         entry.next_action_summary.missing_evidence_groups.missing_owner_evidence_class_ids,
-        [
-          'live_user_path',
-          'ordinary_app_experience',
-          'cross_agent_scaleout',
-          'long_soak_recovery',
-          'release_install_evidence',
-          'operator_repair_loop',
-          'capability_fail_open_boundary',
-          'cross_agent_foundry_agent_os_adoption',
-        ],
+        [],
       );
       assert.deepEqual(
         entry.next_action_summary.missing_evidence_groups.observed_refs_not_l5_claim_class_ids,
@@ -555,7 +546,17 @@ test('brand module L5 evidence gate is executable but does not claim production 
       );
       assert.deepEqual(
         entry.next_action_summary.missing_evidence_groups.typed_blocker_recorded_class_ids,
-        ['owner_acceptance'],
+        [
+          'live_user_path',
+          'ordinary_app_experience',
+          'cross_agent_scaleout',
+          'long_soak_recovery',
+          'release_install_evidence',
+          'operator_repair_loop',
+          'owner_acceptance',
+          'capability_fail_open_boundary',
+          'cross_agent_foundry_agent_os_adoption',
+        ],
       );
       assert.deepEqual(
         entry.next_action_summary.missing_evidence_groups.verified_receipt_class_ids,
@@ -681,6 +682,32 @@ test('brand module L5 evidence gate is executable but does not claim production 
       assert.equal(ownerAcceptance?.observed_ref_count, 1);
       assert.equal(ownerAcceptance?.observed_typed_blocker_ref_count, 1);
       assert.equal(ownerAcceptance?.l5_claim_status, 'owner_typed_blocker_recorded_not_l5_claimed');
+
+      for (const classId of [
+        'live_user_path',
+        'ordinary_app_experience',
+        'cross_agent_scaleout',
+        'long_soak_recovery',
+        'release_install_evidence',
+        'operator_repair_loop',
+        'capability_fail_open_boundary',
+        'cross_agent_foundry_agent_os_adoption',
+      ]) {
+        const route = entry.owner_evidence_routes.find((candidate) => candidate.class_id === classId);
+        assert.equal(route?.owner_route_status, 'owner_typed_blocker_recorded');
+        assert.equal(route?.blocker_state, 'typed_blocker_recorded');
+        assert.equal(route?.next_owner_action, 'resolve_typed_blocker_or_record_owner_acceptance_ref');
+        assert.equal(route?.owner_evidence_closure_state, 'owner_typed_blocker_recorded');
+        assert.equal(route?.existing_evidence_refs.length, 0);
+        assert.deepEqual(route?.existing_blocker_refs, [
+          `typed-blocker:opl-brand-l5/${entry.module_id}/${classId}/owner-evidence-needed-20260612`,
+        ]);
+        assert.deepEqual(route?.observed_evidence_refs, route?.existing_blocker_refs);
+        assert.deepEqual(route?.observed_ref_shapes, ['typed_blocker_ref']);
+        assert.equal(route?.observed_ref_count, 1);
+        assert.equal(route?.observed_typed_blocker_ref_count, 1);
+        assert.equal(route?.l5_claim_status, 'owner_typed_blocker_recorded_not_l5_claimed');
+      }
     }
     assert.equal(status.owner_route_work_order_policy.work_orders_close_l5, false);
     assert.equal(status.owner_route_work_order_policy.work_orders_can_claim_production_ready, false);
@@ -746,21 +773,95 @@ test('brand module L5 status surfaces ledger typed blockers as owner-needed evid
     assert.equal(route.owner_evidence_closure_state, 'owner_typed_blocker_recorded');
     assert.equal(route.ready_claim_authorized, false);
     assert.equal(route.observed_receipt_count, 1);
-    assert.equal(route.observed_typed_blocker_ref_count, 1);
+    assert.equal(route.observed_typed_blocker_ref_count, 2);
     assert.equal(route.verified_receipt_count, 0);
     assert.deepEqual(route.observed_receipt_refs, [record.receipt_ref]);
+    assert.equal(
+      route.observed_evidence_refs.includes(
+        'typed-blocker:opl-brand-l5/charter/live_user_path/owner-evidence-needed-20260612',
+      ),
+      true,
+    );
     assert.equal(route.observed_evidence_refs.includes('typed-blocker:charter/live-user-path-owner-needed'), true);
-    assert.deepEqual(route.observed_ref_shapes, ['ledger_receipt_ref', 'typed_blocker_ref']);
+    assert.equal(route.observed_ref_shapes.includes('typed_blocker_ref'), true);
+    assert.equal(route.observed_ref_shapes.includes('ledger_receipt_ref'), true);
     assert.equal(route.l5_claim_status, 'owner_typed_blocker_recorded_not_l5_claimed');
     assert.equal(route.authority_boundary.route_can_claim_l5, false);
     assert.equal(route.authority_boundary.route_can_create_typed_blocker, false);
     assert.deepEqual(
       module.next_action_summary.missing_evidence_groups.typed_blocker_recorded_class_ids,
-      ['live_user_path', 'owner_acceptance'],
+      [
+        'live_user_path',
+        'ordinary_app_experience',
+        'cross_agent_scaleout',
+        'long_soak_recovery',
+        'release_install_evidence',
+        'operator_repair_loop',
+        'owner_acceptance',
+        'capability_fail_open_boundary',
+        'cross_agent_foundry_agent_os_adoption',
+      ],
     );
-    assert.equal(module.next_action_summary.typed_blocker_recorded_class_count, 2);
+    assert.equal(module.next_action_summary.typed_blocker_recorded_class_count, 9);
     assert.equal(module.next_action_summary.observed_refs_not_l5_claim_class_count, 4);
-    assert.equal(module.next_action_summary.missing_owner_evidence_class_count, 7);
+    assert.equal(module.next_action_summary.missing_owner_evidence_class_count, 0);
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+});
+
+test('brand module L5 status separates owner-needed typed blockers from missing owner evidence across remaining requirements', () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-brand-l5-owner-needed-state-'));
+  const env = { OPL_STATE_DIR: stateDir };
+  const expectedOwnerNeededBlockerClasses = [
+    'live_user_path',
+    'ordinary_app_experience',
+    'cross_agent_scaleout',
+    'long_soak_recovery',
+    'release_install_evidence',
+    'operator_repair_loop',
+    'owner_acceptance',
+    'capability_fail_open_boundary',
+    'cross_agent_foundry_agent_os_adoption',
+  ];
+
+  try {
+    const status = runCli(['brand-modules', 'l5-status'], env).brand_module_l5_status;
+
+    assert.equal(status.status, 'evidence_required');
+    assert.equal(status.l5_complete_module_count, 0);
+    assert.deepEqual(status.l5_complete_module_ids, []);
+    for (const entry of status.modules as L5Module[]) {
+      assert.equal(entry.evidence_required, true);
+      assert.equal(entry.l5_can_be_claimed, false);
+      assert.equal(entry.next_action_summary.false_completion_guard.ready_claim_authorized, false);
+      assert.equal(entry.next_action_summary.false_completion_guard.verified_ledger_closes_l5, false);
+      assert.equal(entry.next_action_summary.missing_owner_evidence_class_count, 0);
+      assert.equal(entry.next_action_summary.observed_refs_not_l5_claim_class_count, 4);
+      assert.equal(entry.next_action_summary.typed_blocker_recorded_class_count, 9);
+      assert.deepEqual(
+        entry.next_action_summary.missing_evidence_groups.missing_owner_evidence_class_ids,
+        [],
+      );
+      assert.deepEqual(
+        entry.next_action_summary.missing_evidence_groups.typed_blocker_recorded_class_ids,
+        expectedOwnerNeededBlockerClasses,
+      );
+      assert.equal(
+        entry.owner_evidence_routes.every((route) => route.ready_claim_authorized === false),
+        true,
+      );
+      for (const classId of expectedOwnerNeededBlockerClasses) {
+        const route = entry.owner_evidence_routes.find((candidate) => candidate.class_id === classId);
+        assert.equal(route?.owner_route_status, 'owner_typed_blocker_recorded');
+        assert.equal(route?.blocker_state, 'typed_blocker_recorded');
+        assert.equal(route?.owner_evidence_closure_state, 'owner_typed_blocker_recorded');
+        assert.equal(route?.observed_typed_blocker_ref_count, 1);
+        assert.equal(route?.l5_claim_status, 'owner_typed_blocker_recorded_not_l5_claimed');
+        assert.equal(route?.authority_boundary.route_can_claim_l5, false);
+        assert.equal(route?.authority_boundary.route_can_create_typed_blocker, false);
+      }
+    }
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
   }
@@ -828,7 +929,7 @@ test('module-owned L5 status is readable from the module command surface and rem
       }) =>
         entry.class_id === 'long_soak_recovery'
         && entry.accepted_ref_shapes.includes('long_soak_ref')
-        && entry.blocker_state === 'owner_route_evidence_missing'
+        && entry.blocker_state === 'typed_blocker_recorded'
       ),
       true,
     );

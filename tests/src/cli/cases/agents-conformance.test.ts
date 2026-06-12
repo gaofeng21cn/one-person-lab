@@ -462,6 +462,31 @@ test('agents conformance consumes domain-owned live StageRun progress evidence w
     'domain_owner_typed_blocker_ref_recorded_wait_for_owner_resolution_route_back_or_no_regression_ref',
   );
   assert.deepEqual(worklistDomain.observed_ref_shapes, domain.live_stage_run_progress_observed_ref_shapes);
+  assert.equal(worklistDomain.owner_repo, magRepo);
+  assert.equal(worklistDomain.next_owner_repo, magRepo);
+  assert.equal(
+    worklistDomain.closing_ref_source,
+    'contracts/live_stage_run_progress_evidence.json#domain_owner_receipt_refs|typed_blocker_refs|human_gate_refs|quality_or_export_receipt_refs|no_regression_refs|long_soak_refs',
+  );
+  assert.equal(
+    worklistDomain.typed_blocker_source,
+    'contracts/live_stage_run_progress_evidence.json#typed_blocker_refs',
+  );
+  assert.deepEqual(worklistDomain.verification_commands, [
+    'scripts/verify.sh',
+    `opl agents conformance --agent mag=${magRepo} --json`,
+  ]);
+  assert.equal(worklistDomain.source_command, `opl agents conformance --agent mag=${magRepo} --json`);
+  assert.equal(worklistDomain.forbidden_opl_claims.includes('domain_ready'), true);
+  assert.equal(worklistDomain.forbidden_opl_claims.includes('typed_blocker_created_by_opl'), true);
+  assert.equal(worklistDomain.non_closing_inputs.includes('controlled_canary_pass'), true);
+  assert.equal(
+    worklistDomain.stop_loss.includes(
+      'if status is owner_typed_blocker_recorded_not_ready_claim, wait for domain owner route-back, no_regression_ref, or updated live progress evidence before treating the lane as complete',
+    ),
+    true,
+  );
+  assert.equal(worklistDomain.ready_claim_authorized, false);
   assert.equal(worklistDomain.conformance_can_claim_domain_ready, false);
   assert.equal(worklistDomain.can_create_typed_blocker, false);
   assert.equal(adoption.authority_boundary.can_claim_domain_ready, false);

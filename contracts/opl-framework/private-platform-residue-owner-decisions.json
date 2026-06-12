@@ -67,6 +67,23 @@
     "ordinary_owner_delta_can_be_driven_by_private_residue_inventory": false,
     "raw_private_residue_inventory_can_drive_default_planning": false
   },
+  "owner_decision_work_order_policy": {
+    "surface_kind": "opl_private_platform_residue_owner_decision_work_order",
+    "lane_id": "private_platform_cleanup_lane",
+    "empty_cleanup_lane_status": "no_private_residue_classified_not_delete_ready",
+    "classified_cleanup_lane_status": "owner_delete_keep_or_typed_blocker_decision_required",
+    "open_count_semantics": "zero_residue_gate_count_means_no_cleanup_lane_items_not_physical_delete_authorized",
+    "required_owner_action": "domain_owner_choose_delete_authorize_keep_or_typed_blocker",
+    "accepted_refs_only_result_shapes": [
+      "physical_delete_authorization_ref",
+      "keep_as_authority_adapter_ref",
+      "typed_blocker_ref"
+    ],
+    "work_order_can_authorize_domain_repo_physical_delete": false,
+    "work_order_can_delete_domain_repo_files": false,
+    "work_order_can_create_typed_blocker": false,
+    "ready_claim_authorized": false
+  },
   "authority_boundary": {
     "ledger_can_write_domain_truth": false,
     "ledger_can_write_memory_body": false,

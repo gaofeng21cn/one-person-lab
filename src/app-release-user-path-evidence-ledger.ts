@@ -5,6 +5,10 @@ type AppReleaseUserPathEvidenceReceipt = {
   surface_kind: 'opl_app_release_user_path_evidence_receipt';
   receipt_ref: string;
   receipt_status: 'recorded' | 'verified';
+  receipt_path:
+    | 'same_cohort_release_user_path_refs_path'
+    | 'release_owner_verdict_path'
+    | 'release_owner_typed_blocker_path';
   recorded_at: string;
   target_surface: 'one_person_lab_app_release_user_path';
   release_package_refs: string[];
@@ -12,6 +16,8 @@ type AppReleaseUserPathEvidenceReceipt = {
   reload_prompt_user_path_refs: string[];
   provider_state_linkage_refs: string[];
   long_operator_evidence_refs: string[];
+  release_owner_receipt_refs: string[];
+  install_evidence_refs: string[];
   typed_blocker_refs: string[];
   source_surface: 'opl_app_release_user_path_evidence';
   authority_boundary: {
@@ -36,6 +42,8 @@ export type AppReleaseUserPathEvidenceReceiptInput = {
   reload_prompt_user_path_refs?: string[];
   provider_state_linkage_refs?: string[];
   long_operator_evidence_refs?: string[];
+  release_owner_receipt_refs?: string[];
+  install_evidence_refs?: string[];
   typed_blocker_refs?: string[];
   receipt_ref?: string | null;
 };
@@ -108,8 +116,99 @@ function allEvidenceRefs(input: AppReleaseUserPathEvidenceReceiptInput) {
     ...(input.reload_prompt_user_path_refs ?? []),
     ...(input.provider_state_linkage_refs ?? []),
     ...(input.long_operator_evidence_refs ?? []),
+    ...(input.release_owner_receipt_refs ?? []),
+    ...(input.install_evidence_refs ?? []),
     ...(input.typed_blocker_refs ?? []),
   ]);
+}
+
+function successEvidenceRefs(input: AppReleaseUserPathEvidenceReceiptInput) {
+  return uniqueStrings([
+    ...(input.release_package_refs ?? []),
+    ...(input.screenshot_refs ?? []),
+    ...(input.reload_prompt_user_path_refs ?? []),
+    ...(input.provider_state_linkage_refs ?? []),
+    ...(input.long_operator_evidence_refs ?? []),
+    ...(input.install_evidence_refs ?? []),
+  ]);
+}
+
+function ownerVerdictRefs(input: AppReleaseUserPathEvidenceReceiptInput) {
+  return uniqueStrings(input.release_owner_receipt_refs ?? []);
+}
+
+function typedBlockerRefs(input: AppReleaseUserPathEvidenceReceiptInput) {
+  return uniqueStrings(input.typed_blocker_refs ?? []);
+}
+
+function payloadPath(input: AppReleaseUserPathEvidenceReceiptInput):
+  AppReleaseUserPathEvidenceReceipt['receipt_path'] | null {
+  const paths = [
+    successEvidenceRefs(input).length > 0 ? 'same_cohort_release_user_path_refs_path' : null,
+    ownerVerdictRefs(input).length > 0 ? 'release_owner_verdict_path' : null,
+    typedBlockerRefs(input).length > 0 ? 'release_owner_typed_blocker_path' : null,
+  ].filter((entry): entry is AppReleaseUserPathEvidenceReceipt['receipt_path'] =>
+    Boolean(entry)
+  );
+  return paths.length === 1 ? paths[0] : null;
+}
+
+export function appReleaseUserPathEvidencePayloadPreflight(
+  input: AppReleaseUserPathEvidenceReceiptInput,
+) {
+  const successRefCount = successEvidenceRefs(input).length;
+  const releaseOwnerReceiptRefCount = ownerVerdictRefs(input).length;
+  const typedBlockerRefCount = typedBlockerRefs(input).length;
+  const selectedPath = payloadPath(input);
+  const refCount = successRefCount + releaseOwnerReceiptRefCount + typedBlockerRefCount;
+  const conflictingPayloadFields = [
+    successRefCount > 0 ? 'app_release_user_path_refs' : null,
+    releaseOwnerReceiptRefCount > 0 ? 'release_owner_receipt_refs' : null,
+    typedBlockerRefCount > 0 ? 'typed_blocker_refs' : null,
+  ].filter((entry): entry is string => Boolean(entry));
+  return {
+    surface_kind: 'opl_app_release_user_path_evidence_payload_preflight',
+    status: selectedPath
+      ? 'payload_refs_observed'
+      : refCount > 0
+        ? 'blocked'
+        : 'payload_required',
+    selected_payload_path: selectedPath ?? 'blocked',
+    can_record_refs_only_receipt: selectedPath !== null,
+    accepted_ref_counts: {
+      release_package_refs: input.release_package_refs?.length ?? 0,
+      screenshot_refs: input.screenshot_refs?.length ?? 0,
+      reload_prompt_user_path_refs: input.reload_prompt_user_path_refs?.length ?? 0,
+      provider_state_linkage_refs: input.provider_state_linkage_refs?.length ?? 0,
+      long_operator_evidence_refs: input.long_operator_evidence_refs?.length ?? 0,
+      release_owner_receipt_refs: input.release_owner_receipt_refs?.length ?? 0,
+      install_evidence_refs: input.install_evidence_refs?.length ?? 0,
+      typed_blocker_refs: typedBlockerRefCount,
+    },
+    conflicting_payload_fields: selectedPath || refCount === 0 ? [] : conflictingPayloadFields,
+    payload_path_policy:
+      'operator_must_choose_same_cohort_release_user_path_refs_release_owner_verdict_or_typed_blocker_path_empty_template_blocks',
+    required_any: [
+      'release_package_refs',
+      'screenshot_refs',
+      'reload_prompt_user_path_refs',
+      'provider_state_linkage_refs',
+      'long_operator_evidence_refs',
+      'release_owner_receipt_refs',
+      'install_evidence_refs',
+      'typed_blocker_refs',
+    ],
+    empty_payload_template_is_success_evidence: false,
+    payload_owner: 'app_live_operator_or_release_owner',
+    authority_boundary: {
+      refs_only: true,
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_claim_release_ready: false,
+      can_claim_production_ready: false,
+      can_close_app_release_user_path: false,
+    },
+  };
 }
 
 function receiptRef(input: AppReleaseUserPathEvidenceReceiptInput) {
@@ -133,6 +232,15 @@ function normalizeReceipt(value: unknown): AppReleaseUserPathEvidenceReceipt | n
     surface_kind: 'opl_app_release_user_path_evidence_receipt',
     receipt_ref,
     receipt_status: value.receipt_status === 'verified' ? 'verified' : 'recorded',
+    receipt_path: value.receipt_path === 'release_owner_verdict_path'
+      ? 'release_owner_verdict_path'
+      : value.receipt_path === 'release_owner_typed_blocker_path'
+        ? 'release_owner_typed_blocker_path'
+        : stringList(value.release_owner_receipt_refs).length > 0
+          ? 'release_owner_verdict_path'
+          : stringList(value.typed_blocker_refs).length > 0
+            ? 'release_owner_typed_blocker_path'
+            : 'same_cohort_release_user_path_refs_path',
     recorded_at: optionalString(value.recorded_at) ?? nowIso(),
     target_surface: 'one_person_lab_app_release_user_path',
     release_package_refs: uniqueStrings(stringList(value.release_package_refs)),
@@ -142,6 +250,8 @@ function normalizeReceipt(value: unknown): AppReleaseUserPathEvidenceReceipt | n
     ),
     provider_state_linkage_refs: uniqueStrings(stringList(value.provider_state_linkage_refs)),
     long_operator_evidence_refs: uniqueStrings(stringList(value.long_operator_evidence_refs)),
+    release_owner_receipt_refs: uniqueStrings(stringList(value.release_owner_receipt_refs)),
+    install_evidence_refs: uniqueStrings(stringList(value.install_evidence_refs)),
     typed_blocker_refs: uniqueStrings(stringList(value.typed_blocker_refs)),
     source_surface: 'opl_app_release_user_path_evidence',
     authority_boundary: refsOnlyAuthorityBoundary(),
@@ -189,6 +299,7 @@ function normalizeInput(
     surface_kind: 'opl_app_release_user_path_evidence_receipt',
     receipt_ref: receiptRef(input),
     receipt_status: 'recorded',
+    receipt_path: payloadPath(input) ?? 'same_cohort_release_user_path_refs_path',
     recorded_at: nowIso(),
     target_surface: 'one_person_lab_app_release_user_path',
     release_package_refs: uniqueStrings(input.release_package_refs ?? []),
@@ -196,6 +307,8 @@ function normalizeInput(
     reload_prompt_user_path_refs: uniqueStrings(input.reload_prompt_user_path_refs ?? []),
     provider_state_linkage_refs: uniqueStrings(input.provider_state_linkage_refs ?? []),
     long_operator_evidence_refs: uniqueStrings(input.long_operator_evidence_refs ?? []),
+    release_owner_receipt_refs: uniqueStrings(input.release_owner_receipt_refs ?? []),
+    install_evidence_refs: uniqueStrings(input.install_evidence_refs ?? []),
     typed_blocker_refs: uniqueStrings(input.typed_blocker_refs ?? []),
     source_surface: 'opl_app_release_user_path_evidence',
     authority_boundary: refsOnlyAuthorityBoundary(),
@@ -206,7 +319,7 @@ export function recordAppReleaseUserPathEvidenceReceipts(
   inputs: AppReleaseUserPathEvidenceReceiptInput[],
 ) {
   const receipts = inputs
-    .filter((input) => allEvidenceRefs(input).length > 0)
+    .filter((input) => appReleaseUserPathEvidencePayloadPreflight(input).can_record_refs_only_receipt)
     .map(normalizeInput);
   if (receipts.length === 0) {
     return {

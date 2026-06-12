@@ -55,6 +55,44 @@ function cleanupDisposition(value: unknown): DefaultCallerPrivatePlatformCleanup
     : null;
 }
 
+function ownerDecisionWorkOrder(residueGateCount: number) {
+  return {
+    surface_kind: 'opl_private_platform_residue_owner_decision_work_order',
+    work_order_id: 'private-platform-cleanup-owner-decision',
+    lane_id: DEFAULT_CALLER_PRIVATE_PLATFORM_CLEANUP_LANE_ID,
+    status: residueGateCount > 0
+      ? 'owner_delete_keep_or_typed_blocker_decision_required'
+      : 'no_private_residue_classified_not_delete_ready',
+    residue_gate_count: residueGateCount,
+    open_decision_count: residueGateCount,
+    open_count_semantics:
+      'zero_residue_gate_count_means_no_cleanup_lane_items_not_physical_delete_authorized',
+    next_required_owner_action: DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
+    accepted_refs_only_result_shapes: [
+      ...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES,
+    ],
+    typed_blocker_result_shape: 'typed_blocker_ref',
+    physical_delete_authorized: false,
+    default_caller_delete_ready: false,
+    ready_claim_authorized: false,
+    forbidden_opl_claims: [
+      'domain_repo_physical_delete_authorization',
+      'default_caller_delete_ready',
+      'domain_ready',
+      'production_ready',
+      'artifact_authority',
+    ],
+    authority_boundary: {
+      work_order_can_delete_domain_repo_files: false,
+      work_order_can_write_domain_truth: false,
+      work_order_can_sign_domain_owner_receipt: false,
+      work_order_can_create_typed_blocker: false,
+      work_order_can_authorize_quality_or_export: false,
+      work_order_can_authorize_domain_repo_physical_delete: false,
+    },
+  };
+}
+
 export function privatePlatformResidueGateFromRecord(record: JsonRecord) {
   const gate = isRecord(record.private_platform_residue_gate)
     ? record.private_platform_residue_gate
@@ -120,6 +158,7 @@ export function buildPrivatePlatformResidueDeletionGate(
     accepted_refs_only_result_shapes: [
       ...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES,
     ],
+    owner_decision_work_order: ownerDecisionWorkOrder(items.length),
     physical_delete_authorized: false,
     default_caller_delete_ready: false,
     cleanup_lane_can_authorize_physical_delete: false,

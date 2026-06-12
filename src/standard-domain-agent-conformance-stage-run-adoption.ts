@@ -82,6 +82,30 @@ const LIVE_STAGE_RUN_PROGRESS_ACCEPTED_RESULT_SHAPES = [
   'long_soak_ref',
 ];
 
+const LIVE_STAGE_RUN_PROGRESS_FORBIDDEN_OPL_CLAIMS = [
+  'live_domain_progress_complete',
+  'domain_ready',
+  'production_ready',
+  'quality_or_export_ready',
+  'owner_receipt_signed_by_opl',
+  'typed_blocker_created_by_opl',
+];
+
+const LIVE_STAGE_RUN_PROGRESS_NON_CLOSING_INPUTS = [
+  'structural_conformance_pass',
+  'controlled_canary_pass',
+  'production_acceptance_tail_present',
+  'docs_foldback',
+  'verified_refs_only_ledger_without_live_stage_run_progress_binding',
+  'zero_open_worklist_count',
+];
+
+const LIVE_STAGE_RUN_PROGRESS_STOP_LOSS = [
+  'if status is owner_typed_blocker_recorded_not_ready_claim, wait for domain owner route-back, no_regression_ref, or updated live progress evidence before treating the lane as complete',
+  'if verification commands fail, keep the domain in required_from_domain_owner or owner_typed_blocker_recorded_not_ready_claim and do not claim domain_ready',
+  'if observed refs are not bound to contracts/live_stage_run_progress_evidence.json, request a domain-owned contract update instead of synthesizing an owner receipt',
+];
+
 const LIVE_STAGE_RUN_PROGRESS_EVIDENCE_CONTRACT =
   'contracts/live_stage_run_progress_evidence.json';
 
@@ -336,6 +360,19 @@ function stageRunDomainNextAction(
   return 'domain_owner_live_progress_evidence_still_required_before_domain_or_production_ready';
 }
 
+function conformanceCommandForDomain(domain: {
+  requested_agent_id: string | null;
+  repo_dir: string;
+  domain_id: string;
+}) {
+  const agentId = domain.requested_agent_id ?? domain.domain_id;
+  return `opl agents conformance --agent ${agentId}=${domain.repo_dir} --json`;
+}
+
+function liveStageRunProgressClosingRefSource(evidenceContractRef: string) {
+  return `${evidenceContractRef}#domain_owner_receipt_refs|typed_blocker_refs|human_gate_refs|quality_or_export_receipt_refs|no_regression_refs|long_soak_refs`;
+}
+
 export function buildStageRunDomainAdoptionReadModel(reports: StageRunAdoptionReport[]) {
   const domains = reports.map((report) => {
     const profile = report.stage_run_kernel_profile_checks;
@@ -468,6 +505,21 @@ export function buildStageRunDomainAdoptionReadModel(reports: StageRunAdoptionRe
       observed_ref_counts: domain.live_stage_run_progress_observed_ref_counts,
       doc_refs: domain.live_stage_run_progress_doc_refs,
       next_verification_refs: domain.live_stage_run_progress_next_verification_refs,
+      verification_commands: unique([
+        ...domain.live_stage_run_progress_next_verification_refs,
+        conformanceCommandForDomain(domain),
+      ]),
+      source_command: conformanceCommandForDomain(domain),
+      owner_repo: domain.repo_dir,
+      next_owner_repo: domain.repo_dir,
+      closing_ref_source:
+        liveStageRunProgressClosingRefSource(domain.live_stage_run_progress_evidence_contract_ref),
+      typed_blocker_source:
+        `${domain.live_stage_run_progress_evidence_contract_ref}#typed_blocker_refs`,
+      forbidden_opl_claims: LIVE_STAGE_RUN_PROGRESS_FORBIDDEN_OPL_CLAIMS,
+      non_closing_inputs: LIVE_STAGE_RUN_PROGRESS_NON_CLOSING_INPUTS,
+      stop_loss: LIVE_STAGE_RUN_PROGRESS_STOP_LOSS,
+      ready_claim_authorized: false,
       typed_blocker_kind: domain.live_stage_run_progress_typed_blocker_kind,
       next_required_owner_action: domain.next_required_owner_action,
       accepted_refs_only_result_shapes: LIVE_STAGE_RUN_PROGRESS_ACCEPTED_RESULT_SHAPES,

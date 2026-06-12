@@ -239,6 +239,103 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
       false,
     );
     assert.equal(
+      maturity.unresolved_owner_gates.surface_kind,
+      'opl_unresolved_owner_gate_inventory',
+    );
+    assert.equal(maturity.unresolved_owner_gates.status, 'owner_gates_required');
+    assert.equal(maturity.unresolved_owner_gates.ready_claim_authorized, false);
+    assert.equal(maturity.unresolved_owner_gates.gate_count, 7);
+    assert.deepEqual(maturity.unresolved_owner_gates.gate_ids, [
+      'owner-gate:current_owner_delta_owner_answer',
+      'owner-gate:domain_owner_chain_scaleout',
+      'owner-gate:brand_module_l5_operating_maturity',
+      'owner-gate:app_release_user_path',
+      'owner-gate:provider_long_soak',
+      'owner-gate:private_platform_retirement',
+      'owner-gate:memory_artifact_lifecycle_apply',
+    ]);
+    assert.equal(
+      maturity.unresolved_owner_gates.completion_policy.owner_native_refs_required,
+      true,
+    );
+    assert.equal(
+      maturity.unresolved_owner_gates.completion_policy.open_count_zero_closes_ready,
+      false,
+    );
+    assert.equal(
+      maturity.unresolved_owner_gates.completion_policy.refs_only_projection_closes_ready,
+      false,
+    );
+    assert.equal(
+      maturity.unresolved_owner_gates.completion_policy.opl_can_close_owner_gate,
+      false,
+    );
+    assert.equal(
+      maturity.unresolved_owner_gates.authority_boundary.can_claim_production_ready,
+      false,
+    );
+    assert.equal(
+      maturity.unresolved_owner_gates.authority_boundary.can_sign_owner_receipt,
+      false,
+    );
+    assert.equal(
+      maturity.unresolved_owner_gates.authority_boundary.can_create_typed_blocker,
+      false,
+    );
+    const currentOwnerGate = maturity.unresolved_owner_gates.gates.find(
+      (entry: { lane: string }) => entry.lane === 'current_owner_delta_owner_answer',
+    );
+    assert.equal(currentOwnerGate.status, 'owner_answer_or_typed_blocker_required');
+    assert.equal(
+      currentOwnerGate.owner,
+      maturity.current_owner_delta_bridge.current_owner,
+    );
+    assert.equal(
+      currentOwnerGate.accepted_ref_shapes.includes('typed_blocker_ref'),
+      true,
+    );
+    assert.deepEqual(
+      currentOwnerGate.missing_input_refs,
+      maturity.current_owner_delta_bridge.missing_input_refs,
+    );
+    assert.equal(
+      currentOwnerGate.closing_ref_source,
+      'current_owner_domain_owned_answer_ref_bound_to_current_owner_delta',
+    );
+    assert.equal(
+      currentOwnerGate.typed_blocker_source,
+      'current_owner_domain_owned_typed_blocker_ref_bound_to_current_owner_delta',
+    );
+    assert.match(
+      currentOwnerGate.record_command,
+      /domain-owner-payload-summary record|owner-native refs-only record/,
+    );
+    assert.equal(currentOwnerGate.ready_claim_authorized, false);
+    assert.equal(currentOwnerGate.can_be_completed_by_opl, false);
+    const appReleaseOwnerGate = maturity.unresolved_owner_gates.gates.find(
+      (entry: { lane: string }) => entry.lane === 'app_release_user_path',
+    );
+    assert.equal(appReleaseOwnerGate.owner_repo, '/Users/gaofeng/workspace/one-person-lab-app');
+    assert.equal(
+      appReleaseOwnerGate.status,
+      'owner_evidence_required',
+    );
+    assert.equal(appReleaseOwnerGate.open_count, maturity.summary.app_release_user_path_open_count);
+    assert.equal(
+      appReleaseOwnerGate.accepted_ref_shapes.includes('release_owner_receipt_ref'),
+      true,
+    );
+    assert.equal(
+      appReleaseOwnerGate.forbidden_opl_claims.includes('app_release_ready'),
+      true,
+    );
+    assert.equal(
+      appReleaseOwnerGate.stop_loss.includes(
+        'request owner-native receipt, verdict, acceptance, or typed blocker from the listed owner',
+      ),
+      true,
+    );
+    assert.equal(
       maturity.owner_evidence_intake.surface_kind,
       'foundry_agent_os_owner_evidence_intake',
     );
@@ -341,20 +438,72 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
       ),
       true,
     );
+    assert.equal(omaRoute.owner_repo, `${workspaceRoot}/opl-meta-agent`);
+    assert.equal(omaRoute.next_owner_repo, `${workspaceRoot}/opl-meta-agent`);
+    assert.equal(
+      omaRoute.closing_ref_source,
+      'contracts/live_stage_run_progress_evidence.json#domain_owner_receipt_refs|typed_blocker_refs|human_gate_refs|quality_or_export_receipt_refs|no_regression_refs|long_soak_refs',
+    );
+    assert.equal(
+      omaRoute.typed_blocker_source,
+      'contracts/live_stage_run_progress_evidence.json#typed_blocker_refs',
+    );
+    assert.equal(
+      omaRoute.verification_commands.includes(
+        `opl agents conformance --agent opl-meta-agent=${workspaceRoot}/opl-meta-agent --json`,
+      ),
+      true,
+    );
+    assert.equal(
+      omaRoute.source_command,
+      `opl agents conformance --agent opl-meta-agent=${workspaceRoot}/opl-meta-agent --json`,
+    );
+    assert.equal(omaRoute.forbidden_opl_claims.includes('live_domain_progress_complete'), true);
+    assert.equal(omaRoute.forbidden_opl_claims.includes('typed_blocker_created_by_opl'), true);
+    assert.equal(
+      omaRoute.non_closing_inputs.includes('verified_refs_only_ledger_without_live_stage_run_progress_binding'),
+      true,
+    );
+    assert.equal(
+      omaRoute.stop_loss.includes(
+        'if observed refs are not bound to contracts/live_stage_run_progress_evidence.json, request a domain-owned contract update instead of synthesizing an owner receipt',
+      ),
+      true,
+    );
+    assert.equal(omaRoute.ready_claim_authorized, false);
     assert.equal(omaRoute.authority_boundary.can_sign_owner_receipt, false);
     assert.equal(omaRoute.authority_boundary.can_create_typed_blocker, false);
     assert.equal(
       maturity.domain_owner_chain_scaleout.domain_owner_evidence_routes.every(
         (entry: {
           accepted_ref_shapes: string[];
+          owner_repo: string;
+          next_owner_repo: string;
+          closing_ref_source: string;
+          typed_blocker_source: string;
+          verification_commands: string[];
+          forbidden_opl_claims: string[];
+          non_closing_inputs: string[];
+          stop_loss: string[];
           next_owner_action: string;
+          ready_claim_authorized: boolean;
           conformance_can_close_production: boolean;
           authority_boundary: { can_sign_owner_receipt: boolean; can_create_typed_blocker: boolean };
         }) =>
           entry.accepted_ref_shapes.includes('domain_owner_receipt_ref')
           && entry.accepted_ref_shapes.includes('typed_blocker_ref')
           && entry.accepted_ref_shapes.includes('human_gate_ref')
+          && entry.owner_repo.length > 0
+          && entry.next_owner_repo.length > 0
+          && entry.closing_ref_source.includes('contracts/live_stage_run_progress_evidence.json')
+          && entry.typed_blocker_source === 'contracts/live_stage_run_progress_evidence.json#typed_blocker_refs'
+          && entry.verification_commands.some((command) => command.startsWith('opl agents conformance --agent '))
+          && entry.forbidden_opl_claims.includes('domain_ready')
+          && entry.forbidden_opl_claims.includes('production_ready')
+          && entry.non_closing_inputs.includes('controlled_canary_pass')
+          && entry.stop_loss.length > 0
           && entry.next_owner_action === 'domain_owner_record_live_owner_receipt_typed_blocker_human_gate_quality_export_no_regression_or_long_soak_ref'
+          && entry.ready_claim_authorized === false
           && entry.conformance_can_close_production === false
           && entry.authority_boundary.can_sign_owner_receipt === false
           && entry.authority_boundary.can_create_typed_blocker === false,

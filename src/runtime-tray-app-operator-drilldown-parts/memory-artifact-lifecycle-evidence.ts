@@ -17,6 +17,122 @@ function stringValue(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
+function stringList(value: unknown) {
+  return Array.isArray(value)
+    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
+    : [];
+}
+
+function readinessStatus(input: {
+  observedRefCount: number;
+  reconcileIssueCount: number;
+  lifecycleApplyHandoffBlockedDecisionCount: number;
+  lifecycleApplyHandoffSafeDecisionCount: number;
+}) {
+  if (input.reconcileIssueCount > 0) {
+    return 'lifecycle_reconcile_attention_required_not_ready';
+  }
+  if (input.lifecycleApplyHandoffBlockedDecisionCount > 0
+    && input.lifecycleApplyHandoffSafeDecisionCount === 0) {
+    return 'typed_blocker_work_order_required_not_ready';
+  }
+  if (input.observedRefCount > 0) {
+    return 'refs_observed_not_memory_or_artifact_ready';
+  }
+  return 'owner_receipt_or_typed_blocker_required_not_ready';
+}
+
+function lifecycleOwnerWorkOrder(input: {
+  readinessStatus: string;
+  observedRefCount: number;
+  reconcileIssueCount: number;
+  lifecycleApplyHandoffAttemptCount: number;
+  lifecycleApplyHandoffBlockedDecisionCount: number;
+  lifecycleApplyHandoffSafeDecisionCount: number;
+  domainPhysicalDeleteCanExecute: boolean;
+  oplCleanupApplyCanExecute: boolean;
+  latestLifecycleApplyHandoff: unknown;
+}) {
+  return {
+    surface_kind: 'opl_memory_artifact_lifecycle_owner_work_order',
+    work_order_id: 'memory-artifact-lifecycle-owner-decision',
+    lane_id: 'memory_artifact_lifecycle_apply',
+    status: input.readinessStatus,
+    observed_ref_count: input.observedRefCount,
+    open_count: input.reconcileIssueCount > 0
+      ? input.reconcileIssueCount
+      : input.observedRefCount > 0
+        ? 0
+        : 1,
+    open_count_semantics:
+      'open_count_tracks_refs_or_reconcile_gaps_only_zero_does_not_authorize_memory_artifact_package_or_export_ready',
+    next_required_owner_action:
+      'domain_owner_record_memory_artifact_lifecycle_receipt_or_typed_blocker',
+    owner: 'domain_repository_or_app_live_operator',
+    accepted_refs_only_result_shapes: [
+      'memory_receipt_ref',
+      'memory_writeback_receipt_ref',
+      'artifact_mutation_receipt_ref',
+      'package_export_lifecycle_receipt_ref',
+      'cleanup_restore_retention_receipt_ref',
+      'typed_blocker_ref',
+      'owner_acceptance_ref',
+    ],
+    typed_blocker_work_order: {
+      status: input.lifecycleApplyHandoffBlockedDecisionCount > 0
+        ? 'typed_blocker_refs_observed_followthrough_required'
+        : 'typed_blocker_ref_accepted_if_owner_cannot_close_receipt',
+      selected_payload_path:
+        stringValue(record(input.latestLifecycleApplyHandoff).selected_payload_path),
+      blocked_decision_count: input.lifecycleApplyHandoffBlockedDecisionCount,
+      safe_decision_count: input.lifecycleApplyHandoffSafeDecisionCount,
+      accepted_ref_shape: 'typed_blocker_ref',
+      latest_typed_blocker_refs:
+        stringList(record(input.latestLifecycleApplyHandoff).typed_blocker_refs),
+    },
+    lifecycle_apply_handoff_attempt_count: input.lifecycleApplyHandoffAttemptCount,
+    lifecycle_apply_handoff_blocked_decision_count:
+      input.lifecycleApplyHandoffBlockedDecisionCount,
+    lifecycle_apply_handoff_safe_decision_count: input.lifecycleApplyHandoffSafeDecisionCount,
+    lifecycle_reconcile_issue_count: input.reconcileIssueCount,
+    domain_physical_delete_can_execute: input.domainPhysicalDeleteCanExecute,
+    opl_cleanup_apply_can_execute: input.oplCleanupApplyCanExecute,
+    ready_claim_authorized: false,
+    forbidden_opl_claims: [
+      'memory_body_saved_or_accepted',
+      'artifact_body_mutated',
+      'artifact_ready',
+      'package_ready',
+      'export_ready',
+      'domain_ready',
+      'production_ready',
+      'domain_physical_delete_authorization',
+    ],
+    non_closing_inputs: [
+      'app_projection',
+      'verified_refs_only_ledger',
+      'lifecycle_reconcile_zero_issue_count',
+      'open_count_zero',
+      'opl_cleanup_apply_available',
+      'typed_blocker_ref_without_owner_followthrough',
+    ],
+    authority_boundary: {
+      work_order_can_write_domain_truth: false,
+      work_order_can_write_memory_body: false,
+      work_order_can_accept_or_reject_memory_writeback: false,
+      work_order_can_read_artifact_body: false,
+      work_order_can_mutate_artifact_body: false,
+      work_order_can_authorize_package_readiness: false,
+      work_order_can_authorize_export_readiness: false,
+      work_order_can_execute_domain_physical_delete: false,
+      work_order_can_sign_domain_owner_receipt: false,
+      work_order_can_create_typed_blocker: false,
+      work_order_can_claim_domain_ready: false,
+      work_order_can_claim_production_ready: false,
+    },
+  };
+}
+
 export function buildMemoryArtifactLifecycleEvidence(drilldown: JsonRecord) {
   const summary = record(drilldown.summary);
   const lifecycleSummary = record(record(drilldown.lifecycle_ledger_refs).summary);
@@ -67,6 +183,18 @@ export function buildMemoryArtifactLifecycleEvidence(drilldown: JsonRecord) {
   const reconcileIssueCount = reconcileMissingRefCount
     + reconcileExtraRefCount
     + reconcileStaleRefCount;
+  const latestLifecycleApplyHandoff =
+    record(drilldown.lifecycle_ledger_refs).latest_lifecycle_apply_handoff ?? null;
+  const lifecycleReadinessStatus = readinessStatus({
+    observedRefCount,
+    reconcileIssueCount,
+    lifecycleApplyHandoffBlockedDecisionCount,
+    lifecycleApplyHandoffSafeDecisionCount,
+  });
+  const domainPhysicalDeleteCanExecute =
+    summary.lifecycle_domain_physical_delete_can_execute === true;
+  const oplCleanupApplyCanExecute =
+    summary.lifecycle_opl_cleanup_apply_can_execute === true;
   return {
     surface_kind: 'opl_app_drilldown_memory_artifact_lifecycle_evidence',
     projection_policy:
@@ -76,6 +204,21 @@ export function buildMemoryArtifactLifecycleEvidence(drilldown: JsonRecord) {
       : observedRefCount > 0
         ? 'refs_observed'
         : 'no_refs_observed',
+    readiness_status: lifecycleReadinessStatus,
+    ready_claim_authorized: false,
+    open_count_zero_is_not_memory_or_artifact_ready: true,
+    observed_refs_are_refs_only_inputs: true,
+    lifecycle_owner_work_order: lifecycleOwnerWorkOrder({
+      readinessStatus: lifecycleReadinessStatus,
+      observedRefCount,
+      reconcileIssueCount,
+      lifecycleApplyHandoffAttemptCount,
+      lifecycleApplyHandoffBlockedDecisionCount,
+      lifecycleApplyHandoffSafeDecisionCount,
+      domainPhysicalDeleteCanExecute,
+      oplCleanupApplyCanExecute,
+      latestLifecycleApplyHandoff,
+    }),
     observed_ref_count: observedRefCount,
     memory_ref_count: memoryRefCount,
     memory_writeback_ref_count: memoryWritebackRefCount,
@@ -89,8 +232,7 @@ export function buildMemoryArtifactLifecycleEvidence(drilldown: JsonRecord) {
     lifecycle_apply_handoff_attempt_count: lifecycleApplyHandoffAttemptCount,
     lifecycle_apply_handoff_blocked_decision_count: lifecycleApplyHandoffBlockedDecisionCount,
     lifecycle_apply_handoff_safe_decision_count: lifecycleApplyHandoffSafeDecisionCount,
-    latest_lifecycle_apply_handoff:
-      record(drilldown.lifecycle_ledger_refs).latest_lifecycle_apply_handoff ?? null,
+    latest_lifecycle_apply_handoff: latestLifecycleApplyHandoff,
     external_verified_memory_writeback_receipt_ref_count: externalMemoryWritebackReceiptRefCount,
     external_verified_artifact_mutation_receipt_ref_count: externalArtifactMutationReceiptRefCount,
     external_verified_package_lifecycle_receipt_ref_count: externalPackageLifecycleReceiptRefCount,
@@ -102,10 +244,18 @@ export function buildMemoryArtifactLifecycleEvidence(drilldown: JsonRecord) {
     lifecycle_reconcile_stale_ref_count: reconcileStaleRefCount,
     domain_physical_delete_requires_owner_receipt:
       summary.lifecycle_domain_physical_delete_requires_owner_receipt === true,
-    domain_physical_delete_can_execute:
-      summary.lifecycle_domain_physical_delete_can_execute === true,
-    opl_cleanup_apply_can_execute:
-      summary.lifecycle_opl_cleanup_apply_can_execute === true,
+    domain_physical_delete_can_execute: domainPhysicalDeleteCanExecute,
+    opl_cleanup_apply_can_execute: oplCleanupApplyCanExecute,
+    forbidden_opl_claims: [
+      'memory_body_saved_or_accepted',
+      'artifact_body_mutated',
+      'artifact_ready',
+      'package_ready',
+      'export_ready',
+      'domain_ready',
+      'production_ready',
+      'domain_physical_delete_authorization',
+    ],
     full_detail_sections: [
       'memory_writeback_refs',
       'artifact_gallery_refs',

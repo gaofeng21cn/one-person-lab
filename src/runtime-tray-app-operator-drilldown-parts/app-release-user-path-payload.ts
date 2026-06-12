@@ -22,6 +22,12 @@ export function appReleaseUserPathPayloadRefHints() {
       'long_operator_evidence_ref',
       'operator_long_soak_ref',
     ],
+    release_owner_receipt_refs_should_cover: [
+      'release_owner_receipt_ref',
+    ],
+    install_evidence_refs_should_cover: [
+      'install_evidence_ref',
+    ],
     typed_blocker_refs_should_cover: [
       'typed_blocker_ref',
     ],
@@ -35,6 +41,8 @@ export function appReleaseUserPathPayloadTemplate() {
     reload_prompt_user_path_refs: [],
     provider_state_linkage_refs: [],
     long_operator_evidence_refs: [],
+    release_owner_receipt_refs: [],
+    install_evidence_refs: [],
     typed_blocker_refs: [],
   };
 }
@@ -49,21 +57,36 @@ export function appReleaseUserPathPayloadWorkorder(
     'reload_prompt_user_path_refs',
     'provider_state_linkage_refs',
     'long_operator_evidence_refs',
+    'release_owner_receipt_refs',
+    'install_evidence_refs',
     'typed_blocker_refs',
   ];
   return {
     surface_kind: 'opl_app_release_user_path_evidence_payload_workorder',
     workorder_policy:
-      'operator_must_choose_real_app_release_user_path_refs_path_or_release_owner_typed_blocker_path_empty_template_blocks',
+      'operator_must_choose_same_cohort_release_user_path_refs_release_owner_verdict_or_typed_blocker_path_empty_template_blocks',
     payload_owner: 'app_live_operator_or_release_owner',
     accepted_payload_path_policy:
-      'real_app_release_user_path_refs_or_typed_blocker_path_empty_template_blocks',
+      'same_cohort_release_user_path_refs_release_owner_verdict_or_typed_blocker_path_empty_template_blocks',
     accepted_payload_paths: {
       app_release_user_path_refs_path: {
-        required_any_operator_payload_refs: requiredOperatorPayloadRefs.filter((ref) =>
-          ref !== 'typed_blocker_refs'
-        ),
+        required_any_operator_payload_refs: [
+          'release_package_refs',
+          'screenshot_refs',
+          'reload_prompt_user_path_refs',
+          'provider_state_linkage_refs',
+          'long_operator_evidence_refs',
+          'install_evidence_refs',
+        ],
         typed_blocker_refs_must_be_absent: true,
+        release_owner_receipt_refs_must_be_absent: true,
+        closes_app_release_user_path: false,
+        closes_release_ready: false,
+        closes_production_ready: false,
+      },
+      release_owner_verdict_path: {
+        required_operator_payload_refs: ['release_owner_receipt_refs'],
+        success_claimed_by_opl: false,
         closes_app_release_user_path: false,
         closes_release_ready: false,
         closes_production_ready: false,
@@ -92,9 +115,11 @@ export function appReleaseUserPathPayloadWorkorder(
           'release_package_receipt_ref',
           'screenshot_evidence_ref',
           'reload_prompt_user_path_receipt_ref',
-          'provider_state_linkage_ref',
-          'long_operator_evidence_ref',
-          'typed_blocker_ref',
+      'provider_state_linkage_ref',
+      'long_operator_evidence_ref',
+      'release_owner_receipt_ref',
+      'install_evidence_ref',
+      'typed_blocker_ref',
     ],
     payload_template: appReleaseUserPathPayloadTemplate(),
     payload_ref_hints: appReleaseUserPathPayloadRefHints(),

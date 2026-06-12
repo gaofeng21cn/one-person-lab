@@ -41,6 +41,8 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
       reload_prompt_user_path_refs: [],
       provider_state_linkage_refs: [],
       long_operator_evidence_refs: [],
+      release_owner_receipt_refs: [],
+      install_evidence_refs: [],
       typed_blocker_refs: [],
     });
     assert.equal(
@@ -49,11 +51,16 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
     );
     assert.equal(
       initialRecordRoute.payload_workorder.accepted_payload_path_policy,
-      'real_app_release_user_path_refs_or_typed_blocker_path_empty_template_blocks',
+      'same_cohort_release_user_path_refs_release_owner_verdict_or_typed_blocker_path_empty_template_blocks',
     );
     assert.equal(
       initialRecordRoute.payload_workorder.accepted_payload_paths
         .app_release_user_path_refs_path.closes_release_ready,
+      false,
+    );
+    assert.equal(
+      initialRecordRoute.payload_workorder.accepted_payload_paths
+        .release_owner_verdict_path.success_claimed_by_opl,
       false,
     );
     assert.equal(
@@ -166,9 +173,36 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
     );
     assert.deepEqual(
       mixedPayloadExecution.payload.error.details.preflight.conflicting_payload_fields,
-      ['typed_blocker_refs'],
+      ['app_release_user_path_refs', 'typed_blocker_refs'],
     );
     assert.equal(mixedPayloadExecution.payload.error.details.receipt_recorded, false);
+
+    const directMixedPayloadExecution = runCliFailure([
+      'runtime',
+      'app-release-evidence',
+      'record',
+      '--payload',
+      JSON.stringify({
+        release_owner_receipt_refs: ['release-owner:app/release-verdict'],
+        typed_blocker_refs: ['typed-blocker:app-release/screenshot-missing'],
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(directMixedPayloadExecution.payload.error.code, 'cli_usage_error');
+    assert.equal(
+      directMixedPayloadExecution.payload.error.details.error_kind,
+      'app_release_user_path_evidence_payload_preflight_blocked',
+    );
+    assert.equal(
+      directMixedPayloadExecution.payload.error.details.preflight.selected_payload_path,
+      'blocked',
+    );
+    assert.deepEqual(
+      directMixedPayloadExecution.payload.error.details.preflight.conflicting_payload_fields,
+      ['release_owner_receipt_refs', 'typed_blocker_refs'],
+    );
+    assert.equal(directMixedPayloadExecution.payload.error.details.receipt_recorded, false);
 
     const payload = {
       release_package_refs: ['release:package/app-v0.1.0.dmg'],
@@ -260,6 +294,15 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
     assert.equal(evidence.release_ready_claimed, false);
     assert.equal(evidence.production_ready_claimed, false);
     assert.equal(evidence.authority_boundary.can_close_app_release_user_path, false);
+    assert.equal(
+      evidence.release_owner_verdict_handoff.status,
+      'waiting_for_same_cohort_user_path_evidence_or_typed_blocker',
+    );
+    assert.equal(evidence.release_owner_verdict_handoff.release_ready_authorized, false);
+    assert.equal(
+      evidence.release_owner_verdict_handoff.authority_boundary.can_create_owner_receipt,
+      false,
+    );
     const verifyRoute = summary.operator_action_routing_refs.refs.find(
       (ref: { action_id: string }) =>
         ref.action_id === 'app_release_user_path_evidence:one_person_lab_app_release_user_path:verify',
@@ -320,6 +363,25 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
     );
     assert.equal(
       verifiedSummary.attention_first_payload.evidence_after_contract
+        .app_release_user_path_evidence.release_owner_verdict_handoff.status,
+      'release_owner_verdict_required',
+    );
+    assert.equal(
+      verifiedSummary.attention_first_payload.evidence_after_contract
+        .app_release_user_path_evidence.release_owner_verdict_handoff.owner_repo,
+      '/Users/gaofeng/workspace/one-person-lab-app',
+    );
+    assert.deepEqual(
+      verifiedSummary.attention_first_payload.evidence_after_contract
+        .app_release_user_path_evidence.release_owner_verdict_handoff.accepted_ref_shapes,
+      [
+        'release_owner_receipt_ref',
+        'install_evidence_ref',
+        'typed_blocker_ref',
+      ],
+    );
+    assert.equal(
+      verifiedSummary.attention_first_payload.evidence_after_contract
         .app_release_user_path_evidence.evidence_ledger_status,
       'ledger_refs_verified',
     );
@@ -367,6 +429,73 @@ test('runtime App release evidence CLI keeps typed blockers as open operator att
     assert.equal(evidence.refs_observed_for_all_gates, false);
     assert.equal(evidence.production_user_path_ready, false);
     assert.equal(evidence.authority_boundary.can_close_app_release_user_path, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime App release evidence CLI records release-owner verdict refs without release-ready claims', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-release-owner-verdict-state-'));
+  try {
+    const recordOutput = runCli([
+      'runtime',
+      'app-release-evidence',
+      'record',
+      '--payload',
+      JSON.stringify({
+        release_owner_receipt_refs: ['release_owner_receipt_ref://one-person-lab-app/26.5.19/verdict'],
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).app_release_user_path_evidence_ledger_record;
+
+    assert.equal(recordOutput.status, 'recorded');
+    assert.equal(recordOutput.receipts[0].receipt_path, 'release_owner_verdict_path');
+    assert.deepEqual(recordOutput.receipts[0].release_owner_receipt_refs, [
+      'release_owner_receipt_ref://one-person-lab-app/26.5.19/verdict',
+    ]);
+    assert.equal(recordOutput.receipts[0].authority_boundary.can_claim_release_ready, false);
+    assert.equal(recordOutput.receipts[0].authority_boundary.can_claim_production_ready, false);
+
+    runCli([
+      'runtime',
+      'app-release-evidence',
+      'verify',
+      '--receipt-ref',
+      recordOutput.receipt_refs[0],
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const listOutput = runCli(['runtime', 'app-release-evidence', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+    }).app_release_user_path_evidence_ledger;
+    assert.equal(listOutput.receipts[0].receipt_status, 'verified');
+    assert.equal(listOutput.receipts[0].receipt_path, 'release_owner_verdict_path');
+    assert.equal(listOutput.authority_boundary.can_claim_release_ready, false);
+
+    const summary = runCli(['runtime', 'app-operator-drilldown'], {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
+    const evidence = summary.attention_first_payload.evidence_after_contract
+      .app_release_user_path_evidence;
+    assert.equal(evidence.open_gate_count, 5);
+    assert.equal(evidence.production_user_path_ready, false);
+    assert.equal(evidence.release_ready_claimed, false);
+    assert.equal(evidence.production_ready_claimed, false);
+    assert.equal(
+      evidence.release_owner_verdict_handoff.status,
+      'waiting_for_same_cohort_user_path_evidence_or_typed_blocker',
+    );
+    assert.deepEqual(
+      evidence.release_owner_verdict_handoff.observed_release_owner_receipt_refs,
+      ['release_owner_receipt_ref://one-person-lab-app/26.5.19/verdict'],
+    );
+    assert.equal(evidence.release_owner_verdict_handoff.release_ready_authorized, false);
+    assert.equal(
+      evidence.release_owner_verdict_handoff.authority_boundary.can_claim_release_ready,
+      false,
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

@@ -78,6 +78,15 @@
       "keep_as_authority_adapter_ref",
       "typed_blocker_ref"
     ],
+    "owner_decision_work_order": {
+      "surface_kind": "opl_private_platform_residue_owner_decision_work_order",
+      "empty_cleanup_lane_status": "no_private_residue_classified_not_delete_ready",
+      "classified_cleanup_lane_status": "owner_delete_keep_or_typed_blocker_decision_required",
+      "open_count_semantics": "zero_residue_gate_count_means_no_cleanup_lane_items_not_physical_delete_authorized",
+      "work_order_can_authorize_domain_repo_physical_delete": false,
+      "work_order_can_delete_domain_repo_files": false,
+      "work_order_can_create_typed_blocker": false
+    },
     "physical_delete_authorized_by_opl": false,
     "default_caller_delete_ready": false,
     "classification_counts_as_domain_ready": false,

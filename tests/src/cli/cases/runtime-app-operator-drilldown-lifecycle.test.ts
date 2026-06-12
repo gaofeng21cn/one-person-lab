@@ -375,6 +375,67 @@ test('runtime app-operator-drilldown projects lifecycle handoff apply attempts f
     assert.equal(evidence.lifecycle_apply_handoff_blocked_decision_count, 2);
     assert.equal(evidence.lifecycle_apply_handoff_safe_decision_count, 0);
     assert.equal(
+      evidence.readiness_status,
+      'typed_blocker_work_order_required_not_ready',
+    );
+    assert.equal(evidence.ready_claim_authorized, false);
+    assert.equal(evidence.open_count_zero_is_not_memory_or_artifact_ready, true);
+    assert.equal(
+      evidence.forbidden_opl_claims.includes('artifact_ready'),
+      true,
+    );
+    assert.equal(
+      evidence.lifecycle_owner_work_order.status,
+      'typed_blocker_work_order_required_not_ready',
+    );
+    assert.equal(evidence.lifecycle_owner_work_order.open_count, 1);
+    assert.equal(
+      evidence.lifecycle_owner_work_order.open_count_semantics,
+      'open_count_tracks_refs_or_reconcile_gaps_only_zero_does_not_authorize_memory_artifact_package_or_export_ready',
+    );
+    assert.equal(
+      evidence.lifecycle_owner_work_order.next_required_owner_action,
+      'domain_owner_record_memory_artifact_lifecycle_receipt_or_typed_blocker',
+    );
+    assert.equal(
+      evidence.lifecycle_owner_work_order.accepted_refs_only_result_shapes.includes('typed_blocker_ref'),
+      true,
+    );
+    assert.equal(
+      evidence.lifecycle_owner_work_order.non_closing_inputs.includes('open_count_zero'),
+      true,
+    );
+    assert.equal(
+      evidence.lifecycle_owner_work_order.typed_blocker_work_order.status,
+      'typed_blocker_refs_observed_followthrough_required',
+    );
+    assert.equal(
+      evidence.lifecycle_owner_work_order.typed_blocker_work_order.selected_payload_path,
+      'typed_blocker_path',
+    );
+    assert.equal(
+      evidence.lifecycle_owner_work_order.typed_blocker_work_order.blocked_decision_count,
+      2,
+    );
+    assert.equal(
+      evidence.lifecycle_owner_work_order.typed_blocker_work_order.safe_decision_count,
+      0,
+    );
+    assert.deepEqual(
+      evidence.lifecycle_owner_work_order.typed_blocker_work_order.latest_typed_blocker_refs,
+      [
+        'mas-artifact-lifecycle-typed-blocker:medautoscience:canonical-regeneration-required:app',
+      ],
+    );
+    assert.equal(
+      evidence.lifecycle_owner_work_order.authority_boundary.work_order_can_execute_domain_physical_delete,
+      false,
+    );
+    assert.equal(
+      evidence.lifecycle_owner_work_order.authority_boundary.work_order_can_create_typed_blocker,
+      false,
+    );
+    assert.equal(
       evidence.latest_lifecycle_apply_handoff.handoff_ref,
       'mas-artifact-lifecycle-handoff:medautoscience:physical-thinning:app',
     );

@@ -224,6 +224,7 @@ function appReleaseUserPathExecutionRunbook() {
       'app_release_user_path.production_user_path_ready',
       'app_release_user_path.release_ready_authorized',
       'app_release_user_path.next_required_delta',
+      'app_release_user_path.release_owner_verdict_handoff.status',
       'foundry_agent_os_production_evidence_gate.owner_route_work_orders[lane=app_release_user_path]',
     ],
     stop_loss: [
@@ -267,6 +268,42 @@ function domainKey(value: unknown) {
   return aliases[compact] ?? compact;
 }
 
+const DOMAIN_OWNER_CHAIN_FORBIDDEN_OPL_CLAIMS = [
+  'live_domain_progress_complete',
+  'domain_ready',
+  'production_ready',
+  'quality_or_export_ready',
+  'owner_receipt_signed_by_opl',
+  'typed_blocker_created_by_opl',
+];
+
+const DOMAIN_OWNER_CHAIN_NON_CLOSING_INPUTS = [
+  'structural_conformance_pass',
+  'controlled_canary_pass',
+  'production_acceptance_tail_present',
+  'docs_foldback',
+  'verified_refs_only_ledger_without_live_stage_run_progress_binding',
+  'zero_open_worklist_count',
+];
+
+const DOMAIN_OWNER_CHAIN_STOP_LOSS = [
+  'if status is owner_typed_blocker_recorded_not_ready_claim, wait for domain owner route-back, no_regression_ref, or updated live progress evidence before treating the lane as complete',
+  'if verification commands fail, keep the domain in required_from_domain_owner or owner_typed_blocker_recorded_not_ready_claim and do not claim domain_ready',
+  'if observed refs are not bound to contracts/live_stage_run_progress_evidence.json, request a domain-owned contract update instead of synthesizing an owner receipt',
+];
+
+function domainOwnerChainSourceCommand(domain: Record<string, unknown>) {
+  const sourceCommand = stringValue(domain.source_command);
+  if (sourceCommand) {
+    return sourceCommand;
+  }
+  const requestedAgentId = stringValue(domain.requested_agent_id)
+    ?? stringValue(domain.domain_id)
+    ?? '<domain>';
+  const repoDir = stringValue(domain.repo_dir) ?? '<repo-dir>';
+  return `opl agents conformance --agent ${requestedAgentId}=${repoDir} --json`;
+}
+
 function domainOwnerEvidenceRoutes(
   domainOwnerChain: Record<string, unknown>,
   ownerEvidenceIntake: Record<string, unknown>,
@@ -278,30 +315,67 @@ function domainOwnerEvidenceRoutes(
         ?.observed_domains,
     ).map((entry) => [domainKey(stringValue(entry.domain_id)), entry]),
   );
-  return recordList(domainOwnerChain.domains).map((domain) => ({
-    domain_id: stringValue(domain.domain_id),
-    requested_agent_id: stringValue(domain.requested_agent_id),
-    repo_dir: stringValue(domain.repo_dir),
-    owner_route_status:
-      stringValue(observedDomainById.get(domainKey(domain.domain_id))?.status)
-      ?? 'owner_evidence_required',
-    observed_receipt_refs:
-      stringListValue(observedDomainById.get(domainKey(domain.domain_id))?.observed_receipt_refs),
-    observed_ref_shapes:
-      stringListValue(observedDomainById.get(domainKey(domain.domain_id))?.observed_ref_shapes),
-    observed_ref_counts:
-      record(observedDomainById.get(domainKey(domain.domain_id))?.observed_ref_counts),
-    next_owner_action: 'domain_owner_record_live_owner_receipt_typed_blocker_human_gate_quality_export_no_regression_or_long_soak_ref',
-    accepted_ref_shapes: stringListValue(domain.accepted_refs_only_result_shapes),
-    conformance_can_close_production: false,
-    authority_boundary: {
-      route_is_refs_only: true,
-      route_can_claim_domain_ready: false,
-      route_can_claim_production_ready: false,
-      can_sign_owner_receipt: false,
-      can_create_typed_blocker: false,
-    },
-  }));
+  return recordList(domainOwnerChain.domains).map((domain) => {
+    const observed = observedDomainById.get(domainKey(domain.domain_id));
+    const sourceCommand = domainOwnerChainSourceCommand(domain);
+    const nextVerificationRefs = stringListValue(domain.next_verification_refs);
+    return {
+      domain_id: stringValue(domain.domain_id),
+      requested_agent_id: stringValue(domain.requested_agent_id),
+      repo_dir: stringValue(domain.repo_dir),
+      owner_repo:
+        stringValue(domain.owner_repo) ?? stringValue(domain.repo_dir),
+      next_owner_repo:
+        stringValue(domain.next_owner_repo)
+        ?? stringValue(domain.owner_repo)
+        ?? stringValue(domain.repo_dir),
+      owner_route_status:
+        stringValue(observed?.status)
+        ?? 'owner_evidence_required',
+      observed_receipt_refs:
+        stringListValue(observed?.observed_receipt_refs),
+      observed_ref_shapes:
+        stringListValue(observed?.observed_ref_shapes),
+      observed_ref_counts:
+        record(observed?.observed_ref_counts),
+      next_owner_action: 'domain_owner_record_live_owner_receipt_typed_blocker_human_gate_quality_export_no_regression_or_long_soak_ref',
+      accepted_ref_shapes: stringListValue(domain.accepted_refs_only_result_shapes),
+      closing_ref_source:
+        stringValue(domain.closing_ref_source)
+        ?? 'contracts/live_stage_run_progress_evidence.json#domain_owner_receipt_refs|typed_blocker_refs|human_gate_refs|quality_or_export_receipt_refs|no_regression_refs|long_soak_refs',
+      typed_blocker_source:
+        stringValue(domain.typed_blocker_source)
+        ?? 'contracts/live_stage_run_progress_evidence.json#typed_blocker_refs',
+      verification_commands: unique([
+        ...stringListValue(domain.verification_commands),
+        ...nextVerificationRefs,
+        sourceCommand,
+      ]),
+      next_verification_refs: nextVerificationRefs,
+      source_command: sourceCommand,
+      forbidden_opl_claims:
+        stringListValue(domain.forbidden_opl_claims).length > 0
+          ? stringListValue(domain.forbidden_opl_claims)
+          : DOMAIN_OWNER_CHAIN_FORBIDDEN_OPL_CLAIMS,
+      non_closing_inputs:
+        stringListValue(domain.non_closing_inputs).length > 0
+          ? stringListValue(domain.non_closing_inputs)
+          : DOMAIN_OWNER_CHAIN_NON_CLOSING_INPUTS,
+      stop_loss:
+        stringListValue(domain.stop_loss).length > 0
+          ? stringListValue(domain.stop_loss)
+          : DOMAIN_OWNER_CHAIN_STOP_LOSS,
+      ready_claim_authorized: false,
+      conformance_can_close_production: false,
+      authority_boundary: {
+        route_is_refs_only: true,
+        route_can_claim_domain_ready: false,
+        route_can_claim_production_ready: false,
+        can_sign_owner_receipt: false,
+        can_create_typed_blocker: false,
+      },
+    };
+  });
 }
 
 function currentOwnerDeltaBridge(appOperatorDrilldown: Record<string, unknown>) {
@@ -527,6 +601,108 @@ function oneShotPlanLandingReadout(contracts: FrameworkContracts) {
   };
 }
 
+function ownerGateStopLoss() {
+  return [
+    'do not add more OPL projection evidence to claim ready',
+    'request owner-native receipt, verdict, acceptance, or typed blocker from the listed owner',
+    'keep ready_claim_authorized=false until the owner ref is observed and verified',
+  ];
+}
+
+function unresolvedOwnerGates(input: {
+  ownerDeltaBridge: Record<string, unknown>;
+  productionEvidenceGate: Record<string, unknown>;
+}) {
+  const gates = [];
+  const ownerAnswerClosureHandoff = record(
+    input.ownerDeltaBridge.owner_answer_closure_handoff,
+  );
+  const ownerAnswerStillRequired =
+    input.ownerDeltaBridge.owner_answer_still_required === true
+    || input.ownerDeltaBridge.owner_answer_missing === true;
+  if (ownerAnswerStillRequired) {
+    gates.push({
+      gate_id: 'owner-gate:current_owner_delta_owner_answer',
+      lane: 'current_owner_delta_owner_answer',
+      owner: stringValue(input.ownerDeltaBridge.current_owner),
+      owner_repo: stringValue(input.ownerDeltaBridge.current_owner)
+        ?? 'current_owner_domain_repository',
+      status: 'owner_answer_or_typed_blocker_required',
+      required_delta:
+        stringValue(input.ownerDeltaBridge.desired_delta_description)
+        ?? 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+      accepted_ref_shapes:
+        stringListValue(input.ownerDeltaBridge.required_owner_answer_shapes),
+      observed_ref_shapes: [],
+      missing_input_refs:
+        stringListValue(input.ownerDeltaBridge.missing_input_refs),
+      closing_ref_source: 'current_owner_domain_owned_answer_ref_bound_to_current_owner_delta',
+      typed_blocker_source: 'current_owner_domain_owned_typed_blocker_ref_bound_to_current_owner_delta',
+      source_command: 'opl framework readiness --family-defaults --json',
+      record_command: stringValue(ownerAnswerClosureHandoff.record_command),
+      verify_command: stringValue(ownerAnswerClosureHandoff.verify_command),
+      stop_loss: ownerGateStopLoss(),
+      ready_claim_authorized: false,
+      can_be_completed_by_opl: false,
+    });
+  }
+
+  for (const workOrder of recordList(input.productionEvidenceGate.owner_route_work_orders)) {
+    const lane = stringValue(workOrder.lane) ?? 'unknown_owner_gate';
+    gates.push({
+      gate_id: `owner-gate:${lane}`,
+      lane,
+      owner: stringValue(workOrder.owner),
+      owner_repo: stringValue(workOrder.owner_repo),
+      status: stringValue(workOrder.owner_evidence_closure_state)
+        ?? 'owner_gate_required',
+      required_delta: stringValue(workOrder.next_owner_action),
+      accepted_ref_shapes: stringListValue(workOrder.accepted_ref_shapes),
+      observed_ref_shapes: stringListValue(workOrder.observed_ref_shapes),
+      observed_receipt_refs: stringListValue(workOrder.observed_receipt_refs),
+      observed_ref_counts: record(workOrder.observed_ref_counts),
+      open_count: numberValue(workOrder.open_count),
+      open_count_semantics: stringValue(workOrder.open_count_semantics),
+      closing_ref_source: stringValue(workOrder.closing_ref_source),
+      typed_blocker_source: stringValue(workOrder.typed_blocker_source),
+      forbidden_opl_claims: stringListValue(workOrder.forbidden_opl_claims),
+      source_command: stringValue(workOrder.source_command),
+      verification_command: stringValue(workOrder.verification_command),
+      stop_loss: ownerGateStopLoss(),
+      ready_claim_authorized: false,
+      can_be_completed_by_opl: false,
+    });
+  }
+
+  return {
+    surface_kind: 'opl_unresolved_owner_gate_inventory',
+    status: gates.length > 0
+      ? 'owner_gates_required'
+      : 'no_unresolved_owner_gate_observed',
+    gate_count: gates.length,
+    gates,
+    gate_ids: gates.map((gate) => gate.gate_id),
+    owner_repos: unique(gates.map((gate) => gate.owner_repo ?? '')),
+    ready_claim_authorized: false,
+    completion_policy: {
+      owner_native_refs_required: true,
+      open_count_zero_closes_ready: false,
+      refs_only_projection_closes_ready: false,
+      opl_can_close_owner_gate: false,
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_claim_domain_ready: false,
+      can_claim_app_release_ready: false,
+      can_claim_l5: false,
+      can_claim_production_ready: false,
+      can_authorize_physical_delete: false,
+    },
+  };
+}
+
 export async function buildFrameworkOperatingMaturityReadout(
   contracts: FrameworkContracts,
   args: OperatingMaturityArgs,
@@ -604,6 +780,10 @@ export async function buildFrameworkOperatingMaturityReadout(
     ownerEvidenceIntake,
   });
   const oneShotPlanLanding = oneShotPlanLandingReadout(contracts);
+  const ownerGateInventory = unresolvedOwnerGates({
+    ownerDeltaBridge,
+    productionEvidenceGate,
+  });
 
   return {
     version: 'g2',
@@ -639,6 +819,7 @@ export async function buildFrameworkOperatingMaturityReadout(
       },
       current_owner_delta_bridge: ownerDeltaBridge,
       one_shot_plan_landing: oneShotPlanLanding,
+      unresolved_owner_gates: ownerGateInventory,
       owner_evidence_intake: ownerEvidenceIntake,
       foundry_agent_os_production_evidence_gate: productionEvidenceGate,
       domain_owner_chain_scaleout: {
@@ -684,6 +865,8 @@ export async function buildFrameworkOperatingMaturityReadout(
         typed_blocker_ref_count: numberValue(appReleaseUserPath.evidence.typed_blocker_ref_count),
         verified_ledger_receipt_ref_count:
           numberValue(appReleaseUserPath.evidence.verified_ledger_receipt_ref_count),
+        release_owner_verdict_handoff:
+          record(appReleaseUserPath.evidence.release_owner_verdict_handoff),
         selected_cohort_id:
           stringValue(record(appReleaseUserPath.evidence.cohort_guard).selected_cohort_id),
         accepted_refs_only_result_shapes: [

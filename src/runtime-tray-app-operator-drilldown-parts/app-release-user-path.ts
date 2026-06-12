@@ -69,6 +69,10 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
     receipt.receipt_status === 'verified'
   );
   const rawTypedBlockerRefs = refsFromRecords(ledgerReceipts, ['typed_blocker_refs']);
+  const releaseOwnerReceiptRefs = refsFromRecords(ledgerReceipts, [
+    'release_owner_receipt_refs',
+  ]);
+  const installEvidenceRefs = refsFromRecords(ledgerReceipts, ['install_evidence_refs']);
   const candidateEvidenceRecords = [
     record(drilldown.package_export_lifecycle_refs),
     record(drilldown.production_evidence_tail_ledger),
@@ -127,6 +131,50 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
     recorded_ledger_receipt_refs: recordedLedgerReceipts.map((receipt) => receipt.receipt_ref),
     verified_ledger_receipt_ref_count: verifiedLedgerReceipts.length,
     verified_ledger_receipt_refs: verifiedLedgerReceipts.map((receipt) => receipt.receipt_ref),
+    release_owner_verdict_handoff: {
+      surface_kind: 'opl_app_release_owner_verdict_handoff',
+      status: productionUserPathReady
+        ? 'release_owner_verdict_required'
+        : 'waiting_for_same_cohort_user_path_evidence_or_typed_blocker',
+      owner: 'one-person-lab-app release owner',
+      owner_repo: '/Users/gaofeng/workspace/one-person-lab-app',
+      required_delta: productionUserPathReady
+        ? 'release_owner_receipt_install_evidence_or_typed_blocker_ref'
+        : 'same_cohort_release_user_path_refs_or_release_owner_typed_blocker_ref',
+      accepted_ref_shapes: [
+        'release_owner_receipt_ref',
+        'install_evidence_ref',
+        'typed_blocker_ref',
+      ],
+      observed_release_owner_receipt_refs: releaseOwnerReceiptRefs,
+      observed_install_evidence_refs: installEvidenceRefs,
+      observed_typed_blocker_refs: activeTypedBlockerRefs,
+      release_ready_authorized: false,
+      production_ready_authorized: false,
+      record_command:
+        'opl runtime app-release-evidence record --payload \'{"release_owner_receipt_refs":["release-owner:<ref>"]}\'',
+      typed_blocker_record_command:
+        'opl runtime app-release-evidence record --payload \'{"typed_blocker_refs":["typed-blocker:app-release/<reason>"]}\'',
+      verify_command: 'opl runtime app-release-evidence verify --receipt-ref <receipt_ref>',
+      readback_commands: [
+        'opl runtime app-release-evidence list --json',
+        'opl runtime app-operator-drilldown --json',
+        'opl framework operating-maturity --family-defaults --json',
+      ],
+      stop_loss: [
+        'when open_gate_count is zero and release_ready_authorized is false, request release owner verdict or typed blocker instead of recording more OPL user-path evidence',
+        'do not mix release_owner_receipt_refs with typed_blocker_refs or same-cohort user-path refs in one payload',
+      ],
+      authority_boundary: {
+        refs_only: true,
+        can_write_app_repo_truth: false,
+        can_create_owner_receipt: false,
+        can_generate_typed_blocker: false,
+        can_claim_release_ready: false,
+        can_claim_production_ready: false,
+        can_close_app_release_user_path: false,
+      },
+    },
     pending_verify_receipt_ref_count: recordedLedgerReceipts.length,
     pending_verify_receipt_refs: recordedLedgerReceipts.map((receipt) => receipt.receipt_ref),
     gate_items: openGateItems,
@@ -136,6 +184,8 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
       'reload_prompt_user_path_receipt_ref',
       'provider_state_linkage_ref',
       'long_operator_evidence_ref',
+      'release_owner_receipt_ref',
+      'install_evidence_ref',
       'typed_blocker_ref',
     ],
     payload_owner: 'app_live_operator_or_release_owner',
@@ -262,6 +312,7 @@ export function appReleaseUserPathEvidenceNextStep(evidence: JsonRecord) {
     empty_payload_template_is_success_evidence: false,
     typed_blocker_ref_count: numberValue(evidence.typed_blocker_ref_count),
     blocked_by_typed_blocker_refs: evidence.blocked_by_typed_blocker_refs === true,
+    release_owner_verdict_handoff: record(evidence.release_owner_verdict_handoff),
     full_detail_section: 'app_release_user_path_evidence',
     can_execute_domain_action: false,
     can_create_owner_receipt: false,
@@ -358,6 +409,8 @@ export function buildAppReleaseUserPathEvidenceActionRoutes(evidence: JsonRecord
       'reload_prompt_user_path_refs',
       'provider_state_linkage_refs',
       'long_operator_evidence_refs',
+      'release_owner_receipt_refs',
+      'install_evidence_refs',
       'typed_blocker_refs',
     ],
     required_evidence_refs: stringList(evidence.open_gate_ids),

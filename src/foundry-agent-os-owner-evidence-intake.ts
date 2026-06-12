@@ -654,9 +654,14 @@ function appReleaseProjection(appReleaseEvidence: Record<string, unknown>): Owne
   const counts = {
     ...emptyCounts(),
     typed_blocker_ref_count: stringList(appReleaseEvidence.typed_blocker_refs).length,
+    domain_owner_receipt_ref_count:
+      stringList(record(appReleaseEvidence.release_owner_verdict_handoff)
+        .observed_release_owner_receipt_refs).length,
     evidence_ref_count:
       stringList(appReleaseEvidence.verified_ledger_receipt_refs).length
-      + stringList(appReleaseEvidence.recorded_ledger_receipt_refs).length,
+      + stringList(appReleaseEvidence.recorded_ledger_receipt_refs).length
+      + stringList(record(appReleaseEvidence.release_owner_verdict_handoff)
+        .observed_install_evidence_refs).length,
   };
   const recordedReceiptCount = typeof appReleaseEvidence.recorded_ledger_receipt_ref_count === 'number'
     ? appReleaseEvidence.recorded_ledger_receipt_ref_count

@@ -136,7 +136,17 @@ test('runtime brand-module L5 evidence ledger accepts blockers and rejects mixed
     assert.equal(route.blocker_state, 'typed_blocker_recorded');
     assert.equal(route.next_owner_action, 'resolve_typed_blocker_or_record_owner_acceptance_ref');
     assert.equal(route.owner_evidence_closure_state, 'owner_typed_blocker_recorded');
-    assert.equal(route.observed_typed_blocker_ref_count, 1);
+    assert.equal(route.observed_typed_blocker_ref_count, 2);
+    assert.equal(
+      route.observed_evidence_refs.includes(
+        'typed-blocker:opl-brand-l5/connect/release_install_evidence/owner-evidence-needed-20260612',
+      ),
+      true,
+    );
+    assert.equal(
+      route.observed_evidence_refs.includes('typed-blocker:connect/release-open'),
+      true,
+    );
     assert.equal(route.l5_claim_status, 'owner_typed_blocker_recorded_not_l5_claimed');
 
     const failure = runCliFailure([

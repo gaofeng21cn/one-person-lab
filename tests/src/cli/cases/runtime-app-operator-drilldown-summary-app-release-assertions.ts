@@ -113,11 +113,16 @@ export function assertAppReleaseUserPathProductionEvidenceLane(summaryDrilldown:
   );
   assert.equal(
     appUserPathStep.payload_workorder.accepted_payload_path_policy,
-    'real_app_release_user_path_refs_or_typed_blocker_path_empty_template_blocks',
+    'same_cohort_release_user_path_refs_release_owner_verdict_or_typed_blocker_path_empty_template_blocks',
   );
   assert.equal(
     appUserPathStep.payload_workorder.accepted_payload_paths
       .app_release_user_path_refs_path.closes_app_release_user_path,
+    false,
+  );
+  assert.equal(
+    appUserPathStep.payload_workorder.accepted_payload_paths
+      .release_owner_verdict_path.success_claimed_by_opl,
     false,
   );
   assert.equal(
@@ -244,6 +249,16 @@ export function assertAppReleaseUserPathNextStep(summaryDrilldown: any) {
     appUserPathStep.payload_workorder.accepted_payload_paths
       .app_release_user_path_refs_path.typed_blocker_refs_must_be_absent,
     true,
+  );
+  assert.equal(
+    appUserPathStep.payload_workorder.accepted_payload_paths
+      .app_release_user_path_refs_path.release_owner_receipt_refs_must_be_absent,
+    true,
+  );
+  assert.equal(
+    appUserPathStep.payload_workorder.accepted_payload_paths
+      .release_owner_verdict_path.closes_release_ready,
+    false,
   );
   assert.equal(
     appUserPathStep.payload_workorder.accepted_payload_paths

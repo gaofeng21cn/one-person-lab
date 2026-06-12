@@ -136,42 +136,42 @@ function nextOwnerActionForRequirement(currentState: string) {
 
 function routeStatusWithObservedEvidence(
   currentState: string,
-  observedRefCount: number,
+  observedSuccessRefCount: number,
   observedTypedBlockerRefCount: number,
 ) {
+  if (currentState === 'open' && observedSuccessRefCount > 0) {
+    return 'owner_evidence_observed_not_l5_claimed';
+  }
   if (currentState === 'open' && observedTypedBlockerRefCount > 0) {
     return 'owner_typed_blocker_recorded';
-  }
-  if (currentState === 'open' && observedRefCount > 0) {
-    return 'owner_evidence_observed_not_l5_claimed';
   }
   return routeStatusForRequirement(currentState);
 }
 
 function blockerStateWithObservedEvidence(
   currentState: string,
-  observedRefCount: number,
+  observedSuccessRefCount: number,
   observedTypedBlockerRefCount: number,
 ) {
+  if (currentState === 'open' && observedSuccessRefCount > 0) {
+    return 'owner_route_refs_observed_not_l5_claim';
+  }
   if (currentState === 'open' && observedTypedBlockerRefCount > 0) {
     return 'typed_blocker_recorded';
-  }
-  if (currentState === 'open' && observedRefCount > 0) {
-    return 'owner_route_refs_observed_not_l5_claim';
   }
   return blockerStateForRequirement(currentState);
 }
 
 function nextOwnerActionWithObservedEvidence(
   currentState: string,
-  observedRefCount: number,
+  observedSuccessRefCount: number,
   observedTypedBlockerRefCount: number,
 ) {
+  if (currentState === 'open' && observedSuccessRefCount > 0) {
+    return 'continue_collecting_l5_owner_evidence_or_owner_acceptance_ref';
+  }
   if (currentState === 'open' && observedTypedBlockerRefCount > 0) {
     return 'resolve_typed_blocker_or_record_owner_acceptance_ref';
-  }
-  if (currentState === 'open' && observedRefCount > 0) {
-    return 'continue_collecting_l5_owner_evidence_or_owner_acceptance_ref';
   }
   return nextOwnerActionForRequirement(currentState);
 }
@@ -215,10 +215,34 @@ function observedLedgerRefs(receipts: BrandModuleL5EvidenceLedgerReceiptProjecti
   ]));
 }
 
-function contractRefsForRequirement(requirement: { evidence_refs?: string[]; blocker_refs?: string[] }) {
+function contractRefsForRequirement(
+  requirement: { evidence_refs?: string[]; blocker_refs?: string[] },
+  options: { includeBlockerRefs?: boolean } = {},
+) {
   return unique([
     ...(requirement.evidence_refs ?? []),
-    ...(requirement.blocker_refs ?? []),
+    ...(options.includeBlockerRefs === false ? [] : requirement.blocker_refs ?? []),
+  ]);
+}
+
+function observedSuccessLedgerRefs(receipts: BrandModuleL5EvidenceLedgerReceiptProjection[]) {
+  return unique(receipts.flatMap((receipt) => {
+    const successRefs = [
+      ...receipt.evidence_refs,
+      ...receipt.owner_acceptance_refs,
+      ...receipt.no_regression_refs,
+    ];
+    return successRefs.length > 0 ? [receipt.receipt_ref, ...successRefs] : [];
+  }));
+}
+
+function observedSuccessRefsForRequirement(
+  receipts: BrandModuleL5EvidenceLedgerReceiptProjection[],
+  requirement: { evidence_refs?: string[] },
+) {
+  return unique([
+    ...contractRefsForRequirement(requirement, { includeBlockerRefs: false }),
+    ...observedSuccessLedgerRefs(receipts),
   ]);
 }
 
@@ -236,6 +260,13 @@ function observedRefsForRequirement(
   receipts: BrandModuleL5EvidenceLedgerReceiptProjection[],
   requirement: { evidence_refs?: string[]; blocker_refs?: string[] },
 ) {
+  const successRefs = observedSuccessRefsForRequirement(receipts, requirement);
+  if (successRefs.length > 0) {
+    return unique([
+      ...successRefs,
+      ...receipts.flatMap((receipt) => receipt.typed_blocker_refs),
+    ]);
+  }
   return unique([
     ...contractRefsForRequirement(requirement),
     ...observedLedgerRefs(receipts),
@@ -276,8 +307,11 @@ function refShapeForContractRef(ref: string) {
   return 'evidence_ref';
 }
 
-function observedContractRefShapes(requirement: { evidence_refs?: string[]; blocker_refs?: string[] }) {
-  return unique(contractRefsForRequirement(requirement).map(refShapeForContractRef));
+function observedContractRefShapes(
+  requirement: { evidence_refs?: string[]; blocker_refs?: string[] },
+  options: { includeBlockerRefs?: boolean } = {},
+) {
+  return unique(contractRefsForRequirement(requirement, options).map(refShapeForContractRef));
 }
 
 function observedLedgerRefShapes(receipts: BrandModuleL5EvidenceLedgerReceiptProjection[]) {
@@ -301,8 +335,11 @@ function observedRefShapesForRequirement(
   receipts: BrandModuleL5EvidenceLedgerReceiptProjection[],
   requirement: { evidence_refs?: string[]; blocker_refs?: string[] },
 ) {
+  const successRefs = observedSuccessRefsForRequirement(receipts, requirement);
   return unique([
-    ...observedContractRefShapes(requirement),
+    ...observedContractRefShapes(requirement, {
+      includeBlockerRefs: successRefs.length === 0,
+    }),
     ...observedLedgerRefShapes(receipts),
   ]);
 }
@@ -337,7 +374,7 @@ function l5EvidencePlaceholderRef(
 
 function l5RequirementClosureState(
   currentState: string,
-  observedRefCount: number,
+  observedSuccessRefCount: number,
   observedTypedBlockerRefCount = 0,
 ) {
   if (currentState === 'satisfied') {
@@ -346,11 +383,11 @@ function l5RequirementClosureState(
   if (currentState === 'blocked') {
     return 'owner_typed_blocker_recorded';
   }
+  if (observedSuccessRefCount > 0) {
+    return 'owner_evidence_recorded_not_l5_claim';
+  }
   if (observedTypedBlockerRefCount > 0) {
     return 'owner_typed_blocker_recorded';
-  }
-  if (observedRefCount > 0) {
-    return 'owner_evidence_recorded_not_l5_claim';
   }
   return 'owner_acceptance_or_typed_blocker_required';
 }
@@ -447,6 +484,10 @@ function ownerEvidenceRoutes(
       receipt.receipt_status === 'verified'
     );
     const observedEvidenceRefs = observedRefsForRequirement(requirementLedgerReceipts, requirement);
+    const observedSuccessRefs = observedSuccessRefsForRequirement(
+      requirementLedgerReceipts,
+      requirement,
+    );
     const observedTypedBlockerRefs = observedTypedBlockerRefsForRequirement(
       requirementLedgerReceipts,
       requirement,
@@ -459,23 +500,23 @@ function ownerEvidenceRoutes(
       owner_repo: ownerRepoForRequirement(requirement.owner, entry.module_id),
       owner_route_status: routeStatusWithObservedEvidence(
         requirement.current_state,
-        observedEvidenceRefs.length,
+        observedSuccessRefs.length,
         observedTypedBlockerRefs.length,
       ),
       blocker_state: blockerStateWithObservedEvidence(
         requirement.current_state,
-        observedEvidenceRefs.length,
+        observedSuccessRefs.length,
         observedTypedBlockerRefs.length,
       ),
       next_owner_action: nextOwnerActionWithObservedEvidence(
         requirement.current_state,
-        observedEvidenceRefs.length,
+        observedSuccessRefs.length,
         observedTypedBlockerRefs.length,
       ),
       work_order_id: l5RequirementWorkOrderId(entry.module_id, requirement.class_id),
       owner_evidence_closure_state: l5RequirementClosureState(
         requirement.current_state,
-        observedEvidenceRefs.length,
+        observedSuccessRefs.length,
         observedTypedBlockerRefs.length,
       ),
       owner_acceptance_required: true,
@@ -512,9 +553,11 @@ function ownerEvidenceRoutes(
       observed_typed_blocker_ref_count: observedTypedBlockerRefs.length,
       observed_receipt_count: requirementLedgerReceipts.length,
       verified_receipt_count: verifiedRequirementLedgerReceipts.length,
-      l5_claim_status: observedTypedBlockerRefs.length > 0
-        ? 'owner_typed_blocker_recorded_not_l5_claimed'
-        : observedEvidenceRefs.length > 0
+      l5_claim_status: observedSuccessRefs.length > 0
+        ? 'owner_evidence_refs_observed_not_l5_claimed'
+        : observedTypedBlockerRefs.length > 0
+          ? 'owner_typed_blocker_recorded_not_l5_claimed'
+          : observedEvidenceRefs.length > 0
           ? 'owner_evidence_refs_observed_not_l5_claimed'
           : 'owner_evidence_required',
       non_closing_inputs: contract.owner_route_work_order_policy.non_closing_inputs,
@@ -567,21 +610,25 @@ function nextActionSummary(
   const firstMissingRoute = routes.find((route) =>
     route.owner_evidence_closure_state === 'owner_acceptance_or_typed_blocker_required'
   );
+  const firstTypedBlockerRoute = routes.find((route) =>
+    route.owner_evidence_closure_state === 'owner_typed_blocker_recorded'
+  );
+  const nextRoute = firstMissingRoute ?? firstTypedBlockerRoute;
   return {
     module_id: entry.module_id,
     status: entry.l5_can_be_claimed ? 'complete' : entry.l5_completion_status,
     l5_can_be_claimed: entry.l5_can_be_claimed,
-    next_owner_action: firstMissingRoute
-      ? firstMissingRoute.next_owner_action
+    next_owner_action: nextRoute
+      ? nextRoute.next_owner_action
       : 'keep_verified_refs_and_wait_for_all_requirements',
-    next_work_order_id: firstMissingRoute?.work_order_id ?? null,
-    next_evidence_class_id: firstMissingRoute?.class_id ?? null,
-    next_owner: firstMissingRoute?.owner ?? null,
-    next_owner_repo: firstMissingRoute?.owner_repo ?? null,
-    next_accepted_ref_shapes: firstMissingRoute?.accepted_ref_shapes ?? null,
-    next_forbidden_opl_claims: firstMissingRoute?.forbidden_opl_claims ?? null,
-    next_stop_loss: firstMissingRoute?.stop_loss ?? null,
-    next_command_examples: firstMissingRoute?.owner_route_command_examples ?? null,
+    next_work_order_id: nextRoute?.work_order_id ?? null,
+    next_evidence_class_id: nextRoute?.class_id ?? null,
+    next_owner: nextRoute?.owner ?? null,
+    next_owner_repo: nextRoute?.owner_repo ?? null,
+    next_accepted_ref_shapes: nextRoute?.accepted_ref_shapes ?? null,
+    next_forbidden_opl_claims: nextRoute?.forbidden_opl_claims ?? null,
+    next_stop_loss: nextRoute?.stop_loss ?? null,
+    next_command_examples: nextRoute?.owner_route_command_examples ?? null,
     missing_evidence_groups: missingEvidenceGroups,
     missing_owner_evidence_class_count:
       missingEvidenceGroups.missing_owner_evidence_class_ids.length,
