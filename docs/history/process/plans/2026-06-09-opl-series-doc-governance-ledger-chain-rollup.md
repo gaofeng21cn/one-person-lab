@@ -269,6 +269,44 @@ Coverage / carry-forward:
 - Not covered: MAG path-level source thinning, default-caller production proof, App/workbench sustained consumption, Temporal long-soak, OPL/App registry consumption, and any physical source/test/workflow/package/CLI/API retirement.
 - Physical retirement remains gated by MAG machine guards plus replacement-owner, no-active-caller, no-forbidden-write, MAG owner receipt / typed blocker or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
 
+## Fresh Intake 2026-06-12 App Candidate Shell Status Compression
+
+This follow-up reopened `one-person-lab-app` for a narrow docs-only lane after the App repo was clean, aligned to `origin/main`, and OPL Doc doctor was passing. It compresses duplicated `agui-codex` candidate target / command / evidence lifecycle prose in active status back to the candidate SSOT owners. It does not create a new dated ledger chain and does not close the parent `/goal`.
+
+Semantic theme: App candidate shell status compression.
+
+Single Source of Truth:
+
+- App active product gaps and next baton: `one-person-lab-app/docs/active/app-ideal-state-gap-plan.md`.
+- Candidate registry and adoption policy: `contracts/app-shell-candidates.json`, `contracts/shell-adapters/agui-codex.json`, and `contracts/app-shell-adapter.json`.
+- Candidate target shape and verification lifecycle: `docs/app-gui-feature-inventory.md` and `docs/agui-codex-candidate-verification.md`.
+- Candidate evidence: candidate manifests, shell artifacts, active-shell validation, release-boundary tests, release artifacts, and CI logs.
+
+Edited / pushed repo-local docs:
+
+| Repo | Commit | Edited docs and result |
+| --- | --- | --- |
+| `one-person-lab-app` | `31d8e2e docs: compress App candidate shell status` | `docs/status.md` now keeps only the current non-adoption boundary and points candidate target / command / evidence currentness back to candidate owners. `docs/history/process/README.md` records the status compression as topic-level coverage. |
+
+Fresh readback boundary:
+
+- `one-person-lab-app`: `main...origin/main`, `HEAD=origin/main=31d8e2e`; `opl-doc-doctor` remained `finding_count=0`, `active_truth_health.status=pass`, `markdown_doc_count=23`.
+- `one-person-lab`: this rollup is the only OPL docs write for this App follow-up.
+- `med-autoscience`: unrelated local source edits remain outside this docs-governance follow-up.
+- `med-autogrant`, `redcube-ai`, and `opl-meta-agent`: no new repo-local edit in this App follow-up.
+
+Verification:
+
+- App docs diff check: `git diff --check -- docs/status.md docs/history/process/README.md`.
+- App README/docs conflict-marker scan.
+- App OPL Doc doctor: `finding_count=0`, `active_truth_health.status=pass`.
+
+Coverage / carry-forward:
+
+- Covered: App `docs/status.md` candidate-shell section that duplicated the candidate runbook, target inventory and evidence lifecycle as active status prose.
+- Not covered: App release cohort evidence, Full/VM evidence, GUI implementation parity, install exposure live-root validation, candidate implementation, active-shell adoption, or any source/test/workflow/package/CLI/API physical retirement.
+- Physical retirement remains gated by App contracts/source/tests/validators plus replacement-owner, no-active-caller, no-forbidden-write, App owner decision, and retired-surface provenance. This follow-up authorizes no physical deletion.
+
 ## Future Record Policy
 
 - Do not create new dated docs-governance coverage-ledger chains for ordinary process, frozen inventory, doctor transcript, branch/worktree state, command transcripts or per-run proof.
