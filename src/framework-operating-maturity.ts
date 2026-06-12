@@ -68,6 +68,7 @@ function appReleaseUserPathMaturity() {
 
 function appOperatorDrilldownMaturity(drilldown: Record<string, unknown>) {
   const summary = record(drilldown.summary);
+  const providerEvidence = record(drilldown.provider_long_soak_evidence);
   const evidenceAfterContract = record(
     record(drilldown.attention_first_payload).evidence_after_contract,
   );
@@ -80,6 +81,11 @@ function appOperatorDrilldownMaturity(drilldown: Record<string, unknown>) {
     numberValue(summary.provider_slo_cadence_window_missing_receipt_count);
   const providerBlockedRepairReceiptCount =
     numberValue(summary.provider_slo_cadence_window_blocked_repair_receipt_count);
+  const providerEvidenceBlockerRefCount =
+    stringListValue(providerEvidence.provider_blocker_refs).length
+    + stringListValue(providerEvidence.typed_blocker_refs).length;
+  const providerCapabilityStatus =
+    stringValue(summary.provider_slo_capability_status);
   const providerOpenCount = providerLongEvidenceReady ? 0 : 1;
   const lifecycleObservedRefCount = numberValue(lifecycleEvidence.observed_ref_count);
   const lifecycleReconcileIssueCount =
@@ -105,7 +111,18 @@ function appOperatorDrilldownMaturity(drilldown: Record<string, unknown>) {
         numberValue(summary.provider_slo_cadence_window_expected_receipt_count),
       missingReceiptCount: providerMissingReceiptCount,
       blockedRepairReceiptCount: providerBlockedRepairReceiptCount,
-      capabilityStatus: stringValue(summary.provider_slo_capability_status),
+      capabilityStatus:
+        providerCapabilityStatus === 'capability_slo_not_observed'
+          && providerEvidenceBlockerRefCount > 0
+          ? 'capability_slo_blocked'
+          : providerCapabilityStatus,
+      evidence: providerEvidence,
+      observedReceiptRefs: stringListValue(providerEvidence.receipt_refs),
+      verifiedReceiptRefs: stringListValue(providerEvidence.verified_receipt_refs),
+      pendingVerifyReceiptRefs: stringListValue(providerEvidence.pending_verify_receipt_refs),
+      observedRefShapes: stringListValue(providerEvidence.observed_ref_shapes),
+      observedRefCounts: record(providerEvidence.observed_ref_counts),
+      authorityBoundary: record(providerEvidence.authority_boundary),
     },
     lifecycle: {
       evidence: lifecycleEvidence,
@@ -864,6 +881,20 @@ export async function buildFrameworkOperatingMaturityReadout(
         blocked_repair_receipt_count:
           drilldownMaturity.provider.blockedRepairReceiptCount,
         capability_status: drilldownMaturity.provider.capabilityStatus,
+        evidence_ledger_status:
+          stringValue(drilldownMaturity.provider.evidence.evidence_ledger_status),
+        observed_receipt_ref_count:
+          drilldownMaturity.provider.observedReceiptRefs.length,
+        observed_receipt_refs: drilldownMaturity.provider.observedReceiptRefs,
+        verified_receipt_ref_count:
+          drilldownMaturity.provider.verifiedReceiptRefs.length,
+        verified_receipt_refs: drilldownMaturity.provider.verifiedReceiptRefs,
+        pending_verify_receipt_ref_count:
+          drilldownMaturity.provider.pendingVerifyReceiptRefs.length,
+        pending_verify_receipt_refs:
+          drilldownMaturity.provider.pendingVerifyReceiptRefs,
+        observed_ref_shapes: drilldownMaturity.provider.observedRefShapes,
+        observed_ref_counts: drilldownMaturity.provider.observedRefCounts,
         accepted_refs_only_result_shapes: [
           'long_soak_ref',
           'recovery_ref',
@@ -872,6 +903,7 @@ export async function buildFrameworkOperatingMaturityReadout(
           'typed_blocker_ref',
         ],
         provider_completion_counts_as_production_ready: false,
+        authority_boundary: drilldownMaturity.provider.authorityBoundary,
       },
       cleanup_retirement: {
         source_command: 'opl agents default-callers --family-defaults --json',

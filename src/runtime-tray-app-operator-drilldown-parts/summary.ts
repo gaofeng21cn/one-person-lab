@@ -25,6 +25,7 @@ type AppOperatorDrilldownSummaryInput = {
   providerActionRefs: unknown[];
   providerCadenceWindow: JsonRecord;
   providerCapabilitySlo: JsonRecord;
+  providerLongSoakEvidence: JsonRecord;
   periodicRefs: JsonRecord;
   actionRefs: JsonRecord[];
   ownerReceipts: unknown[];
@@ -185,6 +186,25 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     provider_slo_capability_missing_closeout_block_ready: input.providerCapabilitySlo.missing_closeout_block_ready,
     provider_slo_capability_retry_dead_letter_ready: input.providerCapabilitySlo.retry_dead_letter_boundary_ready,
     provider_slo_capability_domain_truth_boundary_preserved: input.providerCapabilitySlo.domain_truth_boundary_preserved,
+    provider_long_soak_evidence_status: input.providerLongSoakEvidence.status,
+    provider_long_soak_evidence_receipt_ref_count:
+      numberValue(input.providerLongSoakEvidence.receipt_count),
+    provider_long_soak_evidence_recorded_receipt_ref_count:
+      numberValue(input.providerLongSoakEvidence.recorded_receipt_ref_count),
+    provider_long_soak_evidence_verified_receipt_ref_count:
+      numberValue(input.providerLongSoakEvidence.verified_receipt_ref_count),
+    provider_long_soak_evidence_pending_verify_receipt_ref_count:
+      numberValue(input.providerLongSoakEvidence.pending_verify_receipt_ref_count),
+    provider_long_soak_evidence_long_soak_ref_count:
+      list(input.providerLongSoakEvidence.long_soak_refs).length,
+    provider_long_soak_evidence_recovery_ref_count:
+      list(input.providerLongSoakEvidence.recovery_refs).length,
+    provider_long_soak_evidence_dead_letter_ref_count:
+      list(input.providerLongSoakEvidence.dead_letter_refs).length,
+    provider_long_soak_evidence_provider_blocker_ref_count:
+      list(input.providerLongSoakEvidence.provider_blocker_refs).length,
+    provider_long_soak_evidence_typed_blocker_ref_count:
+      list(input.providerLongSoakEvidence.typed_blocker_refs).length,
     provider_cadence_window_status: input.providerCadenceWindow.window_status,
     provider_cadence_window_long_evidence_ready: input.providerCadenceWindow.long_window_evidence_ready,
     provider_cadence_window_expected_receipt_count: input.providerCadenceWindow.expected_slo_execution_receipt_count,

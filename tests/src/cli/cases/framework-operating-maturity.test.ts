@@ -1087,6 +1087,131 @@ test('framework operating maturity projects owner evidence ledger refs without r
   }
 });
 
+test('framework operating maturity consumes provider long-soak evidence refs without production ready claims', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-provider-long-soak-evidence-'));
+  const workspaceRoot = createFamilyDefaultContractWorkspace();
+  try {
+    const env: Record<string, string> = {
+      OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+    };
+    const providerRecord = runCli([
+      'runtime',
+      'provider-long-soak-evidence',
+      'record',
+      '--payload',
+      JSON.stringify({
+        long_soak_refs: [
+          'provider-long-soak:temporal/week-1/cadence-window',
+        ],
+        recovery_refs: [
+          'provider-recovery:temporal/worker-restart/requery',
+        ],
+        dead_letter_refs: [
+          'provider-dead-letter:temporal/retry-boundary',
+        ],
+        provider_blocker_refs: [
+          'provider-blocker:temporal/capability-slo/current',
+        ],
+        typed_blocker_refs: [
+          'typed-blocker:provider/temporal/capability-slo-blocked',
+        ],
+      }),
+    ], env).provider_long_soak_evidence_ledger_record;
+    runCli([
+      'runtime',
+      'provider-long-soak-evidence',
+      'verify',
+      '--receipt-ref',
+      providerRecord.receipt_refs[0],
+    ], env);
+
+    const drilldown = runCli([
+      'runtime',
+      'app-operator-drilldown',
+    ], env).app_operator_drilldown;
+    assert.equal(
+      drilldown.provider_long_soak_evidence.surface_kind,
+      'opl_provider_long_soak_evidence_projection',
+    );
+    assert.equal(drilldown.provider_long_soak_evidence.status, 'provider_evidence_observed_not_ready_claim');
+    assert.deepEqual(drilldown.provider_long_soak_evidence.observed_ref_shapes, [
+      'long_soak_ref',
+      'recovery_ref',
+      'dead_letter_ref',
+      'provider_blocker_ref',
+      'typed_blocker_ref',
+    ]);
+    assert.equal(drilldown.summary.provider_long_soak_evidence_verified_receipt_ref_count, 1);
+    assert.equal(drilldown.summary.provider_long_soak_evidence_typed_blocker_ref_count, 1);
+    assert.equal(
+      drilldown.provider_long_soak_evidence.authority_boundary.can_claim_production_ready,
+      false,
+    );
+
+    const maturity = runCli([
+      'framework',
+      'operating-maturity',
+      '--family-defaults',
+    ], env).framework_operating_maturity;
+    assert.equal(maturity.provider_long_soak.status, 'evidence_required');
+    assert.equal(maturity.provider_long_soak.open_evidence_count, 1);
+    assert.equal(maturity.provider_long_soak.capability_status, 'capability_slo_blocked');
+    assert.equal(maturity.provider_long_soak.long_evidence_ready, false);
+    assert.deepEqual(maturity.provider_long_soak.observed_ref_shapes, [
+      'long_soak_ref',
+      'recovery_ref',
+      'dead_letter_ref',
+      'provider_blocker_ref',
+      'typed_blocker_ref',
+    ]);
+    assert.equal(
+      maturity.provider_long_soak.observed_receipt_refs.includes(providerRecord.receipt_refs[0]),
+      true,
+    );
+    assert.equal(maturity.provider_long_soak.verified_receipt_ref_count, 1);
+    assert.equal(maturity.provider_long_soak.provider_completion_counts_as_production_ready, false);
+    assert.equal(
+      maturity.provider_long_soak.authority_boundary.can_claim_production_ready,
+      false,
+    );
+
+    const providerLane = maturity.owner_evidence_intake.lane_evidence.find(
+      (entry: { lane: string }) => entry.lane === 'provider_long_soak',
+    );
+    assert.equal(providerLane.status, 'owner_evidence_observed_not_ready_claim');
+    assert.equal(providerLane.verified_receipt_count, 1);
+    assert.deepEqual(providerLane.observed_ref_shapes, [
+      'long_soak_ref',
+      'recovery_ref',
+      'dead_letter_ref',
+      'provider_blocker_ref',
+      'typed_blocker_ref',
+    ]);
+    assert.equal(
+      providerLane.observed_receipt_refs.includes(providerRecord.receipt_refs[0]),
+      true,
+    );
+    const providerWorkOrder =
+      maturity.foundry_agent_os_production_evidence_gate.owner_route_work_orders.find(
+        (entry: { lane: string }) => entry.lane === 'provider_long_soak',
+      );
+    assert.equal(
+      providerWorkOrder.blocker_state,
+      'owner_route_refs_observed_not_production_claim',
+    );
+    assert.equal(providerWorkOrder.ready_claim_authorized, false);
+    assert.equal(providerWorkOrder.owner_acceptance_required, true);
+    assert.equal(
+      providerWorkOrder.observed_ref_shapes.includes('provider_blocker_ref'),
+      true,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('framework operating maturity consumes verified App release user-path evidence without release-ready claims', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-operating-maturity-app-state-'));
   const workspaceRoot = createFamilyDefaultContractWorkspace();
@@ -1192,18 +1317,17 @@ test('framework operating maturity surfaces refs-only provider and lifecycle cou
     seedProviderCadenceWindow(env, stateRoot);
     const providerRecord = runCli([
       'runtime',
-      'codex-app-runtime-evidence',
+      'provider-long-soak-evidence',
       'record',
       '--payload',
       JSON.stringify({
-        temporal_hosted_long_soak_refs: ['temporal-long-soak:codex-app/runtime-4h'],
-        provider_state_linkage_refs: ['provider-state:temporal/cadence-current'],
-        operator_evidence_refs: ['operator-window:codex-app/runtime-followthrough'],
+        long_soak_refs: ['provider-long-soak:temporal/runtime-4h'],
+        recovery_refs: ['provider-recovery:temporal/cadence-current'],
       }),
-    ], env).codex_app_runtime_evidence_ledger_record;
+    ], env).provider_long_soak_evidence_ledger_record;
     runCli([
       'runtime',
-      'codex-app-runtime-evidence',
+      'provider-long-soak-evidence',
       'verify',
       '--receipt-ref',
       providerRecord.receipt_refs[0],
@@ -1244,7 +1368,10 @@ test('framework operating maturity surfaces refs-only provider and lifecycle cou
     assert.equal(providerWorkOrder.owner_acceptance_required, true);
     assert.equal(providerWorkOrder.ready_claim_authorized, false);
     assert.equal(providerWorkOrder.observed_receipt_refs[0], providerRecord.receipt_refs[0]);
-    assert.deepEqual(providerWorkOrder.observed_ref_shapes, ['evidence_ref']);
+    assert.deepEqual(providerWorkOrder.observed_ref_shapes, [
+      'long_soak_ref',
+      'recovery_ref',
+    ]);
     assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.non_closing_inputs.includes('verified_refs_only_ledger'),
       true,

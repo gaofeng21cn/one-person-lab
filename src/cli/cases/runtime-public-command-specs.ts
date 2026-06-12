@@ -164,6 +164,30 @@ export function buildPublicRuntimeCommandSpecs(
         ],
         group: 'runtime',
       }),
+    'runtime provider-long-soak-evidence record':
+      cloneCommandSpec(commandSpecs['runtime provider-long-soak-evidence record'], {
+        usage:
+          'opl runtime provider-long-soak-evidence record (--payload <json>|--payload-file <path>)',
+        examples: [
+          'opl runtime provider-long-soak-evidence record --payload \'{"long_soak_refs":["provider-long-soak:temporal/window"],"provider_blocker_refs":["provider-blocker:temporal/capability-slo"]}\'',
+          'opl runtime provider-long-soak-evidence record --payload-file payload.json',
+        ],
+        group: 'runtime',
+      }),
+    'runtime provider-long-soak-evidence verify':
+      cloneCommandSpec(commandSpecs['runtime provider-long-soak-evidence verify'], {
+        usage: 'opl runtime provider-long-soak-evidence verify [--receipt-ref <ref>]',
+        examples: [
+          'opl runtime provider-long-soak-evidence verify --receipt-ref opl://provider-long-soak-evidence/provider-long-soak%3Atemporal%2Fwindow',
+        ],
+        group: 'runtime',
+      }),
+    'runtime provider-long-soak-evidence list':
+      cloneCommandSpec(commandSpecs['runtime provider-long-soak-evidence list'], {
+        usage: 'opl runtime provider-long-soak-evidence list',
+        examples: ['opl runtime provider-long-soak-evidence list --json'],
+        group: 'runtime',
+      }),
     'runtime standard-agent-template-consumption record':
       cloneCommandSpec(commandSpecs['runtime standard-agent-template-consumption record'], {
         usage:

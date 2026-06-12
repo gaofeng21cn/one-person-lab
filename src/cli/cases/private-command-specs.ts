@@ -44,6 +44,9 @@ import {
   buildRuntimeResearchHypothesisPortfolioCommandSpecs,
 } from './runtime-research-hypothesis-portfolio-command-spec.ts';
 import {
+  buildRuntimeProviderLongSoakEvidenceCommandSpecs,
+} from './runtime-provider-long-soak-evidence-command-spec.ts';
+import {
   buildRuntimeStageReplayMissingReceiptCommandSpecs,
 } from './runtime-stage-replay-missing-receipt-command-spec.ts';
 import {
@@ -363,6 +366,7 @@ export function buildInternalCommandSpecs(
     ...buildRuntimeAppReleaseEvidenceCommandSpecs(),
     ...buildRuntimeBrandModuleL5EvidenceCommandSpecs(getContracts),
     ...buildRuntimeCodexAppRuntimeEvidenceCommandSpecs(),
+    ...buildRuntimeProviderLongSoakEvidenceCommandSpecs(),
     ...buildRuntimeStandardAgentTemplateConsumptionCommandSpecs(),
     ...buildRuntimeDomainOwnerPayloadSummaryCommandSpecs(),
     ...buildRuntimeMagManifestSustainedConsumptionCommandSpecs(),

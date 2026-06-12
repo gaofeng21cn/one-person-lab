@@ -2,8 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { listBrandModuleL5EvidenceReceipts } from './brand-module-l5-evidence-ledger.ts';
-import { listCodexAppRuntimeEvidenceReceipts } from './codex-app-runtime-evidence-ledger.ts';
 import { listDomainOwnerPayloadSummaryReceipts } from './domain-owner-payload-summary-ledger.ts';
+import {
+  listProviderLongSoakEvidenceReceipts,
+} from './provider-long-soak-evidence-ledger.ts';
 import {
   booleanValue,
   numberValue,
@@ -22,6 +24,9 @@ type RefCounts = {
   quality_or_export_receipt_ref_count: number;
   reviewer_receipt_ref_count: number;
   long_soak_ref_count: number;
+  recovery_ref_count: number;
+  dead_letter_ref_count: number;
+  provider_blocker_ref_count: number;
   monitor_freshness_ref_count: number;
   runtime_event_ref_count: number;
   typed_blocker_ref_count: number;
@@ -71,6 +76,9 @@ function emptyCounts(): RefCounts {
     quality_or_export_receipt_ref_count: 0,
     reviewer_receipt_ref_count: 0,
     long_soak_ref_count: 0,
+    recovery_ref_count: 0,
+    dead_letter_ref_count: 0,
+    provider_blocker_ref_count: 0,
     monitor_freshness_ref_count: 0,
     runtime_event_ref_count: 0,
     typed_blocker_ref_count: 0,
@@ -105,6 +113,9 @@ function refShapes(counts: RefCounts) {
     counts.quality_or_export_receipt_ref_count > 0 ? 'quality_or_export_receipt_ref' : null,
     counts.reviewer_receipt_ref_count > 0 ? 'reviewer_receipt_ref' : null,
     counts.long_soak_ref_count > 0 ? 'long_soak_ref' : null,
+    counts.recovery_ref_count > 0 ? 'recovery_ref' : null,
+    counts.dead_letter_ref_count > 0 ? 'dead_letter_ref' : null,
+    counts.provider_blocker_ref_count > 0 ? 'provider_blocker_ref' : null,
     counts.monitor_freshness_ref_count > 0 ? 'monitor_freshness_ref' : null,
     counts.runtime_event_ref_count > 0 ? 'runtime_event_ref' : null,
     counts.typed_blocker_ref_count > 0 ? 'typed_blocker_ref' : null,
@@ -194,6 +205,15 @@ function addDomainEvidence(
     long_soak_ref_count:
       entry.observed_ref_counts.long_soak_ref_count
       + (input.counts.long_soak_ref_count ?? 0),
+    recovery_ref_count:
+      entry.observed_ref_counts.recovery_ref_count
+      + (input.counts.recovery_ref_count ?? 0),
+    dead_letter_ref_count:
+      entry.observed_ref_counts.dead_letter_ref_count
+      + (input.counts.dead_letter_ref_count ?? 0),
+    provider_blocker_ref_count:
+      entry.observed_ref_counts.provider_blocker_ref_count
+      + (input.counts.provider_blocker_ref_count ?? 0),
     monitor_freshness_ref_count:
       entry.observed_ref_counts.monitor_freshness_ref_count
       + (input.counts.monitor_freshness_ref_count ?? 0),
@@ -224,6 +244,9 @@ function addCounts(current: RefCounts, addition: RefCounts) {
   current.quality_or_export_receipt_ref_count += addition.quality_or_export_receipt_ref_count;
   current.reviewer_receipt_ref_count += addition.reviewer_receipt_ref_count;
   current.long_soak_ref_count += addition.long_soak_ref_count;
+  current.recovery_ref_count += addition.recovery_ref_count;
+  current.dead_letter_ref_count += addition.dead_letter_ref_count;
+  current.provider_blocker_ref_count += addition.provider_blocker_ref_count;
   current.monitor_freshness_ref_count += addition.monitor_freshness_ref_count;
   current.runtime_event_ref_count += addition.runtime_event_ref_count;
   current.typed_blocker_ref_count += addition.typed_blocker_ref_count;
@@ -485,6 +508,9 @@ function domainOwnerChainProjection(input: {
       long_soak_ref_count:
         entry.observed_ref_counts.long_soak_ref_count
         + receipt.long_soak_refs.length,
+      recovery_ref_count: entry.observed_ref_counts.recovery_ref_count,
+      dead_letter_ref_count: entry.observed_ref_counts.dead_letter_ref_count,
+      provider_blocker_ref_count: entry.observed_ref_counts.provider_blocker_ref_count,
       monitor_freshness_ref_count:
         entry.observed_ref_counts.monitor_freshness_ref_count
         + receipt.monitor_freshness_refs.length,
@@ -535,6 +561,9 @@ function domainOwnerChainProjection(input: {
       current.reviewer_receipt_ref_count + receipt.reviewer_receipt_refs.length,
     long_soak_ref_count:
       current.long_soak_ref_count + receipt.long_soak_refs.length,
+    recovery_ref_count: current.recovery_ref_count,
+    dead_letter_ref_count: current.dead_letter_ref_count,
+    provider_blocker_ref_count: current.provider_blocker_ref_count,
     monitor_freshness_ref_count:
       current.monitor_freshness_ref_count + receipt.monitor_freshness_refs.length,
     runtime_event_ref_count:
@@ -651,16 +680,19 @@ function appReleaseProjection(appReleaseEvidence: Record<string, unknown>): Owne
 }
 
 function providerLongSoakProjection(): OwnerEvidenceProjection {
-  const receipts = listCodexAppRuntimeEvidenceReceipts();
+  const receipts = listProviderLongSoakEvidenceReceipts();
   const counts = receipts.reduce<RefCounts>((current, receipt) => ({
     ...current,
+    long_soak_ref_count:
+      current.long_soak_ref_count + receipt.long_soak_refs.length,
+    recovery_ref_count:
+      current.recovery_ref_count + receipt.recovery_refs.length,
+    dead_letter_ref_count:
+      current.dead_letter_ref_count + receipt.dead_letter_refs.length,
+    provider_blocker_ref_count:
+      current.provider_blocker_ref_count + receipt.provider_blocker_refs.length,
     typed_blocker_ref_count:
       current.typed_blocker_ref_count + receipt.typed_blocker_refs.length,
-    evidence_ref_count:
-      current.evidence_ref_count
-      + receipt.temporal_hosted_long_soak_refs.length
-      + receipt.provider_state_linkage_refs.length
-      + receipt.operator_evidence_refs.length,
   }), emptyCounts());
   const recordedReceiptCount = receipts.filter((receipt) =>
     receipt.receipt_status === 'recorded'
@@ -676,7 +708,7 @@ function providerLongSoakProjection(): OwnerEvidenceProjection {
     verified_receipt_count: verifiedReceiptCount,
     observed_receipt_refs: receipts.map((receipt) => receipt.receipt_ref),
     observed_ref_counts: counts,
-    evidence_route: 'opl runtime codex-app-runtime-evidence list --json',
+    evidence_route: 'opl runtime provider-long-soak-evidence list --json',
   };
 }
 

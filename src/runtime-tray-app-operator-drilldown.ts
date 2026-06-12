@@ -559,6 +559,7 @@ export function buildAppOperatorDrilldown(input: {
   const providerActionRefs = providerSloRefs(input.providerContinuousProof);
   const providerCadenceWindow = providerCadenceWindowSummary(input.providerContinuousProof);
   const providerCapabilitySlo = providerCapabilitySloSummary(input.providerContinuousProof);
+  const providerLongSoakEvidence = record(input.providerContinuousProof.provider_long_soak_evidence);
   const appRuntimeRole = buildCodexAppRuntimeRole();
   const developerModeRepairRoutes = buildDeveloperModeAgentLabRepairRouteReadModel();
   const developerModeLiveCloseoutEvidence =
@@ -692,6 +693,7 @@ export function buildAppOperatorDrilldown(input: {
       providerActionRefs,
       providerCadenceWindow,
       providerCapabilitySlo,
+      providerLongSoakEvidence,
       runtimeManagerRouteSupport,
       periodicRefs,
       actionRefs,
@@ -910,6 +912,7 @@ export function buildAppOperatorDrilldown(input: {
       refs: providerActionRefs,
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
+    provider_long_soak_evidence: providerLongSoakEvidence,
     app_release_user_path_evidence: appReleaseUserPathEvidence,
     developer_mode_live_closeout_evidence: developerModeLiveCloseoutEvidence,
     runtime_manager_route_support: runtimeManagerRouteSupport,
