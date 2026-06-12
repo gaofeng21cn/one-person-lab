@@ -18,6 +18,8 @@ import type { FrameworkContracts } from './types.ts';
 type RefCounts = {
   domain_owner_receipt_ref_count: number;
   domain_receipt_ref_count: number;
+  release_owner_receipt_ref_count: number;
+  install_evidence_ref_count: number;
   no_regression_ref_count: number;
   owner_chain_ref_count: number;
   human_gate_ref_count: number;
@@ -70,6 +72,8 @@ function emptyCounts(): RefCounts {
   return {
     domain_owner_receipt_ref_count: 0,
     domain_receipt_ref_count: 0,
+    release_owner_receipt_ref_count: 0,
+    install_evidence_ref_count: 0,
     no_regression_ref_count: 0,
     owner_chain_ref_count: 0,
     human_gate_ref_count: 0,
@@ -107,6 +111,8 @@ function refShapes(counts: RefCounts) {
   return [
     counts.domain_owner_receipt_ref_count > 0 ? 'domain_owner_receipt_ref' : null,
     counts.domain_receipt_ref_count > 0 ? 'domain_receipt_ref' : null,
+    counts.release_owner_receipt_ref_count > 0 ? 'release_owner_receipt_ref' : null,
+    counts.install_evidence_ref_count > 0 ? 'install_evidence_ref' : null,
     counts.no_regression_ref_count > 0 ? 'no_regression_ref' : null,
     counts.owner_chain_ref_count > 0 ? 'owner_chain_ref' : null,
     counts.human_gate_ref_count > 0 ? 'human_gate_ref' : null,
@@ -187,6 +193,12 @@ function addDomainEvidence(
     domain_receipt_ref_count:
       entry.observed_ref_counts.domain_receipt_ref_count
       + (input.counts.domain_receipt_ref_count ?? 0),
+    release_owner_receipt_ref_count:
+      entry.observed_ref_counts.release_owner_receipt_ref_count
+      + (input.counts.release_owner_receipt_ref_count ?? 0),
+    install_evidence_ref_count:
+      entry.observed_ref_counts.install_evidence_ref_count
+      + (input.counts.install_evidence_ref_count ?? 0),
     no_regression_ref_count:
       entry.observed_ref_counts.no_regression_ref_count
       + (input.counts.no_regression_ref_count ?? 0),
@@ -238,6 +250,8 @@ function addDomainEvidence(
 function addCounts(current: RefCounts, addition: RefCounts) {
   current.domain_owner_receipt_ref_count += addition.domain_owner_receipt_ref_count;
   current.domain_receipt_ref_count += addition.domain_receipt_ref_count;
+  current.release_owner_receipt_ref_count += addition.release_owner_receipt_ref_count;
+  current.install_evidence_ref_count += addition.install_evidence_ref_count;
   current.no_regression_ref_count += addition.no_regression_ref_count;
   current.owner_chain_ref_count += addition.owner_chain_ref_count;
   current.human_gate_ref_count += addition.human_gate_ref_count;
@@ -651,17 +665,22 @@ function brandModuleL5Projection(contracts: FrameworkContracts): OwnerEvidencePr
 }
 
 function appReleaseProjection(appReleaseEvidence: Record<string, unknown>): OwnerEvidenceProjection {
+  const releaseOwnerVerdict = record(appReleaseEvidence.release_owner_verdict_handoff);
+  const releaseOwnerReceiptRefs = stringList(
+    releaseOwnerVerdict.observed_release_owner_receipt_refs,
+  );
+  const installEvidenceRefs = stringList(releaseOwnerVerdict.observed_install_evidence_refs);
+  const typedBlockerRefs = stringList(appReleaseEvidence.typed_blocker_refs);
+  const ledgerReceiptRefs = unique([
+    ...stringList(appReleaseEvidence.verified_ledger_receipt_refs),
+    ...stringList(appReleaseEvidence.recorded_ledger_receipt_refs),
+  ]);
   const counts = {
     ...emptyCounts(),
-    typed_blocker_ref_count: stringList(appReleaseEvidence.typed_blocker_refs).length,
-    domain_owner_receipt_ref_count:
-      stringList(record(appReleaseEvidence.release_owner_verdict_handoff)
-        .observed_release_owner_receipt_refs).length,
-    evidence_ref_count:
-      stringList(appReleaseEvidence.verified_ledger_receipt_refs).length
-      + stringList(appReleaseEvidence.recorded_ledger_receipt_refs).length
-      + stringList(record(appReleaseEvidence.release_owner_verdict_handoff)
-        .observed_install_evidence_refs).length,
+    typed_blocker_ref_count: typedBlockerRefs.length,
+    release_owner_receipt_ref_count: releaseOwnerReceiptRefs.length,
+    install_evidence_ref_count: installEvidenceRefs.length,
+    evidence_ref_count: ledgerReceiptRefs.length,
   };
   const recordedReceiptCount = typeof appReleaseEvidence.recorded_ledger_receipt_ref_count === 'number'
     ? appReleaseEvidence.recorded_ledger_receipt_ref_count
@@ -676,8 +695,10 @@ function appReleaseProjection(appReleaseEvidence: Record<string, unknown>): Owne
     recorded_receipt_count: recordedReceiptCount,
     verified_receipt_count: verifiedReceiptCount,
     observed_receipt_refs: unique([
-      ...stringList(appReleaseEvidence.verified_ledger_receipt_refs),
-      ...stringList(appReleaseEvidence.recorded_ledger_receipt_refs),
+      ...ledgerReceiptRefs,
+      ...releaseOwnerReceiptRefs,
+      ...installEvidenceRefs,
+      ...typedBlockerRefs,
     ]),
     observed_ref_counts: counts,
     evidence_route: 'opl runtime app-release-evidence list --json',

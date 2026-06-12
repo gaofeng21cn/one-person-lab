@@ -429,6 +429,88 @@ test('framework operating maturity consumes verified App release user-path evide
   }
 });
 
+test('framework operating maturity surfaces App release owner verdict refs as owner evidence without release-ready claims', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-operating-maturity-app-owner-verdict-'));
+  const workspaceRoot = createFamilyDefaultContractWorkspace();
+  try {
+    const env: Record<string, string> = {
+      OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+    };
+    const record = recordAppReleaseUserPathEvidence(env, {
+      release_owner_receipt_refs: [
+        'release-owner-receipt-ref://one-person-lab-app/26.5.28-draft.20260527235839/release-owner-verdict',
+      ],
+      install_evidence_refs: [
+        'install-evidence-ref://one-person-lab-app/26.5.28-draft.20260527235839/clean-install',
+      ],
+    });
+    runCli([
+      'runtime',
+      'app-release-evidence',
+      'verify',
+      '--receipt-ref',
+      record.receipt_refs[0],
+    ], env);
+
+    const maturity = runCli([
+      'framework',
+      'operating-maturity',
+      '--family-defaults',
+    ], env).framework_operating_maturity;
+
+    assert.deepEqual(
+      maturity.app_release_user_path.release_owner_verdict_handoff
+        .observed_release_owner_receipt_refs,
+      [
+        'release-owner-receipt-ref://one-person-lab-app/26.5.28-draft.20260527235839/release-owner-verdict',
+      ],
+    );
+    assert.deepEqual(
+      maturity.app_release_user_path.release_owner_verdict_handoff
+        .observed_install_evidence_refs,
+      [
+        'install-evidence-ref://one-person-lab-app/26.5.28-draft.20260527235839/clean-install',
+      ],
+    );
+    assert.equal(
+      maturity.app_release_user_path.release_owner_verdict_handoff.release_ready_authorized,
+      false,
+    );
+    const appReleaseLane = maturity.owner_evidence_intake.lane_evidence.find(
+      (entry: { lane: string }) => entry.lane === 'app_release_user_path',
+    );
+    assert.deepEqual(appReleaseLane.observed_ref_shapes, [
+      'release_owner_receipt_ref',
+      'install_evidence_ref',
+      'evidence_ref',
+    ]);
+    assert.equal(appReleaseLane.observed_ref_counts.release_owner_receipt_ref_count, 1);
+    assert.equal(appReleaseLane.observed_ref_counts.install_evidence_ref_count, 1);
+    assert.equal(appReleaseLane.observed_receipt_refs.includes(record.receipt_refs[0]), true);
+    assert.equal(
+      appReleaseLane.observed_receipt_refs.includes(
+        'release-owner-receipt-ref://one-person-lab-app/26.5.28-draft.20260527235839/release-owner-verdict',
+      ),
+      true,
+    );
+    const appReleaseWorkOrder = maturity.foundry_agent_os_production_evidence_gate
+      .owner_route_work_orders.find(
+        (entry: { lane: string }) => entry.lane === 'app_release_user_path',
+      );
+    assert.deepEqual(appReleaseWorkOrder.observed_ref_shapes, [
+      'release_owner_receipt_ref',
+      'install_evidence_ref',
+      'evidence_ref',
+    ]);
+    assert.equal(appReleaseWorkOrder.ready_claim_authorized, false);
+    assert.equal(maturity.authority_boundary.can_claim_app_release_ready, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('framework operating maturity surfaces refs-only provider and lifecycle counts without ready claims', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-operating-maturity-runtime-state-'));
   const workspaceRoot = createFamilyDefaultContractWorkspace();

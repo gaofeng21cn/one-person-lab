@@ -76,7 +76,6 @@ export function appReleaseUserPathPayloadWorkorder(
           'reload_prompt_user_path_refs',
           'provider_state_linkage_refs',
           'long_operator_evidence_refs',
-          'install_evidence_refs',
         ],
         typed_blocker_refs_must_be_absent: true,
         release_owner_receipt_refs_must_be_absent: true,
@@ -85,7 +84,10 @@ export function appReleaseUserPathPayloadWorkorder(
         closes_production_ready: false,
       },
       release_owner_verdict_path: {
-        required_operator_payload_refs: ['release_owner_receipt_refs'],
+        required_any_operator_payload_refs: [
+          'release_owner_receipt_refs',
+          'install_evidence_refs',
+        ],
         success_claimed_by_opl: false,
         closes_app_release_user_path: false,
         closes_release_ready: false,

@@ -1,6 +1,10 @@
 import { buildAgentDefaultCallerReadinessReport } from './agent-platform-surface-ownership.ts';
 import { buildBrandModuleL5Status } from './brand-module-l5-evidence.ts';
 import { FrameworkContractError } from './contracts.ts';
+import {
+  domainOwnerPayloadSummaryTargetKey,
+  listDomainOwnerPayloadSummaryReceipts,
+} from './domain-owner-payload-summary-ledger.ts';
 import { buildFoundryAgentOsOwnerEvidenceIntake } from './foundry-agent-os-owner-evidence-intake.ts';
 import { FRAMEWORK_READINESS_SOURCE_COMMANDS as SOURCE_COMMANDS } from './framework-readiness-source-commands.ts';
 import {
@@ -259,6 +263,36 @@ function ownerPayloadFieldForAnswerShape(shape: string) {
   return shapeToPayloadField[shape];
 }
 
+function ownerPayloadSummaryReceiptRefs(receipt: {
+  receipt_ref: string;
+  domain_owner_receipt_refs: string[];
+  domain_receipt_refs: string[];
+  no_regression_evidence_refs: string[];
+  owner_chain_refs: string[];
+  human_gate_refs: string[];
+  quality_or_export_receipt_refs: string[];
+  reviewer_receipt_refs: string[];
+  long_soak_refs: string[];
+  monitor_freshness_refs: string[];
+  runtime_event_refs: string[];
+  typed_blocker_refs: string[];
+}) {
+  return unique([
+    receipt.receipt_ref,
+    ...receipt.domain_owner_receipt_refs,
+    ...receipt.domain_receipt_refs,
+    ...receipt.no_regression_evidence_refs,
+    ...receipt.owner_chain_refs,
+    ...receipt.human_gate_refs,
+    ...receipt.quality_or_export_receipt_refs,
+    ...receipt.reviewer_receipt_refs,
+    ...receipt.long_soak_refs,
+    ...receipt.monitor_freshness_refs,
+    ...receipt.runtime_event_refs,
+    ...receipt.typed_blocker_refs,
+  ]);
+}
+
 function domainKey(value: unknown) {
   const raw = typeof value === 'string' ? value : '';
   const compact = raw.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -378,6 +412,43 @@ function domainOwnerEvidenceRoutes(
   });
 }
 
+function currentOwnerPayloadTargetKey(input: {
+  domainId: string | null;
+  deltaId: string | null;
+  taskOrStudyRef: string | null;
+  lineageRef: string | null;
+  sourceFingerprint: string | null;
+}) {
+  return [
+    input.domainId,
+    'current_owner_delta_bridge',
+    'owner_payload_item',
+    input.deltaId,
+    input.taskOrStudyRef,
+    input.lineageRef,
+    input.sourceFingerprint,
+  ].filter((entry): entry is string => Boolean(entry)).join('/');
+}
+
+function currentOwnerBindingValue(target: Record<string, unknown>, field: string) {
+  if (field === 'current_owner_delta_id') {
+    return stringValue(target.current_owner_delta_id) ?? stringValue(target.delta_id);
+  }
+  return stringValue(target[field]);
+}
+
+function currentOwnerPayloadBindingMismatches(
+  receiptTarget: Record<string, unknown>,
+  expected: Record<string, string | null>,
+) {
+  return Object.entries(expected)
+    .filter(([, expectedValue]) => expectedValue !== null)
+    .flatMap(([field, expectedValue]) => {
+      const observed = currentOwnerBindingValue(receiptTarget, field);
+      return observed === expectedValue ? [] : [field];
+    });
+}
+
 function currentOwnerDeltaBridge(appOperatorDrilldown: Record<string, unknown>) {
   const attentionFirstPayload = record(appOperatorDrilldown.attention_first_payload);
   const currentOwnerDelta = record(attentionFirstPayload.current_owner_delta);
@@ -390,6 +461,9 @@ function currentOwnerDeltaBridge(appOperatorDrilldown: Record<string, unknown>) 
   const deltaId = stringValue(currentOwnerDelta.delta_id);
   const domainId = stringValue(currentOwnerDelta.domain_id);
   const stageId = stringValue(currentOwnerDelta.stage_id);
+  const taskOrStudyRef = stringValue(currentOwnerDelta.task_or_study_ref);
+  const lineageRef = stringValue(currentOwnerDelta.lineage_ref);
+  const sourceFingerprint = stringValue(currentOwnerDelta.source_fingerprint);
   const acceptedAnswerShape = stringListValue(currentOwnerDelta.accepted_answer_shape);
   const acceptedSuccessAnswerShapes = acceptedAnswerShape.filter((shape) =>
     shape !== 'typed_blocker_ref'
@@ -409,25 +483,124 @@ function currentOwnerDeltaBridge(appOperatorDrilldown: Record<string, unknown>) 
   const verifyCommand = usesDomainOwnerPayloadSummary
     ? 'opl runtime domain-owner-payload-summary verify --receipt-ref <receipt-ref>'
     : 'owner-native verify command for current_owner_delta owner answer ref';
+  const targetIdentity = {
+    domain_id: domainId,
+    current_owner: stringValue(currentOwnerDelta.current_owner),
+    stage_id: stageId,
+    task_or_study_ref: taskOrStudyRef,
+    lineage_ref: lineageRef,
+    current_owner_delta_id: deltaId,
+    source_fingerprint: sourceFingerprint,
+    stage_run_closeout_binding_ref:
+      stringValue(currentOwnerDelta.stage_run_closeout_binding_ref),
+    stage_run_closeout_binding_policy:
+      stringValue(currentOwnerDelta.stage_run_closeout_binding_policy),
+  };
+  const recordTargetKey = currentOwnerPayloadTargetKey({
+    domainId,
+    deltaId,
+    taskOrStudyRef,
+    lineageRef,
+    sourceFingerprint,
+  });
+  const recordTargetIdentityTemplate = {
+    target_key: recordTargetKey,
+    domain_id: domainId,
+    current_owner: stringValue(currentOwnerDelta.current_owner),
+    source_surface: 'current_owner_delta_bridge',
+    summary_kind: 'owner_payload_item',
+    item_id: deltaId ?? stageId ?? 'current-owner-delta',
+    stage_id: stageId,
+    task_or_study_ref: taskOrStudyRef,
+    lineage_ref: lineageRef,
+    current_owner_delta_id: deltaId,
+    source_fingerprint: sourceFingerprint,
+    stage_run_closeout_binding_ref:
+      stringValue(currentOwnerDelta.stage_run_closeout_binding_ref),
+    stage_run_closeout_binding_policy:
+      stringValue(currentOwnerDelta.stage_run_closeout_binding_policy),
+    payload_kind: 'domain_owner_receipt_or_typed_blocker_refs',
+    current_owner_delta_ref:
+      '/framework_readiness/attention_first_payload/current_owner_delta',
+  };
+  const currentOwnerBindingExpected = {
+    current_owner_delta_id: deltaId,
+    stage_id: stageId,
+    task_or_study_ref: taskOrStudyRef,
+    lineage_ref: lineageRef,
+    source_fingerprint: sourceFingerprint,
+  };
+  const ownerPayloadSummaryCandidateReceipts = listDomainOwnerPayloadSummaryReceipts()
+    .filter((receipt) => {
+      const receiptTarget = record(receipt.target_identity);
+      const receiptDomain =
+        stringValue(receiptTarget.domain_id)
+        ?? stringValue(receiptTarget.target_domain_id)
+        ?? stringValue(receiptTarget.project);
+      if (domainKey(receiptDomain) !== domainKey(domainId)) {
+        return false;
+      }
+      const candidateKeys = unique([
+        domainOwnerPayloadSummaryTargetKey(receiptTarget),
+        stringValue(receiptTarget.target_key) ?? '',
+        stringValue(receiptTarget.current_owner_delta_id) ?? '',
+        stringValue(receiptTarget.delta_id) ?? '',
+        stringValue(receiptTarget.item_id) ?? '',
+      ]);
+      return candidateKeys.includes(deltaId ?? '')
+        || candidateKeys.includes(recordTargetKey);
+    });
+  const matchingOwnerPayloadSummaryReceipts = ownerPayloadSummaryCandidateReceipts
+    .filter((receipt) =>
+      currentOwnerPayloadBindingMismatches(
+        record(receipt.target_identity),
+        currentOwnerBindingExpected,
+      ).length === 0
+    );
+  const staleOwnerPayloadSummaryReceipts = ownerPayloadSummaryCandidateReceipts
+    .filter((receipt) =>
+      currentOwnerPayloadBindingMismatches(
+        record(receipt.target_identity),
+        currentOwnerBindingExpected,
+      ).length > 0
+    );
+  const observedOwnerPayloadSummaryReceiptRefs =
+    matchingOwnerPayloadSummaryReceipts.map((receipt) => receipt.receipt_ref);
+  const staleOwnerPayloadSummaryReceiptRefs =
+    staleOwnerPayloadSummaryReceipts.map((receipt) => receipt.receipt_ref);
+  const verifiedOwnerPayloadSummaryReceiptRefs = matchingOwnerPayloadSummaryReceipts
+    .filter((receipt) => receipt.receipt_status === 'verified')
+    .map((receipt) => receipt.receipt_ref);
+  const observedOwnerAnswerRefs = unique(
+    matchingOwnerPayloadSummaryReceipts.flatMap(ownerPayloadSummaryReceiptRefs),
+  );
+  const observedOwnerAnswerShapes = unique(
+    matchingOwnerPayloadSummaryReceipts.flatMap((receipt) => [
+      receipt.domain_owner_receipt_refs.length > 0 ? 'domain_owner_receipt_ref' : '',
+      receipt.domain_receipt_refs.length > 0 ? 'domain_receipt_ref' : '',
+      receipt.no_regression_evidence_refs.length > 0 ? 'no_regression_ref' : '',
+      receipt.owner_chain_refs.length > 0 ? 'owner_chain_ref' : '',
+      receipt.human_gate_refs.length > 0 ? 'human_gate_ref' : '',
+      receipt.quality_or_export_receipt_refs.length > 0 ? 'quality_or_export_receipt_ref' : '',
+      receipt.reviewer_receipt_refs.length > 0 ? 'reviewer_receipt_ref' : '',
+      receipt.long_soak_refs.length > 0 ? 'long_soak_ref' : '',
+      receipt.monitor_freshness_refs.length > 0 ? 'monitor_freshness_ref' : '',
+      receipt.runtime_event_refs.length > 0 ? 'runtime_event_ref' : '',
+      receipt.typed_blocker_refs.length > 0 ? 'typed_blocker_ref' : '',
+    ]),
+  );
+  const ownerPayloadSummaryObserved = observedOwnerPayloadSummaryReceiptRefs.length > 0;
   const ownerAnswerMissing =
     ownerAnswerRef === null
     && acceptedAnswerShape.length > 0;
   const ownerAnswerStillRequired =
     ownerAnswerRef === null
     && hardGate.human_or_domain_owner_required === true;
-  const targetIdentity = {
-    domain_id: domainId,
-    current_owner: stringValue(currentOwnerDelta.current_owner),
-    stage_id: stageId,
-    task_or_study_ref: stringValue(currentOwnerDelta.task_or_study_ref),
-    lineage_ref: stringValue(currentOwnerDelta.lineage_ref),
-    current_owner_delta_id: deltaId,
-    source_fingerprint: stringValue(currentOwnerDelta.source_fingerprint),
-    stage_run_closeout_binding_ref:
-      stringValue(currentOwnerDelta.stage_run_closeout_binding_ref),
-    stage_run_closeout_binding_policy:
-      stringValue(currentOwnerDelta.stage_run_closeout_binding_policy),
-  };
+  const ownerAnswerClosureStatus = ownerAnswerMissing || ownerAnswerStillRequired
+    ? ownerPayloadSummaryObserved
+      ? 'owner_payload_summary_observed_not_current_pointer_claim'
+      : 'domain_owner_payload_required'
+    : 'owner_answer_ref_observed_not_ready_claim';
 
   return {
     surface_kind: 'opl_operating_maturity_current_owner_delta_bridge',
@@ -440,9 +613,9 @@ function currentOwnerDeltaBridge(appOperatorDrilldown: Record<string, unknown>) 
     current_owner: stringValue(currentOwnerDelta.current_owner),
     domain_id: domainId,
     stage_id: stageId,
-    task_or_study_ref: stringValue(currentOwnerDelta.task_or_study_ref),
-    lineage_ref: stringValue(currentOwnerDelta.lineage_ref),
-    source_fingerprint: stringValue(currentOwnerDelta.source_fingerprint),
+    task_or_study_ref: taskOrStudyRef,
+    lineage_ref: lineageRef,
+    source_fingerprint: sourceFingerprint,
     desired_delta_kind: stringValue(currentOwnerDelta.desired_delta_kind),
     desired_delta_description:
       stringValue(currentOwnerDelta.desired_delta_description),
@@ -470,8 +643,24 @@ function currentOwnerDeltaBridge(appOperatorDrilldown: Record<string, unknown>) 
       audit_sidecar_hard_gate_upgrade_required:
         hardGate.audit_sidecar_hard_gate_upgrade_required === true,
     },
-    latest_owner_answer_ref: ownerAnswerRef,
-    latest_owner_answer_kind: stringValue(currentOwnerDelta.latest_owner_answer_kind),
+    latest_owner_answer_ref: ownerAnswerRef ?? observedOwnerAnswerRefs[0] ?? null,
+    latest_owner_answer_kind:
+      stringValue(currentOwnerDelta.latest_owner_answer_kind)
+      ?? observedOwnerAnswerShapes[0],
+    readiness_current_pointer_owner_answer_ref: ownerAnswerRef,
+    observed_owner_payload_summary_receipt_refs: observedOwnerPayloadSummaryReceiptRefs,
+    verified_owner_payload_summary_receipt_refs: verifiedOwnerPayloadSummaryReceiptRefs,
+    stale_owner_payload_summary_receipt_refs: staleOwnerPayloadSummaryReceiptRefs,
+    observed_owner_answer_refs: observedOwnerAnswerRefs,
+    observed_owner_answer_ref_shapes: observedOwnerAnswerShapes,
+    owner_payload_summary_observed: ownerPayloadSummaryObserved,
+    owner_payload_summary_verified:
+      verifiedOwnerPayloadSummaryReceiptRefs.length > 0,
+    owner_payload_summary_closure_state: verifiedOwnerPayloadSummaryReceiptRefs.length > 0
+      ? 'verified_owner_payload_summary_observed_not_current_pointer_claim'
+      : ownerPayloadSummaryObserved
+        ? 'recorded_owner_payload_summary_observed_verify_pending'
+        : 'owner_payload_summary_required',
     next_safe_action_or_none: Object.keys(nextSafeAction).length > 0
       ? nextSafeAction
       : null,
@@ -479,13 +668,18 @@ function currentOwnerDeltaBridge(appOperatorDrilldown: Record<string, unknown>) 
     owner_answer_still_required: ownerAnswerStillRequired,
     owner_answer_closure_handoff: {
       surface_kind: 'opl_current_owner_delta_owner_answer_closure_handoff',
-      status: ownerAnswerMissing || ownerAnswerStillRequired
-        ? 'domain_owner_payload_required'
-        : 'owner_answer_ref_observed_not_ready_claim',
+      status: ownerAnswerClosureStatus,
       route_kind: usesDomainOwnerPayloadSummary
         ? 'refs_only_domain_owner_payload_summary'
         : 'owner_native_refs_only_payload',
       target_identity: targetIdentity,
+      observed_owner_payload_summary_receipt_refs: observedOwnerPayloadSummaryReceiptRefs,
+      verified_owner_payload_summary_receipt_refs: verifiedOwnerPayloadSummaryReceiptRefs,
+      stale_owner_payload_summary_receipt_refs: staleOwnerPayloadSummaryReceiptRefs,
+      observed_owner_answer_refs: observedOwnerAnswerRefs,
+      observed_owner_answer_ref_shapes: observedOwnerAnswerShapes,
+      current_pointer_update_still_required:
+        ownerAnswerRef === null && ownerPayloadSummaryObserved,
       missing_binding_checklist: [
         'domain_id_matches_current_owner_delta',
         'current_owner_matches_current_owner_delta',
@@ -513,15 +707,7 @@ function currentOwnerDeltaBridge(appOperatorDrilldown: Record<string, unknown>) 
       },
       record_command: recordCommand,
       verify_command: verifyCommand,
-      record_target_identity_template: {
-        domain_id: domainId,
-        source_surface: 'current_owner_delta_bridge',
-        summary_kind: 'owner_payload_item',
-        item_id: deltaId ?? stageId ?? 'current-owner-delta',
-        payload_kind: 'domain_owner_receipt_or_typed_blocker_refs',
-        current_owner_delta_ref:
-          '/framework_readiness/attention_first_payload/current_owner_delta',
-      },
+      record_target_identity_template: recordTargetIdentityTemplate,
       success_refs_payload_template: {
         domain_owner_receipt_refs: ['<domain-owned-owner-receipt-ref>'],
         quality_or_export_receipt_refs: ['<domain-owned-quality-or-export-receipt-ref>'],

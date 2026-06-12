@@ -63,6 +63,18 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
         .release_owner_verdict_path.success_claimed_by_opl,
       false,
     );
+    assert.deepEqual(
+      initialRecordRoute.payload_workorder.accepted_payload_paths
+        .release_owner_verdict_path.required_any_operator_payload_refs,
+      ['release_owner_receipt_refs', 'install_evidence_refs'],
+    );
+    assert.equal(
+      initialRecordRoute.payload_workorder.accepted_payload_paths
+        .app_release_user_path_refs_path.required_any_operator_payload_refs.includes(
+          'install_evidence_refs',
+        ),
+      false,
+    );
     assert.equal(
       initialRecordRoute.payload_workorder.accepted_payload_paths
         .typed_blocker_path.success_claimed,
@@ -494,6 +506,50 @@ test('runtime App release evidence CLI records release-owner verdict refs withou
     assert.equal(evidence.release_owner_verdict_handoff.release_ready_authorized, false);
     assert.equal(
       evidence.release_owner_verdict_handoff.authority_boundary.can_claim_release_ready,
+      false,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime App release evidence CLI records install evidence as release-owner verdict path', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-release-install-evidence-state-'));
+  try {
+    const recordOutput = runCli([
+      'runtime',
+      'app-release-evidence',
+      'record',
+      '--payload',
+      JSON.stringify({
+        install_evidence_refs: ['install-evidence-ref://one-person-lab-app/26.5.19/clean-install'],
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).app_release_user_path_evidence_ledger_record;
+
+    assert.equal(recordOutput.status, 'recorded');
+    assert.equal(recordOutput.receipts[0].receipt_path, 'release_owner_verdict_path');
+    assert.deepEqual(recordOutput.receipts[0].install_evidence_refs, [
+      'install-evidence-ref://one-person-lab-app/26.5.19/clean-install',
+    ]);
+
+    const mixedOwnerVerdictRecord = runCli([
+      'runtime',
+      'app-release-evidence',
+      'record',
+      '--payload',
+      JSON.stringify({
+        release_owner_receipt_refs: ['release-owner:app/verdict'],
+        install_evidence_refs: ['install-evidence-ref://one-person-lab-app/26.5.19/clean-install'],
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).app_release_user_path_evidence_ledger_record;
+    assert.equal(mixedOwnerVerdictRecord.status, 'recorded');
+    assert.equal(mixedOwnerVerdictRecord.receipts[0].receipt_path, 'release_owner_verdict_path');
+    assert.equal(
+      mixedOwnerVerdictRecord.receipts[0].authority_boundary.can_claim_release_ready,
       false,
     );
   } finally {

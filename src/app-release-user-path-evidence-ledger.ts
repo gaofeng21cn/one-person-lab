@@ -129,12 +129,14 @@ function successEvidenceRefs(input: AppReleaseUserPathEvidenceReceiptInput) {
     ...(input.reload_prompt_user_path_refs ?? []),
     ...(input.provider_state_linkage_refs ?? []),
     ...(input.long_operator_evidence_refs ?? []),
-    ...(input.install_evidence_refs ?? []),
   ]);
 }
 
 function ownerVerdictRefs(input: AppReleaseUserPathEvidenceReceiptInput) {
-  return uniqueStrings(input.release_owner_receipt_refs ?? []);
+  return uniqueStrings([
+    ...(input.release_owner_receipt_refs ?? []),
+    ...(input.install_evidence_refs ?? []),
+  ]);
 }
 
 function typedBlockerRefs(input: AppReleaseUserPathEvidenceReceiptInput) {
