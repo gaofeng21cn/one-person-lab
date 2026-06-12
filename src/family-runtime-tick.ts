@@ -46,6 +46,11 @@ import {
   DEFAULT_EXECUTOR_SUPERSEDED_REASON,
   payloadFromTask,
 } from './family-runtime-tick-parts/default-executor-currentness.ts';
+import {
+  mergeTaskIdSets,
+  type MaintenanceReconcileResult,
+  zeroMaintenanceReconcileResult,
+} from './family-runtime-tick-parts/maintenance-reconcile-result.ts';
 
 type EnqueueTaskResult = {
   accepted?: boolean;
@@ -73,20 +78,6 @@ type RunFamilyRuntimeQueueTickHandlers<TDispatch> = {
   ) => TDispatch | Promise<TDispatch>;
   queryTemporalStageAttempt?: QueryTemporalStageAttempt;
 };
-type MaintenanceReconcileResult = {
-  defaultExecutorTerminalSyncedCount: number;
-  repairedMissingIdentityRunningCount: number;
-  repairedMissingIdentityDeadLetteredCount: number;
-  repairedMissingIdentityTaskIds: Set<string>;
-  repairedPaperAutonomyMissingCloseoutCount: number;
-  repairedPaperAutonomyMissingCloseoutTaskIds: Set<string>;
-  defaultExecutorSupersededAttemptReconciledCount: number;
-  waitingApprovalAttemptReconciledCount: number;
-  defaultExecutorAutoRedrivenCount: number;
-  defaultExecutorAutoDeadLetteredCount: number;
-  defaultExecutorAutoRedriveStaleSkippedCount: number;
-};
-
 const PROVIDER_TRANSPORT_REDRIVE_REASONS = new Set([
   'temporal_stage_attempt_start_failed',
   'temporal_stage_attempt_not_completed',
@@ -686,26 +677,6 @@ async function syncRunningDefaultExecutorTaskAttempts(
     }
   }
   return terminalSyncedCount;
-}
-
-function zeroMaintenanceReconcileResult(): MaintenanceReconcileResult {
-  return {
-    defaultExecutorTerminalSyncedCount: 0,
-    repairedMissingIdentityRunningCount: 0,
-    repairedMissingIdentityDeadLetteredCount: 0,
-    repairedMissingIdentityTaskIds: new Set<string>(),
-    repairedPaperAutonomyMissingCloseoutCount: 0,
-    repairedPaperAutonomyMissingCloseoutTaskIds: new Set<string>(),
-    defaultExecutorSupersededAttemptReconciledCount: 0,
-    waitingApprovalAttemptReconciledCount: 0,
-    defaultExecutorAutoRedrivenCount: 0,
-    defaultExecutorAutoDeadLetteredCount: 0,
-    defaultExecutorAutoRedriveStaleSkippedCount: 0,
-  };
-}
-
-function mergeTaskIdSets(...sets: Set<string>[]) {
-  return new Set(sets.flatMap((set) => [...set]));
 }
 
 async function runMaintenanceReconcile(
