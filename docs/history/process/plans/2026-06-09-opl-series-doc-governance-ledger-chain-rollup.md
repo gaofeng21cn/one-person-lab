@@ -406,7 +406,7 @@ Edited / pushed repo-local docs:
 
 | Repo | Commit | Edited docs and result |
 | --- | --- | --- |
-| `one-person-lab` | `99f62a63 docs: mark OPL active support docs as reviewed` | Ten OPL active-support docs now use `Last reviewed: 2026-06-12` instead of frozen `Date` fields. The active plan already used `Last reviewed`; this rollup records the cleanup as topic-level coverage. |
+| `one-person-lab` | `58d27290 docs: mark OPL active support docs as reviewed` | Ten OPL active-support docs now use `Last reviewed: 2026-06-12` instead of frozen `Date` fields. The active plan already used `Last reviewed`; this rollup records the cleanup as topic-level coverage. |
 
 Fresh readback boundary:
 
