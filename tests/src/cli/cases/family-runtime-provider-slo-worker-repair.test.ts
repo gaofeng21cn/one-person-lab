@@ -395,6 +395,55 @@ test('family-runtime provider-slo blocks stale worker restart when Temporal serv
   }
 });
 
+test('family-runtime provider-slo blocks stale worker restart when stage attempt ledger is unavailable', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-slo-worker-ledger-unavailable-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    const paths = familyRuntimePaths();
+    fs.mkdirSync(path.dirname(paths.queue_db), { recursive: true });
+    fs.mkdirSync(paths.queue_db, { recursive: true });
+    let stopCount = 0;
+    let startCount = 0;
+    const receipt = await maybeRepairTemporalWorkerForProviderSlo(paths, {
+      inspectTemporalWorkerLifecycle: async () => explicitDeveloperSupervisorStaleWorker(),
+      stopTemporalWorkerLifecycle: async () => {
+        stopCount += 1;
+        throw new Error('stop should not run');
+      },
+      startTemporalWorkerLifecycle: async () => {
+        startCount += 1;
+        throw new Error('start should not run');
+      },
+    });
+
+    assert.equal(stopCount, 0);
+    assert.equal(startCount, 0);
+    assert.equal(receipt.trigger, 'provider_slo_tick');
+    assert.equal(receipt.repair_status, 'blocked');
+    assert.equal(receipt.repair_action_id, 'restart_temporal_worker');
+    assert.equal(receipt.restart_guard?.surface_kind, 'temporal_worker_source_stale_restart_guard');
+    assert.equal(receipt.restart_guard?.guard_status, 'blocked');
+    assert.deepEqual(receipt.blocker_ids, ['stage_attempt_ledger_unavailable']);
+    assert.equal(receipt.restart_guard?.stage_attempt_ledger_readable, false);
+    assert.match(
+      receipt.restart_guard?.stage_attempt_ledger_error ?? '',
+      /directory|unable to open database file/i,
+    );
+    assert.equal(receipt.restart_guard?.active_stage_attempt_count, 0);
+    assert.deepEqual(receipt.restart_guard?.active_stage_attempts, []);
+    assert.equal(receipt.after?.lifecycle_status, 'worker_source_stale');
+    assert.equal(receipt.authority_boundary.can_write_domain_truth, false);
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime provider repair surfaces missing Temporal worker runtime dependencies as OPL blocker', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-repair-worker-dependency-'));
   const previousStateDir = process.env.OPL_STATE_DIR;

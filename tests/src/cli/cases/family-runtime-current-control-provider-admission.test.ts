@@ -1264,18 +1264,34 @@ test('family-runtime enqueue keeps stale queued MAS current-control admission be
     assert.equal(result.requeued_from_terminal, false);
     assert.equal(result.idempotent_noop, false);
     assert.equal(result.task?.status, 'waiting_approval');
+    assert.equal(result.task?.requires_approval, true);
+    assert.equal(result.task?.approved_at, null);
     assert.equal(task.status, 'waiting_approval');
     assert.equal(task.requires_approval, 1);
     assert.equal(task.last_error, 'operator_hold:publication_gate_review');
     assert.equal(task.attempts, 0);
+    assert.equal(payload.action_type, 'run_gate_clearing_batch');
+    assert.equal(payload.next_executable_owner, 'finalize');
     assert.equal(payload.source_fingerprint, 'truth-snapshot::dm003-generation-2');
     assert.equal(
       payload.owner_route_currentness_basis.work_unit_fingerprint,
       'current-ai-reviewer-gate-replay::003::held-fresh-record',
     );
     assert.ok(requeueEvent);
+    assert.equal(
+      eventPayload.reason,
+      'mas_current_control_provider_admission_fresh_after_queued',
+    );
     assert.equal(eventPayload.previous_status, 'waiting_approval');
     assert.equal(eventPayload.next_status, 'waiting_approval');
+    assert.equal(
+      eventPayload.previous_currentness_identity.work_unit_fingerprint,
+      'current-ai-reviewer-gate-replay::003::old-held-record',
+    );
+    assert.equal(
+      eventPayload.next_currentness_identity.work_unit_fingerprint,
+      'current-ai-reviewer-gate-replay::003::held-fresh-record',
+    );
     assert.equal(eventPayload.authority_boundary.domain_truth_mutation, false);
     assert.equal(eventPayload.authority_boundary.provider_completion_is_domain_ready, false);
   } finally {
