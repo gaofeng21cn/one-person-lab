@@ -171,6 +171,36 @@ test('framework operating maturity consumes provider long-soak evidence refs wit
     );
     assert.equal(maturity.provider_long_soak.verified_receipt_ref_count, 1);
     assert.equal(maturity.provider_long_soak.provider_completion_counts_as_production_ready, false);
+    assert.equal(maturity.provider_long_soak.owner, 'one-person-lab runtime owner');
+    assert.match(
+      maturity.provider_long_soak.record_command,
+      /opl runtime provider-long-soak-evidence record/,
+    );
+    assert.match(
+      maturity.provider_long_soak.verify_command,
+      /opl runtime provider-long-soak-evidence verify --receipt-ref <receipt_ref>/,
+    );
+    assert.deepEqual(maturity.provider_long_soak.execution_runbook.accepted_paths, [
+      'long_soak_recovery_dead_letter_evidence_path',
+      'provider_or_typed_blocker_path',
+    ]);
+    assert.equal(
+      maturity.provider_long_soak.execution_runbook.readback_commands.includes(
+        'opl framework operating-maturity --family-defaults --json',
+      ),
+      true,
+    );
+    assert.equal(
+      maturity.provider_long_soak.execution_runbook.stop_loss.includes(
+        'if capability_status remains capability_slo_blocked, record provider_blocker_ref or typed_blocker_ref instead of rerunning evidence accounting',
+      ),
+      true,
+    );
+    assert.equal(
+      maturity.provider_long_soak.execution_runbook.false_authority_guard
+        .can_claim_provider_production_ready,
+      false,
+    );
     assert.equal(
       maturity.provider_long_soak.authority_boundary.can_claim_production_ready,
       false,
@@ -267,6 +297,42 @@ test('framework operating maturity consumes verified App release user-path evide
       'app-release-cohort:26.5.28-draft.20260527235839',
     );
     assert.equal(maturity.app_release_user_path.release_ready_authorized, false);
+    assert.equal(maturity.app_release_user_path.owner, 'one-person-lab-app release owner');
+    assert.match(
+      maturity.app_release_user_path.record_command,
+      /opl runtime app-release-evidence record/,
+    );
+    assert.match(
+      maturity.app_release_user_path.verify_command,
+      /opl runtime app-release-evidence verify --receipt-ref <receipt_ref>/,
+    );
+    assert.deepEqual(maturity.app_release_user_path.execution_runbook.accepted_paths, [
+      'same_cohort_release_user_path_refs_path',
+      'release_owner_typed_blocker_path',
+      'release_owner_verdict_path',
+    ]);
+    assert.equal(
+      maturity.app_release_user_path.execution_runbook.readback_commands.includes(
+        'opl runtime app-release-evidence list --json',
+      ),
+      true,
+    );
+    assert.equal(
+      maturity.app_release_user_path.execution_runbook.stop_loss.includes(
+        'if open_gate_count is zero but release_ready_authorized is false, stop recording OPL evidence and request release owner verdict or typed blocker',
+      ),
+      true,
+    );
+    assert.equal(
+      maturity.app_release_user_path.execution_runbook.false_authority_guard
+        .open_count_zero_is_not_release_ready,
+      true,
+    );
+    assert.equal(
+      maturity.app_release_user_path.execution_runbook.false_authority_guard
+        .can_claim_app_release_ready,
+      false,
+    );
     const appReleaseGateLane = maturity.foundry_agent_os_production_evidence_gate.lane_statuses.find(
       (entry: { lane: string }) => entry.lane === 'app_release_user_path',
     );
@@ -344,6 +410,11 @@ test('framework operating maturity surfaces refs-only provider and lifecycle cou
     assert.equal(maturity.provider_long_soak.long_evidence_ready, true);
     assert.equal(maturity.provider_long_soak.observed_receipt_count, 7);
     assert.equal(maturity.provider_long_soak.provider_completion_counts_as_production_ready, false);
+    assert.equal(
+      maturity.provider_long_soak.execution_runbook.false_authority_guard
+        .can_claim_production_ready,
+      false,
+    );
     const providerGateLane = maturity.foundry_agent_os_production_evidence_gate.lane_statuses.find(
       (entry: { lane: string }) => entry.lane === 'provider_long_soak',
     );

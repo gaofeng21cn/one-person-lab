@@ -177,6 +177,107 @@ function nextOwnerActions() {
   ];
 }
 
+function providerLongSoakExecutionRunbook() {
+  return {
+    surface_kind: 'opl_provider_long_soak_execution_runbook',
+    owner: 'one-person-lab runtime owner',
+    record_command:
+      'opl runtime provider-long-soak-evidence record --payload \'{"long_soak_refs":["provider-long-soak:temporal/<window>"],"recovery_refs":["provider-recovery:temporal/<event>"],"dead_letter_refs":["provider-dead-letter:temporal/<queue>"],"provider_blocker_refs":["provider-blocker:temporal/<capability>"],"typed_blocker_refs":["typed-blocker:provider/<reason>"]}\'',
+    verify_command:
+      'opl runtime provider-long-soak-evidence verify --receipt-ref <receipt_ref>',
+    readback_commands: [
+      'opl runtime provider-long-soak-evidence list --json',
+      SOURCE_COMMANDS.app_operator_drilldown,
+      'opl framework operating-maturity --family-defaults --json',
+    ],
+    accepted_ref_shapes: [
+      'long_soak_ref',
+      'recovery_ref',
+      'dead_letter_ref',
+      'provider_blocker_ref',
+      'typed_blocker_ref',
+    ],
+    accepted_paths: [
+      'long_soak_recovery_dead_letter_evidence_path',
+      'provider_or_typed_blocker_path',
+    ],
+    readback_fields: [
+      'provider_long_soak.open_evidence_count',
+      'provider_long_soak.long_evidence_ready',
+      'provider_long_soak.capability_status',
+      'provider_long_soak.provider_completion_counts_as_production_ready',
+      'foundry_agent_os_production_evidence_gate.owner_route_work_orders[lane=provider_long_soak]',
+    ],
+    stop_loss: [
+      'if capability_status remains capability_slo_blocked, record provider_blocker_ref or typed_blocker_ref instead of rerunning evidence accounting',
+      'if long_evidence_ready remains false after a claimed window, preserve open_evidence_count=1 and route to runtime owner',
+      'if provider completion is the only proof, keep provider_completion_counts_as_production_ready=false',
+    ],
+    false_authority_guard: {
+      refs_only: true,
+      can_claim_provider_production_ready: false,
+      can_claim_production_ready: false,
+      can_claim_domain_ready: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+    },
+  };
+}
+
+function appReleaseUserPathExecutionRunbook() {
+  return {
+    surface_kind: 'opl_app_release_user_path_execution_runbook',
+    owner: 'one-person-lab-app release owner',
+    record_command:
+      'opl runtime app-release-evidence record --payload \'{"release_package_refs":["release:pkg"],"screenshot_refs":["screenshot:first-run"],"reload_prompt_user_path_refs":["first-run:log"],"provider_state_linkage_refs":["provider:state"],"long_operator_evidence_refs":["operator:long-window"]}\'',
+    typed_blocker_record_command:
+      'opl runtime app-release-evidence record --payload \'{"typed_blocker_refs":["typed-blocker:app-release/<reason>"]}\'',
+    verify_command:
+      'opl runtime app-release-evidence verify --receipt-ref <receipt_ref>',
+    long_operator_commands: [
+      'opl runtime app-release-evidence long-operator start --cohort <version> --minimum-duration-minutes <n> --evidence-dir <path>',
+      'opl runtime app-release-evidence long-operator event --workorder-file <path> --event-kind <kind> --evidence-ref <ref>',
+      'opl runtime app-release-evidence long-operator finish --workorder-file <path>',
+    ],
+    readback_commands: [
+      'opl runtime app-release-evidence list --json',
+      SOURCE_COMMANDS.app_operator_drilldown,
+      'opl framework operating-maturity --family-defaults --json',
+    ],
+    accepted_ref_shapes: [
+      'release_evidence_ref',
+      'install_evidence_ref',
+      'operator_evidence_ref',
+      'release_owner_receipt_ref',
+      'typed_blocker_ref',
+    ],
+    accepted_paths: [
+      'same_cohort_release_user_path_refs_path',
+      'release_owner_typed_blocker_path',
+      'release_owner_verdict_path',
+    ],
+    readback_fields: [
+      'app_release_user_path.open_gate_count',
+      'app_release_user_path.production_user_path_ready',
+      'app_release_user_path.release_ready_authorized',
+      'app_release_user_path.next_required_delta',
+      'foundry_agent_os_production_evidence_gate.owner_route_work_orders[lane=app_release_user_path]',
+    ],
+    stop_loss: [
+      'if open_gate_count is zero but release_ready_authorized is false, stop recording OPL evidence and request release owner verdict or typed blocker',
+      'if success refs and typed_blocker_refs are mixed in one payload, split the path before recording',
+      'if cohort_guard selects a newer incomplete cohort, keep release_ready_authorized=false',
+    ],
+    false_authority_guard: {
+      refs_only: true,
+      open_count_zero_is_not_release_ready: true,
+      can_claim_app_release_ready: false,
+      can_claim_production_ready: false,
+      can_create_owner_receipt: false,
+    },
+  };
+}
+
 function ownerRouteWorkOrderAuthorityBoundary() {
   return {
     work_order_is_refs_only: true,
@@ -908,6 +1009,8 @@ export async function buildFrameworkOperatingMaturityReadout(
   const physicalDeleteAuthority = record(defaultCallers.physical_delete_authority_read_model);
   const providerOpenCount = drilldownMaturity.provider.openEvidenceCount;
   const lifecycleOpenCount = drilldownMaturity.lifecycle.openEvidenceCount;
+  const appReleaseRunbook = appReleaseUserPathExecutionRunbook();
+  const providerLongSoakRunbook = providerLongSoakExecutionRunbook();
   const cleanupEvidenceWorklistCount = numberValue(defaultCallers.deletion_evidence_worklist_count);
   const cleanupOpenDecisionCount = numberValue(
     physicalDeleteAuthority.structural_prerequisites_observed_but_domain_owner_decision_missing_count,
@@ -1023,6 +1126,12 @@ export async function buildFrameworkOperatingMaturityReadout(
           'release_owner_receipt_ref',
           'typed_blocker_ref',
         ],
+        execution_runbook: appReleaseRunbook,
+        owner: appReleaseRunbook.owner,
+        record_command: appReleaseRunbook.record_command,
+        verify_command: appReleaseRunbook.verify_command,
+        readback_commands: appReleaseRunbook.readback_commands,
+        stop_loss: appReleaseRunbook.stop_loss,
         details_stay_out_of_ordinary_cockpit: true,
         release_ready_authorized: false,
       },
@@ -1059,6 +1168,12 @@ export async function buildFrameworkOperatingMaturityReadout(
           'provider_blocker_ref',
           'typed_blocker_ref',
         ],
+        execution_runbook: providerLongSoakRunbook,
+        owner: providerLongSoakRunbook.owner,
+        record_command: providerLongSoakRunbook.record_command,
+        verify_command: providerLongSoakRunbook.verify_command,
+        readback_commands: providerLongSoakRunbook.readback_commands,
+        stop_loss: providerLongSoakRunbook.stop_loss,
         provider_completion_counts_as_production_ready: false,
         authority_boundary: drilldownMaturity.provider.authorityBoundary,
       },
