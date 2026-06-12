@@ -573,6 +573,55 @@ Coverage / carry-forward:
 - Not covered: RCA production-like no-regression, Temporal visual-stage long soak, generated/default caller thinning, concrete source/contract/test retirement lanes, `docs/architecture.md` residual thinning, `docs/decisions.md` residual thinning, or full six-repo paragraph coverage.
 - Physical retirement remains gated by RCA machine guards plus replacement-owner, no-active-caller, no-forbidden-write, RCA owner receipt / typed blocker or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
 
+## Fresh Intake 2026-06-12 MAS Recovery Execution-Entry Vocabulary Retirement
+
+This follow-up reopened `med-autoscience` for a narrow docs-only lane after the
+repo was clean, aligned to `origin/main`, and OPL Doc doctor reported three
+active-path legacy-vocabulary warnings for `frontdoor`. It retires that wording
+from active MAS prose while preserving the existing machine contract key as a
+separate contract/source/test migration concern. It does not create a new dated
+ledger chain and does not close the parent `/goal`.
+
+Semantic theme: MAS active-doc recovery execution-entry vocabulary retirement.
+
+Single Source of Truth:
+
+- MAS active completion / gap / next prompt owner: `med-autoscience/docs/active/mas-ideal-state-gap-plan.md`.
+- Stage-route and recovery machine policy: `med-autoscience/contracts/stage_route_reconcile_contract.json`, especially the Codex executor route policy and `dm002_dm003_recovery_acceptance_policy`.
+- Current runbook / status / decisions prose: `med-autoscience/docs/runtime/control/progress_first_stage_outcome.md`, `med-autoscience/docs/status.md`, and `med-autoscience/docs/decisions.md`.
+- Topic-level MAS coverage provenance: `med-autoscience/docs/history/docs-portfolio-coverage-ledger/README.md`.
+
+Brand-module scope:
+
+- Primary module: `OPL Charter`, because this is docs lifecycle / SSOT governance.
+- Coordinating modules: `OPL Runway` and `OPL Foundry Lab`, because the edited MAS prose describes StageRun provider execution and a standard Foundry Agent's owner-callable execution boundary.
+- Not touched: runtime implementation, MAS study truth, paper body, publication verdict, controller decision, artifact authority, owner receipts, typed blockers, contracts/source/tests/CLI/API/workflows/packages, or physical deletion gates.
+
+Edited / pushed repo-local docs:
+
+| Repo | Commit | Edited docs and result |
+| --- | --- | --- |
+| `med-autoscience` | `b4c65e5b1 docs: retire MAS recovery frontdoor wording` | `docs/decisions.md`, `docs/status.md`, and `docs/runtime/control/progress_first_stage_outcome.md` now name the current human-facing boundary as execution entry / execution boundary and point SSOT back to the Codex executor route policy plus DM002/DM003 recovery acceptance policy. `docs/history/docs-portfolio-coverage-ledger/README.md` records the docs-only consolidation and states that the old `frontdoor` wording remains only contract-key / history vocabulary. |
+
+Fresh readback boundary:
+
+- `med-autoscience`: `main...origin/main`, `HEAD=origin/main=b4c65e5b1`; `opl-doc-doctor` moved from `finding_count=3` to `finding_count=0`, `active_truth_health.status=pass`, `markdown_doc_count=273`.
+- `one-person-lab`: this rollup is the only OPL docs write for this MAS follow-up.
+- `med-autogrant`, `redcube-ai`, `opl-meta-agent`, and `one-person-lab-app`: no repo-local edit in this MAS follow-up.
+
+Verification:
+
+- MAS docs diff check: `git diff --check -- docs/decisions.md docs/status.md docs/runtime/control/progress_first_stage_outcome.md docs/history/docs-portfolio-coverage-ledger/README.md`.
+- MAS README/docs/contracts/tests conflict-marker scan.
+- MAS residual `frontdoor` scan confirmed remaining hits only in `contracts/stage_route_reconcile_contract.json` and the MAS coverage row that records the contract-key / history vocabulary boundary.
+- MAS OPL Doc doctor: `finding_count=0`, `active_truth_health.status=pass`.
+
+Coverage / carry-forward:
+
+- Covered: MAS active docs that used old `frontdoor` wording as current recovery terminology for the DM002/DM003 execution route.
+- Not covered: contract-key rename, source/test/caller migration, MAS `docs/status.md` dense summary compression beyond this term, `docs/decisions.md` residual thinning beyond this term, display catalog compression, live owner-surface foldback, concrete source/test/workflow/package/CLI/API retirement lanes, or full six-repo paragraph coverage.
+- Physical retirement remains gated by replacement-owner, no-active-caller, no-forbidden-write, MAS owner receipt / typed blocker or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
+
 ## Future Record Policy
 
 - Do not create new dated docs-governance coverage-ledger chains for ordinary process, frozen inventory, doctor transcript, branch/worktree state, command transcripts or per-run proof.
