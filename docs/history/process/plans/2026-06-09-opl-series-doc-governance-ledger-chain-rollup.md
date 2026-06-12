@@ -99,6 +99,31 @@ Coverage result:
 
 The parent OPL Doc `/goal` remains open. This tranche covers high-confidence SSOT compression and role correction; it does not prove full six-repo paragraph coverage or close remaining functional/evidence gaps.
 
+## Fresh Intake 2026-06-12 Runtime Decisions Follow-up
+
+This OPL-only follow-up continued the runtime / provider / executor boundary SSOT lane after the MAS currentness source/test work was verified and landed in `med-autoscience` as `c7ea46029 fix(runtime): harden readiness blocker currentness`. That MAS commit is runtime authority foldback evidence, not six-repo docs coverage, domain-ready proof, paper progress, owner receipt, typed blocker closure, or physical retirement authorization.
+
+Semantic theme: OPL runtime history and Runtime Manager current-reading compression in `docs/decisions.md`.
+
+Single Source of Truth:
+
+- Runtime boundary support: `docs/runtime/opl-runtime-naming-and-boundary-contract.md`.
+- Runtime Manager detail: `contracts/opl-framework/runtime-manager-contract.json`, `docs/references/runtime-substrate/opl-runtime-manager-target.md`, runtime source/tests, and fresh CLI/read-model.
+- Current active baton: `docs/active/current-state-vs-ideal-gap.md`.
+- Current core docs: `docs/architecture.md`, `docs/status.md`, `docs/invariants.md`, `docs/decisions.md`.
+- Historical provenance: `docs/history/runtime-substrate/README.md`, `docs/history/process/plans/2026-06-09-opl-decisions-runtime-history-compression-closeout.md`, and this rollup.
+
+Edited docs:
+
+- `docs/decisions.md`: compressed the 2026-04-26 Runtime Manager historical implementation longlist into a current-reading paragraph that points to the contract/runtime support owners and keeps only the no-resurrection boundary; marked the 2026-04-11 runtime substrate decision as historical and removed active-looking `gateway` wording from its impact.
+- `docs/history/process/plans/2026-06-09-opl-series-doc-governance-ledger-chain-rollup.md`: records this follow-up and preserves the open parent goal.
+
+Coverage / carry-forward:
+
+- Covered: OPL `docs/decisions.md` runtime history paragraphs that could still freeze implementation detail, native-helper dynamic state, provider lifecycle detail, or stale Gateway vocabulary inside an active decision log.
+- Not covered: full OPL `docs/architecture.md` / `docs/status.md` thinning, every OPL support/reference doc paragraph, the full six-repo docs corpus, and any source/test/workflow/package/CLI/API physical-retirement lane.
+- Remaining rule: stale source/test/workflow/package/CLI/API surfaces still require replacement-owner, no-active-caller, no-forbidden-write, owner receipt / typed blocker roundtrip or explicit owner decision, and tombstone/provenance evidence before deletion. This follow-up authorizes no physical surface deletion.
+
 ## Future Record Policy
 
 - Do not create new dated docs-governance coverage-ledger chains for ordinary process, frozen inventory, doctor transcript, branch/worktree state, command transcripts or per-run proof.

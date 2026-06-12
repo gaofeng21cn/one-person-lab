@@ -819,23 +819,13 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 原因：历史上曾计划把长跑托管任务注册到外部 `Hermes-Agent` online runtime substrate，由它负责 session、scheduler、wakeup、interrupt/resume、memory、delivery、approval、cron 与 webhook。当前这一路线已被 Temporal-backed provider 取代；保留本段只解释 Runtime Manager 为什么需要产品级 provision、version pin、profile wiring、typed family queue、domain task registration hydration、诊断、恢复入口、native helper catalog 与高频状态索引，而不是复制一套 runtime kernel。
 
-影响：
+当前读法：Runtime Manager 的细节 SSOT 已转到 `contracts/opl-framework/runtime-manager-contract.json`、`docs/references/runtime-substrate/opl-runtime-manager-target.md`、`docs/runtime/opl-runtime-naming-and-boundary-contract.md`、source/tests 和 fresh CLI/read-model。本文只保留决策来源与 no-resurrection 边界：
 
-- 新增 `opl runtime manager` 作为 Runtime Manager 的机器可读 projection
-- 新增 `contracts/opl-framework/runtime-manager-contract.json` 冻结 owner split、responsibilities、non-goals、native helper target 与 state index target
-- `opl runtime manager` 可以发现并调用可选 Rust native helper，把 `opl_runtime_manager_native_state_projection` 持久化到 OPL 本地 state；缺少 helper 时只报告 repair hint，不把 helper 伪装成 runtime kernel
-- Rust native helper 现在作为 OPL package lifecycle 的一等面分发：npm package 包含 Cargo workspace 和 doctor/repair 脚本，`native:repair` 负责重建 helper 后输出 lifecycle doctor JSON
-- native helper lifecycle 继续收紧为生产门禁：CI 跑 build/typecheck、fast、regression、integration、fresh-install、native、lint 与 structure；native lane 覆盖 doctor、prebuild check、package dry-run、Rust test/build、state cache 与 family smoke
-- 测试治理采用单一 lane registry：`fast` 是默认本地信号，`regression` 承接宽回归，`integration` 覆盖 ACP/session runtime、install/configure 与 retired surface fail-closed，所有 active 测试文件必须被 `scripts/test-lanes.mjs assert-coverage` 覆盖
-- 本地 `structure` lane 是结构质量 advisory 入口：line budget、Sentrux baseline regression 与 explicit Sentrux rules findings 默认输出 OPL quality details / warning，不阻断普通开发；`line-budget:strict`、`structure:strict` 或对应 strict 环境变量才作为维护硬门，检查新增超线、超过 reviewed baseline、stale baseline 与 retired baseline；GitHub Sentrux Advisory workflow 继续作为非阻断 sidecar 信号存在，不替代显式 strict 维护入口
-- prebuild/cache 策略先按 manifest 和 `OPL_STATE_DIR` cache 落地，目标是让 fresh install 优先恢复匹配平台的 helper binary，只有缺失或无效时才走本地 Cargo build
-- native state index 的 lifecycle 必须输出 TTL、history、failure、last-success、freshness、结构化 diff 与 history GC preserved/removed reporting，避免 helper 短暂不可用或 history 被裁剪时丢失可审计状态
-- `opl runtime snapshot` 可以为桌面托盘和 App Runtime Workbench 投影 `attention_items`、`running_items`、`recent_items` 与 MAS study drilldown/read-only workbench 数据，但只读取 domain-owned durable surfaces；为了托盘状态显示或 App drilldown 不新增本地 daemon，也不把 MAS `mas_opl_runtime_workbench_projection` 升级为 OPL-owned study truth
-- family runtime provider 继续由 provider-specific service / worker 承担 online substrate；`OPL Runtime Manager` 只做产品控制面、typed dispatch、诊断恢复和投影。Temporal 是 production required provider；旧 Hermes provider/Gateway/readiness 只在历史 provenance、诊断语料或负向 guard 语境中出现；`hermes_agent` 作为 executor adapter/backend 另按显式非默认接口处理。
-- `domain task registration hydration` 是 Runtime Manager 的一等职责：OPL 读取 domain-owned sidecar export 中显式授权的 `pending_family_tasks[]`，写入 OPL typed queue，并保持 retry / dead-letter / notification / approval 语义；OPL 不从 read-only projection 自行推断医学、基金或视觉交付任务。
-- provider system service lifecycle 由 provider-specific installer/gateway command 管理；OPL 只触发、检查和报告 readiness
-- `MAS`、`MAG`、`RCA` 继续持有 domain truth 与 route-selected executor 语义
-- 未来如需迁移到 OPL 自有完整 sidecar，必须先证明 provider abstraction / Temporal 无法表达必要的 task、wakeup、approval、audit 或产品隔离合同
+- `OPL Runtime Manager` 是 provider-backed family runtime 之上的产品控制面与 typed dispatch / diagnosis / projection 层；它不是自有 runtime kernel、domain scheduler、concrete executor、domain truth owner、quality verdict owner 或 artifact authority。
+- Runtime Manager 可持有 provider selection、typed family queue、domain task registration hydration、diagnostics/repair entry、optional native helper catalog 和 state-index projection；native helper / state index 只按合同和 runtime support docs 读取，不在本决策中维护动态实现清单。
+- Temporal 是 production required provider；`local_sqlite` 只作 dev/CI/offline diagnostic baseline；旧 Hermes provider / Gateway / readiness 只保留为 history provenance、诊断语料或负向 guard。`hermes_agent` 另按显式非默认 executor adapter/backend 处理。
+- Domain task hydration 只能消费 domain-owned export 中显式授权的 refs / `pending_family_tasks[]`；OPL 不从 read-only projection 自行推断医学、基金或视觉交付任务，不写 domain truth、memory body、owner receipt、typed blocker 或 quality/export verdict。
+- Provider service / worker lifecycle 由对应 deployment substrate 承担；OPL 只触发、检查、修复入口和报告 readiness。未来若要转向 OPL 自有完整 sidecar，必须先证明 provider abstraction / Temporal 无法表达必要的 task、wakeup、approval、audit 或产品隔离合同。
 
 ## 2026-04-25
 
@@ -994,14 +984,14 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 原因：避免把仓内 shim、helper 或 scaffold 误写成“已接入 Hermes-Agent”，同时避免把当前 canonical `hermes_agent` executor adapter/backend 误删为旧 Hermes provider/Gateway 残留。
 
-### 决策：统一 runtime substrate，不强制统一具体执行器
+### 历史决策：统一 runtime substrate，不强制统一具体执行器
 
 状态：历史决策，已被 2026-05 的 provider-backed family runtime / Temporal production required substrate 口径吸收。当前读法是：Temporal-backed family runtime provider 承担 production online substrate；`Hermes-Agent` 不再是 runtime provider / Gateway / readiness path，但 `hermes_agent` 仍可作为显式非默认 executor adapter/backend。`Codex CLI` 当前仍是家族默认且第一公民的具体执行器，默认模式是 `autonomous`。
 
 影响：
 
 - family runtime provider 统一负责 stage attempt、signal/query/history、receipt 和 operator projection 等 substrate 能力；历史 `Hermes Kernel` / online-management gateway 说法只作为迁移期背景
-- `OPL` 与各领域仓继续负责 gateway、authority、object contract、audit truth
+- `OPL` 与各领域仓继续按当前 owner split 负责 activation、authority boundary、object contract 和 audit truth；旧 `gateway` 只作为历史词汇保留，不恢复为 active compatibility surface
 - 具体任务执行继续通过领域内部的执行路径完成
 
 ### 决策：家族第一公民执行器正式名称冻结为 `Codex CLI`
