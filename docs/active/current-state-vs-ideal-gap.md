@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `family_ideal_state_gap_plan`
 State: `active_plan`
 Machine boundary: 本文是人读 gap / completion map。机器真相继续归 `contracts/`、源码、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、真实 workspace 与 App evidence。
-Date: `2026-06-10`
+Last reviewed: `2026-06-12`
 
 ## 读法
 
@@ -16,21 +16,9 @@ North-star 目标态回到 [OPL 与 Foundry Agents 理想目标态](../reference
 
 当前 ideal top-level redesign 的 active owner 口径是：`TASTE.md` 固化长期维护 taste，`docs/decisions.md` 记录仍有效决策，`contracts/opl-framework/surface-budget-policy.json` 冻结机器预算，`contracts/opl-framework/target-operating-architecture-contract.json` 镜像目标态 compiler policy，本文维护当前 owner、gap、gate、next action 和完成口径。支撑文档只能提供目标态、评估标准或证据解释，不能维护第二 active backlog、第二 ordinary route 或第二 truth。
 
-2026-06-10 foldback：`opl-family-ideal-operating-model-redesign.md` 只作为 north-star / 验收标准读取；active baton 仍由本文承接。`multi-plane operating system`、OPL 基座优化、`Runway` / `Console` / `Vault` false-authority、`current_owner_delta` single ordinary route 的落地状态统一写入本文的 `Operating Model Foldback 状态`、`测试 / 证据差距` 和 `下一轮 Agent prompt`。redesign 文档不得维护独立 owner queue、dated checklist、worktree closeout 或第二 active plan。
+近期 foldback 的统一读法是：support 文档和 contracts 只保留目标态、验收标准、机器锚点和 false-authority guard；本文只维护当前 owner、gap、gate、next action 和完成口径。`opl-family-ideal-operating-model-redesign.md` 的 `multi-plane operating system`、`运行流畅度 / 输出质量 / 品牌感` 和 OPL 基座优化是 north-star / audit standard；`contracts/opl-framework/target-operating-architecture-contract.json#experience_operating_model`、`#one_shot_plan_landing_model` 和 `#foundry_agent_os_standard` 是机器锚点；`framework operating-maturity`、`agents conformance`、`brand-modules l5-status` 和 App operator read model 是动态读面。这些 surface 只能说明 OPL-controlled transport/read-model/contract/test 已落地或 owner-evidence work order 可接力，不能关闭 MAS/MAG/RCA/OMA domain ready、MAS paper done、App release ready、Brand L5、quality/export verdict、physical delete 或 production ready。
 
-2026-06-12 foldback：顶层完善方向按三轴读取。`运行流畅度` 要求 ordinary path 更短、唯一 Continue/Review/Ask/Repair/Park action、durable StageRun、JIT readiness 和 anti-spin；`输出质量` 要求执行 attempt、独立 review / quality gate attempt、owner answer 分离，并让 MAS 的 source truth、analysis validity、manuscript argument、journal fit、AI reviewer 和 publication handoff 都回 domain owner；`品牌感` 要求产品层、Foundry line、模块语言、状态语言、视觉 token 和 evidence language 从同一 brand profile / L5 evidence contract 派生。该 foldback 只扩充验收标准，不关闭当前 MAS owner-answer gate、Brand L5 evidence gate、App release-owner verdict、provider long-soak 或 private-platform delete authority。
-
-2026-06-12 machine foldback：`contracts/opl-framework/target-operating-architecture-contract.json#experience_operating_model` 已把三轴体验目标落成机器合同，默认路径固定为 `current_owner_delta` + `opl app state --profile fast --json`，MAS 旗舰默认形态固定为 `Declarative Domain Pack + OPL generated/hosted surfaces + minimal domain authority kernel`。`tests/src/target-architecture-schema-contracts.test.ts` 现在验证 `running_smoothness`、`output_quality`、`brand_feel` 的 owner modules、machine checks、forbidden regressions 和 false-authority boundary；这只关闭“理想体验目标没有机器锚点”的差距，不授权 L5 ready、domain ready、App release ready、production ready 或 MAS paper done。
-
-2026-06-12 one-shot landing foldback：附件计划的 P0-P8 已折成 `contracts/opl-framework/target-operating-architecture-contract.json#one_shot_plan_landing_model`，并由 `loadFrameworkContracts`、`framework operating-maturity` 和 App operator view model 消费。OPL-controlled surface 的完成口径是 `contract/read-model/runtime route/App projection/test` 已落地：P3 的 `ProgressDeltaReceipt` 已有 schema/helper/test，并进入 `stage_progress_log.progress_delta_receipt` 与 `stage_progress_log_summary.progress_delta_receipt_refs`；P4 的 `QualityGateRuntime` 已有 refs-only contract/helper/test，StageRun closeout 可接受 domain-owned `quality_gate_receipt`、`human_gate` 和 `route_back_evidence` 作为 owner-answer refs，但继续 `quality_or_export_authorized=false`；P8 只在既有 `foundry_agent_os_production_evidence_gate` 下新增 `final_scaleout_gate` 聚合 open lanes、owner verdict refs、release verdict refs 和 long-soak refs，`ready_claim_authorized=false`。App fast state 同步暴露 `one_shot_plan_landing`，用于告诉 operator “OPL 面已落地、外部 owner evidence 仍必需”。该 foldback 不关闭 MAS/MAG/RCA/OMA domain ready、MAS paper done、App release ready、Brand L5、quality/export verdict、physical delete 或 production ready。
-
-2026-06-10 W7 owner-evidence foldback：fresh `opl framework operating-maturity --family-defaults --json`、`opl brand-modules l5-status --json` 和 `opl brand-modules operating-model-projections --json` 的结论是 `owner_needed_work_order_projected` / `hygiene_only_supporting_active_gap`，不是 production ready。W7 已落的是 owner-route work order 的 refs-only 投影、accepted-ref 字段、false-authority guard 和 forbidden-claim guard；当前 ordinary owner 仍是 `med-autoscience` 的 `owner_answer_or_typed_blocker` gate。Brand L5 仍是 10 个模块全部 `evidence_required`；App release/user-path 和 provider long-soak 只记录 refs/evidence，不授权 release ready、domain ready、Brand L5、physical delete 或 production ready。OPL 在这些读面中不生成 owner receipt、typed blocker、quality/export/review verdict、domain truth、artifact/memory body 或 physical delete authorization。
-
-2026-06-11 W7 follow-through：`runtime domain-owner-payload-summary` 与 App action execution 的 refs-only intake 已保留并回投 `human_gate_refs`、`quality_or_export_receipt_refs`、`reviewer_receipt_refs` 和 `long_soak_refs`；CLI payload 兼容 `quality_gate_receipt_refs` 与 `export_receipt_refs` 作为 quality/export receipt 输入。`framework operating-maturity` 会把这些 concrete refs、ref shape、ref count 投影到 `owner_evidence_intake`、per-domain `domain_owner_evidence_routes` 和 W7 owner-route work orders。Work order 现在显式输出 `owner_evidence_closure_state`、`owner_acceptance_required=true`、`ready_claim_authorized=false` 与 `open_count_semantics`：`open_count=0` 只表示 lane-specific 缺口证据已观察，不授权 ready claim；`open_count>0` 即使已有 observed refs，也仍是 owner evidence required。
-
-2026-06-11 L5 owner-route follow-through：Brand L5 不再只是“10 个模块 evidence required”的粗粒度状态。`opl brand-modules l5-status --json` 对每个模块的 13 类 L5 requirement 输出 requirement-level `work_order_id`、owner、accepted ref shapes、`typed_blocker_payload_template`、`evidence_payload_template`、record / verify command 和 false-authority boundary；`opl framework operating-maturity --family-defaults --json` 同步在 `foundry_agent_os_production_evidence_gate.brand_module_l5_requirement_work_orders` 聚合 130 条可接力 work order。这个改动只关闭“L5 缺口不可执行、不可逐项接力”的问题；所有 work order 仍是 refs-only，不创建 owner receipt / typed blocker，不声明 L5、production ready、domain ready 或 App release ready。
-
-2026-06-10 以后，MAS 的 Agent OS 目标态已抽象为 family-level Foundry Agent OS pattern：`OPL Agent OS + Domain Declarative Pack + Domain Minimal Authority Kernel + Domain Capability Registry`。该 pattern 的机器锚点是 `contracts/opl-framework/target-operating-architecture-contract.json#foundry_agent_os_standard`，实施规划入口是 [Foundry Agent OS Family Target Implementation Plan](./foundry-agent-os-family-target-implementation-plan.md)。2026-06-12 起，MAS flagship experience mapping 进一步由 `contracts/opl-framework/target-operating-architecture-contract.json#flagship_experience_mapping` 和 `opl agents conformance` 的 `foundry_agent_os_conformance.flagship_experience_mapping` 持有：MAS 作为 Research Foundry flagship 只映射 `Evidence Map -> Analysis Pack -> Manuscript Draft -> Reviewer Letter -> Revision Packet -> Publication Handoff` 的理想体验与迁移边界；标准 agent 形态仍是 `Declarative Domain Pack + OPL generated/hosted surfaces + minimal authority functions`，私有 scheduler / runner / workbench / status shell 只能作为迁移输入。它是 active_support，不替代本文的唯一 active owner；Capability Registry 只归入 `Atlas + Pack + Stagecraft` 的 registry / ABI / use-policy，不新增第 11 个品牌模块，也不生成 domain authority。原先独立的 OPL / MAS supervisory acceptance 目标已经降级为该计划的 `Supervisory acceptance gate`：只作为 `W0` / `W2` / `W6` / `W7` 的验收细目存在，不再单独维护 active line，也不负责修 MAS provider admission / currentness 源头或生成 MAS owner receipt / typed blocker。该映射不得声明 MAS ready、paper done、Brand L5 done 或 production ready。
+MAS 的 family-level Foundry Agent OS 目标态按 `OPL Agent OS + Domain Declarative Pack + Domain Minimal Authority Kernel + Domain Capability Registry` 读取。MAS flagship experience mapping 只定义 `Evidence Map -> Analysis Pack -> Manuscript Draft -> Reviewer Letter -> Revision Packet -> Publication Handoff` 的理想体验与迁移边界；私有 scheduler / runner / workbench / status shell 只能作为迁移输入。Capability Registry 归入 `Atlas + Pack + Stagecraft` 的 registry / ABI / use-policy，不新增第 11 个品牌模块，也不生成 domain authority。原先独立的 OPL / MAS supervisory acceptance 目标只作为 Foundry Agent OS plan 的验收细目存在；当前执行顺序和 owner gate 仍回本文。
 
 ## 目标态
 
@@ -107,7 +95,7 @@ support planes:
 | live surface | 当前读法 | 本页结论 |
 | --- | --- | --- |
 | `opl framework readiness --family-defaults --json` | 本轮 fresh readout 为 `status=framework_control_plane_available_with_open_production_tail`、`hard_blocker_count=0`、`open_tail_count=1`，owner delta handoff 仍是 `needs_domain_or_app_live_owner_payload`，下一 owner 是 `med-autoscience`；domain-blocked typed blocker refs 只作为 refs-only attention tail。 | 默认下一步只能回 MAS/domain owner answer 或 typed blocker path。Audit sidecar、blocked refs-only residue、raw worklist、provider trace、replay packet、cleanup route 和 private residue 都不能生成默认 next action。 |
-| `opl agents conformance --family-defaults --json` | family structural contract 仍是 `3 passed / 1 blocked`；ordinary path guard passed；live domain progress 仍 `required_from_domain_owner`。 | StageRun profile、controlled canary、scaffold/validate gate 和 conformance pass 只证明标准接入和 evidence shape，不声明 MAS/MAG/RCA/OMA domain ready、artifact ready、quality/export ready 或 production ready。 |
+| `opl agents conformance --family-defaults --json` | family structural contract 为 `passed_count=4`、`blocked_count=0`；ordinary path guard passed；live domain progress 仍是 `owner_evidence_recorded_not_ready_claim`。 | StageRun profile、controlled canary、scaffold/validate gate 和 conformance pass 只证明标准接入和 evidence shape，不声明 MAS/MAG/RCA/OMA domain ready、artifact ready、quality/export ready 或 production ready。 |
 | `opl agents default-callers --family-defaults --json` | `blocked_count=0`，`deletion_evidence_worklist_count=32`，`default_caller_delete_ready=false`，`physical_delete_authorized=false`，`physical_delete_authorization_status=not_authorized_by_opl_projection`。 | No-active-caller / replacement / tombstone refs 只是 cleanup lane 输入。没有 domain owner physical delete authorization、keep decision 或 typed blocker ref 时，OPL 不删除 wrapper、facade、alias、helper、workflow、test 或 package surface。 |
 | `opl framework operating-maturity --family-defaults --json` | baseline 是 `L4_executable_baseline`，target 是 `L5_production_operating_maturity`，`status=evidence_required`，`ready_claim_authorized=false`。本轮 fresh summary 仍显示 current owner 是 `med-autoscience`，`current_owner_delta_owner_answer_missing=true` / `current_owner_delta_owner_answer_still_required=true`；Brand L5 `evidence_required_module_count=10` / `l5_complete_module_count=0`；App release/user-path 是 `evidence_recorded_not_release_ready_claim`，`open_gate_count=0`、`production_user_path_ready=true`、`release_ready_authorized=false`；provider long-soak 是 `open_evidence_count=1`、`long_evidence_ready=false`、`capability_status=capability_slo_blocked`。`owner_evidence_intake` 先读取 domain owner payload summary、Brand L5、App release 和 Codex App runtime evidence 的 refs-only ledger，再把 observed refs 回投到 domain owner-chain、brand L5、release/user-path、provider long-soak、cleanup 和 memory/artifact/lifecycle evidence lane。 | Evidence lane 只能定位下一 owner、accepted ref shape、observed ref shape 和 false-authority boundary；不能授权 domain ready、App release ready、Brand L5、physical delete 或 production ready，也不能让 OPL 生成 owner receipt、typed blocker 或 quality/export/review verdict。 |
 
@@ -157,50 +145,17 @@ Workspace Protocol 的当前 active 口径只保留结构边界：`Workspace Gro
 
 本节是所有 active/support 规划的单一缺口归口。support 文档里的 P0-P5、W0-W7、audit lane、rollout phase、closure matrix row 和 external-practice checklist 只提供标准或证据解释；它们不维护第二 backlog。
 
-2026-06-11 fresh readout:
+Fresh readout discipline:
 
-```text
-opl framework operating-maturity --family-defaults --json
-  status=evidence_required
-  current_owner=med-autoscience
-  current_owner_stage_id=domain_owner/default-executor-dispatch
-  current_owner_delta_owner_answer_missing=true
-  current_owner_delta_owner_answer_still_required=true
-  ready_claim_authorized=false
-  domain_owner_chain_open_domain_count=0
-  brand_module_l5_evidence_required_module_count=10
-  brand_module_l5_verified_receipt_count=1
-  provider_long_soak_open_count=1
-  production_gate_summary.owner_route_work_order_count=6
-  production_gate_summary.brand_module_l5_requirement_work_order_count=130
-```
+| command | fields to read | how this plan may use it |
+| --- | --- | --- |
+| `opl framework readiness --family-defaults --json` | `current_owner_delta`, owner, stage, required return shapes, hard gate and default next action. | Sets the current ordinary owner. It does not authorize domain ready or production ready. |
+| `opl framework operating-maturity --family-defaults --json` | `summary`, `current_owner_delta_bridge`, `owner_evidence_intake`, production evidence gates and `ready_claim_authorized`. | Aggregates owner-evidence lanes. Any open/zero count remains read-model state, not a readiness claim. |
+| `opl agents conformance --family-defaults --json` | structural pass/block state, live progress evidence status, per-domain observed refs and false-authority flags. | Proves standard interface shape and refs-only consumption. It cannot close live domain progress. |
+| `opl brand-modules l5-status --json` | L5 status, evidence-required modules, owner-route work orders and accepted ref shapes. | Drives Brand L5 owner-evidence work; work orders and verified refs-only ledger entries do not claim L5. |
+| `opl agents default-callers --family-defaults --json` | deletion evidence worklist, owner decision status and `physical_delete_authorized`. | Drives explicit cleanup lane only. Observed prerequisites do not authorize physical delete. |
 
-```text
-opl agents conformance --family-defaults --json
-  passed_count=4
-  blocked_count=0
-  live_stage_run_progress_evidence_open_domain_count=0
-  live_stage_run_progress_evidence_status=owner_evidence_recorded_not_ready_claim
-  MAS/MAG/RCA/OMA status=owner_typed_blocker_recorded_not_ready_claim
-```
-
-```text
-opl brand-modules l5-status --json
-  status=evidence_required
-  all_module_count=10
-  l5_complete_module_count=0
-  evidence_required_module_count=10
-  owner_route_count=130
-```
-
-```text
-opl agents default-callers --family-defaults --json
-  blocked_count=0
-  deletion_evidence_worklist_count=32
-  physical_delete_authorized=false
-  default_caller_delete_ready=false
-  owner_decision_status=owner_decision_observed_refs_only_not_delete_authorized
-```
+2026-06-12 readback kept the same active conclusion: framework read models are available; current owner answer is still external-owner gated; conformance is structurally passing but live domain progress is `owner_evidence_recorded_not_ready_claim`; all ten brand modules still require L5 evidence; default-caller deletion evidence is observed but `physical_delete_authorized=false`. Future edits must rerun the commands above instead of copying these counters.
 
 | active gap | 已落地 | 仍未落地 | owner / closing ref | source of truth |
 | --- | --- | --- | --- | --- |

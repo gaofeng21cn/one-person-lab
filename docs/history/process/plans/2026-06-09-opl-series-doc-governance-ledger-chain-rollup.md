@@ -124,6 +124,32 @@ Coverage / carry-forward:
 - Not covered: full OPL `docs/architecture.md` / `docs/status.md` thinning, every OPL support/reference doc paragraph, the full six-repo docs corpus, and any source/test/workflow/package/CLI/API physical-retirement lane.
 - Remaining rule: stale source/test/workflow/package/CLI/API surfaces still require replacement-owner, no-active-caller, no-forbidden-write, owner receipt / typed blocker roundtrip or explicit owner decision, and tombstone/provenance evidence before deletion. This follow-up authorizes no physical surface deletion.
 
+## Fresh Intake 2026-06-12 Active Gap Readout Compression Follow-up
+
+This OPL-only follow-up continued the active gap / status dynamic readout compression lane. It does not supersede the earlier six-repo intake and does not close the parent OPL Doc `/goal`.
+
+Semantic theme: OPL active truth and status pages were freezing dated readout packets, work-order detail and runtime-currentness implementation history that now belong to live CLI/read-model, source/contracts/tests or history provenance.
+
+Single Source of Truth:
+
+- Active owner: `docs/active/current-state-vs-ideal-gap.md`.
+- Current summary: `docs/status.md`.
+- Dynamic readout: `opl framework readiness --family-defaults --json`, `opl framework operating-maturity --family-defaults --json`, `opl agents conformance --family-defaults --json`, `opl brand-modules l5-status --json`, and `opl agents default-callers --family-defaults --json`.
+- Runtime/currentness detail: contracts, source, tests, provider/read-model output and runtime ledger.
+- Historical provenance: this rollup and git history.
+
+Edited docs:
+
+- `docs/active/current-state-vs-ideal-gap.md`: compressed dated machine readout blocks into a fresh readout discipline table, kept the 2026-06-12 conclusion as a short readback, and corrected conformance status to `passed_count=4` / `blocked_count=0` while preserving the `not_ready_claim` boundary.
+- `docs/status.md`: compressed the Foundry Agent OS, multi-plane operating model, Temporal / StageRun transport, Runway current-control and Stage-route substrate date chain into current status semantics and owner-delta-first live-read rules.
+- `docs/history/process/plans/2026-06-09-opl-series-doc-governance-ledger-chain-rollup.md`: records this tranche as compact topic-level provenance instead of creating another dated ledger file.
+
+Coverage / carry-forward:
+
+- Covered: OPL active gap and status paragraphs that were duplicating dynamic counters, W0-W7 work-order detail, provider / attempt history, currentness implementation longlists or branch-era readbacks as current truth.
+- Not covered: full OPL `docs/architecture.md` / `docs/decisions.md` thinning, every OPL support/reference doc paragraph, every paragraph in the six repos' full `README*` and `docs/**/*.md` corpus, MAS status/decisions/display catalog compression, MAG architecture/status thinning, RCA status/architecture/decisions thinning, OMA script-to-pack source reductions, and all concrete physical-retirement lanes.
+- No physical source, contract, test, workflow, package, CLI/API or runtime surface deletion is authorized by this follow-up. Concrete retirement still requires replacement-owner, no-active-caller, no-forbidden-write, owner receipt / typed blocker roundtrip or explicit owner decision, and tombstone/provenance evidence.
+
 ## Future Record Policy
 
 - Do not create new dated docs-governance coverage-ledger chains for ordinary process, frozen inventory, doctor transcript, branch/worktree state, command transcripts or per-run proof.
