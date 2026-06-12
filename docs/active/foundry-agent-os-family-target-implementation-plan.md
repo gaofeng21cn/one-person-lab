@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `foundry_agent_os_family_target_implementation_plan`
 State: `active_support`
 Machine boundary: 本文是人读目标实施规划。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、owner receipt、typed blocker、真实 workspace 与 App evidence。当前执行顺序、live gap 和完成判断仍回到 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。
-Date: `2026-06-10`
+Last reviewed: `2026-06-12`
 
 ## 结论
 

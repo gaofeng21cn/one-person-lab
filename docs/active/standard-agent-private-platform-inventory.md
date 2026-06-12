@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `cross_repo_private_platform_inventory`
 State: `active_support`
 Machine boundary: 本文是跨 repo 人读治理台账。机器真相继续归 OPL `contracts/`、CLI/API 行为、provider receipt、domain-owned contracts、sidecar/manifest projection、真实 workspace receipt 与各 domain agent owner receipt。
-Date: `2026-06-05`
+Last reviewed: `2026-06-12`
 
 ## 文档职责
 

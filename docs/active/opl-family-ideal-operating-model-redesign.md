@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `opl_family_ideal_operating_model_redesign`
 State: `active_reference`
 Machine boundary: 本文是人读顶层重设计与审计标准。机器真相继续归各 repo 的 contracts、source、tests、CLI/read-model、runtime ledger、provider receipt、domain-owned manifest、owner receipt、typed blocker、release artifact 和真实 workspace/App evidence。
-Date: `2026-06-12`
+Last reviewed: `2026-06-12`
 
 ## 读法
 

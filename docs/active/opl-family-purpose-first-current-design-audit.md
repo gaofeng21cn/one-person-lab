@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `purpose_first_current_design_audit_support`
 State: `active_support`
 Machine boundary: 本文是人读跨仓顶层设计审计支撑。机器真相继续归各 repo 的 contracts、source、tests、CLI/read-model、runtime ledger、provider receipt、owner receipt、typed blocker、release artifact 和 domain-owned evidence。
-Date: `2026-06-05`
+Last reviewed: `2026-06-12`
 
 ## 读法
 

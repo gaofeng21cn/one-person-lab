@@ -383,6 +383,50 @@ Coverage / carry-forward:
 - Not covered: MAG production/default-caller evidence, App/workbench sustained consumption, Temporal long-soak, private source thinning, `docs/decisions.md` review, concrete source/test/workflow/package/CLI/API retirement lanes, or full six-repo paragraph coverage.
 - Physical retirement remains gated by MAG machine guards plus replacement-owner, no-active-caller, no-forbidden-write, MAG owner receipt / typed blocker or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
 
+## Fresh Intake 2026-06-12 OPL Active-Support Reviewed Header Cleanup
+
+This follow-up reopened the OPL root active-support layer after the repo was clean, aligned to `origin/main`, and OPL Doc doctor was passing. It changes current support/reference metadata from frozen snapshot dates to current review markers. It does not create a new dated ledger chain and does not close the parent `/goal`.
+
+Semantic theme: OPL active-support reviewed header cleanup.
+
+Single Source of Truth:
+
+- Active completion / gap / baton owner: `docs/active/current-state-vs-ideal-gap.md`.
+- Active support owner map and target-state support: `docs/active/current-development-lines.md`, `docs/active/opl-family-development-reference.md`, `docs/active/opl-family-ideal-operating-model-redesign.md`, `docs/active/ordinary-progress-spine-and-audit-sidecar-plan.md`, `docs/active/opl-foundry-agent-target-operating-architecture.md`, `docs/active/foundry-agent-os-family-target-implementation-plan.md`, `docs/active/opl-stage-native-kernel-rollout-plan.md`, `docs/active/opl-family-purpose-first-current-design-audit.md`, `docs/active/production-framework-closure-gap-matrix.md`, and `docs/active/standard-agent-private-platform-inventory.md`.
+- Docs lifecycle owner: `docs/docs_portfolio_consolidation.md` and `docs/policies/docs-lifecycle-policy.md`.
+- Machine truth and retirement guards: OPL contracts, source/tests, CLI/read-model, runtime ledger, provider receipts, domain-owned manifests, owner receipts and typed blockers.
+
+Brand-module scope:
+
+- Primary module: `OPL Charter`, because this is docs lifecycle / owner-boundary governance.
+- Coordinating modules: `OPL Foundry Lab`, `OPL Runway`, and `OPL Console`, because the edited support docs explain Foundry Agent target shape, runtime/progress spine, and operator/current-owner readback.
+- Not touched: `OPL Vault`, `OPL Workspace`, `OPL Pack`, `OPL Connect`, domain truth, App release truth, artifact authority, quality/export verdicts, owner receipts, typed blockers, runtime implementation, source/test/workflow/package/CLI/API surfaces.
+
+Edited / pushed repo-local docs:
+
+| Repo | Commit | Edited docs and result |
+| --- | --- | --- |
+| `one-person-lab` | `99f62a63 docs: mark OPL active support docs as reviewed` | Ten OPL active-support docs now use `Last reviewed: 2026-06-12` instead of frozen `Date` fields. The active plan already used `Last reviewed`; this rollup records the cleanup as topic-level coverage. |
+
+Fresh readback boundary:
+
+- `one-person-lab`: `main...origin/main`, clean before edit; this rollup and the active-support metadata files are the only OPL docs writes for this follow-up.
+- `med-autoscience`: unrelated local source/docs/test edits remain outside this docs-governance follow-up.
+- `med-autogrant`, `redcube-ai`, `opl-meta-agent`, and `one-person-lab-app`: no repo-local edit in this OPL follow-up.
+
+Verification planned for closeout:
+
+- OPL docs diff check over the edited active-support docs and this rollup.
+- OPL README/docs conflict-marker scan.
+- OPL active/current frozen-date scan over `docs/active` and core docs.
+- OPL Doc doctor risk map.
+
+Coverage / carry-forward:
+
+- Covered: OPL active-support headers that were still reading like dated snapshots while their body text declares active support / current owner-map / target-state support roles.
+- Not covered: full OPL `docs/architecture.md` / `docs/decisions.md` residual thinning, every OPL support/reference doc paragraph, every paragraph in the six repos' full `README*` and `docs/**/*.md` corpus, MAS status/decisions/display catalog compression, MAG/RCA residual thinning, OMA script-to-pack source reductions, and all concrete physical-retirement lanes.
+- Physical retirement remains gated by replacement-owner, no-active-caller, no-forbidden-write, owner receipt / typed blocker or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
+
 ## Future Record Policy
 
 - Do not create new dated docs-governance coverage-ledger chains for ordinary process, frozen inventory, doctor transcript, branch/worktree state, command transcripts or per-run proof.

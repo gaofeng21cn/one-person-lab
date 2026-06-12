@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `foundry_agent_target_operating_architecture`
 State: `active_support`
 Machine boundary: 本文是人读目标操作架构。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、owner receipt、typed blocker、真实 workspace 与 App evidence。
-Date: `2026-06-05`
+Last reviewed: `2026-06-12`
 
 ## 读法
 
