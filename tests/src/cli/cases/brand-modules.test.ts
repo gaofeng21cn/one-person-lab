@@ -502,106 +502,151 @@ test('brand module L5 evidence gate is executable but does not claim production 
       status.owner_route_work_order_policy.accepted_route_ref_shapes.includes('typed_blocker_ref'),
       true,
     );
-    assert.equal(
-      status.modules.every((entry: {
+    type L5Route = {
+      module_id: string;
+      class_id: string;
+      owner: string;
+      owner_route_status: string;
+      blocker_state: string;
+      next_owner_action: string;
+      work_order_id: string;
+      owner_evidence_closure_state: string;
+      owner_acceptance_required: boolean;
+      ready_claim_authorized: boolean;
+      closing_ref_source: string;
+      typed_blocker_source: string;
+      record_evidence_command: string;
+      typed_blocker_payload_template: {
         module_id: string;
-        evidence_required: boolean;
-        l5_can_be_claimed: boolean;
-        l5_completion_status: string;
-        owner_evidence_routes: Array<{
-          module_id: string;
-          class_id: string;
-          owner: string;
-          owner_route_status: string;
-          blocker_state: string;
-          next_owner_action: string;
-          work_order_id: string;
-          owner_evidence_closure_state: string;
-          owner_acceptance_required: boolean;
-          ready_claim_authorized: boolean;
-          closing_ref_source: string;
-          typed_blocker_source: string;
-          record_evidence_command: string;
-          typed_blocker_payload_template: {
-            module_id: string;
-            evidence_class_id: string;
-            typed_blocker_refs: string[];
-            receipt_ref: string;
-          };
-          evidence_payload_template: {
-            module_id: string;
-            evidence_class_id: string;
-            evidence_refs: string[];
-          };
-          verification_command: string;
-          accepted_ref_shapes: string[];
-          existing_evidence_refs: string[];
-          existing_blocker_refs: string[];
-          observed_receipt_count: number;
-          verified_receipt_count: number;
-          l5_claim_status: string;
-          non_closing_inputs: string[];
-          authority_boundary: {
-            route_is_refs_only: boolean;
-            route_can_claim_l5: boolean;
-            route_can_claim_production_ready: boolean;
-            route_can_create_owner_receipt: boolean;
-            route_can_create_typed_blocker: boolean;
-          };
-        }>;
-      }) =>
-        entry.evidence_required === true
-        && entry.l5_can_be_claimed === false
-        && entry.l5_completion_status === 'evidence_required'
-        && entry.owner_evidence_routes.length === status.evidence_classes.length
-        && entry.owner_evidence_routes.every((route) =>
-          route.module_id === entry.module_id
-          && route.class_id.length > 0
-          && route.owner.length > 0
-          && route.work_order_id === `w7-brand-module-l5-${entry.module_id}-${route.class_id}`
-          && route.owner_route_status === 'owner_evidence_required'
-          && route.blocker_state === 'owner_route_evidence_missing'
-          && route.owner_evidence_closure_state === 'owner_acceptance_or_typed_blocker_required'
-          && route.owner_acceptance_required === true
-          && route.ready_claim_authorized === false
-          && route.closing_ref_source === 'brand_module_owner_evidence_ref_or_owner_acceptance_ref_for_requirement'
-          && route.typed_blocker_source === 'brand_module_owner_l5_typed_blocker_ref_for_requirement'
-          && route.record_evidence_command === 'opl runtime brand-module-l5-evidence record --payload <json>'
-          && route.typed_blocker_payload_template.module_id === entry.module_id
-          && route.typed_blocker_payload_template.evidence_class_id === route.class_id
-          && route.typed_blocker_payload_template.typed_blocker_refs[0]
-            === `typed-blocker:opl-brand-l5/${entry.module_id}/${route.class_id}/owner-evidence-pending`
-          && route.typed_blocker_payload_template.receipt_ref
-            === `opl://brand-module-l5-evidence/${entry.module_id}/${route.class_id}/typed-blocker-pending`
-          && route.evidence_payload_template.module_id === entry.module_id
-          && route.evidence_payload_template.evidence_class_id === route.class_id
-          && route.evidence_payload_template.evidence_refs[0]
-            === `owner-evidence-ref:opl-brand-l5/${entry.module_id}/${route.class_id}/<owner-evidence-id>`
-          && route.verification_command
-            === `opl runtime brand-module-l5-evidence verify --receipt-ref opl://brand-module-l5-evidence/${entry.module_id}/${route.class_id}/typed-blocker-pending`
-          && route.next_owner_action === 'record_owner_evidence_ref_or_typed_blocker_for_l5_requirement'
-          && Array.isArray(route.existing_evidence_refs)
-          && Array.isArray(route.existing_blocker_refs)
-          && route.observed_receipt_count === 0
-          && route.verified_receipt_count === 0
-          && route.l5_claim_status === 'owner_evidence_required'
-          && route.accepted_ref_shapes.includes('typed_blocker_ref')
-          && route.accepted_ref_shapes.some((shape) => shape !== 'typed_blocker_ref')
-          && route.non_closing_inputs.includes('contract_validation')
-          && route.non_closing_inputs.includes('docs_foldback')
-          && route.non_closing_inputs.includes('conformance_pass')
-          && route.non_closing_inputs.includes('provider_completion')
-          && route.non_closing_inputs.includes('app_projection')
-          && route.non_closing_inputs.includes('verified_refs_only_ledger')
-          && route.authority_boundary.route_is_refs_only === true
-          && route.authority_boundary.route_can_claim_l5 === false
-          && route.authority_boundary.route_can_claim_production_ready === false
-          && route.authority_boundary.route_can_create_owner_receipt === false
-          && route.authority_boundary.route_can_create_typed_blocker === false
-        )
-      ),
-      true,
-    );
+        evidence_class_id: string;
+        typed_blocker_refs: string[];
+        receipt_ref: string;
+      };
+      evidence_payload_template: {
+        module_id: string;
+        evidence_class_id: string;
+        evidence_refs: string[];
+      };
+      verification_command: string;
+      accepted_ref_shapes: string[];
+      existing_evidence_refs: string[];
+      existing_blocker_refs: string[];
+      observed_evidence_refs: string[];
+      observed_ref_shapes: string[];
+      observed_ref_count: number;
+      observed_receipt_count: number;
+      verified_receipt_count: number;
+      l5_claim_status: string;
+      non_closing_inputs: string[];
+      authority_boundary: {
+        route_is_refs_only: boolean;
+        route_can_claim_l5: boolean;
+        route_can_claim_production_ready: boolean;
+        route_can_create_owner_receipt: boolean;
+        route_can_create_typed_blocker: boolean;
+      };
+    };
+    type L5Module = {
+      module_id: string;
+      evidence_required: boolean;
+      l5_can_be_claimed: boolean;
+      l5_completion_status: string;
+      open_requirement_count: number;
+      blocked_requirement_count: number;
+      owner_evidence_routes: L5Route[];
+    };
+
+    for (const entry of status.modules as L5Module[]) {
+      assert.equal(entry.evidence_required, true);
+      assert.equal(entry.l5_can_be_claimed, false);
+      assert.equal(entry.l5_completion_status, 'evidence_required');
+      assert.equal(entry.open_requirement_count, 12);
+      assert.equal(entry.blocked_requirement_count, 1);
+      assert.equal(entry.owner_evidence_routes.length, status.evidence_classes.length);
+
+      for (const route of entry.owner_evidence_routes) {
+        assert.equal(route.module_id, entry.module_id);
+        assert.equal(route.class_id.length > 0, true);
+        assert.equal(route.owner.length > 0, true);
+        assert.equal(route.work_order_id, `w7-brand-module-l5-${entry.module_id}-${route.class_id}`);
+        assert.equal(route.owner_acceptance_required, true);
+        assert.equal(route.ready_claim_authorized, false);
+        assert.equal(route.closing_ref_source, 'brand_module_owner_evidence_ref_or_owner_acceptance_ref_for_requirement');
+        assert.equal(route.typed_blocker_source, 'brand_module_owner_l5_typed_blocker_ref_for_requirement');
+        assert.equal(route.record_evidence_command, 'opl runtime brand-module-l5-evidence record --payload <json>');
+        assert.equal(route.typed_blocker_payload_template.module_id, entry.module_id);
+        assert.equal(route.typed_blocker_payload_template.evidence_class_id, route.class_id);
+        assert.equal(
+          route.typed_blocker_payload_template.typed_blocker_refs[0],
+          `typed-blocker:opl-brand-l5/${entry.module_id}/${route.class_id}/owner-evidence-pending`,
+        );
+        assert.equal(
+          route.typed_blocker_payload_template.receipt_ref,
+          `opl://brand-module-l5-evidence/${entry.module_id}/${route.class_id}/typed-blocker-pending`,
+        );
+        assert.equal(route.evidence_payload_template.module_id, entry.module_id);
+        assert.equal(route.evidence_payload_template.evidence_class_id, route.class_id);
+        assert.equal(
+          route.evidence_payload_template.evidence_refs[0],
+          `owner-evidence-ref:opl-brand-l5/${entry.module_id}/${route.class_id}/<owner-evidence-id>`,
+        );
+        assert.equal(
+          route.verification_command,
+          `opl runtime brand-module-l5-evidence verify --receipt-ref opl://brand-module-l5-evidence/${entry.module_id}/${route.class_id}/typed-blocker-pending`,
+        );
+        assert.equal(Array.isArray(route.existing_evidence_refs), true);
+        assert.equal(Array.isArray(route.existing_blocker_refs), true);
+        assert.equal(route.observed_receipt_count, 0);
+        assert.equal(route.verified_receipt_count, 0);
+        assert.equal(route.accepted_ref_shapes.includes('typed_blocker_ref'), true);
+        assert.equal(route.accepted_ref_shapes.some((shape) => shape !== 'typed_blocker_ref'), true);
+        assert.equal(route.non_closing_inputs.includes('contract_validation'), true);
+        assert.equal(route.non_closing_inputs.includes('docs_foldback'), true);
+        assert.equal(route.non_closing_inputs.includes('conformance_pass'), true);
+        assert.equal(route.non_closing_inputs.includes('provider_completion'), true);
+        assert.equal(route.non_closing_inputs.includes('app_projection'), true);
+        assert.equal(route.non_closing_inputs.includes('verified_refs_only_ledger'), true);
+        assert.equal(route.authority_boundary.route_is_refs_only, true);
+        assert.equal(route.authority_boundary.route_can_claim_l5, false);
+        assert.equal(route.authority_boundary.route_can_claim_production_ready, false);
+        assert.equal(route.authority_boundary.route_can_create_owner_receipt, false);
+        assert.equal(route.authority_boundary.route_can_create_typed_blocker, false);
+      }
+
+      for (const classId of [
+        'current_owner_delta_default_read',
+        'domain_authority_false_boundary',
+        'no_second_truth_regression',
+        'pack_compile_parity',
+      ]) {
+        const route = entry.owner_evidence_routes.find((candidate) => candidate.class_id === classId);
+        assert.equal(route?.owner_route_status, 'owner_evidence_observed_not_l5_claimed');
+        assert.equal(route?.blocker_state, 'owner_route_refs_observed_not_l5_claim');
+        assert.equal(route?.next_owner_action, 'continue_collecting_l5_owner_evidence_or_owner_acceptance_ref');
+        assert.equal(route?.owner_evidence_closure_state, 'owner_evidence_recorded_not_l5_claim');
+        assert.equal(route?.existing_evidence_refs.length, 2);
+        assert.equal(route?.existing_blocker_refs.length, 0);
+        assert.deepEqual(route?.observed_evidence_refs, route?.existing_evidence_refs);
+        assert.equal(route?.observed_ref_count, 2);
+        assert.equal(route?.l5_claim_status, 'owner_evidence_refs_observed_not_l5_claimed');
+      }
+
+      const ownerAcceptance = entry.owner_evidence_routes.find((candidate) =>
+        candidate.class_id === 'owner_acceptance'
+      );
+      assert.equal(ownerAcceptance?.owner_route_status, 'owner_typed_blocker_recorded');
+      assert.equal(ownerAcceptance?.blocker_state, 'typed_blocker_recorded');
+      assert.equal(ownerAcceptance?.next_owner_action, 'resolve_typed_blocker_or_record_owner_acceptance_ref');
+      assert.equal(ownerAcceptance?.owner_evidence_closure_state, 'owner_typed_blocker_recorded');
+      assert.equal(ownerAcceptance?.existing_evidence_refs.length, 0);
+      assert.deepEqual(ownerAcceptance?.existing_blocker_refs, [
+        `typed-blocker:opl-brand-l5/${entry.module_id}/owner_acceptance/brand-owner-acceptance-pending-20260612`,
+      ]);
+      assert.deepEqual(ownerAcceptance?.observed_evidence_refs, ownerAcceptance?.existing_blocker_refs);
+      assert.deepEqual(ownerAcceptance?.observed_ref_shapes, ['typed_blocker_ref']);
+      assert.equal(ownerAcceptance?.observed_ref_count, 1);
+      assert.equal(ownerAcceptance?.l5_claim_status, 'owner_evidence_refs_observed_not_l5_claimed');
+    }
     assert.equal(status.owner_route_work_order_policy.work_orders_close_l5, false);
     assert.equal(status.owner_route_work_order_policy.work_orders_can_claim_production_ready, false);
     assert.equal(status.not_claims.includes('production_ready'), true);

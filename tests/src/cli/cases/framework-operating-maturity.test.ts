@@ -1028,6 +1028,21 @@ test('framework operating maturity projects owner evidence ledger refs without r
       130,
     );
     assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.summary
+        .brand_module_l5_existing_evidence_ref_work_order_count,
+      40,
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.summary
+        .brand_module_l5_existing_blocker_ref_work_order_count,
+      10,
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.summary
+        .brand_module_l5_observed_ref_work_order_count,
+      51,
+    );
+    assert.equal(
       maturity.foundry_agent_os_production_evidence_gate
         .brand_module_l5_requirement_work_orders.length,
       130,
@@ -1070,6 +1085,63 @@ test('framework operating maturity projects owner evidence ledger refs without r
       charterLivePathWorkOrder.authority_boundary.route_can_create_typed_blocker,
       false,
     );
+    const charterOwnerAcceptanceWorkOrder = maturity.foundry_agent_os_production_evidence_gate
+      .brand_module_l5_requirement_work_orders.find(
+        (entry: { module_id: string; class_id: string }) =>
+          entry.module_id === 'charter' && entry.class_id === 'owner_acceptance',
+      );
+    assert.equal(
+      charterOwnerAcceptanceWorkOrder.owner_evidence_closure_state,
+      'owner_typed_blocker_recorded',
+    );
+    assert.deepEqual(charterOwnerAcceptanceWorkOrder.existing_blocker_refs, [
+      'typed-blocker:opl-brand-l5/charter/owner_acceptance/brand-owner-acceptance-pending-20260612',
+    ]);
+    assert.deepEqual(
+      charterOwnerAcceptanceWorkOrder.observed_evidence_refs,
+      charterOwnerAcceptanceWorkOrder.existing_blocker_refs,
+    );
+    assert.deepEqual(charterOwnerAcceptanceWorkOrder.observed_ref_shapes, [
+      'typed_blocker_ref',
+    ]);
+    assert.equal(charterOwnerAcceptanceWorkOrder.ready_claim_authorized, false);
+    assert.equal(
+      charterOwnerAcceptanceWorkOrder.authority_boundary.route_can_create_typed_blocker,
+      false,
+    );
+    const charterOwnerDeltaWorkOrder = maturity.foundry_agent_os_production_evidence_gate
+      .brand_module_l5_requirement_work_orders.find(
+        (entry: { module_id: string; class_id: string }) =>
+          entry.module_id === 'charter' && entry.class_id === 'current_owner_delta_default_read',
+      );
+    assert.deepEqual(charterOwnerDeltaWorkOrder.existing_evidence_refs, [
+      'current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root',
+      'operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta',
+    ]);
+    assert.deepEqual(charterOwnerDeltaWorkOrder.observed_ref_shapes, [
+      'current_owner_delta_ref',
+      'operator_default_read_ref',
+    ]);
+    assert.equal(
+      charterOwnerDeltaWorkOrder.owner_evidence_closure_state,
+      'owner_evidence_recorded_not_l5_claim',
+    );
+    assert.equal(charterOwnerDeltaWorkOrder.ready_claim_authorized, false);
+    const runwayLongSoakWorkOrder = maturity.foundry_agent_os_production_evidence_gate
+      .brand_module_l5_requirement_work_orders.find(
+        (entry: { module_id: string; class_id: string }) =>
+          entry.module_id === 'runway' && entry.class_id === 'long_soak_recovery',
+      );
+    assert.equal(runwayLongSoakWorkOrder.observed_receipt_refs[0], l5Record.receipt_ref);
+    assert.deepEqual(runwayLongSoakWorkOrder.observed_ref_shapes, [
+      'ledger_receipt_ref',
+      'typed_blocker_ref',
+    ]);
+    assert.equal(
+      runwayLongSoakWorkOrder.owner_evidence_closure_state,
+      'owner_evidence_recorded_not_l5_claim',
+    );
+    assert.equal(runwayLongSoakWorkOrder.ready_claim_authorized, false);
     assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.summary.closed_by_opl,
       false,

@@ -223,22 +223,37 @@
         {
           "class_id": "owner_acceptance",
           "owner": "OPL Framework owner",
-          "current_state": "open"
+          "current_state": "blocked",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/charter/owner_acceptance/brand-owner-acceptance-pending-20260612"
+          ]
         },
         {
           "class_id": "no_second_truth_regression",
           "owner": "OPL Framework docs governance",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "no-resurrection-guard-ref:tests/src/active-path-residue-scan.test.ts#docs-active-no-resurrection",
+            "source-scan-ref:tests/src/cli/cases/brand-modules.test.ts#l5-false-completion-guard"
+          ]
         },
         {
           "class_id": "pack_compile_parity",
           "owner": "OPL Charter owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "pack-compile-parity-ref:contracts/opl-framework/domain-pack-compiler-contract.json#default_entry_policy",
+            "generated-surface-parity-ref:opl-agents-interfaces-family-defaults/generated_direct_parity"
+          ]
         },
         {
           "class_id": "current_owner_delta_default_read",
           "owner": "OPL Charter owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root",
+            "operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta"
+          ]
         },
         {
           "class_id": "capability_fail_open_boundary",
@@ -248,7 +263,11 @@
         {
           "class_id": "domain_authority_false_boundary",
           "owner": "OPL Charter owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.charter.authority_boundary",
+            "negative-guard-ref:opl-brand-module-l5/charter/domain-authority-false-boundary/ready-claim-authorized-false"
+          ]
         },
         {
           "class_id": "cross_agent_foundry_agent_os_adoption",
@@ -309,22 +328,37 @@
         {
           "class_id": "owner_acceptance",
           "owner": "OPL Framework owner",
-          "current_state": "open"
+          "current_state": "blocked",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/atlas/owner_acceptance/brand-owner-acceptance-pending-20260612"
+          ]
         },
         {
           "class_id": "no_second_truth_regression",
           "owner": "OPL Framework catalog owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "no-resurrection-guard-ref:tests/src/active-path-residue-scan.test.ts#docs-active-no-resurrection",
+            "source-scan-ref:tests/src/cli/cases/brand-modules.test.ts#l5-false-completion-guard"
+          ]
         },
         {
           "class_id": "pack_compile_parity",
           "owner": "OPL Atlas owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "pack-compile-parity-ref:contracts/opl-framework/domain-pack-compiler-contract.json#default_entry_policy",
+            "generated-surface-parity-ref:opl-agents-interfaces-family-defaults/generated_direct_parity"
+          ]
         },
         {
           "class_id": "current_owner_delta_default_read",
           "owner": "OPL Atlas owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root",
+            "operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta"
+          ]
         },
         {
           "class_id": "capability_fail_open_boundary",
@@ -334,7 +368,11 @@
         {
           "class_id": "domain_authority_false_boundary",
           "owner": "OPL Atlas owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.atlas.authority_boundary",
+            "negative-guard-ref:opl-brand-module-l5/atlas/domain-authority-false-boundary/ready-claim-authorized-false"
+          ]
         },
         {
           "class_id": "cross_agent_foundry_agent_os_adoption",
@@ -396,22 +434,37 @@
         {
           "class_id": "owner_acceptance",
           "owner": "domain workspace owners",
-          "current_state": "open"
+          "current_state": "blocked",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/workspace/owner_acceptance/brand-owner-acceptance-pending-20260612"
+          ]
         },
         {
           "class_id": "no_second_truth_regression",
           "owner": "OPL Workspace owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "no-resurrection-guard-ref:tests/src/active-path-residue-scan.test.ts#docs-active-no-resurrection",
+            "source-scan-ref:tests/src/cli/cases/brand-modules.test.ts#l5-false-completion-guard"
+          ]
         },
         {
           "class_id": "pack_compile_parity",
           "owner": "OPL Workspace owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "pack-compile-parity-ref:contracts/opl-framework/domain-pack-compiler-contract.json#default_entry_policy",
+            "generated-surface-parity-ref:opl-agents-interfaces-family-defaults/generated_direct_parity"
+          ]
         },
         {
           "class_id": "current_owner_delta_default_read",
           "owner": "OPL Workspace owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root",
+            "operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta"
+          ]
         },
         {
           "class_id": "capability_fail_open_boundary",
@@ -421,7 +474,11 @@
         {
           "class_id": "domain_authority_false_boundary",
           "owner": "OPL Workspace owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.workspace.authority_boundary",
+            "negative-guard-ref:opl-brand-module-l5/workspace/domain-authority-false-boundary/ready-claim-authorized-false"
+          ]
         },
         {
           "class_id": "cross_agent_foundry_agent_os_adoption",
@@ -483,22 +540,37 @@
         {
           "class_id": "owner_acceptance",
           "owner": "domain pack owners",
-          "current_state": "open"
+          "current_state": "blocked",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/pack/owner_acceptance/brand-owner-acceptance-pending-20260612"
+          ]
         },
         {
           "class_id": "no_second_truth_regression",
           "owner": "OPL Pack owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "no-resurrection-guard-ref:tests/src/active-path-residue-scan.test.ts#docs-active-no-resurrection",
+            "source-scan-ref:tests/src/cli/cases/brand-modules.test.ts#l5-false-completion-guard"
+          ]
         },
         {
           "class_id": "pack_compile_parity",
           "owner": "OPL Pack owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "pack-compile-parity-ref:contracts/opl-framework/domain-pack-compiler-contract.json#default_entry_policy",
+            "generated-surface-parity-ref:opl-agents-interfaces-family-defaults/generated_direct_parity"
+          ]
         },
         {
           "class_id": "current_owner_delta_default_read",
           "owner": "OPL Pack owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root",
+            "operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta"
+          ]
         },
         {
           "class_id": "capability_fail_open_boundary",
@@ -508,7 +580,11 @@
         {
           "class_id": "domain_authority_false_boundary",
           "owner": "OPL Pack owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.pack.authority_boundary",
+            "negative-guard-ref:opl-brand-module-l5/pack/domain-authority-false-boundary/ready-claim-authorized-false"
+          ]
         },
         {
           "class_id": "cross_agent_foundry_agent_os_adoption",
@@ -574,22 +650,37 @@
         {
           "class_id": "owner_acceptance",
           "owner": "domain stage owners",
-          "current_state": "open"
+          "current_state": "blocked",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/stagecraft/owner_acceptance/brand-owner-acceptance-pending-20260612"
+          ]
         },
         {
           "class_id": "no_second_truth_regression",
           "owner": "OPL Stagecraft owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "no-resurrection-guard-ref:tests/src/active-path-residue-scan.test.ts#docs-active-no-resurrection",
+            "source-scan-ref:tests/src/cli/cases/brand-modules.test.ts#l5-false-completion-guard"
+          ]
         },
         {
           "class_id": "pack_compile_parity",
           "owner": "OPL Stagecraft owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "pack-compile-parity-ref:contracts/opl-framework/domain-pack-compiler-contract.json#default_entry_policy",
+            "generated-surface-parity-ref:opl-agents-interfaces-family-defaults/generated_direct_parity"
+          ]
         },
         {
           "class_id": "current_owner_delta_default_read",
           "owner": "OPL Stagecraft owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root",
+            "operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta"
+          ]
         },
         {
           "class_id": "capability_fail_open_boundary",
@@ -599,7 +690,11 @@
         {
           "class_id": "domain_authority_false_boundary",
           "owner": "OPL Stagecraft owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.stagecraft.authority_boundary",
+            "negative-guard-ref:opl-brand-module-l5/stagecraft/domain-authority-false-boundary/ready-claim-authorized-false"
+          ]
         },
         {
           "class_id": "cross_agent_foundry_agent_os_adoption",
@@ -661,22 +756,37 @@
         {
           "class_id": "owner_acceptance",
           "owner": "runtime and domain owners",
-          "current_state": "open"
+          "current_state": "blocked",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/runway/owner_acceptance/brand-owner-acceptance-pending-20260612"
+          ]
         },
         {
           "class_id": "no_second_truth_regression",
           "owner": "OPL Runway owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "no-resurrection-guard-ref:tests/src/active-path-residue-scan.test.ts#docs-active-no-resurrection",
+            "source-scan-ref:tests/src/cli/cases/brand-modules.test.ts#l5-false-completion-guard"
+          ]
         },
         {
           "class_id": "pack_compile_parity",
           "owner": "OPL Runway owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "pack-compile-parity-ref:contracts/opl-framework/domain-pack-compiler-contract.json#default_entry_policy",
+            "generated-surface-parity-ref:opl-agents-interfaces-family-defaults/generated_direct_parity"
+          ]
         },
         {
           "class_id": "current_owner_delta_default_read",
           "owner": "OPL Runway owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root",
+            "operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta"
+          ]
         },
         {
           "class_id": "capability_fail_open_boundary",
@@ -686,7 +796,11 @@
         {
           "class_id": "domain_authority_false_boundary",
           "owner": "OPL Runway owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.runway.authority_boundary",
+            "negative-guard-ref:opl-brand-module-l5/runway/domain-authority-false-boundary/ready-claim-authorized-false"
+          ]
         },
         {
           "class_id": "cross_agent_foundry_agent_os_adoption",
@@ -748,22 +862,37 @@
         {
           "class_id": "owner_acceptance",
           "owner": "domain artifact and memory owners",
-          "current_state": "open"
+          "current_state": "blocked",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/vault/owner_acceptance/brand-owner-acceptance-pending-20260612"
+          ]
         },
         {
           "class_id": "no_second_truth_regression",
           "owner": "OPL Vault owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "no-resurrection-guard-ref:tests/src/active-path-residue-scan.test.ts#docs-active-no-resurrection",
+            "source-scan-ref:tests/src/cli/cases/brand-modules.test.ts#l5-false-completion-guard"
+          ]
         },
         {
           "class_id": "pack_compile_parity",
           "owner": "OPL Vault owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "pack-compile-parity-ref:contracts/opl-framework/domain-pack-compiler-contract.json#default_entry_policy",
+            "generated-surface-parity-ref:opl-agents-interfaces-family-defaults/generated_direct_parity"
+          ]
         },
         {
           "class_id": "current_owner_delta_default_read",
           "owner": "OPL Vault owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root",
+            "operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta"
+          ]
         },
         {
           "class_id": "capability_fail_open_boundary",
@@ -773,7 +902,11 @@
         {
           "class_id": "domain_authority_false_boundary",
           "owner": "OPL Vault owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.vault.authority_boundary",
+            "negative-guard-ref:opl-brand-module-l5/vault/domain-authority-false-boundary/ready-claim-authorized-false"
+          ]
         },
         {
           "class_id": "cross_agent_foundry_agent_os_adoption",
@@ -836,22 +969,37 @@
         {
           "class_id": "owner_acceptance",
           "owner": "App release owner",
-          "current_state": "open"
+          "current_state": "blocked",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/console/owner_acceptance/brand-owner-acceptance-pending-20260612"
+          ]
         },
         {
           "class_id": "no_second_truth_regression",
           "owner": "OPL Console owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "no-resurrection-guard-ref:tests/src/active-path-residue-scan.test.ts#docs-active-no-resurrection",
+            "source-scan-ref:tests/src/cli/cases/brand-modules.test.ts#l5-false-completion-guard"
+          ]
         },
         {
           "class_id": "pack_compile_parity",
           "owner": "OPL Console owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "pack-compile-parity-ref:contracts/opl-framework/domain-pack-compiler-contract.json#default_entry_policy",
+            "generated-surface-parity-ref:opl-agents-interfaces-family-defaults/generated_direct_parity"
+          ]
         },
         {
           "class_id": "current_owner_delta_default_read",
           "owner": "OPL Console owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root",
+            "operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta"
+          ]
         },
         {
           "class_id": "capability_fail_open_boundary",
@@ -861,7 +1009,11 @@
         {
           "class_id": "domain_authority_false_boundary",
           "owner": "OPL Console owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.console.authority_boundary",
+            "negative-guard-ref:opl-brand-module-l5/console/domain-authority-false-boundary/ready-claim-authorized-false"
+          ]
         },
         {
           "class_id": "cross_agent_foundry_agent_os_adoption",
@@ -923,22 +1075,37 @@
         {
           "class_id": "owner_acceptance",
           "owner": "target agent owners",
-          "current_state": "open"
+          "current_state": "blocked",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/foundry-lab/owner_acceptance/brand-owner-acceptance-pending-20260612"
+          ]
         },
         {
           "class_id": "no_second_truth_regression",
           "owner": "OPL Foundry Lab owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "no-resurrection-guard-ref:tests/src/active-path-residue-scan.test.ts#docs-active-no-resurrection",
+            "source-scan-ref:tests/src/cli/cases/brand-modules.test.ts#l5-false-completion-guard"
+          ]
         },
         {
           "class_id": "pack_compile_parity",
           "owner": "OPL Foundry Lab owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "pack-compile-parity-ref:contracts/opl-framework/domain-pack-compiler-contract.json#default_entry_policy",
+            "generated-surface-parity-ref:opl-agents-interfaces-family-defaults/generated_direct_parity"
+          ]
         },
         {
           "class_id": "current_owner_delta_default_read",
           "owner": "OPL Foundry Lab owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root",
+            "operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta"
+          ]
         },
         {
           "class_id": "capability_fail_open_boundary",
@@ -948,7 +1115,11 @@
         {
           "class_id": "domain_authority_false_boundary",
           "owner": "OPL Foundry Lab owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.foundry-lab.authority_boundary",
+            "negative-guard-ref:opl-brand-module-l5/foundry-lab/domain-authority-false-boundary/ready-claim-authorized-false"
+          ]
         },
         {
           "class_id": "cross_agent_foundry_agent_os_adoption",
@@ -1008,22 +1179,37 @@
         {
           "class_id": "owner_acceptance",
           "owner": "install and release owners",
-          "current_state": "open"
+          "current_state": "blocked",
+          "blocker_refs": [
+            "typed-blocker:opl-brand-l5/connect/owner_acceptance/brand-owner-acceptance-pending-20260612"
+          ]
         },
         {
           "class_id": "no_second_truth_regression",
           "owner": "OPL Connect owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "no-resurrection-guard-ref:tests/src/active-path-residue-scan.test.ts#docs-active-no-resurrection",
+            "source-scan-ref:tests/src/cli/cases/brand-modules.test.ts#l5-false-completion-guard"
+          ]
         },
         {
           "class_id": "pack_compile_parity",
           "owner": "OPL Connect owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "pack-compile-parity-ref:contracts/opl-framework/domain-pack-compiler-contract.json#default_entry_policy",
+            "generated-surface-parity-ref:opl-agents-interfaces-family-defaults/generated_direct_parity"
+          ]
         },
         {
           "class_id": "current_owner_delta_default_read",
           "owner": "OPL Connect owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root",
+            "operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta"
+          ]
         },
         {
           "class_id": "capability_fail_open_boundary",
@@ -1033,7 +1219,11 @@
         {
           "class_id": "domain_authority_false_boundary",
           "owner": "OPL Connect owner",
-          "current_state": "open"
+          "current_state": "open",
+          "evidence_refs": [
+            "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.connect.authority_boundary",
+            "negative-guard-ref:opl-brand-module-l5/connect/domain-authority-false-boundary/ready-claim-authorized-false"
+          ]
         },
         {
           "class_id": "cross_agent_foundry_agent_os_adoption",

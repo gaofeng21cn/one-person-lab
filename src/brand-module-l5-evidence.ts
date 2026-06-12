@@ -124,22 +124,22 @@ function nextOwnerActionForRequirement(currentState: string) {
   return 'record_owner_evidence_ref_or_typed_blocker_for_l5_requirement';
 }
 
-function routeStatusWithLedgerReceipts(currentState: string, receiptCount: number) {
-  if (currentState === 'open' && receiptCount > 0) {
+function routeStatusWithObservedRefs(currentState: string, observedRefCount: number) {
+  if (currentState === 'open' && observedRefCount > 0) {
     return 'owner_evidence_observed_not_l5_claimed';
   }
   return routeStatusForRequirement(currentState);
 }
 
-function blockerStateWithLedgerReceipts(currentState: string, receiptCount: number) {
-  if (currentState === 'open' && receiptCount > 0) {
+function blockerStateWithObservedRefs(currentState: string, observedRefCount: number) {
+  if (currentState === 'open' && observedRefCount > 0) {
     return 'owner_route_refs_observed_not_l5_claim';
   }
   return blockerStateForRequirement(currentState);
 }
 
-function nextOwnerActionWithLedgerReceipts(currentState: string, receiptCount: number) {
-  if (currentState === 'open' && receiptCount > 0) {
+function nextOwnerActionWithObservedRefs(currentState: string, observedRefCount: number) {
+  if (currentState === 'open' && observedRefCount > 0) {
     return 'continue_collecting_l5_owner_evidence_or_owner_acceptance_ref';
   }
   return nextOwnerActionForRequirement(currentState);
@@ -184,6 +184,61 @@ function observedLedgerRefs(receipts: BrandModuleL5EvidenceLedgerReceiptProjecti
   ]));
 }
 
+function contractRefsForRequirement(requirement: { evidence_refs?: string[]; blocker_refs?: string[] }) {
+  return unique([
+    ...(requirement.evidence_refs ?? []),
+    ...(requirement.blocker_refs ?? []),
+  ]);
+}
+
+function observedRefsForRequirement(
+  receipts: BrandModuleL5EvidenceLedgerReceiptProjection[],
+  requirement: { evidence_refs?: string[]; blocker_refs?: string[] },
+) {
+  return unique([
+    ...contractRefsForRequirement(requirement),
+    ...observedLedgerRefs(receipts),
+  ]);
+}
+
+function refShapeForContractRef(ref: string) {
+  if (ref.startsWith('current-owner-delta-ref:')) {
+    return 'current_owner_delta_ref';
+  }
+  if (ref.startsWith('operator-default-read-ref:')) {
+    return 'operator_default_read_ref';
+  }
+  if (ref.startsWith('false-authority-guard-ref:')) {
+    return 'false_authority_guard_ref';
+  }
+  if (ref.startsWith('negative-guard-ref:')) {
+    return 'negative_guard_ref';
+  }
+  if (ref.startsWith('no-resurrection-guard-ref:')) {
+    return 'no_resurrection_guard_ref';
+  }
+  if (ref.startsWith('source-scan-ref:')) {
+    return 'source_scan_ref';
+  }
+  if (ref.startsWith('pack-compile-parity-ref:')) {
+    return 'pack_compile_parity_ref';
+  }
+  if (ref.startsWith('generated-surface-parity-ref:')) {
+    return 'generated_surface_parity_ref';
+  }
+  if (ref.startsWith('typed-blocker:')) {
+    return 'typed_blocker_ref';
+  }
+  if (ref.startsWith('owner-acceptance-ref:')) {
+    return 'owner_acceptance_ref';
+  }
+  return 'evidence_ref';
+}
+
+function observedContractRefShapes(requirement: { evidence_refs?: string[]; blocker_refs?: string[] }) {
+  return unique(contractRefsForRequirement(requirement).map(refShapeForContractRef));
+}
+
 function observedLedgerRefShapes(receipts: BrandModuleL5EvidenceLedgerReceiptProjection[]) {
   const shapes: string[] = receipts.length > 0 ? ['ledger_receipt_ref'] : [];
   if (receipts.some((receipt) => receipt.evidence_refs.length > 0)) {
@@ -199,6 +254,16 @@ function observedLedgerRefShapes(receipts: BrandModuleL5EvidenceLedgerReceiptPro
     shapes.push('no_regression_ref');
   }
   return unique(shapes);
+}
+
+function observedRefShapesForRequirement(
+  receipts: BrandModuleL5EvidenceLedgerReceiptProjection[],
+  requirement: { evidence_refs?: string[]; blocker_refs?: string[] },
+) {
+  return unique([
+    ...observedContractRefShapes(requirement),
+    ...observedLedgerRefShapes(receipts),
+  ]);
 }
 
 function l5RequirementWorkOrderId(
@@ -231,7 +296,7 @@ function l5EvidencePlaceholderRef(
 
 function l5RequirementClosureState(
   currentState: string,
-  receipts: BrandModuleL5EvidenceLedgerReceiptProjection[],
+  observedRefCount: number,
 ) {
   if (currentState === 'satisfied') {
     return 'owner_evidence_recorded_not_l5_claim';
@@ -239,7 +304,7 @@ function l5RequirementClosureState(
   if (currentState === 'blocked') {
     return 'owner_typed_blocker_recorded';
   }
-  if (receipts.length > 0) {
+  if (observedRefCount > 0) {
     return 'owner_evidence_recorded_not_l5_claim';
   }
   return 'owner_acceptance_or_typed_blocker_required';
@@ -286,26 +351,28 @@ function ownerEvidenceRoutes(
     const verifiedRequirementLedgerReceipts = requirementLedgerReceipts.filter((receipt) =>
       receipt.receipt_status === 'verified'
     );
+    const observedEvidenceRefs = observedRefsForRequirement(requirementLedgerReceipts, requirement);
+    const observedRefShapes = observedRefShapesForRequirement(requirementLedgerReceipts, requirement);
     return {
       module_id: entry.module_id,
       class_id: requirement.class_id,
       owner: requirement.owner,
-      owner_route_status: routeStatusWithLedgerReceipts(
+      owner_route_status: routeStatusWithObservedRefs(
         requirement.current_state,
-        requirementLedgerReceipts.length,
+        observedEvidenceRefs.length,
       ),
-      blocker_state: blockerStateWithLedgerReceipts(
+      blocker_state: blockerStateWithObservedRefs(
         requirement.current_state,
-        requirementLedgerReceipts.length,
+        observedEvidenceRefs.length,
       ),
-      next_owner_action: nextOwnerActionWithLedgerReceipts(
+      next_owner_action: nextOwnerActionWithObservedRefs(
         requirement.current_state,
-        requirementLedgerReceipts.length,
+        observedEvidenceRefs.length,
       ),
       work_order_id: l5RequirementWorkOrderId(entry.module_id, requirement.class_id),
       owner_evidence_closure_state: l5RequirementClosureState(
         requirement.current_state,
-        requirementLedgerReceipts,
+        observedEvidenceRefs.length,
       ),
       owner_acceptance_required: true,
       ready_claim_authorized: false,
@@ -330,13 +397,14 @@ function ownerEvidenceRoutes(
       ]),
       existing_evidence_refs: requirement.evidence_refs ?? [],
       existing_blocker_refs: requirement.blocker_refs ?? [],
-      observed_evidence_refs: observedLedgerRefs(requirementLedgerReceipts),
+      observed_evidence_refs: observedEvidenceRefs,
       observed_receipt_refs: requirementLedgerReceipts.map((receipt) => receipt.receipt_ref),
-      observed_ref_shapes: observedLedgerRefShapes(requirementLedgerReceipts),
+      observed_ref_shapes: observedRefShapes,
+      observed_ref_count: observedEvidenceRefs.length,
       observed_receipt_count: requirementLedgerReceipts.length,
       verified_receipt_count: verifiedRequirementLedgerReceipts.length,
-      l5_claim_status: requirementLedgerReceipts.length > 0
-        ? 'ledger_refs_observed_not_l5_claimed'
+      l5_claim_status: observedEvidenceRefs.length > 0
+        ? 'owner_evidence_refs_observed_not_l5_claimed'
         : 'owner_evidence_required',
       non_closing_inputs: contract.owner_route_work_order_policy.non_closing_inputs,
       authority_boundary: {

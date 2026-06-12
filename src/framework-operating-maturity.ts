@@ -430,6 +430,15 @@ function foundryAgentOsProductionEvidenceGate(input: {
       owner_evidence_closure_state: stringValue(route.owner_evidence_closure_state),
       owner_acceptance_required: route.owner_acceptance_required === true,
       ready_claim_authorized: route.ready_claim_authorized === true,
+      existing_evidence_refs: stringListValue(route.existing_evidence_refs),
+      existing_blocker_refs: stringListValue(route.existing_blocker_refs),
+      observed_evidence_refs: stringListValue(route.observed_evidence_refs),
+      observed_ref_shapes: stringListValue(route.observed_ref_shapes),
+      observed_ref_count: numberValue(route.observed_ref_count),
+      observed_receipt_refs: stringListValue(route.observed_receipt_refs),
+      observed_receipt_count: numberValue(route.observed_receipt_count),
+      verified_receipt_count: numberValue(route.verified_receipt_count),
+      l5_claim_status: stringValue(route.l5_claim_status),
       typed_blocker_payload_template: record(route.typed_blocker_payload_template),
       evidence_payload_template: record(route.evidence_payload_template),
       verification_command: stringValue(route.verification_command),
@@ -519,6 +528,18 @@ function foundryAgentOsProductionEvidenceGate(input: {
       brand_module_l5_owner_acceptance_required_work_order_count:
         brandL5RequirementWorkOrders.filter((entry) =>
           entry.owner_acceptance_required === true
+        ).length,
+      brand_module_l5_existing_evidence_ref_work_order_count:
+        brandL5RequirementWorkOrders.filter((entry) =>
+          entry.existing_evidence_refs.length > 0
+        ).length,
+      brand_module_l5_existing_blocker_ref_work_order_count:
+        brandL5RequirementWorkOrders.filter((entry) =>
+          entry.existing_blocker_refs.length > 0
+        ).length,
+      brand_module_l5_observed_ref_work_order_count:
+        brandL5RequirementWorkOrders.filter((entry) =>
+          entry.observed_ref_count > 0 || entry.observed_evidence_refs.length > 0
         ).length,
       open_owner_route_work_order_count: workOrders.filter((entry) => entry.status === 'open').length,
       owner_evidence_required_work_order_count: workOrders.filter((entry) =>
