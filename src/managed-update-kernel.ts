@@ -5,6 +5,10 @@ import { buildOplModules } from './system-installation/modules.ts';
 import {
   findLatestManagedUpdateReceipt,
   managedUpdateComponentReceiptLedgerFilePath,
+  type ManagedUpdatePostApplyActionReceipt,
+  type ManagedUpdateReceiptApplyMode,
+  type ManagedUpdateReceiptStatusDetail,
+  type ManagedUpdateReloadGuidance,
 } from './managed-update-component-receipts.ts';
 import { managedUpdateLockFilePath, MANAGED_UPDATE_LOCK_STALE_AFTER_SECONDS } from './managed-update-lock.ts';
 
@@ -58,6 +62,20 @@ type ManagedUpdateComponent = {
   conditions: ManagedUpdateCondition[];
   lifecycle: string[];
   post_apply_hooks: string[];
+  auto_apply: {
+    mode: ManagedUpdateReceiptApplyMode;
+    eligible: boolean;
+    app_background_safe: boolean;
+    scope: string;
+    command_ref: string | null;
+    blocked_reasons: string[];
+  };
+  status_detail: ManagedUpdateReceiptStatusDetail;
+  post_apply_guidance: {
+    required: boolean;
+    command_refs: string[];
+    reload_guidance: ManagedUpdateReloadGuidance;
+  };
   plan: {
     action: 'none' | 'check' | 'install' | 'update' | 'sync' | 'reload' | 'restart' | 'manual_review';
     summary: string;
@@ -78,6 +96,10 @@ type ManagedUpdateComponent = {
     rollback_ref: string | null;
     repair_action: string | null;
     content_identity_fields: string[];
+    apply_mode: ManagedUpdateReceiptApplyMode;
+    status_detail: ManagedUpdateReceiptStatusDetail;
+    post_apply_action_statuses: ManagedUpdatePostApplyActionReceipt[];
+    reload_guidance: ManagedUpdateReloadGuidance;
   };
   authority_boundary: Record<string, boolean>;
   notes: string[];
@@ -130,6 +152,10 @@ const COMPONENT_RECEIPT_REQUIRED_FIELDS = [
   'post_apply_hooks',
   'rollback_ref',
   'repair_action',
+  'apply_mode',
+  'status_detail',
+  'post_apply_action_statuses',
+  'reload_guidance',
 ];
 
 function condition(
@@ -199,6 +225,9 @@ function componentReceipt(options: {
   source_manifest_ref: string | null;
   content_identity_fields: string[];
   post_apply_hooks: string[];
+  apply_mode: ManagedUpdateReceiptApplyMode;
+  status_detail: ManagedUpdateReceiptStatusDetail;
+  reload_guidance: ManagedUpdateReloadGuidance;
   from_version?: string | null;
   from_digest?: string | null;
   to_version?: string | null;
@@ -206,6 +235,7 @@ function componentReceipt(options: {
   repair_action?: string | null;
 }) {
   const latestReceipt = findLatestManagedUpdateReceipt(options.component_id);
+  const latestActionStatuses = latestReceipt?.post_apply_action_statuses ?? [];
   return {
     schema_version: 'opl_managed_update_component_receipt.v1' as const,
     required: true,
@@ -221,11 +251,58 @@ function componentReceipt(options: {
     rollback_ref: latestReceipt?.rollback_ref ?? null,
     repair_action: latestReceipt?.repair_action ?? options.repair_action ?? null,
     content_identity_fields: options.content_identity_fields,
+    apply_mode: latestReceipt?.apply_mode ?? options.apply_mode,
+    status_detail: latestReceipt?.status_detail ?? options.status_detail,
+    post_apply_action_statuses: latestActionStatuses,
+    reload_guidance: latestReceipt?.reload_guidance ?? options.reload_guidance,
+  };
+}
+
+function noAutoApply(scope: string): ManagedUpdateComponent['auto_apply'] {
+  return {
+    mode: 'projection_only',
+    eligible: false,
+    app_background_safe: false,
+    scope,
+    command_ref: null,
+    blocked_reasons: [],
+  };
+}
+
+function noReloadGuidance(): ManagedUpdateReloadGuidance {
+  return {
+    reload_required: false,
+    reload_recommended: false,
+    reload_targets: [],
+    command_ref: null,
+    reason: null,
+  };
+}
+
+function statusDetail(input: {
+  component_state: ManagedUpdateComponentState;
+  auto_apply_eligible?: boolean;
+  app_background_safe?: boolean;
+  clean_managed_targets_count?: number | null;
+  manual_required_targets_count?: number | null;
+  post_apply_status?: ManagedUpdateReceiptStatusDetail['post_apply_status'];
+  reload_status?: ManagedUpdateReceiptStatusDetail['reload_status'];
+}): ManagedUpdateReceiptStatusDetail {
+  return {
+    component_state: input.component_state,
+    auto_apply_eligible: input.auto_apply_eligible ?? false,
+    app_background_safe: input.app_background_safe ?? false,
+    clean_managed_targets_count: input.clean_managed_targets_count ?? null,
+    manual_required_targets_count: input.manual_required_targets_count ?? null,
+    post_apply_status: input.post_apply_status ?? 'not_run',
+    reload_status: input.reload_status ?? 'not_required',
   };
 }
 
 function buildAppBinaryComponent(channel: string): ManagedUpdateComponent {
   const postApplyHooks = ['replace_desktop_app_bundle_after_standard_updater_download'];
+  const detail = statusDetail({ component_state: 'current' });
+  const reloadGuidance = noReloadGuidance();
   return {
     component_id: 'app_binary',
     provider_id: 'app_binary',
@@ -249,6 +326,13 @@ function buildAppBinaryComponent(channel: string): ManagedUpdateComponent {
     ],
     lifecycle: KERNEL_LIFECYCLE,
     post_apply_hooks: postApplyHooks,
+    auto_apply: noAutoApply('desktop_app_standard_updater_projection'),
+    status_detail: detail,
+    post_apply_guidance: {
+      required: false,
+      command_refs: [],
+      reload_guidance: reloadGuidance,
+    },
     plan: {
       action: 'none',
       summary: 'Desktop App update checks stay in the App-owned standard updater.',
@@ -264,6 +348,9 @@ function buildAppBinaryComponent(channel: string): ManagedUpdateComponent {
       component_id: 'app_binary',
       source_manifest_ref: 'github_release_standard_updater_metadata',
       post_apply_hooks: postApplyHooks,
+      apply_mode: 'projection_only',
+      status_detail: detail,
+      reload_guidance: reloadGuidance,
       content_identity_fields: ['release_tag', 'asset_sha256', 'updater_metadata_sha256'],
     }),
     authority_boundary: {
@@ -298,6 +385,11 @@ function buildRuntimeToolchainComponent(systemEnvironment: Record<string, unknow
         : 'current';
   const action = state === 'current' ? 'none' : state === 'failed_with_repair' ? 'install' : 'update';
   const postApplyHooks = ['startup_smoke', 'swap_runtime_current_pointer_with_rollback'];
+  const detail = statusDetail({
+    component_state: state,
+    post_apply_status: state === 'current' ? 'skipped' : 'not_run',
+  });
+  const reloadGuidance = noReloadGuidance();
 
   return {
     component_id: 'runtime_toolchain',
@@ -344,6 +436,20 @@ function buildRuntimeToolchainComponent(systemEnvironment: Record<string, unknow
     ],
     lifecycle: KERNEL_LIFECYCLE,
     post_apply_hooks: postApplyHooks,
+    auto_apply: {
+      mode: 'controlled_apply',
+      eligible: state !== 'current',
+      app_background_safe: false,
+      scope: 'app_owned_runtime_root_only',
+      command_ref: state === 'current' ? null : 'opl update apply --component runtime_toolchain --json',
+      blocked_reasons: [],
+    },
+    status_detail: detail,
+    post_apply_guidance: {
+      required: state !== 'current',
+      command_refs: state === 'current' ? [] : ['opl system startup-maintenance --json'],
+      reload_guidance: reloadGuidance,
+    },
     plan: {
       action,
       summary: state === 'current'
@@ -376,6 +482,9 @@ function buildRuntimeToolchainComponent(systemEnvironment: Record<string, unknow
       from_version: typeof codex?.version === 'string' ? codex.version : null,
       to_version: typeof codex?.latest_version === 'string' ? codex.latest_version : null,
       post_apply_hooks: postApplyHooks,
+      apply_mode: 'controlled_apply',
+      status_detail: detail,
+      reload_guidance: reloadGuidance,
       repair_action: state === 'failed_with_repair' ? 'run_startup_maintenance' : null,
       content_identity_fields: ['runtime_version', 'sha256', 'current_pointer', 'staged_root'],
     }),
@@ -440,6 +549,7 @@ function buildAgentPackageComponent(modules: Record<string, unknown>[], channel:
   const failedWithRepairCount = moduleStates.filter((entry) => entry.state === 'failed_with_repair').length;
   const updateCount = moduleStates.filter((entry) => entry.state === 'update_available').length;
   const manualCount = moduleStates.filter((entry) => entry.state === 'skipped_manual_required').length;
+  const cleanManagedTargetsCount = defaultModules.length - manualCount;
   const state: ManagedUpdateComponentState =
     manualCount > 0
       ? 'skipped_manual_required'
@@ -462,6 +572,27 @@ function buildAgentPackageComponent(modules: Record<string, unknown>[], channel:
     'sync_plugin_packaged_skills',
     'sync_oma_generated_plugin_surface',
   ];
+  const cleanManagedScopeSafe = manualCount === 0 && cleanManagedTargetsCount > 0;
+  const autoApplyEligible = cleanManagedScopeSafe && action !== 'none';
+  const reloadRecommended = autoApplyEligible;
+  const reloadGuidance: ManagedUpdateReloadGuidance = reloadRecommended
+    ? {
+      reload_required: false,
+      reload_recommended: true,
+      reload_targets: ['one_person_lab_app', 'codex_plugin_cache'],
+      command_ref: 'Reload One Person Lab App or Codex plugin cache',
+      reason: 'Codex may cache plugin metadata until App/Codex reload after managed module package changes.',
+    }
+    : noReloadGuidance();
+  const detail = statusDetail({
+    component_state: state,
+    auto_apply_eligible: autoApplyEligible,
+    app_background_safe: cleanManagedScopeSafe,
+    clean_managed_targets_count: cleanManagedTargetsCount,
+    manual_required_targets_count: manualCount,
+    post_apply_status: action === 'none' ? 'skipped' : 'not_run',
+    reload_status: reloadRecommended ? 'recommended' : manualCount > 0 ? 'manual_required' : 'not_required',
+  });
 
   return {
     component_id: 'agent_package_channel',
@@ -509,6 +640,24 @@ function buildAgentPackageComponent(modules: Record<string, unknown>[], channel:
     ],
     lifecycle: KERNEL_LIFECYCLE,
     post_apply_hooks: postApplyHooks,
+    auto_apply: {
+      mode: cleanManagedScopeSafe ? 'auto_apply' : 'manual_required',
+      eligible: autoApplyEligible,
+      app_background_safe: cleanManagedScopeSafe,
+      scope: 'clean_opl_managed_module_roots_only',
+      command_ref: autoApplyEligible ? 'opl update apply --component agent_package_channel --json' : null,
+      blocked_reasons: manualCount > 0
+        ? ['manual_or_developer_checkout_visible']
+        : [],
+    },
+    status_detail: detail,
+    post_apply_guidance: {
+      required: autoApplyEligible,
+      command_refs: autoApplyEligible
+        ? ['opl connect reconcile-modules --json', 'opl connect sync-skills --json']
+        : [],
+      reload_guidance: reloadGuidance,
+    },
     plan: {
       action,
       summary: action === 'none'
@@ -549,6 +698,9 @@ function buildAgentPackageComponent(modules: Record<string, unknown>[], channel:
       component_id: 'agent_package_channel',
       source_manifest_ref: 'ghcr.io/gaofeng21cn/one-person-lab-manifest:stable',
       post_apply_hooks: postApplyHooks,
+      apply_mode: cleanManagedScopeSafe ? 'auto_apply' : 'manual_required',
+      status_detail: detail,
+      reload_guidance: reloadGuidance,
       repair_action: state === 'failed_with_repair' ? 'reconcile_managed_modules' : null,
       content_identity_fields: ['digest', 'sha256', 'source_fingerprint', 'git_head_sha'],
     }),
@@ -570,6 +722,22 @@ function buildAgentPackageComponent(modules: Record<string, unknown>[], channel:
 function buildCapabilityExposureComponent(agentPackages: ManagedUpdateComponent, channel: string): ManagedUpdateComponent {
   const needsReload = agentPackages.plan.command_refs.some((entry) => entry.action_id === 'sync_codex_skills');
   const postApplyHooks = ['sync_plugin_registry', 'sync_plugin_packaged_skills', 'sync_oma_generated_plugin_surface'];
+  const reloadGuidance: ManagedUpdateReloadGuidance = needsReload
+    ? {
+      reload_required: false,
+      reload_recommended: true,
+      reload_targets: ['one_person_lab_app', 'codex_plugin_cache'],
+      command_ref: 'Reload One Person Lab App or Codex plugin cache',
+      reason: 'Codex may cache plugin metadata until reload.',
+    }
+    : noReloadGuidance();
+  const detail = statusDetail({
+    component_state: needsReload ? 'needs_reload' : 'current',
+    auto_apply_eligible: needsReload,
+    app_background_safe: needsReload,
+    post_apply_status: needsReload ? 'not_run' : 'skipped',
+    reload_status: needsReload ? 'recommended' : 'not_required',
+  });
   return {
     component_id: 'capability_exposure',
     provider_id: 'capability_exposure',
@@ -606,6 +774,20 @@ function buildCapabilityExposureComponent(agentPackages: ManagedUpdateComponent,
     ],
     lifecycle: KERNEL_LIFECYCLE,
     post_apply_hooks: postApplyHooks,
+    auto_apply: {
+      mode: needsReload ? 'auto_apply' : 'projection_only',
+      eligible: needsReload,
+      app_background_safe: needsReload,
+      scope: 'codex_plugin_registry_and_skill_projection_only',
+      command_ref: needsReload ? 'opl update apply --component capability_exposure --json' : null,
+      blocked_reasons: [],
+    },
+    status_detail: detail,
+    post_apply_guidance: {
+      required: needsReload,
+      command_refs: needsReload ? ['opl connect sync-skills --json'] : [],
+      reload_guidance: reloadGuidance,
+    },
     plan: {
       action: needsReload ? 'reload' : 'none',
       summary: needsReload
@@ -636,6 +818,9 @@ function buildCapabilityExposureComponent(agentPackages: ManagedUpdateComponent,
       component_id: 'capability_exposure',
       source_manifest_ref: 'module_post_apply_projection',
       post_apply_hooks: postApplyHooks,
+      apply_mode: needsReload ? 'auto_apply' : 'projection_only',
+      status_detail: detail,
+      reload_guidance: reloadGuidance,
       repair_action: needsReload ? 'sync_codex_skills' : null,
       content_identity_fields: ['plugin_manifest_hash', 'skill_pack_hash', 'generated_surface_hash'],
     }),

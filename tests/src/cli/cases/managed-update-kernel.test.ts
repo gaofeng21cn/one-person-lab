@@ -439,6 +439,41 @@ exit 2
             activated_at: string | null;
             post_apply_hooks: string[];
             repair_action: string | null;
+            apply_mode: string;
+            status_detail: {
+              auto_apply_eligible: boolean | null;
+              app_background_safe: boolean | null;
+              clean_managed_targets_count: number | null;
+              manual_required_targets_count: number | null;
+              post_apply_status: string;
+              reload_status: string;
+            };
+            post_apply_action_statuses: Array<{ action_id: string; status: string; result_ref: string | null }>;
+            reload_guidance: {
+              reload_required: boolean;
+              reload_recommended: boolean;
+              reload_targets: string[];
+              command_ref: string | null;
+              reason: string | null;
+            };
+          };
+          auto_apply: { eligible: boolean; app_background_safe: boolean; command_ref: string | null };
+          status_detail: {
+            auto_apply_eligible: boolean | null;
+            app_background_safe: boolean | null;
+            clean_managed_targets_count: number | null;
+            manual_required_targets_count: number | null;
+            post_apply_status: string;
+            reload_status: string;
+          };
+          post_apply_guidance: {
+            reload_guidance: {
+              reload_required: boolean;
+              reload_recommended: boolean;
+              reload_targets: string[];
+              command_ref: string | null;
+              reason: string | null;
+            };
           };
         }>;
         execution: {
@@ -447,7 +482,48 @@ exit 2
             adapter_id: string;
             status: string;
             reason: string;
-            post_apply_actions: Array<{ action_id: string; status: string }>;
+            apply_mode: string;
+            status_detail: {
+              auto_apply_eligible: boolean | null;
+              app_background_safe: boolean | null;
+              clean_managed_targets_count: number | null;
+              manual_required_targets_count: number | null;
+              post_apply_status: string;
+              reload_status: string;
+            };
+            reload_guidance: {
+              reload_required: boolean;
+              reload_recommended: boolean;
+              reload_targets: string[];
+              command_ref: string | null;
+              reason: string | null;
+            };
+            result: {
+              apply_mode: string;
+              app_background_safe: boolean;
+              auto_apply_scope: string;
+              status_detail: {
+                auto_apply_eligible: boolean | null;
+                app_background_safe: boolean | null;
+                clean_managed_targets_count: number | null;
+                manual_required_targets_count: number | null;
+                post_apply_status: string;
+                reload_status: string;
+              };
+              reload_guidance: {
+                reload_required: boolean;
+                reload_recommended: boolean;
+                reload_targets: string[];
+                command_ref: string | null;
+                reason: string | null;
+              };
+              read_model_guidance: {
+                status_plane: string;
+                component_receipt_ledger: string;
+                app_consumer: string;
+              };
+            };
+            post_apply_actions: Array<{ action_id: string; status: string; result_ref: string | null }>;
           }>;
           receipt_record: {
             status: string;
@@ -477,6 +553,26 @@ exit 2
     assert.equal(output.managed_update.execution.adapter_results[0].adapter_id, 'agent_package_channel_adapter');
     assert.equal(output.managed_update.execution.adapter_results[0].status, 'completed');
     assert.equal(output.managed_update.execution.adapter_results[0].reason, 'managed_modules_reconciled_and_capability_exposure_synced');
+    assert.equal(output.managed_update.execution.adapter_results[0].apply_mode, 'auto_apply');
+    assert.equal(output.managed_update.execution.adapter_results[0].status_detail.auto_apply_eligible, true);
+    assert.equal(output.managed_update.execution.adapter_results[0].status_detail.app_background_safe, true);
+    assert.equal(output.managed_update.execution.adapter_results[0].status_detail.clean_managed_targets_count, 4);
+    assert.equal(output.managed_update.execution.adapter_results[0].status_detail.manual_required_targets_count, 0);
+    assert.equal(output.managed_update.execution.adapter_results[0].status_detail.post_apply_status, 'completed');
+    assert.equal(output.managed_update.execution.adapter_results[0].status_detail.reload_status, 'recommended');
+    assert.equal(output.managed_update.execution.adapter_results[0].reload_guidance.reload_recommended, true);
+    assert.deepEqual(output.managed_update.execution.adapter_results[0].reload_guidance.reload_targets, [
+      'one_person_lab_app',
+      'codex_plugin_cache',
+    ]);
+    assert.equal(output.managed_update.execution.adapter_results[0].result.apply_mode, 'auto_apply');
+    assert.equal(output.managed_update.execution.adapter_results[0].result.app_background_safe, true);
+    assert.equal(output.managed_update.execution.adapter_results[0].result.auto_apply_scope, 'clean_opl_managed_module_roots_only');
+    assert.equal(output.managed_update.execution.adapter_results[0].result.read_model_guidance.status_plane, 'opl update status --component agent_package_channel --json');
+    assert.equal(
+      output.managed_update.execution.adapter_results[0].result.read_model_guidance.component_receipt_ledger,
+      path.join(stateRoot, 'managed-update-component-receipts.json'),
+    );
     assert.deepEqual(
       output.managed_update.execution.adapter_results[0].post_apply_actions.map((entry) => entry.action_id),
       ['reconcile_modules', 'sync_skills', 'capability_exposure'],
@@ -501,6 +597,23 @@ exit 2
         post_apply_hooks: string[];
         authority_boundary: { can_write_domain_truth: boolean };
         adapter_result_ref: string | null;
+        apply_mode: string;
+        status_detail: {
+          auto_apply_eligible: boolean | null;
+          app_background_safe: boolean | null;
+          clean_managed_targets_count: number | null;
+          manual_required_targets_count: number | null;
+          post_apply_status: string;
+          reload_status: string;
+        };
+        post_apply_action_statuses: Array<{ action_id: string; status: string; result_ref: string | null }>;
+        reload_guidance: {
+          reload_required: boolean;
+          reload_recommended: boolean;
+          reload_targets: string[];
+          command_ref: string | null;
+          reason: string | null;
+        };
       }>;
     };
     assert.equal(receiptLedger.receipts.length, 1);
@@ -509,14 +622,38 @@ exit 2
     assert.equal(receiptLedger.receipts[0].verify_result, 'passed');
     assert.equal(typeof receiptLedger.receipts[0].activated_at, 'string');
     assert.equal(receiptLedger.receipts[0].post_apply_hooks.includes('sync_skills'), true);
+    assert.equal(receiptLedger.receipts[0].apply_mode, 'auto_apply');
+    assert.equal(receiptLedger.receipts[0].status_detail.auto_apply_eligible, true);
+    assert.equal(receiptLedger.receipts[0].status_detail.app_background_safe, true);
+    assert.equal(receiptLedger.receipts[0].status_detail.clean_managed_targets_count, 4);
+    assert.equal(receiptLedger.receipts[0].status_detail.manual_required_targets_count, 0);
+    assert.equal(receiptLedger.receipts[0].status_detail.post_apply_status, 'completed');
+    assert.equal(receiptLedger.receipts[0].status_detail.reload_status, 'recommended');
+    assert.deepEqual(
+      receiptLedger.receipts[0].post_apply_action_statuses.map((entry) => entry.action_id),
+      ['reconcile_modules', 'sync_skills', 'capability_exposure'],
+    );
+    assert.equal(receiptLedger.receipts[0].reload_guidance.reload_recommended, true);
+    assert.deepEqual(receiptLedger.receipts[0].reload_guidance.reload_targets, [
+      'one_person_lab_app',
+      'codex_plugin_cache',
+    ]);
     assert.equal(receiptLedger.receipts[0].authority_boundary.can_write_domain_truth, false);
     assert.equal(typeof receiptLedger.receipts[0].adapter_result_ref, 'string');
     const agents = output.managed_update.components[0];
     assert.equal(agents.component_id, 'agent_package_channel');
+    assert.equal(agents.auto_apply.eligible, true);
+    assert.equal(agents.auto_apply.app_background_safe, true);
     assert.equal(agents.receipt.last_receipt_ref, receiptLedger.receipts[0].receipt_ref);
     assert.equal(agents.receipt.verify_result, 'passed');
     assert.equal(typeof agents.receipt.activated_at, 'string');
     assert.equal(agents.receipt.post_apply_hooks.includes('sync_plugin_registry'), true);
+    assert.equal(agents.receipt.apply_mode, 'auto_apply');
+    assert.equal(agents.receipt.status_detail.post_apply_status, 'completed');
+    assert.equal(agents.receipt.status_detail.reload_status, 'recommended');
+    assert.equal(agents.receipt.reload_guidance.reload_recommended, true);
+    assert.equal(agents.status_detail.post_apply_status, 'completed');
+    assert.equal(agents.post_apply_guidance.reload_guidance.reload_recommended, true);
     assert.equal(output.managed_update.authority_boundary.can_silently_update_clean_managed_modules, true);
     assert.equal(output.managed_update.authority_boundary.can_write_domain_truth, false);
     assert.equal(
@@ -546,6 +683,12 @@ exit 2
             last_receipt_ref: string | null;
             verify_result: string;
             activated_at: string | null;
+            apply_mode: string;
+            status_detail: {
+              post_apply_status: string;
+              reload_status: string;
+            };
+            reload_guidance: { reload_recommended: boolean };
           };
         }>;
       };
@@ -553,6 +696,10 @@ exit 2
     assert.equal(status.managed_update.components[0].receipt.last_receipt_ref, receiptLedger.receipts[0].receipt_ref);
     assert.equal(status.managed_update.components[0].receipt.verify_result, 'passed');
     assert.equal(typeof status.managed_update.components[0].receipt.activated_at, 'string');
+    assert.equal(status.managed_update.components[0].receipt.apply_mode, 'auto_apply');
+    assert.equal(status.managed_update.components[0].receipt.status_detail.post_apply_status, 'completed');
+    assert.equal(status.managed_update.components[0].receipt.status_detail.reload_status, 'recommended');
+    assert.equal(status.managed_update.components[0].receipt.reload_guidance.reload_recommended, true);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });

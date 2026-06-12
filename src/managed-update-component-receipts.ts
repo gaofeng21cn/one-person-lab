@@ -4,6 +4,36 @@ import path from 'node:path';
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 import type { ManagedUpdateOperation, ManagedUpdateProviderAdapterId } from './managed-update-kernel.ts';
 
+export type ManagedUpdateReceiptApplyMode =
+  | 'projection_only'
+  | 'auto_apply'
+  | 'controlled_apply'
+  | 'manual_required';
+
+export type ManagedUpdatePostApplyActionReceipt = {
+  action_id: string;
+  status: 'completed' | 'skipped' | 'manual_required' | 'failed';
+  result_ref: string | null;
+};
+
+export type ManagedUpdateReloadGuidance = {
+  reload_required: boolean;
+  reload_recommended: boolean;
+  reload_targets: string[];
+  command_ref: string | null;
+  reason: string | null;
+};
+
+export type ManagedUpdateReceiptStatusDetail = {
+  component_state: string | null;
+  auto_apply_eligible: boolean | null;
+  app_background_safe: boolean | null;
+  clean_managed_targets_count: number | null;
+  manual_required_targets_count: number | null;
+  post_apply_status: 'not_run' | 'completed' | 'manual_required' | 'failed' | 'skipped' | 'unknown';
+  reload_status: 'not_required' | 'recommended' | 'required' | 'manual_required' | 'unknown';
+};
+
 export type ManagedUpdateComponentReceipt = {
   surface_kind: 'opl_managed_update_component_receipt';
   schema_version: 'opl_managed_update_component_receipt.v1';
@@ -25,6 +55,10 @@ export type ManagedUpdateComponentReceipt = {
   rollback_ref: string | null;
   repair_action: string | null;
   adapter_result_ref: string | null;
+  apply_mode: ManagedUpdateReceiptApplyMode;
+  status_detail: ManagedUpdateReceiptStatusDetail;
+  post_apply_action_statuses: ManagedUpdatePostApplyActionReceipt[];
+  reload_guidance: ManagedUpdateReloadGuidance;
   authority_boundary: {
     can_write_domain_truth: false;
     can_write_domain_memory_body: false;
@@ -50,6 +84,10 @@ export type ManagedUpdateComponentReceiptInput = {
   rollback_ref?: string | null;
   repair_action?: string | null;
   adapter_result_ref?: string | null;
+  apply_mode: ManagedUpdateReceiptApplyMode;
+  status_detail: ManagedUpdateReceiptStatusDetail;
+  post_apply_action_statuses: ManagedUpdatePostApplyActionReceipt[];
+  reload_guidance: ManagedUpdateReloadGuidance;
 };
 
 type ManagedUpdateComponentReceiptLedger = {
@@ -76,6 +114,14 @@ function optionalStringArray(value: unknown) {
     : [];
 }
 
+function optionalBoolean(value: unknown) {
+  return typeof value === 'boolean' ? value : null;
+}
+
+function optionalNumber(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
 function receiptLedgerPath() {
   return resolveOplStatePaths().managed_update_component_receipt_ledger_file;
 }
@@ -100,6 +146,114 @@ function authorityBoundary(): ManagedUpdateComponentReceipt['authority_boundary'
 
 function normalizeVerifyResult(value: unknown): ManagedUpdateComponentReceipt['verify_result'] {
   return value === 'passed' || value === 'failed' || value === 'unknown' ? value : 'unknown';
+}
+
+function normalizeApplyMode(value: unknown): ManagedUpdateReceiptApplyMode {
+  return value === 'auto_apply'
+    || value === 'controlled_apply'
+    || value === 'manual_required'
+    || value === 'projection_only'
+    ? value
+    : 'projection_only';
+}
+
+function defaultStatusDetail(): ManagedUpdateReceiptStatusDetail {
+  return {
+    component_state: null,
+    auto_apply_eligible: null,
+    app_background_safe: null,
+    clean_managed_targets_count: null,
+    manual_required_targets_count: null,
+    post_apply_status: 'unknown',
+    reload_status: 'unknown',
+  };
+}
+
+function normalizePostApplyStatus(value: unknown): ManagedUpdateReceiptStatusDetail['post_apply_status'] {
+  return value === 'not_run'
+    || value === 'completed'
+    || value === 'manual_required'
+    || value === 'failed'
+    || value === 'skipped'
+    || value === 'unknown'
+    ? value
+    : 'unknown';
+}
+
+function normalizeReloadStatus(value: unknown): ManagedUpdateReceiptStatusDetail['reload_status'] {
+  return value === 'not_required'
+    || value === 'recommended'
+    || value === 'required'
+    || value === 'manual_required'
+    || value === 'unknown'
+    ? value
+    : 'unknown';
+}
+
+function normalizeStatusDetail(value: unknown): ManagedUpdateReceiptStatusDetail {
+  if (!isRecord(value)) {
+    return defaultStatusDetail();
+  }
+  return {
+    component_state: optionalString(value.component_state),
+    auto_apply_eligible: optionalBoolean(value.auto_apply_eligible),
+    app_background_safe: optionalBoolean(value.app_background_safe),
+    clean_managed_targets_count: optionalNumber(value.clean_managed_targets_count),
+    manual_required_targets_count: optionalNumber(value.manual_required_targets_count),
+    post_apply_status: normalizePostApplyStatus(value.post_apply_status),
+    reload_status: normalizeReloadStatus(value.reload_status),
+  };
+}
+
+function normalizePostApplyActionStatus(value: unknown): ManagedUpdatePostApplyActionReceipt | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const actionId = optionalString(value.action_id);
+  if (!actionId) {
+    return null;
+  }
+  return {
+    action_id: actionId,
+    status: value.status === 'completed'
+      || value.status === 'skipped'
+      || value.status === 'manual_required'
+      || value.status === 'failed'
+      ? value.status
+      : 'manual_required',
+    result_ref: optionalString(value.result_ref),
+  };
+}
+
+function normalizePostApplyActionStatuses(value: unknown) {
+  return Array.isArray(value)
+    ? value
+      .map(normalizePostApplyActionStatus)
+      .filter((entry): entry is ManagedUpdatePostApplyActionReceipt => Boolean(entry))
+    : [];
+}
+
+function defaultReloadGuidance(): ManagedUpdateReloadGuidance {
+  return {
+    reload_required: false,
+    reload_recommended: false,
+    reload_targets: [],
+    command_ref: null,
+    reason: null,
+  };
+}
+
+function normalizeReloadGuidance(value: unknown): ManagedUpdateReloadGuidance {
+  if (!isRecord(value)) {
+    return defaultReloadGuidance();
+  }
+  return {
+    reload_required: value.reload_required === true,
+    reload_recommended: value.reload_recommended === true,
+    reload_targets: optionalStringArray(value.reload_targets),
+    command_ref: optionalString(value.command_ref),
+    reason: optionalString(value.reason),
+  };
 }
 
 function normalizeOperation(value: unknown): ManagedUpdateOperation | null {
@@ -157,6 +311,10 @@ function normalizeReceipt(value: unknown): ManagedUpdateComponentReceipt | null 
     rollback_ref: optionalString(value.rollback_ref),
     repair_action: optionalString(value.repair_action),
     adapter_result_ref: optionalString(value.adapter_result_ref),
+    apply_mode: normalizeApplyMode(value.apply_mode),
+    status_detail: normalizeStatusDetail(value.status_detail),
+    post_apply_action_statuses: normalizePostApplyActionStatuses(value.post_apply_action_statuses),
+    reload_guidance: normalizeReloadGuidance(value.reload_guidance),
     authority_boundary: authorityBoundary(),
   };
 }
@@ -201,6 +359,16 @@ function normalizeInput(input: ManagedUpdateComponentReceiptInput): ManagedUpdat
     rollback_ref: input.rollback_ref ?? null,
     repair_action: input.repair_action ?? null,
     adapter_result_ref: input.adapter_result_ref ?? null,
+    apply_mode: input.apply_mode,
+    status_detail: input.status_detail,
+    post_apply_action_statuses: input.post_apply_action_statuses.map((entry) => ({ ...entry })),
+    reload_guidance: {
+      reload_required: input.reload_guidance.reload_required,
+      reload_recommended: input.reload_guidance.reload_recommended,
+      reload_targets: [...input.reload_guidance.reload_targets],
+      command_ref: input.reload_guidance.command_ref,
+      reason: input.reload_guidance.reason,
+    },
     authority_boundary: authorityBoundary(),
   };
 }

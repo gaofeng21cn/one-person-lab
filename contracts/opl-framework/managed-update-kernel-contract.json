@@ -79,6 +79,26 @@
       "authority": "GHCR tag selects a channel target; digest or sha identifies installed content.",
       "default_policy": "silent_background_for_clean_managed_modules",
       "mutation_scope": "clean_opl_managed_module_roots_only",
+      "auto_apply": {
+        "mode": "auto_apply",
+        "app_background_safe": true,
+        "command_ref": "opl update apply --component agent_package_channel --json",
+        "eligible_scope": "clean_opl_managed_module_roots_only",
+        "eligible_when": [
+          "default managed module root is missing and can be installed into the managed root",
+          "installed module origin is managed_root",
+          "module health status is ready or package-channel updateable",
+          "git dirty is false",
+          "git sync status is not ahead, diverged, no_upstream, or unknown"
+        ],
+        "blocked_when": [
+          "dirty checkout",
+          "developer checkout",
+          "sibling workspace or env override source",
+          "ahead, diverged, no_upstream, or unknown git state",
+          "missing digest, sha256, source fingerprint, or git head identity after apply"
+        ]
+      },
       "post_apply_actions": [
         "reconcile_modules",
         "sync_skills",
@@ -156,6 +176,45 @@
         "failed"
       ]
     },
+    "adapter_status_detail_shape": {
+      "required_fields": [
+        "component_state",
+        "auto_apply_eligible",
+        "app_background_safe",
+        "clean_managed_targets_count",
+        "manual_required_targets_count",
+        "post_apply_status",
+        "reload_status"
+      ],
+      "post_apply_status_values": [
+        "not_run",
+        "completed",
+        "manual_required",
+        "failed",
+        "skipped",
+        "unknown"
+      ],
+      "reload_status_values": [
+        "not_required",
+        "recommended",
+        "required",
+        "manual_required",
+        "unknown"
+      ]
+    },
+    "reload_guidance_shape": {
+      "required_fields": [
+        "reload_required",
+        "reload_recommended",
+        "reload_targets",
+        "command_ref",
+        "reason"
+      ],
+      "reload_targets": [
+        "one_person_lab_app",
+        "codex_plugin_cache"
+      ]
+    },
     "runtime_toolchain_adapter_result_shape": {
       "required_fields": [
         "action",
@@ -180,7 +239,11 @@
       "activated_at",
       "post_apply_hooks",
       "rollback_ref",
-      "repair_action"
+      "repair_action",
+      "apply_mode",
+      "status_detail",
+      "post_apply_action_statuses",
+      "reload_guidance"
     ],
     "identity_fields": [
       "digest",

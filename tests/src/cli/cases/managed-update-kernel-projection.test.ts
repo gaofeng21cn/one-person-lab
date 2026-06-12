@@ -13,9 +13,23 @@ function readManagedUpdateKernelContract() {
       repair_action?: string;
       rollback_action?: string;
       post_apply_actions?: string[];
+      auto_apply?: {
+        mode: string;
+        app_background_safe: boolean;
+        command_ref: string;
+        eligible_scope: string;
+        eligible_when: string[];
+        blocked_when: string[];
+      };
     }>;
     runner_result_shape: {
       adapter_post_apply_action_shape: { required_fields: string[]; status_values: string[] };
+      adapter_status_detail_shape: {
+        required_fields: string[];
+        post_apply_status_values: string[];
+        reload_status_values: string[];
+      };
+      reload_guidance_shape: { required_fields: string[]; reload_targets: string[] };
       runtime_toolchain_adapter_result_shape: {
         required_fields: string[];
         controlled_execution_path: string;
@@ -34,6 +48,11 @@ test('managed update kernel contract keeps runtime and agent post-apply executio
 
   const agents = contract.providers.find((entry) => entry.provider_id === 'agent_package_channel');
   assert.ok(agents);
+  assert.equal(agents.auto_apply?.mode, 'auto_apply');
+  assert.equal(agents.auto_apply?.app_background_safe, true);
+  assert.equal(agents.auto_apply?.command_ref, 'opl update apply --component agent_package_channel --json');
+  assert.equal(agents.auto_apply?.eligible_scope, 'clean_opl_managed_module_roots_only');
+  assert.equal(agents.auto_apply?.blocked_when.includes('dirty checkout'), true);
   assert.deepEqual(agents.post_apply_actions, [
     'reconcile_modules',
     'sync_skills',
@@ -51,6 +70,28 @@ test('managed update kernel contract keeps runtime and agent post-apply executio
     'skipped',
     'manual_required',
     'failed',
+  ]);
+  assert.deepEqual(contract.runner_result_shape.adapter_status_detail_shape.required_fields, [
+    'component_state',
+    'auto_apply_eligible',
+    'app_background_safe',
+    'clean_managed_targets_count',
+    'manual_required_targets_count',
+    'post_apply_status',
+    'reload_status',
+  ]);
+  assert.equal(contract.runner_result_shape.adapter_status_detail_shape.post_apply_status_values.includes('completed'), true);
+  assert.equal(contract.runner_result_shape.adapter_status_detail_shape.reload_status_values.includes('recommended'), true);
+  assert.deepEqual(contract.runner_result_shape.reload_guidance_shape.required_fields, [
+    'reload_required',
+    'reload_recommended',
+    'reload_targets',
+    'command_ref',
+    'reason',
+  ]);
+  assert.deepEqual(contract.runner_result_shape.reload_guidance_shape.reload_targets, [
+    'one_person_lab_app',
+    'codex_plugin_cache',
   ]);
   assert.deepEqual(contract.runner_result_shape.runtime_toolchain_adapter_result_shape.required_fields, [
     'action',
@@ -80,6 +121,7 @@ exit 2
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: path.join(homeRoot, 'state'),
+      OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
       OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
       PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
     }) as {
@@ -114,6 +156,52 @@ exit 2
             post_apply_hooks: string[];
             content_identity_fields: string[];
             repair_action: string | null;
+            apply_mode: string;
+            status_detail: {
+              component_state: string | null;
+              auto_apply_eligible: boolean | null;
+              app_background_safe: boolean | null;
+              clean_managed_targets_count: number | null;
+              manual_required_targets_count: number | null;
+              post_apply_status: string;
+              reload_status: string;
+            };
+            post_apply_action_statuses: Array<{ action_id: string; status: string; result_ref: string | null }>;
+            reload_guidance: {
+              reload_required: boolean;
+              reload_recommended: boolean;
+              reload_targets: string[];
+              command_ref: string | null;
+              reason: string | null;
+            };
+          };
+          auto_apply: {
+            mode: string;
+            eligible: boolean;
+            app_background_safe: boolean;
+            scope: string;
+            command_ref: string | null;
+            blocked_reasons: string[];
+          };
+          status_detail: {
+            component_state: string | null;
+            auto_apply_eligible: boolean | null;
+            app_background_safe: boolean | null;
+            clean_managed_targets_count: number | null;
+            manual_required_targets_count: number | null;
+            post_apply_status: string;
+            reload_status: string;
+          };
+          post_apply_guidance: {
+            required: boolean;
+            command_refs: string[];
+            reload_guidance: {
+              reload_required: boolean;
+              reload_recommended: boolean;
+              reload_targets: string[];
+              command_ref: string | null;
+              reason: string | null;
+            };
           };
           authority_boundary: Record<string, boolean>;
           current: Record<string, unknown>;
@@ -157,6 +245,10 @@ exit 2
       'post_apply_hooks',
       'rollback_ref',
       'repair_action',
+      'apply_mode',
+      'status_detail',
+      'post_apply_action_statuses',
+      'reload_guidance',
     ]);
     assert.equal(output.managed_update.summary.total_components_count, 4);
     assert.equal(Number.isInteger(output.managed_update.summary.failed_with_repair_components_count), true);
@@ -206,7 +298,21 @@ exit 2
     assert.equal(agents.adapter_id, 'agent_package_channel_adapter');
     assert.equal(agents.policy_id, 'ordinary_user_non_development_silent_background');
     assert.equal(agents.current.tag_role, 'selector_only');
+    assert.equal(agents.auto_apply.mode, 'auto_apply');
+    assert.equal(agents.auto_apply.eligible, true);
+    assert.equal(agents.auto_apply.app_background_safe, true);
+    assert.equal(agents.auto_apply.command_ref, 'opl update apply --component agent_package_channel --json');
+    assert.equal(agents.auto_apply.scope, 'clean_opl_managed_module_roots_only');
+    assert.equal(agents.status_detail.auto_apply_eligible, true);
+    assert.equal(agents.status_detail.app_background_safe, true);
+    assert.equal(typeof agents.status_detail.clean_managed_targets_count, 'number');
+    assert.equal(agents.status_detail.manual_required_targets_count, 0);
+    assert.equal(agents.post_apply_guidance.reload_guidance.reload_recommended, true);
     assert.equal(agents.receipt.source_manifest_ref, 'ghcr.io/gaofeng21cn/one-person-lab-manifest:stable');
+    assert.equal(agents.receipt.apply_mode, 'auto_apply');
+    assert.equal(agents.receipt.status_detail.auto_apply_eligible, true);
+    assert.equal(agents.receipt.status_detail.manual_required_targets_count, 0);
+    assert.equal(agents.receipt.reload_guidance.reload_recommended, true);
     assert.deepEqual(agents.receipt.post_apply_hooks, [
       'reconcile_modules',
       'sync_skills',
@@ -251,6 +357,7 @@ exit 2
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: path.join(homeRoot, 'state'),
+      OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
       OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
       PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
     }) as {
@@ -261,7 +368,17 @@ exit 2
           component_id: string;
           provider_id: string;
           plan: { command_refs: Array<{ action_id: string; command: string; mode: string; destructive: boolean }> };
-          receipt: { schema_version: string; source_manifest_ref: string; content_identity_fields: string[]; post_apply_hooks: string[] };
+          receipt: {
+            schema_version: string;
+            source_manifest_ref: string;
+            content_identity_fields: string[];
+            post_apply_hooks: string[];
+            apply_mode: string;
+            status_detail: { auto_apply_eligible: boolean | null; app_background_safe: boolean | null };
+            reload_guidance: { reload_recommended: boolean };
+          };
+          auto_apply: { eligible: boolean; app_background_safe: boolean; command_ref: string | null };
+          post_apply_guidance: { command_refs: string[]; reload_guidance: { reload_recommended: boolean } };
           authority_boundary: Record<string, boolean>;
         }>;
       };
@@ -278,6 +395,18 @@ exit 2
     assert.equal(agents.receipt.content_identity_fields.includes('digest'), true);
     assert.equal(agents.receipt.content_identity_fields.includes('sha256'), true);
     assert.equal(agents.receipt.post_apply_hooks.includes('sync_plugin_registry'), true);
+    assert.equal(agents.receipt.apply_mode, 'auto_apply');
+    assert.equal(agents.receipt.status_detail.auto_apply_eligible, true);
+    assert.equal(agents.receipt.status_detail.app_background_safe, true);
+    assert.equal(agents.receipt.reload_guidance.reload_recommended, true);
+    assert.equal(agents.auto_apply.eligible, true);
+    assert.equal(agents.auto_apply.app_background_safe, true);
+    assert.equal(agents.auto_apply.command_ref, 'opl update apply --component agent_package_channel --json');
+    assert.deepEqual(agents.post_apply_guidance.command_refs, [
+      'opl connect reconcile-modules --json',
+      'opl connect sync-skills --json',
+    ]);
+    assert.equal(agents.post_apply_guidance.reload_guidance.reload_recommended, true);
     assert.equal(agents.authority_boundary.can_overwrite_developer_checkout, false);
     assert.equal(
       agents.plan.command_refs.every((entry) => entry.destructive === false),
@@ -305,6 +434,7 @@ exit 2
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: path.join(homeRoot, 'state'),
+      OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
       OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
       PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
     }) as {
