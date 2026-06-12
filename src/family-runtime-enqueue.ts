@@ -34,6 +34,10 @@ import {
   providerAdmissionCurrentnessIdentity,
   sameProviderAdmissionCurrentnessIdentity,
 } from './family-runtime-mas-current-control-admission-currentness.ts';
+import {
+  antiLoopStopLossSameLineageDecision,
+  findAntiLoopStopLossSuccessorAdmission,
+} from './family-runtime-stop-loss-successor-policy.ts';
 import { listStageAttemptsForTask, updateStageAttemptsForTask } from './family-runtime-stage-attempts.ts';
 import { activeQueueHoldForTaskInput } from './family-runtime-queue-holds.ts';
 
@@ -623,6 +627,33 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
         && isDefaultExecutorDispatchInput(input.domainId, taskKind, payload)
         ? listStageAttemptsForTask(db, existing.task_id)
         : [];
+      const antiLoopSameLineageDecision = antiLoopStopLossSameLineageDecision({
+        existing,
+        existingPayload,
+        nextPayload: payload,
+      });
+      if (antiLoopSameLineageDecision) {
+        const {
+          event_type: eventType,
+          ...decisionPayload
+        } = antiLoopSameLineageDecision;
+        insertEvent(db, {
+          taskId: existing.task_id,
+          domainId: existing.domain_id,
+          eventType,
+          source: input.source ?? 'opl-cli',
+          payload: {
+            dedupe_key: dedupeKey,
+            retained_status: existing.status,
+            ...decisionPayload,
+          },
+        });
+        return {
+          accepted: false,
+          idempotent_noop: true,
+          task: taskToPayload(existing),
+        };
+      }
       const closeoutRedrive = defaultExecutorSucceededAdmissionRefresh
         ? defaultExecutorCloseoutRedriveDecision(existing, existingPayload, payload)
         : null;
@@ -1459,24 +1490,32 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
     }
   }
 
+  const stopLossSuccessor = isDefaultExecutorDispatchInput(input.domainId, taskKind, payload)
+    ? findAntiLoopStopLossSuccessorAdmission(db, {
+        domainId: input.domainId,
+        taskKind,
+        payload,
+      })
+    : null;
+  const admittedPayload: Record<string, unknown> = stopLossSuccessor?.admission.nextPayload ?? payload;
   let deferredDefaultExecutorLiveAttempt: {
     liveAttempt: NonNullable<ReturnType<typeof findLiveDefaultExecutorDispatchAttempt>>;
     liveDispatchAttemptMatched: boolean;
     lease: ReturnType<typeof refreshDefaultExecutorLiveAttemptTaskLease>;
   } | null = null;
-  if (isDefaultExecutorDispatchInput(input.domainId, taskKind, payload)) {
+  if (isDefaultExecutorDispatchInput(input.domainId, taskKind, admittedPayload)) {
     const candidate = defaultExecutorCandidateRow({
       domainId: input.domainId,
       taskKind,
-      payload,
+      payload: admittedPayload,
       dedupeKey,
       priority: input.priority,
       source: input.source,
       requiresApproval,
       createdAt,
     });
-    const liveDispatchAttempt = findLiveDefaultExecutorDispatchAttempt(db, candidate, payload);
-    const liveAttempt = liveDispatchAttempt ?? findLiveDefaultExecutorStudyAttempt(db, candidate, payload);
+    const liveDispatchAttempt = findLiveDefaultExecutorDispatchAttempt(db, candidate, admittedPayload);
+    const liveAttempt = liveDispatchAttempt ?? findLiveDefaultExecutorStudyAttempt(db, candidate, admittedPayload);
     if (liveAttempt?.task_id) {
       const lease = refreshDefaultExecutorLiveAttemptTaskLease(db, {
         attempt: liveAttempt,
@@ -1496,12 +1535,12 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
             ? 'same_dispatch_live_stage_attempt_exists_at_enqueue'
             : 'same_study_live_stage_attempt_exists_at_enqueue',
           stage_attempt_id: liveAttempt.stage_attempt_id,
-          candidate_source_fingerprint: sourceFingerprint(payload),
+          candidate_source_fingerprint: sourceFingerprint(admittedPayload),
           live_source_fingerprint: liveAttempt.workspace_locator.domain_source_fingerprint ?? null,
-          dispatch_ref: payload.dispatch_ref ?? null,
-          action_type: payload.action_type ?? null,
+          dispatch_ref: admittedPayload.dispatch_ref ?? null,
+          action_type: admittedPayload.action_type ?? null,
           live_action_type: liveAttempt.workspace_locator.action_type ?? null,
-          study_id: payload.study_id ?? null,
+          study_id: admittedPayload.study_id ?? null,
           lease,
           authority_boundary: {
             opl: 'queue_intake_single_flight_noop_only',
@@ -1525,14 +1564,14 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
     input.domainId,
     taskKind,
     dedupeKey,
-    payload,
+    admittedPayload,
     createdAt,
   ]);
   const task = {
     task_id: taskId,
     domain_id: input.domainId,
     task_kind: taskKind,
-    payload_json: JSON.stringify(payload),
+    payload_json: JSON.stringify(admittedPayload),
     dedupe_key: dedupeKey,
     priority: input.priority ?? 0,
     status: initialStatus,
@@ -1625,12 +1664,12 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           : 'same_study_live_stage_attempt_exists_at_enqueue',
         live_task_id: liveAttempt.task_id,
         stage_attempt_id: liveAttempt.stage_attempt_id,
-        candidate_source_fingerprint: sourceFingerprint(payload),
+        candidate_source_fingerprint: sourceFingerprint(admittedPayload),
         live_source_fingerprint: liveAttempt.workspace_locator.domain_source_fingerprint ?? null,
-        dispatch_ref: payload.dispatch_ref ?? null,
-        action_type: payload.action_type ?? null,
+        dispatch_ref: admittedPayload.dispatch_ref ?? null,
+        action_type: admittedPayload.action_type ?? null,
         live_action_type: liveAttempt.workspace_locator.action_type ?? null,
-        study_id: payload.study_id ?? null,
+        study_id: admittedPayload.study_id ?? null,
         lease,
         authority_boundary: {
           opl: 'queue_intake_single_flight_defer_only',
@@ -1641,6 +1680,21 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           current_package_mutation: false,
           provider_stage_attempt_started: false,
         },
+      },
+    });
+  }
+  if (stopLossSuccessor) {
+    insertEvent(db, {
+      taskId,
+      domainId: input.domainId,
+      eventType: 'task_stop_loss_successor_admitted',
+      source: input.source ?? 'opl-cli',
+      payload: {
+        dedupe_key: dedupeKey,
+        previous_status: stopLossSuccessor.task.status,
+        next_status: initialStatus,
+        active_hold_id: activeHold?.hold_id ?? null,
+        ...stopLossSuccessor.admission.payload,
       },
     });
   }

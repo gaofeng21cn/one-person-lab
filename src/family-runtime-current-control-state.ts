@@ -540,6 +540,7 @@ function deriveCurrentControlStateFromRows(
   const stageProgressLog = currentStageProgressLog(current, livenessProviderRun, activityEvents, latestCloseout);
   const missingIdentity = requiredIdentityMissing(task, current);
   const staleEpochs = task && current ? staleEpochKinds(taskPayload, current) : [];
+  const stopLossSuccessorAdmission = parseRecord(taskPayload.stop_loss_successor_admission);
   const ownerReceiptRefs = uniqueStrings([
     ...refListFromRecord(latestCloseout, ['owner_receipt_ref', 'owner_receipt_refs']),
     ...refListFromRecord(parseRecord(current?.route_impact_json), [
@@ -575,6 +576,20 @@ function deriveCurrentControlStateFromRows(
     stale_epoch_kinds: staleEpochs,
     stale_work_unit_diagnostic: staleWorkUnit,
     stage_run_currentness_identity: stageRunCurrentnessIdentity,
+    stop_loss_successor_admission:
+      Object.keys(stopLossSuccessorAdmission).length > 0
+        ? {
+            ...stopLossSuccessorAdmission,
+            projection_policy: 'queue_task_payload_read_model_only',
+            authority_boundary: {
+              ...parseRecord(stopLossSuccessorAdmission.authority_boundary),
+              read_model_can_authorize_domain_ready: false,
+              read_model_can_create_owner_receipt: false,
+              read_model_can_create_typed_blocker: false,
+              read_model_can_claim_publication_ready: false,
+            },
+          }
+        : null,
     missing_stage_run_currentness_identity_fields:
       missingStageRunCurrentnessIdentityFields(stageRunCurrentnessIdentity),
     missing_identity_fields: missingIdentity,

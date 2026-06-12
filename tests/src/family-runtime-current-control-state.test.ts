@@ -568,3 +568,74 @@ test('queue inspect exposes current control state without domain readiness claim
     assert.equal(Object.hasOwn(state, 'artifact_ready'), false);
   });
 });
+
+test('current control state projects stop-loss successor admission without domain authority', () => {
+  withDb((db) => {
+    const task = enqueueDefaultTask(db, {
+      study_id: '002-dm-china-us-mortality-attribution',
+      quest_id: '002-dm-china-us-mortality-attribution',
+      action_type: 'publishability_repair_sprint',
+      work_unit_id: 'publishability_repair_sprint_after_anti_loop_budget_exhausted',
+      work_unit_fingerprint: 'dm002-stop-loss-successor',
+      source_fingerprint: 'dm002-stop-loss-successor-source',
+      route_identity_key: 'dm002-stop-loss-successor-route',
+      idempotency_key: 'dm002-stop-loss-successor-idempotency',
+      stop_loss_successor_admission: {
+        surface_kind: 'opl_stop_loss_successor_admission_read_model',
+        schema_version: 'stop-loss-successor-admission.v1',
+        status: 'admitted',
+        reason: 'anti_loop_stop_loss_identity_different_successor_admitted',
+        terminal_blocker_code: 'anti_loop_budget_exhausted',
+        previous_stop_loss_task_id: 'task-dm002-stop-loss-exhausted-lineage',
+        successor_route_reason: 'anti_loop_budget_exhausted_successor',
+        legal_terminal_path: 'publishability_repair_sprint',
+        same_work_unit_redrive_allowed: false,
+        authority_boundary: {
+          can_write_domain_truth: false,
+          can_create_owner_receipt: false,
+          can_create_typed_blocker: false,
+          can_claim_publication_ready: false,
+        },
+      },
+    });
+    const attempt = createTaskAttempt(db, task, {
+      sourceFingerprint: 'dm002-stop-loss-successor-source',
+      workspaceEpochs: {
+        domain_source_fingerprint: 'dm002-stop-loss-successor-source',
+        action_type: 'publishability_repair_sprint',
+        work_unit_id: 'publishability_repair_sprint_after_anti_loop_budget_exhausted',
+      },
+      start: true,
+    });
+
+    const state = deriveCurrentControlStateForTask(db, task.task_id);
+    const successorAdmission = state.stop_loss_successor_admission as Record<string, any>;
+
+    assert.equal(state.reconciliation_status, 'running');
+    assert.equal(state.current_stage_attempt_id, attempt.stage_attempt_id);
+    assert.equal(successorAdmission.status, 'admitted');
+    assert.equal(
+      successorAdmission.previous_stop_loss_task_id,
+      'task-dm002-stop-loss-exhausted-lineage',
+    );
+    assert.equal(
+      successorAdmission.successor_route_reason,
+      'anti_loop_budget_exhausted_successor',
+    );
+    assert.equal(successorAdmission.same_work_unit_redrive_allowed, false);
+    assert.equal(
+      (successorAdmission.authority_boundary as Record<string, unknown>).read_model_can_create_owner_receipt,
+      false,
+    );
+    assert.equal(
+      (successorAdmission.authority_boundary as Record<string, unknown>).read_model_can_create_typed_blocker,
+      false,
+    );
+    assert.equal(
+      (successorAdmission.authority_boundary as Record<string, unknown>).read_model_can_claim_publication_ready,
+      false,
+    );
+    assert.equal(Object.hasOwn(state, 'domain_ready'), false);
+    assert.equal(Object.hasOwn(state, 'publication_ready'), false);
+  });
+});
