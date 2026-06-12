@@ -622,6 +622,56 @@ Coverage / carry-forward:
 - Not covered: contract-key rename, source/test/caller migration, MAS `docs/status.md` dense summary compression beyond this term, `docs/decisions.md` residual thinning beyond this term, display catalog compression, live owner-surface foldback, concrete source/test/workflow/package/CLI/API retirement lanes, or full six-repo paragraph coverage.
 - Physical retirement remains gated by replacement-owner, no-active-caller, no-forbidden-write, MAS owner receipt / typed blocker or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
 
+## Fresh Intake 2026-06-12 App Runtime Status Summary Compression
+
+This follow-up reopened `one-person-lab-app` for a narrow docs-only Runtime
+status lane after the App repo was clean, aligned to `origin/main`, and OPL Doc
+doctor was passing. It compresses field-level Runtime page, first-run progress,
+provider readiness repair, State Index, Stage Artifact and user-task-count
+details out of current status and back to App runtime/page-state SSOT owners. It
+does not create a new dated ledger chain and does not close the parent `/goal`.
+
+Semantic theme: App Runtime status summary compression.
+
+Single Source of Truth:
+
+- App active product gaps and next baton: `one-person-lab-app/docs/active/app-ideal-state-gap-plan.md`.
+- Runtime bridge and Runtime page machine policy: `one-person-lab-app/contracts/app-runtime-bridge.json`, `one-person-lab-app/contracts/app-page-state-matrix.json`, and `one-person-lab-app/contracts/app-gui-product-contract.json`.
+- Durable human current truth for runtime boundaries: `one-person-lab-app/docs/architecture.md` and `one-person-lab-app/docs/decisions.md`.
+- Topic-level App process provenance: `one-person-lab-app/docs/history/process/README.md`.
+
+Brand-module scope:
+
+- Primary module: `OPL Charter`, because this is docs lifecycle / SSOT governance.
+- Coordinating modules: `OPL Console` and `OPL Runway`, because the compressed text concerns App Runtime display, user-task readout, safe-action routing and Framework provider/read-model consumption.
+- Not touched: runtime implementation, App shell code, App release promotion authority, domain truth, artifact authority, quality/export verdicts, owner receipts, typed blockers, contracts/source/tests/CLI/API/workflows/packages, or physical deletion gates.
+
+Edited / pushed repo-local docs:
+
+| Repo | Commit | Edited docs and result |
+| --- | --- | --- |
+| `one-person-lab-app` | `cfe10ba docs: compress App runtime status summary` | `docs/status.md` now keeps first-run / Runtime readout as a compact App-consumer summary and points field-level policy back to runtime bridge, GUI/page-state contracts, architecture, decisions, validators and release-boundary tests. `docs/history/process/README.md` records Runtime status summary compression as topic-level coverage. |
+
+Fresh readback boundary:
+
+- `one-person-lab-app`: `main...origin/main`, `HEAD=origin/main=cfe10ba`; `opl-doc-doctor` remained `finding_count=0`, `active_truth_health.status=pass`, `markdown_doc_count=23`.
+- `one-person-lab`: this rollup is the only OPL docs write for this App follow-up.
+- `med-autoscience`, `med-autogrant`, `redcube-ai`, and `opl-meta-agent`: no repo-local edit in this App follow-up.
+
+Verification:
+
+- App docs diff check: `git diff --check -- docs/status.md docs/history/process/README.md`.
+- App README/docs conflict-marker scan.
+- App OPL Doc doctor: `finding_count=0`, `active_truth_health.status=pass`.
+- App release-boundary validator: `npm run validate:release-boundary`.
+- App release-boundary test suite: `npm run test:release-boundary` with `129` tests passing and `0` failures.
+
+Coverage / carry-forward:
+
+- Covered: App `docs/status.md` paragraphs that duplicated runtime bridge command resolution, provider readiness repair commands, first-run progress source, Runtime user-task count policies, State Index refs, Stage Artifact refs, forbidden default terminology and diagnostic/liveness distinctions as current status prose.
+- Not covered: future App release cohorts, Full/VM evidence, GUI implementation parity, install exposure live-root validation, active-shell adoption, runtime bridge contract migration, App source/test/workflow/package/CLI/API retirement, or full six-repo paragraph coverage.
+- Physical retirement remains gated by App contracts/source/tests/validators plus replacement-owner, no-active-caller, no-forbidden-write, App owner decision, and retired-surface provenance. This follow-up authorizes no physical deletion.
+
 ## Future Record Policy
 
 - Do not create new dated docs-governance coverage-ledger chains for ordinary process, frozen inventory, doctor transcript, branch/worktree state, command transcripts or per-run proof.
