@@ -427,6 +427,51 @@ Coverage / carry-forward:
 - Not covered: full OPL `docs/architecture.md` / `docs/decisions.md` residual thinning, every OPL support/reference doc paragraph, every paragraph in the six repos' full `README*` and `docs/**/*.md` corpus, MAS status/decisions/display catalog compression, MAG/RCA residual thinning, OMA script-to-pack source reductions, and all concrete physical-retirement lanes.
 - Physical retirement remains gated by replacement-owner, no-active-caller, no-forbidden-write, owner receipt / typed blocker or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
 
+## Fresh Intake 2026-06-12 MAS Active-Support Reviewed Header Cleanup
+
+This follow-up reopened `med-autoscience` for a narrow docs-only lane after the repo was clean, aligned to `origin/main`, and OPL Doc doctor was passing. It changes current active support metadata from frozen snapshot dates to current review markers and records the active-support coverage in the MAS compressed coverage ledger. It does not create a new dated ledger chain and does not close the parent `/goal`.
+
+Semantic theme: MAS active-support reviewed header cleanup and coverage foldback.
+
+Single Source of Truth:
+
+- MAS docs lifecycle rules: `med-autoscience/docs/docs_portfolio_consolidation.md`.
+- Active completion / gap / next prompt owner: `med-autoscience/docs/active/mas-ideal-state-gap-plan.md`.
+- Current-state summary: `med-autoscience/docs/status.md`.
+- Topic-level coverage provenance: `med-autoscience/docs/history/docs-portfolio-coverage-ledger/README.md`.
+- Machine truth and retirement guards: MAS `agent/`, contracts, source/tests, CLI/MCP/API behavior, runtime/controller read-model surfaces, owner receipts, typed blockers and true workspace artifacts.
+
+Brand-module scope:
+
+- Primary module: `OPL Charter`, because this is docs lifecycle / SSOT governance.
+- Coordinating modules: `OPL Foundry Lab` and `OPL Runway`, because the MAS support docs explain standard Foundry Agent shape, StageRun / owner-route boundary and ordinary progress support.
+- Not touched: runtime implementation, domain truth, App release truth, artifact authority, quality/export verdicts, owner receipts, typed blockers, source/test/workflow/package/CLI/API surfaces or physical deletion gates.
+
+Edited / pushed repo-local docs:
+
+| Repo | Commit | Edited docs and result |
+| --- | --- | --- |
+| `med-autoscience` | `1d73d652f docs: mark MAS active support docs reviewed` | `docs/active/current-development-lines.md`, `docs/active/program_portfolio_consolidation.md`, `docs/active/mas-opl-stage-native-state-machine.md`, `docs/active/opl_app_mas_runtime_workbench_program.md`, `docs/active/stage_surface_standardization_program.md` and `docs/active/ai_first_paper_autonomy_closure_program.md` now use `Last reviewed: 2026-06-12` instead of frozen `Date` fields. `docs/history/docs-portfolio-coverage-ledger/README.md` records the tranche as active-support coverage and preserves the no-physical-retirement boundary. |
+
+Fresh readback boundary:
+
+- `med-autoscience`: `main...origin/main`, `HEAD=origin/main=1d73d652f`; `opl-doc-doctor` remained `finding_count=0`, `active_truth_health.status=pass`, `markdown_doc_count=273`.
+- `one-person-lab`: this rollup is the only OPL docs write for this MAS follow-up.
+- `med-autogrant`, `redcube-ai`, `opl-meta-agent`, and `one-person-lab-app`: no repo-local edit in this MAS follow-up.
+
+Verification:
+
+- MAS docs diff check over the edited active-support docs and coverage ledger.
+- MAS README/docs/contracts/tests conflict-marker scan.
+- MAS active/current frozen-date scan confirmed only `docs/active/mas-ideal-state-gap-plan.md` still has a `Date` field; it was intentionally left as the active plan's existing baseline marker, not rewritten as fresh runtime truth.
+- MAS OPL Doc doctor: `finding_count=0`, `active_truth_health.status=pass`.
+
+Coverage / carry-forward:
+
+- Covered: MAS active-support headers that were still reading like dated snapshots while their body text declares active support / active plan-index / design / acceptance-owner roles.
+- Not covered: MAS `docs/status.md` dense current-summary compression, `docs/decisions.md`, display catalog compression, live owner-surface foldback, concrete source/test/workflow/package/CLI/API retirement lanes, or full six-repo paragraph coverage.
+- Physical retirement remains gated by replacement-owner, no-active-caller, no-forbidden-write, MAS owner receipt / typed blocker or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
+
 ## Future Record Policy
 
 - Do not create new dated docs-governance coverage-ledger chains for ordinary process, frozen inventory, doctor transcript, branch/worktree state, command transcripts or per-run proof.
