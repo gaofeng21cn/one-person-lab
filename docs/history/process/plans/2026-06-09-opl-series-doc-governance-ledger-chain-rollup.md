@@ -193,6 +193,44 @@ Coverage / carry-forward:
 - Not covered: full paragraph-level coverage of all six repos' `README*` and `docs/**/*.md`, OPL `architecture.md` / `decisions.md` residual thinning, App release/install/runtime docs beyond existing owners, OMA script-to-pack reductions, and every source/test/workflow/package/CLI/API physical-retirement lane.
 - Physical retirement remains gated by replacement-owner, no-active-caller, no-forbidden-write, owner receipt / typed blocker roundtrip or explicit owner decision, and tombstone/provenance evidence in the owning repo. This docs-only follow-up authorizes no physical deletion.
 
+## Fresh Intake 2026-06-12 OMA Private Inventory Compression Follow-up
+
+This follow-up reopened `opl-meta-agent` because the repo was clean, aligned to `origin/main`, small enough for full human-doc readback, and carried a concrete SSOT duplication: the active private implementation inventory still repeated itemized retired-surface details that already belonged to OMA process provenance and machine no-resurrection guards.
+
+Semantic theme: OMA private implementation inventory retired-tail compression.
+
+Single Source of Truth:
+
+- Current private implementation classification and migration gates: `opl-meta-agent/docs/active/opl-private-implementation-migration-inventory.md`.
+- Retired surface itemization and no-resurrection provenance: `opl-meta-agent/docs/history/process/retired-surface-provenance.md`.
+- Machine absence / no-resurrection guards: `runtime/authority_functions/meta-agent-authority-functions.json#source_purity_scan_receipt`, `script_morphology_policy.script_to_pack_retirement_gates`, and `tests/source-purity.test.ts`.
+
+Edited / pushed repo-local docs:
+
+| Repo | Commit | Edited docs and result |
+| --- | --- | --- |
+| `opl-meta-agent` | `68cbc5e docs: compress OMA retired surface inventory` | `docs/active/opl-private-implementation-migration-inventory.md` now keeps current classification and migration-gate rules only, and points itemized retired-tail provenance to history / machine guards. `docs/history/process/README.md` records this as topic-level process coverage. |
+
+Fresh readback boundary:
+
+- `opl-meta-agent`: `main...origin/main`, `HEAD=origin/main=68cbc5e`; `opl-doc-doctor` remained `finding_count=0`, `active_truth_health.status=pass`, `markdown_doc_count=14`.
+- `one-person-lab`: concurrent managed-update contract/source/test edits remain outside this docs-governance tranche.
+- `med-autoscience`: after the previous MAS docs compression tranche, a new unrelated test edit was observed in `tests/domain_action_request_materializer_cases/test_stage_native_next_action_admission.py`; that owner lane is outside this OMA docs follow-up.
+- `one-person-lab-app`: concurrent App GUI/product contract/docs/test edits remain outside this docs-governance tranche.
+
+Verification:
+
+- OMA docs diff check: `git diff --check -- docs/active/opl-private-implementation-migration-inventory.md docs/history/process/README.md`.
+- OMA conflict-marker scan over `README*`, `docs/**/*.md`, and tracked `agent/*/README.md`.
+- OMA OPL Doc doctor: `finding_count=0`, `active_truth_health.status=pass`.
+- Text assertion confirmed the retired surface detail rows were removed from the active private inventory.
+
+Coverage / carry-forward:
+
+- Covered: OMA active private inventory section that duplicated retired surface itemization as current active content.
+- Not covered: OMA script-to-pack source reductions, OPL/App registry or live App evidence tails, new target cohort evidence, independent reviewer direct evidence, and any physical source/test/workflow/package/CLI/API retirement.
+- Physical retirement remains gated by OMA machine guards plus replacement-owner, no-active-caller, no-forbidden-write, owner receipt / typed blocker or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
+
 ## Future Record Policy
 
 - Do not create new dated docs-governance coverage-ledger chains for ordinary process, frozen inventory, doctor transcript, branch/worktree state, command transcripts or per-run proof.
