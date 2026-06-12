@@ -1,5 +1,4 @@
-import { buildOplEnvironment } from './system-installation/environment.ts';
-import { runOplEngineAction } from './system-installation/engine-actions.ts';
+import { syncFamilySkillPacks } from './opl-skills.ts';
 import {
   buildOplModules,
   resolveManagedModuleCheckoutPath,
@@ -8,6 +7,7 @@ import {
 } from './system-installation/modules.ts';
 import { rollbackManagedModulePackageChannel } from './system-installation/module-package-channel.ts';
 import { runOplSystemAction } from './system-installation/system-actions.ts';
+import { runOplStartupMaintenance } from './system-installation/startup-maintenance.ts';
 import type { FrameworkContracts } from './types.ts';
 import {
   buildManagedUpdateKernelProjection,
@@ -28,6 +28,14 @@ import {
 type ManagedUpdateProjection = Awaited<ReturnType<typeof buildManagedUpdateKernelProjection>>;
 type ManagedUpdateProjectionComponent = ManagedUpdateProjection['managed_update']['components'][number];
 
+type AdapterPostApplyAction = {
+  action_id: string;
+  command_ref: string;
+  status: 'completed' | 'skipped' | 'manual_required' | 'failed';
+  result_ref: string | null;
+  result: Record<string, unknown> | null;
+};
+
 type AdapterExecutionResult = {
   component_id: string;
   adapter_id: ManagedUpdateProviderAdapterId;
@@ -36,6 +44,7 @@ type AdapterExecutionResult = {
   result_ref: string | null;
   result: Record<string, unknown> | null;
   error: Record<string, unknown> | null;
+  post_apply_actions?: AdapterPostApplyAction[];
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -72,6 +81,28 @@ function adapterResultRef(componentId: string, operation: ManagedUpdateOperation
   return `opl://managed-update-adapter/${componentId}/${operation}/${new Date().toISOString()}`;
 }
 
+function runtimeAdapterReceiptRef(operation: ManagedUpdateOperation) {
+  return adapterResultRef('runtime_toolchain', operation, null);
+}
+
+function runtimeRollbackRef(receiptRef: string) {
+  return `opl://managed-update/runtime_toolchain/rollback/${encodeURIComponent(receiptRef)}`;
+}
+
+function systemActionStatus(value: unknown): AdapterExecutionResult['status'] {
+  const status = nestedString(value, 'status');
+  if (status === 'completed') {
+    return 'completed';
+  }
+  if (status === 'skipped') {
+    return 'skipped';
+  }
+  if (status === 'failed') {
+    return 'failed';
+  }
+  return 'manual_required';
+}
+
 function normalizeError(error: unknown) {
   if (error && typeof error === 'object' && 'toJSON' in error && typeof error.toJSON === 'function') {
     return error.toJSON() as Record<string, unknown>;
@@ -95,62 +126,107 @@ async function runRuntimeToolchainAdapter(
   contracts: FrameworkContracts,
   operation: ManagedUpdateOperation,
 ): Promise<AdapterExecutionResult> {
+  const receiptRef = runtimeAdapterReceiptRef(operation);
+  const rollbackRef = runtimeRollbackRef(receiptRef);
   if (operation === 'rollback') {
     return {
       component_id: 'runtime_toolchain',
       adapter_id: 'runtime_toolchain_adapter',
       status: 'manual_required',
-      reason: 'runtime_pointer_rollback_requires_app_runtime_pointer_support',
-      result_ref: null,
+      reason: 'startup_maintenance_runtime_toolchain_adapter',
+      result_ref: receiptRef,
       result: {
+        surface_kind: 'runtime_toolchain_adapter_result',
+        action: operation,
+        status: 'manual_required',
+        receipt_ref: receiptRef,
+        rollback_ref: rollbackRef,
         repair_action: 'restart_app_with_previous_runtime_pointer_or_run_startup_maintenance',
+        manual_required_reason: 'runtime_pointer_rollback_requires_app_runtime_pointer_support',
       },
       error: null,
     };
   }
 
-  const environment = (await buildOplEnvironment(contracts)).system_environment;
-  const codex = environment.core_engines.codex;
-  if (!codex.installed) {
-    const result = await runOplEngineAction(contracts, 'install', 'codex');
-    return {
-      component_id: 'runtime_toolchain',
-      adapter_id: 'runtime_toolchain_adapter',
-      status: result.engine_action.status === 'completed' ? 'completed' : 'manual_required',
-      reason: 'codex_cli_missing',
-      result_ref: adapterResultRef('runtime_toolchain', operation, result.engine_action as Record<string, unknown>),
-      result: result.engine_action as Record<string, unknown>,
-      error: null,
-    };
-  }
-  if (!codex.update_available) {
-    return {
-      component_id: 'runtime_toolchain',
-      adapter_id: 'runtime_toolchain_adapter',
-      status: 'skipped',
-      reason: 'runtime_toolchain_current',
-      result_ref: null,
-      result: {
-        system_environment: environment as unknown as Record<string, unknown>,
-      },
-      error: null,
-    };
-  }
-
-  const result = await runOplEngineAction(contracts, 'update', 'codex');
+  const result = await runOplStartupMaintenance(contracts, { scope: 'runtime_toolchain' });
+  const systemAction = result.system_action as Record<string, unknown>;
   return {
     component_id: 'runtime_toolchain',
     adapter_id: 'runtime_toolchain_adapter',
-    status: result.engine_action.status === 'completed' ? 'completed' : 'manual_required',
-    reason: 'runtime_toolchain_update',
-    result_ref: adapterResultRef('runtime_toolchain', operation, result.engine_action as Record<string, unknown>),
-    result: result.engine_action as Record<string, unknown>,
+    status: systemActionStatus(systemAction),
+    reason: 'startup_maintenance_runtime_toolchain_adapter',
+    result_ref: receiptRef,
+    result: {
+      surface_kind: 'runtime_toolchain_adapter_result',
+      action: operation,
+      status: systemActionStatus(systemAction),
+      receipt_ref: receiptRef,
+      rollback_ref: rollbackRef,
+      repair_action: 'run_startup_maintenance',
+      startup_maintenance: systemAction,
+    },
     error: null,
   };
 }
 
 function moduleStatus(result: unknown) {
   return isRecord(result) && result.status === 'completed' ? 'completed' : 'manual_required';
+}
+
+function buildAgentPackagePostApplyActions(
+  operation: ManagedUpdateOperation,
+  reconcileResult: Record<string, unknown>,
+): AdapterPostApplyAction[] {
+  if (operation === 'rollback') {
+    return [
+      {
+        action_id: 'rollback_package_channel',
+        command_ref: 'opl update rollback --component agent_package_channel --json',
+        status: nestedRecord(reconcileResult, 'summary') ? 'completed' : 'manual_required',
+        result_ref: adapterResultRef('agent_package_channel', operation, reconcileResult),
+        result: reconcileResult,
+      },
+    ];
+  }
+
+  const skillSync = syncFamilySkillPacks({
+    companionMode: 'observe',
+    superpowersProfile: 'keep',
+  }) as unknown as Record<string, unknown>;
+  const skillSyncPayload = nestedRecord(skillSync, 'skill_sync');
+  const skillSyncSummary = nestedRecord(skillSyncPayload, 'summary');
+  const skippedCount = Number(skillSyncSummary?.skipped ?? 0);
+  const syncedCount = Number(skillSyncSummary?.synced ?? 0);
+  const skillSyncStatus: AdapterPostApplyAction['status'] = skippedCount > 0 && syncedCount === 0
+    ? 'manual_required'
+    : 'completed';
+
+  return [
+    {
+      action_id: 'reconcile_modules',
+      command_ref: 'opl connect reconcile-modules --json',
+      status: 'completed',
+      result_ref: adapterResultRef('agent_package_channel', operation, reconcileResult),
+      result: reconcileResult,
+    },
+    {
+      action_id: 'sync_skills',
+      command_ref: 'opl connect sync-skills --json',
+      status: skillSyncStatus,
+      result_ref: adapterResultRef('capability_exposure', operation, skillSyncPayload),
+      result: skillSyncPayload,
+    },
+    {
+      action_id: 'capability_exposure',
+      command_ref: 'opl update status --component capability_exposure --json',
+      status: skillSyncStatus,
+      result_ref: adapterResultRef('capability_exposure', operation, skillSyncPayload),
+      result: {
+        source: 'agent_package_channel_post_apply',
+        skill_sync_summary: skillSyncSummary,
+      },
+    },
+  ];
 }
 
 function runAgentPackageAdapter(operation: ManagedUpdateOperation): AdapterExecutionResult {
@@ -217,6 +293,7 @@ function runAgentPackageAdapter(operation: ManagedUpdateOperation): AdapterExecu
       result_ref: completedCount > 0 ? adapterResultRef('agent_package_channel', operation, result) : null,
       result,
       error: null,
+      post_apply_actions: buildAgentPackagePostApplyActions(operation, result),
     };
   }
 
@@ -284,10 +361,11 @@ function runAgentPackageAdapter(operation: ManagedUpdateOperation): AdapterExecu
     component_id: 'agent_package_channel',
     adapter_id: 'agent_package_channel_adapter',
     status: manualCount > 0 ? 'manual_required' : 'completed',
-    reason: manualCount > 0 ? 'manual_review_required' : 'managed_modules_reconciled_and_skills_synced',
+    reason: manualCount > 0 ? 'manual_review_required' : 'managed_modules_reconciled_and_capability_exposure_synced',
     result_ref: adapterResultRef('agent_package_channel', operation, result),
     result,
     error: null,
+    post_apply_actions: manualCount > 0 ? [] : buildAgentPackagePostApplyActions(operation, result),
   };
 }
 

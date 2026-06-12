@@ -1,4 +1,68 @@
-import { assert, createFakeCodexFixture, fs, os, path, runCli, test } from '../helpers.ts';
+import { assert, createFakeCodexFixture, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+
+function readManagedUpdateKernelContract() {
+  return JSON.parse(
+    fs.readFileSync(
+      path.join(repoRoot, 'contracts/opl-framework/managed-update-kernel-contract.json'),
+      'utf8',
+    ),
+  ) as {
+    providers: Array<{
+      provider_id: string;
+      controlled_execution_path?: string;
+      repair_action?: string;
+      rollback_action?: string;
+      post_apply_actions?: string[];
+    }>;
+    runner_result_shape: {
+      adapter_post_apply_action_shape: { required_fields: string[]; status_values: string[] };
+      runtime_toolchain_adapter_result_shape: {
+        required_fields: string[];
+        controlled_execution_path: string;
+      };
+    };
+  };
+}
+
+test('managed update kernel contract keeps runtime and agent post-apply execution shapes explicit', () => {
+  const contract = readManagedUpdateKernelContract();
+  const runtime = contract.providers.find((entry) => entry.provider_id === 'runtime_toolchain');
+  assert.ok(runtime);
+  assert.equal(runtime.controlled_execution_path, 'opl system startup-maintenance --json');
+  assert.equal(runtime.repair_action, 'run_startup_maintenance');
+  assert.equal(runtime.rollback_action, 'restart_app_with_previous_runtime_pointer_or_run_startup_maintenance');
+
+  const agents = contract.providers.find((entry) => entry.provider_id === 'agent_package_channel');
+  assert.ok(agents);
+  assert.deepEqual(agents.post_apply_actions, [
+    'reconcile_modules',
+    'sync_skills',
+    'capability_exposure',
+  ]);
+  assert.deepEqual(contract.runner_result_shape.adapter_post_apply_action_shape.required_fields, [
+    'action_id',
+    'command_ref',
+    'status',
+    'result_ref',
+    'result',
+  ]);
+  assert.deepEqual(contract.runner_result_shape.adapter_post_apply_action_shape.status_values, [
+    'completed',
+    'skipped',
+    'manual_required',
+    'failed',
+  ]);
+  assert.deepEqual(contract.runner_result_shape.runtime_toolchain_adapter_result_shape.required_fields, [
+    'action',
+    'receipt_ref',
+    'rollback_ref',
+    'repair_action',
+  ]);
+  assert.equal(
+    contract.runner_result_shape.runtime_toolchain_adapter_result_shape.controlled_execution_path,
+    'startup_maintenance_runtime_toolchain_adapter',
+  );
+});
 
 test('update status exposes the managed update kernel projection without mutating global tools or domain truth', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-update-status-'));

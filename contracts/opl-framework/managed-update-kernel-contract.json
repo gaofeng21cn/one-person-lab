@@ -66,7 +66,10 @@
       "role": "app_owned_runtime_fallback_and_toolchain_layer",
       "authority": "App-owned runtime roots, current pointer, staged root, health smoke, and rollback pointer.",
       "default_policy": "silent_stage_apply_on_restart_or_startup_maintenance",
-      "mutation_scope": "app_owned_runtime_root_only"
+      "mutation_scope": "app_owned_runtime_root_only",
+      "controlled_execution_path": "opl system startup-maintenance --json",
+      "repair_action": "run_startup_maintenance",
+      "rollback_action": "restart_app_with_previous_runtime_pointer_or_run_startup_maintenance"
     },
     {
       "provider_id": "agent_package_channel",
@@ -75,7 +78,12 @@
       "role": "GHCR module package channel for MAS/MAG/RCA/OMA ordinary users",
       "authority": "GHCR tag selects a channel target; digest or sha identifies installed content.",
       "default_policy": "silent_background_for_clean_managed_modules",
-      "mutation_scope": "clean_opl_managed_module_roots_only"
+      "mutation_scope": "clean_opl_managed_module_roots_only",
+      "post_apply_actions": [
+        "reconcile_modules",
+        "sync_skills",
+        "capability_exposure"
+      ]
     },
     {
       "provider_id": "capability_exposure",
@@ -133,6 +141,30 @@
       "manual_required",
       "failed"
     ],
+    "adapter_post_apply_action_shape": {
+      "required_fields": [
+        "action_id",
+        "command_ref",
+        "status",
+        "result_ref",
+        "result"
+      ],
+      "status_values": [
+        "completed",
+        "skipped",
+        "manual_required",
+        "failed"
+      ]
+    },
+    "runtime_toolchain_adapter_result_shape": {
+      "required_fields": [
+        "action",
+        "receipt_ref",
+        "rollback_ref",
+        "repair_action"
+      ],
+      "controlled_execution_path": "startup_maintenance_runtime_toolchain_adapter"
+    },
     "receipt_ledger_file": "managed-update-component-receipts.json",
     "lock_file": "managed-update-kernel.lock"
   },

@@ -39,6 +39,7 @@ type StartupMaintenanceEngineTarget = {
 
 type StartupMaintenanceTarget = StartupMaintenanceModuleTarget | StartupMaintenanceEngineTarget;
 type StartupMaintenanceFrameworkTarget = ReturnType<typeof runOplFrameworkSelfUpdate>;
+type StartupMaintenanceScope = 'all' | 'runtime_toolchain';
 
 function buildTarget(
   module: ModuleStatus,
@@ -389,13 +390,19 @@ async function maybeRunEngineStartupMaintenance(
   }
 }
 
-export async function runOplStartupMaintenance(contracts: FrameworkContracts) {
+export async function runOplStartupMaintenance(
+  contracts: FrameworkContracts,
+  options: { scope?: StartupMaintenanceScope } = {},
+) {
+  const scope = options.scope ?? 'all';
   const initialEnvironment = (await buildOplEnvironment(contracts)).system_environment;
   const frameworkTargets: StartupMaintenanceFrameworkTarget[] = [
     runOplFrameworkSelfUpdate({ targetRoot: resolveFrameworkUpdateTargetRoot(resolveProjectRoot()) }),
   ];
   const engineTargets = [await maybeRunEngineStartupMaintenance(contracts, initialEnvironment)];
-  const initialModules = buildOplModules().modules.modules.filter((module) => module.default_install);
+  const initialModules = scope === 'runtime_toolchain'
+    ? []
+    : buildOplModules().modules.modules.filter((module) => module.default_install);
   const moduleTargets = initialModules.map((module) => runModuleStartupMaintenance(module));
   const frameworkSummary = summarizeFrameworkTargets(frameworkTargets);
   const engineSummary = summarizeTargets(engineTargets);
@@ -424,7 +431,10 @@ export async function runOplStartupMaintenance(contracts: FrameworkContracts) {
       workspace_root: readOplWorkspaceRoot(),
       details: {
         surface_kind: 'opl_app_startup_maintenance',
-        mode: 'clean_managed_environment_startup',
+        mode: scope === 'runtime_toolchain'
+          ? 'runtime_toolchain_adapter_startup'
+          : 'clean_managed_environment_startup',
+        scope,
         framework_summary: frameworkSummary,
         engine_summary: engineSummary,
         summary,
