@@ -345,6 +345,44 @@ Coverage / carry-forward:
 - Not covered: RCA status/architecture/decisions residual thinning, production-like no-regression, Temporal visual-stage long soak, generated/default caller thinning, concrete source/contract/test retirement lanes, or any physical source/test/workflow/package/CLI/API deletion.
 - Physical retirement remains gated by RCA machine guards plus replacement-owner, no-active-caller, no-forbidden-write, RCA owner receipt / typed blocker or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
 
+## Fresh Intake 2026-06-12 MAG Active Gap Reviewed Header Cleanup
+
+This follow-up reopened `med-autogrant` for the same active-doc metadata cleanup pattern after the repo was clean, aligned to `origin/main`, and OPL Doc doctor was passing. It changes current active gap metadata from a frozen snapshot date to a current review marker. It does not create a new dated ledger chain and does not close the parent `/goal`.
+
+Semantic theme: MAG active gap reviewed header cleanup.
+
+Single Source of Truth:
+
+- Active completion / gap / baton owner: `med-autogrant/docs/active/mag-ideal-state-cross-repo-gap-plan.md`.
+- Topic-level coverage provenance: `med-autogrant/docs/history/docs-portfolio-coverage-ledger/README.md`.
+- Machine truth and retirement guards: `med-autogrant/contracts/runtime-program/current-program.json`, private surface contracts, Foundry series contract, source, tests, CLI/API behavior, MAG owner receipts and typed blockers.
+
+Edited / pushed repo-local docs:
+
+| Repo | Commit | Edited docs and result |
+| --- | --- | --- |
+| `med-autogrant` | `1bd3c7d docs: mark MAG active gap as reviewed` | `docs/active/mag-ideal-state-cross-repo-gap-plan.md` now uses `Last reviewed: 2026-06-12` instead of a frozen `Date` field. `docs/history/docs-portfolio-coverage-ledger/README.md` records the cleanup as topic-level coverage. |
+
+Fresh readback boundary:
+
+- `med-autogrant`: `main...origin/main`, `HEAD=origin/main=1bd3c7d`; `opl-doc-doctor` remained `finding_count=0`, `active_truth_health.status=pass`, `markdown_doc_count=51`.
+- `one-person-lab`: this rollup is the only OPL docs write for this MAG follow-up.
+- `med-autoscience`: unrelated local source edits remain outside this docs-governance follow-up.
+- `redcube-ai`, `opl-meta-agent`, and `one-person-lab-app`: no new repo-local edit in this MAG follow-up.
+
+Verification:
+
+- MAG docs diff check: `git diff --check -- docs/active/mag-ideal-state-cross-repo-gap-plan.md docs/history/docs-portfolio-coverage-ledger/README.md`.
+- MAG README/docs conflict-marker scan.
+- MAG active/current frozen-date scan over `docs/active` and core docs.
+- MAG OPL Doc doctor: `finding_count=0`, `active_truth_health.status=pass`.
+
+Coverage / carry-forward:
+
+- Covered: MAG active gap plan header semantics that were still reading like a dated snapshot.
+- Not covered: MAG production/default-caller evidence, App/workbench sustained consumption, Temporal long-soak, private source thinning, `docs/decisions.md` review, concrete source/test/workflow/package/CLI/API retirement lanes, or full six-repo paragraph coverage.
+- Physical retirement remains gated by MAG machine guards plus replacement-owner, no-active-caller, no-forbidden-write, MAG owner receipt / typed blocker or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
+
 ## Future Record Policy
 
 - Do not create new dated docs-governance coverage-ledger chains for ordinary process, frozen inventory, doctor transcript, branch/worktree state, command transcripts or per-run proof.
