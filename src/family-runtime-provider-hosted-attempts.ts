@@ -1,5 +1,4 @@
 import type { DatabaseSync } from 'node:sqlite';
-import path from 'node:path';
 
 import type { FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 import { insertEvent, nowIso, stableId } from './family-runtime-store.ts';
@@ -24,35 +23,21 @@ import {
   sameStageRunRouteCurrentnessIdentity,
 } from './family-runtime-stage-run-currentness-identity.ts';
 import { buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-gate.ts';
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function exportOwnerFingerprint(payload: Record<string, unknown>) {
-  const context = isRecord(payload.opl_domain_export_context) ? payload.opl_domain_export_context : null;
-  return optionalString(context?.owner_fingerprint);
-}
-
-function nestedRecord(value: Record<string, unknown> | null, path: string[]) {
-  let current: unknown = value;
-  for (const key of path) {
-    if (!isRecord(current)) {
-      return null;
-    }
-    current = current[key];
-  }
-  return isRecord(current) ? current : null;
-}
-
-function masDefaultExecutorCurrentnessBasis(payload: Record<string, unknown>) {
-  return (isRecord(payload.owner_route_currentness_basis) ? payload.owner_route_currentness_basis : null)
-    ?? nestedRecord(payload, ['owner_route', 'currentness_contract', 'basis']);
-}
+import {
+  exportOwnerFingerprint,
+  isRecord,
+  masDefaultExecutorCurrentnessBasis,
+  optionalString,
+  recordList,
+  recordStringRefs,
+  relativeDispatchRefFromPath,
+  sameOptionalStringField,
+  sameStringField,
+  stringList,
+  uniqueStrings,
+  workspaceRelativeRef,
+  workspaceRootFromProfile,
+} from './family-runtime-provider-hosted-attempts-parts/values.ts';
 
 export function defaultExecutorDispatchRef(payload: Record<string, unknown>) {
   return optionalString(payload.dispatch_ref)
@@ -96,10 +81,6 @@ function defaultExecutorDispatchIdentityRef(payload: Record<string, unknown>) {
     ?? defaultExecutorSourceFingerprint(payload);
 }
 
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
 function isTransportOnlyAdmissionDispatchReceiptRef(value: unknown) {
   if (typeof value !== 'string') {
     return false;
@@ -107,22 +88,6 @@ function isTransportOnlyAdmissionDispatchReceiptRef(value: unknown) {
   return value.includes('/runtime/artifacts/opl_family_domain_handler/dispatch_receipts/')
     || value.startsWith('runtime/artifacts/opl_family_domain_handler/dispatch_receipts/')
     || value.includes('/opl_family_domain_handler/dispatch_receipts/');
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-    : [];
-}
-
-function uniqueStrings(values: Array<string | null>) {
-  return [...new Set(values.filter((entry): entry is string => Boolean(entry)))];
-}
-
-function sameStringField(left: Record<string, unknown>, right: Record<string, unknown>, key: string) {
-  const leftValue = optionalString(left[key]);
-  const rightValue = optionalString(right[key]);
-  return Boolean(leftValue && rightValue && leftValue === rightValue);
 }
 
 function isSameDefaultExecutorDispatch(
@@ -151,15 +116,6 @@ function isSameDefaultExecutorStudyActionStage(
 ) {
   return isSameDefaultExecutorStudyStage(left, right)
     && sameStringField(left, right, 'action_type');
-}
-
-function sameOptionalStringField(left: Record<string, unknown>, right: Record<string, unknown>, key: string) {
-  const leftValue = optionalString(left[key]);
-  const rightValue = optionalString(right[key]);
-  if (!leftValue || !rightValue) {
-    return !leftValue && !rightValue;
-  }
-  return leftValue === rightValue;
 }
 
 export const DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
@@ -370,49 +326,6 @@ function hasLiveDefaultExecutorLinkedTask(db: DatabaseSync, taskId: string | nul
     WHERE task_id = ?
   `).get(taskId) as Pick<FamilyRuntimeTaskRow, 'status'> | undefined;
   return Boolean(row && DEFAULT_EXECUTOR_CROSS_TASK_LIVE_TASK_STATUSES.has(row.status));
-}
-
-function workspaceRootFromProfile(profile: string | null) {
-  if (!profile) {
-    return null;
-  }
-  const marker = '/ops/medautoscience/profiles/';
-  const index = profile.indexOf(marker);
-  return index >= 0 ? profile.slice(0, index) : null;
-}
-
-function relativeDispatchRefFromPath(payload: Record<string, unknown>) {
-  const dispatchPath = optionalString(payload.dispatch_path);
-  if (!dispatchPath) {
-    return null;
-  }
-  const workspaceRoot = optionalString(payload.workspace_root)
-    ?? workspaceRootFromProfile(optionalString(payload.profile));
-  if (!workspaceRoot) {
-    return null;
-  }
-  return workspaceRelativeRef(dispatchPath, workspaceRoot);
-}
-
-function workspaceRelativeRef(value: string | null, workspaceRoot: string | null) {
-  if (!value || !workspaceRoot || !path.isAbsolute(value)) {
-    return value;
-  }
-  const relative = path.relative(workspaceRoot, value);
-  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
-    return value;
-  }
-  return relative.split(path.sep).join('/');
-}
-
-function recordStringRefs(value: Record<string, unknown> | null, singularKeys: string[], listKeys: string[]) {
-  if (!value) {
-    return [];
-  }
-  return uniqueStrings([
-    ...singularKeys.map((key) => optionalString(value[key])),
-    ...listKeys.flatMap((key) => stringList(value[key])),
-  ]);
 }
 
 function transitionBridgeEvidence(transition: Record<string, unknown>) {

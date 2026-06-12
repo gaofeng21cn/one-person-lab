@@ -4,7 +4,6 @@ import path from 'node:path';
 import { FrameworkContractError } from './contracts.ts';
 import { buildAgentWorkspaceNormProjection } from './agent-workspace-norm.ts';
 import type { FrameworkContracts } from './types.ts';
-import { initializeWorkspace } from './workspace-initializer.ts';
 import {
   buildProjectIndex,
   buildSharedResourceManifest,
@@ -44,13 +43,8 @@ import {
   expectedDomainTopologyProfile,
   WORKSPACE_PROFILE_FINGERPRINT,
   WORKSPACE_PROFILE_VERSION,
-  profileFromTopologyContract,
-  selectWorkspaceProfileId,
-  toWorkspaceRelative,
   WORKSPACE_TOPOLOGY_CONTRACT_REF,
-  workspaceProjectEntry,
   type TopologyProfile,
-  type WorkspaceModeInput,
   type WorkspaceProfileId,
   type WorkspaceProjectIndexEntry,
 } from './workspace-topology.ts';
@@ -58,35 +52,26 @@ import {
   findWorkspaceAgentProfile,
   type WorkspaceAgentProfile,
 } from './workspace-agent-defaults.ts';
+import {
+  addBlocker,
+  isRecord,
+  materializeFindings,
+  normalizeOptionalString,
+  sameJson,
+  workspaceDiagnosticPolicy,
+} from './workspace-diagnostics-parts/policy.ts';
+import type { WorkspaceDiagnosticFinding } from './workspace-diagnostics-parts/policy.ts';
+export type { WorkspaceDiagnosticFinding } from './workspace-diagnostics-parts/policy.ts';
+export {
+  adoptWorkspace,
+  type WorkspaceAdoptOptions,
+} from './workspace-diagnostics-parts/adoption.ts';
 
 export type WorkspaceValidationOptions = {
   workspacePath?: string;
 };
 
 export type WorkspaceDoctorOptions = WorkspaceValidationOptions;
-
-export type WorkspaceDiagnosticSeverity = 'hard_blocker' | 'repairable' | 'advisory';
-
-export type WorkspaceDiagnosticFinding = {
-  code: string;
-  message: string;
-  severity: WorkspaceDiagnosticSeverity;
-  default_blocks_execution: boolean;
-  details?: Record<string, unknown>;
-  repair_command?: string;
-};
-
-export type WorkspaceAdoptOptions = {
-  agentId?: string;
-  workspacePath?: string;
-  workspaceRoot?: string;
-  workspaceId?: string;
-  projectId?: string;
-  title?: string;
-  mode?: WorkspaceModeInput;
-  dryRun?: boolean;
-  apply?: boolean;
-};
 
 export type WorkspaceLifecycleOptions = {
   workspacePath?: string;
@@ -98,249 +83,6 @@ export type WorkspaceLifecycleOptions = {
   dryRun?: boolean;
   apply?: boolean;
 };
-
-const BLOCKER_MESSAGES: Record<string, string> = {
-  workspace_path_required: 'Provide --workspace for workspace validation or doctor.',
-  workspace_root_missing: 'Workspace directory does not exist.',
-  workspace_root_not_directory: 'Workspace path exists but is not a directory.',
-  workspace_index_missing: 'workspace_index.json is missing.',
-  workspace_config_missing: 'workspace.yaml is missing.',
-  workspace_index_invalid_json: 'workspace_index.json is not valid JSON.',
-  workspace_index_shape_invalid: 'workspace_index.json does not have the OPL workspace index shape.',
-  agent_metadata_missing: 'workspace_index.json is missing agent metadata.',
-  workspace_topology_profile_missing: 'workspace_index.json is missing workspace_topology_profile.',
-  canonical_topology_missing: 'workspace_index.json is missing canonical_topology.',
-  canonical_topology_drift: 'canonical_topology does not match the agent topology profile.',
-  display_labels_missing: 'workspace_index.json is missing display_labels.',
-  display_labels_drift: 'display_labels do not match the agent topology profile.',
-  shared_resources_missing: 'workspace_index.json is missing shared_resources.',
-  shared_resources_drift: 'shared_resources do not match shared_resource_roots.',
-  shared_resource_root_missing: 'A declared shared resource root is missing on disk.',
-  shared_resource_manifest_missing: 'A declared shared resource manifest is missing on disk.',
-  shared_resource_manifest_drift: 'A declared shared resource manifest does not match the OPL projection.',
-  domain_topology_profile_drift: 'workspace_index.json agent topology profile does not match the executable OPL norm contract.',
-  project_collection_missing: 'The project collection directory is missing.',
-  indexed_projects_missing: 'workspace_index.json does not list any projects.',
-  indexed_project_shape_invalid: 'An indexed project has invalid path fields.',
-  indexed_project_root_missing: 'An indexed project root is missing on disk.',
-  indexed_project_config_missing: 'An indexed project config is missing on disk.',
-  indexed_project_index_missing: 'An indexed project index is missing on disk.',
-  indexed_project_index_drift: 'An indexed project index does not match the OPL projection.',
-  indexed_inputs_root_missing: 'An indexed project inputs root is missing on disk.',
-  indexed_exports_root_missing: 'An indexed project exports root is missing on disk.',
-  indexed_packages_root_missing: 'An indexed project packages root is missing on disk.',
-  indexed_archive_root_missing: 'An indexed project archive root is missing on disk.',
-  indexed_stage_outputs_root_missing: 'An indexed project stage outputs root is missing on disk.',
-  indexed_stage_outputs_manifest_missing: 'An indexed project stage outputs manifest is missing on disk.',
-  indexed_stage_outputs_manifest_drift: 'An indexed project stage outputs manifest does not match the OPL projection.',
-  indexed_stage_outputs_index_missing: 'An indexed project stage outputs index is missing on disk.',
-  indexed_stage_outputs_index_drift: 'An indexed project stage outputs index does not match the OPL projection.',
-  indexed_current_stage_pointer_missing: 'An indexed project current stage pointer is missing on disk.',
-  indexed_current_stage_pointer_drift: 'An indexed project current stage pointer does not match the OPL projection.',
-  indexed_control_root_missing: 'An indexed project control root is missing on disk.',
-  indexed_review_root_missing: 'An indexed project review root is missing on disk.',
-  indexed_handoff_root_missing: 'An indexed project handoff root is missing on disk.',
-  workspace_map_missing: 'workspace_map.json is missing.',
-  workspace_map_drift: 'workspace_map.json does not match the OPL projection.',
-  workspace_health_missing: 'workspace_health.json is missing.',
-  workspace_health_drift: 'workspace_health.json does not match the OPL projection.',
-  workspace_inspection_missing: 'workspace_inspection.json is missing.',
-  workspace_inspection_drift: 'workspace_inspection.json does not match the OPL projection.',
-  workspace_resource_inventory_missing: 'workspace_resource_inventory.json is missing.',
-  workspace_resource_inventory_drift: 'workspace_resource_inventory.json does not match the OPL projection.',
-  workspace_report_missing: 'workspace_report.json is missing.',
-  workspace_report_drift: 'workspace_report.json does not match the OPL projection.',
-  canonical_generated_projection_missing: 'A canonical control/opl generated projection is missing.',
-  canonical_generated_projection_drift: 'A canonical control/opl generated projection does not match its root mirror projection.',
-  profile_binding_missing: 'workspace_index.json is missing profile binding metadata.',
-  profile_binding_drift: 'workspace profile binding metadata is stale or does not match the current protocol.',
-  topology_events_missing: 'workspace_index.json is missing topology event history.',
-  workspace_norm_projection_drift: 'workspace_norm projection does not match the executable norm projection.',
-  generated_refs_missing: 'workspace_index.json is missing generated_refs.',
-  interface_projection_missing: 'workspace_index.json is missing interface_projection.',
-  authority_boundary_overclaim: 'authority_boundary grants authority that OPL must not hold.',
-  runtime_state_boundary_overclaim: 'runtime_state_boundary treats runtime-state as user/project truth.',
-  workspace_norm_missing: 'workspace_index.json is missing workspace_norm projection.',
-  workspace_norm_drift: 'workspace_norm projection does not match the executable norm contract.',
-};
-
-const REPAIRABLE_DIAGNOSTIC_CODES = new Set([
-  'workspace_config_missing',
-  'canonical_topology_missing',
-  'canonical_topology_drift',
-  'display_labels_missing',
-  'display_labels_drift',
-  'shared_resources_missing',
-  'shared_resources_drift',
-  'shared_resource_root_missing',
-  'shared_resource_manifest_missing',
-  'shared_resource_manifest_drift',
-  'generated_refs_missing',
-  'workspace_norm_missing',
-  'workspace_norm_drift',
-  'workspace_norm_projection_drift',
-  'profile_binding_missing',
-  'profile_binding_drift',
-  'topology_events_missing',
-  'indexed_project_config_missing',
-  'indexed_project_index_missing',
-  'indexed_project_index_drift',
-  'indexed_inputs_root_missing',
-  'indexed_exports_root_missing',
-  'indexed_packages_root_missing',
-  'indexed_archive_root_missing',
-  'indexed_stage_outputs_root_missing',
-  'indexed_stage_outputs_manifest_missing',
-  'indexed_stage_outputs_manifest_drift',
-  'indexed_stage_outputs_index_missing',
-  'indexed_current_stage_pointer_missing',
-  'indexed_control_root_missing',
-  'indexed_review_root_missing',
-  'indexed_handoff_root_missing',
-  'workspace_map_missing',
-  'workspace_map_drift',
-  'workspace_health_missing',
-  'workspace_health_drift',
-  'workspace_inspection_missing',
-  'workspace_inspection_drift',
-  'workspace_resource_inventory_missing',
-  'workspace_resource_inventory_drift',
-  'workspace_report_missing',
-  'workspace_report_drift',
-  'canonical_generated_projection_missing',
-  'canonical_generated_projection_drift',
-  'interface_projection_missing',
-]);
-
-const ADVISORY_DIAGNOSTIC_CODES = new Set<string>();
-
-const DEFAULT_WORKSPACE_DIAGNOSTIC_POLICY = {
-  policy_id: 'opl.workspace_diagnostics.contract_light.v1',
-  surface_kind: 'opl_workspace_diagnostic_policy',
-  default_execution_blocks_on: 'hard_blockers_only',
-  hard_blocker_rule:
-    'Only missing/invalid workspace identity, unsafe project shape, authority overclaim, runtime-state overclaim, and closeout-sensitive stage pointer/index shape drift stop default execution.',
-  repairable_rule:
-    'Generated metadata, profile binding, topology events, shared manifests, directory skeletons, root mirrors, reports, and missing stage projections are repairable through workspace upgrade.',
-  advisory_rule:
-    'Advisory warnings are operator hints only and never block default execution.',
-  auto_repair_command_template: 'opl workspace upgrade --workspace <path> --apply',
-  repairable_findings_block_default_execution: false,
-  advisory_warnings_block_default_execution: false,
-  hard_blocker_codes: [
-    'workspace_path_required',
-    'workspace_root_missing',
-    'workspace_root_not_directory',
-    'workspace_index_missing',
-    'workspace_index_invalid_json',
-    'workspace_index_shape_invalid',
-    'agent_metadata_missing',
-    'workspace_topology_profile_missing',
-    'domain_topology_profile_drift',
-    'project_collection_missing',
-    'indexed_projects_missing',
-    'indexed_project_shape_invalid',
-    'indexed_project_root_missing',
-    'indexed_stage_outputs_index_drift',
-    'indexed_current_stage_pointer_drift',
-    'authority_boundary_overclaim',
-    'runtime_state_boundary_overclaim',
-  ],
-  repairable_finding_codes: [...REPAIRABLE_DIAGNOSTIC_CODES],
-  advisory_warning_codes: [...ADVISORY_DIAGNOSTIC_CODES],
-};
-
-function workspaceDiagnosticPolicy(contracts: FrameworkContracts) {
-  return contracts.agentWorkspaceNorm.workspace_diagnostic_policy ?? DEFAULT_WORKSPACE_DIAGNOSTIC_POLICY;
-}
-
-function classifyDiagnostic(
-  policy: typeof DEFAULT_WORKSPACE_DIAGNOSTIC_POLICY,
-  code: string,
-): WorkspaceDiagnosticSeverity {
-  if (policy.repairable_finding_codes.includes(code)) {
-    return 'repairable';
-  }
-  if (policy.advisory_warning_codes.includes(code)) {
-    return 'advisory';
-  }
-  return 'hard_blocker';
-}
-
-function repairCommand(workspacePath: string | null, severity: WorkspaceDiagnosticSeverity) {
-  return severity === 'repairable' && workspacePath
-    ? `opl workspace upgrade --workspace ${JSON.stringify(workspacePath)} --apply`
-    : undefined;
-}
-
-function materializeFindings(
-  policy: typeof DEFAULT_WORKSPACE_DIAGNOSTIC_POLICY,
-  workspacePath: string | null,
-  findings: Array<{ code: string; message: string; details?: Record<string, unknown> }>,
-): WorkspaceDiagnosticFinding[] {
-  return findings.map((finding) => {
-    const severity = classifyDiagnostic(policy, finding.code);
-    const command = repairCommand(workspacePath, severity);
-    return {
-      ...finding,
-      severity,
-      default_blocks_execution: severity === 'hard_blocker',
-      ...(command ? { repair_command: command } : {}),
-    };
-  });
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function normalizeOptionalString(value: string | undefined) {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
-}
-
-function normalizeRequiredSegment(value: string, field: string) {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    throw new FrameworkContractError('cli_usage_error', `${field} cannot be empty.`, { field });
-  }
-  if (trimmed === '.' || trimmed === '..' || trimmed.includes('/') || trimmed.includes('\\')) {
-    throw new FrameworkContractError(
-      'cli_usage_error',
-      `${field} must be a single path segment, not a relative or nested path.`,
-      { field, value },
-    );
-  }
-  return trimmed;
-}
-
-function normalizeMode(value: string | undefined): WorkspaceModeInput {
-  const mode = normalizeOptionalString(value) ?? 'auto';
-  if (mode === 'auto' || mode === 'one_off' || mode === 'series' || mode === 'portfolio') {
-    return mode;
-  }
-  throw new FrameworkContractError(
-    'cli_usage_error',
-    'workspace adopt --mode must be auto, one_off, series, or portfolio.',
-    { mode, allowed_modes: ['auto', 'one_off', 'series', 'portfolio'] },
-  );
-}
-
-function addBlocker(
-  blockers: Array<{ code: string; message: string; details?: Record<string, unknown> }>,
-  code: string,
-  details?: Record<string, unknown>,
-) {
-  blockers.push({
-    code,
-    message: BLOCKER_MESSAGES[code] ?? code,
-    ...(details ? { details } : {}),
-  });
-}
-
-function sameJson(left: unknown, right: unknown) {
-  return JSON.stringify(left) === JSON.stringify(right);
-}
 
 function normalizeProjectEntry(project: Record<string, unknown>): WorkspaceProjectIndexEntry | null {
   const fields = [
@@ -1113,181 +855,6 @@ export function validateWorkspace(
       indexed_projects: doctor.indexed_projects,
       authority_boundary: doctor.authority_boundary,
       runtime_state_boundary: doctor.runtime_state_boundary,
-    },
-  };
-}
-
-function resolveAdoptWorkspacePath(options: WorkspaceAdoptOptions, agent: WorkspaceAgentProfile) {
-  const explicitPath = normalizeOptionalString(options.workspacePath);
-  const explicitRoot = normalizeOptionalString(options.workspaceRoot);
-  if (explicitPath && explicitRoot) {
-    throw new FrameworkContractError(
-      'cli_usage_error',
-      'workspace adopt accepts either --workspace or --workspace-root, not both.',
-      { mutually_exclusive: ['--workspace', '--workspace-root'] },
-    );
-  }
-  if (explicitPath) {
-    return path.resolve(explicitPath);
-  }
-  if (!explicitRoot) {
-    throw new FrameworkContractError(
-      'cli_usage_error',
-      'workspace adopt requires --workspace or --workspace-root.',
-      { required_one_of: ['--workspace', '--workspace-root'] },
-    );
-  }
-  const workspaceId = normalizeRequiredSegment(
-    normalizeOptionalString(options.workspaceId) ?? agent.default_workspace_id,
-    'workspace_id',
-  );
-  return path.resolve(explicitRoot, workspaceId);
-}
-
-export function adoptWorkspace(
-  contracts: FrameworkContracts,
-  options: WorkspaceAdoptOptions,
-) {
-  if (options.dryRun === true && options.apply === true) {
-    throw new FrameworkContractError(
-      'cli_usage_error',
-      'workspace adopt accepts either --dry-run or --apply, not both.',
-      { mutually_exclusive: ['--dry-run', '--apply'] },
-    );
-  }
-  const apply = options.apply === true;
-
-  const agent = findWorkspaceAgentProfile(options.agentId);
-  const mode = normalizeMode(options.mode);
-  const profileId = selectWorkspaceProfileId(agent, mode, 'workspace adopt');
-  const profile = profileFromTopologyContract(profileId);
-  const workspacePath = resolveAdoptWorkspacePath(options, agent);
-  const workspaceId = normalizeRequiredSegment(path.basename(workspacePath), 'workspace_id');
-  const projectId = normalizeRequiredSegment(
-    normalizeOptionalString(options.projectId) ?? agent.default_project_id,
-    'project_id',
-  );
-  const projectRoot = path.join(workspacePath, profile.project_collection_path, projectId);
-  const stageOutputsRoot = path.join(projectRoot, profile.project_stage_outputs_root);
-  const projectRootRef = toWorkspaceRelative(workspacePath, projectRoot);
-  const stageOutputsRootRef = toWorkspaceRelative(workspacePath, stageOutputsRoot);
-  const currentProject = workspaceProjectEntry(projectId, projectRootRef, stageOutputsRootRef);
-  const directories = [
-    workspacePath,
-    ...profile.shared_resource_roots.map((entry) => path.join(workspacePath, entry)),
-    path.join(workspacePath, profile.project_collection_path),
-    projectRoot,
-    path.join(projectRoot, 'control'),
-    path.join(projectRoot, 'inputs'),
-    stageOutputsRoot,
-    path.join(projectRoot, 'artifacts', 'exports'),
-    path.join(projectRoot, 'artifacts', 'packages'),
-    path.join(projectRoot, 'review'),
-    path.join(projectRoot, 'handoff'),
-    path.join(projectRoot, 'archive'),
-  ];
-  const existingIndexPath = path.join(workspacePath, 'workspace_index.json');
-  const existingIndex = fs.existsSync(existingIndexPath)
-    ? readWorkspaceIndex(existingIndexPath).index
-    : null;
-  const indexedProjects = existingIndex && Array.isArray(existingIndex.projects)
-    ? existingIndex.projects.filter(isRecord).map(normalizeProjectEntry).filter((entry): entry is WorkspaceProjectIndexEntry => Boolean(entry))
-    : [];
-  const projectIds = new Set(indexedProjects.map((entry) => entry.project_id));
-  const wouldIndexProjects = projectIds.has(projectId)
-    ? indexedProjects
-    : [...indexedProjects, currentProject];
-
-  if (apply) {
-    const initialized = initializeWorkspace(contracts, {
-      agentId: agent.agent_id,
-      workspacePath,
-      projectId,
-      title: options.title,
-      mode: options.mode,
-      bind: false,
-      force: false,
-    });
-    return {
-      version: 'g2',
-      contracts_context: initialized.contracts_context,
-      workspace_adoption: {
-        surface_kind: 'opl_workspace_adoption',
-        status: 'applied',
-        dry_run: false,
-        write_allowed: true,
-        workspace_path: workspacePath,
-        workspace_id: workspaceId,
-        project: initialized.workspace_initialization.project,
-        profile: initialized.workspace_initialization.profile,
-        created_directories: initialized.workspace_initialization.created_directories,
-        written_generated_files: initialized.workspace_initialization.written_generated_files,
-        workspace_index_path: initialized.workspace_initialization.workspace_index_path,
-        workspace_map_path: initialized.workspace_initialization.workspace_map_path,
-        workspace_health_path: initialized.workspace_initialization.workspace_health_path,
-        workspace_inspection_path: initialized.workspace_initialization.workspace_inspection_path,
-        workspace_resource_inventory_path: initialized.workspace_initialization.workspace_resource_inventory_path,
-        authority_boundary: {
-          opl_can_write_domain_truth: false,
-          opl_can_mutate_artifact_body: false,
-          opl_can_create_owner_receipt: false,
-          opl_can_create_typed_blocker: false,
-        },
-      },
-    };
-  }
-
-  return {
-    version: 'g2',
-    contracts_context: {
-      contracts_dir: contracts.contractsDir,
-      contracts_root_source: contracts.contractsRootSource,
-    },
-    workspace_adoption: {
-      surface_kind: 'opl_workspace_adoption_plan',
-      status: 'dry_run_ready',
-      dry_run: true,
-      write_allowed: false,
-      workspace_path: workspacePath,
-      workspace_id: workspaceId,
-      title: normalizeOptionalString(options.title),
-      agent: {
-        agent_id: agent.agent_id,
-        label: agent.label,
-        project_id: agent.project_id,
-        project: agent.project,
-        workspace_kind: agent.workspace_kind,
-        project_kind: agent.project_kind,
-      },
-      profile: {
-        contract_ref: WORKSPACE_TOPOLOGY_CONTRACT_REF,
-        profile_id: profileId,
-        workspace_mode: profile.workspace_mode,
-        project_collection_path: profile.project_collection_path,
-        shared_resource_roots: profile.shared_resource_roots,
-        project_stage_outputs_root: profile.project_stage_outputs_root,
-      },
-      canonical_topology: buildCanonicalTopology(agent, profile),
-      display_labels: buildWorkspaceDisplayLabels(agent, profile),
-      shared_resources: buildSharedResources(profile),
-      project: currentProject,
-      would_create_metadata_files: [
-        path.join(workspacePath, 'workspace.yaml'),
-        existingIndexPath,
-      ].filter((filePath) => !fs.existsSync(filePath)),
-      would_create_directories: directories.filter((dirPath) => (
-        !fs.existsSync(dirPath) || !fs.statSync(dirPath).isDirectory()
-      )),
-      would_index_projects: wouldIndexProjects,
-      existing_workspace_index_detected: Boolean(existingIndex),
-      next_apply_command: `opl workspace adopt --agent ${agent.agent_id} --workspace ${workspacePath} --project-id ${projectId} --mode ${profile.workspace_mode} --apply`,
-      authority_boundary: {
-        adopt_dry_run_can_write_files: false,
-        opl_can_write_domain_truth: false,
-        opl_can_mutate_artifact_body: false,
-        opl_can_create_owner_receipt: false,
-        opl_can_create_typed_blocker: false,
-      },
     },
   };
 }

@@ -47,6 +47,18 @@ function humanGateRefsForAttempt(attempt: ReturnType<typeof inspectStageAttempt>
     : [];
 }
 
+function attemptAlreadyAbsorbedCloseout(
+  attempt: ReturnType<typeof inspectStageAttempt>,
+  packet: TypedStageCloseoutPacket,
+) {
+  const existingCloseoutRefs = new Set(
+    Array.isArray(attempt.closeout_refs)
+      ? attempt.closeout_refs.filter((entry): entry is string => typeof entry === 'string')
+      : [],
+  );
+  return packet.closeout_refs.every((ref) => existingCloseoutRefs.has(ref));
+}
+
 function syncAttemptRowFromAcceptedCloseout(
   db: DatabaseSync,
   input: {
@@ -60,6 +72,7 @@ function syncAttemptRowFromAcceptedCloseout(
   if (
     input.attempt.status === 'completed'
     && input.attempt.closeout_receipt_status === 'accepted_typed_closeout'
+    && attemptAlreadyAbsorbedCloseout(input.attempt, input.packet)
   ) {
     return input.attempt;
   }

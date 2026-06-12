@@ -295,7 +295,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(['resolved', 'not_bound'].includes(metaAgentRegistry.status), true);
     assert.equal(
       metaAgentRegistry.summary.app_workbench_section_count,
-      metaAgentRegistry.status === 'resolved' ? 7 : 0,
+      metaAgentRegistry.status === 'resolved' ? 8 : 0,
     );
     assert.equal(
       metaAgentRegistry.summary.claims_domain_ready,
@@ -318,6 +318,15 @@ test('domain manifests resolves real family manifest fixtures while workspace li
       assert.equal(metaAgentRegistry.summary.scaleout_cleanup_closeout_target_count, 2);
       assert.equal(metaAgentRegistry.summary.scaleout_domain_ready_claim_count, 0);
       assert.equal(metaAgentRegistry.summary.scaleout_default_promotion_claim_count, 0);
+      assert.equal(
+        metaAgentRegistry.oma_sections.trajectory_learning.surface_kind,
+        'opl_meta_agent_trajectory_learning_app_workbench_section',
+      );
+      assert.equal(
+        metaAgentRegistry.oma_sections.trajectory_learning.authority_boundary
+          .can_promote_default_agent_without_gate,
+        false,
+      );
       assert.equal(
         metaAgentRegistry.oma_sections.patch_loop_closeout.refs.length >= 16,
         true,

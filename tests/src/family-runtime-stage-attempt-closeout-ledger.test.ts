@@ -100,3 +100,46 @@ test('stage attempt closeout ledger is idempotent and fails closed on conflictin
     assert.equal(listStageAttemptCloseouts(db, attemptId).length, 1);
   });
 });
+
+test('stage attempt closeout replay repairs accepted attempts that missed closeout refs', () => {
+  withStageAttemptDb((db) => {
+    const created = createStageAttempt(db, {
+      domainId: 'medautoscience',
+      stageId: 'publication_handoff',
+      providerKind: 'local_sqlite',
+      workspaceLocator: { workspace_root: '/tmp/mas' },
+      sourceFingerprint: 'sha256:handoff',
+    });
+    const attemptId = created.attempt.stage_attempt_id;
+    const packet = {
+      surface_kind: 'stage_attempt_closeout_packet',
+      closeout_id: 'closeout:publication-handoff-blocker',
+      closeout_refs: ['typed-blocker:publication-handoff'],
+      consumed_refs: ['evidence:handoff-ledger'],
+      next_owner: 'med-autoscience',
+      domain_ready_verdict: 'domain_gate_pending',
+      route_impact: { route: 'publication_handoff' },
+    };
+
+    ingestStageAttemptCloseout(db, {
+      stageAttemptId: attemptId,
+      packet,
+    });
+    db.prepare(`
+      UPDATE stage_attempts
+      SET closeout_refs_json = '[]'
+      WHERE stage_attempt_id = ?
+    `).run(attemptId);
+
+    const replay = ingestStageAttemptCloseout(db, {
+      stageAttemptId: attemptId,
+      packet,
+    });
+
+    assert.equal(replay.closeout.idempotent_noop, true);
+    assert.deepEqual(replay.attempt.closeout_refs, ['typed-blocker:publication-handoff']);
+    assert.equal(replay.attempt.closeout_receipt_status, 'accepted_typed_closeout');
+    assert.equal(inspectStageAttempt(db, attemptId).activity_events.length, 2);
+    assert.equal(listStageAttemptCloseouts(db, attemptId).length, 1);
+  });
+});

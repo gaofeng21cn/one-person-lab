@@ -158,6 +158,10 @@ function ownerAnswerKindFromProjection(projection: JsonRecord) {
   return ownerAnswerRefFromProjection(projection) ? 'owner_receipt' : null;
 }
 
+function legalStageRunCloseoutOwnerAnswerKind(kind: string | null) {
+  return kind === 'owner_receipt' || kind === 'typed_blocker' ? kind : null;
+}
+
 function missingRefsFromBlockerReasons(reasons: string[]) {
   return [
     ...new Set(reasons.flatMap((reason) => BLOCKER_REASON_REF_MAP[reason] ?? [reason])),
@@ -295,9 +299,10 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
   const ownerAnswerProjectionHardGate = record(ownerAnswerProjection.hard_gate);
   const ownerAnswerProjectionCloseoutBinding = record(ownerAnswerProjection.closeout_binding);
   const bridgedOwnerAnswerRef = ownerAnswerRefFromProjection(ownerAnswerProjection);
-  const effectiveOwnerAnswerKind = ownerAnswerKind(currentOwnerDelta)
+  const observedOwnerAnswerKind = ownerAnswerKind(currentOwnerDelta)
     ?? latestExecutionAuthorization?.owner_answer_kind
     ?? ownerAnswerKindFromProjection(ownerAnswerProjection);
+  const effectiveOwnerAnswerKind = legalStageRunCloseoutOwnerAnswerKind(observedOwnerAnswerKind);
   const rawOwnerAnswerRef = ownerAnswerRef(currentOwnerDelta)
     ?? latestExecutionAuthorization?.owner_answer_ref
     ?? bridgedOwnerAnswerRef;
@@ -368,9 +373,6 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
     manifest_valid: true,
     produced_role_artifacts: producedRoleArtifacts,
     owner_receipt_refs: effectiveOwnerAnswerKind === 'owner_receipt'
-      || effectiveOwnerAnswerKind === 'quality_gate_receipt'
-      || effectiveOwnerAnswerKind === 'human_gate'
-      || effectiveOwnerAnswerKind === 'route_back_evidence'
       ? stringRefs(effectiveOwnerAnswerRef)
       : [],
     typed_blocker_refs: effectiveOwnerAnswerKind === 'typed_blocker'
