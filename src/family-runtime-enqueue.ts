@@ -333,6 +333,54 @@ function defaultExecutorTerminalAttemptCurrentControlAdmissionRedriveDecision(
   };
 }
 
+function defaultExecutorRunningTerminalCurrentControlAdmissionNoopDecision(
+  existing: FamilyRuntimeTaskRow,
+  existingPayload: Record<string, unknown>,
+  nextPayload: Record<string, unknown>,
+  stageAttempts: ReturnType<typeof listStageAttemptsForTask>,
+) {
+  if (
+    existing.status !== 'running'
+    || !isDefaultExecutorDispatch(existing, existingPayload)
+    || !isDefaultExecutorDispatch(existing, nextPayload)
+  ) {
+    return null;
+  }
+  const existingIdentity = providerAdmissionCurrentnessIdentity(existingPayload);
+  const nextIdentity = providerAdmissionCurrentnessIdentity(nextPayload);
+  if (!existingIdentity || !nextIdentity || !sameProviderAdmissionCurrentnessIdentity(existingIdentity, nextIdentity)) {
+    return null;
+  }
+  const terminalAttempt = stageAttempts.find((attempt) => {
+    if (!TERMINAL_STAGE_ATTEMPT_STATUSES.has(optionalString(attempt.status) ?? '')) {
+      return false;
+    }
+    const attemptIdentity = providerAdmissionCurrentnessIdentity(
+      attempt.workspace_locator,
+      { requirePendingStatus: false },
+    );
+    return !attemptIdentity
+      || sameProviderAdmissionCurrentnessIdentity(attemptIdentity, nextIdentity)
+      || sameProviderAdmissionCurrentnessIdentity(existingIdentity, nextIdentity);
+  });
+  if (!terminalAttempt) {
+    return null;
+  }
+  const closeoutRefs = Array.isArray(terminalAttempt.closeout_refs)
+    ? terminalAttempt.closeout_refs.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
+    : [];
+  return {
+    reason: 'terminal_stage_attempt_same_currentness_clears_stale_running_queue_projection',
+    terminal_stage_attempt_id: terminalAttempt.stage_attempt_id,
+    terminal_stage_attempt_status: terminalAttempt.status,
+    terminal_provider_status: optionalString(terminalAttempt.provider_run.provider_status),
+    closeout_refs: closeoutRefs,
+    currentness_identity: nextIdentity,
+    previous_source_fingerprint: existingIdentity.source_fingerprint,
+    next_source_fingerprint: nextIdentity.source_fingerprint,
+  };
+}
+
 function transportOnlySucceededDefaultExecutorAdmissionRedriveDecision(
   db: DatabaseSync,
   existing: FamilyRuntimeTaskRow,
@@ -612,6 +660,15 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           existingStageAttempts,
         )
         : null;
+      const runningTerminalCurrentControlAdmissionNoop = isDefaultExecutorDispatch(existing, existingPayload)
+        && isDefaultExecutorDispatchInput(input.domainId, taskKind, payload)
+        ? defaultExecutorRunningTerminalCurrentControlAdmissionNoopDecision(
+          existing,
+          existingPayload,
+          payload,
+          existingStageAttempts,
+        )
+        : null;
       const supersededCurrentControlAdmissionRedrive = isDefaultExecutorDispatch(existing, existingPayload)
         && isDefaultExecutorDispatchInput(input.domainId, taskKind, payload)
         ? defaultExecutorSupersededCurrentControlAdmissionRedriveDecision(existing, payload)
@@ -663,6 +720,53 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           title: 'Family runtime missing owner answer resolved',
           body: `${input.domainId}:${taskKind}`,
           payload: { status: refreshed.status, dedupe_key: dedupeKey },
+        });
+        return {
+          accepted: false,
+          idempotent_noop: true,
+          task: taskToPayload(refreshed),
+        };
+      }
+      if (runningTerminalCurrentControlAdmissionNoop) {
+        db.prepare(`
+          UPDATE tasks
+          SET status = 'succeeded', lease_owner = NULL, lease_expires_at = NULL,
+            last_error = NULL, dead_letter_reason = NULL, updated_at = ?
+          WHERE task_id = ?
+        `).run(createdAt, existing.task_id);
+        const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
+        insertEvent(db, {
+          taskId: refreshed.task_id,
+          domainId: refreshed.domain_id,
+          eventType: 'task_running_current_control_terminal_attempt_noop',
+          source: input.source ?? 'opl-cli',
+          payload: {
+            dedupe_key: dedupeKey,
+            previous_status: existing.status,
+            next_status: refreshed.status,
+            ...runningTerminalCurrentControlAdmissionNoop,
+            authority_boundary: {
+              opl: 'queue_read_model_repair_from_terminal_attempt_observation_only',
+              domain: 'truth_quality_artifact_gate_owner',
+              domain_truth_mutation: false,
+              publication_quality_mutation: false,
+              artifact_gate_mutation: false,
+              current_package_mutation: false,
+              provider_stage_attempt_started: false,
+              provider_completion_is_domain_ready: false,
+            },
+          },
+        });
+        insertNotification(db, {
+          taskId: refreshed.task_id,
+          severity: 'info',
+          title: 'Family runtime stale running task cleared',
+          body: `${input.domainId}:${taskKind}`,
+          payload: {
+            status: refreshed.status,
+            dedupe_key: dedupeKey,
+            stage_attempt_id: runningTerminalCurrentControlAdmissionNoop.terminal_stage_attempt_id,
+          },
         });
         return {
           accepted: false,

@@ -231,12 +231,14 @@ export function insertCompletedCurrentControlStageAttempt(
     taskId: string;
     stageAttemptId: string;
     payload: Record<string, unknown>;
+    closeoutRefs?: string[];
   },
 ) {
   const createdAt = new Date().toISOString();
   const sourceFingerprint = typeof input.payload.source_fingerprint === 'string'
     ? input.payload.source_fingerprint
     : null;
+  const closeoutRefs = input.closeoutRefs ?? [];
   db.prepare(`
     INSERT INTO stage_attempts(
       stage_attempt_id, idempotency_key, provider_kind, workflow_id, domain_id, stage_id,
@@ -278,14 +280,14 @@ export function insertCompletedCurrentControlStageAttempt(
     'codex_cli',
     'completed',
     '[]',
-    '[]',
+    JSON.stringify(closeoutRefs),
     '[]',
     '{"max_attempts":3}',
     1,
     input.taskId,
     null,
-    '{}',
-    '{"provider_status":"completed"}',
+    JSON.stringify({ closeout_refs: closeoutRefs }),
+    JSON.stringify({ provider_status: 'completed' }),
     '[]',
     '{}',
     'accepted_typed_closeout',
