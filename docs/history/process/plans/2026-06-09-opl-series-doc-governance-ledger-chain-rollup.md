@@ -672,6 +672,57 @@ Coverage / carry-forward:
 - Not covered: future App release cohorts, Full/VM evidence, GUI implementation parity, install exposure live-root validation, active-shell adoption, runtime bridge contract migration, App source/test/workflow/package/CLI/API retirement, or full six-repo paragraph coverage.
 - Physical retirement remains gated by App contracts/source/tests/validators plus replacement-owner, no-active-caller, no-forbidden-write, App owner decision, and retired-surface provenance. This follow-up authorizes no physical deletion.
 
+## Fresh Intake 2026-06-12 MAG Decisions SSOT Detail Compression
+
+This follow-up reopened `med-autogrant` for a narrow docs-only decision-log
+lane after the repo was clean, aligned to `origin/main`, and OPL Doc doctor was
+passing. It compresses field-level Stage Folder Kernel implementation detail out
+of the current MAG decision log and records `docs/decisions.md` review in the
+repo-local coverage ledger. It does not create a new dated ledger chain and
+does not close the parent `/goal`.
+
+Semantic theme: MAG decision log preserves durable decision boundaries without
+freezing Stage Folder Kernel schema fields, builder payload fields or SQLite
+sidecar constraints as current prose truth.
+
+Single Source of Truth:
+
+- Current decision boundary: `med-autogrant/docs/decisions.md`.
+- Current MAG status and evidence boundary: `med-autogrant/docs/status.md`.
+- MAG active gap and physical-delete gate: `med-autogrant/docs/active/mag-ideal-state-cross-repo-gap-plan.md`.
+- Stage/native artifact and retirement machine truth: `med-autogrant/contracts/runtime-program/current-program.json`, `med-autogrant/contracts/stage_control_plane.json`, private surface contracts, Foundry series contract, schemas, source, CLI/API behavior and tests.
+- Topic-level MAG coverage provenance: `med-autogrant/docs/history/docs-portfolio-coverage-ledger/README.md`.
+
+Brand-module scope:
+
+- Primary module: `OPL Charter`, because this is docs lifecycle / SSOT governance.
+- Coordinating modules: `OPL Runway` and `OPL Foundry Lab`, because the compressed text concerns Stage Folder Kernel refs, provider/read-model consumption and a standard Foundry Agent's artifact/authority boundary.
+- Not touched: runtime implementation, MAG grant truth, fundability / quality / export verdicts, package authority, owner receipts, typed blockers, contracts/source/tests/CLI/API/workflows/packages, or physical deletion gates.
+
+Edited / pushed repo-local docs:
+
+| Repo | Commit | Edited docs and result |
+| --- | --- | --- |
+| `med-autogrant` | `89c6b21 docs: compress MAG decisions SSOT detail` | `docs/decisions.md` now marks `Last reviewed` and routes Stage Folder Kernel schema, builder payload and conformance detail back to machine owners while keeping the durable owner boundary. `docs/history/docs-portfolio-coverage-ledger/README.md` records decisions review as topic-level coverage and removes `docs/decisions.md` as a standing unreviewed docs-governance tail. |
+
+Fresh readback boundary:
+
+- `med-autogrant`: `main...origin/main`, `HEAD=origin/main=89c6b21`; `opl-doc-doctor` remained `finding_count=0`, `active_truth_health.status=pass`, `markdown_doc_count=51`.
+- `one-person-lab`: this rollup is the only OPL docs write for this MAG follow-up. The root checkout already had a separate local structure-test commit ahead of `origin/main`; it is outside this docs-governance write set and will be pushed linearly with this rollup.
+- `med-autoscience`, `redcube-ai`, `opl-meta-agent`, and `one-person-lab-app`: no repo-local edit in this MAG decisions follow-up.
+
+Verification:
+
+- MAG docs diff check: `git diff --check -- docs/decisions.md docs/history/docs-portfolio-coverage-ledger/README.md`.
+- MAG README/docs conflict-marker scan.
+- MAG OPL Doc doctor: `finding_count=0`, `active_truth_health.status=pass`.
+
+Coverage / carry-forward:
+
+- Covered: MAG `docs/decisions.md` paragraphs that duplicated Stage Folder Kernel refs, SQLite sidecar constraints or builder payload fields as current prose truth.
+- Not covered: private inventory refresh, production/default-caller evidence, App/workbench sustained consumption, Temporal long-soak, concrete source/test/workflow/package retirement lanes, or full six-repo paragraph coverage.
+- Physical retirement remains gated by MAG replacement-owner, no-active-caller, MAG owner receipt / typed blocker roundtrip, no-forbidden-write proof and tombstone/provenance refs. This follow-up authorizes no physical deletion.
+
 ## Future Record Policy
 
 - Do not create new dated docs-governance coverage-ledger chains for ordinary process, frozen inventory, doctor transcript, branch/worktree state, command transcripts or per-run proof.
