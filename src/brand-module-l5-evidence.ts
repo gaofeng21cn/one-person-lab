@@ -577,6 +577,10 @@ function nextActionSummary(
     next_work_order_id: firstMissingRoute?.work_order_id ?? null,
     next_evidence_class_id: firstMissingRoute?.class_id ?? null,
     next_owner: firstMissingRoute?.owner ?? null,
+    next_owner_repo: firstMissingRoute?.owner_repo ?? null,
+    next_accepted_ref_shapes: firstMissingRoute?.accepted_ref_shapes ?? null,
+    next_forbidden_opl_claims: firstMissingRoute?.forbidden_opl_claims ?? null,
+    next_stop_loss: firstMissingRoute?.stop_loss ?? null,
     next_command_examples: firstMissingRoute?.owner_route_command_examples ?? null,
     missing_evidence_groups: missingEvidenceGroups,
     missing_owner_evidence_class_count:

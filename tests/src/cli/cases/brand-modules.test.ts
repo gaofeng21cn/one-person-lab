@@ -582,6 +582,10 @@ test('brand module L5 evidence gate is executable but does not claim production 
         next_work_order_id: string | null;
         next_evidence_class_id: string | null;
         next_owner: string | null;
+        next_owner_repo: string | null;
+        next_accepted_ref_shapes: string[] | null;
+        next_forbidden_opl_claims: string[] | null;
+        next_stop_loss: string[] | null;
         next_command_examples: L5Route['owner_route_command_examples'] | null;
         missing_evidence_groups: {
           missing_owner_evidence_class_ids: string[];
@@ -622,6 +626,25 @@ test('brand module L5 evidence gate is executable but does not claim production 
         `w7-brand-module-l5-${entry.module_id}-live_user_path`,
       );
       assert.equal(entry.next_action_summary.next_evidence_class_id, 'live_user_path');
+      assert.equal(
+        typeof entry.next_action_summary.next_owner_repo === 'string'
+          && entry.next_action_summary.next_owner_repo.length > 0,
+        true,
+      );
+      assert.equal(
+        entry.next_action_summary.next_accepted_ref_shapes?.includes('typed_blocker_ref'),
+        true,
+      );
+      assert.equal(
+        entry.next_action_summary.next_forbidden_opl_claims?.includes('brand_module_l5_complete'),
+        true,
+      );
+      assert.equal(
+        entry.next_action_summary.next_stop_loss?.includes(
+          'if observed refs exist but l5_can_be_claimed is false, do not add more OPL projection evidence for this requirement',
+        ),
+        true,
+      );
       assert.equal(entry.next_action_summary.missing_owner_evidence_class_count, 8);
       assert.equal(entry.next_action_summary.observed_refs_not_l5_claim_class_count, 4);
       assert.equal(entry.next_action_summary.typed_blocker_recorded_class_count, 1);
