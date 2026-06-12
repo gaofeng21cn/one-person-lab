@@ -22,17 +22,19 @@ import {
   type FamilyRuntimeTaskStatus,
 } from './family-runtime-store.ts';
 import {
+  DEFAULT_EXECUTOR_TRANSPORT_ONLY_ADMISSION_SUPERSEDED_REASON,
   defaultExecutorDomainSourceFingerprint,
   findLiveDefaultExecutorDispatchAttempt,
   findLiveDefaultExecutorStudyAttempt,
   isDefaultExecutorDispatchTask,
+  isTransportOnlyDefaultExecutorAdmissionCheckpoint,
   refreshDefaultExecutorLiveAttemptTaskLease,
 } from './family-runtime-provider-hosted-attempts.ts';
 import {
   providerAdmissionCurrentnessIdentity,
   sameProviderAdmissionCurrentnessIdentity,
 } from './family-runtime-mas-current-control-admission-currentness.ts';
-import { listStageAttemptsForTask } from './family-runtime-stage-attempts.ts';
+import { listStageAttemptsForTask, updateStageAttemptsForTask } from './family-runtime-stage-attempts.ts';
 import { activeQueueHoldForTaskInput } from './family-runtime-queue-holds.ts';
 
 const DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
@@ -337,11 +339,15 @@ function transportOnlySucceededDefaultExecutorAdmissionRedriveDecision(
   existingPayload: Record<string, unknown>,
   nextPayload: Record<string, unknown>,
 ) {
+  const existingStageAttempts = listStageAttemptsForTask(db, existing.task_id);
+  const nonTransportOnlyStageAttempts = existingStageAttempts.filter((attempt) => (
+    !isTransportOnlyDefaultExecutorAdmissionCheckpoint(attempt)
+  ));
   if (
     existing.status !== 'succeeded'
     || !isDefaultExecutorDispatch(existing, existingPayload)
     || !isDefaultExecutorDispatch(existing, nextPayload)
-    || listStageAttemptsForTask(db, existing.task_id).length > 0
+    || nonTransportOnlyStageAttempts.length > 0
   ) {
     return null;
   }
@@ -374,7 +380,42 @@ function transportOnlySucceededDefaultExecutorAdmissionRedriveDecision(
     next_source_fingerprint: sourceFingerprint(nextPayload),
     previous_next_executable_owner: optionalString(existingPayload.next_executable_owner),
     next_executable_owner: optionalString(nextPayload.next_executable_owner),
+    transport_only_stage_attempt_ids: existingStageAttempts.map((attempt) => attempt.stage_attempt_id),
   };
+}
+
+function markTransportOnlyAdmissionCheckpointsSuperseded(
+  db: DatabaseSync,
+  input: {
+    taskId: string;
+    source: string;
+  },
+) {
+  const attempts = listStageAttemptsForTask(db, input.taskId).filter(isTransportOnlyDefaultExecutorAdmissionCheckpoint);
+  if (attempts.length === 0) {
+    return [];
+  }
+  return updateStageAttemptsForTask(db, {
+    taskId: input.taskId,
+    stageAttemptIds: attempts.map((attempt) => attempt.stage_attempt_id),
+    status: 'blocked',
+    blockedReason: DEFAULT_EXECUTOR_TRANSPORT_ONLY_ADMISSION_SUPERSEDED_REASON,
+    activityEvent: {
+      activity_kind: 'mas_default_executor_transport_admission_redrive',
+      activity_status: 'blocked',
+      blocked_reason: DEFAULT_EXECUTOR_TRANSPORT_ONLY_ADMISSION_SUPERSEDED_REASON,
+      reason: 'transport_only_admission_checkpoint_without_provider_owner_answer',
+      authority_boundary: {
+        opl: 'queue_attempt_transport_checkpoint_supersession_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        domain_truth_mutation: false,
+        publication_quality_mutation: false,
+        artifact_gate_mutation: false,
+        current_package_mutation: false,
+        provider_completion_is_domain_ready: false,
+      },
+    },
+  });
 }
 
 function latestDispatchSucceededPayload(db: DatabaseSync, taskId: string) {
@@ -687,6 +728,10 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
         };
       }
       if (transportOnlyAdmissionRedrive) {
+        const supersededTransportAttempts = markTransportOnlyAdmissionCheckpointsSuperseded(db, {
+          taskId: existing.task_id,
+          source: input.source ?? 'opl-cli',
+        });
         const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
         db.prepare(`
           UPDATE tasks
@@ -718,6 +763,7 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
             previous_status: existing.status,
             next_status: nextStatus,
             active_hold_id: activeHold?.hold_id ?? null,
+            superseded_stage_attempt_ids: supersededTransportAttempts.map((attempt) => attempt.stage_attempt_id),
             ...transportOnlyAdmissionRedrive,
             authority_boundary: {
               opl: 'provider_transport_redrive_from_transport_only_admission_receipt',

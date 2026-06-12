@@ -31,6 +31,72 @@ function normalizeRouteImpact(packet: TypedStageCloseoutPacket) {
   };
 }
 
+function closeoutRefsForAttempt(
+  attempt: ReturnType<typeof inspectStageAttempt>,
+  packet: TypedStageCloseoutPacket,
+) {
+  const existingCloseoutRefs = Array.isArray(attempt.closeout_refs)
+    ? attempt.closeout_refs.filter((entry): entry is string => typeof entry === 'string')
+    : [];
+  return [...new Set([...existingCloseoutRefs, ...packet.closeout_refs])];
+}
+
+function humanGateRefsForAttempt(attempt: ReturnType<typeof inspectStageAttempt>) {
+  return Array.isArray(attempt.human_gate_refs)
+    ? attempt.human_gate_refs.filter((entry): entry is string => typeof entry === 'string')
+    : [];
+}
+
+function syncAttemptRowFromAcceptedCloseout(
+  db: DatabaseSync,
+  input: {
+    stageAttemptId: string;
+    attempt: ReturnType<typeof inspectStageAttempt>;
+    packet: TypedStageCloseoutPacket;
+    closeoutId: string;
+    observedAt: string;
+  },
+) {
+  if (
+    input.attempt.status === 'completed'
+    && input.attempt.closeout_receipt_status === 'accepted_typed_closeout'
+  ) {
+    return input.attempt;
+  }
+  const currentRow = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
+    input.stageAttemptId,
+  ) as StageAttemptRow;
+  const providerRun = {
+    ...input.attempt.provider_run,
+    provider_status: 'completed',
+    completed_at: input.observedAt,
+    last_heartbeat_at: input.observedAt,
+  };
+  const activityEvents = appendActivityEventToRow(currentRow, {
+    activity_kind: 'typed_closeout_ingest',
+    activity_status: 'completed',
+    closeout_id: input.closeoutId,
+    closeout_refs: input.packet.closeout_refs,
+  });
+  db.prepare(`
+    UPDATE stage_attempts
+    SET status = 'completed', closeout_refs_json = ?, human_gate_refs_json = ?, blocked_reason = NULL,
+      provider_run_json = ?, activity_events_json = ?, route_impact_json = ?, closeout_receipt_status = ?,
+      updated_at = ?
+    WHERE stage_attempt_id = ?
+  `).run(
+    JSON.stringify(closeoutRefsForAttempt(input.attempt, input.packet)),
+    JSON.stringify(humanGateRefsForAttempt(input.attempt)),
+    JSON.stringify(providerRun),
+    JSON.stringify(activityEvents),
+    JSON.stringify(normalizeRouteImpact(input.packet)),
+    'accepted_typed_closeout',
+    input.observedAt,
+    input.stageAttemptId,
+  );
+  return inspectStageAttempt(db, input.stageAttemptId);
+}
+
 export function ingestStageAttemptCloseout(
   db: DatabaseSync,
   input: {
@@ -77,8 +143,15 @@ export function ingestStageAttemptCloseout(
         },
       );
     }
-    return {
+    const syncedAttempt = syncAttemptRowFromAcceptedCloseout(db, {
+      stageAttemptId: input.stageAttemptId,
       attempt,
+      packet,
+      closeoutId,
+      observedAt: createdAt,
+    });
+    return {
+      attempt: syncedAttempt,
       closeout: {
         closeout_id: closeoutId,
         stage_attempt_id: input.stageAttemptId,
@@ -96,45 +169,15 @@ export function ingestStageAttemptCloseout(
   const persistedCloseouts = db.prepare(
     'SELECT COUNT(*) AS count FROM stage_attempt_closeouts WHERE closeout_id = ?',
   ).get(closeoutId) as { count: number };
-  const existingCloseoutRefs = Array.isArray(attempt.closeout_refs)
-    ? attempt.closeout_refs.filter((entry): entry is string => typeof entry === 'string')
-    : [];
-  const humanGateRefs = Array.isArray(attempt.human_gate_refs)
-    ? attempt.human_gate_refs.filter((entry): entry is string => typeof entry === 'string')
-    : [];
-  const currentRow = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
-    input.stageAttemptId,
-  ) as StageAttemptRow;
-  const providerRun = {
-    ...attempt.provider_run,
-    provider_status: 'completed',
-    completed_at: createdAt,
-    last_heartbeat_at: createdAt,
-  };
-  const activityEvents = appendActivityEventToRow(currentRow, {
-    activity_kind: 'typed_closeout_ingest',
-    activity_status: 'completed',
-    closeout_id: closeoutId,
-    closeout_refs: packet.closeout_refs,
+  const syncedAttempt = syncAttemptRowFromAcceptedCloseout(db, {
+    stageAttemptId: input.stageAttemptId,
+    attempt,
+    packet,
+    closeoutId,
+    observedAt: createdAt,
   });
-  db.prepare(`
-    UPDATE stage_attempts
-    SET status = 'completed', closeout_refs_json = ?, human_gate_refs_json = ?, blocked_reason = NULL,
-      provider_run_json = ?, activity_events_json = ?, route_impact_json = ?, closeout_receipt_status = ?,
-      updated_at = ?
-    WHERE stage_attempt_id = ?
-  `).run(
-    JSON.stringify([...new Set([...existingCloseoutRefs, ...packet.closeout_refs])]),
-    JSON.stringify(humanGateRefs),
-    JSON.stringify(providerRun),
-    JSON.stringify(activityEvents),
-    JSON.stringify(normalizeRouteImpact(packet)),
-    'accepted_typed_closeout',
-    createdAt,
-    input.stageAttemptId,
-  );
   return {
-    attempt: inspectStageAttempt(db, input.stageAttemptId),
+    attempt: syncedAttempt,
     closeout: {
       closeout_id: closeoutId,
       stage_attempt_id: input.stageAttemptId,

@@ -12,6 +12,7 @@ import { normalizeTaskScopeForStorage, taskRowMatchesScope } from './family-runt
 import { markStageAttemptOperatorHoldRequested } from './family-runtime-stage-attempt-control.ts';
 import {
   listStageAttemptsForTask,
+  syncStageAttemptFromMaterializedCloseout,
   syncStageAttemptFromTemporalTerminalObservation,
   updateStageAttemptsForTask,
 } from './family-runtime-stage-attempts.ts';
@@ -588,6 +589,12 @@ async function syncObservableDefaultExecutorAttempt(
   attempt: StageAttemptPayload,
   queryTemporalStageAttempt?: QueryTemporalStageAttempt,
 ) {
+  const materializedCloseoutAttempt = syncStageAttemptFromMaterializedCloseout(db, {
+    stageAttemptId: attempt.stage_attempt_id,
+  });
+  if (materializedCloseoutAttempt) {
+    return materializedCloseoutAttempt;
+  }
   if (!queryTemporalStageAttempt) {
     return attempt;
   }
@@ -655,9 +662,6 @@ async function syncRunningDefaultExecutorTaskAttempts(
     queryTemporalStageAttempt?: QueryTemporalStageAttempt;
   } = {},
 ) {
-  if (!options.queryTemporalStageAttempt) {
-    return 0;
-  }
   let terminalSyncedCount = 0;
   for (const row of rows) {
     if (row.status !== 'running') {

@@ -18,7 +18,10 @@ export {
   inspectStageAttemptWithCurrentProviderReadiness,
   listStageAttemptsWithCurrentProviderReadiness,
 } from './family-runtime-stage-attempts-parts/inspect.ts';
-export { syncStageAttemptFromTemporalTerminalObservation } from './family-runtime-stage-attempts-parts/temporal-terminal-observation.ts';
+export {
+  syncStageAttemptFromMaterializedCloseout,
+  syncStageAttemptFromTemporalTerminalObservation,
+} from './family-runtime-stage-attempts-parts/temporal-terminal-observation.ts';
 export { signalStageAttempt } from './family-runtime-stage-attempts-parts/signals-heartbeat.ts';
 export { recordStageAttemptActivityHeartbeat } from './family-runtime-stage-attempts-parts/signals-heartbeat.ts';
 export { ingestStageAttemptCloseout } from './family-runtime-stage-attempts-parts/closeout-ingest.ts';

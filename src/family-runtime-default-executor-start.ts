@@ -11,6 +11,7 @@ import {
 import {
   inspectStageAttempt,
   listStageAttemptsForTask,
+  syncStageAttemptFromMaterializedCloseout,
   syncStageAttemptFromTemporalTerminalObservation,
   updateStageAttemptsForTask,
 } from './family-runtime-stage-attempts.ts';
@@ -77,6 +78,12 @@ async function syncTerminalStageAttemptIfObservable(
   attempt: StageAttemptPayload,
   queryStageAttempt: QueryTemporalStageAttemptReadModel,
 ) {
+  const materializedCloseoutAttempt = syncStageAttemptFromMaterializedCloseout(db, {
+    stageAttemptId: attempt.stage_attempt_id,
+  });
+  if (materializedCloseoutAttempt) {
+    return materializedCloseoutAttempt;
+  }
   const observation = await queryStageAttempt(attempt, { paths });
   return syncStageAttemptFromTemporalTerminalObservation(db, observation) ?? attempt;
 }

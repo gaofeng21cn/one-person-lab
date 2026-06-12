@@ -3,6 +3,9 @@ import { WorkflowNotFoundError } from '@temporalio/common';
 
 import {
   assert,
+  fs,
+  os,
+  path,
   test,
 } from './helpers.ts';
 import {
@@ -509,6 +512,175 @@ test('family-runtime syncs a terminal same-study MAS default executor attempt be
     });
   } finally {
     db.close();
+  }
+});
+
+test('family-runtime consumes same-attempt materialized MAS closeout before same-study live skip', async () => {
+  const db = new DatabaseSync(':memory:');
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-mas-materialized-closeout-test-'));
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      const reviewerPayload = {
+        ...defaultExecutorPayloadForOwner({
+          sourceFingerprint: 'publication-blockers::gate-replay-current',
+          actionType: 'run_gate_clearing_batch',
+          nextOwner: 'ai_reviewer',
+          dispatchAuthority: 'consumer_default_executor_dispatch',
+          dispatchRef: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/run_gate_clearing_batch.json',
+        }),
+        workspace_root: workspaceRoot,
+        work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+        work_unit_fingerprint: 'publication-blockers::gate-replay-current',
+      };
+      const writePayload = {
+        ...defaultExecutorPayloadForOwner({
+          sourceFingerprint: 'publication-blockers::0915410f804b3697',
+          actionType: 'run_quality_repair_batch',
+          nextOwner: 'write',
+          dispatchAuthority: 'quality_repair_batch_writer_handoff',
+          dispatchRef: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json',
+        }),
+        workspace_root: workspaceRoot,
+        work_unit_id: 'medical_prose_write_repair',
+        work_unit_fingerprint: 'publication-blockers::0915410f804b3697',
+      };
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-materialized-closeout-reviewer',
+        payload: reviewerPayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:run_gate_clearing_batch:materialized-closeout',
+      });
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-materialized-closeout-writer',
+        payload: writePayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:after-materialized-closeout',
+      });
+      db.prepare("UPDATE tasks SET status = 'running', attempts = 1 WHERE task_id = ?").run(
+        'task-mas-default-materialized-closeout-reviewer',
+      );
+      db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id = ?").run(
+        'task-mas-default-materialized-closeout-writer',
+      );
+      const reviewerRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-materialized-closeout-reviewer',
+      ) as Parameters<typeof ensureProviderHostedStageAttempt>[1];
+      const writerRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-materialized-closeout-writer',
+      ) as Parameters<typeof startDefaultExecutorStageAttempt>[2]['row'];
+      const reviewerAttempt = ensureProviderHostedStageAttempt(db, reviewerRow, reviewerPayload);
+      assert.ok(reviewerAttempt);
+      db.prepare(`
+        UPDATE stage_attempts
+        SET status = 'running',
+          provider_run_json = json_set(provider_run_json, '$.provider_status', 'running')
+        WHERE stage_attempt_id = ?
+      `).run(reviewerAttempt.stage_attempt_id);
+      const closeoutDir = path.join(
+        workspaceRoot,
+        'studies',
+        '002-dm-china-us-mortality-attribution',
+        'artifacts',
+        'supervision',
+        'consumer',
+        'default_executor_execution',
+      );
+      fs.mkdirSync(closeoutDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(closeoutDir, `${reviewerAttempt.stage_attempt_id}.closeout.json`),
+        `${JSON.stringify({
+          surface_kind: 'stage_attempt_closeout_packet',
+          stage_attempt_id: reviewerAttempt.stage_attempt_id,
+          closeout_refs: [
+            `studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_execution/${reviewerAttempt.stage_attempt_id}.closeout.json`,
+            'studies/002-dm-china-us-mortality-attribution/artifacts/controller/gate_clearing_batch/latest.json',
+          ],
+          consumed_refs: ['dispatch:dm002/gate-replay'],
+          consumed_memory_refs: [],
+          writeback_receipt_refs: [],
+          rejected_writes: [],
+          next_owner: 'write',
+          domain_ready_verdict: 'domain_gate_pending',
+          route_impact: {
+            action_type: 'run_gate_clearing_batch',
+            work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+            next_forced_delta: {
+              owner: 'write',
+              work_unit_id: 'medical_prose_write_repair',
+            },
+          },
+          authority_boundary: {
+            opl: 'default_executor_materialized_closeout_transport_only',
+            domain: 'truth_quality_artifact_gate_owner',
+          },
+        }, null, 2)}\n`,
+        'utf8',
+      );
+      const blockedWriterAttempt = ensureProviderHostedStageAttempt(db, writerRow, writePayload);
+      let temporalStartCount = 0;
+
+      const result = await startDefaultExecutorStageAttempt(db, familyRuntimePaths(), {
+        row: writerRow,
+        payload: writePayload,
+        providerHostedAttempt: blockedWriterAttempt,
+        temporalProviderModule: async () => ({
+          startTemporalStageAttemptWorkflow: async () => {
+            temporalStartCount += 1;
+            return { surface_kind: 'temporal_stage_attempt_start_receipt' };
+          },
+        }),
+        queryTemporalStageAttemptReadModel: async () => ({
+          surface_kind: 'temporal_stage_attempt_query_unavailable',
+          provider_kind: 'temporal',
+          stage_attempt_id: reviewerAttempt.stage_attempt_id,
+          workflow_id: reviewerAttempt.workflow_id,
+          run_id: 'test-stale-running-run',
+          workflow_status: 'RUNNING',
+          status: 'unavailable',
+          reason: 'temporal_stage_attempt_query_unavailable',
+          error: {
+            code: 'temporal_stage_attempt_query_unavailable',
+            message: 'Temporal read model still reports the old workflow as non-terminal.',
+          },
+          authority_boundary: {
+            opl: 'local_stage_attempt_ledger_projection_only',
+            domain: 'truth_quality_artifact_gate_owner',
+          },
+        }),
+      });
+      const reviewerTask = db.prepare('SELECT status, last_error FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-materialized-closeout-reviewer',
+      ) as { status: string; last_error: string | null };
+      const [syncedReviewerAttempt] = listStageAttemptsForTask(
+        db,
+        'task-mas-default-materialized-closeout-reviewer',
+      );
+      const writerTask = db.prepare('SELECT status, attempts FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-materialized-closeout-writer',
+      ) as { status: string; attempts: number };
+      const writerAttempts = listStageAttemptsForTask(db, 'task-mas-default-materialized-closeout-writer');
+      const skipEvent = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_default_executor_live_attempt_skip'
+        LIMIT 1
+      `).get('task-mas-default-materialized-closeout-writer') as { payload_json: string } | undefined;
+
+      assert.equal(blockedWriterAttempt, null);
+      assert.equal(reviewerTask.status, 'succeeded');
+      assert.equal(reviewerTask.last_error, null);
+      assert.equal(syncedReviewerAttempt.status, 'completed');
+      assert.equal(syncedReviewerAttempt.closeout_receipt_status, 'accepted_typed_closeout');
+      assert.equal(result.status, 'running');
+      assert.equal(temporalStartCount, 1);
+      assert.equal(writerTask.status, 'running');
+      assert.equal(writerTask.attempts, 1);
+      assert.equal(writerAttempts.length, 1);
+      assert.equal(writerAttempts[0].status, 'running');
+      assert.equal(skipEvent, undefined);
+    });
+  } finally {
+    db.close();
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });
 

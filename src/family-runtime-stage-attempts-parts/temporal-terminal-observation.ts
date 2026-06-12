@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 import {
@@ -78,6 +80,104 @@ function isTemporalStageAttemptTerminalObservation(
     && typeof (observation as Record<string, unknown>).stage_attempt_id === 'string'
     && typeof (observation as Record<string, unknown>).workflow_id === 'string'
   );
+}
+
+function optionalString(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function readJsonRecordFile(filePath: string) {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
+    return isRecord(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function workspaceRootFromRow(row: StageAttemptRow) {
+  const locator = parseStageAttemptJsonObject(row.workspace_locator_json);
+  return optionalString(locator.workspace_root) ?? optionalString(locator.repo_root);
+}
+
+function studyIdFromRow(row: StageAttemptRow) {
+  const locator = parseStageAttemptJsonObject(row.workspace_locator_json);
+  return optionalString(locator.study_id) ?? optionalString(locator.quest_id);
+}
+
+function defaultExecutorMaterializedCloseoutPath(row: StageAttemptRow) {
+  const workspaceRoot = workspaceRootFromRow(row);
+  const studyId = studyIdFromRow(row);
+  if (
+    row.stage_id !== 'domain_owner/default-executor-dispatch'
+    || row.executor_kind !== 'codex_cli'
+    || !workspaceRoot
+    || !studyId
+  ) {
+    return null;
+  }
+  return path.join(
+    workspaceRoot,
+    'studies',
+    studyId,
+    'artifacts',
+    'supervision',
+    'consumer',
+    'default_executor_execution',
+    `${row.stage_attempt_id}.closeout.json`,
+  );
+}
+
+function sameAttemptMaterializedCloseoutPacket(row: StageAttemptRow) {
+  const closeoutPath = defaultExecutorMaterializedCloseoutPath(row);
+  if (!closeoutPath || !fs.existsSync(closeoutPath)) {
+    return null;
+  }
+  const packet = readJsonRecordFile(closeoutPath);
+  if (!packet || optionalString(packet.stage_attempt_id) !== row.stage_attempt_id) {
+    return null;
+  }
+  const surfaceKind = optionalString(packet.surface_kind);
+  if (
+    surfaceKind !== 'stage_attempt_closeout_packet'
+    && surfaceKind !== 'stage_memory_closeout_packet'
+    && surfaceKind !== 'domain_stage_closeout_packet'
+  ) {
+    return null;
+  }
+  return packet;
+}
+
+export function syncStageAttemptFromMaterializedCloseout(
+  db: DatabaseSync,
+  input: {
+    stageAttemptId: string;
+  },
+) {
+  const row = getStageAttemptRow(db, input.stageAttemptId);
+  if (!row) {
+    return null;
+  }
+  const packet = sameAttemptMaterializedCloseoutPacket(row);
+  if (!packet) {
+    return null;
+  }
+  const synced = ingestStageAttemptCloseout(db, {
+    stageAttemptId: input.stageAttemptId,
+    packet,
+  }).attempt;
+  const syncedRow = getStageAttemptRow(db, input.stageAttemptId);
+  if (syncedRow) {
+    markLinkedDefaultExecutorTaskCompleted(db, {
+      row: syncedRow,
+      observedAt: nowIso(),
+    });
+  }
+  return synced;
 }
 
 function temporalTerminalFailureReason(observation: TemporalStageAttemptTerminalObservation) {

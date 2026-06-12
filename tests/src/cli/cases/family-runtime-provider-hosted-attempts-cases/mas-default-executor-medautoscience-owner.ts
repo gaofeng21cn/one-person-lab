@@ -146,6 +146,123 @@ test('family-runtime requeues transport-only succeeded MAS-owned readiness admis
   }
 });
 
+test('family-runtime requeues transport-only succeeded MAS admission with checkpointed admission attempt', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    createQueueTables(db);
+    const taskId = 'task-mas-default-readiness-transport-only-checkpoint';
+    const dedupeKey = 'mas:dm-cvd:002:default-executor:complete_medical_paper_readiness_surface:transport-only-checkpoint';
+    const payload = readinessSurfacePayload('readiness-transport-only-checkpoint-source');
+    insertSucceededTask(db, { taskId, payload, dedupeKey });
+    db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id = ?").run(taskId);
+    const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as Parameters<
+      typeof ensureProviderHostedStageAttempt
+    >[1];
+    const transportAttempt = ensureProviderHostedStageAttempt(db, row, payload);
+    assert.ok(transportAttempt);
+    db.prepare(`
+      UPDATE tasks
+      SET status = 'succeeded',
+        attempts = 1,
+        last_error = NULL,
+        dead_letter_reason = NULL
+      WHERE task_id = ?
+    `).run(taskId);
+    db.prepare(`
+      UPDATE stage_attempts
+      SET status = 'checkpointed',
+        closeout_refs_json = ?,
+        closeout_receipt_status = 'accepted_typed_closeout',
+        provider_run_json = json_set(
+          provider_run_json,
+          '$.provider_status', 'checkpointed',
+          '$.completed_at', '2026-06-11T18:24:03.527Z'
+        )
+      WHERE stage_attempt_id = ?
+    `).run(
+      JSON.stringify(['runtime/artifacts/opl_family_domain_handler/dispatch_receipts/34ebb605e6ea30432656.json']),
+      transportAttempt.stage_attempt_id,
+    );
+    insertEvent(db, {
+      taskId,
+      domainId: 'medautoscience',
+      eventType: 'task_dispatch_succeeded',
+      source: 'test-legacy-domain-handler',
+      payload: {
+        output: {
+          surface_kind: 'mas_family_domain_handler_dispatch_receipt',
+          accepted: true,
+          opl_attempt_admission_requested: true,
+          opl_attempt_admission_status: 'requested',
+          dispatch: {
+            execution_policy: 'opl_default_executor_stage_attempt_admission',
+            result: {
+              status: 'opl_attempt_admission_requested',
+              next_owner: 'MedAutoScience',
+            },
+          },
+        },
+      },
+    });
+
+    const result = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload,
+      dedupeKey,
+      source: 'test-domain-export-replay',
+    });
+    const task = db.prepare('SELECT status, attempts, last_error, dead_letter_reason FROM tasks WHERE task_id = ?').get(
+      taskId,
+    ) as { status: string; attempts: number; last_error: string | null; dead_letter_reason: string | null };
+    const attemptsAfterRequeue = db.prepare(`
+      SELECT stage_attempt_id, status, blocked_reason
+      FROM stage_attempts
+      WHERE task_id = ?
+      ORDER BY created_at ASC
+    `).all(taskId) as Array<{ stage_attempt_id: string; status: string; blocked_reason: string | null }>;
+    const requeueEvent = db.prepare(`
+      SELECT payload_json
+      FROM events
+      WHERE task_id = ? AND event_type = 'task_requeued_from_transport_only_succeeded_default_executor_admission'
+      LIMIT 1
+    `).get(taskId) as { payload_json: string } | undefined;
+
+    assert.equal(result.accepted, true);
+    assert.equal(result.requeued_from_terminal, true);
+    assert.equal(result.idempotent_noop, false);
+    assert.equal(result.task?.status, 'queued');
+    assert.equal(task.status, 'queued');
+    assert.equal(task.attempts, 0);
+    assert.equal(task.last_error, null);
+    assert.equal(task.dead_letter_reason, null);
+    assert.equal(attemptsAfterRequeue.length, 1);
+    assert.equal(attemptsAfterRequeue[0].stage_attempt_id, transportAttempt.stage_attempt_id);
+    assert.equal(attemptsAfterRequeue[0].status, 'blocked');
+    assert.equal(
+      attemptsAfterRequeue[0].blocked_reason,
+      'transport_only_admission_checkpoint_superseded_by_provider_admission_requeue',
+    );
+    assert.ok(requeueEvent);
+    const requeuePayload = JSON.parse(requeueEvent.payload_json);
+    assert.equal(requeuePayload.reason, 'transport_only_admission_without_provider_stage_attempt');
+    assert.deepEqual(requeuePayload.superseded_stage_attempt_ids, [transportAttempt.stage_attempt_id]);
+
+    const refreshedRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as Parameters<
+      typeof ensureProviderHostedStageAttempt
+    >[1];
+    const providerAttempt = ensureProviderHostedStageAttempt(db, refreshedRow, payload);
+    const attemptsAfterNewAdmission = listStageAttemptsForTask(db, taskId);
+
+    assert.ok(providerAttempt);
+    assert.notEqual(providerAttempt.stage_attempt_id, transportAttempt.stage_attempt_id);
+    assert.equal(providerAttempt.status, 'queued');
+    assert.equal(attemptsAfterNewAdmission.length, 2);
+  } finally {
+    db.close();
+  }
+});
+
 test('family-runtime requeues succeeded MAS readiness owner action missing Stage Native owner answer', () => {
   const db = new DatabaseSync(':memory:');
   try {

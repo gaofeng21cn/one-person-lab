@@ -100,6 +100,15 @@ function recordList(value: unknown) {
   return Array.isArray(value) ? value.filter(isRecord) : [];
 }
 
+function isTransportOnlyAdmissionDispatchReceiptRef(value: unknown) {
+  if (typeof value !== 'string') {
+    return false;
+  }
+  return value.includes('/runtime/artifacts/opl_family_domain_handler/dispatch_receipts/')
+    || value.startsWith('runtime/artifacts/opl_family_domain_handler/dispatch_receipts/')
+    || value.includes('/opl_family_domain_handler/dispatch_receipts/');
+}
+
 function stringList(value: unknown) {
   return Array.isArray(value)
     ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
@@ -154,6 +163,8 @@ function sameOptionalStringField(left: Record<string, unknown>, right: Record<st
 }
 
 export const DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
+export const DEFAULT_EXECUTOR_TRANSPORT_ONLY_ADMISSION_SUPERSEDED_REASON =
+  'transport_only_admission_checkpoint_superseded_by_provider_admission_requeue';
 const DEFAULT_EXECUTOR_NEXT_OWNERS = new Set([
   'write',
   'ai_reviewer',
@@ -175,6 +186,21 @@ const DEFAULT_EXECUTOR_CROSS_TASK_LIVE_TASK_STATUSES = new Set(['queued', 'runni
 const DEFAULT_EXECUTOR_TERMINAL_PROVIDER_STATUSES = new Set(['completed', 'failed', 'blocked', 'timed_out']);
 const DEFAULT_EXECUTOR_SUPERSEDED_REASON = 'mas_default_executor_superseded_by_current_source';
 const DEFAULT_EXECUTOR_TASK_LEASE_MS = 5 * 60 * 1000;
+
+export function isTransportOnlyDefaultExecutorAdmissionCheckpoint(
+  attempt: ReturnType<typeof listStageAttempts>[number],
+) {
+  if (
+    attempt.stage_id !== DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
+    || attempt.executor_kind !== 'codex_cli'
+    || attempt.status !== 'checkpointed'
+  ) {
+    return false;
+  }
+  const closeoutRefs = Array.isArray(attempt.closeout_refs) ? attempt.closeout_refs : [];
+  return closeoutRefs.length > 0
+    && closeoutRefs.every(isTransportOnlyAdmissionDispatchReceiptRef);
+}
 
 function hasActiveDefaultExecutorTaskLease(db: DatabaseSync, taskId: string | null) {
   if (!taskId) {
@@ -929,10 +955,17 @@ export function ensureProviderHostedStageAttempt(
   const expectedSourceFingerprint = sourceFingerprintForProviderHostedTask(row, payload);
   const stageId = stageIdForProviderHostedTask(row, payload);
   const workspaceLocator = workspaceLocatorForProviderHostedTask(row, payload);
+  const forceNewAttemptAfterTransportOnlyAdmission = isDefaultExecutorDispatchTask(row, payload)
+    && existingAttempts.some((attempt) => (
+      attempt.provider_kind === providerKind
+      && attempt.source_fingerprint === expectedSourceFingerprint
+      && attempt.blocked_reason === DEFAULT_EXECUTOR_TRANSPORT_ONLY_ADMISSION_SUPERSEDED_REASON
+    ));
   if (!options.newAttempt && isDefaultExecutorDispatchTask(row, payload) && existingAttempts.some((attempt) => (
     attempt.provider_kind === providerKind
       && DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES.has(attempt.status)
       && attempt.blocked_reason !== DEFAULT_EXECUTOR_SUPERSEDED_REASON
+      && attempt.blocked_reason !== DEFAULT_EXECUTOR_TRANSPORT_ONLY_ADMISSION_SUPERSEDED_REASON
   ))) {
     return null;
   }
@@ -962,6 +995,7 @@ export function ensureProviderHostedStageAttempt(
   }
   if (!options.newAttempt && existingAttempts.some((attempt) => (
     attempt.provider_kind === providerKind && attempt.source_fingerprint === expectedSourceFingerprint
+    && attempt.blocked_reason !== DEFAULT_EXECUTOR_TRANSPORT_ONLY_ADMISSION_SUPERSEDED_REASON
   ))) {
     return null;
   }
@@ -985,7 +1019,7 @@ export function ensureProviderHostedStageAttempt(
     sourceFingerprint: expectedSourceFingerprint,
     executorKind: isDefaultExecutorDispatchTask(row, payload) ? 'codex_cli' : 'domain_handler',
     taskId: row.task_id,
-    newAttempt: options.newAttempt,
+    newAttempt: options.newAttempt === true || forceNewAttemptAfterTransportOnlyAdmission,
     checkpointRefs: isDefaultExecutorDispatchTask(row, payload)
       ? defaultExecutorStagePacketRefs(payload)
       : undefined,
@@ -1005,7 +1039,10 @@ export function ensureProviderHostedStageAttempt(
       stage_id: stageId,
       provider_kind: result.attempt.provider_kind,
       task_kind: row.task_kind,
-      new_attempt: options.newAttempt === true,
+      new_attempt: options.newAttempt === true || forceNewAttemptAfterTransportOnlyAdmission,
+      new_attempt_reason: forceNewAttemptAfterTransportOnlyAdmission
+        ? DEFAULT_EXECUTOR_TRANSPORT_ONLY_ADMISSION_SUPERSEDED_REASON
+        : null,
       stage_launch_admission_gate: admissionGate,
     },
   });
