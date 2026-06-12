@@ -462,6 +462,7 @@ function missingClassIds(entry: BrandModuleL5OperatingEvidenceEntry) {
 
 const l5ContractClassIds: BrandModuleL5EvidenceClassId[] = [
   'live_user_path',
+  'ordinary_app_experience',
   'cross_agent_scaleout',
   'long_soak_recovery',
   'release_install_evidence',

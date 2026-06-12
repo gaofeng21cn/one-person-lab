@@ -25,7 +25,7 @@ Fresh eleven-repo local summary from `2026-06-08T09:10:19Z` after root checkout 
 
 | Repo | needs_design_pass | mechanical_residue | public_surface_risk | missing_verify_entry |
 | --- | ---: | ---: | ---: | --- |
-| `one-person-lab` | 16 | 0 | 6 | `false` |
+| `one-person-lab` | 27 | 0 | 8 | `false` |
 | `med-autoscience` | 34 | 0 | 5 | `false` |
 | `med-autogrant` | 1 | 0 | 5 | `false` |
 | `redcube-ai` | 0 | 0 | 9 | `false` |
@@ -67,7 +67,7 @@ Support repos can be lighter but should still be recognizable: `one-person-lab` 
 
 | Repo | Current structure finding | Action |
 | --- | --- | --- |
-| `one-person-lab` | Fresh scan now reports 16 `needs_design_pass` source/test files and 6 public-surface risks. No mechanical residue and no missing verify entry. | Treat as OPL-owned natural source-boundary queue. Prioritize `contracts.ts` / public command specs / workspace diagnostics / domain-pack compiler / runtime enqueue / workspace lifecycle when their owner surfaces are next touched; do not turn this support snapshot into a blocking backlog. |
+| `one-person-lab` | Fresh scan now reports 27 `needs_design_pass` source/test files and 8 public-surface risks after the 2026-06-12 experience-contract expansion. No mechanical residue and no missing verify entry. | Treat as OPL-owned natural source-boundary queue. Prioritize `contracts.ts` / public command specs / workspace diagnostics / domain-pack compiler / runtime enqueue / workspace lifecycle when their owner surfaces are next touched; do not turn this support snapshot into a blocking backlog. |
 | `med-autoscience` | Fresh scan reports 34 `needs_design_pass` items and 5 public-surface risks. No mechanical residue and no missing verify entry. | MAS remains the highest residual source-shape advisory queue. Handle only from MAS owner lanes with fresh repo state, especially domain action materializer, owner-route handoff/reconcile, domain health diagnostic, study progress / progress-first projection and dispatch surfaces. |
 | `med-autogrant` | Fresh scan reports one source-shape item, `src/med_autogrant/opl_standard_pack.py`, plus 5 public-surface risks. | Treat as MAG owner-boundary review for standard-pack extraction and generated schema/contract modularity; no OPL-side physical edit is authorized by this snapshot. |
 | `redcube-ai` | Fresh scan has no source-shape finding; public-surface risk remains in generated/public contracts and two shared buckets. | Continue generated/public-surface modularity and shared-bucket ownership review from RCA lanes; no source split is currently implied. |
@@ -116,8 +116,10 @@ public_surface_risk:
 - `contracts/opl-framework/workspace-index.schema.json`
 - `contracts/family-orchestration/family-stage-proof-bundle.schema.json`
 - `contracts/opl-framework/agent-lab-contract.json`
+- `contracts/opl-framework/brand-module-l5-operating-evidence.json`
+- `contracts/opl-framework/target-operating-architecture-contract.json`
 
-Interpretation: OPL framework source/test shape has fresh source-boundary advisory items again after later feature growth. These are not fail-closed blockers and not proof of poor functionality. Future cleanup should choose semantic owners such as contract loader, public command spec cases, workspace diagnostics, generated-interface read model, skills registry, runtime enqueue and workspace lifecycle.
+Interpretation: OPL framework source/test shape has fresh source-boundary advisory items again after later feature growth. The two experience contracts remain public-surface risk items because this tranche deliberately made the target architecture and L5 evidence surfaces more explicit; that is a structure advisory signal, not a functional blocker. Future cleanup should choose semantic owners such as contract loader, public command spec cases, workspace diagnostics, generated-interface read model, skills registry, runtime enqueue and workspace lifecycle.
 
 ### med-autoscience
 

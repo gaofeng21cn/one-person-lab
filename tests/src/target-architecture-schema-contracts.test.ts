@@ -664,6 +664,32 @@ test('target operating architecture contract freezes resource, authority, lane, 
       gui_truth_owner: string;
       framework_role: string;
     };
+    experience_operating_model: {
+      model_id: string;
+      purpose: string;
+      default_user_path: {
+        planning_root: string;
+        first_screen_policy: string;
+        primary_read_surface: string;
+        drilldown_policy: string;
+      };
+      target_axes: Array<{
+        axis_id: string;
+        owner_modules: string[];
+        success_policy: string;
+        machine_checks: string[];
+        forbidden_regressions: string[];
+      }>;
+      flagship_agent_default: {
+        agent_id: string;
+        expected_path: string;
+        domain_pack_role: string;
+        opl_role: string;
+        private_runtime_disposition: string;
+      };
+      authority_boundary: Record<string, boolean>;
+      forbidden_claims: string[];
+    };
     agent_lab_improvement_plane: {
       role: string;
       may_produce: string[];
@@ -697,6 +723,16 @@ test('target operating architecture contract freezes resource, authority, lane, 
       implementation_lane_refs: string[];
       authority_boundary: Record<string, boolean>;
       forbidden_claims: string[];
+    };
+    flagship_experience_mapping: {
+      mapping_id: string;
+      flagship_agent_id: string;
+      standard_agent_shape: string;
+      journey_artifacts: string[];
+      private_platform_residue_inputs: string[];
+      opl_contract_surfaces: string[];
+      false_ready_claims: string[];
+      authority_boundary: Record<string, boolean>;
     };
     authority_boundary: Record<string, boolean>;
     forbidden_claims: string[];
@@ -977,6 +1013,71 @@ test('target operating architecture contract freezes resource, authority, lane, 
   assert.equal(contract.app_console_policy.gui_truth_owner, 'one-person-lab-app');
   assert.equal(contract.app_console_policy.framework_role, 'state_action_projection_producer_only');
 
+  assert.equal(contract.experience_operating_model.model_id, 'opl_family_ideal_experience_operating_model.v1');
+  assert.equal(contract.experience_operating_model.default_user_path.planning_root, 'current_owner_delta');
+  assert.equal(
+    contract.experience_operating_model.default_user_path.primary_read_surface,
+    'opl app state --profile fast --json',
+  );
+  assert.equal(
+    contract.experience_operating_model.default_user_path.first_screen_policy,
+    'owner_delta_action_artifact_or_blocker_first',
+  );
+  assert.equal(
+    contract.experience_operating_model.default_user_path.drilldown_policy,
+    'explicit_full_detail_only',
+  );
+  const experienceAxes = new Map(
+    contract.experience_operating_model.target_axes.map((axis) => [axis.axis_id, axis]),
+  );
+  assert.deepEqual([...experienceAxes.keys()], [
+    'running_smoothness',
+    'output_quality',
+    'brand_feel',
+  ]);
+  assert.deepEqual(experienceAxes.get('running_smoothness')?.owner_modules, [
+    'runway',
+    'stagecraft',
+    'console',
+  ]);
+  assert.equal(
+    experienceAxes.get('running_smoothness')?.machine_checks.includes('exactly_one_default_next_action_or_owner_wait'),
+    true,
+  );
+  assert.equal(
+    experienceAxes.get('output_quality')?.machine_checks.includes('owner_answer_or_typed_blocker_required_for_semantic_closeout'),
+    true,
+  );
+  assert.equal(
+    experienceAxes.get('brand_feel')?.machine_checks.includes('brand_module_profile_applies_to_default_surfaces'),
+    true,
+  );
+  for (const axis of experienceAxes.values()) {
+    assert.equal(axis.forbidden_regressions.includes('ready_claim_without_owner_evidence'), true);
+    assert.equal(axis.forbidden_regressions.includes('diagnostic_tail_becomes_default_route'), true);
+  }
+  assert.equal(contract.experience_operating_model.flagship_agent_default.agent_id, 'mas');
+  assert.equal(
+    contract.experience_operating_model.flagship_agent_default.expected_path,
+    'declarative_domain_pack_plus_opl_generated_hosted_surfaces_plus_minimal_domain_authority_kernel',
+  );
+  assert.equal(
+    contract.experience_operating_model.flagship_agent_default.private_runtime_disposition,
+    'migration_input_not_target_architecture',
+  );
+  for (const [claim, allowed] of Object.entries(contract.experience_operating_model.authority_boundary)) {
+    assert.equal(allowed, false, `experience model must not claim ${claim}`);
+  }
+  for (const forbiddenClaim of [
+    'ideal_experience_contract_is_l5_ready',
+    'smooth_runtime_is_domain_ready',
+    'quality_axis_is_quality_verdict',
+    'brand_profile_is_release_ready',
+    'mas_flagship_mapping_is_paper_done',
+  ]) {
+    assert.equal(contract.experience_operating_model.forbidden_claims.includes(forbiddenClaim), true);
+  }
+
   assert.equal(contract.agent_lab_improvement_plane.role, 'refs_only_improvement_control_plane');
   assert.equal(contract.agent_lab_improvement_plane.may_produce.includes('work_order_ref'), true);
   assert.equal(contract.agent_lab_improvement_plane.may_produce.includes('promotion_proposal_ref'), true);
@@ -1079,6 +1180,40 @@ test('target operating architecture contract freezes resource, authority, lane, 
       true,
       forbiddenClaim,
     );
+  }
+
+  assert.equal(contract.flagship_experience_mapping.mapping_id, 'mas_research_foundry_flagship_experience.v1');
+  assert.equal(contract.flagship_experience_mapping.flagship_agent_id, 'mas');
+  assert.equal(
+    contract.flagship_experience_mapping.standard_agent_shape,
+    'Declarative Domain Pack + OPL generated/hosted surfaces + minimal authority functions',
+  );
+  assert.deepEqual(contract.flagship_experience_mapping.journey_artifacts, [
+    'Evidence Map',
+    'Analysis Pack',
+    'Manuscript Draft',
+    'Reviewer Letter',
+    'Revision Packet',
+    'Publication Handoff',
+  ]);
+  for (const residueInput of [
+    'private_scheduler',
+    'private_runner',
+    'private_workbench',
+    'private_status_shell',
+  ]) {
+    assert.equal(contract.flagship_experience_mapping.private_platform_residue_inputs.includes(residueInput), true);
+  }
+  for (const falseClaim of [
+    'mas_ready',
+    'paper_done',
+    'brand_l5_done',
+    'production_ready',
+  ]) {
+    assert.equal(contract.flagship_experience_mapping.false_ready_claims.includes(falseClaim), true);
+  }
+  for (const [claim, allowed] of Object.entries(contract.flagship_experience_mapping.authority_boundary)) {
+    assert.equal(allowed, false, `MAS flagship mapping must not claim ${claim}`);
   }
 
   for (const [claim, allowed] of Object.entries(contract.authority_boundary)) {

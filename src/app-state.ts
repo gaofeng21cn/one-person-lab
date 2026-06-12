@@ -462,6 +462,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
     actions,
     uiDefaults,
     runtimeActivityItems,
+    brandSystemProfile: contracts.brandSystemProfile as unknown as JsonRecord,
     currentOwnerDeltaReadModel,
   });
 

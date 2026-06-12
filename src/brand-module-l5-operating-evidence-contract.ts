@@ -27,6 +27,7 @@ const BRAND_MODULE_IDS = [
 
 const BRAND_MODULE_L5_EVIDENCE_CLASSES = [
   'live_user_path',
+  'ordinary_app_experience',
   'cross_agent_scaleout',
   'long_soak_recovery',
   'release_install_evidence',

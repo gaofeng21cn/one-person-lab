@@ -363,6 +363,7 @@ export type BrandModuleL5TargetLevel = 'L5_production_operating_maturity';
 
 export type BrandModuleL5EvidenceClassId =
   | 'live_user_path'
+  | 'ordinary_app_experience'
   | 'cross_agent_scaleout'
   | 'long_soak_recovery'
   | 'release_install_evidence'
@@ -670,6 +671,28 @@ export interface BrandSystemReceiptBlockerLanguage {
   wording_rules: string[];
 }
 
+export interface BrandSystemOrdinaryAppExperienceAxis {
+  axis_id: 'running_fluency' | 'output_quality' | 'brand_feel';
+  user_visible_goal: string;
+  app_projection_ref: string;
+  l5_evidence_class_ref: string;
+  must_not_claim: string[];
+}
+
+export interface BrandSystemOrdinaryAppExperience {
+  surface_kind: 'opl_brand_ordinary_app_experience_profile';
+  default_read_surface_ref: string;
+  experience_axes: BrandSystemOrdinaryAppExperienceAxis[];
+  l5_evidence_refs_only: true;
+  authority_boundary: {
+    can_claim_l5: false;
+    can_claim_app_release_ready: false;
+    can_authorize_quality_verdict: false;
+    can_create_owner_receipt: false;
+    can_create_typed_blocker: false;
+  };
+}
+
 export interface BrandSystemProfileContract {
   version: string;
   scope: string;
@@ -688,6 +711,7 @@ export interface BrandSystemProfileContract {
   visual_system: {
     pattern_groups: BrandSystemVisualPatternGroup[];
   };
+  ordinary_app_experience: BrandSystemOrdinaryAppExperience;
   receipt_blocker_language: BrandSystemReceiptBlockerLanguage;
   authority_boundary: BrandModuleAuthorityBoundary;
   forbidden_claims: string[];
@@ -827,6 +851,16 @@ export interface TargetOperatingArchitectureContract {
     implementation_lane_refs: string[];
     authority_boundary: Record<string, false>;
     forbidden_claims: string[];
+  };
+  flagship_experience_mapping: {
+    mapping_id: string;
+    flagship_agent_id: string;
+    standard_agent_shape: string;
+    journey_artifacts: string[];
+    private_platform_residue_inputs: string[];
+    opl_contract_surfaces: string[];
+    false_ready_claims: string[];
+    authority_boundary: Record<string, false>;
   };
   authority_boundary: Record<string, false>;
   forbidden_claims: string[];

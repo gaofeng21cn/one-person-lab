@@ -26,6 +26,7 @@ function canonicalFoundryAgentId(report: RepoConformanceReport) {
 function buildFoundryAgentOsDomainConformance(
   report: RepoConformanceReport,
   expectedAgents: string[],
+  flagshipMapping: FrameworkContracts['targetOperatingArchitecture']['flagship_experience_mapping'],
 ) {
   const canonicalAgentId = canonicalFoundryAgentId(report);
   const defaultEntrySourceOfWorkGate = report.generated_interface_checks.default_entry_source_of_work_gate;
@@ -140,6 +141,17 @@ function buildFoundryAgentOsDomainConformance(
     capability_registry_policy_status: statusFromBlockers(capabilityRegistryBlockers),
     optional_ref_policy: 'fail_open_unless_current_owner_delta_requires_route_ref',
     domain_authority_kernel_status: statusFromBlockers(domainAuthorityBlockers),
+    flagship_experience_mapping: canonicalAgentId === flagshipMapping.flagship_agent_id
+      ? {
+          mapping_id: flagshipMapping.mapping_id,
+          standard_agent_shape: flagshipMapping.standard_agent_shape,
+          journey_artifacts: flagshipMapping.journey_artifacts,
+          private_platform_residue_inputs: flagshipMapping.private_platform_residue_inputs,
+          opl_contract_surfaces: flagshipMapping.opl_contract_surfaces,
+          false_ready_claims: flagshipMapping.false_ready_claims,
+          authority_boundary: flagshipMapping.authority_boundary,
+        }
+      : null,
     false_authority_flags: {
       conformance_pass_can_claim_domain_ready: false,
       conformance_pass_can_claim_production_ready: false,
@@ -157,9 +169,10 @@ export function buildFoundryAgentOsConformance(
   contracts: FrameworkContracts,
 ) {
   const standard = contracts.targetOperatingArchitecture.foundry_agent_os_standard;
+  const flagshipMapping = contracts.targetOperatingArchitecture.flagship_experience_mapping;
   const expectedAgents = standard.applies_to_domain_agents;
   const domainReports = reports.map((report) =>
-    buildFoundryAgentOsDomainConformance(report, expectedAgents)
+    buildFoundryAgentOsDomainConformance(report, expectedAgents, flagshipMapping)
   );
   const reportedAgentIds = domainReports
     .map((report) => report.canonical_agent_id)
@@ -203,6 +216,7 @@ export function buildFoundryAgentOsConformance(
       optional_ref_missing_default: standard.capability_registry_boundary.optional_ref_missing_default,
       route_required_ref_missing: standard.capability_registry_boundary.route_required_ref_missing,
     },
+    flagship_experience_mapping: flagshipMapping,
     domains: domainReports,
     authority_boundary: {
       conformance_pass_can_claim_domain_ready: false,

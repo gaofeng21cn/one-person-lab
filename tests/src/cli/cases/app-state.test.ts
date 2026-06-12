@@ -171,6 +171,10 @@ exit 1
       output.app_state.operator.default_read_surface_policy.ordinary_cockpit.audit_sidecar_policy_ref,
       'app_state.operator.ordinary_cockpit.audit_sidecar_policy',
     );
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.ordinary_cockpit.brand_experience_profile_ref,
+      'app_state.operator.brand_experience_profile',
+    );
     assert.deepEqual(
       output.app_state.operator.default_read_surface_policy.ordinary_cockpit.developer_full_drilldown_only,
       [
@@ -293,6 +297,40 @@ exit 1
     assert.deepEqual(
       output.app_state.operator.ordinary_cockpit.audit_sidecar_policy,
       output.app_state.operator.current_owner_delta.audit_sidecar_policy,
+    );
+    assert.deepEqual(
+      output.app_state.operator.brand_experience_profile,
+      output.app_state.operator.workbench.brand_experience_profile,
+    );
+    assert.equal(
+      output.app_state.operator.brand_experience_profile.surface_kind,
+      'opl_app_brand_experience_profile',
+    );
+    assert.deepEqual(
+      output.app_state.operator.brand_experience_profile.experience_axes.map((entry: AppStateListEntry) =>
+        entry.axis_id
+      ),
+      ['running_fluency', 'output_quality', 'brand_feel'],
+    );
+    assert.equal(
+      output.app_state.operator.brand_experience_profile.default_read_surface_ref,
+      'app_state.operator.ordinary_cockpit',
+    );
+    assert.equal(
+      output.app_state.operator.brand_experience_profile.contract_refs.includes(
+        'contracts/opl-framework/brand-system-profile.json#ordinary_app_experience',
+      ),
+      true,
+    );
+    assert.equal(output.app_state.operator.brand_experience_profile.l5_evidence_refs_only, true);
+    assert.equal(output.app_state.operator.brand_experience_profile.authority_boundary.can_claim_l5, false);
+    assert.equal(
+      output.app_state.operator.brand_experience_profile.authority_boundary.can_claim_app_release_ready,
+      false,
+    );
+    assert.equal(
+      output.app_state.operator.brand_experience_profile.authority_boundary.can_authorize_quality_verdict,
+      false,
     );
     assert.equal(
       output.app_state.operator.ordinary_cockpit.authority_boundary.default_next_action_derives_from,

@@ -14,7 +14,9 @@
     "contracts/opl-framework/family-product-operator-projection.json",
     "contracts/opl-framework/owner-answer.schema.json",
     "contracts/opl-framework/stage-owner-receipt.schema.json",
-    "contracts/opl-framework/stage-typed-blocker.schema.json"
+    "contracts/opl-framework/stage-typed-blocker.schema.json",
+    "human_doc:opl_family_ideal_operating_model_redesign#ideal_experience_redesign",
+    "contracts/opl-framework/brand-module-l5-operating-evidence.json#evidence_classes.ordinary_app_experience"
   ],
   "product_cognition_layers": [
     {
@@ -261,5 +263,52 @@
     "brand_system_profile_claims_owner_receipt_creation",
     "brand_system_profile_claims_typed_blocker_creation",
     "provider_completion_counts_as_receipt"
-  ]
+  ],
+  "ordinary_app_experience": {
+    "surface_kind": "opl_brand_ordinary_app_experience_profile",
+    "default_read_surface_ref": "app_state.operator.ordinary_cockpit",
+    "experience_axes": [
+      {
+        "axis_id": "running_fluency",
+        "user_visible_goal": "The ordinary App path shows one current owner, one next action, and artifact or blocker refs without exposing runtime ledgers.",
+        "app_projection_ref": "app_state.operator.ordinary_cockpit.display_payload",
+        "l5_evidence_class_ref": "contracts/opl-framework/brand-module-l5-operating-evidence.json#evidence_classes.ordinary_app_experience",
+        "must_not_claim": [
+          "runtime_projection_is_domain_progress",
+          "app_projection_counts_as_l5",
+          "provider_completion_counts_as_owner_receipt"
+        ]
+      },
+      {
+        "axis_id": "output_quality",
+        "user_visible_goal": "The ordinary App path names artifact, receipt, blocker, review, and human-gate shapes while leaving quality verdicts with domain or human owners.",
+        "app_projection_ref": "app_state.operator.brand_experience_profile.display_language_refs",
+        "l5_evidence_class_ref": "contracts/opl-framework/brand-module-l5-operating-evidence.json#evidence_classes.ordinary_app_experience",
+        "must_not_claim": [
+          "schema_pass_is_quality_verdict",
+          "receipt_ref_exists_means_owner_accepted",
+          "app_profile_authorizes_export_or_publication"
+        ]
+      },
+      {
+        "axis_id": "brand_feel",
+        "user_visible_goal": "The ordinary App path derives status words, cards, icons, and evidence language from the OPL brand profile instead of per-surface wording.",
+        "app_projection_ref": "app_state.operator.brand_experience_profile.display_language_refs",
+        "l5_evidence_class_ref": "contracts/opl-framework/brand-module-l5-operating-evidence.json#evidence_classes.ordinary_app_experience",
+        "must_not_claim": [
+          "visual_tokens_are_release_ready",
+          "brand_profile_claims_production_ready",
+          "app_shell_rendering_claims_domain_ready"
+        ]
+      }
+    ],
+    "l5_evidence_refs_only": true,
+    "authority_boundary": {
+      "can_claim_l5": false,
+      "can_claim_app_release_ready": false,
+      "can_authorize_quality_verdict": false,
+      "can_create_owner_receipt": false,
+      "can_create_typed_blocker": false
+    }
+  }
 }

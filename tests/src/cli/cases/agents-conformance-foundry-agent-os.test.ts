@@ -103,6 +103,27 @@ test('agents conformance exposes Foundry Agent OS family standard without author
   assert.equal(foundry.authority_boundary.capability_registry_can_create_typed_blocker, false);
   assert.equal(foundry.authority_boundary.capability_registry_can_sign_owner_receipt, false);
   assert.equal(foundry.authority_boundary.provider_completion_can_claim_domain_completion, false);
+  assert.equal(
+    foundry.flagship_experience_mapping.mapping_id,
+    'mas_research_foundry_flagship_experience.v1',
+  );
+  assert.equal(foundry.flagship_experience_mapping.flagship_agent_id, 'mas');
+  assert.equal(
+    foundry.flagship_experience_mapping.standard_agent_shape,
+    'Declarative Domain Pack + OPL generated/hosted surfaces + minimal authority functions',
+  );
+  assert.deepEqual(foundry.flagship_experience_mapping.journey_artifacts, [
+    'Evidence Map',
+    'Analysis Pack',
+    'Manuscript Draft',
+    'Reviewer Letter',
+    'Revision Packet',
+    'Publication Handoff',
+  ]);
+  assert.equal(foundry.flagship_experience_mapping.false_ready_claims.includes('mas_ready'), true);
+  assert.equal(foundry.flagship_experience_mapping.false_ready_claims.includes('paper_done'), true);
+  assert.equal(foundry.flagship_experience_mapping.false_ready_claims.includes('brand_l5_done'), true);
+  assert.equal(foundry.flagship_experience_mapping.false_ready_claims.includes('production_ready'), true);
 
   for (const domain of foundry.domains) {
     assert.equal(domain.status, 'passed');
@@ -124,6 +145,22 @@ test('agents conformance exposes Foundry Agent OS family standard without author
     assert.equal(domain.false_authority_flags.capability_registry_can_create_typed_blocker, false);
     assert.equal(domain.false_authority_flags.capability_registry_can_sign_owner_receipt, false);
   }
+
+  const mas = foundry.domains.find((domain: { canonical_agent_id: string }) =>
+    domain.canonical_agent_id === 'mas'
+  );
+  assert.ok(mas);
+  assert.equal(mas.flagship_experience_mapping.mapping_id, 'mas_research_foundry_flagship_experience.v1');
+  assert.equal(mas.flagship_experience_mapping.authority_boundary.can_claim_mas_ready, false);
+  assert.equal(mas.flagship_experience_mapping.authority_boundary.can_sign_mas_owner_receipt, false);
+  assert.equal(mas.flagship_experience_mapping.private_platform_residue_inputs.includes('private_scheduler'), true);
+  assert.equal(mas.flagship_experience_mapping.private_platform_residue_inputs.includes('private_workbench'), true);
+
+  const mag = foundry.domains.find((domain: { canonical_agent_id: string }) =>
+    domain.canonical_agent_id === 'mag'
+  );
+  assert.ok(mag);
+  assert.equal(mag.flagship_experience_mapping, null);
 });
 
 test('Foundry Agent OS canonicalizes OPL Meta Agent as OMA without renaming domain truth', () => {

@@ -84,6 +84,18 @@ test('brand system profile freezes product grammar and language against the bran
     profile.visual_system.pattern_groups.map((entry) => entry.group_id),
     ['design_tokens', 'icons', 'cards', 'status_patterns'],
   );
+  assert.deepEqual(
+    profile.ordinary_app_experience.experience_axes.map((entry) => entry.axis_id),
+    ['running_fluency', 'output_quality', 'brand_feel'],
+  );
+  assert.equal(
+    profile.ordinary_app_experience.default_read_surface_ref,
+    'app_state.operator.ordinary_cockpit',
+  );
+  assert.equal(profile.ordinary_app_experience.l5_evidence_refs_only, true);
+  assert.equal(profile.ordinary_app_experience.authority_boundary.can_claim_l5, false);
+  assert.equal(profile.ordinary_app_experience.authority_boundary.can_claim_app_release_ready, false);
+  assert.equal(profile.ordinary_app_experience.authority_boundary.can_authorize_quality_verdict, false);
   assert.equal(profile.receipt_blocker_language.success_shape, 'domain_owner_receipt_ref');
   assert.equal(profile.receipt_blocker_language.blocked_shape, 'domain_owned_typed_blocker_ref');
   assert.equal(profile.authority_boundary.can_claim_domain_ready, false);
@@ -92,6 +104,16 @@ test('brand system profile freezes product grammar and language against the bran
   assert.equal(profile.authority_boundary.can_create_typed_blocker, false);
   assert.equal(
     validation.brandSystemProfile.source_refs.includes('human_doc:opl_brand_modules_reference'),
+    true,
+  );
+  const appExperienceClass = contracts.brandModuleL5OperatingEvidence.evidence_classes.find((entry) =>
+    entry.class_id === 'ordinary_app_experience'
+  );
+  assert.equal(appExperienceClass?.accepted_ref_shapes.includes('brand_experience_profile_ref'), true);
+  assert.equal(
+    contracts.brandModuleL5OperatingEvidence.owner_route_work_order_policy.non_closing_inputs.includes(
+      'brand_experience_profile',
+    ),
     true,
   );
 });
@@ -454,7 +476,7 @@ test('brand module L5 evidence gate is executable but does not claim production 
     assert.deepEqual(status.l5_complete_module_ids, []);
     assert.deepEqual(status.evidence_required_module_ids, expectedModuleIds);
     assert.equal(status.l5_claim_policy.contract_validation_counts_as_l5, false);
-    assert.equal(status.evidence_classes.length, 12);
+    assert.equal(status.evidence_classes.length, 13);
     assert.equal(
       status.evidence_classes.some((entry: { class_id: string }) =>
         entry.class_id === 'capability_fail_open_boundary'
@@ -644,8 +666,8 @@ test('module-owned L5 status is readable from the module command surface and rem
     assert.equal(status.module_id, 'runway');
     assert.equal(status.status, 'evidence_required');
     assert.equal(status.l5_can_be_claimed, false);
-    assert.equal(status.evidence_requirements.length, 12);
-    assert.equal(status.owner_evidence_routes.length, 12);
+    assert.equal(status.evidence_requirements.length, 13);
+    assert.equal(status.owner_evidence_routes.length, 13);
     assert.equal(
       status.owner_evidence_routes.some((entry: {
         class_id: string;

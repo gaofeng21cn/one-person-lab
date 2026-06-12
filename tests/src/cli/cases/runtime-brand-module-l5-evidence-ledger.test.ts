@@ -81,7 +81,7 @@ test('runtime brand-module L5 evidence ledger records and verifies refs without 
     assert.equal(runway.evidence_ledger.receipt_count, 1);
     assert.deepEqual(runway.evidence_ledger.verified_evidence_class_ids, ['long_soak_recovery']);
     assert.equal(runway.l5_can_be_claimed, false);
-    assert.equal(runway.open_requirement_count, 12);
+    assert.equal(runway.open_requirement_count, 13);
     const route = runway.owner_evidence_routes.find((entry: { class_id: string }) =>
       entry.class_id === 'long_soak_recovery'
     );

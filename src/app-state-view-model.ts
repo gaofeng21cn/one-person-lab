@@ -13,6 +13,7 @@ type OplAppOperatorViewModelInput = {
   actions: ReadonlyArray<JsonRecord>;
   uiDefaults: JsonRecord;
   runtimeActivityItems: ReadonlyArray<JsonRecord>;
+  brandSystemProfile: JsonRecord;
   currentOwnerDeltaReadModel?: JsonRecord;
 };
 
@@ -600,6 +601,7 @@ function buildDefaultReadSurfacePolicy(input: OplAppOperatorViewModelInput) {
       progress_delta_receipt_ref: 'app_state.operator.ordinary_cockpit.progress_delta_receipt',
       artifact_tier_policy_ref: 'app_state.operator.ordinary_cockpit.artifact_tier_policy',
       audit_sidecar_policy_ref: 'app_state.operator.ordinary_cockpit.audit_sidecar_policy',
+      brand_experience_profile_ref: 'app_state.operator.brand_experience_profile',
       display_payload_fields: [...ORDINARY_COCKPIT_DISPLAY_FIELDS],
       developer_full_drilldown_only: [...ORDINARY_COCKPIT_DEVELOPER_FULL_ONLY],
     },
@@ -628,6 +630,44 @@ function buildDefaultReadSurfacePolicy(input: OplAppOperatorViewModelInput) {
   };
 }
 
+function buildBrandExperienceProfile(input: OplAppOperatorViewModelInput) {
+  const ordinaryAppExperience = asRecord(input.brandSystemProfile.ordinary_app_experience);
+  return {
+    surface_kind: 'opl_app_brand_experience_profile',
+    schema_version: 'app-brand-experience-profile.v1',
+    source_profile_ref: 'contracts/opl-framework/brand-system-profile.json#ordinary_app_experience',
+    default_read_surface_ref: asString(ordinaryAppExperience.default_read_surface_ref)
+      ?? 'app_state.operator.ordinary_cockpit',
+    contract_refs: [
+      'contracts/opl-framework/brand-system-profile.json#ordinary_app_experience',
+      'contracts/opl-framework/brand-module-l5-operating-evidence.json#evidence_classes.ordinary_app_experience',
+    ],
+    experience_axes: asRecordArray(ordinaryAppExperience.experience_axes).map((axis) => ({
+      axis_id: asString(axis.axis_id),
+      user_visible_goal: asString(axis.user_visible_goal),
+      app_projection_ref: asString(axis.app_projection_ref),
+      l5_evidence_class_ref: asString(axis.l5_evidence_class_ref),
+      must_not_claim: Array.isArray(axis.must_not_claim)
+        ? axis.must_not_claim.filter((entry): entry is string => typeof entry === 'string')
+        : [],
+    })),
+    display_language_refs: {
+      status_terms_ref: 'contracts/opl-framework/brand-system-profile.json#app_status_language.default_terms',
+      visual_patterns_ref: 'contracts/opl-framework/brand-system-profile.json#visual_system.pattern_groups',
+      receipt_blocker_language_ref:
+        'contracts/opl-framework/brand-system-profile.json#receipt_blocker_language',
+    },
+    l5_evidence_refs_only: ordinaryAppExperience.l5_evidence_refs_only === true,
+    authority_boundary: {
+      can_claim_l5: false,
+      can_claim_app_release_ready: false,
+      can_authorize_quality_verdict: false,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+    },
+  };
+}
+
 export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput) {
   const temporal = asRecord(asRecord(input.provider).temporal);
   const status = temporal.ready === true ? 'ready' : 'attention_needed';
@@ -638,6 +678,7 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
   });
   const defaultReadSurfacePolicy = buildDefaultReadSurfacePolicy(input);
   const ordinaryCockpit = buildOrdinaryCockpit(currentOwnerDeltaTopline, input);
+  const brandExperienceProfile = buildBrandExperienceProfile(input);
   const lazyRefs = [
     {
       ref_id: 'full_app_state_refresh',
@@ -662,11 +703,13 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
     full_detail_surface: 'opl runtime app-operator-drilldown --detail full --json',
     default_read_surface_policy: defaultReadSurfacePolicy,
     ordinary_cockpit: ordinaryCockpit,
+    brand_experience_profile: brandExperienceProfile,
     ...currentOwnerDeltaTopline,
     workbench: {
       view_model_schema: 'opl_app_operator_workbench.v1',
       default_read_surface_policy: defaultReadSurfacePolicy,
       ordinary_cockpit: ordinaryCockpit,
+      brand_experience_profile: brandExperienceProfile,
       ...currentOwnerDeltaTopline,
       summary_cards: buildSummaryCards(input),
       sections: buildSections(input),

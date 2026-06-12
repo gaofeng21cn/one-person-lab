@@ -38,7 +38,8 @@
       "conformance_pass",
       "provider_completion",
       "app_projection",
-      "verified_refs_only_ledger"
+      "verified_refs_only_ledger",
+      "brand_experience_profile"
     ]
   },
   "evidence_ledger_surfaces": {
@@ -58,6 +59,16 @@
       "accepted_ref_shapes": [
         "user_path_evidence_ref",
         "operator_evidence_ref",
+        "typed_blocker_ref"
+      ]
+    },
+    {
+      "class_id": "ordinary_app_experience",
+      "definition": "The ordinary App and operator read surfaces expose running fluency, output quality language, and brand feel as refs-only display grammar without claiming L5, release ready, production ready, or quality verdicts.",
+      "accepted_ref_shapes": [
+        "brand_experience_profile_ref",
+        "app_operator_projection_ref",
+        "user_path_evidence_ref",
         "typed_blocker_ref"
       ]
     },
@@ -185,6 +196,11 @@
           "current_state": "open"
         },
         {
+          "class_id": "ordinary_app_experience",
+          "owner": "OPL Framework and App product owners",
+          "current_state": "open"
+        },
+        {
           "class_id": "cross_agent_scaleout",
           "owner": "OPL Framework docs governance",
           "current_state": "open"
@@ -263,6 +279,11 @@
         {
           "class_id": "live_user_path",
           "owner": "OPL Framework catalog owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "ordinary_app_experience",
+          "owner": "OPL Framework and App product owners",
           "current_state": "open"
         },
         {
@@ -348,6 +369,11 @@
           "current_state": "open"
         },
         {
+          "class_id": "ordinary_app_experience",
+          "owner": "OPL Framework and App product owners",
+          "current_state": "open"
+        },
+        {
           "class_id": "cross_agent_scaleout",
           "owner": "OPL Workspace owner",
           "current_state": "open"
@@ -427,6 +453,11 @@
         {
           "class_id": "live_user_path",
           "owner": "OPL Pack owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "ordinary_app_experience",
+          "owner": "OPL Framework and App product owners",
           "current_state": "open"
         },
         {
@@ -516,6 +547,11 @@
           "current_state": "open"
         },
         {
+          "class_id": "ordinary_app_experience",
+          "owner": "OPL Framework and App product owners",
+          "current_state": "open"
+        },
+        {
           "class_id": "cross_agent_scaleout",
           "owner": "OPL Stagecraft owner",
           "current_state": "open"
@@ -598,6 +634,11 @@
           "current_state": "open"
         },
         {
+          "class_id": "ordinary_app_experience",
+          "owner": "OPL Framework and App product owners",
+          "current_state": "open"
+        },
+        {
           "class_id": "cross_agent_scaleout",
           "owner": "OPL Runway owner",
           "current_state": "open"
@@ -677,6 +718,11 @@
         {
           "class_id": "live_user_path",
           "owner": "OPL Vault owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "ordinary_app_experience",
+          "owner": "OPL Framework and App product owners",
           "current_state": "open"
         },
         {
@@ -763,6 +809,11 @@
           "current_state": "open"
         },
         {
+          "class_id": "ordinary_app_experience",
+          "owner": "OPL Console and App product owners",
+          "current_state": "open"
+        },
+        {
           "class_id": "cross_agent_scaleout",
           "owner": "One Person Lab App owner",
           "current_state": "open"
@@ -845,6 +896,11 @@
           "current_state": "open"
         },
         {
+          "class_id": "ordinary_app_experience",
+          "owner": "OPL Framework and App product owners",
+          "current_state": "open"
+        },
+        {
           "class_id": "cross_agent_scaleout",
           "owner": "OPL Foundry Lab owner",
           "current_state": "open"
@@ -922,6 +978,11 @@
         {
           "class_id": "live_user_path",
           "owner": "OPL Connect owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "ordinary_app_experience",
+          "owner": "OPL Connect and App product owners",
           "current_state": "open"
         },
         {

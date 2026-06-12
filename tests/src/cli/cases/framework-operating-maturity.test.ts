@@ -992,22 +992,22 @@ test('framework operating maturity projects owner evidence ledger refs without r
     assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.summary
         .brand_module_l5_requirement_work_order_count,
-      120,
+      130,
     );
     assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.summary
         .brand_module_l5_typed_blocker_ready_work_order_count,
-      120,
+      130,
     );
     assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.summary
         .brand_module_l5_owner_acceptance_required_work_order_count,
-      120,
+      130,
     );
     assert.equal(
       maturity.foundry_agent_os_production_evidence_gate
         .brand_module_l5_requirement_work_orders.length,
-      120,
+      130,
     );
     const charterLivePathWorkOrder = maturity.foundry_agent_os_production_evidence_gate
       .brand_module_l5_requirement_work_orders.find(

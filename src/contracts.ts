@@ -52,6 +52,12 @@ const REQUIRED_CONTRACT_FILE_NAMES = [
   'pack-os-contract.json',
 ] as const;
 
+const BRAND_SYSTEM_ORDINARY_APP_EXPERIENCE_AXIS_IDS = [
+  'running_fluency',
+  'output_quality',
+  'brand_feel',
+] as const;
+
 type NormalizedFrameworkContractsLoadOptions = {
   searchFrom: string | null;
   contractsDir: string | null;
@@ -1455,6 +1461,36 @@ const TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_FORBIDDEN_CLAIMS = [
   'console_view_is_app_release_ready',
 ] as const;
 
+const TARGET_ARCHITECTURE_MAS_FLAGSHIP_JOURNEY_ARTIFACTS = [
+  'Evidence Map',
+  'Analysis Pack',
+  'Manuscript Draft',
+  'Reviewer Letter',
+  'Revision Packet',
+  'Publication Handoff',
+] as const;
+
+const TARGET_ARCHITECTURE_FLAGSHIP_PRIVATE_RESIDUE_INPUTS = [
+  'private_scheduler',
+  'private_runner',
+  'private_workbench',
+  'private_status_shell',
+] as const;
+
+const TARGET_ARCHITECTURE_FLAGSHIP_CONTRACT_SURFACES = [
+  'target_operating_architecture_contract',
+  'standard_domain_agent_conformance',
+  'foundry_agent_os_conformance',
+  'pack_compiler_projection',
+] as const;
+
+const TARGET_ARCHITECTURE_FLAGSHIP_FALSE_READY_CLAIMS = [
+  'mas_ready',
+  'paper_done',
+  'brand_l5_done',
+  'production_ready',
+] as const;
+
 function expectBrandModuleIdArray(value: unknown, field: string, filePath: string) {
   const ids = expectNonEmptyStringArray(value, field, filePath);
   for (const id of ids) {
@@ -1487,6 +1523,7 @@ function validateBrandSystemProfile(
   const agentNamingRaw = value.agent_naming;
   const appStatusLanguageRaw = value.app_status_language;
   const visualSystemRaw = value.visual_system;
+  const ordinaryAppExperienceRaw = value.ordinary_app_experience;
   const receiptBlockerLanguageRaw = value.receipt_blocker_language;
   if (
     !Array.isArray(layersRaw)
@@ -1494,6 +1531,7 @@ function validateBrandSystemProfile(
     || !isRecord(agentNamingRaw)
     || !isRecord(appStatusLanguageRaw)
     || !isRecord(visualSystemRaw)
+    || !isRecord(ordinaryAppExperienceRaw)
     || !isRecord(receiptBlockerLanguageRaw)
   ) {
     throw new FrameworkContractError(
@@ -1641,6 +1679,86 @@ function validateBrandSystemProfile(
     filePath,
   );
 
+  const ordinaryAxisRaw = ordinaryAppExperienceRaw.experience_axes;
+  if (!Array.isArray(ordinaryAxisRaw)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'ordinary_app_experience.experience_axes must be an array.', {
+      file: filePath,
+      field: 'ordinary_app_experience.experience_axes',
+    });
+  }
+  const ordinaryAxisIds = new Set<string>();
+  const ordinaryAppExperienceAxes = ordinaryAxisRaw.map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each ordinary_app_experience axis must be an object.', {
+        file: filePath,
+        index,
+      });
+    }
+    const axisId = expectString(entry.axis_id, 'ordinary_app_experience.experience_axes.axis_id', filePath);
+    if (!BRAND_SYSTEM_ORDINARY_APP_EXPERIENCE_AXIS_IDS.includes(axisId as typeof BRAND_SYSTEM_ORDINARY_APP_EXPERIENCE_AXIS_IDS[number])) {
+      throw new FrameworkContractError('contract_shape_invalid', 'ordinary_app_experience.experience_axes.axis_id must be a known experience axis.', {
+        file: filePath,
+        index,
+        axis_id: axisId,
+        expected_axis_ids: [...BRAND_SYSTEM_ORDINARY_APP_EXPERIENCE_AXIS_IDS],
+      });
+    }
+    if (ordinaryAxisIds.has(axisId)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'ordinary_app_experience.experience_axes axis ids must be unique.', {
+        file: filePath,
+        index,
+        axis_id: axisId,
+      });
+    }
+    ordinaryAxisIds.add(axisId);
+    return {
+      axis_id: axisId as BrandSystemProfileContract['ordinary_app_experience']['experience_axes'][number]['axis_id'],
+      user_visible_goal: expectString(entry.user_visible_goal, 'ordinary_app_experience.experience_axes.user_visible_goal', filePath),
+      app_projection_ref: expectString(entry.app_projection_ref, 'ordinary_app_experience.experience_axes.app_projection_ref', filePath),
+      l5_evidence_class_ref: expectString(entry.l5_evidence_class_ref, 'ordinary_app_experience.experience_axes.l5_evidence_class_ref', filePath),
+      must_not_claim: expectNonEmptyStringArray(entry.must_not_claim, 'ordinary_app_experience.experience_axes.must_not_claim', filePath),
+    };
+  });
+  requireEveryValue(
+    [...ordinaryAxisIds] as typeof BRAND_SYSTEM_ORDINARY_APP_EXPERIENCE_AXIS_IDS[number][],
+    BRAND_SYSTEM_ORDINARY_APP_EXPERIENCE_AXIS_IDS,
+    'ordinary_app_experience.experience_axes.axis_id',
+    filePath,
+  );
+  if (ordinaryAppExperienceRaw.surface_kind !== 'opl_brand_ordinary_app_experience_profile') {
+    throw new FrameworkContractError('contract_shape_invalid', 'ordinary_app_experience.surface_kind must be canonical.', {
+      file: filePath,
+      field: 'ordinary_app_experience.surface_kind',
+      actual: ordinaryAppExperienceRaw.surface_kind,
+    });
+  }
+  if (ordinaryAppExperienceRaw.l5_evidence_refs_only !== true) {
+    throw new FrameworkContractError('contract_shape_invalid', 'ordinary_app_experience.l5_evidence_refs_only must be true.', {
+      file: filePath,
+      field: 'ordinary_app_experience.l5_evidence_refs_only',
+    });
+  }
+  const ordinaryAppExperienceAuthority = validateFalseBoundaryRecord(
+    filePath,
+    ordinaryAppExperienceRaw.authority_boundary,
+    'ordinary_app_experience.authority_boundary',
+  );
+  for (const requiredFalseFlag of [
+    'can_claim_l5',
+    'can_claim_app_release_ready',
+    'can_authorize_quality_verdict',
+    'can_create_owner_receipt',
+    'can_create_typed_blocker',
+  ]) {
+    if (!(requiredFalseFlag in ordinaryAppExperienceAuthority)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'ordinary_app_experience.authority_boundary must include all false-authority flags.', {
+        file: filePath,
+        field: 'ordinary_app_experience.authority_boundary',
+        missing_flag: requiredFalseFlag,
+      });
+    }
+  }
+
   const successShape = expectString(receiptBlockerLanguageRaw.success_shape, 'receipt_blocker_language.success_shape', filePath);
   const blockedShape = expectString(receiptBlockerLanguageRaw.blocked_shape, 'receipt_blocker_language.blocked_shape', filePath);
   if (successShape !== 'domain_owner_receipt_ref' || blockedShape !== 'domain_owned_typed_blocker_ref') {
@@ -1680,6 +1798,17 @@ function validateBrandSystemProfile(
     },
     visual_system: {
       pattern_groups,
+    },
+    ordinary_app_experience: {
+      surface_kind: 'opl_brand_ordinary_app_experience_profile',
+      default_read_surface_ref: expectString(
+        ordinaryAppExperienceRaw.default_read_surface_ref,
+        'ordinary_app_experience.default_read_surface_ref',
+        filePath,
+      ),
+      experience_axes: ordinaryAppExperienceAxes,
+      l5_evidence_refs_only: true,
+      authority_boundary: ordinaryAppExperienceAuthority as BrandSystemProfileContract['ordinary_app_experience']['authority_boundary'],
     },
     receipt_blocker_language: {
       success_shape: successShape,
@@ -2102,6 +2231,112 @@ function validateTargetOperatingArchitectureMultiPlaneModel(
   };
 }
 
+function validateFlagshipExperienceMapping(
+  filePath: string,
+  value: unknown,
+): TargetOperatingArchitectureContract['flagship_experience_mapping'] {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'target-operating-architecture-contract.json must declare flagship_experience_mapping.',
+      { file: filePath, field: 'flagship_experience_mapping' },
+    );
+  }
+
+  const mappingId = expectString(value.mapping_id, 'flagship_experience_mapping.mapping_id', filePath);
+  if (mappingId !== 'mas_research_foundry_flagship_experience.v1') {
+    throw new FrameworkContractError('contract_shape_invalid', 'flagship_experience_mapping.mapping_id must freeze the MAS Research Foundry flagship mapping.', {
+      file: filePath,
+      field: 'flagship_experience_mapping.mapping_id',
+      actual: mappingId,
+    });
+  }
+  const flagshipAgentId = expectString(
+    value.flagship_agent_id,
+    'flagship_experience_mapping.flagship_agent_id',
+    filePath,
+  );
+  if (flagshipAgentId !== 'mas') {
+    throw new FrameworkContractError('contract_shape_invalid', 'flagship_experience_mapping.flagship_agent_id must stay scoped to MAS.', {
+      file: filePath,
+      field: 'flagship_experience_mapping.flagship_agent_id',
+      actual: flagshipAgentId,
+    });
+  }
+  const standardAgentShape = expectString(
+    value.standard_agent_shape,
+    'flagship_experience_mapping.standard_agent_shape',
+    filePath,
+  );
+  if (standardAgentShape !== 'Declarative Domain Pack + OPL generated/hosted surfaces + minimal authority functions') {
+    throw new FrameworkContractError('contract_shape_invalid', 'flagship_experience_mapping.standard_agent_shape must keep the standard agent target shape explicit.', {
+      file: filePath,
+      field: 'flagship_experience_mapping.standard_agent_shape',
+      actual: standardAgentShape,
+    });
+  }
+
+  const journeyArtifacts = expectNonEmptyStringArray(
+    value.journey_artifacts,
+    'flagship_experience_mapping.journey_artifacts',
+    filePath,
+  );
+  requireEveryValue(
+    journeyArtifacts,
+    TARGET_ARCHITECTURE_MAS_FLAGSHIP_JOURNEY_ARTIFACTS,
+    'flagship_experience_mapping.journey_artifacts',
+    filePath,
+  );
+  const privatePlatformResidueInputs = expectNonEmptyStringArray(
+    value.private_platform_residue_inputs,
+    'flagship_experience_mapping.private_platform_residue_inputs',
+    filePath,
+  );
+  requireEveryValue(
+    privatePlatformResidueInputs,
+    TARGET_ARCHITECTURE_FLAGSHIP_PRIVATE_RESIDUE_INPUTS,
+    'flagship_experience_mapping.private_platform_residue_inputs',
+    filePath,
+  );
+  const oplContractSurfaces = expectNonEmptyStringArray(
+    value.opl_contract_surfaces,
+    'flagship_experience_mapping.opl_contract_surfaces',
+    filePath,
+  );
+  requireEveryValue(
+    oplContractSurfaces,
+    TARGET_ARCHITECTURE_FLAGSHIP_CONTRACT_SURFACES,
+    'flagship_experience_mapping.opl_contract_surfaces',
+    filePath,
+  );
+  const falseReadyClaims = expectNonEmptyStringArray(
+    value.false_ready_claims,
+    'flagship_experience_mapping.false_ready_claims',
+    filePath,
+  );
+  requireEveryValue(
+    falseReadyClaims,
+    TARGET_ARCHITECTURE_FLAGSHIP_FALSE_READY_CLAIMS,
+    'flagship_experience_mapping.false_ready_claims',
+    filePath,
+  );
+
+  return {
+    mapping_id: mappingId,
+    flagship_agent_id: flagshipAgentId,
+    standard_agent_shape: standardAgentShape,
+    journey_artifacts: journeyArtifacts,
+    private_platform_residue_inputs: privatePlatformResidueInputs,
+    opl_contract_surfaces: oplContractSurfaces,
+    false_ready_claims: falseReadyClaims,
+    authority_boundary: validateFalseBoundaryRecord(
+      filePath,
+      value.authority_boundary,
+      'flagship_experience_mapping.authority_boundary',
+    ),
+  };
+}
+
 function validateTargetOperatingArchitecture(
   filePath: string,
   value: unknown,
@@ -2126,6 +2361,7 @@ function validateTargetOperatingArchitecture(
   const appConsoleRaw = value.app_console_policy;
   const agentLabRaw = value.agent_lab_improvement_plane;
   const foundryAgentOsStandardRaw = value.foundry_agent_os_standard;
+  const flagshipExperienceMappingRaw = value.flagship_experience_mapping;
   const multiPlaneRaw = value.multi_plane_operating_system;
   if (
     !isRecord(resourceModelRaw)
@@ -2138,12 +2374,20 @@ function validateTargetOperatingArchitecture(
     || !isRecord(appConsoleRaw)
     || !isRecord(agentLabRaw)
     || !isRecord(foundryAgentOsStandardRaw)
+    || !isRecord(flagshipExperienceMappingRaw)
     || !isRecord(multiPlaneRaw)
   ) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
       'target-operating-architecture-contract.json must declare resource, authority, ABI, surface, multi-plane, reconciler, catalog, App, Agent Lab, and Foundry Agent OS sections.',
-      { file: filePath, field: !isRecord(multiPlaneRaw) ? 'multi_plane_operating_system' : undefined },
+      {
+        file: filePath,
+        field: !isRecord(multiPlaneRaw)
+          ? 'multi_plane_operating_system'
+          : !isRecord(flagshipExperienceMappingRaw)
+            ? 'flagship_experience_mapping'
+            : undefined,
+      },
     );
   }
 
@@ -2567,6 +2811,10 @@ function validateTargetOperatingArchitecture(
     foundry_agent_os_standard: validateFoundryAgentOsStandard(
       filePath,
       foundryAgentOsStandardRaw,
+    ),
+    flagship_experience_mapping: validateFlagshipExperienceMapping(
+      filePath,
+      flagshipExperienceMappingRaw,
     ),
     authority_boundary: validateFalseBoundaryRecord(filePath, value.authority_boundary, 'authority_boundary'),
     forbidden_claims: expectNonEmptyStringArray(value.forbidden_claims, 'forbidden_claims', filePath),
