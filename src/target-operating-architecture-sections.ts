@@ -1,0 +1,842 @@
+import type { TargetOperatingArchitectureContract } from './types.ts';
+import {
+  FrameworkContractError,
+  expectBoolean,
+  expectString,
+  isRecord,
+} from './contract-validation.ts';
+import {
+  expectBrandModuleId,
+  expectNonEmptyStringArray,
+  requireEveryValue,
+} from './brand-module-contracts.ts';
+import {
+  TARGET_ARCHITECTURE_EXPERIENCE_AXIS_IDS,
+  TARGET_ARCHITECTURE_FLAGSHIP_CONTRACT_SURFACES,
+  TARGET_ARCHITECTURE_FLAGSHIP_FALSE_READY_CLAIMS,
+  TARGET_ARCHITECTURE_FLAGSHIP_PRIVATE_RESIDUE_INPUTS,
+  TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_AGENTS,
+  TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_CAPABILITY_REGISTRY_MODULES,
+  TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_CONFORMANCE_CLAIMS,
+  TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_FORBIDDEN_CLAIMS,
+  TARGET_ARCHITECTURE_LANES,
+  TARGET_ARCHITECTURE_MAS_FLAGSHIP_JOURNEY_ARTIFACTS,
+  TARGET_ARCHITECTURE_ONE_SHOT_PLAN_IDS,
+  TARGET_ARCHITECTURE_ONE_SHOT_PLAN_STATUSES,
+  TARGET_ARCHITECTURE_PLANE_FORBIDDEN_CLAIMS,
+  TARGET_ARCHITECTURE_PLANES,
+  expectBrandModuleIdArray,
+  expectFalseBoolean,
+  expectFiniteNumber,
+  expectTrueBoolean,
+  validateFalseBoundaryRecord,
+} from './target-operating-architecture-shared.ts';
+
+export function validateFoundryAgentOsStandard(filePath: string, value: unknown) {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard must be an object.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard',
+    });
+  }
+
+  const patternId = expectString(value.pattern_id, 'foundry_agent_os_standard.pattern_id', filePath);
+  if (patternId !== 'foundry_agent_os_standard.v1') {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.pattern_id must be foundry_agent_os_standard.v1.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.pattern_id',
+      actual: patternId,
+    });
+  }
+
+  const targetShape = expectString(value.target_shape, 'foundry_agent_os_standard.target_shape', filePath);
+  if (targetShape !== 'OPL Agent OS + Domain Declarative Pack + Domain Minimal Authority Kernel + Domain Capability Registry') {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.target_shape must preserve the family target shape.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.target_shape',
+      actual: targetShape,
+    });
+  }
+
+  const appliesToDomainAgents = expectNonEmptyStringArray(
+    value.applies_to_domain_agents,
+    'foundry_agent_os_standard.applies_to_domain_agents',
+    filePath,
+  );
+  requireEveryValue(
+    appliesToDomainAgents,
+    TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_AGENTS,
+    'foundry_agent_os_standard.applies_to_domain_agents',
+    filePath,
+  );
+
+  const domainPackExamplesRaw = value.domain_pack_examples;
+  const domainAuthorityKernelExamplesRaw = value.domain_authority_kernel_examples;
+  const capabilityRegistryRaw = value.capability_registry_boundary;
+  if (!isRecord(domainPackExamplesRaw) || !isRecord(domainAuthorityKernelExamplesRaw) || !isRecord(capabilityRegistryRaw)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'foundry_agent_os_standard must declare domain pack examples, authority kernel examples, and capability registry boundary.',
+      { file: filePath, field: 'foundry_agent_os_standard' },
+    );
+  }
+
+  const domainPackExamples: Record<string, string> = {};
+  const domainAuthorityKernelExamples: Record<string, string[]> = {};
+  for (const agentId of TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_AGENTS) {
+    domainPackExamples[agentId] = expectString(
+      domainPackExamplesRaw[agentId],
+      `foundry_agent_os_standard.domain_pack_examples.${agentId}`,
+      filePath,
+    );
+    domainAuthorityKernelExamples[agentId] = expectNonEmptyStringArray(
+      domainAuthorityKernelExamplesRaw[agentId],
+      `foundry_agent_os_standard.domain_authority_kernel_examples.${agentId}`,
+      filePath,
+    );
+  }
+
+  const mappingRaw = value.opl_module_mapping;
+  if (!Array.isArray(mappingRaw)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.opl_module_mapping must be an array.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.opl_module_mapping',
+    });
+  }
+  const mapping = mappingRaw.map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each foundry agent OS module mapping entry must be an object.', {
+        file: filePath,
+        index,
+      });
+    }
+    return {
+      target_capability: expectString(entry.target_capability, 'foundry_agent_os_standard.opl_module_mapping.target_capability', filePath),
+      primary_module: expectBrandModuleId(entry.primary_module, 'foundry_agent_os_standard.opl_module_mapping.primary_module', filePath),
+      supporting_modules: expectBrandModuleIdArray(entry.supporting_modules, 'foundry_agent_os_standard.opl_module_mapping.supporting_modules', filePath),
+      ordinary_lane: expectString(entry.ordinary_lane, 'foundry_agent_os_standard.opl_module_mapping.ordinary_lane', filePath),
+      authority_boundary: expectString(entry.authority_boundary, 'foundry_agent_os_standard.opl_module_mapping.authority_boundary', filePath),
+    };
+  });
+  for (const requiredCapability of [
+    'pack_compiler_generated_surfaces',
+    'domain_capability_registry',
+    'current_owner_delta_default_read_root',
+    'stage_run_durable_execution',
+    'refs_only_evidence_and_lineage',
+  ]) {
+    if (!mapping.some((entry) => entry.target_capability === requiredCapability)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.opl_module_mapping is missing a required target capability.', {
+        file: filePath,
+        field: 'foundry_agent_os_standard.opl_module_mapping',
+        missing_capability: requiredCapability,
+      });
+    }
+  }
+
+  const ownerModules = expectBrandModuleIdArray(
+    capabilityRegistryRaw.owner_modules,
+    'foundry_agent_os_standard.capability_registry_boundary.owner_modules',
+    filePath,
+  );
+  requireEveryValue(
+    ownerModules,
+    TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_CAPABILITY_REGISTRY_MODULES,
+    'foundry_agent_os_standard.capability_registry_boundary.owner_modules',
+    filePath,
+  );
+  const defaultBehavior = expectString(
+    capabilityRegistryRaw.default_behavior,
+    'foundry_agent_os_standard.capability_registry_boundary.default_behavior',
+    filePath,
+  );
+  if (defaultBehavior !== 'current_owner_delta_bound_jit_or_fail_open') {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard capability registry default behavior must stay current-owner-delta-bound and fail-open.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.capability_registry_boundary.default_behavior',
+      actual: defaultBehavior,
+    });
+  }
+  const resolverAbiRef = expectString(
+    capabilityRegistryRaw.resolver_abi_ref,
+    'foundry_agent_os_standard.capability_registry_boundary.resolver_abi_ref',
+    filePath,
+  );
+  if (resolverAbiRef !== 'contracts/opl-framework/capability-registry-resolver.schema.json') {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard capability registry resolver ABI ref must point to the W3 machine contract.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.capability_registry_boundary.resolver_abi_ref',
+      actual: resolverAbiRef,
+    });
+  }
+  const selectorHelperRef = expectString(
+    capabilityRegistryRaw.selector_helper_ref,
+    'foundry_agent_os_standard.capability_registry_boundary.selector_helper_ref',
+    filePath,
+  );
+  if (selectorHelperRef !== 'src/capability-registry-resolver.ts') {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard capability registry selector helper ref must point to the W3 resolver helper.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.capability_registry_boundary.selector_helper_ref',
+      actual: selectorHelperRef,
+    });
+  }
+  const optionalRefMissingDefault = expectString(
+    capabilityRegistryRaw.optional_ref_missing_default,
+    'foundry_agent_os_standard.capability_registry_boundary.optional_ref_missing_default',
+    filePath,
+  );
+  if (optionalRefMissingDefault !== 'advisory_or_audit') {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard optional capability refs must fail open into advisory/audit.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.capability_registry_boundary.optional_ref_missing_default',
+      actual: optionalRefMissingDefault,
+    });
+  }
+  const routeRequiredRefMissing = expectString(
+    capabilityRegistryRaw.route_required_ref_missing,
+    'foundry_agent_os_standard.capability_registry_boundary.route_required_ref_missing',
+    filePath,
+  );
+  if (routeRequiredRefMissing !== 'typed_blocker_candidate_only_from_current_owner_delta_hard_boundary') {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard route-required missing refs must only produce blocker candidates from current_owner_delta hard boundaries.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.capability_registry_boundary.route_required_ref_missing',
+      actual: routeRequiredRefMissing,
+    });
+  }
+  const mustNotCreate = expectNonEmptyStringArray(
+    capabilityRegistryRaw.must_not_create,
+    'foundry_agent_os_standard.capability_registry_boundary.must_not_create',
+    filePath,
+  );
+  for (const forbiddenRegistryCreation of ['domain authority verdict', 'owner receipt', 'typed blocker']) {
+    if (!mustNotCreate.includes(forbiddenRegistryCreation)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard capability registry boundary is missing a forbidden creation rule.', {
+        file: filePath,
+        field: 'foundry_agent_os_standard.capability_registry_boundary.must_not_create',
+        missing: forbiddenRegistryCreation,
+      });
+    }
+  }
+
+  const conformanceClaims = expectNonEmptyStringArray(
+    value.cross_agent_conformance_required_claims,
+    'foundry_agent_os_standard.cross_agent_conformance_required_claims',
+    filePath,
+  );
+  requireEveryValue(
+    conformanceClaims,
+    TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_CONFORMANCE_CLAIMS,
+    'foundry_agent_os_standard.cross_agent_conformance_required_claims',
+    filePath,
+  );
+
+  const forbiddenClaims = expectNonEmptyStringArray(
+    value.forbidden_claims,
+    'foundry_agent_os_standard.forbidden_claims',
+    filePath,
+  );
+  requireEveryValue(
+    forbiddenClaims,
+    TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_FORBIDDEN_CLAIMS,
+    'foundry_agent_os_standard.forbidden_claims',
+    filePath,
+  );
+
+  return {
+    pattern_id: patternId,
+    source_pattern_ref: expectString(value.source_pattern_ref, 'foundry_agent_os_standard.source_pattern_ref', filePath),
+    target_shape: targetShape,
+    applies_to_domain_agents: appliesToDomainAgents,
+    domain_pack_examples: domainPackExamples,
+    domain_authority_kernel_examples: domainAuthorityKernelExamples,
+    opl_module_mapping: mapping,
+    capability_registry_boundary: {
+      owner_modules: ownerModules,
+      default_behavior: defaultBehavior,
+      resolver_abi_ref: resolverAbiRef,
+      selector_helper_ref: selectorHelperRef,
+      fail_open_policy: expectString(
+        capabilityRegistryRaw.fail_open_policy,
+        'foundry_agent_os_standard.capability_registry_boundary.fail_open_policy',
+        filePath,
+      ),
+      optional_ref_missing_default: optionalRefMissingDefault,
+      route_required_ref_missing: routeRequiredRefMissing,
+      must_not_create: mustNotCreate,
+    },
+    cross_agent_conformance_required_claims: conformanceClaims,
+    implementation_lane_refs: expectNonEmptyStringArray(
+      value.implementation_lane_refs,
+      'foundry_agent_os_standard.implementation_lane_refs',
+      filePath,
+    ),
+    authority_boundary: validateFalseBoundaryRecord(
+      filePath,
+      value.authority_boundary,
+      'foundry_agent_os_standard.authority_boundary',
+    ),
+    forbidden_claims: forbiddenClaims,
+  };
+}
+
+export function validateTargetOperatingArchitectureMultiPlaneModel(
+  filePath: string,
+  value: unknown,
+): TargetOperatingArchitectureContract['multi_plane_operating_system'] {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'target-operating-architecture-contract.json must declare multi_plane_operating_system.',
+      { file: filePath, field: 'multi_plane_operating_system' },
+    );
+  }
+
+  const planeModelId = expectString(value.plane_model_id, 'multi_plane_operating_system.plane_model_id', filePath);
+  if (planeModelId !== 'opl_family_multi_plane_operating_system.v1') {
+    throw new FrameworkContractError('contract_shape_invalid', 'multi_plane_operating_system.plane_model_id must stay on the OPL family multi-plane model.', {
+      file: filePath,
+      field: 'multi_plane_operating_system.plane_model_id',
+      actual: planeModelId,
+    });
+  }
+
+  const defaultOrdinaryRoute = expectString(
+    value.default_ordinary_route,
+    'multi_plane_operating_system.default_ordinary_route',
+    filePath,
+  );
+  if (defaultOrdinaryRoute !== 'current_owner_delta') {
+    throw new FrameworkContractError('contract_shape_invalid', 'multi_plane_operating_system.default_ordinary_route must remain current_owner_delta.', {
+      file: filePath,
+      field: 'multi_plane_operating_system.default_ordinary_route',
+      actual: defaultOrdinaryRoute,
+    });
+  }
+
+  const planesRaw = value.planes;
+  if (!Array.isArray(planesRaw)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'multi_plane_operating_system.planes must be an array.', {
+      file: filePath,
+      field: 'multi_plane_operating_system.planes',
+    });
+  }
+
+  const seenPlanes = new Set<string>();
+  const planes = planesRaw.map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each multi-plane operating model plane must be an object.', {
+        file: filePath,
+        field: 'multi_plane_operating_system.planes',
+        index,
+      });
+    }
+    const planeId = expectString(entry.plane_id, 'multi_plane_operating_system.planes.plane_id', filePath);
+    if (!(TARGET_ARCHITECTURE_PLANES as readonly string[]).includes(planeId)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'multi_plane_operating_system.planes.plane_id must be a known OPL operating plane.', {
+        file: filePath,
+        field: 'multi_plane_operating_system.planes.plane_id',
+        index,
+        actual: planeId,
+        allowed: [...TARGET_ARCHITECTURE_PLANES],
+      });
+    }
+    if (seenPlanes.has(planeId)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each OPL operating plane must be unique.', {
+        file: filePath,
+        field: 'multi_plane_operating_system.planes',
+        index,
+        plane_id: planeId,
+      });
+    }
+    seenPlanes.add(planeId);
+
+    const defaultLane = expectString(entry.default_lane, 'multi_plane_operating_system.planes.default_lane', filePath);
+    if (!(TARGET_ARCHITECTURE_LANES as readonly string[]).includes(defaultLane)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'multi_plane_operating_system.planes.default_lane must be a known target architecture lane.', {
+        file: filePath,
+        field: 'multi_plane_operating_system.planes.default_lane',
+        index,
+        actual: defaultLane,
+        allowed: [...TARGET_ARCHITECTURE_LANES],
+      });
+    }
+
+    const forbiddenClaims = expectNonEmptyStringArray(
+      entry.forbidden_claims,
+      'multi_plane_operating_system.planes.forbidden_claims',
+      filePath,
+    );
+    for (const requiredForbiddenClaim of TARGET_ARCHITECTURE_PLANE_FORBIDDEN_CLAIMS) {
+      if (!forbiddenClaims.includes(requiredForbiddenClaim)) {
+        throw new FrameworkContractError('contract_shape_invalid', 'Each OPL operating plane must preserve the false-authority forbidden claims.', {
+          file: filePath,
+          field: 'multi_plane_operating_system.planes.forbidden_claims',
+          index,
+          plane_id: planeId,
+          missing: requiredForbiddenClaim,
+        });
+      }
+    }
+
+    return {
+      plane_id: planeId,
+      owner_modules: expectBrandModuleIdArray(
+        entry.owner_modules,
+        'multi_plane_operating_system.planes.owner_modules',
+        filePath,
+      ),
+      default_lane: defaultLane,
+      inputs: expectNonEmptyStringArray(entry.inputs, 'multi_plane_operating_system.planes.inputs', filePath),
+      outputs: expectNonEmptyStringArray(entry.outputs, 'multi_plane_operating_system.planes.outputs', filePath),
+      forbidden_claims: forbiddenClaims,
+      ordinary_path_eligible: expectBoolean(
+        entry.ordinary_path_eligible,
+        'multi_plane_operating_system.planes.ordinary_path_eligible',
+        filePath,
+      ),
+    };
+  });
+
+  requireEveryValue(
+    [...seenPlanes],
+    TARGET_ARCHITECTURE_PLANES,
+    'multi_plane_operating_system.planes.plane_id',
+    filePath,
+  );
+
+  return {
+    plane_model_id: planeModelId,
+    default_ordinary_route: defaultOrdinaryRoute,
+    planes,
+    cross_plane_authority_boundary: validateFalseBoundaryRecord(
+      filePath,
+      value.cross_plane_authority_boundary,
+      'multi_plane_operating_system.cross_plane_authority_boundary',
+    ),
+  };
+}
+
+export function validateFlagshipExperienceMapping(
+  filePath: string,
+  value: unknown,
+): TargetOperatingArchitectureContract['flagship_experience_mapping'] {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'target-operating-architecture-contract.json must declare flagship_experience_mapping.',
+      { file: filePath, field: 'flagship_experience_mapping' },
+    );
+  }
+
+  const mappingId = expectString(value.mapping_id, 'flagship_experience_mapping.mapping_id', filePath);
+  if (mappingId !== 'mas_research_foundry_flagship_experience.v1') {
+    throw new FrameworkContractError('contract_shape_invalid', 'flagship_experience_mapping.mapping_id must freeze the MAS Research Foundry flagship mapping.', {
+      file: filePath,
+      field: 'flagship_experience_mapping.mapping_id',
+      actual: mappingId,
+    });
+  }
+  const flagshipAgentId = expectString(
+    value.flagship_agent_id,
+    'flagship_experience_mapping.flagship_agent_id',
+    filePath,
+  );
+  if (flagshipAgentId !== 'mas') {
+    throw new FrameworkContractError('contract_shape_invalid', 'flagship_experience_mapping.flagship_agent_id must stay scoped to MAS.', {
+      file: filePath,
+      field: 'flagship_experience_mapping.flagship_agent_id',
+      actual: flagshipAgentId,
+    });
+  }
+  const standardAgentShape = expectString(
+    value.standard_agent_shape,
+    'flagship_experience_mapping.standard_agent_shape',
+    filePath,
+  );
+  if (standardAgentShape !== 'Declarative Domain Pack + OPL generated/hosted surfaces + minimal authority functions') {
+    throw new FrameworkContractError('contract_shape_invalid', 'flagship_experience_mapping.standard_agent_shape must keep the standard agent target shape explicit.', {
+      file: filePath,
+      field: 'flagship_experience_mapping.standard_agent_shape',
+      actual: standardAgentShape,
+    });
+  }
+
+  const journeyArtifacts = expectNonEmptyStringArray(
+    value.journey_artifacts,
+    'flagship_experience_mapping.journey_artifacts',
+    filePath,
+  );
+  requireEveryValue(
+    journeyArtifacts,
+    TARGET_ARCHITECTURE_MAS_FLAGSHIP_JOURNEY_ARTIFACTS,
+    'flagship_experience_mapping.journey_artifacts',
+    filePath,
+  );
+  const privatePlatformResidueInputs = expectNonEmptyStringArray(
+    value.private_platform_residue_inputs,
+    'flagship_experience_mapping.private_platform_residue_inputs',
+    filePath,
+  );
+  requireEveryValue(
+    privatePlatformResidueInputs,
+    TARGET_ARCHITECTURE_FLAGSHIP_PRIVATE_RESIDUE_INPUTS,
+    'flagship_experience_mapping.private_platform_residue_inputs',
+    filePath,
+  );
+  const oplContractSurfaces = expectNonEmptyStringArray(
+    value.opl_contract_surfaces,
+    'flagship_experience_mapping.opl_contract_surfaces',
+    filePath,
+  );
+  requireEveryValue(
+    oplContractSurfaces,
+    TARGET_ARCHITECTURE_FLAGSHIP_CONTRACT_SURFACES,
+    'flagship_experience_mapping.opl_contract_surfaces',
+    filePath,
+  );
+  const falseReadyClaims = expectNonEmptyStringArray(
+    value.false_ready_claims,
+    'flagship_experience_mapping.false_ready_claims',
+    filePath,
+  );
+  requireEveryValue(
+    falseReadyClaims,
+    TARGET_ARCHITECTURE_FLAGSHIP_FALSE_READY_CLAIMS,
+    'flagship_experience_mapping.false_ready_claims',
+    filePath,
+  );
+
+  return {
+    mapping_id: mappingId,
+    flagship_agent_id: flagshipAgentId,
+    standard_agent_shape: standardAgentShape,
+    journey_artifacts: journeyArtifacts,
+    private_platform_residue_inputs: privatePlatformResidueInputs,
+    opl_contract_surfaces: oplContractSurfaces,
+    false_ready_claims: falseReadyClaims,
+    authority_boundary: validateFalseBoundaryRecord(
+      filePath,
+      value.authority_boundary,
+      'flagship_experience_mapping.authority_boundary',
+    ),
+  };
+}
+
+export function validateOneShotPlanLandingModel(
+  filePath: string,
+  value: unknown,
+): TargetOperatingArchitectureContract['one_shot_plan_landing_model'] {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'target-operating-architecture-contract.json must declare one_shot_plan_landing_model.',
+      { file: filePath, field: 'one_shot_plan_landing_model' },
+    );
+  }
+
+  const modelId = expectString(value.model_id, 'one_shot_plan_landing_model.model_id', filePath);
+  if (modelId !== 'opl_family_one_shot_plan_landing.v1') {
+    throw new FrameworkContractError('contract_shape_invalid', 'one_shot_plan_landing_model.model_id must be canonical.', {
+      file: filePath,
+      field: 'one_shot_plan_landing_model.model_id',
+      actual: modelId,
+    });
+  }
+
+  const slicesRaw = value.implementation_slices;
+  if (!Array.isArray(slicesRaw)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'one_shot_plan_landing_model.implementation_slices must be an array.', {
+      file: filePath,
+      field: 'one_shot_plan_landing_model.implementation_slices',
+    });
+  }
+
+  const seenPlanIds = new Set<string>();
+  const statusCounts = {
+    opl_landed: 0,
+    opl_landed_owner_gated: 0,
+    external_owner_gated: 0,
+  };
+  const implementationSlices = slicesRaw.map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each one-shot plan landing slice must be an object.', {
+        file: filePath,
+        index,
+      });
+    }
+    const planId = expectString(entry.plan_id, 'one_shot_plan_landing_model.implementation_slices.plan_id', filePath);
+    if (!TARGET_ARCHITECTURE_ONE_SHOT_PLAN_IDS.includes(planId as typeof TARGET_ARCHITECTURE_ONE_SHOT_PLAN_IDS[number])) {
+      throw new FrameworkContractError('contract_shape_invalid', 'one_shot_plan_landing_model.implementation_slices.plan_id must be P0-P8.', {
+        file: filePath,
+        index,
+        plan_id: planId,
+        expected_plan_ids: [...TARGET_ARCHITECTURE_ONE_SHOT_PLAN_IDS],
+      });
+    }
+    if (seenPlanIds.has(planId)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'one_shot_plan_landing_model.implementation_slices plan ids must be unique.', {
+        file: filePath,
+        index,
+        plan_id: planId,
+      });
+    }
+    seenPlanIds.add(planId);
+    const status = expectString(entry.status, 'one_shot_plan_landing_model.implementation_slices.status', filePath);
+    if (!TARGET_ARCHITECTURE_ONE_SHOT_PLAN_STATUSES.includes(status as typeof TARGET_ARCHITECTURE_ONE_SHOT_PLAN_STATUSES[number])) {
+      throw new FrameworkContractError('contract_shape_invalid', 'one_shot_plan_landing_model.implementation_slices.status must be a known landing status.', {
+        file: filePath,
+        index,
+        status,
+        expected_statuses: [...TARGET_ARCHITECTURE_ONE_SHOT_PLAN_STATUSES],
+      });
+    }
+    statusCounts[status as keyof typeof statusCounts] += 1;
+    return {
+      plan_id: planId,
+      title: expectString(entry.title, 'one_shot_plan_landing_model.implementation_slices.title', filePath),
+      status: status as TargetOperatingArchitectureContract['one_shot_plan_landing_model']['implementation_slices'][number]['status'],
+      opl_landed_surfaces: expectNonEmptyStringArray(
+        entry.opl_landed_surfaces,
+        'one_shot_plan_landing_model.implementation_slices.opl_landed_surfaces',
+        filePath,
+      ),
+      validation_commands: expectNonEmptyStringArray(
+        entry.validation_commands,
+        'one_shot_plan_landing_model.implementation_slices.validation_commands',
+        filePath,
+      ),
+      remaining_owner_gate: expectString(
+        entry.remaining_owner_gate,
+        'one_shot_plan_landing_model.implementation_slices.remaining_owner_gate',
+        filePath,
+      ),
+      false_completion_claims: expectNonEmptyStringArray(
+        entry.false_completion_claims,
+        'one_shot_plan_landing_model.implementation_slices.false_completion_claims',
+        filePath,
+      ),
+    };
+  });
+  requireEveryValue(
+    [...seenPlanIds],
+    TARGET_ARCHITECTURE_ONE_SHOT_PLAN_IDS,
+    'one_shot_plan_landing_model.implementation_slices.plan_id',
+    filePath,
+  );
+
+  const summaryRaw = value.summary;
+  if (!isRecord(summaryRaw)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'one_shot_plan_landing_model.summary must be an object.', {
+      file: filePath,
+      field: 'one_shot_plan_landing_model.summary',
+    });
+  }
+  const summary = {
+    total_plan_count: expectFiniteNumber(summaryRaw.total_plan_count, 'one_shot_plan_landing_model.summary.total_plan_count', filePath),
+    opl_landed_count: expectFiniteNumber(summaryRaw.opl_landed_count, 'one_shot_plan_landing_model.summary.opl_landed_count', filePath),
+    opl_landed_owner_gated_count: expectFiniteNumber(summaryRaw.opl_landed_owner_gated_count, 'one_shot_plan_landing_model.summary.opl_landed_owner_gated_count', filePath),
+    external_owner_gated_count: expectFiniteNumber(summaryRaw.external_owner_gated_count, 'one_shot_plan_landing_model.summary.external_owner_gated_count', filePath),
+    all_opl_controlled_surfaces_landed: expectTrueBoolean(
+      summaryRaw.all_opl_controlled_surfaces_landed,
+      'one_shot_plan_landing_model.summary.all_opl_controlled_surfaces_landed',
+      filePath,
+    ),
+    external_owner_evidence_still_required: expectTrueBoolean(
+      summaryRaw.external_owner_evidence_still_required,
+      'one_shot_plan_landing_model.summary.external_owner_evidence_still_required',
+      filePath,
+    ),
+    ready_claim_authorized: expectFalseBoolean(
+      summaryRaw.ready_claim_authorized,
+      'one_shot_plan_landing_model.summary.ready_claim_authorized',
+      filePath,
+    ),
+  };
+  const expectedSummary = {
+    total_plan_count: TARGET_ARCHITECTURE_ONE_SHOT_PLAN_IDS.length,
+    opl_landed_count: statusCounts.opl_landed,
+    opl_landed_owner_gated_count: statusCounts.opl_landed_owner_gated,
+    external_owner_gated_count: statusCounts.external_owner_gated,
+  };
+  for (const [field, expected] of Object.entries(expectedSummary)) {
+    if (summary[field as keyof typeof expectedSummary] !== expected) {
+      throw new FrameworkContractError('contract_shape_invalid', 'one_shot_plan_landing_model.summary counts must match implementation_slices.', {
+        file: filePath,
+        field: `one_shot_plan_landing_model.summary.${field}`,
+        expected,
+        actual: summary[field as keyof typeof expectedSummary],
+      });
+    }
+  }
+
+  return {
+    model_id: modelId,
+    purpose: expectString(value.purpose, 'one_shot_plan_landing_model.purpose', filePath),
+    source_plan_ref: expectString(value.source_plan_ref, 'one_shot_plan_landing_model.source_plan_ref', filePath),
+    default_completion_semantics: expectString(
+      value.default_completion_semantics,
+      'one_shot_plan_landing_model.default_completion_semantics',
+      filePath,
+    ),
+    implementation_slices: implementationSlices,
+    summary,
+    authority_boundary: validateFalseBoundaryRecord(
+      filePath,
+      value.authority_boundary,
+      'one_shot_plan_landing_model.authority_boundary',
+    ),
+  };
+}
+
+export function validateTargetOperatingArchitectureExperienceModel(
+  filePath: string,
+  value: unknown,
+): TargetOperatingArchitectureContract['experience_operating_model'] {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'target-operating-architecture-contract.json must declare experience_operating_model.',
+      { file: filePath, field: 'experience_operating_model' },
+    );
+  }
+  const modelId = expectString(value.model_id, 'experience_operating_model.model_id', filePath);
+  if (modelId !== 'opl_family_ideal_experience_operating_model.v1') {
+    throw new FrameworkContractError('contract_shape_invalid', 'experience_operating_model.model_id must be canonical.', {
+      file: filePath,
+      field: 'experience_operating_model.model_id',
+      actual: modelId,
+    });
+  }
+  const defaultUserPathRaw = value.default_user_path;
+  const targetAxesRaw = value.target_axes;
+  const flagshipAgentRaw = value.flagship_agent_default;
+  if (!isRecord(defaultUserPathRaw) || !Array.isArray(targetAxesRaw) || !isRecord(flagshipAgentRaw)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'experience_operating_model must declare default_user_path, target_axes, and flagship_agent_default.',
+      { file: filePath, field: 'experience_operating_model' },
+    );
+  }
+  const seenAxisIds = new Set<string>();
+  const targetAxes = targetAxesRaw.map((axis, index) => {
+    if (!isRecord(axis)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each experience target axis must be an object.', {
+        file: filePath,
+        index,
+      });
+    }
+    const axisId = expectString(axis.axis_id, 'experience_operating_model.target_axes.axis_id', filePath);
+    if (!TARGET_ARCHITECTURE_EXPERIENCE_AXIS_IDS.includes(axisId as typeof TARGET_ARCHITECTURE_EXPERIENCE_AXIS_IDS[number])) {
+      throw new FrameworkContractError('contract_shape_invalid', 'experience_operating_model.target_axes.axis_id must be known.', {
+        file: filePath,
+        index,
+        axis_id: axisId,
+        allowed: [...TARGET_ARCHITECTURE_EXPERIENCE_AXIS_IDS],
+      });
+    }
+    if (seenAxisIds.has(axisId)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'experience_operating_model target axes must be unique.', {
+        file: filePath,
+        index,
+        axis_id: axisId,
+      });
+    }
+    seenAxisIds.add(axisId);
+    return {
+      axis_id: axisId as TargetOperatingArchitectureContract['experience_operating_model']['target_axes'][number]['axis_id'],
+      owner_modules: expectBrandModuleIdArray(
+        axis.owner_modules,
+        'experience_operating_model.target_axes.owner_modules',
+        filePath,
+      ),
+      success_policy: expectString(
+        axis.success_policy,
+        'experience_operating_model.target_axes.success_policy',
+        filePath,
+      ),
+      machine_checks: expectNonEmptyStringArray(
+        axis.machine_checks,
+        'experience_operating_model.target_axes.machine_checks',
+        filePath,
+      ),
+      forbidden_regressions: expectNonEmptyStringArray(
+        axis.forbidden_regressions,
+        'experience_operating_model.target_axes.forbidden_regressions',
+        filePath,
+      ),
+    };
+  });
+  requireEveryValue(
+    [...seenAxisIds],
+    TARGET_ARCHITECTURE_EXPERIENCE_AXIS_IDS,
+    'experience_operating_model.target_axes.axis_id',
+    filePath,
+  );
+
+  return {
+    model_id: modelId,
+    purpose: expectString(value.purpose, 'experience_operating_model.purpose', filePath),
+    default_user_path: {
+      planning_root: expectString(
+        defaultUserPathRaw.planning_root,
+        'experience_operating_model.default_user_path.planning_root',
+        filePath,
+      ),
+      first_screen_policy: expectString(
+        defaultUserPathRaw.first_screen_policy,
+        'experience_operating_model.default_user_path.first_screen_policy',
+        filePath,
+      ),
+      primary_read_surface: expectString(
+        defaultUserPathRaw.primary_read_surface,
+        'experience_operating_model.default_user_path.primary_read_surface',
+        filePath,
+      ),
+      drilldown_policy: expectString(
+        defaultUserPathRaw.drilldown_policy,
+        'experience_operating_model.default_user_path.drilldown_policy',
+        filePath,
+      ),
+    },
+    target_axes: targetAxes,
+    flagship_agent_default: {
+      agent_id: expectString(
+        flagshipAgentRaw.agent_id,
+        'experience_operating_model.flagship_agent_default.agent_id',
+        filePath,
+      ),
+      expected_path: expectString(
+        flagshipAgentRaw.expected_path,
+        'experience_operating_model.flagship_agent_default.expected_path',
+        filePath,
+      ),
+      domain_pack_role: expectString(
+        flagshipAgentRaw.domain_pack_role,
+        'experience_operating_model.flagship_agent_default.domain_pack_role',
+        filePath,
+      ),
+      opl_role: expectString(
+        flagshipAgentRaw.opl_role,
+        'experience_operating_model.flagship_agent_default.opl_role',
+        filePath,
+      ),
+      private_runtime_disposition: expectString(
+        flagshipAgentRaw.private_runtime_disposition,
+        'experience_operating_model.flagship_agent_default.private_runtime_disposition',
+        filePath,
+      ),
+    },
+    authority_boundary: validateFalseBoundaryRecord(
+      filePath,
+      value.authority_boundary,
+      'experience_operating_model.authority_boundary',
+    ),
+    forbidden_claims: expectNonEmptyStringArray(
+      value.forbidden_claims,
+      'experience_operating_model.forbidden_claims',
+      filePath,
+    ),
+  };
+}
