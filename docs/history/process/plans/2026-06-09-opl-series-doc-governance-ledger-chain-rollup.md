@@ -777,6 +777,60 @@ Coverage / carry-forward:
 - Not covered: production-like no-regression evidence, Temporal visual-stage long soak, generated/default caller thinning, concrete source/contract/test retirement lanes, or full six-repo paragraph coverage.
 - Physical retirement remains gated by RCA replacement-owner, no-active-caller, no-forbidden-write proof, owner receipt / typed blocker roundtrip or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
 
+## Fresh Intake 2026-06-12 RCA Status Evidence Payload Summary Compression
+
+This follow-up reopened `redcube-ai` for a narrow docs-only status lane after
+the repo remained clean, aligned to `origin/main`, and OPL Doc doctor was
+passing. It compresses Stage Folder role / physical path detail, AgentLab
+suite/task detail, production evidence payload paths, receipt count longlists,
+expected-receipt template internals and stage/replay field walkthroughs out of
+the RCA current status page. It does not create a new dated ledger chain and
+does not close the parent `/goal`.
+
+Semantic theme: RCA status is a current readout and gap pointer. Field-level
+Stage Folder, AgentLab, production acceptance, expected receipt, long-soak,
+source morphology and replay/readiness truth belongs to active plans, machine
+contracts, runtime evidence, source/tests and focused guards.
+
+Single Source of Truth:
+
+- Current RCA status readout: `redcube-ai/docs/status.md`.
+- Current RCA active gap and owner-delta baton: `redcube-ai/docs/active/rca-ideal-state-gap-plan.md`.
+- RCA private surface migration gates: `redcube-ai/docs/active/opl-private-implementation-migration-inventory.md`.
+- Field/payload truth: `redcube-ai/contracts/stage_control_plane.json`, production acceptance contracts, runtime-program parts, Stage Folder / artifact locator contracts, runtime evidence, source/tests and focused guard tests.
+- Topic-level RCA process provenance: `redcube-ai/docs/history/process/README.md`.
+
+Brand-module scope:
+
+- Primary module: `OPL Charter`, because this is docs lifecycle / SSOT governance.
+- Coordinating modules: `OPL Runway`, `OPL Foundry Lab` and `OPL Console`, because the compressed text concerns provider/read-model evidence, standard Foundry Agent stage surfaces and App/operator/Agent Lab readouts.
+- Not touched: runtime implementation, RCA visual truth, review/export verdicts, artifact authority, owner receipts, typed blockers, contracts/source/tests/CLI/API/workflows/packages, or physical deletion gates.
+
+Edited / pushed repo-local docs:
+
+| Repo | Commit | Edited docs and result |
+| --- | --- | --- |
+| `redcube-ai` | `3de00f30 docs: compress RCA status evidence payloads` | `docs/status.md` now keeps current-read summaries and routes Stage Folder roles/paths, AgentLab suite observations, production evidence payloads, receipt counts, expected-receipt templates, long-soak ref shapes and replay/readiness field detail back to active plans, contracts, runtime evidence and tests. `docs/history/process/README.md` records status evidence payload compression as topic-level coverage. |
+
+Fresh readback boundary:
+
+- `redcube-ai`: `main...origin/main`, `HEAD=origin/main=3de00f30`; `opl-doc-doctor` remained `finding_count=0`, `active_truth_health.status=pass`, `markdown_doc_count=93`.
+- `one-person-lab`: this rollup is the only OPL docs write for this RCA status follow-up.
+- `med-autoscience`, `med-autogrant`, `opl-meta-agent`, and `one-person-lab-app`: no repo-local edit in this RCA status follow-up.
+
+Verification:
+
+- RCA docs diff check: `git diff --check -- docs/status.md docs/history/process/README.md`.
+- RCA README/docs conflict-marker scan.
+- RCA residual status field/payload scan for removed longlist specifics.
+- RCA OPL Doc doctor: `finding_count=0`, `active_truth_health.status=pass`.
+
+Coverage / carry-forward:
+
+- Covered: RCA `docs/status.md` paragraphs that duplicated Stage Folder physical paths/files, stage output role lists, AgentLab suite/task detail, production evidence payload paths, proof-by-proof receipt counts, expected-receipt template internals, long-soak ref shapes or replay/readiness field walkthroughs as current prose truth.
+- Not covered: production-like no-regression evidence, Temporal visual-stage long soak itself, generated/default caller thinning, concrete source/contract/test retirement lanes, or full six-repo paragraph coverage.
+- Physical retirement remains gated by RCA replacement-owner, no-active-caller, no-forbidden-write proof, owner receipt / typed blocker roundtrip or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
+
 ## Future Record Policy
 
 - Do not create new dated docs-governance coverage-ledger chains for ordinary process, frozen inventory, doctor transcript, branch/worktree state, command transcripts or per-run proof.
