@@ -288,6 +288,8 @@ function compactStopLossState(...values: unknown[]) {
   if (!folded) {
     return defaultStopLossState();
   }
+  const terminalBlockerCode = stringValue(folded.terminal_blocker_code);
+  const successorAdmission = record(folded.successor_admission);
   return {
     ...defaultStopLossState(),
     surface_kind: stringValue(folded.surface_kind),
@@ -307,6 +309,8 @@ function compactStopLossState(...values: unknown[]) {
     fresh_owner_delta_required_to_resume:
       folded.fresh_owner_delta_required_to_resume === true,
     release_conditions: stringList(folded.release_conditions),
+    ...(terminalBlockerCode ? { terminal_blocker_code: terminalBlockerCode } : {}),
+    ...(Object.keys(successorAdmission).length > 0 ? { successor_admission: successorAdmission } : {}),
     policy_ref: stringValue(folded.policy_ref),
   };
 }

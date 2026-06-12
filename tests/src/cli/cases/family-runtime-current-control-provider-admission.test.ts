@@ -22,6 +22,12 @@ function jsString(value: string) {
   return JSON.stringify(value);
 }
 
+function record(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
 function writeJsonEmitterScript(scriptPath: string, payload: unknown) {
   fs.writeFileSync(
     scriptPath,
@@ -1170,8 +1176,11 @@ test('family-runtime stage attempt locator keeps fresh MAS payload fingerprint a
       'sha256:fresh-top-level-work-unit',
     );
     assert.equal(attempt.workspace_locator.domain_source_fingerprint, 'sha256:fresh-source');
+    const ownerRoute = record(attempt.workspace_locator.owner_route);
+    const currentnessContract = record(ownerRoute.currentness_contract);
+    const basis = record(currentnessContract.basis);
     assert.equal(
-      attempt.workspace_locator.owner_route.currentness_contract.basis.work_unit_fingerprint,
+      basis.work_unit_fingerprint,
       'sha256:stale-nested-owner-route-basis',
     );
   } finally {

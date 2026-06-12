@@ -55,6 +55,23 @@ test('family-runtime evidence-worklist keeps raw worklist roots out of current o
             stale_route_repeat_count: 0,
             fresh_owner_delta_required_to_resume: true,
             release_conditions: ['fresh_owner_delta', 'stable_typed_blocker'],
+            terminal_blocker_code: 'anti_loop_budget_exhausted',
+            successor_admission: {
+              status: 'identity_different_successor_or_gate_required',
+              same_work_unit_redrive_allowed: false,
+              preferred_successor: {
+                action_type: 'publishability_repair_sprint',
+                work_unit_id: 'publishability_repair_sprint_after_anti_loop_budget_exhausted',
+              },
+              stable_operator_gate: {
+                gate_kind: 'operator_or_human_decision_required',
+              },
+              authority_boundary: {
+                can_create_owner_receipt: false,
+                can_create_typed_blocker: false,
+                can_write_domain_truth: false,
+              },
+            },
             policy_ref: 'contracts/opl-framework/stop-loss-policy.schema.json',
           },
           primary_item: {
@@ -179,6 +196,19 @@ test('family-runtime evidence-worklist keeps raw worklist roots out of current o
   );
   const stopLossState = projection.current_owner_delta.stop_loss_state as Record<string, unknown>;
   assert.deepEqual(stopLossState.release_conditions, ['fresh_owner_delta', 'stable_typed_blocker']);
+  assert.equal(stopLossState.terminal_blocker_code, 'anti_loop_budget_exhausted');
+  assert.equal(
+    (stopLossState.successor_admission as Record<string, any>).preferred_successor.action_type,
+    'publishability_repair_sprint',
+  );
+  assert.equal(
+    (stopLossState.successor_admission as Record<string, any>).same_work_unit_redrive_allowed,
+    false,
+  );
+  assert.equal(
+    (stopLossState.successor_admission as Record<string, any>).authority_boundary.can_create_owner_receipt,
+    false,
+  );
   assert.equal(
     projection.next_safe_action_or_none?.derivation_source,
     'current_owner_delta',

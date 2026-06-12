@@ -649,6 +649,25 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
     budget.budget_exhaustion_action,
     'freeze_default_redrive_and_project_stop_loss_state_until_fresh_owner_delta_domain_answer_human_decision_or_provider_hard_gate_clearance',
   );
+  assert.equal(budget.budget_exhaustion_terminal_blocker_code, 'anti_loop_budget_exhausted');
+  assert.equal(budget.same_work_unit_redrive_after_budget_exhaustion_allowed, false);
+  assert.equal(
+    budget.successor_admission_policy.default_successor_action_type,
+    'publishability_repair_sprint',
+  );
+  assert.equal(
+    budget.successor_admission_policy.default_successor_work_unit_id,
+    'publishability_repair_sprint_after_anti_loop_budget_exhausted',
+  );
+  assert.equal(
+    budget.successor_admission_policy.identity_must_differ_by_any_of.includes('source_fingerprint'),
+    true,
+  );
+  assert.equal(budget.successor_admission_policy.stable_operator_or_human_gate_allowed, true);
+  assert.equal(
+    budget.successor_admission_policy.authority_boundary.can_create_owner_receipt,
+    false,
+  );
   assert.ok(budget.counts_as_progress_refs.includes('domain_owner_receipt_ref'));
   assert.ok(budget.counts_as_progress_refs.includes('paper_or_artifact_delta_ref'));
 

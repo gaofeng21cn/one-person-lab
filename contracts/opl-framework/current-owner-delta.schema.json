@@ -343,6 +343,53 @@
         },
         "fresh_owner_delta_required_to_resume": {
           "type": "boolean"
+        },
+        "terminal_blocker_code": {
+          "type": "string",
+          "enum": [
+            "anti_loop_budget_exhausted"
+          ]
+        },
+        "successor_admission": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "status": {
+              "enum": [
+                "identity_different_successor_or_gate_required"
+              ]
+            },
+            "same_work_unit_redrive_allowed": {
+              "const": false
+            },
+            "preferred_successor": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "action_type": {
+                  "const": "publishability_repair_sprint"
+                },
+                "work_unit_id": {
+                  "const": "publishability_repair_sprint_after_anti_loop_budget_exhausted"
+                }
+              }
+            },
+            "authority_boundary": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "can_create_owner_receipt": {
+                  "const": false
+                },
+                "can_create_typed_blocker": {
+                  "const": false
+                },
+                "can_write_domain_truth": {
+                  "const": false
+                }
+              }
+            }
+          }
         }
       }
     },

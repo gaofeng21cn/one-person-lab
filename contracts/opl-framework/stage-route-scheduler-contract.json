@@ -311,6 +311,26 @@
           "no_deliverable_delta"
         ],
         "budget_exhaustion_action": "freeze_default_redrive_and_project_stop_loss_state_until_fresh_owner_delta_domain_answer_human_decision_or_provider_hard_gate_clearance",
+        "budget_exhaustion_terminal_blocker_code": "anti_loop_budget_exhausted",
+        "same_work_unit_redrive_after_budget_exhaustion_allowed": false,
+        "successor_admission_policy": {
+          "status": "identity_different_successor_or_gate_required",
+          "default_successor_action_type": "publishability_repair_sprint",
+          "default_successor_work_unit_id": "publishability_repair_sprint_after_anti_loop_budget_exhausted",
+          "identity_must_differ_by_any_of": [
+            "action_type",
+            "work_unit_id",
+            "work_unit_fingerprint",
+            "source_fingerprint"
+          ],
+          "stable_operator_or_human_gate_allowed": true,
+          "authority_boundary": {
+            "can_write_domain_truth": false,
+            "can_create_owner_receipt": false,
+            "can_create_typed_blocker": false,
+            "can_authorize_quality_verdict": false
+          }
+        },
         "counts_as_progress_refs": [
           "domain_owner_receipt_ref",
           "quality_gate_receipt_ref",

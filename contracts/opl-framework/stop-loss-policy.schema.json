@@ -41,6 +41,12 @@
         "released"
       ]
     },
+    "terminal_blocker_code": {
+      "type": "string",
+      "enum": [
+        "anti_loop_budget_exhausted"
+      ]
+    },
     "release_conditions": {
       "type": "array",
       "minItems": 1,
@@ -57,6 +63,39 @@
     },
     "authority_boundary": {
       "$ref": "#/$defs/authority_boundary"
+    },
+    "successor_policy": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "same_work_unit_redrive_allowed",
+        "identity_different_successor_allowed",
+        "default_successor_action_type",
+        "stable_operator_gate_allowed"
+      ],
+      "properties": {
+        "same_work_unit_redrive_allowed": {
+          "const": false
+        },
+        "identity_different_successor_allowed": {
+          "const": true
+        },
+        "default_successor_action_type": {
+          "const": "publishability_repair_sprint"
+        },
+        "default_successor_work_unit_id": {
+          "const": "publishability_repair_sprint_after_anti_loop_budget_exhausted"
+        },
+        "stable_operator_gate_allowed": {
+          "const": true
+        },
+        "required_identity_difference_any_of": {
+          "type": "array",
+          "contains": {
+            "const": "source_fingerprint"
+          }
+        }
+      }
     }
   },
   "$defs": {

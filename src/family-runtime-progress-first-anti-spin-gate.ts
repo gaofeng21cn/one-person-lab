@@ -16,6 +16,9 @@ type JsonRecord = Record<string, unknown>;
 export const PROGRESS_FIRST_OWNER_DELTA_REQUIRED_REASON = 'progress_first_owner_delta_required';
 const DEFAULT_ANTI_SPIN_REPEAT_THRESHOLD = 2;
 const MISSING_SOURCE_FINGERPRINT_REASON = 'progress_first_source_fingerprint_required';
+const ANTI_LOOP_BUDGET_EXHAUSTED_BLOCKER_CODE = 'anti_loop_budget_exhausted';
+const STOP_LOSS_SUCCESSOR_ACTION_TYPE = 'publishability_repair_sprint';
+const STOP_LOSS_SUCCESSOR_WORK_UNIT_ID = 'publishability_repair_sprint_after_anti_loop_budget_exhausted';
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -90,6 +93,21 @@ function ownerFingerprint(payload: JsonRecord | null) {
 function sourceFingerprint(payload: JsonRecord | null) {
   return stringValue(payload?.source_fingerprint)
     ?? stringValue(payload?.domain_source_fingerprint);
+}
+
+function workUnitId(payload: JsonRecord | null) {
+  const basis = record(payload?.owner_route_currentness_basis);
+  return stringValue(payload?.work_unit_id)
+    ?? stringValue(basis.work_unit_id)
+    ?? stringValue(payload?.action_type)
+    ?? stringValue(payload?.action_ref);
+}
+
+function workUnitFingerprint(payload: JsonRecord | null) {
+  const basis = record(payload?.owner_route_currentness_basis);
+  return stringValue(payload?.work_unit_fingerprint)
+    ?? stringValue(basis.work_unit_fingerprint)
+    ?? sourceFingerprint(payload);
 }
 
 function deltaCount(value: unknown) {
@@ -308,16 +326,19 @@ function ownerPayloadRefs(value: JsonRecord) {
 
 function lineageFieldsFromPayload(row: FamilyRuntimeTaskRow, payload: JsonRecord) {
   const workspace = record(payload.workspace_locator);
+  const actionType =
+    stringValue(payload.action_type)
+    ?? stringValue(payload.action_ref)
+    ?? stringValue(payload.dispatch_authority)
+    ?? stringValue(payload.next_executable_owner)
+    ?? row.task_kind;
   return {
     domain_id: row.domain_id,
     task_kind: row.task_kind,
     study_id: stringValue(payload.study_id) ?? stringValue(payload.quest_id) ?? stringValue(workspace.study_id),
-    action_type:
-      stringValue(payload.action_type)
-      ?? stringValue(payload.action_ref)
-      ?? stringValue(payload.dispatch_authority)
-      ?? stringValue(payload.next_executable_owner)
-      ?? row.task_kind,
+    action_type: actionType,
+    work_unit_id: workUnitId(payload) ?? actionType,
+    work_unit_fingerprint: workUnitFingerprint(payload) ?? sourceFingerprint(payload),
     source_fingerprint: sourceFingerprint(payload),
     owner_fingerprint: ownerFingerprint(payload),
   };
@@ -325,16 +346,26 @@ function lineageFieldsFromPayload(row: FamilyRuntimeTaskRow, payload: JsonRecord
 
 function lineageFieldsFromAttempt(attempt: ReturnType<typeof listStageAttempts>[number], linkedPayload: JsonRecord | null) {
   const workspace = record(attempt.workspace_locator);
+  const actionType =
+    stringValue(workspace.action_type)
+    ?? stringValue(workspace.action_ref)
+    ?? stringValue(workspace.dispatch_authority)
+    ?? stringValue(workspace.next_executable_owner)
+    ?? stringValue(attempt.stage_id);
   return {
     domain_id: stringValue(attempt.domain_id),
     task_kind: stringValue(workspace.task_kind) ?? stringValue(attempt.stage_id),
     study_id: stringValue(workspace.study_id) ?? stringValue(workspace.quest_id) ?? stringValue(linkedPayload?.study_id),
-    action_type:
-      stringValue(workspace.action_type)
-      ?? stringValue(workspace.action_ref)
-      ?? stringValue(workspace.dispatch_authority)
-      ?? stringValue(workspace.next_executable_owner)
-      ?? stringValue(attempt.stage_id),
+    action_type: actionType,
+    work_unit_id:
+      stringValue(workspace.work_unit_id)
+      ?? workUnitId(linkedPayload)
+      ?? actionType,
+    work_unit_fingerprint:
+      stringValue(workspace.work_unit_fingerprint)
+      ?? stringValue(workspace.domain_source_fingerprint)
+      ?? workUnitFingerprint(linkedPayload)
+      ?? stringValue(attempt.source_fingerprint),
     source_fingerprint:
       stringValue(workspace.domain_source_fingerprint)
       ?? sourceFingerprint(linkedPayload)
@@ -433,9 +464,12 @@ function buildLineagePacket(input: {
       task_kind: input.lineage.task_kind,
       study_id: input.lineage.study_id,
       action_type: input.lineage.action_type,
+      work_unit_id: input.lineage.work_unit_id,
+      work_unit_fingerprint: input.lineage.work_unit_fingerprint,
       source_fingerprint: input.lineage.source_fingerprint,
     },
     candidate_task_id: input.candidate.task_id,
+    terminal_blocker_code: ANTI_LOOP_BUDGET_EXHAUSTED_BLOCKER_CODE,
     recent_attempt_refs: noDeltaAttempts.map((attempt) => `/stage_attempt_workbench/attempts/${attempt.stage_attempt_id}`),
     repeat_breakdown: repeatBreakdown,
     repeated_attempt_classifications: noDeltaAttempts.map((attempt) => ({
@@ -465,11 +499,98 @@ function buildLineagePacket(input: {
   };
 }
 
+function stopLossAuthorityBoundary() {
+  return {
+    opl: 'stop_loss_successor_projection_and_admission_guard_only',
+    domain: 'truth_quality_artifact_gate_owner',
+    can_execute_domain_action: false,
+    can_write_domain_truth: false,
+    can_create_owner_receipt: false,
+    can_create_typed_blocker: false,
+    can_authorize_domain_ready: false,
+    can_authorize_quality_verdict: false,
+    can_claim_publication_ready: false,
+    can_claim_production_ready: false,
+  };
+}
+
+function successorSourceFingerprint(lineageKey: JsonRecord) {
+  return [
+    'anti-loop-successor',
+    stringValue(lineageKey.domain_id) ?? 'unknown-domain',
+    stringValue(lineageKey.study_id) ?? 'unknown-study',
+    STOP_LOSS_SUCCESSOR_ACTION_TYPE,
+    ANTI_LOOP_BUDGET_EXHAUSTED_BLOCKER_CODE,
+    stringValue(lineageKey.source_fingerprint) ?? 'unknown-source',
+  ].join(':');
+}
+
+function buildSuccessorAdmission(lineage: JsonRecord) {
+  const lineageKey = record(lineage.lineage_key);
+  const successor = {
+    action_type: STOP_LOSS_SUCCESSOR_ACTION_TYPE,
+    work_unit_id: STOP_LOSS_SUCCESSOR_WORK_UNIT_ID,
+    work_unit_fingerprint: [
+      STOP_LOSS_SUCCESSOR_WORK_UNIT_ID,
+      ANTI_LOOP_BUDGET_EXHAUSTED_BLOCKER_CODE,
+      stringValue(lineageKey.study_id) ?? 'unknown-study',
+    ].join(':'),
+    source_fingerprint: successorSourceFingerprint(lineageKey),
+    required_owner: stringValue(lineage.required_owner) ?? stringValue(lineageKey.domain_id),
+    accepted_answer_shape: [
+      'domain_owner_receipt_ref',
+      'quality_gate_receipt_ref',
+      'typed_blocker_ref',
+      'human_gate_ref',
+      'route_back_evidence_ref',
+    ],
+    admission_requires: [
+      'fresh_current_owner_delta_identity',
+      'stage_run_currentness_identity',
+      'different_action_type_or_work_unit_or_source_fingerprint',
+      'domain_owned_owner_answer_or_stable_gate_ref',
+    ],
+  };
+  return {
+    surface_kind: 'opl_stop_loss_successor_admission',
+    schema_version: 'stop-loss-successor-admission.v1',
+    status: 'identity_different_successor_or_gate_required',
+    terminal_blocker_code: ANTI_LOOP_BUDGET_EXHAUSTED_BLOCKER_CODE,
+    exhausted_lineage_key: lineageKey,
+    same_work_unit_redrive_allowed: false,
+    identity_must_differ_from_exhausted_lineage_by_any_of: [
+      'action_type',
+      'work_unit_id',
+      'work_unit_fingerprint',
+      'source_fingerprint',
+    ],
+    preferred_successor: successor,
+    stable_operator_gate: {
+      gate_kind: 'operator_or_human_decision_required',
+      gate_ref: `operator-gate:${stringValue(lineage.candidate_task_id) ?? 'unknown'}:${ANTI_LOOP_BUDGET_EXHAUSTED_BLOCKER_CODE}`,
+      required_ref_any_of: [
+        'human_gate_ref',
+        'route_back_evidence_ref',
+        'domain_typed_blocker_ref',
+        'provider_hard_gate_clearance_ref',
+      ],
+      allowed_decisions: [
+        'admit_identity_different_publishability_repair_sprint',
+        'wait_for_domain_owned_typed_blocker',
+        'record_human_gate_ref',
+        'clear_after_provider_hard_gate_clearance',
+      ],
+    },
+    authority_boundary: stopLossAuthorityBoundary(),
+  };
+}
+
 function buildStopLossState(lineage: JsonRecord) {
   const repeatBreakdown = record(lineage.repeat_breakdown);
   return {
     surface_kind: 'opl_current_owner_delta_stop_loss_state',
     status: 'frozen',
+    terminal_blocker_code: ANTI_LOOP_BUDGET_EXHAUSTED_BLOCKER_CODE,
     lineage_repeat_count: numberValue(lineage.repeat_count),
     receipt_only_repeat_count: numberValue(repeatBreakdown.receipt_only_repeat_count),
     read_model_reconcile_repeat_count:
@@ -487,6 +608,7 @@ function buildStopLossState(lineage: JsonRecord) {
       'human_decision',
       'provider_hard_gate_clearance',
     ],
+    successor_admission: buildSuccessorAdmission(lineage),
     policy_ref: 'contracts/opl-framework/stop-loss-policy.schema.json',
   };
 }
@@ -540,12 +662,26 @@ function buildStopLossPolicy(lineage: JsonRecord) {
         ? `/family-runtime/tasks/${stringValue(lineage.candidate_task_id)}/progress-first-anti-spin`
         : '/family-runtime/progress-first-anti-spin',
     freeze_state: 'frozen',
+    terminal_blocker_code: ANTI_LOOP_BUDGET_EXHAUSTED_BLOCKER_CODE,
     release_conditions: [
       'fresh_owner_delta',
       'stable_typed_blocker',
       'human_decision',
       'provider_hard_gate_clearance',
     ],
+    successor_policy: {
+      same_work_unit_redrive_allowed: false,
+      identity_different_successor_allowed: true,
+      default_successor_action_type: STOP_LOSS_SUCCESSOR_ACTION_TYPE,
+      default_successor_work_unit_id: STOP_LOSS_SUCCESSOR_WORK_UNIT_ID,
+      stable_operator_gate_allowed: true,
+      required_identity_difference_any_of: [
+        'action_type',
+        'work_unit_id',
+        'work_unit_fingerprint',
+        'source_fingerprint',
+      ],
+    },
     authority_boundary: {
       opl_can_freeze_default_launch: true,
       opl_can_delete_domain_attempts: false,

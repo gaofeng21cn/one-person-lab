@@ -182,12 +182,54 @@ test('family-runtime tick blocks repeated same-source MAS default executor dispa
       assert.equal(eventPayload.reason, 'progress_first_owner_delta_required');
       assert.equal(eventPayload.lineage.repeat_count, 2);
       assert.equal(eventPayload.lineage.next_forced_delta, 'domain_deliverable_or_owner_receipt_delta_required');
+      assert.equal(eventPayload.lineage.terminal_blocker_code, 'anti_loop_budget_exhausted');
       assert.equal(eventPayload.stop_loss_state.status, 'frozen');
       assert.equal(eventPayload.stop_loss_state.lineage_repeat_count, 2);
       assert.equal(eventPayload.stop_loss_state.platform_repair_only_repeat_count, 2);
       assert.equal(eventPayload.stop_loss_state.receipt_only_repeat_count, 0);
       assert.equal(eventPayload.stop_loss_state.read_model_reconcile_repeat_count, 0);
       assert.equal(eventPayload.stop_loss_state.stale_route_repeat_count, 0);
+      assert.equal(eventPayload.stop_loss_state.terminal_blocker_code, 'anti_loop_budget_exhausted');
+      assert.equal(
+        eventPayload.stop_loss_state.successor_admission.status,
+        'identity_different_successor_or_gate_required',
+      );
+      assert.equal(
+        eventPayload.stop_loss_state.successor_admission.preferred_successor.action_type,
+        'publishability_repair_sprint',
+      );
+      assert.equal(
+        eventPayload.stop_loss_state.successor_admission.preferred_successor.work_unit_id,
+        'publishability_repair_sprint_after_anti_loop_budget_exhausted',
+      );
+      assert.notEqual(
+        eventPayload.stop_loss_state.successor_admission.preferred_successor.action_type,
+        eventPayload.lineage.lineage_key.action_type,
+      );
+      assert.notEqual(
+        eventPayload.stop_loss_state.successor_admission.preferred_successor.work_unit_id,
+        eventPayload.lineage.lineage_key.action_type,
+      );
+      assert.notEqual(
+        eventPayload.stop_loss_state.successor_admission.preferred_successor.source_fingerprint,
+        eventPayload.lineage.lineage_key.source_fingerprint,
+      );
+      assert.equal(
+        eventPayload.stop_loss_state.successor_admission.stable_operator_gate.gate_kind,
+        'operator_or_human_decision_required',
+      );
+      assert.equal(
+        eventPayload.stop_loss_state.successor_admission.authority_boundary.can_create_owner_receipt,
+        false,
+      );
+      assert.equal(
+        eventPayload.stop_loss_policy.successor_policy.same_work_unit_redrive_allowed,
+        false,
+      );
+      assert.equal(
+        eventPayload.stop_loss_policy.successor_policy.identity_different_successor_allowed,
+        true,
+      );
       assert.deepEqual(
         eventPayload.lineage.repeat_breakdown,
         {

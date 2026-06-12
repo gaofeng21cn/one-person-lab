@@ -332,6 +332,30 @@ test('target architecture schema contracts keep owner delta root and audit tail 
 
   const stopLoss = schemas['contracts/opl-framework/stop-loss-policy.schema.json'];
   assert.equal(stopLoss.$defs.authority_boundary.properties.opl_can_synthesize_fallback_verdict.const, false);
+  assert.equal(
+    stopLoss.properties.terminal_blocker_code.enum.includes('anti_loop_budget_exhausted'),
+    true,
+  );
+  assert.equal(stopLoss.properties.successor_policy.properties.same_work_unit_redrive_allowed.const, false);
+  assert.equal(stopLoss.properties.successor_policy.properties.identity_different_successor_allowed.const, true);
+  assert.equal(
+    stopLoss.properties.successor_policy.properties.default_successor_action_type.const,
+    'publishability_repair_sprint',
+  );
+
+  const currentOwnerDelta = schemas['contracts/opl-framework/current-owner-delta.schema.json'];
+  assert.equal(
+    currentOwnerDelta.properties.stop_loss_state.properties.successor_admission.properties.same_work_unit_redrive_allowed.const,
+    false,
+  );
+  assert.equal(
+    currentOwnerDelta.properties.stop_loss_state.properties.successor_admission.properties.preferred_successor.properties.action_type.const,
+    'publishability_repair_sprint',
+  );
+  assert.equal(
+    currentOwnerDelta.properties.stop_loss_state.properties.successor_admission.properties.authority_boundary.properties.can_create_owner_receipt.const,
+    false,
+  );
 
   const defaultSurfaceBudget = schemas['contracts/opl-framework/default-surface-budget.schema.json'];
   assert.equal(defaultSurfaceBudget.$defs.false_flags.properties.can_claim_production_ready.const, false);

@@ -523,6 +523,56 @@ Coverage / carry-forward:
 - Not covered: future App release cohorts, Full/VM evidence, GUI implementation parity, install exposure live-root validation, active-shell adoption, release promotion decisions, any App source/test/workflow/package/CLI/API retirement, or full six-repo paragraph coverage.
 - Physical retirement remains gated by App contracts/source/tests/validators plus replacement-owner, no-active-caller, no-forbidden-write, App owner decision, and retired-surface provenance. This follow-up authorizes no physical deletion.
 
+## Fresh Intake 2026-06-12 RCA Status Naming / Source Morphology Summary Compression
+
+This follow-up reopened `redcube-ai` for a narrow docs-only status lane after
+the repo was clean, aligned to `origin/main`, and OPL Doc doctor was passing. It
+compresses field-by-field retired legacy surface id, compatibility payload,
+source-ref integrity, session/gateway/protocol naming and path-level source
+morphology longlists out of current status and back to their RCA SSOT owners. It
+does not create a new dated ledger chain and does not close the parent `/goal`.
+
+Semantic theme: RCA status naming / source morphology summary compression.
+
+Single Source of Truth:
+
+- Current RCA completion, hygiene and owner-delta plan: `redcube-ai/docs/active/rca-ideal-state-gap-plan.md`.
+- Private implementation classification and cutover gates: `redcube-ai/docs/active/opl-private-implementation-migration-inventory.md`.
+- Machine guard and source morphology truth: `redcube-ai/contracts/physical_source_morphology_policy.json`, `redcube-ai/contracts/private_functional_surface_policy.json`, runtime-program leaf contracts, source/tests and focused guard tests.
+- Topic-level RCA process provenance: `redcube-ai/docs/history/process/README.md`.
+
+Brand-module scope:
+
+- Primary module: `OPL Charter`, because this is docs lifecycle / SSOT governance.
+- Coordinating modules: `OPL Foundry Lab` and `OPL Runway`, because the compressed text concerns a Foundry Agent's private-surface classification, generated/default caller thinning and hosted-runtime handoff boundaries.
+- Not touched: runtime implementation, RCA visual truth, App release truth, artifact authority, quality/export verdicts, owner receipts, typed blockers, source/test/workflow/package/CLI/API surfaces or physical deletion gates.
+
+Edited / pushed repo-local docs:
+
+| Repo | Commit | Edited docs and result |
+| --- | --- | --- |
+| `redcube-ai` | `51acbe2e docs: compress RCA status hygiene summary` | `docs/status.md` now keeps only the current naming/source hygiene and physical source morphology readout, pointing guard internals and path-level checkpoints back to active plan, private inventory, machine contracts, source/tests and focused guard tests. `docs/history/process/README.md` records the status summary compression as topic-level coverage. |
+
+Fresh readback boundary:
+
+- `redcube-ai`: `main...origin/main`, `HEAD=origin/main=51acbe2e`; `opl-doc-doctor` remained `finding_count=0`, `active_truth_health.status=pass`, `markdown_doc_count=93`.
+- `one-person-lab`: this rollup is the only OPL docs write for this RCA follow-up; concurrent runtime/currentness contract/source/test/doc edits are outside this docs-governance write set.
+- `med-autoscience`: unrelated runtime/currentness owner lanes remain outside this RCA docs-governance follow-up.
+- `med-autogrant`, `opl-meta-agent`, and `one-person-lab-app`: no repo-local edit in this RCA follow-up.
+
+Verification:
+
+- RCA docs diff check: `git diff --check -- docs/status.md docs/history/process/README.md`.
+- RCA README/docs conflict-marker scan.
+- RCA status residual field-level longlist scan for the compressed naming/source morphology terms.
+- RCA OPL Doc doctor: `finding_count=0`, `active_truth_health.status=pass`.
+
+Coverage / carry-forward:
+
+- Covered: RCA `docs/status.md` paragraphs that duplicated retired-surface id pointer policy, compatibility payload-field policy, source-ref integrity gate, session/gateway/protocol naming cleanup and path-level source morphology checkpoints as current status prose.
+- Not covered: RCA production-like no-regression, Temporal visual-stage long soak, generated/default caller thinning, concrete source/contract/test retirement lanes, `docs/architecture.md` residual thinning, `docs/decisions.md` residual thinning, or full six-repo paragraph coverage.
+- Physical retirement remains gated by RCA machine guards plus replacement-owner, no-active-caller, no-forbidden-write, RCA owner receipt / typed blocker or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
+
 ## Future Record Policy
 
 - Do not create new dated docs-governance coverage-ledger chains for ordinary process, frozen inventory, doctor transcript, branch/worktree state, command transcripts or per-run proof.
