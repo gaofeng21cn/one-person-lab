@@ -4,7 +4,7 @@ import { assert, fs, loadFrameworkContracts, os, path, repoRoot, runCli, test } 
 import './brand-modules-cases/agent-and-foundry-surfaces.ts';
 import './brand-modules-cases/module-command-surfaces.ts';
 import './brand-modules-cases/runway-control-loop.ts';
-import { expectedModuleIds } from './brand-modules-cases/shared.ts';
+import { expectedModuleIds, type L5Module } from './brand-modules-cases/shared.ts';
 import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/family-runtime-evidence-worklist.ts';
 
 test('brand module registry is loaded as a required framework contract', () => {
@@ -489,124 +489,6 @@ test('brand module L5 evidence gate is executable but does not claim production 
       status.owner_route_work_order_policy.accepted_route_ref_shapes.includes('typed_blocker_ref'),
       true,
     );
-    type L5Route = {
-      module_id: string;
-      class_id: string;
-      owner: string;
-      owner_repo: string;
-      owner_route_status: string;
-      blocker_state: string;
-      next_owner_action: string;
-      work_order_id: string;
-      owner_evidence_closure_state: string;
-      owner_acceptance_required: boolean;
-      ready_claim_authorized: boolean;
-      closing_ref_source: string;
-      typed_blocker_source: string;
-      record_evidence_command: string;
-      typed_blocker_payload_template: {
-        module_id: string;
-        evidence_class_id: string;
-        typed_blocker_refs: string[];
-        receipt_ref: string;
-      };
-      evidence_payload_template: {
-        module_id: string;
-        evidence_class_id: string;
-        evidence_refs: string[];
-      };
-      owner_route_command_examples: {
-        record_evidence: {
-          command: string;
-          payload_template: {
-            module_id: string;
-            evidence_class_id: string;
-            evidence_refs: string[];
-          };
-          closes_l5: boolean;
-        };
-        record_typed_blocker_ref: {
-          command: string;
-          payload_template: {
-            module_id: string;
-            evidence_class_id: string;
-            typed_blocker_refs: string[];
-            receipt_ref: string;
-          };
-          closes_l5: boolean;
-          creates_typed_blocker: boolean;
-        };
-        verify_receipt: {
-          command: string;
-          closes_l5: boolean;
-        };
-        list_requirement_refs: {
-          command: string;
-          closes_l5: boolean;
-        };
-      };
-      verification_command: string;
-      accepted_ref_shapes: string[];
-      existing_evidence_refs: string[];
-      existing_blocker_refs: string[];
-      observed_evidence_refs: string[];
-      observed_ref_shapes: string[];
-      observed_ref_count: number;
-      observed_typed_blocker_ref_count: number;
-      observed_receipt_count: number;
-      verified_receipt_count: number;
-      l5_claim_status: string;
-      non_closing_inputs: string[];
-      forbidden_opl_claims: string[];
-      stop_loss: string[];
-      authority_boundary: {
-        route_is_refs_only: boolean;
-        route_can_claim_l5: boolean;
-        route_can_claim_production_ready: boolean;
-        route_can_create_owner_receipt: boolean;
-        route_can_create_typed_blocker: boolean;
-      };
-    };
-    type L5Module = {
-      module_id: string;
-      evidence_required: boolean;
-      l5_can_be_claimed: boolean;
-      l5_completion_status: string;
-      open_requirement_count: number;
-      blocked_requirement_count: number;
-      next_action_summary: {
-        module_id: string;
-        status: string;
-        l5_can_be_claimed: boolean;
-        next_owner_action: string;
-        next_work_order_id: string | null;
-        next_evidence_class_id: string | null;
-        next_owner: string | null;
-        next_owner_repo: string | null;
-        next_accepted_ref_shapes: string[] | null;
-        next_forbidden_opl_claims: string[] | null;
-        next_stop_loss: string[] | null;
-        next_command_examples: L5Route['owner_route_command_examples'] | null;
-        missing_evidence_groups: {
-          missing_owner_evidence_class_ids: string[];
-          observed_refs_not_l5_claim_class_ids: string[];
-          typed_blocker_recorded_class_ids: string[];
-          verified_receipt_class_ids: string[];
-        };
-        missing_owner_evidence_class_count: number;
-        observed_refs_not_l5_claim_class_count: number;
-        typed_blocker_recorded_class_count: number;
-        verified_receipt_class_count: number;
-        false_completion_guard: {
-          refs_only_inputs_close_l5: boolean;
-          work_order_projection_closes_l5: boolean;
-          verified_ledger_closes_l5: boolean;
-          ready_claim_authorized: boolean;
-        };
-      };
-      owner_evidence_routes: L5Route[];
-    };
-
     for (const entry of status.modules as L5Module[]) {
       assert.equal(entry.evidence_required, true);
       assert.equal(entry.l5_can_be_claimed, false);
