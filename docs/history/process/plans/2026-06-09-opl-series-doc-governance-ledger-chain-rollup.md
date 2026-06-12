@@ -472,6 +472,57 @@ Coverage / carry-forward:
 - Not covered: MAS `docs/status.md` dense current-summary compression, `docs/decisions.md`, display catalog compression, live owner-surface foldback, concrete source/test/workflow/package/CLI/API retirement lanes, or full six-repo paragraph coverage.
 - Physical retirement remains gated by replacement-owner, no-active-caller, no-forbidden-write, MAS owner receipt / typed blocker or explicit owner decision, and tombstone/provenance refs. This follow-up authorizes no physical deletion.
 
+## Fresh Intake 2026-06-12 App Release Status Summary Compression
+
+This follow-up reopened `one-person-lab-app` for a narrow docs-only release
+status lane after the App repo was clean, aligned to `origin/main`, and OPL Doc
+doctor was passing. It compresses detailed standard/Full release policy,
+managed-update runner detail, cohort evidence classifications and active-shell
+release validation prose out of current status and back to their App release
+SSOT owners. It does not create a new dated ledger chain and does not close the
+parent `/goal`.
+
+Semantic theme: App release-state status summary compression.
+
+Single Source of Truth:
+
+- Current App release guide and operator map: `one-person-lab-app/docs/release/README.md`.
+- Machine release contract and gates: `one-person-lab-app/contracts/app-release-channel.json`, release workflows, validators, release-boundary tests and release artifacts.
+- Current App active product gaps and next baton: `one-person-lab-app/docs/active/app-ideal-state-gap-plan.md`.
+- Topic-level App process provenance: `one-person-lab-app/docs/history/process/README.md`.
+
+Brand-module scope:
+
+- Primary module: `OPL Charter`, because this is docs lifecycle / SSOT governance.
+- Coordinating modules: `OPL Console` and `OPL Runway`, because the App status surface is an operator/read-model entry and the managed-update text references Framework runner consumption.
+- Not touched: runtime implementation, domain truth, App release promotion authority, artifact authority, quality/export verdicts, owner receipts, typed blockers, source/test/workflow/package/CLI/API surfaces or physical deletion gates.
+
+Edited / pushed repo-local docs:
+
+| Repo | Commit | Edited docs and result |
+| --- | --- | --- |
+| `one-person-lab-app` | `64c24fa docs: compress App release status summary` | `docs/status.md#release-state` now keeps only the current release-state summary and SSOT pointers. `docs/history/process/README.md` records release status summary compression and keeps release policy detail routed to the release guide, contracts, scripts, tests, workflows, artifacts or history/provenance. |
+
+Fresh readback boundary:
+
+- `one-person-lab-app`: `main...origin/main`, `HEAD=origin/main=64c24fa`; `opl-doc-doctor` remained `finding_count=0`, `active_truth_health.status=pass`, `markdown_doc_count=23`.
+- `one-person-lab`: this rollup is the only OPL docs write for this App release-status follow-up.
+- `med-autoscience`: unrelated runtime/currentness owner lanes remain outside this App docs-governance follow-up.
+- `med-autogrant`, `redcube-ai` and `opl-meta-agent`: no repo-local edit in this App follow-up.
+
+Verification:
+
+- App docs diff check: `git diff --check -- docs/status.md docs/history/process/README.md`.
+- App README/docs conflict-marker scan.
+- App OPL Doc doctor: `finding_count=0`, `active_truth_health.status=pass`.
+- App release-boundary validator: `npm run validate:release-boundary`.
+
+Coverage / carry-forward:
+
+- Covered: App `docs/status.md#release-state` paragraphs that duplicated release guide, release contract, managed-update runner, evidence-cohort and active-shell release validation detail as active status prose.
+- Not covered: future App release cohorts, Full/VM evidence, GUI implementation parity, install exposure live-root validation, active-shell adoption, release promotion decisions, any App source/test/workflow/package/CLI/API retirement, or full six-repo paragraph coverage.
+- Physical retirement remains gated by App contracts/source/tests/validators plus replacement-owner, no-active-caller, no-forbidden-write, App owner decision, and retired-surface provenance. This follow-up authorizes no physical deletion.
+
 ## Future Record Policy
 
 - Do not create new dated docs-governance coverage-ledger chains for ordinary process, frozen inventory, doctor transcript, branch/worktree state, command transcripts or per-run proof.
