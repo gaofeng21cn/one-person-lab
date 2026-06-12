@@ -574,3 +574,95 @@ test('owner delta first skips superseded domain dispatch workstreams', () => {
     'sat-current-dm003-retry',
   );
 });
+
+test('owner delta first does not promote unclosed running attempts over closed owner target', () => {
+  const drilldown = buildAppOperatorDrilldown({
+    stageAttemptWorkbench: {
+      attempts: [
+        {
+          stage_attempt_id: 'sat-closed-owner-target',
+          task_id: 'frt-closed-owner-target',
+          domain_id: 'medautoscience',
+          stage_id: 'domain_owner/default-executor-dispatch',
+          status: 'completed',
+          local_status: 'completed',
+          source_fingerprint: 'sha256:closed-owner-target',
+          created_at: '2026-06-12T14:45:24.495Z',
+          updated_at: '2026-06-12T15:05:59.187Z',
+          workspace_locator: {
+            dispatch_ref:
+              'studies/003/artifacts/supervision/consumer/default_executor_dispatches/immutable/return_to_ai_reviewer_workflow/request.json',
+            study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+            action_type: 'return_to_ai_reviewer_workflow',
+          },
+          closeout_receipt_status: 'accepted_typed_closeout',
+          current_owner_delta: {
+            delta_id: 'current-owner-delta:dm003-closed-owner-target',
+            lineage_ref: 'sat-closed-owner-target',
+            source_fingerprint: 'sha256:closed-owner-target',
+          },
+          stage_progress_log: {
+            surface_kind: 'opl_stage_progress_log',
+            progress_delta_classification: 'deliverable_progress',
+            deliverable_progress_delta: {
+              changed_stage_surfaces: ['paper:readiness'],
+            },
+            platform_repair_delta: {
+              changed_stage_surfaces: [],
+            },
+          },
+          route_impact: {},
+        },
+        {
+          stage_attempt_id: 'sat-running-newer-attempt',
+          task_id: 'frt-running-newer-attempt',
+          domain_id: 'medautoscience',
+          stage_id: 'domain_owner/default-executor-dispatch',
+          status: 'running',
+          local_status: 'running',
+          source_fingerprint: 'sha256:running-newer-attempt',
+          created_at: '2026-06-12T15:00:34.811Z',
+          updated_at: '2026-06-12T15:06:34.954Z',
+          workspace_locator: {
+            dispatch_ref:
+              'studies/003/artifacts/supervision/consumer/default_executor_dispatches/immutable/run_quality_repair_batch/request.json',
+            study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+            action_type: 'run_quality_repair_batch',
+          },
+          closeout_receipt_status: null,
+          current_owner_delta: {
+            delta_id: 'current-owner-delta:dm003-running-newer-attempt',
+            lineage_ref: 'sat-running-newer-attempt',
+            source_fingerprint: 'sha256:running-newer-attempt',
+          },
+          stage_progress_log: {
+            surface_kind: 'opl_stage_progress_log',
+            progress_delta_classification: 'unknown',
+          },
+          route_impact: {},
+        },
+      ],
+    },
+    providerContinuousProof: {},
+    domainProjectionIngestion: {},
+    domainManifestProjects: [],
+    detailLevel: 'full',
+  }) as any;
+
+  const [closedWorkstream, runningWorkstream] = drilldown.workstream_operating_loop.workstreams;
+  assert.equal(closedWorkstream.heartbeat_status, 'closed');
+  assert.equal(runningWorkstream.heartbeat_status, 'running');
+  assert.equal(runningWorkstream.default_actionable, false);
+  assert.equal(
+    runningWorkstream.default_actionability_status,
+    'not_actionable_stage_attempt_not_closed',
+  );
+  assert.equal(
+    drilldown.attention_first_payload.owner_delta_first.primary_item.stage_attempt_id,
+    'sat-closed-owner-target',
+  );
+  assert.equal(
+    drilldown.attention_first_payload.current_owner_delta_read_model.current_owner_delta.lineage_ref,
+    'sat-closed-owner-target',
+  );
+});

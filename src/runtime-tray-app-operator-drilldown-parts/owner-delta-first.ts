@@ -94,9 +94,18 @@ function firstWorkstreamRequiringOwner(loop: JsonRecord) {
   const actionableWorkstreams = recordList(loop.workstreams).filter((item) =>
     stringValue(record(item.next_steering_action).action_id) !== 'continue_workstream_observation'
   );
+  const closedActionableWorkstreams = actionableWorkstreams.filter((item) =>
+    stringValue(item.heartbeat_status) === 'closed'
+    || stringValue(item.closeout_receipt_status) === 'accepted_typed_closeout'
+    || stringValue(item.attempt_status) === 'completed'
+    || stringValue(item.local_status) === 'completed'
+  );
   return actionableWorkstreams
     .filter((item) => item.default_actionable === true)
     .sort(compareWorkstreamCurrentness)[0]
+    ?? closedActionableWorkstreams
+      .filter((item) => stringValue(item.default_actionability_status) !== 'superseded')
+      .sort(compareWorkstreamCurrentness)[0]
     ?? actionableWorkstreams
       .filter((item) => stringValue(item.default_actionability_status) !== 'superseded')
       .sort(compareWorkstreamCurrentness)[0]

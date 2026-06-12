@@ -564,6 +564,66 @@ test('current owner delta keeps blocked refs-only residue as audit sidecar only'
   );
 });
 
+test('current owner delta source fingerprint ignores audit tail counters', async () => {
+  const module = await import(pathToFileURL(path.join(repoRoot, projectionModulePath)).href);
+  const baseInput = {
+    ownerDeltaFirst: {
+      next_owner: 'med-autoscience',
+      domain_id: 'medautoscience',
+      next_required_delta: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+      required_return_shapes: [
+        'domain_owner_receipt_ref',
+        'quality_gate_receipt_ref',
+        'typed_blocker_ref',
+      ],
+      primary_item: {
+        step_kind: 'owner_steering_required',
+        owner: 'med-autoscience',
+        domain_id: 'medautoscience',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        stage_attempt_id: 'sat-current-owner-answer-target',
+        workstream_id: 'medautoscience:frt-current-owner-answer-target',
+      },
+    },
+    nextSafeAction: {
+      action_id: 'app_release_user_path_evidence:one_person_lab_app_release_user_path:record',
+      action_kind: 'app_release_user_path_evidence_receipt_record',
+      owner: 'opl',
+      ref: 'app-release-user-path:transient-safe-action',
+      route_requires_domain_or_app_payload: true,
+    },
+  };
+  const first = module.buildCurrentOwnerDeltaReadModel({
+    ...baseInput,
+    countSummary: {
+      openSafeActionCount: 1,
+      blockedRefsOnlyCount: 2095,
+    },
+  });
+  const second = module.buildCurrentOwnerDeltaReadModel({
+    ...baseInput,
+    countSummary: {
+      openSafeActionCount: 6,
+      blockedRefsOnlyCount: 2095,
+    },
+  });
+
+  assert.equal(
+    first.current_owner_delta.source_fingerprint,
+    second.current_owner_delta.source_fingerprint,
+  );
+  assert.equal(
+    first.current_owner_delta.task_or_study_ref,
+    second.current_owner_delta.task_or_study_ref,
+  );
+  assert.equal(
+    first.current_owner_delta.lineage_ref,
+    second.current_owner_delta.lineage_ref,
+  );
+  assert.equal(first.owner_delta_audit_tail.count_summary.open_safe_action_count, 1);
+  assert.equal(second.owner_delta_audit_tail.count_summary.open_safe_action_count, 6);
+});
+
 test('current owner delta provider hard gate remains explicit even with receipt-shaped answers', async () => {
   const module = await import(pathToFileURL(path.join(repoRoot, projectionModulePath)).href);
   const nextAction = module.buildDefaultNextActionFromCurrentOwnerDelta({

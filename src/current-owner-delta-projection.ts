@@ -322,6 +322,27 @@ function foldedOwnerDeltaRef(ownerDeltaFirst: JsonRecord, key: string) {
   );
 }
 
+function currentOwnerDeltaSourceFingerprint(input: {
+  currentOwner: string;
+  domain: string;
+  stageRef: string | null;
+  taskOrStudyRef: string | null;
+  lineageRef: string | null;
+  requiredDelta: string;
+  acceptedReturnShapes: string[];
+}) {
+  return [
+    'owner_delta_first',
+    sanitizeIdPart(input.currentOwner),
+    sanitizeIdPart(input.domain),
+    input.stageRef ? sanitizeIdPart(input.stageRef) : 'no-stage',
+    input.taskOrStudyRef ? sanitizeIdPart(input.taskOrStudyRef) : 'no-task',
+    input.lineageRef ? sanitizeIdPart(input.lineageRef) : 'no-lineage',
+    sanitizeIdPart(input.requiredDelta),
+    sanitizeIdPart(input.acceptedReturnShapes.join('-or-')),
+  ].join(':');
+}
+
 function ordinaryProgressSpinePolicy() {
   return {
     surface_kind: 'opl_ordinary_progress_spine_policy',
@@ -580,6 +601,16 @@ function buildCurrentOwnerDeltaProjection(input: {
     desiredDelta: requiredDelta,
     shapes: input.acceptedReturnShapes,
   });
+  const taskOrStudyRef = firstString(
+    input.compactAction?.next_safe_action_ref,
+    stringValue(record(input.ownerDeltaFirst.primary_item).workstream_id),
+    stringValue(record(input.ownerDeltaFirst.primary_item).stage_attempt_id),
+  );
+  const lineageRef = firstString(
+    stringValue(record(input.ownerDeltaFirst.primary_item).stage_attempt_id),
+    input.compactAction?.next_safe_action_ref,
+    stringValue(input.handoff.lineage_ref),
+  );
   const auditRefs = {
     ...input.fullDetailRefs,
     owner_delta_first_ref:
@@ -654,25 +685,19 @@ function buildCurrentOwnerDeltaProjection(input: {
     ].join(':'),
     domain,
     domain_id: domain,
-    task_or_study_ref: firstString(
-      input.compactAction?.next_safe_action_ref,
-      stringValue(record(input.ownerDeltaFirst.primary_item).workstream_id),
-      stringValue(record(input.ownerDeltaFirst.primary_item).stage_attempt_id),
-    ),
+    task_or_study_ref: taskOrStudyRef,
     stage_ref: stageRef,
     stage_id: stageRef,
-    lineage_ref: firstString(
-      stringValue(record(input.ownerDeltaFirst.primary_item).stage_attempt_id),
-      input.compactAction?.next_safe_action_ref,
-      stringValue(input.handoff.lineage_ref),
-    ),
-    source_fingerprint: [
-      'owner_delta_first',
-      sanitizeIdPart(currentOwner),
-      sanitizeIdPart(requiredDelta),
-      input.countSummary.open_safe_action_count,
-      input.countSummary.blocked_refs_only_count,
-    ].join(':'),
+    lineage_ref: lineageRef,
+    source_fingerprint: currentOwnerDeltaSourceFingerprint({
+      currentOwner,
+      domain,
+      stageRef,
+      taskOrStudyRef,
+      lineageRef,
+      requiredDelta,
+      acceptedReturnShapes,
+    }),
     desired_delta_kind: desiredDeltaKind(requiredDelta),
     desired_delta_description: requiredDelta,
     payload_requirement: requiredDelta,
