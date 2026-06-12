@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `opl_family_ideal_system_assessment`
 State: `support_reference`
 Machine boundary: 本文是人读 north-star 评估和设计参考。当前事实、gap、计数、receipt、release verdict、domain ready、production ready 继续归 `docs/active/current-state-vs-ideal-gap.md`、核心五件套、contracts、source、CLI/API、runtime ledger、provider receipt、domain-owned manifests、App release/user-path evidence 和真实 workspace evidence。
-Date: `2026-06-10`
+Last reviewed: `2026-06-12`
 
 ## 读法
 
