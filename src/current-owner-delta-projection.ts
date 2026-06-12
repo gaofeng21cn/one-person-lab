@@ -1,8 +1,17 @@
 import { cognitiveKernelBoundary } from './cognitive-kernel-boundary.ts';
 import { buildAppStageRunCockpit } from './app-state-stage-run-cockpit.ts';
 import { currentOwnerDeltaWithClosedStageRunAnswer } from './current-owner-delta-stage-run-closeout.ts';
-
-type JsonRecord = Record<string, unknown>;
+import {
+  type JsonRecord,
+  firstString,
+  numberValue,
+  omitPayloadTemplateDeep,
+  record,
+  sanitizeIdPart,
+  stringList,
+  stringValue,
+  uniqueStringList,
+} from './current-owner-delta-parts/values.ts';
 
 const GUARDED_APPLY_STAGE_ID = 'paper_autonomy/guarded-apply';
 const GUARDED_APPLY_DESIRED_DELTA =
@@ -14,64 +23,6 @@ const GUARDED_APPLY_ACCEPTED_ANSWER_SHAPES = [
   'human_gate_ref',
   'route_back_evidence_ref',
 ];
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function numberValue(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
-function firstString(...values: unknown[]) {
-  for (const value of values) {
-    const text = stringValue(value);
-    if (text) {
-      return text;
-    }
-  }
-  return null;
-}
-
-function uniqueStringList(values: string[]) {
-  return [...new Set(values.filter((value) => value.trim().length > 0))];
-}
-
-function sanitizeIdPart(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80) || 'unknown';
-}
-
-function omitPayloadTemplateDeep(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map(omitPayloadTemplateDeep);
-  }
-  if (!isRecord(value)) {
-    return value;
-  }
-  return Object.fromEntries(
-    Object.entries(value)
-      .filter(([key]) => key !== 'payload_template')
-      .map(([key, entry]) => [key, omitPayloadTemplateDeep(entry)]),
-  );
-}
 
 function acceptedReturnShapes(...values: unknown[]) {
   const shapes = uniqueStringList(values.flatMap(stringList));
