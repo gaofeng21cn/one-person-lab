@@ -116,8 +116,8 @@ public_surface_risk:
 - `contracts/opl-framework/workspace-index.schema.json`
 - `contracts/family-orchestration/family-stage-proof-bundle.schema.json`
 - `contracts/opl-framework/agent-lab-contract.json`
-- `contracts/opl-framework/target-operating-architecture-contract.json`
 - `contracts/opl-framework/brand-module-l5-operating-evidence.json`
+- `contracts/opl-framework/target-operating-architecture-contract.json`
 
 Interpretation: OPL framework source/test shape has fresh source-boundary advisory items again after later feature growth. The two experience contracts remain public-surface risk items because this tranche deliberately made the target architecture and L5 evidence surfaces more explicit; that is a structure advisory signal, not a functional blocker. Future cleanup should choose semantic owners such as contract loader, public command spec cases, workspace diagnostics, generated-interface read model, skills registry, runtime enqueue and workspace lifecycle.
 
