@@ -41,6 +41,14 @@ import {
   buildWorkspaceIndex,
   buildWorkspaceYaml,
 } from './workspace-initializer.ts';
+import {
+  fleetStatusForDoctor,
+  unboundWorkspaceProjectFleetEntry,
+  workspaceFleetEntryAuthorityBoundary,
+  workspaceFleetReportAuthorityBoundary,
+  workspaceFleetReportStatus,
+  workspaceFleetReportSummary,
+} from './workspace-lifecycle-parts/fleet-report.ts';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -63,23 +71,6 @@ function doctorFindingsForArtifacts(doctor: {
     repairableFindings: doctor.repairable_findings,
     advisoryWarnings: doctor.advisory_warnings,
   };
-}
-
-function fleetStatusForDoctor(doctor: {
-  blockers: WorkspaceDiagnosticFinding[];
-  repairable_findings: WorkspaceDiagnosticFinding[];
-  advisory_warnings: WorkspaceDiagnosticFinding[];
-}) {
-  if (doctor.blockers.length > 0) {
-    return 'blocked';
-  }
-  if (doctor.repairable_findings.length > 0) {
-    return 'repairable';
-  }
-  if (doctor.advisory_warnings.length > 0) {
-    return 'warning';
-  }
-  return 'ready';
 }
 
 function readWorkspaceIndex(indexPath: string) {
@@ -893,12 +884,7 @@ function fleetEntryForBinding(
       blockers: [],
       current_project: null,
       project_lifecycle_counts: null,
-      authority_boundary: {
-        fleet_report_is_projection_only: true,
-        fleet_report_executes_direct_entry: false,
-        fleet_report_executes_manifest_command: false,
-        fleet_report_writes_domain_truth: false,
-      },
+      authority_boundary: workspaceFleetEntryAuthorityBoundary(),
     };
   }
   const doctor = doctorWorkspace(contracts, { workspacePath }).workspace_doctor;
@@ -914,12 +900,7 @@ function fleetEntryForBinding(
       advisory_warnings: doctor.advisory_warnings,
       current_project: null,
       project_lifecycle_counts: null,
-      authority_boundary: {
-        fleet_report_is_projection_only: true,
-        fleet_report_executes_direct_entry: false,
-        fleet_report_executes_manifest_command: false,
-        fleet_report_writes_domain_truth: false,
-      },
+      authority_boundary: workspaceFleetEntryAuthorityBoundary(),
     };
   }
   const report = workspaceReport(contracts, { workspacePath }).workspace_report;
@@ -947,12 +928,7 @@ function fleetEntryForBinding(
       createdAt: doctor.checked_at,
       updatedAt: doctor.checked_at,
     }).project_lifecycle_counts,
-    authority_boundary: {
-      fleet_report_is_projection_only: true,
-      fleet_report_executes_direct_entry: false,
-      fleet_report_executes_manifest_command: false,
-      fleet_report_writes_domain_truth: false,
-    },
+    authority_boundary: workspaceFleetEntryAuthorityBoundary(),
   };
 }
 
@@ -962,15 +938,7 @@ export function workspaceFleetReport(contracts: FrameworkContracts) {
   const entries = bindings.map((binding) => fleetEntryForBinding(contracts, binding));
   const unboundProjects = catalog.projects
     .filter((project: { active_binding: unknown }) => project.active_binding === null)
-    .map((project: { project_id: string; project: string }) => ({
-      project_id: project.project_id,
-      project: project.project,
-      fleet_status: 'not_bound',
-      workspace_path: null,
-      workspace_report_command: null,
-      workspace_report_ref: null,
-      blockers: [],
-    }));
+    .map(unboundWorkspaceProjectFleetEntry);
 
   return {
     version: 'g2',
@@ -980,34 +948,13 @@ export function workspaceFleetReport(contracts: FrameworkContracts) {
     },
     workspace_fleet_report: {
       surface_kind: 'opl_workspace_fleet_report',
-      status: entries.some((entry) => entry.fleet_status === 'blocked')
-        ? 'blocked'
-        : entries.some((entry) => entry.fleet_status === 'repairable')
-          ? 'repairable'
-          : entries.some((entry) => entry.fleet_status === 'warning')
-            ? 'warning'
-            : 'ok',
+      status: workspaceFleetReportStatus(entries),
       checked_at: new Date().toISOString(),
       registry_summary: catalog.summary,
-      summary: {
-        bindings_count: entries.length,
-        ready_bindings_count: entries.filter((entry) => entry.fleet_status === 'ready').length,
-        repairable_bindings_count: entries.filter((entry) => entry.fleet_status === 'repairable').length,
-        warning_bindings_count: entries.filter((entry) => entry.fleet_status === 'warning').length,
-        blocked_bindings_count: entries.filter((entry) => entry.fleet_status === 'blocked').length,
-        archived_bindings_count: entries.filter((entry) => entry.fleet_status === 'archived_binding').length,
-        unbound_projects_count: unboundProjects.length,
-      },
+      summary: workspaceFleetReportSummary(entries, unboundProjects),
       bindings: entries,
       unbound_projects: unboundProjects,
-      authority_boundary: {
-        fleet_report_is_projection_only: true,
-        fleet_report_executes_direct_entry: false,
-        fleet_report_executes_manifest_command: false,
-        fleet_report_writes_domain_truth: false,
-        fleet_report_claims_domain_ready: false,
-        fleet_report_claims_stage_complete: false,
-      },
+      authority_boundary: workspaceFleetReportAuthorityBoundary(),
     },
   };
 }
