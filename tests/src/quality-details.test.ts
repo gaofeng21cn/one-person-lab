@@ -342,6 +342,41 @@ function makeDuplicateAnonymousCallbackGitFixture() {
   return root;
 }
 
+function makePayloadPathCheckingPythonWrapper() {
+  const wrapperRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-python-wrapper-'));
+  const wrapperPath = path.join(wrapperRoot, 'python3');
+  fs.writeFileSync(
+    wrapperPath,
+    [
+      '#!/usr/bin/env node',
+      "const { spawnSync } = require('node:child_process');",
+      "const fs = require('node:fs');",
+      'if (process.argv[2] !== "-c") {',
+      '  process.stderr.write("expected -c invocation\\n");',
+      '  process.exit(2);',
+      '}',
+      'if (process.argv[3].includes("print(\\"ok\\")")) {',
+      '  process.stdout.write("ok\\n");',
+      '  process.exit(0);',
+      '}',
+      'const payloadPath = process.argv[4];',
+      'if (!payloadPath || !fs.existsSync(payloadPath) || fs.statSync(payloadPath).size === 0) {',
+      '  process.stderr.write("missing analyzer payload file\\n");',
+      '  process.exit(3);',
+      '}',
+      'const result = spawnSync("/usr/bin/python3", ["-c", process.argv[3], payloadPath], {',
+      '  encoding: "utf8",',
+      '});',
+      'process.stdout.write(result.stdout || "");',
+      'process.stderr.write(result.stderr || "");',
+      'process.exit(result.status ?? 1);',
+      '',
+    ].join('\n'),
+  );
+  fs.chmodSync(wrapperPath, 0o755);
+  return { wrapperRoot, wrapperPath };
+}
+
 test('quality details compare-ref reports functions crossing the complex threshold', () => {
   const fixtureRoot = makeQualityGitFixture();
   try {
@@ -371,6 +406,28 @@ test('quality details compare-ref reports functions crossing the complex thresho
     assert.match(markdown.stdout, /new_complex_function/);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('quality details python analyzer passes source file list by payload path', () => {
+  const fixtureRoot = makeQualityFixture();
+  const wrapper = makePayloadPathCheckingPythonWrapper();
+  try {
+    const output = runCliInCwd(
+      ['quality', 'details', '--root', fixtureRoot, '--format', 'json', '--limit', '10'],
+      fixtureRoot,
+      { OPL_QUALITY_DETAILS_PYTHON: wrapper.wrapperPath },
+    );
+
+    assert.ok(
+      output.quality_details.function_findings.some(
+        (finding: { file: string; function_name: string }) =>
+          finding.file === 'src/deep.py' && finding.function_name === 'python_branch',
+      ),
+    );
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(wrapper.wrapperRoot, { recursive: true, force: true });
   }
 });
 

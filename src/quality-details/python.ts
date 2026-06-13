@@ -1,4 +1,7 @@
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 import type { FunctionFinding, SourceFileInfo } from './types.ts';
 
@@ -88,7 +91,12 @@ class FunctionCollector(ast.NodeVisitor):
         self.generic_visit(node)
         self.scope.pop()
 
-payload = json.load(sys.stdin)
+payload_path = sys.argv[1] if len(sys.argv) > 1 else ""
+if payload_path:
+    with open(payload_path, "r", encoding="utf-8") as payload_file:
+        payload = json.load(payload_file)
+else:
+    payload = json.load(sys.stdin)
 result = []
 for item in payload:
     text = open(item["absolutePath"], "r", encoding="utf-8").read()
@@ -173,14 +181,26 @@ function analyzePythonFiles(files: SourceFileInfo[]) {
   }
 
   const pythonExecutable = resolvePythonExecutable();
-  const result = spawnSync(pythonExecutable, ['-c', PYTHON_ANALYZER], {
-    input: JSON.stringify(files.map((file) => ({
-      absolutePath: file.absolutePath,
-      relativePath: file.relativePath,
-    }))),
-    encoding: 'utf8',
-    maxBuffer: 20 * 1024 * 1024,
-  });
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-python-'));
+  const payloadPath = path.join(tempDir, 'files.json');
+  const result = (() => {
+    try {
+      fs.writeFileSync(
+        payloadPath,
+        JSON.stringify(files.map((file) => ({
+          absolutePath: file.absolutePath,
+          relativePath: file.relativePath,
+        }))),
+        'utf8',
+      );
+      return spawnSync(pythonExecutable, ['-c', PYTHON_ANALYZER, payloadPath], {
+        encoding: 'utf8',
+        maxBuffer: 20 * 1024 * 1024,
+      });
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  })();
 
   if (result.status !== 0) {
     throw new Error(`Python AST analyzer failed with ${pythonExecutable}: ${result.stderr || result.stdout}`);
