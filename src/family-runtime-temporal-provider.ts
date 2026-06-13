@@ -600,6 +600,21 @@ export async function startTemporalWorkerLifecycle(paths: TemporalWorkerPaths, i
       },
     );
   }
+  if (status.lifecycle_status === 'worker_source_stale') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Temporal worker start found a stale managed worker; use the explicit stop/restart repair path before starting a replacement.',
+      {
+        lifecycle_status: status.lifecycle_status,
+        provider_kind: 'temporal',
+        managed_worker_pid: status.managed_worker_pid,
+        stale_worker_pid: status.stale_worker_pid,
+        managed_worker_source_version: status.managed_worker_source_version,
+        expected_worker_source_version: status.expected_worker_source_version,
+        repair_action: status.repair_action,
+      },
+    );
+  }
   if (status.lifecycle_status === 'ready') {
     return {
       surface_kind: 'temporal_worker_lifecycle_start',

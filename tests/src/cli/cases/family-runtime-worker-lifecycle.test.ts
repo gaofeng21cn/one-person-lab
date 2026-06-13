@@ -346,6 +346,93 @@ test('Temporal worker lifecycle rejects stale managed worker source version', as
   }
 });
 
+test('Temporal worker start fails closed instead of spawning over a stale managed worker', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-stale-start-'));
+  const workerRoot = path.join(stateRoot, 'family-runtime');
+  const server = await createFakeTemporalServer();
+  const address = server.address;
+  const child = spawn(process.execPath, [
+    '-e',
+    'setTimeout(() => {}, 30_000);',
+  ], {
+    detached: true,
+    stdio: 'ignore',
+  });
+  child.unref();
+  const previousAddress = process.env.OPL_TEMPORAL_ADDRESS;
+  const previousNamespace = process.env.OPL_TEMPORAL_NAMESPACE;
+  const previousTaskQueue = process.env.OPL_TEMPORAL_TASK_QUEUE;
+  const previousWorkerStatus = process.env.OPL_TEMPORAL_WORKER_STATUS;
+  const previousSourceVersion = process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+  try {
+    assert.equal(typeof child.pid, 'number');
+    fs.mkdirSync(workerRoot, { recursive: true });
+    fs.writeFileSync(path.join(workerRoot, 'temporal-worker.json'), `${JSON.stringify({
+      provider_kind: 'temporal',
+      pid: child.pid,
+      address,
+      namespace: 'opl-worker-stale-start-test',
+      task_queue: 'opl-worker-stale-start',
+      started_at: new Date().toISOString(),
+      status: 'ready',
+      source_version: 'git:old-worker-source',
+    }, null, 2)}\n`);
+
+    process.env.OPL_TEMPORAL_ADDRESS = address;
+    process.env.OPL_TEMPORAL_NAMESPACE = 'opl-worker-stale-start-test';
+    process.env.OPL_TEMPORAL_TASK_QUEUE = 'opl-worker-stale-start';
+    process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = 'git:new-worker-source';
+    delete process.env.OPL_TEMPORAL_WORKER_STATUS;
+
+    await assert.rejects(
+      () => startTemporalWorkerLifecycle({ root: workerRoot }),
+      (error: unknown) => {
+        assert.equal((error as { code?: string }).code, 'contract_shape_invalid');
+        assert.equal(
+          ((error as { details?: Record<string, unknown> }).details ?? {}).lifecycle_status,
+          'worker_source_stale',
+        );
+        return true;
+      },
+    );
+
+    assert.doesNotThrow(() => process.kill(child.pid!, 0));
+  } finally {
+    if (previousAddress === undefined) {
+      delete process.env.OPL_TEMPORAL_ADDRESS;
+    } else {
+      process.env.OPL_TEMPORAL_ADDRESS = previousAddress;
+    }
+    if (previousNamespace === undefined) {
+      delete process.env.OPL_TEMPORAL_NAMESPACE;
+    } else {
+      process.env.OPL_TEMPORAL_NAMESPACE = previousNamespace;
+    }
+    if (previousTaskQueue === undefined) {
+      delete process.env.OPL_TEMPORAL_TASK_QUEUE;
+    } else {
+      process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
+    }
+    if (previousWorkerStatus === undefined) {
+      delete process.env.OPL_TEMPORAL_WORKER_STATUS;
+    } else {
+      process.env.OPL_TEMPORAL_WORKER_STATUS = previousWorkerStatus;
+    }
+    if (previousSourceVersion === undefined) {
+      delete process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+    } else {
+      process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = previousSourceVersion;
+    }
+    try {
+      process.kill(child.pid!, 'SIGTERM');
+    } catch {
+      // The lifecycle under test should keep the original worker alive until explicit stop.
+    }
+    await server.close();
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('Temporal worker lifecycle accepts same runtime content hash from managed source root', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-managed-root-current-'));
   const workerRoot = path.join(stateRoot, 'family-runtime');
