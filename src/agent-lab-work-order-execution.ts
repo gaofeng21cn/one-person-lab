@@ -59,6 +59,15 @@ type OwnerCloseoutResult = {
   responsePath: string | null;
 };
 
+const OMA_TARGET_AGENT_WORK_ORDER_GUARD_FIELDS = [
+  'target_owner_route',
+  'source_morphology',
+  'generated_surface_consumption',
+  'private_residue_decision',
+  'no_forbidden_write_proof',
+  'owner_answer_shape',
+] as const;
+
 const WORK_ORDER_EXECUTION_PRESENTATION: WorkOrderExecutionPresentation = {
   envelopeKey: 'work_order_execution',
   resultSurfaceId: 'opl_work_order_codex_execution',
@@ -318,6 +327,95 @@ function assertExecutableWorkOrder(workOrder: JsonRecord): void {
   }
 }
 
+function missingOmaTargetAgentWorkOrderGuardFields(workOrder: JsonRecord): string[] {
+  const machineCloseoutRefs = isRecord(workOrder.machine_closeout_refs) ? workOrder.machine_closeout_refs : {};
+  const noForbiddenWriteProof = isRecord(workOrder.no_forbidden_write_proof)
+    ? workOrder.no_forbidden_write_proof
+    : {};
+  const missing: string[] = [];
+  if (stringList(workOrder.owner_route_refs).length === 0) {
+    missing.push('target_owner_route');
+  }
+  if (!isRecord(workOrder.source_morphology_proof) && !optionalString(workOrder.source_morphology_proof_ref)) {
+    missing.push('source_morphology');
+  }
+  if (!optionalString(machineCloseoutRefs.target_runtime_read_model_consumption_ref)) {
+    missing.push('generated_surface_consumption');
+  }
+  if (!optionalString(workOrder.private_residue_decision_ref)) {
+    missing.push('private_residue_decision');
+  }
+  if (
+    noForbiddenWriteProof.required !== true
+    || noForbiddenWriteProof.can_write_target_domain_truth !== false
+    || noForbiddenWriteProof.can_write_target_domain_memory_body !== false
+    || noForbiddenWriteProof.can_mutate_target_domain_artifact_body !== false
+    || noForbiddenWriteProof.can_authorize_target_domain_quality_or_export !== false
+    || stringList(noForbiddenWriteProof.proof_refs).length === 0
+  ) {
+    missing.push('no_forbidden_write_proof');
+  }
+  if (!optionalString(machineCloseoutRefs.target_owner_receipt_or_typed_blocker_ref)) {
+    missing.push('owner_answer_shape');
+  }
+  return OMA_TARGET_AGENT_WORK_ORDER_GUARD_FIELDS.filter((field) => missing.includes(field));
+}
+
+function writeOmaTargetAgentWorkOrderGuardBlocker(input: {
+  workOrder: JsonRecord;
+  workOrderId: string;
+  outputDir: string;
+  missingFields: string[];
+}): string {
+  const typedBlockerPath = path.join(input.outputDir, 'typed-blocker.json');
+  writeJson(typedBlockerPath, {
+    surface_kind: 'opl_work_order_typed_blocker',
+    version: 'opl.work-order-execution.typed-blocker.v1',
+    blocker_kind: 'oma_target_agent_work_order_guard_missing',
+    status: 'developer_work_order_required',
+    work_order_id: input.workOrderId,
+    missing_guard_fields: input.missingFields,
+    required_guard_fields: OMA_TARGET_AGENT_WORK_ORDER_GUARD_FIELDS,
+    developer_work_order_required: true,
+    can_sign_target_owner_receipt: false,
+    can_create_target_typed_blocker: false,
+    can_write_target_truth: false,
+    required_next_shape: 'developer_work_order',
+    guard_policy_ref:
+      'contracts/opl-framework/standard-agent-landing-acceptance-contract.json#oma_target_agent_work_order_guard',
+  });
+  return typedBlockerPath;
+}
+
+function assertOmaTargetAgentWorkOrderGuard(input: {
+  workOrder: JsonRecord;
+  workOrderId: string;
+  outputDir: string;
+}): void {
+  const missingFields = missingOmaTargetAgentWorkOrderGuardFields(input.workOrder);
+  if (missingFields.length === 0) {
+    return;
+  }
+  const typedBlockerPath = writeOmaTargetAgentWorkOrderGuardBlocker({
+    ...input,
+    missingFields,
+  });
+  throw new FrameworkContractError(
+    'contract_shape_invalid',
+    'OMA target-agent work order guard requires target owner route, source morphology, generated surface consumption, private residue decision, no-forbidden-write proof, and owner answer shape before execution.',
+    {
+      work_order_id: input.workOrderId,
+      blocker_kind: 'oma_target_agent_work_order_guard_missing',
+      missing_guard_fields: missingFields,
+      typed_blocker_path: typedBlockerPath,
+      developer_work_order_required: true,
+      can_sign_target_owner_receipt: false,
+      can_create_target_typed_blocker: false,
+      can_write_target_truth: false,
+    },
+  );
+}
+
 function readSuiteResult(suitePath: string | null | undefined) {
   if (!suitePath) {
     return null;
@@ -556,8 +654,15 @@ async function executeDeveloperWorkOrder(
 ) {
   const workOrderPath = path.resolve(options.workOrderPath);
   const workOrder = readJson(workOrderPath);
-  assertExecutableWorkOrder(workOrder);
   const workOrderId = optionalString(workOrder.work_order_id) ?? stableId('work-order', [workOrderPath, workOrder]);
+  const outputDir = normalizeOutputDir(options.outputDir, workOrderId);
+  fs.mkdirSync(outputDir, { recursive: true });
+  assertExecutableWorkOrder(workOrder);
+  assertOmaTargetAgentWorkOrderGuard({
+    workOrder,
+    workOrderId,
+    outputDir,
+  });
   const targetAgent = isRecord(workOrder.target_agent) ? workOrder.target_agent : {};
   const targetAgentDir = path.resolve(
     options.targetAgentDir
@@ -574,8 +679,6 @@ async function executeDeveloperWorkOrder(
       },
     );
   }
-  const outputDir = normalizeOutputDir(options.outputDir, workOrderId);
-  fs.mkdirSync(outputDir, { recursive: true });
   assertWorktreeDirIgnored(targetAgentDir);
   const targetDirtyStatusBeforeOpen = statusEntries(targetAgentDir);
   const targetDirtyFilesBeforeOpen = dirtyFiles(targetAgentDir);

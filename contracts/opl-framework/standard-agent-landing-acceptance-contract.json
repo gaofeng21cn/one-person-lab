@@ -9,10 +9,11 @@
     "human_doc:opl_family_development_reference",
     "human_doc:opl_current_state_vs_ideal_gap",
     "human_doc:opl_decisions",
+    "contracts/opl-framework/standard-agent-landing-evidence-status.json",
     "contracts/opl-framework/target-operating-architecture-contract.json#foundry_agent_os_standard",
     "contracts/opl-framework/stage-route-scheduler-contract.json",
     "contracts/opl-framework/private-platform-residue-owner-decisions.json",
-    "/Users/gaofeng/workspace/med-autoscience/contracts/standard_agent_completion_acceptance.json"
+    "external_repo:med-autoscience/contracts/standard_agent_completion_acceptance.json"
   ],
   "standard_agent_definition": {
     "source_shape": "Declarative Domain Pack + OPL generated/hosted surfaces + Domain Minimal Authority Kernel",
@@ -191,6 +192,7 @@
     "Agent_Lab_pass",
     "functional_structure_gap_count_zero",
     "private_residue_classified",
+    "classification_zero",
     "queue_empty",
     "provider_completed",
     "Temporal_workflow_completed",

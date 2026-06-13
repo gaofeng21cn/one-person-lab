@@ -14,12 +14,13 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - `contracts/opl-framework/standard-agent-landing-acceptance-contract.json` 成为标准 Agent landing 的机器验收定义，状态只能先读作 `acceptance_definition_landed` / `family_evidence_tail_open_not_complete`。
+- `contracts/opl-framework/standard-agent-landing-evidence-status.json` 成为标准 Agent landing 的 evidence/status ledger，七个 gate 必须逐项记录 `satisfied`、`evidence_required` 或 `satisfied_or_owner_typed_blocker`；generated-surface production consumption、OMA target-agent samples、cross-agent negative conformance scaleout 和 long-soak / real-user-path owner evidence 不能被误报 complete。
 - 标准 Agent 完成必须同时看真实 `agent/` pack semantics、generated surface production consumption、private-platform residue owner decision、`current_owner_delta` single ordinary route、stage-route arbiter / stop-loss、OMA target-agent work-order guard 和 cross-agent negative conformance。
-- `descriptor_ready`、`generated_interface_ready`、`standard_pack_conformance_passed`、`suite_pass`、`Agent_Lab_pass`、`functional_structure_gap_count_zero`、`provider_completed`、`verified_refs_only_ledger`、`App_projection_ready` 和 `contract_landed` 都只能作为输入，不能声明 domain ready、caller migration、physical retirement、target owner acceptance、Brand L5 或 production readiness。
-- OMA / new-agent builder / takeover path 必须在缺 target owner route、source morphology、generated surface consumption、private residue decision、no-forbidden-write proof 或 owner answer shape 时返回 typed blocker / developer work order；OMA 不能签 target owner receipt、创建 target typed blocker、写 target truth 或在缺 target owner evidence 时 promotion 默认 agent。
+- `descriptor_ready`、`generated_interface_ready`、`standard_pack_conformance_passed`、`suite_pass`、`Agent_Lab_pass`、`functional_structure_gap_count_zero` / `classification_zero`、`provider_completed`、`verified_refs_only_ledger`、`App_projection_ready` 和 `contract_landed` 都只能作为输入，不能声明 domain ready、caller migration、physical retirement、target owner acceptance、Brand L5 或 production readiness。
+- OMA / new-agent builder / takeover path 必须在缺 target owner route、source morphology、generated surface consumption、private residue decision、no-forbidden-write proof 或 owner answer shape 时返回 typed blocker / developer work order；`opl work-order execute` 在执行前按这六项 fail closed 并写 refs-only typed blocker。OMA 不能签 target owner receipt、创建 target typed blocker、写 target truth 或在缺 target owner evidence 时 promotion 默认 agent。
 - MAS-specific `paper_recovery_state` 留在 MAS；OPL 只上收 generic stage-route currentness、recovery obligation identity、StageRun execution、attempt ledger、closeout refs-only transport、operator projection shell 和 private residue decision ledger。
 
-本决策只落 family-level acceptance contract、docs 和 meta tests；不声明 MAS/MAG/RCA/OMA domain ready、App release ready、Brand L5、physical delete authorized 或 production ready。
+本决策只落 family-level acceptance contract、evidence/status ledger、OMA work-order guard、negative conformance tests、docs 和 meta tests；不声明 MAS/MAG/RCA/OMA domain ready、App release ready、Brand L5、physical delete authorized 或 production ready。
 
 ### 决策：StageRun currentness identity 绑定 selected dispatch / stage packet
 

@@ -182,6 +182,13 @@ export function writeExecutableWorkOrder(filePath: string, targetRepo: string): 
     required_verification_refs: ['target-verification:fake/custom-command'],
     rollback_version_refs: ['git_commit', 'target_agent_previous_head_ref', 'temporary_worktree_ref'],
     owner_route_refs: ['target-agent-owner:fake-agent'],
+    source_morphology_proof: {
+      source_shape: 'Declarative Domain Pack + OPL generated/hosted surfaces + Domain Minimal Authority Kernel',
+      inspected_refs: ['contracts/domain_descriptor.json'],
+      prose_only_or_empty_scaffold: false,
+    },
+    private_residue_decision_ref:
+      'private-residue-decision:fake-agent/oma_developer_patch_work_order_test',
     no_forbidden_write_proof: {
       required: true,
       proof_refs: ['no_target_domain_truth_write_proof'],
