@@ -12,6 +12,14 @@ export type CurrentControlProviderAdmissionExportContext = {
   owner_fingerprint: string;
 };
 
+type CurrentControlProviderAdmissionCandidateFields = {
+  studyId: string;
+  actionType: string;
+  workUnitId: string;
+  workUnitFingerprint: string;
+  nextOwner: string;
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -372,19 +380,9 @@ function currentControlProviderAdmissionCandidates(currentControl: Record<string
   });
 }
 
-function currentControlProviderAdmissionInputFrom(
-  domainId: FamilyRuntimeDomainId,
+function currentControlProviderAdmissionCandidateFields(
   candidate: Record<string, unknown>,
-  output: Record<string, unknown>,
-  exportContext: CurrentControlProviderAdmissionExportContext,
-  currentControlRef: string,
-): { input?: EnqueueInput; blocked?: { reason: string; task: unknown } } {
-  if (domainId !== 'medautoscience') {
-    return { blocked: { reason: 'unsupported_current_control_provider_admission_domain', task: candidate } };
-  }
-  if (optionalString(candidate.status) !== 'provider_admission_pending' || candidate.owner_route_current !== true) {
-    return {};
-  }
+): { fields?: CurrentControlProviderAdmissionCandidateFields; blocked?: { reason: string; task: unknown } } {
   const studyId = optionalString(candidate.study_id);
   const actionType = optionalString(candidate.action_type);
   const workUnitId = optionalString(candidate.work_unit_id);
@@ -400,6 +398,44 @@ function currentControlProviderAdmissionInputFrom(
   if (!validStageTransitionAuthorityBoundary(candidate.stage_transition_authority_boundary)) {
     return { blocked: { reason: 'current_control_provider_admission_missing_stage_authority_boundary', task: candidate } };
   }
+  return {
+    fields: {
+      studyId,
+      actionType,
+      workUnitId,
+      workUnitFingerprint,
+      nextOwner,
+    },
+  };
+}
+
+function currentControlProviderAdmissionInputFrom(
+  domainId: FamilyRuntimeDomainId,
+  candidate: Record<string, unknown>,
+  output: Record<string, unknown>,
+  exportContext: CurrentControlProviderAdmissionExportContext,
+  currentControlRef: string,
+): { input?: EnqueueInput; blocked?: { reason: string; task: unknown } } {
+  if (domainId !== 'medautoscience') {
+    return { blocked: { reason: 'unsupported_current_control_provider_admission_domain', task: candidate } };
+  }
+  if (optionalString(candidate.status) !== 'provider_admission_pending' || candidate.owner_route_current !== true) {
+    return {};
+  }
+  const candidateFields = currentControlProviderAdmissionCandidateFields(candidate);
+  if (candidateFields.blocked) {
+    return { blocked: candidateFields.blocked };
+  }
+  if (!candidateFields.fields) {
+    return { blocked: { reason: 'invalid_current_control_provider_admission_candidate', task: candidate } };
+  }
+  const {
+    studyId,
+    actionType,
+    workUnitId,
+    workUnitFingerprint,
+    nextOwner,
+  } = candidateFields.fields;
   const workspaceRoot = exportWorkspaceRoot(output);
   const profileName = exportProfileName(output);
   const profileRef = exportProfileRef(output);
