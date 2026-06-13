@@ -89,6 +89,9 @@ import {
   buildLifecycleLedgerRefs,
 } from './runtime-tray-app-operator-drilldown-parts/lifecycle-ledger-refs.ts';
 import {
+  buildMemoryArtifactLifecycleEvidence,
+} from './runtime-tray-app-operator-drilldown-parts/memory-artifact-lifecycle-evidence.ts';
+import {
   currentControlStateProjection,
   safeActionRefs,
 } from './runtime-tray-app-operator-drilldown-parts/current-control-safe-actions.ts';
@@ -822,6 +825,10 @@ export function buildAppOperatorDrilldown(input: {
     workstream_operating_loop_goal_oracle_advisory_count:
       record(workstreamOperatingLoop.summary).goal_oracle_advisory_count,
   };
+  const memoryArtifactLifecycle = buildMemoryArtifactLifecycleEvidence({
+    summary,
+    lifecycle_ledger_refs: lifecycleRefs,
+  });
   const sourceRefs: RuntimeTraySourceRef[] = uniqueByRef([
     sourceRef('/runtime_tray_snapshot/stage_attempt_workbench', 'stage_attempt_workbench'),
     sourceRef('/runtime_tray_snapshot/domain_projection_ingestion', 'domain_projection_ingestion'),
@@ -914,6 +921,7 @@ export function buildAppOperatorDrilldown(input: {
     },
     provider_long_soak_evidence: providerLongSoakEvidence,
     app_release_user_path_evidence: appReleaseUserPathEvidence,
+    memory_artifact_lifecycle: memoryArtifactLifecycle,
     developer_mode_live_closeout_evidence: developerModeLiveCloseoutEvidence,
     runtime_manager_route_support: runtimeManagerRouteSupport,
     route_transition_drilldown: routeTransitionDrilldownRefs,

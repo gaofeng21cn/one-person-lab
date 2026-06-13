@@ -368,6 +368,44 @@ test('runtime app-operator-drilldown projects lifecycle handoff apply attempts f
     const drilldown = runCli(['runtime', 'app-operator-drilldown'], {
       OPL_STATE_DIR: stateRoot,
     }).app_operator_drilldown;
+    assert.equal(
+      drilldown.memory_artifact_lifecycle.surface_kind,
+      'opl_app_drilldown_memory_artifact_lifecycle_evidence',
+    );
+    assert.equal(
+      drilldown.memory_artifact_lifecycle.readiness_status,
+      'typed_blocker_work_order_required_not_ready',
+    );
+    assert.equal(drilldown.memory_artifact_lifecycle.ready_claim_authorized, false);
+    assert.equal(
+      drilldown.memory_artifact_lifecycle.open_count_zero_is_not_memory_or_artifact_ready,
+      true,
+    );
+    assert.equal(
+      drilldown.memory_artifact_lifecycle.lifecycle_owner_work_order.status,
+      'typed_blocker_work_order_required_not_ready',
+    );
+    assert.equal(
+      drilldown.memory_artifact_lifecycle.lifecycle_owner_work_order.accepted_refs_only_result_shapes
+        .includes('typed_blocker_ref'),
+      true,
+    );
+    assert.equal(
+      drilldown.memory_artifact_lifecycle.authority_boundary.can_write_memory_body,
+      false,
+    );
+    assert.equal(
+      drilldown.memory_artifact_lifecycle.authority_boundary.can_mutate_artifact_body,
+      false,
+    );
+    assert.equal(
+      drilldown.memory_artifact_lifecycle.authority_boundary.can_authorize_export_readiness,
+      false,
+    );
+    assert.equal(
+      drilldown.memory_artifact_lifecycle.authority_boundary.can_execute_domain_physical_delete,
+      false,
+    );
     const evidence =
       drilldown.attention_first_payload.evidence_after_contract.memory_artifact_lifecycle_evidence;
 
