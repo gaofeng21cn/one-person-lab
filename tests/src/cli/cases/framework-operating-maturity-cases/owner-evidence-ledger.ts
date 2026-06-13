@@ -818,11 +818,40 @@ test('framework operating maturity reads current owner delta payload summary wit
         .verified_owner_payload_summary_receipt_refs.includes(record.receipt_refs[0]),
       true,
     );
+    const currentOwnerGate = maturity.unresolved_owner_gates.gates.find(
+      (entry: { gate_id: string }) =>
+        entry.gate_id === 'owner-gate:current_owner_delta_owner_answer',
+    );
+    assert.deepEqual(currentOwnerGate.observed_ref_shapes, [
+      'domain_owner_receipt_ref',
+      'quality_or_export_receipt_ref',
+    ]);
     assert.equal(
-      maturity.unresolved_owner_gates.gates.find(
-        (entry: { gate_id: string }) =>
-          entry.gate_id === 'owner-gate:current_owner_delta_owner_answer',
-      ).can_be_completed_by_opl,
+      currentOwnerGate.observed_owner_answer_refs.includes(
+        'domain-owner-receipt-ref:mas/current-owner-delta/owner-answer',
+      ),
+      true,
+    );
+    assert.equal(
+      currentOwnerGate.observed_owner_payload_summary_receipt_refs.includes(
+        record.receipt_refs[0],
+      ),
+      true,
+    );
+    assert.equal(
+      currentOwnerGate.verified_owner_payload_summary_receipt_refs.includes(
+        record.receipt_refs[0],
+      ),
+      true,
+    );
+    assert.equal(
+      currentOwnerGate.owner_payload_summary_closure_state,
+      'verified_owner_payload_summary_observed_not_current_pointer_claim',
+    );
+    assert.equal(currentOwnerGate.current_pointer_update_still_required, true);
+    assert.equal(currentOwnerGate.observed_refs_are_current_pointer_closeout, false);
+    assert.equal(
+      currentOwnerGate.can_be_completed_by_opl,
       false,
     );
     assert.equal(maturity.authority_boundary.can_claim_production_ready, false);

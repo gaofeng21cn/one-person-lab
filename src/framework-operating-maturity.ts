@@ -224,6 +224,12 @@ function unresolvedOwnerGates(input: {
     input.ownerDeltaBridge.owner_answer_still_required === true
     || input.ownerDeltaBridge.owner_answer_missing === true;
   if (ownerAnswerStillRequired) {
+    const observedOwnerAnswerRefs =
+      stringListValue(input.ownerDeltaBridge.observed_owner_answer_refs);
+    const observedOwnerPayloadSummaryReceiptRefs =
+      stringListValue(input.ownerDeltaBridge.observed_owner_payload_summary_receipt_refs);
+    const verifiedOwnerPayloadSummaryReceiptRefs =
+      stringListValue(input.ownerDeltaBridge.verified_owner_payload_summary_receipt_refs);
     gates.push({
       gate_id: 'owner-gate:current_owner_delta_owner_answer',
       lane: 'current_owner_delta_owner_answer',
@@ -236,7 +242,16 @@ function unresolvedOwnerGates(input: {
         ?? 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
       accepted_ref_shapes:
         stringListValue(input.ownerDeltaBridge.required_owner_answer_shapes),
-      observed_ref_shapes: [],
+      observed_ref_shapes:
+        stringListValue(input.ownerDeltaBridge.observed_owner_answer_ref_shapes),
+      observed_owner_answer_refs: observedOwnerAnswerRefs,
+      observed_owner_payload_summary_receipt_refs: observedOwnerPayloadSummaryReceiptRefs,
+      verified_owner_payload_summary_receipt_refs: verifiedOwnerPayloadSummaryReceiptRefs,
+      owner_payload_summary_closure_state:
+        stringValue(input.ownerDeltaBridge.owner_payload_summary_closure_state),
+      current_pointer_update_still_required:
+        ownerAnswerClosureHandoff.current_pointer_update_still_required === true,
+      observed_refs_are_current_pointer_closeout: false,
       missing_input_refs:
         stringListValue(input.ownerDeltaBridge.missing_input_refs),
       closing_ref_source: 'current_owner_domain_owned_answer_ref_bound_to_current_owner_delta',
