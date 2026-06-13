@@ -21,6 +21,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 本决策只落 family-level acceptance contract、docs 和 meta tests；不声明 MAS/MAG/RCA/OMA domain ready、App release ready、Brand L5、physical delete authorized 或 production ready。
 
+### 决策：StageRun currentness identity 绑定 selected dispatch / stage packet
+
+原因：MAS DM002 暴露的 `stage_packet_not_current_selected_dispatch` 不应长期只停留在 MAS blocker 名称里；它对应 OPL / Runway / Foundry Agent substrate 的通用问题：同一 study/action/work-unit/source/currentness basis 下，旧 selected dispatch、旧 stage packet、queue residue、trace/span 或 provider completion 不能被当成当前 StageRun。若 StageRun currentness 只比较 work unit / source / epoch / idempotency，而把 selected dispatch / stage packet 留在旁路比较，operator 和恢复逻辑仍可能在合同层把 stale packet 读成 current route。
+
+影响：
+
+- `stage_run_currentness_identity` 的 required fields 扩展为包含 `dispatch_ref`、`stage_packet_ref` 和规范化后的 `stage_packet_refs`。
+- `sameStageRunRouteCurrentnessIdentity` 继续忽略 `stage_attempt_id`，以允许同一 route identity 的 fresh candidate 与 admitted attempt reconcile；但 selected dispatch / stage packet refs 必须匹配，不匹配时 fail closed。
+- live skip、terminal closeout reconcile 和 current-control projection 只能复用同一 selected dispatch / stage packet identity；旧 selected dispatch、trace/span、queue residue、provider completion 或 read-model refresh 只能作为诊断，不得生成 domain owner receipt、typed blocker、quality verdict、domain ready、App release ready、Brand L5 或 production-ready claim。
+- DM003 类 pending admission / projection inconsistent 继续由 current-control provider admission identity、StageRun currentness identity、terminal closeout ordering 和 recovery obligation identity 回归覆盖；平台层不再因为 live recovery 状态而手写 MAS runtime/study artifacts。
+
 ## 2026-06-11
 
 ### 决策：Stage-route arbiter substrate 固定为 OPL 基座合同

@@ -87,6 +87,7 @@ const fastTestFiles = [
   'tests/src/research-evidence-pack.test.ts',
   'tests/src/research-hypothesis-portfolio.test.ts',
   'tests/src/pack-os.test.ts',
+  'tests/src/standard-agent-landing-acceptance-contract.test.ts',
   'tests/src/cli/cases/pack-os-command-surface.test.ts',
   'tests/src/cli/cases/runtime-research-evidence-pack-read-model.test.ts',
   'tests/src/cli/cases/runtime-research-hypothesis-portfolio-read-model.test.ts',
