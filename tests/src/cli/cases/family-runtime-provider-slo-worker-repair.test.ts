@@ -352,6 +352,56 @@ test('family-runtime provider-slo blocks stale worker restart while active stage
   }
 });
 
+test('family-runtime provider-slo restart guard summarizes active attempt blockers by status', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-slo-worker-active-summary-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  let db: DatabaseSync | null = null;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    db = initializeQueueDbForCurrentStateDir();
+    createActiveStageAttempt(db, 'queued');
+    createActiveStageAttempt(db, 'running');
+    createActiveStageAttempt(db, 'checkpointed');
+    createActiveStageAttempt(db, 'human_gate');
+
+    const receipt = await maybeRepairTemporalWorkerForProviderSlo(familyRuntimePaths(), {
+      inspectTemporalWorkerLifecycle: async () => explicitDeveloperSupervisorStaleWorker(),
+      stopTemporalWorkerLifecycle: async () => {
+        throw new Error('stop should not run');
+      },
+      startTemporalWorkerLifecycle: async () => {
+        throw new Error('start should not run');
+      },
+    });
+
+    assert.equal(receipt.repair_status, 'blocked');
+    assert.deepEqual(receipt.blocker_ids, ['active_stage_attempts_present']);
+    assert.equal(receipt.restart_guard?.active_stage_attempt_count, 4);
+    assert.deepEqual(receipt.restart_guard?.active_stage_attempts_by_status, {
+      checkpointed: 1,
+      human_gate: 1,
+      queued: 1,
+      running: 1,
+    });
+    assert.deepEqual(receipt.restart_guard?.active_stage_attempt_statuses, [
+      'checkpointed',
+      'human_gate',
+      'queued',
+      'running',
+    ]);
+    assert.equal(receipt.restart_guard?.active_stage_attempt_sample_limit, 20);
+    assert.equal(receipt.authority_boundary.can_write_domain_truth, false);
+  } finally {
+    db?.close();
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime provider-slo blocks stale worker restart when Temporal service is unreachable', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-slo-worker-service-unreachable-'));
   const previousStateDir = process.env.OPL_STATE_DIR;

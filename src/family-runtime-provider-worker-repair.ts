@@ -33,6 +33,9 @@ type WorkerRestartGuard = {
   stage_attempt_ledger_readable: boolean;
   stage_attempt_ledger_error: string | null;
   active_stage_attempt_count: number;
+  active_stage_attempt_statuses: string[];
+  active_stage_attempts_by_status: Record<string, number>;
+  active_stage_attempt_sample_limit: number;
   active_stage_attempts: Array<{
     stage_attempt_id: string;
     status: string;
@@ -90,6 +93,12 @@ function buildWorkerRestartGuard(input: {
       stage_id: String(attempt.stage_id),
       task_id: typeof attempt.task_id === 'string' ? attempt.task_id : null,
     }));
+  const activeStageAttemptsByStatus = Object.fromEntries(
+    [...new Set(activeStageAttempts.map((attempt) => attempt.status))].sort().map((status) => [
+      status,
+      activeStageAttempts.filter((attempt) => attempt.status === status).length,
+    ]),
+  );
   const blockerIds: string[] = [];
   if (workerMutationGuard?.mutation_guard_status !== 'allowed_explicit_developer_supervisor') {
     blockerIds.push('developer_supervisor_required');
@@ -116,6 +125,9 @@ function buildWorkerRestartGuard(input: {
         ? String(input.stageAttemptLedgerError)
         : null,
     active_stage_attempt_count: activeStageAttempts.length,
+    active_stage_attempt_statuses: Object.keys(activeStageAttemptsByStatus),
+    active_stage_attempts_by_status: activeStageAttemptsByStatus,
+    active_stage_attempt_sample_limit: 20,
     active_stage_attempts: activeStageAttempts.slice(0, 20),
   } satisfies WorkerRestartGuard;
 }
