@@ -53,7 +53,7 @@ rtk opl agents default-callers --family-defaults --json
 - `provider_long_soak` 仍是 `owner_evidence_required` / `ready_claim_authorized=false`；readout 已把 `capability_slo_blocked` 细化到 `capability_missing_requirement_ids` 与 owner work-order `missing_owner_action_ids`，fresh 缺 `restart_requery_ready`、`signal_history_ready`、`typed_closeout_required_ready`、`missing_closeout_block_ready`、`retry_dead_letter_boundary_ready` 五项，供 OPL runtime owner 记录具体 long-soak / recovery / dead-letter / provider blocker / typed blocker refs。
 - `app_operator_drilldown.memory_artifact_lifecycle` 当前 `status=refs_observed`、`readiness_status=typed_blocker_work_order_required_not_ready`、`ready_claim_authorized=false`、`observed_ref_count=47`、`lifecycle_reconcile_status=reconciled`；它只支撑 owner work order 和 forbidden-claim 展示。
 - `app_operator_drilldown.cleanup_retirement` 当前 `deletion_evidence_worklist_count=8`、`open_deletion_evidence_requirement_count=0`、`physical_delete_authorized=false`；`agents default-callers` broader worklist 仍是 32 项 refs-only evidence，二者都不能授权删除。
-- `brand-modules l5-status` 当前十模块都是 `evidence_required`，`l5_complete_module_count=0`，`evidence_ledger.verified_receipt_count=3`，ledger status 是 `ledger_refs_only_not_l5_claimed`。
+- `brand-modules l5-status` 当前十模块都是 `evidence_required`，`l5_complete_module_count=0`，`evidence_ledger.verified_receipt_count=3`，ledger status 是 `ledger_refs_only_not_l5_claimed`；`framework operating-maturity` 已把 Brand L5 顶层 work order 细化到 10 个模块级 `owner_action_checklist` 和 130 个 `missing_owner_action_ids`，供下一轮直接按模块 owner evidence / typed blocker / acceptance ref 推进。
 
 ## Owner Map
 

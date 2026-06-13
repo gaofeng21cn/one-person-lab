@@ -137,6 +137,107 @@ function ownerRouteWorkOrderPolicy(lane: string) {
   };
 }
 
+function brandModuleL5RequirementWorkOrders(brandModules: Record<string, unknown>[]) {
+  return brandModules.flatMap((module) =>
+    recordList(module.owner_evidence_routes).map((route) => ({
+      module_id: stringValue(module.module_id),
+      brand_name: stringValue(module.brand_name),
+      work_order_id: stringValue(route.work_order_id),
+      class_id: stringValue(route.class_id),
+      owner: stringValue(route.owner),
+      owner_repo: stringValue(route.owner_repo),
+      owner_route_status: stringValue(route.owner_route_status),
+      blocker_state: stringValue(route.blocker_state),
+      owner_evidence_closure_state: stringValue(route.owner_evidence_closure_state),
+      owner_acceptance_required: route.owner_acceptance_required === true,
+      ready_claim_authorized: route.ready_claim_authorized === true,
+      existing_evidence_refs: stringListValue(route.existing_evidence_refs),
+      existing_blocker_refs: stringListValue(route.existing_blocker_refs),
+      observed_evidence_refs: stringListValue(route.observed_evidence_refs),
+      observed_ref_shapes: stringListValue(route.observed_ref_shapes),
+      observed_ref_count: numberValue(route.observed_ref_count),
+      observed_typed_blocker_ref_count: numberValue(route.observed_typed_blocker_ref_count),
+      observed_receipt_refs: stringListValue(route.observed_receipt_refs),
+      observed_receipt_count: numberValue(route.observed_receipt_count),
+      verified_receipt_count: numberValue(route.verified_receipt_count),
+      l5_claim_status: stringValue(route.l5_claim_status),
+      accepted_ref_shapes: stringListValue(route.accepted_ref_shapes),
+      closing_ref_source: stringValue(route.closing_ref_source),
+      typed_blocker_source: stringValue(route.typed_blocker_source),
+      forbidden_opl_claims: stringListValue(route.forbidden_opl_claims),
+      non_closing_inputs: stringListValue(route.non_closing_inputs),
+      stop_loss: stringListValue(route.stop_loss),
+      typed_blocker_payload_template: record(route.typed_blocker_payload_template),
+      evidence_payload_template: record(route.evidence_payload_template),
+      owner_route_command_examples: record(route.owner_route_command_examples),
+      verification_command: stringValue(route.verification_command),
+      authority_boundary: record(route.authority_boundary),
+    }))
+  );
+}
+
+function brandModuleL5OwnerActionChecklist(
+  brandModules: Record<string, unknown>[],
+  requirementWorkOrders: Record<string, unknown>[],
+) {
+  return brandModules.map((module) => {
+    const moduleId = stringValue(module.module_id);
+    const moduleWorkOrders = requirementWorkOrders.filter(
+      (entry) => stringValue(entry.module_id) === moduleId,
+    );
+    const nextAction = record(module.next_action_summary);
+    const evidenceLedger = record(module.evidence_ledger);
+    return {
+      module_id: moduleId,
+      brand_name: stringValue(module.brand_name),
+      status: stringValue(module.l5_completion_status) ?? 'evidence_required',
+      l5_can_be_claimed: module.l5_can_be_claimed === true,
+      evidence_requirement_count: numberValue(module.evidence_requirement_count),
+      open_requirement_count: numberValue(module.open_requirement_count),
+      blocked_requirement_count: numberValue(module.blocked_requirement_count),
+      owner_action_required_count: moduleWorkOrders.length,
+      missing_requirement_action_ids: moduleWorkOrders
+        .map((entry) => stringValue(entry.work_order_id))
+        .filter((entry): entry is string => typeof entry === 'string' && entry.length > 0),
+      missing_requirement_class_ids: unique(
+        moduleWorkOrders
+          .map((entry) => stringValue(entry.class_id))
+          .filter((entry): entry is string => typeof entry === 'string' && entry.length > 0),
+      ),
+      next_work_order_id:
+        stringValue(nextAction.next_work_order_id)
+        ?? stringValue(moduleWorkOrders[0]?.work_order_id),
+      next_evidence_class_id:
+        stringValue(nextAction.next_evidence_class_id)
+        ?? stringValue(moduleWorkOrders[0]?.class_id),
+      next_owner:
+        stringValue(nextAction.next_owner)
+        ?? stringValue(moduleWorkOrders[0]?.owner),
+      next_owner_repo:
+        stringValue(nextAction.next_owner_repo)
+        ?? stringValue(moduleWorkOrders[0]?.owner_repo),
+      next_owner_action:
+        stringValue(nextAction.next_owner_action)
+        ?? 'record_brand_module_l5_owner_evidence_or_typed_blocker_ref',
+      owner_acceptance_required: moduleWorkOrders.some(
+        (entry) => entry.owner_acceptance_required === true,
+      ),
+      ready_claim_authorized: false,
+      verified_receipt_count: numberValue(evidenceLedger.verified_receipt_count),
+      l5_claim_status:
+        stringValue(evidenceLedger.l5_claim_status)
+        ?? 'ledger_refs_only_not_l5_claimed',
+      authority_boundary: {
+        checklist_is_refs_only: true,
+        checklist_can_claim_l5: false,
+        checklist_can_claim_production_ready: false,
+        checklist_can_sign_owner_receipt: false,
+        checklist_can_create_typed_blocker: false,
+      },
+    };
+  });
+}
+
 function ownerRouteWorkOrders(
   laneStatuses: Array<{
     lane: string;
@@ -241,6 +342,17 @@ export function foundryAgentOsProductionEvidenceGate(input: {
   lifecycleOpenCount: number;
   ownerEvidenceIntake: Record<string, unknown>;
 }) {
+  const brandModules = recordList(input.brandModuleL5.modules);
+  const brandL5RequirementWorkOrders = brandModuleL5RequirementWorkOrders(brandModules);
+  const brandL5OwnerActionChecklist = brandModuleL5OwnerActionChecklist(
+    brandModules,
+    brandL5RequirementWorkOrders,
+  );
+  const brandL5MissingOwnerActionIds = unique(
+    brandL5RequirementWorkOrders
+      .map((entry) => stringValue(entry.work_order_id))
+      .filter((entry): entry is string => typeof entry === 'string' && entry.length > 0),
+  );
   const laneStatuses = [
     {
       lane: 'domain_owner_chain_scaleout',
@@ -263,6 +375,9 @@ export function foundryAgentOsProductionEvidenceGate(input: {
         'owner_acceptance_ref',
         'typed_blocker_ref',
       ],
+      owner_action_checklist: brandL5OwnerActionChecklist,
+      missing_owner_action_ids: brandL5MissingOwnerActionIds,
+      next_evidence_action: 'record_or_resolve_brand_module_l5_owner_evidence_for_missing_module_requirements',
     },
     {
       lane: 'app_release_user_path',
@@ -311,43 +426,6 @@ export function foundryAgentOsProductionEvidenceGate(input: {
   ];
   const workOrders = ownerRouteWorkOrders(laneStatuses, input.ownerEvidenceIntake);
   const openLaneCount = laneStatuses.filter((lane) => lane.open_count > 0).length;
-  const brandModules = recordList(input.brandModuleL5.modules);
-  const brandL5RequirementWorkOrders = brandModules.flatMap((module) =>
-    recordList(module.owner_evidence_routes).map((route) => ({
-      module_id: stringValue(module.module_id),
-      brand_name: stringValue(module.brand_name),
-      work_order_id: stringValue(route.work_order_id),
-      class_id: stringValue(route.class_id),
-      owner: stringValue(route.owner),
-      owner_repo: stringValue(route.owner_repo),
-      owner_route_status: stringValue(route.owner_route_status),
-      blocker_state: stringValue(route.blocker_state),
-      owner_evidence_closure_state: stringValue(route.owner_evidence_closure_state),
-      owner_acceptance_required: route.owner_acceptance_required === true,
-      ready_claim_authorized: route.ready_claim_authorized === true,
-      existing_evidence_refs: stringListValue(route.existing_evidence_refs),
-      existing_blocker_refs: stringListValue(route.existing_blocker_refs),
-      observed_evidence_refs: stringListValue(route.observed_evidence_refs),
-      observed_ref_shapes: stringListValue(route.observed_ref_shapes),
-      observed_ref_count: numberValue(route.observed_ref_count),
-      observed_typed_blocker_ref_count: numberValue(route.observed_typed_blocker_ref_count),
-      observed_receipt_refs: stringListValue(route.observed_receipt_refs),
-      observed_receipt_count: numberValue(route.observed_receipt_count),
-      verified_receipt_count: numberValue(route.verified_receipt_count),
-      l5_claim_status: stringValue(route.l5_claim_status),
-      accepted_ref_shapes: stringListValue(route.accepted_ref_shapes),
-      closing_ref_source: stringValue(route.closing_ref_source),
-      typed_blocker_source: stringValue(route.typed_blocker_source),
-      forbidden_opl_claims: stringListValue(route.forbidden_opl_claims),
-      non_closing_inputs: stringListValue(route.non_closing_inputs),
-      stop_loss: stringListValue(route.stop_loss),
-      typed_blocker_payload_template: record(route.typed_blocker_payload_template),
-      evidence_payload_template: record(route.evidence_payload_template),
-      owner_route_command_examples: record(route.owner_route_command_examples),
-      verification_command: stringValue(route.verification_command),
-      authority_boundary: record(route.authority_boundary),
-    }))
-  );
   return {
     surface_kind: 'foundry_agent_os_production_evidence_gate',
     owner: 'one-person-lab',

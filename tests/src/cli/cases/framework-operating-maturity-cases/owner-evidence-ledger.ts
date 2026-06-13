@@ -455,6 +455,51 @@ test('framework operating maturity projects owner evidence ledger refs without r
     );
     assert.deepEqual(brandWorkOrder.observed_ref_shapes, ['typed_blocker_ref']);
     assert.equal(brandWorkOrder.observed_receipt_refs[0], l5Record.receipt_ref);
+    assert.equal(
+      brandWorkOrder.next_evidence_action,
+      'record_or_resolve_brand_module_l5_owner_evidence_for_missing_module_requirements',
+    );
+    assert.equal(brandWorkOrder.owner_action_checklist.length, 10);
+    assert.equal(brandWorkOrder.missing_owner_action_ids.length, 130);
+    assert.equal(
+      brandWorkOrder.missing_owner_action_ids.includes('w7-brand-module-l5-charter-live_user_path'),
+      true,
+    );
+    assert.equal(
+      brandWorkOrder.missing_owner_action_ids.includes('w7-brand-module-l5-runway-long_soak_recovery'),
+      true,
+    );
+    assert.equal(
+      brandWorkOrder.missing_owner_action_ids.includes('w7-brand-module-l5-connect-release_install_evidence'),
+      true,
+    );
+    const charterBrandChecklist = brandWorkOrder.owner_action_checklist.find(
+      (entry: { module_id: string }) => entry.module_id === 'charter',
+    );
+    assert.equal(charterBrandChecklist.status, 'evidence_required');
+    assert.equal(charterBrandChecklist.l5_can_be_claimed, false);
+    assert.equal(charterBrandChecklist.owner_action_required_count, 13);
+    assert.equal(charterBrandChecklist.open_requirement_count, 12);
+    assert.equal(charterBrandChecklist.blocked_requirement_count, 1);
+    assert.equal(charterBrandChecklist.missing_requirement_class_ids.length, 13);
+    assert.equal(
+      charterBrandChecklist.missing_requirement_action_ids.includes(
+        'w7-brand-module-l5-charter-live_user_path',
+      ),
+      true,
+    );
+    assert.equal(charterBrandChecklist.next_work_order_id, 'w7-brand-module-l5-charter-live_user_path');
+    assert.equal(charterBrandChecklist.next_evidence_class_id, 'live_user_path');
+    assert.equal(
+      charterBrandChecklist.next_owner_repo,
+      '/Users/gaofeng/workspace/one-person-lab#brand-module:charter',
+    );
+    assert.equal(charterBrandChecklist.ready_claim_authorized, false);
+    assert.equal(charterBrandChecklist.authority_boundary.checklist_can_claim_l5, false);
+    assert.equal(
+      charterBrandChecklist.authority_boundary.checklist_can_create_typed_blocker,
+      false,
+    );
     assert.equal(brandWorkOrder.authority_boundary.can_claim_l5, false);
 
     assert.equal(
