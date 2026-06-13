@@ -257,12 +257,14 @@
           "runtime_health_epoch",
           "source_eval_id",
           "idempotency_key",
+          "route_identity_key",
+          "attempt_idempotency_key",
           "dispatch_ref",
           "stage_packet_ref",
           "stage_packet_refs"
         ],
-        "match_policy": "all_available_current_owner_delta_and_selected_dispatch_stage_packet_fields_must_match_and_missing_identity_fails_closed",
-        "missing_identity_effect": "fail_closed_no_stage_run_currentness_match",
+        "match_policy": "all_required_current_owner_delta_provider_admission_selected_dispatch_and_stage_packet_fields_must_match; missing route_identity_key, attempt_idempotency_key, dispatch_ref, stage_packet_ref, or stage_packet_refs fails closed",
+        "missing_identity_effect": "fail_closed_no_stage_run_currentness_match_no_live_skip_no_terminal_reconcile",
         "authority_boundary": {
           "opl_can_use_for_live_skip": true,
           "opl_can_use_for_terminal_closeout_reconcile": true,
@@ -280,7 +282,19 @@
           "human_gate_ref",
           "route_back_evidence_ref",
           "provider_hard_gate_clearance"
-        ]
+        ],
+        "provider_admission_identity_policy": {
+          "route_identity_key_required": true,
+          "attempt_idempotency_key_required": true,
+          "generic_idempotency_key_is_not_attempt_idempotency_key": true,
+          "missing_provider_admission_identity_effect": "fail_closed_no_stage_run_currentness_match"
+        },
+        "selected_dispatch_stage_packet_policy": {
+          "dispatch_ref_required": true,
+          "stage_packet_ref_required": true,
+          "stage_packet_refs_required_non_empty": true,
+          "stale_selected_dispatch_or_stage_packet_effect": "route_currentness_mismatch_fail_closed"
+        }
       },
       "terminal_closeout_precedes_live_projection": {
         "required_observations": [
@@ -385,6 +399,13 @@
       "opl_can_create_domain_typed_blocker": false,
       "opl_can_authorize_quality_or_publication_ready": false,
       "provider_completion_is_domain_ready": false
+    },
+    "false_authority_flags": {
+      "queue_or_transport_can_generate_domain_authority": false,
+      "worker_source_stale_can_generate_owner_answer": false,
+      "provider_completion_can_generate_owner_receipt": false,
+      "trace_span_can_select_stage_route": false,
+      "read_model_refresh_can_create_current_owner_delta": false
     }
   },
   "stage_progress_log_minimum_viability_policy": {

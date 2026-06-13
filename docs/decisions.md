@@ -51,6 +51,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - `stage_run_currentness_identity` 的 required fields 扩展为包含 `dispatch_ref`、`stage_packet_ref` 和规范化后的 `stage_packet_refs`。
+- `stage_run_currentness_identity` 的 required fields 同时包含 `route_identity_key` 与 `attempt_idempotency_key`；通用 `idempotency_key` 不能兜底为 provider attempt intent。缺 route identity、attempt identity、selected dispatch 或 stage packet identity 时，`missingStageRunCurrentnessIdentityFields` 必须报告缺字段，`sameStageRunCurrentnessIdentity` 与 `sameStageRunRouteCurrentnessIdentity` 都 fail closed。
 - `sameStageRunRouteCurrentnessIdentity` 继续忽略 `stage_attempt_id`，以允许同一 route identity 的 fresh candidate 与 admitted attempt reconcile；但 selected dispatch / stage packet refs 必须匹配，不匹配时 fail closed。
 - live skip、terminal closeout reconcile 和 current-control projection 只能复用同一 selected dispatch / stage packet identity；旧 selected dispatch、trace/span、queue residue、provider completion 或 read-model refresh 只能作为诊断，不得生成 domain owner receipt、typed blocker、quality verdict、domain ready、App release ready、Brand L5 或 production-ready claim。
 - DM003 类 pending admission / projection inconsistent 继续由 current-control provider admission identity、StageRun currentness identity、terminal closeout ordering 和 recovery obligation identity 回归覆盖；平台层不再因为 live recovery 状态而手写 MAS runtime/study artifacts。

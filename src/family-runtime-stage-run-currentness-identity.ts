@@ -160,9 +160,7 @@ export function buildStageRunCurrentnessIdentity(
     route_identity_key: optionalString(taskPayload.route_identity_key)
       ?? optionalString(providerAdmissionIdentity?.route_identity_key),
     attempt_idempotency_key: optionalString(taskPayload.attempt_idempotency_key)
-      ?? optionalString(providerAdmissionIdentity?.attempt_idempotency_key)
-      ?? optionalString(taskPayload.idempotency_key)
-      ?? optionalString(providerAdmissionIdentity?.idempotency_key),
+      ?? optionalString(providerAdmissionIdentity?.attempt_idempotency_key),
     recovery_obligation_id: optionalString(taskPayload.recovery_obligation_id)
       ?? optionalString(providerAdmissionIdentity?.recovery_obligation_id)
       ?? optionalString(providerAdmissionIdentity?.paper_recovery_obligation_id)
@@ -193,7 +191,7 @@ export function buildStageRunCurrentnessIdentity(
 export function missingStageRunCurrentnessIdentityFields(
   identity: StageRunCurrentnessIdentity,
 ) {
-  return [
+  const missing = [
     'domain_id',
     'study_id_or_quest_id',
     'stage_id',
@@ -206,7 +204,15 @@ export function missingStageRunCurrentnessIdentityFields(
     'runtime_health_epoch',
     'source_eval_id',
     'idempotency_key',
+    'route_identity_key',
+    'attempt_idempotency_key',
+    'dispatch_ref',
+    'stage_packet_ref',
   ].filter((key) => !identity[key as keyof StageRunCurrentnessIdentity]);
+  if (identity.stage_packet_refs.length === 0) {
+    missing.push('stage_packet_refs');
+  }
+  return missing;
 }
 
 function comparisonFields(identity: StageRunCurrentnessIdentity) {
@@ -272,22 +278,9 @@ export function sameStageRunRouteCurrentnessIdentity(
   left: StageRunCurrentnessIdentity,
   right: StageRunCurrentnessIdentity,
 ) {
-  const required = [
-    'domain_id',
-    'study_id_or_quest_id',
-    'stage_id',
-    'action_type',
-    'work_unit_id',
-    'work_unit_fingerprint',
-    'source_fingerprint',
-    'truth_epoch',
-    'runtime_health_epoch',
-    'source_eval_id',
-    'idempotency_key',
-  ] as const;
   if (
-    required.some((key) => !left[key])
-    || required.some((key) => !right[key])
+    missingStageRunCurrentnessIdentityFields(left).length > 0
+    || missingStageRunCurrentnessIdentityFields(right).length > 0
   ) {
     return false;
   }

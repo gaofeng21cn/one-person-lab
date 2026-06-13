@@ -209,6 +209,37 @@ test('fails closed when selected dispatch or stage packet identity changes', () 
   assert.equal(sameStageRunRouteCurrentnessIdentity(current, reorderedRefs), true);
 });
 
+test('fails closed when provider admission or selected stage packet identity is incomplete', () => {
+  const base = baseInput();
+  const basePayload = (base.task as Record<string, unknown>).payload as Record<string, unknown>;
+  const incomplete = buildStageRunCurrentnessIdentity(baseInput({
+    task: {
+      ...base.task,
+      payload: {
+        ...basePayload,
+        provider_admission_identity: {
+          status: 'provider_admission_pending',
+        },
+        route_identity_key: undefined,
+        attempt_idempotency_key: undefined,
+        dispatch_ref: undefined,
+        stage_packet_ref: undefined,
+        stage_packet_refs: [],
+      },
+    },
+  }));
+
+  assert.deepEqual(missingStageRunCurrentnessIdentityFields(incomplete), [
+    'route_identity_key',
+    'attempt_idempotency_key',
+    'dispatch_ref',
+    'stage_packet_ref',
+    'stage_packet_refs',
+  ]);
+  assert.equal(sameStageRunCurrentnessIdentity(incomplete, incomplete), false);
+  assert.equal(sameStageRunRouteCurrentnessIdentity(incomplete, incomplete), false);
+});
+
 test('preserves explicit MAS provider admission identity fields in StageRun currentness identity', () => {
   const identity = buildStageRunCurrentnessIdentity({
     task: {
@@ -226,6 +257,11 @@ test('preserves explicit MAS provider admission identity fields in StageRun curr
       stage_id: 'domain_owner/default-executor-dispatch',
       action_type: 'return_to_ai_reviewer_workflow',
       source_fingerprint: 'mas-source:fresh',
+      dispatch_ref: 'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/ai_reviewer.json',
+      stage_packet_ref: 'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/ai_reviewer.json',
+      stage_packet_refs: [
+        'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/ai_reviewer.json',
+      ],
       provider_admission_identity: {
         status: 'provider_admission_pending',
         route_identity_key: 'mas-route::003::ai-reviewer',
@@ -291,6 +327,11 @@ test('fails closed when required StageRun currentness identity fields are missin
     'runtime_health_epoch',
     'source_eval_id',
     'idempotency_key',
+    'route_identity_key',
+    'attempt_idempotency_key',
+    'dispatch_ref',
+    'stage_packet_ref',
+    'stage_packet_refs',
   ]);
   assert.equal(sameStageRunCurrentnessIdentity(identity, identity), false);
   assert.equal(sameStageRunRouteCurrentnessIdentity(identity, identity), false);
