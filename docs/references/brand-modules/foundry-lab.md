@@ -27,6 +27,7 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 Agent L
 | `evaluation_run` | 对 descriptor、stage、receipt、tool boundary、App projection 的评估。 |
 | `improvement_candidate` | 机制改进候选、预期影响、风险层级。 |
 | `developer_work_order` | 可执行 patch work order、验证命令、禁止范围和 owner closeout。 |
+| `rho_backend_plan` | RHO no-apply sidecar 的候选计划面，只产出 trajectory digest、diagnosis、candidate harness、self-preference score、winner、candidate diff、work-order draft 和 promotion evidence refs。 |
 | `canary_ref` | 小范围真实或 controlled canary 证据。 |
 | `promotion_receipt` | risk-tier promotion / rollback / no-regression refs。 |
 | `target_agent_handoff` | 给目标 agent/domain owner 的交接。 |
@@ -77,6 +78,7 @@ opl agents scaffold --json
 opl agents conformance --family-defaults --json
 opl agents readiness --family-defaults --json
 opl agents default-callers --family-defaults --json
+opl agent-lab rho --project <target-agent-dir> --json
 opl work-order execute --work-order <file> --json
 ```
 
@@ -102,6 +104,7 @@ contracts/opl-framework/standard-domain-agent-skeleton-contract.json
 ## Authority boundary
 
 - Foundry Lab 持有 agent blueprint、evaluation、developer work order、canary 和 promotion/rollback 的改进循环边界。
+- RHO backend 第一版只作为 no-apply sidecar/read-model：它可以生成 candidate refs、candidate diff refs、work-order draft refs 和 promotion evidence refs；不能写 target repo、不能直接 apply、不能作为 runtime substrate、truth source、domain owner、owner receipt 或 default promotion authority。
 - Target domain owner 持有 domain truth、owner receipt、artifact authority、domain quality verdict 和最终 adoption/rollback 裁决。
 - OPL Meta Agent 可作为 builder/tester module 提供 work order 和测试接管能力，但不成为 OPL Framework 或目标 domain 的 truth owner。
 - Console、Atlas 和 Vault 只能消费 Foundry Lab 输出的 descriptor、receipt 或 refs，不从 Lab 推导 domain ready。
@@ -115,6 +118,7 @@ contracts/opl-framework/standard-domain-agent-skeleton-contract.json
 - 不把 canary 通过写成全量 rollout 通过。
 - 不把 developer work order 完成写成 owner 已接受。
 - 不把 Foundry Lab promotion 写成 target domain owner acceptance。
+- 不把 RHO winner、self-preference score、candidate diff 或 work-order draft 写成 runtime substrate、domain truth、owner receipt、direct apply 或 default promotion。
 
 ## L4 structural baseline 成功标准
 

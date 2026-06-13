@@ -805,3 +805,42 @@ test('agent-lab optimize runs an external suite into gated candidate and RL tran
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
+
+test('agent-lab rho emits a no-apply backend plan with refs-only candidate surfaces', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-rho-project-'));
+  try {
+    const output = runCli(['agent-lab', 'rho', '--project', fixtureRoot, '--json']);
+    const plan = output.agent_lab_rho.backend_plan;
+
+    assert.equal(output.version, 'g2');
+    assert.equal(output.agent_lab_rho.surface_id, 'opl_agent_lab_rho_backend');
+    assert.equal(plan.surface_kind, 'opl_agent_lab_rho_backend_plan');
+    assert.equal(plan.backend, 'rho');
+    assert.equal(plan.apply_mode, 'no_apply');
+    assert.equal(plan.refs_only, true);
+    assert.equal(plan.project_ref, `project-ref:${fixtureRoot}`);
+    assert.match(plan.plan_id, /^oalrho_/);
+    assert.equal(plan.trajectory_digest_refs.length, 1);
+    assert.equal(plan.diagnosis_refs.length, 1);
+    assert.equal(plan.candidate_harness_refs.length, 1);
+    assert.equal(plan.self_preference_score_refs.length, 1);
+    assert.match(plan.winner_ref, /^rho-winner-ref:/);
+    assert.equal(plan.candidate_diff_refs.length, 1);
+    assert.equal(plan.work_order_draft_refs.length, 1);
+    assert.equal(plan.promotion_evidence_refs.length, 1);
+    assert.equal(plan.can_write_domain_truth, false);
+    assert.equal(plan.can_write_memory_body, false);
+    assert.equal(plan.can_mutate_artifact_body, false);
+    assert.equal(plan.can_write_owner_receipt, false);
+    assert.equal(plan.can_direct_apply, false);
+    assert.equal(plan.can_promote_default_agent, false);
+    assert.equal(plan.can_promote_default_agent_without_gate, false);
+    assert.equal(plan.authority_boundary.can_write_domain_truth, false);
+    assert.equal(plan.authority_boundary.can_write_memory_body, false);
+    assert.equal(plan.authority_boundary.can_mutate_domain_artifact, false);
+    assert.equal(plan.authority_boundary.can_write_owner_receipt, false);
+    assert.equal(plan.authority_boundary.can_promote_default_agent_without_gate, false);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});

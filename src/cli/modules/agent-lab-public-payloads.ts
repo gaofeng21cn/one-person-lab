@@ -10,6 +10,7 @@ import {
   buildCompleteAgentLabControlPlane,
   type AgentLabExportTarget,
 } from '../../agent-lab-complete.ts';
+import { buildAgentLabRhoBackendPlan } from '../../agent-lab-rho-backend.ts';
 import {
   agentLabRefSummary,
   buildAgentLabCostEstimate,
@@ -194,6 +195,30 @@ function parseAgentLabRunArgs(args: string[], spec: CommandSpec) {
   return parseAgentLabSuiteArgs(args, spec, 'run');
 }
 
+function parseAgentLabRhoArgs(args: string[], spec: CommandSpec) {
+  let projectDir: string | null = null;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (token !== '--project') {
+      throw buildUsageError(`Unknown option for agent-lab rho: ${token}.`, spec, { option: token });
+    }
+
+    const value = args[index + 1];
+    if (!value) {
+      throw buildUsageError('Missing value for option: --project.', spec, { option: '--project' });
+    }
+    projectDir = value;
+    index += 1;
+  }
+
+  if (!projectDir) {
+    throw buildUsageError('agent-lab rho requires --project <dir>.', spec, { option: '--project' });
+  }
+
+  return { projectDir };
+}
+
 function parseAgentLabExportArgs(args: string[], spec: CommandSpec) {
   let target: AgentLabExportTarget | null = null;
   const allowedTargets = new Set(['inspect-ai', 'openinference', 'langfuse', 'phoenix', 'json']);
@@ -281,6 +306,19 @@ function buildAgentLabOptimizePayload(args: string[], spec: CommandSpec) {
   };
 }
 
+function buildAgentLabRhoPayload(args: string[], spec: CommandSpec) {
+  const { projectDir } = parseAgentLabRhoArgs(args, spec);
+  const backendPlan = buildAgentLabRhoBackendPlan({ projectDir });
+  return {
+    version: 'g2',
+    agent_lab_rho: {
+      surface_id: 'opl_agent_lab_rho_backend',
+      backend_plan: backendPlan,
+      authority_boundary: backendPlan.authority_boundary,
+    },
+  };
+}
+
 function buildAgentLabEvolvePayload(args: string[], spec: CommandSpec) {
   const { suitePath } = parseAgentLabSuiteArgs(args, spec, 'evolve');
   return {
@@ -316,6 +354,7 @@ export {
   buildAgentLabOptimizePayload,
   buildAgentLabRunEfficiencyPayload,
   buildAgentLabRunPayload,
+  buildAgentLabRhoPayload,
   buildAgentLabSamplePayload,
   buildAgentLabStageExecutorPolicyPayload,
   buildAgentLabWorkbenchPayload,

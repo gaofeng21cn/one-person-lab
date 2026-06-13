@@ -15,6 +15,7 @@ import {
   buildAgentLabOptimizePayload,
   buildAgentLabRunEfficiencyPayload,
   buildAgentLabRunPayload,
+  buildAgentLabRhoPayload,
   buildAgentLabSamplePayload,
   buildAgentLabStageExecutorPolicyPayload,
   buildAgentLabWorkbenchPayload,
@@ -282,6 +283,14 @@ export function buildPublicAgentLabCommandSpecs(): Record<string, CommandSpec> {
       examples: ['opl agent-lab optimize --suite ./agent-lab-suite.json --json'],
       group: 'framework',
       handler: (args) => buildAgentLabOptimizePayload(args, specs['agent-lab optimize']),
+    },
+    'agent-lab rho': {
+      usage: 'opl agent-lab rho --project <dir>',
+      summary:
+        'Emit a deterministic no-apply RHO backend plan with trajectory, diagnosis, candidate, diff, work-order draft, and promotion evidence refs.',
+      examples: ['opl agent-lab rho --project ./target-agent --json'],
+      group: 'framework',
+      handler: (args) => buildAgentLabRhoPayload(args, specs['agent-lab rho']),
     },
     'agent-lab evolve': {
       usage: 'opl agent-lab evolve --suite <suite.json>',
