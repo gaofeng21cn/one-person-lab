@@ -603,12 +603,15 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
     'runtime_health_epoch',
     'source_eval_id',
     'idempotency_key',
+    'dispatch_ref',
+    'stage_packet_ref',
+    'stage_packet_refs',
   ]) {
     assert.ok(identity.required_fields.includes(field));
   }
   assert.equal(
     identity.match_policy,
-    'all_available_current_owner_delta_fields_must_match_and_missing_identity_fails_closed',
+    'all_available_current_owner_delta_and_selected_dispatch_stage_packet_fields_must_match_and_missing_identity_fails_closed',
   );
   assert.equal(identity.missing_identity_effect, 'fail_closed_no_stage_run_currentness_match');
   assert.ok(identity.reset_evidence.includes('domain_owner_receipt_ref'));

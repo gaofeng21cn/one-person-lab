@@ -228,12 +228,12 @@
         "comparison_refs": {
           "attempt_match_ref": "src/family-runtime-stage-run-currentness-identity.ts#sameStageRunCurrentnessIdentity",
           "route_currentness_match_ref": "src/family-runtime-stage-run-currentness-identity.ts#sameStageRunRouteCurrentnessIdentity",
-          "route_currentness_match_policy": "sameStageRunRouteCurrentnessIdentity compares route/currentness fields without using stage_attempt_id so an admitted attempt and a fresh candidate for the same route identity can reconcile, while stale work-unit/source/currentness basis mismatch fails closed"
+          "route_currentness_match_policy": "sameStageRunRouteCurrentnessIdentity compares route/currentness fields without using stage_attempt_id so an admitted attempt and a fresh candidate for the same selected dispatch/stage packet identity can reconcile, while stale work-unit/source/currentness basis or selected dispatch/stage packet mismatch fails closed"
         },
         "consumed_by": [
           {
             "surface": "default_executor_live_skip",
-            "policy": "live-skip may only reuse an existing provider attempt when sameStageRunRouteCurrentnessIdentity confirms the same domain, study or quest, stage, action, work unit, source, epoch, and idempotency basis"
+            "policy": "live-skip may only reuse an existing provider attempt when sameStageRunRouteCurrentnessIdentity confirms the same domain, study or quest, stage, action, work unit, source, epoch, idempotency basis, dispatch ref, and stage packet refs"
           },
           {
             "surface": "terminal_closeout_reconcile",
@@ -256,9 +256,12 @@
           "truth_epoch",
           "runtime_health_epoch",
           "source_eval_id",
-          "idempotency_key"
+          "idempotency_key",
+          "dispatch_ref",
+          "stage_packet_ref",
+          "stage_packet_refs"
         ],
-        "match_policy": "all_available_current_owner_delta_fields_must_match_and_missing_identity_fails_closed",
+        "match_policy": "all_available_current_owner_delta_and_selected_dispatch_stage_packet_fields_must_match_and_missing_identity_fails_closed",
         "missing_identity_effect": "fail_closed_no_stage_run_currentness_match",
         "authority_boundary": {
           "opl_can_use_for_live_skip": true,

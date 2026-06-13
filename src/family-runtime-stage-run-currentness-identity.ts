@@ -18,6 +18,17 @@ function nestedRecord(source: JsonRecord, ...keys: string[]) {
   return current;
 }
 
+function stringList(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+      .map((entry) => entry.trim())
+    : [];
+}
+
+function uniqueSortedStrings(values: Array<string | null>) {
+  return [...new Set(values.filter((value): value is string => Boolean(value)))].sort();
+}
+
 export type StageRunCurrentnessIdentity = {
   surface_kind: 'opl_stage_run_currentness_identity';
   schema_version: 1;
@@ -36,6 +47,9 @@ export type StageRunCurrentnessIdentity = {
   route_identity_key: string | null;
   attempt_idempotency_key: string | null;
   recovery_obligation_id: string | null;
+  dispatch_ref: string | null;
+  stage_packet_ref: string | null;
+  stage_packet_refs: string[];
   provider_admission_identity: JsonRecord | null;
   owner_route_currentness_basis: JsonRecord | null;
   provider_attempt_ref: string | null;
@@ -73,6 +87,23 @@ export function buildStageRunCurrentnessIdentity(
     ?? recordValue(workspaceLocator.owner_route_currentness_basis)
     ?? recordValue(currentOwnerDelta.currentness_basis)
     ?? {};
+  const dispatchRef = optionalString(taskPayload.dispatch_ref)
+    ?? optionalString(workspaceLocator.dispatch_ref)
+    ?? optionalString(providerAdmissionIdentity?.dispatch_ref)
+    ?? optionalString(taskPayload.dispatch_packet_ref)
+    ?? optionalString(workspaceLocator.dispatch_packet_ref)
+    ?? optionalString(taskPayload.dispatch_request_ref)
+    ?? optionalString(workspaceLocator.dispatch_request_ref);
+  const stagePacketRef = optionalString(taskPayload.stage_packet_ref)
+    ?? optionalString(workspaceLocator.stage_packet_ref)
+    ?? optionalString(providerAdmissionIdentity?.stage_packet_ref);
+  const stagePacketRefs = uniqueSortedStrings([
+    stagePacketRef,
+    ...stringList(taskPayload.stage_packet_refs),
+    ...stringList(taskPayload.checkpoint_refs),
+    ...stringList(workspaceLocator.stage_packet_refs),
+    ...stringList(workspaceLocator.checkpoint_refs),
+  ]);
   return {
     surface_kind: 'opl_stage_run_currentness_identity',
     schema_version: 1,
@@ -136,6 +167,9 @@ export function buildStageRunCurrentnessIdentity(
       ?? optionalString(providerAdmissionIdentity?.recovery_obligation_id)
       ?? optionalString(providerAdmissionIdentity?.paper_recovery_obligation_id)
       ?? optionalString(workspaceLocator.recovery_obligation_id),
+    dispatch_ref: dispatchRef,
+    stage_packet_ref: stagePacketRef,
+    stage_packet_refs: stagePacketRefs,
     provider_admission_identity: providerAdmissionIdentity,
     owner_route_currentness_basis: recordValue(taskPayload.owner_route_currentness_basis)
       ?? recordValue(sourceRefs.owner_route_currentness_basis)
@@ -192,6 +226,9 @@ function comparisonFields(identity: StageRunCurrentnessIdentity) {
     route_identity_key: identity.route_identity_key,
     attempt_idempotency_key: identity.attempt_idempotency_key,
     recovery_obligation_id: identity.recovery_obligation_id,
+    dispatch_ref: identity.dispatch_ref,
+    stage_packet_ref: identity.stage_packet_ref,
+    stage_packet_refs: identity.stage_packet_refs,
     task_id: identity.task_id,
   };
 }
@@ -212,6 +249,9 @@ function routeComparisonFields(identity: StageRunCurrentnessIdentity) {
     route_identity_key: identity.route_identity_key,
     attempt_idempotency_key: identity.attempt_idempotency_key,
     recovery_obligation_id: identity.recovery_obligation_id,
+    dispatch_ref: identity.dispatch_ref,
+    stage_packet_ref: identity.stage_packet_ref,
+    stage_packet_refs: identity.stage_packet_refs,
   };
 }
 

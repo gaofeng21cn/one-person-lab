@@ -27,6 +27,14 @@ function baseInput(overrides: Record<string, unknown> = {}) {
         idempotency_key: 'provider-admission::003::sha256:gate-replay-current',
         route_identity_key: 'route::003::publication-gate-replay',
         attempt_idempotency_key: 'attempt::003::publication-gate-replay',
+        dispatch_ref:
+          'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/run_gate_clearing_batch.json',
+        stage_packet_ref:
+          'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/run_gate_clearing_batch.json',
+        stage_packet_refs: [
+          'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/run_gate_clearing_batch.json',
+          'current-control://003/run_gate_clearing_batch',
+        ],
         provider_admission_identity: {
           status: 'provider_admission_pending',
           route_identity_key: 'route::003::publication-gate-replay',
@@ -85,6 +93,14 @@ test('builds a reusable StageRun currentness identity from task and attempt refs
     route_identity_key: 'route::003::publication-gate-replay',
     attempt_idempotency_key: 'attempt::003::publication-gate-replay',
     recovery_obligation_id: null,
+    dispatch_ref:
+      'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/run_gate_clearing_batch.json',
+    stage_packet_ref:
+      'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/run_gate_clearing_batch.json',
+    stage_packet_refs: [
+      'current-control://003/run_gate_clearing_batch',
+      'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/run_gate_clearing_batch.json',
+    ],
     provider_admission_identity: {
       status: 'provider_admission_pending',
       route_identity_key: 'route::003::publication-gate-replay',
@@ -153,6 +169,44 @@ test('compares StageRun route currentness without letting stage attempt id split
   assert.equal(sameStageRunCurrentnessIdentity(admitted, candidate), false);
   assert.equal(sameStageRunRouteCurrentnessIdentity(admitted, candidate), true);
   assert.equal(sameStageRunRouteCurrentnessIdentity(admitted, stale), false);
+});
+
+test('fails closed when selected dispatch or stage packet identity changes', () => {
+  const base = baseInput();
+  const basePayload = (base.task as Record<string, unknown>).payload as Record<string, unknown>;
+  const current = buildStageRunCurrentnessIdentity(base);
+  const staleSelectedDispatch = buildStageRunCurrentnessIdentity(baseInput({
+    task: {
+      ...base.task,
+      payload: {
+        ...basePayload,
+        dispatch_ref:
+          'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/immutable/run_gate_clearing_batch/stale.json',
+        stage_packet_ref:
+          'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/immutable/run_gate_clearing_batch/stale.json',
+        stage_packet_refs: [
+          'current-control://003/run_gate_clearing_batch',
+          'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/immutable/run_gate_clearing_batch/stale.json',
+        ],
+      },
+    },
+  }));
+  const reorderedRefs = buildStageRunCurrentnessIdentity(baseInput({
+    task: {
+      ...base.task,
+      payload: {
+        ...basePayload,
+        stage_packet_refs: [
+          'current-control://003/run_gate_clearing_batch',
+          'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/run_gate_clearing_batch.json',
+        ],
+      },
+    },
+  }));
+
+  assert.equal(sameStageRunRouteCurrentnessIdentity(current, staleSelectedDispatch), false);
+  assert.equal(sameStageRunCurrentnessIdentity(current, staleSelectedDispatch), false);
+  assert.equal(sameStageRunRouteCurrentnessIdentity(current, reorderedRefs), true);
 });
 
 test('preserves explicit MAS provider admission identity fields in StageRun currentness identity', () => {
