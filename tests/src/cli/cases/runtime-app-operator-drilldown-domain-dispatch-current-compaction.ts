@@ -146,6 +146,7 @@ test('domain dispatch evidence defaults to latest actionable attempt while prese
     assert.equal(recordRoutes.length, 1);
     assert.equal(recordRoutes[0].stage_attempt_id, latest.stage_attempt_id);
     assert.equal(recordRoutes[0].default_actionability_status, 'current');
+    assert.equal(recordRoutes[0].required_closeout_binding.closeout_binding_ready, true);
     assert.equal(
       recordRoutes.some((route: { stage_attempt_id: string }) =>
         route.stage_attempt_id === superseded.stage_attempt_id
@@ -238,6 +239,9 @@ test('domain dispatch evidence defaults to latest actionable attempt while prese
         source_fingerprint: 'truth-snapshot::second',
         typed_blocker_refs: ['mas://typed-blockers/dm002/default-executor-owner-receipt-pending'],
         no_regression_refs: ['mas://no-regression/dm002/default-executor-owner-receipt-pending'],
+        owner_delta_result: {
+          closeout_binding: recordRoutes[0].required_closeout_binding.closeout_binding,
+        },
       }),
     ], env).runtime_operator_action_execution;
     assert.equal(

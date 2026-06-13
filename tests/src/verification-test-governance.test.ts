@@ -50,10 +50,13 @@ const verifyWorkflowNativeAndStructurePatterns = [
 const sentruxAdvisoryWorkflowPatterns = [
   /fetch-depth: 0/,
   /git fetch --no-tags --prune origin main:refs\/remotes\/origin\/main/,
+  /timeout-minutes: 30/,
   /sentrux gate \./,
   /sentrux check \./,
   /\.\/scripts\/install-sentrux-ci\.sh/,
   /uses: \.\/\.github\/actions\/quality-details/,
+  /timeout-minutes: 20/,
+  /continue-on-error: true/,
   /compare-ref: origin\/main/,
   /json-limit: '50'/,
   /path: artifacts\/opl-quality-details\/quality-details\.json/,

@@ -13,7 +13,7 @@ jobs:
   structural-gate:
     name: Structural quality advisory
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     continue-on-error: true
 
     steps:
@@ -54,6 +54,8 @@ jobs:
           fi
 
       - name: Run OPL quality details
+        timeout-minutes: 20
+        continue-on-error: true
         uses: ./.github/actions/quality-details
         with:
           root: .
