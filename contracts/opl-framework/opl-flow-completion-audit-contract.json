@@ -1,0 +1,103 @@
+{
+  "surface_kind": "opl_flow_completion_audit_contract",
+  "version": "opl-flow-completion-audit.v1",
+  "owner": "one-person-lab",
+  "state": "active_contract",
+  "purpose": "Machine-readable closeout gate for OPL Flow tasks whose requested claim scope is thorough landing or complete execution.",
+  "machine_boundary": "This contract defines the closeout audit shape and false-completion guard for OPL Flow. It does not declare domain truth, runtime truth, artifact authority, quality verdicts, owner receipts, App release readiness, Brand L5, production readiness, or task completion by itself.",
+  "trigger_phrases": [
+    "彻底落地",
+    "全部落地",
+    "一步到位",
+    "完善后立刻吸收",
+    "持续推进直到完成",
+    "能做的都做掉",
+    "complete landing",
+    "fully landed",
+    "end-to-end complete"
+  ],
+  "claim_scopes": [
+    "thorough_landing",
+    "complete_execution",
+    "end_to_end_acceptance",
+    "production_ready_claim",
+    "release_ready_claim"
+  ],
+  "required_audit_item_fields": [
+    "item_id",
+    "target_state",
+    "status",
+    "completion_percent",
+    "fresh_evidence_refs",
+    "missing_refs",
+    "next_action"
+  ],
+  "allowed_item_statuses": [
+    "done",
+    "partial",
+    "not_started",
+    "blocked"
+  ],
+  "completion_percent_policy": {
+    "minimum": 0,
+    "maximum": 100,
+    "hundred_percent_requires_fresh_executable_evidence": true,
+    "non_hundred_percent_blocks_complete_claim": true
+  },
+  "fresh_evidence_ref_kinds": [
+    "test_result_ref",
+    "cli_output_ref",
+    "runtime_artifact_ref",
+    "run_receipt_ref",
+    "owner_receipt_ref",
+    "typed_blocker_ref",
+    "end_to_end_acceptance_ref",
+    "commit_ref",
+    "push_ref",
+    "cleanup_ref"
+  ],
+  "insufficient_completion_evidence": [
+    "docs_updated",
+    "catalog_landed",
+    "plan_landed",
+    "read_model_landed",
+    "refs_only_surface_landed",
+    "contract_landed",
+    "tests_passed_only",
+    "commit_pushed_only",
+    "subagent_reported_complete",
+    "worktree_merged_only"
+  ],
+  "closeout_gate": {
+    "surface_kind": "opl_flow_completion_audit_closeout_gate",
+    "requires_plan_item_audit": true,
+    "requires_lane_to_plan_mapping_when_subagents_or_worktrees_used": true,
+    "requires_main_session_fresh_verification": true,
+    "can_claim_complete_rule": "Every audit item must be status=done, completion_percent=100, and backed by fresh executable evidence refs. Otherwise can_claim_complete=false.",
+    "when_user_requested_thorough_landing_and_can_claim_complete_false": "continue_or_emit_typed_blocker",
+    "allowed_blocker_reasons": [
+      "same_write_set_conflict",
+      "source_of_truth_unclear",
+      "verification_cannot_cover_claim",
+      "permission_or_external_dependency_unavailable",
+      "real_owner_decision_required"
+    ]
+  },
+  "audit_surface_shape": {
+    "surface_kind": "opl_flow_completion_audit",
+    "plan_ref_required": true,
+    "claim_scope_required": true,
+    "items_required": true,
+    "can_claim_complete_required": true,
+    "blocked_reason_required_when_blocked": true
+  },
+  "forbidden_claims_without_audit": [
+    "task_complete",
+    "fully_landed",
+    "thoroughly_landed",
+    "production_ready",
+    "release_ready",
+    "all_done",
+    "ready_claim_authorized"
+  ]
+}

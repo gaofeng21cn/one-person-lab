@@ -8,6 +8,8 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 `contra
 
 Plugin native profile pointer: `contracts/opl-native-profile.json` 只声明 OPL Flow / OPL Doc 插件同步与 drift 检查所需的 repo-native profile；它不是 framework truth、runtime truth、domain truth、artifact authority、owner receipt 或 production-ready 证据。
 
+OPL Flow closeout gate: `contracts/opl-framework/opl-flow-completion-audit-contract.json` 是目标态交付的机器化后验证合同。凡 claim scope 属于 `thorough_landing`、`complete_execution`、`end_to_end_acceptance`、`production_ready_claim` 或 `release_ready_claim`，closeout 前必须给出逐项 plan completion audit、完成度百分比、fresh evidence refs、missing refs、next action 和 subagent/worktree lane mapping。docs/catalog/plan/read-model/refs-only surface/contract/test/commit-only evidence 不能单独支撑 `100%` 或 complete claim；仍有非 100% 条目时只能继续推进，或在明确 owner / source of truth / 权限 / 外部依赖 / 验证边界 blocker 下输出 typed blocker。
+
 ## 读法
 
 本文只保存当前角色、当前成熟度、完成边界、动态真相入口和仍未闭合的缺口类别。它不冻结 receipt id、attempt id、workorder 数字、open/closed counter、branch/SHA、provider tick、ledger verify 流水或某轮 closeout 细节。

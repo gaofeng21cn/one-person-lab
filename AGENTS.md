@@ -74,6 +74,8 @@
 - 保持 diff 小、可审查、可回退。
 - 能删就别加；能复用现有模式就别新起抽象。
 - 没有明确必要不要新增依赖。
+- 当用户要求“彻底落地 / 全部落地 / 一步到位 / 完善后立刻吸收 / 持续推进直到完成 / 能做的都做掉”等目标态交付时，最终声称完成前必须执行 `Plan Completion Audit`：把原始规划拆成可验收条目，逐项给出 `done / partial / not_started / blocked`、完成度百分比、新鲜证据、缺口和后续动作。`100%` 只能用于已有 fresh executable evidence 的条目；docs、catalog、plan、read-model、refs-only surface、contract landed、测试绿或提交推送不能单独替代 runnable behavior、runtime artifact、owner receipt、end-to-end acceptance 或用户明确要求的目标态证据。
+- 若 `Plan Completion Audit` 仍有非 `100%` 条目，且用户要求的是“彻底落地”，默认继续推进；只有同一写集冲突、source of truth 不清、验证无法覆盖、权限/外部依赖无法满足或需要真实 owner 决策时，才输出 typed blocker / blocked，并写清不能继续的具体证据。
 - 修改 machine-readable contracts、公开边界、默认 docs 入口、文档骨架或 active domain-agent wording 时，必须同步更新文档、contracts 与相关测试。
 - 叙述性 `README*`、`docs/**` 和参考文档不作为脚本/测试的断言对象；可以测试 machine-readable contract、schema、CLI/API 行为、生成产物结构与路径，但不要用测试固定文档措辞、章节或状态文案。
 - 默认验证入口、Python clean runner、Node-triggered Python helper 和 build/proof 命令必须把 bytecode、pytest cache、`uv sync` project venv、安装/同步副产物和 runtime artifact 导向仓库外部；禁止在开发 checkout 生成 `.venv`、`__pycache__`、`.pytest_cache` 或 `*.egg-info` 后再靠测试清理兜底。

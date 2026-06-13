@@ -46,6 +46,19 @@
     "tests",
     "package.json"
   ],
+  "flow_closeout_gates": [
+    {
+      "kind": "completion_audit",
+      "path": "contracts/opl-framework/opl-flow-completion-audit-contract.json",
+      "required_for_claim_scopes": [
+        "thorough_landing",
+        "complete_execution",
+        "end_to_end_acceptance",
+        "production_ready_claim",
+        "release_ready_claim"
+      ]
+    }
+  ],
   "managed_by_plugins": {
     "opl-doc": {
       "does_not_own": [
