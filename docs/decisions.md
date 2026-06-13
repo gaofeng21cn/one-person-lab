@@ -270,6 +270,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 这只关闭 binding transport 和 identity validation 缺口；OPL 仍不能生成 domain owner receipt、quality gate receipt、typed blocker、owner-chain ref、no-regression ref，不能声明 domain ready、paper ready、App release ready 或 production ready。
 - 2026-06-07 追加：`quality_gate_receipt` 可以让 `current_owner_delta` 投影为 `domain_owner_answer_recorded`，从而停止继续催同一个默认 owner answer；但它不能被 StageRun cockpit 提升为 closeout owner receipt，也不能设置 `domain_ready_authorized`、`quality_or_export_authorized` 或 execution authorization success。需要关闭 StageRun closeout 时，仍必须有 domain owner receipt 或 typed blocker。
 - 2026-06-07 追加：当 StageRun cockpit 已经验证 closeout binding 中的 `owner_receipt` 或 `typed_blocker` 与当前 StageRun、manifest、current pointer、source fingerprint 和 idempotency 完全一致时，`current_owner_delta` 可以消费这条合法 owner answer 并清空默认 next action；该回填只关闭“owner answer 是否已提交”的等待，不声明 domain ready、quality/export ready 或 production ready。
+- 2026-06-13 追加：Temporal / provider attempt 处于 `checkpointed` 且 `closeout_receipt_status=domain_handler_receipt_ref_only` 时，若 workspace locator 缺 `provider_attempt_ref`、`attempt_lease_ref`、`execution_authorization_decision_ref` 或 `execution_authorization_receipt_ref`，current-control 必须投影 `blocked_missing_launch_execution_authorization`。这类 refs-only checkpoint 不能当 running proof、domain ready 或 owner receipt；operator 只能通过 provider-transport redrive 补齐 OPL launch authorization refs，且 redrive event 必须保留 `refs_only_checkpoint_is_running_proof=false` 与 no-domain-truth-mutation authority boundary。
 
 ### 决策：StageRun blocker 按缺口类型选择默认 owner
 

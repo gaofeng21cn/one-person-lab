@@ -299,6 +299,8 @@ OPL 对 MAS 的进一步优化重点不是再补 MAS 私有推进器，而是把
 
 2026-06-11 implementation foldback：同一 dedupe-key 下 stale `queued` / `waiting_approval` MAS current-control provider admission 被 fresh work-unit/source currentness identity 取代时，属于 OPL `durable_runway_plane` / `reconciler_plane` 的 queue currentness 修复，可原地刷新 payload、重置 attempts，并保留既有 approval gate。owner-answer bridge 仍只接受带完整 StageRun closeout binding 的 domain-owned owner receipt / typed blocker；binding 必须匹配 provider attempt、active lease、execution authorization decision、source fingerprint 与 idempotency。fresh audit 中 `sat_c0348bcfa41849926ebb46f9` 的 MAS typed blocker 是真实业务阻塞证据，但缺少匹配该 StageRun 的 closeout binding，不能由 OPL 绑定成当前 owner answer 或 domain ready。
 
+2026-06-13 implementation foldback：StageRun currentness identity 已从“work unit / source / idempotency + selected packet”收紧为完整 provider admission route identity。`route_identity_key`、`attempt_idempotency_key`、`dispatch_ref`、`stage_packet_ref` 和非空 `stage_packet_refs` 都是 required fields；通用 `idempotency_key` 不能兜底为 provider attempt identity。缺任一字段时，live skip、terminal closeout reconcile 和 current-control projection 都必须 fail closed，只能形成 OPL runtime/currentness blocker 或 audit drilldown，不能借旧 selected dispatch、trace/span、queue residue、read-model refresh 或 provider completion生成 domain owner answer、typed blocker、quality verdict、domain ready、App release ready、Brand L5 或 production ready。
+
 ### 4. Support Repos
 
 `opl-aion-shell` 和 `opl-doc` 不进入 Foundry Agent core truth set。
@@ -316,7 +318,7 @@ OPL 对 MAS 的进一步优化重点不是再补 MAS 私有推进器，而是把
 | `summary_de_noise` | OPL default summaries owner-delta-only，raw counts 只作 diagnostic-only。 | ordinary summary 不以 worklist/replay/blocked envelope count 作为 next-action root。 |
 | `current_owner_delta_cutover` | 默认命名和 payload root 都说 `current_owner_delta`，`current_owner_delta_read_model` 只承载显式 audit/full-detail refs。 | `compact_*` 只在 history / negative guard 中出现，不能成为 default planning root 或 active compatibility alias。 |
 | `domain_wrapper_delete_gate` | retained wrapper 逐项 delete/tombstone；delete-auth false / safe-to-delete false guard 防止 premature physical delete。 | no-active-caller、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance machine-readable。 |
-| `real_owner_delta_tail` | production evidence tail 必须回到 domain owner answer，不用平台 repair 或 docs/provenance 替代。 | 真实 paper/grant/visual/target-agent owner receipt、typed blocker、human gate、review/export receipt 或 no-regression ref。 |
+| `real_owner_delta_tail` | production evidence tail 必须回到 domain owner answer，不用平台 repair 或 docs/provenance 替代；OPL 只用完整 StageRun currentness identity 保护 route/currentness，不用通用 idempotency、旧 dispatch、provider completion 或 read-model refresh 伪造 progress。 | 真实 paper/grant/visual/target-agent owner receipt、typed blocker、human gate、review/export receipt 或 no-regression ref。 |
 | `app_contract_compaction` | App ordinary path contract 收薄，并由 active-shell / release-boundary guard 检查。 | Home/Runtime/Settings 只显示 purpose、task status、next owner、artifact/blocker、release facts；release detail 只在 release/developer/detail 语境。 |
 | `oma_script_to_pack_hygiene` | Stable scripts 迁到 `agent/`、contracts、authority functions 或 OPL primitive；保留脚本只能是 refs/smoke/work-order/helper。 | 新增或收薄脚本必须更新 machine gate。 |
 | `support_entry_clarity` | Shell/doc support repo 只做 implementation carrier / workflow steward。 | support repo 不反向定义 OPL/App/domain truth，并持续防止 implementation detail 或 doctor-clean 变成 readiness。 |
