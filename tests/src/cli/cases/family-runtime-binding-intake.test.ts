@@ -145,41 +145,59 @@ test('family-runtime profile hydrate resolves MAS export through OPL module chec
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-profile-module-home-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-profile-module-'));
   const profilePath = path.join(fixtureRoot, 'dm-cvd.workspace.toml');
-  const uvPath = path.join(fixtureRoot, 'uv');
+  const runnerArgvPath = path.join(fixtureRoot, 'runner.argv');
+  const runnerCwdPath = path.join(fixtureRoot, 'runner.cwd');
   const medautosciPath = path.join(fixtureRoot, 'medautosci');
-  const uvArgvPath = path.join(fixtureRoot, 'uv.argv');
-  const uvCwdPath = path.join(fixtureRoot, 'uv.cwd');
+  const uvPath = path.join(fixtureRoot, 'uv');
   const legacyPathHitPath = path.join(fixtureRoot, 'legacy-path-hit');
-  const masFixture = createGitModuleRemoteFixture('med-autoscience');
-  fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
-  writeJsonEmitterScript(uvPath, {
-    surface_kind: 'mas_family_domain_handler_export',
-    pending_family_tasks: [
-      {
-        domain_id: 'med-autoscience',
-        recommended_task_kind: 'domain_route/reconcile-apply',
-        priority: 55,
-        source: 'mas-runtime-owner-route',
-        dedupe_key: 'mas:dm002:owner-route:quest_waiting_opl_runtime_owner_route',
-        owner_route_ref: 'quest_waiting_opl_runtime_owner_route',
-        runtime_state_path: 'studies/002-dm-china-us-mortality-attribution/runtime/state.json',
-        reason: 'quest_waiting_opl_runtime_owner_route',
-        payload: {
-          profile: 'dm-cvd.workspace.toml',
-          study_id: '002-dm-china-us-mortality-attribution',
-          source_fingerprint: 'unit-harmonized-route',
-        },
-      },
-    ],
-  }, {
-    cwdPath: uvCwdPath,
-    argvPath: uvArgvPath,
+  const masFixture = createGitModuleRemoteFixture('med-autoscience', {
+    extraFiles: {
+      'scripts/run-python-clean.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        `printf '%s\\n' "$PWD" > ${shellSingleQuote(runnerCwdPath)}`,
+        `: > ${shellSingleQuote(runnerArgvPath)}`,
+        `for arg in "$@"; do printf '%s\\n' "$arg" >> ${shellSingleQuote(runnerArgvPath)}; done`,
+        `exec ${shellSingleQuote(process.execPath)} -e ${shellSingleQuote(`process.stdout.write(${jsString(`${JSON.stringify({
+          surface_kind: 'mas_family_domain_handler_export',
+          pending_family_tasks: [
+            {
+              domain_id: 'med-autoscience',
+              recommended_task_kind: 'domain_route/reconcile-apply',
+              priority: 55,
+              source: 'mas-runtime-owner-route',
+              dedupe_key: 'mas:dm002:owner-route:quest_waiting_opl_runtime_owner_route',
+              owner_route_ref: 'quest_waiting_opl_runtime_owner_route',
+              runtime_state_path: 'studies/002-dm-china-us-mortality-attribution/runtime/state.json',
+              reason: 'quest_waiting_opl_runtime_owner_route',
+              payload: {
+                profile: 'dm-cvd.workspace.toml',
+                study_id: '002-dm-china-us-mortality-attribution',
+                source_fingerprint: 'unit-harmonized-route',
+              },
+            },
+          ],
+        }, null, 2)}\n`)});`)} -- "$@"`,
+        '',
+      ].join('\n'),
+    },
+    executableFiles: ['scripts/run-python-clean.sh'],
   });
+  fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
   fs.writeFileSync(
     medautosciPath,
     `#!/usr/bin/env bash
 set -euo pipefail
 printf 'legacy-path-medautosci-was-called\\n' > ${shellSingleQuote(legacyPathHitPath)}
+exit 44
+`,
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    uvPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf 'legacy-path-uv-was-called\\n' > ${shellSingleQuote(legacyPathHitPath)}
 exit 44
 `,
     { mode: 0o755 },
@@ -202,20 +220,17 @@ exit 44
     ], env);
     const queue = runCli(['family-runtime', 'queue', 'list'], env);
     const exportResult = intake.family_runtime_intake.exports[0];
-    const uvArgv = fs.readFileSync(uvArgvPath, 'utf8').trim().split('\n');
+    const runnerArgv = fs.readFileSync(runnerArgvPath, 'utf8').trim().split('\n');
+    const runnerPath = path.join(masFixture.sourceRoot, 'scripts', 'run-python-clean.sh');
 
     assert.equal(intake.family_runtime_intake.enqueued_count, 1);
     assert.equal(exportResult.status, 'completed');
     assert.equal(exportResult.command_source, 'module_exec_profile');
     assert.equal(exportResult.command_cwd, masFixture.sourceRoot);
     assert.deepEqual(exportResult.command_preview, [
-      'uv',
-      'run',
-      '--directory',
-      masFixture.sourceRoot,
-      '--extra',
-      'analysis',
-      'medautosci',
+      runnerPath,
+      '-m',
+      'med_autoscience.cli',
       'domain-handler',
       'export',
       '--profile',
@@ -225,10 +240,10 @@ exit 44
     ]);
     assert.equal(fs.existsSync(legacyPathHitPath), false);
     assert.equal(
-      fs.realpathSync(fs.readFileSync(uvCwdPath, 'utf8').trim()),
+      fs.realpathSync(fs.readFileSync(runnerCwdPath, 'utf8').trim()),
       fs.realpathSync(masFixture.sourceRoot),
     );
-    assert.deepEqual(uvArgv, exportResult.command_preview.slice(1));
+    assert.deepEqual(runnerArgv, exportResult.command_preview.slice(1));
     assert.equal(queue.family_runtime_queue.tasks[0].task_kind, 'domain_route/reconcile-apply');
     assert.equal(queue.family_runtime_queue.tasks[0].payload.study_id, '002-dm-china-us-mortality-attribution');
     assert.equal(queue.family_runtime_queue.tasks[0].payload.reason, 'quest_waiting_opl_runtime_owner_route');
@@ -246,35 +261,53 @@ test('family-runtime intake --profile overrides active MAS workspace binding', (
   const boundMasWorkspacePath = path.join(fixtureRoot, 'bound-med-autoscience');
   const boundProfilePath = path.join(fixtureRoot, 'nfpitnet.workspace.toml');
   const explicitProfilePath = path.join(fixtureRoot, 'dm-cvd.workspace.toml');
+  const runnerArgvPath = path.join(fixtureRoot, 'runner.argv');
+  const runnerCwdPath = path.join(fixtureRoot, 'runner.cwd');
   const uvPath = path.join(fixtureRoot, 'uv');
-  const uvArgvPath = path.join(fixtureRoot, 'uv.argv');
-  const uvCwdPath = path.join(fixtureRoot, 'uv.cwd');
-  const masFixture = createGitModuleRemoteFixture('med-autoscience');
+  const masFixture = createGitModuleRemoteFixture('med-autoscience', {
+    extraFiles: {
+      'scripts/run-python-clean.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        `printf '%s\\n' "$PWD" > ${shellSingleQuote(runnerCwdPath)}`,
+        `: > ${shellSingleQuote(runnerArgvPath)}`,
+        `for arg in "$@"; do printf '%s\\n' "$arg" >> ${shellSingleQuote(runnerArgvPath)}; done`,
+        `exec ${shellSingleQuote(process.execPath)} -e ${shellSingleQuote(`process.stdout.write(${jsString(`${JSON.stringify({
+          surface_kind: 'mas_family_domain_handler_export',
+          pending_family_tasks: [
+            {
+              domain_id: 'medautoscience',
+              task_kind: 'domain_route/reconcile-apply',
+              priority: 55,
+              source: 'dm002-explicit-profile-owner-route',
+              dedupe_key: 'mas:dm-cvd:002-dm-china-us-mortality-attribution:owner-route',
+              dispatch_owner: 'med-autoscience',
+              payload: {
+                profile: 'dm-cvd.workspace.toml',
+                study_id: '002-dm-china-us-mortality-attribution',
+                reason: 'runtime_controller_redrive_required',
+              },
+            },
+          ],
+        }, null, 2)}\n`)});`)} -- "$@"`,
+        '',
+      ].join('\n'),
+    },
+    executableFiles: ['scripts/run-python-clean.sh'],
+  });
   fs.mkdirSync(boundMasWorkspacePath, { recursive: true });
   writeMasCleanRunnerFixture(boundMasWorkspacePath);
   fs.writeFileSync(boundProfilePath, '[workspace]\nname = "nfpitnet"\n', 'utf8');
   fs.writeFileSync(explicitProfilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
-  writeJsonEmitterScript(uvPath, {
-    surface_kind: 'mas_family_domain_handler_export',
-    pending_family_tasks: [
-      {
-        domain_id: 'medautoscience',
-        task_kind: 'domain_route/reconcile-apply',
-        priority: 55,
-        source: 'dm002-explicit-profile-owner-route',
-        dedupe_key: 'mas:dm-cvd:002-dm-china-us-mortality-attribution:owner-route',
-        dispatch_owner: 'med-autoscience',
-        payload: {
-          profile: 'dm-cvd.workspace.toml',
-          study_id: '002-dm-china-us-mortality-attribution',
-          reason: 'runtime_controller_redrive_required',
-        },
-      },
-    ],
-  }, {
-    cwdPath: uvCwdPath,
-    argvPath: uvArgvPath,
-  });
+  fs.writeFileSync(
+    uvPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf 'legacy-path-uv-was-called\\n' >&2
+exit 44
+`,
+    { mode: 0o755 },
+  );
   const env = familyRuntimeEnv(stateRoot, {
     HOME: homeRoot,
     PATH: `${fixtureRoot}:${process.env.PATH ?? ''}`,
@@ -306,19 +339,16 @@ test('family-runtime intake --profile overrides active MAS workspace binding', (
     ], env);
     const exportResult = intake.family_runtime_intake.exports[0];
     const queue = runCli(['family-runtime', 'queue', 'list'], env);
-    const uvArgv = fs.readFileSync(uvArgvPath, 'utf8').trim().split('\n');
+    const runnerArgv = fs.readFileSync(runnerArgvPath, 'utf8').trim().split('\n');
+    const runnerPath = path.join(masFixture.sourceRoot, 'scripts', 'run-python-clean.sh');
 
     assert.equal(intake.family_runtime_intake.enqueued_count, 1);
     assert.equal(exportResult.command_source, 'module_exec_profile');
     assert.equal(exportResult.command_cwd, masFixture.sourceRoot);
     assert.deepEqual(exportResult.command_preview, [
-      'uv',
-      'run',
-      '--directory',
-      masFixture.sourceRoot,
-      '--extra',
-      'analysis',
-      'medautosci',
+      runnerPath,
+      '-m',
+      'med_autoscience.cli',
       'domain-handler',
       'export',
       '--profile',
@@ -329,10 +359,10 @@ test('family-runtime intake --profile overrides active MAS workspace binding', (
     assert.match(exportResult.command_preview.join(' '), /dm-cvd\.workspace\.toml/);
     assert.doesNotMatch(exportResult.command_preview.join(' '), /nfpitnet\.workspace\.toml/);
     assert.equal(
-      fs.realpathSync(fs.readFileSync(uvCwdPath, 'utf8').trim()),
+      fs.realpathSync(fs.readFileSync(runnerCwdPath, 'utf8').trim()),
       fs.realpathSync(masFixture.sourceRoot),
     );
-    assert.deepEqual(uvArgv, exportResult.command_preview.slice(1));
+    assert.deepEqual(runnerArgv, exportResult.command_preview.slice(1));
     assert.equal(queue.family_runtime_queue.tasks[0].payload.study_id, '002-dm-china-us-mortality-attribution');
     assert.equal(
       queue.family_runtime_queue.tasks[0].payload.opl_domain_export_context.command_source,
@@ -359,9 +389,7 @@ test('family-runtime profile tick dispatches MAS tasks through OPL module checko
   const uvCwdPath = path.join(fixtureRoot, 'uv.cwd');
   const dispatchedTaskPath = path.join(fixtureRoot, 'dispatched-task.json');
   const legacyPathHitPath = path.join(fixtureRoot, 'legacy-dispatch-hit');
-  const masFixture = createGitModuleRemoteFixture('med-autoscience');
-  fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
-  writeNodeScript(uvPath, `
+  const moduleRunnerSource = `
 const fs = require('node:fs');
 const args = process.argv.slice(1);
 fs.writeFileSync(${jsString(uvCwdPath)}, process.cwd() + '\\n');
@@ -406,9 +434,30 @@ if (joined.includes(' domain-handler dispatch ')) {
   }) + '\\n');
   process.exit(0);
 }
-process.stderr.write(\`unexpected uv command: \${args.join(' ')}\\n\`);
+process.stderr.write(\`unexpected MAS clean runner command: \${args.join(' ')}\\n\`);
 process.exit(64);
-`);
+`;
+  const masFixture = createGitModuleRemoteFixture('med-autoscience', {
+    extraFiles: {
+      'scripts/run-python-clean.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        `exec ${shellSingleQuote(process.execPath)} -e ${shellSingleQuote(moduleRunnerSource)} -- "$@"`,
+        '',
+      ].join('\n'),
+    },
+    executableFiles: ['scripts/run-python-clean.sh'],
+  });
+  fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
+  fs.writeFileSync(
+    uvPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf 'legacy-path-uv-was-called\\n' > ${shellSingleQuote(legacyPathHitPath)}
+exit 44
+`,
+    { mode: 0o755 },
+  );
   fs.writeFileSync(
     medautosciPath,
     `#!/usr/bin/env bash
@@ -444,17 +493,13 @@ exit 44
     assert.equal(tick.family_runtime_tick.selected_count, 1);
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
     assert.deepEqual(tick.family_runtime_tick.dispatches[0].command_preview, [
-      'uv',
-      'run',
-      '--directory',
-      masFixture.sourceRoot,
-      '--extra',
-      'analysis',
-      'medautosci',
+      path.join(masFixture.sourceRoot, 'scripts', 'run-python-clean.sh'),
+      '-m',
+      'med_autoscience.cli',
       'domain-handler',
       'dispatch',
       '--task',
-      tick.family_runtime_tick.dispatches[0].command_preview[10],
+      tick.family_runtime_tick.dispatches[0].command_preview[6],
       '--format',
       'json',
     ]);
@@ -709,31 +754,49 @@ test('family-runtime requeues dead-lettered MAS exports when domain owner finger
   const dispatchPath = path.join(fixtureRoot, 'dispatch');
   const dispatchCountPath = path.join(fixtureRoot, 'dispatch.count');
   const dispatchedTaskPath = path.join(fixtureRoot, 'dispatched-task.json');
-  const masFixture = createGitModuleRemoteFixture('med-autoscience');
-  fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
-  writeJsonEmitterScript(uvPath, {
-    surface_kind: 'mas_family_domain_handler_export',
-    pending_family_tasks: [
-      {
-        domain_id: 'medautoscience',
-        recommended_task_kind: 'paper_autonomy/repair-recheck',
-        priority: 60,
-        source: 'mas-runtime-owner-route',
-        dedupe_key: 'mas:dm002:repair-recheck:unit_harmonized_validation_uncertainty_and_grouped_calibration',
-        dispatch_owner: 'med-autoscience',
-        owner_route_ref: 'owner-route:mas/DM002/unit_harmonized_validation_uncertainty_and_grouped_calibration',
-        source_fingerprint: 'unit-harmonized-route',
-        payload: {
-          profile: 'dm-cvd.workspace.toml',
-          study_id: '002-dm-china-us-mortality-attribution',
-          work_unit_id: 'unit_harmonized_validation_uncertainty_and_grouped_calibration',
-        },
-      },
-    ],
-  }, {
-    cwdPath: uvCwdPath,
-    argvPath: uvArgvPath,
+  const masFixture = createGitModuleRemoteFixture('med-autoscience', {
+    extraFiles: {
+      'scripts/run-python-clean.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        `printf '%s\\n' "$PWD" > ${shellSingleQuote(uvCwdPath)}`,
+        `: > ${shellSingleQuote(uvArgvPath)}`,
+        `for arg in "$@"; do printf '%s\\n' "$arg" >> ${shellSingleQuote(uvArgvPath)}; done`,
+        `exec ${shellSingleQuote(process.execPath)} -e ${shellSingleQuote(`process.stdout.write(${jsString(`${JSON.stringify({
+          surface_kind: 'mas_family_domain_handler_export',
+          pending_family_tasks: [
+            {
+              domain_id: 'medautoscience',
+              recommended_task_kind: 'paper_autonomy/repair-recheck',
+              priority: 60,
+              source: 'mas-runtime-owner-route',
+              dedupe_key: 'mas:dm002:repair-recheck:unit_harmonized_validation_uncertainty_and_grouped_calibration',
+              dispatch_owner: 'med-autoscience',
+              owner_route_ref: 'owner-route:mas/DM002/unit_harmonized_validation_uncertainty_and_grouped_calibration',
+              source_fingerprint: 'unit-harmonized-route',
+              payload: {
+                profile: 'dm-cvd.workspace.toml',
+                study_id: '002-dm-china-us-mortality-attribution',
+                work_unit_id: 'unit_harmonized_validation_uncertainty_and_grouped_calibration',
+              },
+            },
+          ],
+        }, null, 2)}\n`)});`)} -- "$@"`,
+        '',
+      ].join('\n'),
+    },
+    executableFiles: ['scripts/run-python-clean.sh'],
   });
+  fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
+  fs.writeFileSync(
+    uvPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf 'legacy-path-uv-was-called\\n' >&2
+exit 44
+`,
+    { mode: 0o755 },
+  );
   writeNodeScript(dispatchPath, `
 const fs = require('node:fs');
 const taskPath = process.argv[1];

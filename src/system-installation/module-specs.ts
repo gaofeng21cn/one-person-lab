@@ -62,6 +62,17 @@ function buildHealthCheckCommand(checkoutPath: string, verifyLane = 'fast') {
     };
 }
 
+function buildMasCleanRunnerExecCommand(checkoutPath: string, args: string[]) {
+  const runnerPath = path.join(checkoutPath, 'scripts', 'run-python-clean.sh');
+  if (!fs.existsSync(runnerPath) || !fs.statSync(runnerPath).isFile()) {
+    return null;
+  }
+  return {
+    command: runnerPath,
+    args: ['-m', 'med_autoscience.cli', ...args],
+  };
+}
+
 export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
   {
     module_id: 'medautoscience',
@@ -76,10 +87,7 @@ export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
       ?? buildPythonEditableBootstrapCommand(checkoutPath, '3.12')
     ),
     health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
-    exec_command: (checkoutPath, args) => ({
-      command: 'uv',
-      args: ['run', '--directory', checkoutPath, '--extra', 'analysis', 'medautosci', ...args],
-    }),
+    exec_command: buildMasCleanRunnerExecCommand,
     skill_sync_domain: 'medautoscience',
   },
   {

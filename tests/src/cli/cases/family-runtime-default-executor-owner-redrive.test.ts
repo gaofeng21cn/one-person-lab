@@ -33,9 +33,7 @@ test('family-runtime hydrate keeps succeeded MAS default executor dispatch termi
   const uvPath = path.join(fixtureRoot, 'uv');
   const uvArgvPath = path.join(fixtureRoot, 'uv.argv');
   const uvCwdPath = path.join(fixtureRoot, 'uv.cwd');
-  const masFixture = createGitModuleRemoteFixture('med-autoscience');
-  fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
-  writeNodeScript(uvPath, `
+  const runnerSource = `
 const fs = require('node:fs');
 const args = process.argv.slice(1);
 fs.writeFileSync(${jsString(uvCwdPath)}, process.cwd() + '\\n');
@@ -81,9 +79,30 @@ if (joined.includes(' domain-handler dispatch ')) {
   }) + '\\n');
   process.exit(0);
 }
-process.stderr.write(\`unexpected uv command: \${args.join(' ')}\\n\`);
+process.stderr.write(\`unexpected MAS clean runner command: \${args.join(' ')}\\n\`);
 process.exit(64);
-`);
+`;
+  const masFixture = createGitModuleRemoteFixture('med-autoscience', {
+    extraFiles: {
+      'scripts/run-python-clean.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        `exec ${shellSingleQuote(process.execPath)} -e ${shellSingleQuote(runnerSource)} -- "$@"`,
+        '',
+      ].join('\n'),
+    },
+    executableFiles: ['scripts/run-python-clean.sh'],
+  });
+  fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
+  fs.writeFileSync(
+    uvPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf 'legacy-path-uv-was-called\\n' >&2
+exit 44
+`,
+    { mode: 0o755 },
+  );
   const env = familyRuntimeEnv(path.join(homeRoot, 'opl-state'), {
     HOME: homeRoot,
     PATH: `${fixtureRoot}:${process.env.PATH ?? ''}`,

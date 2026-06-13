@@ -719,6 +719,8 @@ test('modules projection treats Full runtime packaged overrides as launch source
 test('module exec runs domain CLIs from the current module checkout instead of PATH tools', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-exec-home-'));
   const fakeBinRoot = path.join(homeRoot, 'fake-bin');
+  const masRunnerArgvPath = path.join(homeRoot, 'mas-runner.argv');
+  const masRunnerCwdPath = path.join(homeRoot, 'mas-runner.cwd');
   const uvArgvPath = path.join(homeRoot, 'uv.argv');
   const uvCwdPath = path.join(homeRoot, 'uv.cwd');
   const npmArgvPath = path.join(homeRoot, 'npm.argv');
@@ -738,6 +740,15 @@ printf '{"ok":true,"runner":"uv"}\\n'
     { mode: 0o755 },
   );
   fs.writeFileSync(
+    path.join(fakeBinRoot, 'medautosci'),
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf 'PATH medautosci should not be used\\n' >&2
+exit 43
+`,
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
     path.join(fakeBinRoot, 'npm'),
     `#!/usr/bin/env bash
 set -euo pipefail
@@ -750,7 +761,20 @@ printf '{"ok":true,"runner":"npm"}\\n'
 `,
     { mode: 0o755 },
   );
-  const masFixture = createGitModuleRemoteFixture('med-autoscience');
+  const masFixture = createGitModuleRemoteFixture('med-autoscience', {
+    extraFiles: {
+      'scripts/run-python-clean.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        `printf '%s\\n' "$PWD" > ${JSON.stringify(masRunnerCwdPath)}`,
+        `: > ${JSON.stringify(masRunnerArgvPath)}`,
+        `for arg in "$@"; do printf '%s\\n' "$arg" >> ${JSON.stringify(masRunnerArgvPath)}; done`,
+        `printf '{"ok":true,"runner":"mas-clean-runner"}\\n'`,
+        '',
+      ].join('\n'),
+    },
+    executableFiles: ['scripts/run-python-clean.sh'],
+  });
   const magFixture = createGitModuleRemoteFixture('med-autogrant');
   const rcaFixture = createGitModuleRemoteFixture('redcube-ai');
   const metaFixture = createGitModuleRemoteFixture('opl-meta-agent');
@@ -785,21 +809,18 @@ printf '{"ok":true,"runner":"npm"}\\n'
     assert.equal(masExec.module_exec.module_id, 'medautoscience');
     assert.equal(masExec.module_exec.working_directory, masFixture.sourceRoot);
     assert.equal(masExec.module_exec.exit_code, 0);
-    assert.deepEqual(masExec.module_exec.result, { ok: true, runner: 'uv' });
+    assert.deepEqual(masExec.module_exec.result, { ok: true, runner: 'mas-clean-runner' });
     assert.deepEqual(masExec.module_exec.command_preview, [
-      'uv',
-      'run',
-      '--directory',
-      masFixture.sourceRoot,
-      '--extra',
-      'analysis',
-      'medautosci',
+      path.join(masFixture.sourceRoot, 'scripts', 'run-python-clean.sh'),
+      '-m',
+      'med_autoscience.cli',
       'doctor',
       'entry-modes',
       '--json',
     ]);
-    assert.equal(realpath(fs.readFileSync(uvCwdPath, 'utf8').trim()), realpath(masFixture.sourceRoot));
-    assert.deepEqual(readLines(uvArgvPath), masExec.module_exec.command_preview.slice(1));
+    assert.equal(realpath(fs.readFileSync(masRunnerCwdPath, 'utf8').trim()), realpath(masFixture.sourceRoot));
+    assert.deepEqual(readLines(masRunnerArgvPath), masExec.module_exec.command_preview.slice(1));
+    assert.equal(fs.existsSync(uvCwdPath), false);
 
     const magExec = runCli(
       ['connect', 'exec', '--module', 'mag', '--', '--help'],
@@ -870,20 +891,19 @@ printf '{"ok":true,"runner":"npm"}\\n'
 
 test('module exec captures large domain CLI stdout without default spawnSync ENOBUFS', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-exec-buffer-home-'));
+  const masFixture = createGitModuleRemoteFixture('med-autoscience', {
+    extraFiles: {
+      'scripts/run-python-clean.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        `printf '%*s' ${2 * 1024 * 1024} '' | tr ' ' x`,
+        '',
+      ].join('\n'),
+    },
+    executableFiles: ['scripts/run-python-clean.sh'],
+  });
   const fakeBinRoot = path.join(homeRoot, 'fake-bin');
-  const masFixture = createGitModuleRemoteFixture('med-autoscience');
   fs.mkdirSync(fakeBinRoot, { recursive: true });
-  fs.writeFileSync(
-    path.join(fakeBinRoot, 'uv'),
-    `#!/usr/bin/env bash
-set -euo pipefail
-python3 - <<'PY'
-import sys
-sys.stdout.write("x" * (2 * 1024 * 1024))
-PY
-`,
-    { mode: 0o755 },
-  );
   const env = {
     HOME: homeRoot,
     PATH: `${fakeBinRoot}:${process.env.PATH ?? ''}`,

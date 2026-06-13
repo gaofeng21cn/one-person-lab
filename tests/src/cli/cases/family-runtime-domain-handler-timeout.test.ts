@@ -59,17 +59,18 @@ test('family-runtime profile module export fails closed when module exec hangs',
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-profile-module-timeout-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-profile-module-timeout-'));
   const profilePath = path.join(fixtureRoot, 'dm-cvd.workspace.toml');
-  const uvPath = path.join(fixtureRoot, 'uv');
-  const masFixture = createGitModuleRemoteFixture('med-autoscience');
+  const masFixture = createGitModuleRemoteFixture('med-autoscience', {
+    extraFiles: {
+      'scripts/run-python-clean.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        'sleep 30',
+        '',
+      ].join('\n'),
+    },
+    executableFiles: ['scripts/run-python-clean.sh'],
+  });
   fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
-  fs.writeFileSync(
-    uvPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-sleep 30
-`,
-    { mode: 0o755 },
-  );
   try {
     const intake = runCli([
       'family-runtime',
