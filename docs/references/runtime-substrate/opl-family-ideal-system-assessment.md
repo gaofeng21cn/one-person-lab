@@ -309,17 +309,17 @@ MCP / OpenAI tool / CLI / App action 需要从同一 action catalog 派生，避
 
 这些指标应进入 `OPL Vault` 和 `Console` 的 L5 drilldown，但普通用户仍只看到 next owner、artifact、blocker 和交付状态。
 
-## 最小行动顺序
+## 演进顺序原则
 
-理想实现顺序不是“先把所有底层都做完”，而是围绕使用路径和维护路径同时收敛：
+理想实现顺序不是“先把所有底层都做完”，而是围绕使用路径和维护路径同时收敛。本文只保留 north-star 顺序，不维护 landed / in-progress / remaining gate 状态；当前完成度、下一步和证据尾项必须回到 [OPL Family 当前状态与理想目标差距](../../active/current-state-vs-ideal-gap.md)、核心五件套、contracts、source、tests 和 fresh CLI/read-model。
 
-1. `landed_structural_gate`：冻结 One Person Lab 品牌系统。`brand-system-profile.json` 已把产品层级、品牌模块语言、Agent 命名、App 状态语言、visual/status pattern group 和 receipt/blocker 文案变成 required framework contract；后续还需要真实 UI token、icon/card/status pattern 和 public surface 逐项消费。
-2. `landed_structural_gate`：冻结 standard Agent Pack ABI。标准 skeleton contract、scaffold、stage pack v2、pack compiler input projection 和 conformance gate 已要求 `agent/`、`contracts/`、`runtime/authority_functions/`、stage/quality/receipt/tool boundary 的必填 shape；这不等于 L5 或 production ready。
-3. `in_progress_scaleout_gate`：把 MAS/MAG/RCA/OMA 都压成同一 golden path。结构上已经有 standard pack、domain handler target、generated/default caller、conformance 和 private residue gate；仍需要真实 MAS/MAG/RCA/OMA owner receipt、typed blocker、human gate、review/export/no-regression evidence 反复跑通。
-4. `landed_structural_gate`：把 generated surfaces 变成默认。CLI、MCP、OpenAI/AI SDK tool、Skill/plugin、App action、status read model 和 workbench 已由 domain pack compiler 的 `default_entry_policy` / `supported_derived_surfaces` 从同一 action/stage catalog 派生。
-5. `landed_cleanup_gate`：把 private platform residue 逐项进删除门。`wrapper-retirement-gate-policy.json` 和 `private_platform_residue_gate` 已按 scheduler、queue、session store、workbench、status shell、domain wrapper、runtimeWatch、agent-lab materializer 分类，并要求 no-active-caller、replacement parity、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance；它不授权 OPL 物理删除。
-6. `remaining_evidence_gate`：把 L5 证据矩阵运行起来。真实 user path、release/install cohort、long-soak、owner-chain scaleout、operator repair、owner acceptance 仍是后续证据尾项。
-7. `ongoing_governance`：只在 evidence 表明普通路径仍慢或不清楚时新增 surface；否则优先 demote、merge 或 retire。
+1. 先固定 One Person Lab 品牌系统、产品层级、状态语言、visual pattern、Agent 命名和 receipt/blocker 文案，让用户、App、CLI 和模块文档使用同一套语言。
+2. 再固定 standard Agent Pack ABI，让 `agent/`、`contracts/`、`runtime/authority_functions/`、stage / quality / receipt / tool boundary 成为所有 Foundry Agent 的标准接入形态。
+3. 把 MAS/MAG/RCA/OMA 压到同一 ordinary golden path：domain pack 声明领域语义，OPL 生成/托管通用 surface，domain owner 仍持有 receipt、typed blocker、human gate、quality/export/no-regression verdict。
+4. 让 CLI、MCP、OpenAI/AI SDK tool、Skill/plugin、App action、status read model 和 workbench 从同一 action / stage / pack metadata 派生，避免 domain repo 继续复制 generated wrapper。
+5. 把 private platform residue 进入显式删除门：scheduler、queue、session store、workbench、status shell、domain wrapper、runtimeWatch、agent-lab materializer 等只能在 no-active-caller、replacement parity、owner receipt / typed blocker、no-forbidden-write 和 tombstone/provenance 成立后物理退役。
+6. 最后用真实 user path、release/install cohort、long-soak、owner-chain scaleout、operator repair、owner acceptance 和 no-second-truth regression 关闭 L5；contract validation、conformance、provider completion、verified refs-only ledger 或 App projection 都只能作为输入。
+7. 长期治理只在证据表明普通路径仍慢、不清楚或越权时新增 surface；否则优先 demote、merge 或 retire。
 
 ## 不应继续强化的方向
 
