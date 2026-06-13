@@ -41,6 +41,9 @@ export function providerAdmissionCurrentnessIdentity(
     stable_truth_digest: optionalString(digestBasis?.stable_truth_digest),
     volatile_projection_digest: optionalString(digestBasis?.volatile_projection_digest),
     work_unit_digest: optionalString(digestBasis?.work_unit_digest),
+    recovery_obligation_id: optionalString(payload.recovery_obligation_id)
+      ?? optionalString(identity?.recovery_obligation_id)
+      ?? optionalString(identity?.paper_recovery_obligation_id),
   };
   if (!fields.work_unit_id || !fields.work_unit_fingerprint) {
     return null;
@@ -67,6 +70,7 @@ function providerAdmissionCurrentnessComparisonFields(
     stable_truth_digest: identity.stable_truth_digest,
     volatile_projection_digest: identity.volatile_projection_digest,
     work_unit_digest: identity.work_unit_digest,
+    recovery_obligation_id: identity.recovery_obligation_id,
   };
 }
 

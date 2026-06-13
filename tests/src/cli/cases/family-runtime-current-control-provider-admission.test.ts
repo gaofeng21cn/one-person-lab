@@ -2,17 +2,23 @@ import './family-runtime-current-control-provider-admission-cases/queue-refresh-
 import './family-runtime-current-control-provider-admission-cases/stop-loss-successor-policy.ts';
 import {
   assert,
+  DatabaseSync,
   currentControlActionQueueItem,
+  createQueueTables,
   familyRuntimeEnv,
   fs,
+  insertQueuedTask,
   os,
   path,
   providerObservationBoundary,
+  record,
+  ensureProviderHostedStageAttempt,
   runCli,
   test,
   writeDefaultExecutorDispatchPacket,
   writeJsonEmitterScript,
 } from './family-runtime-current-control-provider-admission-cases/shared.ts';
+import { deriveCurrentControlStateForTask } from '../../../../src/family-runtime-current-control-state.ts';
 
 test('family-runtime intake admits MAS current-control provider candidates ahead of stale sidecar default executor tasks', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-admission-state-'));
@@ -281,6 +287,7 @@ test('family-runtime intake admits MAS current-control handoff action_queue prov
         sourceFingerprint: 'truth-snapshot::dm002-handoff',
         truthEpoch: 'truth-event-000040',
         runtimeHealthEpoch: 'runtime-health-event-006692',
+        recoveryObligationId: 'paper-recovery-obligation:dm002:revise-ai-reviewer',
       }),
     ],
     studies: [
@@ -334,6 +341,14 @@ test('family-runtime intake admits MAS current-control handoff action_queue prov
     ]);
     assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].source, 'opl-current-control-provider-admission');
     assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.provider_admission_schema_source, 'action_queue');
+    assert.equal(
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.recovery_obligation_id,
+      'paper-recovery-obligation:dm002:revise-ai-reviewer',
+    );
+    assert.equal(
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.provider_admission_identity.recovery_obligation_id,
+      'paper-recovery-obligation:dm002:revise-ai-reviewer',
+    );
     assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.source_fingerprint, 'truth-snapshot::dm002-handoff');
     assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.dispatch_ref, dm002DispatchRef);
     assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.stage_packet_ref, dm002DispatchRef);
@@ -348,11 +363,97 @@ test('family-runtime intake admits MAS current-control handoff action_queue prov
       false,
     );
     assert.equal(tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.work_unit_fingerprint, 'sha256:handoff-dm003');
+    assert.equal(tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.recovery_obligation_id, undefined);
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.provider_admission_identity.recovery_obligation_id,
+      undefined,
+    );
     assert.equal(tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.dispatch_ref, dm003DispatchRef);
     assert.equal(tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.stage_packet_ref, dm003DispatchRef);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime current-control recovery obligation id flows into stage attempt and read model without authority escalation', () => {
+  const db = new DatabaseSync(':memory:');
+  const obligationId = 'paper-recovery-obligation:dm002:stage-run-closeout';
+  const payload = {
+    profile: '/tmp/dm-cvd.profile.toml',
+    study_id: '002-dm-china-us-mortality-attribution',
+    quest_id: '002-dm-china-us-mortality-attribution',
+    action_type: 'return_to_ai_reviewer_workflow',
+    work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    work_unit_fingerprint: 'sha256:recovery-obligation-current',
+    action_fingerprint: 'sha256:recovery-obligation-current',
+    source_fingerprint: 'truth-snapshot::recovery-obligation-current',
+    dispatch_authority: 'opl_current_control_state_handoff',
+    dispatch_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json',
+    executor_kind: 'codex_cli_default',
+    next_executable_owner: 'ai_reviewer',
+    authority_boundary: 'mas_default_executor_dispatch_request_only',
+    owner_route_current: true,
+    provider_attempt_or_lease_required: true,
+    provider_completion_is_domain_completion: false,
+    recovery_obligation_id: obligationId,
+    stage_transition_authority_boundary: providerObservationBoundary(),
+    provider_admission_schema_source: 'action_queue',
+    provider_admission_identity: {
+      status: 'provider_admission_pending',
+      recovery_obligation_id: obligationId,
+      provider_completion_is_domain_completion: false,
+      stage_transition_authority_boundary: providerObservationBoundary(),
+    },
+    owner_route_currentness_basis: {
+      schema_version: 1,
+      surface: 'opl_current_control_state_handoff',
+      generated_at: '2026-06-08T15:41:00+00:00',
+      work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+      work_unit_fingerprint: 'sha256:recovery-obligation-current',
+      truth_epoch: 'truth-event-000041',
+      runtime_health_epoch: 'runtime-health-event-006693',
+      source_eval_id: 'source-eval:dm002:recovery-obligation',
+    },
+  };
+  try {
+    createQueueTables(db);
+    insertQueuedTask(db, {
+      taskId: 'task-recovery-obligation',
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload,
+      dedupeKey: 'mas:dm-cvd:002:default-executor:return_to_ai_reviewer_workflow:recovery-obligation',
+    });
+    const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get('task-recovery-obligation') as Parameters<
+      typeof ensureProviderHostedStageAttempt
+    >[1];
+
+    const attempt = ensureProviderHostedStageAttempt(db, row, payload);
+    const readModel = deriveCurrentControlStateForTask(db, 'task-recovery-obligation');
+
+    assert.ok(attempt);
+    assert.equal(attempt.workspace_locator.recovery_obligation_id, obligationId);
+    assert.equal(record(attempt.workspace_locator.provider_admission_identity).recovery_obligation_id, obligationId);
+    assert.equal(attempt.workspace_locator.opl_writes_domain_truth, false);
+    assert.equal(attempt.workspace_locator.opl_writes_publication_quality, false);
+    assert.equal(attempt.workspace_locator.opl_writes_artifact_gate, false);
+    assert.equal(attempt.workspace_locator.opl_writes_current_package, false);
+    assert.equal(readModel.stage_run_currentness_identity.recovery_obligation_id, obligationId);
+    assert.equal(
+      record(readModel.stage_run_currentness_identity.provider_admission_identity).recovery_obligation_id,
+      obligationId,
+    );
+    assert.equal(readModel.authority_boundary.can_write_domain_truth, false);
+    assert.equal(readModel.authority_boundary.opl_can_authorize_publication_ready, false);
+    assert.equal(readModel.authority_boundary.opl_can_sign_domain_owner_receipt, false);
+    assert.equal(readModel.authority_boundary.opl_can_authorize_domain_ready, false);
+    assert.equal(
+      readModel.missing_stage_run_currentness_identity_fields.includes('recovery_obligation_id'),
+      false,
+    );
+  } finally {
+    db.close();
   }
 });
 

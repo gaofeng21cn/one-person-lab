@@ -20,6 +20,11 @@ function optionalString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
+function recoveryObligationId(value: Record<string, unknown> | null | undefined) {
+  return optionalString(value?.recovery_obligation_id)
+    ?? optionalString(value?.paper_recovery_obligation_id);
+}
+
 function stringList(value: unknown) {
   return Array.isArray(value)
     ? value
@@ -291,6 +296,9 @@ function currentControlProviderAdmissionCandidateFromActionQueueItem(
   const sourceFingerprint = optionalString(action.source_fingerprint)
     ?? optionalString(ownerRoute?.source_fingerprint)
     ?? actionFingerprint;
+  const obligationId = recoveryObligationId(action)
+    ?? recoveryObligationId(handoff)
+    ?? recoveryObligationId(ownerRoute);
   return {
     ...action,
     status: 'provider_admission_pending',
@@ -307,6 +315,7 @@ function currentControlProviderAdmissionCandidateFromActionQueueItem(
     provider_attempt_or_lease_required: true,
     provider_completion_is_domain_completion: false,
     stage_transition_authority_boundary: providerObservationBoundaryFromCurrentControl(),
+    ...(obligationId ? { recovery_obligation_id: obligationId } : {}),
     required_output_surface: optionalString(action.required_output_surface),
     idempotency_key: optionalString(handoff.idempotency_key) ?? optionalString(ownerRoute?.idempotency_key),
     currentness_basis: currentControlCurrentnessBasis({
@@ -417,6 +426,7 @@ function currentControlProviderAdmissionInputFrom(
   const sourceFingerprint = optionalString(candidate.source_fingerprint)
     ?? optionalString(candidate.action_fingerprint)
     ?? workUnitFingerprint;
+  const obligationId = recoveryObligationId(candidate);
   const sourceRefs = providerAdmissionSourceRefs({
     candidate,
     currentControlRef,
@@ -453,6 +463,7 @@ function currentControlProviderAdmissionInputFrom(
         provider_attempt_or_lease_required: candidate.provider_attempt_or_lease_required !== false,
         provider_completion_is_domain_completion: false,
         stage_transition_authority_boundary: candidate.stage_transition_authority_boundary,
+        ...(obligationId ? { recovery_obligation_id: obligationId } : {}),
         ...(optionalString(candidate.provider_admission_schema_source)
           ? { provider_admission_schema_source: optionalString(candidate.provider_admission_schema_source) }
           : {}),

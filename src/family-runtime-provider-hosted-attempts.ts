@@ -736,6 +736,9 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
       attempt_idempotency_key: optionalString(payload.attempt_idempotency_key)
         ?? optionalString(providerAdmissionIdentity?.attempt_idempotency_key)
         ?? optionalString(providerAdmissionIdentity?.idempotency_key),
+      recovery_obligation_id: optionalString(payload.recovery_obligation_id)
+        ?? optionalString(providerAdmissionIdentity?.recovery_obligation_id)
+        ?? optionalString(providerAdmissionIdentity?.paper_recovery_obligation_id),
     })) {
       if (value) {
         locator[targetKey] = value;

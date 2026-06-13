@@ -70,6 +70,7 @@ export function currentControlActionQueueItem(input: {
   runtimeHealthEpoch: string;
   nextOwner?: string;
   dispatchable?: boolean | null;
+  recoveryObligationId?: string;
 }) {
   const nextOwner = input.nextOwner ?? 'ai_reviewer';
   return {
@@ -80,6 +81,7 @@ export function currentControlActionQueueItem(input: {
     source_fingerprint: input.sourceFingerprint,
     study_id: input.studyId,
     work_unit_fingerprint: input.workUnitFingerprint,
+    ...(input.recoveryObligationId ? { recovery_obligation_id: input.recoveryObligationId } : {}),
     required_output_surface: 'artifacts/publication_eval/ai_reviewer_responses/*_publication_eval_record.json',
     owner: nextOwner,
     handoff_packet: {
@@ -97,6 +99,7 @@ export function currentControlActionQueueItem(input: {
       owner: nextOwner,
       quest_id: input.studyId,
       study_id: input.studyId,
+      ...(input.recoveryObligationId ? { recovery_obligation_id: input.recoveryObligationId } : {}),
       owner_route: {
         currentness_contract: {
           basis: {
@@ -162,6 +165,7 @@ export function currentControlActionQueueItem(input: {
         study_id: input.studyId,
         truth_epoch: input.truthEpoch,
         work_unit_fingerprint: input.workUnitFingerprint,
+        ...(input.recoveryObligationId ? { recovery_obligation_id: input.recoveryObligationId } : {}),
       },
     },
   };
@@ -267,6 +271,7 @@ export function insertCompletedCurrentControlStageAttempt(
       dispatch_ref: input.payload.dispatch_ref,
       next_executable_owner: input.payload.next_executable_owner,
       workspace_root: input.payload.workspace_root,
+      recovery_obligation_id: input.payload.recovery_obligation_id,
       authority_boundary: input.payload.authority_boundary,
       owner_route_currentness_basis: input.payload.owner_route_currentness_basis,
       domain_source_fingerprint: input.payload.source_fingerprint,

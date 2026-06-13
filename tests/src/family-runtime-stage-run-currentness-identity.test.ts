@@ -84,6 +84,7 @@ test('builds a reusable StageRun currentness identity from task and attempt refs
     idempotency_key: 'attempt::003::publication-gate-replay',
     route_identity_key: 'route::003::publication-gate-replay',
     attempt_idempotency_key: 'attempt::003::publication-gate-replay',
+    recovery_obligation_id: null,
     provider_admission_identity: {
       status: 'provider_admission_pending',
       route_identity_key: 'route::003::publication-gate-replay',

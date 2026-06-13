@@ -35,6 +35,7 @@ export type StageRunCurrentnessIdentity = {
   idempotency_key: string | null;
   route_identity_key: string | null;
   attempt_idempotency_key: string | null;
+  recovery_obligation_id: string | null;
   provider_admission_identity: JsonRecord | null;
   owner_route_currentness_basis: JsonRecord | null;
   provider_attempt_ref: string | null;
@@ -130,6 +131,10 @@ export function buildStageRunCurrentnessIdentity(
       ?? optionalString(providerAdmissionIdentity?.attempt_idempotency_key)
       ?? optionalString(taskPayload.idempotency_key)
       ?? optionalString(providerAdmissionIdentity?.idempotency_key),
+    recovery_obligation_id: optionalString(taskPayload.recovery_obligation_id)
+      ?? optionalString(providerAdmissionIdentity?.recovery_obligation_id)
+      ?? optionalString(providerAdmissionIdentity?.paper_recovery_obligation_id)
+      ?? optionalString(workspaceLocator.recovery_obligation_id),
     provider_admission_identity: providerAdmissionIdentity,
     owner_route_currentness_basis: recordValue(taskPayload.owner_route_currentness_basis)
       ?? recordValue(sourceRefs.owner_route_currentness_basis)
@@ -185,6 +190,7 @@ function comparisonFields(identity: StageRunCurrentnessIdentity) {
     idempotency_key: identity.idempotency_key,
     route_identity_key: identity.route_identity_key,
     attempt_idempotency_key: identity.attempt_idempotency_key,
+    recovery_obligation_id: identity.recovery_obligation_id,
     task_id: identity.task_id,
   };
 }
@@ -204,6 +210,7 @@ function routeComparisonFields(identity: StageRunCurrentnessIdentity) {
     idempotency_key: identity.idempotency_key,
     route_identity_key: identity.route_identity_key,
     attempt_idempotency_key: identity.attempt_idempotency_key,
+    recovery_obligation_id: identity.recovery_obligation_id,
   };
 }
 
