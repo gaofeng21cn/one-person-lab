@@ -5,6 +5,7 @@ import {
   buildStageAttemptProviderReceipt,
   resolveFamilyRuntimeProviderKind,
 } from '../family-runtime-providers.ts';
+import { buildLaunchExecutionAuthorization } from '../family-runtime-temporal.ts';
 import type {
   FamilyRuntimeDomainId,
   FamilyRuntimeProviderKind,
@@ -23,6 +24,7 @@ import {
   normalizeStageId,
   nowIso,
 } from './shared.ts';
+import { recordStageRunExecutionAuthorizationReceipts } from '../stage-run-execution-authorization-ledger.ts';
 
 export type StageAttemptCreateInput = {
   domainId: FamilyRuntimeDomainId;
@@ -138,6 +140,40 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     input.newAttempt ? newAttemptOrdinal : createdAt,
   ]);
   const workflowId = stableId('wf', [input.domainId, stageId, stageAttemptId]);
+  const launchAuthorization = buildLaunchExecutionAuthorization({
+    stageAttemptId,
+    workflowId,
+    domainId: input.domainId,
+    stageId,
+    executorKind,
+    taskId,
+    workspaceLocator: input.workspaceLocator,
+    stagePacketRef: normalizeJsonList(input.checkpointRefs)[0] ?? null,
+    sourceFingerprint,
+    idempotencyKey,
+  });
+  const launchAuthorizationLedgerRecord = launchAuthorization
+    ? recordStageRunExecutionAuthorizationReceipts([launchAuthorization])
+    : null;
+  const launchAuthorizationReceipt =
+    launchAuthorizationLedgerRecord?.status === 'recorded'
+      && Array.isArray(launchAuthorizationLedgerRecord.receipts)
+      ? launchAuthorizationLedgerRecord.receipts[0]
+      : null;
+  const workspaceLocator = launchAuthorizationReceipt
+    ? {
+        ...input.workspaceLocator,
+        stage_run_id: launchAuthorizationReceipt.stage_run_id,
+        current_pointer_ref: launchAuthorizationReceipt.current_pointer_ref,
+        stage_manifest_ref: launchAuthorizationReceipt.stage_manifest_ref,
+        provider_attempt_ref: launchAuthorizationReceipt.provider_attempt_ref,
+        attempt_lease_ref: launchAuthorizationReceipt.attempt_lease_ref,
+        attempt_lease_status: launchAuthorizationReceipt.attempt_lease_status,
+        execution_authorization_decision_ref:
+          launchAuthorizationReceipt.execution_authorization_decision_ref,
+        execution_authorization_receipt_ref: launchAuthorizationReceipt.receipt_ref,
+      }
+    : input.workspaceLocator;
   const providerReceipt = buildStageAttemptProviderReceipt({
     providerKind,
     stageAttemptId,
@@ -174,7 +210,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     workflow_id: workflowId,
     domain_id: input.domainId,
     stage_id: stageId,
-    workspace_locator_json: JSON.stringify(input.workspaceLocator),
+    workspace_locator_json: JSON.stringify(workspaceLocator),
     source_fingerprint: sourceFingerprint,
     executor_kind: executorKind,
     status: input.blockedReason ? 'blocked' : 'queued',
@@ -213,5 +249,6 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     created: true,
     idempotent_noop: false,
     attempt: stageAttemptToPayload(row as StageAttemptRow),
+    execution_authorization_ledger_record: launchAuthorizationLedgerRecord,
   };
 }

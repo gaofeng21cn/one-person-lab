@@ -146,6 +146,22 @@ JSON
     assert.equal(task.family_runtime_task.task.domain_route.owner_route_handoff.authority_boundary.writes_domain_truth, false);
     assert.equal(attempt.stage_id, 'domain_route/reconcile-apply');
     assert.equal(attempt.workspace_locator.route_ref, 'domain_route/reconcile-apply');
+    assert.equal(attempt.workspace_locator.provider_attempt_ref, `temporal://attempt/${attempt.stage_attempt_id}`);
+    assert.equal(
+      attempt.workspace_locator.attempt_lease_ref,
+      `opl://stage-attempts/${attempt.stage_attempt_id}/leases/${taskId}/active`,
+    );
+    assert.equal(
+      attempt.workspace_locator.execution_authorization_decision_ref,
+      `opl://stage-attempts/${attempt.stage_attempt_id}/execution-authorizations/${taskId}/${attempt.workflow_id}`,
+    );
+    assert.equal(typeof attempt.workspace_locator.execution_authorization_receipt_ref, 'string');
+    assert.equal(
+      attempt.workspace_locator.execution_authorization_receipt_ref.startsWith(
+        'opl://stage-run-execution-authorization/',
+      ),
+      true,
+    );
     assert.equal(dispatchedTask.task_kind, 'domain_route/reconcile-apply');
     assert.equal(dispatchedTask.domain_route.route_ref, 'domain_route/reconcile-apply');
     assert.equal(dispatchedTask.domain_route.action_ref, 'domain_route_reconcile_apply');
