@@ -6,18 +6,18 @@ import { FrameworkContractError } from '../contracts.ts';
 import { buildManagedShellCommandEnv, prepareManagedShellCommandCwd } from '../managed-shell-command-env.ts';
 import { normalizeCommandOutput } from '../terminal.ts';
 
-export type CommandResult = {
+type CommandResult = {
   exitCode: number;
   stdout: string;
   stderr: string;
 };
 
-export type GitCommandResult = CommandResult & {
+type GitCommandResult = CommandResult & {
   ok: boolean;
   text: string;
 };
 
-export function runCommand(command: string, args: string[], cwd?: string): CommandResult {
+function runCommand(command: string, args: string[], cwd?: string): CommandResult {
   const result = spawnSync(command, args, {
     cwd,
     encoding: 'utf8',
@@ -31,7 +31,7 @@ export function runCommand(command: string, args: string[], cwd?: string): Comma
   };
 }
 
-export function runGit(cwd: string, args: string[]): GitCommandResult {
+function runGit(cwd: string, args: string[]): GitCommandResult {
   const result = runCommand('git', ['-C', cwd, ...args]);
 
   return {
@@ -41,7 +41,7 @@ export function runGit(cwd: string, args: string[]): GitCommandResult {
   };
 }
 
-export function parseStatusLine(statusLine: string) {
+function parseStatusLine(statusLine: string) {
   const branchMatch = statusLine.match(/^##\s+([^\s.]+)(?:\.\.\.([^\s]+))?(?:\s+\[(.+)\])?$/);
 
   return {
@@ -131,18 +131,6 @@ export function normalizeWorkspacePath(workspacePath?: string) {
   }
 
   return resolved;
-}
-
-export function normalizeBaseUrlHost(host: string) {
-  if (host === '0.0.0.0') {
-    return '127.0.0.1';
-  }
-
-  if (host === '::') {
-    return '[::1]';
-  }
-
-  return host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
 }
 
 export function uniqueStrings(values: Array<string | null | undefined>) {
@@ -257,7 +245,7 @@ export function normalizeInlineText(value: string | null | undefined) {
   return normalized ? normalized : null;
 }
 
-export function escapeRegex(value: string) {
+function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 

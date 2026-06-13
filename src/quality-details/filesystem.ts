@@ -141,6 +141,4 @@ function listSourceFiles(root: string): SourceFileInfo[] {
 export {
   listRepoFiles,
   listSourceFiles,
-  sourceLanguageFor,
-  toRepoPath,
 };

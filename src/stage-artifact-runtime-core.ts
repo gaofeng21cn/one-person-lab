@@ -113,7 +113,7 @@ export const RETENTION_POLICY = {
   restore_does_not_declare_domain_truth_or_quality: true,
 } as const;
 
-export function isRecord(value: unknown): value is JsonRecord {
+function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
@@ -209,7 +209,7 @@ export function hashFiles(dir: string, role: StageArtifactFileHash['role']): Sta
   }));
 }
 
-export function hashIndexByPath(hashes: StageArtifactFileHash[]) {
+function hashIndexByPath(hashes: StageArtifactFileHash[]) {
   return new Map(hashes.map((entry) => [entry.path, entry]));
 }
 
@@ -285,11 +285,11 @@ export function stageFolderName(stageId: string, stageOrder?: number) {
   return stageId;
 }
 
-export function stageIdFromFolderName(name: string) {
+function stageIdFromFolderName(name: string) {
   return name.replace(/^\d+-/, '');
 }
 
-export function stageOrderFromFolderName(name: string) {
+function stageOrderFromFolderName(name: string) {
   const match = name.match(/^(\d+)-/);
   return match ? Number.parseInt(match[1], 10) : null;
 }
