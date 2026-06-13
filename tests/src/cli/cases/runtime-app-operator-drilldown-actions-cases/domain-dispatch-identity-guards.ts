@@ -101,8 +101,12 @@ test('runtime action execute blocks domain dispatch evidence payloads bound to a
     const attempt = afterBlockedDrilldown.domain_dispatch_evidence.attempts.find(
       (entry: { stage_attempt_id: string }) => entry.stage_attempt_id === attemptId,
     );
+    const recordRoute = afterBlockedDrilldown.operator_action_routing_refs.refs.find(
+      (entry: { action_id: string }) => entry.action_id === recordActionId,
+    );
     assert.equal(attempt.dispatch_evidence_receipt_status, 'missing');
     assert.deepEqual(attempt.dispatch_evidence_receipt_refs, []);
+    assert.equal(recordRoute.required_closeout_binding.closeout_binding_ready, true);
 
     const matchedExecution = runCli([
       'runtime',
@@ -117,6 +121,9 @@ test('runtime action execute blocks domain dispatch evidence payloads bound to a
         source_fingerprint: '95d9b5310c9c7a8d',
         typed_blocker_refs: ['mas://typed-blockers/dm-cvd/reviewer-refresh-pending'],
         owner_chain_refs: ['mas://owner-chain/dm-cvd/reviewer-refresh.json'],
+        owner_delta_result: {
+          closeout_binding: recordRoute.required_closeout_binding.closeout_binding,
+        },
       }),
     ], {
       OPL_STATE_DIR: stateRoot,

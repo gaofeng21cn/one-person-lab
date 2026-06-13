@@ -558,6 +558,9 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       no_regression_refs: [],
       owner_chain_refs: [],
       evidence_refs: [],
+      owner_delta_result: {
+        closeout_binding: domainDispatchEvidenceRecordRoute.required_closeout_binding.closeout_binding,
+      },
     });
     assert.equal(
       domainDispatchEvidenceRecordRoute.payload_requirement,
