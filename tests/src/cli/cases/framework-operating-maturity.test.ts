@@ -652,6 +652,36 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
       6,
     );
     assert.deepEqual(
+      Object.keys(
+        maturity.foundry_agent_os_production_evidence_gate.owner_route_work_orders_by_lane,
+      ),
+      [
+        'domain_owner_chain_scaleout',
+        'brand_module_l5_operating_maturity',
+        'app_release_user_path',
+        'provider_long_soak',
+        'private_platform_retirement',
+        'memory_artifact_lifecycle_apply',
+      ],
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.owner_route_work_orders_by_lane
+        .provider_long_soak.work_order_id,
+      'w7-provider-long-soak',
+    );
+    assert.deepEqual(
+      maturity.foundry_agent_os_production_evidence_gate.owner_route_work_orders_by_lane
+        .provider_long_soak,
+      maturity.foundry_agent_os_production_evidence_gate.owner_route_work_orders.find(
+        (entry: { lane: string }) => entry.lane === 'provider_long_soak',
+      ),
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.owner_route_work_orders_by_lane
+        .provider_long_soak.ready_claim_authorized,
+      false,
+    );
+    assert.deepEqual(
       maturity.foundry_agent_os_production_evidence_gate.owner_route_work_orders.map(
         (entry: { work_order_id: string; blocker_state: string }) => ({
           work_order_id: entry.work_order_id,

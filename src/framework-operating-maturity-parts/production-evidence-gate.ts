@@ -329,6 +329,10 @@ function ownerRouteWorkOrders(
   });
 }
 
+function ownerRouteWorkOrdersByLane(workOrders: ReturnType<typeof ownerRouteWorkOrders>) {
+  return Object.fromEntries(workOrders.map((workOrder) => [workOrder.lane, workOrder]));
+}
+
 export function foundryAgentOsProductionEvidenceGate(input: {
   domainOpenCount: number;
   l5RequiredModuleCount: number;
@@ -431,6 +435,7 @@ export function foundryAgentOsProductionEvidenceGate(input: {
     },
   ];
   const workOrders = ownerRouteWorkOrders(laneStatuses, input.ownerEvidenceIntake);
+  const workOrdersByLane = ownerRouteWorkOrdersByLane(workOrders);
   const openLaneCount = laneStatuses.filter((lane) => lane.open_count > 0).length;
   return {
     surface_kind: 'foundry_agent_os_production_evidence_gate',
@@ -502,6 +507,7 @@ export function foundryAgentOsProductionEvidenceGate(input: {
       },
     },
     owner_route_work_orders: workOrders,
+    owner_route_work_orders_by_lane: workOrdersByLane,
     brand_module_l5_requirement_work_orders: brandL5RequirementWorkOrders,
     summary: {
       open_lane_count: openLaneCount,
