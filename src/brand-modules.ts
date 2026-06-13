@@ -494,26 +494,6 @@ export function buildBrandModuleInterfaces(contracts: FrameworkContracts) {
   };
 }
 
-export function buildBrandModuleSurfaceStatus(contracts: FrameworkContracts, moduleId: BrandModuleId) {
-  return buildBrandModuleSurface(contracts, moduleId, 'status');
-}
-
-export function buildBrandModuleSurfaceInspect(contracts: FrameworkContracts, moduleId: BrandModuleId) {
-  return buildBrandModuleSurface(contracts, moduleId, 'inspect');
-}
-
-export function buildBrandModuleSurfaceInterfaces(contracts: FrameworkContracts, moduleId: BrandModuleId) {
-  return buildBrandModuleSurface(contracts, moduleId, 'interfaces');
-}
-
-export function buildBrandModuleSurfaceValidation(contracts: FrameworkContracts, moduleId: BrandModuleId) {
-  return buildBrandModuleSurface(contracts, moduleId, 'validate');
-}
-
-export function buildBrandModuleSurfaceDoctor(contracts: FrameworkContracts, moduleId: BrandModuleId) {
-  return buildBrandModuleSurface(contracts, moduleId, 'doctor');
-}
-
 export function buildAgentInternalBrandModulesList(contracts: FrameworkContracts) {
   const governance = brandCliGovernance(contracts).agent_internal_modules;
   const domainIds = agentDomainIds(contracts);
