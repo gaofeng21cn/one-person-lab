@@ -116,6 +116,13 @@ test('framework operating maturity consumes provider long-soak evidence refs wit
         typed_blocker_refs: [
           'typed-blocker:provider/temporal/capability-slo-blocked',
         ],
+        capability_requirement_ids: [
+          'restart_requery_ready',
+          'signal_history_ready',
+          'typed_closeout_required_ready',
+          'missing_closeout_block_ready',
+          'retry_dead_letter_boundary_ready',
+        ],
       }),
     ], env).provider_long_soak_evidence_ledger_record;
     runCli([
@@ -144,6 +151,13 @@ test('framework operating maturity consumes provider long-soak evidence refs wit
     ]);
     assert.equal(drilldown.summary.provider_long_soak_evidence_verified_receipt_ref_count, 1);
     assert.equal(drilldown.summary.provider_long_soak_evidence_typed_blocker_ref_count, 1);
+    assert.deepEqual(drilldown.provider_long_soak_evidence.capability_requirement_ids, [
+      'restart_requery_ready',
+      'signal_history_ready',
+      'typed_closeout_required_ready',
+      'missing_closeout_block_ready',
+      'retry_dead_letter_boundary_ready',
+    ]);
     assert.equal(
       drilldown.provider_long_soak_evidence.authority_boundary.can_claim_production_ready,
       false,
@@ -158,19 +172,22 @@ test('framework operating maturity consumes provider long-soak evidence refs wit
     assert.equal(maturity.provider_long_soak.open_evidence_count, 1);
     assert.equal(maturity.provider_long_soak.capability_status, 'capability_slo_blocked');
     assert.deepEqual(maturity.provider_long_soak.capability_missing_requirement_ids, [
+      'domain_truth_boundary_preserved',
+    ]);
+    assert.deepEqual(maturity.provider_long_soak.capability_evidence_observed_requirement_ids, [
       'restart_requery_ready',
       'signal_history_ready',
       'typed_closeout_required_ready',
       'missing_closeout_block_ready',
       'retry_dead_letter_boundary_ready',
-      'domain_truth_boundary_preserved',
     ]);
-    assert.equal(maturity.provider_long_soak.capability_open_requirement_count, 6);
+    assert.equal(maturity.provider_long_soak.capability_open_requirement_count, 1);
     assert.equal(
       maturity.provider_long_soak.capability_next_evidence_action,
       'record_provider_capability_slo_evidence_or_blocker_for_missing_requirements',
     );
     assert.equal(maturity.provider_long_soak.capability_checklist[0].required_ref_shape, 'recovery_ref');
+    assert.equal(maturity.provider_long_soak.capability_checklist[0].status, 'refs_observed_not_ready_claim');
     assert.equal(maturity.provider_long_soak.capability_checklist[0].closes_production_ready, false);
     assert.equal(maturity.provider_long_soak.long_evidence_ready, false);
     assert.deepEqual(maturity.provider_long_soak.observed_ref_shapes, [
@@ -252,12 +269,16 @@ test('framework operating maturity consumes provider long-soak evidence refs wit
       true,
     );
     assert.deepEqual(providerWorkOrder.missing_owner_action_ids, [
+      'domain_truth_boundary_preserved',
+    ]);
+    assert.deepEqual(providerWorkOrder.owner_action_checklist
+      .filter((entry: { status: string }) => entry.status === 'refs_observed_not_ready_claim')
+      .map((entry: { requirement_id: string }) => entry.requirement_id), [
       'restart_requery_ready',
       'signal_history_ready',
       'typed_closeout_required_ready',
       'missing_closeout_block_ready',
       'retry_dead_letter_boundary_ready',
-      'domain_truth_boundary_preserved',
     ]);
     assert.equal(
       providerWorkOrder.next_evidence_action,
@@ -732,6 +753,10 @@ test('framework operating maturity surfaces refs-only provider and lifecycle cou
       JSON.stringify({
         long_soak_refs: ['provider-long-soak:temporal/runtime-4h'],
         recovery_refs: ['provider-recovery:temporal/cadence-current'],
+        capability_requirement_ids: [
+          'restart_requery_ready',
+          'signal_history_ready',
+        ],
       }),
     ], env).provider_long_soak_evidence_ledger_record;
     runCli([
@@ -752,12 +777,14 @@ test('framework operating maturity surfaces refs-only provider and lifecycle cou
     assert.equal(maturity.provider_long_soak.open_evidence_count, 0);
     assert.equal(maturity.provider_long_soak.long_evidence_ready, true);
     assert.deepEqual(maturity.provider_long_soak.capability_missing_requirement_ids, [
-      'restart_requery_ready',
-      'signal_history_ready',
       'typed_closeout_required_ready',
       'missing_closeout_block_ready',
       'retry_dead_letter_boundary_ready',
       'domain_truth_boundary_preserved',
+    ]);
+    assert.deepEqual(maturity.provider_long_soak.capability_evidence_observed_requirement_ids, [
+      'restart_requery_ready',
+      'signal_history_ready',
     ]);
     assert.equal(maturity.provider_long_soak.observed_receipt_count, 7);
     assert.equal(maturity.provider_long_soak.provider_completion_counts_as_production_ready, false);

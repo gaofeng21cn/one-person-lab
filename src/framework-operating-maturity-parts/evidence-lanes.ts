@@ -56,13 +56,25 @@ const PROVIDER_CAPABILITY_REQUIREMENTS = [
   },
 ];
 
-function providerCapabilityChecklist(summary: Record<string, unknown>) {
+function providerCapabilityChecklist(
+  summary: Record<string, unknown>,
+  providerEvidence: Record<string, unknown>,
+) {
+  const evidenceRequirementIds = stringListValue(
+    providerEvidence.capability_requirement_ids,
+  );
   return PROVIDER_CAPABILITY_REQUIREMENTS.map((requirement) => {
     const observed = booleanValue(summary[requirement.summary_field]) === true;
+    const refsObserved = evidenceRequirementIds.includes(requirement.requirement_id);
     return {
       ...requirement,
       observed,
-      status: observed ? 'observed' : 'evidence_required',
+      refs_observed: refsObserved,
+      status: observed
+        ? 'observed'
+        : refsObserved
+          ? 'refs_observed_not_ready_claim'
+          : 'evidence_required',
       closes_production_ready: false,
       authority_boundary: {
         refs_only: true,
@@ -136,9 +148,12 @@ export function appOperatorDrilldownMaturity(drilldown: Record<string, unknown>)
     + stringListValue(providerEvidence.typed_blocker_refs).length;
   const providerCapabilityStatus =
     stringValue(summary.provider_slo_capability_status);
-  const capabilityChecklist = providerCapabilityChecklist(summary);
+  const capabilityChecklist = providerCapabilityChecklist(summary, providerEvidence);
   const capabilityMissingRequirementIds = capabilityChecklist
-    .filter((entry) => entry.observed !== true)
+    .filter((entry) => entry.observed !== true && entry.refs_observed !== true)
+    .map((entry) => entry.requirement_id);
+  const capabilityEvidenceObservedRequirementIds = capabilityChecklist
+    .filter((entry) => entry.observed !== true && entry.refs_observed === true)
     .map((entry) => entry.requirement_id);
   const providerOpenCount = providerLongEvidenceReady ? 0 : 1;
   const lifecycleObservedRefCount = numberValue(lifecycleEvidence.observed_ref_count);
@@ -172,6 +187,7 @@ export function appOperatorDrilldownMaturity(drilldown: Record<string, unknown>)
           : providerCapabilityStatus,
       capabilityChecklist,
       capabilityMissingRequirementIds,
+      capabilityEvidenceObservedRequirementIds,
       capabilityOpenRequirementCount: capabilityMissingRequirementIds.length,
       capabilityNextEvidenceAction: capabilityMissingRequirementIds.length > 0
         ? 'record_provider_capability_slo_evidence_or_blocker_for_missing_requirements'

@@ -13,6 +13,7 @@ export type ProviderLongSoakEvidenceReceipt = {
   dead_letter_refs: string[];
   provider_blocker_refs: string[];
   typed_blocker_refs: string[];
+  capability_requirement_ids: string[];
   source_surface: 'opl_provider_long_soak_evidence';
   authority_boundary: ProviderLongSoakEvidenceAuthorityBoundary;
 };
@@ -23,6 +24,7 @@ export type ProviderLongSoakEvidenceReceiptInput = {
   dead_letter_refs?: string[];
   provider_blocker_refs?: string[];
   typed_blocker_refs?: string[];
+  capability_requirement_ids?: string[];
   receipt_ref?: string | null;
 };
 
@@ -144,6 +146,7 @@ function normalizeReceipt(value: unknown): ProviderLongSoakEvidenceReceipt | nul
     dead_letter_refs: uniqueStrings(stringList(value.dead_letter_refs)),
     provider_blocker_refs: uniqueStrings(stringList(value.provider_blocker_refs)),
     typed_blocker_refs: uniqueStrings(stringList(value.typed_blocker_refs)),
+    capability_requirement_ids: uniqueStrings(stringList(value.capability_requirement_ids)),
     source_surface: 'opl_provider_long_soak_evidence',
     authority_boundary: providerLongSoakEvidenceAuthorityBoundary(),
   } satisfies ProviderLongSoakEvidenceReceipt;
@@ -194,6 +197,7 @@ function normalizeInput(
     dead_letter_refs: uniqueStrings(input.dead_letter_refs ?? []),
     provider_blocker_refs: uniqueStrings(input.provider_blocker_refs ?? []),
     typed_blocker_refs: uniqueStrings(input.typed_blocker_refs ?? []),
+    capability_requirement_ids: uniqueStrings(input.capability_requirement_ids ?? []),
     source_surface: 'opl_provider_long_soak_evidence',
     authority_boundary: providerLongSoakEvidenceAuthorityBoundary(),
   };
@@ -316,6 +320,9 @@ export function buildProviderLongSoakEvidenceProjection() {
     ...receipts.flatMap((receipt) => receipt.provider_blocker_refs),
   ]);
   const typedBlockerRefs = uniqueStrings(receipts.flatMap((receipt) => receipt.typed_blocker_refs));
+  const capabilityRequirementIds = uniqueStrings(
+    receipts.flatMap((receipt) => receipt.capability_requirement_ids),
+  );
   const observedRefShapes = refShapes({
     longSoakRefs,
     recoveryRefs,
@@ -349,6 +356,7 @@ export function buildProviderLongSoakEvidenceProjection() {
     dead_letter_refs: deadLetterRefs,
     provider_blocker_refs: providerBlockerRefs,
     typed_blocker_refs: typedBlockerRefs,
+    capability_requirement_ids: capabilityRequirementIds,
     observed_ref_shapes: observedRefShapes,
     observed_ref_counts: {
       long_soak_ref_count: longSoakRefs.length,

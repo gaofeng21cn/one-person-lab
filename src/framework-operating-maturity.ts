@@ -903,6 +903,8 @@ export async function buildFrameworkOperatingMaturityReadout(
         capability_checklist: drilldownMaturity.provider.capabilityChecklist,
         capability_missing_requirement_ids:
           drilldownMaturity.provider.capabilityMissingRequirementIds,
+        capability_evidence_observed_requirement_ids:
+          drilldownMaturity.provider.capabilityEvidenceObservedRequirementIds,
         capability_open_requirement_count:
           drilldownMaturity.provider.capabilityOpenRequirementCount,
         capability_next_evidence_action:

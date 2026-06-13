@@ -60,6 +60,9 @@ function parseProviderLongSoakEvidencePayload(
       parsed.provider_blocker_refs ?? parsed.provider_blocker_ref,
     ),
     typed_blocker_refs: stringList(parsed.typed_blocker_refs ?? parsed.typed_blocker_ref),
+    capability_requirement_ids: stringList(
+      parsed.capability_requirement_ids ?? parsed.capability_requirement_id,
+    ),
     receipt_ref: optionalString(parsed.receipt_ref),
   };
 }
@@ -149,7 +152,7 @@ export function buildRuntimeProviderLongSoakEvidenceCommandSpecs():
       summary:
         'Record refs-only provider long-soak, recovery, dead-letter, provider blocker, or typed blocker refs without claiming production readiness.',
       examples: [
-        'opl runtime provider-long-soak-evidence record --payload \'{"long_soak_refs":["provider-long-soak:temporal/window"],"provider_blocker_refs":["provider-blocker:temporal/capability-slo"]}\'',
+        'opl runtime provider-long-soak-evidence record --payload \'{"long_soak_refs":["provider-long-soak:temporal/window"],"provider_blocker_refs":["provider-blocker:temporal/capability-slo"],"capability_requirement_ids":["signal_history_ready"]}\'',
         'opl runtime provider-long-soak-evidence record --payload-file payload.json',
       ],
       handler: (args) => ({
@@ -227,6 +230,7 @@ export function buildRuntimeProviderLongSoakEvidenceCommandSpecs():
             'dead_letter_ref',
             'provider_blocker_ref',
             'typed_blocker_ref',
+            'capability_requirement_id',
           ],
           subcommands,
           authority_boundary: providerLongSoakEvidenceAuthorityBoundary(),
