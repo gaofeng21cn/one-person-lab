@@ -27,7 +27,14 @@ import {
   sourceFingerprint,
 } from './family-runtime-enqueue-parts/existing-dedupe-reconcile.ts';
 
-export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
+export type EnqueueTaskResult = {
+  accepted: boolean;
+  requeued_from_terminal?: boolean;
+  idempotent_noop: boolean;
+  task: ReturnType<typeof taskToPayload>;
+};
+
+export function enqueueTask(db: DatabaseSync, input: EnqueueInput): EnqueueTaskResult {
   const createdAt = nowIso();
   const dedupeKey = input.dedupeKey?.trim() || null;
   const taskKind = canonicalFamilyRuntimeTaskKind(input.domainId, input.taskKind);

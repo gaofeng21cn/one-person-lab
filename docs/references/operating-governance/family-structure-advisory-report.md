@@ -21,11 +21,11 @@ Fresh command:
 npm run --silent family:structure-advisory -- --format=json
 ```
 
-Fresh eleven-repo local summary from `2026-06-13T14:38:56Z` after root checkout revalidation:
+Fresh eleven-repo local summary from `2026-06-13T14:38:56Z` after root checkout revalidation, with scoped OPL follow-up from `2026-06-13T14:57:53Z`:
 
 | Repo | needs_design_pass | mechanical_residue | public_surface_risk | missing_verify_entry |
 | --- | ---: | ---: | ---: | --- |
-| `one-person-lab` | 1 | 0 | 8 | `false` |
+| `one-person-lab` | 0 | 0 | 8 | `false` |
 | `med-autoscience` | 46 | 0 | 8 | `false` |
 | `med-autogrant` | 0 | 0 | 5 | `false` |
 | `redcube-ai` | 0 | 0 | 9 | `false` |
@@ -73,7 +73,7 @@ Support repos can be lighter but should still be recognizable: `one-person-lab` 
 
 | Repo | Current structure finding | Action |
 | --- | --- | --- |
-| `one-person-lab` | Fresh scan now reports 1 `needs_design_pass` item, 0 mechanical residue and 8 public-surface risks. The App operator drilldown source-boundary slice is landed: `src/runtime-tray-app-operator-drilldown.ts` is no longer in the design-pass queue after extracting `runtime-tray-app-operator-drilldown-parts/core-refs.ts`. | Treat the remaining item as OPL-owned natural source-boundary queue for `family-runtime-enqueue` currentness / reconcile code. Do not turn this support snapshot into a blocking backlog or readiness claim. |
+| `one-person-lab` | Fresh scoped scan now reports 0 `needs_design_pass` items, 0 mechanical residue and 8 public-surface risks. The App operator drilldown source-boundary slice is landed, and `family-runtime-enqueue` dedupe reconcile has been split into a thin coordinator plus `existing-dedupe-requeue.ts`. | Treat OPL source-shape advisory as currently clean. Public-surface risk remains generated / machine-readable contract pressure, not a functional blocker or readiness claim. |
 | `med-autoscience` | Fresh scan reports 46 `needs_design_pass` items and 8 public-surface risks. First source-shape advisory is `src/med_autoscience/controllers/current_work_unit.py` at `1913` lines. No mechanical residue and no missing verify entry. | MAS remains the highest residual source-shape advisory queue. Handle only from MAS owner lanes with fresh repo state, especially current work unit, current executable owner action, provider admission current control, persisted dispatch, domain health diagnostic and study progress surfaces. |
 | `med-autogrant` | Fresh scan reports no source-shape item and 5 public-surface risks. | Treat remaining MAG advisory work as generated schema / contract modularity review; no OPL-side physical edit is authorized by this snapshot. |
 | `redcube-ai` | Fresh scan has no source-shape finding; public-surface risk remains in generated/public contracts and two shared buckets. | Continue generated/public-surface modularity and shared-bucket ownership review from RCA lanes; no source split is currently implied. |
@@ -93,7 +93,7 @@ The `one-person-lab` section is kept detailed because `tests/src/family-structur
 
 needs_design_pass:
 
-- `src/family-runtime-enqueue-parts/existing-dedupe-reconcile.ts` (`989`, `part_file_near_1000_lines`)
+- none
 
 mechanical_residue:
 
@@ -110,7 +110,7 @@ public_surface_risk:
 - `contracts/family-orchestration/family-stage-proof-bundle.schema.json`
 - `contracts/opl-framework/target-operating-architecture-contract.json`
 
-Interpretation: OPL framework source/test shape has been substantially reduced by recent semantic splits. The App operator drilldown core refs extraction is now reflected here: `src/runtime-tray-app-operator-drilldown.ts` is out of the advisory queue, and `src/runtime-tray-app-operator-drilldown-parts/core-refs.ts` is classified as `safe_to_keep` / `semantic_part_under_advisory_budget` at `420` lines. The remaining OPL source-shape advisory is `family-runtime-enqueue` reconcile currentness code near the part-file advisory limit. Public-surface risks remain generated / machine-readable contract pressure; they are review signals, not functional blockers or readiness evidence.
+Interpretation: OPL framework source/test shape has been substantially reduced by recent semantic splits. The App operator drilldown core refs extraction is reflected here: `src/runtime-tray-app-operator-drilldown.ts` is out of the advisory queue, and `src/runtime-tray-app-operator-drilldown-parts/core-refs.ts` is classified as `safe_to_keep` / `semantic_part_under_advisory_budget` at about `420` lines. The `family-runtime-enqueue` reconcile currentness coordinator is also below the part-file advisory limit after extracting `src/family-runtime-enqueue-parts/existing-dedupe-requeue.ts`: `existing-dedupe-reconcile.ts` is about `712` lines and `existing-dedupe-requeue.ts` is about `118` lines. Public-surface risks remain generated / machine-readable contract pressure; they are review signals, not functional blockers or readiness evidence.
 
 ### med-autoscience
 

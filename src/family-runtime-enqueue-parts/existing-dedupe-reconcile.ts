@@ -14,6 +14,7 @@ import { antiLoopStopLossSameLineageDecision } from '../family-runtime-stop-loss
 import type { ActiveFamilyRuntimeQueueHold } from '../family-runtime-queue-holds.ts';
 import { refreshDefaultExecutorLiveAttemptTaskLease } from '../family-runtime-provider-hosted-attempts.ts';
 import { isLiveSameTaskDefaultExecutorAttempt } from './existing-dedupe-live-attempt.ts';
+import { applyExistingDedupeRequeue } from './existing-dedupe-requeue.ts';
 import {
   defaultExecutorBlockedRedriveDecision,
   defaultExecutorCloseoutRedriveDecision,
@@ -306,36 +307,19 @@ export function reconcileExistingDedupeTask(
   }
   if (exportedTaskChanged && closeoutRedrive) {
     const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
-    db.prepare(`
-      UPDATE tasks
-      SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
-        attempts = 0, source = ?, requires_approval = ?, approved_at = NULL,
-        lease_owner = NULL, lease_expires_at = NULL, last_error = ?,
-        dead_letter_reason = NULL, updated_at = ?
-      WHERE task_id = ?
-    `).run(
-      input.domainId,
+    return applyExistingDedupeRequeue(db, {
+      input,
       taskKind,
       exportedPayloadJson,
-      input.priority ?? 0,
+      existing,
       nextStatus,
-      input.source ?? 'opl-cli',
-      requiresApproval ? 1 : 0,
-      initialLastError,
+      nextRequiresApproval: requiresApproval,
+      nextLastError: initialLastError,
       createdAt,
-      existing.task_id,
-    );
-    const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
-    insertEvent(db, {
-      taskId: refreshed.task_id,
-      domainId: refreshed.domain_id,
+      dedupeKey,
+      activeHoldId: activeHold?.hold_id ?? null,
       eventType: 'task_requeued_from_mas_default_executor_redrive_context',
-      source: input.source ?? 'opl-cli',
-      payload: {
-        dedupe_key: dedupeKey,
-        previous_status: existing.status,
-        next_status: nextStatus,
-        active_hold_id: activeHold?.hold_id ?? null,
+      eventPayload: {
         ...closeoutRedrive,
         authority_boundary: {
           opl: 'provider_transport_redrive_from_mas_closeout_context_only',
@@ -346,20 +330,9 @@ export function reconcileExistingDedupeTask(
           current_package_mutation: false,
         },
       },
+      notificationTitle: 'Family runtime task requeued from MAS closeout redrive',
+      requeuedFromTerminal: true,
     });
-    insertNotification(db, {
-      taskId: refreshed.task_id,
-      severity: 'info',
-      title: 'Family runtime task requeued from MAS closeout redrive',
-      body: `${input.domainId}:${taskKind}`,
-      payload: { status: nextStatus, dedupe_key: dedupeKey, active_hold_id: activeHold?.hold_id ?? null },
-    });
-    return {
-      accepted: true,
-      requeued_from_terminal: true,
-      idempotent_noop: false,
-      task: taskToPayload(refreshed),
-    };
   }
   if (transportOnlyAdmissionRedrive) {
     const supersededTransportAttempts = markTransportOnlyAdmissionCheckpointsSuperseded(db, {
@@ -367,36 +340,19 @@ export function reconcileExistingDedupeTask(
       source: input.source ?? 'opl-cli',
     });
     const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
-    db.prepare(`
-      UPDATE tasks
-      SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
-        attempts = 0, source = ?, requires_approval = ?, approved_at = NULL,
-        lease_owner = NULL, lease_expires_at = NULL, last_error = ?,
-        dead_letter_reason = NULL, updated_at = ?
-      WHERE task_id = ?
-    `).run(
-      input.domainId,
+    return applyExistingDedupeRequeue(db, {
+      input,
       taskKind,
       exportedPayloadJson,
-      input.priority ?? 0,
+      existing,
       nextStatus,
-      input.source ?? 'opl-cli',
-      requiresApproval ? 1 : 0,
-      initialLastError,
+      nextRequiresApproval: requiresApproval,
+      nextLastError: initialLastError,
       createdAt,
-      existing.task_id,
-    );
-    const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
-    insertEvent(db, {
-      taskId: refreshed.task_id,
-      domainId: refreshed.domain_id,
+      dedupeKey,
+      activeHoldId: activeHold?.hold_id ?? null,
       eventType: 'task_requeued_from_transport_only_succeeded_default_executor_admission',
-      source: input.source ?? 'opl-cli',
-      payload: {
-        dedupe_key: dedupeKey,
-        previous_status: existing.status,
-        next_status: nextStatus,
-        active_hold_id: activeHold?.hold_id ?? null,
+      eventPayload: {
         superseded_stage_attempt_ids: supersededTransportAttempts.map((attempt) => attempt.stage_attempt_id),
         ...transportOnlyAdmissionRedrive,
         authority_boundary: {
@@ -408,53 +364,25 @@ export function reconcileExistingDedupeTask(
           current_package_mutation: false,
         },
       },
+      notificationTitle: 'Family runtime task requeued from transport-only admission',
+      requeuedFromTerminal: true,
     });
-    insertNotification(db, {
-      taskId: refreshed.task_id,
-      severity: 'info',
-      title: 'Family runtime task requeued from transport-only admission',
-      body: `${input.domainId}:${taskKind}`,
-      payload: { status: nextStatus, dedupe_key: dedupeKey, active_hold_id: activeHold?.hold_id ?? null },
-    });
-    return {
-      accepted: true,
-      requeued_from_terminal: true,
-      idempotent_noop: false,
-      task: taskToPayload(refreshed),
-    };
   }
   if (missingStageNativeOwnerAnswerRedrive) {
     const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
-    db.prepare(`
-      UPDATE tasks
-      SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
-        attempts = 0, source = ?, requires_approval = ?, approved_at = NULL,
-        lease_owner = NULL, lease_expires_at = NULL, last_error = ?,
-        dead_letter_reason = NULL, updated_at = ?
-      WHERE task_id = ?
-    `).run(
-      input.domainId,
+    return applyExistingDedupeRequeue(db, {
+      input,
       taskKind,
       exportedPayloadJson,
-      input.priority ?? 0,
+      existing,
       nextStatus,
-      input.source ?? 'opl-cli',
-      requiresApproval ? 1 : 0,
-      initialLastError,
+      nextRequiresApproval: requiresApproval,
+      nextLastError: initialLastError,
       createdAt,
-      existing.task_id,
-    );
-    const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
-    insertEvent(db, {
-      taskId: refreshed.task_id,
-      domainId: refreshed.domain_id,
+      dedupeKey,
+      activeHoldId: activeHold?.hold_id ?? null,
       eventType: 'task_requeued_from_missing_stage_native_owner_answer',
-      source: input.source ?? 'opl-cli',
-      payload: {
-        dedupe_key: dedupeKey,
-        previous_status: existing.status,
-        next_status: nextStatus,
-        active_hold_id: activeHold?.hold_id ?? null,
+      eventPayload: {
         ...missingStageNativeOwnerAnswerRedrive,
         authority_boundary: {
           opl: 'queue_redrive_until_domain_owner_answer_observed_only',
@@ -466,53 +394,25 @@ export function reconcileExistingDedupeTask(
           provider_completion_is_domain_ready: false,
         },
       },
+      notificationTitle: 'Family runtime task requeued for missing MAS owner answer',
+      requeuedFromTerminal: true,
     });
-    insertNotification(db, {
-      taskId: refreshed.task_id,
-      severity: 'info',
-      title: 'Family runtime task requeued for missing MAS owner answer',
-      body: `${input.domainId}:${taskKind}`,
-      payload: { status: nextStatus, dedupe_key: dedupeKey, active_hold_id: activeHold?.hold_id ?? null },
-    });
-    return {
-      accepted: true,
-      requeued_from_terminal: true,
-      idempotent_noop: false,
-      task: taskToPayload(refreshed),
-    };
   }
   if (freshCurrentControlAdmissionRedrive) {
     const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
-    db.prepare(`
-      UPDATE tasks
-      SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
-        attempts = 0, source = ?, requires_approval = ?, approved_at = NULL,
-        lease_owner = NULL, lease_expires_at = NULL, last_error = ?,
-        dead_letter_reason = NULL, updated_at = ?
-      WHERE task_id = ?
-    `).run(
-      input.domainId,
+    return applyExistingDedupeRequeue(db, {
+      input,
       taskKind,
       exportedPayloadJson,
-      input.priority ?? 0,
+      existing,
       nextStatus,
-      input.source ?? 'opl-cli',
-      requiresApproval ? 1 : 0,
-      initialLastError,
+      nextRequiresApproval: requiresApproval,
+      nextLastError: initialLastError,
       createdAt,
-      existing.task_id,
-    );
-    const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
-    insertEvent(db, {
-      taskId: refreshed.task_id,
-      domainId: refreshed.domain_id,
+      dedupeKey,
+      activeHoldId: activeHold?.hold_id ?? null,
       eventType: 'task_requeued_from_mas_current_control_provider_admission',
-      source: input.source ?? 'opl-cli',
-      payload: {
-        dedupe_key: dedupeKey,
-        previous_status: existing.status,
-        next_status: nextStatus,
-        active_hold_id: activeHold?.hold_id ?? null,
+      eventPayload: {
         ...freshCurrentControlAdmissionRedrive,
         authority_boundary: {
           opl: 'queue_attempt_provider_transport_rehydrate_from_mas_current_control_only',
@@ -524,20 +424,9 @@ export function reconcileExistingDedupeTask(
           provider_completion_is_domain_ready: false,
         },
       },
+      notificationTitle: 'Family runtime task requeued from MAS current-control admission',
+      requeuedFromTerminal: true,
     });
-    insertNotification(db, {
-      taskId: refreshed.task_id,
-      severity: 'info',
-      title: 'Family runtime task requeued from MAS current-control admission',
-      body: `${input.domainId}:${taskKind}`,
-      payload: { status: nextStatus, dedupe_key: dedupeKey, active_hold_id: activeHold?.hold_id ?? null },
-    });
-    return {
-      accepted: true,
-      requeued_from_terminal: true,
-      idempotent_noop: false,
-      task: taskToPayload(refreshed),
-    };
   }
   if (queuedCurrentControlAdmissionRefresh) {
     const retainExistingApprovalGate = existing.status === 'waiting_approval'
@@ -546,36 +435,19 @@ export function reconcileExistingDedupeTask(
     const nextStatus: FamilyRuntimeTaskStatus = nextRequiresApproval ? 'waiting_approval' : 'queued';
     const nextLastError = activeHold?.reason
       ?? (retainExistingApprovalGate ? existing.last_error : initialLastError);
-    db.prepare(`
-      UPDATE tasks
-      SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
-        attempts = 0, source = ?, requires_approval = ?, approved_at = NULL,
-        lease_owner = NULL, lease_expires_at = NULL, last_error = ?,
-        dead_letter_reason = NULL, updated_at = ?
-      WHERE task_id = ?
-    `).run(
-      input.domainId,
+    return applyExistingDedupeRequeue(db, {
+      input,
       taskKind,
       exportedPayloadJson,
-      input.priority ?? 0,
+      existing,
       nextStatus,
-      input.source ?? 'opl-cli',
-      nextRequiresApproval ? 1 : 0,
+      nextRequiresApproval,
       nextLastError,
       createdAt,
-      existing.task_id,
-    );
-    const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
-    insertEvent(db, {
-      taskId: refreshed.task_id,
-      domainId: refreshed.domain_id,
+      dedupeKey,
+      activeHoldId: activeHold?.hold_id ?? null,
       eventType: 'task_requeued_from_mas_current_control_provider_admission',
-      source: input.source ?? 'opl-cli',
-      payload: {
-        dedupe_key: dedupeKey,
-        previous_status: existing.status,
-        next_status: nextStatus,
-        active_hold_id: activeHold?.hold_id ?? null,
+      eventPayload: {
         ...queuedCurrentControlAdmissionRefresh,
         authority_boundary: {
           opl: 'queue_attempt_provider_transport_rehydrate_from_mas_current_control_only',
@@ -587,53 +459,25 @@ export function reconcileExistingDedupeTask(
           provider_completion_is_domain_ready: false,
         },
       },
+      notificationTitle: 'Family runtime queued task refreshed from MAS current-control admission',
+      requeuedFromTerminal: false,
     });
-    insertNotification(db, {
-      taskId: refreshed.task_id,
-      severity: 'info',
-      title: 'Family runtime queued task refreshed from MAS current-control admission',
-      body: `${input.domainId}:${taskKind}`,
-      payload: { status: nextStatus, dedupe_key: dedupeKey, active_hold_id: activeHold?.hold_id ?? null },
-    });
-    return {
-      accepted: true,
-      requeued_from_terminal: false,
-      idempotent_noop: false,
-      task: taskToPayload(refreshed),
-    };
   }
   if (terminalAttemptCurrentControlAdmissionRedrive) {
     const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
-    db.prepare(`
-      UPDATE tasks
-      SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
-        attempts = 0, source = ?, requires_approval = ?, approved_at = NULL,
-        lease_owner = NULL, lease_expires_at = NULL, last_error = ?,
-        dead_letter_reason = NULL, updated_at = ?
-      WHERE task_id = ?
-    `).run(
-      input.domainId,
+    return applyExistingDedupeRequeue(db, {
+      input,
       taskKind,
       exportedPayloadJson,
-      input.priority ?? 0,
+      existing,
       nextStatus,
-      input.source ?? 'opl-cli',
-      requiresApproval ? 1 : 0,
-      initialLastError,
+      nextRequiresApproval: requiresApproval,
+      nextLastError: initialLastError,
       createdAt,
-      existing.task_id,
-    );
-    const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
-    insertEvent(db, {
-      taskId: refreshed.task_id,
-      domainId: refreshed.domain_id,
+      dedupeKey,
+      activeHoldId: activeHold?.hold_id ?? null,
       eventType: 'task_requeued_from_mas_current_control_provider_admission',
-      source: input.source ?? 'opl-cli',
-      payload: {
-        dedupe_key: dedupeKey,
-        previous_status: existing.status,
-        next_status: nextStatus,
-        active_hold_id: activeHold?.hold_id ?? null,
+      eventPayload: {
         ...terminalAttemptCurrentControlAdmissionRedrive,
         authority_boundary: {
           opl: 'queue_attempt_provider_transport_rehydrate_from_mas_current_control_only',
@@ -645,53 +489,25 @@ export function reconcileExistingDedupeTask(
           provider_completion_is_domain_ready: false,
         },
       },
+      notificationTitle: 'Family runtime task requeued from MAS current-control terminal attempt',
+      requeuedFromTerminal: true,
     });
-    insertNotification(db, {
-      taskId: refreshed.task_id,
-      severity: 'info',
-      title: 'Family runtime task requeued from MAS current-control terminal attempt',
-      body: `${input.domainId}:${taskKind}`,
-      payload: { status: nextStatus, dedupe_key: dedupeKey, active_hold_id: activeHold?.hold_id ?? null },
-    });
-    return {
-      accepted: true,
-      requeued_from_terminal: true,
-      idempotent_noop: false,
-      task: taskToPayload(refreshed),
-    };
   }
   if (supersededCurrentControlAdmissionRedrive) {
     const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
-    db.prepare(`
-      UPDATE tasks
-      SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
-        attempts = 0, source = ?, requires_approval = ?, approved_at = NULL,
-        lease_owner = NULL, lease_expires_at = NULL, last_error = ?,
-        dead_letter_reason = NULL, updated_at = ?
-      WHERE task_id = ?
-    `).run(
-      input.domainId,
+    return applyExistingDedupeRequeue(db, {
+      input,
       taskKind,
       exportedPayloadJson,
-      input.priority ?? 0,
+      existing,
       nextStatus,
-      input.source ?? 'opl-cli',
-      requiresApproval ? 1 : 0,
-      initialLastError,
+      nextRequiresApproval: requiresApproval,
+      nextLastError: initialLastError,
       createdAt,
-      existing.task_id,
-    );
-    const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
-    insertEvent(db, {
-      taskId: refreshed.task_id,
-      domainId: refreshed.domain_id,
+      dedupeKey,
+      activeHoldId: activeHold?.hold_id ?? null,
       eventType: 'task_requeued_from_mas_current_control_provider_admission',
-      source: input.source ?? 'opl-cli',
-      payload: {
-        dedupe_key: dedupeKey,
-        previous_status: existing.status,
-        next_status: nextStatus,
-        active_hold_id: activeHold?.hold_id ?? null,
+      eventPayload: {
         ...supersededCurrentControlAdmissionRedrive,
         authority_boundary: {
           opl: 'queue_attempt_provider_transport_rehydrate_from_mas_current_control_only',
@@ -703,20 +519,9 @@ export function reconcileExistingDedupeTask(
           provider_completion_is_domain_ready: false,
         },
       },
+      notificationTitle: 'Family runtime task requeued from MAS current-control supersession',
+      requeuedFromTerminal: true,
     });
-    insertNotification(db, {
-      taskId: refreshed.task_id,
-      severity: 'info',
-      title: 'Family runtime task requeued from MAS current-control supersession',
-      body: `${input.domainId}:${taskKind}`,
-      payload: { status: nextStatus, dedupe_key: dedupeKey, active_hold_id: activeHold?.hold_id ?? null },
-    });
-    return {
-      accepted: true,
-      requeued_from_terminal: true,
-      idempotent_noop: false,
-      task: taskToPayload(refreshed),
-    };
   }
   const metadataRefresh = defaultExecutorSucceededAdmissionRefresh
     ? defaultExecutorMetadataRefresh(existingPayload, payload)
@@ -768,51 +573,25 @@ export function reconcileExistingDedupeTask(
   }
   if (existing.status === 'succeeded' && exportedTaskChanged && !defaultExecutorSucceededAdmissionRefresh) {
     const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
-    db.prepare(`
-      UPDATE tasks
-      SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
-        source = ?, requires_approval = ?, approved_at = NULL, lease_owner = NULL,
-        lease_expires_at = NULL, last_error = ?, dead_letter_reason = NULL, updated_at = ?
-      WHERE task_id = ?
-    `).run(
-      input.domainId,
+    return applyExistingDedupeRequeue(db, {
+      input,
       taskKind,
       exportedPayloadJson,
-      input.priority ?? 0,
+      existing,
       nextStatus,
-      input.source ?? 'opl-cli',
-      requiresApproval ? 1 : 0,
-      initialLastError,
+      nextRequiresApproval: requiresApproval,
+      nextLastError: initialLastError,
       createdAt,
-      existing.task_id,
-    );
-    const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
-    insertEvent(db, {
-      taskId: refreshed.task_id,
-      domainId: refreshed.domain_id,
+      dedupeKey,
+      activeHoldId: activeHold?.hold_id ?? null,
       eventType: 'task_requeued_from_domain_export_update',
-      source: input.source ?? 'opl-cli',
-      payload: {
-        dedupe_key: dedupeKey,
-        previous_status: existing.status,
-        next_status: nextStatus,
+      eventPayload: {
         reason: 'domain_export_changed_after_terminal_attempt',
-        active_hold_id: activeHold?.hold_id ?? null,
       },
+      notificationTitle: 'Family runtime task requeued',
+      requeuedFromTerminal: true,
+      resetAttempts: false,
     });
-    insertNotification(db, {
-      taskId: refreshed.task_id,
-      severity: 'info',
-      title: 'Family runtime task requeued',
-      body: `${input.domainId}:${taskKind}`,
-      payload: { status: nextStatus, dedupe_key: dedupeKey, active_hold_id: activeHold?.hold_id ?? null },
-    });
-    return {
-      accepted: true,
-      requeued_from_terminal: true,
-      idempotent_noop: false,
-      task: taskToPayload(refreshed),
-    };
   }
   const deadLetterRedrive = deadLetterRedriveDecision(existingPayload, payload);
   const blockedRedrive = defaultExecutorBlockedRedriveDecision(existing, existingPayload, payload);
@@ -849,52 +628,24 @@ export function reconcileExistingDedupeTask(
   }
   if (exportedTaskChanged && blockedRedrive) {
     const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
-    db.prepare(`
-      UPDATE tasks
-      SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
-        attempts = 0, source = ?, requires_approval = ?, approved_at = NULL,
-        lease_owner = NULL, lease_expires_at = NULL, last_error = ?,
-        dead_letter_reason = NULL, updated_at = ?
-      WHERE task_id = ?
-    `).run(
-      input.domainId,
+    return applyExistingDedupeRequeue(db, {
+      input,
       taskKind,
       exportedPayloadJson,
-      input.priority ?? 0,
+      existing,
       nextStatus,
-      input.source ?? 'opl-cli',
-      requiresApproval ? 1 : 0,
-      initialLastError,
+      nextRequiresApproval: requiresApproval,
+      nextLastError: initialLastError,
       createdAt,
-      existing.task_id,
-    );
-    const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
-    insertEvent(db, {
-      taskId: refreshed.task_id,
-      domainId: refreshed.domain_id,
+      dedupeKey,
+      activeHoldId: activeHold?.hold_id ?? null,
       eventType: 'task_requeued_from_blocked_after_domain_owner_update',
-      source: input.source ?? 'opl-cli',
-      payload: {
-        dedupe_key: dedupeKey,
-        previous_status: existing.status,
-        next_status: nextStatus,
-        active_hold_id: activeHold?.hold_id ?? null,
+      eventPayload: {
         ...blockedRedrive,
       },
+      notificationTitle: 'Family runtime task requeued after domain owner update',
+      requeuedFromTerminal: true,
     });
-    insertNotification(db, {
-      taskId: refreshed.task_id,
-      severity: 'info',
-      title: 'Family runtime task requeued after domain owner update',
-      body: `${input.domainId}:${taskKind}`,
-      payload: { status: nextStatus, dedupe_key: dedupeKey, active_hold_id: activeHold?.hold_id ?? null },
-    });
-    return {
-      accepted: true,
-      requeued_from_terminal: true,
-      idempotent_noop: false,
-      task: taskToPayload(refreshed),
-    };
   }
   if (exportedTaskChanged && paperAutonomyDeadLetterBlock) {
     insertEvent(db, {
@@ -927,52 +678,24 @@ export function reconcileExistingDedupeTask(
   }
   if (existing.status === 'dead_letter' && exportedTaskChanged && deadLetterRedrive) {
     const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
-    db.prepare(`
-      UPDATE tasks
-      SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
-        attempts = 0, source = ?, requires_approval = ?, approved_at = NULL,
-        lease_owner = NULL, lease_expires_at = NULL, last_error = ?,
-        dead_letter_reason = NULL, updated_at = ?
-      WHERE task_id = ?
-    `).run(
-      input.domainId,
+    return applyExistingDedupeRequeue(db, {
+      input,
       taskKind,
       exportedPayloadJson,
-      input.priority ?? 0,
+      existing,
       nextStatus,
-      input.source ?? 'opl-cli',
-      requiresApproval ? 1 : 0,
-      initialLastError,
+      nextRequiresApproval: requiresApproval,
+      nextLastError: initialLastError,
       createdAt,
-      existing.task_id,
-    );
-    const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
-    insertEvent(db, {
-      taskId: refreshed.task_id,
-      domainId: refreshed.domain_id,
+      dedupeKey,
+      activeHoldId: activeHold?.hold_id ?? null,
       eventType: 'task_requeued_from_dead_letter_after_domain_owner_update',
-      source: input.source ?? 'opl-cli',
-      payload: {
-        dedupe_key: dedupeKey,
-        previous_status: existing.status,
-        next_status: nextStatus,
-        active_hold_id: activeHold?.hold_id ?? null,
+      eventPayload: {
         ...deadLetterRedrive,
       },
+      notificationTitle: 'Family runtime task requeued after domain owner update',
+      requeuedFromTerminal: true,
     });
-    insertNotification(db, {
-      taskId: refreshed.task_id,
-      severity: 'info',
-      title: 'Family runtime task requeued after domain owner update',
-      body: `${input.domainId}:${taskKind}`,
-      payload: { status: nextStatus, dedupe_key: dedupeKey, active_hold_id: activeHold?.hold_id ?? null },
-    });
-    return {
-      accepted: true,
-      requeued_from_terminal: true,
-      idempotent_noop: false,
-      task: taskToPayload(refreshed),
-    };
   }
   insertEvent(db, {
     taskId: existing.task_id,
