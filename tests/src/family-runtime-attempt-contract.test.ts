@@ -611,9 +611,12 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   }
   assert.equal(
     identity.match_policy,
-    'all_available_current_owner_delta_and_selected_dispatch_stage_packet_fields_must_match_and_missing_identity_fails_closed',
+    'all_required_current_owner_delta_provider_admission_selected_dispatch_and_stage_packet_fields_must_match; missing route_identity_key, attempt_idempotency_key, dispatch_ref, stage_packet_ref, or stage_packet_refs fails closed',
   );
-  assert.equal(identity.missing_identity_effect, 'fail_closed_no_stage_run_currentness_match');
+  assert.equal(
+    identity.missing_identity_effect,
+    'fail_closed_no_stage_run_currentness_match_no_live_skip_no_terminal_reconcile',
+  );
   assert.ok(identity.reset_evidence.includes('domain_owner_receipt_ref'));
   assert.ok(identity.reset_evidence.includes('typed_blocker_ref'));
   assert.ok(identity.reset_evidence.includes('provider_hard_gate_clearance'));
@@ -687,6 +690,49 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
     traceRefs.policy,
     'observability links are refs-only drilldown evidence and never a planning root or domain authority source',
   );
+
+  const attemptList = surfaces.attempt_list_audit_safe_readout;
+  assert.equal(
+    attemptList.implementation_ref,
+    'src/family-runtime-stage-attempt-monitoring.ts#listStageAttemptsWithMonitoringProjection',
+  );
+  assert.equal(
+    attemptList.test_ref,
+    'tests/src/cli/cases/family-runtime-stage-attempt-monitoring.test.ts',
+  );
+  assert.equal(
+    attemptList.default_unfiltered_policy,
+    'unfiltered_json_attempt_list_defaults_to_compact_timeline_audit_safe_readout',
+  );
+  assert.equal(attemptList.default_limit, 25);
+  for (const requiredShape of [
+    'view_mode=compact_timeline',
+    'filters.compact_timeline=true',
+    'summary.compact_timeline_limit=25',
+    'items=array',
+    'attempts=array',
+    'compact_timeline=array',
+  ]) {
+    assert.ok(attemptList.required_default_shape.includes(requiredShape));
+  }
+  for (const heavyField of ['provider_run', 'activity_events', 'route_impact']) {
+    assert.ok(attemptList.omitted_heavy_fields_default.includes(heavyField));
+  }
+  assert.ok(
+    attemptList.consumer_must_not_interpret.includes(
+      'compact_timeline_omitted_total_as_no_active_attempts',
+    ),
+  );
+  assert.ok(
+    attemptList.consumer_must_not_interpret.includes(
+      'provider_readiness_projection_as_domain_progress',
+    ),
+  );
+  assert.equal(attemptList.authority_boundary.opl_can_project_bounded_attempt_readout, true);
+  assert.equal(attemptList.authority_boundary.opl_can_infer_no_active_attempts_from_bounded_readout, false);
+  assert.equal(attemptList.authority_boundary.opl_can_restart_worker_from_bounded_readout_only, false);
+  assert.equal(attemptList.authority_boundary.opl_can_create_domain_owner_receipt, false);
+  assert.equal(attemptList.authority_boundary.provider_completion_is_domain_ready, false);
 
   assert.equal(
     substrate.current_control_admission_currentness_policy_ref,

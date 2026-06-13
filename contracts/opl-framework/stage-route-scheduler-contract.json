@@ -386,6 +386,45 @@
           "stage_progress_log_ref"
         ],
         "policy": "observability links are refs-only drilldown evidence and never a planning root or domain authority source"
+      },
+      "attempt_list_audit_safe_readout": {
+        "purpose": "Keep default attempt-list operator readout bounded, body-free, and shape-stable so large ledgers cannot be misread as empty, provider-ready, or domain progress.",
+        "implementation_ref": "src/family-runtime-stage-attempt-monitoring.ts#listStageAttemptsWithMonitoringProjection",
+        "test_ref": "tests/src/cli/cases/family-runtime-stage-attempt-monitoring.test.ts",
+        "test_lane": "fast",
+        "default_unfiltered_policy": "unfiltered_json_attempt_list_defaults_to_compact_timeline_audit_safe_readout",
+        "default_limit": 25,
+        "required_default_shape": [
+          "view_mode=compact_timeline",
+          "filters.compact_timeline=true",
+          "summary.compact_timeline_limit=25",
+          "summary.compact_timeline_returned_total",
+          "summary.compact_timeline_omitted_total",
+          "items=array",
+          "attempts=array",
+          "compact_timeline=array"
+        ],
+        "omitted_heavy_fields_default": [
+          "provider_run",
+          "activity_events",
+          "route_impact"
+        ],
+        "filtered_or_explicit_full_boundary": "filtered_or_explicit_full_views_may_return_full_attempt_bodies_but_consumers_must_read_view_mode_summary_and_filters_before_interpreting_attempt_absence_or_provider_readiness",
+        "consumer_must_not_interpret": [
+          "compact_timeline_omitted_total_as_no_active_attempts",
+          "missing_heavy_body_as_missing_attempt",
+          "provider_readiness_projection_as_domain_progress",
+          "bounded_default_readout_as_worker_restart_authority"
+        ],
+        "authority_boundary": {
+          "opl_can_project_bounded_attempt_readout": true,
+          "opl_can_reconcile_attempt_ledger": true,
+          "opl_can_infer_no_active_attempts_from_bounded_readout": false,
+          "opl_can_restart_worker_from_bounded_readout_only": false,
+          "opl_can_create_domain_owner_receipt": false,
+          "opl_can_create_domain_typed_blocker": false,
+          "provider_completion_is_domain_ready": false
+        }
       }
     },
     "current_control_admission_currentness_policy_ref": "current_control_admission_currentness_policy",
