@@ -10,6 +10,16 @@ function recordValue(value: unknown) {
     : null;
 }
 
+function stringList(value: unknown) {
+  return Array.isArray(value)
+    ? value.map((item) => optionalString(item)).filter((item): item is string => Boolean(item))
+    : [];
+}
+
+function uniqueSortedStrings(values: string[]) {
+  return [...new Set(values)].sort();
+}
+
 function currentnessSourceFingerprint(payload: Record<string, unknown>) {
   return optionalString(payload.source_fingerprint)
     ?? optionalString(payload.domain_source_fingerprint)
@@ -41,6 +51,24 @@ export function providerAdmissionCurrentnessIdentity(
     stable_truth_digest: optionalString(digestBasis?.stable_truth_digest),
     volatile_projection_digest: optionalString(digestBasis?.volatile_projection_digest),
     work_unit_digest: optionalString(digestBasis?.work_unit_digest),
+    stage_packet_ref:
+      optionalString(payload.stage_packet_ref)
+      ?? optionalString(identity?.stage_packet_ref),
+    stage_packet_refs: uniqueSortedStrings([
+      ...stringList(payload.stage_packet_refs),
+      ...stringList(identity?.stage_packet_refs),
+      ...stringList(payload.checkpoint_refs),
+      optionalString(payload.stage_packet_ref),
+      optionalString(identity?.stage_packet_ref),
+    ].filter((item): item is string => Boolean(item))),
+    route_identity_key:
+      optionalString(payload.route_identity_key)
+      ?? optionalString(identity?.route_identity_key),
+    attempt_idempotency_key:
+      optionalString(payload.attempt_idempotency_key)
+      ?? optionalString(payload.idempotency_key)
+      ?? optionalString(identity?.attempt_idempotency_key)
+      ?? optionalString(identity?.idempotency_key),
     recovery_obligation_id: optionalString(payload.recovery_obligation_id)
       ?? optionalString(identity?.recovery_obligation_id)
       ?? optionalString(identity?.paper_recovery_obligation_id),
@@ -70,6 +98,10 @@ function providerAdmissionCurrentnessComparisonFields(
     stable_truth_digest: identity.stable_truth_digest,
     volatile_projection_digest: identity.volatile_projection_digest,
     work_unit_digest: identity.work_unit_digest,
+    stage_packet_ref: identity.stage_packet_ref,
+    stage_packet_refs: identity.stage_packet_refs,
+    route_identity_key: identity.route_identity_key,
+    attempt_idempotency_key: identity.attempt_idempotency_key,
     recovery_obligation_id: identity.recovery_obligation_id,
   };
 }

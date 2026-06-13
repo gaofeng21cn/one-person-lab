@@ -7,6 +7,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-06-13
 
+### 决策：MAS current-control admission identity 必须包含 selected stage packet / route / attempt key
+
+原因：MAS DM003 复现出同一 `action_type + work_unit_id + work_unit_fingerprint` 下，旧 closeout 绑定旧 mutable dispatch，而当前 admission 绑定新的 immutable stage packet。MAS 修复 closeout evidence 后，OPL 基座也必须避免把同 fingerprint 的旧 queued / terminal admission 当成当前 admission；否则同类问题会在 OPL enqueue、tick、live attempt reconcile 或 terminal attempt no-op 路径继续复活。
+
+影响：
+
+- `providerAdmissionCurrentnessIdentity` 必须把 `stage_packet_ref`、规范化 `stage_packet_refs`、`route_identity_key` 和 `attempt_idempotency_key` 纳入 current-control admission identity；`idempotency_key` 只能兜底 attempt idempotency，不能替代 route identity。
+- `sameProviderAdmissionCurrentnessIdentity` 比较上述字段。只要 selected stage packet 或 route / attempt key 不一致，即使 work-unit id、fingerprint、source eval、truth/runtime epoch 与 source fingerprint 相同，也必须视为 stale / fresh identity 差异，允许 queued admission refresh、terminal attempt stale requeue 或 tick reconcile。
+- OPL 仍只处理 generic Runway / current-control identity，不解释 MAS paper recovery phase，不签 MAS owner receipt，不创建 MAS typed blocker，不写 Yang study/runtime artifacts，也不声明 paper progress、domain ready、App release ready、Brand L5 或 production ready。
+
 ### 决策：Family runtime 控制面输出与 hydrate/export 前置门必须 fail closed
 
 原因：Popper 审计指出三个相邻 control-plane 缺口会让 operator 或工具链误读运行态：`module_exec_profile` 的 domain-handler export 可在 dirty checkout 上执行并入队，`attempt list --compact-timeline` 顶层 JSON 没有稳定数组字段，`--payload-match payload.*` / `task.payload.*` 会被当作真实 payload path 静默接受。这些都不会直接写 domain truth，但会让 hydrate/tick、monitoring 和 scope selector 产生 false progress 或 false empty read。

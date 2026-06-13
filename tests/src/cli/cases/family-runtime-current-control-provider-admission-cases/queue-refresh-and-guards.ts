@@ -567,6 +567,112 @@ test('family-runtime enqueue replaces stale queued MAS current-control admission
   }
 });
 
+test('family-runtime enqueue replaces same-fingerprint MAS current-control admission when stage packet identity changes', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    createQueueTables(db);
+    const taskId = 'task-mas-current-control-queued-stale-stage-packet';
+    const dedupeKey = 'owner-route::003-dpcc-primary-care-phenotype-treatment-gap::current-control-stage-packet';
+    const workUnitFingerprint = 'publication-blockers::0915410f804b3697';
+    const stalePayload = {
+      ...currentControlAdmissionPayload(
+        workUnitFingerprint,
+        '01',
+        workUnitFingerprint,
+      ),
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      quest_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      action_type: 'run_quality_repair_batch',
+      next_executable_owner: 'write',
+      work_unit_id: 'medical_prose_write_repair',
+      stage_packet_ref:
+        'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json',
+      stage_packet_refs: [
+        'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json',
+      ],
+    };
+    stalePayload.owner_route_currentness_basis = {
+      ...stalePayload.owner_route_currentness_basis,
+      work_unit_id: 'medical_prose_write_repair',
+    };
+    const freshPayload = {
+      ...currentControlAdmissionPayload(
+        workUnitFingerprint,
+        '01',
+        workUnitFingerprint,
+      ),
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      quest_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      action_type: 'run_quality_repair_batch',
+      next_executable_owner: 'write',
+      work_unit_id: 'medical_prose_write_repair',
+      stage_packet_ref:
+        'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/immutable/run_quality_repair_batch/77fa1796dc1d50c2b7687a9f.json',
+      stage_packet_refs: [
+        'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/immutable/run_quality_repair_batch/77fa1796dc1d50c2b7687a9f.json',
+      ],
+    };
+    freshPayload.owner_route_currentness_basis = {
+      ...freshPayload.owner_route_currentness_basis,
+      work_unit_id: 'medical_prose_write_repair',
+    };
+    insertQueuedTask(db, {
+      taskId,
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload: stalePayload,
+      dedupeKey,
+    });
+
+    const result = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload: freshPayload,
+      dedupeKey,
+      source: 'test-current-control-stage-packet-refresh',
+    });
+    const task = db.prepare('SELECT status, attempts, payload_json FROM tasks WHERE task_id = ?').get(taskId) as {
+      status: string;
+      attempts: number;
+      payload_json: string;
+    };
+    const requeueEvent = db.prepare(`
+      SELECT payload_json
+      FROM events
+      WHERE task_id = ? AND event_type = 'task_requeued_from_mas_current_control_provider_admission'
+      LIMIT 1
+    `).get(taskId) as { payload_json: string } | undefined;
+    const payload = JSON.parse(task.payload_json);
+    const eventPayload = requeueEvent ? JSON.parse(requeueEvent.payload_json) : null;
+
+    assert.equal(result.accepted, true);
+    assert.equal(result.requeued_from_terminal, false);
+    assert.equal(result.idempotent_noop, false);
+    assert.equal(result.task?.status, 'queued');
+    assert.equal(task.status, 'queued');
+    assert.equal(task.attempts, 0);
+    assert.equal(
+      payload.stage_packet_ref,
+      'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/immutable/run_quality_repair_batch/77fa1796dc1d50c2b7687a9f.json',
+    );
+    assert.ok(requeueEvent);
+    assert.equal(
+      eventPayload.reason,
+      'mas_current_control_provider_admission_fresh_after_queued',
+    );
+    assert.equal(
+      eventPayload.previous_currentness_identity.stage_packet_ref,
+      'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json',
+    );
+    assert.equal(
+      eventPayload.next_currentness_identity.stage_packet_ref,
+      'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/immutable/run_quality_repair_batch/77fa1796dc1d50c2b7687a9f.json',
+    );
+  } finally {
+    db.close();
+  }
+});
+
 test('family-runtime stage attempt locator keeps fresh MAS payload fingerprint ahead of stale nested owner-route basis', () => {
   const db = new DatabaseSync(':memory:');
   try {
