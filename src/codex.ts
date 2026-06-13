@@ -10,7 +10,6 @@ import {
 import {
   attachLineBuffer,
   createCodexExecEventParserState,
-  extractCodexRecentOutput,
   findPendingUnsupportedFunctionCalls,
   parseCodexExecEventFromLine,
   terminateChildProcessGroup,
