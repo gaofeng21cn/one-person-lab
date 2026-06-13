@@ -25,7 +25,7 @@ type DomainHandlerProcessResult = SpawnSyncReturns<string> & {
   };
 };
 
-export function resolveFamilyRuntimeDomainHandlerTimeoutMs() {
+function resolveFamilyRuntimeDomainHandlerTimeoutMs() {
   const raw = process.env.OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS?.trim();
   if (!raw) {
     return DEFAULT_DOMAIN_HANDLER_TIMEOUT_MS;

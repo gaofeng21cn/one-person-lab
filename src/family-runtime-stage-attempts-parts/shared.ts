@@ -19,7 +19,7 @@ export function normalizeJsonList(value?: string[]) {
   return Array.isArray(value) ? value.filter((entry) => entry.trim()).map((entry) => entry.trim()) : [];
 }
 
-export function normalizeActivityEvent(value: Record<string, unknown>) {
+function normalizeActivityEvent(value: Record<string, unknown>) {
   return {
     event_time: nowIso(),
     ...value,
