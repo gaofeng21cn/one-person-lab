@@ -98,13 +98,11 @@ function workspaceRelativeRef(value: string | null, workspaceRoot: string | null
 function currentControlStagePacketRefs(input: {
   candidate: Record<string, unknown>;
   workspaceRoot: string | null;
-  dispatchRef: string | null;
 }) {
   return uniqueStrings([
     workspaceRelativeRef(optionalString(input.candidate.stage_packet_ref), input.workspaceRoot),
     ...stringList(input.candidate.stage_packet_refs).map((ref) => workspaceRelativeRef(ref, input.workspaceRoot)),
     ...stringList(input.candidate.checkpoint_refs).map((ref) => workspaceRelativeRef(ref, input.workspaceRoot)),
-    input.dispatchRef,
   ]);
 }
 
@@ -160,14 +158,16 @@ function providerAdmissionSourceRefs(input: {
 
 function providerAdmissionDedupeKey(input: {
   candidate: Record<string, unknown>;
+  routeIdentityKey: string;
+  attemptIdempotencyKey: string;
   profileName: string | null;
   studyId: string;
   actionType: string;
   dispatchAuthority: string;
   sourceFingerprint: string;
 }) {
-  return optionalString(input.candidate.idempotency_key)
-    ?? optionalString(input.candidate.dedupe_key)
+  return input.attemptIdempotencyKey
+    ?? input.routeIdentityKey
     ?? [
       'mas',
       input.profileName ?? 'current-control',
@@ -307,6 +307,12 @@ function currentControlProviderAdmissionCandidateFromActionQueueItem(
   const obligationId = recoveryObligationId(action)
     ?? recoveryObligationId(handoff)
     ?? recoveryObligationId(ownerRoute);
+  const routeIdentityKey = optionalString(action.route_identity_key)
+    ?? optionalString(handoff.route_identity_key)
+    ?? optionalString(ownerRoute?.route_identity_key);
+  const attemptIdempotencyKey = optionalString(action.attempt_idempotency_key)
+    ?? optionalString(handoff.attempt_idempotency_key)
+    ?? optionalString(ownerRoute?.attempt_idempotency_key);
   return {
     ...action,
     status: 'provider_admission_pending',
@@ -326,6 +332,8 @@ function currentControlProviderAdmissionCandidateFromActionQueueItem(
     ...(obligationId ? { recovery_obligation_id: obligationId } : {}),
     required_output_surface: optionalString(action.required_output_surface),
     idempotency_key: optionalString(handoff.idempotency_key) ?? optionalString(ownerRoute?.idempotency_key),
+    ...(routeIdentityKey ? { route_identity_key: routeIdentityKey } : {}),
+    ...(attemptIdempotencyKey ? { attempt_idempotency_key: attemptIdempotencyKey } : {}),
     currentness_basis: currentControlCurrentnessBasis({
       currentControl,
       action,
@@ -448,13 +456,30 @@ function currentControlProviderAdmissionInputFrom(
   const stagePacketRefs = currentControlStagePacketRefs({
     candidate,
     workspaceRoot,
-    dispatchRef,
   });
   const stagePacketRef = stagePacketRefs[0] ?? null;
   if (!stagePacketRef && (optionalString(candidate.executor_kind) ?? 'codex_cli_default') === 'codex_cli_default') {
     return {
       blocked: {
         reason: 'current_control_provider_admission_stage_packet_ref_missing',
+        task: candidate,
+      },
+    };
+  }
+  const routeIdentityKey = optionalString(candidate.route_identity_key);
+  if (!routeIdentityKey) {
+    return {
+      blocked: {
+        reason: 'current_control_provider_admission_route_identity_key_missing',
+        task: candidate,
+      },
+    };
+  }
+  const attemptIdempotencyKey = optionalString(candidate.attempt_idempotency_key);
+  if (!attemptIdempotencyKey) {
+    return {
+      blocked: {
+        reason: 'current_control_provider_admission_attempt_idempotency_key_missing',
         task: candidate,
       },
     };
@@ -485,6 +510,8 @@ function currentControlProviderAdmissionInputFrom(
         work_unit_fingerprint: workUnitFingerprint,
         action_fingerprint: optionalString(candidate.action_fingerprint) ?? workUnitFingerprint,
         source_fingerprint: sourceFingerprint,
+        route_identity_key: routeIdentityKey,
+        attempt_idempotency_key: attemptIdempotencyKey,
         dispatch_authority: dispatchAuthority,
         executor_kind: optionalString(candidate.executor_kind) ?? 'codex_cli_default',
         ...(dispatchRef ? { dispatch_ref: dispatchRef } : {}),
@@ -518,6 +545,8 @@ function currentControlProviderAdmissionInputFrom(
       },
       dedupeKey: providerAdmissionDedupeKey({
         candidate,
+        routeIdentityKey,
+        attemptIdempotencyKey,
         profileName,
         studyId,
         actionType,

@@ -71,8 +71,30 @@ export function currentControlActionQueueItem(input: {
   nextOwner?: string;
   dispatchable?: boolean | null;
   recoveryObligationId?: string;
+  dispatchRef?: string;
+  dispatchPath?: string;
+  stagePacketRef?: string;
+  stagePacketRefs?: string[];
+  checkpointRefs?: string[];
+  routeIdentityKey?: string;
+  attemptIdempotencyKey?: string;
 }) {
   const nextOwner = input.nextOwner ?? 'ai_reviewer';
+  const routeIdentityKey = input.routeIdentityKey ?? [
+    'owner-route',
+    input.studyId,
+    input.actionType,
+    input.workUnitId,
+    input.workUnitFingerprint,
+  ].join('::');
+  const attemptIdempotencyKey = input.attemptIdempotencyKey ?? [
+    'owner-route-attempt',
+    input.studyId,
+    input.truthEpoch,
+    nextOwner,
+    input.workUnitId,
+    input.workUnitFingerprint,
+  ].join('::');
   return {
     action_fingerprint: input.workUnitFingerprint,
     action_type: input.actionType,
@@ -84,21 +106,28 @@ export function currentControlActionQueueItem(input: {
     ...(input.recoveryObligationId ? { recovery_obligation_id: input.recoveryObligationId } : {}),
     required_output_surface: 'artifacts/publication_eval/ai_reviewer_responses/*_publication_eval_record.json',
     owner: nextOwner,
+    ...(input.dispatchRef ? { dispatch_ref: input.dispatchRef } : {}),
+    ...(input.dispatchPath ? { dispatch_path: input.dispatchPath } : {}),
+    ...(input.stagePacketRef ? { stage_packet_ref: input.stagePacketRef } : {}),
+    ...(input.stagePacketRefs ? { stage_packet_refs: input.stagePacketRefs } : {}),
+    ...(input.checkpointRefs ? { checkpoint_refs: input.checkpointRefs } : {}),
+    route_identity_key: routeIdentityKey,
+    attempt_idempotency_key: attemptIdempotencyKey,
     handoff_packet: {
       action_fingerprint: input.workUnitFingerprint,
       action_type: input.actionType,
-      idempotency_key: [
-        'owner-route',
-        input.studyId,
-        input.truthEpoch,
-        nextOwner,
-        input.workUnitId,
-        input.workUnitFingerprint,
-      ].join('::'),
+      idempotency_key: attemptIdempotencyKey,
+      route_identity_key: routeIdentityKey,
+      attempt_idempotency_key: attemptIdempotencyKey,
       next_executable_owner: nextOwner,
       owner: nextOwner,
       quest_id: input.studyId,
       study_id: input.studyId,
+      ...(input.dispatchRef ? { dispatch_ref: input.dispatchRef } : {}),
+      ...(input.dispatchPath ? { dispatch_path: input.dispatchPath } : {}),
+      ...(input.stagePacketRef ? { stage_packet_ref: input.stagePacketRef } : {}),
+      ...(input.stagePacketRefs ? { stage_packet_refs: input.stagePacketRefs } : {}),
+      ...(input.checkpointRefs ? { checkpoint_refs: input.checkpointRefs } : {}),
       ...(input.recoveryObligationId ? { recovery_obligation_id: input.recoveryObligationId } : {}),
       owner_route: {
         currentness_contract: {
@@ -117,7 +146,9 @@ export function currentControlActionQueueItem(input: {
           stable_truth_digest: `truth:${input.truthEpoch}`,
           work_unit_digest: `work-unit:${input.workUnitFingerprint}`,
         },
-        idempotency_key: `owner-route::${input.studyId}::${input.truthEpoch}::${nextOwner}::${input.workUnitId}`,
+        idempotency_key: attemptIdempotencyKey,
+        route_identity_key: routeIdentityKey,
+        attempt_idempotency_key: attemptIdempotencyKey,
         next_owner: nextOwner,
         owner_route_attempt_protocol: {
           authority_boundary: {
@@ -198,6 +229,8 @@ export function currentControlAdmissionPayload(
   generation: string,
   workUnitFingerprint = `sha256:current-control-${generation}`,
 ) {
+  const routeIdentityKey = `mas-route::${generation}::return_to_ai_reviewer_workflow::${workUnitFingerprint}`;
+  const attemptIdempotencyKey = `mas-attempt::${generation}::return_to_ai_reviewer_workflow::${workUnitFingerprint}`;
   return {
     ...defaultExecutorPayload(sourceFingerprint),
     action_type: 'return_to_ai_reviewer_workflow',
@@ -206,11 +239,19 @@ export function currentControlAdmissionPayload(
     work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
     work_unit_fingerprint: workUnitFingerprint,
     action_fingerprint: workUnitFingerprint,
+    route_identity_key: routeIdentityKey,
+    attempt_idempotency_key: attemptIdempotencyKey,
+    stage_packet_ref: `studies/002-dm-china-us-mortality-attribution/artifacts/stage_packets/current-control-${generation}.json`,
+    stage_packet_refs: [
+      `studies/002-dm-china-us-mortality-attribution/artifacts/stage_packets/current-control-${generation}.json`,
+    ],
     provider_admission_schema_source: 'action_queue',
     provider_admission_identity: {
       status: 'provider_admission_pending',
       provider_admission_schema_source: 'action_queue',
       action_fingerprint: workUnitFingerprint,
+      route_identity_key: routeIdentityKey,
+      attempt_idempotency_key: attemptIdempotencyKey,
     },
     owner_route_currentness_basis: {
       schema_version: 1,

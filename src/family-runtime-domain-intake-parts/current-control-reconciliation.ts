@@ -14,6 +14,12 @@ function currentControlAdmissionStudyIds(inputs: EnqueueInput[]) {
     .filter((studyId): studyId is string => Boolean(studyId)));
 }
 
+function currentControlBlockedStudyIds(blocked: Array<{ reason: string; task: unknown }>) {
+  return new Set(blocked
+    .map((item) => isRecord(item.task) ? optionalString(item.task.study_id) : null)
+    .filter((studyId): studyId is string => Boolean(studyId)));
+}
+
 function payloadString(input: EnqueueInput, key: string) {
   return optionalString(input.payload[key]);
 }
@@ -88,8 +94,12 @@ export function reconcileCurrentControlExecutableOwners(
 export function suppressStaleDefaultExecutorInputs(
   inputs: EnqueueInput[],
   currentAdmissionInputs: EnqueueInput[],
+  currentAdmissionBlocked: Array<{ reason: string; task: unknown }> = [],
 ) {
   const currentStudyIds = currentControlAdmissionStudyIds(currentAdmissionInputs);
+  for (const studyId of currentControlBlockedStudyIds(currentAdmissionBlocked)) {
+    currentStudyIds.add(studyId);
+  }
   if (currentStudyIds.size === 0) {
     return { inputs, suppressed_count: 0 };
   }

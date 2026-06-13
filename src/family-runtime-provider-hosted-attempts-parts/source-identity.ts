@@ -24,7 +24,6 @@ export function defaultExecutorStagePacketRefs(payload: Record<string, unknown>)
     workspaceRelativeRef(optionalString(payload.stage_packet_ref), workspaceRoot),
     ...stringList(payload.stage_packet_refs).map((ref) => workspaceRelativeRef(ref, workspaceRoot)),
     ...stringList(payload.checkpoint_refs).map((ref) => workspaceRelativeRef(ref, workspaceRoot)),
-    defaultExecutorDispatchRef(payload),
   ]);
 }
 

@@ -184,7 +184,11 @@ function exportedTaskInputs(
     currentControlRaw.inputs,
     pending.inputs,
   );
-  const pendingAfterCurrentControl = suppressStaleDefaultExecutorInputs(pending.inputs, currentControlInputs);
+  const pendingAfterCurrentControl = suppressStaleDefaultExecutorInputs(
+    pending.inputs,
+    currentControlInputs,
+    currentControlRaw.blocked,
+  );
   const transitions = transitionTaskInputsFromMatrix(domainId, output, source);
   const exportedInputs = [...currentControlInputs, ...pendingAfterCurrentControl.inputs, ...transitions.inputs];
   const inputs = exportedInputs.filter((taskInput) => taskInputMatchesScope(taskInput, taskScope));

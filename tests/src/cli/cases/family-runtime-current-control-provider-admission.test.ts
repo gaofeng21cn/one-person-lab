@@ -60,6 +60,8 @@ test('family-runtime intake admits MAS current-control provider candidates ahead
           'default_executor_dispatches',
           'return_to_ai_reviewer_workflow.json',
         ),
+        route_identity_key: 'owner-route::dm002::ai-reviewer-current',
+        attempt_idempotency_key: 'owner-route-attempt::dm002::ai-reviewer-current',
         execution_ref: path.join(
           workspaceRoot,
           'studies',
@@ -108,6 +110,8 @@ test('family-runtime intake admits MAS current-control provider candidates ahead
           'stage_packets',
           'return_to_ai_reviewer_workflow.stage-packet.json',
         ),
+        route_identity_key: 'owner-route::dm003::ai-reviewer-current',
+        attempt_idempotency_key: 'owner-route-attempt::dm003::ai-reviewer-current',
         checkpoint_refs: [
           path.join(
             workspaceRoot,
@@ -179,47 +183,17 @@ test('family-runtime intake admits MAS current-control provider candidates ahead
       task,
     ]));
 
-    assert.equal(intake.family_runtime_intake.enqueued_count, 2);
+    assert.equal(intake.family_runtime_intake.enqueued_count, 1);
+    assert.equal(intake.family_runtime_intake.blocked_count, 1);
     assert.equal(intake.family_runtime_intake.exports[0].exported_count, 2);
-    assert.equal(tasks.length, 2);
+    assert.equal(intake.family_runtime_intake.exports[0].blocked[0].reason, 'current_control_provider_admission_stage_packet_ref_missing');
+    assert.equal(tasks.length, 1);
     assert.deepEqual(Object.keys(tasksByStudy).sort(), [
-      '002-dm-china-us-mortality-attribution',
       '003-dpcc-primary-care-phenotype-treatment-gap',
     ]);
-    assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].task_kind, 'domain_owner/default-executor-dispatch');
-    assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].priority, 95);
-    assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].source, 'opl-current-control-provider-admission');
-    assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.action_type, 'return_to_ai_reviewer_workflow');
-    assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.work_unit_fingerprint, 'sha256:current-dm002');
-    assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.source_fingerprint, 'sha256:current-dm002');
-    assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.next_executable_owner, 'ai_reviewer');
-    assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.provider_completion_is_domain_completion, false);
-    assert.equal(
-      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.dispatch_ref,
-      'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json',
-    );
-    assert.equal(
-      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.stage_packet_ref,
-      'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json',
-    );
-    assert.deepEqual(
-      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.checkpoint_refs,
-      [
-        'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json',
-      ],
-    );
-    assert.deepEqual(
-      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.stage_packet_refs,
-      [
-        'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json',
-      ],
-    );
-    assert.equal(
-      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.stage_transition_authority_boundary.intent_can_publish_current_owner_delta,
-      false,
-    );
-    assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.provider_admission_identity.status, 'provider_admission_pending');
     assert.equal(tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.work_unit_fingerprint, 'sha256:current-dm003');
+    assert.equal(tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.route_identity_key, 'owner-route::dm003::ai-reviewer-current');
+    assert.equal(tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.attempt_idempotency_key, 'owner-route-attempt::dm003::ai-reviewer-current');
     assert.equal(
       tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.stage_packet_ref,
       'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/stage_packets/return_to_ai_reviewer_workflow.stage-packet.json',
@@ -229,7 +203,6 @@ test('family-runtime intake admits MAS current-control provider candidates ahead
       [
         'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/stage_packets/return_to_ai_reviewer_workflow.stage-packet.json',
         'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/stage_packets/checkpoints/ai-reviewer-current.json',
-        'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json',
       ],
     );
     assert.deepEqual(
@@ -237,7 +210,6 @@ test('family-runtime intake admits MAS current-control provider candidates ahead
       [
         'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/stage_packets/return_to_ai_reviewer_workflow.stage-packet.json',
         'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/stage_packets/checkpoints/ai-reviewer-current.json',
-        'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json',
       ],
     );
     assert.equal(
@@ -273,6 +245,20 @@ test('family-runtime intake admits MAS current-control handoff action_queue prov
     '003-dpcc-primary-care-phenotype-treatment-gap',
     'return_to_ai_reviewer_workflow',
   );
+  const dm002StagePacketRef = [
+    'studies',
+    '002-dm-china-us-mortality-attribution',
+    'artifacts',
+    'stage_packets',
+    'return_to_ai_reviewer_workflow.stage-packet.json',
+  ].join('/');
+  const dm003StagePacketRef = [
+    'studies',
+    '003-dpcc-primary-care-phenotype-treatment-gap',
+    'artifacts',
+    'stage_packets',
+    'return_to_ai_reviewer_workflow.stage-packet.json',
+  ].join('/');
   fs.mkdirSync(path.dirname(currentControlPath), { recursive: true });
   fs.writeFileSync(currentControlPath, JSON.stringify({
     surface: 'opl_current_control_state_handoff',
@@ -288,6 +274,11 @@ test('family-runtime intake admits MAS current-control handoff action_queue prov
         truthEpoch: 'truth-event-000040',
         runtimeHealthEpoch: 'runtime-health-event-006692',
         recoveryObligationId: 'paper-recovery-obligation:dm002:revise-ai-reviewer',
+        dispatchRef: dm002DispatchRef,
+        stagePacketRef: dm002StagePacketRef,
+        stagePacketRefs: [dm002StagePacketRef],
+        routeIdentityKey: 'owner-route::dm002::handoff',
+        attemptIdempotencyKey: 'owner-route-attempt::dm002::handoff',
       }),
     ],
     studies: [
@@ -302,6 +293,11 @@ test('family-runtime intake admits MAS current-control handoff action_queue prov
             sourceFingerprint: 'truth-snapshot::dm003-handoff',
             truthEpoch: 'truth-event-000030',
             runtimeHealthEpoch: 'runtime-health-event-006486',
+            dispatchRef: dm003DispatchRef,
+            stagePacketRef: dm003StagePacketRef,
+            stagePacketRefs: [dm003StagePacketRef],
+            routeIdentityKey: 'owner-route::dm003::handoff',
+            attemptIdempotencyKey: 'owner-route-attempt::dm003::handoff',
           }),
         ],
       },
@@ -351,9 +347,11 @@ test('family-runtime intake admits MAS current-control handoff action_queue prov
     );
     assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.source_fingerprint, 'truth-snapshot::dm002-handoff');
     assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.dispatch_ref, dm002DispatchRef);
-    assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.stage_packet_ref, dm002DispatchRef);
-    assert.deepEqual(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.checkpoint_refs, [dm002DispatchRef]);
-    assert.deepEqual(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.stage_packet_refs, [dm002DispatchRef]);
+    assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.stage_packet_ref, dm002StagePacketRef);
+    assert.deepEqual(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.checkpoint_refs, [dm002StagePacketRef]);
+    assert.deepEqual(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.stage_packet_refs, [dm002StagePacketRef]);
+    assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.route_identity_key, 'owner-route::dm002::handoff');
+    assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.attempt_idempotency_key, 'owner-route-attempt::dm002::handoff');
     assert.equal(
       tasksByStudy['002-dm-china-us-mortality-attribution'].payload.owner_route_currentness_basis.truth_epoch,
       'truth-event-000040',
@@ -369,7 +367,7 @@ test('family-runtime intake admits MAS current-control handoff action_queue prov
       undefined,
     );
     assert.equal(tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.dispatch_ref, dm003DispatchRef);
-    assert.equal(tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.stage_packet_ref, dm003DispatchRef);
+    assert.equal(tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.stage_packet_ref, dm003StagePacketRef);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -480,6 +478,13 @@ test('family-runtime intake reconciles current-control display owner to executab
     actionType,
   ].join('::');
   const dispatchRef = writeDefaultExecutorDispatchPacket(workspaceRoot, studyId, actionType);
+  const stagePacketRef = [
+    'studies',
+    studyId,
+    'artifacts',
+    'stage_packets',
+    'run_gate_clearing_batch.stage-packet.json',
+  ].join('/');
   fs.mkdirSync(path.dirname(currentControlPath), { recursive: true });
   fs.writeFileSync(currentControlPath, JSON.stringify({
     surface: 'opl_current_control_state_handoff',
@@ -497,6 +502,10 @@ test('family-runtime intake reconciles current-control display owner to executab
         source_fingerprint: workUnitFingerprint,
         dispatch_authority: 'consumer_default_executor_dispatch',
         dispatch_path: path.join(workspaceRoot, dispatchRef),
+        stage_packet_ref: stagePacketRef,
+        stage_packet_refs: [stagePacketRef],
+        route_identity_key: 'owner-route::dm003::gate-clearing-current',
+        attempt_idempotency_key: 'owner-route-attempt::dm003::gate-clearing-current',
         next_executable_owner: 'finalize',
         owner_route_current: true,
         provider_attempt_or_lease_required: true,
@@ -637,6 +646,99 @@ test('family-runtime intake blocks current-control action_queue provider candida
     assert.equal(
       intake.family_runtime_intake.exports[0].blocked[0].reason,
       'current_control_provider_admission_stage_packet_ref_missing',
+    );
+    assert.equal(queue.family_runtime_queue.tasks.length, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime intake blocks current-control provider candidates with incomplete route attempt identity', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-incomplete-identity-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-incomplete-identity-'));
+  const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  const exportPath = path.join(fixtureRoot, 'export');
+  const currentControlPath = path.join(
+    workspaceRoot,
+    'runtime',
+    'artifacts',
+    'supervision',
+    'opl_current_control_state',
+    'latest.json',
+  );
+  fs.mkdirSync(path.dirname(currentControlPath), { recursive: true });
+  fs.writeFileSync(currentControlPath, JSON.stringify({
+    surface: 'opl_current_control_state_handoff',
+    schema_version: 1,
+    generated_at: '2026-06-08T15:37:31+00:00',
+    provider_admission_candidates: [
+      {
+        status: 'provider_admission_pending',
+        study_id: '002-dm-china-us-mortality-attribution',
+        quest_id: '002-dm-china-us-mortality-attribution',
+        action_type: 'return_to_ai_reviewer_workflow',
+        work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+        work_unit_fingerprint: 'sha256:missing-route-identity',
+        action_fingerprint: 'sha256:missing-route-identity',
+        dispatch_authority: 'ai_reviewer_record_production_handoff',
+        dispatch_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json',
+        stage_packet_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/stage_packets/return_to_ai_reviewer_workflow.stage-packet.json',
+        attempt_idempotency_key: 'owner-route-attempt::dm002::missing-route',
+        next_executable_owner: 'ai_reviewer',
+        owner_route_current: true,
+        provider_attempt_or_lease_required: true,
+        provider_completion_is_domain_completion: false,
+        stage_transition_authority_boundary: providerObservationBoundary(),
+      },
+      {
+        status: 'provider_admission_pending',
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        quest_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        action_type: 'return_to_ai_reviewer_workflow',
+        work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+        work_unit_fingerprint: 'sha256:missing-attempt-identity',
+        action_fingerprint: 'sha256:missing-attempt-identity',
+        dispatch_authority: 'ai_reviewer_record_production_handoff',
+        dispatch_ref: 'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json',
+        stage_packet_ref: 'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/stage_packets/return_to_ai_reviewer_workflow.stage-packet.json',
+        route_identity_key: 'owner-route::dm003::missing-attempt',
+        next_executable_owner: 'ai_reviewer',
+        owner_route_current: true,
+        provider_attempt_or_lease_required: true,
+        provider_completion_is_domain_completion: false,
+        stage_transition_authority_boundary: providerObservationBoundary(),
+      },
+    ],
+  }), 'utf8');
+  writeJsonEmitterScript(exportPath, {
+    surface_kind: 'mas_family_domain_handler_export',
+    workspace: {
+      workspace_root: workspaceRoot,
+      workspace_exists: true,
+    },
+    pending_family_tasks: [],
+  });
+  const env = familyRuntimeEnv(stateRoot, {
+    OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
+  });
+  try {
+    const intake = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+    ], env);
+    const queue = runCli(['family-runtime', 'queue', 'list'], env);
+
+    assert.equal(intake.family_runtime_intake.enqueued_count, 0);
+    assert.equal(intake.family_runtime_intake.blocked_count, 2);
+    assert.deepEqual(
+      intake.family_runtime_intake.exports[0].blocked.map((item: { reason: string }) => item.reason),
+      [
+        'current_control_provider_admission_route_identity_key_missing',
+        'current_control_provider_admission_attempt_idempotency_key_missing',
+      ],
     );
     assert.equal(queue.family_runtime_queue.tasks.length, 0);
   } finally {
