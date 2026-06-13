@@ -61,7 +61,7 @@ export function payloadFromTask(row: FamilyRuntimeTaskRow) {
   return JSON.parse(row.payload_json) as Record<string, unknown>;
 }
 
-export function isNewerTask(
+function isNewerTask(
   left: Pick<FamilyRuntimeTaskRow, 'created_at' | 'task_id'>,
   right: DefaultExecutorCurrentTask,
 ) {
