@@ -270,7 +270,7 @@ Fresh readout discipline:
    rtk opl agents interfaces --family-defaults --json
    # read generated_direct_parity as regression guard only
    rtk opl framework operating-maturity --family-defaults --json
-   # read payload under .framework_operating_maturity; then read owner_evidence_intake, foundry_agent_os_production_evidence_gate.owner_route_work_orders, domain_owner_chain_scaleout.domain_owner_evidence_routes, unresolved_owner_gates, summary.provider_long_soak_open_count, and ready_claim_authorized
+   # read payload under .framework_operating_maturity; then read owner_evidence_intake, foundry_agent_os_production_evidence_gate.owner_route_work_orders, domain_owner_chain_scaleout.domain_owner_evidence_routes, unresolved_owner_gates.ready_claim_authorized, summary.provider_long_soak_open_count, and summary.ready_claim_authorized
    rtk opl runtime app-operator-drilldown --json
    # read payload under .app_operator_drilldown
    rtk opl brand-modules l5-status --json
