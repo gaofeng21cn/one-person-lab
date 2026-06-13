@@ -234,7 +234,7 @@ test('family-runtime attempt list defaults unfiltered readout to bounded audit-s
     createFamilyRuntimeQueueTables(db);
     const heavyBody = 'x'.repeat(128_000);
     for (let index = 0; index < 55; index += 1) {
-      createStageAttempt(db, {
+      const attempt = createStageAttempt(db, {
         domainId: 'medautoscience',
         stageId: `review-${String(index).padStart(2, '0')}`,
         providerKind: 'local_sqlite',
@@ -242,18 +242,27 @@ test('family-runtime attempt list defaults unfiltered readout to bounded audit-s
           workspace_root: '/tmp/mas',
           study_id: 'DM003',
         },
-        providerRun: {
+      }).attempt;
+      db.prepare(`
+        UPDATE stage_attempts
+        SET provider_run_json = ?,
+          activity_events_json = ?,
+          route_impact_json = ?
+        WHERE stage_attempt_id = ?
+      `).run(
+        JSON.stringify({
           provider_run_id: `provider-run-${index}`,
           transcript_body: heavyBody,
-        },
-        activityEvents: [{
+        }),
+        JSON.stringify([{
           event_id: `event-${index}`,
           payload_body: heavyBody,
-        }],
-        routeImpact: {
+        }]),
+        JSON.stringify({
           raw_route_payload: heavyBody,
-        },
-      });
+        }),
+        attempt.stage_attempt_id,
+      );
     }
 
     const output = await listStageAttemptsWithMonitoringProjection(db, { root: stateRoot });
@@ -268,9 +277,9 @@ test('family-runtime attempt list defaults unfiltered readout to bounded audit-s
     assert.equal(output.attempts.length, 25);
     assert.equal(output.compact_timeline?.length, 25);
     assert.deepEqual(output.attempts, output.compact_timeline);
-    assert.equal(output.attempts[0].provider_run, undefined);
-    assert.equal(output.attempts[0].activity_events, undefined);
-    assert.equal(output.attempts[0].route_impact, undefined);
+    assert.equal('provider_run' in output.attempts[0], false);
+    assert.equal('activity_events' in output.attempts[0], false);
+    assert.equal('route_impact' in output.attempts[0], false);
     assert.equal(outputJson.includes(heavyBody), false);
     assert.equal(outputJson.length < heavyBody.length * 10, true);
   } finally {
