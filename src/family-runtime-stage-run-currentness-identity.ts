@@ -64,13 +64,14 @@ export function buildStageRunCurrentnessIdentity(
   const ownerRoute = recordValue(taskPayload.owner_route) ?? {};
   const sourceRefs = recordValue(ownerRoute.source_refs) ?? {};
   const currentnessContract = recordValue(ownerRoute.currentness_contract) ?? {};
+  const workspaceLocator = recordValue(stageAttempt.workspace_locator)
+    ?? recordValue(taskPayload.workspace_locator)
+    ?? {};
   const basis = recordValue(sourceRefs.owner_route_currentness_basis)
     ?? recordValue(currentnessContract.basis)
     ?? recordValue(taskPayload.owner_route_currentness_basis)
+    ?? recordValue(workspaceLocator.owner_route_currentness_basis)
     ?? recordValue(currentOwnerDelta.currentness_basis)
-    ?? {};
-  const workspaceLocator = recordValue(stageAttempt.workspace_locator)
-    ?? recordValue(taskPayload.workspace_locator)
     ?? {};
   return {
     surface_kind: 'opl_stage_run_currentness_identity',

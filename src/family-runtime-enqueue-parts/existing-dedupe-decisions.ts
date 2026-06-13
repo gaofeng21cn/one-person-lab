@@ -193,7 +193,7 @@ function defaultExecutorCloseoutRedriveDecision(
   nextPayload: Record<string, unknown>,
 ) {
   if (
-    existing.status !== 'succeeded'
+    !['succeeded', 'blocked'].includes(existing.status)
     || !isDefaultExecutorDispatch(existing, existingPayload)
     || !isDefaultExecutorDispatch(existing, nextPayload)
   ) {
@@ -230,7 +230,8 @@ function defaultExecutorFreshCurrentControlAdmissionRedriveDecision(
     return null;
   }
   const existingIdentity = providerAdmissionCurrentnessIdentity(existingPayload);
-  const nextIdentity = providerAdmissionCurrentnessIdentity(nextPayload);
+  const nextIdentity = providerAdmissionCurrentnessIdentity(nextPayload)
+    ?? providerAdmissionCurrentnessIdentity(nextPayload, { requirePendingStatus: false });
   if (!existingIdentity || !nextIdentity) {
     return null;
   }
@@ -282,13 +283,14 @@ function defaultExecutorTerminalAttemptCurrentControlAdmissionRedriveDecision(
   stageAttempts: ReturnType<typeof listStageAttemptsForTask>,
 ) {
   if (
-    existing.status !== 'succeeded'
+    !['succeeded', 'blocked'].includes(existing.status)
     || !isDefaultExecutorDispatch(existing, existingPayload)
     || !isDefaultExecutorDispatch(existing, nextPayload)
   ) {
     return null;
   }
-  const nextIdentity = providerAdmissionCurrentnessIdentity(nextPayload);
+  const nextIdentity = providerAdmissionCurrentnessIdentity(nextPayload)
+    ?? providerAdmissionCurrentnessIdentity(nextPayload, { requirePendingStatus: false });
   if (!nextIdentity) {
     return null;
   }

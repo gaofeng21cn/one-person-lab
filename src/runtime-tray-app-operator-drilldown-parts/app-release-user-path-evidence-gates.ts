@@ -246,17 +246,42 @@ function typedBlockerGateIdFromRef(value: string) {
   return match ? safeDecodeURIComponent(match[1]).trim() : null;
 }
 
+function releaseOwnerVerdictTypedBlockerRef(value: string) {
+  const decoded = safeDecodeURIComponent(value);
+  return (
+    decoded.includes('typed_blocker_ref://')
+    && decoded.includes('/release-owner/')
+    && (
+      decoded.includes('/verdict-pending')
+      || decoded.includes('owner-verdict')
+    )
+  );
+}
+
 export function currentAppReleaseUserPathTypedBlockerRefs(input: {
   typedBlockerRefs: string[];
   openGateIds: Set<string>;
   selectedCohortId: string | null;
+  releaseOwnerReceiptRefs?: string[];
 }) {
+  const releaseOwnerReceiptCohortIds = new Set(
+    (input.releaseOwnerReceiptRefs ?? [])
+      .map(versionCohortFromRef)
+      .filter((entry): entry is string => Boolean(entry)),
+  );
   return input.typedBlockerRefs.filter((ref) => {
     const blockerCohortId = versionCohortFromRef(ref);
     if (
       input.selectedCohortId
       && blockerCohortId
       && blockerCohortId !== input.selectedCohortId
+    ) {
+      return false;
+    }
+    if (
+      blockerCohortId
+      && releaseOwnerReceiptCohortIds.has(blockerCohortId)
+      && releaseOwnerVerdictTypedBlockerRef(ref)
     ) {
       return false;
     }

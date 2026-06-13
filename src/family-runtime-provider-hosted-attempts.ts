@@ -22,6 +22,7 @@ import {
   buildStageRunCurrentnessIdentity,
   sameStageRunRouteCurrentnessIdentity,
 } from './family-runtime-stage-run-currentness-identity.ts';
+import { providerAdmissionCurrentnessIdentity } from './family-runtime-mas-current-control-admission-currentness.ts';
 import { buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-gate.ts';
 import {
   exportOwnerFingerprint,
@@ -860,6 +861,18 @@ function sourceFingerprintForProviderHostedTask(row: FamilyRuntimeTaskRow, paylo
     ]);
   }
   if (isDefaultExecutorDispatchTask(row, payload)) {
+    const admissionIdentity = providerAdmissionCurrentnessIdentity(payload);
+    if (admissionIdentity) {
+      return stableId('mas_default_executor_provider_admission_source', [
+        row.domain_id,
+        row.task_kind,
+        defaultExecutorDispatchRef(payload),
+        defaultExecutorSourceFingerprint(payload),
+        exportOwnerFingerprint(payload),
+        row.dedupe_key,
+        admissionIdentity,
+      ]);
+    }
     return stableId('mas_default_executor_source', [
       row.domain_id,
       row.task_kind,

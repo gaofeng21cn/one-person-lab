@@ -92,6 +92,7 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
     typedBlockerRefs: rawTypedBlockerRefs,
     openGateIds: new Set(openGateItems.map((gate) => gate.gate_id)),
     selectedCohortId: cohortGuard.selected_cohort_id,
+    releaseOwnerReceiptRefs,
   });
   const productionUserPathReady =
     openGateItems.length === 0

@@ -214,6 +214,103 @@ test('runtime App drilldown retires gate-scoped typed blocker after same-cohort 
   });
 });
 
+test('runtime App drilldown retires release-owner typed blocker after same-cohort owner verdict refs verify', () => {
+  withTempState('opl-app-release-owner-blocker-retired-state-', (stateRoot) => {
+    const blockerRef =
+      'typed_blocker_ref://one-person-lab-app/release-owner/26.6.12-owner-verdict/verdict-pending';
+    const blockerRecord = recordAppReleaseUserPathEvidence(stateRoot, {
+      typed_blocker_refs: [blockerRef],
+    });
+    runCli([
+      'runtime',
+      'app-release-evidence',
+      'verify',
+      '--receipt-ref',
+      blockerRecord.receipt_refs[0],
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const successRecord = recordAppReleaseUserPathEvidence(stateRoot, {
+      release_package_refs: [
+        'release_package_receipt_ref://one-person-lab-app/v26.6.12/remote-release-verification?run=27415765472',
+      ],
+      screenshot_refs: [
+        'screenshot_evidence_ref://one-person-lab-app/v26.6.12/standard-first-run/first-run-beginner.png',
+      ],
+      reload_prompt_user_path_refs: [
+        'first_run_log_ref://one-person-lab-app/v26.6.12/standard-first-run/first-run.jsonl',
+      ],
+      provider_state_linkage_refs: [
+        'provider_slo_receipt_ref://one-person-lab/v26.6.12/github-actions-window-cadence-satisfied',
+      ],
+      long_operator_evidence_refs: [
+        'long_operator_evidence_ref://one-person-lab-app/v26.6.12/operator-evidence-bundle',
+      ],
+    });
+    const ownerVerdictRecord = recordAppReleaseUserPathEvidence(stateRoot, {
+      release_owner_receipt_refs: [
+        'release_owner_receipt_ref://one-person-lab-app/release-owner/v26.6.12/receipt-20260612-owner-verdict',
+      ],
+      install_evidence_refs: [
+        'install_evidence_ref://one-person-lab-app/release-owner/26.6.12-owner-verdict/owner-review-handoff',
+      ],
+    });
+    for (const receiptRef of [
+      successRecord.receipt_refs[0],
+      ownerVerdictRecord.receipt_refs[0],
+    ]) {
+      runCli([
+        'runtime',
+        'app-release-evidence',
+        'verify',
+        '--receipt-ref',
+        receiptRef,
+      ], {
+        OPL_STATE_DIR: stateRoot,
+      });
+    }
+
+    const output = runCli(['runtime', 'app-operator-drilldown'], {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
+    const evidence = output.attention_first_payload.evidence_after_contract
+      .app_release_user_path_evidence;
+
+    assert.equal(evidence.status, 'app_release_user_path_evidence_refs_observed');
+    assert.equal(evidence.refs_observed_for_all_gates, true);
+    assert.equal(evidence.open_gate_count, 0);
+    assert.deepEqual(evidence.open_gate_ids, []);
+    assert.equal(evidence.typed_blocker_ref_count, 0);
+    assert.equal(evidence.blocked_by_typed_blocker_refs, false);
+    assert.deepEqual(evidence.historical_typed_blocker_refs, [blockerRef]);
+    assert.equal(evidence.historical_typed_blocker_ref_count, 1);
+    assert.equal(evidence.production_user_path_ready, true);
+    assert.equal(evidence.release_ready_claimed, false);
+    assert.equal(evidence.production_ready_claimed, false);
+    assert.deepEqual(
+      evidence.release_owner_verdict_handoff.observed_release_owner_receipt_refs,
+      [
+        'release_owner_receipt_ref://one-person-lab-app/release-owner/v26.6.12/receipt-20260612-owner-verdict',
+      ],
+    );
+    assert.deepEqual(
+      evidence.release_owner_verdict_handoff.observed_install_evidence_refs,
+      [
+        'install_evidence_ref://one-person-lab-app/release-owner/26.6.12-owner-verdict/owner-review-handoff',
+      ],
+    );
+    assert.equal(
+      evidence.release_owner_verdict_handoff.release_ready_authorized,
+      false,
+    );
+    assert.equal(output.summary.app_release_user_path_evidence_typed_blocker_ref_count, 0);
+    assert.equal(output.summary.app_release_user_path_production_user_path_ready, true);
+    assert.equal(output.summary.app_release_user_path_release_ready_claimed, false);
+    assert.equal(output.summary.app_release_user_path_production_ready_claimed, false);
+  });
+});
+
 test('runtime App drilldown ignores typed blocker refs from a different release cohort', () => {
   withTempState('opl-app-release-user-path-cross-cohort-blocker-state-', (stateRoot) => {
     const blockerRecord = recordAppReleaseUserPathEvidence(stateRoot, {
