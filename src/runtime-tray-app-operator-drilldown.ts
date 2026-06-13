@@ -83,6 +83,9 @@ import {
   buildDefaultCallerDeletionEvidenceRefs,
 } from './runtime-tray-app-operator-drilldown-parts/default-caller-deletion-evidence-refs.ts';
 import {
+  buildCleanupRetirementProjection,
+} from './runtime-tray-app-operator-drilldown-parts/cleanup-retirement-projection.ts';
+import {
   buildAppExecutionBridge,
 } from './runtime-tray-app-operator-drilldown-parts/execution-bridge.ts';
 import {
@@ -829,6 +832,10 @@ export function buildAppOperatorDrilldown(input: {
     summary,
     lifecycle_ledger_refs: lifecycleRefs,
   });
+  const cleanupRetirement = buildCleanupRetirementProjection({
+    defaultCallerDeletionEvidenceRefs,
+    legacyCleanupPlans,
+  });
   const sourceRefs: RuntimeTraySourceRef[] = uniqueByRef([
     sourceRef('/runtime_tray_snapshot/stage_attempt_workbench', 'stage_attempt_workbench'),
     sourceRef('/runtime_tray_snapshot/domain_projection_ingestion', 'domain_projection_ingestion'),
@@ -978,6 +985,7 @@ export function buildAppOperatorDrilldown(input: {
     },
     visual_ref_groups: record(runtimeVisualizationProjection.visual_ref_groups),
     domain_legacy_cleanup_plan_refs: legacyCleanupPlans,
+    cleanup_retirement: cleanupRetirement,
     standard_agent_template_consumption_refs: standardAgentTemplateConsumption,
     opl_meta_agent_workbench_refs: oplMetaAgentRegistry,
     oma_sections: record(oplMetaAgentRegistry.oma_sections),

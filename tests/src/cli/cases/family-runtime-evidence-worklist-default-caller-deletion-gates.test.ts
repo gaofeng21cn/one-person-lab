@@ -59,6 +59,27 @@ test('family-runtime evidence-worklist carries default-caller deletion evidence 
       '--detail',
       'full',
     ], familyRuntimeEnv(stateRoot, fixtureContractsRoot));
+    const cleanupRetirement = drilldown.app_operator_drilldown.cleanup_retirement;
+    assert.equal(cleanupRetirement.surface_kind, 'opl_app_drilldown_cleanup_retirement_projection');
+    assert.equal(cleanupRetirement.status, 'waiting_for_structural_prerequisites');
+    assert.equal(cleanupRetirement.deletion_evidence_worklist_count, 8);
+    assert.equal(cleanupRetirement.open_deletion_evidence_requirement_count, 24);
+    assert.equal(cleanupRetirement.physical_delete_authorized, false);
+    assert.equal(cleanupRetirement.default_caller_delete_ready, false);
+    assert.equal(cleanupRetirement.owner_decision_required_after_prerequisites_observed, false);
+    assert.equal(cleanupRetirement.owner_decision_required_after_all_refs_observed, false);
+    assert.equal(
+      cleanupRetirement.accepted_refs_only_result_shapes.includes('typed_blocker_ref'),
+      true,
+    );
+    assert.equal(
+      cleanupRetirement.not_authorized_claims.includes('domain_repo_physical_delete_authorization'),
+      true,
+    );
+    assert.equal(cleanupRetirement.authority_boundary.can_authorize_physical_delete, false);
+    assert.equal(cleanupRetirement.authority_boundary.can_execute_physical_delete, false);
+    assert.equal(cleanupRetirement.authority_boundary.can_sign_domain_owner_receipt, false);
+
     const refs = drilldown.app_operator_drilldown.default_caller_deletion_evidence_refs;
     assert.equal(refs.surface_kind, 'opl_default_caller_deletion_evidence_refs');
     assert.equal(refs.summary.deletion_evidence_worklist_count, 8);
