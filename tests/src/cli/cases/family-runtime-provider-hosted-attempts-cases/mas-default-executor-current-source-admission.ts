@@ -256,6 +256,121 @@ test('family-runtime requeues superseded MAS current-control provider admission 
   }
 });
 
+test('MAS current-control provider admission creates a fresh attempt when source eval currentness changes', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    withIsolatedFamilyRuntimeEnv(() => {
+      createQueueTables(db);
+      const basePayload = {
+        ...defaultExecutorPayloadForOwner({
+          sourceFingerprint: 'publication-blockers::0915410f804b3697',
+          actionType: 'run_quality_repair_batch',
+          nextOwner: 'write',
+          dispatchAuthority: 'consumer_default_executor_dispatch',
+          dispatchRef:
+            'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json',
+        }),
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        quest_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        work_unit_id: 'medical_prose_write_repair',
+        work_unit_fingerprint: 'publication-blockers::0915410f804b3697',
+        action_fingerprint: 'publication-blockers::0915410f804b3697',
+        required_output_surface: 'artifacts/controller/repair_execution_evidence/latest.json',
+        provider_attempt_or_lease_required: true,
+        provider_completion_is_domain_completion: false,
+      };
+      const oldPayload = {
+        ...basePayload,
+        owner_route_currentness_basis: {
+          source: 'publication_eval.recommended_actions.readiness_blocker_repair',
+          source_eval_id:
+            'publication-eval::003-dpcc-primary-care-phenotype-treatment-gap::003-dpcc-primary-care-phenotype-treatment-gap::2026-06-12T20:06:05+00:00',
+          truth_epoch: 'truth-event-000032-097fe584ce2a78fb',
+          runtime_health_epoch: 'runtime-health-event-006783-856c36f70452981a',
+          work_unit_id: 'medical_prose_write_repair',
+          work_unit_fingerprint: 'publication-blockers::0915410f804b3697',
+        },
+      };
+      const currentPayload = {
+        ...basePayload,
+        owner_route_currentness_basis: {
+          source: 'publication_eval.recommended_actions.readiness_blocker_repair',
+          source_eval_id:
+            'publication-eval::003-dpcc-primary-care-phenotype-treatment-gap::003-dpcc-primary-care-phenotype-treatment-gap::2026-06-13T00:48:48+00:00',
+          truth_epoch: 'truth-event-000035-39f0b8e96689a623',
+          runtime_health_epoch: 'runtime-health-event-006790-35465837978b7159',
+          work_unit_id: 'medical_prose_write_repair',
+          work_unit_fingerprint: 'publication-blockers::0915410f804b3697',
+        },
+        provider_admission_identity: {
+          status: 'provider_admission_pending',
+          action_type: 'run_quality_repair_batch',
+          attempt_idempotency_key:
+            'provider-admission::003-dpcc-primary-care-phenotype-treatment-gap::publication-blockers::0915410f804b3697',
+          route_identity_key:
+            'provider-admission::003-dpcc-primary-care-phenotype-treatment-gap::publication-blockers::0915410f804b3697',
+          source_eval_id:
+            'publication-eval::003-dpcc-primary-care-phenotype-treatment-gap::003-dpcc-primary-care-phenotype-treatment-gap::2026-06-13T00:48:48+00:00',
+          work_unit_id: 'medical_prose_write_repair',
+          work_unit_fingerprint: 'publication-blockers::0915410f804b3697',
+        },
+      };
+      insertDefaultExecutorTaskWithPayload(db, {
+        taskId: 'task-dm003-current-admission',
+        payload: oldPayload,
+        dedupeKey: 'mas:dm-cvd:003:default-executor:run_quality_repair_batch:medical-prose',
+        createdAt: '2026-06-12T23:34:50.000Z',
+        status: 'queued',
+      });
+      const oldRow = db.prepare(`
+        SELECT *
+        FROM tasks
+        WHERE task_id = ?
+      `).get('task-dm003-current-admission') as FamilyRuntimeTaskRow;
+      const oldAttempt = ensureProviderHostedStageAttempt(db, oldRow, oldPayload);
+      assert.ok(oldAttempt);
+      db.prepare(`
+        UPDATE stage_attempts
+        SET status = 'completed',
+          provider_run_json = json_set(provider_run_json, '$.provider_status', 'completed')
+        WHERE stage_attempt_id = ?
+      `).run(oldAttempt.stage_attempt_id);
+      db.prepare(`
+        UPDATE tasks
+        SET payload_json = ?, status = 'queued', attempts = 0, last_error = NULL, dead_letter_reason = NULL
+        WHERE task_id = ?
+      `).run(JSON.stringify(currentPayload), 'task-dm003-current-admission');
+      const currentRow = db.prepare(`
+        SELECT *
+        FROM tasks
+        WHERE task_id = ?
+      `).get('task-dm003-current-admission') as FamilyRuntimeTaskRow;
+
+      const currentAttempt = ensureProviderHostedStageAttempt(db, currentRow, currentPayload);
+      const attempts = db.prepare(`
+        SELECT stage_attempt_id, status, source_fingerprint, workspace_locator_json
+        FROM stage_attempts
+        WHERE task_id = ?
+        ORDER BY created_at ASC
+      `).all('task-dm003-current-admission') as Array<{
+        stage_attempt_id: string;
+        status: string;
+        source_fingerprint: string | null;
+        workspace_locator_json: string;
+      }>;
+
+      assert.ok(currentAttempt);
+      assert.equal(attempts.length, 2);
+      assert.notEqual(currentAttempt.stage_attempt_id, oldAttempt.stage_attempt_id);
+      assert.equal(currentAttempt.status, 'queued');
+      assert.equal(currentAttempt.workspace_locator.owner_route_currentness_basis.source_eval_id,
+        'publication-eval::003-dpcc-primary-care-phenotype-treatment-gap::003-dpcc-primary-care-phenotype-treatment-gap::2026-06-13T00:48:48+00:00');
+    });
+  } finally {
+    db.close();
+  }
+});
+
 test('family-runtime requeues superseded MAS current owner-route admission without provider identity', () => {
   const db = new DatabaseSync(':memory:');
   try {

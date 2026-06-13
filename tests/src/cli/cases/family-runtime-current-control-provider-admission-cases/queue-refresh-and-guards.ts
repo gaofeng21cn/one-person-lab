@@ -167,6 +167,116 @@ test('family-runtime rehydrates terminal MAS current-control admission when stag
   }
 });
 
+test('family-runtime rehydrates blocked MAS current-control admission when terminal attempts are stale', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    createQueueTables(db);
+    const taskId = 'task-mas-current-control-blocked-stale-terminal-attempts';
+    const stageAttemptId = 'sat_current_control_blocked_stale_terminal';
+    const dedupeKey = 'owner-route::003-dpcc-primary-care-phenotype-treatment-gap::current-control-blocked-stale';
+    const workUnitFingerprint = 'publication-blockers::0915410f804b3697';
+    const staleAttemptPayload = currentControlAdmissionPayload(
+      workUnitFingerprint,
+      '01',
+      workUnitFingerprint,
+    );
+    staleAttemptPayload.owner_route_currentness_basis = {
+      ...staleAttemptPayload.owner_route_currentness_basis,
+      source_eval_id:
+        'publication-eval::003-dpcc-primary-care-phenotype-treatment-gap::003-dpcc-primary-care-phenotype-treatment-gap::2026-06-12T20:06:05+00:00',
+    };
+    const freshPayload = {
+      ...currentControlAdmissionPayload(
+        workUnitFingerprint,
+        '02',
+        workUnitFingerprint,
+      ),
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      quest_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      action_type: 'run_quality_repair_batch',
+      next_executable_owner: 'write',
+      work_unit_id: 'medical_prose_write_repair',
+      required_output_surface: 'artifacts/controller/repair_execution_evidence/latest.json',
+    };
+    freshPayload.owner_route_currentness_basis = {
+      ...freshPayload.owner_route_currentness_basis,
+      work_unit_id: 'medical_prose_write_repair',
+      source_eval_id:
+        'publication-eval::003-dpcc-primary-care-phenotype-treatment-gap::003-dpcc-primary-care-phenotype-treatment-gap::2026-06-13T00:48:48+00:00',
+    };
+    insertQueuedTask(db, {
+      taskId,
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload: freshPayload,
+      dedupeKey,
+    });
+    db.prepare(`
+      UPDATE tasks
+      SET status = 'blocked', attempts = 1,
+        last_error = 'default executor dispatch has no launchable Temporal Codex stage attempt.',
+        dead_letter_reason = 'temporal_stage_attempt_start_failed'
+      WHERE task_id = ?
+    `).run(taskId);
+    insertCompletedCurrentControlStageAttempt(db, {
+      taskId,
+      stageAttemptId,
+      payload: staleAttemptPayload,
+    });
+
+    const result = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload: freshPayload,
+      dedupeKey,
+      source: 'test-current-control-replay',
+    });
+    const task = db.prepare(`
+      SELECT status, attempts, last_error, dead_letter_reason, payload_json
+      FROM tasks
+      WHERE task_id = ?
+    `).get(taskId) as {
+      status: string;
+      attempts: number;
+      last_error: string | null;
+      dead_letter_reason: string | null;
+      payload_json: string;
+    };
+    const requeueEvent = db.prepare(`
+      SELECT payload_json
+      FROM events
+      WHERE task_id = ? AND event_type = 'task_requeued_from_mas_current_control_provider_admission'
+      LIMIT 1
+    `).get(taskId) as { payload_json: string } | undefined;
+    const eventPayload = requeueEvent ? JSON.parse(requeueEvent.payload_json) : null;
+
+    assert.equal(result.accepted, true);
+    assert.equal(result.requeued_from_terminal, true);
+    assert.equal(result.idempotent_noop, false);
+    assert.equal(result.task?.status, 'queued');
+    assert.equal(task.status, 'queued');
+    assert.equal(task.attempts, 0);
+    assert.equal(task.last_error, null);
+    assert.equal(task.dead_letter_reason, null);
+    assert.ok(requeueEvent);
+    assert.equal(
+      eventPayload.reason,
+      'mas_current_control_provider_admission_fresh_after_terminal_attempt',
+    );
+    assert.equal(eventPayload.terminal_stage_attempt_id, stageAttemptId);
+    assert.equal(
+      eventPayload.terminal_currentness_identity.source_eval_id,
+      'publication-eval::003-dpcc-primary-care-phenotype-treatment-gap::003-dpcc-primary-care-phenotype-treatment-gap::2026-06-12T20:06:05+00:00',
+    );
+    assert.equal(
+      eventPayload.next_currentness_identity.source_eval_id,
+      'publication-eval::003-dpcc-primary-care-phenotype-treatment-gap::003-dpcc-primary-care-phenotype-treatment-gap::2026-06-13T00:48:48+00:00',
+    );
+  } finally {
+    db.close();
+  }
+});
+
 test('family-runtime clears stale running MAS current-control admission when linked attempt is terminal same identity', () => {
   const db = new DatabaseSync(':memory:');
   try {
