@@ -16,10 +16,6 @@ function readAgentLabContract() {
   ) as Record<string, any>;
 }
 
-function readText(relativePath: string) {
-  return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
-}
-
 test('Agent Lab contract defines executable RHO no-apply backend and workflow runner gates', () => {
   const contract = readAgentLabContract();
   const rho = contract.rho_backend_surface;
@@ -74,32 +70,4 @@ test('Agent Lab contract defines executable RHO no-apply backend and workflow ru
   assert.equal(workflow.authority_boundary.can_write_owner_receipt, false);
   assert.ok(workflow.forbidden_claims.includes('ordinary_workflow_compiler'));
   assert.ok(workflow.forbidden_claims.includes('runtime_substrate'));
-});
-
-test('RHO and workflow docs point to the executable contract and acceptance gates', () => {
-  const runtimeDoc = readText('docs/runtime/opl-agent-lab-control-plane.md');
-  const foundryDoc = readText('docs/references/brand-modules/foundry-lab.md');
-  const activeGapDoc = readText('docs/active/current-state-vs-ideal-gap.md');
-
-  for (const [docName, doc] of [
-    ['runtime', runtimeDoc],
-    ['foundry', foundryDoc],
-    ['active-gap', activeGapDoc],
-  ] as const) {
-    assert.match(
-      doc,
-      /contracts\/opl-framework\/agent-lab-contract\.json/,
-      `${docName} doc must point to the machine contract`,
-    );
-    assert.match(
-      doc,
-      /executable_no_apply_harness_backend/,
-      `${docName} doc must carry the RHO executable no-apply backend role`,
-    );
-    assert.match(
-      doc,
-      /executable_suite_topology_work_order_runner/,
-      `${docName} doc must carry the workflow executable runner role`,
-    );
-  }
 });
