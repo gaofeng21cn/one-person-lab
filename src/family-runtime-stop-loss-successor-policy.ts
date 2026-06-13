@@ -2,10 +2,10 @@ import type { DatabaseSync } from 'node:sqlite';
 
 type JsonRecord = Record<string, unknown>;
 
-export const ANTI_LOOP_BUDGET_EXHAUSTED_BLOCKER_CODE = 'anti_loop_budget_exhausted';
-export const PROGRESS_FIRST_OWNER_DELTA_REQUIRED_REASON = 'progress_first_owner_delta_required';
-export const STOP_LOSS_SUCCESSOR_ACTION_TYPE = 'publishability_repair_sprint';
-export const STOP_LOSS_SUCCESSOR_WORK_UNIT_ID =
+const ANTI_LOOP_BUDGET_EXHAUSTED_BLOCKER_CODE = 'anti_loop_budget_exhausted';
+const PROGRESS_FIRST_OWNER_DELTA_REQUIRED_REASON = 'progress_first_owner_delta_required';
+const STOP_LOSS_SUCCESSOR_ACTION_TYPE = 'publishability_repair_sprint';
+const STOP_LOSS_SUCCESSOR_WORK_UNIT_ID =
   'publishability_repair_sprint_after_anti_loop_budget_exhausted';
 
 type StopLossTask = {
@@ -51,7 +51,7 @@ function currentnessBasis(payload: JsonRecord) {
   return record(payload.owner_route_currentness_basis);
 }
 
-export function stopLossCurrentnessIdentity(payload: JsonRecord) {
+function stopLossCurrentnessIdentity(payload: JsonRecord) {
   const providerIdentity = providerAdmissionIdentity(payload);
   const basis = currentnessBasis(payload);
   return {
@@ -102,7 +102,7 @@ export function stopLossCurrentnessIdentity(payload: JsonRecord) {
   };
 }
 
-export function stopLossIdentityDifference(
+function stopLossIdentityDifference(
   previous: ReturnType<typeof stopLossCurrentnessIdentity>,
   next: ReturnType<typeof stopLossCurrentnessIdentity>,
 ) {
@@ -161,7 +161,7 @@ function sameStudyScope(
   );
 }
 
-export function isAntiLoopStopLossBlockedTask(task: StopLossTask) {
+function isAntiLoopStopLossBlockedTask(task: StopLossTask) {
   if (task.status !== 'blocked') {
     return false;
   }
@@ -175,7 +175,7 @@ export function isAntiLoopStopLossBlockedTask(task: StopLossTask) {
     ].includes(PROGRESS_FIRST_OWNER_DELTA_REQUIRED_REASON);
 }
 
-export function stopLossPolicyAllowsSuccessor(value: unknown) {
+function stopLossPolicyAllowsSuccessor(value: unknown) {
   const payload = record(value);
   const stopLossState = record(payload.stop_loss_state);
   const successorAdmission = record(stopLossState.successor_admission);
@@ -357,7 +357,7 @@ export function findAntiLoopStopLossSuccessorAdmission(
   return null;
 }
 
-export function antiLoopStopLossSuccessorAdmission(input: {
+function antiLoopStopLossSuccessorAdmission(input: {
   previousTaskId: string;
   previousPayload: JsonRecord;
   nextPayload: JsonRecord;
