@@ -692,6 +692,7 @@ function compactTimelineForAttempt(
     return {
       stage_attempt_id: base.stage_attempt_id,
       task_id: base.task_id,
+      provider_kind: attempt.provider_kind,
       domain_id: base.domain_id,
       study_id: base.study_id,
       stage_id: base.stage_id,
@@ -707,6 +708,7 @@ function compactTimelineForAttempt(
         status: base.current_provider_readiness?.status ?? null,
         degraded_reason: base.current_provider_readiness?.degraded_reason ?? null,
       },
+      provider_readiness_currentness: base.provider_readiness_currentness,
       provider_liveness_attention: livenessSummary(base.provider_liveness_attention),
       operator_summary: {
         attempt: base.operator_summary.attempt,
