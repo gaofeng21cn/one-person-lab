@@ -5,6 +5,12 @@ import {
 import {
   buildDomainDispatchEvidenceIdentityGuidance,
 } from '../domain-dispatch-evidence-identity-guidance.ts';
+import {
+  buildDomainDispatchRecordPayloadArtifacts,
+  DOMAIN_DISPATCH_RECORD_REQUIRED_PAYLOAD_REFS,
+  DOMAIN_DISPATCH_REQUIRED_RETURN_SHAPES,
+  DOMAIN_DISPATCH_SUPPLEMENTAL_PAYLOAD_REFS,
+} from './domain-dispatch-payload-artifacts.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -62,33 +68,6 @@ function runtimeActionExecuteCommand(input: {
     ...(input.payload ? [`--payload ${shellSingleQuotedJson(input.payload)}`] : []),
   ].join(' ');
 }
-
-const DOMAIN_DISPATCH_SUCCESS_CLOSEOUT_PAYLOAD_REFS = [
-  'domain_receipt_refs',
-  'owner_chain_refs',
-  'no_regression_refs',
-];
-
-const DOMAIN_DISPATCH_TYPED_BLOCKER_PAYLOAD_REFS = [
-  'typed_blocker_refs',
-];
-
-const DOMAIN_DISPATCH_SUPPLEMENTAL_PAYLOAD_REFS = [
-  'evidence_refs',
-];
-
-const DOMAIN_DISPATCH_RECORD_REQUIRED_PAYLOAD_REFS = [
-  ...DOMAIN_DISPATCH_SUCCESS_CLOSEOUT_PAYLOAD_REFS,
-  ...DOMAIN_DISPATCH_TYPED_BLOCKER_PAYLOAD_REFS,
-];
-
-const DOMAIN_DISPATCH_REQUIRED_RETURN_SHAPES = [
-  'domain_owner_receipt_ref',
-  'typed_blocker_ref',
-  'domain_typed_blocker_ref',
-  'owner_chain_ref',
-  'no_regression_ref',
-];
 
 function refsOnlyAuthorityBoundary() {
   return {
@@ -175,94 +154,17 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
       })
     : null;
   const recordedReceiptRef = stringList(attempt.dispatch_evidence_receipt_refs)[0] ?? null;
-  const payloadTemplate = recordMode
-    ? {
-        domain_receipt_refs: [],
-        typed_blocker_refs: [],
-        no_regression_refs: [],
-        owner_chain_refs: [],
-        evidence_refs: [],
-        ...(closeoutBindingRequirement.closeout_binding_ready
-          ? {
-              owner_delta_result: {
-                closeout_binding: closeoutBindingRequirement.closeout_binding,
-              },
-            }
-          : {}),
-      }
+  const recordPayloadArtifacts = recordMode
+    ? buildDomainDispatchRecordPayloadArtifacts({
+        domainId,
+        stageAttemptId,
+        closeoutBindingRequirement,
+      })
     : null;
-  const successPayloadExample = recordMode
-    ? {
-        domain_receipt_refs: [`<${domainId}-owner-receipt-ref>`],
-        typed_blocker_refs: [],
-        no_regression_refs: [`<${domainId}-no-regression-ref>`],
-        owner_chain_refs: [`<${domainId}-owner-chain-ref>`],
-        evidence_refs: [],
-        ...(closeoutBindingRequirement.closeout_binding_ready
-          ? {
-              owner_delta_result: {
-                closeout_binding: closeoutBindingRequirement.closeout_binding,
-              },
-            }
-          : {}),
-      }
-    : null;
-  const typedBlockerPayloadExample = recordMode
-    ? {
-        domain_receipt_refs: [],
-        typed_blocker_refs: [`<${domainId}-typed-blocker-ref>`],
-        no_regression_refs: [],
-        owner_chain_refs: [],
-        evidence_refs: [],
-        ...(closeoutBindingRequirement.closeout_binding_ready
-          ? {
-              owner_delta_result: {
-                closeout_binding: closeoutBindingRequirement.closeout_binding,
-              },
-            }
-          : {}),
-      }
-    : null;
-  const payloadWorkorder = recordMode
-    ? {
-        surface_kind: 'opl_domain_dispatch_evidence_payload_workorder',
-        workorder_policy:
-          'operator_must_choose_success_refs_path_or_domain_owned_typed_blocker_path_empty_template_blocks',
-        payload_owner: 'domain_repository_or_app_live_operator',
-        accepted_payload_paths: {
-          success_refs_path: {
-            required_any_operator_payload_refs: DOMAIN_DISPATCH_SUCCESS_CLOSEOUT_PAYLOAD_REFS,
-            supplemental_operator_payload_refs: DOMAIN_DISPATCH_SUPPLEMENTAL_PAYLOAD_REFS,
-            typed_blocker_refs_must_be_absent: true,
-            closes_domain_ready: false,
-            closes_production_ready: false,
-          },
-          typed_blocker_path: {
-            required_operator_payload_refs: DOMAIN_DISPATCH_TYPED_BLOCKER_PAYLOAD_REFS,
-            success_claimed: false,
-            closes_domain_ready: false,
-            closes_production_ready: false,
-          },
-        },
-        required_evidence_refs: [
-          `domain_dispatch:${domainId}:${stageAttemptId}:owner_receipt_or_typed_blocker`,
-        ],
-        required_return_shapes: DOMAIN_DISPATCH_REQUIRED_RETURN_SHAPES,
-        required_closeout_binding: closeoutBindingRequirement,
-        success_refs_path_payload: successPayloadExample,
-        typed_blocker_path_payload: typedBlockerPayloadExample,
-        empty_payload_template_is_success_evidence: false,
-        preflight_error_code: 'cli_usage_error',
-        preflight_blocked_error_kind: 'domain_dispatch_evidence_payload_preflight_blocked',
-        authority_boundary: {
-          can_write_domain_truth: false,
-          can_generate_domain_owner_receipt: false,
-          can_generate_typed_blocker: false,
-          can_close_domain_ready: false,
-          can_claim_production_ready: false,
-        },
-      }
-    : {};
+  const payloadTemplate = recordPayloadArtifacts?.payloadTemplate ?? null;
+  const successPayloadExample = recordPayloadArtifacts?.successPayloadExample ?? null;
+  const typedBlockerPayloadExample = recordPayloadArtifacts?.typedBlockerPayloadExample ?? null;
+  const payloadWorkorder = recordPayloadArtifacts?.payloadWorkorder ?? {};
   const args = [
     'agents',
     'evidence',

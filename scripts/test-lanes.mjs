@@ -69,6 +69,7 @@ const fastTestFiles = [
   'tests/src/functional-privatization-audit-envelope.test.ts',
   'tests/src/domain-dispatch-evidence-payload-preflight.test.ts',
   'tests/src/domain-dispatch-evidence-workorder-packet.test.ts',
+  'tests/src/runtime-tray-app-operator-domain-dispatch-action-routes.test.ts',
   'tests/src/family-runtime-lifecycle-index.test.ts',
   'tests/src/family-runtime-sqlite.test.ts',
   'tests/src/family-runtime-domain-intake-current-control-reconciliation.test.ts',
