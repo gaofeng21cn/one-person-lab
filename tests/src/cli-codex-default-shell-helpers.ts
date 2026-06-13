@@ -336,6 +336,9 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
 }
 
 export function writeFakeOmaGeneratedSurfacePack(repoRoot: string) {
+  const buildAgentBaselineCommand =
+    'npm run build-agent-baseline -- --output-dir <output_dir> --opl-bin <opl_bin> --ai-reviewer-evaluation <ai_reviewer_evaluation> --domain-id <domain_id> --domain-label <domain_label> --delivery-domain <delivery_domain> --target-brief <target_brief>';
+
   fs.mkdirSync(path.join(repoRoot, 'agent', 'skills'), { recursive: true });
   fs.mkdirSync(path.join(repoRoot, 'contracts'), { recursive: true });
   fs.mkdirSync(path.join(repoRoot, 'runtime', 'authority_functions'), { recursive: true });
@@ -380,20 +383,28 @@ export function writeFakeOmaGeneratedSurfacePack(repoRoot: string) {
         {
           action_id: 'build-agent-baseline',
           title: 'Build Agent Baseline',
-          summary: 'Generate an OPL-compatible candidate agent package and emit baseline delivery refs.',
+          summary: 'Generate an OPL-compatible candidate agent package from a user natural-language target-agent request, validate its standard scaffold, run an Agent Lab baseline suite, consume a structured AI reviewer evaluation, and emit baseline delivery and learning refs.',
           owner: 'opl-meta-agent',
           effect: 'mutating',
           source_command: {
-            command: 'npm run bootstrap:sample -- --output-dir <output_dir> --opl-bin <opl_bin> --ai-reviewer-evaluation <ai_reviewer_evaluation>',
+            command: buildAgentBaselineCommand,
             surface_kind: 'domain_smoke_cli',
           },
           input_schema_ref: 'contracts/schemas/build-agent-baseline.input.schema.json',
           output_schema_ref: 'contracts/schemas/build-agent-baseline.output.schema.json',
-          workspace_locator_fields: ['output_dir', 'opl_bin', 'ai_reviewer_evaluation'],
+          workspace_locator_fields: [
+            'output_dir',
+            'opl_bin',
+            'ai_reviewer_evaluation',
+            'domain_id',
+            'domain_label',
+            'delivery_domain',
+            'target_brief',
+          ],
           human_gate_ids: ['baseline_delivery_owner_review'],
           supported_surfaces: {
             cli: {
-              command: 'npm run bootstrap:sample -- --output-dir <output_dir> --opl-bin <opl_bin> --ai-reviewer-evaluation <ai_reviewer_evaluation>',
+              command: buildAgentBaselineCommand,
               surface_kind: 'domain_smoke_cli',
             },
             mcp: {
@@ -405,10 +416,11 @@ export function writeFakeOmaGeneratedSurfacePack(repoRoot: string) {
             skill: {
               command_contract_id: 'opl-meta-agent.build-agent-baseline',
               surface_kind: 'opl_generated_skill_contract',
+              intent_mapping: 'Codex extracts domain_id, domain_label, delivery_domain, target_brief, output_dir, opl_bin, and ai_reviewer_evaluation from the user natural-language request before invoking this action.',
             },
             product_entry: {
               action_key: 'build-agent-baseline',
-              command: 'npm run bootstrap:sample -- --output-dir <output_dir> --opl-bin <opl_bin> --ai-reviewer-evaluation <ai_reviewer_evaluation>',
+              command: buildAgentBaselineCommand,
               surface_kind: 'domain_product_entry_action',
             },
             openai: { tool_name: 'opl_meta_agent_build_agent_baseline' },
@@ -416,6 +428,11 @@ export function writeFakeOmaGeneratedSurfacePack(repoRoot: string) {
           },
           authority_boundary: {
             can_write_target_domain_truth: false,
+            can_write_target_domain_memory_body: false,
+            can_mutate_target_domain_artifact_body: false,
+            can_authorize_target_domain_quality_or_export: false,
+            can_promote_default_agent_without_gate: false,
+            can_train_or_deploy_model_weights: false,
           },
         },
       ],

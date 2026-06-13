@@ -541,6 +541,11 @@ test('opl connect skills discovers the family plugin packs through the configure
       OPL_STATE_DIR: stateDir,
     });
     assert.equal(previewOutput.generated_agent_interfaces.status, 'ready');
+    assert.match(
+      JSON.stringify(previewOutput.generated_agent_interfaces),
+      /npm run build-agent-baseline -- --output-dir <output_dir> --opl-bin <opl_bin> --ai-reviewer-evaluation <ai_reviewer_evaluation> --domain-id <domain_id> --domain-label <domain_label> --delivery-domain <delivery_domain> --target-brief <target_brief>/,
+    );
+    assert.doesNotMatch(JSON.stringify(previewOutput.generated_agent_interfaces), /bootstrap:sample/);
     assert.equal(fs.existsSync(syncLogPath), false);
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });
