@@ -13,7 +13,7 @@ Machine boundary: 本文是人读 advisory snapshot。当前机器 truth 继续�
 - Advisory findings 只能进入 design-pass、contract-surface review 或 cleanup candidate queue；不能直接变成 fail-closed backlog、机械拆分任务、domain ready 判断或 production ready 判断。
 - 结构 landing 的逐提交 evidence、worktree cleanup、验证命令长清单和历史 closeout 不属于本 support reference 的当前正文；它们只作为 `docs/history/**` provenance 阅读。
 
-## 2026-06-08 Current Snapshot
+## 2026-06-13 Current Snapshot
 
 Fresh command:
 
@@ -21,17 +21,17 @@ Fresh command:
 npm run --silent family:structure-advisory -- --format=json
 ```
 
-Fresh eleven-repo local summary from `2026-06-08T09:10:19Z` after root checkout revalidation:
+Fresh eleven-repo local summary from `2026-06-13T13:46:10Z` after root checkout revalidation:
 
 | Repo | needs_design_pass | mechanical_residue | public_surface_risk | missing_verify_entry |
 | --- | ---: | ---: | ---: | --- |
-| `one-person-lab` | 27 | 0 | 8 | `false` |
-| `med-autoscience` | 34 | 0 | 5 | `false` |
-| `med-autogrant` | 1 | 0 | 5 | `false` |
+| `one-person-lab` | 1 | 0 | 8 | `false` |
+| `med-autoscience` | 46 | 0 | 8 | `false` |
+| `med-autogrant` | 0 | 0 | 5 | `false` |
 | `redcube-ai` | 0 | 0 | 9 | `false` |
 | `opl-meta-agent` | 0 | 0 | 1 | `false` |
-| `one-person-lab-app` | 0 | 0 | 3 | `false` |
-| `opl-agui-codex-shell` | 0 | 0 | 0 | `false` |
+| `one-person-lab-app` | 7 | 0 | 4 | `false` |
+| `opl-agui-codex-shell` | 2 | 0 | 0 | `false` |
 | `opl-doc` | 0 | 0 | 0 | `false` |
 | `opl-flow` | 0 | 0 | 0 | `false` |
 | `homebrew-one-person-lab` | 0 | 0 | 0 | `false` |
@@ -67,13 +67,13 @@ Support repos can be lighter but should still be recognizable: `one-person-lab` 
 
 | Repo | Current structure finding | Action |
 | --- | --- | --- |
-| `one-person-lab` | Fresh scan now reports 27 `needs_design_pass` source/test files and 8 public-surface risks after the 2026-06-12 experience-contract expansion. No mechanical residue and no missing verify entry. | Treat as OPL-owned natural source-boundary queue. Prioritize `contracts.ts` / public command specs / workspace diagnostics / domain-pack compiler / runtime enqueue / workspace lifecycle when their owner surfaces are next touched; do not turn this support snapshot into a blocking backlog. |
-| `med-autoscience` | Fresh scan reports 34 `needs_design_pass` items and 5 public-surface risks. No mechanical residue and no missing verify entry. | MAS remains the highest residual source-shape advisory queue. Handle only from MAS owner lanes with fresh repo state, especially domain action materializer, owner-route handoff/reconcile, domain health diagnostic, study progress / progress-first projection and dispatch surfaces. |
-| `med-autogrant` | Fresh scan reports one source-shape item, `src/med_autogrant/opl_standard_pack.py`, plus 5 public-surface risks. | Treat as MAG owner-boundary review for standard-pack extraction and generated schema/contract modularity; no OPL-side physical edit is authorized by this snapshot. |
+| `one-person-lab` | Fresh scan now reports 1 `needs_design_pass` item, 0 mechanical residue and 8 public-surface risks. The App operator drilldown source-boundary slice is landed: `src/runtime-tray-app-operator-drilldown.ts` is no longer in the design-pass queue after extracting `runtime-tray-app-operator-drilldown-parts/core-refs.ts`. | Treat the remaining item as OPL-owned natural source-boundary queue for `family-runtime-enqueue` currentness / reconcile code. Do not turn this support snapshot into a blocking backlog or readiness claim. |
+| `med-autoscience` | Fresh scan reports 46 `needs_design_pass` items and 8 public-surface risks. No mechanical residue and no missing verify entry. | MAS remains the highest residual source-shape advisory queue. Handle only from MAS owner lanes with fresh repo state, especially current work unit, current executable owner action, provider admission current control, persisted dispatch, domain health diagnostic and study progress surfaces. |
+| `med-autogrant` | Fresh scan reports no source-shape item and 5 public-surface risks. | Treat remaining MAG advisory work as generated schema / contract modularity review; no OPL-side physical edit is authorized by this snapshot. |
 | `redcube-ai` | Fresh scan has no source-shape finding; public-surface risk remains in generated/public contracts and two shared buckets. | Continue generated/public-surface modularity and shared-bucket ownership review from RCA lanes; no source split is currently implied. |
 | `opl-meta-agent` | Fresh scan has no source-shape finding; public-surface risk remains in `contracts/stage_control_plane.json`. | Keep source/parts direction; contract modularity remains generator/source concern. |
-| `one-person-lab-app` | Fresh scan has no source-shape finding; public-surface risk remains in three App contracts. | Keep App source-shape advisory. Future growth should split by product release boundary, active-shell validation phases, package builder phases, release notes, readiness summary and user-path evidence. |
-| `opl-agui-codex-shell` | No source-shape, mechanical residue, public-surface or missing-verify finding. | Keep shell-local implementation thin and App-owned product truth out of the shell. |
+| `one-person-lab-app` | Fresh scan reports 7 source/test shape items and 4 public-surface risks. | Keep App source-shape advisory in the App owner lane. Future cleanup should split by release workflow, active-shell validation, package builder, release evidence bundle and user-path evidence boundaries. |
+| `opl-agui-codex-shell` | Fresh scan reports 2 source-shape items, no mechanical residue, no public-surface risk and no missing verify entry. | Keep shell-local implementation thin and App-owned product truth out of the shell; handle `ui-smoke` and candidate validator growth from App shell support lanes only. |
 | `opl-doc` | No current finding. | Keep as support/plugin morphology example: thin command entry plus named doctor responsibility modules. |
 | `opl-flow` | No current finding. | Keep verify entry thin and repo-native; no extra structure gate is needed until active source growth appears. |
 | `homebrew-one-person-lab` | No current finding; verify entry is not required by policy. | Keep lightweight as distribution transport support. |
@@ -87,22 +87,7 @@ The `one-person-lab` section is kept detailed because `tests/src/family-structur
 
 needs_design_pass:
 
-- `src/contracts.ts` (`1945`, `source_file_over_1000_lines`)
-- `src/cli/cases/public-command-specs.ts` (`1450`, `source_file_over_1000_lines`)
-- `src/workspace-diagnostics.ts` (`1293`, `source_file_over_1000_lines`)
-- `tests/src/cli/cases/workspace-domain.initializer.test.ts` (`1277`, `source_file_over_1000_lines`)
-- `src/domain-pack-compiler/generated-interface-read-model.ts` (`1218`, `source_file_over_1000_lines`)
-- `tests/src/verification-command-surfaces.test.ts` (`1165`, `source_file_over_1000_lines`)
-- `tests/src/cli/cases/domain-pack-compiler-generated-interfaces.test.ts` (`1142`, `source_file_over_1000_lines`)
-- `tests/src/cli/cases/agents-conformance.test.ts` (`1139`, `source_file_over_1000_lines`)
-- `src/opl-skills.ts` (`1101`, `source_file_over_1000_lines`)
-- `tests/src/cli/cases/family-runtime-provider-slo.test.ts` (`1094`, `source_file_over_1000_lines`)
-- `tests/src/cli/cases/family-runtime-provider-hosted-attempts-cases/mas-default-executor-single-flight.ts` (`1091`, `source_file_over_1000_lines`)
-- `src/domain-pack-compiler.ts` (`1086`, `source_file_over_1000_lines`)
-- `src/family-runtime-enqueue.ts` (`1073`, `source_file_over_1000_lines`)
-- `src/workspace-initializer.ts` (`1049`, `source_file_over_1000_lines`)
-- `tests/src/cli/cases/family-runtime-worker-lifecycle.test.ts` (`1020`, `source_file_over_1000_lines`)
-- `src/workspace-lifecycle.ts` (`1013`, `source_file_over_1000_lines`)
+- `src/family-runtime-enqueue-parts/existing-dedupe-reconcile.ts` (`989`, `part_file_near_1000_lines`)
 
 mechanical_residue:
 
@@ -114,16 +99,16 @@ public_surface_risk:
 - `contracts/opl-framework/brand-module-surfaces.json`
 - `contracts/family-orchestration/family-product-entry-manifest-v2.schema.json`
 - `contracts/opl-framework/workspace-index.schema.json`
+- `contracts/opl-framework/agent-lab-contract.json`
 - `contracts/opl-framework/brand-module-l5-operating-evidence.json`
 - `contracts/family-orchestration/family-stage-proof-bundle.schema.json`
-- `contracts/opl-framework/agent-lab-contract.json`
 - `contracts/opl-framework/target-operating-architecture-contract.json`
 
-Interpretation: OPL framework source/test shape has fresh source-boundary advisory items again after later feature growth. The two experience contracts remain public-surface risk items because this tranche deliberately made the target architecture and L5 evidence surfaces more explicit; that is a structure advisory signal, not a functional blocker. Future cleanup should choose semantic owners such as contract loader, public command spec cases, workspace diagnostics, generated-interface read model, skills registry, runtime enqueue and workspace lifecycle.
+Interpretation: OPL framework source/test shape has been substantially reduced by recent semantic splits. The App operator drilldown core refs extraction is now reflected here: `src/runtime-tray-app-operator-drilldown.ts` is out of the advisory queue, and `src/runtime-tray-app-operator-drilldown-parts/core-refs.ts` is classified as `safe_to_keep` / `semantic_part_under_advisory_budget` at `420` lines. The remaining OPL source-shape advisory is `family-runtime-enqueue` reconcile currentness code near the part-file advisory limit. Public-surface risks remain generated / machine-readable contract pressure; they are review signals, not functional blockers or readiness evidence.
 
 ### med-autoscience
 
-Fresh scan reports 34 `needs_design_pass` items and 5 `public_surface_risk` items. Exact current paths must be read from fresh `family:structure-advisory` JSON before a MAS owner lane writes source or docs.
+Fresh scan reports 46 `needs_design_pass` items and 8 `public_surface_risk` items. Exact current paths must be read from fresh `family:structure-advisory` JSON before a MAS owner lane writes source or docs.
 
 ## External Calibration
 
