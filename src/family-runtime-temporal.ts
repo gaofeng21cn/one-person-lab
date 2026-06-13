@@ -287,7 +287,7 @@ function optionalText(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
-export function stageRunIdFor(input: { domain_id: string; stage_id: string }) {
+function stageRunIdFor(input: { domain_id: string; stage_id: string }) {
   return [
     'app-stage-run',
     input.domain_id,
@@ -297,7 +297,7 @@ export function stageRunIdFor(input: { domain_id: string; stage_id: string }) {
     .join(':');
 }
 
-export function workspaceScopeRef(workspaceLocator: Record<string, unknown>) {
+function workspaceScopeRef(workspaceLocator: Record<string, unknown>) {
   return optionalText(workspaceLocator.workspace_scope_ref)
     ?? optionalText(workspaceLocator.workspace_ref)
     ?? (optionalText(workspaceLocator.workspace_root)
@@ -317,7 +317,7 @@ export function workspaceScopeRef(workspaceLocator: Record<string, unknown>) {
       : null);
 }
 
-export function artifactScopeRef(input: { workspaceLocator: Record<string, unknown>; stagePacketRef: string | null }) {
+function artifactScopeRef(input: { workspaceLocator: Record<string, unknown>; stagePacketRef: string | null }) {
   return optionalText(input.workspaceLocator.artifact_scope_ref)
     ?? optionalText(input.workspaceLocator.stage_artifact_unit_ref)
     ?? optionalText(input.workspaceLocator.lineage_ref)
@@ -328,7 +328,7 @@ export function artifactScopeRef(input: { workspaceLocator: Record<string, unkno
     ?? optionalText(input.workspaceLocator.study_id);
 }
 
-export function stageManifestRef(input: { workspaceLocator: Record<string, unknown>; stageId: string }) {
+function stageManifestRef(input: { workspaceLocator: Record<string, unknown>; stageId: string }) {
   return optionalText(input.workspaceLocator.stage_manifest_ref)
     ?? optionalText(input.workspaceLocator.manifest_ref)
     ?? `opl://stage-manifests/${encodeURIComponent(input.stageId)}`;
