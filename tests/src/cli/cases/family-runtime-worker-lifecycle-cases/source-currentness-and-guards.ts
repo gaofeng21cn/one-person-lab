@@ -67,6 +67,47 @@ test('Temporal worker source version ignores documentation-only git HEAD drift',
   }
 });
 
+test('Temporal worker source version canonicalizes built provider module to repo src root', () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-worker-runtime-built-source-version-'));
+  const srcRoot = path.join(repoRoot, 'src');
+  const distRoot = path.join(repoRoot, 'dist');
+  const srcModulePath = path.join(srcRoot, 'family-runtime-temporal-provider.ts');
+  const srcHelperPath = path.join(srcRoot, 'family-runtime-temporal-provider-parts', 'worker-state.ts');
+  const distModulePath = path.join(distRoot, 'family-runtime-temporal-provider.js');
+  const distHelperPath = path.join(distRoot, 'family-runtime-temporal-provider-parts', 'worker-state.js');
+  const previousSourceVersion = process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+  try {
+    delete process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+    fs.mkdirSync(path.dirname(srcModulePath), { recursive: true });
+    fs.mkdirSync(path.dirname(srcHelperPath), { recursive: true });
+    fs.mkdirSync(path.dirname(distModulePath), { recursive: true });
+    fs.mkdirSync(path.dirname(distHelperPath), { recursive: true });
+    fs.writeFileSync(srcModulePath, 'export const workerRuntime = 1;\n');
+    fs.writeFileSync(srcHelperPath, 'export const helperRuntime = 1;\n');
+    fs.writeFileSync(distModulePath, 'export const compiledWorkerRuntime = 1;\n');
+    fs.writeFileSync(distHelperPath, 'export const compiledHelperRuntime = 1;\n');
+
+    const fromSrc = currentWorkerSourceVersion(pathToFileURL(srcModulePath).href);
+    const fromDist = currentWorkerSourceVersion(pathToFileURL(distModulePath).href);
+    fs.writeFileSync(distModulePath, 'export const compiledWorkerRuntime = 2;\n');
+    const distOnlyChanged = currentWorkerSourceVersion(pathToFileURL(distModulePath).href);
+    fs.writeFileSync(srcModulePath, 'export const workerRuntime = 2;\n');
+    const srcChanged = currentWorkerSourceVersion(pathToFileURL(distModulePath).href);
+
+    assert.equal(fromDist, fromSrc);
+    assert.equal(distOnlyChanged, fromSrc);
+    assert.notEqual(srcChanged, fromSrc);
+    assert.equal(fromDist.startsWith(`worker-runtime:${srcRoot}:`), true);
+  } finally {
+    if (previousSourceVersion === undefined) {
+      delete process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+    } else {
+      process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = previousSourceVersion;
+    }
+    fs.rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
 test('Temporal worker source version currentness follows runtime content hash across source roots', () => {
   const hash = 'a'.repeat(64);
   const otherHash = 'b'.repeat(64);

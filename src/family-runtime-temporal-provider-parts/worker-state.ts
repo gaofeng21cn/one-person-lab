@@ -67,6 +67,22 @@ function repoRootFromModulePath(moduleUrl: string) {
   return path.resolve(path.dirname(fileURLToPath(moduleUrl)), '..');
 }
 
+function runtimeSourceRootFromModulePath(modulePath: string) {
+  const moduleDir = path.dirname(modulePath);
+  const moduleBase = path.basename(modulePath);
+  const repoRoot = path.resolve(moduleDir, '..');
+  const sourcePeer = path.join(repoRoot, 'src', moduleBase.replace(/\.js$/, '.ts'));
+  if (
+    path.basename(moduleDir) === 'dist'
+    && moduleBase.startsWith('family-runtime-')
+    && moduleBase.endsWith('.js')
+    && fs.existsSync(sourcePeer)
+  ) {
+    return path.join(repoRoot, 'src');
+  }
+  return moduleDir;
+}
+
 function gitDirForRepo(repoRoot: string) {
   const gitPath = path.join(repoRoot, '.git');
   try {
@@ -104,7 +120,7 @@ function gitHeadVersion(repoRoot: string) {
 }
 
 function runtimeSourceVersion(modulePath: string) {
-  const sourceRoot = path.dirname(modulePath);
+  const sourceRoot = runtimeSourceRootFromModulePath(modulePath);
   try {
     const files: string[] = [];
     const collect = (dir: string) => {
