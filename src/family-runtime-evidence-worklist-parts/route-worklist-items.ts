@@ -24,7 +24,7 @@ import { worklistOwnerId } from './owner-normalization.ts';
 import { payloadHandoffProjection } from './operator-route-handoff.ts';
 import { freshnessRef, readOnlyExpectedRefs } from './worklist-route-refs.ts';
 
-export function worklistLaneFor(input: {
+function worklistLaneFor(input: {
   claimScope: string;
   actionKind: string;
   diagnosticOnlyRoute: boolean;
@@ -56,7 +56,7 @@ export function worklistLaneFor(input: {
   return 'ordinary';
 }
 
-export function readOnlyClaimScope(route: JsonRecord) {
+function readOnlyClaimScope(route: JsonRecord) {
   const actionKind = stringValue(route.action_kind) ?? 'operator_action';
   if (actionKind === 'stage_production_attempt_request') {
     return 'stage_production_caller_request';
