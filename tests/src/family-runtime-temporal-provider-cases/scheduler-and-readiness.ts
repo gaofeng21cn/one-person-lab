@@ -9,7 +9,7 @@ import {
   buildTemporalSchedulerTickWorkflowArgs,
 } from '../../../src/family-runtime-temporal-provider-parts/scheduler-cadence.ts';
 import {
-  resolveTemporalWorkerReadinessStatus,
+  buildTemporalWorkerReadiness,
 } from '../../../src/family-runtime-temporal-provider.ts';
 
 test('Temporal scheduler health projection surfaces current stale action repair without domain authority', () => {
@@ -239,24 +239,21 @@ test('Temporal scheduler health projection keeps historical overlap skips inform
 });
 
 test('Temporal worker lifecycle status distinguishes configured, server, and worker readiness gates', () => {
-  assert.equal(resolveTemporalWorkerReadinessStatus({
+  assert.equal(buildTemporalWorkerReadiness({
     address: null,
     serverReachable: false,
-    workerReady: false,
-  }), 'not_configured');
-  assert.equal(resolveTemporalWorkerReadinessStatus({
+  }).readiness_status, 'not_configured');
+  assert.equal(buildTemporalWorkerReadiness({
     address: '127.0.0.1:7233',
     serverReachable: false,
-    workerReady: false,
-  }), 'server_unreachable');
-  assert.equal(resolveTemporalWorkerReadinessStatus({
+  }).readiness_status, 'server_unreachable');
+  assert.equal(buildTemporalWorkerReadiness({
     address: '127.0.0.1:7233',
     serverReachable: true,
-    workerReady: false,
-  }), 'worker_not_ready');
-  assert.equal(resolveTemporalWorkerReadinessStatus({
+  }).readiness_status, 'worker_not_ready');
+  assert.equal(buildTemporalWorkerReadiness({
     address: '127.0.0.1:7233',
     serverReachable: true,
-    workerReady: true,
-  }), 'ready');
+    workerStatus: 'ready',
+  }).readiness_status, 'ready');
 });

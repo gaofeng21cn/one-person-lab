@@ -35,7 +35,6 @@ export {
 export {
   buildTemporalWorkerLifecycleContract,
   buildTemporalWorkerReadiness,
-  resolveTemporalWorkerReadinessStatus,
   type TemporalWorkerReadinessStatus,
 } from './family-runtime-temporal-readiness.ts';
 import {

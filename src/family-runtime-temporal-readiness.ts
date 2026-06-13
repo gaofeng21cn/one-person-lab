@@ -226,7 +226,7 @@ function resolveTemporalWorkerReadinessInput(
   };
 }
 
-export function resolveTemporalWorkerReadinessStatus(input: {
+function resolveTemporalWorkerReadinessStatus(input: {
   address?: string | null;
   serverReachable?: boolean | null;
   workerReady?: boolean | null;
