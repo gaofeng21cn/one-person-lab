@@ -19,7 +19,7 @@ import {
 } from './family-runtime-domain-handler-process.ts';
 import { resolveOplModuleExecCommand } from './system-installation/modules.ts';
 import type { ModuleInspection } from './system-installation/shared.ts';
-import { payloadMatchesTaskScope } from './family-runtime-task-scope.ts';
+import { taskInputMatchesScope } from './family-runtime-task-scope.ts';
 import {
   activeMedautoscienceWorkspaceProfile,
   resolveExplicitMedautoscienceDomainProfile,
@@ -171,19 +171,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function inputMatchesTaskScope(input: EnqueueInput, taskScope?: FamilyRuntimeTaskScope) {
-  if (!taskScope) {
-    return true;
-  }
-  if (taskScope.domainId && input.domainId !== taskScope.domainId) {
-    return false;
-  }
-  if (taskScope.taskKind && input.taskKind !== taskScope.taskKind) {
-    return false;
-  }
-  return payloadMatchesTaskScope(input.payload, taskScope);
-}
-
 function exportedTaskInputs(
   domainId: FamilyRuntimeDomainId,
   output: Record<string, unknown>,
@@ -200,7 +187,7 @@ function exportedTaskInputs(
   const pendingAfterCurrentControl = suppressStaleDefaultExecutorInputs(pending.inputs, currentControlInputs);
   const transitions = transitionTaskInputsFromMatrix(domainId, output, source);
   const exportedInputs = [...currentControlInputs, ...pendingAfterCurrentControl.inputs, ...transitions.inputs];
-  const inputs = exportedInputs.filter((taskInput) => inputMatchesTaskScope(taskInput, taskScope));
+  const inputs = exportedInputs.filter((taskInput) => taskInputMatchesScope(taskInput, taskScope));
   return {
     inputs,
     blocked: [...currentControlRaw.blocked, ...pending.blocked, ...transitions.blocked],
