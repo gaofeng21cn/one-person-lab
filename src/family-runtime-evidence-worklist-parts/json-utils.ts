@@ -1,6 +1,6 @@
 export type JsonRecord = Record<string, unknown>;
 
-export function isRecord(value: unknown): value is JsonRecord {
+function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
@@ -28,13 +28,6 @@ export function countValue(value: unknown) {
 
 export function uniqueStringList(values: Array<string | null | undefined>) {
   return [...new Set(values.filter((entry): entry is string => Boolean(entry)))];
-}
-
-export function commandRef(args: string[]) {
-  if (args[0] === 'agents') {
-    return `opl ${args.join(' ')}`;
-  }
-  return `opl family-runtime ${args.join(' ')}`;
 }
 
 export function firstRef(value: unknown) {
