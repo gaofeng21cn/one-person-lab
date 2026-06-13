@@ -175,7 +175,7 @@ test('family-runtime rehydrates blocked MAS current-control admission when termi
     const stageAttemptId = 'sat_current_control_blocked_stale_terminal';
     const dedupeKey = 'owner-route::003-dpcc-primary-care-phenotype-treatment-gap::current-control-blocked-stale';
     const workUnitFingerprint = 'publication-blockers::0915410f804b3697';
-    const staleAttemptPayload = currentControlAdmissionPayload(
+    const staleAttemptPayload: Record<string, any> = currentControlAdmissionPayload(
       workUnitFingerprint,
       '01',
       workUnitFingerprint,
@@ -185,7 +185,7 @@ test('family-runtime rehydrates blocked MAS current-control admission when termi
       source_eval_id:
         'publication-eval::003-dpcc-primary-care-phenotype-treatment-gap::003-dpcc-primary-care-phenotype-treatment-gap::2026-06-12T20:06:05+00:00',
     };
-    const freshPayload = {
+    const freshPayload: Record<string, any> = {
       ...currentControlAdmissionPayload(
         workUnitFingerprint,
         '02',
