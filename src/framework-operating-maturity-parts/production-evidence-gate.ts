@@ -340,6 +340,9 @@ export function foundryAgentOsProductionEvidenceGate(input: {
   providerLongSoakNextEvidenceAction?: string | null;
   cleanupOpenDecisionCount: number;
   lifecycleOpenCount: number;
+  lifecycleOwnerActionChecklist?: unknown[];
+  lifecycleMissingOwnerActionIds?: string[];
+  lifecycleNextEvidenceAction?: string | null;
   ownerEvidenceIntake: Record<string, unknown>;
 }) {
   const brandModules = recordList(input.brandModuleL5.modules);
@@ -422,6 +425,9 @@ export function foundryAgentOsProductionEvidenceGate(input: {
         'package_export_lifecycle_receipt_ref',
         'typed_blocker_ref',
       ],
+      owner_action_checklist: input.lifecycleOwnerActionChecklist ?? [],
+      missing_owner_action_ids: input.lifecycleMissingOwnerActionIds ?? [],
+      next_evidence_action: input.lifecycleNextEvidenceAction ?? null,
     },
   ];
   const workOrders = ownerRouteWorkOrders(laneStatuses, input.ownerEvidenceIntake);

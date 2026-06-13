@@ -157,6 +157,13 @@ export function appOperatorDrilldownMaturity(drilldown: Record<string, unknown>)
     .map((entry) => entry.requirement_id);
   const providerOpenCount = providerLongEvidenceReady ? 0 : 1;
   const lifecycleObservedRefCount = numberValue(lifecycleEvidence.observed_ref_count);
+  const lifecycleOwnerWorkOrder = record(lifecycleEvidence.lifecycle_owner_work_order);
+  const lifecycleTypedBlockerWorkOrder = record(
+    lifecycleOwnerWorkOrder.typed_blocker_work_order,
+  );
+  const lifecycleLatestTypedBlockerRefs = stringListValue(
+    lifecycleTypedBlockerWorkOrder.latest_typed_blocker_refs,
+  );
   const lifecycleReconcileIssueCount =
     numberValue(lifecycleEvidence.lifecycle_reconcile_missing_ref_count)
     + numberValue(lifecycleEvidence.lifecycle_reconcile_extra_ref_count)
@@ -166,6 +173,40 @@ export function appOperatorDrilldownMaturity(drilldown: Record<string, unknown>)
     : lifecycleObservedRefCount > 0
       ? 0
       : 1;
+  const lifecycleNextEvidenceAction =
+    stringValue(lifecycleOwnerWorkOrder.next_required_owner_action)
+    ?? 'memory_artifact_lifecycle_receipt_or_typed_blocker_ref';
+  const lifecycleOwnerActionChecklist = [
+    {
+      requirement_id: 'memory_artifact_lifecycle_owner_followthrough',
+      status:
+        stringValue(lifecycleOwnerWorkOrder.status)
+        ?? stringValue(lifecycleEvidence.readiness_status)
+        ?? 'owner_receipt_or_typed_blocker_required_not_ready',
+      observed_ref_count: lifecycleObservedRefCount,
+      open_count: numberValue(lifecycleOwnerWorkOrder.open_count),
+      next_required_owner_action: lifecycleNextEvidenceAction,
+      accepted_refs_only_result_shapes: stringListValue(
+        lifecycleOwnerWorkOrder.accepted_refs_only_result_shapes,
+      ),
+      typed_blocker_work_order_status:
+        stringValue(lifecycleTypedBlockerWorkOrder.status),
+      selected_payload_path:
+        stringValue(lifecycleTypedBlockerWorkOrder.selected_payload_path),
+      blocked_decision_count:
+        numberValue(lifecycleTypedBlockerWorkOrder.blocked_decision_count),
+      safe_decision_count:
+        numberValue(lifecycleTypedBlockerWorkOrder.safe_decision_count),
+      latest_typed_blocker_refs: lifecycleLatestTypedBlockerRefs,
+      closes_memory_or_artifact_ready: false,
+      closes_production_ready: false,
+      ready_claim_authorized: false,
+      authority_boundary: record(lifecycleOwnerWorkOrder.authority_boundary),
+    },
+  ];
+  const lifecycleMissingOwnerActionIds = lifecycleOpenCount > 0
+    ? ['memory_artifact_lifecycle_owner_receipt_or_typed_blocker_required']
+    : [];
 
   return {
     provider: {
@@ -208,6 +249,12 @@ export function appOperatorDrilldownMaturity(drilldown: Record<string, unknown>)
         : 'evidence_recorded_not_artifact_or_memory_ready_claim',
       observedRefCount: lifecycleObservedRefCount,
       reconcileIssueCount: lifecycleReconcileIssueCount,
+      ownerWorkOrder: lifecycleOwnerWorkOrder,
+      typedBlockerWorkOrder: lifecycleTypedBlockerWorkOrder,
+      ownerActionChecklist: lifecycleOwnerActionChecklist,
+      missingOwnerActionIds: lifecycleMissingOwnerActionIds,
+      nextEvidenceAction: lifecycleNextEvidenceAction,
+      latestTypedBlockerRefs: lifecycleLatestTypedBlockerRefs,
     },
   };
 }

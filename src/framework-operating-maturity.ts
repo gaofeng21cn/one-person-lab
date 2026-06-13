@@ -776,6 +776,12 @@ export async function buildFrameworkOperatingMaturityReadout(
       drilldownMaturity.provider.capabilityNextEvidenceAction,
     cleanupOpenDecisionCount,
     lifecycleOpenCount,
+    lifecycleOwnerActionChecklist:
+      drilldownMaturity.lifecycle.ownerActionChecklist,
+    lifecycleMissingOwnerActionIds:
+      drilldownMaturity.lifecycle.missingOwnerActionIds,
+    lifecycleNextEvidenceAction:
+      drilldownMaturity.lifecycle.nextEvidenceAction,
     ownerEvidenceIntake,
   });
   const oneShotPlanLanding = oneShotPlanLandingReadout(contracts);
@@ -983,6 +989,26 @@ export async function buildFrameworkOperatingMaturityReadout(
           numberValue(drilldownMaturity.lifecycle.evidence.lifecycle_apply_handoff_blocked_decision_count),
         lifecycle_apply_handoff_safe_decision_count:
           numberValue(drilldownMaturity.lifecycle.evidence.lifecycle_apply_handoff_safe_decision_count),
+        lifecycle_owner_work_order_status:
+          stringValue(drilldownMaturity.lifecycle.ownerWorkOrder.status),
+        lifecycle_owner_work_order_open_count:
+          numberValue(drilldownMaturity.lifecycle.ownerWorkOrder.open_count),
+        lifecycle_owner_work_order_next_required_owner_action:
+          stringValue(drilldownMaturity.lifecycle.ownerWorkOrder.next_required_owner_action),
+        lifecycle_typed_blocker_work_order_status:
+          stringValue(drilldownMaturity.lifecycle.typedBlockerWorkOrder.status),
+        lifecycle_typed_blocker_selected_payload_path:
+          stringValue(drilldownMaturity.lifecycle.typedBlockerWorkOrder.selected_payload_path),
+        lifecycle_typed_blocker_ref_count:
+          drilldownMaturity.lifecycle.latestTypedBlockerRefs.length,
+        lifecycle_latest_typed_blocker_refs:
+          drilldownMaturity.lifecycle.latestTypedBlockerRefs,
+        owner_action_checklist:
+          drilldownMaturity.lifecycle.ownerActionChecklist,
+        missing_owner_action_ids:
+          drilldownMaturity.lifecycle.missingOwnerActionIds,
+        next_evidence_action:
+          drilldownMaturity.lifecycle.nextEvidenceAction,
         lifecycle_blockers_count_as_missing_evidence: false,
         accepted_refs_only_result_shapes: [
           'memory_receipt_ref',
