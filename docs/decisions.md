@@ -5,6 +5,22 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-06-13
+
+### 决策：Standard Agent landing acceptance 成为 family-level 验收门
+
+原因：MAS DM002/DM003 暴露的问题不是某个 domain repo 的单点 bug，而是标准 Agent 迁移、生成、接管时容易把 descriptor ready、generated interface ready、conformance pass、suite pass、classification zero、provider completion、refs-only ledger 或 App projection 误读成完成。没有 family-level 验收门，OMA 以后构建 target agent 仍会复制半标准形态，旧 scheduler、queue、wrapper、read-model residue 也会在默认路径里复活。
+
+影响：
+
+- `contracts/opl-framework/standard-agent-landing-acceptance-contract.json` 成为标准 Agent landing 的机器验收定义，状态只能先读作 `acceptance_definition_landed` / `family_evidence_tail_open_not_complete`。
+- 标准 Agent 完成必须同时看真实 `agent/` pack semantics、generated surface production consumption、private-platform residue owner decision、`current_owner_delta` single ordinary route、stage-route arbiter / stop-loss、OMA target-agent work-order guard 和 cross-agent negative conformance。
+- `descriptor_ready`、`generated_interface_ready`、`standard_pack_conformance_passed`、`suite_pass`、`Agent_Lab_pass`、`functional_structure_gap_count_zero`、`provider_completed`、`verified_refs_only_ledger`、`App_projection_ready` 和 `contract_landed` 都只能作为输入，不能声明 domain ready、caller migration、physical retirement、target owner acceptance、Brand L5 或 production readiness。
+- OMA / new-agent builder / takeover path 必须在缺 target owner route、source morphology、generated surface consumption、private residue decision、no-forbidden-write proof 或 owner answer shape 时返回 typed blocker / developer work order；OMA 不能签 target owner receipt、创建 target typed blocker、写 target truth 或在缺 target owner evidence 时 promotion 默认 agent。
+- MAS-specific `paper_recovery_state` 留在 MAS；OPL 只上收 generic stage-route currentness、recovery obligation identity、StageRun execution、attempt ledger、closeout refs-only transport、operator projection shell 和 private residue decision ledger。
+
+本决策只落 family-level acceptance contract、docs 和 meta tests；不声明 MAS/MAG/RCA/OMA domain ready、App release ready、Brand L5、physical delete authorized 或 production ready。
+
 ## 2026-06-11
 
 ### 决策：Stage-route arbiter substrate 固定为 OPL 基座合同
