@@ -1,5 +1,6 @@
 import { buildFoundryAgentOsOwnerEvidenceIntake } from '../../../../src/foundry-agent-os-owner-evidence-intake.ts';
 import { assert, contractsDir, fs, loadFrameworkContracts, os, path, runCli, test } from '../helpers.ts';
+import './framework-operating-maturity-cases/memory-artifact-lifecycle-followthrough.ts';
 import './framework-operating-maturity-cases/owner-evidence-ledger.ts';
 import './framework-operating-maturity-cases/provider-and-app-evidence.ts';
 import { createFamilyDefaultContractWorkspace } from './domain-pack-compiler-fixtures.ts';

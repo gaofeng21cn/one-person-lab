@@ -1,4 +1,5 @@
 import './family-runtime-current-control-provider-admission-cases/queue-refresh-and-guards.ts';
+import './family-runtime-current-control-provider-admission-cases/stage-attempt-repair.ts';
 import './family-runtime-current-control-provider-admission-cases/stop-loss-successor-policy.ts';
 import {
   assert,
