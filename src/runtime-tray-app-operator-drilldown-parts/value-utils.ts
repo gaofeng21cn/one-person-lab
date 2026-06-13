@@ -1,7 +1,7 @@
 import type { DomainManifestCatalogEntry } from '../domain-manifest/types.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 
-export function isRecord(value: unknown): value is JsonRecord {
+function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
@@ -62,12 +62,6 @@ export function cleanupCommandDomainId(project: DomainManifestCatalogEntry, fall
   return stringValue(project.project_id)
     ?? stringValue(project.project)
     ?? fallbackDomainId;
-}
-
-export function nestedRef(value: unknown) {
-  return isRecord(value) && typeof value.ref === 'string' && value.ref.trim().length > 0
-    ? value.ref.trim()
-    : null;
 }
 
 function typedBlockerId(value: JsonRecord) {

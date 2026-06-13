@@ -216,7 +216,7 @@ function isReadOnlyProductEntryCommand(command: string) {
   ));
 }
 
-export function buildManagedShellScratchCwd(cwd: string, env: NodeJS.ProcessEnv = process.env) {
+function buildManagedShellScratchCwd(cwd: string, env: NodeJS.ProcessEnv = process.env) {
   return path.join(
     buildManagedShellCommandEnv(cwd, env).OPL_DOMAIN_COMMAND_TMP_ROOT,
     'source-scratch-',

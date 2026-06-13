@@ -97,7 +97,7 @@ function parseTomlValue(rawValue: string) {
   return trimmed;
 }
 
-export function resolveLocalCodexConfigPath() {
+function resolveLocalCodexConfigPath() {
   const explicitCodexHome = normalizeOptionalString(process.env.CODEX_HOME);
   const homeDir = normalizeOptionalString(process.env.HOME) ?? os.homedir();
   const codexHome = explicitCodexHome ?? path.join(homeDir, '.codex');
@@ -108,7 +108,7 @@ function quoteTomlString(value: string) {
   return JSON.stringify(value);
 }
 
-export function resolveBundledCodexDefaultProfilePath() {
+function resolveBundledCodexDefaultProfilePath() {
   return path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
     '..',
@@ -415,7 +415,7 @@ export function bootstrapLocalCodexDefaults(input: BootstrapLocalCodexDefaultsIn
   };
 }
 
-export function readLocalCodexDefaults(): LocalCodexDefaults {
+function readLocalCodexDefaults(): LocalCodexDefaults {
   const configPath = resolveLocalCodexConfigPath();
   if (!fs.existsSync(configPath) || !fs.statSync(configPath).isFile()) {
     throw new FrameworkContractError(
