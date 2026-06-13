@@ -19,6 +19,7 @@ import {
   buildAgentLabSamplePayload,
   buildAgentLabStageExecutorPolicyPayload,
   buildAgentLabWorkbenchPayload,
+  buildAgentLabWorkflowTemplatePayload,
 } from '../modules/agent-lab-public-payloads.ts';
 import { assertNoArgs, buildUsageError } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
@@ -179,6 +180,16 @@ export function buildPublicAgentLabCommandSpecs(): Record<string, CommandSpec> {
       handler: (args) => {
         assertNoArgs(args, specs['agent-lab mechanism']);
         return buildAgentLabMechanismPayload();
+      },
+    },
+    'agent-lab workflow-template': {
+      usage: 'opl agent-lab workflow-template',
+      summary: 'Show the Foundry Lab dynamic workflow template catalog for suite topology and work-order refs.',
+      examples: ['opl agent-lab workflow-template --json'],
+      group: 'framework',
+      handler: (args) => {
+        assertNoArgs(args, specs['agent-lab workflow-template']);
+        return buildAgentLabWorkflowTemplatePayload();
       },
     },
     'agent-lab risk-tier-promotion record': {

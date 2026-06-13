@@ -28,6 +28,7 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 Agent L
 | `improvement_candidate` | 机制改进候选、预期影响、风险层级。 |
 | `developer_work_order` | 可执行 patch work order、验证命令、禁止范围和 owner closeout。 |
 | `rho_backend_plan` | RHO no-apply sidecar 的候选计划面，只产出 trajectory digest、diagnosis、candidate harness、self-preference score、winner、candidate diff、work-order draft 和 promotion evidence refs。 |
+| `dynamic_workflow_template` | Foundry Lab suite topology / verifier / work-order draft refs 的动态模板 catalog。 |
 | `canary_ref` | 小范围真实或 controlled canary 证据。 |
 | `promotion_receipt` | risk-tier promotion / rollback / no-regression refs。 |
 | `target_agent_handoff` | 给目标 agent/domain owner 的交接。 |
@@ -55,6 +56,7 @@ Workspace 级 L4 的 Foundry Lab 对象模型必须像 Workspace 一样有自己
 | `validation / doctor` | `opl foundry-lab validate --json` 检查 skeleton/conformance/readiness/work-order/promotion contract；`opl foundry-lab doctor --json` 报告缺 scaffold、缺 tests、缺 canary、缺 owner gate 或 target repo handoff gap。 |
 | `tests` | CLI public spec、agent scaffold fixture、conformance/readiness regression、work-order receipt fixture、promotion/rollback negative authority、owner-acceptance-not-claimed guard。 |
 | `status` | `docs/status.md`、`docs/runtime/opl-agent-lab-control-plane.md`、`docs/references/brand-modules/current-maturity-against-workspace.md`、target repo owner closeout refs。 |
+| `dynamic workflow template` | `src/agent-lab-workflow-templates.ts`、`opl agent-lab workflow-template --json`、`tests/src/cli/cases/agent-lab.test.ts`。 |
 
 ## 接口与文档
 
@@ -79,10 +81,19 @@ opl agents conformance --family-defaults --json
 opl agents readiness --family-defaults --json
 opl agents default-callers --family-defaults --json
 opl agent-lab rho --project <target-agent-dir> --json
+opl agent-lab workflow-template --json
 opl work-order execute --work-order <file> --json
 ```
 
 Foundry Agent series 的普通 CLI spine 是 `workspace / work / stage / run / vault / handoff / connect`。OPL brand modules 继续作为 framework taxonomy；`runtime`、`family-runtime`、`index`、`stage-artifact`、`skill/module/packages/engine` 等旧实现桶不再作为 Foundry Agent 用户 command surface。
+
+## Dynamic workflow template
+
+Foundry Lab 的 dynamic workflow template 是 Agent Lab 机器面的 refs-only catalog。它把常见 agent improvement 拓扑固定为可审计模板：`classify_and_act`、`fan_out_and_synthesize`、`adversarial_verification`、`generate_and_filter`、`tournament`、`loop_until_done`、`model_routing`、`worktree_isolation`。
+
+这些模板只能产生 `suite_topology_ref`、`verifier_ref` 和 `work_order_draft_ref`。它们用于描述“怎样组织一次评估、验证或 patch work order 草稿”，不用于编译普通用户 workflow，不定义 runtime substrate，不替代 Runway / Temporal / family-runtime，也不能签发 domain truth、quality verdict 或 owner receipt。
+
+机器入口是 `opl agent-lab workflow-template --json`。该输出可以被 App developer surface、OMA 和 operator drilldown 消费为 Foundry Lab template catalog；consumer 需要继续从 target repo verification、domain-owned proof 和 owner receipt refs 判断后续闭合，不能把 template catalog 本身当成 adoption、promotion 或 readiness 证据。
 
 理想文档：
 

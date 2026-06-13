@@ -11,6 +11,7 @@ import {
   type AgentLabExportTarget,
 } from '../../agent-lab-complete.ts';
 import { buildAgentLabRhoBackendPlan } from '../../agent-lab-rho-backend.ts';
+import { buildAgentLabWorkflowTemplateCatalog } from '../../agent-lab-workflow-templates.ts';
 import {
   agentLabRefSummary,
   buildAgentLabCostEstimate,
@@ -69,6 +70,13 @@ function buildAgentLabMechanismPayload() {
   return {
     version: 'g2',
     agent_lab_mechanism: buildAgentLabMechanismReadModel(),
+  };
+}
+
+function buildAgentLabWorkflowTemplatePayload() {
+  return {
+    version: 'g2',
+    agent_lab_workflow_template: buildAgentLabWorkflowTemplateCatalog(),
   };
 }
 
@@ -358,4 +366,5 @@ export {
   buildAgentLabSamplePayload,
   buildAgentLabStageExecutorPolicyPayload,
   buildAgentLabWorkbenchPayload,
+  buildAgentLabWorkflowTemplatePayload,
 };

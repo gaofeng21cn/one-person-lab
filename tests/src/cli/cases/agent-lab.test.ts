@@ -402,6 +402,46 @@ test('agent-lab mechanism exposes a first-class refs-only mechanism object', () 
   assert.equal(output.agent_lab_mechanism.refs_only, true);
 });
 
+test('agent-lab workflow-template exposes Foundry Lab dynamic workflow template catalog', () => {
+  const output = runCli(['agent-lab', 'workflow-template', '--json']);
+
+  assert.equal(output.version, 'g2');
+  assert.equal(output.agent_lab_workflow_template.surface_kind,
+    'opl_agent_lab_workflow_template_catalog');
+  assert.equal(output.agent_lab_workflow_template.refs_only, true);
+  assert.equal(output.agent_lab_workflow_template.template_catalog.template_count, 8);
+  assert.deepEqual(
+    output.agent_lab_workflow_template.template_catalog.patterns.map((entry: any) => entry.pattern_id),
+    [
+      'classify_and_act',
+      'fan_out_and_synthesize',
+      'adversarial_verification',
+      'generate_and_filter',
+      'tournament',
+      'loop_until_done',
+      'model_routing',
+      'worktree_isolation',
+    ],
+  );
+  assert.deepEqual(output.agent_lab_workflow_template.allowed_outputs, [
+    'suite_topology_ref',
+    'verifier_ref',
+    'work_order_draft_ref',
+  ]);
+  assert.deepEqual(output.agent_lab_workflow_template.forbidden_claims, [
+    'runtime_substrate',
+    'ordinary_workflow_compiler',
+    'domain_truth',
+    'quality_verdict',
+    'owner_receipt',
+  ]);
+  assert.equal(output.agent_lab_workflow_template.authority_boundary.can_define_runtime_substrate, false);
+  assert.equal(output.agent_lab_workflow_template.authority_boundary.can_compile_ordinary_user_workflow, false);
+  assert.equal(output.agent_lab_workflow_template.authority_boundary.can_write_domain_truth, false);
+  assert.equal(output.agent_lab_workflow_template.authority_boundary.can_authorize_quality_verdict, false);
+  assert.equal(output.agent_lab_workflow_template.authority_boundary.can_write_owner_receipt, false);
+});
+
 test('agent-lab export emits refs-only connector envelopes for optional targets', () => {
   const inspect = runCli(['agent-lab', 'export', '--target', 'inspect-ai', '--json']);
   const openinference = runCli(['agent-lab', 'export', '--target', 'openinference', '--json']);
