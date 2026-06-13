@@ -364,4 +364,4 @@ W7 owner-evidence docs foldback 只能记录 active owner 已消费的 fresh 判
 
 ## Baton Boundary
 
-执行顺序不在本文维护。需要行动时读取 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md) 的 `Operating Model Foldback 状态`、`测试 / 证据差距` 和 `Active-Goal Agent Prompt`，再 fresh 读取 live contracts/source/CLI/read-model 的 wrapper payload。本文只提供评估口径：每个新发现的 surface 先分类为 `meets_target`、`needs_demotion` 或 `needs_retirement`；需要落地或关闭时回到 active gap owner 记录 owner、source of truth、accepted answer shape 和验证命令。本文不得维护 W7 owner-route queue、Brand L5 backlog、App release/user-path backlog、provider long-soak backlog 或 dated worktree closeout。
+执行顺序不在本文维护。需要行动时读取 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md) 的 `Operating Model Foldback 状态`、`测试 / 证据差距` 和 `Next-Round Agent Prompt`，再 fresh 读取 live contracts/source/CLI/read-model 的 wrapper payload。本文只提供评估口径：每个新发现的 surface 先分类为 `meets_target`、`needs_demotion` 或 `needs_retirement`；需要落地或关闭时回到 active gap owner 记录 owner、source of truth、accepted answer shape 和验证命令。本文不得维护 W7 owner-route queue、Brand L5 backlog、App release/user-path backlog、provider long-soak backlog 或 dated worktree closeout。
