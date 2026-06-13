@@ -12,6 +12,10 @@ import {
 } from './family-runtime-store.ts';
 import { stageAttemptSummary } from './family-runtime-stage-attempts.ts';
 import { runTemporalSchedulerCadenceCommand } from './family-runtime-scheduler.ts';
+import {
+  inspectTemporalWorkerRestartGuardForLifecycle,
+  type WorkerRestartGuard,
+} from './family-runtime-provider-worker-repair.ts';
 import type { FamilyRuntimeProviderKind } from './family-runtime-types.ts';
 
 type FamilyRuntimePaths = ReturnType<typeof familyRuntimePaths>;
@@ -53,6 +57,42 @@ function countStatus(summary: { by_status: Record<string, number> }, statuses: s
 
 function schedulerNeedsRepair(status: string | null) {
   return status === 'attention_required' || status === 'blocked_provider_not_ready';
+}
+
+function recordValue(value: unknown) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function stringValue(value: unknown) {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function workerRepairActionId(workerReadiness: Record<string, unknown> | null) {
+  const repairAction = recordValue(workerReadiness?.repair_action);
+  return stringValue(repairAction?.action_id);
+}
+
+function buildWorkerRestartGuardProjection(input: {
+  paths: FamilyRuntimePaths;
+  workerReadiness: unknown;
+  degradedReason: string | null;
+}) {
+  const workerReadiness = recordValue(input.workerReadiness);
+  if (!workerReadiness) {
+    return null;
+  }
+  if (input.degradedReason !== 'temporal_worker_source_stale'
+    && stringValue(workerReadiness.lifecycle_status) !== 'worker_source_stale'
+    && stringValue(workerReadiness.readiness_status) !== 'worker_source_stale') {
+    return null;
+  }
+  if (workerRepairActionId(workerReadiness) !== 'restart_temporal_worker') {
+    return null;
+  }
+  return inspectTemporalWorkerRestartGuardForLifecycle(
+    input.paths,
+    workerReadiness as Parameters<typeof inspectTemporalWorkerRestartGuardForLifecycle>[1],
+  );
 }
 
 function buildNextSafeAction(input: {
@@ -193,6 +233,11 @@ export async function buildFamilyRuntimeControlLoopStatus(
     attemptTotal: attempts.total,
   });
   const schedulerStatus = typeof scheduler.status === 'string' ? scheduler.status : null;
+  const workerRestartGuard = buildWorkerRestartGuardProjection({
+    paths,
+    workerReadiness: selected.details.worker_readiness,
+    degradedReason: selected.degraded_reason,
+  });
   const nextSafeAction = buildNextSafeAction({
     status,
     providerReady: selected.ready,
@@ -337,12 +382,26 @@ export async function buildFamilyRuntimeControlLoopStatus(
         || nextSafeAction.action_id === 'retry'
         ? nextSafeAction
         : null,
+      worker_restart_guard: workerRestartGuard,
     },
     authority_boundary: FALSE_AUTHORITY_BOUNDARY,
   };
 }
 
 type FamilyRuntimeControlLoopStatus = Awaited<ReturnType<typeof buildFamilyRuntimeControlLoopStatus>>;
+
+function recoveryRepairStatus(input: {
+  selectedRepairAction: FamilyRuntimeControlLoopStatus['recovery_repair']['selected_repair_action'];
+  workerRestartGuard?: WorkerRestartGuard | null;
+}) {
+  if (input.workerRestartGuard?.guard_status === 'blocked') {
+    return 'repair_blocked_by_worker_restart_guard';
+  }
+  if (input.selectedRepairAction) {
+    return 'repair_action_available';
+  }
+  return 'no_repair_action_selected';
+}
 
 export function buildRunwayReadinessProjection(controlLoop: FamilyRuntimeControlLoopStatus) {
   return {
@@ -413,17 +472,24 @@ export function buildRunwayHandoffGatesProjection(controlLoop: FamilyRuntimeCont
 }
 
 export function buildRunwayRecoveryRepairProjection(controlLoop: FamilyRuntimeControlLoopStatus) {
+  const workerRestartGuard = controlLoop.recovery_repair.worker_restart_guard ?? null;
   return {
     surface_kind: 'opl_runway_recovery_repair',
     module_id: 'runway',
     brand_name: 'OPL Runway',
-    repair_status: controlLoop.recovery_repair.selected_repair_action
-      ? 'repair_action_available'
-      : 'no_repair_action_selected',
+    repair_status: recoveryRepairStatus({
+      selectedRepairAction: controlLoop.recovery_repair.selected_repair_action,
+      workerRestartGuard,
+    }),
     repair_policy: controlLoop.recovery_repair.repair_policy,
     repair_classes: controlLoop.recovery_repair.repair_classes,
     selected_repair_action: controlLoop.recovery_repair.selected_repair_action,
     default_repair_command: controlLoop.recovery_repair.default_repair_command,
+    worker_restart_guard: workerRestartGuard,
+    repair_blocker_ids: workerRestartGuard?.blocker_ids ?? [],
+    repair_can_mutate_worker: workerRestartGuard
+      ? workerRestartGuard.guard_status === 'ready'
+      : controlLoop.recovery_repair.selected_repair_action?.mutation === true,
     provider_runtime: controlLoop.provider_runtime,
     scheduler_cadence: controlLoop.scheduler_cadence,
     queue: controlLoop.queue,

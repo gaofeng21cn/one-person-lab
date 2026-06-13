@@ -24,7 +24,7 @@ export type TemporalWorkerRepairDeps = {
 
 type StageAttemptPayload = ReturnType<typeof listStageAttempts>[number];
 
-type WorkerRestartGuard = {
+export type WorkerRestartGuard = {
   surface_kind: 'temporal_worker_source_stale_restart_guard';
   guard_status: 'ready' | 'blocked';
   blocker_ids: string[];
@@ -150,6 +150,13 @@ function inspectWorkerRestartGuardFromState(paths: TemporalWorkerPaths, before: 
   } finally {
     db?.close();
   }
+}
+
+export function inspectTemporalWorkerRestartGuardForLifecycle(
+  paths: TemporalWorkerPaths,
+  before: TemporalWorkerLifecycle,
+) {
+  return inspectWorkerRestartGuardFromState(paths, before);
 }
 
 function workerLifecycleReceipt(input: {

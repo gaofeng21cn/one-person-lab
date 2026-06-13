@@ -12,6 +12,7 @@ import {
 } from '../../../../src/family-runtime-provider-slo-executor.ts';
 import {
   repairTemporalWorkerForProviderRepair,
+  inspectTemporalWorkerRestartGuardForLifecycle,
 } from '../../../../src/family-runtime-provider-worker-repair.ts';
 import {
   familyRuntimePaths,
@@ -391,6 +392,42 @@ test('family-runtime provider-slo restart guard summarizes active attempt blocke
     ]);
     assert.equal(receipt.restart_guard?.active_stage_attempt_sample_limit, 20);
     assert.equal(receipt.authority_boundary.can_write_domain_truth, false);
+  } finally {
+    db?.close();
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime worker restart guard can be inspected without mutating worker lifecycle', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-worker-guard-inspect-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  let db: DatabaseSync | null = null;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    db = initializeQueueDbForCurrentStateDir();
+    createActiveStageAttempt(db, 'queued');
+    createActiveStageAttempt(db, 'checkpointed');
+
+    const guard = inspectTemporalWorkerRestartGuardForLifecycle(
+      familyRuntimePaths(),
+      explicitDeveloperSupervisorStaleWorker(),
+    );
+
+    assert.equal(guard.surface_kind, 'temporal_worker_source_stale_restart_guard');
+    assert.equal(guard.guard_status, 'blocked');
+    assert.deepEqual(guard.blocker_ids, ['active_stage_attempts_present']);
+    assert.equal(guard.stage_attempt_ledger_readable, true);
+    assert.equal(guard.active_stage_attempt_count, 2);
+    assert.deepEqual(guard.active_stage_attempts_by_status, {
+      checkpointed: 1,
+      queued: 1,
+    });
+    assert.deepEqual(guard.active_stage_attempt_statuses, ['checkpointed', 'queued']);
   } finally {
     db?.close();
     if (previousStateDir === undefined) {
