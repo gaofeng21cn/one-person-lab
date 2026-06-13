@@ -21,7 +21,7 @@ Fresh command:
 npm run --silent family:structure-advisory -- --format=json
 ```
 
-Fresh eleven-repo local summary from `2026-06-13T14:12:56Z` after root checkout revalidation:
+Fresh eleven-repo local summary from `2026-06-13T14:38:56Z` after root checkout revalidation:
 
 | Repo | needs_design_pass | mechanical_residue | public_surface_risk | missing_verify_entry |
 | --- | ---: | ---: | ---: | --- |
@@ -74,12 +74,12 @@ Support repos can be lighter but should still be recognizable: `one-person-lab` 
 | Repo | Current structure finding | Action |
 | --- | --- | --- |
 | `one-person-lab` | Fresh scan now reports 1 `needs_design_pass` item, 0 mechanical residue and 8 public-surface risks. The App operator drilldown source-boundary slice is landed: `src/runtime-tray-app-operator-drilldown.ts` is no longer in the design-pass queue after extracting `runtime-tray-app-operator-drilldown-parts/core-refs.ts`. | Treat the remaining item as OPL-owned natural source-boundary queue for `family-runtime-enqueue` currentness / reconcile code. Do not turn this support snapshot into a blocking backlog or readiness claim. |
-| `med-autoscience` | Fresh scan reports 46 `needs_design_pass` items and 8 public-surface risks. No mechanical residue and no missing verify entry. | MAS remains the highest residual source-shape advisory queue. Handle only from MAS owner lanes with fresh repo state, especially current work unit, current executable owner action, provider admission current control, persisted dispatch, domain health diagnostic and study progress surfaces. |
+| `med-autoscience` | Fresh scan reports 46 `needs_design_pass` items and 8 public-surface risks. First source-shape advisory is `src/med_autoscience/controllers/current_work_unit.py` at `1913` lines. No mechanical residue and no missing verify entry. | MAS remains the highest residual source-shape advisory queue. Handle only from MAS owner lanes with fresh repo state, especially current work unit, current executable owner action, provider admission current control, persisted dispatch, domain health diagnostic and study progress surfaces. |
 | `med-autogrant` | Fresh scan reports no source-shape item and 5 public-surface risks. | Treat remaining MAG advisory work as generated schema / contract modularity review; no OPL-side physical edit is authorized by this snapshot. |
 | `redcube-ai` | Fresh scan has no source-shape finding; public-surface risk remains in generated/public contracts and two shared buckets. | Continue generated/public-surface modularity and shared-bucket ownership review from RCA lanes; no source split is currently implied. |
 | `opl-meta-agent` | Fresh scan has no source-shape finding; public-surface risk remains in `contracts/stage_control_plane.json`. | Keep source/parts direction; contract modularity remains generator/source concern. |
-| `one-person-lab-app` | Fresh scan reports 7 source/test shape items and 4 public-surface risks. | Keep App source-shape advisory in the App owner lane. Future cleanup should split by release workflow, active-shell validation, package builder, release evidence bundle and user-path evidence boundaries. |
-| `opl-agui-codex-shell` | Fresh scan reports 2 source-shape items, no mechanical residue, no public-surface risk and no missing verify entry. | Keep shell-local implementation thin and App-owned product truth out of the shell; handle `ui-smoke` and candidate validator growth from App shell support lanes only. |
+| `one-person-lab-app` | Fresh scan reports 7 source/test shape items and 4 public-surface risks. First source-shape advisory is `tests/release/app-release-boundary-cases/workflow-release-channels.ts` at `1363` lines. | Keep App source-shape advisory in the App owner lane. Future cleanup should split by release workflow, active-shell validation, package builder, release evidence bundle and user-path evidence boundaries. |
+| `opl-agui-codex-shell` | Fresh scan reports 2 source-shape items, no mechanical residue, no public-surface risk and no missing verify entry. First source-shape advisory is `src/main/ui-smoke.js` at `1053` lines. | Keep shell-local implementation thin and App-owned product truth out of the shell; handle `ui-smoke` and candidate validator growth from App shell support lanes only. |
 | `opl-doc` | No current finding. | Keep as support/plugin morphology example: thin command entry plus named doctor responsibility modules. |
 | `opl-flow` | No current finding. | Keep verify entry thin and repo-native; no extra structure gate is needed until active source growth appears. |
 | `homebrew-one-person-lab` | No current finding; verify entry is not required by policy. | Keep lightweight as distribution transport support. |
@@ -114,7 +114,7 @@ Interpretation: OPL framework source/test shape has been substantially reduced b
 
 ### med-autoscience
 
-Fresh scan reports 46 `needs_design_pass` items and 8 `public_surface_risk` items. Exact current paths must be read from fresh `family:structure-advisory` JSON before a MAS owner lane writes source or docs.
+Fresh scan reports 46 `needs_design_pass` items and 8 `public_surface_risk` items. The first advisory is `src/med_autoscience/controllers/current_work_unit.py` (`1913`, `source_file_over_1000_lines`). Exact current paths must be read from fresh `family:structure-advisory` JSON before a MAS owner lane writes source or docs.
 
 ## External Calibration
 
