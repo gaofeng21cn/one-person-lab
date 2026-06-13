@@ -24,6 +24,17 @@ import {
 } from './family-runtime-stage-run-currentness-identity.ts';
 import { providerAdmissionCurrentnessIdentity } from './family-runtime-mas-current-control-admission-currentness.ts';
 import { buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-gate.ts';
+export {
+  defaultExecutorDispatchRef,
+  defaultExecutorSourceFingerprint,
+} from './family-runtime-provider-hosted-attempts-parts/source-identity.ts';
+import {
+  defaultExecutorDispatchIdentityRef,
+  defaultExecutorDispatchRef,
+  defaultExecutorSourceFingerprint,
+  defaultExecutorStagePacketRefs,
+  hasDefaultExecutorDispatchIdentity,
+} from './family-runtime-provider-hosted-attempts-parts/source-identity.ts';
 import {
   exportOwnerFingerprint,
   isRecord,
@@ -31,56 +42,12 @@ import {
   optionalString,
   recordList,
   recordStringRefs,
-  relativeDispatchRefFromPath,
   sameOptionalStringField,
   sameStringField,
   stringList,
   uniqueStrings,
-  workspaceRelativeRef,
   workspaceRootFromProfile,
 } from './family-runtime-provider-hosted-attempts-parts/values.ts';
-
-export function defaultExecutorDispatchRef(payload: Record<string, unknown>) {
-  return optionalString(payload.dispatch_ref)
-    ?? optionalString(payload.immutable_dispatch_ref)
-    ?? optionalString(payload.dispatch_packet_ref)
-    ?? optionalString(payload.dispatch_request_ref)
-    ?? relativeDispatchRefFromPath(payload);
-}
-
-function defaultExecutorStagePacketRefs(payload: Record<string, unknown>) {
-  const workspaceRoot = optionalString(payload.workspace_root)
-    ?? workspaceRootFromProfile(optionalString(payload.profile));
-  return uniqueStrings([
-    workspaceRelativeRef(optionalString(payload.stage_packet_ref), workspaceRoot),
-    ...stringList(payload.stage_packet_refs).map((ref) => workspaceRelativeRef(ref, workspaceRoot)),
-    ...stringList(payload.checkpoint_refs).map((ref) => workspaceRelativeRef(ref, workspaceRoot)),
-    defaultExecutorDispatchRef(payload),
-  ]);
-}
-
-export function defaultExecutorSourceFingerprint(payload: Record<string, unknown>) {
-  const ownerRoute = isRecord(payload.owner_route) ? payload.owner_route : null;
-  const basis = masDefaultExecutorCurrentnessBasis(payload);
-  return optionalString(payload.source_fingerprint)
-    ?? optionalString(payload.action_fingerprint)
-    ?? optionalString(payload.repeat_suppression_key)
-    ?? optionalString(ownerRoute?.source_fingerprint)
-    ?? optionalString(ownerRoute?.action_fingerprint)
-    ?? optionalString(basis?.work_unit_fingerprint)
-    ?? optionalString(basis?.truth_epoch)
-    ?? optionalString(basis?.runtime_health_epoch);
-}
-
-function hasDefaultExecutorDispatchIdentity(payload: Record<string, unknown>) {
-  return defaultExecutorDispatchRef(payload) !== null
-    || defaultExecutorSourceFingerprint(payload) !== null;
-}
-
-function defaultExecutorDispatchIdentityRef(payload: Record<string, unknown>) {
-  return defaultExecutorDispatchRef(payload)
-    ?? defaultExecutorSourceFingerprint(payload);
-}
 
 function isTransportOnlyAdmissionDispatchReceiptRef(value: unknown) {
   if (typeof value !== 'string') {
