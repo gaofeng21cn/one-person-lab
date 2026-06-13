@@ -114,10 +114,6 @@ function noActiveCallerProofRefs(input: {
   ]);
 }
 
-export function generatedSurfaceTargetAllowed(targetKind: string) {
-  return defaultCallerTargetAllowed(targetKind);
-}
-
 export function defaultCallerSurfaceGates(bundle: JsonRecord) {
   const wrapperBundle = isRecord(bundle.generated_wrapper_bundle) ? bundle.generated_wrapper_bundle : {};
   const targetProof = isRecord(bundle.active_caller_target_proof) ? bundle.active_caller_target_proof : {};
