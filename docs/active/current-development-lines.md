@@ -4,13 +4,15 @@ Owner: `One Person Lab`
 Purpose: `current_owner_map_support`
 State: `active_support`
 Machine boundary: 本文是人读路线支撑。机器真相继续归 `contracts/`、source code、CLI/API behavior、runtime ledgers、provider receipts、domain-owned manifests 和真实 workspace / App evidence。
-Last reviewed: `2026-06-12`
+Last reviewed: `2026-06-14`
 
 ## 读法
 
 当前开发线路不再作为独立 active plan 维护。OPL family 的当前目标、差距、完成口径和下一轮 baton 的唯一 active owner 是 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。
 
 本文只回答一个支撑问题：各类工作应回到哪个长期 owner。它不排序下一步、不维护路线图、不冻结 live counter、readiness 摘要、receipt id、attempt id、workorder 数、branch/worktree 或 closeout 过程。
+
+2026-06-14 文档落地更新：近期重构后的 active 支撑读法必须 wrapper-aware。`framework readiness` 读 `.framework_readiness`，`framework operating-maturity` 读 `.framework_operating_maturity`，App/operator drilldown 读 `.app_operator_drilldown`，Brand L5 读 `.brand_module_l5_status`，attempt list 读 `.family_runtime_stage_attempts`。当前 durable 目标仍是 `W7 owner-evidence / production-tail closure`；本文不能把 docs foldback、source split、verified refs-only ledger、conformance pass、App projection 或 `open_count=0` 写成 owner gate 关闭。
 
 当前 runtime 边界固定为 Codex-default executor 进入 provider-backed Stage Attempt；legacy wrapper、provenance、diagnostic、history 或 fixture 只作为支撑证据和退役语境，不进入 ordinary owner root。
 
@@ -34,28 +36,37 @@ OPL Framework current_owner_delta root
 
 ```bash
 rtk opl framework readiness --family-defaults --json
+rtk opl framework operating-maturity --family-defaults --json
 rtk opl runtime app-operator-drilldown --json
+rtk opl brand-modules l5-status --json
 rtk opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json
 rtk opl agents conformance --family-defaults --json
 rtk opl agents default-callers --family-defaults --json
-rtk opl agents residue-decisions --family-defaults --json
 ```
 
-这些命令只提供 framework、App/operator、generated surface、evidence worklist 和 standard-agent structural 状态。它们不能单独声明 domain ready、App release ready、production ready、artifact authority ready 或 domain repo physical delete authorized。
+这些命令只提供 framework、App/operator、generated surface、evidence worklist、Brand L5 refs-only ledger、default-caller delete gate 和 standard-agent structural 状态。它们不能单独声明 domain ready、App release ready、Brand L5 complete、production ready、artifact authority ready 或 domain repo physical delete authorized。
+
+本轮 fresh readback 的支撑口径：
+
+- `framework operating-maturity` 仍是 `status=evidence_required`，`ready_claim_authorized=false`，7 个 unresolved owner gates 仍为 `current_owner_delta_owner_answer`、domain owner-chain scaleout、Brand L5、App release/user-path、provider long-soak、private platform retirement、memory/artifact/lifecycle apply。
+- `current_owner_delta_bridge` 已观测当前 identity 的 `typed_blocker_ref`，但 `readiness_current_pointer_owner_answer_ref=null` 且 `current_pointer_update_still_required=true`；这表示 refs-only owner payload summary 已可读，不表示 current pointer closeout。
+- `app_operator_drilldown.memory_artifact_lifecycle` 当前 `status=refs_observed`、`readiness_status=typed_blocker_work_order_required_not_ready`、`ready_claim_authorized=false`、`observed_ref_count=47`、`lifecycle_reconcile_status=reconciled`；它只支撑 owner work order 和 forbidden-claim 展示。
+- `app_operator_drilldown.cleanup_retirement` 当前 `deletion_evidence_worklist_count=8`、`open_deletion_evidence_requirement_count=0`、`physical_delete_authorized=false`；`agents default-callers` broader worklist 仍是 32 项 refs-only evidence，二者都不能授权删除。
+- `brand-modules l5-status` 当前十模块都是 `evidence_required`，`l5_complete_module_count=0`，`evidence_ledger.verified_receipt_count=3`，ledger status 是 `ledger_refs_only_not_l5_claimed`。
 
 ## Owner Map
 
 | 路线 | 长期 owner | 默认落点 | 完成口径 |
 | --- | --- | --- | --- |
-| `current_owner_delta_default` | OPL Framework | `current-state-vs-ideal-gap.md` | 默认 CLI/App/operator summary 只回答当前 owner、accepted answer shape、hard gate 和下一步 owner action。raw evidence、worklist、replay、typed-blocker group 和 private residue 只进入 full-detail / diagnostic。 |
+| `current_owner_delta_default` | OPL Framework + domain owner | `current-state-vs-ideal-gap.md` | 默认 CLI/App/operator summary 只回答当前 owner、accepted answer shape、hard gate 和下一步 owner action。当前 owner payload summary 已被 maturity bridge 观测为 typed blocker refs-only evidence，但 readiness current pointer 仍未闭合；下一步必须回 MAS/domain owner 或 route-back 指向的 currentness/stage-packet owner，不能重复写同一 ledger。raw evidence、worklist、replay、typed-blocker group 和 private residue 只进入 full-detail / diagnostic。 |
 | `stage_attempt_runtime` | OPL Framework / Temporal provider | `docs/runtime/`、contracts、source | Temporal-backed provider、typed queue、stage attempt、retry/dead-letter、human gate 和 provider receipt 可恢复、可审计；local provider 只作 dev/CI/offline diagnostic baseline。 |
 | `stage_artifact_progress_truth` | OPL Framework + domain owner | `current-state-vs-ideal-gap.md`、target architecture | Progress 只能来自 physical output、valid manifest、owner answer 和 current pointer；provider completion、file existence、receipt count 或 conformance pass 单独不算 progress。OPL 标准层现在已有 stage_manifest / role artifact / owner receipt / typed blocker schemas、`opl stage validate` 和 StageRun profile conformance gate；MAS terminal handoff callable 已落地为 domain authority function。下一步只排序 live owner receipt / typed blocker / human gate、真实 domain canary、App cockpit consumption 和补偿链退役。 |
-| `brand_system_freeze` | OPL Charter + module owners | `contracts/opl-framework/brand-system-profile.json`、brand module refs | One Person Lab 三层产品认知、品牌模块 product grammar、Foundry Agent 命名、App 状态语言、visual/status pattern group 和 receipt/blocker 文案由 required framework contract 冻结；后续 UI/CLI/App/public surface 只能对齐或显式提出 profile 变更。 |
+| `brand_system_freeze` | OPL Charter + module owners | `contracts/opl-framework/brand-system-profile.json`、brand module refs | One Person Lab 三层产品认知、品牌模块 product grammar、Foundry Agent 命名、App 状态语言、visual/status pattern group 和 receipt/blocker 文案由 required framework contract 冻结；后续 UI/CLI/App/public surface 只能对齐或显式提出 profile 变更。Brand L5 必须另读 `.brand_module_l5_status`，verified ledger、docs foldback、App projection 或 module command pass 都不能替代 owner acceptance / live path / release-install / long-soak evidence。 |
 | `standard_agent_pack_abi` | OPL Foundry Lab + pack compiler | standard skeleton contract、stage pack v2、conformance | 新 agent 和 domain repo 迁移必须满足 standard Agent Pack ABI：declarative `agent/`、machine contracts、`runtime/authority_functions/` 和 domain handler target。ABI pass 只证明标准源码入口，不等于 L5、domain ready 或 production ready。 |
 | `generated_surface_consumption` | OPL generated surface owner | contracts/source/CLI/App derived surfaces | MAS/MAG/RCA/OMA 生产入口默认消费 OPL generated/hosted surfaces；CLI、MCP、OpenAI/AI SDK tools、Skill/plugin、App action、status read model 和 workbench 从同一 action/stage catalog 派生。domain repo retained wrapper 只作为 refs-only adapter、domain handler target、migration input 或 tombstone candidate。 |
 | `domain_owner_delta_tail` | MAS/MAG/RCA/OMA domain owner | 各 domain active plan / owner receipt | MAS current-control / next-action admission、MAG owner-chain canary blocker evidence、RCA owner-chain canary evidence 和 OMA human-gate owner evidence tail 属于各 domain repo 的 live evidence surface；fresh family readout 仍要求 domain-owned live progress evidence。真实 paper、grant、visual 或 target-agent owner receipt、typed blocker、human gate、review/export receipt、no-regression ref 或 long-soak ref 才关闭对应 evidence tail。OPL/App 只记录 refs，不生成 domain answer。 |
-| `app_cockpit_consumption` | One Person Lab App | `docs/product/`、App repo contract/release evidence | App 只展示和介入，消费 framework/provider 状态与 domain-owned projection；ordinary cockpit 默认只展示 purpose、task、current owner、next action、artifact 或 blocker，provider/ledger/worklist/raw receipt/release evidence 只在 full/developer detail。App release/user-path truth 仍回 App repo contracts、release artifacts 和真实 user-path evidence，不回 OPL Framework。 |
-| `wrapper_retirement` | OPL cleanup gate + domain owner | private inventory、domain repo gate、`contracts/opl-framework/private-platform-residue-owner-decisions.json` | 满足 replacement parity、no-active-caller、owner receipt / typed blocker、no-forbidden-write 和 tombstone/provenance 后删除或 tombstone；不新增 compatibility alias、facade 或 wrapper。private platform residue 逐项按 scheduler、queue、session store、workbench、status shell、domain wrapper、runtimeWatch、agent-lab materializer 分类，并由 `opl agents residue-decisions --family-defaults --json` 投影为 `retain_authority_function` / `raise_to_opl_primitive` / `no_active_caller_delete_gate` / `tombstone_gate` / `typed_blocker_gate` owner-decision ledger。该 ledger 只读 refs，不驱动 ordinary owner delta，不写 domain truth，也不授权物理删除。 |
+| `app_cockpit_consumption` | One Person Lab App | `docs/product/`、App repo contract/release evidence | App 只展示和介入，消费 framework/provider 状态与 domain-owned projection；ordinary cockpit 默认只展示 purpose、task、current owner、next action、artifact 或 blocker，provider/ledger/worklist/raw receipt/release evidence 只在 full/developer detail。App release/user-path truth 仍回 App repo contracts、release artifacts 和真实 user-path evidence，不回 OPL Framework；当前 `app_release_user_path_open_count=0` 只表示 evidence lane 可读，不是 release-ready。 |
+| `wrapper_retirement` | OPL cleanup gate + domain owner | default-caller delete gate、private inventory、domain repo gate、`contracts/opl-framework/private-platform-residue-owner-decisions.json` | 满足 replacement parity、no-active-caller、owner receipt / typed blocker、no-forbidden-write 和 tombstone/provenance 后删除或 tombstone；不新增 compatibility alias、facade 或 wrapper。当前 `app_operator_drilldown.cleanup_retirement` 8 项 worklist 与 `agents default-callers` 32 项 broader worklist 都是 refs-only projection；`physical_delete_authorized=false` 时不执行物理删除。private platform residue 逐项按 scheduler、queue、session store、workbench、status shell、domain wrapper、runtimeWatch、agent-lab materializer 分类；该 ledger 只读 refs，不驱动 ordinary owner delta，不写 domain truth，也不授权物理删除。 |
 | `support_repo_clarity` | App shell / OPL Doc support owner | support repo docs | shell 是 App renderer carrier，OPL Doc 是 workflow steward；support repo 不反向定义 OPL/App/domain truth。 |
 
 ## Direct Retirement 读法
