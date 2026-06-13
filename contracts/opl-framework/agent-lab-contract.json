@@ -507,6 +507,185 @@
     "compatibility_boundary": "The producing domain agent declares OPL Agent Lab compatibility; OPL Agent Lab validates refs-only suite shape and never becomes the domain design center.",
     "authority_boundary": "runs the same refs-only Agent Lab validation as built-in suites; cannot write domain truth, memory body, artifacts, owner receipts, or default agent config"
   },
+  "rho_backend_surface": {
+    "surface_kind": "opl_agent_lab_rho_backend_contract",
+    "contract_version": "opl-agent-lab.v1.rho-backend",
+    "backend": "rho",
+    "backend_role": "executable_no_apply_harness_backend",
+    "cli": "opl agent-lab rho run --project <target-agent-dir> [--sessions <codex-sessions-dir>] [--output <rho-run-dir>] --json",
+    "executable": true,
+    "apply_mode": "no_apply",
+    "refs_only": true,
+    "required_artifacts": [
+      "trajectory_digest_ref",
+      "diagnosis_ref",
+      "candidate_harness_ref",
+      "self_preference_score_ref",
+      "winner_ref",
+      "candidate_diff_ref",
+      "work_order_draft_ref",
+      "promotion_evidence_ref",
+      "no_forbidden_write_ref",
+      "execution_receipt_ref"
+    ],
+    "output_surface": "opl_agent_lab_rho_backend_run",
+    "consumer_outputs": [
+      "agent_lab_rho_run.execution_receipt",
+      "agent_lab_rho_run.work_order_draft",
+      "agent_lab_workbench.rho_backend",
+      "foundry_lab_read_model.rho_backend"
+    ],
+    "readiness_gate": {
+      "gate_id": "agent_lab_rho_backend_executable_no_apply_gate",
+      "required_refs": [
+        "trajectory_digest_ref",
+        "diagnosis_ref",
+        "candidate_harness_ref",
+        "self_preference_score_ref",
+        "winner_ref",
+        "candidate_diff_ref",
+        "work_order_draft_ref",
+        "promotion_evidence_ref",
+        "no_forbidden_write_ref",
+        "execution_receipt_ref"
+      ],
+      "ready_status": "executable_backend_ready",
+      "blocked_status": "blocked_missing_required_artifact_or_authority_boundary",
+      "false_authority_flags_must_be_false": [
+        "can_direct_apply",
+        "can_write_domain_truth",
+        "can_write_memory_body",
+        "can_mutate_domain_artifact",
+        "can_write_owner_receipt",
+        "can_promote_default_agent_without_gate",
+        "can_define_runtime_substrate"
+      ]
+    },
+    "end_to_end_acceptance": {
+      "acceptance_status": "accepted_when_cli_emits_complete_no_apply_receipt",
+      "acceptance_command": "opl agent-lab rho run --project <target-agent-dir> [--sessions <codex-sessions-dir>] [--output <rho-run-dir>] --json",
+      "must_emit": [
+        "execution_receipt",
+        "work_order_draft",
+        "required_artifacts",
+        "authority_boundary",
+        "readiness_gate",
+        "execution_receipt_ref"
+      ],
+      "must_not_apply_patch": true,
+      "accepted_downstream_route": "work_order_draft_ref_to_opl_work_order_execute_or_owner_gate"
+    },
+    "authority_boundary": {
+      "surface_role": "executable_backend_for_candidate_generation_only",
+      "can_direct_apply": false,
+      "can_write_domain_truth": false,
+      "can_write_memory_body": false,
+      "can_mutate_domain_artifact": false,
+      "can_write_owner_receipt": false,
+      "can_authorize_domain_ready": false,
+      "can_authorize_quality_verdict": false,
+      "can_promote_default_agent_without_gate": false,
+      "can_define_runtime_substrate": false
+    },
+    "forbidden_claims": [
+      "direct_apply",
+      "target_repo_mutation",
+      "runtime_substrate",
+      "domain_truth",
+      "quality_verdict",
+      "owner_receipt",
+      "default_agent_promotion",
+      "production_ready"
+    ]
+  },
+  "dynamic_workflow_runner_surface": {
+    "surface_kind": "opl_agent_lab_dynamic_workflow_runner_contract",
+    "contract_version": "opl-agent-lab.v1.dynamic-workflow-runner",
+    "runner_role": "executable_suite_topology_work_order_runner",
+    "cli": "opl agent-lab workflow-template run --template <id> --project <target-agent-dir> [--output <workflow-run-dir>] --json",
+    "executable": true,
+    "refs_only": true,
+    "input_surface": "opl_agent_lab_workflow_template_catalog",
+    "required_artifacts": [
+      "suite_topology_ref",
+      "verifier_ref",
+      "work_order_draft_ref",
+      "work_order_sequence_ref",
+      "runner_execution_receipt_ref",
+      "typed_blocker_ref_or_acceptance_ref"
+    ],
+    "allowed_patterns": [
+      "classify_and_act",
+      "fan_out_and_synthesize",
+      "adversarial_verification",
+      "generate_and_filter",
+      "tournament",
+      "loop_until_done",
+      "model_routing",
+      "worktree_isolation"
+    ],
+    "consumer_outputs": [
+      "agent_lab_workflow_template_run",
+      "foundry_lab_read_model.dynamic_workflow_runner",
+      "oma_work_order_generation.dynamic_workflow_runner"
+    ],
+    "readiness_gate": {
+      "gate_id": "agent_lab_dynamic_workflow_executable_runner_gate",
+      "required_refs": [
+        "suite_topology_ref",
+        "verifier_ref",
+        "work_order_draft_ref",
+        "work_order_sequence_ref",
+        "runner_execution_receipt_ref",
+        "typed_blocker_ref_or_acceptance_ref"
+      ],
+      "ready_status": "executable_runner_ready",
+      "blocked_status": "blocked_missing_suite_topology_verifier_work_order_or_receipt",
+      "false_authority_flags_must_be_false": [
+        "can_compile_ordinary_user_workflow",
+        "can_define_runtime_substrate",
+        "can_execute_non_default_executor",
+        "can_write_domain_truth",
+        "can_authorize_quality_verdict",
+        "can_write_owner_receipt"
+      ]
+    },
+    "end_to_end_acceptance": {
+      "acceptance_status": "accepted_when_runner_emits_work_order_receipt_or_typed_blocker",
+      "acceptance_command": "opl agent-lab workflow-template run --template <id> --project <target-agent-dir> [--output <workflow-run-dir>] --json",
+      "must_emit": [
+        "suite_topology_ref",
+        "verifier_ref",
+        "work_order_draft_ref",
+        "work_order_sequence_ref",
+        "runner_execution_receipt_ref",
+        "typed_blocker_ref_or_acceptance_ref"
+      ],
+      "accepted_downstream_route": "work_order_draft_ref_to_opl_work_order_execute_or_typed_blocker"
+    },
+    "authority_boundary": {
+      "surface_role": "executable_runner_for_agent_lab_suite_topology_and_work_order_refs_only",
+      "can_compile_ordinary_user_workflow": false,
+      "can_define_runtime_substrate": false,
+      "can_execute_non_default_executor": false,
+      "can_write_domain_truth": false,
+      "can_write_memory_body": false,
+      "can_mutate_domain_artifact": false,
+      "can_authorize_quality_verdict": false,
+      "can_write_owner_receipt": false,
+      "can_promote_default_agent_without_gate": false
+    },
+    "forbidden_claims": [
+      "ordinary_workflow_compiler",
+      "runtime_substrate",
+      "domain_truth",
+      "quality_verdict",
+      "owner_receipt",
+      "non_default_executor_execution",
+      "default_agent_promotion",
+      "production_ready"
+    ]
+  },
   "production_evidence_gate_surface": {
     "surface_kind": "opl_agent_lab_production_evidence_gate_result",
     "cli": "opl agent-lab run --suite <agent_production_evidence_suite.json>",
@@ -1208,6 +1387,8 @@
       "aris_maturity_controls",
       "variant_comparison_read_model",
       "stage_executor_policy_read_model",
+      "rho_executable_no_apply_backend",
+      "dynamic_workflow_executable_runner",
       "rl_boundary"
     ],
     "readiness_fields": [
@@ -1227,6 +1408,8 @@
       "ready_to_emit_codex_attempt_trace_flywheel",
       "ready_to_emit_variant_comparison_read_model",
       "ready_to_emit_stage_executor_policy_read_model",
+      "ready_to_emit_rho_executable_no_apply_backend",
+      "ready_to_emit_dynamic_workflow_executable_runner",
       "ready_to_emit_token_cost_estimates",
       "ai_review_approved_count",
       "automatic_model_training_ready",
@@ -1254,6 +1437,8 @@
     "OPL can project refs-only stage executor policy candidates, including non-default adapter trial gates such as antigravity_cli with gemini-3.5-flash high for RCA HTML routes, without executing the adapter or changing the default executor",
     "OPL can emit refs-only export envelopes for optional Inspect AI, OpenInference, Langfuse, Phoenix, and JSON consumers without uploading data",
     "OPL can run an external suite into gated optimizer candidate refs and RL transition refs without training weights or promoting a default agent",
+    "OPL can execute the RHO backend as a no-apply harness that emits trajectory digest, diagnosis, candidate harness, self-preference score, winner, candidate diff, work-order draft, promotion evidence, no-forbidden-write, and execution receipt refs without applying patches or writing owner authority",
+    "OPL can execute the dynamic workflow runner as a Foundry Lab suite topology and work-order runner that emits suite topology, verifier, work-order draft, work-order sequence, runner execution receipt, and typed blocker or acceptance refs without becoming an ordinary workflow compiler or runtime substrate",
     "OPL can auto-promote low and medium risk mechanism changes through canary when real failure/evidence delta, independent AI review, promotion receipt, rollback target, no-forbidden-write proof, and medium-risk canary refs are present",
     "OPL can route high risk mechanism changes to owner or human gate instead of applying them automatically",
     "OPL can treat mechanism as a first-class refs-only object with editable surface refs, meta edit receipt refs, evolution segment refs, evidence delta refs, and next mechanism candidate refs",
@@ -1283,7 +1468,9 @@
     "RCA artifact readiness verdict from token/cost estimate",
     "RCA export readiness verdict from token/cost estimate",
     "quality, tool semantics, or resume equivalence from non-default executor connectivity or speed",
-    "default executor switch from Agent Lab stage executor policy recommendation"
+    "default executor switch from Agent Lab stage executor policy recommendation",
+    "RHO direct apply, target repo mutation, runtime substrate readiness, domain truth, owner receipt, or default agent promotion",
+    "dynamic workflow ordinary workflow compiler status, runtime substrate readiness, non-default executor execution, domain truth, owner receipt, or production readiness"
   ],
   "domain_retained_authority": [
     "domain truth",
@@ -1314,7 +1501,9 @@
     "credential policy mutation",
     "network policy mutation",
     "write policy mutation",
-    "ARIS runtime dependency"
+    "ARIS runtime dependency",
+    "RHO direct apply",
+    "dynamic workflow ordinary compiler claim"
   ],
   "external_framework_policy": {
     "primary_eval_runner": "Inspect AI adapter optional",

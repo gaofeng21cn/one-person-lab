@@ -10,8 +10,16 @@ import {
   buildCompleteAgentLabControlPlane,
   type AgentLabExportTarget,
 } from '../../agent-lab-complete.ts';
-import { buildAgentLabRhoBackendPlan } from '../../agent-lab-rho-backend.ts';
-import { buildAgentLabWorkflowTemplateCatalog } from '../../agent-lab-workflow-templates.ts';
+import {
+  buildAgentLabRhoBackendPlan,
+  buildAgentLabRhoBackendRun,
+} from '../../agent-lab-rho-backend.ts';
+import {
+  buildAgentLabWorkflowTemplateCatalog,
+  buildAgentLabWorkflowTemplateRun,
+  isAgentLabWorkflowTemplateId,
+  listAgentLabWorkflowTemplateIds,
+} from '../../agent-lab-workflow-templates.ts';
 import {
   agentLabRefSummary,
   buildAgentLabCostEstimate,
@@ -77,6 +85,14 @@ function buildAgentLabWorkflowTemplatePayload() {
   return {
     version: 'g2',
     agent_lab_workflow_template: buildAgentLabWorkflowTemplateCatalog(),
+  };
+}
+
+function buildAgentLabWorkflowTemplateRunPayload(args: string[], spec: CommandSpec) {
+  const run = buildAgentLabWorkflowTemplateRun(parseAgentLabWorkflowTemplateRunArgs(args, spec));
+  return {
+    version: 'g2',
+    agent_lab_workflow_template_run: run,
   };
 }
 
@@ -203,6 +219,54 @@ function parseAgentLabRunArgs(args: string[], spec: CommandSpec) {
   return parseAgentLabSuiteArgs(args, spec, 'run');
 }
 
+function parseAgentLabWorkflowTemplateRunArgs(args: string[], spec: CommandSpec) {
+  let templateId: string | null = null;
+  let projectDir: string | null = null;
+  let outputDir: string | null = null;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (token !== '--template' && token !== '--project' && token !== '--output') {
+      throw buildUsageError(`Unknown option for agent-lab workflow-template run: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, { option: token });
+    }
+
+    if (token === '--template') {
+      templateId = value;
+    } else if (token === '--project') {
+      projectDir = value;
+    } else {
+      outputDir = value;
+    }
+    index += 1;
+  }
+
+  if (!templateId) {
+    throw buildUsageError('agent-lab workflow-template run requires --template <id>.', spec, {
+      option: '--template',
+    });
+  }
+  if (!isAgentLabWorkflowTemplateId(templateId)) {
+    throw buildUsageError(`Unsupported agent-lab workflow template: ${templateId}.`, spec, {
+      option: '--template',
+      supported_template_ids: listAgentLabWorkflowTemplateIds(),
+    });
+  }
+  if (!projectDir) {
+    throw buildUsageError('agent-lab workflow-template run requires --project <dir>.', spec, {
+      option: '--project',
+    });
+  }
+
+  return { templateId, projectDir, outputDir };
+}
+
 function parseAgentLabRhoArgs(args: string[], spec: CommandSpec) {
   let projectDir: string | null = null;
 
@@ -225,6 +289,55 @@ function parseAgentLabRhoArgs(args: string[], spec: CommandSpec) {
   }
 
   return { projectDir };
+}
+
+function parsePositiveIntegerOption(value: string, option: string, spec: CommandSpec) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw buildUsageError(`Option ${option} requires a positive integer.`, spec, { option, value });
+  }
+  return parsed;
+}
+
+function parseAgentLabRhoRunArgs(args: string[], spec: CommandSpec) {
+  let projectDir: string | null = null;
+  let sessionsDir: string | null = null;
+  let outputDir: string | null = null;
+  let maxTrajectories: number | null = null;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (
+      token !== '--project'
+      && token !== '--sessions'
+      && token !== '--output'
+      && token !== '--max-trajectories'
+    ) {
+      throw buildUsageError(`Unknown option for agent-lab rho run: ${token}.`, spec, { option: token });
+    }
+
+    const value = args[index + 1];
+    if (!value) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, { option: token });
+    }
+
+    if (token === '--project') {
+      projectDir = value;
+    } else if (token === '--sessions') {
+      sessionsDir = value;
+    } else if (token === '--output') {
+      outputDir = value;
+    } else {
+      maxTrajectories = parsePositiveIntegerOption(value, token, spec);
+    }
+    index += 1;
+  }
+
+  if (!projectDir) {
+    throw buildUsageError('agent-lab rho run requires --project <dir>.', spec, { option: '--project' });
+  }
+
+  return { projectDir, sessionsDir, outputDir, maxTrajectories };
 }
 
 function parseAgentLabExportArgs(args: string[], spec: CommandSpec) {
@@ -327,6 +440,13 @@ function buildAgentLabRhoPayload(args: string[], spec: CommandSpec) {
   };
 }
 
+function buildAgentLabRhoRunPayload(args: string[], spec: CommandSpec) {
+  return {
+    version: 'g2',
+    agent_lab_rho_run: buildAgentLabRhoBackendRun(parseAgentLabRhoRunArgs(args, spec)),
+  };
+}
+
 function buildAgentLabEvolvePayload(args: string[], spec: CommandSpec) {
   const { suitePath } = parseAgentLabSuiteArgs(args, spec, 'evolve');
   return {
@@ -363,8 +483,10 @@ export {
   buildAgentLabRunEfficiencyPayload,
   buildAgentLabRunPayload,
   buildAgentLabRhoPayload,
+  buildAgentLabRhoRunPayload,
   buildAgentLabSamplePayload,
   buildAgentLabStageExecutorPolicyPayload,
   buildAgentLabWorkbenchPayload,
   buildAgentLabWorkflowTemplatePayload,
+  buildAgentLabWorkflowTemplateRunPayload,
 };

@@ -16,10 +16,12 @@ import {
   buildAgentLabRunEfficiencyPayload,
   buildAgentLabRunPayload,
   buildAgentLabRhoPayload,
+  buildAgentLabRhoRunPayload,
   buildAgentLabSamplePayload,
   buildAgentLabStageExecutorPolicyPayload,
   buildAgentLabWorkbenchPayload,
   buildAgentLabWorkflowTemplatePayload,
+  buildAgentLabWorkflowTemplateRunPayload,
 } from '../modules/agent-lab-public-payloads.ts';
 import { assertNoArgs, buildUsageError } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
@@ -192,6 +194,19 @@ export function buildPublicAgentLabCommandSpecs(): Record<string, CommandSpec> {
         return buildAgentLabWorkflowTemplatePayload();
       },
     },
+    'agent-lab workflow-template run': {
+      usage: 'opl agent-lab workflow-template run --template <id> --project <dir> [--output <dir>]',
+      summary:
+        'Materialize deterministic Agent Lab workflow run artifacts for a dynamic workflow template without dispatching subagents.',
+      examples: [
+        'opl agent-lab workflow-template run --template fan_out_and_synthesize --project ./target-agent --output ./workflow-run --json',
+      ],
+      group: 'framework',
+      handler: (args) => buildAgentLabWorkflowTemplateRunPayload(
+        args,
+        specs['agent-lab workflow-template run'],
+      ),
+    },
     'agent-lab risk-tier-promotion record': {
       usage: 'opl agent-lab risk-tier-promotion record --payload <json>',
       summary:
@@ -302,6 +317,16 @@ export function buildPublicAgentLabCommandSpecs(): Record<string, CommandSpec> {
       examples: ['opl agent-lab rho --project ./target-agent --json'],
       group: 'framework',
       handler: (args) => buildAgentLabRhoPayload(args, specs['agent-lab rho']),
+    },
+    'agent-lab rho run': {
+      usage: 'opl agent-lab rho run --project <dir> [--sessions <dir>] [--output <dir>] [--max-trajectories <n>]',
+      summary:
+        'Run the OPL native RHO no-apply backend over Codex session trajectories and materialize harness artifacts plus a work-order draft.',
+      examples: [
+        'opl agent-lab rho run --project ./target-agent --sessions ~/.codex/sessions --output ./rho-run --max-trajectories 8 --json',
+      ],
+      group: 'framework',
+      handler: (args) => buildAgentLabRhoRunPayload(args, specs['agent-lab rho run']),
     },
     'agent-lab evolve': {
       usage: 'opl agent-lab evolve --suite <suite.json>',

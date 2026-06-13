@@ -27,8 +27,8 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 Agent L
 | `evaluation_run` | 对 descriptor、stage、receipt、tool boundary、App projection 的评估。 |
 | `improvement_candidate` | 机制改进候选、预期影响、风险层级。 |
 | `developer_work_order` | 可执行 patch work order、验证命令、禁止范围和 owner closeout。 |
-| `rho_backend_plan` | RHO no-apply sidecar 的候选计划面，只产出 trajectory digest、diagnosis、candidate harness、self-preference score、winner、candidate diff、work-order draft 和 promotion evidence refs。 |
-| `dynamic_workflow_template` | Foundry Lab suite topology / verifier / work-order draft refs 的动态模板 catalog。 |
+| `rho_backend_plan` | RHO `executable_no_apply_harness_backend` 的候选执行结果面，只产出 trajectory digest、diagnosis、candidate harness、self-preference score、winner、candidate diff、work-order draft、promotion evidence、no-forbidden-write 和 execution receipt refs。 |
+| `dynamic_workflow_runner` | Foundry Lab `executable_suite_topology_work_order_runner`，产出 suite topology、verifier、work-order draft、work-order sequence、runner execution receipt 和 typed blocker-or-acceptance refs。 |
 | `canary_ref` | 小范围真实或 controlled canary 证据。 |
 | `promotion_receipt` | risk-tier promotion / rollback / no-regression refs。 |
 | `target_agent_handoff` | 给目标 agent/domain owner 的交接。 |
@@ -56,7 +56,7 @@ Workspace 级 L4 的 Foundry Lab 对象模型必须像 Workspace 一样有自己
 | `validation / doctor` | `opl foundry-lab validate --json` 检查 skeleton/conformance/readiness/work-order/promotion contract；`opl foundry-lab doctor --json` 报告缺 scaffold、缺 tests、缺 canary、缺 owner gate 或 target repo handoff gap。 |
 | `tests` | CLI public spec、agent scaffold fixture、conformance/readiness regression、work-order receipt fixture、promotion/rollback negative authority、owner-acceptance-not-claimed guard。 |
 | `status` | `docs/status.md`、`docs/runtime/opl-agent-lab-control-plane.md`、`docs/references/brand-modules/current-maturity-against-workspace.md`、target repo owner closeout refs。 |
-| `dynamic workflow template` | `src/agent-lab-workflow-templates.ts`、`opl agent-lab workflow-template --json`、`tests/src/cli/cases/agent-lab.test.ts`。 |
+| `RHO / dynamic workflow executable backend` | `contracts/opl-framework/agent-lab-contract.json#rho_backend_surface`、`contracts/opl-framework/agent-lab-contract.json#dynamic_workflow_runner_surface`、`src/agent-lab-rho-backend.ts`、`src/agent-lab-workflow-templates.ts`、`opl agent-lab rho run --project <dir> --sessions <codex-sessions-dir> --output <rho-run-dir> --json`、`opl agent-lab workflow-template run --template <id> --project <target-agent-dir> --output <workflow-run-dir> --json`、`tests/src/agent-lab-rho-workflow-contract.test.ts`。 |
 
 ## 接口与文档
 
@@ -80,20 +80,20 @@ opl agents scaffold --json
 opl agents conformance --family-defaults --json
 opl agents readiness --family-defaults --json
 opl agents default-callers --family-defaults --json
-opl agent-lab rho --project <target-agent-dir> --json
-opl agent-lab workflow-template --json
+opl agent-lab rho run --project <target-agent-dir> --sessions <codex-sessions-dir> --output <rho-run-dir> --json
+opl agent-lab workflow-template run --template <id> --project <target-agent-dir> --output <workflow-run-dir> --json
 opl work-order execute --work-order <file> --json
 ```
 
 Foundry Agent series 的普通 CLI spine 是 `workspace / work / stage / run / vault / handoff / connect`。OPL brand modules 继续作为 framework taxonomy；`runtime`、`family-runtime`、`index`、`stage-artifact`、`skill/module/packages/engine` 等旧实现桶不再作为 Foundry Agent 用户 command surface。
 
-## Dynamic workflow template
+## RHO 与 Dynamic workflow runner
 
-Foundry Lab 的 dynamic workflow template 是 Agent Lab 机器面的 refs-only catalog。它把常见 agent improvement 拓扑固定为可审计模板：`classify_and_act`、`fan_out_and_synthesize`、`adversarial_verification`、`generate_and_filter`、`tournament`、`loop_until_done`、`model_routing`、`worktree_isolation`。
+Foundry Lab 的 RHO backend 与 dynamic workflow runner 机器边界由 `contracts/opl-framework/agent-lab-contract.json` 持有。RHO 是 `executable_no_apply_harness_backend`：`opl agent-lab rho run --project <target-agent-dir> --sessions <codex-sessions-dir> --output <rho-run-dir> --json` 可以运行 no-apply harness，必须输出 trajectory digest、diagnosis、candidate harness、self-preference score、winner、candidate diff、work-order draft、promotion evidence、no-forbidden-write 和 execution receipt refs。验收只看这些 required artifacts 与 authority flags，不把 candidate diff 或 winner 当成 apply、domain truth、owner receipt、default promotion 或 production ready。
 
-这些模板只能产生 `suite_topology_ref`、`verifier_ref` 和 `work_order_draft_ref`。它们用于描述“怎样组织一次评估、验证或 patch work order 草稿”，不用于编译普通用户 workflow，不定义 runtime substrate，不替代 Runway / Temporal / family-runtime，也不能签发 domain truth、quality verdict 或 owner receipt。
+Dynamic workflow 是 `executable_suite_topology_work_order_runner`。它把常见 agent improvement 拓扑固定为可审计 runner：`classify_and_act`、`fan_out_and_synthesize`、`adversarial_verification`、`generate_and_filter`、`tournament`、`loop_until_done`、`model_routing`、`worktree_isolation`。runner 必须产出 `suite_topology_ref`、`verifier_ref`、`work_order_draft_ref`、`work_order_sequence_ref`、`runner_execution_receipt_ref` 和 `typed_blocker_ref_or_acceptance_ref`，用于组织一次评估、验证或 patch work order 草稿。
 
-机器入口是 `opl agent-lab workflow-template --json`。该输出可以被 App developer surface、OMA 和 operator drilldown 消费为 Foundry Lab template catalog；consumer 需要继续从 target repo verification、domain-owned proof 和 owner receipt refs 判断后续闭合，不能把 template catalog 本身当成 adoption、promotion 或 readiness 证据。
+这些 runner 不用于编译普通用户 workflow，不定义 runtime substrate，不替代 Runway / Temporal / family-runtime，不执行非默认 executor，也不能签发 domain truth、quality verdict 或 owner receipt。机器入口是 `opl agent-lab rho run --project <target-agent-dir> --sessions <codex-sessions-dir> --output <rho-run-dir> --json` 与 `opl agent-lab workflow-template run --template <id> --project <target-agent-dir> --output <workflow-run-dir> --json`。这些输出可以被 App developer surface、OMA 和 operator drilldown 消费；consumer 需要继续从 target repo verification、domain-owned proof 和 owner receipt refs 判断后续闭合，不能把 RHO winner、runner receipt、template pass 或 worktree isolation proof 当成 adoption、promotion 或 readiness 证据。
 
 理想文档：
 
@@ -115,7 +115,8 @@ contracts/opl-framework/standard-domain-agent-skeleton-contract.json
 ## Authority boundary
 
 - Foundry Lab 持有 agent blueprint、evaluation、developer work order、canary 和 promotion/rollback 的改进循环边界。
-- RHO backend 第一版只作为 no-apply sidecar/read-model：它可以生成 candidate refs、candidate diff refs、work-order draft refs 和 promotion evidence refs；不能写 target repo、不能直接 apply、不能作为 runtime substrate、truth source、domain owner、owner receipt 或 default promotion authority。
+- RHO backend 是 executable no-apply harness backend：它可以生成 candidate refs、candidate diff refs、work-order draft refs、promotion evidence refs、no-forbidden-write refs 和 execution receipt refs；不能写 target repo、不能直接 apply、不能作为 runtime substrate、truth source、domain owner、owner receipt 或 default promotion authority。
+- Dynamic workflow runner 是 executable suite topology / work-order runner：它可以组织 topology、verifier、work-order sequence 和 runner receipt refs；不能成为普通用户 workflow compiler、runtime substrate、非默认 executor launcher、domain truth owner、quality verdict owner 或 owner receipt signer。
 - Target domain owner 持有 domain truth、owner receipt、artifact authority、domain quality verdict 和最终 adoption/rollback 裁决。
 - OPL Meta Agent 可作为 builder/tester module 提供 work order 和测试接管能力，但不成为 OPL Framework 或目标 domain 的 truth owner。
 - Console、Atlas 和 Vault 只能消费 Foundry Lab 输出的 descriptor、receipt 或 refs，不从 Lab 推导 domain ready。
@@ -130,6 +131,7 @@ contracts/opl-framework/standard-domain-agent-skeleton-contract.json
 - 不把 developer work order 完成写成 owner 已接受。
 - 不把 Foundry Lab promotion 写成 target domain owner acceptance。
 - 不把 RHO winner、self-preference score、candidate diff 或 work-order draft 写成 runtime substrate、domain truth、owner receipt、direct apply 或 default promotion。
+- 不把 dynamic workflow runner receipt、template pass、loop completion 或 worktree isolation proof 写成 ordinary workflow compiler、runtime substrate、non-default executor execution、owner receipt、domain ready 或 production ready。
 
 ## L4 structural baseline 成功标准
 
