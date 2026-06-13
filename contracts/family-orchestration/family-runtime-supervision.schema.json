@@ -244,8 +244,8 @@
         "summary": "supervision tick is inside the domain-owned freshness SLO",
         "breached_slo_ids": []
       },
-      "repair_command": "medautoscience runtime-ensure-supervision --profile <profile>",
-      "safe_reconcile_hint": "Run the domain-owned repair command and re-read the domain-owned supervision source; OPL must not write runtime truth.",
+      "repair_command": "medautosci runtime domain-health-diagnostic --runtime-root <runtime_root> --profile <profile> --request-opl-stage-attempts --dry-run",
+      "safe_reconcile_hint": "Run the domain-owned read-only current-control probe and re-read the domain-owned supervision source; OPL must not write runtime truth or recreate retired MAS supervision commands.",
       "domain_owned_source_refs": [
         {
           "ref_kind": "repo_path",

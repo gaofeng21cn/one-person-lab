@@ -319,8 +319,8 @@ test('family runtime supervision helper projects wakeup freshness without author
       state: 'met',
       summary: 'supervision tick is inside the domain-owned freshness SLO',
     },
-    repair_command: 'medautoscience runtime-ensure-supervision --profile <profile>',
-    safe_reconcile_hint: 'Run domain-owned supervision repair; do not write runtime truth from OPL.',
+    repair_command: 'medautosci runtime domain-health-diagnostic --runtime-root <runtime_root> --profile <profile> --request-opl-stage-attempts --dry-run',
+    safe_reconcile_hint: 'Run domain-owned read-only current-control probe; do not write runtime truth from OPL.',
     domain_owned_source_refs: [
       {
         ref_kind: 'repo_path',

@@ -803,6 +803,13 @@ test('family persistence lifecycle owner-route and supervision schemas freeze sh
   assert.ok(supervisionRequired.includes('safe_reconcile_hint'));
   assert.ok(supervisionRequired.includes('domain_owned_source_refs'));
   assert.ok(supervisionRequired.includes('read_only_authority_boundary'));
+  const supervisionExample = (supervisionSchema.examples as Json[])[0] as Json;
+  assert.equal(
+    supervisionExample.repair_command,
+    'medautosci runtime domain-health-diagnostic --runtime-root <runtime_root> --profile <profile> --request-opl-stage-attempts --dry-run',
+  );
+  assert.doesNotMatch(String(supervisionExample.repair_command), /runtime-ensure-supervision|runtime ensure-supervision/);
+  assert.match(String(supervisionExample.safe_reconcile_hint), /read-only current-control probe/);
   assert.deepEqual(
     (supervisionSchema.properties as Json).surface_kind,
     { const: 'family_runtime_supervision' },

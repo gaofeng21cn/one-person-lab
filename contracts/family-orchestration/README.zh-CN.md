@@ -204,7 +204,7 @@ canonical classification 固定为：
 
 `family-runtime-supervision.schema.json` 冻结 family-level runtime wakeup / supervision 只读投影。它让 `MAS`、`MAG`、`RCA` 以及未来 admitted domain 用同一形状暴露 adapter id、cadence、latest tick、latest success、lease freshness、SLO state、repair command、safe reconcile hint 与 domain-owned source references。
 
-这个 surface 不是 domain scheduler contract。已配置的 family runtime provider 承担 OPL-managed online wakeup / queue / attempt substrate；`OPL` 可以发现、导出、比较、入队、tick 和投影它，用于 parity 与 operator visibility；`OPL` 不因此成为 domain scheduler、session store、memory owner、quality verdict owner 或 artifact authority。`repair_command` 与 `safe_reconcile_hint` 只是把修复动作路由回 domain-owned repair / supervision surface。
+这个 surface 不是 domain scheduler contract。已配置的 family runtime provider 承担 OPL-managed online wakeup / queue / attempt substrate；`OPL` 可以发现、导出、比较、入队、tick 和投影它，用于 parity 与 operator visibility；`OPL` 不因此成为 domain scheduler、session store、memory owner、quality verdict owner 或 artifact authority。`repair_command` 与 `safe_reconcile_hint` 只是把动作路由回 domain-owned 只读 current-control probe 或 owner repair surface；不得把已退役的 MAS runtime-supervision 命令恢复成 active entrypoint。
 
 ## Action Catalog Freeze
 
