@@ -21,7 +21,7 @@ Fresh command:
 npm run --silent family:structure-advisory -- --format=json
 ```
 
-Fresh eleven-repo local summary from `2026-06-13T13:46:10Z` after root checkout revalidation:
+Fresh eleven-repo local summary from `2026-06-13T14:12:56Z` after root checkout revalidation:
 
 | Repo | needs_design_pass | mechanical_residue | public_surface_risk | missing_verify_entry |
 | --- | ---: | ---: | ---: | --- |
@@ -42,6 +42,12 @@ Current scope:
 - Included standard / Foundry Agent repos: `med-autoscience`、`med-autogrant`、`redcube-ai`、`opl-meta-agent`。
 - Included framework / product / shell / support repos: `one-person-lab`、`one-person-lab-app`、`opl-agui-codex-shell`、`opl-doc`、`opl-flow`、`homebrew-one-person-lab`、`OPL-PPT`。
 - Excluded: `opl-aion-shell`、`med-deepscientist`、`DeepScientist`。
+
+Current JSON shape:
+
+- `repositories` is an array. Each repo entry uses `repo`, `repo_role`, `status`, `categories` and `summary`.
+- Per-repo findings live under `categories.safe_to_keep`、`categories.needs_design_pass`、`categories.mechanical_residue` and `categories.public_surface_risk`.
+- Do not query stale `repo_key`, top-level `items` or top-level `findings` paths when refreshing this report.
 
 ## Current Interpretation
 
