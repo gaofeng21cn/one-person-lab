@@ -104,14 +104,6 @@ import {
 export {
   queryTemporalStageAttemptWorkflow,
 } from './family-runtime-temporal-provider-parts/attempt-query.ts';
-export {
-  buildTemporalSchedulerTickWorkflowArgs,
-  buildTemporalSchedulerHealthProjection,
-  ensureTemporalSchedulerCadence,
-  inspectTemporalSchedulerCadence,
-  removeTemporalSchedulerCadence,
-  triggerTemporalSchedulerCadence,
-} from './family-runtime-temporal-provider-parts/scheduler-cadence.ts';
 export { resolveTemporalWorkerForegroundPaths, resolveTemporalWorkerForegroundPathsFromArgv } from './family-runtime-temporal-provider-parts/foreground-paths.ts';
 import { resolveTemporalWorkerForegroundPathsFromArgv } from './family-runtime-temporal-provider-parts/foreground-paths.ts';
 

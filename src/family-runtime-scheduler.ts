@@ -9,6 +9,12 @@ import {
   buildTemporalProviderLivenessBlocker,
   isTemporalWorkerLivenessBlocker,
 } from './family-runtime-provider-liveness-blocker.ts';
+import {
+  ensureTemporalSchedulerCadence,
+  inspectTemporalSchedulerCadence,
+  removeTemporalSchedulerCadence,
+  triggerTemporalSchedulerCadence,
+} from './family-runtime-temporal-provider-parts/scheduler-cadence.ts';
 import { runTemporalProviderSloTick } from './family-runtime-provider-slo-executor.ts';
 import type { FamilyRuntimeProviderKind } from './family-runtime-types.ts';
 import type { FamilyRuntimeDomainProfiles, FamilyRuntimeTaskScope } from './family-runtime-command.ts';
@@ -246,14 +252,13 @@ export async function runTemporalSchedulerCadenceCommand(
       },
     };
   }
-  const temporal = await temporalProviderModule();
   const action = input.mode === 'scheduler_install'
-    ? await temporal.ensureTemporalSchedulerCadence(paths, { domainProfiles: input.domainProfiles })
+    ? await ensureTemporalSchedulerCadence(paths, { domainProfiles: input.domainProfiles })
     : input.mode === 'scheduler_remove'
-      ? await temporal.removeTemporalSchedulerCadence(paths)
+      ? await removeTemporalSchedulerCadence(paths)
       : input.mode === 'scheduler_trigger'
-        ? await temporal.triggerTemporalSchedulerCadence(paths)
-        : await temporal.inspectTemporalSchedulerCadence(paths);
+        ? await triggerTemporalSchedulerCadence(paths)
+        : await inspectTemporalSchedulerCadence(paths);
   const health = input.mode === 'scheduler_status' && 'health' in action
     ? action.health as Record<string, unknown>
     : null;
