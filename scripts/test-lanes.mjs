@@ -71,6 +71,7 @@ const fastTestFiles = [
   'tests/src/domain-dispatch-evidence-workorder-packet.test.ts',
   'tests/src/family-runtime-lifecycle-index.test.ts',
   'tests/src/family-runtime-sqlite.test.ts',
+  'tests/src/family-runtime-domain-intake-current-control-reconciliation.test.ts',
   'tests/src/family-runtime-domain-intake-pending-task-inputs.test.ts',
   'tests/src/agent-lab.test.ts',
   'tests/src/agent-lab-mechanism-evolution.test.ts',
