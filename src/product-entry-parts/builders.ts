@@ -142,7 +142,7 @@ export function buildProductEntrySessionPrompt(contracts: FrameworkContracts) {
   ].join('\n');
 }
 
-export function buildHandoffBundleInput(
+function buildHandoffBundleInput(
   mode: ProductEntryMode,
   input: ProductEntryCliInput,
   stageSelection: ResolutionResult,
