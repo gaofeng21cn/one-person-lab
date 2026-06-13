@@ -17,13 +17,38 @@ export function defaultExecutorDispatchRef(payload: Record<string, unknown>) {
     ?? relativeDispatchRefFromPath(payload);
 }
 
-export function defaultExecutorStagePacketRefs(payload: Record<string, unknown>) {
+function defaultExecutorStageRefs(payload: Record<string, unknown>) {
   const workspaceRoot = optionalString(payload.workspace_root)
     ?? workspaceRootFromProfile(optionalString(payload.profile));
   return uniqueStrings([
     workspaceRelativeRef(optionalString(payload.stage_packet_ref), workspaceRoot),
     ...stringList(payload.stage_packet_refs).map((ref) => workspaceRelativeRef(ref, workspaceRoot)),
     ...stringList(payload.checkpoint_refs).map((ref) => workspaceRelativeRef(ref, workspaceRoot)),
+  ]);
+}
+
+function preservesCurrentControlStagePacketIdentity(payload: Record<string, unknown>) {
+  const basis = masDefaultExecutorCurrentnessBasis(payload);
+  return optionalString(payload.dispatch_authority) === 'opl_current_control_state_handoff'
+    || optionalString(payload.provider_admission_schema_source) === 'action_queue'
+    || optionalString(basis?.surface) === 'opl_current_control_state_handoff';
+}
+
+export function defaultExecutorStagePacketRefs(payload: Record<string, unknown>) {
+  return uniqueStrings([
+    ...defaultExecutorStageRefs(payload),
+    preservesCurrentControlStagePacketIdentity(payload) ? null : defaultExecutorDispatchRef(payload),
+  ]);
+}
+
+export function defaultExecutorStageCheckpointRefs(payload: Record<string, unknown>) {
+  const stageRefs = defaultExecutorStageRefs(payload);
+  if (preservesCurrentControlStagePacketIdentity(payload)) {
+    return stageRefs.length > 0 ? stageRefs : uniqueStrings([defaultExecutorDispatchRef(payload)]);
+  }
+  return uniqueStrings([
+    ...stageRefs,
+    defaultExecutorDispatchRef(payload),
   ]);
 }
 

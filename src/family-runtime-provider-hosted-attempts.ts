@@ -32,6 +32,7 @@ import {
   defaultExecutorDispatchIdentityRef,
   defaultExecutorDispatchRef,
   defaultExecutorSourceFingerprint,
+  defaultExecutorStageCheckpointRefs,
   defaultExecutorStagePacketRefs,
   hasDefaultExecutorDispatchIdentity,
 } from './family-runtime-provider-hosted-attempts-parts/source-identity.ts';
@@ -942,7 +943,7 @@ export function ensureProviderHostedStageAttempt(
     taskId: row.task_id,
     newAttempt: options.newAttempt === true || forceNewAttemptAfterTransportOnlyAdmission,
     checkpointRefs: isDefaultExecutorDispatchTask(row, payload)
-      ? defaultExecutorStagePacketRefs(payload)
+      ? defaultExecutorStageCheckpointRefs(payload)
       : undefined,
     blockedReason: admissionGate.blocked_reason ?? undefined,
   });
