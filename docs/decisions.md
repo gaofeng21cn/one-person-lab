@@ -7,6 +7,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-06-13
 
+### 决策：Observation-only generation 与否定 ready verdict 不能降级 Stage / domain authority 边界
+
+原因：OPL 的 Runway / Stagecraft / Console 读面需要同时显示最新 provider / read-model / worklist observation 和最近一次合法 owner transition。如果 read-model 只按最高 observed generation 折叠，就会让高 generation 的 provider observation 抹掉低 generation 已 accepted 的 owner transition，造成 `current_owner_delta` 消失。另一个相邻风险是 operator drilldown 把 `not_ready`、`domain_not_ready`、`*_pending`、`*_observed` 或 typed-blocker 类 verdict 当成 ready claim 计数，虽然不直接授权 domain ready，但会污染 Console maturity readout。
+
+影响：
+
+- Stage Transition Authority 的 read model 必须分开读取 `observed_generation` 与最近 accepted transition：`observed_generation` 继续取同一 StageRun 最高 event generation；`accepted_transition_ref` 与 `current_owner_delta` 只能来自最近合法 `transition_accepted` event，不能被更高 generation 的 `provider_observation`、`read_model_observation`、`worklist_observation`、Agent Lab observation、evidence observation 或 route recommendation 清空。
+- `contracts/opl-framework/stage-transition-authority-contract.json` 的 `read_model_generation_fold_policy` 固定该折叠规则；contract test 与 `tests/src/stage-transition-authority.test.ts` 必须覆盖 generation 2 accepted + generation 3 observation-only 的回归。
+- Domain dispatch evidence 的 `domain_ready_claim_count` 只统计明确 positive verdict，例如 `ready`、`domain_ready`、`domain_ready_claimed` 和正向 `*_ready` / `*_ready_claimed`；包含 `not`、`non`、`pending`、`observed`、`blocker`、`blocked`、`failed` 或 `rejected` token 的 verdict 一律按非 ready observation 处理。
+- 该修复属于 OPL Console / Runway / Stagecraft false-authority guard：它只防止读面误降级或误计数，不让 OPL 签 domain owner receipt、创建 typed blocker、写 domain truth、授权 quality/export verdict、声明 domain ready、App release ready、Brand L5 或 production ready。
+
 ### 决策：Standard Agent landing acceptance 成为 family-level 验收门
 
 原因：MAS DM002/DM003 暴露的问题不是某个 domain repo 的单点 bug，而是标准 Agent 迁移、生成、接管时容易把 descriptor ready、generated interface ready、conformance pass、suite pass、classification zero、provider completion、refs-only ledger 或 App projection 误读成完成。没有 family-level 验收门，OMA 以后构建 target agent 仍会复制半标准形态，旧 scheduler、queue、wrapper、read-model residue 也会在默认路径里复活。

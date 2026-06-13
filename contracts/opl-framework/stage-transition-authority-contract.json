@@ -47,7 +47,8 @@
     "duplicate_intent_policy": "dedupe_by_stage_run_generation_idempotency_key",
     "stale_generation_policy": "reject_for_default_transition_keep_as_audit_observation",
     "old_controller_decision_policy": "cannot_close_current_stage_without_current_closeout_binding",
-    "read_model_policy": "rebuildable_projection_not_truth_source"
+    "read_model_policy": "rebuildable_projection_not_truth_source",
+    "read_model_generation_fold_policy": "observed_generation_tracks_highest_event_but_observation_only_generation_does_not_clear_latest_accepted_transition_or_current_owner_delta"
   },
   "intent_producers": [
     {

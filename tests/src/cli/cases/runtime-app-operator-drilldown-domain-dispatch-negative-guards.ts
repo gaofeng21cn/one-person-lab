@@ -371,3 +371,100 @@ test('domain dispatch evidence keeps older unclosed attempts as superseded prove
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('domain dispatch evidence counts only explicit positive domain ready verdicts as ready claims', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-ready-verdict-guard-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+  };
+  const negativeVerdicts = [
+    'not_ready',
+    'not_domain_ready',
+    'domain_not_ready',
+    'blocked_not_ready',
+    'domain_gate_pending',
+    'domain_owner_receipt_observed',
+    'typed_blocker',
+    'domain_typed_blocker',
+    'blocked_by_domain_typed_blocker',
+  ];
+  const positiveVerdicts = [
+    'ready',
+    'domain_ready',
+    'domain_ready_claimed',
+  ];
+
+  try {
+    for (const [index, verdict] of [...negativeVerdicts, ...positiveVerdicts].entries()) {
+      const attempt = runCli([
+        'family-runtime',
+        'attempt',
+        'create',
+        '--domain',
+        'medautoscience',
+        '--stage',
+        'write',
+        '--provider',
+        'local_sqlite',
+        '--workspace-locator',
+        JSON.stringify({
+          workspace_root: '/tmp/mas',
+          artifact_root: '/tmp/mas/artifacts',
+          dispatch_ref: `mas-domain-dispatch:dm-cvd:verdict-guard-${index}`,
+        }),
+        '--task',
+        `task-domain-ready-verdict-guard-${index}`,
+        '--source-fingerprint',
+        `sha256:domain-ready-verdict-guard-${index}`,
+      ], env).family_runtime_stage_attempt.attempt;
+      runCli([
+        'family-runtime',
+        'attempt',
+        'fixture-run',
+        attempt.stage_attempt_id,
+        '--closeout-packet',
+        JSON.stringify({
+          surface_kind: 'stage_attempt_closeout_packet',
+          closeout_refs: [`receipt:domain-ready-verdict-guard-${index}`],
+          next_owner: 'med-autoscience',
+          domain_ready_verdict: verdict,
+          route_impact: {
+            decision: 'bounded_repair',
+            domain_ready_verdict: verdict,
+          },
+        }),
+      ], env);
+    }
+
+    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+      .app_operator_drilldown;
+    const evidenceByVerdict = new Map<string, { domain_ready_claimed: boolean }>(
+      drilldown.domain_dispatch_evidence.attempts.map(
+        (entry: { domain_ready_verdict: string; domain_ready_claimed: boolean }) => [
+          entry.domain_ready_verdict,
+          entry,
+        ],
+      ),
+    );
+
+    for (const verdict of negativeVerdicts) {
+      assert.equal(evidenceByVerdict.get(verdict)?.domain_ready_claimed, false, verdict);
+    }
+    for (const verdict of positiveVerdicts) {
+      assert.equal(evidenceByVerdict.get(verdict)?.domain_ready_claimed, true, verdict);
+    }
+    assert.equal(
+      drilldown.domain_dispatch_evidence.by_domain.medautoscience.domain_ready_claim_count,
+      positiveVerdicts.length,
+    );
+    assert.equal(
+      drilldown.domain_dispatch_evidence.summary.domain_ready_claim_count,
+      positiveVerdicts.length,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});

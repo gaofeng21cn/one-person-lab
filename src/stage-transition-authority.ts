@@ -581,7 +581,7 @@ export function rebuildStageTransitionAuthorityReadModel(
       .map(([stageRunId, stageRunEvents]) => {
         const observedGeneration = Math.max(...stageRunEvents.map((event) => event.generation));
         const currentEvents = stageRunEvents.filter((event) => event.generation === observedGeneration);
-        const accepted = currentEvents
+        const accepted = stageRunEvents
           .filter((event) => event.decision_status === 'transition_accepted')
           .at(-1) ?? null;
         const acceptedDecision = accepted

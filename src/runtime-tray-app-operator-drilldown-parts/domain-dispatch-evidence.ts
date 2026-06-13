@@ -224,14 +224,17 @@ function domainReadyClaimed(verdict: string | null) {
   if (!verdict) {
     return false;
   }
-  const normalized = verdict.toLowerCase();
+  const normalized = verdict.toLowerCase().trim();
+  const parts = normalized.split('_').filter(Boolean);
   if (
-    normalized.endsWith('_pending')
-    || normalized.includes('gate_pending')
-    || normalized.endsWith('_observed')
-    || normalized.includes('receipt_observed')
-    || normalized.includes('typed_blocker')
-    || normalized.includes('blocker')
+    parts.includes('not')
+    || parts.includes('non')
+    || parts.includes('pending')
+    || parts.includes('observed')
+    || parts.includes('blocker')
+    || parts.includes('blocked')
+    || parts.includes('failed')
+    || parts.includes('rejected')
   ) {
     return false;
   }

@@ -207,6 +207,47 @@ test('Stage Transition Authority rebuild deduplicates idempotent intents and ign
   assert.equal(readModel.authority_boundary.read_model_update_counts_as_stage_transition, false);
 });
 
+test('Stage Transition Authority rebuild preserves accepted transition across higher generation observations', () => {
+  const readModel = rebuildStageTransitionAuthorityReadModel([
+    baseIntent({
+      intent_id: 'intent-accepted-generation-2',
+      observed_at: '2026-06-08T00:01:00.000Z',
+    }),
+    baseIntent({
+      intent_id: 'intent-generation-3-provider-observation',
+      intent_kind: 'provider_observation',
+      producer_kind: 'runtime_provider',
+      generation: 3,
+      idempotency_key: 'stage-run-transition:g3:provider',
+      stage_manifest_ref: 'opl://stage-manifests/stage-run-transition:g3',
+      current_pointer_ref: 'opl://stage-runs/stage-run-transition/current:g3',
+      provider_attempt_ref: 'temporal://attempt/stage-run-transition:g3',
+      attempt_lease_ref: 'opl://leases/stage-run-transition:g3',
+      execution_authorization_decision_ref: 'opl://execution-authorizations/stage-run-transition:g3',
+      owner_receipt_ref: undefined,
+      owner_answer_stage_run_id: undefined,
+      owner_answer_generation: undefined,
+      owner_answer_manifest_ref: undefined,
+      owner_answer_current_pointer_ref: undefined,
+      owner_answer_source_fingerprint: undefined,
+      owner_answer_idempotency_key: undefined,
+      observed_at: '2026-06-08T00:02:00.000Z',
+    }),
+  ]);
+
+  assert.equal(readModel.stage_runs.length, 1);
+  assert.equal(readModel.stage_runs[0].observed_generation, 3);
+  assert.equal(
+    readModel.stage_runs[0].accepted_transition_ref,
+    'opl://stage-transition-authority/stage-run-transition/g2/stage-run-transition%3Ag2',
+  );
+  assert.equal(
+    readModel.stage_runs[0].current_owner_delta?.lineage_ref,
+    readModel.stage_runs[0].accepted_transition_ref,
+  );
+  assert.equal(readModel.stage_runs[0].observation_intent_count, 1);
+});
+
 test('Stage Transition Authority rejects forbidden body or authority claims', () => {
   assert.throws(
     () => normalizeStageTransitionIntent(baseIntent({ artifact_body: 'body' })),

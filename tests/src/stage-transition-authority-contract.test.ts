@@ -23,6 +23,10 @@ test('Stage Transition Authority contract freezes one writer and many intent pro
   assert.equal(contract.single_writer_policy.stage_run_terminal_state_writer, 'stage_transition_authority');
   assert.equal(contract.single_writer_policy.current_owner_delta_publisher, 'stage_transition_authority');
   assert.equal(contract.single_writer_policy.parallel_intent_policy, 'many_producers_one_authority_decision');
+  assert.equal(
+    contract.single_writer_policy.read_model_generation_fold_policy,
+    'observed_generation_tracks_highest_event_but_observation_only_generation_does_not_clear_latest_accepted_transition_or_current_owner_delta',
+  );
   assert.deepEqual(contract.transition_capable_intents, [
     'domain_owner_answer',
     'typed_blocker',
