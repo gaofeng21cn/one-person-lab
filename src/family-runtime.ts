@@ -811,9 +811,10 @@ export async function runFamilyRuntime(args: string[]): Promise<Record<string, u
           surface_id: 'opl_family_runtime_stage_attempts',
           summary: projection.summary,
           filters: projection.filters,
-          ...(projection.compact_timeline
-            ? { compact_timeline: projection.compact_timeline }
-            : { attempts: projection.attempts }),
+          view_mode: projection.compact_timeline ? 'compact_timeline' : 'full',
+          items: projection.compact_timeline ?? projection.attempts,
+          attempts: projection.compact_timeline ?? projection.attempts,
+          ...(projection.compact_timeline ? { compact_timeline: projection.compact_timeline } : {}),
         },
       };
     }

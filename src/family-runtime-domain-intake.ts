@@ -18,6 +18,7 @@ import {
   domainHandlerResultErrorMessage,
 } from './family-runtime-domain-handler-process.ts';
 import { resolveOplModuleExecCommand } from './system-installation/modules.ts';
+import type { ModuleInspection } from './system-installation/shared.ts';
 import { payloadMatchesTaskScope } from './family-runtime-task-scope.ts';
 import {
   activeMedautoscienceWorkspaceProfile,
@@ -30,6 +31,7 @@ type DomainExportCommand = {
   cwd: string;
   source: 'env_override' | 'module_exec_profile' | 'workspace_binding';
   owner_fingerprint: string;
+  module?: ModuleInspection;
 };
 
 type EnqueueTaskResult = {
@@ -82,6 +84,7 @@ function exportCommandForDomain(
         argv: command.command_preview,
         cwd: command.working_directory,
         source: 'module_exec_profile',
+        module: command.module,
         owner_fingerprint: [
           'module_exec_profile',
           profile,
@@ -122,6 +125,28 @@ function exportCommandForDomain(
     }
   }
   return null;
+}
+
+function dirtyModuleExportBlock(command: DomainExportCommand) {
+  if (command.source !== 'module_exec_profile' || command.module?.health_status !== 'dirty' && command.module?.git?.dirty !== true) {
+    return null;
+  }
+  return {
+    status: 'blocked',
+    reason: 'dirty_checkout',
+    command_preview: command.argv,
+    command_cwd: command.cwd,
+    command_source: command.source,
+    module_id: command.module.module_id,
+    module_install_origin: command.module.install_origin,
+    module_checkout_path: command.module.checkout_path,
+    module_git: command.module.git,
+    override_policy: {
+      default: 'fail_closed',
+      explicit_override_available: false,
+      note: 'family-runtime hydrate/export requires a clean module_exec_profile checkout before running the domain handler.',
+    },
+  };
 }
 
 function parseDispatchOutput(stdout: string) {
@@ -557,6 +582,15 @@ export function hydrateDomainTasks(
     const command = exportCommandForDomain(domainId, paths, input.domainProfiles);
     if (!command) {
       exports.push({ domain_id: domainId, status: 'skipped', reason: 'export_command_not_configured' });
+      continue;
+    }
+    const dirtyBlock = dirtyModuleExportBlock(command);
+    if (dirtyBlock) {
+      blockedCount += 1;
+      exports.push({
+        domain_id: domainId,
+        ...dirtyBlock,
+      });
       continue;
     }
     const result = runFamilyRuntimeDomainHandlerCommand(command.argv, {

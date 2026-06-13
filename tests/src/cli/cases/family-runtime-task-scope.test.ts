@@ -4,6 +4,7 @@ import {
   os,
   path,
   runCli,
+  runCliFailure,
   test,
 } from '../helpers.ts';
 
@@ -204,6 +205,27 @@ test('family-runtime queue list treats repeated study selectors as same-path OR 
       ['DM003:secondary'],
     );
     assert.equal(studyOrWithAndQueue.family_runtime_queue.queue.total, 1);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime task scope rejects payload-root prefixes for payload-match paths', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-payload-match-prefix-'));
+  try {
+    for (const args of [
+      ['family-runtime', 'queue', 'list', '--payload-match', 'payload.study_id=DM002'],
+      ['family-runtime', 'tick', '--hydrate', '--payload-match', 'task.payload.study_id=DM002'],
+      ['family-runtime', 'intake', '--domain', 'medautoscience', '--payload-match', 'payload.study_id=DM002'],
+    ]) {
+      const failure = runCliFailure(args, familyRuntimeEnv(stateRoot));
+
+      assert.equal(failure.payload.error.code, 'cli_usage_error');
+      assert.match(failure.payload.error.message, /relative to the task payload root/);
+      assert.match(failure.payload.error.message, /do not prefix/);
+      assert.equal(failure.payload.error.details.option, '--payload-match');
+      assert.match(failure.payload.error.details.path, /^(payload|task\.payload)/);
+    }
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

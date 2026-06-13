@@ -7,6 +7,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-06-13
 
+### 决策：Family runtime 控制面输出与 hydrate/export 前置门必须 fail closed
+
+原因：Popper 审计指出三个相邻 control-plane 缺口会让 operator 或工具链误读运行态：`module_exec_profile` 的 domain-handler export 可在 dirty checkout 上执行并入队，`attempt list --compact-timeline` 顶层 JSON 没有稳定数组字段，`--payload-match payload.*` / `task.payload.*` 会被当作真实 payload path 静默接受。这些都不会直接写 domain truth，但会让 hydrate/tick、monitoring 和 scope selector 产生 false progress 或 false empty read。
+
+影响：
+
+- `family-runtime intake` 和 `tick --hydrate` 通过 `module_exec_profile` 执行 domain-handler export 前，必须要求对应 managed module checkout clean；dirty 时输出 `status=blocked`、`reason=dirty_checkout`、`command_source=module_exec_profile`，不得执行 runner、不得 enqueue。显式 override 若未来开放，必须在输出中清楚标注，默认仍 fail closed。
+- `family-runtime attempt list` 的 compact 与 full view 都必须提供稳定顶层数组字段 `items` 和 `attempts`，并保留 `summary`、`filters`、`view_mode` 与 compact 兼容字段 `compact_timeline`；消费方不得因 compact view 缺 `attempts` 而误读为空。
+- `--payload-match` path 永远相对 task payload root；`payload.`、`task.payload.`、`payload` 与 `task.payload` 前缀必须 fail-fast，错误信息提示使用 `study_id=...` 这类 root-relative path。该 parser 覆盖 `queue list`、`tick --hydrate` 和 `intake` 等共用 task-scope 入口。
+- 该决策只加固 OPL Runway / Console control plane 与 task scope semantics，不授权 OPL 写 MAS/MAG/RCA truth、执行 live DHD apply/hydrate/tick/redrive、写 Yang runtime/study artifacts、生成 owner receipt、typed blocker、quality verdict、domain ready、App release ready、Brand L5 或 production-ready claim。
+
 ### 决策：Observation-only generation 与否定 ready verdict 不能降级 Stage / domain authority 边界
 
 原因：OPL 的 Runway / Stagecraft / Console 读面需要同时显示最新 provider / read-model / worklist observation 和最近一次合法 owner transition。如果 read-model 只按最高 observed generation 折叠，就会让高 generation 的 provider observation 抹掉低 generation 已 accepted 的 owner transition，造成 `current_owner_delta` 消失。另一个相邻风险是 operator drilldown 把 `not_ready`、`domain_not_ready`、`*_pending`、`*_observed` 或 typed-blocker 类 verdict 当成 ready claim 计数，虽然不直接授权 domain ready，但会污染 Console maturity readout。

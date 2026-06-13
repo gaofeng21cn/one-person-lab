@@ -37,6 +37,14 @@ export function parseTaskScopeOption(
         value,
       });
     }
+    if (path === 'payload' || path.startsWith('payload.') || path === 'task.payload' || path.startsWith('task.payload.')) {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime task scope --payload-match path is relative to the task payload root; do not prefix it with payload. or task.payload.', {
+        option: token,
+        value,
+        path,
+        expected_path_example: 'study_id=DM002',
+      });
+    }
     scope.payloadMatches = [
       ...(scope.payloadMatches ?? []),
       { path, value: matchValue },

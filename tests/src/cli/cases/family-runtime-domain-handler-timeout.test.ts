@@ -99,6 +99,67 @@ test('family-runtime profile module export fails closed when module exec hangs',
   }
 });
 
+test('family-runtime profile module hydrate fails closed on dirty managed module checkout', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-profile-module-dirty-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-profile-module-dirty-'));
+  const profilePath = path.join(fixtureRoot, 'dm-cvd.workspace.toml');
+  const runnerHitPath = path.join(fixtureRoot, 'runner-hit');
+  const masFixture = createGitModuleRemoteFixture('med-autoscience', {
+    extraFiles: {
+      'scripts/run-python-clean.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        `printf 'runner executed\\n' > ${shellSingleQuote(runnerHitPath)}`,
+        `exec ${shellSingleQuote(process.execPath)} -e ${shellSingleQuote(`process.stdout.write(${JSON.stringify(`${JSON.stringify({
+          surface_kind: 'mas_family_domain_handler_export',
+          pending_family_tasks: [
+            {
+              domain_id: 'medautoscience',
+              task_kind: 'domain_route/reconcile-apply',
+              dedupe_key: 'mas:dirty:should-not-enqueue',
+              payload: { study_id: 'DM002' },
+            },
+          ],
+        })}\n`)});`)}`,
+        '',
+      ].join('\n'),
+    },
+    executableFiles: ['scripts/run-python-clean.sh'],
+  });
+  fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
+  fs.writeFileSync(path.join(masFixture.sourceRoot, 'dirty-uncommitted.txt'), 'dirty\n', 'utf8');
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      PATH: `${fixtureRoot}:${process.env.PATH ?? ''}`,
+      OPL_MODULE_PATH_MEDAUTOSCIENCE: masFixture.sourceRoot,
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE: profilePath,
+    });
+    const intake = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+      '--source',
+      'module-dirty-test',
+    ], env);
+    const queue = runCli(['family-runtime', 'queue', 'list'], env);
+    const exportResult = intake.family_runtime_intake.exports[0];
+
+    assert.equal(intake.family_runtime_intake.enqueued_count, 0);
+    assert.equal(intake.family_runtime_intake.blocked_count, 1);
+    assert.equal(exportResult.status, 'blocked');
+    assert.equal(exportResult.reason, 'dirty_checkout');
+    assert.equal(exportResult.command_source, 'module_exec_profile');
+    assert.equal(exportResult.command_cwd, masFixture.sourceRoot);
+    assert.equal(fs.existsSync(runnerHitPath), false);
+    assert.equal(queue.family_runtime_queue.queue.total, 0);
+  } finally {
+    fs.rmSync(masFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime dispatch fails closed when a domain dispatch handler times out', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-dispatch-timeout-state-'));
   const dispatchDomainHandler = hangingDomainHandlerFixture('dispatch');

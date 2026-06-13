@@ -97,7 +97,9 @@ test('family-runtime attempt list filters attempts and emits compact Progress-Fi
     assert.equal(output.filters.study_id, 'DM002');
     assert.equal(output.filters.status, 'blocked');
     assert.equal(output.filters.compact_timeline, true);
-    assert.equal(output.attempts, undefined);
+    assert.deepEqual(output.items, output.compact_timeline);
+    assert.deepEqual(output.attempts, output.compact_timeline);
+    assert.equal(output.view_mode, 'compact_timeline');
     assert.equal(output.compact_timeline.length, 1);
     assert.equal(output.compact_timeline[0].stage_attempt_id, medAttempt.stage_attempt_id);
     assert.equal(output.compact_timeline[0].study_id, 'DM002');
@@ -152,6 +154,74 @@ test('family-runtime attempt list filters attempts and emits compact Progress-Fi
     );
     assert.equal(typeof output.compact_timeline[0].timeline.activity_event_count, 'number');
     assert.equal(output.compact_timeline[0].authority_boundary.domain, 'truth_quality_artifact_gate_owner');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime attempt list keeps stable array shape for full and compact views', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-list-stable-shape-'));
+  try {
+    const task = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'stage/scout',
+      '--payload',
+      '{"study_id":"DM002"}',
+      '--dedupe-key',
+      'mas:DM002:stage:stable-shape',
+    ], familyRuntimeEnv(stateRoot)).family_runtime_enqueue.task;
+    const attempt = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'scout',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas","study_id":"DM002"}',
+      '--task',
+      task.task_id,
+    ], familyRuntimeEnv(stateRoot)).family_runtime_stage_attempt.attempt;
+
+    const full = runCli([
+      'family-runtime',
+      'attempt',
+      'list',
+      '--domain',
+      'medautoscience',
+      '--study',
+      'DM002',
+    ], familyRuntimeEnv(stateRoot)).family_runtime_stage_attempts;
+    const compact = runCli([
+      'family-runtime',
+      'attempt',
+      'list',
+      '--domain',
+      'medautoscience',
+      '--study',
+      'DM002',
+      '--compact-timeline',
+    ], familyRuntimeEnv(stateRoot)).family_runtime_stage_attempts;
+
+    assert.equal(full.view_mode, 'full');
+    assert.equal(compact.view_mode, 'compact_timeline');
+    assert.equal(Array.isArray(full.items), true);
+    assert.equal(Array.isArray(full.attempts), true);
+    assert.equal(Array.isArray(compact.items), true);
+    assert.equal(Array.isArray(compact.attempts), true);
+    assert.equal(full.items[0].stage_attempt_id, attempt.stage_attempt_id);
+    assert.equal(full.attempts[0].stage_attempt_id, attempt.stage_attempt_id);
+    assert.equal(compact.items[0].stage_attempt_id, attempt.stage_attempt_id);
+    assert.equal(compact.attempts[0].stage_attempt_id, attempt.stage_attempt_id);
+    assert.deepEqual(compact.items, compact.compact_timeline);
+    assert.deepEqual(compact.attempts, compact.compact_timeline);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
