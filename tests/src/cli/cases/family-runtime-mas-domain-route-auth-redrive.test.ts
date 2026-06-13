@@ -133,6 +133,32 @@ JSON
       )),
       true,
     );
+    const queueDbAfterRedrive = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
+    try {
+      queueDbAfterRedrive.prepare(`
+        UPDATE tasks
+        SET status = 'succeeded', lease_owner = NULL, lease_expires_at = NULL, last_error = NULL,
+          dead_letter_reason = NULL
+        WHERE task_id = ?
+      `).run(taskId);
+      queueDbAfterRedrive.prepare(`
+        UPDATE stage_attempts
+        SET status = 'checkpointed',
+          closeout_receipt_status = 'domain_handler_receipt_ref_only',
+          provider_run_json = json_set(provider_run_json, '$.provider_status', 'checkpointed'),
+          closeout_refs_json = '["runtime/artifacts/opl_family_domain_handler/dispatch_receipts/current.json"]'
+        WHERE stage_attempt_id = ?
+      `).run(redrivenAttempt.stage_attempt_id);
+    } finally {
+      queueDbAfterRedrive.close();
+    }
+    const refsOnlyTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const refsOnlyControl = refsOnlyTask.family_runtime_task.task.current_control_state;
+    assert.equal(refsOnlyControl.running_provider_attempt, false);
+    assert.equal(refsOnlyControl.active_stage_attempt_id, null);
+    assert.equal(refsOnlyControl.reconciliation_status, 'checkpointed_refs_only_domain_handler_receipt');
+    assert.equal(refsOnlyControl.blocker_reason, 'domain_handler_receipt_ref_only_not_provider_running_proof');
+    assert.equal(refsOnlyControl.authority_boundary.refs_only_checkpoint_is_running_proof, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });

@@ -381,11 +381,20 @@ function refsOnlyCheckpointWithoutLaunchAuthorization(attempt: ControlAttemptRow
     && missingLaunchAuthorizationFields(attempt).length > 0;
 }
 
+function refsOnlyDomainHandlerCheckpoint(attempt: ControlAttemptRow | undefined) {
+  return Boolean(
+    attempt
+    && attempt.status === 'checkpointed'
+    && attempt.executor_kind === 'domain_handler'
+    && attempt.closeout_receipt_status === 'domain_handler_receipt_ref_only',
+  );
+}
+
 function isLiveProviderAttempt(attempt: ControlAttemptRow | undefined, providerRun: Record<string, unknown>) {
   if (!attempt) {
     return false;
   }
-  if (refsOnlyCheckpointWithoutLaunchAuthorization(attempt)) {
+  if (refsOnlyDomainHandlerCheckpoint(attempt)) {
     return false;
   }
   const providerStatus = stringValue(providerRun.provider_status);
@@ -683,6 +692,19 @@ function deriveCurrentControlStateFromRows(
       current_attempt_state: 'blocked',
       blocker_reason: 'launch_execution_authorization_required_for_refs_only_checkpoint',
       missing_launch_authorization_fields: missingLaunchAuthorizationFields(current),
+      authority_boundary: {
+        ...base.authority_boundary,
+        provider_completion_is_domain_ready: false,
+        refs_only_checkpoint_is_running_proof: false,
+      },
+    };
+  }
+  if (refsOnlyDomainHandlerCheckpoint(current)) {
+    return {
+      ...base,
+      reconciliation_status: 'checkpointed_refs_only_domain_handler_receipt',
+      current_attempt_state: 'checkpointed',
+      blocker_reason: 'domain_handler_receipt_ref_only_not_provider_running_proof',
       authority_boundary: {
         ...base.authority_boundary,
         provider_completion_is_domain_ready: false,
