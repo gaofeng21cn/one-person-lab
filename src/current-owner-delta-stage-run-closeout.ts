@@ -26,7 +26,7 @@ const ACCEPTED_CLOSEOUT_OWNER_ANSWER_KINDS = [
   'route_back_evidence',
 ] as const;
 
-export function closedStageRunOwnerAnswer(stageRunCockpit: JsonRecord) {
+function closedStageRunOwnerAnswer(stageRunCockpit: JsonRecord) {
   const authorization = record(stageRunCockpit.execution_authorization);
   const closeoutBinding = record(authorization.closeout_binding);
   const ownerAnswerRef = text(closeoutBinding.owner_answer_ref);

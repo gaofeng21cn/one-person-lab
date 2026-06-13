@@ -92,12 +92,12 @@ test('family-runtime rehydrates terminal MAS current-control admission when stag
     const stageAttemptId = 'sat_current_control_attempt_stale_identity';
     const dedupeKey = 'owner-route::003-dpcc-primary-care-phenotype-treatment-gap::current-control-admission';
     const workUnitFingerprint = 'sha256:same-current-control-work-unit';
-    const staleAttemptPayload = currentControlAdmissionPayload(
+    const staleAttemptPayload: Record<string, any> = currentControlAdmissionPayload(
       'truth-snapshot::dm003-generation-1',
       '01',
       workUnitFingerprint,
     );
-    const freshPayload = {
+    const freshPayload: Record<string, any> = {
       ...currentControlAdmissionPayload(
         'truth-snapshot::dm003-generation-2',
         '02',

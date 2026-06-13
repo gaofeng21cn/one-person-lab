@@ -1,8 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  buildWorklistCurrentOwnerDeltaReadModel,
+  buildWorklistOwnerDeltaActionProjection,
 } from '../../../../src/family-runtime-evidence-worklist-parts/current-owner-delta-projection.ts';
+
+type WorklistProjectionInput = Parameters<typeof buildWorklistOwnerDeltaActionProjection>[0];
+
+function buildCurrentOwnerDeltaReadModel(input: WorklistProjectionInput) {
+  return buildWorklistOwnerDeltaActionProjection(input).currentOwnerDeltaReadModel;
+}
 
 test('family-runtime evidence-worklist keeps raw worklist roots out of current owner delta planning', () => {
   const rawWorklistItem = {
@@ -31,7 +37,7 @@ test('family-runtime evidence-worklist keeps raw worklist roots out of current o
     },
   };
 
-  const projection = buildWorklistCurrentOwnerDeltaReadModel({
+  const projection = buildCurrentOwnerDeltaReadModel({
     drilldown: {
       attention_first_payload: {
         owner_delta_first: {
@@ -267,7 +273,7 @@ test('family-runtime evidence-worklist keeps stage replay guidance out of defaul
     can_claim_production_ready: false,
   };
 
-  const projection = buildWorklistCurrentOwnerDeltaReadModel({
+  const projection = buildCurrentOwnerDeltaReadModel({
     drilldown: {
       attention_first_payload: {
         owner_delta_first: {
@@ -345,7 +351,7 @@ test('family-runtime evidence-worklist keeps stage replay guidance out of defaul
 });
 
 test('family-runtime evidence-worklist keeps current owner delta visible when ordinary worklist is empty', () => {
-  const projection = buildWorklistCurrentOwnerDeltaReadModel({
+  const projection = buildCurrentOwnerDeltaReadModel({
     drilldown: {
       attention_first_payload: {
         owner_delta_first: {

@@ -363,7 +363,8 @@ test('MAS current-control provider admission creates a fresh attempt when source
       assert.equal(attempts.length, 2);
       assert.notEqual(currentAttempt.stage_attempt_id, oldAttempt.stage_attempt_id);
       assert.equal(currentAttempt.status, 'queued');
-      assert.equal(currentAttempt.workspace_locator.owner_route_currentness_basis.source_eval_id,
+      const currentAttemptBasis = currentAttempt.workspace_locator.owner_route_currentness_basis as Record<string, unknown>;
+      assert.equal(currentAttemptBasis.source_eval_id,
         'publication-eval::003-dpcc-primary-care-phenotype-treatment-gap::003-dpcc-primary-care-phenotype-treatment-gap::2026-06-13T00:48:48+00:00');
     });
   } finally {

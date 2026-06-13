@@ -13,7 +13,7 @@ function normalizeWorklistDefaultNextActionOwner(action: JsonRecord): JsonRecord
   };
 }
 
-export function buildWorklistCurrentOwnerDeltaReadModel(input: {
+function buildWorklistCurrentOwnerDeltaReadModel(input: {
   drilldown: JsonRecord;
   openItems: JsonRecord[];
   nextSafeActions: JsonRecord[];
