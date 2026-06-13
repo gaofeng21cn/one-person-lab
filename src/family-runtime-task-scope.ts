@@ -24,7 +24,7 @@ function payloadMatchValuesByPath(taskScope?: FamilyRuntimeTaskScope) {
   return valuesByPath;
 }
 
-export function payloadMatchesTaskScope(
+function payloadMatchesTaskScope(
   payload: Record<string, unknown>,
   taskScope?: FamilyRuntimeTaskScope,
 ) {
