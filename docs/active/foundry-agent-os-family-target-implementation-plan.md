@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `foundry_agent_os_family_target_implementation_plan`
 State: `active_support`
 Machine boundary: 本文是人读目标实施规划。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、owner receipt、typed blocker、真实 workspace 与 App evidence。当前执行顺序、live gap 和完成判断仍回到 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。
-Last reviewed: `2026-06-12`
+Last reviewed: `2026-06-13`
 
 ## 结论
 
@@ -19,7 +19,7 @@ OPL Agent OS
 
 这个 pattern 适用于 `MAS`、`MAG`、`RCA` 和 `OMA`。OPL 持有通用运行时、Pack compiler、generated/hosted surfaces、current_owner_delta 默认读面、refs-only Vault、Console 和 cross-agent conformance；domain 仓只保留无法声明化的领域 authority kernel。
 
-本规划已经落到 `contracts/opl-framework/target-operating-architecture-contract.json` 的 `foundry_agent_os_standard`，并同步扩展品牌模块 registry / surfaces / L5 evidence 合同。它不声明功能已经全量完成、domain ready、App release ready、Brand L5 或 production ready；它只冻结后续改造要对齐的目标架构和实施顺序。
+本规划已经落到 `contracts/opl-framework/target-operating-architecture-contract.json` 的 `foundry_agent_os_standard`，并同步扩展品牌模块 registry / surfaces / L5 evidence 合同。近期 runtime/read-model 重构后，本规划只引用 wrapper-aware live payload，不复制旧顶层字段路径：`framework operating-maturity` 读 `.framework_operating_maturity`，App operator drilldown 读 `.app_operator_drilldown`，Brand L5 读 `.brand_module_l5_status`。它不声明功能已经全量完成、domain ready、App release ready、Brand L5 或 production ready；它只冻结后续改造要对齐的目标架构和实施顺序。
 
 ## 后续开发主入口
 
@@ -55,7 +55,7 @@ OPL Agent OS
 - 本文与 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。
 - `contracts/opl-framework/target-operating-architecture-contract.json#foundry_agent_os_standard`。
 - `contracts/opl-framework/brand-module-registry.json`、`brand-module-surfaces.json`、`brand-module-l5-operating-evidence.json`。
-- live `opl framework readiness --family-defaults --json`、`opl agents conformance --family-defaults --json`、`opl brand-modules l5-status --json`。
+- live `opl framework readiness --family-defaults --json`、`opl agents conformance --family-defaults --json`、`opl framework operating-maturity --family-defaults --json`、`opl runtime app-operator-drilldown --json`、`opl brand-modules l5-status --json`；读取时必须进入各自 wrapper payload。
 - MAS/MAG/RCA/OMA 各自 `contracts/foundry-agent-os-domain-kernel-manifest.json`。
 - App `contracts/app-runtime-bridge.json`、`contracts/app-gui-product-contract.json` 和 fast-state fixture。
 
@@ -286,7 +286,7 @@ OPL 后续不能把 domain target delta 当成“OPL 已接管完成”。接收
 rtk opl framework operating-maturity --family-defaults --json
 ```
 
-阅读顺序是 `framework_operating_maturity.owner_evidence_intake` -> `foundry_agent_os_production_evidence_gate.owner_route_work_orders` -> `domain_owner_chain_scaleout.domain_owner_evidence_routes`。`owner_evidence_intake` 会显示每条 lane 的 `observed_receipt_refs`、`observed_ref_shapes`、`observed_ref_counts` 和 domain owner-chain 的 per-domain `observed_domains`；human gate、quality/export、reviewer 和 long-soak refs 会作为具体 evidence ref 被保留，而不是折成模糊 receipt count。对应 work order 只把 `blocker_state` 从 `owner_route_evidence_missing` 调整为 `owner_route_refs_observed_not_production_claim`，并用 `owner_evidence_closure_state` / `open_count_semantics` 表示缺口仍需要 owner acceptance、真实 closing ref 或 typed blocker。无论 observed refs 是否存在，`closed_by_opl=false`、`production_ready_claim_authorized=false` 和 false-authority flags 都必须保持不变。
+阅读顺序是 `.framework_operating_maturity.owner_evidence_intake` -> `.framework_operating_maturity.foundry_agent_os_production_evidence_gate.owner_route_work_orders` -> `.framework_operating_maturity.domain_owner_chain_scaleout.domain_owner_evidence_routes` -> `.framework_operating_maturity.unresolved_owner_gates`。`owner_evidence_intake` 会显示每条 lane 的 `observed_receipt_refs`、`observed_ref_shapes`、`observed_ref_counts` 和 domain owner-chain 的 per-domain `observed_domains`；human gate、quality/export、reviewer 和 long-soak refs 会作为具体 evidence ref 被保留，而不是折成模糊 receipt count。对应 work order 只把 `blocker_state` 从 `owner_route_evidence_missing` 调整为 `owner_route_refs_observed_not_production_claim`，并用 `owner_evidence_closure_state` / `open_count_semantics` 表示缺口仍需要 owner acceptance、真实 closing ref 或 typed blocker。无论 observed refs 是否存在，`closed_by_opl=false`、`production_ready_claim_authorized=false` / `ready_claim_authorized=false` 和 false-authority flags 都必须保持不变。
 
 ## 验收门
 

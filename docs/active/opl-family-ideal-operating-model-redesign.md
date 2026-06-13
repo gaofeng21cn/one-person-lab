@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `opl_family_ideal_operating_model_redesign`
 State: `active_reference`
 Machine boundary: 本文是人读顶层重设计与审计标准。机器真相继续归各 repo 的 contracts、source、tests、CLI/read-model、runtime ledger、provider receipt、domain-owned manifest、owner receipt、typed blocker、release artifact 和真实 workspace/App evidence。
-Last reviewed: `2026-06-12`
+Last reviewed: `2026-06-13`
 
 ## 读法
 
@@ -15,6 +15,8 @@ Last reviewed: `2026-06-12`
 2026-06-10 refresh：本文进一步把 MAS/OPL 的理想形态重设为 `multi-plane operating system`。核心判断是：更丝滑的 MAS 推进不来自更多默认 worklist、更多 proof 或更厚 preflight，而来自一个 ordinary progress contract 加上彼此分离的 durable runtime、artifact、evidence、decision、observability 和 improvement 平面。所有外部成熟工程经验只作为 pattern source；它们不能成为 OPL 第二 runtime、MAS 第二 truth、第二 selector 或第二 active backlog。
 
 2026-06-12 refresh：本文增加 `运行流畅度 / 输出质量 / 品牌感` 三轴重设计。它按理想状态反推 OPL 基座能力，而不是按现有实现补洞。核心判断是：OPL 的品牌感不是额外命名、配色或宣传页，而是用户在 MAS 这类旗舰智能体中持续感受到 `任务能继续、结果能审、证据能查、阻塞能接、交付能收口`。外部成熟实践只作为 engineering pattern：Kubernetes controller 的 desired/observed 分离、Temporal 的 durable execution、OpenAI Agents 的 handoff/guardrail/tracing、Anthropic 的 routing/parallel/evaluator-optimizer patterns、Carbon / Material 等设计系统的 token 化一致性，都必须折回 OPL 自有 owner boundary、surface budget 和 `current_owner_delta` single ordinary route。
+
+2026-06-13 refresh：近期 OPL family 重构主要改变的是 read-model wrapper、Agent Lab / OPL Flow / owner-evidence foldback 和 provider long-soak 的 live counter 读取方式，不改变本文 north-star。需要从 fresh payload 读取当前事实：`framework operating-maturity` 在 `.framework_operating_maturity`，App operator drilldown 在 `.app_operator_drilldown`，Brand L5 在 `.brand_module_l5_status`。任何 `open_count=0/1`、verified refs-only ledger、provider blocker、conformance pass、completion audit contract pass 或 docs foldback 都只能作为 owner-evidence 输入，不能升级为 domain ready、App release ready、Brand L5、production ready 或 physical delete authorization。
 
 评估范围：
 
@@ -345,8 +347,8 @@ OPL 对 MAS 的进一步优化重点不是再补 MAS 私有推进器，而是把
 
 并行 lane 完善后必须及时吸收回 `main`，并清理对应 worktree、branch、thread 与临时状态。已有并发 worktree / branch 默认视为外部 owner lane，除非用户明确授权，不得吸收、清理、覆盖或把其状态并入本轮完成口径。subagent 完成报告不能替代 owner receipt、domain verdict、delete authority、App release readiness、production readiness 或最终验收。
 
-W7 owner-evidence docs foldback 只能记录 `operating-maturity`、Brand L5 和 operating-model projection 的 fresh 判断：owner-route work order 是 refs-only 投影和字段/guard，不是 closing authority。当前 owner answer 仍回 `med-autoscience` owner receipt / typed blocker；Brand L5、App release/user-path、provider long-soak、cleanup 和 memory/artifact/lifecycle evidence 都按各自 owner lane 关闭，不能由本文或 OPL 投影生成 ready claim。
+W7 owner-evidence docs foldback 只能记录 `operating-maturity`、Brand L5 和 operating-model projection 的 fresh 判断：owner-route work order 是 refs-only 投影和字段/guard，不是 closing authority。当前 owner answer 仍回 `med-autoscience` owner receipt / typed blocker；Brand L5、App release/user-path、provider long-soak、cleanup 和 memory/artifact/lifecycle evidence 都按各自 owner lane 关闭。近期 wrapper-aware readout 中 provider long-soak 为 open owner-evidence tail，Brand L5 仍是 10 个 evidence-required modules / 0 个 L5 complete，App same-cohort user path evidence 不授权 release-ready；这些都不能由本文或 OPL 投影生成 ready claim。
 
 ## Baton Boundary
 
-下一步执行顺序不在本文维护。需要行动时读取 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md) 的 `Operating Model Foldback 状态`、`测试 / 证据差距` 和 `下一轮 Agent prompt`，再 fresh 读取 live contracts/source/CLI/read-model。本文只提供评估口径：每个新发现的 surface 先分类为 `meets_target`、`needs_demotion` 或 `needs_retirement`；需要落地或关闭时回到 active gap owner 记录 owner、source of truth、accepted answer shape 和验证命令。本文不得维护 W7 owner-route queue、Brand L5 backlog、App release/user-path backlog、provider long-soak backlog 或 dated worktree closeout。
+下一步执行顺序不在本文维护。需要行动时读取 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md) 的 `Operating Model Foldback 状态`、`测试 / 证据差距` 和 `下一轮 Agent prompt`，再 fresh 读取 live contracts/source/CLI/read-model 的 wrapper payload。本文只提供评估口径：每个新发现的 surface 先分类为 `meets_target`、`needs_demotion` 或 `needs_retirement`；需要落地或关闭时回到 active gap owner 记录 owner、source of truth、accepted answer shape 和验证命令。本文不得维护 W7 owner-route queue、Brand L5 backlog、App release/user-path backlog、provider long-soak backlog 或 dated worktree closeout。
