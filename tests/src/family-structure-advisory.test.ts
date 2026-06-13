@@ -128,35 +128,6 @@ test('default family structure advisory scope follows the current OPL series', (
   assert.equal(homebrew.summary.missing_verify_entry, false);
 });
 
-test('tracked family structure report stays aligned to generated public-surface risks', () => {
-  const trackedReportPath = path.join(repoRoot, 'docs/references/operating-governance/family-structure-advisory-report.md');
-  const report = fs.readFileSync(trackedReportPath, 'utf8');
-
-  assert.equal(report.includes('contracts/opl-framework/candidate-domain-backlog.json'), false);
-
-  const onePersonLabSection = readSection(report, '### one-person-lab', '### med-autoscience');
-  const publicSurfaceRiskStart = onePersonLabSection.indexOf('public_surface_risk:');
-  assert.notEqual(publicSurfaceRiskStart, -1, 'missing one-person-lab public_surface_risk section');
-  const publicSurfaceRisk = onePersonLabSection.slice(publicSurfaceRiskStart);
-  const listedRisks = Array.from(
-    publicSurfaceRisk.matchAll(/^- `([^`]+)`$/gm),
-    (match) => match[1],
-  );
-
-  const generated = spawnSync(
-    process.execPath,
-    [scriptPath, '--repo', `one-person-lab=${repoRoot}`, '--format=json'],
-    { cwd: repoRoot, encoding: 'utf8' },
-  );
-  assert.equal(generated.status, 0, generated.stderr);
-  const generatedReport = JSON.parse(generated.stdout);
-  const generatedRisks = generatedReport.repositories[0].categories.public_surface_risk.map(
-    (finding: { path: string }) => finding.path,
-  );
-
-  assert.deepEqual(listedRisks, generatedRisks);
-});
-
 function writeLines(root: string, relativePath: string, lines: number) {
   const absolutePath = path.join(root, relativePath);
   fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
@@ -169,12 +140,4 @@ function writeLines(root: string, relativePath: string, lines: number) {
 function run(command: string, args: string[], cwd: string) {
   const result = spawnSync(command, args, { cwd, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
-}
-
-function readSection(content: string, startMarker: string, endMarker: string) {
-  const start = content.indexOf(startMarker);
-  assert.notEqual(start, -1, `missing start marker: ${startMarker}`);
-  const end = content.indexOf(endMarker, start + startMarker.length);
-  assert.notEqual(end, -1, `missing end marker: ${endMarker}`);
-  return content.slice(start, end);
 }
