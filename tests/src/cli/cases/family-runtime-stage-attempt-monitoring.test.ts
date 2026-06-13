@@ -227,6 +227,58 @@ test('family-runtime attempt list keeps stable array shape for full and compact 
   }
 });
 
+test('family-runtime attempt list defaults unfiltered readout to bounded audit-safe timeline', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-list-default-bounded-'));
+  const db = new DatabaseSync(path.join(stateRoot, 'queue.sqlite'));
+  try {
+    createFamilyRuntimeQueueTables(db);
+    const heavyBody = 'x'.repeat(128_000);
+    for (let index = 0; index < 55; index += 1) {
+      createStageAttempt(db, {
+        domainId: 'medautoscience',
+        stageId: `review-${String(index).padStart(2, '0')}`,
+        providerKind: 'local_sqlite',
+        workspaceLocator: {
+          workspace_root: '/tmp/mas',
+          study_id: 'DM003',
+        },
+        providerRun: {
+          provider_run_id: `provider-run-${index}`,
+          transcript_body: heavyBody,
+        },
+        activityEvents: [{
+          event_id: `event-${index}`,
+          payload_body: heavyBody,
+        }],
+        routeImpact: {
+          raw_route_payload: heavyBody,
+        },
+      });
+    }
+
+    const output = await listStageAttemptsWithMonitoringProjection(db, { root: stateRoot });
+    const outputJson = JSON.stringify(output);
+
+    assert.equal(output.filters.compact_timeline, true);
+    assert.equal(output.summary.total, 55);
+    assert.equal(output.summary.filtered_total, 55);
+    assert.equal(output.summary.compact_timeline_returned_total, 25);
+    assert.equal(output.summary.compact_timeline_omitted_total, 30);
+    assert.equal(output.summary.compact_timeline_limit, 25);
+    assert.equal(output.attempts.length, 25);
+    assert.equal(output.compact_timeline?.length, 25);
+    assert.deepEqual(output.attempts, output.compact_timeline);
+    assert.equal(output.attempts[0].provider_run, undefined);
+    assert.equal(output.attempts[0].activity_events, undefined);
+    assert.equal(output.attempts[0].route_impact, undefined);
+    assert.equal(outputJson.includes(heavyBody), false);
+    assert.equal(outputJson.length < heavyBody.length * 10, true);
+  } finally {
+    db.close();
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime attempt list exposes provider liveness attention before read-model reconcile', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-list-provider-attention-'));
   try {

@@ -596,6 +596,7 @@ function compactTimelineForAttempt(
   db: DatabaseSync,
   attempt: StageAttemptPayload,
   currentProviderReadiness: CurrentProviderReadiness | null,
+  options: { auditSafe?: boolean } = {},
 ) {
   const studyId = attemptStudyId(db, attempt);
   const stageProgressLog = buildStageProgressLog({
@@ -656,7 +657,7 @@ function compactTimelineForAttempt(
     currentProviderReadiness,
     readinessCurrentness,
   );
-  return {
+  const base = {
     stage_attempt_id: attempt.stage_attempt_id,
     task_id: attempt.task_id,
     domain_id: attempt.domain_id,
@@ -687,6 +688,44 @@ function compactTimelineForAttempt(
     operator_summary: operatorSummary,
     authority_boundary: compactAuthorityBoundary(stageProgressLog.authority_boundary),
   };
+  if (options.auditSafe === true) {
+    return {
+      stage_attempt_id: base.stage_attempt_id,
+      task_id: base.task_id,
+      domain_id: base.domain_id,
+      study_id: base.study_id,
+      stage_id: base.stage_id,
+      status: base.status,
+      blocked_reason: base.blocked_reason,
+      updated_at: base.updated_at,
+      progress_delta_classification: base.progress_delta_classification,
+      semantic_status: base.semantic_status,
+      closeout_refs: base.closeout_refs,
+      current_provider_readiness: {
+        provider_kind: base.current_provider_readiness?.provider_kind ?? null,
+        provider_ready: base.current_provider_readiness?.provider_ready ?? null,
+        status: base.current_provider_readiness?.status ?? null,
+        degraded_reason: base.current_provider_readiness?.degraded_reason ?? null,
+      },
+      provider_liveness_attention: livenessSummary(base.provider_liveness_attention),
+      operator_summary: {
+        attempt: base.operator_summary.attempt,
+        status: base.operator_summary.status,
+        stage: base.operator_summary.stage,
+        study: base.operator_summary.study,
+        domain: base.operator_summary.domain,
+        owner: base.operator_summary.owner,
+        action: base.operator_summary.action,
+        provider_liveness_attention: base.operator_summary.provider_liveness_attention,
+        progress_delta_classification: base.operator_summary.progress_delta_classification,
+        closeout_ref_count: base.operator_summary.closeout_ref_count,
+        semantic_gap_reason: base.operator_summary.semantic_gap_reason,
+        next_inspection: base.operator_summary.next_inspection,
+      },
+      authority_boundary: base.authority_boundary,
+    };
+  }
+  return base;
 }
 
 export async function listStageAttemptsWithMonitoringProjection(
@@ -698,16 +737,29 @@ export async function listStageAttemptsWithMonitoringProjection(
   const sinceIso = typeof filters.sinceHours === 'number'
     ? new Date(Date.now() - filters.sinceHours * 60 * 60 * 1000).toISOString()
     : null;
+  const hasExplicitFilters = Boolean(filters.domainId || filters.status || filters.studyId || filters.sinceHours);
+  const effectiveCompactTimeline = filters.compactTimeline === true || !hasExplicitFilters;
+  const auditSafeTimeline = effectiveCompactTimeline && !hasExplicitFilters && filters.compactTimeline !== true;
   const baseAttempts = listStageAttemptRows(db).map(stageAttemptToPayload);
   const filteredAttempts = baseAttempts.filter((attempt) =>
     attemptMatchesMonitoringFilters(db, attempt, filters, sinceIso)
   );
-  const compactTimelineAttempts = filters.compactTimeline
+  const compactTimelineAttempts = effectiveCompactTimeline
     ? [...filteredAttempts]
         .sort((left, right) => right.updated_at.localeCompare(left.updated_at))
         .slice(0, COMPACT_TIMELINE_ATTEMPT_LIMIT)
     : filteredAttempts;
   const readinessByKind = await providerReadinessByKind(filteredAttempts, paths, options);
+  const compactTimeline = effectiveCompactTimeline
+    ? compactTimelineAttempts.map((attempt) =>
+        compactTimelineForAttempt(db, attempt, readinessByKind.get(attempt.provider_kind) ?? null, {
+          auditSafe: auditSafeTimeline,
+        })
+      )
+    : null;
+  const fullAttempts = readinessByKind
+    ? filteredAttempts.map((attempt) => attachCurrentProviderReadiness(attempt, readinessByKind))
+    : filteredAttempts;
   return {
     filters: {
       domain_id: filters.domainId ?? null,
@@ -715,18 +767,18 @@ export async function listStageAttemptsWithMonitoringProjection(
       study_id: filters.studyId ?? null,
       since_hours: filters.sinceHours ?? null,
       since_at: sinceIso,
-      compact_timeline: filters.compactTimeline === true,
+      compact_timeline: effectiveCompactTimeline,
     },
     summary: {
       total: baseAttempts.length,
       filtered_total: filteredAttempts.length,
-      compact_timeline_returned_total: filters.compactTimeline
+      compact_timeline_returned_total: effectiveCompactTimeline
         ? compactTimelineAttempts.length
         : null,
-      compact_timeline_omitted_total: filters.compactTimeline
+      compact_timeline_omitted_total: effectiveCompactTimeline
         ? Math.max(0, filteredAttempts.length - compactTimelineAttempts.length)
         : null,
-      compact_timeline_limit: filters.compactTimeline
+      compact_timeline_limit: effectiveCompactTimeline
         ? COMPACT_TIMELINE_ATTEMPT_LIMIT
         : null,
       by_status: Object.fromEntries(
@@ -736,13 +788,7 @@ export async function listStageAttemptsWithMonitoringProjection(
         ]),
       ),
     },
-    attempts: readinessByKind
-      ? filteredAttempts.map((attempt) => attachCurrentProviderReadiness(attempt, readinessByKind))
-      : filteredAttempts,
-    compact_timeline: filters.compactTimeline
-      ? compactTimelineAttempts.map((attempt) =>
-          compactTimelineForAttempt(db, attempt, readinessByKind.get(attempt.provider_kind) ?? null)
-        )
-      : null,
+    attempts: compactTimeline ?? fullAttempts,
+    compact_timeline: compactTimeline,
   };
 }
