@@ -157,6 +157,21 @@ test('framework operating maturity consumes provider long-soak evidence refs wit
     assert.equal(maturity.provider_long_soak.status, 'evidence_required');
     assert.equal(maturity.provider_long_soak.open_evidence_count, 1);
     assert.equal(maturity.provider_long_soak.capability_status, 'capability_slo_blocked');
+    assert.deepEqual(maturity.provider_long_soak.capability_missing_requirement_ids, [
+      'restart_requery_ready',
+      'signal_history_ready',
+      'typed_closeout_required_ready',
+      'missing_closeout_block_ready',
+      'retry_dead_letter_boundary_ready',
+      'domain_truth_boundary_preserved',
+    ]);
+    assert.equal(maturity.provider_long_soak.capability_open_requirement_count, 6);
+    assert.equal(
+      maturity.provider_long_soak.capability_next_evidence_action,
+      'record_provider_capability_slo_evidence_or_blocker_for_missing_requirements',
+    );
+    assert.equal(maturity.provider_long_soak.capability_checklist[0].required_ref_shape, 'recovery_ref');
+    assert.equal(maturity.provider_long_soak.capability_checklist[0].closes_production_ready, false);
     assert.equal(maturity.provider_long_soak.long_evidence_ready, false);
     assert.deepEqual(maturity.provider_long_soak.observed_ref_shapes, [
       'long_soak_ref',
@@ -192,7 +207,7 @@ test('framework operating maturity consumes provider long-soak evidence refs wit
     );
     assert.equal(
       maturity.provider_long_soak.execution_runbook.stop_loss.includes(
-        'if capability_status remains capability_slo_blocked, record provider_blocker_ref or typed_blocker_ref instead of rerunning evidence accounting',
+        'if capability_status remains capability_slo_blocked, use capability_missing_requirement_ids to record specific long_soak/recovery/dead_letter/provider_blocker/typed_blocker evidence instead of rerunning evidence accounting',
       ),
       true,
     );
@@ -236,6 +251,19 @@ test('framework operating maturity consumes provider long-soak evidence refs wit
       providerWorkOrder.observed_ref_shapes.includes('provider_blocker_ref'),
       true,
     );
+    assert.deepEqual(providerWorkOrder.missing_owner_action_ids, [
+      'restart_requery_ready',
+      'signal_history_ready',
+      'typed_closeout_required_ready',
+      'missing_closeout_block_ready',
+      'retry_dead_letter_boundary_ready',
+      'domain_truth_boundary_preserved',
+    ]);
+    assert.equal(
+      providerWorkOrder.next_evidence_action,
+      'record_provider_capability_slo_evidence_or_blocker_for_missing_requirements',
+    );
+    assert.equal(providerWorkOrder.owner_action_checklist[0].required_ref_shape, 'recovery_ref');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
@@ -723,6 +751,14 @@ test('framework operating maturity surfaces refs-only provider and lifecycle cou
     assert.equal(maturity.summary.provider_long_soak_open_count, 0);
     assert.equal(maturity.provider_long_soak.open_evidence_count, 0);
     assert.equal(maturity.provider_long_soak.long_evidence_ready, true);
+    assert.deepEqual(maturity.provider_long_soak.capability_missing_requirement_ids, [
+      'restart_requery_ready',
+      'signal_history_ready',
+      'typed_closeout_required_ready',
+      'missing_closeout_block_ready',
+      'retry_dead_letter_boundary_ready',
+      'domain_truth_boundary_preserved',
+    ]);
     assert.equal(maturity.provider_long_soak.observed_receipt_count, 7);
     assert.equal(maturity.provider_long_soak.provider_completion_counts_as_production_ready, false);
     assert.equal(
@@ -758,6 +794,10 @@ test('framework operating maturity surfaces refs-only provider and lifecycle cou
       'long_soak_ref',
       'recovery_ref',
     ]);
+    assert.equal(
+      providerWorkOrder.next_evidence_action,
+      'record_provider_capability_slo_evidence_or_blocker_for_missing_requirements',
+    );
     assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.non_closing_inputs.includes('verified_refs_only_ledger'),
       true,

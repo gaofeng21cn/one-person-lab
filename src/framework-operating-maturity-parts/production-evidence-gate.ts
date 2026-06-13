@@ -142,6 +142,9 @@ function ownerRouteWorkOrders(
     lane: string;
     open_count: number;
     accepted_closing_ref_shapes: string[];
+    owner_action_checklist?: unknown[];
+    missing_owner_action_ids?: string[];
+    next_evidence_action?: string | null;
   }>,
   ownerEvidenceIntake: Record<string, unknown>,
 ) {
@@ -179,6 +182,11 @@ function ownerRouteWorkOrders(
         : 'owner_route_evidence_missing',
       open_count: lane?.open_count ?? 1,
       next_owner_action: action.required_delta,
+      next_evidence_action: lane?.next_evidence_action ?? action.required_delta,
+      owner_action_checklist: Array.isArray(lane?.owner_action_checklist)
+        ? lane.owner_action_checklist
+        : [],
+      missing_owner_action_ids: lane?.missing_owner_action_ids ?? [],
       observed_owner_evidence_status:
         stringValue(observed?.status) ?? 'owner_evidence_required',
       observed_receipt_refs: observedReceiptRefs,
@@ -226,6 +234,9 @@ export function foundryAgentOsProductionEvidenceGate(input: {
   brandModuleL5: Record<string, unknown>;
   appReleaseOpenCount: number;
   providerOpenCount: number;
+  providerLongSoakOwnerActionChecklist?: unknown[];
+  providerLongSoakMissingOwnerActionIds?: string[];
+  providerLongSoakNextEvidenceAction?: string | null;
   cleanupOpenDecisionCount: number;
   lifecycleOpenCount: number;
   ownerEvidenceIntake: Record<string, unknown>;
@@ -274,6 +285,9 @@ export function foundryAgentOsProductionEvidenceGate(input: {
         'provider_blocker_ref',
         'typed_blocker_ref',
       ],
+      owner_action_checklist: input.providerLongSoakOwnerActionChecklist ?? [],
+      missing_owner_action_ids: input.providerLongSoakMissingOwnerActionIds ?? [],
+      next_evidence_action: input.providerLongSoakNextEvidenceAction ?? null,
     },
     {
       lane: 'private_platform_retirement',

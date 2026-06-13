@@ -768,6 +768,12 @@ export async function buildFrameworkOperatingMaturityReadout(
     brandModuleL5,
     appReleaseOpenCount,
     providerOpenCount,
+    providerLongSoakOwnerActionChecklist:
+      drilldownMaturity.provider.capabilityChecklist,
+    providerLongSoakMissingOwnerActionIds:
+      drilldownMaturity.provider.capabilityMissingRequirementIds,
+    providerLongSoakNextEvidenceAction:
+      drilldownMaturity.provider.capabilityNextEvidenceAction,
     cleanupOpenDecisionCount,
     lifecycleOpenCount,
     ownerEvidenceIntake,
@@ -894,6 +900,13 @@ export async function buildFrameworkOperatingMaturityReadout(
         blocked_repair_receipt_count:
           drilldownMaturity.provider.blockedRepairReceiptCount,
         capability_status: drilldownMaturity.provider.capabilityStatus,
+        capability_checklist: drilldownMaturity.provider.capabilityChecklist,
+        capability_missing_requirement_ids:
+          drilldownMaturity.provider.capabilityMissingRequirementIds,
+        capability_open_requirement_count:
+          drilldownMaturity.provider.capabilityOpenRequirementCount,
+        capability_next_evidence_action:
+          drilldownMaturity.provider.capabilityNextEvidenceAction,
         evidence_ledger_status:
           stringValue(drilldownMaturity.provider.evidence.evidence_ledger_status),
         observed_receipt_ref_count:

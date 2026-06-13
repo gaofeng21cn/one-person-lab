@@ -17,6 +17,63 @@ export function unique(items: string[]) {
   return [...new Set(items.filter((item) => item.trim().length > 0))];
 }
 
+const PROVIDER_CAPABILITY_REQUIREMENTS = [
+  {
+    requirement_id: 'restart_requery_ready',
+    summary_field: 'provider_slo_capability_restart_requery_ready',
+    required_ref_shape: 'recovery_ref',
+    owner_action: 'record restart/requery recovery evidence or provider blocker',
+  },
+  {
+    requirement_id: 'signal_history_ready',
+    summary_field: 'provider_slo_capability_signal_history_ready',
+    required_ref_shape: 'long_soak_ref',
+    owner_action: 'record signal-history long-soak evidence or provider blocker',
+  },
+  {
+    requirement_id: 'typed_closeout_required_ready',
+    summary_field: 'provider_slo_capability_typed_closeout_ready',
+    required_ref_shape: 'typed_blocker_ref',
+    owner_action: 'record typed closeout evidence or typed blocker',
+  },
+  {
+    requirement_id: 'missing_closeout_block_ready',
+    summary_field: 'provider_slo_capability_missing_closeout_block_ready',
+    required_ref_shape: 'provider_blocker_ref',
+    owner_action: 'record missing-closeout blocking evidence or provider blocker',
+  },
+  {
+    requirement_id: 'retry_dead_letter_boundary_ready',
+    summary_field: 'provider_slo_capability_retry_dead_letter_ready',
+    required_ref_shape: 'dead_letter_ref',
+    owner_action: 'record retry/dead-letter boundary evidence or provider blocker',
+  },
+  {
+    requirement_id: 'domain_truth_boundary_preserved',
+    summary_field: 'provider_slo_capability_domain_truth_boundary_preserved',
+    required_ref_shape: 'provider_blocker_ref',
+    owner_action: 'record domain-truth boundary preservation evidence or provider blocker',
+  },
+];
+
+function providerCapabilityChecklist(summary: Record<string, unknown>) {
+  return PROVIDER_CAPABILITY_REQUIREMENTS.map((requirement) => {
+    const observed = booleanValue(summary[requirement.summary_field]) === true;
+    return {
+      ...requirement,
+      observed,
+      status: observed ? 'observed' : 'evidence_required',
+      closes_production_ready: false,
+      authority_boundary: {
+        refs_only: true,
+        can_claim_provider_production_ready: false,
+        can_claim_production_ready: false,
+        can_claim_domain_ready: false,
+      },
+    };
+  });
+}
+
 export function appReleaseUserPathMaturity() {
   const evidence = record(buildAppReleaseUserPathEvidence({}));
   const releaseOwnerVerdictHandoff = record(evidence.release_owner_verdict_handoff);
@@ -79,6 +136,10 @@ export function appOperatorDrilldownMaturity(drilldown: Record<string, unknown>)
     + stringListValue(providerEvidence.typed_blocker_refs).length;
   const providerCapabilityStatus =
     stringValue(summary.provider_slo_capability_status);
+  const capabilityChecklist = providerCapabilityChecklist(summary);
+  const capabilityMissingRequirementIds = capabilityChecklist
+    .filter((entry) => entry.observed !== true)
+    .map((entry) => entry.requirement_id);
   const providerOpenCount = providerLongEvidenceReady ? 0 : 1;
   const lifecycleObservedRefCount = numberValue(lifecycleEvidence.observed_ref_count);
   const lifecycleReconcileIssueCount =
@@ -109,6 +170,12 @@ export function appOperatorDrilldownMaturity(drilldown: Record<string, unknown>)
           && providerEvidenceBlockerRefCount > 0
           ? 'capability_slo_blocked'
           : providerCapabilityStatus,
+      capabilityChecklist,
+      capabilityMissingRequirementIds,
+      capabilityOpenRequirementCount: capabilityMissingRequirementIds.length,
+      capabilityNextEvidenceAction: capabilityMissingRequirementIds.length > 0
+        ? 'record_provider_capability_slo_evidence_or_blocker_for_missing_requirements'
+        : 'capability_slo_requirements_observed_not_production_ready_claim',
       evidence: providerEvidence,
       observedReceiptRefs: stringListValue(providerEvidence.receipt_refs),
       verifiedReceiptRefs: stringListValue(providerEvidence.verified_receipt_refs),
@@ -157,11 +224,13 @@ export function providerLongSoakExecutionRunbook() {
       'provider_long_soak.open_evidence_count',
       'provider_long_soak.long_evidence_ready',
       'provider_long_soak.capability_status',
+      'provider_long_soak.capability_missing_requirement_ids',
+      'provider_long_soak.capability_next_evidence_action',
       'provider_long_soak.provider_completion_counts_as_production_ready',
       'foundry_agent_os_production_evidence_gate.owner_route_work_orders[lane=provider_long_soak]',
     ],
     stop_loss: [
-      'if capability_status remains capability_slo_blocked, record provider_blocker_ref or typed_blocker_ref instead of rerunning evidence accounting',
+      'if capability_status remains capability_slo_blocked, use capability_missing_requirement_ids to record specific long_soak/recovery/dead_letter/provider_blocker/typed_blocker evidence instead of rerunning evidence accounting',
       'if long_evidence_ready remains false after a claimed window, preserve open_evidence_count=1 and route to runtime owner',
       'if provider completion is the only proof, keep provider_completion_counts_as_production_ready=false',
     ],
