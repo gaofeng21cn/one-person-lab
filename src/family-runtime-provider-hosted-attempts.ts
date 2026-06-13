@@ -591,17 +591,19 @@ export function refreshDefaultExecutorLiveAttemptTaskLease(
     FROM tasks
     WHERE task_id = ?
   `).get(taskId) as FamilyRuntimeTaskRow | undefined;
-  if (!row || row.status !== 'running') {
+  if (!row || !['queued', 'retry_waiting', 'running'].includes(row.status)) {
     return null;
   }
   const leaseOwner = row.lease_owner || `opl-family-runtime:${process.pid}`;
   const leaseExpiresAt = new Date(Date.now() + DEFAULT_EXECUTOR_TASK_LEASE_MS).toISOString();
   const refreshedAt = nowIso();
+  const attemptCount = Math.max(row.attempts, input.attempt?.attempt_count ?? 0, 1);
   db.prepare(`
     UPDATE tasks
-    SET lease_owner = ?, lease_expires_at = ?, updated_at = ?
-    WHERE task_id = ? AND status = 'running'
-  `).run(leaseOwner, leaseExpiresAt, refreshedAt, taskId);
+    SET status = 'running', attempts = max(attempts, ?), lease_owner = ?,
+      lease_expires_at = ?, last_error = NULL, dead_letter_reason = NULL, updated_at = ?
+    WHERE task_id = ? AND status IN ('queued', 'retry_waiting', 'running')
+  `).run(attemptCount, leaseOwner, leaseExpiresAt, refreshedAt, taskId);
   insertEvent(db, {
     taskId,
     domainId: row.domain_id,
@@ -610,6 +612,8 @@ export function refreshDefaultExecutorLiveAttemptTaskLease(
     payload: {
       reason: input.reason,
       stage_attempt_id: input.attempt?.stage_attempt_id ?? null,
+      previous_status: row.status,
+      next_status: 'running',
       previous_lease_owner: row.lease_owner,
       previous_lease_expires_at: row.lease_expires_at,
       lease_owner: leaseOwner,
@@ -617,6 +621,11 @@ export function refreshDefaultExecutorLiveAttemptTaskLease(
       authority_boundary: {
         opl: 'provider_transport_lease_refresh_only',
         domain: 'truth_quality_artifact_gate_owner',
+        domain_truth_mutation: false,
+        publication_quality_mutation: false,
+        artifact_gate_mutation: false,
+        current_package_mutation: false,
+        provider_stage_attempt_started: false,
         provider_completion_is_domain_ready: false,
       },
     },

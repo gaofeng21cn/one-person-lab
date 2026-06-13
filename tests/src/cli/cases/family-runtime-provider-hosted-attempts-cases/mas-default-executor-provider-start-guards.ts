@@ -191,7 +191,7 @@ test('family-runtime does not start MAS default executor Temporal workflow from 
   }
 });
 
-test('family-runtime does not block MAS default executor task when a live attempt is already running', async () => {
+test('family-runtime repairs MAS default executor task read model when a same-task attempt is already live', async () => {
   const db = new DatabaseSync(':memory:');
   try {
     await withIsolatedFamilyRuntimeEnv(async () => {
@@ -228,17 +228,40 @@ test('family-runtime does not block MAS default executor task when a live attemp
           },
         }),
       });
-      const task = db.prepare('SELECT status, dead_letter_reason FROM tasks WHERE task_id = ?').get(taskId) as {
+      const task = db.prepare(`
+        SELECT status, attempts, lease_owner, lease_expires_at, dead_letter_reason
+        FROM tasks
+        WHERE task_id = ?
+      `).get(taskId) as {
         status: string;
+        attempts: number;
+        lease_owner: string | null;
+        lease_expires_at: string | null;
         dead_letter_reason: string | null;
       };
+      const leaseEvent = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_default_executor_live_attempt_lease_refreshed'
+        ORDER BY created_at DESC
+        LIMIT 1
+      `).get(taskId) as { payload_json: string } | undefined;
+      const leasePayload = leaseEvent ? JSON.parse(leaseEvent.payload_json) : null;
 
       assert.equal(result.status, 'skipped');
       assert.equal(result.reason, 'live_stage_attempt_exists');
       assert.equal(temporalStartCount, 0);
-      assert.equal(task.status, 'queued');
+      assert.equal(task.status, 'running');
+      assert.equal(task.attempts, 1);
+      assert.ok(task.lease_owner);
+      assert.ok(task.lease_expires_at);
       assert.equal(task.dead_letter_reason, null);
       assert.equal(listStageAttemptsForTask(db, taskId).length, 1);
+      assert.ok(leaseEvent);
+      assert.equal(leasePayload.reason, 'same_task_live_stage_attempt_exists');
+      assert.equal(leasePayload.previous_status, 'queued');
+      assert.equal(leasePayload.next_status, 'running');
+      assert.equal(leasePayload.stage_attempt_id, firstAttempt.stage_attempt_id);
     });
   } finally {
     db.close();

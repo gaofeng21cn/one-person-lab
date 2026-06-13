@@ -12,6 +12,11 @@ import {
 } from '../family-runtime-store.ts';
 import { antiLoopStopLossSameLineageDecision } from '../family-runtime-stop-loss-successor-policy.ts';
 import type { ActiveFamilyRuntimeQueueHold } from '../family-runtime-queue-holds.ts';
+import { refreshDefaultExecutorLiveAttemptTaskLease } from '../family-runtime-provider-hosted-attempts.ts';
+import {
+  providerAdmissionCurrentnessIdentity,
+  sameProviderAdmissionCurrentnessIdentity,
+} from '../family-runtime-mas-current-control-admission-currentness.ts';
 import {
   defaultExecutorBlockedRedriveDecision,
   defaultExecutorCloseoutRedriveDecision,
@@ -30,6 +35,23 @@ import {
   transportOnlySucceededDefaultExecutorAdmissionRedriveDecision,
 } from './existing-dedupe-decisions.ts';
 import { listStageAttemptsForTask } from '../family-runtime-stage-attempts.ts';
+
+const LIVE_SAME_TASK_DEFAULT_EXECUTOR_STATUSES = new Set(['running', 'checkpointed', 'human_gate']);
+
+function sameLiveAttemptCurrentnessAsPayload(
+  attempt: ReturnType<typeof listStageAttemptsForTask>[number],
+  payload: Record<string, unknown>,
+) {
+  const payloadIdentity = providerAdmissionCurrentnessIdentity(payload);
+  if (!payloadIdentity) {
+    return true;
+  }
+  const attemptIdentity = providerAdmissionCurrentnessIdentity(
+    attempt.workspace_locator,
+    { requirePendingStatus: false },
+  );
+  return Boolean(attemptIdentity && sameProviderAdmissionCurrentnessIdentity(attemptIdentity, payloadIdentity));
+}
 
 export {
   defaultExecutorCandidateRow,
@@ -82,6 +104,16 @@ export function reconcileExistingDedupeTask(
     && isDefaultExecutorDispatchInput(input.domainId, taskKind, payload)
     ? listStageAttemptsForTask(db, existing.task_id)
     : [];
+  const liveSameTaskDefaultExecutorAttempt = ['queued', 'retry_waiting'].includes(existing.status)
+    && isDefaultExecutorDispatch(existing, existingPayload)
+    && isDefaultExecutorDispatchInput(input.domainId, taskKind, payload)
+    ? existingStageAttempts.find((attempt) => (
+      attempt.provider_kind === 'temporal'
+      && attempt.executor_kind === 'codex_cli'
+      && LIVE_SAME_TASK_DEFAULT_EXECUTOR_STATUSES.has(attempt.status)
+      && sameLiveAttemptCurrentnessAsPayload(attempt, payload)
+    )) ?? null
+    : null;
   const antiLoopSameLineageDecision = antiLoopStopLossSameLineageDecision({
     existing,
     existingPayload,
@@ -107,6 +139,43 @@ export function reconcileExistingDedupeTask(
       accepted: false,
       idempotent_noop: true,
       task: taskToPayload(existing),
+    };
+  }
+  if (liveSameTaskDefaultExecutorAttempt) {
+    const lease = refreshDefaultExecutorLiveAttemptTaskLease(db, {
+      attempt: liveSameTaskDefaultExecutorAttempt,
+      source: input.source ?? 'opl-cli',
+      reason: 'same_task_live_stage_attempt_exists_at_enqueue',
+    });
+    const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
+    insertEvent(db, {
+      taskId: refreshed.task_id,
+      domainId: refreshed.domain_id,
+      eventType: 'task_default_executor_live_dispatch_dedupe_noop',
+      source: input.source ?? 'opl-cli',
+      payload: {
+        dedupe_key: dedupeKey,
+        reason: 'same_task_live_stage_attempt_exists_at_enqueue',
+        stage_attempt_id: liveSameTaskDefaultExecutorAttempt.stage_attempt_id,
+        previous_status: existing.status,
+        next_status: refreshed.status,
+        lease,
+        authority_boundary: {
+          opl: 'queue_read_model_repair_from_live_attempt_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          domain_truth_mutation: false,
+          publication_quality_mutation: false,
+          artifact_gate_mutation: false,
+          current_package_mutation: false,
+          provider_stage_attempt_started: false,
+          provider_completion_is_domain_ready: false,
+        },
+      },
+    });
+    return {
+      accepted: false,
+      idempotent_noop: true,
+      task: taskToPayload(refreshed),
     };
   }
   const closeoutRedrive = defaultExecutorSucceededAdmissionRefresh
