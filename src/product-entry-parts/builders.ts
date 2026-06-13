@@ -27,7 +27,7 @@ export function buildContractsContext(contracts: FrameworkContracts) {
   };
 }
 
-export function buildPromptHeader(
+function buildPromptHeader(
   mode: ProductEntryMode,
   input: ProductEntryCliInput,
   resolution: ResolutionResult,
