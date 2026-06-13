@@ -356,8 +356,36 @@ function terminalAttemptRefs(attempts: ControlAttemptRow[], current: ControlAtte
     .map((attempt) => `opl://stage_attempts/${attempt.stage_attempt_id}`);
 }
 
+function missingLaunchAuthorizationFields(attempt: ControlAttemptRow | undefined) {
+  if (!attempt) {
+    return [];
+  }
+  const workspaceLocator = parseRecord(attempt.workspace_locator_json);
+  return [
+    stringValue(workspaceLocator.provider_attempt_ref) ? null : 'provider_attempt_ref',
+    stringValue(workspaceLocator.attempt_lease_ref) ? null : 'attempt_lease_ref',
+    stringValue(workspaceLocator.execution_authorization_decision_ref)
+      ? null
+      : 'execution_authorization_decision_ref',
+    stringValue(workspaceLocator.execution_authorization_receipt_ref)
+      ? null
+      : 'execution_authorization_receipt_ref',
+  ].filter((entry): entry is string => Boolean(entry));
+}
+
+function refsOnlyCheckpointWithoutLaunchAuthorization(attempt: ControlAttemptRow | undefined) {
+  if (!attempt || attempt.status !== 'checkpointed') {
+    return false;
+  }
+  return attempt.closeout_receipt_status === 'domain_handler_receipt_ref_only'
+    && missingLaunchAuthorizationFields(attempt).length > 0;
+}
+
 function isLiveProviderAttempt(attempt: ControlAttemptRow | undefined, providerRun: Record<string, unknown>) {
   if (!attempt) {
+    return false;
+  }
+  if (refsOnlyCheckpointWithoutLaunchAuthorization(attempt)) {
     return false;
   }
   const providerStatus = stringValue(providerRun.provider_status);
@@ -646,6 +674,20 @@ function deriveCurrentControlStateFromRows(
       reconciliation_status: 'blocked_stale_work_unit',
       current_attempt_state: 'blocked',
       blocker_reason: STALE_WORK_UNIT_DIAGNOSTIC,
+    };
+  }
+  if (refsOnlyCheckpointWithoutLaunchAuthorization(current)) {
+    return {
+      ...base,
+      reconciliation_status: 'blocked_missing_launch_execution_authorization',
+      current_attempt_state: 'blocked',
+      blocker_reason: 'launch_execution_authorization_required_for_refs_only_checkpoint',
+      missing_launch_authorization_fields: missingLaunchAuthorizationFields(current),
+      authority_boundary: {
+        ...base.authority_boundary,
+        provider_completion_is_domain_ready: false,
+        refs_only_checkpoint_is_running_proof: false,
+      },
     };
   }
   if (terminalWithoutAcceptedCloseout(current, providerRun)) {

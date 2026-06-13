@@ -95,6 +95,10 @@ function stringList(value: unknown) {
     : [];
 }
 
+function stringValue(value: unknown) {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
 function providerTransportRedriveReasonsForTrigger(trigger: ProviderTransportRedriveTrigger) {
   return trigger === 'auto'
     ? PROVIDER_TRANSPORT_REDRIVE_REASONS
@@ -177,6 +181,29 @@ function terminalProviderTransportAttemptForRedrive(db: DatabaseSync, taskId: st
       && closeoutRefs.length === 0
       && attempt.closeout_receipt_status === null;
   });
+  return attempts.sort((left, right) => Date.parse(left.updated_at) - Date.parse(right.updated_at)).at(-1) ?? null;
+}
+
+function missingLaunchAuthorizationFields(attempt: StageAttemptPayload) {
+  return [
+    stringValue(attempt.workspace_locator.provider_attempt_ref) ? null : 'provider_attempt_ref',
+    stringValue(attempt.workspace_locator.attempt_lease_ref) ? null : 'attempt_lease_ref',
+    stringValue(attempt.workspace_locator.execution_authorization_decision_ref)
+      ? null
+      : 'execution_authorization_decision_ref',
+    stringValue(attempt.workspace_locator.execution_authorization_receipt_ref)
+      ? null
+      : 'execution_authorization_receipt_ref',
+  ].filter((entry): entry is string => Boolean(entry));
+}
+
+function refsOnlyCheckpointMissingLaunchAuthorizationForRedrive(db: DatabaseSync, taskId: string) {
+  const attempts = listStageAttemptsForTask(db, taskId).filter((attempt) => (
+    attempt.provider_kind === 'temporal'
+    && attempt.status === 'checkpointed'
+    && attempt.closeout_receipt_status === 'domain_handler_receipt_ref_only'
+    && missingLaunchAuthorizationFields(attempt).length > 0
+  ));
   return attempts.sort((left, right) => Date.parse(left.updated_at) - Date.parse(right.updated_at)).at(-1) ?? null;
 }
 
@@ -308,6 +335,133 @@ function redriveTerminalProviderTransportTask(
           publication_quality_mutation: false,
           artifact_gate_mutation: false,
           current_package_mutation: false,
+        },
+      },
+    });
+    db.exec('COMMIT');
+    return {
+      redriven: true,
+      requeued_from_terminal: true,
+      task: taskToPayload(refreshed),
+      redriven_stage_attempt: redrivenAttempt,
+      provider_redrive_started: Boolean(redrivenAttempt),
+      held_by_active_hold: Boolean(admission.activeHold),
+    };
+  } catch (error) {
+    try {
+      db.exec('ROLLBACK');
+    } catch {
+      // Preserve the original contract error.
+    }
+    throw error;
+  }
+}
+
+function redriveRefsOnlyCheckpointMissingLaunchAuthorizationTask(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  _payload: Record<string, unknown>,
+  input: {
+    source?: string;
+    operatorReason: string;
+    redrivenAt?: string;
+  },
+) {
+  const eventSource = input.source?.trim() || 'opl-family-runtime-redrive';
+  const redrivenAt = input.redrivenAt ?? nowIso();
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    const currentRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(row.task_id) as
+      | FamilyRuntimeTaskRow
+      | undefined;
+    if (!currentRow) {
+      throw new FrameworkContractError('cli_usage_error', 'Family runtime task not found.', {
+        task_id: row.task_id,
+      });
+    }
+    const currentPayload = parsePayload(currentRow);
+    assertDomainRouteProviderTransportTask(currentRow, currentPayload);
+    if (currentRow.status !== 'succeeded') {
+      db.exec('COMMIT');
+      return {
+        redriven: false,
+        requeued_from_terminal: false,
+        idempotent_noop: true,
+        skip_reason: 'task_no_longer_refs_only_checkpoint_missing_launch_authorization',
+        task: taskToPayload(currentRow),
+        redriven_stage_attempt: null,
+      };
+    }
+    const staleAttempt = refsOnlyCheckpointMissingLaunchAuthorizationForRedrive(db, currentRow.task_id);
+    if (!staleAttempt) {
+      throw new FrameworkContractError(
+        'cli_usage_error',
+        'family-runtime queue redrive requires refs-only checkpoint evidence missing launch execution authorization.',
+        {
+          blocker_id: 'family_runtime_redrive_blocked',
+          task_id: currentRow.task_id,
+          status: currentRow.status,
+          required_stage_attempt_status: 'checkpointed',
+          required_closeout_receipt_status: 'domain_handler_receipt_ref_only',
+          required_missing_launch_authorization_fields: [
+            'provider_attempt_ref',
+            'attempt_lease_ref',
+            'execution_authorization_decision_ref',
+            'execution_authorization_receipt_ref',
+          ],
+        },
+      );
+    }
+    const missingFields = missingLaunchAuthorizationFields(staleAttempt);
+    const admission = redriveAdmissionForTask(db, currentRow, currentPayload);
+    const nextStatus = admission.nextStatus;
+    const claim = db.prepare(`
+      UPDATE tasks
+      SET status = ?, attempts = 0, requires_approval = ?, lease_owner = NULL, lease_expires_at = NULL,
+        last_error = ?, dead_letter_reason = NULL, updated_at = ?
+      WHERE task_id = ? AND status = 'succeeded'
+    `).run(nextStatus, admission.requiresApproval ? 1 : 0, admission.lastError, redrivenAt, currentRow.task_id);
+    if (claim.changes === 0) {
+      const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(currentRow.task_id) as
+        | FamilyRuntimeTaskRow
+        | undefined;
+      db.exec('COMMIT');
+      return {
+        redriven: false,
+        requeued_from_terminal: false,
+        idempotent_noop: true,
+        skip_reason: 'task_no_longer_refs_only_checkpoint_missing_launch_authorization',
+        task: refreshed ? taskToPayload(refreshed) : null,
+        redriven_stage_attempt: null,
+      };
+    }
+    const redrivenAttempt = createRedrivenAttemptForAdmission(db, currentRow, currentPayload, admission, eventSource);
+    const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(currentRow.task_id) as
+      FamilyRuntimeTaskRow;
+    insertEvent(db, {
+      taskId: currentRow.task_id,
+      domainId: currentRow.domain_id,
+      eventType: 'task_operator_redrive_from_refs_only_checkpoint_missing_launch_authorization',
+      source: eventSource,
+      payload: {
+        previous_status: currentRow.status,
+        next_status: nextStatus,
+        ...redriveAdmissionEventPayload(admission),
+        previous_stage_attempt_id: staleAttempt.stage_attempt_id,
+        previous_stage_attempt_state: staleAttempt.status,
+        previous_closeout_receipt_status: staleAttempt.closeout_receipt_status,
+        missing_launch_authorization_fields: missingFields,
+        operator_reason: input.operatorReason,
+        source_fingerprint_changed: false,
+        redriven_stage_attempt_id: redrivenAttempt?.stage_attempt_id ?? null,
+        authority_boundary: {
+          opl: 'provider_transport_redrive_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          domain_truth_mutation: false,
+          publication_quality_mutation: false,
+          artifact_gate_mutation: false,
+          current_package_mutation: false,
+          refs_only_checkpoint_is_running_proof: false,
         },
       },
     });
@@ -630,10 +784,16 @@ export function redriveFamilyRuntimeTask(
       operatorReason,
     });
   } else if (domainRouteRedriveAuthority(row, payload)) {
-    result = redriveTerminalProviderTransportTask(db, row, payload, {
-      source: input.source,
-      operatorReason,
-    });
+    const refsOnlyCheckpoint = refsOnlyCheckpointMissingLaunchAuthorizationForRedrive(db, row.task_id);
+    result = refsOnlyCheckpoint
+      ? redriveRefsOnlyCheckpointMissingLaunchAuthorizationTask(db, row, payload, {
+          source: input.source,
+          operatorReason,
+        })
+      : redriveTerminalProviderTransportTask(db, row, payload, {
+          source: input.source,
+          operatorReason,
+        });
   } else {
     throw new FrameworkContractError(
       'cli_usage_error',
