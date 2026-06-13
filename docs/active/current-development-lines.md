@@ -8,7 +8,7 @@ Last reviewed: `2026-06-14`
 
 ## 读法
 
-当前开发线路不再作为独立 active plan 维护。OPL family 的当前目标、差距、完成口径和下一轮 baton 的唯一 active owner 是 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。
+当前开发线路不再作为独立 active plan 维护。OPL family 的当前目标、差距、完成口径和 active-goal baton 的唯一 active owner 是 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。
 
 本文只回答一个支撑问题：各类工作应回到哪个长期 owner。它不排序下一步、不维护路线图、不冻结 live counter、readiness 摘要、receipt id、attempt id、workorder 数、branch/worktree 或 closeout 过程。
 
@@ -16,7 +16,7 @@ Last reviewed: `2026-06-14`
 
 当前 runtime 边界固定为 Codex-default executor 进入 provider-backed Stage Attempt；legacy wrapper、provenance、diagnostic、history 或 fixture 只作为支撑证据和退役语境，不进入 ordinary owner root。
 
-原先分散的 purpose-first audit、MVP friction、Stage Native Kernel、App cockpit、wrapper retirement、OMA script-to-pack 和 domain canary 线都只按同一个 owner map 读取。已落地结构能力写回对应 owner repo；当前状态、maturity、open evidence lane 和 next baton 归 `docs/status.md` 与 `current-state-vs-ideal-gap.md`，不由本文冻结 branch、SHA、receipt id 或 closeout 流水。未闭合项只能保留为 domain-owned live evidence、App release/user-path evidence、wrapper retirement gate、memory/artifact/lifecycle receipt 或 support no-resurrection tail。因此不能写成 publication-ready、grant-ready、visual-ready、target-agent ready、App release-ready、domain ready、production ready 或 L5 complete。
+原先分散的 purpose-first audit、MVP friction、Stage Native Kernel、App cockpit、wrapper retirement、OMA script-to-pack 和 domain canary 线都只按同一个 owner map 读取。已落地结构能力写回对应 owner repo；当前状态、maturity、open evidence lane 和 active-goal baton 归 `docs/status.md` 与 `current-state-vs-ideal-gap.md`，不由本文冻结 branch、SHA、receipt id 或 closeout 流水。未闭合项只能保留为 domain-owned live evidence、App release/user-path evidence、wrapper retirement gate、memory/artifact/lifecycle receipt 或 support no-resurrection tail。因此不能写成 publication-ready、grant-ready、visual-ready、target-agent ready、App release-ready、domain ready、production ready 或 L5 complete。
 
 统一目标仍是：
 

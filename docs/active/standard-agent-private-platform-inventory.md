@@ -8,7 +8,7 @@ Last reviewed: `2026-06-12`
 
 ## 文档职责
 
-本文只维护 MAS/MAG/RCA/OPL Meta Agent 中仍可能被误读成 repo-local generic platform 的 surface 分类、owner 边界和迁移门。当前执行目标、ideal-operating-model redesign foldback、remaining residue/delete gate 和下一轮 baton 回到 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。本文不再保存逐日拆文件流水账、line-count closeout、commit 过程、dated readout counter 或长 follow-up 清单。
+本文只维护 MAS/MAG/RCA/OPL Meta Agent 中仍可能被误读成 repo-local generic platform 的 surface 分类、owner 边界和迁移门。当前执行目标、ideal-operating-model redesign foldback、remaining residue/delete gate 和 active-goal baton 回到 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。本文不再保存逐日拆文件流水账、line-count closeout、commit 过程、dated readout counter 或长 follow-up 清单。
 
 逐文件拆分过程已归入 [2026-05-22 OPL active ledger consolidation](../history/process/plans/2026-05-22-opl-doc-lifecycle-active-ledger-consolidation.md)。新增 private-platform 清理证据时，active 层只更新本文件的分类结论；过程证据进入 `docs/history/**` 或对应 repo 的 status / gap plan。
 

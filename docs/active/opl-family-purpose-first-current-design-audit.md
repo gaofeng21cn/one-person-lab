@@ -8,7 +8,7 @@ Last reviewed: `2026-06-12`
 
 ## 读法
 
-本文不再维护独立 re-audit 流水、closeout ledger、跨仓执行清单或下一轮计划。OPL family 的当前目标、差距、完成口径和下一轮 baton 的唯一 active owner 是 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。
+本文不再维护独立 re-audit 流水、closeout ledger、跨仓执行清单或后续批次计划。OPL family 的当前目标、差距、完成口径和 active-goal baton 的唯一 active owner 是 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。
 
 本文只保留目的优先审计的稳定结论：从最终产出反推，哪些 surface 必须进入默认路径，哪些只应下沉为 diagnostic / audit / support / history，哪些被替代后应进入 retirement gate。
 

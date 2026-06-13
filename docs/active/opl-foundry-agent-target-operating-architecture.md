@@ -609,7 +609,7 @@ domain-agent-repo/
 
 ## Migration Reading
 
-迁移阶段只作为目标架构支撑，不再作为独立 active roadmap。当前执行顺序和下一轮 baton 回到 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。
+迁移阶段只作为目标架构支撑，不再作为独立 active roadmap。当前执行顺序和 active-goal baton 回到 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。
 
 | Phase | 当前读法 |
 | --- | --- |

@@ -8,7 +8,7 @@ Last reviewed: `2026-06-12`
 
 ## 读法
 
-本文不再作为独立 active plan 维护。OPL family 当前目标、差距、完成口径和下一轮 baton 的唯一 active owner 是 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。本文只解释 production closure 相关证据如何被唯一 active owner 消费。
+本文不再作为独立 active plan 维护。OPL family 当前目标、差距、完成口径和 active-goal baton 的唯一 active owner 是 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。本文只解释 production closure 相关证据如何被唯一 active owner 消费。
 
 统一 operating model 标准回到 [OPL Family Ideal Operating Model Redesign](./opl-family-ideal-operating-model-redesign.md)。目标操作架构回到 [OPL Foundry Agent Target Operating Architecture](./opl-foundry-agent-target-operating-architecture.md)。过程性 provider proof、receipt 事件、workorder 计数、命令输出、分支名、attempt id 和 dated closeout 流水进入 `docs/history/**`、runtime ledger 或提交历史。
 
