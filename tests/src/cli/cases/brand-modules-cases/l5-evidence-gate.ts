@@ -46,8 +46,8 @@ test('brand module L5 evidence gate is executable but does not claim production 
     assert.equal(status.evidence_class_followthrough_summary.evidence_class_count, 13);
     assert.equal(status.evidence_class_followthrough_summary.route_count, 130);
     assert.equal(status.evidence_class_followthrough_summary.missing_owner_evidence_route_count, 0);
-    assert.equal(status.evidence_class_followthrough_summary.typed_blocker_followthrough_route_count, 56);
-    assert.equal(status.evidence_class_followthrough_summary.observed_refs_not_l5_claim_route_count, 74);
+    assert.equal(status.evidence_class_followthrough_summary.typed_blocker_followthrough_route_count, 47);
+    assert.equal(status.evidence_class_followthrough_summary.observed_refs_not_l5_claim_route_count, 83);
     assert.equal(status.evidence_class_followthrough_summary.observed_ref_route_count, 130);
     assert.equal(status.evidence_class_followthrough_summary.verified_receipt_route_count, 0);
     assert.equal(status.evidence_class_followthrough_summary.l5_claim_authorized, false);
@@ -95,16 +95,16 @@ test('brand module L5 evidence gate is executable but does not claim production 
       assert.equal(entry.l5_completion_status, 'evidence_required');
       const expectedOpenRequirementCount =
         entry.module_id === 'runway' ? 3
-        : entry.module_id === 'console' || entry.module_id === 'connect' ? 4
-        : 5;
+        : entry.module_id === 'console' || entry.module_id === 'connect' ? 3
+        : 4;
       const expectedSatisfiedRequirementCount =
         entry.module_id === 'runway' ? 9
-        : entry.module_id === 'console' || entry.module_id === 'connect' ? 8
-        : 7;
+        : entry.module_id === 'console' || entry.module_id === 'connect' ? 9
+        : 8;
       const expectedTypedBlockerRequirementCount =
         entry.module_id === 'runway' ? 4
-        : entry.module_id === 'console' || entry.module_id === 'connect' ? 5
-        : 6;
+        : entry.module_id === 'console' || entry.module_id === 'connect' ? 4
+        : 5;
       const expectedObservedRefsRequirementCount = 13 - expectedTypedBlockerRequirementCount;
       const expectedNextEvidenceClass = 'cross_agent_scaleout';
       assert.equal(entry.satisfied_requirement_count, expectedSatisfiedRequirementCount);
@@ -316,7 +316,8 @@ test('brand module L5 evidence gate is executable but does not claim production 
           'domain_authority_false_boundary',
           'no_second_truth_regression',
           'pack_compile_parity',
-          ...(entry.module_id === 'runway' ? ['long_soak_recovery', 'operator_repair_loop'] : []),
+          'operator_repair_loop',
+          ...(entry.module_id === 'runway' ? ['long_soak_recovery'] : []),
           ...(entry.module_id === 'console' ? ['release_install_evidence'] : []),
           ...(entry.module_id === 'connect' ? ['release_install_evidence'] : []),
         ]) {
@@ -356,11 +357,10 @@ test('brand module L5 evidence gate is executable but does not claim production 
         'cross_agent_scaleout',
         'long_soak_recovery',
         'release_install_evidence',
-        'operator_repair_loop',
         'cross_agent_foundry_agent_os_adoption',
       ]) {
         if (
-          (entry.module_id === 'runway' && (classId === 'long_soak_recovery' || classId === 'operator_repair_loop'))
+          (entry.module_id === 'runway' && classId === 'long_soak_recovery')
           || (entry.module_id === 'console' && (classId === 'cross_agent_scaleout' || classId === 'release_install_evidence'))
           || (entry.module_id === 'connect' && classId === 'release_install_evidence')
         ) {

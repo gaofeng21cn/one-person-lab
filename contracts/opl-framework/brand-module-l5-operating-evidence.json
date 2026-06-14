@@ -251,9 +251,14 @@
           "owner": "OPL Framework docs governance",
           "owner_route_ref": "opl-owner-route:brand-module/charter/operator_repair_loop/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:charter",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/charter/operator_repair_loop/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "repair_loop_ref:opl-charter/operator-repair-loop/current-owner-safe-action-readout-20260615",
+            "current_owner_delta_ref:opl-framework/readiness-current-owner-delta-default-root",
+            "safe_action_ref:opl-charter/operator-repair-loop/evidence-closure-route-20260615"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/charter/operator_repair_loop/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -428,9 +433,14 @@
           "owner": "OPL Framework catalog owner",
           "owner_route_ref": "opl-owner-route:brand-module/atlas/operator_repair_loop/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:atlas",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/atlas/operator_repair_loop/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "repair_loop_ref:opl-atlas/operator-repair-loop/current-owner-safe-action-readout-20260615",
+            "current_owner_delta_ref:opl-framework/readiness-current-owner-delta-default-root",
+            "safe_action_ref:opl-atlas/operator-repair-loop/evidence-closure-route-20260615"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/atlas/operator_repair_loop/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -606,9 +616,14 @@
           "owner": "OPL Workspace owner",
           "owner_route_ref": "opl-owner-route:brand-module/workspace/operator_repair_loop/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:workspace",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/workspace/operator_repair_loop/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "repair_loop_ref:opl-workspace/operator-repair-loop/current-owner-safe-action-readout-20260615",
+            "current_owner_delta_ref:opl-framework/readiness-current-owner-delta-default-root",
+            "safe_action_ref:opl-workspace/operator-repair-loop/evidence-closure-route-20260615"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/workspace/operator_repair_loop/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -784,9 +799,14 @@
           "owner": "OPL Pack owner",
           "owner_route_ref": "opl-owner-route:brand-module/pack/operator_repair_loop/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:pack",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/pack/operator_repair_loop/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "repair_loop_ref:opl-pack/operator-repair-loop/current-owner-safe-action-readout-20260615",
+            "current_owner_delta_ref:opl-framework/readiness-current-owner-delta-default-root",
+            "safe_action_ref:opl-pack/operator-repair-loop/evidence-closure-route-20260615"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/pack/operator_repair_loop/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -966,9 +986,14 @@
           "owner": "OPL Stagecraft owner",
           "owner_route_ref": "opl-owner-route:brand-module/stagecraft/operator_repair_loop/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:stagecraft",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/stagecraft/operator_repair_loop/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "repair_loop_ref:opl-stagecraft/operator-repair-loop/current-owner-safe-action-readout-20260615",
+            "current_owner_delta_ref:opl-framework/readiness-current-owner-delta-default-root",
+            "safe_action_ref:opl-stagecraft/operator-repair-loop/evidence-closure-route-20260615"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/stagecraft/operator_repair_loop/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1332,9 +1357,14 @@
           "owner": "OPL Vault owner",
           "owner_route_ref": "opl-owner-route:brand-module/vault/operator_repair_loop/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:vault",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/vault/operator_repair_loop/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "repair_loop_ref:opl-vault/operator-repair-loop/current-owner-safe-action-readout-20260615",
+            "current_owner_delta_ref:opl-framework/readiness-current-owner-delta-default-root",
+            "safe_action_ref:opl-vault/operator-repair-loop/evidence-closure-route-20260615"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/vault/operator_repair_loop/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1509,9 +1539,14 @@
           "owner": "OPL Console owner",
           "owner_route_ref": "opl-owner-route:brand-module/console/operator_repair_loop/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:console",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/console/operator_repair_loop/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "repair_loop_ref:opl-console/operator-repair-loop/current-owner-safe-action-readout-20260615",
+            "current_owner_delta_ref:opl-framework/readiness-current-owner-delta-default-root",
+            "safe_action_ref:opl-console/operator-repair-loop/evidence-closure-route-20260615"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/console/operator_repair_loop/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1687,9 +1722,14 @@
           "owner": "OPL Foundry Lab owner",
           "owner_route_ref": "opl-owner-route:brand-module/foundry-lab/operator_repair_loop/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry-lab",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/foundry-lab/operator_repair_loop/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "repair_loop_ref:opl-foundry-lab/operator-repair-loop/current-owner-safe-action-readout-20260615",
+            "current_owner_delta_ref:opl-framework/readiness-current-owner-delta-default-root",
+            "safe_action_ref:opl-foundry-lab/operator-repair-loop/evidence-closure-route-20260615"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/foundry-lab/operator_repair_loop/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1864,9 +1904,14 @@
           "owner": "OPL Connect owner",
           "owner_route_ref": "opl-owner-route:brand-module/connect/operator_repair_loop/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:connect",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/connect/operator_repair_loop/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "repair_loop_ref:opl-connect/operator-repair-loop/current-owner-safe-action-readout-20260615",
+            "current_owner_delta_ref:opl-framework/readiness-current-owner-delta-default-root",
+            "safe_action_ref:opl-connect/operator-repair-loop/evidence-closure-route-20260615"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/connect/operator_repair_loop/opl-brand-owner-accepted-20260615"
           ]
         },
         {
