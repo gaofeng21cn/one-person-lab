@@ -24,7 +24,7 @@ jobs:
 
       - name: Ensure origin/main compare ref
         shell: bash
-        run: git fetch --no-tags --prune origin main:refs/remotes/origin/main
+        run: git fetch --no-tags --prune origin +main:refs/remotes/origin/main
 
       - name: Install Sentrux
         run: ./scripts/install-sentrux-ci.sh
