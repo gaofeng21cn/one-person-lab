@@ -292,9 +292,9 @@ export function buildPublicRuntimeCommandSpecs(
       }),
     'runtime stage-run-authorization record':
       cloneCommandSpec(commandSpecs['runtime stage-run-authorization record'], {
-        usage: 'opl runtime stage-run-authorization record (--payload <json>|--payload-file <path>)',
+        usage: 'opl runtime stage-run-authorization record (--payload <json>|--payload-file <path>) [--dry-run]',
         examples: [
-          'opl runtime stage-run-authorization record --payload-file stage-run-authorization.json',
+          'opl runtime stage-run-authorization record --payload-file stage-run-authorization.json --dry-run --json',
         ],
         group: 'runtime',
       }),

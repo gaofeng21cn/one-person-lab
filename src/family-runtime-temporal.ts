@@ -334,6 +334,20 @@ function stageManifestRef(input: { workspaceLocator: Record<string, unknown>; st
     ?? `opl://stage-manifests/${encodeURIComponent(input.stageId)}`;
 }
 
+function studyIdRef(workspaceLocator: Record<string, unknown>, taskId: string | null) {
+  return optionalText(workspaceLocator.study_id)
+    ?? optionalText(workspaceLocator.study_ref)
+    ?? taskId
+    ?? 'study:unspecified';
+}
+
+function actionTypeRef(input: { workspaceLocator: Record<string, unknown>; stageId: string }) {
+  return optionalText(input.workspaceLocator.action_type)
+    ?? optionalText(input.workspaceLocator.action)
+    ?? optionalText(input.workspaceLocator.task_kind)
+    ?? input.stageId;
+}
+
 export function buildLaunchExecutionAuthorization(input: {
   stageAttemptId: string;
   workflowId: string;
@@ -356,6 +370,11 @@ export function buildLaunchExecutionAuthorization(input: {
   }
   const stageRunId = stageRunIdFor({ domain_id: input.domainId, stage_id: input.stageId });
   const taskOrAttemptId = input.taskId ?? input.stageAttemptId;
+  const studyId = studyIdRef(input.workspaceLocator, input.taskId);
+  const actionType = actionTypeRef({
+    workspaceLocator: input.workspaceLocator,
+    stageId: input.stageId,
+  });
   return {
     owner: 'one-person-lab' as const,
     executor_kind: input.executorKind,
@@ -366,10 +385,22 @@ export function buildLaunchExecutionAuthorization(input: {
     execution_authorization_decision_ref: `opl://stage-attempts/${encodeURIComponent(input.stageAttemptId)}/execution-authorizations/${encodeURIComponent(taskOrAttemptId)}/${encodeURIComponent(input.workflowId)}`,
     stage_run_id: stageRunId,
     domain_id: input.domainId,
+    study_id: studyId,
+    domain_context: {
+      domain_id: input.domainId,
+      study_id: studyId,
+      stage_id: input.stageId,
+    },
     stage_id: input.stageId,
     generation: 0 as const,
     phase: 'launch' as const,
     selected_executor: input.executorKind,
+    action_type: actionType,
+    work_unit_id: artifactScope,
+    work_unit_fingerprint: input.sourceFingerprint,
+    decision: 'authorize' as const,
+    reason: 'provider_stage_attempt_launch_authorized_by_opl_refs_only_gate',
+    operator: 'one-person-lab:runtime',
     workspace_scope_ref: workspaceScope,
     artifact_scope_ref: artifactScope,
     source_fingerprint: input.sourceFingerprint,

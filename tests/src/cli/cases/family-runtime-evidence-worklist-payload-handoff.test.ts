@@ -114,6 +114,19 @@ function recordPayloadHandoffStageRunAuthorization() {
     artifact_scope_ref: 'domain_owner/default-executor-dispatch',
     source_fingerprint:
       'owner_delta_first:med-autoscience:domain-app-or-live-refs-payload-required-to-record-domain-dispatch-owner-receipt-or-typed-blocker:1:0',
+    study_id: 'study:payload-handoff',
+    domain_context: {
+      domain_id: 'medautoscience',
+      study_id: 'study:payload-handoff',
+      stage_id: 'domain_owner/default-executor-dispatch',
+    },
+    action_type: 'domain_dispatch:medautoscience:sat_payload_handoff:record',
+    work_unit_id: 'domain_owner/default-executor-dispatch',
+    work_unit_fingerprint:
+      'owner_delta_first:med-autoscience:domain-app-or-live-refs-payload-required-to-record-domain-dispatch-owner-receipt-or-typed-blocker:1:0',
+    decision: 'authorize',
+    reason: 'test_authorized_refs_only_stage_attempt_execution',
+    operator: 'test:family-runtime-evidence-worklist-payload-handoff',
     idempotency_key:
       'current-owner-delta:medautoscience:domain-owner-default-executor-dispatch:owner-answer-or-typed-blocker',
     current_pointer_ref:

@@ -535,6 +535,18 @@ test('typed blocker ref content identity mismatch fails closed even when payload
       workspace_scope_ref: `workspace:${workspaceRoot}`,
       artifact_scope_ref: 'stage-packet:current',
       source_fingerprint: 'mas_default_executor_source_current',
+      study_id: 'study:domain-dispatch-current',
+      domain_context: {
+        domain_id: 'medautoscience',
+        study_id: 'study:domain-dispatch-current',
+        stage_id: 'domain_owner/default-executor-dispatch',
+      },
+      action_type: 'domain_owner/default-executor-dispatch',
+      work_unit_id: 'stage-packet:current',
+      work_unit_fingerprint: 'mas_default_executor_source_current',
+      decision: 'authorize',
+      reason: 'test_authorized_refs_only_stage_attempt_execution',
+      operator: 'test:domain-dispatch-evidence-payload-preflight',
       idempotency_key: 'idem_current',
       current_pointer_ref:
         'opl://stage-runs/app-stage-run%3Amedautoscience%3Adomain-owner-default-executor-dispatch/current',

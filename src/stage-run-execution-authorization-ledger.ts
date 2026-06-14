@@ -8,9 +8,19 @@ import {
 
 type JsonRecord = Record<string, unknown>;
 
+type StageRunExecutionAuthorizationDecision = 'authorize' | 'human_gate' | 'typed_blocker';
+
+type StageRunExecutionAuthorizationDomainContext = {
+  domain_id: string;
+  study_id: string;
+  stage_id: string;
+};
+
 export type StageRunExecutionAuthorizationInput = {
   stage_run_id?: string | null;
   domain_id?: string | null;
+  study_id?: string | null;
+  domain_context?: Record<string, unknown> | null;
   stage_id?: string | null;
   generation?: number | null;
   phase?: 'launch' | 'closeout' | null;
@@ -19,6 +29,12 @@ export type StageRunExecutionAuthorizationInput = {
   stage_attempt_id?: string | null;
   attempt_lease_ref?: string | null;
   attempt_lease_status?: string | null;
+  action_type?: string | null;
+  work_unit_id?: string | null;
+  work_unit_fingerprint?: string | null;
+  decision?: string | null;
+  reason?: string | null;
+  operator?: string | null;
   execution_authorization_decision_ref?: string | null;
   workspace_scope_ref?: string | null;
   artifact_scope_ref?: string | null;
@@ -53,6 +69,8 @@ export type StageRunExecutionAuthorizationReceipt = {
   recorded_at: string;
   stage_run_id: string;
   domain_id: string;
+  study_id: string;
+  domain_context: StageRunExecutionAuthorizationDomainContext;
   stage_id: string;
   generation: number;
   phase: 'launch' | 'closeout';
@@ -61,6 +79,12 @@ export type StageRunExecutionAuthorizationReceipt = {
   stage_attempt_id: string | null;
   attempt_lease_ref: string;
   attempt_lease_status: 'active';
+  action_type: string;
+  work_unit_id: string;
+  work_unit_fingerprint: string;
+  decision: StageRunExecutionAuthorizationDecision;
+  reason: string;
+  operator: string;
   execution_authorization_decision_ref: string;
   workspace_scope_ref: string;
   artifact_scope_ref: string;
@@ -90,6 +114,10 @@ export type StageRunExecutionAuthorizationReceipt = {
 
 export type StageRunExecutionAuthorizationVerifyInput = {
   receipt_ref?: string | null;
+};
+
+export type StageRunExecutionAuthorizationRecordOptions = {
+  dry_run?: boolean;
 };
 
 type StageRunExecutionAuthorizationLedger = {
@@ -142,6 +170,12 @@ function ownerAnswerKind(value: unknown) {
     : null;
 }
 
+function decisionValue(value: unknown): StageRunExecutionAuthorizationDecision | null {
+  return value === 'authorize' || value === 'human_gate' || value === 'typed_blocker'
+    ? value
+    : null;
+}
+
 function refsOnlyAuthorityBoundary() {
   return {
     refs_only: true,
@@ -160,6 +194,65 @@ function refsOnlyAuthorityBoundary() {
     provider_completion_counts_as_domain_ready: false,
     authorization_receipt_is_domain_owner_answer: false,
   };
+}
+
+function domainContextValue(
+  value: unknown,
+): StageRunExecutionAuthorizationDomainContext | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const domainId = optionalString(value.domain_id);
+  const studyId = optionalString(value.study_id);
+  const stageId = optionalString(value.stage_id);
+  if (!domainId || !studyId || !stageId) {
+    return null;
+  }
+  return {
+    domain_id: domainId,
+    study_id: studyId,
+    stage_id: stageId,
+  };
+}
+
+function identityBlockers(input: {
+  domainId: string | null;
+  studyId: string | null;
+  stageId: string | null;
+  stageAttemptId: string | null;
+  actionType: string | null;
+  workUnitId: string | null;
+  workUnitFingerprint: string | null;
+  sourceFingerprint: string | null;
+  decision: StageRunExecutionAuthorizationDecision | null;
+  reason: string | null;
+  operator: string | null;
+  domainContext: StageRunExecutionAuthorizationDomainContext | null;
+}) {
+  return [
+    input.stageAttemptId ? null : 'stage_attempt_id_missing',
+    input.studyId ? null : 'study_id_missing',
+    input.domainContext ? null : 'domain_context_missing',
+    input.actionType ? null : 'action_type_missing',
+    input.workUnitId ? null : 'work_unit_id_missing',
+    input.workUnitFingerprint ? null : 'work_unit_fingerprint_missing',
+    input.decision ? null : 'decision_missing_or_invalid',
+    input.reason ? null : 'reason_missing',
+    input.operator ? null : 'operator_missing',
+    input.domainContext && input.domainId && input.domainContext.domain_id !== input.domainId
+      ? 'domain_context_domain_id_mismatch'
+      : null,
+    input.domainContext && input.studyId && input.domainContext.study_id !== input.studyId
+      ? 'domain_context_study_id_mismatch'
+      : null,
+    input.domainContext && input.stageId && input.domainContext.stage_id !== input.stageId
+      ? 'domain_context_stage_id_mismatch'
+      : null,
+    input.workUnitFingerprint && input.sourceFingerprint
+      && input.workUnitFingerprint !== input.sourceFingerprint
+      ? 'work_unit_fingerprint_source_fingerprint_mismatch'
+      : null,
+  ].filter((entry): entry is string => Boolean(entry));
 }
 
 function emptyLedger(): StageRunExecutionAuthorizationLedger {
@@ -237,9 +330,18 @@ function normalizeReceipt(value: unknown): StageRunExecutionAuthorizationReceipt
   }
   const stage_run_id = optionalString(value.stage_run_id);
   const domain_id = optionalString(value.domain_id);
+  const study_id = optionalString(value.study_id);
+  const domain_context = domainContextValue(value.domain_context);
   const stage_id = optionalString(value.stage_id);
   const provider_attempt_ref = optionalString(value.provider_attempt_ref);
+  const stage_attempt_id = optionalString(value.stage_attempt_id);
   const attempt_lease_ref = optionalString(value.attempt_lease_ref);
+  const action_type = optionalString(value.action_type);
+  const work_unit_id = optionalString(value.work_unit_id);
+  const work_unit_fingerprint = optionalString(value.work_unit_fingerprint);
+  const decision = decisionValue(value.decision);
+  const reason = optionalString(value.reason);
+  const operator = optionalString(value.operator);
   const execution_authorization_decision_ref = optionalString(value.execution_authorization_decision_ref);
   const workspace_scope_ref = optionalString(value.workspace_scope_ref);
   const artifact_scope_ref = optionalString(value.artifact_scope_ref);
@@ -252,9 +354,18 @@ function normalizeReceipt(value: unknown): StageRunExecutionAuthorizationReceipt
   if (
     !stage_run_id
     || !domain_id
+    || !study_id
+    || !domain_context
     || !stage_id
     || !provider_attempt_ref
+    || !stage_attempt_id
     || !attempt_lease_ref
+    || !action_type
+    || !work_unit_id
+    || !work_unit_fingerprint
+    || !decision
+    || !reason
+    || !operator
     || !execution_authorization_decision_ref
     || !workspace_scope_ref
     || !artifact_scope_ref
@@ -278,14 +389,22 @@ function normalizeReceipt(value: unknown): StageRunExecutionAuthorizationReceipt
     recorded_at: optionalString(value.recorded_at) ?? nowIso(),
     stage_run_id,
     domain_id,
+    study_id,
+    domain_context,
     stage_id,
     generation: generationValue(value.generation),
     phase: value.phase === 'closeout' ? 'closeout' : 'launch',
     selected_executor: optionalString(value.selected_executor) ?? 'codex_cli',
     provider_attempt_ref,
-    stage_attempt_id: optionalString(value.stage_attempt_id),
+    stage_attempt_id,
     attempt_lease_ref,
     attempt_lease_status: 'active',
+    action_type,
+    work_unit_id,
+    work_unit_fingerprint,
+    decision,
+    reason,
+    operator,
     execution_authorization_decision_ref,
     workspace_scope_ref,
     artifact_scope_ref,
@@ -340,7 +459,33 @@ function writeLedger(ledger: StageRunExecutionAuthorizationLedger) {
 function normalizeInput(input: StageRunExecutionAuthorizationInput): StageRunExecutionAuthorizationReceipt | null {
   const evaluationInput = buildEvaluationInput(input);
   const report = evaluateStageRunExecutionAuthorization(evaluationInput);
-  if (report.execution_authorized !== true) {
+  const domainId = optionalString(evaluationInput.domain_id);
+  const studyId = optionalString(input.study_id);
+  const stageId = optionalString(evaluationInput.stage_id);
+  const stageAttemptId = optionalString(input.stage_attempt_id);
+  const actionType = optionalString(input.action_type);
+  const workUnitId = optionalString(input.work_unit_id);
+  const workUnitFingerprint = optionalString(input.work_unit_fingerprint);
+  const sourceFingerprint = optionalString(evaluationInput.source_fingerprint);
+  const decision = decisionValue(input.decision);
+  const reason = optionalString(input.reason);
+  const operator = optionalString(input.operator);
+  const domainContext = domainContextValue(input.domain_context);
+  const blockers = identityBlockers({
+    domainId,
+    studyId,
+    stageId,
+    stageAttemptId,
+    actionType,
+    workUnitId,
+    workUnitFingerprint,
+    sourceFingerprint,
+    decision,
+    reason,
+    operator,
+    domainContext,
+  });
+  if (report.execution_authorized !== true || blockers.length > 0) {
     return null;
   }
   const stageRunId = optionalString(evaluationInput.stage_run_id)!;
@@ -356,15 +501,23 @@ function normalizeInput(input: StageRunExecutionAuthorizationInput): StageRunExe
     receipt_status: 'recorded',
     recorded_at: nowIso(),
     stage_run_id: stageRunId,
-    domain_id: optionalString(evaluationInput.domain_id)!,
-    stage_id: optionalString(evaluationInput.stage_id)!,
+    domain_id: domainId!,
+    study_id: studyId!,
+    domain_context: domainContext!,
+    stage_id: stageId!,
     generation: generationValue(evaluationInput.generation),
     phase: evaluationInput.phase as 'launch' | 'closeout',
     selected_executor: optionalString(evaluationInput.selected_executor) ?? 'codex_cli',
     provider_attempt_ref: optionalString(evaluationInput.provider_attempt_ref)!,
-    stage_attempt_id: optionalString(input.stage_attempt_id),
+    stage_attempt_id: stageAttemptId,
     attempt_lease_ref: optionalString(evaluationInput.attempt_lease_ref)!,
     attempt_lease_status: 'active',
+    action_type: actionType!,
+    work_unit_id: workUnitId!,
+    work_unit_fingerprint: workUnitFingerprint!,
+    decision: decision!,
+    reason: reason!,
+    operator: operator!,
     execution_authorization_decision_ref: decisionRef,
     workspace_scope_ref: optionalString(evaluationInput.workspace_scope_ref)!,
     artifact_scope_ref: optionalString(evaluationInput.artifact_scope_ref)!,
@@ -387,23 +540,78 @@ function normalizeInput(input: StageRunExecutionAuthorizationInput): StageRunExe
   };
 }
 
-export function recordStageRunExecutionAuthorizationReceipts(inputs: StageRunExecutionAuthorizationInput[]) {
+function inputBlockers(input: StageRunExecutionAuthorizationInput) {
+  const evaluationInput = buildEvaluationInput(input);
+  const report = evaluateStageRunExecutionAuthorization(evaluationInput);
+  const identityReasons = identityBlockers({
+    domainId: optionalString(evaluationInput.domain_id),
+    studyId: optionalString(input.study_id),
+    stageId: optionalString(evaluationInput.stage_id),
+    stageAttemptId: optionalString(input.stage_attempt_id),
+    actionType: optionalString(input.action_type),
+    workUnitId: optionalString(input.work_unit_id),
+    workUnitFingerprint: optionalString(input.work_unit_fingerprint),
+    sourceFingerprint: optionalString(evaluationInput.source_fingerprint),
+    decision: decisionValue(input.decision),
+    reason: optionalString(input.reason),
+    operator: optionalString(input.operator),
+    domainContext: domainContextValue(input.domain_context),
+  });
+  return {
+    report,
+    identityReasons,
+    reasons: [...new Set([
+      ...report.launch_blockers,
+      ...report.closeout_binding_blockers,
+      ...identityReasons,
+    ])],
+  };
+}
+
+export function recordStageRunExecutionAuthorizationReceipts(
+  inputs: StageRunExecutionAuthorizationInput[],
+  options: StageRunExecutionAuthorizationRecordOptions = {},
+) {
   const receipts = inputs
     .map(normalizeInput)
     .filter((receipt): receipt is StageRunExecutionAuthorizationReceipt => Boolean(receipt));
 
   if (receipts.length === 0) {
+    const blockers = inputs.flatMap((input) => inputBlockers(input).reasons);
+    const identityBlockerCount = inputs
+      .filter((input) => inputBlockers(input).identityReasons.length > 0)
+      .length;
     return {
       surface_kind: 'opl_stage_run_execution_authorization_ledger_record',
       status: 'blocked',
+      dry_run: options.dry_run === true,
+      writes_performed: false,
       recorded_receipt_count: 0,
       receipt_refs: [],
       ledger_file: ledgerPath(),
       blocker: {
         blocker_kind: 'stage_run_execution_authorization_receipt_gate',
-        blocker_id: 'stage_run_execution_authorization_not_authorized',
+        blocker_id: identityBlockerCount > 0
+          ? 'stage_run_execution_authorization_identity_invalid'
+          : 'stage_run_execution_authorization_not_authorized',
         required_owner: 'one-person-lab',
+        blocker_reasons: [...new Set(blockers)],
       },
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    };
+  }
+
+  if (options.dry_run === true) {
+    return {
+      surface_kind: 'opl_stage_run_execution_authorization_ledger_record',
+      status: 'planned',
+      dry_run: true,
+      writes_performed: false,
+      planned_receipt_count: receipts.length,
+      recorded_receipt_count: 0,
+      receipt_refs: receipts.map((receipt) => receipt.receipt_ref),
+      ledger_file: ledgerPath(),
+      receipts,
       authority_boundary: refsOnlyAuthorityBoundary(),
     };
   }
@@ -421,6 +629,8 @@ export function recordStageRunExecutionAuthorizationReceipts(inputs: StageRunExe
   return {
     surface_kind: 'opl_stage_run_execution_authorization_ledger_record',
     status: 'recorded',
+    dry_run: false,
+    writes_performed: true,
     recorded_receipt_count: receipts.length,
     receipt_refs: receipts.map((receipt) => receipt.receipt_ref),
     ledger_file: ledgerPath(),

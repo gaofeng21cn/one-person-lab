@@ -21,6 +21,19 @@ function authorizationPayload(overrides: Record<string, unknown> = {}) {
     stage_attempt_id: 'sat_live',
     attempt_lease_ref: 'opl://stage_attempts/sat_live/lease/current',
     attempt_lease_status: 'active',
+    study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+    domain_context: {
+      domain_id: 'medautoscience',
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      stage_id: 'finalize_and_publication_handoff',
+    },
+    action_type: 'complete_medical_paper_readiness_surface',
+    work_unit_id: '08-publication_package_handoff',
+    work_unit_fingerprint:
+      'stage-artifact-index::08-publication_package_handoff::publication_handoff_owner_gate::003-dpcc-primary-care-phenotype-treatment-gap',
+    decision: 'authorize',
+    reason: 'operator_authorized_refs_only_stage_attempt_execution',
+    operator: 'human_operator:gaofeng',
     execution_authorization_decision_ref:
       'opl://stage_attempts/sat_live/execution-authorization/current',
     workspace_scope_ref: 'workspace:/Users/gaofeng/workspace/Yang/DM-CVD-Mortality-Risk',
@@ -144,6 +157,81 @@ function writeMasOwnerAnswerProjection(input: {
     'utf8',
   );
 }
+
+test('runtime StageRun execution authorization dry-run validates exact identity without writing ledger', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-authorization-dry-run-'));
+  try {
+    const dryRun = runCli([
+      'runtime',
+      'stage-run-authorization',
+      'record',
+      '--payload',
+      JSON.stringify(authorizationPayload()),
+      '--dry-run',
+      '--json',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).stage_run_execution_authorization_ledger_record;
+
+    assert.equal(dryRun.status, 'planned');
+    assert.equal(dryRun.dry_run, true);
+    assert.equal(dryRun.writes_performed, false);
+    assert.equal(dryRun.planned_receipt_count, 1);
+    assert.equal(dryRun.receipt_refs.length, 1);
+    assert.equal(dryRun.receipts[0].study_id, '003-dpcc-primary-care-phenotype-treatment-gap');
+    assert.equal(dryRun.receipts[0].domain_context.study_id, '003-dpcc-primary-care-phenotype-treatment-gap');
+    assert.equal(dryRun.receipts[0].action_type, 'complete_medical_paper_readiness_surface');
+    assert.equal(dryRun.receipts[0].work_unit_id, '08-publication_package_handoff');
+    assert.equal(
+      dryRun.receipts[0].work_unit_fingerprint,
+      dryRun.receipts[0].source_fingerprint,
+    );
+    assert.equal(dryRun.receipts[0].decision, 'authorize');
+    assert.equal(dryRun.receipts[0].operator, 'human_operator:gaofeng');
+    assert.equal(dryRun.authority_boundary.can_write_domain_truth, false);
+    assert.equal(
+      fs.existsSync(path.join(stateRoot, 'stage-run-execution-authorization-ledger.json')),
+      false,
+    );
+
+    const mismatch = runCli([
+      'runtime',
+      'stage-run-authorization',
+      'record',
+      '--payload',
+      JSON.stringify(authorizationPayload({
+        domain_context: {
+          domain_id: 'medautoscience',
+          study_id: 'stale-study',
+          stage_id: 'finalize_and_publication_handoff',
+        },
+      })),
+      '--dry-run',
+      '--json',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).stage_run_execution_authorization_ledger_record;
+
+    assert.equal(mismatch.status, 'blocked');
+    assert.equal(mismatch.dry_run, true);
+    assert.equal(mismatch.writes_performed, false);
+    assert.equal(mismatch.recorded_receipt_count, 0);
+    assert.equal(
+      mismatch.blocker.blocker_id,
+      'stage_run_execution_authorization_identity_invalid',
+    );
+    assert.equal(
+      mismatch.blocker.blocker_reasons.includes('domain_context_study_id_mismatch'),
+      true,
+    );
+    assert.equal(
+      fs.existsSync(path.join(stateRoot, 'stage-run-execution-authorization-ledger.json')),
+      false,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
 
 test('runtime StageRun execution authorization ledger records refs-only OPL authorization', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-authorization-'));

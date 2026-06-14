@@ -13,6 +13,30 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const modulePath = 'src/current-owner-delta-topline.ts';
 const projectionModulePath = 'src/current-owner-delta-projection.ts';
 
+function authorizationIdentity(input: {
+  domainId: string;
+  studyId: string;
+  stageId: string;
+  actionType: string;
+  workUnitId: string;
+  sourceFingerprint: string;
+}) {
+  return {
+    study_id: input.studyId,
+    domain_context: {
+      domain_id: input.domainId,
+      study_id: input.studyId,
+      stage_id: input.stageId,
+    },
+    action_type: input.actionType,
+    work_unit_id: input.workUnitId,
+    work_unit_fingerprint: input.sourceFingerprint,
+    decision: 'authorize',
+    reason: 'test_authorized_refs_only_stage_attempt_execution',
+    operator: 'test:current-owner-delta-topline',
+  };
+}
+
 test('current owner delta topline keeps domain owner when only owner answer binding is missing', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-owner-delta-topline-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
@@ -34,6 +58,14 @@ test('current owner delta topline keeps domain owner when only owner answer bind
       workspace_scope_ref: 'workspace:/tmp/mas',
       artifact_scope_ref: 'stage-packet:owner-delta-topline',
       source_fingerprint: 'sha256:owner-delta-topline-test',
+      ...authorizationIdentity({
+        domainId: 'med-autoscience',
+        studyId: 'study:owner-delta-topline-test',
+        stageId: 'paper_closeout',
+        actionType: 'paper_closeout',
+        workUnitId: 'stage-packet:owner-delta-topline',
+        sourceFingerprint: 'sha256:owner-delta-topline-test',
+      }),
       idempotency_key: 'idem-owner-delta-topline',
       current_pointer_ref: 'opl://stage-runs/app-stage-run%3Amed-autoscience%3Apaper-closeout/current',
       stage_manifest_ref: 'opl://stage-manifests/paper_closeout',
@@ -270,6 +302,14 @@ test('current owner delta topline folds closed StageRun owner answer into defaul
       workspace_scope_ref: 'workspace:/tmp/mas',
       artifact_scope_ref: 'stage-packet:owner-delta-topline-closed',
       source_fingerprint: 'sha256:owner-delta-topline-closed-test',
+      ...authorizationIdentity({
+        domainId: 'med-autoscience',
+        studyId: 'study:owner-delta-topline-closed-test',
+        stageId: 'paper_closeout_closed',
+        actionType: 'paper_closeout_closed',
+        workUnitId: 'stage-packet:owner-delta-topline-closed',
+        sourceFingerprint: 'sha256:owner-delta-topline-closed-test',
+      }),
       idempotency_key: 'idem-owner-delta-topline-closed',
       current_pointer_ref: currentPointerRef,
       stage_manifest_ref: 'opl://stage-manifests/paper_closeout_closed',

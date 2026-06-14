@@ -38,6 +38,10 @@ function optionalOwnerAnswerKind(value: unknown) {
   return value === 'owner_receipt' || value === 'typed_blocker' ? value : null;
 }
 
+function optionalRecord(value: unknown) {
+  return isRecord(value) ? value : null;
+}
+
 function parseJsonObject(
   value: string,
   message: string,
@@ -61,6 +65,8 @@ function payloadInput(payload: Record<string, unknown>): StageRunExecutionAuthor
   return {
     stage_run_id: optionalString(payload.stage_run_id),
     domain_id: optionalString(payload.domain_id),
+    study_id: optionalString(payload.study_id),
+    domain_context: optionalRecord(payload.domain_context),
     stage_id: optionalString(payload.stage_id),
     generation: optionalGeneration(payload.generation),
     phase: payload.phase === 'closeout' ? 'closeout' : 'launch',
@@ -69,6 +75,12 @@ function payloadInput(payload: Record<string, unknown>): StageRunExecutionAuthor
     stage_attempt_id: optionalString(payload.stage_attempt_id),
     attempt_lease_ref: optionalString(payload.attempt_lease_ref),
     attempt_lease_status: optionalString(payload.attempt_lease_status),
+    action_type: optionalString(payload.action_type),
+    work_unit_id: optionalString(payload.work_unit_id),
+    work_unit_fingerprint: optionalString(payload.work_unit_fingerprint),
+    decision: optionalString(payload.decision),
+    reason: optionalString(payload.reason),
+    operator: optionalString(payload.operator),
     execution_authorization_decision_ref: optionalString(
       payload.execution_authorization_decision_ref,
     ),
@@ -94,8 +106,16 @@ function payloadInput(payload: Record<string, unknown>): StageRunExecutionAuthor
 
 function parseRecordArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'examples'>) {
   let payload: Record<string, unknown> | null = null;
+  let dryRun = false;
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
+    if (token === '--dry-run') {
+      dryRun = true;
+      continue;
+    }
+    if (token === '--json') {
+      continue;
+    }
     if (token === '--payload') {
       const value = args[++index];
       if (!value) {
@@ -139,7 +159,10 @@ function parseRecordArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'exam
       { required_any: ['--payload', '--payload-file'] },
     );
   }
-  return payloadInput(payload);
+  return {
+    input: payloadInput(payload),
+    dryRun,
+  };
 }
 
 function parseVerifyArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'examples'>) {
@@ -165,7 +188,7 @@ function parseVerifyArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'exam
 export function buildRuntimeStageRunAuthorizationCommandSpecs(): Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
     'runtime stage-run-authorization record': {
-      usage: 'opl runtime stage-run-authorization record (--payload <json>|--payload-file <path>)',
+      usage: 'opl runtime stage-run-authorization record (--payload <json>|--payload-file <path>) [--dry-run]',
       summary:
         'Record OPL-owned refs-only StageRun execution authorization refs without creating domain owner answers.',
       examples: [
@@ -173,9 +196,12 @@ export function buildRuntimeStageRunAuthorizationCommandSpecs(): Record<string, 
       ],
       handler: (args) => ({
         stage_run_execution_authorization_ledger_record:
-          recordStageRunExecutionAuthorizationReceipts([
-            parseRecordArgs(args, commandSpecs['runtime stage-run-authorization record']),
-          ]),
+          (() => {
+            const parsed = parseRecordArgs(args, commandSpecs['runtime stage-run-authorization record']);
+            return recordStageRunExecutionAuthorizationReceipts([parsed.input], {
+              dry_run: parsed.dryRun,
+            });
+          })(),
       }),
     },
     'runtime stage-run-authorization verify': {
