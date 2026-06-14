@@ -7,11 +7,13 @@ Machine boundary: 本文是人读政策。机器真相继续归 contracts、sche
 
 ## 当前政策
 
-OPL、MAS、MAG、RCA 采用同一套 canonical docs 目录：
+OPL series docs governance 默认覆盖六个 repo：`one-person-lab`、`med-autoscience`、`med-autogrant`、`redcube-ai`、`opl-meta-agent` 和 `one-person-lab-app`。其中 OPL、MAS、MAG、RCA 采用同一套 strict canonical docs 目录：
 
 `active/public/product/runtime/delivery/source/policies/specs/references/history`
 
-这套目录不是按“当前有没有文件”决定保留，而是按四仓长期生命周期职责决定保留。一个目录如果承接长期职责，可以在某个仓暂时只有索引；但索引必须写清 owner、purpose、state、machine boundary、当前承载状态和何时应新增正文。没有长期职责的目录不进入 taxonomy。
+这套目录不是按“当前有没有文件”决定保留，而是按 repo 长期生命周期职责决定保留。OPL/MAS/MAG/RCA 的目录如果承接长期职责，可以暂时只有索引；但索引必须写清 owner、purpose、state、machine boundary、当前承载状态和何时应新增正文。没有长期职责的目录不进入 taxonomy。
+
+`opl-meta-agent` 和 `one-person-lab-app` 纳入同一治理巡检，但按各自 repo 职责治理：OMA 可以保持 target-agent builder 所需的轻量 docs 形态；App docs 归产品、release、testing、user guides 和 screenshot lifecycle。它们只有在出现长期 public、product、runtime、delivery、source、policies、specs 或 history 内容时，才新增对应目录索引。
 
 ## 文档基本原则
 

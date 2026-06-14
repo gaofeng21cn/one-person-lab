@@ -10,15 +10,15 @@ Machine boundary: 本文是人读治理入口。机器可读真相继续归 `con
 
 `docs/**` 是 OPL 的中文内部开发与维护参考，不再维护 docs 层双语镜像。稳定文档路径优先使用无语言后缀 `.md` 承载中文 canonical 内容。历史文档可以保留旧双语方案、旧路径和旧命令作为 provenance，但 active/reference 索引必须指向当前无后缀路径。
 
-OPL、MAS、MAG、RCA 采用同一套 canonical docs taxonomy：
+OPL 系列 docs governance 的默认巡检范围是六个 repo：`one-person-lab`、`med-autoscience`、`med-autogrant`、`redcube-ai`、`opl-meta-agent` 和 `one-person-lab-app`。其中严格同名 canonical docs taxonomy 适用于当前 framework / domain owner repo：OPL、MAS、MAG、RCA。
 
 `active/public/product/runtime/delivery/source/policies/specs/references/history`
 
-这套目录不是按“当前有没有文件”决定保留，而是按四仓长期生命周期职责决定保留。目录有长期职责时，可以暂时只有 README/索引；但索引必须写清 owner、purpose、state、machine boundary、当前承载状态和新增正文准入规则。目录没有长期职责时，不进入 taxonomy。
+这套目录不是按“当前有没有文件”决定保留，而是按 repo 长期生命周期职责决定保留。OPL/MAS/MAG/RCA 有长期职责时，可以暂时只有 README/索引；但索引必须写清 owner、purpose、state、machine boundary、当前承载状态和新增正文准入规则。目录没有长期职责时，不进入 taxonomy。
 
-`opl-meta-agent` 属于 OPL-compatible Foundry Agent / target-agent builder repo，纳入 series docs governance 巡检，但不改变四仓 canonical taxonomy 的适用范围。OMA 当前可以保持轻量 `docs/` root、`docs/active/`、`docs/references/` 形态；只有当它出现长期 public、product、runtime、delivery、source、policies、specs 或 history 内容时，才按相同生命周期规则新增对应目录索引。
+`opl-meta-agent` 属于 OPL-compatible Foundry Agent / target-agent builder repo，纳入 series docs governance 巡检，但不强制套用 OPL/MAS/MAG/RCA 的完整目录骨架。OMA 当前可以保持轻量 `docs/` root、`docs/active/`、`docs/references/` 形态；只有当它出现长期 public、product、runtime、delivery、source、policies、specs 或 history 内容时，才按相同生命周期规则新增对应目录索引。
 
-`one-person-lab-app/docs/` 治理 One Person Lab App 的产品文档、release、testing、user guides 和 screenshots；当前 AionUI shell 的 upstream 依赖文档归 `opl-aion-shell/docs/`，不主导 App 顶层，也不纳入 OPL/MAS/MAG/RCA 的 canonical docs taxonomy。`one-person-lab-app/shells/aionui` 只是外部 checkout 入口，不能把 AionUI 文档历史合入 App 默认分支。OPL 主仓只记录 One Person Lab App/workbench 的目标、消费合同、action routing 和 runtime/domain truth 投影边界。
+`one-person-lab-app/docs/` 治理 One Person Lab App 的产品文档、release、testing、user guides 和 screenshots，纳入六仓治理范围，但按 App 产品仓职责治理，不反向扩大 framework/domain canonical taxonomy。当前 AionUI shell 的 upstream 依赖文档归 `opl-aion-shell/docs/`，不主导 App 顶层，也不纳入 OPL/MAS/MAG/RCA 的 canonical docs taxonomy。`one-person-lab-app/shells/aionui` 只是外部 checkout 入口，不能把 AionUI 文档历史合入 App 默认分支。OPL 主仓只记录 One Person Lab App/workbench 的目标、消费合同、action routing 和 runtime/domain truth 投影边界。
 
 ## 主参考
 
@@ -27,7 +27,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 - OPL 全局目标、全局差距、shared primitive 上收边界、App/workbench 目标、domain admission 与跨仓开发顺序；
 - MAS/MAG/RCA 单仓目标、差距、authority、direct/hosted 边界和上收候选的放置规则；
 - 过时模块、接口、alias、facade、聚合测试和旧文档入口的 direct retirement 规则；
-- 四仓 canonical docs taxonomy 与非 canonical 目录迁移规则。
+- OPL/MAS/MAG/RCA canonical docs taxonomy、OMA/App repo-specific docs governance 范围，以及非 canonical 目录迁移规则。
 
 单仓文档只维护本仓 truth、差距、计划、authority 和与 OPL 的上收边界。MAS/MAG/RCA 不在本仓维护其他 domain 的 backlog，也不保留 parallel framework plan。
 
@@ -104,7 +104,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | `docs/references/runtime-substrate/opl-runtime-manager-target.md` | `support_reference` | Runtime Manager 的 provider readiness、native helper、state index 与 operator projection 边界。 | 只做产品级管理与投影支撑；不替代 provider 或 domain truth。 |
 | `docs/references/current-support/*` | `support_reference` | 安装、GUI/WebUI、release、skills、测试和质量操作参考。 | 保持支撑参考；行为 truth 回命令、合同和 artifact。 |
 | `docs/references/convergence-governance/*` | `support_reference` | 当前仍有效的收敛治理规则、文档生命周期 playbook、intake 模板、shared release 维护和 stage control plane 支撑。 | 单次 rollout、dated execution board、closeout evidence 和已被 taxonomy 吸收的同步记录进入 history；有效规则上提后才可作为当前治理依据。 |
-| `docs/history/process/convergence-governance/*` | `history_or_tombstone` | 四仓同步、executor follow-up、用户面成熟度、文档治理 rollout、产品分层 closeout 和外部 orchestration learning 的历史快照。 | 只作 provenance；不得恢复为 active roadmap、manifest 要求、provider/readiness path 或 compatibility surface。 |
+| `docs/history/process/convergence-governance/*` | `history_or_tombstone` | 早期四仓同步、executor follow-up、用户面成熟度、文档治理 rollout、产品分层 closeout 和外部 orchestration learning 的历史快照。 | 只作 provenance；不得恢复为 active roadmap、manifest 要求、provider/readiness path 或 compatibility surface。 |
 | `docs/references/operating-governance/*` | `support_reference` | quality、operator projection、memory governance、family governance 和 structure advisory 稳定读法支撑。 | 保持支撑参考；fresh generated counts、line lists、public-surface risk 列表和 dated structure snapshots 留在命令输出或 history/provenance，不复制进 active/reference 正文；gateway-derived 旧 matrix 留 history。 |
 | `docs/references/domain-admission/*` | `support_reference` | candidate backlog 和准入支撑参考。 | 保持 reference；正式准入规则回 specs。 |
 | `docs/history/**` | `history_or_tombstone` | 退役路线、完成计划、frontdoor/gateway/federation/OMX/process provenance。 | 不作为 active owner；有用结论先吸收再保留原文。 |
@@ -121,7 +121,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 - path-stable reference/spec 如果仍因 contract、human_doc 或 audit context 保留原路径，必须在索引或文件开头说明生命周期；不得恢复旧 provider、Gateway、frontdoor、compatibility、direct-entry 或 host-agent-only 叙述为 active plan。
 - 2026-06-03 起，`docs/active/current-state-vs-ideal-gap.md` 是 compact active gap plan；它不再承载 dated App/runtime/domain evidence ledger。相关归档见 [OPL Active Gap Plan Lifecycle Cleanup](./history/process/plans/2026-06-03-opl-active-gap-plan-lifecycle-cleanup.md)。
 
-## 四仓目录状态
+## 六仓治理范围与目录状态
 
 | 仓库 | 当前判断 |
 | --- | --- |
@@ -129,6 +129,8 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | `MAS` | 完整保留 canonical 目录集合；`active/runtime/delivery/policies/references/history` 已真实承载，`product/public/source/specs` 可先保持薄索引，后续按真实 owner surface 吸收。旧 `program/`、`capabilities/` active 目录已物理退役，历史内容留在 `docs/history/`。 |
 | `MAG` | 完整保留 canonical 目录集合；真实 owner 主要在 core five、`active/`、`references/`、`specs/`、`history/`，`product/runtime/delivery/source/policies/public` 先作为职责明确的薄索引，后续小批量吸收仍 current 的内容。旧 `plans/` 已退役。 |
 | `RCA` | 完整保留 canonical 目录集合；`active/product/runtime/delivery/source/policies/references/history` 已真实承载，`public/specs` 可以保持薄索引。旧 `program/`、`plans/`、`capabilities/` 不复活成 active 目录。 |
+| `OPL Meta Agent` | 纳入六仓巡检；当前保持轻量 docs root / active / references 形态。只有当 target-agent builder 职责产生长期 public、product、runtime、delivery、source、policies、specs 或 history 内容时，才新增对应目录索引。 |
+| `One Person Lab App` | 纳入六仓巡检；App docs 归产品、release、testing、user guides 和 screenshot lifecycle。App release truth、GUI product truth 和 active-shell validation 回 App repo 自身 contracts/source/tests；AionUI upstream docs 不合入 App 默认分支，也不主导 OPL framework/domain taxonomy。 |
 
 ## 内容级整合规则
 

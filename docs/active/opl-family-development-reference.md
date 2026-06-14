@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `family_development_reference`
 State: `active_support`
 Machine boundary: 本文是人读开发参考。机器可读真相继续归 `contracts/`、源码、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、真实 workspace 与 App 证据。
-Last reviewed: `2026-06-12`
+Last reviewed: `2026-06-15`
 
 ## 结论
 
@@ -152,8 +152,8 @@ App 普通用户产品面按 `Codex App wrapper` 设计：固定 `Codex CLI` con
 
 ## Docs 目录结构对齐
 
-OPL、MAS、MAG、RCA 采用同名 canonical docs taxonomy。统一目录名不是因为
-这些目录现在都必须很厚，而是因为四仓长期生命周期角色已经稳定：
+OPL series 的开发文档治理默认巡检 OPL、MAS、MAG、RCA、OMA 和 App 六仓。OPL、MAS、MAG、RCA 采用同名 canonical docs taxonomy。统一目录名不是因为
+这些目录现在都必须很厚，而是因为 framework / domain owner repo 的长期生命周期角色已经稳定：
 读者进入任意由 OPL 系列直接管理的 framework/domain repo 时，都应能在同一组目录下找到同类材料。
 
 目录是否保留按长期职责判断，不按当前文件数量判断。有长期职责的目录可以暂时只放
@@ -165,7 +165,7 @@ README/索引，但 README 必须说明 owner、purpose、state、machine bounda
 或 tombstone 暂留，并由 canonical 目录 README 明确指向。旧目录不能继续作为
 new recurring material 的默认落点。
 
-App 顶层 `docs/` 应纳入 One Person Lab App 的产品文档、release、testing、user guide 和 screenshot lifecycle；`opl-aion-shell/docs/` 仍按 upstream AionUI 依赖文档处理，不主导 App 顶层治理。
+OMA 纳入巡检，但按 Agent Foundry / target-agent builder 职责保持轻量 docs 形态；只有出现长期 public、product、runtime、delivery、source、policies、specs 或 history 内容时，才新增对应目录索引。App 顶层 `docs/` 应纳入 One Person Lab App 的产品文档、release、testing、user guide 和 screenshot lifecycle；`opl-aion-shell/docs/` 仍按 upstream AionUI 依赖文档处理，不主导 App 顶层治理，也不合入 App 默认分支。
 
 统一目录集合如下：
 
