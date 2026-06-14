@@ -57,7 +57,7 @@ runs:
         if [ -n "$OPL_QUALITY_DETAILS_COMPARE_REF" ]; then
           if [[ "$OPL_QUALITY_DETAILS_COMPARE_REF" == origin/* ]]; then
             compare_branch="${OPL_QUALITY_DETAILS_COMPARE_REF#origin/}"
-            git -C "$quality_root" fetch --no-tags --prune origin "${compare_branch}:refs/remotes/origin/${compare_branch}"
+            git -C "$quality_root" fetch --no-tags origin "+${compare_branch}:refs/remotes/origin/${compare_branch}"
           fi
           git -C "$quality_root" rev-parse --verify "$OPL_QUALITY_DETAILS_COMPARE_REF^{commit}" >/dev/null
           compare_args=(--compare-ref "$OPL_QUALITY_DETAILS_COMPARE_REF")

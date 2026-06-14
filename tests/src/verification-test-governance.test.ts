@@ -50,12 +50,12 @@ const verifyWorkflowNativeAndStructurePatterns = [
   /\.\/scripts\/install-sentrux-ci\.sh/,
   /OPL_QUALITY_DETAILS_TIMEOUT_SECONDS: '240'/,
   /fetch-depth: 0/,
-  /git fetch --no-tags --prune origin \+main:refs\/remotes\/origin\/main/,
+  /git fetch --no-tags origin \+main:refs\/remotes\/origin\/main/,
 ];
 
 const sentruxAdvisoryWorkflowPatterns = [
   /fetch-depth: 0/,
-  /git fetch --no-tags --prune origin \+main:refs\/remotes\/origin\/main/,
+  /git fetch --no-tags origin \+main:refs\/remotes\/origin\/main/,
   /timeout-minutes: 30/,
   /sentrux gate \./,
   /sentrux check \./,
@@ -76,7 +76,7 @@ const qualityDetailsActionPatterns = [
   /npm ci --prefix "\$GITHUB_ACTION_PATH\/\.\.\/\.\.\/\.\."/,
   /OPL_QUALITY_DETAILS_COMPARE_REF/,
   /quality_root="\$\(cd "\$OPL_QUALITY_DETAILS_ROOT" && pwd\)"/,
-  /git -C "\$quality_root" fetch --no-tags --prune origin "\$\{compare_branch\}:refs\/remotes\/origin\/\$\{compare_branch\}"/,
+  /git -C "\$quality_root" fetch --no-tags origin "\+\$\{compare_branch\}:refs\/remotes\/origin\/\$\{compare_branch\}"/,
   /git -C "\$quality_root" rev-parse --verify "\$OPL_QUALITY_DETAILS_COMPARE_REF\^\{commit\}"/,
   /--compare-ref "\$OPL_QUALITY_DETAILS_COMPARE_REF"/,
   /quality details --root "\$quality_root" --format markdown/,
