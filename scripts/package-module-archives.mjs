@@ -4,6 +4,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+import { parseRequiredValueOptions } from './required-value-options.mjs';
 import {
   buildOplPackageManifest,
   buildOplPackageChannelManifest,
@@ -24,44 +25,26 @@ function parseArgs(argv) {
     retainVersions: process.env.OPL_PACKAGE_RETAIN_VERSIONS || undefined,
   };
 
-  for (let index = 0; index < argv.length; index += 1) {
-    const token = argv[index];
-    const value = argv[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw new Error(`Missing value for ${token}`);
-    }
-    if (token === '--version') {
+  parseRequiredValueOptions(argv, {
+    '--version': (value) => {
       parsed.version = value;
-      index += 1;
-      continue;
-    }
-    if (token === '--out-dir') {
+    },
+    '--out-dir': (value) => {
       parsed.outDir = path.resolve(value);
-      index += 1;
-      continue;
-    }
-    if (token === '--clone-root') {
+    },
+    '--clone-root': (value) => {
       parsed.cloneRoot = path.resolve(value);
-      index += 1;
-      continue;
-    }
-    if (token === '--owner') {
+    },
+    '--owner': (value) => {
       parsed.owner = value;
-      index += 1;
-      continue;
-    }
-    if (token === '--previous-manifest') {
+    },
+    '--previous-manifest': (value) => {
       parsed.previousManifest = path.resolve(value);
-      index += 1;
-      continue;
-    }
-    if (token === '--retain-versions') {
+    },
+    '--retain-versions': (value) => {
       parsed.retainVersions = value;
-      index += 1;
-      continue;
-    }
-    throw new Error(`Unknown argument: ${token}`);
-  }
+    },
+  });
 
   if (!parsed.cloneRoot) {
     parsed.cloneRoot = path.join(path.dirname(parsed.outDir), `${path.basename(parsed.outDir)}-package-sources`);

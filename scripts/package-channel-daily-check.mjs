@@ -2,6 +2,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { parseRequiredValueOptions } from './required-value-options.mjs';
+
 function parseArgs(argv) {
   const parsed = {
     candidateManifest: null,
@@ -10,34 +12,20 @@ function parseArgs(argv) {
     summaryPath: null,
   };
 
-  for (let index = 0; index < argv.length; index += 1) {
-    const token = argv[index];
-    const value = argv[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw new Error(`Missing value for ${token}`);
-    }
-    if (token === '--candidate-manifest') {
+  parseRequiredValueOptions(argv, {
+    '--candidate-manifest': (value) => {
       parsed.candidateManifest = path.resolve(value);
-      index += 1;
-      continue;
-    }
-    if (token === '--current-manifest') {
+    },
+    '--current-manifest': (value) => {
       parsed.currentManifest = path.resolve(value);
-      index += 1;
-      continue;
-    }
-    if (token === '--version') {
+    },
+    '--version': (value) => {
       parsed.version = value.trim();
-      index += 1;
-      continue;
-    }
-    if (token === '--summary-path') {
+    },
+    '--summary-path': (value) => {
       parsed.summaryPath = path.resolve(value);
-      index += 1;
-      continue;
-    }
-    throw new Error(`Unknown argument: ${token}`);
-  }
+    },
+  });
 
   if (!parsed.candidateManifest || !parsed.currentManifest || !parsed.version) {
     throw new Error('Usage: package-channel-daily-check.mjs --candidate-manifest <path> --current-manifest <path> --version <version> [--summary-path <path>]');

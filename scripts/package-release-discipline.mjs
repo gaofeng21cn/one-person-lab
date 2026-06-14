@@ -2,24 +2,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { parseRequiredValueOptions } from './required-value-options.mjs';
+
 function parseArgs(argv) {
   const parsed = {
     manifest: null,
   };
 
-  for (let index = 0; index < argv.length; index += 1) {
-    const token = argv[index];
-    const value = argv[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw new Error(`Missing value for ${token}`);
-    }
-    if (token === '--manifest') {
+  parseRequiredValueOptions(argv, {
+    '--manifest': (value) => {
       parsed.manifest = path.resolve(value);
-      index += 1;
-      continue;
-    }
-    throw new Error(`Unknown argument: ${token}`);
-  }
+    },
+  });
 
   if (!parsed.manifest) {
     throw new Error('Usage: package-release-discipline.mjs --manifest <opl-release-manifest.json>');

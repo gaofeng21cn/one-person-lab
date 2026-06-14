@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { parseRequiredValueOptions } from './required-value-options.mjs';
 import { buildCodexDefaultProfileFromLocalConfig } from '../src/local-codex-defaults.ts';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -13,24 +14,14 @@ function parseArgs(argv) {
     generatedAt: new Date().toISOString(),
   };
 
-  for (let index = 0; index < argv.length; index += 1) {
-    const token = argv[index];
-    const value = argv[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw new Error(`Missing value for ${token}`);
-    }
-    if (token === '--out') {
+  parseRequiredValueOptions(argv, {
+    '--out': (value) => {
       parsed.out = path.resolve(value);
-      index += 1;
-      continue;
-    }
-    if (token === '--generated-at') {
+    },
+    '--generated-at': (value) => {
       parsed.generatedAt = value;
-      index += 1;
-      continue;
-    }
-    throw new Error(`Unknown argument: ${token}`);
-  }
+    },
+  });
 
   return parsed;
 }
