@@ -94,6 +94,44 @@
       }
     ]
   },
+  "paper_autonomy_supervisor_index_policy": {
+    "surface_kind": "opl_paper_autonomy_supervisor_index_policy",
+    "schema_version": 1,
+    "role": "refs_only_obligation_and_decision_projection",
+    "may_index": [
+      "obligation_id",
+      "decision_id",
+      "stage_run_id",
+      "route_identity_key",
+      "attempt_idempotency_key",
+      "source_fingerprint",
+      "work_unit_fingerprint",
+      "cursor",
+      "checksum",
+      "bounded_preview_hash",
+      "evidence_ref",
+      "human_gate_ref",
+      "owner_answer_ref",
+      "terminal_closeout_ref",
+      "recovery_receipt_ref"
+    ],
+    "must_not_store": [
+      "study_truth_body",
+      "publication_verdict_body",
+      "artifact_body",
+      "memory_body",
+      "paper_body",
+      "domain_owner_receipt_body",
+      "typed_blocker_body"
+    ],
+    "query_update_boundary": {
+      "query_reads_projection_only": true,
+      "update_must_be_identity_bound": true,
+      "read_model_can_execute_recovery_action": false,
+      "read_model_can_consume_closeout": false,
+      "read_model_can_sign_owner_answer": false
+    }
+  },
   "stage_folder_rebuild_projection": {
     "command": "opl index rebuild --domain <domain> --json",
     "source_root": "${OPL_STATE_DIR}/runtime-state/domains",

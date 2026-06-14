@@ -219,6 +219,171 @@
       "stable_domain_typed_blocker",
       "diagnostic_or_stale_residue"
     ],
+    "paper_autonomy_supervisor_substrate_mapping": {
+      "surface_kind": "opl_paper_autonomy_supervisor_substrate_mapping",
+      "schema_version": 1,
+      "source_target_design": "human_doc:mas_paper_autonomy_supervisor_target_design",
+      "status": "existing_opl_surface_mapping_with_contract_gaps",
+      "purpose": "Map MAS Paper Autonomy Supervisor target concepts to existing OPL-owned stage-route, current-control, human-gate, state-index, operator, and observability surfaces without creating a second truth source.",
+      "allowed_supervisor_decisions": [
+        "execute_current_owner_delta",
+        "consume_terminal_closeout",
+        "materialize_recovery_action",
+        "wait_for_owner_with_resume_token",
+        "stop_with_stable_typed_blocker"
+      ],
+      "decision_surface_policy": {
+        "query_role": "read_only_current_obligation_and_evidence_refs",
+        "update_role": "identity_bound_stage_route_or_recovery_obligation_transition",
+        "signal_role": "owner_or_human_resume_token_only",
+        "read_model_can_execute": false,
+        "observability_can_close_owner_answer": false
+      },
+      "concepts": {
+        "StageRunIdentityPacket": {
+          "existing_surfaces": [
+            "stage_run_currentness_identity",
+            "stage-run-kernel-contract.json",
+            "family-runtime-attempt-contract.json",
+            "runtime stage-run-authorization ledger"
+          ],
+          "required_identity_refs": [
+            "stage_run_id",
+            "route_identity_key",
+            "attempt_idempotency_key",
+            "selected_dispatch_ref",
+            "stage_packet_ref",
+            "stage_packet_refs",
+            "provider_attempt_ref",
+            "attempt_lease_ref",
+            "workflow_ref",
+            "source_fingerprint",
+            "truth_epoch",
+            "runtime_health_epoch"
+          ],
+          "authority_boundary": "opl_identity_and_transport_only_no_domain_receipt_or_publication_verdict"
+        },
+        "HumanGateTransport": {
+          "existing_surfaces": [
+            "contracts/family-orchestration/family-human-gate.schema.json",
+            "StageAttemptWorkflow resume signals",
+            "stage_attempt_workbench resume ledger",
+            "owner-answer.schema.json human_decision"
+          ],
+          "required_transport_refs": [
+            "resume_token",
+            "owner",
+            "allowed_decisions",
+            "timeout_policy",
+            "default_safe_branch",
+            "current_identity",
+            "evidence_required"
+          ],
+          "authority_boundary": "opl_transports_resume_token_domain_or_human_owner_supplies_answer"
+        },
+        "RecoveryObligationStore": {
+          "existing_surfaces": [
+            "current-owner-delta.schema.json",
+            "stage_route_arbiter_substrate_contract.no_progress_budget_contract",
+            "stop-loss-policy.schema.json",
+            "state-index-kernel-contract.json"
+          ],
+          "required_obligation_refs": [
+            "obligation_id",
+            "desired_delta_ref",
+            "current_identity",
+            "status",
+            "last_evidence_refs",
+            "no_progress_budget_state",
+            "stale_read_model_lag",
+            "supervisor_decision_ref"
+          ],
+          "gap": "dedicated query_update store and five-decision fixture readback are not yet landed"
+        },
+        "SupervisorDecisionEngine": {
+          "existing_surfaces": [
+            "runway readiness",
+            "runway reconcile",
+            "runway handoff-gates",
+            "runway recovery-repair",
+            "runway control-loop status",
+            "stage_route_arbiter_substrate_contract"
+          ],
+          "decision_inputs": [
+            "current_owner_delta",
+            "StageRunIdentityPacket",
+            "terminal_closeout_packet_ref",
+            "human_gate_ref",
+            "no_progress_budget_state",
+            "provider_liveness_or_repair_state",
+            "observability_refs"
+          ],
+          "gap": "single SupervisorDecisionEngine output packet for all five decisions is not yet a runtime readback fixture"
+        },
+        "StateIndexKernel": {
+          "existing_surfaces": [
+            "state-index-kernel-contract.json",
+            "index doctor",
+            "index rebuild",
+            "operator read-model sqlite sidecar"
+          ],
+          "allowed_payload": [
+            "refs",
+            "fingerprint",
+            "cursor",
+            "checksum",
+            "bounded_preview_hash",
+            "obligation_id",
+            "decision_id"
+          ],
+          "forbidden_payload": [
+            "study_truth_body",
+            "publication_verdict_body",
+            "artifact_body",
+            "memory_body",
+            "paper_body"
+          ]
+        },
+        "Workbench Shell": {
+          "existing_surfaces": [
+            "family-product-operator-projection.json",
+            "app state --profile fast",
+            "runtime app-operator-drilldown"
+          ],
+          "default_operator_answers": [
+            "current_owner",
+            "running_truth",
+            "next_safe_action",
+            "human_gate_token_state",
+            "platform_repair_state",
+            "paper_semantic_delta_state"
+          ],
+          "drilldown_only": [
+            "DHD",
+            "queue",
+            "stage index",
+            "trace",
+            "lineage",
+            "telemetry"
+          ]
+        },
+        "Observability Plane": {
+          "existing_surfaces": [
+            "evidence-vault-event.schema.json",
+            "family-product-operator-projection.runtime_observability_export",
+            "trace_span_correlation_refs"
+          ],
+          "authority_boundary": "telemetry_lineage_and_trace_spans_are_observability_only"
+        }
+      },
+      "not_complete_claims": [
+        "mapping_landed_does_not_mean_supervisor_runtime_landed",
+        "contract_landed_does_not_mean_five_decision_tick_readback_exists",
+        "human_gate_schema_fields_do_not_mean_human_token_runtime_is_complete",
+        "state_index_projection_does_not_mean_paper_progress",
+        "observability_refs_do_not_close_owner_receipt_quality_gate_or_publication_readiness"
+      ]
+    },
     "required_substrate_surfaces": {
       "stage_run_currentness_identity": {
         "purpose": "OPL-owned strict StageRun route/run currentness identity used for default-executor live skip, terminal closeout reconciliation, and current-control projection without claiming domain authority.",

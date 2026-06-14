@@ -65,6 +65,9 @@
         "minLength": 1
       }
     },
+    "transport_contract": {
+      "$ref": "#/$defs/transportContract"
+    },
     "decision": {
       "type": "object",
       "additionalProperties": false,
@@ -140,6 +143,135 @@
           "minLength": 1
         },
         "label": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "transportContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resume_token",
+        "owner",
+        "allowed_decisions",
+        "timeout_policy",
+        "default_safe_branch",
+        "current_identity",
+        "evidence_required"
+      ],
+      "properties": {
+        "resume_token": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allowed_decisions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "timeout_policy": {
+          "$ref": "#/$defs/timeoutPolicy"
+        },
+        "default_safe_branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "current_identity": {
+          "$ref": "#/$defs/currentIdentity"
+        },
+        "evidence_required": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "timeoutPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "timeout_at",
+        "on_timeout"
+      ],
+      "properties": {
+        "timeout_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "wall_clock_budget_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "heartbeat_budget": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "on_timeout": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "currentIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identity_kind",
+        "identity_ref"
+      ],
+      "properties": {
+        "identity_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "identity_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage_run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "action_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "work_unit_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "work_unit_fingerprint": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_fingerprint": {
+          "type": "string",
+          "minLength": 1
+        },
+        "route_identity_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "attempt_idempotency_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage_packet_ref": {
           "type": "string",
           "minLength": 1
         }
