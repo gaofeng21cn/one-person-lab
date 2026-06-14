@@ -97,6 +97,156 @@ function hasRuntimeControlReference(payload: JsonRecord) {
   );
 }
 
+function assignOptionalManifestCompanions(
+  normalized: FamilyProductEntryManifestSurface,
+  payload: JsonRecord,
+) {
+  if (payload.runtime_inventory !== undefined) {
+    normalized.runtime_inventory = cloneRecord(
+      payload.runtime_inventory,
+      'product_entry_manifest.runtime_inventory',
+    );
+  }
+  if (payload.task_lifecycle !== undefined) {
+    normalized.task_lifecycle = cloneRecord(
+      payload.task_lifecycle,
+      'product_entry_manifest.task_lifecycle',
+    );
+  }
+  if (payload.persistence_policy !== undefined) {
+    normalized.persistence_policy = validateSurfaceKindRecord(
+      payload.persistence_policy,
+      'product_entry_manifest.persistence_policy',
+      'family_persistence_policy',
+    );
+  }
+  if (payload.lifecycle_ledger !== undefined) {
+    normalized.lifecycle_ledger = validateSurfaceKindRecord(
+      payload.lifecycle_ledger,
+      'product_entry_manifest.lifecycle_ledger',
+      'family_lifecycle_ledger',
+    );
+  }
+  if (payload.owner_route !== undefined) {
+    normalized.owner_route = validateSurfaceKindRecord(
+      payload.owner_route,
+      'product_entry_manifest.owner_route',
+      'family_owner_route',
+    );
+  }
+  if (payload.runtime_control !== undefined) {
+    normalized.runtime_control = validateSurfaceKindRecord(
+      payload.runtime_control,
+      'product_entry_manifest.runtime_control',
+      'runtime_control',
+    );
+  }
+  if (payload.runtime_loop_closure !== undefined) {
+    normalized.runtime_loop_closure = validateSurfaceKindRecord(
+      payload.runtime_loop_closure,
+      'product_entry_manifest.runtime_loop_closure',
+      'runtime_loop_closure',
+    );
+  }
+  if (payload.session_continuity !== undefined) {
+    normalized.session_continuity = validateSurfaceKindRecord(
+      payload.session_continuity,
+      'product_entry_manifest.session_continuity',
+      'session_continuity',
+    );
+  }
+  if (payload.progress_projection !== undefined) {
+    normalized.progress_projection = validateSurfaceKindRecord(
+      payload.progress_projection,
+      'product_entry_manifest.progress_projection',
+      'progress_projection',
+    );
+  }
+  if (payload.artifact_inventory !== undefined) {
+    normalized.artifact_inventory = validateSurfaceKindRecord(
+      payload.artifact_inventory,
+      'product_entry_manifest.artifact_inventory',
+      'artifact_inventory',
+    );
+  }
+  if (payload.skill_catalog !== undefined) {
+    normalized.skill_catalog = cloneRecord(
+      payload.skill_catalog,
+      'product_entry_manifest.skill_catalog',
+    );
+  }
+  if (payload.automation !== undefined) {
+    normalized.automation = cloneRecord(payload.automation, 'product_entry_manifest.automation');
+  }
+}
+
+function assignRequiredRuntimeCompanions(
+  normalized: FamilyProductEntryManifestSurface,
+  payload: JsonRecord,
+) {
+  normalized.runtime_inventory = validateSurfaceKindRecord(
+    payload.runtime_inventory,
+    'product_entry_manifest.runtime_inventory',
+    'runtime_inventory',
+  );
+  normalized.task_lifecycle = validateSurfaceKindRecord(
+    payload.task_lifecycle,
+    'product_entry_manifest.task_lifecycle',
+    'task_lifecycle',
+  );
+  normalized.persistence_policy = validateSurfaceKindRecord(
+    payload.persistence_policy,
+    'product_entry_manifest.persistence_policy',
+    'family_persistence_policy',
+  );
+  normalized.lifecycle_ledger = validateSurfaceKindRecord(
+    payload.lifecycle_ledger,
+    'product_entry_manifest.lifecycle_ledger',
+    'family_lifecycle_ledger',
+  );
+  normalized.owner_route = validateSurfaceKindRecord(
+    payload.owner_route,
+    'product_entry_manifest.owner_route',
+    'family_owner_route',
+  );
+  normalized.skill_catalog = validateSurfaceKindRecord(
+    payload.skill_catalog,
+    'product_entry_manifest.skill_catalog',
+    'skill_catalog',
+  );
+  normalized.automation = validateSurfaceKindRecord(
+    payload.automation,
+    'product_entry_manifest.automation',
+    'automation',
+  );
+}
+
+function assignRequiredRuntimeContinuity(
+  normalized: FamilyProductEntryManifestSurface,
+  payload: JsonRecord,
+) {
+  normalized.session_continuity = validateSurfaceKindRecord(
+    payload.session_continuity,
+    'product_entry_manifest.session_continuity',
+    'session_continuity',
+  );
+  normalized.progress_projection = validateSurfaceKindRecord(
+    payload.progress_projection,
+    'product_entry_manifest.progress_projection',
+    'progress_projection',
+  );
+  normalized.artifact_inventory = validateSurfaceKindRecord(
+    payload.artifact_inventory,
+    'product_entry_manifest.artifact_inventory',
+    'artifact_inventory',
+  );
+  if (!hasRuntimeControlReference(payload)) {
+    throw new Error(
+      'product entry companion product_entry_manifest 缺少 runtime continuity control reference；需要 runtime_control、runtime_loop_closure，或 research_runtime_control_projection companion。',
+    );
+  }
+}
+
 export function validateFamilyOrchestrationCompanion(
   value: unknown,
   field: string,
@@ -348,83 +498,7 @@ export function validateFamilyProductEntryManifest(
   if (recommendedCommand !== undefined) {
     normalized.recommended_command = recommendedCommand;
   }
-  if (payload.runtime_inventory !== undefined) {
-    normalized.runtime_inventory = cloneRecord(
-      payload.runtime_inventory,
-      'product_entry_manifest.runtime_inventory',
-    );
-  }
-  if (payload.task_lifecycle !== undefined) {
-    normalized.task_lifecycle = cloneRecord(
-      payload.task_lifecycle,
-      'product_entry_manifest.task_lifecycle',
-    );
-  }
-  if (payload.persistence_policy !== undefined) {
-    normalized.persistence_policy = validateSurfaceKindRecord(
-      payload.persistence_policy,
-      'product_entry_manifest.persistence_policy',
-      'family_persistence_policy',
-    );
-  }
-  if (payload.lifecycle_ledger !== undefined) {
-    normalized.lifecycle_ledger = validateSurfaceKindRecord(
-      payload.lifecycle_ledger,
-      'product_entry_manifest.lifecycle_ledger',
-      'family_lifecycle_ledger',
-    );
-  }
-  if (payload.owner_route !== undefined) {
-    normalized.owner_route = validateSurfaceKindRecord(
-      payload.owner_route,
-      'product_entry_manifest.owner_route',
-      'family_owner_route',
-    );
-  }
-  if (payload.runtime_control !== undefined) {
-    normalized.runtime_control = validateSurfaceKindRecord(
-      payload.runtime_control,
-      'product_entry_manifest.runtime_control',
-      'runtime_control',
-    );
-  }
-  if (payload.runtime_loop_closure !== undefined) {
-    normalized.runtime_loop_closure = validateSurfaceKindRecord(
-      payload.runtime_loop_closure,
-      'product_entry_manifest.runtime_loop_closure',
-      'runtime_loop_closure',
-    );
-  }
-  if (payload.session_continuity !== undefined) {
-    normalized.session_continuity = validateSurfaceKindRecord(
-      payload.session_continuity,
-      'product_entry_manifest.session_continuity',
-      'session_continuity',
-    );
-  }
-  if (payload.progress_projection !== undefined) {
-    normalized.progress_projection = validateSurfaceKindRecord(
-      payload.progress_projection,
-      'product_entry_manifest.progress_projection',
-      'progress_projection',
-    );
-  }
-  if (payload.artifact_inventory !== undefined) {
-    normalized.artifact_inventory = validateSurfaceKindRecord(
-      payload.artifact_inventory,
-      'product_entry_manifest.artifact_inventory',
-      'artifact_inventory',
-    );
-  }
-  if (payload.skill_catalog !== undefined) {
-    normalized.skill_catalog = cloneRecord(
-      payload.skill_catalog,
-      'product_entry_manifest.skill_catalog',
-    );
-  }
-  if (payload.automation !== undefined) {
-    normalized.automation = cloneRecord(payload.automation, 'product_entry_manifest.automation');
-  }
+  assignOptionalManifestCompanions(normalized, payload);
   if (payload.product_entry_overview !== undefined) {
     normalized.product_entry_overview = validateProductEntryOverviewSurface(
       payload.product_entry_overview,
@@ -473,63 +547,10 @@ export function validateFamilyProductEntryManifest(
     );
   }
   if (options.requireRuntimeCompanions) {
-    normalized.runtime_inventory = validateSurfaceKindRecord(
-      payload.runtime_inventory,
-      'product_entry_manifest.runtime_inventory',
-      'runtime_inventory',
-    );
-    normalized.task_lifecycle = validateSurfaceKindRecord(
-      payload.task_lifecycle,
-      'product_entry_manifest.task_lifecycle',
-      'task_lifecycle',
-    );
-    normalized.persistence_policy = validateSurfaceKindRecord(
-      payload.persistence_policy,
-      'product_entry_manifest.persistence_policy',
-      'family_persistence_policy',
-    );
-    normalized.lifecycle_ledger = validateSurfaceKindRecord(
-      payload.lifecycle_ledger,
-      'product_entry_manifest.lifecycle_ledger',
-      'family_lifecycle_ledger',
-    );
-    normalized.owner_route = validateSurfaceKindRecord(
-      payload.owner_route,
-      'product_entry_manifest.owner_route',
-      'family_owner_route',
-    );
-    normalized.skill_catalog = validateSurfaceKindRecord(
-      payload.skill_catalog,
-      'product_entry_manifest.skill_catalog',
-      'skill_catalog',
-    );
-    normalized.automation = validateSurfaceKindRecord(
-      payload.automation,
-      'product_entry_manifest.automation',
-      'automation',
-    );
+    assignRequiredRuntimeCompanions(normalized, payload);
   }
   if (options.requireRuntimeContinuity) {
-    normalized.session_continuity = validateSurfaceKindRecord(
-      payload.session_continuity,
-      'product_entry_manifest.session_continuity',
-      'session_continuity',
-    );
-    normalized.progress_projection = validateSurfaceKindRecord(
-      payload.progress_projection,
-      'product_entry_manifest.progress_projection',
-      'progress_projection',
-    );
-    normalized.artifact_inventory = validateSurfaceKindRecord(
-      payload.artifact_inventory,
-      'product_entry_manifest.artifact_inventory',
-      'artifact_inventory',
-    );
-    if (!hasRuntimeControlReference(payload)) {
-      throw new Error(
-        'product entry companion product_entry_manifest 缺少 runtime continuity control reference；需要 runtime_control、runtime_loop_closure，或 research_runtime_control_projection companion。',
-      );
-    }
+    assignRequiredRuntimeContinuity(normalized, payload);
   }
 
   return normalized;
