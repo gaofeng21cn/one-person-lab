@@ -160,6 +160,123 @@ function parseManifestPayload(stdout: string) {
   return parsed;
 }
 
+function executeManifestCommandWithUvCacheRecovery(
+  binding: WorkspaceBinding,
+  manifestCommand: string,
+  timeoutMs: number,
+) {
+  const baseEnv = process.env;
+  let result = executeManifestCommand(
+    binding,
+    manifestCommand,
+    timeoutMs,
+    buildManagedShellEnvWithUvCacheRecovery(binding.workspace_path, baseEnv),
+  );
+  if (!shouldRetryWithFreshUvCache(result)) {
+    return result;
+  }
+
+  const firstStatus = result.status ?? 1;
+  const firstErrorExcerpt = resultText(result).replace(/\s+/g, ' ').trim().slice(0, 500);
+  const retryTmpRoot = buildManagedShellRecoveryTmpRoot(binding.workspace_path, baseEnv);
+  fs.mkdirSync(retryTmpRoot, { recursive: true });
+  result = executeManifestCommand(binding, manifestCommand, timeoutMs, {
+    ...baseEnv,
+    OPL_DOMAIN_COMMAND_TMP_ROOT: retryTmpRoot,
+  });
+  const retryStatus = result.status ?? (result.error ? 127 : 1);
+  if (!commandTimedOut(result) && retryStatus === 0) {
+    recordManagedShellUvCacheRecovery(binding.workspace_path, baseEnv, {
+      recoveryTmpRoot: retryTmpRoot,
+      firstExitCode: firstStatus,
+      retryExitCode: retryStatus,
+      firstErrorExcerpt,
+    });
+  }
+  return result;
+}
+
+function buildResolvedEntryFromCommandResult(
+  projectId: string,
+  project: string,
+  binding: WorkspaceBinding,
+  manifestCommand: string,
+  result: ReturnType<typeof spawnSync>,
+  timeoutMs: number,
+  options: {
+    materializeFamilyTransitions?: boolean;
+    transitionMaterializationTimeoutMs?: number;
+  },
+) {
+  const parsed = parseManifestPayload(result.stdout ?? '');
+  return buildResolvedManifestEntry(projectId, project, binding, manifestCommand, parsed, timeoutMs, {
+    materializeFamilyTransitions: options.materializeFamilyTransitions,
+    transitionMaterializationTimeoutMs: options.transitionMaterializationTimeoutMs,
+  });
+}
+
+function buildParseFailureEntry(
+  projectId: string,
+  project: string,
+  binding: WorkspaceBinding,
+  result: ReturnType<typeof spawnSync>,
+  error: unknown,
+) {
+  const code = error instanceof SyntaxError ? 'invalid_json' : 'invalid_manifest';
+  return buildCommandFailureEntry(
+    projectId,
+    project,
+    binding,
+    code,
+    error instanceof Error
+      ? error.message
+      : code === 'invalid_json'
+        ? 'Manifest command did not return valid JSON.'
+        : 'Manifest payload does not satisfy the minimum discovery contract.',
+    result.stdout ?? '',
+    result.stderr ?? '',
+  );
+}
+
+function resolveTimedOutManifestCommand(
+  projectId: string,
+  project: string,
+  binding: WorkspaceBinding,
+  manifestCommand: string,
+  result: ReturnType<typeof spawnSync>,
+  timeoutMs: number,
+  options: {
+    materializeFamilyTransitions?: boolean;
+    transitionMaterializationTimeoutMs?: number;
+  },
+) {
+  if ((result.stdout ?? '').trim().length > 0) {
+    try {
+      return buildResolvedEntryFromCommandResult(
+        projectId,
+        project,
+        binding,
+        manifestCommand,
+        result,
+        timeoutMs,
+        options,
+      );
+    } catch {
+      // A command that timed out without a complete manifest remains fail-closed.
+    }
+  }
+  return buildCommandFailureEntry(
+    projectId,
+    project,
+    binding,
+    'command_timeout',
+    'Domain manifest command timed out.',
+    result.stdout ?? '',
+    result.stderr ?? '',
+    { timeoutMs },
+  );
+}
+
 export function resolveBindingManifest(
   projectId: string,
   project: string,
@@ -206,58 +323,17 @@ export function resolveBindingManifest(
   const timeoutPolicy = options.timeoutPolicy
     ?? (options.timeoutMs === undefined ? 'env_or_default' : 'fixed');
   const timeoutMs = resolveManifestCommandTimeoutMs(options.timeoutMs, timeoutPolicy);
-  const baseEnv = process.env;
-  let result = executeManifestCommand(
-    binding,
-    manifestCommand,
-    timeoutMs,
-    buildManagedShellEnvWithUvCacheRecovery(binding.workspace_path, baseEnv),
-  );
-  if (shouldRetryWithFreshUvCache(result)) {
-    const firstStatus = result.status ?? 1;
-    const firstErrorExcerpt = resultText(result).replace(/\s+/g, ' ').trim().slice(0, 500);
-    const retryTmpRoot = buildManagedShellRecoveryTmpRoot(binding.workspace_path, baseEnv);
-    fs.mkdirSync(retryTmpRoot, { recursive: true });
-    result = executeManifestCommand(binding, manifestCommand, timeoutMs, {
-      ...baseEnv,
-      OPL_DOMAIN_COMMAND_TMP_ROOT: retryTmpRoot,
-    });
-    const retryStatus = result.status ?? (result.error ? 127 : 1);
-    if (!commandTimedOut(result) && retryStatus === 0) {
-      recordManagedShellUvCacheRecovery(binding.workspace_path, baseEnv, {
-        recoveryTmpRoot: retryTmpRoot,
-        firstExitCode: firstStatus,
-        retryExitCode: retryStatus,
-        firstErrorExcerpt,
-      });
-    }
-  }
-
-  const parseResolvedStdout = () => {
-    const parsed = parseManifestPayload(result.stdout ?? '');
-    return buildResolvedManifestEntry(projectId, project, binding, manifestCommand, parsed, timeoutMs, {
-      materializeFamilyTransitions: options.materializeFamilyTransitions,
-      transitionMaterializationTimeoutMs: options.transitionMaterializationTimeoutMs,
-    });
-  };
+  const result = executeManifestCommandWithUvCacheRecovery(binding, manifestCommand, timeoutMs);
 
   if (commandTimedOut(result)) {
-    if ((result.stdout ?? '').trim().length > 0) {
-      try {
-        return parseResolvedStdout();
-      } catch {
-        // A command that timed out without a complete manifest remains fail-closed.
-      }
-    }
-    return buildCommandFailureEntry(
+    return resolveTimedOutManifestCommand(
       projectId,
       project,
       binding,
-      'command_timeout',
-      'Domain manifest command timed out.',
-      result.stdout ?? '',
-      result.stderr ?? '',
-      { timeoutMs },
+      manifestCommand,
+      result,
+      timeoutMs,
+      options,
     );
   }
 
@@ -274,21 +350,16 @@ export function resolveBindingManifest(
   }
 
   try {
-    return parseResolvedStdout();
-  } catch (error) {
-    const code = error instanceof SyntaxError ? 'invalid_json' : 'invalid_manifest';
-    return buildCommandFailureEntry(
+    return buildResolvedEntryFromCommandResult(
       projectId,
       project,
       binding,
-      code,
-      error instanceof Error
-        ? error.message
-        : code === 'invalid_json'
-          ? 'Manifest command did not return valid JSON.'
-          : 'Manifest payload does not satisfy the minimum discovery contract.',
-      result.stdout ?? '',
-      result.stderr ?? '',
+      manifestCommand,
+      result,
+      timeoutMs,
+      options,
     );
+  } catch (error) {
+    return buildParseFailureEntry(projectId, project, binding, result, error);
   }
 }

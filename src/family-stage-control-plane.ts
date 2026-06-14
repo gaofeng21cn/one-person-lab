@@ -294,7 +294,7 @@ export function buildFamilyStageControlPlaneParity(
   };
 }
 
-export function buildFamilyStageListEntry(
+function buildFamilyStageListEntry(
   entry: DomainManifestCatalogEntry,
   plane: FamilyStageControlPlane,
   stage: FamilyStageDescriptor,
