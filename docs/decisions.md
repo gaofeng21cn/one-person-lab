@@ -5,6 +5,19 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-06-14
+
+### 决策：StageRun execution authorization 记录入口必须 refs-only 且强 identity fail closed
+
+原因：MAS DM003 的 `opl_execution_authorization_required` 已经能形成 execution authorization request，但此前 OPL 只有 ledger / contract / tests，没有面向 operator 的正式 dry-run / record 入口来验证同一 study、domain context、stage attempt、action、work unit、fingerprint 和 decision identity。这会让恢复线程只能反复停在 owner-needed，或错误地把旧 provider attempt / active lease / closeout binding 当成当前授权。
+
+影响：
+
+- `opl runtime stage-run-authorization record (--payload <json>|--payload-file <path>) [--dry-run] --json` 是 OPL-owned execution authorization intake。payload 必须携带 `stage_attempt_id`、`study_id`、`domain_context`、`action_type`、`work_unit_id`、`work_unit_fingerprint`、`decision`、`reason` 和 `operator`；`domain_context` 必须与 domain/study/stage 一致，`work_unit_fingerprint` 必须与 `source_fingerprint` 一致。
+- `--dry-run` 只返回 `status=planned`、planned receipt refs 和 `writes_performed=false`；身份不完整或不一致时返回 `stage_run_execution_authorization_identity_invalid`，不写 ledger。非 dry-run 只写 OPL-owned `stage-run-execution-authorization-ledger.json`。
+- 该入口只记录 / 验证 OPL refs-only execution authorization receipt。它不写 domain truth、不生成 MAS/MAG/RCA/OMA owner receipt、不创建 domain typed blocker、不关闭 current pointer owner answer、不声明 paper/domain ready，也不授权 DHD apply / hydrate / tick / provider start。
+- Temporal provider launch authorization 也必须派生同一 study / action / work-unit identity，避免 provider launch refs 与 current owner work unit 脱钩。
+
 ## 2026-06-13
 
 ### 决策：MAS current-control admission identity 必须包含 selected stage packet / route / attempt key
