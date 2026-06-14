@@ -671,6 +671,9 @@ function appReleaseProjection(appReleaseEvidence: Record<string, unknown>): Owne
     releaseOwnerVerdict.observed_release_owner_receipt_refs,
   );
   const installEvidenceRefs = stringList(releaseOwnerVerdict.observed_install_evidence_refs);
+  const ownerAcceptanceRefs = stringList(
+    releaseOwnerVerdict.observed_owner_acceptance_refs,
+  );
   const typedBlockerRefs = stringList(appReleaseEvidence.typed_blocker_refs);
   const ledgerReceiptRefs = unique([
     ...stringList(appReleaseEvidence.verified_ledger_receipt_refs),
@@ -681,6 +684,7 @@ function appReleaseProjection(appReleaseEvidence: Record<string, unknown>): Owne
     typed_blocker_ref_count: typedBlockerRefs.length,
     release_owner_receipt_ref_count: releaseOwnerReceiptRefs.length,
     install_evidence_ref_count: installEvidenceRefs.length,
+    owner_acceptance_ref_count: ownerAcceptanceRefs.length,
     evidence_ref_count: ledgerReceiptRefs.length,
   };
   const recordedReceiptCount = typeof appReleaseEvidence.recorded_ledger_receipt_ref_count === 'number'
@@ -699,9 +703,11 @@ function appReleaseProjection(appReleaseEvidence: Record<string, unknown>): Owne
       ...ledgerReceiptRefs,
       ...releaseOwnerReceiptRefs,
       ...installEvidenceRefs,
+      ...ownerAcceptanceRefs,
       ...typedBlockerRefs,
     ]),
     observed_ref_counts: counts,
+    owner_acceptance_refs: ownerAcceptanceRefs,
     evidence_route: 'opl runtime app-release-evidence list --json',
   };
 }

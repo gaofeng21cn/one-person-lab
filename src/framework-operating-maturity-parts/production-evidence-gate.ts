@@ -33,7 +33,7 @@ export function nextOwnerActions() {
     {
       lane: 'app_release_user_path',
       owner: 'one-person-lab-app release owner',
-      required_delta: 'same_cohort_release_user_path_receipt_release_owner_receipt_install_evidence_or_release_owner_typed_blocker',
+      required_delta: 'same_cohort_release_user_path_receipt_release_owner_receipt_install_evidence_owner_acceptance_or_release_owner_typed_blocker',
       source_command: SOURCE_COMMANDS.app_operator_drilldown,
     },
     {
@@ -103,7 +103,7 @@ function ownerRouteWorkOrderPolicy(lane: string) {
     },
     app_release_user_path: {
       owner_repo: '/Users/gaofeng/workspace/one-person-lab-app',
-      closing_ref_source: 'one_person_lab_app_release_owner_receipt_install_evidence_or_same_cohort_release_evidence_ref',
+      closing_ref_source: 'one_person_lab_app_release_owner_receipt_install_evidence_owner_acceptance_or_same_cohort_release_evidence_ref',
       typed_blocker_source: 'one_person_lab_app_release_owner_typed_blocker_ref',
       verification_command: SOURCE_COMMANDS.app_operator_drilldown,
     },
@@ -511,6 +511,7 @@ export function foundryAgentOsProductionEvidenceGate(input: {
         'release_owner_receipt_ref',
         'release_owner_typed_blocker_ref',
         'typed_blocker_ref',
+        'owner_acceptance_ref',
       ],
     },
     {

@@ -31,6 +31,9 @@ export function appReleaseUserPathPayloadRefHints() {
     typed_blocker_refs_should_cover: [
       'typed_blocker_ref',
     ],
+    owner_acceptance_refs_should_cover: [
+      'owner_acceptance_ref',
+    ],
   };
 }
 
@@ -44,6 +47,7 @@ export function appReleaseUserPathPayloadTemplate() {
     release_owner_receipt_refs: [],
     install_evidence_refs: [],
     typed_blocker_refs: [],
+    owner_acceptance_refs: [],
   };
 }
 
@@ -60,14 +64,15 @@ export function appReleaseUserPathPayloadWorkorder(
     'release_owner_receipt_refs',
     'install_evidence_refs',
     'typed_blocker_refs',
+    'owner_acceptance_refs',
   ];
   return {
     surface_kind: 'opl_app_release_user_path_evidence_payload_workorder',
     workorder_policy:
-      'operator_must_choose_same_cohort_release_user_path_refs_release_owner_verdict_or_typed_blocker_path_empty_template_blocks',
+      'operator_must_choose_same_cohort_release_user_path_refs_release_owner_verdict_owner_acceptance_or_typed_blocker_path_empty_template_blocks',
     payload_owner: 'app_live_operator_or_release_owner',
     accepted_payload_path_policy:
-      'same_cohort_release_user_path_refs_release_owner_verdict_or_typed_blocker_path_empty_template_blocks',
+      'same_cohort_release_user_path_refs_release_owner_verdict_owner_acceptance_or_typed_blocker_path_empty_template_blocks',
     accepted_payload_paths: {
       app_release_user_path_refs_path: {
         required_any_operator_payload_refs: [
@@ -100,6 +105,13 @@ export function appReleaseUserPathPayloadWorkorder(
         closes_release_ready: false,
         closes_production_ready: false,
       },
+      owner_acceptance_path: {
+        required_operator_payload_refs: ['owner_acceptance_refs'],
+        success_claimed_by_opl: false,
+        closes_app_release_user_path: false,
+        closes_release_ready: false,
+        closes_production_ready: false,
+      },
     },
     typed_blocker_path_payload: {
       typed_blocker_refs: [],
@@ -122,6 +134,7 @@ export function appReleaseUserPathPayloadWorkorder(
       'release_owner_receipt_ref',
       'install_evidence_ref',
       'typed_blocker_ref',
+      'owner_acceptance_ref',
     ],
     payload_template: appReleaseUserPathPayloadTemplate(),
     payload_ref_hints: appReleaseUserPathPayloadRefHints(),

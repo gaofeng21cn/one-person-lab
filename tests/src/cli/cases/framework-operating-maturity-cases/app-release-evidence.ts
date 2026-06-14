@@ -74,7 +74,7 @@ test('framework operating maturity consumes verified App release user-path evide
     );
     assert.equal(
       maturity.app_release_user_path.release_owner_verdict_handoff.required_delta,
-      'release_owner_receipt_install_evidence_or_typed_blocker_ref',
+      'release_owner_receipt_install_evidence_owner_acceptance_or_typed_blocker_ref',
     );
     assert.deepEqual(
       maturity.app_release_user_path.release_owner_verdict_handoff.accepted_ref_shapes,
@@ -82,8 +82,12 @@ test('framework operating maturity consumes verified App release user-path evide
         'release_owner_receipt_ref',
         'install_evidence_ref',
         'typed_blocker_ref',
+        'owner_acceptance_ref',
       ],
     );
+    assert.equal(maturity.app_release_user_path.owner_acceptance_evidence_recorded, false);
+    assert.equal(maturity.app_release_user_path.owner_acceptance_ref_count, 0);
+    assert.deepEqual(maturity.app_release_user_path.owner_acceptance_refs, []);
     assert.equal(
       maturity.app_release_user_path.release_owner_verdict_handoff.release_ready_authorized,
       false,
@@ -111,6 +115,7 @@ test('framework operating maturity consumes verified App release user-path evide
       'same_cohort_release_user_path_refs_path',
       'release_owner_typed_blocker_path',
       'release_owner_verdict_path',
+      'release_owner_acceptance_path',
     ]);
     assert.equal(
       maturity.app_release_user_path.execution_runbook.readback_commands.includes(
@@ -151,14 +156,18 @@ test('framework operating maturity consumes verified App release user-path evide
     assert.equal(appReleaseWorkOrder.ready_claim_authorized, false);
     assert.equal(
       appReleaseWorkOrder.next_owner_action,
-      'same_cohort_release_user_path_receipt_release_owner_receipt_install_evidence_or_release_owner_typed_blocker',
+      'same_cohort_release_user_path_receipt_release_owner_receipt_install_evidence_owner_acceptance_or_release_owner_typed_blocker',
     );
     assert.equal(
       appReleaseWorkOrder.closing_ref_source,
-      'one_person_lab_app_release_owner_receipt_install_evidence_or_same_cohort_release_evidence_ref',
+      'one_person_lab_app_release_owner_receipt_install_evidence_owner_acceptance_or_same_cohort_release_evidence_ref',
     );
     assert.equal(
       appReleaseWorkOrder.accepted_ref_shapes.includes('release_owner_receipt_ref'),
+      true,
+    );
+    assert.equal(
+      appReleaseWorkOrder.accepted_ref_shapes.includes('owner_acceptance_ref'),
       true,
     );
     assert.equal(
@@ -353,6 +362,92 @@ test('framework operating maturity surfaces App release owner verdict refs as ow
       'owner_evidence_recorded_not_l5_claim',
     );
     assert.equal(connectReleaseInstallWorkOrder.ready_claim_authorized, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('framework operating maturity surfaces App release owner acceptance refs as owner evidence without release-ready claims', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-operating-maturity-app-owner-acceptance-'));
+  const workspaceRoot = createFamilyDefaultContractWorkspace();
+  try {
+    const env: Record<string, string> = {
+      OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+    };
+    const ownerAcceptanceRef =
+      'owner-acceptance:app-release/26.5.28-draft.20260527235839/operator-accepted';
+    const record = recordAppReleaseUserPathEvidence(env, {
+      owner_acceptance_refs: [ownerAcceptanceRef],
+    });
+    runCli([
+      'runtime',
+      'app-release-evidence',
+      'verify',
+      '--receipt-ref',
+      record.receipt_refs[0],
+    ], env);
+
+    const maturity = runCli([
+      'framework',
+      'operating-maturity',
+      '--family-defaults',
+    ], env).framework_operating_maturity;
+
+    assert.equal(maturity.summary.app_release_user_path_open_count, 0);
+    assert.equal(
+      maturity.app_release_user_path.status,
+      'release_owner_acceptance_recorded_not_release_ready_claim',
+    );
+    assert.equal(
+      maturity.app_release_user_path.next_required_delta,
+      'release_owner_acceptance_recorded_no_release_ready_claim',
+    );
+    assert.equal(maturity.app_release_user_path.owner_acceptance_evidence_recorded, true);
+    assert.equal(maturity.app_release_user_path.owner_acceptance_ref_count, 1);
+    assert.deepEqual(maturity.app_release_user_path.owner_acceptance_refs, [
+      ownerAcceptanceRef,
+    ]);
+    assert.deepEqual(
+      maturity.app_release_user_path.release_owner_verdict_handoff
+        .observed_owner_acceptance_refs,
+      [ownerAcceptanceRef],
+    );
+    assert.equal(
+      maturity.app_release_user_path.release_owner_verdict_handoff.status,
+      'release_owner_acceptance_recorded_not_release_ready_claim',
+    );
+    assert.equal(maturity.app_release_user_path.release_ready_authorized, false);
+    assert.equal(maturity.authority_boundary.can_claim_app_release_ready, false);
+    assert.equal(maturity.authority_boundary.can_claim_production_ready, false);
+
+    const appReleaseLane = maturity.owner_evidence_intake.lane_evidence.find(
+      (entry: { lane: string }) => entry.lane === 'app_release_user_path',
+    );
+    assert.equal(appReleaseLane.status, 'owner_evidence_observed_not_ready_claim');
+    assert.equal(appReleaseLane.verified_receipt_count, 1);
+    assert.equal(appReleaseLane.observed_ref_shapes.includes('owner_acceptance_ref'), true);
+    assert.equal(appReleaseLane.observed_ref_counts.owner_acceptance_ref_count, 1);
+    assert.deepEqual(appReleaseLane.owner_acceptance_refs, [ownerAcceptanceRef]);
+    assert.equal(appReleaseLane.observed_receipt_refs.includes(record.receipt_refs[0]), true);
+    assert.equal(appReleaseLane.observed_receipt_refs.includes(ownerAcceptanceRef), true);
+
+    const appReleaseWorkOrder = maturity.foundry_agent_os_production_evidence_gate
+      .owner_route_work_orders.find(
+        (entry: { lane: string }) => entry.lane === 'app_release_user_path',
+      );
+    assert.equal(appReleaseWorkOrder.status, 'owner_evidence_recorded');
+    assert.equal(appReleaseWorkOrder.open_count, 0);
+    assert.equal(
+      appReleaseWorkOrder.owner_evidence_closure_state,
+      'owner_evidence_recorded_not_ready_claim',
+    );
+    assert.equal(appReleaseWorkOrder.observed_ref_shapes.includes('owner_acceptance_ref'), true);
+    assert.equal(appReleaseWorkOrder.observed_ref_counts.owner_acceptance_ref_count, 1);
+    assert.deepEqual(appReleaseWorkOrder.owner_acceptance_refs, [ownerAcceptanceRef]);
+    assert.equal(appReleaseWorkOrder.accepted_ref_shapes.includes('owner_acceptance_ref'), true);
+    assert.equal(appReleaseWorkOrder.ready_claim_authorized, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });

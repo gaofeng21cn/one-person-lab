@@ -70,6 +70,9 @@ function parseRuntimeAppReleaseEvidencePayload(
       parsed.release_owner_receipt_refs ?? parsed.release_owner_receipt_ref,
     ),
     typed_blocker_refs: stringList(parsed.typed_blocker_refs ?? parsed.typed_blocker_ref),
+    owner_acceptance_refs: stringList(
+      parsed.owner_acceptance_refs ?? parsed.owner_acceptance_ref,
+    ),
     receipt_ref: optionalString(parsed.receipt_ref),
   };
 }
@@ -328,6 +331,7 @@ export function buildRuntimeAppReleaseEvidenceCommandSpecs(): Record<string, Com
         'Record refs-only App release/user-path evidence refs without claiming App release or production readiness.',
       examples: [
         'opl runtime app-release-evidence record --payload \'{"release_package_refs":["release:pkg"],"screenshot_refs":["screenshot:first-run"]}\'',
+        'opl runtime app-release-evidence record --payload \'{"owner_acceptance_refs":["owner-acceptance:app-release/<cohort>"]}\'',
         'opl runtime app-release-evidence record --payload-file payload.json',
       ],
       handler: (args) => ({

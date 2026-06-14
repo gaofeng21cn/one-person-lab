@@ -113,7 +113,7 @@ export function assertAppReleaseUserPathProductionEvidenceLane(summaryDrilldown:
   );
   assert.equal(
     appUserPathStep.payload_workorder.accepted_payload_path_policy,
-    'same_cohort_release_user_path_refs_release_owner_verdict_or_typed_blocker_path_empty_template_blocks',
+    'same_cohort_release_user_path_refs_release_owner_verdict_owner_acceptance_or_typed_blocker_path_empty_template_blocks',
   );
   assert.equal(
     appUserPathStep.payload_workorder.accepted_payload_paths

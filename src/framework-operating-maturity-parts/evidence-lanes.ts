@@ -97,17 +97,26 @@ export function appReleaseUserPathMaturity() {
     stringListValue(releaseOwnerVerdictHandoff.observed_release_owner_receipt_refs).length;
   const releaseOwnerTypedBlockerRefCount =
     stringListValue(releaseOwnerVerdictHandoff.observed_typed_blocker_refs).length;
+  const ownerAcceptanceRefs =
+    stringListValue(releaseOwnerVerdictHandoff.observed_owner_acceptance_refs);
+  const ownerAcceptanceRefCount = ownerAcceptanceRefs.length;
   const releaseOwnerVerdictObserved = releaseOwnerReceiptRefCount > 0;
   const verifiedReleaseOwnerTypedBlockerObserved =
     verifiedReceiptCount > 0 && pendingVerifyCount === 0 && releaseOwnerTypedBlockerRefCount > 0;
+  const ownerAcceptanceEvidenceRecorded =
+    ownerAcceptanceRefCount > 0 && verifiedReceiptCount > 0 && pendingVerifyCount === 0;
   const releaseOwnerVerdictStatus = releaseOwnerVerdictObserved
     ? 'release_owner_receipt_recorded_not_release_ready_claim'
-    : verifiedReleaseOwnerTypedBlockerObserved
-      ? 'release_owner_typed_blocker_recorded_not_release_ready_claim'
+    : ownerAcceptanceEvidenceRecorded
+      ? 'release_owner_acceptance_recorded_not_release_ready_claim'
+      : verifiedReleaseOwnerTypedBlockerObserved
+        ? 'release_owner_typed_blocker_recorded_not_release_ready_claim'
       : stringValue(releaseOwnerVerdictHandoff.status)
         ?? 'waiting_for_same_cohort_user_path_evidence_or_typed_blocker';
   const releaseOwnerVerdictClosureObserved =
-    releaseOwnerVerdictObserved || verifiedReleaseOwnerTypedBlockerObserved;
+    releaseOwnerVerdictObserved
+    || verifiedReleaseOwnerTypedBlockerObserved
+    || ownerAcceptanceEvidenceRecorded;
   const openEvidenceCount =
     (
       productionUserPathReady && pendingVerifyCount === 0 && typedBlockerCount === 0
@@ -123,6 +132,9 @@ export function appReleaseUserPathMaturity() {
     },
     releaseOwnerVerdictClosureObserved,
     releaseOwnerVerdictStatus,
+    ownerAcceptanceEvidenceRecorded,
+    ownerAcceptanceRefs,
+    ownerAcceptanceRefCount,
     openEvidenceCount,
     productionUserPathReady,
   };
@@ -352,6 +364,8 @@ export function appReleaseUserPathExecutionRunbook() {
       'opl runtime app-release-evidence record --payload \'{"release_package_refs":["release:pkg"],"screenshot_refs":["screenshot:first-run"],"reload_prompt_user_path_refs":["first-run:log"],"provider_state_linkage_refs":["provider:state"],"long_operator_evidence_refs":["operator:long-window"]}\'',
     typed_blocker_record_command:
       'opl runtime app-release-evidence record --payload \'{"typed_blocker_refs":["typed-blocker:app-release/<reason>"]}\'',
+    owner_acceptance_record_command:
+      'opl runtime app-release-evidence record --payload \'{"owner_acceptance_refs":["owner-acceptance:app-release/<cohort>"]}\'',
     verify_command:
       'opl runtime app-release-evidence verify --receipt-ref <receipt_ref>',
     long_operator_commands: [
@@ -370,11 +384,13 @@ export function appReleaseUserPathExecutionRunbook() {
       'operator_evidence_ref',
       'release_owner_receipt_ref',
       'typed_blocker_ref',
+      'owner_acceptance_ref',
     ],
     accepted_paths: [
       'same_cohort_release_user_path_refs_path',
       'release_owner_typed_blocker_path',
       'release_owner_verdict_path',
+      'release_owner_acceptance_path',
     ],
     readback_fields: [
       'app_release_user_path.open_gate_count',
@@ -382,12 +398,14 @@ export function appReleaseUserPathExecutionRunbook() {
       'app_release_user_path.release_ready_authorized',
       'app_release_user_path.next_required_delta',
       'app_release_user_path.release_owner_verdict_handoff.status',
+      'app_release_user_path.owner_acceptance_ref_count',
       'foundry_agent_os_production_evidence_gate.owner_route_work_orders[lane=app_release_user_path]',
     ],
     stop_loss: [
       'if open_gate_count is zero but release_ready_authorized is false, stop recording OPL evidence and request release owner verdict or typed blocker',
       'if success refs and typed_blocker_refs are mixed in one payload, split the path before recording',
       'if cohort_guard selects a newer incomplete cohort, keep release_ready_authorized=false',
+      'if verified owner_acceptance_ref is observed, record release owner follow-through but keep release-ready and production-ready claims unauthorized',
     ],
     false_authority_guard: {
       refs_only: true,

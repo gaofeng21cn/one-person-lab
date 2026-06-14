@@ -126,7 +126,7 @@ test('owner delta handoff summary uses selected safe action payload workorder wi
         payload_workorder: {
           surface_kind: 'opl_app_release_user_path_evidence_payload_workorder',
           accepted_payload_path_policy:
-            'same_cohort_release_user_path_refs_release_owner_verdict_or_typed_blocker_path_empty_template_blocks',
+            'same_cohort_release_user_path_refs_release_owner_verdict_owner_acceptance_or_typed_blocker_path_empty_template_blocks',
           required_operator_payload_refs: [
             'release_package_refs',
             'typed_blocker_refs',
@@ -200,7 +200,7 @@ test('owner delta handoff summary uses selected safe action payload workorder wi
   ]);
   assert.equal(
     summary.payload_path_policy,
-    'same_cohort_release_user_path_refs_release_owner_verdict_or_typed_blocker_path_empty_template_blocks',
+    'same_cohort_release_user_path_refs_release_owner_verdict_owner_acceptance_or_typed_blocker_path_empty_template_blocks',
   );
   assert.equal(
     record(summary.accepted_payload_paths).typed_blocker_path

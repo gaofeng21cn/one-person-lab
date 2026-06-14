@@ -488,6 +488,8 @@ export async function buildFrameworkOperatingMaturityReadout(
         latest_release_tag: null,
         next_required_delta: appReleaseOpenCount > 0
           ? 'same_cohort_app_release_user_path_evidence_or_release_owner_typed_blocker'
+          : appReleaseUserPath.ownerAcceptanceEvidenceRecorded
+            ? 'release_owner_acceptance_recorded_no_release_ready_claim'
           : appReleaseUserPath.releaseOwnerVerdictClosureObserved
             ? 'release_owner_verdict_recorded_no_release_ready_claim'
             : 'release_owner_verdict_still_not_claimed_by_opl',
@@ -499,6 +501,12 @@ export async function buildFrameworkOperatingMaturityReadout(
         typed_blocker_ref_count: numberValue(appReleaseUserPath.evidence.typed_blocker_ref_count),
         verified_ledger_receipt_ref_count:
           numberValue(appReleaseUserPath.evidence.verified_ledger_receipt_ref_count),
+        owner_acceptance_evidence_recorded:
+          appReleaseUserPath.ownerAcceptanceEvidenceRecorded,
+        owner_acceptance_ref_count:
+          appReleaseUserPath.ownerAcceptanceRefCount,
+        owner_acceptance_refs:
+          appReleaseUserPath.ownerAcceptanceRefs,
         release_owner_verdict_handoff:
           appReleaseUserPath.releaseOwnerVerdictHandoff,
         selected_cohort_id:
@@ -509,6 +517,7 @@ export async function buildFrameworkOperatingMaturityReadout(
           'operator_evidence_ref',
           'release_owner_receipt_ref',
           'typed_blocker_ref',
+          'owner_acceptance_ref',
         ],
         execution_runbook: appReleaseRunbook,
         owner: appReleaseRunbook.owner,

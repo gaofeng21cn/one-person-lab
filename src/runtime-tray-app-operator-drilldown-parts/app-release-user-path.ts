@@ -73,6 +73,9 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
     'release_owner_receipt_refs',
   ]);
   const installEvidenceRefs = refsFromRecords(verifiedLedgerReceipts, ['install_evidence_refs']);
+  const ownerAcceptanceRefs = refsFromRecords(verifiedLedgerReceipts, [
+    'owner_acceptance_refs',
+  ]);
   const candidateEvidenceRecords = [
     record(drilldown.package_export_lifecycle_refs),
     record(drilldown.production_evidence_tail_ledger),
@@ -140,22 +143,26 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
       owner: 'one-person-lab-app release owner',
       owner_repo: '/Users/gaofeng/workspace/one-person-lab-app',
       required_delta: productionUserPathReady
-        ? 'release_owner_receipt_install_evidence_or_typed_blocker_ref'
-        : 'same_cohort_release_user_path_refs_or_release_owner_typed_blocker_ref',
+        ? 'release_owner_receipt_install_evidence_owner_acceptance_or_typed_blocker_ref'
+        : 'same_cohort_release_user_path_refs_release_owner_acceptance_or_release_owner_typed_blocker_ref',
       accepted_ref_shapes: [
         'release_owner_receipt_ref',
         'install_evidence_ref',
         'typed_blocker_ref',
+        'owner_acceptance_ref',
       ],
       observed_release_owner_receipt_refs: releaseOwnerReceiptRefs,
       observed_install_evidence_refs: installEvidenceRefs,
       observed_typed_blocker_refs: activeTypedBlockerRefs,
+      observed_owner_acceptance_refs: ownerAcceptanceRefs,
       release_ready_authorized: false,
       production_ready_authorized: false,
       record_command:
         'opl runtime app-release-evidence record --payload \'{"release_owner_receipt_refs":["release-owner:<ref>"]}\'',
       typed_blocker_record_command:
         'opl runtime app-release-evidence record --payload \'{"typed_blocker_refs":["typed-blocker:app-release/<reason>"]}\'',
+      owner_acceptance_record_command:
+        'opl runtime app-release-evidence record --payload \'{"owner_acceptance_refs":["owner-acceptance:app-release/<cohort>"]}\'',
       verify_command: 'opl runtime app-release-evidence verify --receipt-ref <receipt_ref>',
       readback_commands: [
         'opl runtime app-release-evidence list --json',
@@ -188,7 +195,10 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
       'release_owner_receipt_ref',
       'install_evidence_ref',
       'typed_blocker_ref',
+      'owner_acceptance_ref',
     ],
+    owner_acceptance_refs: ownerAcceptanceRefs,
+    owner_acceptance_ref_count: ownerAcceptanceRefs.length,
     payload_owner: 'app_live_operator_or_release_owner',
     full_detail_section: 'app_release_user_path_evidence',
     authority_boundary: {
@@ -313,6 +323,8 @@ export function appReleaseUserPathEvidenceNextStep(evidence: JsonRecord) {
     empty_payload_template_is_success_evidence: false,
     typed_blocker_ref_count: numberValue(evidence.typed_blocker_ref_count),
     blocked_by_typed_blocker_refs: evidence.blocked_by_typed_blocker_refs === true,
+    owner_acceptance_ref_count: numberValue(evidence.owner_acceptance_ref_count),
+    owner_acceptance_refs: stringList(evidence.owner_acceptance_refs),
     release_owner_verdict_handoff: record(evidence.release_owner_verdict_handoff),
     full_detail_section: 'app_release_user_path_evidence',
     can_execute_domain_action: false,
@@ -413,11 +425,13 @@ export function buildAppReleaseUserPathEvidenceActionRoutes(evidence: JsonRecord
       'release_owner_receipt_refs',
       'install_evidence_refs',
       'typed_blocker_refs',
+      'owner_acceptance_refs',
     ],
     required_evidence_refs: stringList(evidence.open_gate_ids),
     required_return_shapes: stringList(evidence.required_return_shapes),
     required_receipt_shapes: ['app_release_user_path_evidence_receipt_ref'],
     typed_blocker_refs: stringList(evidence.typed_blocker_refs),
+    owner_acceptance_refs: stringList(evidence.owner_acceptance_refs),
     open_reason: 'app_release_user_path_evidence_refs_or_typed_blocker_refs_required',
     payload_requirement:
       'app_live_operator_or_release_owner_refs_payload_required_to_record_app_release_user_path_evidence_or_typed_blocker',
@@ -466,6 +480,8 @@ export function appReleaseUserPathEvidenceSummary(appReleaseUserPathEvidence: Js
       numberValue(appReleaseUserPathEvidence.ledger_receipt_ref_count),
     typed_blocker_ref_count:
       numberValue(appReleaseUserPathEvidence.typed_blocker_ref_count),
+    owner_acceptance_ref_count:
+      numberValue(appReleaseUserPathEvidence.owner_acceptance_ref_count),
     recorded_ledger_receipt_ref_count:
       numberValue(appReleaseUserPathEvidence.recorded_ledger_receipt_ref_count),
     verified_ledger_receipt_ref_count:
