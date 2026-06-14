@@ -305,9 +305,9 @@ test('family-runtime anti-spin treats MAS owner closeout refs as domain progress
         taskId: 'task-mas-default-anti-spin-domain-progress-first',
         sourceFingerprint: 'publication-blockers::0915410f804b3697',
         closeoutRefs: [
-          'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/controller/repair_execution_evidence/latest.json',
-          'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/controller/repair_execution_receipts/latest.json',
-          'studies/003-dpcc-primary-care-phenotype-treatment-gap/paper/draft.md',
+          'artifacts/controller/repair_execution_evidence/latest.json',
+          'artifacts/controller/repair_execution_receipts/latest.json',
+          'paper/draft.md',
         ],
         createdAt: '2026-06-14T09:00:00.000Z',
       });
@@ -315,9 +315,9 @@ test('family-runtime anti-spin treats MAS owner closeout refs as domain progress
         taskId: 'task-mas-default-anti-spin-domain-progress-second',
         sourceFingerprint: 'publication-blockers::0915410f804b3697',
         closeoutRefs: [
-          'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/controller/quality_repair_batch/latest.json',
-          'runtime/quests/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/reports/publishability_gate/latest.json',
-          'studies/003-dpcc-primary-care-phenotype-treatment-gap/paper/review/review_ledger.json',
+          'artifacts/controller/quality_repair_batch/latest.json',
+          'artifacts/reports/publishability_gate/latest.json',
+          'paper/review/review_ledger.json',
         ],
         createdAt: '2026-06-14T09:10:00.000Z',
       });

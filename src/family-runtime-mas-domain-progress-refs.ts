@@ -26,53 +26,54 @@ function refsFrom(recordValue: JsonRecord, keys: string[]) {
 }
 
 export function isMasDomainProgressRef(ref: string) {
-  const normalized = ref.toLowerCase();
-  if (!normalized.trim()) {
+  const normalized = ref.toLowerCase().trim();
+  if (!normalized) {
     return false;
   }
-  if (normalized.includes('/artifacts/supervision/consumer/default_executor_execution/')) {
+  const normalizedPath = normalized.startsWith('/') ? normalized : `/${normalized}`;
+  if (normalizedPath.includes('/artifacts/supervision/consumer/default_executor_execution/')) {
     return false;
   }
-  if (normalized.includes('/artifacts/supervision/consumer/default_executor_dispatches/')) {
+  if (normalizedPath.includes('/artifacts/supervision/consumer/default_executor_dispatches/')) {
     return false;
   }
-  if (normalized.includes('/artifacts/supervision/consumer/stage_attempt_closeouts/')) {
+  if (normalizedPath.includes('/artifacts/supervision/consumer/stage_attempt_closeouts/')) {
     return false;
   }
-  if (normalized.includes('/artifacts/controller/repair_execution_evidence/')) {
+  if (normalizedPath.includes('/artifacts/controller/repair_execution_evidence/')) {
     return true;
   }
-  if (normalized.includes('/artifacts/controller/repair_execution_receipts/')) {
+  if (normalizedPath.includes('/artifacts/controller/repair_execution_receipts/')) {
     return true;
   }
-  if (normalized.includes('/artifacts/controller/quality_repair_batch/')) {
+  if (normalizedPath.includes('/artifacts/controller/quality_repair_batch/')) {
     return true;
   }
-  if (normalized.includes('/artifacts/controller/gate_clearing_batch/')) {
+  if (normalizedPath.includes('/artifacts/controller/gate_clearing_batch/')) {
     return true;
   }
-  if (normalized.includes('/artifacts/controller/gate_replay_requests/')) {
+  if (normalizedPath.includes('/artifacts/controller/gate_replay_requests/')) {
     return true;
   }
-  if (normalized.includes('/artifacts/publication_eval/ai_reviewer_responses/')) {
+  if (normalizedPath.includes('/artifacts/publication_eval/ai_reviewer_responses/')) {
     return true;
   }
-  if (normalized.includes('/artifacts/reports/publishability_gate/')) {
+  if (normalizedPath.includes('/artifacts/reports/publishability_gate/')) {
     return true;
   }
-  if (normalized.includes('/paper/draft.md')) {
+  if (normalizedPath.includes('/paper/draft.md')) {
     return true;
   }
-  if (normalized.includes('/paper/build/review_manuscript.md')) {
+  if (normalizedPath.includes('/paper/build/review_manuscript.md')) {
     return true;
   }
-  if (normalized.includes('/paper/evidence_ledger.json')) {
+  if (normalizedPath.includes('/paper/evidence_ledger.json')) {
     return true;
   }
-  if (normalized.includes('/paper/claim_evidence_map.json')) {
+  if (normalizedPath.includes('/paper/claim_evidence_map.json')) {
     return true;
   }
-  if (normalized.includes('/paper/review/review_ledger.json')) {
+  if (normalizedPath.includes('/paper/review/review_ledger.json')) {
     return true;
   }
   return false;
