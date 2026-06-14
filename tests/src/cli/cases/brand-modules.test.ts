@@ -525,12 +525,11 @@ test('brand module L5 status surfaces ledger typed blockers as owner-needed evid
           'cross_agent_scaleout',
           'long_soak_recovery',
           'release_install_evidence',
-          'owner_acceptance',
           'cross_agent_foundry_agent_os_adoption',
         ],
       );
-      assert.equal(module.next_action_summary.typed_blocker_recorded_class_count, 5);
-      assert.equal(module.next_action_summary.observed_refs_not_l5_claim_class_count, 8);
+      assert.equal(module.next_action_summary.typed_blocker_recorded_class_count, 4);
+      assert.equal(module.next_action_summary.observed_refs_not_l5_claim_class_count, 9);
     assert.equal(module.next_action_summary.missing_owner_evidence_class_count, 0);
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
