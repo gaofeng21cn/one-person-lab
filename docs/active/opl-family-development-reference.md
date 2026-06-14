@@ -203,13 +203,13 @@ path stability、contract-linked `human_doc:*` 或历史归档暂留原位。
 4. 需要保留来龙去脉时，放入 `docs/history/`、tombstone 或明确的 provenance/reference，不保留 active compatibility interface。
 5. 测试只断言 contract/schema/source/CLI/API/manifest/generated artifact 行为，不断言 prose wording 或旧文档路径。
 
-这条规则适用于 Hermes-first、Gateway/frontdoor/federation、local-manager、repo-local runtime pilot、legacy service wrapper、flat shell alias、compatibility facade、旧聚合测试和旧 active-path 文案。保留历史不等于保留兼容接口。
+这条规则适用于 Hermes-first、Gateway/frontdoor/federation、local-manager、repo-local runtime pilot、legacy service wrapper、flat shell alias、compatibility facade、旧 `production-closeout` 聚合入口、旧聚合测试和旧 active-path 文案。保留历史不等于保留兼容接口。
 
 ## 工作准入分类
 
 任何新增 OPL 系列开发工作，先归类到以下之一：
 
-- `OPL global`: framework/shared primitive/App workbench/domain admission/production closeout。
+- `OPL global`: framework/shared primitive/App workbench/domain admission/production-tail owner-evidence。
 - `domain-owned`: MAS/MAG/RCA 的领域 truth、quality、artifact、memory body、owner receipt 或 direct skill。
 - `App-owned`: GUI shell、workbench 展示、action routing、packaging/update、fork overlay。
 - `reference/history`: 外部学习、旧路线、proof lane、迁移背景或 tombstone。
