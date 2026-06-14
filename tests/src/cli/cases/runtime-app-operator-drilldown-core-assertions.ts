@@ -204,12 +204,37 @@ export function assertCoreAppOperatorDrilldownProjection(
     drilldown.stage_progress_log.authority_boundary.provider_completion_is_domain_ready,
     false,
   );
+  assert.equal(
+    drilldown.domain_current_work_unit_projection.surface_kind,
+    'opl_domain_current_work_unit_projection',
+  );
+  assert.equal(
+    drilldown.domain_current_work_unit_projection.projection_policy,
+    'runtime_tray_domain_current_work_unit_refs_only_no_domain_truth_reduction',
+  );
+  assert.equal(
+    drilldown.domain_current_work_unit_projection.summary.current_work_unit_count,
+    drilldown.domain_current_work_unit_projection.items.length,
+  );
+  assert.equal(
+    drilldown.domain_current_work_unit_projection.authority_boundary.can_write_domain_truth,
+    false,
+  );
+  assert.equal(
+    drilldown.domain_current_work_unit_projection.authority_boundary.can_execute_domain_action,
+    false,
+  );
+  assert.equal(
+    drilldown.domain_current_work_unit_projection.authority_boundary.provider_completion_is_domain_ready,
+    false,
+  );
   assert.deepEqual(
     drilldown.runtime_workbench,
     {
       ...drilldown.runtime_visualization_projection.runtime_workbench,
       memory_trace_projection: drilldown.memory_trace_projection,
       workstream_operating_loop: drilldown.workstream_operating_loop,
+      domain_current_work_unit_projection: drilldown.domain_current_work_unit_projection,
     },
   );
   assert.deepEqual(
