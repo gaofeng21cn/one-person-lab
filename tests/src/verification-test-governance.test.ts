@@ -44,12 +44,12 @@ const verifyWorkflowNativeAndStructurePatterns = [
   /rust-toolchain/,
   /\.\/scripts\/install-sentrux-ci\.sh/,
   /fetch-depth: 0/,
-  /git fetch --no-tags --prune origin main:refs\/remotes\/origin\/main/,
+  /git fetch --no-tags --prune origin \+main:refs\/remotes\/origin\/main/,
 ];
 
 const sentruxAdvisoryWorkflowPatterns = [
   /fetch-depth: 0/,
-  /git fetch --no-tags --prune origin main:refs\/remotes\/origin\/main/,
+  /git fetch --no-tags --prune origin \+main:refs\/remotes\/origin\/main/,
   /timeout-minutes: 30/,
   /sentrux gate \./,
   /sentrux check \./,
