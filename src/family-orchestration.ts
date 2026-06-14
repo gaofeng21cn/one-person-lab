@@ -1,6 +1,17 @@
-import { createHash } from 'node:crypto';
-
-type JsonRecord = Record<string, unknown>;
+import {
+  isRecord,
+  normalizeRef,
+  normalizeRefs,
+  optionalString,
+  optionalStringList,
+  readStringList,
+  requireBoolean,
+  requirePositiveInteger,
+  requireString,
+  stableId,
+  type JsonRecord,
+} from './family-orchestration-parts/shared.ts';
+import { buildFamilyOrchestrationCompanionFromTemplate } from './family-orchestration-parts/companion.ts';
 
 export interface FamilyReference {
   ref_kind: string;
@@ -251,82 +262,6 @@ export interface BuildFamilyProjectProfileCompanionInput {
   project_profile: BuildFamilyProjectProfileSummaryInput;
   preference_signals: string[];
   grounding_refs: FamilyReference[];
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function requireString(value: unknown, field: string) {
-  const text = optionalString(value);
-  if (!text) {
-    throw new Error(`family orchestration 缺少字符串字段: ${field}`);
-  }
-  return text;
-}
-
-function normalizeRef(value: unknown, field: string): FamilyReference | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-  const refKind = optionalString(value.ref_kind);
-  const ref = optionalString(value.ref);
-  if (!refKind || !ref) {
-    throw new Error(`family orchestration reference 缺少字段: ${field}`);
-  }
-  return {
-    ref_kind: refKind,
-    ref,
-    ...(optionalString(value.role) ? { role: optionalString(value.role)! } : {}),
-    ...(optionalString(value.label) ? { label: optionalString(value.label)! } : {}),
-  };
-}
-
-function normalizeRefs(values: unknown, field: string) {
-  if (!Array.isArray(values)) {
-    return [] as FamilyReference[];
-  }
-  return values
-    .map((value, index) => normalizeRef(value, `${field}[${index}]`))
-    .filter((value): value is FamilyReference => Boolean(value));
-}
-
-function requireBoolean(value: unknown, field: string) {
-  if (typeof value !== 'boolean') {
-    throw new Error(`family orchestration 缺少布尔字段: ${field}`);
-  }
-  return value;
-}
-
-function requirePositiveInteger(value: unknown, field: string) {
-  if (!Number.isInteger(value) || Number(value) <= 0) {
-    throw new Error(`family orchestration 缺少正整数字段: ${field}`);
-  }
-  return Number(value);
-}
-
-function readStringList(values: unknown, field: string) {
-  if (!Array.isArray(values)) {
-    throw new Error(`family orchestration 缺少数组字段: ${field}`);
-  }
-  return values.map((value, index) => requireString(value, `${field}[${index}]`));
-}
-
-function optionalStringList(values: unknown, field: string) {
-  if (values === null || values === undefined) {
-    return [] as string[];
-  }
-  return readStringList(values, field);
-}
-
-function stableId(prefix: string, ...parts: unknown[]) {
-  const source = parts.map((part) => String(part ?? '').trim()).join('|');
-  const digest = createHash('sha1').update(source).digest('hex').slice(0, 12);
-  return `${prefix}-${digest}`;
 }
 
 export function resolveProgramId(execution: unknown, fallback = 'opl_family_program') {
@@ -796,174 +731,8 @@ export function buildFamilyProductEntryPresetOrchestration(
 }
 
 export function buildFamilyOrchestrationCompanion(input: BuildFamilyOrchestrationCompanionInput) {
-  const eventTime = optionalString(input.event_time) ?? new Date().toISOString();
-  const surfaceKind = requireString(input.surface_kind, 'surface_kind');
-  const surfaceId = requireString(input.surface_id, 'surface_id');
-  const eventName = requireString(input.event_name, 'event_name');
-  const sourceSurface = requireString(input.source_surface, 'source_surface');
-  const sessionId = optionalString(input.session_id) ?? stableId('session', input.study_id, input.quest_id, eventName);
-  const checkpointId = optionalString(input.checkpoint_id)
-    ?? stableId('checkpoint', input.study_id, input.quest_id, input.runtime_decision, input.runtime_reason, eventName);
-  const lineageId = stableId('lineage', sessionId, checkpointId);
-  const envelopeId = stableId('evt', surfaceId, eventName, eventTime, sessionId, checkpointId);
-  const correlationId = stableId('corr', sessionId, eventName, checkpointId);
-  const activeRunId = resolveActiveRunId(input.active_run_id);
-  const programId = optionalString(input.program_id) ?? resolveProgramId(null);
-  const humanGates = Array.isArray(input.human_gates)
-    ? input.human_gates.filter((gate): gate is JsonRecord => isRecord(gate)).map((gate) => ({ ...gate }))
-    : [];
-  const payload: JsonRecord = isRecord(input.payload) ? { ...input.payload } : {};
-  if (optionalString(input.runtime_decision)) {
-    payload.runtime_decision = optionalString(input.runtime_decision);
-  }
-  if (optionalString(input.runtime_reason)) {
-    payload.runtime_reason = optionalString(input.runtime_reason);
-  }
-
-  const eventEnvelope: JsonRecord = {
-    version: 'family-event-envelope.v1',
-    envelope_id: envelopeId,
-    event_name: eventName,
-    event_time: eventTime,
-    target_domain_id: optionalString(input.target_domain_id) ?? 'unknown_domain',
-    producer: {
-      surface_kind: surfaceKind,
-      surface_id: surfaceId,
-    },
-    session: {
-      session_id: sessionId,
-      source_surface: sourceSurface,
-      ...(activeRunId ? { active_run_id: activeRunId } : {}),
-      ...(programId ? { program_id: programId } : {}),
-      ...(optionalString(input.study_id) ? { study_id: optionalString(input.study_id)! } : {}),
-      ...(optionalString(input.quest_id) ? { quest_id: optionalString(input.quest_id)! } : {}),
-    },
-    correlation: {
-      correlation_id: correlationId,
-      checkpoint_id: checkpointId,
-      checkpoint_lineage_id: lineageId,
-      ...(optionalString(input.action_graph_id) ? { action_graph_id: optionalString(input.action_graph_id)! } : {}),
-      ...(optionalString(input.node_id) ? { node_id: optionalString(input.node_id)! } : {}),
-      ...(optionalString(input.gate_id) ? { gate_id: optionalString(input.gate_id)! } : {}),
-      ...(optionalString(input.parent_envelope_id) ? { parent_envelope_id: optionalString(input.parent_envelope_id)! } : {}),
-      ...(optionalString(input.parent_session_id) ? { parent_session_id: optionalString(input.parent_session_id)! } : {}),
-    },
-    payload,
-  };
-
-  const auditRefs = normalizeRefs(input.audit_refs, 'audit_refs');
-  if (auditRefs.length > 0) {
-    eventEnvelope.audit_refs = auditRefs;
-  }
-  if (humanGates.length > 0) {
-    const firstGate = humanGates[0];
-    eventEnvelope.human_gate_hint = {
-      gate_id: optionalString(firstGate.gate_id),
-      status: optionalString(firstGate.status) ?? 'requested',
-      ...(isRecord(firstGate.request_surface) ? { review_surface: { ...firstGate.request_surface } } : {}),
-    };
-  }
-
-  const stateRefs = normalizeRefs(input.state_refs, 'state_refs');
-  if (stateRefs.length === 0) {
-    stateRefs.push({
-      role: 'status',
-      ref_kind: 'repo_path',
-      ref: surfaceId,
-      label: 'surface_status',
-    });
-  }
-  const restorationEvidence = normalizeRefs(input.restoration_evidence, 'restoration_evidence');
-  const checkpointLineage: JsonRecord = {
-    version: 'family-checkpoint-lineage.v1',
-    lineage_id: lineageId,
-    checkpoint_id: checkpointId,
-    target_domain_id: optionalString(input.target_domain_id) ?? 'unknown_domain',
-    session: {
-      session_id: sessionId,
-      ...(activeRunId ? { active_run_id: activeRunId } : {}),
-      ...(programId ? { program_id: programId } : {}),
-    },
-    producer: {
-      event_envelope_id: envelopeId,
-      ...(optionalString(input.action_graph_id) ? { action_graph_id: optionalString(input.action_graph_id)! } : {}),
-      ...(optionalString(input.node_id) ? { node_id: optionalString(input.node_id)! } : {}),
-      ...(optionalString(input.gate_id) ? { gate_id: optionalString(input.gate_id)! } : {}),
-    },
-    state_refs: stateRefs,
-    resume_contract: {
-      resume_mode: optionalString(input.resume_mode) ?? 'resume_from_checkpoint',
-      resume_handle: optionalString(input.resume_handle) ?? `${surfaceKind}:${checkpointId}`,
-      human_gate_required: Boolean(input.human_gate_required),
-    },
-    integrity: {
-      status: 'complete',
-      recorded_at: eventTime,
-      summary: optionalString(input.checkpoint_label)
-        ?? optionalString(input.runtime_reason)
-        ?? 'runtime checkpoint captured',
-    },
-  };
-  const parent: JsonRecord = {};
-  for (const [key, value] of [
-    ['parent_lineage_id', input.parent_lineage_id],
-    ['parent_checkpoint_id', input.parent_checkpoint_id],
-    ['resume_from_lineage_id', input.resume_from_lineage_id],
-  ] as const) {
-    const text = optionalString(value);
-    if (text) {
-      parent[key] = text;
-    }
-  }
-  if (Object.keys(parent).length > 0) {
-    checkpointLineage.parent = parent;
-  }
-  if (restorationEvidence.length > 0) {
-    checkpointLineage.restoration_evidence = restorationEvidence;
-  }
-
-  const template = buildFamilyOrchestrationTemplate({
-    action_graph: isRecord(input.action_graph) ? input.action_graph : {},
-    human_gates: humanGates,
-    resume_surface_kind: optionalString(input.resume_surface_kind) ?? surfaceKind,
-    session_locator_field: optionalString(input.session_locator_field) ?? 'event_envelope.session.session_id',
-    checkpoint_locator_field: optionalString(input.checkpoint_locator_field) ?? 'checkpoint_lineage.checkpoint_id',
-    action_graph_ref: input.action_graph_ref ?? null,
-    event_envelope_surface: input.event_envelope_surface ?? null,
-    checkpoint_lineage_surface: input.checkpoint_lineage_surface ?? null,
-    intake_evidence_companion: isRecord(input.intake_evidence_companion)
-      ? { ...input.intake_evidence_companion }
-      : null,
-    project_profile_companion: isRecord(input.project_profile_companion)
-      ? { ...input.project_profile_companion }
-      : null,
-  });
-  const intakeEvidenceCompanion = isRecord(template.intake_evidence_companion)
-    ? { ...template.intake_evidence_companion }
-    : null;
-  const projectProfileCompanion = isRecord(template.project_profile_companion)
-    ? { ...template.project_profile_companion }
-    : null;
-
-  return {
-    ...template,
-    human_gates: humanGates,
-    family_human_gates: humanGates,
-    event_envelope: eventEnvelope,
-    family_event_envelope: eventEnvelope,
-    checkpoint_lineage: checkpointLineage,
-    family_checkpoint_lineage: checkpointLineage,
-    ...(intakeEvidenceCompanion
-      ? {
-        intake_evidence_companion: intakeEvidenceCompanion,
-        family_intake_evidence_companion: intakeEvidenceCompanion,
-      }
-      : {}),
-    ...(projectProfileCompanion
-      ? {
-        project_profile_companion: projectProfileCompanion,
-        family_project_profile_companion: projectProfileCompanion,
-      }
-      : {}),
-  };
+  return buildFamilyOrchestrationCompanionFromTemplate(
+    input,
+    buildFamilyOrchestrationTemplate,
+  );
 }
