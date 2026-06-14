@@ -488,17 +488,15 @@ const CROSS_AGENT_SCALEOUT_TARGET_AGENTS = [
 function coveredCrossAgentScaleoutTargets(refs: string[] = []) {
   const covered = new Set<string>();
   for (const ref of refs) {
-    if (ref.includes('med-autoscience') || ref.includes('/mas') || ref.includes(':mas')) {
-      covered.add('med-autoscience');
-    }
-    if (ref.includes('med-autogrant') || ref.includes('/mag') || ref.includes(':mag')) {
-      covered.add('med-autogrant');
-    }
-    if (ref.includes('redcube-ai') || ref.includes('/rca') || ref.includes(':rca')) {
-      covered.add('redcube-ai');
-    }
-    if (ref.includes('opl-meta-agent') || ref.includes('/oma') || ref.includes(':oma')) {
-      covered.add('opl-meta-agent');
+    const match = /^supporting_domain_owner_chain_ref:\/\/([^/#?]+)/.exec(ref);
+    const repoId = match?.[1];
+    if (
+      repoId
+      && CROSS_AGENT_SCALEOUT_TARGET_AGENTS.includes(
+        repoId as typeof CROSS_AGENT_SCALEOUT_TARGET_AGENTS[number],
+      )
+    ) {
+      covered.add(repoId);
     }
   }
   return CROSS_AGENT_SCALEOUT_TARGET_AGENTS.filter((agent) => covered.has(agent));

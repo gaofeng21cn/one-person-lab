@@ -1,5 +1,5 @@
 import { assert, createContractsFixtureRoot, fs, loadFrameworkContracts, os, path, repoRoot, runCli, runCliFailure, test } from '../../helpers.ts';
-import { expectedModuleIds, type L5Module } from './shared.ts';
+import { expectedModuleIds, type L5Module, type L5Route } from './shared.ts';
 
 test('brand module L5 evidence gate is executable but does not claim production maturity', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-brand-l5-status-state-'));
@@ -605,6 +605,57 @@ test('brand module L5 requirement keeps supporting domain owner chain refs scope
     assert.match(
       failure.payload.error.message,
       /supporting_domain_owner_chain_refs may only appear on cross_agent_scaleout requirements/,
+    );
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('brand module L5 supporting owner-chain coverage uses canonical repo refs', () => {
+  const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
+    const contractPath = path.join(contractsRoot, 'brand-module-l5-operating-evidence.json');
+    const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8')) as {
+      modules: Array<{
+        module_id: string;
+        evidence_requirements: Array<{
+          class_id: string;
+          supporting_domain_owner_chain_refs?: string[];
+        }>;
+      }>;
+    };
+    const workspace = contract.modules.find((entry) => entry.module_id === 'workspace');
+    assert.ok(workspace);
+    const scaleout = workspace.evidence_requirements.find((entry) =>
+      entry.class_id === 'cross_agent_scaleout'
+    );
+    assert.ok(scaleout);
+    scaleout.supporting_domain_owner_chain_refs = [
+      'supporting_domain_owner_chain_ref://med-autoscience/contracts/production_acceptance/mas-scaleout.json',
+      'supporting_domain_owner_chain_ref://not-a-domain/contracts/production_acceptance/path-with-/mag-and-:rca.json',
+    ];
+    fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`, 'utf8');
+  });
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-brand-l5-supporting-refs-canonical-state-'));
+  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateDir };
+
+  try {
+    const status = runCli(['brand-modules', 'l5-status'], env).brand_module_l5_status;
+    const workspace = status.modules.find((entry: L5Module) => entry.module_id === 'workspace');
+    const scaleout = workspace?.owner_evidence_routes.find((entry: L5Route) =>
+      entry.class_id === 'cross_agent_scaleout'
+    );
+    assert.deepEqual(scaleout?.supporting_domain_owner_chain_coverage?.covered_target_agents, [
+      'med-autoscience',
+    ]);
+    assert.deepEqual(scaleout?.supporting_domain_owner_chain_coverage?.missing_target_agents, [
+      'med-autogrant',
+      'redcube-ai',
+      'opl-meta-agent',
+    ]);
+    assert.equal(
+      scaleout?.supporting_domain_owner_chain_coverage?.next_required_owner_action,
+      'record_missing_per_agent_scaleout_receipt_or_owner_typed_blocker',
     );
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
