@@ -673,12 +673,9 @@ domain-agent-repo/
 
 这也是最符合 MVP 的重构：少一个默认入口，多一个稳定 primitive；少暴露一层平台细节，多暴露一个可执行下一步；少一套工具流程标准，多一个安全可审计的工具 affordance 边界。
 
-## Verification For This Design
+## Verification Boundary
 
-本文是 target architecture + machine contract 支撑。最小验证：
-
-- `rtk git diff --check`
-- `rtk rg -n '^(<<<<<<<|=======|>>>>>>>)' docs/active/opl-foundry-agent-target-operating-architecture.md docs/active/README.md docs/history/process/plans/2026-06-04-opl-foundry-agent-mvp-friction-audit.md`
-- `rtk node --experimental-strip-types --test tests/src/cognitive-computation-kernel-contract.test.ts`
-- `rtk npm run test:smoke`
-- external web refresh used Anthropic, OpenAI Agents SDK, LangGraph, Kubernetes, Temporal, Backstage, CNCF, Google SRE, OpenTelemetry and DORA docs on `2026-06-04 CST`.
+本文是 target architecture 支撑，不维护一次性验证 transcript、外部 refresh
+date 或执行流水。当前 coverage、open tail、repo-native verification 和
+docs-lifecycle closeout 归 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)、
+machine contracts/tests、live read-model 和 history/provenance。
