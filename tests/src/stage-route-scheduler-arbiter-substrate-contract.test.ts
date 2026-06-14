@@ -167,6 +167,44 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   assert.equal(attemptList.authority_boundary.opl_can_create_domain_owner_receipt, false);
   assert.equal(attemptList.authority_boundary.provider_completion_is_domain_ready, false);
 
+  const paperAutonomy = substrate.paper_autonomy_supervisor_substrate_mapping;
+  assert.equal(
+    paperAutonomy.status,
+    'existing_opl_surface_mapping_with_minimal_readback_fixture',
+  );
+  assert.deepEqual(paperAutonomy.allowed_supervisor_decisions, [
+    'execute_current_owner_delta',
+    'consume_terminal_closeout',
+    'materialize_recovery_action',
+    'wait_for_owner_with_resume_token',
+    'stop_with_stable_typed_blocker',
+  ]);
+  assert.equal(paperAutonomy.decision_surface_policy.read_model_can_execute, false);
+  assert.equal(paperAutonomy.decision_surface_policy.observability_can_close_owner_answer, false);
+  assert.match(
+    paperAutonomy.concepts.RecoveryObligationStore.landed_support,
+    /src\/family-runtime-paper-autonomy\.ts/,
+  );
+  assert.match(
+    paperAutonomy.concepts.RecoveryObligationStore.landed_support,
+    /obligation_id and StageRun identity/,
+  );
+  assert.match(
+    paperAutonomy.concepts.RecoveryObligationStore.remaining_gap,
+    /end-to-end runtime soak/,
+  );
+  assert.match(
+    paperAutonomy.concepts.SupervisorDecisionEngine.landed_support,
+    /wait_for_owner_with_resume_token/,
+  );
+  assert.match(
+    paperAutonomy.concepts.SupervisorDecisionEngine.remaining_gap,
+    /provider tick/,
+  );
+  assert.ok(paperAutonomy.not_complete_claims.includes(
+    'readback_fixture_does_not_mean_five_decision_provider_tick_or_owner_runtime_exists',
+  ));
+
   assert.equal(
     substrate.current_control_admission_currentness_policy_ref,
     'current_control_admission_currentness_policy',

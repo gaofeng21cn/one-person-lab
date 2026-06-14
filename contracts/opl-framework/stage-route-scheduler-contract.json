@@ -223,7 +223,7 @@
       "surface_kind": "opl_paper_autonomy_supervisor_substrate_mapping",
       "schema_version": 1,
       "source_target_design": "human_doc:mas_paper_autonomy_supervisor_target_design",
-      "status": "existing_opl_surface_mapping_with_contract_gaps",
+      "status": "existing_opl_surface_mapping_with_minimal_readback_fixture",
       "purpose": "Map MAS Paper Autonomy Supervisor target concepts to existing OPL-owned stage-route, current-control, human-gate, state-index, operator, and observability surfaces without creating a second truth source.",
       "allowed_supervisor_decisions": [
         "execute_current_owner_delta",
@@ -298,7 +298,8 @@
             "stale_read_model_lag",
             "supervisor_decision_ref"
           ],
-          "gap": "dedicated query_update store and five-decision fixture readback are not yet landed"
+          "landed_support": "src/family-runtime-paper-autonomy.ts exposes refs-only obligation query/update fixture bound to obligation_id and StageRun identity",
+          "remaining_gap": "dedicated durable provider-backed RecoveryObligationStore is not yet proven by end-to-end runtime soak"
         },
         "SupervisorDecisionEngine": {
           "existing_surfaces": [
@@ -318,7 +319,8 @@
             "provider_liveness_or_repair_state",
             "observability_refs"
           ],
-          "gap": "single SupervisorDecisionEngine output packet for all five decisions is not yet a runtime readback fixture"
+          "landed_support": "src/family-runtime-paper-autonomy.ts emits refs-only readback packets for execute_current_owner_delta, consume_terminal_closeout, materialize_recovery_action, wait_for_owner_with_resume_token, and stop_with_stable_typed_blocker",
+          "remaining_gap": "provider tick, owner receipt, human resume token, terminal closeout consumption, and end-to-end runtime soak are not yet proven"
         },
         "StateIndexKernel": {
           "existing_surfaces": [
@@ -378,7 +380,7 @@
       },
       "not_complete_claims": [
         "mapping_landed_does_not_mean_supervisor_runtime_landed",
-        "contract_landed_does_not_mean_five_decision_tick_readback_exists",
+        "readback_fixture_does_not_mean_five_decision_provider_tick_or_owner_runtime_exists",
         "human_gate_schema_fields_do_not_mean_human_token_runtime_is_complete",
         "state_index_projection_does_not_mean_paper_progress",
         "observability_refs_do_not_close_owner_receipt_quality_gate_or_publication_readiness"
