@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
+import { countLines } from './source-line-count.mjs';
+
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const workspaceRoot = path.dirname(repoRoot.includes(`${path.sep}.worktrees${path.sep}`) ? path.dirname(path.dirname(repoRoot)) : repoRoot);
 
@@ -338,13 +340,6 @@ function dedupeFindings(findings) {
     seen.add(key);
     return true;
   });
-}
-
-function countLines(content) {
-  if (content.length === 0) {
-    return 0;
-  }
-  return content.endsWith('\n') ? content.split('\n').length - 1 : content.split('\n').length;
 }
 
 function renderMarkdown(report) {

@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
+import { countLines } from './source-line-count.mjs';
+
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const CODE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.mts', '.cts', '.py', '.sh', '.bash', '.zsh', '.rs', '.go']);
 const IGNORED_PARTS = new Set(['node_modules', 'dist', 'build', 'coverage', '.venv', '__pycache__']);
@@ -90,13 +92,6 @@ function isCodeFile(relativePath) {
     return false;
   }
   return CODE_EXTENSIONS.has(path.extname(relativePath));
-}
-
-function countLines(content) {
-  if (content.length === 0) {
-    return 0;
-  }
-  return content.endsWith('\n') ? content.split('\n').length - 1 : content.split('\n').length;
 }
 
 function parseArgs(argv) {
