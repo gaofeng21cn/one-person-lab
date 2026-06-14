@@ -65,10 +65,10 @@ Domain Intent
 
 ## Combined Design Evaluation
 
-本节把两条对话主线合并成同一个目标态判断：
+本节把两类 prior design-review input 合并成同一个目标态判断；具体会话来源属于历史 provenance / git history，不作为 active architecture truth 维护：
 
-- `019e83cd-6c5e-74b3-9410-31681dca7a72` 的关注点是 purpose-first / owner-delta-first：从最终产出反推哪些 repo、surface、wrapper、read-model、evidence 和 cleanup 面真正必要。
-- `019e8e48-a561-7a32-a12d-91df71c7bfde` 的关注点是 MVP-first：从最短可用路径判断哪些设计正在帮助 agent 产出，哪些会把系统拖入 receipt、reconcile、replay、diagnostic 或 evidence accounting。
+- `purpose-first / owner-delta-first` input：从最终产出反推哪些 repo、surface、wrapper、read-model、evidence 和 cleanup 面真正必要。
+- `MVP-first` input：从最短可用路径判断哪些设计正在帮助 agent 产出，哪些会把系统拖入 receipt、reconcile、replay、diagnostic 或 evidence accounting。
 
 两条线给出的共同结论是：OPL 应该成为更强的底座，而不是更厚的默认流程。理想 OPL 的默认层只负责把正确的 `current_owner_delta`、stage context、authority boundary、available affordances、quality gate 和 durable runtime 交给 Codex executor；其余 evidence、diagnostic、replay、long-soak、cleanup 和 wrapper-retirement 都是显式 lane。
 
