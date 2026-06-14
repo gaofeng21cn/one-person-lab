@@ -1075,6 +1075,11 @@
           "app_projection:capability_invocation_hard_gate",
           "app_projection:runway_handoff_gates",
           "app_projection:runway_recovery_repair"
+        ],
+        "payload_contract_refs": [
+          "opl_runway_recovery_repair.attempt_repair_queue",
+          "opl_runway_recovery_repair.attempt_repair_queue.summary",
+          "opl_runway_recovery_repair.attempt_repair_queue.items[].command"
         ]
       },
       "descriptor_surface": {
@@ -1217,7 +1222,7 @@
         "repair_action_is_l5_evidence",
         "no_open_runtime_blocker_is_l5_closure"
       ],
-      "notes": "Runway owns the control-loop runtime module: runtime intent admission, queue/readiness reconciliation, provider attempt orchestration refs, handoff gates, and recovery repair. The executable read surfaces are status/inspect/interfaces/validate/doctor plus readiness/reconcile/handoff-gates/recovery-repair/control-loop status. Temporal not configured, service down, worker not ready, or scheduler missing is provider_not_ready/OPL repair action, not domain readiness. Temporal is durable substrate, worker supervision is process liveness, and the Progress Reconciler is the semantic/execution loop projection; Runway does not write domain truth, sign owner receipts, create typed blockers, convert provider completion into domain readiness, or close L5 production long-soak."
+      "notes": "Runway owns the control-loop runtime module: runtime intent admission, queue/readiness reconciliation, provider attempt orchestration refs, handoff gates, and recovery repair. The executable read surfaces are status/inspect/interfaces/validate/doctor plus readiness/reconcile/handoff-gates/recovery-repair/control-loop status. recovery-repair exposes provider repair, worker restart guard, and a refs-only attempt_repair_queue for blocked/failed attempt operator review. Temporal not configured, service down, worker not ready, or scheduler missing is provider_not_ready/OPL repair action, not domain readiness. Temporal is durable substrate, worker supervision is process liveness, and the Progress Reconciler is the semantic/execution loop projection; Runway does not write domain truth, sign owner receipts, create typed blockers, convert provider completion into domain readiness, or close L5 production long-soak."
     },
     {
       "module_id": "vault",
