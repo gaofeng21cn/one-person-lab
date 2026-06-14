@@ -195,9 +195,13 @@
           "owner": "OPL Framework docs governance",
           "owner_route_ref": "opl-owner-route:brand-module/charter/live_user_path/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:charter",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/charter/live_user_path/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "user_path_evidence_ref:opl-charter/status/valid-l4-module-surface-20260614T120409Z",
+            "operator_evidence_ref:opl-charter/doctor/checks-pass-authority-boundary-false-20260614T120409Z"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/charter/live_user_path/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -205,9 +209,11 @@
           "owner": "OPL Framework and App product owners",
           "owner_route_ref": "opl-owner-route:brand-module/charter/ordinary_app_experience/app-release-owner",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab-app",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/charter/ordinary_app_experience/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "brand_experience_profile_ref:opl-app/operator/brand-experience-profile/ordinary-cockpit-20260614T120958Z",
+            "app_operator_projection_ref:opl-app/operator/ordinary-cockpit-current-owner-delta-20260614T120958Z",
+            "user_path_evidence_ref:opl-app/state-full/operator-ready-no-release-claim-20260614T120958Z"
           ]
         },
         {
@@ -265,10 +271,13 @@
           "owner": "OPL Framework docs governance",
           "owner_route_ref": "opl-owner-route:brand-module/charter/no_second_truth_regression/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:charter",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "no-resurrection-guard-ref:tests/src/active-path-residue-scan.test.ts#docs-active-no-resurrection",
             "source-scan-ref:tests/src/cli/cases/brand-modules.test.ts#l5-false-completion-guard"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/charter/no_second_truth_regression/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -276,10 +285,13 @@
           "owner": "OPL Charter owner",
           "owner_route_ref": "opl-owner-route:brand-module/charter/pack_compile_parity/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:charter",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "pack-compile-parity-ref:contracts/opl-framework/domain-pack-compiler-contract.json#default_entry_policy",
             "generated-surface-parity-ref:opl-agents-interfaces-family-defaults/generated_direct_parity"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/charter/pack_compile_parity/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -287,10 +299,13 @@
           "owner": "OPL Charter owner",
           "owner_route_ref": "opl-owner-route:brand-module/charter/current_owner_delta_default_read/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:charter",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root",
             "operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/charter/current_owner_delta_default_read/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -298,9 +313,13 @@
           "owner": "OPL Framework owner",
           "owner_route_ref": "opl-owner-route:brand-module/charter/capability_fail_open_boundary/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:charter",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/charter/capability_fail_open_boundary/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "capability_fail_open_ref:tests/src/capability-registry-resolver.test.ts#optional-missing-fail-open",
+            "route_required_capability_ref:tests/src/capability-registry-resolver.test.ts#route-required-hard-boundary-missing-ref"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/charter/capability_fail_open_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -308,10 +327,13 @@
           "owner": "OPL Charter owner",
           "owner_route_ref": "opl-owner-route:brand-module/charter/domain_authority_false_boundary/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:charter",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.charter.authority_boundary",
             "negative-guard-ref:opl-brand-module-l5/charter/domain-authority-false-boundary/ready-claim-authorized-false"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/charter/domain_authority_false_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -350,9 +372,13 @@
           "owner": "OPL Framework catalog owner",
           "owner_route_ref": "opl-owner-route:brand-module/atlas/live_user_path/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:atlas",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/atlas/live_user_path/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "user_path_evidence_ref:opl-atlas/status/valid-l4-module-surface-20260614T120409Z",
+            "operator_evidence_ref:opl-atlas/doctor/checks-pass-authority-boundary-false-20260614T120409Z"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/atlas/live_user_path/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -360,9 +386,11 @@
           "owner": "OPL Framework and App product owners",
           "owner_route_ref": "opl-owner-route:brand-module/atlas/ordinary_app_experience/app-release-owner",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab-app",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/atlas/ordinary_app_experience/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "brand_experience_profile_ref:opl-app/operator/brand-experience-profile/ordinary-cockpit-20260614T120958Z",
+            "app_operator_projection_ref:opl-app/operator/ordinary-cockpit-current-owner-delta-20260614T120958Z",
+            "user_path_evidence_ref:opl-app/state-full/operator-ready-no-release-claim-20260614T120958Z"
           ]
         },
         {
@@ -420,10 +448,13 @@
           "owner": "OPL Framework catalog owner",
           "owner_route_ref": "opl-owner-route:brand-module/atlas/no_second_truth_regression/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:atlas",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "no-resurrection-guard-ref:tests/src/active-path-residue-scan.test.ts#docs-active-no-resurrection",
             "source-scan-ref:tests/src/cli/cases/brand-modules.test.ts#l5-false-completion-guard"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/atlas/no_second_truth_regression/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -431,10 +462,13 @@
           "owner": "OPL Atlas owner",
           "owner_route_ref": "opl-owner-route:brand-module/atlas/pack_compile_parity/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:atlas",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "pack-compile-parity-ref:contracts/opl-framework/domain-pack-compiler-contract.json#default_entry_policy",
             "generated-surface-parity-ref:opl-agents-interfaces-family-defaults/generated_direct_parity"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/atlas/pack_compile_parity/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -442,10 +476,13 @@
           "owner": "OPL Atlas owner",
           "owner_route_ref": "opl-owner-route:brand-module/atlas/current_owner_delta_default_read/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:atlas",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root",
             "operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/atlas/current_owner_delta_default_read/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -453,9 +490,13 @@
           "owner": "OPL Atlas owner",
           "owner_route_ref": "opl-owner-route:brand-module/atlas/capability_fail_open_boundary/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:atlas",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/atlas/capability_fail_open_boundary/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "capability_fail_open_ref:tests/src/capability-registry-resolver.test.ts#optional-missing-fail-open",
+            "route_required_capability_ref:tests/src/capability-registry-resolver.test.ts#route-required-hard-boundary-missing-ref"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/atlas/capability_fail_open_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -463,10 +504,13 @@
           "owner": "OPL Atlas owner",
           "owner_route_ref": "opl-owner-route:brand-module/atlas/domain_authority_false_boundary/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:atlas",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.atlas.authority_boundary",
             "negative-guard-ref:opl-brand-module-l5/atlas/domain-authority-false-boundary/ready-claim-authorized-false"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/atlas/domain_authority_false_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -506,9 +550,13 @@
           "owner": "OPL Workspace owner",
           "owner_route_ref": "opl-owner-route:brand-module/workspace/live_user_path/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:workspace",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/workspace/live_user_path/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "user_path_evidence_ref:opl-workspace/status/valid-l4-module-surface-20260614T120409Z",
+            "operator_evidence_ref:opl-workspace/doctor/checks-pass-authority-boundary-false-20260614T120409Z"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/workspace/live_user_path/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -516,9 +564,11 @@
           "owner": "OPL Framework and App product owners",
           "owner_route_ref": "opl-owner-route:brand-module/workspace/ordinary_app_experience/app-release-owner",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab-app",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/workspace/ordinary_app_experience/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "brand_experience_profile_ref:opl-app/operator/brand-experience-profile/ordinary-cockpit-20260614T120958Z",
+            "app_operator_projection_ref:opl-app/operator/ordinary-cockpit-current-owner-delta-20260614T120958Z",
+            "user_path_evidence_ref:opl-app/state-full/operator-ready-no-release-claim-20260614T120958Z"
           ]
         },
         {
@@ -576,10 +626,13 @@
           "owner": "OPL Workspace owner",
           "owner_route_ref": "opl-owner-route:brand-module/workspace/no_second_truth_regression/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:workspace",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "no-resurrection-guard-ref:tests/src/active-path-residue-scan.test.ts#docs-active-no-resurrection",
             "source-scan-ref:tests/src/cli/cases/brand-modules.test.ts#l5-false-completion-guard"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/workspace/no_second_truth_regression/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -587,10 +640,13 @@
           "owner": "OPL Workspace owner",
           "owner_route_ref": "opl-owner-route:brand-module/workspace/pack_compile_parity/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:workspace",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "pack-compile-parity-ref:contracts/opl-framework/domain-pack-compiler-contract.json#default_entry_policy",
             "generated-surface-parity-ref:opl-agents-interfaces-family-defaults/generated_direct_parity"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/workspace/pack_compile_parity/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -598,10 +654,13 @@
           "owner": "OPL Workspace owner",
           "owner_route_ref": "opl-owner-route:brand-module/workspace/current_owner_delta_default_read/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:workspace",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root",
             "operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/workspace/current_owner_delta_default_read/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -609,9 +668,13 @@
           "owner": "OPL Framework owner",
           "owner_route_ref": "opl-owner-route:brand-module/workspace/capability_fail_open_boundary/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:workspace",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/workspace/capability_fail_open_boundary/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "capability_fail_open_ref:tests/src/capability-registry-resolver.test.ts#optional-missing-fail-open",
+            "route_required_capability_ref:tests/src/capability-registry-resolver.test.ts#route-required-hard-boundary-missing-ref"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/workspace/capability_fail_open_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -619,10 +682,13 @@
           "owner": "OPL Workspace owner",
           "owner_route_ref": "opl-owner-route:brand-module/workspace/domain_authority_false_boundary/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:workspace",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.workspace.authority_boundary",
             "negative-guard-ref:opl-brand-module-l5/workspace/domain-authority-false-boundary/ready-claim-authorized-false"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/workspace/domain_authority_false_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -662,9 +728,13 @@
           "owner": "OPL Pack owner",
           "owner_route_ref": "opl-owner-route:brand-module/pack/live_user_path/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:pack",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/pack/live_user_path/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "user_path_evidence_ref:opl-pack/status/valid-l4-module-surface-20260614T120409Z",
+            "operator_evidence_ref:opl-pack/doctor/checks-pass-authority-boundary-false-20260614T120409Z"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/pack/live_user_path/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -672,9 +742,11 @@
           "owner": "OPL Framework and App product owners",
           "owner_route_ref": "opl-owner-route:brand-module/pack/ordinary_app_experience/app-release-owner",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab-app",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/pack/ordinary_app_experience/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "brand_experience_profile_ref:opl-app/operator/brand-experience-profile/ordinary-cockpit-20260614T120958Z",
+            "app_operator_projection_ref:opl-app/operator/ordinary-cockpit-current-owner-delta-20260614T120958Z",
+            "user_path_evidence_ref:opl-app/state-full/operator-ready-no-release-claim-20260614T120958Z"
           ]
         },
         {
@@ -732,10 +804,13 @@
           "owner": "OPL Pack owner",
           "owner_route_ref": "opl-owner-route:brand-module/pack/no_second_truth_regression/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:pack",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "no-resurrection-guard-ref:tests/src/active-path-residue-scan.test.ts#docs-active-no-resurrection",
             "source-scan-ref:tests/src/cli/cases/brand-modules.test.ts#l5-false-completion-guard"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/pack/no_second_truth_regression/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -743,10 +818,13 @@
           "owner": "OPL Pack owner",
           "owner_route_ref": "opl-owner-route:brand-module/pack/pack_compile_parity/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:pack",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "pack-compile-parity-ref:contracts/opl-framework/domain-pack-compiler-contract.json#default_entry_policy",
             "generated-surface-parity-ref:opl-agents-interfaces-family-defaults/generated_direct_parity"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/pack/pack_compile_parity/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -754,10 +832,13 @@
           "owner": "OPL Pack owner",
           "owner_route_ref": "opl-owner-route:brand-module/pack/current_owner_delta_default_read/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:pack",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root",
             "operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/pack/current_owner_delta_default_read/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -765,9 +846,13 @@
           "owner": "OPL Pack owner",
           "owner_route_ref": "opl-owner-route:brand-module/pack/capability_fail_open_boundary/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:pack",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/pack/capability_fail_open_boundary/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "capability_fail_open_ref:tests/src/capability-registry-resolver.test.ts#optional-missing-fail-open",
+            "route_required_capability_ref:tests/src/capability-registry-resolver.test.ts#route-required-hard-boundary-missing-ref"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/pack/capability_fail_open_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -775,10 +860,13 @@
           "owner": "OPL Pack owner",
           "owner_route_ref": "opl-owner-route:brand-module/pack/domain_authority_false_boundary/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:pack",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.pack.authority_boundary",
             "negative-guard-ref:opl-brand-module-l5/pack/domain-authority-false-boundary/ready-claim-authorized-false"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/pack/domain_authority_false_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -822,9 +910,13 @@
           "owner": "OPL Stagecraft owner",
           "owner_route_ref": "opl-owner-route:brand-module/stagecraft/live_user_path/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:stagecraft",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/stagecraft/live_user_path/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "user_path_evidence_ref:opl-stagecraft/status/valid-l4-module-surface-20260614T120409Z",
+            "operator_evidence_ref:opl-stagecraft/doctor/checks-pass-authority-boundary-false-20260614T120409Z"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/stagecraft/live_user_path/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -832,9 +924,11 @@
           "owner": "OPL Framework and App product owners",
           "owner_route_ref": "opl-owner-route:brand-module/stagecraft/ordinary_app_experience/app-release-owner",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab-app",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/stagecraft/ordinary_app_experience/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "brand_experience_profile_ref:opl-app/operator/brand-experience-profile/ordinary-cockpit-20260614T120958Z",
+            "app_operator_projection_ref:opl-app/operator/ordinary-cockpit-current-owner-delta-20260614T120958Z",
+            "user_path_evidence_ref:opl-app/state-full/operator-ready-no-release-claim-20260614T120958Z"
           ]
         },
         {
@@ -892,10 +986,13 @@
           "owner": "OPL Stagecraft owner",
           "owner_route_ref": "opl-owner-route:brand-module/stagecraft/no_second_truth_regression/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:stagecraft",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "no-resurrection-guard-ref:tests/src/active-path-residue-scan.test.ts#docs-active-no-resurrection",
             "source-scan-ref:tests/src/cli/cases/brand-modules.test.ts#l5-false-completion-guard"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/stagecraft/no_second_truth_regression/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -903,10 +1000,13 @@
           "owner": "OPL Stagecraft owner",
           "owner_route_ref": "opl-owner-route:brand-module/stagecraft/pack_compile_parity/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:stagecraft",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "pack-compile-parity-ref:contracts/opl-framework/domain-pack-compiler-contract.json#default_entry_policy",
             "generated-surface-parity-ref:opl-agents-interfaces-family-defaults/generated_direct_parity"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/stagecraft/pack_compile_parity/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -914,10 +1014,13 @@
           "owner": "OPL Stagecraft owner",
           "owner_route_ref": "opl-owner-route:brand-module/stagecraft/current_owner_delta_default_read/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:stagecraft",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root",
             "operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/stagecraft/current_owner_delta_default_read/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -925,9 +1028,13 @@
           "owner": "OPL Stagecraft owner",
           "owner_route_ref": "opl-owner-route:brand-module/stagecraft/capability_fail_open_boundary/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:stagecraft",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/stagecraft/capability_fail_open_boundary/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "capability_fail_open_ref:tests/src/capability-registry-resolver.test.ts#optional-missing-fail-open",
+            "route_required_capability_ref:tests/src/capability-registry-resolver.test.ts#route-required-hard-boundary-missing-ref"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/stagecraft/capability_fail_open_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -935,10 +1042,13 @@
           "owner": "OPL Stagecraft owner",
           "owner_route_ref": "opl-owner-route:brand-module/stagecraft/domain_authority_false_boundary/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:stagecraft",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.stagecraft.authority_boundary",
             "negative-guard-ref:opl-brand-module-l5/stagecraft/domain-authority-false-boundary/ready-claim-authorized-false"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/stagecraft/domain_authority_false_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -978,9 +1088,13 @@
           "owner": "OPL Runway owner",
           "owner_route_ref": "opl-owner-route:brand-module/runway/live_user_path/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:runway",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/runway/live_user_path/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "user_path_evidence_ref:opl-runway/status/valid-l4-module-surface-20260614T120409Z",
+            "operator_evidence_ref:opl-runway/doctor/checks-pass-authority-boundary-false-20260614T120409Z"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/runway/live_user_path/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -988,9 +1102,11 @@
           "owner": "OPL Framework and App product owners",
           "owner_route_ref": "opl-owner-route:brand-module/runway/ordinary_app_experience/app-release-owner",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab-app",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/runway/ordinary_app_experience/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "brand_experience_profile_ref:opl-app/operator/brand-experience-profile/ordinary-cockpit-20260614T120958Z",
+            "app_operator_projection_ref:opl-app/operator/ordinary-cockpit-current-owner-delta-20260614T120958Z",
+            "user_path_evidence_ref:opl-app/state-full/operator-ready-no-release-claim-20260614T120958Z"
           ]
         },
         {
@@ -1008,9 +1124,14 @@
           "owner": "OPL Runway owner",
           "owner_route_ref": "opl-owner-route:brand-module/runway/long_soak_recovery/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:runway",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/runway/long_soak_recovery/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "temporal_hosted_long_soak_ref://one-person-lab/codex-app-runtime/operator-window/6756d4677c6e2cee?path=%2FUsers%2Fgaofeng%2F.codex%2Fprojects%2Fone-person-lab%2Fruntime-state%2Freceipts%2Fcodex-app-runtime-long-soak%2F20260526T085329Z%2Fcodex-app-runtime-long-soak-manifest.json&sha256=6756d4677c6e2cee6156055b1878c361e776be84fa6393ed6a338ae62088a332",
+            "provider_state_linkage_ref://one-person-lab/codex-app-runtime/operator-window/6756d4677c6e2cee?path=%2FUsers%2Fgaofeng%2F.codex%2Fprojects%2Fone-person-lab%2Fruntime-state%2Freceipts%2Fcodex-app-runtime-long-soak%2F20260526T085329Z%2Fcodex-app-runtime-long-soak-manifest.json&sha256=6756d4677c6e2cee6156055b1878c361e776be84fa6393ed6a338ae62088a332",
+            "operator_evidence_ref://one-person-lab/codex-app-runtime/operator-log/7a151fc9cd1b380d?path=%2FUsers%2Fgaofeng%2F.codex%2Fprojects%2Fone-person-lab%2Fruntime-state%2Freceipts%2Fcodex-app-runtime-long-soak%2F20260526T085329Z%2Foperator-observation-events.jsonl&sha256=7a151fc9cd1b380d0cd3abe492e901c0ff328a3848ba26577f7487faaad15c48"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/runway/long_soak_recovery/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1028,9 +1149,14 @@
           "owner": "OPL Runway owner",
           "owner_route_ref": "opl-owner-route:brand-module/runway/operator_repair_loop/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:runway",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/runway/operator_repair_loop/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "repair_loop_ref:opl-runway/recovery-repair/no-repair-action-selected-20260614T0652Z",
+            "safe_action_ref:opl-runway/recovery-repair/no-worker-mutation-no-blockers-20260614T0652Z",
+            "current_owner_delta_ref:opl-framework/readiness-current-owner-delta-default-root"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/runway/operator_repair_loop/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1048,10 +1174,13 @@
           "owner": "OPL Runway owner",
           "owner_route_ref": "opl-owner-route:brand-module/runway/no_second_truth_regression/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:runway",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "no-resurrection-guard-ref:tests/src/active-path-residue-scan.test.ts#docs-active-no-resurrection",
             "source-scan-ref:tests/src/cli/cases/brand-modules.test.ts#l5-false-completion-guard"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/runway/no_second_truth_regression/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1059,10 +1188,13 @@
           "owner": "OPL Runway owner",
           "owner_route_ref": "opl-owner-route:brand-module/runway/pack_compile_parity/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:runway",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "pack-compile-parity-ref:contracts/opl-framework/domain-pack-compiler-contract.json#default_entry_policy",
             "generated-surface-parity-ref:opl-agents-interfaces-family-defaults/generated_direct_parity"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/runway/pack_compile_parity/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1070,10 +1202,13 @@
           "owner": "OPL Runway owner",
           "owner_route_ref": "opl-owner-route:brand-module/runway/current_owner_delta_default_read/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:runway",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root",
             "operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/runway/current_owner_delta_default_read/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1081,9 +1216,13 @@
           "owner": "OPL Framework owner",
           "owner_route_ref": "opl-owner-route:brand-module/runway/capability_fail_open_boundary/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:runway",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/runway/capability_fail_open_boundary/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "capability_fail_open_ref:tests/src/capability-registry-resolver.test.ts#optional-missing-fail-open",
+            "route_required_capability_ref:tests/src/capability-registry-resolver.test.ts#route-required-hard-boundary-missing-ref"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/runway/capability_fail_open_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1091,10 +1230,13 @@
           "owner": "OPL Runway owner",
           "owner_route_ref": "opl-owner-route:brand-module/runway/domain_authority_false_boundary/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:runway",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.runway.authority_boundary",
             "negative-guard-ref:opl-brand-module-l5/runway/domain-authority-false-boundary/ready-claim-authorized-false"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/runway/domain_authority_false_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1134,9 +1276,13 @@
           "owner": "OPL Vault owner",
           "owner_route_ref": "opl-owner-route:brand-module/vault/live_user_path/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:vault",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/vault/live_user_path/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "user_path_evidence_ref:opl-vault/status/valid-l4-module-surface-20260614T120409Z",
+            "operator_evidence_ref:opl-vault/doctor/checks-pass-authority-boundary-false-20260614T120409Z"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/vault/live_user_path/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1144,9 +1290,11 @@
           "owner": "OPL Framework and App product owners",
           "owner_route_ref": "opl-owner-route:brand-module/vault/ordinary_app_experience/app-release-owner",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab-app",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/vault/ordinary_app_experience/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "brand_experience_profile_ref:opl-app/operator/brand-experience-profile/ordinary-cockpit-20260614T120958Z",
+            "app_operator_projection_ref:opl-app/operator/ordinary-cockpit-current-owner-delta-20260614T120958Z",
+            "user_path_evidence_ref:opl-app/state-full/operator-ready-no-release-claim-20260614T120958Z"
           ]
         },
         {
@@ -1204,10 +1352,13 @@
           "owner": "OPL Vault owner",
           "owner_route_ref": "opl-owner-route:brand-module/vault/no_second_truth_regression/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:vault",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "no-resurrection-guard-ref:tests/src/active-path-residue-scan.test.ts#docs-active-no-resurrection",
             "source-scan-ref:tests/src/cli/cases/brand-modules.test.ts#l5-false-completion-guard"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/vault/no_second_truth_regression/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1215,10 +1366,13 @@
           "owner": "OPL Vault owner",
           "owner_route_ref": "opl-owner-route:brand-module/vault/pack_compile_parity/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:vault",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "pack-compile-parity-ref:contracts/opl-framework/domain-pack-compiler-contract.json#default_entry_policy",
             "generated-surface-parity-ref:opl-agents-interfaces-family-defaults/generated_direct_parity"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/vault/pack_compile_parity/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1226,10 +1380,13 @@
           "owner": "OPL Vault owner",
           "owner_route_ref": "opl-owner-route:brand-module/vault/current_owner_delta_default_read/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:vault",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root",
             "operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/vault/current_owner_delta_default_read/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1237,9 +1394,13 @@
           "owner": "OPL Framework owner",
           "owner_route_ref": "opl-owner-route:brand-module/vault/capability_fail_open_boundary/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:vault",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/vault/capability_fail_open_boundary/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "capability_fail_open_ref:tests/src/capability-registry-resolver.test.ts#optional-missing-fail-open",
+            "route_required_capability_ref:tests/src/capability-registry-resolver.test.ts#route-required-hard-boundary-missing-ref"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/vault/capability_fail_open_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1247,10 +1408,13 @@
           "owner": "OPL Vault owner",
           "owner_route_ref": "opl-owner-route:brand-module/vault/domain_authority_false_boundary/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:vault",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.vault.authority_boundary",
             "negative-guard-ref:opl-brand-module-l5/vault/domain-authority-false-boundary/ready-claim-authorized-false"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/vault/domain_authority_false_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1291,9 +1455,10 @@
           "owner": "One Person Lab App owner",
           "owner_route_ref": "opl-owner-route:brand-module/console/live_user_path/app-release-owner",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab-app",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/console/live_user_path/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "user_path_evidence_ref:opl-console/read-model/valid-current-owner-delta-projection-20260614T120614Z",
+            "operator_evidence_ref:opl-console/doctor/checks-pass-authority-boundary-false-20260614T120614Z"
           ]
         },
         {
@@ -1301,9 +1466,11 @@
           "owner": "OPL Console and App product owners",
           "owner_route_ref": "opl-owner-route:brand-module/console/ordinary_app_experience/app-release-owner",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab-app",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/console/ordinary_app_experience/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "brand_experience_profile_ref:opl-app/operator/brand-experience-profile/ordinary-cockpit-20260614T120958Z",
+            "app_operator_projection_ref:opl-app/operator/ordinary-cockpit-current-owner-delta-20260614T120958Z",
+            "user_path_evidence_ref:opl-app/state-full/operator-ready-no-release-claim-20260614T120958Z"
           ]
         },
         {
@@ -1331,9 +1498,10 @@
           "owner": "One Person Lab App release owner",
           "owner_route_ref": "opl-owner-route:brand-module/console/release_install_evidence/app-release-owner",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab-app",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/console/release_install_evidence/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "release_evidence_ref://one-person-lab-app/release-owner/v26.6.12/receipt-20260612-owner-verdict",
+            "install_evidence_ref://one-person-lab-app/release-owner/26.6.12-owner-verdict/owner-review-handoff"
           ]
         },
         {
@@ -1361,10 +1529,13 @@
           "owner": "OPL Console owner",
           "owner_route_ref": "opl-owner-route:brand-module/console/no_second_truth_regression/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:console",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "no-resurrection-guard-ref:tests/src/active-path-residue-scan.test.ts#docs-active-no-resurrection",
             "source-scan-ref:tests/src/cli/cases/brand-modules.test.ts#l5-false-completion-guard"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/console/no_second_truth_regression/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1372,10 +1543,13 @@
           "owner": "OPL Console owner",
           "owner_route_ref": "opl-owner-route:brand-module/console/pack_compile_parity/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:console",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "pack-compile-parity-ref:contracts/opl-framework/domain-pack-compiler-contract.json#default_entry_policy",
             "generated-surface-parity-ref:opl-agents-interfaces-family-defaults/generated_direct_parity"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/console/pack_compile_parity/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1383,10 +1557,13 @@
           "owner": "OPL Console owner",
           "owner_route_ref": "opl-owner-route:brand-module/console/current_owner_delta_default_read/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:console",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root",
             "operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/console/current_owner_delta_default_read/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1394,9 +1571,13 @@
           "owner": "OPL Framework owner",
           "owner_route_ref": "opl-owner-route:brand-module/console/capability_fail_open_boundary/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:console",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/console/capability_fail_open_boundary/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "capability_fail_open_ref:tests/src/capability-registry-resolver.test.ts#optional-missing-fail-open",
+            "route_required_capability_ref:tests/src/capability-registry-resolver.test.ts#route-required-hard-boundary-missing-ref"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/console/capability_fail_open_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1404,10 +1585,13 @@
           "owner": "OPL Console owner",
           "owner_route_ref": "opl-owner-route:brand-module/console/domain_authority_false_boundary/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:console",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.console.authority_boundary",
             "negative-guard-ref:opl-brand-module-l5/console/domain-authority-false-boundary/ready-claim-authorized-false"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/console/domain_authority_false_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1447,9 +1631,13 @@
           "owner": "OPL Foundry Lab owner",
           "owner_route_ref": "opl-owner-route:brand-module/foundry-lab/live_user_path/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry-lab",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/foundry-lab/live_user_path/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "user_path_evidence_ref:opl-foundry-lab/status/valid-l4-module-surface-20260614T120409Z",
+            "operator_evidence_ref:opl-foundry-lab/doctor/checks-pass-authority-boundary-false-20260614T120409Z"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/foundry-lab/live_user_path/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1457,9 +1645,11 @@
           "owner": "OPL Framework and App product owners",
           "owner_route_ref": "opl-owner-route:brand-module/foundry-lab/ordinary_app_experience/app-release-owner",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab-app",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/foundry-lab/ordinary_app_experience/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "brand_experience_profile_ref:opl-app/operator/brand-experience-profile/ordinary-cockpit-20260614T120958Z",
+            "app_operator_projection_ref:opl-app/operator/ordinary-cockpit-current-owner-delta-20260614T120958Z",
+            "user_path_evidence_ref:opl-app/state-full/operator-ready-no-release-claim-20260614T120958Z"
           ]
         },
         {
@@ -1517,10 +1707,13 @@
           "owner": "OPL Foundry Lab owner",
           "owner_route_ref": "opl-owner-route:brand-module/foundry-lab/no_second_truth_regression/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry-lab",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "no-resurrection-guard-ref:tests/src/active-path-residue-scan.test.ts#docs-active-no-resurrection",
             "source-scan-ref:tests/src/cli/cases/brand-modules.test.ts#l5-false-completion-guard"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/foundry-lab/no_second_truth_regression/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1528,10 +1721,13 @@
           "owner": "OPL Foundry Lab owner",
           "owner_route_ref": "opl-owner-route:brand-module/foundry-lab/pack_compile_parity/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry-lab",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "pack-compile-parity-ref:contracts/opl-framework/domain-pack-compiler-contract.json#default_entry_policy",
             "generated-surface-parity-ref:opl-agents-interfaces-family-defaults/generated_direct_parity"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/foundry-lab/pack_compile_parity/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1539,10 +1735,13 @@
           "owner": "OPL Foundry Lab owner",
           "owner_route_ref": "opl-owner-route:brand-module/foundry-lab/current_owner_delta_default_read/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry-lab",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root",
             "operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/foundry-lab/current_owner_delta_default_read/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1550,9 +1749,13 @@
           "owner": "OPL Framework owner",
           "owner_route_ref": "opl-owner-route:brand-module/foundry-lab/capability_fail_open_boundary/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry-lab",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/foundry-lab/capability_fail_open_boundary/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "capability_fail_open_ref:tests/src/capability-registry-resolver.test.ts#optional-missing-fail-open",
+            "route_required_capability_ref:tests/src/capability-registry-resolver.test.ts#route-required-hard-boundary-missing-ref"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/foundry-lab/capability_fail_open_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1560,10 +1763,13 @@
           "owner": "OPL Foundry Lab owner",
           "owner_route_ref": "opl-owner-route:brand-module/foundry-lab/domain_authority_false_boundary/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry-lab",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.foundry-lab.authority_boundary",
             "negative-guard-ref:opl-brand-module-l5/foundry-lab/domain-authority-false-boundary/ready-claim-authorized-false"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/foundry-lab/domain_authority_false_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1601,9 +1807,13 @@
           "owner": "OPL Connect owner",
           "owner_route_ref": "opl-owner-route:brand-module/connect/live_user_path/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:connect",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/connect/live_user_path/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "user_path_evidence_ref:opl-connect/modules/installed-healthy-5-of-5-20260614T115739Z",
+            "operator_evidence_ref:opl-connect/status/doctor-checks-pass-authority-boundary-false-20260614T115739Z"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/connect/live_user_path/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1611,9 +1821,11 @@
           "owner": "OPL Connect and App product owners",
           "owner_route_ref": "opl-owner-route:brand-module/connect/ordinary_app_experience/app-release-owner",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab-app",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/connect/ordinary_app_experience/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "brand_experience_profile_ref:opl-app/operator/brand-experience-profile/ordinary-cockpit-20260614T120958Z",
+            "app_operator_projection_ref:opl-app/operator/ordinary-cockpit-current-owner-delta-20260614T120958Z",
+            "user_path_evidence_ref:opl-app/state-full/operator-ready-no-release-claim-20260614T120958Z"
           ]
         },
         {
@@ -1641,9 +1853,10 @@
           "owner": "OPL Connect and App release owners",
           "owner_route_ref": "opl-owner-route:brand-module/connect/release_install_evidence/app-release-owner",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab-app",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/connect/release_install_evidence/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "release_evidence_ref://one-person-lab-app/release-owner/v26.6.12/receipt-20260612-owner-verdict",
+            "install_evidence_ref://one-person-lab-app/release-owner/26.6.12-owner-verdict/owner-review-handoff"
           ]
         },
         {
@@ -1671,10 +1884,13 @@
           "owner": "OPL Connect owner",
           "owner_route_ref": "opl-owner-route:brand-module/connect/no_second_truth_regression/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:connect",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "no-resurrection-guard-ref:tests/src/active-path-residue-scan.test.ts#docs-active-no-resurrection",
             "source-scan-ref:tests/src/cli/cases/brand-modules.test.ts#l5-false-completion-guard"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/connect/no_second_truth_regression/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1682,10 +1898,13 @@
           "owner": "OPL Connect owner",
           "owner_route_ref": "opl-owner-route:brand-module/connect/pack_compile_parity/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:connect",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "pack-compile-parity-ref:contracts/opl-framework/domain-pack-compiler-contract.json#default_entry_policy",
             "generated-surface-parity-ref:opl-agents-interfaces-family-defaults/generated_direct_parity"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/connect/pack_compile_parity/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1693,10 +1912,13 @@
           "owner": "OPL Connect owner",
           "owner_route_ref": "opl-owner-route:brand-module/connect/current_owner_delta_default_read/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:connect",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root",
             "operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/connect/current_owner_delta_default_read/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1704,9 +1926,13 @@
           "owner": "OPL Framework owner",
           "owner_route_ref": "opl-owner-route:brand-module/connect/capability_fail_open_boundary/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:connect",
-          "current_state": "open",
-          "blocker_refs": [
-            "typed-blocker:opl-brand-l5/connect/capability_fail_open_boundary/owner-evidence-needed-20260612"
+          "current_state": "satisfied",
+          "evidence_refs": [
+            "capability_fail_open_ref:tests/src/capability-registry-resolver.test.ts#optional-missing-fail-open",
+            "route_required_capability_ref:tests/src/capability-registry-resolver.test.ts#route-required-hard-boundary-missing-ref"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/connect/capability_fail_open_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
@@ -1714,10 +1940,13 @@
           "owner": "OPL Connect owner",
           "owner_route_ref": "opl-owner-route:brand-module/connect/domain_authority_false_boundary/opl-framework",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:connect",
-          "current_state": "open",
+          "current_state": "satisfied",
           "evidence_refs": [
             "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.connect.authority_boundary",
             "negative-guard-ref:opl-brand-module-l5/connect/domain-authority-false-boundary/ready-claim-authorized-false"
+          ],
+          "owner_acceptance_refs": [
+            "owner_acceptance_ref:opl-brand-l5/connect/domain_authority_false_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {

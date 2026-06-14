@@ -458,21 +458,25 @@ test('framework operating maturity projects owner evidence ledger refs without r
     assert.equal(
       brandWorkOrder.next_evidence_action,
       'record_or_resolve_brand_module_l5_owner_evidence_for_missing_module_requirements',
-    );
-    assert.equal(brandWorkOrder.owner_action_checklist.length, 10);
-    assert.equal(brandWorkOrder.missing_owner_action_ids.length, 90);
-    assert.equal(
-      brandWorkOrder.missing_owner_action_ids.includes('w7-brand-module-l5-charter-live_user_path'),
-      true,
-    );
-    assert.equal(
-      brandWorkOrder.missing_owner_action_ids.includes('w7-brand-module-l5-runway-long_soak_recovery'),
-      true,
-    );
-    assert.equal(
-      brandWorkOrder.missing_owner_action_ids.includes('w7-brand-module-l5-connect-release_install_evidence'),
-      true,
-    );
+      );
+      assert.equal(brandWorkOrder.owner_action_checklist.length, 10);
+      assert.equal(brandWorkOrder.missing_owner_action_ids.length, 56);
+      assert.equal(
+        brandWorkOrder.missing_owner_action_ids.includes('w7-brand-module-l5-charter-live_user_path'),
+        false,
+      );
+      assert.equal(
+        brandWorkOrder.missing_owner_action_ids.includes('w7-brand-module-l5-charter-cross_agent_scaleout'),
+        true,
+      );
+      assert.equal(
+        brandWorkOrder.missing_owner_action_ids.includes('w7-brand-module-l5-runway-long_soak_recovery'),
+        false,
+      );
+      assert.equal(
+        brandWorkOrder.missing_owner_action_ids.includes('w7-brand-module-l5-connect-release_install_evidence'),
+        false,
+      );
     assert.equal(
       brandWorkOrder.missing_owner_action_ids.includes(
         'w7-brand-module-l5-charter-current_owner_delta_default_read',
@@ -481,47 +485,59 @@ test('framework operating maturity projects owner evidence ledger refs without r
     );
     const charterBrandChecklist = brandWorkOrder.owner_action_checklist.find(
       (entry: { module_id: string }) => entry.module_id === 'charter',
-    );
-    assert.equal(charterBrandChecklist.status, 'evidence_required');
-    assert.equal(charterBrandChecklist.l5_can_be_claimed, false);
-    assert.equal(charterBrandChecklist.route_work_order_count, 13);
-    assert.equal(charterBrandChecklist.owner_action_required_count, 9);
-    assert.equal(charterBrandChecklist.missing_owner_evidence_action_count, 0);
-    assert.equal(charterBrandChecklist.typed_blocker_action_count, 9);
-    assert.equal(charterBrandChecklist.observed_refs_not_l5_claim_count, 4);
-    assert.equal(charterBrandChecklist.owner_followthrough_required, true);
-    assert.equal(charterBrandChecklist.owner_followthrough_required_count, 9);
-    assert.equal(charterBrandChecklist.missing_owner_evidence_requirement_count, 0);
-    assert.equal(charterBrandChecklist.typed_blocker_followthrough_requirement_count, 9);
-    assert.equal(charterBrandChecklist.observed_refs_not_l5_claim_requirement_count, 4);
-    assert.equal(charterBrandChecklist.observed_ref_requirement_count, 13);
-    assert.equal(charterBrandChecklist.open_requirement_count, 12);
-    assert.equal(charterBrandChecklist.blocked_requirement_count, 1);
-    assert.equal(charterBrandChecklist.missing_requirement_class_ids.length, 9);
-    assert.equal(
-      charterBrandChecklist.missing_requirement_action_ids.includes(
-        'w7-brand-module-l5-charter-live_user_path',
-      ),
-      true,
-    );
+      );
+      assert.equal(charterBrandChecklist.status, 'evidence_required');
+      assert.equal(charterBrandChecklist.l5_can_be_claimed, false);
+      assert.equal(charterBrandChecklist.route_work_order_count, 13);
+      assert.equal(charterBrandChecklist.owner_action_required_count, 6);
+      assert.equal(charterBrandChecklist.missing_owner_evidence_action_count, 0);
+      assert.equal(charterBrandChecklist.typed_blocker_action_count, 6);
+      assert.equal(charterBrandChecklist.observed_refs_not_l5_claim_count, 7);
+      assert.equal(charterBrandChecklist.owner_followthrough_required, true);
+      assert.equal(charterBrandChecklist.owner_followthrough_required_count, 6);
+      assert.equal(charterBrandChecklist.missing_owner_evidence_requirement_count, 0);
+      assert.equal(charterBrandChecklist.typed_blocker_followthrough_requirement_count, 6);
+      assert.equal(charterBrandChecklist.observed_refs_not_l5_claim_requirement_count, 7);
+      assert.equal(charterBrandChecklist.observed_ref_requirement_count, 13);
+      assert.equal(charterBrandChecklist.open_requirement_count, 5);
+      assert.equal(charterBrandChecklist.blocked_requirement_count, 1);
+      assert.equal(charterBrandChecklist.missing_requirement_class_ids.length, 6);
+      assert.equal(
+        charterBrandChecklist.missing_requirement_action_ids.includes(
+          'w7-brand-module-l5-charter-live_user_path',
+        ),
+        false,
+      );
+      assert.equal(
+        charterBrandChecklist.missing_requirement_action_ids.includes(
+          'w7-brand-module-l5-charter-cross_agent_scaleout',
+        ),
+        true,
+      );
     assert.equal(
       charterBrandChecklist.missing_requirement_action_ids.includes(
         'w7-brand-module-l5-charter-current_owner_delta_default_read',
       ),
       false,
-    );
-    assert.deepEqual(charterBrandChecklist.missing_owner_evidence_action_ids, []);
-    assert.equal(charterBrandChecklist.typed_blocker_action_ids.length, 9);
-    assert.equal(charterBrandChecklist.owner_followthrough_work_order_ids.length, 9);
-    assert.equal(charterBrandChecklist.typed_blocker_followthrough_work_order_ids.length, 9);
-    assert.equal(
-      charterBrandChecklist.typed_blocker_followthrough_work_order_ids.includes(
-        'w7-brand-module-l5-charter-live_user_path',
-      ),
-      true,
-    );
-    assert.equal(charterBrandChecklist.observed_refs_not_l5_claim_action_ids.length, 4);
-    assert.equal(charterBrandChecklist.observed_refs_not_l5_claim_work_order_ids.length, 4);
+      );
+      assert.deepEqual(charterBrandChecklist.missing_owner_evidence_action_ids, []);
+      assert.equal(charterBrandChecklist.typed_blocker_action_ids.length, 6);
+      assert.equal(charterBrandChecklist.owner_followthrough_work_order_ids.length, 6);
+      assert.equal(charterBrandChecklist.typed_blocker_followthrough_work_order_ids.length, 6);
+      assert.equal(
+        charterBrandChecklist.typed_blocker_followthrough_work_order_ids.includes(
+          'w7-brand-module-l5-charter-live_user_path',
+        ),
+        false,
+      );
+      assert.equal(
+        charterBrandChecklist.typed_blocker_followthrough_work_order_ids.includes(
+          'w7-brand-module-l5-charter-cross_agent_scaleout',
+        ),
+        true,
+      );
+      assert.equal(charterBrandChecklist.observed_refs_not_l5_claim_action_ids.length, 7);
+      assert.equal(charterBrandChecklist.observed_refs_not_l5_claim_work_order_ids.length, 7);
     assert.equal(
       charterBrandChecklist.observed_refs_not_l5_claim_action_ids.includes(
         'w7-brand-module-l5-charter-current_owner_delta_default_read',
@@ -532,12 +548,12 @@ test('framework operating maturity projects owner evidence ledger refs without r
       charterBrandChecklist.next_followthrough_action,
       'resolve_typed_blocker_or_record_owner_acceptance_ref',
     );
-    assert.equal(
-      charterBrandChecklist.next_followthrough_work_order_id,
-      'w7-brand-module-l5-charter-live_user_path',
-    );
-    assert.equal(charterBrandChecklist.next_work_order_id, 'w7-brand-module-l5-charter-live_user_path');
-    assert.equal(charterBrandChecklist.next_evidence_class_id, 'live_user_path');
+      assert.equal(
+        charterBrandChecklist.next_followthrough_work_order_id,
+        'w7-brand-module-l5-charter-cross_agent_scaleout',
+      );
+      assert.equal(charterBrandChecklist.next_work_order_id, 'w7-brand-module-l5-charter-cross_agent_scaleout');
+      assert.equal(charterBrandChecklist.next_evidence_class_id, 'cross_agent_scaleout');
     assert.equal(
       charterBrandChecklist.next_owner_repo,
       '/Users/gaofeng/workspace/one-person-lab#brand-module:charter',
@@ -587,26 +603,26 @@ test('framework operating maturity projects owner evidence ledger refs without r
         .brand_module_l5_requirement_work_order_count,
       130,
     );
-    assert.equal(
-      maturity.foundry_agent_os_production_evidence_gate.summary
-        .brand_module_l5_actionable_work_order_count,
-      90,
-    );
+      assert.equal(
+        maturity.foundry_agent_os_production_evidence_gate.summary
+          .brand_module_l5_actionable_work_order_count,
+        56,
+      );
     assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.summary
         .brand_module_l5_missing_owner_evidence_work_order_count,
       0,
     );
-    assert.equal(
-      maturity.foundry_agent_os_production_evidence_gate.summary
-        .brand_module_l5_typed_blocker_recorded_work_order_count,
-      90,
-    );
-    assert.equal(
-      maturity.foundry_agent_os_production_evidence_gate.summary
-        .brand_module_l5_observed_refs_not_l5_claim_work_order_count,
-      40,
-    );
+      assert.equal(
+        maturity.foundry_agent_os_production_evidence_gate.summary
+          .brand_module_l5_typed_blocker_recorded_work_order_count,
+        56,
+      );
+      assert.equal(
+        maturity.foundry_agent_os_production_evidence_gate.summary
+          .brand_module_l5_observed_refs_not_l5_claim_work_order_count,
+        74,
+      );
     assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.summary
         .brand_module_l5_typed_blocker_ready_work_order_count,
@@ -617,41 +633,41 @@ test('framework operating maturity projects owner evidence ledger refs without r
         .brand_module_l5_owner_acceptance_required_work_order_count,
       130,
     );
-    assert.equal(
-      maturity.foundry_agent_os_production_evidence_gate.summary
-        .brand_module_l5_existing_evidence_ref_work_order_count,
-      40,
-    );
-    assert.equal(
-      maturity.foundry_agent_os_production_evidence_gate.summary
-        .brand_module_l5_existing_blocker_ref_work_order_count,
-      90,
-    );
+      assert.equal(
+        maturity.foundry_agent_os_production_evidence_gate.summary
+          .brand_module_l5_existing_evidence_ref_work_order_count,
+        74,
+      );
+      assert.equal(
+        maturity.foundry_agent_os_production_evidence_gate.summary
+          .brand_module_l5_existing_blocker_ref_work_order_count,
+        56,
+      );
     assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.summary
         .brand_module_l5_observed_ref_work_order_count,
       130,
     );
-    assert.equal(
-      maturity.foundry_agent_os_production_evidence_gate.summary
-        .brand_module_l5_owner_action_id_count,
-      90,
-    );
+      assert.equal(
+        maturity.foundry_agent_os_production_evidence_gate.summary
+          .brand_module_l5_owner_action_id_count,
+        56,
+      );
     assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.summary
         .brand_module_l5_missing_owner_evidence_action_id_count,
       0,
     );
-    assert.equal(
-      maturity.foundry_agent_os_production_evidence_gate.summary
-        .brand_module_l5_typed_blocker_action_id_count,
-      90,
-    );
-    assert.equal(
-      maturity.foundry_agent_os_production_evidence_gate.summary
-        .brand_module_l5_observed_refs_not_l5_claim_action_id_count,
-      40,
-    );
+      assert.equal(
+        maturity.foundry_agent_os_production_evidence_gate.summary
+          .brand_module_l5_typed_blocker_action_id_count,
+        56,
+      );
+      assert.equal(
+        maturity.foundry_agent_os_production_evidence_gate.summary
+          .brand_module_l5_observed_refs_not_l5_claim_action_id_count,
+        74,
+      );
     assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.summary
         .brand_module_l5_all_requirement_work_order_id_count,
@@ -671,10 +687,10 @@ test('framework operating maturity projects owner evidence ledger refs without r
       charterLivePathWorkOrder.work_order_id,
       'w7-brand-module-l5-charter-live_user_path',
     );
-    assert.equal(
-      charterLivePathWorkOrder.owner_evidence_closure_state,
-      'owner_typed_blocker_recorded',
-    );
+      assert.equal(
+        charterLivePathWorkOrder.owner_evidence_closure_state,
+        'owner_evidence_recorded_not_l5_claim',
+      );
     assert.equal(
       charterLivePathWorkOrder.owner_repo,
       '/Users/gaofeng/workspace/one-person-lab#brand-module:charter',
@@ -787,10 +803,11 @@ test('framework operating maturity projects owner evidence ledger refs without r
       'current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root',
       'operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta',
     ]);
-    assert.deepEqual(charterOwnerDeltaWorkOrder.observed_ref_shapes, [
-      'current_owner_delta_ref',
-      'operator_default_read_ref',
-    ]);
+      assert.deepEqual(charterOwnerDeltaWorkOrder.observed_ref_shapes, [
+        'current_owner_delta_ref',
+        'operator_default_read_ref',
+        'owner_acceptance_ref',
+      ]);
     assert.equal(
       charterOwnerDeltaWorkOrder.owner_evidence_closure_state,
       'owner_evidence_recorded_not_l5_claim',
@@ -801,21 +818,25 @@ test('framework operating maturity projects owner evidence ledger refs without r
         (entry: { module_id: string; class_id: string }) =>
           entry.module_id === 'runway' && entry.class_id === 'long_soak_recovery',
       );
-    assert.equal(runwayLongSoakWorkOrder.observed_receipt_refs[0], l5Record.receipt_ref);
-    assert.deepEqual([...runwayLongSoakWorkOrder.observed_ref_shapes].sort(), [
-      'ledger_receipt_ref',
-      'typed_blocker_ref',
-    ]);
-    assert.equal(runwayLongSoakWorkOrder.observed_typed_blocker_ref_count, 2);
-    assert.equal(runwayLongSoakWorkOrder.blocker_state, 'typed_blocker_recorded');
-    assert.equal(
-      runwayLongSoakWorkOrder.owner_evidence_closure_state,
-      'owner_typed_blocker_recorded',
-    );
-    assert.equal(
-      runwayLongSoakWorkOrder.l5_claim_status,
-      'owner_typed_blocker_recorded_not_l5_claimed',
-    );
+      assert.equal(runwayLongSoakWorkOrder.observed_receipt_refs[0], l5Record.receipt_ref);
+      assert.deepEqual([...runwayLongSoakWorkOrder.observed_ref_shapes].sort(), [
+        'evidence_ref',
+        'ledger_receipt_ref',
+        'long_soak_ref',
+        'operator_evidence_ref',
+        'owner_acceptance_ref',
+        'typed_blocker_ref',
+      ]);
+      assert.equal(runwayLongSoakWorkOrder.observed_typed_blocker_ref_count, 1);
+      assert.equal(runwayLongSoakWorkOrder.blocker_state, 'refs_observed_not_l5_claim');
+      assert.equal(
+        runwayLongSoakWorkOrder.owner_evidence_closure_state,
+        'owner_evidence_recorded_not_l5_claim',
+      );
+      assert.equal(
+        runwayLongSoakWorkOrder.l5_claim_status,
+        'owner_evidence_refs_observed_not_l5_claimed',
+      );
     assert.equal(runwayLongSoakWorkOrder.ready_claim_authorized, false);
     assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.summary.closed_by_opl,

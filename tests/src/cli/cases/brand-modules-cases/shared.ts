@@ -74,6 +74,7 @@ export type L5Route = {
   verification_command: string;
   accepted_ref_shapes: string[];
   existing_evidence_refs: string[];
+  existing_owner_acceptance_refs: string[];
   existing_blocker_refs: string[];
   observed_evidence_refs: string[];
   observed_ref_shapes: string[];
@@ -99,6 +100,7 @@ export type L5Module = {
   evidence_required: boolean;
   l5_can_be_claimed: boolean;
   l5_completion_status: string;
+  satisfied_requirement_count: number;
   open_requirement_count: number;
   blocked_requirement_count: number;
   owner_followthrough_summary: {
