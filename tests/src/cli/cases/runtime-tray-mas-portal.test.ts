@@ -170,6 +170,23 @@ test('runtime snapshot consumes MAS OPL workbench projection as read-only study 
     assert.equal(item.study_workbench.study_id, '002-dm-china-us-mortality-attribution');
     assert.equal(item.study_workbench.display_title, 'DM mortality attribution');
     assert.equal(item.study_workbench.macro_state, 'running');
+    assert.equal(item.current_work_unit.status, 'executable_owner_action');
+    assert.equal(item.current_work_unit.current_owner, 'write');
+    assert.equal(item.current_work_unit.stage_id, 'publication_supervision');
+    assert.equal(item.current_work_unit.action_type, 'run_quality_repair_batch');
+    assert.equal(item.current_work_unit.work_unit_id, 'medical_prose_write_repair');
+    assert.equal(
+      item.current_work_unit.work_unit_fingerprint,
+      'publication-blockers::0915410f804b3697',
+    );
+    assert.equal(
+      item.current_work_unit.currentness_basis.truth_epoch,
+      'truth-event-000035-39f0b8e96689a623',
+    );
+    assert.equal(item.current_work_unit.authority_boundary.can_write_domain_truth, false);
+    assert.equal(item.current_work_unit.authority_boundary.can_create_owner_receipt, false);
+    assert.equal(item.current_work_unit.authority_boundary.can_create_typed_blocker, false);
+    assert.equal(item.current_work_unit.authority_boundary.can_claim_domain_ready, false);
     assert.equal(item.study_workbench.terminal.mode, 'read_only_tail');
     assert.equal(item.study_workbench.links.progress_payload_ref, 'artifacts/runtime/progress_portal/studies/002-dm-china-us-mortality-attribution/latest.json');
     assert.deepEqual(item.study_workbench.links.artifact_refs, [
@@ -195,6 +212,105 @@ test('runtime snapshot consumes MAS OPL workbench projection as read-only study 
     assert.doesNotMatch(JSON.stringify(item.recommended_commands), /progress-projection/);
     assert.equal(item.workbench_projection_source_refs.some((ref: { role: string }) => ref.role === 'mas_opl_runtime_workbench_projection'), true);
     assert.equal(item.source_refs.some((ref: { role: string }) => ref.role === 'mas_opl_runtime_workbench_projection'), true);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime snapshot fallback study-progress current work-unit typed blockers enter attention lane', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-cwu-state-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-cwu-workspace-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const profileDir = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles');
+  const profilePath = path.join(profileDir, 'dm.workspace.toml');
+  const studyId = '004-dpcc-longitudinal-care-inertia-intensification-gap';
+  const studyRoot = path.join(workspaceRoot, 'studies', studyId);
+  const runtimeStatusPath = path.join(studyRoot, 'artifacts', 'runtime', 'runtime_status_summary.json');
+  const runtimeSupervisionPath = path.join(studyRoot, 'artifacts', 'runtime', 'runtime_supervision', 'latest.json');
+  const studyProgressPath = path.join(workspaceRoot, 'ops', 'medautoscience', 'bin', 'study-progress');
+
+  fs.mkdirSync(profileDir, { recursive: true });
+  fs.writeFileSync(profilePath, 'workspace_name = "dm"\n');
+  fs.mkdirSync(path.dirname(runtimeStatusPath), { recursive: true });
+  fs.mkdirSync(path.dirname(runtimeSupervisionPath), { recursive: true });
+  fs.writeFileSync(runtimeStatusPath, `${JSON.stringify({
+    generated_at: '2026-06-14T10:00:00.000Z',
+    status_summary: '当前 owner work unit 是 OPL typed blocker。',
+    health_status: 'blocked',
+    next_action_summary: '补齐 closeout 或 route-back evidence。',
+  }, null, 2)}\n`);
+  fs.writeFileSync(runtimeSupervisionPath, `${JSON.stringify({
+    recorded_at: '2026-06-14T10:00:01.000Z',
+    health_status: 'blocked',
+    quest_status: 'blocked',
+    active_run_id: null,
+  }, null, 2)}\n`);
+  fs.mkdirSync(path.dirname(studyProgressPath), { recursive: true });
+  fs.writeFileSync(studyProgressPath, `#!/usr/bin/env node
+const payload = {
+  generated_at: '2026-06-14T10:00:02.000Z',
+  truth_epoch: 'truth-event-000006-fixture',
+  runtime_health_epoch: 'runtime-health-event-000008-fixture',
+  current_work_unit: {
+    status: 'typed_blocker',
+    current_owner: 'one-person-lab',
+    owner: 'one-person-lab',
+    stage_id: 'managed_opl_runtime_owner_handoff_gap',
+    action_type: 'return_to_ai_reviewer_workflow',
+    work_unit_id: 'truth-snapshot::fixture',
+    work_unit_fingerprint: 'truth-snapshot::fixture',
+    currentness_basis: {
+      truth_epoch: 'truth-event-000006-fixture',
+      runtime_health_epoch: 'runtime-health-event-000008-fixture'
+    }
+  },
+  current_execution_envelope: {
+    state_kind: 'typed_blocker',
+    owner: 'one-person-lab'
+  }
+};
+process.stdout.write(JSON.stringify(payload));
+`);
+  fs.chmodSync(studyProgressPath, 0o755);
+
+  try {
+    bindMasWorkspace({ stateRoot, fixtureContractsRoot, workspaceRoot, profilePath });
+    const output = runCli(['runtime', 'snapshot'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_FAMILY_RUNTIME_PROVIDER: '',
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+      OPL_TEMPORAL_WORKER_STATUS: '',
+      OPL_TEMPORAL_WORKER_ENABLED: '',
+    });
+    const snapshot = output.runtime_tray_snapshot;
+    const item = snapshot.attention_items.find((entry: { study_id?: string }) =>
+      entry.study_id === studyId
+    );
+
+    assert.ok(item);
+    assert.equal(item.item_id, `medautoscience:study:${studyId}`);
+    assert.equal(item.status_label, 'Typed blocker');
+    assert.equal(item.action_owner, 'opl');
+    assert.equal(item.action_kind, 'quality_gate');
+    assert.equal(item.current_work_unit.status, 'typed_blocker');
+    assert.equal(item.current_work_unit.current_owner, 'one-person-lab');
+    assert.equal(item.current_work_unit.work_unit_id, 'truth-snapshot::fixture');
+    assert.equal(item.current_work_unit.source_projection_ref, 'mas_study_progress/current_work_unit');
+    assert.equal(item.study_progress_current_work_unit_diagnostic.status, 'fresh');
+    assert.equal(
+      item.source_refs.some((ref: { ref: string; role: string }) =>
+        ref.ref === studyProgressPath && ref.role === 'mas_study_progress_probe'
+      ),
+      true,
+    );
+    assert.equal(
+      snapshot.running_items.some((entry: { study_id?: string }) => entry.study_id === studyId),
+      false,
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
@@ -337,6 +453,22 @@ function workbenchPortalPayload(workspaceRoot: string, profilePath: string) {
           source_refs: [
             path.join(workspaceRoot, 'studies', '002-dm-china-us-mortality-attribution', 'artifacts', 'runtime', 'runtime_supervision', 'latest.json'),
           ],
+          current_work_unit: {
+            status: 'executable_owner_action',
+            stage_id: 'publication_supervision',
+            owner: 'write',
+            current_owner: 'write',
+            action_type: 'run_quality_repair_batch',
+            work_unit_id: 'medical_prose_write_repair',
+            work_unit_fingerprint: 'publication-blockers::0915410f804b3697',
+            currentness_basis: {
+              truth_epoch: 'truth-event-000035-39f0b8e96689a623',
+              runtime_health_epoch: 'runtime-health-event-006839-47eeac962614068d',
+            },
+            source_refs: [
+              'studies/002-dm-china-us-mortality-attribution/artifacts/runtime/study_progress/latest.json',
+            ],
+          },
           links: {
             progress_payload_ref: 'artifacts/runtime/progress_portal/studies/002-dm-china-us-mortality-attribution/latest.json',
             conversation_read_model_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/runtime/conversation_read_model/latest.json',

@@ -126,6 +126,28 @@ type StageRunExecutionAuthorizationLedger = {
   receipts: StageRunExecutionAuthorizationReceipt[];
 };
 
+type StageRunExecutionAuthorizationLedgerInspection = StageRunExecutionAuthorizationLedger & {
+  ledger_file: string;
+  ledger_exists: boolean;
+  raw_receipt_count: number;
+  strict_schema_rejected_receipt_count: number;
+  strict_schema_required_identity_fields: string[];
+  read_error: string | null;
+};
+
+const STRICT_SCHEMA_REQUIRED_IDENTITY_FIELDS = [
+  'study_id',
+  'domain_context',
+  'stage_attempt_id',
+  'action_type',
+  'work_unit_id',
+  'work_unit_fingerprint',
+  'decision',
+  'reason',
+  'operator',
+  'execution_authorization_report.execution_authorized',
+];
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -256,6 +278,22 @@ function emptyLedger(): StageRunExecutionAuthorizationLedger {
     surface_kind: 'opl_stage_run_execution_authorization_ledger',
     version: 'stage-run-execution-authorization-ledger.v1',
     receipts: [],
+  };
+}
+
+function emptyLedgerInspection(input: {
+  file: string;
+  exists: boolean;
+  readError?: string | null;
+}): StageRunExecutionAuthorizationLedgerInspection {
+  return {
+    ...emptyLedger(),
+    ledger_file: input.file,
+    ledger_exists: input.exists,
+    raw_receipt_count: 0,
+    strict_schema_rejected_receipt_count: 0,
+    strict_schema_required_identity_fields: STRICT_SCHEMA_REQUIRED_IDENTITY_FIELDS,
+    read_error: input.readError ?? null,
   };
 }
 
@@ -423,25 +461,49 @@ function normalizeReceipt(value: unknown): StageRunExecutionAuthorizationReceipt
   };
 }
 
-function readLedger(): StageRunExecutionAuthorizationLedger {
+function readLedgerInspection(): StageRunExecutionAuthorizationLedgerInspection {
   const file = ledgerPath();
   if (!fs.existsSync(file)) {
-    return emptyLedger();
+    return emptyLedgerInspection({ file, exists: false });
   }
   try {
     const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
     if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
-      return emptyLedger();
+      return emptyLedgerInspection({
+        file,
+        exists: true,
+        readError: 'stage_run_execution_authorization_ledger_invalid_shape',
+      });
     }
+    const rawReceipts = parsed.receipts;
+    const receipts = rawReceipts
+      .map(normalizeReceipt)
+      .filter((receipt): receipt is StageRunExecutionAuthorizationReceipt => Boolean(receipt));
     return {
       ...emptyLedger(),
-      receipts: parsed.receipts
-        .map(normalizeReceipt)
-        .filter((receipt): receipt is StageRunExecutionAuthorizationReceipt => Boolean(receipt)),
+      ledger_file: file,
+      ledger_exists: true,
+      raw_receipt_count: rawReceipts.length,
+      strict_schema_rejected_receipt_count: rawReceipts.length - receipts.length,
+      strict_schema_required_identity_fields: STRICT_SCHEMA_REQUIRED_IDENTITY_FIELDS,
+      read_error: null,
+      receipts,
     };
   } catch {
-    return emptyLedger();
+    return emptyLedgerInspection({
+      file,
+      exists: true,
+      readError: 'stage_run_execution_authorization_ledger_parse_failed',
+    });
   }
+}
+
+function readLedger(): StageRunExecutionAuthorizationLedger {
+  const { receipts } = readLedgerInspection();
+  return {
+    ...emptyLedger(),
+    receipts,
+  };
 }
 
 function writeLedger(ledger: StageRunExecutionAuthorizationLedger) {
@@ -684,6 +746,10 @@ export function verifyStageRunExecutionAuthorizationReceipt(
 
 export function listStageRunExecutionAuthorizationReceipts() {
   return readLedger().receipts;
+}
+
+export function inspectStageRunExecutionAuthorizationLedger() {
+  return readLedgerInspection();
 }
 
 export function latestStageRunExecutionAuthorizationReceiptForStageRun(stageRunId: string) {

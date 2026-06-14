@@ -11,6 +11,7 @@ import type { FrameworkContracts } from './types.ts';
 import { actionContext, actionCountsForItems, noActionContext, runningActionContext } from './runtime-tray-action.ts';
 import { humanizeStatusLabel, liveRouteStatusLabel, localizeRuntimeDisplayList, localizeRuntimeDisplayText, masPublicationActionSummary, masPublicationNextActionSummary } from './runtime-tray-display.ts';
 import { buildMasPortalItems } from './runtime-tray-mas-portal.ts';
+import { readMasStudyProgressCurrentWorkUnitAsync } from './runtime-tray-mas-current-work-unit.ts';
 import type { JsonRecord, MasWorkspaceProjectionRef, RuntimeTrayCommand, RuntimeTrayHealthStatus, RuntimeTrayItem, RuntimeTrayLane, RuntimeTraySourceRef } from './runtime-tray-snapshot-types.ts';
 import { fileSourceRef, firstString, firstStringFromList, nestedRecord, normalizeStatusCode, optionalBoolean, optionalString, readJsonRecord, shellArgument, sourceRef, stringListFromRecords, uniqueByRef, uniqueStrings } from './runtime-tray-snapshot-utils.ts';
 import { buildFamilyStageControlPlaneParity } from './family-stage-control-plane.ts';
@@ -521,7 +522,10 @@ function isActiveMasStudy(
   );
 }
 
-function buildMasStudyItem(workspace: MasWorkspaceProjectionRef, studyRoot: string): RuntimeTrayItem | null {
+async function buildMasStudyItem(
+  workspace: MasWorkspaceProjectionRef,
+  studyRoot: string,
+): Promise<RuntimeTrayItem | null> {
   const studyId = path.basename(studyRoot);
   const runtimeStatusPath = path.join(studyRoot, 'artifacts', 'runtime', 'runtime_status_summary.json');
   const runtimeSupervisionPath = path.join(studyRoot, 'artifacts', 'runtime', 'runtime_supervision', 'latest.json');
@@ -533,7 +537,17 @@ function buildMasStudyItem(workspace: MasWorkspaceProjectionRef, studyRoot: stri
     return null;
   }
   const controllerDecision = readJsonRecord(controllerDecisionPath);
-  if (!isActiveMasStudy(supervision, statusSummary, controllerDecision)) {
+  const currentWorkUnitReadout = await readMasStudyProgressCurrentWorkUnitAsync({
+    workspace,
+    studyId,
+  });
+  const currentWorkUnitSourceRefs = currentWorkUnitReadout.source_refs;
+  const hasCurrentWorkUnitProjection = currentWorkUnitReadout.projection !== null;
+  const currentWorkUnitStatus = normalizeStatusCode(
+    firstString(currentWorkUnitReadout.projection?.status) ?? '',
+  );
+  const currentWorkUnitIsTypedBlocker = currentWorkUnitStatus === 'typed_blocker';
+  if (!hasCurrentWorkUnitProjection && !isActiveMasStudy(supervision, statusSummary, controllerDecision)) {
     return null;
   }
 
@@ -551,11 +565,21 @@ function buildMasStudyItem(workspace: MasWorkspaceProjectionRef, studyRoot: stri
     || false;
   const publicationBlocked = normalizeStatusCode(firstString(publicationVerdict?.overall_verdict) ?? '') === 'blocked';
   const parkedHandoff = isParkedMasHandoffStudy(supervision, statusSummary, controllerDecision);
-  const lane: RuntimeTrayLane = parkedHandoff ? 'recent' : needsHumanIntervention || publicationBlocked ? 'attention' : 'running';
+  const lane: RuntimeTrayLane = parkedHandoff
+    ? 'recent'
+    : currentWorkUnitIsTypedBlocker
+      ? 'attention'
+    : hasCurrentWorkUnitProjection
+      ? 'running'
+      : needsHumanIntervention || publicationBlocked ? 'attention' : 'running';
   const routeTarget = firstString(controllerDecision?.route_target);
   const routeKeyQuestion = firstString(controllerDecision?.route_key_question);
   const statusLabel = parkedHandoff
     ? '已暂停：等待确认'
+    : currentWorkUnitIsTypedBlocker
+      ? 'Typed blocker'
+    : hasCurrentWorkUnitProjection
+      ? '可执行 owner action'
     : needsHumanIntervention
     ? '需用户确认'
     : publicationBlocked
@@ -608,6 +632,18 @@ function buildMasStudyItem(workspace: MasWorkspaceProjectionRef, studyRoot: stri
       'handoff_review',
       nextActionSummary ?? '论文线已暂停在复核或交付节点；需用户确认下一步。',
     )
+    : currentWorkUnitIsTypedBlocker
+      ? actionContext(
+        'opl',
+        'quality_gate',
+        nextActionSummary ?? 'MAS current work unit 已返回 typed blocker；需要当前 owner 给出 receipt、route-back evidence 或新的 typed blocker。',
+      )
+    : hasCurrentWorkUnitProjection
+      ? actionContext(
+        'opl',
+        'quality_gate',
+        nextActionSummary ?? 'MAS current work unit 可执行；需要 owner 产出 receipt、quality gate 或 typed blocker。',
+      )
     : needsHumanIntervention
       ? actionContext(
         'user',
@@ -638,7 +674,10 @@ function buildMasStudyItem(workspace: MasWorkspaceProjectionRef, studyRoot: stri
     workspace_path: workspace.workspace_root,
     runtime_owner: runtimeOwnerForCurrentProvider(),
     domain_owner: 'med-autoscience',
-    source_refs: sourceRefs,
+    source_refs: uniqueByRef([
+      ...sourceRefs,
+      ...currentWorkUnitSourceRefs,
+    ]),
     ...action,
     study_id: studyId,
     workspace_label: workspace.profile_name,
@@ -650,25 +689,26 @@ function buildMasStudyItem(workspace: MasWorkspaceProjectionRef, studyRoot: stri
     health_status: healthStatus,
     blockers: localizeRuntimeDisplayList(blockers),
     recommended_commands: recommendedCommands,
+    current_work_unit: currentWorkUnitReadout.projection,
+    study_progress_current_work_unit_diagnostic: currentWorkUnitReadout.diagnostic,
   };
 }
 
-function buildMasStudyProjection(
+async function buildMasStudyProjection(
   domainManifests: { projects: DomainManifestCatalogEntry[] },
-) {
+): Promise<{ items: RuntimeTrayItem[]; source_refs: RuntimeTraySourceRef[] }> {
   const workspaces = uniqueMasWorkspaces([
     ...masWorkspaceRefsFromDomainManifests(domainManifests.projects),
   ]);
   const portalProjections = workspaces.map((workspace) => buildMasPortalItems(workspace));
   const portalWorkspaceRoots = new Set(portalProjections.flatMap((projection) => [...projection.portal_workspace_roots]));
   const portalItems = portalProjections.flatMap((projection) => projection.items);
-  const fallbackItems = workspaces
+  const fallbackItems = (await Promise.all(workspaces
     .filter((workspace) => !portalWorkspaceRoots.has(path.resolve(workspace.workspace_root)))
     .flatMap((workspace) =>
       immediateStudyRoots(workspace.workspace_root)
         .map((studyRoot) => buildMasStudyItem(workspace, studyRoot))
-        .filter((entry): entry is RuntimeTrayItem => Boolean(entry))
-    );
+    ))).filter((entry): entry is RuntimeTrayItem => Boolean(entry));
   const items = [...portalItems, ...fallbackItems];
 
   return {
@@ -718,6 +758,10 @@ export async function buildRuntimeTraySnapshot(
   const providerContinuousProof = buildRuntimeProviderContinuousProof();
   const nativeHelperExecutionEnvelope = buildNativeHelperExecutionEnvelope();
   const domainProjectionIngestion = buildDomainProjectionIngestion(domainManifests.projects);
+  const masStudyProjection = await buildMasStudyProjection(domainManifests);
+  const currentWorkUnitProjections = masStudyProjection.items
+    .map((item) => item.current_work_unit)
+    .filter((item): item is JsonRecord => Boolean(item) && typeof item === 'object' && !Array.isArray(item));
   const appOperatorDrilldown = buildAppOperatorDrilldown({
     stageAttemptWorkbench,
     providerInspection: lifecycleProvider,
@@ -725,6 +769,7 @@ export async function buildRuntimeTraySnapshot(
     domainProjectionIngestion,
     domainManifestProjects: domainManifests.projects,
     functionalPrivatizationProjects: functionalPrivatizationDomainManifests.projects,
+    currentWorkUnitProjections,
     detailLevel: options.appOperatorDrilldownDetailLevel,
   });
   const domainItems = domainManifests.projects
@@ -734,7 +779,6 @@ export async function buildRuntimeTraySnapshot(
         : buildAttentionItemForUnresolved(entry)
     )
     .filter((entry): entry is RuntimeTrayItem => Boolean(entry));
-  const masStudyProjection = buildMasStudyProjection(domainManifests);
   const stageAttemptItems = buildStageAttemptTrayItems({
     workbench: stageAttemptWorkbench,
     sourceRefs: stageAttemptWorkbench.source_refs,

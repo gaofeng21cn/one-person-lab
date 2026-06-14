@@ -1,4 +1,5 @@
 import {
+  inspectStageRunExecutionAuthorizationLedger,
   listStageRunExecutionAuthorizationReceipts,
   recordStageRunExecutionAuthorizationReceipts,
   verifyStageRunExecutionAuthorizationReceipt,
@@ -231,10 +232,19 @@ export function buildRuntimeStageRunAuthorizationCommandSpecs(): Record<string, 
       examples: ['opl runtime stage-run-authorization list --json'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['runtime stage-run-authorization list']);
-        const receipts = listStageRunExecutionAuthorizationReceipts();
+        const inspection = inspectStageRunExecutionAuthorizationLedger();
+        const receipts = inspection.receipts;
         return {
           stage_run_execution_authorization_ledger: {
             surface_kind: 'opl_stage_run_execution_authorization_ledger_projection',
+            ledger_file: inspection.ledger_file,
+            ledger_exists: inspection.ledger_exists,
+            raw_receipt_count: inspection.raw_receipt_count,
+            strict_schema_rejected_receipt_count:
+              inspection.strict_schema_rejected_receipt_count,
+            strict_schema_required_identity_fields:
+              inspection.strict_schema_required_identity_fields,
+            read_error: inspection.read_error,
             receipt_count: receipts.length,
             recorded_receipt_count:
               receipts.filter((receipt) => receipt.receipt_status === 'recorded').length,

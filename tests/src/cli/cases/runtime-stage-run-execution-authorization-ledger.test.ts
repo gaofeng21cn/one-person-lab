@@ -392,6 +392,68 @@ test('runtime StageRun execution authorization ledger records refs-only OPL auth
   }
 });
 
+test('runtime StageRun execution authorization list reports strict schema rejected legacy receipts', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-authorization-legacy-'));
+  try {
+    fs.mkdirSync(stateRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(stateRoot, 'stage-run-execution-authorization-ledger.json'),
+      `${JSON.stringify({
+        surface_kind: 'opl_stage_run_execution_authorization_ledger',
+        version: 'stage-run-execution-authorization-ledger.v1',
+        receipts: [
+          {
+            surface_kind: 'opl_stage_run_execution_authorization_receipt',
+            version: 'stage-run-execution-authorization-ledger.v1',
+            receipt_ref: 'opl://stage-run-execution-authorization/legacy',
+            receipt_status: 'verified',
+            stage_run_id: 'app-stage-run:medautoscience:legacy',
+            domain_id: 'medautoscience',
+            stage_id: 'legacy_stage',
+            provider_attempt_ref: 'opl://stage_attempts/sat_legacy',
+            stage_attempt_id: 'sat_legacy',
+            attempt_lease_ref: 'opl://stage_attempts/sat_legacy/lease',
+            execution_authorization_decision_ref:
+              'opl://stage_attempts/sat_legacy/execution-authorization',
+            workspace_scope_ref: 'workspace:legacy',
+            artifact_scope_ref: 'artifact:legacy',
+            source_fingerprint: 'sha256:legacy',
+            idempotency_key: 'idem_legacy',
+            current_pointer_ref: 'opl://stage-runs/app-stage-run%3Alegacy/current',
+            execution_authorization_report: {
+              status: 'authorized',
+              execution_authorized: true,
+              launch_blockers: [],
+              closeout_binding_blockers: [],
+            },
+          },
+        ],
+      }, null, 2)}\n`,
+      'utf8',
+    );
+
+    const list = runCli([
+      'runtime',
+      'stage-run-authorization',
+      'list',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).stage_run_execution_authorization_ledger;
+    assert.equal(list.ledger_exists, true);
+    assert.equal(list.raw_receipt_count, 1);
+    assert.equal(list.receipt_count, 0);
+    assert.equal(list.verified_receipt_count, 0);
+    assert.equal(list.strict_schema_rejected_receipt_count, 1);
+    assert.equal(
+      list.strict_schema_required_identity_fields.includes('domain_context'),
+      true,
+    );
+    assert.equal(list.authority_boundary.can_claim_production_ready, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('App StageRun cockpit consumes authorization ledger while preserving domain owner-answer gate', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-cockpit-auth-'));
   const previousStateDir = process.env.OPL_STATE_DIR;

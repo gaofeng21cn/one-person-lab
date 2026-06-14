@@ -11,6 +11,9 @@ import {
   type RuntimeTraySourceRef,
 } from './runtime-tray-snapshot-types.ts';
 import {
+  normalizeMasCurrentWorkUnitProjection,
+} from './runtime-tray-mas-current-work-unit.ts';
+import {
   fileSourceRef,
   firstString,
   jsonRecordList,
@@ -267,6 +270,12 @@ function buildMasWorkbenchStudyItem(
   const blockers = localizeRuntimeDisplayList(stringList(study.blocker_summary));
   const summary = firstString(study.state_summary, freshness?.summary, study.user_next);
   const status = firstString(study.current_stage, study.macro_state, study.worker_state);
+  const currentWorkUnit = normalizeMasCurrentWorkUnitProjection({
+    currentWorkUnit: nestedRecord(study, 'current_work_unit'),
+    studyId,
+    sourceRefs: projectionSourceRefs,
+    sourceProjectionRef: '/mas_opl_runtime_workbench_projection/studies/current_work_unit',
+  });
 
   return {
     item_id: `medautoscience:workbench-study:${studyId}`,
@@ -300,6 +309,7 @@ function buildMasWorkbenchStudyItem(
     health_status: firstString(study.worker_state, study.macro_state),
     blockers,
     recommended_commands: recommendedCommands,
+    current_work_unit: currentWorkUnit,
     ...buildPortalFields(portalHtmlPath, portalPayloadRef, portalFreshness, portalSourceRefs),
     workbench_projection: projection,
     workbench_projection_source_refs: projectionSourceRefs,

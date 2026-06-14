@@ -160,6 +160,29 @@ function compactNextSafeAction(action: unknown) {
   };
 }
 
+function primaryDomainCurrentWorkUnitOwnerAnswer(primaryItem: JsonRecord) {
+  if (stringValue(primaryItem.source) !== 'domain_current_work_unit') {
+    return {
+      ref: null,
+      kind: null,
+    };
+  }
+  const envelope = record(primaryItem.current_execution_envelope);
+  const typedBlocker = record(envelope.typed_blocker);
+  const typedBlockerRef = firstString(
+    typedBlocker.latest_owner_answer_ref,
+    typedBlocker.typed_blocker_ref,
+    typedBlocker.ref,
+    typedBlocker.source_ref,
+    envelope.latest_owner_answer_ref,
+    envelope.typed_blocker_ref,
+  );
+  return {
+    ref: typedBlockerRef,
+    kind: typedBlockerRef ? 'typed_blocker' : null,
+  };
+}
+
 function falseFlags(input: JsonRecord = {}) {
   const boundary = record(input.authority_boundary);
   return {
@@ -552,13 +575,26 @@ function buildCurrentOwnerDeltaProjection(input: {
     desiredDelta: requiredDelta,
     shapes: input.acceptedReturnShapes,
   });
+  const primaryItem = record(input.ownerDeltaFirst.primary_item);
+  const currentnessBasis = record(primaryItem.currentness_basis);
+  const workUnitId = stringValue(primaryItem.work_unit_id);
+  const workUnitFingerprint = stringValue(primaryItem.work_unit_fingerprint);
+  const studyId = stringValue(primaryItem.study_id);
+  const primaryStageAttemptId = firstString(
+    primaryItem.stage_attempt_id,
+    currentnessBasis.stage_attempt_id,
+  );
   const taskOrStudyRef = firstString(
     input.compactAction?.next_safe_action_ref,
-    stringValue(record(input.ownerDeltaFirst.primary_item).workstream_id),
-    stringValue(record(input.ownerDeltaFirst.primary_item).stage_attempt_id),
+    studyId,
+    workUnitId,
+    stringValue(primaryItem.workstream_id),
+    primaryStageAttemptId,
   );
   const lineageRef = firstString(
-    stringValue(record(input.ownerDeltaFirst.primary_item).stage_attempt_id),
+    primaryStageAttemptId,
+    workUnitFingerprint,
+    workUnitId,
     input.compactAction?.next_safe_action_ref,
     stringValue(input.handoff.lineage_ref),
   );
@@ -578,13 +614,16 @@ function buildCurrentOwnerDeltaProjection(input: {
     countSummary: input.countSummary,
     compactAction: input.compactAction,
   });
+  const primaryOwnerAnswer = primaryDomainCurrentWorkUnitOwnerAnswer(primaryItem);
   const latestOwnerAnswerRef = firstString(
     stringValue(input.handoff.latest_owner_answer_ref),
-    stringValue(record(input.ownerDeltaFirst.primary_item).latest_owner_answer_ref),
+    stringValue(primaryItem.latest_owner_answer_ref),
+    primaryOwnerAnswer.ref,
   );
   const latestOwnerAnswerKind = firstString(
     stringValue(input.handoff.latest_owner_answer_kind),
-    stringValue(record(input.ownerDeltaFirst.primary_item).latest_owner_answer_kind),
+    stringValue(primaryItem.latest_owner_answer_kind),
+    primaryOwnerAnswer.kind,
   );
   const ownerAnswerRecorded = latestOwnerAnswerRef !== null;
   const ownerAnswerRequired = ownerAnswerOrTypedBlockerRequired({
@@ -637,9 +676,22 @@ function buildCurrentOwnerDeltaProjection(input: {
     domain,
     domain_id: domain,
     task_or_study_ref: taskOrStudyRef,
+    study_id: studyId,
     stage_ref: stageRef,
     stage_id: stageRef,
     lineage_ref: lineageRef,
+    stage_attempt_id: primaryStageAttemptId,
+    work_unit_id: workUnitId,
+    work_unit_fingerprint: workUnitFingerprint,
+    action_type: stringValue(primaryItem.action_type),
+    owner_route_currentness_basis: {
+      ...currentnessBasis,
+      work_unit_id: firstString(currentnessBasis.work_unit_id, workUnitId),
+      work_unit_fingerprint: firstString(
+        currentnessBasis.work_unit_fingerprint,
+        workUnitFingerprint,
+      ),
+    },
     source_fingerprint: currentOwnerDeltaSourceFingerprint({
       currentOwner,
       domain,

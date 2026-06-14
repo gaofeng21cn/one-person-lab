@@ -575,6 +575,307 @@ test('owner delta first skips superseded domain dispatch workstreams', () => {
   );
 });
 
+test('owner delta first keeps unbound dispatch workstreams as provenance, not current owner pointer', () => {
+  const drilldown = buildAppOperatorDrilldown({
+    stageAttemptWorkbench: {
+      attempts: [
+        {
+          stage_attempt_id: 'sat-stale-unbound-paper-autonomy',
+          task_id: 'frt-stale-unbound-paper-autonomy',
+          domain_id: 'medautoscience',
+          stage_id: 'paper_autonomy/guarded-apply',
+          status: 'completed',
+          local_status: 'completed',
+          source_fingerprint: 'sha256:stale-unbound-paper-autonomy',
+          created_at: '2026-06-14T09:00:00.000Z',
+          updated_at: '2026-06-14T09:30:00.000Z',
+          workspace_locator: {
+            study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+            action_type: 'run_quality_repair_batch',
+          },
+          closeout_receipt_status: 'accepted_typed_closeout',
+          current_owner_delta: {
+            delta_id: 'current-owner-delta:stale-unbound-paper-autonomy',
+            lineage_ref: 'sat-stale-unbound-paper-autonomy',
+            source_fingerprint: 'sha256:stale-unbound-paper-autonomy',
+          },
+          stage_progress_log: {
+            surface_kind: 'opl_stage_progress_log',
+            progress_delta_classification: 'deliverable_progress',
+            deliverable_progress_delta: {
+              changed_stage_surfaces: ['paper:readiness'],
+            },
+            platform_repair_delta: {
+              changed_stage_surfaces: [],
+            },
+          },
+          route_impact: {},
+          artifact_refs: [
+            'runtime/artifacts/opl_family_domain_handler/dispatch_receipts/a6906c3602db0b2b0601.json',
+            'mas-domain-handler-dispatch:frt-stale-unbound-paper-autonomy',
+          ],
+        },
+      ],
+    },
+    providerContinuousProof: {},
+    domainProjectionIngestion: {},
+    domainManifestProjects: [],
+    detailLevel: 'full',
+  }) as any;
+
+  const workstream = drilldown.workstream_operating_loop.workstreams[0];
+  assert.equal(workstream.heartbeat_status, 'closed');
+  assert.equal(workstream.default_actionable, false);
+  assert.equal(
+    workstream.default_actionability_status,
+    'not_actionable_unbound_dispatch_identity',
+  );
+  assert.equal(
+    workstream.next_steering_action.action_id,
+    'record_owner_or_gate_for_target_anchor',
+  );
+
+  const ownerDeltaFirst = drilldown.attention_first_payload.owner_delta_first;
+  assert.notEqual(
+    ownerDeltaFirst.primary_item.stage_attempt_id,
+    'sat-stale-unbound-paper-autonomy',
+  );
+  assert.equal(ownerDeltaFirst.workstream_item, null);
+  assert.equal(ownerDeltaFirst.primary_item.source, 'evidence_next_steps');
+  assert.equal(
+    ownerDeltaFirst.next_required_delta,
+    'domain_or_app_owner_payload_ref_or_typed_blocker_required',
+  );
+  assert.equal(
+    drilldown.attention_first_payload.current_owner_delta_read_model
+      .current_owner_delta.lineage_ref,
+    null,
+  );
+});
+
+test('owner delta first projects MAS current work unit ahead of stale unbound dispatch residue', () => {
+  const currentWorkUnit = {
+    surface_kind: 'mas_current_work_unit_projection',
+    projection_policy: 'refs_only_domain_currentness_projection_no_domain_truth_write',
+    domain_id: 'medautoscience',
+    study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+    stage_id: 'publication_supervision',
+    current_owner: 'write',
+    owner: 'write',
+    action_type: 'run_quality_repair_batch',
+    work_unit_id: 'medical_prose_write_repair',
+    work_unit_fingerprint: 'publication-blockers::0915410f804b3697',
+    status: 'executable_owner_action',
+    currentness_basis: {
+      truth_epoch: 'truth-event-000035-39f0b8e96689a623',
+      runtime_health_epoch: 'runtime-health-event-006839-47eeac962614068d',
+      stage_attempt_id: 'sat-current-work-unit',
+    },
+    source_refs: [
+      'mas://study-progress/003-dpcc-primary-care-phenotype-treatment-gap',
+    ],
+    authority_boundary: {
+      mas_truth_owner: true,
+      opl_role: 'projection_consumer_only',
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_claim_domain_ready: false,
+      can_claim_production_ready: false,
+    },
+  };
+  const drilldown = buildAppOperatorDrilldown({
+    stageAttemptWorkbench: {
+      attempts: [
+        {
+          stage_attempt_id: 'sat-stale-unbound-paper-autonomy',
+          task_id: 'frt-stale-unbound-paper-autonomy',
+          domain_id: 'medautoscience',
+          stage_id: 'paper_autonomy/guarded-apply',
+          status: 'completed',
+          local_status: 'completed',
+          source_fingerprint: 'sha256:stale-unbound-paper-autonomy',
+          created_at: '2026-06-14T09:00:00.000Z',
+          updated_at: '2026-06-14T09:30:00.000Z',
+          workspace_locator: {
+            study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+            action_type: 'run_quality_repair_batch',
+          },
+          closeout_receipt_status: 'accepted_typed_closeout',
+          current_owner_delta: {
+            delta_id: 'current-owner-delta:stale-unbound-paper-autonomy',
+            lineage_ref: 'sat-stale-unbound-paper-autonomy',
+            source_fingerprint: 'sha256:stale-unbound-paper-autonomy',
+          },
+          stage_progress_log: {
+            surface_kind: 'opl_stage_progress_log',
+            progress_delta_classification: 'deliverable_progress',
+            deliverable_progress_delta: {
+              changed_stage_surfaces: ['paper:readiness'],
+            },
+            platform_repair_delta: {
+              changed_stage_surfaces: [],
+            },
+          },
+          route_impact: {},
+          artifact_refs: [
+            'runtime/artifacts/opl_family_domain_handler/dispatch_receipts/a6906c3602db0b2b0601.json',
+            'mas-domain-handler-dispatch:frt-stale-unbound-paper-autonomy',
+          ],
+        },
+      ],
+    },
+    providerContinuousProof: {},
+    domainProjectionIngestion: {},
+    domainManifestProjects: [],
+    currentWorkUnitProjections: [currentWorkUnit],
+    detailLevel: 'full',
+  }) as any;
+
+  const ownerDeltaFirst = drilldown.attention_first_payload.owner_delta_first;
+  assert.equal(ownerDeltaFirst.primary_item.source, 'domain_current_work_unit');
+  assert.equal(ownerDeltaFirst.primary_item.status, 'executable_owner_action');
+  assert.equal(ownerDeltaFirst.primary_item.domain_id, 'medautoscience');
+  assert.equal(ownerDeltaFirst.primary_item.study_id, '003-dpcc-primary-care-phenotype-treatment-gap');
+  assert.equal(ownerDeltaFirst.primary_item.stage_id, 'publication_supervision');
+  assert.equal(ownerDeltaFirst.primary_item.owner, 'write');
+  assert.equal(ownerDeltaFirst.primary_item.action_type, 'run_quality_repair_batch');
+  assert.equal(ownerDeltaFirst.primary_item.work_unit_id, 'medical_prose_write_repair');
+  assert.equal(ownerDeltaFirst.primary_item.stage_attempt_id, 'sat-current-work-unit');
+  assert.equal(
+    ownerDeltaFirst.primary_item.work_unit_fingerprint,
+    'publication-blockers::0915410f804b3697',
+  );
+  assert.equal(
+    ownerDeltaFirst.primary_item.currentness_basis.truth_epoch,
+    'truth-event-000035-39f0b8e96689a623',
+  );
+  assert.equal(ownerDeltaFirst.next_owner, 'write');
+  assert.equal(
+    ownerDeltaFirst.next_required_delta,
+    'domain_current_work_unit_owner_action_or_typed_blocker_required',
+  );
+  assert.equal(ownerDeltaFirst.workstream_item, null);
+
+  const readModel = drilldown.attention_first_payload.current_owner_delta_read_model;
+  assert.equal(readModel.current_owner, 'write');
+  assert.equal(readModel.current_owner_delta.domain_id, 'medautoscience');
+  assert.equal(readModel.current_owner_delta.stage_id, 'publication_supervision');
+  assert.equal(
+    readModel.current_owner_delta.work_unit_id,
+    'medical_prose_write_repair',
+  );
+  assert.equal(
+    readModel.current_owner_delta.work_unit_fingerprint,
+    'publication-blockers::0915410f804b3697',
+  );
+  assert.equal(
+    readModel.current_owner_delta.owner_route_currentness_basis.truth_epoch,
+    'truth-event-000035-39f0b8e96689a623',
+  );
+  assert.equal(readModel.current_owner_delta.lineage_ref, 'sat-current-work-unit');
+  assert.equal(readModel.current_owner_delta.stage_attempt_id, 'sat-current-work-unit');
+  assert.equal(
+    readModel.current_owner_delta.authority_boundary.can_write_domain_truth,
+    false,
+  );
+  assert.equal(
+    readModel.current_owner_delta.authority_boundary.can_create_owner_receipt,
+    false,
+  );
+});
+
+test('owner delta first prioritizes OPL-owned MAS current work-unit blockers over later domain actions', () => {
+  const domainActionWorkUnit = {
+    surface_kind: 'mas_current_work_unit_projection',
+    projection_policy: 'refs_only_domain_currentness_projection_no_domain_truth_write',
+    domain_id: 'medautoscience',
+    study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+    stage_id: 'publication_supervision',
+    current_owner: 'write',
+    owner: 'write',
+    action_type: 'run_quality_repair_batch',
+    work_unit_id: 'medical_prose_write_repair',
+    work_unit_fingerprint: 'publication-blockers::0915410f804b3697',
+    status: 'executable_owner_action',
+    currentness_basis: {
+      truth_epoch: 'truth-event-000040-1a4d1f9cfed66d87',
+      runtime_health_epoch: 'runtime-health-event-006839-47eeac962614068d',
+    },
+  };
+  const oplBlockerWorkUnit = {
+    surface_kind: 'mas_current_work_unit_projection',
+    projection_policy: 'refs_only_domain_currentness_projection_no_domain_truth_write',
+    domain_id: 'medautoscience',
+    study_id: '004-dpcc-longitudinal-care-inertia-intensification-gap',
+    stage_id: 'managed_opl_runtime_owner_handoff_gap',
+    current_owner: 'one-person-lab',
+    owner: 'one-person-lab',
+    action_type: 'return_to_ai_reviewer_workflow',
+    work_unit_id: 'truth-snapshot::c275cc9ec942575e291388ff',
+    work_unit_fingerprint: 'truth-snapshot::c275cc9ec942575e291388ff',
+    status: 'typed_blocker',
+    currentness_basis: {
+      truth_epoch: 'truth-event-000006-3d805e45be5cd58a',
+      runtime_health_epoch: 'runtime-health-event-004968-09c7d147e7508da9',
+      stage_attempt_id: 'sat-opl-current-work-unit-blocker',
+    },
+    current_execution_envelope: {
+      state_kind: 'typed_blocker',
+      owner: 'one-person-lab',
+      typed_blocker: {
+        latest_owner_answer_ref:
+          'mas://typed-blockers/dm004/truth-snapshot-c275cc9ec942575e291388ff',
+        typed_blocker_ref:
+          'mas://typed-blockers/dm004/truth-snapshot-c275cc9ec942575e291388ff',
+        source_ref:
+          'mas://study-progress/004-dpcc-longitudinal-care-inertia-intensification-gap',
+      },
+    },
+  };
+  const drilldown = buildAppOperatorDrilldown({
+    stageAttemptWorkbench: { attempts: [] },
+    providerContinuousProof: {},
+    domainProjectionIngestion: {},
+    domainManifestProjects: [],
+    currentWorkUnitProjections: [domainActionWorkUnit, oplBlockerWorkUnit],
+    detailLevel: 'full',
+  }) as any;
+
+  const ownerDeltaFirst = drilldown.attention_first_payload.owner_delta_first;
+  assert.equal(ownerDeltaFirst.primary_item.source, 'domain_current_work_unit');
+  assert.equal(ownerDeltaFirst.primary_item.status, 'typed_blocker');
+  assert.equal(ownerDeltaFirst.primary_item.owner, 'one-person-lab');
+  assert.equal(
+    ownerDeltaFirst.primary_item.study_id,
+    '004-dpcc-longitudinal-care-inertia-intensification-gap',
+  );
+  assert.equal(
+    ownerDeltaFirst.primary_item.work_unit_id,
+    'truth-snapshot::c275cc9ec942575e291388ff',
+  );
+  assert.equal(
+    ownerDeltaFirst.primary_item.stage_attempt_id,
+    'sat-opl-current-work-unit-blocker',
+  );
+  assert.equal(ownerDeltaFirst.summary.domain_current_work_unit_count, 2);
+
+  const currentOwnerDelta =
+    drilldown.attention_first_payload.current_owner_delta_read_model.current_owner_delta;
+  assert.equal(
+    currentOwnerDelta.latest_owner_answer_ref,
+    'mas://typed-blockers/dm004/truth-snapshot-c275cc9ec942575e291388ff',
+  );
+  assert.equal(currentOwnerDelta.latest_owner_answer_kind, 'typed_blocker');
+  assert.equal(currentOwnerDelta.lineage_ref, 'sat-opl-current-work-unit-blocker');
+  assert.equal(currentOwnerDelta.stage_attempt_id, 'sat-opl-current-work-unit-blocker');
+  assert.equal(currentOwnerDelta.hard_gate.state, 'domain_owner_answer_recorded');
+  assert.equal(currentOwnerDelta.hard_gate.human_or_domain_owner_required, false);
+  assert.equal(currentOwnerDelta.hard_gate.domain_ready_authorized, false);
+  assert.equal(currentOwnerDelta.authority_boundary.can_write_domain_truth, false);
+  assert.equal(currentOwnerDelta.authority_boundary.can_create_typed_blocker, false);
+});
+
 test('owner delta first does not promote unclosed running attempts over closed owner target', () => {
   const drilldown = buildAppOperatorDrilldown({
     stageAttemptWorkbench: {

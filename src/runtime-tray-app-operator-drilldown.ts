@@ -139,6 +139,7 @@ import {
   recordList,
   stringValue,
   uniqueRefs,
+  uniqueStrings,
 } from './runtime-tray-app-operator-drilldown-parts/value-utils.ts';
 
 export function buildAppOperatorDrilldown(input: {
@@ -147,6 +148,7 @@ export function buildAppOperatorDrilldown(input: {
   providerContinuousProof: JsonRecord;
   domainProjectionIngestion: JsonRecord;
   domainManifestProjects: DomainManifestCatalogEntry[]; functionalPrivatizationProjects?: DomainManifestCatalogEntry[];
+  currentWorkUnitProjections?: JsonRecord[];
   detailLevel?: AppOperatorDrilldownDetailLevel;
 }) {
   const attempts = recordList(input.stageAttemptWorkbench.attempts);
@@ -290,6 +292,38 @@ export function buildAppOperatorDrilldown(input: {
     packageLifecycle,
     memoryRefs,
   });
+  const currentWorkUnitItems = (input.currentWorkUnitProjections ?? [])
+    .map(record)
+    .filter((item) => Object.keys(item).length > 0);
+  const domainCurrentWorkUnitProjection = {
+    surface_kind: 'opl_domain_current_work_unit_projection',
+    projection_policy:
+      'runtime_tray_domain_current_work_unit_refs_only_no_domain_truth_reduction',
+    summary: {
+      current_work_unit_count: currentWorkUnitItems.length,
+      domain_ids: uniqueStrings(currentWorkUnitItems
+        .map((item) => stringValue(item.domain_id))
+        .filter((entry): entry is string => Boolean(entry))),
+      study_ids: uniqueStrings(currentWorkUnitItems
+        .map((item) => stringValue(item.study_id))
+        .filter((entry): entry is string => Boolean(entry))),
+    },
+    items: currentWorkUnitItems,
+    authority_boundary: {
+      opl_role: 'projection_consumer_only',
+      domain_truth_owner: 'domain repositories',
+      can_execute_domain_action: false,
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_close_owner_chain: false,
+      can_close_domain_ready: false,
+      can_authorize_quality_or_export: false,
+      can_claim_domain_ready: false,
+      can_claim_production_ready: false,
+      provider_completion_is_domain_ready: false,
+    },
+  };
   const summary = {
     ...buildAppOperatorDrilldownSummary({
       attempts,
@@ -432,6 +466,8 @@ export function buildAppOperatorDrilldown(input: {
       record(workstreamOperatingLoop.summary).deliverable_target_ref_observed_count,
     workstream_operating_loop_goal_oracle_advisory_count:
       record(workstreamOperatingLoop.summary).goal_oracle_advisory_count,
+    domain_current_work_unit_projection_count:
+      record(domainCurrentWorkUnitProjection.summary).current_work_unit_count,
   };
   const memoryArtifactLifecycle = buildMemoryArtifactLifecycleEvidence({
     summary,
@@ -583,10 +619,12 @@ export function buildAppOperatorDrilldown(input: {
     evidence_envelope: evidenceEnvelope,
     runtime_visualization_projection: runtimeVisualizationProjection,
     workstream_operating_loop: workstreamOperatingLoop,
+    domain_current_work_unit_projection: domainCurrentWorkUnitProjection,
     runtime_workbench: {
       ...record(runtimeVisualizationProjection.runtime_workbench),
       memory_trace_projection: memoryTrace,
       workstream_operating_loop: workstreamOperatingLoop,
+      domain_current_work_unit_projection: domainCurrentWorkUnitProjection,
     },
     visual_ref_groups: record(runtimeVisualizationProjection.visual_ref_groups),
     domain_legacy_cleanup_plan_refs: legacyCleanupPlans,

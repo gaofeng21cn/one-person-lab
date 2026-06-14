@@ -658,6 +658,8 @@ function buildAttentionFirstPayload(drilldown: JsonRecord) {
     evidenceAfterContract,
     evidenceNextSteps: evidenceNextStepsProjection,
     workstreamOperatingLoop,
+    domainCurrentWorkUnitProjection:
+      record(drilldown.domain_current_work_unit_projection),
   });
   const currentOwnerDeltaReadModel = buildAppDrilldownCurrentOwnerDeltaReadModel({
     ownerDeltaFirst,
