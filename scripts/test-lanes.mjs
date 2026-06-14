@@ -251,6 +251,7 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/runtime-app-operator-drilldown-route-support.test.ts',
   'tests/src/cli/cases/runtime-app-operator-drilldown-app-release-user-path-ledger.test.ts',
   'tests/src/cli/cases/runtime-app-release-user-path-evidence-ledger.test.ts',
+  'tests/src/cli/cases/runtime-app-release-user-path-long-operator.test.ts',
   'tests/src/cli/cases/runtime-codex-app-runtime-evidence-ledger.test.ts',
   'tests/src/cli/cases/runtime-stage-run-execution-authorization-ledger.test.ts',
   'tests/src/cli/cases/runtime-developer-mode-closeout-ledger.test.ts',
