@@ -8,11 +8,11 @@ Machine boundary: 本文是人读 cross-repo closeout ledger。当前 truth 继�
 ## Snapshot
 
 - `RUN_SNAPSHOT_TS=2026-06-14T00:56:48Z`.
-- OPL repo: `/Users/gaofeng/workspace/one-person-lab` at `main@1ca4f182`, synced with `origin/main`.
-- MAS repo: `/Users/gaofeng/workspace/med-autoscience` at `main@3edd02c8c`, synced with `origin/main`.
+- OPL repo: `/Users/gaofeng/workspace/one-person-lab` started from `main@1ca4f182`; during this verification window the core OPL docs foldback was already linearly landed as `ad216464`, with `origin/main` at `ad216464` before this ledger commit.
+- MAS repo: `/Users/gaofeng/workspace/med-autoscience` started from `main@3edd02c8c`; during this verification window the MAS docs/source-test foldback was already linearly landed through `07c02803c` and `de6502bfc`, with `origin/main` at `de6502bfc` before the MAS ledger commit.
 - OPL dirty write set before absorption: `docs/status.md`, `docs/active/current-state-vs-ideal-gap.md`, `docs/active/opl-family-ideal-operating-model-redesign.md`.
 - MAS dirty write set before absorption: `docs/decisions.md`, `docs/status.md`.
-- Post-snapshot activity: these dirty docs were coherent foldback of MAS owner-split source/test landing; this lane verified, indexed, and absorbed them.
+- Post-snapshot activity: these dirty docs were coherent foldback of MAS owner-split source/test landing; this lane verified, indexed, and recorded the already-landed core foldback without overwriting it.
 
 ## Candidate Gate
 
@@ -63,22 +63,20 @@ Fresh OPL readout showed:
 - unresolved owner gate count remains `7`
 - current owner gate reports `observed_ref_shapes=["typed_blocker_ref"]`, `observed_refs_are_current_pointer_closeout=false`, `current_pointer_update_still_required=true`, `readiness_current_pointer_owner_answer_ref=null`, and `owner_payload_summary_closure_state=verified_owner_payload_summary_observed_not_current_pointer_claim`.
 
-## Changed Files
+## Landed And Recorded Files
 
-OPL:
+Already landed before this ledger commit:
 
-- `docs/status.md`
-- `docs/active/current-state-vs-ideal-gap.md`
-- `docs/active/opl-family-ideal-operating-model-redesign.md`
-- `docs/history/process/plans/2026-06-14-mas-opl-authorization-owner-split-closeout.md`
-- `docs/history/process/plans/README.md`
+- OPL `ad216464`: `docs/status.md`, `docs/active/current-state-vs-ideal-gap.md`, `docs/active/opl-family-ideal-operating-model-redesign.md`.
+- MAS `07c02803c`: `docs/decisions.md`, `docs/status.md`.
+- MAS `de6502bfc`: focused current-work-unit authorization blocker test split.
 
-MAS:
+Recorded by this ledger commit:
 
-- `docs/decisions.md`
-- `docs/status.md`
-- `docs/history/program/opl_execution_authorization_owner_split_closeout_2026_06_14.md`
-- `docs/history/program/README.md`
+- OPL `docs/history/process/plans/2026-06-14-mas-opl-authorization-owner-split-closeout.md`.
+- OPL `docs/history/process/plans/README.md`.
+- MAS `docs/history/program/opl_execution_authorization_owner_split_closeout_2026_06_14.md`.
+- MAS `docs/history/program/README.md`.
 
 No source, tests, contracts, workflows, package metadata, runtime state, publication artifacts, owner receipts, typed blockers, human gates, provider attempts, or App release artifacts were changed by this foldback lane.
 
