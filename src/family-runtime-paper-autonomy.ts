@@ -233,7 +233,9 @@ export function applyPaperAutonomySupervisorDecision(
   reason?: 'identity_mismatch';
   obligation: PaperAutonomyRecoveryObligation;
 } {
-  if (!samePaperAutonomyStageRunIdentity(obligation.current_identity, decision.current_identity)) {
+  if (obligation.obligation_id !== decision.obligation_id
+    || !samePaperAutonomyStageRunIdentity(obligation.current_identity, decision.current_identity)
+  ) {
     return {
       applied: false,
       reason: 'identity_mismatch',

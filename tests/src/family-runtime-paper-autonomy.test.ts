@@ -133,6 +133,14 @@ test('paper autonomy recovery obligation store query and update are identity-bou
   assert.equal(applied.obligation.supervisor_decision_ref, packet.decision_id);
   assert.equal(obligations[0].status, 'open');
 
+  const wrongObligation = applyPaperAutonomySupervisorDecision({
+    ...obligations[1],
+    obligation_id: 'obligation:other',
+  }, packet);
+  assert.equal(wrongObligation.applied, false);
+  assert.equal(wrongObligation.reason, 'identity_mismatch');
+  assert.equal(wrongObligation.obligation.status, 'open');
+
   const mismatch = applyPaperAutonomySupervisorDecision(obligations[0], packet);
   assert.equal(mismatch.applied, false);
   assert.equal(mismatch.reason, 'identity_mismatch');
