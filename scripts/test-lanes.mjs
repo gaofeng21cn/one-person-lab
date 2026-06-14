@@ -42,6 +42,7 @@ const fastTestFiles = [
   'tests/src/active-path-residue-scan.test.ts',
   'tests/src/stale-compat-retirement-guard.test.ts',
   'tests/src/managed-shell-command-env.test.ts',
+  'tests/src/domain-manifest-resolver.test.ts',
   'tests/src/family-structure-advisory.test.ts',
   'tests/src/family-shared-release-discipline.test.ts',
   'tests/src/family-shared-release.test.ts',
