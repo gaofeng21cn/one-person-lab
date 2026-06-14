@@ -489,6 +489,12 @@ test('framework operating maturity projects owner evidence ledger refs without r
     assert.equal(charterBrandChecklist.missing_owner_evidence_action_count, 0);
     assert.equal(charterBrandChecklist.typed_blocker_action_count, 9);
     assert.equal(charterBrandChecklist.observed_refs_not_l5_claim_count, 4);
+    assert.equal(charterBrandChecklist.owner_followthrough_required, true);
+    assert.equal(charterBrandChecklist.owner_followthrough_required_count, 9);
+    assert.equal(charterBrandChecklist.missing_owner_evidence_requirement_count, 0);
+    assert.equal(charterBrandChecklist.typed_blocker_followthrough_requirement_count, 9);
+    assert.equal(charterBrandChecklist.observed_refs_not_l5_claim_requirement_count, 4);
+    assert.equal(charterBrandChecklist.observed_ref_requirement_count, 13);
     assert.equal(charterBrandChecklist.open_requirement_count, 12);
     assert.equal(charterBrandChecklist.blocked_requirement_count, 1);
     assert.equal(charterBrandChecklist.missing_requirement_class_ids.length, 9);
@@ -506,12 +512,29 @@ test('framework operating maturity projects owner evidence ledger refs without r
     );
     assert.deepEqual(charterBrandChecklist.missing_owner_evidence_action_ids, []);
     assert.equal(charterBrandChecklist.typed_blocker_action_ids.length, 9);
+    assert.equal(charterBrandChecklist.owner_followthrough_work_order_ids.length, 9);
+    assert.equal(charterBrandChecklist.typed_blocker_followthrough_work_order_ids.length, 9);
+    assert.equal(
+      charterBrandChecklist.typed_blocker_followthrough_work_order_ids.includes(
+        'w7-brand-module-l5-charter-live_user_path',
+      ),
+      true,
+    );
     assert.equal(charterBrandChecklist.observed_refs_not_l5_claim_action_ids.length, 4);
+    assert.equal(charterBrandChecklist.observed_refs_not_l5_claim_work_order_ids.length, 4);
     assert.equal(
       charterBrandChecklist.observed_refs_not_l5_claim_action_ids.includes(
         'w7-brand-module-l5-charter-current_owner_delta_default_read',
       ),
       true,
+    );
+    assert.equal(
+      charterBrandChecklist.next_followthrough_action,
+      'resolve_typed_blocker_or_record_owner_acceptance_ref',
+    );
+    assert.equal(
+      charterBrandChecklist.next_followthrough_work_order_id,
+      'w7-brand-module-l5-charter-live_user_path',
     );
     assert.equal(charterBrandChecklist.next_work_order_id, 'w7-brand-module-l5-charter-live_user_path');
     assert.equal(charterBrandChecklist.next_evidence_class_id, 'live_user_path');
@@ -520,6 +543,18 @@ test('framework operating maturity projects owner evidence ledger refs without r
       '/Users/gaofeng/workspace/one-person-lab#brand-module:charter',
     );
     assert.equal(charterBrandChecklist.ready_claim_authorized, false);
+    assert.equal(
+      charterBrandChecklist.owner_followthrough_false_completion_guard.observed_refs_close_l5,
+      false,
+    );
+    assert.equal(
+      charterBrandChecklist.owner_followthrough_false_completion_guard.typed_blocker_refs_close_l5,
+      false,
+    );
+    assert.equal(
+      charterBrandChecklist.owner_followthrough_false_completion_guard.ready_claim_authorized,
+      false,
+    );
     assert.equal(charterBrandChecklist.authority_boundary.checklist_can_claim_l5, false);
     assert.equal(
       charterBrandChecklist.authority_boundary.checklist_can_create_typed_blocker,

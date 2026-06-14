@@ -667,6 +667,44 @@ function nextActionSummary(
   };
 }
 
+function moduleOwnerFollowthroughSummary(routes: BrandModuleL5OwnerEvidenceRoute[]) {
+  const missingOwnerEvidenceRoutes = routes.filter((route) =>
+    route.owner_evidence_closure_state === 'owner_acceptance_or_typed_blocker_required'
+  );
+  const typedBlockerRoutes = routes.filter((route) =>
+    route.owner_evidence_closure_state === 'owner_typed_blocker_recorded'
+  );
+  const observedRefsNotL5ClaimRoutes = routes.filter((route) =>
+    route.owner_evidence_closure_state === 'owner_evidence_recorded_not_l5_claim'
+  );
+  const routesWithObservedRefs = routes.filter((route) =>
+    route.observed_ref_count > 0 || route.observed_receipt_count > 0
+  );
+  const actionableRoutes = [
+    ...missingOwnerEvidenceRoutes,
+    ...typedBlockerRoutes,
+  ];
+  return {
+    owner_followthrough_required: actionableRoutes.length > 0,
+    owner_followthrough_required_count: actionableRoutes.length,
+    missing_owner_evidence_requirement_count: missingOwnerEvidenceRoutes.length,
+    typed_blocker_followthrough_requirement_count: typedBlockerRoutes.length,
+    observed_refs_not_l5_claim_requirement_count: observedRefsNotL5ClaimRoutes.length,
+    observed_ref_requirement_count: routesWithObservedRefs.length,
+    owner_followthrough_work_order_ids: actionableRoutes.map((route) => route.work_order_id),
+    typed_blocker_followthrough_work_order_ids: typedBlockerRoutes.map((route) => route.work_order_id),
+    observed_refs_not_l5_claim_work_order_ids: observedRefsNotL5ClaimRoutes.map((route) => route.work_order_id),
+    next_followthrough_action: actionableRoutes[0]?.next_owner_action ?? null,
+    next_followthrough_work_order_id: actionableRoutes[0]?.work_order_id ?? null,
+    false_completion_guard: {
+      observed_refs_close_l5: false,
+      typed_blocker_refs_close_l5: false,
+      owner_followthrough_closes_l5_without_owner_acceptance: false,
+      ready_claim_authorized: false,
+    },
+  };
+}
+
 function compactModule(
   contract: BrandModuleL5OperatingEvidenceContract,
   entry: BrandModuleL5OperatingEvidenceEntry,
@@ -682,6 +720,7 @@ function compactModule(
     receipt.receipt_status === 'verified'
   );
   const routes = ownerEvidenceRoutes(contract, entry, moduleLedgerReceipts);
+  const ownerFollowthroughSummary = moduleOwnerFollowthroughSummary(routes);
   return {
     module_id: entry.module_id,
     brand_name: entry.brand_name,
@@ -710,6 +749,7 @@ function compactModule(
       l5_claim_status: 'ledger_refs_only_not_l5_claimed',
     },
     next_action_summary: nextActionSummary(entry, routes),
+    owner_followthrough_summary: ownerFollowthroughSummary,
     immediate_enabling_surfaces: entry.immediate_enabling_surfaces,
     evidence_requirements: entry.evidence_requirements,
     owner_evidence_routes: routes,

@@ -217,6 +217,7 @@ function brandModuleL5OwnerActionChecklist(
     ];
     const nextAction = record(module.next_action_summary);
     const evidenceLedger = record(module.evidence_ledger);
+    const ownerFollowthrough = record(module.owner_followthrough_summary);
     return {
       module_id: moduleId,
       brand_name: stringValue(module.brand_name),
@@ -230,6 +231,26 @@ function brandModuleL5OwnerActionChecklist(
       missing_owner_evidence_action_count: missingOwnerEvidenceWorkOrders.length,
       typed_blocker_action_count: typedBlockerWorkOrders.length,
       observed_refs_not_l5_claim_count: observedRefsNotL5ClaimWorkOrders.length,
+      owner_followthrough_required:
+        ownerFollowthrough.owner_followthrough_required === true,
+      owner_followthrough_required_count:
+        numberValue(ownerFollowthrough.owner_followthrough_required_count)
+        ?? ownerActionRequiredWorkOrders.length,
+      missing_owner_evidence_requirement_count:
+        numberValue(ownerFollowthrough.missing_owner_evidence_requirement_count)
+        ?? missingOwnerEvidenceWorkOrders.length,
+      typed_blocker_followthrough_requirement_count:
+        numberValue(ownerFollowthrough.typed_blocker_followthrough_requirement_count)
+        ?? typedBlockerWorkOrders.length,
+      observed_refs_not_l5_claim_requirement_count:
+        numberValue(ownerFollowthrough.observed_refs_not_l5_claim_requirement_count)
+        ?? observedRefsNotL5ClaimWorkOrders.length,
+      observed_ref_requirement_count:
+        numberValue(ownerFollowthrough.observed_ref_requirement_count)
+        ?? moduleWorkOrders.filter((entry) =>
+          numberValue(record(entry).observed_ref_count) > 0
+          || numberValue(record(entry).observed_receipt_count) > 0
+        ).length,
       missing_requirement_action_ids: ownerActionRequiredWorkOrders
         .map((entry) => stringValue(entry.work_order_id))
         .filter((entry): entry is string => typeof entry === 'string' && entry.length > 0),
@@ -247,6 +268,16 @@ function brandModuleL5OwnerActionChecklist(
       observed_refs_not_l5_claim_action_ids: observedRefsNotL5ClaimWorkOrders
         .map((entry) => stringValue(entry.work_order_id))
         .filter((entry): entry is string => typeof entry === 'string' && entry.length > 0),
+      owner_followthrough_work_order_ids:
+        stringListValue(ownerFollowthrough.owner_followthrough_work_order_ids),
+      typed_blocker_followthrough_work_order_ids:
+        stringListValue(ownerFollowthrough.typed_blocker_followthrough_work_order_ids),
+      observed_refs_not_l5_claim_work_order_ids:
+        stringListValue(ownerFollowthrough.observed_refs_not_l5_claim_work_order_ids),
+      next_followthrough_action:
+        stringValue(ownerFollowthrough.next_followthrough_action),
+      next_followthrough_work_order_id:
+        stringValue(ownerFollowthrough.next_followthrough_work_order_id),
       next_work_order_id:
         stringValue(nextAction.next_work_order_id)
         ?? stringValue(moduleWorkOrders[0]?.work_order_id),
@@ -270,6 +301,8 @@ function brandModuleL5OwnerActionChecklist(
       l5_claim_status:
         stringValue(evidenceLedger.l5_claim_status)
         ?? 'ledger_refs_only_not_l5_claimed',
+      owner_followthrough_false_completion_guard:
+        record(ownerFollowthrough.false_completion_guard),
       authority_boundary: {
         checklist_is_refs_only: true,
         checklist_can_claim_l5: false,

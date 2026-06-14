@@ -101,6 +101,25 @@ export type L5Module = {
   l5_completion_status: string;
   open_requirement_count: number;
   blocked_requirement_count: number;
+  owner_followthrough_summary: {
+    owner_followthrough_required: boolean;
+    owner_followthrough_required_count: number;
+    missing_owner_evidence_requirement_count: number;
+    typed_blocker_followthrough_requirement_count: number;
+    observed_refs_not_l5_claim_requirement_count: number;
+    observed_ref_requirement_count: number;
+    owner_followthrough_work_order_ids: string[];
+    typed_blocker_followthrough_work_order_ids: string[];
+    observed_refs_not_l5_claim_work_order_ids: string[];
+    next_followthrough_action: string | null;
+    next_followthrough_work_order_id: string | null;
+    false_completion_guard: {
+      observed_refs_close_l5: boolean;
+      typed_blocker_refs_close_l5: boolean;
+      owner_followthrough_closes_l5_without_owner_acceptance: boolean;
+      ready_claim_authorized: boolean;
+    };
+  };
   next_action_summary: {
     module_id: string;
     status: string;

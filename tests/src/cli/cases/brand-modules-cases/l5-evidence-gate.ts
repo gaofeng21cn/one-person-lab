@@ -49,6 +49,39 @@ test('brand module L5 evidence gate is executable but does not claim production 
       assert.equal(entry.l5_completion_status, 'evidence_required');
       assert.equal(entry.open_requirement_count, 12);
       assert.equal(entry.blocked_requirement_count, 1);
+      assert.equal(entry.owner_followthrough_summary.owner_followthrough_required, true);
+      assert.equal(entry.owner_followthrough_summary.owner_followthrough_required_count, 9);
+      assert.equal(entry.owner_followthrough_summary.missing_owner_evidence_requirement_count, 0);
+      assert.equal(entry.owner_followthrough_summary.typed_blocker_followthrough_requirement_count, 9);
+      assert.equal(entry.owner_followthrough_summary.observed_refs_not_l5_claim_requirement_count, 4);
+      assert.equal(entry.owner_followthrough_summary.observed_ref_requirement_count, 13);
+      assert.equal(
+        entry.owner_followthrough_summary.next_followthrough_action,
+        'resolve_typed_blocker_or_record_owner_acceptance_ref',
+      );
+      assert.equal(
+        entry.owner_followthrough_summary.next_followthrough_work_order_id,
+        `w7-brand-module-l5-${entry.module_id}-live_user_path`,
+      );
+      assert.equal(
+        entry.owner_followthrough_summary.owner_followthrough_work_order_ids.includes(
+          `w7-brand-module-l5-${entry.module_id}-live_user_path`,
+        ),
+        true,
+      );
+      assert.equal(
+        entry.owner_followthrough_summary.observed_refs_not_l5_claim_work_order_ids.includes(
+          `w7-brand-module-l5-${entry.module_id}-current_owner_delta_default_read`,
+        ),
+        true,
+      );
+      assert.equal(entry.owner_followthrough_summary.false_completion_guard.observed_refs_close_l5, false);
+      assert.equal(entry.owner_followthrough_summary.false_completion_guard.typed_blocker_refs_close_l5, false);
+      assert.equal(
+        entry.owner_followthrough_summary.false_completion_guard.owner_followthrough_closes_l5_without_owner_acceptance,
+        false,
+      );
+      assert.equal(entry.owner_followthrough_summary.false_completion_guard.ready_claim_authorized, false);
       assert.equal(entry.owner_evidence_routes.length, status.evidence_classes.length);
       assert.equal(entry.next_action_summary.module_id, entry.module_id);
       assert.equal(entry.next_action_summary.status, 'evidence_required');
@@ -330,6 +363,17 @@ test('brand module L5 can be claimed only with satisfied owner acceptance succes
     assert.equal(charter.evidence_required, false);
     assert.equal(charter.open_requirement_count, 0);
     assert.equal(charter.blocked_requirement_count, 0);
+    assert.equal(charter.owner_followthrough_summary.owner_followthrough_required, false);
+    assert.equal(charter.owner_followthrough_summary.owner_followthrough_required_count, 0);
+    assert.equal(charter.owner_followthrough_summary.missing_owner_evidence_requirement_count, 0);
+    assert.equal(charter.owner_followthrough_summary.typed_blocker_followthrough_requirement_count, 0);
+    assert.equal(charter.owner_followthrough_summary.observed_refs_not_l5_claim_requirement_count, 13);
+    assert.equal(charter.owner_followthrough_summary.observed_ref_requirement_count, 13);
+    assert.equal(charter.owner_followthrough_summary.next_followthrough_action, null);
+    assert.equal(charter.owner_followthrough_summary.next_followthrough_work_order_id, null);
+    assert.deepEqual(charter.owner_followthrough_summary.owner_followthrough_work_order_ids, []);
+    assert.equal(charter.owner_followthrough_summary.false_completion_guard.observed_refs_close_l5, false);
+    assert.equal(charter.owner_followthrough_summary.false_completion_guard.ready_claim_authorized, false);
     assert.equal(charter.next_action_summary.status, 'complete');
     assert.equal(charter.next_action_summary.l5_can_be_claimed, true);
     assert.equal(charter.next_action_summary.false_completion_guard.ready_claim_authorized, false);
@@ -430,6 +474,25 @@ test('runtime owner acceptance ledger refs remain non-closing without contract o
     );
     assert.equal(runway.l5_can_be_claimed, false);
     assert.equal(status.evidence_required_module_count, 10);
+    assert.equal(runway.owner_followthrough_summary.owner_followthrough_required, true);
+    assert.equal(runway.owner_followthrough_summary.owner_followthrough_required_count, 8);
+    assert.equal(runway.owner_followthrough_summary.missing_owner_evidence_requirement_count, 0);
+    assert.equal(runway.owner_followthrough_summary.typed_blocker_followthrough_requirement_count, 8);
+    assert.equal(runway.owner_followthrough_summary.observed_refs_not_l5_claim_requirement_count, 5);
+    assert.equal(runway.owner_followthrough_summary.observed_ref_requirement_count, 13);
+    assert.equal(
+      runway.owner_followthrough_summary.typed_blocker_followthrough_work_order_ids.includes(
+        'w7-brand-module-l5-runway-long_soak_recovery',
+      ),
+      false,
+    );
+    assert.equal(
+      runway.owner_followthrough_summary.observed_refs_not_l5_claim_work_order_ids.includes(
+        'w7-brand-module-l5-runway-long_soak_recovery',
+      ),
+      true,
+    );
+    assert.equal(runway.owner_followthrough_summary.false_completion_guard.observed_refs_close_l5, false);
     assert.equal(route.verified_receipt_count, 1);
     assert.equal(route.observed_ref_shapes.includes('owner_acceptance_ref'), true);
     assert.equal(route.l5_claim_status, 'owner_evidence_refs_observed_not_l5_claimed');
