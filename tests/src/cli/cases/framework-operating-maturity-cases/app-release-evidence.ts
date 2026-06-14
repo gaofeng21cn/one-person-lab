@@ -331,9 +331,14 @@ test('framework operating maturity surfaces App release owner verdict refs as ow
       true,
     );
     assert.equal(
-      consoleReleaseInstallWorkOrder.observed_ref_shapes.includes('evidence_ref'),
+      consoleReleaseInstallWorkOrder.observed_ref_shapes.includes('release_evidence_ref'),
       true,
     );
+    assert.equal(
+      consoleReleaseInstallWorkOrder.observed_ref_shapes.includes('install_evidence_ref'),
+      true,
+    );
+    assert.equal(consoleReleaseInstallWorkOrder.observed_ref_shapes.includes('evidence_ref'), false);
     assert.equal(consoleReleaseInstallWorkOrder.ready_claim_authorized, false);
     const connectReleaseInstallWorkOrder =
       maturity.foundry_agent_os_production_evidence_gate

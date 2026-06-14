@@ -277,7 +277,10 @@ function observedRefsForRequirement(
 
 const L5_REF_SHAPE_PREFIX_ALIASES: Record<string, string> = {
   typed_blocker: 'typed_blocker_ref',
-  release_owner_receipt_ref: 'owner_receipt_ref',
+  release_owner_receipt_ref: 'release_evidence_ref',
+  release_owner_receipt: 'release_evidence_ref',
+  release_evidence: 'release_evidence_ref',
+  install_evidence: 'install_evidence_ref',
   temporal_hosted_long_soak_ref: 'long_soak_ref',
   provider_long_soak_ref: 'long_soak_ref',
   provider_recovery_ref: 'recovery_ref',
