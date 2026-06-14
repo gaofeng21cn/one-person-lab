@@ -33,6 +33,23 @@ type CurrentControlProviderAdmissionActionQueueIdentity = {
   attemptIdempotencyKey: string | null;
 };
 
+type CurrentControlProviderAdmissionInputContext = {
+  workspaceRoot: string | null;
+  profileName: string | null;
+  profileRef: string | null;
+  dispatchAuthority: string;
+  dispatchPath: string | null;
+  dispatchRef: string | null;
+  stagePacketRefs: string[];
+  stagePacketRef: string | null;
+  routeIdentityKey: string;
+  attemptIdempotencyKey: string;
+  sourceFingerprint: string;
+  obligationId: string | null;
+  sourceRefs: Array<Record<string, unknown>>;
+  currentnessBasis: Record<string, unknown> | null;
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -478,6 +495,87 @@ function currentControlProviderAdmissionCandidateFields(
   };
 }
 
+function currentControlProviderAdmissionInputContext(input: {
+  candidate: Record<string, unknown>;
+  output: Record<string, unknown>;
+  fields: CurrentControlProviderAdmissionCandidateFields;
+  currentControlRef: string;
+}): { context?: CurrentControlProviderAdmissionInputContext; blocked?: { reason: string; task: unknown } } {
+  const workspaceRoot = exportWorkspaceRoot(input.output);
+  const profileName = exportProfileName(input.output);
+  const profileRef = exportProfileRef(input.output);
+  const dispatchAuthority = optionalString(input.candidate.dispatch_authority)
+    ?? 'consumer_default_executor_dispatch';
+  const dispatchPath = optionalString(input.candidate.dispatch_path);
+  const dispatchRef = optionalString(input.candidate.dispatch_ref)
+    ?? workspaceRelativeRef(dispatchPath, workspaceRoot)
+    ?? defaultExecutorDispatchRefByConvention({
+      workspaceRoot,
+      studyId: input.fields.studyId,
+      actionType: input.fields.actionType,
+    });
+  const stagePacketRefs = currentControlStagePacketRefs({
+    candidate: input.candidate,
+    workspaceRoot,
+  });
+  const stagePacketRef = stagePacketRefs[0] ?? null;
+  if (!stagePacketRef && (optionalString(input.candidate.executor_kind) ?? 'codex_cli_default') === 'codex_cli_default') {
+    return {
+      blocked: {
+        reason: 'current_control_provider_admission_stage_packet_ref_missing',
+        task: input.candidate,
+      },
+    };
+  }
+  const routeIdentityKey = optionalString(input.candidate.route_identity_key);
+  if (!routeIdentityKey) {
+    return {
+      blocked: {
+        reason: 'current_control_provider_admission_route_identity_key_missing',
+        task: input.candidate,
+      },
+    };
+  }
+  const attemptIdempotencyKey = optionalString(input.candidate.attempt_idempotency_key);
+  if (!attemptIdempotencyKey) {
+    return {
+      blocked: {
+        reason: 'current_control_provider_admission_attempt_idempotency_key_missing',
+        task: input.candidate,
+      },
+    };
+  }
+  const sourceFingerprint = optionalString(input.candidate.source_fingerprint)
+    ?? optionalString(input.candidate.action_fingerprint)
+    ?? input.fields.workUnitFingerprint;
+  const obligationId = recoveryObligationId(input.candidate);
+  const sourceRefs = providerAdmissionSourceRefs({
+    candidate: input.candidate,
+    currentControlRef: input.currentControlRef,
+    workspaceRoot,
+    dispatchRef,
+  });
+  const currentnessBasis = isRecord(input.candidate.currentness_basis) ? input.candidate.currentness_basis : null;
+  return {
+    context: {
+      workspaceRoot,
+      profileName,
+      profileRef,
+      dispatchAuthority,
+      dispatchPath,
+      dispatchRef,
+      stagePacketRefs,
+      stagePacketRef,
+      routeIdentityKey,
+      attemptIdempotencyKey,
+      sourceFingerprint,
+      obligationId,
+      sourceRefs,
+      currentnessBasis,
+    },
+  };
+}
+
 function currentControlProviderAdmissionInputFrom(
   domainId: FamilyRuntimeDomainId,
   candidate: Record<string, unknown>,
@@ -505,57 +603,34 @@ function currentControlProviderAdmissionInputFrom(
     workUnitFingerprint,
     nextOwner,
   } = candidateFields.fields;
-  const workspaceRoot = exportWorkspaceRoot(output);
-  const profileName = exportProfileName(output);
-  const profileRef = exportProfileRef(output);
-  const dispatchAuthority = optionalString(candidate.dispatch_authority)
-    ?? 'consumer_default_executor_dispatch';
-  const dispatchPath = optionalString(candidate.dispatch_path);
-  const dispatchRef = optionalString(candidate.dispatch_ref)
-    ?? workspaceRelativeRef(dispatchPath, workspaceRoot)
-    ?? defaultExecutorDispatchRefByConvention({ workspaceRoot, studyId, actionType });
-  const stagePacketRefs = currentControlStagePacketRefs({
+  const contextResult = currentControlProviderAdmissionInputContext({
     candidate,
-    workspaceRoot,
-  });
-  const stagePacketRef = stagePacketRefs[0] ?? null;
-  if (!stagePacketRef && (optionalString(candidate.executor_kind) ?? 'codex_cli_default') === 'codex_cli_default') {
-    return {
-      blocked: {
-        reason: 'current_control_provider_admission_stage_packet_ref_missing',
-        task: candidate,
-      },
-    };
-  }
-  const routeIdentityKey = optionalString(candidate.route_identity_key);
-  if (!routeIdentityKey) {
-    return {
-      blocked: {
-        reason: 'current_control_provider_admission_route_identity_key_missing',
-        task: candidate,
-      },
-    };
-  }
-  const attemptIdempotencyKey = optionalString(candidate.attempt_idempotency_key);
-  if (!attemptIdempotencyKey) {
-    return {
-      blocked: {
-        reason: 'current_control_provider_admission_attempt_idempotency_key_missing',
-        task: candidate,
-      },
-    };
-  }
-  const sourceFingerprint = optionalString(candidate.source_fingerprint)
-    ?? optionalString(candidate.action_fingerprint)
-    ?? workUnitFingerprint;
-  const obligationId = recoveryObligationId(candidate);
-  const sourceRefs = providerAdmissionSourceRefs({
-    candidate,
+    output,
+    fields: candidateFields.fields,
     currentControlRef,
-    workspaceRoot,
-    dispatchRef,
   });
-  const currentnessBasis = isRecord(candidate.currentness_basis) ? candidate.currentness_basis : null;
+  if (contextResult.blocked) {
+    return { blocked: contextResult.blocked };
+  }
+  if (!contextResult.context) {
+    return { blocked: { reason: 'invalid_current_control_provider_admission_candidate', task: candidate } };
+  }
+  const {
+    workspaceRoot,
+    profileName,
+    profileRef,
+    dispatchAuthority,
+    dispatchPath,
+    dispatchRef,
+    stagePacketRefs,
+    stagePacketRef,
+    routeIdentityKey,
+    attemptIdempotencyKey,
+    sourceFingerprint,
+    obligationId,
+    sourceRefs,
+    currentnessBasis,
+  } = contextResult.context;
   return {
     input: {
       domainId,
