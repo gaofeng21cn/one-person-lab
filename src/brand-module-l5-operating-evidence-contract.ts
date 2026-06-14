@@ -486,6 +486,24 @@ export function validateBrandModuleL5OperatingEvidence(
       const evidenceRefs = optionalNonEmptyStringArrayField(requirement, 'evidence_refs', filePath);
       const ownerAcceptanceRefs = optionalNonEmptyStringArrayField(requirement, 'owner_acceptance_refs', filePath);
       const blockerRefs = optionalNonEmptyStringArrayField(requirement, 'blocker_refs', filePath);
+      const supportingDomainOwnerChainRefs = optionalNonEmptyStringArrayField(
+        requirement,
+        'supporting_domain_owner_chain_refs',
+        filePath,
+      );
+      if (supportingDomainOwnerChainRefs && classId !== 'cross_agent_scaleout') {
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'supporting_domain_owner_chain_refs may only appear on cross_agent_scaleout requirements.',
+          {
+            file: filePath,
+            index,
+            module_id: moduleId,
+            requirementIndex,
+            class_id: classId,
+          },
+        );
+      }
       if ((evidenceRefs || ownerAcceptanceRefs) && blockerRefs) {
         throw new FrameworkContractError('contract_shape_invalid', 'success refs cannot be mixed with blocker_refs on the same L5 evidence requirement.', {
           file: filePath,
@@ -530,6 +548,9 @@ export function validateBrandModuleL5OperatingEvidence(
         ...(evidenceRefs ? { evidence_refs: evidenceRefs } : {}),
         ...(ownerAcceptanceRefs ? { owner_acceptance_refs: ownerAcceptanceRefs } : {}),
         ...(blockerRefs ? { blocker_refs: blockerRefs } : {}),
+        ...(supportingDomainOwnerChainRefs
+          ? { supporting_domain_owner_chain_refs: supportingDomainOwnerChainRefs }
+          : {}),
       };
     });
 

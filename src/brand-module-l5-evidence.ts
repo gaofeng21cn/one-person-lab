@@ -478,6 +478,57 @@ function ownerRouteCommandExamples(
   };
 }
 
+const CROSS_AGENT_SCALEOUT_TARGET_AGENTS = [
+  'med-autoscience',
+  'med-autogrant',
+  'redcube-ai',
+  'opl-meta-agent',
+] as const;
+
+function coveredCrossAgentScaleoutTargets(refs: string[] = []) {
+  const covered = new Set<string>();
+  for (const ref of refs) {
+    if (ref.includes('med-autoscience') || ref.includes('/mas') || ref.includes(':mas')) {
+      covered.add('med-autoscience');
+    }
+    if (ref.includes('med-autogrant') || ref.includes('/mag') || ref.includes(':mag')) {
+      covered.add('med-autogrant');
+    }
+    if (ref.includes('redcube-ai') || ref.includes('/rca') || ref.includes(':rca')) {
+      covered.add('redcube-ai');
+    }
+    if (ref.includes('opl-meta-agent') || ref.includes('/oma') || ref.includes(':oma')) {
+      covered.add('opl-meta-agent');
+    }
+  }
+  return CROSS_AGENT_SCALEOUT_TARGET_AGENTS.filter((agent) => covered.has(agent));
+}
+
+function supportingDomainOwnerChainCoverage(
+  classId: BrandModuleL5EvidenceClassId,
+  refs: string[] = [],
+) {
+  if (classId !== 'cross_agent_scaleout' || refs.length === 0) {
+    return null;
+  }
+  const covered_target_agents = coveredCrossAgentScaleoutTargets(refs);
+  const missing_target_agents = CROSS_AGENT_SCALEOUT_TARGET_AGENTS.filter((agent) =>
+    !covered_target_agents.includes(agent)
+  );
+  return {
+    target_agents: [...CROSS_AGENT_SCALEOUT_TARGET_AGENTS],
+    covered_target_agents,
+    missing_target_agents,
+    all_target_agents_covered: missing_target_agents.length === 0,
+    refs_are_supporting_only: true,
+    refs_count_as_l5_evidence: false,
+    refs_count_as_ready_claim: false,
+    next_required_owner_action: missing_target_agents.length > 0
+      ? 'record_missing_per_agent_scaleout_receipt_or_owner_typed_blocker'
+      : 'record_brand_module_scaleout_receipt_ref_or_owner_acceptance_ref',
+  };
+}
+
 function ownerEvidenceRoutes(
   contract: BrandModuleL5OperatingEvidenceContract,
   entry: BrandModuleL5OperatingEvidenceEntry,
@@ -502,6 +553,11 @@ function ownerEvidenceRoutes(
       requirement,
     );
     const observedRefShapes = observedRefShapesForRequirement(requirementLedgerReceipts, requirement);
+    const supportingDomainOwnerChainRefs = requirement.supporting_domain_owner_chain_refs ?? [];
+    const supportingCoverage = supportingDomainOwnerChainCoverage(
+      requirement.class_id,
+      supportingDomainOwnerChainRefs,
+    );
     return {
       module_id: entry.module_id,
       class_id: requirement.class_id,
@@ -558,6 +614,9 @@ function ownerEvidenceRoutes(
       existing_evidence_refs: requirement.evidence_refs ?? [],
       existing_owner_acceptance_refs: requirement.owner_acceptance_refs ?? [],
       existing_blocker_refs: requirement.blocker_refs ?? [],
+      supporting_domain_owner_chain_refs: supportingDomainOwnerChainRefs,
+      supporting_domain_owner_chain_ref_count: supportingDomainOwnerChainRefs.length,
+      supporting_domain_owner_chain_coverage: supportingCoverage,
       observed_evidence_refs: observedEvidenceRefs,
       observed_receipt_refs: requirementLedgerReceipts.map((receipt) => receipt.receipt_ref),
       observed_ref_shapes: observedRefShapes,
@@ -576,6 +635,7 @@ function ownerEvidenceRoutes(
       forbidden_opl_claims: L5_REQUIREMENT_FORBIDDEN_OPL_CLAIMS,
       stop_loss: [
         'if observed refs exist but l5_can_be_claimed is false, do not add more OPL projection evidence for this requirement',
+        'if supporting_domain_owner_chain_refs exist, treat them as owner-handoff context only until a scaleout_receipt_ref, per_agent_receipt_ref, owner_acceptance_ref, or typed_blocker_ref is recorded for the brand module route',
         'if the requirement needs owner acceptance, request owner_acceptance_ref or typed_blocker_ref from the listed owner repo',
         'if only contract validation, docs foldback, conformance pass, App projection, provider completion, or verified refs-only ledger exists, keep ready_claim_authorized=false',
       ],

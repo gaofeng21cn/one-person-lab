@@ -298,6 +298,12 @@ test('brand module L5 evidence gate is executable but does not claim production 
         assert.equal(route.forbidden_opl_claims.includes('typed_blocker_created_by_opl'), true);
         assert.equal(
           route.stop_loss.includes(
+            'if supporting_domain_owner_chain_refs exist, treat them as owner-handoff context only until a scaleout_receipt_ref, per_agent_receipt_ref, owner_acceptance_ref, or typed_blocker_ref is recorded for the brand module route',
+          ),
+          true,
+        );
+        assert.equal(
+          route.stop_loss.includes(
             'if only contract validation, docs foldback, conformance pass, App projection, provider completion, or verified refs-only ledger exists, keep ready_claim_authorized=false',
           ),
           true,
@@ -307,6 +313,46 @@ test('brand module L5 evidence gate is executable but does not claim production 
         assert.equal(route.authority_boundary.route_can_claim_production_ready, false);
         assert.equal(route.authority_boundary.route_can_create_owner_receipt, false);
         assert.equal(route.authority_boundary.route_can_create_typed_blocker, false);
+      }
+
+      const crossAgentScaleout = entry.owner_evidence_routes.find((candidate) =>
+        candidate.class_id === 'cross_agent_scaleout'
+      );
+      if (entry.module_id === 'workspace') {
+        const supportingCoverage = crossAgentScaleout?.supporting_domain_owner_chain_coverage;
+        assert.ok(supportingCoverage);
+        assert.equal(crossAgentScaleout?.supporting_domain_owner_chain_ref_count, 5);
+        assert.equal(
+          crossAgentScaleout?.supporting_domain_owner_chain_refs.includes(
+            'supporting_domain_owner_chain_ref://med-autogrant/contracts/production_acceptance/mag-workspace-receipt-scaleout-evidence-20260527.json#/workspace_receipt_scaleout',
+          ),
+          true,
+        );
+        assert.deepEqual(
+          supportingCoverage.target_agents,
+          ['med-autoscience', 'med-autogrant', 'redcube-ai', 'opl-meta-agent'],
+        );
+        assert.deepEqual(
+          supportingCoverage.covered_target_agents,
+          ['med-autoscience', 'med-autogrant', 'redcube-ai', 'opl-meta-agent'],
+        );
+        assert.deepEqual(supportingCoverage.missing_target_agents, []);
+        assert.equal(supportingCoverage.refs_are_supporting_only, true);
+        assert.equal(supportingCoverage.refs_count_as_l5_evidence, false);
+        assert.equal(supportingCoverage.refs_count_as_ready_claim, false);
+        assert.equal(
+          supportingCoverage.next_required_owner_action,
+          'record_brand_module_scaleout_receipt_ref_or_owner_acceptance_ref',
+        );
+        assert.deepEqual(crossAgentScaleout?.observed_evidence_refs, [
+          'typed-blocker:opl-brand-l5/workspace/cross_agent_scaleout/owner-evidence-needed-20260612',
+        ]);
+        assert.deepEqual(crossAgentScaleout?.observed_ref_shapes, ['typed_blocker_ref']);
+        assert.equal(crossAgentScaleout?.owner_evidence_closure_state, 'owner_typed_blocker_recorded');
+      } else {
+        assert.equal(crossAgentScaleout?.supporting_domain_owner_chain_ref_count, 0);
+        assert.deepEqual(crossAgentScaleout?.supporting_domain_owner_chain_refs, []);
+        assert.equal(crossAgentScaleout?.supporting_domain_owner_chain_coverage, null);
       }
 
       for (const classId of [
@@ -520,6 +566,45 @@ test('brand module L5 requirement rejects success refs mixed with blocker refs',
     assert.match(
       failure.payload.error.message,
       /success refs cannot be mixed with blocker_refs/,
+    );
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('brand module L5 requirement keeps supporting domain owner chain refs scoped to scaleout', () => {
+  const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
+    const contractPath = path.join(contractsRoot, 'brand-module-l5-operating-evidence.json');
+    const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8')) as {
+      modules: Array<{
+        module_id: string;
+        evidence_requirements: Array<{
+          class_id: string;
+          supporting_domain_owner_chain_refs?: string[];
+        }>;
+      }>;
+    };
+    const charter = contract.modules.find((entry) => entry.module_id === 'charter');
+    assert.ok(charter);
+    const longSoak = charter.evidence_requirements.find((entry) =>
+      entry.class_id === 'long_soak_recovery'
+    );
+    assert.ok(longSoak);
+    longSoak.supporting_domain_owner_chain_refs = [
+      'supporting_domain_owner_chain_ref://med-autoscience/contracts/production_acceptance/not-scaleout.json',
+    ];
+    fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`, 'utf8');
+  });
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-brand-l5-supporting-refs-scope-state-'));
+  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateDir };
+
+  try {
+    const failure = runCliFailure(['brand-modules', 'l5-status'], env);
+    assert.equal(failure.payload.error.code, 'contract_shape_invalid');
+    assert.match(
+      failure.payload.error.message,
+      /supporting_domain_owner_chain_refs may only appear on cross_agent_scaleout requirements/,
     );
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });

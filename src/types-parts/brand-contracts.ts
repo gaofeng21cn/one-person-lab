@@ -66,6 +66,7 @@ export interface BrandModuleL5EvidenceRequirement {
   evidence_refs?: string[];
   owner_acceptance_refs?: string[];
   blocker_refs?: string[];
+  supporting_domain_owner_chain_refs?: string[];
 }
 
 export interface BrandModuleL5OperatingEvidenceEntry {

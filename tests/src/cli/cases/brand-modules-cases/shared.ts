@@ -76,6 +76,18 @@ export type L5Route = {
   existing_evidence_refs: string[];
   existing_owner_acceptance_refs: string[];
   existing_blocker_refs: string[];
+  supporting_domain_owner_chain_refs: string[];
+  supporting_domain_owner_chain_ref_count: number;
+  supporting_domain_owner_chain_coverage: {
+    target_agents: string[];
+    covered_target_agents: string[];
+    missing_target_agents: string[];
+    all_target_agents_covered: boolean;
+    refs_are_supporting_only: boolean;
+    refs_count_as_l5_evidence: boolean;
+    refs_count_as_ready_claim: boolean;
+    next_required_owner_action: string;
+  } | null;
   observed_evidence_refs: string[];
   observed_ref_shapes: string[];
   observed_ref_count: number;

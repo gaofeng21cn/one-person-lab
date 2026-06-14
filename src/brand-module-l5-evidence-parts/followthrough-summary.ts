@@ -18,6 +18,9 @@ export type BrandModuleL5OwnerEvidenceRoute = {
   observed_receipt_count: number;
   verified_receipt_count: number;
   blocker_state: string;
+  supporting_domain_owner_chain_refs?: string[];
+  supporting_domain_owner_chain_ref_count?: number;
+  supporting_domain_owner_chain_coverage?: unknown;
   forbidden_opl_claims?: string[];
   stop_loss?: string[];
   owner_route_command_examples?: unknown;
