@@ -146,6 +146,9 @@ export function appOperatorDrilldownMaturity(drilldown: Record<string, unknown>)
   const providerEvidenceBlockerRefCount =
     stringListValue(providerEvidence.provider_blocker_refs).length
     + stringListValue(providerEvidence.typed_blocker_refs).length;
+  const providerVerifiedReceiptRefs = stringListValue(providerEvidence.verified_receipt_refs);
+  const providerPendingVerifyReceiptRefs =
+    stringListValue(providerEvidence.pending_verify_receipt_refs);
   const providerCapabilityStatus =
     stringValue(summary.provider_slo_capability_status);
   const capabilityChecklist = providerCapabilityChecklist(summary, providerEvidence);
@@ -155,7 +158,13 @@ export function appOperatorDrilldownMaturity(drilldown: Record<string, unknown>)
   const capabilityEvidenceObservedRequirementIds = capabilityChecklist
     .filter((entry) => entry.observed !== true && entry.refs_observed === true)
     .map((entry) => entry.requirement_id);
-  const providerOpenCount = providerLongEvidenceReady ? 0 : 1;
+  const providerOwnerBlockerEvidenceRecorded =
+    providerEvidenceBlockerRefCount > 0
+    && providerVerifiedReceiptRefs.length > 0
+    && providerPendingVerifyReceiptRefs.length === 0
+    && capabilityMissingRequirementIds.length === 0;
+  const providerOpenCount =
+    providerLongEvidenceReady || providerOwnerBlockerEvidenceRecorded ? 0 : 1;
   const lifecycleObservedRefCount = numberValue(lifecycleEvidence.observed_ref_count);
   const lifecycleOwnerWorkOrder = record(lifecycleEvidence.lifecycle_owner_work_order);
   const lifecycleTypedBlockerWorkOrder = record(
@@ -235,8 +244,8 @@ export function appOperatorDrilldownMaturity(drilldown: Record<string, unknown>)
         : 'capability_slo_requirements_observed_not_production_ready_claim',
       evidence: providerEvidence,
       observedReceiptRefs: stringListValue(providerEvidence.receipt_refs),
-      verifiedReceiptRefs: stringListValue(providerEvidence.verified_receipt_refs),
-      pendingVerifyReceiptRefs: stringListValue(providerEvidence.pending_verify_receipt_refs),
+      verifiedReceiptRefs: providerVerifiedReceiptRefs,
+      pendingVerifyReceiptRefs: providerPendingVerifyReceiptRefs,
       observedRefShapes: stringListValue(providerEvidence.observed_ref_shapes),
       observedRefCounts: record(providerEvidence.observed_ref_counts),
       authorityBoundary: record(providerEvidence.authority_boundary),
@@ -294,7 +303,8 @@ export function providerLongSoakExecutionRunbook() {
     ],
     stop_loss: [
       'if capability_status remains capability_slo_blocked, use capability_missing_requirement_ids to record specific long_soak/recovery/dead_letter/provider_blocker/typed_blocker evidence instead of rerunning evidence accounting',
-      'if long_evidence_ready remains false after a claimed window, preserve open_evidence_count=1 and route to runtime owner',
+      'if long_evidence_ready remains false after a claimed window and capability_missing_requirement_ids is not empty, preserve open_evidence_count=1 and route to runtime owner',
+      'if verified provider_blocker_ref or typed_blocker_ref covers every capability owner action, close the owner-evidence work order but keep long_evidence_ready=false and production ready claims unauthorized',
       'if provider completion is the only proof, keep provider_completion_counts_as_production_ready=false',
     ],
     false_authority_guard: {

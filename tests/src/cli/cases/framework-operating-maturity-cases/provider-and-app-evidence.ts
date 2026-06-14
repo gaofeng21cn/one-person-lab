@@ -303,6 +303,118 @@ test('provider long-soak evidence namespace help exposes record verify and list 
   ]);
 });
 
+test('framework operating maturity closes provider owner-evidence work order when blocker refs cover every capability without ready claims', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-provider-owner-evidence-covered-'));
+  const workspaceRoot = createFamilyDefaultContractWorkspace();
+  try {
+    const env: Record<string, string> = {
+      OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+    };
+    const providerRecord = runCli([
+      'runtime',
+      'provider-long-soak-evidence',
+      'record',
+      '--payload',
+      JSON.stringify({
+        provider_blocker_refs: [
+          'provider-blocker:temporal/capability/restart-requery',
+          'provider-blocker:temporal/capability/signal-history',
+          'provider-blocker:temporal/capability/missing-closeout-block',
+          'provider-blocker:temporal/capability/retry-dead-letter',
+          'provider-blocker:temporal/capability/domain-truth-boundary',
+        ],
+        typed_blocker_refs: [
+          'typed-blocker:provider/typed-closeout-required',
+        ],
+        capability_requirement_ids: [
+          'restart_requery_ready',
+          'signal_history_ready',
+          'typed_closeout_required_ready',
+          'missing_closeout_block_ready',
+          'retry_dead_letter_boundary_ready',
+          'domain_truth_boundary_preserved',
+        ],
+      }),
+    ], env).provider_long_soak_evidence_ledger_record;
+    runCli([
+      'runtime',
+      'provider-long-soak-evidence',
+      'verify',
+      '--receipt-ref',
+      providerRecord.receipt_refs[0],
+    ], env);
+
+    const maturity = runCli([
+      'framework',
+      'operating-maturity',
+      '--family-defaults',
+    ], env).framework_operating_maturity;
+
+    assert.equal(maturity.summary.provider_long_soak_open_count, 0);
+    assert.equal(
+      maturity.provider_long_soak.status,
+      'evidence_recorded_not_production_ready_claim',
+    );
+    assert.equal(maturity.provider_long_soak.open_evidence_count, 0);
+    assert.equal(maturity.provider_long_soak.long_evidence_ready, false);
+    assert.equal(maturity.provider_long_soak.capability_status, 'capability_slo_blocked');
+    assert.deepEqual(maturity.provider_long_soak.capability_missing_requirement_ids, []);
+    assert.deepEqual(maturity.provider_long_soak.capability_evidence_observed_requirement_ids, [
+      'restart_requery_ready',
+      'signal_history_ready',
+      'typed_closeout_required_ready',
+      'missing_closeout_block_ready',
+      'retry_dead_letter_boundary_ready',
+      'domain_truth_boundary_preserved',
+    ]);
+    assert.equal(maturity.provider_long_soak.capability_open_requirement_count, 0);
+    assert.equal(
+      maturity.provider_long_soak.capability_next_evidence_action,
+      'capability_slo_requirements_observed_not_production_ready_claim',
+    );
+    assert.deepEqual(maturity.provider_long_soak.observed_ref_shapes, [
+      'provider_blocker_ref',
+      'typed_blocker_ref',
+    ]);
+    assert.equal(maturity.provider_long_soak.verified_receipt_ref_count, 1);
+    assert.equal(maturity.provider_long_soak.provider_completion_counts_as_production_ready, false);
+    assert.equal(
+      maturity.provider_long_soak.authority_boundary.can_claim_production_ready,
+      false,
+    );
+
+    const providerGateLane = maturity.foundry_agent_os_production_evidence_gate.lane_statuses.find(
+      (entry: { lane: string }) => entry.lane === 'provider_long_soak',
+    );
+    assert.equal(providerGateLane.open_count, 0);
+    assert.equal(providerGateLane.status, 'refs_observed_not_production_ready_claim');
+    assert.deepEqual(providerGateLane.missing_owner_action_ids, []);
+    const providerWorkOrder = maturity.foundry_agent_os_production_evidence_gate
+      .owner_route_work_orders.find(
+        (entry: { lane: string }) => entry.lane === 'provider_long_soak',
+      );
+    assert.equal(providerWorkOrder.status, 'owner_evidence_recorded');
+    assert.equal(providerWorkOrder.open_count, 0);
+    assert.equal(
+      providerWorkOrder.owner_evidence_closure_state,
+      'owner_evidence_recorded_not_ready_claim',
+    );
+    assert.deepEqual(providerWorkOrder.missing_owner_action_ids, []);
+    assert.equal(providerWorkOrder.owner_acceptance_required, true);
+    assert.equal(providerWorkOrder.ready_claim_authorized, false);
+    assert.equal(
+      providerWorkOrder.authority_boundary.can_claim_production_ready,
+      false,
+    );
+    assert.equal(maturity.authority_boundary.can_claim_production_ready, false);
+    assert.equal(maturity.not_claims.includes('production_ready'), true);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('framework operating maturity consumes verified App release user-path evidence without release-ready claims', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-operating-maturity-app-state-'));
   const workspaceRoot = createFamilyDefaultContractWorkspace();
