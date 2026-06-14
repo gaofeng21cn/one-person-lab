@@ -276,6 +276,40 @@ export function temporalPayloadHistoryPolicy() {
     max_inline_string_bytes: TEMPORAL_MAX_INLINE_PAYLOAD_BYTES,
     large_payload_storage: 'external_ref_required',
     large_payload_ref_prefix: 'payload_ref:sha256:',
+    scheduler_tick_activity_result: {
+      result_surface_kind: 'temporal_scheduler_tick_activity_receipt',
+      max_inline_bytes: TEMPORAL_MAX_INLINE_PAYLOAD_BYTES,
+      full_scheduler_tick_body_omitted: true,
+      retained_summary_fields: [
+        'scheduler_tick_surface_kind',
+        'scheduler_owner',
+        'cadence_owner',
+        'provider_kind',
+        'tick_source',
+        'tick_status',
+        'task_scope',
+        'provider_readiness_after_slo',
+        'provider_liveness_blocker',
+        'provider_blocker',
+        'provider_slo_summary',
+        'progress_first_ready_owner_action_pickup_slo',
+        'queue_tick',
+        'authority_boundary',
+      ],
+      omitted_body_fields: [
+        'provider_runtime',
+        'provider_runtime_after_slo',
+        'provider_slo',
+        'queue_tick.dispatches',
+      ],
+      authority_boundary: {
+        can_write_domain_truth: false,
+        can_write_domain_memory_body: false,
+        can_authorize_quality_verdict: false,
+        can_authorize_export_verdict: false,
+        provider_completion_is_domain_ready: false,
+      },
+    },
   } as const;
 }
 

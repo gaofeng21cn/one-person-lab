@@ -10,6 +10,8 @@ import {
 import { enqueueTask } from '../../../../../src/family-runtime-enqueue.ts';
 import { runSchedulerTick } from '../../../../../src/family-runtime-scheduler.ts';
 import { familyRuntimePaths } from '../../../../../src/family-runtime-store.ts';
+import { compactSchedulerTickForTemporalResult } from '../../../../../src/family-runtime-temporal-activities.ts';
+import { TEMPORAL_MAX_INLINE_PAYLOAD_BYTES } from '../../../../../src/family-runtime-temporal.ts';
 
 function readyProviderLifecycle() {
   return {
@@ -208,4 +210,92 @@ test('family-runtime scheduler tick passes MAS profile into domain hydration bef
   } finally {
     db.close();
   }
+});
+
+test('temporal scheduler tick receipt is compact enough for workflow history', () => {
+  const hugeBody = 'x'.repeat(TEMPORAL_MAX_INLINE_PAYLOAD_BYTES + 4096);
+  const compact = compactSchedulerTickForTemporalResult({
+    surface_kind: 'opl_family_runtime_scheduler_tick',
+    scheduler_owner: 'opl_provider_runtime_manager',
+    cadence_owner: 'provider_backed_family_runtime',
+    provider_kind: 'temporal',
+    tick_source: 'opl-provider-scheduler',
+    provider_runtime_after_slo: {
+      selected_provider: 'temporal',
+      providers: {
+        temporal: {
+          ready: true,
+          details: {
+            worker_readiness: {
+              readiness_status: 'ready',
+              retained_diagnostic_body: hugeBody,
+            },
+          },
+        },
+      },
+    },
+    provider_readiness_after_slo: {
+      surface_kind: 'opl_provider_readiness_after_slo',
+      provider_kind: 'temporal',
+      ready: true,
+      status: 'ready',
+      worker_lifecycle_status: 'ready',
+      worker_readiness_status: 'ready',
+      worker_ready: true,
+    },
+    provider_slo: {
+      surface_id: 'opl_family_runtime_provider_slo_tick',
+      provider_kind: 'temporal',
+      execution_status: 'skipped',
+      skipped: true,
+      provider_slo_execution_receipt: {
+        receipt_status: 'skipped',
+        skip_reason: 'deferred_owner_delta_first',
+      },
+      retained_diagnostic_body: hugeBody,
+    },
+    progress_first_ready_owner_action_pickup_slo: {
+      surface_kind: 'opl_progress_first_ready_owner_action_pickup_slo',
+      slo_status: 'satisfied',
+      hydrated_pending_family_task_count: 1,
+      same_tick_selected_count: 1,
+      same_tick_dispatch_count: 1,
+      cadence_wait_required: false,
+    },
+    task_scope: { domain_id: 'medautoscience' },
+    queue_tick: {
+      source: 'opl-provider-scheduler',
+      limit: 10,
+      hydrate: true,
+      hydration: {
+        enqueued_count: 1,
+        requeued_count: 0,
+        idempotent_noop_count: 0,
+        filtered_count: 0,
+      },
+      selected_count: 1,
+      dispatches: [{
+        task_id: 'task-large',
+        dispatch_status: 'admitted',
+        domain_receipt_body: hugeBody,
+      }],
+    },
+    authority_boundary: {
+      opl: 'scheduler_cadence_queue_and_provider_slo_owner',
+      domain: 'truth_quality_artifact_gate_owner',
+      can_write_domain_truth: false,
+      provider_completion_is_domain_ready: false,
+    },
+  });
+
+  assert.equal(compact.surface_kind, 'temporal_scheduler_tick_activity_receipt');
+  assert.equal(compact.full_scheduler_tick_omitted, true);
+  assert.equal(compact.queue_tick.dispatches_omitted, true);
+  assert.equal(compact.queue_tick.dispatches_count, 1);
+  assert.equal(compact.provider_runtime_after_slo_omitted, true);
+  assert.equal(compact.provider_slo_omitted, true);
+  assert.equal(compact.authority_boundary.can_write_domain_truth, false);
+  assert.equal(compact.authority_boundary.provider_completion_is_domain_ready, false);
+  assert.equal(JSON.stringify(compact).includes(hugeBody), false);
+  assert.ok(Buffer.byteLength(JSON.stringify(compact), 'utf8') < TEMPORAL_MAX_INLINE_PAYLOAD_BYTES);
 });

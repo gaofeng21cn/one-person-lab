@@ -43,6 +43,18 @@ function readStringList(value: unknown) {
   return value.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry));
 }
 
+function readString(value: unknown) {
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+function readNumber(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function readBoolean(value: unknown) {
+  return typeof value === 'boolean' ? value : null;
+}
+
 export function compactCloseoutPacketForTemporalResult(value: unknown) {
   if (!isRecord(value)) {
     return null;
@@ -109,6 +121,132 @@ export function compactCloseoutPacketForTemporalResult(value: unknown) {
         'user_stage_log',
         'stage_log_summary',
         'human_stage_log',
+      ],
+    },
+  };
+}
+
+function compactSchedulerQueueTickForTemporalResult(value: unknown) {
+  const queueTick = isRecord(value) ? value : {};
+  const hydration = isRecord(queueTick.hydration) ? queueTick.hydration : null;
+  const dispatches = Array.isArray(queueTick.dispatches) ? queueTick.dispatches : [];
+  return {
+    source: readString(queueTick.source),
+    limit: readNumber(queueTick.limit),
+    hydrate: readBoolean(queueTick.hydrate),
+    status: readString(queueTick.status),
+    dispatch_blocked_reason: readString(queueTick.dispatch_blocked_reason),
+    selected_count: readNumber(queueTick.selected_count) ?? 0,
+    filtered_count: readNumber(queueTick.filtered_count) ?? 0,
+    dispatches_count: dispatches.length,
+    dispatches_omitted: true,
+    hydration: hydration
+      ? {
+          source: readString(hydration.source),
+          enqueued_count: readNumber(hydration.enqueued_count) ?? 0,
+          requeued_count: readNumber(hydration.requeued_count) ?? 0,
+          idempotent_noop_count: readNumber(hydration.idempotent_noop_count) ?? 0,
+          filtered_count: readNumber(hydration.filtered_count) ?? 0,
+        }
+      : null,
+  };
+}
+
+function compactProviderSloForTemporalResult(value: unknown) {
+  const providerSlo = isRecord(value) ? value : {};
+  const receipt = isRecord(providerSlo.provider_slo_execution_receipt)
+    ? providerSlo.provider_slo_execution_receipt
+    : {};
+  const workerRepair = isRecord(providerSlo.provider_worker_repair_receipt)
+    ? providerSlo.provider_worker_repair_receipt
+    : {};
+  return {
+    surface_id: readString(providerSlo.surface_id),
+    provider_kind: readString(providerSlo.provider_kind),
+    execution_status: readString(providerSlo.execution_status),
+    skipped: readBoolean(providerSlo.skipped),
+    event_id: readString(providerSlo.event_id),
+    provider_slo_execution_receipt: {
+      receipt_status: readString(receipt.receipt_status),
+      execution_status: readString(receipt.execution_status),
+      skip_reason: readString(receipt.skip_reason),
+      receipt_kind: readString(receipt.receipt_kind),
+    },
+    provider_worker_repair_receipt: {
+      repair_status: readString(workerRepair.repair_status),
+      repair_action_id: readString(workerRepair.repair_action_id),
+      command: readString(workerRepair.command),
+      can_execute_domain_repair: readBoolean(workerRepair.can_execute_domain_repair),
+    },
+  };
+}
+
+export function compactSchedulerTickForTemporalResult(value: unknown) {
+  const tick = isRecord(value) ? value : {};
+  const authorityBoundary = isRecord(tick.authority_boundary)
+    ? tick.authority_boundary
+    : {
+        opl: 'scheduler_cadence_queue_and_provider_slo_owner',
+        domain: 'truth_quality_artifact_gate_owner',
+      };
+  return {
+    surface_kind: 'temporal_scheduler_tick_activity_receipt',
+    activity_kind: 'scheduler_tick_activity',
+    activity_status: 'completed',
+    scheduler_tick_surface_kind: readString(tick.surface_kind),
+    scheduler_owner: readString(tick.scheduler_owner),
+    cadence_owner: readString(tick.cadence_owner),
+    provider_kind: readString(tick.provider_kind),
+    tick_source: readString(tick.tick_source),
+    tick_status: readString(tick.status),
+    task_scope: isRecord(tick.task_scope) ? tick.task_scope : null,
+    provider_readiness_after_slo: isRecord(tick.provider_readiness_after_slo)
+      ? tick.provider_readiness_after_slo
+      : null,
+    provider_liveness_blocker: isRecord(tick.provider_liveness_blocker)
+      ? tick.provider_liveness_blocker
+      : null,
+    provider_blocker: isRecord(tick.provider_blocker) ? tick.provider_blocker : null,
+    provider_slo_summary: compactProviderSloForTemporalResult(tick.provider_slo),
+    progress_first_ready_owner_action_pickup_slo: isRecord(tick.progress_first_ready_owner_action_pickup_slo)
+      ? tick.progress_first_ready_owner_action_pickup_slo
+      : null,
+    queue_tick: compactSchedulerQueueTickForTemporalResult(tick.queue_tick),
+    full_scheduler_tick_omitted: true,
+    provider_runtime_after_slo_omitted: true,
+    provider_slo_omitted: true,
+    omitted_body_fields: [
+      'provider_runtime',
+      'provider_runtime_after_slo',
+      'provider_slo',
+      'queue_tick.dispatches',
+    ],
+    authority_boundary: {
+      ...authorityBoundary,
+      can_write_domain_truth: false,
+      can_write_domain_memory_body: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_export_verdict: false,
+      provider_completion_is_domain_ready: false,
+    },
+    temporal_payload_policy: {
+      surface_kind: 'temporal_activity_compacted_scheduler_tick',
+      full_scheduler_tick_body_omitted: true,
+      retained_fields: [
+        'scheduler_tick_surface_kind',
+        'scheduler_owner',
+        'cadence_owner',
+        'provider_kind',
+        'tick_source',
+        'tick_status',
+        'task_scope',
+        'provider_readiness_after_slo',
+        'provider_liveness_blocker',
+        'provider_blocker',
+        'provider_slo_summary',
+        'progress_first_ready_owner_action_pickup_slo',
+        'queue_tick',
+        'authority_boundary',
       ],
     },
   };
@@ -330,32 +468,33 @@ export async function schedulerTickActivity(input: {
     limit: input.limit ?? 10,
   });
   const { db, paths } = openQueueDb();
-  return {
-    version: 'g2',
-    family_runtime_scheduler_tick: await runSchedulerTick(
+  const tick = await runSchedulerTick(
+    db,
+    paths,
+    {
+      providerKind: input.provider_kind,
+      force: input.force,
+      limit: input.limit,
+      hydrate: input.hydrate,
+      domainProfiles: input.domain_profiles,
+    },
+    (source, limit, hydrate, taskScope, domainProfiles, queueTickOptions) => runSchedulerQueueTick(
       db,
       paths,
+      source,
+      limit,
+      hydrate,
+      taskScope,
+      domainProfiles,
       {
-        providerKind: input.provider_kind,
-        force: input.force,
-        limit: input.limit,
-        hydrate: input.hydrate,
-        domainProfiles: input.domain_profiles,
+        temporalProviderModule,
+        dispatchEnabled: queueTickOptions?.dispatchEnabled,
+        blockedReason: queueTickOptions?.blockedReason,
       },
-      (source, limit, hydrate, taskScope, domainProfiles, queueTickOptions) => runSchedulerQueueTick(
-        db,
-        paths,
-        source,
-        limit,
-        hydrate,
-        taskScope,
-        domainProfiles,
-        {
-          temporalProviderModule,
-          dispatchEnabled: queueTickOptions?.dispatchEnabled,
-          blockedReason: queueTickOptions?.blockedReason,
-        },
-      ),
     ),
+  );
+  return {
+    version: 'g2',
+    family_runtime_scheduler_tick: compactSchedulerTickForTemporalResult(tick),
   };
 }
