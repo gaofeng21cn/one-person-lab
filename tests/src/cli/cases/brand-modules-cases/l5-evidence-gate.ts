@@ -439,3 +439,53 @@ test('runtime owner acceptance ledger refs remain non-closing without contract o
     fs.rmSync(stateDir, { recursive: true, force: true });
   }
 });
+
+test('runtime L5 evidence ledger projects contract-specific ref shapes without closing L5', () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-brand-l5-ledger-ref-shapes-state-'));
+  const env = { OPL_STATE_DIR: stateDir };
+
+  try {
+    const record = runCli([
+      'runtime',
+      'brand-module-l5-evidence',
+      'record',
+      '--payload',
+      JSON.stringify({
+        module_id: 'foundry-lab',
+        evidence_class_id: 'cross_agent_scaleout',
+        evidence_refs: [
+          'scaleout_receipt_ref://opl-meta-agent/real-target-agent-scaleout/2026-05-20',
+          'per_agent_receipt_ref://opl-meta-agent/med-autoscience/agent-evidence/2026-05-20',
+          'per_agent_receipt_ref://opl-meta-agent/med-autogrant/agent-evidence/2026-05-20',
+        ],
+      }),
+      '--json',
+    ], env).brand_module_l5_evidence_ledger_record;
+    runCli([
+      'runtime',
+      'brand-module-l5-evidence',
+      'verify',
+      '--receipt-ref',
+      record.receipt.receipt_ref,
+      '--json',
+    ], env);
+
+    const status = runCli(['brand-modules', 'l5-status', '--module', 'foundry-lab'], env).brand_module_l5_status;
+    const foundryLab = status.modules[0];
+    const route = foundryLab.owner_evidence_routes.find((candidate: { class_id: string }) =>
+      candidate.class_id === 'cross_agent_scaleout'
+    );
+
+    assert.equal(foundryLab.l5_can_be_claimed, false);
+    assert.equal(route.verified_receipt_count, 1);
+    assert.equal(route.observed_ref_shapes.includes('ledger_receipt_ref'), true);
+    assert.equal(route.observed_ref_shapes.includes('scaleout_receipt_ref'), true);
+    assert.equal(route.observed_ref_shapes.includes('per_agent_receipt_ref'), true);
+    assert.equal(route.observed_ref_shapes.includes('evidence_ref'), false);
+    assert.equal(route.owner_evidence_closure_state, 'owner_evidence_recorded_not_l5_claim');
+    assert.equal(route.ready_claim_authorized, false);
+    assert.equal(route.l5_claim_status, 'owner_evidence_refs_observed_not_l5_claimed');
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+});

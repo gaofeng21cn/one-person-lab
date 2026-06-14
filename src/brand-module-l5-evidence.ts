@@ -275,36 +275,59 @@ function observedRefsForRequirement(
   ]);
 }
 
+const L5_REF_SHAPE_PREFIX_ALIASES: Record<string, string> = {
+  typed_blocker: 'typed_blocker_ref',
+  release_owner_receipt_ref: 'owner_receipt_ref',
+  temporal_hosted_long_soak_ref: 'long_soak_ref',
+  provider_long_soak_ref: 'long_soak_ref',
+  provider_recovery_ref: 'recovery_ref',
+  provider_dead_letter_ref: 'dead_letter_ref',
+};
+
+const L5_KNOWN_REF_SHAPES = new Set([
+  'app_operator_projection_ref',
+  'brand_experience_profile_ref',
+  'capability_fail_open_ref',
+  'cross_agent_adoption_ref',
+  'current_owner_delta_ref',
+  'dead_letter_ref',
+  'descriptor_drift_ref',
+  'false_authority_guard_ref',
+  'generated_surface_parity_ref',
+  'human_gate_ref',
+  'install_evidence_ref',
+  'long_soak_ref',
+  'negative_guard_ref',
+  'no_regression_ref',
+  'no_resurrection_guard_ref',
+  'operator_default_read_ref',
+  'operator_evidence_ref',
+  'owner_acceptance_ref',
+  'owner_receipt_ref',
+  'pack_compile_parity_ref',
+  'per_agent_receipt_ref',
+  'per_agent_target_delta_ref',
+  'recovery_ref',
+  'release_evidence_ref',
+  'repair_loop_ref',
+  'route_required_capability_ref',
+  'safe_action_ref',
+  'scaleout_receipt_ref',
+  'source_scan_ref',
+  'typed_blocker_ref',
+  'user_path_evidence_ref',
+]);
+
 function refShapeForContractRef(ref: string) {
-  if (ref.startsWith('current-owner-delta-ref:')) {
-    return 'current_owner_delta_ref';
-  }
-  if (ref.startsWith('operator-default-read-ref:')) {
-    return 'operator_default_read_ref';
-  }
-  if (ref.startsWith('false-authority-guard-ref:')) {
-    return 'false_authority_guard_ref';
-  }
-  if (ref.startsWith('negative-guard-ref:')) {
-    return 'negative_guard_ref';
-  }
-  if (ref.startsWith('no-resurrection-guard-ref:')) {
-    return 'no_resurrection_guard_ref';
-  }
-  if (ref.startsWith('source-scan-ref:')) {
-    return 'source_scan_ref';
-  }
-  if (ref.startsWith('pack-compile-parity-ref:')) {
-    return 'pack_compile_parity_ref';
-  }
-  if (ref.startsWith('generated-surface-parity-ref:')) {
-    return 'generated_surface_parity_ref';
-  }
-  if (ref.startsWith('typed-blocker:')) {
-    return 'typed_blocker_ref';
-  }
-  if (ref.startsWith('owner-acceptance-ref:')) {
-    return 'owner_acceptance_ref';
+  const prefix = ref.split(':')[0]?.trim().replaceAll('-', '_');
+  if (prefix) {
+    const alias = L5_REF_SHAPE_PREFIX_ALIASES[prefix];
+    if (alias) {
+      return alias;
+    }
+    if (L5_KNOWN_REF_SHAPES.has(prefix)) {
+      return prefix;
+    }
   }
   return 'evidence_ref';
 }
@@ -318,17 +341,27 @@ function observedContractRefShapes(
 
 function observedLedgerRefShapes(receipts: BrandModuleL5EvidenceLedgerReceiptProjection[]) {
   const shapes: string[] = receipts.length > 0 ? ['ledger_receipt_ref'] : [];
-  if (receipts.some((receipt) => receipt.evidence_refs.length > 0)) {
-    shapes.push('evidence_ref');
-  }
+  const evidenceRefShapes = receipts.flatMap((receipt) =>
+    receipt.evidence_refs.map(refShapeForContractRef)
+  );
+  shapes.push(...evidenceRefShapes);
   if (receipts.some((receipt) => receipt.typed_blocker_refs.length > 0)) {
-    shapes.push('typed_blocker_ref');
+    shapes.push(
+      'typed_blocker_ref',
+      ...receipts.flatMap((receipt) => receipt.typed_blocker_refs.map(refShapeForContractRef)),
+    );
   }
   if (receipts.some((receipt) => receipt.owner_acceptance_refs.length > 0)) {
-    shapes.push('owner_acceptance_ref');
+    shapes.push(
+      'owner_acceptance_ref',
+      ...receipts.flatMap((receipt) => receipt.owner_acceptance_refs.map(refShapeForContractRef)),
+    );
   }
   if (receipts.some((receipt) => receipt.no_regression_refs.length > 0)) {
-    shapes.push('no_regression_ref');
+    shapes.push(
+      'no_regression_ref',
+      ...receipts.flatMap((receipt) => receipt.no_regression_refs.map(refShapeForContractRef)),
+    );
   }
   return unique(shapes);
 }
