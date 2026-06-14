@@ -215,6 +215,8 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       list(input.providerLongSoakEvidence.provider_blocker_refs).length,
     provider_long_soak_evidence_typed_blocker_ref_count:
       list(input.providerLongSoakEvidence.typed_blocker_refs).length,
+    provider_long_soak_evidence_owner_acceptance_ref_count:
+      list(input.providerLongSoakEvidence.owner_acceptance_refs).length,
     provider_cadence_window_status: input.providerCadenceWindow.window_status,
     provider_cadence_window_long_evidence_ready: input.providerCadenceWindow.long_window_evidence_ready,
     provider_cadence_window_expected_receipt_count: input.providerCadenceWindow.expected_slo_execution_receipt_count,

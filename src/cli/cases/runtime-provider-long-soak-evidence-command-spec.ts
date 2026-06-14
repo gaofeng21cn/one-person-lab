@@ -60,6 +60,9 @@ function parseProviderLongSoakEvidencePayload(
       parsed.provider_blocker_refs ?? parsed.provider_blocker_ref,
     ),
     typed_blocker_refs: stringList(parsed.typed_blocker_refs ?? parsed.typed_blocker_ref),
+    owner_acceptance_refs: stringList(
+      parsed.owner_acceptance_refs ?? parsed.owner_acceptance_ref,
+    ),
     capability_requirement_ids: stringList(
       parsed.capability_requirement_ids ?? parsed.capability_requirement_id,
     ),
@@ -150,9 +153,9 @@ export function buildRuntimeProviderLongSoakEvidenceCommandSpecs():
       usage:
         'opl runtime provider-long-soak-evidence record (--payload <json>|--payload-file <path>)',
       summary:
-        'Record refs-only provider long-soak, recovery, dead-letter, provider blocker, or typed blocker refs without claiming production readiness.',
+        'Record refs-only provider long-soak, recovery, dead-letter, provider blocker, typed blocker, or owner acceptance refs without claiming production readiness.',
       examples: [
-        'opl runtime provider-long-soak-evidence record --payload \'{"long_soak_refs":["provider-long-soak:temporal/window"],"provider_blocker_refs":["provider-blocker:temporal/capability-slo"],"capability_requirement_ids":["signal_history_ready"]}\'',
+        'opl runtime provider-long-soak-evidence record --payload \'{"long_soak_refs":["provider-long-soak:temporal/window"],"provider_blocker_refs":["provider-blocker:temporal/capability-slo"],"owner_acceptance_refs":["owner-acceptance:runtime/provider-window"],"capability_requirement_ids":["signal_history_ready"]}\'',
         'opl runtime provider-long-soak-evidence record --payload-file payload.json',
       ],
       handler: (args) => ({
@@ -230,6 +233,7 @@ export function buildRuntimeProviderLongSoakEvidenceCommandSpecs():
             'dead_letter_ref',
             'provider_blocker_ref',
             'typed_blocker_ref',
+            'owner_acceptance_ref',
             'capability_requirement_id',
           ],
           subcommands,

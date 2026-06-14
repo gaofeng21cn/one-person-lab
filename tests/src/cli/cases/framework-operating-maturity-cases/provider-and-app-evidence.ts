@@ -103,6 +103,9 @@ test('framework operating maturity consumes provider long-soak evidence refs wit
         typed_blocker_refs: [
           'typed-blocker:provider/temporal/capability-slo-blocked',
         ],
+        owner_acceptance_refs: [
+          'owner-acceptance:provider/temporal/week-1/operator-accepted',
+        ],
         capability_requirement_ids: [
           'restart_requery_ready',
           'signal_history_ready',
@@ -157,9 +160,17 @@ test('framework operating maturity consumes provider long-soak evidence refs wit
       'dead_letter_ref',
       'provider_blocker_ref',
       'typed_blocker_ref',
+      'owner_acceptance_ref',
     ]);
     assert.equal(drilldown.summary.provider_long_soak_evidence_verified_receipt_ref_count, 1);
     assert.equal(drilldown.summary.provider_long_soak_evidence_typed_blocker_ref_count, 1);
+    assert.equal(
+      drilldown.summary.provider_long_soak_evidence_owner_acceptance_ref_count,
+      1,
+    );
+    assert.deepEqual(drilldown.provider_long_soak_evidence.owner_acceptance_refs, [
+      'owner-acceptance:provider/temporal/week-1/operator-accepted',
+    ]);
     assert.deepEqual(drilldown.provider_long_soak_evidence.capability_requirement_ids, [
       'restart_requery_ready',
       'signal_history_ready',
@@ -177,8 +188,11 @@ test('framework operating maturity consumes provider long-soak evidence refs wit
       'operating-maturity',
       '--family-defaults',
     ], env).framework_operating_maturity;
-    assert.equal(maturity.provider_long_soak.status, 'evidence_required');
-    assert.equal(maturity.provider_long_soak.open_evidence_count, 1);
+    assert.equal(
+      maturity.provider_long_soak.status,
+      'evidence_recorded_not_production_ready_claim',
+    );
+    assert.equal(maturity.provider_long_soak.open_evidence_count, 0);
     assert.equal(maturity.provider_long_soak.capability_status, 'capability_slo_blocked');
     assert.deepEqual(maturity.provider_long_soak.capability_missing_requirement_ids, [
       'domain_truth_boundary_preserved',
@@ -205,7 +219,18 @@ test('framework operating maturity consumes provider long-soak evidence refs wit
       'dead_letter_ref',
       'provider_blocker_ref',
       'typed_blocker_ref',
+      'owner_acceptance_ref',
     ]);
+    assert.equal(maturity.provider_long_soak.owner_acceptance_evidence_recorded, true);
+    assert.equal(maturity.provider_long_soak.owner_acceptance_ref_count, 1);
+    assert.deepEqual(maturity.provider_long_soak.owner_acceptance_refs, [
+      'owner-acceptance:provider/temporal/week-1/operator-accepted',
+    ]);
+    assert.deepEqual(maturity.provider_long_soak.owner_evidence_missing_action_ids, []);
+    assert.equal(
+      maturity.provider_long_soak.owner_evidence_next_action,
+      'provider_owner_acceptance_observed_not_production_ready_claim',
+    );
     assert.equal(
       maturity.provider_long_soak.observed_receipt_refs.includes(providerRecord.receipt_refs[0]),
       true,
@@ -232,6 +257,7 @@ test('framework operating maturity consumes provider long-soak evidence refs wit
     assert.deepEqual(maturity.provider_long_soak.execution_runbook.accepted_paths, [
       'long_soak_recovery_dead_letter_evidence_path',
       'provider_or_typed_blocker_path',
+      'provider_owner_acceptance_path',
     ]);
     assert.equal(
       maturity.provider_long_soak.execution_runbook.readback_commands.includes(
@@ -266,6 +292,7 @@ test('framework operating maturity consumes provider long-soak evidence refs wit
       'dead_letter_ref',
       'provider_blocker_ref',
       'typed_blocker_ref',
+      'owner_acceptance_ref',
     ]);
     assert.equal(
       providerLane.observed_receipt_refs.includes(providerRecord.receipt_refs[0]),
@@ -285,8 +312,13 @@ test('framework operating maturity consumes provider long-soak evidence refs wit
       providerWorkOrder.observed_ref_shapes.includes('provider_blocker_ref'),
       true,
     );
-    assert.deepEqual(providerWorkOrder.missing_owner_action_ids, [
-      'domain_truth_boundary_preserved',
+    assert.equal(
+      providerWorkOrder.observed_ref_shapes.includes('owner_acceptance_ref'),
+      true,
+    );
+    assert.deepEqual(providerWorkOrder.missing_owner_action_ids, []);
+    assert.deepEqual(providerWorkOrder.owner_acceptance_refs, [
+      'owner-acceptance:provider/temporal/week-1/operator-accepted',
     ]);
     assert.deepEqual(providerWorkOrder.owner_action_checklist
       .filter((entry: { status: string }) => entry.status === 'refs_observed_not_ready_claim')
@@ -299,7 +331,7 @@ test('framework operating maturity consumes provider long-soak evidence refs wit
     ]);
     assert.equal(
       providerWorkOrder.next_evidence_action,
-      'record_provider_capability_slo_evidence_or_blocker_for_missing_requirements',
+      'provider_owner_acceptance_observed_not_production_ready_claim',
     );
     assert.equal(providerWorkOrder.owner_action_checklist[0].required_ref_shape, 'recovery_ref');
   } finally {

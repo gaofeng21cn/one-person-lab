@@ -396,9 +396,9 @@ export async function buildFrameworkOperatingMaturityReadout(
     providerLongSoakOwnerActionChecklist:
       drilldownMaturity.provider.capabilityChecklist,
     providerLongSoakMissingOwnerActionIds:
-      drilldownMaturity.provider.capabilityMissingRequirementIds,
+      drilldownMaturity.provider.ownerEvidenceMissingActionIds,
     providerLongSoakNextEvidenceAction:
-      drilldownMaturity.provider.capabilityNextEvidenceAction,
+      drilldownMaturity.provider.ownerEvidenceNextAction,
     cleanupOpenDecisionCount,
     lifecycleOpenCount,
     lifecycleOwnerActionChecklist:
@@ -540,6 +540,16 @@ export async function buildFrameworkOperatingMaturityReadout(
           drilldownMaturity.provider.capabilityOpenRequirementCount,
         capability_next_evidence_action:
           drilldownMaturity.provider.capabilityNextEvidenceAction,
+        owner_acceptance_evidence_recorded:
+          drilldownMaturity.provider.ownerAcceptanceEvidenceRecorded,
+        owner_acceptance_ref_count:
+          drilldownMaturity.provider.ownerAcceptanceRefCount,
+        owner_acceptance_refs:
+          drilldownMaturity.provider.ownerAcceptanceRefs,
+        owner_evidence_missing_action_ids:
+          drilldownMaturity.provider.ownerEvidenceMissingActionIds,
+        owner_evidence_next_action:
+          drilldownMaturity.provider.ownerEvidenceNextAction,
         evidence_ledger_status:
           stringValue(drilldownMaturity.provider.evidence.evidence_ledger_status),
         observed_receipt_ref_count:
@@ -560,6 +570,7 @@ export async function buildFrameworkOperatingMaturityReadout(
           'dead_letter_ref',
           'provider_blocker_ref',
           'typed_blocker_ref',
+          'owner_acceptance_ref',
         ],
         execution_runbook: providerLongSoakRunbook,
         owner: providerLongSoakRunbook.owner,

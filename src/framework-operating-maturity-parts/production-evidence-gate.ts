@@ -343,6 +343,7 @@ function ownerRouteWorkOrders(
     const observed = laneEvidenceById.get(action.lane);
     const observedReceiptRefs = stringListValue(observed?.observed_receipt_refs);
     const observedRefShapes = stringListValue(observed?.observed_ref_shapes);
+    const ownerAcceptanceRefs = stringListValue(observed?.owner_acceptance_refs);
     const ownerEvidenceObserved =
       stringValue(observed?.status) === 'owner_evidence_observed_not_ready_claim'
       || observedReceiptRefs.length > 0
@@ -373,6 +374,7 @@ function ownerRouteWorkOrders(
       observed_receipt_refs: observedReceiptRefs,
       observed_ref_shapes: observedRefShapes,
       observed_ref_counts: record(observed?.observed_ref_counts),
+      owner_acceptance_refs: ownerAcceptanceRefs,
       owner_evidence_route:
         stringValue(observed?.evidence_route) ?? action.source_command,
       owner_evidence_closure_state: lane?.open_count && lane.open_count > 0

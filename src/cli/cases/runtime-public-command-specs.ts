@@ -178,7 +178,7 @@ export function buildPublicRuntimeCommandSpecs(
         usage:
           'opl runtime provider-long-soak-evidence record (--payload <json>|--payload-file <path>)',
         examples: [
-          'opl runtime provider-long-soak-evidence record --payload \'{"long_soak_refs":["provider-long-soak:temporal/window"],"provider_blocker_refs":["provider-blocker:temporal/capability-slo"]}\'',
+          'opl runtime provider-long-soak-evidence record --payload \'{"long_soak_refs":["provider-long-soak:temporal/window"],"provider_blocker_refs":["provider-blocker:temporal/capability-slo"],"owner_acceptance_refs":["owner-acceptance:provider/window"]}\'',
           'opl runtime provider-long-soak-evidence record --payload-file payload.json',
         ],
         group: 'runtime',

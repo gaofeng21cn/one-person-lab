@@ -44,6 +44,7 @@ type OwnerEvidenceProjection = {
   observed_receipt_refs: string[];
   observed_ref_counts: RefCounts;
   observed_ref_shapes: string[];
+  owner_acceptance_refs?: string[];
   observed_domains?: Array<{
     domain_id: string;
     recorded_receipt_count: number;
@@ -719,6 +720,8 @@ function providerLongSoakProjection(): OwnerEvidenceProjection {
       current.provider_blocker_ref_count + receipt.provider_blocker_refs.length,
     typed_blocker_ref_count:
       current.typed_blocker_ref_count + receipt.typed_blocker_refs.length,
+    owner_acceptance_ref_count:
+      current.owner_acceptance_ref_count + receipt.owner_acceptance_refs.length,
   }), emptyCounts());
   const recordedReceiptCount = receipts.filter((receipt) =>
     receipt.receipt_status === 'recorded'
@@ -732,8 +735,12 @@ function providerLongSoakProjection(): OwnerEvidenceProjection {
     ...status,
     recorded_receipt_count: recordedReceiptCount,
     verified_receipt_count: verifiedReceiptCount,
-    observed_receipt_refs: receipts.map((receipt) => receipt.receipt_ref),
+    observed_receipt_refs: unique([
+      ...receipts.map((receipt) => receipt.receipt_ref),
+      ...receipts.flatMap((receipt) => receipt.owner_acceptance_refs),
+    ]),
     observed_ref_counts: counts,
+    owner_acceptance_refs: unique(receipts.flatMap((receipt) => receipt.owner_acceptance_refs)),
     evidence_route: 'opl runtime provider-long-soak-evidence list --json',
   };
 }

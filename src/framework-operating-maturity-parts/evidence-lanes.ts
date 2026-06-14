@@ -146,6 +146,10 @@ export function appOperatorDrilldownMaturity(drilldown: Record<string, unknown>)
   const providerEvidenceBlockerRefCount =
     stringListValue(providerEvidence.provider_blocker_refs).length
     + stringListValue(providerEvidence.typed_blocker_refs).length;
+  const providerOwnerAcceptanceRefs =
+    stringListValue(providerEvidence.owner_acceptance_refs);
+  const providerOwnerAcceptanceRefCount =
+    providerOwnerAcceptanceRefs.length;
   const providerVerifiedReceiptRefs = stringListValue(providerEvidence.verified_receipt_refs);
   const providerPendingVerifyReceiptRefs =
     stringListValue(providerEvidence.pending_verify_receipt_refs);
@@ -163,8 +167,16 @@ export function appOperatorDrilldownMaturity(drilldown: Record<string, unknown>)
     && providerVerifiedReceiptRefs.length > 0
     && providerPendingVerifyReceiptRefs.length === 0
     && capabilityMissingRequirementIds.length === 0;
+  const providerOwnerAcceptanceEvidenceRecorded =
+    providerOwnerAcceptanceRefCount > 0
+    && providerVerifiedReceiptRefs.length > 0
+    && providerPendingVerifyReceiptRefs.length === 0;
   const providerOpenCount =
-    providerLongEvidenceReady || providerOwnerBlockerEvidenceRecorded ? 0 : 1;
+    providerLongEvidenceReady
+      || providerOwnerBlockerEvidenceRecorded
+      || providerOwnerAcceptanceEvidenceRecorded
+      ? 0
+      : 1;
   const lifecycleObservedRefCount = numberValue(lifecycleEvidence.observed_ref_count);
   const lifecycleOwnerWorkOrder = record(lifecycleEvidence.lifecycle_owner_work_order);
   const lifecycleTypedBlockerWorkOrder = record(
@@ -242,6 +254,17 @@ export function appOperatorDrilldownMaturity(drilldown: Record<string, unknown>)
       capabilityNextEvidenceAction: capabilityMissingRequirementIds.length > 0
         ? 'record_provider_capability_slo_evidence_or_blocker_for_missing_requirements'
         : 'capability_slo_requirements_observed_not_production_ready_claim',
+      ownerAcceptanceEvidenceRecorded: providerOwnerAcceptanceEvidenceRecorded,
+      ownerAcceptanceRefs: providerOwnerAcceptanceRefs,
+      ownerAcceptanceRefCount: providerOwnerAcceptanceRefCount,
+      ownerEvidenceMissingActionIds: providerOwnerAcceptanceEvidenceRecorded
+        ? []
+        : capabilityMissingRequirementIds,
+      ownerEvidenceNextAction: providerOwnerAcceptanceEvidenceRecorded
+        ? 'provider_owner_acceptance_observed_not_production_ready_claim'
+        : capabilityMissingRequirementIds.length > 0
+          ? 'record_provider_capability_slo_evidence_or_blocker_for_missing_requirements'
+          : 'capability_slo_requirements_observed_not_production_ready_claim',
       evidence: providerEvidence,
       observedReceiptRefs: stringListValue(providerEvidence.receipt_refs),
       verifiedReceiptRefs: providerVerifiedReceiptRefs,
@@ -273,7 +296,7 @@ export function providerLongSoakExecutionRunbook() {
     surface_kind: 'opl_provider_long_soak_execution_runbook',
     owner: 'one-person-lab runtime owner',
     record_command:
-      'opl runtime provider-long-soak-evidence record --payload \'{"long_soak_refs":["provider-long-soak:temporal/<window>"],"recovery_refs":["provider-recovery:temporal/<event>"],"dead_letter_refs":["provider-dead-letter:temporal/<queue>"],"provider_blocker_refs":["provider-blocker:temporal/<capability>"],"typed_blocker_refs":["typed-blocker:provider/<reason>"]}\'',
+      'opl runtime provider-long-soak-evidence record --payload \'{"long_soak_refs":["provider-long-soak:temporal/<window>"],"recovery_refs":["provider-recovery:temporal/<event>"],"dead_letter_refs":["provider-dead-letter:temporal/<queue>"],"provider_blocker_refs":["provider-blocker:temporal/<capability>"],"typed_blocker_refs":["typed-blocker:provider/<reason>"],"owner_acceptance_refs":["owner-acceptance:provider/<window>"]}\'',
     verify_command:
       'opl runtime provider-long-soak-evidence verify --receipt-ref <receipt_ref>',
     readback_commands: [
@@ -287,10 +310,12 @@ export function providerLongSoakExecutionRunbook() {
       'dead_letter_ref',
       'provider_blocker_ref',
       'typed_blocker_ref',
+      'owner_acceptance_ref',
     ],
     accepted_paths: [
       'long_soak_recovery_dead_letter_evidence_path',
       'provider_or_typed_blocker_path',
+      'provider_owner_acceptance_path',
     ],
     readback_fields: [
       'provider_long_soak.open_evidence_count',
@@ -305,6 +330,7 @@ export function providerLongSoakExecutionRunbook() {
       'if capability_status remains capability_slo_blocked, use capability_missing_requirement_ids to record specific long_soak/recovery/dead_letter/provider_blocker/typed_blocker evidence instead of rerunning evidence accounting',
       'if long_evidence_ready remains false after a claimed window and capability_missing_requirement_ids is not empty, preserve open_evidence_count=1 and route to runtime owner',
       'if verified provider_blocker_ref or typed_blocker_ref covers every capability owner action, close the owner-evidence work order but keep long_evidence_ready=false and production ready claims unauthorized',
+      'if verified owner_acceptance_ref is observed, record owner follow-through but keep provider production ready claims unauthorized',
       'if provider completion is the only proof, keep provider_completion_counts_as_production_ready=false',
     ],
     false_authority_guard: {

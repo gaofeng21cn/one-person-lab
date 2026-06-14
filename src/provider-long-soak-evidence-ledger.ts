@@ -13,6 +13,7 @@ export type ProviderLongSoakEvidenceReceipt = {
   dead_letter_refs: string[];
   provider_blocker_refs: string[];
   typed_blocker_refs: string[];
+  owner_acceptance_refs: string[];
   capability_requirement_ids: string[];
   source_surface: 'opl_provider_long_soak_evidence';
   authority_boundary: ProviderLongSoakEvidenceAuthorityBoundary;
@@ -24,6 +25,7 @@ export type ProviderLongSoakEvidenceReceiptInput = {
   dead_letter_refs?: string[];
   provider_blocker_refs?: string[];
   typed_blocker_refs?: string[];
+  owner_acceptance_refs?: string[];
   capability_requirement_ids?: string[];
   receipt_ref?: string | null;
 };
@@ -114,6 +116,7 @@ function allEvidenceRefs(input: ProviderLongSoakEvidenceReceiptInput) {
     ...(input.dead_letter_refs ?? []),
     ...(input.provider_blocker_refs ?? []),
     ...(input.typed_blocker_refs ?? []),
+    ...(input.owner_acceptance_refs ?? []),
   ]);
 }
 
@@ -146,6 +149,7 @@ function normalizeReceipt(value: unknown): ProviderLongSoakEvidenceReceipt | nul
     dead_letter_refs: uniqueStrings(stringList(value.dead_letter_refs)),
     provider_blocker_refs: uniqueStrings(stringList(value.provider_blocker_refs)),
     typed_blocker_refs: uniqueStrings(stringList(value.typed_blocker_refs)),
+    owner_acceptance_refs: uniqueStrings(stringList(value.owner_acceptance_refs)),
     capability_requirement_ids: uniqueStrings(stringList(value.capability_requirement_ids)),
     source_surface: 'opl_provider_long_soak_evidence',
     authority_boundary: providerLongSoakEvidenceAuthorityBoundary(),
@@ -197,6 +201,7 @@ function normalizeInput(
     dead_letter_refs: uniqueStrings(input.dead_letter_refs ?? []),
     provider_blocker_refs: uniqueStrings(input.provider_blocker_refs ?? []),
     typed_blocker_refs: uniqueStrings(input.typed_blocker_refs ?? []),
+    owner_acceptance_refs: uniqueStrings(input.owner_acceptance_refs ?? []),
     capability_requirement_ids: uniqueStrings(input.capability_requirement_ids ?? []),
     source_surface: 'opl_provider_long_soak_evidence',
     authority_boundary: providerLongSoakEvidenceAuthorityBoundary(),
@@ -299,6 +304,7 @@ function refShapes(input: {
   deadLetterRefs: string[];
   providerBlockerRefs: string[];
   typedBlockerRefs: string[];
+  ownerAcceptanceRefs: string[];
 }) {
   return [
     input.longSoakRefs.length > 0 ? 'long_soak_ref' : null,
@@ -306,6 +312,7 @@ function refShapes(input: {
     input.deadLetterRefs.length > 0 ? 'dead_letter_ref' : null,
     input.providerBlockerRefs.length > 0 ? 'provider_blocker_ref' : null,
     input.typedBlockerRefs.length > 0 ? 'typed_blocker_ref' : null,
+    input.ownerAcceptanceRefs.length > 0 ? 'owner_acceptance_ref' : null,
   ].filter((entry): entry is string => Boolean(entry));
 }
 
@@ -320,6 +327,9 @@ export function buildProviderLongSoakEvidenceProjection() {
     ...receipts.flatMap((receipt) => receipt.provider_blocker_refs),
   ]);
   const typedBlockerRefs = uniqueStrings(receipts.flatMap((receipt) => receipt.typed_blocker_refs));
+  const ownerAcceptanceRefs = uniqueStrings(
+    verifiedReceipts.flatMap((receipt) => receipt.owner_acceptance_refs),
+  );
   const capabilityRequirementIds = uniqueStrings(
     receipts.flatMap((receipt) => receipt.capability_requirement_ids),
   );
@@ -329,6 +339,7 @@ export function buildProviderLongSoakEvidenceProjection() {
     deadLetterRefs,
     providerBlockerRefs,
     typedBlockerRefs,
+    ownerAcceptanceRefs,
   });
   const observed = receipts.length > 0 || observedRefShapes.length > 0;
   return {
@@ -356,6 +367,7 @@ export function buildProviderLongSoakEvidenceProjection() {
     dead_letter_refs: deadLetterRefs,
     provider_blocker_refs: providerBlockerRefs,
     typed_blocker_refs: typedBlockerRefs,
+    owner_acceptance_refs: ownerAcceptanceRefs,
     capability_requirement_ids: capabilityRequirementIds,
     observed_ref_shapes: observedRefShapes,
     observed_ref_counts: {
@@ -364,6 +376,7 @@ export function buildProviderLongSoakEvidenceProjection() {
       dead_letter_ref_count: deadLetterRefs.length,
       provider_blocker_ref_count: providerBlockerRefs.length,
       typed_blocker_ref_count: typedBlockerRefs.length,
+      owner_acceptance_ref_count: ownerAcceptanceRefs.length,
     },
     accepted_refs_only_result_shapes: [
       'long_soak_ref',
@@ -371,6 +384,7 @@ export function buildProviderLongSoakEvidenceProjection() {
       'dead_letter_ref',
       'provider_blocker_ref',
       'typed_blocker_ref',
+      'owner_acceptance_ref',
     ],
     ready_claim_authorized: false,
     production_ready_claim_status:
