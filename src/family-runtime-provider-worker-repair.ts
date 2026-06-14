@@ -43,9 +43,26 @@ export type WorkerRestartGuard = {
     stage_id: string;
     task_id: string | null;
   }>;
+  diagnostic_stage_attempt_count: number;
+  diagnostic_stage_attempt_statuses: string[];
+  diagnostic_stage_attempts_by_status: Record<string, number>;
+  diagnostic_stage_attempt_sample_limit: number;
+  diagnostic_stage_attempts: Array<{
+    stage_attempt_id: string;
+    status: string;
+    domain_id: string;
+    stage_id: string;
+    task_id: string | null;
+  }>;
 };
 
-const ACTIVE_STAGE_ATTEMPT_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate']);
+const WORKER_RESTART_BLOCKING_STAGE_ATTEMPT_STATUSES = new Set(['running']);
+const WORKER_RESTART_DIAGNOSTIC_STAGE_ATTEMPT_STATUSES = new Set([
+  'queued',
+  'running',
+  'checkpointed',
+  'human_gate',
+]);
 
 function stringValue(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
@@ -84,8 +101,8 @@ function buildWorkerRestartGuard(input: {
     : typeof temporalServiceLifecycle?.server_reachable === 'boolean'
       ? temporalServiceLifecycle.server_reachable
       : null;
-  const activeStageAttempts = input.attempts
-    .filter((attempt) => ACTIVE_STAGE_ATTEMPT_STATUSES.has(String(attempt.status)))
+  const diagnosticStageAttempts = input.attempts
+    .filter((attempt) => WORKER_RESTART_DIAGNOSTIC_STAGE_ATTEMPT_STATUSES.has(String(attempt.status)))
     .map((attempt) => ({
       stage_attempt_id: attempt.stage_attempt_id,
       status: String(attempt.status),
@@ -93,10 +110,19 @@ function buildWorkerRestartGuard(input: {
       stage_id: String(attempt.stage_id),
       task_id: typeof attempt.task_id === 'string' ? attempt.task_id : null,
     }));
+  const activeStageAttempts = diagnosticStageAttempts.filter((attempt) =>
+    WORKER_RESTART_BLOCKING_STAGE_ATTEMPT_STATUSES.has(attempt.status)
+  );
   const activeStageAttemptsByStatus = Object.fromEntries(
     [...new Set(activeStageAttempts.map((attempt) => attempt.status))].sort().map((status) => [
       status,
       activeStageAttempts.filter((attempt) => attempt.status === status).length,
+    ]),
+  );
+  const diagnosticStageAttemptsByStatus = Object.fromEntries(
+    [...new Set(diagnosticStageAttempts.map((attempt) => attempt.status))].sort().map((status) => [
+      status,
+      diagnosticStageAttempts.filter((attempt) => attempt.status === status).length,
     ]),
   );
   const blockerIds: string[] = [];
@@ -129,6 +155,11 @@ function buildWorkerRestartGuard(input: {
     active_stage_attempts_by_status: activeStageAttemptsByStatus,
     active_stage_attempt_sample_limit: 20,
     active_stage_attempts: activeStageAttempts.slice(0, 20),
+    diagnostic_stage_attempt_count: diagnosticStageAttempts.length,
+    diagnostic_stage_attempt_statuses: Object.keys(diagnosticStageAttemptsByStatus),
+    diagnostic_stage_attempts_by_status: diagnosticStageAttemptsByStatus,
+    diagnostic_stage_attempt_sample_limit: 20,
+    diagnostic_stage_attempts: diagnosticStageAttempts.slice(0, 20),
   } satisfies WorkerRestartGuard;
 }
 

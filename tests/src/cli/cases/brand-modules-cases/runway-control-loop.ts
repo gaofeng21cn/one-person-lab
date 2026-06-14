@@ -154,14 +154,22 @@ test('Runway recovery-repair projection exposes blocked worker restart guard wit
         temporal_service_reachable: true,
         stage_attempt_ledger_readable: true,
         stage_attempt_ledger_error: null,
-        active_stage_attempt_count: 2,
-        active_stage_attempt_statuses: ['checkpointed', 'queued'],
+        active_stage_attempt_count: 1,
+        active_stage_attempt_statuses: ['running'],
         active_stage_attempts_by_status: {
-          checkpointed: 1,
-          queued: 1,
+          running: 1,
         },
         active_stage_attempt_sample_limit: 20,
         active_stage_attempts: [],
+        diagnostic_stage_attempt_count: 3,
+        diagnostic_stage_attempt_statuses: ['checkpointed', 'queued', 'running'],
+        diagnostic_stage_attempts_by_status: {
+          checkpointed: 1,
+          queued: 1,
+          running: 1,
+        },
+        diagnostic_stage_attempt_sample_limit: 20,
+        diagnostic_stage_attempts: [],
       },
     },
     provider_runtime: {
@@ -206,8 +214,93 @@ test('Runway recovery-repair projection exposes blocked worker restart guard wit
   assert.deepEqual(repair.repair_blocker_ids, ['active_stage_attempts_present']);
   assert.equal(repair.repair_can_mutate_worker, false);
   assert.equal(repair.worker_restart_guard?.guard_status, 'blocked');
-  assert.equal(repair.worker_restart_guard?.active_stage_attempt_count, 2);
+  assert.equal(repair.worker_restart_guard?.active_stage_attempt_count, 1);
   assert.equal(repair.selected_repair_action?.mutation, true);
+  assert.equal(repair.authority_boundary.can_write_domain_truth, false);
+});
+
+test('Runway recovery-repair allows worker repair when only restart diagnostic backlog remains', () => {
+  const repair = buildRunwayRecoveryRepairProjection({
+    recovery_repair: {
+      repair_policy: 'classify_before_repair',
+      repair_classes: ['worker_source_stale'],
+      default_repair_command: 'opl family-runtime repair --provider temporal',
+      selected_repair_action: {
+        action_id: 'repair_provider_liveness',
+        owner: 'opl_provider_runtime_manager',
+        reason: 'temporal_provider_not_ready',
+        command: 'opl family-runtime repair --provider temporal --json',
+        mutation: true,
+        blocks_runtime_execution: true,
+        blocks_domain_progress_claim: true,
+      },
+      worker_restart_guard: {
+        surface_kind: 'temporal_worker_source_stale_restart_guard',
+        guard_status: 'ready',
+        blocker_ids: [],
+        worker_mutation_guard: null,
+        temporal_service_reachable: true,
+        stage_attempt_ledger_readable: true,
+        stage_attempt_ledger_error: null,
+        active_stage_attempt_count: 0,
+        active_stage_attempt_statuses: [],
+        active_stage_attempts_by_status: {},
+        active_stage_attempt_sample_limit: 20,
+        active_stage_attempts: [],
+        diagnostic_stage_attempt_count: 2,
+        diagnostic_stage_attempt_statuses: ['checkpointed', 'queued'],
+        diagnostic_stage_attempts_by_status: {
+          checkpointed: 1,
+          queued: 1,
+        },
+        diagnostic_stage_attempt_sample_limit: 20,
+        diagnostic_stage_attempts: [],
+      },
+    },
+    provider_runtime: {
+      substrate: 'temporal',
+      selected_provider: 'temporal',
+      selected_ready: false,
+      selected_status: 'provider_code_landed_unconfigured',
+      degraded_reason: 'temporal_worker_source_stale',
+      runtime_dependency: 'temporal_server_and_worker_required_for_live_workflows',
+      live_workflow_execution_ready: false,
+    },
+    scheduler_cadence: {
+      substrate: 'temporal_scheduler',
+      status: 'blocked_provider_not_ready',
+      schedule_id: null,
+      health: null,
+      repair_action: null,
+    },
+    queue: { total: 0, by_status: {} },
+    stage_attempts: {
+      total: 2,
+      by_status: {
+        checkpointed: 1,
+        queued: 1,
+      },
+    },
+    authority_boundary: {
+      can_execute_domain_action: false,
+      can_write_domain_truth: false,
+      can_write_domain_memory_body: false,
+      can_mutate_artifact_body: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_export_verdict: false,
+      provider_completion_is_domain_ready: false,
+    },
+  } as unknown as Parameters<typeof buildRunwayRecoveryRepairProjection>[0]);
+
+  assert.equal(repair.repair_status, 'repair_action_available');
+  assert.deepEqual(repair.repair_blocker_ids, []);
+  assert.equal(repair.repair_can_mutate_worker, true);
+  assert.equal(repair.worker_restart_guard?.guard_status, 'ready');
+  assert.equal(repair.worker_restart_guard?.active_stage_attempt_count, 0);
+  assert.equal(repair.worker_restart_guard?.diagnostic_stage_attempt_count, 2);
   assert.equal(repair.authority_boundary.can_write_domain_truth, false);
 });
 

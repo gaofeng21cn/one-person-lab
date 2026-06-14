@@ -353,7 +353,7 @@ test('family-runtime provider-slo blocks stale worker restart while active stage
   }
 });
 
-test('family-runtime provider-slo restart guard summarizes active attempt blockers by status', async () => {
+test('family-runtime provider-slo restart guard treats non-running stage attempts as diagnostic backlog', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-slo-worker-active-summary-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   let db: DatabaseSync | null = null;
@@ -361,34 +361,57 @@ test('family-runtime provider-slo restart guard summarizes active attempt blocke
     process.env.OPL_STATE_DIR = stateRoot;
     db = initializeQueueDbForCurrentStateDir();
     createActiveStageAttempt(db, 'queued');
-    createActiveStageAttempt(db, 'running');
     createActiveStageAttempt(db, 'checkpointed');
     createActiveStageAttempt(db, 'human_gate');
+    let stopCount = 0;
+    let startCount = 0;
 
     const receipt = await maybeRepairTemporalWorkerForProviderSlo(familyRuntimePaths(), {
       inspectTemporalWorkerLifecycle: async () => explicitDeveloperSupervisorStaleWorker(),
       stopTemporalWorkerLifecycle: async () => {
-        throw new Error('stop should not run');
+        stopCount += 1;
+        return {
+          surface_kind: 'temporal_worker_lifecycle_stop',
+          provider_kind: 'temporal',
+          stop_status: 'stopped',
+          stopped_pid: 12344,
+          stop_actions: [],
+          orphan_stopped_pids: [],
+          orphan_stop_incomplete_pids: [],
+          orphan_stop_actions: [],
+          before: temporalWorkerStatus('worker_source_stale'),
+          status: temporalWorkerStatus('worker_not_ready'),
+        };
       },
       startTemporalWorkerLifecycle: async () => {
-        throw new Error('start should not run');
+        startCount += 1;
+        return {
+          surface_kind: 'temporal_worker_lifecycle_start',
+          provider_kind: 'temporal',
+          start_status: 'started',
+          status: temporalWorkerStatus('ready'),
+        };
       },
     });
 
-    assert.equal(receipt.repair_status, 'blocked');
-    assert.deepEqual(receipt.blocker_ids, ['active_stage_attempts_present']);
-    assert.equal(receipt.restart_guard?.active_stage_attempt_count, 4);
-    assert.deepEqual(receipt.restart_guard?.active_stage_attempts_by_status, {
+    assert.equal(stopCount, 1);
+    assert.equal(startCount, 1);
+    assert.equal(receipt.repair_status, 'executed');
+    assert.deepEqual(receipt.blocker_ids, []);
+    assert.equal(receipt.restart_guard?.guard_status, 'ready');
+    assert.equal(receipt.restart_guard?.active_stage_attempt_count, 0);
+    assert.deepEqual(receipt.restart_guard?.active_stage_attempts_by_status, {});
+    assert.deepEqual(receipt.restart_guard?.active_stage_attempt_statuses, []);
+    assert.equal(receipt.restart_guard?.diagnostic_stage_attempt_count, 3);
+    assert.deepEqual(receipt.restart_guard?.diagnostic_stage_attempts_by_status, {
       checkpointed: 1,
       human_gate: 1,
       queued: 1,
-      running: 1,
     });
-    assert.deepEqual(receipt.restart_guard?.active_stage_attempt_statuses, [
+    assert.deepEqual(receipt.restart_guard?.diagnostic_stage_attempt_statuses, [
       'checkpointed',
       'human_gate',
       'queued',
-      'running',
     ]);
     assert.equal(receipt.restart_guard?.active_stage_attempt_sample_limit, 20);
     assert.equal(receipt.authority_boundary.can_write_domain_truth, false);
@@ -419,15 +442,18 @@ test('family-runtime worker restart guard can be inspected without mutating work
     );
 
     assert.equal(guard.surface_kind, 'temporal_worker_source_stale_restart_guard');
-    assert.equal(guard.guard_status, 'blocked');
-    assert.deepEqual(guard.blocker_ids, ['active_stage_attempts_present']);
+    assert.equal(guard.guard_status, 'ready');
+    assert.deepEqual(guard.blocker_ids, []);
     assert.equal(guard.stage_attempt_ledger_readable, true);
-    assert.equal(guard.active_stage_attempt_count, 2);
-    assert.deepEqual(guard.active_stage_attempts_by_status, {
+    assert.equal(guard.active_stage_attempt_count, 0);
+    assert.deepEqual(guard.active_stage_attempts_by_status, {});
+    assert.deepEqual(guard.active_stage_attempt_statuses, []);
+    assert.equal(guard.diagnostic_stage_attempt_count, 2);
+    assert.deepEqual(guard.diagnostic_stage_attempts_by_status, {
       checkpointed: 1,
       queued: 1,
     });
-    assert.deepEqual(guard.active_stage_attempt_statuses, ['checkpointed', 'queued']);
+    assert.deepEqual(guard.diagnostic_stage_attempt_statuses, ['checkpointed', 'queued']);
   } finally {
     db?.close();
     if (previousStateDir === undefined) {
