@@ -2,18 +2,23 @@ import { buildWorkspaceCatalog } from '../workspace-registry.ts';
 import type { FrameworkContracts } from '../types.ts';
 import { buildDomainManifestCatalog } from '../domain-manifest/catalog-builder.ts';
 
+import {
+  buildConfiguredHumanGates,
+  buildProgressAttentionItems,
+  buildProgressInspectPaths,
+  buildProgressSummary,
+  buildProjectState,
+  currentReadinessEntryForProject,
+  pickProgressNextFocus,
+  splitProgressWorkspaceFiles,
+} from './progress-brief.ts';
 import { buildCurrentReadinessProjection } from './readiness.ts';
 import { buildProgressFeedback, buildWorkspaceInbox } from './progress-feedback.ts';
 import {
   buildStudyProgressSurface,
-  describeHumanGate,
-  explainManifestFailure,
   pickCurrentProjectEntry,
 } from './progress-study.ts';
-import {
-  normalizeWorkspacePath,
-  uniqueStrings,
-} from './shared.ts';
+import { normalizeWorkspacePath } from './shared.ts';
 import type { DashboardOptions } from './types.ts';
 import { buildRuntimeStatus } from './workspace-runtime.ts';
 
@@ -30,9 +35,7 @@ export async function buildProjectProgressBrief(
     ledgerLimit: options.sessionsLimit,
   })).runtime_status;
   const currentProject = pickCurrentProjectEntry(domainManifests, workspaceCatalog, workspacePath);
-  const readinessEntry = currentProject.projectId
-    ? readiness.projects.find((entry) => entry.project_id === currentProject.projectId) ?? null
-    : null;
+  const readinessEntry = currentReadinessEntryForProject(readiness.projects, currentProject.projectId);
   const manifestEntry = currentProject.manifestEntry;
   const manifest = manifestEntry?.manifest ?? null;
   const overview = manifest?.product_entry_overview ?? null;
@@ -52,55 +55,35 @@ export async function buildProjectProgressBrief(
         preview: recentLedgerSession.latest_goal_preview ?? '',
       }
     : null;
-  const projectState =
-    manifestEntry === null
-      ? 'unbound'
-      : manifestEntry.status !== 'resolved'
-        ? 'attention_needed'
-        : readinessEntry?.usable_now === false
-          ? 'attention_needed'
-          : 'active';
-  const progressSummary =
-    studySurface.progressSummary
-    ?? studySurface.currentStudy?.story_summary
-    ?? overview?.summary
-    ?? productStatus?.summary
-    ?? readinessEntry?.summary
-    ?? (
-      manifestEntry === null
-        ? '当前 workspace 还没有绑定到可直接汇报进度的项目。'
-        : '当前还没有读到结构化的项目进度摘要。'
-    );
-  const nextFocus =
-    [
-      studySurface.nextFocus,
-      ...(overview?.next_focus ?? []),
-      ...(productStatus?.next_focus ?? []),
-      ...(Array.isArray(repoMainline?.next_focus)
-        ? repoMainline.next_focus.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
-        : []),
-      ...(readinessEntry?.recommended_next_actions ?? []),
-    ][0] ?? null;
-  const attentionItems = uniqueStrings([
-    ...studySurface.attentionItems,
-    ...(readinessEntry?.usable_now === false ? readinessEntry.blocking_gaps : []),
-    explainManifestFailure(manifestEntry?.error ?? null),
-  ]);
-  const inspectPaths = uniqueStrings([
+  const projectState = buildProjectState(manifestEntry, readinessEntry);
+  const progressSummary = buildProgressSummary({
+    manifestEntry,
+    overview,
+    productStatus,
+    readinessEntry,
+    studySurface,
+  });
+  const nextFocus = pickProgressNextFocus({
+    overview,
+    productStatus,
+    readinessEntry,
+    repoMainline,
+    studySurface,
+  });
+  const attentionItems = buildProgressAttentionItems({
+    manifestEntry,
+    readinessEntry,
+    studySurface,
+  });
+  const inspectPaths = buildProgressInspectPaths({
+    currentProject,
+    manifest,
+    manifestEntry,
+    studySurface,
     workspacePath,
-    currentProject.activeBindingEntry?.active_binding?.workspace_path ?? null,
-    manifestEntry?.workspace_path ?? null,
-    typeof manifest?.workspace_locator?.workspace_root === 'string' ? manifest.workspace_locator.workspace_root : null,
-    typeof manifest?.workspace_locator?.profile_ref === 'string' ? manifest.workspace_locator.profile_ref : null,
-    ...studySurface.inspectPaths,
-  ]);
-  const configuredHumanGates = uniqueStrings([
-    ...(overview?.human_gate_ids ?? []),
-    ...(manifest?.product_entry_start?.human_gate_ids ?? []),
-  ]).map((gateId) => describeHumanGate(gateId));
-  const workspaceFiles = studySurface.workspaceFiles;
-  const deliverableFiles = workspaceFiles.filter((entry) => entry.kind === 'deliverable');
-  const supportingFiles = workspaceFiles.filter((entry) => entry.kind === 'supporting');
+  });
+  const configuredHumanGates = buildConfiguredHumanGates({ manifest, overview });
+  const { deliverableFiles, supportingFiles } = splitProgressWorkspaceFiles(studySurface.workspaceFiles);
   const progressFeedback = buildProgressFeedback({
     studySurface,
     progressSummary,
