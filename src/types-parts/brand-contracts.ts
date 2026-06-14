@@ -64,6 +64,7 @@ export interface BrandModuleL5EvidenceRequirement {
   owner_repo_ref: string;
   current_state: BrandModuleL5EvidenceState;
   evidence_refs?: string[];
+  owner_acceptance_refs?: string[];
   blocker_refs?: string[];
 }
 

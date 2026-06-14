@@ -53,7 +53,11 @@ Machine boundary: 本文是人读现状对照。当前完成度、计数、recei
 
 ## L5 规划
 
-当前没有模块声明 `L5 production operating maturity`。本仓已新增 `contracts/opl-framework/brand-module-l5-operating-evidence.json`、对应 CLI/read-model 和 `opl runtime brand-module-l5-evidence record|verify|list --json` refs-only ledger，把 L5 证据门变成可执行 surface；它只记录每个模块需要关闭的 evidence class、owner route、accepted ref shape、ledger command refs 和 false-authority policy。当前 contract-tracked owner-evidence refs 已覆盖 `current_owner_delta_default_read`、`domain_authority_false_boundary`、`no_second_truth_regression` 和 `pack_compile_parity` 四类 requirement，并为每个模块的 `owner_acceptance` 记录 owner-needed typed blocker refs；这些 refs 只让 `l5-status` 和 `framework operating-maturity` 可以消费当前证据，不关闭 L5。L5 不是再补一层文档，而是把模块变成可持续运营能力：
+当前没有模块声明 `L5 production operating maturity`。本仓已新增 `contracts/opl-framework/brand-module-l5-operating-evidence.json`、对应 CLI/read-model 和 `opl runtime brand-module-l5-evidence record|verify|list --json` refs-only ledger，把 L5 证据门变成可执行 surface；它只记录每个模块需要关闭的 evidence class、owner route、accepted ref shape、ledger command refs 和 false-authority policy。当前 contract-tracked owner-evidence refs 已覆盖 `current_owner_delta_default_read`、`domain_authority_false_boundary`、`no_second_truth_regression` 和 `pack_compile_parity` 四类 requirement，并为缺 owner/action 的 requirement 记录 owner-needed typed blocker refs；这些 refs 只让 `l5-status` 和 `framework operating-maturity` 可以消费当前证据，不关闭 L5。
+
+`owner_acceptance_refs` 现在是一等 contract success ref：只有当某个 requirement 已由 owner 写成 `current_state=satisfied`，并带有 `evidence_refs` 或 `owner_acceptance_refs` 时，才可参与 `l5_can_be_claimed=true` 的 contract validation。任何 `evidence_refs` / `owner_acceptance_refs` 与 `blocker_refs` 混在同一 requirement 的合同都会 fail closed。runtime ledger 中记录或验证的 `owner_acceptance_refs` 仍然只是 refs-only observed input；没有 contract satisfied state 时不会关闭 L5。
+
+L5 不是再补一层文档，而是把模块变成可持续运营能力：
 
 - `Charter`: 术语、ADR/RFC、authority matrix 和 supersession 机制能持续约束新模块、新 surface 与旧路线退役。
 - `Atlas`: agent / capability / surface / owner catalog 能被 CLI、App、conformance、release 和 operator drilldown 同源消费。
@@ -117,9 +121,9 @@ opl foundry-lab l5-status --json
 opl connect l5-status --json
 ```
 
-`runtime brand-module-l5-evidence` 是 evidence intake/read-model，不是 completion command。它只把外部真实用户路径、long-soak、release/install、owner acceptance、no-regression 或 typed blocker refs 记录到本地 OPL state ledger，再让 `l5-status` 显示 observed / verified counts；它不能创建 owner receipt / typed blocker，不能写 domain truth，不能把 verified receipt 升级成 L5。
+`runtime brand-module-l5-evidence` 是 evidence intake/read-model，不是 completion command。它只把外部真实用户路径、long-soak、release/install、owner acceptance、no-regression 或 typed blocker refs 记录到本地 OPL state ledger，再让 `l5-status` 显示 observed / verified counts；它不能创建 owner receipt / typed blocker，不能写 domain truth，不能把 verified receipt 或 ledger owner acceptance refs 升级成 L5。
 
-Contract-tracked `evidence_refs` / `blocker_refs` 与 runtime ledger 一样是 refs-only input。它们可以把 requirement route 从 `owner_route_evidence_missing` 推到 `owner_evidence_observed_not_l5_claimed` 或 `owner_typed_blocker_recorded`，但不改变 `l5_can_be_claimed=false`、不减少模块级 `evidence_required_module_count=10`，也不授权 `production_ready`。
+Contract-tracked `evidence_refs` / `owner_acceptance_refs` / `blocker_refs` 与 runtime ledger 一样必须按 false-authority policy 读取。`evidence_refs` 或 `owner_acceptance_refs` 可以作为 satisfied requirement 的 success refs；`blocker_refs` 只能说明 owner route 已有 typed blocker。当前真实合同仍为 `l5_complete_module_count=0`、`evidence_required_module_count=10`，因此这些 refs 只会把 requirement route 推到 `owner_evidence_observed_not_l5_claimed` 或 `owner_typed_blocker_recorded`，不授权 `production_ready`。
 
 品牌系统冻结基线验收入口：
 

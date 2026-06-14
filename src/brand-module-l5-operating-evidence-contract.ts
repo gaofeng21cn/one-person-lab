@@ -484,7 +484,17 @@ export function validateBrandModuleL5OperatingEvidence(
       seenRequirementClasses.add(classId);
 
       const evidenceRefs = optionalNonEmptyStringArrayField(requirement, 'evidence_refs', filePath);
+      const ownerAcceptanceRefs = optionalNonEmptyStringArrayField(requirement, 'owner_acceptance_refs', filePath);
       const blockerRefs = optionalNonEmptyStringArrayField(requirement, 'blocker_refs', filePath);
+      if ((evidenceRefs || ownerAcceptanceRefs) && blockerRefs) {
+        throw new FrameworkContractError('contract_shape_invalid', 'success refs cannot be mixed with blocker_refs on the same L5 evidence requirement.', {
+          file: filePath,
+          index,
+          module_id: moduleId,
+          requirementIndex,
+          class_id: classId,
+        });
+      }
       const ownerRouteRef = expectString(
         requirement.owner_route_ref,
         'evidence_requirements.owner_route_ref',
@@ -518,6 +528,7 @@ export function validateBrandModuleL5OperatingEvidence(
           filePath,
         ),
         ...(evidenceRefs ? { evidence_refs: evidenceRefs } : {}),
+        ...(ownerAcceptanceRefs ? { owner_acceptance_refs: ownerAcceptanceRefs } : {}),
         ...(blockerRefs ? { blocker_refs: blockerRefs } : {}),
       };
     });
@@ -536,8 +547,9 @@ export function validateBrandModuleL5OperatingEvidence(
 
     const l5CanBeClaimed = expectBoolean(entry.l5_can_be_claimed, 'l5_can_be_claimed', filePath);
     const satisfiedRequirements = evidenceRequirements.filter((requirement) => requirement.current_state === 'satisfied');
-    const requirementsWithEvidenceRefs = evidenceRequirements.filter((requirement) => (
-      Array.isArray(requirement.evidence_refs) && requirement.evidence_refs.length > 0
+    const requirementsWithSuccessRefs = evidenceRequirements.filter((requirement) => (
+      (Array.isArray(requirement.evidence_refs) && requirement.evidence_refs.length > 0)
+      || (Array.isArray(requirement.owner_acceptance_refs) && requirement.owner_acceptance_refs.length > 0)
     ));
     if (l5CanBeClaimed) {
       if (l5CompletionStatus !== 'complete') {
@@ -549,9 +561,9 @@ export function validateBrandModuleL5OperatingEvidence(
       }
       if (
         satisfiedRequirements.length !== BRAND_MODULE_L5_EVIDENCE_CLASSES.length
-        || requirementsWithEvidenceRefs.length !== BRAND_MODULE_L5_EVIDENCE_CLASSES.length
+        || requirementsWithSuccessRefs.length !== BRAND_MODULE_L5_EVIDENCE_CLASSES.length
       ) {
-        throw new FrameworkContractError('contract_shape_invalid', 'l5_can_be_claimed=true requires every evidence requirement to be satisfied with evidence_refs.', {
+        throw new FrameworkContractError('contract_shape_invalid', 'l5_can_be_claimed=true requires every evidence requirement to be satisfied with evidence_refs or owner_acceptance_refs.', {
           file: filePath,
           index,
           module_id: moduleId,

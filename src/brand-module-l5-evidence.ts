@@ -216,11 +216,12 @@ function observedLedgerRefs(receipts: BrandModuleL5EvidenceLedgerReceiptProjecti
 }
 
 function contractRefsForRequirement(
-  requirement: { evidence_refs?: string[]; blocker_refs?: string[] },
+  requirement: { evidence_refs?: string[]; owner_acceptance_refs?: string[]; blocker_refs?: string[] },
   options: { includeBlockerRefs?: boolean } = {},
 ) {
   return unique([
     ...(requirement.evidence_refs ?? []),
+    ...(requirement.owner_acceptance_refs ?? []),
     ...(options.includeBlockerRefs === false ? [] : requirement.blocker_refs ?? []),
   ]);
 }
@@ -238,10 +239,11 @@ function observedSuccessLedgerRefs(receipts: BrandModuleL5EvidenceLedgerReceiptP
 
 function observedSuccessRefsForRequirement(
   receipts: BrandModuleL5EvidenceLedgerReceiptProjection[],
-  requirement: { evidence_refs?: string[] },
+  requirement: { evidence_refs?: string[]; owner_acceptance_refs?: string[] },
 ) {
   return unique([
-    ...contractRefsForRequirement(requirement, { includeBlockerRefs: false }),
+    ...(requirement.evidence_refs ?? []),
+    ...(requirement.owner_acceptance_refs ?? []),
     ...observedSuccessLedgerRefs(receipts),
   ]);
 }
@@ -258,7 +260,7 @@ function observedTypedBlockerRefsForRequirement(
 
 function observedRefsForRequirement(
   receipts: BrandModuleL5EvidenceLedgerReceiptProjection[],
-  requirement: { evidence_refs?: string[]; blocker_refs?: string[] },
+  requirement: { evidence_refs?: string[]; owner_acceptance_refs?: string[]; blocker_refs?: string[] },
 ) {
   const successRefs = observedSuccessRefsForRequirement(receipts, requirement);
   if (successRefs.length > 0) {
@@ -308,7 +310,7 @@ function refShapeForContractRef(ref: string) {
 }
 
 function observedContractRefShapes(
-  requirement: { evidence_refs?: string[]; blocker_refs?: string[] },
+  requirement: { evidence_refs?: string[]; owner_acceptance_refs?: string[]; blocker_refs?: string[] },
   options: { includeBlockerRefs?: boolean } = {},
 ) {
   return unique(contractRefsForRequirement(requirement, options).map(refShapeForContractRef));
@@ -333,7 +335,7 @@ function observedLedgerRefShapes(receipts: BrandModuleL5EvidenceLedgerReceiptPro
 
 function observedRefShapesForRequirement(
   receipts: BrandModuleL5EvidenceLedgerReceiptProjection[],
-  requirement: { evidence_refs?: string[]; blocker_refs?: string[] },
+  requirement: { evidence_refs?: string[]; owner_acceptance_refs?: string[]; blocker_refs?: string[] },
 ) {
   const successRefs = observedSuccessRefsForRequirement(receipts, requirement);
   return unique([
@@ -526,6 +528,7 @@ function ownerEvidenceRoutes(
         ...contract.owner_route_work_order_policy.accepted_route_ref_shapes,
       ]),
       existing_evidence_refs: requirement.evidence_refs ?? [],
+      existing_owner_acceptance_refs: requirement.owner_acceptance_refs ?? [],
       existing_blocker_refs: requirement.blocker_refs ?? [],
       observed_evidence_refs: observedEvidenceRefs,
       observed_receipt_refs: requirementLedgerReceipts.map((receipt) => receipt.receipt_ref),
@@ -759,8 +762,10 @@ const l5ContractClassIds: BrandModuleL5EvidenceClassId[] = [
 function hasSatisfiedEvidenceRefs(entry: BrandModuleL5OperatingEvidenceEntry) {
   return entry.evidence_requirements.every((requirement) => (
     requirement.current_state === 'satisfied'
-    && Array.isArray(requirement.evidence_refs)
-    && requirement.evidence_refs.length > 0
+    && (
+      (Array.isArray(requirement.evidence_refs) && requirement.evidence_refs.length > 0)
+      || (Array.isArray(requirement.owner_acceptance_refs) && requirement.owner_acceptance_refs.length > 0)
+    )
   ));
 }
 

@@ -1,4 +1,4 @@
-import { assert, fs, loadFrameworkContracts, os, path, repoRoot, runCli, test } from '../../helpers.ts';
+import { assert, createContractsFixtureRoot, fs, loadFrameworkContracts, os, path, repoRoot, runCli, runCliFailure, test } from '../../helpers.ts';
 import { expectedModuleIds, type L5Module } from './shared.ts';
 
 test('brand module L5 evidence gate is executable but does not claim production maturity', () => {
@@ -276,6 +276,165 @@ test('brand module L5 evidence gate is executable but does not claim production 
     assert.equal(status.owner_route_work_order_policy.work_orders_can_claim_production_ready, false);
     assert.equal(status.not_claims.includes('production_ready'), true);
     assert.equal(status.authority_boundary.can_claim_production_ready, false);
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+});
+
+test('brand module L5 can be claimed only with satisfied owner acceptance success refs', () => {
+  const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
+    const contractPath = path.join(contractsRoot, 'brand-module-l5-operating-evidence.json');
+    const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8')) as {
+      modules: Array<{
+        module_id: string;
+        l5_completion_status: string;
+        l5_can_be_claimed: boolean;
+        evidence_requirements: Array<{
+          class_id: string;
+          current_state: string;
+          evidence_refs?: string[];
+          owner_acceptance_refs?: string[];
+          blocker_refs?: string[];
+        }>;
+      }>;
+    };
+    const charter = contract.modules.find((entry) => entry.module_id === 'charter');
+    assert.ok(charter);
+    charter.l5_completion_status = 'complete';
+    charter.l5_can_be_claimed = true;
+    for (const requirement of charter.evidence_requirements) {
+      requirement.current_state = 'satisfied';
+      delete requirement.blocker_refs;
+      requirement.evidence_refs = [
+        `owner-evidence-ref:opl-brand-l5/charter/${requirement.class_id}/live-closeout-20260614`,
+      ];
+      requirement.owner_acceptance_refs = [
+        `owner-acceptance-ref:opl-brand-l5/charter/${requirement.class_id}/brand-owner-accepted-20260614`,
+      ];
+    }
+    fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`, 'utf8');
+  });
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-brand-l5-owner-acceptance-state-'));
+  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateDir };
+
+  try {
+    const status = runCli(['brand-modules', 'l5-status'], env).brand_module_l5_status;
+    assert.equal(status.l5_complete_module_count, 1);
+    assert.deepEqual(status.l5_complete_module_ids, ['charter']);
+    assert.equal(status.evidence_required_module_count, 9);
+    assert.deepEqual(status.evidence_required_module_ids, expectedModuleIds.filter((moduleId) => moduleId !== 'charter'));
+
+    const charter = status.modules.find((entry: { module_id: string }) => entry.module_id === 'charter');
+    assert.equal(charter.l5_completion_status, 'complete');
+    assert.equal(charter.l5_can_be_claimed, true);
+    assert.equal(charter.evidence_required, false);
+    assert.equal(charter.open_requirement_count, 0);
+    assert.equal(charter.blocked_requirement_count, 0);
+    assert.equal(charter.next_action_summary.status, 'complete');
+    assert.equal(charter.next_action_summary.l5_can_be_claimed, true);
+    assert.equal(charter.next_action_summary.false_completion_guard.ready_claim_authorized, false);
+
+    const livePath = charter.owner_evidence_routes.find((route: { class_id: string }) =>
+      route.class_id === 'live_user_path'
+    );
+    assert.equal(livePath.owner_route_status, 'owner_evidence_recorded_not_l5_claimed');
+    assert.equal(livePath.blocker_state, 'refs_observed_not_l5_claim');
+    assert.equal(livePath.existing_owner_acceptance_refs.length, 1);
+    assert.equal(
+      livePath.existing_owner_acceptance_refs[0],
+      'owner-acceptance-ref:opl-brand-l5/charter/live_user_path/brand-owner-accepted-20260614',
+    );
+    assert.equal(
+      livePath.observed_evidence_refs.includes(livePath.existing_owner_acceptance_refs[0]),
+      true,
+    );
+    assert.equal(livePath.observed_ref_shapes.includes('owner_acceptance_ref'), true);
+    assert.equal(livePath.ready_claim_authorized, false);
+
+    const atlas = status.modules.find((entry: { module_id: string }) => entry.module_id === 'atlas');
+    assert.equal(atlas.l5_can_be_claimed, false);
+    assert.equal(atlas.evidence_required, true);
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('brand module L5 requirement rejects success refs mixed with blocker refs', () => {
+  const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
+    const contractPath = path.join(contractsRoot, 'brand-module-l5-operating-evidence.json');
+    const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8')) as {
+      modules: Array<{
+        module_id: string;
+        evidence_requirements: Array<{
+          class_id: string;
+          evidence_refs?: string[];
+          blocker_refs?: string[];
+        }>;
+      }>;
+    };
+    const charter = contract.modules.find((entry) => entry.module_id === 'charter');
+    assert.ok(charter);
+    const livePath = charter.evidence_requirements.find((entry) => entry.class_id === 'live_user_path');
+    assert.ok(livePath);
+    livePath.evidence_refs = ['owner-evidence-ref:opl-brand-l5/charter/live_user_path/mixed-success'];
+    assert.ok(livePath.blocker_refs);
+    fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`, 'utf8');
+  });
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-brand-l5-mixed-success-blocker-state-'));
+  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateDir };
+
+  try {
+    const failure = runCliFailure(['brand-modules', 'l5-status'], env);
+    assert.equal(failure.payload.error.code, 'contract_shape_invalid');
+    assert.match(
+      failure.payload.error.message,
+      /success refs cannot be mixed with blocker_refs/,
+    );
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime owner acceptance ledger refs remain non-closing without contract owner acceptance', () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-brand-l5-ledger-owner-acceptance-state-'));
+  const env = { OPL_STATE_DIR: stateDir };
+
+  try {
+    const record = runCli([
+      'runtime',
+      'brand-module-l5-evidence',
+      'record',
+      '--payload',
+      JSON.stringify({
+        module_id: 'runway',
+        evidence_class_id: 'long_soak_recovery',
+        owner_acceptance_refs: ['owner-acceptance-ref:opl-brand-l5/runway/long_soak_recovery/operator-accepted'],
+      }),
+      '--json',
+    ], env).brand_module_l5_evidence_ledger_record;
+    runCli([
+      'runtime',
+      'brand-module-l5-evidence',
+      'verify',
+      '--receipt-ref',
+      record.receipt.receipt_ref,
+      '--json',
+    ], env);
+
+    const status = runCli(['brand-modules', 'l5-status', '--module', 'runway'], env).brand_module_l5_status;
+    const runway = status.modules[0];
+    const route = runway.owner_evidence_routes.find((candidate: { class_id: string }) =>
+      candidate.class_id === 'long_soak_recovery'
+    );
+    assert.equal(runway.l5_can_be_claimed, false);
+    assert.equal(status.evidence_required_module_count, 10);
+    assert.equal(route.verified_receipt_count, 1);
+    assert.equal(route.observed_ref_shapes.includes('owner_acceptance_ref'), true);
+    assert.equal(route.l5_claim_status, 'owner_evidence_refs_observed_not_l5_claimed');
+    assert.equal(route.ready_claim_authorized, false);
+    assert.equal(route.owner_evidence_closure_state, 'owner_evidence_recorded_not_l5_claim');
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
   }
