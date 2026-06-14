@@ -370,6 +370,38 @@ function defaultExecutorRunningTerminalCurrentControlAdmissionNoopDecision(
   };
 }
 
+function defaultExecutorSucceededProviderLeaseRequiredRedriveDecision(
+  existing: FamilyRuntimeTaskRow,
+  existingPayload: Record<string, unknown>,
+  nextPayload: Record<string, unknown>,
+  stageAttempts: ReturnType<typeof listStageAttemptsForTask>,
+) {
+  if (
+    existing.status !== 'succeeded'
+    || !isDefaultExecutorDispatch(existing, existingPayload)
+    || !isDefaultExecutorDispatch(existing, nextPayload)
+    || stageAttempts.length > 0
+  ) {
+    return null;
+  }
+  const existingIdentity = providerAdmissionCurrentnessIdentity(existingPayload);
+  const nextIdentity = providerAdmissionCurrentnessIdentity(nextPayload);
+  if (!existingIdentity || !nextIdentity || !sameProviderAdmissionCurrentnessIdentity(existingIdentity, nextIdentity)) {
+    return null;
+  }
+  const providerLeaseRequired = nextPayload.provider_attempt_or_lease_required === true
+    || recordValue(nextPayload.provider_admission_identity)?.provider_attempt_or_lease_required === true;
+  if (!providerLeaseRequired) {
+    return null;
+  }
+  return {
+    reason: 'mas_current_control_provider_admission_still_required_after_succeeded',
+    currentness_identity: nextIdentity,
+    previous_source_fingerprint: existingIdentity.source_fingerprint,
+    next_source_fingerprint: nextIdentity.source_fingerprint,
+  };
+}
+
 function transportOnlySucceededDefaultExecutorAdmissionRedriveDecision(
   db: DatabaseSync,
   existing: FamilyRuntimeTaskRow,
@@ -584,6 +616,7 @@ export {
   defaultExecutorQueuedCurrentControlAdmissionRefreshDecision,
   defaultExecutorResolvedMissingStageNativeOwnerAnswerDecision,
   defaultExecutorRunningTerminalCurrentControlAdmissionNoopDecision,
+  defaultExecutorSucceededProviderLeaseRequiredRedriveDecision,
   defaultExecutorSupersededCurrentControlAdmissionRedriveDecision,
   defaultExecutorTerminalAttemptCurrentControlAdmissionRedriveDecision,
   isDefaultExecutorDispatch,

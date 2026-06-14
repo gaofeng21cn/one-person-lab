@@ -84,6 +84,90 @@ test('family-runtime rehydrates terminal MAS current-control admission only when
   }
 });
 
+test('family-runtime rehydrates succeeded MAS current-control admission when provider lease is still required', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    createQueueTables(db);
+    const taskId = 'task-mas-current-control-succeeded-still-provider-required';
+    const dedupeKey = 'owner-route::002-dm-china-us-mortality-attribution::gate-replay-current';
+    const payload = {
+      ...currentControlAdmissionPayload(
+        'sha256:c69e0d2890655ebc1e7a774e9a83dfe333cbc855bf85c3b2cdaf021289e8fc32',
+        '40',
+        'sha256:c69e0d2890655ebc1e7a774e9a83dfe333cbc855bf85c3b2cdaf021289e8fc32',
+      ),
+      study_id: '002-dm-china-us-mortality-attribution',
+      quest_id: '002-dm-china-us-mortality-attribution',
+      action_type: 'run_gate_clearing_batch',
+      next_executable_owner: 'gate_clearing_batch',
+      work_unit_id: 'publication_gate_replay',
+      provider_attempt_or_lease_required: true,
+      provider_admission_identity: {
+        surface: 'opl_provider_admission_candidate',
+        status: 'provider_admission_pending',
+        action_type: 'run_gate_clearing_batch',
+        work_unit_id: 'publication_gate_replay',
+        work_unit_fingerprint: 'sha256:c69e0d2890655ebc1e7a774e9a83dfe333cbc855bf85c3b2cdaf021289e8fc32',
+        action_fingerprint: 'sha256:c69e0d2890655ebc1e7a774e9a83dfe333cbc855bf85c3b2cdaf021289e8fc32',
+        provider_attempt_or_lease_required: true,
+        route_identity_key:
+          'owner-route::002-dm-china-us-mortality-attribution::truth-event-000040::gate_clearing_batch::publication_gate_replay',
+        attempt_idempotency_key:
+          'owner-route::002-dm-china-us-mortality-attribution::truth-event-000040::gate_clearing_batch::publication_gate_replay',
+      },
+    };
+    payload.owner_route_currentness_basis = {
+      ...payload.owner_route_currentness_basis,
+      work_unit_id: 'publication_gate_replay',
+      truth_epoch: 'truth-event-000040',
+      runtime_health_epoch: 'runtime-health-event-006940',
+    };
+    insertSucceededTask(db, {
+      taskId,
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload,
+      dedupeKey,
+    });
+
+    const result = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload,
+      dedupeKey,
+      source: 'test-current-control-replay',
+    });
+    const task = db.prepare('SELECT status, attempts, payload_json FROM tasks WHERE task_id = ?').get(taskId) as {
+      status: string;
+      attempts: number;
+      payload_json: string;
+    };
+    const event = db.prepare(`
+      SELECT payload_json
+      FROM events
+      WHERE task_id = ? AND event_type = 'task_requeued_from_mas_current_control_provider_admission'
+      LIMIT 1
+    `).get(taskId) as { payload_json: string } | undefined;
+    const eventPayload = event ? JSON.parse(event.payload_json) : null;
+
+    assert.equal(result.accepted, true);
+    assert.equal(result.requeued_from_terminal, true);
+    assert.equal(result.idempotent_noop, false);
+    assert.equal(result.task?.status, 'queued');
+    assert.equal(task.status, 'queued');
+    assert.equal(task.attempts, 0);
+    assert.ok(eventPayload);
+    assert.equal(
+      eventPayload.reason,
+      'mas_current_control_provider_admission_still_required_after_succeeded',
+    );
+    assert.equal(eventPayload.currentness_identity.work_unit_id, 'publication_gate_replay');
+    assert.equal(eventPayload.authority_boundary.provider_completion_is_domain_ready, false);
+  } finally {
+    db.close();
+  }
+});
+
 test('family-runtime rehydrates terminal MAS current-control admission when stage attempt identity is stale', () => {
   const db = new DatabaseSync(':memory:');
   try {

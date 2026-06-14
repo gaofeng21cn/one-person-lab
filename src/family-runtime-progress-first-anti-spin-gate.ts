@@ -10,6 +10,9 @@ import {
   listStageAttempts,
   updateStageAttemptsForTask,
 } from './family-runtime-stage-attempts.ts';
+import {
+  masDomainProgressRefsFromRecord,
+} from './family-runtime-mas-domain-progress-refs.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -231,6 +234,7 @@ function hasDeliverableDelta(value: JsonRecord) {
   const classification = progressDeltaClassification(value);
   return classification === 'deliverable_progress'
     || classification === 'mixed'
+    || masDomainProgressRefsFromRecord(value).length > 0
     || deltaCount(value.deliverable_progress_delta) > 0
     || deltaCount(routeImpact.deliverable_progress_delta) > 0
     || deltaCount(record(value.user_stage_log).deliverable_progress_delta) > 0;
@@ -420,11 +424,19 @@ function attemptEvidence(attempt: ReturnType<typeof listStageAttempts>[number]) 
   const routeImpact = record(attempt.route_impact);
   const stageProgressLog = record(attemptRecord.stage_progress_log);
   const userStageLog = record(stageProgressLog.user_stage_log);
+  const closeoutRefs = Array.isArray(attempt.closeout_refs)
+    ? attempt.closeout_refs.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
+    : [];
+  const checkpointRefs = Array.isArray(attempt.checkpoint_refs)
+    ? attempt.checkpoint_refs.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
+    : [];
   return {
     ...routeImpact,
     route_impact: routeImpact,
     user_stage_log: userStageLog,
     blocked_reason: attempt.blocked_reason,
+    closeout_refs: closeoutRefs,
+    checkpoint_refs: checkpointRefs,
   };
 }
 

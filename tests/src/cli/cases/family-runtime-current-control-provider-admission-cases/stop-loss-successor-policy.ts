@@ -209,6 +209,80 @@ test('family-runtime enqueue keeps anti-loop stop-loss same work-unit redrive bl
   }
 });
 
+test('family-runtime enqueue releases same-lineage stop-loss when MAS domain progress evidence is present', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    createQueueTables(db);
+    const dedupeKey = 'owner-route::003-dpcc-primary-care-phenotype-treatment-gap::write-repair-current';
+    const payload = stopLossDm002Payload({
+      workUnitId: 'medical_prose_write_repair',
+      workUnitFingerprint: 'publication-blockers::0915410f804b3697',
+      sourceFingerprint: 'publication-blockers::0915410f804b3697',
+    });
+    const progressPayload = {
+      ...payload,
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      quest_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      action_type: 'run_quality_repair_batch',
+      next_executable_owner: 'write',
+      provider_attempt_or_lease_required: true,
+      domain_progress_refs: [
+        'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/controller/repair_execution_evidence/latest.json',
+        'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/controller/repair_execution_receipts/latest.json',
+        'studies/003-dpcc-primary-care-phenotype-treatment-gap/paper/draft.md',
+      ],
+      provider_admission_identity: {
+        ...record(payload.provider_admission_identity),
+        route_identity_key: dedupeKey,
+        idempotency_key: dedupeKey,
+      },
+    };
+    insertBlockedStopLossTask(db, {
+      taskId: 'task-dm003-stop-loss-same-lineage-domain-progress',
+      dedupeKey,
+      payload: progressPayload,
+    });
+
+    const result = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload: progressPayload,
+      dedupeKey,
+      source: 'test-dm003-stop-loss-domain-progress',
+    });
+    const task = db.prepare('SELECT status, dead_letter_reason, payload_json FROM tasks WHERE task_id = ?').get(
+      'task-dm003-stop-loss-same-lineage-domain-progress',
+    ) as { status: string; dead_letter_reason: string | null; payload_json: string };
+    const releasedEvent = db.prepare(`
+      SELECT payload_json
+      FROM events
+      WHERE task_id = ? AND event_type = 'task_stop_loss_same_lineage_domain_progress_released'
+      LIMIT 1
+    `).get('task-dm003-stop-loss-same-lineage-domain-progress') as { payload_json: string } | undefined;
+    const blockedEvent = db.prepare(`
+      SELECT payload_json
+      FROM events
+      WHERE task_id = ? AND event_type = 'task_stop_loss_successor_admission_blocked'
+      LIMIT 1
+    `).get('task-dm003-stop-loss-same-lineage-domain-progress') as { payload_json: string } | undefined;
+    const eventPayload = releasedEvent ? JSON.parse(releasedEvent.payload_json) : null;
+
+    assert.equal(result.accepted, true);
+    assert.equal(result.idempotent_noop, false);
+    assert.equal(result.task?.status, 'queued');
+    assert.equal(task.status, 'queued');
+    assert.equal(task.dead_letter_reason, null);
+    assert.ok(releasedEvent);
+    assert.equal(blockedEvent, undefined);
+    assert.equal(eventPayload.reason, 'anti_loop_stop_loss_same_lineage_domain_progress_observed');
+    assert.equal(eventPayload.same_work_unit_redrive_allowed, true);
+    assert.deepEqual(eventPayload.domain_progress_refs, progressPayload.domain_progress_refs);
+    assert.equal(eventPayload.authority_boundary.can_write_domain_truth, false);
+  } finally {
+    db.close();
+  }
+});
+
 test('family-runtime enqueue preserves same-lineage typed blocker as legal anti-loop stop-loss terminal path', () => {
   const db = new DatabaseSync(':memory:');
   try {

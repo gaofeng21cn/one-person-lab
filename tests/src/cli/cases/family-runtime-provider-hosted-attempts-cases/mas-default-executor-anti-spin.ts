@@ -118,6 +118,48 @@ function closeAttemptWithoutDeliverableDelta(
   });
 }
 
+function closeAttemptWithMasDomainProgressRefs(
+  db: DatabaseSync,
+  input: {
+    taskId: string;
+    sourceFingerprint: string;
+    closeoutRefs: string[];
+    createdAt: string;
+  },
+) {
+  const payload = defaultExecutorPayload(input.sourceFingerprint);
+  insertSucceededTask(db, {
+    taskId: input.taskId,
+    payload,
+    dedupeKey: `mas:dm-cvd:003:default-executor:domain-progress:${input.taskId}`,
+  });
+  db.prepare('UPDATE tasks SET created_at = ?, updated_at = ? WHERE task_id = ?').run(
+    input.createdAt,
+    input.createdAt,
+    input.taskId,
+  );
+  const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(input.taskId) as FamilyRuntimeTaskRow;
+  const attempt = ensureProviderHostedStageAttempt(db, row, payload);
+  assert.ok(attempt);
+  ingestStageAttemptCloseout(db, {
+    stageAttemptId: attempt.stage_attempt_id,
+    packet: {
+      surface_kind: 'stage_attempt_closeout_packet',
+      closeout_refs: input.closeoutRefs,
+      consumed_refs: [`source:${input.taskId}`],
+      consumed_memory_refs: [],
+      writeback_receipt_refs: [],
+      rejected_writes: [],
+      next_owner: 'med-autoscience',
+      domain_ready_verdict: 'domain_gate_pending',
+      route_impact: {
+        next_owner: 'medautoscience',
+        domain_ready_verdict: 'domain_gate_pending',
+      },
+    },
+  });
+}
+
 test('family-runtime tick blocks repeated same-source MAS default executor dispatches without deliverable delta', async () => {
   const db = new DatabaseSync(':memory:');
   try {
@@ -248,6 +290,66 @@ test('family-runtime tick blocks repeated same-source MAS default executor dispa
       assert.equal(eventPayload.authority_boundary.can_create_owner_receipt, false);
       assert.equal(eventPayload.authority_boundary.can_create_typed_blocker, false);
       assert.equal(eventPayload.authority_boundary.can_claim_domain_ready, false);
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime anti-spin treats MAS owner closeout refs as domain progress', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      closeAttemptWithMasDomainProgressRefs(db, {
+        taskId: 'task-mas-default-anti-spin-domain-progress-first',
+        sourceFingerprint: 'publication-blockers::0915410f804b3697',
+        closeoutRefs: [
+          'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/controller/repair_execution_evidence/latest.json',
+          'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/controller/repair_execution_receipts/latest.json',
+          'studies/003-dpcc-primary-care-phenotype-treatment-gap/paper/draft.md',
+        ],
+        createdAt: '2026-06-14T09:00:00.000Z',
+      });
+      closeAttemptWithMasDomainProgressRefs(db, {
+        taskId: 'task-mas-default-anti-spin-domain-progress-second',
+        sourceFingerprint: 'publication-blockers::0915410f804b3697',
+        closeoutRefs: [
+          'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/controller/quality_repair_batch/latest.json',
+          'runtime/quests/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/reports/publishability_gate/latest.json',
+          'studies/003-dpcc-primary-care-phenotype-treatment-gap/paper/review/review_ledger.json',
+        ],
+        createdAt: '2026-06-14T09:10:00.000Z',
+      });
+      insertQueuedDefaultExecutorTask(db, {
+        taskId: 'task-mas-default-anti-spin-domain-progress-candidate',
+        payload: defaultExecutorPayload('publication-blockers::0915410f804b3697'),
+        dedupeKey: 'mas:dm-cvd:003:default-executor:domain-progress:candidate',
+        createdAt: '2026-06-14T09:20:00.000Z',
+      });
+
+      const dispatchedTaskIds: string[] = [];
+      const tick = await runFamilyRuntimeQueueTick(db, familyRuntimePaths(), {
+        source: 'test-progress-first-domain-progress-closeouts',
+        limit: 10,
+        hydrate: false,
+      }, {
+        enqueueTask,
+        dispatchTask: (_db, _paths, row) => {
+          dispatchedTaskIds.push(row.task_id);
+          return { task_id: row.task_id, status: 'selected' };
+        },
+      });
+      const event = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_progress_first_anti_spin_blocked'
+        LIMIT 1
+      `).get('task-mas-default-anti-spin-domain-progress-candidate') as { payload_json: string } | undefined;
+
+      assert.equal(tick.progress_first_anti_spin_blocked_count, 0);
+      assert.deepEqual(dispatchedTaskIds, ['task-mas-default-anti-spin-domain-progress-candidate']);
+      assert.equal(event, undefined);
     });
   } finally {
     db.close();

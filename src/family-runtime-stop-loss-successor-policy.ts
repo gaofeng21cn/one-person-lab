@@ -1,5 +1,10 @@
 import type { DatabaseSync } from 'node:sqlite';
 
+import {
+  isMasDomainProgressRef,
+  masDomainProgressRefsFromRecord,
+} from './family-runtime-mas-domain-progress-refs.ts';
+
 type JsonRecord = Record<string, unknown>;
 
 const ANTI_LOOP_BUDGET_EXHAUSTED_BLOCKER_CODE = 'anti_loop_budget_exhausted';
@@ -243,6 +248,67 @@ function legalTerminalPath(payload: JsonRecord) {
   return null;
 }
 
+function domainProgressRefs(payload: JsonRecord) {
+  return masDomainProgressRefsFromRecord(payload);
+}
+
+function safeJsonRecord(value: string) {
+  try {
+    return record(JSON.parse(value));
+  } catch {
+    return {};
+  }
+}
+
+function stopLossAttemptDomainProgress(
+  db: DatabaseSync,
+  input: {
+    task: StopLossTask;
+    previousIdentity: ReturnType<typeof stopLossCurrentnessIdentity>;
+  },
+) {
+  if (!input.task.domain_id || !input.task.task_kind) {
+    return { stage_attempt_ids: [], domain_progress_refs: [] };
+  }
+  const rows = db.prepare(`
+    SELECT stage_attempt_id, status, workspace_locator_json, closeout_refs_json, route_impact_json
+    FROM stage_attempts
+    WHERE domain_id = ? AND stage_id = ?
+      AND status IN ('completed', 'blocked', 'failed', 'dead_lettered', 'checkpointed')
+    ORDER BY updated_at DESC, created_at DESC
+  `).all(input.task.domain_id, input.task.task_kind) as Array<{
+    stage_attempt_id: string;
+    status: string;
+    workspace_locator_json: string;
+    closeout_refs_json: string;
+    route_impact_json: string;
+  }>;
+  const stageAttemptIds: string[] = [];
+  const progressRefs: string[] = [];
+  for (const row of rows) {
+    const workspaceLocator = safeJsonRecord(row.workspace_locator_json);
+    const attemptIdentity = stopLossCurrentnessIdentity(workspaceLocator);
+    if (!sameStopLossLineage(input.previousIdentity, attemptIdentity)) {
+      continue;
+    }
+    const closeoutRefs = stringList(JSON.parse(row.closeout_refs_json));
+    const routeImpact = safeJsonRecord(row.route_impact_json);
+    const attemptProgressRefs = uniqueStrings([
+      ...closeoutRefs,
+      ...domainProgressRefs(routeImpact),
+    ]).filter(isMasDomainProgressRef);
+    if (attemptProgressRefs.length === 0) {
+      continue;
+    }
+    stageAttemptIds.push(row.stage_attempt_id);
+    progressRefs.push(...attemptProgressRefs);
+  }
+  return {
+    stage_attempt_ids: uniqueStrings(stageAttemptIds),
+    domain_progress_refs: uniqueStrings(progressRefs),
+  };
+}
+
 function stopLossAuthorityBoundary() {
   return {
     opl: 'stop_loss_successor_admission_and_read_model_only',
@@ -259,6 +325,7 @@ function stopLossAuthorityBoundary() {
 }
 
 export function antiLoopStopLossSameLineageDecision(input: {
+  db: DatabaseSync;
   existing: StopLossTask;
   existingPayload: JsonRecord;
   nextPayload: JsonRecord;
@@ -289,6 +356,30 @@ export function antiLoopStopLossSameLineageDecision(input: {
       next_currentness_identity: nextIdentity,
       identity_difference: stopLossIdentityDifference(previousIdentity, nextIdentity),
       next_required_route: 'terminal_path_observed_no_default_redrive',
+      authority_boundary: stopLossAuthorityBoundary(),
+    };
+  }
+  const payloadProgressRefs = domainProgressRefs(input.nextPayload);
+  const attemptProgress = stopLossAttemptDomainProgress(input.db, {
+    task: input.existing,
+    previousIdentity,
+  });
+  const progressRefs = uniqueStrings([
+    ...payloadProgressRefs,
+    ...attemptProgress.domain_progress_refs,
+  ]);
+  if (progressRefs.length > 0) {
+    return {
+      event_type: 'task_stop_loss_same_lineage_domain_progress_released',
+      reason: 'anti_loop_stop_loss_same_lineage_domain_progress_observed',
+      terminal_blocker_code: ANTI_LOOP_BUDGET_EXHAUSTED_BLOCKER_CODE,
+      same_work_unit_redrive_allowed: true,
+      domain_progress_refs: progressRefs,
+      domain_progress_stage_attempt_ids: attemptProgress.stage_attempt_ids,
+      previous_currentness_identity: previousIdentity,
+      next_currentness_identity: nextIdentity,
+      identity_difference: stopLossIdentityDifference(previousIdentity, nextIdentity),
+      next_required_route: 'same_lineage_provider_attempt_allowed_after_domain_progress_evidence',
       authority_boundary: stopLossAuthorityBoundary(),
     };
   }

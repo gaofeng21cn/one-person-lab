@@ -23,6 +23,7 @@ import {
   defaultExecutorQueuedCurrentControlAdmissionRefreshDecision,
   defaultExecutorResolvedMissingStageNativeOwnerAnswerDecision,
   defaultExecutorRunningTerminalCurrentControlAdmissionNoopDecision,
+  defaultExecutorSucceededProviderLeaseRequiredRedriveDecision,
   defaultExecutorSupersededCurrentControlAdmissionRedriveDecision,
   defaultExecutorTerminalAttemptCurrentControlAdmissionRedriveDecision,
   isDefaultExecutorDispatch,
@@ -91,6 +92,7 @@ export function reconcileExistingDedupeTask(
     ? existingStageAttempts.find((attempt) => isLiveSameTaskDefaultExecutorAttempt(attempt, payload)) ?? null
     : null;
   const antiLoopSameLineageDecision = antiLoopStopLossSameLineageDecision({
+    db,
     existing,
     existingPayload,
     nextPayload: payload,
@@ -100,6 +102,27 @@ export function reconcileExistingDedupeTask(
       event_type: eventType,
       ...decisionPayload
     } = antiLoopSameLineageDecision;
+    if (eventType === 'task_stop_loss_same_lineage_domain_progress_released') {
+      const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
+      return applyExistingDedupeRequeue(db, {
+        input,
+        taskKind,
+        exportedPayloadJson,
+        existing,
+        nextStatus,
+        nextRequiresApproval: requiresApproval,
+        nextLastError: initialLastError,
+        createdAt,
+        dedupeKey,
+        activeHoldId: activeHold?.hold_id ?? null,
+        eventType,
+        eventPayload: {
+          ...decisionPayload,
+        },
+        notificationTitle: 'Family runtime stop-loss released by MAS domain progress evidence',
+        requeuedFromTerminal: true,
+      });
+    }
     insertEvent(db, {
       taskId: existing.task_id,
       domainId: existing.domain_id,
@@ -185,6 +208,15 @@ export function reconcileExistingDedupeTask(
   const terminalAttemptCurrentControlAdmissionRedrive = isDefaultExecutorDispatch(existing, existingPayload)
     && isDefaultExecutorDispatchInput(input.domainId, taskKind, payload)
     ? defaultExecutorTerminalAttemptCurrentControlAdmissionRedriveDecision(
+      existing,
+      existingPayload,
+      payload,
+      existingStageAttempts,
+    )
+    : null;
+  const succeededProviderLeaseRequiredRedrive = isDefaultExecutorDispatch(existing, existingPayload)
+    && isDefaultExecutorDispatchInput(input.domainId, taskKind, payload)
+    ? defaultExecutorSucceededProviderLeaseRequiredRedriveDecision(
       existing,
       existingPayload,
       payload,
@@ -490,6 +522,36 @@ export function reconcileExistingDedupeTask(
         },
       },
       notificationTitle: 'Family runtime task requeued from MAS current-control terminal attempt',
+      requeuedFromTerminal: true,
+    });
+  }
+  if (succeededProviderLeaseRequiredRedrive) {
+    const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
+    return applyExistingDedupeRequeue(db, {
+      input,
+      taskKind,
+      exportedPayloadJson,
+      existing,
+      nextStatus,
+      nextRequiresApproval: requiresApproval,
+      nextLastError: initialLastError,
+      createdAt,
+      dedupeKey,
+      activeHoldId: activeHold?.hold_id ?? null,
+      eventType: 'task_requeued_from_mas_current_control_provider_admission',
+      eventPayload: {
+        ...succeededProviderLeaseRequiredRedrive,
+        authority_boundary: {
+          opl: 'queue_attempt_provider_transport_rehydrate_from_mas_current_control_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          domain_truth_mutation: false,
+          publication_quality_mutation: false,
+          artifact_gate_mutation: false,
+          current_package_mutation: false,
+          provider_completion_is_domain_ready: false,
+        },
+      },
+      notificationTitle: 'Family runtime task requeued because MAS still requires provider lease',
       requeuedFromTerminal: true,
     });
   }
