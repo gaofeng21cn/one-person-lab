@@ -157,6 +157,8 @@ function brandModuleL5RequirementWorkOrders(brandModules: Record<string, unknown
       work_order_id: stringValue(route.work_order_id),
       class_id: stringValue(route.class_id),
       owner: stringValue(route.owner),
+      owner_route_ref: stringValue(route.owner_route_ref),
+      owner_repo_ref: stringValue(route.owner_repo_ref),
       owner_repo: stringValue(route.owner_repo),
       owner_route_status: stringValue(route.owner_route_status),
       blocker_state: stringValue(route.blocker_state),
@@ -197,6 +199,22 @@ function brandModuleL5OwnerActionChecklist(
     const moduleWorkOrders = requirementWorkOrders.filter(
       (entry) => stringValue(entry.module_id) === moduleId,
     );
+    const missingOwnerEvidenceWorkOrders = moduleWorkOrders.filter(
+      (entry) => stringValue(entry.owner_evidence_closure_state)
+        === 'owner_acceptance_or_typed_blocker_required',
+    );
+    const typedBlockerWorkOrders = moduleWorkOrders.filter(
+      (entry) => stringValue(entry.owner_evidence_closure_state)
+        === 'owner_typed_blocker_recorded',
+    );
+    const observedRefsNotL5ClaimWorkOrders = moduleWorkOrders.filter(
+      (entry) => stringValue(entry.owner_evidence_closure_state)
+        === 'owner_evidence_recorded_not_l5_claim',
+    );
+    const ownerActionRequiredWorkOrders = [
+      ...missingOwnerEvidenceWorkOrders,
+      ...typedBlockerWorkOrders,
+    ];
     const nextAction = record(module.next_action_summary);
     const evidenceLedger = record(module.evidence_ledger);
     return {
@@ -207,15 +225,28 @@ function brandModuleL5OwnerActionChecklist(
       evidence_requirement_count: numberValue(module.evidence_requirement_count),
       open_requirement_count: numberValue(module.open_requirement_count),
       blocked_requirement_count: numberValue(module.blocked_requirement_count),
-      owner_action_required_count: moduleWorkOrders.length,
-      missing_requirement_action_ids: moduleWorkOrders
+      route_work_order_count: moduleWorkOrders.length,
+      owner_action_required_count: ownerActionRequiredWorkOrders.length,
+      missing_owner_evidence_action_count: missingOwnerEvidenceWorkOrders.length,
+      typed_blocker_action_count: typedBlockerWorkOrders.length,
+      observed_refs_not_l5_claim_count: observedRefsNotL5ClaimWorkOrders.length,
+      missing_requirement_action_ids: ownerActionRequiredWorkOrders
         .map((entry) => stringValue(entry.work_order_id))
         .filter((entry): entry is string => typeof entry === 'string' && entry.length > 0),
       missing_requirement_class_ids: unique(
-        moduleWorkOrders
+        ownerActionRequiredWorkOrders
           .map((entry) => stringValue(entry.class_id))
           .filter((entry): entry is string => typeof entry === 'string' && entry.length > 0),
       ),
+      missing_owner_evidence_action_ids: missingOwnerEvidenceWorkOrders
+        .map((entry) => stringValue(entry.work_order_id))
+        .filter((entry): entry is string => typeof entry === 'string' && entry.length > 0),
+      typed_blocker_action_ids: typedBlockerWorkOrders
+        .map((entry) => stringValue(entry.work_order_id))
+        .filter((entry): entry is string => typeof entry === 'string' && entry.length > 0),
+      observed_refs_not_l5_claim_action_ids: observedRefsNotL5ClaimWorkOrders
+        .map((entry) => stringValue(entry.work_order_id))
+        .filter((entry): entry is string => typeof entry === 'string' && entry.length > 0),
       next_work_order_id:
         stringValue(nextAction.next_work_order_id)
         ?? stringValue(moduleWorkOrders[0]?.work_order_id),
@@ -372,10 +403,44 @@ export function foundryAgentOsProductionEvidenceGate(input: {
     brandL5RequirementWorkOrders,
   );
   const brandL5MissingOwnerActionIds = unique(
-    brandL5RequirementWorkOrders
-      .map((entry) => stringValue(entry.work_order_id))
-      .filter((entry): entry is string => typeof entry === 'string' && entry.length > 0),
+    brandL5OwnerActionChecklist.flatMap((entry) =>
+      stringListValue(record(entry).missing_requirement_action_ids)
+    )
   );
+  const brandL5MissingOwnerEvidenceActionIds = unique(
+    brandL5OwnerActionChecklist.flatMap((entry) =>
+      stringListValue(record(entry).missing_owner_evidence_action_ids)
+    )
+  );
+  const brandL5TypedBlockerActionIds = unique(
+    brandL5OwnerActionChecklist.flatMap((entry) =>
+      stringListValue(record(entry).typed_blocker_action_ids)
+    )
+  );
+  const brandL5ObservedRefsNotL5ClaimActionIds = unique(
+    brandL5OwnerActionChecklist.flatMap((entry) =>
+      stringListValue(record(entry).observed_refs_not_l5_claim_action_ids)
+    )
+  );
+  const brandL5ActionableRequirementWorkOrders = brandL5RequirementWorkOrders.filter(
+    (entry) =>
+      brandL5MissingOwnerActionIds.includes(stringValue(entry.work_order_id) ?? ''),
+  );
+  const brandL5MissingOwnerEvidenceWorkOrders = brandL5RequirementWorkOrders.filter(
+    (entry) =>
+      brandL5MissingOwnerEvidenceActionIds.includes(stringValue(entry.work_order_id) ?? ''),
+  );
+  const brandL5TypedBlockerWorkOrders = brandL5RequirementWorkOrders.filter(
+    (entry) =>
+      brandL5TypedBlockerActionIds.includes(stringValue(entry.work_order_id) ?? ''),
+  );
+  const brandL5ObservedRefsNotL5ClaimWorkOrders = brandL5RequirementWorkOrders.filter(
+    (entry) =>
+      brandL5ObservedRefsNotL5ClaimActionIds.includes(stringValue(entry.work_order_id) ?? ''),
+  );
+  const brandL5ObservedRefWorkOrders = brandL5RequirementWorkOrders
+      .map((entry) => stringValue(entry.work_order_id))
+      .filter((entry): entry is string => typeof entry === 'string' && entry.length > 0);
   const laneStatuses = [
     {
       lane: 'domain_owner_chain_scaleout',
@@ -530,6 +595,14 @@ export function foundryAgentOsProductionEvidenceGate(input: {
       owner_route_work_order_count: workOrders.length,
       brand_module_l5_requirement_work_order_count:
         brandL5RequirementWorkOrders.length,
+      brand_module_l5_actionable_work_order_count:
+        brandL5ActionableRequirementWorkOrders.length,
+      brand_module_l5_missing_owner_evidence_work_order_count:
+        brandL5MissingOwnerEvidenceWorkOrders.length,
+      brand_module_l5_typed_blocker_recorded_work_order_count:
+        brandL5TypedBlockerWorkOrders.length,
+      brand_module_l5_observed_refs_not_l5_claim_work_order_count:
+        brandL5ObservedRefsNotL5ClaimWorkOrders.length,
       brand_module_l5_typed_blocker_ready_work_order_count:
         brandL5RequirementWorkOrders.filter((entry) =>
           Object.keys(record(entry.typed_blocker_payload_template)).length > 0
@@ -550,6 +623,16 @@ export function foundryAgentOsProductionEvidenceGate(input: {
         brandL5RequirementWorkOrders.filter((entry) =>
           entry.observed_ref_count > 0 || entry.observed_evidence_refs.length > 0
         ).length,
+      brand_module_l5_owner_action_id_count:
+        brandL5MissingOwnerActionIds.length,
+      brand_module_l5_missing_owner_evidence_action_id_count:
+        brandL5MissingOwnerEvidenceActionIds.length,
+      brand_module_l5_typed_blocker_action_id_count:
+        brandL5TypedBlockerActionIds.length,
+      brand_module_l5_observed_refs_not_l5_claim_action_id_count:
+        brandL5ObservedRefsNotL5ClaimActionIds.length,
+      brand_module_l5_all_requirement_work_order_id_count:
+        brandL5ObservedRefWorkOrders.length,
       open_owner_route_work_order_count: workOrders.filter((entry) => entry.status === 'open').length,
       owner_evidence_required_work_order_count: workOrders.filter((entry) =>
         entry.owner_evidence_closure_state === 'owner_evidence_required'

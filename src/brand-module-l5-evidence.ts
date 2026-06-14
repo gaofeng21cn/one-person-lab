@@ -419,27 +419,6 @@ function l5RequirementEvidencePayloadTemplate(
   };
 }
 
-function ownerRepoForRequirement(owner: string, moduleId: BrandModuleId) {
-  const normalizedOwner = owner.toLowerCase();
-  if (
-    normalizedOwner.includes('app')
-    || normalizedOwner.includes('release')
-    || normalizedOwner.includes('install')
-  ) {
-    return '/Users/gaofeng/workspace/one-person-lab-app';
-  }
-  if (
-    normalizedOwner.includes('domain')
-    || normalizedOwner.includes('target agent')
-    || normalizedOwner.includes('mas')
-    || normalizedOwner.includes('mag')
-    || normalizedOwner.includes('rca')
-  ) {
-    return 'MAS/MAG/RCA/OMA domain repositories';
-  }
-  return `/Users/gaofeng/workspace/one-person-lab#brand-module:${moduleId}`;
-}
-
 function ownerRouteCommandExamples(
   moduleId: BrandModuleId,
   classId: BrandModuleL5EvidenceClassId,
@@ -497,7 +476,9 @@ function ownerEvidenceRoutes(
       module_id: entry.module_id,
       class_id: requirement.class_id,
       owner: requirement.owner,
-      owner_repo: ownerRepoForRequirement(requirement.owner, entry.module_id),
+      owner_route_ref: requirement.owner_route_ref,
+      owner_repo_ref: requirement.owner_repo_ref,
+      owner_repo: requirement.owner_repo_ref,
       owner_route_status: routeStatusWithObservedEvidence(
         requirement.current_state,
         observedSuccessRefs.length,

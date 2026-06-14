@@ -281,6 +281,8 @@ export const MINIMAL_BRAND_MODULE_L5_OPERATING_EVIDENCE_CONTRACT: BrandModuleL5O
     evidence_requirements: MINIMAL_BRAND_MODULE_L5_EVIDENCE_CLASSES.map((classId) => ({
       class_id: classId,
       owner: 'one-person-lab',
+      owner_route_ref: `opl-owner-route:brand-module/${moduleId}/${classId}/test-owner`,
+      owner_repo_ref: `/tmp/opl-test#brand-module:${moduleId}`,
       current_state: 'open',
     })),
     not_claims: ['production_ready'],

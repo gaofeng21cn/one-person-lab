@@ -379,6 +379,33 @@ test('agent workspace norm contract is fail-closed during load and validation', 
   }
 });
 
+test('brand module L5 evidence requirements require explicit owner route refs', () => {
+  const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
+    const contractPath = path.join(contractsRoot, 'brand-module-l5-operating-evidence.json');
+    const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
+    delete contract.modules[0].evidence_requirements[0].owner_route_ref;
+    fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`);
+  });
+
+  try {
+    assert.throws(
+      () => loadFrameworkContracts({
+        contractsDir: fixtureContractsRoot,
+        source: 'api',
+      }),
+      (error: unknown) => {
+        assert.ok(error instanceof FrameworkContractError);
+        assert.equal(error.code, 'contract_shape_invalid');
+        assert.equal(error.details?.file, path.join(fixtureContractsRoot, 'brand-module-l5-operating-evidence.json'));
+        assert.equal(error.details?.field, 'evidence_requirements.owner_route_ref');
+        return true;
+      },
+    );
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('target operating architecture contract requires the multi-plane operating model', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
     const contractPath = path.join(contractsRoot, 'target-operating-architecture-contract.json');

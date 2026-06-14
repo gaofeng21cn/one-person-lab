@@ -485,9 +485,33 @@ export function validateBrandModuleL5OperatingEvidence(
 
       const evidenceRefs = optionalNonEmptyStringArrayField(requirement, 'evidence_refs', filePath);
       const blockerRefs = optionalNonEmptyStringArrayField(requirement, 'blocker_refs', filePath);
+      const ownerRouteRef = expectString(
+        requirement.owner_route_ref,
+        'evidence_requirements.owner_route_ref',
+        filePath,
+      );
+      if (!ownerRouteRef.startsWith(`opl-owner-route:brand-module/${moduleId}/${classId}/`)) {
+        throw new FrameworkContractError('contract_shape_invalid', 'owner_route_ref must bind the module and evidence class.', {
+          file: filePath,
+          index,
+          module_id: moduleId,
+          requirementIndex,
+          class_id: classId,
+          owner_route_ref: ownerRouteRef,
+          expected_prefix: `opl-owner-route:brand-module/${moduleId}/${classId}/`,
+        });
+      }
+
+      const ownerRepoRef = expectString(
+        requirement.owner_repo_ref,
+        'evidence_requirements.owner_repo_ref',
+        filePath,
+      );
       return {
         class_id: classId,
         owner: expectString(requirement.owner, 'evidence_requirements.owner', filePath),
+        owner_route_ref: ownerRouteRef,
+        owner_repo_ref: ownerRepoRef,
         current_state: expectBrandModuleL5EvidenceState(
           requirement.current_state,
           'evidence_requirements.current_state',

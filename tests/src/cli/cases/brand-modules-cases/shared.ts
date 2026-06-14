@@ -17,6 +17,8 @@ export type L5Route = {
   module_id: string;
   class_id: string;
   owner: string;
+  owner_route_ref: string;
+  owner_repo_ref: string;
   owner_repo: string;
   owner_route_status: string;
   blocker_state: string;

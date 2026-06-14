@@ -60,6 +60,8 @@ export interface BrandModuleL5EvidenceClass {
 export interface BrandModuleL5EvidenceRequirement {
   class_id: BrandModuleL5EvidenceClassId;
   owner: string;
+  owner_route_ref: string;
+  owner_repo_ref: string;
   current_state: BrandModuleL5EvidenceState;
   evidence_refs?: string[];
   blocker_refs?: string[];
