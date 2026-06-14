@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import type { SpawnSyncReturns } from 'node:child_process';
 import fs from 'node:fs';
 
 import type { WorkspaceBinding } from '../workspace-registry.ts';
@@ -22,6 +23,7 @@ type DomainManifestErrorCode =
   | 'invalid_manifest';
 type JsonRecord = Record<string, unknown>;
 export type ManifestCommandTimeoutPolicy = 'env_or_default' | 'fixed';
+type ManifestCommandResult = SpawnSyncReturns<string>;
 const DEFAULT_TRANSITION_MATERIALIZATION_TIMEOUT_MS = 1_000;
 
 function resolveManifestCommandTimeoutMs(
@@ -105,7 +107,7 @@ function executeManifestCommand(
   manifestCommand: string,
   timeoutMs: number,
   env: NodeJS.ProcessEnv = process.env,
-) {
+): ManifestCommandResult {
   const commandCwd = prepareManagedShellCommandCwd(binding.workspace_path, manifestCommand, env);
   try {
     return spawnSync('/bin/bash', ['-c', manifestCommand], {
@@ -201,7 +203,7 @@ function buildResolvedEntryFromCommandResult(
   project: string,
   binding: WorkspaceBinding,
   manifestCommand: string,
-  result: ReturnType<typeof spawnSync>,
+  result: ManifestCommandResult,
   timeoutMs: number,
   options: {
     materializeFamilyTransitions?: boolean;
@@ -219,7 +221,7 @@ function buildParseFailureEntry(
   projectId: string,
   project: string,
   binding: WorkspaceBinding,
-  result: ReturnType<typeof spawnSync>,
+  result: ManifestCommandResult,
   error: unknown,
 ) {
   const code = error instanceof SyntaxError ? 'invalid_json' : 'invalid_manifest';
@@ -243,7 +245,7 @@ function resolveTimedOutManifestCommand(
   project: string,
   binding: WorkspaceBinding,
   manifestCommand: string,
-  result: ReturnType<typeof spawnSync>,
+  result: ManifestCommandResult,
   timeoutMs: number,
   options: {
     materializeFamilyTransitions?: boolean;
