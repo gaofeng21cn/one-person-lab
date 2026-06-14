@@ -233,6 +233,89 @@ test('runtime StageRun execution authorization dry-run validates exact identity 
   }
 });
 
+test('runtime StageRun execution authorization accepts distinct work unit and source identities', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-authorization-mas-identities-'));
+  try {
+    const stageRunId = 'app-stage-run:medautoscience:domain-owner-default-executor-dispatch';
+    const currentPointerRef = `opl://stage-runs/${encodeURIComponent(stageRunId)}/current`;
+    const stageManifestRef = `opl://stage-runs/${encodeURIComponent(stageRunId)}/manifest`;
+    const typedBlockerRef =
+      'artifacts/supervision/consumer/default_executor_execution/sat_e1063d97901cc3d70424fc5c.closeout.json';
+    const sourceFingerprint = 'truth-snapshot::eb10e8316639d4839970dc15';
+    const idempotencyKey =
+      'owner-route::003-dpcc-primary-care-phenotype-treatment-gap::truth-event-000035-39f0b8e96689a623::gate_clearing_batch::repair_progress_gate_replay_required::6c520342c1c99c25';
+    const dryRun = runCli([
+      'runtime',
+      'stage-run-authorization',
+      'record',
+      '--payload',
+      JSON.stringify(authorizationPayload({
+        phase: 'closeout',
+        stage_run_id: stageRunId,
+        stage_id: 'domain_owner/default-executor-dispatch',
+        domain_context: {
+          domain_id: 'medautoscience',
+          study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+          stage_id: 'domain_owner/default-executor-dispatch',
+        },
+        provider_attempt_ref: 'opl://stage_attempts/sat_e1063d97901cc3d70424fc5c',
+        stage_attempt_id: 'sat_e1063d97901cc3d70424fc5c',
+        attempt_lease_ref: 'opl://stage_attempts/sat_e1063d97901cc3d70424fc5c/lease',
+        action_type: 'run_gate_clearing_batch',
+        work_unit_id: 'publication_gate_replay',
+        work_unit_fingerprint:
+          'sha256:2c4793a4e41859fd21a0bc088459c85f298bacb7d06eea811b44beae568fbf9f',
+        reason: 'operator_authorized_exact_identity_after_domain_typed_blocker_observed',
+        execution_authorization_decision_ref:
+          'opl://stage_attempts/sat_e1063d97901cc3d70424fc5c/execution-authorization',
+        workspace_scope_ref: 'medautoscience:frt_fd682ae13a7920705c231336',
+        artifact_scope_ref: 'sat_e1063d97901cc3d70424fc5c',
+        source_fingerprint: sourceFingerprint,
+        idempotency_key: idempotencyKey,
+        current_pointer_ref: currentPointerRef,
+        stage_manifest_ref: stageManifestRef,
+        owner_answer_ref: typedBlockerRef,
+        owner_answer_kind: 'typed_blocker',
+        closeout_receipt_ref: typedBlockerRef,
+        owner_answer_stage_run_id: stageRunId,
+        owner_answer_generation: 0,
+        owner_answer_manifest_ref: stageManifestRef,
+        owner_answer_current_pointer_ref: currentPointerRef,
+        owner_answer_source_fingerprint: sourceFingerprint,
+        owner_answer_idempotency_key: idempotencyKey,
+      })),
+      '--dry-run',
+      '--json',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).stage_run_execution_authorization_ledger_record;
+
+    assert.equal(dryRun.status, 'planned');
+    assert.equal(dryRun.dry_run, true);
+    assert.equal(dryRun.writes_performed, false);
+    assert.equal(dryRun.planned_receipt_count, 1);
+    assert.equal(dryRun.receipts[0].work_unit_fingerprint !== dryRun.receipts[0].source_fingerprint, true);
+    assert.equal(dryRun.receipts[0].source_fingerprint, sourceFingerprint);
+    assert.equal(dryRun.receipts[0].idempotency_key, idempotencyKey);
+    const report = dryRun.receipts[0].execution_authorization_report;
+    assert.equal(report.status, 'authorized');
+    assert.deepEqual(report.launch_blockers, []);
+    assert.deepEqual(report.closeout_binding_blockers, []);
+    assert.equal(report.closeout_binding.owner_answer_kind, 'typed_blocker');
+    assert.equal(report.closeout_binding.bound_to_stage_run, true);
+    assert.equal(report.closeout_binding.bound_to_stage_manifest, true);
+    assert.equal(report.closeout_binding.bound_to_current_pointer, true);
+    assert.equal(report.closeout_binding.bound_to_source_fingerprint, true);
+    assert.equal(report.closeout_binding.bound_to_idempotency_key, true);
+    assert.equal(
+      fs.existsSync(path.join(stateRoot, 'stage-run-execution-authorization-ledger.json')),
+      false,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('runtime StageRun execution authorization ledger records refs-only OPL authorization', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-authorization-'));
   try {

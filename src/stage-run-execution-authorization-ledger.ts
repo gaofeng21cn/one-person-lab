@@ -248,10 +248,6 @@ function identityBlockers(input: {
     input.domainContext && input.stageId && input.domainContext.stage_id !== input.stageId
       ? 'domain_context_stage_id_mismatch'
       : null,
-    input.workUnitFingerprint && input.sourceFingerprint
-      && input.workUnitFingerprint !== input.sourceFingerprint
-      ? 'work_unit_fingerprint_source_fingerprint_mismatch'
-      : null,
   ].filter((entry): entry is string => Boolean(entry));
 }
 
