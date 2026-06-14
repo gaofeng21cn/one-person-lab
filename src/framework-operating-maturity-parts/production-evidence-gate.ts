@@ -137,6 +137,18 @@ function ownerRouteWorkOrderPolicy(lane: string) {
   };
 }
 
+function ownerRouteWorkOrderStatus(input: {
+  open_count?: number;
+  owner_evidence_observed: boolean;
+}) {
+  if (input.open_count && input.open_count > 0) {
+    return 'open';
+  }
+  return input.owner_evidence_observed
+    ? 'owner_evidence_recorded'
+    : 'owner_acceptance_required';
+}
+
 function brandModuleL5RequirementWorkOrders(brandModules: Record<string, unknown>[]) {
   return brandModules.flatMap((module) =>
     recordList(module.owner_evidence_routes).map((route) => ({
@@ -272,12 +284,16 @@ function ownerRouteWorkOrders(
       || observedReceiptRefs.length > 0
       || observedRefShapes.length > 0;
     const policy = ownerRouteWorkOrderPolicy(action.lane);
+    const status = ownerRouteWorkOrderStatus({
+      open_count: lane?.open_count,
+      owner_evidence_observed: ownerEvidenceObserved,
+    });
     return {
       work_order_id: workOrderIds[action.lane] ?? `w7-${action.lane.replace(/_/g, '-')}`,
       lane: action.lane,
       owner: action.owner,
       owner_repo: policy.owner_repo,
-      status: 'open',
+      status,
       blocker_state: ownerEvidenceObserved
         ? 'owner_route_refs_observed_not_production_claim'
         : 'owner_route_evidence_missing',

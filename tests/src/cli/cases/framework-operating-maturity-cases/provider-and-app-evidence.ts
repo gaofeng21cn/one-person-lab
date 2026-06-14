@@ -587,6 +587,7 @@ test('framework operating maturity surfaces App release owner verdict refs as ow
       .owner_route_work_orders.find(
         (entry: { lane: string }) => entry.lane === 'app_release_user_path',
       );
+    assert.equal(appReleaseWorkOrder.status, 'owner_evidence_recorded');
     assert.equal(appReleaseWorkOrder.open_count, 0);
     assert.equal(
       appReleaseWorkOrder.owner_evidence_closure_state,

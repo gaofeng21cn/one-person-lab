@@ -733,7 +733,7 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
           non_closing_inputs: string[];
           authority_boundary: { work_order_can_close_production: boolean; can_claim_l5: boolean };
         }) =>
-          entry.status === 'open'
+          ['open', 'owner_evidence_recorded', 'owner_acceptance_required'].includes(entry.status)
           && typeof entry.owner_repo === 'string'
           && entry.next_owner_action.length > 0
           && entry.owner_evidence_closure_state.length > 0
