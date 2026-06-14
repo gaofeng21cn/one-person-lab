@@ -19,6 +19,18 @@ import {
 import type { FamilyRuntimeProviderKind } from './family-runtime-types.ts';
 
 type FamilyRuntimePaths = ReturnType<typeof familyRuntimePaths>;
+type RunwayRepairAction = {
+  action_id: string;
+  owner: string;
+  reason: string;
+  command: string;
+  mutation: boolean;
+  blocks_runtime_execution: boolean;
+  blocks_domain_progress_claim: boolean;
+  repairable_attempt_count?: number;
+  blocked_attempt_count?: number;
+  failed_attempt_count?: number;
+};
 
 const FALSE_AUTHORITY_BOUNDARY = {
   can_execute_domain_action: false,
@@ -32,6 +44,9 @@ const FALSE_AUTHORITY_BOUNDARY = {
   can_authorize_export_verdict: false,
   provider_completion_is_domain_ready: false,
 } as const;
+
+const BLOCKED_ATTEMPT_REPAIR_COMMAND = 'opl family-runtime attempt list --status blocked --json';
+const FAILED_ATTEMPT_REPAIR_COMMAND = 'opl family-runtime attempt list --status failed --json';
 
 function readinessStatus(input: {
   providerReady: boolean;
@@ -57,6 +72,48 @@ function countStatus(summary: { by_status: Record<string, number> }, statuses: s
 
 function schedulerNeedsRepair(status: string | null) {
   return status === 'attention_required' || status === 'blocked_provider_not_ready';
+}
+
+function buildAttemptRepairQueue(attempts: { total: number; by_status: Record<string, number> }) {
+  const blockedAttemptCount = countStatus(attempts, ['blocked']);
+  const failedAttemptCount = countStatus(attempts, ['failed']);
+  const items = [
+    blockedAttemptCount > 0
+      ? {
+        status: 'blocked',
+        attempt_count: blockedAttemptCount,
+        reason: 'blocked_stage_attempts_require_owner_answer_typed_blocker_or_route_back_review',
+        command: BLOCKED_ATTEMPT_REPAIR_COMMAND,
+        mutation: false,
+        blocks_runtime_execution: true,
+        blocks_domain_progress_claim: true,
+      }
+      : null,
+    failedAttemptCount > 0
+      ? {
+        status: 'failed',
+        attempt_count: failedAttemptCount,
+        reason: 'failed_stage_attempts_require_failure_review_before_redrive_or_owner_escalation',
+        command: FAILED_ATTEMPT_REPAIR_COMMAND,
+        mutation: false,
+        blocks_runtime_execution: true,
+        blocks_domain_progress_claim: true,
+      }
+      : null,
+  ].filter((item): item is NonNullable<typeof item> => item !== null);
+
+  return {
+    surface_kind: 'opl_runway_attempt_repair_queue',
+    repair_policy: 'query_attempts_before_retry_redrive_or_owner_escalation',
+    summary: {
+      repairable_attempt_count: blockedAttemptCount + failedAttemptCount,
+      blocked_attempt_count: blockedAttemptCount,
+      failed_attempt_count: failedAttemptCount,
+    },
+    default_repair_command: items[0]?.command ?? null,
+    items,
+    authority_boundary: FALSE_AUTHORITY_BOUNDARY,
+  };
 }
 
 function recordValue(value: unknown) {
@@ -170,13 +227,19 @@ function buildNextSafeAction(input: {
 
   const repairableAttemptCount = countStatus(input.attempts, ['blocked', 'failed']);
   if (repairableAttemptCount > 0) {
+    const blockedAttemptCount = countStatus(input.attempts, ['blocked']);
+    const failedAttemptCount = countStatus(input.attempts, ['failed']);
     return {
       action_id: 'retry',
       owner: 'opl_runway',
       reason: 'blocked_or_failed_stage_attempts_need_repair_classification',
-      command: 'opl runway recovery-repair --json',
+      command: blockedAttemptCount > 0
+        ? BLOCKED_ATTEMPT_REPAIR_COMMAND
+        : FAILED_ATTEMPT_REPAIR_COMMAND,
       mutation: false,
       repairable_attempt_count: repairableAttemptCount,
+      blocked_attempt_count: blockedAttemptCount,
+      failed_attempt_count: failedAttemptCount,
       blocks_runtime_execution: true,
       blocks_domain_progress_claim: true,
     };
@@ -390,8 +453,45 @@ export async function buildFamilyRuntimeControlLoopStatus(
 
 type FamilyRuntimeControlLoopStatus = Awaited<ReturnType<typeof buildFamilyRuntimeControlLoopStatus>>;
 
-function recoveryRepairStatus(input: {
+function selectedRepairActionWithAttemptQueue(input: {
   selectedRepairAction: FamilyRuntimeControlLoopStatus['recovery_repair']['selected_repair_action'];
+  attemptRepairQueue: ReturnType<typeof buildAttemptRepairQueue>;
+}): RunwayRepairAction | null {
+  if (!input.selectedRepairAction) {
+    return null;
+  }
+  const repairAction: RunwayRepairAction = {
+    action_id: input.selectedRepairAction.action_id,
+    owner: input.selectedRepairAction.owner,
+    reason: input.selectedRepairAction.reason,
+    command: input.selectedRepairAction.command,
+    mutation: input.selectedRepairAction.mutation,
+    blocks_runtime_execution: input.selectedRepairAction.blocks_runtime_execution,
+    blocks_domain_progress_claim: input.selectedRepairAction.blocks_domain_progress_claim,
+  };
+  if (typeof input.selectedRepairAction.repairable_attempt_count === 'number') {
+    repairAction.repairable_attempt_count = input.selectedRepairAction.repairable_attempt_count;
+  }
+  if (typeof input.selectedRepairAction.blocked_attempt_count === 'number') {
+    repairAction.blocked_attempt_count = input.selectedRepairAction.blocked_attempt_count;
+  }
+  if (typeof input.selectedRepairAction.failed_attempt_count === 'number') {
+    repairAction.failed_attempt_count = input.selectedRepairAction.failed_attempt_count;
+  }
+  if (repairAction.action_id !== 'retry' || !input.attemptRepairQueue.default_repair_command) {
+    return repairAction;
+  }
+  return {
+    ...repairAction,
+    command: input.attemptRepairQueue.default_repair_command,
+    repairable_attempt_count: input.attemptRepairQueue.summary.repairable_attempt_count,
+    blocked_attempt_count: input.attemptRepairQueue.summary.blocked_attempt_count,
+    failed_attempt_count: input.attemptRepairQueue.summary.failed_attempt_count,
+  };
+}
+
+function recoveryRepairStatus(input: {
+  selectedRepairAction: RunwayRepairAction | null;
   workerRestartGuard?: WorkerRestartGuard | null;
 }) {
   if (input.workerRestartGuard?.guard_status === 'blocked') {
@@ -473,23 +573,30 @@ export function buildRunwayHandoffGatesProjection(controlLoop: FamilyRuntimeCont
 
 export function buildRunwayRecoveryRepairProjection(controlLoop: FamilyRuntimeControlLoopStatus) {
   const workerRestartGuard = controlLoop.recovery_repair.worker_restart_guard ?? null;
+  const attemptRepairQueue = buildAttemptRepairQueue(controlLoop.stage_attempts);
+  const selectedRepairAction = selectedRepairActionWithAttemptQueue({
+    selectedRepairAction: controlLoop.recovery_repair.selected_repair_action,
+    attemptRepairQueue,
+  });
   return {
     surface_kind: 'opl_runway_recovery_repair',
     module_id: 'runway',
     brand_name: 'OPL Runway',
     repair_status: recoveryRepairStatus({
-      selectedRepairAction: controlLoop.recovery_repair.selected_repair_action,
+      selectedRepairAction,
       workerRestartGuard,
     }),
     repair_policy: controlLoop.recovery_repair.repair_policy,
     repair_classes: controlLoop.recovery_repair.repair_classes,
-    selected_repair_action: controlLoop.recovery_repair.selected_repair_action,
-    default_repair_command: controlLoop.recovery_repair.default_repair_command,
+    selected_repair_action: selectedRepairAction,
+    default_repair_command: controlLoop.recovery_repair.default_repair_command
+      ?? (selectedRepairAction?.action_id === 'retry' ? attemptRepairQueue.default_repair_command : null),
+    attempt_repair_queue: attemptRepairQueue,
     worker_restart_guard: workerRestartGuard,
     repair_blocker_ids: workerRestartGuard?.blocker_ids ?? [],
     repair_can_mutate_worker: workerRestartGuard
       ? workerRestartGuard.guard_status === 'ready'
-      : controlLoop.recovery_repair.selected_repair_action?.mutation === true,
+      : selectedRepairAction?.mutation === true,
     provider_runtime: controlLoop.provider_runtime,
     scheduler_cadence: controlLoop.scheduler_cadence,
     queue: controlLoop.queue,
