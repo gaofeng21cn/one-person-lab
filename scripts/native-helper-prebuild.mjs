@@ -269,16 +269,12 @@ function restoreReleaseArchive() {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-prebuild-archive-'));
   try {
     const archivePath = archivePathFromUrl(archiveUrl, tempRoot);
-    fs.rmSync(prebuildDir(), { recursive: true, force: true });
-    fs.mkdirSync(prebuildDir(), { recursive: true });
-    const result = spawnSync('tar', tarArgs(['-xzf', archivePath, '-C', prebuildDir()]), {
-      encoding: 'utf8',
-    });
-    if (result.status !== 0) {
+    const extract = extractArchiveIntoPrebuildDir(archivePath);
+    if (extract.status !== 'ok') {
       return {
         status: 'release_archive_extract_failed',
         archive_url: archiveUrl,
-        error: result.stderr.trim() || `tar exited with status ${result.status}`,
+        error: extract.error,
       };
     }
     return {
@@ -353,18 +349,14 @@ function restoreOciArchive() {
       return digestStatus;
     }
 
-    fs.rmSync(prebuildDir(), { recursive: true, force: true });
-    fs.mkdirSync(prebuildDir(), { recursive: true });
-    const result = spawnSync('tar', tarArgs(['-xzf', archivePath, '-C', prebuildDir()]), {
-      encoding: 'utf8',
-    });
-    if (result.status !== 0) {
+    const extract = extractArchiveIntoPrebuildDir(archivePath);
+    if (extract.status !== 'ok') {
       return {
         status: 'oci_archive_extract_failed',
         image: imageRef.image,
         tag: imageRef.tag,
         digest: layer.digest,
-        error: result.stderr.trim() || `tar exited with status ${result.status}`,
+        error: extract.error,
       };
     }
     return {
@@ -384,6 +376,21 @@ function restoreOciArchive() {
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
+}
+
+function extractArchiveIntoPrebuildDir(archivePath) {
+  fs.rmSync(prebuildDir(), { recursive: true, force: true });
+  fs.mkdirSync(prebuildDir(), { recursive: true });
+  const result = spawnSync('tar', tarArgs(['-xzf', archivePath, '-C', prebuildDir()]), {
+    encoding: 'utf8',
+  });
+  if (result.status !== 0) {
+    return {
+      status: 'failed',
+      error: result.stderr.trim() || `tar exited with status ${result.status}`,
+    };
+  }
+  return { status: 'ok' };
 }
 
 function archivePathFromUrl(archiveUrl, tempRoot) {
