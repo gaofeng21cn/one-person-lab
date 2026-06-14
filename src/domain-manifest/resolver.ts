@@ -24,7 +24,7 @@ type JsonRecord = Record<string, unknown>;
 export type ManifestCommandTimeoutPolicy = 'env_or_default' | 'fixed';
 const DEFAULT_TRANSITION_MATERIALIZATION_TIMEOUT_MS = 1_000;
 
-export function resolveManifestCommandTimeoutMs(
+function resolveManifestCommandTimeoutMs(
   defaultTimeoutMs = 30_000,
   policy: ManifestCommandTimeoutPolicy = 'env_or_default',
 ) {
