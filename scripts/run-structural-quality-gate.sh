@@ -5,7 +5,70 @@ compare_ref="${OPL_QUALITY_DETAILS_COMPARE_REF:-origin/main}"
 quality_details_bin="${OPL_QUALITY_DETAILS_BIN:-./bin/opl}"
 quality_details_limit="${OPL_QUALITY_DETAILS_LIMIT:-30}"
 quality_details_focus="${OPL_QUALITY_DETAILS_FOCUS:-auto}"
+quality_details_timeout_seconds="${OPL_QUALITY_DETAILS_TIMEOUT_SECONDS:-240}"
 strict_mode="${OPL_STRUCTURAL_QUALITY_STRICT:-0}"
+
+run_quality_details_with_timeout() {
+  local resolved_compare_ref="$1"
+
+  node - "$quality_details_timeout_seconds" "$quality_details_bin" "$resolved_compare_ref" "$quality_details_limit" "$quality_details_focus" <<'NODE'
+const [timeoutRaw, qualityDetailsBin, compareRef, limit, focus] = process.argv.slice(2);
+const timeoutSeconds = Number(timeoutRaw);
+if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0) {
+  console.error(`Invalid OPL_QUALITY_DETAILS_TIMEOUT_SECONDS: ${timeoutRaw}`);
+  process.exit(64);
+}
+
+const { spawn } = require('node:child_process');
+const child = spawn(
+  qualityDetailsBin,
+  [
+    'quality',
+    'details',
+    '--root',
+    '.',
+    '--format',
+    'markdown',
+    '--limit',
+    limit,
+    '--focus',
+    focus,
+    '--compare-ref',
+    compareRef,
+  ],
+  { stdio: 'inherit' },
+);
+
+let timedOut = false;
+let killTimer;
+const timer = setTimeout(() => {
+  timedOut = true;
+  child.kill('SIGTERM');
+  killTimer = setTimeout(() => child.kill('SIGKILL'), 5000);
+  killTimer.unref();
+}, timeoutSeconds * 1000);
+
+child.on('error', (error) => {
+  clearTimeout(timer);
+  if (killTimer) clearTimeout(killTimer);
+  console.error(error.message);
+  process.exit(127);
+});
+
+child.on('close', (code, signal) => {
+  clearTimeout(timer);
+  if (killTimer) clearTimeout(killTimer);
+  if (timedOut) {
+    process.exit(124);
+  }
+  if (signal) {
+    console.error(`OPL quality details terminated by signal: ${signal}`);
+    process.exit(1);
+  }
+  process.exit(code ?? 0);
+});
+NODE
+}
 
 emit_quality_details() {
   local reason="$1"
@@ -19,7 +82,11 @@ emit_quality_details() {
       resolved_compare_ref="HEAD^"
     fi
   fi
-  if ! "$quality_details_bin" quality details --root . --format markdown --limit "$quality_details_limit" --focus "$quality_details_focus" --compare-ref "$resolved_compare_ref"; then
+  run_quality_details_with_timeout "$resolved_compare_ref"
+  local details_status=$?
+  if [ "$details_status" -eq 124 ]; then
+    echo "::warning::OPL quality details exceeded ${quality_details_timeout_seconds}s in the local structure gate; use the Sentrux Advisory workflow for the full quality-details artifact." >&2
+  elif [ "$details_status" -ne 0 ]; then
     echo "::warning::OPL quality details failed for compare ref: ${resolved_compare_ref}" >&2
   fi
 }

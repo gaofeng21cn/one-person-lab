@@ -203,4 +203,6 @@ jobs:
         run: ./scripts/verify.sh lint
 
       - name: Verify local structural quality gate
+        env:
+          OPL_QUALITY_DETAILS_TIMEOUT_SECONDS: '240'
         run: ./scripts/verify.sh structure

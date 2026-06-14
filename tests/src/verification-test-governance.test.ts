@@ -14,14 +14,19 @@ const packageJson = JSON.parse(
 const structuralGatePatterns = [
   /OPL_QUALITY_DETAILS_COMPARE_REF/,
   /compare_ref="\$\{OPL_QUALITY_DETAILS_COMPARE_REF:-origin\/main\}"/,
+  /OPL_QUALITY_DETAILS_TIMEOUT_SECONDS/,
+  /quality_details_timeout_seconds="\$\{OPL_QUALITY_DETAILS_TIMEOUT_SECONDS:-240\}"/,
+  /run_quality_details_with_timeout\(\)/,
+  /process\.exit\(124\)/,
   /sentrux gate \./,
   /Compare ref \$\{compare_ref\} is unavailable; using HEAD\^ for quality details\./,
   /Sentrux baseline regression reported structural drift/,
+  /OPL quality details exceeded \$\{quality_details_timeout_seconds\}s in the local structure gate/,
   /default structure lane is advisory/,
   /OPL_STRUCTURAL_QUALITY_STRICT=1/,
   /sentrux check \./,
-  /quality details --root \./,
-  /--compare-ref "\$resolved_compare_ref"/,
+  /'quality',\s*'details',\s*'--root',\s*'\.'/,
+  /'--compare-ref',\s*compareRef/,
 ];
 
 const verifyWorkflowBuildAndJsLanePatterns = [
@@ -43,6 +48,7 @@ const verifyWorkflowNativeAndStructurePatterns = [
   /npm run native:family-smoke -- --fixture --require-real-workspaces/,
   /rust-toolchain/,
   /\.\/scripts\/install-sentrux-ci\.sh/,
+  /OPL_QUALITY_DETAILS_TIMEOUT_SECONDS: '240'/,
   /fetch-depth: 0/,
   /git fetch --no-tags --prune origin \+main:refs\/remotes\/origin\/main/,
 ];

@@ -84,4 +84,6 @@ One Person Lab App 的用户 release、Full first-install、updater metadata 和
 
 以下信号默认不得单独阻断普通重构 merge：root help 是否展示某个细粒度入口、文案/示例完整性、结构质量分数、line-budget advisory、Sentrux advisory、raw counter、diagnostic mirror、historical failed run、被后续绿色覆盖的 release attempt、以及只影响报告美观或证据完整度的 supporting detail。它们应进入 `meta`、`structure`、advisory workflow、dated audit 或人工维护 lane。
 
+`Verify` 的 local structure gate 可以在 Sentrux drift 时输出 `opl quality details` 作为 triage 片段，但该诊断必须受 `OPL_QUALITY_DETAILS_TIMEOUT_SECONDS` 约束，不能耗尽 default-branch 硬 CI 预算。完整 markdown / JSON 质量详情归 `Sentrux Advisory` workflow 产出；若 local structure gate 的详情超时，记录 warning 并继续按 advisory 结构口径处理。
+
 细粒度信号只有在触发 hard boundary upgrade condition 时才升级为硬门：它导致 CLI/API 无法调用、JSON/contract shape 漂移、owner route 错投、release artifact 错配、安装路径不可用、权限或 secret 边界破坏，或会让 operator 误闭合当前 work unit。升级时必须在失败日志或 follow-up 记录中说明对应的大边界，不得只写“文案不匹配”或“覆盖不完整”。
