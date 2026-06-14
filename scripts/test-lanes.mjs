@@ -48,6 +48,7 @@ const fastTestFiles = [
   'tests/src/family-shared-release.test.ts',
   'tests/src/native-helper-family-smoke.test.ts',
   'tests/src/native-helper-prebuild.test.ts',
+  'tests/src/cli/cases/cli-broken-pipe.test.ts',
   'tests/src/mas-mag-cognitive-kernel-stage-pack-fixtures.test.ts',
   'tests/src/stage-artifact-runtime.test.ts',
   'tests/src/stage-artifact-contract.test.ts',
