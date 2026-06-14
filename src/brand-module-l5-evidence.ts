@@ -1,7 +1,7 @@
 import { FrameworkContractError } from './contracts.ts';
+import { BRAND_MODULE_L5_FALSE_AUTHORITY_BOUNDARY } from './brand-module-l5-evidence-authority.ts';
 import { listBrandModuleL5EvidenceReceipts } from './brand-module-l5-evidence-ledger.ts';
 import type {
-  BrandModuleAuthorityBoundary,
   BrandModuleId,
   BrandModuleL5EvidenceClassId,
   BrandModuleL5OperatingEvidenceEntry,
@@ -12,20 +12,6 @@ import type {
 type BrandModuleL5StatusArgs = string[];
 
 const L5_EVIDENCE_CONTRACT_REF = 'contracts/opl-framework/brand-module-l5-operating-evidence.json';
-
-const FALSE_AUTHORITY_BOUNDARY: BrandModuleAuthorityBoundary = {
-  can_claim_domain_ready: false,
-  can_claim_quality_verdict: false,
-  can_claim_artifact_authority: false,
-  can_claim_production_ready: false,
-  can_write_domain_truth: false,
-  can_write_memory_body: false,
-  can_mutate_artifact_body: false,
-  can_sign_owner_receipt: false,
-  can_create_typed_blocker: false,
-  can_replace_domain_owner: false,
-  can_replace_ai_executor_planning: false,
-};
 
 const L5_REQUIREMENT_FORBIDDEN_OPL_CLAIMS = [
   'brand_module_l5_complete',
@@ -795,7 +781,7 @@ function statusEnvelope(
     ),
     modules: modules.map((entry) => compactModule(contract, entry, evidenceLedger.receipts)),
     not_claims: unique(modules.flatMap((entry) => entry.not_claims)),
-    authority_boundary: FALSE_AUTHORITY_BOUNDARY,
+    authority_boundary: BRAND_MODULE_L5_FALSE_AUTHORITY_BOUNDARY,
     machine_boundary: contract.machine_boundary,
   };
 }
@@ -883,7 +869,7 @@ export function buildBrandModuleL5Validation(contracts: FrameworkContracts) {
       false_completion_violations: falseCompletionViolations,
       completion_status_violations: completionStatusViolations,
       l5_claim_policy: contract.l5_claim_policy,
-      authority_boundary: FALSE_AUTHORITY_BOUNDARY,
+      authority_boundary: BRAND_MODULE_L5_FALSE_AUTHORITY_BOUNDARY,
       not_claims: [
         'contract_validation_counts_as_l5',
         'docs_foldback_counts_as_l5',
@@ -960,7 +946,7 @@ export function buildBrandModuleL5Interfaces(contracts: FrameworkContracts) {
         l5_can_be_claimed: entry.l5_can_be_claimed,
       })),
       l5_claim_policy: contract.l5_claim_policy,
-      authority_boundary: FALSE_AUTHORITY_BOUNDARY,
+      authority_boundary: BRAND_MODULE_L5_FALSE_AUTHORITY_BOUNDARY,
     },
   };
 }
@@ -999,7 +985,7 @@ export function buildBrandModuleL5ModuleStatus(
       owner_evidence_routes: routes,
       immediate_enabling_surfaces: module.immediate_enabling_surfaces,
       not_claims: module.not_claims,
-      authority_boundary: FALSE_AUTHORITY_BOUNDARY,
+      authority_boundary: BRAND_MODULE_L5_FALSE_AUTHORITY_BOUNDARY,
       machine_boundary: 'Read-only L5 operating evidence status; does not create owner receipts, typed blockers, App release truth, long-soak proof, domain readiness, or production readiness.',
     },
   };
