@@ -97,6 +97,8 @@ export function buildHandoffBundle(
         : null,
       domain_manifest_recommendation: domainManifestEntry
         ? {
+            project_id: domainManifestEntry.project_id,
+            project: domainManifestEntry.project,
             status: domainManifestEntry.status,
             manifest_command: domainManifestEntry.manifest_command,
             binding_id: domainManifestEntry.binding_id,
