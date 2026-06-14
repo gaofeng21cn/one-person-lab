@@ -35,7 +35,13 @@ function optionalGeneration(value: unknown) {
 }
 
 function optionalOwnerAnswerKind(value: unknown) {
-  return value === 'owner_receipt' || value === 'typed_blocker' ? value : null;
+  return value === 'owner_receipt'
+    || value === 'quality_gate_receipt'
+    || value === 'typed_blocker'
+    || value === 'human_gate'
+    || value === 'route_back_evidence'
+    ? value
+    : null;
 }
 
 function optionalRecord(value: unknown) {
@@ -192,7 +198,7 @@ export function buildRuntimeStageRunAuthorizationCommandSpecs(): Record<string, 
       summary:
         'Record OPL-owned refs-only StageRun execution authorization refs without creating domain owner answers.',
       examples: [
-        'opl runtime stage-run-authorization record --payload \'{"stage_run_id":"app-stage-run:medautoscience:finalize-and-publication-handoff","domain_id":"medautoscience","stage_id":"finalize_and_publication_handoff","provider_attempt_ref":"opl://stage_attempts/sat_demo","attempt_lease_ref":"opl://stage_attempts/sat_demo/lease","execution_authorization_decision_ref":"opl://stage_attempts/sat_demo/execution-authorization","workspace_scope_ref":"workspace:dm-cvd","artifact_scope_ref":"stage:publication-handoff","source_fingerprint":"sha256:demo","idempotency_key":"idem_demo"}\'',
+        'opl runtime stage-run-authorization record --payload \'{"stage_run_id":"app-stage-run:medautoscience:finalize-and-publication-handoff","domain_id":"medautoscience","study_id":"003-dpcc-primary-care-phenotype-treatment-gap","domain_context":{"domain_id":"medautoscience","study_id":"003-dpcc-primary-care-phenotype-treatment-gap","stage_id":"finalize_and_publication_handoff"},"stage_id":"finalize_and_publication_handoff","provider_attempt_ref":"opl://stage_attempts/sat_demo","stage_attempt_id":"sat_demo","attempt_lease_ref":"opl://stage_attempts/sat_demo/lease","action_type":"run_gate_clearing_batch","work_unit_id":"publication_gate_replay","work_unit_fingerprint":"sha256:demo","decision":"authorize","reason":"operator_authorized_exact_identity","operator":"human_operator:gaofeng","execution_authorization_decision_ref":"opl://stage_attempts/sat_demo/execution-authorization","workspace_scope_ref":"workspace:dm-cvd","artifact_scope_ref":"stage:publication-handoff","source_fingerprint":"sha256:demo","idempotency_key":"idem_demo"}\' --dry-run --json',
       ],
       handler: (args) => ({
         stage_run_execution_authorization_ledger_record:
