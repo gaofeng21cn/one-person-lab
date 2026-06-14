@@ -92,7 +92,3 @@ export function masDomainProgressRefsFromRecord(recordValue: JsonRecord) {
   ]);
   return refs.filter(isMasDomainProgressRef);
 }
-
-export function hasMasDomainProgressEvidence(recordValue: unknown) {
-  return isRecord(recordValue) && masDomainProgressRefsFromRecord(recordValue).length > 0;
-}
