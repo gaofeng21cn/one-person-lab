@@ -20,6 +20,19 @@ type CurrentControlProviderAdmissionCandidateFields = {
   nextOwner: string;
 };
 
+type CurrentControlProviderAdmissionActionQueueContext = {
+  handoff: Record<string, unknown>;
+  ownerRoute: Record<string, unknown> | null;
+};
+
+type CurrentControlProviderAdmissionActionQueueIdentity = {
+  actionFingerprint: string;
+  sourceFingerprint: string;
+  obligationId: string | null;
+  routeIdentityKey: string | null;
+  attemptIdempotencyKey: string | null;
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -246,16 +259,19 @@ function currentControlCurrentnessBasis(input: {
   };
 }
 
-function currentControlProviderAdmissionCandidateFromActionQueueItem(
-  currentControl: Record<string, unknown>,
+function actionQueueProviderAdmissionContext(
   action: Record<string, unknown>,
-) {
+): CurrentControlProviderAdmissionActionQueueContext {
   const handoff = isRecord(action.handoff_packet) ? action.handoff_packet : {};
   const ownerRoute = isRecord(handoff.owner_route)
     ? handoff.owner_route
     : isRecord(action.owner_route)
       ? action.owner_route
       : null;
+  return { handoff, ownerRoute };
+}
+
+function actionQueueAttemptProtocolAllowsProviderAdmission(ownerRoute: Record<string, unknown> | null) {
   const protocol = isRecord(ownerRoute?.owner_route_attempt_protocol)
     ? ownerRoute.owner_route_attempt_protocol
     : null;
@@ -267,79 +283,124 @@ function currentControlProviderAdmissionCandidateFromActionQueueItem(
   const oplOwns = Array.isArray(authorityBoundary?.opl_owns)
     ? authorityBoundary.opl_owns
     : [];
-  if (
-    protocol?.dispatchable !== true
-    || !oplOwns.includes('queue')
-    || !oplOwns.includes('attempt')
-    || completionBoundary?.provider_completion_is_domain_ready !== false
-    || runtimeCompletionGuard?.provider_completion_is_domain_completion !== false
-  ) {
-    return null;
-  }
-  const studyId = optionalString(action.study_id) ?? optionalString(handoff.study_id) ?? optionalString(ownerRoute?.study_id);
-  const actionType = optionalString(action.action_type) ?? optionalString(handoff.action_type);
-  const workUnitId = optionalString(action.controller_work_unit_id)
-    ?? optionalString(action.executable_work_unit)
-    ?? optionalString(action.next_work_unit)
-    ?? optionalString(isRecord(ownerRoute?.currentness_contract)
-      && isRecord(ownerRoute.currentness_contract.basis)
-      ? ownerRoute.currentness_contract.basis.work_unit_id
-      : null);
-  const workUnitFingerprint = optionalString(action.work_unit_fingerprint)
-    ?? optionalString(ownerRoute?.work_unit_fingerprint)
-    ?? optionalString(isRecord(ownerRoute?.currentness_contract)
-      && isRecord(ownerRoute.currentness_contract.basis)
-      ? ownerRoute.currentness_contract.basis.work_unit_fingerprint
-      : null)
-    ?? optionalString(action.action_fingerprint);
-  const nextOwner = optionalString(handoff.next_executable_owner)
-    ?? optionalString(handoff.owner)
-    ?? optionalString(action.owner)
-    ?? optionalString(action.recommended_owner)
-    ?? optionalString(ownerRoute?.next_owner);
+  return protocol?.dispatchable === true
+    && oplOwns.includes('queue')
+    && oplOwns.includes('attempt')
+    && completionBoundary?.provider_completion_is_domain_ready === false
+    && runtimeCompletionGuard?.provider_completion_is_domain_completion === false;
+}
+
+function actionQueueProviderAdmissionFields(input: {
+  action: Record<string, unknown>;
+  handoff: Record<string, unknown>;
+  ownerRoute: Record<string, unknown> | null;
+}): CurrentControlProviderAdmissionCandidateFields | null {
+  const contract = isRecord(input.ownerRoute?.currentness_contract)
+    ? input.ownerRoute.currentness_contract
+    : null;
+  const basis = isRecord(contract?.basis) ? contract.basis : null;
+  const studyId = optionalString(input.action.study_id)
+    ?? optionalString(input.handoff.study_id)
+    ?? optionalString(input.ownerRoute?.study_id);
+  const actionType = optionalString(input.action.action_type) ?? optionalString(input.handoff.action_type);
+  const workUnitId = optionalString(input.action.controller_work_unit_id)
+    ?? optionalString(input.action.executable_work_unit)
+    ?? optionalString(input.action.next_work_unit)
+    ?? optionalString(basis?.work_unit_id);
+  const workUnitFingerprint = optionalString(input.action.work_unit_fingerprint)
+    ?? optionalString(input.ownerRoute?.work_unit_fingerprint)
+    ?? optionalString(basis?.work_unit_fingerprint)
+    ?? optionalString(input.action.action_fingerprint);
+  const nextOwner = optionalString(input.handoff.next_executable_owner)
+    ?? optionalString(input.handoff.owner)
+    ?? optionalString(input.action.owner)
+    ?? optionalString(input.action.recommended_owner)
+    ?? optionalString(input.ownerRoute?.next_owner);
   if (!studyId || !actionType || !workUnitId || !workUnitFingerprint || !nextOwner) {
     return null;
   }
-  const actionFingerprint = optionalString(action.action_fingerprint) ?? workUnitFingerprint;
-  const sourceFingerprint = optionalString(action.source_fingerprint)
-    ?? optionalString(ownerRoute?.source_fingerprint)
+  return {
+    studyId,
+    actionType,
+    workUnitId,
+    workUnitFingerprint,
+    nextOwner,
+  };
+}
+
+function actionQueueProviderAdmissionIdentity(input: {
+  action: Record<string, unknown>;
+  handoff: Record<string, unknown>;
+  ownerRoute: Record<string, unknown> | null;
+  workUnitFingerprint: string;
+}): CurrentControlProviderAdmissionActionQueueIdentity {
+  const actionFingerprint = optionalString(input.action.action_fingerprint) ?? input.workUnitFingerprint;
+  const sourceFingerprint = optionalString(input.action.source_fingerprint)
+    ?? optionalString(input.ownerRoute?.source_fingerprint)
     ?? actionFingerprint;
-  const obligationId = recoveryObligationId(action)
-    ?? recoveryObligationId(handoff)
-    ?? recoveryObligationId(ownerRoute);
-  const routeIdentityKey = optionalString(action.route_identity_key)
-    ?? optionalString(handoff.route_identity_key)
-    ?? optionalString(ownerRoute?.route_identity_key);
-  const attemptIdempotencyKey = optionalString(action.attempt_idempotency_key)
-    ?? optionalString(handoff.attempt_idempotency_key)
-    ?? optionalString(ownerRoute?.attempt_idempotency_key);
+  const obligationId = recoveryObligationId(input.action)
+    ?? recoveryObligationId(input.handoff)
+    ?? recoveryObligationId(input.ownerRoute);
+  const routeIdentityKey = optionalString(input.action.route_identity_key)
+    ?? optionalString(input.handoff.route_identity_key)
+    ?? optionalString(input.ownerRoute?.route_identity_key);
+  const attemptIdempotencyKey = optionalString(input.action.attempt_idempotency_key)
+    ?? optionalString(input.handoff.attempt_idempotency_key)
+    ?? optionalString(input.ownerRoute?.attempt_idempotency_key);
+  return {
+    actionFingerprint,
+    sourceFingerprint,
+    obligationId,
+    routeIdentityKey,
+    attemptIdempotencyKey,
+  };
+}
+
+function currentControlProviderAdmissionCandidateFromActionQueueItem(
+  currentControl: Record<string, unknown>,
+  action: Record<string, unknown>,
+) {
+  const { handoff, ownerRoute } = actionQueueProviderAdmissionContext(action);
+  if (!actionQueueAttemptProtocolAllowsProviderAdmission(ownerRoute)) {
+    return null;
+  }
+  const fields = actionQueueProviderAdmissionFields({ action, handoff, ownerRoute });
+  if (!fields) {
+    return null;
+  }
+  const identity = actionQueueProviderAdmissionIdentity({
+    action,
+    handoff,
+    ownerRoute,
+    workUnitFingerprint: fields.workUnitFingerprint,
+  });
   return {
     ...action,
     status: 'provider_admission_pending',
     owner_route_current: true,
-    study_id: studyId,
-    quest_id: optionalString(handoff.quest_id) ?? optionalString(ownerRoute?.quest_id) ?? studyId,
-    action_type: actionType,
-    work_unit_id: workUnitId,
-    work_unit_fingerprint: workUnitFingerprint,
-    action_fingerprint: actionFingerprint,
-    source_fingerprint: sourceFingerprint,
+    study_id: fields.studyId,
+    quest_id: optionalString(handoff.quest_id) ?? optionalString(ownerRoute?.quest_id) ?? fields.studyId,
+    action_type: fields.actionType,
+    work_unit_id: fields.workUnitId,
+    work_unit_fingerprint: fields.workUnitFingerprint,
+    action_fingerprint: identity.actionFingerprint,
+    source_fingerprint: identity.sourceFingerprint,
     dispatch_authority: optionalString(action.dispatch_authority) ?? 'opl_current_control_state_handoff',
-    next_executable_owner: nextOwner,
+    next_executable_owner: fields.nextOwner,
     provider_attempt_or_lease_required: true,
     provider_completion_is_domain_completion: false,
     stage_transition_authority_boundary: providerObservationBoundaryFromCurrentControl(),
-    ...(obligationId ? { recovery_obligation_id: obligationId } : {}),
+    ...(identity.obligationId ? { recovery_obligation_id: identity.obligationId } : {}),
     required_output_surface: optionalString(action.required_output_surface),
     idempotency_key: optionalString(handoff.idempotency_key) ?? optionalString(ownerRoute?.idempotency_key),
-    ...(routeIdentityKey ? { route_identity_key: routeIdentityKey } : {}),
-    ...(attemptIdempotencyKey ? { attempt_idempotency_key: attemptIdempotencyKey } : {}),
+    ...(identity.routeIdentityKey ? { route_identity_key: identity.routeIdentityKey } : {}),
+    ...(identity.attemptIdempotencyKey ? { attempt_idempotency_key: identity.attemptIdempotencyKey } : {}),
     currentness_basis: currentControlCurrentnessBasis({
       currentControl,
       action,
       ownerRoute,
-      workUnitId,
-      workUnitFingerprint,
+      workUnitId: fields.workUnitId,
+      workUnitFingerprint: fields.workUnitFingerprint,
     }),
     provider_admission_schema_source: 'action_queue',
   };
