@@ -5,6 +5,7 @@ import {
   applyPaperAutonomySupervisorDecision,
   buildPaperAutonomySupervisorDecisionReadback,
   PAPER_AUTONOMY_SUPERVISOR_DECISION_KINDS,
+  readPaperAutonomySupervisorDecisionFromObligation,
   selectPaperAutonomyRecoveryObligation,
   type PaperAutonomyRecoveryObligation,
   type PaperAutonomyStageRunIdentity,
@@ -38,11 +39,13 @@ function decisionInput(decision_kind: PaperAutonomySupervisorDecisionKind) {
     decision_kind,
     current_identity: identity(),
     current_owner_delta_ref: 'mas://DM002/current-owner-delta/latest.json',
+    provider_admission_identity_ref: 'opl://provider-admission/dm002',
     terminal_closeout_ref: 'opl://stage-attempts/dm002/closeout.json',
     recovery_action_ref: 'opl://recovery-actions/dm002/materialize.json',
     human_gate_ref: 'human-gate://dm002/paper-autonomy',
     resume_token: 'resume-token:dm002:paper-autonomy',
     typed_blocker_ref: 'mas://DM002/typed-blockers/stable.json',
+    budget_or_missing_evidence_ref: 'opl://runway/budget-exhausted',
     evidence_refs: [
       'mas://DM002/evidence/current-owner-delta.json',
     ],
@@ -171,5 +174,57 @@ test('paper autonomy supervisor readback fails closed when required transition r
       },
     }),
     /stage_packet_refs/,
+  );
+});
+
+test('paper autonomy supervisor readback maps MAS obligation state without idle or terminal queue shortcuts', () => {
+  const noProgressDecision = readPaperAutonomySupervisorDecisionFromObligation({
+    obligation_id: 'obligation:no-progress',
+    current_identity: identity(),
+    current_owner_delta_ref: 'mas://DM002/current-owner-delta/latest.json',
+    no_progress_or_inconsistency_ref: 'opl://runway/no-progress/dm002',
+    action_queue: [],
+    provider_admission_pending_count: 0,
+    evidence_refs: [
+      'opl://runway/action-queue-empty',
+      'opl://runway/provider-admission-pending-count-zero',
+    ],
+  });
+
+  assert.equal(noProgressDecision.decision_kind, 'materialize_recovery_action');
+  assert.equal(noProgressDecision.transition_ref, 'opl://runway/no-progress/dm002');
+  assert.equal(noProgressDecision.state_index_projection.indexed_refs.terminal_closeout_ref, null);
+  assert.equal(noProgressDecision.authority_boundary.provider_completion_is_domain_ready, false);
+
+  const stopDecision = readPaperAutonomySupervisorDecisionFromObligation({
+    obligation_id: 'obligation:typed-blocker',
+    current_identity: identity(),
+    typed_blocker_ref: 'mas://DM002/typed-blockers/stable.json',
+    budget_or_missing_evidence_ref: 'opl://runway/budget-exhausted',
+  });
+  assert.equal(stopDecision.decision_kind, 'stop_with_stable_typed_blocker');
+  assert.equal(stopDecision.transition_ref, 'mas://DM002/typed-blockers/stable.json');
+
+  const waitDecision = readPaperAutonomySupervisorDecisionFromObligation({
+    obligation_id: 'obligation:human-gate',
+    current_identity: identity(),
+    human_gate_ref: 'human-gate://dm002/paper-autonomy',
+    resume_token: 'resume-token:dm002:paper-autonomy',
+  });
+  assert.equal(waitDecision.decision_kind, 'wait_for_owner_with_resume_token');
+  assert.equal(waitDecision.transition_ref, 'resume-token:dm002:paper-autonomy');
+  assert.equal(
+    waitDecision.state_index_projection.indexed_refs.human_gate_ref,
+    'human-gate://dm002/paper-autonomy',
+  );
+
+  assert.throws(
+    () => readPaperAutonomySupervisorDecisionFromObligation({
+      obligation_id: 'obligation:execute-missing-identity',
+      current_identity: identity({ stage_run_id: '' }),
+      current_owner_delta_ref: 'mas://DM002/current-owner-delta/latest.json',
+      provider_admission_identity_ref: 'opl://provider-admission/dm002',
+    }),
+    /stage_run_id/,
   );
 });

@@ -190,12 +190,20 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
     /obligation_id and StageRun identity/,
   );
   assert.match(
+    paperAutonomy.concepts.RecoveryObligationStore.landed_support,
+    /refuses action_queue\/provider_pending terminal shortcuts/,
+  );
+  assert.match(
     paperAutonomy.concepts.RecoveryObligationStore.remaining_gap,
     /end-to-end runtime soak/,
   );
   assert.match(
     paperAutonomy.concepts.SupervisorDecisionEngine.landed_support,
     /wait_for_owner_with_resume_token/,
+  );
+  assert.match(
+    paperAutonomy.concepts.SupervisorDecisionEngine.landed_support,
+    /explicit transition evidence/,
   );
   assert.match(
     paperAutonomy.concepts.SupervisorDecisionEngine.remaining_gap,

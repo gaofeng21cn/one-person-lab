@@ -56,11 +56,32 @@ export type PaperAutonomySupervisorDecisionInput = {
   decision_kind: PaperAutonomySupervisorDecisionKind;
   current_identity: PaperAutonomyStageRunIdentity;
   current_owner_delta_ref?: string;
+  provider_admission_identity_ref?: string;
   terminal_closeout_ref?: string;
   recovery_action_ref?: string;
+  no_progress_or_inconsistency_ref?: string;
   human_gate_ref?: string;
   resume_token?: string;
   typed_blocker_ref?: string;
+  budget_or_missing_evidence_ref?: string;
+  evidence_refs?: string[];
+  observability_refs?: string[];
+};
+
+export type PaperAutonomySupervisorObligationReadbackInput = {
+  obligation_id: string;
+  current_identity: PaperAutonomyStageRunIdentity;
+  current_owner_delta_ref?: string;
+  provider_admission_identity_ref?: string;
+  terminal_closeout_ref?: string;
+  recovery_action_ref?: string;
+  no_progress_or_inconsistency_ref?: string;
+  human_gate_ref?: string;
+  resume_token?: string;
+  typed_blocker_ref?: string;
+  budget_or_missing_evidence_ref?: string;
+  action_queue?: unknown[];
+  provider_admission_pending_count?: number;
   evidence_refs?: string[];
   observability_refs?: string[];
 };
@@ -213,6 +234,59 @@ export function buildPaperAutonomySupervisorDecisionReadback(
   };
 }
 
+export function readPaperAutonomySupervisorDecisionFromObligation(
+  input: PaperAutonomySupervisorObligationReadbackInput,
+): PaperAutonomySupervisorDecisionReadback {
+  const base = {
+    obligation_id: input.obligation_id,
+    current_identity: input.current_identity,
+    current_owner_delta_ref: input.current_owner_delta_ref,
+    provider_admission_identity_ref: input.provider_admission_identity_ref,
+    terminal_closeout_ref: input.terminal_closeout_ref,
+    recovery_action_ref: input.recovery_action_ref,
+    no_progress_or_inconsistency_ref: input.no_progress_or_inconsistency_ref,
+    human_gate_ref: input.human_gate_ref,
+    resume_token: input.resume_token,
+    typed_blocker_ref: input.typed_blocker_ref,
+    budget_or_missing_evidence_ref: input.budget_or_missing_evidence_ref,
+    evidence_refs: supervisorEvidenceRefs(input),
+    observability_refs: input.observability_refs,
+  };
+
+  if (input.terminal_closeout_ref) {
+    return buildPaperAutonomySupervisorDecisionReadback({
+      ...base,
+      decision_kind: 'consume_terminal_closeout',
+    });
+  }
+  if (input.typed_blocker_ref) {
+    return buildPaperAutonomySupervisorDecisionReadback({
+      ...base,
+      decision_kind: 'stop_with_stable_typed_blocker',
+    });
+  }
+  if (input.human_gate_ref) {
+    return buildPaperAutonomySupervisorDecisionReadback({
+      ...base,
+      decision_kind: 'wait_for_owner_with_resume_token',
+    });
+  }
+  if (input.recovery_action_ref || input.no_progress_or_inconsistency_ref) {
+    return buildPaperAutonomySupervisorDecisionReadback({
+      ...base,
+      decision_kind: 'materialize_recovery_action',
+    });
+  }
+  if (input.current_owner_delta_ref && input.provider_admission_identity_ref) {
+    return buildPaperAutonomySupervisorDecisionReadback({
+      ...base,
+      decision_kind: 'execute_current_owner_delta',
+    });
+  }
+
+  throw new Error('Paper autonomy supervisor obligation missing actionable transition evidence; action_queue and provider_admission_pending_count are not terminal evidence');
+}
+
 export function selectPaperAutonomyRecoveryObligation(
   obligations: PaperAutonomyRecoveryObligation[],
   currentIdentity: PaperAutonomyStageRunIdentity,
@@ -287,15 +361,20 @@ function assertCompleteStageRunIdentity(identity: PaperAutonomyStageRunIdentity)
 function transitionRefForDecision(input: PaperAutonomySupervisorDecisionInput) {
   switch (input.decision_kind) {
     case 'execute_current_owner_delta':
+      requiredRef(input.provider_admission_identity_ref, 'provider_admission_identity_ref');
       return requiredRef(input.current_owner_delta_ref, 'current_owner_delta_ref');
     case 'consume_terminal_closeout':
       return requiredRef(input.terminal_closeout_ref, 'terminal_closeout_ref');
     case 'materialize_recovery_action':
-      return requiredRef(input.recovery_action_ref, 'recovery_action_ref');
+      return requiredRef(
+        input.recovery_action_ref ?? input.no_progress_or_inconsistency_ref,
+        'recovery_action_ref_or_no_progress_or_inconsistency_ref',
+      );
     case 'wait_for_owner_with_resume_token':
       requiredRef(input.human_gate_ref, 'human_gate_ref');
       return requiredRef(input.resume_token, 'resume_token');
     case 'stop_with_stable_typed_blocker':
+      requiredRef(input.budget_or_missing_evidence_ref, 'budget_or_missing_evidence_ref');
       return requiredRef(input.typed_blocker_ref, 'typed_blocker_ref');
   }
 }
@@ -345,4 +424,13 @@ function samePaperAutonomyStageRunIdentity(
 
 function sameStringArray(left: string[], right: string[]) {
   return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function supervisorEvidenceRefs(input: PaperAutonomySupervisorObligationReadbackInput) {
+  return [
+    ...(input.evidence_refs ?? []),
+    input.provider_admission_identity_ref,
+    input.no_progress_or_inconsistency_ref,
+    input.budget_or_missing_evidence_ref,
+  ].filter((value): value is string => Boolean(value));
 }

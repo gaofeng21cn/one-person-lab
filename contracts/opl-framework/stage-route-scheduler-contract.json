@@ -298,7 +298,7 @@
             "stale_read_model_lag",
             "supervisor_decision_ref"
           ],
-          "landed_support": "src/family-runtime-paper-autonomy.ts exposes refs-only obligation query/update fixture bound to obligation_id and StageRun identity",
+          "landed_support": "src/family-runtime-paper-autonomy.ts exposes refs-only obligation query/update fixture bound to obligation_id and StageRun identity, plus MAS paper_autonomy_obligation readback classification that refuses action_queue/provider_pending terminal shortcuts",
           "remaining_gap": "dedicated durable provider-backed RecoveryObligationStore is not yet proven by end-to-end runtime soak"
         },
         "SupervisorDecisionEngine": {
@@ -319,7 +319,7 @@
             "provider_liveness_or_repair_state",
             "observability_refs"
           ],
-          "landed_support": "src/family-runtime-paper-autonomy.ts emits refs-only readback packets for execute_current_owner_delta, consume_terminal_closeout, materialize_recovery_action, wait_for_owner_with_resume_token, and stop_with_stable_typed_blocker",
+          "landed_support": "src/family-runtime-paper-autonomy.ts emits refs-only readback packets for execute_current_owner_delta, consume_terminal_closeout, materialize_recovery_action, wait_for_owner_with_resume_token, and stop_with_stable_typed_blocker from explicit transition evidence",
           "remaining_gap": "provider tick, owner receipt, human resume token, terminal closeout consumption, and end-to-end runtime soak are not yet proven"
         },
         "StateIndexKernel": {
