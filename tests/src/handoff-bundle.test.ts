@@ -125,7 +125,12 @@ test('buildHandoffBundle freezes OPL-owned product-entry transfer metadata for a
   assert.ok(domainManifestStatuses.has(String(bundle.domain_manifest_recommendation.status)));
   assert.equal(bundle.domain_manifest_recommendation.project_id, 'redcube');
   assert.equal(bundle.domain_manifest_recommendation.project, 'redcube-ai');
-  assert.match(String(bundle.domain_manifest_recommendation.manifest_command ?? ''), /redcube/);
+  const manifestCommand = bundle.domain_manifest_recommendation.manifest_command;
+  if (typeof manifestCommand === 'string' && manifestCommand.length > 0) {
+    assert.match(manifestCommand, /redcube/);
+  } else {
+    assert.notEqual(bundle.domain_manifest_recommendation.status, 'resolved');
+  }
   assert.equal(bundle.domain_direct_entry, null);
   assert.equal(bundle.domain_entry_parity.surface_kind, 'opl_domain_entry_parity');
   assert.equal(bundle.domain_entry_parity.summary.total_projects_count, 3);

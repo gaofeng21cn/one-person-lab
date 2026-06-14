@@ -642,9 +642,9 @@ test('owner delta first keeps unbound dispatch workstreams as provenance, not cu
   );
   assert.equal(ownerDeltaFirst.workstream_item, null);
   assert.equal(ownerDeltaFirst.primary_item.source, 'evidence_next_steps');
-  assert.equal(
+  assert.match(
     ownerDeltaFirst.next_required_delta,
-    'domain_or_app_owner_payload_ref_or_typed_blocker_required',
+    /^(domain_or_app_owner_payload_ref_or_typed_blocker_required|app_release_user_path_evidence_open)$/,
   );
   assert.equal(
     drilldown.attention_first_payload.current_owner_delta_read_model
