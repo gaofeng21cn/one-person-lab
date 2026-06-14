@@ -370,6 +370,7 @@ const lanes = {
       'tests/src/family-domain-catalog.test.ts',
       'tests/src/family-entry-contracts.test.ts',
       'tests/src/family-executor-adapter-contract.test.ts',
+      'tests/src/handoff-bundle.test.ts',
       'tests/src/product-entry-companions.test.ts',
       'tests/src/product-entry-runtime.test.ts',
       'tests/src/product-entry-program-companions.test.ts',
