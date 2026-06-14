@@ -21,6 +21,12 @@ type RulesConfig = {
   }>;
 };
 
+type RulesSection = 'constraints' | 'layer' | 'boundary';
+
+type RulesLine =
+  | { kind: 'section'; section: RulesSection }
+  | { kind: 'entry'; key: string; value: string };
+
 function stripInlineComment(line: string) {
   let inString = false;
   let quote = '';
@@ -67,6 +73,85 @@ function parseNumber(raw: string) {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function parseRulesLine(rawLine: string): RulesLine | null {
+  const line = stripInlineComment(rawLine);
+  if (!line) {
+    return null;
+  }
+  if (line === '[constraints]') {
+    return { kind: 'section', section: 'constraints' };
+  }
+  if (line === '[[layers]]') {
+    return { kind: 'section', section: 'layer' };
+  }
+  if (line === '[[boundaries]]') {
+    return { kind: 'section', section: 'boundary' };
+  }
+
+  const equalIndex = line.indexOf('=');
+  if (equalIndex === -1) {
+    return null;
+  }
+  return {
+    kind: 'entry',
+    key: line.slice(0, equalIndex).trim(),
+    value: line.slice(equalIndex + 1).trim(),
+  };
+}
+
+function startRulesSection(config: RulesConfig, section: RulesSection) {
+  if (section === 'layer') {
+    config.layers.push({ name: '', paths: [] });
+  } else if (section === 'boundary') {
+    config.boundaries.push({ from: '', to: '', reason: '' });
+  }
+  return section;
+}
+
+function applyConstraintEntry(config: RulesConfig, key: string, value: string) {
+  if (key === 'max_depth' || key === 'max_file_lines' || key === 'max_cycles') {
+    config.constraints[key] = parseNumber(value);
+  }
+}
+
+function applyLayerEntry(config: RulesConfig, key: string, value: string) {
+  const layer = config.layers[config.layers.length - 1];
+  if (!layer) {
+    return;
+  }
+  if (key === 'name') {
+    layer.name = parseString(value);
+  } else if (key === 'paths') {
+    layer.paths = parseStringList(value);
+  } else if (key === 'order') {
+    layer.order = parseNumber(value);
+  }
+}
+
+function applyBoundaryEntry(config: RulesConfig, key: string, value: string) {
+  const boundary = config.boundaries[config.boundaries.length - 1];
+  if (!boundary) {
+    return;
+  }
+  if (key === 'from') {
+    boundary.from = parseString(value);
+  } else if (key === 'to') {
+    boundary.to = parseString(value);
+  } else if (key === 'reason') {
+    boundary.reason = parseString(value);
+  }
+}
+
+function applyRulesEntry(config: RulesConfig, section: RulesSection | null, line: Extract<RulesLine, { kind: 'entry' }>) {
+  if (section === 'constraints') {
+    applyConstraintEntry(config, line.key, line.value);
+  } else if (section === 'layer') {
+    applyLayerEntry(config, line.key, line.value);
+  } else if (section === 'boundary') {
+    applyBoundaryEntry(config, line.key, line.value);
+  }
+}
+
 function parseRulesToml(root: string): RulesConfig | null {
   const rulesPath = path.join(root, '.sentrux', 'rules.toml');
   if (!fs.existsSync(rulesPath)) {
@@ -81,63 +166,15 @@ function parseRulesToml(root: string): RulesConfig | null {
   let section: 'constraints' | 'layer' | 'boundary' | null = null;
 
   for (const rawLine of fs.readFileSync(rulesPath, 'utf8').split(/\r?\n/)) {
-    const line = stripInlineComment(rawLine);
+    const line = parseRulesLine(rawLine);
     if (!line) {
       continue;
     }
-
-    if (line === '[constraints]') {
-      section = 'constraints';
+    if (line.kind === 'section') {
+      section = startRulesSection(config, line.section);
       continue;
     }
-    if (line === '[[layers]]') {
-      section = 'layer';
-      config.layers.push({ name: '', paths: [] });
-      continue;
-    }
-    if (line === '[[boundaries]]') {
-      section = 'boundary';
-      config.boundaries.push({ from: '', to: '', reason: '' });
-      continue;
-    }
-
-    const equalIndex = line.indexOf('=');
-    if (equalIndex === -1) {
-      continue;
-    }
-
-    const key = line.slice(0, equalIndex).trim();
-    const value = line.slice(equalIndex + 1).trim();
-
-    if (section === 'constraints') {
-      if (key === 'max_depth' || key === 'max_file_lines' || key === 'max_cycles') {
-        config.constraints[key] = parseNumber(value);
-      }
-      continue;
-    }
-
-    if (section === 'layer') {
-      const layer = config.layers[config.layers.length - 1];
-      if (key === 'name') {
-        layer.name = parseString(value);
-      } else if (key === 'paths') {
-        layer.paths = parseStringList(value);
-      } else if (key === 'order') {
-        layer.order = parseNumber(value);
-      }
-      continue;
-    }
-
-    if (section === 'boundary') {
-      const boundary = config.boundaries[config.boundaries.length - 1];
-      if (key === 'from') {
-        boundary.from = parseString(value);
-      } else if (key === 'to') {
-        boundary.to = parseString(value);
-      } else if (key === 'reason') {
-        boundary.reason = parseString(value);
-      }
-    }
+    applyRulesEntry(config, section, line);
   }
 
   config.layers = config.layers.filter((layer) => layer.name && layer.paths.length > 0);
