@@ -243,6 +243,7 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/workspace-domain.stages-artifact-locator.test.ts',
   'tests/src/cli/cases/workspace-domain.stages-graph.test.ts',
   'tests/src/cli/cases/workspace-domain.stages-replay.test.ts',
+  'tests/src/cli/cases/workspace-domain.agent-skeleton.test.ts',
   'tests/src/cli/cases/workspace-domain.external-evidence.test.ts',
   'tests/src/cli/cases/runtime-tray-domain-projection-ingestion.test.ts',
   'tests/src/runtime-app-operator-selected-safe-action.test.ts',
