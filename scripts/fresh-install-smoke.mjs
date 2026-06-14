@@ -157,6 +157,19 @@ function assertInitializeState(output, expected) {
   );
 }
 
+function assertCodexBlockedInitializeState(output) {
+  assertInitializeState(output, {
+    phase: 'environment',
+    blocking: ['codex', 'codex_config'],
+    maintenance: ['domain_modules', 'family_runtime_provider', 'recommended_skills'],
+    conditionalMaintenance: ['native_helpers'],
+    readyToLaunch: false,
+    familyRuntimeProviderBlocking: true,
+    familyRuntimeProviderStatus: 'initializing',
+    fullReadinessBlocking: true,
+  });
+}
+
 function runCase(scenarioId, fn) {
   const root = makeTempRoot(scenarioId);
   const startedAt = new Date().toISOString();
@@ -188,16 +201,7 @@ function runCase(scenarioId, fn) {
 function cleanUserMissingCodex(root) {
   const env = baseEnv(root);
   const output = runOpl(['system', 'initialize'], env);
-  assertInitializeState(output, {
-    phase: 'environment',
-    blocking: ['codex', 'codex_config'],
-    maintenance: ['domain_modules', 'family_runtime_provider', 'recommended_skills'],
-    conditionalMaintenance: ['native_helpers'],
-    readyToLaunch: false,
-    familyRuntimeProviderBlocking: true,
-    familyRuntimeProviderStatus: 'initializing',
-    fullReadinessBlocking: true,
-  });
+  assertCodexBlockedInitializeState(output);
   return { observations: { overall_state: output.system_initialize.overall_state } };
 }
 
@@ -222,16 +226,7 @@ function outdatedCodex(root) {
   const tools = createFakeCodex(root, '0.121.0');
   const env = baseEnv(root, { PATH: `${tools}:/usr/bin:/bin` });
   const output = runOpl(['system', 'initialize'], env);
-  assertInitializeState(output, {
-    phase: 'environment',
-    blocking: ['codex', 'codex_config'],
-    maintenance: ['domain_modules', 'family_runtime_provider', 'recommended_skills'],
-    conditionalMaintenance: ['native_helpers'],
-    readyToLaunch: false,
-    familyRuntimeProviderBlocking: true,
-    familyRuntimeProviderStatus: 'initializing',
-    fullReadinessBlocking: true,
-  });
+  assertCodexBlockedInitializeState(output);
   assert.equal(output.system_initialize.core_engines.codex.version_status, 'outdated');
   return { observations: { codex_issue: output.system_initialize.core_engines.codex.issues[0] } };
 }
