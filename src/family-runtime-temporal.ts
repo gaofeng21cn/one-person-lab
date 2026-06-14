@@ -300,6 +300,12 @@ export function temporalPayloadHistoryPolicy() {
         'provider_runtime',
         'provider_runtime_after_slo',
         'provider_slo',
+        'task_scope.payloadMatches',
+        'provider_readiness_after_slo.blockers',
+        'provider_readiness_after_slo.repair_action.body',
+        'provider_liveness_blocker.next_repair_action.body',
+        'provider_blocker.next_repair_action.body',
+        'progress_first_ready_owner_action_pickup_slo.body',
         'queue_tick.dispatches',
       ],
       authority_boundary: {

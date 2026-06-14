@@ -242,6 +242,40 @@ test('temporal scheduler tick receipt is compact enough for workflow history', (
       worker_lifecycle_status: 'ready',
       worker_readiness_status: 'ready',
       worker_ready: true,
+      blockers: [{
+        blocker_id: 'oversized_worker_diagnostic',
+        diagnostic_body: hugeBody,
+      }],
+      repair_action: {
+        action_id: 'none',
+        diagnostic_body: hugeBody,
+      },
+    },
+    provider_liveness_blocker: {
+      blocker_kind: 'platform_dependency',
+      blocker_id: 'temporal_worker_not_ready',
+      next_repair_command: 'opl family-runtime worker start --provider temporal',
+      next_repair_action: {
+        action_id: 'start_worker',
+        diagnostic_body: hugeBody,
+      },
+      worker_lifecycle_status: 'worker_not_ready',
+      temporal_service_status: 'running',
+      temporal_server_reachable: true,
+      liveness_blocker_first: true,
+    },
+    provider_blocker: {
+      blocker_kind: 'platform_dependency',
+      blocker_id: 'temporal_worker_not_ready',
+      next_repair_command: 'opl family-runtime worker start --provider temporal',
+      next_repair_action: {
+        action_id: 'start_worker',
+        diagnostic_body: hugeBody,
+      },
+      worker_lifecycle_status: 'worker_not_ready',
+      temporal_service_status: 'running',
+      temporal_server_reachable: true,
+      liveness_blocker_first: true,
     },
     provider_slo: {
       surface_id: 'opl_family_runtime_provider_slo_tick',
@@ -261,8 +295,15 @@ test('temporal scheduler tick receipt is compact enough for workflow history', (
       same_tick_selected_count: 1,
       same_tick_dispatch_count: 1,
       cadence_wait_required: false,
+      diagnostic_body: hugeBody,
     },
-    task_scope: { domain_id: 'medautoscience' },
+    task_scope: {
+      domainId: 'medautoscience',
+      payloadMatches: [{
+        path: 'payload.diagnostic_body',
+        value: hugeBody,
+      }],
+    },
     queue_tick: {
       source: 'opl-provider-scheduler',
       limit: 10,
@@ -285,6 +326,7 @@ test('temporal scheduler tick receipt is compact enough for workflow history', (
       domain: 'truth_quality_artifact_gate_owner',
       can_write_domain_truth: false,
       provider_completion_is_domain_ready: false,
+      diagnostic_body: hugeBody,
     },
   });
 
@@ -294,6 +336,29 @@ test('temporal scheduler tick receipt is compact enough for workflow history', (
   assert.equal(compact.queue_tick.dispatches_count, 1);
   assert.equal(compact.provider_runtime_after_slo_omitted, true);
   assert.equal(compact.provider_slo_omitted, true);
+  assert.equal(compact.task_scope?.payload_match_count, 1);
+  assert.equal(compact.task_scope?.payload_matches_omitted, true);
+  assert.equal('payloadMatches' in (compact.task_scope ?? {}), false);
+  assert.equal(compact.provider_readiness_after_slo.blocker_count, 1);
+  assert.deepEqual(compact.provider_readiness_after_slo.blocker_ids, ['oversized_worker_diagnostic']);
+  assert.equal('blockers' in compact.provider_readiness_after_slo, false);
+  assert.equal('dispatches' in compact.queue_tick, false);
+  const providerLivenessBlocker = compact.provider_liveness_blocker;
+  assert.ok(providerLivenessBlocker);
+  const pickupSlo = compact.progress_first_ready_owner_action_pickup_slo;
+  assert.ok(pickupSlo);
+  assert.equal(
+    providerLivenessBlocker.next_repair_action.action_id,
+    'start_worker',
+  );
+  assert.equal(
+    'diagnostic_body' in providerLivenessBlocker.next_repair_action,
+    false,
+  );
+  assert.equal(
+    'diagnostic_body' in pickupSlo,
+    false,
+  );
   assert.equal(compact.authority_boundary.can_write_domain_truth, false);
   assert.equal(compact.authority_boundary.provider_completion_is_domain_ready, false);
   assert.equal(JSON.stringify(compact).includes(hugeBody), false);
