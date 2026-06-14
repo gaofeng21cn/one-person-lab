@@ -43,6 +43,52 @@ test('brand module L5 evidence gate is executable but does not claim production 
       status.owner_route_work_order_policy.accepted_route_ref_shapes.includes('typed_blocker_ref'),
       true,
     );
+    assert.equal(status.evidence_class_followthrough_summary.evidence_class_count, 13);
+    assert.equal(status.evidence_class_followthrough_summary.route_count, 130);
+    assert.equal(status.evidence_class_followthrough_summary.missing_owner_evidence_route_count, 0);
+    assert.equal(status.evidence_class_followthrough_summary.typed_blocker_followthrough_route_count, 90);
+    assert.equal(status.evidence_class_followthrough_summary.observed_refs_not_l5_claim_route_count, 40);
+    assert.equal(status.evidence_class_followthrough_summary.observed_ref_route_count, 130);
+    assert.equal(status.evidence_class_followthrough_summary.verified_receipt_route_count, 0);
+    assert.equal(status.evidence_class_followthrough_summary.l5_claim_authorized, false);
+    assert.equal(status.evidence_class_followthrough_summary.can_close_l5, false);
+    assert.equal(status.evidence_class_followthrough_summary.can_be_completed_by_opl, false);
+    assert.equal(status.evidence_class_followthrough_summary.supporting_guard_can_be_completed_by_opl, true);
+    assert.equal(
+      status.evidence_class_followthrough_summary.false_completion_guard
+        .class_followthrough_aggregate_closes_l5,
+      false,
+    );
+    assert.equal(
+      status.evidence_class_followthrough_summary.false_completion_guard.verified_ledger_closes_l5,
+      false,
+    );
+    const liveUserPathClass = status.evidence_class_followthrough_summary.by_class.find(
+      (entry: { class_id: string }) => entry.class_id === 'live_user_path',
+    );
+    const noSecondTruthClass = status.evidence_class_followthrough_summary.by_class.find(
+      (entry: { class_id: string }) => entry.class_id === 'no_second_truth_regression',
+    );
+    assert.equal(liveUserPathClass?.route_count, 10);
+    assert.equal(liveUserPathClass?.typed_blocker_followthrough_route_count, 10);
+    assert.equal(liveUserPathClass?.observed_refs_not_l5_claim_route_count, 0);
+    assert.deepEqual(liveUserPathClass?.module_ids, expectedModuleIds);
+    assert.equal(liveUserPathClass?.accepted_ref_shapes.includes('user_path_evidence_ref'), true);
+    assert.equal(liveUserPathClass?.accepted_ref_shapes.includes('owner_acceptance_ref'), true);
+    assert.equal(liveUserPathClass?.accepted_ref_shapes.includes('typed_blocker_ref'), true);
+    assert.equal(liveUserPathClass?.next_followthrough_work_order_id, 'w7-brand-module-l5-charter-live_user_path');
+    assert.equal(liveUserPathClass?.can_close_l5, false);
+    assert.equal(liveUserPathClass?.can_be_completed_by_opl, false);
+    assert.equal(liveUserPathClass?.supporting_guard_can_be_completed_by_opl, true);
+    assert.equal(
+      liveUserPathClass?.false_completion_guard.class_followthrough_aggregate_closes_l5,
+      false,
+    );
+    assert.equal(noSecondTruthClass?.route_count, 10);
+    assert.equal(noSecondTruthClass?.typed_blocker_followthrough_route_count, 0);
+    assert.equal(noSecondTruthClass?.observed_refs_not_l5_claim_route_count, 10);
+    assert.equal(noSecondTruthClass?.next_followthrough_work_order_id, null);
+    assert.equal(noSecondTruthClass?.can_close_l5, false);
     for (const entry of status.modules as L5Module[]) {
       assert.equal(entry.evidence_required, true);
       assert.equal(entry.l5_can_be_claimed, false);
@@ -472,6 +518,29 @@ test('runtime owner acceptance ledger refs remain non-closing without contract o
     const route = runway.owner_evidence_routes.find((candidate: { class_id: string }) =>
       candidate.class_id === 'long_soak_recovery'
     );
+    const longSoakAggregate = status.evidence_class_followthrough_summary.by_class.find(
+      (candidate: { class_id: string }) => candidate.class_id === 'long_soak_recovery',
+    );
+    const liveUserPathAggregate = status.evidence_class_followthrough_summary.by_class.find(
+      (candidate: { class_id: string }) => candidate.class_id === 'live_user_path',
+    );
+    assert.equal(status.evidence_class_followthrough_summary.route_count, 13);
+    assert.equal(status.evidence_class_followthrough_summary.typed_blocker_followthrough_route_count, 8);
+    assert.equal(status.evidence_class_followthrough_summary.observed_refs_not_l5_claim_route_count, 5);
+    assert.equal(status.evidence_class_followthrough_summary.verified_receipt_route_count, 1);
+    assert.equal(status.evidence_class_followthrough_summary.can_close_l5, false);
+    assert.equal(status.evidence_class_followthrough_summary.can_be_completed_by_opl, false);
+    assert.equal(status.evidence_class_followthrough_summary.supporting_guard_can_be_completed_by_opl, true);
+    assert.equal(status.evidence_class_followthrough_summary.false_completion_guard.verified_ledger_closes_l5, false);
+    assert.equal(longSoakAggregate?.route_count, 1);
+    assert.equal(longSoakAggregate?.observed_refs_not_l5_claim_route_count, 1);
+    assert.equal(longSoakAggregate?.typed_blocker_followthrough_route_count, 0);
+    assert.equal(longSoakAggregate?.verified_receipt_route_count, 1);
+    assert.deepEqual(longSoakAggregate?.module_ids, ['runway']);
+    assert.equal(longSoakAggregate?.accepted_ref_shapes.includes('owner_acceptance_ref'), true);
+    assert.equal(longSoakAggregate?.can_close_l5, false);
+    assert.equal(liveUserPathAggregate?.typed_blocker_followthrough_route_count, 1);
+    assert.equal(liveUserPathAggregate?.next_followthrough_work_order_id, 'w7-brand-module-l5-runway-live_user_path');
     assert.equal(runway.l5_can_be_claimed, false);
     assert.equal(status.evidence_required_module_count, 10);
     assert.equal(runway.owner_followthrough_summary.owner_followthrough_required, true);
