@@ -187,6 +187,16 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     provider_slo_capability_retry_dead_letter_ready: input.providerCapabilitySlo.retry_dead_letter_boundary_ready,
     provider_slo_capability_domain_truth_boundary_preserved: input.providerCapabilitySlo.domain_truth_boundary_preserved,
     provider_long_soak_evidence_status: input.providerLongSoakEvidence.status,
+    provider_long_soak_evidence_ready_claim_authorized:
+      input.providerLongSoakEvidence.ready_claim_authorized === true,
+    provider_long_soak_evidence_production_ready_claim_status:
+      input.providerLongSoakEvidence.production_ready_claim_status,
+    provider_long_soak_evidence_verified_refs_only_ledger_counts_as_production_ready:
+      input.providerLongSoakEvidence.verified_refs_only_ledger_counts_as_production_ready === true,
+    provider_long_soak_evidence_long_evidence_ready_counts_as_production_ready:
+      input.providerLongSoakEvidence.long_evidence_ready_counts_as_production_ready === true,
+    provider_long_soak_evidence_capability_slo_satisfied_counts_as_production_ready:
+      input.providerLongSoakEvidence.capability_slo_satisfied_counts_as_production_ready === true,
     provider_long_soak_evidence_receipt_ref_count:
       numberValue(input.providerLongSoakEvidence.receipt_count),
     provider_long_soak_evidence_recorded_receipt_ref_count:

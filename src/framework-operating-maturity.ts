@@ -567,7 +567,15 @@ export async function buildFrameworkOperatingMaturityReadout(
         verify_command: providerLongSoakRunbook.verify_command,
         readback_commands: providerLongSoakRunbook.readback_commands,
         stop_loss: providerLongSoakRunbook.stop_loss,
+        ready_claim_authorized: false,
+        production_ready_claim_status:
+          stringValue(
+            drilldownMaturity.provider.evidence.production_ready_claim_status,
+          ) ?? 'provider_long_soak_evidence_observed_not_production_ready_claim',
         provider_completion_counts_as_production_ready: false,
+        verified_refs_only_ledger_counts_as_production_ready: false,
+        long_evidence_ready_counts_as_production_ready: false,
+        capability_slo_satisfied_counts_as_production_ready: false,
         authority_boundary: drilldownMaturity.provider.authorityBoundary,
       },
       cleanup_retirement: {

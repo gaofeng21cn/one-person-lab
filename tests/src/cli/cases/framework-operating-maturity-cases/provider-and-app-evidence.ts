@@ -129,6 +129,28 @@ test('framework operating maturity consumes provider long-soak evidence refs wit
       'opl_provider_long_soak_evidence_projection',
     );
     assert.equal(drilldown.provider_long_soak_evidence.status, 'provider_evidence_observed_not_ready_claim');
+    assert.equal(drilldown.provider_long_soak_evidence.ready_claim_authorized, false);
+    assert.equal(
+      drilldown.provider_long_soak_evidence.production_ready_claim_status,
+      'provider_long_soak_evidence_observed_not_production_ready_claim',
+    );
+    assert.equal(
+      drilldown.provider_long_soak_evidence.verified_refs_only_ledger_counts_as_production_ready,
+      false,
+    );
+    assert.equal(
+      drilldown.provider_long_soak_evidence.long_evidence_ready_counts_as_production_ready,
+      false,
+    );
+    assert.equal(
+      drilldown.provider_long_soak_evidence.capability_slo_satisfied_counts_as_production_ready,
+      false,
+    );
+    assert.equal(drilldown.summary.provider_long_soak_evidence_ready_claim_authorized, false);
+    assert.equal(
+      drilldown.summary.provider_long_soak_evidence_production_ready_claim_status,
+      'provider_long_soak_evidence_observed_not_production_ready_claim',
+    );
     assert.deepEqual(drilldown.provider_long_soak_evidence.observed_ref_shapes, [
       'long_soak_ref',
       'recovery_ref',
@@ -189,7 +211,15 @@ test('framework operating maturity consumes provider long-soak evidence refs wit
       true,
     );
     assert.equal(maturity.provider_long_soak.verified_receipt_ref_count, 1);
+    assert.equal(maturity.provider_long_soak.ready_claim_authorized, false);
+    assert.equal(
+      maturity.provider_long_soak.production_ready_claim_status,
+      'provider_long_soak_evidence_observed_not_production_ready_claim',
+    );
     assert.equal(maturity.provider_long_soak.provider_completion_counts_as_production_ready, false);
+    assert.equal(maturity.provider_long_soak.verified_refs_only_ledger_counts_as_production_ready, false);
+    assert.equal(maturity.provider_long_soak.long_evidence_ready_counts_as_production_ready, false);
+    assert.equal(maturity.provider_long_soak.capability_slo_satisfied_counts_as_production_ready, false);
     assert.equal(maturity.provider_long_soak.owner, 'one-person-lab runtime owner');
     assert.match(
       maturity.provider_long_soak.record_command,
@@ -365,7 +395,15 @@ test('framework operating maturity closes provider owner-evidence work order whe
       'typed_blocker_ref',
     ]);
     assert.equal(maturity.provider_long_soak.verified_receipt_ref_count, 1);
+    assert.equal(maturity.provider_long_soak.ready_claim_authorized, false);
+    assert.equal(
+      maturity.provider_long_soak.production_ready_claim_status,
+      'provider_long_soak_evidence_observed_not_production_ready_claim',
+    );
     assert.equal(maturity.provider_long_soak.provider_completion_counts_as_production_ready, false);
+    assert.equal(maturity.provider_long_soak.verified_refs_only_ledger_counts_as_production_ready, false);
+    assert.equal(maturity.provider_long_soak.long_evidence_ready_counts_as_production_ready, false);
+    assert.equal(maturity.provider_long_soak.capability_slo_satisfied_counts_as_production_ready, false);
     assert.equal(
       maturity.provider_long_soak.authority_boundary.can_claim_production_ready,
       false,
@@ -453,7 +491,15 @@ test('framework operating maturity surfaces refs-only provider and lifecycle cou
       'signal_history_ready',
     ]);
     assert.equal(maturity.provider_long_soak.observed_receipt_count, 7);
+    assert.equal(maturity.provider_long_soak.ready_claim_authorized, false);
+    assert.equal(
+      maturity.provider_long_soak.production_ready_claim_status,
+      'provider_long_soak_evidence_observed_not_production_ready_claim',
+    );
     assert.equal(maturity.provider_long_soak.provider_completion_counts_as_production_ready, false);
+    assert.equal(maturity.provider_long_soak.verified_refs_only_ledger_counts_as_production_ready, false);
+    assert.equal(maturity.provider_long_soak.long_evidence_ready_counts_as_production_ready, false);
+    assert.equal(maturity.provider_long_soak.capability_slo_satisfied_counts_as_production_ready, false);
     assert.equal(
       maturity.provider_long_soak.execution_runbook.false_authority_guard
         .can_claim_production_ready,

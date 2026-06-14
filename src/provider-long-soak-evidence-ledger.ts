@@ -372,7 +372,19 @@ export function buildProviderLongSoakEvidenceProjection() {
       'provider_blocker_ref',
       'typed_blocker_ref',
     ],
+    ready_claim_authorized: false,
+    production_ready_claim_status:
+      'provider_long_soak_evidence_observed_not_production_ready_claim',
+    non_closing_inputs: [
+      'provider_completion',
+      'verified_refs_only_ledger',
+      'long_evidence_ready',
+      'capability_slo_satisfied',
+    ],
     provider_completion_counts_as_production_ready: false,
+    verified_refs_only_ledger_counts_as_production_ready: false,
+    long_evidence_ready_counts_as_production_ready: false,
+    capability_slo_satisfied_counts_as_production_ready: false,
     authority_boundary: providerLongSoakEvidenceAuthorityBoundary(),
   };
 }
