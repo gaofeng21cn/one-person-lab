@@ -96,6 +96,15 @@ export type PaperAutonomySupervisorDecisionReadback = {
   substrate_owner: 'one-person-lab';
   current_identity: PaperAutonomyStageRunIdentity;
   transition_ref: string;
+  provider_admission_identity_ref: string | null;
+  current_owner_delta_ref: string | null;
+  terminal_closeout_ref: string | null;
+  recovery_action_ref: string | null;
+  no_progress_or_inconsistency_ref: string | null;
+  human_gate_ref: string | null;
+  resume_token: string | null;
+  typed_blocker_ref: string | null;
+  budget_or_missing_evidence_ref: string | null;
   evidence_refs: string[];
   observability_refs: string[];
   authority_boundary: {
@@ -122,6 +131,53 @@ export type PaperAutonomySupervisorDecisionReadback = {
       owner_answer_ref: string | null;
       terminal_closeout_ref: string | null;
       recovery_receipt_ref: string | null;
+    };
+  };
+};
+
+export type PaperAutonomySupervisorTransitionPacket = {
+  surface_kind: 'opl_paper_autonomy_supervisor_transition_packet';
+  obligation_id: string;
+  supervisor_decision_ref: string;
+  transition_kind: PaperAutonomySupervisorDecisionKind;
+  transition_ref: string;
+  provider_admission_identity_ref: string | null;
+  current_identity: PaperAutonomyStageRunIdentity;
+  evidence_refs: string[];
+  observability_refs: string[];
+  runtime_apply_target: {
+    kind:
+      | 'provider_attempt_or_owner_callable'
+      | 'terminal_closeout_consumption'
+      | 'recovery_owner_action_materialization'
+      | 'human_gate_resume_token'
+      | 'stable_domain_typed_blocker';
+    provider_admission_required: boolean;
+    owner_callable_required: boolean;
+    terminal_closeout_consumption_required: boolean;
+    recovery_action_materialization_required: boolean;
+    human_resume_token_required: boolean;
+    stable_typed_blocker_required: boolean;
+    domain_truth_owner: 'med-autoscience';
+    substrate_owner: 'one-person-lab';
+  };
+  authority_boundary: {
+    opl_can_write_mas_truth: false;
+    opl_can_create_domain_owner_receipt: false;
+    opl_can_create_domain_typed_blocker: false;
+    provider_completion_is_domain_ready: false;
+  };
+  state_index_projection: {
+    payload_refs_only: true;
+    indexed_refs: {
+      obligation_id: string;
+      supervisor_decision_ref: string;
+      transition_ref: string;
+      stage_run_id: string;
+      route_identity_key: string;
+      attempt_idempotency_key: string;
+      source_fingerprint: string;
+      work_unit_fingerprint: string;
     };
   };
 };
@@ -203,6 +259,15 @@ export function buildPaperAutonomySupervisorDecisionReadback(
     substrate_owner: 'one-person-lab',
     current_identity: input.current_identity,
     transition_ref: transitionRef,
+    provider_admission_identity_ref: input.provider_admission_identity_ref ?? null,
+    current_owner_delta_ref: input.current_owner_delta_ref ?? null,
+    terminal_closeout_ref: input.terminal_closeout_ref ?? null,
+    recovery_action_ref: input.recovery_action_ref ?? null,
+    no_progress_or_inconsistency_ref: input.no_progress_or_inconsistency_ref ?? null,
+    human_gate_ref: input.human_gate_ref ?? null,
+    resume_token: input.resume_token ?? null,
+    typed_blocker_ref: input.typed_blocker_ref ?? null,
+    budget_or_missing_evidence_ref: input.budget_or_missing_evidence_ref ?? null,
     evidence_refs: input.evidence_refs ?? [],
     observability_refs: input.observability_refs ?? [],
     authority_boundary: {
@@ -302,11 +367,17 @@ export function selectPaperAutonomyRecoveryObligation(
 export function applyPaperAutonomySupervisorDecision(
   obligation: PaperAutonomyRecoveryObligation,
   decision: PaperAutonomySupervisorDecisionReadback,
-): {
-  applied: boolean;
-  reason?: 'identity_mismatch';
-  obligation: PaperAutonomyRecoveryObligation;
-} {
+):
+  | {
+    applied: true;
+    obligation: PaperAutonomyRecoveryObligation;
+    transition: PaperAutonomySupervisorTransitionPacket;
+  }
+  | {
+    applied: false;
+    reason: 'identity_mismatch';
+    obligation: PaperAutonomyRecoveryObligation;
+  } {
   if (obligation.obligation_id !== decision.obligation_id
     || !samePaperAutonomyStageRunIdentity(obligation.current_identity, decision.current_identity)
   ) {
@@ -325,7 +396,110 @@ export function applyPaperAutonomySupervisorDecision(
       supervisor_decision_ref: decision.decision_id,
       last_evidence_refs: decision.evidence_refs,
     },
+    transition: buildPaperAutonomySupervisorTransitionPacket(decision),
   };
+}
+
+function buildPaperAutonomySupervisorTransitionPacket(
+  decision: PaperAutonomySupervisorDecisionReadback,
+): PaperAutonomySupervisorTransitionPacket {
+  return {
+    surface_kind: 'opl_paper_autonomy_supervisor_transition_packet',
+    obligation_id: decision.obligation_id,
+    supervisor_decision_ref: decision.decision_id,
+    transition_kind: decision.decision_kind,
+    transition_ref: decision.transition_ref,
+    provider_admission_identity_ref: decision.provider_admission_identity_ref,
+    current_identity: decision.current_identity,
+    evidence_refs: decision.evidence_refs,
+    observability_refs: decision.observability_refs,
+    runtime_apply_target: runtimeApplyTargetForDecision(decision.decision_kind),
+    authority_boundary: {
+      opl_can_write_mas_truth: false,
+      opl_can_create_domain_owner_receipt: false,
+      opl_can_create_domain_typed_blocker: false,
+      provider_completion_is_domain_ready: false,
+    },
+    state_index_projection: {
+      payload_refs_only: true,
+      indexed_refs: {
+        obligation_id: decision.obligation_id,
+        supervisor_decision_ref: decision.decision_id,
+        transition_ref: decision.transition_ref,
+        stage_run_id: decision.current_identity.stage_run_id,
+        route_identity_key: decision.current_identity.route_identity_key,
+        attempt_idempotency_key: decision.current_identity.attempt_idempotency_key,
+        source_fingerprint: decision.current_identity.source_fingerprint,
+        work_unit_fingerprint: decision.current_identity.work_unit_fingerprint,
+      },
+    },
+  };
+}
+
+function runtimeApplyTargetForDecision(
+  decisionKind: PaperAutonomySupervisorDecisionKind,
+): PaperAutonomySupervisorTransitionPacket['runtime_apply_target'] {
+  const common = {
+    domain_truth_owner: 'med-autoscience' as const,
+    substrate_owner: 'one-person-lab' as const,
+  };
+  switch (decisionKind) {
+    case 'execute_current_owner_delta':
+      return {
+        ...common,
+        kind: 'provider_attempt_or_owner_callable',
+        provider_admission_required: true,
+        owner_callable_required: true,
+        terminal_closeout_consumption_required: false,
+        recovery_action_materialization_required: false,
+        human_resume_token_required: false,
+        stable_typed_blocker_required: false,
+      };
+    case 'consume_terminal_closeout':
+      return {
+        ...common,
+        kind: 'terminal_closeout_consumption',
+        provider_admission_required: false,
+        owner_callable_required: false,
+        terminal_closeout_consumption_required: true,
+        recovery_action_materialization_required: false,
+        human_resume_token_required: false,
+        stable_typed_blocker_required: false,
+      };
+    case 'materialize_recovery_action':
+      return {
+        ...common,
+        kind: 'recovery_owner_action_materialization',
+        provider_admission_required: false,
+        owner_callable_required: true,
+        terminal_closeout_consumption_required: false,
+        recovery_action_materialization_required: true,
+        human_resume_token_required: false,
+        stable_typed_blocker_required: false,
+      };
+    case 'wait_for_owner_with_resume_token':
+      return {
+        ...common,
+        kind: 'human_gate_resume_token',
+        provider_admission_required: false,
+        owner_callable_required: false,
+        terminal_closeout_consumption_required: false,
+        recovery_action_materialization_required: false,
+        human_resume_token_required: true,
+        stable_typed_blocker_required: false,
+      };
+    case 'stop_with_stable_typed_blocker':
+      return {
+        ...common,
+        kind: 'stable_domain_typed_blocker',
+        provider_admission_required: false,
+        owner_callable_required: false,
+        terminal_closeout_consumption_required: false,
+        recovery_action_materialization_required: false,
+        human_resume_token_required: false,
+        stable_typed_blocker_required: true,
+      };
+  }
 }
 
 function assertAllowedDecisionKind(decisionKind: PaperAutonomySupervisorDecisionKind) {

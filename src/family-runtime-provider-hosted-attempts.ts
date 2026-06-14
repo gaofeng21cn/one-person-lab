@@ -799,6 +799,7 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
     'owner_route_currentness_basis',
     'owner_route',
     'provider_admission_identity',
+    'paper_autonomy_supervisor_apply',
     'progress_first_closeout_admission',
   ]) {
     if (isRecord(payload[key])) {

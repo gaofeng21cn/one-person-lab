@@ -346,6 +346,25 @@ test('family-runtime intake admits MAS current-control handoff action_queue prov
       tasksByStudy['002-dm-china-us-mortality-attribution'].payload.provider_admission_identity.recovery_obligation_id,
       'paper-recovery-obligation:dm002:revise-ai-reviewer',
     );
+    assert.equal(
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.paper_autonomy_supervisor_apply.transition_kind,
+      'execute_current_owner_delta',
+    );
+    assert.equal(
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.paper_autonomy_supervisor_apply.runtime_apply_target.kind,
+      'provider_attempt_or_owner_callable',
+    );
+    assert.equal(
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.provider_admission_identity
+        .paper_autonomy_supervisor_apply.supervisor_decision_ref,
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.paper_autonomy_supervisor_apply
+        .supervisor_decision_ref,
+    );
+    assert.equal(
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.paper_autonomy_supervisor_apply
+        .authority_boundary.opl_can_create_domain_typed_blocker,
+      false,
+    );
     assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.source_fingerprint, 'truth-snapshot::dm002-handoff');
     assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.dispatch_ref, dm002DispatchRef);
     assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.stage_packet_ref, dm002StagePacketRef);
@@ -451,6 +470,139 @@ test('family-runtime current-control recovery obligation id flows into stage att
       readModel.missing_stage_run_currentness_identity_fields.includes('recovery_obligation_id'),
       false,
     );
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime current-control PAS execute decision apply proof flows into provider admission attempt', () => {
+  const db = new DatabaseSync(':memory:');
+  const obligationId = 'paper-recovery-obligation:dm002:execute-current-owner-delta';
+  const decisionId = [
+    obligationId,
+    'execute_current_owner_delta',
+    'stage-run:dm002:current',
+    'owner-route::dm002::pas-current',
+    'owner-route-attempt::dm002::pas-current',
+  ].join('|');
+  const supervisorApply = {
+    surface_kind: 'opl_paper_autonomy_supervisor_transition_packet',
+    obligation_id: obligationId,
+    supervisor_decision_ref: decisionId,
+    transition_kind: 'execute_current_owner_delta',
+    transition_ref: 'mas://DM002/current-owner-delta/latest.json',
+    provider_admission_identity_ref: 'opl://provider-admission/dm002/current',
+    current_identity: {
+      stage_run_id: 'stage-run:dm002:current',
+      route_identity_key: 'owner-route::dm002::pas-current',
+      attempt_idempotency_key: 'owner-route-attempt::dm002::pas-current',
+      selected_dispatch_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json',
+      stage_packet_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/stage_packets/current-control-pas.json',
+      stage_packet_refs: [
+        'studies/002-dm-china-us-mortality-attribution/artifacts/stage_packets/current-control-pas.json',
+      ],
+      provider_attempt_ref: 'opl://stage-attempts/stage-run:dm002:current',
+      attempt_lease_ref: 'opl://leases/stage-run:dm002:current',
+      workflow_ref: 'temporal://workflow/stage-run:dm002:current',
+      source_fingerprint: 'truth-snapshot::pas-current',
+      truth_epoch: 'truth-event-pas-current',
+      runtime_health_epoch: 'runtime-health-event-pas-current',
+      work_unit_fingerprint: 'sha256:pas-current',
+    },
+    runtime_apply_target: {
+      kind: 'provider_attempt_or_owner_callable',
+      provider_admission_required: true,
+      owner_callable_required: true,
+      domain_truth_owner: 'med-autoscience',
+    },
+    authority_boundary: {
+      opl_can_write_mas_truth: false,
+      opl_can_create_domain_owner_receipt: false,
+      opl_can_create_domain_typed_blocker: false,
+      provider_completion_is_domain_ready: false,
+    },
+  };
+  const payload = {
+    profile: '/tmp/dm-cvd.profile.toml',
+    study_id: '002-dm-china-us-mortality-attribution',
+    quest_id: '002-dm-china-us-mortality-attribution',
+    action_type: 'return_to_ai_reviewer_workflow',
+    work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    work_unit_fingerprint: 'sha256:pas-current',
+    action_fingerprint: 'sha256:pas-current',
+    source_fingerprint: 'truth-snapshot::pas-current',
+    dispatch_authority: 'opl_current_control_state_handoff',
+    dispatch_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json',
+    executor_kind: 'codex_cli_default',
+    next_executable_owner: 'ai_reviewer',
+    authority_boundary: 'mas_default_executor_dispatch_request_only',
+    owner_route_current: true,
+    provider_attempt_or_lease_required: true,
+    provider_completion_is_domain_completion: false,
+    recovery_obligation_id: obligationId,
+    route_identity_key: 'owner-route::dm002::pas-current',
+    attempt_idempotency_key: 'owner-route-attempt::dm002::pas-current',
+    stage_packet_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/stage_packets/current-control-pas.json',
+    stage_packet_refs: [
+      'studies/002-dm-china-us-mortality-attribution/artifacts/stage_packets/current-control-pas.json',
+    ],
+    stage_transition_authority_boundary: providerObservationBoundary(),
+    provider_admission_schema_source: 'action_queue',
+    paper_autonomy_supervisor_apply: supervisorApply,
+    provider_admission_identity: {
+      status: 'provider_admission_pending',
+      recovery_obligation_id: obligationId,
+      route_identity_key: 'owner-route::dm002::pas-current',
+      attempt_idempotency_key: 'owner-route-attempt::dm002::pas-current',
+      provider_completion_is_domain_completion: false,
+      stage_transition_authority_boundary: providerObservationBoundary(),
+      paper_autonomy_supervisor_apply: supervisorApply,
+    },
+    owner_route_currentness_basis: {
+      schema_version: 1,
+      surface: 'opl_current_control_state_handoff',
+      generated_at: '2026-06-15T08:00:00+00:00',
+      work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+      work_unit_fingerprint: 'sha256:pas-current',
+      truth_epoch: 'truth-event-pas-current',
+      runtime_health_epoch: 'runtime-health-event-pas-current',
+      source_eval_id: 'source-eval:dm002:pas-current',
+    },
+  };
+  try {
+    createQueueTables(db);
+    insertQueuedTask(db, {
+      taskId: 'task-pas-current-control',
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload,
+      dedupeKey: 'mas:dm-cvd:002:default-executor:return_to_ai_reviewer_workflow:pas-current',
+    });
+    const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get('task-pas-current-control') as Parameters<
+      typeof ensureProviderHostedStageAttempt
+    >[1];
+
+    const attempt = ensureProviderHostedStageAttempt(db, row, payload);
+    const locatorSupervisorApply = record(attempt?.workspace_locator.paper_autonomy_supervisor_apply);
+    const locatorRuntimeApplyTarget = record(locatorSupervisorApply.runtime_apply_target);
+    const providerAdmissionApply = record(
+      record(attempt?.workspace_locator.provider_admission_identity).paper_autonomy_supervisor_apply,
+    );
+
+    assert.ok(attempt);
+    assert.equal(locatorSupervisorApply.transition_kind, 'execute_current_owner_delta');
+    assert.equal(
+      locatorRuntimeApplyTarget.kind,
+      'provider_attempt_or_owner_callable',
+    );
+    assert.equal(
+      providerAdmissionApply.transition_ref,
+      'mas://DM002/current-owner-delta/latest.json',
+    );
+    assert.equal(attempt.workspace_locator.opl_writes_domain_truth, false);
+    assert.equal(attempt.workspace_locator.opl_writes_publication_quality, false);
+    assert.equal(attempt.workspace_locator.opl_writes_artifact_gate, false);
+    assert.equal(attempt.workspace_locator.opl_writes_current_package, false);
   } finally {
     db.close();
   }

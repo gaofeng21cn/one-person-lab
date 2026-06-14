@@ -170,7 +170,7 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   const paperAutonomy = substrate.paper_autonomy_supervisor_substrate_mapping;
   assert.equal(
     paperAutonomy.status,
-    'existing_opl_surface_mapping_with_minimal_readback_fixture',
+    'execute_decision_runtime_admission_path_landed_non_ready',
   );
   assert.deepEqual(paperAutonomy.allowed_supervisor_decisions, [
     'execute_current_owner_delta',
@@ -187,11 +187,11 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   );
   assert.match(
     paperAutonomy.concepts.RecoveryObligationStore.landed_support,
-    /obligation_id and StageRun identity/,
+    /identity-bound obligation query\/update plus transition packets/,
   );
   assert.match(
     paperAutonomy.concepts.RecoveryObligationStore.landed_support,
-    /refuses action_queue\/provider_pending terminal shortcuts/,
+    /paper_autonomy_supervisor_apply/,
   );
   assert.match(
     paperAutonomy.concepts.RecoveryObligationStore.remaining_gap,
@@ -199,18 +199,18 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   );
   assert.match(
     paperAutonomy.concepts.SupervisorDecisionEngine.landed_support,
-    /wait_for_owner_with_resume_token/,
+    /all five decisions/,
   );
   assert.match(
     paperAutonomy.concepts.SupervisorDecisionEngine.landed_support,
-    /explicit transition evidence/,
+    /current-control provider admission/,
   );
   assert.match(
     paperAutonomy.concepts.SupervisorDecisionEngine.remaining_gap,
-    /provider tick/,
+    /end-to-end runtime soak/,
   );
   assert.ok(paperAutonomy.not_complete_claims.includes(
-    'readback_fixture_does_not_mean_five_decision_provider_tick_or_owner_runtime_exists',
+    'execute_decision_runtime_admission_path_does_not_mean_all_five_decisions_have_provider_tick_or_owner_runtime',
   ));
 
   assert.equal(

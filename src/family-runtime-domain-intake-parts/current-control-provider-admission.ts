@@ -48,6 +48,7 @@ type CurrentControlProviderAdmissionInputContext = {
   obligationId: string | null;
   sourceRefs: Array<Record<string, unknown>>;
   currentnessBasis: Record<string, unknown> | null;
+  paperAutonomySupervisorApply: Record<string, unknown> | null;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -112,6 +113,30 @@ function readJsonRecord(filePath: string) {
   } catch {
     return null;
   }
+}
+
+function paperAutonomySupervisorApply(value: Record<string, unknown>) {
+  const direct = isRecord(value.paper_autonomy_supervisor_apply)
+    ? value.paper_autonomy_supervisor_apply
+    : isRecord(value.supervisor_decision_apply)
+      ? value.supervisor_decision_apply
+      : null;
+  if (!direct) {
+    return null;
+  }
+  const boundary = isRecord(direct.authority_boundary) ? direct.authority_boundary : null;
+  const runtimeApplyTarget = isRecord(direct.runtime_apply_target) ? direct.runtime_apply_target : null;
+  return optionalString(direct.surface_kind) === 'opl_paper_autonomy_supervisor_transition_packet'
+    && optionalString(direct.transition_kind) === 'execute_current_owner_delta'
+    && optionalString(runtimeApplyTarget?.kind) === 'provider_attempt_or_owner_callable'
+    && runtimeApplyTarget?.provider_admission_required === true
+    && runtimeApplyTarget?.domain_truth_owner === 'med-autoscience'
+    && boundary?.opl_can_write_mas_truth === false
+    && boundary?.opl_can_create_domain_owner_receipt === false
+    && boundary?.opl_can_create_domain_typed_blocker === false
+    && boundary?.provider_completion_is_domain_ready === false
+    ? direct
+    : null;
 }
 
 function workspaceRelativeRef(value: string | null, workspaceRoot: string | null) {
@@ -419,6 +444,11 @@ function currentControlProviderAdmissionCandidateFromActionQueueItem(
       workUnitId: fields.workUnitId,
       workUnitFingerprint: fields.workUnitFingerprint,
     }),
+    ...(
+      paperAutonomySupervisorApply(action)
+        ? { paper_autonomy_supervisor_apply: paperAutonomySupervisorApply(action) }
+        : {}
+    ),
     provider_admission_schema_source: 'action_queue',
   };
 }
@@ -556,6 +586,21 @@ function currentControlProviderAdmissionInputContext(input: {
     dispatchRef,
   });
   const currentnessBasis = isRecord(input.candidate.currentness_basis) ? input.candidate.currentness_basis : null;
+  const explicitSupervisorApply = paperAutonomySupervisorApply(input.candidate);
+  const paperAutonomyApply = explicitSupervisorApply
+    ?? paperAutonomySupervisorExecuteApply({
+      obligationId,
+      fields: input.fields,
+      context: {
+        stagePacketRef,
+        stagePacketRefs,
+        routeIdentityKey,
+        attemptIdempotencyKey,
+        sourceFingerprint,
+        currentnessBasis,
+        dispatchRef,
+      },
+    });
   return {
     context: {
       workspaceRoot,
@@ -572,6 +617,105 @@ function currentControlProviderAdmissionInputContext(input: {
       obligationId,
       sourceRefs,
       currentnessBasis,
+      paperAutonomySupervisorApply: paperAutonomyApply,
+    },
+  };
+}
+
+function paperAutonomySupervisorExecuteApply(input: {
+  obligationId: string | null;
+  fields: CurrentControlProviderAdmissionCandidateFields;
+  context: {
+    stagePacketRef: string | null;
+    stagePacketRefs: string[];
+    routeIdentityKey: string;
+    attemptIdempotencyKey: string;
+    sourceFingerprint: string;
+    currentnessBasis: Record<string, unknown> | null;
+    dispatchRef: string | null;
+  };
+}) {
+  if (!input.obligationId || !input.context.stagePacketRef) {
+    return null;
+  }
+  const truthEpoch = optionalString(input.context.currentnessBasis?.truth_epoch)
+    ?? input.context.sourceFingerprint;
+  const runtimeHealthEpoch = optionalString(input.context.currentnessBasis?.runtime_health_epoch)
+    ?? input.context.sourceFingerprint;
+  const decisionId = [
+    input.obligationId,
+    'execute_current_owner_delta',
+    `stage-run:${input.fields.studyId}:${input.fields.workUnitId}`,
+    input.context.routeIdentityKey,
+    input.context.attemptIdempotencyKey,
+  ].join('|');
+  const providerAdmissionIdentityRef = [
+    'opl://provider-admission',
+    input.fields.studyId,
+    input.fields.actionType,
+    input.context.attemptIdempotencyKey,
+  ].join('/');
+  return {
+    surface_kind: 'opl_paper_autonomy_supervisor_transition_packet',
+    obligation_id: input.obligationId,
+    supervisor_decision_ref: decisionId,
+    transition_kind: 'execute_current_owner_delta',
+    transition_ref: [
+      'mas://current-owner-delta',
+      input.fields.studyId,
+      input.fields.workUnitId,
+      input.fields.workUnitFingerprint,
+    ].join('/'),
+    provider_admission_identity_ref: providerAdmissionIdentityRef,
+    current_identity: {
+      stage_run_id: `stage-run:${input.fields.studyId}:${input.fields.workUnitId}`,
+      route_identity_key: input.context.routeIdentityKey,
+      attempt_idempotency_key: input.context.attemptIdempotencyKey,
+      selected_dispatch_ref: input.context.dispatchRef ?? input.context.stagePacketRef,
+      stage_packet_ref: input.context.stagePacketRef,
+      stage_packet_refs: input.context.stagePacketRefs,
+      provider_attempt_ref: providerAdmissionIdentityRef,
+      attempt_lease_ref: `opl://attempt-leases/${input.context.attemptIdempotencyKey}`,
+      workflow_ref: `opl://workflows/${input.context.attemptIdempotencyKey}`,
+      source_fingerprint: input.context.sourceFingerprint,
+      truth_epoch: truthEpoch,
+      runtime_health_epoch: runtimeHealthEpoch,
+      work_unit_fingerprint: input.fields.workUnitFingerprint,
+    },
+    runtime_apply_target: {
+      kind: 'provider_attempt_or_owner_callable',
+      provider_admission_required: true,
+      owner_callable_required: true,
+      terminal_closeout_consumption_required: false,
+      recovery_action_materialization_required: false,
+      human_resume_token_required: false,
+      stable_typed_blocker_required: false,
+      domain_truth_owner: 'med-autoscience',
+      substrate_owner: 'one-person-lab',
+    },
+    authority_boundary: {
+      opl_can_write_mas_truth: false,
+      opl_can_create_domain_owner_receipt: false,
+      opl_can_create_domain_typed_blocker: false,
+      provider_completion_is_domain_ready: false,
+    },
+    state_index_projection: {
+      payload_refs_only: true,
+      indexed_refs: {
+        obligation_id: input.obligationId,
+        supervisor_decision_ref: decisionId,
+        transition_ref: [
+          'mas://current-owner-delta',
+          input.fields.studyId,
+          input.fields.workUnitId,
+          input.fields.workUnitFingerprint,
+        ].join('/'),
+        stage_run_id: `stage-run:${input.fields.studyId}:${input.fields.workUnitId}`,
+        route_identity_key: input.context.routeIdentityKey,
+        attempt_idempotency_key: input.context.attemptIdempotencyKey,
+        source_fingerprint: input.context.sourceFingerprint,
+        work_unit_fingerprint: input.fields.workUnitFingerprint,
+      },
     },
   };
 }
@@ -630,7 +774,12 @@ function currentControlProviderAdmissionInputFrom(
     obligationId,
     sourceRefs,
     currentnessBasis,
+    paperAutonomySupervisorApply,
   } = contextResult.context;
+  const providerAdmissionIdentity = {
+    ...candidate,
+    ...(paperAutonomySupervisorApply ? { paper_autonomy_supervisor_apply: paperAutonomySupervisorApply } : {}),
+  };
   return {
     input: {
       domainId,
@@ -670,9 +819,12 @@ function currentControlProviderAdmissionInputFrom(
           ? { required_output_surface: optionalString(candidate.required_output_surface) }
           : {}),
         ...(currentnessBasis ? { owner_route_currentness_basis: currentnessBasis } : {}),
+        ...(paperAutonomySupervisorApply
+          ? { paper_autonomy_supervisor_apply: paperAutonomySupervisorApply }
+          : {}),
         source_refs: sourceRefs,
         ...(isRecord(candidate.source_refs) ? { provider_admission_source_refs: candidate.source_refs } : {}),
-        provider_admission_identity: candidate,
+        provider_admission_identity: providerAdmissionIdentity,
         opl_domain_export_context: {
           command_source: exportContext.source,
           owner_fingerprint: exportContext.owner_fingerprint,

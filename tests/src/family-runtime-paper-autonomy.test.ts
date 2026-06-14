@@ -134,6 +134,13 @@ test('paper autonomy recovery obligation store query and update are identity-bou
   assert.equal(applied.applied, true);
   assert.equal(applied.obligation.status, 'recovery_materialized');
   assert.equal(applied.obligation.supervisor_decision_ref, packet.decision_id);
+  assert.equal(applied.transition.surface_kind, 'opl_paper_autonomy_supervisor_transition_packet');
+  assert.equal(applied.transition.transition_kind, 'materialize_recovery_action');
+  assert.equal(applied.transition.transition_ref, 'opl://recovery-actions/dm002/materialize.json');
+  assert.equal(applied.transition.current_identity.route_identity_key, currentIdentity.route_identity_key);
+  assert.equal(applied.transition.authority_boundary.opl_can_write_mas_truth, false);
+  assert.equal(applied.transition.authority_boundary.opl_can_create_domain_owner_receipt, false);
+  assert.equal(applied.transition.authority_boundary.opl_can_create_domain_typed_blocker, false);
   assert.equal(obligations[0].status, 'open');
 
   const wrongObligation = applyPaperAutonomySupervisorDecision({
@@ -148,6 +155,35 @@ test('paper autonomy recovery obligation store query and update are identity-bou
   assert.equal(mismatch.applied, false);
   assert.equal(mismatch.reason, 'identity_mismatch');
   assert.equal(mismatch.obligation.status, 'open');
+});
+
+test('paper autonomy supervisor execute decision produces provider admission transition packet', () => {
+  const currentIdentity = identity();
+  const obligation: PaperAutonomyRecoveryObligation = {
+    obligation_id: 'obligation:execute-current-owner-delta',
+    desired_delta_ref: 'mas://DM002/current-owner-delta/latest.json',
+    current_identity: currentIdentity,
+    status: 'open',
+    last_evidence_refs: [],
+  };
+  const packet = buildPaperAutonomySupervisorDecisionReadback({
+    ...decisionInput('execute_current_owner_delta'),
+    obligation_id: obligation.obligation_id,
+    current_identity: currentIdentity,
+  });
+  const applied = applyPaperAutonomySupervisorDecision(obligation, packet);
+
+  assert.equal(applied.applied, true);
+  assert.equal(applied.transition.surface_kind, 'opl_paper_autonomy_supervisor_transition_packet');
+  assert.equal(applied.transition.transition_kind, 'execute_current_owner_delta');
+  assert.equal(applied.transition.transition_ref, 'mas://DM002/current-owner-delta/latest.json');
+  assert.equal(applied.transition.provider_admission_identity_ref, 'opl://provider-admission/dm002');
+  assert.equal(applied.transition.runtime_apply_target.kind, 'provider_attempt_or_owner_callable');
+  assert.equal(applied.transition.runtime_apply_target.provider_admission_required, true);
+  assert.equal(applied.transition.runtime_apply_target.owner_callable_required, true);
+  assert.equal(applied.transition.runtime_apply_target.domain_truth_owner, 'med-autoscience');
+  assert.equal(applied.transition.state_index_projection.payload_refs_only, true);
+  assert.equal(applied.transition.state_index_projection.indexed_refs.supervisor_decision_ref, packet.decision_id);
 });
 
 test('paper autonomy supervisor readback fails closed when required transition refs are missing', () => {
