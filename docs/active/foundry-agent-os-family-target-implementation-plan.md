@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `foundry_agent_os_family_target_implementation_plan`
 State: `active_support`
 Machine boundary: 本文是人读目标实施规划。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、owner receipt、typed blocker、真实 workspace 与 App evidence。当前执行顺序、live gap 和完成判断仍回到 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。
-Last reviewed: `2026-06-13`
+Last reviewed: `2026-06-14`
 
 ## 结论
 
@@ -21,9 +21,11 @@ OPL Agent OS
 
 本规划已经落到 `contracts/opl-framework/target-operating-architecture-contract.json` 的 `foundry_agent_os_standard`，并同步扩展品牌模块 registry / surfaces / L5 evidence 合同。近期 runtime/read-model 重构后，本规划只引用 wrapper-aware live payload，不复制旧顶层字段路径：`framework operating-maturity` 读 `.framework_operating_maturity`，App operator drilldown 读 `.app_operator_drilldown`，Brand L5 读 `.brand_module_l5_status`。它不声明功能已经全量完成、domain ready、App release ready、Brand L5 或 production ready；它只冻结后续改造要对齐的目标架构和实施顺序。
 
+2026-06-14 落地文档更新：近期 OPL family 重构后，本规划的角色保持为 `active_support`，不升级为新的 active backlog。当前 active 执行解释已经收敛到 `W7-owner-evidence-and-production-tail`，并由 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md) 维护 owner、gate、next action 和 Plan Completion Audit。Fresh readout 显示 OPL 基座、wrapper-aware read model、Runway repair guard、App drilldown、Brand L5 ledger、provider long-soak ledger、workspace currentness 与 source-boundary cleanup 已能把后续工作准确路由给 owner；这些仍只是 supporting landing。`framework readiness.current_owner_delta.latest_owner_answer_ref=null`、`framework operating-maturity.current_owner_delta_bridge.readiness_current_pointer_owner_answer_ref=null`、`owner_payload_summary_closure_state=verified_owner_payload_summary_observed_not_current_pointer_claim` 时，本规划不得把 refs-only typed-blocker payload summary、App user-path evidence、verified ledger、conformance pass、docs foldback 或 source cleanup 写成 current pointer closeout、domain ready、App release ready、Brand L5、provider production ready 或 production ready。
+
 ## 后续开发主入口
 
-后续开发从本文开工。阅读顺序固定为：
+后续开发不从本文维护第二 active backlog；本文只作为 Foundry Agent OS 目标 ABI、lane 和 false-authority guard 的支撑规划。阅读顺序固定为：
 
 1. 先读 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)，确认当前 active owner、live gate 和不能声明的范围。
 2. 再读本文，确认 Foundry Agent OS 的目标 ABI、lane、写集和验收门。
@@ -48,7 +50,7 @@ OPL Agent OS
 
 ## 当前落地主入口
 
-当前后续开发仍从本文开工，但不要重开 `W0`。`W0-cross-agent-conformance-readout` 已落为 `opl_foundry_agent_os_conformance` 读面：它把 `foundry_agent_os_standard` 变成 `opl agents conformance --family-defaults --json` 可稳定消费、可测试、可审计的结构字段。
+当前后续开发先从 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md) 读取 active baton，再回到本文确认 W0-W7 目标 ABI、owner 边界和 false-authority guard；不要重开 `W0`，也不要把本文当第二 active backlog。`W0-cross-agent-conformance-readout` 已落为 `opl_foundry_agent_os_conformance` 读面：它把 `foundry_agent_os_standard` 变成 `opl agents conformance --family-defaults --json` 可稳定消费、可测试、可审计的结构字段。
 
 后续 source of truth 固定为：
 
