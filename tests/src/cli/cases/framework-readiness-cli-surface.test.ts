@@ -19,3 +19,16 @@ test('framework operating maturity exposes command-scoped help', () => {
   assert.equal(scoped.help.command, 'framework operating-maturity');
   assert.match(scoped.help.usage, /framework operating-maturity --family-defaults/);
 });
+
+test('framework production closeout command is retired in favor of operating maturity', () => {
+  const failure = runCliFailure(['framework', 'production-closeout']);
+
+  assert.equal(failure.payload.error.code, 'cli_usage_error');
+  assert.match(failure.payload.error.message, /has been retired/);
+  assert.equal(failure.payload.error.details.command, 'opl framework production-closeout');
+  assert.equal(
+    failure.payload.error.details.replacement,
+    'opl framework operating-maturity --family-defaults --json',
+  );
+  assert.equal(failure.payload.error.details.retired, true);
+});

@@ -67,7 +67,7 @@ test('runtime tray summary can use a non-authoritative manifest projection cache
         false,
       );
       assert.equal(
-        tray.domain_manifest_projection_cache.authority_boundary.live_manifest_refresh_required_for_production_closeout,
+        tray.domain_manifest_projection_cache.authority_boundary.live_manifest_refresh_required_for_operating_maturity,
         true,
       );
     } finally {

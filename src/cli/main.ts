@@ -90,6 +90,16 @@ const RETIRED_COMMAND_REPLACEMENTS = [
     usage: 'opl connect reconcile-modules',
     examples: ['opl connect reconcile-modules --json'],
   },
+  {
+    tokens: ['framework', 'production-closeout'],
+    command: 'opl framework production-closeout',
+    replacement: 'opl framework operating-maturity --family-defaults --json',
+    usage: 'opl framework operating-maturity --family-defaults',
+    examples: [
+      'opl framework operating-maturity --family-defaults --json',
+      'opl framework readiness --family-defaults --json',
+    ],
+  },
 ] as const;
 
 function resolveRetiredCommand(tokens: string[]) {

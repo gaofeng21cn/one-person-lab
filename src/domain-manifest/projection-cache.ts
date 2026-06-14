@@ -119,7 +119,7 @@ export function hydrateDomainManifestCatalogFromProjectionCache(entries: DomainM
           cache_is_domain_truth: false,
           cache_can_authorize_domain_ready: false,
           cache_can_authorize_quality_or_export_verdict: false,
-          live_manifest_refresh_required_for_production_closeout: true,
+          live_manifest_refresh_required_for_operating_maturity: true,
         },
       },
     };

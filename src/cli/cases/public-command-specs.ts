@@ -2,7 +2,6 @@ import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWork
 import { buildOplFrameworkLocator } from '../../opl-framework-locator.ts';
 import { buildFrameworkOperatingMaturityReadout } from '../../framework-operating-maturity.ts';
 import { buildFrameworkReadinessSummary } from '../../framework-readiness.ts';
-import { buildProductionFunctionalCloseout } from '../../production-functional-closeout.ts';
 import { buildOplAppState, parseAppActionExecuteArgs, parseAppStateArgs, runOplAppActionExecute } from '../../app-state.ts';
 import { runOplEngineAction } from '../../system-installation/engine-actions.ts';
 import { runOplTurnkeyInstall } from '../../system-installation/turnkey.ts';
@@ -247,17 +246,6 @@ export function buildPublicCommandSpecs(
           );
         }
         return await buildFrameworkOperatingMaturityReadout(getContracts(), { familyDefaults: true });
-      },
-    },
-    'framework production-closeout': {
-      usage: 'opl framework production-closeout',
-      summary:
-        'Read the production functional closeout gate across OPL, MAS, MAG, and RCA without running long soaks.',
-      examples: ['opl framework production-closeout'],
-      group: 'framework',
-      handler: (args) => {
-        assertNoArgs(args, publicCommandSpecs['framework production-closeout']);
-        return buildProductionFunctionalCloseout(getContracts());
       },
     },
     ...agentLabCommandSpecs,

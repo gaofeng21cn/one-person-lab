@@ -871,7 +871,7 @@ export async function buildRuntimeTraySnapshot(
           cache_is_domain_truth: false,
           can_authorize_domain_ready: false,
           can_authorize_quality_or_export_verdict: false,
-          live_manifest_refresh_required_for_production_closeout: true,
+          live_manifest_refresh_required_for_operating_maturity: true,
         },
       },
       daemon_policy: {

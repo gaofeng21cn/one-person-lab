@@ -126,15 +126,15 @@ export function buildOplFrameworkSemanticHygieneAudit(contracts: FrameworkContra
       status: 'guarded',
       owner: 'one-person-lab',
       source_evidence: [
-        'src/production-functional-closeout-provider-readiness.ts',
         'src/family-runtime-temporal-readiness.ts',
         'src/family-runtime-temporal-provider.ts',
+        'src/framework-operating-maturity-parts/evidence-lanes.ts',
       ],
       current_state_claims: NO_READY_CLAIMS,
       required_boundary:
         'Temporal-backed provider readiness is the production substrate truth; local/offline provider status cannot stand in for Full online readiness.',
       next_action:
-        'Keep production closeout provider readiness routed through buildTemporalWorkerReadiness and reject secondary ready/domain-ready wording.',
+        'Keep provider readiness routed through buildTemporalWorkerReadiness and framework operating-maturity provider_long_soak evidence lanes; reject secondary ready/domain-ready wording.',
     },
     {
       gate_id: 'generated_surface_drift_owner_claim',
