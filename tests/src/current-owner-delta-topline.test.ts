@@ -402,6 +402,134 @@ test('current owner delta topline folds closed StageRun owner answer into defaul
   }
 });
 
+test('current owner delta topline bridges closed StageRun answer by stage attempt identity', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-owner-delta-stage-attempt-bridge-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  const module = await import(pathToFileURL(path.join(repoRoot, modulePath)).href);
+  try {
+    const stageRunId = 'app-stage-run:medautoscience:domain-owner-default-executor-dispatch';
+    const stageAttemptId = 'sat-stage-attempt-bridge';
+    const currentPointerRef = `opl://stage-runs/${encodeURIComponent(stageRunId)}/current`;
+    recordStageRunExecutionAuthorizationReceipts([{
+      stage_run_id: stageRunId,
+      domain_id: 'medautoscience',
+      stage_id: 'domain_owner/default-executor-dispatch',
+      generation: 0,
+      phase: 'closeout',
+      selected_executor: 'codex_cli',
+      provider_attempt_ref: `temporal://attempt/${stageAttemptId}`,
+      stage_attempt_id: stageAttemptId,
+      attempt_lease_ref: `opl://stage-attempts/${stageAttemptId}/leases/task-stage-attempt-bridge/active`,
+      attempt_lease_status: 'active',
+      execution_authorization_decision_ref:
+        `opl://stage-attempts/${stageAttemptId}/execution-authorizations/task-stage-attempt-bridge/wf-stage-attempt-bridge`,
+      workspace_scope_ref: 'workspace:/tmp/mas-stage-attempt-bridge',
+      artifact_scope_ref: 'stage-packet:stage-attempt-bridge',
+      source_fingerprint: 'sha256:stage-attempt-bridge',
+      ...authorizationIdentity({
+        domainId: 'medautoscience',
+        studyId: '002-dm-china-us-mortality-attribution',
+        stageId: 'domain_owner/default-executor-dispatch',
+        actionType: 'run_gate_clearing_batch',
+        workUnitId: 'publication_gate_replay',
+        sourceFingerprint: 'sha256:stage-attempt-bridge',
+      }),
+      idempotency_key: 'idem-stage-attempt-bridge',
+      current_pointer_ref: currentPointerRef,
+      stage_manifest_ref: 'opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch',
+      owner_answer_ref:
+        'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_execution/sat-stage-attempt-bridge.closeout.json#typed_blocker',
+      owner_answer_kind: 'typed_blocker',
+      owner_answer_stage_run_id: stageRunId,
+      owner_answer_generation: 0,
+      owner_answer_manifest_ref: 'opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch',
+      owner_answer_current_pointer_ref: currentPointerRef,
+      owner_answer_source_fingerprint: 'sha256:stage-attempt-bridge',
+      owner_answer_idempotency_key: 'idem-stage-attempt-bridge',
+    }]);
+
+    const topline = module.buildCurrentOwnerDeltaTopline({
+      currentOwnerDeltaReadModel: {
+        surface_kind: 'opl_current_owner_delta_read_model',
+        current_owner_delta: {
+          surface_kind: 'opl_current_owner_delta',
+          delta_id:
+            'current-owner-delta:medautoscience:publication-supervision:typed-blocker',
+          domain: 'medautoscience',
+          domain_id: 'medautoscience',
+          task_or_study_ref: '002-dm-china-us-mortality-attribution',
+          study_id: '002-dm-china-us-mortality-attribution',
+          current_owner: 'one-person-lab',
+          owner: 'one-person-lab',
+          stage_ref: 'publication_supervision',
+          stage_id: 'publication_supervision',
+          lineage_ref: stageAttemptId,
+          stage_attempt_id: stageAttemptId,
+          action_type: 'run_gate_clearing_batch',
+          work_unit_id: 'ai_reviewer_record_gate_consumption',
+          work_unit_fingerprint:
+            'domain-transition::route_back_same_line::ai_reviewer_record_gate_consumption',
+          desired_delta_kind: 'typed_blocker',
+          desired_delta_description:
+            'domain_current_work_unit_owner_action_or_typed_blocker_required',
+          payload_requirement:
+            'domain_current_work_unit_owner_action_or_typed_blocker_required',
+          accepted_answer_shape: [
+            'domain_owner_receipt_ref',
+            'quality_gate_receipt_ref',
+            'typed_blocker_ref',
+            'human_gate_ref',
+            'route_back_evidence_ref',
+          ],
+          hard_gate: {
+            state: 'domain_owner_answer_recorded',
+            provider_liveness_required: false,
+            human_or_domain_owner_required: false,
+            owner_answer_ref:
+              'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_execution/sat-stage-attempt-bridge.closeout.json#typed_blocker',
+            owner_answer_kind: 'typed_blocker',
+            domain_ready_authorized: false,
+            quality_or_export_authorized: false,
+          },
+          source_fingerprint:
+            'owner_delta_first:one-person-lab:medautoscience:publication-supervision',
+          audit_refs: {},
+        },
+        next_safe_action_or_none: null,
+      },
+    });
+
+    assert.equal(
+      topline.stage_run_cockpit.stage_run_current_owner_delta.stage_run_id,
+      stageRunId,
+    );
+    assert.equal(
+      topline.stage_run_cockpit.stage_run_current_owner_delta.source_current_owner_delta_stage_run_id,
+      'app-stage-run:medautoscience:publication-supervision',
+    );
+    assert.equal(
+      topline.stage_run_cockpit.stage_run_current_owner_delta.stage_run_identity_source,
+      'stage_attempt_execution_authorization_receipt',
+    );
+    assert.equal(topline.stage_run_cockpit_summary.stage_id, 'domain_owner/default-executor-dispatch');
+    assert.equal(topline.stage_run_cockpit_summary.execution_authorized, true);
+    assert.equal(topline.stage_run_cockpit_summary.execution_authorization_refs_missing, false);
+    assert.equal(topline.stage_run_cockpit_summary.closeout_binding_blocked, false);
+    assert.equal(topline.stage_run_cockpit_summary.closeout_binding_blocker_count, 0);
+    assert.equal(topline.stage_run_next_required_owner_action, null);
+    assert.deepEqual(topline.stage_run_next_missing_input_refs, []);
+    assert.equal(topline.operator_next_action_source, 'stage_run_execution_authorization_closed');
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('current owner delta hard gate ignores generic audit-only open safe-action counts', async () => {
   const module = await import(pathToFileURL(path.join(repoRoot, projectionModulePath)).href);
   const readModel = module.buildCurrentOwnerDeltaReadModel({

@@ -1,6 +1,8 @@
 import { evaluateStageRunAdmission, evaluateStageRunExecutionAuthorization } from './stage-run-kernel.ts';
 import {
+  latestStageRunExecutionAuthorizationCloseoutReceiptForStageAttempt,
   latestStageRunExecutionAuthorizationCloseoutReceiptForStageRun,
+  latestStageRunExecutionAuthorizationReceiptForStageAttemptAnyRun,
   latestStageRunExecutionAuthorizationReceiptForStageAttempt,
   latestStageRunExecutionAuthorizationReceiptForStageRun,
 } from './stage-run-execution-authorization-ledger.ts';
@@ -274,24 +276,35 @@ function buildExecutionAuthorizationNextAction(input: {
 
 export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
   const currentOwnerDelta = record(currentOwnerDeltaInput);
-  const runId = stageRunId(currentOwnerDelta);
+  const currentOwnerDeltaRunId = stageRunId(currentOwnerDelta);
   const generation = 0;
-  const domainId = text(currentOwnerDelta.domain) ?? text(currentOwnerDelta.current_owner) ?? 'one-person-lab';
-  const stageId = currentOwnerDeltaStageId(currentOwnerDelta) ?? 'current-owner-delta';
+  const currentOwnerDeltaDomainId =
+    text(currentOwnerDelta.domain) ?? text(currentOwnerDelta.current_owner) ?? 'one-person-lab';
+  const currentOwnerDeltaStageIdValue = currentOwnerDeltaStageId(currentOwnerDelta) ?? 'current-owner-delta';
+  const currentStageAttemptId = currentOwnerDeltaStageAttemptId(currentOwnerDelta);
+  const latestExecutionAuthorization =
+    latestStageRunExecutionAuthorizationCloseoutReceiptForStageRun(currentOwnerDeltaRunId)
+    ?? (currentStageAttemptId
+      ? latestStageRunExecutionAuthorizationCloseoutReceiptForStageAttempt(currentStageAttemptId)
+        ?? latestStageRunExecutionAuthorizationReceiptForStageAttempt({
+            stageRunId: currentOwnerDeltaRunId,
+            stageAttemptId: currentStageAttemptId,
+          })
+        ?? latestStageRunExecutionAuthorizationReceiptForStageAttemptAnyRun(currentStageAttemptId)
+      : latestStageRunExecutionAuthorizationReceiptForStageRun(currentOwnerDeltaRunId));
+  const runId = latestExecutionAuthorization?.stage_run_id ?? currentOwnerDeltaRunId;
+  const domainId = latestExecutionAuthorization?.domain_id ?? currentOwnerDeltaDomainId;
+  const stageId = latestExecutionAuthorization?.stage_id ?? currentOwnerDeltaStageIdValue;
+  const stageRunIdentitySource = latestExecutionAuthorization?.stage_run_id === currentOwnerDeltaRunId
+      ? 'current_owner_delta_stage_run_id'
+    : latestExecutionAuthorization
+      ? 'stage_attempt_execution_authorization_receipt'
+      : 'current_owner_delta_synthetic';
   const currentPointer = {
     stage_run_id: runId,
     generation,
     current: true,
   };
-  const currentStageAttemptId = currentOwnerDeltaStageAttemptId(currentOwnerDelta);
-  const latestExecutionAuthorization =
-    latestStageRunExecutionAuthorizationCloseoutReceiptForStageRun(runId)
-    ?? (currentStageAttemptId
-      ? latestStageRunExecutionAuthorizationReceiptForStageAttempt({
-          stageRunId: runId,
-          stageAttemptId: currentStageAttemptId,
-        })
-      : latestStageRunExecutionAuthorizationReceiptForStageRun(runId));
   const ownerAnswerProjectionMatch = findMasPublicationHandoffOwnerAnswerProjection({
     receipt: latestExecutionAuthorization,
   });
@@ -481,6 +494,8 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
     source_current_owner_delta_ref: '/app_state/operator/current_owner_delta',
     stage_run_current_owner_delta: {
       stage_run_id: runId,
+      source_current_owner_delta_stage_run_id: currentOwnerDeltaRunId,
+      stage_run_identity_source: stageRunIdentitySource,
       domain_id: domainId,
       stage_id: stageId,
       current_owner: stageRunCurrentOwner,

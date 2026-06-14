@@ -783,6 +783,27 @@ export function latestStageRunExecutionAuthorizationCloseoutReceiptForStageRun(s
   ) ?? null;
 }
 
+export function latestStageRunExecutionAuthorizationCloseoutReceiptForStageAttempt(stageAttemptId: string) {
+  const normalizedStageAttemptId = optionalString(stageAttemptId);
+  if (!normalizedStageAttemptId) {
+    return null;
+  }
+  return readLedger().receipts.find((receipt) =>
+    receipt.stage_attempt_id === normalizedStageAttemptId
+    && receiptHasCloseoutOwnerAnswerBinding(receipt)
+  ) ?? null;
+}
+
+export function latestStageRunExecutionAuthorizationReceiptForStageAttemptAnyRun(stageAttemptId: string) {
+  const normalizedStageAttemptId = optionalString(stageAttemptId);
+  if (!normalizedStageAttemptId) {
+    return null;
+  }
+  return readLedger().receipts.find((receipt) =>
+    receipt.stage_attempt_id === normalizedStageAttemptId
+  ) ?? null;
+}
+
 export function latestStageRunExecutionAuthorizationReceiptForStageAttempt(input: {
   stageRunId: string;
   stageAttemptId?: string | null;
