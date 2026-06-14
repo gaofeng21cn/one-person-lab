@@ -94,12 +94,16 @@ test('agents residue-decisions projects private platform owner-decision ledger',
   );
   writeJson(functionalAuditPath, functionalAudit);
 
-  const ledger = runCli([
+  const result = runCli([
     'agents',
     'residue-decisions',
     '--agent',
     `sample=${repoDir}`,
-  ]).private_platform_residue_owner_decisions;
+  ]);
+  assert.deepEqual(Object.keys(result), ['private_platform_residue_owner_decisions']);
+  assert.equal(result.physical_delete_authorized, undefined);
+
+  const ledger = result.private_platform_residue_owner_decisions;
   const allowedDecisions = [
     'retain_authority_function',
     'raise_to_opl_primitive',
