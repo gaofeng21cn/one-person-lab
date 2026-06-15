@@ -361,6 +361,16 @@ function missingOmaTargetAgentWorkOrderGuardFields(workOrder: JsonRecord): strin
   return OMA_TARGET_AGENT_WORK_ORDER_GUARD_FIELDS.filter((field) => missing.includes(field));
 }
 
+function omaTargetAgentNoExecutorLaunchProof() {
+  return {
+    codex_process_started: false,
+    target_worktree_opened: false,
+    absorption_attempted: false,
+    cleanup_needed: false,
+    reason: 'oma_target_agent_work_order_guard_missing',
+  };
+}
+
 function writeOmaTargetAgentWorkOrderGuardBlocker(input: {
   workOrder: JsonRecord;
   workOrderId: string;
@@ -368,14 +378,17 @@ function writeOmaTargetAgentWorkOrderGuardBlocker(input: {
   missingFields: string[];
 }): string {
   const typedBlockerPath = path.join(input.outputDir, 'typed-blocker.json');
+  const noExecutorLaunchProof = omaTargetAgentNoExecutorLaunchProof();
   writeJson(typedBlockerPath, {
     surface_kind: 'opl_work_order_typed_blocker',
     version: 'opl.work-order-execution.typed-blocker.v1',
     blocker_kind: 'oma_target_agent_work_order_guard_missing',
     status: 'developer_work_order_required',
+    executor_launch_admission: 'blocked_before_executor_launch',
     work_order_id: input.workOrderId,
     missing_guard_fields: input.missingFields,
     required_guard_fields: OMA_TARGET_AGENT_WORK_ORDER_GUARD_FIELDS,
+    no_executor_launch_proof: noExecutorLaunchProof,
     developer_work_order_required: true,
     can_sign_target_owner_receipt: false,
     can_create_target_typed_blocker: false,
@@ -406,8 +419,10 @@ function assertOmaTargetAgentWorkOrderGuard(input: {
     {
       work_order_id: input.workOrderId,
       blocker_kind: 'oma_target_agent_work_order_guard_missing',
+      executor_launch_admission: 'blocked_before_executor_launch',
       missing_guard_fields: missingFields,
       typed_blocker_path: typedBlockerPath,
+      no_executor_launch_proof: omaTargetAgentNoExecutorLaunchProof(),
       developer_work_order_required: true,
       can_sign_target_owner_receipt: false,
       can_create_target_typed_blocker: false,

@@ -217,6 +217,14 @@ test('work-order execute fails closed when OMA target-agent guard evidence is mi
 
     assert.equal(failure.payload.error.code, 'contract_shape_invalid');
     assert.equal(failure.payload.error.details.blocker_kind, 'oma_target_agent_work_order_guard_missing');
+    assert.equal(failure.payload.error.details.executor_launch_admission, 'blocked_before_executor_launch');
+    assert.deepEqual(failure.payload.error.details.no_executor_launch_proof, {
+      codex_process_started: false,
+      target_worktree_opened: false,
+      absorption_attempted: false,
+      cleanup_needed: false,
+      reason: 'oma_target_agent_work_order_guard_missing',
+    });
     assert.deepEqual(failure.payload.error.details.missing_guard_fields, [
       'target_owner_route',
       'source_morphology',
@@ -231,8 +239,13 @@ test('work-order execute fails closed when OMA target-agent guard evidence is mi
     assert.equal(typedBlocker.surface_kind, 'opl_work_order_typed_blocker');
     assert.equal(typedBlocker.blocker_kind, 'oma_target_agent_work_order_guard_missing');
     assert.equal(typedBlocker.status, 'developer_work_order_required');
+    assert.equal(typedBlocker.executor_launch_admission, 'blocked_before_executor_launch');
+    assert.deepEqual(typedBlocker.no_executor_launch_proof,
+      failure.payload.error.details.no_executor_launch_proof);
     assert.equal(typedBlocker.can_sign_target_owner_receipt, false);
     assert.deepEqual(typedBlocker.missing_guard_fields, failure.payload.error.details.missing_guard_fields);
+    assert.equal(fs.existsSync(path.join(targetRepo, '.worktrees')), false);
+    assert.equal(fs.existsSync(path.join(targetRepo, 'docs', 'efficiency.md')), false);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }

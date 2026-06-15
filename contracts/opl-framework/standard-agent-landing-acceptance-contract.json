@@ -155,6 +155,7 @@
       "requires": [
         "OMA-generated or OMA-takeover work orders include target owner route, editable surface policy, source morphology proof, reviewer evidence where required, executor lease, no-forbidden-write proof, verification refs, rollback/canary refs, and expected target owner receipt or typed blocker return shape",
         "missing target owner route, source shape, generated surface, private residue decision, no-forbidden-write proof, or owner answer shape returns typed blocker or developer work order",
+        "guard-missing typed blockers and error payloads include executor_launch_admission=blocked_before_executor_launch plus no_executor_launch_proof showing no Codex process, no target worktree, no absorption attempt, and no cleanup need",
         "OMA cannot sign target owner receipt, create target typed blocker, write target truth, or promote default agent without target owner evidence"
       ],
       "cannot_be_satisfied_by": [
