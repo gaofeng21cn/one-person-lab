@@ -53,6 +53,9 @@ import {
   buildRuntimeStageRunAuthorizationCommandSpecs,
 } from './runtime-stage-run-authorization-command-spec.ts';
 import {
+  buildRuntimeStageTransitionAuthorityCommandSpecs,
+} from './runtime-stage-transition-authority-command-spec.ts';
+import {
   buildRuntimeStandardAgentTemplateConsumptionCommandSpecs,
 } from './runtime-standard-agent-template-consumption-command-spec.ts';
 import { buildWorkspaceInitializeCommandSpecs } from './workspace-initialize-command-spec.ts';
@@ -372,6 +375,7 @@ export function buildInternalCommandSpecs(
     ...buildRuntimeMagManifestSustainedConsumptionCommandSpecs(),
     ...buildRuntimeStageReplayMissingReceiptCommandSpecs(),
     ...buildRuntimeStageRunAuthorizationCommandSpecs(),
+    ...buildRuntimeStageTransitionAuthorityCommandSpecs(),
     ...buildRuntimeDeveloperModeCloseoutCommandSpecs(),
     ...buildRuntimeOmaAppLivePathCommandSpecs(),
     ...buildRuntimeOmaProductionConsumptionCommandSpecs(),

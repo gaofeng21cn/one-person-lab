@@ -312,6 +312,24 @@ export function buildPublicRuntimeCommandSpecs(
         examples: ['opl runtime stage-run-authorization list --json'],
         group: 'runtime',
       }),
+    'runtime stage-transition-authority evaluate':
+      cloneCommandSpec(commandSpecs['runtime stage-transition-authority evaluate'], {
+        usage:
+          'opl runtime stage-transition-authority evaluate (--payload <json>|--payload-file <path>)',
+        examples: [
+          'opl runtime stage-transition-authority evaluate --payload-file stage-transition-intent.json --json',
+        ],
+        group: 'runtime',
+      }),
+    'runtime stage-transition-authority read-model':
+      cloneCommandSpec(commandSpecs['runtime stage-transition-authority read-model'], {
+        usage:
+          'opl runtime stage-transition-authority read-model (--payload <json>|--payload-file <path>)',
+        examples: [
+          'opl runtime stage-transition-authority read-model --payload-file stage-transition-intents.json --json',
+        ],
+        group: 'runtime',
+      }),
     ...developerModeCloseoutCommandSpecs,
     'runtime oma-app-live-path record':
       cloneCommandSpec(commandSpecs['runtime oma-app-live-path record'], {
