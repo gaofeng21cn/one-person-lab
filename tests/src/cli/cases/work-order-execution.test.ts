@@ -251,6 +251,118 @@ test('work-order execute fails closed when OMA target-agent guard evidence is mi
   }
 });
 
+const omaTargetAgentGuardMissingCases = [
+  {
+    name: 'target owner route',
+    missingField: 'target_owner_route',
+    mutate(workOrder: Record<string, any>) {
+      delete workOrder.owner_route_refs;
+    },
+  },
+  {
+    name: 'source morphology',
+    missingField: 'source_morphology',
+    mutate(workOrder: Record<string, any>) {
+      delete workOrder.source_morphology_proof;
+      delete workOrder.source_morphology_proof_ref;
+    },
+  },
+  {
+    name: 'generated surface consumption',
+    missingField: 'generated_surface_consumption',
+    mutate(workOrder: Record<string, any>) {
+      delete workOrder.machine_closeout_refs.target_runtime_read_model_consumption_ref;
+    },
+  },
+  {
+    name: 'private residue decision',
+    missingField: 'private_residue_decision',
+    mutate(workOrder: Record<string, any>) {
+      delete workOrder.private_residue_decision_ref;
+    },
+  },
+  {
+    name: 'no forbidden write proof',
+    missingField: 'no_forbidden_write_proof',
+    mutate(workOrder: Record<string, any>) {
+      workOrder.no_forbidden_write_proof.proof_refs = [];
+    },
+  },
+  {
+    name: 'owner answer shape',
+    missingField: 'owner_answer_shape',
+    mutate(workOrder: Record<string, any>) {
+      delete workOrder.machine_closeout_refs.target_owner_receipt_or_typed_blocker_ref;
+    },
+  },
+];
+
+for (const { name, missingField, mutate } of omaTargetAgentGuardMissingCases) {
+  test(`work-order execute records machine guard sample for missing ${name}`, () => {
+    const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), `opl-work-order-guard-${missingField}-`));
+    try {
+      const targetRepo = path.join(fixtureRoot, 'target-agent');
+      const outputDir = path.join(fixtureRoot, 'output');
+      const codexBin = path.join(fixtureRoot, 'codex');
+      const workOrderPath = path.join(fixtureRoot, 'developer-patch-work-order.json');
+      createWorkOrderTargetRepo(targetRepo);
+      createFakeCodexWorkOrderExecutor(codexBin);
+      writeExecutableWorkOrder(workOrderPath, targetRepo);
+      const workOrder = readJson(workOrderPath);
+      mutate(workOrder);
+      fs.writeFileSync(workOrderPath, `${JSON.stringify(workOrder, null, 2)}\n`);
+
+      const failure = runCliFailure([
+        'work-order',
+        'execute',
+        '--work-order',
+        workOrderPath,
+        '--target-agent-dir',
+        targetRepo,
+        '--output-dir',
+        outputDir,
+        '--codex-timeout-ms',
+        '10000',
+        '--json',
+      ], {
+        OPL_CODEX_BIN: codexBin,
+      });
+
+      assert.equal(failure.payload.error.code, 'contract_shape_invalid');
+      assert.equal(failure.payload.error.details.blocker_kind, 'oma_target_agent_work_order_guard_missing');
+      assert.equal(failure.payload.error.details.executor_launch_admission, 'blocked_before_executor_launch');
+      assert.deepEqual(failure.payload.error.details.missing_guard_fields, [missingField]);
+      assert.deepEqual(failure.payload.error.details.no_executor_launch_proof, {
+        codex_process_started: false,
+        target_worktree_opened: false,
+        absorption_attempted: false,
+        cleanup_needed: false,
+        reason: 'oma_target_agent_work_order_guard_missing',
+      });
+      assert.equal(failure.payload.error.details.developer_work_order_required, true);
+      assert.equal(failure.payload.error.details.can_sign_target_owner_receipt, false);
+      assert.equal(failure.payload.error.details.can_create_target_typed_blocker, false);
+      assert.equal(failure.payload.error.details.can_write_target_truth, false);
+
+      const typedBlocker = readJson(path.join(outputDir, 'typed-blocker.json'));
+      assert.equal(typedBlocker.blocker_kind, 'oma_target_agent_work_order_guard_missing');
+      assert.equal(typedBlocker.status, 'developer_work_order_required');
+      assert.equal(typedBlocker.required_next_shape, 'developer_work_order');
+      assert.equal(typedBlocker.executor_launch_admission, 'blocked_before_executor_launch');
+      assert.deepEqual(typedBlocker.missing_guard_fields, [missingField]);
+      assert.deepEqual(typedBlocker.no_executor_launch_proof,
+        failure.payload.error.details.no_executor_launch_proof);
+      assert.equal(typedBlocker.can_sign_target_owner_receipt, false);
+      assert.equal(typedBlocker.can_create_target_typed_blocker, false);
+      assert.equal(typedBlocker.can_write_target_truth, false);
+      assert.equal(fs.existsSync(path.join(targetRepo, '.worktrees')), false);
+      assert.equal(fs.existsSync(path.join(targetRepo, 'docs', 'efficiency.md')), false);
+    } finally {
+      fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    }
+  });
+}
+
 test('work-order execute calls target owner closeout hook after absorption when declared', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-work-order-owner-closeout-'));
   try {

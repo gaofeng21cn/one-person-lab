@@ -8,6 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const contractPath = 'contracts/opl-framework/standard-agent-landing-acceptance-contract.json';
 const evidenceStatusPath = 'contracts/opl-framework/standard-agent-landing-evidence-status.json';
+const negativeSamplesPath = 'contracts/opl-framework/standard-agent-negative-conformance-samples.json';
 const absoluteLocalPathPattern = /(?<!workspace:)\/Users\/[^ "]+/;
 
 function readJson<T>(relativePath: string): T {
@@ -113,12 +114,27 @@ test('standard agent landing evidence status keeps evidence tails open', () => {
     assert.equal(ledger.open_evidence_tails[openTail].status, 'evidence_required', openTail);
     assert.equal(ledger.open_evidence_tails[openTail].can_claim_complete, false, openTail);
   }
+
+  assert.ok(gates.cross_agent_negative_conformance.evidence_refs.includes(negativeSamplesPath));
+  assert.equal(
+    gates.cross_agent_negative_conformance.missing_evidence.includes(
+      'cross-agent negative conformance scaleout across MAS/MAG/RCA/OMA',
+    ),
+    false,
+  );
+  assert.ok(
+    gates.cross_agent_negative_conformance.missing_evidence.includes(
+      'production generated-surface caller negative samples',
+    ),
+  );
+  assert.ok(gates.cross_agent_negative_conformance.missing_evidence.includes('long-soak negative samples'));
 });
 
 test('standard agent landing contract and evidence status do not pin local checkout paths as machine refs', () => {
   const surfaces = [
     readJson<Record<string, any>>(contractPath),
     readJson<Record<string, any>>(evidenceStatusPath),
+    readJson<Record<string, any>>(negativeSamplesPath),
   ];
 
   for (const surface of surfaces) {
@@ -152,6 +168,47 @@ test('standard agent landing negative conformance rejects false completions', ()
     assert.equal(entry.status, 'blocked_false_completion');
     assert.equal(entry.can_claim_standard_agent_complete, false, entry.case_id);
     assert.ok(entry.required_next_shape === 'typed_blocker' || entry.required_next_shape === 'developer_work_order');
+  }
+});
+
+test('standard agent landing negative conformance has repo-backed cross-agent samples', () => {
+  assert.equal(fs.existsSync(path.join(repoRoot, negativeSamplesPath)), true, 'negative samples ledger is missing');
+  const samplesLedger = readJson<Record<string, any>>(negativeSamplesPath);
+  const samples = samplesLedger.samples;
+
+  assert.equal(samplesLedger.surface_kind, 'opl_standard_agent_negative_conformance_samples');
+  assert.equal(samplesLedger.version, 'standard-agent-negative-conformance-samples.v1');
+  assert.equal(samplesLedger.owner, 'one-person-lab');
+  assert.equal(samplesLedger.state, 'active_negative_conformance_samples');
+  assert.equal(samplesLedger.can_claim_family_complete, false);
+  assert.equal(samplesLedger.can_claim_standard_agent_complete, false);
+  assert.equal(samplesLedger.open_tail.status, 'evidence_required');
+  assert.equal(samplesLedger.open_tail.can_claim_complete, false);
+
+  assert.deepEqual(
+    [...new Set(samples.map((sample: any) => sample.target_dimension))].sort(),
+    ['MAS', 'MAG', 'OMA', 'RCA', 'family-default'].sort(),
+  );
+  assert.deepEqual(
+    [...new Set(samples.map((sample: any) => sample.false_completion_signal))].sort(),
+    [
+      'classification_zero',
+      'domain_specific_kernel_copied_to_opl',
+      'generated_interface_ready',
+      'provider_completed',
+      'verified_refs_only_ledger',
+    ],
+  );
+
+  for (const sample of samples) {
+    assert.equal(sample.status, 'blocked_false_completion', sample.sample_id);
+    assert.ok(sample.rejected_completion_claim.length > 0, sample.sample_id);
+    assert.ok(
+      sample.required_next_shape === 'typed_blocker' || sample.required_next_shape === 'developer_work_order',
+      sample.sample_id,
+    );
+    assert.equal(sample.can_claim_standard_agent_complete, false, sample.sample_id);
+    assert.equal(sample.domain_specific_kernel_written_as_opl_generic_kernel_allowed, false, sample.sample_id);
   }
 });
 

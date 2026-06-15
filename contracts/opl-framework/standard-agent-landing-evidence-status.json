@@ -73,9 +73,9 @@
         "tests/src/cli/cases/work-order-execution.test.ts"
       ],
       "missing_evidence": [
-        "OMA generated target-agent samples",
-        "OMA takeover target-agent samples",
-        "target owner route closeout evidence at real target owner"
+        "target owner route closeout evidence at real target owner",
+        "production generated-surface consumption tail for OMA target-agent route",
+        "real target owner accepted-answer or typed-blocker return-shape evidence"
       ],
       "can_claim_complete": false
     },
@@ -85,10 +85,10 @@
       "status": "evidence_required",
       "evidence_refs": [
         "contracts/opl-framework/standard-agent-landing-acceptance-contract.json#cross_agent_negative_conformance",
+        "contracts/opl-framework/standard-agent-negative-conformance-samples.json",
         "tests/src/standard-agent-landing-acceptance-contract.test.ts"
       ],
       "missing_evidence": [
-        "cross-agent negative conformance scaleout across MAS/MAG/RCA/OMA",
         "production generated-surface caller negative samples",
         "long-soak negative samples"
       ],
@@ -104,12 +104,12 @@
     "oma_target_agent_work_order_guard": {
       "status": "evidence_required",
       "can_claim_complete": false,
-      "reason": "Guard rules are executable, but OMA generated/takeover target-agent samples still require owner evidence."
+      "reason": "Guard-missing machine samples are executable; real target owner closeout and production consumption tails still require owner evidence."
     },
     "cross_agent_negative_conformance": {
       "status": "evidence_required",
       "can_claim_complete": false,
-      "reason": "Negative conformance is locked for false-completion cases but not scaled out as family completion evidence."
+      "reason": "Repo-backed cross-agent negative samples exist for MAS/MAG/RCA/OMA/family-default false-completion signals; production caller and long-soak tails remain open."
     },
     "long_soak_real_user_path_owner_evidence": {
       "status": "evidence_required",
