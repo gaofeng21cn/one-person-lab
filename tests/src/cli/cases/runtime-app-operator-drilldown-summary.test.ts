@@ -9,6 +9,7 @@ import {
   runCli,
   test,
 } from '../helpers.ts';
+import './wrapper-aware-read-model.test.ts';
 import { buildOplAionRuntimeConsumptionContract } from '../../../../src/aionui-acp-shell.ts';
 import { openQueueDb } from '../../../../src/family-runtime-store.ts';
 import { createStageAttempt, runStageAttemptFixtureActivity } from '../../../../src/family-runtime-stage-attempts.ts';
