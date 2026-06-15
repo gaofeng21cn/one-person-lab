@@ -292,10 +292,8 @@ function buildManifestRecord(assemblyPath: string) {
       source_entries: entries,
       generated_artifact: {
         aggregate_ref: assembly.aggregate.ref,
-        aggregate_path: assembly.aggregate.path,
         expected_sha256: expectedAggregateSha256,
         manifest_ref: assembly.manifest.ref,
-        manifest_path: assembly.manifest.path,
         aggregate_is_generated_consumer_surface: true,
         do_not_edit: true,
       },

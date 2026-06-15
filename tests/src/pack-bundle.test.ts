@@ -74,6 +74,8 @@ test('Pack Bundle writes generated aggregates from source parts with manifest di
     assert.equal(write.aggregate_output.path, aggregatePath);
     assert.match(write.aggregate_output.sha256, /^[0-9a-f]{64}$/);
     assert.equal(write.manifest.generated_artifact.do_not_edit, true);
+    assert.equal(Object.prototype.hasOwnProperty.call(write.manifest.generated_artifact, 'aggregate_path'), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(write.manifest.generated_artifact, 'manifest_path'), false);
     assert.equal(write.manifest.source_entries.length, 3);
     assert.match(write.manifest.source_digest, /^[0-9a-f]{64}$/);
     assert.equal(write.manifest.assembly_ref, 'contract.assembly.json');
