@@ -1,4 +1,5 @@
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import { createFamilyDefaultContractWorkspace } from './domain-pack-compiler-fixtures.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -19,8 +20,10 @@ function assertOnlyWrapperKey(
 
 test('read-model consumers must use wrapper keys for App and Console CLI payloads', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-wrapper-aware-read-model-'));
+  const workspaceRoot = createFamilyDefaultContractWorkspace();
   const env = {
     OPL_STATE_DIR: stateRoot,
+    OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
   };
   try {
     const appOutput = runCli(['runtime', 'app-operator-drilldown'], env);
@@ -93,5 +96,6 @@ test('read-model consumers must use wrapper keys for App and Console CLI payload
     assert.equal((runwayReadiness.authority_boundary as JsonRecord).can_authorize_domain_ready, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });
