@@ -68,9 +68,13 @@ function closeAttemptWithoutDeliverableDelta(
     progressDeltaClassification?: string;
     blockedReason?: string;
     platformRepairDeltaCount?: number;
+    payloadPatch?: Record<string, unknown>;
   },
 ) {
-  const payload = defaultExecutorPayload(input.sourceFingerprint);
+  const payload = {
+    ...defaultExecutorPayload(input.sourceFingerprint),
+    ...(input.payloadPatch ?? {}),
+  };
   insertSucceededTask(db, {
     taskId: input.taskId,
     payload,
@@ -450,6 +454,85 @@ test('family-runtime anti-spin stop-loss classifies receipt, read-model, stale-r
         'human_decision',
         'provider_hard_gate_clearance',
       ]);
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime anti-spin uses action-scoped stop-loss repeat budgets', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      closeAttemptWithoutDeliverableDelta(db, {
+        taskId: 'task-mas-default-anti-spin-gate-clearing-first',
+        sourceFingerprint: 'source-gate-clearing-budget',
+        blockerFamily: 'gate_clearing_platform_repair',
+        createdAt: '2026-06-02T03:00:00.000Z',
+        payloadPatch: {
+          action_type: 'run_gate_clearing_batch',
+          work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+          work_unit_fingerprint: 'domain-transition::route-back-current',
+          owner_route_currentness_basis: {
+            work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+            work_unit_fingerprint: 'domain-transition::route-back-current',
+          },
+        },
+      });
+      closeAttemptWithoutDeliverableDelta(db, {
+        taskId: 'task-mas-default-anti-spin-gate-clearing-second',
+        sourceFingerprint: 'source-gate-clearing-budget',
+        blockerFamily: 'gate_clearing_platform_repair',
+        createdAt: '2026-06-02T03:10:00.000Z',
+        payloadPatch: {
+          action_type: 'run_gate_clearing_batch',
+          work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+          work_unit_fingerprint: 'domain-transition::route-back-current',
+          owner_route_currentness_basis: {
+            work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+            work_unit_fingerprint: 'domain-transition::route-back-current',
+          },
+        },
+      });
+      insertQueuedDefaultExecutorTask(db, {
+        taskId: 'task-mas-default-anti-spin-gate-clearing-candidate',
+        payload: {
+          ...defaultExecutorPayload('source-gate-clearing-budget'),
+          action_type: 'run_gate_clearing_batch',
+          work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+          work_unit_fingerprint: 'domain-transition::route-back-current',
+          owner_route_currentness_basis: {
+            work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+            work_unit_fingerprint: 'domain-transition::route-back-current',
+          },
+        },
+        dedupeKey: 'mas:dm-cvd:003:default-executor:run_gate_clearing_batch:anti-spin-budget',
+        createdAt: '2026-06-02T03:20:00.000Z',
+      });
+
+      const tick = await runFamilyRuntimeQueueTick(db, familyRuntimePaths(), {
+        source: 'test-progress-first-anti-spin-action-budget',
+        limit: 10,
+        hydrate: false,
+      }, {
+        enqueueTask,
+        dispatchTask: (_db, _paths, row) => ({ task_id: row.task_id, status: 'selected' }),
+      });
+      const event = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_progress_first_anti_spin_blocked'
+        LIMIT 1
+      `).get('task-mas-default-anti-spin-gate-clearing-candidate') as { payload_json: string } | undefined;
+      const eventPayload = event ? JSON.parse(event.payload_json) : null;
+
+      assert.equal(tick.progress_first_anti_spin_blocked_count, 1);
+      assert.ok(eventPayload);
+      assert.equal(eventPayload.lineage.threshold, 2);
+      assert.equal(eventPayload.stop_loss_policy.repeat_budget.policy_id, 'mas.run_gate_clearing_batch.strict');
+      assert.equal(eventPayload.stop_loss_policy.repeat_budget.repeat_threshold, 2);
+      assert.equal(eventPayload.stop_loss_policy.repeat_budget.matched_on, 'action_type');
     });
   } finally {
     db.close();

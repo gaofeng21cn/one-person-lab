@@ -22,6 +22,27 @@ const MISSING_SOURCE_FINGERPRINT_REASON = 'progress_first_source_fingerprint_req
 const ANTI_LOOP_BUDGET_EXHAUSTED_BLOCKER_CODE = 'anti_loop_budget_exhausted';
 const STOP_LOSS_SUCCESSOR_ACTION_TYPE = 'publishability_repair_sprint';
 const STOP_LOSS_SUCCESSOR_WORK_UNIT_ID = 'publishability_repair_sprint_after_anti_loop_budget_exhausted';
+const ACTION_STOP_LOSS_REPEAT_BUDGETS: Record<string, {
+  policy_id: string;
+  repeat_threshold: number;
+  matched_on: 'action_type';
+}> = {
+  run_gate_clearing_batch: {
+    policy_id: 'mas.run_gate_clearing_batch.strict',
+    repeat_threshold: 2,
+    matched_on: 'action_type',
+  },
+  run_quality_repair_batch: {
+    policy_id: 'mas.run_quality_repair_batch.default',
+    repeat_threshold: DEFAULT_ANTI_SPIN_REPEAT_THRESHOLD,
+    matched_on: 'action_type',
+  },
+  [STOP_LOSS_SUCCESSOR_ACTION_TYPE]: {
+    policy_id: 'mas.publishability_repair_sprint.successor',
+    repeat_threshold: 1,
+    matched_on: 'action_type',
+  },
+};
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -419,6 +440,20 @@ function hasCandidateBypass(payload: JsonRecord) {
   return null;
 }
 
+function stopLossRepeatBudgetForLineage(
+  lineage: ReturnType<typeof lineageFieldsFromPayload>,
+  fallbackThreshold: number,
+) {
+  const actionPolicy = lineage.action_type
+    ? ACTION_STOP_LOSS_REPEAT_BUDGETS[lineage.action_type]
+    : undefined;
+  return actionPolicy ?? {
+    policy_id: 'opl.progress_first_anti_spin.default',
+    repeat_threshold: fallbackThreshold,
+    matched_on: 'default' as const,
+  };
+}
+
 function attemptEvidence(attempt: ReturnType<typeof listStageAttempts>[number]) {
   const attemptRecord = attempt as unknown as JsonRecord;
   const routeImpact = record(attempt.route_impact);
@@ -460,6 +495,7 @@ function buildLineagePacket(input: {
   lineage: ReturnType<typeof lineageFieldsFromPayload>;
   attempts: ReturnType<typeof listStageAttempts>;
   threshold: number;
+  repeatBudget: ReturnType<typeof stopLossRepeatBudgetForLineage>;
 }) {
   const noDeltaAttempts = input.attempts.filter(isNoDeliverableSpinAttempt).sort(compareAttemptUpdatedAtDesc);
   const latest = noDeltaAttempts[0] ?? null;
@@ -470,6 +506,7 @@ function buildLineagePacket(input: {
     packet_version: 'progress-first-anti-spin.v1',
     reason: PROGRESS_FIRST_OWNER_DELTA_REQUIRED_REASON,
     threshold: input.threshold,
+    repeat_budget: input.repeatBudget,
     repeat_count: noDeltaAttempts.length,
     lineage_key: {
       domain_id: input.lineage.domain_id,
@@ -665,6 +702,7 @@ function buildMissingSourceFingerprintLineage(input: {
 }
 
 function buildStopLossPolicy(lineage: JsonRecord) {
+  const repeatBudget = record(lineage.repeat_budget);
   return {
     surface_kind: 'opl_stop_loss_policy',
     schema_version: 'stop-loss-policy.v1',
@@ -681,6 +719,18 @@ function buildStopLossPolicy(lineage: JsonRecord) {
       'human_decision',
       'provider_hard_gate_clearance',
     ],
+    repeat_budget: {
+      policy_id:
+        stringValue(repeatBudget.policy_id)
+        ?? 'opl.progress_first_anti_spin.default',
+      repeat_threshold:
+        numberValue(repeatBudget.repeat_threshold)
+        || numberValue(lineage.threshold)
+        || DEFAULT_ANTI_SPIN_REPEAT_THRESHOLD,
+      matched_on:
+        stringValue(repeatBudget.matched_on)
+        ?? 'default',
+    },
     successor_policy: {
       same_work_unit_redrive_allowed: false,
       identity_different_successor_allowed: true,
@@ -737,6 +787,7 @@ function evaluateProgressFirstAntiSpinGate(
     return { status: 'allowed' as const, blocked_reason: null, lineage: null, bypass_reason: bypassReason };
   }
   const lineage = lineageFieldsFromPayload(row, payload);
+  const repeatBudget = stopLossRepeatBudgetForLineage(lineage, threshold);
   if (!lineage.source_fingerprint) {
     return {
       status: 'blocked' as const,
@@ -767,13 +818,20 @@ function evaluateProgressFirstAntiSpinGate(
     return ['completed', 'blocked', 'failed', 'dead_lettered', 'checkpointed'].includes(attempt.status);
   });
   const noDeltaAttempts = attempts.filter(isNoDeliverableSpinAttempt);
-  if (noDeltaAttempts.length < threshold) {
+  if (noDeltaAttempts.length < repeatBudget.repeat_threshold) {
     return { status: 'allowed' as const, blocked_reason: null, lineage: null };
   }
   return {
     status: 'blocked' as const,
     blocked_reason: PROGRESS_FIRST_OWNER_DELTA_REQUIRED_REASON,
-    lineage: buildLineagePacket({ candidate: row, candidatePayload: payload, lineage, attempts, threshold }),
+    lineage: buildLineagePacket({
+      candidate: row,
+      candidatePayload: payload,
+      lineage,
+      attempts,
+      threshold: repeatBudget.repeat_threshold,
+      repeatBudget,
+    }),
   };
 }
 

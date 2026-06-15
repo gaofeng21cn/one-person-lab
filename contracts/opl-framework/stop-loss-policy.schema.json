@@ -16,6 +16,7 @@
     "lineage_ref",
     "freeze_state",
     "release_conditions",
+    "repeat_budget",
     "authority_boundary"
   ],
   "properties": {
@@ -63,6 +64,32 @@
     },
     "authority_boundary": {
       "$ref": "#/$defs/authority_boundary"
+    },
+    "repeat_budget": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "policy_id",
+        "repeat_threshold",
+        "matched_on"
+      ],
+      "properties": {
+        "policy_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repeat_threshold": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "matched_on": {
+          "type": "string",
+          "enum": [
+            "action_type",
+            "default"
+          ]
+        }
+      }
     },
     "successor_policy": {
       "type": "object",

@@ -332,6 +332,9 @@ test('target architecture schema contracts keep owner delta root and audit tail 
 
   const stopLoss = schemas['contracts/opl-framework/stop-loss-policy.schema.json'];
   assert.equal(stopLoss.$defs.authority_boundary.properties.opl_can_synthesize_fallback_verdict.const, false);
+  assert.equal(stopLoss.required.includes('repeat_budget'), true);
+  assert.equal(stopLoss.properties.repeat_budget.properties.repeat_threshold.minimum, 1);
+  assert.deepEqual(stopLoss.properties.repeat_budget.properties.matched_on.enum, ['action_type', 'default']);
   assert.equal(
     stopLoss.properties.terminal_blocker_code.enum.includes('anti_loop_budget_exhausted'),
     true,
