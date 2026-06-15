@@ -63,7 +63,6 @@ const fastTestFiles = [
   'tests/src/family-runtime-attempt-contract.test.ts',
   'tests/src/family-runtime-stage-run-currentness-identity.test.ts',
   'tests/src/family-runtime-current-control-state.test.ts',
-  'tests/src/family-runtime-stage-run-currentness-identity.test.ts',
   'tests/src/family-runtime-effective-current-context.test.ts',
   'tests/src/current-owner-delta-read-model-cache.test.ts',
   'tests/src/family-transition-runner.test.ts',
@@ -192,7 +191,6 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/family-runtime-paper-autonomy.test.ts',
   'tests/src/cli/cases/family-runtime-provider-repair.test.ts',
   'tests/src/cli/cases/family-runtime-provider-hosted-attempts.test.ts',
-  'tests/src/cli/cases/family-runtime-queue-stranded-release.test.ts',
   'tests/src/cli/cases/family-runtime-provider-slo.test.ts',
   'tests/src/cli/cases/family-runtime-provider-slo-worker-repair.test.ts',
   'tests/src/cli/cases/family-runtime-lifecycle-handoff.test.ts',
@@ -530,18 +528,14 @@ function nodeTestArgs(step) {
 }
 
 function assertCoverage() {
+  failOnDuplicateLaneEntryFiles(duplicateLaneEntryFiles());
+
   const trackedTests = trackedTestFiles();
   const covered = coveredTestFiles();
   const uncovered = trackedTests.filter((file) => !covered.has(file));
   failOnUncoveredTests(uncovered);
 
   process.stdout.write(`All ${trackedTests.length} active test files are assigned to a test lane.\n`);
-}
-
-function coveredTestFiles() {
-  const covered = new Set();
-  laneEntryFiles().forEach((file) => addImportClosure(file, covered));
-  return covered;
 }
 
 function failOnUncoveredTests(uncovered) {
@@ -552,6 +546,46 @@ function failOnUncoveredTests(uncovered) {
   process.stderr.write(uncovered.map((file) => `- ${file}`).join('\n'));
   process.stderr.write('\n');
   process.exit(1);
+}
+
+function duplicateLaneEntryFiles() {
+  const duplicates = [];
+  for (const [laneName, steps] of Object.entries(lanes)) {
+    const occurrences = new Map();
+    laneNodeTestFiles(steps).forEach((file, index) => {
+      const normalized = normalizeRelativePath(file);
+      if (!occurrences.has(normalized)) {
+        occurrences.set(normalized, []);
+      }
+      occurrences.get(normalized).push(index + 1);
+    });
+    for (const [file, indexes] of occurrences.entries()) {
+      if (indexes.length > 1) {
+        duplicates.push({ laneName, file, indexes });
+      }
+    }
+  }
+  return duplicates;
+}
+
+function failOnDuplicateLaneEntryFiles(duplicates) {
+  if (duplicates.length === 0) {
+    return;
+  }
+  process.stderr.write('Test lane files are listed more than once in the same lane:\n');
+  process.stderr.write(
+    duplicates
+      .map(({ laneName, file, indexes }) => `- ${laneName}: ${file} (${indexes.join(', ')})`)
+      .join('\n'),
+  );
+  process.stderr.write('\n');
+  process.exit(1);
+}
+
+function coveredTestFiles() {
+  const covered = new Set();
+  laneEntryFiles().forEach((file) => addImportClosure(file, covered));
+  return covered;
 }
 
 function laneEntryFiles() {
