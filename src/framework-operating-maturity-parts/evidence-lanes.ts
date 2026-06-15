@@ -190,6 +190,7 @@ export function appOperatorDrilldownMaturity(drilldown: Record<string, unknown>)
       ? 0
       : 1;
   const lifecycleObservedRefCount = numberValue(lifecycleEvidence.observed_ref_count);
+  const lifecycleLedgerProjection = record(lifecycleEvidence.ledger_projection);
   const lifecycleOwnerWorkOrder = record(lifecycleEvidence.lifecycle_owner_work_order);
   const lifecycleTypedBlockerWorkOrder = record(
     lifecycleOwnerWorkOrder.typed_blocker_work_order,
@@ -197,13 +198,34 @@ export function appOperatorDrilldownMaturity(drilldown: Record<string, unknown>)
   const lifecycleLatestTypedBlockerRefs = stringListValue(
     lifecycleTypedBlockerWorkOrder.latest_typed_blocker_refs,
   );
+  const lifecycleLedgerVerifiedReceiptRefs =
+    stringListValue(lifecycleEvidence.ledger_verified_receipt_refs);
+  const lifecycleLedgerPendingVerifyReceiptRefs =
+    stringListValue(lifecycleEvidence.ledger_pending_verify_receipt_refs);
+  const lifecycleLedgerTypedBlockerRefs =
+    stringListValue(lifecycleEvidence.ledger_latest_typed_blocker_refs);
+  const lifecycleLedgerOwnerAcceptanceRefs =
+    stringListValue(lifecycleEvidence.ledger_owner_acceptance_refs);
+  const lifecycleVerifiedOwnerEvidenceRecorded =
+    lifecycleLedgerVerifiedReceiptRefs.length > 0
+    && lifecycleLedgerPendingVerifyReceiptRefs.length === 0
+    && (
+      numberValue(lifecycleEvidence.ledger_memory_receipt_ref_count) > 0
+      || numberValue(lifecycleEvidence.ledger_memory_writeback_receipt_ref_count) > 0
+      || numberValue(lifecycleEvidence.ledger_artifact_mutation_receipt_ref_count) > 0
+      || numberValue(lifecycleEvidence.ledger_package_lifecycle_receipt_ref_count) > 0
+      || numberValue(lifecycleEvidence.ledger_export_lifecycle_receipt_ref_count) > 0
+      || numberValue(lifecycleEvidence.ledger_cleanup_restore_retention_receipt_ref_count) > 0
+      || lifecycleLedgerTypedBlockerRefs.length > 0
+      || lifecycleLedgerOwnerAcceptanceRefs.length > 0
+    );
   const lifecycleReconcileIssueCount =
     numberValue(lifecycleEvidence.lifecycle_reconcile_missing_ref_count)
     + numberValue(lifecycleEvidence.lifecycle_reconcile_extra_ref_count)
     + numberValue(lifecycleEvidence.lifecycle_reconcile_stale_ref_count);
   const lifecycleOpenCount = lifecycleReconcileIssueCount > 0
     ? lifecycleReconcileIssueCount
-    : lifecycleObservedRefCount > 0
+    : lifecycleVerifiedOwnerEvidenceRecorded || lifecycleObservedRefCount > 0
       ? 0
       : 1;
   const lifecycleNextEvidenceAction =
@@ -231,6 +253,16 @@ export function appOperatorDrilldownMaturity(drilldown: Record<string, unknown>)
       safe_decision_count:
         numberValue(lifecycleTypedBlockerWorkOrder.safe_decision_count),
       latest_typed_blocker_refs: lifecycleLatestTypedBlockerRefs,
+      ledger_verified_receipt_refs: lifecycleLedgerVerifiedReceiptRefs,
+      ledger_pending_verify_receipt_refs: lifecycleLedgerPendingVerifyReceiptRefs,
+      ledger_typed_blocker_refs: lifecycleLedgerTypedBlockerRefs,
+      ledger_owner_acceptance_refs: lifecycleLedgerOwnerAcceptanceRefs,
+      owner_evidence_recorded:
+        lifecycleVerifiedOwnerEvidenceRecorded || lifecycleObservedRefCount > 0,
+      verified_refs_only_ledger_counts_as_memory_ready: false,
+      verified_refs_only_ledger_counts_as_artifact_ready: false,
+      verified_refs_only_ledger_counts_as_package_ready: false,
+      verified_refs_only_ledger_counts_as_export_ready: false,
       closes_memory_or_artifact_ready: false,
       closes_production_ready: false,
       ready_claim_authorized: false,
@@ -299,6 +331,12 @@ export function appOperatorDrilldownMaturity(drilldown: Record<string, unknown>)
       missingOwnerActionIds: lifecycleMissingOwnerActionIds,
       nextEvidenceAction: lifecycleNextEvidenceAction,
       latestTypedBlockerRefs: lifecycleLatestTypedBlockerRefs,
+      ledgerProjection: lifecycleLedgerProjection,
+      ledgerVerifiedReceiptRefs: lifecycleLedgerVerifiedReceiptRefs,
+      ledgerPendingVerifyReceiptRefs: lifecycleLedgerPendingVerifyReceiptRefs,
+      ledgerTypedBlockerRefs: lifecycleLedgerTypedBlockerRefs,
+      ledgerOwnerAcceptanceRefs: lifecycleLedgerOwnerAcceptanceRefs,
+      verifiedOwnerEvidenceRecorded: lifecycleVerifiedOwnerEvidenceRecorded,
     },
   };
 }

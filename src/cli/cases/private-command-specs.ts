@@ -48,6 +48,9 @@ import {
   buildRuntimeProviderLongSoakEvidenceCommandSpecs,
 } from './runtime-provider-long-soak-evidence-command-spec.ts';
 import {
+  buildRuntimeMemoryArtifactLifecycleEvidenceCommandSpecs,
+} from './runtime-memory-artifact-lifecycle-evidence-command-spec.ts';
+import {
   buildRuntimeStageReplayMissingReceiptCommandSpecs,
 } from './runtime-stage-replay-missing-receipt-command-spec.ts';
 import {
@@ -391,6 +394,7 @@ export function buildInternalCommandSpecs(
     ...buildRuntimeBrandModuleL5EvidenceCommandSpecs(getContracts),
     ...buildRuntimeCodexAppRuntimeEvidenceCommandSpecs(),
     ...buildRuntimeProviderLongSoakEvidenceCommandSpecs(),
+    ...buildRuntimeMemoryArtifactLifecycleEvidenceCommandSpecs(),
     ...buildRuntimeStandardAgentTemplateConsumptionCommandSpecs(),
     ...buildRuntimeDomainOwnerPayloadSummaryCommandSpecs(),
     ...buildRuntimeMagManifestSustainedConsumptionCommandSpecs(),

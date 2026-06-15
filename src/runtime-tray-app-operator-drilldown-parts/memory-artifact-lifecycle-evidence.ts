@@ -136,6 +136,8 @@ function lifecycleOwnerWorkOrder(input: {
 export function buildMemoryArtifactLifecycleEvidence(drilldown: JsonRecord) {
   const summary = record(drilldown.summary);
   const lifecycleSummary = record(record(drilldown.lifecycle_ledger_refs).summary);
+  const ledgerProjection = record(drilldown.memory_artifact_lifecycle_evidence_projection);
+  const ledgerObservedCounts = record(ledgerProjection.observed_ref_counts);
   const memoryRefCount = numberValue(summary.memory_ref_count);
   const memoryWritebackRefCount = numberValue(summary.memory_writeback_ref_count);
   const dispatchMemoryWritebackRefCount =
@@ -163,6 +165,20 @@ export function buildMemoryArtifactLifecycleEvidence(drilldown: JsonRecord) {
     numberValue(summary.domain_external_verified_lifecycle_receipt_ref_count);
   const externalRestoreProofRefCount =
     numberValue(summary.domain_external_verified_restore_proof_ref_count);
+  const ledgerMemoryReceiptRefCount =
+    numberValue(ledgerObservedCounts.memory_receipt_ref_count);
+  const ledgerMemoryWritebackReceiptRefCount =
+    numberValue(ledgerObservedCounts.memory_writeback_receipt_ref_count);
+  const ledgerArtifactMutationReceiptRefCount =
+    numberValue(ledgerObservedCounts.artifact_mutation_receipt_ref_count);
+  const ledgerPackageLifecycleReceiptRefCount =
+    numberValue(ledgerObservedCounts.package_lifecycle_receipt_ref_count);
+  const ledgerExportLifecycleReceiptRefCount =
+    numberValue(ledgerObservedCounts.export_lifecycle_receipt_ref_count);
+  const ledgerCleanupRestoreRetentionReceiptRefCount =
+    numberValue(ledgerObservedCounts.cleanup_restore_retention_receipt_ref_count);
+  const ledgerTypedBlockerRefs = stringList(ledgerProjection.typed_blocker_refs);
+  const ledgerOwnerAcceptanceRefs = stringList(ledgerProjection.owner_acceptance_refs);
   const reconcileMissingRefCount = numberValue(summary.lifecycle_reconcile_missing_ref_count);
   const reconcileExtraRefCount = numberValue(summary.lifecycle_reconcile_extra_ref_count);
   const reconcileStaleRefCount = numberValue(summary.lifecycle_reconcile_stale_ref_count);
@@ -179,7 +195,14 @@ export function buildMemoryArtifactLifecycleEvidence(drilldown: JsonRecord) {
     + externalArtifactMutationReceiptRefCount
     + externalPackageLifecycleReceiptRefCount
     + externalLifecycleReceiptRefCount
-    + externalRestoreProofRefCount;
+    + externalRestoreProofRefCount
+    + ledgerMemoryReceiptRefCount
+    + ledgerMemoryWritebackReceiptRefCount
+    + ledgerArtifactMutationReceiptRefCount
+    + ledgerPackageLifecycleReceiptRefCount
+    + ledgerExportLifecycleReceiptRefCount
+    + ledgerCleanupRestoreRetentionReceiptRefCount
+    + ledgerOwnerAcceptanceRefs.length;
   const reconcileIssueCount = reconcileMissingRefCount
     + reconcileExtraRefCount
     + reconcileStaleRefCount;
@@ -238,6 +261,31 @@ export function buildMemoryArtifactLifecycleEvidence(drilldown: JsonRecord) {
     external_verified_package_lifecycle_receipt_ref_count: externalPackageLifecycleReceiptRefCount,
     external_verified_lifecycle_receipt_ref_count: externalLifecycleReceiptRefCount,
     external_verified_restore_proof_ref_count: externalRestoreProofRefCount,
+    evidence_ledger_status:
+      stringValue(ledgerProjection.evidence_ledger_status) ?? 'ledger_refs_missing',
+    ledger_receipt_ref_count: numberValue(ledgerProjection.receipt_count),
+    ledger_recorded_receipt_ref_count:
+      numberValue(ledgerProjection.recorded_receipt_ref_count),
+    ledger_verified_receipt_ref_count:
+      numberValue(ledgerProjection.verified_receipt_ref_count),
+    ledger_pending_verify_receipt_ref_count:
+      numberValue(ledgerProjection.pending_verify_receipt_ref_count),
+    ledger_receipt_refs: stringList(ledgerProjection.receipt_refs),
+    ledger_verified_receipt_refs: stringList(ledgerProjection.verified_receipt_refs),
+    ledger_pending_verify_receipt_refs:
+      stringList(ledgerProjection.pending_verify_receipt_refs),
+    ledger_memory_receipt_ref_count: ledgerMemoryReceiptRefCount,
+    ledger_memory_writeback_receipt_ref_count: ledgerMemoryWritebackReceiptRefCount,
+    ledger_artifact_mutation_receipt_ref_count: ledgerArtifactMutationReceiptRefCount,
+    ledger_package_lifecycle_receipt_ref_count: ledgerPackageLifecycleReceiptRefCount,
+    ledger_export_lifecycle_receipt_ref_count: ledgerExportLifecycleReceiptRefCount,
+    ledger_cleanup_restore_retention_receipt_ref_count:
+      ledgerCleanupRestoreRetentionReceiptRefCount,
+    ledger_typed_blocker_ref_count: ledgerTypedBlockerRefs.length,
+    ledger_latest_typed_blocker_refs: ledgerTypedBlockerRefs,
+    ledger_owner_acceptance_ref_count: ledgerOwnerAcceptanceRefs.length,
+    ledger_owner_acceptance_refs: ledgerOwnerAcceptanceRefs,
+    ledger_projection: ledgerProjection,
     lifecycle_reconcile_status: stringValue(lifecycleSummary.lifecycle_reconcile_status),
     lifecycle_reconcile_missing_ref_count: reconcileMissingRefCount,
     lifecycle_reconcile_extra_ref_count: reconcileExtraRefCount,
@@ -273,6 +321,10 @@ export function buildMemoryArtifactLifecycleEvidence(drilldown: JsonRecord) {
       can_authorize_package_readiness: false,
       can_authorize_export_readiness: false,
       can_execute_domain_physical_delete: false,
+      verified_refs_only_ledger_counts_as_memory_ready: false,
+      verified_refs_only_ledger_counts_as_artifact_ready: false,
+      verified_refs_only_ledger_counts_as_package_ready: false,
+      verified_refs_only_ledger_counts_as_export_ready: false,
     },
   };
 }

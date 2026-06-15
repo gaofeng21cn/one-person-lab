@@ -46,6 +46,10 @@ export function buildMemoryArtifactLifecycleReadback(appOperatorDrilldown: JsonR
   const evidence = record(appOperatorDrilldown.memory_artifact_lifecycle);
   const summary = record(appOperatorDrilldown.summary);
   const lifecycleLedgerRefs = record(appOperatorDrilldown.lifecycle_ledger_refs);
+  const ledgerProjection = record(
+    appOperatorDrilldown.memory_artifact_lifecycle_evidence_projection,
+  );
+  const ledgerObservedCounts = record(ledgerProjection.observed_ref_counts);
   const ownerWorkOrder = record(evidence.lifecycle_owner_work_order);
   const latestHandoff = record(evidence.latest_lifecycle_apply_handoff);
   const status = stringValue(evidence.readiness_status) ?? 'owner_receipt_or_typed_blocker_required_not_ready';
@@ -93,6 +97,94 @@ export function buildMemoryArtifactLifecycleReadback(appOperatorDrilldown: JsonR
         numberValue(summary.lifecycle_apply_receipt_count),
       app_summary_lifecycle_apply_blocked_receipt_count:
         numberValue(summary.lifecycle_apply_blocked_receipt_count),
+      ledger_receipt_ref_count:
+        numberValue(summary.memory_artifact_lifecycle_evidence_ledger_receipt_ref_count),
+      ledger_recorded_receipt_ref_count:
+        numberValue(
+          summary.memory_artifact_lifecycle_evidence_recorded_ledger_receipt_ref_count,
+        ),
+      ledger_verified_receipt_ref_count:
+        numberValue(
+          summary.memory_artifact_lifecycle_evidence_verified_ledger_receipt_ref_count,
+        ),
+      ledger_pending_verify_receipt_ref_count:
+        numberValue(
+          summary.memory_artifact_lifecycle_evidence_pending_verify_receipt_ref_count,
+        ),
+      ledger_typed_blocker_ref_count:
+        numberValue(summary.memory_artifact_lifecycle_evidence_typed_blocker_ref_count),
+      ledger_owner_acceptance_ref_count:
+        numberValue(summary.memory_artifact_lifecycle_evidence_owner_acceptance_ref_count),
+    },
+    ledger_evidence_projection: {
+      surface_kind: ledgerProjection.surface_kind
+        ?? 'opl_memory_artifact_lifecycle_evidence_projection',
+      status: stringValue(ledgerProjection.status) ?? 'lifecycle_evidence_required',
+      evidence_ledger_status:
+        stringValue(ledgerProjection.evidence_ledger_status) ?? 'ledger_refs_missing',
+      receipt_count: numberValue(ledgerProjection.receipt_count),
+      receipt_refs: Array.isArray(ledgerProjection.receipt_refs)
+        ? ledgerProjection.receipt_refs
+        : [],
+      recorded_receipt_ref_count:
+        numberValue(ledgerProjection.recorded_receipt_ref_count),
+      recorded_receipt_refs: Array.isArray(ledgerProjection.recorded_receipt_refs)
+        ? ledgerProjection.recorded_receipt_refs
+        : [],
+      verified_receipt_ref_count:
+        numberValue(ledgerProjection.verified_receipt_ref_count),
+      verified_receipt_refs: Array.isArray(ledgerProjection.verified_receipt_refs)
+        ? ledgerProjection.verified_receipt_refs
+        : [],
+      pending_verify_receipt_ref_count:
+        numberValue(ledgerProjection.pending_verify_receipt_ref_count),
+      pending_verify_receipt_refs:
+        Array.isArray(ledgerProjection.pending_verify_receipt_refs)
+          ? ledgerProjection.pending_verify_receipt_refs
+          : [],
+      memory_receipt_refs: Array.isArray(ledgerProjection.memory_receipt_refs)
+        ? ledgerProjection.memory_receipt_refs
+        : [],
+      memory_writeback_receipt_refs:
+        Array.isArray(ledgerProjection.memory_writeback_receipt_refs)
+          ? ledgerProjection.memory_writeback_receipt_refs
+          : [],
+      artifact_mutation_receipt_refs:
+        Array.isArray(ledgerProjection.artifact_mutation_receipt_refs)
+          ? ledgerProjection.artifact_mutation_receipt_refs
+          : [],
+      package_lifecycle_receipt_refs:
+        Array.isArray(ledgerProjection.package_lifecycle_receipt_refs)
+          ? ledgerProjection.package_lifecycle_receipt_refs
+          : [],
+      export_lifecycle_receipt_refs:
+        Array.isArray(ledgerProjection.export_lifecycle_receipt_refs)
+          ? ledgerProjection.export_lifecycle_receipt_refs
+          : [],
+      cleanup_restore_retention_receipt_refs:
+        Array.isArray(ledgerProjection.cleanup_restore_retention_receipt_refs)
+          ? ledgerProjection.cleanup_restore_retention_receipt_refs
+          : [],
+      typed_blocker_refs: Array.isArray(ledgerProjection.typed_blocker_refs)
+        ? ledgerProjection.typed_blocker_refs
+        : [],
+      owner_acceptance_refs: Array.isArray(ledgerProjection.owner_acceptance_refs)
+        ? ledgerProjection.owner_acceptance_refs
+        : [],
+      observed_ref_shapes: Array.isArray(ledgerProjection.observed_ref_shapes)
+        ? ledgerProjection.observed_ref_shapes
+        : [],
+      observed_ref_counts: ledgerObservedCounts,
+      ready_claim_authorized: ledgerProjection.ready_claim_authorized === true,
+      verified_refs_only_ledger_counts_as_memory_ready:
+        ledgerProjection.verified_refs_only_ledger_counts_as_memory_ready === true,
+      verified_refs_only_ledger_counts_as_artifact_ready:
+        ledgerProjection.verified_refs_only_ledger_counts_as_artifact_ready === true,
+      verified_refs_only_ledger_counts_as_package_ready:
+        ledgerProjection.verified_refs_only_ledger_counts_as_package_ready === true,
+      verified_refs_only_ledger_counts_as_export_ready:
+        ledgerProjection.verified_refs_only_ledger_counts_as_export_ready === true,
+      authority_boundary: record(ledgerProjection.authority_boundary),
     },
     latest_lifecycle_apply_handoff: {
       handoff_ref: latestHandoff.handoff_ref ?? null,

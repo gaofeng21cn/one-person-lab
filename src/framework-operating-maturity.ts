@@ -653,9 +653,60 @@ export async function buildFrameworkOperatingMaturityReadout(
         lifecycle_typed_blocker_selected_payload_path:
           stringValue(drilldownMaturity.lifecycle.typedBlockerWorkOrder.selected_payload_path),
         lifecycle_typed_blocker_ref_count:
-          drilldownMaturity.lifecycle.latestTypedBlockerRefs.length,
+          drilldownMaturity.lifecycle.latestTypedBlockerRefs.length
+          + drilldownMaturity.lifecycle.ledgerTypedBlockerRefs.length,
         lifecycle_latest_typed_blocker_refs:
-          drilldownMaturity.lifecycle.latestTypedBlockerRefs,
+          unique([
+            ...drilldownMaturity.lifecycle.latestTypedBlockerRefs,
+            ...drilldownMaturity.lifecycle.ledgerTypedBlockerRefs,
+          ]),
+        ledger_evidence_status:
+          stringValue(drilldownMaturity.lifecycle.evidence.evidence_ledger_status),
+        ledger_receipt_ref_count:
+          numberValue(drilldownMaturity.lifecycle.evidence.ledger_receipt_ref_count),
+        ledger_recorded_receipt_ref_count:
+          numberValue(drilldownMaturity.lifecycle.evidence.ledger_recorded_receipt_ref_count),
+        ledger_verified_receipt_ref_count:
+          drilldownMaturity.lifecycle.ledgerVerifiedReceiptRefs.length,
+        ledger_verified_receipt_refs:
+          drilldownMaturity.lifecycle.ledgerVerifiedReceiptRefs,
+        ledger_pending_verify_receipt_ref_count:
+          drilldownMaturity.lifecycle.ledgerPendingVerifyReceiptRefs.length,
+        ledger_pending_verify_receipt_refs:
+          drilldownMaturity.lifecycle.ledgerPendingVerifyReceiptRefs,
+        ledger_memory_receipt_ref_count:
+          numberValue(drilldownMaturity.lifecycle.evidence.ledger_memory_receipt_ref_count),
+        ledger_memory_writeback_receipt_ref_count:
+          numberValue(
+            drilldownMaturity.lifecycle.evidence.ledger_memory_writeback_receipt_ref_count,
+          ),
+        ledger_artifact_mutation_receipt_ref_count:
+          numberValue(
+            drilldownMaturity.lifecycle.evidence.ledger_artifact_mutation_receipt_ref_count,
+          ),
+        ledger_package_lifecycle_receipt_ref_count:
+          numberValue(
+            drilldownMaturity.lifecycle.evidence.ledger_package_lifecycle_receipt_ref_count,
+          ),
+        ledger_export_lifecycle_receipt_ref_count:
+          numberValue(
+            drilldownMaturity.lifecycle.evidence.ledger_export_lifecycle_receipt_ref_count,
+          ),
+        ledger_cleanup_restore_retention_receipt_ref_count:
+          numberValue(
+            drilldownMaturity.lifecycle.evidence
+              .ledger_cleanup_restore_retention_receipt_ref_count,
+          ),
+        ledger_typed_blocker_ref_count:
+          drilldownMaturity.lifecycle.ledgerTypedBlockerRefs.length,
+        ledger_typed_blocker_refs:
+          drilldownMaturity.lifecycle.ledgerTypedBlockerRefs,
+        ledger_owner_acceptance_ref_count:
+          drilldownMaturity.lifecycle.ledgerOwnerAcceptanceRefs.length,
+        ledger_owner_acceptance_refs:
+          drilldownMaturity.lifecycle.ledgerOwnerAcceptanceRefs,
+        verified_owner_evidence_recorded:
+          drilldownMaturity.lifecycle.verifiedOwnerEvidenceRecorded,
         owner_action_checklist:
           drilldownMaturity.lifecycle.ownerActionChecklist,
         missing_owner_action_ids:
@@ -669,8 +720,14 @@ export async function buildFrameworkOperatingMaturityReadout(
           'package_export_lifecycle_receipt_ref',
           'cleanup_restore_retention_receipt_ref',
           'typed_blocker_ref',
+          'owner_acceptance_ref',
         ],
         opl_stores_body_or_verdict: false,
+        ready_claim_authorized: false,
+        verified_refs_only_ledger_counts_as_memory_ready: false,
+        verified_refs_only_ledger_counts_as_artifact_ready: false,
+        verified_refs_only_ledger_counts_as_package_ready: false,
+        verified_refs_only_ledger_counts_as_export_ready: false,
       },
       next_owner_actions: nextOwnerActions(),
       not_claims: [

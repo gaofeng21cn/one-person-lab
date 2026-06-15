@@ -50,6 +50,7 @@ type AppOperatorDrilldownSummaryInput = {
   codexAppRuntimeRole: JsonRecord;
   appReleaseUserPathEvidence: JsonRecord;
   developerModeLiveCloseoutEvidence: JsonRecord;
+  memoryArtifactLifecycleEvidenceProjection: JsonRecord;
 };
 
 function record(value: unknown): JsonRecord {
@@ -117,6 +118,10 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     developerModeLiveCloseoutEvidenceSummary(input.developerModeLiveCloseoutEvidence);
   const codexAppRuntimeEvidence =
     codexAppRuntimeEvidenceSummary(input.codexAppRuntimeRole);
+  const memoryArtifactLifecycleProjection =
+    record(input.memoryArtifactLifecycleEvidenceProjection);
+  const memoryArtifactLifecycleProjectionObservedCounts =
+    record(memoryArtifactLifecycleProjection.observed_ref_counts);
   const domainOwnerPayloadSummaryReceipts = listDomainOwnerPayloadSummaryReceipts();
   const domainOwnerPayloadSummaryRecordedReceiptCount =
     domainOwnerPayloadSummaryReceipts.filter((receipt) => receipt.receipt_status === 'recorded').length;
@@ -382,6 +387,59 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     lifecycle_domain_physical_delete_can_execute:
       lifecycleSummary.lifecycle_domain_physical_delete_can_execute,
     lifecycle_opl_cleanup_apply_can_execute: lifecycleSummary.lifecycle_opl_cleanup_apply_can_execute,
+    memory_artifact_lifecycle_evidence_status:
+      memoryArtifactLifecycleProjection.status,
+    memory_artifact_lifecycle_evidence_ledger_status:
+      memoryArtifactLifecycleProjection.evidence_ledger_status,
+    memory_artifact_lifecycle_evidence_ledger_receipt_ref_count:
+      numberValue(memoryArtifactLifecycleProjection.receipt_count),
+    memory_artifact_lifecycle_evidence_recorded_ledger_receipt_ref_count:
+      numberValue(memoryArtifactLifecycleProjection.recorded_receipt_ref_count),
+    memory_artifact_lifecycle_evidence_verified_ledger_receipt_ref_count:
+      numberValue(memoryArtifactLifecycleProjection.verified_receipt_ref_count),
+    memory_artifact_lifecycle_evidence_pending_verify_receipt_ref_count:
+      numberValue(memoryArtifactLifecycleProjection.pending_verify_receipt_ref_count),
+    memory_artifact_lifecycle_evidence_memory_receipt_ref_count:
+      numberValue(memoryArtifactLifecycleProjectionObservedCounts.memory_receipt_ref_count),
+    memory_artifact_lifecycle_evidence_memory_writeback_receipt_ref_count:
+      numberValue(
+        memoryArtifactLifecycleProjectionObservedCounts.memory_writeback_receipt_ref_count,
+      ),
+    memory_artifact_lifecycle_evidence_artifact_mutation_receipt_ref_count:
+      numberValue(
+        memoryArtifactLifecycleProjectionObservedCounts.artifact_mutation_receipt_ref_count,
+      ),
+    memory_artifact_lifecycle_evidence_package_lifecycle_receipt_ref_count:
+      numberValue(
+        memoryArtifactLifecycleProjectionObservedCounts.package_lifecycle_receipt_ref_count,
+      ),
+    memory_artifact_lifecycle_evidence_export_lifecycle_receipt_ref_count:
+      numberValue(
+        memoryArtifactLifecycleProjectionObservedCounts.export_lifecycle_receipt_ref_count,
+      ),
+    memory_artifact_lifecycle_evidence_cleanup_restore_retention_receipt_ref_count:
+      numberValue(
+        memoryArtifactLifecycleProjectionObservedCounts
+          .cleanup_restore_retention_receipt_ref_count,
+      ),
+    memory_artifact_lifecycle_evidence_typed_blocker_ref_count:
+      numberValue(memoryArtifactLifecycleProjectionObservedCounts.typed_blocker_ref_count),
+    memory_artifact_lifecycle_evidence_owner_acceptance_ref_count:
+      numberValue(memoryArtifactLifecycleProjectionObservedCounts.owner_acceptance_ref_count),
+    memory_artifact_lifecycle_evidence_ready_claim_authorized:
+      memoryArtifactLifecycleProjection.ready_claim_authorized === true,
+    memory_artifact_lifecycle_evidence_verified_refs_only_ledger_counts_as_memory_ready:
+      memoryArtifactLifecycleProjection
+        .verified_refs_only_ledger_counts_as_memory_ready === true,
+    memory_artifact_lifecycle_evidence_verified_refs_only_ledger_counts_as_artifact_ready:
+      memoryArtifactLifecycleProjection
+        .verified_refs_only_ledger_counts_as_artifact_ready === true,
+    memory_artifact_lifecycle_evidence_verified_refs_only_ledger_counts_as_package_ready:
+      memoryArtifactLifecycleProjection
+        .verified_refs_only_ledger_counts_as_package_ready === true,
+    memory_artifact_lifecycle_evidence_verified_refs_only_ledger_counts_as_export_ready:
+      memoryArtifactLifecycleProjection
+        .verified_refs_only_ledger_counts_as_export_ready === true,
     functional_privatization_default_watchlist_count: input.functionalSummary.default_watchlist_count,
     functional_privatization_action_required_count: Math.max(
       numberValue(input.functionalSummary.default_watchlist_count),

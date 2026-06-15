@@ -21,6 +21,7 @@ export type OplStatePaths = {
   app_release_user_path_evidence_ledger_file: string;
   codex_app_runtime_evidence_ledger_file: string;
   provider_long_soak_evidence_ledger_file: string;
+  memory_artifact_lifecycle_evidence_ledger_file: string;
   brand_module_l5_evidence_ledger_file: string;
   standard_agent_template_consumption_ledger_file: string;
   domain_owner_payload_summary_ledger_file: string;
@@ -80,6 +81,10 @@ export function resolveOplStatePaths(): OplStatePaths {
     provider_long_soak_evidence_ledger_file: path.join(
       stateDir,
       'provider-long-soak-evidence-ledger.json',
+    ),
+    memory_artifact_lifecycle_evidence_ledger_file: path.join(
+      stateDir,
+      'memory-artifact-lifecycle-evidence-ledger.json',
     ),
     brand_module_l5_evidence_ledger_file: path.join(
       stateDir,

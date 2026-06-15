@@ -11,6 +11,7 @@ import {
   test,
 } from '../helpers.ts';
 import { DatabaseSync } from 'node:sqlite';
+import { createFamilyDefaultContractWorkspace } from './domain-pack-compiler-fixtures.ts';
 
 test('runtime app-operator-drilldown reconciles MAS refs-only payload with OPL lifecycle ledger refs', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-mas-lifecycle-'));
@@ -543,6 +544,228 @@ test('runtime app-operator-drilldown projects lifecycle handoff apply attempts f
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime memory artifact lifecycle evidence ledger records refs-only owner follow-through without ready claims', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-memory-artifact-lifecycle-evidence-'));
+  const workspaceRoot = createFamilyDefaultContractWorkspace();
+  try {
+    const env = {
+      OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+    };
+    const recordResult = runCli([
+      'runtime',
+      'memory-artifact-lifecycle-evidence',
+      'record',
+      '--payload',
+      JSON.stringify({
+        receipt_ref: 'opl://memory-artifact-lifecycle-evidence/domain-owner-demo',
+        memory_receipt_refs: ['memory-receipt:domain/accepted'],
+        memory_writeback_receipt_refs: ['memory-writeback-receipt:domain/accepted'],
+        artifact_mutation_receipt_refs: ['artifact-receipt:domain/package'],
+        package_lifecycle_receipt_refs: ['package-lifecycle:domain/package'],
+        export_lifecycle_receipt_refs: ['export-lifecycle:domain/export'],
+        cleanup_restore_retention_receipt_refs: ['cleanup-restore:domain/retention'],
+        typed_blocker_refs: ['typed-blocker:lifecycle/domain-followthrough'],
+        owner_acceptance_refs: ['owner-acceptance:lifecycle/domain-followthrough'],
+      }),
+    ], env).memory_artifact_lifecycle_evidence_ledger_record;
+
+    assert.equal(recordResult.status, 'recorded');
+    assert.equal(recordResult.recorded_receipt_count, 1);
+    assert.deepEqual(recordResult.receipt_refs, [
+      'opl://memory-artifact-lifecycle-evidence/domain-owner-demo',
+    ]);
+    assert.equal(recordResult.receipts[0].authority_boundary.refs_only, true);
+    assert.equal(recordResult.receipts[0].authority_boundary.can_write_memory_body, false);
+    assert.equal(recordResult.receipts[0].authority_boundary.can_mutate_artifact_body, false);
+    assert.equal(recordResult.receipts[0].authority_boundary.can_create_owner_receipt, false);
+    assert.equal(recordResult.receipts[0].authority_boundary.can_generate_typed_blocker, false);
+    assert.equal(recordResult.receipts[0].authority_boundary.can_claim_memory_ready, false);
+    assert.equal(recordResult.receipts[0].authority_boundary.can_claim_artifact_ready, false);
+    assert.equal(recordResult.receipts[0].authority_boundary.can_claim_package_ready, false);
+    assert.equal(recordResult.receipts[0].authority_boundary.can_claim_export_ready, false);
+    assert.equal(recordResult.receipts[0].authority_boundary.can_claim_production_ready, false);
+
+    const verifyResult = runCli([
+      'runtime',
+      'memory-artifact-lifecycle-evidence',
+      'verify',
+      '--receipt-ref',
+      'opl://memory-artifact-lifecycle-evidence/domain-owner-demo',
+    ], env).memory_artifact_lifecycle_evidence_ledger_verify;
+
+    assert.equal(verifyResult.status, 'verified');
+    assert.equal(verifyResult.verified_receipt_count, 1);
+    assert.equal(verifyResult.authority_boundary.can_write_domain_truth, false);
+    assert.equal(verifyResult.authority_boundary.can_create_owner_receipt, false);
+    assert.equal(verifyResult.authority_boundary.can_generate_typed_blocker, false);
+
+    const ledger = runCli([
+      'runtime',
+      'memory-artifact-lifecycle-evidence',
+      'list',
+    ], env).memory_artifact_lifecycle_evidence_ledger;
+    const projection = ledger.projection;
+
+    assert.equal(ledger.receipt_count, 1);
+    assert.equal(projection.evidence_ledger_status, 'ledger_refs_verified');
+    assert.equal(projection.verified_receipt_ref_count, 1);
+    assert.equal(projection.pending_verify_receipt_ref_count, 0);
+    assert.deepEqual(projection.memory_receipt_refs, ['memory-receipt:domain/accepted']);
+    assert.deepEqual(projection.memory_writeback_receipt_refs, [
+      'memory-writeback-receipt:domain/accepted',
+    ]);
+    assert.deepEqual(projection.artifact_mutation_receipt_refs, [
+      'artifact-receipt:domain/package',
+    ]);
+    assert.deepEqual(projection.package_lifecycle_receipt_refs, [
+      'package-lifecycle:domain/package',
+    ]);
+    assert.deepEqual(projection.export_lifecycle_receipt_refs, [
+      'export-lifecycle:domain/export',
+    ]);
+    assert.deepEqual(projection.cleanup_restore_retention_receipt_refs, [
+      'cleanup-restore:domain/retention',
+    ]);
+    assert.deepEqual(projection.typed_blocker_refs, [
+      'typed-blocker:lifecycle/domain-followthrough',
+    ]);
+    assert.deepEqual(projection.owner_acceptance_refs, [
+      'owner-acceptance:lifecycle/domain-followthrough',
+    ]);
+    assert.equal(projection.ready_claim_authorized, false);
+    assert.equal(projection.verified_refs_only_ledger_counts_as_memory_ready, false);
+    assert.equal(projection.verified_refs_only_ledger_counts_as_artifact_ready, false);
+    assert.equal(projection.verified_refs_only_ledger_counts_as_package_ready, false);
+    assert.equal(projection.verified_refs_only_ledger_counts_as_export_ready, false);
+
+    const drilldown = runCli([
+      'runtime',
+      'app-operator-drilldown',
+      '--detail',
+      'full',
+    ], env).app_operator_drilldown;
+    const lifecycle = drilldown.memory_artifact_lifecycle;
+
+    assert.equal(drilldown.summary.memory_artifact_lifecycle_evidence_ledger_receipt_ref_count, 1);
+    assert.equal(drilldown.summary.memory_artifact_lifecycle_evidence_verified_ledger_receipt_ref_count, 1);
+    assert.equal(drilldown.summary.memory_artifact_lifecycle_evidence_pending_verify_receipt_ref_count, 0);
+    assert.equal(drilldown.summary.memory_artifact_lifecycle_evidence_typed_blocker_ref_count, 1);
+    assert.equal(drilldown.summary.memory_artifact_lifecycle_evidence_owner_acceptance_ref_count, 1);
+    assert.equal(
+      drilldown.summary.memory_artifact_lifecycle_evidence_verified_refs_only_ledger_counts_as_memory_ready,
+      false,
+    );
+    assert.equal(
+      drilldown.summary.memory_artifact_lifecycle_evidence_verified_refs_only_ledger_counts_as_artifact_ready,
+      false,
+    );
+    assert.equal(lifecycle.evidence_ledger_status, 'ledger_refs_verified');
+    assert.equal(lifecycle.ledger_verified_receipt_ref_count, 1);
+    assert.equal(lifecycle.ledger_pending_verify_receipt_ref_count, 0);
+    assert.equal(lifecycle.ledger_memory_receipt_ref_count, 1);
+    assert.equal(lifecycle.ledger_memory_writeback_receipt_ref_count, 1);
+    assert.equal(lifecycle.ledger_artifact_mutation_receipt_ref_count, 1);
+    assert.equal(lifecycle.ledger_package_lifecycle_receipt_ref_count, 1);
+    assert.equal(lifecycle.ledger_export_lifecycle_receipt_ref_count, 1);
+    assert.equal(lifecycle.ledger_cleanup_restore_retention_receipt_ref_count, 1);
+    assert.equal(lifecycle.ledger_typed_blocker_ref_count, 1);
+    assert.deepEqual(lifecycle.ledger_latest_typed_blocker_refs, [
+      'typed-blocker:lifecycle/domain-followthrough',
+    ]);
+    assert.equal(lifecycle.ledger_owner_acceptance_ref_count, 1);
+    assert.deepEqual(lifecycle.ledger_owner_acceptance_refs, [
+      'owner-acceptance:lifecycle/domain-followthrough',
+    ]);
+    assert.equal(lifecycle.ready_claim_authorized, false);
+    assert.equal(
+      lifecycle.authority_boundary.verified_refs_only_ledger_counts_as_memory_ready,
+      false,
+    );
+    assert.equal(
+      lifecycle.authority_boundary.verified_refs_only_ledger_counts_as_artifact_ready,
+      false,
+    );
+
+    const attentionLifecycle =
+      drilldown.attention_first_payload.evidence_after_contract
+        .memory_artifact_lifecycle_evidence;
+    assert.equal(attentionLifecycle.ledger_verified_receipt_ref_count, 1);
+    assert.equal(attentionLifecycle.ledger_owner_acceptance_ref_count, 1);
+    assert.equal(attentionLifecycle.ready_claim_authorized, false);
+
+    const readback = runCli([
+      'runtime',
+      'memory-artifact-lifecycle',
+    ], env).memory_artifact_lifecycle_readback;
+    assert.equal(readback.summary.ledger_receipt_ref_count, 1);
+    assert.equal(readback.summary.ledger_verified_receipt_ref_count, 1);
+    assert.equal(readback.summary.ledger_pending_verify_receipt_ref_count, 0);
+    assert.equal(readback.summary.ledger_typed_blocker_ref_count, 1);
+    assert.equal(readback.summary.ledger_owner_acceptance_ref_count, 1);
+    assert.equal(readback.ledger_evidence_projection.evidence_ledger_status, 'ledger_refs_verified');
+    assert.deepEqual(readback.ledger_evidence_projection.verified_receipt_refs, [
+      'opl://memory-artifact-lifecycle-evidence/domain-owner-demo',
+    ]);
+    assert.equal(readback.ledger_evidence_projection.ready_claim_authorized, false);
+    assert.equal(
+      readback.ledger_evidence_projection.verified_refs_only_ledger_counts_as_memory_ready,
+      false,
+    );
+    assert.equal(
+      readback.ledger_evidence_projection.verified_refs_only_ledger_counts_as_artifact_ready,
+      false,
+    );
+    assert.equal(readback.authority_boundary.can_read_memory_body, false);
+    assert.equal(readback.authority_boundary.can_mutate_artifact_body, false);
+    assert.equal(readback.authority_boundary.can_create_owner_receipt, false);
+    assert.equal(readback.authority_boundary.can_create_typed_blocker, false);
+
+    const maturity = runCli([
+      'framework',
+      'operating-maturity',
+      '--family-defaults',
+    ], env).framework_operating_maturity;
+    assert.equal(maturity.summary.memory_artifact_lifecycle_open_count, 0);
+    assert.equal(maturity.memory_artifact_lifecycle.open_evidence_count, 0);
+    assert.equal(
+      maturity.memory_artifact_lifecycle.status,
+      'evidence_recorded_not_artifact_or_memory_ready_claim',
+    );
+    assert.equal(maturity.memory_artifact_lifecycle.ledger_verified_receipt_ref_count, 1);
+    assert.equal(maturity.memory_artifact_lifecycle.ledger_pending_verify_receipt_ref_count, 0);
+    assert.equal(maturity.memory_artifact_lifecycle.ledger_owner_acceptance_ref_count, 1);
+    assert.equal(maturity.memory_artifact_lifecycle.verified_owner_evidence_recorded, true);
+    assert.deepEqual(maturity.memory_artifact_lifecycle.missing_owner_action_ids, []);
+    assert.equal(maturity.memory_artifact_lifecycle.ready_claim_authorized, false);
+    assert.equal(
+      maturity.memory_artifact_lifecycle.verified_refs_only_ledger_counts_as_memory_ready,
+      false,
+    );
+    assert.equal(
+      maturity.memory_artifact_lifecycle.verified_refs_only_ledger_counts_as_artifact_ready,
+      false,
+    );
+    assert.equal(
+      maturity.memory_artifact_lifecycle.verified_refs_only_ledger_counts_as_package_ready,
+      false,
+    );
+    assert.equal(
+      maturity.memory_artifact_lifecycle.verified_refs_only_ledger_counts_as_export_ready,
+      false,
+    );
+    const lifecycleGate = maturity.foundry_agent_os_production_evidence_gate
+      .owner_route_work_orders.find(
+        (entry: { lane: string }) => entry.lane === 'memory_artifact_lifecycle_apply',
+      );
+    assert.equal(lifecycleGate.open_count, 0);
+    assert.equal(lifecycleGate.ready_claim_authorized, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });
 

@@ -95,6 +95,9 @@ import {
   buildMemoryArtifactLifecycleEvidence,
 } from './runtime-tray-app-operator-drilldown-parts/memory-artifact-lifecycle-evidence.ts';
 import {
+  buildMemoryArtifactLifecycleEvidenceProjection,
+} from './memory-artifact-lifecycle-evidence-ledger.ts';
+import {
   currentControlStateProjection,
   safeActionRefs,
 } from './runtime-tray-app-operator-drilldown-parts/current-control-safe-actions.ts';
@@ -292,6 +295,8 @@ export function buildAppOperatorDrilldown(input: {
     packageLifecycle,
     memoryRefs,
   });
+  const memoryArtifactLifecycleEvidenceProjection =
+    buildMemoryArtifactLifecycleEvidenceProjection();
   const currentWorkUnitItems = (input.currentWorkUnitProjections ?? [])
     .map(record)
     .filter((item) => Object.keys(item).length > 0);
@@ -363,6 +368,7 @@ export function buildAppOperatorDrilldown(input: {
       codexAppRuntimeRole: appRuntimeRole,
       appReleaseUserPathEvidence,
       developerModeLiveCloseoutEvidence,
+      memoryArtifactLifecycleEvidenceProjection,
     }),
     codex_app_runtime_role_status: appRuntimeRole.runtime_policy,
     codex_app_runtime_role_count: Array.isArray(appRuntimeRole.codex_app_roles)
@@ -472,6 +478,8 @@ export function buildAppOperatorDrilldown(input: {
   const memoryArtifactLifecycle = buildMemoryArtifactLifecycleEvidence({
     summary,
     lifecycle_ledger_refs: lifecycleRefs,
+    memory_artifact_lifecycle_evidence_projection:
+      memoryArtifactLifecycleEvidenceProjection,
   });
   const cleanupRetirement = buildCleanupRetirementProjection({
     defaultCallerDeletionEvidenceRefs,
@@ -489,6 +497,10 @@ export function buildAppOperatorDrilldown(input: {
       'developer_mode_live_closeout_evidence',
     ),
     sourceRef('/app-release-user-path-evidence-ledger', 'app_release_user_path_evidence_ledger'),
+    sourceRef(
+      '/memory-artifact-lifecycle-evidence-ledger',
+      'memory_artifact_lifecycle_evidence_ledger',
+    ),
     sourceRef('/runtime_manager/family_runtime_queue/mas_domain_route_projection', 'runtime_manager_mas_route_support'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/route_transition_drilldown', 'route_transition_drilldown'),
     sourceRef('/family-runtime/lifecycle-index', 'family_runtime_lifecycle_index'),
@@ -570,6 +582,8 @@ export function buildAppOperatorDrilldown(input: {
     provider_long_soak_evidence: providerLongSoakEvidence,
     app_release_user_path_evidence: appReleaseUserPathEvidence,
     memory_artifact_lifecycle: memoryArtifactLifecycle,
+    memory_artifact_lifecycle_evidence_projection:
+      memoryArtifactLifecycleEvidenceProjection,
     developer_mode_live_closeout_evidence: developerModeLiveCloseoutEvidence,
     runtime_manager_route_support: runtimeManagerRouteSupport,
     route_transition_drilldown: routeTransitionDrilldownRefs,

@@ -44,6 +44,39 @@ export function buildPublicRuntimeCommandSpecs(
         ],
         group: 'runtime',
       }),
+    'runtime memory-artifact-lifecycle-evidence':
+      cloneCommandSpec(commandSpecs['runtime memory-artifact-lifecycle-evidence'], {
+        usage: 'opl runtime memory-artifact-lifecycle-evidence <record|verify|list>',
+        examples: [
+          'opl runtime memory-artifact-lifecycle-evidence list --json',
+          'opl help runtime memory-artifact-lifecycle-evidence record',
+        ],
+        group: 'runtime',
+      }),
+    'runtime memory-artifact-lifecycle-evidence record':
+      cloneCommandSpec(commandSpecs['runtime memory-artifact-lifecycle-evidence record'], {
+        usage:
+          'opl runtime memory-artifact-lifecycle-evidence record (--payload <json>|--payload-file <path>)',
+        examples: [
+          'opl runtime memory-artifact-lifecycle-evidence record --payload \'{"memory_receipt_refs":["memory-receipt:domain/accepted"],"artifact_mutation_receipt_refs":["artifact-receipt:domain/package"]}\'',
+          'opl runtime memory-artifact-lifecycle-evidence record --payload-file payload.json',
+        ],
+        group: 'runtime',
+      }),
+    'runtime memory-artifact-lifecycle-evidence verify':
+      cloneCommandSpec(commandSpecs['runtime memory-artifact-lifecycle-evidence verify'], {
+        usage: 'opl runtime memory-artifact-lifecycle-evidence verify [--receipt-ref <ref>]',
+        examples: [
+          'opl runtime memory-artifact-lifecycle-evidence verify --receipt-ref opl://memory-artifact-lifecycle-evidence/memory-receipt%3Adomain%2Faccepted',
+        ],
+        group: 'runtime',
+      }),
+    'runtime memory-artifact-lifecycle-evidence list':
+      cloneCommandSpec(commandSpecs['runtime memory-artifact-lifecycle-evidence list'], {
+        usage: 'opl runtime memory-artifact-lifecycle-evidence list',
+        examples: ['opl runtime memory-artifact-lifecycle-evidence list --json'],
+        group: 'runtime',
+      }),
     'runtime app-release-evidence record':
       cloneCommandSpec(commandSpecs['runtime app-release-evidence record'], {
         usage: 'opl runtime app-release-evidence record (--payload <json>|--payload-file <path>)',
