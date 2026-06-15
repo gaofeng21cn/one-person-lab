@@ -45,6 +45,7 @@ function decisionInput(decision_kind: PaperAutonomySupervisorDecisionKind) {
     human_gate_ref: 'human-gate://dm002/paper-autonomy',
     resume_token: 'resume-token:dm002:paper-autonomy',
     typed_blocker_ref: 'mas://DM002/typed-blockers/stable.json',
+    owner_receipt_ref: 'mas://DM002/owner-receipts/stopped.json',
     budget_or_missing_evidence_ref: 'opl://runway/budget-exhausted',
     evidence_refs: [
       'mas://DM002/evidence/current-owner-delta.json',
@@ -55,13 +56,14 @@ function decisionInput(decision_kind: PaperAutonomySupervisorDecisionKind) {
   };
 }
 
-test('paper autonomy supervisor readback emits all five closed decision packets', () => {
+test('paper autonomy supervisor readback emits all six closed decision packets', () => {
   assert.deepEqual(PAPER_AUTONOMY_SUPERVISOR_DECISION_KINDS, [
     'execute_current_owner_delta',
     'consume_terminal_closeout',
     'materialize_recovery_action',
     'wait_for_owner_with_resume_token',
     'stop_with_stable_typed_blocker',
+    'stop_with_owner_receipt',
   ]);
 
   const packets = PAPER_AUTONOMY_SUPERVISOR_DECISION_KINDS.map((decisionKind) =>
@@ -186,6 +188,42 @@ test('paper autonomy supervisor execute decision produces provider admission tra
   assert.equal(applied.transition.state_index_projection.indexed_refs.supervisor_decision_ref, packet.decision_id);
 });
 
+test('paper autonomy supervisor owner receipt stop produces refs-only owner receipt consumption transition packet', () => {
+  const currentIdentity = identity();
+  const obligation: PaperAutonomyRecoveryObligation = {
+    obligation_id: 'obligation:owner-receipt-stop',
+    desired_delta_ref: 'mas://DM002/current-owner-delta/latest.json',
+    current_identity: currentIdentity,
+    status: 'open',
+    last_evidence_refs: [],
+  };
+  const packet = buildPaperAutonomySupervisorDecisionReadback({
+    ...decisionInput('stop_with_owner_receipt'),
+    obligation_id: obligation.obligation_id,
+    current_identity: currentIdentity,
+    provider_admission_identity_ref: undefined,
+  });
+  const applied = applyPaperAutonomySupervisorDecision(obligation, packet);
+
+  assert.equal(packet.transition_ref, 'mas://DM002/owner-receipts/stopped.json');
+  assert.equal(packet.owner_receipt_ref, 'mas://DM002/owner-receipts/stopped.json');
+  assert.equal(packet.provider_admission_identity_ref, null);
+  assert.equal(packet.authority_boundary.opl_can_create_domain_owner_receipt, false);
+  assert.equal(packet.state_index_projection.indexed_refs.owner_receipt_ref, 'mas://DM002/owner-receipts/stopped.json');
+  assert.equal(packet.state_index_projection.indexed_refs.owner_answer_ref, 'mas://DM002/owner-receipts/stopped.json');
+  assert.equal(applied.applied, true);
+  assert.equal(applied.obligation.status, 'stopped_with_owner_receipt');
+  assert.equal(applied.transition.transition_kind, 'stop_with_owner_receipt');
+  assert.equal(applied.transition.transition_ref, 'mas://DM002/owner-receipts/stopped.json');
+  assert.equal(applied.transition.provider_admission_identity_ref, null);
+  assert.equal(applied.transition.runtime_apply_target.kind, 'owner_receipt_consumption');
+  assert.equal(applied.transition.runtime_apply_target.provider_admission_required, false);
+  assert.equal(applied.transition.runtime_apply_target.owner_callable_required, false);
+  assert.equal(applied.transition.runtime_apply_target.owner_receipt_consumption_required, true);
+  assert.equal(applied.transition.runtime_apply_target.stable_typed_blocker_required, false);
+  assert.equal(applied.transition.authority_boundary.opl_can_create_domain_owner_receipt, false);
+});
+
 test('paper autonomy supervisor readback fails closed when required transition refs are missing', () => {
   assert.throws(
     () => buildPaperAutonomySupervisorDecisionReadback({
@@ -210,6 +248,13 @@ test('paper autonomy supervisor readback fails closed when required transition r
       },
     }),
     /stage_packet_refs/,
+  );
+  assert.throws(
+    () => buildPaperAutonomySupervisorDecisionReadback({
+      ...decisionInput('stop_with_owner_receipt'),
+      owner_receipt_ref: undefined,
+    }),
+    /owner_receipt_ref/,
   );
 });
 
@@ -240,6 +285,16 @@ test('paper autonomy supervisor readback maps MAS obligation state without idle 
   });
   assert.equal(stopDecision.decision_kind, 'stop_with_stable_typed_blocker');
   assert.equal(stopDecision.transition_ref, 'mas://DM002/typed-blockers/stable.json');
+
+  const ownerReceiptDecision = readPaperAutonomySupervisorDecisionFromObligation({
+    obligation_id: 'obligation:owner-receipt',
+    current_identity: identity(),
+    owner_receipt_ref: 'mas://DM002/owner-receipts/stopped.json',
+    evidence_refs: ['mas://DM002/evidence/owner-receipt.json'],
+  });
+  assert.equal(ownerReceiptDecision.decision_kind, 'stop_with_owner_receipt');
+  assert.equal(ownerReceiptDecision.transition_ref, 'mas://DM002/owner-receipts/stopped.json');
+  assert.equal(ownerReceiptDecision.state_index_projection.indexed_refs.owner_receipt_ref, 'mas://DM002/owner-receipts/stopped.json');
 
   const waitDecision = readPaperAutonomySupervisorDecisionFromObligation({
     obligation_id: 'obligation:human-gate',

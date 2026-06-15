@@ -178,6 +178,7 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
     'materialize_recovery_action',
     'wait_for_owner_with_resume_token',
     'stop_with_stable_typed_blocker',
+    'stop_with_owner_receipt',
   ]);
   assert.equal(paperAutonomy.decision_surface_policy.read_model_can_execute, false);
   assert.equal(paperAutonomy.decision_surface_policy.observability_can_close_owner_answer, false);
@@ -199,7 +200,28 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   );
   assert.match(
     paperAutonomy.concepts.SupervisorDecisionEngine.landed_support,
-    /all five decisions/,
+    /all six decisions/,
+  );
+  assert.match(
+    paperAutonomy.concepts.SupervisorDecisionEngine.landed_support,
+    /stop_with_owner_receipt/,
+  );
+  assert.ok(
+    paperAutonomy.concepts.SupervisorDecisionEngine.required_decision_refs.stop_with_owner_receipt.includes(
+      'owner_receipt_ref',
+    ),
+  );
+  assert.equal(
+    paperAutonomy.concepts.SupervisorDecisionEngine.runtime_apply_targets.stop_with_owner_receipt.kind,
+    'owner_receipt_consumption',
+  );
+  assert.equal(
+    paperAutonomy.concepts.SupervisorDecisionEngine.runtime_apply_targets.stop_with_owner_receipt.provider_admission_required,
+    false,
+  );
+  assert.equal(
+    paperAutonomy.concepts.SupervisorDecisionEngine.runtime_apply_targets.stop_with_owner_receipt.authority_boundary.opl_can_create_domain_owner_receipt,
+    false,
   );
   assert.match(
     paperAutonomy.concepts.SupervisorDecisionEngine.landed_support,
@@ -210,7 +232,7 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
     /end-to-end runtime soak/,
   );
   assert.ok(paperAutonomy.not_complete_claims.includes(
-    'execute_decision_runtime_admission_path_does_not_mean_all_five_decisions_have_provider_tick_or_owner_runtime',
+    'execute_decision_runtime_admission_path_does_not_mean_all_six_decisions_have_provider_tick_or_owner_runtime',
   ));
 
   assert.equal(

@@ -230,7 +230,8 @@
         "consume_terminal_closeout",
         "materialize_recovery_action",
         "wait_for_owner_with_resume_token",
-        "stop_with_stable_typed_blocker"
+        "stop_with_stable_typed_blocker",
+        "stop_with_owner_receipt"
       ],
       "decision_surface_policy": {
         "query_role": "read_only_current_obligation_and_evidence_refs",
@@ -315,12 +316,105 @@
             "StageRunIdentityPacket",
             "terminal_closeout_packet_ref",
             "human_gate_ref",
+            "owner_receipt_ref",
             "no_progress_budget_state",
             "provider_liveness_or_repair_state",
             "observability_refs"
           ],
-          "landed_support": "src/family-runtime-paper-autonomy.ts emits refs-only readback packets for all five decisions; execute_current_owner_delta additionally materializes an opl_paper_autonomy_supervisor_transition_packet consumed by current-control provider admission and persisted on the provider StageAttempt locator",
-          "remaining_gap": "real MAS owner receipt, human resume token consumption, terminal closeout consumption, and end-to-end runtime soak are not yet proven for all decision classes"
+          "landed_support": "src/family-runtime-paper-autonomy.ts emits refs-only readback packets for all six decisions including stop_with_owner_receipt; execute_current_owner_delta additionally materializes a provider-admission transition packet consumed by current-control provider admission, while stop_with_owner_receipt materializes an owner_receipt_consumption transition packet that transports and indexes MAS owner_receipt_ref without OPL signing authority",
+          "remaining_gap": "real MAS owner receipt consumption side effects, human resume token consumption, terminal closeout consumption, and end-to-end runtime soak are not yet proven for all decision classes",
+          "required_decision_refs": {
+            "execute_current_owner_delta": [
+              "current_owner_delta_ref",
+              "provider_admission_identity_ref"
+            ],
+            "consume_terminal_closeout": [
+              "terminal_closeout_ref"
+            ],
+            "materialize_recovery_action": [
+              "recovery_action_ref_or_no_progress_or_inconsistency_ref"
+            ],
+            "wait_for_owner_with_resume_token": [
+              "human_gate_ref",
+              "resume_token"
+            ],
+            "stop_with_stable_typed_blocker": [
+              "typed_blocker_ref",
+              "budget_or_missing_evidence_ref"
+            ],
+            "stop_with_owner_receipt": [
+              "owner_receipt_ref"
+            ]
+          },
+          "runtime_apply_targets": {
+            "execute_current_owner_delta": {
+              "kind": "provider_attempt_or_owner_callable",
+              "provider_admission_required": true,
+              "owner_callable_required": true,
+              "authority_boundary": {
+                "opl_can_write_mas_truth": false,
+                "opl_can_create_domain_owner_receipt": false,
+                "opl_can_create_domain_typed_blocker": false,
+                "provider_completion_is_domain_ready": false
+              }
+            },
+            "consume_terminal_closeout": {
+              "kind": "terminal_closeout_consumption",
+              "provider_admission_required": false,
+              "owner_callable_required": false,
+              "authority_boundary": {
+                "opl_can_write_mas_truth": false,
+                "opl_can_create_domain_owner_receipt": false,
+                "opl_can_create_domain_typed_blocker": false,
+                "provider_completion_is_domain_ready": false
+              }
+            },
+            "materialize_recovery_action": {
+              "kind": "recovery_owner_action_materialization",
+              "provider_admission_required": false,
+              "owner_callable_required": true,
+              "authority_boundary": {
+                "opl_can_write_mas_truth": false,
+                "opl_can_create_domain_owner_receipt": false,
+                "opl_can_create_domain_typed_blocker": false,
+                "provider_completion_is_domain_ready": false
+              }
+            },
+            "wait_for_owner_with_resume_token": {
+              "kind": "human_gate_resume_token",
+              "provider_admission_required": false,
+              "owner_callable_required": false,
+              "authority_boundary": {
+                "opl_can_write_mas_truth": false,
+                "opl_can_create_domain_owner_receipt": false,
+                "opl_can_create_domain_typed_blocker": false,
+                "provider_completion_is_domain_ready": false
+              }
+            },
+            "stop_with_stable_typed_blocker": {
+              "kind": "stable_domain_typed_blocker",
+              "provider_admission_required": false,
+              "owner_callable_required": false,
+              "authority_boundary": {
+                "opl_can_write_mas_truth": false,
+                "opl_can_create_domain_owner_receipt": false,
+                "opl_can_create_domain_typed_blocker": false,
+                "provider_completion_is_domain_ready": false
+              }
+            },
+            "stop_with_owner_receipt": {
+              "kind": "owner_receipt_consumption",
+              "provider_admission_required": false,
+              "owner_callable_required": false,
+              "required_ref": "owner_receipt_ref",
+              "authority_boundary": {
+                "opl_can_write_mas_truth": false,
+                "opl_can_create_domain_owner_receipt": false,
+                "opl_can_create_domain_typed_blocker": false,
+                "provider_completion_is_domain_ready": false
+              }
+            }
+          }
         },
         "StateIndexKernel": {
           "existing_surfaces": [
@@ -380,7 +474,7 @@
       },
       "not_complete_claims": [
         "mapping_landed_does_not_mean_supervisor_runtime_landed",
-        "execute_decision_runtime_admission_path_does_not_mean_all_five_decisions_have_provider_tick_or_owner_runtime",
+        "execute_decision_runtime_admission_path_does_not_mean_all_six_decisions_have_provider_tick_or_owner_runtime",
         "human_gate_schema_fields_do_not_mean_human_token_runtime_is_complete",
         "state_index_projection_does_not_mean_paper_progress",
         "observability_refs_do_not_close_owner_receipt_quality_gate_or_publication_readiness"

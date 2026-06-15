@@ -20,6 +20,7 @@ export const PAPER_AUTONOMY_SUPERVISOR_DECISION_KINDS = [
   'materialize_recovery_action',
   'wait_for_owner_with_resume_token',
   'stop_with_stable_typed_blocker',
+  'stop_with_owner_receipt',
 ] as const;
 
 export type PaperAutonomySupervisorDecisionKind = typeof PAPER_AUTONOMY_SUPERVISOR_DECISION_KINDS[number];
@@ -44,7 +45,7 @@ export type PaperAutonomyRecoveryObligation = {
   obligation_id: string;
   desired_delta_ref: string;
   current_identity: PaperAutonomyStageRunIdentity;
-  status: 'open' | 'current_owner_delta_executed' | 'terminal_closeout_consumed' | 'recovery_materialized' | 'waiting_for_owner' | 'stopped_with_typed_blocker';
+  status: 'open' | 'current_owner_delta_executed' | 'terminal_closeout_consumed' | 'recovery_materialized' | 'waiting_for_owner' | 'stopped_with_typed_blocker' | 'stopped_with_owner_receipt';
   last_evidence_refs: string[];
   no_progress_budget_state?: string;
   stale_read_model_lag?: string;
@@ -63,6 +64,7 @@ export type PaperAutonomySupervisorDecisionInput = {
   human_gate_ref?: string;
   resume_token?: string;
   typed_blocker_ref?: string;
+  owner_receipt_ref?: string;
   budget_or_missing_evidence_ref?: string;
   evidence_refs?: string[];
   observability_refs?: string[];
@@ -79,6 +81,7 @@ export type PaperAutonomySupervisorObligationReadbackInput = {
   human_gate_ref?: string;
   resume_token?: string;
   typed_blocker_ref?: string;
+  owner_receipt_ref?: string;
   budget_or_missing_evidence_ref?: string;
   action_queue?: unknown[];
   provider_admission_pending_count?: number;
@@ -104,6 +107,7 @@ export type PaperAutonomySupervisorDecisionReadback = {
   human_gate_ref: string | null;
   resume_token: string | null;
   typed_blocker_ref: string | null;
+  owner_receipt_ref: string | null;
   budget_or_missing_evidence_ref: string | null;
   evidence_refs: string[];
   observability_refs: string[];
@@ -129,6 +133,7 @@ export type PaperAutonomySupervisorDecisionReadback = {
       evidence_ref: string | null;
       human_gate_ref: string | null;
       owner_answer_ref: string | null;
+      owner_receipt_ref: string | null;
       terminal_closeout_ref: string | null;
       recovery_receipt_ref: string | null;
     };
@@ -151,13 +156,15 @@ export type PaperAutonomySupervisorTransitionPacket = {
       | 'terminal_closeout_consumption'
       | 'recovery_owner_action_materialization'
       | 'human_gate_resume_token'
-      | 'stable_domain_typed_blocker';
+      | 'stable_domain_typed_blocker'
+      | 'owner_receipt_consumption';
     provider_admission_required: boolean;
     owner_callable_required: boolean;
     terminal_closeout_consumption_required: boolean;
     recovery_action_materialization_required: boolean;
     human_resume_token_required: boolean;
     stable_typed_blocker_required: boolean;
+    owner_receipt_consumption_required: boolean;
     domain_truth_owner: 'med-autoscience';
     substrate_owner: 'one-person-lab';
   };
@@ -267,6 +274,7 @@ export function buildPaperAutonomySupervisorDecisionReadback(
     human_gate_ref: input.human_gate_ref ?? null,
     resume_token: input.resume_token ?? null,
     typed_blocker_ref: input.typed_blocker_ref ?? null,
+    owner_receipt_ref: input.owner_receipt_ref ?? null,
     budget_or_missing_evidence_ref: input.budget_or_missing_evidence_ref ?? null,
     evidence_refs: input.evidence_refs ?? [],
     observability_refs: input.observability_refs ?? [],
@@ -291,7 +299,10 @@ export function buildPaperAutonomySupervisorDecisionReadback(
         work_unit_fingerprint: input.current_identity.work_unit_fingerprint,
         evidence_ref: input.evidence_refs?.[0] ?? null,
         human_gate_ref: input.human_gate_ref ?? null,
-        owner_answer_ref: input.current_owner_delta_ref ?? input.typed_blocker_ref ?? null,
+        owner_answer_ref: input.decision_kind === 'stop_with_owner_receipt'
+          ? input.owner_receipt_ref ?? null
+          : input.current_owner_delta_ref ?? input.owner_receipt_ref ?? input.typed_blocker_ref ?? null,
+        owner_receipt_ref: input.owner_receipt_ref ?? null,
         terminal_closeout_ref: input.terminal_closeout_ref ?? null,
         recovery_receipt_ref: input.recovery_action_ref ?? null,
       },
@@ -313,6 +324,7 @@ export function readPaperAutonomySupervisorDecisionFromObligation(
     human_gate_ref: input.human_gate_ref,
     resume_token: input.resume_token,
     typed_blocker_ref: input.typed_blocker_ref,
+    owner_receipt_ref: input.owner_receipt_ref,
     budget_or_missing_evidence_ref: input.budget_or_missing_evidence_ref,
     evidence_refs: supervisorEvidenceRefs(input),
     observability_refs: input.observability_refs,
@@ -322,6 +334,12 @@ export function readPaperAutonomySupervisorDecisionFromObligation(
     return buildPaperAutonomySupervisorDecisionReadback({
       ...base,
       decision_kind: 'consume_terminal_closeout',
+    });
+  }
+  if (input.owner_receipt_ref) {
+    return buildPaperAutonomySupervisorDecisionReadback({
+      ...base,
+      decision_kind: 'stop_with_owner_receipt',
     });
   }
   if (input.typed_blocker_ref) {
@@ -454,6 +472,7 @@ function runtimeApplyTargetForDecision(
         recovery_action_materialization_required: false,
         human_resume_token_required: false,
         stable_typed_blocker_required: false,
+        owner_receipt_consumption_required: false,
       };
     case 'consume_terminal_closeout':
       return {
@@ -465,6 +484,7 @@ function runtimeApplyTargetForDecision(
         recovery_action_materialization_required: false,
         human_resume_token_required: false,
         stable_typed_blocker_required: false,
+        owner_receipt_consumption_required: false,
       };
     case 'materialize_recovery_action':
       return {
@@ -476,6 +496,7 @@ function runtimeApplyTargetForDecision(
         recovery_action_materialization_required: true,
         human_resume_token_required: false,
         stable_typed_blocker_required: false,
+        owner_receipt_consumption_required: false,
       };
     case 'wait_for_owner_with_resume_token':
       return {
@@ -487,6 +508,7 @@ function runtimeApplyTargetForDecision(
         recovery_action_materialization_required: false,
         human_resume_token_required: true,
         stable_typed_blocker_required: false,
+        owner_receipt_consumption_required: false,
       };
     case 'stop_with_stable_typed_blocker':
       return {
@@ -498,6 +520,19 @@ function runtimeApplyTargetForDecision(
         recovery_action_materialization_required: false,
         human_resume_token_required: false,
         stable_typed_blocker_required: true,
+        owner_receipt_consumption_required: false,
+      };
+    case 'stop_with_owner_receipt':
+      return {
+        ...common,
+        kind: 'owner_receipt_consumption',
+        provider_admission_required: false,
+        owner_callable_required: false,
+        terminal_closeout_consumption_required: false,
+        recovery_action_materialization_required: false,
+        human_resume_token_required: false,
+        stable_typed_blocker_required: false,
+        owner_receipt_consumption_required: true,
       };
   }
 }
@@ -550,6 +585,8 @@ function transitionRefForDecision(input: PaperAutonomySupervisorDecisionInput) {
     case 'stop_with_stable_typed_blocker':
       requiredRef(input.budget_or_missing_evidence_ref, 'budget_or_missing_evidence_ref');
       return requiredRef(input.typed_blocker_ref, 'typed_blocker_ref');
+    case 'stop_with_owner_receipt':
+      return requiredRef(input.owner_receipt_ref, 'owner_receipt_ref');
   }
 }
 
@@ -574,6 +611,8 @@ function obligationStatusForDecision(
       return 'waiting_for_owner';
     case 'stop_with_stable_typed_blocker':
       return 'stopped_with_typed_blocker';
+    case 'stop_with_owner_receipt':
+      return 'stopped_with_owner_receipt';
   }
 }
 
@@ -604,6 +643,7 @@ function supervisorEvidenceRefs(input: PaperAutonomySupervisorObligationReadback
   return [
     ...(input.evidence_refs ?? []),
     input.provider_admission_identity_ref,
+    input.owner_receipt_ref,
     input.no_progress_or_inconsistency_ref,
     input.budget_or_missing_evidence_ref,
   ].filter((value): value is string => Boolean(value));
