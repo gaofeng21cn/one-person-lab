@@ -11,6 +11,7 @@ import {
 import {
   familyRuntimePaths,
   insertEvent,
+  type FamilyRuntimeTaskRow,
   type taskToPayload,
 } from './family-runtime-store.ts';
 import {
@@ -19,7 +20,7 @@ import {
 } from './family-runtime-domain-handler-process.ts';
 import { resolveOplModuleExecCommand } from './system-installation/modules.ts';
 import type { ModuleInspection } from './system-installation/shared.ts';
-import { taskInputMatchesScope } from './family-runtime-task-scope.ts';
+import { taskInputMatchesScope, taskRowMatchesScope } from './family-runtime-task-scope.ts';
 import {
   activeMedautoscienceWorkspaceProfile,
   resolveExplicitMedautoscienceDomainProfile,
@@ -27,6 +28,7 @@ import {
 import { currentControlProviderAdmissionInputs } from './family-runtime-domain-intake-parts/current-control-provider-admission.ts';
 import {
   reconcileCurrentControlExecutableOwners,
+  suppressExistingStaleDefaultExecutorRowsForBlockedCurrentControl,
   suppressStaleDefaultExecutorInputs,
 } from './family-runtime-domain-intake-parts/current-control-reconciliation.ts';
 import { toPendingTaskInputs } from './family-runtime-domain-intake-parts/pending-task-inputs.ts';
@@ -200,6 +202,14 @@ function exportedTaskInputs(
   };
 }
 
+function rowsForCurrentControlExistingRowSuppression(
+  db: DatabaseSync,
+  taskScope?: FamilyRuntimeTaskScope,
+) {
+  return (db.prepare('SELECT * FROM tasks').all() as FamilyRuntimeTaskRow[])
+    .filter((row) => taskRowMatchesScope(row, taskScope));
+}
+
 export function hydrateDomainTasks(
   db: DatabaseSync,
   paths: ReturnType<typeof familyRuntimePaths>,
@@ -263,9 +273,15 @@ export function hydrateDomainTasks(
       command,
       input.taskScope,
     );
+    const existingSuppressedCount = suppressExistingStaleDefaultExecutorRowsForBlockedCurrentControl(
+      db,
+      rowsForCurrentControlExistingRowSuppression(db, input.taskScope),
+      blocked,
+      input.source,
+    );
     blockedCount += blocked.length;
     filteredCount += filtered_count;
-    suppressedCount += suppressed_count;
+    suppressedCount += suppressed_count + existingSuppressedCount;
     const acceptedTasks = [];
     for (const taskInput of inputs) {
       const resultPayload = enqueueTask(db, taskInput);
@@ -288,7 +304,7 @@ export function hydrateDomainTasks(
       ...(result.recovery ? { domain_handler_recovery: result.recovery } : {}),
       exported_count: inputs.length + blocked.length,
       filtered_count,
-      suppressed_count,
+      suppressed_count: suppressed_count + existingSuppressedCount,
       enqueued_count: acceptedTasks.filter((task) => task.accepted).length,
       requeued_count: acceptedTasks.filter((task) => task.requeued_from_terminal).length,
       idempotent_noop_count: acceptedTasks.filter((task) => task.idempotent_noop).length,
