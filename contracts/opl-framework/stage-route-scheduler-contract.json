@@ -299,10 +299,10 @@
             "stale_read_model_lag",
             "supervisor_decision_ref"
           ],
-          "landed_support": "src/family-runtime-paper-autonomy.ts exposes identity-bound obligation query/update plus transition packets; src/family-runtime-paper-autonomy-parts/substrate.ts adds an append-only obligation store with identity-bound apply/reject entries, current-control provider admission carries paper_autonomy_supervisor_apply for recovery obligations into queue and StageAttempt locator without MAS truth authority",
+          "landed_support": "src/family-runtime-paper-autonomy.ts exposes identity-bound obligation query/update plus transition packets; src/family-runtime-paper-autonomy-parts/substrate.ts adds an append-only physical JSONL obligation store with identity-bound apply/reject entries, current-control provider admission carries paper_autonomy_supervisor_apply for recovery obligations into queue and StageAttempt locator without MAS truth authority",
           "durable_substrate_first_slice": {
-            "obligation_store": "append_only_jsonl_compatible_identity_bound",
-            "closeout_inbox": "pending_consumed_rejected_identity_bound",
+            "obligation_store": "append_only_physical_jsonl_identity_bound",
+            "closeout_inbox": "append_only_physical_jsonl_pending_consumed_rejected_identity_bound",
             "same_identity_redrive_policy": "fail_closed_when_decision_is_not_current_latest_for_identity",
             "authority_boundary": {
               "opl_can_write_mas_truth": false,
@@ -311,7 +311,7 @@
               "provider_completion_is_domain_ready": false
             }
           },
-          "remaining_gap": "dedicated provider-backed runtime soak and physical JSONL/SQLite integration are not yet proven by end-to-end runtime soak"
+          "remaining_gap": "dedicated provider-backed runtime soak and SQLite/index integration are not yet proven by end-to-end runtime soak"
         },
         "SupervisorDecisionEngine": {
           "existing_surfaces": [
@@ -332,9 +332,9 @@
             "provider_liveness_or_repair_state",
             "observability_refs"
           ],
-          "landed_support": "src/family-runtime-paper-autonomy.ts emits refs-only readback packets for all six decisions including stop_with_owner_receipt; src/family-runtime-paper-autonomy-parts/substrate.ts adds an append-only supervisor decision ledger with exactly-one current latest decision per obligation identity; execute_current_owner_delta additionally materializes a provider-admission transition packet consumed by current-control provider admission, while stop_with_owner_receipt materializes an owner_receipt_consumption transition packet that transports and indexes MAS owner_receipt_ref without OPL signing authority",
+          "landed_support": "src/family-runtime-paper-autonomy.ts emits refs-only readback packets for all six decisions including stop_with_owner_receipt; src/family-runtime-paper-autonomy-parts/substrate.ts adds an append-only physical JSONL supervisor decision ledger with exactly-one current latest decision per obligation identity; execute_current_owner_delta additionally materializes a provider-admission transition packet consumed by current-control provider admission, while stop_with_owner_receipt materializes an owner_receipt_consumption transition packet that transports and indexes MAS owner_receipt_ref without OPL signing authority",
           "durable_substrate_first_slice": {
-            "ledger": "append_only_jsonl_compatible",
+            "ledger": "append_only_physical_jsonl",
             "current_latest_policy": "exactly_one_latest_current_decision_per_obligation_identity",
             "identity_mismatch_policy": "reject_without_current_latest_projection",
             "queue_empty_terminal_evidence": false,

@@ -1,3 +1,5 @@
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import type {
   PaperAutonomyRecoveryObligation,
   PaperAutonomyStageRunIdentity,
@@ -63,6 +65,13 @@ export type PaperAutonomyCloseoutInboxEntry = {
   authority_boundary: PaperAutonomySubstrateAuthorityBoundary;
 };
 
+type PaperAutonomyJsonlLedgerEntry =
+  | PaperAutonomyRecoveryObligationStoreEntry
+  | PaperAutonomySupervisorDecisionLedgerEntry
+  | PaperAutonomyCloseoutInboxEntry;
+
+type PaperAutonomyJsonlSurfaceKind = PaperAutonomyJsonlLedgerEntry['surface_kind'];
+
 const authorityBoundary: PaperAutonomySubstrateAuthorityBoundary = {
   opl_can_write_mas_truth: false,
   opl_can_create_domain_owner_receipt: false,
@@ -109,6 +118,26 @@ export function appendPaperAutonomyRecoveryObligation(
     entries: [...entries, entry],
     obligation: input.obligation,
   };
+}
+
+export function readPaperAutonomyRecoveryObligationStoreJsonl(
+  ledgerPath: string,
+): PaperAutonomyRecoveryObligationStoreEntry[] {
+  return readPaperAutonomyJsonlLedger(
+    ledgerPath,
+    'opl_paper_autonomy_recovery_obligation_store_entry',
+  ) as PaperAutonomyRecoveryObligationStoreEntry[];
+}
+
+export function appendPaperAutonomyRecoveryObligationStoreJsonl(
+  ledgerPath: string,
+  entry: PaperAutonomyRecoveryObligationStoreEntry,
+) {
+  appendPaperAutonomyJsonlLedgerEntry(
+    ledgerPath,
+    entry,
+    'opl_paper_autonomy_recovery_obligation_store_entry',
+  );
 }
 
 export function currentPaperAutonomyRecoveryObligation(
@@ -176,6 +205,26 @@ export function recordPaperAutonomySupervisorDecision(
     entries: [...entries, entry],
     decision: input.decision,
   };
+}
+
+export function readPaperAutonomySupervisorDecisionLedgerJsonl(
+  ledgerPath: string,
+): PaperAutonomySupervisorDecisionLedgerEntry[] {
+  return readPaperAutonomyJsonlLedger(
+    ledgerPath,
+    'opl_paper_autonomy_supervisor_decision_ledger_entry',
+  ) as PaperAutonomySupervisorDecisionLedgerEntry[];
+}
+
+export function appendPaperAutonomySupervisorDecisionLedgerJsonl(
+  ledgerPath: string,
+  entry: PaperAutonomySupervisorDecisionLedgerEntry,
+) {
+  appendPaperAutonomyJsonlLedgerEntry(
+    ledgerPath,
+    entry,
+    'opl_paper_autonomy_supervisor_decision_ledger_entry',
+  );
 }
 
 export function currentPaperAutonomySupervisorDecision(
@@ -314,6 +363,26 @@ export function appendPaperAutonomyCloseoutInboxPending(
   };
 }
 
+export function readPaperAutonomyCloseoutInboxJsonl(
+  ledgerPath: string,
+): PaperAutonomyCloseoutInboxEntry[] {
+  return readPaperAutonomyJsonlLedger(
+    ledgerPath,
+    'opl_paper_autonomy_closeout_inbox_entry',
+  ) as PaperAutonomyCloseoutInboxEntry[];
+}
+
+export function appendPaperAutonomyCloseoutInboxJsonl(
+  ledgerPath: string,
+  entry: PaperAutonomyCloseoutInboxEntry,
+) {
+  appendPaperAutonomyJsonlLedgerEntry(
+    ledgerPath,
+    entry,
+    'opl_paper_autonomy_closeout_inbox_entry',
+  );
+}
+
 export function readPaperAutonomyCloseoutInboxEntry(
   entries: PaperAutonomyCloseoutInboxEntry[],
   input: {
@@ -445,6 +514,45 @@ function rejectedObligationApply(
     entry,
     entries: [...input.obligation_entries, entry],
   };
+}
+
+function readPaperAutonomyJsonlLedger(
+  ledgerPath: string,
+  expectedSurfaceKind: PaperAutonomyJsonlSurfaceKind,
+): PaperAutonomyJsonlLedgerEntry[] {
+  if (!existsSync(ledgerPath)) {
+    return [];
+  }
+  const raw = readFileSync(ledgerPath, 'utf8');
+  const entries: PaperAutonomyJsonlLedgerEntry[] = [];
+  for (const [index, line] of raw.split(/\r?\n/u).entries()) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      continue;
+    }
+    const parsed = JSON.parse(trimmed) as Partial<PaperAutonomyJsonlLedgerEntry>;
+    if (parsed.surface_kind !== expectedSurfaceKind) {
+      throw new Error(
+        `Unexpected paper autonomy JSONL surface at line ${index + 1}: ${String(parsed.surface_kind)}`,
+      );
+    }
+    entries.push(parsed as PaperAutonomyJsonlLedgerEntry);
+  }
+  return entries;
+}
+
+function appendPaperAutonomyJsonlLedgerEntry(
+  ledgerPath: string,
+  entry: PaperAutonomyJsonlLedgerEntry,
+  expectedSurfaceKind: PaperAutonomyJsonlSurfaceKind,
+) {
+  if (entry.surface_kind !== expectedSurfaceKind) {
+    throw new Error(
+      `Unexpected paper autonomy JSONL append surface: ${entry.surface_kind}`,
+    );
+  }
+  mkdirSync(dirname(ledgerPath), { recursive: true });
+  appendFileSync(ledgerPath, `${JSON.stringify(entry)}\n`, 'utf8');
 }
 
 function obligationStatusForDecision(

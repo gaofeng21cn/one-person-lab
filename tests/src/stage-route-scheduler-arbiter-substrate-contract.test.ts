@@ -192,14 +192,14 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   );
   assert.match(
     paperAutonomy.concepts.RecoveryObligationStore.landed_support,
-    /append-only obligation store/,
+    /append-only physical JSONL obligation store/,
   );
   assert.match(
     paperAutonomy.concepts.RecoveryObligationStore.landed_support,
     /paper_autonomy_supervisor_apply/,
   );
-  assert.equal(paperAutonomy.concepts.RecoveryObligationStore.durable_substrate_first_slice.obligation_store, 'append_only_jsonl_compatible_identity_bound');
-  assert.equal(paperAutonomy.concepts.RecoveryObligationStore.durable_substrate_first_slice.closeout_inbox, 'pending_consumed_rejected_identity_bound');
+  assert.equal(paperAutonomy.concepts.RecoveryObligationStore.durable_substrate_first_slice.obligation_store, 'append_only_physical_jsonl_identity_bound');
+  assert.equal(paperAutonomy.concepts.RecoveryObligationStore.durable_substrate_first_slice.closeout_inbox, 'append_only_physical_jsonl_pending_consumed_rejected_identity_bound');
   assert.equal(
     paperAutonomy.concepts.RecoveryObligationStore.durable_substrate_first_slice.same_identity_redrive_policy,
     'fail_closed_when_decision_is_not_current_latest_for_identity',
@@ -214,9 +214,9 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   );
   assert.match(
     paperAutonomy.concepts.SupervisorDecisionEngine.landed_support,
-    /append-only supervisor decision ledger/,
+    /append-only physical JSONL supervisor decision ledger/,
   );
-  assert.equal(paperAutonomy.concepts.SupervisorDecisionEngine.durable_substrate_first_slice.ledger, 'append_only_jsonl_compatible');
+  assert.equal(paperAutonomy.concepts.SupervisorDecisionEngine.durable_substrate_first_slice.ledger, 'append_only_physical_jsonl');
   assert.equal(
     paperAutonomy.concepts.SupervisorDecisionEngine.durable_substrate_first_slice.current_latest_policy,
     'exactly_one_latest_current_decision_per_obligation_identity',

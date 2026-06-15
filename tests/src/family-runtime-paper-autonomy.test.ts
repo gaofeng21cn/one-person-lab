@@ -1,9 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 
 import {
   appendPaperAutonomyCloseoutInboxPending,
+  appendPaperAutonomyCloseoutInboxJsonl,
   appendPaperAutonomyRecoveryObligation,
+  appendPaperAutonomyRecoveryObligationStoreJsonl,
+  appendPaperAutonomySupervisorDecisionLedgerJsonl,
   applyPaperAutonomySupervisorDecision,
   applyPaperAutonomySupervisorDecisionFromLedger,
   buildPaperAutonomySupervisorDecisionReadback,
@@ -13,6 +19,9 @@ import {
   PAPER_AUTONOMY_SUPERVISOR_DECISION_KINDS,
   readPaperAutonomySupervisorDecisionFromObligation,
   readPaperAutonomyCloseoutInboxEntry,
+  readPaperAutonomyCloseoutInboxJsonl,
+  readPaperAutonomyRecoveryObligationStoreJsonl,
+  readPaperAutonomySupervisorDecisionLedgerJsonl,
   recordPaperAutonomySupervisorDecision,
   rejectPaperAutonomyCloseoutInboxEntry,
   selectPaperAutonomyRecoveryObligation,
@@ -496,4 +505,91 @@ test('paper autonomy closeout inbox records pending closeouts as consumed or rej
     closeout_ref: 'opl://stage-attempts/dm002/closeout-rejected.json',
     current_identity: currentIdentity,
   })?.status, 'rejected');
+});
+
+test('paper autonomy physical JSONL ledgers replay obligation, decision, and closeout inbox state', () => {
+  const currentIdentity = identity();
+  const root = mkdtempSync(join(tmpdir(), 'opl-paper-autonomy-jsonl-'));
+  const obligationLedgerPath = join(root, 'obligations.jsonl');
+  const decisionLedgerPath = join(root, 'decisions.jsonl');
+  const closeoutInboxPath = join(root, 'closeout-inbox.jsonl');
+  const obligation: PaperAutonomyRecoveryObligation = {
+    obligation_id: 'obligation:physical-jsonl',
+    desired_delta_ref: 'mas://DM002/current-owner-delta/latest.json',
+    current_identity: currentIdentity,
+    status: 'open',
+    last_evidence_refs: [],
+  };
+
+  const appendedObligation = appendPaperAutonomyRecoveryObligation([], {
+    obligation,
+    appended_at: '2026-06-15T00:04:00.000Z',
+  });
+  appendPaperAutonomyRecoveryObligationStoreJsonl(
+    obligationLedgerPath,
+    appendedObligation.entry,
+  );
+
+  const decision = buildPaperAutonomySupervisorDecisionReadback({
+    ...decisionInput('stop_with_owner_receipt'),
+    obligation_id: obligation.obligation_id,
+    current_identity: currentIdentity,
+    provider_admission_identity_ref: undefined,
+  });
+  const recordedDecision = recordPaperAutonomySupervisorDecision([], {
+    obligation_id: obligation.obligation_id,
+    current_identity: currentIdentity,
+    decision,
+    appended_at: '2026-06-15T00:04:01.000Z',
+  });
+  assert.equal(recordedDecision.accepted, true);
+  appendPaperAutonomySupervisorDecisionLedgerJsonl(
+    decisionLedgerPath,
+    recordedDecision.entry,
+  );
+
+  let closeoutEntries: PaperAutonomyCloseoutInboxEntry[] = [];
+  closeoutEntries = appendPaperAutonomyCloseoutInboxPending(closeoutEntries, {
+    closeout_ref: 'opl://stage-attempts/dm002/closeout-physical.json',
+    obligation_id: obligation.obligation_id,
+    current_identity: currentIdentity,
+    terminal_closeout_ref: 'opl://stage-attempts/dm002/closeout-physical.json',
+    appended_at: '2026-06-15T00:04:02.000Z',
+  }).entries;
+  appendPaperAutonomyCloseoutInboxJsonl(closeoutInboxPath, closeoutEntries.at(-1)!);
+  const consumed = consumePaperAutonomyCloseoutInboxEntry(closeoutEntries, {
+    closeout_ref: 'opl://stage-attempts/dm002/closeout-physical.json',
+    current_identity: currentIdentity,
+    supervisor_decision_ref: decision.decision_id,
+    consumed_at: '2026-06-15T00:04:03.000Z',
+  });
+  assert.equal(consumed.consumed, true);
+  appendPaperAutonomyCloseoutInboxJsonl(closeoutInboxPath, consumed.entry);
+
+  const replayedObligations = readPaperAutonomyRecoveryObligationStoreJsonl(obligationLedgerPath);
+  const replayedDecisions = readPaperAutonomySupervisorDecisionLedgerJsonl(decisionLedgerPath);
+  const replayedCloseouts = readPaperAutonomyCloseoutInboxJsonl(closeoutInboxPath);
+
+  assert.equal(replayedObligations.length, 1);
+  assert.equal(replayedObligations[0].projection.append_only_jsonl_compatible, true);
+  assert.equal(currentPaperAutonomySupervisorDecision(replayedDecisions, {
+    obligation_id: obligation.obligation_id,
+    current_identity: currentIdentity,
+  })?.decision_id, decision.decision_id);
+  assert.equal(readPaperAutonomyCloseoutInboxEntry(replayedCloseouts, {
+    closeout_ref: 'opl://stage-attempts/dm002/closeout-physical.json',
+    current_identity: currentIdentity,
+  })?.status, 'consumed');
+
+  assert.throws(
+    () => appendPaperAutonomyCloseoutInboxJsonl(
+      closeoutInboxPath,
+      replayedObligations[0] as unknown as PaperAutonomyCloseoutInboxEntry,
+    ),
+    /Unexpected paper autonomy JSONL append surface/,
+  );
+  assert.throws(
+    () => readPaperAutonomySupervisorDecisionLedgerJsonl(closeoutInboxPath),
+    /Unexpected paper autonomy JSONL surface/,
+  );
 });
