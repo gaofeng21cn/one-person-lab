@@ -180,7 +180,7 @@ test('runtime Stage Transition Authority commands reject body payloads and non-o
     '--json',
   ]);
 
-  assert.equal(rejectedIntent.payload.error.type, 'contract_shape_invalid');
+  assert.equal(rejectedIntent.payload.error.code, 'contract_shape_invalid');
   assert.match(rejectedIntent.payload.error.message, /forbidden_body_payload/);
 
   const rejectedReadModel = runCliFailure([
@@ -192,6 +192,6 @@ test('runtime Stage Transition Authority commands reject body payloads and non-o
     '--json',
   ]);
 
-  assert.equal(rejectedReadModel.payload.error.type, 'cli_usage_error');
+  assert.equal(rejectedReadModel.payload.error.code, 'cli_usage_error');
   assert.match(rejectedReadModel.payload.error.message, /payload must be a JSON array/);
 });
