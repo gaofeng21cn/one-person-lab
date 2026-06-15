@@ -321,9 +321,27 @@ test('domain manifests reports stale workspace bindings separately from live man
 
     assert.equal(manifestOutput.domain_manifests.summary.stale_binding_count, 1);
     assert.deepEqual(manifestOutput.domain_manifests.summary.stale_binding_project_ids, ['redcube']);
+    assert.equal(manifestOutput.domain_manifests.summary.currentness_owner_action_packet_count, 1);
+    assert.deepEqual(
+      manifestOutput.domain_manifests.summary.currentness_owner_action_project_ids,
+      ['redcube'],
+    );
     assert.equal(manifestOutput.domain_manifests.summary.failed_count, 0);
     assert.deepEqual(manifestOutput.domain_manifests.summary.live_failed_project_ids, []);
     assert.equal(redcube.status, 'workspace_missing');
+    assert.equal(redcube.currentness_owner_action_packet.status, 'owner_action_required');
+    assert.equal(redcube.currentness_owner_action_packet.action_id, 'rebind_or_archive_stale_workspace_binding');
+    assert.deepEqual(redcube.currentness_owner_action_packet.accepted_owner_answer_shapes, [
+      'workspace_rebind_ref',
+      'workspace_archive_ref',
+      'typed_blocker_ref',
+    ]);
+    assert.equal(redcube.currentness_owner_action_packet.safe_commands.rebind_command,
+      `opl workspace bind --project redcube --path ${workspacePath} --manifest-command <manifest-command>`);
+    assert.equal(redcube.currentness_owner_action_packet.safe_commands.archive_command,
+      `opl workspace archive --project redcube --path ${workspacePath}`);
+    assert.equal(redcube.currentness_owner_action_packet.authority_boundary.can_write_domain_truth, false);
+    assert.equal(redcube.currentness_owner_action_packet.authority_boundary.can_claim_domain_ready, false);
     assert.equal(redcube.workspace_path, workspacePath);
     assert.equal(redcube.error.code, 'workspace_missing');
     assert.equal(redcube.error.message, 'Active workspace binding path does not exist.');
@@ -364,9 +382,25 @@ test('domain manifests reports missing manifest commands as binding configuratio
       manifestOutput.domain_manifests.summary.manifest_not_configured_project_ids,
       ['medautogrant'],
     );
+    assert.equal(manifestOutput.domain_manifests.summary.currentness_owner_action_packet_count, 1);
+    assert.deepEqual(
+      manifestOutput.domain_manifests.summary.currentness_owner_action_project_ids,
+      ['medautogrant'],
+    );
     assert.equal(manifestOutput.domain_manifests.summary.failed_count, 0);
     assert.deepEqual(manifestOutput.domain_manifests.summary.live_failed_project_ids, []);
     assert.equal(medautogrant.status, 'manifest_not_configured');
+    assert.equal(medautogrant.currentness_owner_action_packet.status, 'owner_action_required');
+    assert.equal(medautogrant.currentness_owner_action_packet.action_id, 'configure_manifest_command_or_record_typed_blocker');
+    assert.deepEqual(medautogrant.currentness_owner_action_packet.accepted_owner_answer_shapes, [
+      'manifest_command_configured_ref',
+      'typed_blocker_ref',
+    ]);
+    assert.equal(medautogrant.currentness_owner_action_packet.safe_commands.rebind_command,
+      `opl workspace bind --project medautogrant --path ${workspacePath} --manifest-command <manifest-command>`);
+    assert.equal(medautogrant.currentness_owner_action_packet.safe_commands.archive_command, null);
+    assert.equal(medautogrant.currentness_owner_action_packet.authority_boundary.can_execute_manifest_command, false);
+    assert.equal(medautogrant.currentness_owner_action_packet.authority_boundary.can_claim_domain_ready, false);
     assert.equal(medautogrant.manifest_command, null);
     assert.equal(medautogrant.error, null);
   } finally {

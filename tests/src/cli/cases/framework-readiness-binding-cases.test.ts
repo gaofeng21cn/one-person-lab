@@ -51,6 +51,19 @@ test('framework readiness treats stale domain workspace bindings as registry att
       })).framework_readiness;
       assert.equal(readiness.summary.domain_manifest_stale_binding_count, 1);
       assert.deepEqual(readiness.summary.domain_manifest_stale_binding_project_ids, ['redcube']);
+      assert.equal(readiness.summary.domain_manifest_currentness_owner_action_packet_count, 1);
+      assert.deepEqual(readiness.summary.domain_manifest_currentness_owner_action_project_ids, ['redcube']);
+      const currentnessPacket = readiness.domain_manifest_currentness_owner_action_packet;
+      assert.ok(currentnessPacket);
+      const currentnessItem = currentnessPacket.items[0] as Record<string, any>;
+      assert.equal(
+        currentnessItem.action_id,
+        'rebind_or_archive_stale_workspace_binding',
+      );
+      assert.equal(
+        currentnessItem.authority_boundary.can_claim_domain_ready,
+        false,
+      );
       assert.deepEqual(readiness.summary.domain_manifest_live_failed_project_ids, []);
       assert.equal(
         readiness.stages.readiness_by_domain.rca.diagnostic_failure_count,
@@ -107,6 +120,19 @@ test('framework readiness treats missing manifest commands as config attention, 
       })).framework_readiness;
       assert.equal(readiness.summary.domain_manifest_not_configured_count, 1);
       assert.deepEqual(readiness.summary.domain_manifest_not_configured_project_ids, ['medautogrant']);
+      assert.equal(readiness.summary.domain_manifest_currentness_owner_action_packet_count, 1);
+      assert.deepEqual(readiness.summary.domain_manifest_currentness_owner_action_project_ids, ['medautogrant']);
+      const currentnessPacket = readiness.domain_manifest_currentness_owner_action_packet;
+      assert.ok(currentnessPacket);
+      const currentnessItem = currentnessPacket.items[0] as Record<string, any>;
+      assert.equal(
+        currentnessItem.action_id,
+        'configure_manifest_command_or_record_typed_blocker',
+      );
+      assert.equal(
+        currentnessItem.authority_boundary.can_execute_manifest_command,
+        false,
+      );
       assert.deepEqual(readiness.summary.domain_manifest_live_failed_project_ids, []);
       assert.equal(
         readiness.stages.readiness_by_domain.mag.diagnostic_failure_count,

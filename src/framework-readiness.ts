@@ -600,6 +600,12 @@ export async function buildFrameworkReadinessSummary(
           Array.isArray(domainManifests.summary.manifest_not_configured_project_ids)
             ? domainManifests.summary.manifest_not_configured_project_ids
             : [],
+        domain_manifest_currentness_owner_action_packet_count:
+          numberValue(domainManifests.summary.currentness_owner_action_packet_count),
+        domain_manifest_currentness_owner_action_project_ids:
+          Array.isArray(domainManifests.summary.currentness_owner_action_project_ids)
+            ? domainManifests.summary.currentness_owner_action_project_ids
+            : [],
         domain_manifest_live_failed_project_ids:
           Array.isArray(domainManifests.summary.live_failed_project_ids)
             ? domainManifests.summary.live_failed_project_ids
@@ -633,6 +639,15 @@ export async function buildFrameworkReadinessSummary(
         owner_delta_handoff_next_owner:
           ownerDeltaHandoffSummary.next_owner ?? null,
       },
+      domain_manifest_currentness_owner_action_packet:
+        domainManifests.currentness_owner_action_packet ?? {
+          surface_kind: 'opl_domain_manifest_currentness_owner_action_packet',
+          status: 'clear',
+          item_count: 0,
+          project_ids: [],
+          items: [],
+          authority_boundary: frameworkReadinessAuthorityBoundary(),
+        },
       source_commands: Object.values(SOURCE_COMMANDS),
       evidence_counter_taxonomy: {
         agent_structural_evidence_tail:

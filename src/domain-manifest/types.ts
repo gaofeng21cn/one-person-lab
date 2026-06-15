@@ -545,6 +545,7 @@ export interface DomainManifestCatalogEntry {
   manifest_command: string | null;
   status: DomainManifestStatus;
   manifest: NormalizedDomainManifest | null;
+  currentness_owner_action_packet?: JsonRecord | null;
   error: {
     code: string;
     message: string;
