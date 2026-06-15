@@ -51,6 +51,12 @@ type CurrentControlProviderAdmissionInputContext = {
   paperAutonomySupervisorApply: Record<string, unknown> | null;
 };
 
+type CurrentControlProviderAdmissionBlocked = {
+  reason: string;
+  task: unknown;
+  repair_action?: Record<string, unknown>;
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -498,7 +504,7 @@ function currentControlProviderAdmissionCandidates(currentControl: Record<string
 
 function currentControlProviderAdmissionCandidateFields(
   candidate: Record<string, unknown>,
-): { fields?: CurrentControlProviderAdmissionCandidateFields; blocked?: { reason: string; task: unknown } } {
+): { fields?: CurrentControlProviderAdmissionCandidateFields; blocked?: CurrentControlProviderAdmissionBlocked } {
   const studyId = optionalString(candidate.study_id);
   const actionType = optionalString(candidate.action_type);
   const workUnitId = optionalString(candidate.work_unit_id);
@@ -530,7 +536,7 @@ function currentControlProviderAdmissionInputContext(input: {
   output: Record<string, unknown>;
   fields: CurrentControlProviderAdmissionCandidateFields;
   currentControlRef: string;
-}): { context?: CurrentControlProviderAdmissionInputContext; blocked?: { reason: string; task: unknown } } {
+}): { context?: CurrentControlProviderAdmissionInputContext; blocked?: CurrentControlProviderAdmissionBlocked } {
   const workspaceRoot = exportWorkspaceRoot(input.output);
   const profileName = exportProfileName(input.output);
   const profileRef = exportProfileRef(input.output);
@@ -554,6 +560,11 @@ function currentControlProviderAdmissionInputContext(input: {
       blocked: {
         reason: 'current_control_provider_admission_stage_packet_ref_missing',
         task: input.candidate,
+        repair_action: currentControlProviderAdmissionRepairAction(
+          'current_control_provider_admission_stage_packet_ref_missing',
+          ['stage_packet_ref', 'stage_packet_refs'],
+          input.fields,
+        ),
       },
     };
   }
@@ -563,6 +574,11 @@ function currentControlProviderAdmissionInputContext(input: {
       blocked: {
         reason: 'current_control_provider_admission_route_identity_key_missing',
         task: input.candidate,
+        repair_action: currentControlProviderAdmissionRepairAction(
+          'current_control_provider_admission_route_identity_key_missing',
+          ['route_identity_key'],
+          input.fields,
+        ),
       },
     };
   }
@@ -572,6 +588,11 @@ function currentControlProviderAdmissionInputContext(input: {
       blocked: {
         reason: 'current_control_provider_admission_attempt_idempotency_key_missing',
         task: input.candidate,
+        repair_action: currentControlProviderAdmissionRepairAction(
+          'current_control_provider_admission_attempt_idempotency_key_missing',
+          ['attempt_idempotency_key'],
+          input.fields,
+        ),
       },
     };
   }
@@ -618,6 +639,101 @@ function currentControlProviderAdmissionInputContext(input: {
       sourceRefs,
       currentnessBasis,
       paperAutonomySupervisorApply: paperAutonomyApply,
+    },
+  };
+}
+
+function currentControlProviderAdmissionRepairAction(
+  reason: string,
+  missingFields: string[],
+  fields: CurrentControlProviderAdmissionCandidateFields,
+) {
+  return {
+    surface_kind: 'opl_current_control_provider_admission_repair_action',
+    action_id: 'materialize_current_control_provider_admission_identity',
+    repair_owner: 'med-autoscience',
+    substrate_owner: 'one-person-lab',
+    reason,
+    study_id: fields.studyId,
+    action_type: fields.actionType,
+    work_unit_id: fields.workUnitId,
+    work_unit_fingerprint: fields.workUnitFingerprint,
+    missing_fields: missingFields,
+    required_fields: ['stage_packet_ref', 'stage_packet_refs', 'route_identity_key', 'attempt_idempotency_key'],
+    preflight: {
+      status: 'blocked',
+      can_dispatch_provider_attempt: false,
+      stale_sidecar_pending_task_must_remain_suppressed: true,
+      materialization_owner: 'med-autoscience',
+      substrate_owner: 'one-person-lab',
+      missing_fields: missingFields,
+      required_fields: ['stage_packet_ref', 'stage_packet_refs', 'route_identity_key', 'attempt_idempotency_key'],
+      blocked_reason: reason,
+    },
+    accepted_materialization: {
+      owner_route_must_emit_selected_stage_packet: true,
+      owner_route_must_emit_route_identity_key: true,
+      owner_route_must_emit_attempt_idempotency_key: true,
+    },
+    forbidden_fallbacks: {
+      dispatch_ref_as_stage_packet_ref: 'forbidden',
+      generic_idempotency_key_as_route_identity_key: 'forbidden',
+      generic_idempotency_key_as_attempt_idempotency_key: 'forbidden',
+      opl_materializes_mas_truth: 'forbidden',
+    },
+    command_hints: [
+      {
+        purpose: 'generate_selected_stage_packet',
+        owner: 'med-autoscience',
+        substrate_owner: 'one-person-lab',
+        command_ref: [
+          'mas current-control stage-packet materialize',
+          `--study ${fields.studyId}`,
+          `--action ${fields.actionType}`,
+          `--work-unit ${fields.workUnitId}`,
+        ].join(' '),
+        writes_domain_truth: true,
+        opl_must_not_execute_as_truth_writer: true,
+      },
+      {
+        purpose: 'refresh_owner_route_identity',
+        owner: 'med-autoscience',
+        substrate_owner: 'one-person-lab',
+        command_ref: [
+          'mas current-control owner-route refresh',
+          `--study ${fields.studyId}`,
+          `--action ${fields.actionType}`,
+          `--work-unit ${fields.workUnitId}`,
+        ].join(' '),
+        required_output_fields: ['route_identity_key', 'attempt_idempotency_key'],
+        writes_domain_truth: true,
+        opl_must_not_execute_as_truth_writer: true,
+      },
+      {
+        purpose: 'materialize_current_control_provider_admission_identity',
+        owner: 'med-autoscience',
+        substrate_owner: 'one-person-lab',
+        command_ref: [
+          'mas current-control provider-admission materialize-identity',
+          `--study ${fields.studyId}`,
+          `--action ${fields.actionType}`,
+          `--work-unit ${fields.workUnitId}`,
+        ].join(' '),
+        required_output_fields: ['stage_packet_ref', 'stage_packet_refs', 'route_identity_key', 'attempt_idempotency_key'],
+        writes_domain_truth: true,
+        opl_must_not_execute_as_truth_writer: true,
+      },
+    ],
+    output_contract: {
+      owner_repo: 'med-autoscience',
+      output_surface: 'runtime/artifacts/supervision/opl_current_control_state/latest.json',
+      provider_admission_candidate_must_include_required_fields: true,
+    },
+    authority_boundary: {
+      opl_can_write_mas_truth: false,
+      opl_can_create_domain_owner_receipt: false,
+      opl_can_create_domain_typed_blocker: false,
+      repair_action_counts_as_domain_ready: false,
     },
   };
 }
@@ -726,7 +842,7 @@ function currentControlProviderAdmissionInputFrom(
   output: Record<string, unknown>,
   exportContext: CurrentControlProviderAdmissionExportContext,
   currentControlRef: string,
-): { input?: EnqueueInput; blocked?: { reason: string; task: unknown } } {
+): { input?: EnqueueInput; blocked?: CurrentControlProviderAdmissionBlocked } {
   if (domainId !== 'medautoscience') {
     return { blocked: { reason: 'unsupported_current_control_provider_admission_domain', task: candidate } };
   }
@@ -866,7 +982,7 @@ export function currentControlProviderAdmissionInputs(
   }
   const candidates = currentControlProviderAdmissionCandidates(currentControl);
   const inputs: EnqueueInput[] = [];
-  const blocked: Array<{ reason: string; task: unknown }> = [];
+  const blocked: CurrentControlProviderAdmissionBlocked[] = [];
   for (const candidate of candidates) {
     if (!isRecord(candidate)) {
       blocked.push({ reason: 'invalid_current_control_provider_admission_candidate', task: candidate });

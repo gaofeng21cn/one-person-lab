@@ -800,6 +800,82 @@ test('family-runtime intake blocks current-control action_queue provider candida
       intake.family_runtime_intake.exports[0].blocked[0].reason,
       'current_control_provider_admission_stage_packet_ref_missing',
     );
+    assert.deepEqual(
+      intake.family_runtime_intake.exports[0].blocked[0].repair_action,
+      {
+        surface_kind: 'opl_current_control_provider_admission_repair_action',
+        action_id: 'materialize_current_control_provider_admission_identity',
+        repair_owner: 'med-autoscience',
+        substrate_owner: 'one-person-lab',
+        reason: 'current_control_provider_admission_stage_packet_ref_missing',
+        study_id: '002-dm-china-us-mortality-attribution',
+        action_type: 'return_to_ai_reviewer_workflow',
+        work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+        work_unit_fingerprint: 'sha256:handoff-dm002',
+        missing_fields: ['stage_packet_ref', 'stage_packet_refs'],
+        required_fields: ['stage_packet_ref', 'stage_packet_refs', 'route_identity_key', 'attempt_idempotency_key'],
+        preflight: {
+          status: 'blocked',
+          can_dispatch_provider_attempt: false,
+          stale_sidecar_pending_task_must_remain_suppressed: true,
+          materialization_owner: 'med-autoscience',
+          substrate_owner: 'one-person-lab',
+          missing_fields: ['stage_packet_ref', 'stage_packet_refs'],
+          required_fields: ['stage_packet_ref', 'stage_packet_refs', 'route_identity_key', 'attempt_idempotency_key'],
+          blocked_reason: 'current_control_provider_admission_stage_packet_ref_missing',
+        },
+        accepted_materialization: {
+          owner_route_must_emit_selected_stage_packet: true,
+          owner_route_must_emit_route_identity_key: true,
+          owner_route_must_emit_attempt_idempotency_key: true,
+        },
+        forbidden_fallbacks: {
+          dispatch_ref_as_stage_packet_ref: 'forbidden',
+          generic_idempotency_key_as_route_identity_key: 'forbidden',
+          generic_idempotency_key_as_attempt_idempotency_key: 'forbidden',
+          opl_materializes_mas_truth: 'forbidden',
+        },
+        command_hints: [
+          {
+            purpose: 'generate_selected_stage_packet',
+            owner: 'med-autoscience',
+            substrate_owner: 'one-person-lab',
+            command_ref: 'mas current-control stage-packet materialize --study 002-dm-china-us-mortality-attribution --action return_to_ai_reviewer_workflow --work-unit produce_ai_reviewer_publication_eval_record_against_current_inputs',
+            writes_domain_truth: true,
+            opl_must_not_execute_as_truth_writer: true,
+          },
+          {
+            purpose: 'refresh_owner_route_identity',
+            owner: 'med-autoscience',
+            substrate_owner: 'one-person-lab',
+            command_ref: 'mas current-control owner-route refresh --study 002-dm-china-us-mortality-attribution --action return_to_ai_reviewer_workflow --work-unit produce_ai_reviewer_publication_eval_record_against_current_inputs',
+            required_output_fields: ['route_identity_key', 'attempt_idempotency_key'],
+            writes_domain_truth: true,
+            opl_must_not_execute_as_truth_writer: true,
+          },
+          {
+            purpose: 'materialize_current_control_provider_admission_identity',
+            owner: 'med-autoscience',
+            substrate_owner: 'one-person-lab',
+            command_ref: 'mas current-control provider-admission materialize-identity --study 002-dm-china-us-mortality-attribution --action return_to_ai_reviewer_workflow --work-unit produce_ai_reviewer_publication_eval_record_against_current_inputs',
+            required_output_fields: ['stage_packet_ref', 'stage_packet_refs', 'route_identity_key', 'attempt_idempotency_key'],
+            writes_domain_truth: true,
+            opl_must_not_execute_as_truth_writer: true,
+          },
+        ],
+        output_contract: {
+          owner_repo: 'med-autoscience',
+          output_surface: 'runtime/artifacts/supervision/opl_current_control_state/latest.json',
+          provider_admission_candidate_must_include_required_fields: true,
+        },
+        authority_boundary: {
+          opl_can_write_mas_truth: false,
+          opl_can_create_domain_owner_receipt: false,
+          opl_can_create_domain_typed_blocker: false,
+          repair_action_counts_as_domain_ready: false,
+        },
+      },
+    );
     assert.equal(queue.family_runtime_queue.tasks.length, 0);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -891,6 +967,47 @@ test('family-runtime intake blocks current-control provider candidates with inco
       [
         'current_control_provider_admission_route_identity_key_missing',
         'current_control_provider_admission_attempt_idempotency_key_missing',
+      ],
+    );
+    assert.deepEqual(
+      intake.family_runtime_intake.exports[0].blocked.map((item: { repair_action: { missing_fields: string[] } }) =>
+        item.repair_action.missing_fields
+      ),
+      [
+        ['route_identity_key'],
+        ['attempt_idempotency_key'],
+      ],
+    );
+    assert.equal(
+      intake.family_runtime_intake.exports[0].blocked[0].repair_action.forbidden_fallbacks
+        .generic_idempotency_key_as_route_identity_key,
+      'forbidden',
+    );
+    assert.equal(
+      intake.family_runtime_intake.exports[0].blocked[1].repair_action.forbidden_fallbacks
+        .generic_idempotency_key_as_attempt_idempotency_key,
+      'forbidden',
+    );
+    assert.deepEqual(
+      intake.family_runtime_intake.exports[0].blocked.map((
+        item: { repair_action: { preflight: { status: string; can_dispatch_provider_attempt: boolean } } },
+      ) => ({
+        status: item.repair_action.preflight.status,
+        can_dispatch_provider_attempt: item.repair_action.preflight.can_dispatch_provider_attempt,
+      })),
+      [
+        { status: 'blocked', can_dispatch_provider_attempt: false },
+        { status: 'blocked', can_dispatch_provider_attempt: false },
+      ],
+    );
+    assert.deepEqual(
+      intake.family_runtime_intake.exports[0].blocked[0].repair_action.command_hints.map((
+        hint: { purpose: string },
+      ) => hint.purpose),
+      [
+        'generate_selected_stage_packet',
+        'refresh_owner_route_identity',
+        'materialize_current_control_provider_admission_identity',
       ],
     );
     assert.equal(queue.family_runtime_queue.tasks.length, 0);
