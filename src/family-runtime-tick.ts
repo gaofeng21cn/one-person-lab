@@ -32,7 +32,11 @@ import {
 import { redriveBlockedDefaultExecutorProviderTransportTask } from './family-runtime-redrive.ts';
 import { MAS_DOMAIN_ROUTE_RECONCILE_APPLY } from './family-runtime-mas-domain-route.ts';
 import {
+  domainRouteOplAttemptAdmissionNeedsProviderFollowthrough,
   isDomainRouteOplAttemptAdmissionRequested,
+  masDomainOwnerAnswerObservationFromRecords,
+  type MasDomainOwnerAnswerObservation,
+  MAS_DOMAIN_TYPED_BLOCKER_OBSERVED_REASON,
   OPL_ATTEMPT_ADMISSION_PROVIDER_START_PENDING_REASON,
   OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
 } from './family-runtime-opl-attempt-admission-receipt.ts';
@@ -434,6 +438,136 @@ function latestTaskDispatchSucceededOutput(db: DatabaseSync, taskId: string) {
   }
 }
 
+function closeoutRefsFromAttemptPayload(attempts: ReturnType<typeof listStageAttemptsForTask>) {
+  return attempts.flatMap((attempt) => (
+    Array.isArray(attempt.closeout_refs) ? attempt.closeout_refs.filter((ref): ref is string => typeof ref === 'string') : []
+  ));
+}
+
+function blockMasDomainRouteOwnerAnswerObserved(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  source: string,
+  input: {
+    observation: MasDomainOwnerAnswerObservation;
+    previousStatus: string;
+    output?: Record<string, unknown> | null;
+  },
+) {
+  const blockedAt = new Date().toISOString();
+  db.prepare(`
+    UPDATE tasks
+    SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
+      last_error = ?, dead_letter_reason = ?, updated_at = ?
+    WHERE task_id = ?
+  `).run(input.observation.reason, input.observation.reason, blockedAt, row.task_id);
+  const attempts = listStageAttemptsForTask(db, row.task_id).filter((attempt) => (
+    attempt.executor_kind === 'domain_handler'
+    && ['queued', 'running', 'checkpointed', 'completed'].includes(attempt.status)
+  ));
+  const blockedAttempts = updateStageAttemptsForTask(db, {
+    taskId: row.task_id,
+    stageAttemptIds: attempts.map((attempt) => attempt.stage_attempt_id),
+    status: 'blocked',
+    closeoutRefs: closeoutRefsFromAttemptPayload(attempts),
+    closeoutReceiptStatus: attempts.some((attempt) => attempt.closeout_receipt_status === 'domain_handler_receipt_ref_only')
+      ? 'domain_handler_receipt_ref_only'
+      : undefined,
+    blockedReason: input.observation.reason,
+    routeImpact: {
+      answer_kind: input.observation.answer_kind,
+      typed_blocker_refs: input.observation.answer_kind === 'typed_blocker_ref' ? input.observation.refs : [],
+      owner_answer_refs: input.observation.answer_kind !== 'typed_blocker_ref' ? input.observation.refs : [],
+      evidence_paths: input.observation.evidence_paths,
+    },
+    activityEvent: {
+      activity_kind: 'domain_handler_dispatch_activity',
+      activity_status: 'blocked_domain_owner_answer_observed',
+      blocked_reason: input.observation.reason,
+      answer_kind: input.observation.answer_kind,
+      refs: input.observation.refs,
+      previous_status: input.previousStatus,
+      previous_admission_signal: OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
+    },
+  });
+  insertEvent(db, {
+    taskId: row.task_id,
+    domainId: row.domain_id,
+    eventType: input.observation.reason === MAS_DOMAIN_TYPED_BLOCKER_OBSERVED_REASON
+      ? 'task_repaired_from_route_admission_to_mas_domain_typed_blocker'
+      : 'task_repaired_from_route_admission_to_mas_domain_owner_answer',
+    source,
+    payload: {
+      previous_status: input.previousStatus,
+      next_status: 'blocked',
+      reason: input.observation.reason,
+      answer_kind: input.observation.answer_kind,
+      refs: input.observation.refs,
+      evidence_paths: input.observation.evidence_paths,
+      previous_admission_signal: OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
+      dispatch_output: input.output ?? null,
+      repaired_stage_attempt_ids: blockedAttempts.map((attempt) => attempt.stage_attempt_id),
+      authority_boundary: {
+        opl: 'owner_answer_observation_and_queue_lifecycle_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        provider_completion_is_domain_ready: false,
+        refs_only_checkpoint_is_running_proof: false,
+        domain_truth_mutation: false,
+        publication_quality_mutation: false,
+        artifact_gate_mutation: false,
+        current_package_mutation: false,
+        can_create_owner_receipt: false,
+        can_create_typed_blocker: false,
+      },
+    },
+  });
+}
+
+function blockMasDomainRouteAdmissionsWithObservedOwnerAnswer(
+  db: DatabaseSync,
+  rows: FamilyRuntimeTaskRow[],
+  source: string,
+) {
+  let blockedCount = 0;
+  const blockedTaskIds = new Set<string>();
+  for (const row of rows) {
+    if (
+      row.domain_id !== 'medautoscience'
+      || row.task_kind !== MAS_DOMAIN_ROUTE_RECONCILE_APPLY
+      || !['running', 'succeeded'].includes(row.status)
+    ) {
+      continue;
+    }
+    const payload = payloadFromTask(row);
+    const output = latestTaskDispatchSucceededOutput(db, row.task_id);
+    if (row.status === 'succeeded' && !isDomainRouteOplAttemptAdmissionRequested(output)) {
+      continue;
+    }
+    if (
+      row.status === 'running'
+      && row.last_error !== OPL_ATTEMPT_ADMISSION_REQUESTED_REASON
+      && !isDomainRouteOplAttemptAdmissionRequested(output)
+    ) {
+      continue;
+    }
+    const observation = masDomainOwnerAnswerObservationFromRecords([
+      { source: 'task_payload', value: payload },
+      { source: 'domain_handler_output', value: output },
+    ]);
+    if (!observation) {
+      continue;
+    }
+    blockMasDomainRouteOwnerAnswerObserved(db, row, source, {
+      observation,
+      previousStatus: row.status,
+      output,
+    });
+    blockedCount += 1;
+    blockedTaskIds.add(row.task_id);
+  }
+  return { blockedCount, blockedTaskIds };
+}
+
 function repairSucceededMasDomainRouteAdmissionRequested(
   db: DatabaseSync,
   rows: FamilyRuntimeTaskRow[],
@@ -451,7 +585,8 @@ function repairSucceededMasDomainRouteAdmissionRequested(
       continue;
     }
     const output = latestTaskDispatchSucceededOutput(db, row.task_id);
-    if (!isDomainRouteOplAttemptAdmissionRequested(output)) {
+    const payload = payloadFromTask(row);
+    if (!domainRouteOplAttemptAdmissionNeedsProviderFollowthrough({ taskPayload: payload, output })) {
       continue;
     }
     const attempts = listStageAttemptsForTask(db, row.task_id).filter((attempt) => (
@@ -472,9 +607,7 @@ function repairSucceededMasDomainRouteAdmissionRequested(
       taskId: row.task_id,
       stageAttemptIds: attempts.map((attempt) => attempt.stage_attempt_id),
       status: 'queued',
-      closeoutRefs: attempts.flatMap((attempt) => (
-        Array.isArray(attempt.closeout_refs) ? attempt.closeout_refs.filter((ref): ref is string => typeof ref === 'string') : []
-      )),
+      closeoutRefs: closeoutRefsFromAttemptPayload(attempts),
       closeoutReceiptStatus: 'domain_handler_receipt_ref_only',
       blockedReason: null,
       activityEvent: {
@@ -826,11 +959,20 @@ async function runMaintenanceReconcile(
   );
   const scopedRowsAfterPaperAutonomyRepair = rowsForMaintenance();
   const {
+    blockedCount: blockedMasDomainRouteOwnerAnswerObservedCount,
+    blockedTaskIds: blockedMasDomainRouteOwnerAnswerObservedTaskIds,
+  } = blockMasDomainRouteAdmissionsWithObservedOwnerAnswer(
+    db,
+    scopedRowsAfterPaperAutonomyRepair,
+    `${input.source}:domain-route-owner-answer-observed-repair`,
+  );
+  const scopedRowsAfterDomainRouteOwnerAnswerObserved = rowsForMaintenance();
+  const {
     repairedCount: repairedMasDomainRouteAdmissionRequestedCount,
     repairedTaskIds: repairedMasDomainRouteAdmissionRequestedTaskIds,
   } = repairSucceededMasDomainRouteAdmissionRequested(
     db,
-    scopedRowsAfterPaperAutonomyRepair,
+    scopedRowsAfterDomainRouteOwnerAnswerObserved,
     `${input.source}:domain-route-admission-repair`,
   );
   const scopedRowsAfterDomainRouteAdmissionRepair = rowsForMaintenance();
@@ -867,6 +1009,8 @@ async function runMaintenanceReconcile(
     repairedPaperAutonomyMissingCloseoutTaskIds,
     repairedMasDomainRouteAdmissionRequestedCount,
     repairedMasDomainRouteAdmissionRequestedTaskIds,
+    blockedMasDomainRouteOwnerAnswerObservedCount,
+    blockedMasDomainRouteOwnerAnswerObservedTaskIds,
     defaultExecutorSupersededAttemptReconciledCount,
     waitingApprovalAttemptReconciledCount,
     defaultExecutorAutoRedrivenCount,
@@ -999,6 +1143,7 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     if (
       maintenanceReconcile.defaultExecutorAutoRedrivenCount > 0
       || maintenanceReconcile.repairedMasDomainRouteAdmissionRequestedCount > 0
+      || maintenanceReconcile.blockedMasDomainRouteOwnerAnswerObservedCount > 0
       || postRepairHydration.enqueued_count > 0
       || postRepairHydration.requeued_count > 0
     ) {
@@ -1006,6 +1151,7 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
         maintenanceReconcile.repairedMissingIdentityTaskIds,
         maintenanceReconcile.repairedPaperAutonomyMissingCloseoutTaskIds,
         maintenanceReconcile.repairedMasDomainRouteAdmissionRequestedTaskIds,
+        maintenanceReconcile.blockedMasDomainRouteOwnerAnswerObservedTaskIds,
       );
       selection = await selectDispatchCandidates(db, input, handlers, repairedTaskIds);
       selectionTotals.defaultExecutorSupersededCount += selection.defaultExecutorSupersededCount;
@@ -1060,6 +1206,8 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
       repaired_paper_autonomy_missing_closeout_count: maintenanceReconcile.repairedPaperAutonomyMissingCloseoutCount,
       repaired_mas_domain_route_admission_requested_count:
         maintenanceReconcile.repairedMasDomainRouteAdmissionRequestedCount,
+      blocked_mas_domain_route_owner_answer_observed_count:
+        maintenanceReconcile.blockedMasDomainRouteOwnerAnswerObservedCount,
       post_repair_hydration: postRepairHydration,
       mas_default_executor_auto_redriven_count: maintenanceReconcile.defaultExecutorAutoRedrivenCount,
       mas_default_executor_auto_dead_lettered_count: maintenanceReconcile.defaultExecutorAutoDeadLetteredCount,
@@ -1108,6 +1256,8 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     repaired_paper_autonomy_missing_closeout_count: maintenanceReconcile.repairedPaperAutonomyMissingCloseoutCount,
     repaired_mas_domain_route_admission_requested_count:
       maintenanceReconcile.repairedMasDomainRouteAdmissionRequestedCount,
+    blocked_mas_domain_route_owner_answer_observed_count:
+      maintenanceReconcile.blockedMasDomainRouteOwnerAnswerObservedCount,
     post_repair_hydration: postRepairHydration,
     mas_default_executor_auto_redriven_count: maintenanceReconcile.defaultExecutorAutoRedrivenCount,
     mas_default_executor_auto_dead_lettered_count: maintenanceReconcile.defaultExecutorAutoDeadLetteredCount,

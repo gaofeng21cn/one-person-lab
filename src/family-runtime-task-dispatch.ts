@@ -36,7 +36,11 @@ import {
 } from './family-runtime-paper-autonomy.ts';
 import { PROGRESS_FIRST_OWNER_DELTA_REQUIRED_REASON } from './family-runtime-progress-first-anti-spin-gate.ts';
 import {
+  domainRouteOplAttemptAdmissionNeedsProviderFollowthrough,
   isDomainRouteOplAttemptAdmissionRequested,
+  masDomainOwnerAnswerObservationFromRecords,
+  type MasDomainOwnerAnswerObservation,
+  MAS_DOMAIN_TYPED_BLOCKER_OBSERVED_REASON,
   OPL_ATTEMPT_ADMISSION_PROVIDER_START_PENDING_REASON,
   OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
 } from './family-runtime-opl-attempt-admission-receipt.ts';
@@ -379,6 +383,103 @@ function keepTaskOpenForOplAttemptAdmissionRequested(
   };
 }
 
+function blockTaskForObservedMasDomainOwnerAnswer(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  input: {
+    commandPreview: string[];
+    commandCwd: string | null;
+    output: Record<string, unknown>;
+    activeStageAttemptIds: string[];
+    closeoutRefs: string[];
+    observation: MasDomainOwnerAnswerObservation;
+  },
+) {
+  const updatedAt = nowIso();
+  db.prepare(`
+    UPDATE tasks
+    SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
+      last_error = ?, dead_letter_reason = ?, updated_at = ?
+    WHERE task_id = ?
+  `).run(input.observation.reason, input.observation.reason, updatedAt, row.task_id);
+  insertEvent(db, {
+    taskId: row.task_id,
+    domainId: row.domain_id,
+    eventType: input.observation.reason === MAS_DOMAIN_TYPED_BLOCKER_OBSERVED_REASON
+      ? 'task_dispatch_mas_domain_typed_blocker_observed'
+      : 'task_dispatch_mas_domain_owner_answer_observed',
+    source: 'opl-family-runtime',
+    payload: {
+      reason: input.observation.reason,
+      answer_kind: input.observation.answer_kind,
+      refs: input.observation.refs,
+      evidence_paths: input.observation.evidence_paths,
+      previous_admission_signal: OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
+      next_state: 'blocked_domain_owner_answer_observed',
+      command_preview: input.commandPreview,
+      command_cwd: input.commandCwd,
+      output: input.output,
+      closeout_refs: input.closeoutRefs,
+      authority_boundary: {
+        opl: 'owner_answer_observation_and_queue_lifecycle_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        provider_completion_is_domain_ready: false,
+        refs_only_checkpoint_is_running_proof: false,
+        domain_truth_mutation: false,
+        publication_quality_mutation: false,
+        artifact_gate_mutation: false,
+        current_package_mutation: false,
+        can_create_owner_receipt: false,
+        can_create_typed_blocker: false,
+      },
+    },
+  });
+  insertNotification(db, {
+    taskId: row.task_id,
+    severity: 'warning',
+    title: 'Family runtime observed MAS owner answer',
+    body: `${row.domain_id}:${row.task_kind} carried a MAS ${input.observation.answer_kind}; provider admission follow-through is not reopened.`,
+    payload: {
+      reason: input.observation.reason,
+      answer_kind: input.observation.answer_kind,
+      refs: input.observation.refs,
+    },
+  });
+  const stageAttempts = updateStageAttemptsForTask(db, {
+    taskId: row.task_id,
+    stageAttemptIds: input.activeStageAttemptIds,
+    status: 'blocked',
+    closeoutRefs: input.closeoutRefs,
+    closeoutReceiptStatus: input.closeoutRefs.length > 0 ? 'domain_handler_receipt_ref_only' : null,
+    blockedReason: input.observation.reason,
+    routeImpact: {
+      answer_kind: input.observation.answer_kind,
+      typed_blocker_refs: input.observation.answer_kind === 'typed_blocker_ref' ? input.observation.refs : [],
+      owner_answer_refs: input.observation.answer_kind !== 'typed_blocker_ref' ? input.observation.refs : [],
+      evidence_paths: input.observation.evidence_paths,
+    },
+    activityEvent: {
+      activity_kind: 'domain_handler_dispatch_activity',
+      activity_status: 'blocked_domain_owner_answer_observed',
+      blocked_reason: input.observation.reason,
+      answer_kind: input.observation.answer_kind,
+      refs: input.observation.refs,
+      closeout_refs: input.closeoutRefs,
+    },
+  });
+  return {
+    task_id: row.task_id,
+    status: 'blocked',
+    reason: input.observation.reason,
+    answer_kind: input.observation.answer_kind,
+    refs: input.observation.refs,
+    command_preview: input.commandPreview,
+    command_cwd: input.commandCwd,
+    output: input.output,
+    stage_attempts: stageAttempts,
+  };
+}
+
 export async function dispatchFamilyRuntimeTask(
   db: DatabaseSync,
   paths: ReturnType<typeof familyRuntimePaths>,
@@ -492,6 +593,22 @@ export async function dispatchFamilyRuntimeTask(
     const closeoutRefs = closeoutRefsFromDomainHandlerOutput(output);
     const typedCloseoutPacket = closeoutPacketFromDomainHandlerOutput(output);
     if (isDomainRouteOplAttemptAdmissionRequested(output)) {
+      const observation = masDomainOwnerAnswerObservationFromRecords([
+        { source: 'task_payload', value: payload },
+        { source: 'domain_handler_output', value: output },
+      ]);
+      if (observation) {
+        return blockTaskForObservedMasDomainOwnerAnswer(db, row, {
+          commandPreview: command.command_preview,
+          commandCwd: command.cwd,
+          output,
+          activeStageAttemptIds,
+          closeoutRefs,
+          observation,
+        });
+      }
+    }
+    if (domainRouteOplAttemptAdmissionNeedsProviderFollowthrough({ taskPayload: payload, output })) {
       return keepTaskOpenForOplAttemptAdmissionRequested(db, row, {
         commandPreview: command.command_preview,
         commandCwd: command.cwd,

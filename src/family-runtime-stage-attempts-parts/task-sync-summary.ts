@@ -24,6 +24,7 @@ export function updateStageAttemptsForTask(
     closeoutReceiptStatus?: string | null;
     humanGateRefs?: string[];
     blockedReason?: string | null;
+    routeImpact?: Record<string, unknown>;
     activityEvent?: Record<string, unknown>;
   },
 ) {
@@ -53,6 +54,9 @@ export function updateStageAttemptsForTask(
       provider_status: status,
       last_heartbeat_at: updatedAt,
     };
+    const routeImpact = input.routeImpact
+      ? { ...parseStageAttemptJsonObject(row.route_impact_json), ...input.routeImpact }
+      : parseStageAttemptJsonObject(row.route_impact_json);
     const activityEvents = input.activityEvent
       ? appendActivityEventToRow(row, input.activityEvent)
       : parseStageAttemptJsonList(row.activity_events_json);
@@ -65,6 +69,7 @@ export function updateStageAttemptsForTask(
       UPDATE stage_attempts
       SET status = ?, attempt_count = ?, checkpoint_refs_json = ?, closeout_refs_json = ?,
         human_gate_refs_json = ?, blocked_reason = ?, provider_run_json = ?, activity_events_json = ?,
+        route_impact_json = ?,
         closeout_receipt_status = CASE WHEN ? IS NOT NULL AND closeout_receipt_status IS NULL THEN ? ELSE closeout_receipt_status END,
         updated_at = ?
       WHERE stage_attempt_id = ?
@@ -77,6 +82,7 @@ export function updateStageAttemptsForTask(
       input.blockedReason === undefined ? row.blocked_reason : input.blockedReason,
       JSON.stringify(providerRun),
       JSON.stringify(activityEvents),
+      JSON.stringify(routeImpact),
       closeoutReceiptStatus,
       closeoutReceiptStatus,
       updatedAt,

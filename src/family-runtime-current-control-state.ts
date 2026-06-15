@@ -5,6 +5,7 @@ import {
   isDefaultExecutorDispatchTask,
   defaultExecutorStudyIdentity,
 } from './family-runtime-provider-hosted-attempts.ts';
+import { MAS_DOMAIN_ROUTE_RECONCILE_APPLY } from './family-runtime-mas-domain-route.ts';
 import type { StageAttemptRow } from './family-runtime-stage-attempt-ledger.ts';
 import {
   buildModelRouteCostProjection,
@@ -19,6 +20,7 @@ import {
   missingStageRunCurrentnessIdentityFields,
 } from './family-runtime-stage-run-currentness-identity.ts';
 import {
+  masDomainOwnerAnswerObservationFromRecords,
   OPL_ATTEMPT_ADMISSION_PROVIDER_START_PENDING_REASON,
   OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
 } from './family-runtime-opl-attempt-admission-receipt.ts';
@@ -586,6 +588,7 @@ function deriveCurrentControlStateFromRows(
       : null,
   });
   const providerRun = current ? parseRecord(current.provider_run_json) : {};
+  const routeImpact = parseRecord(current?.route_impact_json);
   const activityEvents = current ? parseList(current.activity_events_json) : [];
   const livenessProviderRun = latestProviderActivityHeartbeat(activityEvents, providerRun);
   const liveProviderAttempt = isLiveProviderAttempt(current, providerRun);
@@ -598,7 +601,7 @@ function deriveCurrentControlStateFromRows(
   const stopLossSuccessorAdmission = parseRecord(taskPayload.stop_loss_successor_admission);
   const ownerReceiptRefs = uniqueStrings([
     ...refListFromRecord(latestCloseout, ['owner_receipt_ref', 'owner_receipt_refs']),
-    ...refListFromRecord(parseRecord(current?.route_impact_json), [
+    ...refListFromRecord(routeImpact, [
       'owner_receipt_ref',
       'owner_receipt_refs',
       'domain_owner_receipt_ref',
@@ -607,9 +610,17 @@ function deriveCurrentControlStateFromRows(
   ]);
   const typedBlockerRefs = uniqueStrings([
     ...refListFromRecord(latestCloseout, ['typed_blocker_ref', 'typed_blocker_refs']),
-    ...refListFromRecord(parseRecord(current?.route_impact_json), ['typed_blocker_ref', 'typed_blocker_refs']),
+    ...refListFromRecord(routeImpact, ['typed_blocker_ref', 'typed_blocker_refs']),
     ...typedBlockerRefsFromCloseoutRefs(closeoutRefs),
   ]);
+  const ownerAnswerObservation = task?.domain_id === 'medautoscience'
+    && task.task_kind === MAS_DOMAIN_ROUTE_RECONCILE_APPLY
+    ? masDomainOwnerAnswerObservationFromRecords([
+        { source: 'task_payload', value: taskPayload },
+        { source: 'stage_attempt_route_impact', value: routeImpact },
+        { source: 'latest_closeout', value: latestCloseout },
+      ])
+    : null;
   const base = {
     surface_kind: 'opl_current_control_state',
     projection_policy: 'opl_reconciled_queue_attempt_provider_closeout_projection_only',
@@ -714,6 +725,22 @@ function deriveCurrentControlStateFromRows(
         ...base.authority_boundary,
         provider_completion_is_domain_ready: false,
         refs_only_checkpoint_is_running_proof: false,
+      },
+    };
+  }
+  if (ownerAnswerObservation) {
+    return {
+      ...base,
+      reconciliation_status: 'domain_owner_answer_observed',
+      current_attempt_state: 'blocked',
+      blocker_reason: ownerAnswerObservation.reason,
+      domain_owner_answer_observation: ownerAnswerObservation,
+      authority_boundary: {
+        ...base.authority_boundary,
+        provider_completion_is_domain_ready: false,
+        refs_only_checkpoint_is_running_proof: false,
+        can_create_owner_receipt: false,
+        can_create_typed_blocker: false,
       },
     };
   }
