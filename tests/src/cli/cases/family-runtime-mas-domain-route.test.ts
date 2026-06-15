@@ -320,6 +320,87 @@ JSON
   }
 });
 
+test('family-runtime requires MAS owner-answer refs before blocking domain route admission', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-domain-route-ref-required-'));
+  const dispatch = createDispatchFixture(`
+cat <<'JSON'
+{
+  "accepted": true,
+  "surface_kind": "mas_family_domain_handler_dispatch_receipt",
+  "opl_attempt_admission_requested": true,
+  "opl_attempt_admission_status": "requested",
+  "dispatch": {
+    "action_type": "domain_route_owner_handoff",
+    "study_id": "002-dm-china-us-mortality-attribution",
+    "execution_policy": "opl_route_hydration_stage_attempt_admission",
+    "result": {
+      "surface": "domain_route_owner_handoff_admission",
+      "status": "opl_attempt_admission_requested",
+      "study_id": "002-dm-china-us-mortality-attribution",
+      "continuation_reason": "current_work_unit_typed_blocker_owner_resolution",
+      "provider_completion_is_domain_completion": false
+    }
+  },
+  "receipt_ref": "runtime/artifacts/opl_family_domain_handler/dispatch_receipts/unit.json"
+}
+JSON
+`);
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_route/reconcile-apply',
+      '--payload',
+      JSON.stringify({
+        profile: '/tmp/profile.toml',
+        study_id: '002-dm-china-us-mortality-attribution',
+        reason: 'current_work_unit_typed_blocker_owner_resolution',
+        source_fingerprint: '4ed3699bda5e3842',
+        queue_owner: 'one-person-lab',
+        domain_truth_owner: 'med-autoscience',
+        current_work_unit: {
+          status: 'typed_blocker',
+          owner: 'one-person-lab',
+          blocker_type: 'anti_loop_budget_exhausted',
+        },
+        state: {
+          owner_answer_binding: {
+            answer_kind: 'typed_blocker_ref',
+          },
+        },
+      }),
+      '--dedupe-key',
+      'mas:test:DM002:domain-route:typed-blocker-ref-required',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test-domain-route-ref-required'], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const inspectedTask = task.family_runtime_task.task;
+    const control = inspectedTask.current_control_state;
+    const attempt = task.family_runtime_task.stage_attempts[0];
+
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'running');
+    assert.equal(inspectedTask.status, 'running');
+    assert.equal(inspectedTask.last_error, 'opl_attempt_admission_requested');
+    assert.equal(inspectedTask.dead_letter_reason, null);
+    assert.equal(attempt.status, 'queued');
+    assert.equal(control.reconciliation_status, 'provider_admission_requested');
+    assert.equal(control.current_attempt_state, 'queued');
+    assert.equal(control.blocker_reason, 'provider_attempt_start_pending');
+    assert.deepEqual(control.typed_blocker_refs, []);
+    assert.equal(control.domain_owner_answer_observation, undefined);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime repairs historical MAS domain route admission requests and hydrates provider follow-through', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-domain-route-admission-repair-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-domain-route-admission-repair-export-'));
@@ -620,6 +701,99 @@ test('family-runtime maintenance blocks running MAS domain route admission resid
     assert.equal(repaired.family_runtime_task.task.current_control_state.blocker_reason, 'mas_owner_answer_typed_blocker_observed');
     assert.deepEqual(repaired.family_runtime_task.task.current_control_state.typed_blocker_refs, [typedBlockerRef]);
     assert.equal(running.family_runtime_queue.queue.by_status.running ?? 0, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime maintenance blocks running MAS domain dispatch evidence typed-blocker payload residue', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-domain-route-evidence-residue-'));
+  const typedBlockerRef = 'mas-domain-dispatch-typed-blocker:medautoscience:domain_route-reconcile-apply:002-dm-china-us-mortality-attribution:controller_decision_route_back:c5af69c6044801af:owner-receipt-or-live-paper-line-closeout-pending';
+  try {
+    const env = familyRuntimeEnv(stateRoot);
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_route/reconcile-apply',
+      '--payload',
+      JSON.stringify({
+        profile: '/tmp/profile.toml',
+        study_id: '002-dm-china-us-mortality-attribution',
+        reason: 'controller_decision_route_back',
+        source_fingerprint: 'c5af69c6044801af',
+        queue_owner: 'one-person-lab',
+        domain_truth_owner: 'med-autoscience',
+        domain_dispatch_evidence_record_payload: {
+          surface_kind: 'mas_domain_dispatch_evidence_record_payload',
+          mode: 'refs_only_domain_owned_typed_blocker_payload',
+          closeout_semantics: 'typed_blocker_until_real_owner_receipt_or_live_paper_line_closeout',
+          record_payload: {
+            domain_owner_receipt_refs: [],
+            typed_blocker_refs: [typedBlockerRef],
+            no_regression_refs: [
+              'mas-no-forbidden-write-proof:medautoscience:domain_route-reconcile-apply:002:refs-only-dispatch-payload',
+            ],
+          },
+          typed_blocker_refs: [typedBlockerRef],
+          domain_ready_claimed: false,
+          publication_ready_claimed: false,
+        },
+      }),
+      '--dedupe-key',
+      'mas:test:DM002:domain-route:evidence-typed-blocker-residue',
+    ], env);
+    const routeTaskId = enqueue.family_runtime_enqueue.task.task_id;
+    const oldAttempt = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'domain_route/reconcile-apply',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      '{"route_ref":"domain_route/reconcile-apply","action_ref":"domain_route_reconcile_apply","study_id":"002-dm-china-us-mortality-attribution","opl_writes_domain_truth":false}',
+      '--source-fingerprint',
+      'c5af69c6044801af',
+      '--executor-kind',
+      'domain_handler',
+      '--task',
+      routeTaskId,
+    ], env).family_runtime_stage_attempt.attempt;
+    const queueDb = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
+    try {
+      queueDb.prepare(`
+        UPDATE tasks
+        SET status = 'running', attempts = 1, last_error = 'opl_attempt_admission_requested',
+          dead_letter_reason = NULL, lease_owner = NULL, lease_expires_at = NULL
+        WHERE task_id = ?
+      `).run(routeTaskId);
+      queueDb.prepare(`
+        UPDATE stage_attempts
+        SET status = 'queued',
+          closeout_refs_json = '["runtime/artifacts/opl_family_domain_handler/dispatch_receipts/unit.json"]',
+          closeout_receipt_status = 'domain_handler_receipt_ref_only',
+          provider_run_json = json_set(provider_run_json, '$.provider_status', 'queued')
+        WHERE stage_attempt_id = ?
+      `).run(oldAttempt.stage_attempt_id);
+    } finally {
+      queueDb.close();
+    }
+
+    const repairTick = runCli(['family-runtime', 'tick', '--source', 'test-domain-route-evidence-residue'], env);
+    const repaired = runCli(['family-runtime', 'queue', 'inspect', routeTaskId], env);
+
+    assert.equal(repairTick.family_runtime_tick.blocked_mas_domain_route_owner_answer_observed_count, 1);
+    assert.equal(repaired.family_runtime_task.task.status, 'blocked');
+    assert.equal(repaired.family_runtime_task.task.current_control_state.reconciliation_status, 'domain_owner_answer_observed');
+    assert.equal(repaired.family_runtime_task.task.current_control_state.blocker_reason, 'mas_owner_answer_typed_blocker_observed');
+    assert.deepEqual(repaired.family_runtime_task.task.current_control_state.typed_blocker_refs, [typedBlockerRef]);
+    assert.deepEqual(repaired.family_runtime_task.task.current_control_state.domain_owner_answer_observation.refs, [typedBlockerRef]);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

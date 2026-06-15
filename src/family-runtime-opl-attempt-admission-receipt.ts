@@ -57,6 +57,9 @@ const OWNER_ANSWER_CONTAINER_KEYS = [
   'route_impact',
   'closeout_packet',
   'output',
+  'domain_dispatch_evidence_record_payload',
+  'record_payload',
+  'opl_runtime_action_execute_payload',
 ];
 
 export function optionalString(value: unknown) {
@@ -110,14 +113,18 @@ function observationFromRecord(
 ): MasDomainOwnerAnswerObservation | null {
   const currentWorkUnitStatus = optionalString(record.status);
   if (currentWorkUnitStatus === 'typed_blocker') {
+    const refs = [
+      optionalString(record.typed_blocker_ref),
+      optionalString(record.latest_typed_blocker_ref),
+      ...stringList(record.typed_blocker_refs),
+    ].filter((entry): entry is string => Boolean(entry));
+    if (refs.length === 0) {
+      return null;
+    }
     return {
       reason: MAS_DOMAIN_TYPED_BLOCKER_OBSERVED_REASON,
       answer_kind: 'typed_blocker_ref',
-      refs: [
-        optionalString(record.typed_blocker_ref),
-        optionalString(record.latest_typed_blocker_ref),
-        ...stringList(record.typed_blocker_refs),
-      ].filter((entry): entry is string => Boolean(entry)),
+      refs,
       evidence_paths: [`${path}.status`],
     };
   }
@@ -126,17 +133,21 @@ function observationFromRecord(
     ?? normalizeOwnerAnswerKind(record.owner_answer_kind)
     ?? normalizeOwnerAnswerKind(record.accepted_answer_kind);
   if (explicitKind) {
+    const refs = [
+      optionalString(record.owner_answer_ref),
+      optionalString(record.latest_owner_answer_ref),
+      optionalString(record.typed_blocker_ref),
+      optionalString(record.latest_typed_blocker_ref),
+      ...stringList(record.owner_answer_refs),
+      ...stringList(record.typed_blocker_refs),
+    ].filter((entry): entry is string => Boolean(entry));
+    if (refs.length === 0) {
+      return null;
+    }
     return {
       reason: observationReason(explicitKind),
       answer_kind: explicitKind,
-      refs: [
-        optionalString(record.owner_answer_ref),
-        optionalString(record.latest_owner_answer_ref),
-        optionalString(record.typed_blocker_ref),
-        optionalString(record.latest_typed_blocker_ref),
-        ...stringList(record.owner_answer_refs),
-        ...stringList(record.typed_blocker_refs),
-      ].filter((entry): entry is string => Boolean(entry)),
+      refs,
       evidence_paths: [`${path}.answer_kind`],
     };
   }
