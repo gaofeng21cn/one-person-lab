@@ -291,6 +291,7 @@
       "product_session",
       "domain_handler",
       "workbench",
+      "generated_surface_consumption_bundle",
       "openai_tool",
       "ai_sdk",
       "active_caller_target_proof",
@@ -323,6 +324,79 @@
         "opl_can_mutate_artifacts": false,
         "domain_handler_target_allowed": true,
         "refs_only_domain_adapter_target_allowed": true
+      }
+    },
+    "generated_surface_consumption_bundle": {
+      "surface_kind": "opl_generated_surface_consumption_bundle",
+      "version": "opl-generated-surface-consumption-bundle.v1",
+      "owner": "one-person-lab",
+      "status_values": [
+        "ready_for_generated_surface_consumption",
+        "blocked"
+      ],
+      "source_refs": [
+        "generated_agent_interfaces.default_entry_policy",
+        "generated_agent_interfaces.source_of_work_lineage",
+        "generated_agent_interfaces.active_caller_cutover_proof",
+        "generated_agent_interfaces.generated_wrapper_bundle"
+      ],
+      "consumer_surface_ids": [
+        "cli",
+        "mcp",
+        "openai_tool",
+        "ai_sdk",
+        "skill_plugin",
+        "app_action",
+        "status_read_model",
+        "workbench"
+      ],
+      "consumer_roles": [
+        "tool_surface_consumer",
+        "codex_skill_consumer",
+        "app_or_workbench_consumer"
+      ],
+      "selected_format_policy": "Only surfaces selected by --format are hard blockers for that command output; all surfaces remain listed for default-entry planning.",
+      "selected_format_surface_map": {
+        "all": [
+          "cli",
+          "mcp",
+          "openai_tool",
+          "ai_sdk",
+          "skill_plugin",
+          "app_action",
+          "status_read_model",
+          "workbench"
+        ],
+        "product-entry": [
+          "app_action",
+          "status_read_model",
+          "workbench"
+        ],
+        "cli": [
+          "cli"
+        ],
+        "mcp": [
+          "mcp"
+        ],
+        "skill": [
+          "skill_plugin"
+        ],
+        "openai": [
+          "openai_tool"
+        ],
+        "ai-sdk": [
+          "ai_sdk"
+        ]
+      },
+      "scope_claim": "generated_surface_consumption_readiness_only_not_live_soak_or_domain_ready",
+      "authority_boundary": {
+        "consumption_bundle_can_write_domain_truth": false,
+        "consumption_bundle_can_write_memory_body": false,
+        "consumption_bundle_can_authorize_quality_or_export": false,
+        "consumption_bundle_can_mutate_artifacts": false,
+        "consumption_bundle_can_claim_domain_ready": false,
+        "consumption_bundle_can_claim_production_ready": false,
+        "generated_surface_routes_to_domain_handler_or_refs_only_adapter": true
       }
     },
     "generated_direct_parity": {

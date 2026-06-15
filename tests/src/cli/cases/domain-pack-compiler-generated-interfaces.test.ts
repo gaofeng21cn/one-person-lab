@@ -52,6 +52,41 @@ test('generated interfaces command exposes descriptors but blocks cutover withou
   assert.equal(bundle.generated_direct_parity.authority_boundary.parity_proof_can_claim_domain_ready, false);
   assert.equal(bundle.authority_boundary.generated_interface_can_write_memory_body, false);
   assert.equal(bundle.authority_boundary.generated_interface_can_mutate_artifacts, false);
+  assert.equal(bundle.generated_surface_consumption_bundle.surface_kind, 'opl_generated_surface_consumption_bundle');
+  assert.equal(bundle.generated_surface_consumption_bundle.status, 'blocked');
+  assert.equal(bundle.generated_surface_consumption_bundle.generated_blocks_ready, true);
+  assert.equal(bundle.generated_surface_consumption_bundle.active_caller_cutover_status, 'blocked');
+  assert.equal(bundle.generated_surface_consumption_bundle.generated_wrapper_bundle_status, 'blocked');
+  assert.deepEqual(bundle.generated_surface_consumption_bundle.consumer_surface_ids, [
+    'cli',
+    'mcp',
+    'openai_tool',
+    'ai_sdk',
+    'skill_plugin',
+    'app_action',
+    'status_read_model',
+    'workbench',
+  ]);
+  assert.equal(bundle.generated_surface_consumption_bundle.consumption_status_counts.blocked > 0, true);
+  assert.equal(
+    bundle.generated_surface_consumption_bundle.consumers.some(
+      (consumer: { surface_id: string; consumption_status: string }) =>
+        consumer.surface_id === 'app_action' && consumer.consumption_status === 'blocked',
+    ),
+    true,
+  );
+  assert.equal(
+    bundle.generated_surface_consumption_bundle.scope_claim,
+    'generated_surface_consumption_readiness_only_not_live_soak_or_domain_ready',
+  );
+  assert.equal(
+    bundle.generated_surface_consumption_bundle.authority_boundary.consumption_bundle_can_claim_domain_ready,
+    false,
+  );
+  assert.equal(
+    bundle.generated_surface_consumption_bundle.authority_boundary.consumption_bundle_can_claim_production_ready,
+    false,
+  );
 
   const mcpOnly = runCli(['agents', 'interfaces', '--domain', 'mas', '--format', 'mcp'], env)
     .generated_agent_interfaces;
@@ -61,6 +96,8 @@ test('generated interfaces command exposes descriptors but blocks cutover withou
   assert.equal('skill' in mcpOnly, false);
   assert.equal(mcpOnly.generated_direct_parity.checked_surface_ids.includes('mcp'), true);
   assert.deepEqual(mcpOnly.stage_routes, []);
+  assert.equal(mcpOnly.generated_surface_consumption_bundle.consumer_surface_ids.includes('mcp'), true);
+  assert.equal(mcpOnly.generated_surface_consumption_bundle.consumer_surface_ids.includes('app_action'), true);
 });
 
 test('generated interfaces declare generated surfaces as the default entry baseline', () => {
@@ -178,6 +215,15 @@ test('generated interfaces declare generated surfaces as the default entry basel
     'workbench_consumes_generated_surface_lineage_and_stage_routes_without_claiming_domain_ready',
   );
   assert.equal(bundle.generated_wrapper_bundle.domain_repo_role_policy, 'domain_handler_target_or_refs_only_adapter');
+  assert.equal(bundle.generated_surface_consumption_bundle.source_of_work_lineage_status, 'ready_from_family_action_catalog');
+  assert.equal(
+    bundle.generated_surface_consumption_bundle.consumers.every(
+      (consumer: { source_of_work_lineage_ref: string; domain_repo_can_own_generated_surface: boolean }) =>
+        consumer.source_of_work_lineage_ref === 'generated_agent_interfaces.source_of_work_lineage'
+        && consumer.domain_repo_can_own_generated_surface === false,
+    ),
+    true,
+  );
 });
 
 test('generated default entry release gate prevents wrapper surface resurrection', () => {
@@ -338,6 +384,32 @@ test('domain pack compiler contract and action catalog schema declare generated 
       .lineage_can_claim_domain_ready,
     false,
   );
+  assert.equal(
+    contract.generated_interface_bundle.generated_surface_consumption_bundle.surface_kind,
+    'opl_generated_surface_consumption_bundle',
+  );
+  assert.deepEqual(
+    contract.generated_interface_bundle.generated_surface_consumption_bundle.consumer_surface_ids,
+    contract.generated_interface_bundle.default_entry_policy.default_entry_surface_ids,
+  );
+  assert.equal(
+    contract.generated_interface_bundle.generated_surface_consumption_bundle.authority_boundary
+      .consumption_bundle_can_claim_domain_ready,
+    false,
+  );
+  assert.equal(
+    contract.generated_interface_bundle.generated_surface_consumption_bundle.authority_boundary
+      .consumption_bundle_can_claim_production_ready,
+    false,
+  );
+  assert.deepEqual(
+    contract.generated_interface_bundle.generated_surface_consumption_bundle.selected_format_surface_map['product-entry'],
+    ['app_action', 'status_read_model', 'workbench'],
+  );
+  assert.deepEqual(
+    contract.generated_interface_bundle.generated_surface_consumption_bundle.selected_format_surface_map.all,
+    contract.generated_interface_bundle.default_entry_policy.default_entry_surface_ids,
+  );
   assert.deepEqual(
     contract.generated_interface_bundle.generated_direct_parity.accepted_answer_shape_roundtrip,
     {
@@ -429,6 +501,23 @@ test('generated interfaces family-defaults product-entry format is the App workb
       assert.equal(bundle.workbench.status, 'ready_from_stage_control_plane');
       assert.equal(bundle.stage_routes.length > 0, true);
       assert.equal(bundle.source_contract_consumption.status, 'ready');
+      assert.equal(bundle.generated_surface_consumption_bundle.status, 'ready_for_generated_surface_consumption');
+      assert.deepEqual(bundle.generated_surface_consumption_bundle.consumption_status_counts, {
+        selected: 3,
+        ready: 3,
+        blocked: 0,
+      });
+      assert.equal(
+        bundle.generated_surface_consumption_bundle.consumers.every(
+          (consumer: { selected_for_format: boolean; consumption_status: string; generated_wrapper_bundle_ref: string }) =>
+            !consumer.selected_for_format
+            || (
+              consumer.consumption_status === 'ready_to_consume_generated_surface'
+              && consumer.generated_wrapper_bundle_ref === 'generated_agent_interfaces.generated_wrapper_bundle'
+            ),
+        ),
+        true,
+      );
       assert.equal(bundle.authority_boundary.generated_interface_can_write_domain_truth, false);
       assert.equal(bundle.authority_boundary.generated_interface_can_authorize_quality_or_export, false);
     }
@@ -625,6 +714,27 @@ test('generated interfaces domain mode consumes generated handoff from active re
     true,
   );
   assert.equal(bundle.generated_wrapper_bundle.status, 'ready');
+  assert.equal(bundle.generated_surface_consumption_bundle.status, 'ready_for_generated_surface_consumption');
+  assert.deepEqual(bundle.generated_surface_consumption_bundle.consumption_status_counts, {
+    selected: 8,
+    ready: 8,
+    blocked: 0,
+  });
+  const appActionConsumer = bundle.generated_surface_consumption_bundle.consumers.find(
+    (consumer: { surface_id: string }) => consumer.surface_id === 'app_action',
+  );
+  assert.equal(appActionConsumer.consumer_role, 'app_or_workbench_consumer');
+  assert.equal(appActionConsumer.consumption_status, 'ready_to_consume_generated_surface');
+  assert.equal(appActionConsumer.active_caller_target_kind, 'opl_generated_surface');
+  assert.equal(appActionConsumer.domain_repo_role, 'domain_handler_target_or_refs_only_adapter');
+  assert.equal(
+    bundle.generated_surface_consumption_bundle.authority_boundary.consumption_bundle_can_write_domain_truth,
+    false,
+  );
+  assert.equal(
+    bundle.generated_surface_consumption_bundle.authority_boundary.generated_surface_routes_to_domain_handler_or_refs_only_adapter,
+    true,
+  );
   const cliTarget = bundle.active_caller_target_proof.surface_targets.find(
     (target: { surface_id: string }) => target.surface_id === 'cli',
   );
