@@ -1,5 +1,6 @@
 export type MaintenanceReconcileResult = {
   defaultExecutorTerminalSyncedCount: number;
+  defaultExecutorTemporalQueryHandlerMissingCount: number;
   repairedMissingIdentityRunningCount: number;
   repairedMissingIdentityDeadLetteredCount: number;
   repairedMissingIdentityTaskIds: Set<string>;
@@ -19,6 +20,7 @@ export type MaintenanceReconcileResult = {
 export function zeroMaintenanceReconcileResult(): MaintenanceReconcileResult {
   return {
     defaultExecutorTerminalSyncedCount: 0,
+    defaultExecutorTemporalQueryHandlerMissingCount: 0,
     repairedMissingIdentityRunningCount: 0,
     repairedMissingIdentityDeadLetteredCount: 0,
     repairedMissingIdentityTaskIds: new Set<string>(),

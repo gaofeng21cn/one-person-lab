@@ -63,6 +63,10 @@ type EnqueueTaskResult = {
 type EnqueueTask = (db: DatabaseSync, input: EnqueueInput) => EnqueueTaskResult;
 type StageAttemptPayload = NonNullable<ReturnType<typeof findLiveDefaultExecutorDispatchAttempt>>;
 type QueryTemporalStageAttempt = (attempt: StageAttemptPayload) => unknown | Promise<unknown>;
+type ObservableDefaultExecutorAttemptSyncResult = {
+  attempt: StageAttemptPayload;
+  temporalQueryHandlerMissing: boolean;
+};
 type RunFamilyRuntimeQueueTickInput = {
   source: string;
   limit: number;
@@ -406,22 +410,62 @@ function isProviderStartedDefaultExecutorAttempt(attempt: StageAttemptPayload) {
     && ['running', 'checkpointed', 'human_gate'].includes(attempt.status);
 }
 
+function defaultExecutorTemporalQueryHandlerMissingBoundary() {
+  return {
+    opl: 'family_runtime_tick_temporal_terminal_observation_diagnostic_only',
+    provider: 'temporal_stage_attempt_status_owner',
+    domain: 'truth_quality_artifact_gate_owner',
+    domain_truth_mutation: false,
+    publication_quality_mutation: false,
+    artifact_gate_mutation: false,
+    owner_receipt_mutation: false,
+    production_readiness_claim: false,
+  };
+}
+
+function recordDefaultExecutorTemporalQueryHandlerMissing(
+  db: DatabaseSync,
+  attempt: StageAttemptPayload,
+) {
+  insertEvent(db, {
+    taskId: attempt.task_id,
+    domainId: attempt.domain_id,
+    eventType: 'default_executor_temporal_query_handler_missing',
+    source: 'opl-family-runtime-tick',
+    payload: {
+      reason: 'temporal_query_handler_missing',
+      sync_status: 'terminal_observation_not_attempted',
+      stage_attempt_id: attempt.stage_attempt_id,
+      workflow_id: attempt.workflow_id,
+      provider_kind: attempt.provider_kind,
+      executor_kind: attempt.executor_kind,
+      attempt_status: attempt.status,
+      provider_status: attempt.provider_run.provider_status,
+      authority_boundary: defaultExecutorTemporalQueryHandlerMissingBoundary(),
+    },
+  });
+}
+
 async function syncObservableDefaultExecutorAttempt(
   db: DatabaseSync,
   attempt: StageAttemptPayload,
   queryTemporalStageAttempt?: QueryTemporalStageAttempt,
-) {
+): Promise<ObservableDefaultExecutorAttemptSyncResult> {
   const materializedCloseoutAttempt = syncStageAttemptFromMaterializedCloseout(db, {
     stageAttemptId: attempt.stage_attempt_id,
   });
   if (materializedCloseoutAttempt) {
-    return materializedCloseoutAttempt;
+    return { attempt: materializedCloseoutAttempt, temporalQueryHandlerMissing: false };
   }
   if (!queryTemporalStageAttempt) {
-    return attempt;
+    recordDefaultExecutorTemporalQueryHandlerMissing(db, attempt);
+    return { attempt, temporalQueryHandlerMissing: true };
   }
   const observation = await queryTemporalStageAttempt(attempt);
-  return syncStageAttemptFromTemporalTerminalObservation(db, observation) ?? attempt;
+  return {
+    attempt: syncStageAttemptFromTemporalTerminalObservation(db, observation) ?? attempt,
+    temporalQueryHandlerMissing: false,
+  };
 }
 
 async function dropLiveDefaultExecutorRows(
@@ -433,6 +477,7 @@ async function dropLiveDefaultExecutorRows(
 ) {
   let liveSkippedCount = 0;
   let terminalSyncedCount = 0;
+  let temporalQueryHandlerMissingCount = 0;
   const rows: FamilyRuntimeTaskRow[] = [];
   for (const row of candidateRows) {
     const payload = payloadFromTask(row);
@@ -442,11 +487,15 @@ async function dropLiveDefaultExecutorRows(
       rows.push(row);
       continue;
     }
-    const syncedAttempt = await syncObservableDefaultExecutorAttempt(
+    const syncResult = await syncObservableDefaultExecutorAttempt(
       db,
       liveStudyAttempt,
       options.queryTemporalStageAttempt,
     );
+    const syncedAttempt = syncResult.attempt;
+    if (syncResult.temporalQueryHandlerMissing) {
+      temporalQueryHandlerMissingCount += 1;
+    }
     if (!isLiveDefaultExecutorAttempt(syncedAttempt)) {
       terminalSyncedCount += 1;
       rows.push(row);
@@ -474,7 +523,7 @@ async function dropLiveDefaultExecutorRows(
       },
     });
   }
-  return { rows, liveSkippedCount, terminalSyncedCount };
+  return { rows, liveSkippedCount, terminalSyncedCount, temporalQueryHandlerMissingCount };
 }
 
 async function syncRunningDefaultExecutorTaskAttempts(
@@ -485,6 +534,7 @@ async function syncRunningDefaultExecutorTaskAttempts(
   } = {},
 ) {
   let terminalSyncedCount = 0;
+  let temporalQueryHandlerMissingCount = 0;
   for (const row of rows) {
     if (row.status !== 'running') {
       continue;
@@ -497,17 +547,21 @@ async function syncRunningDefaultExecutorTaskAttempts(
       isObservableRunningDefaultExecutorAttempt(row),
     );
     for (const attempt of attempts) {
-      const syncedAttempt = await syncObservableDefaultExecutorAttempt(
+      const syncResult = await syncObservableDefaultExecutorAttempt(
         db,
         attempt,
         options.queryTemporalStageAttempt,
       );
+      const syncedAttempt = syncResult.attempt;
+      if (syncResult.temporalQueryHandlerMissing) {
+        temporalQueryHandlerMissingCount += 1;
+      }
       if (!isProviderStartedDefaultExecutorAttempt(syncedAttempt)) {
         terminalSyncedCount += 1;
       }
     }
   }
-  return terminalSyncedCount;
+  return { terminalSyncedCount, temporalQueryHandlerMissingCount };
 }
 
 async function runMaintenanceReconcile(
@@ -519,7 +573,10 @@ async function runMaintenanceReconcile(
   const rowsForMaintenance = () => (db.prepare('SELECT * FROM tasks').all() as FamilyRuntimeTaskRow[])
     .filter((row) => taskRowMatchesScope(row, input.taskScope) && !excludeTaskIds.has(row.task_id));
   const scopedRowsBeforeAutoRedrive = rowsForMaintenance();
-  const defaultExecutorTerminalSyncedCount = await syncRunningDefaultExecutorTaskAttempts(
+  const {
+    terminalSyncedCount: defaultExecutorTerminalSyncedCount,
+    temporalQueryHandlerMissingCount: defaultExecutorTemporalQueryHandlerMissingCount,
+  } = await syncRunningDefaultExecutorTaskAttempts(
     db,
     scopedRowsBeforeAutoRedrive,
     { queryTemporalStageAttempt: handlers.queryTemporalStageAttempt },
@@ -589,6 +646,7 @@ async function runMaintenanceReconcile(
   );
   return {
     defaultExecutorTerminalSyncedCount,
+    defaultExecutorTemporalQueryHandlerMissingCount,
     repairedMissingIdentityRunningCount,
     repairedMissingIdentityDeadLetteredCount,
     repairedMissingIdentityTaskIds,
@@ -647,6 +705,7 @@ async function selectDispatchCandidates(
     rows: scopedRows,
     liveSkippedCount: defaultExecutorLiveSkippedCount,
     terminalSyncedCount: defaultExecutorLiveTerminalSyncedCount,
+    temporalQueryHandlerMissingCount: defaultExecutorLiveTemporalQueryHandlerMissingCount,
   } = await dropLiveDefaultExecutorRows(db, scopedRowsAfterStudySingleFlight, {
     queryTemporalStageAttempt: handlers.queryTemporalStageAttempt,
   });
@@ -665,6 +724,7 @@ async function selectDispatchCandidates(
     defaultExecutorStudySingleFlightSkippedCount,
     defaultExecutorLiveSkippedCount,
     defaultExecutorLiveTerminalSyncedCount,
+    defaultExecutorLiveTemporalQueryHandlerMissingCount,
     defaultExecutorCompletedCloseoutReconciledCount,
     progressFirstAntiSpinBlockedCount,
   };
@@ -712,6 +772,8 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     defaultExecutorStudySingleFlightSkippedCount: selection.defaultExecutorStudySingleFlightSkippedCount,
     defaultExecutorLiveSkippedCount: selection.defaultExecutorLiveSkippedCount,
     defaultExecutorLiveTerminalSyncedCount: selection.defaultExecutorLiveTerminalSyncedCount,
+    defaultExecutorLiveTemporalQueryHandlerMissingCount:
+      selection.defaultExecutorLiveTemporalQueryHandlerMissingCount,
     defaultExecutorCompletedCloseoutReconciledCount:
       selection.defaultExecutorCompletedCloseoutReconciledCount,
     progressFirstAntiSpinBlockedCount: selection.progressFirstAntiSpinBlockedCount,
@@ -745,6 +807,8 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
       selectionTotals.defaultExecutorStudySingleFlightSkippedCount += selection.defaultExecutorStudySingleFlightSkippedCount;
       selectionTotals.defaultExecutorLiveSkippedCount += selection.defaultExecutorLiveSkippedCount;
       selectionTotals.defaultExecutorLiveTerminalSyncedCount += selection.defaultExecutorLiveTerminalSyncedCount;
+      selectionTotals.defaultExecutorLiveTemporalQueryHandlerMissingCount +=
+        selection.defaultExecutorLiveTemporalQueryHandlerMissingCount;
       selectionTotals.defaultExecutorCompletedCloseoutReconciledCount +=
         selection.defaultExecutorCompletedCloseoutReconciledCount;
       selectionTotals.progressFirstAntiSpinBlockedCount += selection.progressFirstAntiSpinBlockedCount;
@@ -785,6 +849,9 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
       mas_default_executor_live_skipped_count: selectionTotals.defaultExecutorLiveSkippedCount,
       mas_default_executor_terminal_synced_count: maintenanceReconcile.defaultExecutorTerminalSyncedCount
         + selectionTotals.defaultExecutorLiveTerminalSyncedCount,
+      mas_default_executor_temporal_query_handler_missing_count:
+        maintenanceReconcile.defaultExecutorTemporalQueryHandlerMissingCount
+        + selectionTotals.defaultExecutorLiveTemporalQueryHandlerMissingCount,
       mas_default_executor_superseded_attempt_reconciled_count:
         maintenanceReconcile.defaultExecutorSupersededAttemptReconciledCount,
       waiting_approval_attempt_reconciled_count: maintenanceReconcile.waitingApprovalAttemptReconciledCount,
@@ -806,6 +873,9 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
       default_executor_live_skipped_count: selectionTotals.defaultExecutorLiveSkippedCount,
       default_executor_terminal_synced_count: maintenanceReconcile.defaultExecutorTerminalSyncedCount
         + selectionTotals.defaultExecutorLiveTerminalSyncedCount,
+      default_executor_temporal_query_handler_missing_count:
+        maintenanceReconcile.defaultExecutorTemporalQueryHandlerMissingCount
+        + selectionTotals.defaultExecutorLiveTemporalQueryHandlerMissingCount,
       default_executor_superseded_attempt_reconciled_count:
         maintenanceReconcile.defaultExecutorSupersededAttemptReconciledCount,
       default_executor_auto_redriven_count: maintenanceReconcile.defaultExecutorAutoRedrivenCount,
@@ -835,6 +905,9 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     mas_default_executor_live_skipped_count: selectionTotals.defaultExecutorLiveSkippedCount,
     mas_default_executor_terminal_synced_count: maintenanceReconcile.defaultExecutorTerminalSyncedCount
       + selectionTotals.defaultExecutorLiveTerminalSyncedCount,
+    mas_default_executor_temporal_query_handler_missing_count:
+      maintenanceReconcile.defaultExecutorTemporalQueryHandlerMissingCount
+      + selectionTotals.defaultExecutorLiveTemporalQueryHandlerMissingCount,
     mas_default_executor_superseded_attempt_reconciled_count:
       maintenanceReconcile.defaultExecutorSupersededAttemptReconciledCount,
     waiting_approval_attempt_reconciled_count: maintenanceReconcile.waitingApprovalAttemptReconciledCount,
@@ -856,6 +929,9 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     default_executor_live_skipped_count: selectionTotals.defaultExecutorLiveSkippedCount,
     default_executor_terminal_synced_count: maintenanceReconcile.defaultExecutorTerminalSyncedCount
       + selectionTotals.defaultExecutorLiveTerminalSyncedCount,
+    default_executor_temporal_query_handler_missing_count:
+      maintenanceReconcile.defaultExecutorTemporalQueryHandlerMissingCount
+      + selectionTotals.defaultExecutorLiveTemporalQueryHandlerMissingCount,
     default_executor_superseded_attempt_reconciled_count:
       maintenanceReconcile.defaultExecutorSupersededAttemptReconciledCount,
     default_executor_auto_redriven_count: maintenanceReconcile.defaultExecutorAutoRedrivenCount,

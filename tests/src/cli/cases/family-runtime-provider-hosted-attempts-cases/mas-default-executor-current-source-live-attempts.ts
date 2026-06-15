@@ -530,3 +530,74 @@ test('family-runtime tick syncs a completed running MAS default executor attempt
     db.close();
   }
 });
+
+test('family-runtime tick reports missing Temporal query handler for running MAS default executor sync', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      insertDefaultExecutorTask(db, {
+        taskId: 'task-mas-default-running-temporal-without-query-handler',
+        sourceFingerprint: 'source-stable-missing-query-handler',
+        createdAt: '2026-05-25T16:30:00.000Z',
+        status: 'running',
+        attempts: 1,
+        leaseOwner: 'opl-family-runtime:stale',
+        leaseExpiresAt: new Date(Date.now() + 60_000).toISOString(),
+      });
+      const runningRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-running-temporal-without-query-handler',
+      ) as FamilyRuntimeTaskRow;
+      const runningPayload = JSON.parse(runningRow.payload_json) as Record<string, unknown>;
+      const runningAttempt = ensureProviderHostedStageAttempt(db, runningRow, runningPayload);
+      assert.ok(runningAttempt);
+      db.prepare("UPDATE stage_attempts SET status = 'running' WHERE stage_attempt_id = ?").run(
+        runningAttempt.stage_attempt_id,
+      );
+
+      let dispatchCount = 0;
+      const tick = await runFamilyRuntimeQueueTick(db, familyRuntimePaths(), {
+        source: 'test-sync-running-missing-query-handler',
+        limit: 2,
+        hydrate: false,
+        taskScope: {
+          domainId: 'medautoscience',
+          taskKind: 'domain_owner/default-executor-dispatch',
+          payloadMatches: [
+            {
+              path: 'study_id',
+              value: '002-dm-china-us-mortality-attribution',
+            },
+          ],
+        },
+      }, {
+        enqueueTask: () => ({ accepted: false }),
+        dispatchTask: (_db, _paths, selectedRow: FamilyRuntimeTaskRow) => {
+          dispatchCount += 1;
+          return { task_id: selectedRow.task_id };
+        },
+      });
+      const diagnosticEvent = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'default_executor_temporal_query_handler_missing'
+        LIMIT 1
+      `).get('task-mas-default-running-temporal-without-query-handler') as { payload_json: string } | undefined;
+
+      assert.equal(tick.selected_count, 0);
+      assert.equal(dispatchCount, 0);
+      assert.equal(tick.mas_default_executor_terminal_synced_count, 0);
+      assert.equal(tick.mas_default_executor_temporal_query_handler_missing_count, 1);
+      assert.ok(diagnosticEvent);
+      const payload = JSON.parse(diagnosticEvent.payload_json);
+      assert.equal(payload.reason, 'temporal_query_handler_missing');
+      assert.equal(payload.stage_attempt_id, runningAttempt.stage_attempt_id);
+      assert.equal(payload.workflow_id, runningAttempt.workflow_id);
+      assert.equal(payload.sync_status, 'terminal_observation_not_attempted');
+      assert.equal(payload.authority_boundary.domain_truth_mutation, false);
+      assert.equal(payload.authority_boundary.production_readiness_claim, false);
+    });
+  } finally {
+    db.close();
+  }
+});
