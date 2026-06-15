@@ -83,7 +83,7 @@
     "test:native": "./scripts/verify.sh native",
     "test:structure": "./scripts/verify.sh structure",
     "test:full": "./scripts/run-parallel-test-lanes.sh full",
-    "test": "npm run test:fast",
+    "test": "npm run test:smoke",
     "line-budget": "node ./scripts/line-budget.mjs",
     "line-budget:strict": "node ./scripts/line-budget.mjs --strict",
     "fresh-install:smoke": "node ./scripts/fresh-install-smoke.mjs",

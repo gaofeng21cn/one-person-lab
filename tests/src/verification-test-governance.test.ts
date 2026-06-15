@@ -118,7 +118,7 @@ const expectedTestScripts = {
   'test:fresh-install': 'node ./scripts/test-lanes.mjs run fresh-install',
   'test:native': './scripts/verify.sh native',
   'test:structure': './scripts/verify.sh structure',
-  test: 'npm run test:fast',
+  test: 'npm run test:smoke',
 };
 
 const fullLanePatterns = [

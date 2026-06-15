@@ -80,7 +80,7 @@
 - 叙述性 `README*`、`docs/**` 和参考文档不作为脚本/测试的断言对象；可以测试 machine-readable contract、schema、CLI/API 行为、生成产物结构与路径，但不要用测试固定文档措辞、章节或状态文案。
 - 默认验证入口、Python clean runner、Node-triggered Python helper 和 build/proof 命令必须把 bytecode、pytest cache、`uv sync` project venv、安装/同步副产物和 runtime artifact 导向仓库外部；禁止在开发 checkout 生成 `.venv`、`__pycache__`、`.pytest_cache` 或 `*.egg-info` 后再靠测试清理兜底。
 - 默认最小验证入口是 `scripts/verify.sh`。
-- 默认 smoke 是 `npm test` / `npm run test:fast`。
+- 默认 smoke 是 `npm test` / `npm run test:smoke`；`npm run test:fast` 是显式标准本地入口，不作为裸 `npm test` 的默认成本。
 - `npm run test:meta` 与 `npm run test:artifact` 是显式 lane。
 - `npm run test:full` 是 clean-clone 基线。
 - 上述验证入口必须与 `package.json` 和已跟踪测试保持一致。

@@ -13,8 +13,8 @@ Currentness policy：查看当前 lane 集合时先读 `package.json` 的 `test:
 
 | Lane | 命令 | 角色 |
 | --- | --- | --- |
-| smoke | `npm run test:smoke` | 秒级核心入口，覆盖 lane registry、CLI 模块边界、runtime state path 与 OPL session runtime 基础合同。 |
-| fast | `npm run test:fast` | 默认本地快速入口；覆盖 repo hygiene、合同治理、family shared release、native helper prebuild、轻量 runtime contract、stage pack 与 quality details。 |
+| smoke | `npm test` / `npm run test:smoke` | 默认秒级核心入口，覆盖 lane registry、CLI 模块边界、runtime state path 与 OPL session runtime 基础合同。 |
+| fast | `npm run test:fast` | 显式标准本地入口；覆盖 repo hygiene、合同治理、family shared release、native helper prebuild、轻量 runtime contract、stage pack 与 quality details。 |
 | fast-parallel | `npm run test:fast:parallel` | full wrapper 的并行 fast lane；与 `fast` 使用同一测试集合。 |
 | read-model-gates | `npm run test:read-model-gates` | 串行重型 read-model / runtime gate；覆盖 framework readiness、App drilldown、evidence worklist、Temporal/provider、workspace-domain、domain-pack compiler 与 agent conformance。 |
 | meta | `npm run test:meta` | 治理、quality、contract 和 generated/default surface 元测试 lane；不等价于 `fast`。 |
@@ -35,7 +35,7 @@ Currentness policy：查看当前 lane 集合时先读 `package.json` 的 `test:
 | typecheck | `./scripts/verify.sh typecheck` | `npm run typecheck`。 |
 | full | `npm run test:full` / `./scripts/run-parallel-test-lanes.sh full` | clean-clone 基线入口；先并行 fast-parallel、fresh-install、structure、typecheck 与 lint，再串行 read-model-gates、meta、regression、integration、artifact 与 native。 |
 
-`npm test` 等同 `npm run test:fast`。`test:fast:parallel` 与 `fast` 使用同一测试集合，只是供 full wrapper 并行调度。`test:meta` 是独立治理 / quality / contract meta lane，不再等价 `test:fast`；共享 SQLite/state 的 framework readiness、App drilldown 和 evidence worklist 相关 read-model gates 通过 `test:read-model-gates` 串行执行，避免并行抢占同一状态面。
+`npm test` 等同 `npm run test:smoke`，用于普通开发的最低成本入口。`npm run test:fast` 是显式标准本地入口；当改动触及 shared runtime、contract registry、stage pack、Agent Lab 或 quality details 时再运行。`test:fast:parallel` 与 `fast` 使用同一测试集合，只是供 full wrapper 并行调度。`test:meta` 是独立治理 / quality / contract meta lane，不再等价 `test:fast`；共享 SQLite/state 的 framework readiness、App drilldown 和 evidence worklist 相关 read-model gates 通过 `test:read-model-gates` 串行执行，避免并行抢占同一状态面。
 
 ## 归属规则
 
@@ -62,4 +62,4 @@ node scripts/test-lanes.mjs assert-coverage
 rg "test\\.skip|describe\\.skip" tests/src tests/built
 ```
 
-根据变更面选择最小充分验证：入口/registry 改动跑 `npm run test:smoke && npm run test:fast`；runtime/install 改动跑 `npm run test:integration`；发布前跑 `npm run test:full` 或 `./scripts/verify.sh full`。
+根据变更面选择最小充分验证：入口/registry 改动先跑 `npm test` / `npm run test:smoke`，触及 shared runtime、contract registry、stage pack、Agent Lab 或 quality details 时再补 `npm run test:fast`；runtime/install 改动跑 `npm run test:integration`；发布前跑 `npm run test:full` 或 `./scripts/verify.sh full`。
