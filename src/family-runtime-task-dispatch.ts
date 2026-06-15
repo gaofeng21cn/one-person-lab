@@ -35,6 +35,11 @@ import {
   MAS_PAPER_AUTONOMY_TASK_KINDS,
 } from './family-runtime-paper-autonomy.ts';
 import { PROGRESS_FIRST_OWNER_DELTA_REQUIRED_REASON } from './family-runtime-progress-first-anti-spin-gate.ts';
+import {
+  isDomainRouteOplAttemptAdmissionRequested,
+  OPL_ATTEMPT_ADMISSION_PROVIDER_START_PENDING_REASON,
+  OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
+} from './family-runtime-opl-attempt-admission-receipt.ts';
 
 type TemporalProviderModule = Parameters<typeof startDefaultExecutorStageAttempt>[2]['temporalProviderModule'];
 type QueryTemporalStageAttemptReadModel = typeof queryTemporalStageAttemptReadModel;
@@ -296,6 +301,84 @@ function blockTaskForMissingDomainCloseout(
   };
 }
 
+function keepTaskOpenForOplAttemptAdmissionRequested(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  input: {
+    commandPreview: string[];
+    commandCwd: string | null;
+    output: Record<string, unknown>;
+    activeStageAttemptIds: string[];
+    closeoutRefs: string[];
+  },
+) {
+  const updatedAt = nowIso();
+  db.prepare(`
+    UPDATE tasks
+    SET status = 'running', lease_owner = NULL, lease_expires_at = NULL,
+      last_error = ?, dead_letter_reason = NULL, updated_at = ?
+    WHERE task_id = ?
+  `).run(OPL_ATTEMPT_ADMISSION_REQUESTED_REASON, updatedAt, row.task_id);
+  insertEvent(db, {
+    taskId: row.task_id,
+    domainId: row.domain_id,
+    eventType: 'task_dispatch_opl_attempt_admission_requested',
+    source: 'opl-family-runtime',
+    payload: {
+      reason: OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
+      next_state: 'running_provider_start_pending',
+      command_preview: input.commandPreview,
+      command_cwd: input.commandCwd,
+      output: input.output,
+      closeout_refs: input.closeoutRefs,
+      authority_boundary: {
+        opl: 'provider_admission_followthrough_required',
+        domain: 'truth_quality_artifact_gate_owner',
+        provider_completion_is_domain_ready: false,
+        refs_only_checkpoint_is_running_proof: false,
+        domain_truth_mutation: false,
+        publication_quality_mutation: false,
+        artifact_gate_mutation: false,
+        current_package_mutation: false,
+      },
+    },
+  });
+  insertNotification(db, {
+    taskId: row.task_id,
+    severity: 'warning',
+    title: 'Family runtime provider admission requested',
+    body: `${row.domain_id}:${row.task_kind} requested OPL provider admission; provider start follow-through is still required.`,
+    payload: {
+      reason: OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
+      blocker_reason: OPL_ATTEMPT_ADMISSION_PROVIDER_START_PENDING_REASON,
+    },
+  });
+  const stageAttempts = updateStageAttemptsForTask(db, {
+    taskId: row.task_id,
+    stageAttemptIds: input.activeStageAttemptIds,
+    status: 'queued',
+    closeoutRefs: input.closeoutRefs,
+    closeoutReceiptStatus: input.closeoutRefs.length > 0 ? 'domain_handler_receipt_ref_only' : null,
+    blockedReason: null,
+    activityEvent: {
+      activity_kind: 'domain_handler_dispatch_activity',
+      activity_status: OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
+      blocked_reason: OPL_ATTEMPT_ADMISSION_PROVIDER_START_PENDING_REASON,
+      closeout_refs: input.closeoutRefs,
+    },
+  });
+  return {
+    task_id: row.task_id,
+    status: 'running',
+    reason: OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
+    blocker_reason: OPL_ATTEMPT_ADMISSION_PROVIDER_START_PENDING_REASON,
+    command_preview: input.commandPreview,
+    command_cwd: input.commandCwd,
+    output: input.output,
+    stage_attempts: stageAttempts,
+  };
+}
+
 export async function dispatchFamilyRuntimeTask(
   db: DatabaseSync,
   paths: ReturnType<typeof familyRuntimePaths>,
@@ -408,6 +491,15 @@ export async function dispatchFamilyRuntimeTask(
   if (succeeded) {
     const closeoutRefs = closeoutRefsFromDomainHandlerOutput(output);
     const typedCloseoutPacket = closeoutPacketFromDomainHandlerOutput(output);
+    if (isDomainRouteOplAttemptAdmissionRequested(output)) {
+      return keepTaskOpenForOplAttemptAdmissionRequested(db, row, {
+        commandPreview: command.command_preview,
+        commandCwd: command.cwd,
+        output,
+        activeStageAttemptIds,
+        closeoutRefs,
+      });
+    }
     if (
       providerHostedDispatchRequiresCloseout(row, activeStageAttemptIds)
       && !typedCloseoutPacket

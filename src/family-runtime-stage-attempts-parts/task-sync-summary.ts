@@ -21,6 +21,7 @@ export function updateStageAttemptsForTask(
     incrementAttempt?: boolean;
     checkpointRefs?: string[];
     closeoutRefs?: string[];
+    closeoutReceiptStatus?: string | null;
     humanGateRefs?: string[];
     blockedReason?: string | null;
     activityEvent?: Record<string, unknown>;
@@ -55,9 +56,11 @@ export function updateStageAttemptsForTask(
     const activityEvents = input.activityEvent
       ? appendActivityEventToRow(row, input.activityEvent)
       : parseStageAttemptJsonList(row.activity_events_json);
-    const closeoutReceiptStatus = input.status === 'completed' && closeoutRefs.length > 0
-      ? 'domain_handler_receipt_ref_only'
-      : null;
+    const closeoutReceiptStatus = input.closeoutReceiptStatus !== undefined
+      ? input.closeoutReceiptStatus
+      : input.status === 'completed' && closeoutRefs.length > 0
+        ? 'domain_handler_receipt_ref_only'
+        : null;
     db.prepare(`
       UPDATE stage_attempts
       SET status = ?, attempt_count = ?, checkpoint_refs_json = ?, closeout_refs_json = ?,

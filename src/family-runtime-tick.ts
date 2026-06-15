@@ -30,6 +30,12 @@ import {
   stageIdForProviderHostedTask,
 } from './family-runtime-provider-hosted-attempts.ts';
 import { redriveBlockedDefaultExecutorProviderTransportTask } from './family-runtime-redrive.ts';
+import { MAS_DOMAIN_ROUTE_RECONCILE_APPLY } from './family-runtime-mas-domain-route.ts';
+import {
+  isDomainRouteOplAttemptAdmissionRequested,
+  OPL_ATTEMPT_ADMISSION_PROVIDER_START_PENDING_REASON,
+  OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
+} from './family-runtime-opl-attempt-admission-receipt.ts';
 import {
   MAS_PAPER_AUTONOMY_DOMAIN_HANDLER_CLOSEOUT_REQUIRED_REASON,
   MAS_PAPER_AUTONOMY_TASK_KINDS,
@@ -403,6 +409,111 @@ function repairSucceededMasPaperAutonomyTasksMissingCloseout(
   return { repairedCount, repairedTaskIds };
 }
 
+function latestTaskDispatchSucceededOutput(db: DatabaseSync, taskId: string) {
+  const row = db.prepare(`
+    SELECT payload_json
+    FROM events
+    WHERE task_id = ? AND event_type = 'task_dispatch_succeeded'
+    ORDER BY created_at DESC
+    LIMIT 1
+  `).get(taskId) as { payload_json: string } | undefined;
+  if (!row) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(row.payload_json) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return null;
+    }
+    const output = (parsed as Record<string, unknown>).output;
+    return output && typeof output === 'object' && !Array.isArray(output)
+      ? output as Record<string, unknown>
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function repairSucceededMasDomainRouteAdmissionRequested(
+  db: DatabaseSync,
+  rows: FamilyRuntimeTaskRow[],
+  source: string,
+) {
+  let repairedCount = 0;
+  const repairedTaskIds = new Set<string>();
+  const repairedAt = new Date().toISOString();
+  for (const row of rows) {
+    if (
+      row.domain_id !== 'medautoscience'
+      || row.task_kind !== MAS_DOMAIN_ROUTE_RECONCILE_APPLY
+      || row.status !== 'succeeded'
+    ) {
+      continue;
+    }
+    const output = latestTaskDispatchSucceededOutput(db, row.task_id);
+    if (!isDomainRouteOplAttemptAdmissionRequested(output)) {
+      continue;
+    }
+    const attempts = listStageAttemptsForTask(db, row.task_id).filter((attempt) => (
+      attempt.executor_kind === 'domain_handler'
+      && attempt.closeout_receipt_status === 'domain_handler_receipt_ref_only'
+      && ['checkpointed', 'completed'].includes(attempt.status)
+    ));
+    if (attempts.length === 0) {
+      continue;
+    }
+    db.prepare(`
+      UPDATE tasks
+      SET status = 'running', lease_owner = NULL, lease_expires_at = NULL,
+        last_error = ?, dead_letter_reason = NULL, updated_at = ?
+      WHERE task_id = ? AND status = 'succeeded'
+    `).run(OPL_ATTEMPT_ADMISSION_REQUESTED_REASON, repairedAt, row.task_id);
+    const repairedAttempts = updateStageAttemptsForTask(db, {
+      taskId: row.task_id,
+      stageAttemptIds: attempts.map((attempt) => attempt.stage_attempt_id),
+      status: 'queued',
+      closeoutRefs: attempts.flatMap((attempt) => (
+        Array.isArray(attempt.closeout_refs) ? attempt.closeout_refs.filter((ref): ref is string => typeof ref === 'string') : []
+      )),
+      closeoutReceiptStatus: 'domain_handler_receipt_ref_only',
+      blockedReason: null,
+      activityEvent: {
+        activity_kind: 'domain_handler_dispatch_activity',
+        activity_status: 'repaired_to_provider_admission_requested',
+        blocked_reason: OPL_ATTEMPT_ADMISSION_PROVIDER_START_PENDING_REASON,
+        reason: OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
+      },
+    });
+    insertEvent(db, {
+      taskId: row.task_id,
+      domainId: row.domain_id,
+      eventType: 'task_repaired_from_succeeded_route_admission_requested',
+      source,
+      payload: {
+        previous_status: row.status,
+        next_status: 'running',
+        reason: OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
+        blocker_reason: OPL_ATTEMPT_ADMISSION_PROVIDER_START_PENDING_REASON,
+        repaired_stage_attempt_ids: repairedAttempts.map((attempt) => attempt.stage_attempt_id),
+        hydrate_followthrough_required: true,
+        authority_boundary: {
+          opl: 'route_admission_provider_followthrough_repair_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          provider_completion_is_domain_ready: false,
+          refs_only_checkpoint_is_running_proof: false,
+          domain_truth_mutation: false,
+          publication_quality_mutation: false,
+          artifact_gate_mutation: false,
+          current_package_mutation: false,
+        },
+      },
+    });
+    repairedTaskIds.add(row.task_id);
+    repairedCount += 1;
+  }
+  return { repairedCount, repairedTaskIds };
+}
+
 function autoRedriveBlockedDefaultExecutorProviderTasks(
   db: DatabaseSync,
   rows: FamilyRuntimeTaskRow[],
@@ -714,9 +825,18 @@ async function runMaintenanceReconcile(
     `${input.source}:paper-autonomy-closeout-repair`,
   );
   const scopedRowsAfterPaperAutonomyRepair = rowsForMaintenance();
-  const defaultExecutorSupersededAttemptReconciledCount = reconcileHistoricalSupersededDefaultExecutorAttempts(
+  const {
+    repairedCount: repairedMasDomainRouteAdmissionRequestedCount,
+    repairedTaskIds: repairedMasDomainRouteAdmissionRequestedTaskIds,
+  } = repairSucceededMasDomainRouteAdmissionRequested(
     db,
     scopedRowsAfterPaperAutonomyRepair,
+    `${input.source}:domain-route-admission-repair`,
+  );
+  const scopedRowsAfterDomainRouteAdmissionRepair = rowsForMaintenance();
+  const defaultExecutorSupersededAttemptReconciledCount = reconcileHistoricalSupersededDefaultExecutorAttempts(
+    db,
+    scopedRowsAfterDomainRouteAdmissionRepair,
     `${input.source}:superseded-attempt-reconcile`,
   );
   const scopedRowsAfterSupersededAttemptReconcile = rowsForMaintenance();
@@ -745,6 +865,8 @@ async function runMaintenanceReconcile(
     repairedMissingIdentityTaskIds,
     repairedPaperAutonomyMissingCloseoutCount,
     repairedPaperAutonomyMissingCloseoutTaskIds,
+    repairedMasDomainRouteAdmissionRequestedCount,
+    repairedMasDomainRouteAdmissionRequestedTaskIds,
     defaultExecutorSupersededAttemptReconciledCount,
     waitingApprovalAttemptReconciledCount,
     defaultExecutorAutoRedrivenCount,
@@ -841,6 +963,17 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     };
   let maintenanceReconcile = zeroMaintenanceReconcileResult();
   let maintenanceReconcileRanBeforeDispatch = false;
+  let postRepairHydration = {
+    source: input.source,
+    task_scope: input.taskScope ?? null,
+    enqueued_count: 0,
+    requeued_count: 0,
+    idempotent_noop_count: 0,
+    blocked_count: 0,
+    filtered_count: 0,
+    suppressed_count: 0,
+    exports: [] as unknown[],
+  };
   const noExcludedTaskIds = new Set<string>();
   let selection = await selectDispatchCandidates(db, input, handlers, noExcludedTaskIds);
   const selectionTotals = {
@@ -856,10 +989,23 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
   if (selection.rows.length === 0) {
     maintenanceReconcileRanBeforeDispatch = true;
     maintenanceReconcile = await runMaintenanceReconcile(db, input, handlers, noExcludedTaskIds);
-    if (maintenanceReconcile.defaultExecutorAutoRedrivenCount > 0) {
+    if (input.hydrate && maintenanceReconcile.repairedMasDomainRouteAdmissionRequestedCount > 0) {
+      postRepairHydration = hydrateDomainTasks(db, paths, {
+        source: `${input.source}:post-repair-hydrate`,
+        taskScope: input.taskScope,
+        domainProfiles: input.domainProfiles,
+      }, handlers.enqueueTask);
+    }
+    if (
+      maintenanceReconcile.defaultExecutorAutoRedrivenCount > 0
+      || maintenanceReconcile.repairedMasDomainRouteAdmissionRequestedCount > 0
+      || postRepairHydration.enqueued_count > 0
+      || postRepairHydration.requeued_count > 0
+    ) {
       const repairedTaskIds = mergeTaskIdSets(
         maintenanceReconcile.repairedMissingIdentityTaskIds,
         maintenanceReconcile.repairedPaperAutonomyMissingCloseoutTaskIds,
+        maintenanceReconcile.repairedMasDomainRouteAdmissionRequestedTaskIds,
       );
       selection = await selectDispatchCandidates(db, input, handlers, repairedTaskIds);
       selectionTotals.defaultExecutorSupersededCount += selection.defaultExecutorSupersededCount;
@@ -912,6 +1058,9 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
       repaired_missing_identity_running_count: maintenanceReconcile.repairedMissingIdentityRunningCount,
       repaired_missing_identity_dead_lettered_count: maintenanceReconcile.repairedMissingIdentityDeadLetteredCount,
       repaired_paper_autonomy_missing_closeout_count: maintenanceReconcile.repairedPaperAutonomyMissingCloseoutCount,
+      repaired_mas_domain_route_admission_requested_count:
+        maintenanceReconcile.repairedMasDomainRouteAdmissionRequestedCount,
+      post_repair_hydration: postRepairHydration,
       mas_default_executor_auto_redriven_count: maintenanceReconcile.defaultExecutorAutoRedrivenCount,
       mas_default_executor_auto_dead_lettered_count: maintenanceReconcile.defaultExecutorAutoDeadLetteredCount,
       mas_default_executor_auto_redrive_stale_skipped_count: maintenanceReconcile.defaultExecutorAutoRedriveStaleSkippedCount,
@@ -957,6 +1106,9 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     repaired_missing_identity_running_count: maintenanceReconcile.repairedMissingIdentityRunningCount,
     repaired_missing_identity_dead_lettered_count: maintenanceReconcile.repairedMissingIdentityDeadLetteredCount,
     repaired_paper_autonomy_missing_closeout_count: maintenanceReconcile.repairedPaperAutonomyMissingCloseoutCount,
+    repaired_mas_domain_route_admission_requested_count:
+      maintenanceReconcile.repairedMasDomainRouteAdmissionRequestedCount,
+    post_repair_hydration: postRepairHydration,
     mas_default_executor_auto_redriven_count: maintenanceReconcile.defaultExecutorAutoRedrivenCount,
     mas_default_executor_auto_dead_lettered_count: maintenanceReconcile.defaultExecutorAutoDeadLetteredCount,
     mas_default_executor_auto_redrive_stale_skipped_count: maintenanceReconcile.defaultExecutorAutoRedriveStaleSkippedCount,

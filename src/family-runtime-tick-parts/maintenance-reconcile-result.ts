@@ -5,6 +5,8 @@ export type MaintenanceReconcileResult = {
   repairedMissingIdentityTaskIds: Set<string>;
   repairedPaperAutonomyMissingCloseoutCount: number;
   repairedPaperAutonomyMissingCloseoutTaskIds: Set<string>;
+  repairedMasDomainRouteAdmissionRequestedCount: number;
+  repairedMasDomainRouteAdmissionRequestedTaskIds: Set<string>;
   defaultExecutorSupersededAttemptReconciledCount: number;
   waitingApprovalAttemptReconciledCount: number;
   defaultExecutorAutoRedrivenCount: number;
@@ -20,6 +22,8 @@ export function zeroMaintenanceReconcileResult(): MaintenanceReconcileResult {
     repairedMissingIdentityTaskIds: new Set<string>(),
     repairedPaperAutonomyMissingCloseoutCount: 0,
     repairedPaperAutonomyMissingCloseoutTaskIds: new Set<string>(),
+    repairedMasDomainRouteAdmissionRequestedCount: 0,
+    repairedMasDomainRouteAdmissionRequestedTaskIds: new Set<string>(),
     defaultExecutorSupersededAttemptReconciledCount: 0,
     waitingApprovalAttemptReconciledCount: 0,
     defaultExecutorAutoRedrivenCount: 0,

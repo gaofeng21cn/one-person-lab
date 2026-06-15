@@ -18,6 +18,10 @@ import {
   buildStageRunCurrentnessIdentity,
   missingStageRunCurrentnessIdentityFields,
 } from './family-runtime-stage-run-currentness-identity.ts';
+import {
+  OPL_ATTEMPT_ADMISSION_PROVIDER_START_PENDING_REASON,
+  OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
+} from './family-runtime-opl-attempt-admission-receipt.ts';
 
 type ControlAttemptRow = StageAttemptRow & { rowid: number };
 type WorkUnitIdentity = {
@@ -390,6 +394,20 @@ function refsOnlyDomainHandlerCheckpoint(attempt: ControlAttemptRow | undefined)
   );
 }
 
+function domainHandlerProviderAdmissionRequested(
+  task: FamilyRuntimeTaskRow | undefined,
+  attempt: ControlAttemptRow | undefined,
+) {
+  return Boolean(
+    task?.status === 'running'
+    && task.last_error === OPL_ATTEMPT_ADMISSION_REQUESTED_REASON
+    && attempt
+    && attempt.status === 'queued'
+    && attempt.executor_kind === 'domain_handler'
+    && attempt.closeout_receipt_status === 'domain_handler_receipt_ref_only',
+  );
+}
+
 function isLiveProviderAttempt(attempt: ControlAttemptRow | undefined, providerRun: Record<string, unknown>) {
   if (!attempt) {
     return false;
@@ -692,6 +710,19 @@ function deriveCurrentControlStateFromRows(
       current_attempt_state: 'blocked',
       blocker_reason: 'launch_execution_authorization_required_for_refs_only_checkpoint',
       missing_launch_authorization_fields: missingLaunchAuthorizationFields(current),
+      authority_boundary: {
+        ...base.authority_boundary,
+        provider_completion_is_domain_ready: false,
+        refs_only_checkpoint_is_running_proof: false,
+      },
+    };
+  }
+  if (domainHandlerProviderAdmissionRequested(task, current)) {
+    return {
+      ...base,
+      reconciliation_status: 'provider_admission_requested',
+      current_attempt_state: 'queued',
+      blocker_reason: OPL_ATTEMPT_ADMISSION_PROVIDER_START_PENDING_REASON,
       authority_boundary: {
         ...base.authority_boundary,
         provider_completion_is_domain_ready: false,

@@ -23,6 +23,7 @@ import {
   sameProviderAdmissionCurrentnessIdentity,
 } from '../family-runtime-mas-current-control-admission-currentness.ts';
 import { listStageAttemptsForTask, updateStageAttemptsForTask } from '../family-runtime-stage-attempts.ts';
+import { isDefaultExecutorOplAttemptAdmissionRequested } from '../family-runtime-opl-attempt-admission-receipt.ts';
 
 const DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
 const MAS_PAPER_AUTONOMY_STALE_DEAD_LETTER_MARKERS = [
@@ -432,15 +433,7 @@ function transportOnlySucceededDefaultExecutorAdmissionRedriveDecision(
   }
   const eventPayload = recordValue(JSON.parse(row.payload_json));
   const output = recordValue(eventPayload?.output);
-  const dispatch = recordValue(output?.dispatch);
-  const result = recordValue(dispatch?.result);
-  const admissionRequested = output?.opl_attempt_admission_requested === true
-    || optionalString(output?.opl_attempt_admission_status) === 'requested'
-    || optionalString(result?.status) === 'opl_attempt_admission_requested';
-  if (
-    !admissionRequested
-    || optionalString(dispatch?.execution_policy) !== 'opl_default_executor_stage_attempt_admission'
-  ) {
+  if (!isDefaultExecutorOplAttemptAdmissionRequested(output)) {
     return null;
   }
   return {
