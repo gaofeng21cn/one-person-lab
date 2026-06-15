@@ -23,23 +23,9 @@ import {
   findLiveDefaultExecutorStudyAttempt,
   ensureProviderHostedStageAttempt,
   isDefaultExecutorDispatchTask,
-  defaultExecutorDispatchIdentity,
-  defaultExecutorDomainSourceFingerprint,
-  defaultExecutorStudyActionIdentity,
   refreshDefaultExecutorLiveAttemptTaskLease,
   stageIdForProviderHostedTask,
 } from './family-runtime-provider-hosted-attempts.ts';
-import { redriveBlockedDefaultExecutorProviderTransportTask } from './family-runtime-redrive.ts';
-import { MAS_DOMAIN_ROUTE_RECONCILE_APPLY } from './family-runtime-mas-domain-route.ts';
-import {
-  domainRouteOplAttemptAdmissionNeedsProviderFollowthrough,
-  isDomainRouteOplAttemptAdmissionRequested,
-  masDomainOwnerAnswerObservationFromRecords,
-  type MasDomainOwnerAnswerObservation,
-  MAS_DOMAIN_TYPED_BLOCKER_OBSERVED_REASON,
-  OPL_ATTEMPT_ADMISSION_PROVIDER_START_PENDING_REASON,
-  OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
-} from './family-runtime-opl-attempt-admission-receipt.ts';
 import {
   MAS_PAPER_AUTONOMY_DOMAIN_HANDLER_CLOSEOUT_REQUIRED_REASON,
   MAS_PAPER_AUTONOMY_TASK_KINDS,
@@ -48,8 +34,6 @@ import {
   applyProgressFirstAntiSpinGate,
 } from './family-runtime-progress-first-anti-spin-gate.ts';
 import {
-  currentDefaultExecutorTasksByDispatch,
-  currentDefaultExecutorTasksByStudyAction,
   dropCompletedDefaultExecutorRows,
   dropSameStudyDefaultExecutorRows,
   dropSupersededDefaultExecutorRows,
@@ -61,6 +45,13 @@ import {
   type MaintenanceReconcileResult,
   zeroMaintenanceReconcileResult,
 } from './family-runtime-tick-parts/maintenance-reconcile-result.ts';
+import {
+  blockMasDomainRouteAdmissionsWithObservedOwnerAnswer,
+  repairSucceededMasDomainRouteAdmissionRequested,
+} from './family-runtime-tick-parts/mas-domain-route-maintenance.ts';
+import {
+  autoRedriveBlockedDefaultExecutorProviderTasks,
+} from './family-runtime-tick-parts/default-executor-auto-redrive.ts';
 
 type EnqueueTaskResult = {
   accepted?: boolean;
@@ -88,12 +79,6 @@ type RunFamilyRuntimeQueueTickHandlers<TDispatch> = {
   ) => TDispatch | Promise<TDispatch>;
   queryTemporalStageAttempt?: QueryTemporalStageAttempt;
 };
-const PROVIDER_TRANSPORT_REDRIVE_REASONS = new Set([
-  'temporal_stage_attempt_start_failed',
-  'temporal_stage_attempt_not_completed',
-  'temporal_stage_attempt_failed',
-]);
-
 const MISSING_STAGE_ATTEMPT_IDENTITY_REPAIR_REASON = 'missing_stage_attempt_identity';
 const WAITING_APPROVAL_ATTEMPT_RECONCILIATION_STATUSES = new Set(['queued', 'running', 'checkpointed']);
 
@@ -219,32 +204,6 @@ function reconcileWaitingApprovalTaskAttempts(
     reconciledAttemptCount += reconciledAttempts.length;
   }
   return reconciledAttemptCount;
-}
-
-function attemptCountForTask(db: DatabaseSync, taskId: string) {
-  const row = db.prepare(`
-    SELECT COUNT(*) AS count
-    FROM stage_attempts
-    WHERE task_id = ?
-  `).get(taskId) as { count: number };
-  return row.count;
-}
-
-function attemptCountForTaskCurrentSource(
-  db: DatabaseSync,
-  taskId: string,
-  sourceFingerprint: string | null,
-) {
-  if (!sourceFingerprint) {
-    return attemptCountForTask(db, taskId);
-  }
-  const row = db.prepare(`
-    SELECT COUNT(*) AS count
-    FROM stage_attempts
-    WHERE task_id = ?
-      AND json_extract(workspace_locator_json, '$.domain_source_fingerprint') = ?
-  `).get(taskId, sourceFingerprint) as { count: number };
-  return row.count;
 }
 
 function isExpiredOrUnleasedRunningTask(row: FamilyRuntimeTaskRow) {
@@ -411,378 +370,6 @@ function repairSucceededMasPaperAutonomyTasksMissingCloseout(
     repairedTaskIds.add(row.task_id);
   }
   return { repairedCount, repairedTaskIds };
-}
-
-function latestTaskDispatchSucceededOutput(db: DatabaseSync, taskId: string) {
-  const row = db.prepare(`
-    SELECT payload_json
-    FROM events
-    WHERE task_id = ? AND event_type = 'task_dispatch_succeeded'
-    ORDER BY created_at DESC
-    LIMIT 1
-  `).get(taskId) as { payload_json: string } | undefined;
-  if (!row) {
-    return null;
-  }
-  try {
-    const parsed = JSON.parse(row.payload_json) as unknown;
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return null;
-    }
-    const output = (parsed as Record<string, unknown>).output;
-    return output && typeof output === 'object' && !Array.isArray(output)
-      ? output as Record<string, unknown>
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-function closeoutRefsFromAttemptPayload(attempts: ReturnType<typeof listStageAttemptsForTask>) {
-  return attempts.flatMap((attempt) => (
-    Array.isArray(attempt.closeout_refs) ? attempt.closeout_refs.filter((ref): ref is string => typeof ref === 'string') : []
-  ));
-}
-
-function blockMasDomainRouteOwnerAnswerObserved(
-  db: DatabaseSync,
-  row: FamilyRuntimeTaskRow,
-  source: string,
-  input: {
-    observation: MasDomainOwnerAnswerObservation;
-    previousStatus: string;
-    output?: Record<string, unknown> | null;
-  },
-) {
-  const blockedAt = new Date().toISOString();
-  db.prepare(`
-    UPDATE tasks
-    SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
-      last_error = ?, dead_letter_reason = ?, updated_at = ?
-    WHERE task_id = ?
-  `).run(input.observation.reason, input.observation.reason, blockedAt, row.task_id);
-  const attempts = listStageAttemptsForTask(db, row.task_id).filter((attempt) => (
-    attempt.executor_kind === 'domain_handler'
-    && ['queued', 'running', 'checkpointed', 'completed'].includes(attempt.status)
-  ));
-  const blockedAttempts = updateStageAttemptsForTask(db, {
-    taskId: row.task_id,
-    stageAttemptIds: attempts.map((attempt) => attempt.stage_attempt_id),
-    status: 'blocked',
-    closeoutRefs: closeoutRefsFromAttemptPayload(attempts),
-    closeoutReceiptStatus: attempts.some((attempt) => attempt.closeout_receipt_status === 'domain_handler_receipt_ref_only')
-      ? 'domain_handler_receipt_ref_only'
-      : undefined,
-    blockedReason: input.observation.reason,
-    routeImpact: {
-      answer_kind: input.observation.answer_kind,
-      typed_blocker_refs: input.observation.answer_kind === 'typed_blocker_ref' ? input.observation.refs : [],
-      owner_answer_refs: input.observation.answer_kind !== 'typed_blocker_ref' ? input.observation.refs : [],
-      evidence_paths: input.observation.evidence_paths,
-    },
-    activityEvent: {
-      activity_kind: 'domain_handler_dispatch_activity',
-      activity_status: 'blocked_domain_owner_answer_observed',
-      blocked_reason: input.observation.reason,
-      answer_kind: input.observation.answer_kind,
-      refs: input.observation.refs,
-      previous_status: input.previousStatus,
-      previous_admission_signal: OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
-    },
-  });
-  insertEvent(db, {
-    taskId: row.task_id,
-    domainId: row.domain_id,
-    eventType: input.observation.reason === MAS_DOMAIN_TYPED_BLOCKER_OBSERVED_REASON
-      ? 'task_repaired_from_route_admission_to_mas_domain_typed_blocker'
-      : 'task_repaired_from_route_admission_to_mas_domain_owner_answer',
-    source,
-    payload: {
-      previous_status: input.previousStatus,
-      next_status: 'blocked',
-      reason: input.observation.reason,
-      answer_kind: input.observation.answer_kind,
-      refs: input.observation.refs,
-      evidence_paths: input.observation.evidence_paths,
-      previous_admission_signal: OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
-      dispatch_output: input.output ?? null,
-      repaired_stage_attempt_ids: blockedAttempts.map((attempt) => attempt.stage_attempt_id),
-      authority_boundary: {
-        opl: 'owner_answer_observation_and_queue_lifecycle_only',
-        domain: 'truth_quality_artifact_gate_owner',
-        provider_completion_is_domain_ready: false,
-        refs_only_checkpoint_is_running_proof: false,
-        domain_truth_mutation: false,
-        publication_quality_mutation: false,
-        artifact_gate_mutation: false,
-        current_package_mutation: false,
-        can_create_owner_receipt: false,
-        can_create_typed_blocker: false,
-      },
-    },
-  });
-}
-
-function blockMasDomainRouteAdmissionsWithObservedOwnerAnswer(
-  db: DatabaseSync,
-  rows: FamilyRuntimeTaskRow[],
-  source: string,
-) {
-  let blockedCount = 0;
-  const blockedTaskIds = new Set<string>();
-  for (const row of rows) {
-    if (
-      row.domain_id !== 'medautoscience'
-      || row.task_kind !== MAS_DOMAIN_ROUTE_RECONCILE_APPLY
-      || !['running', 'succeeded'].includes(row.status)
-    ) {
-      continue;
-    }
-    const payload = payloadFromTask(row);
-    const output = latestTaskDispatchSucceededOutput(db, row.task_id);
-    if (row.status === 'succeeded' && !isDomainRouteOplAttemptAdmissionRequested(output)) {
-      continue;
-    }
-    if (
-      row.status === 'running'
-      && row.last_error !== OPL_ATTEMPT_ADMISSION_REQUESTED_REASON
-      && !isDomainRouteOplAttemptAdmissionRequested(output)
-    ) {
-      continue;
-    }
-    const observation = masDomainOwnerAnswerObservationFromRecords([
-      { source: 'task_payload', value: payload },
-      { source: 'domain_handler_output', value: output },
-    ]);
-    if (!observation) {
-      continue;
-    }
-    blockMasDomainRouteOwnerAnswerObserved(db, row, source, {
-      observation,
-      previousStatus: row.status,
-      output,
-    });
-    blockedCount += 1;
-    blockedTaskIds.add(row.task_id);
-  }
-  return { blockedCount, blockedTaskIds };
-}
-
-function repairSucceededMasDomainRouteAdmissionRequested(
-  db: DatabaseSync,
-  rows: FamilyRuntimeTaskRow[],
-  source: string,
-) {
-  let repairedCount = 0;
-  const repairedTaskIds = new Set<string>();
-  const repairedAt = new Date().toISOString();
-  for (const row of rows) {
-    if (
-      row.domain_id !== 'medautoscience'
-      || row.task_kind !== MAS_DOMAIN_ROUTE_RECONCILE_APPLY
-      || row.status !== 'succeeded'
-    ) {
-      continue;
-    }
-    const output = latestTaskDispatchSucceededOutput(db, row.task_id);
-    const payload = payloadFromTask(row);
-    if (!domainRouteOplAttemptAdmissionNeedsProviderFollowthrough({ taskPayload: payload, output })) {
-      continue;
-    }
-    const attempts = listStageAttemptsForTask(db, row.task_id).filter((attempt) => (
-      attempt.executor_kind === 'domain_handler'
-      && attempt.closeout_receipt_status === 'domain_handler_receipt_ref_only'
-      && ['checkpointed', 'completed'].includes(attempt.status)
-    ));
-    if (attempts.length === 0) {
-      continue;
-    }
-    db.prepare(`
-      UPDATE tasks
-      SET status = 'running', lease_owner = NULL, lease_expires_at = NULL,
-        last_error = ?, dead_letter_reason = NULL, updated_at = ?
-      WHERE task_id = ? AND status = 'succeeded'
-    `).run(OPL_ATTEMPT_ADMISSION_REQUESTED_REASON, repairedAt, row.task_id);
-    const repairedAttempts = updateStageAttemptsForTask(db, {
-      taskId: row.task_id,
-      stageAttemptIds: attempts.map((attempt) => attempt.stage_attempt_id),
-      status: 'queued',
-      closeoutRefs: closeoutRefsFromAttemptPayload(attempts),
-      closeoutReceiptStatus: 'domain_handler_receipt_ref_only',
-      blockedReason: null,
-      activityEvent: {
-        activity_kind: 'domain_handler_dispatch_activity',
-        activity_status: 'repaired_to_provider_admission_requested',
-        blocked_reason: OPL_ATTEMPT_ADMISSION_PROVIDER_START_PENDING_REASON,
-        reason: OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
-      },
-    });
-    insertEvent(db, {
-      taskId: row.task_id,
-      domainId: row.domain_id,
-      eventType: 'task_repaired_from_succeeded_route_admission_requested',
-      source,
-      payload: {
-        previous_status: row.status,
-        next_status: 'running',
-        reason: OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
-        blocker_reason: OPL_ATTEMPT_ADMISSION_PROVIDER_START_PENDING_REASON,
-        repaired_stage_attempt_ids: repairedAttempts.map((attempt) => attempt.stage_attempt_id),
-        hydrate_followthrough_required: true,
-        authority_boundary: {
-          opl: 'route_admission_provider_followthrough_repair_only',
-          domain: 'truth_quality_artifact_gate_owner',
-          provider_completion_is_domain_ready: false,
-          refs_only_checkpoint_is_running_proof: false,
-          domain_truth_mutation: false,
-          publication_quality_mutation: false,
-          artifact_gate_mutation: false,
-          current_package_mutation: false,
-        },
-      },
-    });
-    repairedTaskIds.add(row.task_id);
-    repairedCount += 1;
-  }
-  return { repairedCount, repairedTaskIds };
-}
-
-function autoRedriveBlockedDefaultExecutorProviderTasks(
-  db: DatabaseSync,
-  rows: FamilyRuntimeTaskRow[],
-  source: string,
-) {
-  let autoRedrivenCount = 0;
-  let autoDeadLetteredCount = 0;
-  let staleSkippedCount = 0;
-  const redrivenAt = new Date().toISOString();
-  const currentByIdentity = currentDefaultExecutorTasksByDispatch(rows);
-  const currentByStudyAction = currentDefaultExecutorTasksByStudyAction(rows);
-  for (const row of rows) {
-    if (
-      row.status !== 'blocked'
-      || !PROVIDER_TRANSPORT_REDRIVE_REASONS.has(row.dead_letter_reason ?? '')
-    ) {
-      continue;
-    }
-    const payload = payloadFromTask(row);
-    if (!isDefaultExecutorDispatchTask(row, payload)) {
-      continue;
-    }
-    const identity = defaultExecutorDispatchIdentity(row, payload);
-    const actionIdentity = defaultExecutorStudyActionIdentity(row, payload);
-    const current = identity ? currentByIdentity.get(identity) : null;
-    const currentAction = actionIdentity ? currentByStudyAction.get(actionIdentity) : null;
-    const sourceFingerprint = defaultExecutorDomainSourceFingerprint(payload);
-    if (
-      current
-      && current.task_id !== row.task_id
-      && current.source_fingerprint
-      && sourceFingerprint
-      && current.source_fingerprint !== sourceFingerprint
-    ) {
-      staleSkippedCount += 1;
-      insertEvent(db, {
-        taskId: row.task_id,
-        domainId: row.domain_id,
-        eventType: 'task_default_executor_stale_auto_redrive_skip',
-        source,
-        payload: {
-          reason: 'same_dispatch_newer_source_exists',
-          current_task_id: current.task_id,
-          current_source_fingerprint: current.source_fingerprint,
-          stale_source_fingerprint: sourceFingerprint,
-          dispatch_ref: payload.dispatch_ref ?? null,
-          action_type: payload.action_type ?? null,
-          study_id: payload.study_id ?? null,
-          authority_boundary: {
-            opl: 'queue_auto_redrive_currentness_filter_only',
-            domain: 'truth_quality_artifact_gate_owner',
-            domain_truth_mutation: false,
-            publication_quality_mutation: false,
-            artifact_gate_mutation: false,
-            current_package_mutation: false,
-          },
-        },
-      });
-      continue;
-    }
-    if (
-      currentAction
-      && currentAction.task_id !== row.task_id
-      && currentAction.source_fingerprint
-      && sourceFingerprint
-      && currentAction.source_fingerprint !== sourceFingerprint
-    ) {
-      staleSkippedCount += 1;
-      insertEvent(db, {
-        taskId: row.task_id,
-        domainId: row.domain_id,
-        eventType: 'task_default_executor_stale_auto_redrive_skip',
-        source,
-        payload: {
-          reason: 'same_study_action_newer_source_exists',
-          current_task_id: currentAction.task_id,
-          current_source_fingerprint: currentAction.source_fingerprint,
-          stale_source_fingerprint: sourceFingerprint,
-          dispatch_ref: payload.dispatch_ref ?? null,
-          action_type: payload.action_type ?? null,
-          study_id: payload.study_id ?? null,
-          authority_boundary: {
-            opl: 'queue_auto_redrive_currentness_filter_only',
-            domain: 'truth_quality_artifact_gate_owner',
-            domain_truth_mutation: false,
-            publication_quality_mutation: false,
-            artifact_gate_mutation: false,
-            current_package_mutation: false,
-          },
-        },
-      });
-      continue;
-    }
-    const usedAttempts = attemptCountForTaskCurrentSource(db, row.task_id, sourceFingerprint);
-    if (usedAttempts >= row.max_attempts) {
-      db.prepare(`
-        UPDATE tasks
-        SET status = 'dead_letter', lease_owner = NULL, lease_expires_at = NULL,
-          last_error = ?, dead_letter_reason = ?, updated_at = ?
-        WHERE task_id = ?
-      `).run('retry_budget_exhausted', 'retry_budget_exhausted', redrivenAt, row.task_id);
-      insertEvent(db, {
-        taskId: row.task_id,
-        domainId: row.domain_id,
-        eventType: 'task_auto_dead_lettered_after_provider_transport_retries',
-        source,
-        payload: {
-          previous_status: row.status,
-          previous_dead_letter_reason: row.dead_letter_reason,
-          used_attempts: usedAttempts,
-          max_attempts: row.max_attempts,
-          authority_boundary: {
-            opl: 'provider_transport_retry_budget_only',
-            domain: 'truth_quality_artifact_gate_owner',
-            domain_truth_mutation: false,
-            publication_quality_mutation: false,
-            artifact_gate_mutation: false,
-            current_package_mutation: false,
-          },
-        },
-      });
-      autoDeadLetteredCount += 1;
-      continue;
-    }
-    const redrive = redriveBlockedDefaultExecutorProviderTransportTask(db, row, payload, {
-      trigger: 'auto',
-      source,
-      usedAttempts,
-      maxAttempts: row.max_attempts,
-      redrivenAt,
-    });
-    if (redrive.provider_redrive_started ?? redrive.redriven) {
-      autoRedrivenCount += 1;
-    }
-  }
-  return { autoRedrivenCount, autoDeadLetteredCount, staleSkippedCount };
 }
 
 function isLiveDefaultExecutorAttempt(attempt: StageAttemptPayload | null) {
