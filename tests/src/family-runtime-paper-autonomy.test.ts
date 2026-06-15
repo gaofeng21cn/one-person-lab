@@ -2,14 +2,26 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  appendPaperAutonomyCloseoutInboxPending,
+  appendPaperAutonomyRecoveryObligation,
   applyPaperAutonomySupervisorDecision,
+  applyPaperAutonomySupervisorDecisionFromLedger,
   buildPaperAutonomySupervisorDecisionReadback,
+  consumePaperAutonomyCloseoutInboxEntry,
+  currentPaperAutonomySupervisorDecision,
+  listCurrentPaperAutonomySupervisorDecisions,
   PAPER_AUTONOMY_SUPERVISOR_DECISION_KINDS,
   readPaperAutonomySupervisorDecisionFromObligation,
+  readPaperAutonomyCloseoutInboxEntry,
+  recordPaperAutonomySupervisorDecision,
+  rejectPaperAutonomyCloseoutInboxEntry,
   selectPaperAutonomyRecoveryObligation,
+  type PaperAutonomyCloseoutInboxEntry,
   type PaperAutonomyRecoveryObligation,
+  type PaperAutonomyRecoveryObligationStoreEntry,
   type PaperAutonomyStageRunIdentity,
   type PaperAutonomySupervisorDecisionKind,
+  type PaperAutonomySupervisorDecisionLedgerEntry,
 } from '../../src/family-runtime-paper-autonomy.ts';
 
 function identity(overrides: Partial<PaperAutonomyStageRunIdentity> = {}): PaperAutonomyStageRunIdentity {
@@ -318,4 +330,170 @@ test('paper autonomy supervisor readback maps MAS obligation state without idle 
     }),
     /stage_run_id/,
   );
+
+  assert.throws(
+    () => readPaperAutonomySupervisorDecisionFromObligation({
+      obligation_id: 'obligation:queue-empty-alone',
+      current_identity: identity(),
+      action_queue: [],
+      provider_admission_pending_count: 0,
+      evidence_refs: [
+        'opl://runway/action-queue-empty',
+        'opl://runway/provider-admission-pending-count-zero',
+      ],
+    }),
+    /action_queue and provider_admission_pending_count are not terminal evidence/,
+  );
+});
+
+test('paper autonomy durable decision ledger keeps exactly one current latest decision per identity', () => {
+  const currentIdentity = identity();
+  const obligation: PaperAutonomyRecoveryObligation = {
+    obligation_id: 'obligation:durable-current-latest',
+    desired_delta_ref: 'mas://DM002/current-owner-delta/latest.json',
+    current_identity: currentIdentity,
+    status: 'open',
+    last_evidence_refs: [],
+  };
+  let obligationEntries: PaperAutonomyRecoveryObligationStoreEntry[] = [];
+  obligationEntries = appendPaperAutonomyRecoveryObligation(obligationEntries, {
+    obligation,
+    appended_at: '2026-06-15T00:00:00.000Z',
+  }).entries;
+
+  const firstDecision = buildPaperAutonomySupervisorDecisionReadback({
+    ...decisionInput('execute_current_owner_delta'),
+    obligation_id: obligation.obligation_id,
+    current_identity: currentIdentity,
+  });
+  const secondDecision = buildPaperAutonomySupervisorDecisionReadback({
+    ...decisionInput('consume_terminal_closeout'),
+    obligation_id: obligation.obligation_id,
+    current_identity: currentIdentity,
+  });
+
+  let decisionEntries: PaperAutonomySupervisorDecisionLedgerEntry[] = [];
+  let recorded = recordPaperAutonomySupervisorDecision(decisionEntries, {
+    obligation_id: obligation.obligation_id,
+    current_identity: currentIdentity,
+    decision: firstDecision,
+    appended_at: '2026-06-15T00:00:01.000Z',
+  });
+  assert.equal(recorded.accepted, true);
+  decisionEntries = recorded.entries;
+
+  recorded = recordPaperAutonomySupervisorDecision(decisionEntries, {
+    obligation_id: obligation.obligation_id,
+    current_identity: currentIdentity,
+    decision: secondDecision,
+    appended_at: '2026-06-15T00:00:02.000Z',
+  });
+  assert.equal(recorded.accepted, true);
+  decisionEntries = recorded.entries;
+
+  const currentDecisions = listCurrentPaperAutonomySupervisorDecisions(decisionEntries, {
+    obligation_id: obligation.obligation_id,
+  });
+  assert.equal(currentDecisions.length, 1);
+  assert.equal(currentDecisions[0].decision_id, secondDecision.decision_id);
+  assert.equal(currentPaperAutonomySupervisorDecision(decisionEntries, {
+    obligation_id: obligation.obligation_id,
+    current_identity: currentIdentity,
+  })?.decision_id, secondDecision.decision_id);
+
+  const staleApply = applyPaperAutonomySupervisorDecisionFromLedger({
+    obligation_entries: obligationEntries,
+    decision_entries: decisionEntries,
+    decision: firstDecision,
+    applied_at: '2026-06-15T00:00:03.000Z',
+  });
+  assert.equal(staleApply.applied, false);
+  assert.equal(staleApply.reason, 'stale_supervisor_decision');
+  assert.equal(staleApply.entries.at(-1)?.entry_kind, 'obligation_apply_rejected');
+
+  const latestApply = applyPaperAutonomySupervisorDecisionFromLedger({
+    obligation_entries: staleApply.entries,
+    decision_entries: decisionEntries,
+    decision: secondDecision,
+    applied_at: '2026-06-15T00:00:04.000Z',
+  });
+  assert.equal(latestApply.applied, true);
+  assert.equal(latestApply.obligation.status, 'terminal_closeout_consumed');
+  assert.equal(latestApply.obligation.supervisor_decision_ref, secondDecision.decision_id);
+});
+
+test('paper autonomy durable decision ledger rejects identity mismatches without changing current latest', () => {
+  const currentIdentity = identity();
+  const mismatchedDecision = buildPaperAutonomySupervisorDecisionReadback({
+    ...decisionInput('materialize_recovery_action'),
+    obligation_id: 'obligation:identity-mismatch',
+    current_identity: identity({
+      route_identity_key: 'route:dm002:stale',
+      source_fingerprint: 'mas-source:dm002:stale',
+    }),
+  });
+
+  const recorded = recordPaperAutonomySupervisorDecision([], {
+    obligation_id: 'obligation:identity-mismatch',
+    current_identity: currentIdentity,
+    decision: mismatchedDecision,
+    appended_at: '2026-06-15T00:01:00.000Z',
+  });
+
+  assert.equal(recorded.accepted, false);
+  assert.equal(recorded.reason, 'identity_mismatch');
+  assert.equal(recorded.entries.at(-1)?.entry_kind, 'supervisor_decision_rejected');
+  assert.equal(currentPaperAutonomySupervisorDecision(recorded.entries, {
+    obligation_id: 'obligation:identity-mismatch',
+    current_identity: currentIdentity,
+  }), null);
+});
+
+test('paper autonomy closeout inbox records pending closeouts as consumed or rejected by identity', () => {
+  const currentIdentity = identity();
+  let inboxEntries: PaperAutonomyCloseoutInboxEntry[] = [];
+  inboxEntries = appendPaperAutonomyCloseoutInboxPending(inboxEntries, {
+    closeout_ref: 'opl://stage-attempts/dm002/closeout-consumed.json',
+    obligation_id: 'obligation:closeout-consumed',
+    current_identity: currentIdentity,
+    terminal_closeout_ref: 'opl://stage-attempts/dm002/closeout-consumed.json',
+    appended_at: '2026-06-15T00:02:00.000Z',
+  }).entries;
+
+  assert.equal(readPaperAutonomyCloseoutInboxEntry(inboxEntries, {
+    closeout_ref: 'opl://stage-attempts/dm002/closeout-consumed.json',
+    current_identity: currentIdentity,
+  })?.status, 'pending');
+
+  const consumed = consumePaperAutonomyCloseoutInboxEntry(inboxEntries, {
+    closeout_ref: 'opl://stage-attempts/dm002/closeout-consumed.json',
+    current_identity: currentIdentity,
+    supervisor_decision_ref: 'supervisor-decision:consume-closeout',
+    consumed_at: '2026-06-15T00:02:01.000Z',
+  });
+  assert.equal(consumed.consumed, true);
+  assert.equal(readPaperAutonomyCloseoutInboxEntry(consumed.entries, {
+    closeout_ref: 'opl://stage-attempts/dm002/closeout-consumed.json',
+    current_identity: currentIdentity,
+  })?.status, 'consumed');
+
+  inboxEntries = appendPaperAutonomyCloseoutInboxPending(consumed.entries, {
+    closeout_ref: 'opl://stage-attempts/dm002/closeout-rejected.json',
+    obligation_id: 'obligation:closeout-rejected',
+    current_identity: currentIdentity,
+    terminal_closeout_ref: 'opl://stage-attempts/dm002/closeout-rejected.json',
+    appended_at: '2026-06-15T00:03:00.000Z',
+  }).entries;
+
+  const rejected = rejectPaperAutonomyCloseoutInboxEntry(inboxEntries, {
+    closeout_ref: 'opl://stage-attempts/dm002/closeout-rejected.json',
+    current_identity: currentIdentity,
+    reason: 'domain_closeout_identity_mismatch',
+    rejected_at: '2026-06-15T00:03:01.000Z',
+  });
+  assert.equal(rejected.rejected, true);
+  assert.equal(readPaperAutonomyCloseoutInboxEntry(rejected.entries, {
+    closeout_ref: 'opl://stage-attempts/dm002/closeout-rejected.json',
+    current_identity: currentIdentity,
+  })?.status, 'rejected');
 });

@@ -648,3 +648,5 @@ function supervisorEvidenceRefs(input: PaperAutonomySupervisorObligationReadback
     input.budget_or_missing_evidence_ref,
   ].filter((value): value is string => Boolean(value));
 }
+
+export * from './family-runtime-paper-autonomy-parts/substrate.ts';

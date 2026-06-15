@@ -170,7 +170,7 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   const paperAutonomy = substrate.paper_autonomy_supervisor_substrate_mapping;
   assert.equal(
     paperAutonomy.status,
-    'execute_decision_runtime_admission_path_landed_non_ready',
+    'durable_substrate_first_slice_landed_non_ready',
   );
   assert.deepEqual(paperAutonomy.allowed_supervisor_decisions, [
     'execute_current_owner_delta',
@@ -192,15 +192,38 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   );
   assert.match(
     paperAutonomy.concepts.RecoveryObligationStore.landed_support,
+    /append-only obligation store/,
+  );
+  assert.match(
+    paperAutonomy.concepts.RecoveryObligationStore.landed_support,
     /paper_autonomy_supervisor_apply/,
+  );
+  assert.equal(paperAutonomy.concepts.RecoveryObligationStore.durable_substrate_first_slice.obligation_store, 'append_only_jsonl_compatible_identity_bound');
+  assert.equal(paperAutonomy.concepts.RecoveryObligationStore.durable_substrate_first_slice.closeout_inbox, 'pending_consumed_rejected_identity_bound');
+  assert.equal(
+    paperAutonomy.concepts.RecoveryObligationStore.durable_substrate_first_slice.same_identity_redrive_policy,
+    'fail_closed_when_decision_is_not_current_latest_for_identity',
   );
   assert.match(
     paperAutonomy.concepts.RecoveryObligationStore.remaining_gap,
-    /end-to-end runtime soak/,
+    /provider-backed runtime soak/,
   );
   assert.match(
     paperAutonomy.concepts.SupervisorDecisionEngine.landed_support,
     /all six decisions/,
+  );
+  assert.match(
+    paperAutonomy.concepts.SupervisorDecisionEngine.landed_support,
+    /append-only supervisor decision ledger/,
+  );
+  assert.equal(paperAutonomy.concepts.SupervisorDecisionEngine.durable_substrate_first_slice.ledger, 'append_only_jsonl_compatible');
+  assert.equal(
+    paperAutonomy.concepts.SupervisorDecisionEngine.durable_substrate_first_slice.current_latest_policy,
+    'exactly_one_latest_current_decision_per_obligation_identity',
+  );
+  assert.equal(
+    paperAutonomy.concepts.SupervisorDecisionEngine.durable_substrate_first_slice.queue_empty_terminal_evidence,
+    false,
   );
   assert.match(
     paperAutonomy.concepts.SupervisorDecisionEngine.landed_support,
