@@ -52,6 +52,14 @@ function missingEvidenceClassGroups(routes: BrandModuleL5OwnerEvidenceRoute[]) {
   return groups;
 }
 
+const OBSERVED_REFS_OWNER_ACCEPTANCE_ACTION = 'record_owner_acceptance_ref_or_typed_blocker_for_l5_claim';
+
+function followthroughAction(route: BrandModuleL5OwnerEvidenceRoute) {
+  return route.owner_evidence_closure_state === 'owner_evidence_recorded_not_l5_claim'
+    ? OBSERVED_REFS_OWNER_ACCEPTANCE_ACTION
+    : route.next_owner_action;
+}
+
 export function nextActionSummary(
   entry: BrandModuleL5OperatingEvidenceEntry,
   routes: BrandModuleL5OwnerEvidenceRoute[],
@@ -63,13 +71,16 @@ export function nextActionSummary(
   const firstTypedBlockerRoute = routes.find((route) =>
     route.owner_evidence_closure_state === 'owner_typed_blocker_recorded'
   );
-  const nextRoute = firstMissingRoute ?? firstTypedBlockerRoute;
+  const firstObservedRefsRoute = routes.find((route) =>
+    route.owner_evidence_closure_state === 'owner_evidence_recorded_not_l5_claim'
+  );
+  const nextRoute = firstMissingRoute ?? firstTypedBlockerRoute ?? firstObservedRefsRoute;
   return {
     module_id: entry.module_id,
     status: entry.l5_can_be_claimed ? 'complete' : entry.l5_completion_status,
     l5_can_be_claimed: entry.l5_can_be_claimed,
     next_owner_action: nextRoute
-      ? nextRoute.next_owner_action
+      ? followthroughAction(nextRoute)
       : 'keep_verified_refs_and_wait_for_all_requirements',
     next_work_order_id: nextRoute?.work_order_id ?? null,
     next_evidence_class_id: nextRoute?.class_id ?? null,
@@ -113,6 +124,7 @@ export function moduleOwnerFollowthroughSummary(routes: BrandModuleL5OwnerEviden
   const actionableRoutes = [
     ...missingOwnerEvidenceRoutes,
     ...typedBlockerRoutes,
+    ...observedRefsNotL5ClaimRoutes,
   ];
   return {
     owner_followthrough_required: actionableRoutes.length > 0,
@@ -124,8 +136,38 @@ export function moduleOwnerFollowthroughSummary(routes: BrandModuleL5OwnerEviden
     owner_followthrough_work_order_ids: actionableRoutes.map((route) => route.work_order_id),
     typed_blocker_followthrough_work_order_ids: typedBlockerRoutes.map((route) => route.work_order_id),
     observed_refs_not_l5_claim_work_order_ids: observedRefsNotL5ClaimRoutes.map((route) => route.work_order_id),
-    next_followthrough_action: actionableRoutes[0]?.next_owner_action ?? null,
+    next_followthrough_action: actionableRoutes[0]
+      ? followthroughAction(actionableRoutes[0])
+      : null,
     next_followthrough_work_order_id: actionableRoutes[0]?.work_order_id ?? null,
+    false_completion_guard: {
+      observed_refs_close_l5: false,
+      typed_blocker_refs_close_l5: false,
+      owner_followthrough_closes_l5_without_owner_acceptance: false,
+      ready_claim_authorized: false,
+    },
+  };
+}
+
+export function completedModuleOwnerFollowthroughSummary(routes: BrandModuleL5OwnerEvidenceRoute[]) {
+  const observedRefsNotL5ClaimRoutes = routes.filter((route) =>
+    route.owner_evidence_closure_state === 'owner_evidence_recorded_not_l5_claim'
+  );
+  const routesWithObservedRefs = routes.filter((route) =>
+    route.observed_ref_count > 0 || route.observed_receipt_count > 0
+  );
+  return {
+    owner_followthrough_required: false,
+    owner_followthrough_required_count: 0,
+    missing_owner_evidence_requirement_count: 0,
+    typed_blocker_followthrough_requirement_count: 0,
+    observed_refs_not_l5_claim_requirement_count: observedRefsNotL5ClaimRoutes.length,
+    observed_ref_requirement_count: routesWithObservedRefs.length,
+    owner_followthrough_work_order_ids: [],
+    typed_blocker_followthrough_work_order_ids: [],
+    observed_refs_not_l5_claim_work_order_ids: observedRefsNotL5ClaimRoutes.map((route) => route.work_order_id),
+    next_followthrough_action: null,
+    next_followthrough_work_order_id: null,
     false_completion_guard: {
       observed_refs_close_l5: false,
       typed_blocker_refs_close_l5: false,
@@ -159,6 +201,7 @@ export function evidenceClassFollowthroughSummary(
     const actionableRoutes = [
       ...missingOwnerEvidenceRoutes,
       ...typedBlockerRoutes,
+      ...observedRefsNotL5ClaimRoutes,
     ];
 
     return {
@@ -186,7 +229,9 @@ export function evidenceClassFollowthroughSummary(
       observed_refs_not_l5_claim_work_order_ids: observedRefsNotL5ClaimRoutes.map((route) =>
         route.work_order_id
       ),
-      next_followthrough_action: actionableRoutes[0]?.next_owner_action ?? null,
+      next_followthrough_action: actionableRoutes[0]
+        ? followthroughAction(actionableRoutes[0])
+        : null,
       next_followthrough_work_order_id: actionableRoutes[0]?.work_order_id ?? null,
       next_owner: actionableRoutes[0]?.owner ?? null,
       next_owner_repo: actionableRoutes[0]?.owner_repo ?? null,

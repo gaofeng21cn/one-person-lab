@@ -1,6 +1,7 @@
 import { FrameworkContractError } from './contracts.ts';
 import { BRAND_MODULE_L5_FALSE_AUTHORITY_BOUNDARY } from './brand-module-l5-evidence-authority.ts';
 import {
+  completedModuleOwnerFollowthroughSummary,
   evidenceClassFollowthroughSummary,
   moduleOwnerFollowthroughSummary,
   nextActionSummary,
@@ -663,7 +664,9 @@ function compactModule(
     receipt.receipt_status === 'verified'
   );
   const routes = ownerEvidenceRoutes(contract, entry, moduleLedgerReceipts);
-  const ownerFollowthroughSummary = moduleOwnerFollowthroughSummary(routes);
+  const ownerFollowthroughSummary = entry.l5_can_be_claimed
+    ? completedModuleOwnerFollowthroughSummary(routes)
+    : moduleOwnerFollowthroughSummary(routes);
   return {
     module_id: entry.module_id,
     brand_name: entry.brand_name,

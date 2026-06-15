@@ -76,7 +76,11 @@ test('brand module L5 evidence gate is executable but does not claim production 
     assert.equal(liveUserPathClass?.accepted_ref_shapes.includes('user_path_evidence_ref'), true);
     assert.equal(liveUserPathClass?.accepted_ref_shapes.includes('owner_acceptance_ref'), true);
     assert.equal(liveUserPathClass?.accepted_ref_shapes.includes('typed_blocker_ref'), true);
-    assert.equal(liveUserPathClass?.next_followthrough_work_order_id, null);
+    assert.equal(liveUserPathClass?.next_followthrough_work_order_id, 'w7-brand-module-l5-charter-live_user_path');
+    assert.equal(
+      liveUserPathClass?.next_followthrough_action,
+      'record_owner_acceptance_ref_or_typed_blocker_for_l5_claim',
+    );
     assert.equal(liveUserPathClass?.can_close_l5, false);
     assert.equal(liveUserPathClass?.can_be_completed_by_opl, false);
     assert.equal(liveUserPathClass?.supporting_guard_can_be_completed_by_opl, true);
@@ -87,7 +91,10 @@ test('brand module L5 evidence gate is executable but does not claim production 
     assert.equal(noSecondTruthClass?.route_count, 10);
     assert.equal(noSecondTruthClass?.typed_blocker_followthrough_route_count, 0);
     assert.equal(noSecondTruthClass?.observed_refs_not_l5_claim_route_count, 10);
-    assert.equal(noSecondTruthClass?.next_followthrough_work_order_id, null);
+    assert.equal(
+      noSecondTruthClass?.next_followthrough_work_order_id,
+      'w7-brand-module-l5-charter-no_second_truth_regression',
+    );
     assert.equal(noSecondTruthClass?.can_close_l5, false);
     for (const entry of status.modules as L5Module[]) {
       assert.equal(entry.evidence_required, true);
@@ -113,7 +120,7 @@ test('brand module L5 evidence gate is executable but does not claim production 
       assert.equal(entry.owner_followthrough_summary.owner_followthrough_required, true);
       assert.equal(
         entry.owner_followthrough_summary.owner_followthrough_required_count,
-        expectedTypedBlockerRequirementCount,
+        13,
       );
       assert.equal(entry.owner_followthrough_summary.missing_owner_evidence_requirement_count, 0);
       assert.equal(
@@ -716,11 +723,11 @@ test('runtime owner acceptance ledger refs remain non-closing without contract o
     assert.equal(longSoakAggregate?.accepted_ref_shapes.includes('owner_acceptance_ref'), true);
     assert.equal(longSoakAggregate?.can_close_l5, false);
     assert.equal(liveUserPathAggregate?.typed_blocker_followthrough_route_count, 0);
-    assert.equal(liveUserPathAggregate?.next_followthrough_work_order_id, null);
+    assert.equal(liveUserPathAggregate?.next_followthrough_work_order_id, 'w7-brand-module-l5-runway-live_user_path');
     assert.equal(runway.l5_can_be_claimed, false);
     assert.equal(status.evidence_required_module_count, 10);
     assert.equal(runway.owner_followthrough_summary.owner_followthrough_required, true);
-    assert.equal(runway.owner_followthrough_summary.owner_followthrough_required_count, 3);
+    assert.equal(runway.owner_followthrough_summary.owner_followthrough_required_count, 13);
     assert.equal(runway.owner_followthrough_summary.missing_owner_evidence_requirement_count, 0);
     assert.equal(runway.owner_followthrough_summary.typed_blocker_followthrough_requirement_count, 3);
     assert.equal(runway.owner_followthrough_summary.observed_refs_not_l5_claim_requirement_count, 10);
@@ -743,6 +750,80 @@ test('runtime owner acceptance ledger refs remain non-closing without contract o
     assert.equal(route.l5_claim_status, 'owner_evidence_refs_observed_not_l5_claimed');
     assert.equal(route.ready_claim_authorized, false);
     assert.equal(route.owner_evidence_closure_state, 'owner_evidence_recorded_not_l5_claim');
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+});
+
+test('brand module L5 points observed-only modules to owner acceptance followthrough', () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-brand-l5-observed-only-followthrough-'));
+  const env = { OPL_STATE_DIR: stateDir };
+
+  try {
+    for (const evidenceClassId of [
+      'live_user_path',
+      'ordinary_app_experience',
+      'cross_agent_scaleout',
+      'long_soak_recovery',
+      'release_install_evidence',
+      'operator_repair_loop',
+      'owner_acceptance',
+      'no_second_truth_regression',
+      'pack_compile_parity',
+      'current_owner_delta_default_read',
+      'capability_fail_open_boundary',
+      'domain_authority_false_boundary',
+      'cross_agent_foundry_agent_os_adoption',
+    ]) {
+      const record = runCli([
+        'runtime',
+        'brand-module-l5-evidence',
+        'record',
+        '--payload',
+        JSON.stringify({
+          module_id: 'runway',
+          evidence_class_id: evidenceClassId,
+          evidence_refs: [`owner-evidence-ref:opl-brand-l5/runway/${evidenceClassId}/observed-only`],
+        }),
+        '--json',
+      ], env).brand_module_l5_evidence_ledger_record;
+      runCli([
+        'runtime',
+        'brand-module-l5-evidence',
+        'verify',
+        '--receipt-ref',
+        record.receipt.receipt_ref,
+        '--json',
+      ], env);
+    }
+
+    const status = runCli(['brand-modules', 'l5-status', '--module', 'runway'], env).brand_module_l5_status;
+    const runway = status.modules[0] as L5Module;
+
+    assert.equal(runway.l5_can_be_claimed, false);
+    assert.equal(runway.next_action_summary.next_owner_action, 'record_owner_acceptance_ref_or_typed_blocker_for_l5_claim');
+    assert.equal(runway.next_action_summary.next_work_order_id, 'w7-brand-module-l5-runway-live_user_path');
+    assert.equal(runway.next_action_summary.next_evidence_class_id, 'live_user_path');
+    assert.equal(runway.next_action_summary.next_accepted_ref_shapes?.includes('owner_acceptance_ref'), true);
+    assert.equal(runway.next_action_summary.next_accepted_ref_shapes?.includes('typed_blocker_ref'), true);
+    assert.equal(runway.owner_followthrough_summary.owner_followthrough_required, true);
+    assert.equal(runway.owner_followthrough_summary.owner_followthrough_required_count, 13);
+    assert.equal(runway.owner_followthrough_summary.observed_refs_not_l5_claim_requirement_count, 13);
+    assert.equal(
+      runway.owner_followthrough_summary.owner_followthrough_work_order_ids.includes(
+        'w7-brand-module-l5-runway-owner_acceptance',
+      ),
+      true,
+    );
+    assert.equal(
+      runway.owner_followthrough_summary.next_followthrough_action,
+      'record_owner_acceptance_ref_or_typed_blocker_for_l5_claim',
+    );
+    assert.equal(
+      runway.owner_followthrough_summary.next_followthrough_work_order_id,
+      'w7-brand-module-l5-runway-live_user_path',
+    );
+    assert.equal(runway.next_action_summary.false_completion_guard.refs_only_inputs_close_l5, false);
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
   }
