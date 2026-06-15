@@ -30,6 +30,49 @@ function defaultExecutorPayload(sourceFingerprint: string) {
   };
 }
 
+function strictProviderRedrivePayload(sourceFingerprint: string) {
+  return {
+    ...defaultExecutorPayload(sourceFingerprint),
+    stage_packet_ref: `studies/002-dm-china-us-mortality-attribution/artifacts/stage_packets/run_quality_repair_batch/${sourceFingerprint}.json`,
+    route_identity_key: `mas:dm002:run_quality_repair_batch:${sourceFingerprint}`,
+    attempt_idempotency_key: `mas:dm002:run_quality_repair_batch:${sourceFingerprint}:attempt`,
+    work_unit_id: 'run_quality_repair_batch',
+    work_unit_fingerprint: sourceFingerprint,
+    source_eval_id: `source-eval:${sourceFingerprint}`,
+    truth_epoch: `truth:${sourceFingerprint}`,
+    runtime_health_epoch: 'runtime-health:test',
+  };
+}
+
+function assertRedriveBlockedByProviderOnlyProtocol(
+  failure: ReturnType<typeof runCliFailure>,
+  expectedReason: string,
+) {
+  assert.equal(failure.payload.error.code, 'cli_usage_error');
+  assert.equal(failure.payload.error.details.blocker_id, 'family_runtime_redrive_blocked');
+  assert.equal(failure.payload.error.details.reason, expectedReason);
+  assert.equal(failure.payload.error.details.action, 'blocked_semantic_noop');
+  assert.equal(failure.payload.error.details.authority_boundary.domain_truth_mutation, false);
+  assert.equal(failure.payload.error.details.authority_boundary.owner_receipt_created, false);
+  assert.equal(failure.payload.error.details.authority_boundary.typed_blocker_created, false);
+  assert.equal(failure.payload.error.details.authority_boundary.provider_redrive_started, false);
+}
+
+function isProviderOnlyRedriveEvent(event: { payload: Record<string, unknown> }, redriveKind: string) {
+  const protocol = event.payload.redrive_protocol as Record<string, unknown>;
+  const boundary = event.payload.authority_boundary as Record<string, unknown>;
+  return protocol.protocol === 'provider_transport_only'
+    && protocol.redrive_kind === redriveKind
+    && protocol.domain_truth_mutation === false
+    && protocol.owner_receipt_created === false
+    && protocol.typed_blocker_created === false
+    && protocol.domain_progress_claim === false
+    && boundary.domain_truth_mutation === false
+    && boundary.owner_receipt_created === false
+    && boundary.typed_blocker_created === false
+    && boundary.domain_progress_claim === false;
+}
+
 function forceTaskIntoProviderTransportBlockedState(
   stateRoot: string,
   taskId: string,
@@ -64,7 +107,7 @@ function forceTaskIntoProviderTransportBlockedState(
       SELECT
         'sat_' || lower(hex(randomblob(12))), 'idem_' || lower(hex(randomblob(12))),
         'temporal', 'wf_' || lower(hex(randomblob(12))), domain_id, task_kind,
-        json('{}'), ?, 'codex_cli', ?, '[]',
+        payload_json, ?, 'codex_cli', ?, '[]',
         '[]', '[]', '{"max_attempts":3}', 1, task_id,
         ?, '{}', '{"provider_status":"registered"}', '[]',
         '{}', NULL, datetime('now'), datetime('now')
@@ -76,6 +119,198 @@ function forceTaskIntoProviderTransportBlockedState(
     queueDb.close();
   }
 }
+
+test('family-runtime operator redrive rejects same-identity transport failure with live linked provider attempt', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-redrive-live-attempt-block-'));
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      JSON.stringify(strictProviderRedrivePayload('source-live-linked-redrive-block')),
+      '--dedupe-key',
+      'mas:dm-cvd:002:default-executor:run_quality_repair_batch:live-linked-redrive-block',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    forceTaskIntoProviderTransportBlockedState(stateRoot, taskId, 'temporal_stage_attempt_start_failed');
+    const queueDb = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
+    try {
+      queueDb.prepare(`
+        INSERT INTO stage_attempts(
+          stage_attempt_id, idempotency_key, provider_kind, workflow_id, domain_id, stage_id,
+          workspace_locator_json, source_fingerprint, executor_kind, status, checkpoint_refs_json,
+          closeout_refs_json, human_gate_refs_json, retry_budget_json, attempt_count, task_id,
+          blocked_reason, provider_receipt_json, provider_run_json, activity_events_json,
+          route_impact_json, closeout_receipt_status, created_at, updated_at
+        )
+        SELECT
+          'sat_live_redrive_block', 'idem_live_redrive_block',
+          'temporal', 'wf_live_redrive_block', domain_id, stage_id,
+          workspace_locator_json, source_fingerprint, 'codex_cli', 'running', '[]',
+          '[]', '[]', '{"max_attempts":3}', 1, task_id,
+          NULL, '{}', '{"provider_status":"running"}', '[]',
+          '{}', NULL, datetime('now'), datetime('now')
+        FROM stage_attempts
+        WHERE task_id = ?
+        ORDER BY created_at ASC
+        LIMIT 1
+      `).run(taskId);
+    } finally {
+      queueDb.close();
+    }
+
+    const failure = runCliFailure([
+      'family-runtime',
+      'queue',
+      'redrive',
+      taskId,
+      '--reason',
+      'operator_must_not_duplicate_live_provider_attempt',
+      '--source',
+      'test-live-linked-redrive-block',
+    ], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+
+    assertRedriveBlockedByProviderOnlyProtocol(failure, 'live_linked_provider_attempt_exists');
+    assert.equal(task.family_runtime_task.task.status, 'blocked');
+    assert.equal(task.family_runtime_task.task.dead_letter_reason, 'temporal_stage_attempt_start_failed');
+    assert.equal(task.family_runtime_task.stage_attempts.length, 2);
+    assert.equal(
+      task.family_runtime_task.stage_attempts.filter((attempt: { status: string }) => attempt.status === 'queued').length,
+      0,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime operator redrive rejects retry-budget dead letter when same identity has accepted typed closeout', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-redrive-closeout-block-'));
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      JSON.stringify(strictProviderRedrivePayload('source-closeout-redrive-block')),
+      '--dedupe-key',
+      'mas:dm-cvd:002:default-executor:run_quality_repair_batch:closeout-redrive-block',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    forceTaskIntoProviderTransportBlockedState(stateRoot, taskId, 'retry_budget_exhausted', {
+      taskStatus: 'dead_letter',
+      taskAttempts: 3,
+      stageAttemptStatus: 'dead_lettered',
+    });
+    const queueDb = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
+    try {
+      queueDb.prepare(`
+        INSERT INTO stage_attempts(
+          stage_attempt_id, idempotency_key, provider_kind, workflow_id, domain_id, stage_id,
+          workspace_locator_json, source_fingerprint, executor_kind, status, checkpoint_refs_json,
+          closeout_refs_json, human_gate_refs_json, retry_budget_json, attempt_count, task_id,
+          blocked_reason, provider_receipt_json, provider_run_json, activity_events_json,
+          route_impact_json, closeout_receipt_status, created_at, updated_at
+        )
+        SELECT
+          'sat_closeout_redrive_block', 'idem_closeout_redrive_block',
+          'temporal', 'wf_closeout_redrive_block', domain_id, stage_id,
+          workspace_locator_json, source_fingerprint, 'codex_cli', 'completed', '[]',
+          '["mas:owner-receipt:same-identity"]', '[]', '{"max_attempts":3}', 1, task_id,
+          NULL, '{}', '{"provider_status":"completed"}', '[]',
+          '{"owner_receipt_refs":["mas:owner-receipt:same-identity"]}',
+          'accepted_typed_closeout', datetime('now'), datetime('now')
+        FROM stage_attempts
+        WHERE task_id = ?
+        ORDER BY created_at ASC
+        LIMIT 1
+      `).run(taskId);
+    } finally {
+      queueDb.close();
+    }
+
+    const failure = runCliFailure([
+      'family-runtime',
+      'queue',
+      'redrive',
+      taskId,
+      '--reason',
+      'operator_must_not_redrive_after_owner_closeout',
+      '--source',
+      'test-closeout-redrive-block',
+    ], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+
+    assertRedriveBlockedByProviderOnlyProtocol(failure, 'accepted_typed_closeout_exists');
+    assert.equal(task.family_runtime_task.task.status, 'dead_letter');
+    assert.equal(task.family_runtime_task.task.dead_letter_reason, 'retry_budget_exhausted');
+    assert.equal(task.family_runtime_task.stage_attempts.length, 2);
+    assert.equal(
+      task.family_runtime_task.stage_attempts.filter((attempt: { status: string }) => attempt.status === 'queued').length,
+      0,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime operator redrive rejects same-lineage stop-loss domain blockers', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-redrive-stop-loss-block-'));
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      JSON.stringify(strictProviderRedrivePayload('source-stop-loss-redrive-block')),
+      '--dedupe-key',
+      'mas:dm-cvd:002:default-executor:run_quality_repair_batch:stop-loss-redrive-block',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    forceTaskIntoProviderTransportBlockedState(stateRoot, taskId, 'anti_loop_budget_exhausted');
+
+    const failure = runCliFailure([
+      'family-runtime',
+      'queue',
+      'redrive',
+      taskId,
+      '--reason',
+      'operator_must_not_redrive_same_lineage_stop_loss',
+      '--source',
+      'test-stop-loss-redrive-block',
+    ], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+
+    assertRedriveBlockedByProviderOnlyProtocol(failure, 'same_lineage_stop_loss_domain_blocker');
+    assert.equal(task.family_runtime_task.task.status, 'blocked');
+    assert.equal(task.family_runtime_task.task.dead_letter_reason, 'anti_loop_budget_exhausted');
+    assert.equal(
+      task.family_runtime_task.stage_attempts.filter((attempt: { status: string }) => attempt.status === 'queued').length,
+      0,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
 
 test('family-runtime operator redrive reruns failed MAS default executor provider transport without source changes', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-default-executor-failed-operator-redrive-'));
@@ -125,7 +360,7 @@ test('family-runtime operator redrive reruns failed MAS default executor provide
         event.event_type === 'task_operator_redrive_from_blocked_provider_transport'
         && event.payload.previous_dead_letter_reason === 'temporal_stage_attempt_failed'
         && event.payload.operator_reason === 'provider_temporal_heartbeat_timeout_retry_budget_available'
-        && (event.payload.authority_boundary as Record<string, unknown>).domain_truth_mutation === false
+        && isProviderOnlyRedriveEvent(event, 'provider_transport_blocked')
       )),
       true,
     );
@@ -188,7 +423,7 @@ test('family-runtime operator redrive can recover MAS default executor retry-bud
         && event.payload.previous_status === 'dead_letter'
         && event.payload.previous_dead_letter_reason === 'retry_budget_exhausted'
         && event.payload.operator_reason === 'provider_runtime_repaired_after_retry_budget_exhausted'
-        && (event.payload.authority_boundary as Record<string, unknown>).domain_truth_mutation === false
+        && isProviderOnlyRedriveEvent(event, 'retry_budget_provider_transport')
       )),
       true,
     );
@@ -245,7 +480,7 @@ test('family-runtime operator redrive can recover MAS default executor cancellat
         event.event_type === 'task_operator_redrive_from_blocked_provider_transport'
         && event.payload.previous_dead_letter_reason === 'temporal_stage_attempt_canceled'
         && event.payload.operator_reason === 'provider_lifecycle_recovered_after_codex_activity_cancelled'
-        && (event.payload.authority_boundary as Record<string, unknown>).domain_truth_mutation === false
+        && isProviderOnlyRedriveEvent(event, 'provider_transport_blocked')
       )),
       true,
     );
@@ -347,6 +582,7 @@ PY
       redrivenTask.family_runtime_task.events.some((event: { event_type: string; payload: Record<string, unknown> }) => (
         event.event_type === 'task_operator_redrive_from_dead_letter_provider_retry_budget'
         && event.payload.retry_budget_evidence_kind === 'task_auto_dead_letter_event'
+        && isProviderOnlyRedriveEvent(event, 'retry_budget_provider_transport')
       )),
       true,
     );
@@ -655,7 +891,7 @@ test('family-runtime operator redrive reruns blocked MAS default executor provid
       afterTickTask.family_runtime_task.events.some((event: { event_type: string; payload: Record<string, unknown> }) => (
         event.event_type === 'task_operator_redrive_from_blocked_provider_transport'
         && event.payload.source_fingerprint_changed === false
-        && (event.payload.authority_boundary as Record<string, unknown>).domain_truth_mutation === false
+        && isProviderOnlyRedriveEvent(event, 'provider_transport_blocked')
       )),
       true,
     );

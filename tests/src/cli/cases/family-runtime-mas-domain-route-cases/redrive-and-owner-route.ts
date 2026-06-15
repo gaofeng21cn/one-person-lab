@@ -114,7 +114,13 @@ JSON
         && event.payload.previous_status === 'succeeded'
         && event.payload.previous_stage_attempt_state === 'failed'
         && event.payload.previous_stage_attempt_blocked_reason === 'temporal_workflow_not_started_or_not_found'
+        && (event.payload.redrive_protocol as Record<string, unknown>).protocol === 'provider_transport_only'
+        && (event.payload.redrive_protocol as Record<string, unknown>).redrive_kind === 'provider_transport_terminal'
+        && (event.payload.redrive_protocol as Record<string, unknown>).domain_progress_claim === false
         && (event.payload.authority_boundary as Record<string, unknown>).domain_truth_mutation === false
+        && (event.payload.authority_boundary as Record<string, unknown>).owner_receipt_created === false
+        && (event.payload.authority_boundary as Record<string, unknown>).typed_blocker_created === false
+        && (event.payload.authority_boundary as Record<string, unknown>).domain_progress_claim === false
       )),
       true,
     );

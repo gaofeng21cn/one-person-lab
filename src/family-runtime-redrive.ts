@@ -6,6 +6,10 @@ import {
   ensureProviderHostedStageAttempt,
   isDefaultExecutorDispatchTask,
 } from './family-runtime-provider-hosted-attempts.ts';
+import {
+  providerAdmissionCurrentnessIdentity,
+  sameProviderAdmissionCurrentnessIdentity,
+} from './family-runtime-mas-current-control-admission-currentness.ts';
 import { listStageAttemptsForTask } from './family-runtime-stage-attempts.ts';
 import {
   insertEvent,
@@ -37,6 +41,21 @@ type ProviderStageAttemptRedriveReason = typeof PROVIDER_STAGE_ATTEMPT_REDRIVE_R
 type ProviderTransportRedriveTrigger = 'operator' | 'auto';
 type StageAttemptPayload = ReturnType<typeof listStageAttemptsForTask>[number];
 type RedriveAdmission = ReturnType<typeof redriveAdmissionForTask>;
+type ProviderRedriveCurrentnessIdentity = NonNullable<ReturnType<typeof redriveCurrentnessIdentity>>;
+
+type ProviderOnlyRedriveKind =
+  | 'provider_transport_blocked'
+  | 'provider_transport_terminal'
+  | 'refs_only_checkpoint_missing_launch_authorization'
+  | 'retry_budget_provider_transport'
+  | 'blocked_semantic_noop';
+
+const LIVE_PROVIDER_ATTEMPT_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate']);
+const ACCEPTED_CLOSEOUT_RECEIPT_STATUS = 'accepted_typed_closeout';
+const STOP_LOSS_DOMAIN_BLOCKER_REASONS = new Set([
+  'anti_loop_budget_exhausted',
+  'progress_first_owner_delta_required',
+]);
 
 function parsePayload(row: FamilyRuntimeTaskRow) {
   return JSON.parse(row.payload_json) as Record<string, unknown>;
@@ -60,6 +79,79 @@ function redriveAdmissionForTask(
   };
 }
 
+function providerOnlyRedriveProtocol(redriveKind: ProviderOnlyRedriveKind) {
+  return {
+    surface_kind: 'opl_provider_only_redrive_protocol',
+    protocol: 'provider_transport_only',
+    redrive_kind: redriveKind,
+    allowed_failure_classes: [
+      'temporal_network_provider_transport_failure',
+      'refs_only_checkpoint_missing_launch_authorization',
+      'retry_budget_provider_transport_failure',
+    ],
+    provider_transport_only: true,
+    domain_truth_mutation: false,
+    owner_receipt_created: false,
+    typed_blocker_created: false,
+    domain_progress_claim: false,
+  };
+}
+
+function providerOnlyRedriveAuthorityBoundary(
+  opl: string,
+  extra: Record<string, unknown> = {},
+) {
+  return {
+    opl,
+    domain: 'truth_quality_artifact_gate_owner',
+    provider_transport_only: true,
+    domain_truth_mutation: false,
+    owner_receipt_created: false,
+    typed_blocker_created: false,
+    domain_progress_claim: false,
+    publication_quality_mutation: false,
+    artifact_gate_mutation: false,
+    current_package_mutation: false,
+    ...extra,
+  };
+}
+
+function redriveBlockedDetails(
+  reason: string,
+  details: Record<string, unknown> = {},
+) {
+  return {
+    blocker_id: 'family_runtime_redrive_blocked',
+    action: 'blocked_semantic_noop',
+    reason,
+    redrive_protocol: providerOnlyRedriveProtocol('blocked_semantic_noop'),
+    authority_boundary: providerOnlyRedriveAuthorityBoundary(
+      'provider_transport_redrive_blocked_semantic_noop',
+      { provider_redrive_started: false },
+    ),
+    ...details,
+  };
+}
+
+function throwProviderOnlyRedriveBlocked(
+  message: string,
+  reason: string,
+  details: Record<string, unknown> = {},
+): never {
+  throw new FrameworkContractError(
+    'cli_usage_error',
+    message,
+    redriveBlockedDetails(reason, details),
+  );
+}
+
+function redriveResultBoundary(redriveKind: ProviderOnlyRedriveKind, opl: string, extra: Record<string, unknown> = {}) {
+  return {
+    redrive_protocol: providerOnlyRedriveProtocol(redriveKind),
+    authority_boundary: providerOnlyRedriveAuthorityBoundary(opl, extra),
+  };
+}
+
 function createRedrivenAttemptForAdmission(
   db: DatabaseSync,
   row: FamilyRuntimeTaskRow,
@@ -76,12 +168,13 @@ function createRedrivenAttemptForAdmission(
   });
 }
 
-function redriveAdmissionEventPayload(admission: RedriveAdmission) {
+function redriveAdmissionEventPayload(admission: RedriveAdmission, redriveKind: ProviderOnlyRedriveKind) {
   return {
     redrive_admission_status: admission.nextStatus,
     provider_redrive_started: admission.nextStatus === 'queued',
     held_by_active_hold: Boolean(admission.activeHold),
     active_hold_id: admission.activeHold?.hold_id ?? null,
+    redrive_protocol: providerOnlyRedriveProtocol(redriveKind),
   };
 }
 
@@ -111,11 +204,12 @@ function assertProviderTransportRedriveReason(
 ): asserts value is ProviderTransportRedriveReason | ProviderTransportOperatorRedriveReason {
   const allowedReasons: readonly string[] = providerTransportRedriveReasonsForTrigger(trigger);
   if (!allowedReasons.includes(value ?? '')) {
-    throw new FrameworkContractError(
-      'cli_usage_error',
+    throwProviderOnlyRedriveBlocked(
       'family-runtime queue redrive only supports blocked provider-transport default executor tasks.',
+      STOP_LOSS_DOMAIN_BLOCKER_REASONS.has(value ?? '')
+        ? 'same_lineage_stop_loss_domain_blocker'
+        : 'non_provider_transport_blocker',
       {
-        blocker_id: 'family_runtime_redrive_blocked',
         dead_letter_reason: value,
         allowed_dead_letter_reasons: allowedReasons,
       },
@@ -125,6 +219,106 @@ function assertProviderTransportRedriveReason(
 
 function isProviderStageAttemptRedriveReason(value: string | null): value is ProviderStageAttemptRedriveReason {
   return PROVIDER_STAGE_ATTEMPT_REDRIVE_REASONS.includes(value as ProviderStageAttemptRedriveReason);
+}
+
+function redriveCurrentnessIdentity(payload: Record<string, unknown>) {
+  const identity = providerAdmissionCurrentnessIdentity(payload, { requirePendingStatus: false });
+  if (!identity) {
+    return null;
+  }
+  const hasSelectedStagePacket = Boolean(identity.stage_packet_ref && identity.stage_packet_refs.length > 0);
+  const hasCurrentnessBasis = Boolean(
+    identity.work_unit_id
+    && identity.work_unit_fingerprint
+    && (
+      identity.route_identity_key
+      || identity.attempt_idempotency_key
+      || identity.source_eval_id
+      || identity.truth_epoch
+      || identity.runtime_health_epoch
+      || identity.action_fingerprint
+    ),
+  );
+  return hasSelectedStagePacket && hasCurrentnessBasis ? identity : null;
+}
+
+function attemptCurrentnessIdentity(attempt: StageAttemptPayload) {
+  return redriveCurrentnessIdentity(attempt.workspace_locator);
+}
+
+function sameRedriveCurrentnessIdentity(
+  attempt: StageAttemptPayload,
+  identity: ProviderRedriveCurrentnessIdentity,
+) {
+  const attemptIdentity = attemptCurrentnessIdentity(attempt);
+  return Boolean(attemptIdentity && sameProviderAdmissionCurrentnessIdentity(attemptIdentity, identity));
+}
+
+function linkedProviderAttemptsForRedrive(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  identity: ProviderRedriveCurrentnessIdentity,
+) {
+  return listStageAttemptsForTask(db, row.task_id).filter((attempt) => (
+    attempt.provider_kind === 'temporal'
+    && attempt.executor_kind === 'codex_cli'
+    && sameRedriveCurrentnessIdentity(attempt, identity)
+  ));
+}
+
+function assertProviderOnlyRedriveProtocol(input: {
+  db: DatabaseSync;
+  row: FamilyRuntimeTaskRow;
+  payload: Record<string, unknown>;
+  evidenceKind: 'blocked_provider_transport' | 'retry_budget_dead_letter';
+}) {
+  const identity = redriveCurrentnessIdentity(input.payload);
+  if (!identity) {
+    return null;
+  }
+  const linkedAttempts = linkedProviderAttemptsForRedrive(input.db, input.row, identity);
+  const acceptedCloseout = linkedAttempts.find((attempt) => (
+    attempt.closeout_receipt_status === ACCEPTED_CLOSEOUT_RECEIPT_STATUS
+  ));
+  if (acceptedCloseout) {
+    throwProviderOnlyRedriveBlocked(
+      'family-runtime queue redrive is blocked by an accepted typed closeout.',
+      'accepted_typed_closeout_exists',
+      {
+        task_id: input.row.task_id,
+        status: input.row.status,
+        dead_letter_reason: input.row.dead_letter_reason,
+        evidence_kind: input.evidenceKind,
+        currentness_identity: identity,
+        linked_stage_attempt_id: acceptedCloseout.stage_attempt_id,
+        linked_stage_attempt_status: acceptedCloseout.status,
+        linked_stage_attempt_blocked_reason: acceptedCloseout.blocked_reason,
+      },
+    );
+  }
+  const liveAttempt = linkedAttempts.find((attempt) => LIVE_PROVIDER_ATTEMPT_STATUSES.has(attempt.status));
+  if (liveAttempt) {
+    throwProviderOnlyRedriveBlocked(
+      'family-runtime queue redrive is blocked by a live linked provider attempt.',
+      liveAttempt.status === 'queued'
+        ? 'newer_queued_provider_redrive_attempt_exists'
+        : 'live_linked_provider_attempt_exists',
+      {
+        task_id: input.row.task_id,
+        status: input.row.status,
+        dead_letter_reason: input.row.dead_letter_reason,
+        evidence_kind: input.evidenceKind,
+        currentness_identity: identity,
+        linked_stage_attempt_id: liveAttempt.stage_attempt_id,
+        linked_stage_attempt_status: liveAttempt.status,
+        linked_stage_attempt_blocked_reason: liveAttempt.blocked_reason,
+      },
+    );
+  }
+  return {
+    currentness_identity: identity,
+    linked_provider_attempt_count: linkedAttempts.length,
+  };
 }
 
 function providerRetryBudgetDeadLetterEvidenceKind(db: DatabaseSync, taskId: string) {
@@ -207,16 +401,114 @@ function refsOnlyCheckpointMissingLaunchAuthorizationForRedrive(db: DatabaseSync
   return attempts.sort((left, right) => Date.parse(left.updated_at) - Date.parse(right.updated_at)).at(-1) ?? null;
 }
 
+function hasOwnerRefs(value: unknown) {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return Boolean(
+    stringList(value.owner_receipt_refs).length > 0
+    || stringValue(value.owner_receipt_ref)
+    || stringList(value.domain_receipt_refs).length > 0
+    || stringValue(value.domain_receipt_ref)
+    || stringList(value.typed_blocker_refs).length > 0
+    || stringValue(value.typed_blocker_ref)
+  );
+}
+
+function redriveBlockingDomainCloseoutAttempt(
+  attempts: StageAttemptPayload[],
+  input: {
+    allowRefsOnlyCheckpointAttemptId?: string | null;
+  } = {},
+) {
+  return attempts.find((attempt) => (
+    !(
+      attempt.stage_attempt_id === input.allowRefsOnlyCheckpointAttemptId
+      && attempt.closeout_receipt_status === 'domain_handler_receipt_ref_only'
+    )
+    && (
+      attempt.closeout_receipt_status === ACCEPTED_CLOSEOUT_RECEIPT_STATUS
+      || stringList(attempt.closeout_refs).length > 0
+      || hasOwnerRefs(attempt.route_impact)
+    )
+  )) ?? null;
+}
+
+function liveLinkedProviderAttemptForRedrive(attempts: StageAttemptPayload[]) {
+  return attempts.find((attempt) => (
+    attempt.provider_kind === 'temporal'
+    && attempt.executor_kind === 'codex_cli'
+    && LIVE_PROVIDER_ATTEMPT_STATUSES.has(attempt.status)
+    && attempt.closeout_receipt_status !== ACCEPTED_CLOSEOUT_RECEIPT_STATUS
+  )) ?? null;
+}
+
+function assertNoProviderOnlySemanticRedriveBlocker(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  input: {
+    allowLiveAttemptId?: string | null;
+    allowRefsOnlyCheckpointAttemptId?: string | null;
+  } = {},
+) {
+  if (
+    row.status === 'blocked'
+    && STOP_LOSS_DOMAIN_BLOCKER_REASONS.has(row.dead_letter_reason ?? '')
+  ) {
+    throwProviderOnlyRedriveBlocked(
+      'family-runtime queue redrive does not redrive same-lineage stop-loss domain blockers.',
+      'same_lineage_stop_loss_domain_blocker',
+      {
+        task_id: row.task_id,
+        status: row.status,
+        dead_letter_reason: row.dead_letter_reason,
+      },
+    );
+  }
+  const attempts = listStageAttemptsForTask(db, row.task_id);
+  const closeoutAttempt = redriveBlockingDomainCloseoutAttempt(attempts, {
+    allowRefsOnlyCheckpointAttemptId: input.allowRefsOnlyCheckpointAttemptId,
+  });
+  if (closeoutAttempt) {
+    throwProviderOnlyRedriveBlocked(
+      'family-runtime queue redrive does not redrive tasks with domain closeout or owner refs.',
+      closeoutAttempt.closeout_receipt_status === ACCEPTED_CLOSEOUT_RECEIPT_STATUS
+        ? 'accepted_typed_closeout_exists'
+        : 'domain_owner_ref_exists',
+      {
+        task_id: row.task_id,
+        status: row.status,
+        dead_letter_reason: row.dead_letter_reason,
+        stage_attempt_id: closeoutAttempt.stage_attempt_id,
+        closeout_receipt_status: closeoutAttempt.closeout_receipt_status,
+      },
+    );
+  }
+  const liveAttempt = liveLinkedProviderAttemptForRedrive(attempts);
+  if (liveAttempt && liveAttempt.stage_attempt_id !== input.allowLiveAttemptId) {
+    throwProviderOnlyRedriveBlocked(
+      'family-runtime queue redrive does not duplicate a live linked provider attempt.',
+      'live_linked_provider_attempt_exists',
+      {
+        task_id: row.task_id,
+        status: row.status,
+        dead_letter_reason: row.dead_letter_reason,
+        stage_attempt_id: liveAttempt.stage_attempt_id,
+        stage_attempt_status: liveAttempt.status,
+      },
+    );
+  }
+}
+
 function assertDomainRouteProviderTransportTask(
   row: FamilyRuntimeTaskRow,
   payload: Record<string, unknown>,
 ) {
   if (!domainRouteRedriveAuthority(row, payload)) {
-    throw new FrameworkContractError(
-      'cli_usage_error',
+    throwProviderOnlyRedriveBlocked(
       'family-runtime queue redrive requires a provider transport task with OPL redrive authority.',
+      'provider_redrive_authority_missing',
       {
-        blocker_id: 'family_runtime_redrive_blocked',
         task_id: row.task_id,
         domain_id: row.domain_id,
         task_kind: row.task_kind,
@@ -234,11 +526,10 @@ function assertDefaultExecutorTask(
     || row.task_kind !== DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
     || !isDefaultExecutorDispatchTask(row, payload)
   ) {
-    throw new FrameworkContractError(
-      'cli_usage_error',
+    throwProviderOnlyRedriveBlocked(
       'family-runtime queue redrive does not redrive non-default executor tasks.',
+      'non_default_executor_task',
       {
-        blocker_id: 'family_runtime_redrive_blocked',
         task_id: row.task_id,
         domain_id: row.domain_id,
         task_kind: row.task_kind,
@@ -273,11 +564,10 @@ function redriveTerminalProviderTransportTask(
     assertDomainRouteProviderTransportTask(currentRow, currentPayload);
     const terminalAttempt = terminalProviderTransportAttemptForRedrive(db, currentRow.task_id);
     if (!terminalAttempt) {
-      throw new FrameworkContractError(
-        'cli_usage_error',
+      throwProviderOnlyRedriveBlocked(
         'family-runtime queue redrive requires failed provider attempt evidence without closeout refs.',
+        'provider_transport_attempt_evidence_missing',
         {
-          blocker_id: 'family_runtime_redrive_blocked',
           task_id: currentRow.task_id,
           status: currentRow.status,
           required_stage_attempt_statuses: ['failed', 'blocked', 'dead_lettered'],
@@ -286,6 +576,7 @@ function redriveTerminalProviderTransportTask(
         },
       );
     }
+    assertNoProviderOnlySemanticRedriveBlocker(db, currentRow);
     const admission = redriveAdmissionForTask(db, currentRow, currentPayload);
     const nextStatus = admission.nextStatus;
     const claim = db.prepare(`
@@ -319,7 +610,7 @@ function redriveTerminalProviderTransportTask(
       payload: {
         previous_status: currentRow.status,
         next_status: nextStatus,
-        ...redriveAdmissionEventPayload(admission),
+        ...redriveAdmissionEventPayload(admission, 'provider_transport_terminal'),
         previous_dead_letter_reason: currentRow.dead_letter_reason,
         previous_last_error: currentRow.last_error,
         previous_stage_attempt_id: terminalAttempt.stage_attempt_id,
@@ -328,14 +619,7 @@ function redriveTerminalProviderTransportTask(
         operator_reason: input.operatorReason,
         source_fingerprint_changed: false,
         redriven_stage_attempt_id: redrivenAttempt?.stage_attempt_id ?? null,
-        authority_boundary: {
-          opl: 'provider_transport_redrive_only',
-          domain: 'truth_quality_artifact_gate_owner',
-          domain_truth_mutation: false,
-          publication_quality_mutation: false,
-          artifact_gate_mutation: false,
-          current_package_mutation: false,
-        },
+        ...redriveResultBoundary('provider_transport_terminal', 'provider_transport_redrive_only'),
       },
     });
     db.exec('COMMIT');
@@ -346,6 +630,7 @@ function redriveTerminalProviderTransportTask(
       redriven_stage_attempt: redrivenAttempt,
       provider_redrive_started: Boolean(redrivenAttempt),
       held_by_active_hold: Boolean(admission.activeHold),
+      ...redriveResultBoundary('provider_transport_terminal', 'provider_transport_redrive_only'),
     };
   } catch (error) {
     try {
@@ -394,11 +679,10 @@ function redriveRefsOnlyCheckpointMissingLaunchAuthorizationTask(
     }
     const staleAttempt = refsOnlyCheckpointMissingLaunchAuthorizationForRedrive(db, currentRow.task_id);
     if (!staleAttempt) {
-      throw new FrameworkContractError(
-        'cli_usage_error',
+      throwProviderOnlyRedriveBlocked(
         'family-runtime queue redrive requires refs-only checkpoint evidence missing launch execution authorization.',
+        'refs_only_checkpoint_missing_launch_authorization_evidence_missing',
         {
-          blocker_id: 'family_runtime_redrive_blocked',
           task_id: currentRow.task_id,
           status: currentRow.status,
           required_stage_attempt_status: 'checkpointed',
@@ -412,6 +696,10 @@ function redriveRefsOnlyCheckpointMissingLaunchAuthorizationTask(
         },
       );
     }
+    assertNoProviderOnlySemanticRedriveBlocker(db, currentRow, {
+      allowLiveAttemptId: staleAttempt.stage_attempt_id,
+      allowRefsOnlyCheckpointAttemptId: staleAttempt.stage_attempt_id,
+    });
     const missingFields = missingLaunchAuthorizationFields(staleAttempt);
     const admission = redriveAdmissionForTask(db, currentRow, currentPayload);
     const nextStatus = admission.nextStatus;
@@ -446,7 +734,7 @@ function redriveRefsOnlyCheckpointMissingLaunchAuthorizationTask(
       payload: {
         previous_status: currentRow.status,
         next_status: nextStatus,
-        ...redriveAdmissionEventPayload(admission),
+        ...redriveAdmissionEventPayload(admission, 'refs_only_checkpoint_missing_launch_authorization'),
         previous_stage_attempt_id: staleAttempt.stage_attempt_id,
         previous_stage_attempt_state: staleAttempt.status,
         previous_closeout_receipt_status: staleAttempt.closeout_receipt_status,
@@ -454,15 +742,13 @@ function redriveRefsOnlyCheckpointMissingLaunchAuthorizationTask(
         operator_reason: input.operatorReason,
         source_fingerprint_changed: false,
         redriven_stage_attempt_id: redrivenAttempt?.stage_attempt_id ?? null,
-        authority_boundary: {
-          opl: 'provider_transport_redrive_only',
-          domain: 'truth_quality_artifact_gate_owner',
-          domain_truth_mutation: false,
-          publication_quality_mutation: false,
-          artifact_gate_mutation: false,
-          current_package_mutation: false,
-          refs_only_checkpoint_is_running_proof: false,
-        },
+        ...redriveResultBoundary(
+          'refs_only_checkpoint_missing_launch_authorization',
+          'provider_transport_redrive_only',
+          {
+            refs_only_checkpoint_is_running_proof: false,
+          },
+        ),
       },
     });
     db.exec('COMMIT');
@@ -473,6 +759,13 @@ function redriveRefsOnlyCheckpointMissingLaunchAuthorizationTask(
       redriven_stage_attempt: redrivenAttempt,
       provider_redrive_started: Boolean(redrivenAttempt),
       held_by_active_hold: Boolean(admission.activeHold),
+      ...redriveResultBoundary(
+        'refs_only_checkpoint_missing_launch_authorization',
+        'provider_transport_redrive_only',
+        {
+          refs_only_checkpoint_is_running_proof: false,
+        },
+      ),
     };
   } catch (error) {
     try {
@@ -533,6 +826,13 @@ export function redriveBlockedDefaultExecutorProviderTransportTask(
     const currentPayload = parsePayload(currentRow);
     assertDefaultExecutorTask(currentRow, currentPayload);
     assertProviderTransportRedriveReason(currentRow.dead_letter_reason, input.trigger);
+    assertNoProviderOnlySemanticRedriveBlocker(db, currentRow);
+    const strictRedriveProtocol = assertProviderOnlyRedriveProtocol({
+      db,
+      row: currentRow,
+      payload: currentPayload,
+      evidenceKind: 'blocked_provider_transport',
+    });
     const admission = redriveAdmissionForTask(db, currentRow, currentPayload);
     const nextStatus = admission.nextStatus;
     const claim = db.prepare(`
@@ -573,29 +873,36 @@ export function redriveBlockedDefaultExecutorProviderTransportTask(
       payload: {
         previous_status: currentRow.status,
         next_status: nextStatus,
-        ...redriveAdmissionEventPayload(admission),
+        ...redriveAdmissionEventPayload(admission, 'provider_transport_blocked'),
         previous_dead_letter_reason: currentRow.dead_letter_reason,
         previous_last_error: currentRow.last_error,
         ...(input.trigger === 'operator'
           ? {
               operator_reason: input.operatorReason ?? null,
               source_fingerprint_changed: false,
+              action: 'provider_transport_redrive',
             }
           : {
               used_attempts: input.usedAttempts ?? null,
               max_attempts: input.maxAttempts ?? currentRow.max_attempts,
+              action: 'provider_transport_auto_redrive',
             }),
+        reason: input.trigger === 'auto'
+          ? 'provider_transport_auto_redrive'
+          : 'provider_transport_operator_redrive',
         redriven_stage_attempt_id: redrivenAttempt?.stage_attempt_id ?? null,
-        authority_boundary: {
-          opl: input.trigger === 'auto'
+        strict_provider_redrive_protocol: strictRedriveProtocol,
+        ...redriveResultBoundary(
+          'provider_transport_blocked',
+          input.trigger === 'auto'
             ? 'provider_transport_auto_redrive_only'
             : 'provider_transport_redrive_only',
-          domain: 'truth_quality_artifact_gate_owner',
-          domain_truth_mutation: false,
-          publication_quality_mutation: false,
-          artifact_gate_mutation: false,
-          current_package_mutation: false,
-        },
+          {
+            action: input.trigger === 'auto'
+              ? 'provider_transport_auto_redrive'
+              : 'provider_transport_redrive',
+          },
+        ),
       },
     });
     db.exec('COMMIT');
@@ -606,6 +913,12 @@ export function redriveBlockedDefaultExecutorProviderTransportTask(
       redriven_stage_attempt: redrivenAttempt,
       provider_redrive_started: Boolean(redrivenAttempt),
       held_by_active_hold: Boolean(admission.activeHold),
+      ...redriveResultBoundary(
+        'provider_transport_blocked',
+        input.trigger === 'auto'
+          ? 'provider_transport_auto_redrive_only'
+          : 'provider_transport_redrive_only',
+      ),
     };
   } catch (error) {
     try {
@@ -657,11 +970,10 @@ function redriveRetryBudgetDeadLetterDefaultExecutorProviderTask(
     assertDefaultExecutorTask(currentRow, currentPayload);
     const retryBudgetEvidenceKind = providerRetryBudgetDeadLetterEvidenceKind(db, currentRow.task_id);
     if (!retryBudgetEvidenceKind) {
-      throw new FrameworkContractError(
-        'cli_usage_error',
+      throwProviderOnlyRedriveBlocked(
         'family-runtime queue redrive requires retry-budget provider attempt evidence.',
+        'retry_budget_provider_transport_evidence_missing',
         {
-          blocker_id: 'family_runtime_redrive_blocked',
           task_id: currentRow.task_id,
           status: currentRow.status,
           dead_letter_reason: currentRow.dead_letter_reason,
@@ -671,6 +983,13 @@ function redriveRetryBudgetDeadLetterDefaultExecutorProviderTask(
         },
       );
     }
+    assertNoProviderOnlySemanticRedriveBlocker(db, currentRow);
+    const strictRedriveProtocol = assertProviderOnlyRedriveProtocol({
+      db,
+      row: currentRow,
+      payload: currentPayload,
+      evidenceKind: 'retry_budget_dead_letter',
+    });
     const admission = redriveAdmissionForTask(db, currentRow, currentPayload);
     const nextStatus = admission.nextStatus;
     const claim = db.prepare(`
@@ -704,21 +1023,23 @@ function redriveRetryBudgetDeadLetterDefaultExecutorProviderTask(
       payload: {
         previous_status: currentRow.status,
         next_status: nextStatus,
-        ...redriveAdmissionEventPayload(admission),
+        ...redriveAdmissionEventPayload(admission, 'retry_budget_provider_transport'),
         previous_dead_letter_reason: currentRow.dead_letter_reason,
         previous_last_error: currentRow.last_error,
         operator_reason: input.operatorReason,
         source_fingerprint_changed: false,
+        reason: 'provider_transport_retry_budget_operator_redrive',
+        action: 'provider_transport_dead_letter_redrive',
         retry_budget_evidence_kind: retryBudgetEvidenceKind,
         redriven_stage_attempt_id: redrivenAttempt?.stage_attempt_id ?? null,
-        authority_boundary: {
-          opl: 'provider_transport_retry_budget_operator_redrive_only',
-          domain: 'truth_quality_artifact_gate_owner',
-          domain_truth_mutation: false,
-          publication_quality_mutation: false,
-          artifact_gate_mutation: false,
-          current_package_mutation: false,
-        },
+        strict_provider_redrive_protocol: strictRedriveProtocol,
+        ...redriveResultBoundary(
+          'retry_budget_provider_transport',
+          'provider_transport_retry_budget_operator_redrive_only',
+          {
+            action: 'provider_transport_dead_letter_redrive',
+          },
+        ),
       },
     });
     db.exec('COMMIT');
@@ -729,6 +1050,10 @@ function redriveRetryBudgetDeadLetterDefaultExecutorProviderTask(
       redriven_stage_attempt: redrivenAttempt,
       provider_redrive_started: Boolean(redrivenAttempt),
       held_by_active_hold: Boolean(admission.activeHold),
+      ...redriveResultBoundary(
+        'retry_budget_provider_transport',
+        'provider_transport_retry_budget_operator_redrive_only',
+      ),
     };
   } catch (error) {
     try {
@@ -795,11 +1120,10 @@ export function redriveFamilyRuntimeTask(
           operatorReason,
         });
   } else {
-    throw new FrameworkContractError(
-      'cli_usage_error',
+    throwProviderOnlyRedriveBlocked(
       'family-runtime queue redrive requires a blocked provider transport task or retry-budget provider dead-letter.',
+      'provider_redrive_authority_missing',
       {
-        blocker_id: 'family_runtime_redrive_blocked',
         task_id: row.task_id,
         status: row.status,
         dead_letter_reason: row.dead_letter_reason,
@@ -807,6 +1131,12 @@ export function redriveFamilyRuntimeTask(
     );
   }
   if (result.redriven) {
+    const providerRedriveStarted = 'provider_redrive_started' in result
+      ? result.provider_redrive_started
+      : null;
+    const heldByActiveHold = 'held_by_active_hold' in result
+      ? result.held_by_active_hold
+      : null;
     insertNotification(db, {
       taskId: row.task_id,
       severity: 'info',
@@ -816,8 +1146,8 @@ export function redriveFamilyRuntimeTask(
         status: result.task?.status ?? null,
         operator_reason: operatorReason,
         redriven_stage_attempt_id: result.redriven_stage_attempt?.stage_attempt_id ?? null,
-        provider_redrive_started: result.provider_redrive_started ?? null,
-        held_by_active_hold: result.held_by_active_hold ?? null,
+        provider_redrive_started: providerRedriveStarted,
+        held_by_active_hold: heldByActiveHold,
       },
     });
   }

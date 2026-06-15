@@ -128,7 +128,14 @@ JSON
         && event.payload.previous_status === 'succeeded'
         && event.payload.previous_stage_attempt_state === 'checkpointed'
         && event.payload.previous_closeout_receipt_status === 'domain_handler_receipt_ref_only'
+        && (event.payload.redrive_protocol as Record<string, unknown>).protocol === 'provider_transport_only'
+        && (event.payload.redrive_protocol as Record<string, unknown>).redrive_kind ===
+          'refs_only_checkpoint_missing_launch_authorization'
+        && (event.payload.redrive_protocol as Record<string, unknown>).domain_progress_claim === false
         && (event.payload.authority_boundary as Record<string, unknown>).domain_truth_mutation === false
+        && (event.payload.authority_boundary as Record<string, unknown>).owner_receipt_created === false
+        && (event.payload.authority_boundary as Record<string, unknown>).typed_blocker_created === false
+        && (event.payload.authority_boundary as Record<string, unknown>).domain_progress_claim === false
         && (event.payload.authority_boundary as Record<string, unknown>).refs_only_checkpoint_is_running_proof === false
       )),
       true,

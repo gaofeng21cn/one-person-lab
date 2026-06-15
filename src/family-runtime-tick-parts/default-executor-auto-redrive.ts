@@ -177,7 +177,10 @@ export function autoRedriveBlockedDefaultExecutorProviderTasks(
       maxAttempts: row.max_attempts,
       redrivenAt,
     });
-    if (redrive.provider_redrive_started ?? redrive.redriven) {
+    const providerRedriveStarted = 'provider_redrive_started' in redrive
+      ? redrive.provider_redrive_started
+      : null;
+    if (providerRedriveStarted ?? redrive.redriven) {
       autoRedrivenCount += 1;
     }
   }
