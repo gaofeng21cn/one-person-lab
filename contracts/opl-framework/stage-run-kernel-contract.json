@@ -188,7 +188,9 @@
       "closeout_receipt_stage_manifest_binding_missing",
       "closeout_receipt_current_pointer_binding_missing",
       "closeout_receipt_source_fingerprint_binding_missing",
-      "closeout_owner_answer_idempotency_binding_missing"
+      "closeout_owner_answer_idempotency_binding_missing",
+      "quality_gate_independent_attempt_binding_missing",
+      "quality_gate_same_attempt_self_review_forbidden"
     ],
     "blocked_result": {
       "surface_kind": "opl_stage_run_execution_authorization_blocker",

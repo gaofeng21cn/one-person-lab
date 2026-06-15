@@ -228,6 +228,18 @@ test('StageRun Kernel contract freezes launch closeout and advisory conformance 
     ),
     true,
   );
+  assert.equal(
+    contract.execution_authorization_policy.closeout_binding_blockers.includes(
+      'quality_gate_independent_attempt_binding_missing',
+    ),
+    true,
+  );
+  assert.equal(
+    contract.execution_authorization_policy.closeout_binding_blockers.includes(
+      'quality_gate_same_attempt_self_review_forbidden',
+    ),
+    true,
+  );
   assert.equal(contract.forbidden_as_authority.includes('provider completion'), true);
   assert.equal(contract.forbidden_as_authority.includes('conformance passed'), true);
 });
@@ -656,6 +668,119 @@ test('StageRun execution authorization binds typed blocker answer to StageRun ma
   assert.equal(report.closeout_binding.owner_answer_kind, 'typed_blocker');
   assert.equal(report.closeout_binding.owner_answer_ref, 'mas://typed-blockers/publication-handoff');
   assert.deepEqual(report.closeout_binding_blockers, []);
+  assert.equal(report.closeout_binding.bound_to_stage_run, true);
+  assert.equal(report.closeout_binding.bound_to_stage_manifest, true);
+  assert.equal(report.closeout_binding.bound_to_current_pointer, true);
+  assert.equal(report.closeout_binding.bound_to_source_fingerprint, true);
+  assert.equal(report.closeout_binding.bound_to_idempotency_key, true);
+});
+
+test('StageRun execution authorization fails closed on quality gate self-review closeout', async () => {
+  const module = await import(pathToFileURL(path.join(repoRoot, modulePath)).href);
+  const report = module.evaluateStageRunExecutionAuthorization({
+    phase: 'closeout',
+    stage_run_id: 'stage-run-quality-gate',
+    domain_id: 'mas',
+    stage_id: 'publication_quality_review',
+    stage_kind: 'review',
+    generation: 4,
+    current_pointer: {
+      stage_run_id: 'stage-run-quality-gate',
+      generation: 4,
+      current: true,
+    },
+    selected_executor: 'codex_cli',
+    source_fingerprint: 'sha256:source-4',
+    idempotency_key: 'stage-run-quality-gate:g4',
+    provider_attempt_ref: 'temporal://attempt/stage-run-quality-gate',
+    attempt_lease_ref: 'opl://leases/stage-run-quality-gate:g4',
+    attempt_lease_status: 'active',
+    execution_authorization_decision_ref: 'opl://execution-authorizations/stage-run-quality-gate:g4',
+    workspace_scope_ref: 'opl://workspace/stage-run-quality-gate',
+    artifact_scope_ref: 'opl://artifacts/stage-run-quality-gate',
+    authority_boundary: {
+      opl_can_write_domain_truth: false,
+      opl_can_create_owner_receipt: false,
+      opl_can_create_typed_blocker: false,
+    },
+    forbidden_write_required: false,
+    owner_answer_ref: 'mas://quality-gates/publication-review',
+    owner_answer_kind: 'quality_gate_receipt',
+    owner_answer_stage_run_id: 'stage-run-quality-gate',
+    owner_answer_generation: 4,
+    owner_answer_manifest_ref: 'mas://stage-manifests/publication-quality-review',
+    stage_manifest_ref: 'mas://stage-manifests/publication-quality-review',
+    owner_answer_current_pointer_ref: 'opl://current-pointers/stage-run-quality-gate:g4',
+    current_pointer_ref: 'opl://current-pointers/stage-run-quality-gate:g4',
+    owner_answer_source_fingerprint: 'sha256:source-4',
+    owner_answer_idempotency_key: 'stage-run-quality-gate:g4',
+    quality_gate_attempt_ref: 'temporal://attempt/stage-run-quality-gate',
+  });
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(report.execution_authorized, false);
+  assert.equal(
+    report.closeout_binding_blockers.includes('quality_gate_same_attempt_self_review_forbidden'),
+    true,
+  );
+  assert.equal(
+    report.closeout_binding_blockers.includes('quality_gate_independent_attempt_binding_missing'),
+    false,
+  );
+  assert.equal(report.opl_runtime_blocker.owner, 'one-person-lab');
+  assert.deepEqual(report.opl_runtime_blocker.blocked_authority, [
+    'closeout_receipt_binding',
+  ]);
+  assert.equal(report.opl_runtime_blocker.domain_typed_blocker_created, false);
+});
+
+test('StageRun execution authorization authorizes independent quality gate receipt binding', async () => {
+  const module = await import(pathToFileURL(path.join(repoRoot, modulePath)).href);
+  const report = module.evaluateStageRunExecutionAuthorization({
+    phase: 'closeout',
+    stage_run_id: 'stage-run-quality-gate-independent',
+    domain_id: 'mas',
+    stage_id: 'publication_quality_review',
+    stage_kind: 'review',
+    generation: 5,
+    current_pointer: {
+      stage_run_id: 'stage-run-quality-gate-independent',
+      generation: 5,
+      current: true,
+    },
+    selected_executor: 'codex_cli',
+    source_fingerprint: 'sha256:source-5',
+    idempotency_key: 'stage-run-quality-gate-independent:g5',
+    provider_attempt_ref: 'temporal://attempt/stage-run-quality-gate-independent',
+    attempt_lease_ref: 'opl://leases/stage-run-quality-gate-independent:g5',
+    attempt_lease_status: 'active',
+    execution_authorization_decision_ref: 'opl://execution-authorizations/stage-run-quality-gate-independent:g5',
+    workspace_scope_ref: 'opl://workspace/stage-run-quality-gate-independent',
+    artifact_scope_ref: 'opl://artifacts/stage-run-quality-gate-independent',
+    authority_boundary: {
+      opl_can_write_domain_truth: false,
+      opl_can_create_owner_receipt: false,
+      opl_can_create_typed_blocker: false,
+    },
+    forbidden_write_required: false,
+    owner_answer_ref: 'mas://quality-gates/publication-review-independent',
+    owner_answer_kind: 'quality_gate_receipt',
+    owner_answer_stage_run_id: 'stage-run-quality-gate-independent',
+    owner_answer_generation: 5,
+    owner_answer_manifest_ref: 'mas://stage-manifests/publication-quality-review',
+    stage_manifest_ref: 'mas://stage-manifests/publication-quality-review',
+    owner_answer_current_pointer_ref: 'opl://current-pointers/stage-run-quality-gate-independent:g5',
+    current_pointer_ref: 'opl://current-pointers/stage-run-quality-gate-independent:g5',
+    owner_answer_source_fingerprint: 'sha256:source-5',
+    owner_answer_idempotency_key: 'stage-run-quality-gate-independent:g5',
+    quality_gate_attempt_ref: 'temporal://attempt/stage-run-quality-gate-independent-reviewer',
+  });
+
+  assert.equal(report.status, 'authorized');
+  assert.equal(report.execution_authorized, true);
+  assert.deepEqual(report.closeout_binding_blockers, []);
+  assert.equal(report.opl_runtime_blocker, null);
+  assert.equal(report.closeout_binding.owner_answer_kind, 'quality_gate_receipt');
   assert.equal(report.closeout_binding.bound_to_stage_run, true);
   assert.equal(report.closeout_binding.bound_to_stage_manifest, true);
   assert.equal(report.closeout_binding.bound_to_current_pointer, true);

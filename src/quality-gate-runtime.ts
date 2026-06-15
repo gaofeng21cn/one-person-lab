@@ -22,6 +22,7 @@ export type QualityGateRuntimeBinding = {
   source_fingerprint: string;
   idempotency_key: string;
   provider_attempt_ref: string;
+  quality_gate_attempt_ref: string;
   attempt_lease_ref: string;
   execution_authorization_decision_ref: string;
   receipt_ref: string;
@@ -96,6 +97,7 @@ export function buildQualityGateRuntimeBinding(
     source_fingerprint: input.source_fingerprint,
     idempotency_key: input.idempotency_key,
     provider_attempt_ref: input.provider_attempt_ref,
+    quality_gate_attempt_ref: input.quality_gate_attempt_ref,
     attempt_lease_ref: input.attempt_lease_ref,
     execution_authorization_decision_ref: input.execution_authorization_decision_ref,
     receipt_ref: input.receipt_ref,
@@ -145,6 +147,19 @@ export function validateQualityGateRuntimeBinding(value: unknown): QualityGateRu
       actual: value.binding_status,
     });
   }
+  const providerAttemptRef = nonEmptyString(value.provider_attempt_ref, 'provider_attempt_ref');
+  const qualityGateAttemptRef = nonEmptyString(value.quality_gate_attempt_ref, 'quality_gate_attempt_ref');
+  if (kind === 'quality_gate_receipt' && qualityGateAttemptRef === providerAttemptRef) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'QualityGateRuntime binding requires an independent quality_gate_attempt_ref for quality gate receipts.',
+      {
+        field: 'quality_gate_attempt_ref',
+        provider_attempt_ref: providerAttemptRef,
+        same_attempt_self_review_can_close_quality_gate: false,
+      },
+    );
+  }
   return {
     surface_kind: 'opl_quality_gate_runtime_binding',
     schema_version: 'quality-gate-runtime-binding.v1',
@@ -153,7 +168,8 @@ export function validateQualityGateRuntimeBinding(value: unknown): QualityGateRu
     current_pointer_ref: nonEmptyString(value.current_pointer_ref, 'current_pointer_ref'),
     source_fingerprint: nonEmptyString(value.source_fingerprint, 'source_fingerprint'),
     idempotency_key: nonEmptyString(value.idempotency_key, 'idempotency_key'),
-    provider_attempt_ref: nonEmptyString(value.provider_attempt_ref, 'provider_attempt_ref'),
+    provider_attempt_ref: providerAttemptRef,
+    quality_gate_attempt_ref: qualityGateAttemptRef,
     attempt_lease_ref: nonEmptyString(value.attempt_lease_ref, 'attempt_lease_ref'),
     execution_authorization_decision_ref: nonEmptyString(
       value.execution_authorization_decision_ref,

@@ -18,6 +18,7 @@
     "source_fingerprint",
     "idempotency_key",
     "provider_attempt_ref",
+    "quality_gate_attempt_ref",
     "attempt_lease_ref",
     "execution_authorization_decision_ref",
     "receipt_ref",

@@ -45,6 +45,7 @@ test('quality gate runtime contract is refs-only and cannot authorize quality or
     'provider_attempt_ref',
     'attempt_lease_ref',
     'execution_authorization_decision_ref',
+    'quality_gate_attempt_ref',
     'receipt_ref',
     'receipt_kind',
     'receipt_owner',
@@ -73,6 +74,7 @@ test('quality gate runtime helper binds domain-owned quality gate receipt withou
     source_fingerprint: 'sha256:quality-gate-runtime',
     idempotency_key: 'idem-quality-gate-runtime',
     provider_attempt_ref: 'temporal://attempt/sat-quality-gate',
+    quality_gate_attempt_ref: 'temporal://attempt/sat-quality-gate-reviewer',
     attempt_lease_ref: 'lease:sat-quality-gate',
     execution_authorization_decision_ref: 'exec-auth:sat-quality-gate',
     receipt_ref: 'mas://quality-gate/receipt/123',
@@ -126,6 +128,7 @@ test('StageRun closeout accepts quality gate receipt as owner answer ref but kee
     owner_answer_current_pointer_ref: 'current-pointer:paper-review',
     owner_answer_source_fingerprint: 'sha256:quality-gate-runtime',
     owner_answer_idempotency_key: 'idem-quality-gate-runtime',
+    quality_gate_attempt_ref: 'temporal://attempt/sat-quality-gate-reviewer',
   });
 
   assert.equal(report.status, 'authorized');

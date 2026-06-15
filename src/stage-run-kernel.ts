@@ -111,6 +111,8 @@ export type StageRunCloseoutBinding = {
   bound_to_current_pointer: boolean;
   bound_to_source_fingerprint: boolean;
   bound_to_idempotency_key: boolean;
+  quality_gate_attempt_ref: string | null;
+  quality_gate_independent_attempt: boolean | null;
 };
 
 export type StageRunExecutionAuthorizationReport = {
@@ -453,6 +455,12 @@ function buildCloseoutBinding(input: JsonRecord): StageRunCloseoutBinding {
   const idempotencyKey = optionalRef(input.idempotency_key);
   const ownerAnswerIdempotencyKey =
     optionalRef(input.owner_answer_idempotency_key) ?? optionalRef(input.closeout_receipt_idempotency_key);
+  const providerAttemptRef = optionalRef(input.provider_attempt_ref);
+  const qualityGateAttemptRef =
+    optionalRef(input.quality_gate_attempt_ref) ?? optionalRef(input.owner_answer_attempt_ref);
+  const qualityGateIndependentAttempt = ownerAnswerKind === 'quality_gate_receipt'
+    ? qualityGateAttemptRef !== null && qualityGateAttemptRef !== providerAttemptRef
+    : null;
   return {
     owner_answer_ref: ownerAnswerRef,
     owner_answer_kind: ownerAnswerKind,
@@ -477,6 +485,8 @@ function buildCloseoutBinding(input: JsonRecord): StageRunCloseoutBinding {
       ownerAnswerRef !== null
       && idempotencyKey !== null
       && ownerAnswerIdempotencyKey === idempotencyKey,
+    quality_gate_attempt_ref: qualityGateAttemptRef,
+    quality_gate_independent_attempt: qualityGateIndependentAttempt,
   };
 }
 
@@ -488,6 +498,14 @@ function closeoutBindingBlockers(binding: StageRunCloseoutBinding) {
     binding.bound_to_current_pointer ? null : 'closeout_receipt_current_pointer_binding_missing',
     binding.bound_to_source_fingerprint ? null : 'closeout_receipt_source_fingerprint_binding_missing',
     binding.bound_to_idempotency_key ? null : 'closeout_owner_answer_idempotency_binding_missing',
+    binding.owner_answer_kind !== 'quality_gate_receipt' || binding.quality_gate_attempt_ref
+      ? null
+      : 'quality_gate_independent_attempt_binding_missing',
+    binding.owner_answer_kind !== 'quality_gate_receipt'
+      || binding.quality_gate_attempt_ref === null
+      || binding.quality_gate_independent_attempt === true
+      ? null
+      : 'quality_gate_same_attempt_self_review_forbidden',
   ].filter((entry): entry is string => Boolean(entry));
 }
 
