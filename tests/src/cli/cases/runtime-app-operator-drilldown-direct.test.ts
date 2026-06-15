@@ -30,3 +30,32 @@ test('runtime app-operator-drilldown exposes the App read model without raw snap
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('runtime app-operator-drilldown keeps wrapper-only readout fields', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-wrapper-guard-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  try {
+    const output = runCli(['runtime', 'app-operator-drilldown'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    assert.deepEqual(Object.keys(output).sort(), ['app_operator_drilldown']);
+    assert.equal(output.current_owner_delta, undefined);
+    assert.equal(output.summary, undefined);
+    assert.equal(output.attention_first_payload, undefined);
+
+    const drilldown = output.app_operator_drilldown;
+    assert.equal(drilldown.surface_kind, 'opl_app_operator_drilldown_read_model');
+    assert.equal(typeof drilldown.summary, 'object');
+    assert.equal(typeof drilldown.current_owner_delta_read_model, 'object');
+    assert.equal(typeof drilldown.attention_first_payload.current_owner_delta_read_model, 'object');
+    assert.equal(
+      drilldown.current_owner_delta_read_model.current_owner_delta.stop_loss_state.status,
+      'not_triggered',
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
