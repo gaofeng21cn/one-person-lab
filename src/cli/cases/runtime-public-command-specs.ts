@@ -35,6 +35,15 @@ export function buildPublicRuntimeCommandSpecs(
       ],
       group: 'runtime',
     }),
+    'runtime memory-artifact-lifecycle':
+      cloneCommandSpec(commandSpecs['runtime memory-artifact-lifecycle'], {
+        usage: 'opl runtime memory-artifact-lifecycle',
+        examples: [
+          'opl runtime memory-artifact-lifecycle',
+          'opl runtime memory-artifact-lifecycle --json',
+        ],
+        group: 'runtime',
+      }),
     'runtime app-release-evidence record':
       cloneCommandSpec(commandSpecs['runtime app-release-evidence record'], {
         usage: 'opl runtime app-release-evidence record (--payload <json>|--payload-file <path>)',

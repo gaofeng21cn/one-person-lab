@@ -4,6 +4,7 @@ import { buildProductEntryHandoffEnvelope } from '../../product-entry-handoff-en
 import { buildProductEntryDoctor, runProductEntryResume } from '../../product-entry-runtime.ts';
 import { buildRuntimeManager, runRuntimeManagerAction } from '../../runtime-manager.ts';
 import { buildRuntimeTraySnapshot } from '../../runtime-tray-snapshot.ts';
+import { buildMemoryArtifactLifecycleReadback } from '../../memory-artifact-lifecycle-readback.ts';
 import { runRuntimeOperatorActionExecute } from '../../runtime-operator-action-execution.ts';
 import { buildObservabilityExport, renderObservabilityOpenMetrics } from '../../observability-export.ts';
 import { buildNativeIndexSummary } from '../../native-index-summary.ts';
@@ -363,6 +364,26 @@ export function buildInternalCommandSpecs(
         });
         return {
           app_operator_drilldown: snapshot.runtime_tray_snapshot.app_operator_drilldown,
+        };
+      },
+    },
+    'runtime memory-artifact-lifecycle': {
+      usage: 'opl runtime memory-artifact-lifecycle',
+      summary:
+        'Project the memory/artifact/lifecycle owner follow-through packet without reading bodies or taking domain authority.',
+      examples: [
+        'opl runtime memory-artifact-lifecycle',
+        'opl runtime memory-artifact-lifecycle --json',
+      ],
+      handler: async (args) => {
+        assertNoArgs(args, commandSpecs['runtime memory-artifact-lifecycle']);
+        const snapshot = await buildRuntimeTraySnapshot(getContracts(), {
+          appOperatorDrilldownDetailLevel: 'full',
+        });
+        return {
+          memory_artifact_lifecycle_readback: buildMemoryArtifactLifecycleReadback(
+            snapshot.runtime_tray_snapshot.app_operator_drilldown,
+          ),
         };
       },
     },

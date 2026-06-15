@@ -368,6 +368,9 @@ test('runtime app-operator-drilldown projects lifecycle handoff apply attempts f
     const drilldown = runCli(['runtime', 'app-operator-drilldown'], {
       OPL_STATE_DIR: stateRoot,
     }).app_operator_drilldown;
+    const readback = runCli(['runtime', 'memory-artifact-lifecycle'], {
+      OPL_STATE_DIR: stateRoot,
+    }).memory_artifact_lifecycle_readback;
     assert.equal(
       drilldown.memory_artifact_lifecycle.surface_kind,
       'opl_app_drilldown_memory_artifact_lifecycle_evidence',
@@ -405,6 +408,59 @@ test('runtime app-operator-drilldown projects lifecycle handoff apply attempts f
     assert.equal(
       drilldown.memory_artifact_lifecycle.authority_boundary.can_execute_domain_physical_delete,
       false,
+    );
+    assert.equal(readback.surface_kind, 'opl_memory_artifact_lifecycle_readback');
+    assert.equal(readback.source_command, 'opl runtime app-operator-drilldown --json');
+    assert.equal(readback.ready_claim_authorized, false);
+    assert.equal(
+      readback.status,
+      drilldown.memory_artifact_lifecycle.readiness_status,
+    );
+    assert.equal(
+      readback.next_required_owner_action,
+      'domain_owner_record_memory_artifact_lifecycle_receipt_or_typed_blocker',
+    );
+    assert.equal(readback.owner_work_order.lane_id, 'memory_artifact_lifecycle_apply');
+    assert.equal(
+      readback.owner_work_order.typed_blocker_work_order.status,
+      'typed_blocker_refs_observed_followthrough_required',
+    );
+    assert.equal(
+      readback.owner_work_order.accepted_refs_only_result_shapes.includes('typed_blocker_ref'),
+      true,
+    );
+    assert.equal(
+      readback.summary.observed_ref_count,
+      drilldown.memory_artifact_lifecycle.observed_ref_count,
+    );
+    assert.equal(readback.summary.lifecycle_apply_handoff_attempt_count, 1);
+    assert.equal(readback.summary.lifecycle_apply_handoff_blocked_decision_count, 2);
+    assert.equal(readback.summary.lifecycle_apply_handoff_safe_decision_count, 0);
+    assert.equal(
+      readback.latest_lifecycle_apply_handoff.handoff_ref,
+      'mas-artifact-lifecycle-handoff:medautoscience:physical-thinning:app',
+    );
+    assert.equal(
+      readback.latest_lifecycle_apply_handoff.selected_payload_path,
+      'typed_blocker_path',
+    );
+    assert.deepEqual(
+      readback.latest_lifecycle_apply_handoff.typed_blocker_refs,
+      [
+        'mas-artifact-lifecycle-typed-blocker:medautoscience:canonical-regeneration-required:app',
+      ],
+    );
+    assert.equal(readback.authority_boundary.can_read_memory_body, false);
+    assert.equal(readback.authority_boundary.can_mutate_artifact_body, false);
+    assert.equal(readback.authority_boundary.can_execute_domain_physical_delete, false);
+    assert.equal(readback.authority_boundary.can_create_typed_blocker, false);
+    assert.equal(
+      readback.forbidden_opl_claims.includes('artifact_ready'),
+      true,
+    );
+    assert.equal(
+      readback.non_closing_inputs.includes('open_count_zero'),
+      true,
     );
     const evidence =
       drilldown.attention_first_payload.evidence_after_contract.memory_artifact_lifecycle_evidence;
