@@ -170,6 +170,109 @@ test('runtime Stage Transition Authority read-model folds append-only intent eve
   assert.equal(readModel.authority_boundary.worklist_update_counts_as_stage_transition, false);
 });
 
+test('runtime Stage Transition Authority records local append-only event ledger and rebuilds read model', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-transition-authority-ledger-'));
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+  };
+  try {
+    const acceptedRecord = runCli([
+      'runtime',
+      'stage-transition-authority',
+      'record',
+      '--payload',
+      JSON.stringify(transitionIntent({
+        intent_id: 'intent-ledger-accepted-generation-2',
+      })),
+      '--json',
+    ], env).stage_transition_authority_event_ledger_record;
+
+    assert.equal(acceptedRecord.status, 'recorded');
+    assert.equal(acceptedRecord.writes_performed, true);
+    assert.equal(acceptedRecord.decision.status, 'transition_accepted');
+    assert.equal(acceptedRecord.event.current_owner_delta.surface_kind, 'opl_current_owner_delta');
+    assert.equal(acceptedRecord.authority_boundary.opl_can_write_domain_truth, false);
+    assert.equal(acceptedRecord.authority_boundary.opl_can_create_owner_receipt, false);
+    assert.equal(acceptedRecord.authority_boundary.opl_can_create_typed_blocker, false);
+
+    const duplicateRecord = runCli([
+      'runtime',
+      'stage-transition-authority',
+      'record',
+      '--payload',
+      JSON.stringify(transitionIntent({
+        intent_id: 'intent-ledger-accepted-generation-2-duplicate',
+      })),
+      '--json',
+    ], env).stage_transition_authority_event_ledger_record;
+
+    assert.equal(duplicateRecord.status, 'deduped_existing_event');
+    assert.equal(duplicateRecord.writes_performed, false);
+
+    const observationRecord = runCli([
+      'runtime',
+      'stage-transition-authority',
+      'record',
+      '--payload',
+      JSON.stringify(observationIntent({
+        intent_id: 'intent-ledger-generation-3-provider-observation',
+        generation: 3,
+        idempotency_key: 'stage-run-transition-cli:g3:provider',
+        stage_manifest_ref: 'opl://stage-manifests/stage-run-transition-cli:g3',
+        current_pointer_ref: 'opl://stage-runs/stage-run-transition-cli/current:g3',
+        provider_attempt_ref: 'temporal://attempt/stage-run-transition-cli:g3',
+        attempt_lease_ref: 'opl://leases/stage-run-transition-cli:g3',
+        execution_authorization_decision_ref:
+          'opl://execution-authorizations/stage-run-transition-cli:g3',
+        observed_at: '2026-06-15T00:02:00.000Z',
+      })),
+      '--json',
+    ], env).stage_transition_authority_event_ledger_record;
+
+    assert.equal(observationRecord.status, 'recorded');
+    assert.equal(observationRecord.decision.status, 'observation_recorded');
+    assert.equal(observationRecord.event.current_owner_delta, null);
+
+    const ledger = runCli([
+      'runtime',
+      'stage-transition-authority',
+      'list',
+      '--json',
+    ], env).stage_transition_authority_event_ledger;
+
+    assert.equal(ledger.event_count, 2);
+    assert.equal(ledger.raw_event_count, 2);
+    assert.equal(ledger.strict_schema_rejected_event_count, 0);
+    assert.equal(ledger.events[0].decision_status, 'transition_accepted');
+    assert.equal(ledger.events[1].decision_status, 'observation_recorded');
+
+    const readModel = runCli([
+      'runtime',
+      'stage-transition-authority',
+      'read-model',
+      '--from-ledger',
+      '--json',
+    ], env).stage_transition_authority_read_model;
+
+    assert.equal(readModel.ledger_exists, true);
+    assert.equal(readModel.raw_event_count, 2);
+    assert.equal(readModel.events.length, 2);
+    assert.equal(readModel.stage_runs.length, 1);
+    assert.equal(readModel.stage_runs[0].observed_generation, 3);
+    assert.equal(readModel.stage_runs[0].observation_intent_count, 1);
+    assert.equal(
+      readModel.stage_runs[0].current_owner_delta.lineage_ref,
+      readModel.stage_runs[0].accepted_transition_ref,
+    );
+    assert.equal(
+      readModel.authority_boundary.provider_completion_counts_as_stage_transition,
+      false,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('runtime Stage Transition Authority commands reject body payloads and non-object read-model payloads', () => {
   const rejectedIntent = runCliFailure([
     'runtime',

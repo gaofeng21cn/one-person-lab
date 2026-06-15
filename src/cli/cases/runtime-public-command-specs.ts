@@ -333,9 +333,28 @@ export function buildPublicRuntimeCommandSpecs(
     'runtime stage-transition-authority read-model':
       cloneCommandSpec(commandSpecs['runtime stage-transition-authority read-model'], {
         usage:
-          'opl runtime stage-transition-authority read-model (--payload <json>|--payload-file <path>)',
+          'opl runtime stage-transition-authority read-model ((--payload <json>|--payload-file <path>)|--from-ledger)',
         examples: [
           'opl runtime stage-transition-authority read-model --payload-file stage-transition-intents.json --json',
+          'opl runtime stage-transition-authority read-model --from-ledger --json',
+        ],
+        group: 'runtime',
+      }),
+    'runtime stage-transition-authority record':
+      cloneCommandSpec(commandSpecs['runtime stage-transition-authority record'], {
+        usage:
+          'opl runtime stage-transition-authority record (--payload <json>|--payload-file <path>) [--dry-run]',
+        examples: [
+          'opl runtime stage-transition-authority record --payload-file stage-transition-intent.json --json',
+          'opl runtime stage-transition-authority record --payload-file stage-transition-intent.json --dry-run --json',
+        ],
+        group: 'runtime',
+      }),
+    'runtime stage-transition-authority list':
+      cloneCommandSpec(commandSpecs['runtime stage-transition-authority list'], {
+        usage: 'opl runtime stage-transition-authority list',
+        examples: [
+          'opl runtime stage-transition-authority list --json',
         ],
         group: 'runtime',
       }),

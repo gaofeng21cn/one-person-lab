@@ -1,5 +1,8 @@
+import fs from 'node:fs';
+
 import { FrameworkContractError } from './contracts.ts';
 import { stableId } from './family-runtime-ids.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -96,7 +99,27 @@ export type StageTransitionAuthorityEvent = {
   decision_status: StageTransitionDecisionStatus;
   accepted_transition_ref: string | null;
   current_owner_delta_ref: string | null;
+  current_owner_delta: JsonRecord | null;
   authority_boundary: typeof AUTHORITY_BOUNDARY;
+};
+
+export type StageTransitionAuthorityLedger = {
+  surface_kind: 'opl_stage_transition_authority_event_ledger';
+  version: 'stage-transition-authority-event-ledger.v1';
+  ledger_role: 'append_only_refs_only_transition_authority_events';
+  events: StageTransitionAuthorityEvent[];
+};
+
+export type StageTransitionAuthorityLedgerInspection = StageTransitionAuthorityLedger & {
+  ledger_file: string;
+  ledger_exists: boolean;
+  raw_event_count: number;
+  strict_schema_rejected_event_count: number;
+  read_error: string | null;
+};
+
+export type StageTransitionAuthorityRecordOptions = {
+  dry_run?: boolean;
 };
 
 export type StageTransitionAuthorityReadModel = {
@@ -518,7 +541,10 @@ function eventKind(status: StageTransitionDecisionStatus): StageTransitionAuthor
   return 'transition_intent_rejected';
 }
 
-function buildEvent(intent: StageTransitionIntent, decision: StageTransitionAuthorityDecision): StageTransitionAuthorityEvent {
+export function buildStageTransitionAuthorityEvent(
+  intent: StageTransitionIntent,
+  decision: StageTransitionAuthorityDecision,
+): StageTransitionAuthorityEvent {
   return {
     surface_kind: 'opl_stage_transition_authority_event',
     version: 'stage-transition-authority-event.v1',
@@ -540,6 +566,214 @@ function buildEvent(intent: StageTransitionIntent, decision: StageTransitionAuth
     current_owner_delta_ref: decision.current_owner_delta
       ? String(decision.current_owner_delta.lineage_ref)
       : null,
+    current_owner_delta: decision.current_owner_delta,
+    authority_boundary: AUTHORITY_BOUNDARY,
+  };
+}
+
+function emptyLedger(): StageTransitionAuthorityLedger {
+  return {
+    surface_kind: 'opl_stage_transition_authority_event_ledger',
+    version: 'stage-transition-authority-event-ledger.v1',
+    ledger_role: 'append_only_refs_only_transition_authority_events',
+    events: [],
+  };
+}
+
+function ledgerPath() {
+  return resolveOplStatePaths().stage_transition_authority_event_ledger_file;
+}
+
+function emptyLedgerInspection(input: {
+  file: string;
+  exists: boolean;
+  readError?: string | null;
+}): StageTransitionAuthorityLedgerInspection {
+  return {
+    ...emptyLedger(),
+    ledger_file: input.file,
+    ledger_exists: input.exists,
+    raw_event_count: 0,
+    strict_schema_rejected_event_count: 0,
+    read_error: input.readError ?? null,
+  };
+}
+
+function normalizeEvent(value: unknown): StageTransitionAuthorityEvent | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const eventKindValue = value.event_kind;
+  const decisionStatusValue = value.decision_status;
+  const currentOwnerDelta = isRecord(value.current_owner_delta)
+    && value.current_owner_delta.surface_kind === 'opl_current_owner_delta'
+    ? value.current_owner_delta
+    : null;
+  const event_id = optionalString(value.event_id);
+  const stage_run_id = optionalString(value.stage_run_id);
+  const intent_id = optionalString(value.intent_id);
+  const decision_id = optionalString(value.decision_id);
+  const idempotency_key = optionalString(value.idempotency_key);
+  const observed_at = optionalString(value.observed_at);
+  if (
+    value.surface_kind !== 'opl_stage_transition_authority_event'
+    || value.version !== 'stage-transition-authority-event.v1'
+    || !event_id
+    || (
+      eventKindValue !== 'transition_intent_accepted'
+      && eventKindValue !== 'transition_intent_recorded'
+      && eventKindValue !== 'transition_intent_rejected'
+    )
+    || !stage_run_id
+    || !Number.isInteger(value.generation)
+    || Number(value.generation) < 0
+    || !intent_id
+    || !decision_id
+    || !idempotency_key
+    || !observed_at
+    || (
+      decisionStatusValue !== 'transition_accepted'
+      && decisionStatusValue !== 'observation_recorded'
+      && decisionStatusValue !== 'rejected'
+    )
+    || !isRecord(value.authority_boundary)
+    || value.authority_boundary.stage_transition_single_writer !== true
+  ) {
+    return null;
+  }
+  return {
+    surface_kind: 'opl_stage_transition_authority_event',
+    version: 'stage-transition-authority-event.v1',
+    event_id,
+    event_kind: eventKindValue,
+    stage_run_id,
+    generation: Number(value.generation),
+    intent_id,
+    decision_id,
+    idempotency_key,
+    observed_at,
+    decision_status: decisionStatusValue,
+    accepted_transition_ref: optionalString(value.accepted_transition_ref),
+    current_owner_delta_ref: optionalString(value.current_owner_delta_ref),
+    current_owner_delta: currentOwnerDelta,
+    authority_boundary: AUTHORITY_BOUNDARY,
+  };
+}
+
+function readLedgerInspection(): StageTransitionAuthorityLedgerInspection {
+  const file = ledgerPath();
+  if (!fs.existsSync(file)) {
+    return emptyLedgerInspection({ file, exists: false });
+  }
+  try {
+    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
+    if (!isRecord(parsed) || !Array.isArray(parsed.events)) {
+      return emptyLedgerInspection({
+        file,
+        exists: true,
+        readError: 'stage_transition_authority_event_ledger_invalid_shape',
+      });
+    }
+    const rawEvents = parsed.events;
+    const events = rawEvents
+      .map(normalizeEvent)
+      .filter((event): event is StageTransitionAuthorityEvent => Boolean(event));
+    return {
+      ...emptyLedger(),
+      ledger_file: file,
+      ledger_exists: true,
+      raw_event_count: rawEvents.length,
+      strict_schema_rejected_event_count: rawEvents.length - events.length,
+      read_error: null,
+      events,
+    };
+  } catch {
+    return emptyLedgerInspection({
+      file,
+      exists: true,
+      readError: 'stage_transition_authority_event_ledger_parse_failed',
+    });
+  }
+}
+
+function readLedger(): StageTransitionAuthorityLedger {
+  const { events } = readLedgerInspection();
+  return {
+    ...emptyLedger(),
+    events,
+  };
+}
+
+function writeLedger(ledger: StageTransitionAuthorityLedger) {
+  const paths = ensureOplStateDir();
+  fs.writeFileSync(
+    paths.stage_transition_authority_event_ledger_file,
+    `${JSON.stringify(ledger, null, 2)}\n`,
+  );
+}
+
+function eventFoldKey(event: StageTransitionAuthorityEvent) {
+  return [
+    event.stage_run_id,
+    event.generation,
+    event.idempotency_key,
+  ].join('\0');
+}
+
+function eventSort(
+  left: StageTransitionAuthorityEvent,
+  right: StageTransitionAuthorityEvent,
+) {
+  return left.observed_at.localeCompare(right.observed_at)
+    || left.event_id.localeCompare(right.event_id);
+}
+
+function readModelFromEvents(events: StageTransitionAuthorityEvent[]): StageTransitionAuthorityReadModel {
+  const dedupedByKey = new Map<string, StageTransitionAuthorityEvent>();
+  for (const event of [...events].sort(eventSort)) {
+    const key = eventFoldKey(event);
+    if (!dedupedByKey.has(key)) {
+      dedupedByKey.set(key, event);
+    }
+  }
+  const foldedEvents = [...dedupedByKey.values()].sort(eventSort);
+  const byStageRun = new Map<string, StageTransitionAuthorityEvent[]>();
+  for (const event of foldedEvents) {
+    byStageRun.set(event.stage_run_id, [...(byStageRun.get(event.stage_run_id) ?? []), event]);
+  }
+
+  return {
+    surface_kind: 'opl_stage_transition_authority_read_model',
+    version: 'stage-transition-authority.v1',
+    projection_role: 'single_writer_stage_transition_projection',
+    event_log_policy: 'append_only_events_folded_by_stage_run_generation_and_idempotency',
+    stage_runs: [...byStageRun.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([stageRunId, stageRunEvents]) => {
+        const observedGeneration = Math.max(...stageRunEvents.map((event) => event.generation));
+        const currentEvents = stageRunEvents.filter((event) => event.generation === observedGeneration);
+        const accepted = stageRunEvents
+          .filter((event) => event.decision_status === 'transition_accepted')
+          .at(-1) ?? null;
+        const lastEvent = currentEvents.at(-1);
+        if (!lastEvent) {
+          throw new FrameworkContractError(
+            'contract_shape_invalid',
+            'Stage transition authority projection requires at least one current-generation event.',
+            { stage_run_id: stageRunId },
+          );
+        }
+        return {
+          stage_run_id: stageRunId,
+          observed_generation: observedGeneration,
+          accepted_transition_ref: accepted?.accepted_transition_ref ?? null,
+          current_owner_delta: accepted?.current_owner_delta ?? null,
+          rejected_intent_count: currentEvents.filter((event) => event.decision_status === 'rejected').length,
+          observation_intent_count: currentEvents.filter((event) => event.decision_status === 'observation_recorded').length,
+          last_event_ref: lastEvent.event_id,
+        };
+      }),
+    events: foldedEvents,
     authority_boundary: AUTHORITY_BOUNDARY,
   };
 }
@@ -564,7 +798,7 @@ export function rebuildStageTransitionAuthorityReadModel(
   }
 
   const events = [...byIdempotency.values()]
-    .map(({ intent, decision }) => buildEvent(intent, decision))
+    .map(({ intent, decision }) => buildStageTransitionAuthorityEvent(intent, decision))
     .sort((left, right) => left.observed_at.localeCompare(right.observed_at) || left.event_id.localeCompare(right.event_id));
   const byStageRun = new Map<string, StageTransitionAuthorityEvent[]>();
   for (const event of events) {
@@ -609,5 +843,74 @@ export function rebuildStageTransitionAuthorityReadModel(
       }),
     events,
     authority_boundary: AUTHORITY_BOUNDARY,
+  };
+}
+
+export function recordStageTransitionAuthorityIntent(
+  input: JsonRecord,
+  options: StageTransitionAuthorityRecordOptions = {},
+) {
+  const intent = normalizeStageTransitionIntent(input);
+  const decision = evaluateStageTransitionIntent(intent);
+  const event = buildStageTransitionAuthorityEvent(intent, decision);
+  if (options.dry_run === true) {
+    return {
+      surface_kind: 'opl_stage_transition_authority_event_ledger_record',
+      status: 'planned',
+      dry_run: true,
+      writes_performed: false,
+      recorded_event_count: 0,
+      event_ref: event.event_id,
+      ledger_file: ledgerPath(),
+      decision,
+      event,
+      authority_boundary: AUTHORITY_BOUNDARY,
+    };
+  }
+  const ledger = readLedger();
+  const existingIndex = ledger.events.findIndex((entry) => eventFoldKey(entry) === eventFoldKey(event));
+  const writeStatus = existingIndex >= 0 ? 'deduped_existing_event' : 'recorded';
+  if (existingIndex < 0) {
+    ledger.events.push(event);
+    ledger.events.sort(eventSort);
+    writeLedger(ledger);
+  }
+  return {
+    surface_kind: 'opl_stage_transition_authority_event_ledger_record',
+    status: writeStatus,
+    dry_run: false,
+    writes_performed: existingIndex < 0,
+    recorded_event_count: existingIndex < 0 ? 1 : 0,
+    event_ref: existingIndex >= 0 ? ledger.events[existingIndex].event_id : event.event_id,
+    ledger_file: ledgerPath(),
+    decision,
+    event: existingIndex >= 0 ? ledger.events[existingIndex] : event,
+    authority_boundary: AUTHORITY_BOUNDARY,
+  };
+}
+
+export function listStageTransitionAuthorityEvents() {
+  return readLedger().events.sort(eventSort);
+}
+
+export function inspectStageTransitionAuthorityLedger() {
+  return readLedgerInspection();
+}
+
+export function rebuildStageTransitionAuthorityReadModelFromLedger(): StageTransitionAuthorityReadModel & {
+  ledger_file: string;
+  ledger_exists: boolean;
+  raw_event_count: number;
+  strict_schema_rejected_event_count: number;
+  read_error: string | null;
+} {
+  const inspection = readLedgerInspection();
+  return {
+    ...readModelFromEvents(inspection.events),
+    ledger_file: inspection.ledger_file,
+    ledger_exists: inspection.ledger_exists,
+    raw_event_count: inspection.raw_event_count,
+    strict_schema_rejected_event_count: inspection.strict_schema_rejected_event_count,
+    read_error: inspection.read_error,
   };
 }
