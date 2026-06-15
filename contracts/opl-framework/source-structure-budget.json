@@ -2,11 +2,48 @@
   "contract_kind": "opl_source_structure_budget.v1",
   "surface_kind": "opl_source_structure_budget",
   "owner": "one-person-lab",
-  "purpose": "Define the repo-source line budget as a scheduled advisory maintenance signal with an explicit strict ratchet mode for maintainers and daily structure jobs.",
+  "purpose": "Define the repo-source line budget as a reasonable-refactor maintenance signal with advisory default behavior and explicit strict ratchet mode for maintainers and scheduled structure jobs.",
   "state": "active_contract",
-  "machine_boundary": "This contract owns line-budget thresholds and reviewed oversized-file baselines for tracked source files. It does not define domain truth, production readiness, release readiness, or quality verdict authority.",
+  "machine_boundary": "This contract owns line-budget thresholds, near-limit advisory thresholds, reasonable-refactor classification, and reviewed oversized-file baselines for tracked source files. It does not define domain truth, production readiness, release readiness, or quality verdict authority.",
   "default_limit": 1000,
   "advisory_near_limit": 850,
+  "reasonable_refactor_policy": {
+    "mode": "line_budget_as_signal_not_splitter",
+    "split_candidate": "source_or_test_file_at_or_above_default_limit_or_near_limit_with_maintenance_risk_signals",
+    "near_limit_requires_additional_signals": [
+      "high_churn",
+      "long_function_or_complexity",
+      "repeated_implementation",
+      "import_cycle",
+      "test_gap",
+      "baseline_growth",
+      "explicit_structure_rule"
+    ],
+    "preferred_split_boundaries": [
+      "owner",
+      "domain_concept",
+      "lifecycle_phase",
+      "runtime_surface",
+      "action_route",
+      "behavior_case",
+      "test_scenario",
+      "stable_helper",
+      "contract_boundary",
+      "existing_parts_or_cases_pattern"
+    ],
+    "merge_candidate": "small_shallow_single_caller_wrapper_without_clear_interface_value",
+    "characterization_first": [
+      "runtime_authority",
+      "domain_truth",
+      "release_authority",
+      "public_package_export",
+      "contract_generator",
+      "cross_repo_boundary",
+      "currentness_or_provider_semantics"
+    ],
+    "watch_only": "near_limit_or_short_file_without_clear_maintenance_risk_or_safe_semantic_boundary",
+    "completion_policy": "one_or_two_verified_slices_per_scheduled_run_then_stop_unless_same_write_set_requires_followthrough"
+  },
   "baseline_policy": {
     "mode": "scheduled_advisory_with_explicit_strict_ratchet",
     "default_developer_behavior": "advisory_exit_zero",

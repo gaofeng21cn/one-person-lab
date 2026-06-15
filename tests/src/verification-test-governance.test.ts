@@ -188,6 +188,12 @@ test('line-budget advisory is backed by a reviewed strict-ratchet contract', () 
     contract_kind?: string;
     default_limit?: number;
     baseline_policy?: { mode?: string };
+    reasonable_refactor_policy?: {
+      mode?: string;
+      preferred_split_boundaries?: string[];
+      characterization_first?: string[];
+      completion_policy?: string;
+    };
     reviewed_baselines?: Array<Record<string, unknown>>;
   };
   const script = read('scripts/line-budget.mjs');
@@ -195,6 +201,13 @@ test('line-budget advisory is backed by a reviewed strict-ratchet contract', () 
   assert.equal(contract.contract_kind, 'opl_source_structure_budget.v1');
   assert.equal(contract.default_limit, 1000);
   assert.equal(contract.baseline_policy?.mode, 'scheduled_advisory_with_explicit_strict_ratchet');
+  assert.equal(contract.reasonable_refactor_policy?.mode, 'line_budget_as_signal_not_splitter');
+  assert.ok(contract.reasonable_refactor_policy?.preferred_split_boundaries?.includes('test_scenario'));
+  assert.ok(contract.reasonable_refactor_policy?.characterization_first?.includes('runtime_authority'));
+  assert.equal(
+    contract.reasonable_refactor_policy?.completion_policy,
+    'one_or_two_verified_slices_per_scheduled_run_then_stop_unless_same_write_set_requires_followthrough',
+  );
   assert.equal(Array.isArray(contract.reviewed_baselines), true);
   for (const entry of contract.reviewed_baselines ?? []) {
     assert.equal(typeof entry.path, 'string');
