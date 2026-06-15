@@ -32,6 +32,11 @@ import {
   openQueueDb,
 } from '../../../family-runtime-store.ts';
 import {
+  runPackBundleCheckCommand,
+  runPackBundleManifestCommand,
+  runPackBundleWriteCommand,
+} from '../../../pack-bundle.ts';
+import {
   runPackOsCacheCommand,
   runPackOsDistributeCommand,
   runPackOsInstallCommand,
@@ -43,7 +48,7 @@ import {
 } from '../../../pack-os.ts';
 import { runFamilyRuntime } from '../../../family-runtime.ts';
 import type { BrandModuleId, FrameworkContracts } from '../../../types.ts';
-import { assertNoArgs } from '../../modules/support.ts';
+import { assertNoArgs, buildCommandHelp } from '../../modules/support.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 
 type BrandModuleSurfaceSubcommand = 'status' | 'inspect' | 'interfaces' | 'validate' | 'doctor';
@@ -355,6 +360,64 @@ export function buildBrandCommandSpecs(
   };
 
   const brandCommandSpecs: Record<string, CommandSpec> = {
+    'pack bundle': {
+      usage: 'opl pack bundle <manifest|write|check> --assembly <path>',
+      summary: 'Manage source parts to generated aggregate bundles without making generated JSON the source of truth.',
+      examples: [
+        'opl pack bundle manifest --assembly contracts/stage_control_plane.bundle-assembly.json --json',
+        'opl pack bundle write --assembly contracts/stage_control_plane.bundle-assembly.json --json',
+        'opl pack bundle check --assembly contracts/stage_control_plane.bundle-assembly.json --json',
+      ],
+      group: 'brand-pack',
+      subcommands: [
+        {
+          command: 'pack bundle manifest',
+          usage: 'opl pack bundle manifest --assembly <path>',
+          summary: 'Build the refs-only source digest manifest for a generated aggregate bundle.',
+        },
+        {
+          command: 'pack bundle write',
+          usage: 'opl pack bundle write --assembly <path>',
+          summary: 'Regenerate the aggregate JSON and bundle manifest from source parts.',
+        },
+        {
+          command: 'pack bundle check',
+          usage: 'opl pack bundle check --assembly <path>',
+          summary: 'Check that the generated aggregate and manifest still match the source parts.',
+        },
+      ],
+      handler: (args) => {
+        assertNoArgs(args, brandCommandSpecs['pack bundle']);
+        return buildCommandHelp('pack bundle', brandCommandSpecs['pack bundle']);
+      },
+    },
+    'pack bundle manifest': {
+      usage: 'opl pack bundle manifest --assembly <path>',
+      summary: 'Build the refs-only source digest manifest for a generated aggregate bundle.',
+      examples: [
+        'opl pack bundle manifest --assembly contracts/stage_control_plane.bundle-assembly.json --json',
+      ],
+      group: 'brand-pack',
+      handler: runPackBundleManifestCommand,
+    },
+    'pack bundle write': {
+      usage: 'opl pack bundle write --assembly <path>',
+      summary: 'Regenerate aggregate JSON and manifest from editable source parts.',
+      examples: [
+        'opl pack bundle write --assembly contracts/stage_control_plane.bundle-assembly.json --json',
+      ],
+      group: 'brand-pack',
+      handler: runPackBundleWriteCommand,
+    },
+    'pack bundle check': {
+      usage: 'opl pack bundle check --assembly <path>',
+      summary: 'Validate that a generated aggregate and manifest still match editable source parts.',
+      examples: [
+        'opl pack bundle check --assembly contracts/stage_control_plane.bundle-assembly.json --json',
+      ],
+      group: 'brand-pack',
+      handler: runPackBundleCheckCommand,
+    },
     'pack os inspect': {
       usage: 'opl pack os inspect --descriptor <path>',
       summary: 'Inspect a generic capability-pack descriptor through OPL Pack OS without claiming domain authority.',

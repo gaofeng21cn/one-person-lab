@@ -29,6 +29,7 @@ import {
 import { validateBrandModuleL5OperatingEvidence } from './brand-module-l5-operating-evidence-contract.ts';
 import { validateBrandSystemProfile } from './brand-system-profile-contract.ts';
 import { validateDomainsRegistry } from './domain-contracts.ts';
+import { validatePackBundleContract } from './pack-bundle-contract.ts';
 import { validatePackOsContract } from './pack-os-contract.ts';
 import { validateTargetOperatingArchitecture } from './target-operating-architecture-contract.ts';
 
@@ -47,6 +48,7 @@ const REQUIRED_CONTRACT_FILE_NAMES = [
   'brand-module-l5-operating-evidence.json',
   'brand-system-profile.json',
   'target-operating-architecture-contract.json',
+  'pack-bundle-contract.json',
   'pack-os-contract.json',
 ] as const;
 
@@ -789,6 +791,11 @@ const REQUIRED_CONTRACT_FILES = [
     file_name: 'pack-os-contract.json',
     schema_version: (contracts: FrameworkContracts) => String(contracts.packOs.schema_version),
   },
+  {
+    contract_id: 'pack_bundle',
+    file_name: 'pack-bundle-contract.json',
+    schema_version: (contracts: FrameworkContracts) => String(contracts.packBundle.schema_version),
+  },
 ] as const;
 
 export function validateFrameworkContracts(
@@ -866,6 +873,10 @@ export function loadFrameworkContracts(
       targetOperatingArchitecture: validateTargetOperatingArchitecture(
         path.join(contractsDir, 'target-operating-architecture-contract.json'),
         parseJsonFile(path.join(contractsDir, 'target-operating-architecture-contract.json')),
+      ),
+      packBundle: validatePackBundleContract(
+        path.join(contractsDir, 'pack-bundle-contract.json'),
+        parseJsonFile(path.join(contractsDir, 'pack-bundle-contract.json')),
       ),
       packOs: validatePackOsContract(
         path.join(contractsDir, 'pack-os-contract.json'),

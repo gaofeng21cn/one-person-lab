@@ -239,6 +239,12 @@ test('validateFrameworkContracts returns a stable summary for the required contr
         schema_version: String(contracts.packOs.schema_version),
         status: 'valid',
       },
+      {
+        contract_id: 'pack_bundle',
+        file: path.join(contractsDir, 'pack-bundle-contract.json'),
+        schema_version: String(contracts.packBundle.schema_version),
+        status: 'valid',
+      },
     ],
   });
 });
@@ -330,6 +336,12 @@ test('contract validate returns a stable machine-readable contract summary', () 
           contract_id: 'pack_os',
           file: path.join(contractsDir, 'pack-os-contract.json'),
           schema_version: String(contracts.packOs.schema_version),
+          status: 'valid',
+        },
+        {
+          contract_id: 'pack_bundle',
+          file: path.join(contractsDir, 'pack-bundle-contract.json'),
+          schema_version: String(contracts.packBundle.schema_version),
           status: 'valid',
         },
       ],

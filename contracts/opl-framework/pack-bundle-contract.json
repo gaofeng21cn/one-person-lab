@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "contract_id": "opl-pack-bundle-contract.v1",
+  "owner": "One Person Lab",
+  "purpose": "Source-parts to generated-aggregate contract for large JSON consumer surfaces such as stage_control_plane and runtime-program current-program aggregates.",
+  "state": "active_l4_structural_baseline",
+  "machine_boundary": "This contract defines the OPL Pack Bundle assembly, manifest, write, and check surfaces. Editable source parts are the source of truth. Generated aggregate JSON is a consumer compatibility surface and must carry do_not_edit generated metadata. Bundle manifests record source entries and digests. Validation proves aggregate/source consistency only; it does not authorize domain ready, production ready, owner receipt, typed blocker, quality verdict, artifact authority, or domain truth mutation.",
+  "source_module": "src/pack-bundle.ts",
+  "cli_surfaces": {
+    "manifest": "opl pack bundle manifest --assembly <path>",
+    "write": "opl pack bundle write --assembly <path>",
+    "check": "opl pack bundle check --assembly <path>"
+  },
+  "assembly_contract": {
+    "surface_kind": "opl_pack_bundle_assembly",
+    "required_fields": [
+      "schema_version",
+      "bundle_id",
+      "owner",
+      "state",
+      "aggregate_ref",
+      "manifest_ref",
+      "source_root_ref",
+      "generated_array_fields",
+      "commands",
+      "authority_boundary"
+    ],
+    "generated_array_field_required_fields": [
+      "field",
+      "source_dir_ref",
+      "order"
+    ],
+    "source_truth_rule": "source_root_ref and generated_array_fields[].source_dir_ref/order identify the editable source parts. aggregate_ref is regenerated from those source parts and is not edited directly."
+  },
+  "manifest_contract": {
+    "surface_kind": "opl_pack_bundle_manifest",
+    "records": [
+      "assembly_ref",
+      "source_root_ref",
+      "source_entries",
+      "source_digest",
+      "generated_artifact.expected_sha256",
+      "generated_artifact.do_not_edit",
+      "generated_artifact.aggregate_is_generated_consumer_surface"
+    ],
+    "digest_algorithm": "sha256",
+    "compatibility_rule": "Generated aggregate JSON may stay tracked for consumers and diff review, but maintainers edit source parts and run write/check."
+  },
+  "generated_metadata_contract": {
+    "surface_kind": "opl_pack_bundle_generated_metadata",
+    "required_fields": [
+      "generator",
+      "assembly_ref",
+      "source_digest",
+      "source_entry_count",
+      "do_not_edit"
+    ],
+    "do_not_edit": true
+  },
+  "authority_boundary": {
+    "opl_can_write_generated_aggregate": true,
+    "opl_can_write_bundle_manifest": true,
+    "opl_can_validate_source_to_aggregate_drift": true,
+    "opl_can_write_domain_truth": false,
+    "opl_can_sign_owner_receipt": false,
+    "opl_can_create_typed_blocker": false,
+    "opl_can_authorize_quality_verdict": false,
+    "opl_can_claim_domain_ready": false,
+    "opl_can_claim_production_ready": false
+  },
+  "not_claims": [
+    "domain_ready",
+    "quality_verdict",
+    "artifact_authority",
+    "production_ready",
+    "owner_receipt",
+    "typed_blocker"
+  ],
+  "verification": {
+    "focused_tests": [
+      "tests/src/pack-bundle.test.ts",
+      "tests/src/cli/cases/pack-bundle-command-surface.test.ts"
+    ],
+    "required_commands_when_changed": [
+      "node --test tests/src/pack-bundle.test.ts tests/src/cli/cases/pack-bundle-command-surface.test.ts",
+      "npm run typecheck",
+      "npm run test:fast"
+    ]
+  }
+}

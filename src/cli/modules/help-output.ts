@@ -227,6 +227,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl charter status',
         'opl atlas inspect',
         'opl pack status',
+        'opl pack bundle check --assembly contracts/stage_control_plane.bundle-assembly.json',
         'opl pack os validate --descriptor display_pack.json',
         'opl stagecraft interfaces',
         'opl runway l5-status',

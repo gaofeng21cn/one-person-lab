@@ -1,3 +1,4 @@
+export { MINIMAL_PACK_BUNDLE_CONTRACT } from './agent-workspace-norm-fixture-cases/pack-bundle.ts';
 export { MINIMAL_PACK_OS_CONTRACT } from './agent-workspace-norm-fixture-cases/pack-os.ts';
 export { MINIMAL_TARGET_OPERATING_ARCHITECTURE_CONTRACT } from './agent-workspace-norm-fixture-cases/target-operating-architecture.ts';
 export { MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT } from './agent-workspace-norm-fixture-cases/workspace-norm.ts';
