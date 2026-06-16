@@ -5,6 +5,10 @@ import type {
   EnqueueInput,
   FamilyRuntimeDomainId,
 } from '../family-runtime-command.ts';
+import {
+  buildDomainProgressTransitionRuntimeResult,
+  normalizeDomainProgressTransitionCommand,
+} from '../family-runtime-domain-progress-transition-runtime.ts';
 
 export type CurrentControlProviderAdmissionExportContext = {
   cwd: string;
@@ -18,6 +22,8 @@ type CurrentControlProviderAdmissionCandidateFields = {
   workUnitId: string;
   workUnitFingerprint: string;
   nextOwner: string;
+  currentControlCommand: Record<string, unknown>;
+  transitionRuntimeResult: Record<string, unknown>;
 };
 
 type CurrentControlProviderAdmissionActionQueueContext = {
@@ -48,7 +54,9 @@ type CurrentControlProviderAdmissionInputContext = {
   obligationId: string | null;
   sourceRefs: Array<Record<string, unknown>>;
   currentnessBasis: Record<string, unknown> | null;
-  paperAutonomySupervisorApply: Record<string, unknown> | null;
+  currentControlCommand: Record<string, unknown>;
+  transitionRuntimeResult: Record<string, unknown>;
+  domainProgressTransitionApply: Record<string, unknown> | null;
 };
 
 type CurrentControlProviderAdmissionBlocked = {
@@ -63,6 +71,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function optionalString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function optionalScalarString(value: unknown) {
+  if (typeof value === 'string' && value.trim()) {
+    return value.trim();
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
+  return null;
 }
 
 function recoveryObligationId(value: Record<string, unknown> | null | undefined) {
@@ -121,18 +139,16 @@ function readJsonRecord(filePath: string) {
   }
 }
 
-function paperAutonomySupervisorApply(value: Record<string, unknown>) {
-  const direct = isRecord(value.paper_autonomy_supervisor_apply)
-    ? value.paper_autonomy_supervisor_apply
-    : isRecord(value.supervisor_decision_apply)
-      ? value.supervisor_decision_apply
-      : null;
+function domainProgressTransitionApply(value: Record<string, unknown>) {
+  const direct = isRecord(value.domain_progress_transition_apply)
+    ? value.domain_progress_transition_apply
+    : null;
   if (!direct) {
     return null;
   }
   const boundary = isRecord(direct.authority_boundary) ? direct.authority_boundary : null;
   const runtimeApplyTarget = isRecord(direct.runtime_apply_target) ? direct.runtime_apply_target : null;
-  return optionalString(direct.surface_kind) === 'opl_paper_autonomy_supervisor_transition_packet'
+  return optionalString(direct.surface_kind) === 'opl_domain_progress_transition_packet'
     && optionalString(direct.transition_kind) === 'execute_current_owner_delta'
     && optionalString(runtimeApplyTarget?.kind) === 'provider_attempt_or_owner_callable'
     && runtimeApplyTarget?.provider_admission_required === true
@@ -297,6 +313,15 @@ function currentControlCurrentnessBasis(input: {
     schema_version: input.currentControl.schema_version ?? null,
     surface: optionalString(input.currentControl.surface),
     generated_at: optionalString(input.currentControl.generated_at),
+    observed_generation:
+      optionalScalarString(input.currentControl.observed_generation)
+      ?? optionalScalarString(input.currentControl.source_generation)
+      ?? optionalScalarString(input.currentControl.generation),
+    derived_generation:
+      optionalScalarString(input.ownerRoute?.derived_generation)
+      ?? optionalScalarString(contract?.derived_generation)
+      ?? optionalScalarString(basis.derived_generation)
+      ?? optionalScalarString(input.currentControl.derived_generation),
     work_unit_id: optionalString(basis.work_unit_id) ?? input.workUnitId,
     work_unit_fingerprint: optionalString(basis.work_unit_fingerprint) ?? input.workUnitFingerprint,
     truth_epoch: optionalString(input.ownerRoute?.truth_epoch) ?? optionalString(basis.truth_epoch),
@@ -342,7 +367,10 @@ function actionQueueProviderAdmissionFields(input: {
   action: Record<string, unknown>;
   handoff: Record<string, unknown>;
   ownerRoute: Record<string, unknown> | null;
-}): CurrentControlProviderAdmissionCandidateFields | null {
+}): Omit<
+  CurrentControlProviderAdmissionCandidateFields,
+  'currentControlCommand' | 'transitionRuntimeResult'
+> | null {
   const contract = isRecord(input.ownerRoute?.currentness_contract)
     ? input.ownerRoute.currentness_contract
     : null;
@@ -443,6 +471,9 @@ function currentControlProviderAdmissionCandidateFromActionQueueItem(
     idempotency_key: optionalString(handoff.idempotency_key) ?? optionalString(ownerRoute?.idempotency_key),
     ...(identity.routeIdentityKey ? { route_identity_key: identity.routeIdentityKey } : {}),
     ...(identity.attemptIdempotencyKey ? { attempt_idempotency_key: identity.attemptIdempotencyKey } : {}),
+    ...(isRecord(action.current_control_command)
+      ? { current_control_command: action.current_control_command }
+      : {}),
     currentness_basis: currentControlCurrentnessBasis({
       currentControl,
       action,
@@ -451,8 +482,10 @@ function currentControlProviderAdmissionCandidateFromActionQueueItem(
       workUnitFingerprint: fields.workUnitFingerprint,
     }),
     ...(
-      paperAutonomySupervisorApply(action)
-        ? { paper_autonomy_supervisor_apply: paperAutonomySupervisorApply(action) }
+      domainProgressTransitionApply(action)
+        ? {
+          domain_progress_transition_apply: domainProgressTransitionApply(action),
+        }
         : {}
     ),
     provider_admission_schema_source: 'action_queue',
@@ -520,6 +553,19 @@ function currentControlProviderAdmissionCandidateFields(
   if (!validStageTransitionAuthorityBoundary(candidate.stage_transition_authority_boundary)) {
     return { blocked: { reason: 'current_control_provider_admission_missing_stage_authority_boundary', task: candidate } };
   }
+  const commandResult = currentControlCommandOutboxRecord(candidate, {
+    studyId,
+    actionType,
+    workUnitId,
+    workUnitFingerprint,
+    nextOwner,
+  });
+  if (commandResult.blocked) {
+    return { blocked: commandResult.blocked };
+  }
+  if (!commandResult.record) {
+    return { blocked: { reason: 'current_control_provider_admission_command_record_missing', task: candidate } };
+  }
   return {
     fields: {
       studyId,
@@ -527,8 +573,73 @@ function currentControlProviderAdmissionCandidateFields(
       workUnitId,
       workUnitFingerprint,
       nextOwner,
+      currentControlCommand: commandResult.record,
+      transitionRuntimeResult: buildDomainProgressTransitionRuntimeResult(commandResult.record),
     },
   };
+}
+
+function currentControlProviderAdmissionCurrentnessBasis(
+  candidate: Record<string, unknown>,
+  fields: CurrentControlProviderAdmissionCandidateFields,
+) {
+  const basis = isRecord(candidate.currentness_basis) ? candidate.currentness_basis : {};
+  const observedGeneration =
+    optionalScalarString(basis.observed_generation)
+    ?? optionalScalarString(fields.currentControlCommand.source_generation);
+  const derivedGeneration =
+    optionalScalarString(basis.derived_generation)
+    ?? optionalScalarString(fields.currentControlCommand.expected_version);
+  return {
+    ...basis,
+    surface: optionalString(basis.surface) ?? 'opl_current_control_provider_admission',
+    observed_generation: observedGeneration,
+    derived_generation: derivedGeneration,
+    work_unit_id: optionalString(basis.work_unit_id) ?? fields.workUnitId,
+    work_unit_fingerprint: optionalString(basis.work_unit_fingerprint) ?? fields.workUnitFingerprint,
+  };
+}
+
+function currentControlCommandOutboxRecord(
+  candidate: Record<string, unknown>,
+  fields: Omit<
+    CurrentControlProviderAdmissionCandidateFields,
+    'currentControlCommand' | 'transitionRuntimeResult'
+  >,
+): { record?: Record<string, unknown>; blocked?: CurrentControlProviderAdmissionBlocked } {
+  const command = isRecord(candidate.current_control_command)
+    ? candidate.current_control_command
+    : isRecord(candidate.current_control_command_outbox_record)
+      ? candidate.current_control_command_outbox_record
+      : null;
+  if (!command) {
+    return {
+      blocked: {
+        reason: 'current_control_provider_admission_command_record_missing',
+        task: candidate,
+      },
+    };
+  }
+  const normalized = normalizeDomainProgressTransitionCommand(command, fields);
+  if (normalized.blocked) {
+    return {
+      blocked: {
+        reason: normalized.blocked.reason.replace(
+          'domain_progress_transition_',
+          'current_control_provider_admission_',
+        ),
+        task: candidate,
+      },
+    };
+  }
+  return normalized.command
+    ? { record: normalized.command }
+    : {
+        blocked: {
+          reason: 'current_control_provider_admission_command_record_missing',
+          task: candidate,
+        },
+      };
 }
 
 function currentControlProviderAdmissionInputContext(input: {
@@ -606,10 +717,13 @@ function currentControlProviderAdmissionInputContext(input: {
     workspaceRoot,
     dispatchRef,
   });
-  const currentnessBasis = isRecord(input.candidate.currentness_basis) ? input.candidate.currentness_basis : null;
-  const explicitSupervisorApply = paperAutonomySupervisorApply(input.candidate);
-  const paperAutonomyApply = explicitSupervisorApply
-    ?? paperAutonomySupervisorExecuteApply({
+  const currentnessBasis = currentControlProviderAdmissionCurrentnessBasis(
+    input.candidate,
+    input.fields,
+  );
+  const explicitTransitionApply = domainProgressTransitionApply(input.candidate);
+  const transitionApply = explicitTransitionApply
+    ?? domainProgressTransitionExecuteApply({
       obligationId,
       fields: input.fields,
       context: {
@@ -638,7 +752,9 @@ function currentControlProviderAdmissionInputContext(input: {
       obligationId,
       sourceRefs,
       currentnessBasis,
-      paperAutonomySupervisorApply: paperAutonomyApply,
+      currentControlCommand: input.fields.currentControlCommand,
+      transitionRuntimeResult: input.fields.transitionRuntimeResult,
+      domainProgressTransitionApply: transitionApply,
     },
   };
 }
@@ -738,7 +854,7 @@ function currentControlProviderAdmissionRepairAction(
   };
 }
 
-function paperAutonomySupervisorExecuteApply(input: {
+function domainProgressTransitionExecuteApply(input: {
   obligationId: string | null;
   fields: CurrentControlProviderAdmissionCandidateFields;
   context: {
@@ -772,10 +888,34 @@ function paperAutonomySupervisorExecuteApply(input: {
     input.context.attemptIdempotencyKey,
   ].join('/');
   return {
-    surface_kind: 'opl_paper_autonomy_supervisor_transition_packet',
+    surface_kind: 'opl_domain_progress_transition_packet',
     obligation_id: input.obligationId,
-    supervisor_decision_ref: decisionId,
+    transition_runtime_kind: 'DomainProgressTransitionRuntime',
+    transition_decision_ref: decisionId,
     transition_kind: 'execute_current_owner_delta',
+    brand_module_partition: {
+      Runway: 'current-control provider admission and exactly-one apply selection',
+      Pack: 'domain-declared command/outbox identity and postcondition',
+      Stagecraft: 'StageRun identity and stage packet replay semantics',
+      Console: 'read-model metadata projection',
+      Vault: 'append-only outbox/event/replay refs',
+    },
+    exactly_one_apply: {
+      scope: 'stage_run_identity',
+      selected: true,
+      non_advancing_apply: false,
+    },
+    read_model_metadata: {
+      observed_generation: optionalScalarString(input.context.currentnessBasis?.observed_generation),
+      derived_generation: optionalScalarString(input.context.currentnessBasis?.derived_generation),
+      source_generation: optionalScalarString(input.fields.currentControlCommand.source_generation),
+      expected_version: optionalScalarString(input.fields.currentControlCommand.expected_version),
+    },
+    replay_fixture: {
+      command_outbox_ref: `opl://domain-progress-transition/outbox/${encodeURIComponent(input.context.attemptIdempotencyKey)}`,
+      stage_run_identity_ref: `opl://domain-progress-transition/stage-run/${encodeURIComponent(input.context.routeIdentityKey)}`,
+      replay_reads_body: false,
+    },
     transition_ref: [
       'mas://current-owner-delta',
       input.fields.studyId,
@@ -819,7 +959,7 @@ function paperAutonomySupervisorExecuteApply(input: {
       payload_refs_only: true,
       indexed_refs: {
         obligation_id: input.obligationId,
-        supervisor_decision_ref: decisionId,
+        transition_decision_ref: decisionId,
         transition_ref: [
           'mas://current-owner-delta',
           input.fields.studyId,
@@ -890,11 +1030,17 @@ function currentControlProviderAdmissionInputFrom(
     obligationId,
     sourceRefs,
     currentnessBasis,
-    paperAutonomySupervisorApply,
+    currentControlCommand,
+    transitionRuntimeResult,
+    domainProgressTransitionApply,
   } = contextResult.context;
   const providerAdmissionIdentity = {
     ...candidate,
-    ...(paperAutonomySupervisorApply ? { paper_autonomy_supervisor_apply: paperAutonomySupervisorApply } : {}),
+    ...(domainProgressTransitionApply
+      ? {
+        domain_progress_transition_apply: domainProgressTransitionApply,
+      }
+      : {}),
   };
   return {
     input: {
@@ -935,8 +1081,15 @@ function currentControlProviderAdmissionInputFrom(
           ? { required_output_surface: optionalString(candidate.required_output_surface) }
           : {}),
         ...(currentnessBasis ? { owner_route_currentness_basis: currentnessBasis } : {}),
-        ...(paperAutonomySupervisorApply
-          ? { paper_autonomy_supervisor_apply: paperAutonomySupervisorApply }
+        current_control_command: currentControlCommand,
+        domain_progress_transition_runtime: transitionRuntimeResult,
+        opl_transition_event: transitionRuntimeResult.transition_event,
+        opl_transition_outbox_item: transitionRuntimeResult.transactional_outbox_item,
+        projection_metadata: transitionRuntimeResult.projection_metadata,
+        ...(domainProgressTransitionApply
+          ? {
+            domain_progress_transition_apply: domainProgressTransitionApply,
+          }
           : {}),
         source_refs: sourceRefs,
         ...(isRecord(candidate.source_refs) ? { provider_admission_source_refs: candidate.source_refs } : {}),

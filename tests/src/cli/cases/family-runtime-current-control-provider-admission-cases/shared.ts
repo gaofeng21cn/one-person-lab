@@ -60,6 +60,51 @@ export function providerObservationBoundary() {
   };
 }
 
+export function currentControlCommandOutboxRecord(input: {
+  studyId: string;
+  actionType: string;
+  workUnitId: string;
+  workUnitFingerprint: string;
+  sourceGeneration?: string;
+  expectedVersion?: string;
+  idempotencyKey?: string;
+}) {
+  const sourceGeneration = input.sourceGeneration ?? `generation:${input.workUnitFingerprint}`;
+  const idempotencyKey = input.idempotencyKey ?? [
+    'mas-current-control-command',
+    input.studyId,
+    input.actionType,
+    input.workUnitId,
+    input.workUnitFingerprint,
+  ].join('::');
+  return {
+    surface_kind: 'opl_generic_current_control_command_outbox_record',
+    runtime_kind: 'DomainProgressTransitionRuntime',
+    command_kind: 'provider_admission_requested',
+    aggregate_identity: {
+      aggregate_kind: 'study_work_unit',
+      aggregate_id: `${input.studyId}::${input.workUnitId}`,
+      study_id: input.studyId,
+      work_unit_id: input.workUnitId,
+    },
+    action_type: input.actionType,
+    work_unit_fingerprint: input.workUnitFingerprint,
+    idempotency_key: idempotencyKey,
+    source_generation: sourceGeneration,
+    expected_version: input.expectedVersion ?? sourceGeneration,
+    postcondition: {
+      kind: 'provider_admission_enqueued_or_blocked',
+      outcome_owner: 'one-person-lab',
+      domain_state_owner: 'med-autoscience',
+    },
+    outcome: {
+      kind: 'provider_admission_requested',
+      non_advancing_apply: false,
+      provider_completion_is_domain_completion: false,
+    },
+  };
+}
+
 export function currentControlActionQueueItem(input: {
   studyId: string;
   actionType: string;
@@ -106,6 +151,14 @@ export function currentControlActionQueueItem(input: {
     ...(input.recoveryObligationId ? { recovery_obligation_id: input.recoveryObligationId } : {}),
     required_output_surface: 'artifacts/publication_eval/ai_reviewer_responses/*_publication_eval_record.json',
     owner: nextOwner,
+    current_control_command: currentControlCommandOutboxRecord({
+      studyId: input.studyId,
+      actionType: input.actionType,
+      workUnitId: input.workUnitId,
+      workUnitFingerprint: input.workUnitFingerprint,
+      sourceGeneration: input.truthEpoch,
+      idempotencyKey: attemptIdempotencyKey,
+    }),
     ...(input.dispatchRef ? { dispatch_ref: input.dispatchRef } : {}),
     ...(input.dispatchPath ? { dispatch_path: input.dispatchPath } : {}),
     ...(input.stagePacketRef ? { stage_packet_ref: input.stagePacketRef } : {}),
@@ -253,10 +306,20 @@ export function currentControlAdmissionPayload(
       route_identity_key: routeIdentityKey,
       attempt_idempotency_key: attemptIdempotencyKey,
     },
+    current_control_command: currentControlCommandOutboxRecord({
+      studyId: '002-dm-china-us-mortality-attribution',
+      actionType: 'return_to_ai_reviewer_workflow',
+      workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+      workUnitFingerprint,
+      sourceGeneration: `truth-event-${generation}`,
+      idempotencyKey: attemptIdempotencyKey,
+    }),
     owner_route_currentness_basis: {
       schema_version: 1,
       surface: 'opl_current_control_state_handoff',
       generated_at: `2026-06-08T15:${generation}:00+00:00`,
+      observed_generation: generation,
+      derived_generation: `truth-event-${generation}`,
       work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
       work_unit_fingerprint: workUnitFingerprint,
       truth_epoch: `truth-event-${generation}`,

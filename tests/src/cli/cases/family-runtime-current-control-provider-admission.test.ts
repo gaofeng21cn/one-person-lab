@@ -5,6 +5,7 @@ import {
   assert,
   DatabaseSync,
   currentControlActionQueueItem,
+  currentControlCommandOutboxRecord,
   createQueueTables,
   familyRuntimeEnv,
   fs,
@@ -20,6 +21,37 @@ import {
   writeJsonEmitterScript,
 } from './family-runtime-current-control-provider-admission-cases/shared.ts';
 import { deriveCurrentControlStateForTask } from '../../../../src/family-runtime-current-control-state.ts';
+
+test('DomainProgressTransitionRuntime first slice stays inside existing brand-module partition', () => {
+  const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..', '..', '..');
+  const contract = JSON.parse(fs.readFileSync(
+    path.join(repoRoot, 'contracts', 'opl-framework', 'stage-route-scheduler-contract.json'),
+    'utf8',
+  ));
+  const slice = contract.stage_route_arbiter_substrate_contract.domain_progress_transition_runtime_first_slice;
+
+  assert.equal(slice.surface_kind, 'opl_domain_progress_transition_runtime_first_slice');
+  assert.equal(slice.status, 'durable_substrate_first_slice_landed_non_ready');
+  assert.equal(slice.brand_module_partition.module_count_policy, 'no_new_brand_module');
+  assert.match(slice.brand_module_partition.Runway, /current-control intake/);
+  assert.match(slice.brand_module_partition.Pack, /command\/outbox\/event shape/);
+  assert.match(slice.brand_module_partition.Stagecraft, /StageRun identity/);
+  assert.match(slice.brand_module_partition.Console, /read-model metadata/);
+  assert.match(slice.brand_module_partition.Vault, /outbox\/event\/replay refs/);
+  assert.equal(
+    slice.concepts.TransitionDecisionEngine.durable_substrate_first_slice.current_latest_policy,
+    'exactly_one_latest_current_decision_per_obligation_identity',
+  );
+  assert.match(
+    slice.concepts.TransitionDecisionEngine.landed_support,
+    /NonAdvancingApply is projected as metadata/,
+  );
+  assert.match(
+    slice.concepts.TransitionDecisionEngine.landed_support,
+    /replay fixtures remain refs-only/,
+  );
+  assert.ok(slice.not_complete_claims.includes('read_model_projection_does_not_mean_domain_progress'));
+});
 
 test('family-runtime intake admits MAS current-control provider candidates ahead of stale sidecar default executor tasks', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-admission-state-'));
@@ -78,6 +110,14 @@ test('family-runtime intake admits MAS current-control provider candidates ahead
         provider_attempt_or_lease_required: true,
         provider_completion_is_domain_completion: false,
         stage_transition_authority_boundary: providerObservationBoundary(),
+        current_control_command: currentControlCommandOutboxRecord({
+          studyId: '002-dm-china-us-mortality-attribution',
+          actionType: 'return_to_ai_reviewer_workflow',
+          workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+          workUnitFingerprint: 'sha256:current-dm002',
+          sourceGeneration: 'truth-event-current-dm002',
+          idempotencyKey: 'owner-route-attempt::dm002::ai-reviewer-current',
+        }),
         required_output_surface: 'artifacts/publication_eval/ai_reviewer_responses/*_publication_eval_record.json',
         source_refs: {
           work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
@@ -129,6 +169,14 @@ test('family-runtime intake admits MAS current-control provider candidates ahead
         provider_attempt_or_lease_required: true,
         provider_completion_is_domain_completion: false,
         stage_transition_authority_boundary: providerObservationBoundary(),
+        current_control_command: currentControlCommandOutboxRecord({
+          studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+          actionType: 'return_to_ai_reviewer_workflow',
+          workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+          workUnitFingerprint: 'sha256:current-dm003',
+          sourceGeneration: 'truth-event-current-dm003',
+          idempotencyKey: 'owner-route-attempt::dm003::ai-reviewer-current',
+        }),
         required_output_surface: 'artifacts/publication_eval/ai_reviewer_responses/*_publication_eval_record.json',
       },
     ],
@@ -195,6 +243,63 @@ test('family-runtime intake admits MAS current-control provider candidates ahead
     assert.equal(tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.work_unit_fingerprint, 'sha256:current-dm003');
     assert.equal(tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.route_identity_key, 'owner-route::dm003::ai-reviewer-current');
     assert.equal(tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.attempt_idempotency_key, 'owner-route-attempt::dm003::ai-reviewer-current');
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.current_control_command.aggregate_identity.study_id,
+      '003-dpcc-primary-care-phenotype-treatment-gap',
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.current_control_command.idempotency_key,
+      'owner-route-attempt::dm003::ai-reviewer-current',
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.current_control_command.runtime_kind,
+      'DomainProgressTransitionRuntime',
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.provider_admission_identity
+        .current_control_command.postcondition.kind,
+      'provider_admission_enqueued_or_blocked',
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.opl_transition_event
+        .exactly_one_transition,
+      true,
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.opl_transition_outbox_item
+        .surface_kind,
+      'opl_domain_progress_transition_outbox_item',
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.opl_transition_outbox_item
+        .dispatch_allowed,
+      true,
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.projection_metadata
+        .observed_generation,
+      'truth-event-current-dm003',
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.domain_progress_transition_runtime
+        .replay_evidence.transition_count,
+      1,
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.domain_progress_transition_runtime
+        .replay_evidence.non_advancing_apply,
+      false,
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.owner_route_currentness_basis
+        .observed_generation,
+      'truth-event-current-dm003',
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.owner_route_currentness_basis
+        .derived_generation,
+      'truth-event-current-dm003',
+    );
     assert.equal(
       tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.stage_packet_ref,
       'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/stage_packets/return_to_ai_reviewer_workflow.stage-packet.json',
@@ -347,21 +452,51 @@ test('family-runtime intake admits MAS current-control handoff action_queue prov
       'paper-recovery-obligation:dm002:revise-ai-reviewer',
     );
     assert.equal(
-      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.paper_autonomy_supervisor_apply.transition_kind,
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.domain_progress_transition_apply.transition_kind,
       'execute_current_owner_delta',
     );
     assert.equal(
-      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.paper_autonomy_supervisor_apply.runtime_apply_target.kind,
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.domain_progress_transition_apply.runtime_apply_target.kind,
       'provider_attempt_or_owner_callable',
     );
     assert.equal(
-      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.provider_admission_identity
-        .paper_autonomy_supervisor_apply.supervisor_decision_ref,
-      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.paper_autonomy_supervisor_apply
-        .supervisor_decision_ref,
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.domain_progress_transition_apply
+        .transition_runtime_kind,
+      'DomainProgressTransitionRuntime',
     );
     assert.equal(
-      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.paper_autonomy_supervisor_apply
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.domain_progress_transition_apply
+        .exactly_one_apply.selected,
+      true,
+    );
+    assert.equal(
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.domain_progress_transition_apply
+        .exactly_one_apply.non_advancing_apply,
+      false,
+    );
+    assert.equal(
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.domain_progress_transition_apply
+        .read_model_metadata.observed_generation,
+      'truth-event-000040',
+    );
+    assert.equal(
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.domain_progress_transition_apply
+        .read_model_metadata.source_generation,
+      'truth-event-000040',
+    );
+    assert.equal(
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.domain_progress_transition_apply
+        .replay_fixture.replay_reads_body,
+      false,
+    );
+    assert.equal(
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.provider_admission_identity
+        .domain_progress_transition_apply.transition_decision_ref,
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.domain_progress_transition_apply
+        .transition_decision_ref,
+    );
+    assert.equal(
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.domain_progress_transition_apply
         .authority_boundary.opl_can_create_domain_typed_blocker,
       false,
     );
@@ -475,7 +610,7 @@ test('family-runtime current-control recovery obligation id flows into stage att
   }
 });
 
-test('family-runtime current-control PAS execute decision apply proof flows into provider admission attempt', () => {
+test('family-runtime current-control DomainProgressTransitionRuntime apply proof flows into provider admission attempt', () => {
   const db = new DatabaseSync(':memory:');
   const obligationId = 'paper-recovery-obligation:dm002:execute-current-owner-delta';
   const decisionId = [
@@ -485,10 +620,11 @@ test('family-runtime current-control PAS execute decision apply proof flows into
     'owner-route::dm002::pas-current',
     'owner-route-attempt::dm002::pas-current',
   ].join('|');
-  const supervisorApply = {
-    surface_kind: 'opl_paper_autonomy_supervisor_transition_packet',
+  const transitionApply = {
+    surface_kind: 'opl_domain_progress_transition_packet',
     obligation_id: obligationId,
-    supervisor_decision_ref: decisionId,
+    transition_runtime_kind: 'DomainProgressTransitionRuntime',
+    transition_decision_ref: decisionId,
     transition_kind: 'execute_current_owner_delta',
     transition_ref: 'mas://DM002/current-owner-delta/latest.json',
     provider_admission_identity_ref: 'opl://provider-admission/dm002/current',
@@ -514,6 +650,22 @@ test('family-runtime current-control PAS execute decision apply proof flows into
       provider_admission_required: true,
       owner_callable_required: true,
       domain_truth_owner: 'med-autoscience',
+    },
+    exactly_one_apply: {
+      scope: 'stage_run_identity',
+      selected: true,
+      non_advancing_apply: false,
+    },
+    read_model_metadata: {
+      observed_generation: 'truth-event-pas-current',
+      derived_generation: 'truth-event-pas-current',
+      source_generation: 'truth-event-pas-current',
+      expected_version: 'truth-event-pas-current',
+    },
+    replay_fixture: {
+      command_outbox_ref: 'opl://domain-progress-transition/outbox/owner-route-attempt%3A%3Adm002%3A%3Apas-current',
+      stage_run_identity_ref: 'opl://domain-progress-transition/stage-run/owner-route%3A%3Adm002%3A%3Apas-current',
+      replay_reads_body: false,
     },
     authority_boundary: {
       opl_can_write_mas_truth: false,
@@ -548,7 +700,7 @@ test('family-runtime current-control PAS execute decision apply proof flows into
     ],
     stage_transition_authority_boundary: providerObservationBoundary(),
     provider_admission_schema_source: 'action_queue',
-    paper_autonomy_supervisor_apply: supervisorApply,
+    domain_progress_transition_apply: transitionApply,
     provider_admission_identity: {
       status: 'provider_admission_pending',
       recovery_obligation_id: obligationId,
@@ -556,7 +708,7 @@ test('family-runtime current-control PAS execute decision apply proof flows into
       attempt_idempotency_key: 'owner-route-attempt::dm002::pas-current',
       provider_completion_is_domain_completion: false,
       stage_transition_authority_boundary: providerObservationBoundary(),
-      paper_autonomy_supervisor_apply: supervisorApply,
+      domain_progress_transition_apply: transitionApply,
     },
     owner_route_currentness_basis: {
       schema_version: 1,
@@ -583,18 +735,23 @@ test('family-runtime current-control PAS execute decision apply proof flows into
     >[1];
 
     const attempt = ensureProviderHostedStageAttempt(db, row, payload);
-    const locatorSupervisorApply = record(attempt?.workspace_locator.paper_autonomy_supervisor_apply);
-    const locatorRuntimeApplyTarget = record(locatorSupervisorApply.runtime_apply_target);
+    const locatorTransitionApply = record(attempt?.workspace_locator.domain_progress_transition_apply);
+    const locatorRuntimeApplyTarget = record(locatorTransitionApply.runtime_apply_target);
     const providerAdmissionApply = record(
-      record(attempt?.workspace_locator.provider_admission_identity).paper_autonomy_supervisor_apply,
+      record(attempt?.workspace_locator.provider_admission_identity).domain_progress_transition_apply,
     );
 
     assert.ok(attempt);
-    assert.equal(locatorSupervisorApply.transition_kind, 'execute_current_owner_delta');
+    assert.equal(locatorTransitionApply.transition_kind, 'execute_current_owner_delta');
+    assert.equal(locatorTransitionApply.transition_runtime_kind, 'DomainProgressTransitionRuntime');
     assert.equal(
       locatorRuntimeApplyTarget.kind,
       'provider_attempt_or_owner_callable',
     );
+    assert.equal(record(locatorTransitionApply.exactly_one_apply).selected, true);
+    assert.equal(record(locatorTransitionApply.exactly_one_apply).non_advancing_apply, false);
+    assert.equal(record(locatorTransitionApply.read_model_metadata).observed_generation, 'truth-event-pas-current');
+    assert.equal(record(locatorTransitionApply.replay_fixture).replay_reads_body, false);
     assert.equal(
       providerAdmissionApply.transition_ref,
       'mas://DM002/current-owner-delta/latest.json',
@@ -664,6 +821,14 @@ test('family-runtime intake reconciles current-control display owner to executab
         provider_attempt_or_lease_required: true,
         provider_completion_is_domain_completion: false,
         stage_transition_authority_boundary: providerObservationBoundary(),
+        current_control_command: currentControlCommandOutboxRecord({
+          studyId,
+          actionType,
+          workUnitId,
+          workUnitFingerprint,
+          sourceGeneration: 'truth-event-gate-clearing-current',
+          idempotencyKey: 'owner-route-attempt::dm003::gate-clearing-current',
+        }),
       },
     ],
   }), 'utf8');
@@ -883,6 +1048,103 @@ test('family-runtime intake blocks current-control action_queue provider candida
   }
 });
 
+test('family-runtime intake blocks current-control provider candidates without generic command identity or postcondition', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-command-contract-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-command-contract-'));
+  const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  const exportPath = path.join(fixtureRoot, 'export');
+  const currentControlPath = path.join(
+    workspaceRoot,
+    'runtime',
+    'artifacts',
+    'supervision',
+    'opl_current_control_state',
+    'latest.json',
+  );
+  const baseCandidate = {
+    status: 'provider_admission_pending',
+    study_id: '002-dm-china-us-mortality-attribution',
+    quest_id: '002-dm-china-us-mortality-attribution',
+    action_type: 'return_to_ai_reviewer_workflow',
+    work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    work_unit_fingerprint: 'sha256:command-contract',
+    action_fingerprint: 'sha256:command-contract',
+    dispatch_authority: 'ai_reviewer_record_production_handoff',
+    dispatch_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json',
+    stage_packet_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/stage_packets/return_to_ai_reviewer_workflow.stage-packet.json',
+    route_identity_key: 'owner-route::dm002::command-contract',
+    attempt_idempotency_key: 'owner-route-attempt::dm002::command-contract',
+    next_executable_owner: 'ai_reviewer',
+    owner_route_current: true,
+    provider_attempt_or_lease_required: true,
+    provider_completion_is_domain_completion: false,
+    stage_transition_authority_boundary: providerObservationBoundary(),
+  };
+  const incompleteCommand = {
+    ...currentControlCommandOutboxRecord({
+      studyId: '002-dm-china-us-mortality-attribution',
+      actionType: 'return_to_ai_reviewer_workflow',
+      workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+      workUnitFingerprint: 'sha256:command-postcondition-missing',
+      sourceGeneration: 'truth-event-command-contract',
+      idempotencyKey: 'owner-route-attempt::dm002::command-contract',
+    }),
+    postcondition: undefined,
+    outcome: undefined,
+  };
+  fs.mkdirSync(path.dirname(currentControlPath), { recursive: true });
+  fs.writeFileSync(currentControlPath, JSON.stringify({
+    surface: 'opl_current_control_state_handoff',
+    schema_version: 1,
+    generated_at: '2026-06-16T00:00:00+00:00',
+    provider_admission_candidates: [
+      baseCandidate,
+      {
+        ...baseCandidate,
+        work_unit_fingerprint: 'sha256:command-postcondition-missing',
+        action_fingerprint: 'sha256:command-postcondition-missing',
+        route_identity_key: 'owner-route::dm002::command-postcondition-missing',
+        attempt_idempotency_key: 'owner-route-attempt::dm002::command-postcondition-missing',
+        current_control_command: incompleteCommand,
+      },
+    ],
+  }), 'utf8');
+  writeJsonEmitterScript(exportPath, {
+    surface_kind: 'mas_family_domain_handler_export',
+    workspace: {
+      workspace_root: workspaceRoot,
+      workspace_exists: true,
+    },
+    pending_family_tasks: [],
+  });
+  const env = familyRuntimeEnv(stateRoot, {
+    OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
+  });
+  try {
+    const intake = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+    ], env);
+    const queue = runCli(['family-runtime', 'queue', 'list'], env);
+
+    assert.equal(intake.family_runtime_intake.enqueued_count, 0);
+    assert.equal(intake.family_runtime_intake.blocked_count, 2);
+    assert.deepEqual(
+      intake.family_runtime_intake.exports[0].blocked.map((item: { reason: string }) => item.reason),
+      [
+        'current_control_provider_admission_command_record_missing',
+        'current_control_provider_admission_command_postcondition_missing',
+      ],
+    );
+    assert.equal(queue.family_runtime_queue.tasks.length, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime intake blocks current-control provider candidates with incomplete route attempt identity', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-incomplete-identity-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-incomplete-identity-'));
@@ -919,6 +1181,14 @@ test('family-runtime intake blocks current-control provider candidates with inco
         provider_attempt_or_lease_required: true,
         provider_completion_is_domain_completion: false,
         stage_transition_authority_boundary: providerObservationBoundary(),
+        current_control_command: currentControlCommandOutboxRecord({
+          studyId: '002-dm-china-us-mortality-attribution',
+          actionType: 'return_to_ai_reviewer_workflow',
+          workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+          workUnitFingerprint: 'sha256:missing-route-identity',
+          sourceGeneration: 'truth-event-missing-route',
+          idempotencyKey: 'owner-route-attempt::dm002::missing-route',
+        }),
       },
       {
         status: 'provider_admission_pending',
@@ -937,6 +1207,14 @@ test('family-runtime intake blocks current-control provider candidates with inco
         provider_attempt_or_lease_required: true,
         provider_completion_is_domain_completion: false,
         stage_transition_authority_boundary: providerObservationBoundary(),
+        current_control_command: currentControlCommandOutboxRecord({
+          studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+          actionType: 'return_to_ai_reviewer_workflow',
+          workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+          workUnitFingerprint: 'sha256:missing-attempt-identity',
+          sourceGeneration: 'truth-event-missing-attempt',
+          idempotencyKey: 'owner-route::dm003::missing-attempt',
+        }),
       },
     ],
   }), 'utf8');

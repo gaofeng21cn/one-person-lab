@@ -167,12 +167,20 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   assert.equal(attemptList.authority_boundary.opl_can_create_domain_owner_receipt, false);
   assert.equal(attemptList.authority_boundary.provider_completion_is_domain_ready, false);
 
-  const paperAutonomy = substrate.paper_autonomy_supervisor_substrate_mapping;
+  const domainProgress = substrate.domain_progress_transition_runtime_first_slice;
   assert.equal(
-    paperAutonomy.status,
+    domainProgress.surface_kind,
+    'opl_domain_progress_transition_runtime_first_slice',
+  );
+  assert.equal(
+    domainProgress.status,
     'durable_substrate_first_slice_landed_non_ready',
   );
-  assert.deepEqual(paperAutonomy.allowed_supervisor_decisions, [
+  assert.equal(domainProgress.brand_module_partition.module_count_policy, 'no_new_brand_module');
+  assert.match(domainProgress.brand_module_partition.Runway, /exactly-one transition/);
+  assert.match(domainProgress.brand_module_partition.Pack, /command\/outbox\/event shape/);
+  assert.match(domainProgress.brand_module_partition.Console, /observed_generation/);
+  assert.deepEqual(domainProgress.allowed_transition_decisions, [
     'execute_current_owner_delta',
     'consume_terminal_closeout',
     'materialize_recovery_action',
@@ -180,82 +188,81 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
     'stop_with_stable_typed_blocker',
     'stop_with_owner_receipt',
   ]);
-  assert.equal(paperAutonomy.decision_surface_policy.read_model_can_execute, false);
-  assert.equal(paperAutonomy.decision_surface_policy.observability_can_close_owner_answer, false);
+  assert.equal(domainProgress.decision_surface_policy.read_model_can_execute, false);
+  assert.equal(domainProgress.decision_surface_policy.observability_can_close_owner_answer, false);
   assert.match(
-    paperAutonomy.concepts.RecoveryObligationStore.landed_support,
-    /src\/family-runtime-paper-autonomy\.ts/,
+    domainProgress.concepts.TransitionObligationStore.landed_support,
+    /current_control_command\/outbox record/,
   );
   assert.match(
-    paperAutonomy.concepts.RecoveryObligationStore.landed_support,
-    /identity-bound obligation query\/update plus transition packets/,
+    domainProgress.concepts.TransitionObligationStore.landed_support,
+    /aggregate\/study\/work-unit identity/,
   );
   assert.match(
-    paperAutonomy.concepts.RecoveryObligationStore.landed_support,
-    /append-only physical JSONL obligation store/,
+    domainProgress.concepts.TransitionObligationStore.landed_support,
+    /without domain truth authority/,
   );
-  assert.match(
-    paperAutonomy.concepts.RecoveryObligationStore.landed_support,
-    /paper_autonomy_supervisor_apply/,
-  );
-  assert.equal(paperAutonomy.concepts.RecoveryObligationStore.durable_substrate_first_slice.obligation_store, 'append_only_physical_jsonl_identity_bound');
-  assert.equal(paperAutonomy.concepts.RecoveryObligationStore.durable_substrate_first_slice.closeout_inbox, 'append_only_physical_jsonl_pending_consumed_rejected_identity_bound');
+  assert.equal(domainProgress.concepts.TransitionObligationStore.durable_substrate_first_slice.obligation_store, 'append_only_physical_jsonl_identity_bound');
+  assert.equal(domainProgress.concepts.TransitionObligationStore.durable_substrate_first_slice.closeout_inbox, 'append_only_physical_jsonl_pending_consumed_rejected_identity_bound');
   assert.equal(
-    paperAutonomy.concepts.RecoveryObligationStore.durable_substrate_first_slice.same_identity_redrive_policy,
+    domainProgress.concepts.TransitionObligationStore.durable_substrate_first_slice.same_identity_redrive_policy,
     'fail_closed_when_decision_is_not_current_latest_for_identity',
   );
   assert.match(
-    paperAutonomy.concepts.RecoveryObligationStore.remaining_gap,
+    domainProgress.concepts.TransitionObligationStore.remaining_gap,
     /provider-backed runtime soak/,
   );
   assert.match(
-    paperAutonomy.concepts.SupervisorDecisionEngine.landed_support,
-    /all six decisions/,
+    domainProgress.concepts.TransitionDecisionEngine.landed_support,
+    /DomainProgressTransitionRuntime first slice/,
   );
   assert.match(
-    paperAutonomy.concepts.SupervisorDecisionEngine.landed_support,
-    /append-only physical JSONL supervisor decision ledger/,
+    domainProgress.concepts.TransitionDecisionEngine.landed_support,
+    /command\/outbox identity is required/,
   );
-  assert.equal(paperAutonomy.concepts.SupervisorDecisionEngine.durable_substrate_first_slice.ledger, 'append_only_physical_jsonl');
+  assert.match(
+    domainProgress.concepts.TransitionDecisionEngine.landed_support,
+    /NonAdvancingApply is projected as metadata rather than progress/,
+  );
+  assert.equal(domainProgress.concepts.TransitionDecisionEngine.durable_substrate_first_slice.ledger, 'append_only_physical_jsonl');
   assert.equal(
-    paperAutonomy.concepts.SupervisorDecisionEngine.durable_substrate_first_slice.current_latest_policy,
+    domainProgress.concepts.TransitionDecisionEngine.durable_substrate_first_slice.current_latest_policy,
     'exactly_one_latest_current_decision_per_obligation_identity',
   );
   assert.equal(
-    paperAutonomy.concepts.SupervisorDecisionEngine.durable_substrate_first_slice.queue_empty_terminal_evidence,
+    domainProgress.concepts.TransitionDecisionEngine.durable_substrate_first_slice.queue_empty_terminal_evidence,
     false,
   );
   assert.match(
-    paperAutonomy.concepts.SupervisorDecisionEngine.landed_support,
-    /stop_with_owner_receipt/,
+    domainProgress.concepts.TransitionDecisionEngine.remaining_gap,
+    /end-to-end runtime soak/,
   );
   assert.ok(
-    paperAutonomy.concepts.SupervisorDecisionEngine.required_decision_refs.stop_with_owner_receipt.includes(
+    domainProgress.concepts.TransitionDecisionEngine.required_decision_refs.stop_with_owner_receipt.includes(
       'owner_receipt_ref',
     ),
   );
   assert.equal(
-    paperAutonomy.concepts.SupervisorDecisionEngine.runtime_apply_targets.stop_with_owner_receipt.kind,
+    domainProgress.concepts.TransitionDecisionEngine.runtime_apply_targets.stop_with_owner_receipt.kind,
     'owner_receipt_consumption',
   );
   assert.equal(
-    paperAutonomy.concepts.SupervisorDecisionEngine.runtime_apply_targets.stop_with_owner_receipt.provider_admission_required,
+    domainProgress.concepts.TransitionDecisionEngine.runtime_apply_targets.stop_with_owner_receipt.provider_admission_required,
     false,
   );
   assert.equal(
-    paperAutonomy.concepts.SupervisorDecisionEngine.runtime_apply_targets.stop_with_owner_receipt.authority_boundary.opl_can_create_domain_owner_receipt,
+    domainProgress.concepts.TransitionDecisionEngine.runtime_apply_targets.stop_with_owner_receipt.authority_boundary.opl_can_create_domain_owner_receipt,
     false,
   );
-  assert.match(
-    paperAutonomy.concepts.SupervisorDecisionEngine.landed_support,
-    /current-control provider admission/,
+  assert.equal(
+    domainProgress.concepts.ReadModelMetadataKernel.forbidden_payload.includes('paper_body'),
+    true,
   );
-  assert.match(
-    paperAutonomy.concepts.SupervisorDecisionEngine.remaining_gap,
-    /end-to-end runtime soak/,
-  );
-  assert.ok(paperAutonomy.not_complete_claims.includes(
+  assert.ok(domainProgress.not_complete_claims.includes(
     'execute_decision_runtime_admission_path_does_not_mean_all_six_decisions_have_provider_tick_or_owner_runtime',
+  ));
+  assert.ok(domainProgress.not_complete_claims.includes(
+    'mapping_landed_does_not_mean_domain_progress_transition_runtime_landed',
   ));
 
   assert.equal(

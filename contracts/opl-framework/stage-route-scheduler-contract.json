@@ -219,13 +219,21 @@
       "stable_domain_typed_blocker",
       "diagnostic_or_stale_residue"
     ],
-    "paper_autonomy_supervisor_substrate_mapping": {
-      "surface_kind": "opl_paper_autonomy_supervisor_substrate_mapping",
+    "domain_progress_transition_runtime_first_slice": {
+      "surface_kind": "opl_domain_progress_transition_runtime_first_slice",
       "schema_version": 1,
-      "source_target_design": "human_doc:mas_paper_autonomy_supervisor_target_design",
+      "source_target_design": "human_doc:domain_progress_transition_runtime_target_design",
       "status": "durable_substrate_first_slice_landed_non_ready",
-      "purpose": "Map MAS Paper Autonomy Supervisor target concepts to existing OPL-owned stage-route, current-control, human-gate, state-index, operator, and observability surfaces without creating a second truth source.",
-      "allowed_supervisor_decisions": [
+      "purpose": "Land the minimal generic OPL substrate for domain progress transitions through existing Runway, Pack, Stagecraft, Console, and Vault responsibilities without creating an eleventh brand module or a domain truth source.",
+      "brand_module_partition": {
+        "module_count_policy": "no_new_brand_module",
+        "Runway": "owns current-control intake, provider admission, exactly-one transition choice, NonAdvancingApply, and retry/replay guardrails",
+        "Pack": "owns domain-declared command/outbox/event shape, aggregate identity, expected version, postcondition/outcome, and authority ABI refs",
+        "Stagecraft": "owns StageRun identity, stage packet refs, transition decision vocabulary, and runner/replay semantics",
+        "Console": "owns operator read-model metadata including observed_generation, derived_generation, NonAdvancingApply, and typed blocked reason projection",
+        "Vault": "owns append-only outbox/event/replay refs and evidence retention without domain body authority"
+      },
+      "allowed_transition_decisions": [
         "execute_current_owner_delta",
         "consume_terminal_closeout",
         "materialize_recovery_action",
@@ -282,7 +290,7 @@
           ],
           "authority_boundary": "opl_transports_resume_token_domain_or_human_owner_supplies_answer"
         },
-        "RecoveryObligationStore": {
+        "TransitionObligationStore": {
           "existing_surfaces": [
             "current-owner-delta.schema.json",
             "stage_route_arbiter_substrate_contract.no_progress_budget_contract",
@@ -297,9 +305,9 @@
             "last_evidence_refs",
             "no_progress_budget_state",
             "stale_read_model_lag",
-            "supervisor_decision_ref"
+            "transition_decision_ref"
           ],
-          "landed_support": "src/family-runtime-paper-autonomy.ts exposes identity-bound obligation query/update plus transition packets; src/family-runtime-paper-autonomy-parts/substrate.ts adds an append-only physical JSONL obligation store with identity-bound apply/reject entries, current-control provider admission carries paper_autonomy_supervisor_apply for recovery obligations into queue and StageAttempt locator without MAS truth authority",
+          "landed_support": "current-control provider admission now consumes a generic current_control_command/outbox record, preserves aggregate/study/work-unit identity, and carries transition apply metadata into queue and StageAttempt locator without domain truth authority",
           "durable_substrate_first_slice": {
             "obligation_store": "append_only_physical_jsonl_identity_bound",
             "closeout_inbox": "append_only_physical_jsonl_pending_consumed_rejected_identity_bound",
@@ -313,7 +321,7 @@
           },
           "remaining_gap": "dedicated provider-backed runtime soak and SQLite/index integration are not yet proven by end-to-end runtime soak"
         },
-        "SupervisorDecisionEngine": {
+        "TransitionDecisionEngine": {
           "existing_surfaces": [
             "runway readiness",
             "runway reconcile",
@@ -332,7 +340,7 @@
             "provider_liveness_or_repair_state",
             "observability_refs"
           ],
-          "landed_support": "src/family-runtime-paper-autonomy.ts emits refs-only readback packets for all six decisions including stop_with_owner_receipt; src/family-runtime-paper-autonomy-parts/substrate.ts adds an append-only physical JSONL supervisor decision ledger with exactly-one current latest decision per obligation identity; execute_current_owner_delta additionally materializes a provider-admission transition packet consumed by current-control provider admission, while stop_with_owner_receipt materializes an owner_receipt_consumption transition packet that transports and indexes MAS owner_receipt_ref without OPL signing authority",
+          "landed_support": "DomainProgressTransitionRuntime first slice uses current-control/provider admission as the generic transition consumer: command/outbox identity is required, exactly-one advancing transition is selected per StageRun identity, NonAdvancingApply is projected as metadata rather than progress, and replay fixtures remain refs-only",
           "durable_substrate_first_slice": {
             "ledger": "append_only_physical_jsonl",
             "current_latest_policy": "exactly_one_latest_current_decision_per_obligation_identity",
@@ -345,7 +353,7 @@
               "provider_completion_is_domain_ready": false
             }
           },
-          "remaining_gap": "real MAS owner receipt consumption side effects, human resume token consumption, terminal closeout consumption, and end-to-end runtime soak are not yet proven for all decision classes",
+          "remaining_gap": "real domain owner receipt consumption side effects, human resume token consumption, terminal closeout consumption, and end-to-end runtime soak are not yet proven for all decision classes",
           "required_decision_refs": {
             "execute_current_owner_delta": [
               "current_owner_delta_ref",
@@ -439,7 +447,7 @@
             }
           }
         },
-        "StateIndexKernel": {
+        "ReadModelMetadataKernel": {
           "existing_surfaces": [
             "state-index-kernel-contract.json",
             "index doctor",
@@ -463,7 +471,7 @@
             "paper_body"
           ]
         },
-        "Workbench Shell": {
+        "ConsoleReadModel": {
           "existing_surfaces": [
             "family-product-operator-projection.json",
             "app state --profile fast",
@@ -475,7 +483,7 @@
             "next_safe_action",
             "human_gate_token_state",
             "platform_repair_state",
-            "paper_semantic_delta_state"
+            "domain_progress_transition_state"
           ],
           "drilldown_only": [
             "DHD",
@@ -486,7 +494,7 @@
             "telemetry"
           ]
         },
-        "Observability Plane": {
+        "VaultReplayEvidence": {
           "existing_surfaces": [
             "evidence-vault-event.schema.json",
             "family-product-operator-projection.runtime_observability_export",
@@ -496,10 +504,10 @@
         }
       },
       "not_complete_claims": [
-        "mapping_landed_does_not_mean_supervisor_runtime_landed",
+        "mapping_landed_does_not_mean_domain_progress_transition_runtime_landed",
         "execute_decision_runtime_admission_path_does_not_mean_all_six_decisions_have_provider_tick_or_owner_runtime",
         "human_gate_schema_fields_do_not_mean_human_token_runtime_is_complete",
-        "state_index_projection_does_not_mean_paper_progress",
+        "read_model_projection_does_not_mean_domain_progress",
         "observability_refs_do_not_close_owner_receipt_quality_gate_or_publication_readiness"
       ]
     },
