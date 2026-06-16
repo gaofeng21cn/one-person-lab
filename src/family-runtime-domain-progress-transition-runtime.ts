@@ -244,6 +244,26 @@ function logEntryVersion(entry: Record<string, unknown>) {
     ?? (isRecord(entry.payload) ? numberValue(entry.payload.aggregate_version) : null);
 }
 
+function logEntryPayload(entry: Record<string, unknown>) {
+  return isRecord(entry.payload) ? entry.payload : null;
+}
+
+function logEntryTransactionId(entry: Record<string, unknown>) {
+  return optionalString(entry.transaction_id)
+    ?? (isRecord(entry.payload) ? optionalString(entry.payload.transaction_id) : null);
+}
+
+function entryByKindAndTransaction(
+  entries: Array<Record<string, unknown>>,
+  entryKind: string,
+  transactionId: string | null,
+) {
+  return entries.find((entry) =>
+    optionalString(entry.entry_kind) === entryKind
+    && logEntryTransactionId(entry) === transactionId
+  );
+}
+
 function currentAggregateVersionFromEntries(
   entries: Array<Record<string, unknown>>,
   aggregateIdentity: Record<string, unknown>,
@@ -352,7 +372,12 @@ function humanGateResumeToken(input: {
   return {
     surface_kind: 'opl_domain_progress_human_gate_resume_token',
     runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+    lifecycle_status: 'issued',
     resume_token: `opl://domain-progress-transition/human-gate-resume/${token}`,
+    issued_event_id: input.event.event_id,
+    issued_command_id: input.command.command_id,
+    idempotency_key: input.event.idempotency_key,
+    transition_kind: input.event.transition_kind,
     owner: optionalString(input.command.next_owner) ?? 'human_or_domain_owner',
     allowed_decisions: stringList(input.command.allowed_decisions).length > 0
       ? stringList(input.command.allowed_decisions)
@@ -371,6 +396,124 @@ function humanGateResumeToken(input: {
       provider_completion_is_domain_ready: false,
     },
   };
+}
+
+function humanGateResumeTokenFromEntries(input: {
+  commandEntry: Record<string, unknown> | undefined;
+  eventEntry: Record<string, unknown>;
+  outboxEntry: Record<string, unknown> | undefined;
+}): Record<string, unknown> | null {
+  const event = logEntryPayload(input.eventEntry);
+  if (!event) {
+    return null;
+  }
+  const command = input.commandEntry ? logEntryPayload(input.commandEntry) : null;
+  const outbox = input.outboxEntry ? logEntryPayload(input.outboxEntry) : null;
+  const stageIdentity = isRecord(event.stage_run_identity)
+    ? event.stage_run_identity
+    : isRecord(outbox?.stage_run_identity)
+      ? outbox.stage_run_identity
+      : {};
+  const outcome = isRecord(event.outcome) ? event.outcome : {};
+  const outcomeKind = optionalString(outcome.kind) ?? optionalString(event.transition_kind) ?? '';
+  const storedToken = isRecord(event.human_gate_resume_token)
+    ? event.human_gate_resume_token
+    : isRecord(outbox?.human_gate_resume_token)
+      ? outbox.human_gate_resume_token
+      : null;
+  const computedToken = humanGateResumeToken({
+    command: command ?? {},
+    event,
+    stageIdentity,
+    outcomeKind,
+  });
+  const token = storedToken ?? computedToken;
+  if (!token) {
+    return null;
+  }
+  return {
+    ...token,
+    lifecycle_status: 'issued',
+    aggregate_identity: event.aggregate_identity,
+    issued_transaction_id: logEntryTransactionId(input.eventEntry),
+    issued_aggregate_version: logEntryVersion(input.eventEntry),
+    issued_event_id: optionalString(token.issued_event_id) ?? optionalString(event.event_id),
+    issued_command_id: optionalString(token.issued_command_id) ?? optionalString(command?.command_id),
+    issued_outbox_item_id:
+      optionalString(outbox?.outbox_item_id)
+      ?? optionalString(input.outboxEntry?.outbox_item_id),
+    stage_run_identity: stageIdentity,
+  };
+}
+
+function humanGateTokenConsumptionPayload(entry: Record<string, unknown>): Record<string, unknown> | null {
+  const payload = logEntryPayload(entry);
+  return payload?.surface_kind === 'opl_domain_progress_human_gate_resume_token_consumed_event'
+    ? payload
+    : null;
+}
+
+function humanGateTokenIssuances(input: {
+  log: DomainProgressTransitionRuntimeLog;
+  aggregateIdentity?: Record<string, unknown>;
+}) {
+  return input.log.entries
+    .filter((entry) => optionalString(entry.entry_kind) === 'event')
+    .map((eventEntry) => {
+      const payload = logEntryPayload(eventEntry);
+      if (payload?.surface_kind !== 'opl_domain_progress_transition_event') {
+        return null;
+      }
+      if (input.aggregateIdentity) {
+        const entryAggregateIdentity = logEntryAggregateIdentity(eventEntry);
+        if (
+          !entryAggregateIdentity
+          || !aggregateIdentityMatches(entryAggregateIdentity, input.aggregateIdentity)
+        ) {
+          return null;
+        }
+      }
+      const transactionId = logEntryTransactionId(eventEntry);
+      return humanGateResumeTokenFromEntries({
+        commandEntry: entryByKindAndTransaction(input.log.entries, 'command', transactionId),
+        eventEntry,
+        outboxEntry: entryByKindAndTransaction(input.log.entries, 'outbox_item', transactionId),
+      });
+    })
+    .filter((token): token is Record<string, unknown> => Boolean(token));
+}
+
+function humanGateTokenConsumptionEntries(input: {
+  log: DomainProgressTransitionRuntimeLog;
+  resumeToken: string;
+}) {
+  return input.log.entries
+    .map((entry) => humanGateTokenConsumptionPayload(entry))
+    .filter((payload): payload is Record<string, unknown> => {
+      if (!payload) {
+        return false;
+      }
+      return optionalString(payload.resume_token) === input.resumeToken;
+    });
+}
+
+function latestTransitionEventEntries(input: {
+  log: DomainProgressTransitionRuntimeLog;
+  aggregateIdentity: Record<string, unknown>;
+}) {
+  return input.log.entries.filter((entry) => {
+    if (optionalString(entry.entry_kind) !== 'event') {
+      return false;
+    }
+    const payload = logEntryPayload(entry);
+    if (payload?.surface_kind !== 'opl_domain_progress_transition_event') {
+      return false;
+    }
+    const entryAggregateIdentity = logEntryAggregateIdentity(entry);
+    return entryAggregateIdentity
+      ? aggregateIdentityMatches(entryAggregateIdentity, input.aggregateIdentity)
+      : false;
+  });
 }
 
 export function normalizeDomainProgressTransitionCommand(
@@ -523,6 +666,25 @@ export function buildDomainProgressTransitionRuntimeResult(
     dispatch_allowed: transitionKindValue === 'StartProviderAttempt',
     domain_truth_mutation_allowed: false,
   };
+  const resumeToken = humanGateResumeToken({
+    command,
+    event,
+    stageIdentity,
+    outcomeKind,
+  });
+  const transitionEvent = resumeToken
+    ? {
+      ...event,
+      human_gate_resume_token: resumeToken,
+    }
+    : event;
+  const transactionalOutboxItem = resumeToken
+    ? {
+      ...outboxItem,
+      human_gate_resume_token: resumeToken,
+      human_gate_resume_token_ref: resumeToken.resume_token,
+    }
+    : outboxItem;
   const readModelRebuildMetadata = {
     surface_kind: 'opl_domain_progress_read_model_rebuild_metadata',
     runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
@@ -549,16 +711,16 @@ export function buildDomainProgressTransitionRuntimeResult(
   };
   const logEntries = transitionRuntimeLogEntries({
     command,
-    event,
-    outboxItem,
+    event: transitionEvent,
+    outboxItem: transactionalOutboxItem,
     transactionId,
     aggregateVersion,
   });
   const commandEventLog = createDomainProgressTransitionRuntimeLog(logEntries);
   const readback = idempotencyReadback({
     command,
-    event,
-    outboxItem,
+    event: transitionEvent,
+    outboxItem: transactionalOutboxItem,
     transactionId,
     aggregateVersion,
   });
@@ -569,8 +731,8 @@ export function buildDomainProgressTransitionRuntimeResult(
     brand_module_allocation: DOMAIN_PROGRESS_TRANSITION_RUNTIME_MODULE,
     transaction_id: transactionId,
     command,
-    transition_event: event,
-    transactional_outbox_item: outboxItem,
+    transition_event: transitionEvent,
+    transactional_outbox_item: transactionalOutboxItem,
     transactional_outbox: {
       surface_kind: 'opl_domain_progress_transactional_outbox_commit',
       runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
@@ -581,19 +743,14 @@ export function buildDomainProgressTransitionRuntimeResult(
       outbox_item_id: outboxItemId,
       idempotency_key: command.idempotency_key,
       aggregate_identity: aggregateIdentity,
-      outbox_dedupe_key: outboxItem.outbox_dedupe_key,
+      outbox_dedupe_key: transactionalOutboxItem.outbox_dedupe_key,
       jsonl_entry_kinds: ['command', 'event', 'outbox_item'],
     },
     command_event_log: commandEventLog,
     idempotency_readback: readback,
     projection_metadata: projectionMetadata,
     read_model_rebuild_metadata: readModelRebuildMetadata,
-    human_gate_resume_token: humanGateResumeToken({
-      command,
-      event,
-      stageIdentity,
-      outcomeKind,
-    }),
+    human_gate_resume_token: resumeToken,
     replay_evidence: {
       surface_kind: 'opl_domain_progress_replay_evidence',
       replay_status: 'exactly_one_transition',
@@ -711,6 +868,307 @@ export function readDomainProgressTransitionIdempotency(input: {
       && outboxEntry
       && optionalString(eventEntry.transaction_id) === optionalString(outboxEntry.transaction_id),
     ),
+  };
+}
+
+export function readDomainProgressHumanGateResumeToken(input: {
+  log: DomainProgressTransitionRuntimeLog;
+  resumeToken: string;
+}) {
+  const issued = humanGateTokenIssuances({ log: input.log })
+    .find((token) => optionalString(token.resume_token) === input.resumeToken) ?? null;
+  const consumed = humanGateTokenConsumptionEntries({
+    log: input.log,
+    resumeToken: input.resumeToken,
+  }).at(-1) ?? null;
+  const lifecycleStatus = consumed ? 'consumed' : issued ? 'issued' : 'missing';
+  return {
+    surface_kind: 'opl_domain_progress_human_gate_resume_token_readback',
+    runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+    resume_token: input.resumeToken,
+    found: Boolean(issued),
+    lifecycle_status: lifecycleStatus,
+    issued_event_id: issued ? optionalString(issued.issued_event_id) : null,
+    issued_command_id: issued ? optionalString(issued.issued_command_id) : null,
+    issued_outbox_item_id: issued ? optionalString(issued.issued_outbox_item_id) : null,
+    consumed_event_id: consumed ? optionalString(consumed.event_id) : null,
+    consumed_outbox_item_id: consumed
+      ? optionalString(consumed.issued_outbox_item_id)
+      : issued
+        ? optionalString(issued.issued_outbox_item_id)
+        : null,
+    consumption_transaction_id: consumed ? optionalString(consumed.transaction_id) : null,
+    owner: issued ? optionalString(issued.owner) : null,
+    allowed_decisions: issued && Array.isArray(issued.allowed_decisions) ? issued.allowed_decisions : [],
+    decision: consumed ? optionalString(consumed.decision) : null,
+    evidence_ref: consumed ? optionalString(consumed.evidence_ref) : null,
+    aggregate_identity: issued && isRecord(issued.aggregate_identity) ? issued.aggregate_identity : null,
+    stage_run_identity: issued && isRecord(issued.stage_run_identity) ? issued.stage_run_identity : null,
+    authority_boundary: issued && isRecord(issued.authority_boundary) ? issued.authority_boundary : null,
+  };
+}
+
+export function consumeDomainProgressHumanGateResumeToken(input: {
+  log: DomainProgressTransitionRuntimeLog;
+  resumeToken: string;
+  decision: string;
+  evidenceRef: string;
+  consumedBy: string;
+}) {
+  const tokenReadback = readDomainProgressHumanGateResumeToken({
+    log: input.log,
+    resumeToken: input.resumeToken,
+  });
+  if (!tokenReadback.found) {
+    return {
+      surface_kind: 'opl_domain_progress_human_gate_resume_token_consume_result',
+      runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+      consumption_status: 'blocked',
+      blocked: {
+        reason: 'human_gate_resume_token_not_found',
+        resume_token: input.resumeToken,
+      },
+      appended: false,
+      idempotent_replay: false,
+      log: input.log,
+      token_readback: tokenReadback,
+      non_advancing_apply: {
+        surface_kind: 'opl_domain_progress_non_advancing_apply',
+        runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+        reason: 'human_gate_resume_token_not_found',
+        typed_blocker_ref: stableId('dptb', [input.resumeToken, 'not_found']),
+      },
+    };
+  }
+  if (tokenReadback.lifecycle_status === 'consumed') {
+    return {
+      surface_kind: 'opl_domain_progress_human_gate_resume_token_consume_result',
+      runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+      consumption_status: 'already_consumed',
+      appended: false,
+      idempotent_replay: true,
+      log: input.log,
+      token_readback: tokenReadback,
+      non_advancing_apply: {
+        surface_kind: 'opl_domain_progress_non_advancing_apply',
+        runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+        reason: 'human_gate_resume_token_already_consumed',
+        typed_blocker_ref: stableId('dptb', [input.resumeToken, tokenReadback.consumed_event_id]),
+      },
+    };
+  }
+  const allowedDecisions = tokenReadback.allowed_decisions
+    .filter((decision: unknown): decision is string => typeof decision === 'string');
+  if (!allowedDecisions.includes(input.decision)) {
+    return {
+      surface_kind: 'opl_domain_progress_human_gate_resume_token_consume_result',
+      runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+      consumption_status: 'blocked',
+      blocked: {
+        reason: 'human_gate_resume_token_decision_not_allowed',
+        resume_token: input.resumeToken,
+        decision: input.decision,
+        allowed_decisions: allowedDecisions,
+      },
+      appended: false,
+      idempotent_replay: false,
+      log: input.log,
+      token_readback: tokenReadback,
+      non_advancing_apply: {
+        surface_kind: 'opl_domain_progress_non_advancing_apply',
+        runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+        reason: 'human_gate_resume_token_decision_not_allowed',
+        typed_blocker_ref: stableId('dptb', [input.resumeToken, input.decision, 'not_allowed']),
+      },
+    };
+  }
+  const aggregateIdentity = isRecord(tokenReadback.aggregate_identity) ? tokenReadback.aggregate_identity : {};
+  const stageIdentity = isRecord(tokenReadback.stage_run_identity) ? tokenReadback.stage_run_identity : {};
+  const eventId = stableId('dpthgc', [
+    input.resumeToken,
+    tokenReadback.issued_event_id,
+    input.decision,
+    input.evidenceRef,
+  ]);
+  const transactionId = stableId('dptx', [eventId, input.resumeToken, tokenReadback.issued_outbox_item_id]);
+  const aggregateVersion = currentAggregateVersionFromEntries(input.log.entries, aggregateIdentity);
+  const consumptionEvent = {
+    surface_kind: 'opl_domain_progress_human_gate_resume_token_consumed_event',
+    runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+    event_id: eventId,
+    transaction_id: transactionId,
+    resume_token: input.resumeToken,
+    decision: input.decision,
+    evidence_ref: input.evidenceRef,
+    consumed_by: input.consumedBy,
+    lifecycle_status: 'consumed',
+    issued_event_id: tokenReadback.issued_event_id,
+    issued_command_id: tokenReadback.issued_command_id,
+    issued_outbox_item_id: tokenReadback.issued_outbox_item_id,
+    aggregate_identity: aggregateIdentity,
+    aggregate_version: aggregateVersion,
+    stage_run_identity: stageIdentity,
+    authority_boundary: {
+      opl_records_resume_token_consumption: true,
+      opl_can_create_domain_owner_receipt: false,
+      opl_can_create_domain_typed_blocker: false,
+      provider_completion_is_domain_ready: false,
+    },
+  };
+  const consumptionEntry = {
+    surface_kind: 'opl_domain_progress_transition_log_entry',
+    runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+    transaction_id: transactionId,
+    aggregate_identity: aggregateIdentity,
+    aggregate_version: aggregateVersion,
+    entry_kind: 'human_gate_resume_token_consumed',
+    sequence_in_transaction: 0,
+    event_id: eventId,
+    payload_ref: `opl://domain-progress-transition/human-gate-resume-consumptions/${encodeURIComponent(eventId)}`,
+    payload: consumptionEvent,
+    jsonl_friendly: true,
+    body_fields_included: false,
+  };
+  const log = createDomainProgressTransitionRuntimeLog([
+    ...input.log.entries,
+    consumptionEntry,
+  ]);
+  const consumedReadback = readDomainProgressHumanGateResumeToken({
+    log,
+    resumeToken: input.resumeToken,
+  });
+  return {
+    surface_kind: 'opl_domain_progress_human_gate_resume_token_consume_result',
+    runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+    consumption_status: 'consumed',
+    appended: true,
+    idempotent_replay: false,
+    log,
+    appended_entries: [consumptionEntry],
+    consumption_event: consumptionEvent,
+    token_readback: consumedReadback,
+  };
+}
+
+export function rebuildDomainProgressTransitionReadModel(input: {
+  log: DomainProgressTransitionRuntimeLog;
+  aggregateIdentity: Record<string, unknown>;
+}) {
+  const eventEntries = latestTransitionEventEntries(input);
+  const latestEventEntry = eventEntries.at(-1) ?? null;
+  const latestEvent = latestEventEntry ? logEntryPayload(latestEventEntry) : null;
+  const latestTransactionId = latestEventEntry ? logEntryTransactionId(latestEventEntry) : null;
+  const latestCommandEntry = latestTransactionId
+    ? entryByKindAndTransaction(input.log.entries, 'command', latestTransactionId)
+    : undefined;
+  const latestOutboxEntry = latestTransactionId
+    ? entryByKindAndTransaction(input.log.entries, 'outbox_item', latestTransactionId)
+    : undefined;
+  const latestCommand = latestCommandEntry ? logEntryPayload(latestCommandEntry) : null;
+  const latestOutbox = latestOutboxEntry ? logEntryPayload(latestOutboxEntry) : null;
+  const latestEventId = latestEvent ? optionalString(latestEvent.event_id) : null;
+  const latestOutboxItemId = latestOutbox
+    ? optionalString(latestOutbox.outbox_item_id)
+    : latestOutboxEntry
+      ? optionalString(latestOutboxEntry.outbox_item_id)
+      : null;
+  const aggregateVersion = currentAggregateVersionFromEntries(input.log.entries, input.aggregateIdentity);
+  const sourceEventIds = eventEntries
+    .map((entry) => optionalString(entry.event_id) ?? optionalString(logEntryPayload(entry)?.event_id))
+    .filter((eventId): eventId is string => Boolean(eventId));
+  const sourceOutboxItemIds = eventEntries
+    .map((entry) => {
+      const outboxEntry = entryByKindAndTransaction(input.log.entries, 'outbox_item', logEntryTransactionId(entry));
+      return optionalString(outboxEntry?.outbox_item_id) ?? optionalString(logEntryPayload(outboxEntry ?? {})?.outbox_item_id);
+    })
+    .filter((outboxItemId): outboxItemId is string => Boolean(outboxItemId));
+  const latestIssuedToken = humanGateTokenIssuances({
+    log: input.log,
+    aggregateIdentity: input.aggregateIdentity,
+  }).at(-1) ?? null;
+  const latestTokenReadback = latestIssuedToken
+    ? readDomainProgressHumanGateResumeToken({
+      log: input.log,
+      resumeToken: String(latestIssuedToken['resume_token']),
+    })
+    : null;
+  const observedGeneration = latestEvent
+    ? optionalScalarString(latestEvent.source_generation)
+    : null;
+  const derivedGeneration = latestEvent
+    ? optionalScalarString(latestEvent.expected_version)
+    : null;
+  const readModelRebuildMetadata = {
+    surface_kind: 'opl_domain_progress_read_model_rebuild_metadata',
+    runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+    authority: false,
+    rebuild_owner: 'one-person-lab',
+    rebuild_cursor: latestEventId,
+    derived_from_event_id: latestEventId,
+    source_event_ids: sourceEventIds,
+    source_outbox_item_ids: sourceOutboxItemIds,
+    observed_generation: observedGeneration,
+    derived_generation: derivedGeneration,
+    aggregate_version: aggregateVersion,
+    body_fields_included: false,
+  };
+  const projectionMetadata = {
+    surface_kind: 'opl_domain_progress_projection_metadata',
+    runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+    authority: false,
+    derived_from_event_id: latestEventId,
+    observed_generation: observedGeneration,
+    derived_generation: derivedGeneration,
+    lag_status: latestEvent ? 'current' : 'empty',
+    read_model_rebuild_owner: 'one-person-lab',
+    read_model_rebuild_metadata: readModelRebuildMetadata,
+  };
+  return {
+    surface_kind: 'opl_domain_progress_transition_read_model',
+    runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+    authority: false,
+    aggregate_identity: input.aggregateIdentity,
+    aggregate_version: aggregateVersion,
+    transition_count: eventEntries.length,
+    projection_metadata: projectionMetadata,
+    read_model_rebuild_metadata: readModelRebuildMetadata,
+    latest_transition_identity: latestEvent
+      ? {
+        event_id: latestEventId,
+        command_id: optionalString(latestEvent.command_id),
+        transition_kind: optionalString(latestEvent.transition_kind),
+        idempotency_key: optionalString(latestEvent.idempotency_key),
+        aggregate_version: logEntryVersion(latestEventEntry ?? {}),
+      }
+      : null,
+    latest_transaction_identity: latestEvent
+      ? {
+        transaction_id: latestTransactionId,
+        command_id: optionalString(latestCommand?.command_id),
+        event_id: latestEventId,
+        outbox_item_id: latestOutboxItemId,
+        same_transaction_event_and_outbox: Boolean(
+          latestEventEntry
+          && latestOutboxEntry
+          && logEntryTransactionId(latestEventEntry) === logEntryTransactionId(latestOutboxEntry),
+        ),
+      }
+      : null,
+    latest_outbox_identity: latestOutbox
+      ? {
+        outbox_item_id: latestOutboxItemId,
+        outbox_kind: optionalString(latestOutbox.outbox_kind),
+        outbox_dedupe_key: optionalString(latestOutbox.outbox_dedupe_key),
+        transition_event_id: optionalString(latestOutbox.transition_event_id),
+      }
+      : null,
+    latest_stage_run_identity:
+      latestEvent && isRecord(latestEvent.stage_run_identity)
+        ? latestEvent.stage_run_identity
+        : latestOutbox && isRecord(latestOutbox.stage_run_identity)
+          ? latestOutbox.stage_run_identity
+          : null,
+    latest_human_gate_resume_token: latestTokenReadback,
   };
 }
 
@@ -850,14 +1308,55 @@ export function replayDomainProgressTransitionTrace(input: {
   steps: Array<{
     command: Record<string, unknown>;
     observed_outcome?: Record<string, unknown> | null;
+    consume_human_gate_resume?: {
+      decision: string;
+      evidence_ref: string;
+      consumed_by: string;
+    };
   }>;
 }) {
+  let log = createDomainProgressTransitionRuntimeLog();
   const reconciles = input.steps.map((step) => {
-    return reconcileDomainProgressTransitionFixedPoint({
+    const reconcile = reconcileDomainProgressTransitionFixedPoint({
       command: step.command,
       observations: [step.observed_outcome],
       reason: 'replay_step_has_no_stable_outcome',
     });
+    const appended = appendDomainProgressTransitionRuntimeResult({
+      log,
+      result: reconcile.result,
+    });
+    log = appended.log;
+    let humanGateResumeTokenReadback: ReturnType<typeof readDomainProgressHumanGateResumeToken> | null = null;
+    let readModelAfterHumanGateResume: ReturnType<typeof rebuildDomainProgressTransitionReadModel> | null = null;
+    if (step.consume_human_gate_resume) {
+      const token = isRecord(appended.result.human_gate_resume_token)
+        ? optionalString(appended.result.human_gate_resume_token.resume_token)
+        : null;
+      if (token) {
+        const consumed = consumeDomainProgressHumanGateResumeToken({
+          log,
+          resumeToken: token,
+          decision: step.consume_human_gate_resume.decision,
+          evidenceRef: step.consume_human_gate_resume.evidence_ref,
+          consumedBy: step.consume_human_gate_resume.consumed_by,
+        });
+        log = consumed.log;
+        humanGateResumeTokenReadback = consumed.token_readback;
+        const aggregateIdentity = isRecord(appended.result.transition_event.aggregate_identity)
+          ? appended.result.transition_event.aggregate_identity
+          : {};
+        readModelAfterHumanGateResume = rebuildDomainProgressTransitionReadModel({
+          log,
+          aggregateIdentity,
+        });
+      }
+    }
+    return {
+      ...reconcile,
+      human_gate_resume_token_readback: humanGateResumeTokenReadback,
+      read_model_after_human_gate_resume: readModelAfterHumanGateResume,
+    };
   });
   const results = reconciles.map((reconcile) => reconcile.result);
   const stepEvidence = reconciles.map((reconcile, index) => ({
@@ -868,6 +1367,12 @@ export function replayDomainProgressTransitionTrace(input: {
     event_id: reconcile.evidence.event_id,
     outbox_item_id: reconcile.evidence.outbox_item_id,
     stable_observation_kind: reconcile.evidence.stable_observation_kind,
+    human_gate_resume_token_consumed:
+      reconcile.human_gate_resume_token_readback?.lifecycle_status === 'consumed',
+    read_model_rebuilt_after_human_gate_resume:
+      reconcile.read_model_after_human_gate_resume?.latest_human_gate_resume_token?.lifecycle_status === 'consumed',
+    read_model_derived_from_event_id:
+      reconcile.read_model_after_human_gate_resume?.read_model_rebuild_metadata.derived_from_event_id ?? null,
   }));
   return {
     surface_kind: 'opl_domain_progress_transition_replay',
@@ -887,8 +1392,14 @@ export function replayDomainProgressTransitionTrace(input: {
         && (SUPPORTED_TRANSITIONS.has(step.transition_kind) || step.transition_kind === 'NonAdvancingApply')
       ),
       non_advancing_apply_count: stepEvidence.filter((step) => step.non_advancing_apply).length,
+      human_gate_resume_consumption_count: stepEvidence
+        .filter((step) => step.human_gate_resume_token_consumed).length,
       step_evidence: stepEvidence,
     },
+    command_event_log: log,
+    read_model_rebuilds: reconciles
+      .map((reconcile) => reconcile.read_model_after_human_gate_resume)
+      .filter((readModel): readModel is NonNullable<typeof readModel> => Boolean(readModel)),
     results,
   };
 }

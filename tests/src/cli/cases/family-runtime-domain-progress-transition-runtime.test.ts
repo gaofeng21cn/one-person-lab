@@ -15,12 +15,15 @@ import {
   buildNonAdvancingApplyRuntimeResult,
   appendDomainProgressTransitionRuntimeResult,
   appendDomainProgressTransitionRuntimeResultJsonl,
+  consumeDomainProgressHumanGateResumeToken,
   createDomainProgressTransitionRuntimeLog,
   currentDomainProgressTransitionAggregateVersion,
   normalizeDomainProgressTransitionCommand,
+  readDomainProgressHumanGateResumeToken,
   readDomainProgressTransitionIdempotency,
   readDomainProgressTransitionIdempotencyJsonl,
   readDomainProgressTransitionRuntimeLogJsonl,
+  rebuildDomainProgressTransitionReadModel,
   reconcileDomainProgressTransitionFixedPoint,
   replayDomainProgressTransitionTrace,
 } from '../../../../src/family-runtime-domain-progress-transition-runtime.ts';
@@ -181,6 +184,80 @@ test('DomainProgressTransitionRuntime persists append-only JSONL log and replays
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('DomainProgressTransitionRuntime rebuilds read model from append-only command/event/outbox log', () => {
+  const command = normalizeDomainProgressTransitionCommand(currentControlCommandOutboxRecord({
+    studyId: '002-dm-china-us-mortality-attribution',
+    actionType: 'return_to_ai_reviewer_workflow',
+    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    workUnitFingerprint: 'sha256:read-model-rebuild',
+    sourceGeneration: 'truth-event-read-model-rebuild-1',
+    idempotencyKey: 'owner-route-attempt::dm002::read-model-rebuild-1',
+  }), {
+    studyId: '002-dm-china-us-mortality-attribution',
+    actionType: 'return_to_ai_reviewer_workflow',
+    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    workUnitFingerprint: 'sha256:read-model-rebuild',
+    nextOwner: 'ai_reviewer',
+  }).command!;
+  const first = appendDomainProgressTransitionRuntimeResult({
+    log: createDomainProgressTransitionRuntimeLog(),
+    result: reconcileDomainProgressTransitionFixedPoint({
+      command,
+      observations: [{ kind: 'provider_admission_accepted' }],
+    }).result,
+  });
+  const secondCommand = normalizeDomainProgressTransitionCommand({
+    surface_kind: 'opl_generic_current_control_command_outbox_record',
+    runtime_kind: 'DomainProgressTransitionRuntime',
+    command_kind: 'RecordTypedBlocker',
+    aggregate_identity: command.aggregate_identity,
+    action_type: 'return_to_ai_reviewer_workflow',
+    next_owner: 'ai_reviewer',
+    idempotency_key: 'owner-route-attempt::dm002::read-model-rebuild-2',
+    source_generation: 'truth-event-read-model-rebuild-2',
+    expected_version: 'truth-event-read-model-rebuild-2',
+    postcondition: {
+      kind: 'typed_blocker_ref',
+      outcome_owner: 'one-person-lab',
+      domain_state_owner: 'med-autoscience',
+    },
+  }, {
+    studyId: '002-dm-china-us-mortality-attribution',
+    actionType: 'return_to_ai_reviewer_workflow',
+    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    workUnitFingerprint: 'sha256:read-model-rebuild',
+    nextOwner: 'ai_reviewer',
+  }).command!;
+  const second = appendDomainProgressTransitionRuntimeResult({
+    log: first.log,
+    result: reconcileDomainProgressTransitionFixedPoint({
+      command: secondCommand,
+      observations: [{ kind: 'typed_blocker_ref', typed_blocker_ref: 'typed-blocker:dm002/read-model-rebuild' }],
+    }).result,
+  });
+  const readModel = rebuildDomainProgressTransitionReadModel({
+    log: second.log,
+    aggregateIdentity: command.aggregate_identity as Record<string, unknown>,
+  });
+
+  assert.equal(readModel.surface_kind, 'opl_domain_progress_transition_read_model');
+  assert.equal(readModel.aggregate_version, 2);
+  assert.ok(readModel.latest_transition_identity);
+  assert.ok(readModel.latest_outbox_identity);
+  assert.ok(readModel.latest_stage_run_identity);
+  assert.ok(readModel.latest_transaction_identity);
+  assert.equal(readModel.latest_transition_identity.event_id, second.result.transition_event.event_id);
+  assert.equal(readModel.latest_transition_identity.transition_kind, 'RecordTypedBlocker');
+  assert.equal(readModel.latest_outbox_identity.outbox_item_id, second.result.transactional_outbox_item.outbox_item_id);
+  assert.equal(readModel.latest_stage_run_identity.stage_run_id, (secondCommand.stage_run_identity as Record<string, unknown>).stage_run_id);
+  assert.equal(readModel.projection_metadata.authority, false);
+  assert.equal(readModel.projection_metadata.derived_from_event_id, second.result.transition_event.event_id);
+  assert.equal(readModel.projection_metadata.observed_generation, 'truth-event-read-model-rebuild-2');
+  assert.equal(readModel.projection_metadata.lag_status, 'current');
+  assert.equal(readModel.read_model_rebuild_metadata.derived_from_event_id, second.result.transition_event.event_id);
+  assert.equal(readModel.latest_transaction_identity.same_transaction_event_and_outbox, true);
 });
 
 test('DomainProgressTransitionRuntime normalizes MAS policy request without accepting legacy supervisor apply alias', () => {
@@ -348,6 +425,146 @@ test('DomainProgressTransitionRuntime fixed-point helper chooses exactly one tra
   assert.equal(record(resumeToken.authority_boundary).opl_can_supply_human_answer, false);
   assert.equal(nonAdvancing.non_advancing_apply, true);
   assert.equal(nonAdvancing.result.transition_event.transition_kind, 'NonAdvancingApply');
+});
+
+test('DomainProgressTransitionRuntime stores, reads back, consumes, and idempotently replays human gate resume token', () => {
+  const command = normalizeDomainProgressTransitionCommand({
+    surface_kind: 'opl_generic_current_control_command_outbox_record',
+    runtime_kind: 'DomainProgressTransitionRuntime',
+    command_kind: 'OpenHumanGate',
+    aggregate_identity: {
+      aggregate_kind: 'study_work_unit',
+      aggregate_id: '003-dpcc-primary-care-phenotype-treatment-gap::human_gate_resume',
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      work_unit_id: 'human_gate_resume',
+      work_unit_fingerprint: 'sha256:human-gate-resume',
+    },
+    action_type: 'manual_owner_decision',
+    next_owner: 'human_operator',
+    idempotency_key: 'owner-route-attempt::dm003::human-gate-resume',
+    source_generation: 'truth-event-human-gate-resume',
+    expected_version: 'truth-event-human-gate-resume',
+    postcondition: {
+      kind: 'human_gate_ref',
+      outcome_owner: 'one-person-lab',
+      domain_state_owner: 'med-autoscience',
+    },
+    allowed_decisions: ['approve', 'route_back'],
+  }, {
+    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+    actionType: 'manual_owner_decision',
+    workUnitId: 'human_gate_resume',
+    workUnitFingerprint: 'sha256:human-gate-resume',
+    nextOwner: 'human_operator',
+  }).command!;
+  const appended = appendDomainProgressTransitionRuntimeResult({
+    log: createDomainProgressTransitionRuntimeLog(),
+    result: reconcileDomainProgressTransitionFixedPoint({
+      command,
+      observations: [{ kind: 'human_gate_ref', human_gate_ref: 'human-gate:dm003/resume' }],
+    }).result,
+  });
+  const token = appended.result.human_gate_resume_token as Record<string, unknown>;
+  const issuedReadback = readDomainProgressHumanGateResumeToken({
+    log: appended.log,
+    resumeToken: String(token.resume_token),
+  });
+
+  assert.equal(issuedReadback.found, true);
+  assert.equal(issuedReadback.lifecycle_status, 'issued');
+  assert.equal(issuedReadback.issued_event_id, appended.result.transition_event.event_id);
+  assert.equal(issuedReadback.issued_outbox_item_id, appended.result.transactional_outbox_item.outbox_item_id);
+  assert.ok(issuedReadback.stage_run_identity);
+  assert.equal(issuedReadback.stage_run_identity.stage_run_id, (command.stage_run_identity as Record<string, unknown>).stage_run_id);
+
+  const consumed = consumeDomainProgressHumanGateResumeToken({
+    log: appended.log,
+    resumeToken: String(token.resume_token),
+    decision: 'approve',
+    evidenceRef: 'owner-answer:dm003/human-gate-resume',
+    consumedBy: 'human_operator',
+  });
+  assert.equal(consumed.consumption_status, 'consumed');
+  assert.equal(consumed.appended, true);
+  assert.equal(consumed.token_readback.lifecycle_status, 'consumed');
+  assert.ok(consumed.consumption_event);
+  assert.equal(consumed.token_readback.consumed_event_id, consumed.consumption_event.event_id);
+  assert.equal(consumed.token_readback.consumed_outbox_item_id, appended.result.transactional_outbox_item.outbox_item_id);
+  assert.ok(consumed.token_readback.stage_run_identity);
+  assert.equal(consumed.token_readback.stage_run_identity.stage_run_id, (command.stage_run_identity as Record<string, unknown>).stage_run_id);
+
+  const repeated = consumeDomainProgressHumanGateResumeToken({
+    log: consumed.log,
+    resumeToken: String(token.resume_token),
+    decision: 'approve',
+    evidenceRef: 'owner-answer:dm003/human-gate-resume',
+    consumedBy: 'human_operator',
+  });
+  assert.equal(repeated.consumption_status, 'already_consumed');
+  assert.equal(repeated.idempotent_replay, true);
+  assert.equal(repeated.appended, false);
+  assert.equal(repeated.log.entries.length, consumed.log.entries.length);
+
+  const readModel = rebuildDomainProgressTransitionReadModel({
+    log: consumed.log,
+    aggregateIdentity: command.aggregate_identity as Record<string, unknown>,
+  });
+  assert.ok(readModel.latest_human_gate_resume_token);
+  assert.equal(readModel.latest_human_gate_resume_token.lifecycle_status, 'consumed');
+  assert.equal(readModel.latest_human_gate_resume_token.consumed_event_id, consumed.consumption_event.event_id);
+});
+
+test('DomainProgressTransitionRuntime replay consumes human resume token and rebuilds read model', () => {
+  const command = normalizeDomainProgressTransitionCommand({
+    surface_kind: 'opl_generic_current_control_command_outbox_record',
+    runtime_kind: 'DomainProgressTransitionRuntime',
+    command_kind: 'OpenHumanGate',
+    aggregate_identity: {
+      aggregate_kind: 'study_work_unit',
+      aggregate_id: '003-dpcc-primary-care-phenotype-treatment-gap::human_gate_replay_resume',
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      work_unit_id: 'human_gate_replay_resume',
+      work_unit_fingerprint: 'sha256:human-gate-replay-resume',
+    },
+    action_type: 'manual_owner_decision',
+    next_owner: 'human_operator',
+    idempotency_key: 'owner-route-attempt::dm003::human-gate-replay-resume',
+    source_generation: 'truth-event-human-gate-replay-resume',
+    expected_version: 'truth-event-human-gate-replay-resume',
+    postcondition: {
+      kind: 'human_gate_ref',
+      outcome_owner: 'one-person-lab',
+      domain_state_owner: 'med-autoscience',
+    },
+    allowed_decisions: ['approve', 'route_back'],
+  }, {
+    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+    actionType: 'manual_owner_decision',
+    workUnitId: 'human_gate_replay_resume',
+    workUnitFingerprint: 'sha256:human-gate-replay-resume',
+    nextOwner: 'human_operator',
+  }).command!;
+  const replay = replayDomainProgressTransitionTrace({
+    traceId: 'dm003-human-gate-resume-token-consumed',
+    steps: [
+      {
+        command,
+        observed_outcome: { kind: 'human_gate_ref', human_gate_ref: 'human-gate:dm003/replay-resume' },
+        consume_human_gate_resume: {
+          decision: 'approve',
+          evidence_ref: 'owner-answer:dm003/human-gate-replay-resume',
+          consumed_by: 'human_operator',
+        },
+      },
+    ],
+  });
+
+  assert.equal(replay.replay_status, 'accepted');
+  assert.equal(replay.replay_evidence.human_gate_resume_consumption_count, 1);
+  assert.equal(replay.replay_evidence.step_evidence[0].human_gate_resume_token_consumed, true);
+  assert.equal(replay.replay_evidence.step_evidence[0].read_model_rebuilt_after_human_gate_resume, true);
+  assert.equal(replay.read_model_rebuilds[0].latest_human_gate_resume_token?.lifecycle_status, 'consumed');
+  assert.equal(replay.read_model_rebuilds[0].projection_metadata.derived_from_event_id, replay.results[0].transition_event.event_id);
 });
 
 test('family-runtime intake exposes OPL transition event, outbox, and read-model metadata for provider admission', () => {
