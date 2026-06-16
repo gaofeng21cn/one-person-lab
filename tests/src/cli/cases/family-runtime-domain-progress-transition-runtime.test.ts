@@ -6,13 +6,19 @@ import {
   os,
   path,
   providerObservationBoundary,
+  record,
   runCli,
   test,
   writeJsonEmitterScript,
 } from './family-runtime-current-control-provider-admission-cases/shared.ts';
 import {
   buildNonAdvancingApplyRuntimeResult,
+  appendDomainProgressTransitionRuntimeResult,
+  createDomainProgressTransitionRuntimeLog,
+  currentDomainProgressTransitionAggregateVersion,
   normalizeDomainProgressTransitionCommand,
+  readDomainProgressTransitionIdempotency,
+  reconcileDomainProgressTransitionFixedPoint,
   replayDomainProgressTransitionTrace,
 } from '../../../../src/family-runtime-domain-progress-transition-runtime.ts';
 
@@ -52,9 +58,67 @@ test('DomainProgressTransitionRuntime normalizes MAS command into exactly-one ev
 
   assert.equal(result.transition_event.transition_kind, 'NonAdvancingApply');
   assert.equal(result.transition_event.exactly_one_transition, true);
+  assert.equal(result.transactional_outbox.committed_together, true);
+  assert.equal(result.transactional_outbox.event_id, result.transition_event.event_id);
+  assert.equal(result.transactional_outbox.outbox_item_id, result.transactional_outbox_item.outbox_item_id);
+  assert.equal(result.idempotency_readback.same_transaction_event_and_outbox, true);
+  assert.equal(result.read_model_rebuild_metadata.derived_from_event_id, result.transition_event.event_id);
   assert.equal(result.replay_evidence.non_advancing_apply, true);
   assert.equal(result.projection_metadata.authority, false);
   assert.equal(result.projection_metadata.derived_from_event_id, result.transition_event.event_id);
+});
+
+test('DomainProgressTransitionRuntime appends JSONL-friendly command/event/outbox log with aggregate version and idempotency readback', () => {
+  const command = normalizeDomainProgressTransitionCommand(currentControlCommandOutboxRecord({
+    studyId: '002-dm-china-us-mortality-attribution',
+    actionType: 'return_to_ai_reviewer_workflow',
+    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    workUnitFingerprint: 'sha256:append-log',
+    sourceGeneration: 'truth-event-append-log',
+    idempotencyKey: 'owner-route-attempt::dm002::append-log',
+  }), {
+    studyId: '002-dm-china-us-mortality-attribution',
+    actionType: 'return_to_ai_reviewer_workflow',
+    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    workUnitFingerprint: 'sha256:append-log',
+    nextOwner: 'ai_reviewer',
+  }).command!;
+
+  const first = appendDomainProgressTransitionRuntimeResult({
+    log: createDomainProgressTransitionRuntimeLog(),
+    result: reconcileDomainProgressTransitionFixedPoint({
+      command,
+      observations: [{ kind: 'provider_admission_accepted' }],
+    }).result,
+  });
+  const secondCommand = {
+    ...command,
+    idempotency_key: 'owner-route-attempt::dm002::append-log-repeat',
+    command_id: 'dptc_repeat',
+    expected_version: 'truth-event-append-log-repeat',
+  };
+  const second = appendDomainProgressTransitionRuntimeResult({
+    log: first.log,
+    result: reconcileDomainProgressTransitionFixedPoint({
+      command: secondCommand,
+      observations: [{ kind: 'typed_blocker_ref', typed_blocker_ref: 'typed-blocker:dm002/blocked' }],
+    }).result,
+  });
+  const readback = readDomainProgressTransitionIdempotency({
+    log: second.log,
+    idempotencyKey: 'owner-route-attempt::dm002::append-log',
+  });
+
+  assert.equal(first.appended_entry_count, 3);
+  assert.equal(second.current_aggregate_version, 2);
+  assert.equal(currentDomainProgressTransitionAggregateVersion({
+    log: second.log,
+    aggregateIdentity: command.aggregate_identity as Record<string, unknown>,
+  }), 2);
+  assert.equal(readback.found, true);
+  assert.equal(readback.current_aggregate_version, 2);
+  assert.equal(readback.same_transaction_event_and_outbox, true);
+  assert.equal(second.log.storage_contract, 'jsonl_friendly_append_only');
 });
 
 test('DomainProgressTransitionRuntime normalizes MAS policy request without accepting legacy supervisor apply alias', () => {
@@ -170,7 +234,58 @@ test('DomainProgressTransitionRuntime replay accepts stable steps and records No
   assert.equal(replay.replay_status, 'accepted');
   assert.equal(replay.exactly_one_transition_per_step, true);
   assert.equal(replay.non_advancing_apply_count, 1);
+  assert.equal(replay.replay_evidence.exactly_one_or_non_advancing_per_step, true);
+  assert.equal(replay.replay_evidence.step_evidence[1].non_advancing_apply, true);
   assert.equal(replay.results[1].transition_event.transition_kind, 'NonAdvancingApply');
+});
+
+test('DomainProgressTransitionRuntime fixed-point helper chooses exactly one transition or NonAdvancingApply and exposes human gate token', () => {
+  const command = normalizeDomainProgressTransitionCommand({
+    surface_kind: 'opl_generic_current_control_command_outbox_record',
+    runtime_kind: 'DomainProgressTransitionRuntime',
+    command_kind: 'OpenHumanGate',
+    aggregate_identity: {
+      aggregate_kind: 'study_work_unit',
+      aggregate_id: '003-dpcc-primary-care-phenotype-treatment-gap::human_gate',
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      work_unit_id: 'human_gate',
+      work_unit_fingerprint: 'sha256:human-gate',
+    },
+    action_type: 'manual_owner_decision',
+    next_owner: 'human_operator',
+    idempotency_key: 'owner-route-attempt::dm003::human-gate',
+    source_generation: 'truth-event-human-gate',
+    expected_version: 'truth-event-human-gate',
+    postcondition: {
+      kind: 'human_gate_ref',
+      outcome_owner: 'one-person-lab',
+      domain_state_owner: 'med-autoscience',
+    },
+    allowed_decisions: ['approve', 'route_back'],
+  }, {
+    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+    actionType: 'manual_owner_decision',
+    workUnitId: 'human_gate',
+    workUnitFingerprint: 'sha256:human-gate',
+    nextOwner: 'human_operator',
+  }).command!;
+  const stable = reconcileDomainProgressTransitionFixedPoint({
+    command,
+    observations: [{ kind: 'human_gate_ref', human_gate_ref: 'human-gate:dm003/operator' }],
+  });
+  const nonAdvancing = reconcileDomainProgressTransitionFixedPoint({
+    command,
+    observations: [{ kind: 'provider_admission_requested' }],
+  });
+
+  assert.equal(stable.exactly_one_transition, true);
+  assert.equal(stable.result.transition_event.transition_kind, 'OpenHumanGate');
+  const resumeToken = stable.result.human_gate_resume_token as Record<string, unknown>;
+  assert.equal(resumeToken.owner, 'human_operator');
+  assert.deepEqual(resumeToken.allowed_decisions, ['approve', 'route_back']);
+  assert.equal(record(resumeToken.authority_boundary).opl_can_supply_human_answer, false);
+  assert.equal(nonAdvancing.non_advancing_apply, true);
+  assert.equal(nonAdvancing.result.transition_event.transition_kind, 'NonAdvancingApply');
 });
 
 test('family-runtime intake exposes OPL transition event, outbox, and read-model metadata for provider admission', () => {
@@ -238,9 +353,13 @@ test('family-runtime intake exposes OPL transition event, outbox, and read-model
     assert.equal(payload.opl_transition_event.transition_kind, 'StartProviderAttempt');
     assert.equal(payload.opl_transition_event.exactly_one_transition, true);
     assert.equal(payload.opl_transition_outbox_item.outbox_kind, 'start_provider_attempt');
+    assert.equal(payload.domain_progress_transition_runtime.transactional_outbox.committed_together, true);
+    assert.equal(payload.domain_progress_transition_runtime.idempotency_readback.idempotency_key, 'owner-route-attempt::dm003::transition-runtime-readback');
     assert.equal(payload.opl_transition_outbox_item.stage_run_identity.stage_run_id, 'stage-run:003-dpcc-primary-care-phenotype-treatment-gap:produce_ai_reviewer_publication_eval_record_against_current_inputs');
     assert.equal(payload.projection_metadata.authority, false);
     assert.equal(payload.projection_metadata.observed_generation, 'truth-event-transition-runtime-readback');
+    assert.equal(payload.read_model_rebuild_metadata.derived_from_event_id, payload.opl_transition_event.event_id);
+    assert.equal(payload.transition_idempotency_readback.same_transaction_event_and_outbox, true);
     assert.equal(payload.domain_progress_transition_runtime.brand_module_allocation.not_a_new_brand_module, true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

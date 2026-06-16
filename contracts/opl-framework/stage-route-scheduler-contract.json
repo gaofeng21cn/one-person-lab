@@ -223,8 +223,14 @@
       "surface_kind": "opl_domain_progress_transition_runtime_first_slice",
       "schema_version": 1,
       "source_target_design": "human_doc:domain_progress_transition_runtime_target_design",
-      "status": "durable_substrate_first_slice_landed_non_ready",
+      "status": "runtime_slice_landed_non_ready",
       "purpose": "Land the minimal generic OPL substrate for domain progress transitions through existing Runway, Pack, Stagecraft, Console, and Vault responsibilities without creating an eleventh brand module or a domain truth source.",
+      "implementation_refs": {
+        "runtime_source": "src/family-runtime-domain-progress-transition-runtime.ts",
+        "current_control_consumer": "src/family-runtime-domain-intake-parts/current-control-provider-admission.ts",
+        "focused_test": "tests/src/cli/cases/family-runtime-domain-progress-transition-runtime.test.ts",
+        "provider_admission_regression_test": "tests/src/cli/cases/family-runtime-current-control-provider-admission.test.ts"
+      },
       "brand_module_partition": {
         "module_count_policy": "no_new_brand_module",
         "Runway": "owns current-control intake, provider admission, exactly-one transition choice, NonAdvancingApply, and retry/replay guardrails",
@@ -310,6 +316,8 @@
           "landed_support": "current-control provider admission now consumes a domain transition request or OPL-native command record, preserves aggregate/study/work-unit identity, and carries OPL-generated transition apply metadata into queue and StageAttempt locator without domain truth authority",
           "durable_substrate_first_slice": {
             "obligation_store": "append_only_physical_jsonl_identity_bound",
+            "command_event_log": "in_memory_jsonl_friendly_append_only_command_event_outbox_entries",
+            "idempotency_readback": "command_event_outbox_transaction_readback_by_idempotency_key",
             "closeout_inbox": "append_only_physical_jsonl_pending_consumed_rejected_identity_bound",
             "same_identity_redrive_policy": "fail_closed_when_decision_is_not_current_latest_for_identity",
             "authority_boundary": {
@@ -343,6 +351,11 @@
           "landed_support": "DomainProgressTransitionRuntime first slice uses current-control/provider admission as the generic transition consumer: domain transition request or OPL-native command identity is required, legacy supervisor apply alias is fail-closed, exactly-one advancing transition is selected per StageRun identity, NonAdvancingApply is projected as metadata rather than progress, and replay fixtures remain refs-only",
           "durable_substrate_first_slice": {
             "ledger": "append_only_physical_jsonl",
+            "transactional_outbox": "event_and_outbox_item_share_one_runtime_transaction_result_with_dedupe_readback",
+            "fixed_point_reconciler": "observations_and_command_produce_exactly_one_transition_or_non_advancing_apply",
+            "replay_harness": "multi_step_trace_exposes_step_evidence_for_exactly_one_or_non_advancing_apply",
+            "human_gate_resume_token": "transport_shape_landed_without_opl_supplying_human_or_domain_answer",
+            "read_model_rebuild_metadata": "derived_from_event_id_observed_generation_derived_generation_authority_false",
             "current_latest_policy": "exactly_one_latest_current_decision_per_obligation_identity",
             "identity_mismatch_policy": "reject_without_current_latest_projection",
             "queue_empty_terminal_evidence": false,

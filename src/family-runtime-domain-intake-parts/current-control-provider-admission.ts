@@ -1044,6 +1044,8 @@ function currentControlProviderAdmissionInputFrom(
     opl_transition_event: transitionRuntimeResult.transition_event,
     opl_transition_outbox_item: transitionRuntimeResult.transactional_outbox_item,
     projection_metadata: transitionRuntimeResult.projection_metadata,
+    read_model_rebuild_metadata: transitionRuntimeResult.read_model_rebuild_metadata,
+    transition_idempotency_readback: transitionRuntimeResult.idempotency_readback,
     ...(domainProgressTransitionApply
       ? {
         domain_progress_transition_apply: domainProgressTransitionApply,
@@ -1094,6 +1096,8 @@ function currentControlProviderAdmissionInputFrom(
         opl_transition_event: transitionRuntimeResult.transition_event,
         opl_transition_outbox_item: transitionRuntimeResult.transactional_outbox_item,
         projection_metadata: transitionRuntimeResult.projection_metadata,
+        read_model_rebuild_metadata: transitionRuntimeResult.read_model_rebuild_metadata,
+        transition_idempotency_readback: transitionRuntimeResult.idempotency_readback,
         ...(domainProgressTransitionApply
           ? {
             domain_progress_transition_apply: domainProgressTransitionApply,

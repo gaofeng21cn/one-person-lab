@@ -174,7 +174,15 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   );
   assert.equal(
     domainProgress.status,
-    'durable_substrate_first_slice_landed_non_ready',
+    'runtime_slice_landed_non_ready',
+  );
+  assert.equal(
+    domainProgress.implementation_refs.runtime_source,
+    'src/family-runtime-domain-progress-transition-runtime.ts',
+  );
+  assert.equal(
+    domainProgress.implementation_refs.current_control_consumer,
+    'src/family-runtime-domain-intake-parts/current-control-provider-admission.ts',
   );
   assert.equal(domainProgress.brand_module_partition.module_count_policy, 'no_new_brand_module');
   assert.match(domainProgress.brand_module_partition.Runway, /exactly-one transition/);
@@ -203,6 +211,14 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
     /without domain truth authority/,
   );
   assert.equal(domainProgress.concepts.TransitionObligationStore.durable_substrate_first_slice.obligation_store, 'append_only_physical_jsonl_identity_bound');
+  assert.equal(
+    domainProgress.concepts.TransitionObligationStore.durable_substrate_first_slice.command_event_log,
+    'in_memory_jsonl_friendly_append_only_command_event_outbox_entries',
+  );
+  assert.equal(
+    domainProgress.concepts.TransitionObligationStore.durable_substrate_first_slice.idempotency_readback,
+    'command_event_outbox_transaction_readback_by_idempotency_key',
+  );
   assert.equal(domainProgress.concepts.TransitionObligationStore.durable_substrate_first_slice.closeout_inbox, 'append_only_physical_jsonl_pending_consumed_rejected_identity_bound');
   assert.equal(
     domainProgress.concepts.TransitionObligationStore.durable_substrate_first_slice.same_identity_redrive_policy,
@@ -229,6 +245,26 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
     /NonAdvancingApply is projected as metadata rather than progress/,
   );
   assert.equal(domainProgress.concepts.TransitionDecisionEngine.durable_substrate_first_slice.ledger, 'append_only_physical_jsonl');
+  assert.equal(
+    domainProgress.concepts.TransitionDecisionEngine.durable_substrate_first_slice.transactional_outbox,
+    'event_and_outbox_item_share_one_runtime_transaction_result_with_dedupe_readback',
+  );
+  assert.equal(
+    domainProgress.concepts.TransitionDecisionEngine.durable_substrate_first_slice.fixed_point_reconciler,
+    'observations_and_command_produce_exactly_one_transition_or_non_advancing_apply',
+  );
+  assert.equal(
+    domainProgress.concepts.TransitionDecisionEngine.durable_substrate_first_slice.replay_harness,
+    'multi_step_trace_exposes_step_evidence_for_exactly_one_or_non_advancing_apply',
+  );
+  assert.equal(
+    domainProgress.concepts.TransitionDecisionEngine.durable_substrate_first_slice.human_gate_resume_token,
+    'transport_shape_landed_without_opl_supplying_human_or_domain_answer',
+  );
+  assert.equal(
+    domainProgress.concepts.TransitionDecisionEngine.durable_substrate_first_slice.read_model_rebuild_metadata,
+    'derived_from_event_id_observed_generation_derived_generation_authority_false',
+  );
   assert.equal(
     domainProgress.concepts.TransitionDecisionEngine.durable_substrate_first_slice.current_latest_policy,
     'exactly_one_latest_current_decision_per_obligation_identity',

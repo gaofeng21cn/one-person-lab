@@ -31,7 +31,7 @@ test('DomainProgressTransitionRuntime first slice stays inside existing brand-mo
   const slice = contract.stage_route_arbiter_substrate_contract.domain_progress_transition_runtime_first_slice;
 
   assert.equal(slice.surface_kind, 'opl_domain_progress_transition_runtime_first_slice');
-  assert.equal(slice.status, 'durable_substrate_first_slice_landed_non_ready');
+  assert.equal(slice.status, 'runtime_slice_landed_non_ready');
   assert.equal(slice.brand_module_partition.module_count_policy, 'no_new_brand_module');
   assert.match(slice.brand_module_partition.Runway, /current-control intake/);
   assert.match(slice.brand_module_partition.Pack, /command\/outbox\/event shape/);
