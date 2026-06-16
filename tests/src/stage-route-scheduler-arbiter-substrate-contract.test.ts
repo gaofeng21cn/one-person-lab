@@ -184,6 +184,22 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
     domainProgress.implementation_refs.current_control_consumer,
     'src/family-runtime-domain-intake-parts/current-control-provider-admission.ts',
   );
+  assert.equal(
+    domainProgress.physical_persistence_refs.runtime_log_read_api,
+    'readDomainProgressTransitionRuntimeLogJsonl',
+  );
+  assert.equal(
+    domainProgress.physical_persistence_refs.runtime_log_append_api,
+    'appendDomainProgressTransitionRuntimeResultJsonl',
+  );
+  assert.equal(
+    domainProgress.physical_persistence_refs.idempotency_readback_api,
+    'readDomainProgressTransitionIdempotencyJsonl',
+  );
+  assert.equal(
+    domainProgress.physical_persistence_refs.storage_contract,
+    'append_only_physical_jsonl',
+  );
   assert.equal(domainProgress.brand_module_partition.module_count_policy, 'no_new_brand_module');
   assert.match(domainProgress.brand_module_partition.Runway, /exactly-one transition/);
   assert.match(domainProgress.brand_module_partition.Pack, /transition request and normalized command\/outbox\/event shape/);
@@ -213,7 +229,7 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   assert.equal(domainProgress.concepts.TransitionObligationStore.durable_substrate_first_slice.obligation_store, 'append_only_physical_jsonl_identity_bound');
   assert.equal(
     domainProgress.concepts.TransitionObligationStore.durable_substrate_first_slice.command_event_log,
-    'in_memory_jsonl_friendly_append_only_command_event_outbox_entries',
+    'append_only_physical_jsonl_command_event_outbox_entries',
   );
   assert.equal(
     domainProgress.concepts.TransitionObligationStore.durable_substrate_first_slice.idempotency_readback,

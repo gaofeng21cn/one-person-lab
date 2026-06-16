@@ -231,6 +231,13 @@
         "focused_test": "tests/src/cli/cases/family-runtime-domain-progress-transition-runtime.test.ts",
         "provider_admission_regression_test": "tests/src/cli/cases/family-runtime-current-control-provider-admission.test.ts"
       },
+      "physical_persistence_refs": {
+        "runtime_log_read_api": "readDomainProgressTransitionRuntimeLogJsonl",
+        "runtime_log_append_api": "appendDomainProgressTransitionRuntimeResultJsonl",
+        "idempotency_readback_api": "readDomainProgressTransitionIdempotencyJsonl",
+        "storage_contract": "append_only_physical_jsonl",
+        "focused_test": "tests/src/cli/cases/family-runtime-domain-progress-transition-runtime.test.ts"
+      },
       "brand_module_partition": {
         "module_count_policy": "no_new_brand_module",
         "Runway": "owns current-control intake, provider admission, exactly-one transition choice, NonAdvancingApply, and retry/replay guardrails",
@@ -316,7 +323,7 @@
           "landed_support": "current-control provider admission now consumes a domain transition request or OPL-native command record, preserves aggregate/study/work-unit identity, and carries OPL-generated transition apply metadata into queue and StageAttempt locator without domain truth authority",
           "durable_substrate_first_slice": {
             "obligation_store": "append_only_physical_jsonl_identity_bound",
-            "command_event_log": "in_memory_jsonl_friendly_append_only_command_event_outbox_entries",
+            "command_event_log": "append_only_physical_jsonl_command_event_outbox_entries",
             "idempotency_readback": "command_event_outbox_transaction_readback_by_idempotency_key",
             "closeout_inbox": "append_only_physical_jsonl_pending_consumed_rejected_identity_bound",
             "same_identity_redrive_policy": "fail_closed_when_decision_is_not_current_latest_for_identity",

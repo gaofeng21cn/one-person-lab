@@ -1,3 +1,6 @@
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { dirname } from 'node:path';
+
 import { stableId } from './family-runtime-ids.ts';
 
 export const DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID = 'opl_domain_progress_transition_runtime';
@@ -610,6 +613,66 @@ export function createDomainProgressTransitionRuntimeLog(
     storage_contract: 'jsonl_friendly_append_only',
     entries,
   };
+}
+
+export function readDomainProgressTransitionRuntimeLogJsonl(
+  logPath: string,
+): DomainProgressTransitionRuntimeLog {
+  if (!existsSync(logPath)) {
+    return createDomainProgressTransitionRuntimeLog();
+  }
+  const entries: Array<Record<string, unknown>> = [];
+  const raw = readFileSync(logPath, 'utf8');
+  for (const [index, line] of raw.split(/\r?\n/u).entries()) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      continue;
+    }
+    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+    if (parsed.surface_kind !== 'opl_domain_progress_transition_log_entry') {
+      throw new Error(
+        `Unexpected domain progress transition log surface at line ${index + 1}: ${String(parsed.surface_kind)}`,
+      );
+    }
+    if (parsed.runtime_id !== DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID) {
+      throw new Error(
+        `Unexpected domain progress transition runtime at line ${index + 1}: ${String(parsed.runtime_id)}`,
+      );
+    }
+    entries.push(parsed);
+  }
+  return createDomainProgressTransitionRuntimeLog(entries);
+}
+
+export function appendDomainProgressTransitionRuntimeResultJsonl(input: {
+  logPath: string;
+  result: ReturnType<typeof buildDomainProgressTransitionRuntimeResult>;
+}) {
+  const existingLog = readDomainProgressTransitionRuntimeLogJsonl(input.logPath);
+  const append = appendDomainProgressTransitionRuntimeResult({
+    log: existingLog,
+    result: input.result,
+  });
+  mkdirSync(dirname(input.logPath), { recursive: true });
+  for (const entry of append.appended_entries) {
+    appendFileSync(input.logPath, `${JSON.stringify(entry)}\n`, 'utf8');
+  }
+  return {
+    ...append,
+    log_path: input.logPath,
+    persisted: true,
+    storage_contract: 'append_only_physical_jsonl' as const,
+  };
+}
+
+export function readDomainProgressTransitionIdempotencyJsonl(input: {
+  logPath: string;
+  idempotencyKey: string;
+}) {
+  return readDomainProgressTransitionIdempotency({
+    log: readDomainProgressTransitionRuntimeLogJsonl(input.logPath),
+    idempotencyKey: input.idempotencyKey,
+  });
 }
 
 export function currentDomainProgressTransitionAggregateVersion(input: {

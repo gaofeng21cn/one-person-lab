@@ -14,10 +14,13 @@ import {
 import {
   buildNonAdvancingApplyRuntimeResult,
   appendDomainProgressTransitionRuntimeResult,
+  appendDomainProgressTransitionRuntimeResultJsonl,
   createDomainProgressTransitionRuntimeLog,
   currentDomainProgressTransitionAggregateVersion,
   normalizeDomainProgressTransitionCommand,
   readDomainProgressTransitionIdempotency,
+  readDomainProgressTransitionIdempotencyJsonl,
+  readDomainProgressTransitionRuntimeLogJsonl,
   reconcileDomainProgressTransitionFixedPoint,
   replayDomainProgressTransitionTrace,
 } from '../../../../src/family-runtime-domain-progress-transition-runtime.ts';
@@ -119,6 +122,65 @@ test('DomainProgressTransitionRuntime appends JSONL-friendly command/event/outbo
   assert.equal(readback.current_aggregate_version, 2);
   assert.equal(readback.same_transaction_event_and_outbox, true);
   assert.equal(second.log.storage_contract, 'jsonl_friendly_append_only');
+});
+
+test('DomainProgressTransitionRuntime persists append-only JSONL log and replays idempotency readback from disk', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-progress-transition-jsonl-'));
+  const logPath = path.join(root, 'domain-progress-transition.jsonl');
+  const command = normalizeDomainProgressTransitionCommand(currentControlCommandOutboxRecord({
+    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+    actionType: 'return_to_ai_reviewer_workflow',
+    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    workUnitFingerprint: 'sha256:durable-jsonl',
+    sourceGeneration: 'truth-event-durable-jsonl',
+    idempotencyKey: 'owner-route-attempt::dm003::durable-jsonl',
+  }), {
+    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+    actionType: 'return_to_ai_reviewer_workflow',
+    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    workUnitFingerprint: 'sha256:durable-jsonl',
+    nextOwner: 'ai_reviewer',
+  }).command!;
+
+  try {
+    const first = appendDomainProgressTransitionRuntimeResultJsonl({
+      logPath,
+      result: reconcileDomainProgressTransitionFixedPoint({
+        command,
+        observations: [{ kind: 'provider_admission_accepted' }],
+      }).result,
+    });
+    const second = appendDomainProgressTransitionRuntimeResultJsonl({
+      logPath,
+      result: reconcileDomainProgressTransitionFixedPoint({
+        command: {
+          ...command,
+          idempotency_key: 'owner-route-attempt::dm003::durable-jsonl-repeat',
+          command_id: 'dptc_dm003_durable_jsonl_repeat',
+          expected_version: 'truth-event-durable-jsonl-repeat',
+        },
+        observations: [{ kind: 'typed_blocker_ref', typed_blocker_ref: 'typed-blocker:dm003/durable-jsonl' }],
+      }).result,
+    });
+    const replayed = readDomainProgressTransitionRuntimeLogJsonl(logPath);
+    const readback = readDomainProgressTransitionIdempotencyJsonl({
+      logPath,
+      idempotencyKey: 'owner-route-attempt::dm003::durable-jsonl',
+    });
+
+    assert.equal(first.storage_contract, 'append_only_physical_jsonl');
+    assert.equal(second.current_aggregate_version, 2);
+    assert.equal(replayed.entries.length, 6);
+    assert.equal(currentDomainProgressTransitionAggregateVersion({
+      log: replayed,
+      aggregateIdentity: command.aggregate_identity as Record<string, unknown>,
+    }), 2);
+    assert.equal(readback.found, true);
+    assert.equal(readback.current_aggregate_version, 2);
+    assert.equal(readback.same_transaction_event_and_outbox, true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('DomainProgressTransitionRuntime normalizes MAS policy request without accepting legacy supervisor apply alias', () => {
