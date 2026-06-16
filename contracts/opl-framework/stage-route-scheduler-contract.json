@@ -307,7 +307,7 @@
             "stale_read_model_lag",
             "transition_decision_ref"
           ],
-          "landed_support": "current-control provider admission now consumes a generic current_control_command/outbox record, preserves aggregate/study/work-unit identity, and carries transition apply metadata into queue and StageAttempt locator without domain truth authority",
+          "landed_support": "current-control provider admission now consumes a generic current_control_command_outbox_record, preserves aggregate/study/work-unit identity, and carries transition apply metadata into queue and StageAttempt locator without domain truth authority",
           "durable_substrate_first_slice": {
             "obligation_store": "append_only_physical_jsonl_identity_bound",
             "closeout_inbox": "append_only_physical_jsonl_pending_consumed_rejected_identity_bound",

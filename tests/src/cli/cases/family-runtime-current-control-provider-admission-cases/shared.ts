@@ -151,7 +151,7 @@ export function currentControlActionQueueItem(input: {
     ...(input.recoveryObligationId ? { recovery_obligation_id: input.recoveryObligationId } : {}),
     required_output_surface: 'artifacts/publication_eval/ai_reviewer_responses/*_publication_eval_record.json',
     owner: nextOwner,
-    current_control_command: currentControlCommandOutboxRecord({
+    current_control_command_outbox_record: currentControlCommandOutboxRecord({
       studyId: input.studyId,
       actionType: input.actionType,
       workUnitId: input.workUnitId,
@@ -306,7 +306,7 @@ export function currentControlAdmissionPayload(
       route_identity_key: routeIdentityKey,
       attempt_idempotency_key: attemptIdempotencyKey,
     },
-    current_control_command: currentControlCommandOutboxRecord({
+    current_control_command_outbox_record: currentControlCommandOutboxRecord({
       studyId: '002-dm-china-us-mortality-attribution',
       actionType: 'return_to_ai_reviewer_workflow',
       workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',

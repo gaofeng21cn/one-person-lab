@@ -135,7 +135,7 @@ test('family-runtime intake exposes OPL transition event, outbox, and read-model
         provider_attempt_or_lease_required: true,
         provider_completion_is_domain_completion: false,
         stage_transition_authority_boundary: providerObservationBoundary(),
-        current_control_command: currentControlCommandOutboxRecord({
+        current_control_command_outbox_record: currentControlCommandOutboxRecord({
           studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
           actionType: 'return_to_ai_reviewer_workflow',
           workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',

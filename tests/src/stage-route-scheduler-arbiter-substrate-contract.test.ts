@@ -192,7 +192,7 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   assert.equal(domainProgress.decision_surface_policy.observability_can_close_owner_answer, false);
   assert.match(
     domainProgress.concepts.TransitionObligationStore.landed_support,
-    /current_control_command\/outbox record/,
+    /current_control_command_outbox_record/,
   );
   assert.match(
     domainProgress.concepts.TransitionObligationStore.landed_support,

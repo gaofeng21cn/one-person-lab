@@ -471,8 +471,8 @@ function currentControlProviderAdmissionCandidateFromActionQueueItem(
     idempotency_key: optionalString(handoff.idempotency_key) ?? optionalString(ownerRoute?.idempotency_key),
     ...(identity.routeIdentityKey ? { route_identity_key: identity.routeIdentityKey } : {}),
     ...(identity.attemptIdempotencyKey ? { attempt_idempotency_key: identity.attemptIdempotencyKey } : {}),
-    ...(isRecord(action.current_control_command)
-      ? { current_control_command: action.current_control_command }
+    ...(isRecord(action.current_control_command_outbox_record)
+      ? { current_control_command_outbox_record: action.current_control_command_outbox_record }
       : {}),
     currentness_basis: currentControlCurrentnessBasis({
       currentControl,
@@ -607,11 +607,9 @@ function currentControlCommandOutboxRecord(
     'currentControlCommand' | 'transitionRuntimeResult'
   >,
 ): { record?: Record<string, unknown>; blocked?: CurrentControlProviderAdmissionBlocked } {
-  const command = isRecord(candidate.current_control_command)
-    ? candidate.current_control_command
-    : isRecord(candidate.current_control_command_outbox_record)
-      ? candidate.current_control_command_outbox_record
-      : null;
+  const command = isRecord(candidate.current_control_command_outbox_record)
+    ? candidate.current_control_command_outbox_record
+    : null;
   if (!command) {
     return {
       blocked: {
@@ -1036,6 +1034,11 @@ function currentControlProviderAdmissionInputFrom(
   } = contextResult.context;
   const providerAdmissionIdentity = {
     ...candidate,
+    current_control_command: currentControlCommand,
+    domain_progress_transition_runtime: transitionRuntimeResult,
+    opl_transition_event: transitionRuntimeResult.transition_event,
+    opl_transition_outbox_item: transitionRuntimeResult.transactional_outbox_item,
+    projection_metadata: transitionRuntimeResult.projection_metadata,
     ...(domainProgressTransitionApply
       ? {
         domain_progress_transition_apply: domainProgressTransitionApply,

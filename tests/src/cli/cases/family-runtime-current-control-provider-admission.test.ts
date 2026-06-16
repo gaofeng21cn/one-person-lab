@@ -110,7 +110,7 @@ test('family-runtime intake admits MAS current-control provider candidates ahead
         provider_attempt_or_lease_required: true,
         provider_completion_is_domain_completion: false,
         stage_transition_authority_boundary: providerObservationBoundary(),
-        current_control_command: currentControlCommandOutboxRecord({
+        current_control_command_outbox_record: currentControlCommandOutboxRecord({
           studyId: '002-dm-china-us-mortality-attribution',
           actionType: 'return_to_ai_reviewer_workflow',
           workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
@@ -169,7 +169,7 @@ test('family-runtime intake admits MAS current-control provider candidates ahead
         provider_attempt_or_lease_required: true,
         provider_completion_is_domain_completion: false,
         stage_transition_authority_boundary: providerObservationBoundary(),
-        current_control_command: currentControlCommandOutboxRecord({
+        current_control_command_outbox_record: currentControlCommandOutboxRecord({
           studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
           actionType: 'return_to_ai_reviewer_workflow',
           workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
@@ -821,7 +821,7 @@ test('family-runtime intake reconciles current-control display owner to executab
         provider_attempt_or_lease_required: true,
         provider_completion_is_domain_completion: false,
         stage_transition_authority_boundary: providerObservationBoundary(),
-        current_control_command: currentControlCommandOutboxRecord({
+        current_control_command_outbox_record: currentControlCommandOutboxRecord({
           studyId,
           actionType,
           workUnitId,
@@ -1048,7 +1048,7 @@ test('family-runtime intake blocks current-control action_queue provider candida
   }
 });
 
-test('family-runtime intake blocks current-control provider candidates without generic command identity or postcondition', () => {
+test('family-runtime intake blocks current-control provider candidates without outbox record or postcondition', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-command-contract-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-command-contract-'));
   const workspaceRoot = path.join(fixtureRoot, 'workspace');
@@ -1098,14 +1098,24 @@ test('family-runtime intake blocks current-control provider candidates without g
     schema_version: 1,
     generated_at: '2026-06-16T00:00:00+00:00',
     provider_admission_candidates: [
-      baseCandidate,
+      {
+        ...baseCandidate,
+        current_control_command: currentControlCommandOutboxRecord({
+          studyId: '002-dm-china-us-mortality-attribution',
+          actionType: 'return_to_ai_reviewer_workflow',
+          workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+          workUnitFingerprint: 'sha256:command-contract',
+          sourceGeneration: 'truth-event-old-command-alias',
+          idempotencyKey: 'owner-route-attempt::dm002::command-contract',
+        }),
+      },
       {
         ...baseCandidate,
         work_unit_fingerprint: 'sha256:command-postcondition-missing',
         action_fingerprint: 'sha256:command-postcondition-missing',
         route_identity_key: 'owner-route::dm002::command-postcondition-missing',
         attempt_idempotency_key: 'owner-route-attempt::dm002::command-postcondition-missing',
-        current_control_command: incompleteCommand,
+        current_control_command_outbox_record: incompleteCommand,
       },
     ],
   }), 'utf8');
@@ -1181,7 +1191,7 @@ test('family-runtime intake blocks current-control provider candidates with inco
         provider_attempt_or_lease_required: true,
         provider_completion_is_domain_completion: false,
         stage_transition_authority_boundary: providerObservationBoundary(),
-        current_control_command: currentControlCommandOutboxRecord({
+        current_control_command_outbox_record: currentControlCommandOutboxRecord({
           studyId: '002-dm-china-us-mortality-attribution',
           actionType: 'return_to_ai_reviewer_workflow',
           workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
@@ -1207,7 +1217,7 @@ test('family-runtime intake blocks current-control provider candidates with inco
         provider_attempt_or_lease_required: true,
         provider_completion_is_domain_completion: false,
         stage_transition_authority_boundary: providerObservationBoundary(),
-        current_control_command: currentControlCommandOutboxRecord({
+        current_control_command_outbox_record: currentControlCommandOutboxRecord({
           studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
           actionType: 'return_to_ai_reviewer_workflow',
           workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
