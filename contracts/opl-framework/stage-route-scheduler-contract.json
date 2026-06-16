@@ -228,7 +228,7 @@
       "brand_module_partition": {
         "module_count_policy": "no_new_brand_module",
         "Runway": "owns current-control intake, provider admission, exactly-one transition choice, NonAdvancingApply, and retry/replay guardrails",
-        "Pack": "owns domain-declared command/outbox/event shape, aggregate identity, expected version, postcondition/outcome, and authority ABI refs",
+        "Pack": "owns domain-declared transition request and normalized command/outbox/event shape, aggregate identity, expected version, postcondition/outcome, and authority ABI refs",
         "Stagecraft": "owns StageRun identity, stage packet refs, transition decision vocabulary, and runner/replay semantics",
         "Console": "owns operator read-model metadata including observed_generation, derived_generation, NonAdvancingApply, and typed blocked reason projection",
         "Vault": "owns append-only outbox/event/replay refs and evidence retention without domain body authority"
@@ -307,7 +307,7 @@
             "stale_read_model_lag",
             "transition_decision_ref"
           ],
-          "landed_support": "current-control provider admission now consumes a generic current_control_command_outbox_record, preserves aggregate/study/work-unit identity, and carries transition apply metadata into queue and StageAttempt locator without domain truth authority",
+          "landed_support": "current-control provider admission now consumes a domain transition request or OPL-native command record, preserves aggregate/study/work-unit identity, and carries OPL-generated transition apply metadata into queue and StageAttempt locator without domain truth authority",
           "durable_substrate_first_slice": {
             "obligation_store": "append_only_physical_jsonl_identity_bound",
             "closeout_inbox": "append_only_physical_jsonl_pending_consumed_rejected_identity_bound",
@@ -340,7 +340,7 @@
             "provider_liveness_or_repair_state",
             "observability_refs"
           ],
-          "landed_support": "DomainProgressTransitionRuntime first slice uses current-control/provider admission as the generic transition consumer: command/outbox identity is required, exactly-one advancing transition is selected per StageRun identity, NonAdvancingApply is projected as metadata rather than progress, and replay fixtures remain refs-only",
+          "landed_support": "DomainProgressTransitionRuntime first slice uses current-control/provider admission as the generic transition consumer: domain transition request or OPL-native command identity is required, legacy supervisor apply alias is fail-closed, exactly-one advancing transition is selected per StageRun identity, NonAdvancingApply is projected as metadata rather than progress, and replay fixtures remain refs-only",
           "durable_substrate_first_slice": {
             "ledger": "append_only_physical_jsonl",
             "current_latest_policy": "exactly_one_latest_current_decision_per_obligation_identity",

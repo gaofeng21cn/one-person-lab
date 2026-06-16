@@ -178,7 +178,7 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   );
   assert.equal(domainProgress.brand_module_partition.module_count_policy, 'no_new_brand_module');
   assert.match(domainProgress.brand_module_partition.Runway, /exactly-one transition/);
-  assert.match(domainProgress.brand_module_partition.Pack, /command\/outbox\/event shape/);
+  assert.match(domainProgress.brand_module_partition.Pack, /transition request and normalized command\/outbox\/event shape/);
   assert.match(domainProgress.brand_module_partition.Console, /observed_generation/);
   assert.deepEqual(domainProgress.allowed_transition_decisions, [
     'execute_current_owner_delta',
@@ -192,7 +192,7 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   assert.equal(domainProgress.decision_surface_policy.observability_can_close_owner_answer, false);
   assert.match(
     domainProgress.concepts.TransitionObligationStore.landed_support,
-    /current_control_command_outbox_record/,
+    /domain transition request or OPL-native command record/,
   );
   assert.match(
     domainProgress.concepts.TransitionObligationStore.landed_support,
@@ -218,7 +218,11 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   );
   assert.match(
     domainProgress.concepts.TransitionDecisionEngine.landed_support,
-    /command\/outbox identity is required/,
+    /domain transition request or OPL-native command identity is required/,
+  );
+  assert.match(
+    domainProgress.concepts.TransitionDecisionEngine.landed_support,
+    /legacy supervisor apply alias is fail-closed/,
   );
   assert.match(
     domainProgress.concepts.TransitionDecisionEngine.landed_support,

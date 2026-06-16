@@ -105,6 +105,58 @@ export function currentControlCommandOutboxRecord(input: {
   };
 }
 
+export function masDomainProgressTransitionRequest(input: {
+  studyId: string;
+  actionType: string;
+  workUnitId: string;
+  workUnitFingerprint: string;
+  sourceGeneration?: string;
+  expectedVersion?: string;
+  idempotencyKey?: string;
+}) {
+  const sourceGeneration = input.sourceGeneration ?? `generation:${input.workUnitFingerprint}`;
+  const idempotencyKey = input.idempotencyKey ?? [
+    'mas-domain-progress-request',
+    input.studyId,
+    input.actionType,
+    input.workUnitId,
+    input.workUnitFingerprint,
+  ].join('::');
+  return {
+    surface_kind: 'mas_domain_progress_transition_request',
+    target_runtime_kind: 'DomainProgressTransitionRuntime',
+    target_runtime_owner: 'one-person-lab',
+    request_owner: 'med-autoscience',
+    authority_role: 'domain_policy_request_only',
+    mas_can_create_opl_outbox_record: false,
+    runtime_kind: 'DomainProgressTransitionRuntime',
+    recommended_transition_kind: 'StartProviderAttempt',
+    aggregate_identity: {
+      aggregate_kind: 'study_work_unit',
+      aggregate_id: `${input.studyId}::${input.workUnitId}`,
+      study_id: input.studyId,
+      work_unit_id: input.workUnitId,
+      work_unit_fingerprint: input.workUnitFingerprint,
+    },
+    action_type: input.actionType,
+    next_owner: 'ai_reviewer',
+    idempotency_key: idempotencyKey,
+    source_generation: sourceGeneration,
+    expected_version: input.expectedVersion ?? sourceGeneration,
+    required_postcondition: {
+      kind: 'provider_admission_enqueued_or_blocked',
+      outcome_owner: 'one-person-lab',
+      domain_state_owner: 'med-autoscience',
+    },
+    forbidden_runtime_fields: [
+      'current_control_command_outbox_record',
+      'opl_domain_progress_transition_event',
+      'opl_domain_progress_transition_outbox_item',
+      'stage_run_identity',
+    ],
+  };
+}
+
 export function currentControlActionQueueItem(input: {
   studyId: string;
   actionType: string;
@@ -151,7 +203,7 @@ export function currentControlActionQueueItem(input: {
     ...(input.recoveryObligationId ? { recovery_obligation_id: input.recoveryObligationId } : {}),
     required_output_surface: 'artifacts/publication_eval/ai_reviewer_responses/*_publication_eval_record.json',
     owner: nextOwner,
-    current_control_command_outbox_record: currentControlCommandOutboxRecord({
+    opl_domain_progress_transition_request: masDomainProgressTransitionRequest({
       studyId: input.studyId,
       actionType: input.actionType,
       workUnitId: input.workUnitId,

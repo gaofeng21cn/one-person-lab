@@ -75,7 +75,8 @@ function optionalScalarString(value: unknown) {
 function transitionKind(command: Record<string, unknown>) {
   const kind = optionalString(command.transition_kind)
     ?? optionalString(command.command_kind)
-    ?? optionalString(command.outbox_kind);
+    ?? optionalString(command.outbox_kind)
+    ?? optionalString(command.recommended_transition_kind);
   if (kind === 'provider_admission_requested') {
     return 'StartProviderAttempt';
   }
@@ -84,11 +85,41 @@ function transitionKind(command: Record<string, unknown>) {
 
 function postconditionKind(command: Record<string, unknown>) {
   const postcondition = isRecord(command.postcondition) ? command.postcondition : null;
+  const requiredPostcondition = isRecord(command.required_postcondition) ? command.required_postcondition : null;
   const outcome = isRecord(command.outcome) ? command.outcome : null;
   return optionalString(postcondition?.kind)
     ?? optionalString(postcondition?.required_outcome)
+    ?? optionalString(requiredPostcondition?.kind)
+    ?? optionalString(requiredPostcondition?.required_outcome)
     ?? optionalString(outcome?.kind)
     ?? optionalString(outcome?.status);
+}
+
+function masTransitionRequestBoundaryViolation(command: Record<string, unknown>) {
+  if (optionalString(command.surface_kind) !== 'mas_domain_progress_transition_request') {
+    return null;
+  }
+  const targetRuntimeKind = optionalString(command.target_runtime_kind) ?? optionalString(command.runtime_kind);
+  if (
+    targetRuntimeKind !== 'DomainProgressTransitionRuntime'
+    || optionalString(command.target_runtime_owner) !== 'one-person-lab'
+    || command.mas_can_create_opl_outbox_record !== false
+  ) {
+    return 'domain_progress_transition_request_boundary_missing';
+  }
+  const forbiddenRuntimeFields = [
+    'current_control_command_outbox_record',
+    'opl_domain_progress_transition_command',
+    'opl_domain_progress_transition_event',
+    'opl_domain_progress_transition_outbox_item',
+    'stage_run_identity',
+    'projection_metadata',
+    'read_model_generation_metadata',
+  ];
+  if (forbiddenRuntimeFields.some((field) => field in command)) {
+    return 'domain_progress_transition_request_runtime_field_forbidden';
+  }
+  return null;
 }
 
 function normalizeAggregateIdentity(
@@ -169,12 +200,20 @@ export function normalizeDomainProgressTransitionCommand(
   command: Record<string, unknown>,
   context: DomainProgressTransitionCommandContext,
 ): { command?: Record<string, unknown>; blocked?: DomainProgressTransitionBlocked } {
+  if (isRecord(command.paper_autonomy_supervisor_apply)) {
+    return { blocked: { reason: 'domain_progress_transition_legacy_supervisor_apply_alias_forbidden', task: command } };
+  }
+  const requestBoundaryViolation = masTransitionRequestBoundaryViolation(command);
+  if (requestBoundaryViolation) {
+    return { blocked: { reason: requestBoundaryViolation, task: command } };
+  }
   const kind = transitionKind(command);
   const aggregateIdentity = normalizeAggregateIdentity(command, context);
   const idempotencyKey = optionalString(command.idempotency_key);
   const sourceGeneration = optionalScalarString(command.source_generation);
   const expectedVersion = optionalScalarString(command.expected_version);
   const postcondition = isRecord(command.postcondition) ? command.postcondition : null;
+  const requiredPostcondition = isRecord(command.required_postcondition) ? command.required_postcondition : null;
   const outcome = isRecord(command.outcome) ? command.outcome : null;
   const outcomeKind = postconditionKind(command);
   if (!kind || !SUPPORTED_TRANSITIONS.has(kind)) {
@@ -216,11 +255,18 @@ export function normalizeDomainProgressTransitionCommand(
       expected_version: expectedVersion,
       postcondition: {
         ...(postcondition ?? {}),
+        ...(requiredPostcondition ?? {}),
         kind: outcomeKind,
         exactly_one_transition_required: true,
         non_advancing_apply_on_no_outcome: true,
-        outcome_owner: optionalString(postcondition?.outcome_owner) ?? 'one-person-lab',
-        domain_state_owner: optionalString(postcondition?.domain_state_owner) ?? 'domain-agent',
+        outcome_owner:
+          optionalString(postcondition?.outcome_owner)
+          ?? optionalString(requiredPostcondition?.outcome_owner)
+          ?? 'one-person-lab',
+        domain_state_owner:
+          optionalString(postcondition?.domain_state_owner)
+          ?? optionalString(requiredPostcondition?.domain_state_owner)
+          ?? 'domain-agent',
       },
       ...(outcome ? { outcome } : {}),
       stage_run_identity: stageRunIdentity(command, aggregateIdentity, idempotencyKey),

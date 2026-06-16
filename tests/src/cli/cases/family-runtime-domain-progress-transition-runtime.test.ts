@@ -2,6 +2,7 @@ import {
   assert,
   currentControlCommandOutboxRecord,
   fs,
+  masDomainProgressTransitionRequest,
   os,
   path,
   providerObservationBoundary,
@@ -54,6 +55,78 @@ test('DomainProgressTransitionRuntime normalizes MAS command into exactly-one ev
   assert.equal(result.replay_evidence.non_advancing_apply, true);
   assert.equal(result.projection_metadata.authority, false);
   assert.equal(result.projection_metadata.derived_from_event_id, result.transition_event.event_id);
+});
+
+test('DomainProgressTransitionRuntime normalizes MAS policy request without accepting legacy supervisor apply alias', () => {
+  const request = {
+    surface_kind: 'mas_domain_progress_transition_request',
+    target_runtime_kind: 'DomainProgressTransitionRuntime',
+    target_runtime_owner: 'one-person-lab',
+    request_owner: 'med-autoscience',
+    authority_role: 'domain_policy_request_only',
+    mas_can_create_opl_outbox_record: false,
+    runtime_kind: 'DomainProgressTransitionRuntime',
+    recommended_transition_kind: 'StartProviderAttempt',
+    aggregate_identity: {
+      aggregate_kind: 'study_work_unit',
+      aggregate_id: '003-dpcc-primary-care-phenotype-treatment-gap::medical_prose_write_repair',
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      work_unit_id: 'medical_prose_write_repair',
+      work_unit_fingerprint: 'publication-blockers::0915410f804b3697',
+    },
+    action_type: 'run_quality_repair_batch',
+    next_owner: 'write',
+    idempotency_key: 'paper-policy-request::dm003::write-repair',
+    source_generation: 'truth-event-dm003-write-repair',
+    expected_version: 'truth-event-dm003-write-repair',
+    required_postcondition: {
+      kind: 'provider_admission_enqueued_or_blocked',
+      outcome_owner: 'one-person-lab',
+      domain_state_owner: 'med-autoscience',
+    },
+  };
+
+  const normalized = normalizeDomainProgressTransitionCommand(request, {
+    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+    actionType: 'run_quality_repair_batch',
+    workUnitId: 'medical_prose_write_repair',
+    workUnitFingerprint: 'publication-blockers::0915410f804b3697',
+    nextOwner: 'write',
+  });
+  assert.equal(normalized.blocked, undefined);
+  assert.equal(normalized.command?.surface_kind, 'opl_domain_progress_transition_command');
+  assert.equal(normalized.command?.transition_kind, 'StartProviderAttempt');
+  assert.equal((normalized.command?.postcondition as Record<string, unknown>).kind, 'provider_admission_enqueued_or_blocked');
+
+  const forbidden = normalizeDomainProgressTransitionCommand({
+    ...request,
+    paper_autonomy_supervisor_apply: { legacy_alias: true },
+  }, {
+    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+    actionType: 'run_quality_repair_batch',
+    workUnitId: 'medical_prose_write_repair',
+    workUnitFingerprint: 'publication-blockers::0915410f804b3697',
+    nextOwner: 'write',
+  });
+  assert.equal(
+    forbidden.blocked?.reason,
+    'domain_progress_transition_legacy_supervisor_apply_alias_forbidden',
+  );
+
+  const runtimeArtifactPolluted = normalizeDomainProgressTransitionCommand({
+    ...request,
+    opl_domain_progress_transition_outbox_item: { surface_kind: 'opl_domain_progress_transition_outbox_item' },
+  }, {
+    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+    actionType: 'run_quality_repair_batch',
+    workUnitId: 'medical_prose_write_repair',
+    workUnitFingerprint: 'publication-blockers::0915410f804b3697',
+    nextOwner: 'write',
+  });
+  assert.equal(
+    runtimeArtifactPolluted.blocked?.reason,
+    'domain_progress_transition_request_runtime_field_forbidden',
+  );
 });
 
 test('DomainProgressTransitionRuntime replay accepts stable steps and records NonAdvancingApply for no-outcome history', () => {
@@ -135,7 +208,7 @@ test('family-runtime intake exposes OPL transition event, outbox, and read-model
         provider_attempt_or_lease_required: true,
         provider_completion_is_domain_completion: false,
         stage_transition_authority_boundary: providerObservationBoundary(),
-        current_control_command_outbox_record: currentControlCommandOutboxRecord({
+        opl_domain_progress_transition_request: masDomainProgressTransitionRequest({
           studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
           actionType: 'return_to_ai_reviewer_workflow',
           workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',

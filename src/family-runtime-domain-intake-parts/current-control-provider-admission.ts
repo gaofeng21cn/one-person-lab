@@ -474,6 +474,9 @@ function currentControlProviderAdmissionCandidateFromActionQueueItem(
     ...(isRecord(action.current_control_command_outbox_record)
       ? { current_control_command_outbox_record: action.current_control_command_outbox_record }
       : {}),
+    ...(isRecord(action.opl_domain_progress_transition_request)
+      ? { opl_domain_progress_transition_request: action.opl_domain_progress_transition_request }
+      : {}),
     currentness_basis: currentControlCurrentnessBasis({
       currentControl,
       action,
@@ -609,7 +612,9 @@ function currentControlCommandOutboxRecord(
 ): { record?: Record<string, unknown>; blocked?: CurrentControlProviderAdmissionBlocked } {
   const command = isRecord(candidate.current_control_command_outbox_record)
     ? candidate.current_control_command_outbox_record
-    : null;
+    : isRecord(candidate.opl_domain_progress_transition_request)
+      ? candidate.opl_domain_progress_transition_request
+      : null;
   if (!command) {
     return {
       blocked: {
