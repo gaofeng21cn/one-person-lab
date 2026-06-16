@@ -15,6 +15,7 @@ import {
   withIsolatedFamilyRuntimeEnv,
 } from './mas-default-executor-helpers.ts';
 import {
+  masDomainProgressTransitionRequest,
   providerObservationBoundary,
   writeJsonEmitterScript,
 } from '../family-runtime-current-control-provider-admission-cases/shared.ts';
@@ -330,6 +331,14 @@ test('family-runtime blocks existing stale MAS default executor rows when curren
             provider_attempt_or_lease_required: true,
             provider_completion_is_domain_completion: false,
             stage_transition_authority_boundary: providerObservationBoundary(),
+            opl_domain_progress_transition_request: masDomainProgressTransitionRequest({
+              studyId,
+              actionType: 'return_to_ai_reviewer_workflow',
+              workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+              workUnitFingerprint: 'sha256:current-control-blocked-existing-row',
+              sourceGeneration: 'truth-event-current-control-blocked-existing-row',
+              idempotencyKey: 'owner-route-attempt::dm002::blocked-existing-row',
+            }),
           },
         ],
       }), 'utf8');
