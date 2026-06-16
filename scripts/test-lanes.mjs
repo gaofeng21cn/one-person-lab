@@ -185,6 +185,7 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/family-runtime-cross-repo-e2e.test.ts',
   'tests/src/cli/cases/family-runtime-binding-intake.test.ts',
   'tests/src/cli/cases/family-runtime-current-control-provider-admission.test.ts',
+  'tests/src/cli/cases/family-runtime-domain-progress-transition-runtime.test.ts',
   'tests/src/cli/cases/family-runtime-binding-dispatch.test.ts',
   'tests/src/cli/cases/family-runtime-binding-deadletter.test.ts',
   'tests/src/cli/cases/family-runtime-default-executor-owner-redrive.test.ts',
