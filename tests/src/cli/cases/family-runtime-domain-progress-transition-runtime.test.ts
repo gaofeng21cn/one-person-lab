@@ -116,7 +116,11 @@ test('DomainProgressTransitionRuntime appends JSONL-friendly command/event/outbo
   });
 
   assert.equal(first.appended_entry_count, 3);
+  assert.equal(first.append_status, 'appended');
   assert.equal(second.current_aggregate_version, 2);
+  assert.equal(second.read_model_readback.aggregate_version, 2);
+  assert.ok(second.read_model_readback.latest_transition_identity);
+  assert.equal(second.read_model_readback.latest_transition_identity.event_id, second.result.transition_event.event_id);
   assert.equal(currentDomainProgressTransitionAggregateVersion({
     log: second.log,
     aggregateIdentity: command.aggregate_identity as Record<string, unknown>,
@@ -125,6 +129,63 @@ test('DomainProgressTransitionRuntime appends JSONL-friendly command/event/outbo
   assert.equal(readback.current_aggregate_version, 2);
   assert.equal(readback.same_transaction_event_and_outbox, true);
   assert.equal(second.log.storage_contract, 'jsonl_friendly_append_only');
+});
+
+test('DomainProgressTransitionRuntime enforces idempotent replay and fail-closes reused keys with different intent', () => {
+  const command = normalizeDomainProgressTransitionCommand(currentControlCommandOutboxRecord({
+    studyId: '002-dm-china-us-mortality-attribution',
+    actionType: 'return_to_ai_reviewer_workflow',
+    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    workUnitFingerprint: 'sha256:idempotent-intent',
+    sourceGeneration: 'truth-event-idempotent-intent',
+    idempotencyKey: 'owner-route-attempt::dm002::idempotent-intent',
+  }), {
+    studyId: '002-dm-china-us-mortality-attribution',
+    actionType: 'return_to_ai_reviewer_workflow',
+    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    workUnitFingerprint: 'sha256:idempotent-intent',
+    nextOwner: 'ai_reviewer',
+  }).command!;
+  const initial = appendDomainProgressTransitionRuntimeResult({
+    log: createDomainProgressTransitionRuntimeLog(),
+    result: reconcileDomainProgressTransitionFixedPoint({
+      command,
+      observations: [{ kind: 'provider_admission_accepted' }],
+    }).result,
+  });
+  const replayed = appendDomainProgressTransitionRuntimeResult({
+    log: initial.log,
+    result: reconcileDomainProgressTransitionFixedPoint({
+      command,
+      observations: [{ kind: 'provider_admission_accepted' }],
+    }).result,
+  });
+  const differentIntent = appendDomainProgressTransitionRuntimeResult({
+    log: initial.log,
+    result: reconcileDomainProgressTransitionFixedPoint({
+      command: {
+        ...command,
+        expected_version: 'truth-event-idempotent-intent-different',
+      },
+      observations: [{ kind: 'typed_blocker_ref', typed_blocker_ref: 'typed-blocker:dm002/idempotent-intent' }],
+    }).result,
+  });
+
+  assert.equal(initial.appended, true);
+  assert.equal(replayed.appended, false);
+  assert.equal(replayed.append_status, 'idempotent_replay');
+  assert.equal(replayed.idempotent_replay, true);
+  assert.equal(replayed.log.entries.length, initial.log.entries.length);
+  assert.equal(replayed.result.transition_event.event_id, initial.result.transition_event.event_id);
+  assert.equal(replayed.read_model_readback.aggregate_version, 1);
+  assert.equal(differentIntent.appended, false);
+  assert.equal(differentIntent.append_status, 'blocked');
+  assert.ok(differentIntent.blocked);
+  assert.equal(
+    differentIntent.blocked.reason,
+    'domain_progress_transition_idempotency_key_reused_for_different_intent',
+  );
+  assert.equal(differentIntent.log.entries.length, initial.log.entries.length);
 });
 
 test('DomainProgressTransitionRuntime persists append-only JSONL log and replays idempotency readback from disk', () => {
@@ -634,6 +695,11 @@ test('family-runtime intake exposes OPL transition event, outbox, and read-model
     assert.equal(payload.opl_transition_outbox_item.outbox_kind, 'start_provider_attempt');
     assert.equal(payload.domain_progress_transition_runtime.transactional_outbox.committed_together, true);
     assert.equal(payload.domain_progress_transition_runtime.idempotency_readback.idempotency_key, 'owner-route-attempt::dm003::transition-runtime-readback');
+    assert.equal(payload.domain_progress_transition_runtime.read_model_readback.aggregate_version, 1);
+    assert.equal(
+      payload.domain_progress_transition_runtime.read_model_readback.latest_transition_identity.event_id,
+      payload.opl_transition_event.event_id,
+    );
     assert.equal(payload.opl_transition_outbox_item.stage_run_identity.stage_run_id, 'stage-run:003-dpcc-primary-care-phenotype-treatment-gap:produce_ai_reviewer_publication_eval_record_against_current_inputs');
     assert.equal(payload.projection_metadata.authority, false);
     assert.equal(payload.projection_metadata.observed_generation, 'truth-event-transition-runtime-readback');

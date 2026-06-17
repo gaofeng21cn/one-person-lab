@@ -6,7 +6,9 @@ import type {
   FamilyRuntimeDomainId,
 } from '../family-runtime-command.ts';
 import {
+  appendDomainProgressTransitionRuntimeResult,
   buildDomainProgressTransitionRuntimeResult,
+  createDomainProgressTransitionRuntimeLog,
   normalizeDomainProgressTransitionCommand,
 } from '../family-runtime-domain-progress-transition-runtime.ts';
 
@@ -569,6 +571,19 @@ function currentControlProviderAdmissionCandidateFields(
   if (!commandResult.record) {
     return { blocked: { reason: 'current_control_provider_admission_command_record_missing', task: candidate } };
   }
+  const transitionAppend = appendDomainProgressTransitionRuntimeResult({
+    log: createDomainProgressTransitionRuntimeLog(),
+    result: buildDomainProgressTransitionRuntimeResult(commandResult.record),
+  });
+  if (!transitionAppend.appended) {
+    return {
+      blocked: {
+        reason: optionalString(transitionAppend.blocked?.reason)
+          ?? 'current_control_provider_admission_transition_runtime_append_blocked',
+        task: candidate,
+      },
+    };
+  }
   return {
     fields: {
       studyId,
@@ -577,7 +592,7 @@ function currentControlProviderAdmissionCandidateFields(
       workUnitFingerprint,
       nextOwner,
       currentControlCommand: commandResult.record,
-      transitionRuntimeResult: buildDomainProgressTransitionRuntimeResult(commandResult.record),
+      transitionRuntimeResult: transitionAppend.result,
     },
   };
 }

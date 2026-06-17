@@ -253,6 +253,52 @@ function logEntryTransactionId(entry: Record<string, unknown>) {
     ?? (isRecord(entry.payload) ? optionalString(entry.payload.transaction_id) : null);
 }
 
+function domainProgressTransitionIntentFingerprint(input: {
+  command?: Record<string, unknown> | null;
+  event?: Record<string, unknown> | null;
+  outboxItem?: Record<string, unknown> | null;
+}) {
+  const command = input.command ?? {};
+  const event = input.event ?? {};
+  const outboxItem = input.outboxItem ?? {};
+  const outcome = isRecord(event.outcome) ? event.outcome : {};
+  const postcondition = isRecord(command.postcondition) ? command.postcondition : {};
+  return stableId('dpti', [
+    optionalString(command.command_id),
+    optionalString(event.transition_kind),
+    logEntryAggregateIdentity(event),
+    optionalString(event.source_generation) ?? optionalString(command.source_generation),
+    optionalString(event.expected_version) ?? optionalString(command.expected_version),
+    optionalString(event.idempotency_key) ?? optionalString(command.idempotency_key),
+    optionalString(postcondition.kind),
+    optionalString(outcome.kind),
+    optionalString(outboxItem.outbox_kind),
+    optionalString(outboxItem.outbox_dedupe_key),
+  ]);
+}
+
+function domainProgressTransitionIntentFingerprintFromResult(
+  result: ReturnType<typeof buildDomainProgressTransitionRuntimeResult>,
+) {
+  return domainProgressTransitionIntentFingerprint({
+    command: result.command,
+    event: result.transition_event,
+    outboxItem: result.transactional_outbox_item,
+  });
+}
+
+function domainProgressTransitionIntentFingerprintFromEntries(input: {
+  commandEntry?: Record<string, unknown>;
+  eventEntry?: Record<string, unknown>;
+  outboxEntry?: Record<string, unknown>;
+}) {
+  return domainProgressTransitionIntentFingerprint({
+    command: input.commandEntry ? logEntryPayload(input.commandEntry) : null,
+    event: input.eventEntry ? logEntryPayload(input.eventEntry) : null,
+    outboxItem: input.outboxEntry ? logEntryPayload(input.outboxEntry) : null,
+  });
+}
+
 function entryByKindAndTransaction(
   entries: Array<Record<string, unknown>>,
   entryKind: string,
@@ -1179,6 +1225,87 @@ export function appendDomainProgressTransitionRuntimeResult(input: {
   const aggregateIdentity = isRecord(input.result.transition_event.aggregate_identity)
     ? input.result.transition_event.aggregate_identity
     : {};
+  const idempotencyKey = optionalString(input.result.transition_event.idempotency_key);
+  if (idempotencyKey) {
+    const idempotencyEntries = input.log.entries
+      .filter((entry) => optionalString(entry.idempotency_key) === idempotencyKey);
+    if (idempotencyEntries.length > 0) {
+      const commandEntry = idempotencyEntries.find((entry) => optionalString(entry.entry_kind) === 'command');
+      const eventEntry = idempotencyEntries.find((entry) => optionalString(entry.entry_kind) === 'event');
+      const outboxEntry = idempotencyEntries.find((entry) => optionalString(entry.entry_kind) === 'outbox_item');
+      const readback = readDomainProgressTransitionIdempotency({
+        log: input.log,
+        idempotencyKey,
+      });
+      const readModelReadback = rebuildDomainProgressTransitionReadModel({
+        log: input.log,
+        aggregateIdentity,
+      });
+      if (!commandEntry || !eventEntry || !outboxEntry) {
+        return {
+          surface_kind: 'opl_domain_progress_transition_log_append',
+          runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+          appended: false,
+          append_status: 'blocked',
+          blocked: {
+            reason: 'domain_progress_transition_idempotency_incomplete_transaction',
+            idempotency_key: idempotencyKey,
+          },
+          current_aggregate_version: currentAggregateVersionFromEntries(input.log.entries, aggregateIdentity),
+          log: input.log,
+          appended_entries: [],
+          idempotency_readback: readback,
+          read_model_readback: readModelReadback,
+          result: input.result,
+        };
+      }
+      const existingIntentFingerprint = domainProgressTransitionIntentFingerprintFromEntries({
+        commandEntry,
+        eventEntry,
+        outboxEntry,
+      });
+      const incomingIntentFingerprint = domainProgressTransitionIntentFingerprintFromResult(input.result);
+      if (existingIntentFingerprint !== incomingIntentFingerprint) {
+        return {
+          surface_kind: 'opl_domain_progress_transition_log_append',
+          runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+          appended: false,
+          append_status: 'blocked',
+          blocked: {
+            reason: 'domain_progress_transition_idempotency_key_reused_for_different_intent',
+            idempotency_key: idempotencyKey,
+            existing_intent_fingerprint: existingIntentFingerprint,
+            incoming_intent_fingerprint: incomingIntentFingerprint,
+          },
+          current_aggregate_version: currentAggregateVersionFromEntries(input.log.entries, aggregateIdentity),
+          log: input.log,
+          appended_entries: [],
+          idempotency_readback: readback,
+          read_model_readback: readModelReadback,
+          result: input.result,
+        };
+      }
+      return {
+        surface_kind: 'opl_domain_progress_transition_log_append',
+        runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+        appended: false,
+        append_status: 'idempotent_replay',
+        idempotent_replay: true,
+        current_aggregate_version: currentAggregateVersionFromEntries(input.log.entries, aggregateIdentity),
+        log: input.log,
+        appended_entries: [],
+        idempotency_readback: readback,
+        read_model_readback: readModelReadback,
+        result: {
+          ...input.result,
+          transition_event: logEntryPayload(eventEntry) ?? input.result.transition_event,
+          transactional_outbox_item: logEntryPayload(outboxEntry) ?? input.result.transactional_outbox_item,
+          idempotency_readback: readback,
+          read_model_readback: readModelReadback,
+        },
+      };
+    }
+  }
   const aggregateVersion = currentAggregateVersionFromEntries(input.log.entries, aggregateIdentity) + 1;
   const event = {
     ...input.result.transition_event,
@@ -1199,11 +1326,15 @@ export function appendDomainProgressTransitionRuntimeResult(input: {
     ...input.log.entries,
     ...entries,
   ]);
-  const idempotencyKey = optionalString(event.idempotency_key);
+  const readModelReadback = rebuildDomainProgressTransitionReadModel({
+    log,
+    aggregateIdentity,
+  });
   return {
     surface_kind: 'opl_domain_progress_transition_log_append',
     runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
     appended: true,
+    append_status: 'appended',
     appended_entry_count: entries.length,
     current_aggregate_version: aggregateVersion,
     log,
@@ -1211,12 +1342,14 @@ export function appendDomainProgressTransitionRuntimeResult(input: {
     idempotency_readback: idempotencyKey
       ? readDomainProgressTransitionIdempotency({ log, idempotencyKey })
       : null,
+    read_model_readback: readModelReadback,
     result: {
       ...input.result,
       transition_event: event,
       idempotency_readback: idempotencyKey
         ? readDomainProgressTransitionIdempotency({ log, idempotencyKey })
         : input.result.idempotency_readback,
+      read_model_readback: readModelReadback,
     },
   };
 }
