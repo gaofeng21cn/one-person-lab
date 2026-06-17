@@ -25,7 +25,10 @@ import {
   activeMedautoscienceWorkspaceProfile,
   resolveExplicitMedautoscienceDomainProfile,
 } from './family-runtime-medautoscience-profile.ts';
-import { currentControlProviderAdmissionInputs } from './family-runtime-domain-intake-parts/current-control-provider-admission.ts';
+import {
+  currentControlProviderAdmissionInputs,
+  publishCurrentControlProviderAdmissionReadback,
+} from './family-runtime-domain-intake-parts/current-control-provider-admission.ts';
 import {
   reconcileCurrentControlExecutableOwners,
   suppressExistingStaleDefaultExecutorRowsForBlockedCurrentControl,
@@ -283,9 +286,18 @@ export function hydrateDomainTasks(
     filteredCount += filtered_count;
     suppressedCount += suppressed_count + existingSuppressedCount;
     const acceptedTasks = [];
+    const currentControlReadbackPublications = [];
     for (const taskInput of inputs) {
       const resultPayload = enqueueTask(db, taskInput);
       acceptedTasks.push(resultPayload);
+      const published = publishCurrentControlProviderAdmissionReadback({
+        output,
+        taskInput,
+        taskResult: resultPayload,
+      });
+      if (published.published) {
+        currentControlReadbackPublications.push(published);
+      }
       if (resultPayload.accepted) {
         enqueuedCount += 1;
         if (resultPayload.requeued_from_terminal) {
@@ -309,6 +321,8 @@ export function hydrateDomainTasks(
       requeued_count: acceptedTasks.filter((task) => task.requeued_from_terminal).length,
       idempotent_noop_count: acceptedTasks.filter((task) => task.idempotent_noop).length,
       blocked_count: blocked.length,
+      current_control_readback_publication_count: currentControlReadbackPublications.length,
+      current_control_readback_publications: currentControlReadbackPublications,
       blocked,
     });
   }

@@ -719,6 +719,7 @@ test('family-runtime intake promotes MAS transition request pending task into OP
     assert.equal(intake.family_runtime_intake.enqueued_count, 1);
     assert.equal(intake.family_runtime_intake.suppressed_count, 1);
     assert.equal(intake.family_runtime_intake.blocked_count, 0);
+    assert.equal(intake.family_runtime_intake.exports[0].current_control_readback_publication_count, 1);
     assert.equal(tasks.length, 1);
     assert.equal(tasks[0].source, 'opl-current-control-transition-request');
     assert.equal(tasks[0].payload.provider_admission_schema_source, 'transition_request_pending_task');
@@ -761,6 +762,45 @@ test('family-runtime intake promotes MAS transition request pending task into OP
     );
     assert.equal(tasks[0].payload.current_control_command.idempotency_key, attemptIdempotencyKey);
     assert.equal(tasks[0].payload.current_control_command.runtime_kind, 'DomainProgressTransitionRuntime');
+    const refreshedCurrentControl = JSON.parse(fs.readFileSync(currentControlPath, 'utf8'));
+    assert.equal(
+      refreshedCurrentControl.current_control_refresh_source,
+      'opl_transition_runtime_readback_provider_admission',
+    );
+    assert.equal(refreshedCurrentControl.provider_admission_pending_count, 1);
+    assert.equal(refreshedCurrentControl.transition_request_pending_count, 0);
+    assert.equal(refreshedCurrentControl.provider_admission_candidates[0].status, 'provider_admission_pending');
+    assert.equal(refreshedCurrentControl.provider_admission_candidates[0].study_id, studyId);
+    assert.equal(
+      refreshedCurrentControl.provider_admission_candidates[0].attempt_idempotency_key,
+      attemptIdempotencyKey,
+    );
+    assert.equal(
+      refreshedCurrentControl.provider_admission_candidates[0].provider_admission_identity
+        .opl_domain_progress_transition_runtime_live_readback.identity.latest_event_id,
+      tasks[0].payload.opl_transition_event.event_id,
+    );
+    assert.equal(
+      refreshedCurrentControl.provider_admission_candidates[0]
+        .opl_domain_progress_transition_runtime_live_readback.runtime_readback_status,
+      'complete_transaction',
+    );
+    assert.equal(
+      refreshedCurrentControl.studies[0].current_control_action.status,
+      'provider_admission_pending',
+    );
+    assert.equal(
+      refreshedCurrentControl.studies[0].current_control_action.reason,
+      'opl_transition_runtime_readback_published',
+    );
+    assert.equal(
+      refreshedCurrentControl.latest_provider_admission_identity.attempt_idempotency_key,
+      attemptIdempotencyKey,
+    );
+    assert.equal(
+      refreshedCurrentControl.provider_admission_projection_metadata.projection_role,
+      'console_read_model_from_runway_transition_runtime',
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

@@ -72,6 +72,17 @@ type CurrentControlProviderAdmissionBlocked = {
   repair_action?: Record<string, unknown>;
 };
 
+type CurrentControlProviderAdmissionReadbackPublishInput = {
+  output: Record<string, unknown>;
+  taskInput: EnqueueInput;
+  taskResult: {
+    accepted?: boolean;
+    requeued_from_terminal?: boolean;
+    idempotent_noop?: boolean;
+    task?: { payload?: Record<string, unknown> };
+  };
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -647,6 +658,159 @@ function currentControlProviderAdmissionCandidates(currentControl: Record<string
     }
     return currentControlProviderAdmissionCandidateFromActionQueueItem(currentControl, item) ?? item;
   });
+}
+
+function providerAdmissionCandidateIdentity(candidate: Record<string, unknown>) {
+  return optionalString(candidate.attempt_idempotency_key)
+    ?? optionalString(candidate.route_identity_key)
+    ?? optionalString(candidate.idempotency_key)
+    ?? optionalString(candidate.work_unit_fingerprint)
+    ?? optionalString(candidate.action_fingerprint);
+}
+
+function mergeProviderAdmissionCandidate(
+  candidates: unknown,
+  candidate: Record<string, unknown>,
+) {
+  const identity = providerAdmissionCandidateIdentity(candidate);
+  const existing = Array.isArray(candidates)
+    ? candidates.filter((entry): entry is Record<string, unknown> => isRecord(entry))
+    : [];
+  const retained = existing.filter((entry) => {
+    const entryIdentity = providerAdmissionCandidateIdentity(entry);
+    return !identity || entryIdentity !== identity;
+  });
+  return [candidate, ...retained];
+}
+
+function transitionRequestPendingCountAfterAdmission(currentControl: Record<string, unknown>) {
+  const count = typeof currentControl.transition_request_pending_count === 'number'
+    && Number.isFinite(currentControl.transition_request_pending_count)
+    ? currentControl.transition_request_pending_count
+    : 0;
+  return Math.max(0, count - 1);
+}
+
+function publishProviderAdmissionCandidateToCurrentControl(input: {
+  currentControl: Record<string, unknown>;
+  candidate: Record<string, unknown>;
+}) {
+  const studyId = optionalString(input.candidate.study_id);
+  const studies = Array.isArray(input.currentControl.studies)
+    ? input.currentControl.studies.map((study) => {
+        if (!isRecord(study) || optionalString(study.study_id) !== studyId) {
+          return study;
+        }
+        return {
+          ...study,
+          current_control_action: {
+            ...(isRecord(study.current_control_action) ? study.current_control_action : {}),
+            status: 'provider_admission_pending',
+            reason: 'opl_transition_runtime_readback_published',
+            provider_admission_requires_opl_runtime_result: false,
+            provider_admission_identity_ref:
+              optionalString(input.candidate.provider_admission_identity_ref)
+              ?? (isRecord(input.candidate.provider_admission_identity)
+                ? optionalString(input.candidate.provider_admission_identity.provider_admission_identity_ref)
+                : null),
+          },
+          provider_admission_pending_count: 1,
+          transition_request_pending_count: 0,
+          provider_admission_candidates: mergeProviderAdmissionCandidate(
+            study.provider_admission_candidates,
+            input.candidate,
+          ),
+        };
+      })
+    : input.currentControl.studies;
+  return {
+    ...input.currentControl,
+    current_control_refresh_source: 'opl_transition_runtime_readback_provider_admission',
+    provider_admission_pending_count: mergeProviderAdmissionCandidate(
+      input.currentControl.provider_admission_candidates,
+      input.candidate,
+    ).length,
+    transition_request_pending_count: transitionRequestPendingCountAfterAdmission(input.currentControl),
+    provider_admission_candidates: mergeProviderAdmissionCandidate(
+      input.currentControl.provider_admission_candidates,
+      input.candidate,
+    ),
+    ...(Array.isArray(input.currentControl.studies) ? { studies } : {}),
+    opl_domain_progress_transition_runtime_live_readback:
+      input.candidate.opl_domain_progress_transition_runtime_live_readback,
+    opl_domain_progress_transition_live_readback:
+      input.candidate.opl_domain_progress_transition_live_readback,
+    latest_provider_admission_identity: input.candidate.provider_admission_identity,
+    provider_admission_projection_metadata: {
+      surface_kind: 'opl_current_control_provider_admission_projection_metadata',
+      projection_role: 'console_read_model_from_runway_transition_runtime',
+      authority: false,
+      domain_truth_owner: 'med-autoscience',
+      substrate_owner: 'one-person-lab',
+      provider_completion_is_domain_completion: false,
+      idempotency_key: optionalString(input.candidate.attempt_idempotency_key),
+      route_identity_key: optionalString(input.candidate.route_identity_key),
+    },
+  };
+}
+
+export function publishCurrentControlProviderAdmissionReadback(
+  input: CurrentControlProviderAdmissionReadbackPublishInput,
+) {
+  if (
+    !input.taskResult.accepted
+    && !input.taskResult.requeued_from_terminal
+    && !input.taskResult.idempotent_noop
+  ) {
+    return { published: false, reason: 'task_not_admitted' };
+  }
+  const payload = isRecord(input.taskInput.payload)
+    ? input.taskInput.payload
+    : isRecord(input.taskResult.task?.payload)
+      ? input.taskResult.task.payload
+      : null;
+  if (!payload || !isRecord(payload.provider_admission_identity)) {
+    return { published: false, reason: 'provider_admission_identity_missing' };
+  }
+  const liveReadback = isRecord(payload.opl_domain_progress_transition_runtime_live_readback)
+    ? payload.opl_domain_progress_transition_runtime_live_readback
+    : isRecord(payload.provider_admission_identity.opl_domain_progress_transition_runtime_live_readback)
+      ? payload.provider_admission_identity.opl_domain_progress_transition_runtime_live_readback
+      : null;
+  if (!liveReadback) {
+    return { published: false, reason: 'transition_runtime_live_readback_missing' };
+  }
+  const currentControlRef = currentControlStatePath(input.output);
+  if (!currentControlRef || !fs.existsSync(currentControlRef)) {
+    return { published: false, reason: 'current_control_state_missing' };
+  }
+  const currentControl = readJsonRecord(currentControlRef);
+  if (!currentControl) {
+    return { published: false, reason: 'invalid_current_control_state' };
+  }
+  const candidate: Record<string, unknown> = {
+    ...payload,
+    status: 'provider_admission_pending',
+    owner_route_current: true,
+    provider_admission_schema_source:
+      optionalString(payload.provider_admission_schema_source)
+      ?? 'transition_runtime_readback',
+    provider_admission_identity: payload.provider_admission_identity,
+    opl_domain_progress_transition_runtime_live_readback: liveReadback,
+    opl_domain_progress_transition_live_readback: liveReadback,
+  };
+  const updated = publishProviderAdmissionCandidateToCurrentControl({
+    currentControl,
+    candidate,
+  });
+  fs.mkdirSync(path.dirname(currentControlRef), { recursive: true });
+  fs.writeFileSync(currentControlRef, `${JSON.stringify(updated, null, 2)}\n`, 'utf8');
+  return {
+    published: true,
+    ref: currentControlRef,
+    idempotency_key: optionalString(candidate.attempt_idempotency_key),
+    study_id: optionalString(candidate.study_id),
+  };
 }
 
 function currentControlProviderAdmissionCandidateFields(
