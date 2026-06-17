@@ -5,6 +5,19 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-06-17
+
+### 决策：Domain Progress Transition Runtime readback 必须稳定暴露五个字段族
+
+原因：MAS 等 domain repo 只有在 OPL runtime readback 同时给出 identity、causality、authority boundary、exactly-one outcome 和 projection metadata 时，才能安全地区分 request-only、provider admission、running proof、terminal closeout、NonAdvancingApply 和 replay。若 append / idempotent replay / blocked append 返回不同形状，domain repo 会再次在 projection、DHD、owner-route 或 provider admission 里补一套私有解释层。
+
+影响：
+
+- `DomainProgressTransitionRuntime` 的 append result、idempotent replay result、read-model rebuild result 和 fail-closed append result 必须携带 `identity`、`causality`、`authority_boundary`、`exactly_one_outcome` 和 `projection_metadata`。
+- 同一 idempotency key 的完整 transaction replay 必须返回原事务 readback，不产生第二组 command/event/outbox；同 key 的不完整 transaction 必须 fail closed 为 `blocked_incomplete_transaction`。
+- 这些字段族是 OPL-owned runtime readback，不是 domain authority。OPL 不因此写 MAS/MAG/RCA/OMA truth，不签 domain owner receipt，不创建 domain typed blocker，不授权 quality/export verdict，也不声明 domain ready、publication ready、App release ready、Brand L5 或 production ready。
+- MAS `transition_request_pending` 只有在 OPL 形成上述 runtime readback 后，才可被提升为 provider-admission-facing runtime input；否则只能停留为 request-only / NonAdvancingApply / typed blocker 语义。
+
 ## 2026-06-16
 
 ### 决策：Domain Progress Transition Runtime 归 OPL，domain 仓只提供 policy adapter

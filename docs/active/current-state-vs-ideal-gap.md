@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `family_ideal_state_gap_plan`
 State: `active_plan`
 Machine boundary: 本文是人读 gap / completion map。机器真相继续归 `contracts/`、源码、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、真实 workspace 与 App evidence。
-Last reviewed: `2026-06-15`
+Last reviewed: `2026-06-17`
 
 ## 读法
 
@@ -31,6 +31,8 @@ Standard Agent landing acceptance 当前机器入口是 `contracts/opl-framework
 MAS 的 family-level Foundry Agent OS 目标态按 `OPL Agent OS + Domain Declarative Pack + Domain Minimal Authority Kernel + Domain Capability Registry` 读取。MAS flagship experience mapping 只定义 `Evidence Map -> Analysis Pack -> Manuscript Draft -> Reviewer Letter -> Revision Packet -> Publication Handoff` 的理想体验与迁移边界；私有 scheduler / runner / workbench / status shell 只能作为迁移输入。Capability Registry 归入 `Atlas + Pack + Stagecraft` 的 registry / ABI / use-policy，不新增第 11 个品牌模块，也不生成 domain authority。原先独立的 OPL / MAS supervisory acceptance 目标只作为 Foundry Agent OS plan 的验收细目存在；当前执行顺序和 owner gate 仍回本文。
 
 2026-06-16 目标口径增补：论文推进卡住暴露出的通用能力归 OPL，而不是在 MAS 内继续做一套独立 supervisor/kernel。active target 固定为 `OPL DomainProgressTransitionRuntime + Domain Progress Policy Adapter`：OPL 负责 append-only event log、fixed-point reconciler、command/outbox/event intake、StageRun identity、idempotency、projection metadata、replay、NonAdvancingApply 分类、human gate resume 和 closeout transport；MAS 作为 first consumer，只提供 `PaperProgressPolicyAdapter`，声明 paper stage / publication gate / reviewer-human gate / artifact delta / forbidden write / owner receipt / typed blocker / quality verdict 的 domain policy。品牌模块映射不新增第 11 模块：主模块是 `Runway`，协同模块是 `Pack`、`Stagecraft`、`Console`、`Vault`、`Atlas`、`Workspace`、`Foundry Lab` 和 `Connect`。完成门必须是 OPL runtime contract、domain policy adapter contract、replay fixture、exactly-one transition、outbox / StageRun identity readback、projection demotion 和 no-domain-authority false flags；MAS 文档或 read-model projection 不能替代这些 OPL-owned runtime surfaces。
+
+2026-06-17 follow-through：`DomainProgressTransitionRuntime` 的 runtime readback shape 已从 first-slice transport 扩展到 stable primitive boundary。append result、idempotent replay、read-model rebuild 和 blocked append 都必须带 identity、causality、authority boundary、exactly-one outcome 和 projection metadata；不完整 transaction 使用 `blocked_incomplete_transaction` fail closed。该条把 OPL runtime primitive 从“能落账”推进到“能被 MAS 等 domain repo 安全消费的读回形状”，但仍属于 support/control-plane landing；production-tail 仍需要 provider-backed soak、terminal closeout integration、human gate integration、domain owner receipt / typed blocker consumption、真实 operator acceptance 和 no-domain-authority long evidence。
 
 ## 目标态
 
