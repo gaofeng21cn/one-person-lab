@@ -688,8 +688,22 @@ test('family-runtime intake exposes OPL transition event, outbox, and read-model
     }));
     const queue = runCli(['family-runtime', 'queue', 'list'], familyRuntimeEnv(stateRoot));
     const payload = queue.family_runtime_queue.tasks[0].payload;
+    const logPath = path.join(
+      workspaceRoot,
+      'runtime',
+      'artifacts',
+      'supervision',
+      'domain_progress_transition_runtime',
+      'command_event_log.jsonl',
+    );
+    const logLineCount = () => fs.readFileSync(logPath, 'utf8').trim().split(/\r?\n/u).length;
 
     assert.equal(payload.domain_progress_transition_runtime.runtime_id, 'opl_domain_progress_transition_runtime');
+    assert.equal(payload.domain_progress_transition_log_ref, 'runtime/artifacts/supervision/domain_progress_transition_runtime/command_event_log.jsonl');
+    assert.equal(payload.domain_progress_transition_log_append.append_status, 'appended');
+    assert.equal(payload.domain_progress_transition_log_append.appended_entry_count, 3);
+    assert.equal(payload.domain_progress_transition_log_append.persisted, true);
+    assert.equal(payload.provider_admission_identity.domain_progress_transition_log_ref, 'runtime/artifacts/supervision/domain_progress_transition_runtime/command_event_log.jsonl');
     assert.equal(payload.opl_transition_event.transition_kind, 'StartProviderAttempt');
     assert.equal(payload.opl_transition_event.exactly_one_transition, true);
     assert.equal(payload.opl_transition_outbox_item.outbox_kind, 'start_provider_attempt');
@@ -706,6 +720,12 @@ test('family-runtime intake exposes OPL transition event, outbox, and read-model
     assert.equal(payload.read_model_rebuild_metadata.derived_from_event_id, payload.opl_transition_event.event_id);
     assert.equal(payload.transition_idempotency_readback.same_transaction_event_and_outbox, true);
     assert.equal(payload.domain_progress_transition_runtime.brand_module_allocation.not_a_new_brand_module, true);
+    assert.equal(logLineCount(), 3);
+
+    runCli(['family-runtime', 'intake', '--domain', 'medautoscience'], familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
+    }));
+    assert.equal(logLineCount(), 3);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

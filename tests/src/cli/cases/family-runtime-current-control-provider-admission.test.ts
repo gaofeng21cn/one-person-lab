@@ -291,6 +291,20 @@ test('family-runtime intake admits MAS current-control provider candidates ahead
       1,
     );
     assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.domain_progress_transition_log_ref,
+      'runtime/artifacts/supervision/domain_progress_transition_runtime/command_event_log.jsonl',
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.domain_progress_transition_log_append
+        .append_status,
+      'appended',
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.domain_progress_transition_log_append
+        .appended_entry_count,
+      3,
+    );
+    assert.equal(
       tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.domain_progress_transition_runtime
         .read_model_readback.latest_transition_identity.event_id,
       tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.opl_transition_event.event_id,

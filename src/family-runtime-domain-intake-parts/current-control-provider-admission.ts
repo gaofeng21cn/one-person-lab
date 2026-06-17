@@ -7,6 +7,7 @@ import type {
 } from '../family-runtime-command.ts';
 import {
   appendDomainProgressTransitionRuntimeResult,
+  appendDomainProgressTransitionRuntimeResultJsonl,
   buildDomainProgressTransitionRuntimeResult,
   createDomainProgressTransitionRuntimeLog,
   normalizeDomainProgressTransitionCommand,
@@ -58,6 +59,8 @@ type CurrentControlProviderAdmissionInputContext = {
   currentnessBasis: Record<string, unknown> | null;
   currentControlCommand: Record<string, unknown>;
   transitionRuntimeResult: Record<string, unknown>;
+  transitionRuntimeLogAppend: Record<string, unknown> | null;
+  transitionRuntimeLogRef: string | null;
   domainProgressTransitionApply: Record<string, unknown> | null;
 };
 
@@ -130,6 +133,19 @@ function currentControlStatePath(output: Record<string, unknown>) {
     'opl_current_control_state',
     'latest.json',
   );
+}
+
+function domainProgressTransitionRuntimeLogPath(workspaceRoot: string | null) {
+  return workspaceRoot
+    ? path.join(
+      workspaceRoot,
+      'runtime',
+      'artifacts',
+      'supervision',
+      'domain_progress_transition_runtime',
+      'command_event_log.jsonl',
+    )
+    : null;
 }
 
 function readJsonRecord(filePath: string) {
@@ -739,6 +755,25 @@ function currentControlProviderAdmissionInputContext(input: {
     input.candidate,
     input.fields,
   );
+  const transitionRuntimeLogPath = domainProgressTransitionRuntimeLogPath(workspaceRoot);
+  const transitionRuntimeLogAppend = transitionRuntimeLogPath
+    ? appendDomainProgressTransitionRuntimeResultJsonl({
+      logPath: transitionRuntimeLogPath,
+      result: buildDomainProgressTransitionRuntimeResult(input.fields.currentControlCommand),
+    })
+    : null;
+  if (transitionRuntimeLogAppend?.blocked) {
+    return {
+      blocked: {
+        reason: optionalString(transitionRuntimeLogAppend.blocked.reason)
+          ?? 'current_control_provider_admission_transition_runtime_log_append_blocked',
+        task: input.candidate,
+      },
+    };
+  }
+  const transitionRuntimeResult = isRecord(transitionRuntimeLogAppend?.result)
+    ? transitionRuntimeLogAppend.result
+    : input.fields.transitionRuntimeResult;
   const explicitTransitionApply = domainProgressTransitionApply(input.candidate);
   const transitionApply = explicitTransitionApply
     ?? domainProgressTransitionExecuteApply({
@@ -771,7 +806,9 @@ function currentControlProviderAdmissionInputContext(input: {
       sourceRefs,
       currentnessBasis,
       currentControlCommand: input.fields.currentControlCommand,
-      transitionRuntimeResult: input.fields.transitionRuntimeResult,
+      transitionRuntimeResult,
+      transitionRuntimeLogAppend,
+      transitionRuntimeLogRef: workspaceRelativeRef(transitionRuntimeLogPath, workspaceRoot),
       domainProgressTransitionApply: transitionApply,
     },
   };
@@ -1050,12 +1087,18 @@ function currentControlProviderAdmissionInputFrom(
     currentnessBasis,
     currentControlCommand,
     transitionRuntimeResult,
+    transitionRuntimeLogAppend,
+    transitionRuntimeLogRef,
     domainProgressTransitionApply,
   } = contextResult.context;
   const providerAdmissionIdentity = {
     ...candidate,
     current_control_command: currentControlCommand,
     domain_progress_transition_runtime: transitionRuntimeResult,
+    ...(transitionRuntimeLogAppend
+      ? { domain_progress_transition_log_append: transitionRuntimeLogAppend }
+      : {}),
+    ...(transitionRuntimeLogRef ? { domain_progress_transition_log_ref: transitionRuntimeLogRef } : {}),
     opl_transition_event: transitionRuntimeResult.transition_event,
     opl_transition_outbox_item: transitionRuntimeResult.transactional_outbox_item,
     projection_metadata: transitionRuntimeResult.projection_metadata,
@@ -1108,6 +1151,10 @@ function currentControlProviderAdmissionInputFrom(
         ...(currentnessBasis ? { owner_route_currentness_basis: currentnessBasis } : {}),
         current_control_command: currentControlCommand,
         domain_progress_transition_runtime: transitionRuntimeResult,
+        ...(transitionRuntimeLogAppend
+          ? { domain_progress_transition_log_append: transitionRuntimeLogAppend }
+          : {}),
+        ...(transitionRuntimeLogRef ? { domain_progress_transition_log_ref: transitionRuntimeLogRef } : {}),
         opl_transition_event: transitionRuntimeResult.transition_event,
         opl_transition_outbox_item: transitionRuntimeResult.transactional_outbox_item,
         projection_metadata: transitionRuntimeResult.projection_metadata,
