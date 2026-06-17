@@ -29,6 +29,38 @@ sleep 30
   return { fixtureRoot, domainHandlerPath };
 }
 
+test('family-runtime domain-handler default timeout covers warm MAS export latency', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-export-default-timeout-'));
+  const exportDomainHandlerPath = path.join(fixtureRoot, 'export');
+  fs.writeFileSync(
+    exportDomainHandlerPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+sleep 1
+printf '{"surface_kind":"mas_family_domain_handler_export","pending_family_tasks":[],"domain_progress_transition_requests":[]}'
+`,
+    { mode: 0o755 },
+  );
+  const previous = process.env.OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS;
+  delete process.env.OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS;
+  try {
+    const result = runFamilyRuntimeDomainHandlerCommand([exportDomainHandlerPath], {
+      cwd: fixtureRoot,
+    });
+
+    assert.equal(result.exit_code, 0);
+    assert.equal(result.timed_out, false);
+    assert.equal(result.domain_handler_timeout_ms, 120_000);
+  } finally {
+    if (previous === undefined) {
+      delete process.env.OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS;
+    } else {
+      process.env.OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS = previous;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime intake fails closed when a domain export handler times out', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-export-timeout-state-'));
   const exportDomainHandler = hangingDomainHandlerFixture('export');

@@ -9,7 +9,7 @@ import {
   recordManagedShellUvCacheRecovery,
 } from './managed-shell-command-env.ts';
 
-const DEFAULT_DOMAIN_HANDLER_TIMEOUT_MS = 30_000;
+const DEFAULT_DOMAIN_HANDLER_TIMEOUT_MS = 120_000;
 const DEFAULT_DOMAIN_HANDLER_MAX_BUFFER = 10 * 1024 * 1024;
 
 type DomainHandlerProcessResult = SpawnSyncReturns<string> & {
