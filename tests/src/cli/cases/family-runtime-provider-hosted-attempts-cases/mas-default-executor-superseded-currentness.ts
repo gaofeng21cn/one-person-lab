@@ -406,6 +406,12 @@ test('family-runtime blocks existing stale MAS default executor rows when curren
         assert.equal(eventsById.get(taskId)?.study_id, studyId);
         assert.equal(eventsById.get(taskId)?.authority_boundary.domain_truth_mutation, false);
       }
+      assert.equal(eventsById.get(staleQueuedTaskId)?.previous_status, 'queued');
+      assert.equal(eventsById.get(staleQueuedTaskId)?.previous_last_error, null);
+      assert.equal(eventsById.get(staleQueuedTaskId)?.operator_hold_preserved, false);
+      assert.equal(eventsById.get(staleWaitingTaskId)?.previous_status, 'waiting_approval');
+      assert.equal(eventsById.get(staleWaitingTaskId)?.previous_last_error, 'operator_hold:preexisting_review');
+      assert.equal(eventsById.get(staleWaitingTaskId)?.operator_hold_preserved, true);
     });
   } finally {
     db.close();

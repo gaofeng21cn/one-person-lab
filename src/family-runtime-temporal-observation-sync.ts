@@ -44,26 +44,6 @@ function temporalUnavailableFailureReason(
   return null;
 }
 
-function linkedTaskForWorkflowMissingObservation(db: DatabaseSync, row: StageAttemptRow) {
-  if (!row.task_id) {
-    return null;
-  }
-  try {
-    return db.prepare(`
-      SELECT domain_id, task_kind, status, lease_expires_at
-      FROM tasks
-      WHERE task_id = ?
-    `).get(row.task_id) as {
-      domain_id: string;
-      task_kind: string;
-      status: string;
-      lease_expires_at: string | null;
-    } | undefined ?? null;
-  } catch {
-    return null;
-  }
-}
-
 function stageAttemptHasProviderStarted(row: StageAttemptRow) {
   if (row.executor_kind === 'domain_handler') {
     return false;
@@ -71,29 +51,11 @@ function stageAttemptHasProviderStarted(row: StageAttemptRow) {
   return ['running', 'checkpointed', 'human_gate'].includes(row.status);
 }
 
-function hasExpiredRunningDefaultExecutorLease(db: DatabaseSync, row: StageAttemptRow) {
-  const task = linkedTaskForWorkflowMissingObservation(db, row);
-  if (
-    !task
-    || task.domain_id !== 'medautoscience'
-    || task.task_kind !== 'domain_owner/default-executor-dispatch'
-    || task.status !== 'running'
-    || !task.lease_expires_at
-  ) {
-    return false;
-  }
-  const leaseExpiresAt = Date.parse(task.lease_expires_at);
-  return Number.isFinite(leaseExpiresAt) && leaseExpiresAt <= Date.now();
-}
-
 function canFailStageAttemptForWorkflowMissing(
-  db: DatabaseSync,
+  _db: DatabaseSync,
   row: StageAttemptRow,
 ) {
-  if (stageAttemptHasProviderStarted(row)) {
-    return true;
-  }
-  return row.status === 'queued' && hasExpiredRunningDefaultExecutorLease(db, row);
+  return stageAttemptHasProviderStarted(row);
 }
 
 function appendActivityEventToRow(row: StageAttemptRow, event: Record<string, unknown>) {

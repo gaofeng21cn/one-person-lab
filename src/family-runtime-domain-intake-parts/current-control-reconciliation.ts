@@ -199,6 +199,9 @@ export function suppressExistingStaleDefaultExecutorRowsForBlockedCurrentControl
       continue;
     }
     const suppressedAt = new Date().toISOString();
+    const previousStatus = row.status;
+    const previousLastError = row.last_error ?? null;
+    const operatorHoldPreserved = previousStatus === 'waiting_approval' && previousLastError !== null;
     const result = db.prepare(`
       UPDATE tasks
       SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
@@ -224,6 +227,9 @@ export function suppressExistingStaleDefaultExecutorRowsForBlockedCurrentControl
         reason: 'same_study_current_control_admission_blocked',
         current_blocked_reason: blocker.reason,
         current_source_fingerprint: sourceFingerprint(blocker.task),
+        previous_status: previousStatus,
+        previous_last_error: previousLastError,
+        operator_hold_preserved: operatorHoldPreserved,
         authority_boundary: {
           opl: 'queue_currentness_supersession_only',
           domain: 'truth_quality_artifact_gate_owner',
@@ -242,6 +248,9 @@ export function suppressExistingStaleDefaultExecutorRowsForBlockedCurrentControl
         current_blocked_reason: blocker.reason,
         current_source_fingerprint: sourceFingerprint(blocker.task),
         stale_source_fingerprint: sourceFingerprint(payload),
+        previous_status: previousStatus,
+        previous_last_error: previousLastError,
+        operator_hold_preserved: operatorHoldPreserved,
         dispatch_ref: payload.dispatch_ref ?? null,
         action_type: payload.action_type ?? null,
         study_id: studyId,
