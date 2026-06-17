@@ -235,7 +235,15 @@
         "runtime_log_read_api": "readDomainProgressTransitionRuntimeLogJsonl",
         "runtime_log_append_api": "appendDomainProgressTransitionRuntimeResultJsonl",
         "idempotency_readback_api": "readDomainProgressTransitionIdempotencyJsonl",
+        "runtime_live_readback_api": "readDomainProgressTransitionRuntimeReadbackJsonl",
         "storage_contract": "append_only_physical_jsonl",
+        "runtime_live_readback_contract": {
+          "complete_transaction_status": "complete_transaction",
+          "incomplete_transaction_status": "incomplete_transaction",
+          "incomplete_transaction_fail_closed_reason": "domain_progress_transition_readback_incomplete_transaction",
+          "incomplete_transaction_outcome_kind": "blocked_incomplete_transaction",
+          "authority_boundary": "opl_runtime_primitive_readback_only_no_domain_truth_owner_receipt_or_typed_blocker"
+        },
         "focused_test": "tests/src/cli/cases/family-runtime-domain-progress-transition-runtime.test.ts"
       },
       "brand_module_partition": {
@@ -325,6 +333,7 @@
             "obligation_store": "append_only_physical_jsonl_identity_bound",
             "command_event_log": "append_only_physical_jsonl_command_event_outbox_entries",
             "idempotency_readback": "command_event_outbox_transaction_readback_by_idempotency_key",
+            "live_readback": "physical_jsonl_command_event_outbox_transaction_complete_or_fail_closed",
             "closeout_inbox": "append_only_physical_jsonl_pending_consumed_rejected_identity_bound",
             "same_identity_redrive_policy": "fail_closed_when_decision_is_not_current_latest_for_identity",
             "authority_boundary": {
@@ -359,6 +368,7 @@
           "durable_substrate_first_slice": {
             "ledger": "append_only_physical_jsonl",
             "transactional_outbox": "event_and_outbox_item_share_one_runtime_transaction_result_with_dedupe_readback",
+            "live_readback": "read_physical_jsonl_and_require_command_event_outbox_same_transaction_before_consumption",
             "fixed_point_reconciler": "observations_and_command_produce_exactly_one_transition_or_non_advancing_apply",
             "replay_harness": "multi_step_trace_exposes_step_evidence_for_exactly_one_or_non_advancing_apply",
             "human_gate_resume_token": "transport_shape_landed_without_opl_supplying_human_or_domain_answer",

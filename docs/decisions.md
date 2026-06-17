@@ -18,6 +18,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 这些字段族是 OPL-owned runtime readback，不是 domain authority。OPL 不因此写 MAS/MAG/RCA/OMA truth，不签 domain owner receipt，不创建 domain typed blocker，不授权 quality/export verdict，也不声明 domain ready、publication ready、App release ready、Brand L5 或 production ready。
 - MAS `transition_request_pending` 只有在 OPL 形成上述 runtime readback 后，才可被提升为 provider-admission-facing runtime input；否则只能停留为 request-only / NonAdvancingApply / typed blocker 语义。
 
+### 决策：Physical JSONL live readback 是 provider/runtime consumption 的最小完整事务证据
+
+原因：MAS consume-only adapter 不能继续读取裸 event、outbox item、queue payload 或 projection metadata 来推断 OPL runtime 已形成可消费状态。只有 physical JSONL 中同一 transaction 同时存在 command、event 和 outbox item，且 readback 暴露同一 identity / causality / authority boundary，domain repo 才能把它当作 OPL runtime primitive 的完整 readback 输入。否则旧的半事务、stale projection 或 queue residue 会再次诱导 MAS 在 DHD / provider admission / owner-route 层补私有 runtime 解释。
+
+影响：
+
+- `readDomainProgressTransitionRuntimeReadbackJsonl` 是 physical JSONL live readback API；它读取 append-only log，重建 aggregate read model，并检查 latest transaction 的 command、event、outbox item 是否完整且 event/outbox 属于同一 transaction。
+- 完整事务只证明 `runtime_readback_status=complete_transaction` 和 OPL primitive transaction completeness；不授权 provider-backed soak、domain owner receipt、typed blocker、publication ready、domain ready 或 production ready。
+- latest event 存在但事务不完整时必须返回 `runtime_readback_status=incomplete_transaction`、`fail_closed_reason=domain_progress_transition_readback_incomplete_transaction` 和 `outcome_kind=blocked_incomplete_transaction`。MAS/MAG/RCA/OMA 只能把它读作 typed blocker / request gap / runtime blocker 输入，不能本地补出 missing outbox、重放 event 或持久化 OPL runtime artifact。
+- MAS consume-only follow-through 必须消费 `opl_domain_progress_transition_runtime_live_readback` 这种完整 shape，而不是直接消费裸 `transition_event_id`、`outbox_item_id`、queue row、DHD dry-run 或 projection clean。
+
 ## 2026-06-16
 
 ### 决策：Domain Progress Transition Runtime 归 OPL，domain 仓只提供 policy adapter

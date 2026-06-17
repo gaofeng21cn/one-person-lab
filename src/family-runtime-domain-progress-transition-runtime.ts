@@ -3,6 +3,10 @@ import { dirname } from 'node:path';
 
 import { stableId } from './family-runtime-ids.ts';
 
+export {
+  readDomainProgressTransitionRuntimeReadbackJsonl,
+} from './family-runtime-domain-progress-transition-runtime-parts/live-readback.ts';
+
 export const DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID = 'opl_domain_progress_transition_runtime';
 export const DOMAIN_PROGRESS_TRANSITION_RUNTIME_MODULE = {
   primary: 'runway',
