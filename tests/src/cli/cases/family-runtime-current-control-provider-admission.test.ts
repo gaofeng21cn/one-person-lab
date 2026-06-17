@@ -306,6 +306,49 @@ test('family-runtime intake admits MAS current-control provider candidates ahead
       3,
     );
     assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload
+        .opl_domain_progress_transition_runtime_live_readback.surface_kind,
+      'opl_domain_progress_transition_runtime_live_readback',
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload
+        .opl_domain_progress_transition_runtime_live_readback.runtime_readback_status,
+      'complete_transaction',
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload
+        .opl_domain_progress_transition_runtime_live_readback.transaction_complete,
+      true,
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload
+        .opl_domain_progress_transition_runtime_live_readback.latest_transaction_readback
+        .same_transaction_event_and_outbox,
+      true,
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload
+        .opl_domain_progress_transition_runtime_live_readback.identity.latest_event_id,
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.opl_transition_event.event_id,
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload
+        .opl_domain_progress_transition_runtime_live_readback.identity.latest_outbox_item_id,
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.opl_transition_outbox_item.outbox_item_id,
+    );
+    assert.deepEqual(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload
+        .opl_domain_progress_transition_live_readback,
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload
+        .opl_domain_progress_transition_runtime_live_readback,
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload
+        .provider_admission_identity.opl_domain_progress_transition_runtime_live_readback
+        .identity.latest_event_id,
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.opl_transition_event.event_id,
+    );
+    assert.equal(
       tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.domain_progress_transition_runtime
         .read_model_readback.latest_transition_identity.event_id,
       tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.opl_transition_event.event_id,
@@ -689,8 +732,33 @@ test('family-runtime intake promotes MAS transition request pending task into OP
     assert.equal(tasks[0].payload.domain_progress_transition_log_ref, 'runtime/artifacts/supervision/domain_progress_transition_runtime/command_event_log.jsonl');
     assert.equal(tasks[0].payload.domain_progress_transition_log_append.append_status, 'appended');
     assert.equal(tasks[0].payload.domain_progress_transition_log_append.appended_entry_count, 3);
+    assert.equal(tasks[0].payload.opl_domain_progress_transition_runtime_live_readback.surface_kind, 'opl_domain_progress_transition_runtime_live_readback');
+    assert.equal(tasks[0].payload.opl_domain_progress_transition_runtime_live_readback.runtime_readback_status, 'complete_transaction');
+    assert.equal(tasks[0].payload.opl_domain_progress_transition_runtime_live_readback.transaction_complete, true);
+    assert.equal(
+      tasks[0].payload.opl_domain_progress_transition_runtime_live_readback.latest_transaction_readback
+        .same_transaction_event_and_outbox,
+      true,
+    );
+    assert.equal(
+      tasks[0].payload.opl_domain_progress_transition_runtime_live_readback.identity.latest_event_id,
+      tasks[0].payload.opl_transition_event.event_id,
+    );
+    assert.equal(
+      tasks[0].payload.opl_domain_progress_transition_runtime_live_readback.identity.latest_outbox_item_id,
+      tasks[0].payload.opl_transition_outbox_item.outbox_item_id,
+    );
+    assert.deepEqual(
+      tasks[0].payload.opl_domain_progress_transition_live_readback,
+      tasks[0].payload.opl_domain_progress_transition_runtime_live_readback,
+    );
     assert.equal(tasks[0].payload.opl_transition_outbox_item.dispatch_allowed, true);
     assert.equal(tasks[0].payload.provider_admission_identity.domain_progress_transition_log_ref, 'runtime/artifacts/supervision/domain_progress_transition_runtime/command_event_log.jsonl');
+    assert.equal(
+      tasks[0].payload.provider_admission_identity.opl_domain_progress_transition_runtime_live_readback
+        .identity.latest_event_id,
+      tasks[0].payload.opl_transition_event.event_id,
+    );
     assert.equal(tasks[0].payload.current_control_command.idempotency_key, attemptIdempotencyKey);
     assert.equal(tasks[0].payload.current_control_command.runtime_kind, 'DomainProgressTransitionRuntime');
   } finally {

@@ -11,6 +11,7 @@ import {
   buildDomainProgressTransitionRuntimeResult,
   createDomainProgressTransitionRuntimeLog,
   normalizeDomainProgressTransitionCommand,
+  readDomainProgressTransitionRuntimeReadbackJsonl,
 } from '../family-runtime-domain-progress-transition-runtime.ts';
 
 export type CurrentControlProviderAdmissionExportContext = {
@@ -61,6 +62,7 @@ type CurrentControlProviderAdmissionInputContext = {
   transitionRuntimeResult: Record<string, unknown>;
   transitionRuntimeLogAppend: Record<string, unknown> | null;
   transitionRuntimeLogRef: string | null;
+  transitionRuntimeLiveReadback: Record<string, unknown> | null;
   domainProgressTransitionApply: Record<string, unknown> | null;
 };
 
@@ -865,6 +867,13 @@ function currentControlProviderAdmissionInputContext(input: {
   const transitionRuntimeResult = isRecord(transitionRuntimeLogAppend?.result)
     ? transitionRuntimeLogAppend.result
     : input.fields.transitionRuntimeResult;
+  const transitionRuntimeLiveReadback = transitionRuntimeLogPath
+    ? readDomainProgressTransitionRuntimeReadbackJsonl({
+      logPath: transitionRuntimeLogPath,
+      aggregateIdentity: input.fields.currentControlCommand.aggregate_identity as Record<string, unknown>,
+      idempotencyKey: attemptIdempotencyKey,
+    })
+    : null;
   const explicitTransitionApply = domainProgressTransitionApply(input.candidate);
   const transitionApply = explicitTransitionApply
     ?? domainProgressTransitionExecuteApply({
@@ -900,6 +909,7 @@ function currentControlProviderAdmissionInputContext(input: {
       transitionRuntimeResult,
       transitionRuntimeLogAppend,
       transitionRuntimeLogRef: workspaceRelativeRef(transitionRuntimeLogPath, workspaceRoot),
+      transitionRuntimeLiveReadback,
       domainProgressTransitionApply: transitionApply,
     },
   };
@@ -1180,6 +1190,7 @@ function currentControlProviderAdmissionInputFrom(
     transitionRuntimeResult,
     transitionRuntimeLogAppend,
     transitionRuntimeLogRef,
+    transitionRuntimeLiveReadback,
     domainProgressTransitionApply,
   } = contextResult.context;
   const providerAdmissionIdentity = {
@@ -1190,6 +1201,12 @@ function currentControlProviderAdmissionInputFrom(
       ? { domain_progress_transition_log_append: transitionRuntimeLogAppend }
       : {}),
     ...(transitionRuntimeLogRef ? { domain_progress_transition_log_ref: transitionRuntimeLogRef } : {}),
+    ...(transitionRuntimeLiveReadback
+      ? {
+        opl_domain_progress_transition_runtime_live_readback: transitionRuntimeLiveReadback,
+        opl_domain_progress_transition_live_readback: transitionRuntimeLiveReadback,
+      }
+      : {}),
     opl_transition_event: transitionRuntimeResult.transition_event,
     opl_transition_outbox_item: transitionRuntimeResult.transactional_outbox_item,
     projection_metadata: transitionRuntimeResult.projection_metadata,
@@ -1247,6 +1264,12 @@ function currentControlProviderAdmissionInputFrom(
           ? { domain_progress_transition_log_append: transitionRuntimeLogAppend }
           : {}),
         ...(transitionRuntimeLogRef ? { domain_progress_transition_log_ref: transitionRuntimeLogRef } : {}),
+        ...(transitionRuntimeLiveReadback
+          ? {
+            opl_domain_progress_transition_runtime_live_readback: transitionRuntimeLiveReadback,
+            opl_domain_progress_transition_live_readback: transitionRuntimeLiveReadback,
+          }
+          : {}),
         opl_transition_event: transitionRuntimeResult.transition_event,
         opl_transition_outbox_item: transitionRuntimeResult.transactional_outbox_item,
         projection_metadata: transitionRuntimeResult.projection_metadata,
