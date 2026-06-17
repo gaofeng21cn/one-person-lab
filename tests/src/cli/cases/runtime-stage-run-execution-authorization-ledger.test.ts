@@ -316,6 +316,114 @@ test('runtime StageRun execution authorization accepts distinct work unit and so
   }
 });
 
+test('runtime StageRun execution authorization records independent quality gate attempt binding', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-authorization-quality-gate-'));
+  try {
+    const stageRunId = 'app-stage-run:medautoscience:publication-quality-gate';
+    const currentPointerRef = `opl://stage-runs/${encodeURIComponent(stageRunId)}/current`;
+    const stageManifestRef = `opl://stage-runs/${encodeURIComponent(stageRunId)}/manifest`;
+    const qualityGateRef = 'mas://quality-gate/receipt/publication-review';
+    const providerAttemptRef = 'temporal://attempt/mas-paper-author';
+    const qualityGateAttemptRef = 'temporal://attempt/mas-quality-reviewer';
+    const sourceFingerprint = 'sha256:quality-gate-runtime-source';
+    const idempotencyKey = 'quality-gate-runtime:g0';
+    const payload = authorizationPayload({
+      phase: 'closeout',
+      stage_run_id: stageRunId,
+      stage_id: 'publication_quality_gate',
+      generation: 0,
+      domain_context: {
+        domain_id: 'medautoscience',
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        stage_id: 'publication_quality_gate',
+      },
+      provider_attempt_ref: providerAttemptRef,
+      stage_attempt_id: 'sat_quality_gate',
+      attempt_lease_ref: 'opl://stage_attempts/sat_quality_gate/lease',
+      action_type: 'review_publication_quality_gate',
+      work_unit_id: 'publication_quality_review',
+      work_unit_fingerprint: 'sha256:quality-gate-runtime-work-unit',
+      reason: 'operator_authorized_independent_quality_gate_receipt',
+      execution_authorization_decision_ref:
+        'opl://stage_attempts/sat_quality_gate/execution-authorization',
+      workspace_scope_ref: 'medautoscience:quality-gate-workspace',
+      artifact_scope_ref: 'publication-quality-gate',
+      source_fingerprint: sourceFingerprint,
+      idempotency_key: idempotencyKey,
+      current_pointer_ref: currentPointerRef,
+      stage_manifest_ref: stageManifestRef,
+      owner_answer_ref: qualityGateRef,
+      owner_answer_kind: 'quality_gate_receipt',
+      closeout_receipt_ref: qualityGateRef,
+      owner_answer_stage_run_id: stageRunId,
+      owner_answer_generation: 0,
+      owner_answer_manifest_ref: stageManifestRef,
+      owner_answer_current_pointer_ref: currentPointerRef,
+      owner_answer_source_fingerprint: sourceFingerprint,
+      owner_answer_idempotency_key: idempotencyKey,
+      quality_gate_attempt_ref: qualityGateAttemptRef,
+    });
+
+    const record = runCli([
+      'runtime',
+      'stage-run-authorization',
+      'record',
+      '--payload',
+      JSON.stringify(payload),
+      '--json',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).stage_run_execution_authorization_ledger_record;
+
+    assert.equal(record.status, 'recorded');
+    assert.equal(record.recorded_receipt_count, 1);
+    assert.equal(record.receipts[0].quality_gate_attempt_ref, qualityGateAttemptRef);
+    assert.equal(
+      record.receipts[0].execution_authorization_report.closeout_binding.quality_gate_attempt_ref,
+      qualityGateAttemptRef,
+    );
+    assert.deepEqual(record.receipts[0].execution_authorization_report.closeout_binding_blockers, []);
+
+    const list = runCli([
+      'runtime',
+      'stage-run-authorization',
+      'list',
+      '--json',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).stage_run_execution_authorization_ledger;
+
+    assert.equal(list.receipts[0].quality_gate_attempt_ref, qualityGateAttemptRef);
+    assert.equal(
+      list.receipts[0].execution_authorization_report.closeout_binding.quality_gate_attempt_ref,
+      qualityGateAttemptRef,
+    );
+
+    const sameAttempt = runCli([
+      'runtime',
+      'stage-run-authorization',
+      'record',
+      '--payload',
+      JSON.stringify({
+        ...payload,
+        quality_gate_attempt_ref: providerAttemptRef,
+      }),
+      '--dry-run',
+      '--json',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).stage_run_execution_authorization_ledger_record;
+
+    assert.equal(sameAttempt.status, 'blocked');
+    assert.equal(
+      sameAttempt.blocker.blocker_reasons.includes('quality_gate_same_attempt_self_review_forbidden'),
+      true,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('runtime StageRun execution authorization ledger records refs-only OPL authorization', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-authorization-'));
   try {
@@ -546,7 +654,7 @@ test('App StageRun cockpit consumes authorization ledger while preserving domain
   }
 });
 
-test('App StageRun cockpit does not promote quality gate receipt to StageRun closeout owner answer', () => {
+test('App StageRun cockpit requires independent attempt binding for quality gate receipt closeout', () => {
   const cockpit = buildAppStageRunCockpit({
     domain: 'medautoscience',
     current_owner: 'medautoscience',
@@ -580,18 +688,31 @@ test('App StageRun cockpit does not promote quality gate receipt to StageRun clo
     },
   });
 
-  assert.equal(cockpit.execution_authorization.closeout_binding.owner_answer_ref, null);
-  assert.equal(cockpit.execution_authorization.closeout_binding.owner_answer_kind, null);
+  assert.equal(
+    cockpit.execution_authorization.closeout_binding.owner_answer_ref,
+    'runtime/quests/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/reports/publishability_gate/2026-06-07T015349Z.json',
+  );
+  assert.equal(cockpit.execution_authorization.closeout_binding.owner_answer_kind, 'quality_gate_receipt');
   assert.equal(
     cockpit.stage_run_current_owner_delta.missing_role_or_answer_summary
       .owner_receipt_or_typed_blocker_missing,
-    true,
+    false,
   );
   assert.equal(cockpit.execution_authorization.execution_authorized, false);
   assert.equal(
     cockpit.execution_authorization.closeout_binding_blockers.includes(
+      'quality_gate_independent_attempt_binding_missing',
+    ),
+    true,
+  );
+  assert.equal(
+    cockpit.execution_authorization.closeout_binding_blockers.includes(
       'closeout_receipt_ref_missing',
     ),
+    false,
+  );
+  assert.equal(
+    cockpit.next_required_owner_action?.missing_input_refs.includes('quality_gate_attempt_ref'),
     true,
   );
   assert.equal(

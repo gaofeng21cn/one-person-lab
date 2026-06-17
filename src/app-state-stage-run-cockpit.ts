@@ -83,6 +83,7 @@ const CLOSEOUT_BINDING_REQUIRED_REFS = [
   'owner_answer_current_pointer_binding_ref',
   'owner_answer_source_fingerprint_binding_ref',
   'owner_answer_idempotency_binding_ref',
+  'quality_gate_attempt_ref',
 ] as const;
 
 const BLOCKER_REASON_REF_MAP: Record<string, string[]> = {
@@ -112,6 +113,8 @@ const BLOCKER_REASON_REF_MAP: Record<string, string[]> = {
   closeout_owner_answer_idempotency_binding_missing: [
     'owner_answer_idempotency_binding_ref',
   ],
+  quality_gate_independent_attempt_binding_missing: ['quality_gate_attempt_ref'],
+  quality_gate_same_attempt_self_review_forbidden: ['quality_gate_attempt_ref'],
 };
 
 function ownerAnswerRef(currentOwnerDelta: JsonRecord) {
@@ -161,7 +164,9 @@ function ownerAnswerKindFromProjection(projection: JsonRecord) {
 }
 
 function legalStageRunCloseoutOwnerAnswerKind(kind: string | null) {
-  return kind === 'owner_receipt' || kind === 'typed_blocker' ? kind : null;
+  return kind === 'owner_receipt' || kind === 'typed_blocker' || kind === 'quality_gate_receipt'
+    ? kind
+    : null;
 }
 
 function missingRefsFromBlockerReasons(reasons: string[]) {
@@ -391,6 +396,9 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
     typed_blocker_refs: effectiveOwnerAnswerKind === 'typed_blocker'
       ? stringRefs(effectiveOwnerAnswerRef)
       : [],
+    quality_gate_receipt_refs: effectiveOwnerAnswerKind === 'quality_gate_receipt'
+      ? stringRefs(effectiveOwnerAnswerRef)
+      : [],
     content_hashes: stringRefs(
       text(ownerAnswerProjection.source_fingerprint),
       text(ownerAnswerProjectionCloseoutBinding.source_fingerprint),
@@ -473,6 +481,10 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
       ?? text(ownerAnswerProjectionHardGate.owner_answer_idempotency_key)
       ?? text(ownerAnswerProjection.delta_id)
       ?? text(ownerAnswerProjectionCloseoutBinding.idempotency_key),
+    quality_gate_attempt_ref: text(record(currentOwnerDelta.hard_gate).quality_gate_attempt_ref)
+      ?? latestExecutionAuthorization?.quality_gate_attempt_ref
+      ?? text(ownerAnswerProjectionHardGate.quality_gate_attempt_ref)
+      ?? text(ownerAnswerProjectionCloseoutBinding.quality_gate_attempt_ref),
   });
   const nextRequiredOwnerAction = buildExecutionAuthorizationNextAction({
     stageRunId: runId,
@@ -542,6 +554,7 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
           receipt_status: latestExecutionAuthorization.receipt_status,
           stage_attempt_id: latestExecutionAuthorization.stage_attempt_id,
           provider_attempt_ref: latestExecutionAuthorization.provider_attempt_ref,
+          quality_gate_attempt_ref: latestExecutionAuthorization.quality_gate_attempt_ref,
           attempt_lease_ref: latestExecutionAuthorization.attempt_lease_ref,
           execution_authorization_decision_ref:
             latestExecutionAuthorization.execution_authorization_decision_ref,

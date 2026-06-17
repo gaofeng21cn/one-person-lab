@@ -361,7 +361,11 @@ export function evaluateStageRunAdmission(input: JsonRecord): StageRunAdmissionR
     if (requiredRoles.length === 0) {
       closeoutBlockers.push('required_role_artifacts_missing');
     }
-    if (stringRefs(input.owner_receipt_refs).length === 0 && stringRefs(input.typed_blocker_refs).length === 0) {
+    if (
+      stringRefs(input.owner_receipt_refs).length === 0
+      && stringRefs(input.typed_blocker_refs).length === 0
+      && stringRefs(input.quality_gate_receipt_refs).length === 0
+    ) {
       closeoutBlockers.push('owner_receipt_or_typed_blocker_missing');
     }
     if (stringRefs(input.content_hashes).length === 0) {

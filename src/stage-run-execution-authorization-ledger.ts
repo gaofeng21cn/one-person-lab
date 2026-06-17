@@ -57,6 +57,8 @@ export type StageRunExecutionAuthorizationInput = {
   owner_answer_current_pointer_ref?: string | null;
   owner_answer_source_fingerprint?: string | null;
   owner_answer_idempotency_key?: string | null;
+  quality_gate_attempt_ref?: string | null;
+  owner_answer_attempt_ref?: string | null;
   closeout_refs?: string[];
   receipt_ref?: string | null;
 };
@@ -107,6 +109,7 @@ export type StageRunExecutionAuthorizationReceipt = {
   owner_answer_current_pointer_ref: string | null;
   owner_answer_source_fingerprint: string | null;
   owner_answer_idempotency_key: string | null;
+  quality_gate_attempt_ref: string | null;
   closeout_refs: string[];
   execution_authorization_report: StageRunExecutionAuthorizationReport;
   authority_boundary: ReturnType<typeof refsOnlyAuthorityBoundary>;
@@ -355,6 +358,8 @@ function buildEvaluationInput(input: StageRunExecutionAuthorizationInput) {
     current_pointer_ref: optionalString(input.current_pointer_ref),
     owner_answer_source_fingerprint: optionalString(input.owner_answer_source_fingerprint),
     owner_answer_idempotency_key: optionalString(input.owner_answer_idempotency_key),
+    quality_gate_attempt_ref:
+      optionalString(input.quality_gate_attempt_ref) ?? optionalString(input.owner_answer_attempt_ref),
   };
 }
 
@@ -382,6 +387,7 @@ function normalizeReceipt(value: unknown): StageRunExecutionAuthorizationReceipt
   const source_fingerprint = optionalString(value.source_fingerprint);
   const idempotency_key = optionalString(value.idempotency_key);
   const current_pointer_ref = optionalString(value.current_pointer_ref);
+  const quality_gate_attempt_ref = optionalString(value.quality_gate_attempt_ref);
   const report = isRecord(value.execution_authorization_report)
     ? value.execution_authorization_report as StageRunExecutionAuthorizationReport
     : null;
@@ -455,6 +461,7 @@ function normalizeReceipt(value: unknown): StageRunExecutionAuthorizationReceipt
     owner_answer_current_pointer_ref: optionalString(value.owner_answer_current_pointer_ref),
     owner_answer_source_fingerprint: optionalString(value.owner_answer_source_fingerprint),
     owner_answer_idempotency_key: optionalString(value.owner_answer_idempotency_key),
+    quality_gate_attempt_ref,
     closeout_refs: uniqueStrings(stringList(value.closeout_refs)),
     execution_authorization_report: report,
     authority_boundary: refsOnlyAuthorityBoundary(),
@@ -592,6 +599,8 @@ function normalizeInput(input: StageRunExecutionAuthorizationInput): StageRunExe
     owner_answer_current_pointer_ref: optionalString(input.owner_answer_current_pointer_ref),
     owner_answer_source_fingerprint: optionalString(input.owner_answer_source_fingerprint),
     owner_answer_idempotency_key: optionalString(input.owner_answer_idempotency_key),
+    quality_gate_attempt_ref:
+      optionalString(input.quality_gate_attempt_ref) ?? optionalString(input.owner_answer_attempt_ref),
     closeout_refs: uniqueStrings(input.closeout_refs ?? []),
     execution_authorization_report: report,
     authority_boundary: refsOnlyAuthorityBoundary(),

@@ -106,6 +106,8 @@ function payloadInput(payload: Record<string, unknown>): StageRunExecutionAuthor
     owner_answer_current_pointer_ref: optionalString(payload.owner_answer_current_pointer_ref),
     owner_answer_source_fingerprint: optionalString(payload.owner_answer_source_fingerprint),
     owner_answer_idempotency_key: optionalString(payload.owner_answer_idempotency_key),
+    quality_gate_attempt_ref: optionalString(payload.quality_gate_attempt_ref),
+    owner_answer_attempt_ref: optionalString(payload.owner_answer_attempt_ref),
     closeout_refs: stringList(payload.closeout_refs ?? payload.closeout_ref),
     receipt_ref: optionalString(payload.receipt_ref),
   };
