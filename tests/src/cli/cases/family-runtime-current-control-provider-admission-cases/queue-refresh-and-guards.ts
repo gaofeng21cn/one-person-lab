@@ -251,6 +251,142 @@ test('family-runtime rehydrates terminal MAS current-control admission when stag
   }
 });
 
+test('family-runtime consumes terminal MAS current-control admission when only volatile projection epochs changed', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    createQueueTables(db);
+    const taskId = 'task-mas-current-control-terminal-consumed-volatile-refresh';
+    const dedupeKey = 'owner-route::003-dpcc-primary-care-phenotype-treatment-gap::terminal-consumed';
+    const workUnitFingerprint = 'publication-blockers::0915410f804b3697';
+    const payload: Record<string, any> = {
+      ...currentControlAdmissionPayload(
+        workUnitFingerprint,
+        '01',
+        workUnitFingerprint,
+      ),
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      quest_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      action_type: 'run_quality_repair_batch',
+      next_executable_owner: 'write',
+      work_unit_id: 'medical_prose_write_repair',
+      route_identity_key: 'paper-policy-request:1a379264039c75d0e9cfd8f5',
+      attempt_idempotency_key: 'paper-policy-request:1a379264039c75d0e9cfd8f5',
+      stage_packet_ref:
+        'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/immutable/run_quality_repair_batch/77fa1796dc1d50c2b7687a9f.json',
+      stage_packet_refs: [
+        'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/immutable/run_quality_repair_batch/77fa1796dc1d50c2b7687a9f.json',
+      ],
+    };
+    payload.provider_admission_identity = {
+      ...payload.provider_admission_identity,
+      route_identity_key: payload.route_identity_key,
+      attempt_idempotency_key: payload.attempt_idempotency_key,
+      action_fingerprint: workUnitFingerprint,
+      stage_packet_ref: payload.stage_packet_ref,
+      stage_packet_refs: payload.stage_packet_refs,
+    };
+    payload.owner_route_currentness_basis = {
+      ...payload.owner_route_currentness_basis,
+      work_unit_id: 'medical_prose_write_repair',
+      work_unit_fingerprint: workUnitFingerprint,
+      truth_epoch: 'truth-event-stable-dm003',
+      runtime_health_epoch: 'runtime-health-event-01',
+      generated_at: '2026-06-17T14:55:58Z',
+      currentness_digest_basis: {
+        runtime_digest: 'runtime-volatile-01',
+        stable_truth_digest: 'truth-stable-dm003',
+        volatile_projection_digest: 'projection-volatile-01',
+        work_unit_digest: 'work-unit-stable-dm003',
+      },
+    };
+    const volatileRefreshPayload: Record<string, any> = {
+      ...payload,
+      owner_route_currentness_basis: {
+        ...payload.owner_route_currentness_basis,
+        runtime_health_epoch: 'runtime-health-event-02',
+        generated_at: '2026-06-17T15:00:00Z',
+        currentness_digest_basis: {
+          ...payload.owner_route_currentness_basis.currentness_digest_basis,
+          runtime_digest: 'runtime-volatile-02',
+          volatile_projection_digest: 'projection-volatile-02',
+        },
+      },
+    };
+    insertSucceededTask(db, {
+      taskId,
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload,
+      dedupeKey,
+    });
+    const taskRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as FamilyRuntimeTaskRow;
+    const stageAttempt = ensureProviderHostedStageAttempt(db, taskRow, payload, {
+      eventSource: 'test-current-control-terminal-consumption',
+    });
+    assert.ok(stageAttempt);
+    const closeoutRefs = [
+      `studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_execution/${stageAttempt.stage_attempt_id}.closeout.json`,
+    ];
+    db.prepare(`
+      UPDATE stage_attempts
+      SET status = 'completed',
+        closeout_refs_json = ?,
+        provider_receipt_json = ?,
+        provider_run_json = ?,
+        closeout_receipt_status = 'accepted_typed_closeout'
+      WHERE stage_attempt_id = ?
+    `).run(
+      JSON.stringify(closeoutRefs),
+      JSON.stringify({ closeout_refs: closeoutRefs }),
+      JSON.stringify({ provider_status: 'completed' }),
+      stageAttempt.stage_attempt_id,
+    );
+
+    const result = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload: volatileRefreshPayload,
+      dedupeKey,
+      source: 'test-current-control-terminal-consumption',
+    });
+    const task = db.prepare('SELECT status, attempts, payload_json FROM tasks WHERE task_id = ?').get(taskId) as {
+      status: string;
+      attempts: number;
+      payload_json: string;
+    };
+    const requeueEvent = db.prepare(`
+      SELECT payload_json
+      FROM events
+      WHERE task_id = ? AND event_type = 'task_requeued_from_mas_current_control_provider_admission'
+      LIMIT 1
+    `).get(taskId) as { payload_json: string } | undefined;
+    const consumedEvent = db.prepare(`
+      SELECT payload_json
+      FROM events
+      WHERE task_id = ? AND event_type = 'task_current_control_provider_admission_already_consumed'
+      LIMIT 1
+    `).get(taskId) as { payload_json: string } | undefined;
+    const eventPayload = consumedEvent ? JSON.parse(consumedEvent.payload_json) : null;
+
+    assert.equal(result.accepted, false);
+    assert.equal(result.idempotent_noop, true);
+    assert.equal(result.requeued_from_terminal, false);
+    assert.equal(result.task?.status, 'succeeded');
+    assert.equal(task.status, 'succeeded');
+    assert.equal(task.attempts, 0);
+    assert.equal(JSON.parse(task.payload_json).owner_route_currentness_basis.runtime_health_epoch, 'runtime-health-event-01');
+    assert.equal(requeueEvent, undefined);
+    assert.ok(consumedEvent);
+    assert.equal(eventPayload.reason, 'terminal_stage_attempt_consumed_same_transition_identity');
+    assert.equal(eventPayload.terminal_stage_attempt_id, stageAttempt.stage_attempt_id);
+    assert.equal(eventPayload.currentness_identity.attempt_idempotency_key, 'paper-policy-request:1a379264039c75d0e9cfd8f5');
+    assert.equal(eventPayload.authority_boundary.provider_stage_attempt_started, false);
+    assert.equal(eventPayload.authority_boundary.provider_completion_is_domain_ready, false);
+  } finally {
+    db.close();
+  }
+});
+
 test('family-runtime rehydrates blocked MAS current-control admission when terminal attempts are stale', () => {
   const db = new DatabaseSync(':memory:');
   try {

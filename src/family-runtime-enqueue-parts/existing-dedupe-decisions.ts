@@ -323,6 +323,86 @@ function defaultExecutorTerminalAttemptCurrentControlAdmissionRedriveDecision(
   };
 }
 
+function providerAdmissionTerminalConsumptionIdentity(
+  payload: Record<string, unknown>,
+) {
+  const identity = providerAdmissionCurrentnessIdentity(payload)
+    ?? providerAdmissionCurrentnessIdentity(payload, { requirePendingStatus: false });
+  if (!identity) {
+    return null;
+  }
+  const stagePacketRefs = identity.stage_packet_refs.length > 0
+    ? identity.stage_packet_refs
+    : identity.stage_packet_ref
+      ? [identity.stage_packet_ref]
+      : [];
+  return {
+    source_fingerprint: identity.source_fingerprint,
+    work_unit_id: identity.work_unit_id,
+    work_unit_fingerprint: identity.work_unit_fingerprint,
+    action_fingerprint: identity.action_fingerprint,
+    truth_epoch: identity.truth_epoch,
+    stable_truth_digest: identity.stable_truth_digest,
+    work_unit_digest: identity.work_unit_digest,
+    stage_packet_refs: stagePacketRefs,
+    route_identity_key: identity.route_identity_key,
+    attempt_idempotency_key: identity.attempt_idempotency_key,
+    recovery_obligation_id: identity.recovery_obligation_id,
+  };
+}
+
+function sameProviderAdmissionTerminalConsumptionIdentity(
+  left: NonNullable<ReturnType<typeof providerAdmissionTerminalConsumptionIdentity>>,
+  right: NonNullable<ReturnType<typeof providerAdmissionTerminalConsumptionIdentity>>,
+) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function defaultExecutorTerminalConsumedCurrentControlAdmissionNoopDecision(
+  existing: FamilyRuntimeTaskRow,
+  existingPayload: Record<string, unknown>,
+  nextPayload: Record<string, unknown>,
+  stageAttempts: ReturnType<typeof listStageAttemptsForTask>,
+) {
+  if (
+    !['succeeded', 'blocked'].includes(existing.status)
+    || !isDefaultExecutorDispatch(existing, existingPayload)
+    || !isDefaultExecutorDispatch(existing, nextPayload)
+  ) {
+    return null;
+  }
+  const nextIdentity = providerAdmissionTerminalConsumptionIdentity(nextPayload);
+  if (!nextIdentity?.attempt_idempotency_key || !nextIdentity.route_identity_key) {
+    return null;
+  }
+  const terminalAttempt = stageAttempts.find((attempt) => {
+    if (!TERMINAL_STAGE_ATTEMPT_STATUSES.has(optionalString(attempt.status) ?? '')) {
+      return false;
+    }
+    const terminalIdentity = providerAdmissionTerminalConsumptionIdentity(attempt.workspace_locator);
+    return Boolean(
+      terminalIdentity
+      && sameProviderAdmissionTerminalConsumptionIdentity(terminalIdentity, nextIdentity),
+    );
+  });
+  if (!terminalAttempt) {
+    return null;
+  }
+  const closeoutRefs = Array.isArray(terminalAttempt.closeout_refs)
+    ? terminalAttempt.closeout_refs.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
+    : [];
+  return {
+    reason: 'terminal_stage_attempt_consumed_same_transition_identity',
+    terminal_stage_attempt_id: terminalAttempt.stage_attempt_id,
+    terminal_stage_attempt_status: terminalAttempt.status,
+    terminal_provider_status: optionalString(terminalAttempt.provider_run.provider_status),
+    closeout_refs: closeoutRefs,
+    currentness_identity: nextIdentity,
+    previous_source_fingerprint: sourceFingerprint(existingPayload),
+    next_source_fingerprint: sourceFingerprint(nextPayload),
+  };
+}
+
 function defaultExecutorRunningTerminalCurrentControlAdmissionNoopDecision(
   existing: FamilyRuntimeTaskRow,
   existingPayload: Record<string, unknown>,
@@ -611,6 +691,7 @@ export {
   defaultExecutorRunningTerminalCurrentControlAdmissionNoopDecision,
   defaultExecutorSucceededProviderLeaseRequiredRedriveDecision,
   defaultExecutorSupersededCurrentControlAdmissionRedriveDecision,
+  defaultExecutorTerminalConsumedCurrentControlAdmissionNoopDecision,
   defaultExecutorTerminalAttemptCurrentControlAdmissionRedriveDecision,
   isDefaultExecutorDispatch,
   markTransportOnlyAdmissionCheckpointsSuperseded,

@@ -25,6 +25,7 @@ import {
   defaultExecutorRunningTerminalCurrentControlAdmissionNoopDecision,
   defaultExecutorSucceededProviderLeaseRequiredRedriveDecision,
   defaultExecutorSupersededCurrentControlAdmissionRedriveDecision,
+  defaultExecutorTerminalConsumedCurrentControlAdmissionNoopDecision,
   defaultExecutorTerminalAttemptCurrentControlAdmissionRedriveDecision,
   isDefaultExecutorDispatch,
   isDefaultExecutorDispatchInput,
@@ -232,6 +233,15 @@ export function reconcileExistingDedupeTask(
       existingStageAttempts,
     )
     : null;
+  const terminalConsumedCurrentControlAdmissionNoop = isDefaultExecutorDispatch(existing, existingPayload)
+    && isDefaultExecutorDispatchInput(input.domainId, taskKind, payload)
+    ? defaultExecutorTerminalConsumedCurrentControlAdmissionNoopDecision(
+      existing,
+      existingPayload,
+      payload,
+      existingStageAttempts,
+    )
+    : null;
   const supersededCurrentControlAdmissionRedrive = isDefaultExecutorDispatch(existing, existingPayload)
     && isDefaultExecutorDispatchInput(input.domainId, taskKind, payload)
     ? defaultExecutorSupersededCurrentControlAdmissionRedriveDecision(existing, payload)
@@ -335,6 +345,36 @@ export function reconcileExistingDedupeTask(
       accepted: false,
       idempotent_noop: true,
       task: taskToPayload(refreshed),
+    };
+  }
+  if (terminalConsumedCurrentControlAdmissionNoop) {
+    insertEvent(db, {
+      taskId: existing.task_id,
+      domainId: existing.domain_id,
+      eventType: 'task_current_control_provider_admission_already_consumed',
+      source: input.source ?? 'opl-cli',
+      payload: {
+        dedupe_key: dedupeKey,
+        retained_status: existing.status,
+        ...terminalConsumedCurrentControlAdmissionNoop,
+        authority_boundary: {
+          opl: 'queue_dedupe_noop_from_terminal_attempt_consumed_transition_identity',
+          domain: 'truth_quality_artifact_gate_owner',
+          domain_truth_mutation: false,
+          publication_quality_mutation: false,
+          artifact_gate_mutation: false,
+          current_package_mutation: false,
+          provider_stage_attempt_started: false,
+          provider_completion_is_domain_ready: false,
+        },
+      },
+    });
+    return {
+      accepted: false,
+      requeued_from_terminal: false,
+      current_control_provider_admission_consumed: terminalConsumedCurrentControlAdmissionNoop,
+      idempotent_noop: true,
+      task: taskToPayload(existing),
     };
   }
   if (exportedTaskChanged && closeoutRedrive) {

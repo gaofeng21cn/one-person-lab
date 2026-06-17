@@ -30,6 +30,7 @@ import {
 export type EnqueueTaskResult = {
   accepted: boolean;
   requeued_from_terminal?: boolean;
+  current_control_provider_admission_consumed?: Record<string, unknown>;
   idempotent_noop: boolean;
   task: ReturnType<typeof taskToPayload>;
 };
