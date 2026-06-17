@@ -38,6 +38,7 @@ import { PROGRESS_FIRST_OWNER_DELTA_REQUIRED_REASON } from './family-runtime-pro
 import {
   domainRouteOplAttemptAdmissionNeedsProviderFollowthrough,
   isDomainRouteOplAttemptAdmissionRequested,
+  isDefaultExecutorOplAttemptAdmissionRequested,
   masDomainOwnerAnswerObservationFromRecords,
   type MasDomainOwnerAnswerObservation,
   MAS_DOMAIN_TYPED_BLOCKER_OBSERVED_REASON,
@@ -609,6 +610,15 @@ export async function dispatchFamilyRuntimeTask(
       }
     }
     if (domainRouteOplAttemptAdmissionNeedsProviderFollowthrough({ taskPayload: payload, output })) {
+      return keepTaskOpenForOplAttemptAdmissionRequested(db, row, {
+        commandPreview: command.command_preview,
+        commandCwd: command.cwd,
+        output,
+        activeStageAttemptIds,
+        closeoutRefs,
+      });
+    }
+    if (isDefaultExecutorOplAttemptAdmissionRequested(output)) {
       return keepTaskOpenForOplAttemptAdmissionRequested(db, row, {
         commandPreview: command.command_preview,
         commandCwd: command.cwd,

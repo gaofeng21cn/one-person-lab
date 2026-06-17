@@ -1302,12 +1302,13 @@ export function currentControlProviderAdmissionInputs(
       blocked: [{ reason: 'invalid_current_control_state', task: { ref: currentControlRef } }],
     };
   }
-  const candidates = [
-    ...currentControlProviderAdmissionCandidates(currentControl),
-    ...pendingInputs
-      .map(currentControlProviderAdmissionCandidateFromTransitionRequestTask)
-      .filter((candidate): candidate is Record<string, unknown> => Boolean(candidate)),
-  ];
+  const candidates = currentControlProviderAdmissionCandidates(currentControl);
+  for (const input of pendingInputs) {
+    const candidate = currentControlProviderAdmissionCandidateFromTransitionRequestTask(input);
+    if (candidate) {
+      candidates.push(candidate);
+    }
+  }
   const inputs: EnqueueInput[] = [];
   const blocked: CurrentControlProviderAdmissionBlocked[] = [];
   for (const candidate of candidates) {
