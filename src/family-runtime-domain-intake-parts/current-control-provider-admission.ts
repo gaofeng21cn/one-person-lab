@@ -513,6 +513,97 @@ function currentControlProviderAdmissionCandidateFromActionQueueItem(
   };
 }
 
+function currentControlProviderAdmissionCandidateFromTransitionRequestTask(
+  input: EnqueueInput,
+) {
+  if (
+    input.domainId !== 'medautoscience'
+    || input.taskKind !== 'domain_owner/default-executor-dispatch'
+  ) {
+    return null;
+  }
+  const request = isRecord(input.payload.opl_domain_progress_transition_request)
+    ? input.payload.opl_domain_progress_transition_request
+    : null;
+  if (!request) {
+    return null;
+  }
+  const studyId = optionalString(input.payload.study_id)
+    ?? optionalString(request.aggregate_identity && isRecord(request.aggregate_identity)
+      ? request.aggregate_identity.study_id
+      : null);
+  const actionType = optionalString(input.payload.action_type)
+    ?? optionalString(request.action_type);
+  const workUnitId = optionalString(input.payload.work_unit_id)
+    ?? optionalString(request.aggregate_identity && isRecord(request.aggregate_identity)
+      ? request.aggregate_identity.work_unit_id
+      : null);
+  const workUnitFingerprint = optionalString(input.payload.work_unit_fingerprint)
+    ?? optionalString(input.payload.action_fingerprint)
+    ?? optionalString(request.aggregate_identity && isRecord(request.aggregate_identity)
+      ? request.aggregate_identity.work_unit_fingerprint
+      : null);
+  const nextOwner = optionalString(input.payload.next_executable_owner)
+    ?? optionalString(input.payload.domain_owner)
+    ?? optionalString(input.payload.owner)
+    ?? optionalString(request.next_owner);
+  const routeIdentityKey = optionalString(input.payload.route_identity_key)
+    ?? optionalString(request.route_identity_key)
+    ?? optionalString(input.payload.attempt_idempotency_key)
+    ?? optionalString(request.idempotency_key);
+  const attemptIdempotencyKey = optionalString(input.payload.attempt_idempotency_key)
+    ?? optionalString(request.idempotency_key);
+  if (!studyId || !actionType || !workUnitId || !workUnitFingerprint || !nextOwner) {
+    return null;
+  }
+  const currentnessBasis = isRecord(input.payload.owner_route_currentness_basis)
+    ? input.payload.owner_route_currentness_basis
+    : isRecord(input.payload.currentness_basis)
+      ? input.payload.currentness_basis
+      : {};
+  return {
+    status: 'provider_admission_pending',
+    owner_route_current: input.payload.owner_route_current !== false,
+    study_id: studyId,
+    quest_id: optionalString(input.payload.quest_id) ?? studyId,
+    action_type: actionType,
+    work_unit_id: workUnitId,
+    work_unit_fingerprint: workUnitFingerprint,
+    action_fingerprint: optionalString(input.payload.action_fingerprint) ?? workUnitFingerprint,
+    source_fingerprint: optionalString(input.payload.source_fingerprint)
+      ?? optionalString(input.payload.action_fingerprint)
+      ?? workUnitFingerprint,
+    dispatch_authority: optionalString(input.payload.dispatch_authority)
+      ?? 'domain_owner_transition_request',
+    dispatch_path: optionalString(input.payload.dispatch_path),
+    dispatch_ref: optionalString(input.payload.dispatch_ref),
+    executor_kind: optionalString(input.payload.executor_kind) ?? 'codex_cli_default',
+    next_executable_owner: nextOwner,
+    provider_attempt_or_lease_required: input.payload.provider_attempt_or_lease_required !== false,
+    provider_completion_is_domain_completion: false,
+    stage_transition_authority_boundary: isRecord(input.payload.stage_transition_authority_boundary)
+      ? input.payload.stage_transition_authority_boundary
+      : providerObservationBoundaryFromCurrentControl(),
+    ...(routeIdentityKey ? { route_identity_key: routeIdentityKey } : {}),
+    ...(attemptIdempotencyKey ? { attempt_idempotency_key: attemptIdempotencyKey } : {}),
+    ...(optionalString(input.payload.stage_packet_ref) ? { stage_packet_ref: optionalString(input.payload.stage_packet_ref) } : {}),
+    ...(Array.isArray(input.payload.stage_packet_refs) ? { stage_packet_refs: input.payload.stage_packet_refs } : {}),
+    ...(Array.isArray(input.payload.checkpoint_refs) ? { checkpoint_refs: input.payload.checkpoint_refs } : {}),
+    ...(optionalString(input.payload.required_output_surface)
+      ? { required_output_surface: optionalString(input.payload.required_output_surface) }
+      : {}),
+    ...(recoveryObligationId(input.payload) ? { recovery_obligation_id: recoveryObligationId(input.payload) } : {}),
+    currentness_basis: {
+      ...currentnessBasis,
+      work_unit_id: optionalString(currentnessBasis.work_unit_id) ?? workUnitId,
+      work_unit_fingerprint: optionalString(currentnessBasis.work_unit_fingerprint) ?? workUnitFingerprint,
+    },
+    opl_domain_progress_transition_request: request,
+    provider_admission_schema_source: 'transition_request_pending_task',
+    priority: input.priority,
+  };
+}
+
 function nestedCurrentControlActionItems(currentControl: Record<string, unknown>) {
   const items: unknown[] = [];
   if (Array.isArray(currentControl.action_queue)) {
@@ -1110,6 +1201,7 @@ function currentControlProviderAdmissionInputFrom(
       }
       : {}),
   };
+  const schemaSource = optionalString(candidate.provider_admission_schema_source);
   return {
     input: {
       domainId,
@@ -1185,7 +1277,9 @@ function currentControlProviderAdmissionInputFrom(
         sourceFingerprint,
       }),
       priority: Number.isInteger(candidate.priority) ? candidate.priority as number : 95,
-      source: 'opl-current-control-provider-admission',
+      source: schemaSource === 'transition_request_pending_task'
+        ? 'opl-current-control-transition-request'
+        : 'opl-current-control-provider-admission',
       requiresApproval: false,
     },
   };
@@ -1195,6 +1289,7 @@ export function currentControlProviderAdmissionInputs(
   domainId: FamilyRuntimeDomainId,
   output: Record<string, unknown>,
   exportContext: CurrentControlProviderAdmissionExportContext,
+  pendingInputs: EnqueueInput[] = [],
 ) {
   const currentControlRef = currentControlStatePath(output);
   if (!currentControlRef || !fs.existsSync(currentControlRef)) {
@@ -1207,7 +1302,12 @@ export function currentControlProviderAdmissionInputs(
       blocked: [{ reason: 'invalid_current_control_state', task: { ref: currentControlRef } }],
     };
   }
-  const candidates = currentControlProviderAdmissionCandidates(currentControl);
+  const candidates = [
+    ...currentControlProviderAdmissionCandidates(currentControl),
+    ...pendingInputs
+      .map(currentControlProviderAdmissionCandidateFromTransitionRequestTask)
+      .filter((candidate): candidate is Record<string, unknown> => Boolean(candidate)),
+  ];
   const inputs: EnqueueInput[] = [];
   const blocked: CurrentControlProviderAdmissionBlocked[] = [];
   for (const candidate of candidates) {

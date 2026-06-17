@@ -10,6 +10,7 @@ import {
   familyRuntimeEnv,
   fs,
   insertQueuedTask,
+  masDomainProgressTransitionRequest,
   os,
   path,
   providerObservationBoundary,
@@ -547,6 +548,151 @@ test('family-runtime intake admits MAS current-control handoff action_queue prov
     );
     assert.equal(tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.dispatch_ref, dm003DispatchRef);
     assert.equal(tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.stage_packet_ref, dm003StagePacketRef);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime intake promotes MAS transition request pending task into OPL runtime-backed provider admission', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-transition-request-pending-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-transition-request-pending-'));
+  const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  const exportPath = path.join(fixtureRoot, 'export');
+  const currentControlPath = path.join(
+    workspaceRoot,
+    'runtime',
+    'artifacts',
+    'supervision',
+    'opl_current_control_state',
+    'latest.json',
+  );
+  const profilePath = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles', 'dm-cvd.local.toml');
+  const studyId = '003-dpcc-primary-care-phenotype-treatment-gap';
+  const actionType = 'run_quality_repair_batch';
+  const workUnitId = 'medical_prose_write_repair';
+  const workUnitFingerprint = 'publication-blockers::0915410f804b3697';
+  const stagePacketRef = [
+    'studies',
+    studyId,
+    'artifacts',
+    'stage_packets',
+    `${actionType}.stage-packet.json`,
+  ].join('/');
+  const routeIdentityKey = 'owner-route::dm003::quality-repair-current';
+  const attemptIdempotencyKey = 'paper-policy-request:1a379264039c75d0e9cfd8f5';
+  fs.mkdirSync(path.dirname(currentControlPath), { recursive: true });
+  fs.mkdirSync(path.dirname(profilePath), { recursive: true });
+  fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
+  fs.writeFileSync(currentControlPath, JSON.stringify({
+    surface: 'opl_current_control_state',
+    transition_request_pending_count: 1,
+    provider_admission_pending_count: 0,
+    studies: [
+      {
+        study_id: studyId,
+        current_control_action: {
+          status: 'transition_request_pending',
+          reason: 'await_opl_transition_readback',
+          provider_admission_requires_opl_runtime_result: true,
+        },
+      },
+    ],
+  }), 'utf8');
+  writeJsonEmitterScript(exportPath, {
+    surface_kind: 'mas_family_domain_handler_export',
+    profile: {
+      profile_name: 'dm-cvd',
+      profile_ref: profilePath,
+    },
+    workspace: {
+      workspace_root: workspaceRoot,
+      workspace_exists: true,
+    },
+    pending_family_tasks: [
+      {
+        domain_id: 'medautoscience',
+        task_kind: 'domain_owner/default-executor-dispatch',
+        priority: 95,
+        source: 'mas-domain-handler-export',
+        dedupe_key: `mas:dm-cvd:${studyId}:transition-request:${actionType}`,
+        source_fingerprint: 'truth-snapshot::dm003-transition-request',
+        reason: 'current_control_transition_request_pending',
+        payload: {
+          profile: profilePath,
+          study_id: studyId,
+          quest_id: studyId,
+          action_type: actionType,
+          work_unit_id: workUnitId,
+          work_unit_fingerprint: workUnitFingerprint,
+          action_fingerprint: workUnitFingerprint,
+          source_fingerprint: 'truth-snapshot::dm003-transition-request',
+          dispatch_authority: 'domain_owner_transition_request',
+          executor_kind: 'codex_cli_default',
+          next_executable_owner: 'write',
+          owner_route_current: true,
+          provider_attempt_or_lease_required: true,
+          provider_completion_is_domain_completion: false,
+          route_identity_key: routeIdentityKey,
+          attempt_idempotency_key: attemptIdempotencyKey,
+          stage_packet_ref: stagePacketRef,
+          stage_packet_refs: [stagePacketRef],
+          stage_transition_authority_boundary: providerObservationBoundary(),
+          owner_route_currentness_basis: {
+            observed_generation: 'truth-event-dm003-transition-request',
+            derived_generation: 'truth-event-dm003-transition-request',
+            work_unit_id: workUnitId,
+            work_unit_fingerprint: workUnitFingerprint,
+          },
+          opl_domain_progress_transition_request: masDomainProgressTransitionRequest({
+            studyId,
+            actionType,
+            workUnitId,
+            workUnitFingerprint,
+            sourceGeneration: 'truth-event-dm003-transition-request',
+            idempotencyKey: attemptIdempotencyKey,
+          }),
+        },
+      },
+    ],
+  });
+  const env = familyRuntimeEnv(stateRoot, {
+    OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
+  });
+  try {
+    const intake = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+      '--study',
+      studyId,
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+    ], env);
+    const queue = runCli(['family-runtime', 'queue', 'list'], env);
+    const tasks = queue.family_runtime_queue.tasks;
+
+    assert.equal(intake.family_runtime_intake.enqueued_count, 1);
+    assert.equal(intake.family_runtime_intake.suppressed_count, 1);
+    assert.equal(intake.family_runtime_intake.blocked_count, 0);
+    assert.equal(tasks.length, 1);
+    assert.equal(tasks[0].source, 'opl-current-control-transition-request');
+    assert.equal(tasks[0].payload.provider_admission_schema_source, 'transition_request_pending_task');
+    assert.equal(tasks[0].payload.study_id, studyId);
+    assert.equal(tasks[0].payload.action_type, actionType);
+    assert.equal(tasks[0].payload.work_unit_id, workUnitId);
+    assert.equal(tasks[0].payload.route_identity_key, routeIdentityKey);
+    assert.equal(tasks[0].payload.attempt_idempotency_key, attemptIdempotencyKey);
+    assert.equal(tasks[0].payload.domain_progress_transition_runtime.transition_event.transition_kind, 'StartProviderAttempt');
+    assert.equal(tasks[0].payload.domain_progress_transition_runtime.transition_event.exactly_one_transition, true);
+    assert.equal(tasks[0].payload.domain_progress_transition_log_ref, 'runtime/artifacts/supervision/domain_progress_transition_runtime/command_event_log.jsonl');
+    assert.equal(tasks[0].payload.domain_progress_transition_log_append.append_status, 'appended');
+    assert.equal(tasks[0].payload.domain_progress_transition_log_append.appended_entry_count, 3);
+    assert.equal(tasks[0].payload.opl_transition_outbox_item.dispatch_allowed, true);
+    assert.equal(tasks[0].payload.provider_admission_identity.domain_progress_transition_log_ref, 'runtime/artifacts/supervision/domain_progress_transition_runtime/command_event_log.jsonl');
+    assert.equal(tasks[0].payload.current_control_command.idempotency_key, attemptIdempotencyKey);
+    assert.equal(tasks[0].payload.current_control_command.runtime_kind, 'DomainProgressTransitionRuntime');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

@@ -181,7 +181,7 @@ function exportedTaskInputs(
   taskScope?: FamilyRuntimeTaskScope,
 ) {
   const pending = toPendingTaskInputs(domainId, output, source, exportContext);
-  const currentControlRaw = currentControlProviderAdmissionInputs(domainId, output, exportContext);
+  const currentControlRaw = currentControlProviderAdmissionInputs(domainId, output, exportContext, pending.inputs);
   const currentControlInputs = reconcileCurrentControlExecutableOwners(
     currentControlRaw.inputs,
     pending.inputs,
