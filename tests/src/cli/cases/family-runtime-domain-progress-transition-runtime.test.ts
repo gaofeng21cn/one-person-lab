@@ -188,6 +188,102 @@ test('DomainProgressTransitionRuntime enforces idempotent replay and fail-closes
   assert.equal(differentIntent.log.entries.length, initial.log.entries.length);
 });
 
+test('DomainProgressTransitionRuntime result and read model expose stable identity causality authority and outcome readback', () => {
+  const command = normalizeDomainProgressTransitionCommand(currentControlCommandOutboxRecord({
+    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+    actionType: 'return_to_ai_reviewer_workflow',
+    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    workUnitFingerprint: 'sha256:stable-readback-shape',
+    sourceGeneration: 'truth-event-stable-readback-shape',
+    idempotencyKey: 'owner-route-attempt::dm003::stable-readback-shape',
+  }), {
+    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+    actionType: 'return_to_ai_reviewer_workflow',
+    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    workUnitFingerprint: 'sha256:stable-readback-shape',
+    nextOwner: 'ai_reviewer',
+  }).command!;
+  const appended = appendDomainProgressTransitionRuntimeResult({
+    log: createDomainProgressTransitionRuntimeLog(),
+    result: reconcileDomainProgressTransitionFixedPoint({
+      command,
+      observations: [{ kind: 'provider_admission_accepted' }],
+    }).result,
+  });
+  const readModel = rebuildDomainProgressTransitionReadModel({
+    log: appended.log,
+    aggregateIdentity: command.aggregate_identity as Record<string, unknown>,
+  });
+
+  assert.equal(appended.result.identity.runtime_id, 'opl_domain_progress_transition_runtime');
+  assert.equal(appended.result.identity.idempotency_key, 'owner-route-attempt::dm003::stable-readback-shape');
+  assert.equal(appended.result.identity.aggregate_identity.study_id, '003-dpcc-primary-care-phenotype-treatment-gap');
+  assert.equal(appended.result.identity.stage_run_identity.route_identity_key, 'owner-route-attempt::dm003::stable-readback-shape');
+  assert.equal(appended.result.causality.command_id, appended.result.command.command_id);
+  assert.equal(appended.result.causality.event_id, appended.result.transition_event.event_id);
+  assert.equal(appended.result.causality.outbox_item_id, appended.result.transactional_outbox_item.outbox_item_id);
+  assert.equal(appended.result.causality.same_transaction_event_and_outbox, true);
+  assert.equal(appended.result.authority_boundary.opl_can_write_domain_truth, false);
+  assert.equal(appended.result.authority_boundary.provider_completion_is_domain_completion, false);
+  assert.equal(appended.result.exactly_one_outcome.selected, true);
+  assert.equal(appended.result.exactly_one_outcome.transition_count, 1);
+  assert.equal(appended.result.exactly_one_outcome.outcome_kind, 'provider_admission_accepted');
+  assert.equal(appended.result.exactly_one_outcome.non_advancing_apply, false);
+  assert.equal(appended.result.projection_metadata.authority, false);
+
+  assert.equal(readModel.identity.runtime_id, 'opl_domain_progress_transition_runtime');
+  assert.equal(readModel.identity.latest_event_id, appended.result.transition_event.event_id);
+  assert.equal(readModel.identity.latest_outbox_item_id, appended.result.transactional_outbox_item.outbox_item_id);
+  assert.equal(readModel.causality.derived_from_event_id, appended.result.transition_event.event_id);
+  assert.equal(readModel.causality.same_transaction_event_and_outbox, true);
+  assert.equal(readModel.authority_boundary.authority, false);
+  assert.equal(readModel.authority_boundary.opl_can_create_domain_owner_receipt, false);
+  assert.equal(readModel.exactly_one_outcome.outcome_kind, 'provider_admission_accepted');
+  assert.equal(readModel.exactly_one_outcome.non_advancing_apply, false);
+  assert.equal(readModel.projection_metadata.derived_from_event_id, appended.result.transition_event.event_id);
+});
+
+test('DomainProgressTransitionRuntime fail-closed incomplete transaction returns stable readback shape without appending', () => {
+  const command = normalizeDomainProgressTransitionCommand(currentControlCommandOutboxRecord({
+    studyId: '002-dm-china-us-mortality-attribution',
+    actionType: 'return_to_ai_reviewer_workflow',
+    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    workUnitFingerprint: 'sha256:incomplete-transaction-readback',
+    sourceGeneration: 'truth-event-incomplete-transaction-readback',
+    idempotencyKey: 'owner-route-attempt::dm002::incomplete-transaction-readback',
+  }), {
+    studyId: '002-dm-china-us-mortality-attribution',
+    actionType: 'return_to_ai_reviewer_workflow',
+    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    workUnitFingerprint: 'sha256:incomplete-transaction-readback',
+    nextOwner: 'ai_reviewer',
+  }).command!;
+  const result = reconcileDomainProgressTransitionFixedPoint({
+    command,
+    observations: [{ kind: 'provider_admission_accepted' }],
+  }).result;
+  const incompleteLog = createDomainProgressTransitionRuntimeLog([
+    result.command_event_log.entries[0],
+  ]);
+  const append = appendDomainProgressTransitionRuntimeResult({
+    log: incompleteLog,
+    result,
+  });
+
+  assert.equal(append.appended, false);
+  assert.equal(append.append_status, 'blocked');
+  assert.equal(append.blocked?.reason, 'domain_progress_transition_idempotency_incomplete_transaction');
+  assert.equal(append.log.entries.length, 1);
+  assert.equal(append.identity.idempotency_key, 'owner-route-attempt::dm002::incomplete-transaction-readback');
+  assert.equal(append.causality.append_status, 'blocked');
+  assert.equal(append.authority_boundary.opl_can_write_domain_truth, false);
+  assert.equal(append.exactly_one_outcome.fail_closed, true);
+  assert.equal(append.exactly_one_outcome.outcome_kind, 'blocked_incomplete_transaction');
+  assert.equal(append.projection_metadata.authority, false);
+  assert.equal(append.read_model_readback.projection_metadata.lag_status, 'empty');
+  assert.equal(append.read_model_readback.authority_boundary.authority, false);
+});
+
 test('DomainProgressTransitionRuntime persists append-only JSONL log and replays idempotency readback from disk', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-progress-transition-jsonl-'));
   const logPath = path.join(root, 'domain-progress-transition.jsonl');

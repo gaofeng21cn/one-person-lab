@@ -398,6 +398,218 @@ function idempotencyReadback(input: {
   };
 }
 
+function domainProgressTransitionAuthorityBoundary(source?: Record<string, unknown> | null) {
+  return {
+    ...(source ?? {}),
+    authority: false,
+    runtime_owner: 'one-person-lab',
+    opl_can_write_domain_truth: false,
+    opl_can_write_mas_truth: false,
+    opl_can_create_domain_owner_receipt: false,
+    opl_can_create_domain_typed_blocker: false,
+    provider_completion_is_domain_completion: false,
+    provider_completion_is_domain_ready: false,
+    read_model_can_execute: false,
+    projection_can_authorize_provider_admission: false,
+  };
+}
+
+function domainProgressTransitionOutcomeKind(event: Record<string, unknown>) {
+  const outcome = isRecord(event.outcome) ? event.outcome : {};
+  return optionalString(outcome.kind)
+    ?? optionalString(outcome.status)
+    ?? optionalString(event.transition_kind)
+    ?? null;
+}
+
+function domainProgressTransitionIdentity(input: {
+  command?: Record<string, unknown> | null;
+  event: Record<string, unknown>;
+  outboxItem?: Record<string, unknown> | null;
+  transactionId?: string | null;
+}) {
+  const aggregateIdentity = isRecord(input.event.aggregate_identity)
+    ? input.event.aggregate_identity
+    : isRecord(input.command?.aggregate_identity)
+      ? input.command.aggregate_identity
+      : {};
+  const stageRunIdentity = isRecord(input.event.stage_run_identity)
+    ? input.event.stage_run_identity
+    : isRecord(input.outboxItem?.stage_run_identity)
+      ? input.outboxItem.stage_run_identity
+      : isRecord(input.command?.stage_run_identity)
+        ? input.command.stage_run_identity
+        : {};
+  return {
+    surface_kind: 'opl_domain_progress_transition_identity',
+    runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+    aggregate_identity: aggregateIdentity,
+    stage_run_identity: stageRunIdentity,
+    idempotency_key:
+      optionalString(input.event.idempotency_key)
+      ?? optionalString(input.command?.idempotency_key)
+      ?? optionalString(input.outboxItem?.idempotency_key),
+    command_id:
+      optionalString(input.event.command_id)
+      ?? optionalString(input.command?.command_id),
+    event_id: optionalString(input.event.event_id),
+    outbox_item_id: optionalString(input.outboxItem?.outbox_item_id),
+    transaction_id:
+      input.transactionId
+      ?? optionalString(input.outboxItem?.transaction_id),
+    aggregate_version: numberValue(input.event.aggregate_version),
+    transition_kind: optionalString(input.event.transition_kind),
+    outcome_kind: domainProgressTransitionOutcomeKind(input.event),
+  };
+}
+
+function domainProgressTransitionCausality(input: {
+  command?: Record<string, unknown> | null;
+  event: Record<string, unknown>;
+  outboxItem?: Record<string, unknown> | null;
+  transactionId?: string | null;
+}) {
+  const eventId = optionalString(input.event.event_id);
+  const outboxItemId = optionalString(input.outboxItem?.outbox_item_id);
+  const transactionId =
+    input.transactionId
+    ?? optionalString(input.outboxItem?.transaction_id);
+  const eventTransactionId = optionalString(input.event.transaction_id);
+  const outboxTransitionEventId = optionalString(input.outboxItem?.transition_event_id);
+  return {
+    surface_kind: 'opl_domain_progress_transition_causality',
+    runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+    command_id:
+      optionalString(input.event.command_id)
+      ?? optionalString(input.command?.command_id),
+    event_id: eventId,
+    outbox_item_id: outboxItemId,
+    transaction_id: transactionId,
+    causal_event_id: optionalString(input.event.causal_event_id),
+    source_generation:
+      optionalScalarString(input.event.source_generation)
+      ?? optionalScalarString(input.command?.source_generation),
+    expected_version:
+      optionalScalarString(input.event.expected_version)
+      ?? optionalScalarString(input.command?.expected_version),
+    derived_from_event_id: eventId,
+    source_event_ids: eventId ? [eventId] : [],
+    source_outbox_item_ids: outboxItemId ? [outboxItemId] : [],
+    same_transaction_event_and_outbox: Boolean(
+      eventId
+      && outboxItemId
+      && outboxTransitionEventId === eventId
+      && (!eventTransactionId || !transactionId || eventTransactionId === transactionId),
+    ),
+  };
+}
+
+function domainProgressExactlyOneOutcome(event: Record<string, unknown>) {
+  const outcome = isRecord(event.outcome) ? event.outcome : {};
+  const outcomeKind = domainProgressTransitionOutcomeKind(event);
+  const transitionKindValue = optionalString(event.transition_kind);
+  const nonAdvancingApply =
+    transitionKindValue === 'NonAdvancingApply'
+    || outcomeKind === 'non_advancing_apply_typed_blocker_ref';
+  return {
+    surface_kind: 'opl_domain_progress_exactly_one_outcome',
+    runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+    selected: true,
+    exactly_one_transition: event.exactly_one_transition === true,
+    transition_count: 1,
+    transition_kind: transitionKindValue,
+    outcome_kind: outcomeKind,
+    stable_outcome:
+      outcome.stable_outcome === true
+      || (outcomeKind ? STABLE_OUTCOMES.has(outcomeKind) : false),
+    non_advancing_apply: nonAdvancingApply,
+    fail_closed: false,
+  };
+}
+
+function blockedDomainProgressExactlyOneOutcome(reason: string) {
+  const outcomeKind = reason === 'domain_progress_transition_idempotency_incomplete_transaction'
+    ? 'blocked_incomplete_transaction'
+    : reason === 'domain_progress_transition_idempotency_key_reused_for_different_intent'
+      ? 'blocked_idempotency_conflict'
+      : 'blocked_fail_closed';
+  return {
+    surface_kind: 'opl_domain_progress_exactly_one_outcome',
+    runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+    selected: false,
+    exactly_one_transition: false,
+    transition_count: 0,
+    transition_kind: null,
+    outcome_kind: outcomeKind,
+    stable_outcome: true,
+    non_advancing_apply: false,
+    fail_closed: true,
+    blocked_reason: reason,
+  };
+}
+
+function withDomainProgressRuntimeReadbackShape<
+  T extends {
+    command?: Record<string, unknown>;
+    transition_event: Record<string, unknown>;
+    transactional_outbox_item?: Record<string, unknown>;
+    transaction_id?: string;
+  },
+>(
+  result: T,
+): T & {
+  identity: ReturnType<typeof domainProgressTransitionIdentity>;
+  causality: ReturnType<typeof domainProgressTransitionCausality>;
+  authority_boundary: ReturnType<typeof domainProgressTransitionAuthorityBoundary>;
+  exactly_one_outcome: ReturnType<typeof domainProgressExactlyOneOutcome>;
+} {
+  const command = isRecord(result.command) ? result.command : null;
+  const outboxItem = isRecord(result.transactional_outbox_item) ? result.transactional_outbox_item : null;
+  const transitionEvent = result.transition_event;
+  return {
+    ...result,
+    identity: domainProgressTransitionIdentity({
+      command,
+      event: transitionEvent,
+      outboxItem,
+      transactionId: optionalString(result.transaction_id),
+    }),
+    causality: domainProgressTransitionCausality({
+      command,
+      event: transitionEvent,
+      outboxItem,
+      transactionId: optionalString(result.transaction_id),
+    }),
+    authority_boundary: domainProgressTransitionAuthorityBoundary(
+      isRecord(transitionEvent.authority_boundary)
+        ? transitionEvent.authority_boundary
+        : isRecord(command?.authority_boundary)
+          ? command.authority_boundary
+          : null,
+    ),
+    exactly_one_outcome: domainProgressExactlyOneOutcome(transitionEvent),
+  };
+}
+
+function blockedDomainProgressAppendReadback(input: {
+  result: ReturnType<typeof buildDomainProgressTransitionRuntimeResult>;
+  readModelReadback: ReturnType<typeof rebuildDomainProgressTransitionReadModel>;
+  reason: string;
+  appendStatus: string;
+}) {
+  return {
+    identity: input.result.identity,
+    causality: {
+      ...input.result.causality,
+      append_status: input.appendStatus,
+      fail_closed_reason: input.reason,
+    },
+    authority_boundary: input.result.authority_boundary,
+    exactly_one_outcome: blockedDomainProgressExactlyOneOutcome(input.reason),
+    projection_metadata: input.readModelReadback.projection_metadata,
+  };
+}
+
 function humanGateResumeToken(input: {
   command: Record<string, unknown>;
   event: Record<string, unknown>;
@@ -770,7 +982,7 @@ export function buildDomainProgressTransitionRuntimeResult(
     transactionId,
     aggregateVersion,
   });
-  return {
+  return withDomainProgressRuntimeReadbackShape({
     surface_kind: 'opl_domain_progress_transition_runtime_result',
     runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
     owner_module: 'runway',
@@ -804,7 +1016,7 @@ export function buildDomainProgressTransitionRuntimeResult(
       event_ids: [eventId],
       non_advancing_apply: false,
     },
-  };
+  });
 }
 
 export function createDomainProgressTransitionRuntimeLog(
@@ -1169,10 +1381,84 @@ export function rebuildDomainProgressTransitionReadModel(input: {
     read_model_rebuild_owner: 'one-person-lab',
     read_model_rebuild_metadata: readModelRebuildMetadata,
   };
+  const identity = latestEvent
+    ? domainProgressTransitionIdentity({
+      command: latestCommand,
+      event: latestEvent,
+      outboxItem: latestOutbox,
+      transactionId: latestTransactionId,
+    })
+    : {
+      surface_kind: 'opl_domain_progress_transition_identity',
+      runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+      aggregate_identity: input.aggregateIdentity,
+      stage_run_identity: null,
+      idempotency_key: null,
+      command_id: null,
+      event_id: null,
+      outbox_item_id: null,
+      transaction_id: null,
+      aggregate_version: aggregateVersion,
+      transition_kind: null,
+      outcome_kind: null,
+    };
+  const readModelIdentity = {
+    ...identity,
+    latest_event_id: latestEventId,
+    latest_outbox_item_id: latestOutboxItemId,
+    latest_transaction_id: latestTransactionId,
+    current_aggregate_version: aggregateVersion,
+  };
+  const causality = latestEvent
+    ? domainProgressTransitionCausality({
+      command: latestCommand,
+      event: latestEvent,
+      outboxItem: latestOutbox,
+      transactionId: latestTransactionId,
+    })
+    : {
+      surface_kind: 'opl_domain_progress_transition_causality',
+      runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+      command_id: null,
+      event_id: null,
+      outbox_item_id: null,
+      transaction_id: null,
+      causal_event_id: null,
+      source_generation: null,
+      expected_version: null,
+      derived_from_event_id: null,
+      source_event_ids: [],
+      source_outbox_item_ids: [],
+      same_transaction_event_and_outbox: false,
+    };
+  const exactlyOneOutcome = latestEvent
+    ? domainProgressExactlyOneOutcome(latestEvent)
+    : {
+      surface_kind: 'opl_domain_progress_exactly_one_outcome',
+      runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+      selected: false,
+      exactly_one_transition: false,
+      transition_count: 0,
+      transition_kind: null,
+      outcome_kind: null,
+      stable_outcome: false,
+      non_advancing_apply: false,
+      fail_closed: false,
+    };
   return {
     surface_kind: 'opl_domain_progress_transition_read_model',
     runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
     authority: false,
+    identity: readModelIdentity,
+    causality,
+    authority_boundary: domainProgressTransitionAuthorityBoundary(
+      latestEvent && isRecord(latestEvent.authority_boundary)
+        ? latestEvent.authority_boundary
+        : latestCommand && isRecord(latestCommand.authority_boundary)
+          ? latestCommand.authority_boundary
+          : null,
+    ),
+    exactly_one_outcome: exactlyOneOutcome,
     aggregate_identity: input.aggregateIdentity,
     aggregate_version: aggregateVersion,
     transition_count: eventEntries.length,
@@ -1242,6 +1528,12 @@ export function appendDomainProgressTransitionRuntimeResult(input: {
         aggregateIdentity,
       });
       if (!commandEntry || !eventEntry || !outboxEntry) {
+        const appendReadback = blockedDomainProgressAppendReadback({
+          result: input.result,
+          readModelReadback,
+          reason: 'domain_progress_transition_idempotency_incomplete_transaction',
+          appendStatus: 'blocked',
+        });
         return {
           surface_kind: 'opl_domain_progress_transition_log_append',
           runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
@@ -1256,6 +1548,11 @@ export function appendDomainProgressTransitionRuntimeResult(input: {
           appended_entries: [],
           idempotency_readback: readback,
           read_model_readback: readModelReadback,
+          identity: appendReadback.identity,
+          causality: appendReadback.causality,
+          authority_boundary: appendReadback.authority_boundary,
+          exactly_one_outcome: appendReadback.exactly_one_outcome,
+          projection_metadata: appendReadback.projection_metadata,
           result: input.result,
         };
       }
@@ -1266,6 +1563,12 @@ export function appendDomainProgressTransitionRuntimeResult(input: {
       });
       const incomingIntentFingerprint = domainProgressTransitionIntentFingerprintFromResult(input.result);
       if (existingIntentFingerprint !== incomingIntentFingerprint) {
+        const appendReadback = blockedDomainProgressAppendReadback({
+          result: input.result,
+          readModelReadback,
+          reason: 'domain_progress_transition_idempotency_key_reused_for_different_intent',
+          appendStatus: 'blocked',
+        });
         return {
           surface_kind: 'opl_domain_progress_transition_log_append',
           runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
@@ -1282,9 +1585,21 @@ export function appendDomainProgressTransitionRuntimeResult(input: {
           appended_entries: [],
           idempotency_readback: readback,
           read_model_readback: readModelReadback,
+          identity: appendReadback.identity,
+          causality: appendReadback.causality,
+          authority_boundary: appendReadback.authority_boundary,
+          exactly_one_outcome: appendReadback.exactly_one_outcome,
+          projection_metadata: appendReadback.projection_metadata,
           result: input.result,
         };
       }
+      const replayedResult = withDomainProgressRuntimeReadbackShape({
+        ...input.result,
+        transition_event: logEntryPayload(eventEntry) ?? input.result.transition_event,
+        transactional_outbox_item: logEntryPayload(outboxEntry) ?? input.result.transactional_outbox_item,
+        idempotency_readback: readback,
+        read_model_readback: readModelReadback,
+      });
       return {
         surface_kind: 'opl_domain_progress_transition_log_append',
         runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
@@ -1296,13 +1611,15 @@ export function appendDomainProgressTransitionRuntimeResult(input: {
         appended_entries: [],
         idempotency_readback: readback,
         read_model_readback: readModelReadback,
-        result: {
-          ...input.result,
-          transition_event: logEntryPayload(eventEntry) ?? input.result.transition_event,
-          transactional_outbox_item: logEntryPayload(outboxEntry) ?? input.result.transactional_outbox_item,
-          idempotency_readback: readback,
-          read_model_readback: readModelReadback,
+        identity: replayedResult.identity,
+        causality: {
+          ...replayedResult.causality,
+          append_status: 'idempotent_replay',
         },
+        authority_boundary: replayedResult.authority_boundary,
+        exactly_one_outcome: replayedResult.exactly_one_outcome,
+        projection_metadata: replayedResult.projection_metadata,
+        result: replayedResult,
       };
     }
   }
@@ -1330,6 +1647,14 @@ export function appendDomainProgressTransitionRuntimeResult(input: {
     log,
     aggregateIdentity,
   });
+  const appendedResult = withDomainProgressRuntimeReadbackShape({
+    ...input.result,
+    transition_event: event,
+    idempotency_readback: idempotencyKey
+      ? readDomainProgressTransitionIdempotency({ log, idempotencyKey })
+      : input.result.idempotency_readback,
+    read_model_readback: readModelReadback,
+  });
   return {
     surface_kind: 'opl_domain_progress_transition_log_append',
     runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
@@ -1343,14 +1668,15 @@ export function appendDomainProgressTransitionRuntimeResult(input: {
       ? readDomainProgressTransitionIdempotency({ log, idempotencyKey })
       : null,
     read_model_readback: readModelReadback,
-    result: {
-      ...input.result,
-      transition_event: event,
-      idempotency_readback: idempotencyKey
-        ? readDomainProgressTransitionIdempotency({ log, idempotencyKey })
-        : input.result.idempotency_readback,
-      read_model_readback: readModelReadback,
+    identity: appendedResult.identity,
+    causality: {
+      ...appendedResult.causality,
+      append_status: 'appended',
     },
+    authority_boundary: appendedResult.authority_boundary,
+    exactly_one_outcome: appendedResult.exactly_one_outcome,
+    projection_metadata: appendedResult.projection_metadata,
+    result: appendedResult,
   };
 }
 
