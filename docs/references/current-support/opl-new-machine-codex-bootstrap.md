@@ -5,7 +5,7 @@ Purpose: `new_machine_codex_opl_family_bootstrap_entry`
 State: `support_reference`
 Machine boundary: 本文是人读 bootstrap runbook。可执行真相归 `install.sh`、One Person Lab App release asset、`opl` CLI 输出、Codex plugin registry、domain repo installer、App release evidence 与 repo-native 验证命令。
 
-本文是新机器上让 Codex 一句话安装配置 OPL 智能体运行环境的 canonical GitHub 入口。它覆盖 OPL Framework、One Person Lab App、MAS/MAG/RCA/OMA 智能体可见面、OPL Flow 工作流 profile、OPL Doc 文档治理插件，以及推荐 companion skills / tools 的同步边界。
+本文是新机器上让 Codex 一句话安装配置 OPL 智能体运行环境的 canonical GitHub 入口。它覆盖 OPL Framework、One Person Lab App、MAS/MAG/RCA/OMA 智能体可见面、OPL Flow 工作流 profile、OPL Doc 文档治理插件，以及推荐 companion skills / tools 的同步边界。BookForge 已作为新的 OPL-standard repo 进入系列文档治理和产品线索引；默认安装/Connect/App 可见面仍等待后续 generated surface、runtime handoff 和 App 产品 owner 证据。
 
 ## 复制给新机器 Codex
 
@@ -39,7 +39,7 @@ Source of truth:
 | --- | --- | --- |
 | Framework / runtime | `one-person-lab` | `opl` CLI、初始化、Connect 模块发现、runtime/provider/readiness、`opl connect sync-skills`、App 可消费 state/action surface |
 | Product / first install | `one-person-lab-app` | Desktop App、Full first-install DMG、one-shot App installer、release gates、首启用户路径 |
-| Domain agents | MAS/MAG/RCA/OMA repos + OPL generated surface | domain truth、action/stage semantics、quality/export/artifact authority、domain skill metadata |
+| Domain agents | MAS/MAG/RCA/OMA default visible surfaces; BookForge explicit repo until default admission | domain truth、action/stage semantics、quality/export/artifact authority、domain skill metadata |
 | Codex workflow | `opl-flow` | 用户级 `AGENTS.md`、`TASTE.md`、角色库、subagent contract、Direct/Inline/Durable 工作流 |
 | Docs governance | `opl-doc` | OPL-native 文档生命周期治理 skill、`opl-doc-doctor`、`opl-doc-governance` 历史转发入口 |
 | Companion skills/tools | OPL CLI/App managed profile | OfficeCLI、MinerU、Superpowers、UI/UX、PDF/Office 等辅助能力的检测、同步和受管路径 |
@@ -78,7 +78,7 @@ https://github.com/gaofeng21cn/one-person-lab-app/releases/latest
 One-Person-Lab-Full-<version>-mac-arm64.dmg
 ```
 
-Full DMG 是 clean-machine 产品路径。它包含桌面 App、OPL Framework runtime payload、Foundry Agents、当前 runtime payload、`officecli` 和推荐 skill payload。
+Full DMG 是 clean-machine 产品路径。它包含桌面 App、OPL Framework runtime payload、Foundry Agents、当前 runtime payload、`officecli` 和推荐 skill payload；BookForge 是否进入默认 App 首屏仍由 App-owned product decision 和 release evidence 决定。
 
 ### 3. 验证 OPL CLI 与初始化状态
 
@@ -100,7 +100,7 @@ opl connect skills --json
 稳定边界：
 
 - MAS、MAG、RCA 走 plugin-packaged domain skill entries。
-- OPL Meta Agent 走 OPL-generated skill surface。
+- OPL Meta Agent 走 OPL-generated skill surface；BookForge 默认可见面等待后续 admission evidence。
 - `opl connect sync-skills` 是统一同步入口；旧 `opl skill sync` 已退役并 fail closed 到 Connect 替代入口。
 - MAS/MAG/RCA 不应同时作为重复裸 skill 出现在 `~/.codex/skills/{mas,mag,rca}`。
 
