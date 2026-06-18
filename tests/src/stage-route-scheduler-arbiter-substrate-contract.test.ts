@@ -200,6 +200,16 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
     domainProgress.physical_persistence_refs.storage_contract,
     'append_only_physical_jsonl',
   );
+  assert.deepEqual(
+    domainProgress.physical_persistence_refs.runtime_live_readback_contract.complete_transaction_requires,
+    [
+      'command_event_outbox_entries_present',
+      'event_and_outbox_entry_share_latest_transaction_id',
+      'outbox_entry_item_id_matches_payload_item_id',
+      'outbox_payload_item_id_matches_read_model_latest_outbox_item_id',
+      'outbox_payload_transition_event_id_matches_latest_event_id',
+    ],
+  );
   assert.equal(domainProgress.brand_module_partition.module_count_policy, 'no_new_brand_module');
   assert.match(domainProgress.brand_module_partition.Runway, /exactly-one transition/);
   assert.match(domainProgress.brand_module_partition.Pack, /transition request and normalized command\/outbox\/event shape/);
@@ -264,6 +274,10 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   assert.equal(
     domainProgress.concepts.TransitionDecisionEngine.durable_substrate_first_slice.transactional_outbox,
     'event_and_outbox_item_share_one_runtime_transaction_result_with_dedupe_readback',
+  );
+  assert.equal(
+    domainProgress.concepts.TransitionDecisionEngine.durable_substrate_first_slice.live_readback,
+    'read_physical_jsonl_and_require_command_event_outbox_same_transaction_and_outbox_identity_before_consumption',
   );
   assert.equal(
     domainProgress.concepts.TransitionDecisionEngine.durable_substrate_first_slice.fixed_point_reconciler,

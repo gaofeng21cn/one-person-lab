@@ -58,6 +58,15 @@ export function readDomainProgressTransitionRuntimeReadbackJsonl(input: {
     : undefined;
   const eventPayload = logEntryPayload(eventEntry);
   const outboxPayload = logEntryPayload(outboxEntry);
+  const outboxEntryItemId = optionalString(outboxEntry?.outbox_item_id);
+  const outboxPayloadItemId = optionalString(outboxPayload?.outbox_item_id);
+  const sameOutboxIdentity = Boolean(
+    latestOutboxItemId
+    && outboxEntryItemId
+    && outboxPayloadItemId
+    && outboxEntryItemId === latestOutboxItemId
+    && outboxPayloadItemId === latestOutboxItemId
+  );
   const sameTransactionEventAndOutbox = Boolean(
     eventEntry
     && outboxEntry
@@ -66,6 +75,7 @@ export function readDomainProgressTransitionRuntimeReadbackJsonl(input: {
     && latestTransactionId
     && logEntryTransactionId(eventEntry) === latestTransactionId
     && logEntryTransactionId(outboxEntry) === latestTransactionId
+    && sameOutboxIdentity
     && optionalString(outboxPayload?.transition_event_id) === latestEventId
   );
   const transactionComplete = Boolean(commandEntry && eventEntry && outboxEntry && sameTransactionEventAndOutbox);
@@ -94,6 +104,7 @@ export function readDomainProgressTransitionRuntimeReadbackJsonl(input: {
     identity: readModelReadback.identity,
     causality: {
       ...readModelReadback.causality,
+      same_transaction_event_and_outbox: sameTransactionEventAndOutbox,
       runtime_readback_status: runtimeReadbackStatus,
       transaction_complete: transactionComplete,
       ...(failClosedReason ? { fail_closed_reason: failClosedReason } : {}),
@@ -119,6 +130,9 @@ export function readDomainProgressTransitionRuntimeReadbackJsonl(input: {
       outbox_item_present: Boolean(outboxEntry),
       event_id: latestEventId,
       outbox_item_id: latestOutboxItemId,
+      outbox_log_entry_item_id: outboxEntryItemId,
+      outbox_payload_item_id: outboxPayloadItemId,
+      same_outbox_identity: sameOutboxIdentity,
       same_transaction_event_and_outbox: sameTransactionEventAndOutbox,
       transition_event_id: eventPayload ? optionalString(eventPayload.event_id) : null,
       outbox_transition_event_id: outboxPayload ? optionalString(outboxPayload.transition_event_id) : null,

@@ -401,6 +401,58 @@ test('DomainProgressTransitionRuntime live readback rebuilds complete physical t
   }
 });
 
+test('DomainProgressTransitionRuntime live readback fail-closes outbox identity mismatch inside a physical transaction', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-progress-transition-outbox-mismatch-'));
+  const logPath = path.join(root, 'domain-progress-transition.jsonl');
+  const command = normalizeDomainProgressTransitionCommand(currentControlCommandOutboxRecord({
+    studyId: '002-dm-china-us-mortality-attribution',
+    actionType: 'return_to_ai_reviewer_workflow',
+    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    workUnitFingerprint: 'sha256:outbox-identity-mismatch',
+    sourceGeneration: 'truth-event-outbox-identity-mismatch',
+    idempotencyKey: 'owner-route-attempt::dm002::outbox-identity-mismatch',
+  }), {
+    studyId: '002-dm-china-us-mortality-attribution',
+    actionType: 'return_to_ai_reviewer_workflow',
+    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    workUnitFingerprint: 'sha256:outbox-identity-mismatch',
+    nextOwner: 'ai_reviewer',
+  }).command!;
+
+  try {
+    const result = reconcileDomainProgressTransitionFixedPoint({
+      command,
+      observations: [{ kind: 'provider_admission_accepted' }],
+    }).result;
+    fs.mkdirSync(path.dirname(logPath), { recursive: true });
+    fs.writeFileSync(
+      logPath,
+      result.command_event_log.entries
+        .map((entry) => entry.entry_kind === 'outbox_item'
+          ? { ...entry, outbox_item_id: 'dpto_physical_outbox_identity_mismatch' }
+          : entry)
+        .map((entry) => JSON.stringify(entry))
+        .join('\n') + '\n',
+      'utf8',
+    );
+    const readback = readDomainProgressTransitionRuntimeReadbackJsonl({
+      logPath,
+      aggregateIdentity: command.aggregate_identity as Record<string, unknown>,
+      idempotencyKey: 'owner-route-attempt::dm002::outbox-identity-mismatch',
+    });
+
+    assert.equal(readback.runtime_readback_status, 'incomplete_transaction');
+    assert.equal(readback.transaction_complete, false);
+    assert.equal(readback.causality.same_transaction_event_and_outbox, false);
+    assert.equal(readback.latest_transaction_readback.same_transaction_event_and_outbox, false);
+    assert.equal(readback.latest_transaction_readback.outbox_log_entry_item_id, 'dpto_physical_outbox_identity_mismatch');
+    assert.equal(readback.latest_transaction_readback.outbox_payload_item_id, result.transactional_outbox_item.outbox_item_id);
+    assert.equal(readback.latest_transaction_readback.outbox_item_id, result.transactional_outbox_item.outbox_item_id);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('DomainProgressTransitionRuntime live readback fail-closes incomplete physical transactions', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-progress-transition-incomplete-readback-'));
   const logPath = path.join(root, 'domain-progress-transition.jsonl');
