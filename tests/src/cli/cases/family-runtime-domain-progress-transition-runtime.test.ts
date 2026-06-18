@@ -396,6 +396,94 @@ test('DomainProgressTransitionRuntime live readback rebuilds complete physical t
     assert.equal(readback.latest_transaction_readback.event_present, true);
     assert.equal(readback.latest_transaction_readback.outbox_item_present, true);
     assert.equal(readback.latest_transaction_readback.same_transaction_event_and_outbox, true);
+    assert.equal(readback.latest_transaction_readback.same_stage_run_identity, true);
+    assert.equal(
+      readback.latest_transaction_readback.stage_run_identity_readback.stage_run_id,
+      'stage-run:003-dpcc-primary-care-phenotype-treatment-gap:produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    );
+    const latestTransactionIdentity = readback.read_model_readback.latest_transaction_identity;
+    assert.ok(latestTransactionIdentity);
+    const stageRunIdentityReadback = latestTransactionIdentity.stage_run_identity_readback;
+    assert.ok(stageRunIdentityReadback);
+    assert.equal(stageRunIdentityReadback.same_stage_run_identity, true);
+    assert.equal(latestTransactionIdentity.transaction_complete, true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('DomainProgressTransitionRuntime live readback fail-closes StageRun identity mismatch inside a physical transaction', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-progress-transition-stage-run-mismatch-'));
+  const logPath = path.join(root, 'domain-progress-transition.jsonl');
+  const command = normalizeDomainProgressTransitionCommand(currentControlCommandOutboxRecord({
+    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+    actionType: 'return_to_ai_reviewer_workflow',
+    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    workUnitFingerprint: 'sha256:stage-run-identity-mismatch',
+    sourceGeneration: 'truth-event-stage-run-identity-mismatch',
+    idempotencyKey: 'owner-route-attempt::dm003::stage-run-identity-mismatch',
+  }), {
+    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+    actionType: 'return_to_ai_reviewer_workflow',
+    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    workUnitFingerprint: 'sha256:stage-run-identity-mismatch',
+    nextOwner: 'ai_reviewer',
+  }).command!;
+
+  try {
+    const result = reconcileDomainProgressTransitionFixedPoint({
+      command,
+      observations: [{ kind: 'provider_admission_accepted' }],
+    }).result;
+    fs.mkdirSync(path.dirname(logPath), { recursive: true });
+    fs.writeFileSync(
+      logPath,
+      result.command_event_log.entries
+        .map((entry) => {
+          if (entry.entry_kind !== 'event') {
+            return entry;
+          }
+          const payload = record(entry.payload);
+          return {
+            ...entry,
+            payload: {
+              ...payload,
+              stage_run_identity: {
+                ...record(payload.stage_run_identity),
+                stage_run_id: 'stage-run:003-dpcc-primary-care-phenotype-treatment-gap:stale-owner-route',
+              },
+            },
+          };
+        })
+        .map((entry) => JSON.stringify(entry))
+        .join('\n') + '\n',
+      'utf8',
+    );
+    const readback = readDomainProgressTransitionRuntimeReadbackJsonl({
+      logPath,
+      aggregateIdentity: command.aggregate_identity as Record<string, unknown>,
+      idempotencyKey: 'owner-route-attempt::dm003::stage-run-identity-mismatch',
+    });
+
+    assert.equal(readback.runtime_readback_status, 'incomplete_transaction');
+    assert.equal(readback.transaction_complete, false);
+    assert.equal(readback.causality.same_transaction_event_and_outbox, true);
+    assert.equal(readback.causality.transaction_complete, false);
+    assert.equal(readback.exactly_one_outcome.fail_closed, true);
+    assert.equal(readback.exactly_one_outcome.outcome_kind, 'blocked_incomplete_transaction');
+    assert.equal(readback.latest_transaction_readback.same_transaction_event_and_outbox, true);
+    assert.equal(readback.latest_transaction_readback.same_stage_run_identity, false);
+    assert.equal(
+      readback.latest_transaction_readback.stage_run_identity_readback.fail_closed_reason,
+      'domain_progress_transition_readback_stage_run_identity_mismatch',
+    );
+    assert.equal(readback.read_model_readback.latest_stage_run_identity, null);
+    const latestTransactionIdentity = readback.read_model_readback.latest_transaction_identity;
+    assert.ok(latestTransactionIdentity);
+    const stageRunIdentityReadback = latestTransactionIdentity.stage_run_identity_readback;
+    assert.ok(stageRunIdentityReadback);
+    assert.equal(stageRunIdentityReadback.same_stage_run_identity, false);
+    assert.equal(latestTransactionIdentity.transaction_complete, false);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

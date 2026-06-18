@@ -418,6 +418,84 @@ function domainProgressTransitionAuthorityBoundary(source?: Record<string, unkno
   };
 }
 
+const STAGE_RUN_IDENTITY_REQUIRED_FIELDS = [
+  'stage_run_id',
+  'route_identity_key',
+  'attempt_idempotency_key',
+  'provider_attempt_ref',
+  'attempt_lease_ref',
+] as const;
+
+const STAGE_RUN_IDENTITY_COMPARISON_FIELDS = [
+  ...STAGE_RUN_IDENTITY_REQUIRED_FIELDS,
+  'source_generation',
+] as const;
+
+function stageRunIdentityRecord(value?: Record<string, unknown> | null) {
+  return value && isRecord(value.stage_run_identity) ? value.stage_run_identity : null;
+}
+
+function stageRunIdentityComparisonKey(identity: Record<string, unknown> | null) {
+  if (!identity) {
+    return null;
+  }
+  if (
+    STAGE_RUN_IDENTITY_REQUIRED_FIELDS.some((field) => !optionalString(identity[field]))
+  ) {
+    return null;
+  }
+  return JSON.stringify(
+    STAGE_RUN_IDENTITY_COMPARISON_FIELDS.map((field) => [
+      field,
+      optionalScalarString(identity[field]),
+    ]),
+  );
+}
+
+export function readDomainProgressStageRunIdentity(input: {
+  command?: Record<string, unknown> | null;
+  event?: Record<string, unknown> | null;
+  outboxItem?: Record<string, unknown> | null;
+}) {
+  const commandStageRunIdentity = stageRunIdentityRecord(input.command);
+  const eventStageRunIdentity = stageRunIdentityRecord(input.event);
+  const outboxStageRunIdentity = stageRunIdentityRecord(input.outboxItem);
+  const commandStageRunIdentityKey = stageRunIdentityComparisonKey(commandStageRunIdentity);
+  const eventStageRunIdentityKey = stageRunIdentityComparisonKey(eventStageRunIdentity);
+  const outboxStageRunIdentityKey = stageRunIdentityComparisonKey(outboxStageRunIdentity);
+  const sameStageRunIdentity = Boolean(
+    commandStageRunIdentityKey
+    && eventStageRunIdentityKey
+    && outboxStageRunIdentityKey
+    && commandStageRunIdentityKey === eventStageRunIdentityKey
+    && eventStageRunIdentityKey === outboxStageRunIdentityKey,
+  );
+  const canonical = sameStageRunIdentity ? eventStageRunIdentity : null;
+  return {
+    surface_kind: 'opl_domain_progress_stage_run_identity_readback',
+    runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+    same_stage_run_identity: sameStageRunIdentity,
+    command_stage_run_identity_present: Boolean(commandStageRunIdentity),
+    event_stage_run_identity_present: Boolean(eventStageRunIdentity),
+    outbox_stage_run_identity_present: Boolean(outboxStageRunIdentity),
+    command_stage_run_identity: commandStageRunIdentity,
+    event_stage_run_identity: eventStageRunIdentity,
+    outbox_stage_run_identity: outboxStageRunIdentity,
+    command_stage_run_identity_key: commandStageRunIdentityKey,
+    event_stage_run_identity_key: eventStageRunIdentityKey,
+    outbox_stage_run_identity_key: outboxStageRunIdentityKey,
+    stage_run_id: canonical ? optionalString(canonical.stage_run_id) : null,
+    route_identity_key: canonical ? optionalString(canonical.route_identity_key) : null,
+    attempt_idempotency_key: canonical ? optionalString(canonical.attempt_idempotency_key) : null,
+    provider_attempt_ref: canonical ? optionalString(canonical.provider_attempt_ref) : null,
+    attempt_lease_ref: canonical ? optionalString(canonical.attempt_lease_ref) : null,
+    source_generation: canonical ? optionalScalarString(canonical.source_generation) : null,
+    fail_closed_reason: sameStageRunIdentity
+      ? null
+      : 'domain_progress_transition_readback_stage_run_identity_mismatch',
+  };
+}
+
 function domainProgressTransitionOutcomeKind(event: Record<string, unknown>) {
   const outcome = isRecord(event.outcome) ? event.outcome : {};
   return optionalString(outcome.kind)
@@ -1328,6 +1406,13 @@ export function rebuildDomainProgressTransitionReadModel(input: {
     : undefined;
   const latestCommand = latestCommandEntry ? logEntryPayload(latestCommandEntry) : null;
   const latestOutbox = latestOutboxEntry ? logEntryPayload(latestOutboxEntry) : null;
+  const latestStageRunIdentityReadback = latestEvent
+    ? readDomainProgressStageRunIdentity({
+      command: latestCommand,
+      event: latestEvent,
+      outboxItem: latestOutbox,
+    })
+    : null;
   const latestEventId = latestEvent ? optionalString(latestEvent.event_id) : null;
   const latestOutboxItemId = latestOutbox
     ? optionalString(latestOutbox.outbox_item_id)
@@ -1488,6 +1573,15 @@ export function rebuildDomainProgressTransitionReadModel(input: {
           && latestOutboxEntry
           && logEntryTransactionId(latestEventEntry) === logEntryTransactionId(latestOutboxEntry),
         ),
+        same_stage_run_identity: latestStageRunIdentityReadback?.same_stage_run_identity ?? false,
+        transaction_complete: Boolean(
+          latestCommandEntry
+          && latestEventEntry
+          && latestOutboxEntry
+          && logEntryTransactionId(latestEventEntry) === logEntryTransactionId(latestOutboxEntry)
+          && latestStageRunIdentityReadback?.same_stage_run_identity,
+        ),
+        stage_run_identity_readback: latestStageRunIdentityReadback,
       }
       : null,
     latest_outbox_identity: latestOutbox
@@ -1499,11 +1593,10 @@ export function rebuildDomainProgressTransitionReadModel(input: {
       }
       : null,
     latest_stage_run_identity:
-      latestEvent && isRecord(latestEvent.stage_run_identity)
-        ? latestEvent.stage_run_identity
-        : latestOutbox && isRecord(latestOutbox.stage_run_identity)
-          ? latestOutbox.stage_run_identity
-          : null,
+      latestStageRunIdentityReadback?.same_stage_run_identity
+        ? latestStageRunIdentityReadback.event_stage_run_identity
+        : null,
+    latest_stage_run_identity_readback: latestStageRunIdentityReadback,
     latest_human_gate_resume_token: latestTokenReadback,
   };
 }

@@ -1,6 +1,7 @@
 import {
   DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
   type DomainProgressTransitionRuntimeLog,
+  readDomainProgressStageRunIdentity,
   readDomainProgressTransitionIdempotency,
   readDomainProgressTransitionRuntimeLogJsonl,
   rebuildDomainProgressTransitionReadModel,
@@ -58,8 +59,14 @@ export function readDomainProgressTransitionRuntimeReadbackJsonl(input: {
     : undefined;
   const eventPayload = logEntryPayload(eventEntry);
   const outboxPayload = logEntryPayload(outboxEntry);
+  const commandPayload = logEntryPayload(commandEntry);
   const outboxEntryItemId = optionalString(outboxEntry?.outbox_item_id);
   const outboxPayloadItemId = optionalString(outboxPayload?.outbox_item_id);
+  const stageRunIdentityReadback = readDomainProgressStageRunIdentity({
+    command: commandPayload,
+    event: eventPayload,
+    outboxItem: outboxPayload,
+  });
   const sameOutboxIdentity = Boolean(
     latestOutboxItemId
     && outboxEntryItemId
@@ -78,7 +85,13 @@ export function readDomainProgressTransitionRuntimeReadbackJsonl(input: {
     && sameOutboxIdentity
     && optionalString(outboxPayload?.transition_event_id) === latestEventId
   );
-  const transactionComplete = Boolean(commandEntry && eventEntry && outboxEntry && sameTransactionEventAndOutbox);
+  const transactionComplete = Boolean(
+    commandEntry
+    && eventEntry
+    && outboxEntry
+    && sameTransactionEventAndOutbox
+    && stageRunIdentityReadback.same_stage_run_identity
+  );
   const runtimeReadbackStatus = latestEventId
     ? transactionComplete
       ? 'complete_transaction'
@@ -136,6 +149,8 @@ export function readDomainProgressTransitionRuntimeReadbackJsonl(input: {
       same_transaction_event_and_outbox: sameTransactionEventAndOutbox,
       transition_event_id: eventPayload ? optionalString(eventPayload.event_id) : null,
       outbox_transition_event_id: outboxPayload ? optionalString(outboxPayload.transition_event_id) : null,
+      same_stage_run_identity: stageRunIdentityReadback.same_stage_run_identity,
+      stage_run_identity_readback: stageRunIdentityReadback,
     },
   };
 }
