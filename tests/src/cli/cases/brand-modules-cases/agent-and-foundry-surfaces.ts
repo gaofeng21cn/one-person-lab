@@ -70,7 +70,7 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying OPL bra
     );
     assert.deepEqual(
       output.peers.map((entry: { agent_id: string }) => entry.agent_id),
-      ['mas', 'mag', 'rca', 'oma'],
+      ['mas', 'mag', 'rca', 'oma', 'opl-bookforge'],
     );
     assert.equal(output.authority_boundary.generated_surface_can_write_domain_truth, false);
     assert.equal(output.authority_boundary.generated_surface_can_create_owner_receipt, false);
@@ -84,21 +84,27 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying OPL bra
   }
 });
 
-test('OPL Foundry Agent index exposes MAS MAG RCA OMA direct and generated CLI command surfaces', () => {
+test('OPL Foundry Agent index exposes MAS MAG RCA OMA BookForge direct and generated CLI command surfaces', () => {
   const list = runCli(['foundry', 'agents', 'list']).foundry_agents;
   assert.deepEqual(
     list.agents.map((entry: { agent_id: string }) => entry.agent_id),
-    ['mas', 'mag', 'rca', 'oma'],
+    ['mas', 'mag', 'rca', 'oma', 'opl-bookforge'],
   );
   assert.deepEqual(
     list.agents.map((entry: { foundry_command_surface: string }) => entry.foundry_command_surface),
-    ['medautosci foundry', 'medautogrant foundry', 'redcube foundry', 'opl foundry agents inspect oma'],
+    [
+      'medautosci foundry',
+      'medautogrant foundry',
+      'redcube foundry',
+      'opl foundry agents inspect oma',
+      'opl foundry agents inspect opl-bookforge',
+    ],
   );
   assert.deepEqual(
     list.agents.map((entry: { cli_smoke: { executable_brand_cli_command_surface: string | null } }) =>
       entry.cli_smoke.executable_brand_cli_command_surface
     ),
-    [null, null, null, null],
+    [null, null, null, null, null],
   );
   assert.deepEqual(
     list.agents.map((entry: { cli_smoke: { json_flag_aliases: string[] } }) =>
@@ -108,6 +114,7 @@ test('OPL Foundry Agent index exposes MAS MAG RCA OMA direct and generated CLI c
       ['--json', '--format json'],
       ['--json', '--format json'],
       ['--json', '--format json'],
+      ['--json'],
       ['--json'],
     ],
   );
@@ -162,4 +169,15 @@ test('OPL Foundry Agent index exposes MAS MAG RCA OMA direct and generated CLI c
   assert.equal(oma.compatibility_command_surface, 'opl agents interfaces --repo-dir <opl-meta-agent-repo>');
   assert.equal(oma.cli_smoke.executable_brand_cli_command_surface, null);
   assert.equal(oma.direct_cli_command_surface_policy.first_screen_must_identify_series, true);
+
+  const bookforge = runCli(['foundry', 'agents', 'inspect', 'opl-bookforge']).foundry_agent;
+  assert.equal(bookforge.status, 'generated_surface_only');
+  assert.equal(bookforge.work_object.natural_alias, 'book');
+  assert.equal(bookforge.brand_cli, 'opl-bookforge');
+  assert.equal(bookforge.direct_domain_cli, 'opl agents interfaces --repo-dir <opl-bookforge-repo>');
+  assert.equal(bookforge.foundry_command_surface, 'opl foundry agents inspect opl-bookforge');
+  assert.equal(bookforge.compatibility_command_surface, 'opl agents interfaces --repo-dir <opl-bookforge-repo>');
+  assert.equal(bookforge.cli_smoke.status_json_command, 'opl foundry agents inspect opl-bookforge --json');
+  assert.equal(bookforge.cli_smoke.executable_brand_cli_command_surface, null);
+  assert.equal(bookforge.direct_cli_command_surface_policy.first_screen_must_identify_series, true);
 });

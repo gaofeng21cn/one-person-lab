@@ -25,17 +25,18 @@ export function buildFoundryCommandSpecs(): Record<string, CommandSpec> {
     ...foundrySpineSpecs,
     'foundry agents list': {
       usage: 'opl foundry agents list',
-      summary: 'List MAS, MAG, RCA, and OMA as one OPL Foundry Agent series with their direct CLI, Skill, MCP, and Connect command surfaces.',
+      summary: 'List MAS, MAG, RCA, OMA, and BookForge as one OPL Foundry Agent series with their direct CLI, Skill, MCP, and Connect command surfaces.',
       examples: ['opl foundry agents list --json'],
       group: 'foundry',
       handler: (args) => buildFoundryAgentsList(args),
     },
     'foundry agents inspect': {
-      usage: 'opl foundry agents inspect <mas|mag|rca|oma>',
+      usage: 'opl foundry agents inspect <mas|mag|rca|oma|opl-bookforge>',
       summary: 'Inspect one Foundry Agent series member and its direct CLI foundry spine, ordinary work alias, Skill/MCP projection, and authority boundary.',
       examples: [
         'opl foundry agents inspect mas --json',
         'opl foundry agents inspect rca --json',
+        'opl foundry agents inspect opl-bookforge --json',
       ],
       group: 'foundry',
       handler: (args) => buildFoundryAgentInspect(args),

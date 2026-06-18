@@ -71,6 +71,19 @@ const FOUNDRY_AGENT_PEERS = [
       'target agent -> stage -> target owner answer -> mechanism or work-order handoff',
     generated_surface_only: true,
   },
+  {
+    agent_id: 'opl-bookforge',
+    domain_id: 'oplbookforge',
+    label: 'OPL BookForge',
+    brand_cli: 'opl-bookforge',
+    direct_domain_cli: 'opl agents interfaces --repo-dir <opl-bookforge-repo>',
+    codex_executable_cli: 'opl foundry agents inspect opl-bookforge',
+    domain_alias: 'book',
+    work_alias: 'book',
+    ordinary_golden_path:
+      'book -> stage -> domain owner receipt or typed blocker -> manuscript package handoff',
+    generated_surface_only: true,
+  },
 ] as const;
 
 type FoundryAgentPeer = typeof FOUNDRY_AGENT_PEERS[number];
@@ -292,6 +305,7 @@ function resolvePeer(agentId: string) {
     || peer.domain_alias === normalized
     || peer.work_alias === normalized
     || (peer.agent_id === 'oma' && normalized === 'opl-meta-agent')
+    || (peer.agent_id === 'opl-bookforge' && ['bookforge', 'book-forge', 'oplbookforge', 'opl_bookforge'].includes(normalized))
     || (peer.agent_id === 'rca' && normalized === 'redcube-ai')
     || (peer.agent_id === 'mas' && normalized === 'med-autoscience')
     || (peer.agent_id === 'mag' && normalized === 'med-autogrant')
@@ -309,10 +323,11 @@ function parseAgentInspectArgs(args: string[]) {
     'cli_usage_error',
     'foundry agents inspect requires one agent id.',
     {
-      usage: 'opl foundry agents inspect <mas|mag|rca|oma>',
+      usage: 'opl foundry agents inspect <mas|mag|rca|oma|opl-bookforge>',
       examples: [
         'opl foundry agents inspect mas --json',
         'opl foundry agents inspect --agent rca --json',
+        'opl foundry agents inspect opl-bookforge --json',
       ],
       unexpected_args: args,
     },
