@@ -1,6 +1,7 @@
 import {
   parseRegisteredFamilyRuntimeCommand,
 } from './family-runtime-command-parts/registry.ts';
+import type { PaperAutonomyStageRunIdentity } from './family-runtime-paper-autonomy.ts';
 import {
   FAMILY_RUNTIME_DOMAIN_IDS,
   type FamilyRuntimeDomainId,
@@ -99,6 +100,15 @@ export type FamilyRuntimeCommandInput =
       expected_restore_proof_refs?: string[];
       expected_domain_artifact_mutation_receipt_refs?: string[];
       max_age_ms?: number | null;
+    };
+  }
+  | {
+    mode: 'paper_autonomy_supervisor_readback';
+    input: {
+      obligation_ledger_path: string;
+      decision_ledger_path: string;
+      obligation_id: string;
+      current_identity: PaperAutonomyStageRunIdentity;
     };
   }
   | {
