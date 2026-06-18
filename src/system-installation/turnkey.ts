@@ -78,6 +78,16 @@ function normalizeModuleSelection(modules?: string[]) {
   return [...new Set(selected.map((moduleId) => normalizeModuleId(moduleId)))];
 }
 
+function frameworkErrorDetails(error: unknown) {
+  if (!error || typeof error !== 'object') {
+    return null;
+  }
+  const details = (error as { details?: unknown }).details;
+  return details && typeof details === 'object' && !Array.isArray(details)
+    ? details
+    : null;
+}
+
 function buildMacReleaseAssetName() {
   const arch = process.arch === 'arm64' ? 'arm64' : 'x64';
   return buildOplGuiArtifactName({ platform: 'macos', arch, ext: 'dmg' });
@@ -485,11 +495,13 @@ export async function runOplTurnkeyInstall(
       },
     };
   } catch (error) {
+    const details = frameworkErrorDetails(error);
     firstRunLogEvents.push(
       appendOplFirstRunLogEvent('install_failed', {
         status: 'failed',
         selected_modules: modules,
         message: error instanceof Error ? error.message : String(error),
+        ...(details ? { details } : {}),
       }),
     );
     throw error;

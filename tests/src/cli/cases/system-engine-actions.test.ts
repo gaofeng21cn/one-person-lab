@@ -1,3 +1,5 @@
+import { spawnSync } from 'node:child_process';
+
 import {
   assert,
   createFakeCodexFixture,
@@ -42,6 +44,57 @@ function writeFakeNpmRuntimeInstaller(fakeNpm: string, logPath: string) {
     ].join('\n'),
     { mode: 0o755 },
   );
+}
+
+function createTarball(sourceDir: string, tarballPath: string) {
+  const result = spawnSync('tar', ['-czf', tarballPath, '-C', sourceDir, 'package'], { encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+}
+
+function writePreseededCodexTarballs(fixtureRoot: string) {
+  const rootPackage = path.join(fixtureRoot, 'root-package');
+  const platformPackage = path.join(fixtureRoot, 'platform-package');
+  const rootPackageDir = path.join(rootPackage, 'package');
+  const platformPackageDir = path.join(platformPackage, 'package');
+  const rootTarball = path.join(fixtureRoot, 'openai-codex.tgz');
+  const platformTarball = path.join(fixtureRoot, 'openai-codex-darwin-arm64.tgz');
+
+  fs.mkdirSync(path.join(rootPackageDir, 'bin'), { recursive: true });
+  fs.writeFileSync(
+    path.join(rootPackageDir, 'package.json'),
+    JSON.stringify({
+      name: '@openai/codex',
+      version: '0.141.0',
+      optionalDependencies: {
+        '@openai/codex-darwin-arm64': 'npm:@openai/codex@0.141.0-darwin-arm64',
+      },
+      bin: { codex: 'bin/codex.js' },
+    }, null, 2),
+  );
+  fs.writeFileSync(path.join(rootPackageDir, 'bin', 'codex.js'), '#!/usr/bin/env node\n', { mode: 0o755 });
+
+  const vendorRoot = path.join(platformPackageDir, 'vendor', 'aarch64-apple-darwin');
+  fs.mkdirSync(path.join(vendorRoot, 'bin'), { recursive: true });
+  fs.mkdirSync(path.join(vendorRoot, 'codex-path'), { recursive: true });
+  fs.writeFileSync(
+    path.join(platformPackageDir, 'package.json'),
+    JSON.stringify({
+      name: '@openai/codex',
+      version: '0.141.0-darwin-arm64',
+      os: ['darwin'],
+      cpu: ['arm64'],
+    }, null, 2),
+  );
+  fs.writeFileSync(path.join(vendorRoot, 'bin', 'codex'), '#!/usr/bin/env bash\necho "codex-cli 0.141.0"\n', {
+    mode: 0o755,
+  });
+  fs.writeFileSync(path.join(vendorRoot, 'codex-path', 'rg'), '#!/usr/bin/env bash\necho "rg preseeded"\n', {
+    mode: 0o755,
+  });
+
+  createTarball(rootPackage, rootTarball);
+  createTarball(platformPackage, platformTarball);
+  return { rootTarball, platformTarball };
 }
 
 test('engine action executes env-overridden install commands and returns a structured action surface', () => {
@@ -176,6 +229,89 @@ test('builtin Codex update stages and atomically applies selected OPL runtime bi
     assert.match(fs.readFileSync(runtimeCodex, 'utf8'), /0\.134\.0/);
     assert.match(fs.readFileSync(runtimeRg, 'utf8'), /rg new/);
   } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('builtin Codex install consumes first-run preseeded root and platform tarballs without registry fetch', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-engine-preseeded-codex-'));
+  const codexFixture = createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex-cli 0.130.0"
+  exit 0
+fi
+echo "Unsupported codex fixture command: $*" >&2
+exit 1
+`);
+  const runtimeHome = path.join(fixtureRoot, 'runtime', 'current');
+  const runtimeBin = path.join(runtimeHome, 'bin');
+  const runtimeCodex = path.join(runtimeBin, 'codex');
+  const runtimeRg = path.join(runtimeBin, 'rg');
+  const fakeBin = path.join(fixtureRoot, 'fake-bin');
+  const fakeNpm = path.join(fakeBin, 'npm');
+  const npmLog = path.join(fixtureRoot, 'npm.log');
+  const { rootTarball, platformTarball } = writePreseededCodexTarballs(fixtureRoot);
+
+  fs.mkdirSync(runtimeBin, { recursive: true });
+  fs.mkdirSync(fakeBin, { recursive: true });
+  fs.writeFileSync(
+    fakeNpm,
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      `printf '%s\\n' "$*" >> ${shellSingleQuote(npmLog)}`,
+      'if [[ "$*" == *"@openai/codex@latest"* ]]; then',
+      '  echo "registry fetch is forbidden in preseeded fixture" >&2',
+      '  exit 47',
+      'fi',
+      'if [[ "$1" == "install" && "$2" == "--prefix" ]]; then',
+      '  prefix="$3"',
+      '  mkdir -p "$prefix/node_modules/@openai/codex"',
+      '  cp -R "$4" "$prefix/node_modules/@openai/codex/source-tarball.txt"',
+      '  echo "installed staged preseeded root package"',
+      '  exit 0',
+      'fi',
+      'echo "Unexpected npm command: $*" >&2',
+      'exit 1',
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+
+  try {
+    const output = runCli(
+      ['engine', 'install', '--engine', 'codex'],
+      {
+        HOME: fixtureRoot,
+        OPL_RUNTIME_ROOT: path.join(fixtureRoot, 'runtime'),
+        OPL_FIRST_RUN_CODEX_PACKAGE_TARBALL: rootTarball,
+        OPL_FIRST_RUN_CODEX_PLATFORM_PACKAGE_TARBALL: platformTarball,
+        OPL_FIRST_RUN_CODEX_NPM_CACHE_DIR: path.join(fixtureRoot, 'npm-cache'),
+        OPL_CODEX_BIN: codexFixture.codexPath,
+        OPL_CODEX_CLI_LATEST_VERSION: '0.141.0',
+        SHELL: '/bin/bash',
+        PATH: `${fakeBin}:/usr/bin:/bin`,
+      },
+    ) as {
+      engine_action: {
+        status: string;
+        command_preview: string[];
+        stdout: string;
+      };
+    };
+
+    assert.equal(output.engine_action.status, 'completed');
+    assert.equal(fs.existsSync(runtimeCodex), true);
+    assert.equal(fs.existsSync(runtimeRg), true);
+    assert.match(fs.readFileSync(runtimeCodex, 'utf8'), /0\.141\.0/);
+    assert.match(fs.readFileSync(runtimeRg, 'utf8'), /rg preseeded/);
+    assert.match(output.engine_action.command_preview.join(' '), new RegExp(rootTarball.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.match(output.engine_action.command_preview.join(' '), /--prefer-offline/);
+    assert.match(output.engine_action.stdout, /preseeded_platform_package/);
+    assert.match(output.engine_action.stdout, /codex-darwin-arm64/);
+    assert.doesNotMatch(fs.readFileSync(npmLog, 'utf8'), /@openai\/codex@latest/);
+  } finally {
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 import { resolveCodexBinary } from '../codex.ts';
 
@@ -504,7 +505,7 @@ function buildCodexRuntimeNpmInstallArgs(prefixRoot: string) {
     'install',
     '--prefix',
     prefixRoot,
-    '@openai/codex@latest',
+    resolveCodexPackageInstallSpec(),
     '--force',
     '--include=optional',
     '--ignore-scripts=false',
@@ -512,6 +513,7 @@ function buildCodexRuntimeNpmInstallArgs(prefixRoot: string) {
     '--fetch-retry-mintimeout=2000',
     '--fetch-retry-maxtimeout=20000',
     '--fetch-timeout=60000',
+    ...codexRuntimeNpmCacheArgs(),
   ];
 }
 
@@ -521,6 +523,72 @@ function makeRuntimeStageAttemptRoot(paths: RuntimeToolchainPaths) {
   fs.rmSync(attemptRoot, { recursive: true, force: true });
   fs.mkdirSync(attemptRoot, { recursive: true });
   return attemptRoot;
+}
+
+function resolvePreseedTarballPath(envKey: string) {
+  const rawPath = normalizeOptionalString(process.env[envKey]);
+  if (!rawPath) {
+    return null;
+  }
+  const tarballPath = path.resolve(rawPath);
+  return fs.existsSync(tarballPath) && fs.statSync(tarballPath).isFile()
+    ? tarballPath
+    : null;
+}
+
+function resolveCodexPackageInstallSpec() {
+  return resolvePreseedTarballPath('OPL_FIRST_RUN_CODEX_PACKAGE_TARBALL') ?? '@openai/codex@latest';
+}
+
+function resolveCodexPlatformPackageTarball() {
+  return resolvePreseedTarballPath('OPL_FIRST_RUN_CODEX_PLATFORM_PACKAGE_TARBALL');
+}
+
+function codexRuntimeNpmCacheArgs() {
+  const cacheDir = normalizeOptionalString(process.env.OPL_FIRST_RUN_CODEX_NPM_CACHE_DIR)
+    ?? normalizeOptionalString(process.env.NPM_CONFIG_CACHE)
+    ?? normalizeOptionalString(process.env.npm_config_cache);
+  return cacheDir ? ['--cache', path.resolve(cacheDir), '--prefer-offline'] : [];
+}
+
+function extractTarballToDirectory(tarballPath: string, outputRoot: string) {
+  fs.rmSync(outputRoot, { recursive: true, force: true });
+  fs.mkdirSync(outputRoot, { recursive: true });
+  const result = spawnSync('tar', ['-xzf', tarballPath, '-C', outputRoot], {
+    encoding: 'utf8',
+  });
+  if (result.status !== 0) {
+    throw new Error([
+      `Failed to extract ${tarballPath}`,
+      result.stdout ? `stdout:\n${result.stdout}` : '',
+      result.stderr ? `stderr:\n${result.stderr}` : '',
+      result.error ? `error=${result.error.message}` : '',
+    ].filter(Boolean).join('\n'));
+  }
+  const packageRoot = path.join(outputRoot, 'package');
+  if (!fs.existsSync(packageRoot) || !fs.statSync(packageRoot).isDirectory()) {
+    throw new Error(`Codex package tarball did not contain package/ root: ${tarballPath}`);
+  }
+  return packageRoot;
+}
+
+function copyDirectoryContents(sourceRoot: string, targetRoot: string) {
+  fs.rmSync(targetRoot, { recursive: true, force: true });
+  fs.mkdirSync(path.dirname(targetRoot), { recursive: true });
+  fs.cpSync(sourceRoot, targetRoot, { recursive: true });
+}
+
+function materializePreseededCodexPlatformPackage(stageAttemptRoot: string, platformTarballPath: string) {
+  const extractedRoot = extractTarballToDirectory(
+    platformTarballPath,
+    path.join(stageAttemptRoot, '.preseed', 'codex-darwin-arm64'),
+  );
+  const platformPackageRoot = path.join(stageAttemptRoot, 'node_modules', '@openai', 'codex-darwin-arm64');
+  copyDirectoryContents(extractedRoot, platformPackageRoot);
+  return {
+    package_root: platformPackageRoot,
+    tarball_path: platformTarballPath,
+  };
 }
 
 function verifyCodexExecutable(binaryPath: string) {
@@ -611,6 +679,35 @@ function runBuiltinCodexRuntimeInstallOrUpdate(cwd?: string) {
   if (installResult.exitCode !== 0) {
     return installResult;
   }
+  let preseededPlatformPackage = null;
+  const platformTarballPath = resolveCodexPlatformPackageTarball();
+  try {
+    if (platformTarballPath) {
+      preseededPlatformPackage = materializePreseededCodexPlatformPackage(stageAttemptRoot, platformTarballPath);
+    }
+  } catch (error) {
+    return {
+      exitCode: 1,
+      stdout: installResult.stdout,
+      stderr: normalizeOutput(
+        installResult.stderr,
+        JSON.stringify({
+          opl_runtime_codex_update: {
+            surface_kind: 'opl_runtime_toolchain_update_receipt',
+            updater_version: CODEX_RUNTIME_UPDATER_VERSION,
+            owner: 'opl_app_runtime',
+            target_toolchain: 'codex_cli',
+            stage_attempt_root: stageAttemptRoot,
+            preseeded_platform_package: {
+              status: 'failed',
+              tarball_path: platformTarballPath,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+        }),
+      ),
+    };
+  }
 
   const runtimeApply = applyStagedCodexRuntimePayload(stageAttemptRoot, paths);
   if (!runtimeApply.applied) {
@@ -640,6 +737,8 @@ function runBuiltinCodexRuntimeInstallOrUpdate(cwd?: string) {
             global_toolchain_mutation_allowed: false,
             system_tool_priority: 'prefer_compatible_system_codex_from_env_or_path',
             stage_attempt_root: stageAttemptRoot,
+            preseeded_package_tarball: resolvePreseedTarballPath('OPL_FIRST_RUN_CODEX_PACKAGE_TARBALL'),
+            preseeded_platform_package: preseededPlatformPackage,
             ...runtimeApply,
           },
         }),
