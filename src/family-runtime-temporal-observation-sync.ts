@@ -51,11 +51,46 @@ function stageAttemptHasProviderStarted(row: StageAttemptRow) {
   return ['running', 'checkpointed', 'human_gate'].includes(row.status);
 }
 
+function linkedRunningTaskLeaseState(db: DatabaseSync, row: StageAttemptRow) {
+  if (!row.task_id) {
+    return null;
+  }
+  return db.prepare(`
+    SELECT status, lease_owner, lease_expires_at
+    FROM tasks
+    WHERE task_id = ?
+  `).get(row.task_id) as {
+    status: string;
+    lease_owner: string | null;
+    lease_expires_at: string | null;
+  } | undefined ?? null;
+}
+
+function isExpiredOrUnleasedDefaultExecutorAdmission(db: DatabaseSync, row: StageAttemptRow) {
+  if (
+    row.executor_kind !== 'codex_cli'
+    || row.status !== 'queued'
+    || parseStageAttemptJsonObject(row.provider_run_json).provider_status !== 'registered'
+  ) {
+    return false;
+  }
+  const task = linkedRunningTaskLeaseState(db, row);
+  if (task?.status !== 'running') {
+    return false;
+  }
+  if (!task.lease_owner || !task.lease_expires_at) {
+    return true;
+  }
+  const leaseExpiresAt = Date.parse(task.lease_expires_at);
+  return Number.isFinite(leaseExpiresAt) && leaseExpiresAt <= Date.now();
+}
+
 function canFailStageAttemptForWorkflowMissing(
-  _db: DatabaseSync,
+  db: DatabaseSync,
   row: StageAttemptRow,
 ) {
-  return stageAttemptHasProviderStarted(row);
+  return stageAttemptHasProviderStarted(row)
+    || isExpiredOrUnleasedDefaultExecutorAdmission(db, row);
 }
 
 function appendActivityEventToRow(row: StageAttemptRow, event: Record<string, unknown>) {
