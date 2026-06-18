@@ -597,7 +597,7 @@ test('family-runtime intake admits MAS current-control handoff action_queue prov
   }
 });
 
-test('family-runtime intake promotes MAS transition request pending task into OPL runtime-backed provider admission', () => {
+test('family-runtime intake promotes MAS transition request-only task into OPL runtime-backed provider admission', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-transition-request-pending-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-transition-request-pending-'));
   const workspaceRoot = path.join(fixtureRoot, 'workspace');
@@ -622,7 +622,6 @@ test('family-runtime intake promotes MAS transition request pending task into OP
     'stage_packets',
     `${actionType}.stage-packet.json`,
   ].join('/');
-  const routeIdentityKey = 'owner-route::dm003::quality-repair-current';
   const attemptIdempotencyKey = 'paper-policy-request:1a379264039c75d0e9cfd8f5';
   fs.mkdirSync(path.dirname(currentControlPath), { recursive: true });
   fs.mkdirSync(path.dirname(profilePath), { recursive: true });
@@ -676,8 +675,6 @@ test('family-runtime intake promotes MAS transition request pending task into OP
           owner_route_current: true,
           provider_attempt_or_lease_required: true,
           provider_completion_is_domain_completion: false,
-          route_identity_key: routeIdentityKey,
-          attempt_idempotency_key: attemptIdempotencyKey,
           stage_packet_ref: stagePacketRef,
           stage_packet_refs: [stagePacketRef],
           stage_transition_authority_boundary: providerObservationBoundary(),
@@ -726,7 +723,7 @@ test('family-runtime intake promotes MAS transition request pending task into OP
     assert.equal(tasks[0].payload.study_id, studyId);
     assert.equal(tasks[0].payload.action_type, actionType);
     assert.equal(tasks[0].payload.work_unit_id, workUnitId);
-    assert.equal(tasks[0].payload.route_identity_key, routeIdentityKey);
+    assert.equal(tasks[0].payload.route_identity_key, attemptIdempotencyKey);
     assert.equal(tasks[0].payload.attempt_idempotency_key, attemptIdempotencyKey);
     assert.equal(tasks[0].payload.domain_progress_transition_runtime.transition_event.transition_kind, 'StartProviderAttempt');
     assert.equal(tasks[0].payload.domain_progress_transition_runtime.transition_event.exactly_one_transition, true);
@@ -773,6 +770,10 @@ test('family-runtime intake promotes MAS transition request pending task into OP
     assert.equal(refreshedCurrentControl.provider_admission_candidates[0].study_id, studyId);
     assert.equal(
       refreshedCurrentControl.provider_admission_candidates[0].attempt_idempotency_key,
+      attemptIdempotencyKey,
+    );
+    assert.equal(
+      refreshedCurrentControl.provider_admission_candidates[0].route_identity_key,
       attemptIdempotencyKey,
     );
     assert.equal(
