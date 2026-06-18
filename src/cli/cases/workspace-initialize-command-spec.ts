@@ -34,10 +34,11 @@ import type { CommandSpec } from '../modules/support.ts';
 export function buildWorkspaceInitializeCommandSpecs(
   getContracts: () => FrameworkContracts,
 ): Record<string, CommandSpec> {
+  const agentUsage = getContracts().agentWorkspaceNorm.supported_agents.join('|');
   const specs: Record<string, CommandSpec> = {
     'workspace-init': {
       usage:
-        'opl workspace init --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio] [--title <title>] [--dry-run] [--no-bind] [--force]',
+        `opl workspace init --agent <${agentUsage}> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio] [--title <title>] [--dry-run] [--no-bind] [--force]`,
       summary:
         'Materialize the OPL standard workspace topology for a family agent and optionally activate it in the workspace registry.',
       examples: [
@@ -45,6 +46,7 @@ export function buildWorkspaceInitializeCommandSpecs(
         'opl workspace init --agent rca --workspace-root /Users/gaofeng/workspace --workspace-id visual-theme-a --project-id deck-001',
         'opl workspace init --agent mas --workspace-root /Users/gaofeng/workspace --workspace-id dm-cvd --project-id DM002',
         'opl workspace init --agent oma --workspace /Users/gaofeng/workspace/agent-foundry --dry-run',
+        'opl workspace init --agent bookforge --workspace /Users/gaofeng/workspace/bookforge --dry-run',
       ],
       handler: (args) => {
         const parsed = parseWorkspaceInitializeArgs(args, specs['workspace-init']);
@@ -64,13 +66,14 @@ export function buildWorkspaceInitializeCommandSpecs(
     },
     'workspace-ensure': {
       usage:
-        'opl workspace ensure --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio] [--title <title>] [--dry-run] [--no-bind] [--force]',
+        `opl workspace ensure --agent <${agentUsage}> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio] [--title <title>] [--dry-run] [--no-bind] [--force]`,
       summary:
         'Ensure an OPL family agent has an active workspace binding, initializing the standard topology only when needed.',
       examples: [
         'opl workspace ensure --agent rca --project-id deck-001',
         'opl workspace ensure --agent mas --workspace-id dm-cvd --project-id DM002',
         'opl workspace ensure --agent mag --workspace-root /Users/gaofeng/workspace --workspace-id nsfc-p2c --project-id grant-001',
+        'opl workspace ensure --agent bookforge --workspace-id bookforge-workspace --project-id book-001',
       ],
       handler: (args) => {
         const parsed = parseWorkspaceInitializeArgs(args, specs['workspace-ensure']);
@@ -118,7 +121,7 @@ export function buildWorkspaceInitializeCommandSpecs(
     },
     'workspace adopt': {
       usage:
-        'opl workspace adopt --agent <mas|mag|rca|oma> --workspace <path> [--project-id <id>] [--mode auto|one_off|series|portfolio] [--dry-run|--apply]',
+        `opl workspace adopt --agent <${agentUsage}> --workspace <path> [--project-id <id>] [--mode auto|one_off|series|portfolio] [--dry-run|--apply]`,
       summary:
         'Plan or apply OPL-owned workspace topology metadata and generated inspection refs for an existing directory without writing domain truth.',
       examples: [

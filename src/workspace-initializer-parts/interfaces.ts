@@ -11,6 +11,7 @@ export function buildInterfaceProjection(
   workspacePath: string,
   projectId: string,
 ) {
+  const supportedAgentUsage = contract.supported_agents.join('/');
   const initExample = `${contract.explicit_initialization.command} --agent ${agent.agent_id} --workspace ${workspacePath} --project-id ${projectId}`;
   const ensureExample = `${contract.default_workspace_precondition.command} --agent ${agent.agent_id} --project-id ${projectId}`;
   return {
@@ -32,7 +33,7 @@ export function buildInterfaceProjection(
     },
     skill: {
       ...contract.descriptor_delegates.skill,
-      instruction: 'Call the OPL workspace ensure action before running a MAS/MAG/RCA/OMA task.',
+      instruction: `Call the OPL workspace ensure action before running a supported OPL family task (${supportedAgentUsage}).`,
     },
     openai: {
       ...contract.descriptor_delegates.openai,
@@ -90,7 +91,7 @@ export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts
           report_command: 'opl workspace report',
           fleet_report_command: 'opl workspace fleet report',
           usage:
-            'opl workspace ensure --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio]',
+            `opl workspace ensure --agent <${contracts.agentWorkspaceNorm.supported_agents.join('|')}> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio]`,
         },
         management_commands: {
           validate: {
@@ -184,7 +185,7 @@ export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts
         skill: {
           ...contracts.agentWorkspaceNorm.descriptor_delegates.skill,
           instruction:
-            'Use this OPL-owned ensure action before MAS/MAG/RCA/OMA task execution; it reuses an active workspace binding or initializes the default topology.',
+            `Use this OPL-owned ensure action before supported OPL family task execution (${contracts.agentWorkspaceNorm.supported_agents.join('/')}); it reuses an active workspace binding or initializes the default topology.`,
           management_instruction:
             'Use workspace validate as the hard-blockers-only gate, workspace doctor for hard/repairable/advisory diagnostics, workspace report for the user-first current-project view, workspace fleet report for registry-wide workspace inspection, workspace adopt --dry-run before --apply, workspace upgrade --apply to auto-repair OPL projections, workspace project lifecycle --apply to pause/resume/lock/supersede/archive without deleting files, workspace project delete --dry-run to check the owner receipt safe-delete gate, and export-map/inspect/inventory/health for audit inspection.',
         },

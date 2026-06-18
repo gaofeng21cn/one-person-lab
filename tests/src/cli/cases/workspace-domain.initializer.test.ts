@@ -264,6 +264,63 @@ test('workspace init materializes MAG one-off deliverable topology', () => {
   }
 });
 
+test('workspace init materializes BookForge one-off book topology', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-bookforge-state-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-bookforge-root-'));
+
+  try {
+    const output = runCli([
+      'workspace',
+      'init',
+      '--agent',
+      'bookforge',
+      '--workspace-root',
+      workspaceRoot,
+      '--workspace-id',
+      'bookforge-workspace',
+      '--project-id',
+      'book-001',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const workspacePath = path.join(workspaceRoot, 'bookforge-workspace');
+    assert.equal(output.workspace_initialization.agent.project_id, 'opl-bookforge');
+    assert.equal(output.workspace_initialization.profile.profile_id, 'one_off');
+    assert.equal(output.workspace_initialization.profile.workspace_mode, 'one_off');
+
+    for (const relativePath of [
+      'shared/sources',
+      'shared/memory',
+      'shared/style_system',
+      'projects/book-001/control',
+      'projects/book-001/artifacts/stage_outputs',
+      'projects/book-001/review',
+      'projects/book-001/handoff',
+    ]) {
+      assert.equal(fs.statSync(path.join(workspacePath, relativePath)).isDirectory(), true, relativePath);
+    }
+
+    const workspaceIndex = readJsonFile(path.join(workspacePath, 'workspace_index.json'));
+    assert.equal(workspaceIndex.canonical_topology.project_unit_kind, 'book_project');
+    assert.equal(workspaceIndex.display_labels.project_collection, 'books');
+    assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.profile, 'one_off');
+    assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.project_kind, 'book_project');
+    assert.deepEqual(workspaceIndex.workspace_norm.domain_topology_profile.project_semantic_aliases, ['book_project', 'book']);
+    assert.equal(workspaceIndex.expected_domain_topology_profile.project_kind, 'book_project');
+    assert.equal(workspaceIndex.expected_domain_topology_profile.projected_profile.project_collection_display_label, 'books');
+
+    const catalog = runCli(['workspace', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const bookforge = catalog.workspace_catalog.projects.find((entry: { project_id: string }) => entry.project_id === 'opl-bookforge');
+    assert.equal(bookforge.active_binding.workspace_path, workspacePath);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('workspace init uses configured OPL workspace root when no path is provided', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-home-'));
   const stateRoot = path.join(homeRoot, 'opl-state');
@@ -600,7 +657,8 @@ test('workspace interfaces exports the OPL-owned initializer surfaces for tools 
   assert.equal(output.workspace_interfaces.surfaces.app.health_action_id, 'workspace_health');
   assert.equal(output.workspace_interfaces.surfaces.app.report_action_id, 'workspace_report');
   assert.equal(output.workspace_interfaces.surfaces.app.fleet_report_action_id, 'workspace_fleet_report');
-  assert.deepEqual(output.workspace_interfaces.supported_agents, ['mas', 'mag', 'rca', 'oma']);
+  assert.deepEqual(output.workspace_interfaces.supported_agents, ['mas', 'mag', 'rca', 'oma', 'bookforge']);
+  assert.match(output.workspace_interfaces.surfaces.cli.usage, /bookforge/);
 });
 
 test('workspace validate fails closed and doctor reports blockers for missing workspace index', () => {

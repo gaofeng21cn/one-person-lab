@@ -9,7 +9,8 @@
     "mas",
     "mag",
     "rca",
-    "oma"
+    "oma",
+    "bookforge"
   ],
   "default_workspace_precondition": {
     "action_id": "opl_workspace_ensure",
@@ -219,6 +220,30 @@
       "project_semantic_aliases": [
         "agent_capability",
         "deliverable"
+      ],
+      "user_inspection_roots": [
+        "projects/<project-id>/artifacts/stage_outputs"
+      ],
+      "shared_resource_roots": [
+        "shared/sources",
+        "shared/memory",
+        "shared/style_system"
+      ],
+      "legacy_project_collection_aliases": [
+        "deliverables"
+      ]
+    },
+    "bookforge": {
+      "profile": "one_off",
+      "workspace_mode": "one_off",
+      "project_kind": "book_project",
+      "project_collection_path": "projects",
+      "canonical_project_collection_role": "project_units",
+      "project_collection_alias_role": "legacy_display_alias",
+      "project_collection_display_label": "books",
+      "project_semantic_aliases": [
+        "book_project",
+        "book"
       ],
       "user_inspection_roots": [
         "projects/<project-id>/artifacts/stage_outputs"

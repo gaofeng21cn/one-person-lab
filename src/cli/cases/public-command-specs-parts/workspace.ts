@@ -4,6 +4,12 @@ import type { CommandSpec } from '../../modules/support.ts';
 export function buildWorkspaceCommandSpecs(
   commandSpecs: Record<string, CommandSpec>,
 ): Record<string, CommandSpec> {
+  const workspaceInitUsage = commandSpecs['workspace-init']?.usage
+    ?? 'opl workspace init --agent <mas|mag|rca|oma|bookforge> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>]';
+  const workspaceEnsureUsage = commandSpecs['workspace-ensure']?.usage
+    ?? 'opl workspace ensure --agent <mas|mag|rca|oma|bookforge> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>]';
+  const workspaceAdoptUsage = commandSpecs['workspace adopt']?.usage
+    ?? 'opl workspace adopt --agent <mas|mag|rca|oma|bookforge> --workspace <path> [--project-id <id>] [--mode auto|one_off|series|portfolio] [--dry-run|--apply]';
   const workspaceCommandSpecs: Record<string, CommandSpec> = {
     workspace: {
       usage:
@@ -34,14 +40,12 @@ export function buildWorkspaceCommandSpecs(
         },
         {
           command: 'workspace init',
-          usage:
-            'opl workspace init --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>]',
+          usage: workspaceInitUsage,
           summary: 'Materialize the standard OPL workspace topology for one family agent.',
         },
         {
           command: 'workspace ensure',
-          usage:
-            'opl workspace ensure --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>]',
+          usage: workspaceEnsureUsage,
           summary: 'Reuse an active binding or initialize/append the compatible standard workspace topology.',
         },
         {
@@ -106,23 +110,23 @@ export function buildWorkspaceCommandSpecs(
       group: 'workspace',
     }),
     'workspace init': cloneCommandSpec(commandSpecs['workspace-init'], {
-      usage:
-        'opl workspace init --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio] [--title <title>] [--dry-run] [--no-bind] [--force]',
+      usage: workspaceInitUsage,
       examples: [
         'opl workspace init --agent rca --workspace-id visual-theme-a --project-id deck-001',
         'opl workspace init --agent rca --workspace-root /Users/gaofeng/workspace --workspace-id visual-theme-a --project-id deck-001',
         'opl workspace init --agent mas --workspace-root /Users/gaofeng/workspace --workspace-id dm-cvd --project-id DM002',
         'opl workspace init --agent oma --workspace /Users/gaofeng/workspace/agent-foundry --dry-run',
+        'opl workspace init --agent bookforge --workspace /Users/gaofeng/workspace/bookforge --dry-run',
       ],
       group: 'workspace',
     }),
     'workspace ensure': cloneCommandSpec(commandSpecs['workspace-ensure'], {
-      usage:
-        'opl workspace ensure --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio] [--title <title>] [--dry-run] [--no-bind] [--force]',
+      usage: workspaceEnsureUsage,
       examples: [
         'opl workspace ensure --agent rca --project-id deck-001',
         'opl workspace ensure --agent mas --workspace-id dm-cvd --project-id DM002',
         'opl workspace ensure --agent mag --workspace-root /Users/gaofeng/workspace --workspace-id nsfc-p2c --project-id grant-001',
+        'opl workspace ensure --agent bookforge --workspace-id bookforge-workspace --project-id book-001',
       ],
       group: 'workspace',
     }),
@@ -141,8 +145,7 @@ export function buildWorkspaceCommandSpecs(
       group: 'workspace',
     }),
     'workspace adopt': cloneCommandSpec(commandSpecs['workspace adopt'], {
-      usage:
-        'opl workspace adopt --agent <mas|mag|rca|oma> --workspace <path> [--project-id <id>] [--mode auto|one_off|series|portfolio] [--dry-run|--apply]',
+      usage: workspaceAdoptUsage,
       examples: [
         'opl workspace adopt --agent rca --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --dry-run',
         'opl workspace adopt --agent mas --workspace /Users/gaofeng/workspace/dm-cvd --study-id DM002 --apply',
