@@ -13,20 +13,28 @@ test('OPL system skill sync catalog excludes MAS/MDS project-local stage skills'
   const domainIds = catalog.packs.map((pack) => pack.domain_id);
   const pluginNames = catalog.packs.map((pack) => pack.canonical_plugin_name);
 
-  assert.deepEqual(domainIds, ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent']);
+  assert.deepEqual(domainIds, ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent', 'oplbookforge']);
   assert.equal(domainIds.includes('meddeepscientist'), false);
   assert.equal(pluginNames.includes('deepscientist'), false);
   assert.equal(pluginNames.includes('opl-meta-agent'), true);
+  assert.equal(pluginNames.includes('opl-bookforge'), true);
   for (const pack of catalog.packs) {
-    const generatedOnly = pack.canonical_plugin_name === 'opl-meta-agent';
+    const generatedOnly = ['opl-meta-agent', 'opl-bookforge'].includes(pack.canonical_plugin_name);
     const ordinaryOperations = pack.command_surface_spine.ordinary_operations as string[];
     const ordinaryPublicCommandSurfaceSpine = pack.command_surface_spine.ordinary_public_command_surface_spine as string[];
     const seriesDelegateToolRefs = pack.mcp_projection.series_delegate_tool_refs as string[];
     assert.equal(pack.foundry_agent_series.canonical_command_surface, 'opl agents foundry');
-    if (generatedOnly) {
+    if (pack.canonical_plugin_name === 'opl-meta-agent') {
       assert.equal(pack.foundry_agent_series.generated_surface_only, true);
       assert.equal(pack.foundry_agent_series.direct_cli_foundry_command_surface, 'opl foundry agents inspect oma');
       assert.equal(pack.foundry_agent_series.compatibility_foundry_command_surface, 'opl agents interfaces --repo-dir <opl-meta-agent-repo>');
+    } else if (pack.canonical_plugin_name === 'opl-bookforge') {
+      assert.equal(pack.foundry_agent_series.generated_surface_only, true);
+      assert.equal(pack.foundry_agent_series.brand_cli, 'opl-bookforge');
+      assert.equal(pack.foundry_agent_series.direct_cli, 'opl agents interfaces --repo-dir <opl-bookforge-repo>');
+      assert.equal(pack.foundry_agent_series.direct_cli_foundry_command_surface, 'opl foundry agents inspect opl-bookforge');
+      assert.equal(pack.foundry_agent_series.compatibility_foundry_command_surface, 'opl agents interfaces --repo-dir <opl-bookforge-repo>');
+      assert.equal(pack.command_surface_spine.work_alias, 'book');
     } else if (pack.canonical_plugin_name === 'mas') {
       assert.equal(pack.foundry_agent_series.brand_cli, 'mas');
       assert.equal(pack.foundry_agent_series.direct_cli, 'medautosci');
@@ -83,6 +91,7 @@ test('OPL Codex plugin registry removes standalone family MCP server blocks', ()
     ['medautogrant', path.join(reposRoot, 'med-autogrant')],
     ['redcube', path.join(reposRoot, 'redcube-ai')],
     ['oplmetaagent', path.join(reposRoot, 'opl-meta-agent-generated')],
+    ['oplbookforge', path.join(reposRoot, 'opl-bookforge-generated')],
   ]);
 
   try {
@@ -93,7 +102,9 @@ test('OPL Codex plugin registry removes standalone family MCP server blocks', ()
           ? 'mag'
           : moduleId === 'redcube'
             ? 'rca'
-            : 'opl-meta-agent';
+            : moduleId === 'oplmetaagent'
+              ? 'opl-meta-agent'
+              : 'opl-bookforge';
       const pluginRoot = path.join(repoPath, 'plugins', pluginId);
       fs.mkdirSync(path.join(pluginRoot, '.codex-plugin'), { recursive: true });
       fs.writeFileSync(
@@ -127,11 +138,11 @@ test('OPL Codex plugin registry removes standalone family MCP server blocks', ()
       'utf8',
     );
 
-    const selectedModules: OplModuleId[] = ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent'];
+    const selectedModules: OplModuleId[] = ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent', 'oplbookforge'];
     const result = registerOplFamilyCodexPlugins(selectedModules, repoPaths, homeRoot);
     const config = fs.readFileSync(configPath, 'utf8');
 
-    assert.equal(result.summary.registered, 4);
+    assert.equal(result.summary.registered, 5);
     assert.equal(result.summary.removed_standalone_mcp_servers, 2);
     assert.match(config, /\[mcp_servers\.sentrux\]/);
     assert.doesNotMatch(config, /\[mcp_servers\.redcube-ai\]/);
@@ -140,6 +151,7 @@ test('OPL Codex plugin registry removes standalone family MCP server blocks', ()
     assert.match(config, /\[plugins\."mag@mag-local"\]/);
     assert.match(config, /\[plugins\."rca@rca-local"\]/);
     assert.match(config, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
+    assert.match(config, /\[plugins\."opl-bookforge@opl-bookforge-local"\]/);
     for (const item of result.items) {
       assert.equal(item.status, 'registered');
       assert.equal(fs.existsSync(item.marketplace_path), true);

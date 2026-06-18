@@ -1,6 +1,6 @@
 import { FrameworkContractError } from './contracts.ts';
 
-export type WorkspaceAgentId = 'mas' | 'mag' | 'rca' | 'oma';
+export type WorkspaceAgentId = 'mas' | 'mag' | 'rca' | 'oma' | 'bookforge';
 
 export type WorkspaceAgentProfile = {
   agent_id: WorkspaceAgentId;
@@ -62,6 +62,18 @@ export const OPL_WORKSPACE_AGENT_PROFILES: WorkspaceAgentProfile[] = [
     project_kind: 'agent_capability',
     default_workspace_id: 'agent-foundry-workspace',
     default_project_id: 'agent-001',
+    source: 'opl_generated_agent_contract',
+  },
+  {
+    agent_id: 'bookforge',
+    aliases: ['bookforge', 'book-forge', 'book_forge', 'opl-bookforge', 'oplbookforge', 'opl_bookforge'],
+    project_id: 'opl-bookforge',
+    project: 'opl-bookforge',
+    label: 'OPL BookForge',
+    workspace_kind: 'book_authoring_workspace',
+    project_kind: 'book_project',
+    default_workspace_id: 'bookforge-workspace',
+    default_project_id: 'book-001',
     source: 'opl_generated_agent_contract',
   },
 ];

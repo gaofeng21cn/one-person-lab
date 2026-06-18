@@ -5,7 +5,7 @@ import path from 'node:path';
 import { getOplReleaseRepo, getOplReleaseVersion } from './opl-release.ts';
 import { readBundledCodexDefaultProfile } from './local-codex-defaults.ts';
 
-type PackageModuleId = 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent';
+type PackageModuleId = 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge';
 
 type PackageModuleSpec = {
   module_id: PackageModuleId;
@@ -61,6 +61,14 @@ const MODULE_SPECS: PackageModuleSpec[] = [
     repo_url: 'https://github.com/gaofeng21cn/opl-meta-agent.git',
     scope: 'domain_module',
     package_name: 'opl-meta-agent',
+  },
+  {
+    module_id: 'oplbookforge',
+    label: 'OPL BookForge',
+    repo_name: 'opl-bookforge',
+    repo_url: 'https://github.com/gaofeng21cn/opl-bookforge.git',
+    scope: 'domain_module',
+    package_name: 'opl-bookforge',
   },
 ];
 

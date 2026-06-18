@@ -77,6 +77,12 @@ function normalizeDomainSelection(value: string) {
     oplmetaagent: 'opl-meta-agent',
     'opl-meta-agent': 'opl-meta-agent',
     opl_meta_agent: 'opl-meta-agent',
+    bookforge: 'opl-bookforge',
+    'book-forge': 'opl-bookforge',
+    book_forge: 'opl-bookforge',
+    oplbookforge: 'opl-bookforge',
+    'opl-bookforge': 'opl-bookforge',
+    opl_bookforge: 'opl-bookforge',
   };
   return aliases[key] ?? key;
 }

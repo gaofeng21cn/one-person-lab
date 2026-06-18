@@ -7,6 +7,7 @@ const FAMILY_REPO_DIRECTORIES = [
   'med-autogrant',
   'redcube-ai',
   'opl-meta-agent',
+  'opl-bookforge',
 ] as const;
 
 export type ResolveFamilyWorkspaceRootOptions = {

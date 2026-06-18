@@ -161,4 +161,23 @@ export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
     }),
     skill_sync_domain: 'oplmetaagent',
   },
+  {
+    module_id: 'oplbookforge',
+    label: 'OPL BookForge',
+    repo_name: 'opl-bookforge',
+    repo_url: 'https://github.com/gaofeng21cn/opl-bookforge.git',
+    scope: 'domain_module',
+    default_install: true,
+    description: 'Book Foundry agent for storyline architecture, chapter drafting, figures, tables, style control, and export handoff.',
+    bootstrap_command: (checkoutPath) => (
+      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
+      ?? { command: 'npm', args: ['install'] }
+    ),
+    health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
+    exec_command: (_checkoutPath, args) => ({
+      command: 'npm',
+      args: ['test', '--', ...args],
+    }),
+    skill_sync_domain: 'oplbookforge',
+  },
 ];

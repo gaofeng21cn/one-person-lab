@@ -138,7 +138,7 @@ To develop a new domain agent, debug the CLI, or integrate runtime surfaces, ope
 
 ## For Codex / Agents
 
-On a new machine, ask Codex to install the OPL runtime, MAS/MAG/RCA/OMA agent surfaces, OPL Flow, OPL Doc, and companion tools from the [new-machine Codex bootstrap guide](docs/references/current-support/opl-new-machine-codex-bootstrap.md):
+On a new machine, ask Codex to install the OPL runtime, MAS/MAG/RCA/BookForge/OMA agent surfaces, OPL Flow, OPL Doc, and companion tools from the [new-machine Codex bootstrap guide](docs/references/current-support/opl-new-machine-codex-bootstrap.md):
 
 ```text
 Please follow the official One Person Lab new-machine guide and set up this machine with the OPL agent runtime environment and the complete Codex workflow toolkit.
@@ -150,9 +150,9 @@ Source of truth: https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/re
 - Improve the desktop App first-install package, update channel, and cross-platform release workflow.
 - Continue strengthening long-task progress with recovery, retry, human approval, stage review, and clearer progress views.
 - Use OPL Meta Agent as the Agent Foundry entry for building new domain agents, taking over testing for existing agents, and organizing Agent Lab mechanism evolution.
-- Stabilize the Research, Grant, and Presentation Foundry user experience.
-- Keep Book Foundry on an owner-gated path until manuscript quality, export handoff, and hosted runtime evidence support stronger claims.
-- Admit BookForge into default OPL Connect / App visible surfaces only after the generated surface, runtime handoff, and App product-owner evidence are in place.
+- Stabilize the Research, Grant, Presentation, and Book Foundry user experience.
+- Keep Book Foundry on an owner-gated production path until manuscript quality, export handoff, direct runtime parity, and owner receipts support stronger claims.
+- Maintain BookForge as a default OPL Connect / App visible surface while keeping production-ready book-writing claims fail-closed.
 - Bring Patent, Award, Thesis, and Review work into the same product family.
 - Unify module installation, skill sync, artifact browsing, and workspace recovery across domain agents.
 

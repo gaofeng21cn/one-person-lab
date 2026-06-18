@@ -6,12 +6,12 @@ export type SkillPackInstallerKind = 'bash' | 'node';
 export type SkillPackSourceKind = 'repo_plugin_installer' | 'opl_generated_plugin_surface';
 
 export type SkillPackSpec = {
-  domain_id: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent';
-  module_id: 'MEDAUTOSCIENCE' | 'MEDAUTOGRANT' | 'REDCUBE' | 'OPLMETAAGENT';
+  domain_id: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge';
+  module_id: 'MEDAUTOSCIENCE' | 'MEDAUTOGRANT' | 'REDCUBE' | 'OPLMETAAGENT' | 'OPLBOOKFORGE';
   project: string;
   label: string;
   plugin_name: string;
-  canonical_plugin_name: 'mas' | 'mag' | 'rca' | 'opl-meta-agent';
+  canonical_plugin_name: 'mas' | 'mag' | 'rca' | 'opl-meta-agent' | 'opl-bookforge';
   source_kind: SkillPackSourceKind;
   installer_kind: SkillPackInstallerKind;
   installer_relative_paths: string[];
@@ -102,6 +102,17 @@ export const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
     installer_kind: 'node',
     installer_relative_paths: [],
   },
+  {
+    domain_id: 'oplbookforge',
+    module_id: 'OPLBOOKFORGE',
+    project: 'opl-bookforge',
+    label: 'OPL BookForge',
+    plugin_name: 'opl-bookforge',
+    canonical_plugin_name: 'opl-bookforge',
+    source_kind: 'opl_generated_plugin_surface',
+    installer_kind: 'node',
+    installer_relative_paths: [],
+  },
 ];
 
 const DOMAIN_ALIAS_MAP = new Map<string, SkillPackSpec['domain_id']>([
@@ -122,6 +133,12 @@ const DOMAIN_ALIAS_MAP = new Map<string, SkillPackSpec['domain_id']>([
   ['opl_meta_agent', 'oplmetaagent'],
   ['meta-agent', 'oplmetaagent'],
   ['meta_agent', 'oplmetaagent'],
+  ['bookforge', 'oplbookforge'],
+  ['book-forge', 'oplbookforge'],
+  ['book_forge', 'oplbookforge'],
+  ['oplbookforge', 'oplbookforge'],
+  ['opl-bookforge', 'oplbookforge'],
+  ['opl_bookforge', 'oplbookforge'],
 ]);
 
 export function normalizeDomainSelection(domains: string[] | undefined) {

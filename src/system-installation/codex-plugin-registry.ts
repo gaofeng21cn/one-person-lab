@@ -77,6 +77,15 @@ const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
     category: 'Productivity',
     legacy_standalone_mcp_server_ids: ['opl-meta-agent', 'oplmetaagent', 'oma'],
   },
+  {
+    module_id: 'oplbookforge',
+    marketplace_id: 'opl-bookforge-local',
+    plugin_id: 'opl-bookforge',
+    repo_name: 'opl-bookforge',
+    display_name: 'OPL BookForge Local',
+    category: 'Productivity',
+    legacy_standalone_mcp_server_ids: ['opl-bookforge', 'oplbookforge', 'bookforge'],
+  },
 ];
 
 function resolveHomeDir() {

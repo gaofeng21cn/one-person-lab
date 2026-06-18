@@ -13,7 +13,7 @@ export type DomainModuleRuntimeSpec = DomainModuleSpec & {
   bootstrap_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
   health_check_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
   exec_command?: (checkoutPath: string, args: string[]) => { command: string; args: string[] } | null;
-  skill_sync_domain?: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent';
+  skill_sync_domain?: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge';
 };
 
 export type ModuleActionStepResult = {

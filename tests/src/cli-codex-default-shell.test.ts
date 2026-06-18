@@ -509,21 +509,21 @@ test('opl connect skills discovers the family plugin packs through the configure
       OPL_STATE_DIR: stateDir,
     });
 
-    assert.equal(output.skill_catalog.summary.total, 4);
-    assert.equal(output.skill_catalog.summary.ready_to_sync, 4);
+    assert.equal(output.skill_catalog.summary.total, 5);
+    assert.equal(output.skill_catalog.summary.ready_to_sync, 5);
     assert.deepEqual(
       output.skill_catalog.packs.map((entry: { domain_id: string }) => entry.domain_id),
-      ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent'],
+      ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent', 'oplbookforge'],
     );
     assert.deepEqual(
       output.skill_catalog.packs.map((entry: { canonical_plugin_name: string }) => entry.canonical_plugin_name),
-      ['mas', 'mag', 'rca', 'opl-meta-agent'],
+      ['mas', 'mag', 'rca', 'opl-meta-agent', 'opl-bookforge'],
     );
     assert.match(output.skill_catalog.packs[0].plugin_manifest_path, /plugins\/mas\/\.codex-plugin\/plugin\.json$/);
     assert.match(output.skill_catalog.packs[0].skill_entry_path, /plugins\/mas\/skills\/mas\/SKILL\.md$/);
     assert.deepEqual(
       output.skill_catalog.packs.map((entry: { skill_entry_valid: boolean }) => entry.skill_entry_valid),
-      [true, true, true, false],
+      [true, true, true, false, false],
     );
     const metaPack = output.skill_catalog.packs.find((entry: { domain_id: string }) => entry.domain_id === 'oplmetaagent');
     assert.equal(metaPack?.plugin_manifest_found, false);
@@ -536,6 +536,16 @@ test('opl connect skills discovers the family plugin packs through the configure
     assert.equal(metaPack?.command_surface_spine?.skill_sync_command_surface, 'opl connect sync-skills');
     assert.equal(metaPack?.mcp_projection?.mcp_descriptor_must_delegate_to_series_spine, true);
     assert.equal(metaPack?.legacy_implementation_bucket_policy?.ordinary_public_command_surface_allowed, false);
+    const bookforgePack = output.skill_catalog.packs.find((entry: { domain_id: string }) => entry.domain_id === 'oplbookforge');
+    assert.equal(bookforgePack?.plugin_manifest_found, false);
+    assert.equal(bookforgePack?.installer_found, false);
+    assert.equal(bookforgePack?.generated_skill_surface_ready, true);
+    assert.equal(bookforgePack?.source_kind, 'opl_generated_plugin_surface');
+    assert.equal(bookforgePack?.ready_to_sync, true);
+    assert.deepEqual(bookforgePack?.command_preview?.slice(0, 3), ['opl', 'agents', 'interfaces']);
+    assert.equal(bookforgePack?.foundry_agent_series?.canonical_command_surface, 'opl agents foundry');
+    assert.equal(bookforgePack?.foundry_agent_series?.compatibility_foundry_command_surface, 'opl agents interfaces --repo-dir <opl-bookforge-repo>');
+    assert.equal(bookforgePack?.command_surface_spine?.work_alias, 'book');
     const previewOutput = runCli(metaPack.command_preview.slice(1), {
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
       OPL_STATE_DIR: stateDir,
@@ -589,6 +599,7 @@ test('opl connect skills discovers OPL-managed module installs without OPL_FAMIL
       OPL_MEDAUTOGRANT_REPO_ROOT: path.join(missingRepoRoot, 'med-autogrant'),
       OPL_REDCUBE_REPO_ROOT: path.join(missingRepoRoot, 'redcube-ai'),
       OPL_OPLMETAAGENT_REPO_ROOT: path.join(missingRepoRoot, 'opl-meta-agent'),
+      OPL_OPLBOOKFORGE_REPO_ROOT: path.join(missingRepoRoot, 'opl-bookforge'),
     });
 
     const medAutoScience = output.skill_catalog.packs.find(
@@ -714,7 +725,7 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
     });
 
-    assert.equal(output.skill_sync.summary.synced, 4);
+    assert.equal(output.skill_sync.summary.synced, 5);
     assert.equal(fs.existsSync(syncLogPath), false);
     for (const [project, plugin] of [
       ['med-autoscience', 'mas'],
@@ -730,26 +741,30 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
       );
       assert.equal(pack.installer_result.repo_local_marketplace_written, false);
     }
-    assert.equal(output.skill_sync.packs[3].installer_result.generated_surface, 'opl_generated_codex_plugin_descriptor');
+    const metaGeneratedPack = output.skill_sync.packs.find((entry: { domain_id: string }) => entry.domain_id === 'oplmetaagent');
+    const bookforgeGeneratedPack = output.skill_sync.packs.find((entry: { domain_id: string }) => entry.domain_id === 'oplbookforge');
+    assert.ok(metaGeneratedPack);
+    assert.ok(bookforgeGeneratedPack);
+    assert.equal(metaGeneratedPack.installer_result.generated_surface, 'opl_generated_codex_plugin_descriptor');
     assert.match(
-      output.skill_sync.packs[3].installer_result.generated_codex_plugin.plugin_root,
+      metaGeneratedPack.installer_result.generated_codex_plugin.plugin_root,
       /generated-codex-plugins\/opl-meta-agent-local\/plugins\/opl-meta-agent$/,
     );
     assert.equal(
-      fs.existsSync(output.skill_sync.packs[3].installer_result.generated_codex_plugin.plugin_manifest_path),
+      fs.existsSync(metaGeneratedPack.installer_result.generated_codex_plugin.plugin_manifest_path),
       true,
     );
     assert.equal(
-      fs.existsSync(output.skill_sync.packs[3].installer_result.generated_codex_plugin.marketplace_path),
+      fs.existsSync(metaGeneratedPack.installer_result.generated_codex_plugin.marketplace_path),
       true,
     );
     assert.equal(
-      fs.existsSync(output.skill_sync.packs[3].installer_result.generated_codex_plugin.codex_plugin_cache_path),
+      fs.existsSync(metaGeneratedPack.installer_result.generated_codex_plugin.codex_plugin_cache_path),
       true,
     );
-    const generatedPluginRoot = output.skill_sync.packs[3].installer_result.generated_codex_plugin.plugin_root;
+    const generatedPluginRoot = metaGeneratedPack.installer_result.generated_codex_plugin.plugin_root;
     const generatedPluginManifest = JSON.parse(fs.readFileSync(
-      output.skill_sync.packs[3].installer_result.generated_codex_plugin.plugin_manifest_path,
+      metaGeneratedPack.installer_result.generated_codex_plugin.plugin_manifest_path,
       'utf8',
     ));
     assert.equal(generatedPluginManifest.interface.composerIcon, './assets/icon.svg');
@@ -758,8 +773,27 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.match(generatedPluginIcon, /aria-label="OPL Meta Agent icon"/);
     assert.match(generatedPluginIcon, /M11 44V20L21 34L31 20V44/);
     assert.match(generatedPluginIcon, /M36 44L46 20L56 44/);
+    const generatedOmaSkill = fs.readFileSync(metaGeneratedPack.installer_result.generated_codex_plugin.skill_entry_path, 'utf8');
+    assert.match(generatedOmaSkill, /## New Agent Delivery Gate/);
+    assert.match(generatedOmaSkill, /Scaffold\/interface readiness alone is not an acceptable completion claim/);
+    assert.equal(bookforgeGeneratedPack.installer_result.generated_surface, 'opl_generated_codex_plugin_descriptor');
+    assert.match(
+      bookforgeGeneratedPack.installer_result.generated_codex_plugin.plugin_root,
+      /generated-codex-plugins\/opl-bookforge-local\/plugins\/opl-bookforge$/,
+    );
+    const generatedBookForgeManifest = JSON.parse(fs.readFileSync(
+      bookforgeGeneratedPack.installer_result.generated_codex_plugin.plugin_manifest_path,
+      'utf8',
+    ));
+    assert.equal(generatedBookForgeManifest.name, 'opl-bookforge');
+    assert.equal(generatedBookForgeManifest.interface.displayName, 'OPL BookForge');
+    assert.equal(generatedBookForgeManifest.repository, 'https://github.com/gaofeng21cn/opl-bookforge');
+    const generatedBookForgeSkill = fs.readFileSync(bookforgeGeneratedPack.installer_result.generated_codex_plugin.skill_entry_path, 'utf8');
+    assert.match(generatedBookForgeSkill, /# OPL BookForge/);
+    assert.match(generatedBookForgeSkill, /shape-storyline/);
+    assert.match(generatedBookForgeSkill, /materialize-book/);
     assert.equal(output.skill_sync.codex_plugin_registry.surface_id, 'opl_codex_plugin_registry');
-    assert.equal(output.skill_sync.codex_plugin_registry.summary.registered, 4);
+    assert.equal(output.skill_sync.codex_plugin_registry.summary.registered, 5);
     assert.equal(output.skill_sync.codex_plugin_registry.summary.removed_standalone_mcp_servers, 1);
     for (const item of output.skill_sync.codex_plugin_registry.items) {
       assert.match(item.marketplace_root, /state\/codex-plugin-marketplaces\/.+-local$/);
@@ -772,22 +806,24 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     for (const skillName of ['mas', 'mag', 'rca']) {
       assert.equal(fs.existsSync(path.join(homeDir, '.codex', 'skills', skillName, 'SKILL.md')), false);
     }
-    assert.equal(fs.existsSync(path.join(homeDir, '.codex', 'skills', 'opl-meta-agent', 'SKILL.md')), false);
-    assert.equal(
-      fs.existsSync(path.join(
-        homeDir,
-        '.codex',
-        'plugins',
-        'cache',
-        'opl-meta-agent-local',
-        'opl-meta-agent',
-        '0.1.0',
-        'skills',
-        'opl-meta-agent',
-        'SKILL.md',
-      )),
-      true,
-    );
+    for (const skillName of ['opl-meta-agent', 'opl-bookforge']) {
+      assert.equal(fs.existsSync(path.join(homeDir, '.codex', 'skills', skillName, 'SKILL.md')), false);
+      assert.equal(
+        fs.existsSync(path.join(
+          homeDir,
+          '.codex',
+          'plugins',
+          'cache',
+          `${skillName}-local`,
+          skillName,
+          '0.1.0',
+          'skills',
+          skillName,
+          'SKILL.md',
+        )),
+        true,
+      );
+    }
     const config = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');
     assert.match(config, /\[mcp_servers\.sentrux\]/);
     assert.doesNotMatch(config, /\[mcp_servers\.redcube-ai\]/);
@@ -795,6 +831,7 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.match(config, /\[plugins\."mag@mag-local"\]/);
     assert.match(config, /\[plugins\."rca@rca-local"\]/);
     assert.match(config, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
+    assert.match(config, /\[plugins\."opl-bookforge@opl-bookforge-local"\]/);
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });

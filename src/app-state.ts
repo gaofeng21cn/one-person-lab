@@ -618,11 +618,12 @@ function modulePayload(payload: JsonRecord): OplModuleId {
     && moduleId !== 'medautogrant'
     && moduleId !== 'redcube'
     && moduleId !== 'oplmetaagent'
+    && moduleId !== 'oplbookforge'
     && moduleId !== 'meddeepscientist'
   ) {
     throw new FrameworkContractError('cli_usage_error', 'module action requires a known payload.module_id.', {
       required: ['module_id'],
-      allowed_module_ids: ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent', 'meddeepscientist'],
+      allowed_module_ids: ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent', 'oplbookforge', 'meddeepscientist'],
     });
   }
   return moduleId;

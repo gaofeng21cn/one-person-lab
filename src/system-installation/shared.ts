@@ -11,6 +11,7 @@ export type OplModuleId =
   | 'meddeepscientist'
   | 'medautogrant'
   | 'oplmetaagent'
+  | 'oplbookforge'
   | 'redcube';
 
 export type OplModuleAction =
