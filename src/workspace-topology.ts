@@ -122,6 +122,7 @@ const PROJECT_COLLECTION_DISPLAY_LABELS: Record<WorkspaceAgentProfile['agent_id'
   mag: 'deliverables',
   rca: 'deliverables',
   oma: 'deliverables',
+  bookforge: 'books',
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {

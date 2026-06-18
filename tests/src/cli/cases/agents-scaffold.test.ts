@@ -224,6 +224,7 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
       mag: 'one_off',
       rca: 'rca_series',
       oma: 'one_off',
+      bookforge: 'one_off',
     },
     default_user_inspection_surface: {
       ordinary_user_default_surface: 'workspace_local_project_stage_outputs',
