@@ -4,14 +4,27 @@ import type { PaperAutonomyStageRunIdentity } from '../family-runtime-paper-auto
 import { parsePayload, parsePayloadFile } from './shared.ts';
 
 export function parsePaperAutonomyArgs(rest: string[]): FamilyRuntimeCommandInput | null {
-  if (rest[0] !== 'supervisor' || rest[1] !== 'readback') {
+  if (rest[0] !== 'supervisor' || (rest[1] !== 'readback' && rest[1] !== 'decide')) {
     return null;
   }
 
+  const action = rest[1];
   let obligationLedgerPath = '';
   let decisionLedgerPath = '';
   let obligationId = '';
   let currentIdentity: PaperAutonomyStageRunIdentity | null = null;
+  let currentOwnerDeltaRef: string | undefined;
+  let providerAdmissionIdentityRef: string | undefined;
+  let terminalCloseoutRef: string | undefined;
+  let recoveryActionRef: string | undefined;
+  let noProgressOrInconsistencyRef: string | undefined;
+  let humanGateRef: string | undefined;
+  let resumeToken: string | undefined;
+  let typedBlockerRef: string | undefined;
+  let ownerReceiptRef: string | undefined;
+  let budgetOrMissingEvidenceRef: string | undefined;
+  const evidenceRefs: string[] = [];
+  const observabilityRefs: string[] = [];
 
   for (let index = 2; index < rest.length; index += 1) {
     const token = rest[index];
@@ -31,13 +44,49 @@ export function parsePaperAutonomyArgs(rest: string[]): FamilyRuntimeCommandInpu
     } else if (token === '--current-identity-file' && value) {
       currentIdentity = parsePaperAutonomyStageRunIdentity(parsePayloadFile(value));
       index += 1;
+    } else if (action === 'decide' && token === '--current-owner-delta-ref' && value) {
+      currentOwnerDeltaRef = value;
+      index += 1;
+    } else if (action === 'decide' && token === '--provider-admission-identity-ref' && value) {
+      providerAdmissionIdentityRef = value;
+      index += 1;
+    } else if (action === 'decide' && token === '--terminal-closeout-ref' && value) {
+      terminalCloseoutRef = value;
+      index += 1;
+    } else if (action === 'decide' && token === '--recovery-action-ref' && value) {
+      recoveryActionRef = value;
+      index += 1;
+    } else if (action === 'decide' && token === '--no-progress-or-inconsistency-ref' && value) {
+      noProgressOrInconsistencyRef = value;
+      index += 1;
+    } else if (action === 'decide' && token === '--human-gate-ref' && value) {
+      humanGateRef = value;
+      index += 1;
+    } else if (action === 'decide' && token === '--resume-token' && value) {
+      resumeToken = value;
+      index += 1;
+    } else if (action === 'decide' && token === '--typed-blocker-ref' && value) {
+      typedBlockerRef = value;
+      index += 1;
+    } else if (action === 'decide' && token === '--owner-receipt-ref' && value) {
+      ownerReceiptRef = value;
+      index += 1;
+    } else if (action === 'decide' && token === '--budget-or-missing-evidence-ref' && value) {
+      budgetOrMissingEvidenceRef = value;
+      index += 1;
+    } else if (action === 'decide' && token === '--evidence-ref' && value) {
+      evidenceRefs.push(value);
+      index += 1;
+    } else if (action === 'decide' && token === '--observability-ref' && value) {
+      observabilityRefs.push(value);
+      index += 1;
     } else {
       throw new FrameworkContractError(
         'cli_usage_error',
-        `Unknown family-runtime paper-autonomy supervisor readback option: ${token}.`,
+        `Unknown family-runtime paper-autonomy supervisor ${action} option: ${token}.`,
         {
           option: token,
-          usage: 'opl family-runtime paper-autonomy supervisor readback --obligation-ledger <path> --decision-ledger <path> --obligation-id <id> --current-identity <json>|--current-identity-file <path>',
+          usage: `opl family-runtime paper-autonomy supervisor ${action} --obligation-ledger <path> --decision-ledger <path> --obligation-id <id> --current-identity <json>|--current-identity-file <path>`,
         },
       );
     }
@@ -52,7 +101,7 @@ export function parsePaperAutonomyArgs(rest: string[]): FamilyRuntimeCommandInpu
   if (missing.length > 0) {
     throw new FrameworkContractError(
       'cli_usage_error',
-      'family-runtime paper-autonomy supervisor readback requires obligation ledger, decision ledger, obligation id, and current identity.',
+      `family-runtime paper-autonomy supervisor ${action} requires obligation ledger, decision ledger, obligation id, and current identity.`,
       {
         required: missing,
       },
@@ -61,11 +110,35 @@ export function parsePaperAutonomyArgs(rest: string[]): FamilyRuntimeCommandInpu
   if (!currentIdentity) {
     throw new FrameworkContractError(
       'cli_usage_error',
-      'family-runtime paper-autonomy supervisor readback requires current identity.',
+      `family-runtime paper-autonomy supervisor ${action} requires current identity.`,
       {
         required: ['--current-identity', '--current-identity-file'],
       },
     );
+  }
+
+  if (action === 'decide') {
+    return {
+      mode: 'paper_autonomy_supervisor_decide',
+      input: {
+        obligation_ledger_path: obligationLedgerPath,
+        decision_ledger_path: decisionLedgerPath,
+        obligation_id: obligationId,
+        current_identity: currentIdentity,
+        current_owner_delta_ref: currentOwnerDeltaRef,
+        provider_admission_identity_ref: providerAdmissionIdentityRef,
+        terminal_closeout_ref: terminalCloseoutRef,
+        recovery_action_ref: recoveryActionRef,
+        no_progress_or_inconsistency_ref: noProgressOrInconsistencyRef,
+        human_gate_ref: humanGateRef,
+        resume_token: resumeToken,
+        typed_blocker_ref: typedBlockerRef,
+        owner_receipt_ref: ownerReceiptRef,
+        budget_or_missing_evidence_ref: budgetOrMissingEvidenceRef,
+        evidence_refs: evidenceRefs,
+        observability_refs: observabilityRefs,
+      },
+    };
   }
 
   return {

@@ -69,7 +69,10 @@ import { buildFamilyStageLaunchAdmissionGate } from './family-stage-control-plan
 import { runFamilyRuntimeEvidenceWorklistCommand } from './family-runtime-evidence-worklist-command.ts';
 import { runFamilyRuntimeStageArtifactCommand } from './family-runtime-stage-artifact-command.ts';
 import { buildFamilyRuntimeControlLoopStatus } from './family-runtime-control-loop.ts';
-import { runFamilyRuntimePaperAutonomySupervisorReadbackCommand } from './family-runtime-paper-autonomy-command.ts';
+import {
+  runFamilyRuntimePaperAutonomySupervisorDecideCommand,
+  runFamilyRuntimePaperAutonomySupervisorReadbackCommand,
+} from './family-runtime-paper-autonomy-command.ts';
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
@@ -416,6 +419,9 @@ export async function runFamilyRuntime(args: string[]): Promise<Record<string, u
     }
     if (parsed.mode === 'paper_autonomy_supervisor_readback') {
       return runFamilyRuntimePaperAutonomySupervisorReadbackCommand(parsed);
+    }
+    if (parsed.mode === 'paper_autonomy_supervisor_decide') {
+      return runFamilyRuntimePaperAutonomySupervisorDecideCommand(parsed);
     }
     if (parsed.mode === 'evidence_worklist') {
       return runFamilyRuntimeEvidenceWorklistCommand(parsed.input);

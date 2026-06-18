@@ -112,6 +112,27 @@ export type FamilyRuntimeCommandInput =
     };
   }
   | {
+    mode: 'paper_autonomy_supervisor_decide';
+    input: {
+      obligation_ledger_path: string;
+      decision_ledger_path: string;
+      obligation_id: string;
+      current_identity: PaperAutonomyStageRunIdentity;
+      current_owner_delta_ref?: string;
+      provider_admission_identity_ref?: string;
+      terminal_closeout_ref?: string;
+      recovery_action_ref?: string;
+      no_progress_or_inconsistency_ref?: string;
+      human_gate_ref?: string;
+      resume_token?: string;
+      typed_blocker_ref?: string;
+      owner_receipt_ref?: string;
+      budget_or_missing_evidence_ref?: string;
+      evidence_refs: string[];
+      observability_refs: string[];
+    };
+  }
+  | {
     mode: 'stage_artifact';
     input: {
       action: 'open' | 'commit' | 'status' | 'explain' | 'rebuild' | 'promote' | 'gc' | 'restore' | 'validate' | 'conformance' | 'workbench';

@@ -519,7 +519,7 @@ export function buildInternalCommandSpecs(
     },
     'family-runtime': {
       usage:
-        'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|provider-worker supervisor|intake|tick|enqueue|service start|service status|service stop|worker start|worker status|worker stop|scheduler install|scheduler status|scheduler trigger|scheduler remove|scheduler tick|evidence-worklist|paper-autonomy supervisor readback|residency proof|attempt create|attempt list|attempt inspect|attempt start|attempt cancel|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|queue redrive|queue hold|queue release|queue retire|approve|notify list|events export [options]',
+        'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|provider-worker supervisor|intake|tick|enqueue|service start|service status|service stop|worker start|worker status|worker stop|scheduler install|scheduler status|scheduler trigger|scheduler remove|scheduler tick|evidence-worklist|paper-autonomy supervisor decide|paper-autonomy supervisor readback|residency proof|attempt create|attempt list|attempt inspect|attempt start|attempt cancel|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|queue redrive|queue hold|queue release|queue retire|approve|notify list|events export [options]',
       summary:
         'Manage the provider-backed OPL family runtime queue, stage attempts, evidence worklist, notifications, approvals, and events.',
       examples: [
@@ -550,6 +550,7 @@ export function buildInternalCommandSpecs(
         'opl family-runtime scheduler tick --provider temporal',
         'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --json',
         'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json',
+        'opl family-runtime paper-autonomy supervisor decide --obligation-ledger /tmp/obligations.jsonl --decision-ledger /tmp/decisions.jsonl --obligation-id obligation:dm003 --current-identity-file /tmp/current-identity.json --typed-blocker-ref mas://typed-blocker --budget-or-missing-evidence-ref opl://non-advancing',
         'opl family-runtime paper-autonomy supervisor readback --obligation-ledger /tmp/obligations.jsonl --decision-ledger /tmp/decisions.jsonl --obligation-id obligation:dm003 --current-identity-file /tmp/current-identity.json',
         'opl family-runtime tick --source temporal-worker --hydrate',
         'opl family-runtime queue list',

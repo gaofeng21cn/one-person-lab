@@ -179,6 +179,84 @@ test('family-runtime paper-autonomy supervisor readback returns only identity-bo
   }
 });
 
+test('family-runtime paper-autonomy supervisor decide appends OPL decision and returns same identity readback', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-autonomy-supervisor-decide-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-autonomy-supervisor-decide-fixture-'));
+  const obligationLedger = path.join(fixtureRoot, 'recovery-obligations.jsonl');
+  const decisionLedger = path.join(fixtureRoot, 'supervisor-decisions.jsonl');
+  const identityPath = path.join(fixtureRoot, 'current-identity.json');
+  const currentIdentity = paperAutonomyIdentity();
+  const obligation = {
+    obligation_id: 'obligation:dm003:supervisor-decide',
+    desired_delta_ref: 'mas://DM003/current-owner-delta/latest.json',
+    current_identity: currentIdentity,
+    status: 'open' as const,
+    last_evidence_refs: ['mas://DM003/evidence/current-owner-delta.json'],
+  };
+
+  try {
+    appendPaperAutonomyRecoveryObligationStoreJsonl(obligationLedger, appendPaperAutonomyRecoveryObligation([], {
+      obligation,
+      appended_at: '2026-06-19T00:00:00.000Z',
+    }).entry);
+    fs.writeFileSync(identityPath, JSON.stringify(currentIdentity), 'utf8');
+
+    const decided = runCli([
+      'family-runtime',
+      'paper-autonomy',
+      'supervisor',
+      'decide',
+      '--obligation-ledger',
+      obligationLedger,
+      '--decision-ledger',
+      decisionLedger,
+      '--obligation-id',
+      obligation.obligation_id,
+      '--current-identity-file',
+      identityPath,
+      '--typed-blocker-ref',
+      'mas://DM003/typed-blockers/stable.json',
+      '--budget-or-missing-evidence-ref',
+      'opl://runway/dm003/non-advancing-apply.json',
+      '--evidence-ref',
+      'opl://runway/dm003/non-advancing-apply.json',
+    ], familyRuntimeEnv(stateRoot)).family_runtime_paper_autonomy_supervisor_decision;
+
+    assert.equal(decided.surface_id, 'opl_family_runtime_paper_autonomy_supervisor_decision');
+    assert.equal(decided.decision_status, 'decision_appended');
+    assert.equal(decided.decision_readback.surface_kind, 'opl_paper_autonomy_supervisor_decision_readback');
+    assert.equal(decided.decision_readback.decision_kind, 'stop_with_stable_typed_blocker');
+    assert.equal(decided.decision_readback.current_identity.stage_run_id, currentIdentity.stage_run_id);
+    assert.equal(decided.decision_ledger_entry.entry_kind, 'supervisor_decision_appended');
+    assert.equal(decided.authority_boundary.opl_can_write_mas_truth, false);
+    assert.equal(decided.authority_boundary.opl_can_create_domain_owner_receipt, false);
+    assert.equal(decided.authority_boundary.opl_can_create_domain_typed_blocker, false);
+
+    const readback = runCli([
+      'family-runtime',
+      'paper-autonomy',
+      'supervisor',
+      'readback',
+      '--obligation-ledger',
+      obligationLedger,
+      '--decision-ledger',
+      decisionLedger,
+      '--obligation-id',
+      obligation.obligation_id,
+      '--current-identity-file',
+      identityPath,
+    ], familyRuntimeEnv(stateRoot)).family_runtime_paper_autonomy_supervisor_readback;
+
+    assert.equal(readback.readback_status, 'decision_ready');
+    assert.equal(readback.current_supervisor_decision_readback.decision_id, decided.decision_readback.decision_id);
+    assert.equal(readback.current_supervisor_decision_readback.decision_kind, 'stop_with_stable_typed_blocker');
+    assert.equal(readback.authority_boundary.readback_can_execute_transition, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime hydrates MAS provider-hosted guarded apply tasks without truth authority', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-guarded-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-guarded-export-'));
