@@ -876,6 +876,30 @@ function currentControlProviderAdmissionCandidates(currentControl: Record<string
   });
 }
 
+function mergeCurrentControlProviderAdmissionCandidates(
+  candidates: unknown[],
+  candidate: unknown,
+) {
+  if (!isRecord(candidate)) {
+    candidates.push(candidate);
+    return;
+  }
+  const identity = providerAdmissionCandidateIdentity(candidate);
+  if (identity) {
+    const existingIndex = candidates.findIndex((entry) =>
+      isRecord(entry) && providerAdmissionCandidateIdentity(entry) === identity
+    );
+    if (existingIndex >= 0) {
+      candidates[existingIndex] = {
+        ...candidates[existingIndex] as Record<string, unknown>,
+        ...candidate,
+      };
+      return;
+    }
+  }
+  candidates.push(candidate);
+}
+
 function providerAdmissionCandidateIdentity(candidate: Record<string, unknown>) {
   return optionalString(candidate.attempt_idempotency_key)
     ?? optionalString(candidate.route_identity_key)
@@ -1674,7 +1698,7 @@ function currentControlCommandOutboxRecord(
     ? candidate.current_control_command_outbox_record
     : isRecord(candidate.opl_domain_progress_transition_request)
       ? candidate.opl_domain_progress_transition_request
-      : null;
+      : currentControlCommandFromCompleteRuntimeReadback(candidate);
   if (!command) {
     return {
       blocked: {
@@ -1703,6 +1727,46 @@ function currentControlCommandOutboxRecord(
           task: candidate,
         },
       };
+}
+
+function currentControlCommandFromCompleteRuntimeReadback(candidate: Record<string, unknown>) {
+  const command = isRecord(candidate.current_control_command)
+    ? candidate.current_control_command
+    : null;
+  const runtimeResult = isRecord(candidate.domain_progress_transition_runtime)
+    ? candidate.domain_progress_transition_runtime
+    : null;
+  const runtimeCommand = isRecord(runtimeResult?.command)
+    ? runtimeResult.command
+    : null;
+  const liveReadback = isRecord(candidate.opl_domain_progress_transition_runtime_live_readback)
+    ? candidate.opl_domain_progress_transition_runtime_live_readback
+    : null;
+  if (!command || !runtimeResult || !runtimeCommand || !liveReadback) {
+    return null;
+  }
+  if (!validCompleteTransitionRuntimeLiveReadback(liveReadback)) {
+    return null;
+  }
+  const commandId = optionalString(command.command_id);
+  const runtimeCommandId = optionalString(runtimeCommand.command_id);
+  const readbackCommandId = optionalString(isRecord(liveReadback.identity) ? liveReadback.identity.command_id : null);
+  if (commandId && runtimeCommandId && commandId !== runtimeCommandId) {
+    return null;
+  }
+  if (commandId && readbackCommandId && commandId !== readbackCommandId) {
+    return null;
+  }
+  const idempotencyKey = optionalString(command.idempotency_key);
+  const runtimeIdempotencyKey = optionalString(runtimeCommand.idempotency_key);
+  const readbackIdempotencyKey = optionalString(isRecord(liveReadback.identity) ? liveReadback.identity.idempotency_key : null);
+  if (idempotencyKey && runtimeIdempotencyKey && idempotencyKey !== runtimeIdempotencyKey) {
+    return null;
+  }
+  if (idempotencyKey && readbackIdempotencyKey && idempotencyKey !== readbackIdempotencyKey) {
+    return null;
+  }
+  return command;
 }
 
 function currentControlProviderAdmissionInputContext(input: {
@@ -2131,6 +2195,7 @@ function currentControlProviderAdmissionInputFrom(
   } = contextResult.context;
   const providerAdmissionIdentity = {
     ...candidate,
+    current_control_command_outbox_record: currentControlCommand,
     current_control_command: currentControlCommand,
     domain_progress_transition_runtime: transitionRuntimeResult,
     ...(transitionRuntimeLogAppend
@@ -2194,6 +2259,7 @@ function currentControlProviderAdmissionInputFrom(
           ? { required_output_surface: optionalString(candidate.required_output_surface) }
           : {}),
         ...(currentnessBasis ? { owner_route_currentness_basis: currentnessBasis } : {}),
+        current_control_command_outbox_record: currentControlCommand,
         current_control_command: currentControlCommand,
         domain_progress_transition_runtime: transitionRuntimeResult,
         ...(transitionRuntimeLogAppend
@@ -2267,7 +2333,7 @@ export function currentControlProviderAdmissionInputs(
   for (const input of pendingInputs) {
     const candidate = currentControlProviderAdmissionCandidateFromTransitionRequestTask(input);
     if (candidate) {
-      candidates.push(candidate);
+      mergeCurrentControlProviderAdmissionCandidates(candidates, candidate);
     }
     const transitionCandidate = currentControlTransitionPendingCandidateFromTask(input);
     if (transitionCandidate?.candidate) {
