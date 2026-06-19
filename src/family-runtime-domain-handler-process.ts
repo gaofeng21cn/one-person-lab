@@ -17,7 +17,7 @@ type DomainHandlerProcessResult = SpawnSyncReturns<string> & {
   timed_out: boolean;
   domain_handler_timeout_ms: number;
   recovery?: {
-    trigger_kind: 'uv_cache_archive_missing';
+    trigger_kind: 'uv_cache_archive_missing' | 'managed_python_env_missing_dependency';
     first_exit_code: number;
     retry_exit_code: number;
     retry_tmp_root: string;
@@ -88,15 +88,21 @@ function shortExcerpt(value: string, maxLength = 500) {
   return normalized.length <= maxLength ? normalized : `${normalized.slice(0, maxLength)}...`;
 }
 
-function shouldRetryWithFreshUvCache(result: SpawnSyncReturns<string>, exitCode: number) {
+function freshManagedRootRetryTrigger(result: SpawnSyncReturns<string>, exitCode: number) {
   if (exitCode === 0 || errorCode(result.error) === 'ETIMEDOUT') {
-    return false;
+    return null;
   }
   const text = resultText(result);
-  return /Failed to install:/i.test(text)
+  if (/Failed to install:/i.test(text)
     && /archive-v0/i.test(text)
     && /METADATA/i.test(text)
-    && /No such file or directory/i.test(text);
+    && /No such file or directory/i.test(text)) {
+    return 'uv_cache_archive_missing' as const;
+  }
+  if (/ModuleNotFoundError:\s+No module named ['"][^'"]+['"]/i.test(text)) {
+    return 'managed_python_env_missing_dependency' as const;
+  }
+  return null;
 }
 
 function normalizeDomainHandlerResult(
@@ -164,7 +170,8 @@ export function runFamilyRuntimeDomainHandlerCommand(
   }, timeoutMs);
   const timedOut = errorCode(result.error) === 'ETIMEDOUT';
   const exitCode = resultExitCode(result, timedOut);
-  if (!shouldRetryWithFreshUvCache(result, exitCode)) {
+  const retryTrigger = freshManagedRootRetryTrigger(result, exitCode);
+  if (!retryTrigger) {
     return normalizeDomainHandlerResult(result, timeoutMs);
   }
 
@@ -181,6 +188,7 @@ export function runFamilyRuntimeDomainHandlerCommand(
   const firstErrorExcerpt = shortExcerpt(resultText(result));
   if (retryExitCode === 0) {
     recordManagedShellUvCacheRecovery(options.cwd, baseEnv, {
+      triggerKind: retryTrigger,
       recoveryTmpRoot: retryTmpRoot,
       firstExitCode: exitCode,
       retryExitCode,
@@ -188,7 +196,7 @@ export function runFamilyRuntimeDomainHandlerCommand(
     });
   }
   return normalizeDomainHandlerResult(retry, timeoutMs, {
-    trigger_kind: 'uv_cache_archive_missing',
+    trigger_kind: retryTrigger,
     first_exit_code: exitCode,
     retry_exit_code: retryExitCode,
     retry_tmp_root: retryTmpRoot,

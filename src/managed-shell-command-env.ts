@@ -3,6 +3,11 @@ import path from 'node:path';
 import os from 'node:os';
 
 const UV_CACHE_RECOVERY_MARKER = 'uv-cache-archive-missing.recovery.json';
+type ManagedShellRecoveryTrigger = 'uv_cache_archive_missing' | 'managed_python_env_missing_dependency';
+const MANAGED_SHELL_RECOVERY_TRIGGERS = new Set<string>([
+  'uv_cache_archive_missing',
+  'managed_python_env_missing_dependency',
+]);
 
 function normalizePath(value: string) {
   return path.resolve(value);
@@ -138,7 +143,8 @@ function parseManagedShellUvCacheRecoveryMarker(cwd: string, markerPath: string)
     const record = parsed as Record<string, unknown>;
     if (
       record.surface_kind !== 'opl_managed_shell_uv_cache_recovery_marker'
-      || record.trigger_kind !== 'uv_cache_archive_missing'
+      || typeof record.trigger_kind !== 'string'
+      || !MANAGED_SHELL_RECOVERY_TRIGGERS.has(record.trigger_kind)
       || typeof record.recovery_tmp_root !== 'string'
       || isInsidePath(cwd, record.recovery_tmp_root)
     ) {
@@ -165,6 +171,7 @@ export function recordManagedShellUvCacheRecovery(
   cwd: string,
   env: NodeJS.ProcessEnv = process.env,
   recovery: {
+    triggerKind?: ManagedShellRecoveryTrigger;
     recoveryTmpRoot: string;
     firstExitCode: number;
     retryExitCode: number;
@@ -175,7 +182,7 @@ export function recordManagedShellUvCacheRecovery(
   fs.mkdirSync(path.dirname(markerPath), { recursive: true });
   fs.writeFileSync(markerPath, `${JSON.stringify({
     surface_kind: 'opl_managed_shell_uv_cache_recovery_marker',
-    trigger_kind: 'uv_cache_archive_missing',
+    trigger_kind: recovery.triggerKind ?? 'uv_cache_archive_missing',
     recovery_tmp_root: normalizePath(recovery.recoveryTmpRoot),
     first_exit_code: recovery.firstExitCode,
     retry_exit_code: recovery.retryExitCode,

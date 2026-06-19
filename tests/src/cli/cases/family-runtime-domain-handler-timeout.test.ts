@@ -406,6 +406,51 @@ esac
   }
 });
 
+test('domain handler command retries stale managed python env missing dependency with a fresh root', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-domain-python-env-stale-'));
+  const commandPath = path.join(fixtureRoot, 'domain-handler');
+  const attemptsPath = path.join(fixtureRoot, 'attempts.txt');
+  fs.writeFileSync(
+    commandPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\\n' "$OPL_DOMAIN_COMMAND_TMP_ROOT" >> ${JSON.stringify(attemptsPath)}
+case "$OPL_DOMAIN_COMMAND_TMP_ROOT" in
+  */recovery/*)
+    cat <<'JSON'
+{"surface_kind":"mas_family_domain_handler_export","pending_family_tasks":[]}
+JSON
+    ;;
+  *)
+    echo 'Audited 29 packages in 0.09ms' >&2
+    echo 'Traceback (most recent call last):' >&2
+    echo "ModuleNotFoundError: No module named 'yaml'" >&2
+    exit 1
+    ;;
+esac
+`,
+    { mode: 0o755 },
+  );
+  try {
+    const env = {
+      OPL_DOMAIN_COMMAND_TMP_ROOT: path.join(os.tmpdir(), 'opl-family-runtime-domain-python-env-stale-root'),
+    };
+    const first = runFamilyRuntimeDomainHandlerCommand([commandPath], { cwd: fixtureRoot, env });
+    const second = runFamilyRuntimeDomainHandlerCommand([commandPath], { cwd: fixtureRoot, env });
+    const attempts = fs.readFileSync(attemptsPath, 'utf8').trim().split('\n');
+
+    assert.equal(first.exit_code, 0);
+    assert.equal(first.recovery?.trigger_kind, 'managed_python_env_missing_dependency');
+    assert.equal(first.recovery?.first_exit_code, 1);
+    assert.equal(first.recovery?.retry_exit_code, 0);
+    assert.equal(second.exit_code, 0);
+    assert.equal(second.recovery, undefined);
+    assert.deepEqual(attempts.map((entry) => entry.includes('/recovery/')), [false, true, true]);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime intake exposes domain handler recovery receipts after uv cache retry', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-export-cache-retry-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-export-cache-retry-'));

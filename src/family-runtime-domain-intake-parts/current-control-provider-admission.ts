@@ -11,10 +11,10 @@ import {
   buildNonAdvancingApplyRuntimeResult,
   buildDomainProgressTransitionRuntimeResult,
   createDomainProgressTransitionRuntimeLog,
-  DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
   normalizeDomainProgressTransitionCommand,
   readDomainProgressTransitionRuntimeReadbackJsonl,
 } from '../family-runtime-domain-progress-transition-runtime.ts';
+import { validCompleteTransitionRuntimeLiveReadback } from '../family-runtime-domain-progress-transition-runtime-parts/live-readback-validation.ts';
 
 export type CurrentControlProviderAdmissionExportContext = {
   cwd: string;
@@ -118,19 +118,6 @@ function optionalScalarString(value: unknown) {
     return String(value);
   }
   return null;
-}
-
-function validCompleteTransitionRuntimeLiveReadback(value: Record<string, unknown>) {
-  const latestTransactionReadback = isRecord(value.latest_transaction_readback)
-    ? value.latest_transaction_readback
-    : null;
-  return optionalString(value.surface_kind) === 'opl_domain_progress_transition_runtime_live_readback'
-    && optionalString(value.runtime_id) === DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID
-    && optionalString(value.runtime_readback_status) === 'complete_transaction'
-    && value.transaction_complete === true
-    && latestTransactionReadback?.same_transaction_event_and_outbox === true
-    && latestTransactionReadback?.same_outbox_identity === true
-    && latestTransactionReadback?.same_stage_run_identity === true;
 }
 
 function recoveryObligationId(value: Record<string, unknown> | null | undefined) {

@@ -1,4 +1,4 @@
-import { DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID } from '../family-runtime-domain-progress-transition-runtime.ts';
+import { validCompleteTransitionRuntimeLiveReadback } from '../family-runtime-domain-progress-transition-runtime-parts/live-readback-validation.ts';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -10,19 +10,6 @@ function optionalString(value: unknown) {
 
 function firstRecord(...values: unknown[]) {
   return values.find((value): value is Record<string, unknown> => isRecord(value)) ?? null;
-}
-
-function validCompleteTransitionRuntimeLiveReadback(value: Record<string, unknown>) {
-  const latestTransactionReadback = isRecord(value.latest_transaction_readback)
-    ? value.latest_transaction_readback
-    : null;
-  return optionalString(value.surface_kind) === 'opl_domain_progress_transition_runtime_live_readback'
-    && optionalString(value.runtime_id) === DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID
-    && optionalString(value.runtime_readback_status) === 'complete_transaction'
-    && value.transaction_complete === true
-    && latestTransactionReadback?.same_transaction_event_and_outbox === true
-    && latestTransactionReadback?.same_outbox_identity === true
-    && latestTransactionReadback?.same_stage_run_identity === true;
 }
 
 function sameOptionalIdentity(left: string | null, right: string | null) {
