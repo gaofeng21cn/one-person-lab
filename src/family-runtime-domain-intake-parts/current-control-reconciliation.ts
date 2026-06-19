@@ -17,6 +17,7 @@ const CURRENT_CONTROL_PROVIDER_ADMISSION_IDENTITY_BLOCKERS = new Set([
   'current_control_provider_admission_stage_packet_ref_missing',
   'current_control_provider_admission_route_identity_key_missing',
   'current_control_provider_admission_attempt_idempotency_key_missing',
+  'current_control_transition_non_advancing_apply_recorded',
 ]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -339,6 +339,22 @@
             "transition_decision_ref"
           ],
           "landed_support": "current-control provider admission now consumes a domain transition request or OPL-native command record, preserves aggregate/study/work-unit identity, and carries OPL-generated transition apply metadata into queue and StageAttempt locator without domain truth authority",
+          "non_advancing_apply_current_transition_readback": {
+            "landed_support": "authorized default-executor stage packets that require OPL execution authorization but lack a domain transition request or OPL-native command record are recorded as complete DomainProgressTransitionRuntime NonAdvancingApply transactions instead of being enqueued as provider tasks",
+            "runtime_log_ref": "runtime/artifacts/supervision/domain_progress_transition_runtime/command_event_log.jsonl",
+            "current_control_refresh_source": "opl_transition_runtime_readback_non_advancing_apply",
+            "current_control_action_status": "transition_non_advancing_apply_recorded",
+            "provider_admission_allowed": false,
+            "current_executable_owner_action_allowed": false,
+            "paper_progress_delta": false,
+            "stale_default_executor_pending_suppressed": true,
+            "authority_boundary": {
+              "opl_can_write_mas_truth": false,
+              "opl_can_create_domain_owner_receipt": false,
+              "opl_can_create_domain_typed_blocker": false,
+              "provider_completion_is_domain_ready": false
+            }
+          },
           "durable_substrate_first_slice": {
             "obligation_store": "append_only_physical_jsonl_identity_bound",
             "command_event_log": "append_only_physical_jsonl_command_event_outbox_entries",

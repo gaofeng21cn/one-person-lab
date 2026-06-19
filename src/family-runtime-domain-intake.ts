@@ -282,6 +282,7 @@ function exportedTaskInputs(
   return {
     inputs,
     blocked,
+    current_control_readback_publications: currentControlRaw.current_control_readback_publications,
     filtered_count: exportedInputs.length - inputs.length,
     suppressed_count: pendingAfterCurrentControl.suppressed_count,
   };
@@ -352,7 +353,13 @@ export function hydrateDomainTasks(
       continue;
     }
     const output = parseDispatchOutput(stdout);
-    const { inputs, blocked, filtered_count, suppressed_count } = exportedTaskInputs(
+    const {
+      inputs,
+      blocked,
+      current_control_readback_publications,
+      filtered_count,
+      suppressed_count,
+    } = exportedTaskInputs(
       domainId,
       output,
       input.source,
@@ -374,7 +381,9 @@ export function hydrateDomainTasks(
     filteredCount += filtered_count;
     suppressedCount += suppressed_count + existingSuppressedCount;
     const acceptedTasks = [];
-    const currentControlReadbackPublications = [];
+    const currentControlReadbackPublications: Array<Record<string, unknown>> = [
+      ...current_control_readback_publications,
+    ];
     for (const consumed of supervisorDecisionRequests.consumed) {
       insertEvent(db, {
         domainId,

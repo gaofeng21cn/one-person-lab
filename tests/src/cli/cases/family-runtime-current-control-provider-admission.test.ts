@@ -809,6 +809,220 @@ test('family-runtime intake promotes MAS transition request-only task into OPL r
   }
 });
 
+test('family-runtime records NonAdvancingApply when authorized stage packet lacks OPL transition request', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-non-advancing-current-transition-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-non-advancing-current-transition-'));
+  const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  const exportPath = path.join(fixtureRoot, 'export');
+  const currentControlPath = path.join(
+    workspaceRoot,
+    'runtime',
+    'artifacts',
+    'supervision',
+    'opl_current_control_state',
+    'latest.json',
+  );
+  const runtimeLogPath = path.join(
+    workspaceRoot,
+    'runtime',
+    'artifacts',
+    'supervision',
+    'domain_progress_transition_runtime',
+    'command_event_log.jsonl',
+  );
+  const profilePath = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles', 'dm-cvd.local.toml');
+  const studyId = '003-dpcc-primary-care-phenotype-treatment-gap';
+  const actionType = 'run_quality_repair_batch';
+  const workUnitId = 'medical_prose_write_repair';
+  const workUnitFingerprint = 'publication-blockers::0915410f804b3697';
+  const stagePacketRef = [
+    'studies',
+    studyId,
+    'artifacts',
+    'supervision',
+    'consumer',
+    'default_executor_dispatches',
+    'immutable',
+    'run_quality_repair_batch',
+    '33abc53e0c18295f5fa03738.json',
+  ].join('/');
+  const ownerRouteIdempotencyKey = [
+    'paper-recovery',
+    studyId,
+    actionType,
+    workUnitFingerprint,
+  ].join('::');
+  fs.mkdirSync(path.dirname(currentControlPath), { recursive: true });
+  fs.mkdirSync(path.dirname(profilePath), { recursive: true });
+  fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
+  fs.writeFileSync(currentControlPath, JSON.stringify({
+    surface: 'opl_current_control_state',
+    transition_request_pending_count: 1,
+    provider_admission_pending_count: 0,
+    current_executable_owner_action: {
+      action_type: actionType,
+      work_unit_id: workUnitId,
+      work_unit_fingerprint: workUnitFingerprint,
+    },
+    studies: [
+      {
+        study_id: studyId,
+        current_control_action: {
+          status: 'transition_request_pending',
+          reason: 'await_opl_transition_readback',
+          provider_admission_requires_opl_runtime_result: true,
+        },
+      },
+    ],
+  }), 'utf8');
+  writeJsonEmitterScript(exportPath, {
+    surface_kind: 'mas_family_domain_handler_export',
+    profile: {
+      profile_name: 'dm-cvd',
+      profile_ref: profilePath,
+    },
+    workspace: {
+      workspace_root: workspaceRoot,
+      workspace_exists: true,
+    },
+    pending_family_tasks: [
+      {
+        domain_id: 'medautoscience',
+        task_kind: 'domain_owner/default-executor-dispatch',
+        priority: 95,
+        source: 'mas-domain-handler-export',
+        dedupe_key: `mas:dm-cvd:${studyId}:authorized-stage-packet:${actionType}`,
+        source_fingerprint: workUnitFingerprint,
+        reason: 'current_control_transition_request_pending',
+        blocked_reason: 'opl_execution_authorization_required',
+        execution_requires_opl_authorization: true,
+        payload: {
+          profile: profilePath,
+          study_id: studyId,
+          quest_id: studyId,
+          action_type: actionType,
+          work_unit_id: workUnitId,
+          work_unit_fingerprint: workUnitFingerprint,
+          action_fingerprint: workUnitFingerprint,
+          source_fingerprint: workUnitFingerprint,
+          dispatch_authority: 'consumer_default_executor_dispatch',
+          dispatch_status: 'transition_request_pending',
+          executor_kind: 'codex_cli_default',
+          next_executable_owner: 'write',
+          owner_route_current: true,
+          provider_attempt_or_lease_required: false,
+          provider_completion_is_domain_completion: false,
+          stage_packet_ref: stagePacketRef,
+          stage_packet_refs: [stagePacketRef],
+          stage_transition_authority_boundary: providerObservationBoundary(),
+          owner_route: {
+            idempotency_key: ownerRouteIdempotencyKey,
+            trace_id: `owner-route-trace::${studyId}::8069bb095591944f`,
+            next_owner: 'write',
+            currentness_contract: {
+              basis: {
+                truth_epoch: workUnitFingerprint,
+                runtime_health_epoch: workUnitFingerprint,
+                work_unit_id: workUnitId,
+                work_unit_fingerprint: workUnitFingerprint,
+              },
+              fail_closed_when_missing: true,
+              missing_required_fields: [],
+              status: 'currentness_basis_required',
+            },
+            source_refs: {
+              source_surface: 'paper_recovery_state',
+              supervisor_authority: 'paper_autonomy_supervisor_decision',
+            },
+          },
+          owner_route_currentness_basis: {
+            source: 'paper_recovery_state.next_safe_action.successor_owner_action',
+            truth_epoch: workUnitFingerprint,
+            runtime_health_epoch: workUnitFingerprint,
+            work_unit_id: workUnitId,
+            work_unit_fingerprint: workUnitFingerprint,
+          },
+        },
+      },
+    ],
+  });
+  const env = familyRuntimeEnv(stateRoot, {
+    OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
+  });
+  try {
+    const intake = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+      '--study',
+      studyId,
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+    ], env);
+    const queue = runCli(['family-runtime', 'queue', 'list'], env);
+    const refreshedCurrentControl = JSON.parse(fs.readFileSync(currentControlPath, 'utf8'));
+    const logEntries = fs.readFileSync(runtimeLogPath, 'utf8').trim().split(/\r?\n/u).map((line) => JSON.parse(line));
+
+    assert.equal(intake.family_runtime_intake.enqueued_count, 0);
+    assert.equal(intake.family_runtime_intake.suppressed_count, 1);
+    assert.equal(intake.family_runtime_intake.blocked_count, 1);
+    assert.equal(intake.family_runtime_intake.exports[0].current_control_readback_publication_count, 1);
+    assert.equal(
+      intake.family_runtime_intake.exports[0].current_control_readback_publications[0].status,
+      'transition_non_advancing_apply_recorded',
+    );
+    assert.equal(
+      intake.family_runtime_intake.exports[0].blocked[0].reason,
+      'current_control_transition_non_advancing_apply_recorded',
+    );
+    assert.equal(queue.family_runtime_queue.tasks.length, 0);
+    assert.equal(logEntries.length, 3);
+    assert.equal(logEntries[1].payload.transition_kind, 'NonAdvancingApply');
+    assert.equal(refreshedCurrentControl.provider_admission_pending_count, 0);
+    assert.equal(refreshedCurrentControl.transition_request_pending_count, 0);
+    assert.equal(refreshedCurrentControl.current_executable_owner_action, null);
+    assert.equal(
+      refreshedCurrentControl.current_control_refresh_source,
+      'opl_transition_runtime_readback_non_advancing_apply',
+    );
+    assert.equal(
+      refreshedCurrentControl.studies[0].current_control_action.status,
+      'transition_non_advancing_apply_recorded',
+    );
+    assert.equal(
+      refreshedCurrentControl.domain_progress_transition_non_advancing_apply_readback
+        .runtime_live_readback.runtime_readback_status,
+      'complete_transaction',
+    );
+    assert.equal(
+      refreshedCurrentControl.domain_progress_transition_non_advancing_apply_readback
+        .runtime_live_readback.transaction_complete,
+      true,
+    );
+    assert.equal(
+      refreshedCurrentControl.domain_progress_transition_non_advancing_apply_readback
+        .runtime_result.exactly_one_outcome.non_advancing_apply,
+      true,
+    );
+    assert.equal(
+      refreshedCurrentControl.domain_progress_transition_projection_metadata.provider_admission_allowed,
+      false,
+    );
+    assert.equal(
+      refreshedCurrentControl.domain_progress_transition_projection_metadata.current_executable_owner_action_allowed,
+      false,
+    );
+    assert.equal(
+      refreshedCurrentControl.domain_progress_transition_projection_metadata.paper_progress_delta,
+      false,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime refuses to publish provider admission readback from incomplete transition runtime transaction', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-incomplete-transition-readback-'));
   const workspaceRoot = path.join(fixtureRoot, 'workspace');
