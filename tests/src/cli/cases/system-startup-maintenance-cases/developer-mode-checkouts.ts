@@ -1,6 +1,7 @@
 import { assert, fs, os, path, runCli, test } from '../../helpers.ts';
 import { runGitFixtureCommand } from '../../helpers-parts/family-fixtures.ts';
 import {
+  createBookForgeGeneratedSurfaceRemote,
   createDomainModuleRemote,
   createOmaGeneratedSurfaceRemote,
   withCliTimeout,
@@ -32,11 +33,15 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
   const metaRemote = createOmaGeneratedSurfaceRemote({
     logPath,
   });
+  const bookForgeRemote = createBookForgeGeneratedSurfaceRemote({
+    logPath,
+  });
   const siblingCheckouts = {
     medautoscience: path.join(workspaceRoot, 'med-autoscience'),
     medautogrant: path.join(workspaceRoot, 'med-autogrant'),
     redcube: path.join(workspaceRoot, 'redcube-ai'),
     oplmetaagent: path.join(workspaceRoot, 'opl-meta-agent'),
+    oplbookforge: path.join(workspaceRoot, 'opl-bookforge'),
   };
 
   try {
@@ -45,6 +50,7 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
     runGitFixtureCommand(workspaceRoot, ['clone', magRemote.remoteRoot, siblingCheckouts.medautogrant]);
     runGitFixtureCommand(workspaceRoot, ['clone', rcaRemote.remoteRoot, siblingCheckouts.redcube]);
     runGitFixtureCommand(workspaceRoot, ['clone', metaRemote.remoteRoot, siblingCheckouts.oplmetaagent]);
+    runGitFixtureCommand(workspaceRoot, ['clone', bookForgeRemote.remoteRoot, siblingCheckouts.oplbookforge]);
 
     const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
       HOME: homeRoot,
@@ -59,6 +65,7 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
           'gaofeng21cn/med-autogrant': 'admin',
           'gaofeng21cn/redcube-ai': 'admin',
           'gaofeng21cn/opl-meta-agent': 'admin',
+          'gaofeng21cn/opl-bookforge': 'admin',
         },
       }),
       OPL_GIT_RETRY_ATTEMPTS: '1',
@@ -109,11 +116,11 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
     };
 
     assert.equal(output.system_action.status, 'completed');
-    assert.equal(output.system_action.details.summary.completed_targets_count, 4);
+    assert.equal(output.system_action.details.summary.completed_targets_count, 5);
     assert.equal(output.system_action.details.summary.manual_required_targets_count, 0);
     assert.equal(output.system_action.details.managed_install_update_receipts.recorded_receipt_count, 0);
     assert.equal(output.system_action.details.plugin_cache_freshness.status, 'freshened');
-    assert.equal(output.system_action.details.plugin_cache_freshness.synced_domain_packs_count, 4);
+    assert.equal(output.system_action.details.plugin_cache_freshness.synced_domain_packs_count, 5);
     assert.equal(output.system_action.details.restart_reload_prompt.required, true);
 
     for (const target of output.system_action.details.module_targets) {
@@ -135,6 +142,7 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
       'mag-health',
       'rca-health',
       'opl-meta-agent-health',
+      'opl-bookforge-health',
     ]);
     const codexConfig = fs.readFileSync(path.join(homeRoot, 'codex-home', 'config.toml'), 'utf8');
     for (const [moduleId, marketplaceId, pluginId] of [
@@ -154,11 +162,14 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
     }
     assert.match(codexConfig, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
     assert.match(codexConfig, /codex-plugin-marketplaces\/opl-meta-agent-local/);
+    assert.match(codexConfig, /\[plugins\."opl-bookforge@opl-bookforge-local"\]/);
+    assert.match(codexConfig, /codex-plugin-marketplaces\/opl-bookforge-local/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(masRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(magRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(rcaRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(metaRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(bookForgeRemote.fixtureRoot, { recursive: true, force: true });
   }
 });

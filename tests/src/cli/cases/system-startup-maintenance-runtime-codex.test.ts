@@ -1,5 +1,6 @@
 import { assert, fs, os, path, runCli, shellSingleQuote, test } from '../helpers.ts';
 import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
+import { withCliTimeout } from './system-startup-maintenance-cases/shared.ts';
 
 function writeFakeNpmRuntimeInstaller(fakeNpm: string, logPath: string) {
   fs.writeFileSync(
@@ -65,7 +66,7 @@ test('system startup-maintenance applies staged App-owned runtime Codex update w
   ]);
 
   try {
-    const output = runCli(['system', 'startup-maintenance'], {
+    const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
@@ -78,7 +79,7 @@ test('system startup-maintenance applies staged App-owned runtime Codex update w
       OPL_MODULE_PATH_OPLMETAAGENT: developerCheckout,
       PATH: `${fakeBin}:/usr/bin:/bin`,
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
-    }) as {
+    })) as {
       system_action: {
         details: {
           engine_targets: Array<{
@@ -180,7 +181,7 @@ test('system startup-maintenance installs missing App-owned runtime Codex on cle
   ]);
 
   try {
-    const output = runCli(['system', 'startup-maintenance'], {
+    const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
@@ -193,7 +194,7 @@ test('system startup-maintenance installs missing App-owned runtime Codex on cle
       OPL_MODULE_PATH_OPLMETAAGENT: developerCheckout,
       PATH: `${fakeBin}:/usr/bin:/bin`,
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
-    }) as {
+    })) as {
       system_action: {
         details: {
           engine_targets: Array<{

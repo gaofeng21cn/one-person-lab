@@ -6,7 +6,7 @@ import { buildPublicCommandSpecs } from '../../../../src/cli/cases/public-comman
 import { assertBlockedDeveloperModeSurface, assertDeveloperModeAction } from './developer-mode-assertions.ts';
 
 function createManagedDomainModuleFixtures(modulesRoot: string) {
-  for (const repoName of ['med-autoscience', 'med-deepscientist', 'med-autogrant', 'redcube-ai', 'opl-meta-agent']) {
+  for (const repoName of ['med-autoscience', 'med-deepscientist', 'med-autogrant', 'redcube-ai', 'opl-meta-agent', 'opl-bookforge']) {
     const repoPath = path.join(modulesRoot, repoName);
     fs.mkdirSync(repoPath, { recursive: true });
     const result = spawnSync('git', ['init', '-q'], {
@@ -536,14 +536,14 @@ exit 1
     assert.equal(domainModulesItem.action_command_ref, 'opl system startup-maintenance');
     assert.equal(typeof domainModulesItem.last_attempt?.observed_at, 'string');
     assert.match(domainModulesItem.next_visible_step, /Core workflows/);
-    assert.equal(output.system_initialize.domain_modules.summary.total_modules_count, 5);
+    assert.equal(output.system_initialize.domain_modules.summary.total_modules_count, 6);
     assert.deepEqual(output.system_initialize.module_summary, output.system_initialize.domain_modules.summary);
     assert.equal(
       output.system_initialize.domain_modules.summary.total_modules_count,
       output.system_initialize.domain_modules.modules.length,
     );
     assert.equal(output.system_initialize.domain_modules.summary.installed_modules_count >= 0, true);
-    assert.equal(output.system_initialize.domain_modules.modules.length, 5);
+    assert.equal(output.system_initialize.domain_modules.modules.length, 6);
     assert.equal(output.system_initialize.settings.interaction_mode, 'codex');
     assert.equal(output.system_initialize.settings.execution_mode, 'codex');
     assertBlockedDeveloperModeSurface(output.system_initialize.settings.developer_mode);

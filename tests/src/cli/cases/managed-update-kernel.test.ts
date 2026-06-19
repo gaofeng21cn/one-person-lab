@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 
 import { assert, createFakeCodexFixture, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
 import { computePackageChannelTreeSha256 } from '../../../../src/system-installation/module-package-channel.ts';
+import { writeFakeBookForgeGeneratedSurfacePack } from '../../cli-codex-default-shell-helpers.ts';
 
 const MODULE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.module.source.v1+gzip';
 const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';
@@ -23,7 +24,9 @@ function writePackagedModuleFixture(input: {
   fs.mkdirSync(input.root, { recursive: true });
   fs.writeFileSync(path.join(input.root, 'README.md'), `${input.repoName} fixture\n`, 'utf8');
 
-  if (input.moduleId === 'oplmetaagent') {
+  if (input.moduleId === 'oplbookforge') {
+    writeFakeBookForgeGeneratedSurfacePack(input.root);
+  } else if (input.moduleId === 'oplmetaagent') {
     fs.mkdirSync(path.join(input.root, 'agent', 'interfaces'), { recursive: true });
     fs.writeFileSync(
       path.join(input.root, 'agent', 'interfaces', 'generated-interface-bundle.json'),
@@ -180,6 +183,14 @@ function writeManagedUpdateModuleFixtures(homeRoot: string) {
       headSha: 'oma-head-sha',
       previousHeadSha: 'oma-previous-head-sha',
     },
+    {
+      moduleId: 'oplbookforge',
+      repoName: 'opl-bookforge',
+      pluginName: 'opl-bookforge',
+      skillName: 'opl-bookforge',
+      headSha: 'bookforge-head-sha',
+      previousHeadSha: 'bookforge-previous-head-sha',
+    },
   ] as const;
   const env: Record<string, string> = {
     OPL_MODULES_ROOT: modulesRoot,
@@ -192,16 +203,20 @@ function writeManagedUpdateModuleFixtures(homeRoot: string) {
 }
 
 type ManagedUpdateModuleFixture = {
-  moduleId: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent';
-  repoName: 'med-autoscience' | 'med-autogrant' | 'redcube-ai' | 'opl-meta-agent';
-  pluginName: 'mas' | 'mag' | 'rca' | 'opl-meta-agent';
-  skillName: 'mas' | 'mag' | 'rca' | 'opl-meta-agent';
+  moduleId: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge';
+  repoName: 'med-autoscience' | 'med-autogrant' | 'redcube-ai' | 'opl-meta-agent' | 'opl-bookforge';
+  pluginName: 'mas' | 'mag' | 'rca' | 'opl-meta-agent' | 'opl-bookforge';
+  skillName: 'mas' | 'mag' | 'rca' | 'opl-meta-agent' | 'opl-bookforge';
   sourceHeadSha: string;
 };
 
 function writeModuleSourceFiles(root: string, module: ManagedUpdateModuleFixture, label: string) {
   fs.mkdirSync(root, { recursive: true });
   fs.writeFileSync(path.join(root, 'README.md'), `${module.repoName} ${label}\n`, 'utf8');
+  if (module.moduleId === 'oplbookforge') {
+    writeFakeBookForgeGeneratedSurfacePack(root);
+    return;
+  }
   if (module.moduleId === 'oplmetaagent') {
     fs.mkdirSync(path.join(root, 'agent', 'interfaces'), { recursive: true });
     fs.writeFileSync(
@@ -400,6 +415,13 @@ test('update apply for agent package channel executes the managed adapter and re
       skillName: 'opl-meta-agent',
       sourceHeadSha: 'oma-updated-head-sha',
     },
+    {
+      moduleId: 'oplbookforge',
+      repoName: 'opl-bookforge',
+      pluginName: 'opl-bookforge',
+      skillName: 'opl-bookforge',
+      sourceHeadSha: 'bookforge-updated-head-sha',
+    },
   ];
   const packageChannel = writeManagedUpdatePackageChannelFixture({
     root: path.join(homeRoot, 'channel-update'),
@@ -556,7 +578,7 @@ exit 2
     assert.equal(output.managed_update.execution.adapter_results[0].apply_mode, 'auto_apply');
     assert.equal(output.managed_update.execution.adapter_results[0].status_detail.auto_apply_eligible, true);
     assert.equal(output.managed_update.execution.adapter_results[0].status_detail.app_background_safe, true);
-    assert.equal(output.managed_update.execution.adapter_results[0].status_detail.clean_managed_targets_count, 4);
+    assert.equal(output.managed_update.execution.adapter_results[0].status_detail.clean_managed_targets_count, 5);
     assert.equal(output.managed_update.execution.adapter_results[0].status_detail.manual_required_targets_count, 0);
     assert.equal(output.managed_update.execution.adapter_results[0].status_detail.post_apply_status, 'completed');
     assert.equal(output.managed_update.execution.adapter_results[0].status_detail.reload_status, 'recommended');
@@ -625,7 +647,7 @@ exit 2
     assert.equal(receiptLedger.receipts[0].apply_mode, 'auto_apply');
     assert.equal(receiptLedger.receipts[0].status_detail.auto_apply_eligible, true);
     assert.equal(receiptLedger.receipts[0].status_detail.app_background_safe, true);
-    assert.equal(receiptLedger.receipts[0].status_detail.clean_managed_targets_count, 4);
+    assert.equal(receiptLedger.receipts[0].status_detail.clean_managed_targets_count, 5);
     assert.equal(receiptLedger.receipts[0].status_detail.manual_required_targets_count, 0);
     assert.equal(receiptLedger.receipts[0].status_detail.post_apply_status, 'completed');
     assert.equal(receiptLedger.receipts[0].status_detail.reload_status, 'recommended');
@@ -701,7 +723,7 @@ exit 2
     assert.equal(status.managed_update.components[0].receipt.status_detail.reload_status, 'recommended');
     assert.equal(status.managed_update.components[0].receipt.reload_guidance.reload_recommended, true);
   } finally {
-    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
   }
 });
@@ -785,6 +807,13 @@ test('update rollback for agent package channel restores recorded previous packa
       skillName: 'opl-meta-agent',
       sourceHeadSha: 'oma-rollback-current-sha',
     },
+    {
+      moduleId: 'oplbookforge',
+      repoName: 'opl-bookforge',
+      pluginName: 'opl-bookforge',
+      skillName: 'opl-bookforge',
+      sourceHeadSha: 'bookforge-rollback-current-sha',
+    },
   ];
   const packageChannel = writeManagedUpdatePackageChannelFixture({
     root: path.join(homeRoot, 'channel-rollback'),
@@ -834,7 +863,7 @@ exit 2
     assert.equal(rollback.managed_update.operation, 'rollback');
     assert.equal(rollback.managed_update.execution.status, 'completed');
     assert.equal(rollback.managed_update.execution.adapter_results[0].status, 'completed');
-    assert.equal(rollback.managed_update.execution.adapter_results[0].result.summary.completed_targets_count, 4);
+    assert.equal(rollback.managed_update.execution.adapter_results[0].result.summary.completed_targets_count, 5);
     assert.equal(rollback.managed_update.execution.receipt_record.status, 'recorded');
     assert.equal(rollback.managed_update.execution.receipt_record.recorded_receipt_count, 1);
     assert.equal(rollback.managed_update.components[0].receipt.verify_result, 'passed');
