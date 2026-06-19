@@ -610,6 +610,19 @@ function generatedCodexPluginSpec(inspected: InspectFamilySkillPack): GeneratedC
         'OPL BookForge owns book-domain truth, manuscript quality rules, style policy, figure/table planning, export/publication verdict boundaries, artifact authority, memory body, and owner receipts.',
         'Do not treat generated interface readiness as book delivery ready, production ready, publication approved, or owner accepted.',
       ],
+      generatedSkillSections: [
+        {
+          title: 'Book Materialization Rules',
+          body: [
+            '- Keep book prose Markdown-first: per-chapter Markdown files or equivalent author-facing Markdown refs own manuscript body for book-length work.',
+            '- Use scripts only as thin assemblers, metrics checkers, validators, exporters, and report writers. Do not make Python/TypeScript/shell/JSON string literals the manuscript source of truth for substantial prose.',
+            '- Draft book-length work chapter-by-chapter: chapter brief -> chapter Markdown draft -> chapter-level QC -> merged manuscript -> whole-book pass. The merged `book.md` is an assembly/export ref, not the only creative writing surface unless the owner explicitly chooses a one-file workflow.',
+            '- When an invalid compact/sample draft was created for a book-length target, retire it and rebuild from chapter packages instead of expanding the compact file in place.',
+            '- Preserve owner/source-declared target extent. Compact/sample drafts require explicit owner approval or a typed extent blocker that quantifies missing pages, words, chapters, figures, tables, or cases.',
+            '- Final manuscript figures that require new artwork should be `imagegen`-generated bitmap assets saved to project-local paths with prompt/spec and review criteria, tracked through a figure asset manifest. Chat-preview-only, missing, or unexposed generated file paths are image-asset blockers.',
+          ],
+        },
+      ],
       displayName: 'OPL BookForge',
       shortDescription: 'Book Foundry Agent for storyline-to-manuscript delivery.',
       defaultPrompt: 'Use $opl-bookforge to shape a book storyline, materialize chapters, plan figures and tables, run style/layout checks, or prepare owner-gated export handoff.',
