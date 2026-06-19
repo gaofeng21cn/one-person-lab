@@ -255,6 +255,7 @@ function repoNameForModuleId(moduleId: string) {
     medautogrant: 'med-autogrant',
     redcube: 'redcube-ai',
     oplmetaagent: 'opl-meta-agent',
+    oplbookforge: 'opl-bookforge',
   };
   return repoNames[moduleId] ?? null;
 }

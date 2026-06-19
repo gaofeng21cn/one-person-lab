@@ -1,6 +1,8 @@
 import { spawnSync } from 'node:child_process';
 
 import { assert, createCodexConfigFixture, createFakeCodexFixture, createGitModuleRemoteFixture, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
+import { writeFakeBookForgeGeneratedSurfacePack } from '../../cli-codex-default-shell-helpers.ts';
 
 test('system ignores retired Hermes env outside family runtime provider selection', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-retired-hermes-update-home-'));
@@ -244,12 +246,14 @@ EOF
     extraFiles: moduleExtraFiles,
   });
   const metaAgentRemote = createGitModuleRemoteFixture('opl-meta-agent');
+  const bookForgeRemote = createGitModuleRemoteFixture('opl-bookforge');
   const env = {
     HOME: homeRoot,
     OPL_MODULES_ROOT: modulesRoot,
     OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: medAutoScienceRemote.remoteRoot,
     OPL_MODULE_REPO_URL_MEDAUTOGRANT: medAutoGrantRemote.remoteRoot,
     OPL_MODULE_REPO_URL_OPLMETAAGENT: metaAgentRemote.remoteRoot,
+    OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
     OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
     OPL_CODEX_CLI_LATEST_VERSION: '0.125.0',
     PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
@@ -296,9 +300,9 @@ EOF
     );
     assert.equal(output.system_action.action, 'update');
     assert.equal(output.system_action.status, 'completed');
-    assert.equal(output.system_action.details.summary.total_targets_count, 7);
+    assert.equal(output.system_action.details.summary.total_targets_count, 8);
     assert.equal(output.system_action.details.summary.completed_targets_count, 1);
-    assert.equal(output.system_action.details.summary.skipped_targets_count, 6);
+    assert.equal(output.system_action.details.summary.skipped_targets_count, 7);
     assert.equal(output.system_action.details.summary.manual_required_targets_count, 0);
     assert.equal(targets.get('framework:opl-framework')?.status, 'skipped');
     assert.equal(targets.get('framework:opl-framework')?.reason, 'framework_update_source_not_configured');
@@ -309,6 +313,7 @@ EOF
     assert.equal(targets.get('module:medautogrant')?.status, 'skipped');
     assert.equal(targets.get('module:medautogrant')?.reason, 'dirty_checkout');
     assert.equal(targets.get('module:meddeepscientist')?.reason, 'module_missing');
+    assert.equal(targets.get('module:oplbookforge')?.reason, 'module_missing');
 
     const updatedMas = (
       runCli(['connect', 'modules'], env) as {
@@ -323,6 +328,7 @@ EOF
     fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(medAutoGrantRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(metaAgentRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(bookForgeRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
@@ -507,7 +513,7 @@ test('system reconcile-modules installs missing modules updates clean modules an
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-system-reconcile-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');
   const turnkeyLogPath = path.join(homeRoot, 'turnkey.log');
-  const buildModuleFiles = (skill: 'mas' | 'mag' | 'rca' | 'oma' | null) => {
+  const buildModuleFiles = (skill: 'mas' | 'mag' | 'rca' | 'oma' | 'bookforge' | null) => {
     const files: Record<string, string> = {
       'scripts/opl-module-bootstrap.sh': `#!/usr/bin/env bash
 set -euo pipefail
@@ -534,6 +540,21 @@ fi
 printf 'health:%s:%s\\n' "$(basename "$(pwd)")" "$lane" >> ${JSON.stringify(turnkeyLogPath)}
 cat <<'EOF'
 {"status":"ok","lane":"smoke"}
+EOF
+`;
+    }
+    if (skill === 'bookforge') {
+      delete files['scripts/opl-module-healthcheck.sh'];
+      files['scripts/verify.sh'] = `#!/usr/bin/env bash
+set -euo pipefail
+lane="\${1:-}"
+if [[ "$lane" != "fast" ]]; then
+  echo "Unknown lane: $lane" >&2
+  exit 3
+fi
+printf 'health:%s:%s\\n' "$(basename "$(pwd)")" "$lane" >> ${JSON.stringify(turnkeyLogPath)}
+cat <<'EOF'
+{"status":"ok","lane":"fast"}
 EOF
 `;
     }
@@ -581,7 +602,12 @@ console.log(JSON.stringify({ sync: 'ok' }));
     medautogrant: createGitModuleRemoteFixture('med-autogrant', { extraFiles: buildModuleFiles('mag') }),
     redcube: createGitModuleRemoteFixture('redcube-ai', { extraFiles: buildModuleFiles('rca') }),
     oplmetaagent: createGitModuleRemoteFixture('opl-meta-agent', { extraFiles: buildModuleFiles('oma') }),
+    oplbookforge: createGitModuleRemoteFixture('opl-bookforge', { extraFiles: buildModuleFiles('bookforge') }),
   };
+  writeFakeBookForgeGeneratedSurfacePack(remotes.oplbookforge.sourceRoot);
+  runGitFixtureCommand(remotes.oplbookforge.sourceRoot, ['add', 'agent', 'contracts']);
+  runGitFixtureCommand(remotes.oplbookforge.sourceRoot, ['commit', '-m', 'Add BookForge generated surface pack']);
+  runGitFixtureCommand(remotes.oplbookforge.sourceRoot, ['push', 'origin', 'main']);
   const redcubeExternalCheckout = path.join(homeRoot, 'external-redcube-ai');
   const cloneResult = spawnSync('git', ['clone', '--branch', 'main', remotes.redcube.remoteRoot, redcubeExternalCheckout], {
     encoding: 'utf8',
@@ -595,6 +621,7 @@ console.log(JSON.stringify({ sync: 'ok' }));
     OPL_MODULE_REPO_URL_MEDAUTOGRANT: remotes.medautogrant.remoteRoot,
     OPL_MODULE_REPO_URL_REDCUBE: remotes.redcube.remoteRoot,
     OPL_MODULE_REPO_URL_OPLMETAAGENT: remotes.oplmetaagent.remoteRoot,
+    OPL_MODULE_REPO_URL_OPLBOOKFORGE: remotes.oplbookforge.remoteRoot,
     OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
   };
 
@@ -635,8 +662,8 @@ console.log(JSON.stringify({ sync: 'ok' }));
     assert.equal(output.system_action.action, 'reconcile_modules');
     assert.equal(output.system_action.status, 'manual_required');
     assert.deepEqual(output.system_action.details.summary, {
-      total_targets_count: 5,
-      completed_targets_count: 3,
+      total_targets_count: 6,
+      completed_targets_count: 4,
       skipped_targets_count: 1,
       manual_required_targets_count: 1,
     });
@@ -648,6 +675,8 @@ console.log(JSON.stringify({ sync: 'ok' }));
     assert.equal(targets.get('redcube')?.reason, 'module_reconcile_refresh');
     assert.equal(targets.get('oplmetaagent')?.status, 'completed');
     assert.equal(targets.get('oplmetaagent')?.reason, 'module_missing');
+    assert.equal(targets.get('oplbookforge')?.status, 'completed');
+    assert.equal(targets.get('oplbookforge')?.reason, 'module_missing');
     assert.equal(targets.get('medautogrant')?.status, 'manual_required');
     assert.equal(targets.get('medautogrant')?.reason, 'dirty_checkout');
     const turnkeyLog = fs.readFileSync(turnkeyLogPath, 'utf8');
@@ -660,6 +689,8 @@ console.log(JSON.stringify({ sync: 'ok' }));
     assert.match(turnkeyLog, /health:external-redcube-ai/);
     assert.match(turnkeyLog, /bootstrap:opl-meta-agent/);
     assert.match(turnkeyLog, /health:opl-meta-agent:smoke/);
+    assert.match(turnkeyLog, /bootstrap:opl-bookforge/);
+    assert.match(turnkeyLog, /health:opl-bookforge:fast/);
 
     const modules = runCli(['connect', 'modules'], env) as {
       modules: {
@@ -671,6 +702,7 @@ console.log(JSON.stringify({ sync: 'ok' }));
     assert.equal(byId.get('meddeepscientist')?.installed, false);
     assert.equal(byId.get('redcube')?.installed, true);
     assert.equal(byId.get('oplmetaagent')?.installed, true);
+    assert.equal(byId.get('oplbookforge')?.installed, true);
   } finally {
     for (const remote of Object.values(remotes)) {
       fs.rmSync(remote.fixtureRoot, { recursive: true, force: true });
@@ -683,9 +715,9 @@ test('system reconcile-modules promotes Full packaged module seeds to latest man
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-system-reconcile-full-seed-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');
   const buildFullSeedModule = (
-    moduleId: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent',
-    repoName: 'med-autoscience' | 'med-autogrant' | 'redcube-ai' | 'opl-meta-agent',
-    packageName: 'mas' | 'mag' | 'rca' | 'meta-agent',
+    moduleId: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge',
+    repoName: 'med-autoscience' | 'med-autogrant' | 'redcube-ai' | 'opl-meta-agent' | 'opl-bookforge',
+    packageName: 'mas' | 'mag' | 'rca' | 'meta-agent' | 'opl-bookforge',
     extraFiles: Record<string, string> = {},
   ) => {
     const remote = createGitModuleRemoteFixture(repoName, {
@@ -695,6 +727,12 @@ test('system reconcile-modules promotes Full packaged module seeds to latest man
         ...extraFiles,
       },
     });
+    if (moduleId === 'oplbookforge') {
+      writeFakeBookForgeGeneratedSurfacePack(remote.sourceRoot);
+      runGitFixtureCommand(remote.sourceRoot, ['add', 'agent', 'contracts']);
+      runGitFixtureCommand(remote.sourceRoot, ['commit', '-m', 'Add BookForge generated surface pack']);
+      runGitFixtureCommand(remote.sourceRoot, ['push', 'origin', 'main']);
+    }
     const packagedRoot = path.join(homeRoot, 'runtime', 'current', 'modules', packageName);
     const packagedSha = remote.getHeadSha();
     const latestSha = remote.advance(
@@ -747,6 +785,7 @@ test('system reconcile-modules promotes Full packaged module seeds to latest man
       ].join('\n'),
     }),
     oplmetaagent: buildFullSeedModule('oplmetaagent', 'opl-meta-agent', 'meta-agent'),
+    oplbookforge: buildFullSeedModule('oplbookforge', 'opl-bookforge', 'opl-bookforge'),
   };
   const env = {
     HOME: homeRoot,
@@ -755,10 +794,12 @@ test('system reconcile-modules promotes Full packaged module seeds to latest man
     OPL_MODULE_PATH_MEDAUTOGRANT: packagedModules.medautogrant.packagedRoot,
     OPL_MODULE_PATH_REDCUBE: packagedModules.redcube.packagedRoot,
     OPL_MODULE_PATH_OPLMETAAGENT: packagedModules.oplmetaagent.packagedRoot,
+    OPL_MODULE_PATH_OPLBOOKFORGE: packagedModules.oplbookforge.packagedRoot,
     OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: packagedModules.medautoscience.remote.remoteRoot,
     OPL_MODULE_REPO_URL_MEDAUTOGRANT: packagedModules.medautogrant.remote.remoteRoot,
     OPL_MODULE_REPO_URL_REDCUBE: packagedModules.redcube.remote.remoteRoot,
     OPL_MODULE_REPO_URL_OPLMETAAGENT: packagedModules.oplmetaagent.remote.remoteRoot,
+    OPL_MODULE_REPO_URL_OPLBOOKFORGE: packagedModules.oplbookforge.remote.remoteRoot,
     OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
   };
 

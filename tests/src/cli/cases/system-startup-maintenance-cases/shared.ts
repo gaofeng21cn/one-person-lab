@@ -3,7 +3,10 @@ import crypto from 'node:crypto';
 
 import { createGitModuleRemoteFixture, fs, path } from '../../helpers.ts';
 import { runGitFixtureCommand } from '../../helpers-parts/family-fixtures.ts';
-import { writeFakeOmaGeneratedSurfacePack } from '../../../cli-codex-default-shell-helpers.ts';
+import {
+  writeFakeBookForgeGeneratedSurfacePack,
+  writeFakeOmaGeneratedSurfacePack,
+} from '../../../cli-codex-default-shell-helpers.ts';
 
 const MODULE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.module.source.v1+gzip';
 const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';
@@ -39,7 +42,7 @@ export function withCliTimeout<T>(timeoutMs: string, fn: () => T): T {
 
 export function createDomainModuleRemote(input: {
   repoName: string;
-  pluginName: 'mas' | 'mag' | 'rca' | 'opl-meta-agent';
+  pluginName: 'mas' | 'mag' | 'rca' | 'opl-meta-agent' | 'opl-bookforge';
   installerKind: 'bash' | 'node';
   logPath: string;
 }) {
@@ -194,12 +197,46 @@ export function createOmaGeneratedSurfaceRemote(input: {
   return remote;
 }
 
+export function createBookForgeGeneratedSurfaceRemote(input: {
+  logPath: string;
+  healthcheckLogPath?: string;
+}) {
+  const remote = createGitModuleRemoteFixture('opl-bookforge', {
+    extraFiles: {
+      'scripts/opl-module-bootstrap.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        `printf 'opl-bookforge-bootstrap\n' >> ${JSON.stringify(input.logPath)}`,
+        '',
+      ].join('\n'),
+      'scripts/verify.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        input.healthcheckLogPath
+          ? `printf '%s\n' "$1" > ${JSON.stringify(input.healthcheckLogPath)}`
+          : `printf 'opl-bookforge-health\n' >> ${JSON.stringify(input.logPath)}`,
+        'test "${1:-}" = "fast"',
+        '',
+      ].join('\n'),
+    },
+    executableFiles: [
+      'scripts/opl-module-bootstrap.sh',
+      'scripts/verify.sh',
+    ],
+  });
+  writeFakeBookForgeGeneratedSurfacePack(remote.sourceRoot);
+  runGitFixtureCommand(remote.sourceRoot, ['add', 'agent', 'contracts']);
+  runGitFixtureCommand(remote.sourceRoot, ['commit', '-m', 'Add BookForge generated surface contract pack']);
+  runGitFixtureCommand(remote.sourceRoot, ['push', 'origin', 'main']);
+  return remote;
+}
+
 export function writeStartupPackageChannelFixture(input: {
   root: string;
   version: string;
   modules: Array<{
-    moduleId: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent';
-    repoName: 'med-autoscience' | 'med-autogrant' | 'redcube-ai' | 'opl-meta-agent';
+    moduleId: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge';
+    repoName: 'med-autoscience' | 'med-autogrant' | 'redcube-ai' | 'opl-meta-agent' | 'opl-bookforge';
     sourceHeadSha: string;
     files: Record<string, string>;
   }>;

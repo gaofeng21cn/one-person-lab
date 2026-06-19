@@ -108,6 +108,7 @@ function createGitModuleFixtures(modulesRoot) {
     'med-autogrant',
     'redcube-ai',
     'opl-meta-agent',
+    'opl-bookforge',
   ];
 
   for (const repoName of repoNames) {

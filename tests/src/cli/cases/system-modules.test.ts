@@ -77,7 +77,7 @@ EOF
         }>;
       };
     };
-    assert.equal(initial.modules.summary.total_modules_count, 5);
+    assert.equal(initial.modules.summary.total_modules_count, 6);
     const initialMas = initial.modules.items.find((entry) => entry.module_id === 'medautoscience');
     assert.ok(initialMas);
     assert.equal(initialMas.installed, false);
@@ -655,6 +655,7 @@ test('modules projection treats Full runtime packaged overrides as launch source
     ['medautogrant', 'med-autogrant', 'mag'],
     ['redcube', 'redcube-ai', 'rca'],
     ['oplmetaagent', 'opl-meta-agent', 'meta-agent'],
+    ['oplbookforge', 'opl-bookforge', 'opl-bookforge'],
   ] as const;
 
   try {
@@ -699,8 +700,8 @@ test('modules projection treats Full runtime packaged overrides as launch source
       };
     };
 
-    assert.equal(output.modules.summary.installed_default_modules_count, 4);
-    assert.equal(output.modules.summary.healthy_default_modules_count, 4);
+    assert.equal(output.modules.summary.installed_default_modules_count, 5);
+    assert.equal(output.modules.summary.healthy_default_modules_count, 5);
     const modulesById = new Map(output.modules.items.map((entry) => [entry.module_id, entry]));
     for (const [moduleId] of packagedModules) {
       const module = modulesById.get(moduleId);

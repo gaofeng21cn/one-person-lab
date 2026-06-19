@@ -2,6 +2,7 @@ import { assert, createFakeCodexFixture, fs, os, path, runCli, test } from '../h
 import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
 import './system-startup-maintenance-cases/developer-mode-checkouts.ts';
 import {
+  createBookForgeGeneratedSurfaceRemote,
   createDomainModuleRemote,
   createOmaGeneratedSurfaceRemote,
   readPackageChannelMarker,
@@ -36,9 +37,12 @@ test('system startup-maintenance installs clean managed modules and returns App 
   const metaRemote = createOmaGeneratedSurfaceRemote({
     logPath,
   });
+  const bookForgeRemote = createBookForgeGeneratedSurfaceRemote({
+    logPath,
+  });
 
   try {
-    const output = runCli(['system', 'startup-maintenance'], {
+    const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_MODULES_ROOT: modulesRoot,
@@ -47,9 +51,10 @@ test('system startup-maintenance installs clean managed modules and returns App 
       OPL_MODULE_REPO_URL_MEDAUTOGRANT: magRemote.remoteRoot,
       OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
       OPL_GIT_RETRY_ATTEMPTS: '1',
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
-    }) as {
+    })) as {
       system_action: {
         action: string;
         status: string;
@@ -108,7 +113,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
     assert.equal(output.system_action.details.mode, 'clean_managed_environment_startup');
     assert.equal(output.system_action.details.authority_boundary.can_write_domain_truth, false);
     assert.equal(output.system_action.details.authority_boundary.can_install_domain_daemon, false);
-    assert.equal(output.system_action.details.summary.completed_targets_count, 4);
+    assert.equal(output.system_action.details.summary.completed_targets_count, 5);
     assert.equal(output.system_action.details.summary.manual_required_targets_count, 0);
     assert.deepEqual(output.system_action.details.framework_targets.map((target) => [
       target.target_id,
@@ -124,11 +129,17 @@ test('system startup-maintenance installs clean managed modules and returns App 
     assert.equal(output.system_action.details.managed_install_update_receipts.status, 'recorded');
     assert.equal(
       output.system_action.details.managed_install_update_receipts.recorded_receipt_count,
-      4,
+      5,
     );
     assert.equal(
       output.system_action.details.managed_install_update_receipts.receipt_refs.some(
         (ref) => ref.startsWith('opl://managed-install-update/oplmetaagent/install/'),
+      ),
+      true,
+    );
+    assert.equal(
+      output.system_action.details.managed_install_update_receipts.receipt_refs.some(
+        (ref) => ref.startsWith('opl://managed-install-update/oplbookforge/install/'),
       ),
       true,
     );
@@ -150,11 +161,12 @@ test('system startup-maintenance installs clean managed modules and returns App 
         ['medautogrant', 'completed', 'module_missing', 'missing', 'completed', 'completed'],
         ['redcube', 'completed', 'module_missing', 'missing', 'completed', 'completed'],
         ['oplmetaagent', 'completed', 'module_missing', 'missing', 'completed', 'completed'],
+        ['oplbookforge', 'completed', 'module_missing', 'missing', 'completed', 'completed'],
       ],
     );
     assert.equal(output.system_action.details.plugin_cache_freshness.status, 'freshened');
     assert.equal(output.system_action.details.plugin_cache_freshness.source, 'module_turnkey_skill_sync');
-    assert.equal(output.system_action.details.plugin_cache_freshness.synced_domain_packs_count, 4);
+    assert.equal(output.system_action.details.plugin_cache_freshness.synced_domain_packs_count, 5);
     assert.equal(output.system_action.details.restart_reload_prompt.required, true);
     assert.equal(output.system_action.details.restart_reload_prompt.action, 'reload_app_and_codex_plugin_cache');
     assert.deepEqual(output.system_action.details.restart_reload_prompt.affected_domains, [
@@ -162,6 +174,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
       'medautogrant',
       'redcube',
       'oplmetaagent',
+      'oplbookforge',
     ]);
     assert.deepEqual(fs.readFileSync(logPath, 'utf8').trim().split('\n'), [
       'mas-bootstrap',
@@ -172,11 +185,14 @@ test('system startup-maintenance installs clean managed modules and returns App 
       'rca-health',
       'opl-meta-agent-bootstrap',
       'opl-meta-agent-health',
+      'opl-bookforge-bootstrap',
+      'opl-bookforge-health',
     ]);
     for (const skillName of ['mas', 'mag', 'rca']) {
       assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillName, 'SKILL.md')), false);
     }
     assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'opl-meta-agent', 'SKILL.md')), false);
+    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'opl-bookforge', 'SKILL.md')), false);
     assert.equal(
       fs.existsSync(path.join(
         homeRoot,
@@ -204,8 +220,36 @@ test('system startup-maintenance installs clean managed modules and returns App 
       )),
       true,
     );
+    assert.equal(
+      fs.existsSync(path.join(
+        homeRoot,
+        'opl-state',
+        'generated-codex-plugins',
+        'opl-bookforge-local',
+        'plugins',
+        'opl-bookforge',
+        '.codex-plugin',
+        'plugin.json',
+      )),
+      true,
+    );
+    assert.equal(
+      fs.existsSync(path.join(
+        homeRoot,
+        'opl-state',
+        'generated-codex-plugins',
+        'opl-bookforge-local',
+        'plugins',
+        'opl-bookforge',
+        'skills',
+        'opl-bookforge',
+        'SKILL.md',
+      )),
+      true,
+    );
     const codexConfig = fs.readFileSync(path.join(homeRoot, 'codex-home', 'config.toml'), 'utf8');
     assert.match(codexConfig, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
+    assert.match(codexConfig, /\[plugins\."opl-bookforge@opl-bookforge-local"\]/);
     const previousStateDir = process.env.OPL_STATE_DIR;
     process.env.OPL_STATE_DIR = path.join(homeRoot, 'opl-state');
     try {
@@ -233,6 +277,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
     fs.rmSync(magRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(rcaRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(metaRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(bookForgeRemote.fixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -375,6 +420,21 @@ test('system startup-maintenance silently updates package-channel modules and sy
             body_markdown: `# OMA ${versionLabel}\n`,
           },
         }, null, 2),
+        'scripts/verify.sh': '#!/usr/bin/env bash\nset -euo pipefail\ntest "${1:-}" = "fast"\n',
+      },
+    },
+    {
+      moduleId: 'oplbookforge' as const,
+      repoName: 'opl-bookforge' as const,
+      sourceHeadSha: `bookforge-${versionLabel}-sha`,
+      files: {
+        'agent/skills/book-production.md': `# Book Production ${versionLabel}\n`,
+        'contracts/domain_descriptor.json': JSON.stringify({
+          surface_kind: 'domain_agent_descriptor',
+          schema_version: 1,
+          domain_id: 'opl-bookforge',
+          domain_label: 'OPL BookForge',
+        }, null, 2),
         'scripts/verify.sh': '#!/usr/bin/env bash\nset -euo pipefail\ntest "${1:-}" = "smoke"\n',
       },
     },
@@ -391,7 +451,7 @@ test('system startup-maintenance silently updates package-channel modules and sy
   });
 
   try {
-    for (const moduleId of ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent']) {
+    for (const moduleId of ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent', 'oplbookforge']) {
       runCli(['connect', 'install', '--module', moduleId], {
         HOME: homeRoot,
         CODEX_HOME: path.join(homeRoot, 'codex-home'),
@@ -453,17 +513,18 @@ test('system startup-maintenance silently updates package-channel modules and sy
     };
 
     assert.equal(output.system_action.status, 'completed');
-    assert.equal(output.system_action.details.summary.completed_targets_count, 4);
+    assert.equal(output.system_action.details.summary.completed_targets_count, 5);
     assert.equal(output.system_action.details.summary.manual_required_targets_count, 0);
-    assert.equal(output.system_action.details.managed_install_update_receipts.recorded_receipt_count, 4);
+    assert.equal(output.system_action.details.managed_install_update_receipts.recorded_receipt_count, 5);
     assert.equal(output.system_action.details.plugin_cache_freshness.status, 'freshened');
-    assert.equal(output.system_action.details.plugin_cache_freshness.synced_domain_packs_count, 4);
+    assert.equal(output.system_action.details.plugin_cache_freshness.synced_domain_packs_count, 5);
     assert.equal(output.system_action.details.restart_reload_prompt.required, true);
     assert.deepEqual(output.system_action.details.restart_reload_prompt.affected_domains, [
       'medautoscience',
       'medautogrant',
       'redcube',
       'oplmetaagent',
+      'oplbookforge',
     ]);
 
     const targets = new Map(output.system_action.details.module_targets.map((target) => [target.target_id, target]));
@@ -472,6 +533,7 @@ test('system startup-maintenance silently updates package-channel modules and sy
       ['medautogrant', 'mag-v2-sha'],
       ['redcube', 'rca-v2-sha'],
       ['oplmetaagent', 'oma-v2-sha'],
+      ['oplbookforge', 'bookforge-v2-sha'],
     ] as const) {
       const target = targets.get(moduleId);
       assert.equal(target?.status, 'completed');
@@ -496,6 +558,7 @@ test('system startup-maintenance silently updates package-channel modules and sy
       ['medautogrant', 'med-autogrant', 'mag-v2-sha', 'mag-v1-sha'],
       ['redcube', 'redcube-ai', 'rca-v2-sha', 'rca-v1-sha'],
       ['oplmetaagent', 'opl-meta-agent', 'oma-v2-sha', 'oma-v1-sha'],
+      ['oplbookforge', 'opl-bookforge', 'bookforge-v2-sha', 'bookforge-v1-sha'],
     ] as const) {
       const managedCheckout = path.join(modulesRoot, repoName);
       const marker = readPackageChannelMarker(managedCheckout);
@@ -549,6 +612,9 @@ test('system startup-maintenance installs OMA managed root when only a sibling c
     logPath,
     healthcheckLogPath: omaHealthcheckLogPath,
   });
+  const bookForgeRemote = createBookForgeGeneratedSurfaceRemote({
+    logPath,
+  });
 
   try {
     fs.mkdirSync(onePersonLabRoot, { recursive: true });
@@ -563,6 +629,7 @@ test('system startup-maintenance installs OMA managed root when only a sibling c
       OPL_MODULE_REPO_URL_MEDAUTOGRANT: magRemote.remoteRoot,
       OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
       OPL_STATE_DIR: stateRoot,
       OPL_DEVELOPER_MODE_GH_FIXTURE: JSON.stringify({ login: 'ordinary-user' }),
       OPL_GIT_RETRY_ATTEMPTS: '1',
@@ -617,6 +684,7 @@ test('system startup-maintenance installs OMA managed root when only a sibling c
     fs.rmSync(magRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(rcaRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(metaRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(bookForgeRemote.fixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -643,6 +711,9 @@ test('system startup-maintenance does not block all modules on a timed-out modul
     logPath,
   });
   const metaRemote = createOmaGeneratedSurfaceRemote({
+    logPath,
+  });
+  const bookForgeRemote = createBookForgeGeneratedSurfaceRemote({
     logPath,
   });
 
@@ -672,6 +743,7 @@ test('system startup-maintenance does not block all modules on a timed-out modul
       OPL_MODULE_REPO_URL_MEDAUTOGRANT: magRemote.remoteRoot,
       OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
       OPL_MODULE_ACTION_STEP_TIMEOUT_MS: '100',
       OPL_GIT_RETRY_ATTEMPTS: '1',
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
@@ -720,7 +792,7 @@ test('system startup-maintenance does not block all modules on a timed-out modul
     const masTarget = targets.get('medautoscience');
     assert.equal(output.system_action.status, 'manual_required');
     assert.equal(output.system_action.details.summary.manual_required_targets_count, 1);
-    assert.equal(output.system_action.details.summary.completed_targets_count, 3);
+    assert.equal(output.system_action.details.summary.completed_targets_count, 4);
     assert.equal(masTarget?.status, 'manual_required');
     assert.equal(masTarget?.reason, 'module_health_check_blocked');
     assert.equal(masTarget?.result.turnkey.health_check.status, 'blocked');
@@ -735,23 +807,32 @@ test('system startup-maintenance does not block all modules on a timed-out modul
       false,
     );
     assert.equal(targets.get('oplmetaagent')?.status, 'completed');
+    assert.equal(targets.get('oplbookforge')?.status, 'completed');
     assert.equal(output.system_action.details.managed_install_update_receipts.status, 'recorded');
-    assert.equal(output.system_action.details.managed_install_update_receipts.recorded_receipt_count, 3);
+    assert.equal(output.system_action.details.managed_install_update_receipts.recorded_receipt_count, 4);
     assert.equal(
       output.system_action.details.managed_install_update_receipts.receipt_refs.some(
         (ref) => ref.startsWith('opl://managed-install-update/oplmetaagent/install/'),
       ),
       true,
     );
+    assert.equal(
+      output.system_action.details.managed_install_update_receipts.receipt_refs.some(
+        (ref) => ref.startsWith('opl://managed-install-update/oplbookforge/install/'),
+      ),
+      true,
+    );
     assert.equal(output.system_action.details.plugin_cache_freshness.status, 'freshened');
-    assert.equal(output.system_action.details.plugin_cache_freshness.synced_domain_packs_count, 4);
+    assert.equal(output.system_action.details.plugin_cache_freshness.synced_domain_packs_count, 5);
     assert.equal(fs.readFileSync(logPath, 'utf8').includes('opl-meta-agent-health'), true);
+    assert.equal(fs.readFileSync(logPath, 'utf8').includes('opl-bookforge-health'), true);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(masRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(magRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(rcaRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(metaRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(bookForgeRemote.fixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -780,6 +861,9 @@ test('system startup-maintenance syncs explicit developer checkouts and reports 
   const metaRemote = createOmaGeneratedSurfaceRemote({
     logPath,
   });
+  const bookForgeRemote = createBookForgeGeneratedSurfaceRemote({
+    logPath,
+  });
   const masDeveloperCheckout = path.join(homeRoot, 'developer-med-autoscience');
 
   try {
@@ -793,6 +877,7 @@ test('system startup-maintenance syncs explicit developer checkouts and reports 
       OPL_MODULE_REPO_URL_MEDAUTOGRANT: magRemote.remoteRoot,
       OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
       OPL_GIT_RETRY_ATTEMPTS: '1',
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
     }) as {
@@ -824,6 +909,7 @@ test('system startup-maintenance syncs explicit developer checkouts and reports 
       OPL_MODULE_REPO_URL_MEDAUTOGRANT: magRemote.remoteRoot,
       OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
       OPL_GIT_RETRY_ATTEMPTS: '1',
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
     }) as {
@@ -853,10 +939,17 @@ test('system startup-maintenance syncs explicit developer checkouts and reports 
     assert.equal(secondTargets.get('medautogrant')?.action, null);
     assert.equal(secondTargets.get('redcube')?.status, 'completed');
     assert.equal(secondTargets.get('oplmetaagent')?.status, 'completed');
-    assert.equal(secondRun.system_action.details.managed_install_update_receipts.recorded_receipt_count, 2);
+    assert.equal(secondTargets.get('oplbookforge')?.status, 'completed');
+    assert.equal(secondRun.system_action.details.managed_install_update_receipts.recorded_receipt_count, 3);
     assert.equal(
       secondRun.system_action.details.managed_install_update_receipts.receipt_refs.some(
         (ref) => ref.startsWith('opl://managed-install-update/oplmetaagent/update/'),
+      ),
+      true,
+    );
+    assert.equal(
+      secondRun.system_action.details.managed_install_update_receipts.receipt_refs.some(
+        (ref) => ref.startsWith('opl://managed-install-update/oplbookforge/update/'),
       ),
       true,
     );
@@ -866,5 +959,6 @@ test('system startup-maintenance syncs explicit developer checkouts and reports 
     fs.rmSync(magRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(rcaRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(metaRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(bookForgeRemote.fixtureRoot, { recursive: true, force: true });
   }
 });

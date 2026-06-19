@@ -606,8 +606,8 @@ exit 1
     assert.equal(output.app_state.operator.workbench.action_queue.item_limit, 16);
     assert.equal(output.app_state.operator.workbench.action_queue.items.length > 0, true);
     assert.equal(output.app_state.operator.workbench.action_queue.items[0].item_id.startsWith('action:'), true);
-    assert.equal(output.app_state.operator.workbench.domain_lane_map.lanes.length, 4);
-    assert.equal(output.app_state.operator.workbench.task_drilldowns.length, 4);
+    assert.equal(output.app_state.operator.workbench.domain_lane_map.lanes.length, 5);
+    assert.equal(output.app_state.operator.workbench.task_drilldowns.length, 5);
     assert.equal(output.app_state.operator.workbench.safe_action_routes.length > 0, true);
     assert.equal(
       output.app_state.operator.workbench.safe_action_routes.every((entry: AppStateListEntry) =>
@@ -655,6 +655,7 @@ exit 1
         ['medautogrant', 'Med Auto Grant', true],
         ['redcube', 'RedCube AI', true],
         ['oplmetaagent', 'OPL Meta Agent', true],
+        ['oplbookforge', 'OPL BookForge', true],
       ],
     );
     assert.equal(
@@ -668,6 +669,7 @@ exit 1
         ['medautogrant', 'Med Auto Grant', 'direct_click'],
         ['redcube', 'RedCube AI', 'direct_click'],
         ['oplmetaagent', 'OPL Meta Agent', 'direct_click'],
+        ['oplbookforge', 'OPL BookForge', 'direct_click'],
       ],
     );
     assert.equal(

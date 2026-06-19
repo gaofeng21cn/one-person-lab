@@ -6,6 +6,7 @@ const defaultDeveloperModePermissionsFixture = JSON.stringify({
     'gaofeng21cn/one-person-lab': 'admin',
     'gaofeng21cn/med-autoscience': 'write',
     'gaofeng21cn/med-autogrant': 'maintain',
+    'gaofeng21cn/opl-bookforge': 'write',
     'gaofeng21cn/opl-meta-agent': 'write',
     'gaofeng21cn/redcube-ai': 'admin',
   },
@@ -302,6 +303,7 @@ test('system developer-supervisor reports and persists the family developer mode
         'gaofeng21cn/med-autogrant',
         'gaofeng21cn/med-autoscience',
         'gaofeng21cn/one-person-lab',
+        'gaofeng21cn/opl-bookforge',
         'gaofeng21cn/opl-meta-agent',
         'gaofeng21cn/redcube-ai',
       ],
@@ -335,6 +337,7 @@ test('system developer-supervisor reports PR route when Developer Mode lacks dir
       'gaofeng21cn/one-person-lab': 'read',
       'gaofeng21cn/med-autoscience': 'read',
       'gaofeng21cn/med-autogrant': 'none',
+      'gaofeng21cn/opl-bookforge': 'read',
       'gaofeng21cn/opl-meta-agent': 'read',
       'gaofeng21cn/redcube-ai': 'read',
     },
@@ -559,7 +562,7 @@ esac
     assert.equal(output.system_action.developer_mode.effective_state, 'active_direct');
     assert.equal(output.system_action.developer_mode.allowed_route, 'direct_repo_fix');
     assert.equal(output.system_action.developer_mode.repo_authority.status, 'ready');
-    assert.equal(output.system_action.developer_mode.repo_authority.direct_write_repo_count, 5);
+    assert.equal(output.system_action.developer_mode.repo_authority.direct_write_repo_count, 6);
     assert.equal(output.system_action.developer_mode.repo_authority.blocked_repo_count, 0);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });

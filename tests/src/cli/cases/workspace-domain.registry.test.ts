@@ -35,7 +35,7 @@ test('workspace registry commands bind activate and archive project workspaces w
     const catalogOutput = runCli(['workspace', 'list'], {
       OPL_STATE_DIR: stateRoot,
     });
-    assert.equal(catalogOutput.workspace_catalog.projects.length, 5);
+    assert.equal(catalogOutput.workspace_catalog.projects.length, 6);
     const redcubeProject = catalogOutput.workspace_catalog.projects.find(
       (entry: { project_id: string }) => entry.project_id === 'redcube',
     );
