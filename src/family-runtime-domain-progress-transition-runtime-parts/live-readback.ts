@@ -7,6 +7,18 @@ import {
   rebuildDomainProgressTransitionReadModel,
 } from '../family-runtime-domain-progress-transition-runtime.ts';
 
+type LiveReadbackProjectionMetadata = Record<string, unknown> & {
+  authority: false;
+  projection_role: 'complete_runtime_readback' | 'fail_closed_runtime_readback';
+  read_model_projection_consumable: boolean;
+  runtime_readback_status: string;
+  transaction_complete: boolean;
+  fail_closed?: boolean;
+  fail_closed_reason?: string;
+  outcome_kind?: string | null;
+  source_read_model_projection_metadata?: Record<string, unknown>;
+};
+
 function optionalString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
@@ -33,6 +45,41 @@ function entryByKindAndTransaction(
     optionalString(entry.entry_kind) === entryKind
     && logEntryTransactionId(entry) === transactionId
   );
+}
+
+function liveReadbackProjectionMetadata(input: {
+  readModelProjectionMetadata: unknown;
+  runtimeReadbackStatus: string;
+  transactionComplete: boolean;
+  failClosedReason: string | null;
+  latestEventId: string | null;
+}): LiveReadbackProjectionMetadata {
+  const readModelProjectionMetadata = isRecord(input.readModelProjectionMetadata)
+    ? input.readModelProjectionMetadata
+    : {};
+  if (input.transactionComplete) {
+    return {
+      ...readModelProjectionMetadata,
+      authority: false,
+      projection_role: 'complete_runtime_readback',
+      read_model_projection_consumable: true,
+      runtime_readback_status: input.runtimeReadbackStatus,
+      transaction_complete: true,
+    };
+  }
+  return {
+    surface_kind: 'opl_domain_progress_transition_runtime_live_readback_projection_metadata',
+    runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+    authority: false,
+    projection_role: 'fail_closed_runtime_readback',
+    read_model_projection_consumable: false,
+    runtime_readback_status: input.runtimeReadbackStatus,
+    transaction_complete: false,
+    fail_closed: Boolean(input.latestEventId),
+    outcome_kind: input.latestEventId ? 'blocked_incomplete_transaction' : null,
+    ...(input.failClosedReason ? { fail_closed_reason: input.failClosedReason } : {}),
+    source_read_model_projection_metadata: readModelProjectionMetadata,
+  };
 }
 
 export function readDomainProgressTransitionRuntimeReadbackJsonl(input: {
@@ -105,6 +152,13 @@ export function readDomainProgressTransitionRuntimeReadbackJsonl(input: {
   const failClosedReason = runtimeReadbackStatus === 'incomplete_transaction'
     ? 'domain_progress_transition_readback_incomplete_transaction'
     : null;
+  const projectionMetadata = liveReadbackProjectionMetadata({
+    readModelProjectionMetadata: readModelReadback.projection_metadata,
+    runtimeReadbackStatus,
+    transactionComplete,
+    failClosedReason,
+    latestEventId,
+  });
 
   return {
     surface_kind: 'opl_domain_progress_transition_runtime_live_readback',
@@ -133,7 +187,7 @@ export function readDomainProgressTransitionRuntimeReadbackJsonl(input: {
         fail_closed: Boolean(latestEventId),
         outcome_kind: latestEventId ? 'blocked_incomplete_transaction' : null,
       },
-    projection_metadata: readModelReadback.projection_metadata,
+    projection_metadata: projectionMetadata,
     read_model_readback: readModelReadback,
     idempotency_readback: idempotencyReadback,
     latest_transaction_readback: {

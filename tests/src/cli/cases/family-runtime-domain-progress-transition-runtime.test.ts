@@ -389,6 +389,10 @@ test('DomainProgressTransitionRuntime live readback rebuilds complete physical t
     assert.equal(readback.exactly_one_outcome.outcome_kind, 'provider_admission_accepted');
     assert.equal(readback.exactly_one_outcome.fail_closed, false);
     assert.equal(readback.projection_metadata.authority, false);
+    assert.equal(readback.projection_metadata.projection_role, 'complete_runtime_readback');
+    assert.equal(readback.projection_metadata.read_model_projection_consumable, true);
+    assert.equal(readback.projection_metadata.runtime_readback_status, 'complete_transaction');
+    assert.equal(readback.projection_metadata.transaction_complete, true);
     assert.equal(readback.projection_metadata.derived_from_event_id, append.result.transition_event.event_id);
     assert.equal(readback.idempotency_readback?.found, true);
     assert.equal(readback.idempotency_readback?.same_transaction_event_and_outbox, true);
@@ -471,6 +475,19 @@ test('DomainProgressTransitionRuntime live readback fail-closes StageRun identit
     assert.equal(readback.causality.transaction_complete, false);
     assert.equal(readback.exactly_one_outcome.fail_closed, true);
     assert.equal(readback.exactly_one_outcome.outcome_kind, 'blocked_incomplete_transaction');
+    assert.equal(readback.projection_metadata.projection_role, 'fail_closed_runtime_readback');
+    assert.equal(readback.projection_metadata.read_model_projection_consumable, false);
+    assert.equal(readback.projection_metadata.runtime_readback_status, 'incomplete_transaction');
+    assert.equal(readback.projection_metadata.transaction_complete, false);
+    assert.equal(readback.projection_metadata.outcome_kind, 'blocked_incomplete_transaction');
+    assert.equal(
+      readback.projection_metadata.fail_closed_reason,
+      'domain_progress_transition_readback_incomplete_transaction',
+    );
+    assert.equal(
+      record(readback.projection_metadata.source_read_model_projection_metadata).authority,
+      false,
+    );
     assert.equal(readback.latest_transaction_readback.same_transaction_event_and_outbox, true);
     assert.equal(readback.latest_transaction_readback.same_stage_run_identity, false);
     assert.equal(
@@ -532,6 +549,11 @@ test('DomainProgressTransitionRuntime live readback fail-closes outbox identity 
     assert.equal(readback.runtime_readback_status, 'incomplete_transaction');
     assert.equal(readback.transaction_complete, false);
     assert.equal(readback.causality.same_transaction_event_and_outbox, false);
+    assert.equal(readback.projection_metadata.projection_role, 'fail_closed_runtime_readback');
+    assert.equal(readback.projection_metadata.read_model_projection_consumable, false);
+    assert.equal(readback.projection_metadata.runtime_readback_status, 'incomplete_transaction');
+    assert.equal(readback.projection_metadata.transaction_complete, false);
+    assert.equal(readback.projection_metadata.outcome_kind, 'blocked_incomplete_transaction');
     assert.equal(readback.latest_transaction_readback.same_transaction_event_and_outbox, false);
     assert.equal(readback.latest_transaction_readback.outbox_log_entry_item_id, 'dpto_physical_outbox_identity_mismatch');
     assert.equal(readback.latest_transaction_readback.outbox_payload_item_id, result.transactional_outbox_item.outbox_item_id);
@@ -587,6 +609,15 @@ test('DomainProgressTransitionRuntime live readback fail-closes incomplete physi
     assert.equal(readback.exactly_one_outcome.outcome_kind, 'blocked_incomplete_transaction');
     assert.equal(readback.authority_boundary.authority, false);
     assert.equal(readback.projection_metadata.authority, false);
+    assert.equal(readback.projection_metadata.projection_role, 'fail_closed_runtime_readback');
+    assert.equal(readback.projection_metadata.read_model_projection_consumable, false);
+    assert.equal(readback.projection_metadata.runtime_readback_status, 'incomplete_transaction');
+    assert.equal(readback.projection_metadata.transaction_complete, false);
+    assert.equal(readback.projection_metadata.outcome_kind, 'blocked_incomplete_transaction');
+    assert.equal(
+      readback.projection_metadata.fail_closed_reason,
+      'domain_progress_transition_readback_incomplete_transaction',
+    );
     assert.equal(readback.idempotency_readback?.found, false);
     assert.equal(readback.latest_transaction_readback.command_present, true);
     assert.equal(readback.latest_transaction_readback.event_present, true);

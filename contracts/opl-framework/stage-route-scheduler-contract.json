@@ -249,6 +249,9 @@
           ],
           "incomplete_transaction_fail_closed_reason": "domain_progress_transition_readback_incomplete_transaction",
           "incomplete_transaction_outcome_kind": "blocked_incomplete_transaction",
+          "projection_metadata_complete_role": "complete_runtime_readback",
+          "projection_metadata_incomplete_role": "fail_closed_runtime_readback",
+          "projection_metadata_consumable_only_when_transaction_complete": true,
           "authority_boundary": "opl_runtime_primitive_readback_only_no_domain_truth_owner_receipt_or_typed_blocker"
         },
         "focused_test": "tests/src/cli/cases/family-runtime-domain-progress-transition-runtime.test.ts"
