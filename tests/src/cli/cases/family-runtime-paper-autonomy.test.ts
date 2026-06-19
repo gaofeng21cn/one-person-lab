@@ -257,6 +257,147 @@ test('family-runtime paper-autonomy supervisor decide appends OPL decision and r
   }
 });
 
+test('family-runtime intake consumes MAS OPL supervisor decision requests into OPL readback ledgers', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-autonomy-supervisor-intake-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-autonomy-supervisor-intake-export-'));
+  const exportPath = path.join(fixtureRoot, 'export');
+  const currentIdentity = paperAutonomyIdentity();
+  const obligationId = 'paper-recovery::DM003::run_quality_repair_batch::medical_prose_write_repair::typed_blocker';
+  writeNodeScript(exportPath, `
+process.stdout.write(JSON.stringify({
+  surface_kind: 'mas_family_domain_handler_export',
+  pending_family_tasks: [
+    {
+      domain_id: 'medautoscience',
+      task_kind: 'paper_autonomy/supervisor-decision',
+      priority: 75,
+      source: 'mas-domain-handler-export',
+      dedupe_key: 'mas:dm-cvd:DM003:opl-supervisor-decision:fingerprint',
+      dispatch_owner: 'one-person-lab',
+      queue_owner: 'one-person-lab',
+      domain_truth_owner: 'med-autoscience',
+      reason: 'opl_supervisor_decision_readback_required',
+      source_refs: [
+        { role: 'typed_blocker', ref: 'mas://DM003/typed-blockers/current.json', exists: true },
+      ],
+      payload: {
+        profile: '/tmp/dm-cvd.local.toml',
+        study_id: 'DM003',
+        source_fingerprint: 'source-fingerprint-dm003',
+        continuation_reason: 'opl_supervisor_decision_readback_required',
+        authority_boundary: 'mas_request_projection_only_opl_supervisor_decision_engine',
+        paper_autonomy_supervisor_decision_request: {
+          surface_kind: 'mas_opl_paper_autonomy_supervisor_decision_request',
+          schema_version: 1,
+          request_role: 'mas_policy_projection_to_opl_supervisor_decision_engine',
+          study_id: 'DM003',
+          quest_id: 'DM003',
+          obligation_id: ${jsString(obligationId)},
+          paper_autonomy_obligation_identity: {
+            study_id: 'DM003',
+            quest_id: 'DM003',
+            stage_id: 'publication_supervision',
+            action_type: 'run_quality_repair_batch',
+            work_unit_id: 'medical_prose_write_repair',
+            work_unit_fingerprint: 'sha256:dm003-current-work-unit',
+            route_identity_key: 'route:dm003:current-owner-delta',
+            attempt_idempotency_key: 'attempt:dm003:paper-autonomy:1',
+          },
+          current_identity: ${JSON.stringify(currentIdentity)},
+          requested_decision_readback_shape: 'opl_paper_autonomy_supervisor_decision_readback',
+          requested_opl_command: 'opl family-runtime paper-autonomy supervisor decide',
+          recommended_decision_evidence: {
+            typed_blocker_ref: 'mas://DM003/typed-blockers/stable.json',
+            budget_or_missing_evidence_ref: 'opl://runway/dm003/non-advancing-apply.json',
+            evidence_refs: [
+              'mas://DM003/typed-blockers/current.json',
+              'opl://runway/dm003/non-advancing-apply.json',
+            ],
+            observability_refs: [
+              'study_progress.paper_recovery_state.supervisor_decision',
+              'study_progress.current_work_unit',
+            ],
+          },
+          authority_boundary: {
+            request_owner: 'med-autoscience',
+            decision_engine_owner: 'one-person-lab',
+            recovery_obligation_store_owner: 'one-person-lab',
+            decision_authority: false,
+            mas_can_run_supervisor_decision_engine: false,
+            mas_can_store_recovery_obligation: false,
+            mas_can_create_opl_command_event_or_outbox: false,
+            opl_can_write_mas_truth: false,
+            opl_can_create_domain_owner_receipt: false,
+            opl_can_create_domain_typed_blocker: false,
+          },
+        },
+      },
+    },
+  ],
+}) + '\\n');
+`);
+
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
+    });
+    const first = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+      '--source',
+      'test-supervisor-decision-request',
+    ], env).family_runtime_intake;
+    const queue = runCli(['family-runtime', 'queue', 'list'], env).family_runtime_queue;
+    const consumed = first.exports[0].paper_autonomy_supervisor_decision_request_consumed[0];
+    const obligationLedger = consumed.ledger_paths.obligation_ledger_path;
+    const decisionLedger = consumed.ledger_paths.decision_ledger_path;
+    const obligationEntries = fs.readFileSync(obligationLedger, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+    const decisionEntries = fs.readFileSync(decisionLedger, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+
+    assert.equal(first.enqueued_count, 0);
+    assert.equal(first.blocked_count, 0);
+    assert.equal(first.paper_autonomy_supervisor_decision_request_consumed_count, 1);
+    assert.equal(first.exports[0].paper_autonomy_supervisor_decision_request_consumed_count, 1);
+    assert.equal(queue.tasks.length, 0);
+    assert.equal(consumed.status, 'consumed');
+    assert.equal(consumed.obligation_id, obligationId);
+    assert.equal(consumed.obligation_appended, true);
+    assert.equal(consumed.decision_appended, true);
+    assert.equal(consumed.decision_readback.surface_kind, 'opl_paper_autonomy_supervisor_decision_readback');
+    assert.equal(consumed.decision_readback.decision_kind, 'stop_with_stable_typed_blocker');
+    assert.equal(consumed.decision_readback.current_identity.stage_run_id, currentIdentity.stage_run_id);
+    assert.equal(consumed.authority_boundary.request_is_provider_admission, false);
+    assert.equal(consumed.authority_boundary.opl_can_write_mas_truth, false);
+    assert.equal(consumed.authority_boundary.opl_can_create_domain_owner_receipt, false);
+    assert.equal(consumed.authority_boundary.opl_can_create_domain_typed_blocker, false);
+    assert.equal(obligationEntries.length, 1);
+    assert.equal(obligationEntries[0].surface_kind, 'opl_paper_autonomy_recovery_obligation_store_entry');
+    assert.equal(obligationEntries[0].obligation_id, obligationId);
+    assert.equal(decisionEntries.length, 1);
+    assert.equal(decisionEntries[0].surface_kind, 'opl_paper_autonomy_supervisor_decision_ledger_entry');
+    assert.equal(decisionEntries[0].decision.decision_kind, 'stop_with_stable_typed_blocker');
+
+    const repeated = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+      '--source',
+      'test-supervisor-decision-request-repeat',
+    ], env).family_runtime_intake;
+    assert.equal(repeated.enqueued_count, 0);
+    assert.equal(repeated.paper_autonomy_supervisor_decision_request_consumed_count, 1);
+    assert.equal(repeated.exports[0].paper_autonomy_supervisor_decision_request_consumed[0].status, 'idempotent_noop');
+    assert.equal(fs.readFileSync(obligationLedger, 'utf8').trim().split('\n').length, 1);
+    assert.equal(fs.readFileSync(decisionLedger, 'utf8').trim().split('\n').length, 1);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime hydrates MAS provider-hosted guarded apply tasks without truth authority', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-guarded-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-guarded-export-'));

@@ -3,6 +3,38 @@ import type { FamilyRuntimeCommandInput } from '../family-runtime-command.ts';
 import type { PaperAutonomyStageRunIdentity } from '../family-runtime-paper-autonomy.ts';
 import { parsePayload, parsePayloadFile } from './shared.ts';
 
+export type PaperAutonomySupervisorCommandInput =
+  | {
+    mode: 'paper_autonomy_supervisor_readback';
+    input: {
+      obligation_ledger_path: string;
+      decision_ledger_path: string;
+      obligation_id: string;
+      current_identity: PaperAutonomyStageRunIdentity;
+    };
+  }
+  | {
+    mode: 'paper_autonomy_supervisor_decide';
+    input: {
+      obligation_ledger_path: string;
+      decision_ledger_path: string;
+      obligation_id: string;
+      current_identity: PaperAutonomyStageRunIdentity;
+      current_owner_delta_ref?: string;
+      provider_admission_identity_ref?: string;
+      terminal_closeout_ref?: string;
+      recovery_action_ref?: string;
+      no_progress_or_inconsistency_ref?: string;
+      human_gate_ref?: string;
+      resume_token?: string;
+      typed_blocker_ref?: string;
+      owner_receipt_ref?: string;
+      budget_or_missing_evidence_ref?: string;
+      evidence_refs: string[];
+      observability_refs: string[];
+    };
+  };
+
 export function parsePaperAutonomyArgs(rest: string[]): FamilyRuntimeCommandInput | null {
   if (rest[0] !== 'supervisor' || (rest[1] !== 'readback' && rest[1] !== 'decide')) {
     return null;

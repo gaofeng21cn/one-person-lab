@@ -30,6 +30,9 @@ import {
   publishCurrentControlProviderAdmissionReadback,
 } from './family-runtime-domain-intake-parts/current-control-provider-admission.ts';
 import {
+  consumePaperAutonomySupervisorDecisionRequests,
+} from './family-runtime-domain-intake-parts/paper-autonomy-supervisor-decision.ts';
+import {
   reconcileCurrentControlExecutableOwners,
   suppressExistingStaleDefaultExecutorRowsForBlockedCurrentControl,
   suppressStaleDefaultExecutorInputs,
@@ -234,6 +237,7 @@ export function hydrateDomainTasks(
   let blockedCount = 0;
   let filteredCount = 0;
   let suppressedCount = 0;
+  let paperAutonomySupervisorDecisionConsumedCount = 0;
   for (const domainId of domains) {
     const command = exportCommandForDomain(domainId, paths, input.domainProfiles);
     if (!command) {
@@ -277,18 +281,31 @@ export function hydrateDomainTasks(
       command,
       input.taskScope,
     );
+    const supervisorDecisionRequests = consumePaperAutonomySupervisorDecisionRequests({
+      inputs,
+      paths,
+    });
     const existingSuppressedCount = suppressExistingStaleDefaultExecutorRowsForBlockedCurrentControl(
       db,
       rowsForCurrentControlExistingRowSuppression(db, input.taskScope),
-      blocked,
+      [...blocked, ...supervisorDecisionRequests.blocked],
       input.source,
     );
-    blockedCount += blocked.length;
+    blockedCount += blocked.length + supervisorDecisionRequests.blocked.length;
+    paperAutonomySupervisorDecisionConsumedCount += supervisorDecisionRequests.consumed.length;
     filteredCount += filtered_count;
     suppressedCount += suppressed_count + existingSuppressedCount;
     const acceptedTasks = [];
     const currentControlReadbackPublications = [];
-    for (const taskInput of inputs) {
+    for (const consumed of supervisorDecisionRequests.consumed) {
+      insertEvent(db, {
+        domainId,
+        eventType: 'paper_autonomy_supervisor_decision_request_consumed',
+        source: input.source,
+        payload: consumed,
+      });
+    }
+    for (const taskInput of supervisorDecisionRequests.inputs) {
       const resultPayload = enqueueTask(db, taskInput);
       acceptedTasks.push(resultPayload);
       const published = publishCurrentControlProviderAdmissionReadback({
@@ -321,10 +338,12 @@ export function hydrateDomainTasks(
       enqueued_count: acceptedTasks.filter((task) => task.accepted).length,
       requeued_count: acceptedTasks.filter((task) => task.requeued_from_terminal).length,
       idempotent_noop_count: acceptedTasks.filter((task) => task.idempotent_noop).length,
-      blocked_count: blocked.length,
+      blocked_count: blocked.length + supervisorDecisionRequests.blocked.length,
+      paper_autonomy_supervisor_decision_request_consumed_count: supervisorDecisionRequests.consumed.length,
+      paper_autonomy_supervisor_decision_request_consumed: supervisorDecisionRequests.consumed,
       current_control_readback_publication_count: currentControlReadbackPublications.length,
       current_control_readback_publications: currentControlReadbackPublications,
-      blocked,
+      blocked: [...blocked, ...supervisorDecisionRequests.blocked],
     });
   }
   insertEvent(db, {
@@ -337,6 +356,7 @@ export function hydrateDomainTasks(
       blocked_count: blockedCount,
       filtered_count: filteredCount,
       suppressed_count: suppressedCount,
+      paper_autonomy_supervisor_decision_request_consumed_count: paperAutonomySupervisorDecisionConsumedCount,
       task_scope: input.taskScope ?? null,
     },
   });
@@ -349,6 +369,7 @@ export function hydrateDomainTasks(
     blocked_count: blockedCount,
     filtered_count: filteredCount,
     suppressed_count: suppressedCount,
+    paper_autonomy_supervisor_decision_request_consumed_count: paperAutonomySupervisorDecisionConsumedCount,
     exports,
   };
 }
