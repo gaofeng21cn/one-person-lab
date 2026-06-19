@@ -329,6 +329,165 @@ test('runtime app-operator-drilldown reconciles MAS refs-only payload with OPL l
   }
 });
 
+test('runtime app-operator-drilldown projects OPL NonAdvancingApply current-control readback without progress authority', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-non-advancing-current-control-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-current-control-workspace-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const masManifest = structuredClone(loadFamilyManifestFixtures().medautoscience);
+  const studyId = '003-dpcc-primary-care-phenotype-treatment-gap';
+  const actionType = 'run_quality_repair_batch';
+  const workUnitId = 'medical_prose_write_repair';
+  const workUnitFingerprint = 'publication-blockers::0915410f804b3697';
+  const currentControlPath = path.join(
+    workspaceRoot,
+    'runtime',
+    'artifacts',
+    'supervision',
+    'opl_current_control_state',
+    'latest.json',
+  );
+
+  masManifest.workspace_locator = {
+    ...((masManifest.workspace_locator as Record<string, unknown>) ?? {}),
+    workspace_root: workspaceRoot,
+  };
+  masManifest.progress_projection = {
+    ...((masManifest.progress_projection as Record<string, unknown>) ?? {}),
+    domain_projection: {
+      surface_kind: 'mas_opl_runtime_workbench_projection',
+      source_refs: ['mas://runtime/workbench/latest.json'],
+      freshness: {
+        status: 'current',
+        source_ref: 'mas://runtime/workbench/freshness.json',
+      },
+    },
+  };
+  fs.mkdirSync(path.dirname(currentControlPath), { recursive: true });
+  fs.writeFileSync(currentControlPath, `${JSON.stringify({
+    surface: 'opl_current_control_state',
+    current_control_refresh_source: 'opl_transition_runtime_readback_non_advancing_apply',
+    provider_admission_pending_count: 0,
+    transition_request_pending_count: 0,
+    current_executable_owner_action: null,
+    studies: [
+      {
+        study_id: studyId,
+        current_control_action: {
+          status: 'transition_non_advancing_apply_recorded',
+          reason: 'opl_transition_request_missing_for_authorized_stage_packet',
+          provider_admission_requires_opl_runtime_result: false,
+          provider_completion_is_domain_completion: false,
+          provider_completion_is_domain_ready: false,
+          paper_progress_delta: false,
+          non_advancing_apply: true,
+        },
+        provider_admission_pending_count: 0,
+        transition_request_pending_count: 0,
+      },
+    ],
+    domain_progress_transition_non_advancing_apply_readback: {
+      surface_kind: 'opl_current_control_transition_non_advancing_apply_readback',
+      status: 'transition_non_advancing_apply_recorded',
+      reason: 'opl_transition_request_missing_for_authorized_stage_packet',
+      study_id: studyId,
+      action_type: actionType,
+      work_unit_id: workUnitId,
+      work_unit_fingerprint: workUnitFingerprint,
+      runtime_result: {
+        exactly_one_outcome: {
+          non_advancing_apply: true,
+        },
+      },
+      runtime_live_readback: {
+        runtime_readback_status: 'complete_transaction',
+        transaction_complete: true,
+        replay_audit: {
+          replay_status: 'replay_ready',
+          read_model_projection_consumable: true,
+        },
+      },
+      authority_boundary: {
+        opl_can_write_mas_truth: false,
+        opl_can_create_domain_owner_receipt: false,
+        opl_can_create_domain_typed_blocker: false,
+        provider_completion_is_domain_completion: false,
+        provider_completion_is_domain_ready: false,
+        paper_progress_delta: false,
+      },
+    },
+    domain_progress_transition_projection_metadata: {
+      surface_kind: 'opl_current_control_domain_progress_transition_projection_metadata',
+      projection_role: 'non_advancing_apply_current_transition_readback',
+      runtime_readback_status: 'complete_transaction',
+      transaction_complete: true,
+      provider_admission_allowed: false,
+      current_executable_owner_action_allowed: false,
+      paper_progress_delta: false,
+      provider_completion_is_domain_completion: false,
+      provider_completion_is_domain_ready: false,
+      non_advancing_apply: true,
+      replay_audit_status: 'replay_ready',
+      replay_audit_consumable: true,
+    },
+  }, null, 2)}\n`, 'utf8');
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(masManifest),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    const output = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const drilldown = output.app_operator_drilldown;
+    const projection = drilldown.current_control_state;
+    const readbackState = projection.states[0];
+
+    assert.equal(projection.summary.current_control_state_count, 1);
+    assert.equal(projection.summary.non_advancing_apply_readback_count, 1);
+    assert.equal(projection.summary.non_advancing_apply_consumable_count, 1);
+    assert.equal(projection.summary.non_advancing_apply_provider_admission_allowed_count, 0);
+    assert.equal(
+      projection.summary.non_advancing_apply_current_executable_owner_action_allowed_count,
+      0,
+    );
+    assert.equal(projection.summary.non_advancing_apply_paper_progress_delta_count, 0);
+    assert.equal(readbackState.reconciliation_status, 'transition_non_advancing_apply_recorded');
+    assert.equal(readbackState.non_advancing_apply, true);
+    assert.equal(readbackState.provider_admission_allowed, false);
+    assert.equal(readbackState.current_executable_owner_action_allowed, false);
+    assert.equal(readbackState.paper_progress_delta, false);
+    assert.equal(
+      readbackState.domain_progress_transition_projection_metadata.projection_role,
+      'non_advancing_apply_current_transition_readback',
+    );
+    assert.equal(
+      readbackState.domain_progress_transition_non_advancing_apply_readback.runtime_live_readback
+        .runtime_readback_status,
+      'complete_transaction',
+    );
+    assert.equal(projection.authority_boundary.can_execute_domain_action, false);
+    assert.equal(projection.authority_boundary.can_claim_domain_ready, false);
+    assert.equal(projection.authority_boundary.can_claim_publication_ready, false);
+    assert.equal(projection.authority_boundary.can_claim_artifact_ready, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('runtime app-operator-drilldown projects lifecycle handoff apply attempts for default callers', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-lifecycle-handoff-'));
   try {

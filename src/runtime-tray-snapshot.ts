@@ -456,6 +456,52 @@ function uniqueMasWorkspaces(workspaces: MasWorkspaceProjectionRef[]) {
   });
 }
 
+function currentControlReadbackPath(workspaceRoot: string) {
+  return path.join(
+    workspaceRoot,
+    'runtime',
+    'artifacts',
+    'supervision',
+    'opl_current_control_state',
+    'latest.json',
+  );
+}
+
+function buildMasCurrentControlReadbacks(workspaces: MasWorkspaceProjectionRef[]): JsonRecord[] {
+  return uniqueMasWorkspaces(workspaces).flatMap((workspace): JsonRecord[] => {
+      const readbackPath = currentControlReadbackPath(workspace.workspace_root);
+      const payload = readJsonRecord(readbackPath);
+      if (!payload) {
+        return [];
+      }
+      return [{
+        ...payload,
+        domain_id: 'medautoscience',
+        workspace_root: workspace.workspace_root,
+        source_ref: readbackPath,
+        source_refs: [
+          fileSourceRef(
+            readbackPath,
+            'opl_current_control_state',
+            'runtime/artifacts/supervision/opl_current_control_state/latest.json',
+          ),
+        ],
+        authority_boundary: {
+          ...nestedRecord(payload, 'authority_boundary'),
+          projection_owner: 'one-person-lab',
+          domain_truth_owner: 'med-autoscience',
+          reads_domain_latest_or_dispatch_latest: false,
+          can_execute_domain_action: false,
+          can_write_domain_truth: false,
+          can_create_owner_receipt: false,
+          can_create_typed_blocker: false,
+          provider_completion_is_domain_ready: false,
+          paper_progress_delta: false,
+        },
+      }];
+    });
+}
+
 function immediateStudyRoots(workspaceRoot: string) {
   const studiesDir = path.join(workspaceRoot, 'studies');
   try {
@@ -758,6 +804,8 @@ export async function buildRuntimeTraySnapshot(
   const providerContinuousProof = buildRuntimeProviderContinuousProof();
   const nativeHelperExecutionEnvelope = buildNativeHelperExecutionEnvelope();
   const domainProjectionIngestion = buildDomainProjectionIngestion(domainManifests.projects);
+  const masWorkspaces = masWorkspaceRefsFromDomainManifests(domainManifests.projects);
+  const currentControlReadbacks = buildMasCurrentControlReadbacks(masWorkspaces);
   const masStudyProjection = await buildMasStudyProjection(domainManifests);
   const currentWorkUnitProjections = masStudyProjection.items
     .map((item) => item.current_work_unit)
@@ -770,6 +818,7 @@ export async function buildRuntimeTraySnapshot(
     domainManifestProjects: domainManifests.projects,
     functionalPrivatizationProjects: functionalPrivatizationDomainManifests.projects,
     currentWorkUnitProjections,
+    currentControlReadbacks,
     detailLevel: options.appOperatorDrilldownDetailLevel,
   });
   const domainItems = domainManifests.projects
