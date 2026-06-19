@@ -792,6 +792,13 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.match(generatedBookForgeSkill, /# OPL BookForge/);
     assert.match(generatedBookForgeSkill, /shape-storyline/);
     assert.match(generatedBookForgeSkill, /materialize-book/);
+    assert.match(generatedBookForgeSkill, /reference-draft absorption/);
+    assert.match(generatedBookForgeSkill, /stronger reference draft/);
+    assert.match(generatedBookForgeSkill, /reader-entry plans/);
+    assert.match(generatedBookForgeSkill, /project hygiene scan/);
+    assert.match(generatedBookForgeSkill, /tombstone refs/);
+    assert.match(generatedBookForgeSkill, /教育实验观察窗口/);
+    assert.match(generatedBookForgeSkill, /观察它如何强调/);
     assert.equal(output.skill_sync.codex_plugin_registry.surface_id, 'opl_codex_plugin_registry');
     assert.equal(output.skill_sync.codex_plugin_registry.summary.registered, 5);
     assert.equal(output.skill_sync.codex_plugin_registry.summary.removed_standalone_mcp_servers, 1);
