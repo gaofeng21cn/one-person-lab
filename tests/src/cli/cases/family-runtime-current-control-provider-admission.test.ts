@@ -22,6 +22,7 @@ import {
   writeJsonEmitterScript,
 } from './family-runtime-current-control-provider-admission-cases/shared.ts';
 import { deriveCurrentControlStateForTask } from '../../../../src/family-runtime-current-control-state.ts';
+import { publishCurrentControlProviderAdmissionReadback } from '../../../../src/family-runtime-domain-intake-parts/current-control-provider-admission.ts';
 
 test('DomainProgressTransitionRuntime first slice stays inside existing brand-module partition', () => {
   const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..', '..', '..');
@@ -804,6 +805,108 @@ test('family-runtime intake promotes MAS transition request-only task into OPL r
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime refuses to publish provider admission readback from incomplete transition runtime transaction', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-incomplete-transition-readback-'));
+  const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  const currentControlPath = path.join(
+    workspaceRoot,
+    'runtime',
+    'artifacts',
+    'supervision',
+    'opl_current_control_state',
+    'latest.json',
+  );
+  const incompleteReadback = {
+    surface_kind: 'opl_domain_progress_transition_runtime_live_readback',
+    runtime_id: 'opl_domain_progress_transition_runtime',
+    runtime_readback_status: 'incomplete_transaction',
+    transaction_complete: false,
+    causality: {
+      same_transaction_event_and_outbox: false,
+      runtime_readback_status: 'incomplete_transaction',
+      transaction_complete: false,
+      fail_closed_reason: 'domain_progress_transition_readback_incomplete_transaction',
+    },
+    exactly_one_outcome: {
+      selected: false,
+      exactly_one_transition: false,
+      stable_outcome: false,
+      fail_closed: true,
+      outcome_kind: 'blocked_incomplete_transaction',
+    },
+    latest_transaction_readback: {
+      transaction_id: 'dptx:incomplete',
+      command_present: true,
+      event_present: true,
+      outbox_item_present: false,
+      same_transaction_event_and_outbox: false,
+      same_stage_run_identity: false,
+    },
+  };
+  const payload = {
+    study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+    quest_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+    action_type: 'run_quality_repair_batch',
+    work_unit_id: 'medical_prose_write_repair',
+    work_unit_fingerprint: 'publication-blockers::incomplete-readback',
+    action_fingerprint: 'publication-blockers::incomplete-readback',
+    source_fingerprint: 'truth-snapshot::incomplete-readback',
+    route_identity_key: 'paper-policy-request:incomplete-readback',
+    attempt_idempotency_key: 'paper-policy-request:incomplete-readback',
+    next_executable_owner: 'write',
+    owner_route_current: true,
+    provider_completion_is_domain_completion: false,
+    opl_domain_progress_transition_runtime_live_readback: incompleteReadback,
+    provider_admission_identity: {
+      status: 'provider_admission_pending',
+      route_identity_key: 'paper-policy-request:incomplete-readback',
+      attempt_idempotency_key: 'paper-policy-request:incomplete-readback',
+      provider_completion_is_domain_completion: false,
+      opl_domain_progress_transition_runtime_live_readback: incompleteReadback,
+    },
+  };
+  try {
+    fs.mkdirSync(path.dirname(currentControlPath), { recursive: true });
+    fs.writeFileSync(currentControlPath, JSON.stringify({
+      surface: 'opl_current_control_state',
+      transition_request_pending_count: 1,
+      provider_admission_pending_count: 0,
+      provider_admission_candidates: [],
+    }, null, 2), 'utf8');
+
+    const published = publishCurrentControlProviderAdmissionReadback({
+      output: {
+        workspace: {
+          workspace_root: workspaceRoot,
+          workspace_exists: true,
+        },
+      },
+      taskInput: {
+        domainId: 'medautoscience',
+        taskKind: 'domain_owner/default-executor-dispatch',
+        source: 'opl-current-control-transition-request',
+        priority: 95,
+        dedupeKey: 'mas:dm-cvd:003:transition-request:incomplete-readback',
+        requiresApproval: false,
+        payload,
+      },
+      taskResult: {
+        accepted: true,
+        task: { payload },
+      },
+    });
+    const currentControl = JSON.parse(fs.readFileSync(currentControlPath, 'utf8'));
+
+    assert.equal(published.published, false);
+    assert.equal(published.reason, 'transition_runtime_live_readback_incomplete');
+    assert.equal(currentControl.provider_admission_pending_count, 0);
+    assert.equal(currentControl.transition_request_pending_count, 1);
+    assert.deepEqual(currentControl.provider_admission_candidates, []);
+  } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
