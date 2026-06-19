@@ -3,6 +3,7 @@ import {
   DatabaseSync,
   createQueueTables,
   currentControlAdmissionPayload,
+  currentControlCommandOutboxRecord,
   enqueueTask,
   ensureProviderHostedStageAttempt,
   familyRuntimeEnv,
@@ -162,6 +163,157 @@ test('family-runtime rehydrates succeeded MAS current-control admission when pro
       'mas_current_control_provider_admission_still_required_after_succeeded',
     );
     assert.equal(eventPayload.currentness_identity.work_unit_id, 'publication_gate_replay');
+    assert.equal(eventPayload.authority_boundary.provider_completion_is_domain_ready, false);
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime requeues succeeded MAS admission when complete command readback arrives after transport-only row', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    createQueueTables(db);
+    const taskId = 'task-mas-current-control-transport-only-succeeded';
+    const dedupeKey = 'paper-policy-request:1a379264039c75d0e9cfd8f5';
+    const workUnitFingerprint = 'publication-blockers::0915410f804b3697';
+    const stagePacketRef = [
+      'studies',
+      '003-dpcc-primary-care-phenotype-treatment-gap',
+      'immutable',
+      'run_quality_repair_batch',
+      '33abc53e0c18295f5fa03738.json',
+    ].join('/');
+    const existingPayload: Record<string, any> = {
+      profile: '/tmp/dm-cvd.profile.toml',
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      quest_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      action_type: 'run_quality_repair_batch',
+      dispatch_authority: 'consumer_default_executor_dispatch',
+      next_executable_owner: 'write',
+      executor_kind: 'codex_cli_default',
+      dispatch_ref:
+        'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json',
+      stage_packet_ref: stagePacketRef,
+      checkpoint_refs: [stagePacketRef],
+      stage_packet_refs: [stagePacketRef],
+      authority_boundary: 'mas_default_executor_dispatch_request_only',
+      workspace_root: '/tmp/dm-cvd-workspace',
+      source_fingerprint: 'publication-blockers::0915410f804b3697',
+      route_identity_key: dedupeKey,
+      attempt_idempotency_key: dedupeKey,
+      work_unit_id: 'medical_prose_write_repair',
+      work_unit_fingerprint: workUnitFingerprint,
+      action_fingerprint: workUnitFingerprint,
+      provider_attempt_or_lease_required: true,
+      provider_completion_is_domain_completion: false,
+      owner_route_current: true,
+    };
+    const nextPayload: Record<string, any> = {
+      ...currentControlAdmissionPayload(
+        'publication-blockers::0915410f804b3697',
+        '41',
+        workUnitFingerprint,
+      ),
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      quest_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      action_type: 'run_quality_repair_batch',
+      next_executable_owner: 'write',
+      work_unit_id: 'medical_prose_write_repair',
+      route_identity_key: dedupeKey,
+      attempt_idempotency_key: dedupeKey,
+      stage_packet_ref: stagePacketRef,
+      checkpoint_refs: [stagePacketRef],
+      stage_packet_refs: [stagePacketRef],
+      provider_attempt_or_lease_required: true,
+      provider_completion_is_domain_completion: false,
+    };
+    nextPayload.current_control_command_outbox_record = currentControlCommandOutboxRecord({
+      studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+      actionType: 'run_quality_repair_batch',
+      workUnitId: 'medical_prose_write_repair',
+      workUnitFingerprint,
+      sourceGeneration: 'truth-event-41',
+      idempotencyKey: dedupeKey,
+    });
+    nextPayload.current_control_command = nextPayload.current_control_command_outbox_record;
+    nextPayload.provider_admission_identity = {
+      ...nextPayload.provider_admission_identity,
+      status: 'provider_admission_pending',
+      route_identity_key: dedupeKey,
+      attempt_idempotency_key: dedupeKey,
+      work_unit_id: 'medical_prose_write_repair',
+      work_unit_fingerprint: workUnitFingerprint,
+      action_fingerprint: workUnitFingerprint,
+      provider_attempt_or_lease_required: true,
+      current_control_command_outbox_record: nextPayload.current_control_command_outbox_record,
+    };
+    nextPayload.owner_route_currentness_basis = {
+      ...nextPayload.owner_route_currentness_basis,
+      work_unit_id: 'medical_prose_write_repair',
+      work_unit_fingerprint: workUnitFingerprint,
+      truth_epoch: 'truth-event-41',
+      runtime_health_epoch: 'runtime-health-event-41',
+    };
+    nextPayload.opl_domain_progress_transition_runtime_live_readback = {
+      surface_kind: 'opl_domain_progress_transition_runtime_live_readback',
+      runtime_id: 'DomainProgressTransitionRuntime',
+      runtime_readback_status: 'complete_transaction',
+      transaction_complete: true,
+      identity: {
+        command_id: nextPayload.current_control_command_outbox_record.command_id,
+        idempotency_key: dedupeKey,
+      },
+      latest_transaction_readback: {
+        same_transaction_event_and_outbox: true,
+        same_outbox_identity: true,
+        same_stage_run_identity: true,
+      },
+    };
+    nextPayload.provider_admission_identity.opl_domain_progress_transition_runtime_live_readback =
+      nextPayload.opl_domain_progress_transition_runtime_live_readback;
+    insertSucceededTask(db, {
+      taskId,
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload: existingPayload,
+      dedupeKey,
+    });
+
+    const result = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload: nextPayload,
+      dedupeKey,
+      source: 'test-current-control-command-readback',
+    });
+    const task = db.prepare('SELECT status, attempts, payload_json FROM tasks WHERE task_id = ?').get(taskId) as {
+      status: string;
+      attempts: number;
+      payload_json: string;
+    };
+    const event = db.prepare(`
+      SELECT payload_json
+      FROM events
+      WHERE task_id = ? AND event_type = 'task_requeued_from_mas_current_control_provider_admission'
+      LIMIT 1
+    `).get(taskId) as { payload_json: string } | undefined;
+    const payload = JSON.parse(task.payload_json);
+    const eventPayload = event ? JSON.parse(event.payload_json) : null;
+
+    assert.equal(result.accepted, true);
+    assert.equal(result.requeued_from_terminal, true);
+    assert.equal(result.idempotent_noop, false);
+    assert.equal(result.task?.status, 'queued');
+    assert.equal(task.status, 'queued');
+    assert.equal(task.attempts, 0);
+    assert.deepEqual(payload.current_control_command_outbox_record, payload.current_control_command);
+    assert.equal(payload.current_control_command_outbox_record.idempotency_key, dedupeKey);
+    assert.ok(eventPayload);
+    assert.equal(
+      eventPayload.reason,
+      'mas_current_control_provider_admission_command_readback_completed_after_transport_only_succeeded',
+    );
+    assert.equal(eventPayload.currentness_identity.attempt_idempotency_key, dedupeKey);
     assert.equal(eventPayload.authority_boundary.provider_completion_is_domain_ready, false);
   } finally {
     db.close();

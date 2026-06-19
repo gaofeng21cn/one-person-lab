@@ -467,7 +467,9 @@ function defaultExecutorSucceededProviderLeaseRequiredRedriveDecision(
   }
   const existingIdentity = providerAdmissionCurrentnessIdentity(existingPayload);
   const nextIdentity = providerAdmissionCurrentnessIdentity(nextPayload);
-  if (!existingIdentity || !nextIdentity || !sameProviderAdmissionCurrentnessIdentity(existingIdentity, nextIdentity)) {
+  const nextHasCanonicalCommandReadback = recordValue(nextPayload.current_control_command_outbox_record) !== null
+    && recordValue(nextPayload.opl_domain_progress_transition_runtime_live_readback) !== null;
+  if (!nextIdentity) {
     return null;
   }
   const providerLeaseRequired = nextPayload.provider_attempt_or_lease_required === true
@@ -475,12 +477,26 @@ function defaultExecutorSucceededProviderLeaseRequiredRedriveDecision(
   if (!providerLeaseRequired) {
     return null;
   }
-  return {
-    reason: 'mas_current_control_provider_admission_still_required_after_succeeded',
-    currentness_identity: nextIdentity,
-    previous_source_fingerprint: existingIdentity.source_fingerprint,
-    next_source_fingerprint: nextIdentity.source_fingerprint,
-  };
+  const existingHasCanonicalCommandReadback = recordValue(existingPayload.current_control_command_outbox_record) !== null
+    || recordValue(existingPayload.current_control_command) !== null
+    || recordValue(existingPayload.opl_domain_progress_transition_runtime_live_readback) !== null;
+  if (existingIdentity && sameProviderAdmissionCurrentnessIdentity(existingIdentity, nextIdentity)) {
+    return {
+      reason: 'mas_current_control_provider_admission_still_required_after_succeeded',
+      currentness_identity: nextIdentity,
+      previous_source_fingerprint: existingIdentity.source_fingerprint,
+      next_source_fingerprint: nextIdentity.source_fingerprint,
+    };
+  }
+  if (!existingIdentity && nextHasCanonicalCommandReadback && !existingHasCanonicalCommandReadback) {
+    return {
+      reason: 'mas_current_control_provider_admission_command_readback_completed_after_transport_only_succeeded',
+      currentness_identity: nextIdentity,
+      previous_source_fingerprint: sourceFingerprint(existingPayload),
+      next_source_fingerprint: nextIdentity.source_fingerprint,
+    };
+  }
+  return null;
 }
 
 function transportOnlySucceededDefaultExecutorAdmissionRedriveDecision(
