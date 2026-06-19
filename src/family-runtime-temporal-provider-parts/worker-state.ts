@@ -70,16 +70,6 @@ function repoRootFromModulePath(moduleUrl: string) {
 function runtimeSourceRootFromModulePath(modulePath: string) {
   const moduleDir = path.dirname(modulePath);
   const moduleBase = path.basename(modulePath);
-  const repoRoot = path.resolve(moduleDir, '..');
-  const sourcePeer = path.join(repoRoot, 'src', moduleBase.replace(/\.js$/, '.ts'));
-  if (
-    path.basename(moduleDir) === 'dist'
-    && moduleBase.startsWith('family-runtime-')
-    && moduleBase.endsWith('.js')
-    && fs.existsSync(sourcePeer)
-  ) {
-    return path.join(repoRoot, 'src');
-  }
   return moduleDir;
 }
 

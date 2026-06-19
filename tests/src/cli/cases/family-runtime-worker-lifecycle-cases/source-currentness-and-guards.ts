@@ -67,7 +67,7 @@ test('Temporal worker source version ignores documentation-only git HEAD drift',
   }
 });
 
-test('Temporal worker source version canonicalizes built provider module to repo src root', () => {
+test('Temporal worker source version tracks executable dist runtime for built provider module', () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-worker-runtime-built-source-version-'));
   const srcRoot = path.join(repoRoot, 'src');
   const distRoot = path.join(repoRoot, 'dist');
@@ -94,10 +94,11 @@ test('Temporal worker source version canonicalizes built provider module to repo
     fs.writeFileSync(srcModulePath, 'export const workerRuntime = 2;\n');
     const srcChanged = currentWorkerSourceVersion(pathToFileURL(distModulePath).href);
 
-    assert.equal(fromDist, fromSrc);
-    assert.equal(distOnlyChanged, fromSrc);
-    assert.notEqual(srcChanged, fromSrc);
-    assert.equal(fromDist.startsWith(`worker-runtime:${srcRoot}:`), true);
+    assert.notEqual(fromDist, fromSrc);
+    assert.notEqual(distOnlyChanged, fromDist);
+    assert.equal(srcChanged, distOnlyChanged);
+    assert.equal(fromSrc.startsWith(`worker-runtime:${srcRoot}:`), true);
+    assert.equal(fromDist.startsWith(`worker-runtime:${distRoot}:`), true);
   } finally {
     if (previousSourceVersion === undefined) {
       delete process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
