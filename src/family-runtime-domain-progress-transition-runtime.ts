@@ -2,10 +2,13 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 import { stableId } from './family-runtime-ids.ts';
+import { auditDomainProgressTransitionReplay } from './family-runtime-domain-progress-transition-runtime-parts/replay-audit.ts';
 
 export {
   readDomainProgressTransitionRuntimeReadbackJsonl,
 } from './family-runtime-domain-progress-transition-runtime-parts/live-readback.ts';
+
+export { auditDomainProgressTransitionReplay };
 
 export const DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID = 'opl_domain_progress_transition_runtime';
 export const DOMAIN_PROGRESS_TRANSITION_RUNTIME_MODULE = {
@@ -1057,6 +1060,11 @@ export function buildDomainProgressTransitionRuntimeResult(
     aggregateVersion,
   });
   const commandEventLog = createDomainProgressTransitionRuntimeLog(logEntries);
+  const replayAudit = auditDomainProgressTransitionReplay({
+    runtimeId: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+    entries: commandEventLog.entries,
+    aggregateIdentity,
+  });
   const readback = idempotencyReadback({
     command,
     event: transitionEvent,
@@ -1088,15 +1096,24 @@ export function buildDomainProgressTransitionRuntimeResult(
     },
     command_event_log: commandEventLog,
     idempotency_readback: readback,
-    projection_metadata: projectionMetadata,
+    projection_metadata: {
+      ...projectionMetadata,
+      replay_audit: replayAudit,
+      replay_audit_status: replayAudit.replay_status,
+      replay_audit_consumable: replayAudit.read_model_projection_consumable,
+    },
     read_model_rebuild_metadata: readModelRebuildMetadata,
     human_gate_resume_token: resumeToken,
+    replay_audit: replayAudit,
     replay_evidence: {
       surface_kind: 'opl_domain_progress_replay_evidence',
-      replay_status: 'exactly_one_transition',
+      replay_status: replayAudit.replay_status === 'replay_ready'
+        ? 'exactly_one_transition'
+        : 'fail_closed',
       transition_count: 1,
       event_ids: [eventId],
       non_advancing_apply: false,
+      replay_audit_ref: replayAudit.event_id,
     },
   });
 }
@@ -1459,6 +1476,11 @@ export function rebuildDomainProgressTransitionReadModel(input: {
     aggregate_version: aggregateVersion,
     body_fields_included: false,
   };
+  const replayAudit = auditDomainProgressTransitionReplay({
+    runtimeId: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+    entries: input.log.entries,
+    aggregateIdentity: input.aggregateIdentity,
+  });
   const projectionMetadata = {
     surface_kind: 'opl_domain_progress_projection_metadata',
     runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
@@ -1469,6 +1491,9 @@ export function rebuildDomainProgressTransitionReadModel(input: {
     lag_status: latestEvent ? 'current' : 'empty',
     read_model_rebuild_owner: 'one-person-lab',
     read_model_rebuild_metadata: readModelRebuildMetadata,
+    replay_audit: replayAudit,
+    replay_audit_status: replayAudit.replay_status,
+    replay_audit_consumable: replayAudit.read_model_projection_consumable,
   };
   const identity = latestEvent
     ? domainProgressTransitionIdentity({
@@ -1553,6 +1578,7 @@ export function rebuildDomainProgressTransitionReadModel(input: {
     transition_count: eventEntries.length,
     projection_metadata: projectionMetadata,
     read_model_rebuild_metadata: readModelRebuildMetadata,
+    replay_audit: replayAudit,
     latest_transition_identity: latestEvent
       ? {
         event_id: latestEventId,

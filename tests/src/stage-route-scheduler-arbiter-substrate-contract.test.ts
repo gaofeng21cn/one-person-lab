@@ -197,6 +197,10 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
     'readDomainProgressTransitionIdempotencyJsonl',
   );
   assert.equal(
+    domainProgress.physical_persistence_refs.replay_audit_api,
+    'auditDomainProgressTransitionReplay',
+  );
+  assert.equal(
     domainProgress.physical_persistence_refs.storage_contract,
     'append_only_physical_jsonl',
   );
@@ -278,6 +282,10 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   assert.equal(
     domainProgress.concepts.TransitionDecisionEngine.durable_substrate_first_slice.live_readback,
     'read_physical_jsonl_and_require_command_event_outbox_same_transaction_and_outbox_identity_before_consumption',
+  );
+  assert.equal(
+    domainProgress.concepts.TransitionDecisionEngine.durable_substrate_first_slice.replay_audit,
+    'latest_transaction_is_consumable_only_when_command_event_outbox_and_stage_run_identity_form_exactly_one_complete_transaction',
   );
   assert.equal(
     domainProgress.concepts.TransitionDecisionEngine.durable_substrate_first_slice.fixed_point_reconciler,

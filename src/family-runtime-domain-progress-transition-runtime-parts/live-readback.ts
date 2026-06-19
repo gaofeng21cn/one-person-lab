@@ -6,6 +6,7 @@ import {
   readDomainProgressTransitionRuntimeLogJsonl,
   rebuildDomainProgressTransitionReadModel,
 } from '../family-runtime-domain-progress-transition-runtime.ts';
+import { auditDomainProgressTransitionReplay } from './replay-audit.ts';
 
 type LiveReadbackProjectionMetadata = Record<string, unknown> & {
   authority: false;
@@ -53,6 +54,7 @@ function liveReadbackProjectionMetadata(input: {
   transactionComplete: boolean;
   failClosedReason: string | null;
   latestEventId: string | null;
+  replayAudit: Record<string, unknown>;
 }): LiveReadbackProjectionMetadata {
   const readModelProjectionMetadata = isRecord(input.readModelProjectionMetadata)
     ? input.readModelProjectionMetadata
@@ -65,6 +67,9 @@ function liveReadbackProjectionMetadata(input: {
       read_model_projection_consumable: true,
       runtime_readback_status: input.runtimeReadbackStatus,
       transaction_complete: true,
+      replay_audit: input.replayAudit,
+      replay_audit_status: optionalString(input.replayAudit.replay_status),
+      replay_audit_consumable: input.replayAudit.read_model_projection_consumable === true,
     };
   }
   return {
@@ -78,6 +83,9 @@ function liveReadbackProjectionMetadata(input: {
     fail_closed: Boolean(input.latestEventId),
     outcome_kind: input.latestEventId ? 'blocked_incomplete_transaction' : null,
     ...(input.failClosedReason ? { fail_closed_reason: input.failClosedReason } : {}),
+    replay_audit: input.replayAudit,
+    replay_audit_status: optionalString(input.replayAudit.replay_status),
+    replay_audit_consumable: input.replayAudit.read_model_projection_consumable === true,
     source_read_model_projection_metadata: readModelProjectionMetadata,
   };
 }
@@ -139,8 +147,13 @@ export function readDomainProgressTransitionRuntimeReadbackJsonl(input: {
     && sameTransactionEventAndOutbox
     && stageRunIdentityReadback.same_stage_run_identity
   );
+  const replayAudit = auditDomainProgressTransitionReplay({
+    runtimeId: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+    entries: log.entries,
+    aggregateIdentity: input.aggregateIdentity,
+  });
   const runtimeReadbackStatus = latestEventId
-    ? transactionComplete
+    ? replayAudit.read_model_projection_consumable === true
       ? 'complete_transaction'
       : 'incomplete_transaction'
     : 'empty';
@@ -158,6 +171,7 @@ export function readDomainProgressTransitionRuntimeReadbackJsonl(input: {
     transactionComplete,
     failClosedReason,
     latestEventId,
+    replayAudit,
   });
 
   return {
@@ -177,6 +191,7 @@ export function readDomainProgressTransitionRuntimeReadbackJsonl(input: {
       ...(failClosedReason ? { fail_closed_reason: failClosedReason } : {}),
     },
     authority_boundary: readModelReadback.authority_boundary,
+    replay_audit: replayAudit,
     exactly_one_outcome: transactionComplete
       ? readModelReadback.exactly_one_outcome
       : {

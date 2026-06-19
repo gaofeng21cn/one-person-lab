@@ -1348,6 +1348,9 @@ function publishNonAdvancingApplyToCurrentControl(input: {
       paper_progress_delta: false,
     },
   };
+  const replayAudit = isRecord(input.runtimeLiveReadback.replay_audit)
+    ? input.runtimeLiveReadback.replay_audit
+    : null;
   const projectionMetadata = {
     surface_kind: 'opl_current_control_domain_progress_transition_projection_metadata',
     projection_role: 'non_advancing_apply_current_transition_readback',
@@ -1362,6 +1365,9 @@ function publishNonAdvancingApplyToCurrentControl(input: {
     provider_completion_is_domain_completion: false,
     provider_completion_is_domain_ready: false,
     non_advancing_apply: true,
+    replay_audit_status: replayAudit ? optionalString(replayAudit.replay_status) : null,
+    replay_audit_consumable: replayAudit?.read_model_projection_consumable === true,
+    replay_audit: replayAudit,
     source_runtime_projection_metadata: isRecord(input.runtimeLiveReadback.projection_metadata)
       ? input.runtimeLiveReadback.projection_metadata
       : null,

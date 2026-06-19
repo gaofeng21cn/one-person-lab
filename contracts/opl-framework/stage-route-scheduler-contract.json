@@ -236,6 +236,7 @@
         "runtime_log_append_api": "appendDomainProgressTransitionRuntimeResultJsonl",
         "idempotency_readback_api": "readDomainProgressTransitionIdempotencyJsonl",
         "runtime_live_readback_api": "readDomainProgressTransitionRuntimeReadbackJsonl",
+        "replay_audit_api": "auditDomainProgressTransitionReplay",
         "storage_contract": "append_only_physical_jsonl",
         "runtime_live_readback_contract": {
           "complete_transaction_status": "complete_transaction",
@@ -252,6 +253,10 @@
           "projection_metadata_complete_role": "complete_runtime_readback",
           "projection_metadata_incomplete_role": "fail_closed_runtime_readback",
           "projection_metadata_consumable_only_when_transaction_complete": true,
+          "replay_audit_surface_kind": "opl_domain_progress_transition_replay_audit",
+          "replay_audit_ready_status": "replay_ready",
+          "replay_audit_fail_closed_status": "fail_closed",
+          "replay_audit_consumable_only_when_complete": true,
           "authority_boundary": "opl_runtime_primitive_readback_only_no_domain_truth_owner_receipt_or_typed_blocker"
         },
         "focused_test": "tests/src/cli/cases/family-runtime-domain-progress-transition-runtime.test.ts"
@@ -395,6 +400,7 @@
             "ledger": "append_only_physical_jsonl",
             "transactional_outbox": "event_and_outbox_item_share_one_runtime_transaction_result_with_dedupe_readback",
             "live_readback": "read_physical_jsonl_and_require_command_event_outbox_same_transaction_and_outbox_identity_before_consumption",
+            "replay_audit": "latest_transaction_is_consumable_only_when_command_event_outbox_and_stage_run_identity_form_exactly_one_complete_transaction",
             "fixed_point_reconciler": "observations_and_command_produce_exactly_one_transition_or_non_advancing_apply",
             "replay_harness": "multi_step_trace_exposes_step_evidence_for_exactly_one_or_non_advancing_apply",
             "human_gate_resume_token": "transport_shape_landed_without_opl_supplying_human_or_domain_answer",

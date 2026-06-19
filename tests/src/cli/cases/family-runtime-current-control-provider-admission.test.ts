@@ -1006,6 +1006,24 @@ test('family-runtime records NonAdvancingApply when authorized stage packet lack
       true,
     );
     assert.equal(
+      refreshedCurrentControl.domain_progress_transition_non_advancing_apply_readback
+        .runtime_live_readback.replay_audit.replay_status,
+      'replay_ready',
+    );
+    assert.equal(
+      refreshedCurrentControl.domain_progress_transition_non_advancing_apply_readback
+        .runtime_live_readback.replay_audit.read_model_projection_consumable,
+      true,
+    );
+    assert.equal(
+      refreshedCurrentControl.domain_progress_transition_projection_metadata.replay_audit_status,
+      'replay_ready',
+    );
+    assert.equal(
+      refreshedCurrentControl.domain_progress_transition_projection_metadata.replay_audit_consumable,
+      true,
+    );
+    assert.equal(
       refreshedCurrentControl.domain_progress_transition_projection_metadata.provider_admission_allowed,
       false,
     );
