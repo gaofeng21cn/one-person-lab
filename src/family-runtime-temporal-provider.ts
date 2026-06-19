@@ -73,6 +73,8 @@ import {
 import {
   stopOrphanTemporalForegroundWorkers,
   stopWorkerPid,
+  temporalForegroundWorkerCommand,
+  temporalForegroundWorkerModulePathFromCommand,
 } from './family-runtime-temporal-provider-parts/worker-process.ts';
 import {
   inspectTemporalWorkerLifecycleFast,
@@ -140,6 +142,18 @@ function temporalWorkerSpawnEnvironment(input: {
   };
 }
 
+function expectedWorkerSourceVersionForState(state: ReturnType<typeof readTemporalWorkerState> | null) {
+  if (!state || !processIsAlive(state.pid)) {
+    return currentWorkerSourceVersion(import.meta.url);
+  }
+  const command = temporalForegroundWorkerCommand(state.pid);
+  const workerModulePath = temporalForegroundWorkerModulePathFromCommand(command);
+  if (!workerModulePath) {
+    return currentWorkerSourceVersion(import.meta.url);
+  }
+  return currentWorkerSourceVersion(new URL(workerModulePath, 'file://').href);
+}
+
 export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths) {
   return inspectTemporalWorkerLifecycleWithDetail(paths, { detail: 'full' });
 }
@@ -161,7 +175,7 @@ export async function inspectTemporalWorkerLifecycleWithDetail(
     state?.address === address
     && state.namespace === namespace
     && state.task_queue === taskQueue;
-  const expectedWorkerSourceVersion = currentWorkerSourceVersion(import.meta.url);
+  const expectedWorkerSourceVersion = expectedWorkerSourceVersionForState(state);
   const stateSourceCurrent = stateMatchesConfig && state
     ? workerSourceVersionsEquivalent(state.source_version, expectedWorkerSourceVersion)
     : false;

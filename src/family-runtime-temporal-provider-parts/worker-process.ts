@@ -17,6 +17,40 @@ function commandMatchesFamilyRuntimeRoot(command: string, familyRuntimeRoot: str
   return new RegExp(`(?:^|\\s)--family-runtime-root(?:=|\\s+)${escapedRoot}(?:\\s|$)`).test(command);
 }
 
+export function temporalForegroundWorkerCommand(pid: number) {
+  if (process.platform === 'win32' || !Number.isInteger(pid) || pid <= 0) {
+    return null;
+  }
+  try {
+    const output = execFileSync('ps', ['-ww', '-p', String(pid), '-o', 'command='], {
+      encoding: 'utf8',
+      maxBuffer: 1024 * 1024,
+    }).trim();
+    return output || null;
+  } catch {
+    return null;
+  }
+}
+
+export function temporalForegroundWorkerModulePathFromCommand(command: string | null | undefined) {
+  const normalized = command?.trim();
+  if (!normalized || !normalized.includes('--temporal-worker-foreground')) {
+    return null;
+  }
+  const tokens = normalized.split(/\s+/);
+  const foregroundIndex = tokens.indexOf('--temporal-worker-foreground');
+  if (foregroundIndex <= 0) {
+    return null;
+  }
+  for (let index = foregroundIndex - 1; index >= 0; index -= 1) {
+    const token = tokens[index];
+    if (/family-runtime-temporal-provider\.(?:js|ts)$/.test(token)) {
+      return token;
+    }
+  }
+  return null;
+}
+
 async function waitForProcessExit(pid: number, timeoutMs = WORKER_STOP_GRACE_MS) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -66,7 +100,7 @@ function findTemporalForegroundWorkerPids(input: {
   const exclude = new Set([process.pid, process.ppid, ...(input.excludePids ?? [])]);
   let output = '';
   try {
-    output = execFileSync('ps', ['-axo', 'pid=,command='], {
+    output = execFileSync('ps', ['-ww', '-axo', 'pid=,command='], {
       encoding: 'utf8',
       maxBuffer: 1024 * 1024,
     });
