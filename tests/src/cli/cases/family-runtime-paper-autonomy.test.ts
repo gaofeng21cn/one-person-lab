@@ -421,11 +421,60 @@ test('family-runtime intake task-kind scope consumes only paper autonomy supervi
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-autonomy-supervisor-scoped-intake-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-autonomy-supervisor-scoped-intake-export-'));
   const exportPath = path.join(fixtureRoot, 'export');
+  const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  const currentControlPath = path.join(
+    workspaceRoot,
+    'runtime',
+    'artifacts',
+    'supervision',
+    'opl_current_control_state',
+    'latest.json',
+  );
   const currentIdentity = paperAutonomyIdentity();
   const obligationId = 'paper-recovery::DM003::run_quality_repair_batch::medical_prose_write_repair::typed_blocker';
+  fs.mkdirSync(path.dirname(currentControlPath), { recursive: true });
+  fs.writeFileSync(currentControlPath, `${JSON.stringify({
+    surface: 'opl_current_control_state',
+    provider_admission_pending_count: 1,
+    provider_admission_candidates: [
+      {
+        status: 'provider_admission_pending',
+        study_id: 'DM003',
+        quest_id: 'DM003',
+        action_type: 'run_quality_repair_batch',
+        work_unit_id: 'medical_prose_write_repair',
+        work_unit_fingerprint: 'publication-blockers::0915410f804b3697',
+        action_fingerprint: 'publication-blockers::0915410f804b3697',
+        next_executable_owner: 'write',
+        owner_route_current: true,
+        source_fingerprint: 'publication-blockers::0915410f804b3697',
+        route_identity_key: 'paper-policy-request:scoped-blocked-leak',
+        attempt_idempotency_key: 'paper-policy-request:scoped-blocked-leak',
+        stage_transition_authority_boundary: {
+          producer_kind: 'runtime_provider',
+          intent_kind: 'provider_observation',
+          stage_transition_authority: 'one-person-lab',
+          intent_can_write_stage_current_pointer: false,
+          intent_can_write_stage_run_terminal_state: false,
+          intent_can_publish_current_owner_delta: false,
+          intent_can_write_domain_truth: false,
+          intent_can_create_owner_receipt: false,
+          intent_can_create_typed_blocker: false,
+          provider_completion_counts_as_stage_transition: false,
+          read_model_update_counts_as_stage_transition: false,
+          worklist_update_counts_as_stage_transition: false,
+          evidence_event_counts_as_stage_transition: false,
+          agent_lab_output_counts_as_stage_transition: false,
+        },
+      },
+    ],
+  })}\n`, 'utf8');
   writeNodeScript(exportPath, `
 process.stdout.write(JSON.stringify({
   surface_kind: 'mas_family_domain_handler_export',
+  workspace: {
+    workspace_root: ${JSON.stringify(workspaceRoot)},
+  },
   pending_family_tasks: [
     {
       domain_id: 'medautoscience',
@@ -503,6 +552,22 @@ process.stdout.write(JSON.stringify({
     const env = familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
     });
+    const unscoped = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+      '--source',
+      'test-supervisor-decision-request-unscoped',
+    ], env).family_runtime_intake;
+    assert.equal(unscoped.blocked_count, 1);
+    assert.equal(
+      unscoped.exports[0].blocked[0].reason,
+      'current_control_provider_admission_command_record_missing',
+    );
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.mkdirSync(stateRoot, { recursive: true });
+
     const first = runCli([
       'family-runtime',
       'intake',
@@ -525,6 +590,7 @@ process.stdout.write(JSON.stringify({
     assert.equal(first.paper_autonomy_supervisor_decision_request_consumed_count, 1);
     assert.equal(first.exports[0].exported_count, 1);
     assert.equal(first.exports[0].filtered_count, 1);
+    assert.equal(first.exports[0].blocked_count, 0);
     assert.equal(first.exports[0].paper_autonomy_supervisor_decision_request_consumed_count, 1);
     assert.equal(queue.tasks.length, 0);
     assert.equal(consumed.status, 'consumed');
@@ -545,7 +611,9 @@ process.stdout.write(JSON.stringify({
     ], env).family_runtime_intake;
     assert.equal(repeated.enqueued_count, 0);
     assert.equal(repeated.idempotent_noop_count, 0);
+    assert.equal(repeated.blocked_count, 0);
     assert.equal(repeated.paper_autonomy_supervisor_decision_request_consumed_count, 1);
+    assert.equal(repeated.exports[0].blocked_count, 0);
     assert.equal(repeated.exports[0].paper_autonomy_supervisor_decision_request_consumed[0].status, 'idempotent_noop');
     assert.equal(runCli(['family-runtime', 'queue', 'list'], env).family_runtime_queue.tasks.length, 0);
     assert.equal(fs.readFileSync(obligationLedger, 'utf8').trim().split('\n').length, 1);

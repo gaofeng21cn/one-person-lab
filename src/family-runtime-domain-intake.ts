@@ -58,6 +58,12 @@ type EnqueueTaskResult = {
 
 type EnqueueTask = (db: DatabaseSync, input: EnqueueInput) => EnqueueTaskResult;
 
+type IntakeBlocked = {
+  reason: string;
+  task: unknown;
+  repair_action?: Record<string, unknown>;
+};
+
 function masProductionProofArgs(paths?: ReturnType<typeof familyRuntimePaths>) {
   const proofPath = process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_OPL_PRODUCTION_PROOF?.trim()
     || process.env.OPL_FAMILY_RUNTIME_OPL_PRODUCTION_PROOF?.trim()
@@ -180,6 +186,76 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function optionalString(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function blockedDomainId(
+  domainId: FamilyRuntimeDomainId,
+  task: Record<string, unknown>,
+): FamilyRuntimeDomainId {
+  const declared = optionalString(task.domain_id)?.toLowerCase();
+  return declared && FAMILY_RUNTIME_DOMAIN_IDS.includes(declared as FamilyRuntimeDomainId)
+    ? declared as FamilyRuntimeDomainId
+    : domainId;
+}
+
+function blockedTaskKind(task: Record<string, unknown>) {
+  const explicitTaskKind = optionalString(task.task_kind) ?? optionalString(task.recommended_task_kind);
+  if (explicitTaskKind) {
+    return explicitTaskKind;
+  }
+  if (
+    optionalString(task.status) === 'provider_admission_pending'
+    || optionalString(task.provider_admission_schema_source)
+    || isRecord(task.current_control_command_outbox_record)
+    || isRecord(task.opl_domain_progress_transition_request)
+  ) {
+    return 'domain_owner/default-executor-dispatch';
+  }
+  const result = isRecord(task.result) ? task.result : task;
+  if (optionalString(result.surface_kind) === 'family_transition_result') {
+    return 'family_transition/domain_tick';
+  }
+  return null;
+}
+
+function blockedScopeInput(
+  domainId: FamilyRuntimeDomainId,
+  blocked: IntakeBlocked,
+) {
+  if (!isRecord(blocked.task)) {
+    return null;
+  }
+  const taskKind = blockedTaskKind(blocked.task);
+  if (!taskKind) {
+    return null;
+  }
+  return {
+    domainId: blockedDomainId(domainId, blocked.task),
+    taskKind,
+    payload: isRecord(blocked.task.payload) ? blocked.task.payload : blocked.task,
+  };
+}
+
+function blockedMatchesScope(
+  domainId: FamilyRuntimeDomainId,
+  blocked: IntakeBlocked,
+  taskScope?: FamilyRuntimeTaskScope,
+) {
+  if (!taskScope) {
+    return true;
+  }
+  if (taskScope.domainId && taskScope.domainId !== domainId) {
+    return false;
+  }
+  const scopeInput = blockedScopeInput(domainId, blocked);
+  if (scopeInput) {
+    return taskInputMatchesScope(scopeInput, taskScope);
+  }
+  return !taskScope.taskKind && !taskScope.payloadMatches?.length;
+}
+
 function exportedTaskInputs(
   domainId: FamilyRuntimeDomainId,
   output: Record<string, unknown>,
@@ -201,9 +277,11 @@ function exportedTaskInputs(
   const transitions = transitionTaskInputsFromMatrix(domainId, output, source);
   const exportedInputs = [...currentControlInputs, ...pendingAfterCurrentControl.inputs, ...transitions.inputs];
   const inputs = exportedInputs.filter((taskInput) => taskInputMatchesScope(taskInput, taskScope));
+  const blocked = [...currentControlRaw.blocked, ...pending.blocked, ...transitions.blocked]
+    .filter((entry) => blockedMatchesScope(domainId, entry, taskScope));
   return {
     inputs,
-    blocked: [...currentControlRaw.blocked, ...pending.blocked, ...transitions.blocked],
+    blocked,
     filtered_count: exportedInputs.length - inputs.length,
     suppressed_count: pendingAfterCurrentControl.suppressed_count,
   };
