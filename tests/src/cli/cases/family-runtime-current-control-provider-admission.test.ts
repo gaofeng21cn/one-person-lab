@@ -2,6 +2,7 @@ import './family-runtime-current-control-provider-admission-cases/queue-refresh-
 import './family-runtime-current-control-provider-admission-cases/stage-attempt-repair.ts';
 import './family-runtime-current-control-provider-admission-cases/stop-loss-successor-policy.ts';
 import './family-runtime-current-control-provider-admission-cases/current-control-command-readback.ts';
+import './family-runtime-current-control-provider-admission-cases/current-control-command-readback-live-consumption.ts';
 import {
   assert,
   DatabaseSync,

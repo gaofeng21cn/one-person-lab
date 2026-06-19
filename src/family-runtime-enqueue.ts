@@ -26,6 +26,7 @@ import {
   reconcileExistingDedupeTask,
   sourceFingerprint,
 } from './family-runtime-enqueue-parts/existing-dedupe-reconcile.ts';
+import { normalizeCurrentControlCommandReadbackPayload } from './family-runtime-enqueue-parts/current-control-command-readback.ts';
 
 export type EnqueueTaskResult = {
   accepted: boolean;
@@ -39,12 +40,13 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput): EnqueueTaskR
   const createdAt = nowIso();
   const dedupeKey = input.dedupeKey?.trim() || null;
   const taskKind = canonicalFamilyRuntimeTaskKind(input.domainId, input.taskKind);
-  const payload = input.requireStageAdmission
+  const rawPayload = input.requireStageAdmission
     ? {
         ...input.payload,
         opl_stage_launch_admission_required: true,
       }
     : input.payload;
+  const payload = normalizeCurrentControlCommandReadbackPayload(rawPayload);
   const activeHold = activeQueueHoldForTaskInput(db, {
     domainId: input.domainId,
     taskKind,
