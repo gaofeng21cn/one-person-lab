@@ -300,8 +300,13 @@ const readModelGateTemporalHeavyTestFiles = [
   'tests/src/cli/cases/family-runtime-stage-attempts-temporal-terminal-query.test.ts',
 ];
 
+const readModelGateStartupMaintenanceHeavyTestFiles = [
+  'tests/src/cli/cases/system-startup-maintenance.test.ts',
+];
+
 const readModelGateNonTemporalHeavyTestFiles = readModelGateTestFiles.filter(
-  (file) => !readModelGateTemporalHeavyTestFiles.includes(file),
+  (file) => !readModelGateTemporalHeavyTestFiles.includes(file)
+    && !readModelGateStartupMaintenanceHeavyTestFiles.includes(file),
 );
 
 const lanes = {
@@ -328,6 +333,10 @@ const lanes = {
   'read-model-gates': [
     nodeTest(readModelGateNonTemporalHeavyTestFiles, {
       batchSize: 20,
+      env: { OPL_CLI_TEST_TIMEOUT_MS: '90000' },
+    }),
+    nodeTest(readModelGateStartupMaintenanceHeavyTestFiles, {
+      batchSize: 1,
       env: { OPL_CLI_TEST_TIMEOUT_MS: '90000' },
     }),
     nodeTest(readModelGateTemporalHeavyTestFiles, {
