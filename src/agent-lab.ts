@@ -11,6 +11,24 @@ import { buildAgentLabAheEvidenceReadModel } from './agent-lab-ahe-evidence.ts';
 import { buildAgentLabExecutorCapabilityApertureReadModel } from './agent-lab-executor-capability-aperture.ts';
 import { buildAgentLabCodexAttemptTraceFlywheel } from './agent-lab-codex-attempt-flywheel.ts';
 export {
+  buildAgentLabProgressFirstLoopRiskReport,
+  type AgentLabAdvisoryLoopPolicy,
+  type AgentLabBudgetExhaustedExit,
+  type AgentLabCarryForwardAdvanceExit,
+  type AgentLabLoopRiskCycleReport,
+  type AgentLabLoopRiskEdge,
+  type AgentLabLoopRiskLevel,
+  type AgentLabLoopRiskNode,
+  type AgentLabLoopRiskRepair,
+  type AgentLabLoopRiskRoute,
+  type AgentLabProgressFirstLoopRiskInput,
+  type AgentLabProgressFirstLoopRiskReport,
+  type AgentLabProgressFirstPolicyInput,
+  type AgentLabQualityLoopPolicy,
+  type AgentLabSameIdentityRetryBudget,
+  type AgentLabTaskManifestLoopRiskPolicy,
+} from './agent-lab-loop-risk.ts';
+export {
   buildAgentLabCostEstimate,
   buildAgentLabCostEstimateReadModel,
   type AgentLabCostEstimatePreset,

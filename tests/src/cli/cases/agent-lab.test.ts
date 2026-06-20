@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { after } from 'node:test';
 
 import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import './agent-lab-loop-risk.test.ts';
 
 const agentLabCliStateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-cli-state-'));
 const previousOplStateDir = process.env.OPL_STATE_DIR;
