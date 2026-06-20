@@ -10,6 +10,8 @@ Plugin native profile pointer: `contracts/opl-native-profile.json` 只声明 OPL
 
 OPL Flow closeout gate: `contracts/opl-framework/opl-flow-completion-audit-contract.json` 是目标态交付的机器化后验证合同。凡 claim scope 属于 `thorough_landing`、`complete_execution`、`end_to_end_acceptance`、`production_ready_claim` 或 `release_ready_claim`，closeout 前必须给出逐项 plan completion audit、完成度百分比、fresh evidence refs、missing refs、next action 和 subagent/worktree lane mapping。docs/catalog/plan/read-model/refs-only surface/contract/test/commit-only evidence 不能单独支撑 `100%` 或 complete claim；仍有非 100% 条目时只能继续推进，或在明确 owner / source of truth / 权限 / 外部依赖 / 验证边界 blocker 下输出 typed blocker。
 
+OKF context bundle 当前已作为 OPL-owned advisory context / interchange surface 落地。机器入口是 `contracts/opl-framework/okf-context-bundle-contract.json`、`src/okf-context-bundle.ts`、`opl okf validate --bundle <dir> --json`、`opl okf inspect --bundle <dir> --json` 和 `opl okf project-pack --pack <pack_compiler_input.json> --output <dir> --json`。它只投影 Foundry Agent pack refs、memory locator refs、index/log/crosslink 和 no-authority metadata，帮助 AI executor 更快获得上下文；它不写 domain truth、不复制 memory / artifact / prompt / skill / quality gate body、不调度 runtime、不签 owner receipt、不创建 typed blocker、不授权 quality/export/domain-ready/App-release/production-ready claim。OKF warning（broken link、unknown field/type、missing optional metadata）默认不阻断 ordinary progress；只有被绑定到 source/data authority、owner identity、forbidden write、irreversible mutation 或 hard readiness / final export / submission claim 时，才回到既有 authority gate。
+
 ## 读法
 
 本文只保存当前角色、当前成熟度、完成边界、动态真相入口和仍未闭合的缺口类别。它不冻结 receipt id、attempt id、workorder 数字、open/closed counter、branch/SHA、provider tick、ledger verify 流水或某轮 closeout 细节。
@@ -182,6 +184,9 @@ rtk ./bin/opl workspace inventory --workspace <path> --json
 rtk ./bin/opl workspace health --workspace <path> --json
 rtk ./bin/opl workspace project lifecycle --workspace <path> --project-id <id> --status paused --dry-run --json
 rtk ./bin/opl workspace project delete --workspace <path> --project-id <id> --dry-run --json
+rtk ./bin/opl okf validate --bundle <okf_dir> --json
+rtk ./bin/opl okf inspect --bundle <okf_dir> --json
+rtk ./bin/opl okf project-pack --pack <pack_compiler_input.json> --output <okf_dir> --json
 ```
 
 默认阅读顺序是 owner-delta-first：先从 `current_owner_delta` 看等待哪个 owner、需要什么 deliverable delta / receipt / typed blocker，以及该等待是否阻断 readiness。OPL provider / transport safe action 只有在没有 current owner delta 时才可成为默认下一步。raw refs-only counters、provider worker / redrive / scheduler route、evidence envelope、stage replay packet、typed blocker group、private residue inventory 和历史 receipt 计数都只作 drilldown。

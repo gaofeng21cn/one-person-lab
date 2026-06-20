@@ -1,0 +1,105 @@
+{
+  "surface_kind": "opl_okf_context_bundle_contract",
+  "version": "opl-okf-context-bundle.v1",
+  "owner": "one-person-lab",
+  "state": "active_contract",
+  "purpose": "Freeze the OPL-native OKF v0.1 context bundle projection boundary as a portable interchange layer, not a runtime or domain authority.",
+  "machine_boundary": {
+    "opl_owns": [
+      "context_bundle_contract",
+      "context_bundle_projection",
+      "context_bundle_validation",
+      "refs_only_readback",
+      "non_authority_flags"
+    ],
+    "opl_does_not_own": [
+      "domain_truth",
+      "domain_memory_body",
+      "runtime_scheduler",
+      "quality_verdict",
+      "publication_or_submission_verdict",
+      "artifact_authority",
+      "owner_receipt",
+      "typed_blocker"
+    ]
+  },
+  "bundle_role": "context_bundle",
+  "supported_bundle_roles": [
+    "context_bundle",
+    "interchange_layer",
+    "advisory_knowledge_projection"
+  ],
+  "okf_v0_1_source_refs": [
+    {
+      "ref_kind": "spec",
+      "ref": "https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md",
+      "label": "Google OKF v0.1 SPEC.md",
+      "observed_commit": "e911292cc1e1a5cfe3d0f8420219f0115d07f31e"
+    },
+    {
+      "ref_kind": "blog",
+      "ref": "https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing",
+      "label": "Google Cloud OKF introduction",
+      "published_date": "2026-06-12"
+    }
+  ],
+  "reserved_filenames": [
+    "index.md",
+    "log.md"
+  ],
+  "frontmatter_contract": {
+    "concept_documents_require": [
+      "type"
+    ],
+    "concept_documents_recommended": [
+      "title",
+      "description",
+      "resource",
+      "tags",
+      "timestamp"
+    ],
+    "unknown_type_policy": "tolerate_as_generic_concept",
+    "unknown_frontmatter_policy": "preserve_and_tolerate",
+    "reserved_filename_type_policy": "reserved_files_must_not_be_concept_documents",
+    "root_index_okf_version_policy": "root_index_may_declare_okf_version_without_becoming_a_concept"
+  },
+  "conformance_policy": {
+    "hard_errors": [
+      "non_reserved_markdown_missing_parseable_frontmatter",
+      "non_reserved_markdown_missing_non_empty_type",
+      "reserved_filename_used_as_concept_document"
+    ],
+    "soft_warnings": [
+      "broken_cross_link",
+      "missing_optional_frontmatter",
+      "unknown_type",
+      "unknown_frontmatter",
+      "missing_index_file"
+    ]
+  },
+  "authority_boundary": {
+    "projection_only": true,
+    "can_write_domain_truth": false,
+    "can_write_memory_body": false,
+    "can_accept_or_reject_writeback": false,
+    "can_apply_memory_writeback": false,
+    "can_authorize_quality_verdict": false,
+    "can_authorize_domain_ready": false,
+    "can_authorize_publication_or_submission_verdict": false,
+    "can_write_artifacts": false,
+    "can_sign_owner_receipt": false,
+    "can_create_typed_blocker": false,
+    "can_schedule_runtime": false
+  },
+  "non_authority_flags": {
+    "opl_owns_domain_truth": false,
+    "opl_owns_domain_memory_body": false,
+    "opl_accepts_or_rejects_domain_memory_writeback": false,
+    "opl_applies_domain_memory_writeback": false,
+    "opl_authorizes_quality_verdict": false,
+    "opl_authorizes_domain_ready": false,
+    "opl_authorizes_publication_or_submission_verdict": false,
+    "opl_owns_artifact_authority": false,
+    "opl_schedules_runtime_from_okf": false
+  }
+}

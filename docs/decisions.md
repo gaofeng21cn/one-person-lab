@@ -7,6 +7,19 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-06-20
 
+### 决策：OKF 只作为 OPL context bundle / interchange layer
+
+原因：Google Cloud `Open Knowledge Format` v0.1（blog 发布于 2026-06-12；`GoogleCloudPlatform/knowledge-catalog` main 观察 commit `e911292cc1e1a5cfe3d0f8420219f0115d07f31e`）把知识表达成 Markdown 文件目录、YAML frontmatter、`index.md` / `log.md` reserved files、crosslinks 和宽容消费模型。这个形态很适合 OPL 的 AI-native context 传递，但 OKF 本身明确是 format / interchange pattern，不是 runtime、registry、SDK、scheduler、quality gate 或 authority plane。
+
+影响：
+
+- `contracts/opl-framework/okf-context-bundle-contract.json` 成为 OPL-owned OKF context bundle 边界合同；`src/okf-context-bundle.ts` 和 `opl okf validate|inspect|project-pack --json` 提供可执行投影、校验、读回和物化入口。
+- OKF 映射到现有品牌模块，不新增模块：主模块是 `OPL Atlas`、`OPL Pack`、`OPL Stagecraft` 和 `OPL Connect`；协同模块是 `OPL Vault`、`OPL Console`、`OPL Workspace` 和 `OPL Foundry Lab`。`OPL Runway`、Stage Transition Authority、domain quality verdict、owner receipt、typed blocker、artifact authority 和 production readiness 不消费 OKF 作为授权证据。
+- `opl okf project-pack --pack <pack_compiler_input.json> --output <dir>` 只把 Foundry Agent declarative pack refs 投影成 body-free OKF bundle；prompt、skill、knowledge、quality gate、artifact、memory body 和 domain truth 仍留在 domain repo。
+- `buildOkfMemoryLocatorConcept` 只生成 memory locator concept，默认 `resource_body_mode=body_free_locator`，不复制 memory body，不接受/拒绝 writeback，不替 MAS/MAG/RCA/OMA owner 做 memory authority decision。
+- 进度优先口径固定：unknown frontmatter / unknown type / broken crosslink / missing optional metadata 都只能是 warning 或 advisory gap，不能阻断普通 stage launch、provider wakeup 或 executor 推进；只有 OKF 被用于 source/data authority、owner identity、forbidden write、irreversible mutation、hard reviewer/publication/final export/submission claim、owner receipt / typed blocker / readiness claim 时，才回到既有 authority gate。
+- 这次落地不声明任何 domain ready、App release ready、Brand L5、provider long-soak 或 production ready；OKF 只让 AI executor 更容易获得结构化上下文和 refs-only 发现面。
+
 ### 决策：Domain Markdown Memory 是 advisory prompt context，不是程序化控制器
 
 原因：MAS/MAG/RCA/Book Forge/OMA 的领域经验需要以 Markdown 自然语言保留，让 AI executor 按当前数据、对象、证据、owner gate 和质量目标自行判断是否借用；如果把这类经验硬做成 recipe engine、route scorer、winning-path generator 或 readiness gate，会降低开放式判断质量，并制造新的 false authority。

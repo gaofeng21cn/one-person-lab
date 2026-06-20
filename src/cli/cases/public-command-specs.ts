@@ -1,7 +1,16 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../contracts.ts';
 import { buildOplFrameworkLocator } from '../../opl-framework-locator.ts';
 import { buildFrameworkOperatingMaturityReadout } from '../../framework-operating-maturity.ts';
 import { buildFrameworkReadinessSummary } from '../../framework-readiness.ts';
+import {
+  buildOkfContextBundleFromDomainPack,
+  inspectOkfContextBundle,
+  validateOkfContextBundle,
+  writeOkfContextBundleProjection,
+} from '../../okf-context-bundle.ts';
 import { buildOplAppState, parseAppActionExecuteArgs, parseAppStateArgs, runOplAppActionExecute } from '../../app-state.ts';
 import { runOplEngineAction } from '../../system-installation/engine-actions.ts';
 import { runOplTurnkeyInstall } from '../../system-installation/turnkey.ts';
@@ -63,6 +72,107 @@ import { buildFoundryCommandSpecs } from './public-command-specs-parts/foundry.t
 import { buildStageCommandSpecs, validateStageDerivedLensCommandSpecs } from './public-command-specs-parts/stages.ts';
 import { buildUpdateCommandSpecs } from './public-command-specs-parts/update.ts';
 import { buildWorkspaceCommandSpecs } from './public-command-specs-parts/workspace.ts';
+
+function parseOkfBundleArgs(args: string[], spec: CommandSpec) {
+  let bundlePath: string | undefined;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--json') {
+      continue;
+    }
+    if (arg === '--bundle') {
+      const value = args[index + 1];
+      if (!value) {
+        throw buildUsageError('okf command requires a value for --bundle.', spec, {
+          required: ['--bundle'],
+        });
+      }
+      bundlePath = value;
+      index += 1;
+      continue;
+    }
+    throw buildUsageError(`Unknown okf option: ${arg}.`, spec, {
+      option: arg,
+    });
+  }
+  if (!bundlePath) {
+    throw buildUsageError('okf command requires --bundle.', spec, {
+      required: ['--bundle'],
+    });
+  }
+  return { bundlePath };
+}
+
+function parseOkfProjectPackArgs(args: string[], spec: CommandSpec) {
+  let packPath: string | undefined;
+  let outputPath: string | undefined;
+  let bundleId: string | undefined;
+  let sourceRootRef: string | undefined;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--json') {
+      continue;
+    }
+    if (arg === '--pack') {
+      const value = args[index + 1];
+      if (!value) {
+        throw buildUsageError('okf project-pack requires a value for --pack.', spec, {
+          required: ['--pack'],
+        });
+      }
+      packPath = value;
+      index += 1;
+      continue;
+    }
+    if (arg === '--output') {
+      const value = args[index + 1];
+      if (!value) {
+        throw buildUsageError('okf project-pack requires a value for --output.', spec, {
+          required: ['--output'],
+        });
+      }
+      outputPath = value;
+      index += 1;
+      continue;
+    }
+    if (arg === '--bundle-id') {
+      const value = args[index + 1];
+      if (!value) {
+        throw buildUsageError('okf project-pack requires a value for --bundle-id.', spec, {
+          option: '--bundle-id',
+        });
+      }
+      bundleId = value;
+      index += 1;
+      continue;
+    }
+    if (arg === '--source-root-ref') {
+      const value = args[index + 1];
+      if (!value) {
+        throw buildUsageError('okf project-pack requires a value for --source-root-ref.', spec, {
+          option: '--source-root-ref',
+        });
+      }
+      sourceRootRef = value;
+      index += 1;
+      continue;
+    }
+    throw buildUsageError(`Unknown okf project-pack option: ${arg}.`, spec, {
+      option: arg,
+    });
+  }
+  if (!packPath || !outputPath) {
+    throw buildUsageError('okf project-pack requires --pack and --output.', spec, {
+      required: ['--pack', '--output'],
+    });
+  }
+  return {
+    bundleId,
+    outputPath,
+    packPath,
+    sourceRootRef,
+  };
+}
 
 export function buildPublicCommandSpecs(
   commandSpecs: Record<string, CommandSpec>,
@@ -201,6 +311,59 @@ export function buildPublicCommandSpecs(
     ...connectCommandSpecs,
     ...updateCommandSpecs,
     ...workOrderCommandSpecs,
+    'okf validate': {
+      usage: 'opl okf validate --bundle <path>',
+      summary: 'Validate an OKF v0.1 context bundle projection without taking runtime or domain authority.',
+      examples: ['opl okf validate --bundle ./okf --json'],
+      group: 'contract',
+      handler: (args) => {
+        const parsed = parseOkfBundleArgs(args, publicCommandSpecs['okf validate']);
+        return {
+          version: 'g2',
+          okf_validation: validateOkfContextBundle(parsed),
+        };
+      },
+    },
+    'okf inspect': {
+      usage: 'opl okf inspect --bundle <path>',
+      summary: 'Inspect the OPL OKF context bundle contract and file-role readback.',
+      examples: ['opl okf inspect --bundle ./okf --json'],
+      group: 'contract',
+      handler: (args) => {
+        const parsed = parseOkfBundleArgs(args, publicCommandSpecs['okf inspect']);
+        return {
+          version: 'g2',
+          okf_bundle: inspectOkfContextBundle(parsed),
+        };
+      },
+    },
+    'okf project-pack': {
+      usage:
+        'opl okf project-pack --pack <pack_compiler_input.json> --output <okf_dir> [--bundle-id <id>] [--source-root-ref <ref>]',
+      summary:
+        'Project a Foundry Agent domain pack compiler input into a body-free OKF context bundle directory.',
+      examples: [
+        'opl okf project-pack --pack ./contracts/pack_compiler_input.json --output ./okf --json',
+        'opl okf project-pack --pack ./contracts/pack_compiler_input.json --output ./okf --source-root-ref repo:opl-bookforge --json',
+      ],
+      group: 'contract',
+      handler: (args) => {
+        const parsed = parseOkfProjectPackArgs(args, publicCommandSpecs['okf project-pack']);
+        const packInput = JSON.parse(
+          readFileSync(resolve(parsed.packPath), 'utf8'),
+        );
+        const projection = buildOkfContextBundleFromDomainPack(packInput, {
+          bundleId: parsed.bundleId,
+          sourceRootRef: parsed.sourceRootRef,
+        });
+        return {
+          version: 'g2',
+          okf_projection: projection,
+          okf_write: writeOkfContextBundleProjection(projection, parsed.outputPath),
+          okf_validation: validateOkfContextBundle({ bundlePath: parsed.outputPath }),
+        };
+      },
+    },
     'framework locate': {
       usage: 'opl framework locate',
       summary: 'Locate the OPL Framework runtime dependency for an OPL-compatible agent.',

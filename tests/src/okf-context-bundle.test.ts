@@ -1,0 +1,125 @@
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+
+import { assert, test } from './cli/helpers.ts';
+import {
+  OKF_CONTEXT_BUNDLE_CONTRACT,
+  buildOkfContextBundleProjection,
+  validateOkfContextBundle,
+} from '../../src/okf-context-bundle.ts';
+
+function createBundle(files: Record<string, string>) {
+  const root = mkdtempSync(join(tmpdir(), 'opl-okf-bundle-'));
+  for (const [relativePath, content] of Object.entries(files)) {
+    const filePath = join(root, relativePath);
+    mkdirSync(dirname(filePath), { recursive: true });
+    writeFileSync(filePath, content, 'utf8');
+  }
+  return root;
+}
+
+test('OKF contract freezes OPL authority false flags and reserved filenames', () => {
+  assert.equal(OKF_CONTEXT_BUNDLE_CONTRACT.authority_boundary.can_write_domain_truth, false);
+  assert.equal(OKF_CONTEXT_BUNDLE_CONTRACT.authority_boundary.can_write_memory_body, false);
+  assert.equal(OKF_CONTEXT_BUNDLE_CONTRACT.authority_boundary.can_authorize_quality_verdict, false);
+  assert.deepEqual(OKF_CONTEXT_BUNDLE_CONTRACT.reserved_filenames, ['index.md', 'log.md']);
+  assert.deepEqual(
+    OKF_CONTEXT_BUNDLE_CONTRACT.okf_v0_1_source_refs.map((ref) => ref.ref),
+    [
+      'https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md',
+      'https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing',
+    ],
+  );
+});
+
+test('OKF builder creates a projection without granting runtime or domain authority', () => {
+  const projection = buildOkfContextBundleProjection({
+    bundleId: 'demo-bundle',
+    title: 'Demo Bundle',
+    concepts: [
+      {
+        id: 'stage-packet',
+        title: 'Stage Packet',
+        type: 'concept',
+        body: 'References [[missing-concept]] and keeps unknown frontmatter.',
+        frontmatter: {
+          unexpected_okf_extension: 'kept',
+        },
+      },
+    ],
+  });
+
+  assert.equal(projection.surface_kind, 'opl_okf_context_bundle_projection');
+  assert.equal(projection.bundle_role, 'context_bundle');
+  assert.equal(projection.authority_boundary.can_write_domain_truth, false);
+  assert.equal(projection.authority_boundary.can_write_memory_body, false);
+  assert.equal(projection.files['stage-packet.md']?.frontmatter.type, 'concept');
+  assert.equal(
+    projection.files['stage-packet.md']?.frontmatter.unexpected_okf_extension,
+    'kept',
+  );
+  assert.deepEqual(projection.warnings, [
+    {
+      code: 'okf_broken_link',
+      file: 'stage-packet.md',
+      link: 'missing-concept',
+      message: 'OKF wikilink target is not present in this bundle.',
+    },
+  ]);
+});
+
+test('OKF validator requires concept frontmatter type but tolerates unknown frontmatter and broken links', () => {
+  const root = createBundle({
+    'index.md': '# Index\n\n- [[concept-a]]\n',
+    'log.md': '# Log\n',
+    'concept-a.md': [
+      '---',
+      'type: concept',
+      'unknown_field: tolerated',
+      '---',
+      '',
+      '# Concept A',
+      'Broken [[missing-concept]] link.',
+    ].join('\n'),
+    'missing-type.md': [
+      '---',
+      'title: Missing Type',
+      '---',
+      '',
+      '# Missing Type',
+    ].join('\n'),
+  });
+
+  try {
+    const validation = validateOkfContextBundle({ bundlePath: root });
+
+    assert.equal(validation.status, 'invalid');
+    assert.deepEqual(validation.errors.map((error) => error.code), ['okf_frontmatter_type_required']);
+    assert.deepEqual(validation.warnings.map((warning) => warning.code), ['okf_broken_link']);
+    assert.equal(validation.files.find((file) => file.path === 'concept-a.md')?.frontmatter.unknown_field, 'tolerated');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('OKF validator rejects concept documents using reserved filenames', () => {
+  const root = createBundle({
+    'index.md': [
+      '---',
+      'type: concept',
+      '---',
+      '',
+      '# Reserved concept',
+    ].join('\n'),
+  });
+
+  try {
+    const validation = validateOkfContextBundle({ bundlePath: root });
+
+    assert.equal(validation.status, 'invalid');
+    assert.deepEqual(validation.errors.map((error) => error.code), ['okf_reserved_filename_for_concept']);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
