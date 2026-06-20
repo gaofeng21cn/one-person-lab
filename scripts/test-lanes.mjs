@@ -356,6 +356,7 @@ const lanes = {
       'tests/src/active-path-residue-scan.test.ts',
       'tests/src/stale-compat-retirement-guard.test.ts',
       'tests/src/cli/cases/system-semantic-hygiene.test.ts',
+      'tests/src/cli/cases/system-dependency-doctor.test.ts',
       'tests/src/cli/cases/framework-readiness-binding-cases.test.ts',
       'tests/src/cli/cases/framework-readiness.test.ts',
       'tests/src/cli/cases/runtime-manifest-cache-timeout.test.ts',
