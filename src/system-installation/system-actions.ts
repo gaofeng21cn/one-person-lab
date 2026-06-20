@@ -11,6 +11,7 @@ import type { FrameworkContracts } from '../types.ts';
 
 import { runOplEngineAction } from './engine-actions.ts';
 import { buildOplDeveloperModeSurface } from './developer-mode.ts';
+import { runOplSystemDependencyMaintenance } from './dependency-doctor.ts';
 import { buildOplEnvironment } from './environment.ts';
 import { resolveFrameworkUpdateTargetRoot, runOplFrameworkSelfUpdate } from './framework-self-update.ts';
 import { buildOplModules, runOplModuleAction } from './modules.ts';
@@ -288,6 +289,13 @@ export async function runOplSystemAction(
 
   if (action === 'startup_maintenance') {
     return runOplStartupMaintenance(contracts);
+  }
+
+  if (action === 'dependency_maintenance') {
+    return runOplSystemDependencyMaintenance({
+      profile: input.dependencyProfile,
+      apply: input.apply,
+    });
   }
 
   if (action === 'developer_supervisor') {

@@ -5,6 +5,7 @@ import { bootstrapLocalCodexDefaults, readBundledCodexDefaultProfile } from '../
 import { buildOplFrameworkSemanticHygieneAudit } from '../../framework-semantic-hygiene.ts';
 import { syncOplCompanionSkills } from '../../install-companions.ts';
 import { syncFamilySkillPacks } from '../../opl-skills.ts';
+import { buildOplSystemDependencyDoctor } from '../../system-installation/dependency-doctor.ts';
 import { buildOplEnvironment } from '../../system-installation/environment.ts';
 import { buildOplInitialize } from '../../system-installation/initialize.ts';
 import { runOplSystemAction } from '../../system-installation/system-actions.ts';
@@ -18,6 +19,7 @@ import {
   assertNoArgs,
   buildUsageError,
   parseDeveloperSupervisorArgs,
+  parseSystemDependencyArgs,
   parseSystemConfigureCodexArgs,
   parseUpdateChannelArgs,
 } from '../modules/support.ts';
@@ -196,6 +198,40 @@ export function buildPublicSystemCommandSpecs(
     },
   };
 
+  const systemDependencyDoctorSpec: CommandSpec = {
+    usage: 'opl system dependency-doctor [--profile bookforge-publication-proof]',
+    summary:
+      'Inspect OPL-owned local dependency readiness for domain helper profiles such as BookForge publication proof.',
+    examples: [
+      'opl system dependency-doctor --profile bookforge-publication-proof --json',
+    ],
+    group: 'system',
+    handler: (args) => {
+      const parsed = parseSystemDependencyArgs(args, systemDependencyDoctorSpec);
+      return buildOplSystemDependencyDoctor({ profile: parsed.profile });
+    },
+  };
+
+  const systemDependencyMaintenanceSpec: CommandSpec = {
+    usage: 'opl system dependency-maintenance [--profile bookforge-publication-proof] [--apply]',
+    summary:
+      'Plan or explicitly apply OPL-owned local dependency maintenance for domain helper profiles.',
+    examples: [
+      'opl system dependency-maintenance --profile bookforge-publication-proof --json',
+      'opl system dependency-maintenance --profile bookforge-publication-proof --apply --json',
+    ],
+    group: 'system',
+    handler: async (args) => {
+      const parsed = parseSystemDependencyArgs(args, systemDependencyMaintenanceSpec);
+      return buildPublicSystemActionPayload(
+        await runOplSystemAction(getContracts(), 'dependency_maintenance', {
+          dependencyProfile: parsed.profile,
+          apply: parsed.apply,
+        }),
+      );
+    },
+  };
+
   return {
     system: buildNoArgSpec(
       {
@@ -227,6 +263,8 @@ export function buildPublicSystemCommandSpecs(
         semantic_hygiene: buildOplFrameworkSemanticHygieneAudit(getContracts()),
       }),
     ),
+    'system dependency-doctor': systemDependencyDoctorSpec,
+    'system dependency-maintenance': systemDependencyMaintenanceSpec,
     'system configure-codex': systemConfigureCodexSpec,
     'system repair': buildNoArgSpec(
       {

@@ -35,6 +35,7 @@ export type OplSystemAction =
   | 'update'
   | 'reconcile_modules'
   | 'startup_maintenance'
+  | 'dependency_maintenance'
   | 'update_channel'
   | 'developer_supervisor'
   | 'repair_native_helpers';
@@ -192,6 +193,8 @@ export type OplSystemActionInput = Partial<{
   developerSupervisorEnabled: 'auto' | 'on' | 'off';
   developerSupervisorMode: 'external_observe' | 'developer_apply_safe';
   developerSupervisorAutoEnableGithubLogin: string;
+  dependencyProfile: string;
+  apply: boolean;
   host: string;
   port: number;
   workspacePath: string;

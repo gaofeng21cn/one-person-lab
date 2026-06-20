@@ -4,6 +4,7 @@ import type {
   OplEngineCliInput,
   OplModuleExecCliInput,
   OplModuleCliInput,
+  SystemDependencyCliInput,
   SystemConfigureCodexCliInput,
   SessionRuntimeCliInput,
   TurnkeyInstallCliInput,
@@ -619,6 +620,45 @@ function parseUpdateChannelArgs(
   return parsed;
 }
 
+function parseSystemDependencyArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): SystemDependencyCliInput {
+  const parsed: SystemDependencyCliInput = { profile: 'bookforge-publication-proof' };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (token === '--apply') {
+      parsed.apply = true;
+      continue;
+    }
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, { token });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, { option: token });
+    }
+
+    switch (token) {
+      case '--profile':
+        parsed.profile = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for system dependency command: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
 function parseDeveloperSupervisorArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -724,6 +764,7 @@ export {
   parseOplModuleArgs,
   parseSessionRuntimeArgs,
   parseSystemConfigureCodexArgs,
+  parseSystemDependencyArgs,
   parseTurnkeyInstallArgs,
   parseUpdateChannelArgs,
   parseWorkspaceAdoptArgs,

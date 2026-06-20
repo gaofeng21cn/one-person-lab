@@ -5,6 +5,21 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-06-20
+
+### 决策：Domain helper dependency maintenance 归 OPL system route
+
+原因：OPL BookForge 的 publication proof helper 使用 Pandoc/XeLaTeX/Poppler 和 TeX Live packages。若 BookForge 在领域仓内通过 workaround、跳过验证或私有安装脚本处理 `titling.sty` / `tocloft.sty` / TinyTeX 依赖漂移，会把本机工具链维护误放进 domain truth 层，也会让普通写作推进被出版 proof 环境预检反向阻断。
+
+影响：
+
+- `opl system dependency-doctor --profile bookforge-publication-proof --json` 是 OPL-owned 本机依赖诊断面，读取 Pandoc、XeLaTeX、Poppler 和 proof profile 所需 LaTeX package 的 discoverability。
+- `opl system dependency-maintenance --profile bookforge-publication-proof --json` 默认只输出维护计划；只有显式 `--apply` 才尝试通过检测到的 TeX Live package manager 执行修复。doctor 路径不得突变系统环境。
+- BookForge 仍拥有 manuscript、proof profile、helper behavior、书稿质量、出版 proof / final export owner gate；OPL 只拥有本机依赖诊断、维护 route 和 no-domain-authority readback。
+- 该 surface 的 hard blocker 只适用于 BookForge publication proof / final export 相关 claim。普通 storyline、chapter drafting、context compile、claim integrity、style calibration、review PDF 以外的写作进度不得因为该 doctor blocked 而停摆。
+- `titling.sty` 与 `tocloft.sty` 从 bundled BookForge proof header 中退役后只作为 `legacy_not_required` 诊断项；不得再因为它们缺失阻断当前 proof profile。
+- 该能力不写 MAS/MAG/RCA/BookForge truth，不写 manuscript，不签 owner receipt，不创建 typed blocker，不授权 quality/export verdict，不声明 domain ready、publication ready、final export ready 或 production ready。
+
 ## 2026-06-17
 
 ### 决策：Domain Progress Transition Runtime readback 必须稳定暴露五个字段族

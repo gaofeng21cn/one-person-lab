@@ -84,6 +84,11 @@ type RuntimeAppOperatorDrilldownCliInput = {
   detailLevel: 'summary' | 'full';
 };
 
+type SystemDependencyCliInput = {
+  profile: string;
+  apply?: boolean;
+};
+
 type ObservabilityExportCliInput = {
   format: 'json' | 'openmetrics';
 };
@@ -262,6 +267,7 @@ export type {
   StartCliInput,
   SkillPacksCliInput,
   SystemConfigureCodexCliInput,
+  SystemDependencyCliInput,
   TurnkeyInstallCliInput,
   UpdateChannelCliInput,
   WebCliInput,
