@@ -260,6 +260,8 @@ The portfolio is not a domain hypothesis store, scientific truth reducer, qualit
 
 `family-domain-memory-ref.schema.json` and `family-domain-memory-writeback.schema.json` add the memory-reference layer needed by the stage-led agent framework. They describe only domain-owned memory pack locators, freshness, stage targeting, proposal refs, and router receipt refs.
 
+The baseline rule for the whole family is: domain memory is AI-readable Markdown reference memory owned by the domain repository. `OPL` brand modules such as Atlas, Pack, Stagecraft, Runway, Vault, Console, and Connect carry catalog entries, refs, prompt-injection refs, receipts, and projections only. They are not route scorers, winning-path generators, quality gates, or memory-body owners.
+
 `OPL` may:
 
 - discover and index domain memory refs;
@@ -271,10 +273,11 @@ The portfolio is not a domain hypothesis store, scientific truth reducer, qualit
 
 - store or rewrite domain memory body text;
 - promote memory cards into evidence, review, grant, visual, or artifact truth;
+- generate publication strategy, fundability, visual, or artifact winning paths from memory refs;
 - accept or reject memory writebacks;
 - infer publication, fundability, visual-quality, or artifact-readiness verdicts from memory refs.
 
-MAS `publication_route_memory`, MAG grant strategy memory, and RCA visual pattern memory should expose locator/receipt refs through their domain manifests. Memory content, route judgment, quality gates, and artifact authority remain with the domain repository.
+MAS Publication Strategy Memory / `publication_route_memory`, MAG grant strategy memory, and RCA visual pattern memory should expose locator/receipt refs through their domain manifests. Markdown body content, route judgment, quality gates, writeback accept/reject authority, and artifact authority remain with the domain repository.
 
 ## What This Directory Does Not Freeze
 

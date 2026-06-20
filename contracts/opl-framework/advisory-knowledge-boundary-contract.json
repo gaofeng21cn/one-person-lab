@@ -1,0 +1,137 @@
+{
+  "surface_kind": "opl_advisory_knowledge_boundary_contract",
+  "version": "opl-advisory-knowledge-boundary.v1",
+  "owner": "one-person-lab",
+  "state": "active_contract",
+  "purpose": "Freeze the family-wide boundary that domain Markdown memory is prompt context and advisory knowledge, not a programmatic route scorer, controller, or quality gate.",
+  "machine_boundary": {
+    "opl_owns": {
+      "domain_memory_catalog_refs": true,
+      "body_free_locator_refs": true,
+      "stage_packet_knowledge_refs": true,
+      "prompt_injection_refs": true,
+      "consumed_memory_refs": true,
+      "writeback_proposal_refs": true,
+      "router_receipt_refs": true,
+      "operator_projection_refs": true
+    },
+    "domain_owns": {
+      "markdown_memory_body": true,
+      "memory_accept_reject": true,
+      "route_judgment": true,
+      "quality_verdict": true,
+      "export_or_submission_verdict": true,
+      "artifact_authority": true,
+      "owner_receipt": true,
+      "typed_blocker": true
+    }
+  },
+  "default_use_policy": {
+    "body_mode": "markdown_first",
+    "stage_packet_role": "reference_only_prompt_context",
+    "retrieval_scope": "small_stage_relevant_ref_set",
+    "transport_scope": "body_free_refs_by_default",
+    "missing_memory_blocks_launch_by_default": false,
+    "memory_conflict_blocks_launch_by_default": false,
+    "memory_can_suggest_route_back": true,
+    "memory_can_suggest_human_gate": true,
+    "memory_can_inform_reviewer_attention": true,
+    "memory_can_authorize_stage_progress": false,
+    "memory_can_authorize_domain_ready": false
+  },
+  "hard_gate_triggers": [
+    "source_or_data_authority_missing",
+    "domain_owner_route_identity_missing",
+    "forbidden_write_or_body_exposure",
+    "irreversible_mutation_without_owner_receipt",
+    "hard_reviewer_gate_claim",
+    "quality_verdict_claim",
+    "publication_or_submission_claim",
+    "final_export_claim",
+    "owner_receipt_or_typed_blocker_claim"
+  ],
+  "forbidden_roles": {
+    "route_scorer": false,
+    "winning_path_generator": false,
+    "recipe_engine": false,
+    "controller_decision_source": false,
+    "quality_gate": false,
+    "publication_or_submission_gate": false,
+    "export_gate": false,
+    "domain_truth_source": false,
+    "memory_body_owner": false,
+    "owner_receipt_signer": false,
+    "typed_blocker_creator": false
+  },
+  "brand_module_boundaries": {
+    "atlas": {
+      "may_hold": ["catalog_refs", "locator_refs", "stage_applicability_refs", "freshness_refs", "provenance_refs"],
+      "must_not_hold": ["markdown_body", "route_score", "route_verdict", "quality_verdict"]
+    },
+    "pack": {
+      "may_hold": ["knowledge_refs", "prompt_injection_refs", "rubric_refs", "allowed_read_boundary"],
+      "must_not_hold": ["opl_owned_memory_body", "launch_gate_from_memory_refs", "quality_gate_from_memory_refs"]
+    },
+    "stagecraft": {
+      "may_hold": ["retrieved_memory_refs", "writeback_proposal_refs", "stage_packet_prompt_context"],
+      "must_not_hold": ["winning_path_generation", "route_scoring", "writeback_accept_reject"]
+    },
+    "runway": {
+      "may_hold": ["attempt_consumed_refs", "closeout_writeback_receipt_refs", "typed_blocker_refs"],
+      "must_not_hold": ["domain_progress_from_memory_refs", "domain_ready_from_memory_refs", "production_ready_from_memory_refs"]
+    },
+    "vault": {
+      "may_hold": ["refs_only_index", "receipt_locator", "opaque_payload_ref", "freshness_projection"],
+      "must_not_hold": ["domain_memory_body_store", "domain_truth_store", "quality_verdict_store", "artifact_authority"]
+    },
+    "console": {
+      "may_hold": ["operator_drilldown_refs", "rejected_writeback_reason_refs", "blocked_reason_refs", "authority_boundary"],
+      "must_not_hold": ["memory_body_editor", "domain_accept_reject", "route_verdict"]
+    },
+    "connect": {
+      "may_hold": ["descriptor_discovery_refs", "external_integration_refs", "sync_receipt_refs"],
+      "must_not_hold": ["connector_output_as_memory_body", "connector_output_as_route_verdict", "connector_output_as_quality_gate"]
+    }
+  },
+  "known_domain_memory_families": [
+    {
+      "domain_id": "mas",
+      "memory_family": "publication_strategy_memory",
+      "compatible_implementation_family": "publication_route_memory",
+      "body_owner": "med-autoscience",
+      "advisory_role": "publication_strategy_prompt_context"
+    },
+    {
+      "domain_id": "mag",
+      "memory_family": "grant_strategy_memory",
+      "body_owner": "med-autogrant",
+      "advisory_role": "fundability_strategy_prompt_context"
+    },
+    {
+      "domain_id": "rca",
+      "memory_family": "visual_pattern_memory",
+      "body_owner": "redcube-ai",
+      "advisory_role": "visual_direction_and_review_attention_context"
+    },
+    {
+      "domain_id": "opl-bookforge",
+      "memory_family": "book_style_and_reference_memory",
+      "body_owner": "opl-bookforge",
+      "advisory_role": "drafting_style_and_reference_absorption_context"
+    },
+    {
+      "domain_id": "opl-meta-agent",
+      "memory_family": "agent_building_external_learning_memory",
+      "body_owner": "opl-meta-agent",
+      "advisory_role": "foundry_design_and_improvement_context"
+    }
+  ],
+  "conformance_expectations": {
+    "must_preserve_ai_reasoning_aperture": true,
+    "must_keep_domain_body_in_domain_repo_or_workspace": true,
+    "must_keep_opl_refs_body_free_by_default": true,
+    "must_not_fail_closed_on_missing_advisory_memory": true,
+    "must_fail_closed_on_forbidden_body_exposure": true,
+    "must_fail_closed_on_authority_claim_from_memory_refs": true
+  }
+}

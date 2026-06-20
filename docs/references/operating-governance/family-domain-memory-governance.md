@@ -14,6 +14,7 @@ OPL family 需要统一的 domain memory 管理纪律，但不应该把领域经
 当前合理形态是：
 
 - OPL 提供 framework-level 的发现、索引、stage packet 引用、closeout writeback receipt、freshness 和 operator projection 能力。
+- OPL Atlas / Pack / Stagecraft / Runway / Vault / Console / Connect 只承载 catalog、refs、prompt injection、receipt 和 projection 机制；它们不拥有 Markdown memory body、不生成 winning path、不做 route scorer、不替代 domain quality gate。
 - MAS / MAG / RCA 持有各自的领域经验内容、质量判断、route 判断和 artifact authority。
 - 探索性经验先以自然语言 memory card 沉淀，只加最小 metadata 方便检索、溯源、freshness 和 stage targeting。
 - 已成熟且承担执行安全、质量下限、artifact 构建或 gate 判定的内容继续保持强 schema / contract / code owner。
@@ -37,7 +38,23 @@ OPL family 需要统一的 domain memory 管理纪律，但不应该把领域经
 - `opl agents descriptors --json` / `opl agents descriptor --domain mas --json` 是维护者和 App 的 domain-agent 总入口：它把 entry、stage、action、memory、skill、runtime、progress 和 artifact refs 聚合到同一个只读 descriptor。
 - `opl domain-memory list|inspect|migration-plan --json` 是 memory 专题入口：它只展开 domain-owned memory locator、migration plan、proposal contract、router receipt 和 writeback receipt locator。
 
-因此 MAS 论文路线经验库的 OPL 接入方式是：统一 descriptor 先显示 `domain_memory_descriptor.memory_ref_id=mas_publication_route_memory`，再由 memory 专题入口展开 locator / receipt / freshness。论文路线正文继续在 MAS 的 Markdown-first memory / policy 文档中维护；OPL 只携带 refs/status/authority boundary，不复制正文，也不变成 route recipe engine。
+因此 MAS 论文路线经验库的 OPL 接入方式是：统一 descriptor 先显示 `domain_memory_descriptor.memory_ref_id=mas_publication_route_memory`，再由 memory 专题入口展开 locator / receipt / freshness。MAS Publication Strategy Memory / `publication_route_memory` 是 AI-readable Markdown reference memory；论文路线正文、案例、caveat、失败模式、路线判断、quality gate 和 writeback accept/reject 继续在 MAS domain surface 中维护。OPL 只携带 refs/status/authority boundary，不复制正文，也不变成 route recipe engine。
+
+## OPL 品牌模块边界
+
+长期 family 基线规则如下：
+
+| OPL 模块 | 可以承载 | 不可以承载 |
+| --- | --- | --- |
+| Atlas | domain memory catalog、locator、stage applicability、freshness 和 provenance refs | memory Markdown body、领域路线解释、路线打分或质量结论 |
+| Pack | stage / domain pack 中的 `knowledge_refs`、prompt injection refs、rubric refs 和 allowed-read boundary | 把 memory 正文打包成 OPL-owned 内容，或把 refs 完整性当作 launch / quality gate |
+| Stagecraft | stage packet / descriptor / attempt 中的 retrieved memory refs 与 writeback proposal refs | 生成 winning path、执行 route scorer、接受或拒绝 domain writeback |
+| Runway | runtime attempt ledger、consumed refs、closeout writeback receipt refs、typed blocker refs | 依据 memory ref 宣称 domain progress、publication ready、artifact ready 或 production ready |
+| Vault | refs-only index、receipt locator、opaque payload ref、freshness / provenance projection | domain memory body store、domain truth store、quality verdict store 或 artifact authority |
+| Console | operator drilldown 中的 memory refs、rejected writeback reason、blocked reason 和 authority boundary | 展示或编辑 memory 正文，或代替 domain owner 做 accept/reject / route verdict |
+| Connect | CLI / MCP / Skill / App descriptor discovery 与 external integration refs | 把外部 connector 输出直接写成 domain memory body、route verdict 或 quality gate |
+
+这组边界是 family 基座规则，不只适用于 MAS。MAG grant strategy memory 和 RCA visual pattern memory 复用同一规则：rich Markdown body 留在 domain；OPL 只把可审计引用送到正确 stage、operator view 和 receipt chain。
 
 ## 分类规则
 
