@@ -343,7 +343,7 @@ export const STANDARD_FOUNDRY_AGENT_GOLDEN_PATH_POLICY = {
   default_surface_budget_id: 'default_surface_budget',
   stage_control_plane_ref: 'contracts/stage_control_plane.json',
   ordinary_default_route_budget: 1,
-  default_route_selector: 'stages[].selected_executor.default_executor',
+  default_route_selector: 'stages[] without explicit lane kind + selected_executor.default_executor',
   explicit_lane_kinds: [
     'variant',
     'variants',

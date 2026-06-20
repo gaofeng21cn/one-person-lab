@@ -8,10 +8,91 @@ test('agents conformance blocks multiple ordinary default routes for a Foundry A
   const repoDir = buildReadyAgentRepo();
   const stageControlPlanePath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
   const stageControlPlane = JSON.parse(fs.readFileSync(stageControlPlanePath, 'utf8'));
+  const secondaryDefaultStage = {
+    ...stageControlPlane.stages[0],
+    stage_id: 'secondary_default_stage',
+    stage_kind: 'domain_specific',
+    title: 'Secondary default stage',
+    selected_executor: {
+      ...stageControlPlane.stages[0].selected_executor,
+      default_executor: true,
+    },
+  };
+  stageControlPlane.stages.push(secondaryDefaultStage);
+  writeJson(stageControlPlanePath, stageControlPlane);
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+  const repo = report.reports[0];
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(repo.status, 'blocked');
+  assert.equal(repo.golden_path_default_surface_budget_checks.status, 'blocked');
+  assert.equal(repo.golden_path_default_surface_budget_checks.default_route_count, 2);
+  assert.deepEqual(repo.golden_path_default_surface_budget_checks.default_route_stage_ids, [
+    'domain_intake',
+    'secondary_default_stage',
+  ]);
+  assert.equal(
+    repo.blockers.includes('golden_path_single_default_violation:default_route_count=2'),
+    true,
+  );
+});
+
+test('agents conformance treats explicit Codex follow-on lanes as non-default route variants', () => {
+  const repoDir = buildReadyAgentRepo();
+  const stageControlPlanePath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
+  const stageControlPlane = JSON.parse(fs.readFileSync(stageControlPlanePath, 'utf8'));
+  const followOnStage = {
+    ...stageControlPlane.stages[0],
+    stage_id: 'book_materialization_follow_on',
+    lane_kind: 'variant',
+    route_classification: 'explicit_follow_on_stage',
+    title: 'Book materialization follow-on',
+    selected_executor: {
+      ...stageControlPlane.stages[0].selected_executor,
+      default_executor: true,
+      lane_kind: 'variant',
+    },
+  };
+  stageControlPlane.stages.push(followOnStage);
+  writeJson(stageControlPlanePath, stageControlPlane);
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+  const repo = report.reports[0];
+  const checks = repo.golden_path_default_surface_budget_checks;
+
+  assert.equal(report.status, 'passed');
+  assert.equal(checks.status, 'passed');
+  assert.equal(checks.default_route_count, 1);
+  assert.deepEqual(checks.default_route_stage_ids, ['domain_intake']);
+  assert.deepEqual(checks.explicit_non_default_lane_stage_ids, ['book_materialization_follow_on']);
+  assert.equal(
+    checks.route_stages.find((stage: { stage_id: string }) =>
+      stage.stage_id === 'book_materialization_follow_on'
+    )?.executor_default_binding,
+    true,
+  );
+});
+
+test('agents conformance blocks explicit lanes that declare ordinary default route role', () => {
+  const repoDir = buildReadyAgentRepo();
+  const stageControlPlanePath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
+  const stageControlPlane = JSON.parse(fs.readFileSync(stageControlPlanePath, 'utf8'));
   const proofStage = {
     ...stageControlPlane.stages[0],
     stage_id: 'provider_proof_lane',
     stage_kind: 'proof',
+    route_classification: 'ordinary_default',
     title: 'Provider proof lane',
     selected_executor: {
       ...stageControlPlane.stages[0].selected_executor,
@@ -29,19 +110,12 @@ test('agents conformance blocks multiple ordinary default routes for a Foundry A
     `sample=${repoDir}`,
   ]).standard_domain_agent_conformance;
   const repo = report.reports[0];
+  const checks = repo.golden_path_default_surface_budget_checks;
 
   assert.equal(report.status, 'blocked');
-  assert.equal(repo.status, 'blocked');
-  assert.equal(repo.golden_path_default_surface_budget_checks.status, 'blocked');
-  assert.equal(repo.golden_path_default_surface_budget_checks.default_route_count, 2);
-  assert.deepEqual(repo.golden_path_default_surface_budget_checks.default_route_stage_ids, [
-    'domain_intake',
-    'provider_proof_lane',
-  ]);
-  assert.equal(
-    repo.blockers.includes('golden_path_single_default_violation:default_route_count=2'),
-    true,
-  );
+  assert.equal(checks.status, 'blocked');
+  assert.equal(checks.default_route_count, 1);
+  assert.deepEqual(checks.default_route_stage_ids, ['domain_intake']);
   assert.equal(
     repo.blockers.includes('golden_path_explicit_lane_declares_default:provider_proof_lane:proof'),
     true,

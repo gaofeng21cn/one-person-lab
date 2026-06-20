@@ -130,6 +130,27 @@ function inferredVariantLaneKind(stage: JsonRecord) {
   return null;
 }
 
+function explicitRouteDefaultClaimForStage(stage: JsonRecord) {
+  const selectedExecutor = isRecord(stage.selected_executor) ? stage.selected_executor : {};
+  const routeClassification = optionalString(stage.route_classification);
+  const pathRole = optionalString(stage.path_role);
+  const explicitRouteDefault = [
+    optionalString(stage.route_default),
+    optionalString(stage.default_route),
+    optionalString(selectedExecutor.route_default),
+  ];
+  return (
+    stage.route_default === true
+    || stage.default_route === true
+    || selectedExecutor.route_default === true
+    || routeClassification === 'ordinary_default'
+    || routeClassification === 'default_route'
+    || routeClassification === 'ordinary_default_route'
+    || pathRole === 'ordinary_default'
+    || explicitRouteDefault.some((entry) => entry === 'ordinary_default' || entry === 'default_route')
+  );
+}
+
 function rcaAlignment(routeStages: Array<{
   stage_id: string;
   stage_kind: string | null;
@@ -342,12 +363,16 @@ export function buildGoldenPathDefaultSurfaceBudgetChecks(repoDir: string) {
     const stageId = optionalString(stage.stage_id) ?? `stage_${index}`;
     const explicitLaneKind = explicitLaneKindForStage(stage);
     const inferredLaneKind = inferredVariantLaneKind(stage);
+    const routeDefaultClaim = explicitRouteDefaultClaimForStage(stage);
+    const defaultRoute = selectedExecutor.default_executor === true && !explicitLaneKind;
     return {
       stage_id: stageId,
       stage_kind: optionalString(stage.stage_kind),
       selected_executor_kind: optionalString(selectedExecutor.executor_kind),
       executor_binding_ref: optionalString(selectedExecutor.executor_binding_ref),
-      default_route: selectedExecutor.default_executor === true,
+      executor_default_binding: selectedExecutor.default_executor === true,
+      default_route: defaultRoute,
+      route_default_claim: routeDefaultClaim,
       explicit_lane_kind: explicitLaneKind,
       inferred_variant_lane_kind: inferredLaneKind,
       route_classification: explicitLaneKind ? 'explicit_non_default_lane' : 'ordinary_candidate',
@@ -361,7 +386,7 @@ export function buildGoldenPathDefaultSurfaceBudgetChecks(repoDir: string) {
     .filter((stage) => stage.explicit_lane_kind && !stage.default_route)
     .map((stage) => stage.stage_id);
   const explicitDefaultLaneBlockers = routeStages
-    .filter((stage) => stage.explicit_lane_kind && stage.default_route)
+    .filter((stage) => stage.explicit_lane_kind && stage.route_default_claim)
     .map((stage) =>
       `golden_path_explicit_lane_declares_default:${stage.stage_id}:${stage.explicit_lane_kind}`
     );
