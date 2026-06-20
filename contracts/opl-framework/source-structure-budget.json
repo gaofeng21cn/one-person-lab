@@ -62,14 +62,6 @@
   },
   "reviewed_baselines": [
     {
-      "path": "src/cli/cases/private-command-specs.ts",
-      "limit": 1013,
-      "owner": "one-person-lab",
-      "reason": "characterization_first: command registry and private command dispatch surface; split needs command-family trace before moving public/private CLI authority.",
-      "intended_boundary": "Split by command family and runtime surface after tracing active callers from src/cli/main.ts and system command tests.",
-      "review_after": "2026-07-20"
-    },
-    {
       "path": "src/family-runtime-domain-intake-parts/current-control-provider-admission.ts",
       "limit": 2449,
       "owner": "one-person-lab",
