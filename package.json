@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./automation-companions": "./dist/automation-companions.js",
+    "./advisory-knowledge-boundary": "./dist/advisory-knowledge-boundary.js",
     "./agent-lab": "./dist/agent-lab.js",
     "./agent-lab-complete": "./dist/agent-lab-complete.js",
     "./family-action-catalog": "./dist/family-action-catalog.js",

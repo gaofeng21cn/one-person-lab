@@ -17,6 +17,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - OPL Atlas / Pack / Stagecraft / Runway / Vault / Console / Connect 只能承载 catalog、locator、knowledge refs、prompt-context refs、consumed refs、writeback proposal refs、router receipt refs 和 operator projection。
 - OPL 不持有 memory Markdown body，不接受/拒绝 writeback，不依据 memory refs 生成 route verdict、quality/export/publication/submission verdict、owner receipt 或 typed blocker。
 - 缺少 advisory memory 默认不阻断 stage launch；memory 冲突默认进入 route-back / human gate / reviewer attention，只有 source/data authority、owner identity、forbidden write、不可逆 mutation、hard reviewer / publication / final export / submission claim 或 owner answer claim 才成为 hard gate。
+- 2026-06-20 follow-through：`contracts/opl-framework/advisory-knowledge-boundary-contract.json` 增加 `gate_intent` 和三栏 operator projection 机器边界。`context` 进入参考建议，`advisory_check` 进入软缺口，只有绑定具体 claim/source/owner authority ref 的 `claim_gate` / `authority_gate` 可进入硬 owner gate；`src/advisory-knowledge-boundary.ts` 只生成 projection，不写 domain truth、不读取 memory body、不接受/拒绝 writeback、不签 owner receipt、不创建 typed blocker，也不授权 quality/export/domain-ready verdict。
 
 ### 决策：Domain helper dependency maintenance 归 OPL system route
 

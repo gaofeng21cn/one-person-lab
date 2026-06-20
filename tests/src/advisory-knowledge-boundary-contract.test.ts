@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  buildAdvisoryKnowledgeOperatorProjection,
+} from '../../src/advisory-knowledge-boundary.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -74,6 +77,124 @@ test('advisory knowledge boundary forbids programmatic route and verdict authori
   assert.equal(hardGateTriggers.includes('final_export_claim'), true);
   assert.equal(expectations.must_not_fail_closed_on_missing_advisory_memory, true);
   assert.equal(expectations.must_fail_closed_on_authority_claim_from_memory_refs, true);
+});
+
+test('advisory knowledge boundary freezes gate intent semantics', () => {
+  const contract = readJson(contractPath);
+  const policy = record(contract.gate_intent_policy);
+  const intents = record(policy.intents);
+
+  assert.equal(policy.intent_field, 'gate_intent');
+  assert.equal(policy.default_intent_for_memory_refs, 'context');
+  assert.deepEqual(policy.blocking_intents, ['claim_gate', 'authority_gate']);
+  assert.deepEqual(policy.nonblocking_intents, ['context', 'advisory_check']);
+  assert.deepEqual(policy.blocking_signal_required_fields, [
+    'gate_intent',
+    'blocking_claim',
+    'source_ref',
+    'owner_ref_or_authority_ref',
+  ]);
+
+  assert.equal(record(intents.context).blocking_allowed, false);
+  assert.equal(record(intents.context).fail_mode, 'fail_open');
+  assert.equal(record(intents.advisory_check).blocking_allowed, false);
+  assert.equal(record(intents.advisory_check).fail_mode, 'fail_open');
+  assert.equal(record(intents.claim_gate).blocking_allowed, true);
+  assert.equal(record(intents.claim_gate).claim_binding_required, true);
+  assert.equal(record(intents.authority_gate).blocking_allowed, true);
+  assert.equal(record(intents.authority_gate).authority_binding_required, true);
+  assert.deepEqual(policy.advisory_signal_must_not_create, [
+    'owner_receipt',
+    'typed_blocker',
+    'route_verdict',
+    'quality_verdict',
+    'publication_or_submission_verdict',
+    'artifact_authority',
+  ]);
+});
+
+test('advisory knowledge operator projection contract exposes three columns without authority', () => {
+  const contract = readJson(contractPath);
+  const projection = record(contract.operator_projection_contract);
+  const columns = projection.columns as JsonRecord[];
+  const byColumn = new Map(columns.map((column) => [column.column_id, column]));
+  const authority = record(projection.authority_boundary);
+
+  assert.equal(projection.surface_kind, 'opl_advisory_knowledge_operator_projection_contract');
+  assert.equal(projection.projection_role, 'three_column_operator_boundary');
+  assert.deepEqual(record(byColumn.get('reference_suggestions')).gate_intents, ['context']);
+  assert.equal(record(byColumn.get('reference_suggestions')).can_block, false);
+  assert.deepEqual(record(byColumn.get('soft_gaps')).gate_intents, ['advisory_check']);
+  assert.equal(record(byColumn.get('soft_gaps')).can_block, false);
+  assert.deepEqual(record(byColumn.get('hard_owner_gates')).gate_intents, ['claim_gate', 'authority_gate']);
+  assert.equal(record(byColumn.get('hard_owner_gates')).can_block, true);
+  assert.deepEqual(record(byColumn.get('hard_owner_gates')).required_item_fields, [
+    'blocking_claim',
+    'source_ref',
+    'owner_ref_or_authority_ref',
+  ]);
+
+  assert.equal(authority.projection_only, true);
+  assert.equal(authority.can_write_domain_truth, false);
+  assert.equal(authority.can_write_memory_body, false);
+  assert.equal(authority.can_accept_or_reject_writeback, false);
+  assert.equal(authority.can_sign_owner_receipt, false);
+  assert.equal(authority.can_create_typed_blocker, false);
+  assert.equal(authority.can_authorize_domain_ready, false);
+  assert.equal(authority.can_authorize_quality_or_export_verdict, false);
+});
+
+test('advisory knowledge operator projection sorts signals into reference soft and hard columns', () => {
+  const projection = buildAdvisoryKnowledgeOperatorProjection([
+    {
+      signal_id: 'mas-risk-model-card',
+      gate_intent: 'context',
+      role: 'prompt_context_ref',
+      title: 'Risk stratification model pattern',
+      source_ref: 'mas://publication-strategy-memory/risk-model',
+    },
+    {
+      signal_id: 'bookforge-reference-style-gap',
+      gate_intent: 'advisory_check',
+      role: 'repair_suggestion',
+      title: 'Reference draft style needs review',
+      source_ref: 'bookforge://reference-draft/style-gap',
+    },
+    {
+      signal_id: 'final-export-owner-gate',
+      gate_intent: 'claim_gate',
+      role: 'claim_blocker_ref',
+      title: 'Final export requires owner proof',
+      blocking_claim: 'final_export_ready',
+      source_ref: 'bookforge://proof/latest',
+      owner_ref_or_authority_ref: 'owner-receipt://bookforge/final-export',
+    },
+    {
+      signal_id: 'invalid-authority-gate',
+      gate_intent: 'authority_gate',
+      role: 'owner_or_authority_blocker_ref',
+      title: 'Authority gate missing owner ref',
+      blocking_claim: 'owner_receipt_claim',
+      source_ref: 'opl://runtime/authority',
+    },
+  ]);
+
+  assert.equal(projection.surface_kind, 'opl_advisory_knowledge_operator_projection');
+  assert.equal(projection.projection_role, 'three_column_operator_boundary');
+  assert.deepEqual(projection.counts, {
+    reference_suggestion_count: 1,
+    soft_gap_count: 1,
+    hard_owner_gate_count: 2,
+    blocking_count: 2,
+  });
+  assert.equal(projection.reference_suggestions[0].signal_id, 'mas-risk-model-card');
+  assert.equal(projection.soft_gaps[0].signal_id, 'bookforge-reference-style-gap');
+  assert.equal(projection.hard_owner_gates[0].blocking_claim, 'final_export_ready');
+  assert.deepEqual(projection.hard_owner_gates[1].missing_required_fields, ['owner_ref_or_authority_ref']);
+  assert.equal(projection.authority_boundary.can_write_memory_body, false);
+  assert.equal(projection.authority_boundary.can_sign_owner_receipt, false);
+  assert.equal(projection.authority_boundary.can_create_typed_blocker, false);
+  assert.equal(projection.authority_boundary.can_authorize_quality_or_export_verdict, false);
 });
 
 test('advisory knowledge boundary maps brand modules to refs-only responsibilities', () => {

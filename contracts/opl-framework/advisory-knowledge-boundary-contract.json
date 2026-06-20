@@ -39,6 +39,167 @@
     "memory_can_authorize_stage_progress": false,
     "memory_can_authorize_domain_ready": false
   },
+  "gate_intent_policy": {
+    "intent_field": "gate_intent",
+    "default_intent_for_memory_refs": "context",
+    "blocking_intents": [
+      "claim_gate",
+      "authority_gate"
+    ],
+    "nonblocking_intents": [
+      "context",
+      "advisory_check"
+    ],
+    "blocking_signal_required_fields": [
+      "gate_intent",
+      "blocking_claim",
+      "source_ref",
+      "owner_ref_or_authority_ref"
+    ],
+    "intents": {
+      "context": {
+        "blocking_allowed": false,
+        "fail_mode": "fail_open",
+        "default_for": [
+          "memory_ref",
+          "retrieval_card",
+          "prompt_context",
+          "style_reference",
+          "tool_affordance_ref"
+        ],
+        "allowed_outputs": [
+          "prompt_context",
+          "retrieval_card",
+          "reference_suggestion",
+          "operator_note"
+        ]
+      },
+      "advisory_check": {
+        "blocking_allowed": false,
+        "fail_mode": "fail_open",
+        "default_for": [
+          "rubric_gap",
+          "style_gap",
+          "reference_absorption_gap",
+          "external_learning_gap",
+          "maintainer_review_hint"
+        ],
+        "allowed_outputs": [
+          "soft_gap",
+          "repair_suggestion",
+          "route_back_suggestion",
+          "review_attention"
+        ]
+      },
+      "claim_gate": {
+        "blocking_allowed": true,
+        "fail_mode": "fail_closed_for_claim_only",
+        "claim_binding_required": true,
+        "default_for": [
+          "quality_verdict_claim",
+          "publication_or_submission_claim",
+          "final_export_claim",
+          "domain_ready_claim",
+          "production_ready_claim"
+        ],
+        "allowed_outputs": [
+          "hard_owner_gate",
+          "claim_blocker_ref"
+        ]
+      },
+      "authority_gate": {
+        "blocking_allowed": true,
+        "fail_mode": "fail_closed_for_authority_boundary_only",
+        "claim_binding_required": true,
+        "authority_binding_required": true,
+        "default_for": [
+          "owner_receipt_claim",
+          "typed_blocker_claim",
+          "forbidden_write_or_body_exposure",
+          "irreversible_mutation",
+          "source_or_data_authority_missing",
+          "domain_owner_route_identity_missing"
+        ],
+        "allowed_outputs": [
+          "hard_owner_gate",
+          "owner_or_authority_blocker_ref"
+        ]
+      }
+    },
+    "advisory_signal_must_not_create": [
+      "owner_receipt",
+      "typed_blocker",
+      "route_verdict",
+      "quality_verdict",
+      "publication_or_submission_verdict",
+      "artifact_authority"
+    ]
+  },
+  "operator_projection_contract": {
+    "surface_kind": "opl_advisory_knowledge_operator_projection_contract",
+    "version": "opl-advisory-knowledge-operator-projection.v1",
+    "projection_role": "three_column_operator_boundary",
+    "consumer_modules": [
+      "console",
+      "runway",
+      "stagecraft",
+      "pack"
+    ],
+    "columns": [
+      {
+        "column_id": "reference_suggestions",
+        "gate_intents": [
+          "context"
+        ],
+        "can_block": false,
+        "item_roles": [
+          "prompt_context_ref",
+          "retrieval_card",
+          "reference_note"
+        ]
+      },
+      {
+        "column_id": "soft_gaps",
+        "gate_intents": [
+          "advisory_check"
+        ],
+        "can_block": false,
+        "item_roles": [
+          "repair_suggestion",
+          "review_attention",
+          "route_back_suggestion"
+        ]
+      },
+      {
+        "column_id": "hard_owner_gates",
+        "gate_intents": [
+          "claim_gate",
+          "authority_gate"
+        ],
+        "can_block": true,
+        "item_roles": [
+          "claim_blocker_ref",
+          "owner_or_authority_blocker_ref",
+          "human_gate_ref"
+        ],
+        "required_item_fields": [
+          "blocking_claim",
+          "source_ref",
+          "owner_ref_or_authority_ref"
+        ]
+      }
+    ],
+    "authority_boundary": {
+      "projection_only": true,
+      "can_write_domain_truth": false,
+      "can_write_memory_body": false,
+      "can_accept_or_reject_writeback": false,
+      "can_sign_owner_receipt": false,
+      "can_create_typed_blocker": false,
+      "can_authorize_domain_ready": false,
+      "can_authorize_quality_or_export_verdict": false
+    }
+  },
   "hard_gate_triggers": [
     "source_or_data_authority_missing",
     "domain_owner_route_identity_missing",
@@ -48,7 +209,8 @@
     "quality_verdict_claim",
     "publication_or_submission_claim",
     "final_export_claim",
-    "owner_receipt_or_typed_blocker_claim"
+    "owner_receipt_or_typed_blocker_claim",
+    "claim_or_authority_gate_without_claim_binding"
   ],
   "forbidden_roles": {
     "route_scorer": false,
