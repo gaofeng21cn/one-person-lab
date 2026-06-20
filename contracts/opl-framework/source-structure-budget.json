@@ -84,14 +84,6 @@
       "reason": "characterization_first: redrive logic mutates runtime queue state and carries currentness, stop-loss, terminal attempt, and provider transport authority.",
       "intended_boundary": "Split by redrive decision phase: live-attempt guard, terminal closeout guard, stop-loss policy, retry materialization, and event/readback emission.",
       "review_after": "2026-07-20"
-    },
-    {
-      "path": "src/opl-skills.ts",
-      "limit": 1154,
-      "owner": "one-person-lab",
-      "reason": "characterization_first: skill/plugin discovery and sync is a public OPL/Codex companion boundary with package export and installed-state semantics.",
-      "intended_boundary": "Split by workspace-root resolution, pack discovery, plugin source registry, sync/apply flow, and JSON readback shaping under existing opl-skills boundary tests.",
-      "review_after": "2026-07-20"
     }
   ]
 }
