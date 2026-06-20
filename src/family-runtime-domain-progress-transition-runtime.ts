@@ -2,6 +2,10 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 import { stableId } from './family-runtime-ids.ts';
+import {
+  DOMAIN_PROGRESS_POLICY_ADAPTER_CONTRACT,
+  normalizeDomainProgressPolicyAdapterRequest,
+} from './family-runtime-domain-progress-transition-runtime-parts/policy-adapter.ts';
 import { auditDomainProgressTransitionReplay } from './family-runtime-domain-progress-transition-runtime-parts/replay-audit.ts';
 
 export {
@@ -22,6 +26,7 @@ export const DOMAIN_PROGRESS_TRANSITION_RUNTIME_MODULE = {
   },
   not_a_new_brand_module: true,
 } as const;
+export { DOMAIN_PROGRESS_POLICY_ADAPTER_CONTRACT };
 
 const SUPPORTED_TRANSITIONS = new Set([
   'ConsumeOwnerReceipt',
@@ -873,41 +878,46 @@ export function normalizeDomainProgressTransitionCommand(
   if (isRecord(command.paper_autonomy_supervisor_apply)) {
     return { blocked: { reason: 'domain_progress_transition_legacy_supervisor_apply_alias_forbidden', task: command } };
   }
+  const policyAdapterRequest = normalizeDomainProgressPolicyAdapterRequest(command);
+  if (policyAdapterRequest.blocked) {
+    return { blocked: policyAdapterRequest.blocked };
+  }
+  const commandInput = policyAdapterRequest.request ?? command;
   const requestBoundaryViolation = masTransitionRequestBoundaryViolation(command);
   if (requestBoundaryViolation) {
     return { blocked: { reason: requestBoundaryViolation, task: command } };
   }
-  const kind = transitionKind(command);
-  const aggregateIdentity = normalizeAggregateIdentity(command, context);
-  const idempotencyKey = optionalString(command.idempotency_key);
-  const sourceGeneration = optionalScalarString(command.source_generation);
-  const expectedVersion = optionalScalarString(command.expected_version);
-  const explicitCommandId = optionalString(command.command_id);
-  const postcondition = isRecord(command.postcondition) ? command.postcondition : null;
-  const requiredPostcondition = isRecord(command.required_postcondition) ? command.required_postcondition : null;
-  const outcome = isRecord(command.outcome) ? command.outcome : null;
-  const outcomeKind = postconditionKind(command);
+  const kind = transitionKind(commandInput);
+  const aggregateIdentity = normalizeAggregateIdentity(commandInput, context);
+  const idempotencyKey = optionalString(commandInput.idempotency_key);
+  const sourceGeneration = optionalScalarString(commandInput.source_generation);
+  const expectedVersion = optionalScalarString(commandInput.expected_version);
+  const explicitCommandId = optionalString(commandInput.command_id);
+  const postcondition = isRecord(commandInput.postcondition) ? commandInput.postcondition : null;
+  const requiredPostcondition = isRecord(commandInput.required_postcondition) ? commandInput.required_postcondition : null;
+  const outcome = isRecord(commandInput.outcome) ? commandInput.outcome : null;
+  const outcomeKind = postconditionKind(commandInput);
   if (!kind || !SUPPORTED_TRANSITIONS.has(kind)) {
-    return { blocked: { reason: 'domain_progress_transition_command_kind_missing_or_unsupported', task: command } };
+    return { blocked: { reason: 'domain_progress_transition_command_kind_missing_or_unsupported', task: commandInput } };
   }
-  if (requiresExplicitCommandId(command) && !explicitCommandId) {
-    return { blocked: { reason: 'domain_progress_transition_command_identity_missing', task: command } };
+  if (requiresExplicitCommandId(commandInput) && !explicitCommandId) {
+    return { blocked: { reason: 'domain_progress_transition_command_identity_missing', task: commandInput } };
   }
   if (!aggregateIdentity || !idempotencyKey || !sourceGeneration || !expectedVersion) {
-    return { blocked: { reason: 'domain_progress_transition_command_identity_missing', task: command } };
+    return { blocked: { reason: 'domain_progress_transition_command_identity_missing', task: commandInput } };
   }
   if (
     optionalString(aggregateIdentity.study_id) !== context.studyId
     || optionalString(aggregateIdentity.work_unit_id) !== context.workUnitId
   ) {
-    return { blocked: { reason: 'domain_progress_transition_command_identity_mismatch', task: command } };
+    return { blocked: { reason: 'domain_progress_transition_command_identity_mismatch', task: commandInput } };
   }
   if (!outcomeKind) {
-    return { blocked: { reason: 'domain_progress_transition_command_postcondition_missing', task: command } };
+    return { blocked: { reason: 'domain_progress_transition_command_postcondition_missing', task: commandInput } };
   }
   return {
     command: {
-      ...command,
+      ...commandInput,
       surface_kind: 'opl_domain_progress_transition_command',
       runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
       runtime_owner: 'one-person-lab',
@@ -915,15 +925,15 @@ export function normalizeDomainProgressTransitionCommand(
       brand_name: DOMAIN_PROGRESS_TRANSITION_RUNTIME_MODULE.primary_brand,
       transition_kind: kind,
       command_id: explicitCommandId ?? commandId({
-        ...command,
+        ...commandInput,
         transition_kind: kind,
         idempotency_key: idempotencyKey,
         source_generation: sourceGeneration,
         expected_version: expectedVersion,
       }, aggregateIdentity),
       aggregate_identity: aggregateIdentity,
-      action_type: optionalString(command.action_type) ?? context.actionType ?? null,
-      next_owner: optionalString(command.next_owner) ?? context.nextOwner ?? null,
+      action_type: optionalString(commandInput.action_type) ?? context.actionType ?? null,
+      next_owner: optionalString(commandInput.next_owner) ?? context.nextOwner ?? null,
       idempotency_key: idempotencyKey,
       source_generation: sourceGeneration,
       expected_version: expectedVersion,
@@ -943,7 +953,7 @@ export function normalizeDomainProgressTransitionCommand(
           ?? 'domain-agent',
       },
       ...(outcome ? { outcome } : {}),
-      stage_run_identity: stageRunIdentity(command, aggregateIdentity, idempotencyKey),
+      stage_run_identity: stageRunIdentity(commandInput, aggregateIdentity, idempotencyKey),
       brand_module_allocation: DOMAIN_PROGRESS_TRANSITION_RUNTIME_MODULE,
       authority_boundary: {
         opl_can_write_domain_truth: false,

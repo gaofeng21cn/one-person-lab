@@ -13,6 +13,7 @@ import {
   writeJsonEmitterScript,
 } from './family-runtime-current-control-provider-admission-cases/shared.ts';
 import {
+  DOMAIN_PROGRESS_POLICY_ADAPTER_CONTRACT,
   buildNonAdvancingApplyRuntimeResult,
   appendDomainProgressTransitionRuntimeResult,
   appendDomainProgressTransitionRuntimeResultJsonl,
@@ -538,7 +539,152 @@ test('DomainProgressTransitionRuntime normalizes MAS policy request without acce
   });
   assert.equal(
     runtimeArtifactPolluted.blocked?.reason,
-    'domain_progress_transition_request_runtime_field_forbidden',
+    'domain_progress_policy_adapter_runtime_field_forbidden',
+  );
+});
+
+test('DomainProgressTransitionRuntime publishes OPL-owned policy adapter ABI for MAS PaperProgressPolicyAdapter requests', () => {
+  const request = {
+    surface_kind: 'mas_paper_progress_policy_adapter_request',
+    target_runtime_kind: 'DomainProgressTransitionRuntime',
+    target_runtime_owner: 'one-person-lab',
+    adapter_kind: 'PaperProgressPolicyAdapter',
+    adapter_owner: 'med-autoscience',
+    domain_id: 'medautoscience',
+    adapter_can_create_opl_outbox_record: false,
+    recommended_transition_kind: 'StartProviderAttempt',
+    aggregate_identity: {
+      aggregate_kind: 'study_work_unit',
+      aggregate_id: '003-dpcc-primary-care-phenotype-treatment-gap::paper_progress_adapter',
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      work_unit_id: 'paper_progress_adapter',
+      work_unit_fingerprint: 'sha256:paper-policy-adapter',
+    },
+    action_type: 'return_to_ai_reviewer_workflow',
+    next_owner: 'ai_reviewer',
+    idempotency_key: 'paper-policy-adapter::dm003::ai-reviewer',
+    source_generation: 'truth-event-paper-policy-adapter',
+    expected_version: 'truth-event-paper-policy-adapter',
+    required_postcondition: {
+      kind: 'provider_admission_enqueued_or_blocked',
+      outcome_owner: 'one-person-lab',
+      domain_state_owner: 'med-autoscience',
+    },
+    policy_verdict: {
+      paper_stage: 'ai_reviewer',
+      publication_gate: 'needs_reviewer_record',
+      expected_owner_receipt_refs: ['owner-receipt:dm003/ai-reviewer'],
+      typed_blocker_refs: [],
+      artifact_delta_refs: ['artifact-delta:dm003/reviewer-record'],
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+      provider_completion_is_domain_ready: false,
+    },
+  };
+
+  const normalized = normalizeDomainProgressTransitionCommand(request, {
+    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+    actionType: 'return_to_ai_reviewer_workflow',
+    workUnitId: 'paper_progress_adapter',
+    workUnitFingerprint: 'sha256:paper-policy-adapter',
+    nextOwner: 'ai_reviewer',
+  });
+
+  assert.equal(DOMAIN_PROGRESS_POLICY_ADAPTER_CONTRACT.first_consumer, 'PaperProgressPolicyAdapter');
+  assert.equal(DOMAIN_PROGRESS_POLICY_ADAPTER_CONTRACT.provider_completion_is_domain_ready, false);
+  assert.equal(normalized.blocked, undefined);
+  assert.equal(normalized.command?.surface_kind, 'opl_domain_progress_transition_command');
+  assert.equal(normalized.command?.source_surface_kind, 'mas_paper_progress_policy_adapter_request');
+  assert.equal(normalized.command?.transition_kind, 'StartProviderAttempt');
+  assert.equal(normalized.command?.domain_id, 'medautoscience');
+  assert.equal(normalized.command?.runtime_owner, 'one-person-lab');
+  assert.equal(
+    record(normalized.command?.policy_adapter_readback).surface_kind,
+    'opl_domain_progress_policy_adapter_readback',
+  );
+  assert.equal(record(normalized.command?.policy_adapter_readback).adapter_kind, 'PaperProgressPolicyAdapter');
+  assert.equal(record(normalized.command?.policy_adapter_readback).can_write_domain_truth, false);
+  assert.equal(record(normalized.command?.policy_adapter_readback).can_create_owner_receipt, false);
+  assert.equal(record(normalized.command?.policy_adapter_readback).provider_completion_is_domain_ready, false);
+  assert.equal(record(normalized.command?.domain_policy_result).authority_role, 'domain_policy_request_only');
+  assert.equal(record(normalized.command?.domain_policy_result).can_create_typed_blocker, false);
+
+  const result = reconcileDomainProgressTransitionFixedPoint({
+    command: normalized.command!,
+    observations: [{ kind: 'provider_admission_accepted' }],
+  }).result;
+
+  assert.equal(result.transition_event.domain_policy_result, normalized.command?.domain_policy_result);
+  assert.equal(record(result.transition_event.authority_boundary).opl_can_create_domain_owner_receipt, false);
+  assert.equal(result.authority_boundary.provider_completion_is_domain_ready, false);
+  assert.equal(result.exactly_one_outcome.outcome_kind, 'provider_admission_accepted');
+});
+
+test('DomainProgressTransitionRuntime fail-closes policy adapter authority overclaims before command materialization', () => {
+  const baseRequest = {
+    surface_kind: 'mas_paper_progress_policy_adapter_request',
+    target_runtime_kind: 'DomainProgressTransitionRuntime',
+    target_runtime_owner: 'one-person-lab',
+    adapter_kind: 'PaperProgressPolicyAdapter',
+    adapter_owner: 'med-autoscience',
+    adapter_can_create_opl_outbox_record: false,
+    recommended_transition_kind: 'StartProviderAttempt',
+    aggregate_identity: {
+      aggregate_kind: 'study_work_unit',
+      aggregate_id: '003-dpcc-primary-care-phenotype-treatment-gap::policy_overclaim',
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      work_unit_id: 'policy_overclaim',
+      work_unit_fingerprint: 'sha256:policy-overclaim',
+    },
+    action_type: 'return_to_ai_reviewer_workflow',
+    next_owner: 'ai_reviewer',
+    idempotency_key: 'paper-policy-adapter::dm003::overclaim',
+    source_generation: 'truth-event-policy-overclaim',
+    expected_version: 'truth-event-policy-overclaim',
+    required_postcondition: {
+      kind: 'provider_admission_enqueued_or_blocked',
+      outcome_owner: 'one-person-lab',
+      domain_state_owner: 'med-autoscience',
+    },
+  };
+  const context = {
+    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+    actionType: 'return_to_ai_reviewer_workflow',
+    workUnitId: 'policy_overclaim',
+    workUnitFingerprint: 'sha256:policy-overclaim',
+    nextOwner: 'ai_reviewer',
+  };
+
+  const ownerReceiptBody = normalizeDomainProgressTransitionCommand({
+    ...baseRequest,
+    owner_receipt_body: { verdict: 'accepted' },
+  }, context);
+  const providerReadyOverclaim = normalizeDomainProgressTransitionCommand({
+    ...baseRequest,
+    outcome: {
+      kind: 'provider_admission_accepted',
+      provider_completion_is_domain_ready: true,
+    },
+  }, context);
+  const missingBoundary = normalizeDomainProgressTransitionCommand({
+    ...baseRequest,
+    adapter_can_create_opl_outbox_record: true,
+  }, context);
+
+  assert.equal(
+    ownerReceiptBody.blocked?.reason,
+    'domain_progress_policy_adapter_authority_field_forbidden',
+  );
+  assert.equal(
+    providerReadyOverclaim.blocked?.reason,
+    'domain_progress_policy_adapter_authority_overclaim',
+  );
+  assert.equal(
+    missingBoundary.blocked?.reason,
+    'domain_progress_policy_adapter_boundary_missing',
   );
 });
 

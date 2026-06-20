@@ -229,7 +229,10 @@
         "runtime_source": "src/family-runtime-domain-progress-transition-runtime.ts",
         "current_control_consumer": "src/family-runtime-domain-intake-parts/current-control-provider-admission.ts",
         "focused_test": "tests/src/cli/cases/family-runtime-domain-progress-transition-runtime.test.ts",
-        "provider_admission_regression_test": "tests/src/cli/cases/family-runtime-current-control-provider-admission.test.ts"
+        "provider_admission_regression_test": "tests/src/cli/cases/family-runtime-current-control-provider-admission.test.ts",
+        "policy_adapter_source": "src/family-runtime-domain-progress-transition-runtime-parts/policy-adapter.ts",
+        "policy_adapter_contract_export": "DOMAIN_PROGRESS_POLICY_ADAPTER_CONTRACT",
+        "policy_adapter_focused_test": "tests/src/cli/cases/family-runtime-domain-progress-transition-runtime.test.ts"
       },
       "physical_persistence_refs": {
         "runtime_log_read_api": "readDomainProgressTransitionRuntimeLogJsonl",
@@ -413,9 +416,10 @@
               "opl_can_create_domain_owner_receipt": false,
               "opl_can_create_domain_typed_blocker": false,
               "provider_completion_is_domain_ready": false
-            }
+            },
+            "policy_adapter_abi": "domain_policy_request_only_normalized_before_command_materialization"
           },
-          "remaining_gap": "real domain owner receipt consumption side effects, human resume token consumption, terminal closeout consumption, and end-to-end runtime soak are not yet proven for all decision classes",
+          "remaining_gap": "real domain owner receipt consumption side effects, terminal closeout consumption, end-to-end runtime soak, and live domain progression evidence are not yet proven for all decision classes",
           "required_decision_refs": {
             "execute_current_owner_delta": [
               "current_owner_delta_ref",
@@ -571,7 +575,56 @@
         "human_gate_schema_fields_do_not_mean_human_token_runtime_is_complete",
         "read_model_projection_does_not_mean_domain_progress",
         "observability_refs_do_not_close_owner_receipt_quality_gate_or_publication_readiness"
-      ]
+      ],
+      "policy_adapter_contract": {
+        "surface_kind": "opl_domain_progress_policy_adapter_contract",
+        "runtime_id": "opl_domain_progress_transition_runtime",
+        "runtime_owner": "one-person-lab",
+        "adapter_role": "domain_policy_request_only",
+        "first_consumer": "PaperProgressPolicyAdapter",
+        "accepted_request_surfaces": [
+          "mas_domain_progress_transition_request",
+          "mas_paper_progress_policy_adapter_request",
+          "opl_domain_progress_policy_adapter_request"
+        ],
+        "normalized_request_surface": "mas_domain_progress_transition_request",
+        "required_fields": [
+          "target_runtime_kind=DomainProgressTransitionRuntime",
+          "target_runtime_owner=one-person-lab",
+          "mas_can_create_opl_outbox_record=false or adapter_can_create_opl_outbox_record=false",
+          "aggregate_identity",
+          "idempotency_key",
+          "source_generation",
+          "expected_version",
+          "required_postcondition"
+        ],
+        "fail_closed_reasons": [
+          "domain_progress_policy_adapter_boundary_missing",
+          "domain_progress_policy_adapter_runtime_field_forbidden",
+          "domain_progress_policy_adapter_authority_field_forbidden",
+          "domain_progress_policy_adapter_authority_overclaim",
+          "domain_progress_policy_adapter_identity_or_postcondition_missing"
+        ],
+        "forbidden_domain_adapter_outputs": [
+          "current_control_command_outbox_record",
+          "opl_domain_progress_transition_command",
+          "opl_domain_progress_transition_event",
+          "opl_domain_progress_transition_outbox_item",
+          "stage_run_identity",
+          "owner_receipt",
+          "typed_blocker",
+          "quality_verdict",
+          "domain_ready_verdict"
+        ],
+        "authority_boundary": {
+          "opl_runtime_can_write_domain_truth": false,
+          "adapter_can_create_opl_outbox_record": false,
+          "adapter_can_create_owner_receipt": false,
+          "adapter_can_create_typed_blocker": false,
+          "provider_completion_is_domain_ready": false,
+          "provider_completion_is_domain_completion": false
+        }
+      }
     },
     "required_substrate_surfaces": {
       "stage_run_currentness_identity": {

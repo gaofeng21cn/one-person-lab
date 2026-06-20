@@ -308,6 +308,10 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
     'exactly_one_latest_current_decision_per_obligation_identity',
   );
   assert.equal(
+    domainProgress.concepts.TransitionDecisionEngine.durable_substrate_first_slice.policy_adapter_abi,
+    'domain_policy_request_only_normalized_before_command_materialization',
+  );
+  assert.equal(
     domainProgress.concepts.TransitionDecisionEngine.durable_substrate_first_slice.queue_empty_terminal_evidence,
     false,
   );
@@ -342,6 +346,29 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   assert.ok(domainProgress.not_complete_claims.includes(
     'mapping_landed_does_not_mean_domain_progress_transition_runtime_landed',
   ));
+  assert.equal(
+    domainProgress.policy_adapter_contract.surface_kind,
+    'opl_domain_progress_policy_adapter_contract',
+  );
+  assert.equal(domainProgress.policy_adapter_contract.first_consumer, 'PaperProgressPolicyAdapter');
+  assert.ok(
+    domainProgress.policy_adapter_contract.accepted_request_surfaces.includes(
+      'mas_paper_progress_policy_adapter_request',
+    ),
+  );
+  assert.ok(
+    domainProgress.policy_adapter_contract.fail_closed_reasons.includes(
+      'domain_progress_policy_adapter_authority_overclaim',
+    ),
+  );
+  assert.equal(
+    domainProgress.policy_adapter_contract.authority_boundary.adapter_can_create_owner_receipt,
+    false,
+  );
+  assert.equal(
+    domainProgress.policy_adapter_contract.authority_boundary.provider_completion_is_domain_ready,
+    false,
+  );
 
   assert.equal(
     substrate.current_control_admission_currentness_policy_ref,
