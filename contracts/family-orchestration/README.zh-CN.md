@@ -269,6 +269,8 @@ stage graph 与 owner-route 的关系由 `contracts/opl-framework/stage-route-sc
 
 `family-domain-memory-ref.schema.json` 与 `family-domain-memory-writeback.schema.json` 补齐的是 stage-led agent framework 需要的记忆引用层。它们只描述 domain-owned memory pack 的 locator、freshness、stage targeting、proposal ref 和 router receipt ref。
 
+family 基线规则固定为：domain memory 是由 domain 仓持有的 AI-readable Markdown reference memory。OPL Atlas、Pack、Stagecraft、Runway、Vault、Console、Connect 只承载 catalog、refs、prompt injection refs、receipts 和 projection；它们不是 route scorer、winning-path generator、quality gate 或 memory body owner。
+
 `OPL` 可以做：
 
 - discover / index domain memory refs；
@@ -280,10 +282,11 @@ stage graph 与 owner-route 的关系由 `contracts/opl-framework/stage-route-sc
 
 - 存储或改写 domain memory 正文；
 - 把 memory card 提升为 evidence / review / grant / visual truth；
+- 依据 memory refs 生成 publication strategy、fundability、visual 或 artifact winning path；
 - 接受或拒绝 memory writeback；
 - 依据 memory ref 生成 publication、fundability、visual quality 或 artifact readiness verdict。
 
-MAS 的 `publication_route_memory`、MAG 的 grant strategy memory、RCA 的 visual pattern memory 都应通过各自 domain manifest 暴露 locator/receipt refs；正文、路由判断、质量 gate 和 artifact authority 保持在 domain 仓。
+MAS Publication Strategy Memory / `publication_route_memory`、MAG 的 grant strategy memory、RCA 的 visual pattern memory 都应通过各自 domain manifest 暴露 locator/receipt refs；Markdown 正文、路由判断、质量 gate、writeback accept/reject authority 和 artifact authority 保持在 domain 仓。
 
 ## 这个目录不冻结什么
 
