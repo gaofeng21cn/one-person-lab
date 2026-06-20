@@ -13,7 +13,7 @@ export function buildWorkspaceCommandSpecs(
   const workspaceCommandSpecs: Record<string, CommandSpec> = {
     workspace: {
       usage:
-        'opl workspace projects|list|fleet report|root|init|ensure|validate|doctor|adopt|upgrade|project lifecycle|project archive|project delete|export-map|health|inspect|inventory|report|interfaces|bind|activate|archive [options]',
+        'opl workspace projects|list|fleet report|root|init|ensure|validate|doctor|adopt|upgrade|artifact-lifecycle|project lifecycle|project archive|project delete|export-map|health|inspect|inventory|report|interfaces|bind|activate|archive [options]',
       summary:
         'Manage OPL workspace bindings, standard family-agent workspace initialization, generated inspection refs, and workspace-local project lifecycle projections.',
       examples: [
@@ -24,6 +24,7 @@ export function buildWorkspaceCommandSpecs(
         'opl workspace report --workspace /Users/gaofeng/workspace/visual-theme-a',
         'opl workspace fleet report',
         'opl workspace inspect --workspace /Users/gaofeng/workspace/visual-theme-a',
+        'opl workspace artifact-lifecycle --workspace /Users/gaofeng/workspace/Book --project-id ai-university-bookforge-20260619 --apply',
         'opl workspace interfaces',
       ],
       group: 'workspace',
@@ -72,6 +73,11 @@ export function buildWorkspaceCommandSpecs(
           command: 'workspace report',
           usage: 'opl workspace report --workspace <path>',
           summary: 'Read the user-first workspace report with current project, stage refs, lifecycle counts, and blockers.',
+        },
+        {
+          command: 'workspace artifact-lifecycle',
+          usage: 'opl workspace artifact-lifecycle --workspace <path> [--project-id <id>] [--dry-run|--apply]',
+          summary: 'Materialize OPL-owned refs-only lifecycle projections for project sources, memory refs, outputs, and current refs.',
         },
         {
           command: 'workspace interfaces',
@@ -148,6 +154,7 @@ export function buildWorkspaceCommandSpecs(
       usage: workspaceAdoptUsage,
       examples: [
         'opl workspace adopt --agent rca --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --dry-run',
+        'opl workspace adopt --agent bookforge --workspace /Users/gaofeng/workspace/Book --project-id ai-university-bookforge-20260619 --apply',
         'opl workspace adopt --agent mas --workspace /Users/gaofeng/workspace/dm-cvd --study-id DM002 --apply',
       ],
       group: 'workspace',
@@ -156,6 +163,14 @@ export function buildWorkspaceCommandSpecs(
       usage: 'opl workspace upgrade --workspace <path> [--dry-run|--apply]',
       examples: [
         'opl workspace upgrade --workspace /Users/gaofeng/workspace/visual-theme-a --apply',
+      ],
+      group: 'workspace',
+    }),
+    'workspace artifact-lifecycle': cloneCommandSpec(commandSpecs['workspace artifact-lifecycle'], {
+      usage: 'opl workspace artifact-lifecycle --workspace <path> [--project-id <id>] [--dry-run|--apply]',
+      examples: [
+        'opl workspace artifact-lifecycle --workspace /Users/gaofeng/workspace/Book --project-id ai-university-bookforge-20260619 --dry-run',
+        'opl workspace artifact-lifecycle --workspace /Users/gaofeng/workspace/Book --project-id ai-university-bookforge-20260619 --apply',
       ],
       group: 'workspace',
     }),

@@ -20,11 +20,13 @@ import {
   workspaceInventory,
   workspaceReport,
 } from '../../workspace-lifecycle.ts';
+import { materializeWorkspaceArtifactLifecycle } from '../../workspace-artifact-lifecycle.ts';
 import { buildBrandModuleSurfaceInspect } from '../../brand-module-surfaces.ts';
 import type { FrameworkContracts } from '../../types.ts';
 import {
   assertNoArgs,
   parseWorkspaceAdoptArgs,
+  parseWorkspaceArtifactLifecycleArgs,
   parseWorkspaceInitializeArgs,
   parseWorkspaceLifecycleArgs,
   parseWorkspaceValidationArgs,
@@ -126,6 +128,7 @@ export function buildWorkspaceInitializeCommandSpecs(
         'Plan or apply OPL-owned workspace topology metadata and generated inspection refs for an existing directory without writing domain truth.',
       examples: [
         'opl workspace adopt --agent rca --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --dry-run',
+        'opl workspace adopt --agent bookforge --workspace /Users/gaofeng/workspace/Book --project-id ai-university-bookforge-20260619 --apply',
         'opl workspace adopt --agent mas --workspace /Users/gaofeng/workspace/dm-cvd --study-id DM002 --apply',
       ],
       handler: (args) => {
@@ -215,6 +218,25 @@ export function buildWorkspaceInitializeCommandSpecs(
           workspacePath: parsed.workspacePath,
           projectId: parsed.projectId,
           ownerReceiptRef: parsed.ownerReceiptRef,
+          dryRun: parsed.dryRun,
+          apply: parsed.apply,
+        });
+      },
+    },
+    'workspace artifact-lifecycle': {
+      usage:
+        'opl workspace artifact-lifecycle --workspace <path> [--project-id <id>] [--dry-run|--apply]',
+      summary:
+        'Materialize OPL-owned refs-only lifecycle projections for project inputs, sources, memory refs, outputs, current refs, and retention health without writing domain truth.',
+      examples: [
+        'opl workspace artifact-lifecycle --workspace /Users/gaofeng/workspace/Book --project-id ai-university-bookforge-20260619 --dry-run',
+        'opl workspace artifact-lifecycle --workspace /Users/gaofeng/workspace/Book --project-id ai-university-bookforge-20260619 --apply',
+      ],
+      handler: (args) => {
+        const parsed = parseWorkspaceArtifactLifecycleArgs(args, specs['workspace artifact-lifecycle']);
+        return materializeWorkspaceArtifactLifecycle(getContracts(), {
+          workspacePath: parsed.workspacePath,
+          projectId: parsed.projectId,
           dryRun: parsed.dryRun,
           apply: parsed.apply,
         });

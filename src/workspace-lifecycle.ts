@@ -217,7 +217,7 @@ function normalizeWorkspaceLifecycle(value: unknown): {
   };
 }
 
-function readValidatedWorkspaceIndex(workspacePathInput: string | undefined) {
+export function readValidatedWorkspaceIndex(workspacePathInput: string | undefined) {
   const workspacePath = normalizeOptionalString(workspacePathInput);
   if (!workspacePath) {
     throw new FrameworkContractError('cli_usage_error', 'Workspace lifecycle command requires --workspace.', {

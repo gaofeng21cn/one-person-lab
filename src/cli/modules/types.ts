@@ -146,6 +146,12 @@ type WorkspaceLifecycleCliInput = WorkspaceValidationCliInput & {
   apply?: boolean;
 };
 
+type WorkspaceArtifactLifecycleCliInput = WorkspaceValidationCliInput & {
+  projectId?: string;
+  dryRun?: boolean;
+  apply?: boolean;
+};
+
 type WorkspaceAdoptCliInput = {
   agentId?: string;
   workspacePath?: string;
@@ -273,6 +279,7 @@ export type {
   WebCliInput,
   WorkspaceInitializeCliInput,
   WorkspaceAdoptCliInput,
+  WorkspaceArtifactLifecycleCliInput,
   WorkspaceLifecycleCliInput,
   WorkspaceValidationCliInput,
   WorkspaceRegistryCliInput,
