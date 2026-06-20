@@ -164,14 +164,22 @@ function currentControlCommandFromCompleteRuntimeReadback(candidate: Record<stri
   const runtimeCommand = isRecord(runtimeResult?.command)
     ? runtimeResult.command
     : null;
+  const providerAdmissionIdentity = isRecord(candidate.provider_admission_identity)
+    ? candidate.provider_admission_identity
+    : null;
   const liveReadback = isRecord(candidate.opl_domain_progress_transition_runtime_live_readback)
     ? candidate.opl_domain_progress_transition_runtime_live_readback
-    : null;
-  if (!command || !runtimeResult || !runtimeCommand || !liveReadback) {
+    : isRecord(providerAdmissionIdentity?.opl_domain_progress_transition_runtime_live_readback)
+      ? providerAdmissionIdentity.opl_domain_progress_transition_runtime_live_readback
+      : null;
+  if (!liveReadback) {
     return null;
   }
   if (!validCompleteTransitionRuntimeLiveReadback(liveReadback)) {
     return null;
+  }
+  if (!command || !runtimeResult || !runtimeCommand) {
+    return commandFromCompleteRuntimeReadbackIdentity(candidate, liveReadback);
   }
   const commandId = optionalString(command.command_id);
   const runtimeCommandId = optionalString(runtimeCommand.command_id);
@@ -192,6 +200,95 @@ function currentControlCommandFromCompleteRuntimeReadback(candidate: Record<stri
     return null;
   }
   return command;
+}
+
+function commandFromCompleteRuntimeReadbackIdentity(
+  candidate: Record<string, unknown>,
+  liveReadback: Record<string, unknown>,
+) {
+  const identity = isRecord(liveReadback.identity) ? liveReadback.identity : null;
+  const aggregateIdentity = isRecord(identity?.aggregate_identity) ? identity.aggregate_identity : null;
+  const stageRunIdentity = isRecord(identity?.stage_run_identity) ? identity.stage_run_identity : null;
+  const projectionMetadata = isRecord(liveReadback.projection_metadata) ? liveReadback.projection_metadata : null;
+  const causality = isRecord(liveReadback.causality) ? liveReadback.causality : null;
+  const outcome = isRecord(liveReadback.exactly_one_outcome) ? liveReadback.exactly_one_outcome : null;
+  const idempotencyKey = optionalString(identity?.idempotency_key)
+    ?? optionalString(candidate.attempt_idempotency_key)
+    ?? optionalString(candidate.idempotency_key);
+  const routeIdentityKey = optionalString(stageRunIdentity?.route_identity_key)
+    ?? optionalString(candidate.route_identity_key)
+    ?? idempotencyKey;
+  const attemptIdempotencyKey = optionalString(stageRunIdentity?.attempt_idempotency_key)
+    ?? optionalString(candidate.attempt_idempotency_key)
+    ?? idempotencyKey;
+  if (
+    !identity
+    || !aggregateIdentity
+    || !stageRunIdentity
+    || !idempotencyKey
+    || optionalString(identity.transition_kind) !== 'StartProviderAttempt'
+    || optionalString(outcome?.outcome_kind) !== 'provider_admission_enqueued_or_blocked'
+  ) {
+    return null;
+  }
+  if (
+    optionalString(candidate.attempt_idempotency_key)
+    && optionalString(candidate.attempt_idempotency_key) !== attemptIdempotencyKey
+  ) {
+    return null;
+  }
+  if (
+    optionalString(candidate.route_identity_key)
+    && routeIdentityKey
+    && optionalString(candidate.route_identity_key) !== routeIdentityKey
+  ) {
+    return null;
+  }
+  const sourceGeneration = optionalScalarString(causality?.source_generation)
+    ?? optionalScalarString(stageRunIdentity.source_generation)
+    ?? optionalScalarString(projectionMetadata?.observed_generation)
+    ?? optionalScalarString(candidate.currentness_basis && isRecord(candidate.currentness_basis)
+      ? candidate.currentness_basis.truth_epoch
+      : null)
+    ?? optionalString(candidate.source_fingerprint);
+  const expectedVersion = optionalScalarString(causality?.expected_version)
+    ?? optionalScalarString(projectionMetadata?.derived_generation)
+    ?? sourceGeneration;
+  const commandId = optionalString(identity.command_id);
+  if (!commandId || !sourceGeneration || !expectedVersion) {
+    return null;
+  }
+  return {
+    surface_kind: 'opl_domain_progress_transition_command',
+    runtime_kind: 'DomainProgressTransitionRuntime',
+    transition_kind: 'StartProviderAttempt',
+    command_id: commandId,
+    aggregate_identity: aggregateIdentity,
+    action_type: optionalString(candidate.action_type),
+    work_unit_id: optionalString(candidate.work_unit_id) ?? optionalString(aggregateIdentity.work_unit_id),
+    work_unit_fingerprint:
+      optionalString(candidate.work_unit_fingerprint)
+      ?? optionalString(candidate.action_fingerprint)
+      ?? optionalString(aggregateIdentity.work_unit_fingerprint),
+    next_owner: optionalString(candidate.next_executable_owner) ?? optionalString(candidate.owner),
+    idempotency_key: idempotencyKey,
+    route_identity_key: routeIdentityKey,
+    attempt_idempotency_key: attemptIdempotencyKey,
+    source_generation: sourceGeneration,
+    expected_version: expectedVersion,
+    stage_run_identity: stageRunIdentity,
+    postcondition: {
+      kind: 'provider_admission_enqueued_or_blocked',
+      outcome_owner: 'one-person-lab',
+      domain_state_owner: 'med-autoscience',
+    },
+    outcome: {
+      kind: 'provider_admission_enqueued_or_blocked',
+      non_advancing_apply: false,
+      provider_completion_is_domain_completion: false,
+      provider_completion_is_domain_ready: false,
+    },
+  };
 }
 
 function currentControlProviderAdmissionInputContext(input: {

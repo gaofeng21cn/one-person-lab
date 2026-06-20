@@ -164,6 +164,53 @@ test('family-runtime replays existing complete transition readback when MAS expo
         SET status = 'succeeded'
         WHERE dedupe_key = ?
       `).run(attemptIdempotencyKey);
+      const taskRow = db.prepare('SELECT task_id, payload_json FROM tasks WHERE dedupe_key = ?').get(
+        attemptIdempotencyKey,
+      ) as { task_id: string; payload_json: string };
+      const payload = JSON.parse(taskRow.payload_json);
+      const createdAt = new Date().toISOString();
+      db.prepare(`
+        INSERT INTO stage_attempts(
+          stage_attempt_id, idempotency_key, provider_kind, workflow_id, domain_id, stage_id,
+          workspace_locator_json, source_fingerprint, executor_kind, status, checkpoint_refs_json,
+          closeout_refs_json, human_gate_refs_json, retry_budget_json, attempt_count, task_id,
+          blocked_reason, provider_receipt_json, provider_run_json, activity_events_json,
+          route_impact_json, closeout_receipt_status, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        'sat_existing_terminal_readback_replay',
+        attemptIdempotencyKey,
+        'temporal',
+        'wf_existing_terminal_readback_replay',
+        'medautoscience',
+        'domain_owner/default-executor-dispatch',
+        JSON.stringify({
+          ...payload,
+          domain_id: 'medautoscience',
+          task_kind: 'domain_owner/default-executor-dispatch',
+          domain_source_fingerprint: payload.source_fingerprint,
+        }),
+        payload.source_fingerprint,
+        'codex_cli',
+        'completed',
+        '[]',
+        JSON.stringify([
+          'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_execution/sat_existing_terminal_readback_replay.closeout.json',
+        ]),
+        '[]',
+        '{"max_attempts":3}',
+        1,
+        taskRow.task_id,
+        null,
+        '{}',
+        JSON.stringify({ provider_status: 'completed' }),
+        '[]',
+        '{}',
+        'accepted_typed_closeout',
+        createdAt,
+        createdAt,
+      );
     } finally {
       db.close();
     }
@@ -202,20 +249,23 @@ test('family-runtime replays existing complete transition readback when MAS expo
     assert.equal(queue.family_runtime_queue.tasks[0].status, 'succeeded');
     assert.equal(
       refreshedCurrentControl.current_control_refresh_source,
-      'opl_transition_runtime_readback_provider_admission',
+      'opl_transition_runtime_readback_provider_admission_terminal_consumed',
     );
     assert.equal(refreshedCurrentControl.transition_request_pending_count, 0);
-    assert.equal(refreshedCurrentControl.provider_admission_pending_count, 1);
-    assert.equal(refreshedCurrentControl.provider_admission_candidates[0].status, 'provider_admission_pending');
-    assert.equal(refreshedCurrentControl.provider_admission_candidates[0].attempt_idempotency_key, attemptIdempotencyKey);
+    assert.equal(refreshedCurrentControl.provider_admission_pending_count, 0);
+    assert.equal(refreshedCurrentControl.provider_admission_candidates.length, 0);
     assert.equal(
-      refreshedCurrentControl.provider_admission_candidates[0]
-        .opl_domain_progress_transition_runtime_live_readback.runtime_readback_status,
-      'complete_transaction',
+      refreshedCurrentControl.latest_provider_admission_terminal_consumed_readback.status,
+      'provider_admission_terminal_consumed',
     );
     assert.equal(
       refreshedCurrentControl.studies[0].current_control_action.status,
-      'provider_admission_pending',
+      'provider_admission_terminal_consumed',
+    );
+    assert.equal(
+      refreshedCurrentControl.studies[0].latest_provider_admission_terminal_consumed_readback
+        .terminal_stage_attempt_id,
+      'sat_existing_terminal_readback_replay',
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

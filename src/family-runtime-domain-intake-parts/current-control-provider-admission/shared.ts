@@ -90,6 +90,7 @@ export type CurrentControlProviderAdmissionReadbackPublishInput = {
 };
 
 export type CurrentControlExistingTaskRow = {
+  task_id?: string;
   domain_id: string;
   task_kind: string;
   payload_json: string;

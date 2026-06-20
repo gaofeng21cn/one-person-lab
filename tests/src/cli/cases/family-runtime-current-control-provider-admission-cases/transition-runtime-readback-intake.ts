@@ -243,6 +243,178 @@ test('family-runtime intake promotes MAS transition request-only task into OPL r
   }
 });
 
+test('family-runtime intake consumes MAS current-control transition_request_candidates as OPL runtime-backed provider admission', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-transition-candidate-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-transition-candidate-'));
+  const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  const exportPath = path.join(fixtureRoot, 'export');
+  const currentControlPath = path.join(
+    workspaceRoot,
+    'runtime',
+    'artifacts',
+    'supervision',
+    'opl_current_control_state',
+    'latest.json',
+  );
+  const profilePath = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles', 'dm-cvd.local.toml');
+  const studyId = '002-dm-china-us-mortality-attribution';
+  const actionType = 'return_to_ai_reviewer_workflow';
+  const workUnitId = 'produce_ai_reviewer_publication_eval_record_against_current_inputs';
+  const workUnitFingerprint = 'domain-transition::ai_reviewer_re_eval::produce_ai_reviewer_publication_eval_record_against_current_inputs';
+  const stagePacketRef = `mas://current-work-unit/${studyId}/${workUnitId}/stage-packet`;
+  const attemptIdempotencyKey = 'paper-policy-request:afa135a3051e8aa76700b447';
+  fs.mkdirSync(path.dirname(currentControlPath), { recursive: true });
+  fs.mkdirSync(path.dirname(profilePath), { recursive: true });
+  fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
+  fs.writeFileSync(currentControlPath, JSON.stringify({
+    surface: 'opl_current_control_state',
+    quest_status: 'transition_request_pending',
+    transition_request_pending_count: 1,
+    provider_admission_pending_count: 0,
+    transition_request_candidates: [
+      {
+        status: 'transition_request_pending',
+        study_id: studyId,
+        quest_id: studyId,
+        action_type: actionType,
+        work_unit_id: workUnitId,
+        work_unit_fingerprint: workUnitFingerprint,
+        action_fingerprint: workUnitFingerprint,
+        next_executable_owner: 'ai_reviewer',
+        owner_route_current: true,
+        dispatch_authority: null,
+        dispatch_ref: stagePacketRef,
+        stage_packet_ref: stagePacketRef,
+        stage_packet_refs: [stagePacketRef],
+        checkpoint_refs: [stagePacketRef],
+        route_identity_key: attemptIdempotencyKey,
+        attempt_idempotency_key: attemptIdempotencyKey,
+        idempotency_key: attemptIdempotencyKey,
+        provider_attempt_or_lease_required: false,
+        provider_admission_requires_opl_runtime_result: true,
+        opl_transition_runtime_required: true,
+        source_refs: {
+          dispatch_ref: stagePacketRef,
+          route_identity_key: attemptIdempotencyKey,
+          attempt_idempotency_key: attemptIdempotencyKey,
+          stage_packet_ref: stagePacketRef,
+          stage_packet_refs: [stagePacketRef],
+          work_unit_id: workUnitId,
+          work_unit_fingerprint: workUnitFingerprint,
+        },
+        currentness_basis: {
+          truth_epoch: 'truth-event-000040-1a4d1f9cfed66d87',
+          runtime_health_epoch: 'runtime-health-event-007038-962223086f82031d',
+          work_unit_id: workUnitId,
+          work_unit_fingerprint: workUnitFingerprint,
+        },
+        opl_domain_progress_transition_request: masDomainProgressTransitionRequest({
+          studyId,
+          actionType,
+          workUnitId,
+          workUnitFingerprint,
+          sourceGeneration: 'truth-event-000040-1a4d1f9cfed66d87',
+          expectedVersion: 'truth-event-000040-1a4d1f9cfed66d87',
+          idempotencyKey: attemptIdempotencyKey,
+        }),
+      },
+    ],
+    action_queue: [
+      {
+        status: 'transition_request_pending',
+        study_id: studyId,
+        quest_id: studyId,
+        action_type: actionType,
+        work_unit_id: workUnitId,
+        work_unit_fingerprint: workUnitFingerprint,
+        action_fingerprint: workUnitFingerprint,
+        owner: 'ai_reviewer',
+        authority: 'mas_provider_admission_identity',
+        route_identity_key: attemptIdempotencyKey,
+        attempt_idempotency_key: attemptIdempotencyKey,
+        idempotency_key: attemptIdempotencyKey,
+      },
+    ],
+    studies: [
+      {
+        study_id: studyId,
+        current_control_action: {
+          status: 'transition_request_pending',
+          provider_admission_requires_opl_runtime_result: true,
+        },
+      },
+    ],
+  }), 'utf8');
+  writeJsonEmitterScript(exportPath, {
+    surface_kind: 'mas_family_domain_handler_export',
+    profile: {
+      profile_name: 'dm-cvd',
+      profile_ref: profilePath,
+    },
+    workspace: {
+      workspace_root: workspaceRoot,
+      workspace_exists: true,
+    },
+    pending_family_tasks: [],
+  });
+  const env = familyRuntimeEnv(stateRoot, {
+    OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
+  });
+  try {
+    const intake = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+      '--study',
+      studyId,
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+    ], env);
+    const queue = runCli(['family-runtime', 'queue', 'list'], env);
+    const tasks = queue.family_runtime_queue.tasks;
+
+    assert.equal(intake.family_runtime_intake.enqueued_count, 1);
+    assert.equal(intake.family_runtime_intake.blocked_count, 0);
+    assert.equal(intake.family_runtime_intake.exports[0].current_control_readback_publication_count, 1);
+    assert.equal(tasks.length, 1);
+    assert.equal(tasks[0].source, 'opl-current-control-transition-request');
+    assert.equal(tasks[0].payload.provider_admission_schema_source, 'transition_request_pending_task');
+    assert.equal(tasks[0].payload.route_identity_key, attemptIdempotencyKey);
+    assert.equal(tasks[0].payload.attempt_idempotency_key, attemptIdempotencyKey);
+    assert.equal(tasks[0].payload.stage_packet_ref, stagePacketRef);
+    assert.equal(tasks[0].payload.provider_attempt_or_lease_required, false);
+    assert.equal(tasks[0].payload.current_control_command.transition_kind, 'StartProviderAttempt');
+    assert.equal(tasks[0].payload.current_control_command.postcondition.kind, 'provider_admission_enqueued_or_blocked');
+    assert.equal(tasks[0].payload.opl_transition_outbox_item.dispatch_allowed, true);
+    assert.equal(
+      tasks[0].payload.opl_domain_progress_transition_runtime_live_readback.runtime_readback_status,
+      'complete_transaction',
+    );
+    const refreshedCurrentControl = JSON.parse(fs.readFileSync(currentControlPath, 'utf8'));
+    assert.equal(refreshedCurrentControl.provider_admission_pending_count, 1);
+    assert.equal(refreshedCurrentControl.transition_request_pending_count, 0);
+    assert.equal(
+      refreshedCurrentControl.provider_admission_candidates[0].attempt_idempotency_key,
+      attemptIdempotencyKey,
+    );
+    assert.equal(
+      refreshedCurrentControl.provider_admission_candidates[0]
+        .opl_domain_progress_transition_runtime_live_readback.identity.stage_run_identity
+        .attempt_idempotency_key,
+      attemptIdempotencyKey,
+    );
+    assert.equal(
+      refreshedCurrentControl.provider_admission_candidates[0].current_control_command.transition_kind,
+      'StartProviderAttempt',
+    );
+    assert.equal(refreshedCurrentControl.studies[0].current_control_action.status, 'provider_admission_pending');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime records NonAdvancingApply when authorized stage packet lacks OPL transition request', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-non-advancing-current-transition-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-non-advancing-current-transition-'));

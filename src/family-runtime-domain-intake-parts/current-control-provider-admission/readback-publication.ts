@@ -63,8 +63,70 @@ function transitionPendingCandidateIdentity(candidate: Record<string, unknown>) 
 function transitionPendingCandidates(currentControl: Record<string, unknown>) {
   const candidates: Record<string, unknown>[] = [];
   const seen = new Set<string>();
+  const append = (value: unknown, allowedStatuses: Set<string>) => {
+    if (!isRecord(value)) {
+      return;
+    }
+    const status = optionalString(value.status);
+    if (!status || !allowedStatuses.has(status)) {
+      return;
+    }
+    const identity = transitionPendingCandidateIdentity(value);
+    const key = identity.attemptIdempotencyKey
+      ? `attempt:${identity.attemptIdempotencyKey}`
+      : identity.routeIdentityKey
+        ? `route:${identity.routeIdentityKey}`
+        : [
+          identity.studyId,
+          identity.actionType,
+          identity.workUnitId,
+          identity.workUnitFingerprint,
+        ].join('|');
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    candidates.push(value);
+  };
+  const transitionPendingStatuses = new Set(['transition_request_pending']);
+  if (Array.isArray(currentControl.provider_admission_candidates)) {
+    currentControl.provider_admission_candidates.forEach((candidate) =>
+      append(candidate, transitionPendingStatuses)
+    );
+  }
+  const currentAction = isRecord(currentControl.current_executable_owner_action)
+    ? currentControl.current_executable_owner_action
+    : null;
+  append(currentAction, transitionPendingStatuses);
+  const studies = currentControl.studies;
+  const studyRecords = Array.isArray(studies)
+    ? studies
+    : isRecord(studies)
+      ? Object.values(studies)
+      : [];
+  for (const study of studyRecords) {
+    if (!isRecord(study)) {
+      continue;
+    }
+    append(study.current_control_action, transitionPendingStatuses);
+    if (Array.isArray(study.provider_admission_candidates)) {
+      study.provider_admission_candidates.forEach((candidate) =>
+        append(candidate, transitionPendingStatuses)
+      );
+    }
+  }
+  return candidates;
+}
+
+function providerAdmissionCurrentCandidates(currentControl: Record<string, unknown>) {
+  const candidates: Record<string, unknown>[] = [];
+  const seen = new Set<string>();
   const append = (value: unknown) => {
-    if (!isRecord(value) || optionalString(value.status) !== 'transition_request_pending') {
+    if (!isRecord(value)) {
+      return;
+    }
+    const status = optionalString(value.status);
+    if (status !== 'transition_request_pending' && status !== 'provider_admission_pending') {
       return;
     }
     const identity = transitionPendingCandidateIdentity(value);
@@ -172,6 +234,57 @@ function parseExistingTaskPayload(row: CurrentControlExistingTaskRow) {
   } catch {
     return null;
   }
+}
+
+type CurrentControlExistingStageAttempt = {
+  stage_attempt_id: string;
+  status: string;
+  closeout_receipt_status?: string | null;
+  closeout_refs?: unknown;
+  provider_run?: unknown;
+  workspace_locator?: unknown;
+  task_id?: string | null;
+};
+
+function terminalConsumedFromExistingStageAttempt(
+  row: CurrentControlExistingTaskRow,
+  stageAttemptsByTask?: Map<string, CurrentControlExistingStageAttempt[]>,
+) {
+  const taskId = optionalString(row.task_id);
+  if (!taskId || !stageAttemptsByTask) {
+    return null;
+  }
+  const attempts = stageAttemptsByTask.get(taskId) ?? [];
+  const terminal = attempts.find((attempt) =>
+    (attempt.status === 'completed' || attempt.status === 'succeeded')
+    && attempt.closeout_receipt_status === 'accepted_typed_closeout'
+  );
+  if (!terminal) {
+    return null;
+  }
+  const providerRun = isRecord(terminal.provider_run) ? terminal.provider_run : {};
+  const workspaceLocator = isRecord(terminal.workspace_locator) ? terminal.workspace_locator : {};
+  return {
+    reason: 'terminal_stage_attempt_consumed_same_transition_identity',
+    terminal_stage_attempt_id: optionalString(terminal.stage_attempt_id),
+    terminal_stage_attempt_status: optionalString(terminal.status),
+    terminal_provider_status: optionalString(providerRun.provider_status),
+    closeout_refs: stringList(terminal.closeout_refs),
+    currentness_identity: {
+      task_id: taskId,
+      stage_attempt_id: optionalString(terminal.stage_attempt_id),
+      study_id: optionalString(workspaceLocator.study_id),
+      action_type: optionalString(workspaceLocator.action_type),
+      work_unit_id: optionalString(workspaceLocator.work_unit_id),
+      work_unit_fingerprint:
+        optionalString(workspaceLocator.work_unit_fingerprint)
+        ?? optionalString(workspaceLocator.domain_source_fingerprint),
+      route_identity_key:
+        optionalString(workspaceLocator.route_identity_key)
+        ?? optionalString(workspaceLocator.attempt_idempotency_key),
+      attempt_idempotency_key: optionalString(workspaceLocator.attempt_idempotency_key),
+    },
+  };
 }
 
 function terminalConsumedReadback(input: {
@@ -388,6 +501,7 @@ export function publishCurrentControlProviderAdmissionReadback(
 export function publishExistingCurrentControlProviderAdmissionReadbacks(input: {
   output: Record<string, unknown>;
   existingTasks: CurrentControlExistingTaskRow[];
+  stageAttemptsByTask?: Map<string, CurrentControlExistingStageAttempt[]>;
 }) {
   const currentControlRef = currentControlStatePath(input.output);
   if (!currentControlRef || !fs.existsSync(currentControlRef)) {
@@ -397,7 +511,7 @@ export function publishExistingCurrentControlProviderAdmissionReadbacks(input: {
   if (!currentControl) {
     return [];
   }
-  const candidates = transitionPendingCandidates(currentControl);
+  const candidates = providerAdmissionCurrentCandidates(currentControl);
   if (candidates.length === 0) {
     return [];
   }
@@ -436,6 +550,12 @@ export function publishExistingCurrentControlProviderAdmissionReadbacks(input: {
         taskResult: {
           accepted: false,
           idempotent_noop: true,
+          ...(terminalConsumedFromExistingStageAttempt(row, input.stageAttemptsByTask)
+            ? {
+              current_control_provider_admission_consumed:
+                terminalConsumedFromExistingStageAttempt(row, input.stageAttemptsByTask)!,
+            }
+            : {}),
           task: {
             domain_id: 'medautoscience',
             task_kind: 'domain_owner/default-executor-dispatch',

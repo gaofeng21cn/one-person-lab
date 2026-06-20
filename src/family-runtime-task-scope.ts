@@ -14,6 +14,40 @@ function payloadValueAtPath(value: Record<string, unknown>, path: string) {
   }, value);
 }
 
+function payloadValuesAtPath(value: Record<string, unknown>, path: string) {
+  const direct = payloadValueAtPath(value, path);
+  const aliases: string[] = [];
+  if (path === 'idempotency_key') {
+    aliases.push(
+      'attempt_idempotency_key',
+      'route_identity_key',
+      'provider_admission_identity.idempotency_key',
+      'provider_admission_identity.attempt_idempotency_key',
+      'provider_admission_identity.route_identity_key',
+    );
+  } else if (path === 'attempt_idempotency_key') {
+    aliases.push(
+      'idempotency_key',
+      'route_identity_key',
+      'provider_admission_identity.attempt_idempotency_key',
+      'provider_admission_identity.idempotency_key',
+      'provider_admission_identity.route_identity_key',
+    );
+  } else if (path === 'route_identity_key') {
+    aliases.push(
+      'idempotency_key',
+      'attempt_idempotency_key',
+      'provider_admission_identity.route_identity_key',
+      'provider_admission_identity.idempotency_key',
+      'provider_admission_identity.attempt_idempotency_key',
+    );
+  }
+  return [
+    direct,
+    ...aliases.map((alias) => payloadValueAtPath(value, alias)),
+  ];
+}
+
 function payloadMatchValuesByPath(taskScope?: FamilyRuntimeTaskScope) {
   const valuesByPath = new Map<string, Set<string>>();
   for (const match of taskScope?.payloadMatches ?? []) {
@@ -29,7 +63,7 @@ function payloadMatchesTaskScope(
   taskScope?: FamilyRuntimeTaskScope,
 ) {
   return [...payloadMatchValuesByPath(taskScope)].every(([path, values]) =>
-    values.has(String(payloadValueAtPath(payload, path) ?? ''))
+    payloadValuesAtPath(payload, path).some((value) => values.has(String(value ?? '')))
   );
 }
 

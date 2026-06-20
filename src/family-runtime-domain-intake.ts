@@ -14,6 +14,7 @@ import {
   type FamilyRuntimeTaskRow,
   type taskToPayload,
 } from './family-runtime-store.ts';
+import { listStageAttemptsForTask } from './family-runtime-stage-attempt-ledger.ts';
 import {
   runFamilyRuntimeDomainHandlerCommand,
   domainHandlerResultErrorMessage,
@@ -64,6 +65,50 @@ type IntakeBlocked = {
   task: unknown;
   repair_action?: Record<string, unknown>;
 };
+
+function optionalPublicationString(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function currentControlPublicationKey(publication: Record<string, unknown>) {
+  const studyId = optionalPublicationString(publication.study_id);
+  const idempotencyKey = optionalPublicationString(publication.idempotency_key);
+  return studyId && idempotencyKey ? `${studyId}::${idempotencyKey}` : null;
+}
+
+function currentControlPublicationRank(publication: Record<string, unknown>) {
+  const status = optionalPublicationString(publication.status);
+  if (status === 'provider_admission_terminal_consumed') {
+    return 3;
+  }
+  if (status === 'transition_non_advancing_apply_recorded') {
+    return 2;
+  }
+  return 1;
+}
+
+function mergeCurrentControlReadbackPublications(publications: Array<Record<string, unknown>>) {
+  const merged: Array<Record<string, unknown>> = [];
+  const indexesByKey = new Map<string, number>();
+  for (const publication of publications) {
+    const key = currentControlPublicationKey(publication);
+    if (!key) {
+      merged.push(publication);
+      continue;
+    }
+    const existingIndex = indexesByKey.get(key);
+    if (existingIndex === undefined) {
+      indexesByKey.set(key, merged.length);
+      merged.push(publication);
+      continue;
+    }
+    const existing = merged[existingIndex];
+    if (currentControlPublicationRank(publication) >= currentControlPublicationRank(existing)) {
+      merged[existingIndex] = publication;
+    }
+  }
+  return merged;
+}
 
 function masProductionProofArgs(paths?: ReturnType<typeof familyRuntimePaths>) {
   const proofPath = process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_OPL_PRODUCTION_PROOF?.trim()
@@ -308,6 +353,17 @@ function rowsForExistingCurrentControlReadbackPublication(
       && ['succeeded', 'completed'].includes(row.status));
 }
 
+function stageAttemptsForExistingCurrentControlRows(
+  db: DatabaseSync,
+  rows: FamilyRuntimeTaskRow[],
+) {
+  const byTask = new Map<string, ReturnType<typeof listStageAttemptsForTask>>();
+  for (const row of rows) {
+    byTask.set(row.task_id, listStageAttemptsForTask(db, row.task_id));
+  }
+  return byTask;
+}
+
 export function hydrateDomainTasks(
   db: DatabaseSync,
   paths: ReturnType<typeof familyRuntimePaths>,
@@ -395,10 +451,6 @@ export function hydrateDomainTasks(
     const acceptedTasks = [];
     const currentControlReadbackPublications: Array<Record<string, unknown>> = [
       ...current_control_readback_publications,
-      ...publishExistingCurrentControlProviderAdmissionReadbacks({
-        output,
-        existingTasks: rowsForExistingCurrentControlReadbackPublication(db, input.taskScope),
-      }),
     ];
     for (const consumed of supervisorDecisionRequests.consumed) {
       insertEvent(db, {
@@ -428,6 +480,17 @@ export function hydrateDomainTasks(
         idempotentNoopCount += 1;
       }
     }
+    const existingCurrentControlRows = rowsForExistingCurrentControlReadbackPublication(db, input.taskScope);
+    currentControlReadbackPublications.push(
+      ...publishExistingCurrentControlProviderAdmissionReadbacks({
+        output,
+        existingTasks: existingCurrentControlRows,
+        stageAttemptsByTask: stageAttemptsForExistingCurrentControlRows(db, existingCurrentControlRows),
+      }),
+    );
+    const mergedCurrentControlReadbackPublications = mergeCurrentControlReadbackPublications(
+      currentControlReadbackPublications,
+    );
     exports.push({
       domain_id: domainId,
       status: 'completed',
@@ -444,8 +507,8 @@ export function hydrateDomainTasks(
       blocked_count: blocked.length + supervisorDecisionRequests.blocked.length,
       paper_autonomy_supervisor_decision_request_consumed_count: supervisorDecisionRequests.consumed.length,
       paper_autonomy_supervisor_decision_request_consumed: supervisorDecisionRequests.consumed,
-      current_control_readback_publication_count: currentControlReadbackPublications.length,
-      current_control_readback_publications: currentControlReadbackPublications,
+      current_control_readback_publication_count: mergedCurrentControlReadbackPublications.length,
+      current_control_readback_publications: mergedCurrentControlReadbackPublications,
       blocked: [...blocked, ...supervisorDecisionRequests.blocked],
     });
   }

@@ -347,6 +347,75 @@ test('family-runtime intake can scope hydration by top-level task kind', () => {
   }
 });
 
+test('family-runtime intake payload-match idempotency_key matches provider-admission identity aliases', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-identity-alias-scope-'));
+  const exportFixture = createJsonExportFixture({
+    pending_family_tasks: [
+      {
+        domain_id: 'medautoscience',
+        task_kind: 'domain_owner/default-executor-dispatch',
+        dedupe_key: 'paper-policy-request:dm002-current',
+        payload: {
+          profile: '/tmp/profile.toml',
+          study_id: 'DM002',
+          action_type: 'return_to_ai_reviewer_workflow',
+          work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+          route_identity_key: 'paper-policy-request:dm002-current',
+          attempt_idempotency_key: 'paper-policy-request:dm002-current',
+          provider_admission_identity: {
+            route_identity_key: 'paper-policy-request:dm002-current',
+            attempt_idempotency_key: 'paper-policy-request:dm002-current',
+          },
+        },
+      },
+      {
+        domain_id: 'medautoscience',
+        task_kind: 'domain_owner/default-executor-dispatch',
+        dedupe_key: 'paper-policy-request:dm003-other',
+        payload: {
+          profile: '/tmp/profile.toml',
+          study_id: 'DM003',
+          action_type: 'request_opl_stage_attempt',
+          work_unit_id: 'medical_prose_write_repair',
+          route_identity_key: 'paper-policy-request:dm003-other',
+          attempt_idempotency_key: 'paper-policy-request:dm003-other',
+        },
+      },
+    ],
+  });
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportFixture.exportPath,
+    });
+    const intake = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload-match',
+      'idempotency_key=paper-policy-request:dm002-current',
+      '--source',
+      'test',
+    ], env);
+    const queue = runCli(['family-runtime', 'queue', 'list'], familyRuntimeEnv(stateRoot));
+
+    assert.equal(intake.family_runtime_intake.enqueued_count, 1);
+    assert.equal(intake.family_runtime_intake.filtered_count, 1);
+    assert.deepEqual(intake.family_runtime_intake.task_scope, {
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payloadMatches: [{ path: 'idempotency_key', value: 'paper-policy-request:dm002-current' }],
+    });
+    assert.equal(queue.family_runtime_queue.tasks.length, 1);
+    assert.equal(queue.family_runtime_queue.tasks[0].payload.study_id, 'DM002');
+    assert.equal(queue.family_runtime_queue.tasks[0].payload.attempt_idempotency_key, 'paper-policy-request:dm002-current');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(exportFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime tick scope filtered count excludes limit overflow', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-study-scope-limit-'));
   const dispatch = createDispatchFixture(`

@@ -24,6 +24,85 @@ function actionQueueProviderAdmissionContext(
   return { handoff, ownerRoute };
 }
 
+function currentControlOwnerRoute(currentControl: Record<string, unknown>) {
+  return isRecord(currentControl.owner_route) ? currentControl.owner_route : null;
+}
+
+function currentControlOwnerRouteSourceRefs(currentControl: Record<string, unknown>) {
+  const ownerRoute = currentControlOwnerRoute(currentControl);
+  return isRecord(ownerRoute?.source_refs) ? ownerRoute.source_refs : null;
+}
+
+function transitionRequestFromCandidate(candidate: Record<string, unknown>) {
+  const policyResult = isRecord(candidate.paper_progress_policy_result)
+    ? candidate.paper_progress_policy_result
+    : null;
+  return isRecord(candidate.opl_domain_progress_transition_request)
+    ? candidate.opl_domain_progress_transition_request
+    : isRecord(policyResult?.opl_domain_progress_transition_request)
+      ? policyResult.opl_domain_progress_transition_request
+      : null;
+}
+
+function candidateWithCurrentControlOwnerRouteRefs(
+  currentControl: Record<string, unknown>,
+  candidate: Record<string, unknown>,
+) {
+  const sourceRefs = currentControlOwnerRouteSourceRefs(currentControl);
+  const ownerRoute = currentControlOwnerRoute(currentControl);
+  if (!sourceRefs && !ownerRoute) {
+    return candidate;
+  }
+  const ownerRouteCurrentnessBasis = isRecord(sourceRefs?.owner_route_currentness_basis)
+    ? sourceRefs.owner_route_currentness_basis
+    : null;
+  return {
+    ...(ownerRoute ? { owner_route: ownerRoute } : {}),
+    ...candidate,
+    ...(candidate.owner_route_current === undefined
+      && optionalString(candidate.status) === 'provider_admission_pending'
+      ? { owner_route_current: true }
+      : {}),
+    ...(optionalString(candidate.dispatch_ref)
+      ? {}
+      : { dispatch_ref: optionalString(sourceRefs?.dispatch_ref) }),
+    ...(optionalString(candidate.stage_packet_ref)
+      ? {}
+      : { stage_packet_ref: optionalString(sourceRefs?.stage_packet_ref) }),
+    ...(Array.isArray(candidate.stage_packet_refs)
+      ? {}
+      : Array.isArray(sourceRefs?.stage_packet_refs)
+        ? { stage_packet_refs: sourceRefs.stage_packet_refs }
+        : {}),
+    ...(Array.isArray(candidate.checkpoint_refs)
+      ? {}
+      : Array.isArray(sourceRefs?.stage_packet_refs)
+        ? { checkpoint_refs: sourceRefs.stage_packet_refs }
+        : {}),
+    ...(optionalString(candidate.route_identity_key)
+      ? {}
+      : { route_identity_key: optionalString(sourceRefs?.route_identity_key) }),
+    ...(optionalString(candidate.attempt_idempotency_key)
+      ? {}
+      : { attempt_idempotency_key: optionalString(sourceRefs?.attempt_idempotency_key) }),
+    ...(optionalString(candidate.next_executable_owner)
+      ? {}
+      : {
+        next_executable_owner:
+          optionalString(candidate.owner)
+          ?? optionalString(ownerRoute?.next_owner),
+      }),
+    ...(isRecord(candidate.currentness_basis)
+      ? {}
+      : ownerRouteCurrentnessBasis
+        ? { currentness_basis: ownerRouteCurrentnessBasis }
+        : {}),
+    ...(isRecord(candidate.stage_transition_authority_boundary)
+      ? {}
+      : { stage_transition_authority_boundary: providerObservationBoundaryFromCurrentControl() }),
+  };
+}
+
 function actionQueueAttemptProtocolAllowsProviderAdmission(ownerRoute: Record<string, unknown> | null) {
   const protocol = isRecord(ownerRoute?.owner_route_attempt_protocol)
     ? ownerRoute.owner_route_attempt_protocol
@@ -116,22 +195,23 @@ function currentControlProviderAdmissionCandidateFromActionQueueItem(
   currentControl: Record<string, unknown>,
   action: Record<string, unknown>,
 ) {
-  const { handoff, ownerRoute } = actionQueueProviderAdmissionContext(action);
+  const hydratedAction = candidateWithCurrentControlOwnerRouteRefs(currentControl, action);
+  const { handoff, ownerRoute } = actionQueueProviderAdmissionContext(hydratedAction);
   if (!actionQueueAttemptProtocolAllowsProviderAdmission(ownerRoute)) {
     return null;
   }
-  const fields = actionQueueProviderAdmissionFields({ action, handoff, ownerRoute });
+  const fields = actionQueueProviderAdmissionFields({ action: hydratedAction, handoff, ownerRoute });
   if (!fields) {
     return null;
   }
   const identity = actionQueueProviderAdmissionIdentity({
-    action,
+    action: hydratedAction,
     handoff,
     ownerRoute,
     workUnitFingerprint: fields.workUnitFingerprint,
   });
   return {
-    ...action,
+    ...hydratedAction,
     status: 'provider_admission_pending',
     owner_route_current: true,
     study_id: fields.studyId,
@@ -141,38 +221,63 @@ function currentControlProviderAdmissionCandidateFromActionQueueItem(
     work_unit_fingerprint: fields.workUnitFingerprint,
     action_fingerprint: identity.actionFingerprint,
     source_fingerprint: identity.sourceFingerprint,
-    dispatch_authority: optionalString(action.dispatch_authority) ?? 'opl_current_control_state_handoff',
+    dispatch_authority: optionalString(hydratedAction.dispatch_authority) ?? 'opl_current_control_state_handoff',
     next_executable_owner: fields.nextOwner,
     provider_attempt_or_lease_required: true,
     provider_completion_is_domain_completion: false,
     stage_transition_authority_boundary: providerObservationBoundaryFromCurrentControl(),
     ...(identity.obligationId ? { recovery_obligation_id: identity.obligationId } : {}),
-    required_output_surface: optionalString(action.required_output_surface),
+    required_output_surface: optionalString(hydratedAction.required_output_surface),
     idempotency_key: optionalString(handoff.idempotency_key) ?? optionalString(ownerRoute?.idempotency_key),
     ...(identity.routeIdentityKey ? { route_identity_key: identity.routeIdentityKey } : {}),
     ...(identity.attemptIdempotencyKey ? { attempt_idempotency_key: identity.attemptIdempotencyKey } : {}),
-    ...(isRecord(action.current_control_command_outbox_record)
-      ? { current_control_command_outbox_record: action.current_control_command_outbox_record }
+    ...(isRecord(hydratedAction.current_control_command_outbox_record)
+      ? { current_control_command_outbox_record: hydratedAction.current_control_command_outbox_record }
       : {}),
-    ...(isRecord(action.opl_domain_progress_transition_request)
-      ? { opl_domain_progress_transition_request: action.opl_domain_progress_transition_request }
+    ...(transitionRequestFromCandidate(hydratedAction)
+      ? { opl_domain_progress_transition_request: transitionRequestFromCandidate(hydratedAction) }
       : {}),
     currentness_basis: currentControlCurrentnessBasis({
       currentControl,
-      action,
+      action: hydratedAction,
       ownerRoute,
       workUnitId: fields.workUnitId,
       workUnitFingerprint: fields.workUnitFingerprint,
     }),
     ...(
-      domainProgressTransitionApply(action)
+      domainProgressTransitionApply(hydratedAction)
         ? {
-          domain_progress_transition_apply: domainProgressTransitionApply(action),
+          domain_progress_transition_apply: domainProgressTransitionApply(hydratedAction),
         }
         : {}
     ),
     provider_admission_schema_source: 'action_queue',
   };
+}
+
+function currentControlProviderAdmissionCandidateFromTransitionRequestCandidate(
+  currentControl: Record<string, unknown>,
+  candidate: Record<string, unknown>,
+) {
+  const hydratedCandidate = candidateWithCurrentControlOwnerRouteRefs(currentControl, candidate);
+  const request = transitionRequestFromCandidate(hydratedCandidate);
+  if (!request) {
+    return null;
+  }
+  return currentControlProviderAdmissionCandidateFromTransitionRequestTask({
+    domainId: 'medautoscience',
+    taskKind: 'domain_owner/default-executor-dispatch',
+    payload: {
+      ...hydratedCandidate,
+      opl_domain_progress_transition_request: request,
+    },
+    dedupeKey: optionalString(hydratedCandidate.attempt_idempotency_key)
+      ?? optionalString(hydratedCandidate.route_identity_key)
+      ?? undefined,
+    priority: typeof hydratedCandidate.priority === 'number' ? hydratedCandidate.priority : undefined,
+    source: 'opl-current-control-transition-request-candidate',
+    requiresApproval: false,
+  });
 }
 
 export function currentControlProviderAdmissionCandidateFromTransitionRequestTask(
@@ -405,14 +510,34 @@ export function currentControlProviderAdmissionCandidates(currentControl: Record
   const rootCandidates = Array.isArray(currentControl.provider_admission_candidates)
     ? currentControl.provider_admission_candidates
     : [];
-  const candidates = [...rootCandidates];
+  const candidates = rootCandidates.map((candidate) => (
+    isRecord(candidate)
+      ? candidateWithCurrentControlOwnerRouteRefs(currentControl, candidate)
+      : candidate
+  ));
+  if (Array.isArray(currentControl.transition_request_candidates)) {
+    for (const transitionCandidate of currentControl.transition_request_candidates) {
+      if (!isRecord(transitionCandidate)) {
+        mergeCurrentControlProviderAdmissionCandidates(candidates, transitionCandidate);
+        continue;
+      }
+      const providerCandidate = currentControlProviderAdmissionCandidateFromTransitionRequestCandidate(
+        currentControl,
+        transitionCandidate,
+      );
+      mergeCurrentControlProviderAdmissionCandidates(
+        candidates,
+        providerCandidate ?? candidateWithCurrentControlOwnerRouteRefs(currentControl, transitionCandidate),
+      );
+    }
+  }
   for (const item of nestedCurrentControlActionItems(currentControl)) {
     if (!isRecord(item)) {
       mergeCurrentControlProviderAdmissionCandidates(candidates, item);
       continue;
     }
     const candidate = optionalString(item.status) === 'provider_admission_pending'
-      ? item
+      ? candidateWithCurrentControlOwnerRouteRefs(currentControl, item)
       : currentControlProviderAdmissionCandidateFromActionQueueItem(currentControl, item) ?? item;
     mergeCurrentControlProviderAdmissionCandidates(candidates, candidate);
   }
@@ -433,10 +558,20 @@ export function mergeCurrentControlProviderAdmissionCandidates(
       isRecord(entry) && providerAdmissionCandidateIdentity(entry) === identity
     );
     if (existingIndex >= 0) {
-      candidates[existingIndex] = {
-        ...candidates[existingIndex] as Record<string, unknown>,
-        ...candidate,
-      };
+      const existing = candidates[existingIndex] as Record<string, unknown>;
+      const existingStatus = optionalString(existing.status);
+      const candidateStatus = optionalString(candidate.status);
+      const candidateIsProviderAdmission = candidateStatus === 'provider_admission_pending';
+      const existingIsProviderAdmission = existingStatus === 'provider_admission_pending';
+      candidates[existingIndex] = existingIsProviderAdmission && !candidateIsProviderAdmission
+        ? {
+          ...candidate,
+          ...existing,
+        }
+        : {
+          ...existing,
+          ...candidate,
+        };
       return;
     }
   }
