@@ -796,6 +796,10 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.match(generatedBookForgeSkill, /stronger reference draft/);
     assert.match(generatedBookForgeSkill, /reader-entry plans/);
     assert.match(generatedBookForgeSkill, /project hygiene scan/);
+    assert.match(generatedBookForgeSkill, /current measured extent/);
+    assert.match(generatedBookForgeSkill, /internal-language and AI-flavor scans/);
+    assert.match(generatedBookForgeSkill, /stale reports cannot support readiness claims/);
+    assert.match(generatedBookForgeSkill, /omits `asset_ready` figures/);
     assert.match(generatedBookForgeSkill, /tombstone refs/);
     assert.match(generatedBookForgeSkill, /教育实验观察窗口/);
     assert.match(generatedBookForgeSkill, /观察它如何强调/);
