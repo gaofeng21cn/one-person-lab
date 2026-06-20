@@ -4,11 +4,13 @@ Owner: `One Person Lab`
 Purpose: `status`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
-更新时间：`2026-06-17`
+更新时间：`2026-06-21`
 
 Plugin native profile pointer: `contracts/opl-native-profile.json` 只声明 OPL Flow / OPL Doc 插件同步与 drift 检查所需的 repo-native profile；它不是 framework truth、runtime truth、domain truth、artifact authority、owner receipt 或 production-ready 证据。
 
 OPL Flow closeout gate: `contracts/opl-framework/opl-flow-completion-audit-contract.json` 是目标态交付的机器化后验证合同。凡 claim scope 属于 `thorough_landing`、`complete_execution`、`end_to_end_acceptance`、`production_ready_claim` 或 `release_ready_claim`，closeout 前必须给出逐项 plan completion audit、完成度百分比、fresh evidence refs、missing refs、next action 和 subagent/worktree lane mapping。docs/catalog/plan/read-model/refs-only surface/contract/test/commit-only evidence 不能单独支撑 `100%` 或 complete claim；仍有非 100% 条目时只能继续推进，或在明确 owner / source of truth / 权限 / 外部依赖 / 验证边界 blocker 下输出 typed blocker。
+
+GUI route policy 当前读法：One Person Lab App 的 GUI 主线固定为 `one-person-lab-app` 消费 `opl-aion-shell` 的 OPL-branded AionUI shell；Hermes Desktop / `hermes-codex` 是唯一 foreground alternative GUI candidate；AG-UI/CopilotKit / `agui-codex` / `opl-agui-codex-shell` 只作为 archived technical proof 与显式 replay surface 保留。除非用户明确要求 AGUI replay 或历史技术验证审计，OPL 主仓、App 仓、AionUI shell 仓和 AGUI shell 仓都不应继续把 AGUI 纳入默认开发、验证、polish、release、adoption 或功能面落地路线。App GUI product truth、candidate policy、active-shell validation 和 release gate 继续归 `one-person-lab-app`，OPL Framework 只记录消费边界和 runtime/action projection。
 
 OKF context bundle 当前已作为 OPL-owned advisory context / interchange surface 落地。机器入口是 `contracts/opl-framework/okf-context-bundle-contract.json`、`src/okf-context-bundle.ts`、`opl okf validate --bundle <dir> --json`、`opl okf inspect --bundle <dir> --json` 和 `opl okf project-pack --pack <pack_compiler_input.json> --output <dir> --json`。它只投影 Foundry Agent pack refs、memory locator refs、index/log/crosslink 和 no-authority metadata，帮助 AI executor 更快获得上下文；它不写 domain truth、不复制 memory / artifact / prompt / skill / quality gate body、不调度 runtime、不签 owner receipt、不创建 typed blocker、不授权 quality/export/domain-ready/App-release/production-ready claim。OKF warning（broken link、unknown field/type、missing optional metadata）默认不阻断 ordinary progress；只有被绑定到 source/data authority、owner identity、forbidden write、irreversible mutation 或 hard readiness / final export / submission claim 时，才回到既有 authority gate。
 
