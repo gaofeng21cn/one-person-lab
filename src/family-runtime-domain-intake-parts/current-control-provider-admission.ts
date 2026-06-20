@@ -10,13 +10,13 @@ import {
   currentControlProviderAdmissionCandidates,
   currentControlTransitionPendingCandidateFromTask,
   mergeCurrentControlProviderAdmissionCandidates,
-} from './current-control-provider-admission-parts/candidate-normalization.ts';
-import { recordCurrentControlTransitionNonAdvancingApply } from './current-control-provider-admission-parts/non-advancing-apply.ts';
-import { currentControlProviderAdmissionInputFrom } from './current-control-provider-admission-parts/provider-input.ts';
+} from './current-control-provider-admission/candidate-normalization.ts';
+import { recordCurrentControlTransitionNonAdvancingApply } from './current-control-provider-admission/non-advancing-apply.ts';
+import { currentControlProviderAdmissionInputFrom } from './current-control-provider-admission/provider-input.ts';
 export {
   publishCurrentControlProviderAdmissionReadback,
   publishExistingCurrentControlProviderAdmissionReadbacks,
-} from './current-control-provider-admission-parts/readback-publication.ts';
+} from './current-control-provider-admission/readback-publication.ts';
 import {
   type CurrentControlProviderAdmissionBlocked,
   type CurrentControlProviderAdmissionExportContext,
@@ -24,8 +24,8 @@ import {
   currentControlStatePath,
   isRecord,
   readJsonRecord,
-} from './current-control-provider-admission-parts/shared.ts';
-export type { CurrentControlProviderAdmissionExportContext } from './current-control-provider-admission-parts/shared.ts';
+} from './current-control-provider-admission/shared.ts';
+export type { CurrentControlProviderAdmissionExportContext } from './current-control-provider-admission/shared.ts';
 
 export function currentControlProviderAdmissionInputs(
   domainId: FamilyRuntimeDomainId,
