@@ -52,7 +52,7 @@ Machine boundary: 本文是人读 public surface 索引。机器可读 surface t
 `OPL` 通过 `opl connect sync-skills` 和各 domain 仓自己的 CLI / 程序 / 脚本 / contract surface 来发现并激活它们。
 所以当前顶层集成单元其实是 repo-owned 的 domain app skill 及其底下的 command contract，而不是 OPL 自己再造一套 gateway handoff 词汇。
 
-`One Person Lab App` 是工作台产品 surface，消费 framework/provider 状态和 domain-owned projection；它不持有 domain truth、runtime provider 或 artifact authority。Framework 侧把普通用户 App path 定义为 `Codex App wrapper`：固定 `Codex CLI` executor、内置 Foundry Agent 任务入口、通过 OPL `app state/action` 读取和执行，不把 AionUI upstream 多 backend、多 Agent 选择暴露为普通用户 product surface。`OPL Meta Agent` 是 Agent Foundry / new-agent builder-test managed module，用于创建、测试接管和机制改进；它可以被 OPL managed environment 与 generated plugin surface 消费，但不是第四个 domain truth owner，也不替 MAS/MAG/RCA 或 future domain 签发 quality/export verdict、artifact authority 或 owner receipt。
+`One Person Lab App` 是工作台产品 surface，消费 framework/provider 状态和 domain-owned projection；它不持有 domain truth、runtime provider 或 artifact authority。Framework 侧把普通用户 App path 定义为 `Codex App wrapper`：固定 `Codex CLI` executor、内置 Foundry Agent 任务入口、通过 OPL `app state/action` 读取和执行，不把 AionUI upstream 多 backend、多 Agent 选择暴露为普通用户 product surface。当前 GUI 主线是 `one-person-lab-app` 通过 `shells/aionui` 消费的 OPL-branded AionUI shell；Hermes Desktop / `hermes-codex` 是唯一 foreground alternative。AG-UI/CopilotKit / `agui-codex` 只作为 archived technical proof / explicit replay provenance 读取，除非用户明确要求 AGUI，不进入默认开发、验证、polish、release 或 adoption worklist。`OPL Meta Agent` 是 Agent Foundry / new-agent builder-test managed module，用于创建、测试接管和机制改进；它可以被 OPL managed environment 与 generated plugin surface 消费，但不是第四个 domain truth owner，也不替 MAS/MAG/RCA 或 future domain 签发 quality/export verdict、artifact authority 或 owner receipt。
 
 ### 3. 共享边界配套界面
 
@@ -88,6 +88,7 @@ Machine boundary: 本文是人读 public surface 索引。机器可读 surface t
 
 - 如果你要恢复当前 `OPL` 真相，先读核心工作集和 [合同目录说明](../../contracts/README.md)。
 - 如果你要恢复当前跨仓集成单元，去读已收录 domain 仓及其 app skill surface；App 与 OPL Meta Agent 分别按 workbench product surface 和 Agent Foundry managed module 读取。
+- 如果你要恢复当前 GUI 路线，先读 App 仓 active-shell contract / GUI candidate policy、`opl-aion-shell` 当前 shell 实现和 [GUI shell adapter 边界](../references/current-support/opl-gui-shell-adapter-boundary.md)；不要把 AGUI archived proof 当作 foreground candidate。
 - 如果某份文档仍然把主语写成 `OPL Gateway`、`domain_gateway`、routed handoff payload 或 gateway-owned public-surface indexing，都应按历史来源材料理解。
 
 ## 完成定义
