@@ -411,13 +411,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-06-03
 
-### 决策：active shell candidate 与非默认 executor adapter 不能被 cleanup 误删
+### 决策：GUI shell owner surface 与非默认 executor adapter 不能被 cleanup 误删或误推进
 
-原因：跨仓 cleanup 审计曾把两类仍有 owner 的面放进“后续可删”语境：其一是 `one-person-lab-app` 中仍在测试的 `opl-agui-codex-shell` / `agui-codex` active shell candidate；其二是 MAG/RCA 中 Hermes-named proof/helper/mock tail。前者的 candidate contract、validator、release/user-path evidence owner 是 App 仓，OPL Framework 只能记录边界和消费规则，不能替 App 退役 active candidate。后者的长期 owner 是 OPL Framework 的显式非默认 executor adapter/backend；MAG/RCA 只保留 domain-local receipt/proof lane、route bridge、negative guard 或迁移残留，不应被写成 domain 自己拥有 Hermes executor substrate。
+原因：跨仓 cleanup 审计曾把两类仍有 owner 的面放进“后续可删”语境：其一是 `one-person-lab-app` 中的 GUI shell contract、candidate validator、release/user-path evidence；其二是 MAG/RCA 中 Hermes-named proof/helper/mock tail。前者的 GUI product truth、active shell contract、foreground alternative policy 和 archived proof policy owner 是 App 仓，OPL Framework 只能记录边界和消费规则，不能替 App 退役或推进 shell。后者的长期 owner 是 OPL Framework 的显式非默认 executor adapter/backend；MAG/RCA 只保留 domain-local receipt/proof lane、route bridge、negative guard 或迁移残留，不应被写成 domain 自己拥有 Hermes executor substrate。
+
+2026-06-20 追加：App owner 已将 GUI 路线固定为 `AionUI mainline + Hermes Desktop only foreground alternative + AGUI archived technical proof`。因此 `opl-agui-codex-shell` / `agui-codex` 不再按 active foreground candidate 读取；它只作为 AG-UI/CopilotKit 技术验证归档与显式 replay surface 保留。除非用户明确要求 AGUI，OPL 主仓、App 仓和相关 shell 仓都不得继续把 AGUI 当作日常完善、默认验证或候选推进路线。
 
 影响：
 
-- `agui-codex` 继续按 App-owned active shell candidate 读取；只有 App owner 明确改 candidate contract、validator 和 docs，并完成替代/退役 receipt 后，才能删除对应 shell bridge 或 proof 文件。
+- App GUI 当前主线是 `one-person-lab-app` 通过 `shells/aionui` 消费的 OPL-branded AionUI shell，shell source repo 是 `opl-aion-shell`。
+- Hermes Desktop / `hermes-codex` 是唯一 foreground alternative GUI candidate；它仍不能替代 active release shell，除非 App owner 明确修改 active shell contract 并完成对应 release/user-path gates。
+- `agui-codex` 只作为 archived technical proof / explicit replay surface 读取；不能进入默认候选验证、普通开发 worklist、功能抛光、release readiness 或 active-shell adoption claim。
 - `hermes_agent`、`claude_code`、`antigravity_cli` 等非默认 executor adapter/backend 统一归 OPL Framework owner；它们只能通过显式 stage binding、executor receipt、audit 和 fail-closed gate 进入，不承诺行为、质量、工具语义或 resume 与 `Codex CLI` 等价。
 - MAG/RCA 文档、schema 和测试里的 active owner label 必须写成 `OPL executor adapter ... receipt/proof owner` 或 selected backend，不写成 MAG/RCA 自有 executor owner；domain repo 只持有 grant/visual truth、quality/export verdict、artifact authority、owner receipt 或 typed blocker。
 - OMA materializer/helper 与 Aion Team/E2E bridge tail 只删除无 active caller、已有 replacement proof 和 repo-native verification 的 fixture/alias/helper；active materializer、target-agent handoff、legacy migration window、explicit bridge fallback 和 App-owned shell candidate 不进入物理删除。
@@ -747,7 +751,8 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `opl-aion-shell` 继续持有 AionUI shell 源码、contributors、upstream remote、shell-local build/test/packaging 和 OPL overlay 退役审计。
 - App 产品文档、打包、更新、Full first-install 包、页面状态测试、首启测试、截图和用户教程迁入 App repo。
 - AionUI 不进入 App repo 默认分支历史；App repo 的 `shells/aionui` 是外部 checkout / symlink / CI checkout，来源为 `gaofeng21cn/opl-aion-shell`。
-- AionUI 2.0 或其他 GUI 基座可在 `shells/aionui-next/` / `shells/<candidate>/` 并行适配；验证通过后再切换 App 顶层 active shell contract。
+- 当前 GUI 主线是 OPL-branded AionUI shell；Hermes Desktop / `hermes-codex` 是唯一 foreground alternative。AionUI 大版本迁移可以在 `shells/aionui-next/` 这类主线升级路径中适配；非 Hermes 的新 GUI 候选必须先经 App owner 明确重新打开 candidate policy。
+- `agui-codex` / `opl-agui-codex-shell` 只作为 AG-UI/CopilotKit archived technical proof 与显式 replay surface 保留；除非用户明确要求 AGUI，不再作为日常候选推进、默认验证或 polish lane。
 - App 仍然只消费 OPL CLI / machine-readable surfaces 和 domain-owned projection refs，不复制 runtime/provider/domain truth，也不成为 quality verdict 或 artifact authority。
 - App repo 是标准 DMG、Full DMG、updater metadata、GitHub Release、GUI smoke 和用户教程的唯一 owner；Framework repo 只保留 App release discovery/consumer surface 和 Full DMG payload source。
 
@@ -1071,17 +1076,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `OPL` 主仓当前主线以 `Codex-default session runtime + activation layer` 为中心，而不是以 GUI 或 API 壳为中心
 - canonical truth 收敛到：workspace binding、session lifecycle、progress / artifact projection、agent entry dispatch、runtime mode
 - GUI / Web shell 使用这套 session runtime；本地 8787 Product API / `opl web` 模块退役
-- `one-person-lab-app` 是 App 产品仓；当前第一 GUI adapter 位于 `shells/aionui`，基于 AionUI codebase 产出 OPL 品牌壳，但原版 AionUI app 不是 OPL GUI，也不是 runtime owner
+- `one-person-lab-app` 是 App 产品仓；当前第一 GUI adapter 位于 `shells/aionui`，基于 AionUI codebase 产出 OPL 品牌壳，但原版 AionUI app 不是 OPL GUI，也不是 runtime owner。Hermes Desktop 是唯一 foreground alternative；AGUI/CopilotKit 只作为 archived technical proof 读取
 
 ### 决策：GUI 主线确定为基于 AionUI codebase 的 OPL 品牌壳
 
-原因：在 `OPL` 已经明确走 `Codex-default session runtime + activation layer` 主线之后，当前 GUI 形态确定为基于 AionUI codebase 的 OPL 品牌壳。用户面对的交付物必须是 OPL 品牌壳：去掉 OPL 用不上的通用 AionUI 模块，替换品牌、文案和安装包身份，并消费 OPL runtime/release contracts。
+原因：在 `OPL` 已经明确走 `Codex-default session runtime + activation layer` 主线之后，当前 GUI 形态确定为基于 AionUI codebase 的 OPL 品牌壳。用户面对的交付物必须是 OPL 品牌壳：去掉 OPL 用不上的通用 AionUI 模块，替换品牌、文案和安装包身份，并消费 OPL runtime/release contracts。2026-06-20 后，App GUI 路线进一步收敛为：AionUI 是主线，Hermes Desktop 是唯一 foreground alternative，AGUI/CopilotKit 只保留为 archived technical proof。
 
 影响：
 
 - `OPL` 主仓继续保留 family-level session runtime、`opl` shell / TUI、release distribution surface 与 activation contracts
 - 当前第一 GUI 交付物按 `opl-aion-shell` 的 OPL 品牌壳推进，并由 `one-person-lab-app` 负责发布包装
-- 仓内已移除旧 GUI 备线材料；当前 GUI 实施依据收敛到 `opl-aion-shell` 与 AionUI codebase
+- 当前 GUI 实施依据收敛到 `one-person-lab-app` App-owned contracts、`opl-aion-shell` 与 AionUI codebase；Hermes Desktop 只作为 App-owned foreground alternative candidate；AGUI/CopilotKit 不再作为普通备线材料推进
 
 ## 2026-04-20
 

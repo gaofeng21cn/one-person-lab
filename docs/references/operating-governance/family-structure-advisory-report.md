@@ -52,7 +52,7 @@ Standard / Foundry Agent repos should visibly share the same repo-source shape:
 - `docs/` holds owner truth and policy.
 - `scripts/verify.sh` is the repo-native verification entry.
 
-Support repos can be lighter but should still be recognizable: `one-person-lab` is the framework / shared governance owner; `one-person-lab-app` is product / release / shell-candidate owner; `opl-agui-codex-shell` is App-owned shell-candidate implementation support; `opl-doc` and `opl-flow` are plugin / workflow support repos; `homebrew-one-person-lab` is distribution transport support; `OPL-PPT` is artifact reference support.
+Support repos can be lighter but should still be recognizable: `one-person-lab` is the framework / shared governance owner; `one-person-lab-app` is product / release / GUI candidate policy owner; `opl-aion-shell` is the current App GUI mainline implementation support; `opl-agui-codex-shell` is archived AG-UI/CopilotKit technical-proof replay support, not a foreground candidate; `opl-doc` and `opl-flow` are plugin / workflow support repos; `homebrew-one-person-lab` is distribution transport support; `OPL-PPT` is artifact reference support.
 
 ## Focused Readout Policy
 

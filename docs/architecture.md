@@ -64,7 +64,7 @@ OPL 的三层产品认知说明“面向谁”，当前十个品牌模块说明 
 - `OPL Framework` 集成开发与运行：developer-facing CLI/contracts/package 入口和 runtime control plane 使用同一套 truth；不通过拆仓或复制 runtime 来制造第二框架
 - OPL-compatible Agent 以独立 repo/package 形态开发；运行时通过 `opl framework locate` / `opl_framework_locator` 定位外部 OPL Framework 环境，再调用 framework-owned runtime、contract、package 或 projection surface
 - `One Person Lab App` 是 user-facing workbench：它消费 Framework 的 runtime/activation truth 和 domain-owned projection，持有 GUI product truth、GUI runtime bridge 产品合同、active shell validation、release gate、updater metadata 和用户文档，不成为 domain runtime、quality verdict 或 artifact authority
-- App 普通用户路径等价于 `Codex App wrapper`：`Codex CLI` 是固定 concrete executor，MAS/MAG/RCA 及后续 Foundry Agent 以任务入口内置呈现；`opl-aion-shell` 只是当前 App-owned GUI contract 的 implementation carrier，上游 AionUI 的多 backend、多 Agent 选择只允许作为 shell implementation / developer-operator diagnostic 细节，不成为普通用户产品面
+- App 普通用户路径等价于 `Codex App wrapper`：`Codex CLI` 是固定 concrete executor，MAS/MAG/RCA 及后续 Foundry Agent 以任务入口内置呈现；`opl-aion-shell` 只是当前 App-owned GUI contract 的 implementation carrier，上游 AionUI 的多 backend、多 Agent 选择只允许作为 shell implementation / developer-operator diagnostic 细节，不成为普通用户产品面。当前 GUI 主线是 OPL-branded AionUI shell；Hermes Desktop / `hermes-codex` 是唯一 foreground alternative；AG-UI/CopilotKit / `agui-codex` 只作为 archived technical proof 与显式 replay surface 保留
 - `OPL` 的 family-level agent framework 以 domain `stage` 为可观察、可编排、可恢复、可审计的语义单元；Agent executor 是 stage 内最小执行单位，`Codex CLI` 是当前第一公民 executor
 - 大型任务按接近人类专家实施的阶段推进：界定目标、准备材料、执行、审核、修订、交付收口；OPL 负责阶段生命周期与可见性，domain agent 负责领域判断和交付 authority
 - OPL 的合同面必须保持 contract-light 且只保下限：Minimal Trust Kernel 约束启动条件、owner、权限、安全、凭据、可写范围、审计、replay、恢复与 route-back；Stage Strategy Kernel 声明 stage 内认知策略、prompt、skills、tool affordance boundary、knowledge、rubric 和独立 quality gate；Readiness 只聚合 launch/evidence gap；Derived Diagnostic Lenses 只解释缺口；AI Capability Aperture 保留 stage 内开放式思考、写作、评审、诊断、工具选择和迭代
@@ -340,7 +340,7 @@ Stage attempt 的终态只允许收敛到三类：`success` 表示 required outp
 - 本地 `opl` shell / TUI
 - `Codex` 中的显式调用面
 - ACP-compatible 外部壳
-- `opl-aion-shell` AionUI 定制 GUI，经 `one-person-lab-app` 打包发布
+- `opl-aion-shell` AionUI 定制 GUI，经 `one-person-lab-app` 打包发布；Hermes Desktop 是唯一 foreground alternative GUI candidate，AGUI/CopilotKit 只作为 archived technical proof 读取
 - 未来 hosted / online 壳
 
 ## OPL 与 Domain Agents 的关系

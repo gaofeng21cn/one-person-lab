@@ -18,7 +18,7 @@ OPL 系列 docs governance 的默认巡检范围是六个 repo：`one-person-lab
 
 `opl-meta-agent` 属于 OPL-compatible Foundry Agent / target-agent builder repo，纳入 series docs governance 巡检，但不强制套用 OPL/MAS/MAG/RCA 的完整目录骨架。OMA 当前可以保持轻量 `docs/` root、`docs/active/`、`docs/references/` 形态；只有当它出现长期 public、product、runtime、delivery、source、policies、specs 或 history 内容时，才按相同生命周期规则新增对应目录索引。
 
-`one-person-lab-app/docs/` 治理 One Person Lab App 的产品文档、release、testing、user guides 和 screenshots，纳入六仓治理范围，但按 App 产品仓职责治理，不反向扩大 framework/domain canonical taxonomy。当前 AionUI shell 的 upstream 依赖文档归 `opl-aion-shell/docs/`，不主导 App 顶层，也不纳入 OPL/MAS/MAG/RCA 的 canonical docs taxonomy。`one-person-lab-app/shells/aionui` 只是外部 checkout 入口，不能把 AionUI 文档历史合入 App 默认分支。OPL 主仓只记录 One Person Lab App/workbench 的目标、消费合同、action routing 和 runtime/domain truth 投影边界。
+`one-person-lab-app/docs/` 治理 One Person Lab App 的产品文档、release、testing、user guides 和 screenshots，纳入六仓治理范围，但按 App 产品仓职责治理，不反向扩大 framework/domain canonical taxonomy。当前 AionUI shell 的 upstream 依赖文档归 `opl-aion-shell/docs/`，不主导 App 顶层，也不纳入 OPL/MAS/MAG/RCA 的 canonical docs taxonomy。Hermes Desktop / `hermes-codex` 是 App-owned 唯一 foreground alternative GUI candidate；AG-UI/CopilotKit / `agui-codex` 文档只作为 archived technical proof / explicit replay provenance 维护，不进入默认开发和 polish 巡检。`one-person-lab-app/shells/aionui` 只是外部 checkout 入口，不能把 AionUI 文档历史合入 App 默认分支。OPL 主仓只记录 One Person Lab App/workbench 的目标、消费合同、action routing 和 runtime/domain truth 投影边界。
 
 ## 主参考
 
@@ -130,7 +130,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | `MAG` | 完整保留 canonical 目录集合；真实 owner 主要在 core five、`active/`、`references/`、`specs/`、`history/`，`product/runtime/delivery/source/policies/public` 先作为职责明确的薄索引，后续小批量吸收仍 current 的内容。旧 `plans/` 已退役。 |
 | `RCA` | 完整保留 canonical 目录集合；`active/product/runtime/delivery/source/policies/references/history` 已真实承载，`public/specs` 可以保持薄索引。旧 `program/`、`plans/`、`capabilities/` 不复活成 active 目录。 |
 | `OPL Meta Agent` | 纳入六仓巡检；当前保持轻量 docs root / active / references 形态。只有当 target-agent builder 职责产生长期 public、product、runtime、delivery、source、policies、specs 或 history 内容时，才新增对应目录索引。 |
-| `One Person Lab App` | 纳入六仓巡检；App docs 归产品、release、testing、user guides 和 screenshot lifecycle。App release truth、GUI product truth 和 active-shell validation 回 App repo 自身 contracts/source/tests；AionUI upstream docs 不合入 App 默认分支，也不主导 OPL framework/domain taxonomy。 |
+| `One Person Lab App` | 纳入六仓巡检；App docs 归产品、release、testing、user guides 和 screenshot lifecycle。App release truth、GUI product truth、GUI candidate policy 和 active-shell validation 回 App repo 自身 contracts/source/tests；AionUI upstream docs 不合入 App 默认分支，也不主导 OPL framework/domain taxonomy。Hermes Desktop 是唯一 foreground alternative；AGUI 只作为 archived technical proof / explicit replay provenance。 |
 
 ## 内容级整合规则
 
