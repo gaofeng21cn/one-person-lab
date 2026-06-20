@@ -397,6 +397,42 @@ exit 0
   }
 });
 
+test('installed opl launcher routes managed update status to OPL instead of Codex passthrough', () => {
+  const capturePath = path.join(os.tmpdir(), `opl-launcher-update-capture-${process.pid}.txt`);
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+printf '%s\\n' "$@" > ${JSON.stringify(capturePath)}
+if [ "$1" = "--version" ]; then
+  echo "codex-cli 0.137.0"
+  exit 0
+fi
+if [ "$1" = "update" ]; then
+  echo "SHOULD NOT RUN CODEX UPDATE" >&2
+  exit 64
+fi
+echo "unexpected fake-codex args: $*" >&2
+exit 65
+`);
+
+  try {
+    const result = runEntryPathRaw(binPath, ['update', 'status', '--json'], {
+      OPL_CODEX_BIN: codexPath,
+      OPL_SKIP_SKILL_SYNC: '1',
+    });
+
+    const payload = JSON.parse(result.stdout);
+    assert.equal(payload.managed_update.surface_id, 'opl_managed_updater_kernel');
+    assert.deepEqual(
+      payload.managed_update.components.map((component: { component_id: string }) => component.component_id),
+      ['app_binary', 'runtime_toolchain', 'agent_package_channel', 'capability_exposure'],
+    );
+    assert.equal(result.stderr, '');
+    assert.equal(fs.readFileSync(capturePath, 'utf8').trim(), '--version');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(capturePath, { force: true });
+  }
+});
+
 test('installed opl launcher routes family discovery commands to OPL instead of Codex passthrough', () => {
   const commandMatrix = [
     {
