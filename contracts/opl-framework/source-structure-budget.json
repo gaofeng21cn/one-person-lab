@@ -42,7 +42,7 @@
       "currentness_or_provider_semantics"
     ],
     "watch_only": "near_limit_or_short_file_without_clear_maintenance_risk_or_safe_semantic_boundary",
-    "completion_policy": "one_or_two_verified_slices_per_scheduled_run_then_stop_unless_same_write_set_requires_followthrough"
+    "completion_policy": "p0_queue_processed_until_cleared_blocked_or_budget_then_reasonable_p1_batch"
   },
   "baseline_policy": {
     "mode": "scheduled_advisory_with_explicit_strict_ratchet",
@@ -60,5 +60,46 @@
     "retired_baseline": "advisory_by_default_strict_blocks_until_removed",
     "line_count_ledger_owner": "this_contract_and_scripts_line_budget"
   },
-  "reviewed_baselines": []
+  "reviewed_baselines": [
+    {
+      "path": "src/cli/cases/private-command-specs.ts",
+      "limit": 1013,
+      "owner": "one-person-lab",
+      "reason": "characterization_first: command registry and private command dispatch surface; split needs command-family trace before moving public/private CLI authority.",
+      "intended_boundary": "Split by command family and runtime surface after tracing active callers from src/cli/main.ts and system command tests.",
+      "review_after": "2026-07-20"
+    },
+    {
+      "path": "src/family-runtime-domain-intake-parts/current-control-provider-admission.ts",
+      "limit": 2449,
+      "owner": "one-person-lab",
+      "reason": "characterization_first: current-control provider admission owns runtime/currentness/provider semantics and readback publication authority.",
+      "intended_boundary": "Split by candidate normalization, transition-request promotion, readback publication, terminal consumption, and fail-closed authority guards after source-of-truth trace.",
+      "review_after": "2026-07-20"
+    },
+    {
+      "path": "src/family-runtime-domain-progress-transition-runtime.ts",
+      "limit": 2003,
+      "owner": "one-person-lab",
+      "reason": "characterization_first: DomainProgressTransitionRuntime is OPL runtime authority for command/event/outbox, idempotency, replay, read model, and human gate tokens.",
+      "intended_boundary": "Continue extracting runtime parts around command normalization, append/idempotency, fixed-point outcomes, read-model rebuild, replay, and human-gate token lifecycle.",
+      "review_after": "2026-07-20"
+    },
+    {
+      "path": "src/family-runtime-redrive.ts",
+      "limit": 1155,
+      "owner": "one-person-lab",
+      "reason": "characterization_first: redrive logic mutates runtime queue state and carries currentness, stop-loss, terminal attempt, and provider transport authority.",
+      "intended_boundary": "Split by redrive decision phase: live-attempt guard, terminal closeout guard, stop-loss policy, retry materialization, and event/readback emission.",
+      "review_after": "2026-07-20"
+    },
+    {
+      "path": "src/opl-skills.ts",
+      "limit": 1154,
+      "owner": "one-person-lab",
+      "reason": "characterization_first: skill/plugin discovery and sync is a public OPL/Codex companion boundary with package export and installed-state semantics.",
+      "intended_boundary": "Split by workspace-root resolution, pack discovery, plugin source registry, sync/apply flow, and JSON readback shaping under existing opl-skills boundary tests.",
+      "review_after": "2026-07-20"
+    }
+  ]
 }

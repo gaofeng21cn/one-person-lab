@@ -206,7 +206,7 @@ test('line-budget advisory is backed by a reviewed strict-ratchet contract', () 
   assert.ok(contract.reasonable_refactor_policy?.characterization_first?.includes('runtime_authority'));
   assert.equal(
     contract.reasonable_refactor_policy?.completion_policy,
-    'one_or_two_verified_slices_per_scheduled_run_then_stop_unless_same_write_set_requires_followthrough',
+    'p0_queue_processed_until_cleared_blocked_or_budget_then_reasonable_p1_batch',
   );
   assert.equal(Array.isArray(contract.reviewed_baselines), true);
   for (const entry of contract.reviewed_baselines ?? []) {
