@@ -37,7 +37,7 @@ const DEFAULT_REPOS = [
   repoEntry('redcube-ai', path.join(workspaceRoot, 'redcube-ai'), 'standard_foundry_agent'),
   repoEntry('opl-meta-agent', path.join(workspaceRoot, 'opl-meta-agent'), 'standard_foundry_agent'),
   repoEntry('one-person-lab-app', path.join(workspaceRoot, 'one-person-lab-app'), 'app_product_release_owner'),
-  repoEntry('opl-agui-codex-shell', path.join(workspaceRoot, 'opl-agui-codex-shell'), 'app_shell_candidate'),
+  repoEntry('opl-agui-codex-shell', path.join(workspaceRoot, 'opl-agui-codex-shell'), 'app_shell_archived_technical_proof'),
   repoEntry('opl-doc', path.join(workspaceRoot, 'opl-doc'), 'plugin_workflow_support'),
   repoEntry('opl-flow', path.join(workspaceRoot, 'opl-flow'), 'plugin_workflow_support'),
   repoEntry('homebrew-one-person-lab', path.join(workspaceRoot, 'homebrew-one-person-lab'), 'distribution_tap_support', {

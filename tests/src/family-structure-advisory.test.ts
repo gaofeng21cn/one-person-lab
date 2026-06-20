@@ -106,7 +106,7 @@ test('default family structure advisory scope follows the current OPL series', (
       'standard_foundry_agent',
       'standard_foundry_agent',
       'app_product_release_owner',
-      'app_shell_candidate',
+      'app_shell_archived_technical_proof',
       'plugin_workflow_support',
       'plugin_workflow_support',
       'distribution_tap_support',
