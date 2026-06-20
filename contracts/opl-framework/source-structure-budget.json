@@ -76,14 +76,6 @@
       "reason": "characterization_first: DomainProgressTransitionRuntime is OPL runtime authority for command/event/outbox, idempotency, replay, read model, and human gate tokens.",
       "intended_boundary": "Continue extracting runtime parts around command normalization, append/idempotency, fixed-point outcomes, read-model rebuild, replay, and human-gate token lifecycle.",
       "review_after": "2026-07-20"
-    },
-    {
-      "path": "src/family-runtime-redrive.ts",
-      "limit": 1155,
-      "owner": "one-person-lab",
-      "reason": "characterization_first: redrive logic mutates runtime queue state and carries currentness, stop-loss, terminal attempt, and provider transport authority.",
-      "intended_boundary": "Split by redrive decision phase: live-attempt guard, terminal closeout guard, stop-loss policy, retry materialization, and event/readback emission.",
-      "review_after": "2026-07-20"
     }
   ]
 }
