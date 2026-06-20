@@ -27,6 +27,7 @@ import {
 } from './family-runtime-medautoscience-profile.ts';
 import {
   currentControlProviderAdmissionInputs,
+  publishExistingCurrentControlProviderAdmissionReadbacks,
   publishCurrentControlProviderAdmissionReadback,
 } from './family-runtime-domain-intake-parts/current-control-provider-admission.ts';
 import {
@@ -296,6 +297,17 @@ function rowsForCurrentControlExistingRowSuppression(
     .filter((row) => taskRowMatchesScope(row, taskScope));
 }
 
+function rowsForExistingCurrentControlReadbackPublication(
+  db: DatabaseSync,
+  taskScope?: FamilyRuntimeTaskScope,
+) {
+  return (db.prepare('SELECT * FROM tasks').all() as FamilyRuntimeTaskRow[])
+    .filter((row) => taskRowMatchesScope(row, taskScope))
+    .filter((row) => row.domain_id === 'medautoscience'
+      && row.task_kind === 'domain_owner/default-executor-dispatch'
+      && ['succeeded', 'completed'].includes(row.status));
+}
+
 export function hydrateDomainTasks(
   db: DatabaseSync,
   paths: ReturnType<typeof familyRuntimePaths>,
@@ -383,6 +395,10 @@ export function hydrateDomainTasks(
     const acceptedTasks = [];
     const currentControlReadbackPublications: Array<Record<string, unknown>> = [
       ...current_control_readback_publications,
+      ...publishExistingCurrentControlProviderAdmissionReadbacks({
+        output,
+        existingTasks: rowsForExistingCurrentControlReadbackPublication(db, input.taskScope),
+      }),
     ];
     for (const consumed of supervisorDecisionRequests.consumed) {
       insertEvent(db, {

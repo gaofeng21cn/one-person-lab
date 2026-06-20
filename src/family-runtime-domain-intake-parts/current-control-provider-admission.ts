@@ -102,6 +102,25 @@ type CurrentControlProviderAdmissionReadbackPublishInput = {
   };
 };
 
+type CurrentControlExistingTaskRow = {
+  domain_id: string;
+  task_kind: string;
+  payload_json: string;
+  dedupe_key: string | null;
+  status: string;
+  priority?: number | null;
+  source?: string | null;
+};
+
+type ExistingCurrentControlReadbackPublication = {
+  published: true;
+  ref: string;
+  idempotency_key: string | null;
+  study_id: string | null;
+  status: string;
+  source: 'existing_terminal_queue_readback';
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -953,6 +972,238 @@ function providerAdmissionCandidateIdentity(candidate: Record<string, unknown>) 
     ?? optionalString(candidate.idempotency_key)
     ?? optionalString(candidate.work_unit_fingerprint)
     ?? optionalString(candidate.action_fingerprint);
+}
+
+function transitionPendingCandidateIdentity(candidate: Record<string, unknown>) {
+  const sourceRefs = isRecord(candidate.source_refs) ? candidate.source_refs : {};
+  const policyResult = isRecord(candidate.paper_progress_policy_result) ? candidate.paper_progress_policy_result : {};
+  const request = isRecord(candidate.opl_domain_progress_transition_request)
+    ? candidate.opl_domain_progress_transition_request
+    : isRecord(policyResult.opl_domain_progress_transition_request)
+      ? policyResult.opl_domain_progress_transition_request
+      : {};
+  return {
+    attemptIdempotencyKey:
+      optionalString(candidate.attempt_idempotency_key)
+      ?? optionalString(sourceRefs.attempt_idempotency_key)
+      ?? optionalString(request.idempotency_key),
+    routeIdentityKey:
+      optionalString(candidate.route_identity_key)
+      ?? optionalString(sourceRefs.route_identity_key)
+      ?? optionalString(request.route_identity_key)
+      ?? optionalString(request.idempotency_key),
+    studyId:
+      optionalString(candidate.study_id)
+      ?? optionalString(sourceRefs.study_id)
+      ?? optionalString(request.study_id),
+    actionType:
+      optionalString(candidate.action_type)
+      ?? optionalString(sourceRefs.action_type)
+      ?? optionalString(request.action_type),
+    workUnitId:
+      optionalString(candidate.work_unit_id)
+      ?? optionalString(sourceRefs.work_unit_id)
+      ?? optionalString(request.work_unit_id),
+    workUnitFingerprint:
+      optionalString(candidate.work_unit_fingerprint)
+      ?? optionalString(candidate.action_fingerprint)
+      ?? optionalString(sourceRefs.work_unit_fingerprint)
+      ?? optionalString(request.work_unit_fingerprint)
+      ?? (isRecord(request.aggregate_identity)
+        ? optionalString(request.aggregate_identity.work_unit_fingerprint)
+        : null),
+  };
+}
+
+function transitionPendingCandidates(currentControl: Record<string, unknown>) {
+  const candidates: Record<string, unknown>[] = [];
+  const seen = new Set<string>();
+  const append = (value: unknown) => {
+    if (!isRecord(value) || optionalString(value.status) !== 'transition_request_pending') {
+      return;
+    }
+    const identity = transitionPendingCandidateIdentity(value);
+    const key = identity.attemptIdempotencyKey
+      ? `attempt:${identity.attemptIdempotencyKey}`
+      : identity.routeIdentityKey
+        ? `route:${identity.routeIdentityKey}`
+        : [
+          identity.studyId,
+          identity.actionType,
+          identity.workUnitId,
+          identity.workUnitFingerprint,
+        ].join('|');
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    candidates.push(value);
+  };
+  if (Array.isArray(currentControl.provider_admission_candidates)) {
+    currentControl.provider_admission_candidates.forEach(append);
+  }
+  const currentAction = isRecord(currentControl.current_executable_owner_action)
+    ? currentControl.current_executable_owner_action
+    : null;
+  append(currentAction);
+  const studies = currentControl.studies;
+  const studyRecords = Array.isArray(studies)
+    ? studies
+    : isRecord(studies)
+      ? Object.values(studies)
+      : [];
+  for (const study of studyRecords) {
+    if (!isRecord(study)) {
+      continue;
+    }
+    append(study.current_control_action);
+    if (Array.isArray(study.provider_admission_candidates)) {
+      study.provider_admission_candidates.forEach(append);
+    }
+  }
+  return candidates;
+}
+
+function runtimeReadbackFromPayload(payload: Record<string, unknown>) {
+  const providerAdmissionIdentity = isRecord(payload.provider_admission_identity)
+    ? payload.provider_admission_identity
+    : {};
+  return isRecord(payload.opl_domain_progress_transition_runtime_live_readback)
+    ? payload.opl_domain_progress_transition_runtime_live_readback
+    : isRecord(providerAdmissionIdentity.opl_domain_progress_transition_runtime_live_readback)
+      ? providerAdmissionIdentity.opl_domain_progress_transition_runtime_live_readback
+      : null;
+}
+
+function payloadMatchesTransitionPendingCandidate(
+  payload: Record<string, unknown>,
+  candidate: Record<string, unknown>,
+) {
+  const candidateIdentity = transitionPendingCandidateIdentity(candidate);
+  const readback = runtimeReadbackFromPayload(payload);
+  const readbackIdentity = isRecord(readback?.identity) ? readback.identity : {};
+  const stageRunIdentity = isRecord(readbackIdentity.stage_run_identity)
+    ? readbackIdentity.stage_run_identity
+    : {};
+  const payloadAttemptId =
+    optionalString(payload.attempt_idempotency_key)
+    ?? optionalString(payload.provider_admission_identity && isRecord(payload.provider_admission_identity)
+      ? payload.provider_admission_identity.attempt_idempotency_key
+      : null)
+    ?? optionalString(readbackIdentity.idempotency_key)
+    ?? optionalString(stageRunIdentity.attempt_idempotency_key);
+  const payloadRouteId =
+    optionalString(payload.route_identity_key)
+    ?? optionalString(payload.provider_admission_identity && isRecord(payload.provider_admission_identity)
+      ? payload.provider_admission_identity.route_identity_key
+      : null)
+    ?? optionalString(stageRunIdentity.route_identity_key)
+    ?? payloadAttemptId;
+  if (!candidateIdentity.attemptIdempotencyKey || payloadAttemptId !== candidateIdentity.attemptIdempotencyKey) {
+    return false;
+  }
+  if (candidateIdentity.routeIdentityKey && payloadRouteId && payloadRouteId !== candidateIdentity.routeIdentityKey) {
+    return false;
+  }
+  const aggregateIdentity = isRecord(readbackIdentity.aggregate_identity)
+    ? readbackIdentity.aggregate_identity
+    : {};
+  const payloadStudyId = optionalString(payload.study_id) ?? optionalString(aggregateIdentity.study_id);
+  const payloadActionType = optionalString(payload.action_type);
+  const payloadWorkUnitId = optionalString(payload.work_unit_id) ?? optionalString(aggregateIdentity.work_unit_id);
+  const payloadWorkUnitFingerprint =
+    optionalString(payload.work_unit_fingerprint)
+    ?? optionalString(payload.action_fingerprint)
+    ?? optionalString(aggregateIdentity.work_unit_fingerprint);
+  return (!candidateIdentity.studyId || payloadStudyId === candidateIdentity.studyId)
+    && (!candidateIdentity.actionType || payloadActionType === candidateIdentity.actionType)
+    && (!candidateIdentity.workUnitId || payloadWorkUnitId === candidateIdentity.workUnitId)
+    && (!candidateIdentity.workUnitFingerprint || payloadWorkUnitFingerprint === candidateIdentity.workUnitFingerprint);
+}
+
+function parseExistingTaskPayload(row: CurrentControlExistingTaskRow) {
+  try {
+    const payload = JSON.parse(row.payload_json) as unknown;
+    return isRecord(payload) ? payload : null;
+  } catch {
+    return null;
+  }
+}
+
+export function publishExistingCurrentControlProviderAdmissionReadbacks(input: {
+  output: Record<string, unknown>;
+  existingTasks: CurrentControlExistingTaskRow[];
+}) {
+  const currentControlRef = currentControlStatePath(input.output);
+  if (!currentControlRef || !fs.existsSync(currentControlRef)) {
+    return [];
+  }
+  const currentControl = readJsonRecord(currentControlRef);
+  if (!currentControl) {
+    return [];
+  }
+  const candidates = transitionPendingCandidates(currentControl);
+  if (candidates.length === 0) {
+    return [];
+  }
+  const publications: ExistingCurrentControlReadbackPublication[] = [];
+  const terminalStatuses = new Set(['succeeded', 'completed']);
+  for (const candidate of candidates) {
+    for (const row of input.existingTasks) {
+      if (
+        row.domain_id !== 'medautoscience'
+        || row.task_kind !== 'domain_owner/default-executor-dispatch'
+        || !terminalStatuses.has(row.status)
+      ) {
+        continue;
+      }
+      const payload = parseExistingTaskPayload(row);
+      const liveReadback = payload ? runtimeReadbackFromPayload(payload) : null;
+      if (
+        !payload
+        || !liveReadback
+        || !validCompleteTransitionRuntimeLiveReadback(liveReadback)
+        || !payloadMatchesTransitionPendingCandidate(payload, candidate)
+      ) {
+        continue;
+      }
+      const published = publishCurrentControlProviderAdmissionReadback({
+        output: input.output,
+        taskInput: {
+          domainId: 'medautoscience',
+          taskKind: 'domain_owner/default-executor-dispatch',
+          payload,
+          dedupeKey: row.dedupe_key ?? undefined,
+          priority: row.priority ?? undefined,
+          source: row.source ?? 'opl-existing-current-control-readback',
+          requiresApproval: false,
+        },
+        taskResult: {
+          accepted: false,
+          idempotent_noop: true,
+          task: {
+            domain_id: 'medautoscience',
+            task_kind: 'domain_owner/default-executor-dispatch',
+            payload,
+            dedupe_key: row.dedupe_key,
+            status: row.status,
+          } as never,
+        },
+      });
+      if (published.published && 'ref' in published) {
+        publications.push({
+          published: true,
+          ref: published.ref,
+          idempotency_key: published.idempotency_key,
+          study_id: published.study_id,
+          status: optionalString(published.status) ?? 'provider_admission_pending_replayed',
+          source: 'existing_terminal_queue_readback',
+        });
+        break;
+      }
+    }
+  }
+  return publications;
 }
 
 function mergeProviderAdmissionCandidate(
