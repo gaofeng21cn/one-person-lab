@@ -62,14 +62,6 @@
   },
   "reviewed_baselines": [
     {
-      "path": "src/family-runtime-domain-intake-parts/current-control-provider-admission.ts",
-      "limit": 2449,
-      "owner": "one-person-lab",
-      "reason": "characterization_first: current-control provider admission owns runtime/currentness/provider semantics and readback publication authority.",
-      "intended_boundary": "Split by candidate normalization, transition-request promotion, readback publication, terminal consumption, and fail-closed authority guards after source-of-truth trace.",
-      "review_after": "2026-07-20"
-    },
-    {
       "path": "src/family-runtime-domain-progress-transition-runtime.ts",
       "limit": 2003,
       "owner": "one-person-lab",

@@ -1,5 +1,6 @@
 import './family-runtime-current-control-provider-admission-cases/action-queue-intake.ts';
 import './family-runtime-current-control-provider-admission-cases/transition-runtime-readback-intake.ts';
+import './family-runtime-current-control-provider-admission-cases/existing-terminal-readback-replay.ts';
 import './family-runtime-current-control-provider-admission-cases/stage-attempt-readback.ts';
 import './family-runtime-current-control-provider-admission-cases/queue-refresh-and-guards.ts';
 import './family-runtime-current-control-provider-admission-cases/stage-attempt-repair.ts';
