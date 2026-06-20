@@ -13,10 +13,18 @@ const scannedDocExtensions = new Set(['.md']);
 const scannedFiles = [
   'README.md',
   'README.zh-CN.md',
+  'docs/README.md',
+  'docs/project.md',
+  'docs/status.md',
+  'docs/architecture.md',
+  'docs/invariants.md',
+  'docs/decisions.md',
+  'docs/docs_portfolio_consolidation.md',
   'docs/public/README.md',
   'docs/public/roadmap.md',
   'docs/public/operating-model.md',
   'docs/public/task-map.md',
+  'docs/product/README.md',
   'docs/product/opl-public-surface-index.md',
   'docs/references/operating-governance/family-domain-memory-governance.md',
   'docs/references/runtime-substrate/temporal-family-runtime-provider-plan.md',
@@ -86,10 +94,14 @@ function activeDocFiles() {
   return [...walk('docs/active', scannedDocExtensions)].sort();
 }
 
+function currentSupportDocFiles() {
+  return [...walk('docs/references/current-support', scannedDocExtensions)].sort();
+}
+
 test('active docs and root help do not advertise legacy operator paths as defaults', () => {
   const violations: string[] = [];
 
-  for (const relativePath of [...scannedFiles, ...activeDocFiles()]) {
+  for (const relativePath of [...scannedFiles, ...activeDocFiles(), ...currentSupportDocFiles()]) {
     const lines = read(relativePath).split('\n');
     lines.forEach((line, index) => {
       if (allowedRetainedContext.test(line)) {
