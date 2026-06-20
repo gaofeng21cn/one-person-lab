@@ -68,6 +68,7 @@ export function currentControlCommandOutboxRecord(input: {
   sourceGeneration?: string;
   expectedVersion?: string;
   idempotencyKey?: string;
+  commandId?: string;
 }) {
   const sourceGeneration = input.sourceGeneration ?? `generation:${input.workUnitFingerprint}`;
   const idempotencyKey = input.idempotencyKey ?? [
@@ -81,6 +82,15 @@ export function currentControlCommandOutboxRecord(input: {
     surface_kind: 'opl_generic_current_control_command_outbox_record',
     runtime_kind: 'DomainProgressTransitionRuntime',
     command_kind: 'provider_admission_requested',
+    command_id: input.commandId ?? [
+      'dptc',
+      input.studyId,
+      input.actionType,
+      input.workUnitId,
+      input.workUnitFingerprint,
+      idempotencyKey,
+      sourceGeneration,
+    ].join(':'),
     aggregate_identity: {
       aggregate_kind: 'study_work_unit',
       aggregate_id: `${input.studyId}::${input.workUnitId}`,

@@ -233,6 +233,37 @@ function currentControlStagePacketRefs(input: {
   ]);
 }
 
+function recordStagePacketRefs(value: Record<string, unknown> | null, workspaceRoot: string | null) {
+  if (!value) {
+    return [];
+  }
+  return uniqueStrings([
+    workspaceRelativeRef(optionalString(value.stage_packet_ref), workspaceRoot),
+    ...stringList(value.stage_packet_refs).map((ref) => workspaceRelativeRef(ref, workspaceRoot)),
+    ...stringList(value.checkpoint_refs).map((ref) => workspaceRelativeRef(ref, workspaceRoot)),
+  ]);
+}
+
+function sameOptionalIdentity(candidateValue: string | null, currentValue: string | null) {
+  return !currentValue || Boolean(candidateValue && candidateValue === currentValue);
+}
+
+function stagePacketIdentityMatches(input: {
+  candidate: Record<string, unknown>;
+  current: Record<string, unknown> | null;
+  workspaceRoot: string | null;
+}) {
+  const currentStagePacketRefs = recordStagePacketRefs(input.current, input.workspaceRoot);
+  if (currentStagePacketRefs.length === 0) {
+    return true;
+  }
+  const candidateStagePacketRefs = currentControlStagePacketRefs({
+    candidate: input.candidate,
+    workspaceRoot: input.workspaceRoot,
+  });
+  return currentStagePacketRefs.some((ref) => candidateStagePacketRefs.includes(ref));
+}
+
 function defaultExecutorDispatchRefByConvention(input: {
   workspaceRoot: string | null;
   studyId: string;
@@ -787,6 +818,7 @@ function currentControlStudyRecord(
 function currentControlAllowsNonAdvancingTransitionReadback(input: {
   currentControl: Record<string, unknown>;
   candidate: Record<string, unknown>;
+  workspaceRoot: string | null;
 }) {
   const studyId = optionalString(input.candidate.study_id);
   if (!studyId) {
@@ -809,9 +841,37 @@ function currentControlAllowsNonAdvancingTransitionReadback(input: {
         !optionalString(rootAction.work_unit_fingerprint)
         || optionalString(rootAction.work_unit_fingerprint) === workUnitFingerprint
       )
+      && sameOptionalIdentity(
+        optionalString(input.candidate.route_identity_key),
+        optionalString(rootAction.route_identity_key),
+      )
+      && sameOptionalIdentity(
+        optionalString(input.candidate.attempt_idempotency_key),
+        optionalString(rootAction.attempt_idempotency_key),
+      )
+      && stagePacketIdentityMatches({
+        candidate: input.candidate,
+        current: rootAction,
+        workspaceRoot: input.workspaceRoot,
+      })
     );
   const studyStatus = optionalString(studyAction.status);
+  const actionMatchesStudy =
+    sameOptionalIdentity(
+      optionalString(input.candidate.route_identity_key),
+      optionalString(studyAction.route_identity_key),
+    )
+    && sameOptionalIdentity(
+      optionalString(input.candidate.attempt_idempotency_key),
+      optionalString(studyAction.attempt_idempotency_key),
+    )
+    && stagePacketIdentityMatches({
+      candidate: input.candidate,
+      current: studyAction,
+      workspaceRoot: input.workspaceRoot,
+    });
   return actionMatchesRoot
+    && actionMatchesStudy
     && (
       studyStatus === 'transition_request_pending'
       || studyAction.provider_admission_requires_opl_runtime_result === true
@@ -849,18 +909,18 @@ function currentControlProviderAdmissionCandidates(currentControl: Record<string
   const rootCandidates = Array.isArray(currentControl.provider_admission_candidates)
     ? currentControl.provider_admission_candidates
     : [];
-  if (rootCandidates.length > 0) {
-    return rootCandidates;
-  }
-  return nestedCurrentControlActionItems(currentControl).map((item) => {
+  const candidates = [...rootCandidates];
+  for (const item of nestedCurrentControlActionItems(currentControl)) {
     if (!isRecord(item)) {
-      return item;
+      mergeCurrentControlProviderAdmissionCandidates(candidates, item);
+      continue;
     }
-    if (optionalString(item.status) === 'provider_admission_pending') {
-      return item;
-    }
-    return currentControlProviderAdmissionCandidateFromActionQueueItem(currentControl, item) ?? item;
-  });
+    const candidate = optionalString(item.status) === 'provider_admission_pending'
+      ? item
+      : currentControlProviderAdmissionCandidateFromActionQueueItem(currentControl, item) ?? item;
+    mergeCurrentControlProviderAdmissionCandidates(candidates, candidate);
+  }
+  return candidates;
 }
 
 function mergeCurrentControlProviderAdmissionCandidates(
@@ -1219,6 +1279,15 @@ function nonAdvancingApplyCommand(input: {
     surface_kind: 'opl_current_control_non_advancing_apply_command_outbox_record',
     runtime_kind: 'DomainProgressTransitionRuntime',
     transition_kind: 'NonAdvancingApply',
+    command_id: [
+      'dptc',
+      'non-advancing-apply',
+      input.fields.studyId,
+      input.fields.actionType,
+      input.fields.workUnitId,
+      input.attemptIdempotencyKey,
+      sourceGeneration,
+    ].join(':'),
     aggregate_identity: {
       aggregate_kind: 'study_work_unit',
       aggregate_id: `${input.fields.studyId}::${input.fields.workUnitId}`,
@@ -1452,9 +1521,11 @@ function recordCurrentControlTransitionNonAdvancingApply(input: {
   if (input.candidate.owner_route_current !== true) {
     return {};
   }
+  const workspaceRoot = exportWorkspaceRoot(input.output);
   if (!currentControlAllowsNonAdvancingTransitionReadback({
     currentControl: input.currentControl,
     candidate: input.candidate,
+    workspaceRoot,
   })) {
     return {
       blocked: {
@@ -1475,7 +1546,6 @@ function recordCurrentControlTransitionNonAdvancingApply(input: {
       },
     };
   }
-  const workspaceRoot = exportWorkspaceRoot(input.output);
   const stagePacketRefs = currentControlStagePacketRefs({
     candidate: input.candidate,
     workspaceRoot,

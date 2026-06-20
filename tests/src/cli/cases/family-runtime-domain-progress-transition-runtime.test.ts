@@ -334,6 +334,10 @@ test('DomainProgressTransitionRuntime persists append-only JSONL log and replays
     });
 
     assert.equal(first.storage_contract, 'append_only_physical_jsonl');
+    assert.equal(first.physical_append_entry_count, 3);
+    assert.equal(first.physical_append_chunk_count, 1);
+    assert.equal(second.physical_append_entry_count, 3);
+    assert.equal(second.physical_append_chunk_count, 1);
     assert.equal(second.current_aggregate_version, 2);
     assert.equal(replayed.entries.length, 6);
     assert.equal(currentDomainProgressTransitionAggregateVersion({
@@ -346,6 +350,49 @@ test('DomainProgressTransitionRuntime persists append-only JSONL log and replays
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('DomainProgressTransitionRuntime requires explicit command identity for OPL-native command records', () => {
+  const oplNativeCommand = currentControlCommandOutboxRecord({
+    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+    actionType: 'run_quality_repair_batch',
+    workUnitId: 'medical_prose_write_repair',
+    workUnitFingerprint: 'publication-blockers::explicit-command-identity',
+    sourceGeneration: 'truth-event-explicit-command-identity',
+    idempotencyKey: 'owner-route-attempt::dm003::explicit-command-identity',
+  });
+  const missingCommandId = normalizeDomainProgressTransitionCommand({
+    ...oplNativeCommand,
+    command_id: undefined,
+  }, {
+    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+    actionType: 'run_quality_repair_batch',
+    workUnitId: 'medical_prose_write_repair',
+    workUnitFingerprint: 'publication-blockers::explicit-command-identity',
+    nextOwner: 'write',
+  });
+  const masRequest = masDomainProgressTransitionRequest({
+    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+    actionType: 'run_quality_repair_batch',
+    workUnitId: 'medical_prose_write_repair',
+    workUnitFingerprint: 'publication-blockers::explicit-command-identity',
+    sourceGeneration: 'truth-event-explicit-command-identity',
+    idempotencyKey: 'mas-policy-request::dm003::explicit-command-identity',
+  });
+  const normalizedMasRequest = normalizeDomainProgressTransitionCommand(masRequest, {
+    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+    actionType: 'run_quality_repair_batch',
+    workUnitId: 'medical_prose_write_repair',
+    workUnitFingerprint: 'publication-blockers::explicit-command-identity',
+    nextOwner: 'write',
+  });
+
+  assert.equal(
+    missingCommandId.blocked?.reason,
+    'domain_progress_transition_command_identity_missing',
+  );
+  assert.equal(normalizedMasRequest.blocked, undefined);
+  assert.equal(typeof normalizedMasRequest.command?.command_id, 'string');
 });
 
 test('DomainProgressTransitionRuntime live readback rebuilds complete physical transaction state from JSONL', () => {
@@ -689,6 +736,7 @@ test('DomainProgressTransitionRuntime rebuilds read model from append-only comma
     surface_kind: 'opl_generic_current_control_command_outbox_record',
     runtime_kind: 'DomainProgressTransitionRuntime',
     command_kind: 'RecordTypedBlocker',
+    command_id: 'dptc:dm002:read-model-rebuild-2',
     aggregate_identity: command.aggregate_identity,
     action_type: 'return_to_ai_reviewer_workflow',
     next_owner: 'ai_reviewer',
@@ -860,6 +908,7 @@ test('DomainProgressTransitionRuntime fixed-point helper chooses exactly one tra
     surface_kind: 'opl_generic_current_control_command_outbox_record',
     runtime_kind: 'DomainProgressTransitionRuntime',
     command_kind: 'OpenHumanGate',
+    command_id: 'dptc:dm003:human-gate',
     aggregate_identity: {
       aggregate_kind: 'study_work_unit',
       aggregate_id: '003-dpcc-primary-care-phenotype-treatment-gap::human_gate',
@@ -909,6 +958,7 @@ test('DomainProgressTransitionRuntime stores, reads back, consumes, and idempote
     surface_kind: 'opl_generic_current_control_command_outbox_record',
     runtime_kind: 'DomainProgressTransitionRuntime',
     command_kind: 'OpenHumanGate',
+    command_id: 'dptc:dm003:human-gate-resume',
     aggregate_identity: {
       aggregate_kind: 'study_work_unit',
       aggregate_id: '003-dpcc-primary-care-phenotype-treatment-gap::human_gate_resume',
@@ -996,6 +1046,7 @@ test('DomainProgressTransitionRuntime replay consumes human resume token and reb
     surface_kind: 'opl_generic_current_control_command_outbox_record',
     runtime_kind: 'DomainProgressTransitionRuntime',
     command_kind: 'OpenHumanGate',
+    command_id: 'dptc:dm003:human-gate-replay-resume',
     aggregate_identity: {
       aggregate_kind: 'study_work_unit',
       aggregate_id: '003-dpcc-primary-care-phenotype-treatment-gap::human_gate_replay_resume',

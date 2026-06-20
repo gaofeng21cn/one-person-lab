@@ -149,6 +149,13 @@ function masTransitionRequestBoundaryViolation(command: Record<string, unknown>)
   return null;
 }
 
+function requiresExplicitCommandId(command: Record<string, unknown>) {
+  const surfaceKind = optionalString(command.surface_kind);
+  return surfaceKind === 'opl_generic_current_control_command_outbox_record'
+    || surfaceKind === 'opl_current_control_non_advancing_apply_command_outbox_record'
+    || surfaceKind === 'opl_domain_progress_transition_command';
+}
+
 function normalizeAggregateIdentity(
   command: Record<string, unknown>,
   context: DomainProgressTransitionCommandContext,
@@ -875,12 +882,16 @@ export function normalizeDomainProgressTransitionCommand(
   const idempotencyKey = optionalString(command.idempotency_key);
   const sourceGeneration = optionalScalarString(command.source_generation);
   const expectedVersion = optionalScalarString(command.expected_version);
+  const explicitCommandId = optionalString(command.command_id);
   const postcondition = isRecord(command.postcondition) ? command.postcondition : null;
   const requiredPostcondition = isRecord(command.required_postcondition) ? command.required_postcondition : null;
   const outcome = isRecord(command.outcome) ? command.outcome : null;
   const outcomeKind = postconditionKind(command);
   if (!kind || !SUPPORTED_TRANSITIONS.has(kind)) {
     return { blocked: { reason: 'domain_progress_transition_command_kind_missing_or_unsupported', task: command } };
+  }
+  if (requiresExplicitCommandId(command) && !explicitCommandId) {
+    return { blocked: { reason: 'domain_progress_transition_command_identity_missing', task: command } };
   }
   if (!aggregateIdentity || !idempotencyKey || !sourceGeneration || !expectedVersion) {
     return { blocked: { reason: 'domain_progress_transition_command_identity_missing', task: command } };
@@ -903,7 +914,7 @@ export function normalizeDomainProgressTransitionCommand(
       module_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_MODULE.primary,
       brand_name: DOMAIN_PROGRESS_TRANSITION_RUNTIME_MODULE.primary_brand,
       transition_kind: kind,
-      command_id: commandId({
+      command_id: explicitCommandId ?? commandId({
         ...command,
         transition_kind: kind,
         idempotency_key: idempotencyKey,
@@ -1168,13 +1179,18 @@ export function appendDomainProgressTransitionRuntimeResultJsonl(input: {
     result: input.result,
   });
   mkdirSync(dirname(input.logPath), { recursive: true });
-  for (const entry of append.appended_entries) {
-    appendFileSync(input.logPath, `${JSON.stringify(entry)}\n`, 'utf8');
+  const physicalAppendPayload = append.appended_entries
+    .map((entry) => `${JSON.stringify(entry)}\n`)
+    .join('');
+  if (physicalAppendPayload) {
+    appendFileSync(input.logPath, physicalAppendPayload, 'utf8');
   }
   return {
     ...append,
     log_path: input.logPath,
     persisted: true,
+    physical_append_entry_count: append.appended_entries.length,
+    physical_append_chunk_count: physicalAppendPayload ? 1 : 0,
     storage_contract: 'append_only_physical_jsonl' as const,
   };
 }
