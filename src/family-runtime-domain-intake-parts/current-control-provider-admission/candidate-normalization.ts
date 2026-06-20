@@ -28,8 +28,27 @@ function currentControlOwnerRoute(currentControl: Record<string, unknown>) {
   return isRecord(currentControl.owner_route) ? currentControl.owner_route : null;
 }
 
-function currentControlOwnerRouteSourceRefs(currentControl: Record<string, unknown>) {
-  const ownerRoute = currentControlOwnerRoute(currentControl);
+function currentControlStudyRecord(
+  currentControl: Record<string, unknown>,
+  studyId: string | null,
+) {
+  const studies = Array.isArray(currentControl.studies) ? currentControl.studies : [];
+  return studies.find((study): study is Record<string, unknown> =>
+    isRecord(study) && optionalString(study.study_id) === studyId
+  ) ?? null;
+}
+
+function currentControlOwnerRouteForCandidate(
+  currentControl: Record<string, unknown>,
+  candidate: Record<string, unknown>,
+) {
+  const study = currentControlStudyRecord(currentControl, optionalString(candidate.study_id));
+  return isRecord(study?.owner_route)
+    ? study.owner_route
+    : currentControlOwnerRoute(currentControl);
+}
+
+function currentControlOwnerRouteSourceRefs(ownerRoute: Record<string, unknown> | null) {
   return isRecord(ownerRoute?.source_refs) ? ownerRoute.source_refs : null;
 }
 
@@ -48,8 +67,8 @@ function candidateWithCurrentControlOwnerRouteRefs(
   currentControl: Record<string, unknown>,
   candidate: Record<string, unknown>,
 ) {
-  const sourceRefs = currentControlOwnerRouteSourceRefs(currentControl);
-  const ownerRoute = currentControlOwnerRoute(currentControl);
+  const ownerRoute = currentControlOwnerRouteForCandidate(currentControl, candidate);
+  const sourceRefs = currentControlOwnerRouteSourceRefs(ownerRoute);
   if (!sourceRefs && !ownerRoute) {
     return candidate;
   }

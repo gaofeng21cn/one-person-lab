@@ -270,7 +270,7 @@ function domainProgressTransitionIntentFingerprint(input: {
   return stableId('dpti', [
     optionalString(command.command_id),
     optionalString(event.transition_kind),
-    logEntryAggregateIdentity(event),
+    aggregateIdentityKey(logEntryAggregateIdentity(event) ?? {}),
     optionalString(event.source_generation) ?? optionalString(command.source_generation),
     optionalString(event.expected_version) ?? optionalString(command.expected_version),
     optionalString(event.idempotency_key) ?? optionalString(command.idempotency_key),

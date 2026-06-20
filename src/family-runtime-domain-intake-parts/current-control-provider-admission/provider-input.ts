@@ -119,11 +119,13 @@ function currentControlCommandOutboxRecord(
     'currentControlCommand' | 'transitionRuntimeResult'
   >,
 ): { record?: Record<string, unknown>; blocked?: CurrentControlProviderAdmissionBlocked } {
+  const completeReadbackCommand = currentControlCommandFromCompleteRuntimeReadback(candidate);
   const command = isRecord(candidate.current_control_command_outbox_record)
     ? candidate.current_control_command_outbox_record
-    : isRecord(candidate.opl_domain_progress_transition_request)
-      ? candidate.opl_domain_progress_transition_request
-      : currentControlCommandFromCompleteRuntimeReadback(candidate);
+    : completeReadbackCommand
+      ?? (isRecord(candidate.opl_domain_progress_transition_request)
+        ? candidate.opl_domain_progress_transition_request
+        : null);
   if (!command) {
     return {
       blocked: {
@@ -212,6 +214,7 @@ function commandFromCompleteRuntimeReadbackIdentity(
   const projectionMetadata = isRecord(liveReadback.projection_metadata) ? liveReadback.projection_metadata : null;
   const causality = isRecord(liveReadback.causality) ? liveReadback.causality : null;
   const outcome = isRecord(liveReadback.exactly_one_outcome) ? liveReadback.exactly_one_outcome : null;
+  const outcomeKind = providerAdmissionOutcomeKind(liveReadback);
   const idempotencyKey = optionalString(identity?.idempotency_key)
     ?? optionalString(candidate.attempt_idempotency_key)
     ?? optionalString(candidate.idempotency_key);
@@ -221,13 +224,16 @@ function commandFromCompleteRuntimeReadbackIdentity(
   const attemptIdempotencyKey = optionalString(stageRunIdentity?.attempt_idempotency_key)
     ?? optionalString(candidate.attempt_idempotency_key)
     ?? idempotencyKey;
+  const nextOwner = optionalString(candidate.next_executable_owner) ?? optionalString(candidate.owner);
   if (
     !identity
     || !aggregateIdentity
     || !stageRunIdentity
     || !idempotencyKey
+    || !nextOwner
     || optionalString(identity.transition_kind) !== 'StartProviderAttempt'
-    || optionalString(outcome?.outcome_kind) !== 'provider_admission_enqueued_or_blocked'
+    || !outcomeKind
+    || !completeReadbackRepresentsProviderAdmission(liveReadback)
   ) {
     return null;
   }
@@ -270,7 +276,7 @@ function commandFromCompleteRuntimeReadbackIdentity(
       optionalString(candidate.work_unit_fingerprint)
       ?? optionalString(candidate.action_fingerprint)
       ?? optionalString(aggregateIdentity.work_unit_fingerprint),
-    next_owner: optionalString(candidate.next_executable_owner) ?? optionalString(candidate.owner),
+    next_owner: nextOwner,
     idempotency_key: idempotencyKey,
     route_identity_key: routeIdentityKey,
     attempt_idempotency_key: attemptIdempotencyKey,
@@ -283,12 +289,49 @@ function commandFromCompleteRuntimeReadbackIdentity(
       domain_state_owner: 'med-autoscience',
     },
     outcome: {
-      kind: 'provider_admission_enqueued_or_blocked',
+      kind: outcomeKind,
       non_advancing_apply: false,
       provider_completion_is_domain_completion: false,
       provider_completion_is_domain_ready: false,
     },
   };
+}
+
+function completeReadbackRepresentsProviderAdmission(liveReadback: Record<string, unknown>) {
+  const identity = isRecord(liveReadback.identity) ? liveReadback.identity : null;
+  const readModelReadback = isRecord(liveReadback.read_model_readback) ? liveReadback.read_model_readback : null;
+  const latestOutboxIdentity = isRecord(readModelReadback?.latest_outbox_identity)
+    ? readModelReadback.latest_outbox_identity
+    : null;
+  const latestTransactionReadback = isRecord(liveReadback.latest_transaction_readback)
+    ? liveReadback.latest_transaction_readback
+    : null;
+  const outcomeKind = providerAdmissionOutcomeKind(liveReadback);
+  const startProviderOutbox = latestOutboxIdentity
+    ? optionalString(latestOutboxIdentity.outbox_kind) === 'start_provider_attempt'
+    : latestTransactionReadback?.same_transaction_event_and_outbox === true
+      && latestTransactionReadback.outbox_item_present === true;
+  return optionalString(identity?.transition_kind) === 'StartProviderAttempt'
+    && startProviderOutbox
+    && (
+      outcomeKind === 'provider_admission_enqueued_or_blocked'
+      || outcomeKind === 'provider_admission_requested'
+      || outcomeKind === 'provider_admission_accepted'
+    );
+}
+
+function providerAdmissionOutcomeKind(liveReadback: Record<string, unknown>) {
+  const identity = isRecord(liveReadback.identity) ? liveReadback.identity : null;
+  const outcome = isRecord(liveReadback.exactly_one_outcome) ? liveReadback.exactly_one_outcome : null;
+  const outcomeKind = optionalString(outcome?.outcome_kind)
+    ?? optionalString(identity?.outcome_kind);
+  return (
+    outcomeKind === 'provider_admission_enqueued_or_blocked'
+    || outcomeKind === 'provider_admission_requested'
+    || outcomeKind === 'provider_admission_accepted'
+  )
+    ? outcomeKind
+    : null;
 }
 
 function currentControlProviderAdmissionInputContext(input: {
@@ -759,6 +802,7 @@ export function currentControlProviderAdmissionInputFrom(
         source_fingerprint: sourceFingerprint,
         route_identity_key: routeIdentityKey,
         attempt_idempotency_key: attemptIdempotencyKey,
+        idempotency_key: attemptIdempotencyKey,
         dispatch_authority: dispatchAuthority,
         executor_kind: optionalString(candidate.executor_kind) ?? 'codex_cli_default',
         ...(dispatchRef ? { dispatch_ref: dispatchRef } : {}),

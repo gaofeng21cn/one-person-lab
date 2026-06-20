@@ -467,6 +467,265 @@ test('family-runtime intake preserves MAS owner-route refs for root provider adm
   }
 });
 
+test('family-runtime intake hydrates root provider candidate from matching study owner-route refs', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-study-owner-route-root-candidate-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-study-owner-route-root-candidate-'));
+  const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  const exportPath = path.join(fixtureRoot, 'export');
+  const currentControlPath = path.join(
+    workspaceRoot,
+    'runtime',
+    'artifacts',
+    'supervision',
+    'opl_current_control_state',
+    'latest.json',
+  );
+  const studyId = '002-dm-china-us-mortality-attribution';
+  const actionType = 'return_to_ai_reviewer_workflow';
+  const workUnitId = 'produce_ai_reviewer_publication_eval_record_against_current_inputs';
+  const workUnitFingerprint =
+    'domain-transition::ai_reviewer_re_eval::produce_ai_reviewer_publication_eval_record_against_current_inputs';
+  const attemptIdempotencyKey = 'paper-policy-request:afa135a3051e8aa76700b447';
+  const stagePacketRef = `mas://current-work-unit/${studyId}/${workUnitId}/stage-packet`;
+  fs.mkdirSync(path.dirname(currentControlPath), { recursive: true });
+  fs.writeFileSync(currentControlPath, JSON.stringify({
+    surface: 'opl_current_control_state',
+    provider_admission_pending_count: 1,
+    transition_request_pending_count: 0,
+    provider_admission_candidates: [
+      {
+        status: 'provider_admission_pending',
+        study_id: studyId,
+        quest_id: studyId,
+        action_type: actionType,
+        work_unit_id: workUnitId,
+        work_unit_fingerprint: workUnitFingerprint,
+        action_fingerprint: workUnitFingerprint,
+        source_fingerprint: workUnitFingerprint,
+        route_identity_key: attemptIdempotencyKey,
+        attempt_idempotency_key: attemptIdempotencyKey,
+        idempotency_key: attemptIdempotencyKey,
+        provider_attempt_or_lease_required: true,
+        provider_completion_is_domain_completion: false,
+        opl_domain_progress_transition_request: currentControlCommandOutboxRecord({
+          studyId,
+          actionType,
+          workUnitId,
+          workUnitFingerprint,
+          sourceGeneration: 'truth-event-000040-1a4d1f9cfed66d87',
+          idempotencyKey: attemptIdempotencyKey,
+        }),
+      },
+    ],
+    studies: [
+      {
+        study_id: studyId,
+        owner_route: {
+          next_owner: 'ai_reviewer',
+          allowed_actions: [actionType],
+          idempotency_key: attemptIdempotencyKey,
+          source_refs: {
+            attempt_idempotency_key: attemptIdempotencyKey,
+            route_identity_key: attemptIdempotencyKey,
+            dispatch_ref: stagePacketRef,
+            stage_packet_ref: stagePacketRef,
+            stage_packet_refs: [stagePacketRef],
+            work_unit_id: workUnitId,
+            work_unit_fingerprint: workUnitFingerprint,
+            owner_route_currentness_basis: {
+              current_action_source: 'opl_current_control_state.provider_admission_candidates',
+              current_work_unit_source: 'opl_current_control_state.provider_admission_candidates',
+              work_unit_id: workUnitId,
+              work_unit_fingerprint: workUnitFingerprint,
+            },
+          },
+          study_id: studyId,
+          work_unit_fingerprint: workUnitFingerprint,
+        },
+      },
+    ],
+  }), 'utf8');
+  writeJsonEmitterScript(exportPath, {
+    surface_kind: 'mas_family_domain_handler_export',
+    workspace: {
+      workspace_root: workspaceRoot,
+      workspace_exists: true,
+    },
+    pending_family_tasks: [],
+  });
+  const env = familyRuntimeEnv(stateRoot, {
+    OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
+  });
+  try {
+    const intake = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+      '--study',
+      studyId,
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload-match',
+      `idempotency_key=${attemptIdempotencyKey}`,
+    ], env);
+    const queue = runCli([
+      'family-runtime',
+      'queue',
+      'list',
+      '--study',
+      studyId,
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload-match',
+      `idempotency_key=${attemptIdempotencyKey}`,
+    ], env);
+    const task = queue.family_runtime_queue.tasks[0];
+
+    assert.equal(intake.family_runtime_intake.enqueued_count, 1);
+    assert.equal(intake.family_runtime_intake.blocked_count, 0);
+    assert.equal(queue.family_runtime_queue.tasks.length, 1);
+    assert.equal(task.payload.next_executable_owner, 'ai_reviewer');
+    assert.equal(task.payload.owner_route_current, true);
+    assert.equal(task.payload.stage_packet_ref, stagePacketRef);
+    assert.deepEqual(task.payload.stage_packet_refs, [stagePacketRef]);
+    assert.deepEqual(task.payload.checkpoint_refs, [stagePacketRef]);
+    assert.equal(task.payload.route_identity_key, attemptIdempotencyKey);
+    assert.equal(task.payload.attempt_idempotency_key, attemptIdempotencyKey);
+    assert.equal(task.payload.idempotency_key, attemptIdempotencyKey);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime intake does not infer provider owner from action type when owner-route omits it', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-study-owner-route-missing-owner-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-study-owner-route-missing-owner-'));
+  const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  const exportPath = path.join(fixtureRoot, 'export');
+  const currentControlPath = path.join(
+    workspaceRoot,
+    'runtime',
+    'artifacts',
+    'supervision',
+    'opl_current_control_state',
+    'latest.json',
+  );
+  const studyId = '002-dm-china-us-mortality-attribution';
+  const actionType = 'return_to_ai_reviewer_workflow';
+  const workUnitId = 'produce_ai_reviewer_publication_eval_record_against_current_inputs';
+  const workUnitFingerprint =
+    'domain-transition::ai_reviewer_re_eval::produce_ai_reviewer_publication_eval_record_against_current_inputs';
+  const attemptIdempotencyKey = 'paper-policy-request:missing-owner-route-owner';
+  const stagePacketRef = `mas://current-work-unit/${studyId}/${workUnitId}/stage-packet`;
+  fs.mkdirSync(path.dirname(currentControlPath), { recursive: true });
+  fs.writeFileSync(currentControlPath, JSON.stringify({
+    surface: 'opl_current_control_state',
+    provider_admission_pending_count: 1,
+    transition_request_pending_count: 0,
+    provider_admission_candidates: [
+      {
+        status: 'provider_admission_pending',
+        study_id: studyId,
+        quest_id: studyId,
+        action_type: actionType,
+        work_unit_id: workUnitId,
+        work_unit_fingerprint: workUnitFingerprint,
+        action_fingerprint: workUnitFingerprint,
+        source_fingerprint: workUnitFingerprint,
+        route_identity_key: attemptIdempotencyKey,
+        attempt_idempotency_key: attemptIdempotencyKey,
+        idempotency_key: attemptIdempotencyKey,
+        provider_attempt_or_lease_required: true,
+        provider_completion_is_domain_completion: false,
+        opl_domain_progress_transition_request: currentControlCommandOutboxRecord({
+          studyId,
+          actionType,
+          workUnitId,
+          workUnitFingerprint,
+          sourceGeneration: 'truth-event-000040-1a4d1f9cfed66d87',
+          idempotencyKey: attemptIdempotencyKey,
+        }),
+      },
+    ],
+    studies: [
+      {
+        study_id: studyId,
+        owner_route: {
+          next_owner: null,
+          allowed_actions: [actionType],
+          idempotency_key: attemptIdempotencyKey,
+          source_refs: {
+            attempt_idempotency_key: attemptIdempotencyKey,
+            route_identity_key: attemptIdempotencyKey,
+            dispatch_ref: stagePacketRef,
+            stage_packet_ref: stagePacketRef,
+            stage_packet_refs: [stagePacketRef],
+            work_unit_id: workUnitId,
+            work_unit_fingerprint: workUnitFingerprint,
+            owner_route_currentness_basis: {
+              current_action_source: 'opl_current_control_state.provider_admission_candidates',
+              current_work_unit_source: 'opl_current_control_state.provider_admission_candidates',
+              work_unit_id: workUnitId,
+              work_unit_fingerprint: workUnitFingerprint,
+            },
+          },
+          study_id: studyId,
+          work_unit_fingerprint: workUnitFingerprint,
+        },
+      },
+    ],
+  }), 'utf8');
+  writeJsonEmitterScript(exportPath, {
+    surface_kind: 'mas_family_domain_handler_export',
+    workspace: {
+      workspace_root: workspaceRoot,
+      workspace_exists: true,
+    },
+    pending_family_tasks: [],
+  });
+  const env = familyRuntimeEnv(stateRoot, {
+    OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
+  });
+  try {
+    const intake = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+      '--study',
+      studyId,
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload-match',
+      `idempotency_key=${attemptIdempotencyKey}`,
+    ], env);
+    const queue = runCli([
+      'family-runtime',
+      'queue',
+      'list',
+      '--study',
+      studyId,
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload-match',
+      `idempotency_key=${attemptIdempotencyKey}`,
+    ], env);
+
+    assert.equal(intake.family_runtime_intake.enqueued_count, 0);
+    assert.equal(intake.family_runtime_intake.blocked_count, 1);
+    assert.equal(
+      intake.family_runtime_intake.exports[0].blocked[0].reason,
+      'invalid_current_control_provider_admission_candidate',
+    );
+    assert.equal(queue.family_runtime_queue.tasks.length, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime intake merges root provider candidates with nested current-control action_queue candidates', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-dual-source-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-dual-source-'));

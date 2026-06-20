@@ -1,4 +1,11 @@
 const DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID = 'opl_domain_progress_transition_runtime';
+const STAGE_RUN_IDENTITY_REQUIRED_FIELDS = [
+  'stage_run_id',
+  'route_identity_key',
+  'attempt_idempotency_key',
+  'provider_attempt_ref',
+  'attempt_lease_ref',
+] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -38,12 +45,25 @@ function matchingStageRunIdentity(
     );
 }
 
+function completeStageRunIdentity(identity: Record<string, unknown> | null) {
+  return Boolean(
+    identity
+    && STAGE_RUN_IDENTITY_REQUIRED_FIELDS.every((field) => optionalString(identity[field])),
+  );
+}
+
 function sameOutboxIdentity(input: {
   latestTransactionReadback: Record<string, unknown>;
   readModelReadback: Record<string, unknown> | null;
 }) {
   if (input.latestTransactionReadback.same_outbox_identity === true) {
     return true;
+  }
+  if (
+    input.latestTransactionReadback.same_outbox_identity === false
+    || input.latestTransactionReadback.same_transaction_event_and_outbox === false
+  ) {
+    return false;
   }
   const latestOutboxIdentity = isRecord(input.readModelReadback?.latest_outbox_identity)
     ? input.readModelReadback.latest_outbox_identity
@@ -60,6 +80,14 @@ function sameOutboxIdentity(input: {
     ?? optionalString(input.latestTransactionReadback.transition_event_id)
     ?? optionalString(latestTransactionIdentity?.event_id);
   const readModelTransitionEventId = optionalString(latestOutboxIdentity?.transition_event_id);
+  if (!latestOutboxIdentity) {
+    return input.latestTransactionReadback.same_transaction_event_and_outbox === true
+      && input.latestTransactionReadback.command_present === true
+      && input.latestTransactionReadback.event_present === true
+      && input.latestTransactionReadback.outbox_item_present === true
+      && Boolean(transactionOutboxItemId)
+      && Boolean(transactionEventId);
+  }
   return samePresentString(transactionOutboxItemId, readModelOutboxItemId)
     && samePresentString(transactionEventId, readModelTransitionEventId)
     && latestTransactionIdentity?.same_transaction_event_and_outbox !== false;
@@ -73,6 +101,9 @@ function sameStageRunIdentity(input: {
   if (input.latestTransactionReadback.same_stage_run_identity === true) {
     return true;
   }
+  if (input.latestTransactionReadback.same_stage_run_identity === false) {
+    return false;
+  }
   const readbackIdentity = isRecord(input.liveReadback.identity)
     ? input.liveReadback.identity
     : null;
@@ -85,9 +116,16 @@ function sameStageRunIdentity(input: {
   const latestTransactionIdentity = isRecord(input.readModelReadback?.latest_transaction_identity)
     ? input.readModelReadback.latest_transaction_identity
     : null;
-  return latestTransactionIdentity?.same_stage_run_identity !== false
-    && latestTransactionIdentity?.transaction_complete !== false
-    && matchingStageRunIdentity(identityStageRun, latestStageRunIdentity);
+  if (
+    latestTransactionIdentity?.same_stage_run_identity === false
+    || latestTransactionIdentity?.transaction_complete === false
+  ) {
+    return false;
+  }
+  if (matchingStageRunIdentity(identityStageRun, latestStageRunIdentity)) {
+    return true;
+  }
+  return completeStageRunIdentity(identityStageRun);
 }
 
 export function validCompleteTransitionRuntimeLiveReadback(value: Record<string, unknown>) {
