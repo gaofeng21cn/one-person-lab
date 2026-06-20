@@ -60,14 +60,5 @@
     "retired_baseline": "advisory_by_default_strict_blocks_until_removed",
     "line_count_ledger_owner": "this_contract_and_scripts_line_budget"
   },
-  "reviewed_baselines": [
-    {
-      "path": "src/family-runtime-domain-progress-transition-runtime.ts",
-      "limit": 2003,
-      "owner": "one-person-lab",
-      "reason": "characterization_first: DomainProgressTransitionRuntime is OPL runtime authority for command/event/outbox, idempotency, replay, read model, and human gate tokens.",
-      "intended_boundary": "Continue extracting runtime parts around command normalization, append/idempotency, fixed-point outcomes, read-model rebuild, replay, and human-gate token lifecycle.",
-      "review_after": "2026-07-20"
-    }
-  ]
+  "reviewed_baselines": []
 }

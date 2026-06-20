@@ -2,10 +2,12 @@ import {
   DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
   type DomainProgressTransitionRuntimeLog,
   readDomainProgressStageRunIdentity,
+} from './shared.ts';
+import {
   readDomainProgressTransitionIdempotency,
   readDomainProgressTransitionRuntimeLogJsonl,
   rebuildDomainProgressTransitionReadModel,
-} from '../family-runtime-domain-progress-transition-runtime.ts';
+} from './runtime-results.ts';
 import { auditDomainProgressTransitionReplay } from './replay-audit.ts';
 
 type LiveReadbackProjectionMetadata = Record<string, unknown> & {

@@ -1,5 +1,6 @@
 import {
   assert,
+  DatabaseSync,
   ensureProviderHostedStageAttempt,
   familyRuntimeEnv,
   fs,
