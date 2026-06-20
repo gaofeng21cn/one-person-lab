@@ -7,6 +7,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-06-20
 
+### 决策：Domain Markdown Memory 是 advisory prompt context，不是程序化控制器
+
+原因：MAS/MAG/RCA/BookForge/OMA 的领域经验需要以 Markdown 自然语言保留，让 AI executor 按当前数据、对象、证据、owner gate 和质量目标自行判断是否借用；如果把这类经验硬做成 recipe engine、route scorer、winning-path generator 或 readiness gate，会降低开放式判断质量，并制造新的 false authority。
+
+影响：
+
+- `contracts/opl-framework/advisory-knowledge-boundary-contract.json` 成为 family-level 机器边界。
+- OPL Atlas / Pack / Stagecraft / Runway / Vault / Console / Connect 只能承载 catalog、locator、knowledge refs、prompt-context refs、consumed refs、writeback proposal refs、router receipt refs 和 operator projection。
+- OPL 不持有 memory Markdown body，不接受/拒绝 writeback，不依据 memory refs 生成 route verdict、quality/export/publication/submission verdict、owner receipt 或 typed blocker。
+- 缺少 advisory memory 默认不阻断 stage launch；memory 冲突默认进入 route-back / human gate / reviewer attention，只有 source/data authority、owner identity、forbidden write、不可逆 mutation、hard reviewer / publication / final export / submission claim 或 owner answer claim 才成为 hard gate。
+
 ### 决策：Domain helper dependency maintenance 归 OPL system route
 
 原因：OPL BookForge 的 publication proof helper 使用 Pandoc/XeLaTeX/Poppler 和 TeX Live packages。若 BookForge 在领域仓内通过 workaround、跳过验证或私有安装脚本处理 `titling.sty` / `tocloft.sty` / TinyTeX 依赖漂移，会把本机工具链维护误放进 domain truth 层，也会让普通写作推进被出版 proof 环境预检反向阻断。
