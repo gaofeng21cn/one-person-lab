@@ -655,7 +655,7 @@ exit 1
         ['medautogrant', 'Med Auto Grant', true],
         ['redcube', 'RedCube AI', true],
         ['oplmetaagent', 'OPL Meta Agent', true],
-        ['oplbookforge', 'OPL BookForge', true],
+        ['oplbookforge', 'OPL Book Forge', true],
       ],
     );
     assert.equal(
@@ -669,7 +669,7 @@ exit 1
         ['medautogrant', 'Med Auto Grant', 'direct_click'],
         ['redcube', 'RedCube AI', 'direct_click'],
         ['oplmetaagent', 'OPL Meta Agent', 'direct_click'],
-        ['oplbookforge', 'OPL BookForge', 'direct_click'],
+        ['oplbookforge', 'OPL Book Forge', 'direct_click'],
       ],
     );
     assert.equal(

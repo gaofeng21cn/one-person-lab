@@ -11,7 +11,7 @@ function readJsonFile(filePath: string) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
-test('workspace artifact-lifecycle materializes refs-only BookForge artifact projections', () => {
+test('workspace artifact-lifecycle materializes refs-only Book Forge artifact projections', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-artifact-lifecycle-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-artifact-lifecycle-root-'));
 
@@ -84,13 +84,13 @@ test('workspace artifact-lifecycle materializes refs-only BookForge artifact pro
       repair_plan_ref: 'revision-routing/storyline-repair-plan.md',
       freshness_gate_ref: 'quality/downstream-freshness-gate.json',
       current_owner_delta_ref: 'control/opl/current-owner-delta.json',
-      current_owner: 'OPL BookForge',
+      current_owner: 'OPL Book Forge',
       accepted_answer_shape: ['domain_repair_receipt_ref', 'typed_blocker_ref', 'owner_decision_ref'],
       selected_transport_kind: 'route_back',
       domain_decision_label: 'storyline_architecture_repair',
       route_back: {
         target_stage_ref: 'storyline-architecture',
-        target_owner: 'OPL BookForge',
+        target_owner: 'OPL Book Forge',
       },
       downstream_freshness_refs: [
         'artifacts/manuscript/chapter-manifest.json',
@@ -158,7 +158,7 @@ test('workspace artifact-lifecycle materializes refs-only BookForge artifact pro
       path.join(projectRoot, 'control/opl/artifact_lifecycle/review_repair_transport.json'),
     );
     assert.equal(reviewRepair.status, 'passed');
-    assert.equal(reviewRepair.current_owner, 'OPL BookForge');
+    assert.equal(reviewRepair.current_owner, 'OPL Book Forge');
     assert.deepEqual(reviewRepair.accepted_answer_shape, [
       'domain_repair_receipt_ref',
       'typed_blocker_ref',
@@ -170,7 +170,7 @@ test('workspace artifact-lifecycle materializes refs-only BookForge artifact pro
   }
 });
 
-test('workspace artifact-lifecycle blocks missing BookForge lifecycle refs without writing domain truth', () => {
+test('workspace artifact-lifecycle blocks missing Book Forge lifecycle refs without writing domain truth', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-artifact-lifecycle-block-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-artifact-lifecycle-block-root-'));
 

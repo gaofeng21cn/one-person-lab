@@ -45,7 +45,7 @@ function createFakeDependencyBin(options: { missingLatexPackage?: string; marker
   return binDir;
 }
 
-test('system dependency-doctor blocks only the BookForge proof profile when a required LaTeX package is missing', () => {
+test('system dependency-doctor blocks only the Book Forge proof profile when a required LaTeX package is missing', () => {
   const binDir = createFakeDependencyBin({ missingLatexPackage: 'titlesec.sty' });
   try {
     const output = runCli(['system', 'dependency-doctor', '--profile', 'bookforge-publication-proof'], {

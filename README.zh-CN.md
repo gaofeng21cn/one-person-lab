@@ -100,11 +100,11 @@ One Person Lab 同时包含框架、桌面工作台和专业 Agent 三层：
 | --- | --- | --- |
 | **OPL Framework** | 开发者、技术操作者、产品集成 | 负责长任务运行、进度记录、证据追踪、恢复重试和人工介入。 |
 | **One Person Lab App** | 终端用户 | 桌面工作台。用户从这里选择任务、查看进度、打开文件、处理阻塞和获取更新。 |
-| **Foundry Agents** | 专业工作场景 | MAS、MAG、RCA、BookForge 等专业 Agent 分别提供医学研究、基金写作、视觉交付、书籍写作等专业能力和交付物。 |
+| **Foundry Agents** | 专业工作场景 | MAS、MAG、RCA、Book Forge 等专业 Agent 分别提供医学研究、基金写作、视觉交付、书籍写作等专业能力和交付物。 |
 
 这三层形成一条清晰链路：用 OPL Framework 托管专业 Agent，再把框架和 Agent 打包成普通用户可直接使用的桌面产品。
 
-如果只是使用产品，不需要理解这些仓库分工。对开发者来说：`one-person-lab` 维护框架和命令行，`one-person-lab-app` 维护桌面产品和发布体验，MAS、MAG、RCA、BookForge 等仓库维护各自专业领域的能力、判断标准和交付物。
+如果只是使用产品，不需要理解这些仓库分工。对开发者来说：`one-person-lab` 维护框架和命令行，`one-person-lab-app` 维护桌面产品和发布体验，MAS、MAG、RCA、Book Forge 等仓库维护各自专业领域的能力、判断标准和交付物。
 
 桌面产品沿用 Codex App 的交互形态，把 MAS、MAG、RCA 及后续 Foundry Agents 呈现为内置任务入口。普通用户不需要选择底层执行器或界面实现；这些细节只出现在开发者诊断和验证材料里。
 
@@ -120,7 +120,7 @@ One Person Lab 同时包含框架、桌面工作台和专业 Agent 三层：
 | 研究工坊 | [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) | 医学研究、证据整理、数据分析、稿件准备 | 分析包、证据包、稿件 |
 | 基金工坊 | [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | 基金方向判断、申请书写作、修订准备 | 申请书、提纲、修订包 |
 | 汇报工坊 | [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) | 讲课、组会、汇报、答辩和项目材料 | 幻灯片、讲稿、汇报材料 |
-| 图书工坊 | [`OPL BookForge`](https://github.com/gaofeng21cn/opl-bookforge) | 图书、长篇书稿、章节架构和风格控制 | 故事线、章节草稿、图表计划、DOCX/PDF 交接包 |
+| 图书工坊 | [`OPL Book Forge`](https://github.com/gaofeng21cn/opl-bookforge) | 图书、长篇书稿、章节架构和风格控制 | 故事线、章节草稿、图表计划、DOCX/PDF 交接包 |
 | 专利工坊 | 规划中 | 专利申请、技术交底、权利要求和实施例整理 | 技术交底书、专利申请书、权利要求书 |
 | 报奖工坊 | 规划中 | 科技奖励、成果总结和佐证材料组织 | 报奖书、成果总结、佐证材料包 |
 | 论文工坊 | 规划中 | 学位论文装配和答辩准备 | 章节草稿、答辩材料 |
@@ -138,7 +138,7 @@ One Person Lab 同时包含框架、桌面工作台和专业 Agent 三层：
 
 ## 给 Codex / Agent
 
-在新机器上，让 Codex 按 [新机器 Codex 全家桶安装入口](docs/references/current-support/opl-new-machine-codex-bootstrap.md) 自动安装配置 OPL runtime、MAS/MAG/RCA/OMA/BookForge 智能体可见面、OPL Flow、OPL Doc 和推荐 companion tools：
+在新机器上，让 Codex 按 [新机器 Codex 全家桶安装入口](docs/references/current-support/opl-new-machine-codex-bootstrap.md) 自动安装配置 OPL runtime、MAS/MAG/RCA/OMA/Book Forge 智能体可见面、OPL Flow、OPL Doc 和推荐 companion tools：
 
 ```text
 请按 One Person Lab 官方新机器指南，帮我完成这台机器的 OPL 智能体运行环境和 Codex 工作流全家桶安装配置。
@@ -152,7 +152,7 @@ One Person Lab 同时包含框架、桌面工作台和专业 Agent 三层：
 - 将 OPL Meta Agent 作为智能体工坊入口，用于开发新领域智能体、接管既有智能体测试，并通过 Agent Lab 组织机制自进化。
 - 推进研究工坊、基金工坊、汇报工坊三条产品线的稳定交付体验。
 - 让图书工坊保持 owner-gated 路线，直到书稿质量、导出交接和 hosted runtime 证据足以支撑更强声明。
-- 在 generated surface、runtime handoff 和 App 产品 owner 证据到位后，再把 BookForge 纳入默认 OPL Connect / App 可见面。
+- 在 generated surface、runtime handoff 和 App 产品 owner 证据到位后，再把 Book Forge 纳入默认 OPL Connect / App 可见面。
 - 将专利、报奖、论文、审稿等高价值知识工作纳入同一产品家族。
 - 统一领域智能体的安装、模块发现、技能同步、产物浏览和工作区恢复体验。
 

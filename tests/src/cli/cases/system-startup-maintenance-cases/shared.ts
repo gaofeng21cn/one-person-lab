@@ -226,7 +226,7 @@ export function createBookForgeGeneratedSurfaceRemote(input: {
   });
   writeFakeBookForgeGeneratedSurfacePack(remote.sourceRoot);
   runGitFixtureCommand(remote.sourceRoot, ['add', 'agent', 'contracts']);
-  runGitFixtureCommand(remote.sourceRoot, ['commit', '-m', 'Add BookForge generated surface contract pack']);
+  runGitFixtureCommand(remote.sourceRoot, ['commit', '-m', 'Add Book Forge generated surface contract pack']);
   runGitFixtureCommand(remote.sourceRoot, ['push', 'origin', 'main']);
   return remote;
 }

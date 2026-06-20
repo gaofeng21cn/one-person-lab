@@ -163,7 +163,7 @@ export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
   },
   {
     module_id: 'oplbookforge',
-    label: 'OPL BookForge',
+    label: 'OPL Book Forge',
     repo_name: 'opl-bookforge',
     repo_url: 'https://github.com/gaofeng21cn/opl-bookforge.git',
     scope: 'domain_module',

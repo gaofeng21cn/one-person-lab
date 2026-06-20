@@ -9,7 +9,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ### 决策：Domain Markdown Memory 是 advisory prompt context，不是程序化控制器
 
-原因：MAS/MAG/RCA/BookForge/OMA 的领域经验需要以 Markdown 自然语言保留，让 AI executor 按当前数据、对象、证据、owner gate 和质量目标自行判断是否借用；如果把这类经验硬做成 recipe engine、route scorer、winning-path generator 或 readiness gate，会降低开放式判断质量，并制造新的 false authority。
+原因：MAS/MAG/RCA/Book Forge/OMA 的领域经验需要以 Markdown 自然语言保留，让 AI executor 按当前数据、对象、证据、owner gate 和质量目标自行判断是否借用；如果把这类经验硬做成 recipe engine、route scorer、winning-path generator 或 readiness gate，会降低开放式判断质量，并制造新的 false authority。
 
 影响：
 
@@ -21,16 +21,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ### 决策：Domain helper dependency maintenance 归 OPL system route
 
-原因：OPL BookForge 的 publication proof helper 使用 Pandoc/XeLaTeX/Poppler 和 TeX Live packages。若 BookForge 在领域仓内通过 workaround、跳过验证或私有安装脚本处理 `titling.sty` / `tocloft.sty` / TinyTeX 依赖漂移，会把本机工具链维护误放进 domain truth 层，也会让普通写作推进被出版 proof 环境预检反向阻断。
+原因：OPL Book Forge 的 publication proof helper 使用 Pandoc/XeLaTeX/Poppler 和 TeX Live packages。若 Book Forge 在领域仓内通过 workaround、跳过验证或私有安装脚本处理 `titling.sty` / `tocloft.sty` / TinyTeX 依赖漂移，会把本机工具链维护误放进 domain truth 层，也会让普通写作推进被出版 proof 环境预检反向阻断。
 
 影响：
 
 - `opl system dependency-doctor --profile bookforge-publication-proof --json` 是 OPL-owned 本机依赖诊断面，读取 Pandoc、XeLaTeX、Poppler 和 proof profile 所需 LaTeX package 的 discoverability。
 - `opl system dependency-maintenance --profile bookforge-publication-proof --json` 默认只输出维护计划；只有显式 `--apply` 才尝试通过检测到的 TeX Live package manager 执行修复。doctor 路径不得突变系统环境。
-- BookForge 仍拥有 manuscript、proof profile、helper behavior、书稿质量、出版 proof / final export owner gate；OPL 只拥有本机依赖诊断、维护 route 和 no-domain-authority readback。
-- 该 surface 的 hard blocker 只适用于 BookForge publication proof / final export 相关 claim。普通 storyline、chapter drafting、context compile、claim integrity、style calibration、review PDF 以外的写作进度不得因为该 doctor blocked 而停摆。
-- `titling.sty` 与 `tocloft.sty` 从 bundled BookForge proof header 中退役后只作为 `legacy_not_required` 诊断项；不得再因为它们缺失阻断当前 proof profile。
-- 该能力不写 MAS/MAG/RCA/BookForge truth，不写 manuscript，不签 owner receipt，不创建 typed blocker，不授权 quality/export verdict，不声明 domain ready、publication ready、final export ready 或 production ready。
+- Book Forge 仍拥有 manuscript、proof profile、helper behavior、书稿质量、出版 proof / final export owner gate；OPL 只拥有本机依赖诊断、维护 route 和 no-domain-authority readback。
+- 该 surface 的 hard blocker 只适用于 Book Forge publication proof / final export 相关 claim。普通 storyline、chapter drafting、context compile、claim integrity、style calibration、review PDF 以外的写作进度不得因为该 doctor blocked 而停摆。
+- `titling.sty` 与 `tocloft.sty` 从 bundled Book Forge proof header 中退役后只作为 `legacy_not_required` 诊断项；不得再因为它们缺失阻断当前 proof profile。
+- 该能力不写 MAS/MAG/RCA/Book Forge truth，不写 manuscript，不签 owner receipt，不创建 typed blocker，不授权 quality/export verdict，不声明 domain ready、publication ready、final export ready 或 production ready。
 
 ## 2026-06-17
 
@@ -707,7 +707,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ### 决策：workspace initialization 是 OPL-owned framework action，不进入 domain family action catalog
 
-原因：MAS/MAG/RCA/OMA/BookForge 都需要默认可用的 Stage Native workspace topology，但创建 OPL workspace skeleton 与写入 OPL workspace registry 是 framework responsibility。domain repo 可以持有 domain truth、artifact body、product view、owner receipt、typed blocker 和 quality/export verdict，但不能写 OPL registry，也不能把 workspace topology 初始化包装成 domain-owned action。
+原因：MAS/MAG/RCA/OMA/Book Forge 都需要默认可用的 Stage Native workspace topology，但创建 OPL workspace skeleton 与写入 OPL workspace registry 是 framework responsibility。domain repo 可以持有 domain truth、artifact body、product view、owner receipt、typed blocker 和 quality/export verdict，但不能写 OPL registry，也不能把 workspace topology 初始化包装成 domain-owned action。
 
 影响：
 
@@ -720,7 +720,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 2026-06-07 追加：`workspace_inspection.json`、`workspace_resource_inventory.json`、project-local `artifacts/stage_outputs/stage_outputs_index.json` 和 `artifacts/stage_outputs/current_stage.json` 是 OPL Workspace Protocol 的实际 projection 文件，不是可选文档建议。`init` / `ensure` / `adopt --apply` 必须生成并索引它们；`upgrade --apply` 必须补齐缺失 projection，但不得覆盖 runtime 已写入的合法非空 current pointer；`validate` / `doctor` 必须检查存在性、协议形状、lifecycle status 集合和 authority false flags。
 - 2026-06-07 追加：`opl workspace validate --workspace <path>` 是 hard-blockers-only gate；`opl workspace doctor --workspace <path>` 是同检查的只读诊断，并分层输出 `hard_blockers`、`repairable_findings`、`advisory_warnings` 与统一 `findings`；`opl workspace adopt --agent ... --workspace ... --dry-run|--apply` 支持既有目录采用，apply 只写 OPL-owned metadata / manifests / map / health / inspection / inventory / stage projections，不写 domain truth、不绑定 registry、不迁移 artifact body；`opl workspace upgrade --workspace ... --apply` 原地刷新 generated refs，不移动 project root；`opl workspace project archive --workspace ... --project-id ... --apply` 只更新 indexed project lifecycle，不删除文件，也不等价于 registry binding archive；`opl workspace export-map`、`opl workspace health`、`opl workspace inspect` 和 `opl workspace inventory` 提供只读用户检查投影。`opl workspace interfaces`、App action catalog 和 App action execute 必须暴露这些管理面，避免 workspace 合同只有叙事没有可调用接口。
 - 2026-06-08 追加：workspace governance v2 把 generated projection 的 canonical root 固定到 `control/opl/projections`，把默认用户检查摘要固定到 `control/opl/reports/workspace_report.json`；根层 `workspace_map.json`、`workspace_health.json`、`workspace_inspection.json`、`workspace_resource_inventory.json` 和 `workspace_report.json` 只作为兼容 mirror。`workspace_index.json` 必须携带 `profile_binding`，其中包含 `profile_version=workspace-topology-profile.v2`、`profile_fingerprint=opl-workspace-topology-profile-v2-projects-stage-outputs`、profile contract ref 和 migration history，并必须携带 `topology_events[]`。`agent_workspace_norm` 必须与 executable norm projection 全量一致，不能只按 norm id/version 判断。生成投影 currentness 仍是结构检查项，但缺失或漂移默认是 repairable finding，`workspace validate` 不因这类缺口阻断默认智能体执行；缺 workspace/index identity、项目根、stage pointer/index shape、authority 或 runtime-state 边界才是 hard blocker。
-- 2026-06-08 追加：Project lifecycle 统一为 `active`、`paused`、`archived`、`superseded`、`locked`。这些状态是 OPL-owned workspace lifecycle projection，不删除文件、不关闭 stage、不签 owner receipt，也不改变 domain truth；physical delete 必须由 domain owner receipt 授权。MAS/MAG/RCA/OMA/BookForge 共享同一 Project Unit 物理语义，MAS 的 `study` / `studies` 与 BookForge 的 `book` / `books` 只作为 display naming 例外。workspace governance v2 只能声明 `L4_structural_baseline`；L5 仍需要真实 App user path、跨 agent scaleout、long-soak、release/install evidence 和 owner acceptance。
+- 2026-06-08 追加：Project lifecycle 统一为 `active`、`paused`、`archived`、`superseded`、`locked`。这些状态是 OPL-owned workspace lifecycle projection，不删除文件、不关闭 stage、不签 owner receipt，也不改变 domain truth；physical delete 必须由 domain owner receipt 授权。MAS/MAG/RCA/OMA/Book Forge 共享同一 Project Unit 物理语义，MAS 的 `study` / `studies` 与 Book Forge 的 `book` / `books` 只作为 display naming 例外。workspace governance v2 只能声明 `L4_structural_baseline`；L5 仍需要真实 App user path、跨 agent scaleout、long-soak、release/install evidence 和 owner acceptance。
 - 2026-06-08 追加：`opl workspace fleet report` 是 `workspace list` 的 sibling surface，不改变 `workspace list` registry-only 语义。fleet report 只从 registry binding 和 workspace-local `workspace_index.json` / generated reports 读结构状态，输出 ready / blocked / archived_binding / not_bound 和 lifecycle counts；它不得执行 direct-entry command、manifest command 或 domain product-entry resolver，不得把 domain manifest 解析结果写成 readiness。`opl workspace project lifecycle` 是 pause / resume / lock / supersede / archive 的统一 runtime；`workspace project delete` 只返回 owner-receipt safe-delete gate，OPL 不执行 physical delete。shared resource provenance 只允许在 `opl_resource_manifest.json.resources[]` 中记录 refs、checksum、provenance、reuse、staleness，`body_ref` 必须规范为空；`workspace upgrade` 必须保留这些记录，`workspace inventory` 只投影 refs-only record。
 - 2026-06-10 追加：active workspace binding 指向不存在目录时，`opl domain manifests` 必须报告 `workspace_missing`、`stale_binding_count` 和 `stale_binding_project_ids`；active binding 缺 `manifest_command` 时，必须报告 `manifest_not_configured_count` 和 `manifest_not_configured_project_ids`。二者属于 OPL registry currentness / binding configuration attention，不属于 domain manifest command failure；不得计入 `failed_count`、`live_failed_project_ids` 或 framework stage diagnostic failure。真实 manifest command failure、timeout、invalid JSON 和 invalid manifest 仍按原 fail-closed 路径暴露。
 

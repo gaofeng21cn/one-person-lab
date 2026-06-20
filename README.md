@@ -100,11 +100,11 @@ One Person Lab has three user-visible layers:
 | --- | --- | --- |
 | **OPL Framework** | Developers, technical operators, product integration | Runs long tasks, records progress and evidence, supports recovery/retry, and keeps human intervention visible. |
 | **One Person Lab App** | End users | Desktop workbench for choosing tasks, watching progress, opening files, handling blockers, and receiving updates. |
-| **Foundry Agents** | Specialized work | MAS, MAG, RCA, BookForge, and later agents provide professional capabilities and deliverables for medical research, grant writing, visual delivery, book writing, and more. |
+| **Foundry Agents** | Specialized work | MAS, MAG, RCA, Book Forge, and later agents provide professional capabilities and deliverables for medical research, grant writing, visual delivery, book writing, and more. |
 
 The chain is straightforward: host specialized agents with OPL Framework, then package the framework and agents into a desktop product users can run directly.
 
-Users do not need to understand the repository split to use the product. For developers: `one-person-lab` maintains the framework and CLI, `one-person-lab-app` maintains the desktop product and release experience, and MAS, MAG, RCA, BookForge, and other repositories maintain their professional capabilities, standards, and deliverables.
+Users do not need to understand the repository split to use the product. For developers: `one-person-lab` maintains the framework and CLI, `one-person-lab-app` maintains the desktop product and release experience, and MAS, MAG, RCA, Book Forge, and other repositories maintain their professional capabilities, standards, and deliverables.
 
 The desktop product follows the Codex App interaction shape and presents MAS, MAG, RCA, and later Foundry Agents as built-in task entries. Users do not need to choose the underlying executor or shell implementation; those details stay in developer diagnostics and verification material.
 
@@ -120,7 +120,7 @@ The desktop product follows the Codex App interaction shape and presents MAS, MA
 | `Research Foundry` | [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) | Medical research, evidence organization, analysis, manuscript preparation | Analysis packages, evidence packages, manuscripts |
 | `Grant Foundry` | [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | Grant direction setting, proposal writing, revision preparation | Proposals, outlines, revision packs |
 | `Presentation Foundry` | [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) | Lectures, lab talks, reports, defenses, project materials | Slide decks, scripts, presentation packages |
-| `Book Foundry` | [`OPL BookForge`](https://github.com/gaofeng21cn/opl-bookforge) | Books, long-form manuscripts, chapter architecture, style control | Storylines, chapter drafts, figure/table plans, DOCX/PDF handoff packages |
+| `Book Foundry` | [`OPL Book Forge`](https://github.com/gaofeng21cn/opl-bookforge) | Books, long-form manuscripts, chapter architecture, style control | Storylines, chapter drafts, figure/table plans, DOCX/PDF handoff packages |
 | `Patent Foundry` | Planned | Patent applications, invention disclosures, claims, embodiments | Invention disclosures, patent drafts, claim sets |
 | `Award Foundry` | Planned | Awards, achievement summaries, evidence organization | Award applications, summaries, evidence packs |
 | `Thesis Foundry` | Planned | Thesis assembly and defense preparation | Chapter drafts, defense materials |
@@ -138,7 +138,7 @@ To develop a new domain agent, debug the CLI, or integrate runtime surfaces, ope
 
 ## For Codex / Agents
 
-On a new machine, ask Codex to install the OPL runtime, MAS/MAG/RCA/BookForge/OMA agent surfaces, OPL Flow, OPL Doc, and companion tools from the [new-machine Codex bootstrap guide](docs/references/current-support/opl-new-machine-codex-bootstrap.md):
+On a new machine, ask Codex to install the OPL runtime, MAS/MAG/RCA/Book Forge/OMA agent surfaces, OPL Flow, OPL Doc, and companion tools from the [new-machine Codex bootstrap guide](docs/references/current-support/opl-new-machine-codex-bootstrap.md):
 
 ```text
 Please follow the official One Person Lab new-machine guide and set up this machine with the OPL agent runtime environment and the complete Codex workflow toolkit.
@@ -152,7 +152,7 @@ Source of truth: https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/re
 - Use OPL Meta Agent as the Agent Foundry entry for building new domain agents, taking over testing for existing agents, and organizing Agent Lab mechanism evolution.
 - Stabilize the Research, Grant, Presentation, and Book Foundry user experience.
 - Keep Book Foundry on an owner-gated production path until manuscript quality, export handoff, direct runtime parity, and owner receipts support stronger claims.
-- Maintain BookForge as a default OPL Connect / App visible surface while keeping production-ready book-writing claims fail-closed.
+- Maintain Book Forge as a default OPL Connect / App visible surface while keeping production-ready book-writing claims fail-closed.
 - Bring Patent, Award, Thesis, and Review work into the same product family.
 - Unify module installation, skill sync, artifact browsing, and workspace recovery across domain agents.
 

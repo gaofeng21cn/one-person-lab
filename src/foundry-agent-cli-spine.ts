@@ -74,7 +74,7 @@ const FOUNDRY_AGENT_PEERS = [
   {
     agent_id: 'opl-bookforge',
     domain_id: 'oplbookforge',
-    label: 'OPL BookForge',
+    label: 'OPL Book Forge',
     brand_cli: 'opl-bookforge',
     direct_domain_cli: 'opl agents interfaces --repo-dir <opl-bookforge-repo>',
     codex_executable_cli: 'opl foundry agents inspect opl-bookforge',

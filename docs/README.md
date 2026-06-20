@@ -37,7 +37,7 @@ Repo 角色按当前 App 边界固定读取：`one-person-lab` 是 framework/run
 | 读者 | 建议起点 | 目的 |
 | --- | --- | --- |
 | 用户 | [仓库首页](../README.md) | 安装 OPL、启动 GUI 或网页入口，并按任务选择 Codex 或 domain agent |
-| 新机器 Codex bootstrap | [新机器 Codex 全家桶安装入口](./references/current-support/opl-new-machine-codex-bootstrap.md) | 一句话让 Codex 安装配置 OPL runtime、MAS/MAG/RCA/BookForge/OMA、OPL Flow、OPL Doc 和 companion tools |
+| 新机器 Codex bootstrap | [新机器 Codex 全家桶安装入口](./references/current-support/opl-new-machine-codex-bootstrap.md) | 一句话让 Codex 安装配置 OPL runtime、MAS/MAG/RCA/Book Forge/OMA、OPL Flow、OPL Doc 和 companion tools |
 | 技术规划者、架构读者、方向同步读者 | [项目概览](./project.md)、[当前状态](./status.md)、[架构](./architecture.md)、[硬约束](./invariants.md)、[关键决策](./decisions.md)、[合同目录说明](../contracts/README.md) | 恢复当前边界、运行时模型和 admitted-domain split |
 | 开发者与维护者 | [文档组合治理](./docs_portfolio_consolidation.md)、[活跃支撑文档](./active/README.md)、[公开支撑文档](./public/README.md)、[规格索引](./specs/README.md)、[参考级索引](./references/README.md)、[历史归档索引](./history/README.md) | 查看生命周期角色、活跃支撑、公开支撑、当前规格入口、参考材料和退役路线 |
 
@@ -71,7 +71,7 @@ Repo 角色按当前 App 边界固定读取：`one-person-lab` 是 framework/run
 - [GitHub CI 自动化巡检政策](./policies/github-ci-automation-policy.md)
 - [规格索引](./specs/README.md)
 
-OPL 系列项目开发的主参考是 [OPL 系列项目开发主参考](./active/opl-family-development-reference.md)：OPL 仓维护全局目标、全局差距、上收边界、shared primitives、App/workbench 目标和跨仓开发顺序；MAS/MAG/RCA/BookForge 各仓维护本仓目标、差距、authority、direct/hosted 边界和本仓上收清单。`opl-aion-shell` 的上游 AionUI docs 不纳入这套目录治理。
+OPL 系列项目开发的主参考是 [OPL 系列项目开发主参考](./active/opl-family-development-reference.md)：OPL 仓维护全局目标、全局差距、上收边界、shared primitives、App/workbench 目标和跨仓开发顺序；MAS/MAG/RCA/Book Forge 各仓维护本仓目标、差距、authority、direct/hosted 边界和本仓上收清单。`opl-aion-shell` 的上游 AionUI docs 不纳入这套目录治理。
 
 旧的内容级收敛记录、Family Docs 生命周期治理 rollout、dated proof、line-count closeout 和外部学习记录继续保留在 `docs/references/` 或 `docs/history/`，但只按支撑参考或 provenance 阅读。若其中仍有 current rule，必须先提升到核心五件套、`docs/active/` owner 文档、policy/spec，或机器合同；不要把旧 reference 原文当成新的 active checklist。
 
@@ -179,5 +179,5 @@ OPL 系列项目开发的主参考是 [OPL 系列项目开发主参考](./active
 - `docs/**` 与 `README*` 默认是人读材料：脚本、合同、测试和 runtime dashboard 应使用 contract file、schema file、source file、CLI/API 行为或语义化 `human_doc:*` 标识，不应把叙述文档路径钉成机读约束。
 - 新增或移动文档必须先按 [文档组合治理](./docs_portfolio_consolidation.md) 判断生命周期角色。
 - Active 文档不得继续追加 receipt/proof 流水、workorder 瞬时计数、line-count split 或 worktree closeout；这些过程记录进入 `docs/history/**`，active 层只保留当前 owner、gap、完成口径和验证入口。
-- 跨仓 docs 治理按 [文档组合治理](./docs_portfolio_consolidation.md)、[OPL Family 开发主参考](./active/opl-family-development-reference.md)、[OPL 开发文档组合整理](./active/development-document-portfolio.md) 和 [文档生命周期政策](./policies/docs-lifecycle-policy.md) 执行：默认巡检范围是 OPL、MAS、MAG、RCA、OMA、BookForge 和 App 七仓；OPL/MAS/MAG/RCA/BookForge 采用同名 canonical docs taxonomy；OMA 与 App 按 repo-specific 职责治理，只有出现长期职责时才新增对应目录索引。旧 `program/plans/capabilities` 等目录能物理迁移就直接迁移，仍暂留的旧路径只能是外部/上游支撑、历史 provenance 或 tombstone，不继续扩写成平行目录体系。`opl-aion-shell` 的 docs 属于上游 AionUI 依赖文档，不纳入这套目录治理。2026-05 的 lifecycle rollout 和内容级收敛记录已归入 [Convergence Governance 过程归档](./history/process/convergence-governance/README.md)，只作来源说明。
+- 跨仓 docs 治理按 [文档组合治理](./docs_portfolio_consolidation.md)、[OPL Family 开发主参考](./active/opl-family-development-reference.md)、[OPL 开发文档组合整理](./active/development-document-portfolio.md) 和 [文档生命周期政策](./policies/docs-lifecycle-policy.md) 执行：默认巡检范围是 OPL、MAS、MAG、RCA、OMA、Book Forge 和 App 七仓；OPL/MAS/MAG/RCA/Book Forge 采用同名 canonical docs taxonomy；OMA 与 App 按 repo-specific 职责治理，只有出现长期职责时才新增对应目录索引。旧 `program/plans/capabilities` 等目录能物理迁移就直接迁移，仍暂留的旧路径只能是外部/上游支撑、历史 provenance 或 tombstone，不继续扩写成平行目录体系。`opl-aion-shell` 的 docs 属于上游 AionUI 依赖文档，不纳入这套目录治理。2026-05 的 lifecycle rollout 和内容级收敛记录已归入 [Convergence Governance 过程归档](./history/process/convergence-governance/README.md)，只作来源说明。
 - 任何影响公开表述、合同或已收录领域状态的变更，都必须同步更新文档、合同与相关验证。

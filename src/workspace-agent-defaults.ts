@@ -69,7 +69,7 @@ export const OPL_WORKSPACE_AGENT_PROFILES: WorkspaceAgentProfile[] = [
     aliases: ['bookforge', 'book-forge', 'book_forge', 'opl-bookforge', 'oplbookforge', 'opl_bookforge'],
     project_id: 'opl-bookforge',
     project: 'opl-bookforge',
-    label: 'OPL BookForge',
+    label: 'OPL Book Forge',
     workspace_kind: 'book_authoring_workspace',
     project_kind: 'book_project',
     default_workspace_id: 'bookforge-workspace',

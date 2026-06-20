@@ -61,7 +61,7 @@ L5 不是再补一层文档，而是把模块变成可持续运营能力：
 
 - `Charter`: 术语、ADR/RFC、authority matrix 和 supersession 机制能持续约束新模块、新 surface 与旧路线退役。
 - `Atlas`: agent / capability / surface / owner catalog 能被 CLI、App、conformance、release 和 operator drilldown 同源消费。
-- `Workspace`: 真实 MAS/MAG/RCA/OMA/BookForge 用户项目能长期通过 workspace ensure/adopt/validate/doctor/upgrade/export-map 跑通，并留下 owner acceptance 或 typed blocker。
+- `Workspace`: 真实 MAS/MAG/RCA/OMA/Book Forge 用户项目能长期通过 workspace ensure/adopt/validate/doctor/upgrade/export-map 跑通，并留下 owner acceptance 或 typed blocker。
 - `Pack`: domain pack / authority ABI / generated-surface input / pack compiler drift gate 能在 MAS/MAG/RCA/OMA 和新 Foundry Agents 中长期生成、验证、修复并获得 domain owner acceptance。
 - `Stagecraft`: 多个真实 domain stage 持续产出独立 quality gate、owner receipt、typed blocker 或 route-back evidence。
 - `Runway`: Temporal-backed durable orchestration、Runway worker lifecycle/readiness surface、部署 substrate、queue、lease、retry/dead-letter、human gate 和 recovery 在长窗口内稳定承接真实 owner chain。

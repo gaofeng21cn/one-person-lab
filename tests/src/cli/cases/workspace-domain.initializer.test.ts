@@ -266,7 +266,7 @@ test('workspace init materializes MAG one-off deliverable topology', () => {
   }
 });
 
-test('workspace init materializes BookForge one-off book topology', () => {
+test('workspace init materializes Book Forge one-off book topology', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-bookforge-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-bookforge-root-'));
 

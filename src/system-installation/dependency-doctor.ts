@@ -75,7 +75,7 @@ type MaintenanceInput = {
 const REQUIRED_EXECUTABLES = [
   {
     dependency_id: 'pandoc',
-    purpose: 'Markdown to standalone TeX/PDF conversion for BookForge proof exports.',
+    purpose: 'Markdown to standalone TeX/PDF conversion for Book Forge proof exports.',
   },
   {
     dependency_id: 'xelatex',
@@ -99,7 +99,7 @@ const OPTIONAL_EXECUTABLES = [
 ] as const;
 
 const REQUIRED_LATEX_PACKAGES = [
-  { dependency_id: 'xcolor.sty', install_target: 'xcolor', purpose: 'BookForge color palette.' },
+  { dependency_id: 'xcolor.sty', install_target: 'xcolor', purpose: 'Book Forge color palette.' },
   { dependency_id: 'fancyhdr.sty', install_target: 'fancyhdr', purpose: 'Running headers and page numbers.' },
   { dependency_id: 'titlesec.sty', install_target: 'titlesec', purpose: 'Chapter and section hierarchy.' },
   { dependency_id: 'caption.sty', install_target: 'caption', purpose: 'Caption style and spacing.' },
@@ -112,11 +112,11 @@ const REQUIRED_LATEX_PACKAGES = [
 const LEGACY_LATEX_PACKAGES = [
   {
     dependency_id: 'titling.sty',
-    purpose: 'Previously used title-page helper; no longer required by the BookForge proof profile.',
+    purpose: 'Previously used title-page helper; no longer required by the Book Forge proof profile.',
   },
   {
     dependency_id: 'tocloft.sty',
-    purpose: 'Previously used TOC style helper; no longer required by the BookForge proof profile.',
+    purpose: 'Previously used TOC style helper; no longer required by the Book Forge proof profile.',
   },
 ] as const;
 

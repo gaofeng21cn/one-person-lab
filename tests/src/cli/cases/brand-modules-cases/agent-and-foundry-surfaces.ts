@@ -84,7 +84,7 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying OPL bra
   }
 });
 
-test('OPL Foundry Agent index exposes MAS MAG RCA OMA BookForge direct and generated CLI command surfaces', () => {
+test('OPL Foundry Agent index exposes MAS MAG RCA OMA Book Forge direct and generated CLI command surfaces', () => {
   const list = runCli(['foundry', 'agents', 'list']).foundry_agents;
   assert.deepEqual(
     list.agents.map((entry: { agent_id: string }) => entry.agent_id),

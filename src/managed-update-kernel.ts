@@ -749,7 +749,7 @@ function buildCapabilityExposureComponent(agentPackages: ManagedUpdateComponent,
     current: {
       source: 'module_post_apply_projection',
       plugin_registry: 'Codex plugin registry',
-      skill_surfaces: ['plugin-packaged MAS/MAG/RCA skills', 'OMA/BookForge generated plugin surfaces'],
+      skill_surfaces: ['plugin-packaged MAS/MAG/RCA skills', 'OMA/Book Forge generated plugin surfaces'],
     },
     target: needsReload
       ? {

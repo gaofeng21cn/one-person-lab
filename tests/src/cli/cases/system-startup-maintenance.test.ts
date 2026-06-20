@@ -433,7 +433,7 @@ test('system startup-maintenance silently updates package-channel modules and sy
           surface_kind: 'domain_agent_descriptor',
           schema_version: 1,
           domain_id: 'opl-bookforge',
-          domain_label: 'OPL BookForge',
+          domain_label: 'OPL Book Forge',
         }, null, 2),
         'scripts/verify.sh': '#!/usr/bin/env bash\nset -euo pipefail\ntest "${1:-}" = "smoke"\n',
       },

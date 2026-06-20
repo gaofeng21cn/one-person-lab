@@ -136,7 +136,7 @@ const fakeFamilySkillDescriptions: Record<string, string> = {
   mag: 'Use when Codex should operate Med Auto Grant through its grant-authoring product entry, user-loop, and schema-backed contracts instead of ad-hoc repo scripting.',
   rca: 'Operate RedCube AI as the formal RCA visual-deliverable domain app through product-entry, recoverable deliverable runtime, and same-session continuation contracts.',
   'opl-meta-agent': 'Use when Codex should operate OPL Meta Agent to design, test, improve, or take over testing for OPL-compatible Foundry Agents.',
-  'opl-bookforge': 'Use when Codex should operate OPL BookForge for book storyline architecture, manuscript materialization, figures, tables, style control, export handoff, and owner-gated publication decisions.',
+  'opl-bookforge': 'Use when Codex should operate OPL Book Forge for book storyline architecture, manuscript materialization, figures, tables, style control, export handoff, and owner-gated publication decisions.',
 };
 
 export const retiredCliCommandMatrix: Array<{
@@ -592,7 +592,7 @@ export function writeFakeBookForgeGeneratedSurfacePack(repoRoot: string) {
       surface_kind: 'domain_agent_descriptor',
       schema_version: 1,
       domain_id: 'opl-bookforge',
-      domain_label: 'OPL BookForge',
+      domain_label: 'OPL Book Forge',
       authority_boundary: {
         opl_can_write_domain_truth: false,
         opl_can_write_memory_body: false,

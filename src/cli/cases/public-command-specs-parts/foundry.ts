@@ -25,7 +25,7 @@ export function buildFoundryCommandSpecs(): Record<string, CommandSpec> {
     ...foundrySpineSpecs,
     'foundry agents list': {
       usage: 'opl foundry agents list',
-      summary: 'List MAS, MAG, RCA, OMA, and BookForge as one OPL Foundry Agent series with their direct CLI, Skill, MCP, and Connect command surfaces.',
+      summary: 'List MAS, MAG, RCA, OMA, and Book Forge as one OPL Foundry Agent series with their direct CLI, Skill, MCP, and Connect command surfaces.',
       examples: ['opl foundry agents list --json'],
       group: 'foundry',
       handler: (args) => buildFoundryAgentsList(args),

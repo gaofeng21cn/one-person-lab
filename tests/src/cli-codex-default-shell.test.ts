@@ -787,10 +787,10 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
       'utf8',
     ));
     assert.equal(generatedBookForgeManifest.name, 'opl-bookforge');
-    assert.equal(generatedBookForgeManifest.interface.displayName, 'OPL BookForge');
+    assert.equal(generatedBookForgeManifest.interface.displayName, 'OPL Book Forge');
     assert.equal(generatedBookForgeManifest.repository, 'https://github.com/gaofeng21cn/opl-bookforge');
     const generatedBookForgeSkill = fs.readFileSync(bookforgeGeneratedPack.installer_result.generated_codex_plugin.skill_entry_path, 'utf8');
-    assert.match(generatedBookForgeSkill, /# OPL BookForge/);
+    assert.match(generatedBookForgeSkill, /# OPL Book Forge/);
     assert.match(generatedBookForgeSkill, /shape-storyline/);
     assert.match(generatedBookForgeSkill, /materialize-book/);
     assert.match(generatedBookForgeSkill, /reference-draft absorption/);

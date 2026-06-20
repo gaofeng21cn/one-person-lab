@@ -82,7 +82,7 @@ const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
     marketplace_id: 'opl-bookforge-local',
     plugin_id: 'opl-bookforge',
     repo_name: 'opl-bookforge',
-    display_name: 'OPL BookForge Local',
+    display_name: 'OPL Book Forge Local',
     category: 'Productivity',
     legacy_standalone_mcp_server_ids: ['opl-bookforge', 'oplbookforge', 'bookforge'],
   },

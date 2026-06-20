@@ -106,7 +106,7 @@ export const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
     domain_id: 'oplbookforge',
     module_id: 'OPLBOOKFORGE',
     project: 'opl-bookforge',
-    label: 'OPL BookForge',
+    label: 'OPL Book Forge',
     plugin_name: 'opl-bookforge',
     canonical_plugin_name: 'opl-bookforge',
     source_kind: 'opl_generated_plugin_surface',

@@ -201,7 +201,7 @@ export function buildPublicSystemCommandSpecs(
   const systemDependencyDoctorSpec: CommandSpec = {
     usage: 'opl system dependency-doctor [--profile bookforge-publication-proof]',
     summary:
-      'Inspect OPL-owned local dependency readiness for domain helper profiles such as BookForge publication proof.',
+      'Inspect OPL-owned local dependency readiness for domain helper profiles such as Book Forge publication proof.',
     examples: [
       'opl system dependency-doctor --profile bookforge-publication-proof --json',
     ],

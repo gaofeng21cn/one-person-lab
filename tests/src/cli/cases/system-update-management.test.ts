@@ -606,7 +606,7 @@ console.log(JSON.stringify({ sync: 'ok' }));
   };
   writeFakeBookForgeGeneratedSurfacePack(remotes.oplbookforge.sourceRoot);
   runGitFixtureCommand(remotes.oplbookforge.sourceRoot, ['add', 'agent', 'contracts']);
-  runGitFixtureCommand(remotes.oplbookforge.sourceRoot, ['commit', '-m', 'Add BookForge generated surface pack']);
+  runGitFixtureCommand(remotes.oplbookforge.sourceRoot, ['commit', '-m', 'Add Book Forge generated surface pack']);
   runGitFixtureCommand(remotes.oplbookforge.sourceRoot, ['push', 'origin', 'main']);
   const redcubeExternalCheckout = path.join(homeRoot, 'external-redcube-ai');
   const cloneResult = spawnSync('git', ['clone', '--branch', 'main', remotes.redcube.remoteRoot, redcubeExternalCheckout], {
@@ -730,7 +730,7 @@ test('system reconcile-modules promotes Full packaged module seeds to latest man
     if (moduleId === 'oplbookforge') {
       writeFakeBookForgeGeneratedSurfacePack(remote.sourceRoot);
       runGitFixtureCommand(remote.sourceRoot, ['add', 'agent', 'contracts']);
-      runGitFixtureCommand(remote.sourceRoot, ['commit', '-m', 'Add BookForge generated surface pack']);
+      runGitFixtureCommand(remote.sourceRoot, ['commit', '-m', 'Add Book Forge generated surface pack']);
       runGitFixtureCommand(remote.sourceRoot, ['push', 'origin', 'main']);
     }
     const packagedRoot = path.join(homeRoot, 'runtime', 'current', 'modules', packageName);
