@@ -79,9 +79,12 @@ export function buildPublicRuntimeCommandSpecs(
       }),
     'runtime env':
       cloneCommandSpec(commandSpecs['runtime env'], {
-        usage: 'opl runtime env <inspect|lock|cache|doctor|run-context|contract>',
+        usage:
+          'opl runtime env <inspect|lock|build|prepare|materialize|cache|doctor|run-context|contract>',
         examples: [
           'opl runtime env inspect --domain mas --profile analysis --platform macos-arm64 --json',
+          'opl runtime env build --domain mas --profile analysis --platform macos-arm64 --json',
+          'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --json',
           'opl runtime env cache status --json',
         ],
         group: 'runtime',
@@ -104,10 +107,53 @@ export function buildPublicRuntimeCommandSpecs(
         ],
         group: 'runtime',
       }),
+    'runtime env build':
+      cloneCommandSpec(commandSpecs['runtime env build'], {
+        usage:
+          'opl runtime env build --domain <domain> --profile <profile> --platform <platform>',
+        examples: [
+          'opl runtime env build --domain mas --profile analysis --platform macos-arm64 --json',
+        ],
+        group: 'runtime',
+      }),
+    'runtime env prepare':
+      cloneCommandSpec(commandSpecs['runtime env prepare'], {
+        usage:
+          'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path>',
+        examples: [
+          'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --json',
+        ],
+        group: 'runtime',
+      }),
+    'runtime env materialize':
+      cloneCommandSpec(commandSpecs['runtime env materialize'], {
+        usage:
+          'opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--target current|rollback|staged] [--dry-run|--apply]',
+        examples: [
+          'opl runtime env materialize --domain mas --profile analysis --platform macos-arm64 --dry-run --json',
+          'opl runtime env materialize --domain mas --profile analysis --platform macos-arm64 --apply --json',
+        ],
+        group: 'runtime',
+      }),
     'runtime env cache status':
       cloneCommandSpec(commandSpecs['runtime env cache status'], {
         usage: 'opl runtime env cache status',
         examples: ['opl runtime env cache status --json'],
+        group: 'runtime',
+      }),
+    'runtime env cache inventory':
+      cloneCommandSpec(commandSpecs['runtime env cache inventory'], {
+        usage: 'opl runtime env cache inventory',
+        examples: ['opl runtime env cache inventory --json'],
+        group: 'runtime',
+      }),
+    'runtime env cache prune':
+      cloneCommandSpec(commandSpecs['runtime env cache prune'], {
+        usage: 'opl runtime env cache prune [--dry-run|--apply]',
+        examples: [
+          'opl runtime env cache prune --dry-run --json',
+          'opl runtime env cache prune --apply --json',
+        ],
         group: 'runtime',
       }),
     'runtime env doctor':
@@ -118,9 +164,10 @@ export function buildPublicRuntimeCommandSpecs(
       }),
     'runtime env run-context':
       cloneCommandSpec(commandSpecs['runtime env run-context'], {
-        usage: 'opl runtime env run-context --domain <domain> --profile <profile>',
+        usage: 'opl runtime env run-context --domain <domain> --profile <profile> [--paper-root <path>]',
         examples: [
           'opl runtime env run-context --domain bookforge --profile publication_proof --json',
+          'opl runtime env run-context --domain mas --profile display --paper-root paper --json',
         ],
         group: 'runtime',
       }),

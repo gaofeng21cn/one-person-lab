@@ -760,9 +760,9 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 影响：
 
-- `contracts/opl-framework/runtime-environment-substrate-contract.json` 固定 OPL runtime environment substrate 的 machine boundary、module mapping、layer taxonomy、cache policy、materialization policy、false-ready flags 和 forbidden claims。
-- `opl runtime env inspect|lock|cache status|doctor|run-context|contract --json` 提供 fail-closed readback skeleton，输出 descriptor / lock / cache / doctor / run-context 边界。
-- 当前实现不生成 runtime lock、不 materialize runtime root、不检查真实 host packages、不写 runtime artifact、不剪枝 cache；因此它只完成 contract/readback skeleton，不构成 runtime materialized ready。
+- `contracts/opl-framework/runtime-environment-substrate-contract.json` 固定 OPL runtime environment substrate 的 machine boundary、module mapping、layer taxonomy、cache policy、lock / bundle manifest projection policy、materialization policy、cache inventory policy、false-ready flags 和 forbidden claims。
+- `opl runtime env inspect|lock|build|prepare|materialize|cache status|cache inventory|cache prune|doctor|run-context|contract --json` 提供 fail-closed readback，输出 descriptor / deterministic dry-run lock / bundle manifest / layer graph / dependency prepare lock / receipt / run-context / cache inventory / cleanup plan / doctor / run-context 边界。
+- 当前实现不写持久 runtime lock artifact、不 materialize runtime root、不安装 packages、不写 runtime root、不执行 cache prune apply；`prepare` 只做本机 dependency check 并写 refs-only dependency lock / receipt / run-context，`--apply` 只返回 fail-closed blocker。因此它只完成 deterministic projection、refs-only prepare receipt 和 mutation boundary，不构成 runtime materialized ready。
 - Cache hit、descriptor exists、skeleton materialization、run-context exists 或 runtime environment receipt 都不能替代 runtime ready、domain ready、App release ready、owner receipt、quality/export verdict 或 provider long-soak。
 - 下一步应把 App Full runtime cache 降为 OPL runtime bundle manifest consumer，并补 lock/materializer/cache inventory；MAS/MAG/RCA/OMA 不新增私有通用 environment manager。
 
