@@ -7,6 +7,12 @@ import { ensureOplStateDir } from './runtime-state-paths.ts';
 
 type JsonRecord = Record<string, unknown>;
 
+type RPackageRequirement = {
+  name: string;
+  install_source: 'cran' | 'github';
+  github_repo?: string;
+};
+
 export type RuntimeEnvironmentCommand =
   | 'inspect'
   | 'lock'
@@ -38,6 +44,7 @@ export interface RuntimeEnvironmentCachePruneInput {
 
 export interface RuntimeEnvironmentPrepareInput extends RuntimeEnvironmentTargetInput {
   requirementProfilePath: string;
+  requirementProfileId?: string;
   paperRoot: string;
   apply?: boolean;
 }
@@ -256,28 +263,37 @@ function writePreparedEnvironmentIndex(entry: JsonRecord) {
   fs.writeFileSync(preparedEnvironmentIndexPath(), `${JSON.stringify(entries, null, 2)}\n`);
 }
 
-function shellQuote(value: string) {
-  return `'${value.replace(/'/g, "'\\''")}'`;
-}
-
 function resolveBinary(binaryName: string): string | null {
-  const result = spawnSync('/bin/sh', ['-lc', `command -v ${shellQuote(binaryName)}`], {
-    encoding: 'utf8',
-  });
-  if (result.status !== 0) {
-    return null;
+  if (binaryName.includes(path.sep)) {
+    try {
+      fs.accessSync(binaryName, fs.constants.X_OK);
+      return path.resolve(binaryName);
+    } catch {
+      return null;
+    }
   }
-  const resolved = result.stdout.trim().split('\n')[0]?.trim();
-  return resolved || null;
+  for (const searchRoot of (process.env.PATH ?? '').split(path.delimiter)) {
+    if (!searchRoot) {
+      continue;
+    }
+    const candidate = path.join(searchRoot, binaryName);
+    try {
+      fs.accessSync(candidate, fs.constants.X_OK);
+      return candidate;
+    } catch {
+      // Continue scanning PATH.
+    }
+  }
+  return null;
 }
 
 function installedRPackages(rscriptPath: string, libraryPath?: string): Set<string> {
-  const prefix = libraryPath
-    ? `.libPaths(c(${JSON.stringify(libraryPath)}, .libPaths())); `
-    : '';
+  const expression = libraryPath
+    ? `if (dir.exists(${JSON.stringify(libraryPath)})) cat(paste(rownames(installed.packages(lib.loc = ${JSON.stringify(libraryPath)})), collapse="\\n"))`
+    : 'cat(paste(rownames(installed.packages()), collapse="\\n"))';
   const result = spawnSync(rscriptPath, [
     '-e',
-    `${prefix}cat(paste(rownames(installed.packages()), collapse="\\n"))`,
+    expression,
   ], {
     encoding: 'utf8',
     maxBuffer: 16 * 1024 * 1024,
@@ -288,9 +304,87 @@ function installedRPackages(rscriptPath: string, libraryPath?: string): Set<stri
   return new Set(result.stdout.split('\n').map((entry) => entry.trim()).filter(Boolean));
 }
 
+function baseOrRecommendedRPackages(rscriptPath: string): Set<string> {
+  const result = spawnSync(rscriptPath, [
+    '-e',
+    'cat(paste(rownames(installed.packages(priority = c("base", "recommended"))), collapse="\\n"))',
+  ], {
+    encoding: 'utf8',
+    maxBuffer: 16 * 1024 * 1024,
+  });
+  if (result.status !== 0) {
+    return new Set();
+  }
+  return new Set(result.stdout.split('\n').map((entry) => entry.trim()).filter(Boolean));
+}
+
+function rCharacterVector(values: string[]) {
+  return `c(${values.map((value) => JSON.stringify(value)).join(', ')})`;
+}
+
+function rPackageInstallSource(entry: JsonRecord): RPackageRequirement['install_source'] {
+  const source = entry.source;
+  if (source && typeof source === 'object' && !Array.isArray(source)) {
+    const sourceRecord = source as JsonRecord;
+    if (sourceRecord.type === 'github') {
+      return 'github';
+    }
+  }
+  return entry.install_source === 'github' ? 'github' : 'cran';
+}
+
+function rPackageGithubRepo(entry: JsonRecord): string | undefined {
+  const source = entry.source;
+  if (source && typeof source === 'object' && !Array.isArray(source)) {
+    const sourceRecord = source as JsonRecord;
+    const repo = sourceRecord.repo ?? sourceRecord.repository;
+    return typeof repo === 'string' && repo.trim() ? repo.trim() : undefined;
+  }
+  const repo = entry.github_repo ?? entry.repository;
+  return typeof repo === 'string' && repo.trim() ? repo.trim() : undefined;
+}
+
+function rPackageRequirementsFromEntries(value: unknown): RPackageRequirement[] {
+  return objects(value)
+    .filter((entry) => entry.required !== false)
+    .map((entry): RPackageRequirement | null => {
+      const name = typeof entry.name === 'string' ? entry.name.trim() : '';
+      if (!name) {
+        return null;
+      }
+      const installSource = rPackageInstallSource(entry);
+      return {
+        name,
+        install_source: installSource,
+        github_repo: installSource === 'github' ? rPackageGithubRepo(entry) : undefined,
+      };
+    })
+    .filter((entry): entry is RPackageRequirement => Boolean(entry));
+}
+
+function uniqueRPackageRequirements(values: RPackageRequirement[]): RPackageRequirement[] {
+  const seen = new Set<string>();
+  const result: RPackageRequirement[] = [];
+  values.forEach((value) => {
+    if (!seen.has(value.name)) {
+      seen.add(value.name);
+      result.push(value);
+      return;
+    }
+    if (value.install_source !== 'cran') {
+      const index = result.findIndex((entry) => entry.name === value.name);
+      if (index >= 0) {
+        result[index] = value;
+      }
+    }
+  });
+  return result;
+}
+
 function installRPackagesIntoManagedLibrary(
   rscriptPath: string,
   libraryPath: string,
+  requirements: RPackageRequirement[],
   packages: string[],
 ) {
   if (packages.length === 0) {
@@ -298,18 +392,43 @@ function installRPackagesIntoManagedLibrary(
       status: 'not_required',
       installed: [],
       failed: [],
+      managed_library_path: libraryPath,
+      verified_with: 'installed.packages(lib.loc = managed_library_path)',
       stderr: '',
     };
   }
+  const requirementsByName = new Map(requirements.map((entry) => [entry.name, entry]));
+  const packagesToInstall = packages.map((packageName) => (
+    requirementsByName.get(packageName) ?? { name: packageName, install_source: 'cran' as const }
+  ));
+  const cranPackages = packagesToInstall
+    .filter((entry) => entry.install_source === 'cran')
+    .map((entry) => entry.name);
+  const githubPackages = packagesToInstall.filter((entry) => entry.install_source === 'github');
   fs.mkdirSync(libraryPath, { recursive: true });
   const expression = [
     `dir.create(${JSON.stringify(libraryPath)}, recursive = TRUE, showWarnings = FALSE)`,
     `.libPaths(c(${JSON.stringify(libraryPath)}, .libPaths()))`,
-    `install.packages(${JSON.stringify(packages)}, lib = ${JSON.stringify(libraryPath)}, repos = "https://cloud.r-project.org", quiet = TRUE)`,
-  ].join('; ');
+    cranPackages.length > 0
+      ? `install.packages(${rCharacterVector(cranPackages)}, lib = ${JSON.stringify(libraryPath)}, repos = "https://cloud.r-project.org", quiet = TRUE)`
+      : '',
+    ...githubPackages.map((entry) => {
+      if (!entry.github_repo) {
+        return `stop("missing github repo for R package ${entry.name}")`;
+      }
+      return [
+        `if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes", lib = ${JSON.stringify(libraryPath)}, repos = "https://cloud.r-project.org", quiet = TRUE)`,
+        `remotes::install_github(${JSON.stringify(entry.github_repo)}, lib = ${JSON.stringify(libraryPath)}, dependencies = TRUE, upgrade = "never", quiet = TRUE)`,
+      ].join('; ');
+    }),
+  ].filter(Boolean).join('; ');
   const result = spawnSync(rscriptPath, ['-e', expression], {
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
+    env: {
+      ...process.env,
+      R_REMOTES_NO_ERRORS_FROM_WARNINGS: 'true',
+    },
   });
   const installed = installedRPackages(rscriptPath, libraryPath);
   const failed = packages.filter((packageName) => !installed.has(packageName));
@@ -317,6 +436,8 @@ function installRPackagesIntoManagedLibrary(
     status: result.status === 0 && failed.length === 0 ? 'installed' : 'failed',
     installed: packages.filter((packageName) => installed.has(packageName)),
     failed,
+    managed_library_path: libraryPath,
+    verified_with: 'installed.packages(lib.loc = managed_library_path)',
     stderr: result.stderr.trim(),
   };
 }
@@ -327,26 +448,53 @@ function objects(value: unknown): JsonRecord[] {
     : [];
 }
 
-function stringsFromPackageEntries(value: unknown): string[] {
-  return objects(value)
-    .filter((entry) => entry.required !== false)
-    .map((entry) => (typeof entry.name === 'string' ? entry.name.trim() : ''))
-    .filter(Boolean);
+function uniqueStrings(values: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  values.forEach((value) => {
+    if (!seen.has(value)) {
+      seen.add(value);
+      result.push(value);
+    }
+  });
+  return result;
 }
 
-function readPrepareProfile(profilePath: string) {
+function readPrepareProfile(profilePath: string, requirementProfileId?: string) {
   const profile = JSON.parse(fs.readFileSync(path.resolve(profilePath), 'utf8')) as JsonRecord;
-  const selected = objects(profile.profiles)[0] ?? {};
-  const runtimeBinaries = objects(selected.runtime_binaries)
-    .filter((entry) => entry.required !== false)
-    .map((entry) => (typeof entry.name === 'string' ? entry.name.trim() : ''))
+  const profileEntries = objects(profile.profiles);
+  const selectedProfiles = requirementProfileId
+    ? profileEntries.filter((entry) => entry.profile_id === requirementProfileId)
+    : profileEntries;
+  if (requirementProfileId && selectedProfiles.length === 0) {
+    throw new Error(
+      `runtime env prepare could not find requirement profile id ${JSON.stringify(requirementProfileId)} in ${profilePath}`,
+    );
+  }
+  const selectedRequirementProfileIds = selectedProfiles
+    .map((entry) => (typeof entry.profile_id === 'string' ? entry.profile_id.trim() : ''))
     .filter(Boolean);
-  const languagePackages = selected.language_packages as JsonRecord | undefined;
+  const runtimeBinaries = uniqueStrings(selectedProfiles.flatMap((entry) => (
+    objects(entry.runtime_binaries)
+      .filter((binary) => binary.required !== false)
+      .map((binary) => (typeof binary.name === 'string' ? binary.name.trim() : ''))
+      .filter(Boolean)
+  )));
+  const requiredRPackages = uniqueStrings(selectedProfiles.flatMap((entry) => {
+    const languagePackages = entry.language_packages as JsonRecord | undefined;
+    return rPackageRequirementsFromEntries(languagePackages?.r).map((requirement) => requirement.name);
+  }));
+  const requiredRPackageRequirements = uniqueRPackageRequirements(selectedProfiles.flatMap((entry) => {
+    const languagePackages = entry.language_packages as JsonRecord | undefined;
+    return rPackageRequirementsFromEntries(languagePackages?.r);
+  }));
   return {
     profile,
-    selected,
+    selected: selectedProfiles.length === 1 ? selectedProfiles[0] : {},
+    selectedRequirementProfileIds,
     runtimeBinaries,
-    requiredRPackages: stringsFromPackageEntries(languagePackages?.r),
+    requiredRPackages,
+    requiredRPackageRequirements,
   };
 }
 
@@ -780,8 +928,15 @@ export function buildRuntimeEnvironmentBuildReadback(input: RuntimeEnvironmentTa
 
 export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironmentPrepareInput) {
   const target = normalizeTarget(input);
-  const { selected, runtimeBinaries, requiredRPackages } = readPrepareProfile(
+  const {
+    selected,
+    selectedRequirementProfileIds,
+    runtimeBinaries,
+    requiredRPackages,
+    requiredRPackageRequirements,
+  } = readPrepareProfile(
     input.requirementProfilePath,
+    input.requirementProfileId,
   );
   const buildRoot = path.join(path.resolve(input.paperRoot), 'build');
   fs.mkdirSync(buildRoot, { recursive: true });
@@ -798,12 +953,22 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
   });
 
   const rscriptPath = binaryPaths.Rscript;
+  const baseRPackages = rscriptPath ? baseOrRecommendedRPackages(rscriptPath) : new Set<string>();
+  const managedRPackageRequirements = requiredRPackageRequirements
+    .filter((requirement) => !baseRPackages.has(requirement.name));
+  const baseRPackageRequirements = requiredRPackageRequirements
+    .filter((requirement) => baseRPackages.has(requirement.name))
+    .map((requirement) => requirement.name);
+  const managedRequiredRPackages = managedRPackageRequirements.map((requirement) => requirement.name);
   const managedLibraryPath = path.join(
     dependencyLibrariesRoot(target),
     shortDigest({
       requirement_profile: path.resolve(input.requirementProfilePath),
+      requested_requirement_profile_id: input.requirementProfileId ?? null,
       selected_requirement_profile_id: selected.profile_id ?? null,
+      selected_requirement_profile_ids: selectedRequirementProfileIds,
       required_r_packages: requiredRPackages,
+      managed_required_r_packages: managedRequiredRPackages,
     }),
     'R',
   );
@@ -811,19 +976,26 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
     ? installedRPackages(rscriptPath, managedLibraryPath)
     : new Set<string>();
   let missingRPackages = rscriptPath
-    ? requiredRPackages.filter((packageName) => !installedPackages.has(packageName))
-    : requiredRPackages;
+    ? managedRequiredRPackages.filter((packageName) => !installedPackages.has(packageName))
+    : managedRequiredRPackages;
   const installReceipt = input.apply && rscriptPath && missingBinaries.length === 0
-    ? installRPackagesIntoManagedLibrary(rscriptPath, managedLibraryPath, missingRPackages)
+    ? installRPackagesIntoManagedLibrary(
+      rscriptPath,
+      managedLibraryPath,
+      managedRPackageRequirements,
+      missingRPackages,
+    )
     : {
       status: input.apply ? 'not_required' : 'not_requested',
       installed: [],
       failed: [],
+      managed_library_path: managedLibraryPath,
+      verified_with: 'installed.packages(lib.loc = managed_library_path)',
       stderr: '',
     };
   if (input.apply && rscriptPath && installReceipt.status !== 'not_requested') {
     installedPackages = installedRPackages(rscriptPath, managedLibraryPath);
-    missingRPackages = requiredRPackages.filter((packageName) => !installedPackages.has(packageName));
+    missingRPackages = managedRequiredRPackages.filter((packageName) => !installedPackages.has(packageName));
   }
   const status = missingBinaries.length > 0
     ? 'missing_runtime_binary'
@@ -842,10 +1014,15 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
     profile_id: target.profile_id,
     platform_id: target.platform_id,
     dependency_profile_ref: path.resolve(input.requirementProfilePath),
+    requested_requirement_profile_id: input.requirementProfileId ?? null,
     selected_requirement_profile_id: selected.profile_id ?? null,
+    selected_requirement_profile_ids: selectedRequirementProfileIds,
     source_requirement_refs: [path.resolve(input.requirementProfilePath)],
     runtime_binaries: runtimeBinaries,
     required_r_packages: requiredRPackages,
+    managed_required_r_packages: managedRequiredRPackages,
+    base_or_recommended_r_packages: baseRPackageRequirements,
+    r_package_requirements: requiredRPackageRequirements,
     package_installation_requested: input.apply === true,
     installed_packages: input.apply === true && installReceipt.status === 'installed',
     managed_r_library_path: managedLibraryPath,
@@ -878,10 +1055,15 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
     profile_id: target.profile_id,
     platform_id: target.platform_id,
     dependency_profile_ref: path.resolve(input.requirementProfilePath),
+    requested_requirement_profile_id: input.requirementProfileId ?? null,
     selected_requirement_profile_id: selected.profile_id ?? null,
+    selected_requirement_profile_ids: selectedRequirementProfileIds,
     package_installation_requested: input.apply === true,
     installed_packages: input.apply === true && installReceipt.status === 'installed',
     managed_r_library_path: managedLibraryPath,
+    managed_required_r_packages: managedRequiredRPackages,
+    base_or_recommended_r_packages: baseRPackageRequirements,
+    r_package_requirements: requiredRPackageRequirements,
     package_installation_receipt: installReceipt,
     lock_ref: lockRef,
     lock_sha256: lockWithDigest.lock_sha256,
@@ -911,6 +1093,8 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
       domain_id: target.domain_id,
       profile_id: target.profile_id,
       platform_id: target.platform_id,
+      requested_requirement_profile_id: input.requirementProfileId ?? null,
+      selected_requirement_profile_ids: selectedRequirementProfileIds,
       lock_ref: lockRef,
       lock_sha256: lockWithDigest.lock_sha256,
       binary_paths: binaryPaths,
@@ -919,6 +1103,8 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
         R_LIBS_USER: managedLibraryPath,
       },
       managed_r_library_path: managedLibraryPath,
+      managed_required_r_packages: managedRequiredRPackages,
+      base_or_recommended_r_packages: baseRPackageRequirements,
       package_installation_requested: input.apply === true,
       installed_packages: input.apply === true && installReceipt.status === 'installed',
       writes_domain_truth: false,
@@ -952,6 +1138,9 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
       package_installation_requested: input.apply === true,
       installed_packages: input.apply === true && installReceipt.status === 'installed',
       managed_r_library_path: managedLibraryPath,
+      selected_requirement_profile_ids: selectedRequirementProfileIds,
+      managed_required_r_packages: managedRequiredRPackages,
+      base_or_recommended_r_packages: baseRPackageRequirements,
       package_installation_receipt: installReceipt,
       writes_domain_truth: false,
       writes_runtime_root: false,

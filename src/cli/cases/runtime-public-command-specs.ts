@@ -84,7 +84,7 @@ export function buildPublicRuntimeCommandSpecs(
         examples: [
           'opl runtime env inspect --domain mas --profile analysis --platform macos-arm64 --json',
           'opl runtime env build --domain mas --profile analysis --platform macos-arm64 --json',
-          'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --apply --json',
+          'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --requirement-profile-id r_ggplot2_ggconsort_reporting_flow_v1 --paper-root paper --apply --json',
           'opl runtime env cache status --json',
         ],
         group: 'runtime',
@@ -119,9 +119,9 @@ export function buildPublicRuntimeCommandSpecs(
     'runtime env prepare':
       cloneCommandSpec(commandSpecs['runtime env prepare'], {
         usage:
-          'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> [--apply]',
+          'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]',
         examples: [
-          'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --apply --json',
+          'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --requirement-profile-id r_ggplot2_ggconsort_reporting_flow_v1 --paper-root paper --apply --json',
         ],
         group: 'runtime',
       }),

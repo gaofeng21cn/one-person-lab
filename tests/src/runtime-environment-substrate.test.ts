@@ -59,6 +59,11 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   assert.equal(preparePolicy.writes_run_context_on_success, true);
   assert.equal(preparePolicy.dependency_lock_counts_as_materialized_runtime_lock, false);
   assert.equal(preparePolicy.installs_packages, 'only_when_apply_into_opl_managed_library');
+  assert.equal(preparePolicy.package_presence_verification, 'managed_library_only');
+  assert.equal(
+    preparePolicy.requirement_profile_selection,
+    'all_profiles_by_default_or_scoped_by_requirement_profile_id',
+  );
   assert.equal(preparePolicy.writes_domain_truth, false);
   assert.equal(preparePolicy.writes_runtime_root, false);
   assert.equal(preparePolicy.missing_dependency_returns_runtime_failure, true);
@@ -96,7 +101,12 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
 
   const readbackCommands = contract.readback_commands as string[];
   assert.equal(readbackCommands.some((command) => command.startsWith('opl runtime env build')), true);
-  assert.equal(readbackCommands.some((command) => command.startsWith('opl runtime env prepare')), true);
+  assert.equal(
+    readbackCommands.includes(
+      'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]',
+    ),
+    true,
+  );
   assert.equal(readbackCommands.some((command) => command.startsWith('opl runtime env materialize')), true);
   assert.equal(readbackCommands.some((command) => command.startsWith('opl runtime env verify')), true);
   assert.equal(readbackCommands.includes('opl runtime env cache inventory'), true);

@@ -6,6 +6,57 @@ function stateEnv(label: string) {
   };
 }
 
+function writeFakeRscript(binDir: string) {
+  fs.mkdirSync(binDir, { recursive: true });
+  const rscriptPath = path.join(binDir, 'Rscript');
+  fs.writeFileSync(
+    rscriptPath,
+    `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const expression = process.argv[3] || '';
+const libMatch = expression.match(/lib\\.loc\\s*=\\s*"([^"]+)"/)
+  || expression.match(/lib\\s*=\\s*"([^"]+)"/)
+  || expression.match(/dir\\.exists\\("([^"]+)"\\)/);
+const libPath = libMatch ? libMatch[1] : '';
+const markerPath = libPath ? path.join(libPath, '.fake-installed-packages.json') : '';
+const readPackages = () => {
+  if (!markerPath || !fs.existsSync(markerPath)) return [];
+  return JSON.parse(fs.readFileSync(markerPath, 'utf8'));
+};
+if (expression.includes('priority = c("base", "recommended")')) {
+  process.stdout.write('grid\\n');
+  process.exit(0);
+}
+if (expression.includes('install_github')) {
+  fs.mkdirSync(libPath, { recursive: true });
+  fs.writeFileSync(markerPath, JSON.stringify(Array.from(new Set([...readPackages(), 'ggconsort']))));
+  process.exit(0);
+}
+if (expression.includes('install.packages')) {
+  const packageMatch = expression.match(/install\\.packages\\(c\\(([^)]*)\\)/);
+  const packages = packageMatch
+    ? packageMatch[1].split(',').map((part) => part.trim().replace(/^"|"$/g, '')).filter(Boolean)
+    : [];
+  fs.mkdirSync(libPath, { recursive: true });
+  fs.writeFileSync(markerPath, JSON.stringify(Array.from(new Set([...readPackages(), ...packages]))));
+  process.exit(0);
+}
+if (expression.includes('installed.packages')) {
+  if (libPath) {
+    process.stdout.write(readPackages().join('\\n'));
+    process.exit(0);
+  }
+  process.stdout.write('globalOnlyPackage\\n');
+  process.exit(0);
+}
+process.exit(0);
+`,
+    { mode: 0o755 },
+  );
+  return rscriptPath;
+}
+
 test('runtime env CLI exposes deterministic projections before materializing runtime roots', () => {
   const env = stateEnv('dry-run-');
   const inspect = runCli([
@@ -205,7 +256,7 @@ test('runtime env build materialize verify and cache prune operate on OPL-manage
   assert.equal(fs.existsSync(apply.materialization_plan.runtime_root), false);
 });
 
-test('runtime env prepare writes MAS dependency receipt and run-context refs without installing packages', () => {
+test('runtime env prepare writes a dependency failure receipt without installing packages', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-env-prepare-'));
   const stateRoot = path.join(root, 'opl-state');
   const paperRoot = path.join(root, 'paper');
@@ -260,12 +311,13 @@ test('runtime env prepare writes MAS dependency receipt and run-context refs wit
   ], { OPL_STATE_DIR: stateRoot }).runtime_environment;
 
   assert.equal(prepared.command, 'prepare');
-  assert.equal(prepared.prepare.status, 'prepared');
+  assert.equal(prepared.prepare.status, 'missing_language_package');
+  assert.equal(prepared.prepare.failure_class, 'missing_language_package');
   assert.equal(prepared.prepare.installed_packages, false);
   assert.equal(prepared.prepare.writes_domain_truth, false);
   assert.equal(prepared.prepare.lock_ref, 'paper/build/dependency_environment_lock.json');
   assert.equal(prepared.prepare.receipt_ref, 'paper/build/dependency_environment_receipt.json');
-  assert.equal(prepared.prepare.run_context_ref, 'paper/build/dependency_run_context.json');
+  assert.equal(prepared.prepare.run_context_ref, null);
   assert.equal(prepared.prepare.binary_paths.Rscript.endsWith('Rscript'), true);
 
   const lock = JSON.parse(
@@ -274,32 +326,23 @@ test('runtime env prepare writes MAS dependency receipt and run-context refs wit
   const receipt = JSON.parse(
     fs.readFileSync(path.join(paperRoot, 'build', 'dependency_environment_receipt.json'), 'utf8'),
   );
-  const runContext = JSON.parse(
-    fs.readFileSync(path.join(paperRoot, 'build', 'dependency_run_context.json'), 'utf8'),
-  );
-  assert.equal(lock.status, 'prepared');
+  assert.equal(lock.status, 'missing_language_package');
   assert.equal(lock.lock_ref, 'paper/build/dependency_environment_lock.json');
   assert.match(lock.lock_sha256, /^sha256:[a-f0-9]{64}$/);
   assert.deepEqual(lock.required_r_packages, ['jsonlite', 'ggplot2', 'ggsci', 'grid', 'Rtsne', 'uwot']);
-  assert.equal(receipt.status, 'prepared');
-  assert.equal(receipt.failure_class, '');
+  assert.equal(receipt.status, 'missing_language_package');
+  assert.equal(receipt.failure_class, 'missing_language_package');
   assert.equal(receipt.lock_ref, 'paper/build/dependency_environment_lock.json');
   assert.equal(receipt.lock_sha256, lock.lock_sha256);
-  assert.equal(receipt.run_context_ref, 'paper/build/dependency_run_context.json');
+  assert.equal(receipt.run_context_ref, null);
   assert.equal(receipt.authority_boundary.can_authorize_publication_readiness, false);
-  assert.equal(runContext.status, 'prepared');
-  assert.equal(runContext.lock_ref, 'paper/build/dependency_environment_lock.json');
-  assert.equal(runContext.lock_sha256, lock.lock_sha256);
-  assert.match(runContext.run_context_fingerprint, /^sha256:[a-f0-9]{64}$/);
-  assert.equal(runContext.binary_paths.Rscript, prepared.prepare.binary_paths.Rscript);
-  assert.equal(runContext.env_vars.OPL_RUNTIME_ENVIRONMENT_STATUS, 'prepared');
-  assert.match(runContext.env_vars.R_LIBS_USER, /dependency-libraries/);
+  assert.equal(fs.existsSync(path.join(paperRoot, 'build', 'dependency_run_context.json')), false);
 
   const cacheStatus = runCli(['runtime', 'env', 'cache', 'status'], {
     OPL_STATE_DIR: stateRoot,
   }).runtime_environment;
-  assert.equal(cacheStatus.cache.status, 'observed');
-  assert.equal(cacheStatus.cache.layer_count, 1);
+  assert.equal(cacheStatus.cache.status, 'dry_run_inventory_projection');
+  assert.equal(cacheStatus.cache.layer_count, 0);
   assert.equal(cacheStatus.cache.cache_hit_counts_as_ready, false);
 
   const readback = runCli([
@@ -313,8 +356,195 @@ test('runtime env prepare writes MAS dependency receipt and run-context refs wit
     '--paper-root',
     paperRoot,
   ], { OPL_STATE_DIR: stateRoot }).runtime_environment;
-  assert.equal(readback.run_context.status, 'prepared');
-  assert.equal(readback.run_context.binary_paths.Rscript, prepared.prepare.binary_paths.Rscript);
+  assert.equal(readback.run_context.status, 'planned_not_bound');
+  assert.equal(readback.run_context.writes_runtime_root, false);
+});
+
+test('runtime env prepare aggregates multi-profile dependency requirements instead of only the first profile', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-env-profile-aggregate-'));
+  const stateRoot = path.join(root, 'opl-state');
+  const paperRoot = path.join(root, 'paper');
+  const profilePath = path.join(root, 'renderer_dependency_profile.json');
+  const binDir = path.join(root, 'bin');
+  const rscriptPath = writeFakeRscript(binDir);
+  fs.mkdirSync(paperRoot, { recursive: true });
+  fs.writeFileSync(
+    profilePath,
+    JSON.stringify({
+      surface_kind: 'opl_dependency_requirement_profile',
+      profiles: [
+        {
+          profile_id: 'r_ggplot2_evidence_subprocess_v1',
+          runtime_binaries: [{ name: 'Rscript', required: true }],
+          language_packages: {
+            r: [
+              { name: 'jsonlite', required: true },
+              { name: 'ggplot2', required: true },
+            ],
+          },
+        },
+        {
+          profile_id: 'r_ggplot2_ggconsort_reporting_flow_v1',
+          runtime_binaries: [{ name: 'Rscript', required: true }],
+          language_packages: {
+            r: [
+              { name: 'jsonlite', required: true },
+              { name: 'ggconsort', required: true },
+              { name: 'grid', required: true },
+            ],
+          },
+        },
+      ],
+    }),
+  );
+
+  const result = runCli([
+    'runtime',
+    'env',
+    'prepare',
+    '--domain',
+    'mas',
+    '--profile',
+    'display',
+    '--platform',
+    'macos-arm64',
+    '--requirement-profile',
+    profilePath,
+    '--paper-root',
+    paperRoot,
+  ], {
+    OPL_STATE_DIR: stateRoot,
+    PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ''}`,
+  }).runtime_environment;
+
+  assert.equal(result.prepare.status, 'missing_language_package');
+  assert.equal(result.prepare.binary_paths.Rscript, rscriptPath);
+  assert.deepEqual(result.prepare.selected_requirement_profile_ids, [
+    'r_ggplot2_evidence_subprocess_v1',
+    'r_ggplot2_ggconsort_reporting_flow_v1',
+  ]);
+  assert.deepEqual(result.prepare.missing_r_packages, ['jsonlite', 'ggplot2', 'ggconsort']);
+  assert.deepEqual(result.prepare.base_or_recommended_r_packages, ['grid']);
+  const lock = JSON.parse(
+    fs.readFileSync(path.join(paperRoot, 'build', 'dependency_environment_lock.json'), 'utf8'),
+  );
+  assert.deepEqual(lock.required_r_packages, ['jsonlite', 'ggplot2', 'ggconsort', 'grid']);
+  assert.deepEqual(lock.managed_required_r_packages, ['jsonlite', 'ggplot2', 'ggconsort']);
+  assert.deepEqual(lock.base_or_recommended_r_packages, ['grid']);
+});
+
+test('runtime env prepare --apply verifies packages in the OPL-managed R library only', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-env-managed-apply-'));
+  const stateRoot = path.join(root, 'opl-state');
+  const paperRoot = path.join(root, 'paper');
+  const profilePath = path.join(root, 'renderer_dependency_profile.json');
+  const binDir = path.join(root, 'bin');
+  writeFakeRscript(binDir);
+  fs.mkdirSync(paperRoot, { recursive: true });
+  fs.writeFileSync(
+    profilePath,
+    JSON.stringify({
+      surface_kind: 'opl_dependency_requirement_profile',
+      profiles: [
+        {
+          profile_id: 'r_ggplot2_evidence_subprocess_v1',
+          runtime_binaries: [{ name: 'Rscript', required: true }],
+          language_packages: {
+            r: [{ name: 'globalOnlyPackage', required: true }],
+          },
+        },
+        {
+          profile_id: 'r_ggplot2_ggconsort_reporting_flow_v1',
+          runtime_binaries: [{ name: 'Rscript', required: true }],
+          language_packages: {
+            r: [
+              {
+                name: 'ggconsort',
+                required: true,
+                source: { type: 'github', repo: 'tgerke/ggconsort' },
+              },
+              { name: 'grid', required: true },
+            ],
+          },
+        },
+      ],
+    }),
+  );
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ''}`,
+  };
+
+  const dryRun = runCli([
+    'runtime',
+    'env',
+    'prepare',
+    '--domain',
+    'mas',
+    '--profile',
+    'display',
+    '--platform',
+    'macos-arm64',
+    '--requirement-profile',
+    profilePath,
+    '--requirement-profile-id',
+    'r_ggplot2_evidence_subprocess_v1',
+    '--paper-root',
+    paperRoot,
+  ], env).runtime_environment;
+  assert.equal(dryRun.prepare.status, 'missing_language_package');
+  assert.deepEqual(dryRun.prepare.missing_r_packages, ['globalOnlyPackage']);
+  assert.equal(fs.existsSync(path.join(paperRoot, 'build', 'dependency_run_context.json')), false);
+
+  const prepared = runCli([
+    'runtime',
+    'env',
+    'prepare',
+    '--domain',
+    'mas',
+    '--profile',
+    'display',
+    '--platform',
+    'macos-arm64',
+    '--requirement-profile',
+    profilePath,
+    '--requirement-profile-id',
+    'r_ggplot2_ggconsort_reporting_flow_v1',
+    '--paper-root',
+    paperRoot,
+    '--apply',
+  ], env).runtime_environment;
+
+  assert.equal(prepared.prepare.status, 'prepared');
+  assert.equal(prepared.prepare.package_installation_requested, true);
+  assert.equal(prepared.prepare.installed_packages, true);
+  assert.deepEqual(prepared.prepare.selected_requirement_profile_ids, [
+    'r_ggplot2_ggconsort_reporting_flow_v1',
+  ]);
+  assert.deepEqual(prepared.prepare.missing_r_packages, []);
+  assert.deepEqual(prepared.prepare.managed_required_r_packages, ['ggconsort']);
+  assert.deepEqual(prepared.prepare.base_or_recommended_r_packages, ['grid']);
+  assert.equal(prepared.prepare.package_installation_receipt.status, 'installed');
+  assert.equal(
+    prepared.prepare.package_installation_receipt.verified_with,
+    'installed.packages(lib.loc = managed_library_path)',
+  );
+
+  const runContext = JSON.parse(
+    fs.readFileSync(path.join(paperRoot, 'build', 'dependency_run_context.json'), 'utf8'),
+  );
+  assert.equal(runContext.status, 'prepared');
+  assert.equal(runContext.env_vars.R_LIBS_USER, prepared.prepare.managed_r_library_path);
+  assert.deepEqual(runContext.selected_requirement_profile_ids, [
+    'r_ggplot2_ggconsort_reporting_flow_v1',
+  ]);
+  assert.deepEqual(runContext.managed_required_r_packages, ['ggconsort']);
+  assert.deepEqual(runContext.base_or_recommended_r_packages, ['grid']);
+  const managedMarker = path.join(
+    runContext.env_vars.R_LIBS_USER,
+    '.fake-installed-packages.json',
+  );
+  assert.deepEqual(JSON.parse(fs.readFileSync(managedMarker, 'utf8')), ['ggconsort']);
 });
 
 test('runtime env prepare returns a dependency failure without installing missing R packages', () => {

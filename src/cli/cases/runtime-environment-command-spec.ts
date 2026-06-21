@@ -182,6 +182,16 @@ function parsePrepareArgs(
       parsed.requirementProfilePath = value;
       continue;
     }
+    if (token === '--requirement-profile-id') {
+      const value = args[++index];
+      if (!value) {
+        throw buildUsageError('runtime env prepare requires --requirement-profile-id value.', spec, {
+          option: '--requirement-profile-id',
+        });
+      }
+      parsed.requirementProfileId = value;
+      continue;
+    }
     if (token === '--paper-root') {
       const value = args[++index];
       if (!value) {
@@ -318,7 +328,7 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
       examples: [
         'opl runtime env inspect --domain mas --profile analysis --platform macos-arm64 --json',
         'opl runtime env build --domain mas --profile analysis --platform macos-arm64 --json',
-        'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --apply --json',
+        'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --requirement-profile-id r_ggplot2_ggconsort_reporting_flow_v1 --paper-root paper --apply --json',
         'opl runtime env cache status --json',
       ],
       handler: (args) => {
@@ -352,7 +362,7 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
         {
           command: 'runtime env prepare',
           usage:
-            'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> [--apply]',
+            'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]',
           summary:
             'Check declared dependency requirements; --apply installs missing packages only into the OPL-managed library.',
         },
@@ -451,11 +461,11 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
     },
     'runtime env prepare': {
       usage:
-        'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> [--apply]',
+        'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]',
       summary:
         'Check a dependency requirement profile and write dependency receipt/run-context; --apply installs missing packages only into the OPL-managed library.',
       examples: [
-        'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --apply --json',
+        'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --requirement-profile-id r_ggplot2_ggconsort_reporting_flow_v1 --paper-root paper --apply --json',
       ],
       handler: (args) => ({
         runtime_environment: buildRuntimeEnvironmentPrepareReadback(
