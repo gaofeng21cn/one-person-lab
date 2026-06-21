@@ -761,10 +761,10 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - `contracts/opl-framework/runtime-environment-substrate-contract.json` 固定 OPL runtime environment substrate 的 machine boundary、module mapping、layer taxonomy、cache policy、lock / bundle manifest projection policy、materialization policy、cache inventory policy、false-ready flags 和 forbidden claims。
-- `opl runtime env inspect|lock|build|prepare|materialize|cache status|cache inventory|cache prune|doctor|run-context|contract --json` 提供 fail-closed readback，输出 descriptor / deterministic dry-run lock / bundle manifest / layer graph / dependency prepare lock / receipt / run-context / cache inventory / cleanup plan / doctor / run-context 边界。
-- 当前实现不写持久 runtime lock artifact、不 materialize runtime root、不安装 packages、不写 runtime root、不执行 cache prune apply；`prepare` 只做本机 dependency check 并写 refs-only dependency lock / receipt / run-context，`--apply` 只返回 fail-closed blocker。因此它只完成 deterministic projection、refs-only prepare receipt 和 mutation boundary，不构成 runtime materialized ready。
-- Cache hit、descriptor exists、skeleton materialization、run-context exists 或 runtime environment receipt 都不能替代 runtime ready、domain ready、App release ready、owner receipt、quality/export verdict 或 provider long-soak。
-- 下一步应把 App Full runtime cache 降为 OPL runtime bundle manifest consumer，并补 lock/materializer/cache inventory；MAS/MAG/RCA/OMA 不新增私有通用 environment manager。
+- `opl runtime env inspect|lock|build|prepare|materialize|verify|cache status|cache inventory|cache prune|doctor|run-context|contract --json` 提供 fail-closed readback，输出 descriptor / deterministic lock / bundle manifest / layer graph / dependency prepare lock / receipt / run-context / materialization receipt / verify receipt / cache inventory / cleanup plan / doctor / run-context 边界。
+- 当前实现只在显式 `--apply` 下写 OPL-managed state：`materialize --apply` 写 `${OPL_STATE_DIR}/runtime-environment` 下的 runtime root、lock、manifest、env、receipt 和 selected pointer；`cache prune --apply` 只删除未被 current / rollback pointer 保护且带 receipt 的 stale runtime root；`prepare --apply` 只把缺失语言包安装进 OPL-managed library path，并向显式 paper root 写 dependency lock / receipt / run-context。它不写 development checkout、不写 domain truth / memory body / artifact body、不调度 domain stage、不签 owner receipt / typed blocker。
+- Cache hit、descriptor exists、run-context exists、materialization receipt、verification receipt 或 cleanup receipt 都不能替代 domain ready、App release ready、owner receipt、quality/export verdict、provider long-soak 或 production readiness。runtime materialization/verification 只能证明指定 OPL runtime environment root 已物化并可读。
+- 下一步应把 App Full runtime cache 降为 OPL runtime bundle manifest consumer，并让 MAS/MAG/RCA/OMA 只声明 dependency intent、消费 OPL run-context；它们不新增私有通用 environment manager。
 
 ## 2026-05-15
 

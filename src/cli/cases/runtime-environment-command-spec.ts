@@ -10,10 +10,12 @@ import {
   buildRuntimeEnvironmentMaterializeReadback,
   buildRuntimeEnvironmentPrepareReadback,
   buildRuntimeEnvironmentRunContextReadback,
+  buildRuntimeEnvironmentVerifyReadback,
   type RuntimeEnvironmentCachePruneInput,
   type RuntimeEnvironmentMaterializeInput,
   type RuntimeEnvironmentPrepareInput,
   type RuntimeEnvironmentTargetInput,
+  type RuntimeEnvironmentVerifyInput,
 } from '../../runtime-environment-substrate.ts';
 import {
   assertNoArgs,
@@ -94,6 +96,38 @@ function parseTargetArgs(
   return parsed;
 }
 
+function parseVerifyArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): RuntimeEnvironmentVerifyInput {
+  const parsed: Partial<RuntimeEnvironmentVerifyInput> = {};
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (token === '--json') {
+      continue;
+    }
+    if (token === '--runtime-root') {
+      const value = args[++index];
+      if (!value) {
+        throw buildUsageError('runtime env verify requires --runtime-root value.', spec, {
+          option: '--runtime-root',
+        });
+      }
+      parsed.runtimeRoot = value;
+      continue;
+    }
+    throw buildUsageError(`Unknown option for runtime env verify: ${token}.`, spec, {
+      option: token,
+    });
+  }
+  if (!parsed.runtimeRoot) {
+    throw buildUsageError('runtime env verify requires --runtime-root.', spec, {
+      required: ['--runtime-root'],
+    });
+  }
+  return parsed as RuntimeEnvironmentVerifyInput;
+}
+
 function parsePrepareArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -102,6 +136,10 @@ function parsePrepareArgs(
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
     if (token === '--json') {
+      continue;
+    }
+    if (token === '--apply') {
+      parsed.apply = true;
       continue;
     }
     if (token === '--domain') {
@@ -274,13 +312,13 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
   const commandSpecs: Record<string, CommandSpec> = {
     'runtime env': {
       usage:
-        'opl runtime env <inspect|lock|build|prepare|materialize|cache|doctor|run-context|contract>',
+        'opl runtime env <inspect|lock|build|prepare|materialize|verify|cache|doctor|run-context|contract>',
       summary:
-        'Inspect the OPL-owned runtime environment substrate without materializing runtime roots or claiming readiness.',
+        'Inspect or operate the OPL-owned runtime environment substrate without granting domain/App readiness.',
       examples: [
         'opl runtime env inspect --domain mas --profile analysis --platform macos-arm64 --json',
         'opl runtime env build --domain mas --profile analysis --platform macos-arm64 --json',
-        'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --json',
+        'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --apply --json',
         'opl runtime env cache status --json',
       ],
       handler: (args) => {
@@ -314,16 +352,22 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
         {
           command: 'runtime env prepare',
           usage:
-            'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path>',
+            'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> [--apply]',
           summary:
-            'Check declared dependency requirements, write refs-only dependency receipt/run-context, and avoid package installation.',
+            'Check declared dependency requirements; --apply installs missing packages only into the OPL-managed library.',
         },
         {
           command: 'runtime env materialize',
           usage:
             'opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--target current|rollback|staged] [--dry-run|--apply]',
           summary:
-            'Project materialization steps and fail closed for apply until the materializer is landed.',
+            'Materialize an OPL runtime root envelope under OPL_STATE_DIR when --apply is supplied.',
+        },
+        {
+          command: 'runtime env verify',
+          usage: 'opl runtime env verify --runtime-root <path>',
+          summary:
+            'Verify a materialized OPL runtime root receipt without scheduling a domain stage.',
         },
         {
           command: 'runtime env cache status',
@@ -407,11 +451,11 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
     },
     'runtime env prepare': {
       usage:
-        'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path>',
+        'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> [--apply]',
       summary:
-        'Check a dependency requirement profile and write refs-only dependency receipt/run-context without installing packages or claiming readiness.',
+        'Check a dependency requirement profile and write dependency receipt/run-context; --apply installs missing packages only into the OPL-managed library.',
       examples: [
-        'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --json',
+        'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --apply --json',
       ],
       handler: (args) => ({
         runtime_environment: buildRuntimeEnvironmentPrepareReadback(
@@ -423,7 +467,7 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
       usage:
         'opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--target current|rollback|staged] [--dry-run|--apply]',
       summary:
-        'Project runtime root materialization steps without applying them; --apply returns a fail-closed blocker until receipts land.',
+        'Materialize an OPL runtime root envelope under OPL_STATE_DIR when --apply is supplied.',
       examples: [
         'opl runtime env materialize --domain mas --profile analysis --platform macos-arm64 --dry-run --json',
         'opl runtime env materialize --domain mas --profile analysis --platform macos-arm64 --apply --json',
@@ -431,6 +475,19 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
       handler: (args) => ({
         runtime_environment: buildRuntimeEnvironmentMaterializeReadback(
           parseMaterializeArgs(args, commandSpecs['runtime env materialize']),
+        ),
+      }),
+    },
+    'runtime env verify': {
+      usage: 'opl runtime env verify --runtime-root <path>',
+      summary:
+        'Verify a materialized OPL runtime root receipt without authorizing domain or App readiness.',
+      examples: [
+        'opl runtime env verify --runtime-root /path/to/opl/runtime-root --json',
+      ],
+      handler: (args) => ({
+        runtime_environment: buildRuntimeEnvironmentVerifyReadback(
+          parseVerifyArgs(args, commandSpecs['runtime env verify']),
         ),
       }),
     },

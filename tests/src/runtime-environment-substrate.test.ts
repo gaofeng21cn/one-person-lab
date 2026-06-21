@@ -18,7 +18,7 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
 
   assert.equal(contract.contract_id, 'opl_runtime_environment_substrate_contract');
   assert.equal(contract.owner, 'OPL Framework');
-  assert.equal(contract.implementation_status, 'dry_run_lock_manifest_inventory_projection');
+  assert.equal(contract.implementation_status, 'runtime_lock_materializer_cache_prune_available');
   assert.equal(contract.target_planned, true);
 
   const authority = contract.authority_boundary as Json;
@@ -32,20 +32,20 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   assert.equal(authority.can_claim_runtime_materialized_ready, false);
 
   const lockPolicy = contract.lock_projection_policy as Json;
-  assert.equal(lockPolicy.status, 'dry_run_projection_available');
+  assert.equal(lockPolicy.status, 'projection_and_persisted_lock_available');
   assert.equal(lockPolicy.deterministic_digest_required, true);
   assert.equal(lockPolicy.persisted_lock_required_for_runtime_ready, true);
   assert.equal(lockPolicy.writes_runtime_root, false);
   assert.equal(lockPolicy.can_claim_runtime_ready, false);
 
   const bundlePolicy = contract.bundle_manifest_projection_policy as Json;
-  assert.equal(bundlePolicy.status, 'dry_run_projection_available');
+  assert.equal(bundlePolicy.status, 'projection_and_persisted_manifest_available');
   assert.equal(bundlePolicy.layer_graph_required, true);
   assert.equal(bundlePolicy.dry_run_bundle_manifest_counts_as_runtime_ready, false);
   assert.equal(bundlePolicy.can_claim_runtime_ready, false);
 
   const inventoryPolicy = contract.cache_inventory_policy as Json;
-  assert.equal(inventoryPolicy.status, 'dry_run_projection_available');
+  assert.equal(inventoryPolicy.status, 'filesystem_inventory_and_prune_receipt_available');
   assert.equal(inventoryPolicy.cache_hit_counts_as_ready, false);
   assert.equal(inventoryPolicy.cache_miss_counts_as_readiness_failure, false);
   assert.equal(inventoryPolicy.prune_apply_requires_materialization_receipt, true);
@@ -53,12 +53,12 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   assert.equal(inventoryPolicy.deletes_domain_artifacts, false);
 
   const preparePolicy = contract.dependency_prepare_policy as Json;
-  assert.equal(preparePolicy.status, 'local_dependency_check_and_refs_only_receipt_available');
+  assert.equal(preparePolicy.status, 'local_dependency_check_and_opl_managed_package_prepare_available');
   assert.equal(preparePolicy.writes_dependency_lock, true);
   assert.equal(preparePolicy.writes_dependency_receipt, true);
   assert.equal(preparePolicy.writes_run_context_on_success, true);
   assert.equal(preparePolicy.dependency_lock_counts_as_materialized_runtime_lock, false);
-  assert.equal(preparePolicy.installs_packages, false);
+  assert.equal(preparePolicy.installs_packages, 'only_when_apply_into_opl_managed_library');
   assert.equal(preparePolicy.writes_domain_truth, false);
   assert.equal(preparePolicy.writes_runtime_root, false);
   assert.equal(preparePolicy.missing_dependency_returns_runtime_failure, true);
@@ -98,6 +98,7 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   assert.equal(readbackCommands.some((command) => command.startsWith('opl runtime env build')), true);
   assert.equal(readbackCommands.some((command) => command.startsWith('opl runtime env prepare')), true);
   assert.equal(readbackCommands.some((command) => command.startsWith('opl runtime env materialize')), true);
+  assert.equal(readbackCommands.some((command) => command.startsWith('opl runtime env verify')), true);
   assert.equal(readbackCommands.includes('opl runtime env cache inventory'), true);
   assert.equal(readbackCommands.includes('opl runtime env cache prune --dry-run'), true);
 });

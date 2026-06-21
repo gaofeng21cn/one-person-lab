@@ -6,7 +6,7 @@ function stateEnv(label: string) {
   };
 }
 
-test('runtime env CLI exposes deterministic dry-run projections without materializing runtime roots', () => {
+test('runtime env CLI exposes deterministic projections before materializing runtime roots', () => {
   const env = stateEnv('dry-run-');
   const inspect = runCli([
     'runtime',
@@ -25,7 +25,7 @@ test('runtime env CLI exposes deterministic dry-run projections without material
   assert.equal(inspect.domain_id, 'mas');
   assert.equal(inspect.profile_id, 'analysis');
   assert.equal(inspect.platform_id, 'macos-arm64');
-  assert.equal(inspect.implementation_status, 'dry_run_lock_manifest_inventory_projection');
+  assert.equal(inspect.implementation_status, 'runtime_lock_materializer_cache_prune_available');
   assert.equal(inspect.target_planned, true);
   assert.equal(inspect.dry_run, true);
   assert.equal(inspect.can_claim_runtime_ready, false);
@@ -33,7 +33,6 @@ test('runtime env CLI exposes deterministic dry-run projections without material
   assert.equal(inspect.can_claim_app_release_ready, false);
   assert.equal(inspect.authority_boundary.can_claim_runtime_materialized_ready, false);
   assert.equal(inspect.materialization_status.status, 'not_materialized');
-  assert.equal(inspect.materialization_status.reason, 'dry_run_projection_only');
   assert.match(inspect.runtime_lock_ref, /^runtime-lock:mas\/analysis\/macos-arm64:sha256:/);
   assert.match(inspect.bundle_manifest_ref, /^runtime-bundle:mas\/analysis\/macos-arm64:sha256:/);
 
@@ -65,10 +64,20 @@ test('runtime env CLI exposes deterministic dry-run projections without material
   assert.equal(cacheStatus.command, 'cache status');
   assert.equal(cacheStatus.cache.status, 'dry_run_inventory_projection');
   assert.equal(cacheStatus.cache.cache_hit_counts_as_ready, false);
-  assert.equal(cacheStatus.cache.inventory.scanned_filesystem, false);
+  assert.equal(cacheStatus.cache.inventory.scanned_filesystem, true);
+
+  const doctor = runCli(['runtime', 'env', 'doctor'], env).runtime_environment;
+  assert.equal(doctor.command, 'doctor');
+  assert.equal(doctor.doctor.status, 'runtime_lock_materializer_verify_cache_prune_available');
+  assert.equal(
+    doctor.doctor.findings.some((finding: { code: string }) => (
+      finding.code === 'runtime_environment_materializer_verify_prune_available'
+    )),
+    true,
+  );
 });
 
-test('runtime env build materialize and cache prune expose fail-closed materializer path', () => {
+test('runtime env build materialize verify and cache prune operate on OPL-managed runtime roots', () => {
   const env = stateEnv('materializer-');
   const build = runCli([
     'runtime',
@@ -83,7 +92,7 @@ test('runtime env build materialize and cache prune expose fail-closed materiali
   ], env).runtime_environment;
 
   assert.equal(build.command, 'build');
-  assert.equal(build.build_plan.status, 'dry_run_build_plan_projected');
+  assert.equal(build.build_plan.status, 'bundle_manifest_projected');
   assert.equal(build.build_plan.writes_runtime_root, false);
   assert.equal(build.build_plan.creates_archive, false);
   assert.equal(build.build_plan.can_claim_runtime_ready, false);
@@ -109,7 +118,7 @@ test('runtime env build materialize and cache prune expose fail-closed materiali
   assert.equal(dryRun.materialization_plan.status, 'dry_run_materialization_plan_projected');
   assert.equal(dryRun.materialization_plan.target_pointer, 'current');
   assert.equal(dryRun.materialization_plan.applied, false);
-  assert.equal(dryRun.materialization_plan.can_apply, false);
+  assert.equal(dryRun.materialization_plan.can_apply, true);
   assert.equal(dryRun.materialization_plan.writes_runtime_root, false);
   assert.equal(dryRun.materialization_plan.apply_blocker_ref, null);
 
@@ -127,18 +136,57 @@ test('runtime env build materialize and cache prune expose fail-closed materiali
     'staged',
     '--apply',
   ], env).runtime_environment;
-  assert.equal(apply.materialization_plan.status, 'blocked_apply_requires_materializer_receipt');
+  assert.equal(apply.materialization_plan.status, 'materialized_receipt_written');
   assert.equal(apply.materialization_plan.target_pointer, 'staged');
   assert.equal(apply.materialization_plan.requested_apply, true);
-  assert.equal(apply.materialization_plan.applied, false);
-  assert.equal(apply.materialization_plan.can_apply, false);
-  assert.match(apply.materialization_plan.apply_blocker_ref, /^runtime-blocker-ref:opl-runtime-env/);
+  assert.equal(apply.materialization_plan.applied, true);
+  assert.equal(apply.materialization_plan.can_apply, true);
+  assert.equal(apply.materialization_plan.writes_runtime_root, true);
+  assert.equal(apply.materialization_plan.apply_blocker_ref, null);
+  assert.equal(fs.existsSync(apply.materialization_plan.runtime_root), true);
+  assert.equal(
+    fs.existsSync(path.join(apply.materialization_plan.runtime_root, 'materialization-receipt.json')),
+    true,
+  );
+  assert.equal(fs.existsSync(path.join(apply.materialization_plan.runtime_root, 'env.json')), true);
+
+  const inspectMaterialized = runCli([
+    'runtime',
+    'env',
+    'inspect',
+    '--domain',
+    'mas',
+    '--profile',
+    'analysis',
+    '--platform',
+    'macos-arm64',
+  ], env).runtime_environment;
+  assert.equal(inspectMaterialized.materialization_status.status, 'materialized_runtime_root_observed');
+  assert.equal(inspectMaterialized.materialization_status.reason, 'materialization_receipt_observed');
+  assert.equal(inspectMaterialized.materialization_status.runtime_root, apply.materialization_plan.runtime_root);
+  assert.equal(inspectMaterialized.materialization_status.receipt_ref, apply.materialization_plan.receipt_ref);
+  assert.equal(inspectMaterialized.materialization_status.can_claim_runtime_ready, true);
+  assert.equal(inspectMaterialized.materialization_status.can_claim_domain_ready, false);
+  assert.equal(inspectMaterialized.materialization_status.can_claim_app_release_ready, false);
+
+  const verified = runCli([
+    'runtime',
+    'env',
+    'verify',
+    '--runtime-root',
+    apply.materialization_plan.runtime_root,
+  ], env).runtime_environment;
+  assert.equal(verified.command, 'verify');
+  assert.equal(verified.verification.status, 'verified');
+  assert.equal(verified.verification.can_claim_runtime_ready, true);
+  assert.equal(verified.verification.can_claim_domain_ready, false);
 
   const inventory = runCli(['runtime', 'env', 'cache', 'inventory'], env).runtime_environment;
   assert.equal(inventory.command, 'cache inventory');
-  assert.equal(inventory.cache_inventory.status, 'dry_run_inventory_projection');
-  assert.equal(inventory.cache_inventory.scanned_filesystem, false);
+  assert.equal(inventory.cache_inventory.status, 'scanned');
+  assert.equal(inventory.cache_inventory.scanned_filesystem, true);
   assert.equal(inventory.cache_inventory.cache_hit_counts_as_ready, false);
+  assert.equal(inventory.cache_inventory.materialized_runtime_root_count, 1);
 
   const pruneDryRun = runCli(['runtime', 'env', 'cache', 'prune', '--dry-run'], env).runtime_environment;
   assert.equal(pruneDryRun.command, 'cache prune');
@@ -149,10 +197,12 @@ test('runtime env build materialize and cache prune expose fail-closed materiali
   assert.equal(pruneDryRun.cleanup_plan.applied, false);
 
   const pruneApply = runCli(['runtime', 'env', 'cache', 'prune', '--apply'], env).runtime_environment;
-  assert.equal(pruneApply.cleanup_plan.status, 'blocked_apply_requires_materialization_receipt');
+  assert.equal(pruneApply.cleanup_plan.status, 'applied_prune_receipt_written');
   assert.equal(pruneApply.cleanup_plan.requested_apply, true);
-  assert.equal(pruneApply.cleanup_plan.can_apply, false);
-  assert.match(pruneApply.cleanup_plan.apply_blocker_ref, /^runtime-blocker-ref:opl-runtime-env/);
+  assert.equal(pruneApply.cleanup_plan.can_apply, true);
+  assert.equal(pruneApply.cleanup_plan.apply_blocker_ref, null);
+  assert.equal(pruneApply.cleanup_plan.deleted_runtime_roots.length, 1);
+  assert.equal(fs.existsSync(apply.materialization_plan.runtime_root), false);
 });
 
 test('runtime env prepare writes MAS dependency receipt and run-context refs without installing packages', () => {
@@ -243,6 +293,7 @@ test('runtime env prepare writes MAS dependency receipt and run-context refs wit
   assert.match(runContext.run_context_fingerprint, /^sha256:[a-f0-9]{64}$/);
   assert.equal(runContext.binary_paths.Rscript, prepared.prepare.binary_paths.Rscript);
   assert.equal(runContext.env_vars.OPL_RUNTIME_ENVIRONMENT_STATUS, 'prepared');
+  assert.match(runContext.env_vars.R_LIBS_USER, /dependency-libraries/);
 
   const cacheStatus = runCli(['runtime', 'env', 'cache', 'status'], {
     OPL_STATE_DIR: stateRoot,
@@ -331,9 +382,15 @@ test('runtime env prepare returns a dependency failure without installing missin
 test('runtime env doctor and run-context preserve no-authority boundary', () => {
   const doctor = runCli(['runtime', 'env', 'doctor']).runtime_environment;
   assert.equal(doctor.command, 'doctor');
-  assert.equal(doctor.doctor.status, 'dry_run_projection_available_materializer_not_landed');
+  assert.equal(doctor.doctor.status, 'runtime_lock_materializer_verify_cache_prune_available');
   assert.equal(doctor.doctor.findings[0].severity, 'info');
   assert.equal(doctor.doctor.findings[0].can_block_domain_progress, false);
+  assert.equal(
+    doctor.doctor.findings.some((finding: { code: string }) => (
+      finding.code === 'runtime_environment_materializer_verify_prune_available'
+    )),
+    true,
+  );
 
   const runContext = runCli([
     'runtime',
