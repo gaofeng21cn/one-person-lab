@@ -607,6 +607,11 @@ function buildOrdinaryProgressGuardReadback(contracts: FrameworkContracts) {
     'stage-typed-blocker.schema.json',
     ['surface_kind', 'schema_version'],
   );
+  const ownerAnswerSchema = schemaIdentityFromContract(
+    path.join(contracts.contractsDir, 'owner-answer.schema.json'),
+    'owner-answer.schema.json',
+    ['surface_kind', 'schema_version'],
+  );
 
   return {
     surface_kind: 'opl_ordinary_progress_owner_route_guard_readback',
@@ -615,7 +620,9 @@ function buildOrdinaryProgressGuardReadback(contracts: FrameworkContracts) {
     owner: 'one-person-lab',
     source_contract_refs: [
       'contracts/family-orchestration/family-owner-route.schema.json',
+      'contracts/opl-framework/owner-answer.schema.json',
       'contracts/opl-framework/stage-typed-blocker.schema.json',
+      'contracts/opl-framework/progress-delta-receipt.schema.json',
       'contracts/opl-framework/target-operating-architecture-contract.json',
     ],
     source_cli_readback_refs: [
@@ -638,6 +645,83 @@ function buildOrdinaryProgressGuardReadback(contracts: FrameworkContracts) {
       raw_worklist_policy: 'audit_sidecar_or_full_detail_only_not_default_next_action',
       provider_trace_policy: 'runway_repair_or_diagnostic_only_not_domain_owner_answer',
       private_residue_policy: 'cleanup_lane_only_requires_no_active_caller_and_owner_gate',
+    },
+    owner_answer_admission_gate: {
+      surface_kind: 'opl_owner_answer_admission_gate_readback',
+      gate_role:
+        'ordinary_terminal_input_shape_guard_for_current_owner_delta_derivation_not_owner_authority',
+      source_schema: {
+        surface_kind: ownerAnswerSchema.consts.surface_kind,
+        schema_version: ownerAnswerSchema.consts.schema_version,
+        required_fields: ownerAnswerSchema.required,
+        owner_answer_required_fields_present: [
+          'answer_id',
+          'domain',
+          'answer_kind',
+          'answer_status',
+          'answer_ref',
+          'target_delta_ref',
+          'audit_refs',
+          'authority_boundary',
+        ].every((field) => ownerAnswerSchema.required.includes(field)),
+      },
+      accepted_answer_kinds: [
+        'owner_receipt',
+        'typed_blocker',
+        'human_decision',
+        'route_back',
+      ],
+      accepted_answer_statuses: [
+        'accepted',
+        'blocked',
+        'rejected',
+        'route_back',
+        'needs_human',
+      ],
+      derives_next_current_owner_delta_from: [
+        'owner_answer_ref',
+        'target_delta_ref',
+        'effective_delta_ref',
+        'stage_ref',
+        'attempt_ref',
+        'audit_refs',
+      ],
+      default_next_action_source_priority: [
+        'fresh_current_owner_delta',
+        'owner_answer_admission_gate',
+        'typed_blocker_or_human_gate_projection',
+        'route_back_evidence',
+      ],
+      rejected_default_roots: [
+        'raw_worklist',
+        'provider_trace',
+        'refs_only_evidence_ledger',
+        'cleanup_work_order',
+        'release_cohort_diagnostic',
+        'brand_l5_evidence_tail',
+        'stale_projection_cache',
+      ],
+      required_followthrough:
+        'accepted_owner_answer_or_typed_blocker_or_human_decision_ref_then_rederive_current_owner_delta',
+      authority_boundary: {
+        opl_can_consume_owner_answer: true,
+        opl_can_fold_answer_into_delta: true,
+        opl_can_sign_domain_owner_answer: false,
+        opl_can_create_typed_blocker: false,
+        opl_can_make_human_decision: false,
+        opl_can_infer_domain_truth_from_answer: false,
+        opl_can_authorize_domain_ready: false,
+        opl_can_authorize_quality_verdict: false,
+        opl_can_mutate_artifact_body: false,
+        owner_answer_readback_can_claim_live_evidence_complete: false,
+      },
+      false_ready_guard: {
+        owner_answer_shape_valid_can_claim_domain_ready: false,
+        owner_answer_ref_observed_can_claim_stage_success: false,
+        route_back_ref_can_claim_progress_complete: false,
+        human_decision_required_can_claim_human_decision_complete: false,
+        progress_delta_receipt_can_replace_domain_owner_answer: false,
+      },
     },
     owner_route_schema: {
       surface_kind: ownerRouteSchema.consts.surface_kind,

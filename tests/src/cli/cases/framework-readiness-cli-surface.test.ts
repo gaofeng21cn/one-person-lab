@@ -156,6 +156,57 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     'current_owner_delta',
   );
   assert.equal(
+    readback.ordinary_progress_guard.owner_answer_admission_gate.surface_kind,
+    'opl_owner_answer_admission_gate_readback',
+  );
+  assert.equal(
+    readback.ordinary_progress_guard.owner_answer_admission_gate.source_schema.surface_kind,
+    'opl_owner_answer',
+  );
+  assert.equal(
+    readback.ordinary_progress_guard.owner_answer_admission_gate.source_schema.schema_version,
+    'owner-answer.v1',
+  );
+  assert.equal(
+    readback.ordinary_progress_guard.owner_answer_admission_gate
+      .source_schema.owner_answer_required_fields_present,
+    true,
+  );
+  assert.deepEqual(
+    readback.ordinary_progress_guard.owner_answer_admission_gate.accepted_answer_kinds,
+    [
+      'owner_receipt',
+      'typed_blocker',
+      'human_decision',
+      'route_back',
+    ],
+  );
+  assert.equal(
+    readback.ordinary_progress_guard.owner_answer_admission_gate
+      .default_next_action_source_priority[0],
+    'fresh_current_owner_delta',
+  );
+  assert.ok(
+    readback.ordinary_progress_guard.owner_answer_admission_gate.rejected_default_roots.includes(
+      'provider_trace',
+    ),
+  );
+  assert.equal(
+    readback.ordinary_progress_guard.owner_answer_admission_gate
+      .authority_boundary.opl_can_sign_domain_owner_answer,
+    false,
+  );
+  assert.equal(
+    readback.ordinary_progress_guard.owner_answer_admission_gate
+      .authority_boundary.opl_can_create_typed_blocker,
+    false,
+  );
+  assert.equal(
+    readback.ordinary_progress_guard.owner_answer_admission_gate
+      .false_ready_guard.owner_answer_shape_valid_can_claim_domain_ready,
+    false,
+  );
+  assert.equal(
     readback.ordinary_progress_guard.owner_route_schema.surface_kind,
     'family_owner_route',
   );
