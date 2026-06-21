@@ -1,0 +1,12 @@
+{
+  "authority_boundary": {
+    "domain_memory_accept_reject_owner": "med-autogrant",
+    "opl_can_accept_or_reject_writeback": false,
+    "opl_can_write_memory_body": false
+  },
+  "domain_id": "med-autogrant",
+  "memory_body_owner": "med-autogrant",
+  "opl_projection_policy": "locator_and_receipt_refs_only",
+  "schema_version": 1,
+  "surface_kind": "domain_memory_descriptor_locator"
+}
