@@ -13,6 +13,36 @@ function readJson(relativePath: string): Json {
   return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Json;
 }
 
+test('runtime environment substrate keeps shared helpers split behind a thin facade', () => {
+  const facade = fs.readFileSync(
+    path.join(repoRoot, 'src/runtime-environment-substrate-parts/shared.ts'),
+    'utf8',
+  );
+  const partFiles = [
+    'contract.ts',
+    'target-state.ts',
+    'package-profile.ts',
+    'projection-cache.ts',
+  ];
+
+  assert.equal(facade.includes('export function '), false);
+  assert.deepEqual(
+    facade.trim().split(/\r?\n/),
+    partFiles.map((fileName) => `export * from './${fileName}';`),
+  );
+
+  for (const fileName of partFiles) {
+    const source = fs.readFileSync(
+      path.join(repoRoot, 'src/runtime-environment-substrate-parts', fileName),
+      'utf8',
+    );
+    assert.ok(
+      source.trim().split(/\r?\n/).length <= 420,
+      `${fileName} should stay inside the runtime env source-boundary budget`,
+    );
+  }
+});
+
 test('runtime environment substrate contract defines OPL-owned false-ready boundary', () => {
   const contract = readJson('contracts/opl-framework/runtime-environment-substrate-contract.json');
 
