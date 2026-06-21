@@ -53,10 +53,10 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     'non_live_functional_structure_milestone_tranche_not_full_completion_audit',
   );
   assert.deepEqual(readback.current_tranche.selected_milestone_ids, [
-    'app_active_shell_hermes_convergence',
+    'support_repo_profile_no_resurrection',
   ]);
   assert.deepEqual(readback.current_tranche.closed_or_advanced_structural_milestone_ids, [
-    'app_active_shell_hermes_convergence',
+    'support_repo_profile_no_resurrection',
   ]);
   const milestonesById = Object.fromEntries(
     readback.milestones.map((milestone: { milestone_id: string }) => [milestone.milestone_id, milestone]),
@@ -99,51 +99,51 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     readback.current_tranche.lanes.map((lane: { lane_id: string }) => [lane.lane_id, lane]),
   );
   assert.deepEqual(
-    lanesById['app-shell-hermes-convergence-structure-20260621'].milestone_ids,
-    ['app_active_shell_hermes_convergence'],
+    lanesById['opl-doc-support-policy-ref-guard-20260621'].milestone_ids,
+    ['support_repo_profile_no_resurrection'],
   );
   assert.ok(
-    lanesById['app-shell-hermes-convergence-structure-20260621'].required_surfaces.includes('API_readback'),
+    lanesById['opl-doc-support-policy-ref-guard-20260621'].required_surfaces.includes('contract'),
   );
   assert.ok(
-    lanesById['app-shell-hermes-convergence-structure-20260621'].required_surfaces.includes('CLI_readback'),
+    lanesById['opl-doc-support-policy-ref-guard-20260621'].required_surfaces.includes('CLI_readback'),
   );
   assert.ok(
-    lanesById['app-shell-hermes-convergence-structure-20260621'].non_live_completion_evidence_required.includes(
-      'false_ready_boundary_blocks_release_live_and_adoption_claims',
+    lanesById['opl-doc-support-policy-ref-guard-20260621'].non_live_completion_evidence_required.includes(
+      'legacy_underscore_support_policy_ref_forbidden_not_aliased',
     ),
   );
   assert.deepEqual(
-    lanesById['opl-app-shell-convergence-backlog-closeout-20260621'].milestone_ids,
-    ['app_active_shell_hermes_convergence'],
+    lanesById['opl-cross-repo-ref-integrity-20260621'].milestone_ids,
+    ['support_repo_profile_no_resurrection'],
   );
   assert.ok(
-    lanesById['opl-app-shell-convergence-backlog-closeout-20260621'].non_live_completion_evidence_required.includes(
-      'framework_tranche_backlog_consumes_App_convergence_readback_ref',
+    lanesById['opl-cross-repo-ref-integrity-20260621'].non_live_completion_evidence_required.includes(
+      'framework_tranche_backlog_consumes_opl_doc_canonical_support_policy_ref',
     ),
   );
   assert.equal(
-    lanesById['opl-app-shell-convergence-backlog-closeout-20260621']
+    lanesById['opl-cross-repo-ref-integrity-20260621']
       .authority_boundary.can_create_second_active_backlog,
     false,
   );
   assert.equal(
-    lanesById['opl-app-shell-convergence-backlog-closeout-20260621']
+    lanesById['opl-cross-repo-ref-integrity-20260621']
       .authority_boundary.can_authorize_physical_delete,
     false,
   );
   assert.equal(
-    lanesById['opl-app-shell-convergence-backlog-closeout-20260621']
+    lanesById['opl-cross-repo-ref-integrity-20260621']
       .authority_boundary.can_claim_domain_ready,
     false,
   );
   assert.ok(
-    lanesById['app-shell-hermes-convergence-structure-20260621'].forbidden_scope.includes(
-      'App_release_readiness_claim',
+    lanesById['opl-doc-support-policy-ref-guard-20260621'].forbidden_scope.includes(
+      'legacy_support_repo_policy_alias_file',
     ),
   );
   assert.ok(
-    lanesById['opl-app-shell-convergence-backlog-closeout-20260621'].forbidden_scope.includes(
+    lanesById['opl-cross-repo-ref-integrity-20260621'].forbidden_scope.includes(
       'full_Plan_Completion_Audit_claim',
     ),
   );
@@ -240,6 +240,36 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   );
   assert.equal(
     readback.generated_hosted_surface_boundary.support_repo_boundary.support_repos_can_join_default_foundry_agent_truth_set,
+    false,
+  );
+  assert.equal(
+    readback.cross_repo_ref_integrity_guard.surface_kind,
+    'opl_family_cross_repo_ref_integrity_guard',
+  );
+  assert.equal(
+    readback.cross_repo_ref_integrity_guard.status,
+    'closed_structure_gate_not_live_evidence',
+  );
+  assert.equal(
+    readback.cross_repo_ref_integrity_guard.checked_repo_refs[0].repo,
+    'opl-doc',
+  );
+  assert.equal(
+    readback.cross_repo_ref_integrity_guard.checked_repo_refs[0].canonical_ref,
+    'contracts/support-repo-policy.json',
+  );
+  assert.deepEqual(
+    readback.cross_repo_ref_integrity_guard.checked_repo_refs[0].stale_or_forbidden_refs,
+    ['contracts/support_repo_policy.json'],
+  );
+  assert.equal(
+    readback.cross_repo_ref_integrity_guard.no_second_truth_guard
+      .cross_repo_ref_guard_can_create_missing_contract_alias,
+    false,
+  );
+  assert.equal(
+    readback.cross_repo_ref_integrity_guard.false_ready_guard
+      .ref_integrity_pass_can_claim_plan_completion,
     false,
   );
   assert.equal(
@@ -771,13 +801,13 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   });
   assert.ok(
     readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
-      lane.lane_id === 'app-shell-hermes-convergence-structure-20260621'
-      && lane.repo === 'one-person-lab-app'
+      lane.lane_id === 'opl-doc-support-policy-ref-guard-20260621'
+      && lane.repo === 'opl-doc'
     )),
   );
   assert.ok(
     readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
-      lane.lane_id === 'opl-app-shell-convergence-backlog-closeout-20260621'
+      lane.lane_id === 'opl-cross-repo-ref-integrity-20260621'
       && lane.repo === 'one-person-lab'
     )),
   );
@@ -786,6 +816,18 @@ test('framework tranche backlog exposes a guarded milestone index without comple
       milestone.milestone_id === 'opl_primitive_runtime_owner_route_guard'
       && milestone.priority === 'P0'
     ),
+  );
+  const supportMilestone = readback.milestones.find(
+    (milestone: { milestone_id: string }) =>
+      milestone.milestone_id === 'support_repo_profile_no_resurrection',
+  );
+  assert.ok(supportMilestone);
+  assert.ok(
+    supportMilestone.current_truth_refs.includes('opl-doc:contracts/support-repo-policy.json'),
+  );
+  assert.equal(
+    supportMilestone.current_truth_refs.includes('opl-doc:contracts/support_repo_policy.json'),
+    false,
   );
   assert.ok(
     readback.milestones.every((milestone: { authority_boundary: { can_create_second_active_backlog: boolean } }) =>
