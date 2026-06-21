@@ -22,6 +22,7 @@
 - 面向本仓的方案、重构、优化、代码改动、配置改动和文档改动，必须在方案说明、执行说明和最终汇报中标明涉及的 OPL 品牌模块；若涉及多个模块，应分别列出主模块、协同模块和不触碰范围。当前品牌模块集合以 `contracts/opl-framework/brand-module-registry.json`、`docs/references/brand-modules/`、核心五件套和 fresh `opl brand-modules * --json` 输出为准；本规则只约束表达透明度，不把当前模块数量冻结为上限。若实际需要新增、合并、拆分或退役模块，必须说明必要性、目标 owner、machine boundary、验证口径和文档 / contract foldback。
 - OPL family 以理想目标态为最高优先级：OPL 是完整智能体开发/运行框架，MAS/MAG/RCA 是标准化 OPL Agent。当前 domain 仓内已经存在的私有 scheduler、runner、session store、lifecycle、workbench、sidecar/status/product wrapper 等实现，只能作为迁移输入，不能反过来定义长期架构。
 - 标准 OPL Agent 默认是 `Declarative Domain Pack + OPL generated/hosted surfaces + minimal authority functions`；私有功能面是例外，必须写清接口、active caller、不能上收原因、receipt/blocker/ref 输出边界和退役门。
+- Live Evidence 后置是 OPL family 的基本开发原则。日常开发默认先关闭功能/结构缺口，包括 source、contract、CLI/API、readback、App shell、generated / hosted surface、wrapper retirement、DomainProgressTransitionRuntime / domain policy adapter、memory/artifact/lifecycle functional boundary 和 no-second-truth guard。Live Evidence / production evidence / L5 evidence 保留为 release、readiness、Brand L5、provider long-soak、真实用户路径、真实项目运行和 owner acceptance 的后置验收 lane；它们不阻塞可独立完成的功能/结构清理，也不能被 docs、contract pass、focused tests、projection clean、refs-only ledger 或 source cleanup 替代为 ready claim。
 - 开发文档先设理想态，再找差距；差距不是妥协清单。为了理想态，可以做革命式重构并完全抛弃旧模块、旧接口、旧测试、旧目录和旧文案，不以兼容为理由保留历史污染面。
 - repo-tracked 源码与测试默认都应保持文件边界清晰，优先控制在 `1000` 行以内；超过 `1500` 行应视为明确的拆分信号，而不是继续堆叠实现。line budget 默认是结构维护 advisory，不进入日常开发硬门；默认 `verify`、`smoke`、`fast`、`lint` 不得因行数预算阻断。已显式审查并写入 `contracts/opl-framework/source-structure-budget.json` 的历史超线文件由定时结构治理和显式 strict 入口执行 ratchet：`scripts/line-budget.mjs --strict`、`OPL_LINE_BUDGET_STRICT=1`、`npm run line-budget:strict`、`./scripts/verify.sh line-budget:strict` 或 `./scripts/verify.sh structure:strict` 才把新增超线、超过 reviewed baseline、stale baseline 和 retired baseline 作为失败。新增超线优先按语义边界拆分；若暂时不拆，必须提交带 owner、reason 与 intended boundary 的 reviewed baseline。
 - 新增能力或继续重构时，优先采用稳定薄入口加 `parts/`、`cases/`、`modules/` 等子模块拆分；不要把新逻辑继续堆回单个超长文件。
@@ -63,6 +64,7 @@
 - OPL 文档持有全局目标、全局差距、shared primitive 上收边界、App/workbench 目标、domain admission 与跨仓开发顺序；MAS/MAG/RCA 只在各自仓维护本仓 truth、gap、authority、direct/hosted 边界和上收候选。
 - 理想态差距和开发计划默认拆开写 `功能/结构差距` 与 `测试/证据差距`；不能把“功能本身未完成”和“功能已在但缺少测试/真实证据”混在同一差距项里。
 - `功能/结构差距` 按目标态判断，不按现有实现是否可用判断；凡现有功能面应由 OPL primitive / pack compiler / App shell 承担，就写成上收、generated surface 替换、收薄或退役差距。
+- Live Evidence、production evidence、release evidence、Brand L5 evidence、owner-chain scaleout、provider long-soak 和真实项目 evidence 默认写入 `测试/证据差距` 或后置验收 lane；只有它们正在保护启动安全、authority、不可逆 mutation、owner receipt、typed blocker、release/production claim 或 closeout admission 时，才允许升级为当前功能开发 blocker。
 - 新文档先判断角色，再决定落点；不要把公开主线、合同配套、参考材料和历史记录混在同一层。
 - `README*`、`docs/**` 与参考文档是人读面。代码、测试、contracts、dashboard 或 runtime 不得把 prose path、Markdown 章节或文案当成稳定机器接口；确需关联人读材料时，使用 contract/schema/source 路径或 `human_doc:*` 语义 ID。
 - 根层 `README*` 是面向使用者的公开入口，默认从问题、价值、场景、开始方式和可见效果讲起；关键概念可以在公开区出现，但必须先翻译成用户能理解的效果，并优先使用肯定表达，例如“认知计算”应解释为 AI 在阶段内理解、比较、创作、审阅和修订；`executor-first`、stage、route、receipt、typed blocker、Tool Affordance Boundary、domain truth、quality verdict 等技术边界只放在折叠的 Agent / 开发者 / operator 区或 canonical 技术文档。
