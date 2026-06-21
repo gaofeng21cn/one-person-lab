@@ -263,6 +263,86 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     false,
   );
   assert.equal(
+    readback.memory_artifact_lifecycle_boundary_guard.surface_kind,
+    'opl_memory_artifact_lifecycle_boundary_guard_readback',
+  );
+  assert.equal(
+    readback.memory_artifact_lifecycle_boundary_guard.target_surface,
+    'memory_artifact_lifecycle',
+  );
+  assert.equal(
+    readback.memory_artifact_lifecycle_boundary_guard.evidence_intake_policy.refs_only,
+    true,
+  );
+  assert.deepEqual(
+    readback.memory_artifact_lifecycle_boundary_guard.accepted_refs_only_result_shapes,
+    [
+      'memory_receipt_ref',
+      'memory_writeback_receipt_ref',
+      'artifact_mutation_receipt_ref',
+      'package_lifecycle_receipt_ref',
+      'export_lifecycle_receipt_ref',
+      'cleanup_restore_retention_receipt_ref',
+      'typed_blocker_ref',
+      'owner_acceptance_ref',
+    ],
+  );
+  assert.ok(
+    readback.memory_artifact_lifecycle_boundary_guard.source_cli_readback_refs.includes(
+      'opl runtime memory-artifact-lifecycle-evidence record|verify|list --json',
+    ),
+  );
+  assert.ok(
+    readback.memory_artifact_lifecycle_boundary_guard.source_api_readback_refs.includes(
+      'buildMemoryArtifactLifecycleReadback',
+    ),
+  );
+  assert.equal(
+    readback.memory_artifact_lifecycle_boundary_guard.authority_boundary.can_write_memory_body,
+    false,
+  );
+  assert.equal(
+    readback.memory_artifact_lifecycle_boundary_guard.authority_boundary.can_mutate_artifact_body,
+    false,
+  );
+  assert.equal(
+    readback.memory_artifact_lifecycle_boundary_guard.authority_boundary.can_create_owner_receipt,
+    false,
+  );
+  assert.equal(
+    readback.memory_artifact_lifecycle_boundary_guard.authority_boundary.can_create_typed_blocker,
+    false,
+  );
+  assert.equal(
+    readback.memory_artifact_lifecycle_boundary_guard.authority_boundary.can_authorize_export_readiness,
+    false,
+  );
+  assert.equal(
+    readback.memory_artifact_lifecycle_boundary_guard.false_ready_guard
+      .verified_refs_only_ledger_can_claim_memory_ready,
+    false,
+  );
+  assert.equal(
+    readback.memory_artifact_lifecycle_boundary_guard.false_ready_guard
+      .verified_refs_only_ledger_can_claim_artifact_ready,
+    false,
+  );
+  assert.equal(
+    readback.memory_artifact_lifecycle_boundary_guard.false_ready_guard
+      .verified_refs_only_ledger_can_claim_package_ready,
+    false,
+  );
+  assert.equal(
+    readback.memory_artifact_lifecycle_boundary_guard.false_ready_guard
+      .owner_acceptance_ref_can_claim_domain_ready,
+    false,
+  );
+  assert.equal(
+    readback.memory_artifact_lifecycle_boundary_guard.false_ready_guard
+      .review_repair_transport_passed_can_claim_repair_accepted,
+    false,
+  );
+  assert.equal(
     readback.runtime_environment_substrate_guard.surface_kind,
     'opl_runtime_environment_substrate_guard_readback',
   );
