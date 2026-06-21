@@ -26,6 +26,13 @@ interface OkfContextBundleContract {
   okf_v0_1_source_refs: Array<Record<string, string>>;
   reserved_filenames: string[];
   frontmatter_contract: Record<string, unknown>;
+  native_frontmatter_migration_policy: {
+    state: string;
+    default_bundle_mode: string;
+    required_fields: string[];
+    runtime_consumption_policy: Record<string, false>;
+    false_authority_fields: Record<string, false>;
+  };
   conformance_policy: Record<string, string[]>;
   authority_boundary: {
     projection_only: true;
@@ -74,6 +81,13 @@ export interface BuildOkfDomainPackProjectionOptions {
   sourceRootRef?: string;
 }
 
+export interface BuildOkfDomainRepoProjectionOptions extends BuildOkfDomainPackProjectionOptions {
+  repoRoot: string;
+  packPath?: string;
+  memoryDescriptorPath?: string;
+  includeMemoryLocators?: boolean;
+}
+
 export interface OkfDomainPackCompilerInput {
   domain_id?: string;
   domain_pack_owner?: string;
@@ -85,6 +99,7 @@ export interface OkfDomainPackCompilerInput {
 
 export interface OkfMemoryLocatorDescriptor {
   target_domain_id?: string;
+  domain_id?: string;
   owner?: string;
   memory_ref_id?: string;
   memory_family?: string;
@@ -160,6 +175,22 @@ export interface OkfContextBundleInspection {
   validation: OkfContextBundleValidation;
 }
 
+export interface OkfDomainRepoProjectionReadback {
+  surface_kind: 'opl_okf_domain_repo_projection_readback';
+  version: 'opl-okf-domain-repo-projection-readback.v1';
+  repo_root: string;
+  pack_path: string;
+  memory_descriptor_path: string | null;
+  memory_descriptor_status: 'loaded' | 'missing' | 'not_requested';
+  memory_locator_count: number;
+  domain_id: string;
+  domain_pack_owner: string;
+  source_root_ref: string;
+  projection: OkfContextBundleProjection;
+  authority_boundary: typeof OKF_CONTEXT_BUNDLE_CONTRACT.authority_boundary;
+  non_authority_flags: typeof OKF_CONTEXT_BUNDLE_CONTRACT.non_authority_flags;
+}
+
 const CONTRACT_REF = 'contracts/opl-framework/okf-context-bundle-contract.json';
 const CONTRACT_PATH = fileURLToPath(new URL(`../${CONTRACT_REF}`, import.meta.url));
 const RESERVED_FILENAMES = new Set(['index.md', 'log.md']);
@@ -209,6 +240,38 @@ function frontmatterRecord(value: unknown): JsonRecord | undefined {
     return undefined;
   }
   return value as JsonRecord;
+}
+
+function readJsonRecordFile(filePath: string) {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      throw new FrameworkContractError('contract_file_missing', `OKF source JSON file is missing: ${filePath}.`, {
+        path: filePath,
+      });
+    }
+    throw error;
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'OKF source JSON root must be an object.', {
+      path: filePath,
+    });
+  }
+  return parsed as JsonRecord;
+}
+
+function resolveSourcePath(repoRoot: string, sourcePath: string) {
+  return path.isAbsolute(sourcePath) ? sourcePath : path.resolve(repoRoot, sourcePath);
+}
+
+function domainRepoDefaultPackPath(repoRoot: string) {
+  return path.join(repoRoot, 'contracts', 'pack_compiler_input.json');
+}
+
+function domainRepoDefaultMemoryDescriptorPath(repoRoot: string) {
+  return path.join(repoRoot, 'contracts', 'memory_descriptor.json');
 }
 
 function domainPackPathKind(relativePath: string) {
@@ -570,7 +633,7 @@ export function writeOkfContextBundleProjection(
   };
 }
 
-export function buildOkfContextBundleFromDomainPack(
+function buildOkfDomainPackConcepts(
   packInput: OkfDomainPackCompilerInput,
   options: BuildOkfDomainPackProjectionOptions = {},
 ) {
@@ -634,17 +697,91 @@ export function buildOkfContextBundleFromDomainPack(
     };
   });
 
-  return buildOkfContextBundleProjection({
-    bundleId: options.bundleId ?? `okf:${domainId}:domain-pack`,
-    title: `${owner} Domain Pack OKF Context Bundle`,
+  return {
     concepts,
+    domainId,
+    owner,
+    sourceRootRef: options.sourceRootRef ?? `repo:${owner}`,
+  };
+}
+
+export function buildOkfContextBundleFromDomainPack(
+  packInput: OkfDomainPackCompilerInput,
+  options: BuildOkfDomainPackProjectionOptions = {},
+) {
+  const pack = buildOkfDomainPackConcepts(packInput, options);
+  return buildOkfContextBundleProjection({
+    bundleId: options.bundleId ?? `okf:${pack.domainId}:domain-pack`,
+    title: `${pack.owner} Domain Pack OKF Context Bundle`,
+    concepts: pack.concepts,
   });
+}
+
+function collectOkfMemoryLocatorDescriptors(value: unknown): OkfMemoryLocatorDescriptor[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => frontmatterRecord(entry))
+      .filter((entry): entry is JsonRecord => Boolean(entry))
+      .map((entry) => entry as unknown as OkfMemoryLocatorDescriptor);
+  }
+  const record = frontmatterRecord(value);
+  if (!record) {
+    return [];
+  }
+  if (Array.isArray(record.descriptors)) {
+    return collectOkfMemoryLocatorDescriptors(record.descriptors);
+  }
+  return [record as unknown as OkfMemoryLocatorDescriptor];
+}
+
+export function buildOkfContextBundleFromDomainRepo(
+  options: BuildOkfDomainRepoProjectionOptions,
+): OkfDomainRepoProjectionReadback {
+  const repoRoot = path.resolve(options.repoRoot);
+  const packPath = resolveSourcePath(repoRoot, options.packPath ?? domainRepoDefaultPackPath(repoRoot));
+  const packInput = readJsonRecordFile(packPath) as unknown as OkfDomainPackCompilerInput;
+  const pack = buildOkfDomainPackConcepts(packInput, options);
+
+  const includeMemoryLocators = options.includeMemoryLocators ?? true;
+  const defaultMemoryDescriptorPath = domainRepoDefaultMemoryDescriptorPath(repoRoot);
+  const memoryDescriptorPath = options.memoryDescriptorPath
+    ? resolveSourcePath(repoRoot, options.memoryDescriptorPath)
+    : defaultMemoryDescriptorPath;
+  const memoryDescriptorExists = fs.existsSync(memoryDescriptorPath);
+  const memoryDescriptors = includeMemoryLocators && memoryDescriptorExists
+    ? collectOkfMemoryLocatorDescriptors(readJsonRecordFile(memoryDescriptorPath))
+    : [];
+  const memoryConcepts = memoryDescriptors.map((descriptor) => buildOkfMemoryLocatorConcept(descriptor));
+  const bundleId = options.bundleId ?? `okf:${pack.domainId}:domain-repo`;
+  const projection = buildOkfContextBundleProjection({
+    bundleId,
+    title: `${pack.owner} Domain Repo OKF Context Bundle`,
+    concepts: [...pack.concepts, ...memoryConcepts],
+  });
+
+  return {
+    surface_kind: 'opl_okf_domain_repo_projection_readback',
+    version: 'opl-okf-domain-repo-projection-readback.v1',
+    repo_root: repoRoot,
+    pack_path: packPath,
+    memory_descriptor_path: includeMemoryLocators ? memoryDescriptorPath : null,
+    memory_descriptor_status: includeMemoryLocators
+      ? (memoryDescriptorExists ? 'loaded' : 'missing')
+      : 'not_requested',
+    memory_locator_count: memoryConcepts.length,
+    domain_id: pack.domainId,
+    domain_pack_owner: pack.owner,
+    source_root_ref: pack.sourceRootRef,
+    projection,
+    authority_boundary: OKF_CONTEXT_BUNDLE_CONTRACT.authority_boundary,
+    non_authority_flags: OKF_CONTEXT_BUNDLE_CONTRACT.non_authority_flags,
+  };
 }
 
 export function buildOkfMemoryLocatorConcept(
   descriptor: OkfMemoryLocatorDescriptor,
 ): OkfConceptInput {
-  const domainId = descriptor.target_domain_id ?? 'unknown-domain';
+  const domainId = descriptor.target_domain_id ?? descriptor.domain_id ?? 'unknown-domain';
   const memoryRefId = descriptor.memory_ref_id ?? 'memory';
   const owner = descriptor.owner ?? descriptor.memory_body_owner ?? domainId;
   const resourceRef = descriptor.memory_pack_ref?.ref ?? descriptor.canonical_body_ref?.ref ?? memoryRefId;
