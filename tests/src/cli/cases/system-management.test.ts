@@ -88,6 +88,20 @@ exit 1
             health_status: string;
             issues: string[];
             diagnostics: string[];
+            runtime_toolchain_updater: {
+              global_toolchain_mutation_allowed: boolean;
+              platform_package_materialization_policy: {
+                package_name: string;
+                target_triple: string;
+                source_of_truth: string;
+                explicit_install_when_optional_payload_missing: boolean;
+                install_scope: string;
+                global_toolchain_mutation_allowed: boolean;
+                can_claim_domain_ready: boolean;
+                can_claim_app_release_ready: boolean;
+                can_claim_production_ready: boolean;
+              };
+            };
           };
           family_runtime_provider: {
             provider_kind: string;
@@ -153,6 +167,17 @@ exit 1
     assert.equal(output.system.core_engines.codex.health_status, 'ready');
     assert.deepEqual(output.system.core_engines.codex.issues, []);
     assert.deepEqual(output.system.core_engines.codex.diagnostics, []);
+    const materializationPolicy = output.system.core_engines.codex
+      .runtime_toolchain_updater.platform_package_materialization_policy;
+    assert.equal(materializationPolicy.package_name, '@openai/codex-darwin-arm64');
+    assert.equal(materializationPolicy.target_triple, 'aarch64-apple-darwin');
+    assert.equal(materializationPolicy.source_of_truth, 'npm_optional_dependency_or_preseeded_platform_tarball');
+    assert.equal(materializationPolicy.explicit_install_when_optional_payload_missing, true);
+    assert.equal(materializationPolicy.install_scope, 'app_owned_stage_prefix_only');
+    assert.equal(materializationPolicy.global_toolchain_mutation_allowed, false);
+    assert.equal(materializationPolicy.can_claim_domain_ready, false);
+    assert.equal(materializationPolicy.can_claim_app_release_ready, false);
+    assert.equal(materializationPolicy.can_claim_production_ready, false);
     assert.equal(Object.hasOwn(output.system.core_engines, 'hermes'), false);
     assert.equal(output.system.core_engines.family_runtime_provider.provider_kind, 'temporal');
     assert.equal(output.system.core_engines.family_runtime_provider.health_status, 'attention_needed');

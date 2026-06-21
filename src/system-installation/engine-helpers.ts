@@ -226,6 +226,17 @@ function inspectRuntimeCodexToolchain(
     global_toolchain_mutation_allowed: false,
     system_tool_priority: 'prefer_compatible_system_codex_from_env_or_path',
     managed_payloads: ['codex_cli', 'codex_path_rg'],
+    platform_package_materialization_policy: {
+      package_name: '@openai/codex-darwin-arm64',
+      target_triple: CODEX_MACOS_ARM64_TARGET,
+      source_of_truth: 'npm_optional_dependency_or_preseeded_platform_tarball',
+      explicit_install_when_optional_payload_missing: true,
+      install_scope: 'app_owned_stage_prefix_only',
+      global_toolchain_mutation_allowed: false,
+      can_claim_domain_ready: false,
+      can_claim_app_release_ready: false,
+      can_claim_production_ready: false,
+    },
     runtime_root: paths.runtime_root,
     current_root: paths.current_root,
     current_binary_path: paths.current_codex_path,
@@ -767,9 +778,7 @@ function applyStagedCodexRuntimePayload(stageAttemptRoot: string, paths: Runtime
             exit_code: explicitPlatformInstall.exitCode,
             stdout: explicitPlatformInstall.stdout,
             stderr: explicitPlatformInstall.stderr,
-            platform_spec: failedExplicitPlatformInstall
-              ? resolveInstalledCodexPlatformSpec(packageRoot)
-              : null,
+            platform_spec: resolveInstalledCodexPlatformSpec(packageRoot),
           }
         : null,
       missing_platform_package_spec: vendor.missing_platform_package_spec,

@@ -6,6 +6,22 @@ import { buildOplEnvironment } from './environment.ts';
 import type { OplEngineAction, OplEngineId } from './shared.ts';
 import { normalizeOutput } from './shared.ts';
 
+function parseRuntimeUpdateReceipt(raw: string) {
+  const normalized = raw.trim();
+  if (!normalized) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(normalized) as Record<string, unknown>;
+    const receipt = parsed.opl_runtime_codex_update;
+    return receipt && typeof receipt === 'object'
+      ? receipt as Record<string, unknown>
+      : null;
+  } catch (_) {
+    return null;
+  }
+}
+
 function findEngineOrThrow(engineId: string): OplEngineId {
   const normalized = engineId.trim().toLowerCase();
   if (normalized === 'codex') {
@@ -52,6 +68,7 @@ export async function runOplEngineAction(
 
   const result = spec.executable();
   if (result.exitCode !== 0) {
+    const runtimeUpdate = parseRuntimeUpdateReceipt(result.stderr);
     throw new FrameworkContractError(
       'build_command_failed',
       `Failed to run ${resolvedEngineId} ${action} command for OPL.`,
@@ -61,6 +78,7 @@ export async function runOplEngineAction(
         command_preview: spec.command_preview,
         stdout: result.stdout,
         stderr: result.stderr,
+        ...(runtimeUpdate ? { runtime_update: runtimeUpdate } : {}),
       },
     );
   }
