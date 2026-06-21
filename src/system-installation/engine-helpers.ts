@@ -49,6 +49,14 @@ type RuntimeToolchainPaths = {
   staging_root: string;
 };
 
+type InstalledCodexPayload = {
+  codex: string | null;
+  rg: string | null;
+  package_bin_entry: string | null;
+  platform_package_root: string | null;
+  missing_platform_package_spec: string | null;
+};
+
 function resolveMinimumCodexCliVersion() {
   return normalizeOptionalString(process.env.OPL_MIN_CODEX_CLI_VERSION)
     ?? DEFAULT_MINIMUM_CODEX_CLI_VERSION;
@@ -452,37 +460,92 @@ function findInstalledCodexPackageRoot(prefixRoot: string) {
     : null;
 }
 
-function findInstalledCodexVendorBinaries(packageRoot: string) {
+function readPackageJson(packageRoot: string) {
+  const packageJsonPath = path.join(packageRoot, 'package.json');
+  if (!fs.existsSync(packageJsonPath)) {
+    return null;
+  }
+  try {
+    return JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')) as Record<string, unknown>;
+  } catch (_) {
+    return null;
+  }
+}
+
+function normalizePackageBinEntry(packageJson: Record<string, unknown> | null, binName: string) {
+  const bin = packageJson?.bin;
+  if (typeof bin === 'string') {
+    return binName === 'codex' ? bin : null;
+  }
+  if (!bin || typeof bin !== 'object') {
+    return null;
+  }
+  const entry = (bin as Record<string, unknown>)[binName];
+  return typeof entry === 'string' && entry.trim().length > 0
+    ? entry
+    : null;
+}
+
+function resolveInstalledCodexPlatformSpec(packageRoot: string) {
+  const packageJson = readPackageJson(packageRoot);
+  const optionalDependencies = packageJson?.optionalDependencies;
+  if (!optionalDependencies || typeof optionalDependencies !== 'object') {
+    return null;
+  }
+  const spec = (optionalDependencies as Record<string, unknown>)['@openai/codex-darwin-arm64'];
+  return typeof spec === 'string' && spec.trim().length > 0
+    ? `@openai/codex-darwin-arm64@${spec}`
+    : null;
+}
+
+function findInstalledCodexPayload(packageRoot: string): InstalledCodexPayload {
   const scopedPackageRoot = path.dirname(packageRoot);
+  const siblingPlatformPackageRoot = path.join(scopedPackageRoot, 'codex-darwin-arm64');
+  const nestedPlatformPackageRoot = path.join(packageRoot, 'node_modules', '@openai', 'codex-darwin-arm64');
   const siblingPlatformVendorRoot = path.join(
-    scopedPackageRoot,
-    'codex-darwin-arm64',
+    siblingPlatformPackageRoot,
     'vendor',
     CODEX_MACOS_ARM64_TARGET,
   );
   const platformVendorRoot = path.join(
-    packageRoot,
-    'node_modules',
-    '@openai',
-    'codex-darwin-arm64',
+    nestedPlatformPackageRoot,
     'vendor',
     CODEX_MACOS_ARM64_TARGET,
   );
   const localVendorRoot = path.join(packageRoot, 'vendor', CODEX_MACOS_ARM64_TARGET);
+  const vendorCodex = findExistingFile([
+    path.join(siblingPlatformVendorRoot, 'bin', 'codex'),
+    path.join(platformVendorRoot, 'bin', 'codex'),
+    path.join(localVendorRoot, 'bin', 'codex'),
+    path.join(siblingPlatformVendorRoot, 'codex', 'codex'),
+    path.join(platformVendorRoot, 'codex', 'codex'),
+    path.join(localVendorRoot, 'codex', 'codex'),
+  ]);
+  const vendorRg = findExistingFile([
+    path.join(siblingPlatformVendorRoot, 'codex-path', 'rg'),
+    path.join(platformVendorRoot, 'codex-path', 'rg'),
+    path.join(localVendorRoot, 'codex-path', 'rg'),
+  ]);
+  if (vendorCodex) {
+    return {
+      codex: vendorCodex,
+      rg: vendorRg,
+      package_bin_entry: null,
+      platform_package_root: vendorCodex.startsWith(siblingPlatformPackageRoot)
+        ? siblingPlatformPackageRoot
+        : vendorCodex.startsWith(nestedPlatformPackageRoot)
+          ? nestedPlatformPackageRoot
+          : null,
+      missing_platform_package_spec: null,
+    };
+  }
+  const packageBinEntry = normalizePackageBinEntry(readPackageJson(packageRoot), 'codex');
   return {
-    codex: findExistingFile([
-      path.join(siblingPlatformVendorRoot, 'bin', 'codex'),
-      path.join(platformVendorRoot, 'bin', 'codex'),
-      path.join(localVendorRoot, 'bin', 'codex'),
-      path.join(siblingPlatformVendorRoot, 'codex', 'codex'),
-      path.join(platformVendorRoot, 'codex', 'codex'),
-      path.join(localVendorRoot, 'codex', 'codex'),
-    ]),
-    rg: findExistingFile([
-      path.join(siblingPlatformVendorRoot, 'codex-path', 'rg'),
-      path.join(platformVendorRoot, 'codex-path', 'rg'),
-      path.join(localVendorRoot, 'codex-path', 'rg'),
-    ]),
+    codex: null,
+    rg: null,
+    package_bin_entry: packageBinEntry,
+    platform_package_root: null,
+    missing_platform_package_spec: resolveInstalledCodexPlatformSpec(packageRoot),
   };
 }
 
@@ -506,6 +569,23 @@ function buildCodexRuntimeNpmInstallArgs(prefixRoot: string) {
     '--prefix',
     prefixRoot,
     resolveCodexPackageInstallSpec(),
+    '--force',
+    '--include=optional',
+    '--ignore-scripts=false',
+    '--fetch-retries=3',
+    '--fetch-retry-mintimeout=2000',
+    '--fetch-retry-maxtimeout=20000',
+    '--fetch-timeout=60000',
+    ...codexRuntimeNpmCacheArgs(),
+  ];
+}
+
+function buildCodexRuntimePlatformNpmInstallArgs(prefixRoot: string, platformSpec: string) {
+  return [
+    'install',
+    '--prefix',
+    prefixRoot,
+    platformSpec,
     '--force',
     '--include=optional',
     '--ignore-scripts=false',
@@ -607,7 +687,7 @@ function verifyCodexExecutable(binaryPath: string) {
 }
 
 function applyCodexVendorToRuntime(
-  vendor: ReturnType<typeof findInstalledCodexVendorBinaries>,
+  vendor: InstalledCodexPayload,
   paths: RuntimeToolchainPaths,
   packageRoot: string,
 ) {
@@ -623,6 +703,8 @@ function applyCodexVendorToRuntime(
       runtime_binary_path: paths.current_codex_path,
       codex_package_root: packageRoot,
       reason: 'staged_codex_binary_failed_version_verification',
+      source_kind: 'platform_vendor_binary',
+      platform_package_root: vendor.platform_package_root,
       verification,
     };
   }
@@ -642,13 +724,15 @@ function applyCodexVendorToRuntime(
     runtime_binary_path: paths.current_codex_path,
     runtime_rg_path: rgPath,
     codex_package_root: packageRoot,
+    source_kind: 'platform_vendor_binary',
+    platform_package_root: vendor.platform_package_root,
     copied_codex_source: vendor.codex,
     copied_rg_source: vendor.rg,
     verification,
   };
 }
 
-function applyStagedCodexRuntimePayload(stageAttemptRoot: string, paths: RuntimeToolchainPaths) {
+function applyStagedCodexRuntimePayload(stageAttemptRoot: string, paths: RuntimeToolchainPaths, cwd?: string) {
   const packageRoot = findInstalledCodexPackageRoot(stageAttemptRoot);
   if (!packageRoot) {
     return {
@@ -658,17 +742,51 @@ function applyStagedCodexRuntimePayload(stageAttemptRoot: string, paths: Runtime
       stage_attempt_root: stageAttemptRoot,
     };
   }
-  const vendor = findInstalledCodexVendorBinaries(packageRoot);
+  let explicitPlatformInstall = null;
+  let vendor = findInstalledCodexPayload(packageRoot);
+  if (!vendor.codex && vendor.missing_platform_package_spec) {
+    explicitPlatformInstall = runCommand(
+      'npm',
+      buildCodexRuntimePlatformNpmInstallArgs(stageAttemptRoot, vendor.missing_platform_package_spec),
+      cwd,
+    );
+    vendor = findInstalledCodexPayload(packageRoot);
+  }
   if (!vendor.codex) {
+    const failedExplicitPlatformInstall = explicitPlatformInstall && explicitPlatformInstall.exitCode !== 0;
     return {
       applied: false,
       runtime_binary_path: paths.current_codex_path,
       codex_package_root: packageRoot,
-      reason: 'codex_vendor_binary_not_found',
+      reason: failedExplicitPlatformInstall
+        ? 'codex_platform_package_install_failed'
+        : 'codex_vendor_binary_not_found',
+      package_bin_entry: vendor.package_bin_entry,
+      explicit_platform_install: explicitPlatformInstall
+        ? {
+            exit_code: explicitPlatformInstall.exitCode,
+            stdout: explicitPlatformInstall.stdout,
+            stderr: explicitPlatformInstall.stderr,
+            platform_spec: failedExplicitPlatformInstall
+              ? resolveInstalledCodexPlatformSpec(packageRoot)
+              : null,
+          }
+        : null,
+      missing_platform_package_spec: vendor.missing_platform_package_spec,
     };
   }
 
-  return applyCodexVendorToRuntime(vendor, paths, packageRoot);
+  return {
+    explicit_platform_install: explicitPlatformInstall
+      ? {
+          exit_code: explicitPlatformInstall.exitCode,
+          stdout: explicitPlatformInstall.stdout,
+          stderr: explicitPlatformInstall.stderr,
+          platform_spec: resolveInstalledCodexPlatformSpec(packageRoot),
+        }
+      : null,
+    ...applyCodexVendorToRuntime(vendor, paths, packageRoot),
+  };
 }
 
 function runBuiltinCodexRuntimeInstallOrUpdate(cwd?: string) {
@@ -709,7 +827,7 @@ function runBuiltinCodexRuntimeInstallOrUpdate(cwd?: string) {
     };
   }
 
-  const runtimeApply = applyStagedCodexRuntimePayload(stageAttemptRoot, paths);
+  const runtimeApply = applyStagedCodexRuntimePayload(stageAttemptRoot, paths, cwd);
   if (!runtimeApply.applied) {
     return {
       exitCode: 1,
