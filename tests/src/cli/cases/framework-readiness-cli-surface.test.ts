@@ -43,15 +43,20 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(readback.default_tranche_policy.lane_count_min, 2);
   assert.equal(readback.default_tranche_policy.lane_count_max, 4);
   assert.equal(readback.default_tranche_policy.live_evidence_deferred, true);
-  assert.equal(readback.current_tranche.selected_lane_count, 2);
+  assert.equal(readback.milestone_state_counts.open, 1);
+  assert.equal(readback.milestone_state_counts.partial, 3);
+  assert.equal(readback.milestone_state_counts.closed_structure_gate, 3);
+  assert.equal(readback.current_tranche.selected_lane_count, 3);
   assert.equal(readback.current_tranche.selected_lane_count_within_policy, true);
   assert.equal(
     readback.current_tranche.tranche_role,
     'non_live_functional_structure_milestone_tranche_not_full_completion_audit',
   );
   assert.deepEqual(readback.current_tranche.selected_milestone_ids, [
-    'opl_primitive_runtime_owner_route_guard',
-    'memory_artifact_lifecycle_functional_boundary',
+    'strict_source_purity_private_wrapper_retirement',
+  ]);
+  assert.deepEqual(readback.current_tranche.closed_or_advanced_structural_milestone_ids, [
+    'strict_source_purity_private_wrapper_retirement',
   ]);
   assert.equal(
     readback.current_tranche.lane_selection_policy.root_checkout_role,
@@ -75,39 +80,51 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     readback.current_tranche.lanes.map((lane: { lane_id: string }) => [lane.lane_id, lane]),
   );
   assert.deepEqual(
-    lanesById['opl-domain-progress-runtime-guard-20260621'].milestone_ids,
-    ['opl_primitive_runtime_owner_route_guard'],
+    lanesById['mag-private-wrapper-retirement-20260621'].milestone_ids,
+    ['strict_source_purity_private_wrapper_retirement'],
   );
   assert.deepEqual(
-    lanesById['opl-memory-artifact-lifecycle-boundary-20260621'].milestone_ids,
-    ['memory_artifact_lifecycle_functional_boundary'],
+    lanesById['rca-private-wrapper-retirement-20260621'].milestone_ids,
+    ['strict_source_purity_private_wrapper_retirement'],
+  );
+  assert.deepEqual(
+    lanesById['oma-script-retirement-guard-20260621'].milestone_ids,
+    ['strict_source_purity_private_wrapper_retirement'],
   );
   assert.ok(
-    lanesById['opl-domain-progress-runtime-guard-20260621'].required_surfaces.includes(
-      'API_readback',
-    ),
+    lanesById['mag-private-wrapper-retirement-20260621'].required_surfaces.includes('contract'),
   );
   assert.ok(
-    lanesById['opl-domain-progress-runtime-guard-20260621'].required_surfaces.includes('contract'),
+    lanesById['mag-private-wrapper-retirement-20260621'].required_surfaces.includes('CLI_readback'),
   );
   assert.ok(
-    lanesById['opl-domain-progress-runtime-guard-20260621'].forbidden_scope.includes(
-      'owner_receipt_or_typed_blocker_authority',
-    ),
-  );
-  assert.ok(
-    lanesById['opl-memory-artifact-lifecycle-boundary-20260621'].required_surfaces.includes(
-      'CLI_readback',
+    lanesById['mag-private-wrapper-retirement-20260621'].non_live_completion_evidence_required.includes(
+      'mag_morphology_guard_cli_readback_exposes_delete_false_authority',
     ),
   );
   assert.equal(
-    lanesById['opl-domain-progress-runtime-guard-20260621']
+    lanesById['mag-private-wrapper-retirement-20260621']
       .authority_boundary.can_create_second_active_backlog,
     false,
   );
+  assert.equal(
+    lanesById['rca-private-wrapper-retirement-20260621']
+      .authority_boundary.can_authorize_physical_delete,
+    false,
+  );
+  assert.equal(
+    lanesById['oma-script-retirement-guard-20260621']
+      .authority_boundary.can_claim_domain_ready,
+    false,
+  );
   assert.ok(
-    lanesById['opl-memory-artifact-lifecycle-boundary-20260621'].forbidden_scope.includes(
-      'artifact_body_mutation',
+    lanesById['rca-private-wrapper-retirement-20260621'].forbidden_scope.includes(
+      'visual_ready_or_production_ready_claim',
+    ),
+  );
+  assert.ok(
+    lanesById['oma-script-retirement-guard-20260621'].forbidden_scope.includes(
+      'default_promotion_or_default_caller_cutover_claim',
     ),
   );
   assert.equal(readback.authority_boundary.can_create_second_active_backlog, false);
