@@ -26,6 +26,13 @@ interface OkfContextBundleContract {
   okf_v0_1_source_refs: Array<Record<string, string>>;
   reserved_filenames: string[];
   frontmatter_contract: Record<string, unknown>;
+  native_frontmatter_migration_policy: {
+    state: string;
+    default_bundle_mode: string;
+    required_fields: string[];
+    runtime_consumption_policy: Record<string, false>;
+    false_authority_fields: Record<string, false>;
+  };
   conformance_policy: Record<string, string[]>;
   authority_boundary: {
     projection_only: true;
