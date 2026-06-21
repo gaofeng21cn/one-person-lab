@@ -77,6 +77,59 @@ export function buildPublicRuntimeCommandSpecs(
         examples: ['opl runtime memory-artifact-lifecycle-evidence list --json'],
         group: 'runtime',
       }),
+    'runtime env':
+      cloneCommandSpec(commandSpecs['runtime env'], {
+        usage: 'opl runtime env <inspect|lock|cache|doctor|run-context|contract>',
+        examples: [
+          'opl runtime env inspect --domain mas --profile analysis --platform macos-arm64 --json',
+          'opl runtime env cache status --json',
+        ],
+        group: 'runtime',
+      }),
+    'runtime env inspect':
+      cloneCommandSpec(commandSpecs['runtime env inspect'], {
+        usage:
+          'opl runtime env inspect --domain <domain> --profile <profile> --platform <platform>',
+        examples: [
+          'opl runtime env inspect --domain mas --profile analysis --platform macos-arm64 --json',
+        ],
+        group: 'runtime',
+      }),
+    'runtime env lock':
+      cloneCommandSpec(commandSpecs['runtime env lock'], {
+        usage:
+          'opl runtime env lock --domain <domain> --profile <profile> --platform <platform>',
+        examples: [
+          'opl runtime env lock --domain mas --profile analysis --platform macos-arm64 --json',
+        ],
+        group: 'runtime',
+      }),
+    'runtime env cache status':
+      cloneCommandSpec(commandSpecs['runtime env cache status'], {
+        usage: 'opl runtime env cache status',
+        examples: ['opl runtime env cache status --json'],
+        group: 'runtime',
+      }),
+    'runtime env doctor':
+      cloneCommandSpec(commandSpecs['runtime env doctor'], {
+        usage: 'opl runtime env doctor',
+        examples: ['opl runtime env doctor --json'],
+        group: 'runtime',
+      }),
+    'runtime env run-context':
+      cloneCommandSpec(commandSpecs['runtime env run-context'], {
+        usage: 'opl runtime env run-context --domain <domain> --profile <profile>',
+        examples: [
+          'opl runtime env run-context --domain bookforge --profile publication_proof --json',
+        ],
+        group: 'runtime',
+      }),
+    'runtime env contract':
+      cloneCommandSpec(commandSpecs['runtime env contract'], {
+        usage: 'opl runtime env contract',
+        examples: ['opl runtime env contract --json'],
+        group: 'runtime',
+      }),
     'runtime app-release-evidence record':
       cloneCommandSpec(commandSpecs['runtime app-release-evidence record'], {
         usage: 'opl runtime app-release-evidence record (--payload <json>|--payload-file <path>)',

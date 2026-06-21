@@ -1,0 +1,165 @@
+{
+  "contract_id": "opl_runtime_environment_substrate_contract",
+  "schema_version": "opl-runtime-environment-substrate.v1",
+  "owner": "OPL Framework",
+  "state": "active_contract",
+  "implementation_status": "contract_and_readback_skeleton",
+  "target_planned": true,
+  "purpose": "Define the OPL-owned runtime environment bundle substrate boundary for descriptor, lock, cache, materialization, verification, cleanup, and run-context readbacks without granting domain, App release, or owner-receipt authority.",
+  "ordinary_path": {
+    "input": "domain_environment_intent",
+    "steps": [
+      "runtime_environment_descriptor",
+      "runtime_lock",
+      "content_addressed_layers",
+      "runtime_bundle_manifest",
+      "materialized_runtime_root",
+      "receipt_cleanup_rollback"
+    ],
+    "default_mode": "fail_closed_readback_until_materializer_lands",
+    "domain_agents_declare_dependency_intent_only": true
+  },
+  "module_mapping": {
+    "runway": {
+      "role": "runtime_materialization_and_run_consumption",
+      "owner": "OPL Framework"
+    },
+    "pack": {
+      "role": "descriptor_lock_layer_manifest_and_distribution_refs",
+      "owner": "OPL Framework"
+    },
+    "connect": {
+      "role": "cli_app_install_update_entrypoints",
+      "owner": "OPL Framework"
+    },
+    "console": {
+      "role": "operator_projection",
+      "owner": "OPL Framework"
+    },
+    "vault": {
+      "role": "refs_only_evidence_and_receipt_refs",
+      "owner": "OPL Framework"
+    },
+    "workspace": {
+      "role": "managed_runtime_root_and_workspace_state_separation",
+      "owner": "OPL Framework"
+    },
+    "atlas": {
+      "role": "package_module_registry",
+      "owner": "OPL Framework"
+    },
+    "stagecraft": {
+      "role": "stage_runtime_consumption_refs",
+      "owner": "OPL Framework"
+    },
+    "foundry-lab": {
+      "role": "agent_lab_environment_consumption",
+      "owner": "OPL Framework"
+    },
+    "charter": {
+      "role": "policy_and_false_ready_boundary",
+      "owner": "OPL Framework"
+    }
+  },
+  "descriptor_contract": {
+    "surface_kind": "opl_runtime_environment_descriptor",
+    "required_fields": [
+      "schema",
+      "domain_id",
+      "profile_id",
+      "platform_id",
+      "dependency_sources",
+      "toolchain_needs",
+      "authority_boundary"
+    ],
+    "domain_owned_fields": [
+      "domain_id",
+      "profile_id",
+      "dependency_sources",
+      "study_reproducibility_refs"
+    ],
+    "opl_owned_fields": [
+      "platform_id",
+      "runtime_lock_ref",
+      "layer_manifest_refs",
+      "materialization_receipt_ref",
+      "cache_policy_ref"
+    ],
+    "body_policy": "descriptor_refs_only_no_domain_artifact_or_memory_body"
+  },
+  "layer_types": [
+    "base-toolchain",
+    "python-wheelhouse",
+    "opl-framework-runtime",
+    "domain-pack",
+    "companion-skills",
+    "optional-heavy-tools"
+  ],
+  "cache_policy": {
+    "cache_key_inputs": [
+      "descriptor_digest",
+      "platform_id",
+      "python_or_node_lock_digest",
+      "toolchain_digest",
+      "domain_pack_ref",
+      "packager_source_hash",
+      "exclusion_policy_hash"
+    ],
+    "cache_hit_counts_as_ready": false,
+    "cache_miss_counts_as_readiness_failure": false,
+    "materialization_failure_counts_as_runtime_environment_failure": true
+  },
+  "materialization_policy": {
+    "default_command_mode": "dry_run",
+    "writes_development_checkout": false,
+    "writes_domain_repo": false,
+    "writes_runtime_root_until_materializer_lands": false,
+    "protect_current_and_rollback_pointers": true,
+    "cleanup_apply_requires_receipt": true
+  },
+  "authority_boundary": {
+    "opl_is_canonical_runtime_environment_owner": true,
+    "app_consumes_runtime_environment_projection": true,
+    "domain_agents_declare_dependency_intent_only": true,
+    "can_write_domain_truth": false,
+    "can_write_domain_memory_body": false,
+    "can_write_artifact_body": false,
+    "can_sign_owner_receipt": false,
+    "can_create_typed_blocker": false,
+    "can_claim_domain_ready": false,
+    "can_claim_app_release_ready": false,
+    "can_claim_runtime_materialized_ready": false,
+    "can_claim_quality_or_export_verdict": false,
+    "can_schedule_domain_stage": false
+  },
+  "required_readback_claim_fields": [
+    "implementation_status",
+    "target_planned",
+    "dry_run",
+    "can_claim_runtime_ready",
+    "can_claim_domain_ready",
+    "can_claim_app_release_ready"
+  ],
+  "readback_commands": [
+    "opl runtime env inspect --domain <domain> --profile <profile> --platform <platform>",
+    "opl runtime env lock --domain <domain> --profile <profile> --platform <platform>",
+    "opl runtime env cache status",
+    "opl runtime env doctor",
+    "opl runtime env run-context --domain <domain> --profile <profile>"
+  ],
+  "forbidden_claims": [
+    "runtime_cache_hit_means_ready",
+    "materialization_skeleton_means_runtime_ready",
+    "runtime_environment_receipt_means_domain_ready",
+    "runtime_environment_receipt_means_app_release_ready",
+    "descriptor_exists_means_runtime_materialized",
+    "run_context_exists_means_provider_ready"
+  ],
+  "live_evidence_deferred": [
+    "provider_long_soak",
+    "app_release_cohort",
+    "real_user_path",
+    "domain_owner_chain_live_evidence",
+    "real_paper_or_project_run_evidence"
+  ]
+}

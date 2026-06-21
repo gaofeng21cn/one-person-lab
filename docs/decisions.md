@@ -754,6 +754,18 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - domain agent 继续持有 workspace truth、source body、artifact body、artifact authority、memory body、memory writeback accept/reject、domain truth 与质量裁决。
 - 当前 surface 已覆盖 MAS-like payload 的 workspace root、source refs、artifact refs、memory refs 和 authority boundary；剩余 production gap 是真实长时 domain owner chain、真实 memory writeback apply/body migration、artifact mutation receipt scaleout 和 App drilldown 的持续 soak。
 
+### 决策：Runtime Environment Bundle 是 OPL-owned substrate；domain repo 只声明 dependency intent
+
+原因：App Full、MAS/MAG/RCA/BookForge/OMA、CI/VM smoke 和部署脚本不应各自持有 Python/uv/Node/native helper/domain repo/skills/cache bootstrap。运行环境必须成为 OPL Framework 的 shared primitive，按 descriptor、lock、content-addressed layers、bundle manifest、materialized runtime root、receipt、cleanup 和 rollback 分层；App 是 consumer，domain agent 只声明 dependency intent 和 reproducibility refs。
+
+影响：
+
+- `contracts/opl-framework/runtime-environment-substrate-contract.json` 固定 OPL runtime environment substrate 的 machine boundary、module mapping、layer taxonomy、cache policy、materialization policy、false-ready flags 和 forbidden claims。
+- `opl runtime env inspect|lock|cache status|doctor|run-context|contract --json` 提供 fail-closed readback skeleton，输出 descriptor / lock / cache / doctor / run-context 边界。
+- 当前实现不生成 runtime lock、不 materialize runtime root、不检查真实 host packages、不写 runtime artifact、不剪枝 cache；因此它只完成 contract/readback skeleton，不构成 runtime materialized ready。
+- Cache hit、descriptor exists、skeleton materialization、run-context exists 或 runtime environment receipt 都不能替代 runtime ready、domain ready、App release ready、owner receipt、quality/export verdict 或 provider long-soak。
+- 下一步应把 App Full runtime cache 降为 OPL runtime bundle manifest consumer，并补 lock/materializer/cache inventory；MAS/MAG/RCA/OMA 不新增私有通用 environment manager。
+
 ## 2026-05-15
 
 ### 决策：One Person Lab App 采用 clean 产品仓，AionUI shell 独立保留为 `opl-aion-shell`

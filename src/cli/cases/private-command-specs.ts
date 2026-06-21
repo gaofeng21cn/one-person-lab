@@ -62,6 +62,7 @@ import {
 import {
   buildRuntimeStandardAgentTemplateConsumptionCommandSpecs,
 } from './runtime-standard-agent-template-consumption-command-spec.ts';
+import { buildRuntimeEnvironmentCommandSpecs } from './runtime-environment-command-spec.ts';
 import { buildWorkspaceInitializeCommandSpecs } from './workspace-initialize-command-spec.ts';
 import { parseAgentsScaffoldArgs } from './private-command-specs-parts/agents-scaffold.ts';
 import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseDashboardArgs, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseObservabilityExportArgs, parseProductEntryArgs, parseRuntimeAppOperatorDrilldownArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
@@ -341,6 +342,7 @@ export function buildInternalCommandSpecs(
     ...buildRuntimeOmaProductionConsumptionCommandSpecs(),
     ...buildRuntimeResearchEvidencePackCommandSpecs(),
     ...buildRuntimeResearchHypothesisPortfolioCommandSpecs(),
+    ...buildRuntimeEnvironmentCommandSpecs(),
     'runtime action execute': {
       usage: 'opl runtime action execute --action <action_id> [--payload <json>|--payload-file <path>] [--dry-run] [--approve-domain-action]',
       summary:
