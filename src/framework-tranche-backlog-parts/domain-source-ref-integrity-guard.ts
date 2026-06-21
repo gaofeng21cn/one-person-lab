@@ -11,18 +11,18 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
     absorbed_origin_main_commits: [
       {
         repo: 'med-autogrant',
-        commit: '3848284b64b282ed5b5ec380cbd5a57c72ac47a0',
-        subject: 'Add MAG source ref integrity guard',
+        commit: 'f998e2402d1f403951b6ba706f33825b6f77b301',
+        subject: 'Add MAG strict source purity no-second-truth guard',
       },
       {
         repo: 'opl-meta-agent',
-        commit: '7b2d64a4456225a8e66c767281af4f706aed1fc7',
-        subject: 'Add OMA script source ref integrity guard',
+        commit: 'da7f681b556364ccf1ff1978bf5a25a4b7ddad1a',
+        subject: 'Harden OMA script materializer source purity',
       },
       {
         repo: 'redcube-ai',
-        commit: '711292501cc670f97ed47e405bc2b58686eb0d37',
-        subject: 'Strengthen RCA source ref integrity guard',
+        commit: 'a857539e2f045ef9d83dd83a265ede2f250982a4',
+        subject: 'Guard RCA private platform resurrection',
       },
     ],
     checked_domain_repo_guards: [
@@ -33,6 +33,8 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
           'med-autogrant:contracts/private_functional_surface_policy.json#/physical_source_morphology_policy/source_ref_integrity_gate',
         checked_source_ref_count: 54,
         checked_machine_boundary_ref_count: 0,
+        strict_source_purity_no_second_truth_guard_id:
+          'mag.physical_morphology.strict_source_purity_no_second_truth_guard.v1',
         state: 'repo_local_source_refs_declared_no_second_truth',
         accepted_ref_shapes: ['repo_local_path_or_repo_local_contract_path'],
         forbidden_ref_shapes: [
@@ -53,6 +55,13 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
           'opl-meta-agent:runtime/authority_functions/meta-agent-authority-functions.json#script_morphology_policy/source_ref_integrity_guard',
         checked_source_ref_count: 31,
         invalid_source_ref_count: 0,
+        generic_materializer_no_resurrection_guard_id:
+          'oma.script_morphology.generic_materializer_no_resurrection_guard.v1',
+        generic_materializer_scan_status: 'passed',
+        repo_owned_generic_wrapper_materializer_count: 0,
+        repo_owned_generic_runtime_materializer_count: 0,
+        repo_owned_queue_or_attempt_ledger_materializer_count: 0,
+        repo_owned_target_worktree_lifecycle_materializer_count: 0,
         state: 'repo_local_script_refs_declared_no_second_truth',
         accepted_ref_shapes: ['scripts_repo_local_ts_or_sh_file'],
         forbidden_ref_shapes: [
@@ -72,6 +81,14 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
           'redcube-ai:contracts/physical_source_morphology_policy.json#/source_ref_integrity_gate',
         checked_source_ref_count: 58,
         checked_machine_boundary_ref_count: 3,
+        active_source_resurrection_scan_policy_id:
+          'rca.source_morphology.active_source_no_resurrection_scan.v1',
+        active_source_resurrection_guarded_claim_keys: [
+          'runtimeWatch_can_return_to_domain_action_adapter_default_dispatch',
+          'domain_action_adapter_can_become_generic_dispatch_owner',
+          'domain_action_adapter_can_become_generated_wrapper_owner',
+          'generic_runtime_owner_allowed',
+        ],
         state: 'repo_local_source_refs_declared_no_second_truth',
         accepted_ref_shapes: ['repo_path', 'repo_directory', 'repo_path_anchor'],
         forbidden_ref_shapes: [
@@ -96,8 +113,13 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
       can_close_non_live_structure_gate: true,
       required_current_truth_surfaces: [
         'med-autogrant:physical_source_morphology_policy.source_ref_integrity_gate',
+        'med-autogrant:physical_source_morphology_policy.strict_source_purity_no_second_truth_guard',
+        'med-autogrant:product physical-morphology-guard.strict_source_purity_no_second_truth_guard',
         'opl-meta-agent:script_to_pack_gate_receipt.machine_gate_inputs.source_ref_integrity_guard',
+        'opl-meta-agent:script_morphology_policy.generic_materializer_no_resurrection_guard',
+        'opl-meta-agent:source_purity_scan_receipt.generic_script_materializer_scan',
         'redcube-ai:physical_source_morphology_policy.source_ref_integrity_gate',
+        'redcube-ai:default_caller_tail_thinning_gate.active_source_resurrection_scan_policy',
         'repo_native_source_ref_integrity_tests',
         'remote_sha_readback_equal',
       ],

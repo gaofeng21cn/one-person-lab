@@ -291,9 +291,9 @@ test('framework tranche backlog exposes a guarded milestone index without comple
       (commit: { repo: string; commit: string }) => [commit.repo, commit.commit],
     ),
     [
-      ['med-autogrant', '3848284b64b282ed5b5ec380cbd5a57c72ac47a0'],
-      ['opl-meta-agent', '7b2d64a4456225a8e66c767281af4f706aed1fc7'],
-      ['redcube-ai', '711292501cc670f97ed47e405bc2b58686eb0d37'],
+      ['med-autogrant', 'f998e2402d1f403951b6ba706f33825b6f77b301'],
+      ['opl-meta-agent', 'da7f681b556364ccf1ff1978bf5a25a4b7ddad1a'],
+      ['redcube-ai', 'a857539e2f045ef9d83dd83a265ede2f250982a4'],
     ],
   );
   const sourceRefGuardsByRepo = Object.fromEntries(
@@ -307,17 +307,62 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   );
   assert.equal(sourceRefGuardsByRepo['med-autogrant'].checked_source_ref_count, 54);
   assert.equal(
+    sourceRefGuardsByRepo['med-autogrant'].strict_source_purity_no_second_truth_guard_id,
+    'mag.physical_morphology.strict_source_purity_no_second_truth_guard.v1',
+  );
+  assert.equal(
     sourceRefGuardsByRepo['opl-meta-agent'].source_ref,
     'opl-meta-agent:contracts/script_to_pack_gate_receipt.json#/machine_gate_inputs/source_ref_integrity_guard',
   );
   assert.equal(sourceRefGuardsByRepo['opl-meta-agent'].checked_source_ref_count, 31);
   assert.equal(sourceRefGuardsByRepo['opl-meta-agent'].invalid_source_ref_count, 0);
   assert.equal(
+    sourceRefGuardsByRepo['opl-meta-agent'].generic_materializer_no_resurrection_guard_id,
+    'oma.script_morphology.generic_materializer_no_resurrection_guard.v1',
+  );
+  assert.equal(sourceRefGuardsByRepo['opl-meta-agent'].generic_materializer_scan_status, 'passed');
+  assert.equal(sourceRefGuardsByRepo['opl-meta-agent'].repo_owned_generic_wrapper_materializer_count, 0);
+  assert.equal(sourceRefGuardsByRepo['opl-meta-agent'].repo_owned_generic_runtime_materializer_count, 0);
+  assert.equal(sourceRefGuardsByRepo['opl-meta-agent'].repo_owned_queue_or_attempt_ledger_materializer_count, 0);
+  assert.equal(sourceRefGuardsByRepo['opl-meta-agent'].repo_owned_target_worktree_lifecycle_materializer_count, 0);
+  assert.equal(
     sourceRefGuardsByRepo['redcube-ai'].source_ref,
     'redcube-ai:contracts/physical_source_morphology_policy.json#/source_ref_integrity_gate',
   );
   assert.equal(sourceRefGuardsByRepo['redcube-ai'].checked_source_ref_count, 58);
   assert.equal(sourceRefGuardsByRepo['redcube-ai'].checked_machine_boundary_ref_count, 3);
+  assert.equal(
+    sourceRefGuardsByRepo['redcube-ai'].active_source_resurrection_scan_policy_id,
+    'rca.source_morphology.active_source_no_resurrection_scan.v1',
+  );
+  assert.ok(
+    sourceRefGuardsByRepo['redcube-ai'].active_source_resurrection_guarded_claim_keys.includes(
+      'runtimeWatch_can_return_to_domain_action_adapter_default_dispatch',
+    ),
+  );
+  assert.ok(
+    sourceRefGuardsByRepo['redcube-ai'].active_source_resurrection_guarded_claim_keys.includes(
+      'domain_action_adapter_can_become_generated_wrapper_owner',
+    ),
+  );
+  assert.ok(
+    readback.domain_source_ref_integrity_guard.structural_closeout_guard
+      .required_current_truth_surfaces.includes(
+        'med-autogrant:physical_source_morphology_policy.strict_source_purity_no_second_truth_guard',
+      ),
+  );
+  assert.ok(
+    readback.domain_source_ref_integrity_guard.structural_closeout_guard
+      .required_current_truth_surfaces.includes(
+        'opl-meta-agent:source_purity_scan_receipt.generic_script_materializer_scan',
+      ),
+  );
+  assert.ok(
+    readback.domain_source_ref_integrity_guard.structural_closeout_guard
+      .required_current_truth_surfaces.includes(
+        'redcube-ai:default_caller_tail_thinning_gate.active_source_resurrection_scan_policy',
+      ),
+  );
   assert.equal(
     readback.domain_source_ref_integrity_guard.common_validation_policy
       .stale_or_missing_ref_reopens_structure_gap,
