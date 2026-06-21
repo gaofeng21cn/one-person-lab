@@ -14,6 +14,9 @@ import {
   memoryArtifactLifecycleEvidenceAuthorityBoundary,
 } from './memory-artifact-lifecycle-evidence-ledger.ts';
 import {
+  buildDomainSourceRefIntegrityGuard,
+} from './framework-tranche-backlog-parts/domain-source-ref-integrity-guard.ts';
+import {
   FrameworkContractError,
   expectBoolean,
   expectString,
@@ -455,9 +458,13 @@ const FRAMEWORK_TRANCHE_MILESTONES: FrameworkTrancheMilestone[] = [
       'opl-meta-agent:contracts/script_to_pack_gate_receipt.json#script_morphology_policy.retirement_readback_cleanup_guard',
       'opl-meta-agent:runtime/authority_functions/meta-agent-authority-functions.json#script_morphology_policy',
       'opl-meta-agent:runtime/authority_functions/meta-agent-authority-functions.parts/script_morphology_policy/root.json',
+      'opl-meta-agent:contracts/script_to_pack_gate_receipt.json#/machine_gate_inputs/source_ref_integrity_guard',
       'opl-meta-agent:tests/source-purity.test.ts',
       'opl-meta-agent:docs/active/opl-private-implementation-migration-inventory.md',
       'OPL docs/active/current-state-vs-ideal-gap.md',
+      'MAG source-ref integrity commit 3848284b64b282ed5b5ec380cbd5a57c72ac47a0',
+      'OMA source-ref integrity commit 7b2d64a4456225a8e66c767281af4f706aed1fc7',
+      'RCA source-ref integrity commit 711292501cc670f97ed47e405bc2b58686eb0d37',
     ],
     non_live_evidence_acceptance: NON_LIVE_ACCEPTANCE,
     deferred_evidence: [
@@ -2013,6 +2020,8 @@ export function buildFrameworkTrancheBacklogReadback(contracts: FrameworkContrac
         convergence_readback: APP_SHELL_CONVERGENCE_STRUCTURE_READBACK,
       },
       cross_repo_ref_integrity_guard: CROSS_REPO_REF_INTEGRITY_GUARD,
+      domain_source_ref_integrity_guard:
+        buildDomainSourceRefIntegrityGuard(NO_SECOND_TRUTH_AUTHORITY_BOUNDARY),
       authority_boundary: { ...NO_SECOND_TRUTH_AUTHORITY_BOUNDARY },
       false_ready_guard: {
         tests_or_contracts_can_claim_ready: false,
