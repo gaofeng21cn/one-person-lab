@@ -5,6 +5,7 @@ import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWork
 import { buildOplFrameworkLocator } from '../../opl-framework-locator.ts';
 import { buildFrameworkOperatingMaturityReadout } from '../../framework-operating-maturity.ts';
 import { buildFrameworkReadinessSummary } from '../../framework-readiness.ts';
+import { buildFrameworkTrancheBacklogReadback } from '../../framework-tranche-backlog.ts';
 import {
   buildOkfContextBundleFromDomainPack,
   buildOkfContextBundleFromDomainRepo,
@@ -610,6 +611,25 @@ export function buildPublicCommandSpecs(
           );
         }
         return await buildFrameworkOperatingMaturityReadout(getContracts(), { familyDefaults: true });
+      },
+    },
+    'framework tranche-backlog': {
+      usage: 'opl framework tranche-backlog --family-defaults',
+      summary:
+        'Read the milestone/tranche execution index for functional-structure lanes without creating a second active backlog or completion claim.',
+      examples: ['opl framework tranche-backlog --family-defaults --json'],
+      group: 'framework',
+      handler: (args) => {
+        if (args.length !== 1 || args[0] !== '--family-defaults') {
+          throw buildUsageError(
+            'framework tranche-backlog requires --family-defaults.',
+            publicCommandSpecs['framework tranche-backlog'],
+            {
+              required: ['--family-defaults'],
+            },
+          );
+        }
+        return buildFrameworkTrancheBacklogReadback(getContracts());
       },
     },
     ...agentLabCommandSpecs,
