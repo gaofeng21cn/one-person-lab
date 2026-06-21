@@ -44,8 +44,8 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(readback.default_tranche_policy.lane_count_max, 4);
   assert.equal(readback.default_tranche_policy.live_evidence_deferred, true);
   assert.equal(readback.milestone_state_counts.open, 1);
-  assert.equal(readback.milestone_state_counts.partial, 1);
-  assert.equal(readback.milestone_state_counts.closed_structure_gate, 5);
+  assert.equal(readback.milestone_state_counts.partial, 0);
+  assert.equal(readback.milestone_state_counts.closed_structure_gate, 6);
   assert.equal(readback.current_tranche.selected_lane_count, 1);
   assert.equal(readback.current_tranche.selected_lane_count_within_policy, false);
   assert.equal(
@@ -53,10 +53,10 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     'non_live_functional_structure_milestone_tranche_not_full_completion_audit',
   );
   assert.deepEqual(readback.current_tranche.selected_milestone_ids, [
-    'opl_primitive_runtime_owner_route_guard',
+    'memory_artifact_lifecycle_functional_boundary',
   ]);
   assert.deepEqual(readback.current_tranche.closed_or_advanced_structural_milestone_ids, [
-    'opl_primitive_runtime_owner_route_guard',
+    'memory_artifact_lifecycle_functional_boundary',
   ]);
   const milestonesById = Object.fromEntries(
     readback.milestones.map((milestone: { milestone_id: string }) => [milestone.milestone_id, milestone]),
@@ -67,6 +67,10 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   );
   assert.equal(
     milestonesById['opl_primitive_runtime_owner_route_guard'].state,
+    'closed_structure_gate',
+  );
+  assert.equal(
+    milestonesById['memory_artifact_lifecycle_functional_boundary'].state,
     'closed_structure_gate',
   );
   assert.equal(
@@ -91,43 +95,43 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     readback.current_tranche.lanes.map((lane: { lane_id: string }) => [lane.lane_id, lane]),
   );
   assert.deepEqual(
-    lanesById['opl-primitive-aggregate-structure-closeout-20260621'].milestone_ids,
-    ['opl_primitive_runtime_owner_route_guard'],
+    lanesById['opl-memory-artifact-lifecycle-structure-closeout-20260621'].milestone_ids,
+    ['memory_artifact_lifecycle_functional_boundary'],
   );
   assert.ok(
-    lanesById['opl-primitive-aggregate-structure-closeout-20260621'].required_surfaces.includes('API_readback'),
+    lanesById['opl-memory-artifact-lifecycle-structure-closeout-20260621'].required_surfaces.includes('API_readback'),
   );
   assert.ok(
-    lanesById['opl-primitive-aggregate-structure-closeout-20260621'].required_surfaces.includes('CLI_readback'),
+    lanesById['opl-memory-artifact-lifecycle-structure-closeout-20260621'].required_surfaces.includes('CLI_readback'),
   );
   assert.ok(
-    lanesById['opl-primitive-aggregate-structure-closeout-20260621'].non_live_completion_evidence_required.includes(
-      'ordinary_owner_route_typed_blocker_human_gate_guard_readback_available',
+    lanesById['opl-memory-artifact-lifecycle-structure-closeout-20260621'].non_live_completion_evidence_required.includes(
+      'memory_artifact_lifecycle_guard_blocks_memory_artifact_package_export_domain_and_production_ready_claims',
     ),
   );
   assert.equal(
-    lanesById['opl-primitive-aggregate-structure-closeout-20260621']
+    lanesById['opl-memory-artifact-lifecycle-structure-closeout-20260621']
       .authority_boundary.can_create_second_active_backlog,
     false,
   );
   assert.equal(
-    lanesById['opl-primitive-aggregate-structure-closeout-20260621']
+    lanesById['opl-memory-artifact-lifecycle-structure-closeout-20260621']
       .authority_boundary.can_authorize_physical_delete,
     false,
   );
   assert.equal(
-    lanesById['opl-primitive-aggregate-structure-closeout-20260621']
+    lanesById['opl-memory-artifact-lifecycle-structure-closeout-20260621']
       .authority_boundary.can_claim_domain_ready,
     false,
   );
   assert.ok(
-    lanesById['opl-primitive-aggregate-structure-closeout-20260621'].forbidden_scope.includes(
-      'runtime_ledger_mutation',
+    lanesById['opl-memory-artifact-lifecycle-structure-closeout-20260621'].forbidden_scope.includes(
+      'memory_body_read_or_write',
     ),
   );
   assert.ok(
-    lanesById['opl-primitive-aggregate-structure-closeout-20260621'].forbidden_scope.includes(
-      'provider_long_soak_or_live_evidence_claim',
+    lanesById['opl-memory-artifact-lifecycle-structure-closeout-20260621'].forbidden_scope.includes(
+      'package_or_export_readiness_authority',
     ),
   );
   assert.equal(readback.authority_boundary.can_create_second_active_backlog, false);
@@ -361,6 +365,15 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     'memory_artifact_lifecycle',
   );
   assert.equal(
+    readback.memory_artifact_lifecycle_boundary_guard.status,
+    'closed_structure_gate_not_live_evidence',
+  );
+  assert.equal(
+    readback.memory_artifact_lifecycle_boundary_guard.structural_closeout_guard
+      .can_close_non_live_structure_gate,
+    true,
+  );
+  assert.equal(
     readback.memory_artifact_lifecycle_boundary_guard.evidence_intake_policy.refs_only,
     true,
   );
@@ -431,6 +444,16 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     readback.memory_artifact_lifecycle_boundary_guard.false_ready_guard
       .review_repair_transport_passed_can_claim_repair_accepted,
     false,
+  );
+  assert.ok(
+    readback.memory_artifact_lifecycle_boundary_guard.structural_closeout_guard.cannot_claim.includes(
+      'artifact_body_mutated',
+    ),
+  );
+  assert.ok(
+    readback.memory_artifact_lifecycle_boundary_guard.structural_closeout_guard.cannot_claim.includes(
+      'owner_receipt_signed',
+    ),
   );
   assert.equal(
     readback.runtime_environment_substrate_guard.surface_kind,

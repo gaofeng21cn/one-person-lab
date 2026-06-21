@@ -267,12 +267,12 @@ const DEFERRED_LIVE_EVIDENCE = [
 
 const CURRENT_TRANCHE_LANES: TrancheExecutionLane[] = [
   {
-    lane_id: 'opl-primitive-aggregate-structure-closeout-20260621',
+    lane_id: 'opl-memory-artifact-lifecycle-structure-closeout-20260621',
     repo: 'one-person-lab',
     priority: 'P0',
-    milestone_ids: ['opl_primitive_runtime_owner_route_guard'],
+    milestone_ids: ['memory_artifact_lifecycle_functional_boundary'],
     lane_status: 'structure_gate_closeout_lane_non_live_evidence',
-    write_set_class: 'opl_primitive_runtime_owner_route_aggregate_readback_guard',
+    write_set_class: 'opl_memory_artifact_lifecycle_refs_only_boundary_readback_guard',
     required_surfaces: [
       'source',
       'contract',
@@ -282,23 +282,28 @@ const CURRENT_TRANCHE_LANES: TrancheExecutionLane[] = [
       'tests',
     ],
     non_live_completion_evidence_required: [
-      'domain_progress_transition_runtime_guard_readback_available',
-      'runtime_environment_substrate_guard_readback_available',
-      'ordinary_owner_route_typed_blocker_human_gate_guard_readback_available',
-      'primitive_aggregate_guard_blocks_domain_ready_runtime_ready_app_release_ready_owner_receipt_and_typed_blocker_claims',
+      'refs_only_evidence_intake_guard_readback_available',
+      'memory_artifact_lifecycle_readback_projection_available',
+      'App_drilldown_and_operating_maturity_owner_work_order_projection_available',
+      'workspace_review_repair_transport_projection_boundary_available',
+      'memory_artifact_lifecycle_guard_blocks_memory_artifact_package_export_domain_and_production_ready_claims',
       'framework_cli_surface_tests_typecheck_and_smoke_pass',
       'main_absorbed_push_and_remote_sha_readback',
     ],
     deferred_evidence: [
-      'domain_owner_receipt_followthrough',
-      'domain_typed_blocker_followthrough',
-      'human_gate_decision_followthrough',
+      'domain_memory_receipt_followthrough',
+      'artifact_mutation_receipt_followthrough',
+      'package_export_owner_acceptance',
+      'review_repair_domain_decision_followthrough',
       'App_operator_functional_path_consumption',
       ...DEFERRED_LIVE_EVIDENCE,
     ],
     forbidden_scope: [
       'domain_truth_write',
       'runtime_ledger_mutation',
+      'memory_body_read_or_write',
+      'artifact_body_read_or_mutation',
+      'package_or_export_readiness_authority',
       'physical_delete_authorization',
       'owner_receipt_or_typed_blocker_authority',
       'human_decision_authority',
@@ -384,7 +389,7 @@ const FRAMEWORK_TRANCHE_MILESTONES: FrameworkTrancheMilestone[] = [
   {
     milestone_id: 'memory_artifact_lifecycle_functional_boundary',
     priority: 'P0',
-    state: 'partial',
+    state: 'closed_structure_gate',
     owner_repos: ['one-person-lab'],
     lane_role:
       'Keep memory/artifact/lifecycle as refs-only intake, evidence readback, and owner-route work-order projection without body authority.',
@@ -1695,12 +1700,31 @@ function buildGeneratedHostedBoundaryReadback(contracts: FrameworkContracts) {
 
 function buildMemoryArtifactLifecycleBoundaryGuardReadback() {
   const evidenceAuthority = memoryArtifactLifecycleEvidenceAuthorityBoundary();
+  const structuralChecks = [
+    evidenceAuthority.refs_only === true,
+    evidenceAuthority.can_write_domain_truth === false,
+    evidenceAuthority.can_write_memory_body === false,
+    evidenceAuthority.can_read_memory_body === false,
+    evidenceAuthority.can_mutate_artifact_body === false,
+    evidenceAuthority.can_authorize_package_readiness === false,
+    evidenceAuthority.can_authorize_export_readiness === false,
+    evidenceAuthority.can_create_owner_receipt === false,
+    evidenceAuthority.can_generate_typed_blocker === false,
+    MEMORY_ARTIFACT_LIFECYCLE_REF_SHAPES.includes('memory_receipt_ref'),
+    MEMORY_ARTIFACT_LIFECYCLE_REF_SHAPES.includes('artifact_mutation_receipt_ref'),
+    MEMORY_ARTIFACT_LIFECYCLE_REF_SHAPES.includes('typed_blocker_ref'),
+    MEMORY_ARTIFACT_LIFECYCLE_REF_SHAPES.includes('owner_acceptance_ref'),
+  ];
   return {
     surface_kind: 'opl_memory_artifact_lifecycle_boundary_guard_readback',
     readback_role:
       'memory_artifact_lifecycle_refs_only_boundary_not_memory_ready_not_artifact_ready_not_package_export_ready',
     owner: 'one-person-lab',
     target_surface: 'memory_artifact_lifecycle',
+    milestone_id: 'memory_artifact_lifecycle_functional_boundary',
+    status: structuralChecks.every(Boolean)
+      ? 'closed_structure_gate_not_live_evidence'
+      : 'blocked_structure_gate',
     source_refs: [
       'src/memory-artifact-lifecycle-evidence-ledger.ts',
       'src/memory-artifact-lifecycle-readback.ts',
@@ -1761,6 +1785,35 @@ function buildMemoryArtifactLifecycleBoundaryGuardReadback() {
       transport_can_authorize_physical_delete: false,
     },
     accepted_refs_only_result_shapes: [...MEMORY_ARTIFACT_LIFECYCLE_REF_SHAPES],
+    structural_closeout_guard: {
+      can_close_non_live_structure_gate: structuralChecks.every(Boolean),
+      required_current_truth_surfaces: [
+        'memory_artifact_lifecycle_evidence_ledger',
+        'memory_artifact_lifecycle_readback',
+        'app_operator_drilldown_memory_artifact_lifecycle',
+        'framework_operating_maturity_memory_artifact_lifecycle',
+        'workspace_artifact_lifecycle_review_repair_transport',
+        'framework_tranche_backlog_memory_artifact_lifecycle_boundary_guard',
+      ],
+      cannot_claim: [
+        'memory_body_saved_or_accepted',
+        'memory_writeback_accepted_or_rejected',
+        'artifact_body_mutated',
+        'artifact_ready',
+        'repair_accepted',
+        'package_ready',
+        'export_ready',
+        'domain_ready',
+        'App_release_ready',
+        'production_ready',
+        'provider_long_soak_complete',
+        'owner_receipt_signed',
+        'typed_blocker_created',
+        'human_decision_made',
+        'physical_delete_authorized',
+        'full_goal_complete',
+      ],
+    },
     non_closing_inputs: [
       'app_projection',
       'verified_refs_only_ledger',
