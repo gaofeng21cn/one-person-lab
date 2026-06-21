@@ -1,4 +1,4 @@
-import { assert, runCli, runCliFailure, test } from '../helpers.ts';
+import { assert, fs, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
 
 test('framework readiness rejects non-default invocation to avoid a second truth surface', () => {
   const failure = runCliFailure(['framework', 'readiness']);
@@ -916,6 +916,40 @@ test('framework tranche backlog exposes a guarded milestone index without comple
       milestone.authority_boundary.can_create_second_active_backlog === false
     ),
   );
+});
+
+test('framework tranche backlog guard readbacks stay split behind a thin facade', () => {
+  const facade = fs.readFileSync(
+    path.join(repoRoot, 'src/framework-tranche-backlog-parts/guard-readbacks.ts'),
+    'utf8',
+  );
+  const guardParts = [
+    ['domain-progress-runtime-guard.ts', 'buildDomainProgressTransitionRuntimeGuardReadback'],
+    ['runtime-environment-guard.ts', 'buildRuntimeEnvironmentSubstrateGuardReadback'],
+    ['ordinary-progress-guard.ts', 'buildOrdinaryProgressGuardReadback'],
+    ['primitive-runtime-owner-route-guard.ts', 'buildPrimitiveRuntimeOwnerRouteGuardReadback'],
+    ['generated-hosted-boundary-guard.ts', 'buildGeneratedHostedBoundaryReadback'],
+    ['memory-artifact-lifecycle-boundary-guard.ts', 'buildMemoryArtifactLifecycleBoundaryGuardReadback'],
+  ] as const;
+
+  assert.equal(facade.includes('export function '), false);
+  assert.equal(facade.trim().split(/\r?\n/).length, guardParts.length);
+
+  for (const [fileName, exportName] of guardParts) {
+    assert.match(
+      facade,
+      new RegExp(`export \\{ ${exportName} \\} from './${fileName.replace('.', '\\.')}'`),
+    );
+    const source = fs.readFileSync(
+      path.join(repoRoot, 'src/framework-tranche-backlog-parts', fileName),
+      'utf8',
+    );
+    assert.match(source, new RegExp(`export function ${exportName}\\(`));
+    assert.ok(
+      source.trim().split(/\r?\n/).length <= 240,
+      `${fileName} should stay inside the focused source-boundary budget`,
+    );
+  }
 });
 
 test('framework production closeout command is retired in favor of operating maturity', () => {
