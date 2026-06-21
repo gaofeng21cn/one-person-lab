@@ -53,12 +53,12 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     'non_live_functional_structure_milestone_tranche_not_full_completion_audit',
   );
   assert.deepEqual(readback.current_tranche.selected_milestone_ids, [
-    'domain_pack_generated_hosted_surfaces',
-    'memory_artifact_lifecycle_functional_boundary',
+    'strict_source_purity_private_wrapper_retirement',
+    'oma_script_to_pack_hygiene',
   ]);
   assert.deepEqual(readback.current_tranche.closed_or_advanced_structural_milestone_ids, [
-    'domain_pack_generated_hosted_surfaces',
-    'memory_artifact_lifecycle_functional_boundary',
+    'strict_source_purity_private_wrapper_retirement',
+    'oma_script_to_pack_hygiene',
   ]);
   const milestonesById = Object.fromEntries(
     readback.milestones.map((milestone: { milestone_id: string }) => [milestone.milestone_id, milestone]),
@@ -105,72 +105,72 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     readback.current_tranche.lanes.map((lane: { lane_id: string }) => [lane.lane_id, lane]),
   );
   assert.deepEqual(
-    lanesById['rca-generated-surface-false-ready-20260622'].milestone_ids,
-    ['domain_pack_generated_hosted_surfaces'],
+    lanesById['mag-morphology-public-readback-20260622'].milestone_ids,
+    ['strict_source_purity_private_wrapper_retirement'],
   );
-  assert.equal(lanesById['rca-generated-surface-false-ready-20260622'].repo, 'redcube-ai');
+  assert.equal(lanesById['mag-morphology-public-readback-20260622'].repo, 'med-autogrant');
   assert.ok(
-    lanesById['rca-generated-surface-false-ready-20260622'].required_surfaces.includes('contract'),
-  );
-  assert.ok(
-    lanesById['rca-generated-surface-false-ready-20260622'].required_surfaces.includes('API_readback'),
+    lanesById['mag-morphology-public-readback-20260622'].required_surfaces.includes('contract'),
   );
   assert.ok(
-    lanesById['rca-generated-surface-false-ready-20260622'].non_live_completion_evidence_required.includes(
-      'RCA_generated_surface_handoff_false_ready_guard_blocks_default_caller_cutover_and_artifact_ready_claims',
+    lanesById['mag-morphology-public-readback-20260622'].required_surfaces.includes('CLI_readback'),
+  );
+  assert.ok(
+    lanesById['mag-morphology-public-readback-20260622'].non_live_completion_evidence_required.includes(
+      'MAG_authority_morphology_guard_public_readback_replaces_product_physical_morphology_guard_refs',
     ),
   );
   assert.equal(
-    lanesById['rca-generated-surface-false-ready-20260622']
+    lanesById['mag-morphology-public-readback-20260622']
       .authority_boundary.can_create_second_active_backlog,
     false,
   );
   assert.equal(
-    lanesById['rca-generated-surface-false-ready-20260622']
+    lanesById['mag-morphology-public-readback-20260622']
       .authority_boundary.can_authorize_physical_delete,
     false,
   );
   assert.equal(
-    lanesById['rca-generated-surface-false-ready-20260622']
+    lanesById['mag-morphology-public-readback-20260622']
       .authority_boundary.can_claim_domain_ready,
     false,
   );
   assert.ok(
-    lanesById['rca-generated-surface-false-ready-20260622'].forbidden_scope.includes(
+    lanesById['mag-morphology-public-readback-20260622'].forbidden_scope.includes(
       'default_caller_cutover_claim',
     ),
   );
   assert.ok(
-    lanesById['rca-generated-surface-false-ready-20260622'].forbidden_scope.includes(
-      'artifact_ready_or_domain_ready_claim',
+    lanesById['mag-morphology-public-readback-20260622'].forbidden_scope.includes(
+      'grant_ready_or_submission_ready_claim',
     ),
   );
   assert.deepEqual(
-    lanesById['bookforge-artifact-lifecycle-handoff-20260622'].milestone_ids,
-    ['memory_artifact_lifecycle_functional_boundary'],
+    lanesById['oma-source-structure-json-readback-20260622'].milestone_ids,
+    ['oma_script_to_pack_hygiene'],
   );
-  assert.equal(lanesById['bookforge-artifact-lifecycle-handoff-20260622'].repo, 'opl-bookforge');
+  assert.equal(lanesById['oma-source-structure-json-readback-20260622'].repo, 'opl-meta-agent');
   assert.ok(
-    lanesById['bookforge-artifact-lifecycle-handoff-20260622'].required_surfaces.includes('CLI_readback'),
+    lanesById['oma-source-structure-json-readback-20260622'].required_surfaces.includes('JSON_readback'),
   );
   assert.ok(
-    lanesById['bookforge-artifact-lifecycle-handoff-20260622'].non_live_completion_evidence_required.includes(
-      'BookForge_artifact_lifecycle_handoff_contract_declares_OPL_projection_refs_and_BookForge_authority_refs',
+    lanesById['oma-source-structure-json-readback-20260622'].required_surfaces.includes(
+      'generated_authority_aggregate',
     ),
   );
   assert.ok(
-    lanesById['bookforge-artifact-lifecycle-handoff-20260622'].non_live_completion_evidence_required.includes(
-      'BookForge_false_ready_guard_blocks_dry_run_projection_clean_helper_clean_from_ready_claims',
+    lanesById['oma-source-structure-json-readback-20260622'].non_live_completion_evidence_required.includes(
+      'OMA_source_structure_json_readback_exposes_line_budget_and_script_to_pack_guard_status',
     ),
   );
   assert.equal(
-    lanesById['bookforge-artifact-lifecycle-handoff-20260622']
+    lanesById['oma-source-structure-json-readback-20260622']
       .authority_boundary.can_create_second_active_backlog,
     false,
   );
   assert.ok(
-    lanesById['bookforge-artifact-lifecycle-handoff-20260622'].forbidden_scope.includes(
-      'workspace_apply_evidence_claim_from_dry_run_or_contract',
+    lanesById['oma-source-structure-json-readback-20260622'].forbidden_scope.includes(
+      'target_domain_truth_write',
     ),
   );
   assert.equal(readback.authority_boundary.can_create_second_active_backlog, false);
@@ -315,8 +315,8 @@ test('framework tranche backlog exposes a guarded milestone index without comple
       (commit: { repo: string; commit: string }) => [commit.repo, commit.commit],
     ),
     [
-      ['med-autogrant', 'f998e2402d1f403951b6ba706f33825b6f77b301'],
-      ['opl-meta-agent', 'da7f681b556364ccf1ff1978bf5a25a4b7ddad1a'],
+      ['med-autogrant', '6182a75ae01eb636d639a21d674db917e77da6dc'],
+      ['opl-meta-agent', 'b902ed0b0e1da4cf2ce559d03cb50ce2edcbe255'],
       ['redcube-ai', 'a857539e2f045ef9d83dd83a265ede2f250982a4'],
     ],
   );
@@ -335,6 +335,14 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     'mag.physical_morphology.strict_source_purity_no_second_truth_guard.v1',
   );
   assert.equal(
+    sourceRefGuardsByRepo['med-autogrant'].public_readback_ref,
+    'med-autogrant:authority morphology-guard',
+  );
+  assert.equal(
+    sourceRefGuardsByRepo['med-autogrant'].source_ref_integrity_readback_ref,
+    'med-autogrant:authority morphology-guard#source_ref_integrity_guard',
+  );
+  assert.equal(
     sourceRefGuardsByRepo['opl-meta-agent'].source_ref,
     'opl-meta-agent:contracts/script_to_pack_gate_receipt.json#/machine_gate_inputs/source_ref_integrity_guard',
   );
@@ -349,6 +357,14 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(sourceRefGuardsByRepo['opl-meta-agent'].repo_owned_generic_runtime_materializer_count, 0);
   assert.equal(sourceRefGuardsByRepo['opl-meta-agent'].repo_owned_queue_or_attempt_ledger_materializer_count, 0);
   assert.equal(sourceRefGuardsByRepo['opl-meta-agent'].repo_owned_target_worktree_lifecycle_materializer_count, 0);
+  assert.equal(
+    sourceRefGuardsByRepo['opl-meta-agent'].source_structure_json_readback_ref,
+    'opl-meta-agent:npm run source-structure:json --silent',
+  );
+  assert.equal(
+    sourceRefGuardsByRepo['opl-meta-agent'].source_structure_strict_json_readback_ref,
+    'opl-meta-agent:npm run source-structure:strict:json --silent',
+  );
   assert.equal(
     sourceRefGuardsByRepo['redcube-ai'].source_ref,
     'redcube-ai:contracts/physical_source_morphology_policy.json#/source_ref_integrity_gate',
@@ -372,7 +388,13 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.ok(
     readback.domain_source_ref_integrity_guard.structural_closeout_guard
       .required_current_truth_surfaces.includes(
-        'med-autogrant:physical_source_morphology_policy.strict_source_purity_no_second_truth_guard',
+        'med-autogrant:authority morphology-guard#strict_source_purity_no_second_truth_guard',
+      ),
+  );
+  assert.ok(
+    readback.domain_source_ref_integrity_guard.structural_closeout_guard
+      .required_current_truth_surfaces.includes(
+        'opl-meta-agent:npm run source-structure:json --silent',
       ),
   );
   assert.ok(
@@ -1059,14 +1081,14 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   });
   assert.ok(
     readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
-      lane.lane_id === 'rca-generated-surface-false-ready-20260622'
-      && lane.repo === 'redcube-ai'
+      lane.lane_id === 'mag-morphology-public-readback-20260622'
+      && lane.repo === 'med-autogrant'
     )),
   );
   assert.ok(
     readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
-      lane.lane_id === 'bookforge-artifact-lifecycle-handoff-20260622'
-      && lane.repo === 'opl-bookforge'
+      lane.lane_id === 'oma-source-structure-json-readback-20260622'
+      && lane.repo === 'opl-meta-agent'
     )),
   );
   assert.ok(
@@ -1088,13 +1110,13 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     false,
   );
   assert.ok(
-    milestonesById['domain_pack_generated_hosted_surfaces'].current_truth_refs.includes(
-      'redcube-ai@b0603a1a:contracts/generated_surface_handoff.json#OPL_GENERATED_SURFACE_EXIT_GATE.false_ready_guard',
+    milestonesById['strict_source_purity_private_wrapper_retirement'].current_truth_refs.includes(
+      'med-autogrant:authority morphology-guard#strict_source_purity_no_second_truth_guard',
     ),
   );
   assert.ok(
-    milestonesById['memory_artifact_lifecycle_functional_boundary'].current_truth_refs.includes(
-      'opl-bookforge@17d184c:contracts/artifact_lifecycle_handoff.json',
+    milestonesById['oma_script_to_pack_hygiene'].current_truth_refs.includes(
+      'opl-meta-agent:npm run source-structure:json --silent',
     ),
   );
   assert.ok(

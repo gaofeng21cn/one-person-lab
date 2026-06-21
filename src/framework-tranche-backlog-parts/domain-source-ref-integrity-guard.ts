@@ -11,13 +11,13 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
     absorbed_origin_main_commits: [
       {
         repo: 'med-autogrant',
-        commit: 'f998e2402d1f403951b6ba706f33825b6f77b301',
-        subject: 'Add MAG strict source purity no-second-truth guard',
+        commit: '6182a75ae01eb636d639a21d674db917e77da6dc',
+        subject: 'Converge MAG morphology guard public readback',
       },
       {
         repo: 'opl-meta-agent',
-        commit: 'da7f681b556364ccf1ff1978bf5a25a4b7ddad1a',
-        subject: 'Harden OMA script materializer source purity',
+        commit: 'b902ed0b0e1da4cf2ce559d03cb50ce2edcbe255',
+        subject: 'Add OMA source-structure JSON readback',
       },
       {
         repo: 'redcube-ai',
@@ -31,6 +31,9 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
         guard_id: 'mag.physical_morphology.source_ref_integrity_gate.v1',
         source_ref:
           'med-autogrant:contracts/private_functional_surface_policy.json#/physical_source_morphology_policy/source_ref_integrity_gate',
+        public_readback_ref: 'med-autogrant:authority morphology-guard',
+        source_ref_integrity_readback_ref:
+          'med-autogrant:authority morphology-guard#source_ref_integrity_guard',
         checked_source_ref_count: 54,
         checked_machine_boundary_ref_count: 0,
         strict_source_purity_no_second_truth_guard_id:
@@ -53,6 +56,10 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
           'opl-meta-agent:contracts/script_to_pack_gate_receipt.json#/machine_gate_inputs/source_ref_integrity_guard',
         mirror_ref:
           'opl-meta-agent:runtime/authority_functions/meta-agent-authority-functions.json#script_morphology_policy/source_ref_integrity_guard',
+        source_structure_json_readback_ref:
+          'opl-meta-agent:npm run source-structure:json --silent',
+        source_structure_strict_json_readback_ref:
+          'opl-meta-agent:npm run source-structure:strict:json --silent',
         checked_source_ref_count: 31,
         invalid_source_ref_count: 0,
         generic_materializer_no_resurrection_guard_id:
@@ -114,10 +121,14 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
       required_current_truth_surfaces: [
         'med-autogrant:physical_source_morphology_policy.source_ref_integrity_gate',
         'med-autogrant:physical_source_morphology_policy.strict_source_purity_no_second_truth_guard',
-        'med-autogrant:product physical-morphology-guard.strict_source_purity_no_second_truth_guard',
+        'med-autogrant:authority morphology-guard#source_ref_integrity_guard',
+        'med-autogrant:authority morphology-guard#strict_source_purity_no_second_truth_guard',
         'opl-meta-agent:script_to_pack_gate_receipt.machine_gate_inputs.source_ref_integrity_guard',
         'opl-meta-agent:script_morphology_policy.generic_materializer_no_resurrection_guard',
         'opl-meta-agent:source_purity_scan_receipt.generic_script_materializer_scan',
+        'opl-meta-agent:contracts/source_structure_policy.json#script_to_pack_receipt_guard.json_readback_command_ref',
+        'opl-meta-agent:npm run source-structure:json --silent',
+        'opl-meta-agent:npm run source-structure:strict:json --silent',
         'redcube-ai:physical_source_morphology_policy.source_ref_integrity_gate',
         'redcube-ai:default_caller_tail_thinning_gate.active_source_resurrection_scan_policy',
         'repo_native_source_ref_integrity_tests',
