@@ -112,10 +112,10 @@
       "migration_attempt_would_make_unknown_frontmatter_a_progress_blocker"
     ],
     "foldback_docs": [
-      "docs/decisions.md",
-      "docs/status.md",
-      "docs/architecture.md",
-      "docs/active/current-state-vs-ideal-gap.md"
+      "human_doc:opl_decisions",
+      "human_doc:opl_status",
+      "human_doc:opl_architecture",
+      "human_doc:opl_current_state_vs_ideal_gap"
     ]
   },
   "conformance_policy": {

@@ -32,6 +32,7 @@ interface OkfContextBundleContract {
     required_fields: string[];
     runtime_consumption_policy: Record<string, false>;
     false_authority_fields: Record<string, false>;
+    foldback_docs: string[];
   };
   conformance_policy: Record<string, string[]>;
   authority_boundary: {

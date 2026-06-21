@@ -50,6 +50,12 @@ test('OKF native frontmatter migration stays opt-in and non-authoritative', () =
   assert.equal(policy.false_authority_fields.native_frontmatter_authorizes_artifact_authority, false);
   assert.equal(policy.false_authority_fields.native_frontmatter_authorizes_runtime_scheduling, false);
   assert.equal(policy.false_authority_fields.native_frontmatter_authorizes_readiness, false);
+  assert.deepEqual(policy.foldback_docs, [
+    'human_doc:opl_decisions',
+    'human_doc:opl_status',
+    'human_doc:opl_architecture',
+    'human_doc:opl_current_state_vs_ideal_gap',
+  ]);
 });
 
 test('OKF builder creates a projection without granting runtime or domain authority', () => {
