@@ -328,7 +328,7 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     [
       ['med-autogrant', '1f1a59c1ebcabc96c6441a72f10dea4b72ad3529'],
       ['opl-meta-agent', 'b902ed0b0e1da4cf2ce559d03cb50ce2edcbe255'],
-      ['redcube-ai', '22b1e9c300b41408e50d7409e7a5d5e0f2a00b2d'],
+      ['redcube-ai', '985bc5e3822018f129a94d8aa003f9bff259a59c'],
     ],
   );
   const sourceRefGuardsByRepo = Object.fromEntries(

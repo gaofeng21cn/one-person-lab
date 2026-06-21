@@ -21,8 +21,8 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
       },
       {
         repo: 'redcube-ai',
-        commit: '22b1e9c300b41408e50d7409e7a5d5e0f2a00b2d',
-        subject: 'Add private platform strict readback',
+        commit: '985bc5e3822018f129a94d8aa003f9bff259a59c',
+        subject: 'Add private platform compact tail readback',
       },
     ],
     checked_domain_repo_guards: [

@@ -266,7 +266,7 @@ export const FRAMEWORK_TRANCHE_MILESTONES: FrameworkTrancheMilestone[] = [
       'OMA source-structure JSON readback commit b902ed0b0e1da4cf2ce559d03cb50ce2edcbe255',
       'OMA script-to-pack cleanup readback commit 20d3fce8f648d3956045b6eb7fa59805b5923b86',
       'RCA active source resurrection guard commit a857539e2f045ef9d83dd83a265ede2f250982a4',
-      'RCA private-platform strict readback commit 22b1e9c300b41408e50d7409e7a5d5e0f2a00b2d',
+      'RCA private-platform compact tail readback commit 985bc5e3822018f129a94d8aa003f9bff259a59c',
     ],
     non_live_evidence_acceptance: NON_LIVE_ACCEPTANCE,
     deferred_evidence: [
