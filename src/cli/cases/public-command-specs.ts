@@ -7,6 +7,7 @@ import { buildFrameworkOperatingMaturityReadout } from '../../framework-operatin
 import { buildFrameworkReadinessSummary } from '../../framework-readiness.ts';
 import {
   buildOkfContextBundleFromDomainPack,
+  buildOkfContextBundleFromDomainRepo,
   inspectOkfContextBundle,
   validateOkfContextBundle,
   writeOkfContextBundleProjection,
@@ -170,6 +171,109 @@ function parseOkfProjectPackArgs(args: string[], spec: CommandSpec) {
     bundleId,
     outputPath,
     packPath,
+    sourceRootRef,
+  };
+}
+
+function parseOkfProjectRepoArgs(args: string[], spec: CommandSpec) {
+  let repoRoot: string | undefined;
+  let outputPath: string | undefined;
+  let packPath: string | undefined;
+  let memoryDescriptorPath: string | undefined;
+  let bundleId: string | undefined;
+  let sourceRootRef: string | undefined;
+  let includeMemoryLocators = true;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--json') {
+      continue;
+    }
+    if (arg === '--repo') {
+      const value = args[index + 1];
+      if (!value) {
+        throw buildUsageError('okf project-repo requires a value for --repo.', spec, {
+          required: ['--repo'],
+        });
+      }
+      repoRoot = value;
+      index += 1;
+      continue;
+    }
+    if (arg === '--output') {
+      const value = args[index + 1];
+      if (!value) {
+        throw buildUsageError('okf project-repo requires a value for --output.', spec, {
+          required: ['--output'],
+        });
+      }
+      outputPath = value;
+      index += 1;
+      continue;
+    }
+    if (arg === '--pack') {
+      const value = args[index + 1];
+      if (!value) {
+        throw buildUsageError('okf project-repo requires a value for --pack.', spec, {
+          option: '--pack',
+        });
+      }
+      packPath = value;
+      index += 1;
+      continue;
+    }
+    if (arg === '--memory-descriptor') {
+      const value = args[index + 1];
+      if (!value) {
+        throw buildUsageError('okf project-repo requires a value for --memory-descriptor.', spec, {
+          option: '--memory-descriptor',
+        });
+      }
+      memoryDescriptorPath = value;
+      index += 1;
+      continue;
+    }
+    if (arg === '--no-memory-locators') {
+      includeMemoryLocators = false;
+      continue;
+    }
+    if (arg === '--bundle-id') {
+      const value = args[index + 1];
+      if (!value) {
+        throw buildUsageError('okf project-repo requires a value for --bundle-id.', spec, {
+          option: '--bundle-id',
+        });
+      }
+      bundleId = value;
+      index += 1;
+      continue;
+    }
+    if (arg === '--source-root-ref') {
+      const value = args[index + 1];
+      if (!value) {
+        throw buildUsageError('okf project-repo requires a value for --source-root-ref.', spec, {
+          option: '--source-root-ref',
+        });
+      }
+      sourceRootRef = value;
+      index += 1;
+      continue;
+    }
+    throw buildUsageError(`Unknown okf project-repo option: ${arg}.`, spec, {
+      option: arg,
+    });
+  }
+  if (!repoRoot || !outputPath) {
+    throw buildUsageError('okf project-repo requires --repo and --output.', spec, {
+      required: ['--repo', '--output'],
+    });
+  }
+  return {
+    bundleId,
+    includeMemoryLocators,
+    memoryDescriptorPath,
+    outputPath,
+    packPath,
+    repoRoot,
     sourceRootRef,
   };
 }
@@ -361,6 +465,36 @@ export function buildPublicCommandSpecs(
           okf_projection: projection,
           okf_write: writeOkfContextBundleProjection(projection, parsed.outputPath),
           okf_validation: validateOkfContextBundle({ bundlePath: parsed.outputPath }),
+        };
+      },
+    },
+    'okf project-repo': {
+      usage:
+        'opl okf project-repo --repo <domain_repo> --output <okf_dir> [--pack <path>] [--memory-descriptor <path>] [--no-memory-locators] [--bundle-id <id>] [--source-root-ref <ref>]',
+      summary:
+        'Project a domain repo pack compiler input and optional memory descriptor into one body-free OKF context bundle directory.',
+      examples: [
+        'opl okf project-repo --repo ../opl-bookforge --output ./okf --json',
+        'opl okf project-repo --repo ../med-autoscience --output ./okf --source-root-ref repo:med-autoscience --json',
+      ],
+      group: 'contract',
+      handler: (args) => {
+        const parsed = parseOkfProjectRepoArgs(args, publicCommandSpecs['okf project-repo']);
+        const readback = buildOkfContextBundleFromDomainRepo({
+          bundleId: parsed.bundleId,
+          includeMemoryLocators: parsed.includeMemoryLocators,
+          memoryDescriptorPath: parsed.memoryDescriptorPath,
+          packPath: parsed.packPath,
+          repoRoot: parsed.repoRoot,
+          sourceRootRef: parsed.sourceRootRef,
+        });
+        return {
+          version: 'g2',
+          okf_domain_repo: {
+            ...readback,
+            okf_write: writeOkfContextBundleProjection(readback.projection, parsed.outputPath),
+            okf_validation: validateOkfContextBundle({ bundlePath: parsed.outputPath }),
+          },
         };
       },
     },
