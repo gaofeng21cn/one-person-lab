@@ -8,6 +8,7 @@ import {
   buildOrdinaryProgressGuardReadback,
   buildPrimitiveRuntimeOwnerRouteGuardReadback,
   buildRuntimeEnvironmentSubstrateGuardReadback,
+  buildStandardAgentLandingAcceptanceGuardReadback,
 } from './framework-tranche-backlog-parts/guard-readbacks.ts';
 import {
   APP_SHELL_CONVERGENCE_STRUCTURE_READBACK,
@@ -128,6 +129,9 @@ export function buildFrameworkTrancheBacklogReadback(contracts: FrameworkContrac
       source_contract_refs: [
         'contracts/opl-framework/target-operating-architecture-contract.json',
         'contracts/opl-framework/opl-flow-completion-audit-contract.json',
+        'contracts/opl-framework/standard-agent-landing-acceptance-contract.json',
+        'contracts/opl-framework/standard-agent-landing-evidence-status.json',
+        'contracts/opl-framework/private-platform-residue-owner-decisions.json',
       ],
       target_operating_architecture_ref:
         `contracts/opl-framework/target-operating-architecture-contract.json#${contracts.targetOperatingArchitecture.schema_version}`,
@@ -165,6 +169,8 @@ export function buildFrameworkTrancheBacklogReadback(contracts: FrameworkContrac
       primitive_runtime_owner_route_guard:
         buildPrimitiveRuntimeOwnerRouteGuardReadback(contracts),
       generated_hosted_surface_boundary: buildGeneratedHostedBoundaryReadback(contracts),
+      standard_agent_landing_acceptance_guard:
+        buildStandardAgentLandingAcceptanceGuardReadback(contracts),
       domain_progress_transition_runtime_guard:
         buildDomainProgressTransitionRuntimeGuardReadback(contracts),
       memory_artifact_lifecycle_boundary_guard:

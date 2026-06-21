@@ -45,7 +45,7 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(readback.default_tranche_policy.live_evidence_deferred, true);
   assert.equal(readback.milestone_state_counts.open, 0);
   assert.equal(readback.milestone_state_counts.partial, 0);
-  assert.equal(readback.milestone_state_counts.closed_structure_gate, 7);
+  assert.equal(readback.milestone_state_counts.closed_structure_gate, 8);
   assert.equal(readback.current_tranche.selected_lane_count, 2);
   assert.equal(readback.current_tranche.selected_lane_count_within_policy, true);
   assert.equal(
@@ -53,12 +53,12 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     'non_live_functional_structure_milestone_tranche_not_full_completion_audit',
   );
   assert.deepEqual(readback.current_tranche.selected_milestone_ids, [
-    'opl_primitive_runtime_owner_route_guard',
-    'app_active_shell_hermes_convergence',
+    'standard_agent_landing_acceptance_guard',
+    'support_repo_profile_no_resurrection',
   ]);
   assert.deepEqual(readback.current_tranche.closed_or_advanced_structural_milestone_ids, [
-    'opl_primitive_runtime_owner_route_guard',
-    'app_active_shell_hermes_convergence',
+    'standard_agent_landing_acceptance_guard',
+    'support_repo_profile_no_resurrection',
   ]);
   const milestonesById = Object.fromEntries(
     readback.milestones.map((milestone: { milestone_id: string }) => [milestone.milestone_id, milestone]),
@@ -73,6 +73,10 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   );
   assert.equal(
     milestonesById['memory_artifact_lifecycle_functional_boundary'].state,
+    'closed_structure_gate',
+  );
+  assert.equal(
+    milestonesById['standard_agent_landing_acceptance_guard'].state,
     'closed_structure_gate',
   );
   assert.equal(
@@ -101,52 +105,71 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     readback.current_tranche.lanes.map((lane: { lane_id: string }) => [lane.lane_id, lane]),
   );
   assert.deepEqual(
-    lanesById['opl-primitive-human-gate-readback-20260621'].milestone_ids,
-    ['opl_primitive_runtime_owner_route_guard'],
+    lanesById['opl-standard-agent-residue-acceptance-20260622'].milestone_ids,
+    ['standard_agent_landing_acceptance_guard'],
   );
   assert.ok(
-    lanesById['opl-primitive-human-gate-readback-20260621'].required_surfaces.includes('contract'),
+    lanesById['opl-standard-agent-residue-acceptance-20260622'].required_surfaces.includes('contract'),
   );
   assert.ok(
-    lanesById['opl-primitive-human-gate-readback-20260621'].required_surfaces.includes('API_readback'),
+    lanesById['opl-standard-agent-residue-acceptance-20260622'].required_surfaces.includes('API_readback'),
   );
   assert.ok(
-    lanesById['opl-primitive-human-gate-readback-20260621'].non_live_completion_evidence_required.includes(
-      'ordinary_progress_guard_reads_family_human_gate_schema',
-    ),
-  );
-  assert.deepEqual(
-    lanesById['hermes-candidate-profile-contract-20260621'].milestone_ids,
-    ['app_active_shell_hermes_convergence'],
-  );
-  assert.ok(
-    lanesById['hermes-candidate-profile-contract-20260621'].non_live_completion_evidence_required.includes(
-      'validate_candidate_reads_profile_contract',
+    lanesById['opl-standard-agent-residue-acceptance-20260622'].non_live_completion_evidence_required.includes(
+      'standard_agent_landing_acceptance_guard_reads_private_residue_decision_ledger',
     ),
   );
   assert.equal(
-    lanesById['hermes-candidate-profile-contract-20260621']
+    lanesById['opl-standard-agent-residue-acceptance-20260622']
       .authority_boundary.can_create_second_active_backlog,
     false,
   );
   assert.equal(
-    lanesById['hermes-candidate-profile-contract-20260621']
+    lanesById['opl-standard-agent-residue-acceptance-20260622']
       .authority_boundary.can_authorize_physical_delete,
     false,
   );
   assert.equal(
-    lanesById['hermes-candidate-profile-contract-20260621']
+    lanesById['opl-standard-agent-residue-acceptance-20260622']
       .authority_boundary.can_claim_domain_ready,
     false,
   );
   assert.ok(
-    lanesById['opl-primitive-human-gate-readback-20260621'].forbidden_scope.includes(
+    lanesById['opl-standard-agent-residue-acceptance-20260622'].forbidden_scope.includes(
       'typed_blocker_creation_by_OPL',
     ),
   );
   assert.ok(
-    lanesById['hermes-candidate-profile-contract-20260621'].forbidden_scope.includes(
-      'AGUI_foreground_candidate_resurrection',
+    lanesById['opl-standard-agent-residue-acceptance-20260622'].forbidden_scope.includes(
+      'physical_delete_authorization_by_OPL',
+    ),
+  );
+  assert.deepEqual(
+    lanesById['opl-doc-support-profile-guard-20260622'].milestone_ids,
+    ['support_repo_profile_no_resurrection'],
+  );
+  assert.equal(lanesById['opl-doc-support-profile-guard-20260622'].repo, 'opl-doc');
+  assert.ok(
+    lanesById['opl-doc-support-profile-guard-20260622'].required_surfaces.includes('CLI_readback'),
+  );
+  assert.ok(
+    lanesById['opl-doc-support-profile-guard-20260622'].non_live_completion_evidence_required.includes(
+      'support_profile_audit_reports_legacy_support_repo_policy_ref_absent',
+    ),
+  );
+  assert.ok(
+    lanesById['opl-doc-support-profile-guard-20260622'].non_live_completion_evidence_required.includes(
+      'support_profile_audit_reports_default_governed_repo_set_excludes_support_repos',
+    ),
+  );
+  assert.equal(
+    lanesById['opl-doc-support-profile-guard-20260622']
+      .authority_boundary.can_create_second_active_backlog,
+    false,
+  );
+  assert.ok(
+    lanesById['opl-doc-support-profile-guard-20260622'].forbidden_scope.includes(
+      'legacy_support_repo_policy_alias_resurrection',
     ),
   );
   assert.equal(readback.authority_boundary.can_create_second_active_backlog, false);
@@ -417,6 +440,93 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(
     readback.generated_hosted_surface_boundary.false_ready_guard
       .generated_consumption_bundle_ready_can_claim_App_GUI_complete,
+    false,
+  );
+  assert.equal(
+    readback.standard_agent_landing_acceptance_guard.surface_kind,
+    'opl_standard_agent_landing_acceptance_guard_readback',
+  );
+  assert.equal(
+    readback.standard_agent_landing_acceptance_guard.status,
+    'closed_structure_gate_not_live_evidence',
+  );
+  assert.equal(
+    readback.standard_agent_landing_acceptance_guard.acceptance_summary.current_completion_status,
+    'family_evidence_tail_open_not_complete',
+  );
+  assert.equal(
+    readback.standard_agent_landing_acceptance_guard.acceptance_summary.completion_claim_authorized,
+    false,
+  );
+  assert.equal(
+    readback.standard_agent_landing_acceptance_guard.acceptance_summary.gate_status_counts.total,
+    7,
+  );
+  assert.equal(
+    readback.standard_agent_landing_acceptance_guard.acceptance_summary.gate_status_counts.can_claim_complete,
+    0,
+  );
+  assert.ok(
+    readback.standard_agent_landing_acceptance_guard.acceptance_summary.open_evidence_tail_ids.includes(
+      'generated_surface_production_consumption',
+    ),
+  );
+  assert.equal(
+    readback.standard_agent_landing_acceptance_guard.private_residue_owner_decision_summary.ledger_state,
+    'refs_only_owner_decision_ledger',
+  );
+  assert.equal(
+    readback.standard_agent_landing_acceptance_guard.private_residue_owner_decision_summary.physical_delete_authorized,
+    false,
+  );
+  assert.equal(
+    readback.standard_agent_landing_acceptance_guard.private_residue_owner_decision_summary
+      .invalid_owner_decision_count,
+    0,
+  );
+  assert.equal(
+    readback.standard_agent_landing_acceptance_guard.private_residue_owner_decision_summary
+      .physical_delete_authorized_count,
+    0,
+  );
+  assert.equal(
+    readback.standard_agent_landing_acceptance_guard.negative_conformance_summary
+      .can_claim_standard_agent_complete_count,
+    0,
+  );
+  assert.equal(
+    readback.standard_agent_landing_acceptance_guard.structural_closeout_guard
+      .can_close_non_live_structure_gate,
+    true,
+  );
+  assert.ok(
+    readback.standard_agent_landing_acceptance_guard.structural_closeout_guard.cannot_claim.includes(
+      'standard_agent_complete',
+    ),
+  );
+  assert.ok(
+    readback.standard_agent_landing_acceptance_guard.structural_closeout_guard.cannot_claim.includes(
+      'physical_delete_authorized',
+    ),
+  );
+  assert.equal(
+    readback.standard_agent_landing_acceptance_guard.no_second_truth_guard
+      .evidence_status_can_create_second_active_backlog,
+    false,
+  );
+  assert.equal(
+    readback.standard_agent_landing_acceptance_guard.authority_boundary
+      .private_residue_decision_ledger_can_authorize_physical_delete,
+    false,
+  );
+  assert.equal(
+    readback.standard_agent_landing_acceptance_guard.false_ready_guard
+      .acceptance_definition_landed_can_claim_standard_agent_complete,
+    false,
+  );
+  assert.equal(
+    readback.standard_agent_landing_acceptance_guard.false_ready_guard
+      .residue_decision_ledger_can_authorize_physical_delete,
     false,
   );
   assert.equal(
@@ -948,14 +1058,14 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   });
   assert.ok(
     readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
-      lane.lane_id === 'opl-primitive-human-gate-readback-20260621'
+      lane.lane_id === 'opl-standard-agent-residue-acceptance-20260622'
       && lane.repo === 'one-person-lab'
     )),
   );
   assert.ok(
     readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
-      lane.lane_id === 'hermes-candidate-profile-contract-20260621'
-      && lane.repo === 'opl-hermes-shell'
+      lane.lane_id === 'opl-doc-support-profile-guard-20260622'
+      && lane.repo === 'opl-doc'
     )),
   );
   assert.ok(
@@ -995,6 +1105,7 @@ test('framework tranche backlog guard readbacks stay split behind a thin facade'
     ['primitive-runtime-owner-route-guard.ts', 'buildPrimitiveRuntimeOwnerRouteGuardReadback'],
     ['generated-hosted-boundary-guard.ts', 'buildGeneratedHostedBoundaryReadback'],
     ['memory-artifact-lifecycle-boundary-guard.ts', 'buildMemoryArtifactLifecycleBoundaryGuardReadback'],
+    ['standard-agent-landing-guard.ts', 'buildStandardAgentLandingAcceptanceGuardReadback'],
   ] as const;
 
   assert.equal(facade.includes('export function '), false);

@@ -4,3 +4,4 @@ export { buildMemoryArtifactLifecycleBoundaryGuardReadback } from './memory-arti
 export { buildOrdinaryProgressGuardReadback } from './ordinary-progress-guard.ts';
 export { buildPrimitiveRuntimeOwnerRouteGuardReadback } from './primitive-runtime-owner-route-guard.ts';
 export { buildRuntimeEnvironmentSubstrateGuardReadback } from './runtime-environment-guard.ts';
+export { buildStandardAgentLandingAcceptanceGuardReadback } from './standard-agent-landing-guard.ts';

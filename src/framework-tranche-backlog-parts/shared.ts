@@ -200,6 +200,15 @@ export const GENERATED_HOSTED_BOUNDARY_AUTHORITY = {
   generated_surface_readback_can_claim_default_caller_cutover: false,
 };
 
+export const STANDARD_AGENT_LANDING_AUTHORITY = {
+  ...NO_SECOND_TRUTH_AUTHORITY_BOUNDARY,
+  standard_agent_guard_can_claim_standard_agent_complete: false,
+  acceptance_definition_can_claim_domain_ready: false,
+  evidence_status_can_claim_target_agent_ready: false,
+  private_residue_decision_ledger_can_authorize_physical_delete: false,
+  negative_conformance_samples_can_claim_production_ready: false,
+};
+
 export const ORDINARY_PROGRESS_GUARD_AUTHORITY = {
   ...NO_SECOND_TRUTH_AUTHORITY_BOUNDARY,
   current_owner_delta_can_claim_domain_ready: false,
