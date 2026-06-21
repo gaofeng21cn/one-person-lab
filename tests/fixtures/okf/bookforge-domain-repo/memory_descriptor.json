@@ -1,0 +1,8 @@
+{
+  "surface_kind": "domain_memory_descriptor_locator",
+  "schema_version": 1,
+  "domain_id": "opl-bookforge",
+  "memory_body_owner": "opl-bookforge",
+  "opl_projection_policy": "locator_and_receipt_refs_only",
+  "marker": "generated_by_opl_standard_domain_agent_scaffold_v1"
+}

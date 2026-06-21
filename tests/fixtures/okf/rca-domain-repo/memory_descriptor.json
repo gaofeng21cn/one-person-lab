@@ -1,0 +1,122 @@
+{
+  "surface_kind": "family_domain_memory_ref",
+  "version": "family-domain-memory-ref.v1",
+  "memory_ref_id": "rca_visual_pattern_memory",
+  "target_domain_id": "redcube_ai",
+  "owner": "redcube_ai",
+  "memory_family": "visual_pattern_memory",
+  "memory_pack_ref": {
+    "ref_kind": "json_pointer",
+    "ref": "/domain_memory_descriptor_locator",
+    "role": "domain_owned_memory_pack_descriptor",
+    "label": "RCA visual pattern memory descriptor locator"
+  },
+  "stage_applicability": [
+    "source_intake",
+    "communication_strategy",
+    "visual_direction",
+    "artifact_creation",
+    "review_and_revision",
+    "package_and_handoff"
+  ],
+  "retrieval_contract_ref": {
+    "ref_kind": "json_pointer",
+    "ref": "/domain_memory_descriptor_locator/memory_locator",
+    "role": "locator_only_retrieval_contract",
+    "label": "RCA visual pattern memory locator"
+  },
+  "writeback_contract_ref": {
+    "ref_kind": "json_pointer",
+    "ref": "/domain_memory_descriptor_locator/writeback_proposal_generator",
+    "role": "domain_owned_writeback_proposal_contract",
+    "label": "RCA visual pattern memory writeback proposal generator"
+  },
+  "receipt_contract_ref": {
+    "ref_kind": "json_pointer",
+    "ref": "/domain_memory_descriptor_locator/writeback_receipt_contract",
+    "role": "locator_only_writeback_receipt_contract",
+    "label": "RCA visual pattern memory writeback receipt refs"
+  },
+  "recall_projection_ref": {
+    "ref_kind": "json_pointer",
+    "ref": "/domain_memory_descriptor_locator/operator_receipt_projection",
+    "role": "operator_recall_receipt_projection",
+    "label": "RCA visual pattern memory operator receipt projection"
+  },
+  "migration_plan_ref": {
+    "ref_kind": "json_pointer",
+    "ref": "/domain_memory_descriptor_locator/migration_plan",
+    "role": "domain_owned_migration_plan",
+    "label": "RCA visual pattern memory migration plan"
+  },
+  "seed_corpus_ref": {
+    "ref_kind": "json_pointer",
+    "ref": "/domain_memory_descriptor_locator/seed_fixture_locator",
+    "role": "domain_owned_seed_locator",
+    "label": "RCA visual pattern memory seed fixture locator"
+  },
+  "writeback_receipt_locator_ref": {
+    "ref_kind": "json_pointer",
+    "ref": "/domain_memory_descriptor_locator/writeback_receipt_locator",
+    "role": "domain_owned_writeback_receipt_locator",
+    "label": "RCA visual pattern memory writeback receipt locator"
+  },
+  "provenance_refs": [
+    {
+      "ref_kind": "json_pointer",
+      "ref": "/domain_memory_descriptor_locator/policy_ref",
+      "role": "policy",
+      "label": "Visual Pattern Memory Policy"
+    },
+    {
+      "ref_kind": "json_pointer",
+      "ref": "/domain_memory_descriptor_locator/human_doc_ref",
+      "role": "descriptor_reference",
+      "label": "RCA domain memory descriptor and locator"
+    },
+    {
+      "ref_kind": "json_pointer",
+      "ref": "/controlled_visual_stage_attempt",
+      "role": "controlled_stage_attempt_proof",
+      "label": "RCA controlled visual stage attempt proof"
+    }
+  ],
+  "freshness": {
+    "source": "product_entry_manifest_build",
+    "descriptor_locator_ref": "/domain_memory_descriptor_locator",
+    "refresh_policy": "domain_manifest_rebuild_required_before_stage_attempt"
+  },
+  "migration_readiness": {
+    "status": "descriptor_proof_contract_landed_runtime_writeback_pending",
+    "migration_state": "descriptor_proof_contract_landed_runtime_writeback_pending",
+    "memory_body_migration": "domain_owned_runtime_apply_required",
+    "descriptor_proof_contract_state": "landed",
+    "runtime_writeback_state": "pending",
+    "opl_apply_allowed": false,
+    "repo_tracks_memory_entries": false,
+    "repo_tracks_receipt_instances": false
+  },
+  "status": "descriptor_proof_contract_landed_runtime_writeback_pending",
+  "authority_boundary": {
+    "opl_role": "locator_projection_owner",
+    "domain_memory_owner": "redcube_ai",
+    "forbidden_opl_authority": [
+      "memory_store_owner",
+      "domain_truth_owner",
+      "visual_route_owner",
+      "accept_reject_owner",
+      "quality_verdict_owner",
+      "review_export_verdict_owner",
+      "artifact_authority"
+    ],
+    "can_write_domain_truth": false,
+    "can_authorize_quality_verdict": false,
+    "can_write_artifacts": false,
+    "can_choose_visual_route": false,
+    "can_accept_or_reject_memory_writeback": false,
+    "can_issue_review_or_export_verdict": false
+  },
+  "root_contract_role": "opl_standard_domain_agent_memory_descriptor",
+  "memory_body_owner": "redcube_ai",
+  "opl_projection_policy": "locator_and_receipt_refs_only"
+}
