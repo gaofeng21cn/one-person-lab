@@ -43,6 +43,67 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(readback.default_tranche_policy.lane_count_min, 2);
   assert.equal(readback.default_tranche_policy.lane_count_max, 4);
   assert.equal(readback.default_tranche_policy.live_evidence_deferred, true);
+  assert.equal(readback.current_tranche.selected_lane_count, 3);
+  assert.equal(readback.current_tranche.selected_lane_count_within_policy, true);
+  assert.equal(
+    readback.current_tranche.tranche_role,
+    'non_live_functional_structure_milestone_tranche_not_full_completion_audit',
+  );
+  assert.deepEqual(readback.current_tranche.selected_milestone_ids, [
+    'opl_primitive_runtime_owner_route_guard',
+    'domain_pack_generated_hosted_surfaces',
+    'strict_source_purity_private_wrapper_retirement',
+    'support_repo_profile_no_resurrection',
+  ]);
+  assert.equal(
+    readback.current_tranche.lane_selection_policy.root_checkout_role,
+    'read_absorb_push_readback_cleanup_only',
+  );
+  assert.equal(
+    readback.current_tranche.write_set_isolation_guard.each_lane_requires_isolated_worktree,
+    true,
+  );
+  assert.equal(
+    readback.current_tranche.full_goal_completion_guard.this_tranche_can_claim_full_goal_completion,
+    false,
+  );
+  assert.equal(
+    readback.current_tranche.full_goal_completion_guard.plan_completion_audit_required_before_full_goal_completion,
+    true,
+  );
+  assert.ok(readback.current_tranche.required_closeout_evidence.includes('remote_sha_readback_equal'));
+  assert.ok(readback.current_tranche.required_closeout_evidence.includes('worktree_and_branch_cleanup'));
+  const lanesById = Object.fromEntries(
+    readback.current_tranche.lanes.map((lane: { lane_id: string }) => [lane.lane_id, lane]),
+  );
+  assert.deepEqual(
+    lanesById['opl-tranche-backlog-materialization-20260621'].milestone_ids,
+    [
+      'opl_primitive_runtime_owner_route_guard',
+      'domain_pack_generated_hosted_surfaces',
+    ],
+  );
+  assert.deepEqual(
+    lanesById['rca-source-morphology-tranche-20260621'].milestone_ids,
+    ['strict_source_purity_private_wrapper_retirement'],
+  );
+  assert.deepEqual(
+    lanesById['opl-doc-support-profile-guard-20260621'].milestone_ids,
+    ['support_repo_profile_no_resurrection'],
+  );
+  assert.ok(
+    lanesById['rca-source-morphology-tranche-20260621'].required_surfaces.includes('contract'),
+  );
+  assert.ok(
+    lanesById['opl-doc-support-profile-guard-20260621'].required_surfaces.includes('CLI_readback'),
+  );
+  assert.equal(
+    lanesById['opl-tranche-backlog-materialization-20260621'].authority_boundary.can_create_second_active_backlog,
+    false,
+  );
+  assert.ok(
+    lanesById['rca-source-morphology-tranche-20260621'].forbidden_scope.includes('AGUI'),
+  );
   assert.equal(readback.authority_boundary.can_create_second_active_backlog, false);
   assert.equal(readback.authority_boundary.can_claim_plan_completion, false);
   assert.equal(readback.authority_boundary.can_claim_domain_ready, false);

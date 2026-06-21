@@ -27,6 +27,19 @@ type FrameworkTrancheMilestone = {
   authority_boundary: Record<string, boolean>;
 };
 
+type TrancheExecutionLane = {
+  lane_id: string;
+  repo: string;
+  priority: MilestonePriority;
+  milestone_ids: string[];
+  lane_status: string;
+  write_set_class: string;
+  required_surfaces: string[];
+  non_live_completion_evidence_required: string[];
+  deferred_evidence: string[];
+  forbidden_scope: string[];
+};
+
 type GeneratedHostedBoundarySurface = {
   surface_id: string;
   owner: string;
@@ -136,6 +149,99 @@ const DEFERRED_LIVE_EVIDENCE = [
   'cross_agent_scaleout',
   'large_live_ledger_refresh',
   'real_paper_project_run_evidence',
+];
+
+const CURRENT_TRANCHE_LANES: TrancheExecutionLane[] = [
+  {
+    lane_id: 'opl-tranche-backlog-materialization-20260621',
+    repo: 'one-person-lab',
+    priority: 'P0',
+    milestone_ids: [
+      'opl_primitive_runtime_owner_route_guard',
+      'domain_pack_generated_hosted_surfaces',
+    ],
+    lane_status: 'selected_for_non_live_functional_structure_tranche',
+    write_set_class: 'framework_backlog_cli_readback_and_no_second_truth_guard',
+    required_surfaces: [
+      'source',
+      'CLI_readback',
+      'docs',
+      'tests',
+    ],
+    non_live_completion_evidence_required: [
+      'framework_tranche_backlog_cli_readback_contains_current_tranche',
+      'framework_readiness_cli_surface_test_passes',
+      'typecheck_passes',
+      'main_absorbed_push_and_remote_sha_readback',
+    ],
+    deferred_evidence: DEFERRED_LIVE_EVIDENCE,
+    forbidden_scope: [
+      'full_Plan_Completion_Audit_claim',
+      'domain_truth_write',
+      'runtime_ready_claim',
+      'App_release_ready_claim',
+    ],
+  },
+  {
+    lane_id: 'rca-source-morphology-tranche-20260621',
+    repo: 'redcube-ai',
+    priority: 'P1',
+    milestone_ids: ['strict_source_purity_private_wrapper_retirement'],
+    lane_status: 'selected_for_non_live_functional_structure_tranche',
+    write_set_class: 'rca_source_morphology_runtime_watch_domain_action_adapter_tail',
+    required_surfaces: [
+      'source',
+      'contract',
+      'domain_handler_or_readback',
+      'docs',
+      'tests',
+    ],
+    non_live_completion_evidence_required: [
+      'physical_source_morphology_policy_tracks_tail_thinning',
+      'domain_action_adapter_runtime_watch_no_resurrection_tests_pass',
+      'repo_smoke_passes',
+      'main_absorbed_push_and_remote_sha_readback',
+    ],
+    deferred_evidence: [
+      'default_caller_live_scaleout',
+      'physical_delete_owner_receipt',
+      ...DEFERRED_LIVE_EVIDENCE,
+    ],
+    forbidden_scope: [
+      'visual_artifact_truth',
+      'provider_long_soak',
+      'AGUI',
+      'root_checkout_implementation',
+    ],
+  },
+  {
+    lane_id: 'opl-doc-support-profile-guard-20260621',
+    repo: 'opl-doc',
+    priority: 'P2',
+    milestone_ids: ['support_repo_profile_no_resurrection'],
+    lane_status: 'selected_for_non_live_functional_structure_tranche',
+    write_set_class: 'support_repo_profile_and_no_resurrection_policy_materialization',
+    required_surfaces: [
+      'source',
+      'contract',
+      'CLI_readback',
+      'docs',
+      'tests',
+    ],
+    non_live_completion_evidence_required: [
+      'support_repo_policy_contract_equals_generated_policy',
+      'family_plan_readback_contains_materialized_support_profile_guard',
+      'repo_verify_passes',
+      'main_absorbed_push_and_remote_sha_readback',
+    ],
+    deferred_evidence: DEFERRED_LIVE_EVIDENCE,
+    forbidden_scope: [
+      'default_Foundry_Agent_truth_set',
+      'target_repo_truth_write',
+      'Live_Evidence_claim',
+      'second_active_backlog',
+    ],
+  },
 ];
 
 const FRAMEWORK_TRANCHE_MILESTONES: FrameworkTrancheMilestone[] = [
@@ -266,6 +372,81 @@ function milestoneCounts() {
       deferred_live_evidence: 0,
     },
   );
+}
+
+function selectedMilestoneIds() {
+  return [...new Set(CURRENT_TRANCHE_LANES.flatMap((lane) => lane.milestone_ids))];
+}
+
+function buildCurrentTrancheReadback() {
+  const selectedIds = selectedMilestoneIds();
+  const selectedMilestoneSet = new Set(selectedIds);
+  return {
+    tranche_id: 'opl-family-ideal-operating-model-tranche-20260621',
+    tranche_role:
+      'non_live_functional_structure_milestone_tranche_not_full_completion_audit',
+    selected_lane_count: CURRENT_TRANCHE_LANES.length,
+    selected_lane_count_within_policy:
+      CURRENT_TRANCHE_LANES.length >= 2 && CURRENT_TRANCHE_LANES.length <= 4,
+    selected_milestone_ids: selectedIds,
+    closed_or_advanced_structural_milestone_ids:
+      FRAMEWORK_TRANCHE_MILESTONES
+        .filter((milestone) => (
+          selectedMilestoneSet.has(milestone.milestone_id)
+          && milestone.state !== 'open'
+        ))
+        .map((milestone) => milestone.milestone_id),
+    lane_selection_policy: {
+      prefer_open_coherent_worktree_owned_by_current_session: true,
+      otherwise_select_highest_value_clean_repo_gap: true,
+      disjoint_write_sets_required: true,
+      unresolved_unclear_owner_lanes_are_avoided: true,
+      live_evidence_lanes_deferred: true,
+      root_checkout_role: 'read_absorb_push_readback_cleanup_only',
+    },
+    write_set_isolation_guard: {
+      each_lane_requires_isolated_worktree: true,
+      root_checkout_may_hold_preflight_push_only: true,
+      root_checkout_must_not_hold_implementation_writes: true,
+      lane_write_sets_are_declared_disjoint: true,
+      conflicts_require_owner_route_or_new_tranche: true,
+    },
+    required_closeout_evidence: [
+      'source_or_contract_delta_landed',
+      'CLI_or_API_readback_available_when_surface_exists',
+      'repo_native_tests_or_focused_contract_guard_passed',
+      'docs_folded_back_to_owner_surface',
+      'worktree_absorption_audit_or_equivalent_main_diff_readback',
+      'push_to_origin_main',
+      'remote_sha_readback_equal',
+      'worktree_and_branch_cleanup',
+    ],
+    full_goal_completion_guard: {
+      this_tranche_can_update_milestone_backlog: true,
+      this_tranche_can_claim_full_goal_completion: false,
+      plan_completion_audit_required_before_full_goal_completion: true,
+      all_items_require_fresh_executable_evidence_before_100_percent: true,
+      docs_tests_contracts_readmodels_refs_only_are_not_enough_for_readiness: true,
+    },
+    false_ready_guard: {
+      selected_lane_count_can_claim_goal_complete: false,
+      pushed_commits_can_claim_runtime_ready: false,
+      closed_structure_gate_can_claim_live_evidence_complete: false,
+      remote_sha_readback_can_claim_domain_ready: false,
+    },
+    lanes: CURRENT_TRANCHE_LANES.map((lane) => ({
+      ...lane,
+      milestone_priorities: lane.milestone_ids.map((milestoneId) => (
+        FRAMEWORK_TRANCHE_MILESTONES.find((milestone) => milestone.milestone_id === milestoneId)?.priority
+        ?? 'P2'
+      )),
+      milestone_states: lane.milestone_ids.map((milestoneId) => (
+        FRAMEWORK_TRANCHE_MILESTONES.find((milestone) => milestone.milestone_id === milestoneId)?.state
+        ?? 'open'
+      )),
+      authority_boundary: { ...NO_SECOND_TRUTH_AUTHORITY_BOUNDARY },
+    })),
+  };
 }
 
 function stringField(record: JsonRecord, key: string, filePath: string): string {
@@ -627,6 +808,7 @@ export function buildFrameworkTrancheBacklogReadback(contracts: FrameworkContrac
         live_evidence_deferred: true,
         docs_tests_readmodel_refs_only_do_not_count_as_ready: true,
       },
+      current_tranche: buildCurrentTrancheReadback(),
       priority_order: ['P0', 'P1', 'P2'] as const,
       forbidden_surfaces: ['AGUI/agui-codex'],
       app_shell_policy: {
