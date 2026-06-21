@@ -264,6 +264,8 @@ test('runtime env prepare writes a dependency failure receipt without installing
   const stateRoot = path.join(root, 'opl-state');
   const paperRoot = path.join(root, 'paper');
   const profilePath = path.join(root, 'renderer_dependency_profile.json');
+  const binDir = path.join(root, 'bin');
+  const rscriptPath = writeFakeRscript(binDir);
   fs.mkdirSync(paperRoot, { recursive: true });
   fs.writeFileSync(
     profilePath,
@@ -311,7 +313,10 @@ test('runtime env prepare writes a dependency failure receipt without installing
     profilePath,
     '--paper-root',
     paperRoot,
-  ], { OPL_STATE_DIR: stateRoot }).runtime_environment;
+  ], {
+    OPL_STATE_DIR: stateRoot,
+    PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ''}`,
+  }).runtime_environment;
 
   assert.equal(prepared.command, 'prepare');
   assert.equal(prepared.prepare.status, 'missing_language_package');
@@ -321,7 +326,7 @@ test('runtime env prepare writes a dependency failure receipt without installing
   assert.equal(prepared.prepare.lock_ref, 'paper/build/dependency_environment_lock.json');
   assert.equal(prepared.prepare.receipt_ref, 'paper/build/dependency_environment_receipt.json');
   assert.equal(prepared.prepare.run_context_ref, null);
-  assert.equal(prepared.prepare.binary_paths.Rscript.endsWith('Rscript'), true);
+  assert.equal(prepared.prepare.binary_paths.Rscript, rscriptPath);
 
   const lock = JSON.parse(
     fs.readFileSync(path.join(paperRoot, 'build', 'dependency_environment_lock.json'), 'utf8'),
@@ -607,6 +612,8 @@ test('runtime env prepare returns a dependency failure without installing missin
   const stateRoot = path.join(root, 'opl-state');
   const paperRoot = path.join(root, 'paper');
   const profilePath = path.join(root, 'renderer_dependency_profile.json');
+  const binDir = path.join(root, 'bin');
+  writeFakeRscript(binDir);
   fs.mkdirSync(paperRoot, { recursive: true });
   fs.writeFileSync(
     profilePath,
@@ -640,7 +647,10 @@ test('runtime env prepare returns a dependency failure without installing missin
     profilePath,
     '--paper-root',
     paperRoot,
-  ], { OPL_STATE_DIR: stateRoot }).runtime_environment;
+  ], {
+    OPL_STATE_DIR: stateRoot,
+    PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ''}`,
+  }).runtime_environment;
 
   assert.equal(result.prepare.status, 'missing_language_package');
   assert.equal(result.prepare.failure_class, 'missing_language_package');
