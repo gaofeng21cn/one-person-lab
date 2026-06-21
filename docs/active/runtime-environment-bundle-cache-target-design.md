@@ -536,3 +536,148 @@ Fresh App / Console consumer boundary evidence：
   renderer、payload、artifact 和 parity audit 改动，并落后 `origin/main` 6 个提交。
 - `ggconsort cohort-flow Gallery evidence`、`LidocaineQ parity audit done`、
   `MAS docs/examples foldback to main`、`absorb/push/cleanup active MAS lane` 仍不可 claim。
+
+## 2026-06-21 续跑证据折返
+
+本节是同一总控目标的续跑 readback，记录 fresh evidence root
+`/tmp/opl-mas-display-goal-20260621-NSqdoJ`。它更新上一节的临时证据路径和当前 gate
+状态，但仍不是 domain ready、publication ready、App release ready 或最终 Plan
+Completion Audit。
+
+Current gate：
+
+- `one-person-lab` root `main...origin/main` clean，HEAD 为
+  `d8b739b7a17d95fa139f452247fea06080541d9e`，无 dirty/staged worktree，
+  `codex_ops_gate.py status --repo /Users/gaofeng/workspace/one-person-lab
+  --run-profile-checks` 返回 `may_write=true`、`cleanup_needed=false`。
+- `med-autoscience` root `main...origin/main` clean，HEAD 为
+  `79514e41fff09f577c1a2d0fdcfabbef0c8e5a48`。线程
+  `019eda68-4a4d-7050-a2b0-1e44308df2a8` 仍为 active / in-progress，并持有
+  `.worktrees/lidocaineq-parity-audit-20260621` dirty worktree；该 worktree 在 gate
+  readback 中为 `behind_target`，相对 `origin/main` behind `6`。总控未接管、未改写、
+  未清理该写集。
+- 线程 `019ee959-b3bb-7ad3-bac6-25c266cbed9c` 维持 pin / 未归档 / 标题
+  `核实MAS绘图模板风格`，绑定 recovery worktree
+  `/Users/gaofeng/.codex/worktrees/67a3/med-autoscience`，只作为 MAS 绘图业务上下文；
+  不并发写 `019eda68` 的 LidocaineQ/gallery/parity 写集。
+- `one-person-lab-app` root `main...origin/main` clean，HEAD 为
+  `88f869f2129a038536a4832ae168df2c82c34629`；存在独立 release/size dirty
+  worktrees。本轮只验证 App/Console consumer boundary，不接管 release/size lanes。
+
+Fresh OPL substrate verification：
+
+- `./bin/opl runtime env doctor --json` 返回
+  `runtime_lock_materializer_verify_cache_prune_run_context_guard_available`，并保持
+  `host_environment_fallback_allowed=false`、`can_claim_domain_ready=false`、
+  `can_claim_app_release_ready=false`。
+- `./bin/opl runtime env contract --json` 声明 OPL 是 canonical runtime environment
+  owner，domain agents 只声明 dependency intent；`prepare --apply` 只把缺失语言包安装到
+  OPL-managed library path，并写 dependency lock、receipt 和
+  `dependency_run_context.json`。
+- `npm run typecheck` 通过。
+- `node --experimental-strip-types --test tests/src/runtime-environment-substrate.test.ts
+  tests/src/cli/cases/runtime-environment-substrate-command-surface.test.ts
+  tests/src/cli/cases/framework-readiness-cli-surface.test.ts` 通过 `16` 项。
+
+Fresh OPL prepare / managed library evidence：
+
+- Scoped alluvial prepare：
+  `opl runtime env prepare --domain mas --profile display --platform macos-arm64
+  --requirement-profile /Users/gaofeng/workspace/med-autoscience/display-packs/fenggaolab.org.medical-display-core/renderer_dependency_profile.json
+  --requirement-profile-id r_ggplot2_alluvial_transition_v1 --paper-root
+  /tmp/opl-mas-display-goal-20260621-NSqdoJ/alluvial/paper --apply --json`
+  返回 `status=prepared`，run-context 为
+  `/tmp/opl-mas-display-goal-20260621-NSqdoJ/alluvial/paper/build/dependency_run_context.json`，
+  managed library 为
+  `/Users/gaofeng/Library/Application Support/OPL/state/runtime-environment/targets/mas/display/macos-arm64/dependency-libraries/53608a677fe8c094fd17cc15/R`，
+  fingerprint 为 `sha256:af5a45a1711428d347e86339ae2787a9e4460e3f34afd94c387fede4fe918367`。
+- Full display prepare：
+  `opl runtime env prepare --domain mas --profile display --platform macos-arm64
+  --requirement-profile /Users/gaofeng/workspace/med-autoscience/display-packs/fenggaolab.org.medical-display-core/renderer_dependency_profile.json
+  --paper-root /tmp/opl-mas-display-goal-20260621-NSqdoJ/full/paper --apply --json`
+  返回 `status=prepared`，选择
+  `r_ggplot2_evidence_subprocess_v1`、`r_ggplot2_alluvial_transition_v1`、
+  `r_ggplot2_ggconsort_reporting_flow_v1`、`r_ggplot2_p1_comparison_subprocess_v1`；
+  run-context 为
+  `/tmp/opl-mas-display-goal-20260621-NSqdoJ/full/paper/build/dependency_run_context.json`，
+  managed library 为
+  `/Users/gaofeng/Library/Application Support/OPL/state/runtime-environment/targets/mas/display/macos-arm64/dependency-libraries/0df5a575494b2abe61831519/R`，
+  fingerprint 为 `sha256:89ce403f396a0b5b6251cf753febf44ce1814de5b7bd1f9a8fb64ca41709d7e7`。
+- 以 full run-context 的 `R_LIBS_USER` 强制 `.libPaths(c(managed))` 后，fresh
+  `Rscript` readback 成功加载
+  `jsonlite 2.0.0`、`ggplot2 4.0.3`、`ggsci 5.0.0`、`patchwork 1.3.2`、
+  `gridExtra 2.3`、`Rtsne 0.17`、`uwot 0.2.4`、`ggalluvial 0.12.6`、
+  `dplyr 1.2.1`、`ggconsort 0.1.0`；`find.package()` 均位于上述 OPL-managed
+  library path 下。
+
+Fresh MAS Gallery consumer evidence on `med-autoscience` main：
+
+- 使用 full run-context 注入
+  `MAS_DISPLAY_GALLERY_DEPENDENCY_RUN_CONTEXT_PATH`、`REF` 和 `FINGERPRINT` 后，
+  `./scripts/run-python-clean.sh scripts/build-display-pack-gallery.py --output-root
+  /tmp/opl-mas-display-goal-20260621-NSqdoJ/mas-gallery-full-output --force-render`
+  返回 `status=rendered`、`active_templates=34`、`gallery_visual_templates=37`、
+  `internal_rendered_image_templates=37`、`lidocaineq_reference_coverage_complete=true`、
+  `quality_overall_status=not_publication_ready`、
+  `publication_ready_claim_authorized=false`。
+- Manifest：
+  `/tmp/opl-mas-display-goal-20260621-NSqdoJ/mas-gallery-full-output/medical_display_gallery_assets/gallery_manifest.json`。
+  PDF：
+  `/tmp/opl-mas-display-goal-20260621-NSqdoJ/mas-gallery-full-output/medical_display_gallery.pdf`。
+- `alluvial_transition` manifest 行为：`render_status=rendered`、
+  `renderer_family=r_ggplot2`、`execution_mode=subprocess`，dependency environment 为
+  `status=prepared`，required profile 为 `r_ggplot2_alluvial_transition_v1`，输出
+  `medical_display_gallery_assets/alluvial_transition.png` 和 `.pdf`。
+- `table1_baseline_characteristics` manifest 行为：`render_status=rendered`，
+  `analysis_responsibility=table_shell`，输出
+  `medical_display_gallery_assets/table1_baseline_characteristics.png` 和 `.pdf`；
+  dependency environment 为 `prepared`，只证明 Gallery preview 走通，不改变 Table 1
+  authority。
+- `lidocaineq_reference_coverage.coverage_complete=true`，
+  `covered_reference_template_count=33` / `reference_template_count=33`，且
+  `blocked_template_count=0`、`gallery_visual_blocked_template_count=0`。
+- 当前 `med-autoscience` main 的 `cohort_flow_figure` 仍在 `non_visual_inventory` 中输出
+  `cohort_flow_figure.design.*`，`renderer_family=python`，dependency environment 为空。
+  虽然 manifest 保留 `r_ggplot2_ggconsort_reporting_flow_v1` dependency intent 和
+  `checked_in_renderer_uses_ggconsort=true` contract refs，但 main Gallery 尚未证明
+  cohort flow 真实走 ggconsort；该项仍等待 `019eda68` active lane handoff/吸收验证。
+
+Fresh fail-closed evidence：
+
+- 缺 `MAS_DISPLAY_GALLERY_DEPENDENCY_RUN_CONTEXT_*` 时 Gallery exit `1`：
+  `alluvial_transition requires OPL-prepared dependency run-context ... Run
+  opl runtime env prepare --domain mas --profile display --apply or OPL doctor`。
+- 指定错误 fingerprint `sha256:deadbeef` 时 Gallery exit `1`：
+  `alluvial_transition dependency run-context fingerprint mismatch ... rerun OPL prepare/doctor`。
+- 使用 scoped alluvial-only run-context 跑 full Gallery 时 Gallery exit `1`：
+  `calibration_curve_binary dependency run-context profile mismatch; missing
+  r_ggplot2_evidence_subprocess_v1. Run OPL prepare with the MAS display requirement profile.`
+- 将 run-context 的 `R_LIBS_USER` 指向空 managed library 目录时 Gallery exit `1`：
+  `alluvial_transition dependency run-context managed R library is missing packages
+  ggalluvial; run OPL prepare/doctor for the MAS display profile`。
+
+Fresh MAS clean-runner evidence：
+
+- `./scripts/run-python-clean.sh --clean-runner-status` 返回 `status=warm`、
+  `reuse_env_enabled=true`、`marker_current=true`、`sync_required=false`，环境和 uv cache
+  均位于 `~/.cache/med-autoscience/clean-runner`。
+- `PYTHONPATH=src ./scripts/run-pytest-clean.sh
+  tests/test_test_command_surfaces_cases/test_clean_python_runner_uv_cache.py` 通过 `12` 项。
+
+Fresh App / Console consumer boundary evidence：
+
+- `npm run validate:shell-convergence` 返回
+  `status=closed_structure_gate_not_live_evidence`，active shell 为 AionUI，Hermes 是
+  foreground alternative，AGUI 是 archived technical proof；false-ready 字段均为 false。
+- `npm run validate:release-boundary` 通过。
+- `npm run test:release-boundary` 通过 `164` 项。
+- 这些证据只证明 App/Console consumer boundary 和 release false-ready guard，不证明 App
+  release ready。
+
+Remaining gate：
+
+- `019eda68-4a4d-7050-a2b0-1e44308df2a8` 未 handoff 前，总控不能接管、rebase、吸收、
+  push 或清理其 LidocaineQ/gallery/parity dirty write set。
+- 目标中仍未完成的主项是：`ggconsort cohort-flow Gallery evidence`、`LidocaineQ parity
+  audit/artifact evidence`、MAS docs/examples foldback 到 `main`、MAS active lane 的
+  main-session independent diff review / verification / absorb / push / cleanup。
