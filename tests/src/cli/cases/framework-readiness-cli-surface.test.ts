@@ -44,8 +44,8 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(readback.default_tranche_policy.lane_count_max, 4);
   assert.equal(readback.default_tranche_policy.live_evidence_deferred, true);
   assert.equal(readback.milestone_state_counts.open, 1);
-  assert.equal(readback.milestone_state_counts.partial, 2);
-  assert.equal(readback.milestone_state_counts.closed_structure_gate, 4);
+  assert.equal(readback.milestone_state_counts.partial, 1);
+  assert.equal(readback.milestone_state_counts.closed_structure_gate, 5);
   assert.equal(readback.current_tranche.selected_lane_count, 1);
   assert.equal(readback.current_tranche.selected_lane_count_within_policy, false);
   assert.equal(
@@ -53,10 +53,10 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     'non_live_functional_structure_milestone_tranche_not_full_completion_audit',
   );
   assert.deepEqual(readback.current_tranche.selected_milestone_ids, [
-    'domain_pack_generated_hosted_surfaces',
+    'opl_primitive_runtime_owner_route_guard',
   ]);
   assert.deepEqual(readback.current_tranche.closed_or_advanced_structural_milestone_ids, [
-    'domain_pack_generated_hosted_surfaces',
+    'opl_primitive_runtime_owner_route_guard',
   ]);
   const milestonesById = Object.fromEntries(
     readback.milestones.map((milestone: { milestone_id: string }) => [milestone.milestone_id, milestone]),
@@ -67,7 +67,7 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   );
   assert.equal(
     milestonesById['opl_primitive_runtime_owner_route_guard'].state,
-    'partial',
+    'closed_structure_gate',
   );
   assert.equal(
     readback.current_tranche.lane_selection_policy.root_checkout_role,
@@ -91,43 +91,43 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     readback.current_tranche.lanes.map((lane: { lane_id: string }) => [lane.lane_id, lane]),
   );
   assert.deepEqual(
-    lanesById['opl-generated-hosted-consumption-guard-20260621'].milestone_ids,
-    ['domain_pack_generated_hosted_surfaces'],
+    lanesById['opl-primitive-aggregate-structure-closeout-20260621'].milestone_ids,
+    ['opl_primitive_runtime_owner_route_guard'],
   );
   assert.ok(
-    lanesById['opl-generated-hosted-consumption-guard-20260621'].required_surfaces.includes('API_readback'),
+    lanesById['opl-primitive-aggregate-structure-closeout-20260621'].required_surfaces.includes('API_readback'),
   );
   assert.ok(
-    lanesById['opl-generated-hosted-consumption-guard-20260621'].required_surfaces.includes('CLI_readback'),
+    lanesById['opl-primitive-aggregate-structure-closeout-20260621'].required_surfaces.includes('CLI_readback'),
   );
   assert.ok(
-    lanesById['opl-generated-hosted-consumption-guard-20260621'].non_live_completion_evidence_required.includes(
-      'generated_surface_consumption_bundle_counts_and_active_caller_cutover_refs_are_visible',
+    lanesById['opl-primitive-aggregate-structure-closeout-20260621'].non_live_completion_evidence_required.includes(
+      'ordinary_owner_route_typed_blocker_human_gate_guard_readback_available',
     ),
   );
   assert.equal(
-    lanesById['opl-generated-hosted-consumption-guard-20260621']
+    lanesById['opl-primitive-aggregate-structure-closeout-20260621']
       .authority_boundary.can_create_second_active_backlog,
     false,
   );
   assert.equal(
-    lanesById['opl-generated-hosted-consumption-guard-20260621']
+    lanesById['opl-primitive-aggregate-structure-closeout-20260621']
       .authority_boundary.can_authorize_physical_delete,
     false,
   );
   assert.equal(
-    lanesById['opl-generated-hosted-consumption-guard-20260621']
+    lanesById['opl-primitive-aggregate-structure-closeout-20260621']
       .authority_boundary.can_claim_domain_ready,
     false,
   );
   assert.ok(
-    lanesById['opl-generated-hosted-consumption-guard-20260621'].forbidden_scope.includes(
-      'App_live_rendering_complete_claim',
+    lanesById['opl-primitive-aggregate-structure-closeout-20260621'].forbidden_scope.includes(
+      'runtime_ledger_mutation',
     ),
   );
   assert.ok(
-    lanesById['opl-generated-hosted-consumption-guard-20260621'].forbidden_scope.includes(
-      'default_caller_cutover_or_scaleout_claim',
+    lanesById['opl-primitive-aggregate-structure-closeout-20260621'].forbidden_scope.includes(
+      'provider_long_soak_or_live_evidence_claim',
     ),
   );
   assert.equal(readback.authority_boundary.can_create_second_active_backlog, false);
@@ -649,6 +649,57 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(
     readback.ordinary_progress_guard.false_ready_guard.typed_blocker_ref_can_claim_stage_success,
     false,
+  );
+  assert.equal(
+    readback.primitive_runtime_owner_route_guard.surface_kind,
+    'opl_primitive_runtime_owner_route_guard_readback',
+  );
+  assert.equal(
+    readback.primitive_runtime_owner_route_guard.status,
+    'closed_structure_gate_not_live_evidence',
+  );
+  assert.equal(
+    readback.primitive_runtime_owner_route_guard.structural_closeout_guard.can_close_non_live_structure_gate,
+    true,
+  );
+  assert.equal(
+    readback.primitive_runtime_owner_route_guard.runtime_environment_summary
+      .host_environment_fallback_allowed,
+    false,
+  );
+  assert.equal(
+    readback.primitive_runtime_owner_route_guard.domain_progress_runtime_summary
+      .policy_adapter_matches_contract,
+    true,
+  );
+  assert.equal(
+    readback.primitive_runtime_owner_route_guard.ordinary_route_summary.typed_blocker_schema_ready,
+    true,
+  );
+  assert.equal(
+    readback.primitive_runtime_owner_route_guard.authority_boundary
+      .primitive_guard_can_create_typed_blocker,
+    false,
+  );
+  assert.equal(
+    readback.primitive_runtime_owner_route_guard.authority_boundary
+      .primitive_guard_can_make_human_decision,
+    false,
+  );
+  assert.equal(
+    readback.primitive_runtime_owner_route_guard.false_ready_guard
+      .runtime_environment_guard_closed_can_claim_runtime_ready,
+    false,
+  );
+  assert.equal(
+    readback.primitive_runtime_owner_route_guard.false_ready_guard
+      .no_second_truth_guard_ready_can_claim_full_goal_complete,
+    false,
+  );
+  assert.ok(
+    readback.primitive_runtime_owner_route_guard.structural_closeout_guard.cannot_claim.includes(
+      'provider_long_soak_complete',
+    ),
   );
   assert.equal(readback.app_shell_policy.mainline, 'AionUI/opl-aion-shell');
   assert.equal(readback.app_shell_policy.foreground_alternative, 'Hermes Desktop/hermes-codex');
