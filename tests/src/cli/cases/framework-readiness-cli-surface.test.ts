@@ -86,6 +86,50 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     readback.generated_hosted_surface_boundary.false_ready_guard.default_caller_evidence_worklist_can_authorize_physical_delete,
     false,
   );
+  assert.equal(
+    readback.ordinary_progress_guard.surface_kind,
+    'opl_ordinary_progress_owner_route_guard_readback',
+  );
+  assert.equal(
+    readback.ordinary_progress_guard.ordinary_route_policy.default_planning_root,
+    'current_owner_delta',
+  );
+  assert.equal(
+    readback.ordinary_progress_guard.owner_route_schema.surface_kind,
+    'family_owner_route',
+  );
+  assert.equal(
+    readback.ordinary_progress_guard.owner_route_schema.version,
+    'family-owner-route.v1',
+  );
+  assert.equal(
+    readback.ordinary_progress_guard.owner_route_schema.owner_route_required_fields_present,
+    true,
+  );
+  assert.equal(
+    readback.ordinary_progress_guard.typed_blocker_schema.surface_kind,
+    'opl_stage_typed_blocker',
+  );
+  assert.equal(
+    readback.ordinary_progress_guard.typed_blocker_schema.schema_version,
+    'stage-typed-blocker.v1',
+  );
+  assert.equal(
+    readback.ordinary_progress_guard.typed_blocker_schema.typed_blocker_required_fields_present,
+    true,
+  );
+  assert.equal(
+    readback.ordinary_progress_guard.human_gate_boundary.opl_can_make_human_decision,
+    false,
+  );
+  assert.equal(
+    readback.ordinary_progress_guard.authority_boundary.evidence_worklist_can_override_current_owner_delta,
+    false,
+  );
+  assert.equal(
+    readback.ordinary_progress_guard.false_ready_guard.typed_blocker_ref_can_claim_stage_success,
+    false,
+  );
   assert.equal(readback.app_shell_policy.mainline, 'AionUI/opl-aion-shell');
   assert.equal(readback.app_shell_policy.foreground_alternative, 'Hermes Desktop/hermes-codex');
   assert.equal(readback.app_shell_policy.archived_technical_proof_only, 'AGUI/agui-codex');
