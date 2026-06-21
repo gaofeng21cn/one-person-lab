@@ -53,12 +53,12 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     'non_live_functional_structure_milestone_tranche_not_full_completion_audit',
   );
   assert.deepEqual(readback.current_tranche.selected_milestone_ids, [
-    'standard_agent_landing_acceptance_guard',
-    'support_repo_profile_no_resurrection',
+    'domain_pack_generated_hosted_surfaces',
+    'memory_artifact_lifecycle_functional_boundary',
   ]);
   assert.deepEqual(readback.current_tranche.closed_or_advanced_structural_milestone_ids, [
-    'standard_agent_landing_acceptance_guard',
-    'support_repo_profile_no_resurrection',
+    'domain_pack_generated_hosted_surfaces',
+    'memory_artifact_lifecycle_functional_boundary',
   ]);
   const milestonesById = Object.fromEntries(
     readback.milestones.map((milestone: { milestone_id: string }) => [milestone.milestone_id, milestone]),
@@ -105,71 +105,72 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     readback.current_tranche.lanes.map((lane: { lane_id: string }) => [lane.lane_id, lane]),
   );
   assert.deepEqual(
-    lanesById['opl-standard-agent-residue-acceptance-20260622'].milestone_ids,
-    ['standard_agent_landing_acceptance_guard'],
+    lanesById['rca-generated-surface-false-ready-20260622'].milestone_ids,
+    ['domain_pack_generated_hosted_surfaces'],
+  );
+  assert.equal(lanesById['rca-generated-surface-false-ready-20260622'].repo, 'redcube-ai');
+  assert.ok(
+    lanesById['rca-generated-surface-false-ready-20260622'].required_surfaces.includes('contract'),
   );
   assert.ok(
-    lanesById['opl-standard-agent-residue-acceptance-20260622'].required_surfaces.includes('contract'),
+    lanesById['rca-generated-surface-false-ready-20260622'].required_surfaces.includes('API_readback'),
   );
   assert.ok(
-    lanesById['opl-standard-agent-residue-acceptance-20260622'].required_surfaces.includes('API_readback'),
-  );
-  assert.ok(
-    lanesById['opl-standard-agent-residue-acceptance-20260622'].non_live_completion_evidence_required.includes(
-      'standard_agent_landing_acceptance_guard_reads_private_residue_decision_ledger',
+    lanesById['rca-generated-surface-false-ready-20260622'].non_live_completion_evidence_required.includes(
+      'RCA_generated_surface_handoff_false_ready_guard_blocks_default_caller_cutover_and_artifact_ready_claims',
     ),
   );
   assert.equal(
-    lanesById['opl-standard-agent-residue-acceptance-20260622']
+    lanesById['rca-generated-surface-false-ready-20260622']
       .authority_boundary.can_create_second_active_backlog,
     false,
   );
   assert.equal(
-    lanesById['opl-standard-agent-residue-acceptance-20260622']
+    lanesById['rca-generated-surface-false-ready-20260622']
       .authority_boundary.can_authorize_physical_delete,
     false,
   );
   assert.equal(
-    lanesById['opl-standard-agent-residue-acceptance-20260622']
+    lanesById['rca-generated-surface-false-ready-20260622']
       .authority_boundary.can_claim_domain_ready,
     false,
   );
   assert.ok(
-    lanesById['opl-standard-agent-residue-acceptance-20260622'].forbidden_scope.includes(
-      'typed_blocker_creation_by_OPL',
+    lanesById['rca-generated-surface-false-ready-20260622'].forbidden_scope.includes(
+      'default_caller_cutover_claim',
     ),
   );
   assert.ok(
-    lanesById['opl-standard-agent-residue-acceptance-20260622'].forbidden_scope.includes(
-      'physical_delete_authorization_by_OPL',
+    lanesById['rca-generated-surface-false-ready-20260622'].forbidden_scope.includes(
+      'artifact_ready_or_domain_ready_claim',
     ),
   );
   assert.deepEqual(
-    lanesById['opl-doc-support-profile-guard-20260622'].milestone_ids,
-    ['support_repo_profile_no_resurrection'],
+    lanesById['bookforge-artifact-lifecycle-handoff-20260622'].milestone_ids,
+    ['memory_artifact_lifecycle_functional_boundary'],
   );
-  assert.equal(lanesById['opl-doc-support-profile-guard-20260622'].repo, 'opl-doc');
+  assert.equal(lanesById['bookforge-artifact-lifecycle-handoff-20260622'].repo, 'opl-bookforge');
   assert.ok(
-    lanesById['opl-doc-support-profile-guard-20260622'].required_surfaces.includes('CLI_readback'),
+    lanesById['bookforge-artifact-lifecycle-handoff-20260622'].required_surfaces.includes('CLI_readback'),
   );
   assert.ok(
-    lanesById['opl-doc-support-profile-guard-20260622'].non_live_completion_evidence_required.includes(
-      'support_profile_audit_reports_legacy_support_repo_policy_ref_absent',
+    lanesById['bookforge-artifact-lifecycle-handoff-20260622'].non_live_completion_evidence_required.includes(
+      'BookForge_artifact_lifecycle_handoff_contract_declares_OPL_projection_refs_and_BookForge_authority_refs',
     ),
   );
   assert.ok(
-    lanesById['opl-doc-support-profile-guard-20260622'].non_live_completion_evidence_required.includes(
-      'support_profile_audit_reports_default_governed_repo_set_excludes_support_repos',
+    lanesById['bookforge-artifact-lifecycle-handoff-20260622'].non_live_completion_evidence_required.includes(
+      'BookForge_false_ready_guard_blocks_dry_run_projection_clean_helper_clean_from_ready_claims',
     ),
   );
   assert.equal(
-    lanesById['opl-doc-support-profile-guard-20260622']
+    lanesById['bookforge-artifact-lifecycle-handoff-20260622']
       .authority_boundary.can_create_second_active_backlog,
     false,
   );
   assert.ok(
-    lanesById['opl-doc-support-profile-guard-20260622'].forbidden_scope.includes(
-      'legacy_support_repo_policy_alias_resurrection',
+    lanesById['bookforge-artifact-lifecycle-handoff-20260622'].forbidden_scope.includes(
+      'workspace_apply_evidence_claim_from_dry_run_or_contract',
     ),
   );
   assert.equal(readback.authority_boundary.can_create_second_active_backlog, false);
@@ -1058,14 +1059,14 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   });
   assert.ok(
     readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
-      lane.lane_id === 'opl-standard-agent-residue-acceptance-20260622'
-      && lane.repo === 'one-person-lab'
+      lane.lane_id === 'rca-generated-surface-false-ready-20260622'
+      && lane.repo === 'redcube-ai'
     )),
   );
   assert.ok(
     readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
-      lane.lane_id === 'opl-doc-support-profile-guard-20260622'
-      && lane.repo === 'opl-doc'
+      lane.lane_id === 'bookforge-artifact-lifecycle-handoff-20260622'
+      && lane.repo === 'opl-bookforge'
     )),
   );
   assert.ok(
@@ -1085,6 +1086,16 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(
     supportMilestone.current_truth_refs.includes('opl-doc:contracts/support_repo_policy.json'),
     false,
+  );
+  assert.ok(
+    milestonesById['domain_pack_generated_hosted_surfaces'].current_truth_refs.includes(
+      'redcube-ai@b0603a1a:contracts/generated_surface_handoff.json#OPL_GENERATED_SURFACE_EXIT_GATE.false_ready_guard',
+    ),
+  );
+  assert.ok(
+    milestonesById['memory_artifact_lifecycle_functional_boundary'].current_truth_refs.includes(
+      'opl-bookforge@17d184c:contracts/artifact_lifecycle_handoff.json',
+    ),
   );
   assert.ok(
     readback.milestones.every((milestone: { authority_boundary: { can_create_second_active_backlog: boolean } }) =>

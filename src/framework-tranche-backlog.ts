@@ -45,7 +45,7 @@ function buildCurrentTrancheReadback() {
   const selectedIds = selectedMilestoneIds();
   const selectedMilestoneSet = new Set(selectedIds);
   return {
-    tranche_id: 'opl-family-ideal-operating-model-tranche-20260621',
+    tranche_id: 'opl-family-ideal-operating-model-tranche-20260622',
     tranche_role:
       'non_live_functional_structure_milestone_tranche_not_full_completion_audit',
     selected_lane_count: CURRENT_TRANCHE_LANES.length,
