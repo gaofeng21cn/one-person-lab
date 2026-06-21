@@ -128,6 +128,75 @@ function contentFingerprint(value: unknown) {
   return `sha256:${sha256(value)}`;
 }
 
+function runtimeEnvironmentConsumerBoundary() {
+  return {
+    surface_kind: 'opl_runtime_environment_consumer_boundary',
+    consumer_role: 'consume_opl_prepared_run_context_only',
+    host_environment_fallback_allowed: false,
+    can_write_domain_truth: false,
+    can_write_domain_memory_body: false,
+    can_mutate_domain_artifact_body: false,
+    can_sign_owner_receipt: false,
+    can_create_typed_blocker: false,
+    can_schedule_domain_stage: false,
+    can_claim_provider_ready: false,
+    can_claim_runtime_ready: false,
+    can_claim_domain_ready: false,
+    can_claim_app_release_ready: false,
+  };
+}
+
+function requirementProfileIdentity(
+  profilePath: string,
+  requestedRequirementProfileId: string | undefined,
+  selectedRequirementProfileIds: string[],
+  profile: JsonRecord,
+) {
+  const profileRef = path.resolve(profilePath);
+  return {
+    surface_kind: 'opl_runtime_environment_requirement_profile_identity',
+    requirement_profile_ref: profileRef,
+    requested_requirement_profile_id: requestedRequirementProfileId ?? null,
+    selected_requirement_profile_ids: selectedRequirementProfileIds,
+    profile_fingerprint: contentFingerprint({
+      requirement_profile_ref: profileRef,
+      requested_requirement_profile_id: requestedRequirementProfileId ?? null,
+      selected_requirement_profile_ids: selectedRequirementProfileIds,
+      profile,
+    }),
+  };
+}
+
+function runContextTargetMismatchFields(
+  target: ReturnType<typeof normalizeTarget>,
+  runContext: JsonRecord,
+) {
+  return (['domain_id', 'profile_id', 'platform_id'] as const).filter((field) => (
+    runContext[field] !== target[field]
+  ));
+}
+
+function buildRunContextConsumerPreflight(
+  status: 'bound' | 'missing_run_context' | 'paper_root_not_supplied' | 'target_mismatch',
+  targetMismatchFields: string[] = [],
+) {
+  const canConsumeRunContext = status === 'bound';
+  return {
+    surface_kind: 'opl_runtime_environment_run_context_consumer_preflight',
+    status,
+    can_consume_run_context: canConsumeRunContext,
+    fail_closed: true,
+    target_mismatch_fields: targetMismatchFields,
+    route_hint: canConsumeRunContext ? null : 'opl_runtime_env_prepare',
+    host_environment_fallback_allowed: false,
+    can_schedule_domain_stage: false,
+    can_claim_provider_ready: false,
+    can_claim_runtime_ready: false,
+    can_claim_domain_ready: false,
+    can_claim_app_release_ready: false,
+  };
+}
+
 function runtimeEnvironmentStateRoot() {
   return path.join(ensureOplStateDir().state_dir, 'runtime-environment');
 }
@@ -929,6 +998,7 @@ export function buildRuntimeEnvironmentBuildReadback(input: RuntimeEnvironmentTa
 export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironmentPrepareInput) {
   const target = normalizeTarget(input);
   const {
+    profile,
     selected,
     selectedRequirementProfileIds,
     runtimeBinaries,
@@ -1006,6 +1076,13 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
   const lockRef = relativePaperBuildRef('dependency_environment_lock.json');
   const receiptRef = relativePaperBuildRef('dependency_environment_receipt.json');
   const runContextRef = relativePaperBuildRef('dependency_run_context.json');
+  const profileIdentity = requirementProfileIdentity(
+    input.requirementProfilePath,
+    input.requirementProfileId,
+    selectedRequirementProfileIds,
+    profile,
+  );
+  const consumerBoundary = runtimeEnvironmentConsumerBoundary();
   const lockPayload = {
     surface_kind: 'opl_runtime_environment_dependency_lock',
     version: 'opl-runtime-environment-dependency-lock.v1',
@@ -1017,6 +1094,7 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
     requested_requirement_profile_id: input.requirementProfileId ?? null,
     selected_requirement_profile_id: selected.profile_id ?? null,
     selected_requirement_profile_ids: selectedRequirementProfileIds,
+    requirement_profile_identity: profileIdentity,
     source_requirement_refs: [path.resolve(input.requirementProfilePath)],
     runtime_binaries: runtimeBinaries,
     required_r_packages: requiredRPackages,
@@ -1045,6 +1123,7 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
     can_authorize_publication_readiness: false,
     can_claim_runtime_ready: false,
     can_claim_domain_ready: false,
+    host_environment_fallback_allowed: false,
   };
   const receipt = {
     surface_kind: 'opl_runtime_environment_dependency_receipt',
@@ -1058,6 +1137,7 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
     requested_requirement_profile_id: input.requirementProfileId ?? null,
     selected_requirement_profile_id: selected.profile_id ?? null,
     selected_requirement_profile_ids: selectedRequirementProfileIds,
+    requirement_profile_identity: profileIdentity,
     package_installation_requested: input.apply === true,
     installed_packages: input.apply === true && installReceipt.status === 'installed',
     managed_r_library_path: managedLibraryPath,
@@ -1074,6 +1154,10 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
     run_context_ref: status === 'prepared' ? runContextRef : null,
     route_hint: status === 'prepared' ? null : 'opl_runtime_env_doctor',
     authority_boundary: authority,
+    consumer_boundary: consumerBoundary,
+    consumer_preflight: status === 'prepared'
+      ? buildRunContextConsumerPreflight('bound')
+      : buildRunContextConsumerPreflight('missing_run_context'),
   };
   fs.writeFileSync(
     path.join(buildRoot, 'dependency_environment_lock.json'),
@@ -1095,6 +1179,7 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
       platform_id: target.platform_id,
       requested_requirement_profile_id: input.requirementProfileId ?? null,
       selected_requirement_profile_ids: selectedRequirementProfileIds,
+      requirement_profile_identity: profileIdentity,
       lock_ref: lockRef,
       lock_sha256: lockWithDigest.lock_sha256,
       binary_paths: binaryPaths,
@@ -1110,6 +1195,12 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
       writes_domain_truth: false,
       writes_runtime_root: false,
       can_schedule_domain_stage: false,
+      can_claim_provider_ready: false,
+      can_claim_runtime_ready: false,
+      can_claim_domain_ready: false,
+      can_claim_app_release_ready: false,
+      consumer_boundary: consumerBoundary,
+      consumer_preflight: buildRunContextConsumerPreflight('bound'),
     };
     runContext.run_context_fingerprint = contentFingerprint(runContext);
     runContext.execution_fingerprint = runContext.run_context_fingerprint;
@@ -1139,6 +1230,7 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
       installed_packages: input.apply === true && installReceipt.status === 'installed',
       managed_r_library_path: managedLibraryPath,
       selected_requirement_profile_ids: selectedRequirementProfileIds,
+      requirement_profile_identity: profileIdentity,
       managed_required_r_packages: managedRequiredRPackages,
       base_or_recommended_r_packages: baseRPackageRequirements,
       package_installation_receipt: installReceipt,
@@ -1152,6 +1244,10 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
       missing_r_packages: missingRPackages,
       route_hint: status === 'prepared' ? null : 'opl_runtime_env_doctor',
       authority_boundary: authority,
+      consumer_boundary: consumerBoundary,
+      consumer_preflight: status === 'prepared'
+        ? buildRunContextConsumerPreflight('bound')
+        : buildRunContextConsumerPreflight('missing_run_context'),
     },
     run_context: runContext,
   };
@@ -1378,7 +1474,7 @@ export function buildRuntimeEnvironmentDoctorReadback() {
     ...baseReadback('doctor'),
     doctor: {
       surface_kind: 'opl_runtime_environment_doctor',
-      status: 'runtime_lock_materializer_verify_cache_prune_available',
+      status: 'runtime_lock_materializer_verify_cache_prune_run_context_guard_available',
       can_block_domain_progress: false,
       findings: [
         {
@@ -1407,17 +1503,33 @@ export function buildRuntimeEnvironmentDoctorReadback() {
           can_block_domain_progress: false,
           can_claim_runtime_ready: false,
         },
+        {
+          severity: 'info',
+          code: 'runtime_environment_run_context_consumer_preflight_available',
+          message:
+            'Run-context readback fail-closes when paper root, dependency_run_context.json, or target identity is missing or mismatched; consumers must not fall back to host environment packages.',
+          can_block_domain_progress: false,
+          host_environment_fallback_allowed: false,
+          can_claim_provider_ready: false,
+          can_claim_domain_ready: false,
+          can_claim_app_release_ready: false,
+        },
       ],
     },
   };
 }
 
 export function buildRuntimeEnvironmentRunContextReadback(input: RuntimeEnvironmentTargetInput) {
+  const target = normalizeTarget(input);
   const bundleManifest = bundleManifestProjection(input);
   if (input.paperRoot) {
     const runContextPath = path.join(path.resolve(input.paperRoot), 'build', 'dependency_run_context.json');
     if (fs.existsSync(runContextPath)) {
       const runContext = JSON.parse(fs.readFileSync(runContextPath, 'utf8')) as JsonRecord;
+      const targetMismatchFields = runContextTargetMismatchFields(target, runContext);
+      const consumerPreflight = targetMismatchFields.length === 0
+        ? buildRunContextConsumerPreflight('bound')
+        : buildRunContextConsumerPreflight('target_mismatch', targetMismatchFields);
       return {
         ...baseReadback('run-context', input),
         run_context: {
@@ -1427,9 +1539,40 @@ export function buildRuntimeEnvironmentRunContextReadback(input: RuntimeEnvironm
           writes_domain_truth: false,
           writes_runtime_root: false,
           can_schedule_domain_stage: false,
+          can_claim_provider_ready: false,
+          can_claim_runtime_ready: false,
+          can_claim_domain_ready: false,
+          can_claim_app_release_ready: false,
+          consumer_boundary: runtimeEnvironmentConsumerBoundary(),
+          consumer_preflight: consumerPreflight,
         },
       };
     }
+    return {
+      ...baseReadback('run-context', input),
+      run_context: {
+        surface_kind: 'opl_runtime_environment_run_context',
+        status: 'missing_run_context',
+        paper_root: path.resolve(input.paperRoot),
+        run_context_ref: relativePaperBuildRef('dependency_run_context.json'),
+        environment_bindings: {},
+        runtime_lock_ref: bundleManifest.lock_ref,
+        bundle_manifest_ref: bundleManifest.bundle_ref,
+        runtime_root: null,
+        materialization_receipt_ref: null,
+        writes_domain_truth: false,
+        writes_domain_memory_body: false,
+        writes_artifact_body: false,
+        writes_runtime_root: false,
+        can_schedule_domain_stage: false,
+        can_claim_provider_ready: false,
+        can_claim_runtime_ready: false,
+        can_claim_domain_ready: false,
+        can_claim_app_release_ready: false,
+        consumer_boundary: runtimeEnvironmentConsumerBoundary(),
+        consumer_preflight: buildRunContextConsumerPreflight('missing_run_context'),
+      },
+    };
   }
   return {
     ...baseReadback('run-context', input),
@@ -1446,6 +1589,12 @@ export function buildRuntimeEnvironmentRunContextReadback(input: RuntimeEnvironm
       writes_artifact_body: false,
       writes_runtime_root: false,
       can_schedule_domain_stage: false,
+      can_claim_provider_ready: false,
+      can_claim_runtime_ready: false,
+      can_claim_domain_ready: false,
+      can_claim_app_release_ready: false,
+      consumer_boundary: runtimeEnvironmentConsumerBoundary(),
+      consumer_preflight: buildRunContextConsumerPreflight('paper_root_not_supplied'),
     },
   };
 }

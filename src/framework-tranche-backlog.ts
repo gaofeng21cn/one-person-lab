@@ -115,6 +115,7 @@ type RuntimeEnvironmentSubstrateContractSubset = {
   cache_policy: JsonRecord;
   cache_inventory_policy: JsonRecord;
   dependency_prepare_policy: JsonRecord;
+  run_context_consumer_policy: JsonRecord;
   authority_boundary: JsonRecord;
   required_readback_claim_fields: string[];
   readback_commands: string[];
@@ -747,6 +748,7 @@ function readRuntimeEnvironmentSubstrateContract(
     cache_policy: recordField(parsed, 'cache_policy', filePath),
     cache_inventory_policy: recordField(parsed, 'cache_inventory_policy', filePath),
     dependency_prepare_policy: recordField(parsed, 'dependency_prepare_policy', filePath),
+    run_context_consumer_policy: recordField(parsed, 'run_context_consumer_policy', filePath),
     authority_boundary: recordField(parsed, 'authority_boundary', filePath),
     required_readback_claim_fields: stringArrayField(parsed, 'required_readback_claim_fields', filePath),
     readback_commands: stringArrayField(parsed, 'readback_commands', filePath),
@@ -977,15 +979,26 @@ function buildRuntimeEnvironmentSubstrateGuardReadback(contracts: FrameworkContr
       writes_dependency_receipt: runtimeEnvironment.dependency_prepare_policy.writes_dependency_receipt,
       writes_run_context_on_success:
         runtimeEnvironment.dependency_prepare_policy.writes_run_context_on_success,
+      run_context_consumer_preflight:
+        runtimeEnvironment.dependency_prepare_policy.run_context_consumer_preflight,
+      run_context_identity_required:
+        runtimeEnvironment.dependency_prepare_policy.run_context_identity_required,
       dependency_lock_counts_as_materialized_runtime_lock:
         runtimeEnvironment.dependency_prepare_policy.dependency_lock_counts_as_materialized_runtime_lock,
       installs_packages: runtimeEnvironment.dependency_prepare_policy.installs_packages,
+      host_environment_fallback_allowed:
+        runtimeEnvironment.dependency_prepare_policy.host_environment_fallback_allowed,
       writes_domain_truth: runtimeEnvironment.dependency_prepare_policy.writes_domain_truth,
       writes_runtime_root: runtimeEnvironment.dependency_prepare_policy.writes_runtime_root,
+      can_claim_provider_ready:
+        runtimeEnvironment.dependency_prepare_policy.can_claim_provider_ready,
       can_claim_runtime_ready: runtimeEnvironment.dependency_prepare_policy.can_claim_runtime_ready,
       can_claim_domain_ready: runtimeEnvironment.dependency_prepare_policy.can_claim_domain_ready,
       can_claim_publication_ready:
         runtimeEnvironment.dependency_prepare_policy.can_claim_publication_ready,
+    },
+    run_context_consumer_policy: {
+      ...runtimeEnvironment.run_context_consumer_policy,
     },
     required_readback_claim_fields: [...runtimeEnvironment.required_readback_claim_fields],
     readback_commands: [...runtimeEnvironment.readback_commands],
@@ -1003,6 +1016,8 @@ function buildRuntimeEnvironmentSubstrateGuardReadback(contracts: FrameworkContr
         runtimeEnvironment.cache_policy.cache_miss_counts_as_readiness_failure,
       descriptor_exists_can_claim_runtime_materialized: false,
       run_context_exists_can_claim_provider_ready: false,
+      missing_run_context_allows_host_environment_fallback: false,
+      run_context_target_mismatch_allows_consumer_execution: false,
       materialization_skeleton_can_claim_runtime_ready: false,
       materialization_receipt_can_claim_domain_ready: false,
       verification_receipt_can_claim_app_release_ready: false,

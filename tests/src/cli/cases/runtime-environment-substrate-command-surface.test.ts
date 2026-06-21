@@ -76,7 +76,7 @@ test('runtime env CLI exposes deterministic projections before materializing run
   assert.equal(inspect.domain_id, 'mas');
   assert.equal(inspect.profile_id, 'analysis');
   assert.equal(inspect.platform_id, 'macos-arm64');
-  assert.equal(inspect.implementation_status, 'runtime_lock_materializer_cache_prune_available');
+  assert.equal(inspect.implementation_status, 'runtime_lock_materializer_cache_prune_run_context_guard_available');
   assert.equal(inspect.target_planned, true);
   assert.equal(inspect.dry_run, true);
   assert.equal(inspect.can_claim_runtime_ready, false);
@@ -119,7 +119,10 @@ test('runtime env CLI exposes deterministic projections before materializing run
 
   const doctor = runCli(['runtime', 'env', 'doctor'], env).runtime_environment;
   assert.equal(doctor.command, 'doctor');
-  assert.equal(doctor.doctor.status, 'runtime_lock_materializer_verify_cache_prune_available');
+  assert.equal(
+    doctor.doctor.status,
+    'runtime_lock_materializer_verify_cache_prune_run_context_guard_available',
+  );
   assert.equal(
     doctor.doctor.findings.some((finding: { code: string }) => (
       finding.code === 'runtime_environment_materializer_verify_prune_available'
@@ -356,7 +359,11 @@ test('runtime env prepare writes a dependency failure receipt without installing
     '--paper-root',
     paperRoot,
   ], { OPL_STATE_DIR: stateRoot }).runtime_environment;
-  assert.equal(readback.run_context.status, 'planned_not_bound');
+  assert.equal(readback.run_context.status, 'missing_run_context');
+  assert.equal(readback.run_context.consumer_preflight.status, 'missing_run_context');
+  assert.equal(readback.run_context.consumer_preflight.can_consume_run_context, false);
+  assert.equal(readback.run_context.consumer_preflight.route_hint, 'opl_runtime_env_prepare');
+  assert.equal(readback.run_context.consumer_boundary.host_environment_fallback_allowed, false);
   assert.equal(readback.run_context.writes_runtime_root, false);
 });
 
@@ -540,11 +547,59 @@ test('runtime env prepare --apply verifies packages in the OPL-managed R library
   ]);
   assert.deepEqual(runContext.managed_required_r_packages, ['ggconsort']);
   assert.deepEqual(runContext.base_or_recommended_r_packages, ['grid']);
+  assert.equal(runContext.consumer_boundary.host_environment_fallback_allowed, false);
+  assert.equal(runContext.consumer_boundary.can_schedule_domain_stage, false);
+  assert.equal(runContext.consumer_boundary.can_claim_provider_ready, false);
+  assert.equal(runContext.consumer_preflight.status, 'bound');
+  assert.equal(runContext.consumer_preflight.can_consume_run_context, true);
+  assert.equal(runContext.consumer_preflight.fail_closed, true);
+  assert.equal(runContext.consumer_preflight.route_hint, null);
+  assert.match(runContext.requirement_profile_identity.profile_fingerprint, /^sha256:[a-f0-9]{64}$/);
   const managedMarker = path.join(
     runContext.env_vars.R_LIBS_USER,
     '.fake-installed-packages.json',
   );
   assert.deepEqual(JSON.parse(fs.readFileSync(managedMarker, 'utf8')), ['ggconsort']);
+
+  const readback = runCli([
+    'runtime',
+    'env',
+    'run-context',
+    '--domain',
+    'mas',
+    '--profile',
+    'display',
+    '--platform',
+    'macos-arm64',
+    '--paper-root',
+    paperRoot,
+  ], env).runtime_environment;
+  assert.equal(readback.run_context.status, 'prepared');
+  assert.equal(readback.run_context.consumer_preflight.status, 'bound');
+  assert.equal(readback.run_context.consumer_preflight.can_consume_run_context, true);
+  assert.equal(readback.run_context.consumer_preflight.target_mismatch_fields.length, 0);
+  assert.equal(readback.run_context.consumer_boundary.host_environment_fallback_allowed, false);
+  assert.equal(readback.run_context.can_claim_provider_ready, false);
+  assert.equal(readback.run_context.can_schedule_domain_stage, false);
+
+  const mismatchReadback = runCli([
+    'runtime',
+    'env',
+    'run-context',
+    '--domain',
+    'mag',
+    '--profile',
+    'display',
+    '--platform',
+    'macos-arm64',
+    '--paper-root',
+    paperRoot,
+  ], env).runtime_environment;
+  assert.equal(mismatchReadback.run_context.status, 'prepared');
+  assert.equal(mismatchReadback.run_context.consumer_preflight.status, 'target_mismatch');
+  assert.equal(mismatchReadback.run_context.consumer_preflight.can_consume_run_context, false);
+  assert.deepEqual(mismatchReadback.run_context.consumer_preflight.target_mismatch_fields, ['domain_id']);
+  assert.equal(mismatchReadback.run_context.consumer_preflight.route_hint, 'opl_runtime_env_prepare');
 });
 
 test('runtime env prepare returns a dependency failure without installing missing R packages', () => {
@@ -612,12 +667,22 @@ test('runtime env prepare returns a dependency failure without installing missin
 test('runtime env doctor and run-context preserve no-authority boundary', () => {
   const doctor = runCli(['runtime', 'env', 'doctor']).runtime_environment;
   assert.equal(doctor.command, 'doctor');
-  assert.equal(doctor.doctor.status, 'runtime_lock_materializer_verify_cache_prune_available');
+  assert.equal(
+    doctor.doctor.status,
+    'runtime_lock_materializer_verify_cache_prune_run_context_guard_available',
+  );
   assert.equal(doctor.doctor.findings[0].severity, 'info');
   assert.equal(doctor.doctor.findings[0].can_block_domain_progress, false);
   assert.equal(
     doctor.doctor.findings.some((finding: { code: string }) => (
       finding.code === 'runtime_environment_materializer_verify_prune_available'
+    )),
+    true,
+  );
+  assert.equal(
+    doctor.doctor.findings.some((finding: { code: string; host_environment_fallback_allowed?: boolean }) => (
+      finding.code === 'runtime_environment_run_context_consumer_preflight_available'
+        && finding.host_environment_fallback_allowed === false
     )),
     true,
   );
@@ -645,4 +710,7 @@ test('runtime env doctor and run-context preserve no-authority boundary', () => 
   );
   assert.equal(runContext.run_context.writes_domain_truth, false);
   assert.equal(runContext.run_context.writes_runtime_root, false);
+  assert.equal(runContext.run_context.consumer_preflight.status, 'paper_root_not_supplied');
+  assert.equal(runContext.run_context.consumer_preflight.can_consume_run_context, false);
+  assert.equal(runContext.run_context.consumer_boundary.host_environment_fallback_allowed, false);
 });

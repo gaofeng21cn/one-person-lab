@@ -349,16 +349,44 @@ dependency intent 并消费 OPL-managed run-context。
 - 后续再拆 Full DMG / remote cache / offline kit 时，不会把 release packaging 和 runtime
   substrate 继续搅在一起。
 
+## 当前 tranche closeout
+
+本轮只关闭 OPL-owned runtime environment substrate 的非 Live 功能/结构缺口，不声明 MAS
+gallery、App release、provider long-soak、真实用户路径或 production ready。当前机器
+状态是 `runtime_lock_materializer_cache_prune_run_context_guard_available`：
+
+- `prepare` 生成 dependency lock、dependency receipt 和成功时的
+  `dependency_run_context.json`，并写入 requirement profile identity、lock digest、
+  run-context fingerprint、consumer boundary 和 consumer preflight。
+- `run-context --paper-root <path>` 在缺少 `dependency_run_context.json` 时返回
+  `missing_run_context`，在 domain/profile/platform 与请求目标不一致时返回
+  `target_mismatch`，两者都 `fail_closed=true`。
+- consumer boundary 固定 `host_environment_fallback_allowed=false`，
+  `can_schedule_domain_stage=false`，并且不能声明 provider ready、runtime ready、domain
+  ready、App release ready 或 publication ready。
+- `doctor` 暴露 `runtime_environment_run_context_consumer_preflight_available`，用于把
+  consumer route 指回 `opl runtime env prepare`，而不是让 domain repo 或 App 私下回落到
+  宿主机环境。
+
+### Milestone Backlog
+
+| Milestone | Priority | Owner repo | Current state | Next non-Live action |
+| --- | --- | --- | --- | --- |
+| Runtime env substrate guard | P0 | `one-person-lab` | Contract、CLI、readback、prepare/materialize/verify/cache 和 run-context consumer preflight 已进入同一 OPL-owned false-ready boundary | 后续只补共享 cache / App consumer action；不再在 domain repo 私有化通用 env manager |
+| Domain consumer migration | P0/P1 | MAS/MAG/RCA/OMA owner repos | 仍按各 repo fresh source 判断；OPL 只提供 run-context / materialized runtime root 消费边界 | domain repo 迁移 consumer 时必须 fail closed，并保留 domain truth / owner receipt authority |
+| App / Console consumer projection | P1/P2 | `one-person-lab-app` / shell owner | App 只应消费 OPL runtime projection；release cohort 仍后置 | Storage / Runtime action 只发 OPL action，不把 runtime proof 写成 App release ready |
+| Shared cache / prewarm | P2 | `one-person-lab` + release/CI owner | OPL 已有 deterministic layer key、inventory 和 protected prune | 后续建立 remote/offline cache manifest；cache hit/miss 不进入 readiness claim |
+
 ## Adoption Audit
 
 | Item | Target surface | Current state | Status | Completion | Next action |
 | --- | --- | --- | --- | --- | --- |
-| OPL runtime environment contract/materializer/readback | `contracts/opl-framework/runtime-environment-substrate-contract.json`; `src/runtime-environment-substrate.ts`; `opl runtime env inspect|lock|build|prepare|materialize|verify|cache status|cache inventory|cache prune|doctor|run-context|contract --json` | Contract、deterministic lock / bundle manifest、explicit `materialize --apply` OPL-managed runtime root、materialization receipt、verify readback、filesystem inventory、protected prune receipt、dependency prepare run-context 已落地；`prepare` 默认聚合 profile 文件内所有 required 依赖，也可用 `--requirement-profile-id` 只准备 scoped profile，并只用 managed library 校验包存在 | `done` | `100%` for substrate behavior with focused executable evidence; `0%` for domain/App/production readiness claims | App/MAS consumer 已吸收；post-release/live evidence tail 保留为后置验收 |
-| Shared layer key library | OPL `src/runtime-environment-substrate.ts`; App Full consumer contract | OPL 已有 layer key / digest / manifest refs；App consumer 记录 OPL runtime substrate refs，不再声明 dependency truth owner | `partial` | `70%` | 后续可抽共享 manifest helper；当前不阻塞 OPL substrate 或 App consumer 边界 |
-| MAS environment intent | MAS display dependency profile and run-context consumer | MAS display profile 声明 renderer dependency requirements；`cohort_flow_figure` checked-in renderer 已切到 R/ggplot2 + `ggconsort`，只消费 OPL prepared receipt / run-context，缺 prepared env 时 fail closed；OPL scoped prepare 可指向 `r_ggplot2_ggconsort_reporting_flow_v1` 并写 managed-library run-context；MAS `main` / `origin/main` 为 `e6656dce6`，focused display tests 和 gallery readback 通过 | `done` | `100%` for MAS consumer/source contract and fail-closed behavior; `0%` for local ggconsort runtime render until fresh positive render evidence is recorded | 运行 OPL `prepare --apply` 后用 MAS checked-in renderer 记录 positive live render evidence |
-| App Full consumer boundary | App Full build scripts and release contract | App Full manifest 记录 OPL runtime environment substrate refs，role 是 consumer-only，false-ready flags 保持 false；App `main` / `origin/main` 为 `9cd7846`，release-boundary readback 确认 `opl_runtime_bundle_consumer`、`dependency_truth_owner=false`、`can_materialize_runtime_root=false`、`can_claim_app_release_ready=false` | `done` | `100%` for consumer-boundary contract/readback; `0%` for App release ready | App release ready 仍需 release cohort / VM smoke / owner receipt |
-| Shared remote cache | CI / release / deployment | App release cache 局部存在 | `partial` | `20%` | 建立 digest-based shared cache |
-| Runtime cleanup convergence | OPL CLI + App Settings | OPL env cache inventory / protected prune apply receipt 已可执行；App Storage 仍是 consumer projection | `partial` | `70%` | App Settings consumer 可后续接入；当前 cleanup substrate 已有 executable evidence |
+| OPL runtime environment contract/materializer/readback | `contracts/opl-framework/runtime-environment-substrate-contract.json`; `src/runtime-environment-substrate.ts`; `opl runtime env inspect|lock|build|prepare|materialize|verify|cache status|cache inventory|cache prune|doctor|run-context|contract --json` | Deterministic lock / bundle manifest、explicit `materialize --apply` OPL-managed runtime root、materialization receipt、verify readback、filesystem inventory、protected prune receipt、dependency prepare run-context、run-context consumer preflight 已落地 | `done_for_substrate_boundary` | Executable substrate behavior can be verified by focused tests and CLI readbacks; domain/App/production readiness remains `0%` | 后续 consumer lane 必须在各 owner repo 用 fresh source/readback 验证 |
+| Shared layer key library | OPL `src/runtime-environment-substrate.ts`; App / CI consumer contracts | OPL 已有 layer key / digest / manifest refs；remote/offline cache manifest 仍未成为 shared release/deployment surface | `partial` | `70%` for local substrate, not for remote cache | 建立 digest-based shared cache / offline kit manifest |
+| Domain environment intent consumers | MAS/MAG/RCA/BookForge/OMA owner repos | 本文不冻结 domain repo 状态；domain consumer 是否迁移必须从对应 repo fresh source、contracts、CLI/API/readback 判断 | `not_claimed_here` | `0%` for cross-repo consumer closeout in this OPL-only tranche | 后续 domain lane 只消费 OPL run-context / runtime root，不私有化通用 env manager |
+| App / Console consumer boundary | App owner repo and shell owner | 本文不冻结 App release 或 shell currentness；App 只能消费 OPL runtime projection | `not_claimed_here` | `0%` for App release ready | App consumer lane 需保持 AionUI 主线、Hermes foreground alternative、AGUI archived |
+| Runtime cleanup convergence | OPL CLI + App Settings | OPL env cache inventory / protected prune apply receipt 已可执行；App Storage 仍应只是 consumer projection | `partial` | Local cleanup substrate available; App projection not claimed | App Settings consumer 可后续接入；cleanup receipt 不授权 delete outside OPL runtime root |
 
-这些条目是目标设计 audit，不是完成声明。任何 `100%` 都必须等待 executable contract、
-CLI/readback、runtime artifact 或 release/deployment evidence。
+这些条目是目标设计 audit，不是全目标 Plan Completion Audit。任何 domain ready、App release
+ready、provider production ready、Brand L5 或真实项目完成声明，都必须等待对应 owner repo 的
+fresh executable evidence。

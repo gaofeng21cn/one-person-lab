@@ -18,7 +18,10 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
 
   assert.equal(contract.contract_id, 'opl_runtime_environment_substrate_contract');
   assert.equal(contract.owner, 'OPL Framework');
-  assert.equal(contract.implementation_status, 'runtime_lock_materializer_cache_prune_available');
+  assert.equal(
+    contract.implementation_status,
+    'runtime_lock_materializer_cache_prune_run_context_guard_available',
+  );
   assert.equal(contract.target_planned, true);
 
   const authority = contract.authority_boundary as Json;
@@ -57,6 +60,11 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   assert.equal(preparePolicy.writes_dependency_lock, true);
   assert.equal(preparePolicy.writes_dependency_receipt, true);
   assert.equal(preparePolicy.writes_run_context_on_success, true);
+  assert.equal(
+    preparePolicy.run_context_consumer_preflight,
+    'fail_closed_on_missing_run_context_or_target_mismatch',
+  );
+  assert.equal(preparePolicy.run_context_identity_required, true);
   assert.equal(preparePolicy.dependency_lock_counts_as_materialized_runtime_lock, false);
   assert.equal(preparePolicy.installs_packages, 'only_when_apply_into_opl_managed_library');
   assert.equal(preparePolicy.package_presence_verification, 'managed_library_only');
@@ -64,10 +72,25 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
     preparePolicy.requirement_profile_selection,
     'all_profiles_by_default_or_scoped_by_requirement_profile_id',
   );
+  assert.equal(preparePolicy.host_environment_fallback_allowed, false);
   assert.equal(preparePolicy.writes_domain_truth, false);
   assert.equal(preparePolicy.writes_runtime_root, false);
   assert.equal(preparePolicy.missing_dependency_returns_runtime_failure, true);
+  assert.equal(preparePolicy.can_claim_provider_ready, false);
   assert.equal(preparePolicy.can_claim_runtime_ready, false);
+
+  const runContextPolicy = contract.run_context_consumer_policy as Json;
+  assert.equal(runContextPolicy.status, 'fail_closed_consumer_preflight_available');
+  assert.equal(runContextPolicy.requires_paper_root_for_bound_readback, true);
+  assert.equal(runContextPolicy.missing_run_context_status, 'missing_run_context');
+  assert.equal(runContextPolicy.target_mismatch_status, 'target_mismatch');
+  assert.equal(runContextPolicy.host_environment_fallback_allowed, false);
+  assert.equal(runContextPolicy.run_context_exists_counts_as_provider_ready, false);
+  assert.equal(runContextPolicy.run_context_exists_counts_as_domain_ready, false);
+  assert.equal(runContextPolicy.can_schedule_domain_stage, false);
+  assert.equal(runContextPolicy.can_claim_provider_ready, false);
+  assert.equal(runContextPolicy.can_claim_runtime_ready, false);
+  assert.equal(runContextPolicy.can_claim_domain_ready, false);
 
   assert.deepEqual(contract.required_readback_claim_fields, [
     'implementation_status',
@@ -98,12 +121,20 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   assert.equal(forbiddenClaims.includes('runtime_cache_hit_means_ready'), true);
   assert.equal(forbiddenClaims.includes('materialization_skeleton_means_runtime_ready'), true);
   assert.equal(forbiddenClaims.includes('runtime_environment_receipt_means_domain_ready'), true);
+  assert.equal(forbiddenClaims.includes('missing_run_context_allows_host_environment_fallback'), true);
+  assert.equal(forbiddenClaims.includes('run_context_target_mismatch_allows_consumer_execution'), true);
 
   const readbackCommands = contract.readback_commands as string[];
   assert.equal(readbackCommands.some((command) => command.startsWith('opl runtime env build')), true);
   assert.equal(
     readbackCommands.includes(
       'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]',
+    ),
+    true,
+  );
+  assert.equal(
+    readbackCommands.includes(
+      'opl runtime env run-context --domain <domain> --profile <profile> [--paper-root <path>]',
     ),
     true,
   );

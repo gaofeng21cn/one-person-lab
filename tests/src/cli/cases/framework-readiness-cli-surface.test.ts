@@ -356,7 +356,7 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   );
   assert.equal(
     readback.runtime_environment_substrate_guard.contract_identity.implementation_status,
-    'runtime_lock_materializer_cache_prune_available',
+    'runtime_lock_materializer_cache_prune_run_context_guard_available',
   );
   assert.deepEqual(
     readback.runtime_environment_substrate_guard.ordinary_path.steps,
@@ -391,6 +391,25 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   );
   assert.equal(
     readback.runtime_environment_substrate_guard.dependency_prepare_policy.writes_domain_truth,
+    false,
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.dependency_prepare_policy
+      .run_context_consumer_preflight,
+    'fail_closed_on_missing_run_context_or_target_mismatch',
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.dependency_prepare_policy
+      .host_environment_fallback_allowed,
+    false,
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.run_context_consumer_policy.status,
+    'fail_closed_consumer_preflight_available',
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.run_context_consumer_policy
+      .run_context_exists_counts_as_provider_ready,
     false,
   );
   assert.ok(
@@ -434,6 +453,16 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   );
   assert.equal(
     readback.runtime_environment_substrate_guard.false_ready_guard.runtime_environment_readback_can_create_typed_blocker,
+    false,
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.false_ready_guard
+      .missing_run_context_allows_host_environment_fallback,
+    false,
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.false_ready_guard
+      .run_context_target_mismatch_allows_consumer_execution,
     false,
   );
   assert.equal(
