@@ -46,7 +46,7 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(readback.milestone_state_counts.open, 0);
   assert.equal(readback.milestone_state_counts.partial, 0);
   assert.equal(readback.milestone_state_counts.closed_structure_gate, 8);
-  assert.equal(readback.current_tranche.selected_lane_count, 2);
+  assert.equal(readback.current_tranche.selected_lane_count, 4);
   assert.equal(readback.current_tranche.selected_lane_count_within_policy, true);
   assert.equal(
     readback.current_tranche.tranche_role,
@@ -55,10 +55,12 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.deepEqual(readback.current_tranche.selected_milestone_ids, [
     'opl_primitive_runtime_owner_route_guard',
     'strict_source_purity_private_wrapper_retirement',
+    'app_active_shell_hermes_convergence',
   ]);
   assert.deepEqual(readback.current_tranche.closed_or_advanced_structural_milestone_ids, [
     'opl_primitive_runtime_owner_route_guard',
     'strict_source_purity_private_wrapper_retirement',
+    'app_active_shell_hermes_convergence',
   ]);
   const milestonesById = Object.fromEntries(
     readback.milestones.map((milestone: { milestone_id: string }) => [milestone.milestone_id, milestone]),
@@ -183,6 +185,46 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     lanesById['rca-private-tail-compact-readback-20260622'].forbidden_scope.includes(
       'visual_ready_or_exportable_claim',
     ),
+  );
+  assert.deepEqual(
+    lanesById['mag-compact-source-purity-readback-20260622'].milestone_ids,
+    ['strict_source_purity_private_wrapper_retirement'],
+  );
+  assert.equal(lanesById['mag-compact-source-purity-readback-20260622'].repo, 'med-autogrant');
+  assert.ok(
+    lanesById['mag-compact-source-purity-readback-20260622'].non_live_completion_evidence_required.includes(
+      'MAG_compact_cleanup_readiness_summary_landed',
+    ),
+  );
+  assert.ok(
+    lanesById['mag-compact-source-purity-readback-20260622'].forbidden_scope.includes(
+      'physical_delete_authorization',
+    ),
+  );
+  assert.ok(
+    lanesById['mag-compact-source-purity-readback-20260622'].forbidden_scope.includes(
+      'grant_ready_claim',
+    ),
+  );
+  assert.deepEqual(
+    lanesById['hermes-operator-functional-readback-20260622'].milestone_ids,
+    ['app_active_shell_hermes_convergence'],
+  );
+  assert.equal(lanesById['hermes-operator-functional-readback-20260622'].repo, 'opl-hermes-shell');
+  assert.ok(
+    lanesById['hermes-operator-functional-readback-20260622'].non_live_completion_evidence_required.includes(
+      'Hermes_operator_functional_surface_readback_landed',
+    ),
+  );
+  assert.ok(
+    lanesById['hermes-operator-functional-readback-20260622'].forbidden_scope.includes(
+      'active_shell_adoption_claim',
+    ),
+  );
+  assert.equal(
+    lanesById['hermes-operator-functional-readback-20260622']
+      .authority_boundary.can_claim_production_ready,
+    false,
   );
   assert.equal(readback.authority_boundary.can_create_second_active_backlog, false);
   assert.equal(readback.authority_boundary.can_claim_plan_completion, false);
@@ -326,7 +368,7 @@ test('framework tranche backlog exposes a guarded milestone index without comple
       (commit: { repo: string; commit: string }) => [commit.repo, commit.commit],
     ),
     [
-      ['med-autogrant', '1f1a59c1ebcabc96c6441a72f10dea4b72ad3529'],
+      ['med-autogrant', '1edfc58fc10787fcdd080f1469710bc1ffe61a17'],
       ['opl-meta-agent', 'b902ed0b0e1da4cf2ce559d03cb50ce2edcbe255'],
       ['redcube-ai', '985bc5e3822018f129a94d8aa003f9bff259a59c'],
     ],
@@ -361,6 +403,16 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     sourceRefGuardsByRepo['med-autogrant'].verify_readback_ref,
     'med-autogrant:scripts/verify.sh source-purity:strict',
   );
+  assert.equal(
+    sourceRefGuardsByRepo['med-autogrant'].compact_cleanup_readiness_summary_ref,
+    'med-autogrant:contracts/private_functional_surface_policy.json#/physical_source_morphology_policy/retirement_readback_cleanup_guard/compact_cleanup_readiness_summary',
+  );
+  assert.equal(sourceRefGuardsByRepo['med-autogrant'].compact_cleanup_candidate_count, 7);
+  assert.equal(sourceRefGuardsByRepo['med-autogrant'].compact_cleanup_owner_delta_required, true);
+  assert.equal(sourceRefGuardsByRepo['med-autogrant'].compact_cleanup_can_apply_cleanup, false);
+  assert.equal(sourceRefGuardsByRepo['med-autogrant'].compact_cleanup_can_authorize_physical_delete, false);
+  assert.equal(sourceRefGuardsByRepo['med-autogrant'].compact_cleanup_can_claim_domain_ready, false);
+  assert.equal(sourceRefGuardsByRepo['med-autogrant'].compact_cleanup_can_claim_production_ready, false);
   assert.equal(
     sourceRefGuardsByRepo['opl-meta-agent'].source_ref,
     'opl-meta-agent:contracts/script_to_pack_gate_receipt.json#/machine_gate_inputs/source_ref_integrity_guard',
@@ -416,6 +468,12 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     readback.domain_source_ref_integrity_guard.structural_closeout_guard
       .required_current_truth_surfaces.includes(
         'med-autogrant:authority morphology-guard#strict_source_purity_no_second_truth_guard',
+      ),
+  );
+  assert.ok(
+    readback.domain_source_ref_integrity_guard.structural_closeout_guard
+      .required_current_truth_surfaces.includes(
+        'med-autogrant:scripts/check_source_purity_guard.py --format json#compact_cleanup_readiness_summary',
       ),
   );
   assert.ok(
@@ -1114,11 +1172,36 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(
     readback.app_shell_policy.convergence_readback.hermes_candidate_functional_convergence_readback
       .absorbed_origin_main_sha,
-    'd167952981a266e4e6d1e185a6b1ee72d2b30da3',
+    'bd139d5e1bcb57e47defbd59f411032e0b240a60',
   );
   assert.equal(
     readback.app_shell_policy.convergence_readback.hermes_candidate_functional_convergence_readback
       .false_ready_boundary.can_claim_app_release_ready,
+    false,
+  );
+  assert.equal(
+    readback.app_shell_policy.convergence_readback.hermes_candidate_operator_functional_surface_readback
+      .surface_kind,
+    'opl_hermes_candidate_operator_functional_surface_readback',
+  );
+  assert.equal(
+    readback.app_shell_policy.convergence_readback.hermes_candidate_operator_functional_surface_readback
+      .absorbed_origin_main_sha,
+    'bd139d5e1bcb57e47defbd59f411032e0b240a60',
+  );
+  assert.deepEqual(
+    readback.app_shell_policy.convergence_readback.hermes_candidate_operator_functional_surface_readback
+      .operator_surface_ids,
+    [
+      'domain_skill_catalog',
+      'ordinary_session_prompt_path',
+      'operator_settings_and_model_access',
+      'composer_affordances',
+    ],
+  );
+  assert.equal(
+    readback.app_shell_policy.convergence_readback.hermes_candidate_operator_functional_surface_readback
+      .false_ready_boundary.can_claim_app_operator_sustained_consumption,
     false,
   );
   assert.ok(
@@ -1131,6 +1214,18 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
       lane.lane_id === 'rca-private-tail-compact-readback-20260622'
       && lane.repo === 'redcube-ai'
+    )),
+  );
+  assert.ok(
+    readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
+      lane.lane_id === 'mag-compact-source-purity-readback-20260622'
+      && lane.repo === 'med-autogrant'
+    )),
+  );
+  assert.ok(
+    readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
+      lane.lane_id === 'hermes-operator-functional-readback-20260622'
+      && lane.repo === 'opl-hermes-shell'
     )),
   );
   assert.ok(

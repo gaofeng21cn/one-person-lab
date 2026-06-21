@@ -11,8 +11,8 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
     absorbed_origin_main_commits: [
       {
         repo: 'med-autogrant',
-        commit: '1f1a59c1ebcabc96c6441a72f10dea4b72ad3529',
-        subject: 'Add strict source purity guard readback',
+        commit: '1edfc58fc10787fcdd080f1469710bc1ffe61a17',
+        subject: 'Add compact MAG source-purity cleanup readback',
       },
       {
         repo: 'opl-meta-agent',
@@ -37,6 +37,16 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
         strict_readback_ref:
           'med-autogrant:scripts/check_source_purity_guard.py --format json',
         verify_readback_ref: 'med-autogrant:scripts/verify.sh source-purity:strict',
+        compact_cleanup_readiness_summary_ref:
+          'med-autogrant:contracts/private_functional_surface_policy.json#/physical_source_morphology_policy/retirement_readback_cleanup_guard/compact_cleanup_readiness_summary',
+        compact_cleanup_readiness_readback_ref:
+          'med-autogrant:scripts/check_source_purity_guard.py --format json#compact_cleanup_readiness_summary',
+        compact_cleanup_candidate_count: 7,
+        compact_cleanup_owner_delta_required: true,
+        compact_cleanup_can_apply_cleanup: false,
+        compact_cleanup_can_authorize_physical_delete: false,
+        compact_cleanup_can_claim_domain_ready: false,
+        compact_cleanup_can_claim_production_ready: false,
         checked_source_ref_count: 55,
         checked_machine_boundary_ref_count: 0,
         strict_source_purity_no_second_truth_guard_id:
@@ -134,6 +144,7 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
         'med-autogrant:authority morphology-guard#source_ref_integrity_guard',
         'med-autogrant:authority morphology-guard#strict_source_purity_no_second_truth_guard',
         'med-autogrant:scripts/check_source_purity_guard.py --format json',
+        'med-autogrant:scripts/check_source_purity_guard.py --format json#compact_cleanup_readiness_summary',
         'med-autogrant:scripts/verify.sh source-purity:strict',
         'opl-meta-agent:script_to_pack_gate_receipt.machine_gate_inputs.source_ref_integrity_guard',
         'opl-meta-agent:script_morphology_policy.generic_materializer_no_resurrection_guard',
@@ -153,7 +164,9 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
         'default_caller_cutover',
         'OPL_primitive_parity',
         'App_operator_live_consumption',
+        'App_operator_sustained_consumption',
         'grant_readiness',
+        'submission_readiness',
         'visual_or_export_readiness',
         'target_agent_readiness',
         'domain_ready',
