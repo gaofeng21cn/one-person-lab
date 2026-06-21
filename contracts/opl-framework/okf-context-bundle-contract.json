@@ -63,6 +63,61 @@
     "reserved_filename_type_policy": "reserved_files_must_not_be_concept_documents",
     "root_index_okf_version_policy": "root_index_may_declare_okf_version_without_becoming_a_concept"
   },
+  "native_frontmatter_migration_policy": {
+    "state": "opt_in_advisory_migration_lane",
+    "default_bundle_mode": "exporter_generated_body_free_context_bundle",
+    "purpose": "Allow stable domain-owned agent/*.md documents to carry OKF-compatible frontmatter without making native frontmatter the default bundle source or an authority surface.",
+    "eligible_path_globs": [
+      "agent/*.md"
+    ],
+    "excluded_path_globs": [
+      "docs/**",
+      "runtime-state/**",
+      "control/opl/**",
+      "artifacts/**",
+      "tests/fixtures/okf/**"
+    ],
+    "required_fields": [
+      "type",
+      "body_owner",
+      "domain_authority"
+    ],
+    "required_field_semantics": {
+      "type": "OKF-compatible concept type metadata for advisory context exchange.",
+      "body_owner": "The domain owner that owns the Markdown body and any semantic changes to it.",
+      "domain_authority": "The domain authority surface that owns truth, memory-body acceptance, artifact authority, owner receipts, typed blockers, and quality/export/readiness verdicts."
+    },
+    "body_owner_policy": "Native OKF frontmatter must preserve the existing body owner. OPL may preserve, validate, inspect, or project refs-only metadata, but must not become the Markdown body owner or rewrite body semantics through OKF migration.",
+    "unknown_frontmatter_policy": "preserve_and_tolerate_as_advisory_metadata_without_blocking_ordinary_progress",
+    "runtime_consumption_policy": {
+      "runway_consumes_okf_for_progress_or_readiness": false,
+      "framework_readiness_consumes_okf_for_ready_claims": false,
+      "domain_readiness_consumes_okf_for_ready_claims": false
+    },
+    "false_authority_fields": {
+      "native_frontmatter_authorizes_domain_truth": false,
+      "native_frontmatter_authorizes_memory_body_write": false,
+      "native_frontmatter_authorizes_owner_receipt": false,
+      "native_frontmatter_authorizes_typed_blocker": false,
+      "native_frontmatter_authorizes_quality_or_export_verdict": false,
+      "native_frontmatter_authorizes_artifact_authority": false,
+      "native_frontmatter_authorizes_runtime_scheduling": false,
+      "native_frontmatter_authorizes_readiness": false
+    },
+    "stop_conditions": [
+      "path_is_not_an_eligible_stable_domain_owned_agent_markdown_file",
+      "required_body_owner_or_domain_authority_metadata_missing",
+      "frontmatter_claims_opl_domain_truth_memory_body_artifact_owner_receipt_typed_blocker_quality_export_runtime_or_readiness_authority",
+      "migration_attempt_would_copy_or_mutate_domain_memory_body_artifact_body_prompt_skill_or_quality_gate_body",
+      "migration_attempt_would_make_unknown_frontmatter_a_progress_blocker"
+    ],
+    "foldback_docs": [
+      "docs/decisions.md",
+      "docs/status.md",
+      "docs/architecture.md",
+      "docs/active/current-state-vs-ideal-gap.md"
+    ]
+  },
   "conformance_policy": {
     "hard_errors": [
       "non_reserved_markdown_missing_parseable_frontmatter",

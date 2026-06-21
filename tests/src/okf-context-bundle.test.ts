@@ -33,6 +33,25 @@ test('OKF contract freezes OPL authority false flags and reserved filenames', ()
   );
 });
 
+test('OKF native frontmatter migration stays opt-in and non-authoritative', () => {
+  const policy = OKF_CONTEXT_BUNDLE_CONTRACT.native_frontmatter_migration_policy;
+
+  assert.equal(policy.state, 'opt_in_advisory_migration_lane');
+  assert.equal(policy.default_bundle_mode, 'exporter_generated_body_free_context_bundle');
+  assert.deepEqual(policy.required_fields, ['type', 'body_owner', 'domain_authority']);
+  assert.equal(policy.runtime_consumption_policy.runway_consumes_okf_for_progress_or_readiness, false);
+  assert.equal(policy.runtime_consumption_policy.framework_readiness_consumes_okf_for_ready_claims, false);
+  assert.equal(policy.runtime_consumption_policy.domain_readiness_consumes_okf_for_ready_claims, false);
+  assert.equal(policy.false_authority_fields.native_frontmatter_authorizes_domain_truth, false);
+  assert.equal(policy.false_authority_fields.native_frontmatter_authorizes_memory_body_write, false);
+  assert.equal(policy.false_authority_fields.native_frontmatter_authorizes_owner_receipt, false);
+  assert.equal(policy.false_authority_fields.native_frontmatter_authorizes_typed_blocker, false);
+  assert.equal(policy.false_authority_fields.native_frontmatter_authorizes_quality_or_export_verdict, false);
+  assert.equal(policy.false_authority_fields.native_frontmatter_authorizes_artifact_authority, false);
+  assert.equal(policy.false_authority_fields.native_frontmatter_authorizes_runtime_scheduling, false);
+  assert.equal(policy.false_authority_fields.native_frontmatter_authorizes_readiness, false);
+});
+
 test('OKF builder creates a projection without granting runtime or domain authority', () => {
   const projection = buildOkfContextBundleProjection({
     bundleId: 'demo-bundle',
