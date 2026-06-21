@@ -29,6 +29,7 @@ interface OkfContextBundleContract {
   native_frontmatter_migration_policy: {
     state: string;
     default_bundle_mode: string;
+    eligible_path_globs: string[];
     required_fields: string[];
     runtime_consumption_policy: Record<string, false>;
     false_authority_fields: Record<string, false>;
@@ -87,6 +88,11 @@ export interface BuildOkfDomainRepoProjectionOptions extends BuildOkfDomainPackP
   packPath?: string;
   memoryDescriptorPath?: string;
   includeMemoryLocators?: boolean;
+}
+
+export interface InspectOkfNativeFrontmatterOptions {
+  repoRoot: string;
+  agentRoot?: string;
 }
 
 export interface OkfDomainPackCompilerInput {
@@ -192,11 +198,75 @@ export interface OkfDomainRepoProjectionReadback {
   non_authority_flags: typeof OKF_CONTEXT_BUNDLE_CONTRACT.non_authority_flags;
 }
 
+export interface OkfNativeFrontmatterFileInspection {
+  path: string;
+  parseable: boolean;
+  has_frontmatter: boolean;
+  frontmatter: JsonRecord;
+  missing_required_fields: string[];
+  forbidden_authority_claim_fields: string[];
+  status: 'ready' | 'advisory_gap';
+}
+
+export interface OkfNativeFrontmatterInspection {
+  surface_kind: 'opl_okf_native_frontmatter_inspection';
+  version: 'opl-okf-native-frontmatter-inspection.v1';
+  repo_root: string;
+  agent_root: string;
+  status: 'ready' | 'advisory_gaps' | 'agent_root_missing';
+  default_bundle_mode: string;
+  eligible_path_globs: string[];
+  required_fields: string[];
+  files: OkfNativeFrontmatterFileInspection[];
+  summary: {
+    eligible_file_count: number;
+    ready_file_count: number;
+    advisory_gap_count: number;
+    missing_frontmatter_count: number;
+    parse_error_count: number;
+    missing_required_field_count: number;
+    forbidden_authority_claim_count: number;
+  };
+  advisory_gaps: OkfDiagnostic[];
+  authority_boundary: typeof OKF_CONTEXT_BUNDLE_CONTRACT.authority_boundary;
+  non_authority_flags: typeof OKF_CONTEXT_BUNDLE_CONTRACT.non_authority_flags;
+}
+
 const CONTRACT_REF = 'contracts/opl-framework/okf-context-bundle-contract.json';
 const CONTRACT_PATH = fileURLToPath(new URL(`../${CONTRACT_REF}`, import.meta.url));
 const RESERVED_FILENAMES = new Set(['index.md', 'log.md']);
 const MARKDOWN_LINK_RE = /!?\[[^\]]*]\(([^)\s]+)(?:\s+["'][^)"']*["'])?\)/g;
 const WIKILINK_RE = /\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|[^\]]+)?]]/g;
+const NATIVE_FRONTMATTER_FORBIDDEN_TRUE_FIELDS = [
+  'native_frontmatter_authorizes_domain_truth',
+  'native_frontmatter_authorizes_memory_body_write',
+  'native_frontmatter_authorizes_owner_receipt',
+  'native_frontmatter_authorizes_typed_blocker',
+  'native_frontmatter_authorizes_quality_or_export_verdict',
+  'native_frontmatter_authorizes_artifact_authority',
+  'native_frontmatter_authorizes_runtime_scheduling',
+  'native_frontmatter_authorizes_readiness',
+  'opl_owns_domain_truth',
+  'opl_owns_domain_memory_body',
+  'opl_accepts_or_rejects_domain_memory_writeback',
+  'opl_applies_domain_memory_writeback',
+  'opl_authorizes_quality_verdict',
+  'opl_authorizes_domain_ready',
+  'opl_authorizes_publication_or_submission_verdict',
+  'opl_owns_artifact_authority',
+  'opl_schedules_runtime_from_okf',
+  'opl_can_write_domain_truth',
+  'opl_can_write_memory_body',
+  'opl_can_accept_or_reject_writeback',
+  'opl_can_apply_memory_writeback',
+  'opl_can_authorize_quality_verdict',
+  'opl_can_authorize_domain_ready',
+  'opl_can_authorize_publication_or_submission_verdict',
+  'opl_can_write_artifacts',
+  'opl_can_sign_owner_receipt',
+  'opl_can_create_typed_blocker',
+  'opl_can_schedule_runtime',
+] as const;
 
 export const OKF_CONTEXT_BUNDLE_CONTRACT = JSON.parse(
   fs.readFileSync(CONTRACT_PATH, 'utf8'),
@@ -476,6 +546,14 @@ function walkMarkdownFiles(root: string) {
   };
   visit(root);
   return files.sort((left, right) => left.localeCompare(right));
+}
+
+function fieldClaimsTrue(value: unknown) {
+  return value === true || value === 'true';
+}
+
+function forbiddenNativeFrontmatterClaimFields(frontmatter: JsonRecord) {
+  return NATIVE_FRONTMATTER_FORBIDDEN_TRUE_FIELDS.filter((field) => fieldClaimsTrue(frontmatter[field]));
 }
 
 function normalizeMarkdownTarget(rawTarget: string, fromFile: string) {
@@ -904,5 +982,123 @@ export function inspectOkfContextBundle(input: { bundlePath: string }): OkfConte
     version: 'opl-okf-context-bundle-inspection.v1',
     contract: OKF_CONTEXT_BUNDLE_CONTRACT,
     validation: validateOkfContextBundle(input),
+  };
+}
+
+export function inspectOkfNativeFrontmatter(
+  options: InspectOkfNativeFrontmatterOptions,
+): OkfNativeFrontmatterInspection {
+  const repoRoot = path.resolve(options.repoRoot);
+  const agentRoot = resolveSourcePath(repoRoot, options.agentRoot ?? 'agent');
+  const policy = OKF_CONTEXT_BUNDLE_CONTRACT.native_frontmatter_migration_policy;
+  const requiredFields = policy.required_fields;
+  const eligiblePathGlobs = [
+    ...policy.eligible_path_globs,
+    'agent/**/*.md',
+  ].filter((entry, index, entries) => entries.indexOf(entry) === index);
+
+  if (!fs.existsSync(agentRoot) || !fs.statSync(agentRoot).isDirectory()) {
+    return {
+      surface_kind: 'opl_okf_native_frontmatter_inspection',
+      version: 'opl-okf-native-frontmatter-inspection.v1',
+      repo_root: repoRoot,
+      agent_root: agentRoot,
+      status: 'agent_root_missing',
+      default_bundle_mode: policy.default_bundle_mode,
+      eligible_path_globs: eligiblePathGlobs,
+      required_fields: requiredFields,
+      files: [],
+      summary: {
+        eligible_file_count: 0,
+        ready_file_count: 0,
+        advisory_gap_count: 1,
+        missing_frontmatter_count: 0,
+        parse_error_count: 0,
+        missing_required_field_count: 0,
+        forbidden_authority_claim_count: 0,
+      },
+      advisory_gaps: [
+        {
+          code: 'okf_native_agent_root_missing',
+          file: normalizeRelativePath(path.relative(repoRoot, agentRoot)) || 'agent',
+          message: 'OKF native frontmatter inspection is advisory and found no domain-owned agent markdown root.',
+        },
+      ],
+      authority_boundary: OKF_CONTEXT_BUNDLE_CONTRACT.authority_boundary,
+      non_authority_flags: OKF_CONTEXT_BUNDLE_CONTRACT.non_authority_flags,
+    };
+  }
+
+  const files = walkMarkdownFiles(agentRoot).map((relativeToAgentRoot): OkfNativeFrontmatterFileInspection => {
+    const relativePath = normalizeRelativePath(path.join(path.relative(repoRoot, agentRoot), relativeToAgentRoot));
+    const content = fs.readFileSync(path.join(agentRoot, relativeToAgentRoot), 'utf8');
+    const parsed = parseFrontmatter(content);
+    const missingRequiredFields = parsed.parseable && parsed.frontmatter
+      ? requiredFields.filter((field) => !isNonEmptyString(parsed.frontmatter?.[field]))
+      : requiredFields;
+    const forbiddenAuthorityClaimFields = parsed.frontmatter
+      ? forbiddenNativeFrontmatterClaimFields(parsed.frontmatter)
+      : [];
+    const hasGap = !parsed.parseable || !parsed.frontmatter || missingRequiredFields.length > 0 || forbiddenAuthorityClaimFields.length > 0;
+    return {
+      path: relativePath,
+      parseable: parsed.parseable,
+      has_frontmatter: Boolean(parsed.frontmatter),
+      frontmatter: parsed.frontmatter ?? {},
+      missing_required_fields: missingRequiredFields,
+      forbidden_authority_claim_fields: forbiddenAuthorityClaimFields,
+      status: hasGap ? 'advisory_gap' : 'ready',
+    };
+  });
+
+  const advisoryGaps: OkfDiagnostic[] = [];
+  for (const file of files) {
+    if (!file.parseable || !file.has_frontmatter) {
+      advisoryGaps.push({
+        code: 'okf_native_frontmatter_missing_or_unparseable',
+        file: file.path,
+        message: 'Native OKF frontmatter is absent or unparseable; this is advisory and does not block ordinary progress.',
+      });
+    }
+    for (const field of file.missing_required_fields) {
+      advisoryGaps.push({
+        code: 'okf_native_required_field_missing',
+        file: file.path,
+        message: `Native OKF frontmatter advisory field is missing: ${field}.`,
+      });
+    }
+    for (const field of file.forbidden_authority_claim_fields) {
+      advisoryGaps.push({
+        code: 'okf_native_forbidden_authority_claim',
+        file: file.path,
+        message: `Native OKF frontmatter must not claim OPL runtime, readiness, truth, receipt, blocker, artifact, or verdict authority: ${field}.`,
+      });
+    }
+  }
+
+  const summary = {
+    eligible_file_count: files.length,
+    ready_file_count: files.filter((file) => file.status === 'ready').length,
+    advisory_gap_count: files.filter((file) => file.status === 'advisory_gap').length,
+    missing_frontmatter_count: files.filter((file) => !file.has_frontmatter).length,
+    parse_error_count: files.filter((file) => !file.parseable).length,
+    missing_required_field_count: files.filter((file) => file.missing_required_fields.length > 0).length,
+    forbidden_authority_claim_count: files.filter((file) => file.forbidden_authority_claim_fields.length > 0).length,
+  };
+
+  return {
+    surface_kind: 'opl_okf_native_frontmatter_inspection',
+    version: 'opl-okf-native-frontmatter-inspection.v1',
+    repo_root: repoRoot,
+    agent_root: agentRoot,
+    status: advisoryGaps.length === 0 ? 'ready' : 'advisory_gaps',
+    default_bundle_mode: policy.default_bundle_mode,
+    eligible_path_globs: eligiblePathGlobs,
+    required_fields: requiredFields,
+    files,
+    summary,
+    advisory_gaps: advisoryGaps,
+    authority_boundary: OKF_CONTEXT_BUNDLE_CONTRACT.authority_boundary,
+    non_authority_flags: OKF_CONTEXT_BUNDLE_CONTRACT.non_authority_flags,
   };
 }

@@ -6,6 +6,7 @@ import { assert, test } from './cli/helpers.ts';
 import {
   OKF_CONTEXT_BUNDLE_CONTRACT,
   buildOkfContextBundleProjection,
+  inspectOkfNativeFrontmatter,
   validateOkfContextBundle,
 } from '../../src/okf-context-bundle.ts';
 
@@ -39,6 +40,7 @@ test('OKF native frontmatter migration stays opt-in and non-authoritative', () =
   assert.equal(policy.state, 'opt_in_advisory_migration_lane');
   assert.equal(policy.default_bundle_mode, 'exporter_generated_body_free_context_bundle');
   assert.deepEqual(policy.required_fields, ['type', 'body_owner', 'domain_authority']);
+  assert.deepEqual(policy.eligible_path_globs, ['agent/*.md', 'agent/**/*.md']);
   assert.equal(policy.runtime_consumption_policy.runway_consumes_okf_for_progress_or_readiness, false);
   assert.equal(policy.runtime_consumption_policy.framework_readiness_consumes_okf_for_ready_claims, false);
   assert.equal(policy.runtime_consumption_policy.domain_readiness_consumes_okf_for_ready_claims, false);
@@ -56,6 +58,73 @@ test('OKF native frontmatter migration stays opt-in and non-authoritative', () =
     'human_doc:opl_architecture',
     'human_doc:opl_current_state_vs_ideal_gap',
   ]);
+});
+
+test('OKF native frontmatter inspector reports advisory gaps without granting authority', () => {
+  const repoRoot = mkdtempSync(join(tmpdir(), 'opl-okf-native-frontmatter-'));
+  try {
+    mkdirSync(join(repoRoot, 'agent', 'prompts'), { recursive: true });
+    writeFileSync(
+      join(repoRoot, 'agent', 'prompts', 'ready.md'),
+      [
+        '---',
+        'type: prompt',
+        'body_owner: fixture-agent',
+        'domain_authority: contracts/domain-authority.json',
+        '---',
+        '',
+        '# Ready',
+      ].join('\n'),
+      'utf8',
+    );
+    writeFileSync(
+      join(repoRoot, 'agent', 'prompts', 'missing-fields.md'),
+      [
+        '---',
+        'type: prompt',
+        '---',
+        '',
+        '# Missing Fields',
+      ].join('\n'),
+      'utf8',
+    );
+    writeFileSync(
+      join(repoRoot, 'agent', 'prompts', 'forbidden.md'),
+      [
+        '---',
+        'type: prompt',
+        'body_owner: fixture-agent',
+        'domain_authority: contracts/domain-authority.json',
+        'opl_can_schedule_runtime: true',
+        '---',
+        '',
+        '# Forbidden',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const inspection = inspectOkfNativeFrontmatter({ repoRoot });
+
+    assert.equal(inspection.surface_kind, 'opl_okf_native_frontmatter_inspection');
+    assert.equal(inspection.status, 'advisory_gaps');
+    assert.equal(inspection.default_bundle_mode, 'exporter_generated_body_free_context_bundle');
+    assert.equal(inspection.summary.eligible_file_count, 3);
+    assert.equal(inspection.summary.ready_file_count, 1);
+    assert.equal(inspection.summary.advisory_gap_count, 2);
+    assert.equal(inspection.summary.forbidden_authority_claim_count, 1);
+    assert.equal(inspection.authority_boundary.can_write_domain_truth, false);
+    assert.equal(inspection.authority_boundary.can_schedule_runtime, false);
+    assert.deepEqual(
+      inspection.files.find((file) => file.path === 'agent/prompts/missing-fields.md')?.missing_required_fields,
+      ['body_owner', 'domain_authority'],
+    );
+    assert.deepEqual(
+      inspection.files.find((file) => file.path === 'agent/prompts/forbidden.md')?.forbidden_authority_claim_fields,
+      ['opl_can_schedule_runtime'],
+    );
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
 });
 
 test('OKF builder creates a projection without granting runtime or domain authority', () => {

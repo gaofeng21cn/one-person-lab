@@ -9,6 +9,7 @@ import {
   buildOkfContextBundleFromDomainPack,
   buildOkfContextBundleFromDomainRepo,
   inspectOkfContextBundle,
+  inspectOkfNativeFrontmatter,
   validateOkfContextBundle,
   writeOkfContextBundleProjection,
 } from '../../okf-context-bundle.ts';
@@ -278,6 +279,51 @@ function parseOkfProjectRepoArgs(args: string[], spec: CommandSpec) {
   };
 }
 
+function parseOkfNativeFrontmatterInspectArgs(args: string[], spec: CommandSpec) {
+  let repoRoot: string | undefined;
+  let agentRoot: string | undefined;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--json') {
+      continue;
+    }
+    if (arg === '--repo') {
+      const value = args[index + 1];
+      if (!value) {
+        throw buildUsageError('okf native-frontmatter inspect requires a value for --repo.', spec, {
+          required: ['--repo'],
+        });
+      }
+      repoRoot = value;
+      index += 1;
+      continue;
+    }
+    if (arg === '--agent-root') {
+      const value = args[index + 1];
+      if (!value) {
+        throw buildUsageError('okf native-frontmatter inspect requires a value for --agent-root.', spec, {
+          option: '--agent-root',
+        });
+      }
+      agentRoot = value;
+      index += 1;
+      continue;
+    }
+    throw buildUsageError(`Unknown okf native-frontmatter inspect option: ${arg}.`, spec, {
+      option: arg,
+    });
+  }
+  if (!repoRoot) {
+    throw buildUsageError('okf native-frontmatter inspect requires --repo.', spec, {
+      required: ['--repo'],
+    });
+  }
+  return {
+    agentRoot,
+    repoRoot,
+  };
+}
+
 export function buildPublicCommandSpecs(
   commandSpecs: Record<string, CommandSpec>,
   getContracts: () => FrameworkContracts,
@@ -495,6 +541,27 @@ export function buildPublicCommandSpecs(
             okf_write: writeOkfContextBundleProjection(readback.projection, parsed.outputPath),
             okf_validation: validateOkfContextBundle({ bundlePath: parsed.outputPath }),
           },
+        };
+      },
+    },
+    'okf native-frontmatter inspect': {
+      usage:
+        'opl okf native-frontmatter inspect --repo <domain_repo> [--agent-root <path>]',
+      summary:
+        'Inspect native OKF-compatible frontmatter in domain-owned agent markdown as an advisory migration lane only.',
+      examples: [
+        'opl okf native-frontmatter inspect --repo ../opl-bookforge --json',
+        'opl okf native-frontmatter inspect --repo ../med-autoscience --agent-root agent --json',
+      ],
+      group: 'contract',
+      handler: (args) => {
+        const parsed = parseOkfNativeFrontmatterInspectArgs(
+          args,
+          publicCommandSpecs['okf native-frontmatter inspect'],
+        );
+        return {
+          version: 'g2',
+          okf_native_frontmatter: inspectOkfNativeFrontmatter(parsed),
         };
       },
     },

@@ -68,7 +68,8 @@
     "default_bundle_mode": "exporter_generated_body_free_context_bundle",
     "purpose": "Allow stable domain-owned agent/*.md documents to carry OKF-compatible frontmatter without making native frontmatter the default bundle source or an authority surface.",
     "eligible_path_globs": [
-      "agent/*.md"
+      "agent/*.md",
+      "agent/**/*.md"
     ],
     "excluded_path_globs": [
       "docs/**",

@@ -163,3 +163,54 @@ test('opl okf project-repo writes pack refs and optional memory locator without 
     fs.rmSync(outputRoot, { recursive: true, force: true });
   }
 });
+
+test('opl okf native-frontmatter inspect is an advisory readback over agent markdown', () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-okf-native-cli-'));
+  fs.mkdirSync(path.join(repoRoot, 'agent', 'stages'), { recursive: true });
+  fs.writeFileSync(
+    path.join(repoRoot, 'agent', 'stages', 'intake.md'),
+    [
+      '---',
+      'type: stage',
+      'body_owner: fixture-agent',
+      'domain_authority: contracts/domain-authority.json',
+      '---',
+      '',
+      '# Intake',
+    ].join('\n'),
+    'utf8',
+  );
+  fs.writeFileSync(
+    path.join(repoRoot, 'agent', 'stages', 'draft.md'),
+    [
+      '---',
+      'type: stage',
+      '---',
+      '',
+      '# Draft',
+    ].join('\n'),
+    'utf8',
+  );
+
+  try {
+    const output = runCli([
+      'okf',
+      'native-frontmatter',
+      'inspect',
+      '--repo',
+      repoRoot,
+      '--json',
+    ]);
+
+    assert.equal(output.version, 'g2');
+    assert.equal(output.okf_native_frontmatter.surface_kind, 'opl_okf_native_frontmatter_inspection');
+    assert.equal(output.okf_native_frontmatter.status, 'advisory_gaps');
+    assert.equal(output.okf_native_frontmatter.summary.eligible_file_count, 2);
+    assert.equal(output.okf_native_frontmatter.summary.ready_file_count, 1);
+    assert.equal(output.okf_native_frontmatter.summary.missing_required_field_count, 1);
+    assert.equal(output.okf_native_frontmatter.authority_boundary.can_write_domain_truth, false);
+    assert.equal(output.okf_native_frontmatter.authority_boundary.can_schedule_runtime, false);
+  } finally {
+    fs.rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
