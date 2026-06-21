@@ -44,20 +44,31 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(readback.default_tranche_policy.lane_count_max, 4);
   assert.equal(readback.default_tranche_policy.live_evidence_deferred, true);
   assert.equal(readback.milestone_state_counts.open, 1);
-  assert.equal(readback.milestone_state_counts.partial, 3);
-  assert.equal(readback.milestone_state_counts.closed_structure_gate, 3);
-  assert.equal(readback.current_tranche.selected_lane_count, 3);
-  assert.equal(readback.current_tranche.selected_lane_count_within_policy, true);
+  assert.equal(readback.milestone_state_counts.partial, 2);
+  assert.equal(readback.milestone_state_counts.closed_structure_gate, 4);
+  assert.equal(readback.current_tranche.selected_lane_count, 1);
+  assert.equal(readback.current_tranche.selected_lane_count_within_policy, false);
   assert.equal(
     readback.current_tranche.tranche_role,
     'non_live_functional_structure_milestone_tranche_not_full_completion_audit',
   );
   assert.deepEqual(readback.current_tranche.selected_milestone_ids, [
-    'strict_source_purity_private_wrapper_retirement',
+    'domain_pack_generated_hosted_surfaces',
   ]);
   assert.deepEqual(readback.current_tranche.closed_or_advanced_structural_milestone_ids, [
-    'strict_source_purity_private_wrapper_retirement',
+    'domain_pack_generated_hosted_surfaces',
   ]);
+  const milestonesById = Object.fromEntries(
+    readback.milestones.map((milestone: { milestone_id: string }) => [milestone.milestone_id, milestone]),
+  );
+  assert.equal(
+    milestonesById['domain_pack_generated_hosted_surfaces'].state,
+    'closed_structure_gate',
+  );
+  assert.equal(
+    milestonesById['opl_primitive_runtime_owner_route_guard'].state,
+    'partial',
+  );
   assert.equal(
     readback.current_tranche.lane_selection_policy.root_checkout_role,
     'read_absorb_push_readback_cleanup_only',
@@ -80,51 +91,43 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     readback.current_tranche.lanes.map((lane: { lane_id: string }) => [lane.lane_id, lane]),
   );
   assert.deepEqual(
-    lanesById['mag-private-wrapper-retirement-20260621'].milestone_ids,
-    ['strict_source_purity_private_wrapper_retirement'],
-  );
-  assert.deepEqual(
-    lanesById['rca-private-wrapper-retirement-20260621'].milestone_ids,
-    ['strict_source_purity_private_wrapper_retirement'],
-  );
-  assert.deepEqual(
-    lanesById['oma-script-retirement-guard-20260621'].milestone_ids,
-    ['strict_source_purity_private_wrapper_retirement'],
+    lanesById['opl-generated-hosted-consumption-guard-20260621'].milestone_ids,
+    ['domain_pack_generated_hosted_surfaces'],
   );
   assert.ok(
-    lanesById['mag-private-wrapper-retirement-20260621'].required_surfaces.includes('contract'),
+    lanesById['opl-generated-hosted-consumption-guard-20260621'].required_surfaces.includes('API_readback'),
   );
   assert.ok(
-    lanesById['mag-private-wrapper-retirement-20260621'].required_surfaces.includes('CLI_readback'),
+    lanesById['opl-generated-hosted-consumption-guard-20260621'].required_surfaces.includes('CLI_readback'),
   );
   assert.ok(
-    lanesById['mag-private-wrapper-retirement-20260621'].non_live_completion_evidence_required.includes(
-      'mag_morphology_guard_cli_readback_exposes_delete_false_authority',
+    lanesById['opl-generated-hosted-consumption-guard-20260621'].non_live_completion_evidence_required.includes(
+      'generated_surface_consumption_bundle_counts_and_active_caller_cutover_refs_are_visible',
     ),
   );
   assert.equal(
-    lanesById['mag-private-wrapper-retirement-20260621']
+    lanesById['opl-generated-hosted-consumption-guard-20260621']
       .authority_boundary.can_create_second_active_backlog,
     false,
   );
   assert.equal(
-    lanesById['rca-private-wrapper-retirement-20260621']
+    lanesById['opl-generated-hosted-consumption-guard-20260621']
       .authority_boundary.can_authorize_physical_delete,
     false,
   );
   assert.equal(
-    lanesById['oma-script-retirement-guard-20260621']
+    lanesById['opl-generated-hosted-consumption-guard-20260621']
       .authority_boundary.can_claim_domain_ready,
     false,
   );
   assert.ok(
-    lanesById['rca-private-wrapper-retirement-20260621'].forbidden_scope.includes(
-      'visual_ready_or_production_ready_claim',
+    lanesById['opl-generated-hosted-consumption-guard-20260621'].forbidden_scope.includes(
+      'App_live_rendering_complete_claim',
     ),
   );
   assert.ok(
-    lanesById['oma-script-retirement-guard-20260621'].forbidden_scope.includes(
-      'default_promotion_or_default_caller_cutover_claim',
+    lanesById['opl-generated-hosted-consumption-guard-20260621'].forbidden_scope.includes(
+      'default_caller_cutover_or_scaleout_claim',
     ),
   );
   assert.equal(readback.authority_boundary.can_create_second_active_backlog, false);
@@ -159,6 +162,66 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     ),
   );
   assert.equal(
+    readback.generated_hosted_surface_boundary.structural_closeout_guard.status,
+    'closed_structure_gate_not_live_evidence',
+  );
+  assert.equal(
+    readback.generated_hosted_surface_boundary.structural_closeout_guard.can_close_non_live_structure_gate,
+    true,
+  );
+  assert.ok(
+    readback.generated_hosted_surface_boundary.structural_closeout_guard.cannot_claim.includes(
+      'App_live_rendering_complete',
+    ),
+  );
+  assert.equal(
+    readback.generated_hosted_surface_boundary.generated_surface_consumption_guard.surface_kind,
+    'opl_generated_surface_consumption_guard_readback',
+  );
+  assert.equal(
+    readback.generated_hosted_surface_boundary.generated_surface_consumption_guard
+      .domain_pack_compiler_family_readback.status,
+    'available',
+  );
+  assert.equal(
+    readback.generated_hosted_surface_boundary.generated_surface_consumption_guard
+      .domain_pack_compiler_family_readback.summary.generated_surface_count,
+    40,
+  );
+  assert.equal(
+    readback.generated_hosted_surface_boundary.generated_surface_consumption_guard
+      .generated_interfaces_family_readback.status,
+    'available',
+  );
+  assert.equal(
+    readback.generated_hosted_surface_boundary.generated_surface_consumption_guard
+      .generated_interfaces_family_readback.consumption_status_counts.ready,
+    40,
+  );
+  assert.equal(
+    readback.generated_hosted_surface_boundary.generated_surface_consumption_guard
+      .generated_interfaces_family_readback.consumption_status_counts.blocked,
+    0,
+  );
+  assert.ok(
+    readback.generated_hosted_surface_boundary.generated_surface_consumption_guard
+      .selected_consumer_surface_ids.includes('app_action'),
+  );
+  assert.ok(
+    readback.generated_hosted_surface_boundary.generated_surface_consumption_guard
+      .active_caller_cutover_statuses.includes('cutover_to_opl_generated_or_domain_handler_targets'),
+  );
+  assert.equal(
+    readback.generated_hosted_surface_boundary.generated_surface_consumption_guard
+      .authority_boundary.consumption_guard_can_claim_default_caller_cutover,
+    false,
+  );
+  assert.equal(
+    readback.generated_hosted_surface_boundary.generated_surface_consumption_guard
+      .authority_boundary.consumption_guard_can_claim_app_live_rendering_complete,
+    false,
+  );
+  assert.equal(
     readback.generated_hosted_surface_boundary.support_repo_boundary.support_repos_can_join_default_foundry_agent_truth_set,
     false,
   );
@@ -168,6 +231,16 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   );
   assert.equal(
     readback.generated_hosted_surface_boundary.false_ready_guard.default_caller_evidence_worklist_can_authorize_physical_delete,
+    false,
+  );
+  assert.equal(
+    readback.generated_hosted_surface_boundary.false_ready_guard
+      .generated_consumption_bundle_ready_can_claim_domain_ready,
+    false,
+  );
+  assert.equal(
+    readback.generated_hosted_surface_boundary.false_ready_guard
+      .generated_consumption_bundle_ready_can_claim_App_GUI_complete,
     false,
   );
   assert.equal(
