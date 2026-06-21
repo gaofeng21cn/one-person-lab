@@ -46,7 +46,7 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(readback.milestone_state_counts.open, 0);
   assert.equal(readback.milestone_state_counts.partial, 0);
   assert.equal(readback.milestone_state_counts.closed_structure_gate, 8);
-  assert.equal(readback.current_tranche.selected_lane_count, 2);
+  assert.equal(readback.current_tranche.selected_lane_count, 3);
   assert.equal(readback.current_tranche.selected_lane_count_within_policy, true);
   assert.equal(
     readback.current_tranche.tranche_role,
@@ -54,11 +54,11 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   );
   assert.deepEqual(readback.current_tranche.selected_milestone_ids, [
     'strict_source_purity_private_wrapper_retirement',
-    'oma_script_to_pack_hygiene',
+    'support_repo_profile_no_resurrection',
   ]);
   assert.deepEqual(readback.current_tranche.closed_or_advanced_structural_milestone_ids, [
     'strict_source_purity_private_wrapper_retirement',
-    'oma_script_to_pack_hygiene',
+    'support_repo_profile_no_resurrection',
   ]);
   const milestonesById = Object.fromEntries(
     readback.milestones.map((milestone: { milestone_id: string }) => [milestone.milestone_id, milestone]),
@@ -105,72 +105,90 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     readback.current_tranche.lanes.map((lane: { lane_id: string }) => [lane.lane_id, lane]),
   );
   assert.deepEqual(
-    lanesById['mag-morphology-public-readback-20260622'].milestone_ids,
+    lanesById['mag-source-purity-strict-readback-20260622'].milestone_ids,
     ['strict_source_purity_private_wrapper_retirement'],
   );
-  assert.equal(lanesById['mag-morphology-public-readback-20260622'].repo, 'med-autogrant');
+  assert.equal(lanesById['mag-source-purity-strict-readback-20260622'].repo, 'med-autogrant');
   assert.ok(
-    lanesById['mag-morphology-public-readback-20260622'].required_surfaces.includes('contract'),
+    lanesById['mag-source-purity-strict-readback-20260622'].required_surfaces.includes('contract'),
   );
   assert.ok(
-    lanesById['mag-morphology-public-readback-20260622'].required_surfaces.includes('CLI_readback'),
+    lanesById['mag-source-purity-strict-readback-20260622'].required_surfaces.includes('CLI_readback'),
   );
   assert.ok(
-    lanesById['mag-morphology-public-readback-20260622'].non_live_completion_evidence_required.includes(
-      'MAG_authority_morphology_guard_public_readback_replaces_product_physical_morphology_guard_refs',
+    lanesById['mag-source-purity-strict-readback-20260622'].non_live_completion_evidence_required.includes(
+      'MAG_check_source_purity_guard_json_readback_landed',
     ),
   );
   assert.equal(
-    lanesById['mag-morphology-public-readback-20260622']
+    lanesById['mag-source-purity-strict-readback-20260622']
       .authority_boundary.can_create_second_active_backlog,
     false,
   );
   assert.equal(
-    lanesById['mag-morphology-public-readback-20260622']
+    lanesById['mag-source-purity-strict-readback-20260622']
       .authority_boundary.can_authorize_physical_delete,
     false,
   );
   assert.equal(
-    lanesById['mag-morphology-public-readback-20260622']
+    lanesById['mag-source-purity-strict-readback-20260622']
       .authority_boundary.can_claim_domain_ready,
     false,
   );
   assert.ok(
-    lanesById['mag-morphology-public-readback-20260622'].forbidden_scope.includes(
+    lanesById['mag-source-purity-strict-readback-20260622'].forbidden_scope.includes(
       'default_caller_cutover_claim',
     ),
   );
   assert.ok(
-    lanesById['mag-morphology-public-readback-20260622'].forbidden_scope.includes(
+    lanesById['mag-source-purity-strict-readback-20260622'].forbidden_scope.includes(
       'grant_ready_or_submission_ready_claim',
     ),
   );
   assert.deepEqual(
-    lanesById['oma-source-structure-json-readback-20260622'].milestone_ids,
-    ['oma_script_to_pack_hygiene'],
+    lanesById['rca-private-platform-strict-readback-20260622'].milestone_ids,
+    ['strict_source_purity_private_wrapper_retirement'],
   );
-  assert.equal(lanesById['oma-source-structure-json-readback-20260622'].repo, 'opl-meta-agent');
+  assert.equal(lanesById['rca-private-platform-strict-readback-20260622'].repo, 'redcube-ai');
   assert.ok(
-    lanesById['oma-source-structure-json-readback-20260622'].required_surfaces.includes('JSON_readback'),
+    lanesById['rca-private-platform-strict-readback-20260622'].required_surfaces.includes('CLI_readback'),
   );
   assert.ok(
-    lanesById['oma-source-structure-json-readback-20260622'].required_surfaces.includes(
-      'generated_authority_aggregate',
+    lanesById['rca-private-platform-strict-readback-20260622'].non_live_completion_evidence_required.includes(
+      'RCA_check_private_platform_retirement_json_readback_landed',
     ),
   );
   assert.ok(
-    lanesById['oma-source-structure-json-readback-20260622'].non_live_completion_evidence_required.includes(
-      'OMA_source_structure_json_readback_exposes_line_budget_and_script_to_pack_guard_status',
+    lanesById['rca-private-platform-strict-readback-20260622'].forbidden_scope.includes(
+      'visual_truth_write',
+    ),
+  );
+  assert.ok(
+    lanesById['rca-private-platform-strict-readback-20260622'].forbidden_scope.includes(
+      'review_or_export_verdict',
+    ),
+  );
+  assert.deepEqual(
+    lanesById['opl-doc-support-profile-strict-readback-20260622'].milestone_ids,
+    ['support_repo_profile_no_resurrection'],
+  );
+  assert.equal(lanesById['opl-doc-support-profile-strict-readback-20260622'].repo, 'opl-doc');
+  assert.ok(
+    lanesById['opl-doc-support-profile-strict-readback-20260622'].required_surfaces.includes('verify_lane'),
+  );
+  assert.ok(
+    lanesById['opl-doc-support-profile-strict-readback-20260622'].non_live_completion_evidence_required.includes(
+      'opl_doc_support_profile_check_json_readback_landed',
     ),
   );
   assert.equal(
-    lanesById['oma-source-structure-json-readback-20260622']
+    lanesById['opl-doc-support-profile-strict-readback-20260622']
       .authority_boundary.can_create_second_active_backlog,
     false,
   );
   assert.ok(
-    lanesById['oma-source-structure-json-readback-20260622'].forbidden_scope.includes(
-      'target_domain_truth_write',
+    lanesById['opl-doc-support-profile-strict-readback-20260622'].forbidden_scope.includes(
+      'foundry_agent_truth_set_membership_claim',
     ),
   );
   assert.equal(readback.authority_boundary.can_create_second_active_backlog, false);
@@ -315,9 +333,9 @@ test('framework tranche backlog exposes a guarded milestone index without comple
       (commit: { repo: string; commit: string }) => [commit.repo, commit.commit],
     ),
     [
-      ['med-autogrant', '6182a75ae01eb636d639a21d674db917e77da6dc'],
+      ['med-autogrant', '1f1a59c1ebcabc96c6441a72f10dea4b72ad3529'],
       ['opl-meta-agent', 'b902ed0b0e1da4cf2ce559d03cb50ce2edcbe255'],
-      ['redcube-ai', 'a857539e2f045ef9d83dd83a265ede2f250982a4'],
+      ['redcube-ai', '22b1e9c300b41408e50d7409e7a5d5e0f2a00b2d'],
     ],
   );
   const sourceRefGuardsByRepo = Object.fromEntries(
@@ -329,7 +347,7 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     sourceRefGuardsByRepo['med-autogrant'].source_ref,
     'med-autogrant:contracts/private_functional_surface_policy.json#/physical_source_morphology_policy/source_ref_integrity_gate',
   );
-  assert.equal(sourceRefGuardsByRepo['med-autogrant'].checked_source_ref_count, 54);
+  assert.equal(sourceRefGuardsByRepo['med-autogrant'].checked_source_ref_count, 55);
   assert.equal(
     sourceRefGuardsByRepo['med-autogrant'].strict_source_purity_no_second_truth_guard_id,
     'mag.physical_morphology.strict_source_purity_no_second_truth_guard.v1',
@@ -341,6 +359,14 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(
     sourceRefGuardsByRepo['med-autogrant'].source_ref_integrity_readback_ref,
     'med-autogrant:authority morphology-guard#source_ref_integrity_guard',
+  );
+  assert.equal(
+    sourceRefGuardsByRepo['med-autogrant'].strict_readback_ref,
+    'med-autogrant:scripts/check_source_purity_guard.py --format json',
+  );
+  assert.equal(
+    sourceRefGuardsByRepo['med-autogrant'].verify_readback_ref,
+    'med-autogrant:scripts/verify.sh source-purity:strict',
   );
   assert.equal(
     sourceRefGuardsByRepo['opl-meta-agent'].source_ref,
@@ -374,6 +400,14 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(
     sourceRefGuardsByRepo['redcube-ai'].active_source_resurrection_scan_policy_id,
     'rca.source_morphology.active_source_no_resurrection_scan.v1',
+  );
+  assert.equal(
+    sourceRefGuardsByRepo['redcube-ai'].strict_readback_ref,
+    'redcube-ai:scripts/check-private-platform-retirement.ts --format json',
+  );
+  assert.equal(
+    sourceRefGuardsByRepo['redcube-ai'].verify_readback_ref,
+    'redcube-ai:scripts/verify.sh private-platform:strict',
   );
   assert.ok(
     sourceRefGuardsByRepo['redcube-ai'].active_source_resurrection_guarded_claim_keys.includes(
@@ -1081,14 +1115,20 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   });
   assert.ok(
     readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
-      lane.lane_id === 'mag-morphology-public-readback-20260622'
+      lane.lane_id === 'mag-source-purity-strict-readback-20260622'
       && lane.repo === 'med-autogrant'
     )),
   );
   assert.ok(
     readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
-      lane.lane_id === 'oma-source-structure-json-readback-20260622'
-      && lane.repo === 'opl-meta-agent'
+      lane.lane_id === 'rca-private-platform-strict-readback-20260622'
+      && lane.repo === 'redcube-ai'
+    )),
+  );
+  assert.ok(
+    readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
+      lane.lane_id === 'opl-doc-support-profile-strict-readback-20260622'
+      && lane.repo === 'opl-doc'
     )),
   );
   assert.ok(

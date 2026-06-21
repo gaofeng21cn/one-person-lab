@@ -11,8 +11,8 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
     absorbed_origin_main_commits: [
       {
         repo: 'med-autogrant',
-        commit: '6182a75ae01eb636d639a21d674db917e77da6dc',
-        subject: 'Converge MAG morphology guard public readback',
+        commit: '1f1a59c1ebcabc96c6441a72f10dea4b72ad3529',
+        subject: 'Add strict source purity guard readback',
       },
       {
         repo: 'opl-meta-agent',
@@ -21,8 +21,8 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
       },
       {
         repo: 'redcube-ai',
-        commit: 'a857539e2f045ef9d83dd83a265ede2f250982a4',
-        subject: 'Guard RCA private platform resurrection',
+        commit: '22b1e9c300b41408e50d7409e7a5d5e0f2a00b2d',
+        subject: 'Add private platform strict readback',
       },
     ],
     checked_domain_repo_guards: [
@@ -34,7 +34,10 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
         public_readback_ref: 'med-autogrant:authority morphology-guard',
         source_ref_integrity_readback_ref:
           'med-autogrant:authority morphology-guard#source_ref_integrity_guard',
-        checked_source_ref_count: 54,
+        strict_readback_ref:
+          'med-autogrant:scripts/check_source_purity_guard.py --format json',
+        verify_readback_ref: 'med-autogrant:scripts/verify.sh source-purity:strict',
+        checked_source_ref_count: 55,
         checked_machine_boundary_ref_count: 0,
         strict_source_purity_no_second_truth_guard_id:
           'mag.physical_morphology.strict_source_purity_no_second_truth_guard.v1',
@@ -90,6 +93,13 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
         checked_machine_boundary_ref_count: 3,
         active_source_resurrection_scan_policy_id:
           'rca.source_morphology.active_source_no_resurrection_scan.v1',
+        strict_readback_ref:
+          'redcube-ai:scripts/check-private-platform-retirement.ts --format json',
+        verify_readback_ref: 'redcube-ai:scripts/verify.sh private-platform:strict',
+        runtime_watch_boundary_readback:
+          'redcube-ai:rca_private_platform_retirement_strict_readback.runtime_watch_boundary',
+        domain_action_adapter_boundary_readback:
+          'redcube-ai:rca_private_platform_retirement_strict_readback.domain_action_adapter_boundary',
         active_source_resurrection_guarded_claim_keys: [
           'runtimeWatch_can_return_to_domain_action_adapter_default_dispatch',
           'domain_action_adapter_can_become_generic_dispatch_owner',
@@ -123,6 +133,8 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
         'med-autogrant:physical_source_morphology_policy.strict_source_purity_no_second_truth_guard',
         'med-autogrant:authority morphology-guard#source_ref_integrity_guard',
         'med-autogrant:authority morphology-guard#strict_source_purity_no_second_truth_guard',
+        'med-autogrant:scripts/check_source_purity_guard.py --format json',
+        'med-autogrant:scripts/verify.sh source-purity:strict',
         'opl-meta-agent:script_to_pack_gate_receipt.machine_gate_inputs.source_ref_integrity_guard',
         'opl-meta-agent:script_morphology_policy.generic_materializer_no_resurrection_guard',
         'opl-meta-agent:source_purity_scan_receipt.generic_script_materializer_scan',
@@ -131,6 +143,8 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
         'opl-meta-agent:npm run source-structure:strict:json --silent',
         'redcube-ai:physical_source_morphology_policy.source_ref_integrity_gate',
         'redcube-ai:default_caller_tail_thinning_gate.active_source_resurrection_scan_policy',
+        'redcube-ai:scripts/check-private-platform-retirement.ts --format json',
+        'redcube-ai:scripts/verify.sh private-platform:strict',
         'repo_native_source_ref_integrity_tests',
         'remote_sha_readback_equal',
       ],
