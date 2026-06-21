@@ -47,6 +47,45 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(readback.authority_boundary.can_claim_plan_completion, false);
   assert.equal(readback.authority_boundary.can_claim_domain_ready, false);
   assert.equal(readback.false_ready_guard.plan_completion_audit_required_for_full_goal_completion, true);
+  assert.equal(
+    readback.generated_hosted_surface_boundary.surface_kind,
+    'opl_generated_hosted_surface_authority_boundary_readback',
+  );
+  assert.equal(
+    readback.generated_hosted_surface_boundary.readback_role,
+    'generated_hosted_surface_owner_policy_not_domain_ready_not_live_evidence_not_default_caller_cutover',
+  );
+  assert.equal(readback.generated_hosted_surface_boundary.generated_surface_owner, 'one-person-lab');
+  assert.equal(readback.generated_hosted_surface_boundary.domain_repo_can_own_generated_surface, false);
+  assert.equal(
+    readback.generated_hosted_surface_boundary.default_entry_policy.domain_repo_can_own_default_entry,
+    false,
+  );
+  assert.ok(
+    readback.generated_hosted_surface_boundary.supported_derived_surfaces.some(
+      (surface: { surface_id: string; owner: string; domain_repo_can_own_generated_surface: boolean }) =>
+        surface.surface_id === 'workbench'
+        && surface.owner === 'one-person-lab'
+        && surface.domain_repo_can_own_generated_surface === false
+    ),
+  );
+  assert.ok(
+    readback.generated_hosted_surface_boundary.no_resurrection_gate.blocked_resurrection_surface_classes.includes(
+      'repo_local_workbench_shell',
+    ),
+  );
+  assert.equal(
+    readback.generated_hosted_surface_boundary.support_repo_boundary.support_repos_can_join_default_foundry_agent_truth_set,
+    false,
+  );
+  assert.equal(
+    readback.generated_hosted_surface_boundary.authority_boundary.generated_surface_readback_can_claim_live_app_rendering,
+    false,
+  );
+  assert.equal(
+    readback.generated_hosted_surface_boundary.false_ready_guard.default_caller_evidence_worklist_can_authorize_physical_delete,
+    false,
+  );
   assert.equal(readback.app_shell_policy.mainline, 'AionUI/opl-aion-shell');
   assert.equal(readback.app_shell_policy.foreground_alternative, 'Hermes Desktop/hermes-codex');
   assert.equal(readback.app_shell_policy.archived_technical_proof_only, 'AGUI/agui-codex');

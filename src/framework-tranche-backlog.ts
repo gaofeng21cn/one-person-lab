@@ -1,4 +1,16 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
+import {
+  FrameworkContractError,
+  expectBoolean,
+  expectString,
+  expectStringArray,
+  isRecord,
+} from './contract-validation.ts';
 import type { FrameworkContracts } from './types.ts';
+
+type JsonRecord = Record<string, unknown>;
 
 type MilestonePriority = 'P0' | 'P1' | 'P2';
 type MilestoneState = 'open' | 'partial' | 'closed_structure_gate' | 'deferred_live_evidence';
@@ -15,6 +27,56 @@ type FrameworkTrancheMilestone = {
   authority_boundary: Record<string, boolean>;
 };
 
+type GeneratedHostedBoundarySurface = {
+  surface_id: string;
+  owner: string;
+  default_entry: boolean;
+  source_catalogs: string[];
+  domain_repo_role: string;
+  domain_repo_can_own_generated_surface: boolean;
+};
+
+type DomainPackCompilerGeneratedSurface = {
+  surface_id: string;
+  owner: string;
+  default_entry: boolean;
+  source_catalogs: string[];
+  domain_repo_role: string;
+  domain_repo_can_own_generated_surface: boolean;
+};
+
+type DomainPackCompilerContractSubset = {
+  generated_interface_bundle: {
+    generated_surface_owner: string;
+    domain_repo_can_own_generated_surface: boolean;
+    default_entry_policy: {
+      surface_kind: string;
+      status: string;
+      owner: string;
+      domain_repo_wrapper_policy: string;
+      domain_repo_can_own_default_entry: boolean;
+      default_entry_surface_ids: string[];
+    };
+    source_of_work_lineage: {
+      surface_kind: string;
+      owner: string;
+      source_catalogs: string[];
+      derived_surface_policy: string;
+      domain_repo_wrapper_policy: string;
+      authority_boundary: JsonRecord;
+    };
+    generated_default_entry_no_resurrection_gate: {
+      surface_kind: string;
+      owner: string;
+      release_gate: boolean;
+      required_default_entry_surface_ids: string[];
+      blocked_resurrection_surface_classes: string[];
+      authority_boundary: JsonRecord;
+    };
+    supported_derived_surfaces: DomainPackCompilerGeneratedSurface[];
+  };
+};
+
 const NO_SECOND_TRUTH_AUTHORITY_BOUNDARY = {
   can_replace_active_gap_owner: false,
   can_create_second_active_backlog: false,
@@ -27,6 +89,18 @@ const NO_SECOND_TRUTH_AUTHORITY_BOUNDARY = {
   can_sign_owner_receipt: false,
   can_create_typed_blocker: false,
   can_authorize_physical_delete: false,
+};
+
+const GENERATED_HOSTED_BOUNDARY_AUTHORITY = {
+  ...NO_SECOND_TRUTH_AUTHORITY_BOUNDARY,
+  domain_repo_can_own_generated_surface: false,
+  domain_repo_can_own_default_entry: false,
+  domain_repo_can_own_registry: false,
+  domain_repo_can_own_app_workbench: false,
+  descriptor_pass_can_claim_domain_ready: false,
+  descriptor_pass_can_claim_production_ready: false,
+  generated_surface_readback_can_claim_live_app_rendering: false,
+  generated_surface_readback_can_claim_default_caller_cutover: false,
 };
 
 const NON_LIVE_ACCEPTANCE = [
@@ -178,6 +252,200 @@ function milestoneCounts() {
   );
 }
 
+function stringField(record: JsonRecord, key: string, filePath: string): string {
+  return expectString(record[key], key, filePath);
+}
+
+function booleanField(record: JsonRecord, key: string, filePath: string): boolean {
+  return expectBoolean(record[key], key, filePath);
+}
+
+function stringArrayField(record: JsonRecord, key: string, filePath: string): string[] {
+  const value = expectStringArray(record[key], key, filePath);
+  if (value.some((entry) => entry.length === 0)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      `Contract field "${key}" must not contain empty strings.`,
+      { file: filePath, field: key },
+    );
+  }
+  return value;
+}
+
+function recordField(record: JsonRecord, key: string, filePath: string): JsonRecord {
+  const value = record[key];
+  if (!isRecord(value)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      `Contract field "${key}" must be an object.`,
+      { file: filePath, field: key },
+    );
+  }
+  return value;
+}
+
+function readDomainPackCompilerContract(contractsDir: string): DomainPackCompilerContractSubset {
+  const filePath = path.join(contractsDir, 'domain-pack-compiler-contract.json');
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      throw new FrameworkContractError(
+        'contract_file_missing',
+        'Required contract file is missing: domain-pack-compiler-contract.json.',
+        { file: filePath },
+      );
+    }
+    throw new FrameworkContractError(
+      'contract_json_invalid',
+      'Contract file contains invalid JSON: domain-pack-compiler-contract.json.',
+      {
+        file: filePath,
+        cause: error instanceof Error ? error.message : 'JSON parsing failed unexpectedly.',
+      },
+    );
+  }
+  if (!isRecord(parsed)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'domain-pack-compiler-contract.json must contain an object root.',
+      { file: filePath },
+    );
+  }
+  const generated = recordField(parsed, 'generated_interface_bundle', filePath);
+  const defaultEntry = recordField(generated, 'default_entry_policy', filePath);
+  const lineage = recordField(generated, 'source_of_work_lineage', filePath);
+  const noResurrection = recordField(generated, 'generated_default_entry_no_resurrection_gate', filePath);
+  const supported = generated.supported_derived_surfaces;
+  if (!Array.isArray(supported)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'domain-pack-compiler-contract.json must contain a supported_derived_surfaces array.',
+      { file: filePath, field: 'supported_derived_surfaces' },
+    );
+  }
+
+  return {
+    generated_interface_bundle: {
+      generated_surface_owner: stringField(generated, 'generated_surface_owner', filePath),
+      domain_repo_can_own_generated_surface: booleanField(generated, 'domain_repo_can_own_generated_surface', filePath),
+      default_entry_policy: {
+        surface_kind: stringField(defaultEntry, 'surface_kind', filePath),
+        status: stringField(defaultEntry, 'status', filePath),
+        owner: stringField(defaultEntry, 'owner', filePath),
+        domain_repo_wrapper_policy: stringField(defaultEntry, 'domain_repo_wrapper_policy', filePath),
+        domain_repo_can_own_default_entry: booleanField(defaultEntry, 'domain_repo_can_own_default_entry', filePath),
+        default_entry_surface_ids: stringArrayField(defaultEntry, 'default_entry_surface_ids', filePath),
+      },
+      source_of_work_lineage: {
+        surface_kind: stringField(lineage, 'surface_kind', filePath),
+        owner: stringField(lineage, 'owner', filePath),
+        source_catalogs: stringArrayField(lineage, 'source_catalogs', filePath),
+        derived_surface_policy: stringField(lineage, 'derived_surface_policy', filePath),
+        domain_repo_wrapper_policy: stringField(lineage, 'domain_repo_wrapper_policy', filePath),
+        authority_boundary: recordField(lineage, 'authority_boundary', filePath),
+      },
+      generated_default_entry_no_resurrection_gate: {
+        surface_kind: stringField(noResurrection, 'surface_kind', filePath),
+        owner: stringField(noResurrection, 'owner', filePath),
+        release_gate: booleanField(noResurrection, 'release_gate', filePath),
+        required_default_entry_surface_ids: stringArrayField(noResurrection, 'required_default_entry_surface_ids', filePath),
+        blocked_resurrection_surface_classes: stringArrayField(noResurrection, 'blocked_resurrection_surface_classes', filePath),
+        authority_boundary: recordField(noResurrection, 'authority_boundary', filePath),
+      },
+      supported_derived_surfaces: supported.map((surface) => {
+        if (!isRecord(surface)) {
+          throw new FrameworkContractError(
+            'contract_shape_invalid',
+            'Each domain-pack-compiler supported surface must be an object.',
+            { file: filePath, field: 'supported_derived_surfaces' },
+          );
+        }
+        return {
+          surface_id: stringField(surface, 'surface_id', filePath),
+          owner: stringField(surface, 'owner', filePath),
+          default_entry: booleanField(surface, 'default_entry', filePath),
+          source_catalogs: stringArrayField(surface, 'source_catalogs', filePath),
+          domain_repo_role: stringField(surface, 'domain_repo_role', filePath),
+          domain_repo_can_own_generated_surface: booleanField(surface, 'domain_repo_can_own_generated_surface', filePath),
+        };
+      }),
+    },
+  };
+}
+
+function buildGeneratedHostedBoundaryReadback(contracts: FrameworkContracts) {
+  const generated = readDomainPackCompilerContract(contracts.contractsDir).generated_interface_bundle;
+  const surfaces = generated.supported_derived_surfaces.map((surface) => ({
+    surface_id: surface.surface_id,
+    owner: surface.owner,
+    default_entry: surface.default_entry,
+    source_catalogs: [...surface.source_catalogs],
+    domain_repo_role: surface.domain_repo_role,
+    domain_repo_can_own_generated_surface: surface.domain_repo_can_own_generated_surface,
+  })) satisfies GeneratedHostedBoundarySurface[];
+
+  return {
+    surface_kind: 'opl_generated_hosted_surface_authority_boundary_readback',
+    readback_role:
+      'generated_hosted_surface_owner_policy_not_domain_ready_not_live_evidence_not_default_caller_cutover',
+    owner: 'one-person-lab',
+    source_contract_ref: 'contracts/opl-framework/domain-pack-compiler-contract.json#generated_interface_bundle',
+    generated_surface_owner: generated.generated_surface_owner,
+    domain_repo_can_own_generated_surface: generated.domain_repo_can_own_generated_surface,
+    default_entry_policy: {
+      surface_kind: generated.default_entry_policy.surface_kind,
+      status: generated.default_entry_policy.status,
+      owner: generated.default_entry_policy.owner,
+      domain_repo_wrapper_policy: generated.default_entry_policy.domain_repo_wrapper_policy,
+      domain_repo_can_own_default_entry: generated.default_entry_policy.domain_repo_can_own_default_entry,
+      default_entry_surface_ids: [...generated.default_entry_policy.default_entry_surface_ids],
+    },
+    source_of_work_lineage: {
+      surface_kind: generated.source_of_work_lineage.surface_kind,
+      owner: generated.source_of_work_lineage.owner,
+      source_catalogs: [...generated.source_of_work_lineage.source_catalogs],
+      derived_surface_policy: generated.source_of_work_lineage.derived_surface_policy,
+      domain_repo_wrapper_policy: generated.source_of_work_lineage.domain_repo_wrapper_policy,
+      authority_boundary: { ...generated.source_of_work_lineage.authority_boundary },
+    },
+    no_resurrection_gate: {
+      surface_kind: generated.generated_default_entry_no_resurrection_gate.surface_kind,
+      owner: generated.generated_default_entry_no_resurrection_gate.owner,
+      release_gate: generated.generated_default_entry_no_resurrection_gate.release_gate,
+      required_default_entry_surface_ids: [
+        ...generated.generated_default_entry_no_resurrection_gate.required_default_entry_surface_ids,
+      ],
+      blocked_resurrection_surface_classes: [
+        ...generated.generated_default_entry_no_resurrection_gate.blocked_resurrection_surface_classes,
+      ],
+      authority_boundary: {
+        ...generated.generated_default_entry_no_resurrection_gate.authority_boundary,
+      },
+    },
+    supported_derived_surfaces: surfaces,
+    domain_repo_required_role:
+      'declarative_domain_pack_plus_domain_handler_targets_refs_only_adapters_or_tombstone_candidates',
+    support_repo_boundary: {
+      support_repos_are_explicit_extensions_only: true,
+      support_repos_can_join_default_foundry_agent_truth_set: false,
+      support_repos_can_claim_generated_surface_owner: false,
+      support_repos_can_claim_app_shell_owner: false,
+      support_repos_can_claim_production_readiness: false,
+    },
+    authority_boundary: { ...GENERATED_HOSTED_BOUNDARY_AUTHORITY },
+    false_ready_guard: {
+      descriptor_ready_can_claim_domain_ready: false,
+      generated_bundle_ready_can_claim_production_ready: false,
+      refs_only_consumption_can_claim_live_evidence_complete: false,
+      app_projection_can_claim_live_rendering_complete: false,
+      support_profile_clean_can_claim_foundry_agent_truth: false,
+      default_caller_evidence_worklist_can_authorize_physical_delete: false,
+    },
+  };
+}
+
 export function buildFrameworkTrancheBacklogReadback(contracts: FrameworkContracts) {
   const milestone_state_counts = milestoneCounts();
   return {
@@ -224,6 +492,7 @@ export function buildFrameworkTrancheBacklogReadback(contracts: FrameworkContrac
         tranche_backlog_can_claim_goal_complete: false,
         plan_completion_audit_required_for_full_goal_completion: true,
       },
+      generated_hosted_surface_boundary: buildGeneratedHostedBoundaryReadback(contracts),
       milestones: FRAMEWORK_TRANCHE_MILESTONES,
     },
   };
