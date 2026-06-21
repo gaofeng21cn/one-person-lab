@@ -23,6 +23,7 @@ export function buildPrimitiveRuntimeOwnerRouteGuardReadback(contracts: Framewor
     ordinaryProgressGuard.owner_answer_admission_gate.source_schema.owner_answer_required_fields_present,
     ordinaryProgressGuard.owner_route_schema.owner_route_required_fields_present,
     ordinaryProgressGuard.typed_blocker_schema.typed_blocker_required_fields_present,
+    ordinaryProgressGuard.human_gate_boundary.source_schema.human_gate_required_fields_present,
     ordinaryProgressGuard.human_gate_boundary.opl_can_make_human_decision === false,
     ordinaryProgressGuard.no_second_truth_guard.tranche_backlog_is_execution_index_only === true,
   ];
@@ -47,6 +48,7 @@ export function buildPrimitiveRuntimeOwnerRouteGuardReadback(contracts: Framewor
       'contracts/opl-framework/runtime-environment-substrate-contract.json',
       'contracts/opl-framework/stage-route-scheduler-contract.json#stage_route_arbiter_substrate_contract.domain_progress_transition_runtime_first_slice',
       'contracts/family-orchestration/family-owner-route.schema.json',
+      'contracts/family-orchestration/family-human-gate.schema.json',
       'contracts/opl-framework/owner-answer.schema.json',
       'contracts/opl-framework/stage-typed-blocker.schema.json',
       'contracts/opl-framework/target-operating-architecture-contract.json',
@@ -94,6 +96,9 @@ export function buildPrimitiveRuntimeOwnerRouteGuardReadback(contracts: Framewor
         ordinaryProgressGuard.owner_route_schema.owner_route_required_fields_present,
       typed_blocker_schema_ready:
         ordinaryProgressGuard.typed_blocker_schema.typed_blocker_required_fields_present,
+      human_gate_schema_ready:
+        ordinaryProgressGuard.human_gate_boundary.source_schema
+          .human_gate_required_fields_present,
       human_gate_is_terminal_input:
         ordinaryProgressGuard.human_gate_boundary.human_gate_is_accepted_terminal_input,
       no_second_truth_guard_active:

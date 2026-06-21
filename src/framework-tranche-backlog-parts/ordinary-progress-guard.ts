@@ -16,6 +16,11 @@ export function buildOrdinaryProgressGuardReadback(contracts: FrameworkContracts
     'stage-typed-blocker.schema.json',
     ['surface_kind', 'schema_version'],
   );
+  const humanGateSchema = schemaIdentityFromContract(
+    path.join(contractsRoot, 'family-orchestration', 'family-human-gate.schema.json'),
+    'family-human-gate.schema.json',
+    ['version'],
+  );
   const ownerAnswerSchema = schemaIdentityFromContract(
     path.join(contracts.contractsDir, 'owner-answer.schema.json'),
     'owner-answer.schema.json',
@@ -173,6 +178,21 @@ export function buildOrdinaryProgressGuardReadback(contracts: FrameworkContracts
     },
     human_gate_boundary: {
       surface_kind: 'opl_human_gate_boundary_projection',
+      source_schema: {
+        version: humanGateSchema.consts.version,
+        required_fields: humanGateSchema.required,
+        human_gate_required_fields_present: [
+          'version',
+          'gate_id',
+          'target_domain_id',
+          'gate_kind',
+          'requested_at',
+          'status',
+          'request_surface',
+          'evidence_refs',
+          'decision_options',
+        ].every((field) => humanGateSchema.required.includes(field)),
+      },
       human_gate_is_accepted_terminal_input: true,
       opl_can_request_human_gate: true,
       opl_can_make_human_decision: false,

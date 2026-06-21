@@ -53,10 +53,12 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     'non_live_functional_structure_milestone_tranche_not_full_completion_audit',
   );
   assert.deepEqual(readback.current_tranche.selected_milestone_ids, [
-    'support_repo_profile_no_resurrection',
+    'opl_primitive_runtime_owner_route_guard',
+    'app_active_shell_hermes_convergence',
   ]);
   assert.deepEqual(readback.current_tranche.closed_or_advanced_structural_milestone_ids, [
-    'support_repo_profile_no_resurrection',
+    'opl_primitive_runtime_owner_route_guard',
+    'app_active_shell_hermes_convergence',
   ]);
   const milestonesById = Object.fromEntries(
     readback.milestones.map((milestone: { milestone_id: string }) => [milestone.milestone_id, milestone]),
@@ -99,52 +101,52 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     readback.current_tranche.lanes.map((lane: { lane_id: string }) => [lane.lane_id, lane]),
   );
   assert.deepEqual(
-    lanesById['opl-doc-support-policy-ref-guard-20260621'].milestone_ids,
-    ['support_repo_profile_no_resurrection'],
+    lanesById['opl-primitive-human-gate-readback-20260621'].milestone_ids,
+    ['opl_primitive_runtime_owner_route_guard'],
   );
   assert.ok(
-    lanesById['opl-doc-support-policy-ref-guard-20260621'].required_surfaces.includes('contract'),
+    lanesById['opl-primitive-human-gate-readback-20260621'].required_surfaces.includes('contract'),
   );
   assert.ok(
-    lanesById['opl-doc-support-policy-ref-guard-20260621'].required_surfaces.includes('CLI_readback'),
+    lanesById['opl-primitive-human-gate-readback-20260621'].required_surfaces.includes('API_readback'),
   );
   assert.ok(
-    lanesById['opl-doc-support-policy-ref-guard-20260621'].non_live_completion_evidence_required.includes(
-      'legacy_underscore_support_policy_ref_forbidden_not_aliased',
+    lanesById['opl-primitive-human-gate-readback-20260621'].non_live_completion_evidence_required.includes(
+      'ordinary_progress_guard_reads_family_human_gate_schema',
     ),
   );
   assert.deepEqual(
-    lanesById['opl-cross-repo-ref-integrity-20260621'].milestone_ids,
-    ['support_repo_profile_no_resurrection'],
+    lanesById['hermes-candidate-profile-contract-20260621'].milestone_ids,
+    ['app_active_shell_hermes_convergence'],
   );
   assert.ok(
-    lanesById['opl-cross-repo-ref-integrity-20260621'].non_live_completion_evidence_required.includes(
-      'framework_tranche_backlog_consumes_opl_doc_canonical_support_policy_ref',
+    lanesById['hermes-candidate-profile-contract-20260621'].non_live_completion_evidence_required.includes(
+      'validate_candidate_reads_profile_contract',
     ),
   );
   assert.equal(
-    lanesById['opl-cross-repo-ref-integrity-20260621']
+    lanesById['hermes-candidate-profile-contract-20260621']
       .authority_boundary.can_create_second_active_backlog,
     false,
   );
   assert.equal(
-    lanesById['opl-cross-repo-ref-integrity-20260621']
+    lanesById['hermes-candidate-profile-contract-20260621']
       .authority_boundary.can_authorize_physical_delete,
     false,
   );
   assert.equal(
-    lanesById['opl-cross-repo-ref-integrity-20260621']
+    lanesById['hermes-candidate-profile-contract-20260621']
       .authority_boundary.can_claim_domain_ready,
     false,
   );
   assert.ok(
-    lanesById['opl-doc-support-policy-ref-guard-20260621'].forbidden_scope.includes(
-      'legacy_support_repo_policy_alias_file',
+    lanesById['opl-primitive-human-gate-readback-20260621'].forbidden_scope.includes(
+      'typed_blocker_creation_by_OPL',
     ),
   );
   assert.ok(
-    lanesById['opl-cross-repo-ref-integrity-20260621'].forbidden_scope.includes(
-      'full_Plan_Completion_Audit_claim',
+    lanesById['hermes-candidate-profile-contract-20260621'].forbidden_scope.includes(
+      'AGUI_foreground_candidate_resurrection',
     ),
   );
   assert.equal(readback.authority_boundary.can_create_second_active_backlog, false);
@@ -791,6 +793,20 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     false,
   );
   assert.equal(
+    readback.ordinary_progress_guard.human_gate_boundary.source_schema.version,
+    'family-human-gate.v1',
+  );
+  assert.equal(
+    readback.ordinary_progress_guard.human_gate_boundary.source_schema
+      .human_gate_required_fields_present,
+    true,
+  );
+  assert.ok(
+    readback.ordinary_progress_guard.human_gate_boundary.source_schema.required_fields.includes(
+      'decision_options',
+    ),
+  );
+  assert.equal(
     readback.ordinary_progress_guard.authority_boundary.evidence_worklist_can_override_current_owner_delta,
     false,
   );
@@ -822,6 +838,10 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   );
   assert.equal(
     readback.primitive_runtime_owner_route_guard.ordinary_route_summary.typed_blocker_schema_ready,
+    true,
+  );
+  assert.equal(
+    readback.primitive_runtime_owner_route_guard.ordinary_route_summary.human_gate_schema_ready,
     true,
   );
   assert.equal(
@@ -883,14 +903,14 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   });
   assert.ok(
     readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
-      lane.lane_id === 'opl-doc-support-policy-ref-guard-20260621'
-      && lane.repo === 'opl-doc'
+      lane.lane_id === 'opl-primitive-human-gate-readback-20260621'
+      && lane.repo === 'one-person-lab'
     )),
   );
   assert.ok(
     readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
-      lane.lane_id === 'opl-cross-repo-ref-integrity-20260621'
-      && lane.repo === 'one-person-lab'
+      lane.lane_id === 'hermes-candidate-profile-contract-20260621'
+      && lane.repo === 'opl-hermes-shell'
     )),
   );
   assert.ok(
