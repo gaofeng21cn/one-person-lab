@@ -282,6 +282,17 @@ test('agents conformance allows opl-meta-agent contract guard tests to name forb
   configureReadyMetaMorphology(metaRepo);
   fs.mkdirSync(path.join(metaRepo, 'tests'), { recursive: true });
   fs.mkdirSync(path.join(metaRepo, 'tests', 'support'), { recursive: true });
+  fs.mkdirSync(path.join(metaRepo, 'tests', 'source-purity'), { recursive: true });
+  fs.mkdirSync(
+    path.join(
+      metaRepo,
+      'runtime',
+      'authority_functions',
+      'meta-agent-authority-functions.parts',
+      'script_morphology_policy',
+    ),
+    { recursive: true },
+  );
   fs.writeFileSync(
     path.join(metaRepo, 'tests', 'contracts.test.ts'),
     [
@@ -308,7 +319,98 @@ test('agents conformance allows opl-meta-agent contract guard tests to name forb
     ].join('\n'),
     'utf8',
   );
-
+  writeJson(path.join(metaRepo, 'contracts', 'script_to_pack_gate_receipt.json'), {
+    machine_gate_inputs: {
+      forbidden_roles: [
+        'generic_runtime_owner',
+        'generic_registry_owner',
+        'app_shell_owner',
+        'agent_lab_execution_owner',
+        'promotion_gate_owner',
+        'target_domain_truth_writer',
+      ],
+    },
+  });
+  writeJson(path.join(metaRepo, 'contracts', 'stage_native_artifact_vocabulary.json'), {
+    false_authority_claims: [
+      'app_shell_owner',
+      'promotion_gate_owner',
+    ],
+  });
+  writeJson(
+    path.join(
+      metaRepo,
+      'runtime',
+      'authority_functions',
+      'meta-agent-authority-functions.parts',
+      'script_morphology_policy',
+      'root.json',
+    ),
+    {
+      forbidden_roles: [
+        'generic_runtime_owner',
+        'generic_registry_owner',
+        'app_shell_owner',
+        'agent_lab_execution_owner',
+        'promotion_gate_owner',
+        'target_domain_truth_writer',
+      ],
+    },
+  );
+  writeJson(
+    path.join(
+      metaRepo,
+      'runtime',
+      'authority_functions',
+      'meta-agent-authority-functions.parts',
+      'script_morphology_policy',
+      'script-to-pack-retirement-gates.json',
+    ),
+    [
+      {
+        gate_id: 'retained_thin_authority_helpers_and_takeover_smoke',
+        forbidden_long_term_claims: [
+          'app_shell_owner',
+          'generic_runtime_owner',
+        ],
+      },
+    ],
+  );
+  writeJson(
+    path.join(
+      metaRepo,
+      'runtime',
+      'authority_functions',
+      'meta-agent-authority-functions.parts',
+      'purpose_first_owner_delta_gate.json',
+    ),
+    {
+      second_framework_guard: {
+        forbidden_oma_owned_surfaces: [
+          'app_shell_owner',
+          'target_domain_truth_writer',
+        ],
+      },
+    },
+  );
+  fs.writeFileSync(
+    path.join(metaRepo, 'tests', 'source-purity-boundary.test.ts'),
+    [
+      "assert.equal(authorityFunctions.not_generic_runtime_owner, true);",
+      "assert.ok(forbiddenSurfaces.includes('app_shell_owner'));",
+      '',
+    ].join('\n'),
+    'utf8',
+  );
+  fs.writeFileSync(
+    path.join(metaRepo, 'tests', 'source-purity', 'script-morphology.test-case.ts'),
+    [
+      "assert.ok(morphologyPolicy.forbidden_roles.includes('generic_runtime_owner'));",
+      "assert.ok(gate.forbidden_long_term_claims.includes('app_shell_owner'));",
+      '',
+    ].join('\n'),
+    'utf8',
+  );
   const report = runCli([
     'agents',
     'conformance',
@@ -331,6 +433,23 @@ test('agents conformance allows opl-meta-agent contract guard tests to name forb
     ),
     true,
   );
+  [
+    'contracts/script_to_pack_gate_receipt.json',
+    'contracts/stage_native_artifact_vocabulary.json',
+    'runtime/authority_functions/meta-agent-authority-functions.parts/script_morphology_policy/root.json',
+    'runtime/authority_functions/meta-agent-authority-functions.parts/script_morphology_policy/script-to-pack-retirement-gates.json',
+    'runtime/authority_functions/meta-agent-authority-functions.parts/purpose_first_owner_delta_gate.json',
+    'tests/source-purity-boundary.test.ts',
+    'tests/source-purity/script-morphology.test-case.ts',
+  ].forEach((allowedPath) => {
+    assert.equal(
+      forbiddenNameResidue.some((entry: { path: string; allowed: boolean }) =>
+        entry.path === allowedPath && entry.allowed === true
+      ),
+      true,
+      `${allowedPath} should be allowed as OMA policy/manifest/test guard residue`,
+    );
+  });
   const morphologyChecks = report.reports[0].physical_morphology_checks;
   assert.equal(morphologyChecks.residue_classification_summary.status, 'no_active_forbidden_name_residue');
   assert.equal(morphologyChecks.residue_classification_summary.active_forbidden_name_residue_count, 0);
@@ -341,17 +460,17 @@ test('agents conformance allows opl-meta-agent contract guard tests to name forb
   assert.equal(
     morphologyChecks.residue_classification_summary.allowed_name_residue_by_classification
       .contract_or_legacy_guard_test,
-    8,
+    11,
   );
   assert.equal(
     morphologyChecks.residue_classification_summary.allowed_name_residue_by_classification
       .machine_contract_policy_or_projection,
-    6,
+    14,
   );
   assert.equal(
     morphologyChecks.residue_classification_summary.allowed_name_residue_by_classification
       .authority_function_policy_manifest,
-    6,
+    16,
   );
   assert.deepEqual(morphologyChecks.active_forbidden_name_residue, []);
   assert.equal(
@@ -365,6 +484,47 @@ test('agents conformance allows opl-meta-agent contract guard tests to name forb
     true,
   );
   assert.deepEqual(report.reports[0].blockers, []);
+});
+
+test('agents conformance still blocks unclassified opl-meta-agent active forbidden-role tokens', () => {
+  const metaRepo = buildReadyAgentRepo();
+  retargetReadyRepo(metaRepo, 'opl-meta-agent', 'OPL Meta Agent');
+  configureReadyMetaMorphology(metaRepo);
+  fs.writeFileSync(
+    path.join(metaRepo, 'contracts', 'unexpected_active_policy.json'),
+    [
+      '{',
+      '  "forbidden_roles": ["generic_runtime_owner"]',
+      '}',
+      '',
+    ].join('\n'),
+    'utf8',
+  );
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `opl-meta-agent=${metaRepo}`,
+  ]).standard_domain_agent_conformance;
+  const morphologyChecks = report.reports[0].physical_morphology_checks;
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(report.reports[0].status, 'blocked');
+  assert.equal(morphologyChecks.residue_classification_summary.status, 'active_forbidden_name_residue_present');
+  assert.deepEqual(morphologyChecks.active_forbidden_name_residue, [
+    {
+      token: 'generic_runtime_owner',
+      path: 'contracts/unexpected_active_policy.json',
+      allowed: false,
+    },
+  ]);
+  assert.equal(
+    report.reports[0].blockers.includes(
+      'active_forbidden_name_residue:generic_runtime_owner:contracts/unexpected_active_policy.json',
+    ),
+    true,
+  );
 });
 
 test('agents conformance blocks missing physical morphology policy', () => {

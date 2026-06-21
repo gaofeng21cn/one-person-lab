@@ -237,6 +237,46 @@ export const CURRENT_TRANCHE_LANES: TrancheExecutionLane[] = [
       'full_Plan_Completion_Audit_claim',
     ],
   },
+  {
+    lane_id: 'opl-oma-conformance-residue-classification-20260622',
+    repo: 'one-person-lab',
+    priority: 'P1',
+    milestone_ids: ['strict_source_purity_private_wrapper_retirement', 'oma_script_to_pack_hygiene'],
+    lane_status: 'structure_gate_oma_conformance_residue_classification_non_live_evidence',
+    write_set_class: 'opl_agents_conformance_oma_source_purity_residue_classifier',
+    required_surfaces: [
+      'source',
+      'CLI_readback',
+      'API_readback',
+      'docs',
+      'tests',
+    ],
+    non_live_completion_evidence_required: [
+      'OPL_conformance_allows_OMA_canonical_policy_manifest_and_source_purity_guard_residue',
+      'OPL_conformance_still_blocks_unclassified_OMA_active_forbidden_role_tokens',
+      'OPL_agents_conformance_family_default_OMA_physical_morphology_unblocked',
+      'OPL_framework_tranche_backlog_current_tranche_and_false_ready_guard_updated',
+      'OPL_main_absorbed_push_and_remote_sha_readback',
+    ],
+    deferred_evidence: [
+      'OMA_script_physical_retirement_no_active_caller_receipt',
+      'OMA_target_agent_live_patch_loop',
+      ...DEFERRED_LIVE_EVIDENCE,
+    ],
+    forbidden_scope: [
+      'OMA_contract_or_runtime_source_truth_mutation',
+      'OMA_script_physical_retirement_claim',
+      'OPL_primitive_parity_claim',
+      'owner_receipt_signature',
+      'typed_blocker_instance_creation',
+      'physical_delete_authorization',
+      'target_agent_ready_claim',
+      'domain_ready_claim',
+      'production_ready_claim',
+      'Live_Evidence_claim',
+      'full_Plan_Completion_Audit_claim',
+    ],
+  },
 ];
 
 export const FRAMEWORK_TRANCHE_MILESTONES: FrameworkTrancheMilestone[] = [

@@ -46,7 +46,7 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(readback.milestone_state_counts.open, 0);
   assert.equal(readback.milestone_state_counts.partial, 0);
   assert.equal(readback.milestone_state_counts.closed_structure_gate, 8);
-  assert.equal(readback.current_tranche.selected_lane_count, 3);
+  assert.equal(readback.current_tranche.selected_lane_count, 4);
   assert.equal(readback.current_tranche.selected_lane_count_within_policy, true);
   assert.equal(
     readback.current_tranche.tranche_role,
@@ -54,9 +54,11 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   );
   assert.deepEqual(readback.current_tranche.selected_milestone_ids, [
     'strict_source_purity_private_wrapper_retirement',
+    'oma_script_to_pack_hygiene',
   ]);
   assert.deepEqual(readback.current_tranche.closed_or_advanced_structural_milestone_ids, [
     'strict_source_purity_private_wrapper_retirement',
+    'oma_script_to_pack_hygiene',
   ]);
   const milestonesById = Object.fromEntries(
     readback.milestones.map((milestone: { milestone_id: string }) => [milestone.milestone_id, milestone]),
@@ -200,6 +202,46 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(
     lanesById['opl-tranche-backlog-readback-foldback-20260622']
       .authority_boundary.can_claim_production_ready,
+    false,
+  );
+  assert.deepEqual(
+    lanesById['opl-oma-conformance-residue-classification-20260622'].milestone_ids,
+    ['strict_source_purity_private_wrapper_retirement', 'oma_script_to_pack_hygiene'],
+  );
+  assert.equal(
+    lanesById['opl-oma-conformance-residue-classification-20260622'].repo,
+    'one-person-lab',
+  );
+  assert.ok(
+    lanesById['opl-oma-conformance-residue-classification-20260622'].required_surfaces.includes(
+      'CLI_readback',
+    ),
+  );
+  assert.ok(
+    lanesById['opl-oma-conformance-residue-classification-20260622']
+      .non_live_completion_evidence_required.includes(
+        'OPL_conformance_allows_OMA_canonical_policy_manifest_and_source_purity_guard_residue',
+      ),
+  );
+  assert.ok(
+    lanesById['opl-oma-conformance-residue-classification-20260622']
+      .non_live_completion_evidence_required.includes(
+        'OPL_conformance_still_blocks_unclassified_OMA_active_forbidden_role_tokens',
+      ),
+  );
+  assert.ok(
+    lanesById['opl-oma-conformance-residue-classification-20260622'].forbidden_scope.includes(
+      'OMA_script_physical_retirement_claim',
+    ),
+  );
+  assert.ok(
+    lanesById['opl-oma-conformance-residue-classification-20260622'].forbidden_scope.includes(
+      'target_agent_ready_claim',
+    ),
+  );
+  assert.equal(
+    lanesById['opl-oma-conformance-residue-classification-20260622']
+      .authority_boundary.can_create_second_active_backlog,
     false,
   );
   assert.equal(readback.authority_boundary.can_create_second_active_backlog, false);
@@ -1264,6 +1306,12 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.ok(
     readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
       lane.lane_id === 'opl-tranche-backlog-readback-foldback-20260622'
+      && lane.repo === 'one-person-lab'
+    )),
+  );
+  assert.ok(
+    readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
+      lane.lane_id === 'opl-oma-conformance-residue-classification-20260622'
       && lane.repo === 'one-person-lab'
     )),
   );
