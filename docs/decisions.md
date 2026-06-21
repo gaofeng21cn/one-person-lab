@@ -9,7 +9,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ### 决策：OKF 只作为 OPL context bundle / interchange layer
 
-原因：Google Cloud `Open Knowledge Format` v0.1（blog 发布于 2026-06-12；`GoogleCloudPlatform/knowledge-catalog` main 观察 commit `e911292cc1e1a5cfe3d0f8420219f0115d07f31e`）把知识表达成 Markdown 文件目录、YAML frontmatter、`index.md` / `log.md` reserved files、crosslinks 和宽容消费模型。这个形态很适合 OPL 的 AI-native context 传递，但 OKF 本身明确是 format / interchange pattern，不是 runtime、registry、SDK、scheduler、quality gate 或 authority plane。
+原因：Google Cloud `Open Knowledge Format` v0.1（blog 发布于 2026-06-12；`GoogleCloudPlatform/knowledge-catalog` main 观察 commit `d44368c15e38e7c92481c5992e4f9b5b421a801d`）把知识表达成 Markdown 文件目录、YAML frontmatter、`index.md` / `log.md` reserved files、crosslinks 和宽容消费模型。这个形态很适合 OPL 的 AI-native context 传递，但 OKF 本身明确是 format / interchange pattern，不是 runtime、registry、SDK、scheduler、quality gate 或 authority plane。
 
 影响：
 

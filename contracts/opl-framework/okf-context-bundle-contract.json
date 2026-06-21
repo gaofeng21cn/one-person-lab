@@ -34,7 +34,7 @@
       "ref_kind": "spec",
       "ref": "https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md",
       "label": "Google OKF v0.1 SPEC.md",
-      "observed_commit": "e911292cc1e1a5cfe3d0f8420219f0115d07f31e"
+      "observed_commit": "d44368c15e38e7c92481c5992e4f9b5b421a801d"
     },
     {
       "ref_kind": "blog",
