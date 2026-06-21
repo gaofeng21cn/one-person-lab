@@ -42,8 +42,53 @@
     "dead_letter_intent",
     "receipt",
     "projection",
+    "outcome_path",
+    "terminal_input_kind",
+    "requires_owner_answer",
     "authority_boundary"
   ],
+  "outcome_path_guard": {
+    "guard_id": "opl.family_transition.outcome_path_guard.v1",
+    "owner": "one-person-lab",
+    "surface_kind": "family_transition_outcome_path_guard",
+    "purpose": "make owner receipt, typed blocker, human gate, and dead-letter paths machine-distinguishable without changing domain authority",
+    "path_priority": [
+      "dead_letter_path",
+      "human_gate_path",
+      "typed_blocker_path",
+      "success_refs_path"
+    ],
+    "path_semantics": {
+      "success_refs_path": "transition applied with no typed blocker, human gate, or dead-letter intent",
+      "typed_blocker_path": "transition blocked or domain-declared typed blocker is the terminal input",
+      "human_gate_path": "domain-declared human gate is the terminal input",
+      "dead_letter_path": "unknown or unrouteable transition is carried as dead-letter intent"
+    },
+    "projection_fields": [
+      "outcome_path",
+      "terminal_input_kind",
+      "requires_owner_answer",
+      "success_claimed",
+      "domain_ready_claimed",
+      "production_ready_claimed"
+    ],
+    "no_second_truth_guard": {
+      "domain_projection_can_override_outcome_path": false,
+      "domain_projection_can_set_domain_ready_claimed": false,
+      "domain_projection_can_set_production_ready_claimed": false,
+      "typed_blocker_path_can_claim_stage_success": false,
+      "human_gate_path_can_claim_stage_success": false,
+      "dead_letter_path_can_claim_stage_success": false
+    },
+    "authority_boundary": {
+      "outcome_path_guard_can_write_domain_truth": false,
+      "outcome_path_guard_can_sign_owner_receipt": false,
+      "outcome_path_guard_can_create_typed_blocker": false,
+      "outcome_path_guard_can_make_human_decision": false,
+      "outcome_path_guard_can_claim_domain_ready": false,
+      "outcome_path_guard_can_claim_production_ready": false
+    }
+  },
   "runner_execution_boundary": {
     "opl_executes": [
       "domain-declared transition spec",
@@ -56,7 +101,8 @@
       "owner route refs",
       "typed blocker refs",
       "human gate refs",
-      "dead-letter intent refs"
+      "dead-letter intent refs",
+      "outcome path classification"
     ],
     "opl_must_not_interpret": [
       "MAS publication verdict",

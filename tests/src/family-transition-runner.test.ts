@@ -240,6 +240,14 @@ test('family transition runner advances bundle_stage_ready through domain-declar
   assert.equal(result.human_gate, null);
   assert.equal(result.typed_blocker, null);
   assert.equal(result.dead_letter_intent, null);
+  assert.equal(result.outcome_path, 'success_refs_path');
+  assert.equal(result.terminal_input_kind, 'success_refs_path');
+  assert.equal(result.requires_owner_answer, false);
+  assert.equal(result.projection.outcome_path, 'success_refs_path');
+  assert.equal(result.projection.requires_owner_answer, false);
+  assert.equal(result.projection.success_claimed, true);
+  assert.equal(result.projection.domain_ready_claimed, false);
+  assert.equal(result.projection.production_ready_claimed, false);
   assert.deepEqual(result.receipt.receipt_refs, ['mas-receipt:bundle-owner-ready']);
   assert.equal(result.projection.current_state, 'bundle_stage_ready');
   assert.equal(result.projection.next_state, 'publication_gate_check');
@@ -266,6 +274,8 @@ test('family transition runner records MAS transition refs without interpreting 
           controller_decision_ref: 'artifacts/controller_decisions/latest.json',
           current_package_ref: 'submission/current_package.zip',
           domain_ready_verdict: 'publication_gate_pending',
+          domain_ready_claimed: true,
+          production_ready_claimed: true,
         },
         authority_boundary: {
           opl_interprets_publication_verdict: false,
@@ -288,6 +298,8 @@ test('family transition runner records MAS transition refs without interpreting 
 
   assert.equal(result.status, 'transition_applied');
   assert.equal(result.projection.domain_ready_verdict, 'publication_gate_pending');
+  assert.equal(result.projection.domain_ready_claimed, false);
+  assert.equal(result.projection.production_ready_claimed, false);
   assert.equal(result.projection.publication_eval_ref, 'artifacts/publication_eval/latest.json');
   assert.deepEqual(result.receipt.context_refs, ['mas-owner-receipt:publication-gate-pending']);
   assert.equal(result.authority_boundary.opl, 'transition_runner_transport_projection_only');
@@ -341,7 +353,13 @@ test('family transition matrix keeps adjacent MAS-like blocked states from cross
     ],
   );
   assert.equal(result.results[1].result.typed_blocker?.blocker_code, 'blocked_no_mas_owner_apply_receipt');
+  assert.equal(result.results[1].result.outcome_path, 'typed_blocker_path');
+  assert.equal(result.results[1].result.projection.success_claimed, false);
+  assert.equal(result.results[1].result.requires_owner_answer, true);
   assert.equal(result.results[2].result.human_gate?.gate_ref, 'human-gate:publication-decision');
+  assert.equal(result.results[2].result.outcome_path, 'human_gate_path');
+  assert.equal(result.results[2].result.projection.success_claimed, false);
+  assert.equal(result.results[2].result.requires_owner_answer, true);
 });
 
 test('family transition runner fails closed when an adjacent state provides the wrong guard', () => {
@@ -358,6 +376,9 @@ test('family transition runner fails closed when an adjacent state provides the 
   assert.equal(result.next_work_unit, null);
   assert.equal(result.owner_route.owner, 'med-autoscience');
   assert.equal(result.typed_blocker?.blocker_code, 'transition_guard_unsatisfied');
+  assert.equal(result.outcome_path, 'typed_blocker_path');
+  assert.equal(result.projection.terminal_input_kind, 'typed_blocker_path');
+  assert.equal(result.projection.success_claimed, false);
   assert.equal(result.dead_letter_intent, null);
   assert.equal(result.receipt.receipt_status, 'blocked_fail_closed');
   assert.deepEqual(result.receipt.missing_guard_ids, ['owner_receipt_missing']);
@@ -388,11 +409,15 @@ test('family transition runner dead-letters unknown transitions and guard ids fa
   assert.equal(unknownTransition.status, 'dead_letter_intended');
   assert.equal(unknownTransition.next_state, 'publishability_gate_blocked');
   assert.equal(unknownTransition.dead_letter_intent?.reason, 'unknown_transition');
+  assert.equal(unknownTransition.outcome_path, 'dead_letter_path');
+  assert.equal(unknownTransition.projection.success_claimed, false);
   assert.equal(unknownTransition.receipt.receipt_status, 'dead_letter_intended');
 
   assert.equal(unknownGuard.status, 'blocked');
   assert.equal(unknownGuard.next_state, 'bundle_stage_ready');
   assert.equal(unknownGuard.typed_blocker?.blocker_code, 'unknown_guard_id');
+  assert.equal(unknownGuard.outcome_path, 'typed_blocker_path');
+  assert.equal(unknownGuard.projection.requires_owner_answer, true);
   assert.deepEqual(unknownGuard.receipt.unknown_guard_ids, ['unregistered_guard_from_domain']);
 });
 
@@ -411,6 +436,19 @@ test('family transition runner contract keeps generic execution in OPL and domai
   assert.ok((contract.runner_execution_boundary.opl_records as string[]).includes('transition receipt'));
   assert.ok((contract.runner_execution_boundary.opl_must_not_interpret as string[]).includes('MAS publication verdict'));
   assert.ok((contract.runner_execution_boundary.opl_must_not_interpret as string[]).includes('domain artifact authority'));
+  assert.equal(contract.outcome_path_guard.guard_id, 'opl.family_transition.outcome_path_guard.v1');
+  assert.deepEqual(contract.outcome_path_guard.path_priority, [
+    'dead_letter_path',
+    'human_gate_path',
+    'typed_blocker_path',
+    'success_refs_path',
+  ]);
+  assert.equal(contract.outcome_path_guard.no_second_truth_guard.domain_projection_can_override_outcome_path, false);
+  assert.equal(contract.outcome_path_guard.no_second_truth_guard.typed_blocker_path_can_claim_stage_success, false);
+  assert.equal(contract.outcome_path_guard.authority_boundary.outcome_path_guard_can_create_typed_blocker, false);
+  assert.ok((contract.runner_outputs as string[]).includes('outcome_path'));
+  assert.ok((contract.runner_outputs as string[]).includes('terminal_input_kind'));
+  assert.ok((contract.runner_outputs as string[]).includes('requires_owner_answer'));
 
   for (const field of [
     'surface_kind',
@@ -517,6 +555,8 @@ test('grant transition oracle adapts MAG-owned table and fixtures into the gener
     matrix.results[1].result.typed_blocker?.blocker_code,
     'human_gate_receipt',
   );
+  assert.equal(matrix.results[1].result.outcome_path, 'human_gate_path');
+  assert.equal(matrix.results[1].result.projection.success_claimed, false);
   assert.equal(
     matrix.results[1].result.authority_boundary.opl_can_write_grant_truth,
     false,

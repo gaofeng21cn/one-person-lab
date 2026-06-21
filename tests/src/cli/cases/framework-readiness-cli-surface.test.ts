@@ -53,14 +53,12 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     'non_live_functional_structure_milestone_tranche_not_full_completion_audit',
   );
   assert.deepEqual(readback.current_tranche.selected_milestone_ids, [
+    'opl_primitive_runtime_owner_route_guard',
     'strict_source_purity_private_wrapper_retirement',
-    'oma_script_to_pack_hygiene',
-    'app_active_shell_hermes_convergence',
   ]);
   assert.deepEqual(readback.current_tranche.closed_or_advanced_structural_milestone_ids, [
+    'opl_primitive_runtime_owner_route_guard',
     'strict_source_purity_private_wrapper_retirement',
-    'oma_script_to_pack_hygiene',
-    'app_active_shell_hermes_convergence',
   ]);
   const milestonesById = Object.fromEntries(
     readback.milestones.map((milestone: { milestone_id: string }) => [milestone.milestone_id, milestone]),
@@ -107,83 +105,83 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     readback.current_tranche.lanes.map((lane: { lane_id: string }) => [lane.lane_id, lane]),
   );
   assert.deepEqual(
-    lanesById['oma-script-pack-cleanup-readback-20260622'].milestone_ids,
-    ['strict_source_purity_private_wrapper_retirement', 'oma_script_to_pack_hygiene'],
+    lanesById['opl-transition-outcome-path-guard-20260622'].milestone_ids,
+    ['opl_primitive_runtime_owner_route_guard'],
   );
-  assert.equal(lanesById['oma-script-pack-cleanup-readback-20260622'].repo, 'opl-meta-agent');
+  assert.equal(lanesById['opl-transition-outcome-path-guard-20260622'].repo, 'one-person-lab');
   assert.ok(
-    lanesById['oma-script-pack-cleanup-readback-20260622'].required_surfaces.includes('contract'),
-  );
-  assert.ok(
-    lanesById['oma-script-pack-cleanup-readback-20260622'].required_surfaces.includes('CLI_readback'),
+    lanesById['opl-transition-outcome-path-guard-20260622'].required_surfaces.includes('contract'),
   );
   assert.ok(
-    lanesById['oma-script-pack-cleanup-readback-20260622'].required_surfaces.includes('API_readback'),
+    lanesById['opl-transition-outcome-path-guard-20260622'].required_surfaces.includes('CLI_readback'),
   );
   assert.ok(
-    lanesById['oma-script-pack-cleanup-readback-20260622'].non_live_completion_evidence_required.includes(
-      'OMA_script_to_pack_readback_command_landed',
+    lanesById['opl-transition-outcome-path-guard-20260622'].required_surfaces.includes('API_readback'),
+  );
+  assert.ok(
+    lanesById['opl-transition-outcome-path-guard-20260622'].non_live_completion_evidence_required.includes(
+      'family_transition_runner_outcome_path_fields_landed',
     ),
   );
   assert.equal(
-    lanesById['oma-script-pack-cleanup-readback-20260622']
+    lanesById['opl-transition-outcome-path-guard-20260622']
       .authority_boundary.can_create_second_active_backlog,
     false,
   );
   assert.equal(
-    lanesById['oma-script-pack-cleanup-readback-20260622']
+    lanesById['opl-transition-outcome-path-guard-20260622']
       .authority_boundary.can_authorize_physical_delete,
     false,
   );
   assert.equal(
-    lanesById['oma-script-pack-cleanup-readback-20260622']
+    lanesById['opl-transition-outcome-path-guard-20260622']
       .authority_boundary.can_claim_domain_ready,
     false,
   );
   assert.ok(
-    lanesById['oma-script-pack-cleanup-readback-20260622'].forbidden_scope.includes(
-      'default_caller_cutover_claim',
+    lanesById['opl-transition-outcome-path-guard-20260622'].forbidden_scope.includes(
+      'typed_blocker_instance_creation',
     ),
   );
   assert.ok(
-    lanesById['oma-script-pack-cleanup-readback-20260622'].forbidden_scope.includes(
-      'OPL_primitive_parity_claim',
+    lanesById['opl-transition-outcome-path-guard-20260622'].forbidden_scope.includes(
+      'human_decision',
     ),
   );
   assert.deepEqual(
-    lanesById['hermes-functional-convergence-guard-20260622'].milestone_ids,
-    ['app_active_shell_hermes_convergence'],
+    lanesById['rca-private-tail-compact-readback-20260622'].milestone_ids,
+    ['strict_source_purity_private_wrapper_retirement'],
   );
-  assert.equal(lanesById['hermes-functional-convergence-guard-20260622'].repo, 'opl-hermes-shell');
+  assert.equal(lanesById['rca-private-tail-compact-readback-20260622'].repo, 'redcube-ai');
   assert.ok(
-    lanesById['hermes-functional-convergence-guard-20260622'].required_surfaces.includes('contract'),
-  );
-  assert.ok(
-    lanesById['hermes-functional-convergence-guard-20260622'].required_surfaces.includes('CLI_readback'),
+    lanesById['rca-private-tail-compact-readback-20260622'].required_surfaces.includes('contract'),
   );
   assert.ok(
-    lanesById['hermes-functional-convergence-guard-20260622'].non_live_completion_evidence_required.includes(
-      'Hermes_validate_candidate_outputs_functional_convergence_readback_ok_true',
+    lanesById['rca-private-tail-compact-readback-20260622'].required_surfaces.includes('CLI_readback'),
+  );
+  assert.ok(
+    lanesById['rca-private-tail-compact-readback-20260622'].non_live_completion_evidence_required.includes(
+      'RCA_default_caller_tail_compact_retirement_summary_landed',
     ),
   );
   assert.ok(
-    lanesById['hermes-functional-convergence-guard-20260622'].forbidden_scope.includes(
-      'AGUI_update_or_polish',
+    lanesById['rca-private-tail-compact-readback-20260622'].forbidden_scope.includes(
+      'physical_delete_authorization',
     ),
   );
   assert.ok(
-    lanesById['hermes-functional-convergence-guard-20260622'].forbidden_scope.includes(
-      'active_shell_adoption_claim',
+    lanesById['rca-private-tail-compact-readback-20260622'].forbidden_scope.includes(
+      'default_caller_cutover_claim',
     ),
   );
   assert.equal(
-    lanesById['hermes-functional-convergence-guard-20260622']
+    lanesById['rca-private-tail-compact-readback-20260622']
       .authority_boundary.can_create_second_active_backlog,
     false,
   );
   assert.ok(
-    lanesById['hermes-functional-convergence-guard-20260622'].forbidden_scope.includes(
-      'App_release_ready_claim',
+    lanesById['rca-private-tail-compact-readback-20260622'].forbidden_scope.includes(
+      'visual_ready_or_exportable_claim',
     ),
   );
   assert.equal(readback.authority_boundary.can_create_second_active_backlog, false);
@@ -1125,14 +1123,14 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   );
   assert.ok(
     readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
-      lane.lane_id === 'oma-script-pack-cleanup-readback-20260622'
-      && lane.repo === 'opl-meta-agent'
+      lane.lane_id === 'opl-transition-outcome-path-guard-20260622'
+      && lane.repo === 'one-person-lab'
     )),
   );
   assert.ok(
     readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
-      lane.lane_id === 'hermes-functional-convergence-guard-20260622'
-      && lane.repo === 'opl-hermes-shell'
+      lane.lane_id === 'rca-private-tail-compact-readback-20260622'
+      && lane.repo === 'redcube-ai'
     )),
   );
   assert.ok(

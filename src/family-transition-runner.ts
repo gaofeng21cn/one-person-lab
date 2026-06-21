@@ -90,6 +90,12 @@ export type FamilyTransitionResultStatus =
   | 'blocked'
   | 'dead_letter_intended';
 
+export type FamilyTransitionOutcomePath =
+  | 'success_refs_path'
+  | 'typed_blocker_path'
+  | 'human_gate_path'
+  | 'dead_letter_path';
+
 export type FamilyTransitionReceipt = {
   surface_kind: 'family_transition_receipt';
   receipt_id: string;
@@ -121,6 +127,12 @@ export type FamilyTransitionProjection = {
   route_node_refs: string[];
   action_refs: string[];
   receipt_refs: string[];
+  outcome_path: FamilyTransitionOutcomePath;
+  terminal_input_kind: FamilyTransitionOutcomePath;
+  requires_owner_answer: boolean;
+  success_claimed: boolean;
+  domain_ready_claimed: false;
+  production_ready_claimed: false;
   authority_boundary: JsonRecord;
 } & JsonRecord;
 
@@ -139,6 +151,9 @@ export type FamilyTransitionResult = {
   dead_letter_intent: FamilyTransitionDeadLetterIntent | null;
   receipt: FamilyTransitionReceipt;
   projection: FamilyTransitionProjection;
+  outcome_path: FamilyTransitionOutcomePath;
+  terminal_input_kind: FamilyTransitionOutcomePath;
+  requires_owner_answer: boolean;
   authority_boundary: JsonRecord;
 };
 
@@ -273,6 +288,7 @@ function buildProjection(input: {
   status: FamilyTransitionResultStatus;
   transition: FamilyTransitionRule | null;
   ownerRoute: FamilyTransitionOwnerRoute;
+  outcomePath: FamilyTransitionOutcomePath;
   receipt: FamilyTransitionReceipt;
   authorityBoundary: JsonRecord;
   extra?: JsonRecord;
@@ -296,6 +312,12 @@ function buildProjection(input: {
     receipt_refs: input.receipt.receipt_refs,
     ...(input.transition?.projection ?? {}),
     ...(input.extra ?? {}),
+    outcome_path: input.outcomePath,
+    terminal_input_kind: input.outcomePath,
+    requires_owner_answer: input.outcomePath !== 'success_refs_path',
+    success_claimed: input.outcomePath === 'success_refs_path',
+    domain_ready_claimed: false,
+    production_ready_claimed: false,
     authority_boundary: input.authorityBoundary,
   };
 }
@@ -317,6 +339,12 @@ function buildResult(input: {
   authorityBoundary: JsonRecord;
   projectionExtra?: JsonRecord;
 }): FamilyTransitionResult {
+  const outcomePath = transitionOutcomePath({
+    status: input.status,
+    humanGate: input.humanGate,
+    typedBlocker: input.typedBlocker,
+    deadLetterIntent: input.deadLetterIntent,
+  });
   return {
     surface_kind: 'family_transition_result',
     status: input.status,
@@ -340,12 +368,34 @@ function buildResult(input: {
       status: input.status,
       transition: input.transition,
       ownerRoute: input.ownerRoute,
+      outcomePath,
       receipt: input.receipt,
       authorityBoundary: input.authorityBoundary,
       extra: input.projectionExtra,
     }),
+    outcome_path: outcomePath,
+    terminal_input_kind: outcomePath,
+    requires_owner_answer: outcomePath !== 'success_refs_path',
     authority_boundary: input.authorityBoundary,
   };
+}
+
+function transitionOutcomePath(input: {
+  status: FamilyTransitionResultStatus;
+  humanGate: FamilyTransitionHumanGate | null;
+  typedBlocker: FamilyTransitionTypedBlocker | null;
+  deadLetterIntent: FamilyTransitionDeadLetterIntent | null;
+}): FamilyTransitionOutcomePath {
+  if (input.deadLetterIntent || input.status === 'dead_letter_intended') {
+    return 'dead_letter_path';
+  }
+  if (input.humanGate) {
+    return 'human_gate_path';
+  }
+  if (input.typedBlocker || input.status === 'blocked') {
+    return 'typed_blocker_path';
+  }
+  return 'success_refs_path';
 }
 
 function missingRequiredGuards(rule: FamilyTransitionRule, activeGuards: Set<string>) {
