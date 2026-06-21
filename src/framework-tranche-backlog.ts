@@ -90,6 +90,30 @@ type DomainPackCompilerContractSubset = {
   };
 };
 
+type RuntimeEnvironmentSubstrateContractSubset = {
+  contract_id: string;
+  schema_version: string;
+  owner: string;
+  state: string;
+  implementation_status: string;
+  target_planned: boolean;
+  ordinary_path: {
+    input: string;
+    steps: string[];
+    default_mode: string;
+    domain_agents_declare_dependency_intent_only: boolean;
+  };
+  materialization_policy: JsonRecord;
+  cache_policy: JsonRecord;
+  cache_inventory_policy: JsonRecord;
+  dependency_prepare_policy: JsonRecord;
+  authority_boundary: JsonRecord;
+  required_readback_claim_fields: string[];
+  readback_commands: string[];
+  forbidden_claims: string[];
+  live_evidence_deferred: string[];
+};
+
 type SchemaContractIdentity = {
   required: string[];
   consts: Record<string, string>;
@@ -179,6 +203,35 @@ const CURRENT_TRANCHE_LANES: TrancheExecutionLane[] = [
       'full_Plan_Completion_Audit_claim',
       'domain_truth_write',
       'runtime_ready_claim',
+      'App_release_ready_claim',
+    ],
+  },
+  {
+    lane_id: 'opl-runtime-env-substrate-guard-20260621',
+    repo: 'one-person-lab',
+    priority: 'P0',
+    milestone_ids: ['opl_primitive_runtime_owner_route_guard'],
+    lane_status: 'selected_for_non_live_functional_structure_tranche',
+    write_set_class: 'runtime_environment_substrate_guard_readback',
+    required_surfaces: [
+      'source',
+      'contract',
+      'CLI_readback',
+      'docs',
+      'tests',
+    ],
+    non_live_completion_evidence_required: [
+      'runtime_environment_contract_consumed_by_tranche_backlog_readback',
+      'runtime_env_contract_cli_readback_available',
+      'framework_readiness_cli_surface_test_passes',
+      'main_absorbed_push_and_remote_sha_readback',
+    ],
+    deferred_evidence: DEFERRED_LIVE_EVIDENCE,
+    forbidden_scope: [
+      'runtime_materialized_ready_claim',
+      'domain_truth_write',
+      'domain_stage_schedule',
+      'owner_receipt_or_typed_blocker_authority',
       'App_release_ready_claim',
     ],
   },
@@ -577,6 +630,42 @@ function readDomainPackCompilerContract(contractsDir: string): DomainPackCompile
   };
 }
 
+function readRuntimeEnvironmentSubstrateContract(
+  contractsDir: string,
+): RuntimeEnvironmentSubstrateContractSubset {
+  const filePath = path.join(contractsDir, 'runtime-environment-substrate-contract.json');
+  const parsed = readJsonObject(filePath, 'runtime-environment-substrate-contract.json');
+  const ordinaryPath = recordField(parsed, 'ordinary_path', filePath);
+
+  return {
+    contract_id: stringField(parsed, 'contract_id', filePath),
+    schema_version: stringField(parsed, 'schema_version', filePath),
+    owner: stringField(parsed, 'owner', filePath),
+    state: stringField(parsed, 'state', filePath),
+    implementation_status: stringField(parsed, 'implementation_status', filePath),
+    target_planned: booleanField(parsed, 'target_planned', filePath),
+    ordinary_path: {
+      input: stringField(ordinaryPath, 'input', filePath),
+      steps: stringArrayField(ordinaryPath, 'steps', filePath),
+      default_mode: stringField(ordinaryPath, 'default_mode', filePath),
+      domain_agents_declare_dependency_intent_only: booleanField(
+        ordinaryPath,
+        'domain_agents_declare_dependency_intent_only',
+        filePath,
+      ),
+    },
+    materialization_policy: recordField(parsed, 'materialization_policy', filePath),
+    cache_policy: recordField(parsed, 'cache_policy', filePath),
+    cache_inventory_policy: recordField(parsed, 'cache_inventory_policy', filePath),
+    dependency_prepare_policy: recordField(parsed, 'dependency_prepare_policy', filePath),
+    authority_boundary: recordField(parsed, 'authority_boundary', filePath),
+    required_readback_claim_fields: stringArrayField(parsed, 'required_readback_claim_fields', filePath),
+    readback_commands: stringArrayField(parsed, 'readback_commands', filePath),
+    forbidden_claims: stringArrayField(parsed, 'forbidden_claims', filePath),
+    live_evidence_deferred: stringArrayField(parsed, 'live_evidence_deferred', filePath),
+  };
+}
+
 function schemaIdentityFromContract(
   filePath: string,
   label: string,
@@ -592,6 +681,111 @@ function schemaIdentityFromContract(
   return {
     required,
     consts,
+  };
+}
+
+function buildRuntimeEnvironmentSubstrateGuardReadback(contracts: FrameworkContracts) {
+  const runtimeEnvironment = readRuntimeEnvironmentSubstrateContract(contracts.contractsDir);
+  return {
+    surface_kind: 'opl_runtime_environment_substrate_guard_readback',
+    readback_role:
+      'runtime_environment_substrate_owner_policy_not_domain_ready_not_live_evidence_not_app_release_ready',
+    owner: 'one-person-lab',
+    source_contract_ref:
+      'contracts/opl-framework/runtime-environment-substrate-contract.json#opl-runtime-environment-substrate.v1',
+    source_cli_readback_refs: [
+      'opl runtime env contract --json .runtime_environment.contract',
+      'opl runtime env inspect --domain <domain> --profile <profile> --platform <platform> --json',
+      'opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> --apply --json',
+      'opl runtime env verify --runtime-root <path> --json',
+      'opl runtime env cache inventory --json',
+      'opl runtime env cache prune --apply --json',
+      'opl runtime env run-context --domain <domain> --profile <profile> --json',
+    ],
+    contract_identity: {
+      contract_id: runtimeEnvironment.contract_id,
+      schema_version: runtimeEnvironment.schema_version,
+      owner: runtimeEnvironment.owner,
+      state: runtimeEnvironment.state,
+      implementation_status: runtimeEnvironment.implementation_status,
+      target_planned: runtimeEnvironment.target_planned,
+    },
+    ordinary_path: {
+      ...runtimeEnvironment.ordinary_path,
+      ordinary_path_can_schedule_domain_stage: false,
+      ordinary_path_can_write_domain_truth: false,
+    },
+    materialization_policy: {
+      default_command_mode: runtimeEnvironment.materialization_policy.default_command_mode,
+      writes_development_checkout: runtimeEnvironment.materialization_policy.writes_development_checkout,
+      writes_domain_repo: runtimeEnvironment.materialization_policy.writes_domain_repo,
+      materializer_landed: runtimeEnvironment.materialization_policy.materializer_landed,
+      writes_runtime_root_only_with_apply:
+        runtimeEnvironment.materialization_policy.writes_runtime_root_only_with_apply,
+      materialization_receipt_required:
+        runtimeEnvironment.materialization_policy.materialization_receipt_required,
+      protect_current_and_rollback_pointers:
+        runtimeEnvironment.materialization_policy.protect_current_and_rollback_pointers,
+      cleanup_apply_requires_receipt:
+        runtimeEnvironment.materialization_policy.cleanup_apply_requires_receipt,
+    },
+    cache_policy: {
+      cache_key_inputs: runtimeEnvironment.cache_policy.cache_key_inputs,
+      cache_hit_counts_as_ready: runtimeEnvironment.cache_policy.cache_hit_counts_as_ready,
+      cache_miss_counts_as_readiness_failure:
+        runtimeEnvironment.cache_policy.cache_miss_counts_as_readiness_failure,
+      materialization_failure_counts_as_runtime_environment_failure:
+        runtimeEnvironment.cache_policy.materialization_failure_counts_as_runtime_environment_failure,
+    },
+    cache_inventory_policy: {
+      status: runtimeEnvironment.cache_inventory_policy.status,
+      inventory_may_be_empty_without_failure:
+        runtimeEnvironment.cache_inventory_policy.inventory_may_be_empty_without_failure,
+      prune_apply_requires_materialization_receipt:
+        runtimeEnvironment.cache_inventory_policy.prune_apply_requires_materialization_receipt,
+      deletes_domain_artifacts: runtimeEnvironment.cache_inventory_policy.deletes_domain_artifacts,
+      deletes_development_checkout: runtimeEnvironment.cache_inventory_policy.deletes_development_checkout,
+    },
+    dependency_prepare_policy: {
+      status: runtimeEnvironment.dependency_prepare_policy.status,
+      writes_dependency_lock: runtimeEnvironment.dependency_prepare_policy.writes_dependency_lock,
+      writes_dependency_receipt: runtimeEnvironment.dependency_prepare_policy.writes_dependency_receipt,
+      writes_run_context_on_success:
+        runtimeEnvironment.dependency_prepare_policy.writes_run_context_on_success,
+      dependency_lock_counts_as_materialized_runtime_lock:
+        runtimeEnvironment.dependency_prepare_policy.dependency_lock_counts_as_materialized_runtime_lock,
+      installs_packages: runtimeEnvironment.dependency_prepare_policy.installs_packages,
+      writes_domain_truth: runtimeEnvironment.dependency_prepare_policy.writes_domain_truth,
+      writes_runtime_root: runtimeEnvironment.dependency_prepare_policy.writes_runtime_root,
+      can_claim_runtime_ready: runtimeEnvironment.dependency_prepare_policy.can_claim_runtime_ready,
+      can_claim_domain_ready: runtimeEnvironment.dependency_prepare_policy.can_claim_domain_ready,
+      can_claim_publication_ready:
+        runtimeEnvironment.dependency_prepare_policy.can_claim_publication_ready,
+    },
+    required_readback_claim_fields: [...runtimeEnvironment.required_readback_claim_fields],
+    readback_commands: [...runtimeEnvironment.readback_commands],
+    forbidden_claims: [...runtimeEnvironment.forbidden_claims],
+    live_evidence_deferred: [...runtimeEnvironment.live_evidence_deferred],
+    authority_boundary: {
+      ...runtimeEnvironment.authority_boundary,
+      runtime_environment_guard_can_claim_plan_completion: false,
+      runtime_environment_guard_can_claim_provider_long_soak_complete: false,
+      runtime_environment_guard_can_claim_live_evidence_complete: false,
+    },
+    false_ready_guard: {
+      cache_hit_counts_as_ready: runtimeEnvironment.cache_policy.cache_hit_counts_as_ready,
+      cache_miss_counts_as_readiness_failure:
+        runtimeEnvironment.cache_policy.cache_miss_counts_as_readiness_failure,
+      descriptor_exists_can_claim_runtime_materialized: false,
+      run_context_exists_can_claim_provider_ready: false,
+      materialization_skeleton_can_claim_runtime_ready: false,
+      materialization_receipt_can_claim_domain_ready: false,
+      verification_receipt_can_claim_app_release_ready: false,
+      runtime_environment_receipt_can_claim_owner_receipt: false,
+      runtime_environment_readback_can_create_typed_blocker: false,
+      runtime_environment_readback_can_schedule_domain_stage: false,
+      runtime_environment_guard_can_claim_production_ready: false,
+    },
   };
 }
 
@@ -909,6 +1103,7 @@ export function buildFrameworkTrancheBacklogReadback(contracts: FrameworkContrac
         plan_completion_audit_required_for_full_goal_completion: true,
       },
       generated_hosted_surface_boundary: buildGeneratedHostedBoundaryReadback(contracts),
+      runtime_environment_substrate_guard: buildRuntimeEnvironmentSubstrateGuardReadback(contracts),
       ordinary_progress_guard: buildOrdinaryProgressGuardReadback(contracts),
       milestones: FRAMEWORK_TRANCHE_MILESTONES,
     },

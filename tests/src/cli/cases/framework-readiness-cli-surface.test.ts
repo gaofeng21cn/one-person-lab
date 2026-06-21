@@ -43,7 +43,7 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(readback.default_tranche_policy.lane_count_min, 2);
   assert.equal(readback.default_tranche_policy.lane_count_max, 4);
   assert.equal(readback.default_tranche_policy.live_evidence_deferred, true);
-  assert.equal(readback.current_tranche.selected_lane_count, 3);
+  assert.equal(readback.current_tranche.selected_lane_count, 4);
   assert.equal(readback.current_tranche.selected_lane_count_within_policy, true);
   assert.equal(
     readback.current_tranche.tranche_role,
@@ -84,6 +84,10 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     ],
   );
   assert.deepEqual(
+    lanesById['opl-runtime-env-substrate-guard-20260621'].milestone_ids,
+    ['opl_primitive_runtime_owner_route_guard'],
+  );
+  assert.deepEqual(
     lanesById['rca-source-morphology-tranche-20260621'].milestone_ids,
     ['strict_source_purity_private_wrapper_retirement'],
   );
@@ -93,6 +97,14 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   );
   assert.ok(
     lanesById['rca-source-morphology-tranche-20260621'].required_surfaces.includes('contract'),
+  );
+  assert.ok(
+    lanesById['opl-runtime-env-substrate-guard-20260621'].required_surfaces.includes('CLI_readback'),
+  );
+  assert.ok(
+    lanesById['opl-runtime-env-substrate-guard-20260621'].forbidden_scope.includes(
+      'owner_receipt_or_typed_blocker_authority',
+    ),
   );
   assert.ok(
     lanesById['opl-doc-support-profile-guard-20260621'].required_surfaces.includes('CLI_readback'),
@@ -145,6 +157,100 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   );
   assert.equal(
     readback.generated_hosted_surface_boundary.false_ready_guard.default_caller_evidence_worklist_can_authorize_physical_delete,
+    false,
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.surface_kind,
+    'opl_runtime_environment_substrate_guard_readback',
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.readback_role,
+    'runtime_environment_substrate_owner_policy_not_domain_ready_not_live_evidence_not_app_release_ready',
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.contract_identity.contract_id,
+    'opl_runtime_environment_substrate_contract',
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.contract_identity.implementation_status,
+    'runtime_lock_materializer_cache_prune_available',
+  );
+  assert.deepEqual(
+    readback.runtime_environment_substrate_guard.ordinary_path.steps,
+    [
+      'runtime_environment_descriptor',
+      'runtime_lock',
+      'content_addressed_layers',
+      'runtime_bundle_manifest',
+      'materialized_runtime_root',
+      'receipt_cleanup_rollback',
+    ],
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.ordinary_path.domain_agents_declare_dependency_intent_only,
+    true,
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.materialization_policy.writes_development_checkout,
+    false,
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.materialization_policy.writes_runtime_root_only_with_apply,
+    true,
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.cache_policy.cache_hit_counts_as_ready,
+    false,
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.cache_inventory_policy.deletes_domain_artifacts,
+    false,
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.dependency_prepare_policy.writes_domain_truth,
+    false,
+  );
+  assert.ok(
+    readback.runtime_environment_substrate_guard.readback_commands.includes(
+      'opl runtime env verify --runtime-root <path>',
+    ),
+  );
+  assert.ok(
+    readback.runtime_environment_substrate_guard.required_readback_claim_fields.includes(
+      'can_claim_runtime_ready',
+    ),
+  );
+  assert.ok(
+    readback.runtime_environment_substrate_guard.forbidden_claims.includes(
+      'runtime_environment_receipt_means_domain_ready',
+    ),
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.authority_boundary.can_write_domain_truth,
+    false,
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.authority_boundary.can_sign_owner_receipt,
+    false,
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.authority_boundary.can_create_typed_blocker,
+    false,
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.authority_boundary.can_schedule_domain_stage,
+    false,
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.false_ready_guard.materialization_receipt_can_claim_domain_ready,
+    false,
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.false_ready_guard.verification_receipt_can_claim_app_release_ready,
+    false,
+  );
+  assert.equal(
+    readback.runtime_environment_substrate_guard.false_ready_guard.runtime_environment_readback_can_create_typed_blocker,
     false,
   );
   assert.equal(
