@@ -16,13 +16,13 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
       },
       {
         repo: 'opl-meta-agent',
-        commit: 'b902ed0b0e1da4cf2ce559d03cb50ce2edcbe255',
-        subject: 'Add OMA source-structure JSON readback',
+        commit: '3dfed67f4debf7f44b9b130bd9bb880500dd0340',
+        subject: 'Add OMA script-to-pack compact readback',
       },
       {
         repo: 'redcube-ai',
-        commit: '985bc5e3822018f129a94d8aa003f9bff259a59c',
-        subject: 'Add private platform compact tail readback',
+        commit: '10cde10b131b306e4ec41f31fe65c838aa9d41e1',
+        subject: 'Expose RCA private platform readback',
       },
     ],
     checked_domain_repo_guards: [
@@ -73,6 +73,17 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
           'opl-meta-agent:npm run source-structure:json --silent',
         source_structure_strict_json_readback_ref:
           'opl-meta-agent:npm run source-structure:strict:json --silent',
+        script_to_pack_compact_readback_ref:
+          'opl-meta-agent:npm run script-to-pack:readback --silent#compact_cleanup_summary',
+        compact_cleanup_summary_id:
+          'oma.script_to_pack_retirement_cleanup.compact_summary.v1',
+        compact_cleanup_candidate_count: 31,
+        compact_cleanup_apply_candidate_count: 0,
+        compact_cleanup_missing_evidence_item_count: 247,
+        compact_cleanup_can_authorize_physical_delete: false,
+        compact_cleanup_can_claim_retirement_complete: false,
+        compact_cleanup_can_claim_domain_ready: false,
+        compact_cleanup_can_claim_production_ready: false,
         checked_source_ref_count: 31,
         invalid_source_ref_count: 0,
         generic_materializer_no_resurrection_guard_id:
@@ -105,7 +116,13 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
           'rca.source_morphology.active_source_no_resurrection_scan.v1',
         strict_readback_ref:
           'redcube-ai:scripts/check-private-platform-retirement.ts --format json',
+        direct_package_readback_ref:
+          'redcube-ai:npm run private-platform:readback',
         verify_readback_ref: 'redcube-ai:scripts/verify.sh private-platform:strict',
+        strict_gate_artifact_ref:
+          'redcube-ai:/tmp/redcube-ai-private-platform-retirement.json',
+        direct_readback_surface_kind: 'rca_private_platform_retirement_strict_readback',
+        direct_readback_state: 'passed_repo_source_guard_only',
         runtime_watch_boundary_readback:
           'redcube-ai:rca_private_platform_retirement_strict_readback.runtime_watch_boundary',
         domain_action_adapter_boundary_readback:
@@ -152,9 +169,11 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
         'opl-meta-agent:contracts/source_structure_policy.json#script_to_pack_receipt_guard.json_readback_command_ref',
         'opl-meta-agent:npm run source-structure:json --silent',
         'opl-meta-agent:npm run source-structure:strict:json --silent',
+        'opl-meta-agent:npm run script-to-pack:readback --silent#compact_cleanup_summary',
         'redcube-ai:physical_source_morphology_policy.source_ref_integrity_gate',
         'redcube-ai:default_caller_tail_thinning_gate.active_source_resurrection_scan_policy',
         'redcube-ai:scripts/check-private-platform-retirement.ts --format json',
+        'redcube-ai:npm run private-platform:readback',
         'redcube-ai:scripts/verify.sh private-platform:strict',
         'repo_native_source_ref_integrity_tests',
         'remote_sha_readback_equal',
