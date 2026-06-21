@@ -43,20 +43,20 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(readback.default_tranche_policy.lane_count_min, 2);
   assert.equal(readback.default_tranche_policy.lane_count_max, 4);
   assert.equal(readback.default_tranche_policy.live_evidence_deferred, true);
-  assert.equal(readback.milestone_state_counts.open, 1);
+  assert.equal(readback.milestone_state_counts.open, 0);
   assert.equal(readback.milestone_state_counts.partial, 0);
-  assert.equal(readback.milestone_state_counts.closed_structure_gate, 6);
-  assert.equal(readback.current_tranche.selected_lane_count, 1);
-  assert.equal(readback.current_tranche.selected_lane_count_within_policy, false);
+  assert.equal(readback.milestone_state_counts.closed_structure_gate, 7);
+  assert.equal(readback.current_tranche.selected_lane_count, 2);
+  assert.equal(readback.current_tranche.selected_lane_count_within_policy, true);
   assert.equal(
     readback.current_tranche.tranche_role,
     'non_live_functional_structure_milestone_tranche_not_full_completion_audit',
   );
   assert.deepEqual(readback.current_tranche.selected_milestone_ids, [
-    'memory_artifact_lifecycle_functional_boundary',
+    'app_active_shell_hermes_convergence',
   ]);
   assert.deepEqual(readback.current_tranche.closed_or_advanced_structural_milestone_ids, [
-    'memory_artifact_lifecycle_functional_boundary',
+    'app_active_shell_hermes_convergence',
   ]);
   const milestonesById = Object.fromEntries(
     readback.milestones.map((milestone: { milestone_id: string }) => [milestone.milestone_id, milestone]),
@@ -71,6 +71,10 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   );
   assert.equal(
     milestonesById['memory_artifact_lifecycle_functional_boundary'].state,
+    'closed_structure_gate',
+  );
+  assert.equal(
+    milestonesById['app_active_shell_hermes_convergence'].state,
     'closed_structure_gate',
   );
   assert.equal(
@@ -95,43 +99,52 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     readback.current_tranche.lanes.map((lane: { lane_id: string }) => [lane.lane_id, lane]),
   );
   assert.deepEqual(
-    lanesById['opl-memory-artifact-lifecycle-structure-closeout-20260621'].milestone_ids,
-    ['memory_artifact_lifecycle_functional_boundary'],
+    lanesById['app-shell-hermes-convergence-structure-20260621'].milestone_ids,
+    ['app_active_shell_hermes_convergence'],
   );
   assert.ok(
-    lanesById['opl-memory-artifact-lifecycle-structure-closeout-20260621'].required_surfaces.includes('API_readback'),
+    lanesById['app-shell-hermes-convergence-structure-20260621'].required_surfaces.includes('API_readback'),
   );
   assert.ok(
-    lanesById['opl-memory-artifact-lifecycle-structure-closeout-20260621'].required_surfaces.includes('CLI_readback'),
+    lanesById['app-shell-hermes-convergence-structure-20260621'].required_surfaces.includes('CLI_readback'),
   );
   assert.ok(
-    lanesById['opl-memory-artifact-lifecycle-structure-closeout-20260621'].non_live_completion_evidence_required.includes(
-      'memory_artifact_lifecycle_guard_blocks_memory_artifact_package_export_domain_and_production_ready_claims',
+    lanesById['app-shell-hermes-convergence-structure-20260621'].non_live_completion_evidence_required.includes(
+      'false_ready_boundary_blocks_release_live_and_adoption_claims',
+    ),
+  );
+  assert.deepEqual(
+    lanesById['opl-app-shell-convergence-backlog-closeout-20260621'].milestone_ids,
+    ['app_active_shell_hermes_convergence'],
+  );
+  assert.ok(
+    lanesById['opl-app-shell-convergence-backlog-closeout-20260621'].non_live_completion_evidence_required.includes(
+      'framework_tranche_backlog_consumes_App_convergence_readback_ref',
     ),
   );
   assert.equal(
-    lanesById['opl-memory-artifact-lifecycle-structure-closeout-20260621']
+    lanesById['opl-app-shell-convergence-backlog-closeout-20260621']
       .authority_boundary.can_create_second_active_backlog,
     false,
   );
   assert.equal(
-    lanesById['opl-memory-artifact-lifecycle-structure-closeout-20260621']
+    lanesById['opl-app-shell-convergence-backlog-closeout-20260621']
       .authority_boundary.can_authorize_physical_delete,
     false,
   );
   assert.equal(
-    lanesById['opl-memory-artifact-lifecycle-structure-closeout-20260621']
+    lanesById['opl-app-shell-convergence-backlog-closeout-20260621']
       .authority_boundary.can_claim_domain_ready,
     false,
   );
   assert.ok(
-    lanesById['opl-memory-artifact-lifecycle-structure-closeout-20260621'].forbidden_scope.includes(
-      'memory_body_read_or_write',
+    lanesById['app-shell-hermes-convergence-structure-20260621'].forbidden_scope.includes(
+      'App_release_readiness_claim',
     ),
   );
   assert.ok(
-    lanesById['opl-memory-artifact-lifecycle-structure-closeout-20260621'].forbidden_scope.includes(
-      'package_or_export_readiness_authority',
+    lanesById['opl-app-shell-convergence-backlog-closeout-20260621'].forbidden_scope.includes(
+      'full_Plan_Completion_Audit_claim',
     ),
   );
   assert.equal(readback.authority_boundary.can_create_second_active_backlog, false);
@@ -727,6 +740,47 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(readback.app_shell_policy.mainline, 'AionUI/opl-aion-shell');
   assert.equal(readback.app_shell_policy.foreground_alternative, 'Hermes Desktop/hermes-codex');
   assert.equal(readback.app_shell_policy.archived_technical_proof_only, 'AGUI/agui-codex');
+  assert.equal(
+    readback.app_shell_policy.convergence_readback.status,
+    'closed_structure_gate_not_live_evidence',
+  );
+  assert.equal(
+    readback.app_shell_policy.convergence_readback.absorbed_origin_main_sha,
+    '9cb0196c06d1203a33d9aad20b9299eac6f36a0e',
+  );
+  assert.equal(
+    readback.app_shell_policy.convergence_readback.readback_command,
+    'npm run validate:shell-convergence',
+  );
+  assert.deepEqual(
+    readback.app_shell_policy.convergence_readback.default_candidate_validation_scope,
+    ['hermes-codex'],
+  );
+  assert.deepEqual(
+    readback.app_shell_policy.convergence_readback.archived_technical_proofs,
+    ['agui-codex'],
+  );
+  assert.deepEqual(readback.app_shell_policy.convergence_readback.false_ready_boundary, {
+    active_shell_switch_allowed_by_this_readback: false,
+    can_claim_active_shell_adopted: false,
+    can_claim_app_release_ready: false,
+    can_claim_production_ready: false,
+    can_claim_live_user_path: false,
+    can_claim_live_evidence: false,
+    can_claim_packaged_gui_acceptance: false,
+  });
+  assert.ok(
+    readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
+      lane.lane_id === 'app-shell-hermes-convergence-structure-20260621'
+      && lane.repo === 'one-person-lab-app'
+    )),
+  );
+  assert.ok(
+    readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
+      lane.lane_id === 'opl-app-shell-convergence-backlog-closeout-20260621'
+      && lane.repo === 'one-person-lab'
+    )),
+  );
   assert.ok(
     readback.milestones.some((milestone: { milestone_id: string; priority: string }) =>
       milestone.milestone_id === 'opl_primitive_runtime_owner_route_guard'
