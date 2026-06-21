@@ -2,6 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
+  DOMAIN_PROGRESS_POLICY_ADAPTER_CONTRACT,
+  DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+  DOMAIN_PROGRESS_TRANSITION_RUNTIME_MODULE,
+} from './family-runtime-domain-progress-transition-runtime.ts';
+import {
   FrameworkContractError,
   expectBoolean,
   expectString,
@@ -114,6 +119,36 @@ type RuntimeEnvironmentSubstrateContractSubset = {
   live_evidence_deferred: string[];
 };
 
+type DomainProgressRuntimeFirstSliceContractSubset = {
+  contract_kind: string;
+  owner: string;
+  surface_kind: string;
+  schema_version: string | number;
+  status: string;
+  purpose: string;
+  implementation_refs: JsonRecord;
+  physical_persistence_refs: JsonRecord;
+  runtime_live_readback_contract: JsonRecord;
+  brand_module_partition: JsonRecord;
+  allowed_transition_decisions: string[];
+  decision_surface_policy: JsonRecord;
+  not_complete_claims: string[];
+  policy_adapter_contract: {
+    surface_kind: string;
+    runtime_id: string;
+    runtime_owner: string;
+    adapter_role: string;
+    first_consumer: string;
+    accepted_request_surfaces: string[];
+    normalized_request_surface: string;
+    required_fields: string[];
+    fail_closed_reasons: string[];
+    forbidden_domain_adapter_outputs: string[];
+    authority_boundary: JsonRecord;
+  };
+  stage_route_false_authority_flags: JsonRecord;
+};
+
 type SchemaContractIdentity = {
   required: string[];
   consts: Record<string, string>;
@@ -177,42 +212,43 @@ const DEFERRED_LIVE_EVIDENCE = [
 
 const CURRENT_TRANCHE_LANES: TrancheExecutionLane[] = [
   {
-    lane_id: 'opl-tranche-backlog-materialization-20260621',
-    repo: 'one-person-lab',
-    priority: 'P0',
-    milestone_ids: [
-      'opl_primitive_runtime_owner_route_guard',
-      'domain_pack_generated_hosted_surfaces',
-    ],
-    lane_status: 'selected_for_non_live_functional_structure_tranche',
-    write_set_class: 'framework_backlog_cli_readback_and_no_second_truth_guard',
-    required_surfaces: [
-      'source',
-      'CLI_readback',
-      'docs',
-      'tests',
-    ],
-    non_live_completion_evidence_required: [
-      'framework_tranche_backlog_cli_readback_contains_current_tranche',
-      'framework_readiness_cli_surface_test_passes',
-      'typecheck_passes',
-      'main_absorbed_push_and_remote_sha_readback',
-    ],
-    deferred_evidence: DEFERRED_LIVE_EVIDENCE,
-    forbidden_scope: [
-      'full_Plan_Completion_Audit_claim',
-      'domain_truth_write',
-      'runtime_ready_claim',
-      'App_release_ready_claim',
-    ],
-  },
-  {
-    lane_id: 'opl-runtime-env-substrate-guard-20260621',
+    lane_id: 'opl-domain-progress-runtime-guard-20260621',
     repo: 'one-person-lab',
     priority: 'P0',
     milestone_ids: ['opl_primitive_runtime_owner_route_guard'],
     lane_status: 'selected_for_non_live_functional_structure_tranche',
-    write_set_class: 'runtime_environment_substrate_guard_readback',
+    write_set_class: 'domain_progress_transition_runtime_policy_adapter_guard_readback',
+    required_surfaces: [
+      'source',
+      'contract',
+      'API_readback',
+      'CLI_readback',
+      'docs',
+      'tests',
+    ],
+    non_live_completion_evidence_required: [
+      'stage_route_scheduler_domain_progress_runtime_contract_consumed_by_tranche_backlog_readback',
+      'policy_adapter_contract_export_matches_stage_route_scheduler_contract',
+      'domain_progress_runtime_focused_suite_passes',
+      'framework_tranche_backlog_readback_contains_runtime_guard',
+      'main_absorbed_push_and_remote_sha_readback',
+    ],
+    deferred_evidence: DEFERRED_LIVE_EVIDENCE,
+    forbidden_scope: [
+      'domain_truth_write',
+      'owner_receipt_or_typed_blocker_authority',
+      'provider_long_soak_claim',
+      'publication_ready_claim',
+      'domain_progress_ready_claim',
+    ],
+  },
+  {
+    lane_id: 'opl-memory-artifact-lifecycle-boundary-20260621',
+    repo: 'one-person-lab',
+    priority: 'P0',
+    milestone_ids: ['memory_artifact_lifecycle_functional_boundary'],
+    lane_status: 'selected_for_non_live_functional_structure_tranche',
+    write_set_class: 'memory_artifact_lifecycle_refs_only_functional_boundary_guard',
     required_surfaces: [
       'source',
       'contract',
@@ -221,78 +257,19 @@ const CURRENT_TRANCHE_LANES: TrancheExecutionLane[] = [
       'tests',
     ],
     non_live_completion_evidence_required: [
-      'runtime_environment_contract_consumed_by_tranche_backlog_readback',
-      'runtime_env_contract_cli_readback_available',
+      'memory_artifact_lifecycle_ledger_and_readback_boundary_consumed_by_tranche_backlog_readback',
+      'memory_artifact_lifecycle_evidence_cli_readback_available',
       'framework_readiness_cli_surface_test_passes',
       'main_absorbed_push_and_remote_sha_readback',
     ],
     deferred_evidence: DEFERRED_LIVE_EVIDENCE,
     forbidden_scope: [
-      'runtime_materialized_ready_claim',
+      'memory_body_read_or_write',
+      'artifact_body_mutation',
+      'package_or_export_ready_claim',
       'domain_truth_write',
-      'domain_stage_schedule',
       'owner_receipt_or_typed_blocker_authority',
-      'App_release_ready_claim',
-    ],
-  },
-  {
-    lane_id: 'rca-source-morphology-tranche-20260621',
-    repo: 'redcube-ai',
-    priority: 'P1',
-    milestone_ids: ['strict_source_purity_private_wrapper_retirement'],
-    lane_status: 'selected_for_non_live_functional_structure_tranche',
-    write_set_class: 'rca_source_morphology_runtime_watch_domain_action_adapter_tail',
-    required_surfaces: [
-      'source',
-      'contract',
-      'domain_handler_or_readback',
-      'docs',
-      'tests',
-    ],
-    non_live_completion_evidence_required: [
-      'physical_source_morphology_policy_tracks_tail_thinning',
-      'domain_action_adapter_runtime_watch_no_resurrection_tests_pass',
-      'repo_smoke_passes',
-      'main_absorbed_push_and_remote_sha_readback',
-    ],
-    deferred_evidence: [
-      'default_caller_live_scaleout',
-      'physical_delete_owner_receipt',
-      ...DEFERRED_LIVE_EVIDENCE,
-    ],
-    forbidden_scope: [
-      'visual_artifact_truth',
-      'provider_long_soak',
-      'AGUI',
-      'root_checkout_implementation',
-    ],
-  },
-  {
-    lane_id: 'opl-doc-support-profile-guard-20260621',
-    repo: 'opl-doc',
-    priority: 'P2',
-    milestone_ids: ['support_repo_profile_no_resurrection'],
-    lane_status: 'selected_for_non_live_functional_structure_tranche',
-    write_set_class: 'support_repo_profile_and_no_resurrection_policy_materialization',
-    required_surfaces: [
-      'source',
-      'contract',
-      'CLI_readback',
-      'docs',
-      'tests',
-    ],
-    non_live_completion_evidence_required: [
-      'support_repo_policy_contract_equals_generated_policy',
-      'family_plan_readback_contains_materialized_support_profile_guard',
-      'repo_verify_passes',
-      'main_absorbed_push_and_remote_sha_readback',
-    ],
-    deferred_evidence: DEFERRED_LIVE_EVIDENCE,
-    forbidden_scope: [
-      'default_Foundry_Agent_truth_set',
-      'target_repo_truth_write',
-      'Live_Evidence_claim',
-      'second_active_backlog',
+      'physical_delete_authorization',
     ],
   },
 ];
@@ -309,8 +286,11 @@ const FRAMEWORK_TRANCHE_MILESTONES: FrameworkTrancheMilestone[] = [
       'docs/active/current-state-vs-ideal-gap.md#active-planning-gap-register',
       'docs/status.md#durable-objective-current-reading',
       'contracts/opl-framework/runtime-environment-substrate-contract.json',
+      'contracts/opl-framework/stage-route-scheduler-contract.json#stage_route_arbiter_substrate_contract.domain_progress_transition_runtime_first_slice',
       'contracts/opl-framework/target-operating-architecture-contract.json',
       'src/runtime-environment-substrate.ts',
+      'src/family-runtime-domain-progress-transition-runtime.ts',
+      'src/family-runtime-domain-progress-transition-runtime-parts/policy-adapter.ts',
       'src/framework-readiness.ts',
     ],
     non_live_evidence_acceptance: NON_LIVE_ACCEPTANCE,
@@ -352,6 +332,29 @@ const FRAMEWORK_TRANCHE_MILESTONES: FrameworkTrancheMilestone[] = [
       'default_caller_live_scaleout',
       'App_operator_sustained_consumption',
       'physical_delete_owner_receipt',
+      ...DEFERRED_LIVE_EVIDENCE,
+    ],
+    authority_boundary: { ...NO_SECOND_TRUTH_AUTHORITY_BOUNDARY },
+  },
+  {
+    milestone_id: 'memory_artifact_lifecycle_functional_boundary',
+    priority: 'P0',
+    state: 'partial',
+    owner_repos: ['one-person-lab'],
+    lane_role:
+      'Keep memory/artifact/lifecycle as refs-only intake, evidence readback, and owner-route work-order projection without body authority.',
+    current_truth_refs: [
+      'src/memory-artifact-lifecycle-evidence-ledger.ts',
+      'src/memory-artifact-lifecycle-readback.ts',
+      'src/runtime-tray-app-operator-drilldown-parts/memory-artifact-lifecycle-evidence.ts',
+      'src/cli/cases/runtime-memory-artifact-lifecycle-evidence-command-spec.ts',
+      'docs/active/current-state-vs-ideal-gap.md',
+    ],
+    non_live_evidence_acceptance: NON_LIVE_ACCEPTANCE,
+    deferred_evidence: [
+      'domain_memory_receipt_followthrough',
+      'artifact_mutation_receipt_followthrough',
+      'package_export_owner_acceptance',
       ...DEFERRED_LIVE_EVIDENCE,
     ],
     authority_boundary: { ...NO_SECOND_TRUTH_AUTHORITY_BOUNDARY },
@@ -534,6 +537,30 @@ function recordField(record: JsonRecord, key: string, filePath: string): JsonRec
   return value;
 }
 
+function stringOrNumberField(
+  record: JsonRecord,
+  key: string,
+  filePath: string,
+): string | number {
+  const value = record[key];
+  if (typeof value === 'string' || typeof value === 'number') {
+    return value;
+  }
+  throw new FrameworkContractError(
+    'contract_shape_invalid',
+    `Contract field "${key}" must be a string or number.`,
+    { file: filePath, field: key },
+  );
+}
+
+function sameStringSet(left: string[], right: string[]) {
+  const leftSet = new Set(left);
+  const rightSet = new Set(right);
+  return left.length === right.length
+    && left.every((entry) => rightSet.has(entry))
+    && right.every((entry) => leftSet.has(entry));
+}
+
 function readJsonObject(filePath: string, label: string): JsonRecord {
   let parsed: unknown;
   try {
@@ -630,6 +657,54 @@ function readDomainPackCompilerContract(contractsDir: string): DomainPackCompile
   };
 }
 
+function readDomainProgressRuntimeFirstSliceContract(
+  contractsDir: string,
+): DomainProgressRuntimeFirstSliceContractSubset {
+  const filePath = path.join(contractsDir, 'stage-route-scheduler-contract.json');
+  const parsed = readJsonObject(filePath, 'stage-route-scheduler-contract.json');
+  const arbiter = recordField(parsed, 'stage_route_arbiter_substrate_contract', filePath);
+  const slice = recordField(arbiter, 'domain_progress_transition_runtime_first_slice', filePath);
+  const physicalPersistence = recordField(slice, 'physical_persistence_refs', filePath);
+  const policyAdapter = recordField(slice, 'policy_adapter_contract', filePath);
+
+  return {
+    contract_kind: stringField(parsed, 'contract_kind', filePath),
+    owner: stringField(parsed, 'owner', filePath),
+    surface_kind: stringField(slice, 'surface_kind', filePath),
+    schema_version: stringOrNumberField(slice, 'schema_version', filePath),
+    status: stringField(slice, 'status', filePath),
+    purpose: stringField(slice, 'purpose', filePath),
+    implementation_refs: recordField(slice, 'implementation_refs', filePath),
+    physical_persistence_refs: physicalPersistence,
+    runtime_live_readback_contract:
+      recordField(physicalPersistence, 'runtime_live_readback_contract', filePath),
+    brand_module_partition: recordField(slice, 'brand_module_partition', filePath),
+    allowed_transition_decisions:
+      stringArrayField(slice, 'allowed_transition_decisions', filePath),
+    decision_surface_policy: recordField(slice, 'decision_surface_policy', filePath),
+    not_complete_claims: stringArrayField(slice, 'not_complete_claims', filePath),
+    policy_adapter_contract: {
+      surface_kind: stringField(policyAdapter, 'surface_kind', filePath),
+      runtime_id: stringField(policyAdapter, 'runtime_id', filePath),
+      runtime_owner: stringField(policyAdapter, 'runtime_owner', filePath),
+      adapter_role: stringField(policyAdapter, 'adapter_role', filePath),
+      first_consumer: stringField(policyAdapter, 'first_consumer', filePath),
+      accepted_request_surfaces:
+        stringArrayField(policyAdapter, 'accepted_request_surfaces', filePath),
+      normalized_request_surface:
+        stringField(policyAdapter, 'normalized_request_surface', filePath),
+      required_fields: stringArrayField(policyAdapter, 'required_fields', filePath),
+      fail_closed_reasons:
+        stringArrayField(policyAdapter, 'fail_closed_reasons', filePath),
+      forbidden_domain_adapter_outputs:
+        stringArrayField(policyAdapter, 'forbidden_domain_adapter_outputs', filePath),
+      authority_boundary: recordField(policyAdapter, 'authority_boundary', filePath),
+    },
+    stage_route_false_authority_flags:
+      recordField(arbiter, 'false_authority_flags', filePath),
+  };
+}
+
 function readRuntimeEnvironmentSubstrateContract(
   contractsDir: string,
 ): RuntimeEnvironmentSubstrateContractSubset {
@@ -681,6 +756,142 @@ function schemaIdentityFromContract(
   return {
     required,
     consts,
+  };
+}
+
+function buildDomainProgressTransitionRuntimeGuardReadback(contracts: FrameworkContracts) {
+  const firstSlice = readDomainProgressRuntimeFirstSliceContract(contracts.contractsDir);
+  const sourcePolicy = DOMAIN_PROGRESS_POLICY_ADAPTER_CONTRACT;
+  const policyAdapterContract = firstSlice.policy_adapter_contract;
+  return {
+    surface_kind: 'opl_domain_progress_transition_runtime_guard_readback',
+    readback_role:
+      'domain_progress_transition_runtime_policy_adapter_boundary_not_domain_ready_not_live_evidence',
+    owner: 'one-person-lab',
+    source_contract_ref:
+      'contracts/opl-framework/stage-route-scheduler-contract.json#stage_route_arbiter_substrate_contract.domain_progress_transition_runtime_first_slice',
+    source_api_readback_refs: [
+      'normalizeDomainProgressTransitionCommand',
+      'buildDomainProgressTransitionRuntimeResult',
+      'appendDomainProgressTransitionRuntimeResultJsonl',
+      'readDomainProgressTransitionRuntimeReadbackJsonl',
+      'auditDomainProgressTransitionReplay',
+      'normalizeDomainProgressPolicyAdapterRequest',
+    ],
+    source_cli_readback_refs: [
+      'opl framework tranche-backlog --family-defaults --json .framework_tranche_backlog.domain_progress_transition_runtime_guard',
+      'opl family-runtime current-control provider-admission readback carries opl_domain_progress_transition_runtime_live_readback',
+    ],
+    contract_identity: {
+      contract_kind: firstSlice.contract_kind,
+      owner: firstSlice.owner,
+      surface_kind: firstSlice.surface_kind,
+      schema_version: firstSlice.schema_version,
+      status: firstSlice.status,
+    },
+    runtime_identity: {
+      runtime_id: DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+      runtime_owner: 'one-person-lab',
+      module_allocation: DOMAIN_PROGRESS_TRANSITION_RUNTIME_MODULE,
+      not_a_new_brand_module: DOMAIN_PROGRESS_TRANSITION_RUNTIME_MODULE.not_a_new_brand_module,
+    },
+    implementation_refs: { ...firstSlice.implementation_refs },
+    physical_persistence_refs: {
+      runtime_log_read_api: firstSlice.physical_persistence_refs.runtime_log_read_api,
+      runtime_log_append_api: firstSlice.physical_persistence_refs.runtime_log_append_api,
+      idempotency_readback_api: firstSlice.physical_persistence_refs.idempotency_readback_api,
+      runtime_live_readback_api: firstSlice.physical_persistence_refs.runtime_live_readback_api,
+      replay_audit_api: firstSlice.physical_persistence_refs.replay_audit_api,
+      storage_contract: firstSlice.physical_persistence_refs.storage_contract,
+      focused_test: firstSlice.physical_persistence_refs.focused_test,
+      live_readback_contract: {
+        complete_transaction_status:
+          firstSlice.runtime_live_readback_contract.complete_transaction_status,
+        incomplete_transaction_status:
+          firstSlice.runtime_live_readback_contract.incomplete_transaction_status,
+        complete_transaction_requires:
+          firstSlice.runtime_live_readback_contract.complete_transaction_requires,
+        incomplete_transaction_fail_closed_reason:
+          firstSlice.runtime_live_readback_contract.incomplete_transaction_fail_closed_reason,
+        incomplete_transaction_outcome_kind:
+          firstSlice.runtime_live_readback_contract.incomplete_transaction_outcome_kind,
+        projection_metadata_complete_role:
+          firstSlice.runtime_live_readback_contract.projection_metadata_complete_role,
+        projection_metadata_incomplete_role:
+          firstSlice.runtime_live_readback_contract.projection_metadata_incomplete_role,
+        projection_metadata_consumable_only_when_transaction_complete:
+          firstSlice.runtime_live_readback_contract
+            .projection_metadata_consumable_only_when_transaction_complete,
+        replay_audit_consumable_only_when_complete:
+          firstSlice.runtime_live_readback_contract.replay_audit_consumable_only_when_complete,
+        authority_boundary:
+          firstSlice.runtime_live_readback_contract.authority_boundary,
+      },
+    },
+    brand_module_partition: { ...firstSlice.brand_module_partition },
+    allowed_transition_decisions: [...firstSlice.allowed_transition_decisions],
+    decision_surface_policy: { ...firstSlice.decision_surface_policy },
+    not_complete_claims: [...firstSlice.not_complete_claims],
+    policy_adapter_contract: {
+      ...policyAdapterContract,
+      source_export_surface_kind: sourcePolicy.surface_kind,
+      source_export_runtime_id: sourcePolicy.runtime_id,
+      source_export_request_surfaces: [...sourcePolicy.request_surfaces],
+      source_export_domain_repo_must_not_create: [
+        ...sourcePolicy.domain_repo_must_not_create,
+      ],
+      source_export_matches_stage_route_scheduler_contract:
+        sourcePolicy.surface_kind === policyAdapterContract.surface_kind
+        && sourcePolicy.runtime_id === policyAdapterContract.runtime_id
+        && sourcePolicy.runtime_owner === policyAdapterContract.runtime_owner
+        && sourcePolicy.adapter_role === policyAdapterContract.adapter_role
+        && sourcePolicy.first_consumer === policyAdapterContract.first_consumer
+        && sameStringSet(
+          [...sourcePolicy.request_surfaces],
+          policyAdapterContract.accepted_request_surfaces,
+        )
+        && sourcePolicy.provider_completion_is_domain_ready
+          === policyAdapterContract.authority_boundary.provider_completion_is_domain_ready
+        && sourcePolicy.opl_runtime_can_write_domain_truth
+          === policyAdapterContract.authority_boundary.opl_runtime_can_write_domain_truth,
+    },
+    authority_boundary: {
+      ...NO_SECOND_TRUTH_AUTHORITY_BOUNDARY,
+      runtime_can_write_domain_truth: false,
+      runtime_can_write_memory_body: false,
+      runtime_can_mutate_artifact_body: false,
+      runtime_can_sign_owner_receipt: false,
+      runtime_can_create_typed_blocker: false,
+      runtime_can_authorize_quality_verdict: false,
+      runtime_can_authorize_publication_ready: false,
+      policy_adapter_can_create_opl_outbox_record:
+        policyAdapterContract.authority_boundary.adapter_can_create_opl_outbox_record,
+      policy_adapter_can_create_owner_receipt:
+        policyAdapterContract.authority_boundary.adapter_can_create_owner_receipt,
+      policy_adapter_can_create_typed_blocker:
+        policyAdapterContract.authority_boundary.adapter_can_create_typed_blocker,
+      provider_completion_is_domain_ready:
+        policyAdapterContract.authority_boundary.provider_completion_is_domain_ready,
+      provider_completion_is_domain_completion:
+        policyAdapterContract.authority_boundary.provider_completion_is_domain_completion,
+      readback_guard_can_claim_provider_long_soak_complete: false,
+      readback_guard_can_claim_live_evidence_complete: false,
+    },
+    false_ready_guard: {
+      complete_transaction_can_claim_domain_ready: false,
+      complete_transaction_can_claim_publication_ready: false,
+      read_model_projection_consumable_can_claim_domain_progress: false,
+      replay_audit_ready_can_claim_provider_long_soak_complete: false,
+      non_advancing_apply_can_claim_paper_progress: false,
+      human_gate_resume_token_can_make_human_decision: false,
+      policy_adapter_valid_can_claim_owner_receipt: false,
+      policy_adapter_valid_can_create_typed_blocker: false,
+      provider_completion_can_claim_domain_ready:
+        policyAdapterContract.authority_boundary.provider_completion_is_domain_ready,
+      stage_route_false_authority_flags: {
+        ...firstSlice.stage_route_false_authority_flags,
+      },
+    },
   };
 }
 
@@ -1103,6 +1314,8 @@ export function buildFrameworkTrancheBacklogReadback(contracts: FrameworkContrac
         plan_completion_audit_required_for_full_goal_completion: true,
       },
       generated_hosted_surface_boundary: buildGeneratedHostedBoundaryReadback(contracts),
+      domain_progress_transition_runtime_guard:
+        buildDomainProgressTransitionRuntimeGuardReadback(contracts),
       runtime_environment_substrate_guard: buildRuntimeEnvironmentSubstrateGuardReadback(contracts),
       ordinary_progress_guard: buildOrdinaryProgressGuardReadback(contracts),
       milestones: FRAMEWORK_TRANCHE_MILESTONES,

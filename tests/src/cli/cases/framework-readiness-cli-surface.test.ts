@@ -43,7 +43,7 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(readback.default_tranche_policy.lane_count_min, 2);
   assert.equal(readback.default_tranche_policy.lane_count_max, 4);
   assert.equal(readback.default_tranche_policy.live_evidence_deferred, true);
-  assert.equal(readback.current_tranche.selected_lane_count, 4);
+  assert.equal(readback.current_tranche.selected_lane_count, 2);
   assert.equal(readback.current_tranche.selected_lane_count_within_policy, true);
   assert.equal(
     readback.current_tranche.tranche_role,
@@ -51,9 +51,7 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   );
   assert.deepEqual(readback.current_tranche.selected_milestone_ids, [
     'opl_primitive_runtime_owner_route_guard',
-    'domain_pack_generated_hosted_surfaces',
-    'strict_source_purity_private_wrapper_retirement',
-    'support_repo_profile_no_resurrection',
+    'memory_artifact_lifecycle_functional_boundary',
   ]);
   assert.equal(
     readback.current_tranche.lane_selection_policy.root_checkout_role,
@@ -77,44 +75,40 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     readback.current_tranche.lanes.map((lane: { lane_id: string }) => [lane.lane_id, lane]),
   );
   assert.deepEqual(
-    lanesById['opl-tranche-backlog-materialization-20260621'].milestone_ids,
-    [
-      'opl_primitive_runtime_owner_route_guard',
-      'domain_pack_generated_hosted_surfaces',
-    ],
-  );
-  assert.deepEqual(
-    lanesById['opl-runtime-env-substrate-guard-20260621'].milestone_ids,
+    lanesById['opl-domain-progress-runtime-guard-20260621'].milestone_ids,
     ['opl_primitive_runtime_owner_route_guard'],
   );
   assert.deepEqual(
-    lanesById['rca-source-morphology-tranche-20260621'].milestone_ids,
-    ['strict_source_purity_private_wrapper_retirement'],
-  );
-  assert.deepEqual(
-    lanesById['opl-doc-support-profile-guard-20260621'].milestone_ids,
-    ['support_repo_profile_no_resurrection'],
+    lanesById['opl-memory-artifact-lifecycle-boundary-20260621'].milestone_ids,
+    ['memory_artifact_lifecycle_functional_boundary'],
   );
   assert.ok(
-    lanesById['rca-source-morphology-tranche-20260621'].required_surfaces.includes('contract'),
+    lanesById['opl-domain-progress-runtime-guard-20260621'].required_surfaces.includes(
+      'API_readback',
+    ),
   );
   assert.ok(
-    lanesById['opl-runtime-env-substrate-guard-20260621'].required_surfaces.includes('CLI_readback'),
+    lanesById['opl-domain-progress-runtime-guard-20260621'].required_surfaces.includes('contract'),
   );
   assert.ok(
-    lanesById['opl-runtime-env-substrate-guard-20260621'].forbidden_scope.includes(
+    lanesById['opl-domain-progress-runtime-guard-20260621'].forbidden_scope.includes(
       'owner_receipt_or_typed_blocker_authority',
     ),
   );
   assert.ok(
-    lanesById['opl-doc-support-profile-guard-20260621'].required_surfaces.includes('CLI_readback'),
+    lanesById['opl-memory-artifact-lifecycle-boundary-20260621'].required_surfaces.includes(
+      'CLI_readback',
+    ),
   );
   assert.equal(
-    lanesById['opl-tranche-backlog-materialization-20260621'].authority_boundary.can_create_second_active_backlog,
+    lanesById['opl-domain-progress-runtime-guard-20260621']
+      .authority_boundary.can_create_second_active_backlog,
     false,
   );
   assert.ok(
-    lanesById['rca-source-morphology-tranche-20260621'].forbidden_scope.includes('AGUI'),
+    lanesById['opl-memory-artifact-lifecycle-boundary-20260621'].forbidden_scope.includes(
+      'artifact_body_mutation',
+    ),
   );
   assert.equal(readback.authority_boundary.can_create_second_active_backlog, false);
   assert.equal(readback.authority_boundary.can_claim_plan_completion, false);
@@ -157,6 +151,115 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   );
   assert.equal(
     readback.generated_hosted_surface_boundary.false_ready_guard.default_caller_evidence_worklist_can_authorize_physical_delete,
+    false,
+  );
+  assert.equal(
+    readback.domain_progress_transition_runtime_guard.surface_kind,
+    'opl_domain_progress_transition_runtime_guard_readback',
+  );
+  assert.equal(
+    readback.domain_progress_transition_runtime_guard.contract_identity.surface_kind,
+    'opl_domain_progress_transition_runtime_first_slice',
+  );
+  assert.equal(
+    readback.domain_progress_transition_runtime_guard.runtime_identity.runtime_id,
+    'opl_domain_progress_transition_runtime',
+  );
+  assert.equal(
+    readback.domain_progress_transition_runtime_guard.runtime_identity.runtime_owner,
+    'one-person-lab',
+  );
+  assert.equal(
+    readback.domain_progress_transition_runtime_guard.runtime_identity.not_a_new_brand_module,
+    true,
+  );
+  assert.equal(
+    readback.domain_progress_transition_runtime_guard
+      .physical_persistence_refs.runtime_live_readback_api,
+    'readDomainProgressTransitionRuntimeReadbackJsonl',
+  );
+  assert.equal(
+    readback.domain_progress_transition_runtime_guard
+      .physical_persistence_refs.live_readback_contract.complete_transaction_status,
+    'complete_transaction',
+  );
+  assert.equal(
+    readback.domain_progress_transition_runtime_guard
+      .physical_persistence_refs.live_readback_contract.incomplete_transaction_outcome_kind,
+    'blocked_incomplete_transaction',
+  );
+  assert.equal(
+    readback.domain_progress_transition_runtime_guard
+      .physical_persistence_refs.live_readback_contract
+      .projection_metadata_consumable_only_when_transaction_complete,
+    true,
+  );
+  assert.deepEqual(
+    readback.domain_progress_transition_runtime_guard.allowed_transition_decisions,
+    [
+      'execute_current_owner_delta',
+      'consume_terminal_closeout',
+      'materialize_recovery_action',
+      'wait_for_owner_with_resume_token',
+      'stop_with_stable_typed_blocker',
+      'stop_with_owner_receipt',
+    ],
+  );
+  assert.equal(
+    readback.domain_progress_transition_runtime_guard.decision_surface_policy.read_model_can_execute,
+    false,
+  );
+  assert.equal(
+    readback.domain_progress_transition_runtime_guard.policy_adapter_contract
+      .source_export_matches_stage_route_scheduler_contract,
+    true,
+  );
+  assert.equal(
+    readback.domain_progress_transition_runtime_guard.policy_adapter_contract
+      .normalized_request_surface,
+    'mas_domain_progress_transition_request',
+  );
+  assert.ok(
+    readback.domain_progress_transition_runtime_guard.policy_adapter_contract
+      .fail_closed_reasons.includes('domain_progress_policy_adapter_authority_overclaim'),
+  );
+  assert.ok(
+    readback.domain_progress_transition_runtime_guard.policy_adapter_contract
+      .forbidden_domain_adapter_outputs.includes('typed_blocker'),
+  );
+  assert.equal(
+    readback.domain_progress_transition_runtime_guard
+      .authority_boundary.runtime_can_write_domain_truth,
+    false,
+  );
+  assert.equal(
+    readback.domain_progress_transition_runtime_guard
+      .authority_boundary.runtime_can_sign_owner_receipt,
+    false,
+  );
+  assert.equal(
+    readback.domain_progress_transition_runtime_guard
+      .authority_boundary.runtime_can_create_typed_blocker,
+    false,
+  );
+  assert.equal(
+    readback.domain_progress_transition_runtime_guard
+      .authority_boundary.policy_adapter_can_create_owner_receipt,
+    false,
+  );
+  assert.equal(
+    readback.domain_progress_transition_runtime_guard
+      .false_ready_guard.complete_transaction_can_claim_domain_ready,
+    false,
+  );
+  assert.equal(
+    readback.domain_progress_transition_runtime_guard
+      .false_ready_guard.read_model_projection_consumable_can_claim_domain_progress,
+    false,
+  );
+  assert.equal(
+    readback.domain_progress_transition_runtime_guard
+      .false_ready_guard.non_advancing_apply_can_claim_paper_progress,
     false,
   );
   assert.equal(
