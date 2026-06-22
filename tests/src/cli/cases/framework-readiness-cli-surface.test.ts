@@ -54,10 +54,14 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   );
   assert.deepEqual(readback.current_tranche.selected_milestone_ids, [
     'strict_source_purity_private_wrapper_retirement',
+    'domain_pack_generated_hosted_surfaces',
+    'standard_agent_landing_acceptance_guard',
     'oma_script_to_pack_hygiene',
   ]);
   assert.deepEqual(readback.current_tranche.closed_or_advanced_structural_milestone_ids, [
+    'domain_pack_generated_hosted_surfaces',
     'strict_source_purity_private_wrapper_retirement',
+    'standard_agent_landing_acceptance_guard',
     'oma_script_to_pack_hygiene',
   ]);
   const milestonesById = Object.fromEntries(
@@ -185,28 +189,69 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     ),
   );
   assert.deepEqual(
-    lanesById['opl-tranche-backlog-readback-foldback-20260622'].milestone_ids,
-    ['strict_source_purity_private_wrapper_retirement'],
+    lanesById['opl-bookforge-foundry-membership-classification-20260622'].milestone_ids,
+    ['domain_pack_generated_hosted_surfaces', 'standard_agent_landing_acceptance_guard'],
   );
-  assert.equal(lanesById['opl-tranche-backlog-readback-foldback-20260622'].repo, 'one-person-lab');
+  assert.equal(
+    lanesById['opl-bookforge-foundry-membership-classification-20260622'].repo,
+    'one-person-lab',
+  );
   assert.ok(
-    lanesById['opl-tranche-backlog-readback-foldback-20260622'].non_live_completion_evidence_required.includes(
-      'framework_tranche_backlog_current_tranche_selects_MAG_RCA_OMA_OPL_foldback_lanes',
+    lanesById['opl-bookforge-foundry-membership-classification-20260622']
+      .non_live_completion_evidence_required.includes(
+        'OPL_agents_conformance_classifies_BookForge_as_support_extension',
+      ),
+  );
+  assert.ok(
+    lanesById['opl-bookforge-foundry-membership-classification-20260622']
+      .non_live_completion_evidence_required.includes(
+        'OPL_foundry_agent_os_unknown_non_standard_agent_still_blocks',
+      ),
+  );
+  assert.ok(
+    lanesById['opl-bookforge-foundry-membership-classification-20260622'].required_surfaces.includes(
+      'API_readback',
     ),
   );
   assert.ok(
-    lanesById['opl-tranche-backlog-readback-foldback-20260622'].non_live_completion_evidence_required.includes(
-      'framework_tranche_backlog_mas_conformance_residue_closeout_points_to_MAS_source_closeout_sha_with_latest_remote_ancestor_guard',
+    lanesById['opl-bookforge-foundry-membership-classification-20260622'].forbidden_scope.includes(
+      'BookForge_standard_agent_membership_claim',
     ),
   );
   assert.ok(
-    lanesById['opl-tranche-backlog-readback-foldback-20260622'].forbidden_scope.includes(
+    lanesById['opl-bookforge-foundry-membership-classification-20260622'].forbidden_scope.includes(
       'AGUI_update_or_foreground_resurrection',
     ),
   );
   assert.equal(
-    lanesById['opl-tranche-backlog-readback-foldback-20260622']
+    lanesById['opl-bookforge-foundry-membership-classification-20260622']
       .authority_boundary.can_claim_production_ready,
+    false,
+  );
+  assert.equal(
+    readback.foundry_support_extension_membership_readback.surface_kind,
+    'opl_foundry_support_extension_membership_readback',
+  );
+  assert.equal(
+    readback.foundry_support_extension_membership_readback.status,
+    'closed_structure_gate_not_live_evidence',
+  );
+  assert.deepEqual(
+    readback.foundry_support_extension_membership_readback.standard_member_agent_ids,
+    ['mas', 'mag', 'rca', 'oma'],
+  );
+  assert.deepEqual(
+    readback.foundry_support_extension_membership_readback.support_extension_agent_ids,
+    ['opl-bookforge'],
+  );
+  assert.equal(
+    readback.foundry_support_extension_membership_readback.false_ready_guard
+      .support_extension_pass_can_claim_standard_agent_membership,
+    false,
+  );
+  assert.equal(
+    readback.foundry_support_extension_membership_readback.authority_boundary
+      .can_promote_bookforge_to_standard_foundry_agent_os_member,
     false,
   );
   assert.deepEqual(
@@ -1371,7 +1416,7 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   );
   assert.ok(
     readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
-      lane.lane_id === 'opl-tranche-backlog-readback-foldback-20260622'
+      lane.lane_id === 'opl-bookforge-foundry-membership-classification-20260622'
       && lane.repo === 'one-person-lab'
     )),
   );

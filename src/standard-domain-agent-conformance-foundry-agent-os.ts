@@ -19,8 +19,39 @@ function canonicalFoundryAgentId(report: RepoConformanceReport) {
     redcubeai: 'rca',
     oma: 'oma',
     oplmetaagent: 'oma',
+    bookforge: 'opl-bookforge',
+    oplbookforge: 'opl-bookforge',
   };
   return aliases[normalized] ?? rawId;
+}
+
+const FOUNDRY_AGENT_OS_SUPPORT_EXTENSIONS = [
+  {
+    canonical_agent_id: 'opl-bookforge',
+    normalized_ids: ['oplbookforge', 'bookforge'],
+    support_extension_role:
+      'generated_surface_only_projection_not_foundry_agent_os_standard_member',
+    policy_refs: [
+      'contracts/opl-framework/target-operating-architecture-contract.json#foundry_agent_os_standard',
+      'src/foundry-agent-cli-spine.ts#FOUNDRY_AGENT_PEERS.generated_surface_only',
+      'src/standard-domain-agent-family-repos.ts#DEFAULT_FAMILY_REPOS',
+    ],
+  },
+] as const;
+
+function normalizedAgentId(value: string | null | undefined) {
+  return value?.toLowerCase().replace(/[^a-z0-9]/g, '') ?? '';
+}
+
+function supportExtensionFor(report: RepoConformanceReport, canonicalAgentId: string) {
+  const ids = [
+    normalizedAgentId(canonicalAgentId),
+    normalizedAgentId(report.requested_agent_id),
+    normalizedAgentId(report.domain_id),
+  ];
+  return FOUNDRY_AGENT_OS_SUPPORT_EXTENSIONS.find((extension) =>
+    extension.normalized_ids.some((id) => ids.includes(id))
+  ) ?? null;
 }
 
 function buildFoundryAgentOsDomainConformance(
@@ -29,6 +60,12 @@ function buildFoundryAgentOsDomainConformance(
   flagshipMapping: FrameworkContracts['targetOperatingArchitecture']['flagship_experience_mapping'],
 ) {
   const canonicalAgentId = canonicalFoundryAgentId(report);
+  const supportExtension = supportExtensionFor(report, canonicalAgentId);
+  const standardMembership = expectedAgents.includes(canonicalAgentId)
+    ? 'standard_domain_agent'
+    : supportExtension
+      ? 'support_extension'
+      : 'unknown_non_standard_agent';
   const defaultEntrySourceOfWorkGate = report.generated_interface_checks.default_entry_source_of_work_gate;
   const stageDefaultReadSurface = report.stage_operating_principle_checks.default_read_surface;
   const capabilityRegistryBlockers = [
@@ -115,7 +152,7 @@ function buildFoundryAgentOsDomainConformance(
       : 'golden_path_guard_can_write_domain_truth_must_be_false',
   ].filter((entry): entry is string => Boolean(entry));
   const blockers = unique([
-    expectedAgents.includes(canonicalAgentId)
+    standardMembership !== 'unknown_non_standard_agent'
       ? null
       : `domain_not_in_foundry_agent_os_standard:${report.requested_agent_id ?? report.domain_id}`,
     ...defaultReadRootBlockers,
@@ -128,6 +165,10 @@ function buildFoundryAgentOsDomainConformance(
     domain_id: report.domain_id,
     requested_agent_id: report.requested_agent_id,
     canonical_agent_id: canonicalAgentId,
+    standard_membership: standardMembership,
+    foundry_agent_os_standard_member: standardMembership === 'standard_domain_agent',
+    support_extension_role: supportExtension?.support_extension_role ?? null,
+    support_extension_policy_refs: supportExtension?.policy_refs ?? [],
     status: statusFromBlockers(blockers),
     default_read_root: stageDefaultReadSurface.root,
     raw_worklist_generates_default_next_action: stageDefaultReadSurface.raw_worklist_default !== false,
@@ -175,6 +216,16 @@ export function buildFoundryAgentOsConformance(
     buildFoundryAgentOsDomainConformance(report, expectedAgents, flagshipMapping)
   );
   const reportedAgentIds = domainReports
+    .filter((report) => report.standard_membership === 'standard_domain_agent')
+    .map((report) => report.canonical_agent_id)
+    .filter((agentId): agentId is string => typeof agentId === 'string');
+  const supportExtensionReports = domainReports
+    .filter((report) => report.standard_membership === 'support_extension');
+  const supportExtensionAgentIds = supportExtensionReports
+    .map((report) => report.canonical_agent_id)
+    .filter((agentId): agentId is string => typeof agentId === 'string');
+  const unknownNonStandardAgentIds = domainReports
+    .filter((report) => report.standard_membership === 'unknown_non_standard_agent')
     .map((report) => report.canonical_agent_id)
     .filter((agentId): agentId is string => typeof agentId === 'string');
   const missingAgents = expectedAgents.filter((agentId) => !reportedAgentIds.includes(agentId));
@@ -202,6 +253,9 @@ export function buildFoundryAgentOsConformance(
     source_pattern_ref: standard.source_pattern_ref,
     applies_to_domain_agents: expectedAgents,
     observed_domain_agent_ids: reportedAgentIds,
+    observed_support_extension_agent_ids: supportExtensionAgentIds,
+    observed_support_extension_domain_ids: supportExtensionReports.map((report) => report.domain_id),
+    unknown_non_standard_agent_ids: unknownNonStandardAgentIds,
     missing_domain_agent_ids: missingAgents,
     conformance_required_claims: standard.cross_agent_conformance_required_claims,
     forbidden_claims: standard.forbidden_claims,
@@ -217,6 +271,23 @@ export function buildFoundryAgentOsConformance(
       route_required_ref_missing: standard.capability_registry_boundary.route_required_ref_missing,
     },
     flagship_experience_mapping: flagshipMapping,
+    support_extension_policy: {
+      support_extensions_are_not_foundry_agent_os_standard_members: true,
+      support_extension_agent_ids: FOUNDRY_AGENT_OS_SUPPORT_EXTENSIONS.map((extension) =>
+        extension.canonical_agent_id
+      ),
+      support_extension_roles: FOUNDRY_AGENT_OS_SUPPORT_EXTENSIONS.map((extension) => ({
+        agent_id: extension.canonical_agent_id,
+        support_extension_role: extension.support_extension_role,
+        policy_refs: extension.policy_refs,
+      })),
+      false_ready_boundary: {
+        support_extension_pass_can_claim_standard_agent_membership: false,
+        support_extension_pass_can_claim_domain_ready: false,
+        support_extension_pass_can_claim_production_ready: false,
+        support_extension_pass_can_claim_foundry_agent_os_complete: false,
+      },
+    },
     domains: domainReports,
     authority_boundary: {
       conformance_pass_can_claim_domain_ready: false,

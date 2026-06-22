@@ -14,6 +14,7 @@ import {
   APP_SHELL_CONVERGENCE_STRUCTURE_READBACK,
   CROSS_REPO_REF_INTEGRITY_GUARD,
   CURRENT_TRANCHE_LANES,
+  FOUNDRY_SUPPORT_EXTENSION_MEMBERSHIP_READBACK,
   FRAMEWORK_TRANCHE_MILESTONES,
   MAS_CONFORMANCE_RESIDUE_CLOSEOUT_READBACK,
 } from './framework-tranche-backlog-parts/tranche-data.ts';
@@ -159,6 +160,8 @@ export function buildFrameworkTrancheBacklogReadback(contracts: FrameworkContrac
       cross_repo_ref_integrity_guard: CROSS_REPO_REF_INTEGRITY_GUARD,
       mas_conformance_residue_closeout_readback:
         MAS_CONFORMANCE_RESIDUE_CLOSEOUT_READBACK,
+      foundry_support_extension_membership_readback:
+        FOUNDRY_SUPPORT_EXTENSION_MEMBERSHIP_READBACK,
       domain_source_ref_integrity_guard:
         buildDomainSourceRefIntegrityGuard(NO_SECOND_TRUTH_AUTHORITY_BOUNDARY),
       authority_boundary: { ...NO_SECOND_TRUTH_AUTHORITY_BOUNDARY },

@@ -47,6 +47,9 @@ test('agents conformance exposes Foundry Agent OS family standard without author
   assert.equal(foundry.pattern_id, 'foundry_agent_os_standard.v1');
   assert.deepEqual(foundry.applies_to_domain_agents, ['mas', 'mag', 'rca', 'oma']);
   assert.deepEqual(foundry.observed_domain_agent_ids, ['mas', 'mag', 'rca', 'oma']);
+  assert.deepEqual(foundry.observed_support_extension_agent_ids, []);
+  assert.deepEqual(foundry.observed_support_extension_domain_ids, []);
+  assert.deepEqual(foundry.unknown_non_standard_agent_ids, []);
   assert.deepEqual(foundry.missing_domain_agent_ids, []);
   assert.deepEqual(foundry.capability_registry_boundary.owner_modules, [
     'atlas',
@@ -124,9 +127,31 @@ test('agents conformance exposes Foundry Agent OS family standard without author
   assert.equal(foundry.flagship_experience_mapping.false_ready_claims.includes('paper_done'), true);
   assert.equal(foundry.flagship_experience_mapping.false_ready_claims.includes('brand_l5_done'), true);
   assert.equal(foundry.flagship_experience_mapping.false_ready_claims.includes('production_ready'), true);
+  assert.equal(
+    foundry.support_extension_policy.support_extensions_are_not_foundry_agent_os_standard_members,
+    true,
+  );
+  assert.equal(
+    foundry.support_extension_policy.support_extension_agent_ids.includes('opl-bookforge'),
+    true,
+  );
+  assert.equal(
+    foundry.support_extension_policy.false_ready_boundary
+      .support_extension_pass_can_claim_standard_agent_membership,
+    false,
+  );
+  assert.equal(
+    foundry.support_extension_policy.false_ready_boundary
+      .support_extension_pass_can_claim_foundry_agent_os_complete,
+    false,
+  );
 
   for (const domain of foundry.domains) {
     assert.equal(domain.status, 'passed');
+    assert.equal(domain.standard_membership, 'standard_domain_agent');
+    assert.equal(domain.foundry_agent_os_standard_member, true);
+    assert.equal(domain.support_extension_role, null);
+    assert.deepEqual(domain.support_extension_policy_refs, []);
     assert.equal(domain.default_read_root, 'current_owner_delta');
     assert.equal(domain.raw_worklist_generates_default_next_action, false);
     assert.equal(domain.provider_completion_counts_as_domain_completion, false);
@@ -183,8 +208,114 @@ test('Foundry Agent OS canonicalizes OPL Meta Agent as OMA without renaming doma
   assert.equal(oma.domain_id, 'opl-meta-agent');
   assert.equal(oma.requested_agent_id, 'opl-meta-agent');
   assert.equal(oma.canonical_agent_id, 'oma');
+  assert.equal(oma.standard_membership, 'standard_domain_agent');
+  assert.equal(oma.foundry_agent_os_standard_member, true);
   assert.equal(
     oma.blockers.includes('domain_not_in_foundry_agent_os_standard:opl-meta-agent'),
     false,
+  );
+});
+
+test('Foundry Agent OS classifies BookForge as support extension without adding it to the standard set', () => {
+  const masRepo = buildReadyAgentRepo();
+  retargetReadyRepo(masRepo, 'med-autoscience', 'Med Auto Science');
+
+  const magRepo = buildReadyAgentRepo();
+  retargetReadyRepoToMag(magRepo);
+  configureReadyMagMorphology(magRepo);
+
+  const rcaRepo = buildReadyAgentRepo();
+  retargetReadyRepo(rcaRepo, 'redcube-ai', 'RedCube AI');
+  configureReadyRcaMorphology(rcaRepo);
+
+  const omaRepo = buildReadyAgentRepo();
+  retargetReadyRepo(omaRepo, 'opl-meta-agent', 'OPL Meta Agent');
+  configureReadyMetaMorphology(omaRepo);
+
+  const bookForgeRepo = buildReadyAgentRepo();
+  retargetReadyRepo(bookForgeRepo, 'opl-bookforge', 'OPL Book Forge');
+
+  const payload = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `mas=${masRepo}`,
+    '--agent',
+    `mag=${magRepo}`,
+    '--agent',
+    `rca=${rcaRepo}`,
+    '--agent',
+    `oma=${omaRepo}`,
+    '--agent',
+    `opl-bookforge=${bookForgeRepo}`,
+  ]);
+  const foundry = payload.standard_domain_agent_conformance.foundry_agent_os_conformance;
+  const bookForge = foundry.domains.find((domain: { canonical_agent_id: string }) =>
+    domain.canonical_agent_id === 'opl-bookforge'
+  );
+
+  assert.equal(foundry.status, 'passed');
+  assert.deepEqual(foundry.applies_to_domain_agents, ['mas', 'mag', 'rca', 'oma']);
+  assert.deepEqual(foundry.observed_domain_agent_ids, ['mas', 'mag', 'rca', 'oma']);
+  assert.deepEqual(foundry.observed_support_extension_agent_ids, ['opl-bookforge']);
+  assert.deepEqual(foundry.observed_support_extension_domain_ids, ['opl-bookforge']);
+  assert.deepEqual(foundry.unknown_non_standard_agent_ids, []);
+  assert.deepEqual(foundry.missing_domain_agent_ids, []);
+  assert.equal(
+    foundry.blockers.includes('domain_not_in_foundry_agent_os_standard:opl-bookforge'),
+    false,
+  );
+  assert.ok(bookForge);
+  assert.equal(bookForge.domain_id, 'opl-bookforge');
+  assert.equal(bookForge.requested_agent_id, 'opl-bookforge');
+  assert.equal(bookForge.standard_membership, 'support_extension');
+  assert.equal(bookForge.foundry_agent_os_standard_member, false);
+  assert.equal(
+    bookForge.support_extension_role,
+    'generated_surface_only_projection_not_foundry_agent_os_standard_member',
+  );
+  assert.equal(
+    bookForge.support_extension_policy_refs.includes(
+      'src/foundry-agent-cli-spine.ts#FOUNDRY_AGENT_PEERS.generated_surface_only',
+    ),
+    true,
+  );
+  assert.equal(bookForge.status, 'passed');
+  assert.equal(bookForge.false_authority_flags.conformance_pass_can_claim_domain_ready, false);
+  assert.equal(bookForge.false_authority_flags.conformance_pass_can_claim_production_ready, false);
+  assert.equal(
+    foundry.support_extension_policy.false_ready_boundary
+      .support_extension_pass_can_claim_domain_ready,
+    false,
+  );
+  assert.equal(
+    foundry.support_extension_policy.false_ready_boundary
+      .support_extension_pass_can_claim_production_ready,
+    false,
+  );
+});
+
+test('Foundry Agent OS still blocks unknown non-standard agents', () => {
+  const unknownRepo = buildReadyAgentRepo();
+  retargetReadyRepo(unknownRepo, 'custom-agent', 'Custom Agent');
+
+  const payload = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `custom-agent=${unknownRepo}`,
+  ]);
+  const foundry = payload.standard_domain_agent_conformance.foundry_agent_os_conformance;
+  const unknown = foundry.domains[0];
+
+  assert.equal(foundry.status, 'blocked');
+  assert.deepEqual(foundry.observed_domain_agent_ids, []);
+  assert.deepEqual(foundry.observed_support_extension_agent_ids, []);
+  assert.deepEqual(foundry.unknown_non_standard_agent_ids, ['custom-agent']);
+  assert.equal(unknown.standard_membership, 'unknown_non_standard_agent');
+  assert.equal(unknown.foundry_agent_os_standard_member, false);
+  assert.equal(
+    unknown.blockers.includes('domain_not_in_foundry_agent_os_standard:custom-agent'),
+    true,
   );
 });
