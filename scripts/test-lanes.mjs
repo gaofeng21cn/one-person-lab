@@ -371,6 +371,7 @@ const lanes = {
       'tests/src/cli/cases/runtime-manifest-cache-timeout.test.ts',
       'tests/src/cli/cases/framework-readiness-attention-semantics.test.ts',
       'tests/src/cli/cases/framework-readiness-cli-surface.test.ts',
+      'tests/src/cli/cases/framework-tranche-active-cleanup-no-resurrection.test.ts',
       'tests/src/cli/cases/framework-readiness-oma-managed-install.test.ts',
       'tests/src/cli/cases/framework-readiness-oma-app-live-path.test.ts',
       'tests/src/cli/cases/framework-readiness-oma-production-consumption-ledger.test.ts',

@@ -1,3 +1,4 @@
+export { buildActiveCleanupNoResurrectionGuardReadback } from './active-cleanup-no-resurrection-guard.ts';
 export { buildDomainProgressTransitionRuntimeGuardReadback } from './domain-progress-runtime-guard.ts';
 export { buildGeneratedHostedBoundaryReadback } from './generated-hosted-boundary-guard.ts';
 export { buildMemoryArtifactLifecycleBoundaryGuardReadback } from './memory-artifact-lifecycle-boundary-guard.ts';

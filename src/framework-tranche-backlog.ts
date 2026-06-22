@@ -2,6 +2,7 @@ import {
   buildDomainSourceRefIntegrityGuard,
 } from './framework-tranche-backlog-parts/domain-source-ref-integrity-guard.ts';
 import {
+  buildActiveCleanupNoResurrectionGuardReadback,
   buildDomainProgressTransitionRuntimeGuardReadback,
   buildGeneratedHostedBoundaryReadback,
   buildMemoryArtifactLifecycleBoundaryGuardReadback,
@@ -183,6 +184,8 @@ export function buildFrameworkTrancheBacklogReadback(contracts: FrameworkContrac
         buildMemoryArtifactLifecycleBoundaryGuardReadback(),
       runtime_environment_substrate_guard: buildRuntimeEnvironmentSubstrateGuardReadback(contracts),
       ordinary_progress_guard: buildOrdinaryProgressGuardReadback(contracts),
+      active_cleanup_no_resurrection_guard:
+        buildActiveCleanupNoResurrectionGuardReadback(),
       milestones: FRAMEWORK_TRANCHE_MILESTONES,
     },
   };
