@@ -11,6 +11,7 @@ import {
   buildRuntimeEnvironmentSubstrateGuardReadback,
   buildStandardAgentLandingAcceptanceGuardReadback,
 } from './framework-tranche-backlog-parts/guard-readbacks.ts';
+import { buildOperatorCompactReadbackGuard } from './framework-tranche-backlog-parts/operator-compact-readback-guard.ts';
 import {
   APP_SHELL_CONVERGENCE_STRUCTURE_READBACK,
   CROSS_REPO_REF_INTEGRITY_GUARD,
@@ -19,6 +20,7 @@ import {
   FRAMEWORK_TRANCHE_MILESTONES,
   MAS_CONFORMANCE_RESIDUE_CLOSEOUT_READBACK,
 } from './framework-tranche-backlog-parts/tranche-data.ts';
+import { buildTrancheRollforwardGuard } from './framework-tranche-backlog-parts/tranche-rollforward-guard.ts';
 import {
   NO_SECOND_TRUTH_AUTHORITY_BOUNDARY,
   type MilestoneState,
@@ -40,28 +42,23 @@ function milestoneCounts() {
   );
 }
 
-function selectedMilestoneIds() {
-  return [...new Set(CURRENT_TRANCHE_LANES.flatMap((lane) => lane.milestone_ids))];
-}
-
-function buildCurrentTrancheReadback() {
-  const selectedIds = selectedMilestoneIds();
-  const selectedMilestoneSet = new Set(selectedIds);
+function buildCurrentTrancheReadback(
+  rollforwardGuard: ReturnType<typeof buildTrancheRollforwardGuard>,
+) {
   return {
-    tranche_id: 'opl-family-ideal-operating-model-tranche-20260622',
+    tranche_id: 'opl-family-ideal-operating-model-tranche-next-selection',
     tranche_role:
-      'non_live_functional_structure_milestone_tranche_not_full_completion_audit',
-    selected_lane_count: CURRENT_TRANCHE_LANES.length,
-    selected_lane_count_within_policy:
-      CURRENT_TRANCHE_LANES.length >= 2 && CURRENT_TRANCHE_LANES.length <= 4,
-    selected_milestone_ids: selectedIds,
-    closed_or_advanced_structural_milestone_ids:
-      FRAMEWORK_TRANCHE_MILESTONES
-        .filter((milestone) => (
-          selectedMilestoneSet.has(milestone.milestone_id)
-          && milestone.state !== 'open'
-        ))
-        .map((milestone) => milestone.milestone_id),
+      'fresh_non_live_functional_structure_selection_required_not_full_completion_audit',
+    current_work_order_status:
+      rollforwardGuard.next_selection_required
+        ? 'no_active_non_live_structure_lane_selected'
+        : 'active_or_partial_tranche_present',
+    selected_lane_count: 0,
+    selected_lane_count_within_policy: false,
+    selected_milestone_ids: [],
+    closed_or_advanced_structural_milestone_ids: [],
+    next_selection_required: rollforwardGuard.next_selection_required,
+    closed_tranche_ref: rollforwardGuard.archived_tranche_readback.tranche_id,
     lane_selection_policy: {
       prefer_open_coherent_worktree_owned_by_current_session: true,
       otherwise_select_highest_value_clean_repo_gap: true,
@@ -99,24 +96,18 @@ function buildCurrentTrancheReadback() {
       pushed_commits_can_claim_runtime_ready: false,
       closed_structure_gate_can_claim_live_evidence_complete: false,
       remote_sha_readback_can_claim_domain_ready: false,
+      no_active_selection_can_claim_goal_complete: false,
     },
-    lanes: CURRENT_TRANCHE_LANES.map((lane) => ({
-      ...lane,
-      milestone_priorities: lane.milestone_ids.map((milestoneId) => (
-        FRAMEWORK_TRANCHE_MILESTONES.find((milestone) => milestone.milestone_id === milestoneId)?.priority
-        ?? 'P2'
-      )),
-      milestone_states: lane.milestone_ids.map((milestoneId) => (
-        FRAMEWORK_TRANCHE_MILESTONES.find((milestone) => milestone.milestone_id === milestoneId)?.state
-        ?? 'open'
-      )),
-      authority_boundary: { ...NO_SECOND_TRUTH_AUTHORITY_BOUNDARY },
-    })),
+    lanes: [],
   };
 }
 
 export function buildFrameworkTrancheBacklogReadback(contracts: FrameworkContracts) {
   const milestone_state_counts = milestoneCounts();
+  const trancheRollforwardGuard = buildTrancheRollforwardGuard(
+    CURRENT_TRANCHE_LANES,
+    FRAMEWORK_TRANCHE_MILESTONES,
+  );
   return {
     version: 'g2',
     framework_tranche_backlog: {
@@ -149,7 +140,9 @@ export function buildFrameworkTrancheBacklogReadback(contracts: FrameworkContrac
         live_evidence_deferred: true,
         docs_tests_readmodel_refs_only_do_not_count_as_ready: true,
       },
-      current_tranche: buildCurrentTrancheReadback(),
+      current_tranche: buildCurrentTrancheReadback(trancheRollforwardGuard),
+      tranche_rollforward_guard: trancheRollforwardGuard,
+      last_closed_tranche: trancheRollforwardGuard.archived_tranche_readback,
       priority_order: ['P0', 'P1', 'P2'] as const,
       forbidden_surfaces: ['AGUI/agui-codex'],
       app_shell_policy: {
@@ -186,6 +179,8 @@ export function buildFrameworkTrancheBacklogReadback(contracts: FrameworkContrac
       ordinary_progress_guard: buildOrdinaryProgressGuardReadback(contracts),
       active_cleanup_no_resurrection_guard:
         buildActiveCleanupNoResurrectionGuardReadback(),
+      operator_compact_readback_guard:
+        buildOperatorCompactReadbackGuard(contracts),
       milestones: FRAMEWORK_TRANCHE_MILESTONES,
     },
   };

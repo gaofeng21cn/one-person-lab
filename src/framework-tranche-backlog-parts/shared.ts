@@ -28,6 +28,32 @@ export type TrancheExecutionLane = {
   forbidden_scope: string[];
 };
 
+export type OperatorCompactReadbackSurface = {
+  surface_id: string;
+  surface_kind: string;
+  compact_command: string;
+  full_detail_command: string;
+  source_surface_ref: string;
+  derived_from_full_readback: boolean;
+  default_full_readback_unchanged: boolean;
+  retained_sections: string[];
+  omitted_sections: string[];
+  authority_boundary: JsonRecord;
+};
+
+export type OperatorCompactReadbackContractSubset = {
+  surface_kind: string;
+  version: string;
+  owner: string;
+  state: string;
+  default_full_readback_unchanged: boolean;
+  compact_surfaces: OperatorCompactReadbackSurface[];
+  operator_use: JsonRecord;
+  no_second_truth_guard: JsonRecord;
+  false_ready_guard: JsonRecord;
+  not_authorized_claims: string[];
+};
+
 export type GeneratedHostedBoundarySurface = {
   surface_id: string;
   owner: string;

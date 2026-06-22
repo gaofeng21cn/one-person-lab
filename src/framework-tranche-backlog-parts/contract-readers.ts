@@ -20,6 +20,7 @@ import type {
   FamilyReadbackUnavailable,
   GeneratedInterfacesFamilyReadback,
   JsonRecord,
+  OperatorCompactReadbackContractSubset,
   RuntimeEnvironmentSubstrateContractSubset,
   SchemaContractIdentity,
 } from './shared.ts';
@@ -173,6 +174,57 @@ export function readDomainPackCompilerContract(contractsDir: string): DomainPack
         };
       }),
     },
+  };
+}
+
+export function readOperatorCompactReadbackContract(
+  contractsDir: string,
+): OperatorCompactReadbackContractSubset {
+  const filePath = path.join(contractsDir, 'operator-compact-readback-contract.json');
+  const parsed = readJsonObject(filePath, 'operator-compact-readback-contract.json');
+  const surfaces = parsed.compact_surfaces;
+  if (!Array.isArray(surfaces)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'operator-compact-readback-contract.json must contain a compact_surfaces array.',
+      { file: filePath, field: 'compact_surfaces' },
+    );
+  }
+
+  return {
+    surface_kind: stringField(parsed, 'surface_kind', filePath),
+    version: stringField(parsed, 'version', filePath),
+    owner: stringField(parsed, 'owner', filePath),
+    state: stringField(parsed, 'state', filePath),
+    default_full_readback_unchanged:
+      booleanField(parsed, 'default_full_readback_unchanged', filePath),
+    compact_surfaces: surfaces.map((surface) => {
+      if (!isRecord(surface)) {
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'Each operator compact readback surface must be an object.',
+          { file: filePath, field: 'compact_surfaces' },
+        );
+      }
+      return {
+        surface_id: stringField(surface, 'surface_id', filePath),
+        surface_kind: stringField(surface, 'surface_kind', filePath),
+        compact_command: stringField(surface, 'compact_command', filePath),
+        full_detail_command: stringField(surface, 'full_detail_command', filePath),
+        source_surface_ref: stringField(surface, 'source_surface_ref', filePath),
+        derived_from_full_readback:
+          booleanField(surface, 'derived_from_full_readback', filePath),
+        default_full_readback_unchanged:
+          booleanField(surface, 'default_full_readback_unchanged', filePath),
+        retained_sections: stringArrayField(surface, 'retained_sections', filePath),
+        omitted_sections: stringArrayField(surface, 'omitted_sections', filePath),
+        authority_boundary: recordField(surface, 'authority_boundary', filePath),
+      };
+    }),
+    operator_use: recordField(parsed, 'operator_use', filePath),
+    no_second_truth_guard: recordField(parsed, 'no_second_truth_guard', filePath),
+    false_ready_guard: recordField(parsed, 'false_ready_guard', filePath),
+    not_authorized_claims: stringArrayField(parsed, 'not_authorized_claims', filePath),
   };
 }
 

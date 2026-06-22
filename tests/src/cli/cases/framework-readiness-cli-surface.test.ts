@@ -46,24 +46,50 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(readback.milestone_state_counts.open, 0);
   assert.equal(readback.milestone_state_counts.partial, 0);
   assert.equal(readback.milestone_state_counts.closed_structure_gate, 8);
-  assert.equal(readback.current_tranche.selected_lane_count, 4);
-  assert.equal(readback.current_tranche.selected_lane_count_within_policy, true);
+  assert.equal(readback.current_tranche.selected_lane_count, 0);
+  assert.equal(readback.current_tranche.selected_lane_count_within_policy, false);
   assert.equal(
     readback.current_tranche.tranche_role,
-    'non_live_functional_structure_milestone_tranche_not_full_completion_audit',
+    'fresh_non_live_functional_structure_selection_required_not_full_completion_audit',
   );
-  assert.deepEqual(readback.current_tranche.selected_milestone_ids, [
-    'strict_source_purity_private_wrapper_retirement',
-    'domain_pack_generated_hosted_surfaces',
-    'standard_agent_landing_acceptance_guard',
-    'oma_script_to_pack_hygiene',
-  ]);
-  assert.deepEqual(readback.current_tranche.closed_or_advanced_structural_milestone_ids, [
-    'domain_pack_generated_hosted_surfaces',
-    'strict_source_purity_private_wrapper_retirement',
-    'standard_agent_landing_acceptance_guard',
-    'oma_script_to_pack_hygiene',
-  ]);
+  assert.equal(
+    readback.current_tranche.current_work_order_status,
+    'no_active_non_live_structure_lane_selected',
+  );
+  assert.deepEqual(readback.current_tranche.selected_milestone_ids, []);
+  assert.deepEqual(readback.current_tranche.closed_or_advanced_structural_milestone_ids, []);
+  assert.equal(readback.current_tranche.next_selection_required, true);
+  assert.equal(
+    readback.current_tranche.closed_tranche_ref,
+    'opl-family-ideal-operating-model-tranche-20260622',
+  );
+  assert.deepEqual(readback.current_tranche.lanes, []);
+  assert.equal(
+    readback.tranche_rollforward_guard.surface_kind,
+    'opl_framework_tranche_rollforward_guard',
+  );
+  assert.equal(
+    readback.tranche_rollforward_guard.status,
+    'closed_tranche_archived_next_selection_required',
+  );
+  assert.equal(readback.tranche_rollforward_guard.source_tranche_is_current_work_order, false);
+  assert.equal(readback.tranche_rollforward_guard.selected_lane_count, 4);
+  assert.equal(readback.tranche_rollforward_guard.closed_lane_count, 4);
+  assert.equal(readback.tranche_rollforward_guard.active_or_partial_lane_count, 0);
+  assert.equal(readback.tranche_rollforward_guard.next_selection_required, true);
+  assert.equal(
+    readback.tranche_rollforward_guard.next_selection_policy.can_select_archived_lane_without_new_gap,
+    false,
+  );
+  assert.equal(
+    readback.tranche_rollforward_guard.false_ready_guard.archived_tranche_can_claim_full_goal_complete,
+    false,
+  );
+  assert.equal(
+    readback.last_closed_tranche.tranche_id,
+    'opl-family-ideal-operating-model-tranche-20260622',
+  );
+  assert.equal(readback.last_closed_tranche.selected_lane_count, 4);
   const milestonesById = Object.fromEntries(
     readback.milestones.map((milestone: { milestone_id: string }) => [milestone.milestone_id, milestone]),
   );
@@ -106,7 +132,7 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.ok(readback.current_tranche.required_closeout_evidence.includes('remote_sha_readback_equal'));
   assert.ok(readback.current_tranche.required_closeout_evidence.includes('worktree_and_branch_cleanup'));
   const lanesById = Object.fromEntries(
-    readback.current_tranche.lanes.map((lane: { lane_id: string }) => [lane.lane_id, lane]),
+    readback.last_closed_tranche.lanes.map((lane: { lane_id: string }) => [lane.lane_id, lane]),
   );
   assert.deepEqual(
     lanesById['mag-source-purity-cli-readback-20260622'].milestone_ids,
@@ -298,6 +324,49 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(readback.authority_boundary.can_claim_plan_completion, false);
   assert.equal(readback.authority_boundary.can_claim_domain_ready, false);
   assert.equal(readback.false_ready_guard.plan_completion_audit_required_for_full_goal_completion, true);
+  assert.equal(
+    readback.operator_compact_readback_guard.surface_kind,
+    'opl_operator_compact_readback_guard',
+  );
+  assert.equal(
+    readback.operator_compact_readback_guard.status,
+    'closed_structure_gate_not_live_evidence',
+  );
+  assert.deepEqual(
+    readback.operator_compact_readback_guard.compact_surface_ids,
+    ['framework_readiness_compact', 'framework_operating_maturity_compact'],
+  );
+  assert.equal(readback.operator_compact_readback_guard.compact_surface_count, 2);
+  assert.equal(
+    readback.operator_compact_readback_guard.no_second_truth_guard
+      .compact_surfaces_can_be_source_of_truth,
+    false,
+  );
+  assert.equal(
+    readback.operator_compact_readback_guard.structural_closeout_guard.default_full_readback_unchanged,
+    true,
+  );
+  assert.equal(
+    readback.operator_compact_readback_guard.structural_closeout_guard
+      .does_not_claim_lower_compute_cost,
+    true,
+  );
+  assert.deepEqual(
+    readback.operator_compact_readback_guard.structural_closeout_guard.requires_full_detail_for,
+    [
+      'raw audit drilldown inspection',
+      'owner evidence intake review',
+      'evidence worklist inspection',
+      'provider or App release evidence review',
+      'diagnostic payload debugging',
+      'Plan Completion Audit',
+    ],
+  );
+  assert.equal(
+    readback.operator_compact_readback_guard.authority_boundary
+      .compact_readback_can_claim_goal_complete,
+    false,
+  );
   assert.equal(
     readback.generated_hosted_surface_boundary.surface_kind,
     'opl_generated_hosted_surface_authority_boundary_readback',
@@ -1403,25 +1472,25 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     false,
   );
   assert.ok(
-    readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
+    readback.last_closed_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
       lane.lane_id === 'mag-source-purity-cli-readback-20260622'
       && lane.repo === 'med-autogrant'
     )),
   );
   assert.ok(
-    readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
+    readback.last_closed_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
       lane.lane_id === 'rca-tail-owner-delta-readback-20260622'
       && lane.repo === 'redcube-ai'
     )),
   );
   assert.ok(
-    readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
+    readback.last_closed_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
       lane.lane_id === 'opl-bookforge-foundry-membership-classification-20260622'
       && lane.repo === 'one-person-lab'
     )),
   );
   assert.ok(
-    readback.current_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
+    readback.last_closed_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
       lane.lane_id === 'opl-oma-conformance-residue-classification-20260622'
       && lane.repo === 'one-person-lab'
     )),
