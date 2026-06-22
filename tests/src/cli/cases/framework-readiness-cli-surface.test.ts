@@ -191,7 +191,12 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(lanesById['opl-tranche-backlog-readback-foldback-20260622'].repo, 'one-person-lab');
   assert.ok(
     lanesById['opl-tranche-backlog-readback-foldback-20260622'].non_live_completion_evidence_required.includes(
-      'framework_tranche_backlog_current_tranche_selects_MAG_RCA_OPL_foldback_lanes',
+      'framework_tranche_backlog_current_tranche_selects_MAG_RCA_OMA_OPL_foldback_lanes',
+    ),
+  );
+  assert.ok(
+    lanesById['opl-tranche-backlog-readback-foldback-20260622'].non_live_completion_evidence_required.includes(
+      'framework_tranche_backlog_mas_conformance_residue_closeout_points_to_MAS_latest_remote_sha',
     ),
   );
   assert.ok(
@@ -367,6 +372,58 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   assert.equal(
     readback.cross_repo_ref_integrity_guard.false_ready_guard
       .ref_integrity_pass_can_claim_plan_completion,
+    false,
+  );
+  assert.equal(
+    readback.mas_conformance_residue_closeout_readback.surface_kind,
+    'opl_family_mas_conformance_residue_closeout_readback',
+  );
+  assert.equal(
+    readback.mas_conformance_residue_closeout_readback.status,
+    'closed_structure_gate_not_live_evidence',
+  );
+  assert.equal(
+    readback.mas_conformance_residue_closeout_readback.absorbed_origin_main_sha,
+    '092ce099b2e196e08998f5ef5725c13d5896d217',
+  );
+  assert.equal(
+    readback.mas_conformance_residue_closeout_readback.family_conformance_readback
+      .structural_conformance_status,
+    'passed',
+  );
+  assert.equal(
+    readback.mas_conformance_residue_closeout_readback.family_conformance_readback
+      .blocked_count,
+    0,
+  );
+  assert.equal(
+    readback.mas_conformance_residue_closeout_readback.closed_residue_boundary
+      .progress_portal_summary_status,
+    'suppressed_legacy_private_control_owner',
+  );
+  assert.equal(
+    readback.mas_conformance_residue_closeout_readback.closed_residue_boundary
+      .legacy_marker_literal_resurrection_allowed,
+    false,
+  );
+  assert.ok(
+    readback.mas_conformance_residue_closeout_readback.non_live_evidence.includes(
+      'OPL_agents_conformance_family_defaults_structural_passed_blocked_count_zero_after_MAS_remote_readback',
+    ),
+  );
+  assert.equal(
+    readback.mas_conformance_residue_closeout_readback.authority_boundary
+      .can_claim_mas_domain_ready,
+    false,
+  );
+  assert.equal(
+    readback.mas_conformance_residue_closeout_readback.authority_boundary
+      .can_create_mas_typed_blocker,
+    false,
+  );
+  assert.equal(
+    readback.mas_conformance_residue_closeout_readback.false_ready_guard
+      .blocked_count_zero_can_claim_plan_completion,
     false,
   );
   assert.equal(

@@ -123,6 +123,75 @@ export const CROSS_REPO_REF_INTEGRITY_GUARD = {
   },
 };
 
+export const MAS_CONFORMANCE_RESIDUE_CLOSEOUT_READBACK = {
+  surface_kind: 'opl_family_mas_conformance_residue_closeout_readback',
+  status: 'closed_structure_gate_not_live_evidence',
+  owner: 'one-person-lab',
+  guard_role:
+    'mas_progress_portal_legacy_private_control_owner_delta_residue_is_suppressed_and_family_conformance_unblocked_without_domain_readiness_authority',
+  source_repo: 'gaofeng21cn/med-autoscience',
+  source_lane_id: 'mas-progress-portal-owner-delta-residue-20260622',
+  absorbed_origin_main_sha: '092ce099b2e196e08998f5ef5725c13d5896d217',
+  source_readback_command:
+    './bin/opl agents conformance --family-defaults --json',
+  family_conformance_readback: {
+    structural_conformance_status: 'passed',
+    structural_contract_status: 'passed',
+    ordinary_path_guard_status: 'passed',
+    blocked_count: 0,
+    passed_count: 5,
+    residual_subreadback_scope:
+      'opl_bookforge_foundry_agent_os_membership_residual_not_mas_private_control_owner_delta_residue',
+  },
+  closed_residue_boundary: {
+    source_marker_authority_ref:
+      'med-autoscience:contracts/runtime/legacy-active-path-tombstones.json#/legacy_control_receipt_exclusion_policy/legacy_markers',
+    progress_portal_summary_status:
+      'suppressed_legacy_private_control_owner',
+    active_fixture_owner:
+      'one-person-lab',
+    legacy_marker_literal_resurrection_allowed: false,
+    progress_portal_can_report_legacy_private_control_owner_as_active_operator: false,
+  },
+  source_refs: [
+    'med-autoscience:src/med_autoscience/controllers/progress_portal_parts/owner_delta_summary.py',
+    'med-autoscience:contracts/runtime/legacy-active-path-tombstones.json',
+    'med-autoscience:tests/test_progress_portal.py',
+    'med-autoscience:tests/test_adapter_retirement_boundary.py',
+    'med-autoscience:tests/test_study_runtime_execution_evidence_adoption_cases/test_standard_agent_purity_boundary.py',
+    'med-autoscience:docs/runtime/display/progress_portal.md',
+  ],
+  non_live_evidence: [
+    'MAS_progress_portal_legacy_private_control_owner_delta_suppression_landed',
+    'MAS_progress_portal_fixture_owner_uses_ordinary_owner_route',
+    'MAS_no_resurrection_regression_avoids_active_legacy_marker_literal',
+    'MAS_progress_portal_and_standard_agent_purity_focused_tests_passed',
+    'OPL_agents_conformance_family_defaults_structural_passed_blocked_count_zero_after_MAS_remote_readback',
+  ],
+  deferred_evidence: [
+    'MAS_owner_chain_live_evidence',
+    'MAS_provider_long_soak',
+    'MAS_real_paper_project_run_evidence',
+    ...DEFERRED_LIVE_EVIDENCE,
+  ],
+  authority_boundary: {
+    ...NO_SECOND_TRUTH_AUTHORITY_BOUNDARY,
+    can_write_mas_runtime_truth: false,
+    can_sign_mas_owner_receipt: false,
+    can_create_mas_typed_blocker: false,
+    can_claim_mas_domain_ready: false,
+    can_claim_mas_paper_ready: false,
+    can_claim_foundry_agent_os_complete: false,
+  },
+  false_ready_guard: {
+    conformance_pass_can_claim_mas_domain_ready: false,
+    conformance_pass_can_claim_mas_paper_ready: false,
+    progress_portal_suppression_can_claim_live_evidence_complete: false,
+    remote_sha_readback_can_claim_foundry_agent_os_complete: false,
+    blocked_count_zero_can_claim_plan_completion: false,
+  },
+};
+
 export const CURRENT_TRANCHE_LANES: TrancheExecutionLane[] = [
   {
     lane_id: 'mag-source-purity-cli-readback-20260622',
@@ -217,8 +286,9 @@ export const CURRENT_TRANCHE_LANES: TrancheExecutionLane[] = [
       'tests',
     ],
     non_live_completion_evidence_required: [
-      'framework_tranche_backlog_current_tranche_selects_MAG_RCA_OPL_foldback_lanes',
-      'framework_tranche_backlog_domain_source_ref_integrity_guard_points_to_MAG_RCA_latest_remote_shas',
+      'framework_tranche_backlog_current_tranche_selects_MAG_RCA_OMA_OPL_foldback_lanes',
+      'framework_tranche_backlog_domain_source_ref_integrity_guard_points_to_MAG_OMA_RCA_latest_remote_shas',
+      'framework_tranche_backlog_mas_conformance_residue_closeout_points_to_MAS_latest_remote_sha',
       'framework_tranche_backlog_false_ready_guard_still_blocks_ready_delete_and_goal_complete_claims',
       'OPL_framework_tranche_backlog_CLI_readback_and_tests_passed',
       'OPL_main_absorbed_push_and_remote_sha_readback',
@@ -331,10 +401,16 @@ export const FRAMEWORK_TRANCHE_MILESTONES: FrameworkTrancheMilestone[] = [
     milestone_id: 'strict_source_purity_private_wrapper_retirement',
     priority: 'P1',
     state: 'closed_structure_gate',
-    owner_repos: ['med-autogrant', 'redcube-ai', 'opl-meta-agent'],
+    owner_repos: ['med-autoscience', 'med-autogrant', 'redcube-ai', 'opl-meta-agent'],
     lane_role:
       'Thin or retire private wrapper residue with source-purity gates, no-active-caller proof, tombstone/provenance, and false-ready guards.',
     current_truth_refs: [
+      'med-autoscience:contracts/runtime/legacy-active-path-tombstones.json#/legacy_control_receipt_exclusion_policy/legacy_markers',
+      'med-autoscience:src/med_autoscience/controllers/progress_portal_parts/owner_delta_summary.py',
+      'med-autoscience:tests/test_progress_portal.py',
+      'med-autoscience:docs/runtime/display/progress_portal.md',
+      'med-autoscience progress portal owner-delta residue closeout commit 092ce099b2e196e08998f5ef5725c13d5896d217',
+      'OPL agents conformance family-defaults structural pass after MAS closeout commit 092ce099b2e196e08998f5ef5725c13d5896d217',
       'med-autogrant:contracts/private_functional_surface_policy.json#/physical_source_morphology_policy/retirement_readback_cleanup_guard',
       'med-autogrant:contracts/private_functional_surface_policy.json#/physical_source_morphology_policy/retirement_readback_cleanup_guard/compact_cleanup_readiness_summary',
       'med-autogrant:contracts/private_functional_surface_policy.json#/physical_source_morphology_policy/strict_source_purity_no_second_truth_guard',
