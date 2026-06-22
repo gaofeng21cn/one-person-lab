@@ -856,3 +856,94 @@ test('framework readiness summarizes default control-plane surfaces without auth
     fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
   }
 });
+
+test('framework readiness compact readback is derived from full readback without second-truth authority', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-readiness-compact-state-'));
+  const familyWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-readiness-compact-family-'));
+  try {
+    const { omaRepoDir, workspaceRoot } = createFamilyWorkspaceFixture(familyWorkspaceRoot);
+    const env = {
+      OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+      OPL_META_AGENT_REPO_DIR: omaRepoDir,
+    };
+    const full = runCli(['framework', 'readiness', '--family-defaults'], env)
+      .framework_readiness;
+    const compactOutput = runCli([
+      'framework',
+      'readiness',
+      '--family-defaults',
+      '--detail',
+      'compact',
+    ], env);
+    const compact = compactOutput.framework_readiness_compact;
+
+    assert.equal(Object.hasOwn(compactOutput, 'framework_readiness'), false);
+    assert.equal(compact.surface_kind, 'opl_framework_readiness_compact_readback');
+    assert.equal(compact.detail_level, 'compact');
+    assert.equal(compact.source_surface_ref, '/framework_readiness');
+    assert.equal(compact.source_command, 'opl framework readiness --family-defaults --json');
+    assert.equal(compact.full_detail_command, 'opl framework readiness --family-defaults --json');
+    assert.equal(compact.family_defaults, true);
+    assert.equal(compact.status, full.status);
+    assert.equal(
+      compact.summary.framework_kernel_hard_blocker_count,
+      full.summary.framework_kernel_hard_blocker_count,
+    );
+    assert.equal(
+      compact.summary.open_tail_count,
+      full.summary.open_tail_count,
+    );
+    assert.equal(
+      compact.summary.evidence_envelope_attention_count,
+      full.summary.evidence_envelope_attention_count,
+    );
+    assert.equal(
+      compact.summary.domain_dispatch_attention_count,
+      full.summary.domain_dispatch_attention_count,
+    );
+    assert.equal(
+      compact.summary.stage_replay_missing_receipt_workorder_count,
+      full.summary.stage_replay_missing_receipt_workorder_count,
+    );
+    assert.equal(compact.summary.ready_claim_authorized, false);
+    assert.equal(
+      compact.current_owner_delta_topline.current_owner_delta_id,
+      full.current_owner_delta.delta_id,
+    );
+    assert.equal(
+      compact.current_owner_delta_topline.domain_ready_authorized,
+      false,
+    );
+    assert.equal(
+      compact.operator_next_action.worklist_item_is_completion_claim,
+      false,
+    );
+    assert.equal(
+      compact.omitted_sections.includes('attention_first_payload'),
+      true,
+    );
+    assert.equal(compact.omitted_sections.includes('evidence_worklist'), true);
+    assert.equal(Object.hasOwn(compact, 'attention_first_payload'), false);
+    assert.equal(Object.hasOwn(compact, 'evidence_worklist'), false);
+    assert.equal(compact.false_ready_guard.default_full_readback_unchanged, true);
+    assert.equal(compact.false_ready_guard.compact_readback_can_claim_domain_ready, false);
+    assert.equal(compact.false_ready_guard.compact_readback_can_claim_production_ready, false);
+    assert.equal(compact.false_ready_guard.compact_readback_can_sign_owner_receipt, false);
+    assert.equal(compact.false_ready_guard.compact_readback_can_create_typed_blocker, false);
+    assert.equal(compact.authority_boundary.refs_only, true);
+    assert.equal(compact.authority_boundary.derived_from_full_readback, true);
+    assert.equal(compact.authority_boundary.can_write_domain_truth, false);
+    assert.equal(compact.authority_boundary.can_claim_domain_ready, false);
+    assert.equal(compact.authority_boundary.can_claim_production_ready, false);
+    assert.equal(compact.authority_boundary.can_sign_owner_receipt, false);
+    assert.equal(compact.authority_boundary.can_create_typed_blocker, false);
+    assert.equal(
+      compact.authority_boundary.source_authority_boundary.can_claim_domain_ready,
+      false,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
+  }
+});

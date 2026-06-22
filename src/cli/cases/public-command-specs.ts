@@ -1,6 +1,10 @@
 import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../contracts.ts';
 import { buildOplFrameworkLocator } from '../../opl-framework-locator.ts';
-import { buildFrameworkOperatingMaturityReadout } from '../../framework-operating-maturity.ts';
+import {
+  buildFrameworkOperatingMaturityCompactReadback,
+  buildFrameworkOperatingMaturityReadout,
+} from '../../framework-operating-maturity.ts';
+import { buildFrameworkReadinessCompactReadback } from '../../framework-readiness-compact-readback.ts';
 import { buildFrameworkReadinessSummary } from '../../framework-readiness.ts';
 import { buildFrameworkTrancheBacklogReadback } from '../../framework-tranche-backlog.ts';
 import { buildOplAppState, parseAppActionExecuteArgs, parseAppStateArgs, runOplAppActionExecute } from '../../app-state.ts';
@@ -106,6 +110,29 @@ export function buildPublicCommandSpecs(
     handler: async (args) => buildPublicTurnkeyInstallPayload(
       await runOplTurnkeyInstall(getContracts(), parseTurnkeyInstallArgs(args, installSpec)),
     ),
+  };
+
+  const parseFrameworkReadbackDetail = (
+    args: string[],
+    spec: CommandSpec,
+    commandName: string,
+  ) => {
+    if (args.length === 1 && args[0] === '--family-defaults') {
+      return 'full';
+    }
+    if (
+      args.length === 3
+      && args[0] === '--family-defaults'
+      && args[1] === '--detail'
+      && args[2] === 'compact'
+    ) {
+      return 'compact';
+    }
+    throw buildUsageError(`${commandName} requires --family-defaults and optionally --detail compact.`, spec, {
+      required: ['--family-defaults'],
+      optional: ['--detail compact'],
+      allowed_detail_levels: ['compact'],
+    });
   };
 
   const systemCommandSpecs = buildPublicSystemCommandSpecs(getContracts);
@@ -219,37 +246,46 @@ export function buildPublicCommandSpecs(
       },
     },
     'framework readiness': {
-      usage: 'opl framework readiness --family-defaults',
+      usage: 'opl framework readiness --family-defaults [--detail compact]',
       summary:
         'Read the default attention-first framework readiness summary and Kernel floor without claiming domain, quality, artifact, or production ready.',
-      examples: ['opl framework readiness --family-defaults --json'],
+      examples: [
+        'opl framework readiness --family-defaults --json',
+        'opl framework readiness --family-defaults --detail compact --json',
+      ],
       group: 'framework',
-      handler: (args) => {
-        if (args.length !== 1 || args[0] !== '--family-defaults') {
-          throw buildUsageError('framework readiness requires --family-defaults.', publicCommandSpecs['framework readiness'], {
-            required: ['--family-defaults'],
-          });
+      handler: async (args) => {
+        const detail = parseFrameworkReadbackDetail(
+          args,
+          publicCommandSpecs['framework readiness'],
+          'framework readiness',
+        );
+        if (detail === 'compact') {
+          return await buildFrameworkReadinessCompactReadback(getContracts(), { familyDefaults: true });
         }
-        return buildFrameworkReadinessSummary(getContracts(), { familyDefaults: true });
+        return await buildFrameworkReadinessSummary(getContracts(), { familyDefaults: true });
       },
     },
     'framework operating-maturity': {
-      usage: 'opl framework operating-maturity --family-defaults',
+      usage: 'opl framework operating-maturity --family-defaults [--detail compact]',
       summary:
         'Aggregate domain owner-chain scaleout, L5, App release, provider long-soak, cleanup, and lifecycle evidence gaps without claiming readiness.',
-      examples: ['opl framework operating-maturity --family-defaults --json'],
+      examples: [
+        'opl framework operating-maturity --family-defaults --json',
+        'opl framework operating-maturity --family-defaults --detail compact --json',
+      ],
       group: 'framework',
       handler: async (args) => {
-        if (args.length !== 1 || args[0] !== '--family-defaults') {
-          throw buildUsageError(
-            'framework operating-maturity requires --family-defaults.',
-            publicCommandSpecs['framework operating-maturity'],
-            {
-              required: ['--family-defaults'],
-            },
-          );
+        const detail = parseFrameworkReadbackDetail(
+          args,
+          publicCommandSpecs['framework operating-maturity'],
+          'framework operating-maturity',
+        );
+        const output = await buildFrameworkOperatingMaturityReadout(getContracts(), { familyDefaults: true });
+        if (detail === 'compact') {
+          return buildFrameworkOperatingMaturityCompactReadback(output.framework_operating_maturity);
         }
-        return await buildFrameworkOperatingMaturityReadout(getContracts(), { familyDefaults: true });
+        return output;
       },
     },
     'framework tranche-backlog': {

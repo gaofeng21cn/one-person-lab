@@ -46,6 +46,23 @@ const AUTHORITY_BOUNDARY = {
   can_authorize_physical_delete: false,
 };
 
+const COMPACT_READBACK_AUTHORITY_BOUNDARY = {
+  refs_only: true,
+  derived_from_full_readback: true,
+  can_claim_domain_ready: false,
+  can_claim_app_release_ready: false,
+  can_claim_l5: false,
+  can_claim_production_ready: false,
+  can_claim_quality_or_export_ready: false,
+  can_claim_artifact_ready: false,
+  can_write_domain_truth: false,
+  can_write_memory_body: false,
+  can_mutate_artifact_body: false,
+  can_sign_owner_receipt: false,
+  can_create_typed_blocker: false,
+  can_authorize_physical_delete: false,
+};
+
 function evidenceRequiredStatus(openCounts: number[]) {
   return openCounts.some((count) => count > 0) ? 'evidence_required' : 'evidence_recorded_not_ready_claim';
 }
@@ -740,6 +757,143 @@ export async function buildFrameworkOperatingMaturityReadout(
       authority_boundary: AUTHORITY_BOUNDARY,
       machine_boundary:
         'Read-only operating maturity aggregation; it consumes existing read models and refs-only ledgers, but does not write domain truth, App release truth, owner receipts, typed blockers, artifact bodies, memory bodies, physical delete authorization, L5 completion, or production readiness.',
+    },
+  };
+}
+
+export function buildFrameworkOperatingMaturityCompactReadback(
+  fullMaturityPayload: unknown,
+) {
+  const maturity = record(fullMaturityPayload);
+  const summary = record(maturity.summary);
+  const ownerDeltaBridge = record(maturity.current_owner_delta_bridge);
+  const unresolvedOwnerGates = record(maturity.unresolved_owner_gates);
+  const productionEvidenceGate = record(maturity.foundry_agent_os_production_evidence_gate);
+  const domainOwnerChain = record(maturity.domain_owner_chain_scaleout);
+  const brandModuleL5 = record(maturity.brand_module_l5);
+  const appReleaseUserPath = record(maturity.app_release_user_path);
+  const providerLongSoak = record(maturity.provider_long_soak);
+  const cleanupRetirement = record(maturity.cleanup_retirement);
+  const memoryArtifactLifecycle = record(maturity.memory_artifact_lifecycle);
+  return {
+    version: 'g2',
+    framework_operating_maturity_compact: {
+      surface_kind: 'opl_family_operating_maturity_compact_readback',
+      owner: 'one-person-lab',
+      source_command: 'opl framework operating-maturity --family-defaults --json',
+      full_detail_command: 'opl framework operating-maturity --family-defaults --json',
+      source_surface_ref: '/framework_operating_maturity',
+      compact_readback_role:
+        'operator_owner_gate_summary_projection_from_full_operating_maturity_not_second_truth',
+      status: stringValue(maturity.status),
+      baseline_level: stringValue(maturity.baseline_level),
+      target_level: stringValue(maturity.target_level),
+      detail_level: 'compact',
+      summary: {
+        current_owner: stringValue(summary.current_owner),
+        current_owner_stage_id: stringValue(summary.current_owner_stage_id),
+        current_owner_delta_owner_answer_missing:
+          summary.current_owner_delta_owner_answer_missing === true,
+        current_owner_delta_owner_answer_still_required:
+          summary.current_owner_delta_owner_answer_still_required === true,
+        domain_owner_chain_open_domain_count:
+          numberValue(summary.domain_owner_chain_open_domain_count),
+        brand_module_l5_evidence_required_module_count:
+          numberValue(summary.brand_module_l5_evidence_required_module_count),
+        brand_module_l5_verified_receipt_count:
+          numberValue(summary.brand_module_l5_verified_receipt_count),
+        app_release_user_path_open_count:
+          numberValue(summary.app_release_user_path_open_count),
+        provider_long_soak_open_count:
+          numberValue(summary.provider_long_soak_open_count),
+        cleanup_retirement_open_decision_count:
+          numberValue(summary.cleanup_retirement_open_decision_count),
+        memory_artifact_lifecycle_open_count:
+          numberValue(summary.memory_artifact_lifecycle_open_count),
+        ready_claim_authorized: false,
+      },
+      current_owner_delta_bridge: {
+        delta_id: stringValue(ownerDeltaBridge.delta_id),
+        default_planning_root:
+          stringValue(ownerDeltaBridge.default_planning_root),
+        current_owner: stringValue(ownerDeltaBridge.current_owner),
+        domain_id: stringValue(ownerDeltaBridge.domain_id),
+        stage_id: stringValue(ownerDeltaBridge.stage_id),
+        desired_delta_kind: stringValue(ownerDeltaBridge.desired_delta_kind),
+        desired_delta_description:
+          stringValue(ownerDeltaBridge.desired_delta_description),
+        latest_owner_answer_ref:
+          stringValue(ownerDeltaBridge.latest_owner_answer_ref),
+        latest_owner_answer_kind:
+          stringValue(ownerDeltaBridge.latest_owner_answer_kind),
+        owner_answer_missing: ownerDeltaBridge.owner_answer_missing === true,
+        owner_answer_still_required:
+          ownerDeltaBridge.owner_answer_still_required === true,
+        domain_ready_authorized:
+          record(ownerDeltaBridge.hard_gate).domain_ready_authorized === true,
+      },
+      unresolved_owner_gates: {
+        status: stringValue(unresolvedOwnerGates.status),
+        gate_count: numberValue(unresolvedOwnerGates.gate_count),
+        gate_ids: stringListValue(unresolvedOwnerGates.gate_ids),
+        ready_claim_authorized:
+          unresolvedOwnerGates.ready_claim_authorized === true,
+        completion_policy: record(unresolvedOwnerGates.completion_policy),
+      },
+      evidence_lane_summary: {
+        domain_owner_chain_status: stringValue(domainOwnerChain.status),
+        domain_owner_chain_open_domain_count:
+          numberValue(domainOwnerChain.open_domain_count),
+        brand_module_l5_status: stringValue(brandModuleL5.status),
+        brand_module_l5_evidence_required_module_ids:
+          stringListValue(brandModuleL5.evidence_required_module_ids),
+        app_release_user_path_status: stringValue(appReleaseUserPath.status),
+        provider_long_soak_status: stringValue(providerLongSoak.status),
+        cleanup_retirement_status: stringValue(cleanupRetirement.status),
+        cleanup_physical_delete_authorized:
+          cleanupRetirement.physical_delete_authorized === true,
+        memory_artifact_lifecycle_status:
+          stringValue(memoryArtifactLifecycle.status),
+        memory_artifact_lifecycle_open_evidence_count:
+          numberValue(memoryArtifactLifecycle.open_evidence_count),
+      },
+      production_evidence_gate_summary: {
+        status: stringValue(productionEvidenceGate.status),
+        owner_evidence_closure_state:
+          stringValue(productionEvidenceGate.owner_evidence_closure_state),
+        ready_claim_authorized:
+          productionEvidenceGate.ready_claim_authorized === true,
+      },
+      next_owner_actions: recordList(maturity.next_owner_actions).map((action) => ({
+        lane: stringValue(action.lane),
+        owner: stringValue(action.owner),
+        required_delta: stringValue(action.required_delta),
+        source_command: stringValue(action.source_command),
+      })),
+      not_claims: stringListValue(maturity.not_claims),
+      omitted_sections: [
+        'owner_evidence_intake',
+        'domain_owner_chain_scaleout.domains',
+        'domain_owner_chain_scaleout.domain_owner_evidence_routes',
+        'brand_module_l5.evidence_ledger',
+        'app_release_user_path.execution_runbook',
+        'provider_long_soak.capability_checklist',
+        'memory_artifact_lifecycle.owner_action_checklist',
+      ],
+      false_ready_guard: {
+        compact_readback_can_claim_domain_ready: false,
+        compact_readback_can_claim_app_release_ready: false,
+        compact_readback_can_claim_l5: false,
+        compact_readback_can_claim_production_ready: false,
+        compact_readback_can_authorize_physical_delete: false,
+        compact_readback_can_sign_owner_receipt: false,
+        compact_readback_can_create_typed_blocker: false,
+        default_full_readback_unchanged: true,
+      },
+      authority_boundary: {
+        ...COMPACT_READBACK_AUTHORITY_BOUNDARY,
+        source_authority_boundary: record(maturity.authority_boundary),
+      },
     },
   };
 }

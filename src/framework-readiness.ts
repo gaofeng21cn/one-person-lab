@@ -515,6 +515,103 @@ export async function buildFrameworkReadinessSummary(
   const ownerDeltaTopline = buildCurrentOwnerDeltaTopline({
     currentOwnerDeltaReadModel: attentionFirstPayload.current_owner_delta_read_model,
   });
+  const summary = {
+    control_plane_available: true,
+    framework_kernel_hard_blocker_count: hardBlockerCount,
+    agent_conformance_hard_blocker_count: agentHardBlockerCount,
+    generated_default_entry_source_of_work_blocked_count:
+      generatedDefaultEntrySourceOfWorkBlockedCount,
+    stage_readiness_hard_blocker_count: stageHardBlockerCount,
+    pack_compiler_hard_blocker_count: packCompilerBlockerCount,
+    framework_diagnostic_failure_count: diagnosticFailureCount,
+    semantic_hygiene_attention_required_gate_count: semanticAttentionGateCount,
+    agent_structural_evidence_tail_open_count: agentStructuralEvidenceTailCount,
+    provider_slo_guarded_open_tail_count: providerSloGuardedOpenTailCount,
+    app_live_evidence_tail_raw_open_count: appRawOpenTailCount,
+    app_live_evidence_tail_open_count: appLiveEvidenceTailCount,
+    app_live_evidence_tail_guarded_by_provider_worker_mutation_count:
+      providerSloGuardedOpenTailCount,
+    stage_receipt_freshness_tail_open_count: stageReceiptFreshnessTailCount,
+    stage_source_scope_missing_workorder_count: stageSourceScopeMissingWorkorderCount,
+    stage_runtime_event_missing_workorder_count: stageRuntimeEventMissingWorkorderCount,
+    stage_source_scope_missing_ref_count: stageSourceScopeMissingRefCount,
+    stage_runtime_event_missing_ref_count: stageRuntimeEventMissingRefCount,
+    stage_replay_missing_receipt_workorder_count:
+      stageReplayMissingReceiptWorkorderCount,
+    stage_replay_missing_receipt_ref_count:
+      stageReplayMissingReceiptRefCount,
+    stage_replay_missing_human_gate_ref_count:
+      stageReplayMissingHumanGateRefCount,
+    evidence_envelope_open_count: readinessEvidenceEnvelopeOpenCount,
+    evidence_envelope_blocked_count: readinessEvidenceEnvelopeBlockedCount,
+    evidence_envelope_attention_count: evidenceEnvelopeAttentionCount,
+    domain_dispatch_attention_count: domainDispatchAttentionCount,
+    domain_owner_payload_summary_naming_hygiene_blocker_count:
+      domainOwnerPayloadSummaryNamingHygieneBlockerCount,
+    operator_actionable_attention_tail_count: attentionCounts.operatorActionableAttentionCount,
+    operator_payload_required_attention_tail_count: attentionCounts.operatorPayloadRequiredAttentionCount,
+    operator_payload_free_attention_tail_count: attentionCounts.operatorPayloadFreeAttentionCount,
+    domain_blocked_attention_tail_count: attentionCounts.domainBlockedAttentionCount,
+    domain_blocked_typed_blocker_ref_count: typedBlockerAttention.typedBlockerRefCount,
+    domain_blocked_unique_typed_blocker_ref_count: typedBlockerAttention.uniqueTypedBlockerRefCount,
+    domain_blocked_typed_blocker_group_count: typedBlockerAttention.typedBlockerGroupCount,
+    domain_blocked_attention_grouping_semantics: typedBlockerAttention.groupingSemantics,
+    runtime_manager_mas_route_support_task_kind_count: runtimeManagerRouteSupportTaskKinds.length,
+    runtime_manager_mas_aftercare_route_support_count: runtimeManagerAftercareRouteSupportCount,
+    runtime_manager_mas_route_support_action_ref_count: runtimeManagerRouteSupportActionRefs.length,
+    domain_manifest_projection_cache_used_count:
+      numberValue(domainManifests.summary.projection_cache_used_count),
+    domain_manifest_stale_binding_count:
+      numberValue(domainManifests.summary.stale_binding_count),
+    domain_manifest_stale_binding_project_ids:
+      Array.isArray(domainManifests.summary.stale_binding_project_ids)
+        ? domainManifests.summary.stale_binding_project_ids
+        : [],
+    domain_manifest_not_configured_count:
+      numberValue(domainManifests.summary.manifest_not_configured_count),
+    domain_manifest_not_configured_project_ids:
+      Array.isArray(domainManifests.summary.manifest_not_configured_project_ids)
+        ? domainManifests.summary.manifest_not_configured_project_ids
+        : [],
+    domain_manifest_currentness_owner_action_packet_count:
+      numberValue(domainManifests.summary.currentness_owner_action_packet_count),
+    domain_manifest_currentness_owner_action_project_ids:
+      Array.isArray(domainManifests.summary.currentness_owner_action_project_ids)
+        ? domainManifests.summary.currentness_owner_action_project_ids
+        : [],
+    domain_manifest_live_failed_project_ids:
+      Array.isArray(domainManifests.summary.live_failed_project_ids)
+        ? domainManifests.summary.live_failed_project_ids
+        : [],
+    domain_manifest_live_failure_timeout_ms_values:
+      domainManifests.projects
+        .map((entry) => record(record(entry.manifest_cache).source_error).timeout_ms)
+        .filter((value): value is number => typeof value === 'number' && Number.isFinite(value)),
+    total_operator_attention_tail_count: attentionCounts.totalAttentionCount,
+    attention_tail_semantics: attentionCounts.semantics,
+    attention_payload_requirement_semantics: attentionCounts.payloadRequirementSemantics,
+    open_tail_count: openTailCount,
+    provider_slo_cadence_window_status: appSummary.provider_slo_cadence_window_status ?? null,
+    provider_slo_capability_status: appSummary.provider_slo_capability_status ?? null,
+    workstream_operating_loop_workstream_count:
+      numberValue(record(workstreamOperatingLoop.summary).workstream_count),
+    workstream_operating_loop_artifact_first_review_available_count:
+      numberValue(record(workstreamOperatingLoop.summary).artifact_first_review_available_count),
+    workstream_operating_loop_goal_oracle_missing_count:
+      numberValue(record(workstreamOperatingLoop.summary).goal_oracle_missing_count),
+    workstream_operating_loop_goal_oracle_target_anchor_observed_count:
+      numberValue(record(workstreamOperatingLoop.summary).goal_oracle_target_anchor_observed_count),
+    workstream_operating_loop_deliverable_target_ref_observed_count:
+      numberValue(record(workstreamOperatingLoop.summary).deliverable_target_ref_observed_count),
+    workstream_operating_loop_goal_oracle_advisory_count:
+      numberValue(record(workstreamOperatingLoop.summary).goal_oracle_advisory_count),
+    owner_delta_handoff_status:
+      ownerDeltaHandoffSummary.status ?? null,
+    owner_delta_handoff_current_operator_action_state:
+      ownerDeltaHandoffSummary.current_operator_action_state ?? null,
+    owner_delta_handoff_next_owner:
+      ownerDeltaHandoffSummary.next_owner ?? null,
+  };
   return {
     version: 'g1',
     framework_readiness: {
@@ -542,103 +639,7 @@ export async function buildFrameworkReadinessSummary(
         'artifact_authority_verdict',
         'production_ready_verdict',
       ],
-      summary: {
-        control_plane_available: true,
-        framework_kernel_hard_blocker_count: hardBlockerCount,
-        agent_conformance_hard_blocker_count: agentHardBlockerCount,
-        generated_default_entry_source_of_work_blocked_count:
-          generatedDefaultEntrySourceOfWorkBlockedCount,
-        stage_readiness_hard_blocker_count: stageHardBlockerCount,
-        pack_compiler_hard_blocker_count: packCompilerBlockerCount,
-        framework_diagnostic_failure_count: diagnosticFailureCount,
-        semantic_hygiene_attention_required_gate_count: semanticAttentionGateCount,
-        agent_structural_evidence_tail_open_count: agentStructuralEvidenceTailCount,
-        provider_slo_guarded_open_tail_count: providerSloGuardedOpenTailCount,
-        app_live_evidence_tail_raw_open_count: appRawOpenTailCount,
-        app_live_evidence_tail_open_count: appLiveEvidenceTailCount,
-        app_live_evidence_tail_guarded_by_provider_worker_mutation_count:
-          providerSloGuardedOpenTailCount,
-        stage_receipt_freshness_tail_open_count: stageReceiptFreshnessTailCount,
-        stage_source_scope_missing_workorder_count: stageSourceScopeMissingWorkorderCount,
-        stage_runtime_event_missing_workorder_count: stageRuntimeEventMissingWorkorderCount,
-        stage_source_scope_missing_ref_count: stageSourceScopeMissingRefCount,
-        stage_runtime_event_missing_ref_count: stageRuntimeEventMissingRefCount,
-        stage_replay_missing_receipt_workorder_count:
-          stageReplayMissingReceiptWorkorderCount,
-        stage_replay_missing_receipt_ref_count:
-          stageReplayMissingReceiptRefCount,
-        stage_replay_missing_human_gate_ref_count:
-          stageReplayMissingHumanGateRefCount,
-        evidence_envelope_open_count: readinessEvidenceEnvelopeOpenCount,
-        evidence_envelope_blocked_count: readinessEvidenceEnvelopeBlockedCount,
-        evidence_envelope_attention_count: evidenceEnvelopeAttentionCount,
-        domain_dispatch_attention_count: domainDispatchAttentionCount,
-        domain_owner_payload_summary_naming_hygiene_blocker_count:
-          domainOwnerPayloadSummaryNamingHygieneBlockerCount,
-        operator_actionable_attention_tail_count: attentionCounts.operatorActionableAttentionCount,
-        operator_payload_required_attention_tail_count: attentionCounts.operatorPayloadRequiredAttentionCount,
-        operator_payload_free_attention_tail_count: attentionCounts.operatorPayloadFreeAttentionCount,
-        domain_blocked_attention_tail_count: attentionCounts.domainBlockedAttentionCount,
-        domain_blocked_typed_blocker_ref_count: typedBlockerAttention.typedBlockerRefCount,
-        domain_blocked_unique_typed_blocker_ref_count: typedBlockerAttention.uniqueTypedBlockerRefCount,
-        domain_blocked_typed_blocker_group_count: typedBlockerAttention.typedBlockerGroupCount,
-        domain_blocked_attention_grouping_semantics: typedBlockerAttention.groupingSemantics,
-        runtime_manager_mas_route_support_task_kind_count: runtimeManagerRouteSupportTaskKinds.length,
-        runtime_manager_mas_aftercare_route_support_count: runtimeManagerAftercareRouteSupportCount,
-        runtime_manager_mas_route_support_action_ref_count: runtimeManagerRouteSupportActionRefs.length,
-        domain_manifest_projection_cache_used_count:
-          numberValue(domainManifests.summary.projection_cache_used_count),
-        domain_manifest_stale_binding_count:
-          numberValue(domainManifests.summary.stale_binding_count),
-        domain_manifest_stale_binding_project_ids:
-          Array.isArray(domainManifests.summary.stale_binding_project_ids)
-            ? domainManifests.summary.stale_binding_project_ids
-            : [],
-        domain_manifest_not_configured_count:
-          numberValue(domainManifests.summary.manifest_not_configured_count),
-        domain_manifest_not_configured_project_ids:
-          Array.isArray(domainManifests.summary.manifest_not_configured_project_ids)
-            ? domainManifests.summary.manifest_not_configured_project_ids
-            : [],
-        domain_manifest_currentness_owner_action_packet_count:
-          numberValue(domainManifests.summary.currentness_owner_action_packet_count),
-        domain_manifest_currentness_owner_action_project_ids:
-          Array.isArray(domainManifests.summary.currentness_owner_action_project_ids)
-            ? domainManifests.summary.currentness_owner_action_project_ids
-            : [],
-        domain_manifest_live_failed_project_ids:
-          Array.isArray(domainManifests.summary.live_failed_project_ids)
-            ? domainManifests.summary.live_failed_project_ids
-            : [],
-        domain_manifest_live_failure_timeout_ms_values:
-          domainManifests.projects
-            .map((entry) => record(record(entry.manifest_cache).source_error).timeout_ms)
-            .filter((value): value is number => typeof value === 'number' && Number.isFinite(value)),
-        total_operator_attention_tail_count: attentionCounts.totalAttentionCount,
-        attention_tail_semantics: attentionCounts.semantics,
-        attention_payload_requirement_semantics: attentionCounts.payloadRequirementSemantics,
-        open_tail_count: openTailCount,
-        provider_slo_cadence_window_status: appSummary.provider_slo_cadence_window_status ?? null,
-        provider_slo_capability_status: appSummary.provider_slo_capability_status ?? null,
-        workstream_operating_loop_workstream_count:
-          numberValue(record(workstreamOperatingLoop.summary).workstream_count),
-        workstream_operating_loop_artifact_first_review_available_count:
-          numberValue(record(workstreamOperatingLoop.summary).artifact_first_review_available_count),
-        workstream_operating_loop_goal_oracle_missing_count:
-          numberValue(record(workstreamOperatingLoop.summary).goal_oracle_missing_count),
-        workstream_operating_loop_goal_oracle_target_anchor_observed_count:
-          numberValue(record(workstreamOperatingLoop.summary).goal_oracle_target_anchor_observed_count),
-        workstream_operating_loop_deliverable_target_ref_observed_count:
-          numberValue(record(workstreamOperatingLoop.summary).deliverable_target_ref_observed_count),
-        workstream_operating_loop_goal_oracle_advisory_count:
-          numberValue(record(workstreamOperatingLoop.summary).goal_oracle_advisory_count),
-        owner_delta_handoff_status:
-          ownerDeltaHandoffSummary.status ?? null,
-        owner_delta_handoff_current_operator_action_state:
-          ownerDeltaHandoffSummary.current_operator_action_state ?? null,
-        owner_delta_handoff_next_owner:
-          ownerDeltaHandoffSummary.next_owner ?? null,
-      },
+      summary,
       domain_manifest_currentness_owner_action_packet:
         domainManifests.currentness_owner_action_packet ?? {
           surface_kind: 'opl_domain_manifest_currentness_owner_action_packet',

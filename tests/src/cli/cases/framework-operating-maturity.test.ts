@@ -808,3 +808,102 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });
+
+test('framework operating maturity compact readback summarizes owner gates without full evidence intake', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-operating-maturity-compact-state-'));
+  const workspaceRoot = createFamilyDefaultContractWorkspace();
+  try {
+    const env: Record<string, string> = {
+      OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+    };
+    const full = runCli([
+      'framework',
+      'operating-maturity',
+      '--family-defaults',
+    ], env).framework_operating_maturity;
+    const compactOutput = runCli([
+      'framework',
+      'operating-maturity',
+      '--family-defaults',
+      '--detail',
+      'compact',
+    ], env);
+    const compact = compactOutput.framework_operating_maturity_compact;
+
+    assert.equal(Object.hasOwn(compactOutput, 'framework_operating_maturity'), false);
+    assert.equal(compact.surface_kind, 'opl_family_operating_maturity_compact_readback');
+    assert.equal(compact.detail_level, 'compact');
+    assert.equal(compact.source_surface_ref, '/framework_operating_maturity');
+    assert.equal(
+      compact.source_command,
+      'opl framework operating-maturity --family-defaults --json',
+    );
+    assert.equal(
+      compact.full_detail_command,
+      'opl framework operating-maturity --family-defaults --json',
+    );
+    assert.equal(compact.status, full.status);
+    assert.equal(compact.baseline_level, full.baseline_level);
+    assert.equal(compact.target_level, full.target_level);
+    assert.equal(compact.summary.current_owner, full.summary.current_owner);
+    assert.equal(
+      compact.summary.current_owner_stage_id,
+      full.summary.current_owner_stage_id,
+    );
+    assert.equal(
+      compact.summary.domain_owner_chain_open_domain_count,
+      full.summary.domain_owner_chain_open_domain_count,
+    );
+    assert.equal(compact.summary.ready_claim_authorized, false);
+    assert.equal(
+      compact.current_owner_delta_bridge.delta_id,
+      full.current_owner_delta_bridge.delta_id,
+    );
+    assert.equal(
+      compact.current_owner_delta_bridge.default_planning_root,
+      'current_owner_delta',
+    );
+    assert.equal(
+      compact.current_owner_delta_bridge.domain_ready_authorized,
+      false,
+    );
+    assert.deepEqual(
+      compact.unresolved_owner_gates.gate_ids,
+      full.unresolved_owner_gates.gate_ids,
+    );
+    assert.equal(
+      compact.unresolved_owner_gates.ready_claim_authorized,
+      false,
+    );
+    assert.equal(
+      compact.evidence_lane_summary.cleanup_physical_delete_authorized,
+      false,
+    );
+    assert.deepEqual(
+      compact.next_owner_actions.map((entry: { lane: string }) => entry.lane),
+      full.next_owner_actions.map((entry: { lane: string }) => entry.lane),
+    );
+    assert.equal(compact.omitted_sections.includes('owner_evidence_intake'), true);
+    assert.equal(Object.hasOwn(compact, 'owner_evidence_intake'), false);
+    assert.equal(compact.false_ready_guard.default_full_readback_unchanged, true);
+    assert.equal(compact.false_ready_guard.compact_readback_can_claim_domain_ready, false);
+    assert.equal(compact.false_ready_guard.compact_readback_can_claim_app_release_ready, false);
+    assert.equal(compact.false_ready_guard.compact_readback_can_claim_l5, false);
+    assert.equal(compact.false_ready_guard.compact_readback_can_claim_production_ready, false);
+    assert.equal(compact.false_ready_guard.compact_readback_can_authorize_physical_delete, false);
+    assert.equal(compact.authority_boundary.refs_only, true);
+    assert.equal(compact.authority_boundary.derived_from_full_readback, true);
+    assert.equal(compact.authority_boundary.can_write_domain_truth, false);
+    assert.equal(compact.authority_boundary.can_sign_owner_receipt, false);
+    assert.equal(compact.authority_boundary.can_create_typed_blocker, false);
+    assert.equal(compact.authority_boundary.can_authorize_physical_delete, false);
+    assert.equal(
+      compact.authority_boundary.source_authority_boundary.can_claim_production_ready,
+      false,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});

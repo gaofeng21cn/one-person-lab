@@ -1,0 +1,162 @@
+{
+  "surface_kind": "opl_operator_compact_readback_contract",
+  "version": "operator-compact-readback.v1",
+  "owner": "one-person-lab",
+  "state": "active_contract",
+  "purpose": "Define compact operator readback surfaces derived from the same canonical framework readback source surfaces so fresh gate and tranche selection can avoid transferring and scanning large drilldown payloads without creating a second truth source.",
+  "machine_boundary": "This contract governs the shape and authority boundary of compact operator readbacks. Compact readbacks are refs-only projections from the same source surfaces as the full framework readbacks. They do not replace full readbacks, do not authorize readiness claims, and do not write domain truth, App release truth, owner receipts, typed blockers, human gates, artifact bodies, memory bodies, lifecycle bodies, or physical delete decisions.",
+  "default_full_readback_unchanged": true,
+  "source_readbacks": [
+    {
+      "source_id": "framework_readiness",
+      "full_detail_command": "opl framework readiness --family-defaults --json",
+      "full_detail_root": "framework_readiness",
+      "compact_command": "opl framework readiness --family-defaults --detail compact --json",
+      "compact_root": "framework_readiness_compact",
+      "source_surface_ref": "/framework_readiness"
+    },
+    {
+      "source_id": "framework_operating_maturity",
+      "full_detail_command": "opl framework operating-maturity --family-defaults --json",
+      "full_detail_root": "framework_operating_maturity",
+      "compact_command": "opl framework operating-maturity --family-defaults --detail compact --json",
+      "compact_root": "framework_operating_maturity_compact",
+      "source_surface_ref": "/framework_operating_maturity"
+    }
+  ],
+  "compact_surfaces": [
+    {
+      "surface_id": "framework_readiness_compact",
+      "surface_kind": "opl_framework_readiness_compact_readback",
+      "compact_command": "opl framework readiness --family-defaults --detail compact --json",
+      "full_detail_command": "opl framework readiness --family-defaults --json",
+      "source_surface_ref": "/framework_readiness",
+      "derived_from_full_readback": true,
+      "default_full_readback_unchanged": true,
+      "retained_sections": [
+        "summary",
+        "current_owner_delta_topline",
+        "operator_next_action",
+        "stage_run_cockpit_summary",
+        "false_ready_guard",
+        "authority_boundary"
+      ],
+      "omitted_sections": [
+        "attention_first_payload",
+        "kernel_floor",
+        "diagnostic_drilldowns",
+        "agent_conformance_tail",
+        "pack_compiler",
+        "stages",
+        "evidence_tails",
+        "evidence_worklist",
+        "evidence_envelope",
+        "runtime_tray_snapshot"
+      ],
+      "authority_boundary": {
+        "refs_only": true,
+        "can_write_domain_truth": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_authorize_quality_or_export": false,
+        "can_authorize_physical_delete": false,
+        "can_claim_domain_ready": false,
+        "can_claim_app_release_ready": false,
+        "can_claim_l5": false,
+        "can_claim_production_ready": false
+      }
+    },
+    {
+      "surface_id": "framework_operating_maturity_compact",
+      "surface_kind": "opl_family_operating_maturity_compact_readback",
+      "compact_command": "opl framework operating-maturity --family-defaults --detail compact --json",
+      "full_detail_command": "opl framework operating-maturity --family-defaults --json",
+      "source_surface_ref": "/framework_operating_maturity",
+      "derived_from_full_readback": true,
+      "default_full_readback_unchanged": true,
+      "retained_sections": [
+        "summary",
+        "current_owner_delta_bridge",
+        "unresolved_owner_gates",
+        "evidence_lane_summary",
+        "production_evidence_gate_summary",
+        "next_owner_actions",
+        "false_ready_guard",
+        "authority_boundary"
+      ],
+      "omitted_sections": [
+        "owner_evidence_intake",
+        "domain_owner_chain_scaleout.domains",
+        "domain_owner_chain_scaleout.domain_owner_evidence_routes",
+        "brand_module_l5.evidence_ledger",
+        "app_release_user_path.execution_runbook",
+        "provider_long_soak.capability_checklist",
+        "memory_artifact_lifecycle.owner_action_checklist"
+      ],
+      "authority_boundary": {
+        "refs_only": true,
+        "can_write_domain_truth": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_authorize_quality_or_export": false,
+        "can_authorize_physical_delete": false,
+        "can_claim_domain_ready": false,
+        "can_claim_app_release_ready": false,
+        "can_claim_l5": false,
+        "can_claim_production_ready": false
+      }
+    }
+  ],
+  "operator_use": {
+    "intended_use_cases": [
+      "fresh_gate_topline",
+      "milestone_tranche_selection",
+      "owner_gate_triage",
+      "human_status_briefing"
+    ],
+    "does_not_claim_lower_compute_cost": true,
+    "requires_full_detail_for": [
+      "raw audit drilldown inspection",
+      "owner evidence intake review",
+      "evidence worklist inspection",
+      "provider or App release evidence review",
+      "diagnostic payload debugging",
+      "Plan Completion Audit"
+    ]
+  },
+  "no_second_truth_guard": {
+    "compact_surfaces_are_projection_only": true,
+    "compact_surfaces_use_same_canonical_source_model": true,
+    "compact_surfaces_can_be_source_of_truth": false,
+    "full_readback_remains_source_surface": true,
+    "compact_surface_can_be_manually_edited": false,
+    "compact_surface_can_override_full_readback": false,
+    "compact_surface_can_close_owner_gate": false
+  },
+  "false_ready_guard": {
+    "compact_readback_can_claim_domain_ready": false,
+    "compact_readback_can_claim_app_release_ready": false,
+    "compact_readback_can_claim_l5": false,
+    "compact_readback_can_claim_production_ready": false,
+    "compact_readback_can_authorize_physical_delete": false,
+    "compact_readback_can_sign_owner_receipt": false,
+    "compact_readback_can_create_typed_blocker": false,
+    "default_full_readback_unchanged": true
+  },
+  "not_authorized_claims": [
+    "domain_ready",
+    "app_release_ready",
+    "brand_module_l5_complete",
+    "production_ready",
+    "quality_or_export_ready",
+    "artifact_ready",
+    "physical_delete_authorized",
+    "owner_receipt_signed",
+    "typed_blocker_created",
+    "human_gate_decided"
+  ]
+}
