@@ -131,7 +131,9 @@ export const MAS_CONFORMANCE_RESIDUE_CLOSEOUT_READBACK = {
     'mas_progress_portal_legacy_private_control_owner_delta_residue_is_suppressed_and_family_conformance_unblocked_without_domain_readiness_authority',
   source_repo: 'gaofeng21cn/med-autoscience',
   source_lane_id: 'mas-progress-portal-owner-delta-residue-20260622',
-  absorbed_origin_main_sha: '092ce099b2e196e08998f5ef5725c13d5896d217',
+  source_closeout_origin_main_sha: '092ce099b2e196e08998f5ef5725c13d5896d217',
+  latest_observed_origin_main_sha: 'b3d03a810b5f371b0887030fd8d5d9d1dc716b2c',
+  source_closeout_is_ancestor_of_latest_observed_origin_main: true,
   source_readback_command:
     './bin/opl agents conformance --family-defaults --json',
   family_conformance_readback: {
@@ -288,7 +290,7 @@ export const CURRENT_TRANCHE_LANES: TrancheExecutionLane[] = [
     non_live_completion_evidence_required: [
       'framework_tranche_backlog_current_tranche_selects_MAG_RCA_OMA_OPL_foldback_lanes',
       'framework_tranche_backlog_domain_source_ref_integrity_guard_points_to_MAG_OMA_RCA_latest_remote_shas',
-      'framework_tranche_backlog_mas_conformance_residue_closeout_points_to_MAS_latest_remote_sha',
+      'framework_tranche_backlog_mas_conformance_residue_closeout_points_to_MAS_source_closeout_sha_with_latest_remote_ancestor_guard',
       'framework_tranche_backlog_false_ready_guard_still_blocks_ready_delete_and_goal_complete_claims',
       'OPL_framework_tranche_backlog_CLI_readback_and_tests_passed',
       'OPL_main_absorbed_push_and_remote_sha_readback',

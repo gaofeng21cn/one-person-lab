@@ -196,7 +196,7 @@ test('framework tranche backlog exposes a guarded milestone index without comple
   );
   assert.ok(
     lanesById['opl-tranche-backlog-readback-foldback-20260622'].non_live_completion_evidence_required.includes(
-      'framework_tranche_backlog_mas_conformance_residue_closeout_points_to_MAS_latest_remote_sha',
+      'framework_tranche_backlog_mas_conformance_residue_closeout_points_to_MAS_source_closeout_sha_with_latest_remote_ancestor_guard',
     ),
   );
   assert.ok(
@@ -383,8 +383,17 @@ test('framework tranche backlog exposes a guarded milestone index without comple
     'closed_structure_gate_not_live_evidence',
   );
   assert.equal(
-    readback.mas_conformance_residue_closeout_readback.absorbed_origin_main_sha,
+    readback.mas_conformance_residue_closeout_readback.source_closeout_origin_main_sha,
     '092ce099b2e196e08998f5ef5725c13d5896d217',
+  );
+  assert.equal(
+    readback.mas_conformance_residue_closeout_readback.latest_observed_origin_main_sha,
+    'b3d03a810b5f371b0887030fd8d5d9d1dc716b2c',
+  );
+  assert.equal(
+    readback.mas_conformance_residue_closeout_readback
+      .source_closeout_is_ancestor_of_latest_observed_origin_main,
+    true,
   );
   assert.equal(
     readback.mas_conformance_residue_closeout_readback.family_conformance_readback
