@@ -20,6 +20,7 @@ import {
   FOUNDRY_SUPPORT_EXTENSION_MEMBERSHIP_READBACK,
   FRAMEWORK_TRANCHE_MILESTONES,
   MAS_CONFORMANCE_RESIDUE_CLOSEOUT_READBACK,
+  NEXT_TRANCHE_SELECTED_LANES,
 } from './framework-tranche-backlog-parts/tranche-data.ts';
 import { buildTrancheRollforwardGuard } from './framework-tranche-backlog-parts/tranche-rollforward-guard.ts';
 import {
@@ -46,19 +47,23 @@ function milestoneCounts() {
 function buildCurrentTrancheReadback(
   rollforwardGuard: ReturnType<typeof buildTrancheRollforwardGuard>,
 ) {
+  const selectedLaneCount = NEXT_TRANCHE_SELECTED_LANES.length;
+  const selectedMilestoneIds = [
+    ...new Set(NEXT_TRANCHE_SELECTED_LANES.flatMap((lane) => lane.milestone_ids)),
+  ];
   return {
-    tranche_id: 'opl-family-ideal-operating-model-tranche-next-selection',
+    tranche_id: 'opl-family-ideal-operating-model-tranche-20260622b',
     tranche_role:
-      'fresh_non_live_functional_structure_selection_required_not_full_completion_audit',
+      'fresh_non_live_functional_structure_tranche_selected_not_full_completion_audit',
     current_work_order_status:
-      rollforwardGuard.next_selection_required
-        ? 'no_active_non_live_structure_lane_selected'
-        : 'active_or_partial_tranche_present',
-    selected_lane_count: 0,
-    selected_lane_count_within_policy: false,
-    selected_milestone_ids: [],
+      selectedLaneCount >= 2 && selectedLaneCount <= 4
+        ? 'active_non_live_structure_lanes_selected'
+        : 'selected_lane_count_outside_policy',
+    selected_lane_count: selectedLaneCount,
+    selected_lane_count_within_policy: selectedLaneCount >= 2 && selectedLaneCount <= 4,
+    selected_milestone_ids: selectedMilestoneIds,
     closed_or_advanced_structural_milestone_ids: [],
-    next_selection_required: rollforwardGuard.next_selection_required,
+    next_selection_required: false,
     closed_tranche_ref: rollforwardGuard.archived_tranche_readback.tranche_id,
     lane_selection_policy: {
       prefer_open_coherent_worktree_owned_by_current_session: true,
@@ -85,6 +90,36 @@ function buildCurrentTrancheReadback(
       'remote_sha_readback_equal',
       'worktree_and_branch_cleanup',
     ],
+    tranche_closeout_progress: {
+      progress_status:
+        'external_lane_remote_readbacks_landed_self_lane_requires_post_push_readback',
+      selected_lane_count: selectedLaneCount,
+      remote_readback_matched_lane_count: 2,
+      pending_self_lane_count: 1,
+      absorbed_remote_readbacks: [
+        {
+          lane_id: 'oma-script-to-pack-executable-guard-20260622b',
+          repo: 'opl-meta-agent',
+          commit_sha: '77f34150ac057569daefdda611dcae0191ad1ef0',
+          remote_ref: 'refs/heads/main',
+          remote_sha_matches_local: true,
+        },
+        {
+          lane_id: 'opl-doc-support-profile-json-strict-readback-20260622b',
+          repo: 'opl-doc',
+          commit_sha: '085bb336081a7e63e27139a50959b4a2b0e954a9',
+          remote_ref: 'refs/heads/main',
+          remote_sha_matches_local: true,
+        },
+      ],
+      self_lane_closeout_evidence_ref:
+        'one-person-lab main push plus fresh git ls-remote origin refs/heads/main after this readback is absorbed',
+      false_ready_boundary: {
+        static_backlog_can_self_certify_own_push: false,
+        external_remote_sha_readback_can_claim_runtime_ready: false,
+        tranche_closeout_progress_can_claim_full_goal_completion: false,
+      },
+    },
     full_goal_completion_guard: {
       this_tranche_can_update_milestone_backlog: true,
       this_tranche_can_claim_full_goal_completion: false,
@@ -99,7 +134,7 @@ function buildCurrentTrancheReadback(
       remote_sha_readback_can_claim_domain_ready: false,
       no_active_selection_can_claim_goal_complete: false,
     },
-    lanes: [],
+    lanes: NEXT_TRANCHE_SELECTED_LANES,
   };
 }
 

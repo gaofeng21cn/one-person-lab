@@ -18,24 +18,38 @@ test('framework tranche backlog exposes current selection and closed tranche arc
   assert.equal(readback.milestone_state_counts.open, 0);
   assert.equal(readback.milestone_state_counts.partial, 0);
   assert.equal(readback.milestone_state_counts.closed_structure_gate, 8);
-  assert.equal(readback.current_tranche.selected_lane_count, 0);
-  assert.equal(readback.current_tranche.selected_lane_count_within_policy, false);
+  assert.equal(readback.current_tranche.selected_lane_count, 3);
+  assert.equal(readback.current_tranche.selected_lane_count_within_policy, true);
   assert.equal(
     readback.current_tranche.tranche_role,
-    'fresh_non_live_functional_structure_selection_required_not_full_completion_audit',
+    'fresh_non_live_functional_structure_tranche_selected_not_full_completion_audit',
   );
   assert.equal(
     readback.current_tranche.current_work_order_status,
-    'no_active_non_live_structure_lane_selected',
+    'active_non_live_structure_lanes_selected',
   );
-  assert.deepEqual(readback.current_tranche.selected_milestone_ids, []);
+  assert.deepEqual(readback.current_tranche.selected_milestone_ids, [
+    'opl_primitive_runtime_owner_route_guard',
+    'domain_pack_generated_hosted_surfaces',
+    'standard_agent_landing_acceptance_guard',
+    'strict_source_purity_private_wrapper_retirement',
+    'oma_script_to_pack_hygiene',
+    'support_repo_profile_no_resurrection',
+  ]);
   assert.deepEqual(readback.current_tranche.closed_or_advanced_structural_milestone_ids, []);
-  assert.equal(readback.current_tranche.next_selection_required, true);
+  assert.equal(readback.current_tranche.next_selection_required, false);
   assert.equal(
     readback.current_tranche.closed_tranche_ref,
     'opl-family-ideal-operating-model-tranche-20260622',
   );
-  assert.deepEqual(readback.current_tranche.lanes, []);
+  assert.deepEqual(
+    readback.current_tranche.lanes.map((lane: { lane_id: string }) => lane.lane_id),
+    [
+      'opl-next-tranche-selection-foldback-20260622b',
+      'oma-script-to-pack-executable-guard-20260622b',
+      'opl-doc-support-profile-json-strict-readback-20260622b',
+    ],
+  );
   assert.equal(
     readback.tranche_rollforward_guard.surface_kind,
     'opl_framework_tranche_rollforward_guard',
@@ -103,6 +117,44 @@ test('framework tranche backlog exposes current selection and closed tranche arc
   );
   assert.ok(readback.current_tranche.required_closeout_evidence.includes('remote_sha_readback_equal'));
   assert.ok(readback.current_tranche.required_closeout_evidence.includes('worktree_and_branch_cleanup'));
+  assert.equal(
+    readback.current_tranche.tranche_closeout_progress.progress_status,
+    'external_lane_remote_readbacks_landed_self_lane_requires_post_push_readback',
+  );
+  assert.equal(readback.current_tranche.tranche_closeout_progress.selected_lane_count, 3);
+  assert.equal(readback.current_tranche.tranche_closeout_progress.remote_readback_matched_lane_count, 2);
+  assert.equal(readback.current_tranche.tranche_closeout_progress.pending_self_lane_count, 1);
+  assert.deepEqual(
+    readback.current_tranche.tranche_closeout_progress.absorbed_remote_readbacks.map(
+      (entry: { lane_id: string; commit_sha: string; remote_sha_matches_local: boolean }) => ({
+        lane_id: entry.lane_id,
+        commit_sha: entry.commit_sha,
+        remote_sha_matches_local: entry.remote_sha_matches_local,
+      }),
+    ),
+    [
+      {
+        lane_id: 'oma-script-to-pack-executable-guard-20260622b',
+        commit_sha: '77f34150ac057569daefdda611dcae0191ad1ef0',
+        remote_sha_matches_local: true,
+      },
+      {
+        lane_id: 'opl-doc-support-profile-json-strict-readback-20260622b',
+        commit_sha: '085bb336081a7e63e27139a50959b4a2b0e954a9',
+        remote_sha_matches_local: true,
+      },
+    ],
+  );
+  assert.equal(
+    readback.current_tranche.tranche_closeout_progress.false_ready_boundary
+      .static_backlog_can_self_certify_own_push,
+    false,
+  );
+  assert.equal(
+    readback.current_tranche.tranche_closeout_progress.false_ready_boundary
+      .tranche_closeout_progress_can_claim_full_goal_completion,
+    false,
+  );
   const lanesById = Object.fromEntries(
     readback.last_closed_tranche.lanes.map((lane: { lane_id: string }) => [lane.lane_id, lane]),
   );

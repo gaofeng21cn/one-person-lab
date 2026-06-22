@@ -411,6 +411,132 @@ export const CURRENT_TRANCHE_LANES: TrancheExecutionLane[] = [
   },
 ];
 
+export const NEXT_TRANCHE_SELECTED_LANES: TrancheExecutionLane[] = [
+  {
+    lane_id: 'opl-next-tranche-selection-foldback-20260622b',
+    repo: 'one-person-lab',
+    priority: 'P0',
+    milestone_ids: [
+      'opl_primitive_runtime_owner_route_guard',
+      'domain_pack_generated_hosted_surfaces',
+      'standard_agent_landing_acceptance_guard',
+    ],
+    lane_status:
+      'active_tranche_selection_machine_readback_for_current_non_live_structure_work_order',
+    write_set_class: 'opl_framework_tranche_backlog_current_selection_foldback',
+    required_surfaces: [
+      'source',
+      'CLI_readback',
+      'API_readback',
+      'docs',
+      'tests',
+    ],
+    non_live_completion_evidence_required: [
+      'OPL_framework_tranche_backlog_current_tranche_selected_lane_count_within_policy',
+      'OPL_framework_tranche_backlog_current_lanes_expose_disjoint_write_sets_and_forbidden_scopes',
+      'OPL_framework_tranche_backlog_keeps_rollforward_archive_separate_from_current_work_order',
+      'OPL_focused_tranche_backlog_tests_and_smoke_passed',
+      'OPL_main_absorbed_push_and_remote_sha_readback',
+    ],
+    deferred_evidence: DEFERRED_LIVE_EVIDENCE,
+    forbidden_scope: [
+      'MAS_MAG_RCA_OMA_domain_truth_write',
+      'App_AionUI_or_Hermes_source_write',
+      'AGUI_update_or_foreground_resurrection',
+      'owner_receipt_signature',
+      'typed_blocker_instance_creation',
+      'physical_delete_authorization',
+      'runtime_ready_claim',
+      'domain_ready_claim',
+      'App_release_ready_claim',
+      'production_ready_claim',
+      'Live_Evidence_claim',
+      'full_Plan_Completion_Audit_claim',
+    ],
+  },
+  {
+    lane_id: 'oma-script-to-pack-executable-guard-20260622b',
+    repo: 'opl-meta-agent',
+    priority: 'P2',
+    milestone_ids: [
+      'strict_source_purity_private_wrapper_retirement',
+      'oma_script_to_pack_hygiene',
+    ],
+    lane_status:
+      'active_compact_default_and_full_detail_script_to_pack_readback_non_live_evidence',
+    write_set_class: 'oma_script_to_pack_readback_compact_full_split',
+    required_surfaces: [
+      'source',
+      'contract',
+      'CLI_readback',
+      'API_readback',
+      'docs',
+      'tests',
+    ],
+    non_live_completion_evidence_required: [
+      'OMA_script_to_pack_default_readback_is_compact_parseable_operator_surface',
+      'OMA_script_to_pack_full_readback_retains_all_candidate_rows_without_default_second_inventory',
+      'OMA_source_structure_and_script_to_pack_receipts_reference_same_builder_and_false_ready_guard',
+      'OMA_source_structure_source_purity_and_smoke_tests_passed',
+      'OMA_main_absorbed_push_and_remote_sha_readback',
+    ],
+    deferred_evidence: [
+      'OMA_script_physical_retirement_no_active_caller_receipt',
+      'OMA_target_agent_live_patch_loop',
+      ...DEFERRED_LIVE_EVIDENCE,
+    ],
+    forbidden_scope: [
+      'target_agent_truth_write',
+      'target_owner_receipt_signature',
+      'target_typed_blocker_instance_creation',
+      'physical_delete_authorization',
+      'OPL_primitive_parity_claim',
+      'target_agent_ready_claim',
+      'domain_ready_claim',
+      'production_ready_claim',
+      'Live_Evidence_claim',
+      'full_Plan_Completion_Audit_claim',
+    ],
+  },
+  {
+    lane_id: 'opl-doc-support-profile-json-strict-readback-20260622b',
+    repo: 'opl-doc',
+    priority: 'P2',
+    milestone_ids: ['support_repo_profile_no_resurrection'],
+    lane_status:
+      'active_support_profile_json_strict_readback_non_resurrection_guard',
+    write_set_class: 'opl_doc_support_profile_cli_json_alias_guard',
+    required_surfaces: [
+      'source',
+      'contract',
+      'CLI_readback',
+      'docs',
+      'tests',
+    ],
+    non_live_completion_evidence_required: [
+      'OPL_Doc_support_profile_check_accepts_json_alias_without_new_contract_path',
+      'OPL_Doc_support_profile_audit_still_excludes_support_repos_from_default_foundry_truth_set',
+      'OPL_Doc_verify_support_profile_strict_and_default_verify_passed',
+      'OPL_Doc_main_absorbed_push_and_remote_sha_readback',
+    ],
+    deferred_evidence: [
+      'support_repo_owner_acceptance',
+      ...DEFERRED_LIVE_EVIDENCE,
+    ],
+    forbidden_scope: [
+      'OPL_family_runtime_truth_write',
+      'domain_truth_write',
+      'owner_receipt_signature',
+      'typed_blocker_instance_creation',
+      'support_repo_foundry_truth_membership_claim',
+      'legacy_support_repo_policy_alias',
+      'production_ready_claim',
+      'Live_Evidence_claim',
+      'full_Plan_Completion_Audit_claim',
+    ],
+  },
+];
+
 export const FRAMEWORK_TRANCHE_MILESTONES: FrameworkTrancheMilestone[] = [
   {
     milestone_id: 'opl_primitive_runtime_owner_route_guard',
