@@ -51,7 +51,7 @@ export function buildTrancheRollforwardGuard(
     status: allSelectedLanesClosed
       ? 'closed_tranche_archived_next_selection_required'
       : 'active_or_partial_tranche_present',
-    source_tranche_id: 'opl-family-ideal-operating-model-tranche-20260622',
+    source_tranche_id: 'opl-family-ideal-operating-model-tranche-20260622c',
     source_tranche_is_current_work_order: false,
     selected_lane_count: lanesWithStates.length,
     closed_lane_count: closedLaneIds.length,
@@ -69,7 +69,7 @@ export function buildTrancheRollforwardGuard(
       plan_completion_audit_required_before_full_goal_completion: true,
     },
     archived_tranche_readback: {
-      tranche_id: 'opl-family-ideal-operating-model-tranche-20260622',
+      tranche_id: 'opl-family-ideal-operating-model-tranche-20260622c',
       archive_role:
         'closed_non_live_structure_tranche_evidence_archive_not_current_work_order',
       selected_lane_count: lanesWithStates.length,

@@ -56,7 +56,7 @@ function buildCurrentTrancheReadback(
     authority_boundary: { ...NO_SECOND_TRUTH_AUTHORITY_BOUNDARY },
   }));
   return {
-    tranche_id: 'opl-family-ideal-operating-model-tranche-20260622c',
+    tranche_id: 'opl-family-ideal-operating-model-tranche-20260622d',
     tranche_role:
       'fresh_non_live_functional_structure_tranche_selected_not_full_completion_audit',
     current_work_order_status:
@@ -102,18 +102,22 @@ function buildCurrentTrancheReadback(
       pending_self_lane_count: 1,
       absorbed_remote_readbacks: [
         {
-          lane_id: 'mag-repo-shell-wrapper-source-purity-guard-20260622c',
-          repo: 'med-autogrant',
-          commit_sha: '7d35de2d2084054b014b3e9e1952845633c3369e',
+          lane_id: 'rca-private-platform-json-readback-20260622d',
+          repo: 'redcube-ai',
+          commit_sha: '0726ef03f158a0c90484edc53536f17cfe59a42f',
           remote_ref: 'refs/heads/main',
           remote_sha_matches_local: true,
+          readback_summary:
+            'private-platform:readback emitted parseable 321420-byte JSON with json_transport_guard=complete_parseable_json_required',
         },
         {
-          lane_id: 'rca-active-source-resurrection-scan-20260622c',
-          repo: 'redcube-ai',
-          commit_sha: '328e1969e65e4b816483d12f4ea5a0554ca9389b',
+          lane_id: 'opl-doc-native-support-readback-20260622d',
+          repo: 'opl-doc',
+          commit_sha: '95b3cfaa4d35aa5791919d20052cb1c2d8d54841',
           remote_ref: 'refs/heads/main',
           remote_sha_matches_local: true,
+          readback_summary:
+            'native-check --format json emitted support_profile_guard=opl-doc.support-profile.no-resurrection.v1 and audit=passed_no_resurrection_guard',
         },
       ],
       self_lane_closeout_evidence_ref:

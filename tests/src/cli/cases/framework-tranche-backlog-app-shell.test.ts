@@ -79,29 +79,25 @@ test('framework tranche backlog exposes App shell and support-reference guards',
       .false_ready_boundary.can_claim_app_operator_sustained_consumption,
     false,
   );
-  assert.ok(
-    readback.last_closed_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
-      lane.lane_id === 'mag-source-purity-cli-readback-20260622'
-      && lane.repo === 'med-autogrant'
-    )),
-  );
-  assert.ok(
-    readback.last_closed_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
-      lane.lane_id === 'rca-tail-owner-delta-readback-20260622'
-      && lane.repo === 'redcube-ai'
-    )),
-  );
-  assert.ok(
-    readback.last_closed_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
-      lane.lane_id === 'opl-bookforge-foundry-membership-classification-20260622'
-      && lane.repo === 'one-person-lab'
-    )),
-  );
-  assert.ok(
-    readback.last_closed_tranche.lanes.some((lane: { lane_id: string; repo: string }) => (
-      lane.lane_id === 'opl-oma-conformance-residue-classification-20260622'
-      && lane.repo === 'one-person-lab'
-    )),
+  assert.deepEqual(
+    readback.last_closed_tranche.lanes.map((lane: { lane_id: string; repo: string }) => ({
+      lane_id: lane.lane_id,
+      repo: lane.repo,
+    })),
+    [
+      {
+        lane_id: 'opl-tranche-backlog-foldback-20260622c',
+        repo: 'one-person-lab',
+      },
+      {
+        lane_id: 'mag-repo-shell-wrapper-source-purity-guard-20260622c',
+        repo: 'med-autogrant',
+      },
+      {
+        lane_id: 'rca-active-source-resurrection-scan-20260622c',
+        repo: 'redcube-ai',
+      },
+    ],
   );
   assert.ok(
     readback.milestones.some((milestone: { milestone_id: string; priority: string }) =>
