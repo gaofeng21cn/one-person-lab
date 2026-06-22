@@ -38,6 +38,7 @@ const fastTestFiles = [
   'tests/src/cognitive-computation-kernel-contract.test.ts',
   'tests/src/advisory-knowledge-boundary-contract.test.ts',
   'tests/src/opl-flow-completion-audit-contract.test.ts',
+  'tests/src/operator-compact-readback-contract.test.ts',
   'tests/src/verification-test-governance.test.ts',
   'tests/src/line-budget.test.ts',
   'tests/src/active-path-residue-scan.test.ts',
