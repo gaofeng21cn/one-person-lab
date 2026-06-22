@@ -12,6 +12,7 @@ import {
   buildStandardAgentLandingAcceptanceGuardReadback,
 } from './framework-tranche-backlog-parts/guard-readbacks.ts';
 import { buildOperatorCompactReadbackGuard } from './framework-tranche-backlog-parts/operator-compact-readback-guard.ts';
+import { buildSourceStructureOperatorReadback } from './source-structure-operator-readback.ts';
 import {
   APP_SHELL_CONVERGENCE_STRUCTURE_READBACK,
   CROSS_REPO_REF_INTEGRITY_GUARD,
@@ -181,6 +182,8 @@ export function buildFrameworkTrancheBacklogReadback(contracts: FrameworkContrac
         buildActiveCleanupNoResurrectionGuardReadback(),
       operator_compact_readback_guard:
         buildOperatorCompactReadbackGuard(contracts),
+      source_structure_operator_guard:
+        buildSourceStructureOperatorReadback().source_structure_operator_readback,
       milestones: FRAMEWORK_TRANCHE_MILESTONES,
     },
   };

@@ -41,6 +41,7 @@ const fastTestFiles = [
   'tests/src/operator-compact-readback-contract.test.ts',
   'tests/src/verification-test-governance.test.ts',
   'tests/src/line-budget.test.ts',
+  'tests/src/source-structure-operator-readback.test.ts',
   'tests/src/active-path-residue-scan.test.ts',
   'tests/src/stale-compat-retirement-guard.test.ts',
   'tests/src/managed-shell-command-env.test.ts',

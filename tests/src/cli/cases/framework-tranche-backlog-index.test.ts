@@ -339,4 +339,33 @@ test('framework tranche backlog exposes current selection and closed tranche arc
       .compact_readback_can_claim_goal_complete,
     false,
   );
+  assert.equal(
+    readback.source_structure_operator_guard.surface_kind,
+    'opl_source_structure_operator_readback',
+  );
+  assert.equal(
+    readback.source_structure_operator_guard.readback_role,
+    'operator_source_structure_guard_not_completion_audit_not_readiness_or_quality_verdict',
+  );
+  assert.equal(readback.source_structure_operator_guard.owner, 'one-person-lab');
+  assert.equal(readback.source_structure_operator_guard.default_limit, 1000);
+  assert.equal(readback.source_structure_operator_guard.advisory_passed, true);
+  assert.equal(
+    readback.source_structure_operator_guard.authority_boundary.can_create_second_source_truth,
+    false,
+  );
+  assert.equal(
+    readback.source_structure_operator_guard.authority_boundary.can_claim_plan_completion,
+    false,
+  );
+  assert.equal(
+    readback.source_structure_operator_guard.false_ready_guard
+      .source_structure_readback_can_claim_goal_complete,
+    false,
+  );
+  assert.equal(
+    readback.source_structure_operator_guard.false_ready_guard
+      .findings_are_maintenance_signal_not_domain_blocker,
+    true,
+  );
 });

@@ -7,6 +7,7 @@ import {
 import { buildFrameworkReadinessCompactReadback } from '../../framework-readiness-compact-readback.ts';
 import { buildFrameworkReadinessSummary } from '../../framework-readiness.ts';
 import { buildFrameworkTrancheBacklogReadback } from '../../framework-tranche-backlog.ts';
+import { buildSourceStructureOperatorReadback } from '../../source-structure-operator-readback.ts';
 import { buildOplAppState, parseAppActionExecuteArgs, parseAppStateArgs, runOplAppActionExecute } from '../../app-state.ts';
 import { runOplEngineAction } from '../../system-installation/engine-actions.ts';
 import { runOplTurnkeyInstall } from '../../system-installation/turnkey.ts';
@@ -305,6 +306,35 @@ export function buildPublicCommandSpecs(
           );
         }
         return buildFrameworkTrancheBacklogReadback(getContracts());
+      },
+    },
+    'framework source-structure': {
+      usage: 'opl framework source-structure --family-defaults [--strict]',
+      summary:
+        'Read the OPL source-structure line-budget guard as an operator readback without claiming readiness, quality verdict, or completion.',
+      examples: [
+        'opl framework source-structure --family-defaults --json',
+        'opl framework source-structure --family-defaults --strict --json',
+      ],
+      group: 'framework',
+      handler: (args) => {
+        const allowed = new Set(['--family-defaults', '--strict']);
+        if (
+          !args.includes('--family-defaults')
+          || args.some((arg) => !allowed.has(arg))
+          || args.filter((arg) => arg === '--family-defaults').length !== 1
+          || args.filter((arg) => arg === '--strict').length > 1
+        ) {
+          throw buildUsageError(
+            'framework source-structure requires --family-defaults and optionally --strict.',
+            publicCommandSpecs['framework source-structure'],
+            {
+              required: ['--family-defaults'],
+              optional: ['--strict'],
+            },
+          );
+        }
+        return buildSourceStructureOperatorReadback({ strict: args.includes('--strict') });
       },
     },
     ...agentLabCommandSpecs,
