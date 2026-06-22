@@ -51,8 +51,12 @@ function buildCurrentTrancheReadback(
   const selectedMilestoneIds = [
     ...new Set(NEXT_TRANCHE_SELECTED_LANES.flatMap((lane) => lane.milestone_ids)),
   ];
+  const lanes = NEXT_TRANCHE_SELECTED_LANES.map((lane) => ({
+    ...lane,
+    authority_boundary: { ...NO_SECOND_TRUTH_AUTHORITY_BOUNDARY },
+  }));
   return {
-    tranche_id: 'opl-family-ideal-operating-model-tranche-20260622b',
+    tranche_id: 'opl-family-ideal-operating-model-tranche-20260622c',
     tranche_role:
       'fresh_non_live_functional_structure_tranche_selected_not_full_completion_audit',
     current_work_order_status:
@@ -92,22 +96,22 @@ function buildCurrentTrancheReadback(
     ],
     tranche_closeout_progress: {
       progress_status:
-        'external_lane_remote_readbacks_landed_self_lane_requires_post_push_readback',
+        'domain_lane_remote_readbacks_landed_self_lane_requires_post_push_readback',
       selected_lane_count: selectedLaneCount,
       remote_readback_matched_lane_count: 2,
       pending_self_lane_count: 1,
       absorbed_remote_readbacks: [
         {
-          lane_id: 'oma-script-to-pack-executable-guard-20260622b',
-          repo: 'opl-meta-agent',
-          commit_sha: '77f34150ac057569daefdda611dcae0191ad1ef0',
+          lane_id: 'mag-repo-shell-wrapper-source-purity-guard-20260622c',
+          repo: 'med-autogrant',
+          commit_sha: '7d35de2d2084054b014b3e9e1952845633c3369e',
           remote_ref: 'refs/heads/main',
           remote_sha_matches_local: true,
         },
         {
-          lane_id: 'opl-doc-support-profile-json-strict-readback-20260622b',
-          repo: 'opl-doc',
-          commit_sha: '085bb336081a7e63e27139a50959b4a2b0e954a9',
+          lane_id: 'rca-active-source-resurrection-scan-20260622c',
+          repo: 'redcube-ai',
+          commit_sha: '328e1969e65e4b816483d12f4ea5a0554ca9389b',
           remote_ref: 'refs/heads/main',
           remote_sha_matches_local: true,
         },
@@ -134,7 +138,7 @@ function buildCurrentTrancheReadback(
       remote_sha_readback_can_claim_domain_ready: false,
       no_active_selection_can_claim_goal_complete: false,
     },
-    lanes: NEXT_TRANCHE_SELECTED_LANES,
+    lanes,
   };
 }
 

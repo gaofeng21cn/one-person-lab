@@ -30,11 +30,8 @@ test('framework tranche backlog exposes current selection and closed tranche arc
   );
   assert.deepEqual(readback.current_tranche.selected_milestone_ids, [
     'opl_primitive_runtime_owner_route_guard',
-    'domain_pack_generated_hosted_surfaces',
     'standard_agent_landing_acceptance_guard',
     'strict_source_purity_private_wrapper_retirement',
-    'oma_script_to_pack_hygiene',
-    'support_repo_profile_no_resurrection',
   ]);
   assert.deepEqual(readback.current_tranche.closed_or_advanced_structural_milestone_ids, []);
   assert.equal(readback.current_tranche.next_selection_required, false);
@@ -45,9 +42,9 @@ test('framework tranche backlog exposes current selection and closed tranche arc
   assert.deepEqual(
     readback.current_tranche.lanes.map((lane: { lane_id: string }) => lane.lane_id),
     [
-      'opl-next-tranche-selection-foldback-20260622b',
-      'oma-script-to-pack-executable-guard-20260622b',
-      'opl-doc-support-profile-json-strict-readback-20260622b',
+      'opl-tranche-backlog-foldback-20260622c',
+      'mag-repo-shell-wrapper-source-purity-guard-20260622c',
+      'rca-active-source-resurrection-scan-20260622c',
     ],
   );
   assert.equal(
@@ -119,7 +116,7 @@ test('framework tranche backlog exposes current selection and closed tranche arc
   assert.ok(readback.current_tranche.required_closeout_evidence.includes('worktree_and_branch_cleanup'));
   assert.equal(
     readback.current_tranche.tranche_closeout_progress.progress_status,
-    'external_lane_remote_readbacks_landed_self_lane_requires_post_push_readback',
+    'domain_lane_remote_readbacks_landed_self_lane_requires_post_push_readback',
   );
   assert.equal(readback.current_tranche.tranche_closeout_progress.selected_lane_count, 3);
   assert.equal(readback.current_tranche.tranche_closeout_progress.remote_readback_matched_lane_count, 2);
@@ -134,13 +131,13 @@ test('framework tranche backlog exposes current selection and closed tranche arc
     ),
     [
       {
-        lane_id: 'oma-script-to-pack-executable-guard-20260622b',
-        commit_sha: '77f34150ac057569daefdda611dcae0191ad1ef0',
+        lane_id: 'mag-repo-shell-wrapper-source-purity-guard-20260622c',
+        commit_sha: '7d35de2d2084054b014b3e9e1952845633c3369e',
         remote_sha_matches_local: true,
       },
       {
-        lane_id: 'opl-doc-support-profile-json-strict-readback-20260622b',
-        commit_sha: '085bb336081a7e63e27139a50959b4a2b0e954a9',
+        lane_id: 'rca-active-source-resurrection-scan-20260622c',
+        commit_sha: '328e1969e65e4b816483d12f4ea5a0554ca9389b',
         remote_sha_matches_local: true,
       },
     ],
@@ -157,6 +154,83 @@ test('framework tranche backlog exposes current selection and closed tranche arc
   );
   const lanesById = Object.fromEntries(
     readback.last_closed_tranche.lanes.map((lane: { lane_id: string }) => [lane.lane_id, lane]),
+  );
+  const currentLanesById = Object.fromEntries(
+    readback.current_tranche.lanes.map((lane: { lane_id: string }) => [lane.lane_id, lane]),
+  );
+  assert.deepEqual(
+    currentLanesById['opl-tranche-backlog-foldback-20260622c'].milestone_ids,
+    [
+      'opl_primitive_runtime_owner_route_guard',
+      'standard_agent_landing_acceptance_guard',
+      'strict_source_purity_private_wrapper_retirement',
+    ],
+  );
+  assert.equal(
+    currentLanesById['opl-tranche-backlog-foldback-20260622c'].repo,
+    'one-person-lab',
+  );
+  assert.ok(
+    currentLanesById['opl-tranche-backlog-foldback-20260622c']
+      .non_live_completion_evidence_required.includes(
+        'OPL_framework_tranche_backlog_remote_readbacks_reflect_MAG_and_RCA_origin_main_sha',
+      ),
+  );
+  assert.ok(
+    currentLanesById['opl-tranche-backlog-foldback-20260622c'].forbidden_scope.includes(
+      'AGUI_update_or_foreground_resurrection',
+    ),
+  );
+  assert.equal(
+    currentLanesById['opl-tranche-backlog-foldback-20260622c']
+      .authority_boundary.can_claim_plan_completion,
+    false,
+  );
+  assert.deepEqual(
+    currentLanesById['mag-repo-shell-wrapper-source-purity-guard-20260622c'].milestone_ids,
+    ['strict_source_purity_private_wrapper_retirement'],
+  );
+  assert.equal(
+    currentLanesById['mag-repo-shell-wrapper-source-purity-guard-20260622c'].repo,
+    'med-autogrant',
+  );
+  assert.ok(
+    currentLanesById['mag-repo-shell-wrapper-source-purity-guard-20260622c']
+      .required_surfaces.includes('API_readback'),
+  );
+  assert.ok(
+    currentLanesById['mag-repo-shell-wrapper-source-purity-guard-20260622c']
+      .non_live_completion_evidence_required.includes(
+        'MAG_repo_shell_verification_wrapper_guard_landed_in_source_purity_readback',
+      ),
+  );
+  assert.ok(
+    currentLanesById['mag-repo-shell-wrapper-source-purity-guard-20260622c'].forbidden_scope.includes(
+      'repo_shell_wrapper_physical_delete_claim',
+    ),
+  );
+  assert.deepEqual(
+    currentLanesById['rca-active-source-resurrection-scan-20260622c'].milestone_ids,
+    ['strict_source_purity_private_wrapper_retirement'],
+  );
+  assert.equal(
+    currentLanesById['rca-active-source-resurrection-scan-20260622c'].repo,
+    'redcube-ai',
+  );
+  assert.ok(
+    currentLanesById['rca-active-source-resurrection-scan-20260622c']
+      .required_surfaces.includes('API_readback'),
+  );
+  assert.ok(
+    currentLanesById['rca-active-source-resurrection-scan-20260622c']
+      .non_live_completion_evidence_required.includes(
+        'RCA_active_source_resurrection_scan_landed_in_private_platform_readback',
+      ),
+  );
+  assert.ok(
+    currentLanesById['rca-active-source-resurrection-scan-20260622c'].forbidden_scope.includes(
+      'visual_ready_or_exportable_claim',
+    ),
   );
   assert.deepEqual(
     lanesById['mag-source-purity-cli-readback-20260622'].milestone_ids,
