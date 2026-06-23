@@ -436,7 +436,7 @@ function currentControlProviderAdmissionInputContext(input: {
     ? readDomainProgressTransitionRuntimeReadbackJsonl({
       logPath: transitionRuntimeLogPath,
       aggregateIdentity: input.fields.currentControlCommand.aggregate_identity as Record<string, unknown>,
-      idempotencyKey: attemptIdempotencyKey,
+      idempotencyKey: optionalString(input.fields.currentControlCommand.idempotency_key) ?? attemptIdempotencyKey,
     })
     : null;
   const explicitTransitionApply = domainProgressTransitionApply(input.candidate);
@@ -707,6 +707,17 @@ export function currentControlProviderAdmissionInputFrom(
   if (domainId !== 'medautoscience') {
     return { blocked: { reason: 'unsupported_current_control_provider_admission_domain', task: candidate } };
   }
+  if (
+    optionalString(candidate.provider_admission_schema_source) === 'transition_request_pending_task'
+    && optionalString(candidate.blocked_reason)
+  ) {
+    return {
+      blocked: {
+        reason: optionalString(candidate.blocked_reason)!,
+        task: candidate,
+      },
+    };
+  }
   if (optionalString(candidate.status) !== 'provider_admission_pending' || candidate.owner_route_current !== true) {
     return {};
   }
@@ -758,8 +769,12 @@ export function currentControlProviderAdmissionInputFrom(
     transitionRuntimeLiveReadback,
     domainProgressTransitionApply,
   } = contextResult.context;
+  const transitionRequest = isRecord(candidate.opl_domain_progress_transition_request)
+    ? candidate.opl_domain_progress_transition_request
+    : null;
   const providerAdmissionIdentity = {
     ...candidate,
+    ...(transitionRequest ? { opl_domain_progress_transition_request: transitionRequest } : {}),
     current_control_command_outbox_record: currentControlCommand,
     current_control_command: currentControlCommand,
     domain_progress_transition_runtime: transitionRuntimeResult,
@@ -802,7 +817,10 @@ export function currentControlProviderAdmissionInputFrom(
         source_fingerprint: sourceFingerprint,
         route_identity_key: routeIdentityKey,
         attempt_idempotency_key: attemptIdempotencyKey,
-        idempotency_key: attemptIdempotencyKey,
+        idempotency_key: optionalString(currentControlCommand.idempotency_key) ?? attemptIdempotencyKey,
+        ...(optionalString(candidate.request_idempotency_key)
+          ? { request_idempotency_key: optionalString(candidate.request_idempotency_key) }
+          : {}),
         dispatch_authority: dispatchAuthority,
         executor_kind: optionalString(candidate.executor_kind) ?? 'codex_cli_default',
         ...(dispatchRef ? { dispatch_ref: dispatchRef } : {}),
@@ -825,6 +843,7 @@ export function currentControlProviderAdmissionInputFrom(
           ? { required_output_surface: optionalString(candidate.required_output_surface) }
           : {}),
         ...(currentnessBasis ? { owner_route_currentness_basis: currentnessBasis } : {}),
+        ...(transitionRequest ? { opl_domain_progress_transition_request: transitionRequest } : {}),
         current_control_command_outbox_record: currentControlCommand,
         current_control_command: currentControlCommand,
         domain_progress_transition_runtime: transitionRuntimeResult,

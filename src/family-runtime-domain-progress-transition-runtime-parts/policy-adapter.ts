@@ -75,28 +75,89 @@ function recordField(value: Record<string, unknown>, field: string) {
 
 function adapterCanCreateOplOutbox(request: Record<string, unknown>) {
   const capabilities = recordField(request, 'runtime_capabilities')
-    ?? recordField(request, 'domain_runtime_capabilities')
+    ?? {};
+  const boundary = recordField(request, 'authority_boundary')
+    ?? {};
+  const policyBoundary = recordField(request, 'policy_authority_boundary')
+    ?? {};
+  const domainCapabilities = recordField(request, 'domain_runtime_capabilities')
     ?? {};
   return request.mas_can_create_opl_outbox_record
     ?? request.adapter_can_create_opl_outbox_record
+    ?? boundary.mas_can_create_opl_outbox_record
+    ?? boundary.adapter_can_create_opl_outbox_record
+    ?? policyBoundary.mas_can_create_opl_outbox_record
+    ?? policyBoundary.adapter_can_create_opl_outbox_record
     ?? capabilities.mas_can_create_opl_outbox_record
-    ?? capabilities.adapter_can_create_opl_outbox_record;
+    ?? capabilities.adapter_can_create_opl_outbox_record
+    ?? domainCapabilities.mas_can_create_opl_outbox_record
+    ?? domainCapabilities.adapter_can_create_opl_outbox_record;
 }
 
 function policyAuthorityBoundary(request: Record<string, unknown>) {
   const boundary = recordField(request, 'authority_boundary')
-    ?? recordField(request, 'policy_authority_boundary')
     ?? {};
+  const policyBoundary = recordField(request, 'policy_authority_boundary') ?? {};
+  const capabilities = recordField(request, 'runtime_capabilities') ?? {};
+  const domainCapabilities = recordField(request, 'domain_runtime_capabilities') ?? {};
   const outcome = recordField(request, 'outcome') ?? {};
   const policyVerdict = recordField(request, 'policy_verdict') ?? {};
   const domainPolicyResult = recordField(request, 'domain_policy_result') ?? {};
   const valuesToReject = [
+    request.can_write_opl_outbox,
+    request.can_write_opl_event,
+    request.can_write_opl_stage_run,
+    request.can_write_provider_attempt,
+    request.can_claim_provider_running,
+    request.can_claim_paper_progress,
+    request.can_claim_runtime_ready,
+    request.provider_admission_pending,
+    request.provider_completion_is_domain_ready,
+    request.provider_completion_is_domain_completion,
+    boundary.mas_can_create_opl_event,
+    boundary.mas_can_create_opl_stage_run,
+    boundary.mas_can_authorize_provider_admission,
+    boundary.mas_can_mark_provider_attempt_running,
+    boundary.can_write_opl_outbox,
+    boundary.can_write_opl_event,
+    boundary.can_write_opl_stage_run,
+    boundary.can_write_provider_attempt,
+    boundary.can_claim_provider_running,
+    boundary.can_claim_paper_progress,
+    boundary.can_claim_runtime_ready,
+    boundary.provider_admission_pending,
     boundary.can_write_domain_truth,
     boundary.opl_can_write_domain_truth,
     boundary.can_create_owner_receipt,
     boundary.can_create_typed_blocker,
     boundary.provider_completion_is_domain_ready,
     boundary.provider_completion_is_domain_completion,
+    policyBoundary.mas_can_create_opl_event,
+    policyBoundary.mas_can_create_opl_stage_run,
+    policyBoundary.mas_can_authorize_provider_admission,
+    policyBoundary.mas_can_mark_provider_attempt_running,
+    policyBoundary.can_write_opl_outbox,
+    policyBoundary.can_write_opl_event,
+    policyBoundary.can_write_opl_stage_run,
+    policyBoundary.can_write_provider_attempt,
+    policyBoundary.can_claim_provider_running,
+    policyBoundary.can_claim_paper_progress,
+    policyBoundary.can_claim_runtime_ready,
+    policyBoundary.provider_admission_pending,
+    policyBoundary.can_write_domain_truth,
+    policyBoundary.opl_can_write_domain_truth,
+    policyBoundary.can_create_owner_receipt,
+    policyBoundary.can_create_typed_blocker,
+    policyBoundary.provider_completion_is_domain_ready,
+    policyBoundary.provider_completion_is_domain_completion,
+    capabilities.can_claim_provider_running,
+    capabilities.can_claim_paper_progress,
+    capabilities.can_claim_runtime_ready,
+    capabilities.provider_admission_pending,
+    domainCapabilities.can_claim_provider_running,
+    domainCapabilities.can_claim_paper_progress,
+    domainCapabilities.can_claim_runtime_ready,
+    domainCapabilities.provider_admission_pending,
     outcome.provider_completion_is_domain_ready,
     outcome.provider_completion_is_domain_completion,
     policyVerdict.provider_completion_is_domain_ready,
@@ -162,7 +223,7 @@ export function normalizeDomainProgressPolicyAdapterRequest(
     ?? recordField(value, 'domain_policy_result')
     ?? {};
   const aggregateIdentity = recordField(value, 'aggregate_identity');
-  const idempotencyKey = firstString(value.idempotency_key);
+  const idempotencyKey = firstString(value.request_idempotency_key, value.idempotency_key);
   const sourceGeneration = firstString(value.source_generation);
   const expectedVersion = firstString(value.expected_version);
   if (!aggregateIdentity || !idempotencyKey || !sourceGeneration || !expectedVersion || !requiredPostcondition) {

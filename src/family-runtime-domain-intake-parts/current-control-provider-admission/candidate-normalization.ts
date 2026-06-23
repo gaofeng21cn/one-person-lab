@@ -58,9 +58,44 @@ function transitionRequestFromCandidate(candidate: Record<string, unknown>) {
     : null;
   return isRecord(candidate.opl_domain_progress_transition_request)
     ? candidate.opl_domain_progress_transition_request
+    : isRecord(candidate.opl_runtime_carrier)
+      ? candidate.opl_runtime_carrier
     : isRecord(policyResult?.opl_domain_progress_transition_request)
       ? policyResult.opl_domain_progress_transition_request
+      : isRecord(policyResult?.opl_runtime_carrier)
+        ? policyResult.opl_runtime_carrier
       : null;
+}
+
+function transitionRequestIdentityBinding(
+  request: Record<string, unknown>,
+  payload: Record<string, unknown>,
+) {
+  const requestIdempotencyKey = optionalString(request.request_idempotency_key)
+    ?? optionalString(request.idempotency_key);
+  const routeIdentityKey = optionalString(payload.route_identity_key)
+    ?? optionalString(request.route_identity_key)
+    ?? optionalString(requestIdempotencyKey);
+  const attemptIdempotencyKey = optionalString(payload.attempt_idempotency_key)
+    ?? optionalString(request.attempt_idempotency_key)
+    ?? optionalString(requestIdempotencyKey);
+  const mismatches = [
+    optionalString(payload.request_idempotency_key)
+      && requestIdempotencyKey
+      && optionalString(payload.request_idempotency_key) !== requestIdempotencyKey,
+    optionalString(payload.route_identity_key)
+      && optionalString(request.route_identity_key)
+      && optionalString(payload.route_identity_key) !== optionalString(request.route_identity_key),
+    optionalString(payload.attempt_idempotency_key)
+      && optionalString(request.attempt_idempotency_key)
+      && optionalString(payload.attempt_idempotency_key) !== optionalString(request.attempt_idempotency_key),
+  ];
+  return {
+    requestIdempotencyKey,
+    routeIdentityKey,
+    attemptIdempotencyKey,
+    mismatch: mismatches.some(Boolean),
+  };
 }
 
 function candidateWithCurrentControlOwnerRouteRefs(
@@ -308,9 +343,7 @@ export function currentControlProviderAdmissionCandidateFromTransitionRequestTas
   ) {
     return null;
   }
-  const request = isRecord(input.payload.opl_domain_progress_transition_request)
-    ? input.payload.opl_domain_progress_transition_request
-    : null;
+  const request = transitionRequestFromCandidate(input.payload);
   if (!request) {
     return null;
   }
@@ -333,14 +366,30 @@ export function currentControlProviderAdmissionCandidateFromTransitionRequestTas
     ?? optionalString(input.payload.domain_owner)
     ?? optionalString(input.payload.owner)
     ?? optionalString(request.next_owner);
-  const routeIdentityKey = optionalString(input.payload.route_identity_key)
-    ?? optionalString(request.route_identity_key)
-    ?? optionalString(input.payload.attempt_idempotency_key)
-    ?? optionalString(request.idempotency_key);
-  const attemptIdempotencyKey = optionalString(input.payload.attempt_idempotency_key)
-    ?? optionalString(request.idempotency_key);
+  const identityBinding = transitionRequestIdentityBinding(request, input.payload);
   if (!studyId || !actionType || !workUnitId || !workUnitFingerprint || !nextOwner) {
     return null;
+  }
+  if (identityBinding.mismatch) {
+    return {
+      status: 'blocked',
+      owner_route_current: input.payload.owner_route_current !== false,
+      study_id: studyId,
+      quest_id: optionalString(input.payload.quest_id) ?? studyId,
+      action_type: actionType,
+      work_unit_id: workUnitId,
+      work_unit_fingerprint: workUnitFingerprint,
+      action_fingerprint: optionalString(input.payload.action_fingerprint) ?? workUnitFingerprint,
+      next_executable_owner: nextOwner,
+      provider_completion_is_domain_completion: false,
+      blocked_reason: 'current_control_transition_request_identity_mismatch',
+      request_idempotency_key: identityBinding.requestIdempotencyKey,
+      ...(identityBinding.routeIdentityKey ? { route_identity_key: identityBinding.routeIdentityKey } : {}),
+      ...(identityBinding.attemptIdempotencyKey ? { attempt_idempotency_key: identityBinding.attemptIdempotencyKey } : {}),
+      opl_domain_progress_transition_request: request,
+      provider_admission_schema_source: 'transition_request_pending_task',
+      priority: input.priority,
+    };
   }
   const currentnessBasis = isRecord(input.payload.owner_route_currentness_basis)
     ? input.payload.owner_route_currentness_basis
@@ -370,8 +419,9 @@ export function currentControlProviderAdmissionCandidateFromTransitionRequestTas
     stage_transition_authority_boundary: isRecord(input.payload.stage_transition_authority_boundary)
       ? input.payload.stage_transition_authority_boundary
       : providerObservationBoundaryFromCurrentControl(),
-    ...(routeIdentityKey ? { route_identity_key: routeIdentityKey } : {}),
-    ...(attemptIdempotencyKey ? { attempt_idempotency_key: attemptIdempotencyKey } : {}),
+    ...(identityBinding.requestIdempotencyKey ? { request_idempotency_key: identityBinding.requestIdempotencyKey } : {}),
+    ...(identityBinding.routeIdentityKey ? { route_identity_key: identityBinding.routeIdentityKey } : {}),
+    ...(identityBinding.attemptIdempotencyKey ? { attempt_idempotency_key: identityBinding.attemptIdempotencyKey } : {}),
     ...(optionalString(input.payload.stage_packet_ref) ? { stage_packet_ref: optionalString(input.payload.stage_packet_ref) } : {}),
     ...(Array.isArray(input.payload.stage_packet_refs) ? { stage_packet_refs: input.payload.stage_packet_refs } : {}),
     ...(Array.isArray(input.payload.checkpoint_refs) ? { checkpoint_refs: input.payload.checkpoint_refs } : {}),
@@ -399,6 +449,7 @@ export function currentControlTransitionPendingCandidateFromTask(input: EnqueueI
   }
   if (
     isRecord(input.payload.opl_domain_progress_transition_request)
+    || isRecord(input.payload.opl_runtime_carrier)
     || isRecord(input.payload.current_control_command_outbox_record)
   ) {
     return null;

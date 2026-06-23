@@ -24,18 +24,24 @@ function transitionPendingCandidateIdentity(candidate: Record<string, unknown>) 
   const policyResult = isRecord(candidate.paper_progress_policy_result) ? candidate.paper_progress_policy_result : {};
   const request = isRecord(candidate.opl_domain_progress_transition_request)
     ? candidate.opl_domain_progress_transition_request
+    : isRecord(candidate.opl_runtime_carrier)
+      ? candidate.opl_runtime_carrier
     : isRecord(policyResult.opl_domain_progress_transition_request)
       ? policyResult.opl_domain_progress_transition_request
+      : isRecord(policyResult.opl_runtime_carrier)
+        ? policyResult.opl_runtime_carrier
       : {};
   return {
     attemptIdempotencyKey:
       optionalString(candidate.attempt_idempotency_key)
       ?? optionalString(sourceRefs.attempt_idempotency_key)
+      ?? optionalString(request.attempt_idempotency_key)
       ?? optionalString(request.idempotency_key),
     routeIdentityKey:
       optionalString(candidate.route_identity_key)
       ?? optionalString(sourceRefs.route_identity_key)
       ?? optionalString(request.route_identity_key)
+      ?? optionalString(request.attempt_idempotency_key)
       ?? optionalString(request.idempotency_key),
     studyId:
       optionalString(candidate.study_id)

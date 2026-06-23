@@ -256,6 +256,7 @@ function blockedTaskKind(task: Record<string, unknown>) {
     || optionalString(task.provider_admission_schema_source)
     || isRecord(task.current_control_command_outbox_record)
     || isRecord(task.opl_domain_progress_transition_request)
+    || isRecord(task.opl_runtime_carrier)
   ) {
     return 'domain_owner/default-executor-dispatch';
   }

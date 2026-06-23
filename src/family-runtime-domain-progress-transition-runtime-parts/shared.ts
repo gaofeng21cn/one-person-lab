@@ -79,6 +79,10 @@ export function optionalScalarString(value: unknown) {
   return null;
 }
 
+export function booleanTrue(value: unknown) {
+  return value === true || value === 'true';
+}
+
 export function numberValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
@@ -117,10 +121,31 @@ export function masTransitionRequestBoundaryViolation(command: Record<string, un
     return null;
   }
   const targetRuntimeKind = optionalString(command.target_runtime_kind) ?? optionalString(command.runtime_kind);
+  const authorityBoundary = isRecord(command.authority_boundary) ? command.authority_boundary : {};
+  const policyAuthorityBoundary = isRecord(command.policy_authority_boundary)
+    ? command.policy_authority_boundary
+    : {};
+  const runtimeCapabilities = isRecord(command.runtime_capabilities)
+    ? command.runtime_capabilities
+    : {};
+  const domainRuntimeCapabilities = isRecord(command.domain_runtime_capabilities)
+    ? command.domain_runtime_capabilities
+    : {};
+  const masCanCreateOplOutbox =
+    command.mas_can_create_opl_outbox_record
+    ?? command.adapter_can_create_opl_outbox_record
+    ?? authorityBoundary.mas_can_create_opl_outbox_record
+    ?? authorityBoundary.adapter_can_create_opl_outbox_record
+    ?? policyAuthorityBoundary.mas_can_create_opl_outbox_record
+    ?? policyAuthorityBoundary.adapter_can_create_opl_outbox_record
+    ?? runtimeCapabilities.mas_can_create_opl_outbox_record
+    ?? runtimeCapabilities.adapter_can_create_opl_outbox_record
+    ?? domainRuntimeCapabilities.mas_can_create_opl_outbox_record
+    ?? domainRuntimeCapabilities.adapter_can_create_opl_outbox_record;
   if (
     targetRuntimeKind !== 'DomainProgressTransitionRuntime'
     || optionalString(command.target_runtime_owner) !== 'one-person-lab'
-    || command.mas_can_create_opl_outbox_record !== false
+    || masCanCreateOplOutbox !== false
   ) {
     return 'domain_progress_transition_request_boundary_missing';
   }
@@ -135,6 +160,57 @@ export function masTransitionRequestBoundaryViolation(command: Record<string, un
   ];
   if (forbiddenRuntimeFields.some((field) => field in command)) {
     return 'domain_progress_transition_request_runtime_field_forbidden';
+  }
+  const overclaimValues = [
+    command.can_write_opl_outbox,
+    command.can_write_opl_event,
+    command.can_write_opl_stage_run,
+    command.can_write_provider_attempt,
+    command.can_claim_provider_running,
+    command.can_claim_paper_progress,
+    command.can_claim_runtime_ready,
+    command.provider_admission_pending,
+    command.provider_completion_is_domain_completion,
+    command.provider_completion_is_domain_ready,
+    authorityBoundary.mas_can_create_opl_event,
+    authorityBoundary.mas_can_create_opl_stage_run,
+    authorityBoundary.mas_can_authorize_provider_admission,
+    authorityBoundary.mas_can_mark_provider_attempt_running,
+    authorityBoundary.can_write_opl_outbox,
+    authorityBoundary.can_write_opl_event,
+    authorityBoundary.can_write_opl_stage_run,
+    authorityBoundary.can_write_provider_attempt,
+    authorityBoundary.can_claim_provider_running,
+    authorityBoundary.can_claim_paper_progress,
+    authorityBoundary.can_claim_runtime_ready,
+    authorityBoundary.provider_admission_pending,
+    authorityBoundary.provider_completion_is_domain_completion,
+    authorityBoundary.provider_completion_is_domain_ready,
+    policyAuthorityBoundary.mas_can_create_opl_event,
+    policyAuthorityBoundary.mas_can_create_opl_stage_run,
+    policyAuthorityBoundary.mas_can_authorize_provider_admission,
+    policyAuthorityBoundary.mas_can_mark_provider_attempt_running,
+    policyAuthorityBoundary.can_write_opl_outbox,
+    policyAuthorityBoundary.can_write_opl_event,
+    policyAuthorityBoundary.can_write_opl_stage_run,
+    policyAuthorityBoundary.can_write_provider_attempt,
+    policyAuthorityBoundary.can_claim_provider_running,
+    policyAuthorityBoundary.can_claim_paper_progress,
+    policyAuthorityBoundary.can_claim_runtime_ready,
+    policyAuthorityBoundary.provider_admission_pending,
+    policyAuthorityBoundary.provider_completion_is_domain_completion,
+    policyAuthorityBoundary.provider_completion_is_domain_ready,
+    runtimeCapabilities.can_claim_provider_running,
+    runtimeCapabilities.can_claim_paper_progress,
+    runtimeCapabilities.can_claim_runtime_ready,
+    runtimeCapabilities.provider_admission_pending,
+    domainRuntimeCapabilities.can_claim_provider_running,
+    domainRuntimeCapabilities.can_claim_paper_progress,
+    domainRuntimeCapabilities.can_claim_runtime_ready,
+    domainRuntimeCapabilities.provider_admission_pending,
+  ];
+  if (overclaimValues.some(booleanTrue)) {
+    return 'domain_progress_transition_request_authority_overclaim';
   }
   return null;
 }
@@ -195,6 +271,7 @@ export function stageRunIdentity(
     attempt_idempotency_key:
       optionalString(explicit.attempt_idempotency_key)
       ?? optionalString(command.attempt_idempotency_key)
+      ?? optionalString(command.idempotency_key)
       ?? idempotencyKey,
     provider_attempt_ref:
       optionalString(explicit.provider_attempt_ref)

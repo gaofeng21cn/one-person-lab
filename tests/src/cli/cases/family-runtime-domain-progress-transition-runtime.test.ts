@@ -4,6 +4,7 @@ import {
   assert,
   currentControlCommandOutboxRecord,
   fs,
+  masPaperMissionOplRuntimeCarrier,
   masDomainProgressTransitionRequest,
   os,
   path,
@@ -500,6 +501,108 @@ test('DomainProgressTransitionRuntime normalizes MAS policy request without acce
   assert.equal(
     runtimeArtifactPolluted.blocked?.reason,
     'domain_progress_policy_adapter_runtime_field_forbidden',
+  );
+});
+
+test('DomainProgressTransitionRuntime normalizes MAS PaperMissionTransaction carrier authority boundary', () => {
+  const carrier = masPaperMissionOplRuntimeCarrier({
+    studyId: '002-dm-china-us-mortality-attribution',
+    actionType: 'publication_gate_replay',
+    workUnitId: 'gate_clearing_claim_evidence_repair',
+    workUnitFingerprint: 'paper-mission-transaction::dm002::gate',
+    sourceGeneration: 'paper_mission_transaction_contract_v1',
+    idempotencyKey: 'paper-mission-transaction::dm002::gate',
+  });
+  const normalized = normalizeDomainProgressTransitionCommand(carrier, {
+    studyId: '002-dm-china-us-mortality-attribution',
+    actionType: 'publication_gate_replay',
+    workUnitId: 'gate_clearing_claim_evidence_repair',
+    workUnitFingerprint: 'paper-mission-transaction::dm002::gate',
+    nextOwner: 'ai_reviewer',
+  });
+
+  assert.equal(normalized.blocked, undefined);
+  assert.equal(normalized.command?.surface_kind, 'opl_domain_progress_transition_command');
+  assert.equal(normalized.command?.source_surface_kind, 'mas_domain_progress_transition_request');
+  assert.equal(normalized.command?.source_kind, 'paper_mission_transaction_opl_route_command');
+  assert.equal(normalized.command?.transition_kind, 'StartProviderAttempt');
+  assert.equal(normalized.command?.runtime_owner, 'one-person-lab');
+  assert.equal(normalized.command?.idempotency_key, carrier.request_idempotency_key);
+  assert.equal(record(normalized.command?.stage_run_identity).route_identity_key, carrier.route_identity_key);
+  assert.equal(
+    record(normalized.command?.stage_run_identity).attempt_idempotency_key,
+    carrier.attempt_idempotency_key,
+  );
+  assert.equal(record(normalized.command?.aggregate_identity).aggregate_kind, 'paper_mission_transaction');
+  assert.equal(record(normalized.command?.policy_adapter_readback).adapter_owner, 'med-autoscience');
+  assert.equal(record(normalized.command?.policy_adapter_readback).mas_can_create_opl_outbox_record, false);
+  assert.equal(record(normalized.command?.policy_adapter_readback).can_create_owner_receipt, false);
+  assert.equal(record(normalized.command?.domain_policy_result).provider_completion_is_domain_completion, false);
+
+  const outboxOverclaim = normalizeDomainProgressTransitionCommand({
+    ...carrier,
+    authority_boundary: {
+      ...record(carrier.authority_boundary),
+      mas_can_create_opl_outbox_record: true,
+    },
+  }, {
+    studyId: '002-dm-china-us-mortality-attribution',
+    actionType: 'publication_gate_replay',
+    workUnitId: 'gate_clearing_claim_evidence_repair',
+    workUnitFingerprint: 'paper-mission-transaction::dm002::gate',
+    nextOwner: 'ai_reviewer',
+  });
+
+  assert.equal(
+    outboxOverclaim.blocked?.reason,
+    'domain_progress_policy_adapter_boundary_missing',
+  );
+
+  const topLevelProviderRunningOverclaim = normalizeDomainProgressTransitionCommand({
+    ...carrier,
+    can_claim_provider_running: true,
+  }, {
+    studyId: '002-dm-china-us-mortality-attribution',
+    actionType: 'publication_gate_replay',
+    workUnitId: 'gate_clearing_claim_evidence_repair',
+    workUnitFingerprint: 'paper-mission-transaction::dm002::gate',
+    nextOwner: 'ai_reviewer',
+  });
+  const authorityStageRunOverclaim = normalizeDomainProgressTransitionCommand({
+    ...carrier,
+    authority_boundary: {
+      ...record(carrier.authority_boundary),
+      mas_can_create_opl_stage_run: true,
+    },
+  }, {
+    studyId: '002-dm-china-us-mortality-attribution',
+    actionType: 'publication_gate_replay',
+    workUnitId: 'gate_clearing_claim_evidence_repair',
+    workUnitFingerprint: 'paper-mission-transaction::dm002::gate',
+    nextOwner: 'ai_reviewer',
+  });
+  const providerCompletionOverclaim = normalizeDomainProgressTransitionCommand({
+    ...carrier,
+    provider_completion_is_domain_completion: true,
+  }, {
+    studyId: '002-dm-china-us-mortality-attribution',
+    actionType: 'publication_gate_replay',
+    workUnitId: 'gate_clearing_claim_evidence_repair',
+    workUnitFingerprint: 'paper-mission-transaction::dm002::gate',
+    nextOwner: 'ai_reviewer',
+  });
+
+  assert.equal(
+    topLevelProviderRunningOverclaim.blocked?.reason,
+    'domain_progress_policy_adapter_authority_overclaim',
+  );
+  assert.equal(
+    authorityStageRunOverclaim.blocked?.reason,
+    'domain_progress_policy_adapter_authority_overclaim',
+  );
+  assert.equal(
+    providerCompletionOverclaim.blocked?.reason,
+    'domain_progress_policy_adapter_authority_overclaim',
   );
 });
 
