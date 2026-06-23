@@ -9,6 +9,7 @@ import {
   REQUIRED_AGENT_PACK_SECTIONS,
   REQUIRED_REPO_SOURCE_DIRS,
   STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT,
+  STANDARD_STAGE_COMPLETION_POLICY,
   STANDARD_PROGRESS_DELTA_POLICY,
   STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
   STANDARD_USER_STAGE_LOG_CONTRACT,
@@ -333,6 +334,9 @@ function validateUserStageLogContracts(stageControlPlane: unknown) {
     const userStageLogContract = isPlainRecord(stageContract?.user_stage_log_contract)
       ? stageContract.user_stage_log_contract
       : null;
+    const stageCompletionPolicy = isPlainRecord(stageContract?.stage_completion_policy)
+      ? stageContract.stage_completion_policy
+      : null;
     const progressDeltaPolicy = isPlainRecord(stageContract?.progress_delta_policy)
       ? stageContract.progress_delta_policy
       : null;
@@ -341,6 +345,11 @@ function validateUserStageLogContracts(stageControlPlane: unknown) {
       : null;
     const fields = readStringArray(userStageLogContract?.required_domain_semantic_fields);
     const observabilityFields = readStringArray(userStageLogContract?.required_observability_fields);
+    const closeoutOutcomes = readStringArray(stageCompletionPolicy?.required_closeout_outcomes);
+    const acceptedCloseoutRefFields = readStringArray(stageCompletionPolicy?.accepted_closeout_ref_fields);
+    const stageCompletionBoundary = isPlainRecord(stageCompletionPolicy?.authority_boundary)
+      ? stageCompletionPolicy.authority_boundary
+      : {};
     const progressFields = readStringArray(progressDeltaPolicy?.required_fields);
     const blockerFields = readStringArray(typedBlockerLineagePolicy?.required_fields);
     const findings = [
@@ -358,6 +367,52 @@ function validateUserStageLogContracts(stageControlPlane: unknown) {
       fields.includes('remaining_blockers') ? null : `stage_user_stage_log_missing_remaining_blockers:${stageId}`,
       observabilityFields.includes('duration') ? null : `stage_user_stage_log_missing_duration:${stageId}`,
       observabilityFields.includes('token_usage') ? null : `stage_user_stage_log_missing_token_usage:${stageId}`,
+      stageCompletionPolicy ? null : `stage_completion_policy_missing:${stageId}`,
+      readOptionalString(stageCompletionPolicy?.surface_kind) === STANDARD_STAGE_COMPLETION_POLICY.surface_kind
+        ? null
+        : `stage_completion_policy_surface_kind_invalid:${stageId}`,
+      readOptionalString(stageCompletionPolicy?.completion_judgment_owner) === 'domain_stage'
+        ? null
+        : `stage_completion_policy_owner_invalid:${stageId}`,
+      stageCompletionPolicy?.closeout_packet_required === true
+        ? null
+        : `stage_completion_policy_closeout_packet_not_required:${stageId}`,
+      stageCompletionPolicy?.provider_completion_is_domain_completion === false
+        ? null
+        : `stage_completion_policy_provider_completion_claims_domain_completion:${stageId}`,
+      stageCompletionPolicy?.opl_content_judgment_allowed === false
+        ? null
+        : `stage_completion_policy_opl_content_judgment_allowed:${stageId}`,
+      readOptionalString(stageCompletionPolicy?.next_stage_transition_owner) === 'opl_runtime'
+        ? null
+        : `stage_completion_policy_next_transition_owner_invalid:${stageId}`,
+      closeoutOutcomes.includes('completed_and_continue')
+        ? null
+        : `stage_completion_policy_missing_completed_and_continue:${stageId}`,
+      closeoutOutcomes.includes('route_back')
+        ? null
+        : `stage_completion_policy_missing_route_back:${stageId}`,
+      closeoutOutcomes.includes('blocked')
+        ? null
+        : `stage_completion_policy_missing_blocked:${stageId}`,
+      acceptedCloseoutRefFields.includes('owner_receipt_ref')
+        ? null
+        : `stage_completion_policy_missing_owner_receipt_ref:${stageId}`,
+      acceptedCloseoutRefFields.includes('typed_blocker_ref')
+        ? null
+        : `stage_completion_policy_missing_typed_blocker_ref:${stageId}`,
+      acceptedCloseoutRefFields.includes('route_back_ref')
+        ? null
+        : `stage_completion_policy_missing_route_back_ref:${stageId}`,
+      stageCompletionBoundary.opl_can_decide_domain_completion === false
+        ? null
+        : `stage_completion_policy_opl_can_decide_domain_completion:${stageId}`,
+      stageCompletionBoundary.provider_completion_counts_as_stage_complete === false
+        ? null
+        : `stage_completion_policy_provider_completion_counts_complete:${stageId}`,
+      stageCompletionBoundary.suite_pass_counts_as_stage_complete === false
+        ? null
+        : `stage_completion_policy_suite_pass_counts_complete:${stageId}`,
       progressDeltaPolicy ? null : `stage_progress_delta_policy_missing:${stageId}`,
       readOptionalString(progressDeltaPolicy?.surface_kind) === STANDARD_PROGRESS_DELTA_POLICY.surface_kind
         ? null
@@ -396,6 +451,8 @@ function validateUserStageLogContracts(stageControlPlane: unknown) {
       status: findings.length === 0 ? 'passed' : 'blocked',
       required_domain_semantic_fields: fields,
       required_observability_fields: observabilityFields,
+      stage_completion_policy_outcomes: closeoutOutcomes,
+      stage_completion_policy_ref_fields: acceptedCloseoutRefFields,
       progress_delta_policy_fields: progressFields,
       typed_blocker_lineage_policy_fields: blockerFields,
       blockers: findings,
@@ -766,6 +823,9 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, enforce
     requiredStagePackets.includes('progress_delta_policy')
       ? null
       : 'foundry_agent_series_missing_stage_packet_progress_delta_policy',
+    requiredStagePackets.includes('stage_completion_policy')
+      ? null
+      : 'foundry_agent_series_missing_stage_packet_stage_completion_policy',
     requiredStagePackets.includes('typed_blocker_lineage_policy')
       ? null
       : 'foundry_agent_series_missing_stage_packet_typed_blocker_lineage_policy',

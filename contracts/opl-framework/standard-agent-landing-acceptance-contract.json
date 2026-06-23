@@ -68,13 +68,17 @@
         "canonical agent/ pack root exists",
         "stage control refs point to non-empty prompt / skill / knowledge / quality gate refs or explicit skill ids",
         "stage pack declares selected executor, expected receipt or typed blocker, authority boundary, and independent gate policy",
-        "source shape conformance forbids prose-only, README-only, empty scaffold, or src/packages-only semantic pack"
+        "source shape conformance forbids prose-only, README-only, empty scaffold, or src/packages-only semantic pack",
+        "each stage declares domain-owned stage_completion_policy with closeout packet outcomes",
+        "OPL runtime only transports the next stage after the domain closeout packet is valid"
       ],
       "cannot_be_satisfied_by": [
         "directory exists",
         "README exists",
         "stage id listed without prompt/skill/knowledge/evaluation refs",
-        "conformance pass that does not inspect source shape"
+        "conformance pass that does not inspect source shape",
+        "stage output without domain-owned completion policy",
+        "OPL/controller content judgment after provider completion"
       ]
     },
     {
@@ -201,7 +205,8 @@
     "App_projection_ready",
     "Brand_L4_ready",
     "docs_updated",
-    "contract_landed"
+    "contract_landed",
+    "stage_output_without_domain_completion_policy"
   ],
   "allowed_completion_evidence": [
     "domain_owner_receipt_ref",
@@ -217,7 +222,8 @@
     "no_forbidden_write_proof_ref",
     "tombstone_or_provenance_ref",
     "cross_agent_negative_conformance_ref",
-    "real_user_path_or_long_soak_owner_evidence_ref"
+    "real_user_path_or_long_soak_owner_evidence_ref",
+    "domain_stage_completion_policy_ref"
   ],
   "domain_kernel_policy": {
     "generic_kernel_belongs_to_opl": [

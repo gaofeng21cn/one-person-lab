@@ -73,7 +73,10 @@
     "reuse_scope_refs",
     "quality_floor_refs",
     "no_forbidden_write_refs",
-    "owner_route_refs"
+    "owner_route_refs",
+    "stage_completion_policy_refs",
+    "stage_completion_policy_blocker_refs",
+    "domain_stage_completion_closeout_outcome_refs"
   ],
   "required_observations": [
     "task_manifests_observed",
@@ -84,7 +87,8 @@
     "improvement_candidates_observed",
     "promotion_gates_observed",
     "no_memory_body_observed",
-    "forbidden_authority_flags_all_false"
+    "forbidden_authority_flags_all_false",
+    "domain_stage_completion_policies_observed"
   ],
   "result_surface": {
     "surface_kind": "opl_agent_lab_suite_result",
@@ -116,7 +120,8 @@
       "owner_or_human_gate_required_count",
       "promotable_candidate_count",
       "memory_body_observed",
-      "forbidden_authority_flag_count"
+      "forbidden_authority_flag_count",
+      "stage_completion_policy_blocker_count"
     ],
     "ref_fields": [
       "task_refs",
@@ -178,7 +183,9 @@
       "reuse_scope_refs",
       "quality_floor_refs",
       "no_forbidden_write_refs",
-      "owner_route_refs"
+      "owner_route_refs",
+      "stage_completion_policy_refs",
+      "stage_completion_policy_blocker_refs"
     ]
   },
   "efficiency_nonregression_surface": {
@@ -1374,7 +1381,7 @@
       "langfuse",
       "phoenix"
     ],
-      "optimizer_loop_fields": [
+    "optimizer_loop_fields": [
       "candidate_kinds",
       "loop_steps",
       "pattern_refs",
@@ -1528,5 +1535,52 @@
     "can_write_owner_receipt": false,
     "can_modify_managed_runtime": false,
     "can_promote_default_agent_without_gate": false
-  }
+  },
+  "stage_completion_policy_surface": {
+    "surface_kind": "opl_agent_lab_stage_completion_policy_surface",
+    "version": "opl-agent-lab.v1.stage-completion-policy",
+    "cli": "opl agent-lab run --suite <suite.json>",
+    "purpose": "Fail closed when a candidate stage lacks domain-owned completion judgment and a standard closeout packet contract. This keeps OPL limited to stage execution lifecycle and next-stage transport.",
+    "required_task_field": "stage_completion_policy",
+    "required_policy_shape": {
+      "surface_kind": "domain_stage_completion_policy",
+      "completion_judgment_owner": "domain_stage",
+      "closeout_packet_required": true,
+      "provider_completion_is_domain_completion": false,
+      "opl_content_judgment_allowed": false,
+      "next_stage_transition_owner": "opl_runtime",
+      "required_closeout_outcomes": [
+        "completed_and_continue",
+        "completed_and_wait_owner",
+        "route_back",
+        "blocked",
+        "rejected"
+      ],
+      "accepted_closeout_ref_fields": [
+        "owner_receipt_ref",
+        "typed_blocker_ref",
+        "human_gate_ref",
+        "route_back_ref"
+      ]
+    },
+    "blocked_reasons": [
+      "stage_completion_policy_missing",
+      "stage_completion_policy_surface_kind_invalid",
+      "stage_completion_policy_ref_missing",
+      "stage_completion_judgment_must_be_domain_stage_owned",
+      "stage_closeout_packet_required",
+      "provider_completion_must_not_be_domain_completion",
+      "opl_content_judgment_must_be_forbidden",
+      "next_stage_transition_owner_must_be_opl_runtime",
+      "stage_closeout_outcomes_incomplete",
+      "stage_closeout_ref_fields_incomplete",
+      "opl_domain_completion_authority_forbidden",
+      "provider_completion_counts_as_stage_complete_forbidden"
+    ],
+    "authority_boundary": "Agent Lab may validate policy refs, closeout outcome declarations, and false-authority flags. It cannot inspect target artifact body, judge domain content completion, sign owner receipts, create typed blockers, or promote provider completion to domain completion."
+  },
+  "false_completion_signals": [
+    "stage_output_without_domain_completion_policy",
+    "provider_completion_without_domain_closeout_packet"
+  ]
 }

@@ -4,6 +4,7 @@ import {
   STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT,
 } from './foundry-series.ts';
 import { STANDARD_PROGRESS_DELTA_POLICY } from './progress-delta.ts';
+import { STANDARD_STAGE_COMPLETION_POLICY } from './stage-completion.ts';
 import { STANDARD_TYPED_BLOCKER_LINEAGE_POLICY } from './typed-blocker.ts';
 import { STANDARD_USER_STAGE_LOG_CONTRACT } from './user-stage-log.ts';
 
@@ -226,11 +227,13 @@ export const AGENT_PACK_CONTRACT = {
     'stage_contract.receipt_schema_refs',
     'stage_contract.authority_function_refs',
     'stage_contract.l4_entry_gate and stage_contract.l5_entry_gate',
+    'stage_contract.stage_completion_policy',
     'stage_contract.user_stage_log_contract',
     'stage_contract.progress_delta_policy',
     'stage_contract.typed_blocker_lineage_policy',
     'independent_gate_policy:execution_review_separation',
   ],
+  stage_completion_policy: STANDARD_STAGE_COMPLETION_POLICY,
   user_stage_log_contract: STANDARD_USER_STAGE_LOG_CONTRACT,
   progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
   typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,

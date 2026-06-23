@@ -279,18 +279,25 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       'source_locator_refs',
       'expected_deliverable_class_ref',
       'domain_authority_owner_ref',
+      'stage-completion-policy-ref:award-foundry/domain_intake',
     ]);
     assert.deepEqual(stageControlPlane.stages[0].stage_contract.ensures, [
       'domain_intake_receipt_or_typed_blocker_ref',
       'next_stage_recommendation_ref',
       'authority_boundary_ref',
       'no_forbidden_write_evidence_ref',
+      'stage-closeout-packet-ref:award-foundry/domain_intake/{stage_attempt_id}',
     ]);
     assert.deepEqual(stageControlPlane.stages[0].stage_contract.expected_receipt_refs, [
       {
         ref_kind: 'domain_ref',
         ref: 'intake_receipt_ref',
         role: 'domain_owner_receipt',
+      },
+      {
+        ref_kind: 'stage_closeout_packet_ref',
+        ref: 'stage-closeout-packet-ref:award-foundry/domain_intake/{stage_attempt_id}',
+        role: 'domain_stage_completion_closeout',
       },
       {
         ref_kind: 'domain_ref',

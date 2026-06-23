@@ -1,10 +1,11 @@
 import { STANDARD_PROGRESS_DELTA_POLICY } from './progress-delta.ts';
+import { STANDARD_STAGE_COMPLETION_POLICY } from './stage-completion.ts';
 import { STANDARD_TYPED_BLOCKER_LINEAGE_POLICY } from './typed-blocker.ts';
 import { STANDARD_USER_STAGE_LOG_CONTRACT } from './user-stage-log.ts';
 
 export const FOUNDRY_AGENT_SERIES_POLICY_RELEASE_REF =
   'contracts/opl-framework/foundry-agent-series-policy-release.json';
-export const FOUNDRY_AGENT_SERIES_POLICY_BUNDLE_FINGERPRINT = 'sha256:5d77102e99e6e49acd88714cd94dcafe0969b8f2a5529928d753002ac3d4619d';
+export const FOUNDRY_AGENT_SERIES_POLICY_BUNDLE_FINGERPRINT = 'sha256:503f515e8fa08b3f81ce28cac461368c609d4565de239c9f95c3f910cb758ed5';
 
 export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
   surface_kind: 'opl_foundry_agent_series_contract',
@@ -44,12 +45,15 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
       'tools',
       'knowledge',
       'quality_gates',
+      'stage_completion_policy',
     ],
     shared_closeout_contract: {
       success_shape: 'domain_owner_receipt_ref',
       blocked_shape: 'domain_owned_typed_blocker_ref',
       route_back_shape: 'route_back_or_human_gate_ref',
       provider_completion_is_closeout: false,
+      completion_judgment_owner: 'domain_stage',
+      opl_content_judgment_allowed: false,
     },
     authority_invariants: {
       opl_can_infer_domain_output: false,
@@ -298,6 +302,7 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
     'stage_control_plane_ref',
   ],
   required_stage_packets: [
+    'stage_completion_policy',
     'user_stage_log_contract',
     'progress_delta_policy',
     'typed_blocker_lineage_policy',
@@ -374,6 +379,14 @@ export const FOUNDRY_AGENT_SERIES_POLICY_BUNDLE = {
       ref: 'contracts/opl-framework/foundry-agent-series-contract.json',
       version: STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT.version,
       domain_pin_ref: 'contracts/foundry_agent_series.json#/shared_policy_release',
+    },
+    {
+      surface_id: 'stage_completion_policy',
+      ref: 'contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/new_agent_scaffold/stage_completion_policy',
+      version: STANDARD_STAGE_COMPLETION_POLICY.version,
+      completion_judgment_owner: STANDARD_STAGE_COMPLETION_POLICY.completion_judgment_owner,
+      required_closeout_outcomes: STANDARD_STAGE_COMPLETION_POLICY.required_closeout_outcomes,
+      accepted_closeout_ref_fields: STANDARD_STAGE_COMPLETION_POLICY.accepted_closeout_ref_fields,
     },
     {
       surface_id: 'user_stage_log_contract',

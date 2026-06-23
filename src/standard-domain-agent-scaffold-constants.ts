@@ -10,6 +10,7 @@ export * from './standard-domain-agent-scaffold-constants-parts/identity-and-pri
 export * from './standard-domain-agent-scaffold-constants-parts/runtime-policy.ts';
 export * from './standard-domain-agent-scaffold-constants-parts/stage-kernel.ts';
 export * from './standard-domain-agent-scaffold-constants-parts/state-index-kernel.ts';
+export * from './standard-domain-agent-scaffold-constants-parts/stage-completion.ts';
 export * from './standard-domain-agent-scaffold-constants-parts/progress-delta.ts';
 export * from './standard-domain-agent-scaffold-constants-parts/typed-blocker.ts';
 export * from './standard-domain-agent-scaffold-constants-parts/user-stage-log.ts';

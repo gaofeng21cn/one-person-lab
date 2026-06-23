@@ -58,6 +58,16 @@
       "required_next_shape": "developer_work_order",
       "can_claim_standard_agent_complete": false,
       "domain_specific_kernel_written_as_opl_generic_kernel_allowed": false
+    },
+    {
+      "sample_id": "stage_output_without_completion_policy_rejected",
+      "target_dimension": "family-default",
+      "false_completion_signal": "stage_output_without_domain_completion_policy",
+      "status": "blocked_false_completion",
+      "rejected_completion_claim": "stage_complete_or_next_stage_admission",
+      "required_next_shape": "stage_completion_policy_or_typed_blocker",
+      "can_claim_standard_agent_complete": false,
+      "domain_specific_kernel_written_as_opl_generic_kernel_allowed": false
     }
   ],
   "open_tail": {

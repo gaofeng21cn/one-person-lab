@@ -66,8 +66,6 @@
       "template_source_of_truth": "contracts/opl-framework/standard-domain-agent-skeleton-contract.json",
       "copy_existing_domain_repo_as_template": false
     },
-    "mode": "describe",
-    "target_dir": null,
     "domain_id": "new-domain-agent",
     "domain_label": "New Domain Agent",
     "repo_source_boundary": {
@@ -117,6 +115,8 @@
       "functional_privatization_audit",
       "workspace_lifecycle_policy",
       "stage_artifact_kernel_adoption",
+      "stage_run_kernel_profile",
+      "stage_run_canary_evidence",
       "state_index_kernel_adoption"
     ],
     "opl_owned_generic_primitives": [
@@ -429,11 +429,43 @@
         "stage_contract.receipt_schema_refs",
         "stage_contract.authority_function_refs",
         "stage_contract.l4_entry_gate and stage_contract.l5_entry_gate",
+        "stage_contract.stage_completion_policy",
         "stage_contract.user_stage_log_contract",
         "stage_contract.progress_delta_policy",
         "stage_contract.typed_blocker_lineage_policy",
         "independent_gate_policy:execution_review_separation"
       ],
+      "stage_completion_policy": {
+        "surface_kind": "domain_stage_completion_policy",
+        "version": "domain-stage-completion-policy.v1",
+        "owner": "one-person-lab",
+        "standard_agent_requirement": "domain_stage_owns_completion_judgment_and_emits_standard_closeout_packet",
+        "completion_judgment_owner": "domain_stage",
+        "closeout_packet_required": true,
+        "provider_completion_is_domain_completion": false,
+        "opl_content_judgment_allowed": false,
+        "next_stage_transition_owner": "opl_runtime",
+        "required_closeout_outcomes": [
+          "completed_and_continue",
+          "completed_and_wait_owner",
+          "route_back",
+          "blocked",
+          "rejected"
+        ],
+        "accepted_closeout_ref_fields": [
+          "owner_receipt_ref",
+          "typed_blocker_ref",
+          "human_gate_ref",
+          "route_back_ref"
+        ],
+        "authority_boundary": {
+          "opl_can_decide_domain_completion": false,
+          "provider_completion_counts_as_stage_complete": false,
+          "file_presence_counts_as_stage_complete": false,
+          "suite_pass_counts_as_stage_complete": false,
+          "conformance_pass_counts_as_stage_complete": false
+        }
+      },
       "user_stage_log_contract": {
         "surface_kind": "opl_standard_agent_user_stage_log_contract",
         "version": "standard-user-stage-log.v1",
@@ -600,13 +632,16 @@
             "skills",
             "tools",
             "knowledge",
-            "quality_gates"
+            "quality_gates",
+            "stage_completion_policy"
           ],
           "shared_closeout_contract": {
             "success_shape": "domain_owner_receipt_ref",
             "blocked_shape": "domain_owned_typed_blocker_ref",
             "route_back_shape": "route_back_or_human_gate_ref",
-            "provider_completion_is_closeout": false
+            "provider_completion_is_closeout": false,
+            "completion_judgment_owner": "domain_stage",
+            "opl_content_judgment_allowed": false
           },
           "authority_invariants": {
             "opl_can_infer_domain_output": false,
@@ -868,7 +903,7 @@
         },
         "shared_policy_release": {
           "policy_release_contract_ref": "contracts/opl-framework/foundry-agent-series-policy-release.json",
-          "policy_bundle_fingerprint": "sha256:5d77102e99e6e49acd88714cd94dcafe0969b8f2a5529928d753002ac3d4619d",
+          "policy_bundle_fingerprint": "sha256:503f515e8fa08b3f81ce28cac461368c609d4565de239c9f95c3f910cb758ed5",
           "fingerprint_algorithm": "sha256:stable-json",
           "domain_contract_policy_release_pin_required": true,
           "domain_adapter_must_not_copy_policy_body_as_authority": true,
@@ -883,6 +918,7 @@
           "stage_control_plane_ref"
         ],
         "required_stage_packets": [
+          "stage_completion_policy",
           "user_stage_log_contract",
           "progress_delta_policy",
           "typed_blocker_lineage_policy",
@@ -937,6 +973,25 @@
               "ref": "contracts/opl-framework/foundry-agent-series-contract.json",
               "version": "foundry-agent-series.v1",
               "domain_pin_ref": "contracts/foundry_agent_series.json#/shared_policy_release"
+            },
+            {
+              "surface_id": "stage_completion_policy",
+              "ref": "contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/new_agent_scaffold/stage_completion_policy",
+              "version": "domain-stage-completion-policy.v1",
+              "completion_judgment_owner": "domain_stage",
+              "required_closeout_outcomes": [
+                "completed_and_continue",
+                "completed_and_wait_owner",
+                "route_back",
+                "blocked",
+                "rejected"
+              ],
+              "accepted_closeout_ref_fields": [
+                "owner_receipt_ref",
+                "typed_blocker_ref",
+                "human_gate_ref",
+                "route_back_ref"
+              ]
             },
             {
               "surface_id": "user_stage_log_contract",
@@ -1065,7 +1120,7 @@
             "policy_release_can_claim_domain_ready": false
           }
         },
-        "policy_bundle_fingerprint": "sha256:5d77102e99e6e49acd88714cd94dcafe0969b8f2a5529928d753002ac3d4619d",
+        "policy_bundle_fingerprint": "sha256:503f515e8fa08b3f81ce28cac461368c609d4565de239c9f95c3f910cb758ed5",
         "fingerprint_algorithm": "sha256:stable-json",
         "domain_pin_contract_ref": "contracts/foundry_agent_series.json#/shared_policy_release",
         "domain_pin_requirements": {
@@ -1154,6 +1209,37 @@
         "provider_completion_can_write_domain_truth": false,
         "provider_completion_can_issue_owner_receipt": false,
         "domain_agent_can_install_generic_daemon": false
+      }
+    },
+    "stage_completion_policy": {
+      "surface_kind": "domain_stage_completion_policy",
+      "version": "domain-stage-completion-policy.v1",
+      "owner": "one-person-lab",
+      "standard_agent_requirement": "domain_stage_owns_completion_judgment_and_emits_standard_closeout_packet",
+      "completion_judgment_owner": "domain_stage",
+      "closeout_packet_required": true,
+      "provider_completion_is_domain_completion": false,
+      "opl_content_judgment_allowed": false,
+      "next_stage_transition_owner": "opl_runtime",
+      "required_closeout_outcomes": [
+        "completed_and_continue",
+        "completed_and_wait_owner",
+        "route_back",
+        "blocked",
+        "rejected"
+      ],
+      "accepted_closeout_ref_fields": [
+        "owner_receipt_ref",
+        "typed_blocker_ref",
+        "human_gate_ref",
+        "route_back_ref"
+      ],
+      "authority_boundary": {
+        "opl_can_decide_domain_completion": false,
+        "provider_completion_counts_as_stage_complete": false,
+        "file_presence_counts_as_stage_complete": false,
+        "suite_pass_counts_as_stage_complete": false,
+        "conformance_pass_counts_as_stage_complete": false
       }
     },
     "user_stage_log_contract": {
@@ -1288,6 +1374,87 @@
         "opl_can_claim_deliverable_progress_from_platform_repair": false
       }
     },
+    "stage_operating_principles_policy": {
+      "surface_kind": "opl_standard_agent_stage_operating_principles",
+      "version": "stage-operating-principles.v1",
+      "state": "active_contract",
+      "policy_owner": "one-person-lab",
+      "purpose": "Keep OPL stages easy to manage while preserving fast owner-delta progression.",
+      "principle_summary": {
+        "management_logic": "Manage only the stage boundary: goal, inputs, owner, accepted answer shape, receipt or typed blocker, handoff, pointer, and authority boundary.",
+        "speed_logic": "Let the selected executor do open-ended work inside the stage; route quality gaps into scoped next deltas unless a hard authority, safety, permission, human, or irreversible-change gate applies."
+      },
+      "management_boundary": {
+        "stage_unit": "coarse_grained_stage_attempt",
+        "required_boundary_controls": [
+          "stage_goal",
+          "input_refs",
+          "current_owner",
+          "accepted_answer_shape",
+          "owner_receipt_or_typed_blocker",
+          "handoff_packet",
+          "current_pointer",
+          "authority_boundary"
+        ],
+        "stage_must_not_split_into_micro_status_chain": true,
+        "default_operator_question": "what_does_current_owner_need_to_answer_next"
+      },
+      "speed_policy": {
+        "executor_autonomy_inside_stage": true,
+        "executor_can_choose_order_and_parallelism": true,
+        "strategy_refs_are_advisory_or_route_back": true,
+        "strategy_refs_block_launch_by_default": false,
+        "tool_catalog_can_prescribe_workflow_sequence": false,
+        "preflight_or_quality_review_can_loop_without_deliverable_delta": false,
+        "quality_gaps_block_ordinary_progress_by_default": false,
+        "safe_action_before_diagnostic_reconcile": true,
+        "next_delta_must_be_deliverable_receipt_blocker_or_handoff": true
+      },
+      "default_read_surface": {
+        "root": "current_owner_delta",
+        "raw_worklist_default": false,
+        "readiness_default": false,
+        "replay_packet_default": false,
+        "evidence_accounting_default": false,
+        "cleanup_delete_gate_default": false
+      },
+      "demoted_default_surfaces": [
+        "raw_worklist",
+        "stage_replay_packet",
+        "provider_trace",
+        "evidence_accounting",
+        "private_residue_inventory",
+        "cleanup_delete_gate"
+      ],
+      "hard_stop_gates": [
+        "safety_or_compliance",
+        "permission_or_credential_boundary",
+        "human_decision_required",
+        "irreversible_write_or_delete",
+        "authority_boundary_violation",
+        "missing_owner_answer_shape",
+        "stale_or_mismatched_stage_identity"
+      ],
+      "accepted_next_delta_shapes": [
+        "deliverable_delta_ref",
+        "owner_receipt_ref",
+        "typed_blocker_ref",
+        "human_gate_ref",
+        "quality_gate_receipt_ref",
+        "no_regression_ref",
+        "route_back_ref",
+        "handoff_packet_ref"
+      ],
+      "authority_boundary": {
+        "policy_can_claim_domain_ready": false,
+        "policy_can_claim_production_ready": false,
+        "conformance_pass_counts_as_live_progress": false,
+        "opl_can_write_domain_truth": false,
+        "opl_can_sign_domain_owner_receipt": false,
+        "opl_can_create_typed_blocker": false,
+        "opl_can_authorize_quality_or_export": false
+      }
+    },
     "foundry_agent_series_contract": {
       "surface_kind": "opl_foundry_agent_series_contract",
       "version": "foundry-agent-series.v1",
@@ -1322,13 +1489,16 @@
           "skills",
           "tools",
           "knowledge",
-          "quality_gates"
+          "quality_gates",
+          "stage_completion_policy"
         ],
         "shared_closeout_contract": {
           "success_shape": "domain_owner_receipt_ref",
           "blocked_shape": "domain_owned_typed_blocker_ref",
           "route_back_shape": "route_back_or_human_gate_ref",
-          "provider_completion_is_closeout": false
+          "provider_completion_is_closeout": false,
+          "completion_judgment_owner": "domain_stage",
+          "opl_content_judgment_allowed": false
         },
         "authority_invariants": {
           "opl_can_infer_domain_output": false,
@@ -1420,15 +1590,15 @@
         },
         "workspace_initialization_policy": {
           "default_workspace_mode": "one_off",
-          "infer_series_when_user_requests_multiple_related_deliverables": true,
-          "infer_portfolio_when_user_requests_shared_research_workspace_with_multiple_studies": true,
-          "upgrading_one_off_to_series_must_not_move_existing_project_roots": true,
-          "explicit_workspace_mode_declaration_preferred": true,
           "default_project_collection_path": "projects",
           "legacy_project_collection_aliases": [
             "deliverables",
             "studies"
-          ]
+          ],
+          "infer_series_when_user_requests_multiple_related_deliverables": true,
+          "infer_portfolio_when_user_requests_shared_research_workspace_with_multiple_studies": true,
+          "upgrading_one_off_to_series_must_not_move_existing_project_roots": true,
+          "explicit_workspace_mode_declaration_preferred": true
         },
         "example_project_layouts": {
           "one_off": {
@@ -1469,6 +1639,102 @@
           }
         }
       },
+      "framework_brand_taxonomy_policy": {
+        "surface_kind": "opl_framework_brand_taxonomy_agent_cli_policy",
+        "version": "framework-brand-taxonomy-agent-cli.v1",
+        "taxonomy_ref": "contracts/opl-framework/brand-module-registry.json",
+        "taxonomy_scope": "opl_framework_top_level_public_command_surface",
+        "top_level_modules": [
+          "charter",
+          "atlas",
+          "workspace",
+          "stagecraft",
+          "runway",
+          "vault",
+          "console",
+          "foundry-lab",
+          "connect"
+        ],
+        "agent_cli_public_command_surface_role": "foundry_agent_series_spine",
+        "opl_nine_modules_are_framework_taxonomy": true,
+        "agent_cli_can_reference_framework_taxonomy": true,
+        "agent_cli_must_use_series_spine": true,
+        "agent_cli_must_not_replicate_top_level_modules_as_series_spine": true
+      },
+      "agent_cli_command_surface_policy": {
+        "surface_kind": "opl_foundry_agent_series_cli_command_surface_policy",
+        "version": "foundry-agent-cli-command-surface.v1",
+        "policy_id": "foundry_agent_series_spine_public_command_surface",
+        "canonical_opl_command_surface": "opl agents foundry",
+        "agent_cli_series_label": "OPL Foundry Agent",
+        "ordinary_operations": [
+          "status",
+          "inspect",
+          "interfaces",
+          "validate",
+          "doctor",
+          "peers"
+        ],
+        "ordinary_public_command_surface_spine": [
+          "workspace",
+          "work",
+          "stage",
+          "run",
+          "vault",
+          "handoff",
+          "connect"
+        ],
+        "required_public_surface_derivatives": [
+          "cli",
+          "skill",
+          "mcp",
+          "app_action"
+        ],
+        "agent_cli_must_use_series_spine": true,
+        "agent_cli_must_not_replicate_top_level_modules": true
+      },
+      "legacy_implementation_bucket_retirement_policy": {
+        "surface_kind": "opl_foundry_agent_legacy_implementation_bucket_retirement_policy",
+        "version": "foundry-agent-legacy-bucket-retirement.v1",
+        "ordinary_public_command_surface_allowed": false,
+        "replacement_command_surface": "opl agents foundry",
+        "retired_bucket_prefixes": [
+          "runtime",
+          "family-runtime",
+          "index",
+          "stage-artifact",
+          "agents modules",
+          "module",
+          "modules",
+          "skill",
+          "packages",
+          "engine"
+        ],
+        "allowed_retained_read_surfaces": [
+          "diagnostic_drilldown",
+          "migration_error",
+          "scoped_help_for_replacement",
+          "internal_contract_validation"
+        ],
+        "retired_buckets_cannot_claim_series_identity": true,
+        "retired_buckets_cannot_replace_connect_skill_mcp_command_surface": true
+      },
+      "skill_mcp_surface_policy": {
+        "surface_kind": "opl_foundry_agent_skill_mcp_surface_policy",
+        "version": "foundry-agent-skill-mcp-surface.v1",
+        "skill_pack_must_delegate_to_series_spine": true,
+        "mcp_descriptor_must_delegate_to_series_spine": true,
+        "canonical_skill_connect_command_surface": "opl connect skills",
+        "canonical_skill_sync_command_surface": "opl connect sync-skills",
+        "canonical_mcp_projection_ref": "skill_catalog.packs[].mcp_projection",
+        "legacy_skill_command_retired": true,
+        "legacy_standalone_mcp_servers_retired": true,
+        "derived_surface_refs": [
+          "opl agents foundry interfaces --json",
+          "opl connect skills --json",
+          "opl connect sync-skills --json"
+        ]
+      },
       "contract_version_policy": {
         "current_version": "foundry-agent-series.v1",
         "domain_contract_ref": "contracts/foundry_agent_series.json",
@@ -1494,7 +1760,7 @@
       },
       "shared_policy_release": {
         "policy_release_contract_ref": "contracts/opl-framework/foundry-agent-series-policy-release.json",
-        "policy_bundle_fingerprint": "sha256:5d77102e99e6e49acd88714cd94dcafe0969b8f2a5529928d753002ac3d4619d",
+        "policy_bundle_fingerprint": "sha256:503f515e8fa08b3f81ce28cac461368c609d4565de239c9f95c3f910cb758ed5",
         "fingerprint_algorithm": "sha256:stable-json",
         "domain_contract_policy_release_pin_required": true,
         "domain_adapter_must_not_copy_policy_body_as_authority": true,
@@ -1509,6 +1775,7 @@
         "stage_control_plane_ref"
       ],
       "required_stage_packets": [
+        "stage_completion_policy",
         "user_stage_log_contract",
         "progress_delta_policy",
         "typed_blocker_lineage_policy",
@@ -1538,7 +1805,11 @@
         "opl_owns_series_contract": true,
         "domain_owns_truth_quality_artifact_memory_and_receipts": true,
         "app_owns_display_and_user_action_shell": true,
-        "generated_surface_can_claim_domain_ready": false
+        "generated_surface_can_claim_domain_ready": false,
+        "generated_surface_can_claim_quality_or_export": false,
+        "generated_surface_can_write_domain_truth": false,
+        "generated_surface_can_create_owner_receipt": false,
+        "generated_surface_can_create_typed_blocker": false
       }
     },
     "foundry_agent_series_policy_release": {
@@ -1559,6 +1830,25 @@
             "ref": "contracts/opl-framework/foundry-agent-series-contract.json",
             "version": "foundry-agent-series.v1",
             "domain_pin_ref": "contracts/foundry_agent_series.json#/shared_policy_release"
+          },
+          {
+            "surface_id": "stage_completion_policy",
+            "ref": "contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/new_agent_scaffold/stage_completion_policy",
+            "version": "domain-stage-completion-policy.v1",
+            "completion_judgment_owner": "domain_stage",
+            "required_closeout_outcomes": [
+              "completed_and_continue",
+              "completed_and_wait_owner",
+              "route_back",
+              "blocked",
+              "rejected"
+            ],
+            "accepted_closeout_ref_fields": [
+              "owner_receipt_ref",
+              "typed_blocker_ref",
+              "human_gate_ref",
+              "route_back_ref"
+            ]
           },
           {
             "surface_id": "user_stage_log_contract",
@@ -1687,7 +1977,7 @@
           "policy_release_can_claim_domain_ready": false
         }
       },
-      "policy_bundle_fingerprint": "sha256:5d77102e99e6e49acd88714cd94dcafe0969b8f2a5529928d753002ac3d4619d",
+      "policy_bundle_fingerprint": "sha256:503f515e8fa08b3f81ce28cac461368c609d4565de239c9f95c3f910cb758ed5",
       "fingerprint_algorithm": "sha256:stable-json",
       "domain_pin_contract_ref": "contracts/foundry_agent_series.json#/shared_policy_release",
       "domain_pin_requirements": {
@@ -2185,6 +2475,136 @@
         "opl_can_authorize_quality_or_export": false
       }
     },
+    "stage_run_kernel_profile": {
+      "surface_kind": "opl_stage_run_kernel_profile",
+      "version": "stage-run-kernel-profile.v1",
+      "state": "active_contract",
+      "kernel_contract_ref": "contracts/opl-framework/stage-run-kernel-contract.json",
+      "stage_manifest_schema_ref": "contracts/opl-framework/stage-manifest.schema.json",
+      "role_artifact_ref_schema_ref": "contracts/opl-framework/role-artifact-ref.schema.json",
+      "owner_receipt_schema_ref": "contracts/opl-framework/stage-owner-receipt.schema.json",
+      "typed_blocker_schema_ref": "contracts/opl-framework/stage-typed-blocker.schema.json",
+      "kernel_role": "minimal_state_shell_not_domain_controller_system",
+      "stage_native_unit": [
+        "stage_folder",
+        "stage_manifest",
+        "role_artifacts",
+        "owner_receipt_or_typed_blocker"
+      ],
+      "required_object_models": [
+        "StageRun",
+        "RoleArtifactRef",
+        "OwnerReceipt",
+        "TypedBlocker",
+        "ReadModel"
+      ],
+      "stage_run_state_machine": {
+        "provider_completion_counts_as_domain_accepted": false,
+        "file_presence_counts_as_stage_complete": false,
+        "latest_json_counts_as_domain_accepted": false,
+        "read_model_counts_as_transition_authority": false
+      },
+      "launch_admission_policy": {
+        "hard_blockers": [
+          "identity",
+          "owner",
+          "scope",
+          "selected_executor",
+          "authority_boundary",
+          "required_role_artifacts",
+          "receipt_or_blocker_shape",
+          "forbidden_write",
+          "replay_audit_lineage"
+        ],
+        "advisory_refs": [
+          "prompt_refs",
+          "skill_refs",
+          "tool_affordance_refs",
+          "knowledge_refs",
+          "rubric_refs",
+          "evaluation_refs"
+        ],
+        "advisory_refs_can_block_launch": false
+      },
+      "default_read_surface": {
+        "root": "stage_run_current_owner_delta",
+        "raw_worklist_default": false,
+        "readiness_default": false,
+        "replay_packet_default": false
+      },
+      "transition_authority": {
+        "terminal_transition_authority": "owner_receipt_or_typed_blocker",
+        "provider_completion_counts_as_transition": false,
+        "file_presence_counts_as_transition": false
+      },
+      "authority_boundary": {
+        "opl_can_write_domain_truth": false,
+        "opl_can_mutate_artifact_body": false,
+        "opl_can_sign_domain_owner_receipt": false,
+        "opl_can_create_typed_blocker": false,
+        "opl_can_authorize_quality_or_export": false,
+        "provider_completion_counts_as_domain_accepted": false,
+        "read_model_can_be_truth_source": false
+      }
+    },
+    "stage_run_canary_evidence": {
+      "surface_kind": "opl_stage_run_controlled_canary_evidence",
+      "version": "stage-run-controlled-canary.v1",
+      "evidence_scope": "controlled_fixture_not_live_domain_progress",
+      "domain_id": "new-domain-agent",
+      "canary_id": "new-domain-agent.controlled-stage-run-canary.v1",
+      "stage_id": "domain_intake",
+      "stage_run_ref": "stage-run-ref:new-domain-agent/controlled-canary",
+      "stage_manifest_ref": "stage-manifest-ref:new-domain-agent/controlled-canary",
+      "current_pointer_ref": "stage-current-pointer-ref:new-domain-agent/controlled-canary",
+      "strategy_trace": {
+        "candidate_generation": [
+          "candidate-pool-ref:new-domain-agent/controlled-canary"
+        ],
+        "grounded_reflection": [
+          "reflection-review-ref:new-domain-agent/controlled-canary"
+        ],
+        "comparative_selection": [
+          "ranking-selection-ref:new-domain-agent/controlled-canary"
+        ],
+        "evolution_and_revision": [
+          "revision-lineage-ref:new-domain-agent/controlled-canary"
+        ],
+        "meta_review_learning": [
+          "meta-review-ref:new-domain-agent/controlled-canary"
+        ],
+        "independent_quality_gate": [
+          "independent-gate-ref:new-domain-agent/controlled-canary"
+        ]
+      },
+      "role_artifact_refs": {
+        "candidate_pool_ref": "candidate-pool-ref:new-domain-agent/controlled-canary",
+        "reflection_review_ref": "reflection-review-ref:new-domain-agent/controlled-canary",
+        "ranking_selection_ref": "ranking-selection-ref:new-domain-agent/controlled-canary",
+        "revision_lineage_ref": "revision-lineage-ref:new-domain-agent/controlled-canary",
+        "meta_review_ref": "meta-review-ref:new-domain-agent/controlled-canary",
+        "independent_gate_ref": "independent-gate-ref:new-domain-agent/controlled-canary"
+      },
+      "closeout": {
+        "terminal_outcome": "typed_blocker",
+        "typed_blocker_ref": "typed-blocker-ref:new-domain-agent/controlled-canary",
+        "owner_receipt_ref": null,
+        "same_attempt_self_review": false
+      },
+      "authority_boundary": {
+        "refs_only": true,
+        "controlled_canary_claims_live_domain_progress": false,
+        "provider_completion_counts_as_closeout": false,
+        "file_presence_counts_as_closeout": false,
+        "read_model_counts_as_closeout": false,
+        "conformance_pass_counts_as_closeout": false,
+        "opl_can_write_domain_truth": false,
+        "opl_can_mutate_artifact_body": false,
+        "opl_can_sign_owner_receipt": false,
+        "opl_can_create_typed_blocker": false,
+        "opl_can_authorize_quality_or_export": false
+      }
+    },
     "state_index_kernel_adoption_policy": {
       "surface_kind": "opl_state_index_kernel_adoption",
       "version": "opl-state-index-kernel-adoption.v1",
@@ -2262,185 +2682,10 @@
       "workspace_file_lifecycle_policy_declared",
       "stage_artifact_kernel_adoption_declared",
       "stage_operating_principles_declared",
+      "stage_run_kernel_profile_declared",
+      "stage_run_controlled_canary_evidence_declared",
       "state_index_kernel_adoption_declared"
     ],
-    "write_plan": [],
-    "writes": [],
-    "write_summary": {
-      "written_count": 0,
-      "skipped_existing_count": 0,
-      "force": false
-    },
-    "scaffold_consumption_refs": {
-      "surface_kind": "opl_standard_agent_template_consumption_refs",
-      "owner": "one-person-lab",
-      "evidence_role": "refs_only_new_agent_template_consumption",
-      "status": "describe_only_no_generated_repo_consumed",
-      "mode": "describe",
-      "domain_id": "new-domain-agent",
-      "scaffold_ref": "contracts/opl-framework/standard-domain-agent-skeleton-contract.json",
-      "source_command": "opl agents scaffold",
-      "next_verification_command": "opl agents scaffold --target-dir <tmp-new-agent> && opl agents scaffold --validate <tmp-new-agent>",
-      "target_dir_ref": null,
-      "target_dir_policy": "no_target_dir_in_describe_mode",
-      "generated_template_file_count": 35,
-      "generated_written_file_count": 0,
-      "validation_consumed_generated_repo": false,
-      "validation_status": null,
-      "blocker_count": 0,
-      "blockers": [],
-      "consumed_pack_path_count": 0,
-      "consumed_pack_discovered_path_count": 0,
-      "consumed_stage_count": 0,
-      "prompt_ref_resolved_stage_count": 0,
-      "skill_ref_resolved_stage_count": 0,
-      "tool_ref_resolved_stage_count": 0,
-      "knowledge_ref_resolved_stage_count": 0,
-      "quality_gate_ref_resolved_stage_count": 0,
-      "selected_executor_binding_observed_count": 0,
-      "default_codex_executor_binding_count": 0,
-      "generated_surface_owner_verified": false,
-      "private_surface_policy_guarded": false,
-      "stage_pack_v2_status": null,
-      "app_operator_consumable": true,
-      "app_operator_projection_ref": "/app_operator_drilldown/standard_agent_template_consumption_refs",
-      "claim_policy": "template_generation_and_validation_evidence_only_no_domain_ready_artifact_authority_or_production_ready_claim",
-      "authority_boundary": {
-        "refs_only": true,
-        "opl_can_write_domain_truth": false,
-        "opl_can_write_memory_body": false,
-        "opl_can_mutate_domain_artifact_body": false,
-        "opl_can_authorize_quality_or_export": false,
-        "scaffold_validation_can_claim_domain_ready": false,
-        "scaffold_validation_can_claim_artifact_authority": false,
-        "scaffold_validation_can_claim_production_ready": false
-      }
-    },
-    "generic_primitive_completion": {
-      "surface_kind": "opl_framework_generic_primitive_completion",
-      "owner": "one-person-lab",
-      "status": "functional_surfaces_available_production_evidence_pending",
-      "completed_functional_surfaces": [
-        {
-          "primitive_id": "scheduler_supervision_cadence",
-          "owner": "one-person-lab",
-          "replacement_surface": "family_scheduler_replacement",
-          "domain_policy": "consume_or_project_refs_only",
-          "completion_state": "framework_surface_available"
-        },
-        {
-          "primitive_id": "provider_slo_and_wakeup_transport",
-          "owner": "one-person-lab",
-          "replacement_surface": "provider_backed_family_runtime",
-          "domain_policy": "return_owner_receipt_or_typed_blocker",
-          "completion_state": "framework_surface_available"
-        },
-        {
-          "primitive_id": "queue_attempt_ledger",
-          "owner": "one-person-lab",
-          "replacement_surface": "family_runtime_queue",
-          "domain_policy": "do_not_own_generic_attempt_ledger",
-          "completion_state": "framework_surface_available"
-        },
-        {
-          "primitive_id": "generic_transition_runner",
-          "owner": "one-person-lab",
-          "replacement_surface": "family_transition_runner",
-          "domain_policy": "own_domain_transition_spec_only",
-          "completion_state": "framework_surface_available"
-        },
-        {
-          "primitive_id": "workspace_source_intake_shell",
-          "owner": "one-person-lab",
-          "replacement_surface": "workspace_source_intake_projection",
-          "domain_policy": "own_source_truth_and_readiness_refs",
-          "completion_state": "framework_surface_available"
-        },
-        {
-          "primitive_id": "memory_locator_writeback_transport",
-          "owner": "one-person-lab",
-          "replacement_surface": "memory_locator_index_projection",
-          "domain_policy": "own_memory_body_accept_reject_and_receipts",
-          "completion_state": "framework_surface_available"
-        },
-        {
-          "primitive_id": "artifact_package_lifecycle_shell",
-          "owner": "one-person-lab",
-          "replacement_surface": "package_export_lifecycle_projection",
-          "domain_policy": "own_artifact_body_package_ready_and_export_verdict",
-          "completion_state": "framework_surface_available"
-        },
-        {
-          "primitive_id": "operator_workbench_drilldown_shell",
-          "owner": "one-person-lab",
-          "replacement_surface": "stage_attempt_workbench",
-          "domain_policy": "project_domain_refs_without_rebuilding_workbench",
-          "completion_state": "framework_surface_available"
-        },
-        {
-          "primitive_id": "observability_repair_projection",
-          "owner": "one-person-lab",
-          "replacement_surface": "observability_slo_projection",
-          "domain_policy": "own_domain_blocker_and_safe_repair_hints",
-          "completion_state": "framework_surface_available"
-        },
-        {
-          "primitive_id": "generic_persistence_store",
-          "owner": "one-person-lab",
-          "replacement_surface": "family_persistence_policy_and_runtime_store",
-          "domain_policy": "own_file_authority_or_refs_only_sidecar_index",
-          "completion_state": "framework_surface_available"
-        },
-        {
-          "primitive_id": "runtime_lifecycle_sqlite_index_contract",
-          "owner": "one-person-lab",
-          "replacement_surface": "family_runtime_lifecycle_index_contract",
-          "domain_policy": "do_not_claim_generic_sqlite_persistence_engine",
-          "completion_state": "framework_surface_available"
-        },
-        {
-          "primitive_id": "native_helper_generic_envelope",
-          "owner": "one-person-lab",
-          "replacement_surface": "native_helper_contract_and_execution_envelope",
-          "domain_policy": "own_helper_implementation_only",
-          "completion_state": "framework_surface_available"
-        },
-        {
-          "primitive_id": "review_repair_transport",
-          "owner": "one-person-lab",
-          "replacement_surface": "family_conflict_blocker_and_repair_projection",
-          "domain_policy": "own_domain_review_export_or_quality_decision",
-          "completion_state": "framework_surface_available"
-        },
-        {
-          "primitive_id": "pack_compiler_generated_surface",
-          "owner": "one-person-lab",
-          "replacement_surface": "opl_domain_pack_compiler_and_generated_surface_handoff",
-          "domain_policy": "declare_pack_inputs_and_authority_functions_only",
-          "completion_state": "framework_surface_available"
-        },
-        {
-          "primitive_id": "functional_privatization_audit_read_model",
-          "owner": "one-person-lab",
-          "replacement_surface": "opl_functional_privatization_audit",
-          "domain_policy": "declare_module_boundary_without_owning_generic_runtime",
-          "completion_state": "framework_surface_available"
-        }
-      ],
-      "remaining_evidence_gates": [
-        "long_running_provider_slo_window",
-        "real_domain_owner_chain_scaleout",
-        "accepted_rejected_memory_writeback_receipts_at_scale",
-        "artifact_lifecycle_receipts_at_scale",
-        "operator_app_drilldown_production_use"
-      ],
-      "authority_boundary": {
-        "framework_surface_complete_does_not_authorize_domain_ready": true,
-        "opl_can_write_domain_truth": false,
-        "opl_can_write_memory_body": false,
-        "opl_can_authorize_quality_or_export": false
-      }
-    },
     "authority_boundary": {
       "opl": "framework_runtime_development_primitives_contracts_read_models_projection_and_checklist_owner",
       "domain_agent": "domain_truth_quality_export_artifact_memory_body_and_owner_receipt_authority",

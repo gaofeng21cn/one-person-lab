@@ -104,6 +104,7 @@ test('agents scaffold emits canonical Foundry series design profile', () => {
       'tools',
       'knowledge',
       'quality_gates',
+      'stage_completion_policy',
     ]);
     assert.equal(profile.shared_closeout_contract.success_shape, 'domain_owner_receipt_ref');
     assert.equal(profile.shared_closeout_contract.blocked_shape, 'domain_owned_typed_blocker_ref');

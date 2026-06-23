@@ -54,6 +54,19 @@ type AgentLabPromotionSafetyStatus =
   | 'promotion_blocked'
   | 'owner_or_human_gate_required';
 
+export type AgentLabStageCompletionPolicy = {
+  surface_kind: 'domain_stage_completion_policy' | string;
+  policy_ref: string;
+  completion_judgment_owner: 'domain_stage' | string;
+  closeout_packet_required: boolean;
+  provider_completion_is_domain_completion: boolean;
+  opl_content_judgment_allowed: boolean;
+  next_stage_transition_owner: 'opl_runtime' | string;
+  required_closeout_outcomes: string[];
+  accepted_closeout_ref_fields: string[];
+  authority_boundary?: JsonRecord;
+};
+
 export type AgentLabTaskManifest = {
   task_id: string;
   domain_id: AgentLabDomainId;
@@ -75,6 +88,7 @@ export type AgentLabTaskManifest = {
   scorecard: AgentLabScorecard;
   improvement_candidate: AgentLabImprovementCandidate;
   promotion_gate: AgentLabPromotionGate;
+  stage_completion_policy?: AgentLabStageCompletionPolicy;
   mechanism_evolution_inputs?: JsonRecord;
   executor_capability_aperture?: JsonRecord;
   authority_boundary?: JsonRecord;
@@ -211,6 +225,7 @@ export type AgentLabLonglineSummaryInput = {
 export type AgentLabObservationKey =
   | 'task_manifests_observed'
   | 'agent_trajectories_observed'
+  | 'domain_stage_completion_policies_observed'
   | 'recovery_probes_observed'
   | 'domain_quality_scorecard_refs_observed'
   | 'failure_taxonomy_observed'
@@ -222,6 +237,7 @@ export type AgentLabObservationKey =
 const REQUIRED_OBSERVATIONS: AgentLabObservationKey[] = [
   'task_manifests_observed',
   'agent_trajectories_observed',
+  'domain_stage_completion_policies_observed',
   'recovery_probes_observed',
   'domain_quality_scorecard_refs_observed',
   'failure_taxonomy_observed',
@@ -309,6 +325,88 @@ function stringList(value: unknown): string[] {
     return [];
   }
   return unique(value.filter((entry): entry is string => typeof entry === 'string'));
+}
+
+const REQUIRED_STAGE_CLOSEOUT_OUTCOMES = [
+  'completed_and_continue',
+  'completed_and_wait_owner',
+  'route_back',
+  'blocked',
+  'rejected',
+];
+
+const REQUIRED_STAGE_CLOSEOUT_REF_FIELDS = [
+  'owner_receipt_ref',
+  'typed_blocker_ref',
+  'human_gate_ref',
+  'route_back_ref',
+];
+
+function includesAll(actual: string[], required: string[]) {
+  return required.every((entry) => actual.includes(entry));
+}
+
+function buildStageCompletionPolicyAssessment(task: AgentLabTaskManifest) {
+  const policy = isRecord(task.stage_completion_policy) ? task.stage_completion_policy : null;
+  const blockers: string[] = [];
+  if (!policy) {
+    blockers.push('stage_completion_policy_missing');
+  }
+
+  const requiredOutcomes = stringList(policy?.required_closeout_outcomes);
+  const acceptedRefFields = stringList(policy?.accepted_closeout_ref_fields);
+
+  if (policy && policy.surface_kind !== 'domain_stage_completion_policy') {
+    blockers.push('stage_completion_policy_surface_kind_invalid');
+  }
+  if (policy && typeof policy.policy_ref !== 'string') {
+    blockers.push('stage_completion_policy_ref_missing');
+  }
+  if (policy && policy.completion_judgment_owner !== 'domain_stage') {
+    blockers.push('stage_completion_judgment_must_be_domain_stage_owned');
+  }
+  if (policy && policy.closeout_packet_required !== true) {
+    blockers.push('stage_closeout_packet_required');
+  }
+  if (policy && policy.provider_completion_is_domain_completion !== false) {
+    blockers.push('provider_completion_must_not_be_domain_completion');
+  }
+  if (policy && policy.opl_content_judgment_allowed !== false) {
+    blockers.push('opl_content_judgment_must_be_forbidden');
+  }
+  if (policy && policy.next_stage_transition_owner !== 'opl_runtime') {
+    blockers.push('next_stage_transition_owner_must_be_opl_runtime');
+  }
+  if (policy && !includesAll(requiredOutcomes, REQUIRED_STAGE_CLOSEOUT_OUTCOMES)) {
+    blockers.push('stage_closeout_outcomes_incomplete');
+  }
+  if (policy && !includesAll(acceptedRefFields, REQUIRED_STAGE_CLOSEOUT_REF_FIELDS)) {
+    blockers.push('stage_closeout_ref_fields_incomplete');
+  }
+
+  const authorityBoundary = isRecord(policy?.authority_boundary) ? policy.authority_boundary : null;
+  if (authorityBoundary?.opl_can_decide_domain_completion === true) {
+    blockers.push('opl_domain_completion_authority_forbidden');
+  }
+  if (authorityBoundary?.provider_completion_counts_as_stage_complete === true) {
+    blockers.push('provider_completion_counts_as_stage_complete_forbidden');
+  }
+
+  return {
+    surface_kind: 'opl_agent_lab_stage_completion_policy_assessment',
+    status: blockers.length === 0 ? 'passed' : 'blocked',
+    policy_ref: typeof policy?.policy_ref === 'string' ? policy.policy_ref : null,
+    completion_judgment_owner: typeof policy?.completion_judgment_owner === 'string'
+      ? policy.completion_judgment_owner
+      : null,
+    next_stage_transition_owner: typeof policy?.next_stage_transition_owner === 'string'
+      ? policy.next_stage_transition_owner
+      : null,
+    required_closeout_outcomes: requiredOutcomes,
+    accepted_closeout_ref_fields: acceptedRefFields,
+    blockers: unique(blockers),
+    authority_boundary: AGENT_LAB_AUTHORITY_BOUNDARY,
+  };
 }
 
 export function assessIndependentAiReviewReceipt(receiptInput: unknown): AgentLabIndependentAiReviewAssessment {
@@ -567,12 +665,14 @@ function buildRun(task: AgentLabTaskManifest) {
   const mechanismEvolutionInputs = mechanismEvolutionInputsForTask(task);
   const independentAiReviewAssessment = assessIndependentAiReviewReceipt(reviewReceiptInputForTask(task));
   const promotionSafetyAssessment = buildPromotionSafetyAssessment(task, independentAiReviewAssessment);
+  const stageCompletionPolicyAssessment = buildStageCompletionPolicyAssessment(task);
   const recoveryPassedCount = recoveryPassed(task).length;
   const recoveryProbeCount = task.recovery_probes.length;
   const failureTaxonomy = [
     recoveryPassedCount === recoveryProbeCount ? null : 'recovery_probe_mismatch',
     task.scorecard.passed ? null : 'domain_scorecard_blocked',
     task.promotion_gate.gate_status === 'passed' ? null : 'promotion_gate_blocked',
+    ...stageCompletionPolicyAssessment.blockers,
     ...promotionSafetyAssessment.missing_required_refs.filter((entry) => entry !== 'promotion_gate_blocked'),
   ].filter((entry): entry is string => Boolean(entry));
   const status: AgentLabStatus = failureTaxonomy.length === 0 ? 'passed' : 'blocked';
@@ -610,6 +710,7 @@ function buildRun(task: AgentLabTaskManifest) {
         ? 'suite_fixture_scorecard_only'
         : 'suite_fixture_scorecard_blocked',
     },
+    stage_completion_policy_assessment: stageCompletionPolicyAssessment,
     independent_ai_review_assessment: independentAiReviewAssessment,
     improvement_candidate: task.improvement_candidate,
     promotion_gate: task.promotion_gate,
@@ -635,12 +736,20 @@ function buildObservations(input: AgentLabSuite, runs: ReturnType<typeof buildRu
   ]);
   const memoryBodyObserved = input.tasks.some(hasForbiddenMemoryBody);
   const allRunsHaveFailureTaxonomy = runs.every((run) => Array.isArray(run.failure_taxonomy));
+  const stageCompletionPolicyRefs = unique(runs.flatMap((run) =>
+    typeof run.stage_completion_policy_assessment.policy_ref === 'string'
+      ? [run.stage_completion_policy_assessment.policy_ref]
+      : []));
+  const stageCompletionPolicyBlockers = unique(runs.flatMap((run) =>
+    run.stage_completion_policy_assessment.blockers));
 
   return {
     observations: {
       task_manifests_observed: input.tasks.length > 0,
       agent_trajectories_observed: input.tasks.every((task) =>
         Boolean(task.trajectory.trajectory_ref) && task.trajectory.stage_attempt_refs.length > 0),
+      domain_stage_completion_policies_observed: input.tasks.length > 0
+        && stageCompletionPolicyBlockers.length === 0,
       recovery_probes_observed: recoveryProbeRefs.length > 0,
       domain_quality_scorecard_refs_observed: input.tasks.every((task) =>
         task.scorecard.domain_owned && task.scorecard.opl_scorecard_role === 'scorecard_ref_projection_only'),
@@ -673,6 +782,9 @@ function buildObservations(input: AgentLabSuite, runs: ReturnType<typeof buildRu
         assessment.advisory_only_refs)),
       artifact_refs: unique(input.tasks.flatMap((task) => task.trajectory.artifact_refs)),
       receipt_refs: unique(input.tasks.flatMap((task) => task.trajectory.receipt_refs)),
+      stage_completion_policy_refs: stageCompletionPolicyRefs,
+      stage_completion_policy_blocker_refs: stageCompletionPolicyBlockers.map((blocker) =>
+        `stage-completion-policy-blocker:${blocker}`),
       mechanism_evolution_input_refs: mechanismEvolutionInputRefs,
       production_evidence_gate_result_refs: productionEvidenceGateResult?.gate_result_refs ?? [],
       production_evidence_gate_refs: productionEvidenceGateResult?.gate_ids ?? [],
@@ -736,6 +848,7 @@ function buildObservations(input: AgentLabSuite, runs: ReturnType<typeof buildRu
     counters: {
       memory_body_observed: memoryBodyObserved,
       forbidden_authority_flag_count: forbiddenAuthorityFlags.length,
+      stage_completion_policy_blocker_count: stageCompletionPolicyBlockers.length,
     },
   };
 }
@@ -820,6 +933,7 @@ export function runAgentLabSuite(input: AgentLabSuite) {
         && run.promotion_safety_assessment.automatic_mechanism_promotion_ready).length,
       memory_body_observed: observationResult.counters.memory_body_observed,
       forbidden_authority_flag_count: observationResult.counters.forbidden_authority_flag_count,
+      stage_completion_policy_blocker_count: observationResult.counters.stage_completion_policy_blocker_count,
     },
     refs: {
       ...observationResult.refs,

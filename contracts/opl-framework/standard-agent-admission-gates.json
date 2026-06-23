@@ -109,7 +109,7 @@
         "gate_id": "stage_artifact_contract",
         "requirement_kind": "stage_artifact_contract",
         "required_for_formal_admission": true,
-        "summary": "The candidate declares stage folders, required output roles, manifests, role artifact refs, owner receipt refs, typed blocker refs, current pointers, lineage, repair classification, retention, and restore policy.",
+        "summary": "The candidate declares stage folders, required output roles, manifests, role artifact refs, domain-owned completion policy, owner receipt refs, typed blocker refs, current pointers, lineage, repair classification, retention, and restore policy.",
         "required_evidence_refs": [
           "candidate_domain_repo:stage_artifact_contract",
           "candidate_domain_repo:stage_run_kernel_profile",
@@ -119,13 +119,15 @@
           "contracts/opl-framework/stage-owner-receipt.schema.json",
           "contracts/opl-framework/stage-typed-blocker.schema.json",
           "contracts/opl-framework/stage-artifact-unit.schema.json",
-          "contracts/opl-framework/stage-artifact-progress-truth-policy.json"
+          "contracts/opl-framework/stage-artifact-progress-truth-policy.json",
+          "candidate_domain_repo:stage_completion_policy_contract"
         ],
         "forbidden_claims": [
           "domain_ready",
           "production_ready",
           "file_presence_counts_as_stage_complete",
-          "provider_completion_counts_as_stage_complete"
+          "provider_completion_counts_as_stage_complete",
+          "stage_output_without_domain_completion_policy"
         ]
       },
       {
@@ -235,7 +237,8 @@
     "opl_can_create_typed_blocker": false,
     "human_gate_can_replace_owner_receipt": false,
     "human_gate_can_write_domain_truth": false,
-    "human_gate_can_claim_domain_ready": false
+    "human_gate_can_claim_domain_ready": false,
+    "stage_output_without_domain_completion_policy_counts_as_stage_complete": false
   },
   "non_readiness_statement": {
     "this_contract_admits_any_domain": false,

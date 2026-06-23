@@ -12,6 +12,7 @@ import {
   STARTER_STAGE_ID,
   STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT,
   STANDARD_AGENT_PACK_ABI,
+  STANDARD_STAGE_COMPLETION_POLICY,
   STANDARD_PROGRESS_DELTA_POLICY,
   STATE_INDEX_KERNEL_ADOPTION_POLICY,
   STANDARD_STAGE_PACK_CONFORMANCE_VERSION,
@@ -592,18 +593,25 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
                 'source_locator_refs',
                 'expected_deliverable_class_ref',
                 'domain_authority_owner_ref',
+                `stage-completion-policy-ref:${domainId}/${STARTER_STAGE_ID}`,
               ],
               ensures: [
                 'domain_intake_receipt_or_typed_blocker_ref',
                 'next_stage_recommendation_ref',
                 'authority_boundary_ref',
                 'no_forbidden_write_evidence_ref',
+                `stage-closeout-packet-ref:${domainId}/${STARTER_STAGE_ID}/{stage_attempt_id}`,
               ],
               expected_receipt_refs: [
                 {
                   ref_kind: 'domain_ref',
                   ref: 'intake_receipt_ref',
                   role: 'domain_owner_receipt',
+                },
+                {
+                  ref_kind: 'stage_closeout_packet_ref',
+                  ref: `stage-closeout-packet-ref:${domainId}/${STARTER_STAGE_ID}/{stage_attempt_id}`,
+                  role: 'domain_stage_completion_closeout',
                 },
                 {
                   ref_kind: 'domain_ref',
@@ -627,6 +635,12 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
               ],
               l4_entry_gate: STANDARD_AGENT_PACK_ABI.l4_entry_gate,
               l5_entry_gate: STANDARD_AGENT_PACK_ABI.l5_entry_gate,
+              stage_completion_policy: {
+                ...STANDARD_STAGE_COMPLETION_POLICY,
+                policy_ref: `stage-completion-policy-ref:${domainId}/${STARTER_STAGE_ID}`,
+                stage_id: STARTER_STAGE_ID,
+                target_domain_id: domainId,
+              },
               user_stage_log_contract: STANDARD_USER_STAGE_LOG_CONTRACT,
               progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
               typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
