@@ -196,6 +196,7 @@ test('standard agent landing negative conformance has repo-backed cross-agent sa
       'domain_specific_kernel_copied_to_opl',
       'generated_interface_ready',
       'provider_completed',
+      'stage_output_without_domain_completion_policy',
       'verified_refs_only_ledger',
     ],
   );
@@ -204,7 +205,9 @@ test('standard agent landing negative conformance has repo-backed cross-agent sa
     assert.equal(sample.status, 'blocked_false_completion', sample.sample_id);
     assert.ok(sample.rejected_completion_claim.length > 0, sample.sample_id);
     assert.ok(
-      sample.required_next_shape === 'typed_blocker' || sample.required_next_shape === 'developer_work_order',
+      sample.required_next_shape === 'typed_blocker'
+        || sample.required_next_shape === 'developer_work_order'
+        || sample.required_next_shape === 'stage_completion_policy_or_typed_blocker',
       sample.sample_id,
     );
     assert.equal(sample.can_claim_standard_agent_complete, false, sample.sample_id);

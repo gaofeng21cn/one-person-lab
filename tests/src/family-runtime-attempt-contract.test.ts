@@ -821,6 +821,7 @@ test('standard domain-agent scaffold contract forbids domain-owned generic frame
     'stage_contract.receipt_schema_refs',
     'stage_contract.authority_function_refs',
     'stage_contract.l4_entry_gate and stage_contract.l5_entry_gate',
+    'stage_contract.stage_completion_policy',
     'stage_contract.user_stage_log_contract',
     'stage_contract.progress_delta_policy',
     'stage_contract.typed_blocker_lineage_policy',

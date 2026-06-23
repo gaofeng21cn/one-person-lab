@@ -103,6 +103,7 @@ test('standard domain-agent admission contract keeps false-authority boundaries 
     human_gate_can_replace_owner_receipt: false,
     human_gate_can_write_domain_truth: false,
     human_gate_can_claim_domain_ready: false,
+    stage_output_without_domain_completion_policy_counts_as_stage_complete: false,
   });
 
   const gatesById = new Map(contract.standard_agent_admission_package.gates.map((gate) => [gate.gate_id, gate]));

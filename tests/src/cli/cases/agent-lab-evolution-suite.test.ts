@@ -1,5 +1,34 @@
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
 
+function stageCompletionPolicy(policyRef: string) {
+  return {
+    surface_kind: 'domain_stage_completion_policy',
+    policy_ref: policyRef,
+    completion_judgment_owner: 'domain_stage',
+    closeout_packet_required: true,
+    provider_completion_is_domain_completion: false,
+    opl_content_judgment_allowed: false,
+    next_stage_transition_owner: 'opl_runtime',
+    required_closeout_outcomes: [
+      'completed_and_continue',
+      'completed_and_wait_owner',
+      'route_back',
+      'blocked',
+      'rejected',
+    ],
+    accepted_closeout_ref_fields: [
+      'owner_receipt_ref',
+      'typed_blocker_ref',
+      'human_gate_ref',
+      'route_back_ref',
+    ],
+    authority_boundary: {
+      opl_can_decide_domain_completion: false,
+      provider_completion_counts_as_stage_complete: false,
+    },
+  };
+}
+
 test('agent-lab evolve runs an external suite into a refs-only mechanism evolution segment', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-evolve-suite-'));
   const suitePath = path.join(tmpDir, 'suite.json');
@@ -26,6 +55,7 @@ test('agent-lab evolve runs an external suite into a refs-only mechanism evoluti
         instructions_ref: 'instructions:opl-meta-agent/evolution',
         agent_entry_ref: 'domain-agent-entry:evolution-agent',
         stage_refs: ['stage:evolution/baseline'],
+        stage_completion_policy: stageCompletionPolicy('stage-completion-policy:opl-meta-agent/evolution-candidate'),
         oracle_refs: ['oracle:evolution/baseline-valid'],
         scorer_refs: ['scorer:evolution/acceptance'],
         recovery_probes: [

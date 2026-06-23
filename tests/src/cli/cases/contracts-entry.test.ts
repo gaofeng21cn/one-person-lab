@@ -234,6 +234,12 @@ test('validateFrameworkContracts returns a stable summary for the required contr
         status: 'valid',
       },
       {
+        contract_id: 'scholarskills_capability_modules',
+        file: path.join(contractsDir, 'scholar-skills-capability-modules.json'),
+        schema_version: String(contracts.scholarSkillsCapabilityModules.schema_version),
+        status: 'valid',
+      },
+      {
         contract_id: 'pack_os',
         file: path.join(contractsDir, 'pack-os-contract.json'),
         schema_version: String(contracts.packOs.schema_version),
@@ -330,6 +336,12 @@ test('contract validate returns a stable machine-readable contract summary', () 
           contract_id: 'target_operating_architecture',
           file: path.join(contractsDir, 'target-operating-architecture-contract.json'),
           schema_version: contracts.targetOperatingArchitecture.schema_version,
+          status: 'valid',
+        },
+        {
+          contract_id: 'scholarskills_capability_modules',
+          file: path.join(contractsDir, 'scholar-skills-capability-modules.json'),
+          schema_version: String(contracts.scholarSkillsCapabilityModules.schema_version),
           status: 'valid',
         },
         {
