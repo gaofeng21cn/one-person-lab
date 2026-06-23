@@ -398,6 +398,72 @@ function buildExecutionReceiptCandidate(
   };
 }
 
+function buildModuleCandidatePayload(
+  module: ScholarSkillCapabilityModuleDescriptor,
+  input: InvocationInput,
+) {
+  const moduleProfile = moduleCapabilityProfile(module);
+  return {
+    surface_kind: 'opl_scholarskills_module_candidate_payload',
+    status: 'module_candidate_refs_only',
+    module_id: module.module_id,
+    profile_id: moduleProfile.profile_id,
+    display_name: module.display_name,
+    brand_family: module.brand_family,
+    descriptor_ref: moduleContractRef(module),
+    input_ref: input.inputRef,
+    artifact_root_ref: input.artifactRoot,
+    stage_fit: module.stage_fit,
+    input_schema_refs: module.input_schema_refs,
+    output_schema_refs: module.output_schema_refs,
+    dependency_profile_refs: module.dependency_profile_refs,
+    run_context_refs: module.run_context_refs,
+    artifact_candidate_ref_families: moduleProfile.artifact_ref_families,
+    artifact_candidate_refs: buildArtifactCandidateRefs(module, input.artifactRoot),
+    execution_receipt_ref_families: moduleProfile.execution_receipt_ref_families,
+    required_ref_families: moduleProfile.required_ref_families,
+    quality_checklist: {
+      evidence_kind: module.quality_evidence.evidence_kind,
+      required_ref_shapes: module.quality_evidence.required_ref_shapes,
+      can_claim_quality_verdict: module.quality_evidence.can_claim_quality_verdict,
+      quality_verdict_owner: 'domain_owner_gate',
+    },
+    owner_consumption: {
+      required_for_paper_truth: true,
+      accepted_receipt_refs: module.receipt_policy.accepted_receipt_refs,
+      receipt_body_policy: module.receipt_policy.receipt_body_policy,
+      counts_as_paper_truth: false,
+      counts_as_owner_receipt: false,
+      can_authorize_publication_readiness: false,
+    },
+    writes: {
+      runtime_state_written: false,
+      domain_truth_written: false,
+      artifact_body_written: false,
+      owner_receipt_signed: false,
+      typed_blocker_created: false,
+    },
+    authority_flags: {
+      counts_as_paper_truth: false,
+      counts_as_owner_receipt: false,
+      can_authorize_publication_readiness: false,
+      can_claim_domain_ready: false,
+      can_claim_quality_verdict: false,
+      can_claim_artifact_authority: false,
+      can_claim_production_ready: false,
+      can_claim_runtime_ready: false,
+      can_schedule_runtime: false,
+      can_write_domain_truth: false,
+      can_write_runtime_state: false,
+      can_write_memory_body: false,
+      can_mutate_artifact_body: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+    },
+    authority_boundary: module.authority_boundary,
+  };
+}
+
 function buildExecutionReceiptCandidateTemplate(module: ScholarSkillCapabilityModuleDescriptor) {
   const moduleProfile = moduleCapabilityProfile(module);
   const templateRef = `opl://scholarskills/execution-receipt-candidate-templates/${encodeURIComponent(module.module_id)}`;
@@ -838,6 +904,7 @@ export function buildScholarSkillsMaterializeSurface(
   const module = findModuleOrThrow(contractRoot.modules, assertModuleId(input.moduleId));
   const outputRoot = path.resolve(input.outputRoot);
   const receiptCandidate = buildExecutionReceiptCandidate(module, input);
+  const moduleCandidate = buildModuleCandidatePayload(module, input);
   const refsManifest = {
     surface_kind: 'opl_scholarskills_refs_manifest',
     status: 'candidate_refs_manifest',
@@ -861,9 +928,21 @@ export function buildScholarSkillsMaterializeSurface(
     output_root_ref: `file://${outputRoot}`,
     execution_receipt_ref: receiptCandidate.execution_receipt_ref,
     execution_receipt_candidate_path: path.join(outputRoot, 'execution_receipt_candidate.json'),
+    module_candidate_path: path.join(outputRoot, 'module_candidate.json'),
     refs_manifest_path: path.join(outputRoot, 'refs_manifest.json'),
     artifact_manifest_path: path.join(outputRoot, 'manifest.json'),
     package_policy: 'deterministic_refs_only_candidate_package',
+    module_candidate: {
+      surface_kind: moduleCandidate.surface_kind,
+      status: moduleCandidate.status,
+      module_id: moduleCandidate.module_id,
+      artifact_candidate_ref_families: moduleCandidate.artifact_candidate_ref_families,
+      execution_receipt_ref_families: moduleCandidate.execution_receipt_ref_families,
+      quality_evidence_kind: moduleCandidate.quality_checklist.evidence_kind,
+      owner_consumption_required_for_paper_truth: moduleCandidate.owner_consumption.required_for_paper_truth,
+      counts_as_paper_truth: moduleCandidate.owner_consumption.counts_as_paper_truth,
+      can_authorize_publication_readiness: moduleCandidate.owner_consumption.can_authorize_publication_readiness,
+    },
     written_body_authority: {
       runtime_db_written: false,
       domain_truth_written: false,
@@ -893,6 +972,7 @@ export function buildScholarSkillsMaterializeSurface(
   const writtenFileEntries = [
     writeDeterministicJson(manifest.artifact_manifest_path, manifest),
     writeDeterministicJson(manifest.execution_receipt_candidate_path, receiptCandidate),
+    writeDeterministicJson(manifest.module_candidate_path, moduleCandidate),
     writeDeterministicJson(manifest.refs_manifest_path, refsManifest),
   ];
   const writtenFiles = writtenFileEntries.map((entry) => entry.path);
@@ -910,6 +990,7 @@ export function buildScholarSkillsMaterializeSurface(
       output_root_ref: `file://${outputRoot}`,
       execution_receipt_ref: receiptCandidate.execution_receipt_ref,
       execution_receipt_candidate_path: manifest.execution_receipt_candidate_path,
+      module_candidate_path: manifest.module_candidate_path,
       artifact_manifest_path: manifest.artifact_manifest_path,
       refs_manifest_path: manifest.refs_manifest_path,
       written_files: writtenFiles,

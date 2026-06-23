@@ -552,11 +552,13 @@ test('opl scholar-skills materialize writes a deterministic refs-only candidate 
     assert.equal(output.output_root_ref, `file://${outputRoot}`);
     assert.equal(output.execution_receipt_ref.startsWith('opl://scholarskills/execution-receipt-candidates/'), true);
     assert.equal(output.execution_receipt_candidate_path, path.join(outputRoot, 'execution_receipt_candidate.json'));
+    assert.equal(output.module_candidate_path, path.join(outputRoot, 'module_candidate.json'));
     assert.equal(output.artifact_manifest_path, path.join(outputRoot, 'manifest.json'));
     assert.equal(output.refs_manifest_path, path.join(outputRoot, 'refs_manifest.json'));
     assert.deepEqual(output.written_files.sort(), [
       path.join(outputRoot, 'execution_receipt_candidate.json'),
       path.join(outputRoot, 'manifest.json'),
+      path.join(outputRoot, 'module_candidate.json'),
       path.join(outputRoot, 'refs_manifest.json'),
     ].sort());
     assert.equal(output.sha256, secondOutput.sha256);
@@ -575,14 +577,71 @@ test('opl scholar-skills materialize writes a deterministic refs-only candidate 
 
     const manifest = JSON.parse(fs.readFileSync(output.artifact_manifest_path, 'utf8'));
     const receipt = JSON.parse(fs.readFileSync(output.execution_receipt_candidate_path, 'utf8'));
+    const moduleCandidate = JSON.parse(fs.readFileSync(output.module_candidate_path, 'utf8'));
     const refs = JSON.parse(fs.readFileSync(output.refs_manifest_path, 'utf8'));
     assert.equal(manifest.surface_kind, 'opl_scholarskills_materialized_candidate_package_manifest');
     assert.equal(manifest.authority_flags.can_sign_owner_receipt, false);
+    assert.equal(manifest.module_candidate_path, path.join(outputRoot, 'module_candidate.json'));
+    assert.equal(manifest.module_candidate.surface_kind, 'opl_scholarskills_module_candidate_payload');
+    assert.equal(manifest.module_candidate.owner_consumption_required_for_paper_truth, true);
+    assert.equal(manifest.module_candidate.counts_as_paper_truth, false);
+    assert.equal(manifest.module_candidate.can_authorize_publication_readiness, false);
     assert.equal(receipt.surface_kind, 'opl_scholarskills_execution_receipt_candidate');
     assert.equal(receipt.counts_as_paper_truth, false);
+    assert.equal(moduleCandidate.surface_kind, 'opl_scholarskills_module_candidate_payload');
+    assert.equal(moduleCandidate.status, 'module_candidate_refs_only');
+    assert.equal(moduleCandidate.module_id, 'opl.scholarskills.display');
+    assert.deepEqual(moduleCandidate.artifact_candidate_ref_families, ['display_pack_agent_orchestration']);
+    assert.equal(moduleCandidate.quality_checklist.can_claim_quality_verdict, false);
+    assert.equal(moduleCandidate.owner_consumption.required_for_paper_truth, true);
+    assert.equal(moduleCandidate.owner_consumption.counts_as_paper_truth, false);
+    assert.equal(moduleCandidate.owner_consumption.can_authorize_publication_readiness, false);
+    assert.equal(moduleCandidate.writes.domain_truth_written, false);
+    assert.equal(moduleCandidate.authority_flags.can_mutate_artifact_body, false);
     assert.equal(refs.surface_kind, 'opl_scholarskills_refs_manifest');
     assert.equal(refs.artifact_body_written, false);
     assert.deepEqual(fs.readdirSync(fixtureRoot), ['candidate-package']);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('opl scholar-skills materialize writes module-specific candidate payloads for every module', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholar-skills-materialize-all-'));
+  try {
+    for (const moduleId of expectedModuleIds) {
+      const outputRoot = path.join(fixtureRoot, moduleId.replaceAll('.', '-'));
+      const output = runCli([
+        'scholar-skills',
+        'materialize',
+        '--module',
+        moduleId,
+        '--input-ref',
+        `mas:current_owner_delta/${moduleId}`,
+        '--artifact-root',
+        `artifact-root:${moduleId}`,
+        '--output-root',
+        outputRoot,
+        '--json',
+      ]).scholar_skills_materialize;
+      const moduleCandidate = JSON.parse(fs.readFileSync(output.module_candidate_path, 'utf8'));
+
+      assert.equal(moduleCandidate.module_id, moduleId);
+      assert.equal(moduleCandidate.profile_id, moduleId.replace('opl.scholarskills.', ''));
+      assert.deepEqual(
+        moduleCandidate.artifact_candidate_ref_families,
+        expectedArtifactRefFamiliesByModule[moduleId],
+      );
+      assert.deepEqual(
+        moduleCandidate.execution_receipt_ref_families.map((family: string) => `${family}_ref`),
+        expectedReceiptRefFamiliesByModule[moduleId],
+      );
+      assert.equal(moduleCandidate.quality_checklist.can_claim_quality_verdict, false);
+      assert.equal(moduleCandidate.owner_consumption.required_for_paper_truth, true);
+      assert.equal(moduleCandidate.owner_consumption.counts_as_owner_receipt, false);
+      assert.equal(moduleCandidate.authority_flags.can_sign_owner_receipt, false);
+      assert.equal(moduleCandidate.authority_boundary.can_write_domain_truth, false);
+    }
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
