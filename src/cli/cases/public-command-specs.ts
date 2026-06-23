@@ -68,6 +68,7 @@ import { buildConnectCommandSpecs } from './public-command-specs-parts/connect.t
 import { buildFoundryCommandSpecs } from './public-command-specs-parts/foundry.ts';
 import { buildOkfCommandSpecs } from './public-command-specs-parts/okf.ts';
 import { buildStageCommandSpecs, validateStageDerivedLensCommandSpecs } from './public-command-specs-parts/stages.ts';
+import { buildScholarSkillsCommandSpecs } from './public-command-specs-parts/scholar-skills.ts';
 import { buildUpdateCommandSpecs } from './public-command-specs-parts/update.ts';
 import { buildWorkspaceCommandSpecs } from './public-command-specs-parts/workspace.ts';
 
@@ -145,6 +146,7 @@ export function buildPublicCommandSpecs(
   const foundryCommandSpecs = buildFoundryCommandSpecs();
   const okfCommandSpecs = buildOkfCommandSpecs();
   const stageCommandSpecs = buildStageCommandSpecs(getContracts);
+  const scholarSkillsCommandSpecs = buildScholarSkillsCommandSpecs(getContracts);
   const updateCommandSpecs = buildUpdateCommandSpecs(getContracts);
   const workspaceCommandSpecs = buildWorkspaceCommandSpecs(commandSpecs);
 
@@ -233,6 +235,7 @@ export function buildPublicCommandSpecs(
     ...updateCommandSpecs,
     ...workOrderCommandSpecs,
     ...okfCommandSpecs,
+    ...scholarSkillsCommandSpecs,
     'framework locate': {
       usage: 'opl framework locate',
       summary: 'Locate the OPL Framework runtime dependency for an OPL-compatible agent.',

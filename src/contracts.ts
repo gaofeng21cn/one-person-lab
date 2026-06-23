@@ -31,6 +31,7 @@ import { validateBrandSystemProfile } from './brand-system-profile-contract.ts';
 import { validateDomainsRegistry } from './domain-contracts.ts';
 import { validatePackBundleContract } from './pack-bundle-contract.ts';
 import { validatePackOsContract } from './pack-os-contract.ts';
+import { validateScholarSkillsCapabilityModules } from './scholar-skills-contract.ts';
 import { validateTargetOperatingArchitecture } from './target-operating-architecture-contract.ts';
 
 export { FrameworkContractError } from './contract-validation.ts';
@@ -48,6 +49,7 @@ const REQUIRED_CONTRACT_FILE_NAMES = [
   'brand-module-l5-operating-evidence.json',
   'brand-system-profile.json',
   'target-operating-architecture-contract.json',
+  'scholar-skills-capability-modules.json',
   'pack-bundle-contract.json',
   'pack-os-contract.json',
 ] as const;
@@ -787,6 +789,11 @@ const REQUIRED_CONTRACT_FILES = [
     schema_version: (contracts: FrameworkContracts) => contracts.targetOperatingArchitecture.schema_version,
   },
   {
+    contract_id: 'scholarskills_capability_modules',
+    file_name: 'scholar-skills-capability-modules.json',
+    schema_version: (contracts: FrameworkContracts) => String(contracts.scholarSkillsCapabilityModules.schema_version),
+  },
+  {
     contract_id: 'pack_os',
     file_name: 'pack-os-contract.json',
     schema_version: (contracts: FrameworkContracts) => String(contracts.packOs.schema_version),
@@ -873,6 +880,10 @@ export function loadFrameworkContracts(
       targetOperatingArchitecture: validateTargetOperatingArchitecture(
         path.join(contractsDir, 'target-operating-architecture-contract.json'),
         parseJsonFile(path.join(contractsDir, 'target-operating-architecture-contract.json')),
+      ),
+      scholarSkillsCapabilityModules: validateScholarSkillsCapabilityModules(
+        path.join(contractsDir, 'scholar-skills-capability-modules.json'),
+        parseJsonFile(path.join(contractsDir, 'scholar-skills-capability-modules.json')),
       ),
       packBundle: validatePackBundleContract(
         path.join(contractsDir, 'pack-bundle-contract.json'),

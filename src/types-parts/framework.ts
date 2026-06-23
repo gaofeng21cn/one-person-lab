@@ -15,6 +15,7 @@ import type {
 } from './brand-contracts.ts';
 import type { PackBundleContract } from './pack-bundle.ts';
 import type { PackOsContract } from './pack-os.ts';
+import type { ScholarSkillsCapabilityModulesContract } from './scholar-skills.ts';
 import type { TargetOperatingArchitectureContract } from './target-operating-architecture.ts';
 
 export interface WorkstreamsRegistry {
@@ -52,6 +53,7 @@ export interface FrameworkContracts {
   targetOperatingArchitecture: TargetOperatingArchitectureContract;
   packOs: PackOsContract;
   packBundle: PackBundleContract;
+  scholarSkillsCapabilityModules: ScholarSkillsCapabilityModulesContract;
 }
 
 export interface ContractValidationEntry {
@@ -69,7 +71,8 @@ export interface ContractValidationEntry {
     | 'brand_system_profile'
     | 'target_operating_architecture'
     | 'pack_os'
-    | 'pack_bundle';
+    | 'pack_bundle'
+    | 'scholarskills_capability_modules';
   file: string;
   schema_version: string;
   status: 'valid';

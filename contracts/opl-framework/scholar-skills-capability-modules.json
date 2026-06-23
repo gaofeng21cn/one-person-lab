@@ -1,0 +1,849 @@
+{
+  "contract_id": "opl_scholarskills_capability_modules",
+  "schema_version": "1.0.0",
+  "owner": "One Person Lab",
+  "state": "active_structural_baseline",
+  "brand_family": "OPL ScholarSkills",
+  "purpose": "Canonical capability-module catalog for OPL-hosted scholarly skills that can be discovered by OPL Atlas, packaged by OPL Pack, prepared through OPL runtime env, invoked by OPL Runway, and consumed by domain agents as refs-only candidate outputs.",
+  "machine_boundary": "This contract describes independent capability modules and their descriptor, dependency, run-context, artifact, receipt, and quality-evidence refs. It does not add an eleventh OPL brand module, execute domain stages, write domain truth, mutate artifact bodies, schedule runtime attempts, sign owner receipts, create typed blockers, or claim runtime, domain, quality, artifact, publication, App, or production readiness.",
+  "runtime_environment_bridge": {
+    "mode": "refs_only",
+    "owner": "OPL Framework",
+    "dependency_profile_owner_commands": [
+      "opl runtime env prepare --domain scholarskills --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> --json"
+    ],
+    "run_context_owner_commands": [
+      "opl runtime env run-context --domain scholarskills --profile <profile> --json"
+    ],
+    "can_write_runtime_state": false,
+    "can_claim_runtime_ready": false,
+    "can_claim_domain_ready": false
+  },
+  "authority_boundary": {
+    "can_claim_domain_ready": false,
+    "can_claim_quality_verdict": false,
+    "can_claim_artifact_authority": false,
+    "can_claim_production_ready": false,
+    "can_claim_runtime_ready": false,
+    "can_schedule_runtime": false,
+    "can_write_domain_truth": false,
+    "can_write_runtime_state": false,
+    "can_write_memory_body": false,
+    "can_mutate_artifact_body": false,
+    "can_sign_owner_receipt": false,
+    "can_create_typed_blocker": false,
+    "can_replace_domain_owner": false,
+    "can_replace_ai_executor_planning": false
+  },
+  "modules": [
+    {
+      "module_id": "opl.scholarskills.display",
+      "brand_family": "OPL ScholarSkills",
+      "display_name": "Scholar Display",
+      "stage_fit": [
+        "figure_plan",
+        "visual_template_selection",
+        "display_pack_render",
+        "artifact_gallery_preview"
+      ],
+      "input_schema_refs": [
+        "display-pack-contract.v2#figure_intent",
+        "mas_current_owner_delta#route_required_ref_families"
+      ],
+      "output_schema_refs": [
+        "display-pack-contract.v2#candidate_artifact_refs",
+        "scholarskills_execution_receipt.v1#display"
+      ],
+      "dependency_profile_refs": [
+        "runtime_env_dependency_profile:scholarskills_display_v1",
+        "opl runtime env prepare --domain scholarskills --profile display --platform <platform> --requirement-profile <path> --paper-root <path> --json"
+      ],
+      "run_context_refs": [
+        "opl runtime env run-context --domain scholarskills --profile display --json"
+      ],
+      "invocation_entries": [
+        {
+          "entry_id": "scholar_display_descriptor",
+          "entry_kind": "descriptor_readback",
+          "command": "opl scholar-skills inspect --module opl.scholarskills.display --json",
+          "mutation": false,
+          "descriptor_only": true
+        }
+      ],
+      "artifact_refs": [
+        {
+          "ref_id": "display_pack_agent_orchestration",
+          "ref_kind": "candidate_artifact_ref",
+          "role": "display_pack_candidate_output",
+          "body_policy": "body_owned_by_domain_artifact_surface"
+        }
+      ],
+      "receipt_policy": {
+        "accepted_receipt_refs": [
+          "owner_receipt_ref",
+          "typed_blocker_ref",
+          "reviewer_receipt_ref",
+          "route_back_evidence_ref"
+        ],
+        "can_sign_owner_receipt": false,
+        "receipt_body_policy": "domain_owner_receipt_or_typed_blocker_required_for_authority"
+      },
+      "quality_evidence": {
+        "evidence_kind": "candidate_visual_quality_refs",
+        "required_ref_shapes": [
+          "template_ref",
+          "dependency_run_context_ref",
+          "candidate_artifact_ref",
+          "visual_review_receipt_ref"
+        ],
+        "can_claim_quality_verdict": false
+      },
+      "authority_boundary": {
+        "can_claim_domain_ready": false,
+        "can_claim_quality_verdict": false,
+        "can_claim_artifact_authority": false,
+        "can_claim_production_ready": false,
+        "can_claim_runtime_ready": false,
+        "can_schedule_runtime": false,
+        "can_write_domain_truth": false,
+        "can_write_runtime_state": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_replace_domain_owner": false,
+        "can_replace_ai_executor_planning": false
+      },
+      "allowed_writes": [],
+      "forbidden_writes": [
+        "domain truth",
+        "artifact bodies",
+        "runtime queues/outbox/state",
+        "owner receipts",
+        "typed blockers"
+      ]
+    },
+    {
+      "module_id": "opl.scholarskills.tables",
+      "brand_family": "OPL ScholarSkills",
+      "display_name": "Scholar Tables",
+      "stage_fit": [
+        "table_shell",
+        "statistical_summary_table",
+        "publication_table_qc"
+      ],
+      "input_schema_refs": [
+        "scholarskills_tables_input.v1"
+      ],
+      "output_schema_refs": [
+        "scholarskills_tables_output_refs.v1"
+      ],
+      "dependency_profile_refs": [
+        "runtime_env_dependency_profile:scholarskills_tables_v1"
+      ],
+      "run_context_refs": [
+        "opl runtime env run-context --domain scholarskills --profile tables --json"
+      ],
+      "invocation_entries": [
+        {
+          "entry_id": "scholar_tables_descriptor",
+          "entry_kind": "descriptor_readback",
+          "command": "opl scholar-skills inspect --module opl.scholarskills.tables --json",
+          "mutation": false,
+          "descriptor_only": true
+        }
+      ],
+      "artifact_refs": [
+        {
+          "ref_id": "scholarskills_tables_candidate_refs",
+          "ref_kind": "candidate_artifact_ref",
+          "role": "publication_table_candidate_output",
+          "body_policy": "body_owned_by_domain_artifact_surface"
+        }
+      ],
+      "receipt_policy": {
+        "accepted_receipt_refs": [
+          "owner_receipt_ref",
+          "typed_blocker_ref"
+        ],
+        "can_sign_owner_receipt": false,
+        "receipt_body_policy": "domain_owner_receipt_or_typed_blocker_required_for_authority"
+      },
+      "quality_evidence": {
+        "evidence_kind": "candidate_table_quality_refs",
+        "required_ref_shapes": [
+          "source_data_ref",
+          "table_shell_ref",
+          "qc_receipt_ref"
+        ],
+        "can_claim_quality_verdict": false
+      },
+      "authority_boundary": {
+        "can_claim_domain_ready": false,
+        "can_claim_quality_verdict": false,
+        "can_claim_artifact_authority": false,
+        "can_claim_production_ready": false,
+        "can_claim_runtime_ready": false,
+        "can_schedule_runtime": false,
+        "can_write_domain_truth": false,
+        "can_write_runtime_state": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_replace_domain_owner": false,
+        "can_replace_ai_executor_planning": false
+      },
+      "allowed_writes": [],
+      "forbidden_writes": [
+        "domain truth",
+        "artifact bodies",
+        "runtime queues/outbox/state",
+        "owner receipts",
+        "typed blockers"
+      ]
+    },
+    {
+      "module_id": "opl.scholarskills.stats",
+      "brand_family": "OPL ScholarSkills",
+      "display_name": "Scholar Stats",
+      "stage_fit": [
+        "analysis_plan",
+        "statistical_check",
+        "effect_size_projection"
+      ],
+      "input_schema_refs": [
+        "scholarskills_stats_input.v1"
+      ],
+      "output_schema_refs": [
+        "scholarskills_stats_output_refs.v1"
+      ],
+      "dependency_profile_refs": [
+        "runtime_env_dependency_profile:scholarskills_stats_v1"
+      ],
+      "run_context_refs": [
+        "opl runtime env run-context --domain scholarskills --profile stats --json"
+      ],
+      "invocation_entries": [
+        {
+          "entry_id": "scholar_stats_descriptor",
+          "entry_kind": "descriptor_readback",
+          "command": "opl scholar-skills inspect --module opl.scholarskills.stats --json",
+          "mutation": false,
+          "descriptor_only": true
+        }
+      ],
+      "artifact_refs": [
+        {
+          "ref_id": "scholarskills_stats_candidate_refs",
+          "ref_kind": "candidate_artifact_ref",
+          "role": "statistical_method_candidate_output",
+          "body_policy": "body_owned_by_domain_artifact_surface"
+        }
+      ],
+      "receipt_policy": {
+        "accepted_receipt_refs": [
+          "owner_receipt_ref",
+          "typed_blocker_ref"
+        ],
+        "can_sign_owner_receipt": false,
+        "receipt_body_policy": "domain_owner_receipt_or_typed_blocker_required_for_authority"
+      },
+      "quality_evidence": {
+        "evidence_kind": "candidate_statistical_quality_refs",
+        "required_ref_shapes": [
+          "analysis_plan_ref",
+          "source_data_ref",
+          "statistical_review_ref"
+        ],
+        "can_claim_quality_verdict": false
+      },
+      "authority_boundary": {
+        "can_claim_domain_ready": false,
+        "can_claim_quality_verdict": false,
+        "can_claim_artifact_authority": false,
+        "can_claim_production_ready": false,
+        "can_claim_runtime_ready": false,
+        "can_schedule_runtime": false,
+        "can_write_domain_truth": false,
+        "can_write_runtime_state": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_replace_domain_owner": false,
+        "can_replace_ai_executor_planning": false
+      },
+      "allowed_writes": [],
+      "forbidden_writes": [
+        "domain truth",
+        "artifact bodies",
+        "runtime queues/outbox/state",
+        "owner receipts",
+        "typed blockers"
+      ]
+    },
+    {
+      "module_id": "opl.scholarskills.omics",
+      "brand_family": "OPL ScholarSkills",
+      "display_name": "Scholar Omics",
+      "stage_fit": [
+        "omics_preflight",
+        "feature_matrix_qc",
+        "pathway_projection"
+      ],
+      "input_schema_refs": [
+        "scholarskills_omics_input.v1"
+      ],
+      "output_schema_refs": [
+        "scholarskills_omics_output_refs.v1"
+      ],
+      "dependency_profile_refs": [
+        "runtime_env_dependency_profile:scholarskills_omics_v1"
+      ],
+      "run_context_refs": [
+        "opl runtime env run-context --domain scholarskills --profile omics --json"
+      ],
+      "invocation_entries": [
+        {
+          "entry_id": "scholar_omics_descriptor",
+          "entry_kind": "descriptor_readback",
+          "command": "opl scholar-skills inspect --module opl.scholarskills.omics --json",
+          "mutation": false,
+          "descriptor_only": true
+        }
+      ],
+      "artifact_refs": [
+        {
+          "ref_id": "scholarskills_omics_candidate_refs",
+          "ref_kind": "candidate_artifact_ref",
+          "role": "omics_analysis_candidate_output",
+          "body_policy": "body_owned_by_domain_artifact_surface"
+        }
+      ],
+      "receipt_policy": {
+        "accepted_receipt_refs": [
+          "owner_receipt_ref",
+          "typed_blocker_ref"
+        ],
+        "can_sign_owner_receipt": false,
+        "receipt_body_policy": "domain_owner_receipt_or_typed_blocker_required_for_authority"
+      },
+      "quality_evidence": {
+        "evidence_kind": "candidate_omics_quality_refs",
+        "required_ref_shapes": [
+          "feature_matrix_ref",
+          "pipeline_context_ref",
+          "omics_review_ref"
+        ],
+        "can_claim_quality_verdict": false
+      },
+      "authority_boundary": {
+        "can_claim_domain_ready": false,
+        "can_claim_quality_verdict": false,
+        "can_claim_artifact_authority": false,
+        "can_claim_production_ready": false,
+        "can_claim_runtime_ready": false,
+        "can_schedule_runtime": false,
+        "can_write_domain_truth": false,
+        "can_write_runtime_state": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_replace_domain_owner": false,
+        "can_replace_ai_executor_planning": false
+      },
+      "allowed_writes": [],
+      "forbidden_writes": [
+        "domain truth",
+        "artifact bodies",
+        "runtime queues/outbox/state",
+        "owner receipts",
+        "typed blockers"
+      ]
+    },
+    {
+      "module_id": "opl.scholarskills.lit",
+      "brand_family": "OPL ScholarSkills",
+      "display_name": "Scholar Lit",
+      "stage_fit": [
+        "literature_map",
+        "citation_support",
+        "claim_context"
+      ],
+      "input_schema_refs": [
+        "scholarskills_lit_input.v1"
+      ],
+      "output_schema_refs": [
+        "scholarskills_lit_output_refs.v1"
+      ],
+      "dependency_profile_refs": [
+        "runtime_env_dependency_profile:scholarskills_lit_v1"
+      ],
+      "run_context_refs": [
+        "opl runtime env run-context --domain scholarskills --profile lit --json"
+      ],
+      "invocation_entries": [
+        {
+          "entry_id": "scholar_lit_descriptor",
+          "entry_kind": "descriptor_readback",
+          "command": "opl scholar-skills inspect --module opl.scholarskills.lit --json",
+          "mutation": false,
+          "descriptor_only": true
+        }
+      ],
+      "artifact_refs": [
+        {
+          "ref_id": "scholarskills_lit_candidate_refs",
+          "ref_kind": "candidate_artifact_ref",
+          "role": "literature_context_candidate_output",
+          "body_policy": "body_owned_by_domain_artifact_surface"
+        }
+      ],
+      "receipt_policy": {
+        "accepted_receipt_refs": [
+          "owner_receipt_ref",
+          "typed_blocker_ref"
+        ],
+        "can_sign_owner_receipt": false,
+        "receipt_body_policy": "domain_owner_receipt_or_typed_blocker_required_for_authority"
+      },
+      "quality_evidence": {
+        "evidence_kind": "candidate_literature_quality_refs",
+        "required_ref_shapes": [
+          "query_ref",
+          "citation_matrix_ref",
+          "claim_support_ref"
+        ],
+        "can_claim_quality_verdict": false
+      },
+      "authority_boundary": {
+        "can_claim_domain_ready": false,
+        "can_claim_quality_verdict": false,
+        "can_claim_artifact_authority": false,
+        "can_claim_production_ready": false,
+        "can_claim_runtime_ready": false,
+        "can_schedule_runtime": false,
+        "can_write_domain_truth": false,
+        "can_write_runtime_state": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_replace_domain_owner": false,
+        "can_replace_ai_executor_planning": false
+      },
+      "allowed_writes": [],
+      "forbidden_writes": [
+        "domain truth",
+        "artifact bodies",
+        "runtime queues/outbox/state",
+        "owner receipts",
+        "typed blockers"
+      ]
+    },
+    {
+      "module_id": "opl.scholarskills.write",
+      "brand_family": "OPL ScholarSkills",
+      "display_name": "Scholar Write",
+      "stage_fit": [
+        "section_draft",
+        "claim_trace",
+        "manuscript_revision"
+      ],
+      "input_schema_refs": [
+        "scholarskills_write_input.v1"
+      ],
+      "output_schema_refs": [
+        "scholarskills_write_output_refs.v1"
+      ],
+      "dependency_profile_refs": [
+        "runtime_env_dependency_profile:scholarskills_write_v1"
+      ],
+      "run_context_refs": [
+        "opl runtime env run-context --domain scholarskills --profile write --json"
+      ],
+      "invocation_entries": [
+        {
+          "entry_id": "scholar_write_descriptor",
+          "entry_kind": "descriptor_readback",
+          "command": "opl scholar-skills inspect --module opl.scholarskills.write --json",
+          "mutation": false,
+          "descriptor_only": true
+        }
+      ],
+      "artifact_refs": [
+        {
+          "ref_id": "scholarskills_write_candidate_refs",
+          "ref_kind": "candidate_artifact_ref",
+          "role": "writing_candidate_output",
+          "body_policy": "body_owned_by_domain_artifact_surface"
+        }
+      ],
+      "receipt_policy": {
+        "accepted_receipt_refs": [
+          "owner_receipt_ref",
+          "typed_blocker_ref",
+          "reviewer_receipt_ref"
+        ],
+        "can_sign_owner_receipt": false,
+        "receipt_body_policy": "domain_owner_receipt_or_typed_blocker_required_for_authority"
+      },
+      "quality_evidence": {
+        "evidence_kind": "candidate_writing_quality_refs",
+        "required_ref_shapes": [
+          "source_map_ref",
+          "draft_block_ref",
+          "review_receipt_ref"
+        ],
+        "can_claim_quality_verdict": false
+      },
+      "authority_boundary": {
+        "can_claim_domain_ready": false,
+        "can_claim_quality_verdict": false,
+        "can_claim_artifact_authority": false,
+        "can_claim_production_ready": false,
+        "can_claim_runtime_ready": false,
+        "can_schedule_runtime": false,
+        "can_write_domain_truth": false,
+        "can_write_runtime_state": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_replace_domain_owner": false,
+        "can_replace_ai_executor_planning": false
+      },
+      "allowed_writes": [],
+      "forbidden_writes": [
+        "domain truth",
+        "artifact bodies",
+        "runtime queues/outbox/state",
+        "owner receipts",
+        "typed blockers"
+      ]
+    },
+    {
+      "module_id": "opl.scholarskills.review",
+      "brand_family": "OPL ScholarSkills",
+      "display_name": "Scholar Review",
+      "stage_fit": [
+        "reviewer_comment_map",
+        "quality_gate_feedback",
+        "revision_action_projection"
+      ],
+      "input_schema_refs": [
+        "scholarskills_review_input.v1"
+      ],
+      "output_schema_refs": [
+        "scholarskills_review_output_refs.v1"
+      ],
+      "dependency_profile_refs": [
+        "runtime_env_dependency_profile:scholarskills_review_v1"
+      ],
+      "run_context_refs": [
+        "opl runtime env run-context --domain scholarskills --profile review --json"
+      ],
+      "invocation_entries": [
+        {
+          "entry_id": "scholar_review_descriptor",
+          "entry_kind": "descriptor_readback",
+          "command": "opl scholar-skills inspect --module opl.scholarskills.review --json",
+          "mutation": false,
+          "descriptor_only": true
+        }
+      ],
+      "artifact_refs": [
+        {
+          "ref_id": "scholarskills_review_candidate_refs",
+          "ref_kind": "candidate_artifact_ref",
+          "role": "review_action_candidate_output",
+          "body_policy": "body_owned_by_domain_artifact_surface"
+        }
+      ],
+      "receipt_policy": {
+        "accepted_receipt_refs": [
+          "owner_receipt_ref",
+          "typed_blocker_ref",
+          "reviewer_receipt_ref"
+        ],
+        "can_sign_owner_receipt": false,
+        "receipt_body_policy": "domain_owner_receipt_or_typed_blocker_required_for_authority"
+      },
+      "quality_evidence": {
+        "evidence_kind": "candidate_review_quality_refs",
+        "required_ref_shapes": [
+          "reviewer_comment_ref",
+          "repair_action_ref",
+          "quality_gate_ref"
+        ],
+        "can_claim_quality_verdict": false
+      },
+      "authority_boundary": {
+        "can_claim_domain_ready": false,
+        "can_claim_quality_verdict": false,
+        "can_claim_artifact_authority": false,
+        "can_claim_production_ready": false,
+        "can_claim_runtime_ready": false,
+        "can_schedule_runtime": false,
+        "can_write_domain_truth": false,
+        "can_write_runtime_state": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_replace_domain_owner": false,
+        "can_replace_ai_executor_planning": false
+      },
+      "allowed_writes": [],
+      "forbidden_writes": [
+        "domain truth",
+        "artifact bodies",
+        "runtime queues/outbox/state",
+        "owner receipts",
+        "typed blockers"
+      ]
+    },
+    {
+      "module_id": "opl.scholarskills.submit",
+      "brand_family": "OPL ScholarSkills",
+      "display_name": "Scholar Submit",
+      "stage_fit": [
+        "submission_checklist",
+        "package_export_refs",
+        "journal_rule_projection"
+      ],
+      "input_schema_refs": [
+        "scholarskills_submit_input.v1"
+      ],
+      "output_schema_refs": [
+        "scholarskills_submit_output_refs.v1"
+      ],
+      "dependency_profile_refs": [
+        "runtime_env_dependency_profile:scholarskills_submit_v1"
+      ],
+      "run_context_refs": [
+        "opl runtime env run-context --domain scholarskills --profile submit --json"
+      ],
+      "invocation_entries": [
+        {
+          "entry_id": "scholar_submit_descriptor",
+          "entry_kind": "descriptor_readback",
+          "command": "opl scholar-skills inspect --module opl.scholarskills.submit --json",
+          "mutation": false,
+          "descriptor_only": true
+        }
+      ],
+      "artifact_refs": [
+        {
+          "ref_id": "scholarskills_submit_candidate_refs",
+          "ref_kind": "candidate_artifact_ref",
+          "role": "submission_package_candidate_output",
+          "body_policy": "body_owned_by_domain_artifact_surface"
+        }
+      ],
+      "receipt_policy": {
+        "accepted_receipt_refs": [
+          "owner_receipt_ref",
+          "typed_blocker_ref"
+        ],
+        "can_sign_owner_receipt": false,
+        "receipt_body_policy": "domain_owner_receipt_or_typed_blocker_required_for_authority"
+      },
+      "quality_evidence": {
+        "evidence_kind": "candidate_submission_quality_refs",
+        "required_ref_shapes": [
+          "submission_checklist_ref",
+          "export_package_ref",
+          "journal_rule_ref"
+        ],
+        "can_claim_quality_verdict": false
+      },
+      "authority_boundary": {
+        "can_claim_domain_ready": false,
+        "can_claim_quality_verdict": false,
+        "can_claim_artifact_authority": false,
+        "can_claim_production_ready": false,
+        "can_claim_runtime_ready": false,
+        "can_schedule_runtime": false,
+        "can_write_domain_truth": false,
+        "can_write_runtime_state": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_replace_domain_owner": false,
+        "can_replace_ai_executor_planning": false
+      },
+      "allowed_writes": [],
+      "forbidden_writes": [
+        "domain truth",
+        "artifact bodies",
+        "runtime queues/outbox/state",
+        "owner receipts",
+        "typed blockers"
+      ]
+    },
+    {
+      "module_id": "opl.scholarskills.data",
+      "brand_family": "OPL ScholarSkills",
+      "display_name": "Scholar Data",
+      "stage_fit": [
+        "source_data_profile",
+        "data_dictionary",
+        "analysis_dataset_handoff"
+      ],
+      "input_schema_refs": [
+        "scholarskills_data_input.v1"
+      ],
+      "output_schema_refs": [
+        "scholarskills_data_output_refs.v1"
+      ],
+      "dependency_profile_refs": [
+        "runtime_env_dependency_profile:scholarskills_data_v1"
+      ],
+      "run_context_refs": [
+        "opl runtime env run-context --domain scholarskills --profile data --json"
+      ],
+      "invocation_entries": [
+        {
+          "entry_id": "scholar_data_descriptor",
+          "entry_kind": "descriptor_readback",
+          "command": "opl scholar-skills inspect --module opl.scholarskills.data --json",
+          "mutation": false,
+          "descriptor_only": true
+        }
+      ],
+      "artifact_refs": [
+        {
+          "ref_id": "scholarskills_data_candidate_refs",
+          "ref_kind": "candidate_artifact_ref",
+          "role": "data_profile_candidate_output",
+          "body_policy": "body_owned_by_domain_artifact_surface"
+        }
+      ],
+      "receipt_policy": {
+        "accepted_receipt_refs": [
+          "owner_receipt_ref",
+          "typed_blocker_ref"
+        ],
+        "can_sign_owner_receipt": false,
+        "receipt_body_policy": "domain_owner_receipt_or_typed_blocker_required_for_authority"
+      },
+      "quality_evidence": {
+        "evidence_kind": "candidate_data_quality_refs",
+        "required_ref_shapes": [
+          "source_data_ref",
+          "dictionary_ref",
+          "data_qc_ref"
+        ],
+        "can_claim_quality_verdict": false
+      },
+      "authority_boundary": {
+        "can_claim_domain_ready": false,
+        "can_claim_quality_verdict": false,
+        "can_claim_artifact_authority": false,
+        "can_claim_production_ready": false,
+        "can_claim_runtime_ready": false,
+        "can_schedule_runtime": false,
+        "can_write_domain_truth": false,
+        "can_write_runtime_state": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_replace_domain_owner": false,
+        "can_replace_ai_executor_planning": false
+      },
+      "allowed_writes": [],
+      "forbidden_writes": [
+        "domain truth",
+        "artifact bodies",
+        "runtime queues/outbox/state",
+        "owner receipts",
+        "typed blockers"
+      ]
+    },
+    {
+      "module_id": "opl.scholarskills.intake",
+      "brand_family": "OPL ScholarSkills",
+      "display_name": "Scholar Intake",
+      "stage_fit": [
+        "source_intake",
+        "protocol_parse",
+        "study_workspace_bootstrap"
+      ],
+      "input_schema_refs": [
+        "scholarskills_intake_input.v1"
+      ],
+      "output_schema_refs": [
+        "scholarskills_intake_output_refs.v1"
+      ],
+      "dependency_profile_refs": [
+        "runtime_env_dependency_profile:scholarskills_intake_v1"
+      ],
+      "run_context_refs": [
+        "opl runtime env run-context --domain scholarskills --profile intake --json"
+      ],
+      "invocation_entries": [
+        {
+          "entry_id": "scholar_intake_descriptor",
+          "entry_kind": "descriptor_readback",
+          "command": "opl scholar-skills inspect --module opl.scholarskills.intake --json",
+          "mutation": false,
+          "descriptor_only": true
+        }
+      ],
+      "artifact_refs": [
+        {
+          "ref_id": "scholarskills_intake_candidate_refs",
+          "ref_kind": "candidate_artifact_ref",
+          "role": "source_intake_candidate_output",
+          "body_policy": "body_owned_by_domain_artifact_surface"
+        }
+      ],
+      "receipt_policy": {
+        "accepted_receipt_refs": [
+          "owner_receipt_ref",
+          "typed_blocker_ref"
+        ],
+        "can_sign_owner_receipt": false,
+        "receipt_body_policy": "domain_owner_receipt_or_typed_blocker_required_for_authority"
+      },
+      "quality_evidence": {
+        "evidence_kind": "candidate_intake_quality_refs",
+        "required_ref_shapes": [
+          "source_package_ref",
+          "parsed_protocol_ref",
+          "readiness_ref"
+        ],
+        "can_claim_quality_verdict": false
+      },
+      "authority_boundary": {
+        "can_claim_domain_ready": false,
+        "can_claim_quality_verdict": false,
+        "can_claim_artifact_authority": false,
+        "can_claim_production_ready": false,
+        "can_claim_runtime_ready": false,
+        "can_schedule_runtime": false,
+        "can_write_domain_truth": false,
+        "can_write_runtime_state": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_replace_domain_owner": false,
+        "can_replace_ai_executor_planning": false
+      },
+      "allowed_writes": [],
+      "forbidden_writes": [
+        "domain truth",
+        "artifact bodies",
+        "runtime queues/outbox/state",
+        "owner receipts",
+        "typed blockers"
+      ]
+    }
+  ]
+}
