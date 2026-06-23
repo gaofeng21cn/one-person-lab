@@ -52,6 +52,32 @@ type InvocationInput = {
 
 type MaterializeInput = InvocationInput & {
   outputRoot: string;
+  payload?: unknown;
+  emitCandidateArtifacts?: boolean;
+};
+
+type CandidateArtifactBodyEntry = {
+  ref_id: string;
+  ref_family: string;
+  body_path: string;
+  body_ref: string;
+  body_sha256: string;
+  body_format: 'json' | 'markdown' | 'svg';
+  body_policy: string;
+  body_written: true;
+  materialization_status: 'candidate_artifact_body_written';
+  authority_flags: {
+    counts_as_paper_truth: false;
+    counts_as_owner_receipt: false;
+    can_authorize_publication_readiness: false;
+    can_claim_quality_verdict: false;
+    can_claim_artifact_authority: false;
+    can_mutate_artifact_body: false;
+    can_write_domain_truth: false;
+    can_write_runtime_state: false;
+    can_sign_owner_receipt: false;
+    can_create_typed_blocker: false;
+  };
 };
 
 const MODULE_REQUIRED_ARTIFACT_REF_FAMILIES = {
@@ -254,6 +280,15 @@ function writeDeterministicJson(filePath: string, payload: unknown) {
   };
 }
 
+function writeDeterministicText(filePath: string, content: string) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, content, 'utf8');
+  return {
+    path: filePath,
+    sha256: sha256Hex(content),
+  };
+}
+
 function stableExecutionReceiptRef(
   module: ScholarSkillCapabilityModuleDescriptor,
   input: InvocationInput,
@@ -331,6 +366,7 @@ function runtimeRunContextCommand(input: RunContextInput) {
 function buildArtifactCandidateRefs(
   module: ScholarSkillCapabilityModuleDescriptor,
   artifactRoot: string,
+  candidateArtifactBodies: CandidateArtifactBodyEntry[] = [],
 ) {
   const descriptorArtifactRef = module.artifact_refs[0];
   return moduleArtifactRefFamilies(module).map((refFamily) => ({
@@ -341,8 +377,10 @@ function buildArtifactCandidateRefs(
     descriptor_artifact_refs: module.artifact_refs,
     ref_family: refFamily,
     ref: `${artifactRoot}/${refFamily}`,
-    materialization_status: 'expected_ref_only',
-    body_written: false,
+    materialization_status: candidateArtifactBodies.find((entry) => entry.ref_family === refFamily)
+      ?.materialization_status ?? 'expected_ref_only',
+    body_written: candidateArtifactBodies.some((entry) => entry.ref_family === refFamily),
+    candidate_artifact_body: candidateArtifactBodies.find((entry) => entry.ref_family === refFamily),
     can_mutate_artifact_body: module.authority_boundary.can_mutate_artifact_body,
   }));
 }
@@ -366,6 +404,7 @@ function buildArtifactCandidateRefTemplates(module: ScholarSkillCapabilityModule
 function buildExecutionReceiptCandidate(
   module: ScholarSkillCapabilityModuleDescriptor,
   input: InvocationInput,
+  candidateArtifactBodies: CandidateArtifactBodyEntry[] = [],
 ) {
   const executionReceiptRef = stableExecutionReceiptRef(module, input);
   const moduleProfile = moduleCapabilityProfile(module);
@@ -378,7 +417,8 @@ function buildExecutionReceiptCandidate(
     artifact_root_ref: input.artifactRoot,
     descriptor_ref: moduleContractRef(module),
     artifact_candidate_ref_families: moduleProfile.artifact_ref_families,
-    artifact_candidate_refs: buildArtifactCandidateRefs(module, input.artifactRoot),
+    artifact_candidate_refs: buildArtifactCandidateRefs(module, input.artifactRoot, candidateArtifactBodies),
+    candidate_artifact_bodies: candidateArtifactBodies,
     required_ref_families: moduleProfile.required_ref_families,
     execution_receipt_ref: executionReceiptRef,
     execution_receipt_ref_families: moduleProfile.execution_receipt_ref_families,
@@ -401,11 +441,14 @@ function buildExecutionReceiptCandidate(
 function buildModuleCandidatePayload(
   module: ScholarSkillCapabilityModuleDescriptor,
   input: InvocationInput,
+  candidateArtifactBodies: CandidateArtifactBodyEntry[] = [],
 ) {
   const moduleProfile = moduleCapabilityProfile(module);
   return {
     surface_kind: 'opl_scholarskills_module_candidate_payload',
-    status: 'module_candidate_refs_only',
+    status: candidateArtifactBodies.length > 0
+      ? 'module_candidate_with_non_authoritative_artifact_bodies'
+      : 'module_candidate_refs_only',
     module_id: module.module_id,
     profile_id: moduleProfile.profile_id,
     display_name: module.display_name,
@@ -419,7 +462,8 @@ function buildModuleCandidatePayload(
     dependency_profile_refs: module.dependency_profile_refs,
     run_context_refs: module.run_context_refs,
     artifact_candidate_ref_families: moduleProfile.artifact_ref_families,
-    artifact_candidate_refs: buildArtifactCandidateRefs(module, input.artifactRoot),
+    artifact_candidate_refs: buildArtifactCandidateRefs(module, input.artifactRoot, candidateArtifactBodies),
+    candidate_artifact_bodies: candidateArtifactBodies,
     execution_receipt_ref_families: moduleProfile.execution_receipt_ref_families,
     required_ref_families: moduleProfile.required_ref_families,
     quality_checklist: {
@@ -439,7 +483,7 @@ function buildModuleCandidatePayload(
     writes: {
       runtime_state_written: false,
       domain_truth_written: false,
-      artifact_body_written: false,
+      artifact_body_written: candidateArtifactBodies.length > 0,
       owner_receipt_signed: false,
       typed_blocker_created: false,
     },
@@ -462,6 +506,156 @@ function buildModuleCandidatePayload(
     },
     authority_boundary: module.authority_boundary,
   };
+}
+
+function moduleCandidateArtifactBodyFormat(
+  module: ScholarSkillCapabilityModuleDescriptor,
+  refFamily: string,
+): CandidateArtifactBodyEntry['body_format'] {
+  if (module.module_id === 'opl.scholarskills.display' && refFamily === 'display_pack_agent_orchestration') {
+    return 'svg';
+  }
+  if (
+    module.module_id === 'opl.scholarskills.write'
+    || module.module_id === 'opl.scholarskills.review'
+    || module.module_id === 'opl.scholarskills.submit'
+  ) {
+    return 'markdown';
+  }
+  return 'json';
+}
+
+function candidateArtifactBodyBasePayload(options: {
+  module: ScholarSkillCapabilityModuleDescriptor;
+  refFamily: string;
+  input: InvocationInput;
+  payload: unknown;
+  payloadSha256: string;
+}) {
+  const authorityFlags = {
+    counts_as_paper_truth: false,
+    counts_as_owner_receipt: false,
+    can_authorize_publication_readiness: false,
+    can_claim_quality_verdict: false,
+    can_claim_artifact_authority: false,
+    can_mutate_artifact_body: false,
+    can_write_domain_truth: false,
+    can_write_runtime_state: false,
+    can_sign_owner_receipt: false,
+    can_create_typed_blocker: false,
+  } satisfies CandidateArtifactBodyEntry['authority_flags'];
+  return {
+    surface_kind: 'opl_scholarskills_candidate_artifact_body',
+    status: 'candidate_body_non_authoritative',
+    module_id: options.module.module_id,
+    ref_family: options.refFamily,
+    descriptor_ref: moduleContractRef(options.module),
+    input_ref: options.input.inputRef,
+    artifact_root_ref: options.input.artifactRoot,
+    payload_sha256: options.payloadSha256,
+    payload: options.payload,
+    body_policy: 'opl_generated_non_authoritative_candidate_body_requires_domain_owner_consumption',
+    authority_flags: authorityFlags,
+  };
+}
+
+function candidateArtifactMarkdownBody(value: ReturnType<typeof candidateArtifactBodyBasePayload>) {
+  return [
+    `# ${value.module_id} ${value.ref_family} Candidate`,
+    '',
+    `- status: ${value.status}`,
+    `- input_ref: ${value.input_ref}`,
+    `- artifact_root_ref: ${value.artifact_root_ref}`,
+    `- payload_sha256: ${value.payload_sha256}`,
+    `- body_policy: ${value.body_policy}`,
+    `- counts_as_paper_truth: ${value.authority_flags.counts_as_paper_truth}`,
+    `- can_sign_owner_receipt: ${value.authority_flags.can_sign_owner_receipt}`,
+    '',
+    '```json',
+    stableJson(value.payload),
+    '```',
+    '',
+  ].join('\n');
+}
+
+function candidateArtifactSvgBody(value: ReturnType<typeof candidateArtifactBodyBasePayload>) {
+  const title = `${value.module_id} candidate`;
+  const payloadShortSha = value.payload_sha256.slice(0, 16);
+  return [
+    '<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img">',
+    `<title>${title}</title>`,
+    '<rect width="960" height="540" fill="#f7f7f2"/>',
+    '<rect x="56" y="56" width="848" height="428" rx="8" fill="#ffffff" stroke="#2f3a3f" stroke-width="2"/>',
+    '<text x="88" y="122" font-family="Arial, sans-serif" font-size="28" fill="#1d2529">OPL ScholarSkills Candidate Body</text>',
+    `<text x="88" y="176" font-family="Arial, sans-serif" font-size="22" fill="#34515e">${value.module_id}</text>`,
+    `<text x="88" y="226" font-family="Arial, sans-serif" font-size="18" fill="#34515e">ref_family: ${value.ref_family}</text>`,
+    `<text x="88" y="276" font-family="Arial, sans-serif" font-size="18" fill="#34515e">payload_sha256: ${payloadShortSha}</text>`,
+    '<text x="88" y="336" font-family="Arial, sans-serif" font-size="18" fill="#6b2f2f">non-authoritative: no domain truth, no owner receipt</text>',
+    '</svg>',
+    '',
+  ].join('\n');
+}
+
+function candidateArtifactBodyFileName(
+  refFamily: string,
+  format: CandidateArtifactBodyEntry['body_format'],
+) {
+  const extension = format === 'markdown' ? 'md' : format;
+  return `${refFamily}.${extension}`;
+}
+
+function scholarSkillMaterializeCommands(contractRoot: ScholarSkillsCapabilityModulesContract) {
+  return [
+    ...(contractRoot.runtime_environment_bridge.scholar_skill_materialize_commands ?? [
+      'opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact-root <ref-or-path> --output-root <path> --json',
+    ]),
+    'opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact-root <ref-or-path> --output-root <path> --emit-candidate-artifacts --payload-file <path> --json',
+  ];
+}
+
+function materializeCandidateArtifactBodies(options: {
+  module: ScholarSkillCapabilityModuleDescriptor;
+  input: InvocationInput;
+  outputRoot: string;
+  payload: unknown;
+}): CandidateArtifactBodyEntry[] {
+  const payloadSha256 = sha256Hex(stableJson(options.payload));
+  return moduleArtifactRefFamilies(options.module).map((refFamily) => {
+    const format = moduleCandidateArtifactBodyFormat(options.module, refFamily);
+    const bodyPayload = candidateArtifactBodyBasePayload({
+      module: options.module,
+      refFamily,
+      input: options.input,
+      payload: options.payload,
+      payloadSha256,
+    });
+    const bodyPath = path.join(
+      options.outputRoot,
+      'candidate_artifacts',
+      moduleProfileId(options.module),
+      candidateArtifactBodyFileName(refFamily, format),
+    );
+    const writeResult = format === 'json'
+      ? writeDeterministicJson(bodyPath, bodyPayload)
+      : writeDeterministicText(
+        bodyPath,
+        format === 'svg'
+          ? candidateArtifactSvgBody(bodyPayload)
+          : candidateArtifactMarkdownBody(bodyPayload),
+      );
+    return {
+      ref_id: refFamily,
+      ref_family: refFamily,
+      body_path: writeResult.path,
+      body_ref: `file://${writeResult.path}`,
+      body_sha256: writeResult.sha256,
+      body_format: format,
+      body_policy: bodyPayload.body_policy,
+      body_written: true,
+      materialization_status: 'candidate_artifact_body_written',
+      authority_flags: bodyPayload.authority_flags,
+    } satisfies CandidateArtifactBodyEntry;
+  });
 }
 
 function buildExecutionReceiptCandidateTemplate(module: ScholarSkillCapabilityModuleDescriptor) {
@@ -678,9 +872,7 @@ export function buildScholarSkillsInterfaces(contracts: FrameworkContracts) {
           ...(contractRoot.runtime_environment_bridge.scholar_skill_receipt_commands ?? [
             'opl scholar-skills receipt --module <module_id> --input-ref <ref> --artifact-root <ref> --json',
           ]),
-          ...(contractRoot.runtime_environment_bridge.scholar_skill_materialize_commands ?? [
-            'opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact-root <ref-or-path> --output-root <path> --json',
-          ]),
+          ...scholarSkillMaterializeCommands(contractRoot),
           ...(contractRoot.runtime_environment_bridge.scholar_skill_runtime_prepare_commands ?? [
             'opl scholar-skills runtime-prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> [--apply] --json',
           ]),
@@ -707,7 +899,7 @@ export function buildScholarSkillsInterfaces(contracts: FrameworkContracts) {
           ...(contractRoot.runtime_environment_bridge.scholar_skill_run_context_commands ?? []),
           ...(contractRoot.runtime_environment_bridge.scholar_skill_invocation_commands ?? []),
           ...(contractRoot.runtime_environment_bridge.scholar_skill_receipt_commands ?? []),
-          ...(contractRoot.runtime_environment_bridge.scholar_skill_materialize_commands ?? []),
+          ...scholarSkillMaterializeCommands(contractRoot),
           ...(contractRoot.runtime_environment_bridge.scholar_skill_runtime_prepare_commands ?? []),
           ...(contractRoot.runtime_environment_bridge.scholar_skill_runtime_run_context_commands ?? []),
         ],
@@ -903,8 +1095,16 @@ export function buildScholarSkillsMaterializeSurface(
   const contractRoot = contract(contracts);
   const module = findModuleOrThrow(contractRoot.modules, assertModuleId(input.moduleId));
   const outputRoot = path.resolve(input.outputRoot);
-  const receiptCandidate = buildExecutionReceiptCandidate(module, input);
-  const moduleCandidate = buildModuleCandidatePayload(module, input);
+  const candidateArtifactBodies = input.emitCandidateArtifacts === true && input.payload !== undefined
+    ? materializeCandidateArtifactBodies({
+      module,
+      input,
+      outputRoot,
+      payload: input.payload,
+    })
+    : [];
+  const receiptCandidate = buildExecutionReceiptCandidate(module, input, candidateArtifactBodies);
+  const moduleCandidate = buildModuleCandidatePayload(module, input, candidateArtifactBodies);
   const refsManifest = {
     surface_kind: 'opl_scholarskills_refs_manifest',
     status: 'candidate_refs_manifest',
@@ -914,7 +1114,8 @@ export function buildScholarSkillsMaterializeSurface(
     execution_receipt_ref: receiptCandidate.execution_receipt_ref,
     execution_receipt_refs: receiptCandidate.execution_receipt_refs,
     artifact_candidate_refs: receiptCandidate.artifact_candidate_refs,
-    artifact_body_written: false,
+    candidate_artifact_bodies: candidateArtifactBodies,
+    artifact_body_written: candidateArtifactBodies.length > 0,
     authority_boundary: module.authority_boundary,
   };
   const manifest = {
@@ -931,12 +1132,15 @@ export function buildScholarSkillsMaterializeSurface(
     module_candidate_path: path.join(outputRoot, 'module_candidate.json'),
     refs_manifest_path: path.join(outputRoot, 'refs_manifest.json'),
     artifact_manifest_path: path.join(outputRoot, 'manifest.json'),
-    package_policy: 'deterministic_refs_only_candidate_package',
+    package_policy: candidateArtifactBodies.length > 0
+      ? 'deterministic_non_authoritative_candidate_artifact_package'
+      : 'deterministic_refs_only_candidate_package',
     module_candidate: {
       surface_kind: moduleCandidate.surface_kind,
       status: moduleCandidate.status,
       module_id: moduleCandidate.module_id,
       artifact_candidate_ref_families: moduleCandidate.artifact_candidate_ref_families,
+      candidate_artifact_bodies: candidateArtifactBodies,
       execution_receipt_ref_families: moduleCandidate.execution_receipt_ref_families,
       quality_evidence_kind: moduleCandidate.quality_checklist.evidence_kind,
       owner_consumption_required_for_paper_truth: moduleCandidate.owner_consumption.required_for_paper_truth,
@@ -949,7 +1153,7 @@ export function buildScholarSkillsMaterializeSurface(
       owner_receipt_signed: false,
       typed_blocker_created: false,
       paper_body_written: false,
-      artifact_body_written: false,
+      artifact_body_written: candidateArtifactBodies.length > 0,
     },
     authority_flags: {
       counts_as_paper_truth: false,
@@ -974,6 +1178,10 @@ export function buildScholarSkillsMaterializeSurface(
     writeDeterministicJson(manifest.execution_receipt_candidate_path, receiptCandidate),
     writeDeterministicJson(manifest.module_candidate_path, moduleCandidate),
     writeDeterministicJson(manifest.refs_manifest_path, refsManifest),
+    ...candidateArtifactBodies.map((entry) => ({
+      path: entry.body_path,
+      sha256: entry.body_sha256,
+    })),
   ];
   const writtenFiles = writtenFileEntries.map((entry) => entry.path);
   const packageSha256 = sha256Hex(stableJson(writtenFileEntries));
@@ -993,6 +1201,7 @@ export function buildScholarSkillsMaterializeSurface(
       module_candidate_path: manifest.module_candidate_path,
       artifact_manifest_path: manifest.artifact_manifest_path,
       refs_manifest_path: manifest.refs_manifest_path,
+      candidate_artifact_bodies: candidateArtifactBodies,
       written_files: writtenFiles,
       sha256: packageSha256,
       file_sha256: Object.fromEntries(writtenFileEntries.map((entry) => [entry.path, entry.sha256])),

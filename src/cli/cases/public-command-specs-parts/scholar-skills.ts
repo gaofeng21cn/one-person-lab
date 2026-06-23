@@ -13,7 +13,11 @@ import {
   buildScholarSkillsValidation,
 } from '../../../scholar-skills.ts';
 import type { FrameworkContracts } from '../../../types.ts';
-import { assertNoArgs, buildUsageError } from '../../modules/support.ts';
+import {
+  assertNoArgs,
+  buildUsageError,
+  readPayloadFileText,
+} from '../../modules/support.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 
 function parseInspectArgs(args: string[], spec: CommandSpec) {
@@ -245,6 +249,9 @@ function parseMaterializeArgs(args: string[], spec: CommandSpec) {
   let inputRef: string | undefined;
   let artifactRoot: string | undefined;
   let outputRoot: string | undefined;
+  let payloadJson: string | undefined;
+  let payloadFile: string | undefined;
+  let emitCandidateArtifacts = false;
   const commandLabel = 'scholar-skills materialize';
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
@@ -271,6 +278,20 @@ function parseMaterializeArgs(args: string[], spec: CommandSpec) {
       index += 1;
       continue;
     }
+    if (token === '--payload-json') {
+      payloadJson = expectOptionValue(args, index, token, commandLabel, spec);
+      index += 1;
+      continue;
+    }
+    if (token === '--payload-file') {
+      payloadFile = expectOptionValue(args, index, token, commandLabel, spec);
+      index += 1;
+      continue;
+    }
+    if (token === '--emit-candidate-artifacts') {
+      emitCandidateArtifacts = true;
+      continue;
+    }
     throw buildUsageError(`Unknown ${commandLabel} option: ${token}.`, spec, {
       option: token,
     });
@@ -280,7 +301,40 @@ function parseMaterializeArgs(args: string[], spec: CommandSpec) {
       required: ['--module', '--input-ref', '--artifact-root', '--output-root'],
     });
   }
-  return { moduleId, inputRef, artifactRoot, outputRoot };
+  if (payloadJson && payloadFile) {
+    throw buildUsageError(`${commandLabel} accepts either --payload-json or --payload-file, not both.`, spec, {
+      options: ['--payload-json', '--payload-file'],
+    });
+  }
+  if ((payloadJson || payloadFile) && !emitCandidateArtifacts) {
+    throw buildUsageError(`${commandLabel} requires --emit-candidate-artifacts when payload input is provided.`, spec, {
+      required: ['--emit-candidate-artifacts'],
+    });
+  }
+  if (emitCandidateArtifacts && !payloadJson && !payloadFile) {
+    throw buildUsageError(`${commandLabel} requires --payload-json or --payload-file with --emit-candidate-artifacts.`, spec, {
+      required_any: ['--payload-json', '--payload-file'],
+    });
+  }
+  let payload: unknown;
+  if (payloadJson || payloadFile) {
+    const payloadText = payloadJson ?? readPayloadFileText(payloadFile ?? '', spec);
+    try {
+      payload = JSON.parse(payloadText);
+    } catch (error) {
+      throw buildUsageError(`${commandLabel} payload must be valid JSON.`, spec, {
+        parse_error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+  return {
+    moduleId,
+    inputRef,
+    artifactRoot,
+    outputRoot,
+    payload,
+    emitCandidateArtifacts,
+  };
 }
 
 export function buildScholarSkillsCommandSpecs(
@@ -395,10 +449,11 @@ export function buildScholarSkillsCommandSpecs(
       ),
     },
     'scholar-skills materialize': {
-      usage: 'opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact-root <ref-or-path> --output-root <path>',
-      summary: 'Materialize a deterministic refs-only ScholarSkills candidate package under an explicit output root.',
+      usage: 'opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact-root <ref-or-path> --output-root <path> [--emit-candidate-artifacts (--payload-json <json>|--payload-file <path>)]',
+      summary: 'Materialize a deterministic ScholarSkills candidate package under an explicit output root, with opt-in non-authoritative candidate artifact bodies.',
       examples: [
         'opl scholar-skills materialize --module opl.scholarskills.display --input-ref mas:current_owner_delta/display-intent --artifact-root artifact-root:display-pack-candidates --output-root /tmp/scholarskills-candidate --json',
+        'opl scholar-skills materialize --module opl.scholarskills.display --input-ref mas:current_owner_delta/display-intent --artifact-root artifact-root:display-pack-candidates --output-root /tmp/scholarskills-candidate --emit-candidate-artifacts --payload-file payload.json --json',
       ],
       group: 'scholar-skills',
       handler: (args) => buildScholarSkillsMaterializeSurface(
