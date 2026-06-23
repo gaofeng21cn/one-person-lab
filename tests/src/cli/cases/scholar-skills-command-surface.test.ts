@@ -11,7 +11,96 @@ const expectedModuleIds = [
   'opl.scholarskills.submit',
   'opl.scholarskills.data',
   'opl.scholarskills.intake',
-];
+] as const;
+
+type ExpectedModuleId = typeof expectedModuleIds[number];
+
+const expectedReceiptRefFamiliesByModule = {
+  'opl.scholarskills.display': [
+    'input_fingerprint_ref',
+    'dependency_profile_ref',
+    'prepared_run_context_ref',
+    'render_cache_ref',
+    'artifact_manifest_ref',
+    'visual_audit_or_gallery_preview_ref',
+  ],
+  'opl.scholarskills.tables': [
+    'input_fingerprint_ref',
+    'dependency_profile_ref',
+    'prepared_run_context_ref',
+    'table_manifest_ref',
+    'table_qc_ref',
+  ],
+  'opl.scholarskills.stats': [
+    'input_fingerprint_ref',
+    'dependency_profile_ref',
+    'prepared_run_context_ref',
+    'analysis_manifest_ref',
+    'reproducibility_check_ref',
+  ],
+  'opl.scholarskills.omics': [
+    'input_fingerprint_ref',
+    'dependency_profile_ref',
+    'prepared_run_context_ref',
+    'omics_pipeline_manifest_ref',
+    'feature_matrix_qc_ref',
+  ],
+  'opl.scholarskills.lit': [
+    'input_fingerprint_ref',
+    'dependency_profile_ref',
+    'prepared_run_context_ref',
+    'evidence_map_ref',
+    'citation_manifest_ref',
+  ],
+  'opl.scholarskills.write': [
+    'input_fingerprint_ref',
+    'dependency_profile_ref',
+    'prepared_run_context_ref',
+    'draft_section_manifest_ref',
+    'source_trace_ref',
+  ],
+  'opl.scholarskills.review': [
+    'input_fingerprint_ref',
+    'dependency_profile_ref',
+    'prepared_run_context_ref',
+    'reviewer_report_ref',
+    'route_back_ref',
+  ],
+  'opl.scholarskills.submit': [
+    'input_fingerprint_ref',
+    'dependency_profile_ref',
+    'prepared_run_context_ref',
+    'package_manifest_ref',
+    'submission_checklist_ref',
+  ],
+  'opl.scholarskills.data': [
+    'input_fingerprint_ref',
+    'dependency_profile_ref',
+    'prepared_run_context_ref',
+    'data_manifest_ref',
+    'lineage_readiness_ref',
+  ],
+  'opl.scholarskills.intake': [
+    'input_fingerprint_ref',
+    'dependency_profile_ref',
+    'prepared_run_context_ref',
+    'source_snapshot_ref',
+    'adoption_contract_ref',
+  ],
+} satisfies Record<ExpectedModuleId, string[]>;
+
+const expectedArtifactRefFamiliesByModule = {
+  'opl.scholarskills.display': ['display_pack_agent_orchestration'],
+  'opl.scholarskills.tables': ['table_manifest', 'table_qc'],
+  'opl.scholarskills.stats': ['analysis_manifest', 'reproducibility_check'],
+  'opl.scholarskills.omics': ['omics_pipeline_manifest', 'feature_matrix_qc'],
+  'opl.scholarskills.lit': ['evidence_map', 'citation_manifest'],
+  'opl.scholarskills.write': ['draft_section_manifest', 'source_trace'],
+  'opl.scholarskills.review': ['reviewer_report', 'route_back'],
+  'opl.scholarskills.submit': ['package_manifest', 'submission_checklist'],
+  'opl.scholarskills.data': ['data_manifest', 'lineage_readiness'],
+  'opl.scholarskills.intake': ['source_snapshot', 'adoption_contract'],
+} satisfies Record<ExpectedModuleId, string[]>;
 
 function writeFakeRscript(binDir: string) {
   fs.mkdirSync(binDir, { recursive: true });
@@ -124,6 +213,42 @@ test('opl scholar-skills inspect returns Display dependency and run-context refs
   assert.equal(module.authority_boundary.can_mutate_artifact_body, false);
   assert.equal(module.allowed_writes.length, 0);
   assert.equal(module.forbidden_writes.includes('runtime queues/outbox/state'), true);
+});
+
+test('opl scholar-skills exposes module-specific capability profiles for every ScholarSkills module', () => {
+  for (const moduleId of expectedModuleIds) {
+    const output = runCli([
+      'scholar-skills',
+      'inspect',
+      '--module',
+      moduleId,
+      '--json',
+    ]).scholar_skill_module;
+    const profile = output.module_profile;
+
+    assert.equal(profile.module_id, moduleId);
+    assert.equal(profile.profile_id, moduleId.replace('opl.scholarskills.', ''));
+    assert.deepEqual(
+      profile.execution_receipt_ref_families.map((family: string) => `${family}_ref`),
+      expectedReceiptRefFamiliesByModule[moduleId],
+    );
+    assert.deepEqual(
+      profile.artifact_ref_families,
+      expectedArtifactRefFamiliesByModule[moduleId],
+    );
+    assert.deepEqual(
+      output.execution_receipt_candidate.execution_receipt_ref_families.map((family: string) => `${family}_ref`),
+      expectedReceiptRefFamiliesByModule[moduleId],
+    );
+    assert.deepEqual(
+      output.execution_receipt_candidate.artifact_candidate_ref_families,
+      expectedArtifactRefFamiliesByModule[moduleId],
+    );
+    assert.equal(output.execution_receipt_candidate.counts_as_paper_truth, false);
+    assert.equal(output.execution_receipt_candidate.counts_as_owner_receipt, false);
+    assert.equal(output.execution_receipt_candidate.can_authorize_publication_readiness, false);
+    assert.equal(output.execution_receipt_candidate.authority_boundary.can_write_domain_truth, false);
+  }
 });
 
 test('opl scholar-skills validate and doctor enforce authority false flags', () => {
@@ -384,6 +509,58 @@ test('opl scholar-skills invoke returns invocation envelope and unsigned executi
   assert.equal(output.execution_receipt_candidate.can_claim_quality_verdict, false);
   assert.equal(output.execution_receipt_candidate.can_claim_artifact_authority, false);
   assert.equal(output.execution_receipt_candidate.authority_boundary.can_sign_owner_receipt, false);
+});
+
+test('opl scholar-skills invoke and receipt return module-specific unsigned candidates for all modules', () => {
+  for (const moduleId of expectedModuleIds) {
+    const inputRef = `mas:current_owner_delta/${moduleId}`;
+    const artifactRoot = `artifact-root:${moduleId}`;
+    const invocation = runCli([
+      'scholar-skills',
+      'invoke',
+      '--module',
+      moduleId,
+      '--input-ref',
+      inputRef,
+      '--artifact-root',
+      artifactRoot,
+      '--json',
+    ]).scholar_skills_invocation;
+    const receipt = runCli([
+      'scholar-skills',
+      'receipt',
+      '--module',
+      moduleId,
+      '--input-ref',
+      inputRef,
+      '--artifact-root',
+      artifactRoot,
+      '--json',
+    ]).scholar_skills_receipt_candidate;
+
+    assert.equal(invocation.module_id, moduleId);
+    assert.equal(receipt.module_id, moduleId);
+    assert.deepEqual(
+      Object.keys(invocation.execution_receipt_candidate.execution_receipt_refs),
+      expectedReceiptRefFamiliesByModule[moduleId],
+    );
+    assert.deepEqual(
+      Object.keys(receipt.execution_receipt_refs),
+      expectedReceiptRefFamiliesByModule[moduleId],
+    );
+    assert.deepEqual(
+      invocation.execution_receipt_candidate.artifact_candidate_ref_families,
+      expectedArtifactRefFamiliesByModule[moduleId],
+    );
+    assert.deepEqual(
+      invocation.expected_artifact_refs.map((entry: { ref_family: string }) => entry.ref_family),
+      expectedArtifactRefFamiliesByModule[moduleId],
+    );
+    assert.equal(invocation.execution_receipt_candidate.counts_as_paper_truth, false);
+    assert.equal(receipt.counts_as_owner_receipt, false);
+    assert.equal(receipt.can_authorize_publication_readiness, false);
+    assert.equal(receipt.authority_boundary.can_mutate_artifact_body, false);
+  }
 });
 
 test('opl scholar-skills receipt builds the same execution receipt candidate without signing owner authority', () => {

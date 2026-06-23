@@ -48,6 +48,93 @@ type InvocationInput = {
   artifactRoot: string;
 };
 
+const MODULE_REQUIRED_ARTIFACT_REF_FAMILIES = {
+  'opl.scholarskills.display': ['display_pack_agent_orchestration'],
+  'opl.scholarskills.tables': ['table_manifest', 'table_qc'],
+  'opl.scholarskills.stats': ['analysis_manifest', 'reproducibility_check'],
+  'opl.scholarskills.omics': ['omics_pipeline_manifest', 'feature_matrix_qc'],
+  'opl.scholarskills.lit': ['evidence_map', 'citation_manifest'],
+  'opl.scholarskills.write': ['draft_section_manifest', 'source_trace'],
+  'opl.scholarskills.review': ['reviewer_report', 'route_back'],
+  'opl.scholarskills.submit': ['package_manifest', 'submission_checklist'],
+  'opl.scholarskills.data': ['data_manifest', 'lineage_readiness'],
+  'opl.scholarskills.intake': ['source_snapshot', 'adoption_contract'],
+} as const satisfies Record<ScholarSkillModuleId, readonly string[]>;
+
+const MODULE_EXECUTION_RECEIPT_REF_FAMILIES = {
+  'opl.scholarskills.display': [
+    'input_fingerprint',
+    'dependency_profile',
+    'prepared_run_context',
+    'render_cache',
+    'artifact_manifest',
+    'visual_audit_or_gallery_preview',
+  ],
+  'opl.scholarskills.tables': [
+    'input_fingerprint',
+    'dependency_profile',
+    'prepared_run_context',
+    'table_manifest',
+    'table_qc',
+  ],
+  'opl.scholarskills.stats': [
+    'input_fingerprint',
+    'dependency_profile',
+    'prepared_run_context',
+    'analysis_manifest',
+    'reproducibility_check',
+  ],
+  'opl.scholarskills.omics': [
+    'input_fingerprint',
+    'dependency_profile',
+    'prepared_run_context',
+    'omics_pipeline_manifest',
+    'feature_matrix_qc',
+  ],
+  'opl.scholarskills.lit': [
+    'input_fingerprint',
+    'dependency_profile',
+    'prepared_run_context',
+    'evidence_map',
+    'citation_manifest',
+  ],
+  'opl.scholarskills.write': [
+    'input_fingerprint',
+    'dependency_profile',
+    'prepared_run_context',
+    'draft_section_manifest',
+    'source_trace',
+  ],
+  'opl.scholarskills.review': [
+    'input_fingerprint',
+    'dependency_profile',
+    'prepared_run_context',
+    'reviewer_report',
+    'route_back',
+  ],
+  'opl.scholarskills.submit': [
+    'input_fingerprint',
+    'dependency_profile',
+    'prepared_run_context',
+    'package_manifest',
+    'submission_checklist',
+  ],
+  'opl.scholarskills.data': [
+    'input_fingerprint',
+    'dependency_profile',
+    'prepared_run_context',
+    'data_manifest',
+    'lineage_readiness',
+  ],
+  'opl.scholarskills.intake': [
+    'input_fingerprint',
+    'dependency_profile',
+    'prepared_run_context',
+    'source_snapshot',
+    'adoption_contract',
+  ],
+} as const satisfies Record<ScholarSkillModuleId, readonly string[]>;
+
 const AUTHORITY_FALSE_FIELDS = [
   'can_claim_domain_ready',
   'can_claim_quality_verdict',
@@ -73,15 +160,57 @@ function assertModuleId(value: string): ScholarSkillModuleId {
   return value as ScholarSkillModuleId;
 }
 
+function moduleProfileId(module: ScholarSkillCapabilityModuleDescriptor) {
+  return module.module_id.replace('opl.scholarskills.', '');
+}
+
+function moduleArtifactRefFamilies(module: ScholarSkillCapabilityModuleDescriptor) {
+  return [...MODULE_REQUIRED_ARTIFACT_REF_FAMILIES[module.module_id]];
+}
+
+function moduleExecutionReceiptRefFamilies(module: ScholarSkillCapabilityModuleDescriptor) {
+  return [...MODULE_EXECUTION_RECEIPT_REF_FAMILIES[module.module_id]];
+}
+
+function moduleCapabilityProfile(module: ScholarSkillCapabilityModuleDescriptor) {
+  return {
+    surface_kind: 'opl_scholarskills_module_capability_profile',
+    module_id: module.module_id,
+    profile_id: moduleProfileId(module),
+    stage_fit: module.stage_fit,
+    input_schema_refs: module.input_schema_refs,
+    output_schema_refs: module.output_schema_refs,
+    dependency_profile_refs: module.dependency_profile_refs,
+    run_context_refs: module.run_context_refs,
+    invocation_entries: module.invocation_entries,
+    artifact_ref_families: moduleArtifactRefFamilies(module),
+    artifact_refs: module.artifact_refs,
+    quality_evidence: module.quality_evidence,
+    required_ref_families: [
+      ...new Set([
+        ...moduleExecutionReceiptRefFamilies(module),
+        ...moduleArtifactRefFamilies(module),
+      ]),
+    ],
+    execution_receipt_ref_families: moduleExecutionReceiptRefFamilies(module),
+    authority_boundary: module.authority_boundary,
+  };
+}
+
 function moduleSummary(module: ScholarSkillCapabilityModuleDescriptor) {
   return {
     module_id: module.module_id,
     display_name: module.display_name,
     brand_family: module.brand_family,
     stage_fit: module.stage_fit,
+    input_schema_refs: module.input_schema_refs,
+    output_schema_refs: module.output_schema_refs,
     dependency_profile_refs: module.dependency_profile_refs,
     run_context_refs: module.run_context_refs,
     invocation_entries: module.invocation_entries,
+    artifact_refs: module.artifact_refs,
+    quality_evidence: module.quality_evidence,
+    module_profile: moduleCapabilityProfile(module),
     authority_boundary: module.authority_boundary,
   };
 }
@@ -108,14 +237,12 @@ function buildExecutionReceiptRefs(
   input: InvocationInput,
 ) {
   const receiptRef = stableExecutionReceiptRef(module, input);
-  return {
-    input_fingerprint_ref: `${receiptRef}#input_fingerprint_ref`,
-    dependency_profile_ref: `${receiptRef}#dependency_profile_ref`,
-    prepared_run_context_ref: `${receiptRef}#prepared_run_context_ref`,
-    render_cache_ref: `${receiptRef}#render_cache_ref`,
-    artifact_manifest_ref: `${receiptRef}#artifact_manifest_ref`,
-    visual_audit_or_gallery_preview_ref: `${receiptRef}#visual_audit_or_gallery_preview_ref`,
-  };
+  return Object.fromEntries(
+    moduleExecutionReceiptRefFamilies(module).map((family) => [
+      `${family}_ref`,
+      `${receiptRef}#${family}_ref`,
+    ]),
+  );
 }
 
 function findModuleOrThrow(
@@ -170,9 +297,31 @@ function buildArtifactCandidateRefs(
   module: ScholarSkillCapabilityModuleDescriptor,
   artifactRoot: string,
 ) {
-  return module.artifact_refs.map((entry) => ({
-    ...entry,
-    ref: `${artifactRoot}/${entry.ref_id}`,
+  const descriptorArtifactRef = module.artifact_refs[0];
+  return moduleArtifactRefFamilies(module).map((refFamily) => ({
+    ref_id: refFamily,
+    ref_kind: descriptorArtifactRef?.ref_kind ?? 'candidate_artifact_ref',
+    role: `${moduleProfileId(module)}_${refFamily}_candidate_ref`,
+    body_policy: descriptorArtifactRef?.body_policy ?? 'body_owned_by_domain_artifact_surface',
+    descriptor_artifact_refs: module.artifact_refs,
+    ref_family: refFamily,
+    ref: `${artifactRoot}/${refFamily}`,
+    materialization_status: 'expected_ref_only',
+    body_written: false,
+    can_mutate_artifact_body: module.authority_boundary.can_mutate_artifact_body,
+  }));
+}
+
+function buildArtifactCandidateRefTemplates(module: ScholarSkillCapabilityModuleDescriptor) {
+  const descriptorArtifactRef = module.artifact_refs[0];
+  return moduleArtifactRefFamilies(module).map((refFamily) => ({
+    ref_id: refFamily,
+    ref_kind: descriptorArtifactRef?.ref_kind ?? 'candidate_artifact_ref',
+    role: `${moduleProfileId(module)}_${refFamily}_candidate_ref`,
+    body_policy: descriptorArtifactRef?.body_policy ?? 'body_owned_by_domain_artifact_surface',
+    descriptor_artifact_refs: module.artifact_refs,
+    ref_family: refFamily,
+    ref_template: `<artifact-root>/${refFamily}`,
     materialization_status: 'expected_ref_only',
     body_written: false,
     can_mutate_artifact_body: module.authority_boundary.can_mutate_artifact_body,
@@ -184,14 +333,20 @@ function buildExecutionReceiptCandidate(
   input: InvocationInput,
 ) {
   const executionReceiptRef = stableExecutionReceiptRef(module, input);
+  const moduleProfile = moduleCapabilityProfile(module);
   return {
     surface_kind: 'opl_scholarskills_execution_receipt_candidate',
     status: 'receipt_candidate_unsigned',
     module_id: module.module_id,
+    module_profile: moduleProfile,
     input_ref: input.inputRef,
     artifact_root_ref: input.artifactRoot,
     descriptor_ref: moduleContractRef(module),
+    artifact_candidate_ref_families: moduleProfile.artifact_ref_families,
+    artifact_candidate_refs: buildArtifactCandidateRefs(module, input.artifactRoot),
+    required_ref_families: moduleProfile.required_ref_families,
     execution_receipt_ref: executionReceiptRef,
+    execution_receipt_ref_families: moduleProfile.execution_receipt_ref_families,
     execution_receipt_refs: buildExecutionReceiptRefs(module, input),
     execution_receipt_counts_as_candidate_artifact: true,
     counts_as_paper_truth: false,
@@ -208,6 +363,41 @@ function buildExecutionReceiptCandidate(
   };
 }
 
+function buildExecutionReceiptCandidateTemplate(module: ScholarSkillCapabilityModuleDescriptor) {
+  const moduleProfile = moduleCapabilityProfile(module);
+  const templateRef = `opl://scholarskills/execution-receipt-candidate-templates/${encodeURIComponent(module.module_id)}`;
+  return {
+    surface_kind: 'opl_scholarskills_execution_receipt_candidate_template',
+    status: 'receipt_candidate_template',
+    module_id: module.module_id,
+    module_profile: moduleProfile,
+    descriptor_ref: moduleContractRef(module),
+    artifact_candidate_ref_families: moduleProfile.artifact_ref_families,
+    artifact_candidate_refs: buildArtifactCandidateRefTemplates(module),
+    required_ref_families: moduleProfile.required_ref_families,
+    execution_receipt_ref_template: `${templateRef}/<input-fingerprint>`,
+    execution_receipt_ref_families: moduleProfile.execution_receipt_ref_families,
+    execution_receipt_refs: Object.fromEntries(
+      moduleProfile.execution_receipt_ref_families.map((family) => [
+        `${family}_ref`,
+        `${templateRef}/<input-fingerprint>#${family}_ref`,
+      ]),
+    ),
+    execution_receipt_counts_as_candidate_artifact: true,
+    counts_as_paper_truth: false,
+    counts_as_owner_receipt: false,
+    can_authorize_publication_readiness: false,
+    accepted_receipt_refs: module.receipt_policy.accepted_receipt_refs,
+    receipt_body_policy: module.receipt_policy.receipt_body_policy,
+    can_sign_owner_receipt: module.receipt_policy.can_sign_owner_receipt,
+    can_create_typed_blocker: module.authority_boundary.can_create_typed_blocker,
+    can_claim_quality_verdict: module.quality_evidence.can_claim_quality_verdict,
+    can_claim_artifact_authority: module.authority_boundary.can_claim_artifact_authority,
+    candidate_policy: 'refs_only_unsigned_candidate_template_requires_invoke_or_receipt_binding',
+    authority_boundary: module.authority_boundary,
+  };
+}
+
 function buildValidation(contractRoot: ScholarSkillsCapabilityModulesContract) {
   const seen = new Set<string>();
   const duplicateIds: string[] = [];
@@ -215,6 +405,7 @@ function buildValidation(contractRoot: ScholarSkillsCapabilityModulesContract) {
     ...authorityBoundaryViolations(contractRoot.authority_boundary, 'authority_boundary'),
   ];
   const writeViolations: string[] = [];
+  const capabilitySurfaceViolations: string[] = [];
 
   for (const module of contractRoot.modules) {
     if (seen.has(module.module_id)) {
@@ -235,6 +426,14 @@ function buildValidation(contractRoot: ScholarSkillsCapabilityModulesContract) {
     }
     if (module.quality_evidence.can_claim_quality_verdict !== false) {
       authorityViolations.push(`modules.${module.module_id}.quality_evidence.can_claim_quality_verdict`);
+    }
+    if (moduleCapabilityProfile(module).required_ref_families.length === 0) {
+      capabilitySurfaceViolations.push(`modules.${module.module_id}.required_ref_families`);
+    }
+    for (const refFamily of MODULE_REQUIRED_ARTIFACT_REF_FAMILIES[module.module_id]) {
+      if (!moduleCapabilityProfile(module).required_ref_families.includes(refFamily)) {
+        capabilitySurfaceViolations.push(`modules.${module.module_id}.required_ref_families.${refFamily}`);
+      }
     }
   }
 
@@ -258,6 +457,13 @@ function buildValidation(contractRoot: ScholarSkillsCapabilityModulesContract) {
       check_id: 'write_boundary',
       status: writeViolations.length === 0 ? 'pass' : 'fail',
       detail: writeViolations.length === 0 ? 'Modules do not declare local write authority.' : writeViolations.join(', '),
+    },
+    {
+      check_id: 'module_specific_capability_surfaces',
+      status: capabilitySurfaceViolations.length === 0 ? 'pass' : 'fail',
+      detail: capabilitySurfaceViolations.length === 0
+        ? 'All modules expose module-specific required ref families.'
+        : capabilitySurfaceViolations.join(', '),
     },
     {
       check_id: 'runtime_environment_bridge_refs_only',
@@ -293,6 +499,7 @@ function buildValidation(contractRoot: ScholarSkillsCapabilityModulesContract) {
     checks,
     authority_boundary_violations: authorityViolations,
     write_boundary_violations: writeViolations,
+    capability_surface_violations: capabilitySurfaceViolations,
   };
 }
 
@@ -338,6 +545,9 @@ export function buildScholarSkillModuleInspect(
       schema_version: contractRoot.schema_version,
       contract_ref: `contracts/opl-framework/scholar-skills-capability-modules.json#modules.${module.module_id}`,
       runtime_environment_bridge: contractRoot.runtime_environment_bridge,
+      module_profile: moduleCapabilityProfile(module),
+      artifact_candidate_refs: buildArtifactCandidateRefTemplates(module),
+      execution_receipt_candidate: buildExecutionReceiptCandidateTemplate(module),
       ...module,
     },
   };
@@ -514,6 +724,9 @@ export function buildScholarSkillsPrepareEnvelope(
       profile: input.profile,
       platform: input.platform,
       descriptor_ref: moduleContractRef(module),
+      module_profile: moduleCapabilityProfile(module),
+      artifact_candidate_refs: buildArtifactCandidateRefTemplates(module),
+      execution_receipt_candidate: buildExecutionReceiptCandidateTemplate(module),
       dependency_profile_refs: module.dependency_profile_refs,
       runtime_owner_command: runtimePrepareCommand(input),
       inputs: {
@@ -552,6 +765,9 @@ export function buildScholarSkillsRunContextEnvelope(
       module_id: module.module_id,
       profile: input.profile,
       descriptor_ref: moduleContractRef(module),
+      module_profile: moduleCapabilityProfile(module),
+      artifact_candidate_refs: buildArtifactCandidateRefTemplates(module),
+      execution_receipt_candidate: buildExecutionReceiptCandidateTemplate(module),
       run_context_refs: module.run_context_refs,
       runtime_owner_command: runtimeRunContextCommand(input),
       can_write_runtime_state: contractRoot.runtime_environment_bridge.can_write_runtime_state,
