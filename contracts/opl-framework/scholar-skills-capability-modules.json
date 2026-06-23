@@ -27,6 +27,12 @@
     "scholar_skill_receipt_commands": [
       "opl scholar-skills receipt --module <module_id> --input-ref <ref> --artifact-root <ref> --json"
     ],
+    "scholar_skill_runtime_prepare_commands": [
+      "opl scholar-skills runtime-prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> [--apply] --json"
+    ],
+    "scholar_skill_runtime_run_context_commands": [
+      "opl scholar-skills runtime-run-context --module <module_id> --profile <profile> --platform <platform> --paper-root <path> --json"
+    ],
     "bridge_envelope_policy": {
       "refs_only": true,
       "prepared": false,

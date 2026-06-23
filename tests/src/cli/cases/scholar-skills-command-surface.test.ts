@@ -13,6 +13,72 @@ const expectedModuleIds = [
   'opl.scholarskills.intake',
 ];
 
+function writeFakeRscript(binDir: string) {
+  fs.mkdirSync(binDir, { recursive: true });
+  const rscriptPath = path.join(binDir, 'Rscript');
+  fs.writeFileSync(
+    rscriptPath,
+    `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const expression = process.argv[3] || '';
+const libMatch = expression.match(/lib\\.loc\\s*=\\s*"([^"]+)"/)
+  || expression.match(/lib\\s*=\\s*"([^"]+)"/)
+  || expression.match(/dir\\.exists\\("([^"]+)"\\)/);
+const libPath = libMatch ? libMatch[1] : '';
+const markerPath = libPath ? path.join(libPath, '.fake-installed-packages.json') : '';
+const readPackages = () => {
+  if (!markerPath || !fs.existsSync(markerPath)) return [];
+  return JSON.parse(fs.readFileSync(markerPath, 'utf8'));
+};
+if (expression.includes('priority = c("base", "recommended")')) {
+  process.stdout.write('grid\\n');
+  process.exit(0);
+}
+if (expression.includes('install.packages')) {
+  const packageMatch = expression.match(/install\\.packages\\(c\\(([^)]*)\\)/);
+  const packages = packageMatch
+    ? packageMatch[1].split(',').map((part) => part.trim().replace(/^"|"$/g, '')).filter(Boolean)
+    : [];
+  fs.mkdirSync(libPath, { recursive: true });
+  fs.writeFileSync(markerPath, JSON.stringify(Array.from(new Set([...readPackages(), ...packages]))));
+  process.exit(0);
+}
+if (expression.includes('installed.packages')) {
+  if (libPath) {
+    process.stdout.write(readPackages().join('\\n'));
+    process.exit(0);
+  }
+  process.exit(0);
+}
+process.exit(0);
+`,
+    { mode: 0o755 },
+  );
+  return rscriptPath;
+}
+
+function writeRequirementProfile(profilePath: string) {
+  fs.writeFileSync(
+    profilePath,
+    JSON.stringify({
+      surface_kind: 'opl_dependency_requirement_profile',
+      profiles: [
+        {
+          profile_id: 'scholar_display_test_profile',
+          runtime_binaries: [{ name: 'Rscript', required: true }],
+          language_packages: {
+            r: [
+              { name: 'ggplot2', required: true },
+              { name: 'grid', required: true },
+            ],
+          },
+        },
+      ],
+    }),
+  );
+}
+
 test('ScholarSkills capability module descriptor contract is loaded and exposes ten branded modules', () => {
   const contracts = loadFrameworkContracts(repoRoot);
 
@@ -125,6 +191,144 @@ test('opl scholar-skills prepare returns a deterministic refs-only dependency en
     assert.equal(output.authority_boundary.can_write_runtime_state, false);
     assert.deepEqual(fs.readdirSync(stateRoot), []);
     assert.deepEqual(fs.readdirSync(paperRoot), []);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('opl scholar-skills runtime-prepare invokes OPL runtime env substrate without domain authority', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholar-skills-runtime-prepare-'));
+  try {
+    const stateRoot = path.join(fixtureRoot, 'state');
+    const paperRoot = path.join(fixtureRoot, 'paper');
+    const profilePath = path.join(fixtureRoot, 'renderer_dependency_profile.json');
+    const binDir = path.join(fixtureRoot, 'bin');
+    const rscriptPath = writeFakeRscript(binDir);
+    fs.mkdirSync(paperRoot, { recursive: true });
+    writeRequirementProfile(profilePath);
+
+    const output = runCli(
+      [
+        'scholar-skills',
+        'runtime-prepare',
+        '--module',
+        'opl.scholarskills.display',
+        '--profile',
+        'display',
+        '--platform',
+        'macos-arm64',
+        '--requirement-profile',
+        profilePath,
+        '--requirement-profile-id',
+        'scholar_display_test_profile',
+        '--paper-root',
+        paperRoot,
+        '--apply',
+        '--json',
+      ],
+      {
+        OPL_STATE_DIR: stateRoot,
+        PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ''}`,
+      },
+    ).scholar_skills_runtime_prepare;
+
+    assert.equal(output.surface_kind, 'opl_scholarskills_runtime_prepare_bridge');
+    assert.equal(output.status, 'prepared');
+    assert.equal(output.module_id, 'opl.scholarskills.display');
+    assert.equal(output.runtime_domain_id, 'scholarskills');
+    assert.equal(output.apply_requested, true);
+    assert.equal(output.requirement_profile_id, 'scholar_display_test_profile');
+    assert.equal(output.runtime_owner_command, `opl runtime env prepare --domain scholarskills --profile display --platform macos-arm64 --requirement-profile ${profilePath} --requirement-profile-id scholar_display_test_profile --paper-root ${paperRoot} --apply --json`);
+    assert.equal(output.dependency_lock_ref, 'paper/build/dependency_environment_lock.json');
+    assert.equal(output.dependency_receipt_ref, 'paper/build/dependency_environment_receipt.json');
+    assert.equal(output.dependency_run_context_ref, 'paper/build/dependency_run_context.json');
+    assert.equal(output.consumer_preflight.status, 'bound');
+    assert.equal(output.writes.dependency_lock_written, true);
+    assert.equal(output.writes.dependency_receipt_written, true);
+    assert.equal(output.writes.dependency_run_context_written, true);
+    assert.equal(output.writes.domain_truth_written, false);
+    assert.equal(output.writes.artifact_body_written, false);
+    assert.equal(output.can_claim_runtime_ready, false);
+    assert.equal(output.can_claim_domain_ready, false);
+    assert.equal(output.can_sign_owner_receipt, false);
+    assert.equal(output.can_create_typed_blocker, false);
+    assert.equal(output.runtime_environment.prepare.binary_paths.Rscript, rscriptPath);
+    assert.equal(fs.existsSync(path.join(paperRoot, 'build', 'dependency_environment_lock.json')), true);
+    assert.equal(fs.existsSync(path.join(paperRoot, 'build', 'dependency_environment_receipt.json')), true);
+    assert.equal(fs.existsSync(path.join(paperRoot, 'build', 'dependency_run_context.json')), true);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('opl scholar-skills runtime-run-context reads prepared context and keeps false authority flags', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholar-skills-runtime-context-'));
+  try {
+    const stateRoot = path.join(fixtureRoot, 'state');
+    const paperRoot = path.join(fixtureRoot, 'paper');
+    const profilePath = path.join(fixtureRoot, 'renderer_dependency_profile.json');
+    const binDir = path.join(fixtureRoot, 'bin');
+    writeFakeRscript(binDir);
+    fs.mkdirSync(paperRoot, { recursive: true });
+    writeRequirementProfile(profilePath);
+    const env = {
+      OPL_STATE_DIR: stateRoot,
+      PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ''}`,
+    };
+
+    runCli(
+      [
+        'scholar-skills',
+        'runtime-prepare',
+        '--module',
+        'opl.scholarskills.display',
+        '--profile',
+        'display',
+        '--platform',
+        'macos-arm64',
+        '--requirement-profile',
+        profilePath,
+        '--paper-root',
+        paperRoot,
+        '--apply',
+        '--json',
+      ],
+      env,
+    );
+
+    const output = runCli(
+      [
+        'scholar-skills',
+        'runtime-run-context',
+        '--module',
+        'opl.scholarskills.display',
+        '--profile',
+        'display',
+        '--platform',
+        'macos-arm64',
+        '--paper-root',
+        paperRoot,
+        '--json',
+      ],
+      env,
+    ).scholar_skills_runtime_run_context;
+
+    assert.equal(output.surface_kind, 'opl_scholarskills_runtime_run_context_bridge');
+    assert.equal(output.status, 'prepared');
+    assert.equal(output.module_id, 'opl.scholarskills.display');
+    assert.equal(output.run_context_ref, null);
+    assert.equal(output.consumer_preflight.status, 'bound');
+    assert.equal(output.can_consume_run_context, true);
+    assert.equal(output.can_schedule_domain_stage, false);
+    assert.equal(output.can_claim_provider_ready, false);
+    assert.equal(output.can_claim_runtime_ready, false);
+    assert.equal(output.can_claim_domain_ready, false);
+    assert.equal(output.can_claim_app_release_ready, false);
+    assert.equal(output.can_sign_owner_receipt, false);
+    assert.equal(output.can_create_typed_blocker, false);
+    assert.equal(output.runtime_owner_command, `opl runtime env run-context --domain scholarskills --profile display --platform macos-arm64 --paper-root ${paperRoot} --json`);
+    assert.equal(output.runtime_environment.run_context.consumer_preflight.status, 'bound');
+    assert.equal(output.runtime_environment.run_context.consumer_boundary.host_environment_fallback_allowed, false);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }

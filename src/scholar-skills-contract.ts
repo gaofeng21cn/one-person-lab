@@ -411,6 +411,16 @@ export function validateScholarSkillsCapabilityModules(
         'runtime_environment_bridge.scholar_skill_receipt_commands',
         filePath,
       ),
+      scholar_skill_runtime_prepare_commands: expectOptionalNonEmptyStringArray(
+        bridge.scholar_skill_runtime_prepare_commands,
+        'runtime_environment_bridge.scholar_skill_runtime_prepare_commands',
+        filePath,
+      ),
+      scholar_skill_runtime_run_context_commands: expectOptionalNonEmptyStringArray(
+        bridge.scholar_skill_runtime_run_context_commands,
+        'runtime_environment_bridge.scholar_skill_runtime_run_context_commands',
+        filePath,
+      ),
       bridge_envelope_policy: validateRuntimeBridgeEnvelopePolicy(
         filePath,
         bridge.bridge_envelope_policy,

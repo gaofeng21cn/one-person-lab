@@ -1,4 +1,8 @@
 import { FrameworkContractError } from './contracts.ts';
+import {
+  buildRuntimeEnvironmentPrepareReadback,
+  buildRuntimeEnvironmentRunContextReadback,
+} from './runtime-environment-substrate.ts';
 import type {
   FrameworkContracts,
   ScholarSkillAuthorityBoundary,
@@ -18,12 +22,23 @@ type PrepareInput = {
   profile: string;
   platform: string;
   requirementProfile: string;
+  requirementProfileId?: string;
   paperRoot: string;
+  apply?: boolean;
 };
 
 type RunContextInput = {
   moduleId: string;
   profile: string;
+  platform?: string;
+  paperRoot?: string;
+};
+
+type RuntimePrepareInput = PrepareInput;
+
+type RuntimeRunContextInput = RunContextInput & {
+  platform: string;
+  paperRoot: string;
 };
 
 type InvocationInput = {
@@ -104,13 +119,22 @@ function runtimePrepareCommand(input: PrepareInput) {
     `--profile ${input.profile}`,
     `--platform ${input.platform}`,
     `--requirement-profile ${input.requirementProfile}`,
+    ...(input.requirementProfileId ? [`--requirement-profile-id ${input.requirementProfileId}`] : []),
     `--paper-root ${input.paperRoot}`,
+    ...(input.apply === true ? ['--apply'] : []),
     '--json',
   ].join(' ');
 }
 
 function runtimeRunContextCommand(input: RunContextInput) {
-  return `opl runtime env run-context --domain scholarskills --profile ${input.profile} --json`;
+  return [
+    'opl runtime env run-context',
+    '--domain scholarskills',
+    `--profile ${input.profile}`,
+    ...(input.platform ? [`--platform ${input.platform}`] : []),
+    ...(input.paperRoot ? [`--paper-root ${input.paperRoot}`] : []),
+    '--json',
+  ].join(' ');
 }
 
 function buildArtifactCandidateRefs(
@@ -307,6 +331,12 @@ export function buildScholarSkillsInterfaces(contracts: FrameworkContracts) {
           ...(contractRoot.runtime_environment_bridge.scholar_skill_receipt_commands ?? [
             'opl scholar-skills receipt --module <module_id> --input-ref <ref> --artifact-root <ref> --json',
           ]),
+          ...(contractRoot.runtime_environment_bridge.scholar_skill_runtime_prepare_commands ?? [
+            'opl scholar-skills runtime-prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> [--apply] --json',
+          ]),
+          ...(contractRoot.runtime_environment_bridge.scholar_skill_runtime_run_context_commands ?? [
+            'opl scholar-skills runtime-run-context --module <module_id> --profile <profile> --platform <platform> --paper-root <path> --json',
+          ]),
           'opl scholar-skills interfaces --json',
           'opl scholar-skills validate --json',
           'opl scholar-skills doctor --json',
@@ -327,6 +357,8 @@ export function buildScholarSkillsInterfaces(contracts: FrameworkContracts) {
           ...(contractRoot.runtime_environment_bridge.scholar_skill_run_context_commands ?? []),
           ...(contractRoot.runtime_environment_bridge.scholar_skill_invocation_commands ?? []),
           ...(contractRoot.runtime_environment_bridge.scholar_skill_receipt_commands ?? []),
+          ...(contractRoot.runtime_environment_bridge.scholar_skill_runtime_prepare_commands ?? []),
+          ...(contractRoot.runtime_environment_bridge.scholar_skill_runtime_run_context_commands ?? []),
         ],
         bridge_envelope_policy: contractRoot.runtime_environment_bridge.bridge_envelope_policy,
         can_write_runtime_state: contractRoot.runtime_environment_bridge.can_write_runtime_state,
@@ -334,6 +366,98 @@ export function buildScholarSkillsInterfaces(contracts: FrameworkContracts) {
         can_claim_domain_ready: contractRoot.runtime_environment_bridge.can_claim_domain_ready,
       },
       authority_boundary: contractRoot.authority_boundary,
+    },
+  };
+}
+
+export function buildScholarSkillsRuntimePrepareReadback(
+  contracts: FrameworkContracts,
+  input: RuntimePrepareInput,
+) {
+  const contractRoot = contract(contracts);
+  const module = findModuleOrThrow(contractRoot.modules, assertModuleId(input.moduleId));
+  const runtimeEnvironment = buildRuntimeEnvironmentPrepareReadback({
+    domainId: 'scholarskills',
+    profileId: input.profile,
+    platformId: input.platform,
+    requirementProfilePath: input.requirementProfile,
+    requirementProfileId: input.requirementProfileId,
+    paperRoot: input.paperRoot,
+    apply: input.apply,
+  });
+  return {
+    version: 'g2',
+    scholar_skills_runtime_prepare: {
+      surface_kind: 'opl_scholarskills_runtime_prepare_bridge',
+      status: runtimeEnvironment.prepare.status,
+      module_id: module.module_id,
+      profile: input.profile,
+      platform: input.platform,
+      descriptor_ref: moduleContractRef(module),
+      runtime_domain_id: 'scholarskills',
+      runtime_owner_command: runtimePrepareCommand(input),
+      requirement_profile_id: input.requirementProfileId ?? null,
+      apply_requested: input.apply === true,
+      dependency_lock_ref: runtimeEnvironment.prepare.lock_ref,
+      dependency_receipt_ref: runtimeEnvironment.prepare.receipt_ref,
+      dependency_run_context_ref: runtimeEnvironment.prepare.run_context_ref,
+      consumer_preflight: runtimeEnvironment.prepare.consumer_preflight,
+      runtime_environment: runtimeEnvironment,
+      writes: {
+        dependency_lock_written: true,
+        dependency_receipt_written: true,
+        dependency_run_context_written: runtimeEnvironment.prepare.run_context_ref !== null,
+        domain_truth_written: false,
+        artifact_body_written: false,
+        owner_receipt_signed: false,
+        typed_blocker_created: false,
+      },
+      can_claim_runtime_ready: runtimeEnvironment.can_claim_runtime_ready,
+      can_claim_domain_ready: runtimeEnvironment.can_claim_domain_ready,
+      can_claim_app_release_ready: runtimeEnvironment.can_claim_app_release_ready,
+      can_sign_owner_receipt: module.authority_boundary.can_sign_owner_receipt,
+      can_create_typed_blocker: module.authority_boundary.can_create_typed_blocker,
+      authority_boundary: module.authority_boundary,
+    },
+  };
+}
+
+export function buildScholarSkillsRuntimeRunContextReadback(
+  contracts: FrameworkContracts,
+  input: RuntimeRunContextInput,
+) {
+  const contractRoot = contract(contracts);
+  const module = findModuleOrThrow(contractRoot.modules, assertModuleId(input.moduleId));
+  const runtimeEnvironment = buildRuntimeEnvironmentRunContextReadback({
+    domainId: 'scholarskills',
+    profileId: input.profile,
+    platformId: input.platform,
+    paperRoot: input.paperRoot,
+  });
+  return {
+    version: 'g2',
+    scholar_skills_runtime_run_context: {
+      surface_kind: 'opl_scholarskills_runtime_run_context_bridge',
+      status: runtimeEnvironment.run_context.status,
+      module_id: module.module_id,
+      profile: input.profile,
+      platform: input.platform,
+      descriptor_ref: moduleContractRef(module),
+      runtime_domain_id: 'scholarskills',
+      runtime_owner_command: runtimeRunContextCommand(input),
+      paper_root_ref: input.paperRoot,
+      run_context_ref: runtimeEnvironment.run_context.run_context_ref ?? null,
+      consumer_preflight: runtimeEnvironment.run_context.consumer_preflight,
+      runtime_environment: runtimeEnvironment,
+      can_consume_run_context: runtimeEnvironment.run_context.consumer_preflight.can_consume_run_context,
+      can_schedule_domain_stage: runtimeEnvironment.run_context.can_schedule_domain_stage,
+      can_claim_provider_ready: runtimeEnvironment.run_context.can_claim_provider_ready,
+      can_claim_runtime_ready: runtimeEnvironment.run_context.can_claim_runtime_ready,
+      can_claim_domain_ready: runtimeEnvironment.run_context.can_claim_domain_ready,
+      can_claim_app_release_ready: runtimeEnvironment.run_context.can_claim_app_release_ready,
+      can_sign_owner_receipt: module.authority_boundary.can_sign_owner_receipt,
+      can_create_typed_blocker: module.authority_boundary.can_create_typed_blocker,
+      authority_boundary: module.authority_boundary,
     },
   };
 }

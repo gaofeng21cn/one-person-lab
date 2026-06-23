@@ -98,6 +98,8 @@ export interface ScholarSkillsCapabilityModulesContract {
     scholar_skill_run_context_commands?: string[];
     scholar_skill_invocation_commands?: string[];
     scholar_skill_receipt_commands?: string[];
+    scholar_skill_runtime_prepare_commands?: string[];
+    scholar_skill_runtime_run_context_commands?: string[];
     bridge_envelope_policy?: ScholarSkillRuntimeBridgeEnvelopePolicy;
     can_write_runtime_state: false;
     can_claim_runtime_ready: false;

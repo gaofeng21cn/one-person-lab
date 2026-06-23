@@ -6,6 +6,8 @@ import {
   buildScholarSkillsInterfaces,
   buildScholarSkillsPrepareEnvelope,
   buildScholarSkillsReceiptCandidate,
+  buildScholarSkillsRuntimePrepareReadback,
+  buildScholarSkillsRuntimeRunContextReadback,
   buildScholarSkillsRunContextEnvelope,
   buildScholarSkillsValidation,
 } from '../../../scholar-skills.ts';
@@ -59,51 +61,81 @@ function expectOptionValue(
   return value;
 }
 
-function parsePrepareArgs(args: string[], spec: CommandSpec) {
+function parsePrepareArgs(
+  args: string[],
+  spec: CommandSpec,
+  options: {
+    allowApply?: boolean;
+    allowRequirementProfileId?: boolean;
+    commandLabel?: string;
+  } = {},
+) {
+  const commandLabel = options.commandLabel ?? 'scholar-skills prepare';
   const parsed: {
     moduleId?: string;
     profile?: string;
     platform?: string;
     requirementProfile?: string;
+    requirementProfileId?: string;
     paperRoot?: string;
+    apply?: boolean;
   } = {};
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
     if (token === '--json') {
       continue;
     }
+    if (token === '--apply') {
+      if (!options.allowApply) {
+        throw buildUsageError(`Unknown ${commandLabel} option: ${token}.`, spec, {
+          option: token,
+        });
+      }
+      parsed.apply = true;
+      continue;
+    }
     if (token === '--module' || token === '--id') {
-      parsed.moduleId = expectOptionValue(args, index, token, 'scholar-skills prepare', spec);
+      parsed.moduleId = expectOptionValue(args, index, token, commandLabel, spec);
       index += 1;
       continue;
     }
     if (token === '--profile') {
-      parsed.profile = expectOptionValue(args, index, token, 'scholar-skills prepare', spec);
+      parsed.profile = expectOptionValue(args, index, token, commandLabel, spec);
       index += 1;
       continue;
     }
     if (token === '--platform') {
-      parsed.platform = expectOptionValue(args, index, token, 'scholar-skills prepare', spec);
+      parsed.platform = expectOptionValue(args, index, token, commandLabel, spec);
       index += 1;
       continue;
     }
     if (token === '--requirement-profile') {
-      parsed.requirementProfile = expectOptionValue(args, index, token, 'scholar-skills prepare', spec);
+      parsed.requirementProfile = expectOptionValue(args, index, token, commandLabel, spec);
+      index += 1;
+      continue;
+    }
+    if (token === '--requirement-profile-id') {
+      if (!options.allowRequirementProfileId) {
+        throw buildUsageError(`Unknown ${commandLabel} option: ${token}.`, spec, {
+          option: token,
+        });
+      }
+      parsed.requirementProfileId = expectOptionValue(args, index, token, commandLabel, spec);
       index += 1;
       continue;
     }
     if (token === '--paper-root') {
-      parsed.paperRoot = expectOptionValue(args, index, token, 'scholar-skills prepare', spec);
+      parsed.paperRoot = expectOptionValue(args, index, token, commandLabel, spec);
       index += 1;
       continue;
     }
-    throw buildUsageError(`Unknown scholar-skills prepare option: ${token}.`, spec, {
+    throw buildUsageError(`Unknown ${commandLabel} option: ${token}.`, spec, {
       option: token,
     });
   }
   if (!parsed.moduleId || !parsed.profile || !parsed.platform || !parsed.requirementProfile || !parsed.paperRoot) {
     throw buildUsageError(
-      'scholar-skills prepare requires --module, --profile, --platform, --requirement-profile, and --paper-root.',
+      `${commandLabel} requires --module, --profile, --platform, --requirement-profile, and --paper-root.`,
       spec,
       { required: ['--module', '--profile', '--platform', '--requirement-profile', '--paper-root'] },
     );
@@ -113,38 +145,62 @@ function parsePrepareArgs(args: string[], spec: CommandSpec) {
     profile: parsed.profile,
     platform: parsed.platform,
     requirementProfile: parsed.requirementProfile,
+    requirementProfileId: parsed.requirementProfileId,
     paperRoot: parsed.paperRoot,
+    apply: parsed.apply,
   };
 }
 
-function parseRunContextArgs(args: string[], spec: CommandSpec) {
+function parseRunContextArgs(
+  args: string[],
+  spec: CommandSpec,
+  options: { requirePlatformAndPaperRoot?: boolean; commandLabel?: string } = {},
+) {
   let moduleId: string | undefined;
   let profile: string | undefined;
+  let platform: string | undefined;
+  let paperRoot: string | undefined;
+  const commandLabel = options.commandLabel ?? 'scholar-skills run-context';
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
     if (token === '--json') {
       continue;
     }
     if (token === '--module' || token === '--id') {
-      moduleId = expectOptionValue(args, index, token, 'scholar-skills run-context', spec);
+      moduleId = expectOptionValue(args, index, token, commandLabel, spec);
       index += 1;
       continue;
     }
     if (token === '--profile') {
-      profile = expectOptionValue(args, index, token, 'scholar-skills run-context', spec);
+      profile = expectOptionValue(args, index, token, commandLabel, spec);
       index += 1;
       continue;
     }
-    throw buildUsageError(`Unknown scholar-skills run-context option: ${token}.`, spec, {
+    if (token === '--platform') {
+      platform = expectOptionValue(args, index, token, commandLabel, spec);
+      index += 1;
+      continue;
+    }
+    if (token === '--paper-root') {
+      paperRoot = expectOptionValue(args, index, token, commandLabel, spec);
+      index += 1;
+      continue;
+    }
+    throw buildUsageError(`Unknown ${commandLabel} option: ${token}.`, spec, {
       option: token,
     });
   }
   if (!moduleId || !profile) {
-    throw buildUsageError('scholar-skills run-context requires --module and --profile.', spec, {
+    throw buildUsageError(`${commandLabel} requires --module and --profile.`, spec, {
       required: ['--module', '--profile'],
     });
   }
-  return { moduleId, profile };
+  if (options.requirePlatformAndPaperRoot && (!platform || !paperRoot)) {
+    throw buildUsageError(`${commandLabel} requires --module, --profile, --platform, and --paper-root.`, spec, {
+      required: ['--module', '--profile', '--platform', '--paper-root'],
+    });
+  }
+  return { moduleId, profile, platform, paperRoot };
 }
 
 function parseInvocationArgs(args: string[], spec: CommandSpec, commandLabel: string) {
@@ -222,6 +278,22 @@ export function buildScholarSkillsCommandSpecs(
         parsePrepareArgs(args, specs['scholar-skills prepare']),
       ),
     },
+    'scholar-skills runtime-prepare': {
+      usage: 'opl scholar-skills runtime-prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]',
+      summary: 'Invoke the OPL runtime environment substrate for one ScholarSkills module and return bounded dependency receipts.',
+      examples: [
+        'opl scholar-skills runtime-prepare --module opl.scholarskills.display --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --apply --json',
+      ],
+      group: 'scholar-skills',
+      handler: (args) => buildScholarSkillsRuntimePrepareReadback(
+        getContracts(),
+        parsePrepareArgs(args, specs['scholar-skills runtime-prepare'], {
+          allowApply: true,
+          allowRequirementProfileId: true,
+          commandLabel: 'scholar-skills runtime-prepare',
+        }),
+      ),
+    },
     'scholar-skills run-context': {
       usage: 'opl scholar-skills run-context --module <module_id> --profile <profile>',
       summary: 'Build a refs-only run-context envelope that cannot claim runtime readiness.',
@@ -233,6 +305,26 @@ export function buildScholarSkillsCommandSpecs(
         getContracts(),
         parseRunContextArgs(args, specs['scholar-skills run-context']),
       ),
+    },
+    'scholar-skills runtime-run-context': {
+      usage: 'opl scholar-skills runtime-run-context --module <module_id> --profile <profile> --platform <platform> --paper-root <path>',
+      summary: 'Read the OPL prepared run-context for one ScholarSkills module and fail closed on missing or mismatched refs.',
+      examples: [
+        'opl scholar-skills runtime-run-context --module opl.scholarskills.display --profile display --platform macos-arm64 --paper-root paper --json',
+      ],
+      group: 'scholar-skills',
+      handler: (args) => {
+        const parsed = parseRunContextArgs(args, specs['scholar-skills runtime-run-context'], {
+          requirePlatformAndPaperRoot: true,
+          commandLabel: 'scholar-skills runtime-run-context',
+        });
+        return buildScholarSkillsRuntimeRunContextReadback(getContracts(), {
+          moduleId: parsed.moduleId,
+          profile: parsed.profile,
+          platform: parsed.platform ?? '',
+          paperRoot: parsed.paperRoot ?? '',
+        });
+      },
     },
     'scholar-skills invoke': {
       usage: 'opl scholar-skills invoke --module <module_id> --input-ref <ref> --artifact-root <ref>',
