@@ -64,6 +64,8 @@ opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact
 
 `module_candidate.json` 仍不是专业 engine 的最终结果体：Display 不在这里直接渲染图，Stats 不在这里直接运行临床分析，Lit 不在这里直接检索文献，Submit 不在这里直接生成投稿包。它提供的是 OPL-owned standard handoff payload，使 MAS 等 domain agent 可以用同一消费入口读取候选 refs、质量检查需求和 owner gate 要求；真实图表、分析、文稿、审阅、投稿或数据结果体仍归 domain artifact surface 或后续 module engine 写入，并必须由 domain owner gate 接收或拒绝。
 
+仓内还提供 repo-tracked Codex plugin surface：`plugins/opl-scholarskills/.codex-plugin/plugin.json` 与 `plugins/opl-scholarskills/skills/opl-scholarskills/SKILL.md`。该 skill pack 只是把 canonical contract、CLI readback 和 no-authority guard 暴露给 Codex discovery / sync layer；它不是第二真相源，也不能替代 `contracts/opl-framework/scholar-skills-capability-modules.json`、`src/scholar-skills.ts`、domain owner receipt、typed blocker、runtime evidence 或 paper artifact authority。
+
 需要把 module id 绑定到真实 OPL runtime environment substrate 时，使用 runtime bridge 命令。它们复用 `opl runtime env prepare/run-context` 的实现，可在明确 `--apply` 时写入 OPL 管理依赖库和 `paper/build/dependency_environment_lock.json`、`dependency_environment_receipt.json`、`dependency_run_context.json`，但仍不写 domain truth、artifact body、owner receipt、typed blocker 或 runtime queue：
 
 ```bash
