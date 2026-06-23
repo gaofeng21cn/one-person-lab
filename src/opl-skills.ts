@@ -10,7 +10,10 @@ import { normalizeFamilyActionCatalog } from './family-action-catalog-contract.t
 import { normalizeFamilyStageControlPlane } from './family-stage-control-plane-contract.ts';
 import { buildFunctionalPrivatizationAudit } from './functional-privatization-audit.ts';
 import { syncOplCompanionSkills, type OplCompanionSkillApplyMode, type OplSuperpowersProfile } from './install-companions.ts';
-import { registerOplFamilyCodexPlugins } from './system-installation/codex-plugin-registry.ts';
+import {
+  registerOplFamilyCodexPlugins,
+  type CodexPluginRegistryPackId,
+} from './system-installation/codex-plugin-registry.ts';
 import type { OplModuleId } from './system-installation/shared.ts';
 import {
   resolveDefaultFamilyWorkspaceRoot as resolveDefaultFamilyWorkspaceRootImpl,
@@ -135,6 +138,15 @@ function readBooleanField(source: Record<string, unknown>, field: string) {
 }
 
 function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
+  if (spec.distribution_role !== 'domain_agent_plugin_pack') {
+    return {
+      foundry_agent_series: {},
+      command_surface_spine: {},
+      mcp_projection: {},
+      legacy_implementation_bucket_policy: {},
+    };
+  }
+
   const contract = readFoundryAgentSeriesContract();
   const commandSurface = readObjectField(contract, 'agent_cli_command_surface_policy');
   const skillMcp = readObjectField(contract, 'skill_mcp_surface_policy');
@@ -255,6 +267,38 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
       retired_bucket_prefixes: readStringListField(retirement, 'retired_bucket_prefixes'),
       allowed_retained_read_surfaces: readStringListField(retirement, 'allowed_retained_read_surfaces'),
     },
+  };
+}
+
+function buildCapabilityPluginDistribution(spec: SkillPackSpec) {
+  if (spec.domain_id !== 'scholarskills') {
+    return null;
+  }
+
+  return {
+    surface_kind: 'opl_framework_capability_plugin_distribution',
+    capability_plugin_id: 'opl-scholarskills',
+    distribution_role: spec.distribution_role,
+    ownership_kind: 'framework_capability_plugin',
+    source_of_truth: [
+      'plugins/opl-scholarskills/.codex-plugin/plugin.json',
+      'plugins/opl-scholarskills/skills/opl-scholarskills/SKILL.md',
+      'contracts/opl-framework/scholar-skills-capability-modules.json',
+    ],
+    connect_readback_commands: [
+      'opl connect skills --domain scholarskills --json',
+      'opl connect sync-skills --domain scholarskills --json',
+    ],
+    framework_owned_capability: true,
+    domain_module: false,
+    brand_module: false,
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_write_runtime_queue: false,
+    },
+    note: 'OPL ScholarSkills is a repo-tracked OPL-owned capability plugin pack. It is not a MAS/MAG/RCA/BookForge domain module and is not an additional OPL brand module.',
   };
 }
 
@@ -821,6 +865,7 @@ function inspectFamilySkillPackAtRepoRoot(
   const repoPluginReady =
     repoFound && pluginManifestFound && skillEntryFound && skillEntryValidation.valid;
   const seriesProjection = buildFoundryAgentSeriesProjection(spec);
+  const capabilityPluginDistribution = buildCapabilityPluginDistribution(spec);
 
   return {
     domain_id: spec.domain_id,
@@ -828,7 +873,9 @@ function inspectFamilySkillPackAtRepoRoot(
     label: spec.label,
     plugin_name: spec.plugin_name,
     canonical_plugin_name: spec.canonical_plugin_name,
+    distribution_role: spec.distribution_role,
     ...seriesProjection,
+    capability_plugin_distribution: capabilityPluginDistribution,
     plugin_source_path: pluginSourcePath,
     repo_root: repoRoot,
     repo_found: repoFound,
@@ -879,8 +926,8 @@ export function syncFamilySkillPackFromRepoRoot(
   );
   if (options.registerPlugin !== false && result.sync_status === 'synced' && result.registry_repo_root) {
     const codexPluginRegistry = registerOplFamilyCodexPlugins(
-      [domainId],
-      new Map([[domainId, result.registry_repo_root]]),
+      [domainId as CodexPluginRegistryPackId],
+      new Map([[domainId as CodexPluginRegistryPackId, result.registry_repo_root]]),
       normalizeOptionalString(options.home) ?? undefined,
     );
     return {
@@ -929,12 +976,15 @@ export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) 
   }));
   const syncedFamilyPluginPacks = packs.filter((pack): pack is SyncFamilySkillPack & { domain_id: OplModuleId } => (
     pack.sync_status === 'synced'
-    && ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent', 'oplbookforge'].includes(pack.domain_id)
+    && ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent', 'oplbookforge', 'scholarskills'].includes(pack.domain_id)
     && Boolean(pack.registry_repo_root)
   ));
   const codex_plugin_registry = registerOplFamilyCodexPlugins(
-    syncedFamilyPluginPacks.map((pack) => pack.domain_id),
-    new Map(syncedFamilyPluginPacks.map((pack) => [pack.domain_id, pack.registry_repo_root ?? pack.repo_root])),
+    syncedFamilyPluginPacks.map((pack) => pack.domain_id as CodexPluginRegistryPackId),
+    new Map(syncedFamilyPluginPacks.map((pack) => [
+      pack.domain_id as CodexPluginRegistryPackId,
+      pack.registry_repo_root ?? pack.repo_root,
+    ])),
     resolvedHome ?? undefined,
   );
   const companion_skills = syncOplCompanionSkills(resolvedHome ?? undefined, {

@@ -4,15 +4,17 @@ import { FrameworkContractError } from '../contracts.ts';
 
 export type SkillPackInstallerKind = 'bash' | 'node';
 export type SkillPackSourceKind = 'repo_plugin_installer' | 'opl_generated_plugin_surface';
+export type SkillPackDistributionRole = 'domain_agent_plugin_pack' | 'framework_capability_plugin_pack';
 
 export type SkillPackSpec = {
-  domain_id: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge';
-  module_id: 'MEDAUTOSCIENCE' | 'MEDAUTOGRANT' | 'REDCUBE' | 'OPLMETAAGENT' | 'OPLBOOKFORGE';
+  domain_id: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge' | 'scholarskills';
+  module_id: 'MEDAUTOSCIENCE' | 'MEDAUTOGRANT' | 'REDCUBE' | 'OPLMETAAGENT' | 'OPLBOOKFORGE' | 'SCHOLARSKILLS';
   project: string;
   label: string;
   plugin_name: string;
-  canonical_plugin_name: 'mas' | 'mag' | 'rca' | 'opl-meta-agent' | 'opl-bookforge';
+  canonical_plugin_name: 'mas' | 'mag' | 'rca' | 'opl-meta-agent' | 'opl-bookforge' | 'opl-scholarskills';
   source_kind: SkillPackSourceKind;
+  distribution_role: SkillPackDistributionRole;
   installer_kind: SkillPackInstallerKind;
   installer_relative_paths: string[];
 };
@@ -23,10 +25,12 @@ export type InspectFamilySkillPack = {
   label: string;
   plugin_name: string;
   canonical_plugin_name: string;
+  distribution_role: SkillPackDistributionRole;
   foundry_agent_series: Record<string, unknown>;
   command_surface_spine: Record<string, unknown>;
   mcp_projection: Record<string, unknown>;
   legacy_implementation_bucket_policy: Record<string, unknown>;
+  capability_plugin_distribution: Record<string, unknown> | null;
   plugin_source_path: string;
   repo_root: string;
   repo_found: boolean;
@@ -63,6 +67,7 @@ export const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
     plugin_name: 'med-autoscience',
     canonical_plugin_name: 'mas',
     source_kind: 'repo_plugin_installer',
+    distribution_role: 'domain_agent_plugin_pack',
     installer_kind: 'bash',
     installer_relative_paths: [path.join('scripts', 'install-codex-plugin.sh')],
   },
@@ -74,6 +79,7 @@ export const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
     plugin_name: 'med-autogrant',
     canonical_plugin_name: 'mag',
     source_kind: 'repo_plugin_installer',
+    distribution_role: 'domain_agent_plugin_pack',
     installer_kind: 'bash',
     installer_relative_paths: [path.join('scripts', 'install-codex-plugin.sh')],
   },
@@ -85,6 +91,7 @@ export const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
     plugin_name: 'redcube-ai',
     canonical_plugin_name: 'rca',
     source_kind: 'repo_plugin_installer',
+    distribution_role: 'domain_agent_plugin_pack',
     installer_kind: 'node',
     installer_relative_paths: [
       path.join('scripts', 'install-codex-plugin.ts'),
@@ -99,6 +106,7 @@ export const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
     plugin_name: 'opl-meta-agent',
     canonical_plugin_name: 'opl-meta-agent',
     source_kind: 'opl_generated_plugin_surface',
+    distribution_role: 'domain_agent_plugin_pack',
     installer_kind: 'node',
     installer_relative_paths: [],
   },
@@ -110,6 +118,19 @@ export const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
     plugin_name: 'opl-bookforge',
     canonical_plugin_name: 'opl-bookforge',
     source_kind: 'opl_generated_plugin_surface',
+    distribution_role: 'domain_agent_plugin_pack',
+    installer_kind: 'node',
+    installer_relative_paths: [],
+  },
+  {
+    domain_id: 'scholarskills',
+    module_id: 'SCHOLARSKILLS',
+    project: 'one-person-lab',
+    label: 'OPL ScholarSkills',
+    plugin_name: 'opl-scholarskills',
+    canonical_plugin_name: 'opl-scholarskills',
+    source_kind: 'repo_plugin_installer',
+    distribution_role: 'framework_capability_plugin_pack',
     installer_kind: 'node',
     installer_relative_paths: [],
   },
@@ -139,6 +160,11 @@ const DOMAIN_ALIAS_MAP = new Map<string, SkillPackSpec['domain_id']>([
   ['oplbookforge', 'oplbookforge'],
   ['opl-bookforge', 'oplbookforge'],
   ['opl_bookforge', 'oplbookforge'],
+  ['scholarskills', 'scholarskills'],
+  ['scholar-skills', 'scholarskills'],
+  ['scholar_skills', 'scholarskills'],
+  ['opl-scholarskills', 'scholarskills'],
+  ['opl_scholarskills', 'scholarskills'],
 ]);
 
 export function normalizeDomainSelection(domains: string[] | undefined) {

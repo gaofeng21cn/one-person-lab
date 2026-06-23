@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { developerModePrefersLocalCheckouts } from '../developer-mode-source-policy.ts';
 import { resolveDefaultFamilyWorkspaceRoot } from '../family-workspace-root.ts';
@@ -50,6 +51,10 @@ export function resolveGeneratedPluginRootForName(canonicalPluginName: string, h
 }
 
 export function resolveRepoRoot(spec: SkillPackSpec) {
+  if (spec.domain_id === 'scholarskills') {
+    return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+  }
+
   const envKey = `OPL_${spec.domain_id.toUpperCase()}_REPO_ROOT`;
   const envValue = normalizeOptionalString(process.env[envKey]);
   if (envValue) {
