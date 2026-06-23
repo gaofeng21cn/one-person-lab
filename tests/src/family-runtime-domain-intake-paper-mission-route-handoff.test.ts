@@ -68,25 +68,235 @@ function readyHandoff(overrides: Record<string, unknown> = {}) {
   };
 }
 
-test('MAS paper mission route handoff accepts ready command as runtime intake without runtime writes', () => {
+function materializedReadback(overrides: Record<string, unknown> = {}) {
+  const studyId = '002-dm-china-us-mortality-attribution';
+  const missionId = `paper-mission::${studyId}::gate_clearing_claim_evidence_repair::one-shot-migration`;
+  const transactionRef = `paper-mission-transaction::${studyId}::gate_clearing_claim_evidence_repair::${missionId}`;
+  return {
+    surface_kind: 'paper_mission_materialized_readback',
+    schema_version: 1,
+    source: 'paper_mission_default_tasks',
+    study_id: studyId,
+    mission_id: missionId,
+    materialized_mission_ref: 'ops/medautoscience/paper_mission_one_shot_migration/dm002/paper_mission_run.json',
+    candidate_manifest_ref: 'ops/medautoscience/paper_mission_one_shot_migration/dm002/candidate_manifest.json',
+    transaction_state: 'accepted',
+    stage_terminal_decision: {
+      decision_kind: 'advance',
+      status: 'accepted',
+      reason: 'accepted',
+      next_owner: 'analysis-campaign',
+      next_stage_id: 'publication_gate_replay',
+      accepted_result: 'accepted_candidate',
+    },
+    opl_route_command: {
+      command_kind: 'start_next_stage',
+      target: 'publication_gate_replay',
+      reason: 'accepted',
+      source_terminal_decision_ref: `${transactionRef}#stage_terminal_decision`,
+      stage_run_ref: 'opl-stage-run://paper-mission-materialized/dm002/gate-clearing',
+      runtime_owner: 'one-person-lab',
+    },
+    opl_runtime_carrier: {
+      surface_kind: 'mas_domain_progress_transition_request',
+      paper_mission_transaction_ref: transactionRef,
+      stage_terminal_decision_ref: `${transactionRef}#stage_terminal_decision`,
+      opl_route_command_ref: `${transactionRef}#opl_route_command`,
+      study_id: studyId,
+      work_unit_id: 'gate_clearing_claim_evidence_repair',
+      work_unit_fingerprint: `${missionId}::gate_clearing_claim_evidence_repair::advance::accepted`,
+      route_identity_key: `${transactionRef}::route`,
+      attempt_idempotency_key: `${studyId}::gate_clearing_claim_evidence_repair::accepted_candidate::opl-attempt`,
+      opl_route_command: {
+        command_kind: 'start_next_stage',
+        target: 'publication_gate_replay',
+        reason: 'accepted',
+        source_terminal_decision_ref: `${transactionRef}#stage_terminal_decision`,
+        runtime_owner: 'one-person-lab',
+      },
+      authority_boundary: {
+        mas_can_create_opl_outbox_record: false,
+        mas_can_create_opl_event: false,
+        mas_can_create_opl_stage_run: false,
+        mas_can_authorize_provider_admission: false,
+        mas_can_mark_provider_attempt_running: false,
+        provider_completion_is_domain_completion: false,
+      },
+      can_claim_provider_running: false,
+      can_claim_paper_progress: false,
+      can_claim_runtime_ready: false,
+      can_write_opl_outbox: false,
+      can_write_opl_event: false,
+      can_write_opl_stage_run: false,
+      can_write_provider_attempt: false,
+    },
+    paper_mission_transaction: {
+      transaction_id: transactionRef,
+      authority_boundary: {
+        mas_authority_owner: 'MedAutoScience',
+        runtime_owner: 'one-person-lab',
+        writes_authority_surface: false,
+        writes_publication_eval: false,
+        writes_controller_decision: false,
+        writes_owner_receipt: false,
+        writes_typed_blocker: false,
+        writes_human_gate: false,
+        writes_current_package: false,
+        writes_runtime_queue: false,
+        writes_provider_attempt: false,
+        writes_yang_authority: false,
+      },
+    },
+    ...overrides,
+  };
+}
+
+test('MAS paper mission route handoff accepts ready command as OPL runtime request without StageRun or provider claims', () => {
   const readback = intakeMasPaperMissionRouteHandoff(readyHandoff());
 
   assert.equal(readback.surface_kind, 'opl_mas_paper_mission_route_handoff_intake_readback');
   assert.equal(readback.status, 'accepted_for_runtime_intake');
   assert.equal(readback.command_kind, 'start_next_stage');
   assert.equal(readback.can_submit_to_opl_runtime, true);
+  assert.equal(readback.runtime_start_requested, false);
   assert.equal(readback.writes_opl_outbox, false);
+  assert.equal(readback.writes_opl_event, false);
   assert.equal(readback.writes_opl_stage_run, false);
+  assert.equal(readback.can_claim_runtime_enqueued, false);
   assert.equal(readback.can_claim_stage_run_created, false);
   assert.equal(readback.can_claim_provider_running, false);
   assert.equal(readback.can_claim_paper_progress, false);
   assert.equal(readback.can_claim_runtime_ready, false);
-  assert.equal(readback.runtime_start_requested, false);
   assert.equal(readback.accepted_command_packet.surface_kind, 'mas_paper_mission_opl_route_command_packet');
   assert.equal(readback.accepted_command_packet.command_kind, 'start_next_stage');
   assert.equal(readback.accepted_command_packet.route_command_materialized, true);
   assert.equal(readback.accepted_command_packet.writes_opl_outbox, false);
+  assert.equal(readback.runtime_request_input?.taskKind, 'paper_mission/stage-route');
+  assert.equal(
+    readback.runtime_request_input?.dedupeKey,
+    'paper-mission-route:001-paper:paper-mission-transaction:001-paper:1:start_next_stage',
+  );
+  assert.equal(readback.runtime_request_input?.payload.study_id, '001-paper');
+  assert.equal(readback.runtime_request_input?.payload.command_kind, 'start_next_stage');
+  const requestAuthority = readback.runtime_request_input?.payload.authority_boundary as Record<string, unknown>;
+  assert.equal(requestAuthority.can_claim_opl_runtime_enqueued, false);
+  assert.equal(requestAuthority.can_claim_provider_running, false);
+  assert.equal(requestAuthority.can_claim_paper_progress, false);
   assert.deepEqual(readback.blockers, []);
+});
+
+test('MAS paper mission materialized readback is normalized into OPL runtime request', () => {
+  const readback = intakeMasPaperMissionRouteHandoff(materializedReadback(), {
+    source: 'profile-export',
+  });
+
+  assert.equal(readback.source_surface_kind, 'paper_mission_materialized_readback');
+  assert.equal(readback.status, 'accepted_for_runtime_intake');
+  assert.equal(readback.study_id, '002-dm-china-us-mortality-attribution');
+  assert.equal(readback.command_kind, 'start_next_stage');
+  assert.equal(readback.route_target, 'publication_gate_replay');
+  assert.equal(readback.runtime_start_requested, false);
+  assert.equal(readback.writes_opl_stage_run, false);
+  assert.equal(readback.can_claim_runtime_enqueued, false);
+  assert.equal(readback.can_claim_provider_running, false);
+  assert.equal(readback.can_claim_paper_progress, false);
+  assert.equal(readback.runtime_request_input?.source, 'profile-export');
+  assert.equal(readback.runtime_request_input?.taskKind, 'paper_mission/stage-route');
+  assert.equal(
+    readback.runtime_request_input?.dedupeKey,
+    [
+      'paper-mission-route',
+      '002-dm-china-us-mortality-attribution',
+      'paper-mission-transaction::002-dm-china-us-mortality-attribution::gate_clearing_claim_evidence_repair::paper-mission::002-dm-china-us-mortality-attribution::gate_clearing_claim_evidence_repair::one-shot-migration',
+      'start_next_stage',
+    ].join(':'),
+  );
+  const requestPayload = readback.runtime_request_input?.payload as Record<string, unknown>;
+  const sourceHandoff = requestPayload.opl_route_handoff_record as Record<string, unknown>;
+  const stageRunRequest = requestPayload.stage_run_request as Record<string, unknown>;
+  assert.equal(sourceHandoff.source_surface_kind, 'paper_mission_materialized_readback');
+  assert.equal(stageRunRequest.stage_run_created, false);
+  assert.equal(stageRunRequest.provider_attempt_requested, false);
+  assert.deepEqual(readback.blockers, []);
+});
+
+test('MAS paper mission materialized readback keeps typed blocker out of runtime queue', () => {
+  const readback = intakeMasPaperMissionRouteHandoff(materializedReadback({
+    study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+    transaction_state: 'typed_blocker',
+    stage_terminal_decision: {
+      decision_kind: 'typed_blocker',
+      status: 'typed_blocker',
+      reason: 'typed_blocker',
+      next_owner: 'one-person-lab',
+      blocker_id: 'current_owner_route_superseded_by_existing_typed_blocker',
+      unblock_condition: 'MAS authority kernel consumes this mission candidate',
+    },
+    opl_route_command: {
+      command_kind: 'stop_with_typed_blocker',
+      target: 'current_owner_route_superseded_by_existing_typed_blocker',
+      reason: 'typed_blocker',
+      source_terminal_decision_ref: 'paper-mission-transaction::dm003#stage_terminal_decision',
+      runtime_owner: 'one-person-lab',
+    },
+    opl_runtime_carrier: {
+      surface_kind: 'mas_domain_progress_transition_request',
+      paper_mission_transaction_ref: 'paper-mission-transaction::dm003',
+      stage_terminal_decision_ref: 'paper-mission-transaction::dm003#stage_terminal_decision',
+      opl_route_command_ref: 'paper-mission-transaction::dm003#opl_route_command',
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      opl_route_command: {
+        command_kind: 'stop_with_typed_blocker',
+        target: 'current_owner_route_superseded_by_existing_typed_blocker',
+        reason: 'typed_blocker',
+        source_terminal_decision_ref: 'paper-mission-transaction::dm003#stage_terminal_decision',
+        runtime_owner: 'one-person-lab',
+      },
+      authority_boundary: {
+        mas_can_create_opl_outbox_record: false,
+        mas_can_create_opl_event: false,
+        mas_can_create_opl_stage_run: false,
+        mas_can_authorize_provider_admission: false,
+        mas_can_mark_provider_attempt_running: false,
+        provider_completion_is_domain_completion: false,
+      },
+      can_claim_provider_running: false,
+      can_claim_paper_progress: false,
+      can_claim_runtime_ready: false,
+      can_write_opl_outbox: false,
+      can_write_opl_event: false,
+      can_write_opl_stage_run: false,
+      can_write_provider_attempt: false,
+    },
+  }));
+
+  assert.equal(readback.source_surface_kind, 'paper_mission_materialized_readback');
+  assert.equal(readback.status, 'typed_wait');
+  assert.equal(readback.wait_kind, 'typed_blocker_authority');
+  assert.equal(readback.runtime_request_input, null);
+  assert.equal(readback.runtime_start_requested, false);
+  assert.equal(readback.can_claim_paper_progress, false);
+});
+
+test('MAS paper mission materialized readback fails closed without authority boundary', () => {
+  const payload = materializedReadback({
+    opl_runtime_carrier: {
+      surface_kind: 'mas_domain_progress_transition_request',
+      paper_mission_transaction_ref: 'paper-mission-transaction::dm002',
+      opl_route_command: {
+        command_kind: 'start_next_stage',
+        target: 'publication_gate_replay',
+      },
+    },
+    paper_mission_transaction: {
+      transaction_id: 'paper-mission-transaction::dm002',
+    },
+  });
+  const readback = intakeMasPaperMissionRouteHandoff(payload);
+
+  assert.equal(readback.status, 'rejected');
+  assert.equal(readback.blockers[0].reason, 'missing_authority_boundary');
+  assert.equal(readback.runtime_request_input, null);
 });
 
 test('MAS paper mission route handoff emits typed waits for blocker human gate and mission complete outcomes', () => {

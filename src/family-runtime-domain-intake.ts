@@ -31,6 +31,7 @@ import {
   publishExistingCurrentControlProviderAdmissionReadbacks,
   publishCurrentControlProviderAdmissionReadback,
 } from './family-runtime-domain-intake-parts/current-control-provider-admission.ts';
+import { currentControlStatePath } from './family-runtime-domain-intake-parts/current-control-provider-admission/shared.ts';
 import {
   consumePaperAutonomySupervisorDecisionRequests,
 } from './family-runtime-domain-intake-parts/paper-autonomy-supervisor-decision.ts';
@@ -345,11 +346,27 @@ function exportedTaskInputs(
 ) {
   const pendingOutput = pendingTaskInputOutput(domainId, output);
   const pending = toPendingTaskInputs(domainId, pendingOutput.output, source, exportContext);
-  const currentControlRaw = currentControlProviderAdmissionInputs(domainId, output, exportContext, pending.inputs);
-  const currentControlInputs = reconcileCurrentControlExecutableOwners(
-    currentControlRaw.inputs,
-    pending.inputs,
+  const paperMissionDefaultQueuePresent = domainId === 'medautoscience'
+    && isPaperMissionDefaultTaskQueuePresent(output);
+  const currentControlSuppressedRef = paperMissionDefaultQueuePresent
+    ? currentControlStatePath(output)
+    : null;
+  const currentControlWouldRun = Boolean(
+    currentControlSuppressedRef && fs.existsSync(currentControlSuppressedRef),
   );
+  const currentControlRaw = paperMissionDefaultQueuePresent
+    ? {
+        inputs: [],
+        blocked: [],
+        current_control_readback_publications: [],
+      }
+    : currentControlProviderAdmissionInputs(domainId, output, exportContext, pending.inputs);
+  const currentControlInputs = paperMissionDefaultQueuePresent
+    ? []
+    : reconcileCurrentControlExecutableOwners(
+        currentControlRaw.inputs,
+        pending.inputs,
+      );
   const pendingAfterCurrentControl = suppressStaleDefaultExecutorInputs(
     pending.inputs,
     currentControlInputs,
@@ -357,15 +374,23 @@ function exportedTaskInputs(
   );
   const transitions = transitionTaskInputsFromMatrix(domainId, output, source);
   const paperMissionRouteHandoff = domainId === 'medautoscience'
-    ? intakeMasPaperMissionRouteHandoffsFromExport(output)
+    ? intakeMasPaperMissionRouteHandoffsFromExport(output, { source })
     : null;
+  const paperMissionRouteInputs = paperMissionRouteHandoff?.readbacks
+    .map((readback) => readback.runtime_request_input)
+    .filter((input): input is NonNullable<typeof input> => input !== null) ?? [];
   const paperMissionRouteHandoffBlocked = paperMissionRouteHandoff?.readbacks
     .filter((readback) => readback.status === 'rejected')
     .map((readback) => ({
       reason: 'paper_mission_route_handoff_rejected',
       task: readback,
     })) ?? [];
-  const exportedInputs = [...currentControlInputs, ...pendingAfterCurrentControl.inputs, ...transitions.inputs];
+  const exportedInputs = [
+    ...paperMissionRouteInputs,
+    ...currentControlInputs,
+    ...pendingAfterCurrentControl.inputs,
+    ...transitions.inputs,
+  ];
   const inputs = exportedInputs.filter((taskInput) => taskInputMatchesScope(taskInput, taskScope));
   const blocked = [
     ...currentControlRaw.blocked,
@@ -380,8 +405,13 @@ function exportedTaskInputs(
     current_control_readback_publications: currentControlRaw.current_control_readback_publications,
     paper_mission_route_handoff_intake: paperMissionRouteHandoff,
     paper_mission_legacy_pending_suppressed_count: pendingOutput.suppressedCount,
+    paper_mission_current_control_suppressed_count:
+      currentControlWouldRun ? 1 : 0,
     filtered_count: exportedInputs.length - inputs.length,
-    suppressed_count: pendingAfterCurrentControl.suppressed_count + pendingOutput.suppressedCount,
+    suppressed_count:
+      pendingAfterCurrentControl.suppressed_count
+      + pendingOutput.suppressedCount
+      + (currentControlWouldRun ? 1 : 0),
   };
 }
 
@@ -478,6 +508,7 @@ export function hydrateDomainTasks(
       current_control_readback_publications,
       paper_mission_route_handoff_intake,
       paper_mission_legacy_pending_suppressed_count,
+      paper_mission_current_control_suppressed_count,
       filtered_count,
       suppressed_count,
     } = exportedTaskInputs(
@@ -570,6 +601,7 @@ export function hydrateDomainTasks(
               paper_mission_route_handoff_intake.readbacks
                 .filter((readback) => readback.status === 'accepted_for_runtime_intake').length,
             paper_mission_legacy_pending_suppressed_count,
+            paper_mission_current_control_suppressed_count,
           }
         : {}),
       blocked: [...blocked, ...supervisorDecisionRequests.blocked],

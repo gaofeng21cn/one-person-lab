@@ -19,6 +19,13 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 品牌模块归位：`OPL Charter` 固定 no-second-truth 边界；`OPL Runway` 承载 runtime envelope；`OPL Pack` / `OPL Connect` 承载 generated/hosted descriptors；`OPL Console` 投影 `current_owner_delta` 和 mission refs；`OPL Vault` 仅保存 refs-only evidence。
 - 旧 DHD、owner-route、default-executor dispatch、PaperRecovery 或 MAS legacy blocker 在 OPL 文档中只能出现为 diagnostic、migration、provenance、ABI carrier 或 non-degradation evidence，不得作为普通用户默认 paper mission route。
 
+后续决策：
+
+- 2026-06-24：MAS 默认 `paper_mission_default_tasks[].payload.paper_mission` 中的 `paper_mission_materialized_readback`，以及旧 consumption ledger 的显式 `opl_route_handoff`，由 OPL `family-runtime intake` 转成 OPL-owned `paper_mission/stage-route` queue task。该 queue task 是 runtime request / outbox evidence，不是 MAS paper-progress truth。direct handoff parser 只生成可入队 input，不直接声明 enqueue；真实 enqueue 只由 `hydrateDomainTasks -> enqueueTask` 的 queue row / event readback 证明。
+- `stop_with_typed_blocker`、`wait_for_human` 和 `complete_mission` 不进入 OPL runtime queue；它们保持 owner wait / terminal no-runtime，避免 OPL 越权创建 MAS typed blocker、human gate、owner receipt 或 publication verdict。
+- 任何 `paper_mission/stage-route` queue readback 都必须保持 `writes_opl_stage_run=false`、`writes_provider_attempt=false`、`can_claim_stage_run_created=false`、`can_claim_provider_running=false`、`can_claim_paper_progress=false` 和 `can_claim_runtime_ready=false`，直到后续独立 OPL StageRun / provider attempt / MAS authority receipt 提供新鲜证据。
+- 当 MAS export 已存在 `paper_mission_default_tasks`，旧 current-control transition carrier 只保留为 diagnostic / migration input，不再作为默认 `domain_owner/default-executor-dispatch` 派生源；OPL readback 用 `paper_mission_current_control_suppressed_count` 记录该 suppression，避免 PaperMission terminal decision 与旧 dispatch path 双重消费。
+
 ## 2026-06-20
 
 ### 决策：OKF 只作为 OPL context bundle / interchange layer
