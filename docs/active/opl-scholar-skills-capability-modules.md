@@ -48,7 +48,16 @@ opl runtime env prepare --domain scholarskills --profile <profile> --platform <p
 opl runtime env run-context --domain scholarskills --profile <profile> --json
 ```
 
-`cache hit`、`run-context exists`、`descriptor exists` 或 `doctor pass` 只能证明 OPL substrate 的结构/读面成立，不能声明 domain ready、runtime ready、quality verdict、artifact authority、owner receipt、typed blocker 或 production ready。
+ScholarSkills 自身提供的 bridge 命令只构建 deterministic refs-only envelope，不调用 renderer，不安装依赖，不写 runtime state，不写 artifact body，不签 owner receipt，也不声明 cache hit：
+
+```bash
+opl scholar-skills prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> --json
+opl scholar-skills run-context --module <module_id> --profile <profile> --json
+opl scholar-skills invoke --module <module_id> --input-ref <ref> --artifact-root <ref> --json
+opl scholar-skills receipt --module <module_id> --input-ref <ref> --artifact-root <ref> --json
+```
+
+`prepared_ref_envelope`、`run_context_ref_envelope`、`invocation_ref_envelope`、`receipt_candidate_unsigned`、`cache hit`、`run-context exists`、`descriptor exists` 或 `doctor pass` 只能证明 OPL substrate 的结构/读面成立，不能声明 domain ready、runtime ready、quality verdict、artifact authority、owner receipt、typed blocker 或 production ready。
 
 ## MAS 消费边界
 
@@ -73,6 +82,10 @@ MAS current_owner_delta
 ```bash
 opl scholar-skills list --json
 opl scholar-skills inspect --module opl.scholarskills.display --json
+opl scholar-skills prepare --module opl.scholarskills.display --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --json
+opl scholar-skills run-context --module opl.scholarskills.display --profile display --json
+opl scholar-skills invoke --module opl.scholarskills.display --input-ref mas:current_owner_delta/display-intent --artifact-root artifact-root:display-pack-candidates --json
+opl scholar-skills receipt --module opl.scholarskills.display --input-ref mas:current_owner_delta/display-intent --artifact-root artifact-root:display-pack-candidates --json
 opl scholar-skills interfaces --json
 opl scholar-skills validate --json
 opl scholar-skills doctor --json

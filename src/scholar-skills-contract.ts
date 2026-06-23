@@ -41,6 +41,16 @@ const SCHOLAR_SKILL_AUTHORITY_FIELDS = [
   'can_replace_ai_executor_planning',
 ] as const satisfies readonly (keyof ScholarSkillAuthorityBoundary)[];
 
+const RUNTIME_BRIDGE_ENVELOPE_POLICY_FALSE_FIELDS = [
+  'prepared',
+  'can_claim_cache_hit',
+  'can_write_runtime_state',
+  'can_claim_runtime_ready',
+  'can_mutate_artifact_body',
+  'can_sign_owner_receipt',
+  'can_create_typed_blocker',
+] as const;
+
 function expectFalse(value: unknown, field: string, filePath: string) {
   if (value !== false) {
     throw new FrameworkContractError('contract_shape_invalid', `${field} must be false.`, {
@@ -70,6 +80,76 @@ function expectNonEmptyStringArray(value: unknown, field: string, filePath: stri
     });
   }
   return items;
+}
+
+function expectOptionalNonEmptyStringArray(value: unknown, field: string, filePath: string) {
+  if (value === undefined) {
+    return undefined;
+  }
+  return expectNonEmptyStringArray(value, field, filePath);
+}
+
+function validateRuntimeBridgeEnvelopePolicy(filePath: string, value: unknown) {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!isRecord(value)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'runtime_environment_bridge.bridge_envelope_policy must be an object.', {
+      file: filePath,
+      field: 'runtime_environment_bridge.bridge_envelope_policy',
+    });
+  }
+  const policy = {
+    refs_only: expectBooleanLiteralTrue(
+      value.refs_only,
+      'runtime_environment_bridge.bridge_envelope_policy.refs_only',
+      filePath,
+    ),
+    prepared: expectFalse(
+      value.prepared,
+      'runtime_environment_bridge.bridge_envelope_policy.prepared',
+      filePath,
+    ),
+    can_claim_cache_hit: expectFalse(
+      value.can_claim_cache_hit,
+      'runtime_environment_bridge.bridge_envelope_policy.can_claim_cache_hit',
+      filePath,
+    ),
+    can_write_runtime_state: expectFalse(
+      value.can_write_runtime_state,
+      'runtime_environment_bridge.bridge_envelope_policy.can_write_runtime_state',
+      filePath,
+    ),
+    can_claim_runtime_ready: expectFalse(
+      value.can_claim_runtime_ready,
+      'runtime_environment_bridge.bridge_envelope_policy.can_claim_runtime_ready',
+      filePath,
+    ),
+    can_mutate_artifact_body: expectFalse(
+      value.can_mutate_artifact_body,
+      'runtime_environment_bridge.bridge_envelope_policy.can_mutate_artifact_body',
+      filePath,
+    ),
+    can_sign_owner_receipt: expectFalse(
+      value.can_sign_owner_receipt,
+      'runtime_environment_bridge.bridge_envelope_policy.can_sign_owner_receipt',
+      filePath,
+    ),
+    can_create_typed_blocker: expectFalse(
+      value.can_create_typed_blocker,
+      'runtime_environment_bridge.bridge_envelope_policy.can_create_typed_blocker',
+      filePath,
+    ),
+  };
+  for (const field of RUNTIME_BRIDGE_ENVELOPE_POLICY_FALSE_FIELDS) {
+    if (policy[field] !== false) {
+      throw new FrameworkContractError('contract_shape_invalid', `${field} must be false.`, {
+        file: filePath,
+        field: `runtime_environment_bridge.bridge_envelope_policy.${field}`,
+      });
+    }
+  }
+  return policy;
 }
 
 function expectScholarSkillModuleId(value: unknown, field: string, filePath: string): ScholarSkillModuleId {
@@ -310,6 +390,30 @@ export function validateScholarSkillsCapabilityModules(
         bridge.run_context_owner_commands,
         'runtime_environment_bridge.run_context_owner_commands',
         filePath,
+      ),
+      scholar_skill_prepare_commands: expectOptionalNonEmptyStringArray(
+        bridge.scholar_skill_prepare_commands,
+        'runtime_environment_bridge.scholar_skill_prepare_commands',
+        filePath,
+      ),
+      scholar_skill_run_context_commands: expectOptionalNonEmptyStringArray(
+        bridge.scholar_skill_run_context_commands,
+        'runtime_environment_bridge.scholar_skill_run_context_commands',
+        filePath,
+      ),
+      scholar_skill_invocation_commands: expectOptionalNonEmptyStringArray(
+        bridge.scholar_skill_invocation_commands,
+        'runtime_environment_bridge.scholar_skill_invocation_commands',
+        filePath,
+      ),
+      scholar_skill_receipt_commands: expectOptionalNonEmptyStringArray(
+        bridge.scholar_skill_receipt_commands,
+        'runtime_environment_bridge.scholar_skill_receipt_commands',
+        filePath,
+      ),
+      bridge_envelope_policy: validateRuntimeBridgeEnvelopePolicy(
+        filePath,
+        bridge.bridge_envelope_policy,
       ),
       can_write_runtime_state: expectFalse(
         bridge.can_write_runtime_state,

@@ -48,6 +48,17 @@ export interface ScholarSkillQualityEvidence {
   can_claim_quality_verdict: false;
 }
 
+export interface ScholarSkillRuntimeBridgeEnvelopePolicy {
+  refs_only: true;
+  prepared: false;
+  can_claim_cache_hit: false;
+  can_write_runtime_state: false;
+  can_claim_runtime_ready: false;
+  can_mutate_artifact_body: false;
+  can_sign_owner_receipt: false;
+  can_create_typed_blocker: false;
+}
+
 export interface ScholarSkillCapabilityModuleDescriptor {
   module_id: ScholarSkillModuleId;
   brand_family: 'OPL ScholarSkills';
@@ -83,6 +94,11 @@ export interface ScholarSkillsCapabilityModulesContract {
     owner: 'OPL Framework';
     dependency_profile_owner_commands: string[];
     run_context_owner_commands: string[];
+    scholar_skill_prepare_commands?: string[];
+    scholar_skill_run_context_commands?: string[];
+    scholar_skill_invocation_commands?: string[];
+    scholar_skill_receipt_commands?: string[];
+    bridge_envelope_policy?: ScholarSkillRuntimeBridgeEnvelopePolicy;
     can_write_runtime_state: false;
     can_claim_runtime_ready: false;
     can_claim_domain_ready: false;

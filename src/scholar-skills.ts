@@ -13,6 +13,25 @@ type ValidationCheck = {
   detail: string;
 };
 
+type PrepareInput = {
+  moduleId: string;
+  profile: string;
+  platform: string;
+  requirementProfile: string;
+  paperRoot: string;
+};
+
+type RunContextInput = {
+  moduleId: string;
+  profile: string;
+};
+
+type InvocationInput = {
+  moduleId: string;
+  inputRef: string;
+  artifactRoot: string;
+};
+
 const AUTHORITY_FALSE_FIELDS = [
   'can_claim_domain_ready',
   'can_claim_quality_verdict',
@@ -51,6 +70,10 @@ function moduleSummary(module: ScholarSkillCapabilityModuleDescriptor) {
   };
 }
 
+function moduleContractRef(module: ScholarSkillCapabilityModuleDescriptor) {
+  return `contracts/opl-framework/scholar-skills-capability-modules.json#modules.${module.module_id}`;
+}
+
 function findModuleOrThrow(
   modules: ScholarSkillCapabilityModuleDescriptor[],
   moduleId: string,
@@ -72,6 +95,57 @@ function authorityBoundaryViolations(
   return AUTHORITY_FALSE_FIELDS
     .filter((field) => boundary[field] !== false)
     .map((field) => `${prefix}.${field}`);
+}
+
+function runtimePrepareCommand(input: PrepareInput) {
+  return [
+    'opl runtime env prepare',
+    '--domain scholarskills',
+    `--profile ${input.profile}`,
+    `--platform ${input.platform}`,
+    `--requirement-profile ${input.requirementProfile}`,
+    `--paper-root ${input.paperRoot}`,
+    '--json',
+  ].join(' ');
+}
+
+function runtimeRunContextCommand(input: RunContextInput) {
+  return `opl runtime env run-context --domain scholarskills --profile ${input.profile} --json`;
+}
+
+function buildArtifactCandidateRefs(
+  module: ScholarSkillCapabilityModuleDescriptor,
+  artifactRoot: string,
+) {
+  return module.artifact_refs.map((entry) => ({
+    ...entry,
+    ref: `${artifactRoot}/${entry.ref_id}`,
+    materialization_status: 'expected_ref_only',
+    body_written: false,
+    can_mutate_artifact_body: module.authority_boundary.can_mutate_artifact_body,
+  }));
+}
+
+function buildExecutionReceiptCandidate(
+  module: ScholarSkillCapabilityModuleDescriptor,
+  input: InvocationInput,
+) {
+  return {
+    surface_kind: 'opl_scholarskills_execution_receipt_candidate',
+    status: 'receipt_candidate_unsigned',
+    module_id: module.module_id,
+    input_ref: input.inputRef,
+    artifact_root_ref: input.artifactRoot,
+    descriptor_ref: moduleContractRef(module),
+    accepted_receipt_refs: module.receipt_policy.accepted_receipt_refs,
+    receipt_body_policy: module.receipt_policy.receipt_body_policy,
+    can_sign_owner_receipt: module.receipt_policy.can_sign_owner_receipt,
+    can_create_typed_blocker: module.authority_boundary.can_create_typed_blocker,
+    can_claim_quality_verdict: module.quality_evidence.can_claim_quality_verdict,
+    can_claim_artifact_authority: module.authority_boundary.can_claim_artifact_authority,
+    candidate_policy: 'refs_only_unsigned_candidate_requires_domain_owner_consumption',
+    authority_boundary: module.authority_boundary,
+  };
 }
 
 function buildValidation(contractRoot: ScholarSkillsCapabilityModulesContract) {
@@ -133,6 +207,23 @@ function buildValidation(contractRoot: ScholarSkillsCapabilityModulesContract) {
         && contractRoot.runtime_environment_bridge.can_claim_runtime_ready === false
       ) ? 'pass' : 'fail',
       detail: 'Runtime environment bridge must stay refs-only and fail closed to OPL runtime env commands.',
+    },
+    {
+      check_id: 'runtime_bridge_envelope_policy_refs_only',
+      status: (
+        contractRoot.runtime_environment_bridge.bridge_envelope_policy === undefined
+        || (
+          contractRoot.runtime_environment_bridge.bridge_envelope_policy.refs_only === true
+          && contractRoot.runtime_environment_bridge.bridge_envelope_policy.prepared === false
+          && contractRoot.runtime_environment_bridge.bridge_envelope_policy.can_claim_cache_hit === false
+          && contractRoot.runtime_environment_bridge.bridge_envelope_policy.can_write_runtime_state === false
+          && contractRoot.runtime_environment_bridge.bridge_envelope_policy.can_claim_runtime_ready === false
+          && contractRoot.runtime_environment_bridge.bridge_envelope_policy.can_mutate_artifact_body === false
+          && contractRoot.runtime_environment_bridge.bridge_envelope_policy.can_sign_owner_receipt === false
+          && contractRoot.runtime_environment_bridge.bridge_envelope_policy.can_create_typed_blocker === false
+        )
+      ) ? 'pass' : 'fail',
+      detail: 'ScholarSkills bridge envelopes must remain deterministic refs-only candidates.',
     },
   ];
 
@@ -204,6 +295,18 @@ export function buildScholarSkillsInterfaces(contracts: FrameworkContracts) {
         commands: [
           'opl scholar-skills list --json',
           'opl scholar-skills inspect --module <module_id> --json',
+          ...(contractRoot.runtime_environment_bridge.scholar_skill_prepare_commands ?? [
+            'opl scholar-skills prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> --json',
+          ]),
+          ...(contractRoot.runtime_environment_bridge.scholar_skill_run_context_commands ?? [
+            'opl scholar-skills run-context --module <module_id> --profile <profile> --json',
+          ]),
+          ...(contractRoot.runtime_environment_bridge.scholar_skill_invocation_commands ?? [
+            'opl scholar-skills invoke --module <module_id> --input-ref <ref> --artifact-root <ref> --json',
+          ]),
+          ...(contractRoot.runtime_environment_bridge.scholar_skill_receipt_commands ?? [
+            'opl scholar-skills receipt --module <module_id> --input-ref <ref> --artifact-root <ref> --json',
+          ]),
           'opl scholar-skills interfaces --json',
           'opl scholar-skills validate --json',
           'opl scholar-skills doctor --json',
@@ -220,12 +323,127 @@ export function buildScholarSkillsInterfaces(contracts: FrameworkContracts) {
         commands: [
           ...contractRoot.runtime_environment_bridge.dependency_profile_owner_commands,
           ...contractRoot.runtime_environment_bridge.run_context_owner_commands,
+          ...(contractRoot.runtime_environment_bridge.scholar_skill_prepare_commands ?? []),
+          ...(contractRoot.runtime_environment_bridge.scholar_skill_run_context_commands ?? []),
+          ...(contractRoot.runtime_environment_bridge.scholar_skill_invocation_commands ?? []),
+          ...(contractRoot.runtime_environment_bridge.scholar_skill_receipt_commands ?? []),
         ],
+        bridge_envelope_policy: contractRoot.runtime_environment_bridge.bridge_envelope_policy,
         can_write_runtime_state: contractRoot.runtime_environment_bridge.can_write_runtime_state,
         can_claim_runtime_ready: contractRoot.runtime_environment_bridge.can_claim_runtime_ready,
         can_claim_domain_ready: contractRoot.runtime_environment_bridge.can_claim_domain_ready,
       },
       authority_boundary: contractRoot.authority_boundary,
+    },
+  };
+}
+
+export function buildScholarSkillsPrepareEnvelope(
+  contracts: FrameworkContracts,
+  input: PrepareInput,
+) {
+  const contractRoot = contract(contracts);
+  const module = findModuleOrThrow(contractRoot.modules, assertModuleId(input.moduleId));
+  return {
+    version: 'g2',
+    scholar_skills_prepare: {
+      surface_kind: 'opl_scholarskills_dependency_prepare_ref_envelope',
+      status: 'prepared_ref_envelope',
+      prepared: false,
+      module_id: module.module_id,
+      profile: input.profile,
+      platform: input.platform,
+      descriptor_ref: moduleContractRef(module),
+      dependency_profile_refs: module.dependency_profile_refs,
+      runtime_owner_command: runtimePrepareCommand(input),
+      inputs: {
+        requirement_profile_ref: input.requirementProfile,
+        paper_root_ref: input.paperRoot,
+      },
+      cache_policy: {
+        can_claim_cache_hit: false,
+        cache_hit_claimed: false,
+      },
+      writes: {
+        runtime_state_written: false,
+        paper_root_written: false,
+        artifact_body_written: false,
+        owner_receipt_signed: false,
+      },
+      can_write_runtime_state: contractRoot.runtime_environment_bridge.can_write_runtime_state,
+      can_claim_runtime_ready: contractRoot.runtime_environment_bridge.can_claim_runtime_ready,
+      can_claim_domain_ready: contractRoot.runtime_environment_bridge.can_claim_domain_ready,
+      authority_boundary: module.authority_boundary,
+    },
+  };
+}
+
+export function buildScholarSkillsRunContextEnvelope(
+  contracts: FrameworkContracts,
+  input: RunContextInput,
+) {
+  const contractRoot = contract(contracts);
+  const module = findModuleOrThrow(contractRoot.modules, assertModuleId(input.moduleId));
+  return {
+    version: 'g2',
+    scholar_skills_run_context: {
+      surface_kind: 'opl_scholarskills_run_context_ref_envelope',
+      status: 'run_context_ref_envelope',
+      module_id: module.module_id,
+      profile: input.profile,
+      descriptor_ref: moduleContractRef(module),
+      run_context_refs: module.run_context_refs,
+      runtime_owner_command: runtimeRunContextCommand(input),
+      can_write_runtime_state: contractRoot.runtime_environment_bridge.can_write_runtime_state,
+      can_claim_runtime_ready: contractRoot.runtime_environment_bridge.can_claim_runtime_ready,
+      can_claim_domain_ready: contractRoot.runtime_environment_bridge.can_claim_domain_ready,
+      can_schedule_runtime: module.authority_boundary.can_schedule_runtime,
+      authority_boundary: module.authority_boundary,
+    },
+  };
+}
+
+export function buildScholarSkillsReceiptCandidate(
+  contracts: FrameworkContracts,
+  input: InvocationInput,
+) {
+  const contractRoot = contract(contracts);
+  const module = findModuleOrThrow(contractRoot.modules, assertModuleId(input.moduleId));
+  return {
+    version: 'g2',
+    scholar_skills_receipt_candidate: buildExecutionReceiptCandidate(module, input),
+  };
+}
+
+export function buildScholarSkillsInvocationEnvelope(
+  contracts: FrameworkContracts,
+  input: InvocationInput,
+) {
+  const contractRoot = contract(contracts);
+  const module = findModuleOrThrow(contractRoot.modules, assertModuleId(input.moduleId));
+  return {
+    version: 'g2',
+    scholar_skills_invocation: {
+      surface_kind: 'opl_scholarskills_invocation_ref_envelope',
+      status: 'invocation_ref_envelope',
+      module_id: module.module_id,
+      input_ref: input.inputRef,
+      artifact_root_ref: input.artifactRoot,
+      descriptor_ref: moduleContractRef(module),
+      invocation_entries: module.invocation_entries,
+      expected_artifact_refs: buildArtifactCandidateRefs(module, input.artifactRoot),
+      execution_receipt_candidate: buildExecutionReceiptCandidate(module, input),
+      writes: {
+        artifact_body_written: false,
+        runtime_state_written: false,
+        owner_receipt_signed: false,
+        typed_blocker_created: false,
+      },
+      can_mutate_artifact_body: module.authority_boundary.can_mutate_artifact_body,
+      can_sign_owner_receipt: module.authority_boundary.can_sign_owner_receipt,
+      can_claim_artifact_authority: module.authority_boundary.can_claim_artifact_authority,
+      can_claim_quality_verdict: module.quality_evidence.can_claim_quality_verdict,
+      authority_boundary: module.authority_boundary,
     },
   };
 }

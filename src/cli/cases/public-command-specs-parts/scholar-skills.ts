@@ -2,7 +2,11 @@ import {
   buildScholarSkillModuleInspect,
   buildScholarSkillsCatalog,
   buildScholarSkillsDoctor,
+  buildScholarSkillsInvocationEnvelope,
   buildScholarSkillsInterfaces,
+  buildScholarSkillsPrepareEnvelope,
+  buildScholarSkillsReceiptCandidate,
+  buildScholarSkillsRunContextEnvelope,
   buildScholarSkillsValidation,
 } from '../../../scholar-skills.ts';
 import type { FrameworkContracts } from '../../../types.ts';
@@ -39,6 +43,146 @@ function parseInspectArgs(args: string[], spec: CommandSpec) {
   return { moduleId };
 }
 
+function expectOptionValue(
+  args: string[],
+  index: number,
+  option: string,
+  commandLabel: string,
+  spec: CommandSpec,
+) {
+  const value = args[index + 1];
+  if (!value) {
+    throw buildUsageError(`${commandLabel} requires a value for ${option}.`, spec, {
+      option,
+    });
+  }
+  return value;
+}
+
+function parsePrepareArgs(args: string[], spec: CommandSpec) {
+  const parsed: {
+    moduleId?: string;
+    profile?: string;
+    platform?: string;
+    requirementProfile?: string;
+    paperRoot?: string;
+  } = {};
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (token === '--json') {
+      continue;
+    }
+    if (token === '--module' || token === '--id') {
+      parsed.moduleId = expectOptionValue(args, index, token, 'scholar-skills prepare', spec);
+      index += 1;
+      continue;
+    }
+    if (token === '--profile') {
+      parsed.profile = expectOptionValue(args, index, token, 'scholar-skills prepare', spec);
+      index += 1;
+      continue;
+    }
+    if (token === '--platform') {
+      parsed.platform = expectOptionValue(args, index, token, 'scholar-skills prepare', spec);
+      index += 1;
+      continue;
+    }
+    if (token === '--requirement-profile') {
+      parsed.requirementProfile = expectOptionValue(args, index, token, 'scholar-skills prepare', spec);
+      index += 1;
+      continue;
+    }
+    if (token === '--paper-root') {
+      parsed.paperRoot = expectOptionValue(args, index, token, 'scholar-skills prepare', spec);
+      index += 1;
+      continue;
+    }
+    throw buildUsageError(`Unknown scholar-skills prepare option: ${token}.`, spec, {
+      option: token,
+    });
+  }
+  if (!parsed.moduleId || !parsed.profile || !parsed.platform || !parsed.requirementProfile || !parsed.paperRoot) {
+    throw buildUsageError(
+      'scholar-skills prepare requires --module, --profile, --platform, --requirement-profile, and --paper-root.',
+      spec,
+      { required: ['--module', '--profile', '--platform', '--requirement-profile', '--paper-root'] },
+    );
+  }
+  return {
+    moduleId: parsed.moduleId,
+    profile: parsed.profile,
+    platform: parsed.platform,
+    requirementProfile: parsed.requirementProfile,
+    paperRoot: parsed.paperRoot,
+  };
+}
+
+function parseRunContextArgs(args: string[], spec: CommandSpec) {
+  let moduleId: string | undefined;
+  let profile: string | undefined;
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (token === '--json') {
+      continue;
+    }
+    if (token === '--module' || token === '--id') {
+      moduleId = expectOptionValue(args, index, token, 'scholar-skills run-context', spec);
+      index += 1;
+      continue;
+    }
+    if (token === '--profile') {
+      profile = expectOptionValue(args, index, token, 'scholar-skills run-context', spec);
+      index += 1;
+      continue;
+    }
+    throw buildUsageError(`Unknown scholar-skills run-context option: ${token}.`, spec, {
+      option: token,
+    });
+  }
+  if (!moduleId || !profile) {
+    throw buildUsageError('scholar-skills run-context requires --module and --profile.', spec, {
+      required: ['--module', '--profile'],
+    });
+  }
+  return { moduleId, profile };
+}
+
+function parseInvocationArgs(args: string[], spec: CommandSpec, commandLabel: string) {
+  let moduleId: string | undefined;
+  let inputRef: string | undefined;
+  let artifactRoot: string | undefined;
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (token === '--json') {
+      continue;
+    }
+    if (token === '--module' || token === '--id') {
+      moduleId = expectOptionValue(args, index, token, commandLabel, spec);
+      index += 1;
+      continue;
+    }
+    if (token === '--input-ref') {
+      inputRef = expectOptionValue(args, index, token, commandLabel, spec);
+      index += 1;
+      continue;
+    }
+    if (token === '--artifact-root') {
+      artifactRoot = expectOptionValue(args, index, token, commandLabel, spec);
+      index += 1;
+      continue;
+    }
+    throw buildUsageError(`Unknown ${commandLabel} option: ${token}.`, spec, {
+      option: token,
+    });
+  }
+  if (!moduleId || !inputRef || !artifactRoot) {
+    throw buildUsageError(`${commandLabel} requires --module, --input-ref, and --artifact-root.`, spec, {
+      required: ['--module', '--input-ref', '--artifact-root'],
+    });
+  }
+  return { moduleId, inputRef, artifactRoot };
+}
+
 export function buildScholarSkillsCommandSpecs(
   getContracts: () => FrameworkContracts,
 ): Record<string, CommandSpec> {
@@ -65,6 +209,54 @@ export function buildScholarSkillsCommandSpecs(
         const parsed = parseInspectArgs(args, specs['scholar-skills inspect']);
         return buildScholarSkillModuleInspect(getContracts(), parsed.moduleId);
       },
+    },
+    'scholar-skills prepare': {
+      usage: 'opl scholar-skills prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path>',
+      summary: 'Build a refs-only dependency prepare envelope without installing dependencies or writing runtime state.',
+      examples: [
+        'opl scholar-skills prepare --module opl.scholarskills.display --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --json',
+      ],
+      group: 'scholar-skills',
+      handler: (args) => buildScholarSkillsPrepareEnvelope(
+        getContracts(),
+        parsePrepareArgs(args, specs['scholar-skills prepare']),
+      ),
+    },
+    'scholar-skills run-context': {
+      usage: 'opl scholar-skills run-context --module <module_id> --profile <profile>',
+      summary: 'Build a refs-only run-context envelope that cannot claim runtime readiness.',
+      examples: [
+        'opl scholar-skills run-context --module opl.scholarskills.display --profile display --json',
+      ],
+      group: 'scholar-skills',
+      handler: (args) => buildScholarSkillsRunContextEnvelope(
+        getContracts(),
+        parseRunContextArgs(args, specs['scholar-skills run-context']),
+      ),
+    },
+    'scholar-skills invoke': {
+      usage: 'opl scholar-skills invoke --module <module_id> --input-ref <ref> --artifact-root <ref>',
+      summary: 'Build a refs-only invocation envelope with expected artifact refs and an unsigned receipt candidate.',
+      examples: [
+        'opl scholar-skills invoke --module opl.scholarskills.display --input-ref mas:current_owner_delta/display-intent --artifact-root artifact-root:display-pack-candidates --json',
+      ],
+      group: 'scholar-skills',
+      handler: (args) => buildScholarSkillsInvocationEnvelope(
+        getContracts(),
+        parseInvocationArgs(args, specs['scholar-skills invoke'], 'scholar-skills invoke'),
+      ),
+    },
+    'scholar-skills receipt': {
+      usage: 'opl scholar-skills receipt --module <module_id> --input-ref <ref> --artifact-root <ref>',
+      summary: 'Build an unsigned ScholarSkills execution receipt candidate without owner authority.',
+      examples: [
+        'opl scholar-skills receipt --module opl.scholarskills.display --input-ref mas:current_owner_delta/display-intent --artifact-root artifact-root:display-pack-candidates --json',
+      ],
+      group: 'scholar-skills',
+      handler: (args) => buildScholarSkillsReceiptCandidate(
+        getContracts(),
+        parseInvocationArgs(args, specs['scholar-skills receipt'], 'scholar-skills receipt'),
+      ),
     },
     'scholar-skills interfaces': {
       usage: 'opl scholar-skills interfaces',
