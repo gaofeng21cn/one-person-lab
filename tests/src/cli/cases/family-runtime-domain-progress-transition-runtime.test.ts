@@ -16,6 +16,7 @@ import {
 } from './family-runtime-current-control-provider-admission-cases/shared.ts';
 import {
   DOMAIN_PROGRESS_POLICY_ADAPTER_CONTRACT,
+  buildDomainProgressTransitionRuntimeResult,
   buildNonAdvancingApplyRuntimeResult,
   appendDomainProgressTransitionRuntimeResult,
   appendDomainProgressTransitionRuntimeResultJsonl,
@@ -604,6 +605,49 @@ test('DomainProgressTransitionRuntime normalizes MAS PaperMissionTransaction car
     providerCompletionOverclaim.blocked?.reason,
     'domain_progress_policy_adapter_authority_overclaim',
   );
+});
+
+test('DomainProgressTransitionRuntime maps MAS PaperMission typed-blocker carrier to terminal blocker transition', () => {
+  const carrier = masPaperMissionOplRuntimeCarrier({
+    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+    actionType: 'typed_blocker',
+    workUnitId: 'medical_prose_write_repair_publication_gate_replay',
+    workUnitFingerprint: 'paper-mission-transaction::dm003::typed-blocker',
+    sourceGeneration: 'paper_mission_transaction_contract_v1',
+    idempotencyKey: 'paper-mission-transaction::dm003::typed-blocker',
+  });
+  const typedBlockerCarrier = {
+    ...carrier,
+    opl_route_command: {
+      command_kind: 'stop_with_typed_blocker',
+      target: 'current_owner_route_superseded_by_existing_typed_blocker',
+      reason: 'typed_blocker',
+      runtime_owner: 'one-person-lab',
+    },
+  };
+  const normalized = normalizeDomainProgressTransitionCommand(typedBlockerCarrier, {
+    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+    actionType: 'typed_blocker',
+    workUnitId: 'medical_prose_write_repair_publication_gate_replay',
+    workUnitFingerprint: 'paper-mission-transaction::dm003::typed-blocker',
+    nextOwner: 'med-autoscience',
+  });
+  const result = normalized.command
+    ? buildDomainProgressTransitionRuntimeResult(normalized.command)
+    : null;
+
+  assert.equal(normalized.blocked, undefined);
+  assert.equal(normalized.command?.transition_kind, 'RecordTypedBlocker');
+  assert.equal(record(normalized.command?.outcome).kind, 'typed_blocker_ref');
+  assert.equal(
+    record(normalized.command?.outcome).typed_blocker_ref,
+    'current_owner_route_superseded_by_existing_typed_blocker',
+  );
+  assert.equal(record(normalized.command?.outcome).provider_completion_is_domain_completion, false);
+  assert.equal(result?.transition_event.transition_kind, 'RecordTypedBlocker');
+  assert.equal(result?.transactional_outbox_item.dispatch_allowed, false);
+  assert.equal(result?.exactly_one_outcome.outcome_kind, 'typed_blocker_ref');
+  assert.equal(result?.authority_boundary.provider_completion_is_domain_completion, false);
 });
 
 test('DomainProgressTransitionRuntime publishes OPL-owned policy adapter ABI for MAS PaperProgressPolicyAdapter requests', () => {

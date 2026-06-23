@@ -65,6 +65,14 @@ function currentControlProviderAdmissionCandidateFields(
   if (!commandResult.record) {
     return { blocked: { reason: 'current_control_provider_admission_command_record_missing', task: candidate } };
   }
+  if (optionalString(commandResult.record.transition_kind) !== 'StartProviderAttempt') {
+    return {
+      blocked: {
+        reason: 'current_control_provider_admission_requires_start_provider_attempt',
+        task: candidate,
+      },
+    };
+  }
   const transitionAppend = appendDomainProgressTransitionRuntimeResult({
     log: createDomainProgressTransitionRuntimeLog(),
     result: buildDomainProgressTransitionRuntimeResult(commandResult.record),

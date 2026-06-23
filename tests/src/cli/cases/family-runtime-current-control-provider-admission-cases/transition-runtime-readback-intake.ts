@@ -557,6 +557,130 @@ test('family-runtime blocks MAS PaperMissionTransaction carrier when payload ide
   }
 });
 
+test('family-runtime does not enqueue provider admission for MAS PaperMissionTransaction typed-blocker carrier', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-paper-mission-typed-blocker-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-paper-mission-typed-blocker-'));
+  const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  const exportPath = path.join(fixtureRoot, 'export');
+  const currentControlPath = path.join(
+    workspaceRoot,
+    'runtime',
+    'artifacts',
+    'supervision',
+    'opl_current_control_state',
+    'latest.json',
+  );
+  const profilePath = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles', 'dm-cvd.local.toml');
+  const studyId = '003-dpcc-primary-care-phenotype-treatment-gap';
+  const actionType = 'typed_blocker';
+  const workUnitId = 'medical_prose_write_repair_publication_gate_replay';
+  const workUnitFingerprint = 'paper-mission-transaction::dm003::typed-blocker';
+  const stagePacketRef = 'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/paper_mission/typed_blocker.stage-packet.json';
+  const baseCarrier = masPaperMissionOplRuntimeCarrier({
+    studyId,
+    actionType,
+    workUnitId,
+    workUnitFingerprint,
+    sourceGeneration: 'paper_mission_transaction_contract_v1',
+    expectedVersion: 'paper_mission_transaction_contract_v1',
+    idempotencyKey: 'paper-mission-transaction::dm003::typed-blocker',
+  });
+  const carrier = {
+    ...baseCarrier,
+    opl_route_command: {
+      command_kind: 'stop_with_typed_blocker',
+      target: 'current_owner_route_superseded_by_existing_typed_blocker',
+      reason: 'typed_blocker',
+      runtime_owner: 'one-person-lab',
+    },
+  };
+  fs.mkdirSync(path.dirname(currentControlPath), { recursive: true });
+  fs.mkdirSync(path.dirname(profilePath), { recursive: true });
+  fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
+  fs.writeFileSync(currentControlPath, JSON.stringify({
+    surface: 'opl_current_control_state',
+    transition_request_pending_count: 1,
+    provider_admission_pending_count: 0,
+    studies: [
+      {
+        study_id: studyId,
+        current_control_action: {
+          status: 'transition_request_pending',
+          provider_admission_requires_opl_runtime_result: true,
+        },
+      },
+    ],
+  }), 'utf8');
+  writeJsonEmitterScript(exportPath, {
+    surface_kind: 'mas_family_domain_handler_export',
+    profile: {
+      profile_name: 'dm-cvd',
+      profile_ref: profilePath,
+    },
+    workspace: {
+      workspace_root: workspaceRoot,
+      workspace_exists: true,
+    },
+    pending_family_tasks: [
+      {
+        domain_id: 'medautoscience',
+        task_kind: 'domain_owner/default-executor-dispatch',
+        priority: 100,
+        source: 'mas-paper-mission-transaction-carrier',
+        dedupe_key: `paper-mission:${studyId}:${workUnitId}`,
+        source_fingerprint: workUnitFingerprint,
+        payload: {
+          profile: profilePath,
+          study_id: studyId,
+          quest_id: studyId,
+          action_type: actionType,
+          work_unit_id: workUnitId,
+          work_unit_fingerprint: workUnitFingerprint,
+          action_fingerprint: workUnitFingerprint,
+          source_fingerprint: workUnitFingerprint,
+          dispatch_authority: 'paper_mission_transaction',
+          executor_kind: 'codex_cli_default',
+          next_executable_owner: 'med-autoscience',
+          owner_route_current: true,
+          provider_attempt_or_lease_required: false,
+          provider_completion_is_domain_completion: false,
+          stage_packet_ref: stagePacketRef,
+          stage_packet_refs: [stagePacketRef],
+          stage_transition_authority_boundary: providerObservationBoundary(),
+          opl_runtime_carrier: carrier,
+        },
+      },
+    ],
+  });
+  const env = familyRuntimeEnv(stateRoot, {
+    OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
+  });
+  try {
+    const intake = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+      '--study',
+      studyId,
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+    ], env);
+    const queue = runCli(['family-runtime', 'queue', 'list'], env);
+
+    assert.equal(intake.family_runtime_intake.enqueued_count, 0);
+    assert.equal(intake.family_runtime_intake.blocked_count, 1);
+    assert.equal(
+      intake.family_runtime_intake.exports[0].blocked[0].reason,
+      'current_control_provider_admission_requires_start_provider_attempt',
+    );
+    assert.equal(queue.family_runtime_queue.tasks.length, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime intake consumes MAS current-control transition_request_candidates as OPL runtime-backed provider admission', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-transition-candidate-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-transition-candidate-'));

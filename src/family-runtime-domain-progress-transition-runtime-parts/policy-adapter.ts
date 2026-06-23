@@ -73,6 +73,57 @@ function recordField(value: Record<string, unknown>, field: string) {
   return isRecord(value[field]) ? value[field] : null;
 }
 
+function routeCommandTransitionKind(value: Record<string, unknown>) {
+  const routeCommand = recordField(value, 'opl_route_command');
+  const commandKind = firstString(routeCommand?.command_kind, routeCommand?.route_command);
+  if (commandKind === 'start_next_stage') {
+    return 'StartProviderAttempt';
+  }
+  if (commandKind === 'stop_with_typed_blocker') {
+    return 'RecordTypedBlocker';
+  }
+  if (commandKind === 'open_human_gate') {
+    return 'OpenHumanGate';
+  }
+  return null;
+}
+
+function routeCommandOutcome(
+  value: Record<string, unknown>,
+  transitionKind: string,
+) {
+  const routeCommand = recordField(value, 'opl_route_command');
+  if (transitionKind === 'RecordTypedBlocker') {
+    return {
+      kind: 'typed_blocker_ref',
+      typed_blocker_ref:
+        firstString(value.typed_blocker_ref)
+        ?? firstString(routeCommand?.typed_blocker_ref)
+        ?? firstString(routeCommand?.target)
+        ?? 'typed-blocker:domain-progress-transition-request',
+      reason: firstString(routeCommand?.reason) ?? 'typed_blocker',
+      stable_outcome: true,
+      provider_completion_is_domain_completion: false,
+      provider_completion_is_domain_ready: false,
+    };
+  }
+  if (transitionKind === 'OpenHumanGate') {
+    return {
+      kind: 'human_gate_ref',
+      human_gate_ref:
+        firstString(value.human_gate_ref)
+        ?? firstString(routeCommand?.human_gate_ref)
+        ?? firstString(routeCommand?.target)
+        ?? 'human-gate:domain-progress-transition-request',
+      reason: firstString(routeCommand?.reason) ?? 'human_gate',
+      stable_outcome: true,
+      provider_completion_is_domain_completion: false,
+      provider_completion_is_domain_ready: false,
+    };
+  }
+  return null;
+}
+
 function adapterCanCreateOplOutbox(request: Record<string, unknown>) {
   const capabilities = recordField(request, 'runtime_capabilities')
     ?? {};
@@ -215,10 +266,13 @@ export function normalizeDomainProgressPolicyAdapterRequest(
     ?? (adapterOwner === 'med-autoscience' ? 'medautoscience' : null);
   const recommendedTransitionKind =
     firstString(value.recommended_transition_kind, value.transition_kind, value.command_kind)
+    ?? routeCommandTransitionKind(value)
     ?? 'StartProviderAttempt';
   const requiredPostcondition = recordField(value, 'required_postcondition')
     ?? recordField(value, 'postcondition');
-  const outcome = recordField(value, 'outcome') ?? recordField(value, 'policy_outcome');
+  const outcome = recordField(value, 'outcome')
+    ?? recordField(value, 'policy_outcome')
+    ?? routeCommandOutcome(value, recommendedTransitionKind);
   const policyVerdict = recordField(value, 'policy_verdict')
     ?? recordField(value, 'domain_policy_result')
     ?? {};
