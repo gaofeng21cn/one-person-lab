@@ -343,6 +343,102 @@ test('family-runtime tick reconciles terminal MAS PaperMission stage-route attem
       true,
     );
     assert.equal(runningQueue.family_runtime_queue.queue.total, 0);
+    const terminalReconcileEvents = task.family_runtime_task.events.filter((event: { event_type: string }) =>
+      event.event_type === 'paper_mission_stage_route_terminal_task_reconciled'
+    );
+    assert.equal(terminalReconcileEvents.length, 1);
+    assert.equal(
+      terminalReconcileEvents[0].payload.authority_boundary.provider_completion_is_domain_ready,
+      false,
+    );
+    assert.equal(
+      terminalReconcileEvents[0].payload.authority_boundary.can_claim_paper_progress,
+      false,
+    );
+    const secondReconcile = runCli(['family-runtime', 'tick', '--source', 'test-paper-route-terminal-repeat'], env);
+    const repeatedTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    assert.equal(secondReconcile.family_runtime_tick.reconciled_paper_mission_stage_route_terminal_count, 0);
+    assert.deepEqual(secondReconcile.family_runtime_tick.reconciled_paper_mission_stage_route_terminal_task_ids, []);
+    assert.equal(
+      repeatedTask.family_runtime_task.events.filter((event: { event_type: string }) =>
+        event.event_type === 'paper_mission_stage_route_terminal_task_reconciled'
+      ).length,
+      1,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime tick does not promote MAS PaperMission stage-route domain-ready verdicts into OPL success', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-domain-ready-'));
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_mission/stage-route',
+      '--payload',
+      JSON.stringify(paperMissionRoutePayload()),
+      '--dedupe-key',
+      'paper-mission-route:dm002:terminal-domain-ready',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    runCli(['family-runtime', 'tick', '--source', 'test-paper-route-domain-ready-start'], env);
+    const runningTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const attemptId = runningTask.family_runtime_task.stage_attempts[0].stage_attempt_id;
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      attemptId,
+      '--stage-packet-ref',
+      'packet:paper-mission-route-dm002-domain-ready',
+      '--closeout-packet',
+      JSON.stringify({
+        surface_kind: 'stage_attempt_closeout_packet',
+        closeout_refs: ['receipt:provider-domain-ready-transport-only'],
+        next_owner: 'med-autoscience',
+        domain_ready_verdict: 'domain_ready',
+        route_impact: {
+          decision: 'domain_owner_review_required',
+          next_owner: 'med-autoscience',
+          reason: 'provider_completion_not_mas_authority',
+        },
+      }),
+    ], env);
+    const reconcile = runCli(['family-runtime', 'tick', '--source', 'test-paper-route-domain-ready-terminal'], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const reconcileEvent = task.family_runtime_task.events.find((event: { event_type: string }) =>
+      event.event_type === 'paper_mission_stage_route_terminal_task_reconciled'
+    );
+
+    assert.equal(reconcile.family_runtime_tick.reconciled_paper_mission_stage_route_terminal_count, 1);
+    assert.deepEqual(
+      reconcile.family_runtime_tick.reconciled_paper_mission_stage_route_terminal_task_ids,
+      [taskId],
+    );
+    assert.equal(task.family_runtime_task.task.status, 'blocked');
+    assert.equal(task.family_runtime_task.task.last_error, 'paper_mission_stage_route_domain_authority_required');
+    assert.equal(task.family_runtime_task.task.dead_letter_reason, 'paper_mission_stage_route_domain_authority_required');
+    assert.equal(task.family_runtime_task.stage_attempts[0].status, 'completed');
+    assert.equal(task.family_runtime_task.stage_attempts[0].closeout_receipt_status, 'accepted_typed_closeout');
+    assert.equal(task.family_runtime_task.stage_attempts[0].route_impact.domain_ready_verdict, 'domain_ready');
+    assert.notEqual(reconcileEvent, undefined);
+    assert.equal(reconcileEvent.payload.next_status, 'blocked');
+    assert.equal(
+      reconcileEvent.payload.authority_boundary.provider_completion_is_domain_ready,
+      false,
+    );
+    assert.equal(
+      reconcileEvent.payload.authority_boundary.can_claim_paper_progress,
+      false,
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

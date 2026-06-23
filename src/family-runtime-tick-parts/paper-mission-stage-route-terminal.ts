@@ -32,18 +32,6 @@ function paperMissionStageRouteTaskStatusForTerminalAttempt(attempt: StageAttemp
   const domainReadyVerdict = typeof routeImpact.domain_ready_verdict === 'string'
     ? routeImpact.domain_ready_verdict
     : null;
-  if (
-    attempt.status === 'completed'
-    && attempt.closeout_refs.length > 0
-    && attempt.closeout_receipt_status === 'accepted_typed_closeout'
-    && domainReadyVerdict === 'domain_ready'
-  ) {
-    return {
-      status: 'succeeded' as const,
-      reason: 'paper_mission_stage_route_domain_ready',
-      deadLetterReason: null,
-    };
-  }
   if (attempt.status === 'failed' || attempt.status === 'dead_lettered') {
     const reason = attempt.blocked_reason ?? 'paper_mission_stage_route_provider_terminal_failure';
     return {
@@ -52,8 +40,11 @@ function paperMissionStageRouteTaskStatusForTerminalAttempt(attempt: StageAttemp
       deadLetterReason: reason,
     };
   }
+  const verdictReason = domainReadyVerdict === 'domain_ready'
+    ? 'paper_mission_stage_route_domain_authority_required'
+    : (domainReadyVerdict ? `paper_mission_stage_route_${domainReadyVerdict}` : null);
   const reason = attempt.blocked_reason
-    ?? (domainReadyVerdict ? `paper_mission_stage_route_${domainReadyVerdict}` : null)
+    ?? verdictReason
     ?? PAPER_MISSION_STAGE_ROUTE_DOMAIN_GATE_PENDING_REASON;
   return {
     status: 'blocked' as const,
@@ -85,18 +76,21 @@ export function reconcilePaperMissionStageRouteTerminalTasks(
     }
     const nextTask = paperMissionStageRouteTaskStatusForTerminalAttempt(terminalAttempt);
     const reconciledAt = nowIso();
-    db.prepare(`
+    const result = db.prepare(`
       UPDATE tasks
       SET status = ?, lease_owner = NULL, lease_expires_at = NULL,
         last_error = ?, dead_letter_reason = ?, updated_at = ?
       WHERE task_id = ? AND status = 'running'
     `).run(
       nextTask.status,
-      nextTask.status === 'succeeded' ? null : nextTask.reason,
+      nextTask.reason,
       nextTask.deadLetterReason,
       reconciledAt,
       row.task_id,
     );
+    if (result.changes === 0) {
+      continue;
+    }
     insertEvent(db, {
       taskId: row.task_id,
       domainId: row.domain_id,
@@ -127,7 +121,7 @@ export function reconcilePaperMissionStageRouteTerminalTasks(
           owner_receipt_mutation: false,
           typed_blocker_mutation: false,
           human_gate_mutation: false,
-          provider_completion_is_domain_ready: nextTask.status === 'succeeded',
+          provider_completion_is_domain_ready: false,
           can_claim_provider_running: false,
           can_claim_paper_progress: false,
         },
@@ -135,9 +129,9 @@ export function reconcilePaperMissionStageRouteTerminalTasks(
     });
     insertNotification(db, {
       taskId: row.task_id,
-      severity: nextTask.status === 'succeeded' ? 'info' : 'warning',
-      title: nextTask.status === 'succeeded'
-        ? 'MAS PaperMission stage route terminal readback observed'
+      severity: nextTask.status === 'dead_letter' ? 'error' : 'warning',
+      title: nextTask.status === 'dead_letter'
+        ? 'MAS PaperMission stage route provider terminal failure observed'
         : 'MAS PaperMission stage route waiting for MAS domain gate',
       body: `${row.domain_id}:${row.task_kind} ${nextTask.reason}`,
       payload: {
