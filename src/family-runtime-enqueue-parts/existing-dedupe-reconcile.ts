@@ -43,6 +43,47 @@ export {
   sourceFingerprint,
 } from './existing-dedupe-decisions.ts';
 
+function optionalString(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function isPaperMissionStageRouteReplacementAllowed(input: {
+  existing: FamilyRuntimeTaskRow;
+  nextDomainId: string;
+  nextTaskKind: string;
+  nextPayload: Record<string, unknown>;
+  retiredResidueBlock: Record<string, unknown> | null;
+  exportedTaskChanged: boolean;
+}) {
+  if (
+    !input.exportedTaskChanged
+    || !input.retiredResidueBlock
+    || input.existing.domain_id !== 'medautoscience'
+    || input.nextDomainId !== 'medautoscience'
+    || input.existing.task_kind !== 'paper_mission/stage-route'
+    || input.nextTaskKind !== 'paper_mission/stage-route'
+    || input.nextPayload.surface_kind !== 'opl_mas_paper_mission_route_runtime_request'
+    || (
+      input.nextPayload.runtime_request_kind !== 'mas_paper_mission_stage_route'
+      && input.nextPayload.runtime_request_kind !== undefined
+    )
+  ) {
+    return null;
+  }
+  const workspaceRoot = optionalString(input.nextPayload.workspace_root)
+    ?? optionalString(input.nextPayload.repo_root)
+    ?? optionalString(input.nextPayload.command_cwd);
+  if (!workspaceRoot) {
+    return null;
+  }
+  return {
+    reason: 'paper_mission_stage_route_runtime_contract_replaced_after_operator_retire',
+    operator_retirement_reason: input.retiredResidueBlock.operator_retirement_reason,
+    workspace_root: workspaceRoot,
+    previous_status: input.existing.status,
+  };
+}
+
 export function reconcileExistingDedupeTask(
   db: DatabaseSync,
   context: {
@@ -701,6 +742,45 @@ export function reconcileExistingDedupeTask(
     ? masPaperAutonomyDeadLetterCurrentnessBlock(existing)
     : null;
   const retiredResidueBlock = operatorRetiredStaleResidueBlock(existing);
+  const paperMissionStageRouteReplacement = isPaperMissionStageRouteReplacementAllowed({
+    existing,
+    nextDomainId: input.domainId,
+    nextTaskKind: taskKind,
+    nextPayload: payload,
+    retiredResidueBlock,
+    exportedTaskChanged,
+  });
+  if (paperMissionStageRouteReplacement) {
+    const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
+    return applyExistingDedupeRequeue(db, {
+      input,
+      taskKind,
+      exportedPayloadJson,
+      existing,
+      nextStatus,
+      nextRequiresApproval: requiresApproval,
+      nextLastError: initialLastError,
+      createdAt,
+      dedupeKey,
+      activeHoldId: activeHold?.hold_id ?? null,
+      eventType: 'task_requeued_from_paper_mission_stage_route_contract_replacement',
+      eventPayload: {
+        ...paperMissionStageRouteReplacement,
+        authority_boundary: {
+          opl: 'queue_runtime_contract_replacement_after_operator_retire_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          domain_truth_mutation: false,
+          publication_quality_mutation: false,
+          artifact_gate_mutation: false,
+          current_package_mutation: false,
+          provider_stage_attempt_started: false,
+          provider_completion_is_domain_ready: false,
+        },
+      },
+      notificationTitle: 'MAS PaperMission stage route requeued from runtime contract replacement',
+      requeuedFromTerminal: true,
+    });
+  }
   if (retiredResidueBlock) {
     insertEvent(db, {
       taskId: existing.task_id,

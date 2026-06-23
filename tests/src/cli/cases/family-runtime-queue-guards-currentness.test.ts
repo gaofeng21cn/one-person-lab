@@ -114,6 +114,120 @@ test('family-runtime queue retire blocks stale residue and prevents dedupe rehyd
   }
 });
 
+test('family-runtime queue retire allows MAS PaperMission stage-route contract replacement', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-paper-route-replace-'));
+  try {
+    const env = familyRuntimeEnv(stateRoot);
+    const dedupeKey = [
+      'paper-mission-route',
+      '002-dm-china-us-mortality-attribution',
+      'paper-mission-transaction:dm002:1',
+      'start_next_stage',
+    ].join(':');
+    const enqueued = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_mission/stage-route',
+      '--payload',
+      JSON.stringify({
+        surface_kind: 'opl_mas_paper_mission_route_runtime_request',
+        runtime_request_kind: 'mas_paper_mission_stage_route',
+        study_id: '002-dm-china-us-mortality-attribution',
+        paper_mission_transaction_ref: 'paper-mission-transaction:dm002:1',
+        command_kind: 'start_next_stage',
+        route_target: 'publication_gate_replay',
+      }),
+      '--dedupe-key',
+      dedupeKey,
+    ], env);
+    const taskId = enqueued.family_runtime_enqueue.task.task_id;
+    runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'publication_gate_replay',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      '{"study_id":"002-dm-china-us-mortality-attribution"}',
+      '--source-fingerprint',
+      'paper-route-before-workspace-root',
+      '--executor-kind',
+      'codex_cli',
+      '--task',
+      taskId,
+    ], env);
+    const retire = runCli([
+      'family-runtime',
+      'queue',
+      'retire',
+      '--domain',
+      'medautoscience',
+      '--study',
+      '002-dm-china-us-mortality-attribution',
+      '--task-kind',
+      'paper_mission/stage-route',
+      '--reason',
+      'paper_route_workspace_root_payload_contract_replaced',
+      '--source',
+      'test-paper-route-retire',
+    ], env);
+    const replacement = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_mission/stage-route',
+      '--payload',
+      JSON.stringify({
+        surface_kind: 'opl_mas_paper_mission_route_runtime_request',
+        runtime_request_kind: 'mas_paper_mission_stage_route',
+        study_id: '002-dm-china-us-mortality-attribution',
+        paper_mission_transaction_ref: 'paper-mission-transaction:dm002:1',
+        command_kind: 'start_next_stage',
+        route_target: 'publication_gate_replay',
+        workspace_root: '/tmp/mas-dm-cvd',
+        command_cwd: '/tmp/mas-dm-cvd',
+      }),
+      '--dedupe-key',
+      dedupeKey,
+      '--source',
+      'test-paper-route-contract-replacement',
+    ], env);
+    const task = runCli([
+      'family-runtime',
+      'queue',
+      'inspect',
+      taskId,
+    ], env);
+
+    assert.equal(retire.family_runtime_queue_retire.retired_count, 1);
+    assert.equal(replacement.family_runtime_enqueue.accepted, true);
+    assert.equal(replacement.family_runtime_enqueue.requeued_from_terminal, true);
+    assert.equal(replacement.family_runtime_enqueue.idempotent_noop, false);
+    assert.equal(replacement.family_runtime_enqueue.task.status, 'queued');
+    assert.equal(replacement.family_runtime_enqueue.task.payload.workspace_root, '/tmp/mas-dm-cvd');
+    assert.equal(task.family_runtime_task.task.status, 'queued');
+    assert.equal(task.family_runtime_task.task.dead_letter_reason, null);
+    assert.equal(task.family_runtime_task.task.payload.workspace_root, '/tmp/mas-dm-cvd');
+    assert.equal(
+      task.family_runtime_task.events.some((event: { event_type: string }) =>
+        event.event_type === 'task_requeued_from_paper_mission_stage_route_contract_replacement'
+      ),
+      true,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime queue list filters by domain, study, and status for Progress-First monitoring', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-queue-list-filter-'));
   try {
