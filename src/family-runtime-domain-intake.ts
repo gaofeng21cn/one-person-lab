@@ -40,6 +40,7 @@ import {
   suppressStaleDefaultExecutorInputs,
 } from './family-runtime-domain-intake-parts/current-control-reconciliation.ts';
 import { toPendingTaskInputs } from './family-runtime-domain-intake-parts/pending-task-inputs.ts';
+import { intakeMasPaperMissionRouteHandoffsFromExport } from './family-runtime-domain-intake-parts/paper-mission-route-handoff.ts';
 import { transitionTaskInputsFromMatrix } from './family-runtime-domain-intake-parts/transition-task-inputs.ts';
 
 type DomainExportCommand = {
@@ -236,6 +237,38 @@ function optionalString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
+function isPaperMissionDefaultTaskQueuePresent(output: Record<string, unknown>) {
+  return Array.isArray(output.paper_mission_default_tasks)
+    && output.paper_mission_default_tasks.length > 0;
+}
+
+function isLegacyPaperMissionPendingTask(task: unknown) {
+  if (!isRecord(task)) {
+    return false;
+  }
+  return optionalString(task.task_kind) === 'paper_mission/start_or_resume'
+    || task.default_paper_mission_entry === false
+    || optionalString(task.paper_mission_default_role) === 'diagnostic_or_explicit_owner_handoff';
+}
+
+function pendingTaskInputOutput(
+  domainId: FamilyRuntimeDomainId,
+  output: Record<string, unknown>,
+) {
+  if (domainId !== 'medautoscience' || !isPaperMissionDefaultTaskQueuePresent(output)) {
+    return { output, suppressedCount: 0 };
+  }
+  const pendingTasks = Array.isArray(output.pending_family_tasks) ? output.pending_family_tasks : [];
+  const retained = pendingTasks.filter((task) => !isLegacyPaperMissionPendingTask(task));
+  return {
+    output: {
+      ...output,
+      pending_family_tasks: retained,
+    },
+    suppressedCount: pendingTasks.length - retained.length,
+  };
+}
+
 function blockedDomainId(
   domainId: FamilyRuntimeDomainId,
   task: Record<string, unknown>,
@@ -310,7 +343,8 @@ function exportedTaskInputs(
   exportContext: DomainExportCommand,
   taskScope?: FamilyRuntimeTaskScope,
 ) {
-  const pending = toPendingTaskInputs(domainId, output, source, exportContext);
+  const pendingOutput = pendingTaskInputOutput(domainId, output);
+  const pending = toPendingTaskInputs(domainId, pendingOutput.output, source, exportContext);
   const currentControlRaw = currentControlProviderAdmissionInputs(domainId, output, exportContext, pending.inputs);
   const currentControlInputs = reconcileCurrentControlExecutableOwners(
     currentControlRaw.inputs,
@@ -322,16 +356,32 @@ function exportedTaskInputs(
     currentControlRaw.blocked,
   );
   const transitions = transitionTaskInputsFromMatrix(domainId, output, source);
+  const paperMissionRouteHandoff = domainId === 'medautoscience'
+    ? intakeMasPaperMissionRouteHandoffsFromExport(output)
+    : null;
+  const paperMissionRouteHandoffBlocked = paperMissionRouteHandoff?.readbacks
+    .filter((readback) => readback.status === 'rejected')
+    .map((readback) => ({
+      reason: 'paper_mission_route_handoff_rejected',
+      task: readback,
+    })) ?? [];
   const exportedInputs = [...currentControlInputs, ...pendingAfterCurrentControl.inputs, ...transitions.inputs];
   const inputs = exportedInputs.filter((taskInput) => taskInputMatchesScope(taskInput, taskScope));
-  const blocked = [...currentControlRaw.blocked, ...pending.blocked, ...transitions.blocked]
+  const blocked = [
+    ...currentControlRaw.blocked,
+    ...pending.blocked,
+    ...transitions.blocked,
+    ...paperMissionRouteHandoffBlocked,
+  ]
     .filter((entry) => blockedMatchesScope(domainId, entry, taskScope));
   return {
     inputs,
     blocked,
     current_control_readback_publications: currentControlRaw.current_control_readback_publications,
+    paper_mission_route_handoff_intake: paperMissionRouteHandoff,
+    paper_mission_legacy_pending_suppressed_count: pendingOutput.suppressedCount,
     filtered_count: exportedInputs.length - inputs.length,
-    suppressed_count: pendingAfterCurrentControl.suppressed_count,
+    suppressed_count: pendingAfterCurrentControl.suppressed_count + pendingOutput.suppressedCount,
   };
 }
 
@@ -426,6 +476,8 @@ export function hydrateDomainTasks(
       inputs,
       blocked,
       current_control_readback_publications,
+      paper_mission_route_handoff_intake,
+      paper_mission_legacy_pending_suppressed_count,
       filtered_count,
       suppressed_count,
     } = exportedTaskInputs(
@@ -510,6 +562,16 @@ export function hydrateDomainTasks(
       paper_autonomy_supervisor_decision_request_consumed: supervisorDecisionRequests.consumed,
       current_control_readback_publication_count: mergedCurrentControlReadbackPublications.length,
       current_control_readback_publications: mergedCurrentControlReadbackPublications,
+      ...(paper_mission_route_handoff_intake
+        ? {
+            paper_mission_route_handoff_intake,
+            paper_mission_route_handoff_intake_count: paper_mission_route_handoff_intake.readbacks.length,
+            paper_mission_route_handoff_runtime_intake_ready_count:
+              paper_mission_route_handoff_intake.readbacks
+                .filter((readback) => readback.status === 'accepted_for_runtime_intake').length,
+            paper_mission_legacy_pending_suppressed_count,
+          }
+        : {}),
       blocked: [...blocked, ...supervisorDecisionRequests.blocked],
     });
   }

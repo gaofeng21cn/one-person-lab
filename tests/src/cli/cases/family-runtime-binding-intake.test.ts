@@ -141,6 +141,111 @@ test('family-runtime intake derives MAS domain-handler export from active worksp
   }
 });
 
+test('family-runtime intake reads MAS PaperMission route handoff without creating runtime writes', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-paper-mission-route-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-paper-mission-route-export-'));
+  const exportPath = path.join(fixtureRoot, 'export');
+  writeJsonEmitterScript(exportPath, {
+    surface_kind: 'mas_family_domain_handler_export',
+    paper_mission_default_tasks: [
+      {
+        task_kind: 'paper_mission/start_or_resume',
+        default_paper_mission_entry: true,
+        opl_route_handoff: {
+          surface_kind: 'mas_paper_mission_opl_route_handoff_record',
+          schema_version: 1,
+          source: 'paper-mission-consumption-ledger',
+          study_id: '002-dm-china-us-mortality-attribution',
+          mission_id: 'paper-mission::002-dm-china-us-mortality-attribution::gate-clearing::manual',
+          candidate_ref: 'ops/medautoscience/paper_mission_consumption_ledger/dm002/candidate.json',
+          status: 'accepted_candidate',
+          selected_outcome: 'accepted',
+          handoff_status: 'ready_for_opl_route_command',
+          next_owner: 'one-person-lab',
+          paper_mission_transaction_ref: 'paper-mission-transaction:dm002:1',
+          transaction_state: 'materialized',
+          opl_route_command_ref: 'ops/medautoscience/paper_mission_consumption_ledger/dm002/opl_route_command.json',
+          opl_route_command: {
+            command_kind: 'start_next_stage',
+            target: 'publication_gate_replay',
+            runtime_owner: 'one-person-lab',
+          },
+          route_command_kind: 'start_next_stage',
+          route_target: 'publication_gate_replay',
+          transaction_materialized: true,
+          can_submit_to_opl_runtime: true,
+          can_claim_opl_runtime_enqueued: false,
+          can_claim_opl_stage_run_created: false,
+          can_claim_provider_running: false,
+          can_claim_paper_progress: false,
+          can_claim_runtime_ready: false,
+          authority_boundary: {
+            can_write_owner_receipt: false,
+            can_write_typed_blocker: false,
+            can_write_human_gate: false,
+            can_write_current_package: false,
+            can_write_paper_body: false,
+            can_write_runtime_queue: false,
+            can_write_opl_outbox: false,
+            can_write_opl_event: false,
+            can_write_opl_stage_run: false,
+            can_write_provider_attempt: false,
+          },
+        },
+      },
+    ],
+    pending_family_tasks_policy: {
+      default_paper_mission_queue_source: '/paper_mission_default_tasks',
+      legacy_mixed_queue_source: '/pending_family_tasks',
+    },
+    pending_family_tasks: [
+      {
+        domain_id: 'medautoscience',
+        task_kind: 'domain_owner/default-executor-dispatch',
+        default_paper_mission_entry: false,
+        paper_mission_default_role: 'diagnostic_or_explicit_owner_handoff',
+        payload: {
+          study_id: 'stale-legacy',
+        },
+      },
+    ],
+  });
+
+  try {
+    const intake = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+      '--source',
+      'paper-mission-route-handoff',
+    ], familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
+    })).family_runtime_intake;
+    const queue = runCli(['family-runtime', 'queue', 'list'], familyRuntimeEnv(stateRoot)).family_runtime_queue;
+    const exportResult = intake.exports[0];
+    const routeIntake = exportResult.paper_mission_route_handoff_intake;
+
+    assert.equal(intake.enqueued_count, 0);
+    assert.equal(intake.blocked_count, 0);
+    assert.equal(exportResult.exported_count, 0);
+    assert.equal(exportResult.paper_mission_route_handoff_intake_count, 1);
+    assert.equal(exportResult.paper_mission_route_handoff_runtime_intake_ready_count, 1);
+    assert.equal(routeIntake.source_path, '/paper_mission_default_tasks');
+    assert.equal(routeIntake.legacy_pending_family_tasks_considered, false);
+    assert.equal(routeIntake.readbacks[0].status, 'accepted_for_runtime_intake');
+    assert.equal(routeIntake.readbacks[0].runtime_start_requested, false);
+    assert.equal(routeIntake.readbacks[0].writes_opl_outbox, false);
+    assert.equal(routeIntake.readbacks[0].writes_opl_stage_run, false);
+    assert.equal(routeIntake.readbacks[0].can_claim_stage_run_created, false);
+    assert.equal(routeIntake.readbacks[0].can_claim_paper_progress, false);
+    assert.equal(queue.tasks.length, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime profile hydrate resolves MAS export through OPL module checkout', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-profile-module-home-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-profile-module-'));
