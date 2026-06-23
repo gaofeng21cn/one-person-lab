@@ -65,6 +65,18 @@ function sourceFingerprintFor(row: FamilyRuntimeTaskRow, payload: Record<string,
 }
 
 function workspaceLocatorFor(row: FamilyRuntimeTaskRow, payload: Record<string, unknown>) {
+  const exportContext = isRecord(payload.opl_domain_export_context)
+    ? payload.opl_domain_export_context
+    : {};
+  const workspaceRoot = optionalString(payload.workspace_root)
+    ?? optionalString(payload.domain_workspace_root)
+    ?? optionalString(payload.repo_root)
+    ?? optionalString(exportContext.command_cwd)
+    ?? optionalString(payload.command_cwd);
+  const commandCwd = optionalString(payload.command_cwd)
+    ?? optionalString(exportContext.command_cwd);
+  const commandSource = optionalString(exportContext.command_source)
+    ?? optionalString(payload.command_source);
   return {
     surface_kind: 'opl_mas_paper_mission_stage_route_workspace_locator',
     domain_id: row.domain_id,
@@ -78,6 +90,12 @@ function workspaceLocatorFor(row: FamilyRuntimeTaskRow, payload: Record<string, 
     opl_route_command_ref: optionalString(payload.opl_route_command_ref),
     command_kind: optionalString(payload.command_kind),
     route_target: optionalString(payload.route_target),
+    ...(workspaceRoot ? { workspace_root: workspaceRoot } : {}),
+    ...(commandCwd ? { command_cwd: commandCwd } : {}),
+    ...(commandSource ? { command_source: commandSource } : {}),
+    ...(isRecord(payload.opl_domain_export_context)
+      ? { opl_domain_export_context: payload.opl_domain_export_context }
+      : {}),
     domain_truth_owner: 'med-autoscience',
     runtime_owner: 'one-person-lab',
     opl_writes_domain_truth: false,

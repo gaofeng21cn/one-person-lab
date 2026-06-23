@@ -374,7 +374,12 @@ function exportedTaskInputs(
   );
   const transitions = transitionTaskInputsFromMatrix(domainId, output, source);
   const paperMissionRouteHandoff = domainId === 'medautoscience'
-    ? intakeMasPaperMissionRouteHandoffsFromExport(output, { source })
+    ? intakeMasPaperMissionRouteHandoffsFromExport(output, {
+        source,
+        workspaceRoot: exportContext.cwd,
+        commandCwd: exportContext.cwd,
+        commandSource: exportContext.source,
+      })
     : null;
   const paperMissionRouteInputs = paperMissionRouteHandoff?.readbacks
     .map((readback) => readback.runtime_request_input)

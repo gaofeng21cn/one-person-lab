@@ -62,6 +62,9 @@ type SupportedCommandKind = typeof SUPPORTED_COMMAND_KINDS[number];
 
 type IntakeOptions = {
   source?: string;
+  workspaceRoot?: string | null;
+  commandCwd?: string | null;
+  commandSource?: string | null;
 };
 
 export type MasPaperMissionRouteHandoffIntakeStatus =
@@ -449,10 +452,18 @@ function runtimeRequestAuthorityBoundary() {
   };
 }
 
+function workspaceRootForRuntimeRequest(handoff: JsonRecord, options: IntakeOptions) {
+  return optionalString(handoff.workspace_root)
+    ?? optionalString(handoff.domain_workspace_root)
+    ?? optionalString(handoff.repo_root)
+    ?? optionalString(options.workspaceRoot)
+    ?? optionalString(options.commandCwd);
+}
+
 function runtimeRequestInput(
   handoff: JsonRecord,
   readback: MasPaperMissionRouteHandoffIntakeReadback,
-  source: string,
+  options: IntakeOptions,
 ): EnqueueInput | null {
   if (
     readback.status !== 'accepted_for_runtime_intake'
@@ -469,12 +480,15 @@ function runtimeRequestInput(
     readback.paper_mission_transaction_ref,
     readback.command_kind,
   ].join(':');
+  const workspaceRoot = workspaceRootForRuntimeRequest(handoff, options);
+  const commandCwd = optionalString(options.commandCwd);
+  const commandSource = optionalString(options.commandSource);
   return {
     domainId: 'medautoscience',
     taskKind: RUNTIME_TASK_KIND,
     dedupeKey,
     priority: 100,
-    source,
+    source: options.source ?? 'paper-mission-route-handoff',
     payload: {
       surface_kind: RUNTIME_REQUEST_SURFACE_KIND,
       schema_version: 1,
@@ -487,6 +501,16 @@ function runtimeRequestInput(
       opl_route_command_ref: readback.opl_route_command_ref,
       command_kind: readback.command_kind,
       route_target: readback.route_target,
+      ...(workspaceRoot ? { workspace_root: workspaceRoot } : {}),
+      ...(commandCwd
+        ? {
+            command_cwd: commandCwd,
+            opl_domain_export_context: {
+              command_source: commandSource,
+              command_cwd: commandCwd,
+            },
+          }
+        : {}),
       route_command_materialized: readback.accepted_command_packet.route_command_materialized,
       opl_route_command: routeCommand ?? {},
       opl_route_handoff_record: handoff,
@@ -693,7 +717,7 @@ export function intakeMasPaperMissionRouteHandoff(
       runtime_request_input: runtimeRequestInput(
         handoff,
         accepted,
-        options.source ?? 'paper-mission-route-handoff',
+        options,
       ),
     };
   }

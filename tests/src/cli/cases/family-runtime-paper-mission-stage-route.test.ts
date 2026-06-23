@@ -5,6 +5,10 @@ import {
   openQueueDb,
   type FamilyRuntimeTaskRow,
 } from '../../../../src/family-runtime-store.ts';
+import {
+  buildTemporalStageAttemptWorkflowInput,
+  requireTemporalStageAttemptWorkflowInputLaunchable,
+} from '../../../../src/family-runtime-temporal.ts';
 import { enqueueTask } from '../../../../src/family-runtime-enqueue.ts';
 import { dispatchFamilyRuntimeTask } from '../../../../src/family-runtime-task-dispatch.ts';
 
@@ -78,6 +82,18 @@ function paperMissionRoutePayload(overrides: Record<string, unknown> = {}) {
     },
     ...overrides,
   };
+}
+
+function paperMissionRoutePayloadWithWorkspace(overrides: Record<string, unknown> = {}) {
+  return paperMissionRoutePayload({
+    workspace_root: '/tmp/mas-dm-cvd-workspace',
+    command_cwd: '/tmp/mas-dm-cvd-workspace',
+    opl_domain_export_context: {
+      command_source: 'workspace_binding',
+      command_cwd: '/tmp/mas-dm-cvd-workspace',
+    },
+    ...overrides,
+  });
 }
 
 test('family-runtime tick admits MAS PaperMission stage-route into OPL StageAttempt without domain dispatch', () => {
@@ -239,20 +255,26 @@ test('family-runtime dispatch starts MAS PaperMission stage-route Temporal attem
     const enqueued = enqueueTask(db, {
       domainId: 'medautoscience',
       taskKind: 'paper_mission/stage-route',
-      payload: paperMissionRoutePayload(),
+      payload: paperMissionRoutePayloadWithWorkspace(),
       dedupeKey: 'paper-mission-route:dm002:temporal-start',
       source: 'test',
     });
+    let observedWorkspaceRoot: unknown = null;
+    let observedCommandCwd: unknown = null;
     const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(enqueued.task.task_id) as FamilyRuntimeTaskRow;
     const started = await dispatchFamilyRuntimeTask(db, paths, row, {
       temporalProviderModule: async () => ({
-        startTemporalStageAttemptWorkflow: async (attempt) => ({
-          surface_kind: 'temporal_stage_attempt_start_receipt',
-          provider_kind: 'temporal',
-          stage_attempt_id: attempt.stage_attempt_id,
-          workflow_id: attempt.workflow_id,
-          first_execution_run_id: 'run-paper-mission-route',
-        }),
+        startTemporalStageAttemptWorkflow: async (attempt) => {
+          observedWorkspaceRoot = attempt.workspace_locator.workspace_root;
+          observedCommandCwd = attempt.workspace_locator.command_cwd;
+          return {
+            surface_kind: 'temporal_stage_attempt_start_receipt',
+            provider_kind: 'temporal',
+            stage_attempt_id: attempt.stage_attempt_id,
+            workflow_id: attempt.workflow_id,
+            first_execution_run_id: 'run-paper-mission-route',
+          };
+        },
       }),
     }) as unknown as StageRouteDispatchReadback;
     const task = inspectTask(db, enqueued.task.task_id);
@@ -263,8 +285,17 @@ test('family-runtime dispatch starts MAS PaperMission stage-route Temporal attem
     assert.equal(started.stage_run_request.provider_running, true);
     assert.equal(started.authority_boundary.can_claim_provider_running, true);
     assert.equal(started.authority_boundary.can_claim_paper_progress, false);
+    assert.equal(observedWorkspaceRoot, '/tmp/mas-dm-cvd-workspace');
+    assert.equal(observedCommandCwd, '/tmp/mas-dm-cvd-workspace');
     assert.equal(task.stage_attempts[0].provider_kind, 'temporal');
     assert.equal(task.stage_attempts[0].status, 'running');
+    assert.equal(task.stage_attempts[0].workspace_locator.workspace_root, '/tmp/mas-dm-cvd-workspace');
+    assert.equal(task.stage_attempts[0].workspace_locator.command_cwd, '/tmp/mas-dm-cvd-workspace');
+    assert.equal(task.stage_attempts[0].workspace_locator.command_source, 'workspace_binding');
+    const launchableInput = requireTemporalStageAttemptWorkflowInputLaunchable(
+      buildTemporalStageAttemptWorkflowInput(task.stage_attempts[0]),
+    );
+    assert.equal(launchableInput.workspace_locator.workspace_root, '/tmp/mas-dm-cvd-workspace');
     assert.equal(task.stage_attempts[0].attempt_count, 1);
     assert.equal(task.stage_attempts[0].provider_run.provider_status, 'running');
     assert.equal(task.events.some((event) => event.event_type === 'paper_mission_stage_route_temporal_started'), true);

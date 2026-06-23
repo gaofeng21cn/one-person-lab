@@ -1,4 +1,4 @@
-import { assert, createGitModuleRemoteFixture, fs, os, path, runCli, shellSingleQuote, test, writeMasCleanRunnerFixture } from '../helpers.ts';
+import { assert, createGitModuleRemoteFixture, fs, os, path, repoRoot, runCli, shellSingleQuote, test, writeMasCleanRunnerFixture } from '../helpers.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -253,6 +253,12 @@ test('family-runtime intake enqueues ready MAS PaperMission route handoff as OPL
     assert.equal(queue.tasks[0].payload.command_kind, 'start_next_stage');
     assert.equal(queue.tasks[0].payload.route_target, 'publication_gate_replay');
     assert.equal(queue.tasks[0].payload.paper_mission_transaction_ref, 'paper-mission-transaction:dm002:1');
+    assert.equal(queue.tasks[0].payload.workspace_root, repoRoot);
+    assert.equal(queue.tasks[0].payload.command_cwd, repoRoot);
+    assert.deepEqual(queue.tasks[0].payload.opl_domain_export_context, {
+      command_source: 'env_override',
+      command_cwd: repoRoot,
+    });
     assert.equal(queue.tasks[0].payload.opl_route_handoff_record.handoff_status, 'ready_for_opl_route_command');
     assert.equal(queue.tasks[0].payload.authority_boundary.domain_truth_owner, 'med-autoscience');
     assert.equal(queue.tasks[0].payload.authority_boundary.runtime_owner, 'one-person-lab');
