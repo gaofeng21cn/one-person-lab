@@ -75,7 +75,14 @@ export function taskRowMatchesScope(row: FamilyRuntimeTaskRow, taskScope?: Famil
     return false;
   }
   if (taskScope.taskKind && row.task_kind !== taskScope.taskKind) {
-    return false;
+    const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
+    if (payload.provider_admission_source_task_kind !== taskScope.taskKind) {
+      return false;
+    }
+    if (!taskScope.payloadMatches?.length) {
+      return true;
+    }
+    return payloadMatchesTaskScope(payload, taskScope);
   }
   if (!taskScope.payloadMatches?.length) {
     return true;
@@ -95,7 +102,9 @@ export function taskInputMatchesScope(input: {
     return false;
   }
   if (taskScope.taskKind && input.taskKind !== taskScope.taskKind) {
-    return false;
+    if (input.payload.provider_admission_source_task_kind !== taskScope.taskKind) {
+      return false;
+    }
   }
   return payloadMatchesTaskScope(input.payload, taskScope);
 }

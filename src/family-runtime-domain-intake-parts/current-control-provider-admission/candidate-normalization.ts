@@ -12,6 +12,20 @@ import {
   recoveryObligationId,
 } from './shared.ts';
 
+const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
+const MAS_PAPER_MISSION_START_OR_RESUME_TASK_KIND = 'paper_mission/start_or_resume';
+
+function isMasTransitionRequestTask(input: EnqueueInput) {
+  return input.domainId === 'medautoscience'
+    && (
+      input.taskKind === MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
+      || (
+        input.taskKind === MAS_PAPER_MISSION_START_OR_RESUME_TASK_KIND
+        && transitionRequestFromCandidate(input.payload) !== null
+      )
+    );
+}
+
 function actionQueueProviderAdmissionContext(
   action: Record<string, unknown>,
 ): CurrentControlProviderAdmissionActionQueueContext {
@@ -337,10 +351,7 @@ function currentControlProviderAdmissionCandidateFromTransitionRequestCandidate(
 export function currentControlProviderAdmissionCandidateFromTransitionRequestTask(
   input: EnqueueInput,
 ) {
-  if (
-    input.domainId !== 'medautoscience'
-    || input.taskKind !== 'domain_owner/default-executor-dispatch'
-  ) {
+  if (!isMasTransitionRequestTask(input)) {
     return null;
   }
   const request = transitionRequestFromCandidate(input.payload);
@@ -388,6 +399,9 @@ export function currentControlProviderAdmissionCandidateFromTransitionRequestTas
       ...(identityBinding.attemptIdempotencyKey ? { attempt_idempotency_key: identityBinding.attemptIdempotencyKey } : {}),
       opl_domain_progress_transition_request: request,
       provider_admission_schema_source: 'transition_request_pending_task',
+      ...(input.taskKind !== MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
+        ? { provider_admission_source_task_kind: input.taskKind }
+        : {}),
       priority: input.priority,
     };
   }
@@ -436,6 +450,9 @@ export function currentControlProviderAdmissionCandidateFromTransitionRequestTas
     },
     opl_domain_progress_transition_request: request,
     provider_admission_schema_source: 'transition_request_pending_task',
+    ...(input.taskKind !== MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
+      ? { provider_admission_source_task_kind: input.taskKind }
+      : {}),
     priority: input.priority,
   };
 }

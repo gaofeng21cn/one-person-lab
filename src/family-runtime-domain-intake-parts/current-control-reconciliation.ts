@@ -65,6 +65,15 @@ function payloadString(input: EnqueueInput, key: string) {
   return optionalString(input.payload[key]);
 }
 
+function isMasPaperMissionStartOrResumeInput(input: EnqueueInput) {
+  return input.domainId === 'medautoscience'
+    && input.taskKind === 'paper_mission/start_or_resume'
+    && (
+      isRecord(input.payload.opl_runtime_carrier)
+      || isRecord(input.payload.opl_domain_progress_transition_request)
+    );
+}
+
 function samePayloadString(left: EnqueueInput, right: EnqueueInput, key: string) {
   const leftValue = payloadString(left, key);
   const rightValue = payloadString(right, key);
@@ -167,7 +176,10 @@ export function suppressStaleDefaultExecutorInputs(
     const studyId = optionalString(input.payload.study_id);
     return !(
       input.domainId === 'medautoscience'
-      && input.taskKind === 'domain_owner/default-executor-dispatch'
+      && (
+        input.taskKind === 'domain_owner/default-executor-dispatch'
+        || isMasPaperMissionStartOrResumeInput(input)
+      )
       && studyId !== null
       && currentStudyIds.has(studyId)
     );

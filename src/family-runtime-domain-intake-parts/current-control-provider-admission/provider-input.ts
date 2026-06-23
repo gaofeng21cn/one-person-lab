@@ -847,6 +847,9 @@ export function currentControlProviderAdmissionInputFrom(
         ...(optionalString(candidate.provider_admission_schema_source)
           ? { provider_admission_schema_source: optionalString(candidate.provider_admission_schema_source) }
           : {}),
+        ...(optionalString(candidate.provider_admission_source_task_kind)
+          ? { provider_admission_source_task_kind: optionalString(candidate.provider_admission_source_task_kind) }
+          : {}),
         ...(optionalString(candidate.required_output_surface)
           ? { required_output_surface: optionalString(candidate.required_output_surface) }
           : {}),

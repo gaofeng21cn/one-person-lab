@@ -309,7 +309,7 @@ test('family-runtime intake consumes MAS PaperMissionTransaction opl_runtime_car
     pending_family_tasks: [
       {
         domain_id: 'medautoscience',
-        task_kind: 'domain_owner/default-executor-dispatch',
+        task_kind: 'paper_mission/start_or_resume',
         priority: 100,
         source: 'mas-paper-mission-transaction-carrier',
         dedupe_key: `paper-mission:${studyId}:${workUnitId}`,
@@ -357,7 +357,7 @@ test('family-runtime intake consumes MAS PaperMissionTransaction opl_runtime_car
       '--study',
       studyId,
       '--task-kind',
-      'domain_owner/default-executor-dispatch',
+      'paper_mission/start_or_resume',
     ], env);
     const queue = runCli(['family-runtime', 'queue', 'list'], env);
     const tasks = queue.family_runtime_queue.tasks;
@@ -369,6 +369,9 @@ test('family-runtime intake consumes MAS PaperMissionTransaction opl_runtime_car
     assert.equal(tasks.length, 1);
     assert.equal(tasks[0].source, 'opl-current-control-transition-request');
     assert.equal(tasks[0].payload.provider_admission_schema_source, 'transition_request_pending_task');
+    assert.equal(tasks[0].task_kind, 'domain_owner/default-executor-dispatch');
+    assert.equal(tasks[0].payload.provider_admission_source_task_kind, 'paper_mission/start_or_resume');
+    assert.equal(tasks[0].payload.provider_admission_identity.provider_admission_source_task_kind, 'paper_mission/start_or_resume');
     assert.equal(tasks[0].payload.route_identity_key, carrier.route_identity_key);
     assert.equal(tasks[0].payload.attempt_idempotency_key, attemptIdempotencyKey);
     assert.equal(tasks[0].payload.idempotency_key, carrier.request_idempotency_key);
@@ -497,7 +500,7 @@ test('family-runtime blocks MAS PaperMissionTransaction carrier when payload ide
     pending_family_tasks: [
       {
         domain_id: 'medautoscience',
-        task_kind: 'domain_owner/default-executor-dispatch',
+        task_kind: 'paper_mission/start_or_resume',
         priority: 100,
         source: 'mas-paper-mission-transaction-carrier',
         dedupe_key: `paper-mission:${studyId}:${workUnitId}`,
@@ -540,7 +543,7 @@ test('family-runtime blocks MAS PaperMissionTransaction carrier when payload ide
       '--study',
       studyId,
       '--task-kind',
-      'domain_owner/default-executor-dispatch',
+      'paper_mission/start_or_resume',
     ], env);
     const queue = runCli(['family-runtime', 'queue', 'list'], env);
 
@@ -624,7 +627,7 @@ test('family-runtime does not enqueue provider admission for MAS PaperMissionTra
     pending_family_tasks: [
       {
         domain_id: 'medautoscience',
-        task_kind: 'domain_owner/default-executor-dispatch',
+        task_kind: 'paper_mission/start_or_resume',
         priority: 100,
         source: 'mas-paper-mission-transaction-carrier',
         dedupe_key: `paper-mission:${studyId}:${workUnitId}`,
@@ -664,7 +667,7 @@ test('family-runtime does not enqueue provider admission for MAS PaperMissionTra
       '--study',
       studyId,
       '--task-kind',
-      'domain_owner/default-executor-dispatch',
+      'paper_mission/start_or_resume',
     ], env);
     const queue = runCli(['family-runtime', 'queue', 'list'], env);
 
