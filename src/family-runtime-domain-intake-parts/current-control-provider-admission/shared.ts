@@ -371,6 +371,17 @@ export function validStageTransitionAuthorityBoundary(value: unknown) {
   if (!isRecord(value)) {
     return false;
   }
+  if (optionalString(value.surface_kind) === 'mas_domain_progress_transition_request_boundary') {
+    return optionalString(value.target_runtime_owner) === 'one-person-lab'
+      && optionalString(value.target_runtime_kind) === 'DomainProgressTransitionRuntime'
+      && optionalString(value.authority_role) === 'domain_policy_request_only'
+      && value.mas_can_create_opl_outbox_record === false
+      && value.mas_can_create_opl_event === false
+      && value.mas_can_create_opl_stage_run === false
+      && value.mas_can_authorize_provider_admission === false
+      && value.mas_can_mark_provider_attempt_running === false
+      && value.provider_completion_is_domain_completion === false;
+  }
   return optionalString(value.producer_kind) === 'runtime_provider'
     && optionalString(value.intent_kind) === 'provider_observation'
     && value.stage_transition_authority === 'one-person-lab'

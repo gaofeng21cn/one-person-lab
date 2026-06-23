@@ -73,6 +73,10 @@ function recordField(value: Record<string, unknown>, field: string) {
   return isRecord(value[field]) ? value[field] : null;
 }
 
+function recordValue(value: unknown, field: string) {
+  return isRecord(value) ? value[field] : null;
+}
+
 function routeCommandTransitionKind(value: Record<string, unknown>) {
   const routeCommand = recordField(value, 'opl_route_command');
   const commandKind = firstString(routeCommand?.command_kind, routeCommand?.route_command);
@@ -323,7 +327,7 @@ export function normalizeDomainProgressPolicyAdapterRequest(
       required_postcondition: {
         ...requiredPostcondition,
         kind: firstString(requiredPostcondition.kind, requiredPostcondition.required_outcome)
-          ?? firstString(outcome?.kind, outcome?.status)
+          ?? firstString(recordValue(outcome, 'kind'), recordValue(outcome, 'status'))
           ?? 'provider_admission_enqueued_or_blocked',
         outcome_owner: firstString(requiredPostcondition.outcome_owner) ?? 'one-person-lab',
         domain_state_owner: firstString(requiredPostcondition.domain_state_owner) ?? adapterOwner,
