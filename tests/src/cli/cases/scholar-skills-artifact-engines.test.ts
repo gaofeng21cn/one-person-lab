@@ -26,6 +26,19 @@ const expectedArtifactRefFamiliesByModule = {
   'opl.scholarskills.intake': ['source_snapshot', 'adoption_contract'],
 } satisfies Record<typeof moduleIds[number], string[]>;
 
+const expectedEngineIdsByModule = {
+  'opl.scholarskills.display': 'scholar_display_candidate_visual_plan_engine',
+  'opl.scholarskills.tables': 'scholar_tables_candidate_table_manifest_engine',
+  'opl.scholarskills.stats': 'scholar_stats_candidate_analysis_engine',
+  'opl.scholarskills.omics': 'scholar_omics_candidate_pipeline_engine',
+  'opl.scholarskills.lit': 'scholar_lit_candidate_evidence_map_engine',
+  'opl.scholarskills.write': 'scholar_write_candidate_section_engine',
+  'opl.scholarskills.review': 'scholar_review_candidate_report_engine',
+  'opl.scholarskills.submit': 'scholar_submit_candidate_package_engine',
+  'opl.scholarskills.data': 'scholar_data_candidate_lineage_engine',
+  'opl.scholarskills.intake': 'scholar_intake_candidate_source_engine',
+} satisfies Record<typeof moduleIds[number], string>;
+
 function readJson(filePath: string) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
@@ -36,6 +49,7 @@ test('scholar-skills materialize emits non-authoritative candidate artifact bodi
     const outputRoot = path.join(fixtureRoot, 'display-candidate');
     const payload = {
       title: 'Risk-adjusted outcome trend',
+      source_refs: ['mas:source/cohort-v1'],
       variables: ['age', 'hba1c', 'mortality'],
       cohort_ref: 'mas:source/cohort-v1',
     };
@@ -76,6 +90,16 @@ test('scholar-skills materialize emits non-authoritative candidate artifact bodi
     assert.equal(first.candidate_artifact_bodies.length, 1);
     assert.equal(first.candidate_artifact_bodies[0].body_format, 'svg');
     assert.equal(first.candidate_artifact_bodies[0].body_written, true);
+    assert.equal(first.candidate_artifact_bodies[0].engine_id, expectedEngineIdsByModule['opl.scholarskills.display']);
+    assert.equal(first.candidate_artifact_bodies[0].validation_status, 'pass');
+    assert.equal(first.candidate_artifact_bodies[0].input_requirements.required_artifact_root_ref, true);
+    assert.equal(first.candidate_artifact_bodies[0].kind, 'display_pack_agent_orchestration');
+    assert.equal(first.candidate_artifact_bodies[0].ref, 'artifact-root:display-pack-candidates/display_pack_agent_orchestration');
+    assert.equal(first.candidate_artifact_bodies[0].sha256.startsWith('sha256:'), true);
+    assert.deepEqual(first.candidate_artifact_bodies[0].missing_inputs, []);
+    assert.equal(first.candidate_artifact_bodies[0].body_included, true);
+    assert.equal(first.candidate_artifact_bodies[0].body_carried_to_owner_request, false);
+    assert.equal(first.candidate_artifact_bodies[0].engine_receipt_ref.startsWith('opl://scholarskills/artifact-engine-receipts/'), true);
     assert.equal(first.candidate_artifact_bodies[0].authority_flags.counts_as_paper_truth, false);
     assert.equal(first.candidate_artifact_bodies[0].authority_flags.can_sign_owner_receipt, false);
     assert.equal(first.written_files.includes(first.candidate_artifact_bodies[0].body_path), true);
@@ -183,9 +207,33 @@ test('scholar-skills materialize writes deterministic module-specific bodies for
       assert.equal(output.writes.typed_blocker_created, false);
       for (const body of output.candidate_artifact_bodies) {
         assert.equal(fs.existsSync(body.body_path), true);
+        assert.equal(body.engine_id, expectedEngineIdsByModule[moduleId]);
+        assert.equal(body.engine_version, '2026-06-24');
+        assert.equal(body.validation_status, 'pass');
+        assert.equal(body.validation_checks.some((check: { check_id: string }) => check.check_id === 'authority_boundary_false'), true);
+        assert.equal(body.input_requirements.required_payload_fields.includes('source_refs'), true);
+        assert.equal(body.body_included, true);
+        assert.equal(body.body_carried_to_owner_request, false);
+        assert.equal(body.readiness_notes.some((note: string) => note.includes('domain owner gate')), true);
+        assert.equal(body.engine_receipt_ref.startsWith('opl://scholarskills/artifact-engine-receipts/'), true);
         assert.equal(body.body_policy, 'opl_generated_non_authoritative_candidate_body_requires_domain_owner_consumption');
         assert.equal(body.authority_flags.can_write_domain_truth, false);
         assert.equal(body.authority_flags.can_mutate_artifact_body, false);
+        if (body.body_format === 'json') {
+          const candidate = readJson(body.body_path);
+          assert.equal(candidate.surface_kind, 'opl_scholarskills_executable_candidate_artifact');
+          assert.equal(candidate.status, 'candidate_artifact_engine_output');
+          assert.equal(candidate.engine.engine_id, expectedEngineIdsByModule[moduleId]);
+          assert.equal(candidate.validation.owner_gate_required, true);
+          assert.equal(candidate.receipt_metadata.unsigned, true);
+          assert.deepEqual(candidate.missing_inputs, candidate.input_requirements.required_payload_fields.filter((field: string) => field !== 'source_refs'));
+          assert.equal(candidate.body_carried_to_owner_request, false);
+          assert.equal(candidate.authority_flags.can_sign_owner_receipt, false);
+        } else {
+          const text = fs.readFileSync(body.body_path, 'utf8');
+          assert.equal(text.includes(expectedEngineIdsByModule[moduleId]), true);
+          assert.equal(text.includes('owner gate') || text.includes('owner-gate'), true);
+        }
       }
     }
   } finally {
