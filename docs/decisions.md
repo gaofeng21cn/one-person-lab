@@ -5,6 +5,20 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-06-23
+
+### 决策：MAS paper-progress SSOT 留在 MAS PaperMissionRun
+
+原因：MAS 的 executor-first paper mission cutover 已把默认论文推进读面收口到 `PaperMissionRun`、`paper-mission` CLI、product-entry / domain-handler `paper_mission/start_or_resume` 和 `artifact_first_mission_summary.paper_mission_run`。OPL 同时持有 Stage Transition Authority、DomainProgressTransitionRuntime、Runway、`current_owner_delta` 和 generated/hosted surfaces。若 OPL 文档把 MAS mission refs、DHD diagnostic、queue/provider 状态或 App drilldown 写成新的 paper-progress truth，就会重新制造第二真相源。
+
+影响：
+
+- OPL 文档只维护 Framework runtime、Runway StageRun、typed queue、attempt ledger、`current_owner_delta`、generated/hosted descriptors、App/workbench projection、refs-only evidence 和 shared primitive 的 SSOT。
+- MAS 文档和 MAS repo-owned contracts/source/CLI 继续维护 `PaperMissionRun`、legacy truth import pack、mission input / decision constraint、publication quality、AI reviewer / auditor verdict、publication gate、artifact/current package authority、owner receipt、typed blocker、human gate、evidence/review ledger 和 paper mission consume verdict。
+- OPL 可以消费 MAS `paper_mission/start_or_resume` refs、承载 hosted attempt、记录 provider observation、投影 next owner、运输 owner answer refs 或把合法 owner answer 折回 `current_owner_delta`；OPL 不能签 MAS owner receipt、创建 MAS typed blocker、写 MAS publication eval / controller decision / current package / paper body，也不能授权 MAS publication-ready、paper-progress、domain-ready 或 production-ready。
+- 品牌模块归位：`OPL Charter` 固定 no-second-truth 边界；`OPL Runway` 承载 runtime envelope；`OPL Pack` / `OPL Connect` 承载 generated/hosted descriptors；`OPL Console` 投影 `current_owner_delta` 和 mission refs；`OPL Vault` 仅保存 refs-only evidence。
+- 旧 DHD、owner-route、default-executor dispatch、PaperRecovery 或 MAS legacy blocker 在 OPL 文档中只能出现为 diagnostic、migration、provenance、ABI carrier 或 non-degradation evidence，不得作为普通用户默认 paper mission route。
+
 ## 2026-06-20
 
 ### 决策：OKF 只作为 OPL context bundle / interchange layer

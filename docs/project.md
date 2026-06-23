@@ -27,6 +27,8 @@ OPL Framework 可以使用外部运行时 provider，但框架边界由本仓持
 
 当前 repo 分工固定为：`one-person-lab` 是 OPL Framework / runtime / CLI / contracts owner，不持有 GUI shell implementation；`one-person-lab-app` 是 GUI product truth、release、updater、用户教程、页面状态、active-shell validation 和 GUI candidate policy owner；`opl-aion-shell` 是当前 OPL-branded AionUI shell implementation carrier，负责实现 App-owned GUI contract；Hermes Desktop / `hermes-codex` 是 App-owned 唯一 foreground alternative GUI candidate；`opl-agui-codex-shell` / `agui-codex` 只作为 AG-UI/CopilotKit archived technical proof 与显式 replay surface 保留。MAS/MAG/RCA/Book Forge 等 domain repos 是 domain app/runtime authority，持有自己的 stage 语义、prompt、skill、领域逻辑、质量 gate、truth reducer、运行规则、交付物真相、owner receipt 和 direct skill 入口。
 
+MAS 的论文推进 SSOT 不在 OPL 仓维护。当前 MAS paper-facing 默认入口是 MAS 仓的 `PaperMissionRun`、`paper-mission inspect|start|resume|consume-candidate`、product-entry / domain-handler `paper_mission/start_or_resume` 和 `artifact_first_mission_summary.paper_mission_run`。OPL 只持有承载这些 refs 的 Framework runtime、Runway StageRun、typed queue、attempt ledger、`current_owner_delta` 和 App/workbench projection；不能在 OPL 侧重建 paper mission 状态、签 MAS owner receipt、创建 MAS typed blocker、授权 publication / artifact / current package verdict，或把 provider completion / read-model clean 写成 MAS paper progress。
+
 One Person Lab App 继续放在独立的界面仓中维护，作为普通用户使用 OPL Framework 与 Foundry Agents 的工作台产品。Framework 侧把普通用户 App 目标形态读作 `Codex App wrapper`：固定使用 `Codex CLI` 作为 concrete executor，内置 MAS/MAG/RCA 及后续 Foundry Agent 的任务入口，不把 AionUI 原生多 backend、多 Agent 选择或 executor 切换暴露成普通用户产品面。
 
 ## 品牌模块目标

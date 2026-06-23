@@ -101,6 +101,7 @@ OPL 的三层产品认知说明“面向谁”，当前十个品牌模块说明 
 - App 的 GUI navigation 只能包装 OPL `app state/action` 与 Foundry Agent task entry，不得把 shell repo 的 backend / Agent selector 当成 runtime truth、domain truth 或 ordinary executor switch
 - App 运行状态页消费 OPL `runtime_visualization_projection` 与 `stage_attempt_workbench.stage_progress_log`，并把 Temporal Web UI 作为 operator/debug link 暴露；Temporal Web UI 不成为普通用户主页面、App 状态真相源或 domain authority surface。
 - MAS v2 alignment 下，`MAS` 作为独立 domain agent 通过单一 MAS domain app skill 接入；`OPL` 只消费 MAS-owned entry/projection truth，包括 `mas_opl_runtime_workbench_projection` 的 App drilldown/read-only workbench 投影，不新增 MAS runtime kernel、standalone product release 或 OPL-owned readiness verdict
+- MAS executor-first paper path 下，paper-progress SSOT 保持在 MAS `PaperMissionRun`：OPL Runway 只承载 mission attempt / queue / provider lifecycle，OPL Pack / Connect 只分发 generated descriptors 和 domain task refs，OPL Console 只投影 `current_owner_delta` 与 mission refs，OPL Vault 只保存 refs-only evidence。`paper-mission`、`paper_mission/start_or_resume`、`artifact_first_mission_summary.paper_mission_run`、legacy truth import pack 和 consume-candidate verdict 的语义解释由 MAS 持有；OPL 不把这些 projection 改写成 OPL-owned paper mission truth、publication verdict、artifact authority 或 owner receipt。
 
 ## 当前主线资源
 
