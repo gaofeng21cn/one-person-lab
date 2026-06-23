@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { FrameworkContractError } from './contracts.ts';
 import {
   buildRuntimeEnvironmentPrepareReadback,
@@ -89,6 +90,34 @@ function moduleContractRef(module: ScholarSkillCapabilityModuleDescriptor) {
   return `contracts/opl-framework/scholar-skills-capability-modules.json#modules.${module.module_id}`;
 }
 
+function stableExecutionReceiptRef(
+  module: ScholarSkillCapabilityModuleDescriptor,
+  input: InvocationInput,
+) {
+  const identity = {
+    module_id: module.module_id,
+    input_ref: input.inputRef,
+    artifact_root_ref: input.artifactRoot,
+  };
+  const digest = crypto.createHash('sha256').update(JSON.stringify(identity)).digest('hex');
+  return `opl://scholarskills/execution-receipt-candidates/${encodeURIComponent(module.module_id)}/${digest}`;
+}
+
+function buildExecutionReceiptRefs(
+  module: ScholarSkillCapabilityModuleDescriptor,
+  input: InvocationInput,
+) {
+  const receiptRef = stableExecutionReceiptRef(module, input);
+  return {
+    input_fingerprint_ref: `${receiptRef}#input_fingerprint_ref`,
+    dependency_profile_ref: `${receiptRef}#dependency_profile_ref`,
+    prepared_run_context_ref: `${receiptRef}#prepared_run_context_ref`,
+    render_cache_ref: `${receiptRef}#render_cache_ref`,
+    artifact_manifest_ref: `${receiptRef}#artifact_manifest_ref`,
+    visual_audit_or_gallery_preview_ref: `${receiptRef}#visual_audit_or_gallery_preview_ref`,
+  };
+}
+
 function findModuleOrThrow(
   modules: ScholarSkillCapabilityModuleDescriptor[],
   moduleId: string,
@@ -154,6 +183,7 @@ function buildExecutionReceiptCandidate(
   module: ScholarSkillCapabilityModuleDescriptor,
   input: InvocationInput,
 ) {
+  const executionReceiptRef = stableExecutionReceiptRef(module, input);
   return {
     surface_kind: 'opl_scholarskills_execution_receipt_candidate',
     status: 'receipt_candidate_unsigned',
@@ -161,6 +191,12 @@ function buildExecutionReceiptCandidate(
     input_ref: input.inputRef,
     artifact_root_ref: input.artifactRoot,
     descriptor_ref: moduleContractRef(module),
+    execution_receipt_ref: executionReceiptRef,
+    execution_receipt_refs: buildExecutionReceiptRefs(module, input),
+    execution_receipt_counts_as_candidate_artifact: true,
+    counts_as_paper_truth: false,
+    counts_as_owner_receipt: false,
+    can_authorize_publication_readiness: false,
     accepted_receipt_refs: module.receipt_policy.accepted_receipt_refs,
     receipt_body_policy: module.receipt_policy.receipt_body_policy,
     can_sign_owner_receipt: module.receipt_policy.can_sign_owner_receipt,

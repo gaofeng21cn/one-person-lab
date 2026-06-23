@@ -376,6 +376,10 @@ test('opl scholar-skills invoke returns invocation envelope and unsigned executi
   assert.equal(output.can_sign_owner_receipt, false);
   assert.equal(output.expected_artifact_refs[0].ref, 'artifact-root:display-pack-candidates/display_pack_agent_orchestration');
   assert.equal(output.execution_receipt_candidate.status, 'receipt_candidate_unsigned');
+  assert.equal(output.execution_receipt_candidate.execution_receipt_counts_as_candidate_artifact, true);
+  assert.equal(output.execution_receipt_candidate.counts_as_paper_truth, false);
+  assert.equal(output.execution_receipt_candidate.counts_as_owner_receipt, false);
+  assert.equal(output.execution_receipt_candidate.can_authorize_publication_readiness, false);
   assert.equal(output.execution_receipt_candidate.can_sign_owner_receipt, false);
   assert.equal(output.execution_receipt_candidate.can_claim_quality_verdict, false);
   assert.equal(output.execution_receipt_candidate.can_claim_artifact_authority, false);
@@ -398,6 +402,22 @@ test('opl scholar-skills receipt builds the same execution receipt candidate wit
   assert.equal(output.surface_kind, 'opl_scholarskills_execution_receipt_candidate');
   assert.equal(output.status, 'receipt_candidate_unsigned');
   assert.equal(output.module_id, 'opl.scholarskills.display');
+  assert.equal(
+    output.execution_receipt_ref,
+    'opl://scholarskills/execution-receipt-candidates/opl.scholarskills.display/d846e00822301e2e549acda4d9ab761c8b465b089952e7d14bd5ed7e6f835b9e',
+  );
+  assert.deepEqual(output.execution_receipt_refs, {
+    input_fingerprint_ref: `${output.execution_receipt_ref}#input_fingerprint_ref`,
+    dependency_profile_ref: `${output.execution_receipt_ref}#dependency_profile_ref`,
+    prepared_run_context_ref: `${output.execution_receipt_ref}#prepared_run_context_ref`,
+    render_cache_ref: `${output.execution_receipt_ref}#render_cache_ref`,
+    artifact_manifest_ref: `${output.execution_receipt_ref}#artifact_manifest_ref`,
+    visual_audit_or_gallery_preview_ref: `${output.execution_receipt_ref}#visual_audit_or_gallery_preview_ref`,
+  });
+  assert.equal(output.execution_receipt_counts_as_candidate_artifact, true);
+  assert.equal(output.counts_as_paper_truth, false);
+  assert.equal(output.counts_as_owner_receipt, false);
+  assert.equal(output.can_authorize_publication_readiness, false);
   assert.equal(output.receipt_body_policy, 'domain_owner_receipt_or_typed_blocker_required_for_authority');
   assert.equal(output.can_sign_owner_receipt, false);
   assert.equal(output.can_create_typed_blocker, false);

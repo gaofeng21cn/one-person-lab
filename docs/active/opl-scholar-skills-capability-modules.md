@@ -57,6 +57,8 @@ opl scholar-skills invoke --module <module_id> --input-ref <ref> --artifact-root
 opl scholar-skills receipt --module <module_id> --input-ref <ref> --artifact-root <ref> --json
 ```
 
+`receipt` / `invoke` 返回的 `scholar_skills_receipt_candidate` / `execution_receipt_candidate` 会提供 deterministic `execution_receipt_ref` 和 MAS Display 可消费的 refs-only execution receipt family：`input_fingerprint_ref`、`dependency_profile_ref`、`prepared_run_context_ref`、`render_cache_ref`、`artifact_manifest_ref`、`visual_audit_or_gallery_preview_ref`。这些字段只计为 unsigned candidate artifact ref，显式保持 `counts_as_paper_truth=false`、`counts_as_owner_receipt=false`、`can_authorize_publication_readiness=false`。
+
 需要把 module id 绑定到真实 OPL runtime environment substrate 时，使用 runtime bridge 命令。它们复用 `opl runtime env prepare/run-context` 的实现，可在明确 `--apply` 时写入 OPL 管理依赖库和 `paper/build/dependency_environment_lock.json`、`dependency_environment_receipt.json`、`dependency_run_context.json`，但仍不写 domain truth、artifact body、owner receipt、typed blocker 或 runtime queue：
 
 ```bash
