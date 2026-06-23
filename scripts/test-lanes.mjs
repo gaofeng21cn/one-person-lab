@@ -194,6 +194,7 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/family-runtime-domain-handler-timeout.test.ts',
   'tests/src/cli/cases/family-runtime-cross-repo-e2e.test.ts',
   'tests/src/cli/cases/family-runtime-binding-intake.test.ts',
+  'tests/src/cli/cases/family-runtime-paper-mission-stage-route.test.ts',
   'tests/src/cli/cases/family-runtime-current-control-provider-admission.test.ts',
   'tests/src/cli/cases/family-runtime-domain-progress-transition-runtime.test.ts',
   'tests/src/cli/cases/family-runtime-binding-dispatch.test.ts',

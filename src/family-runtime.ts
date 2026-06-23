@@ -57,6 +57,7 @@ import {
 } from './family-runtime-store.ts';
 import { enqueueTask } from './family-runtime-enqueue.ts';
 import { runSchedulerQueueTick } from './family-runtime-scheduler-tick-runner.ts';
+import { blockPaperMissionStageRouteTasksForProviderPreflight } from './family-runtime-tick.ts';
 import { hydrateDomainTasks, readMasManagedProviderProjection } from './family-runtime-task-dispatch.ts';
 import { redriveFamilyRuntimeTask } from './family-runtime-redrive.ts';
 import { holdFamilyRuntimeQueueTasks } from './family-runtime-queue-hold.ts';
@@ -76,6 +77,26 @@ import {
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
+}
+
+function providerPreflightBlockedReason(value: unknown) {
+  if (typeof value !== 'object' || value === null) {
+    return 'provider_not_ready';
+  }
+  const record = value as Record<string, unknown>;
+  const queueTick = typeof record.queue_tick === 'object' && record.queue_tick !== null
+    ? record.queue_tick as Record<string, unknown>
+    : {};
+  if (typeof queueTick.dispatch_blocked_reason === 'string' && queueTick.dispatch_blocked_reason.trim()) {
+    return queueTick.dispatch_blocked_reason;
+  }
+  const providerBlocker = typeof record.provider_blocker === 'object' && record.provider_blocker !== null
+    ? record.provider_blocker as Record<string, unknown>
+    : {};
+  if (typeof providerBlocker.blocker_id === 'string' && providerBlocker.blocker_id.trim()) {
+    return providerBlocker.blocker_id;
+  }
+  return 'provider_not_ready';
 }
 
 async function syncTemporalStageAttemptsForTask(
@@ -466,6 +487,13 @@ export async function runFamilyRuntime(args: string[]): Promise<Record<string, u
             },
           ),
         );
+        const paperMissionStageRouteProviderPreflight = schedulerTick.status === 'blocked_provider_not_ready'
+          ? blockPaperMissionStageRouteTasksForProviderPreflight(db, {
+              source: parsed.source ?? 'manual',
+              taskScope: parsed.taskScope,
+              reason: providerPreflightBlockedReason(schedulerTick),
+            })
+          : { blockedCount: 0, blockedTaskIds: [] };
         return {
           version: 'g2',
           family_runtime_tick: {
@@ -487,6 +515,7 @@ export async function runFamilyRuntime(args: string[]): Promise<Record<string, u
             provider_blocker: 'provider_blocker' in schedulerTick
               ? schedulerTick.provider_blocker
               : null,
+            paper_mission_stage_route_provider_preflight: paperMissionStageRouteProviderPreflight,
             queue: queueSummary(db),
           },
         };

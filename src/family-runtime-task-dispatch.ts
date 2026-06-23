@@ -16,6 +16,10 @@ import {
   isDefaultExecutorDispatchTask,
 } from './family-runtime-provider-hosted-attempts.ts';
 import { ensureProviderHostedStageAttempt } from './family-runtime-provider-hosted-attempts.ts';
+import {
+  dispatchPaperMissionStageRouteTask,
+  isPaperMissionStageRouteTask,
+} from './family-runtime-paper-mission-stage-route-runner.ts';
 import { blockTaskForStageAdmissionGate } from './family-runtime-stage-admission-gate.ts';
 import {
   listStageAttemptsForTask,
@@ -527,6 +531,11 @@ export async function dispatchFamilyRuntimeTask(
   const providerHostedAttempt = ensureProviderHostedStageAttempt(db, row, payload);
   if (providerHostedAttempt?.status === 'blocked' && providerHostedAttempt.blocked_reason?.startsWith('stage_admission_')) {
     return blockTaskForStageAdmissionGate(db, row, providerHostedAttempt);
+  }
+  if (isPaperMissionStageRouteTask(row, payload)) {
+    return dispatchPaperMissionStageRouteTask(db, paths, row, payload, {
+      temporalProviderModule: options.temporalProviderModule,
+    });
   }
   if (isDefaultExecutorDispatchTask(row, payload)) {
     return startDefaultExecutorStageAttempt(db, paths, {
