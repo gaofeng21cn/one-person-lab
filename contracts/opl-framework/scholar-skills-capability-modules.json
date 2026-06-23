@@ -27,6 +27,9 @@
     "scholar_skill_receipt_commands": [
       "opl scholar-skills receipt --module <module_id> --input-ref <ref> --artifact-root <ref> --json"
     ],
+    "scholar_skill_materialize_commands": [
+      "opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact-root <ref-or-path> --output-root <path> --json"
+    ],
     "scholar_skill_runtime_prepare_commands": [
       "opl scholar-skills runtime-prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> [--apply] --json"
     ],

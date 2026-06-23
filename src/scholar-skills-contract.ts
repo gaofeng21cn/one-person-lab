@@ -411,6 +411,11 @@ export function validateScholarSkillsCapabilityModules(
         'runtime_environment_bridge.scholar_skill_receipt_commands',
         filePath,
       ),
+      scholar_skill_materialize_commands: expectOptionalNonEmptyStringArray(
+        bridge.scholar_skill_materialize_commands,
+        'runtime_environment_bridge.scholar_skill_materialize_commands',
+        filePath,
+      ),
       scholar_skill_runtime_prepare_commands: expectOptionalNonEmptyStringArray(
         bridge.scholar_skill_runtime_prepare_commands,
         'runtime_environment_bridge.scholar_skill_runtime_prepare_commands',

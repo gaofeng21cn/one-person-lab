@@ -55,9 +55,12 @@ opl scholar-skills prepare --module <module_id> --profile <profile> --platform <
 opl scholar-skills run-context --module <module_id> --profile <profile> --json
 opl scholar-skills invoke --module <module_id> --input-ref <ref> --artifact-root <ref> --json
 opl scholar-skills receipt --module <module_id> --input-ref <ref> --artifact-root <ref> --json
+opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact-root <ref-or-path> --output-root <path> --json
 ```
 
 `receipt` / `invoke` 返回的 `scholar_skills_receipt_candidate` / `execution_receipt_candidate` 会提供 deterministic `execution_receipt_ref`。所有模块共享 `input_fingerprint_ref`、`dependency_profile_ref`、`prepared_run_context_ref`，并按模块追加专业 ref family：Display 使用 `render_cache_ref`、`artifact_manifest_ref`、`visual_audit_or_gallery_preview_ref`；Tables 使用 `table_manifest_ref`、`table_qc_ref`；Stats 使用 `analysis_manifest_ref`、`reproducibility_check_ref`；Omics 使用 `omics_pipeline_manifest_ref`、`feature_matrix_qc_ref`；Lit 使用 `evidence_map_ref`、`citation_manifest_ref`；Write 使用 `draft_section_manifest_ref`、`source_trace_ref`；Review 使用 `reviewer_report_ref`、`route_back_ref`；Submit 使用 `package_manifest_ref`、`submission_checklist_ref`；Data 使用 `data_manifest_ref`、`lineage_readiness_ref`；Intake 使用 `source_snapshot_ref`、`adoption_contract_ref`。这些字段只计为 unsigned candidate artifact refs，显式保持 `counts_as_paper_truth=false`、`counts_as_owner_receipt=false`、`can_authorize_publication_readiness=false`。
+
+`materialize` 是 `receipt` candidate 的确定性文件化 surface。它只在显式 `--output-root` 下写出 `manifest.json`、`execution_receipt_candidate.json`、`refs_manifest.json`，并返回 `surface_kind/status/module_id/input_ref/artifact_root_ref/output_root/output_root_ref/execution_receipt_ref/execution_receipt_candidate_path/artifact_manifest_path/written_files/sha256/authority_flags` 等 JSON 字段。该 package 是 refs-only unsigned candidate handoff，不写 runtime DB、domain truth、MAS 文件、owner receipt、typed blocker、paper body 或 artifact body authority；`authority_flags.counts_as_paper_truth`、`authority_flags.counts_as_owner_receipt`、`authority_flags.can_authorize_publication_readiness` 以及相关写权限标志保持 false。
 
 需要把 module id 绑定到真实 OPL runtime environment substrate 时，使用 runtime bridge 命令。它们复用 `opl runtime env prepare/run-context` 的实现，可在明确 `--apply` 时写入 OPL 管理依赖库和 `paper/build/dependency_environment_lock.json`、`dependency_environment_receipt.json`、`dependency_run_context.json`，但仍不写 domain truth、artifact body、owner receipt、typed blocker 或 runtime queue：
 
@@ -97,6 +100,7 @@ opl scholar-skills runtime-prepare --module opl.scholarskills.display --profile 
 opl scholar-skills runtime-run-context --module opl.scholarskills.display --profile display --platform macos-arm64 --paper-root paper --json
 opl scholar-skills invoke --module opl.scholarskills.display --input-ref mas:current_owner_delta/display-intent --artifact-root artifact-root:display-pack-candidates --json
 opl scholar-skills receipt --module opl.scholarskills.display --input-ref mas:current_owner_delta/display-intent --artifact-root artifact-root:display-pack-candidates --json
+opl scholar-skills materialize --module opl.scholarskills.display --input-ref mas:current_owner_delta/display-intent --artifact-root artifact-root:display-pack-candidates --output-root /tmp/scholarskills-display-candidate --json
 opl scholar-skills interfaces --json
 opl scholar-skills validate --json
 opl scholar-skills doctor --json

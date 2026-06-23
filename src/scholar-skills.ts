@@ -1,4 +1,6 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import { FrameworkContractError } from './contracts.ts';
 import {
   buildRuntimeEnvironmentPrepareReadback,
@@ -46,6 +48,10 @@ type InvocationInput = {
   moduleId: string;
   inputRef: string;
   artifactRoot: string;
+};
+
+type MaterializeInput = InvocationInput & {
+  outputRoot: string;
 };
 
 const MODULE_REQUIRED_ARTIFACT_REF_FAMILIES = {
@@ -217,6 +223,35 @@ function moduleSummary(module: ScholarSkillCapabilityModuleDescriptor) {
 
 function moduleContractRef(module: ScholarSkillCapabilityModuleDescriptor) {
   return `contracts/opl-framework/scholar-skills-capability-modules.json#modules.${module.module_id}`;
+}
+
+function stableJson(value: unknown): string {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value) ?? 'null';
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => stableJson(entry)).join(',')}]`;
+  }
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record)
+    .filter((key) => record[key] !== undefined)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`)
+    .join(',')}}`;
+}
+
+function sha256Hex(value: string | Buffer) {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+function writeDeterministicJson(filePath: string, payload: unknown) {
+  const content = `${stableJson(payload)}\n`;
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, content, 'utf8');
+  return {
+    path: filePath,
+    sha256: sha256Hex(content),
+  };
 }
 
 function stableExecutionReceiptRef(
@@ -577,6 +612,9 @@ export function buildScholarSkillsInterfaces(contracts: FrameworkContracts) {
           ...(contractRoot.runtime_environment_bridge.scholar_skill_receipt_commands ?? [
             'opl scholar-skills receipt --module <module_id> --input-ref <ref> --artifact-root <ref> --json',
           ]),
+          ...(contractRoot.runtime_environment_bridge.scholar_skill_materialize_commands ?? [
+            'opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact-root <ref-or-path> --output-root <path> --json',
+          ]),
           ...(contractRoot.runtime_environment_bridge.scholar_skill_runtime_prepare_commands ?? [
             'opl scholar-skills runtime-prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> [--apply] --json',
           ]),
@@ -603,6 +641,7 @@ export function buildScholarSkillsInterfaces(contracts: FrameworkContracts) {
           ...(contractRoot.runtime_environment_bridge.scholar_skill_run_context_commands ?? []),
           ...(contractRoot.runtime_environment_bridge.scholar_skill_invocation_commands ?? []),
           ...(contractRoot.runtime_environment_bridge.scholar_skill_receipt_commands ?? []),
+          ...(contractRoot.runtime_environment_bridge.scholar_skill_materialize_commands ?? []),
           ...(contractRoot.runtime_environment_bridge.scholar_skill_runtime_prepare_commands ?? []),
           ...(contractRoot.runtime_environment_bridge.scholar_skill_runtime_run_context_commands ?? []),
         ],
@@ -788,6 +827,98 @@ export function buildScholarSkillsReceiptCandidate(
   return {
     version: 'g2',
     scholar_skills_receipt_candidate: buildExecutionReceiptCandidate(module, input),
+  };
+}
+
+export function buildScholarSkillsMaterializeSurface(
+  contracts: FrameworkContracts,
+  input: MaterializeInput,
+) {
+  const contractRoot = contract(contracts);
+  const module = findModuleOrThrow(contractRoot.modules, assertModuleId(input.moduleId));
+  const outputRoot = path.resolve(input.outputRoot);
+  const receiptCandidate = buildExecutionReceiptCandidate(module, input);
+  const refsManifest = {
+    surface_kind: 'opl_scholarskills_refs_manifest',
+    status: 'candidate_refs_manifest',
+    module_id: module.module_id,
+    input_ref: input.inputRef,
+    artifact_root_ref: input.artifactRoot,
+    execution_receipt_ref: receiptCandidate.execution_receipt_ref,
+    execution_receipt_refs: receiptCandidate.execution_receipt_refs,
+    artifact_candidate_refs: receiptCandidate.artifact_candidate_refs,
+    artifact_body_written: false,
+    authority_boundary: module.authority_boundary,
+  };
+  const manifest = {
+    surface_kind: 'opl_scholarskills_materialized_candidate_package_manifest',
+    status: 'materialized_candidate_package',
+    module_id: module.module_id,
+    descriptor_ref: moduleContractRef(module),
+    input_ref: input.inputRef,
+    artifact_root_ref: input.artifactRoot,
+    output_root: outputRoot,
+    output_root_ref: `file://${outputRoot}`,
+    execution_receipt_ref: receiptCandidate.execution_receipt_ref,
+    execution_receipt_candidate_path: path.join(outputRoot, 'execution_receipt_candidate.json'),
+    refs_manifest_path: path.join(outputRoot, 'refs_manifest.json'),
+    artifact_manifest_path: path.join(outputRoot, 'manifest.json'),
+    package_policy: 'deterministic_refs_only_candidate_package',
+    written_body_authority: {
+      runtime_db_written: false,
+      domain_truth_written: false,
+      owner_receipt_signed: false,
+      typed_blocker_created: false,
+      paper_body_written: false,
+      artifact_body_written: false,
+    },
+    authority_flags: {
+      counts_as_paper_truth: false,
+      counts_as_owner_receipt: false,
+      can_authorize_publication_readiness: false,
+      can_claim_domain_ready: false,
+      can_claim_quality_verdict: false,
+      can_claim_artifact_authority: false,
+      can_claim_production_ready: false,
+      can_claim_runtime_ready: false,
+      can_schedule_runtime: false,
+      can_write_domain_truth: false,
+      can_write_runtime_state: false,
+      can_write_memory_body: false,
+      can_mutate_artifact_body: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+    },
+  };
+  const writtenFileEntries = [
+    writeDeterministicJson(manifest.artifact_manifest_path, manifest),
+    writeDeterministicJson(manifest.execution_receipt_candidate_path, receiptCandidate),
+    writeDeterministicJson(manifest.refs_manifest_path, refsManifest),
+  ];
+  const writtenFiles = writtenFileEntries.map((entry) => entry.path);
+  const packageSha256 = sha256Hex(stableJson(writtenFileEntries));
+
+  return {
+    version: 'g2',
+    scholar_skills_materialize: {
+      surface_kind: 'opl_scholarskills_materialized_candidate_package',
+      status: 'materialized_candidate_package',
+      module_id: module.module_id,
+      input_ref: input.inputRef,
+      artifact_root_ref: input.artifactRoot,
+      output_root: outputRoot,
+      output_root_ref: `file://${outputRoot}`,
+      execution_receipt_ref: receiptCandidate.execution_receipt_ref,
+      execution_receipt_candidate_path: manifest.execution_receipt_candidate_path,
+      artifact_manifest_path: manifest.artifact_manifest_path,
+      refs_manifest_path: manifest.refs_manifest_path,
+      written_files: writtenFiles,
+      sha256: packageSha256,
+      file_sha256: Object.fromEntries(writtenFileEntries.map((entry) => [entry.path, entry.sha256])),
+      authority_flags: manifest.authority_flags,
+      writes: manifest.written_body_authority,
+      authority_boundary: module.authority_boundary,
+    },
   };
 }
 

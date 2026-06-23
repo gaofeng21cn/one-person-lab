@@ -4,6 +4,7 @@ import {
   buildScholarSkillsDoctor,
   buildScholarSkillsInvocationEnvelope,
   buildScholarSkillsInterfaces,
+  buildScholarSkillsMaterializeSurface,
   buildScholarSkillsPrepareEnvelope,
   buildScholarSkillsReceiptCandidate,
   buildScholarSkillsRuntimePrepareReadback,
@@ -239,6 +240,49 @@ function parseInvocationArgs(args: string[], spec: CommandSpec, commandLabel: st
   return { moduleId, inputRef, artifactRoot };
 }
 
+function parseMaterializeArgs(args: string[], spec: CommandSpec) {
+  let moduleId: string | undefined;
+  let inputRef: string | undefined;
+  let artifactRoot: string | undefined;
+  let outputRoot: string | undefined;
+  const commandLabel = 'scholar-skills materialize';
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (token === '--json') {
+      continue;
+    }
+    if (token === '--module' || token === '--id') {
+      moduleId = expectOptionValue(args, index, token, commandLabel, spec);
+      index += 1;
+      continue;
+    }
+    if (token === '--input-ref') {
+      inputRef = expectOptionValue(args, index, token, commandLabel, spec);
+      index += 1;
+      continue;
+    }
+    if (token === '--artifact-root') {
+      artifactRoot = expectOptionValue(args, index, token, commandLabel, spec);
+      index += 1;
+      continue;
+    }
+    if (token === '--output-root') {
+      outputRoot = expectOptionValue(args, index, token, commandLabel, spec);
+      index += 1;
+      continue;
+    }
+    throw buildUsageError(`Unknown ${commandLabel} option: ${token}.`, spec, {
+      option: token,
+    });
+  }
+  if (!moduleId || !inputRef || !artifactRoot || !outputRoot) {
+    throw buildUsageError(`${commandLabel} requires --module, --input-ref, --artifact-root, and --output-root.`, spec, {
+      required: ['--module', '--input-ref', '--artifact-root', '--output-root'],
+    });
+  }
+  return { moduleId, inputRef, artifactRoot, outputRoot };
+}
+
 export function buildScholarSkillsCommandSpecs(
   getContracts: () => FrameworkContracts,
 ): Record<string, CommandSpec> {
@@ -348,6 +392,18 @@ export function buildScholarSkillsCommandSpecs(
       handler: (args) => buildScholarSkillsReceiptCandidate(
         getContracts(),
         parseInvocationArgs(args, specs['scholar-skills receipt'], 'scholar-skills receipt'),
+      ),
+    },
+    'scholar-skills materialize': {
+      usage: 'opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact-root <ref-or-path> --output-root <path>',
+      summary: 'Materialize a deterministic refs-only ScholarSkills candidate package under an explicit output root.',
+      examples: [
+        'opl scholar-skills materialize --module opl.scholarskills.display --input-ref mas:current_owner_delta/display-intent --artifact-root artifact-root:display-pack-candidates --output-root /tmp/scholarskills-candidate --json',
+      ],
+      group: 'scholar-skills',
+      handler: (args) => buildScholarSkillsMaterializeSurface(
+        getContracts(),
+        parseMaterializeArgs(args, specs['scholar-skills materialize']),
       ),
     },
     'scholar-skills interfaces': {

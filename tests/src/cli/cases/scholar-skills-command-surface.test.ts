@@ -273,6 +273,7 @@ test('opl scholar-skills interfaces exposes JSON readback and runtime env bridge
   assert.equal(output.cli.commands.includes('opl scholar-skills run-context --module <module_id> --profile <profile> --json'), true);
   assert.equal(output.cli.commands.includes('opl scholar-skills invoke --module <module_id> --input-ref <ref> --artifact-root <ref> --json'), true);
   assert.equal(output.cli.commands.includes('opl scholar-skills receipt --module <module_id> --input-ref <ref> --artifact-root <ref> --json'), true);
+  assert.equal(output.cli.commands.includes('opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact-root <ref-or-path> --output-root <path> --json'), true);
   assert.equal(output.cli.commands.includes('opl scholar-skills validate --json'), true);
   assert.equal(output.runtime_environment_bridge.commands.includes('opl runtime env prepare --domain scholarskills --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> --json'), true);
   assert.equal(output.runtime_environment_bridge.commands.includes('opl runtime env run-context --domain scholarskills --profile <profile> --json'), true);
@@ -509,6 +510,82 @@ test('opl scholar-skills invoke returns invocation envelope and unsigned executi
   assert.equal(output.execution_receipt_candidate.can_claim_quality_verdict, false);
   assert.equal(output.execution_receipt_candidate.can_claim_artifact_authority, false);
   assert.equal(output.execution_receipt_candidate.authority_boundary.can_sign_owner_receipt, false);
+});
+
+test('opl scholar-skills materialize writes a deterministic refs-only candidate package', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholar-skills-materialize-'));
+  try {
+    const outputRoot = path.join(fixtureRoot, 'candidate-package');
+    const output = runCli([
+      'scholar-skills',
+      'materialize',
+      '--module',
+      'opl.scholarskills.display',
+      '--input-ref',
+      'mas:current_owner_delta/display-intent',
+      '--artifact-root',
+      'artifact-root:display-pack-candidates',
+      '--output-root',
+      outputRoot,
+      '--json',
+    ]).scholar_skills_materialize;
+    const secondOutput = runCli([
+      'scholar-skills',
+      'materialize',
+      '--module',
+      'opl.scholarskills.display',
+      '--input-ref',
+      'mas:current_owner_delta/display-intent',
+      '--artifact-root',
+      'artifact-root:display-pack-candidates',
+      '--output-root',
+      outputRoot,
+      '--json',
+    ]).scholar_skills_materialize;
+
+    assert.equal(output.surface_kind, 'opl_scholarskills_materialized_candidate_package');
+    assert.equal(output.status, 'materialized_candidate_package');
+    assert.equal(output.module_id, 'opl.scholarskills.display');
+    assert.equal(output.input_ref, 'mas:current_owner_delta/display-intent');
+    assert.equal(output.artifact_root_ref, 'artifact-root:display-pack-candidates');
+    assert.equal(output.output_root, outputRoot);
+    assert.equal(output.output_root_ref, `file://${outputRoot}`);
+    assert.equal(output.execution_receipt_ref.startsWith('opl://scholarskills/execution-receipt-candidates/'), true);
+    assert.equal(output.execution_receipt_candidate_path, path.join(outputRoot, 'execution_receipt_candidate.json'));
+    assert.equal(output.artifact_manifest_path, path.join(outputRoot, 'manifest.json'));
+    assert.equal(output.refs_manifest_path, path.join(outputRoot, 'refs_manifest.json'));
+    assert.deepEqual(output.written_files.sort(), [
+      path.join(outputRoot, 'execution_receipt_candidate.json'),
+      path.join(outputRoot, 'manifest.json'),
+      path.join(outputRoot, 'refs_manifest.json'),
+    ].sort());
+    assert.equal(output.sha256, secondOutput.sha256);
+    assert.equal(output.authority_flags.counts_as_paper_truth, false);
+    assert.equal(output.authority_flags.counts_as_owner_receipt, false);
+    assert.equal(output.authority_flags.can_authorize_publication_readiness, false);
+    assert.equal(output.authority_flags.can_write_runtime_state, false);
+    assert.equal(output.authority_flags.can_write_domain_truth, false);
+    assert.equal(output.authority_flags.can_mutate_artifact_body, false);
+    assert.equal(output.writes.runtime_db_written, false);
+    assert.equal(output.writes.domain_truth_written, false);
+    assert.equal(output.writes.owner_receipt_signed, false);
+    assert.equal(output.writes.typed_blocker_created, false);
+    assert.equal(output.writes.paper_body_written, false);
+    assert.equal(output.writes.artifact_body_written, false);
+
+    const manifest = JSON.parse(fs.readFileSync(output.artifact_manifest_path, 'utf8'));
+    const receipt = JSON.parse(fs.readFileSync(output.execution_receipt_candidate_path, 'utf8'));
+    const refs = JSON.parse(fs.readFileSync(output.refs_manifest_path, 'utf8'));
+    assert.equal(manifest.surface_kind, 'opl_scholarskills_materialized_candidate_package_manifest');
+    assert.equal(manifest.authority_flags.can_sign_owner_receipt, false);
+    assert.equal(receipt.surface_kind, 'opl_scholarskills_execution_receipt_candidate');
+    assert.equal(receipt.counts_as_paper_truth, false);
+    assert.equal(refs.surface_kind, 'opl_scholarskills_refs_manifest');
+    assert.equal(refs.artifact_body_written, false);
+    assert.deepEqual(fs.readdirSync(fixtureRoot), ['candidate-package']);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
 });
 
 test('opl scholar-skills invoke and receipt return module-specific unsigned candidates for all modules', () => {
