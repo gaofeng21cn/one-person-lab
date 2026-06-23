@@ -242,6 +242,112 @@ test('family-runtime tick materializes MAS PaperMission stage-route provider pre
   }
 });
 
+test('family-runtime tick reconciles terminal MAS PaperMission stage-route attempts out of running queue state', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-terminal-'));
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_mission/stage-route',
+      '--payload',
+      JSON.stringify(paperMissionRoutePayload()),
+      '--dedupe-key',
+      'paper-mission-route:dm002:terminal-reconcile',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    runCli(['family-runtime', 'tick', '--source', 'test-paper-route-start'], env);
+    const runningTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const attemptId = runningTask.family_runtime_task.stage_attempts[0].stage_attempt_id;
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      attemptId,
+      '--stage-packet-ref',
+      'packet:paper-mission-route-dm002',
+      '--closeout-packet',
+      JSON.stringify({
+        surface_kind: 'stage_attempt_closeout_packet',
+        closeout_refs: ['typed-blocker:opl_runtime_live_readback_required'],
+        next_owner: 'med-autoscience',
+        domain_ready_verdict: 'domain_gate_pending',
+        route_impact: {
+          decision: 'bounded_repair',
+          next_owner: 'med-autoscience',
+          reason: 'opl_runtime_live_readback_required',
+        },
+      }),
+    ], env);
+    const staleRunningQueue = runCli([
+      'family-runtime',
+      'queue',
+      'list',
+      '--domain',
+      'medautoscience',
+      '--study',
+      '002-dm-china-us-mortality-attribution',
+      '--task-kind',
+      'paper_mission/stage-route',
+      '--status',
+      'running',
+    ], env);
+    const reconcile = runCli(['family-runtime', 'tick', '--source', 'test-paper-route-terminal'], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const runningQueue = runCli([
+      'family-runtime',
+      'queue',
+      'list',
+      '--domain',
+      'medautoscience',
+      '--study',
+      '002-dm-china-us-mortality-attribution',
+      '--task-kind',
+      'paper_mission/stage-route',
+      '--status',
+      'running',
+    ], env);
+
+    assert.equal(staleRunningQueue.family_runtime_queue.queue.total, 1);
+    assert.equal(
+      staleRunningQueue.family_runtime_queue.tasks[0].linked_stage_attempt_liveness.status,
+      'not_live',
+    );
+    assert.equal(
+      staleRunningQueue.family_runtime_queue.tasks[0].linked_stage_attempt_liveness.stage_attempt_status,
+      'completed',
+    );
+    assert.equal(reconcile.family_runtime_tick.reconciled_paper_mission_stage_route_terminal_count, 1);
+    assert.deepEqual(
+      reconcile.family_runtime_tick.reconciled_paper_mission_stage_route_terminal_task_ids,
+      [taskId],
+    );
+    assert.equal(task.family_runtime_task.task.status, 'blocked');
+    assert.equal(task.family_runtime_task.task.last_error, 'paper_mission_stage_route_domain_gate_pending');
+    assert.equal(task.family_runtime_task.task.dead_letter_reason, 'paper_mission_stage_route_domain_gate_pending');
+    assert.equal(task.family_runtime_task.stage_attempts[0].status, 'completed');
+    assert.equal(task.family_runtime_task.stage_attempts[0].closeout_receipt_status, 'accepted_typed_closeout');
+    assert.deepEqual(task.family_runtime_task.stage_attempts[0].closeout_refs, [
+      'typed-blocker:opl_runtime_live_readback_required',
+    ]);
+    assert.equal(task.family_runtime_task.stage_attempts[0].route_impact.domain_ready_verdict, 'domain_gate_pending');
+    assert.equal(
+      task.family_runtime_task.events.some((event: { event_type: string }) =>
+        event.event_type === 'paper_mission_stage_route_terminal_task_reconciled',
+      ),
+      true,
+    );
+    assert.equal(runningQueue.family_runtime_queue.queue.total, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime dispatch starts MAS PaperMission stage-route Temporal attempts in the same tick', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-temporal-'));
   const originalStateDir = process.env.OPL_STATE_DIR;

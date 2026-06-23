@@ -52,6 +52,9 @@ import {
 import {
   autoRedriveBlockedDefaultExecutorProviderTasks,
 } from './family-runtime-tick-parts/default-executor-auto-redrive.ts';
+import {
+  reconcilePaperMissionStageRouteTerminalTasks,
+} from './family-runtime-tick-parts/paper-mission-stage-route-terminal.ts';
 import { isPaperMissionStageRouteTask } from './family-runtime-paper-mission-stage-route-runner.ts';
 
 type EnqueueTaskResult = {
@@ -686,11 +689,20 @@ async function runMaintenanceReconcile(
   );
   const scopedRowsAfterPaperAutonomyRepair = rowsForMaintenance();
   const {
+    reconciledCount: reconciledPaperMissionStageRouteTerminalCount,
+    reconciledTaskIds: reconciledPaperMissionStageRouteTerminalTaskIds,
+  } = reconcilePaperMissionStageRouteTerminalTasks(
+    db,
+    scopedRowsAfterPaperAutonomyRepair,
+    `${input.source}:paper-mission-stage-route-terminal-reconcile`,
+  );
+  const scopedRowsAfterPaperMissionStageRouteTerminalReconcile = rowsForMaintenance();
+  const {
     blockedCount: blockedMasDomainRouteOwnerAnswerObservedCount,
     blockedTaskIds: blockedMasDomainRouteOwnerAnswerObservedTaskIds,
   } = blockMasDomainRouteAdmissionsWithObservedOwnerAnswer(
     db,
-    scopedRowsAfterPaperAutonomyRepair,
+    scopedRowsAfterPaperMissionStageRouteTerminalReconcile,
     `${input.source}:domain-route-owner-answer-observed-repair`,
   );
   const scopedRowsAfterDomainRouteOwnerAnswerObserved = rowsForMaintenance();
@@ -735,6 +747,8 @@ async function runMaintenanceReconcile(
     repairedMissingIdentityTaskIds,
     repairedPaperAutonomyMissingCloseoutCount,
     repairedPaperAutonomyMissingCloseoutTaskIds,
+    reconciledPaperMissionStageRouteTerminalCount,
+    reconciledPaperMissionStageRouteTerminalTaskIds,
     repairedMasDomainRouteAdmissionRequestedCount,
     repairedMasDomainRouteAdmissionRequestedTaskIds,
     blockedMasDomainRouteOwnerAnswerObservedCount,
@@ -848,6 +862,16 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     suppressed_count: 0,
     exports: [] as unknown[],
   };
+  const scopedRowsBeforePreselectReconcile = (db.prepare('SELECT * FROM tasks').all() as FamilyRuntimeTaskRow[])
+    .filter((row) => taskRowMatchesScope(row, input.taskScope));
+  const {
+    reconciledCount: preselectPaperMissionStageRouteTerminalCount,
+    reconciledTaskIds: preselectPaperMissionStageRouteTerminalTaskIds,
+  } = reconcilePaperMissionStageRouteTerminalTasks(
+    db,
+    scopedRowsBeforePreselectReconcile,
+    `${input.source}:paper-mission-stage-route-terminal-preselect`,
+  );
   const noExcludedTaskIds = new Set<string>();
   let selection = await selectDispatchCandidates(db, input, handlers, noExcludedTaskIds);
   const selectionTotals = {
@@ -943,6 +967,9 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
       repaired_paper_autonomy_missing_closeout_count: maintenanceReconcile.repairedPaperAutonomyMissingCloseoutCount,
       repaired_mas_domain_route_admission_requested_count:
         maintenanceReconcile.repairedMasDomainRouteAdmissionRequestedCount,
+      reconciled_paper_mission_stage_route_terminal_count:
+        preselectPaperMissionStageRouteTerminalCount
+        + maintenanceReconcile.reconciledPaperMissionStageRouteTerminalCount,
       blocked_mas_domain_route_owner_answer_observed_count:
         maintenanceReconcile.blockedMasDomainRouteOwnerAnswerObservedCount,
       post_repair_hydration: postRepairHydration,
@@ -997,6 +1024,15 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     repaired_missing_identity_running_count: maintenanceReconcile.repairedMissingIdentityRunningCount,
     repaired_missing_identity_dead_lettered_count: maintenanceReconcile.repairedMissingIdentityDeadLetteredCount,
     repaired_paper_autonomy_missing_closeout_count: maintenanceReconcile.repairedPaperAutonomyMissingCloseoutCount,
+    reconciled_paper_mission_stage_route_terminal_count:
+      preselectPaperMissionStageRouteTerminalCount
+      + maintenanceReconcile.reconciledPaperMissionStageRouteTerminalCount,
+    reconciled_paper_mission_stage_route_terminal_task_ids: [
+      ...mergeTaskIdSets(
+        preselectPaperMissionStageRouteTerminalTaskIds,
+        maintenanceReconcile.reconciledPaperMissionStageRouteTerminalTaskIds,
+      ),
+    ],
     repaired_mas_domain_route_admission_requested_count:
       maintenanceReconcile.repairedMasDomainRouteAdmissionRequestedCount,
     blocked_mas_domain_route_owner_answer_observed_count:

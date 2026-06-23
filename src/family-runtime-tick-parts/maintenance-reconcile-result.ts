@@ -6,6 +6,8 @@ export type MaintenanceReconcileResult = {
   repairedMissingIdentityTaskIds: Set<string>;
   repairedPaperAutonomyMissingCloseoutCount: number;
   repairedPaperAutonomyMissingCloseoutTaskIds: Set<string>;
+  reconciledPaperMissionStageRouteTerminalCount: number;
+  reconciledPaperMissionStageRouteTerminalTaskIds: Set<string>;
   repairedMasDomainRouteAdmissionRequestedCount: number;
   repairedMasDomainRouteAdmissionRequestedTaskIds: Set<string>;
   blockedMasDomainRouteOwnerAnswerObservedCount: number;
@@ -26,6 +28,8 @@ export function zeroMaintenanceReconcileResult(): MaintenanceReconcileResult {
     repairedMissingIdentityTaskIds: new Set<string>(),
     repairedPaperAutonomyMissingCloseoutCount: 0,
     repairedPaperAutonomyMissingCloseoutTaskIds: new Set<string>(),
+    reconciledPaperMissionStageRouteTerminalCount: 0,
+    reconciledPaperMissionStageRouteTerminalTaskIds: new Set<string>(),
     repairedMasDomainRouteAdmissionRequestedCount: 0,
     repairedMasDomainRouteAdmissionRequestedTaskIds: new Set<string>(),
     blockedMasDomainRouteOwnerAnswerObservedCount: 0,
