@@ -176,6 +176,7 @@ OPL 负责：
 - stage graph schema、`DomainProgressTransitionRuntime`、transition runner、queue、attempt ledger、retry/dead-letter、provider wakeup/resume、human gate transport、checkpoint/replay、parallel/map child attempt、App/workbench projection。
 - executor/reviewer/auditor 独立 invocation 调度与 receipt ingestion。
 - refs-only evidence ledger、operator workorder、long-soak/SLO projection 和 no-forbidden-write preflight。
+- PaperMission stage-route terminal reconcile 只负责把仍停在 `running` queue 的 OPL task 对齐到 linked terminal StageAttempt：provider / closeout terminal failure 只能落为 OPL queue `dead_letter`，domain gate pending、非 ready verdict、缺少可接受 typed closeout，或 accepted typed closeout 携带 `domain_ready_verdict=domain_ready`，都只能落为 OPL queue `blocked` 并等待 MAS authority；它不把 provider completion、closeout receipt 或 `domain_ready_verdict` 升格成 MAS domain ready、paper progress、owner receipt、typed blocker、human gate、publication/package/paper authority。
 
 MAS 负责：
 
