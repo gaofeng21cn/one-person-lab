@@ -64,6 +64,8 @@ function sourceFingerprintFor(row: FamilyRuntimeTaskRow, payload: Record<string,
     optionalString(payload.opl_route_command_ref),
     optionalString(payload.command_kind),
     optionalString(payload.route_target),
+    optionalString(payload.route_identity_key),
+    optionalString(payload.attempt_idempotency_key),
     row.dedupe_key,
   ]);
 }
@@ -95,6 +97,9 @@ function workspaceLocatorFor(row: FamilyRuntimeTaskRow, payload: Record<string, 
     opl_route_command_ref: optionalString(payload.opl_route_command_ref),
     command_kind: optionalString(payload.command_kind),
     route_target: optionalString(payload.route_target),
+    route_identity_key: optionalString(payload.route_identity_key),
+    attempt_idempotency_key: optionalString(payload.attempt_idempotency_key),
+    request_idempotency_key: optionalString(payload.request_idempotency_key),
     ...(workspaceRoot ? { workspace_root: workspaceRoot } : {}),
     ...(commandCwd ? { command_cwd: commandCwd } : {}),
     ...(commandSource ? { command_source: commandSource } : {}),
@@ -159,6 +164,31 @@ function forbiddenWriteReason(payload: Record<string, unknown>) {
   return null;
 }
 
+function missingIdentityReason(payload: Record<string, unknown>) {
+  if (!optionalString(payload.study_id)) {
+    return 'paper_mission_route_missing_identity_field:study_id';
+  }
+  if (!optionalString(payload.paper_mission_transaction_ref)) {
+    return 'paper_mission_route_missing_identity_field:paper_mission_transaction_ref';
+  }
+  if (!optionalString(payload.opl_route_command_ref)) {
+    return 'paper_mission_route_missing_identity_field:opl_route_command_ref';
+  }
+  if (!optionalString(payload.command_kind)) {
+    return 'paper_mission_route_missing_identity_field:command_kind';
+  }
+  if (!optionalString(payload.route_target)) {
+    return 'paper_mission_route_missing_identity_field:route_target';
+  }
+  if (!optionalString(payload.route_identity_key)) {
+    return 'paper_mission_route_missing_identity_field:route_identity_key';
+  }
+  if (!optionalString(payload.attempt_idempotency_key)) {
+    return 'paper_mission_route_missing_identity_field:attempt_idempotency_key';
+  }
+  return null;
+}
+
 export async function dispatchPaperMissionStageRouteTask(
   db: DatabaseSync,
   paths: FamilyRuntimePaths,
@@ -169,7 +199,7 @@ export async function dispatchPaperMissionStageRouteTask(
   },
 ) {
   const startedAt = nowIso();
-  const blockedReason = forbiddenWriteReason(payload);
+  const blockedReason = forbiddenWriteReason(payload) ?? missingIdentityReason(payload);
   if (blockedReason) {
     db.prepare(`
       UPDATE tasks

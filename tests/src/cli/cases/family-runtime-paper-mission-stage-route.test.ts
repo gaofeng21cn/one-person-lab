@@ -63,9 +63,14 @@ function paperMissionRoutePayload(overrides: Record<string, unknown> = {}) {
     opl_route_command_ref: 'paper-mission-transaction:dm002:1#opl_route_command',
     command_kind: 'start_next_stage',
     route_target: 'publication_gate_replay',
+    route_identity_key: 'paper-mission-transaction:dm002:1::route',
+    attempt_idempotency_key: 'dm002:gate-clearing:accepted-candidate::opl-attempt',
+    request_idempotency_key: 'dm002:gate-clearing:accepted-candidate::opl-request',
     stage_run_request: {
       request_status: 'requested',
       requested_by: 'mas_paper_mission_route_handoff',
+      route_identity_key: 'paper-mission-transaction:dm002:1::route',
+      attempt_idempotency_key: 'dm002:gate-clearing:accepted-candidate::opl-attempt',
       stage_run_created: false,
       provider_attempt_requested: false,
     },
@@ -158,12 +163,33 @@ test('family-runtime tick admits MAS PaperMission stage-route into OPL StageAtte
     assert.equal(attempt.workspace_locator.runtime_request_kind, 'mas_paper_mission_stage_route');
     assert.equal(attempt.workspace_locator.study_id, '002-dm-china-us-mortality-attribution');
     assert.equal(attempt.workspace_locator.paper_mission_transaction_ref, 'paper-mission-transaction:dm002:1');
+    assert.equal(attempt.workspace_locator.opl_route_command_ref, 'paper-mission-transaction:dm002:1#opl_route_command');
+    assert.equal(attempt.workspace_locator.command_kind, 'start_next_stage');
+    assert.equal(attempt.workspace_locator.route_target, 'publication_gate_replay');
+    assert.equal(attempt.workspace_locator.route_identity_key, 'paper-mission-transaction:dm002:1::route');
+    assert.equal(
+      attempt.workspace_locator.attempt_idempotency_key,
+      'dm002:gate-clearing:accepted-candidate::opl-attempt',
+    );
+    assert.equal(
+      attempt.workspace_locator.request_idempotency_key,
+      'dm002:gate-clearing:accepted-candidate::opl-request',
+    );
     assert.equal(attempt.workspace_locator.can_claim_provider_running, false);
     assert.equal(attempt.workspace_locator.can_claim_paper_progress, false);
     assert.equal(attempt.checkpoint_refs.includes('paper-mission-transaction:dm002:1'), true);
     assert.equal(liveness.stage_attempt_id, attempt.stage_attempt_id);
     assert.equal(liveness.workspace_locator.study_id, '002-dm-china-us-mortality-attribution');
     assert.equal(liveness.route_command.opl_route_command_ref, 'paper-mission-transaction:dm002:1#opl_route_command');
+    assert.equal(liveness.route_command.route_identity_key, 'paper-mission-transaction:dm002:1::route');
+    assert.equal(
+      liveness.route_command.attempt_idempotency_key,
+      'dm002:gate-clearing:accepted-candidate::opl-attempt',
+    );
+    assert.equal(
+      liveness.route_command.request_idempotency_key,
+      'dm002:gate-clearing:accepted-candidate::opl-request',
+    );
     assert.equal(liveness.route_command.workspace_root, null);
     assert.deepEqual(liveness.closeout_refs, []);
     assert.equal(liveness.stage_progress_log.surface_kind, 'opl_queue_task_linked_stage_attempt_progress_readback');
@@ -206,6 +232,41 @@ test('family-runtime tick blocks MAS PaperMission stage-route that claims MAS au
       'paper_mission_route_forbidden_authority_flag:writes_owner_receipt',
     );
     assert.equal(task.family_runtime_task.task.status, 'blocked');
+    assert.equal(task.family_runtime_task.stage_attempts.length, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime tick blocks MAS PaperMission stage-route without route identity', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-identity-blocked-'));
+  try {
+    const env = familyRuntimeEnv(stateRoot);
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_mission/stage-route',
+      '--payload',
+      JSON.stringify(paperMissionRoutePayload({
+        route_identity_key: '',
+      })),
+      '--dedupe-key',
+      'paper-mission-route:dm002:missing-route-identity',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test-paper-route-missing-identity'], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'blocked');
+    assert.equal(
+      tick.family_runtime_tick.dispatches[0].reason,
+      'paper_mission_route_missing_identity_field:route_identity_key',
+    );
+    assert.equal(task.family_runtime_task.task.status, 'blocked');
+    assert.equal(task.family_runtime_task.task.dead_letter_reason, 'paper_mission_route_missing_identity_field:route_identity_key');
     assert.equal(task.family_runtime_task.stage_attempts.length, 0);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -355,6 +416,14 @@ test('family-runtime typed closeout reconciles terminal MAS PaperMission stage-r
       terminalReconcileEvents[0].payload.authority_boundary.can_claim_paper_progress,
       false,
     );
+    assert.equal(
+      terminalReconcileEvents[0].payload.route_identity_key,
+      'paper-mission-transaction:dm002:1::route',
+    );
+    assert.equal(
+      terminalReconcileEvents[0].payload.attempt_idempotency_key,
+      'dm002:gate-clearing:accepted-candidate::opl-attempt',
+    );
     assert.equal(runningQueue.family_runtime_queue.queue.total, 1);
     assert.notEqual(runningQueue.family_runtime_queue.tasks[0].task_id, taskId);
     assert.equal(runningQueue.family_runtime_queue.tasks[0].payload.requeued_from_terminal_task_id, taskId);
@@ -366,6 +435,22 @@ test('family-runtime typed closeout reconciles terminal MAS PaperMission stage-r
     assert.equal(
       runningQueue.family_runtime_queue.tasks[0].linked_stage_attempt_liveness.route_command.opl_route_command_ref,
       'paper-mission-transaction:dm002:1#opl_route_command',
+    );
+    assert.equal(
+      runningQueue.family_runtime_queue.tasks[0].payload.route_identity_key,
+      'paper-mission-transaction:dm002:1::route',
+    );
+    assert.equal(
+      runningQueue.family_runtime_queue.tasks[0].payload.attempt_idempotency_key,
+      'dm002:gate-clearing:accepted-candidate::opl-attempt',
+    );
+    assert.equal(
+      runningQueue.family_runtime_queue.tasks[0].linked_stage_attempt_liveness.route_command.route_identity_key,
+      'paper-mission-transaction:dm002:1::route',
+    );
+    assert.equal(
+      runningQueue.family_runtime_queue.tasks[0].linked_stage_attempt_liveness.route_command.attempt_idempotency_key,
+      'dm002:gate-clearing:accepted-candidate::opl-attempt',
     );
     assert.deepEqual(runningQueue.family_runtime_queue.tasks[0].linked_stage_attempt_liveness.closeout_refs, []);
     const secondReconcile = runCli(['family-runtime', 'tick', '--source', 'test-paper-route-terminal-repeat'], env);

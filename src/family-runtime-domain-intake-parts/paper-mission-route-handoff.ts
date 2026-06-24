@@ -80,8 +80,13 @@ export type MasPaperMissionRouteHandoffIntakeBlocker = {
     | 'invalid_handoff_payload'
     | 'unknown_surface_kind'
     | 'missing_authority_boundary'
+    | 'missing_study_id'
     | 'missing_paper_mission_transaction'
+    | 'missing_opl_route_command_ref'
+    | 'missing_route_target'
     | 'missing_domain_workspace_root'
+    | 'missing_route_identity_key'
+    | 'missing_attempt_idempotency_key'
     | 'unsupported_route_command'
     | 'forbidden_authority_write'
     | 'forbidden_authority_claim'
@@ -107,6 +112,9 @@ export type MasPaperMissionRouteHandoffIntakeReadback = {
   paper_mission_transaction_ref: string | null;
   opl_route_command_ref: string | null;
   route_target: string | null;
+  route_identity_key: string | null;
+  attempt_idempotency_key: string | null;
+  request_idempotency_key: string | null;
   can_submit_to_opl_runtime: boolean;
   runtime_start_requested: false;
   writes_opl_outbox: false;
@@ -331,6 +339,12 @@ function materializedReadbackToHandoff(payload: JsonRecord) {
     transaction_state: optionalString(payload.transaction_state),
     opl_route_command_ref: optionalString(carrier?.opl_route_command_ref)
       ?? routeCommandRefFromTransactionRef(transactionRef),
+    route_identity_key: optionalString(carrier?.route_identity_key)
+      ?? optionalString(payload.route_identity_key),
+    attempt_idempotency_key: optionalString(carrier?.attempt_idempotency_key)
+      ?? optionalString(payload.attempt_idempotency_key),
+    request_idempotency_key: optionalString(carrier?.request_idempotency_key)
+      ?? optionalString(payload.request_idempotency_key),
     opl_route_command: routeCommand ?? {},
     route_command_kind: commandKind,
     route_target: optionalString(routeCommand?.target),
@@ -392,6 +406,9 @@ function baseReadback(
     paper_mission_transaction_ref: handoff ? optionalString(handoff.paper_mission_transaction_ref) : null,
     opl_route_command_ref: handoff ? optionalString(handoff.opl_route_command_ref) : null,
     route_target: handoff ? routeTarget(handoff) : null,
+    route_identity_key: handoff ? optionalString(handoff.route_identity_key) : null,
+    attempt_idempotency_key: handoff ? optionalString(handoff.attempt_idempotency_key) : null,
+    request_idempotency_key: handoff ? optionalString(handoff.request_idempotency_key) : null,
     can_submit_to_opl_runtime: false,
     runtime_start_requested: false,
     writes_opl_outbox: false,
@@ -495,6 +512,9 @@ function runtimeRequestInput(
     return null;
   }
   const routeCommand = nestedRecord(handoff, 'opl_route_command');
+  const routeIdentityKey = optionalString(handoff.route_identity_key);
+  const attemptIdempotencyKey = optionalString(handoff.attempt_idempotency_key);
+  const requestIdempotencyKey = optionalString(handoff.request_idempotency_key);
   const dedupeKey = [
     'paper-mission-route',
     readback.study_id,
@@ -522,6 +542,9 @@ function runtimeRequestInput(
       opl_route_command_ref: readback.opl_route_command_ref,
       command_kind: readback.command_kind,
       route_target: readback.route_target,
+      route_identity_key: routeIdentityKey,
+      attempt_idempotency_key: attemptIdempotencyKey,
+      request_idempotency_key: requestIdempotencyKey,
       workspace_root: workspaceRoot,
       domain_workspace_root: workspaceRoot,
       ...(commandCwd
@@ -543,6 +566,8 @@ function runtimeRequestInput(
         runtime_owner: 'one-person-lab',
         command_kind: readback.command_kind,
         route_target: readback.route_target,
+        route_identity_key: routeIdentityKey,
+        attempt_idempotency_key: attemptIdempotencyKey,
         stage_run_created: false,
         provider_attempt_requested: false,
       },
@@ -583,6 +608,45 @@ function validateForbiddenClaims(handoff: JsonRecord): MasPaperMissionRouteHando
     }
   }
   return [];
+}
+
+function validateRuntimeIdentity(readback: MasPaperMissionRouteHandoffIntakeReadback) {
+  if (!readback.study_id) {
+    return {
+      reason: 'missing_study_id' as const,
+      detail: 'MAS paper mission OPL carrier must provide study_id before OPL runtime intake.',
+      field: 'study_id',
+    };
+  }
+  if (!readback.opl_route_command_ref) {
+    return {
+      reason: 'missing_opl_route_command_ref' as const,
+      detail: 'MAS paper mission OPL carrier must provide opl_route_command_ref before OPL runtime intake.',
+      field: 'opl_route_command_ref',
+    };
+  }
+  if (!readback.route_target) {
+    return {
+      reason: 'missing_route_target' as const,
+      detail: 'MAS paper mission OPL carrier must provide route_target before OPL runtime intake.',
+      field: 'route_target',
+    };
+  }
+  if (!readback.route_identity_key) {
+    return {
+      reason: 'missing_route_identity_key' as const,
+      detail: 'MAS paper mission OPL carrier must provide route_identity_key before OPL runtime intake.',
+      field: 'route_identity_key',
+    };
+  }
+  if (!readback.attempt_idempotency_key) {
+    return {
+      reason: 'missing_attempt_idempotency_key' as const,
+      detail: 'MAS paper mission OPL carrier must provide attempt_idempotency_key before OPL runtime intake.',
+      field: 'attempt_idempotency_key',
+    };
+  }
+  return null;
 }
 
 function waitKindFor(handoffStatus: string | null, commandKind: SupportedCommandKind | null) {
@@ -729,6 +793,13 @@ export function intakeMasPaperMissionRouteHandoff(
     && handoff.transaction_materialized === true
     && isRuntimeIntakeCommand(commandKind)
   ) {
+    const identityBlocker = validateRuntimeIdentity(readback);
+    if (identityBlocker) {
+      return {
+        ...readback,
+        blockers: [identityBlocker],
+      };
+    }
     if (!workspaceRootForRuntimeRequest(handoff, options)) {
       return {
         ...readback,

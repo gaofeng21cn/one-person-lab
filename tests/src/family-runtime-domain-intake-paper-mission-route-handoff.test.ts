@@ -21,6 +21,9 @@ function readyHandoff(overrides: Record<string, unknown> = {}) {
     handoff_status: 'ready_for_opl_route_command',
     next_owner: 'one-person-lab',
     paper_mission_transaction_ref: 'paper-mission-transaction:001-paper:1',
+    route_identity_key: 'paper-mission-transaction:001-paper:1::route',
+    attempt_idempotency_key: '001-paper::gate-clearing::accepted_candidate::opl-attempt',
+    request_idempotency_key: '001-paper::gate-clearing::accepted_candidate::opl-request',
     transaction_state: 'materialized',
     opl_route_command_ref: 'ops/medautoscience/paper_mission_consumption_ledger/001-paper/opl_route_command.json',
     opl_route_command: {
@@ -111,6 +114,7 @@ function materializedReadback(overrides: Record<string, unknown> = {}) {
       work_unit_fingerprint: `${missionId}::gate_clearing_claim_evidence_repair::advance::accepted`,
       route_identity_key: `${transactionRef}::route`,
       attempt_idempotency_key: `${studyId}::gate_clearing_claim_evidence_repair::accepted_candidate::opl-attempt`,
+      request_idempotency_key: `${studyId}::gate_clearing_claim_evidence_repair::accepted_candidate::opl-request`,
       opl_route_command: {
         command_kind: 'start_next_stage',
         target: 'publication_gate_replay',
@@ -186,6 +190,26 @@ test('MAS paper mission route handoff accepts ready command as OPL runtime reque
   );
   assert.equal(readback.runtime_request_input?.payload.study_id, '001-paper');
   assert.equal(readback.runtime_request_input?.payload.command_kind, 'start_next_stage');
+  assert.equal(
+    readback.runtime_request_input?.payload.route_identity_key,
+    'paper-mission-transaction:001-paper:1::route',
+  );
+  assert.equal(
+    readback.runtime_request_input?.payload.attempt_idempotency_key,
+    '001-paper::gate-clearing::accepted_candidate::opl-attempt',
+  );
+  assert.equal(
+    readback.runtime_request_input?.payload.request_idempotency_key,
+    '001-paper::gate-clearing::accepted_candidate::opl-request',
+  );
+  assert.equal(
+    (readback.runtime_request_input?.payload.stage_run_request as Record<string, unknown>).route_identity_key,
+    'paper-mission-transaction:001-paper:1::route',
+  );
+  assert.equal(
+    (readback.runtime_request_input?.payload.stage_run_request as Record<string, unknown>).attempt_idempotency_key,
+    '001-paper::gate-clearing::accepted_candidate::opl-attempt',
+  );
   assert.equal(readback.runtime_request_input?.payload.workspace_root, '/tmp/yang-workspace');
   assert.equal(readback.runtime_request_input?.payload.domain_workspace_root, '/tmp/yang-workspace');
   assert.equal(readback.runtime_request_input?.payload.command_cwd, '/tmp/opl-repo');
@@ -194,6 +218,34 @@ test('MAS paper mission route handoff accepts ready command as OPL runtime reque
   assert.equal(requestAuthority.can_claim_provider_running, false);
   assert.equal(requestAuthority.can_claim_paper_progress, false);
   assert.deepEqual(readback.blockers, []);
+});
+
+test('MAS paper mission route handoff fails closed without route attempt identity', () => {
+  const missingRouteTarget = intakeMasPaperMissionRouteHandoff(readyHandoff({
+    route_target: '',
+    opl_route_command: {
+      command_kind: 'start_next_stage',
+      target: '',
+      runtime_owner: 'one-person-lab',
+    },
+  }));
+  assert.equal(missingRouteTarget.status, 'rejected');
+  assert.equal(missingRouteTarget.runtime_request_input, null);
+  assert.equal(missingRouteTarget.blockers[0].reason, 'missing_route_target');
+
+  const missingRouteIdentity = intakeMasPaperMissionRouteHandoff(readyHandoff({
+    route_identity_key: '',
+  }));
+  assert.equal(missingRouteIdentity.status, 'rejected');
+  assert.equal(missingRouteIdentity.runtime_request_input, null);
+  assert.equal(missingRouteIdentity.blockers[0].reason, 'missing_route_identity_key');
+
+  const missingAttemptIdentity = intakeMasPaperMissionRouteHandoff(readyHandoff({
+    attempt_idempotency_key: '',
+  }));
+  assert.equal(missingAttemptIdentity.status, 'rejected');
+  assert.equal(missingAttemptIdentity.runtime_request_input, null);
+  assert.equal(missingAttemptIdentity.blockers[0].reason, 'missing_attempt_idempotency_key');
 });
 
 test('MAS paper mission route handoff fails closed instead of using OPL command cwd as domain workspace', () => {
@@ -253,6 +305,18 @@ test('MAS paper mission materialized readback is normalized into OPL runtime req
   const requestPayload = readback.runtime_request_input?.payload as Record<string, unknown>;
   const sourceHandoff = requestPayload.opl_route_handoff_record as Record<string, unknown>;
   const stageRunRequest = requestPayload.stage_run_request as Record<string, unknown>;
+  assert.equal(requestPayload.route_identity_key, sourceHandoff.route_identity_key);
+  assert.equal(requestPayload.attempt_idempotency_key, sourceHandoff.attempt_idempotency_key);
+  assert.equal(
+    requestPayload.route_identity_key,
+    'paper-mission-transaction::002-dm-china-us-mortality-attribution::gate_clearing_claim_evidence_repair::paper-mission::002-dm-china-us-mortality-attribution::gate_clearing_claim_evidence_repair::one-shot-migration::route',
+  );
+  assert.equal(
+    requestPayload.attempt_idempotency_key,
+    '002-dm-china-us-mortality-attribution::gate_clearing_claim_evidence_repair::accepted_candidate::opl-attempt',
+  );
+  assert.equal(stageRunRequest.route_identity_key, requestPayload.route_identity_key);
+  assert.equal(stageRunRequest.attempt_idempotency_key, requestPayload.attempt_idempotency_key);
   assert.equal(sourceHandoff.source_surface_kind, 'paper_mission_materialized_readback');
   assert.equal(stageRunRequest.stage_run_created, false);
   assert.equal(stageRunRequest.provider_attempt_requested, false);

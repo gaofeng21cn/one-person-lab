@@ -165,6 +165,9 @@ test('family-runtime intake enqueues ready MAS PaperMission route handoff as OPL
           handoff_status: 'ready_for_opl_route_command',
           next_owner: 'one-person-lab',
           paper_mission_transaction_ref: 'paper-mission-transaction:dm002:1',
+          route_identity_key: 'paper-mission-transaction:dm002:1::route',
+          attempt_idempotency_key: 'dm002:gate-clearing:accepted-candidate::opl-attempt',
+          request_idempotency_key: 'dm002:gate-clearing:accepted-candidate::opl-request',
           transaction_state: 'materialized',
           opl_route_command_ref: 'ops/medautoscience/paper_mission_consumption_ledger/dm002/opl_route_command.json',
           opl_route_command: {
@@ -255,6 +258,10 @@ test('family-runtime intake enqueues ready MAS PaperMission route handoff as OPL
     assert.equal(queue.tasks[0].payload.command_kind, 'start_next_stage');
     assert.equal(queue.tasks[0].payload.route_target, 'publication_gate_replay');
     assert.equal(queue.tasks[0].payload.paper_mission_transaction_ref, 'paper-mission-transaction:dm002:1');
+    assert.equal(queue.tasks[0].payload.route_identity_key, 'paper-mission-transaction:dm002:1::route');
+    assert.equal(queue.tasks[0].payload.attempt_idempotency_key, 'dm002:gate-clearing:accepted-candidate::opl-attempt');
+    assert.equal(queue.tasks[0].payload.stage_run_request.route_identity_key, 'paper-mission-transaction:dm002:1::route');
+    assert.equal(queue.tasks[0].payload.stage_run_request.attempt_idempotency_key, 'dm002:gate-clearing:accepted-candidate::opl-attempt');
     assert.equal(queue.tasks[0].payload.workspace_root, repoRoot);
     assert.equal(queue.tasks[0].payload.command_cwd, repoRoot);
     assert.deepEqual(queue.tasks[0].payload.opl_domain_export_context, {
@@ -621,6 +628,14 @@ test('family-runtime intake consumes MAS default PaperMission materialized readb
     assert.equal(queue.tasks[0].source, 'paper-mission-materialized-export');
     assert.equal(queue.tasks[0].payload.study_id, '002-dm-china-us-mortality-attribution');
     assert.equal(queue.tasks[0].payload.route_target, 'publication_gate_replay');
+    assert.equal(
+      queue.tasks[0].payload.route_identity_key,
+      'paper-mission-transaction::002-dm-china-us-mortality-attribution::gate_clearing_claim_evidence_repair::paper-mission::002-dm-china-us-mortality-attribution::gate_clearing_claim_evidence_repair::one-shot-migration::route',
+    );
+    assert.equal(
+      queue.tasks[0].payload.attempt_idempotency_key,
+      '002-dm-china-us-mortality-attribution::gate_clearing_claim_evidence_repair::accepted::opl-attempt',
+    );
     assert.equal(queue.tasks[0].payload.opl_route_handoff_record.source_surface_kind, 'paper_mission_materialized_readback');
     assert.equal(queue.tasks[0].payload.stage_run_request.stage_run_created, false);
     assert.equal(queue.tasks[0].payload.stage_run_request.provider_attempt_requested, false);
