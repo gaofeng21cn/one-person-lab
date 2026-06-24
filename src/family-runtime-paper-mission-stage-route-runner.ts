@@ -15,6 +15,13 @@ import {
   stableId,
   type FamilyRuntimeTaskRow,
 } from './family-runtime-store.ts';
+import {
+  isPaperMissionStageRouteTask,
+  PAPER_MISSION_STAGE_ROUTE_RUNTIME_REQUEST_KIND,
+  PAPER_MISSION_STAGE_ROUTE_TASK_KIND,
+} from './family-runtime-paper-mission-stage-route-terminal-sync.ts';
+
+export { isPaperMissionStageRouteTask };
 
 type FamilyRuntimePaths = ReturnType<typeof familyRuntimePaths>;
 type StageAttemptPayload = ReturnType<typeof inspectStageAttempt>;
@@ -24,9 +31,6 @@ type TemporalProviderModule = () => Promise<{
     options: { paths: FamilyRuntimePaths },
   ) => Promise<Record<string, unknown>>;
 }>;
-
-const PAPER_MISSION_STAGE_ROUTE_TASK_KIND = 'paper_mission/stage-route';
-const PAPER_MISSION_STAGE_ROUTE_RUNTIME_REQUEST_KIND = 'mas_paper_mission_stage_route';
 
 function optionalString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
@@ -153,19 +157,6 @@ function forbiddenWriteReason(payload: Record<string, unknown>) {
     }
   }
   return null;
-}
-
-export function isPaperMissionStageRouteTask(
-  row: Pick<FamilyRuntimeTaskRow, 'domain_id' | 'task_kind'>,
-  payload: Record<string, unknown>,
-) {
-  return row.domain_id === 'medautoscience'
-    && row.task_kind === PAPER_MISSION_STAGE_ROUTE_TASK_KIND
-    && payload.surface_kind === 'opl_mas_paper_mission_route_runtime_request'
-    && (
-      payload.runtime_request_kind === PAPER_MISSION_STAGE_ROUTE_RUNTIME_REQUEST_KIND
-      || payload.runtime_request_kind === undefined
-    );
 }
 
 export async function dispatchPaperMissionStageRouteTask(

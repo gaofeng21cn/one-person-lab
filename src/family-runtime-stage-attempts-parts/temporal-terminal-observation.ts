@@ -27,6 +27,9 @@ import {
 } from './shared.ts';
 import { inspectStageAttempt } from './inspect.ts';
 import { ingestStageAttemptCloseout } from './closeout-ingest.ts';
+import {
+  reconcilePaperMissionStageRouteTerminalTaskForAttempt,
+} from '../family-runtime-paper-mission-stage-route-terminal-sync.ts';
 
 type TemporalStageAttemptTerminalObservation = {
   surface_kind: 'temporal_stage_attempt_query_receipt';
@@ -213,6 +216,29 @@ function temporalNonCompletionBlocker(observation: TemporalStageAttemptTerminalO
   return 'temporal_stage_attempt_not_completed';
 }
 
+function temporalCompletedMissingCloseoutBlocker(observation: TemporalStageAttemptTerminalObservation) {
+  if (
+    observation.workflow_status !== 'COMPLETED'
+    || observation.query?.status !== 'completed'
+    || observation.query.completion_boundary.provider_completion !== 'completed'
+  ) {
+    return null;
+  }
+  const closeoutRefs = Array.isArray(observation.query.closeout_refs)
+    ? observation.query.closeout_refs.filter((entry) => typeof entry === 'string' && entry.trim())
+    : [];
+  return closeoutRefs.length === 0
+    ? 'temporal_stage_attempt_completed_missing_typed_closeout'
+    : null;
+}
+
+function reconcilePaperMissionStageRouteTerminalObservation(db: DatabaseSync, stageAttemptId: string) {
+  reconcilePaperMissionStageRouteTerminalTaskForAttempt(db, {
+    stageAttemptId,
+    source: 'temporal-terminal-observation:paper-mission-stage-route-terminal',
+  });
+}
+
 function taskDeadLetterReasonForTemporalNonCompletionBlocker(blocker: string) {
   return blocker === 'codex_cli_activity_cancelled'
     ? 'temporal_stage_attempt_canceled'
@@ -229,6 +255,12 @@ function closeoutPacketFromTemporalCompletedObservation(
   ) {
     return null;
   }
+  const closeoutRefs = Array.isArray(observation.query.closeout_refs)
+    ? observation.query.closeout_refs.filter((entry) => typeof entry === 'string' && entry.trim())
+    : [];
+  if (closeoutRefs.length === 0) {
+    return null;
+  }
   const receipt = observation.query.closeout_packet;
   const receiptRecord = typeof receipt === 'object' && receipt !== null && !Array.isArray(receipt)
     ? receipt
@@ -238,7 +270,7 @@ function closeoutPacketFromTemporalCompletedObservation(
     : 'domain_stage_closeout_packet';
   return normalizeTypedStageCloseoutPacket({
     surface_kind: surfaceKind,
-    closeout_refs: observation.query.closeout_refs,
+    closeout_refs: closeoutRefs,
     consumed_refs: observation.query.consumed_refs,
     consumed_memory_refs: observation.query.consumed_memory_refs,
     writeback_receipt_refs: observation.query.writeback_receipt_refs,
@@ -261,7 +293,9 @@ export function syncStageAttemptFromTemporalTerminalObservation(
     return syncStageAttemptFromTemporalUnavailableObservation(db, observation);
   }
   const failureReason = temporalTerminalFailureReason(observation);
-  const nonCompletionBlocker = temporalNonCompletionBlocker(observation);
+  const nonCompletionBlocker =
+    temporalNonCompletionBlocker(observation)
+    ?? temporalCompletedMissingCloseoutBlocker(observation);
   const row = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
     observation.stage_attempt_id,
   ) as StageAttemptRow | undefined;
@@ -288,10 +322,12 @@ export function syncStageAttemptFromTemporalTerminalObservation(
           observedAt: nowIso(),
         });
       }
+      reconcilePaperMissionStageRouteTerminalObservation(db, observation.stage_attempt_id);
       return synced;
     }
     if (rowHasCompletedTerminalObservation(row)) {
       markLinkedDefaultExecutorTaskCompleted(db, { row, observedAt: nowIso() });
+      reconcilePaperMissionStageRouteTerminalObservation(db, observation.stage_attempt_id);
       return null;
     }
     const observedAt = nowIso();
@@ -302,6 +338,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
       WHERE stage_attempt_id = ?
     `).run(JSON.stringify(providerRun), observedAt, observation.stage_attempt_id);
     markLinkedDefaultExecutorTaskCompleted(db, { row, observedAt });
+    reconcilePaperMissionStageRouteTerminalObservation(db, observation.stage_attempt_id);
     return inspectStageAttempt(db, observation.stage_attempt_id);
   }
   if (!failureReason && !nonCompletionBlocker && !completedCloseoutPacket) {
@@ -319,6 +356,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
         observedAt: nowIso(),
       });
     }
+    reconcilePaperMissionStageRouteTerminalObservation(db, observation.stage_attempt_id);
     return synced;
   }
   const observedAt = nowIso();
@@ -368,6 +406,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
       taskDeadLetterReason: taskDeadLetterReasonForTemporalNonCompletionBlocker(nonCompletionBlocker),
       eventType: 'stage_attempt_terminal_blocked_task',
     });
+    reconcilePaperMissionStageRouteTerminalObservation(db, observation.stage_attempt_id);
     return inspectStageAttempt(db, observation.stage_attempt_id);
   }
   if (!failureReason) {
@@ -426,5 +465,6 @@ export function syncStageAttemptFromTemporalTerminalObservation(
     taskDeadLetterReason,
     eventType: taskEventType,
   });
+  reconcilePaperMissionStageRouteTerminalObservation(db, observation.stage_attempt_id);
   return inspectStageAttempt(db, observation.stage_attempt_id);
 }

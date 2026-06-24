@@ -297,6 +297,44 @@ function liveStageAttemptStatus(status: string | null) {
   return status === 'running' || status === 'checkpointed' || status === 'human_gate';
 }
 
+function stringList(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    : [];
+}
+
+function latestActivityEvent(activityEvents: unknown[]) {
+  return activityEvents.filter(isRecord).at(-1) ?? null;
+}
+
+function activityEventTime(event: Record<string, unknown> | null) {
+  if (!event) {
+    return null;
+  }
+  return stringValue(event.event_time) ?? stringValue(event.observed_at) ?? stringValue(event.created_at);
+}
+
+function compactStageProgressForLiveness(input: {
+  stageAttemptId: string | null;
+  activityEvents: unknown[];
+  checkpointRefs: string[];
+  closeoutRefs: string[];
+}) {
+  const latestActivity = latestActivityEvent(input.activityEvents);
+  return {
+    surface_kind: 'opl_queue_task_linked_stage_attempt_progress_readback',
+    stage_attempt_id: input.stageAttemptId,
+    activity_event_count: input.activityEvents.length,
+    latest_activity_at: activityEventTime(latestActivity),
+    latest_activity_kind: stringValue(latestActivity?.activity_kind),
+    latest_activity_status: stringValue(latestActivity?.activity_status),
+    latest_heartbeat_kind: stringValue(latestActivity?.heartbeat_kind),
+    latest_runner_event_kind: stringValue(latestActivity?.runner_event_kind),
+    checkpoint_refs: input.checkpointRefs,
+    closeout_refs: input.closeoutRefs,
+  };
+}
+
 function taskLeaseCurrentness(
   row: FamilyRuntimeTaskRow,
   linkedHeartbeatAt: string | null,
@@ -337,6 +375,11 @@ function queueTaskLinkedStageAttemptLiveness(db: DatabaseSync, row: FamilyRuntim
   const activityEvents = Array.isArray(currentAttempt.activity_events)
     ? currentAttempt.activity_events
     : [];
+  const workspaceLocator = isRecord(currentAttempt.workspace_locator)
+    ? currentAttempt.workspace_locator
+    : {};
+  const checkpointRefs = stringList(currentAttempt.checkpoint_refs);
+  const closeoutRefs = stringList(currentAttempt.closeout_refs);
   const providerRunWithHeartbeat = latestProviderActivityHeartbeat(activityEvents, providerRun);
   const lastHeartbeatAt = stringValue(providerRunWithHeartbeat.last_heartbeat_at);
   const stageAttemptStatus = stringValue(currentAttempt.status);
@@ -353,6 +396,18 @@ function queueTaskLinkedStageAttemptLiveness(db: DatabaseSync, row: FamilyRuntim
     stage_id: stringValue(currentAttempt.stage_id),
     provider_kind: stringValue(currentAttempt.provider_kind),
     executor_kind: stringValue(currentAttempt.executor_kind),
+    task_id: row.task_id,
+    workspace_locator: workspaceLocator,
+    route_command: {
+      command_kind: stringValue(workspaceLocator.command_kind),
+      route_target: stringValue(workspaceLocator.route_target),
+      opl_route_command_ref: stringValue(workspaceLocator.opl_route_command_ref),
+      paper_mission_transaction_ref: stringValue(workspaceLocator.paper_mission_transaction_ref),
+      candidate_ref: stringValue(workspaceLocator.candidate_ref),
+      workspace_root: stringValue(workspaceLocator.workspace_root),
+      command_cwd: stringValue(workspaceLocator.command_cwd),
+      command_source: stringValue(workspaceLocator.command_source),
+    },
     stage_attempt_status: stageAttemptStatus,
     provider_status: providerStatus,
     last_heartbeat_at: lastHeartbeatAt,
@@ -360,6 +415,16 @@ function queueTaskLinkedStageAttemptLiveness(db: DatabaseSync, row: FamilyRuntim
     liveness_source: stringValue(providerRunWithHeartbeat.liveness_source),
     last_activity_heartbeat_kind: stringValue(providerRunWithHeartbeat.last_activity_heartbeat_kind),
     last_runner_event_kind: stringValue(providerRunWithHeartbeat.last_runner_event_kind),
+    checkpoint_refs: checkpointRefs,
+    closeout_refs: closeoutRefs,
+    closeout_ref_count: closeoutRefs.length,
+    closeout_receipt_status: stringValue(currentAttempt.closeout_receipt_status),
+    stage_progress_log: compactStageProgressForLiveness({
+      stageAttemptId: stringValue(currentAttempt.stage_attempt_id),
+      activityEvents,
+      checkpointRefs,
+      closeoutRefs,
+    }),
     task_lease_expires_at: row.lease_expires_at,
     task_lease_currentness: taskLeaseCurrentness(row, lastHeartbeatAt),
     authority_boundary: {

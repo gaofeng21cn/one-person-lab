@@ -19,6 +19,9 @@ import {
   nowIso,
 } from './shared.ts';
 import { inspectStageAttempt } from './inspect.ts';
+import {
+  reconcilePaperMissionStageRouteTerminalTaskForAttempt,
+} from '../family-runtime-paper-mission-stage-route-terminal-sync.ts';
 
 function normalizeRouteImpact(packet: TypedStageCloseoutPacket) {
   const routeImpact = packet.route_impact && typeof packet.route_impact === 'object' && !Array.isArray(packet.route_impact)
@@ -74,6 +77,10 @@ function syncAttemptRowFromAcceptedCloseout(
     && input.attempt.closeout_receipt_status === 'accepted_typed_closeout'
     && attemptAlreadyAbsorbedCloseout(input.attempt, input.packet)
   ) {
+    reconcilePaperMissionStageRouteTerminalTaskForAttempt(db, {
+      stageAttemptId: input.stageAttemptId,
+      source: 'typed-closeout-ingest:paper-mission-stage-route-terminal',
+    });
     return input.attempt;
   }
   const currentRow = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
@@ -107,6 +114,10 @@ function syncAttemptRowFromAcceptedCloseout(
     input.observedAt,
     input.stageAttemptId,
   );
+  reconcilePaperMissionStageRouteTerminalTaskForAttempt(db, {
+    stageAttemptId: input.stageAttemptId,
+    source: 'typed-closeout-ingest:paper-mission-stage-route-terminal',
+  });
   return inspectStageAttempt(db, input.stageAttemptId);
 }
 
