@@ -65,6 +65,21 @@ function recordValue(value: unknown) {
     : {};
 }
 
+export function paperMissionStageRouteIdentityValue(
+  payload: Record<string, unknown>,
+  field: string,
+) {
+  const handoffRecord = recordValue(payload.opl_route_handoff_record);
+  const handoffCarrier = recordValue(handoffRecord.opl_runtime_carrier);
+  const topLevelCarrier = recordValue(payload.opl_runtime_carrier);
+  const stageRunRequest = recordValue(payload.stage_run_request);
+  return optionalString(payload[field])
+    ?? optionalString(handoffRecord[field])
+    ?? optionalString(handoffCarrier[field])
+    ?? optionalString(topLevelCarrier[field])
+    ?? optionalString(stageRunRequest[field]);
+}
+
 function numericValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
@@ -136,7 +151,7 @@ function shouldAdmitSuccessorForTerminalRoute(
   terminalAttempt: StageAttemptPayload,
   nextTask: ReturnType<typeof paperMissionStageRouteTaskStatusForTerminalAttempt>,
 ) {
-  const commandKind = optionalString(payload.command_kind);
+  const commandKind = paperMissionStageRouteIdentityValue(payload, 'command_kind');
   const generation = terminalSuccessorGeneration(payload);
   return nextTask.status === 'blocked'
     && nextTask.reason === PAPER_MISSION_STAGE_ROUTE_DOMAIN_GATE_PENDING_REASON
@@ -146,7 +161,9 @@ function shouldAdmitSuccessorForTerminalRoute(
 }
 
 function missingTerminalSuccessorIdentityFields(payload: Record<string, unknown>) {
-  return TERMINAL_SUCCESSOR_REQUIRED_IDENTITY_FIELDS.filter((field) => !optionalString(payload[field]));
+  return TERMINAL_SUCCESSOR_REQUIRED_IDENTITY_FIELDS.filter(
+    (field) => !paperMissionStageRouteIdentityValue(payload, field),
+  );
 }
 
 function successorDedupeKey(row: FamilyRuntimeTaskRow, terminalAttempt: StageAttemptPayload) {
@@ -166,9 +183,19 @@ function successorPayloadForTerminalAttempt(
   const stageRunRequest = recordValue(payload.stage_run_request);
   const authorityBoundary = recordValue(payload.authority_boundary);
   const generation = terminalSuccessorGeneration(payload) + 1;
+  const commandKind = paperMissionStageRouteIdentityValue(payload, 'command_kind');
+  const routeTarget = paperMissionStageRouteIdentityValue(payload, 'route_target');
+  const routeIdentityKey = paperMissionStageRouteIdentityValue(payload, 'route_identity_key');
+  const attemptIdempotencyKey = paperMissionStageRouteIdentityValue(payload, 'attempt_idempotency_key');
+  const requestIdempotencyKey = paperMissionStageRouteIdentityValue(payload, 'request_idempotency_key');
   return {
     ...payload,
     runtime_request_status: 'queued_request',
+    ...(commandKind ? { command_kind: commandKind } : {}),
+    ...(routeTarget ? { route_target: routeTarget } : {}),
+    ...(routeIdentityKey ? { route_identity_key: routeIdentityKey } : {}),
+    ...(attemptIdempotencyKey ? { attempt_idempotency_key: attemptIdempotencyKey } : {}),
+    ...(requestIdempotencyKey ? { request_idempotency_key: requestIdempotencyKey } : {}),
     terminal_successor_generation: generation,
     terminal_successor_max_generation: MAX_TERMINAL_SUCCESSOR_GENERATION,
     terminal_successor_root_task_id: optionalString(payload.terminal_successor_root_task_id) ?? row.task_id,
@@ -184,8 +211,11 @@ function successorPayloadForTerminalAttempt(
       previous_task_id: row.task_id,
       previous_stage_attempt_id: terminalAttempt.stage_attempt_id,
       previous_terminal_reason: reason,
-      command_kind: payload.command_kind ?? null,
-      route_target: payload.route_target ?? null,
+      command_kind: commandKind,
+      route_target: routeTarget,
+      route_identity_key: routeIdentityKey,
+      attempt_idempotency_key: attemptIdempotencyKey,
+      request_idempotency_key: requestIdempotencyKey,
       domain_truth_owner: 'med-autoscience',
       runtime_owner: 'one-person-lab',
       stage_run_created: false,
@@ -439,9 +469,9 @@ function reconcilePaperMissionStageRouteTaskRowWithAttempt(
       mission_id: payload.mission_id ?? null,
       command_kind: payload.command_kind ?? null,
       route_target: payload.route_target ?? null,
-      route_identity_key: payload.route_identity_key ?? null,
-      attempt_idempotency_key: payload.attempt_idempotency_key ?? null,
-      request_idempotency_key: payload.request_idempotency_key ?? null,
+      route_identity_key: paperMissionStageRouteIdentityValue(payload, 'route_identity_key'),
+      attempt_idempotency_key: paperMissionStageRouteIdentityValue(payload, 'attempt_idempotency_key'),
+      request_idempotency_key: paperMissionStageRouteIdentityValue(payload, 'request_idempotency_key'),
       terminal_successor_identity_ready: successorIdentityReady,
       missing_terminal_successor_identity_fields: missingSuccessorIdentityFields,
       stage_attempt_id: terminalAttempt.stage_attempt_id,

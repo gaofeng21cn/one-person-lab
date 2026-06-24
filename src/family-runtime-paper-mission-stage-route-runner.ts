@@ -19,6 +19,7 @@ import {
   isPaperMissionStageRouteTask,
   PAPER_MISSION_STAGE_ROUTE_RUNTIME_REQUEST_KIND,
   PAPER_MISSION_STAGE_ROUTE_TASK_KIND,
+  paperMissionStageRouteIdentityValue,
 } from './family-runtime-paper-mission-stage-route-terminal-sync.ts';
 
 export { isPaperMissionStageRouteTask };
@@ -49,8 +50,8 @@ function booleanTrue(value: unknown) {
 }
 
 function routeStageId(payload: Record<string, unknown>) {
-  return optionalString(payload.route_target)
-    ?? optionalString(payload.command_kind)
+  return paperMissionStageRouteIdentityValue(payload, 'route_target')
+    ?? paperMissionStageRouteIdentityValue(payload, 'command_kind')
     ?? PAPER_MISSION_STAGE_ROUTE_TASK_KIND;
 }
 
@@ -62,10 +63,10 @@ function sourceFingerprintFor(row: FamilyRuntimeTaskRow, payload: Record<string,
     optionalString(payload.mission_id),
     optionalString(payload.paper_mission_transaction_ref),
     optionalString(payload.opl_route_command_ref),
-    optionalString(payload.command_kind),
-    optionalString(payload.route_target),
-    optionalString(payload.route_identity_key),
-    optionalString(payload.attempt_idempotency_key),
+    paperMissionStageRouteIdentityValue(payload, 'command_kind'),
+    paperMissionStageRouteIdentityValue(payload, 'route_target'),
+    paperMissionStageRouteIdentityValue(payload, 'route_identity_key'),
+    paperMissionStageRouteIdentityValue(payload, 'attempt_idempotency_key'),
     row.dedupe_key,
   ]);
 }
@@ -95,11 +96,11 @@ function workspaceLocatorFor(row: FamilyRuntimeTaskRow, payload: Record<string, 
       ?? optionalString(payload.paper_mission_default_handoff_ref),
     paper_mission_transaction_ref: optionalString(payload.paper_mission_transaction_ref),
     opl_route_command_ref: optionalString(payload.opl_route_command_ref),
-    command_kind: optionalString(payload.command_kind),
-    route_target: optionalString(payload.route_target),
-    route_identity_key: optionalString(payload.route_identity_key),
-    attempt_idempotency_key: optionalString(payload.attempt_idempotency_key),
-    request_idempotency_key: optionalString(payload.request_idempotency_key),
+    command_kind: paperMissionStageRouteIdentityValue(payload, 'command_kind'),
+    route_target: paperMissionStageRouteIdentityValue(payload, 'route_target'),
+    route_identity_key: paperMissionStageRouteIdentityValue(payload, 'route_identity_key'),
+    attempt_idempotency_key: paperMissionStageRouteIdentityValue(payload, 'attempt_idempotency_key'),
+    request_idempotency_key: paperMissionStageRouteIdentityValue(payload, 'request_idempotency_key'),
     ...(workspaceRoot ? { workspace_root: workspaceRoot } : {}),
     ...(commandCwd ? { command_cwd: commandCwd } : {}),
     ...(commandSource ? { command_source: commandSource } : {}),
@@ -174,16 +175,16 @@ function missingIdentityReason(payload: Record<string, unknown>) {
   if (!optionalString(payload.opl_route_command_ref)) {
     return 'paper_mission_route_missing_identity_field:opl_route_command_ref';
   }
-  if (!optionalString(payload.command_kind)) {
+  if (!paperMissionStageRouteIdentityValue(payload, 'command_kind')) {
     return 'paper_mission_route_missing_identity_field:command_kind';
   }
-  if (!optionalString(payload.route_target)) {
+  if (!paperMissionStageRouteIdentityValue(payload, 'route_target')) {
     return 'paper_mission_route_missing_identity_field:route_target';
   }
-  if (!optionalString(payload.route_identity_key)) {
+  if (!paperMissionStageRouteIdentityValue(payload, 'route_identity_key')) {
     return 'paper_mission_route_missing_identity_field:route_identity_key';
   }
-  if (!optionalString(payload.attempt_idempotency_key)) {
+  if (!paperMissionStageRouteIdentityValue(payload, 'attempt_idempotency_key')) {
     return 'paper_mission_route_missing_identity_field:attempt_idempotency_key';
   }
   return null;
