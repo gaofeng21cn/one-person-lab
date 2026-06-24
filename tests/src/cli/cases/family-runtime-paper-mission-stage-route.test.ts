@@ -969,6 +969,83 @@ test('family-runtime late typed closeout supersedes provider-only missing closeo
   }
 });
 
+test('family-runtime requeues fresh MAS PaperMission handoff after domain gate terminal closeout', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-fresh-handoff-'));
+  const originalStateDir = process.env.OPL_STATE_DIR;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    const { db } = openQueueDb();
+    const dedupeKey = 'paper-mission-route:dm002:fresh-handoff-after-domain-gate';
+    const firstHandoffRef =
+      '/tmp/mas-dm-cvd-workspace/ops/medautoscience/paper_mission_consumption_ledger/old/opl_route_handoff.json';
+    const freshHandoffRef =
+      '/tmp/mas-dm-cvd-workspace/ops/medautoscience/paper_mission_consumption_ledger/fresh/opl_route_handoff.json';
+    const firstPayload = paperMissionRoutePayloadWithWorkspace({
+      candidate_ref: '/tmp/mas-dm-cvd-workspace/ops/medautoscience/paper_mission_candidate_package/old/package_manifest.json',
+      paper_mission_transaction_ref: 'paper-mission-transaction:dm002:old',
+      opl_route_command_ref: 'paper-mission-transaction:dm002:old#opl_route_command',
+      opl_route_handoff_record: {
+        handoff_ref: firstHandoffRef,
+      },
+    });
+    const enqueued = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'paper_mission/stage-route',
+      payload: firstPayload,
+      dedupeKey,
+      source: 'test',
+    });
+    db.prepare(`
+      UPDATE tasks
+      SET status = 'blocked',
+        last_error = 'paper_mission_stage_route_domain_gate_pending',
+        dead_letter_reason = 'paper_mission_stage_route_domain_gate_pending'
+      WHERE task_id = ?
+    `).run(enqueued.task.task_id);
+
+    const freshPayload = paperMissionRoutePayloadWithWorkspace({
+      candidate_ref: '/tmp/mas-dm-cvd-workspace/ops/medautoscience/paper_mission_candidate_package/fresh/package_manifest.json',
+      paper_mission_transaction_ref: 'paper-mission-transaction:dm002:fresh',
+      opl_route_command_ref: 'paper-mission-transaction:dm002:fresh#opl_route_command',
+      opl_route_handoff_record: {
+        handoff_ref: freshHandoffRef,
+      },
+    });
+    const requeued = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'paper_mission/stage-route',
+      payload: freshPayload,
+      dedupeKey,
+      source: 'test-fresh-handoff',
+    });
+    const task = inspectTask(db, enqueued.task.task_id);
+    const event = task.events.find((entry) =>
+      entry.event_type === 'task_requeued_from_paper_mission_stage_route_domain_gate_fresh_handoff'
+    );
+
+    assert.equal(requeued.accepted, true);
+    assert.equal(requeued.requeued_from_terminal, true);
+    assert.equal(requeued.idempotent_noop, false);
+    assert.equal(task.task.status, 'queued');
+    assert.equal(task.task.dead_letter_reason, null);
+    assert.equal(task.task.last_error, null);
+    assert.equal(task.task.payload.candidate_ref, freshPayload.candidate_ref);
+    assert.equal(task.task.payload.paper_mission_transaction_ref, freshPayload.paper_mission_transaction_ref);
+    assert.notEqual(event, undefined);
+    assert.equal(event?.payload.reason, 'paper_mission_stage_route_domain_gate_fresh_handoff');
+    assert.equal(event?.payload.previous_candidate_ref, firstPayload.candidate_ref);
+    assert.equal(event?.payload.next_candidate_ref, freshPayload.candidate_ref);
+    assert.equal(event?.payload.previous_opl_route_handoff_ref, firstHandoffRef);
+    assert.equal(event?.payload.next_opl_route_handoff_ref, freshHandoffRef);
+    assert.equal(event?.payload.authority_boundary.domain_truth_mutation, false);
+    assert.equal(event?.payload.authority_boundary.provider_completion_is_domain_ready, false);
+    db.close();
+  } finally {
+    process.env.OPL_STATE_DIR = originalStateDir;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime tick does not promote MAS PaperMission stage-route domain-ready verdicts into OPL success', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-domain-ready-'));
   try {

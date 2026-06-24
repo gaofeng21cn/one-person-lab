@@ -32,6 +32,7 @@ import {
   markTransportOnlyAdmissionCheckpointsSuperseded,
   masPaperAutonomyDeadLetterCurrentnessBlock,
   operatorRetiredStaleResidueBlock,
+  sourceFingerprint,
   transportOnlySucceededDefaultExecutorAdmissionRedriveDecision,
 } from './existing-dedupe-decisions.ts';
 import {
@@ -50,8 +51,40 @@ function optionalString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
+function recordValue(value: unknown) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function stableComparableValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => stableComparableValue(entry));
+  }
+  const record = recordValue(value);
+  if (!record) {
+    return value;
+  }
+  return Object.fromEntries(
+    Object.keys(record)
+      .sort()
+      .map((key) => [key, stableComparableValue(record[key])]),
+  );
+}
+
+function stableComparableJson(value: unknown) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  return JSON.stringify(stableComparableValue(value));
+}
+
 const PAPER_MISSION_STALE_WORKSPACE_SUPERSEDED_REASON =
   'paper_mission_stage_route_stale_workspace_superseded_by_domain_workspace_handoff';
+const PAPER_MISSION_DOMAIN_GATE_FRESH_HANDOFF_REASONS = new Set([
+  'paper_mission_stage_route_domain_gate_pending',
+  'paper_mission_stage_route_domain_authority_required',
+]);
 
 function isOplRepoWorkspace(value: string | null) {
   return Boolean(value && /(?:^|\/)one-person-lab(?:\/|$)/.test(value));
@@ -69,6 +102,33 @@ function isPaperMissionStageRoutePayload(payload: Record<string, unknown>) {
       payload.runtime_request_kind === 'mas_paper_mission_stage_route'
       || payload.runtime_request_kind === undefined
     );
+}
+
+function paperMissionRouteHandoffRecord(payload: Record<string, unknown>) {
+  return recordValue(payload.opl_route_handoff_record)
+    ?? recordValue(payload.opl_route_handoff)
+    ?? recordValue(payload.route_handoff_record);
+}
+
+function paperMissionRouteHandoffRef(payload: Record<string, unknown>) {
+  const handoff = paperMissionRouteHandoffRecord(payload);
+  return optionalString(payload.opl_route_handoff_ref)
+    ?? optionalString(payload.route_handoff_ref)
+    ?? optionalString(handoff?.handoff_ref)
+    ?? optionalString(handoff?.opl_route_handoff_ref)
+    ?? optionalString(handoff?.record_ref)
+    ?? optionalString(handoff?.ref);
+}
+
+function changedStringField(
+  changedFields: string[],
+  field: string,
+  previousValue: string | null,
+  nextValue: string | null,
+) {
+  if (previousValue !== nextValue) {
+    changedFields.push(field);
+  }
 }
 
 function isPaperMissionStageRouteReplacementAllowed(input: {
@@ -104,6 +164,103 @@ function isPaperMissionStageRouteReplacementAllowed(input: {
     reason: 'paper_mission_stage_route_runtime_contract_replaced_after_operator_retire',
     operator_retirement_reason: input.retiredResidueBlock.operator_retirement_reason,
     workspace_root: workspaceRoot,
+    previous_status: input.existing.status,
+  };
+}
+
+function paperMissionStageRouteDomainGateFreshHandoffReplacement(input: {
+  existing: FamilyRuntimeTaskRow;
+  nextDomainId: string;
+  nextTaskKind: string;
+  existingPayload: Record<string, unknown>;
+  nextPayload: Record<string, unknown>;
+  exportedTaskChanged: boolean;
+}) {
+  const previousDomainGateReason = input.existing.dead_letter_reason ?? input.existing.last_error ?? '';
+  if (
+    !input.exportedTaskChanged
+    || input.existing.domain_id !== 'medautoscience'
+    || input.nextDomainId !== 'medautoscience'
+    || input.existing.task_kind !== 'paper_mission/stage-route'
+    || input.nextTaskKind !== 'paper_mission/stage-route'
+    || input.existing.status !== 'blocked'
+    || !PAPER_MISSION_DOMAIN_GATE_FRESH_HANDOFF_REASONS.has(previousDomainGateReason)
+    || !isPaperMissionStageRoutePayload(input.existingPayload)
+    || !isPaperMissionStageRoutePayload(input.nextPayload)
+  ) {
+    return null;
+  }
+
+  const nextWorkspaceRoot = paperMissionWorkspaceRoot(input.nextPayload)
+    ?? optionalString(input.nextPayload.command_cwd);
+  if (!nextWorkspaceRoot || isOplRepoWorkspace(nextWorkspaceRoot)) {
+    return null;
+  }
+
+  const existingWorkspaceRoot = paperMissionWorkspaceRoot(input.existingPayload)
+    ?? optionalString(input.existingPayload.command_cwd);
+  const previousCandidateRef = optionalString(input.existingPayload.candidate_ref);
+  const nextCandidateRef = optionalString(input.nextPayload.candidate_ref);
+  const previousTransactionRef = optionalString(input.existingPayload.paper_mission_transaction_ref);
+  const nextTransactionRef = optionalString(input.nextPayload.paper_mission_transaction_ref);
+  const previousRouteCommandRef = optionalString(input.existingPayload.opl_route_command_ref);
+  const nextRouteCommandRef = optionalString(input.nextPayload.opl_route_command_ref);
+  const previousHandoffRef = paperMissionRouteHandoffRef(input.existingPayload);
+  const nextHandoffRef = paperMissionRouteHandoffRef(input.nextPayload);
+  const previousSourceRef = optionalString(input.existingPayload.source_ref);
+  const nextSourceRef = optionalString(input.nextPayload.source_ref);
+  const previousHandoffRecordJson = stableComparableJson(paperMissionRouteHandoffRecord(input.existingPayload));
+  const nextHandoffRecordJson = stableComparableJson(paperMissionRouteHandoffRecord(input.nextPayload));
+  const previousSourcePayloadJson = stableComparableJson(input.existingPayload.source_payload);
+  const nextSourcePayloadJson = stableComparableJson(input.nextPayload.source_payload);
+  const previousSourceFingerprint = sourceFingerprint(input.existingPayload);
+  const nextSourceFingerprint = sourceFingerprint(input.nextPayload);
+  const changedFields: string[] = [];
+
+  changedStringField(changedFields, 'candidate_ref', previousCandidateRef, nextCandidateRef);
+  changedStringField(
+    changedFields,
+    'paper_mission_transaction_ref',
+    previousTransactionRef,
+    nextTransactionRef,
+  );
+  changedStringField(changedFields, 'opl_route_command_ref', previousRouteCommandRef, nextRouteCommandRef);
+  changedStringField(changedFields, 'opl_route_handoff_ref', previousHandoffRef, nextHandoffRef);
+  changedStringField(changedFields, 'source_ref', previousSourceRef, nextSourceRef);
+  changedStringField(
+    changedFields,
+    'source_fingerprint',
+    previousSourceFingerprint,
+    nextSourceFingerprint,
+  );
+  if (previousHandoffRecordJson !== nextHandoffRecordJson) {
+    changedFields.push('opl_route_handoff_record');
+  }
+  if (previousSourcePayloadJson !== nextSourcePayloadJson) {
+    changedFields.push('source_payload');
+  }
+  if (changedFields.length === 0) {
+    return null;
+  }
+
+  return {
+    reason: 'paper_mission_stage_route_domain_gate_fresh_handoff',
+    previous_domain_gate_reason: previousDomainGateReason,
+    previous_workspace_root: existingWorkspaceRoot,
+    next_workspace_root: nextWorkspaceRoot,
+    previous_candidate_ref: previousCandidateRef,
+    next_candidate_ref: nextCandidateRef,
+    previous_paper_mission_transaction_ref: previousTransactionRef,
+    next_paper_mission_transaction_ref: nextTransactionRef,
+    previous_opl_route_command_ref: previousRouteCommandRef,
+    next_opl_route_command_ref: nextRouteCommandRef,
+    previous_opl_route_handoff_ref: previousHandoffRef,
+    next_opl_route_handoff_ref: nextHandoffRef,
+    previous_source_ref: previousSourceRef,
+    next_source_ref: nextSourceRef,
+    previous_source_fingerprint: previousSourceFingerprint,
+    next_source_fingerprint: nextSourceFingerprint,
+    changed_fields: changedFields,
     previous_status: input.existing.status,
   };
 }
@@ -866,6 +1023,16 @@ export function reconcileExistingDedupeTask(
     ? masPaperAutonomyDeadLetterCurrentnessBlock(existing)
     : null;
   const retiredResidueBlock = operatorRetiredStaleResidueBlock(existing);
+  const domainGateFreshHandoffReplacement = retiredResidueBlock
+    ? null
+    : paperMissionStageRouteDomainGateFreshHandoffReplacement({
+        existing,
+        nextDomainId: input.domainId,
+        nextTaskKind: taskKind,
+        existingPayload,
+        nextPayload: payload,
+        exportedTaskChanged,
+      });
   const staleWorkspaceReplacement = retiredResidueBlock
     ? null
     : stalePaperMissionStageRouteWorkspaceReplacement({
@@ -877,6 +1044,38 @@ export function reconcileExistingDedupeTask(
         exportedTaskChanged,
         stageAttempts: listStageAttemptsForTask(db, existing.task_id),
       });
+  if (domainGateFreshHandoffReplacement) {
+    const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
+    return applyExistingDedupeRequeue(db, {
+      input,
+      taskKind,
+      exportedPayloadJson,
+      existing,
+      nextStatus,
+      nextRequiresApproval: requiresApproval,
+      nextLastError: initialLastError,
+      createdAt,
+      dedupeKey,
+      activeHoldId: activeHold?.hold_id ?? null,
+      eventType: 'task_requeued_from_paper_mission_stage_route_domain_gate_fresh_handoff',
+      eventPayload: {
+        ...domainGateFreshHandoffReplacement,
+        authority_boundary: {
+          opl: 'queue_runtime_currentness_repair_from_fresh_domain_handoff_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          domain_truth_mutation: false,
+          publication_quality_mutation: false,
+          artifact_gate_mutation: false,
+          current_package_mutation: false,
+          provider_stage_attempt_started: false,
+          provider_completion_is_domain_ready: false,
+          can_claim_paper_progress: false,
+        },
+      },
+      notificationTitle: 'MAS PaperMission stage route requeued from fresh domain handoff',
+      requeuedFromTerminal: true,
+    });
+  }
   if (staleWorkspaceReplacement) {
     const supersededStageAttempts = markPaperMissionStageRouteAttemptsSuperseded(db, {
       taskId: existing.task_id,
