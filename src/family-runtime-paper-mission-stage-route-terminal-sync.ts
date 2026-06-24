@@ -36,6 +36,9 @@ const TERMINAL_STAGE_ATTEMPT_STATUSES = new Set<StageAttemptStatus>([
 const SUPERSEDABLE_PROVIDER_BLOCKERS = new Set([
   'temporal_stage_attempt_completed_missing_typed_closeout',
 ]);
+const BACKFILLABLE_TERMINAL_ROUTE_BLOCKERS = new Set([
+  PAPER_MISSION_STAGE_ROUTE_DOMAIN_GATE_PENDING_REASON,
+]);
 
 type StageAttemptPayload = ReturnType<typeof stageAttemptToPayload>;
 
@@ -291,6 +294,16 @@ function enqueuePaperMissionStageRouteSuccessor(
   return { created: result.changes > 0, taskId: refreshed.task_id, dedupeKey };
 }
 
+function existingPaperMissionStageRouteSuccessor(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  terminalAttempt: StageAttemptPayload,
+) {
+  return db.prepare('SELECT * FROM tasks WHERE dedupe_key = ?').get(
+    successorDedupeKey(row, terminalAttempt),
+  ) as FamilyRuntimeTaskRow | undefined;
+}
+
 function canReconcilePaperMissionStageRouteTask(
   row: FamilyRuntimeTaskRow,
   terminalAttempt: StageAttemptPayload,
@@ -302,7 +315,27 @@ function canReconcilePaperMissionStageRouteTask(
     return false;
   }
   const reason = row.dead_letter_reason ?? row.last_error;
-  return typeof reason === 'string' && SUPERSEDABLE_PROVIDER_BLOCKERS.has(reason);
+  return typeof reason === 'string'
+    && (
+      SUPERSEDABLE_PROVIDER_BLOCKERS.has(reason)
+      || BACKFILLABLE_TERMINAL_ROUTE_BLOCKERS.has(reason)
+    );
+}
+
+function canBackfillBlockedTerminalSuccessor(
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+  terminalAttempt: StageAttemptPayload,
+) {
+  const reason = row.dead_letter_reason ?? row.last_error;
+  return row.status === 'blocked'
+    && typeof reason === 'string'
+    && BACKFILLABLE_TERMINAL_ROUTE_BLOCKERS.has(reason)
+    && shouldAdmitSuccessorForTerminalRoute(
+      payload,
+      terminalAttempt,
+      paperMissionStageRouteTaskStatusForTerminalAttempt(terminalAttempt),
+    );
 }
 
 function reconcilePaperMissionStageRouteTaskRowWithAttempt(
@@ -323,6 +356,11 @@ function reconcilePaperMissionStageRouteTaskRowWithAttempt(
   }
   const nextTask = paperMissionStageRouteTaskStatusForTerminalAttempt(terminalAttempt);
   const reconciledAt = nowIso();
+  const admitSuccessor = shouldAdmitSuccessorForTerminalRoute(payload, terminalAttempt, nextTask);
+  if (row.status === 'blocked' && admitSuccessor && existingPaperMissionStageRouteSuccessor(db, row, terminalAttempt)) {
+    return false;
+  }
+  const backfillOnly = canBackfillBlockedTerminalSuccessor(row, payload, terminalAttempt);
   const result = db.prepare(`
     UPDATE tasks
     SET status = ?, lease_owner = NULL, lease_expires_at = NULL,
@@ -336,10 +374,10 @@ function reconcilePaperMissionStageRouteTaskRowWithAttempt(
     row.task_id,
     row.status,
   );
-  if (result.changes === 0) {
+  if (result.changes === 0 && !backfillOnly) {
     return false;
   }
-  const successor = shouldAdmitSuccessorForTerminalRoute(payload, terminalAttempt, nextTask)
+  const successor = admitSuccessor
     ? enqueuePaperMissionStageRouteSuccessor(db, {
         row,
         payload,
@@ -352,12 +390,15 @@ function reconcilePaperMissionStageRouteTaskRowWithAttempt(
   insertEvent(db, {
     taskId: row.task_id,
     domainId: row.domain_id,
-    eventType: 'paper_mission_stage_route_terminal_task_reconciled',
+    eventType: backfillOnly
+      ? 'paper_mission_stage_route_terminal_successor_backfilled'
+      : 'paper_mission_stage_route_terminal_task_reconciled',
     source,
     payload: {
       previous_status: row.status,
       next_status: nextTask.status,
       reason: nextTask.reason,
+      backfill_only: backfillOnly,
       study_id: payload.study_id ?? null,
       mission_id: payload.mission_id ?? null,
       command_kind: payload.command_kind ?? null,
@@ -443,7 +484,7 @@ export function reconcilePaperMissionStageRouteTerminalTasks(
   let reconciledCount = 0;
   const reconciledTaskIds = new Set<string>();
   for (const row of rows) {
-    if (row.status !== 'running') {
+    if (row.status !== 'running' && row.status !== 'blocked') {
       continue;
     }
     const payload = payloadFromTask(row);
