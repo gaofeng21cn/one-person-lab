@@ -7,6 +7,7 @@ import { Worker } from '@temporalio/worker';
 import * as activities from '../../../../src/family-runtime-temporal-activities.ts';
 import {
   buildTemporalStageAttemptWorkflowInputForTest,
+  startTemporalStageAttemptWorkflow,
 } from '../../../../src/family-runtime-temporal-provider.ts';
 import {
   resolveTemporalWorkerTaskQueue,
@@ -226,7 +227,6 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-default-start-'));
   const runtimeRoot = path.join(stateRoot, 'family-runtime');
   const testEnv = await createSearchableTemporalTestEnvironment();
-  const taskQueue = resolveTemporalWorkerTaskQueue({ root: runtimeRoot });
   const previousEnv = {
     OPL_STATE_DIR: process.env.OPL_STATE_DIR,
     OPL_FAMILY_RUNTIME_PROVIDER: process.env.OPL_FAMILY_RUNTIME_PROVIDER,
@@ -242,6 +242,7 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
 
   try {
     fs.mkdirSync(runtimeRoot, { recursive: true });
+    const taskQueue = resolveTemporalWorkerTaskQueue({ root: runtimeRoot });
     fs.writeFileSync(path.join(runtimeRoot, 'temporal-service.json'), `${JSON.stringify({
       provider_kind: 'temporal',
       service_kind: 'custom_command',
@@ -940,6 +941,98 @@ test('family-runtime temporal attempt query reads managed local service state wh
         .stage_progress_log.temporal_webui_ref.workflow_id,
       attempt.workflow_id,
     );
+  } finally {
+    for (const [key, value] of Object.entries(previousEnv)) {
+      if (typeof value === 'string') {
+        process.env[key] = value;
+      } else {
+        delete process.env[key];
+      }
+    }
+    await testEnv.teardown();
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime temporal attempt start uses managed worker task queue for explicit state root', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-start-managed-'));
+  const runtimeRoot = path.join(stateRoot, 'family-runtime');
+  const testEnv = await createSearchableTemporalTestEnvironment();
+  const { fixtureRoot: codexFixtureRoot, codexPath } = createTemporalCloseoutCodexFixture(
+    ['receipt:managed-start'],
+  );
+  const previousEnv = {
+    OPL_STATE_DIR: process.env.OPL_STATE_DIR,
+    OPL_TEMPORAL_ADDRESS: process.env.OPL_TEMPORAL_ADDRESS,
+    TEMPORAL_ADDRESS: process.env.TEMPORAL_ADDRESS,
+    OPL_TEMPORAL_NAMESPACE: process.env.OPL_TEMPORAL_NAMESPACE,
+    OPL_TEMPORAL_TASK_QUEUE: process.env.OPL_TEMPORAL_TASK_QUEUE,
+    OPL_TEMPORAL_WORKER_STATUS: process.env.OPL_TEMPORAL_WORKER_STATUS,
+    OPL_TEMPORAL_WORKER_ENABLED: process.env.OPL_TEMPORAL_WORKER_ENABLED,
+    OPL_CODEX_BIN: process.env.OPL_CODEX_BIN,
+    OPL_TEMPORAL_WORKER_SOURCE_VERSION: process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION,
+  };
+
+  try {
+    fs.mkdirSync(runtimeRoot, { recursive: true });
+    const managedTaskQueue = resolveTemporalWorkerTaskQueue({ root: runtimeRoot });
+    fs.writeFileSync(path.join(runtimeRoot, 'temporal-service.json'), `${JSON.stringify({
+      provider_kind: 'temporal',
+      service_kind: 'custom_command',
+      pid: process.pid,
+      address: testEnv.address,
+      started_at: new Date().toISOString(),
+      status: 'running',
+      command: 'temporal test server',
+    }, null, 2)}\n`);
+    writeReadyTemporalWorkerFixture({
+      runtimeRoot,
+      address: testEnv.address,
+      namespace: testEnv.namespace ?? 'default',
+      taskQueue: managedTaskQueue,
+      sourceVersion: 'git:start-managed-current',
+    });
+
+    const worker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue: managedTaskQueue,
+      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      activities,
+    });
+    process.env.OPL_STATE_DIR = stateRoot;
+    process.env.OPL_TEMPORAL_ADDRESS = '';
+    process.env.TEMPORAL_ADDRESS = '';
+    process.env.OPL_TEMPORAL_NAMESPACE = testEnv.namespace ?? 'default';
+    process.env.OPL_TEMPORAL_TASK_QUEUE = '';
+    process.env.OPL_TEMPORAL_WORKER_STATUS = '';
+    process.env.OPL_TEMPORAL_WORKER_ENABLED = '';
+    process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = 'git:start-managed-current';
+    process.env.OPL_CODEX_BIN = codexPath;
+    const created = await runFamilyRuntime([
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'review',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas"}',
+      '--checkpoint-ref',
+      'checkpoint:managed-start',
+    ]) as TemporalStageAttemptCreateOutput;
+    const attempt = created.family_runtime_stage_attempt.attempt;
+
+    const receipt = await worker.runUntil(async () => startTemporalStageAttemptWorkflow(attempt, {
+      paths: { root: runtimeRoot },
+    }));
+
+    assert.equal(receipt.task_queue, managedTaskQueue);
+    assert.notEqual(receipt.task_queue, 'opl-stage-attempts');
+    assert.equal(receipt.visibility_readiness.task_queue, managedTaskQueue);
   } finally {
     for (const [key, value] of Object.entries(previousEnv)) {
       if (typeof value === 'string') {

@@ -14,7 +14,9 @@ import type {
 
 export type TemporalStageAttemptCreateOutput = {
   family_runtime_stage_attempt: {
-    attempt: TemporalStageAttemptWorkflowInput;
+    attempt: TemporalStageAttemptWorkflowInput & {
+      provider_kind: 'temporal';
+    };
   };
 };
 
