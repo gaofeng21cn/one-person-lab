@@ -690,13 +690,22 @@ function parseSkillPackArgs(
         parsed.home = value;
         break;
       case '--scope':
-        if (value !== 'project' && value !== 'codex') {
-          throw buildUsageError('Option --scope requires project or codex.', spec, { option: token, value });
+        if (value !== 'project' && value !== 'codex' && value !== 'workspace' && value !== 'quest') {
+          throw buildUsageError('Option --scope requires project, codex, workspace, or quest.', spec, { option: token, value });
         }
         parsed.scope = value;
         break;
       case '--target-project':
         parsed.targetProject = value;
+        break;
+      case '--target-workspace':
+        parsed.targetWorkspace = value;
+        break;
+      case '--target-quest':
+        parsed.targetQuest = value;
+        break;
+      case '--target-root':
+        parsed.targetRoot = value;
         break;
       case '--mode':
         if (value !== 'observe' && value !== 'ask_to_apply' && value !== 'managed') {

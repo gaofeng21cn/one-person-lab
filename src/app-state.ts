@@ -581,6 +581,32 @@ function workspaceRootPayload(payload: JsonRecord) {
   return workspaceRoot;
 }
 
+function scholarskillsWorkspaceRootPayload(payload: JsonRecord) {
+  const workspaceRoot = stringPayloadField(payload, 'workspace_root')
+    ?? stringPayloadField(payload, 'workspaceRoot')
+    ?? stringPayloadField(payload, 'path');
+  if (!workspaceRoot) {
+    throw new FrameworkContractError('cli_usage_error', 'scholarskills_workspace_sync action requires payload.workspace_root.', {
+      action_id: 'scholarskills_workspace_sync',
+      required: ['workspace_root'],
+    });
+  }
+  return workspaceRoot;
+}
+
+function scholarskillsQuestRootPayload(payload: JsonRecord) {
+  const questRoot = stringPayloadField(payload, 'quest_root')
+    ?? stringPayloadField(payload, 'questRoot')
+    ?? stringPayloadField(payload, 'path');
+  if (!questRoot) {
+    throw new FrameworkContractError('cli_usage_error', 'scholarskills_quest_sync action requires payload.quest_root.', {
+      action_id: 'scholarskills_quest_sync',
+      required: ['quest_root'],
+    });
+  }
+  return questRoot;
+}
+
 function booleanPayloadField(payload: JsonRecord, field: string, fallback = false) {
   const value = payload[field];
   return typeof value === 'boolean' ? value : fallback;
@@ -818,30 +844,70 @@ async function executeDirectAppAction(
     };
   }
 
-  if (options.actionId === 'scholarskills_project_sync') {
+  if (options.actionId === 'scholarskills_workspace_sync') {
+    const workspaceRoot = scholarskillsWorkspaceRootPayload(options.payload);
     return {
-      delegatedSurface: 'opl connect sync-skills --domain scholarskills --scope project --target-project medautoscience',
+      delegatedSurface: 'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <workspace_root>',
       result: options.dryRun
         ? {
             skill_sync: {
               surface_id: 'opl_skill_sync',
               status: 'dry_run',
               domain_id: 'scholarskills',
-              scope: 'project',
-              target_project: 'medautoscience',
-              command: 'opl connect sync-skills --domain scholarskills --scope project --target-project medautoscience --json',
+              scope: 'workspace',
+              target_workspace: workspaceRoot,
+              target_skill_path: `${workspaceRoot}/.codex/skills/opl-scholarskills`,
+              command: `opl connect sync-skills --domain scholarskills --scope workspace --target-workspace ${workspaceRoot} --json`,
               authority_boundary: {
                 can_write_domain_truth: false,
                 can_sign_owner_receipt: false,
                 can_create_typed_blocker: false,
                 can_write_runtime_queue: false,
+                can_write_owner_receipt: false,
+                can_write_paper_body: false,
+                can_write_artifact_authority: false,
+                can_authorize_publication_readiness: false,
               },
             },
           }
         : syncFamilySkillPacks({
             domains: ['scholarskills'],
-            scope: 'project',
-            targetProject: 'medautoscience',
+            scope: 'workspace',
+            targetWorkspace: workspaceRoot,
+          }),
+    };
+  }
+
+  if (options.actionId === 'scholarskills_quest_sync') {
+    const questRoot = scholarskillsQuestRootPayload(options.payload);
+    return {
+      delegatedSurface: 'opl connect sync-skills --domain scholarskills --scope quest --target-quest <quest_root>',
+      result: options.dryRun
+        ? {
+            skill_sync: {
+              surface_id: 'opl_skill_sync',
+              status: 'dry_run',
+              domain_id: 'scholarskills',
+              scope: 'quest',
+              target_quest: questRoot,
+              target_skill_path: `${questRoot}/.codex/skills/opl-scholarskills`,
+              command: `opl connect sync-skills --domain scholarskills --scope quest --target-quest ${questRoot} --json`,
+              authority_boundary: {
+                can_write_domain_truth: false,
+                can_sign_owner_receipt: false,
+                can_create_typed_blocker: false,
+                can_write_runtime_queue: false,
+                can_write_owner_receipt: false,
+                can_write_paper_body: false,
+                can_write_artifact_authority: false,
+                can_authorize_publication_readiness: false,
+              },
+            },
+          }
+        : syncFamilySkillPacks({
+            domains: ['scholarskills'],
+            scope: 'quest',
+            targetQuest: questRoot,
           }),
     };
   }

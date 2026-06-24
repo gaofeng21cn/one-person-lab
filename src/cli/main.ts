@@ -38,7 +38,7 @@ const RETIRED_COMMAND_REPLACEMENTS = [
     tokens: ['skill', 'sync'],
     command: 'opl skill sync',
     replacement: 'opl connect sync-skills',
-    usage: 'opl connect sync-skills [--domain <domain_id>] [--scope <project|codex>] [--target-project <project_id>] [--home <home_path>] [--quiet]',
+    usage: 'opl connect sync-skills [--domain <domain_id>] [--scope <project|codex|workspace|quest>] [--target-project <project_id>] [--target-workspace <path>] [--target-quest <path>] [--target-root <path>] [--home <home_path>] [--quiet]',
     examples: ['opl connect sync-skills --json', 'opl connect sync-skills --domain medautoscience --json'],
   },
   {

@@ -82,7 +82,8 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       'module_install',
       'module_update',
       'module_sync',
-      'scholarskills_project_sync',
+      'scholarskills_workspace_sync',
+      'scholarskills_quest_sync',
       'module_reinstall',
       'module_remove',
       'provider_scheduler_install',
@@ -119,15 +120,24 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.equal(actions.get('module_update')?.can_submit_to_safe_action_shell, false);
     assert.deepEqual(actions.get('module_sync')?.payload_fields, []);
     assert.equal(actions.get('module_sync')?.delegated_surface, 'opl connect reconcile-modules');
-    assert.deepEqual(actions.get('scholarskills_project_sync')?.payload_fields, []);
+    assert.deepEqual(actions.get('scholarskills_workspace_sync')?.payload_fields, ['workspace_root']);
     assert.equal(
-      actions.get('scholarskills_project_sync')?.delegated_surface,
-      'opl connect sync-skills --domain scholarskills --scope project --target-project medautoscience',
+      actions.get('scholarskills_workspace_sync')?.delegated_surface,
+      'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <workspace_root>',
     );
-    assert.equal(actions.get('scholarskills_project_sync')?.mutates, 'mas_project_local_capability_skill_mirror');
-    assert.equal(actions.get('scholarskills_project_sync')?.dry_run_supported, true);
-    assert.equal(actions.get('scholarskills_project_sync')?.route_requires_domain_or_app_payload, false);
-    assert.equal(actions.get('scholarskills_project_sync')?.can_submit_to_safe_action_shell, true);
+    assert.equal(actions.get('scholarskills_workspace_sync')?.mutates, 'workspace_local_codex_skill');
+    assert.equal(actions.get('scholarskills_workspace_sync')?.dry_run_supported, true);
+    assert.equal(actions.get('scholarskills_workspace_sync')?.route_requires_domain_or_app_payload, true);
+    assert.equal(actions.get('scholarskills_workspace_sync')?.can_submit_to_safe_action_shell, false);
+    assert.deepEqual(actions.get('scholarskills_quest_sync')?.payload_fields, ['quest_root']);
+    assert.equal(
+      actions.get('scholarskills_quest_sync')?.delegated_surface,
+      'opl connect sync-skills --domain scholarskills --scope quest --target-quest <quest_root>',
+    );
+    assert.equal(actions.get('scholarskills_quest_sync')?.mutates, 'quest_local_codex_skill');
+    assert.equal(actions.get('scholarskills_quest_sync')?.dry_run_supported, true);
+    assert.equal(actions.get('scholarskills_quest_sync')?.route_requires_domain_or_app_payload, true);
+    assert.equal(actions.get('scholarskills_quest_sync')?.can_submit_to_safe_action_shell, false);
     assert.equal(actions.get('provider_scheduler_status')?.submit_via, 'opl app action execute');
     assert.equal(actions.get('provider_scheduler_status')?.execution_policy, 'opl_safe_action_shell');
     assert.equal(actions.get('provider_scheduler_status')?.route_requires_domain_or_app_payload, false);
@@ -207,9 +217,9 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
   }
 });
 
-test('app action execute exposes ScholarSkills project-local sync as dry-run before mutating MAS project mirror', () => {
+test('app action execute exposes ScholarSkills workspace sync as dry-run before mutating workspace skill path', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-scholarskills-home-'));
-  const masRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-scholarskills-mas-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-scholarskills-workspace-'));
 
   try {
     const output = runCli([
@@ -217,12 +227,13 @@ test('app action execute exposes ScholarSkills project-local sync as dry-run bef
       'action',
       'execute',
       '--action',
-      'scholarskills_project_sync',
+      'scholarskills_workspace_sync',
+      '--payload',
+      JSON.stringify({ workspace_root: workspaceRoot }),
       '--dry-run',
     ], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
-      OPL_MEDAUTOSCIENCE_REPO_ROOT: masRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
     }) as {
@@ -235,44 +246,57 @@ test('app action execute exposes ScholarSkills project-local sync as dry-run bef
             status: string;
             domain_id: string;
             scope: string;
-            target_project: string;
+            target_workspace: string;
+            target_skill_path: string;
             command: string;
             authority_boundary: {
               can_write_domain_truth: boolean;
               can_sign_owner_receipt: boolean;
               can_create_typed_blocker: boolean;
               can_write_runtime_queue: boolean;
+              can_write_owner_receipt: boolean;
+              can_write_paper_body: boolean;
+              can_write_artifact_authority: boolean;
+              can_authorize_publication_readiness: boolean;
             };
           };
         };
       };
     };
 
-    assert.equal(output.app_action_execution.action_id, 'scholarskills_project_sync');
+    assert.equal(output.app_action_execution.action_id, 'scholarskills_workspace_sync');
     assert.equal(output.app_action_execution.dry_run, true);
     assert.equal(
       output.app_action_execution.delegated_surface,
-      'opl connect sync-skills --domain scholarskills --scope project --target-project medautoscience',
+      'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <workspace_root>',
     );
     assert.equal(output.app_action_execution.result.skill_sync.status, 'dry_run');
     assert.equal(output.app_action_execution.result.skill_sync.domain_id, 'scholarskills');
-    assert.equal(output.app_action_execution.result.skill_sync.scope, 'project');
-    assert.equal(output.app_action_execution.result.skill_sync.target_project, 'medautoscience');
+    assert.equal(output.app_action_execution.result.skill_sync.scope, 'workspace');
+    assert.equal(output.app_action_execution.result.skill_sync.target_workspace, workspaceRoot);
+    assert.equal(
+      output.app_action_execution.result.skill_sync.target_skill_path,
+      `${workspaceRoot}/.codex/skills/opl-scholarskills`,
+    );
     assert.equal(
       output.app_action_execution.result.skill_sync.command,
-      'opl connect sync-skills --domain scholarskills --scope project --target-project medautoscience --json',
+      `opl connect sync-skills --domain scholarskills --scope workspace --target-workspace ${workspaceRoot} --json`,
     );
     assert.deepEqual(output.app_action_execution.result.skill_sync.authority_boundary, {
       can_write_domain_truth: false,
       can_sign_owner_receipt: false,
       can_create_typed_blocker: false,
       can_write_runtime_queue: false,
+      can_write_owner_receipt: false,
+      can_write_paper_body: false,
+      can_write_artifact_authority: false,
+      can_authorize_publication_readiness: false,
     });
-    assert.equal(fs.existsSync(path.join(masRoot, 'plugins', 'opl-scholarskills', 'skills')), false);
+    assert.equal(fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'opl-scholarskills')), false);
     assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'config.toml')), false);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
-    fs.rmSync(masRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });
 

@@ -122,12 +122,14 @@ export function buildConnectCommandSpecs(
       help_surface: 'default',
     }),
     'connect sync-skills': cloneCommandSpec(commandSpecs['skill-sync'], {
-      usage: 'opl connect sync-skills [--domain <domain_id>] [--scope <project|codex>] [--target-project <project_id>] [--home <home_path>] [--quiet]',
+      usage: 'opl connect sync-skills [--domain <domain_id>] [--scope <project|codex|workspace|quest>] [--target-project <project_id>] [--target-workspace <path>] [--target-quest <path>] [--target-root <path>] [--home <home_path>] [--quiet]',
       summary: 'Sync family/domain capability packs to their declared target scope through the canonical Connect command surface.',
       examples: [
         'opl connect sync-skills --json',
         'opl connect sync-skills --domain medautoscience --json',
         'opl connect sync-skills --domain scholarskills --scope project --target-project medautoscience --json',
+        'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace /path/to/workspace --json',
+        'opl connect sync-skills --domain scholarskills --scope quest --target-quest /path/to/quest --json',
         'opl connect sync-skills --domain scholarskills --scope codex --json',
         'opl connect sync-skills --home /tmp/codex-home --json',
       ],

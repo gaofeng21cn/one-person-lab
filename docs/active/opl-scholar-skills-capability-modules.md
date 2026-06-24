@@ -70,13 +70,22 @@ opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact
 
 ## Connect 同步与安装落点
 
-ScholarSkills 的默认消费方是 MAS project-local capability mirror，而不是用户系统级 Codex skill registry。`opl connect sync-skills --domain scholarskills --json` 等价于 project scope，默认写入 MAS 项目工作目录：
+ScholarSkills 的论文执行默认落点是 workspace / quest-local Codex discovery skill，而不是用户系统级 Codex skill registry，也不是 MAS project mirror。面向具体论文 workspace 或 quest 时，使用：
+
+```bash
+opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <workspace-root> --json
+opl connect sync-skills --domain scholarskills --scope quest --target-quest <quest-root> --json
+```
+
+这会把 filtered skill pack 写入 `<target>/.codex/skills/opl-scholarskills/`，并生成 `.opl-install-receipt.json`，记录 source repo path、source HEAD、target scope/root、copy policy、copied/excluded roots 与 authority false flags。复制内容只包括 `SKILL.md` 以及必要 contracts/docs/gallery review refs；`.git`、`outputs`、`build`、`dist`、`node_modules`、`render-cache` 和 heavy gallery assets/intermediate files 不进入目标 workspace / quest。
+
+兼容的 project mirror 仍保留给开发和 review，但必须显式请求：
 
 ```text
 <med-autoscience-repo>/plugins/opl-scholarskills/
 ```
 
-该目录是 OPL-managed project-local mirror，只承载 `opl-scholarskills` plugin manifest 与 `SKILL.md`，用于 MAS 调用和本地审阅。它不是 MAS domain truth、不是 MAS owner receipt、不是 typed blocker、不是 runtime queue，也不是 publication/package authority。MAS 仓内 `.codex/` 已退役，ScholarSkills 默认同步不得写入 MAS `.codex/skills`。
+该目录是 OPL-managed project-local mirror，只承载 `opl-scholarskills` plugin manifest 与 `SKILL.md`，用于开发、review 和 MAS project-local 能力面审阅；它是 deprecated / non-default paper execution path。它不是 MAS domain truth、不是 MAS owner receipt、不是 typed blocker、不是 runtime queue，也不是 publication/package authority。MAS 仓内 `.codex/` 已退役，project scope 不得写入 MAS `.codex/skills`。裸 `opl connect sync-skills --domain scholarskills --json` / `opl connect sync-skills --json` 不会再隐式写 MAS 程序仓 mirror；没有 workspace/quest target 时只返回 skipped/readback。
 
 系统级 Codex 注册仍保留为显式开发者路径：
 

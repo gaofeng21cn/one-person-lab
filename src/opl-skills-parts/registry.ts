@@ -5,7 +5,7 @@ import { FrameworkContractError } from '../contracts.ts';
 export type SkillPackInstallerKind = 'bash' | 'node';
 export type SkillPackSourceKind = 'repo_plugin_installer' | 'opl_generated_plugin_surface';
 export type SkillPackDistributionRole = 'domain_agent_plugin_pack' | 'framework_capability_plugin_pack';
-export type SkillPackSyncScope = 'project' | 'codex';
+export type SkillPackSyncScope = 'project' | 'codex' | 'workspace' | 'quest';
 export type SkillPackTargetProject = 'medautoscience';
 
 export type SkillPackSpec = {
@@ -55,7 +55,16 @@ export type InspectFamilySkillPack = {
 export type SyncFamilySkillPack = InspectFamilySkillPack & {
   sync_status: 'synced' | 'skipped';
   sync_scope: SkillPackSyncScope;
+  target_scope: SkillPackSyncScope;
   target_project: SkillPackTargetProject | null;
+  target_root: string | null;
+  workspace_or_quest_local_skill_root: string | null;
+  codex_discovery_kind:
+    | 'codex_home_plugin_registry'
+    | 'project_local_plugin_mirror'
+    | 'workspace_or_quest_local_skill';
+  project_mirror_deprecated_for_paper_execution: boolean;
+  project_mirror_non_default_paper_execution_path: boolean;
   installer_result: Record<string, unknown> | null;
   registry_repo_root: string | null;
   stdout: string;

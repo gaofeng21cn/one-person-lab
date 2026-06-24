@@ -8,7 +8,7 @@ import { readFamilySkillPacks } from '../../src/opl-skills.ts';
 import { registerOplFamilyCodexPlugins } from '../../src/system-installation/codex-plugin-registry.ts';
 import type { OplModuleId } from '../../src/system-installation/shared.ts';
 
-test('OPL system skill sync catalog excludes MDS stage skills while exposing ScholarSkills as a project-scoped capability pack', () => {
+test('OPL system skill sync catalog excludes MDS stage skills while exposing ScholarSkills as a target-scoped capability pack', () => {
   const catalog = readFamilySkillPacks().skill_catalog;
   const domainIds = catalog.packs.map((pack) => pack.domain_id);
   const pluginNames = catalog.packs.map((pack) => pack.canonical_plugin_name);
@@ -26,8 +26,11 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     const seriesDelegateToolRefs = pack.mcp_projection.series_delegate_tool_refs as string[];
     if (pack.canonical_plugin_name === 'opl-scholarskills') {
       assert.equal(pack.distribution_role, 'framework_capability_plugin_pack');
-      assert.equal(pack.capability_plugin_distribution?.default_sync_scope, 'project');
-      assert.equal(pack.capability_plugin_distribution?.default_target_project, 'medautoscience');
+      assert.equal(
+        pack.capability_plugin_distribution?.default_sync_scope,
+        'none_without_explicit_workspace_or_quest_target',
+      );
+      assert.equal(pack.capability_plugin_distribution?.default_target_project, null);
       assert.equal(pack.capability_plugin_distribution?.domain_module, false);
       assert.deepEqual(pack.command_preview, [
         'opl',
@@ -36,9 +39,9 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
         '--domain',
         'scholarskills',
         '--scope',
-        'project',
-        '--target-project',
-        'medautoscience',
+        'workspace',
+        '--target-workspace',
+        '<workspace-root>',
       ]);
       continue;
     }

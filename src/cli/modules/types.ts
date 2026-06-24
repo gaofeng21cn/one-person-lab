@@ -235,8 +235,11 @@ type SystemConfigureCodexCliInput = {
 type SkillPacksCliInput = {
   domains: string[];
   home?: string;
-  scope?: 'project' | 'codex';
+  scope?: 'project' | 'codex' | 'workspace' | 'quest';
   targetProject?: string;
+  targetWorkspace?: string;
+  targetQuest?: string;
+  targetRoot?: string;
   quiet?: boolean;
   companionMode?: 'observe' | 'ask_to_apply' | 'managed';
   superpowersProfile?: 'keep' | 'lite' | 'full';

@@ -161,9 +161,9 @@ export function buildInstallerCommandPreview(
       '--domain',
       spec.domain_id,
       '--scope',
-      'project',
-      '--target-project',
-      'medautoscience',
+      'workspace',
+      '--target-workspace',
+      '<workspace-root>',
     ];
   }
 

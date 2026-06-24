@@ -52,6 +52,9 @@ type SyncFamilySkillPacksOptions = ReadFamilySkillPacksOptions & {
   home?: string;
   scope?: SkillPackSyncScope;
   targetProject?: string;
+  targetWorkspace?: string;
+  targetQuest?: string;
+  targetRoot?: string;
   companionMode?: OplCompanionSkillApplyMode;
   superpowersProfile?: OplSuperpowersProfile;
 };
@@ -293,11 +296,17 @@ function buildCapabilityPluginDistribution(spec: SkillPackSpec) {
     github_repo: 'gaofeng21cn/opl-scholarskills',
     connect_readback_commands: [
       'opl connect skills --domain scholarskills --json',
+      'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <workspace-root> --json',
+      'opl connect sync-skills --domain scholarskills --scope quest --target-quest <quest-root> --json',
       'opl connect sync-skills --domain scholarskills --scope project --target-project medautoscience --json',
       'opl connect sync-skills --domain scholarskills --scope codex --json',
     ],
-    default_sync_scope: 'project',
-    default_target_project: 'medautoscience',
+    default_sync_scope: 'none_without_explicit_workspace_or_quest_target',
+    default_target_project: null,
+    recommended_paper_execution_scopes: ['workspace', 'quest'],
+    project_mirror_deprecated_for_paper_execution: true,
+    project_mirror_non_default_paper_execution_path: true,
+    project_scope_requires_explicit_request: true,
     codex_scope_requires_explicit_request: true,
     framework_owned_capability: true,
     domain_module: false,
@@ -914,6 +923,7 @@ export function syncFamilySkillPackFromRepoRoot(
     registerPlugin?: boolean;
     scope: SkillPackSyncScope;
     targetProject: string;
+    targetRoot: string;
   }> = {},
 ) {
   const spec = FAMILY_SKILL_PACK_SPECS.find((entry) => entry.domain_id === domainId);
@@ -940,6 +950,9 @@ export function syncFamilySkillPackFromRepoRoot(
       },
     );
   }
+  const targetRoot = resolveSkillSyncTargetRoot(scope, {
+    targetRoot: options.targetRoot,
+  });
 
   const result = runSkillPackInstaller(
     inspectFamilySkillPackAtRepoRoot(spec, path.resolve(repoRoot)),
@@ -947,6 +960,7 @@ export function syncFamilySkillPackFromRepoRoot(
       home: normalizeOptionalString(options.home) ?? undefined,
       scope,
       targetProject: scope === 'project' ? targetProject : null,
+      targetRoot,
       resolveCodexHome,
       writeGeneratedPluginSurface: writeOplGeneratedPluginSurface,
     },
@@ -975,7 +989,7 @@ export function syncFamilySkillPackFromRepoRoot(
 }
 
 function defaultSyncScopeForSpec(spec: SkillPackSpec): SkillPackSyncScope {
-  return spec.domain_id === 'scholarskills' ? 'project' : 'codex';
+  return spec.domain_id === 'scholarskills' ? 'workspace' : 'codex';
 }
 
 function normalizeTargetProject(value: string | undefined | null): SkillPackTargetProject {
@@ -992,6 +1006,56 @@ function normalizeTargetProject(value: string | undefined | null): SkillPackTarg
       allowed_target_projects: ['medautoscience', 'med-autoscience', 'mas'],
     },
   );
+}
+
+function resolveSkillSyncTargetRoot(
+  scope: SkillPackSyncScope,
+  options: {
+    targetWorkspace?: string;
+    targetQuest?: string;
+    targetRoot?: string;
+  },
+) {
+  if (scope === 'workspace') {
+    return normalizeOptionalString(options.targetWorkspace)
+      ?? normalizeOptionalString(options.targetRoot)
+      ?? null;
+  }
+  if (scope === 'quest') {
+    return normalizeOptionalString(options.targetQuest)
+      ?? normalizeOptionalString(options.targetRoot)
+      ?? null;
+  }
+  return normalizeOptionalString(options.targetRoot);
+}
+
+function requireSkillSyncTargetRoot(
+  scope: SkillPackSyncScope,
+  targetRoot: string | null,
+) {
+  if ((scope === 'workspace' || scope === 'quest') && !targetRoot) {
+    throw new FrameworkContractError(
+      'cli_usage_error',
+      `ScholarSkills ${scope} skill sync requires a target root.`,
+      {
+        requested_scope: scope,
+        required: scope === 'workspace'
+          ? ['--target-workspace <path> or --target-root <path>']
+          : ['--target-quest <path> or --target-root <path>'],
+      },
+    );
+  }
+}
+
+function shouldSkipImplicitScholarSkillsSync(
+  spec: SkillPackSpec,
+  options: SyncFamilySkillPacksOptions,
+) {
+  return spec.domain_id === 'scholarskills'
+    && !options.scope
+    && !normalizeOptionalString(options.targetWorkspace)
+    && !normalizeOptionalString(options.targetQuest)
+    && !normalizeOptionalString(options.targetRoot);
 }
 
 export function readFamilySkillPacks(options: ReadFamilySkillPacksOptions = {}) {
@@ -1022,7 +1086,15 @@ export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) 
     .filter((spec) => !selectedDomains || selectedDomains.has(spec.domain_id))
     .map((spec) => ({ spec, inspected: inspectFamilySkillPack(spec) }));
   const targetProject = normalizeTargetProject(options.targetProject);
+  const explicitTargetRoot = resolveSkillSyncTargetRoot(options.scope ?? 'workspace', {
+    targetWorkspace: options.targetWorkspace,
+    targetQuest: options.targetQuest,
+    targetRoot: options.targetRoot,
+  });
   for (const { spec } of inspectedPacks) {
+    if (shouldSkipImplicitScholarSkillsSync(spec, options)) {
+      continue;
+    }
     const scope = options.scope ?? defaultSyncScopeForSpec(spec);
     if (scope === 'project' && spec.domain_id !== 'scholarskills') {
       throw new FrameworkContractError(
@@ -1035,11 +1107,47 @@ export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) 
         },
       );
     }
+    if ((scope === 'workspace' || scope === 'quest') && spec.domain_id !== 'scholarskills') {
+      throw new FrameworkContractError(
+        'cli_usage_error',
+        `Workspace/quest-local skill sync is only supported for OPL ScholarSkills, not ${spec.domain_id}.`,
+        {
+          domain_id: spec.domain_id,
+          requested_scope: scope,
+          allowed_workspace_or_quest_scope_domains: ['scholarskills'],
+        },
+      );
+    }
+    requireSkillSyncTargetRoot(
+      scope,
+      resolveSkillSyncTargetRoot(scope, {
+        targetWorkspace: options.targetWorkspace,
+        targetQuest: options.targetQuest,
+        targetRoot: options.targetRoot,
+      }),
+    );
   }
   const packs = inspectedPacks.map(({ spec, inspected }) => runSkillPackInstaller(inspected, {
     home: resolvedHome ?? undefined,
-    scope: options.scope ?? defaultSyncScopeForSpec(spec),
-    targetProject: (options.scope ?? defaultSyncScopeForSpec(spec)) === 'project' ? targetProject : null,
+    ...(() => {
+      if (shouldSkipImplicitScholarSkillsSync(spec, options)) {
+        return {
+          scope: 'workspace' as const,
+          targetProject: null,
+          targetRoot: null,
+        };
+      }
+      const scope = options.scope ?? defaultSyncScopeForSpec(spec);
+      return {
+        scope,
+        targetProject: scope === 'project' ? targetProject : null,
+        targetRoot: resolveSkillSyncTargetRoot(scope, {
+          targetWorkspace: options.targetWorkspace,
+          targetQuest: options.targetQuest,
+          targetRoot: explicitTargetRoot ?? undefined,
+        }),
+      };
+    })(),
     resolveCodexHome,
     writeGeneratedPluginSurface: writeOplGeneratedPluginSurface,
   }));
