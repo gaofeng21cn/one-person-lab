@@ -28,6 +28,43 @@ function explicitDeveloperSupervisorStaleWorker() {
   });
 }
 
+function explicitDeveloperSupervisorDuplicateWorker() {
+  return {
+    ...temporalWorkerStatus('ready', {
+      mutationGuardStatus: 'allowed_explicit_developer_supervisor',
+      mutationGuardAllowed: true,
+    }),
+    lifecycle_status: 'duplicate_worker' as const,
+    readiness_status: 'duplicate_worker' as const,
+    worker_ready: false,
+    duplicate_worker_pids: [98765],
+    blockers: ['temporal_worker_duplicate_foreground'],
+    repair_action: {
+      ...temporalWorkerStatus('worker_source_stale').repair_action,
+      next_command: 'opl family-runtime worker stop --provider temporal',
+    },
+  };
+}
+
+function supervisorState(paths: { root: string }, installed = true) {
+  return {
+    surface_kind: 'opl_family_runtime_provider_worker_supervisor_state' as const,
+    provider_kind: 'temporal' as const,
+    supervisor_label: 'ai.opl.family-runtime.provider-worker',
+    status: installed ? 'installed' : 'not_installed',
+    plist_path: '/tmp/ai.opl.family-runtime.provider-worker.plist',
+    plist_exists: installed,
+    launchctl_loaded: installed,
+    launchctl: null,
+    keep_alive: true,
+    run_at_load: true,
+    resident_worker_process: true,
+    supervises_family_runtime_root: installed,
+    family_runtime_root: paths.root,
+    root_match_source: installed ? 'plist' : null,
+  };
+}
+
 function initializeQueueDbForCurrentStateDir() {
   const paths = familyRuntimePaths();
   fs.mkdirSync(path.dirname(paths.queue_db), { recursive: true });
@@ -139,6 +176,7 @@ test('family-runtime provider repair restarts stale OPL managed Temporal worker'
         startCount += 1;
         return temporalWorkerStartedLifecycle();
       },
+      inspectProviderWorkerSupervisor: async (paths) => supervisorState(paths, false),
     });
 
     assert.equal(stopCount, 1);
@@ -146,7 +184,9 @@ test('family-runtime provider repair restarts stale OPL managed Temporal worker'
     assert.equal(receipt.trigger, 'provider_repair');
     assert.equal(receipt.repair_status, 'executed');
     assert.equal(receipt.repair_action_id, 'restart_temporal_worker');
-    assert.equal(receipt.command, 'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal');
+    assert.equal(receipt.command, 'opl family-runtime worker stop --provider temporal');
+    assert.equal(receipt.restart_strategy, 'manual_stop_then_start');
+    assert.equal(receipt.restart_reason, 'worker_source_stale');
     assert.equal(receipt.before.lifecycle_status, 'worker_source_stale');
     assert.ok(receipt.after);
     assert.equal(receipt.after.lifecycle_status, 'ready');
@@ -154,6 +194,123 @@ test('family-runtime provider repair restarts stale OPL managed Temporal worker'
     assert.equal(receipt.start?.start_status, 'started');
     assert.equal(receipt.restart_guard?.guard_status, 'ready');
     assert.deepEqual(receipt.blocker_ids, []);
+    assert.equal(receipt.authority_boundary.can_write_domain_truth, false);
+  } finally {
+    db?.close();
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime provider repair lets installed supervisor relaunch stale worker without manual foreground start', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-repair-worker-supervisor-restart-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  let db: DatabaseSync | null = null;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    db = initializeQueueDbForCurrentStateDir();
+    let stopCount = 0;
+    let startCount = 0;
+    let inspectCount = 0;
+    const receipt = await repairTemporalWorkerForProviderRepair(familyRuntimePaths(), {
+      inspectTemporalWorkerLifecycle: async () => {
+        inspectCount += 1;
+        return inspectCount === 1 ? explicitDeveloperSupervisorStaleWorker() : temporalWorkerStatus('ready');
+      },
+      stopTemporalWorkerLifecycle: async () => {
+        stopCount += 1;
+        return {
+          surface_kind: 'temporal_worker_lifecycle_stop',
+          provider_kind: 'temporal',
+          stop_status: 'stopped',
+          stopped_pid: 12344,
+          stop_actions: [],
+          orphan_stopped_pids: [],
+          orphan_stop_incomplete_pids: [],
+          orphan_stop_actions: [],
+          before: temporalWorkerStatus('worker_source_stale'),
+          status: temporalWorkerStatus('worker_not_ready'),
+        };
+      },
+      startTemporalWorkerLifecycle: async () => {
+        startCount += 1;
+        throw new Error('manual start should not run when supervisor owns the runtime root');
+      },
+      inspectProviderWorkerSupervisor: async (paths) => supervisorState(paths, true),
+    });
+
+    assert.equal(stopCount, 1);
+    assert.equal(startCount, 0);
+    assert.equal(receipt.trigger, 'provider_repair');
+    assert.equal(receipt.repair_status, 'executed');
+    assert.equal(receipt.repair_action_id, 'restart_temporal_worker');
+    assert.equal(receipt.command, 'opl family-runtime worker stop --provider temporal');
+    assert.equal(receipt.restart_strategy, 'supervisor_keepalive_stop_only');
+    assert.equal(receipt.restart_reason, 'worker_source_stale');
+    assert.equal(receipt.supervisor_state?.supervises_family_runtime_root, true);
+    assert.equal(receipt.start, null);
+    assert.ok(receipt.after);
+    assert.equal(receipt.after.lifecycle_status, 'ready');
+  } finally {
+    db?.close();
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime provider repair collapses duplicate Temporal worker state through guarded restart', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-repair-worker-duplicate-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  let db: DatabaseSync | null = null;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    db = initializeQueueDbForCurrentStateDir();
+    let stopCount = 0;
+    let startCount = 0;
+    let inspectCount = 0;
+    const receipt = await repairTemporalWorkerForProviderRepair(familyRuntimePaths(), {
+      inspectTemporalWorkerLifecycle: async () => {
+        inspectCount += 1;
+        return inspectCount === 1 ? explicitDeveloperSupervisorDuplicateWorker() : temporalWorkerStatus('ready');
+      },
+      stopTemporalWorkerLifecycle: async () => {
+        stopCount += 1;
+        return {
+          surface_kind: 'temporal_worker_lifecycle_stop',
+          provider_kind: 'temporal',
+          stop_status: 'stopped',
+          stopped_pid: 12344,
+          stop_actions: [],
+          orphan_stopped_pids: [98765],
+          orphan_stop_incomplete_pids: [],
+          orphan_stop_actions: [],
+          before: explicitDeveloperSupervisorDuplicateWorker(),
+          status: temporalWorkerStatus('worker_not_ready'),
+        };
+      },
+      startTemporalWorkerLifecycle: async () => {
+        startCount += 1;
+        throw new Error('manual start should not run when supervisor owns the runtime root');
+      },
+      inspectProviderWorkerSupervisor: async (paths) => supervisorState(paths, true),
+    });
+
+    assert.equal(stopCount, 1);
+    assert.equal(startCount, 0);
+    assert.equal(receipt.repair_status, 'executed');
+    assert.equal(receipt.repair_action_id, 'restart_temporal_worker');
+    assert.equal(receipt.restart_strategy, 'supervisor_keepalive_stop_only');
+    assert.equal(receipt.restart_reason, 'duplicate_worker');
+    assert.equal(receipt.before.lifecycle_status, 'duplicate_worker');
+    assert.equal(receipt.after?.lifecycle_status, 'ready');
     assert.equal(receipt.authority_boundary.can_write_domain_truth, false);
   } finally {
     db?.close();
@@ -197,6 +354,7 @@ test('family-runtime provider-slo restarts stale OPL managed Temporal worker bef
         startCount += 1;
         return temporalWorkerStartedLifecycle();
       },
+      inspectProviderWorkerSupervisor: async (paths) => supervisorState(paths, false),
     });
 
     assert.equal(stopCount, 1);
@@ -204,6 +362,7 @@ test('family-runtime provider-slo restarts stale OPL managed Temporal worker bef
     assert.equal(receipt.trigger, 'provider_slo_tick');
     assert.equal(receipt.repair_status, 'executed');
     assert.equal(receipt.repair_action_id, 'restart_temporal_worker');
+    assert.equal(receipt.restart_strategy, 'manual_stop_then_start');
     assert.equal(receipt.before.lifecycle_status, 'worker_source_stale');
     assert.ok(receipt.after);
     assert.equal(receipt.after.lifecycle_status, 'ready');
@@ -285,6 +444,7 @@ test('family-runtime provider-slo blocks stale worker restart without explicit d
         startCount += 1;
         throw new Error('start should not run');
       },
+      inspectProviderWorkerSupervisor: async (paths) => supervisorState(paths, false),
     });
 
     assert.equal(stopCount, 0);
@@ -328,6 +488,7 @@ test('family-runtime provider-slo blocks stale worker restart while active stage
         startCount += 1;
         throw new Error('start should not run');
       },
+      inspectProviderWorkerSupervisor: async (paths) => supervisorState(paths, false),
     });
 
     assert.equal(stopCount, 0);
@@ -479,6 +640,7 @@ test('family-runtime provider-slo blocks stale worker restart when Temporal serv
         startCount += 1;
         throw new Error('start should not run');
       },
+      inspectProviderWorkerSupervisor: async (paths) => supervisorState(paths, false),
     });
 
     assert.equal(stopCount, 0);
@@ -560,6 +722,7 @@ test('family-runtime provider repair surfaces missing Temporal worker runtime de
         startCount += 1;
         return temporalWorkerStartedLifecycle();
       },
+      inspectProviderWorkerSupervisor: async (paths) => supervisorState(paths, false),
     });
 
     assert.equal(startCount, 0);

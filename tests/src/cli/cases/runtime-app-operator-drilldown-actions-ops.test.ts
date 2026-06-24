@@ -223,8 +223,8 @@ test('runtime App drilldown selects provider SLO proof action before scheduler i
           provider_kind: 'temporal',
           provider_repair_action_id: 'restart_temporal_worker',
           provider_repair_command:
-            'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal',
-          provider_required_next_action: 'Restart stale Temporal worker before rerunning provider proof.',
+            'opl family-runtime worker stop --provider temporal',
+          provider_required_next_action: 'Run supervisor-aware Temporal worker repair before rerunning provider proof.',
           provider_slo_dispatch_status: 'execution_due_or_repair_required',
           opl_cli_args: ['residency', 'proof', '--provider', 'temporal', '--production'],
           authority_boundary: {
@@ -256,11 +256,11 @@ test('runtime App drilldown selects provider SLO proof action before scheduler i
   assert.equal(nextSafeAction.provider_repair_action_id, 'restart_temporal_worker');
   assert.equal(
     nextSafeAction.provider_repair_command,
-    'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal',
+    'opl family-runtime worker stop --provider temporal',
   );
   assert.equal(
     nextSafeAction.provider_required_next_action,
-    'Restart stale Temporal worker before rerunning provider proof.',
+    'Run supervisor-aware Temporal worker repair before rerunning provider proof.',
   );
   assert.deepEqual(nextSafeAction.submit_args, [
     'runtime',

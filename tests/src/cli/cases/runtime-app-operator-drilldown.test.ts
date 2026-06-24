@@ -208,19 +208,16 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(providerWorkerRepairRoute.provider_worker_repair_action_id, 'restart_temporal_worker');
     assert.equal(
       providerWorkerRepairRoute.provider_worker_repair_command,
-      'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal',
+      'opl family-runtime worker stop --provider temporal',
     );
     assert.equal(
       providerWorkerRepairRoute.provider_worker_required_next_action,
-      'Restart stale Temporal worker before rerunning provider proof or provider-backed Codex stages.',
+      'Run supervisor-aware Temporal worker repair before rerunning provider proof or provider-backed Codex stages.',
     );
     assert.deepEqual(providerWorkerRepairRoute.opl_cli_args, [
-      'worker',
       'repair',
       '--provider',
       'temporal',
-      '--action',
-      'restart',
     ]);
     assert.equal(providerWorkerRepairRoute.authority_boundary.can_write_domain_truth, false);
     assert.equal(

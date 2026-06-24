@@ -92,6 +92,7 @@ function buildTemporalWorkerRepairAction(input: {
   namespace?: string | null;
   taskQueue?: string | null;
 }) {
+  const supervisorAwareRestartCommand = 'opl family-runtime worker stop --provider temporal';
   const repairCommands = {
     start_local_temporal_service:
       'opl family-runtime service start --provider temporal',
@@ -103,6 +104,10 @@ function buildTemporalWorkerRepairAction(input: {
       dependencyRepairCommand(),
     start_managed_worker:
       'opl family-runtime worker start --provider temporal',
+    restart_worker_with_supervisor:
+      supervisorAwareRestartCommand,
+    restart_worker_without_supervisor:
+      'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal',
     rerun_production_proof:
       'opl family-runtime residency proof --provider temporal --production',
   };
@@ -119,10 +124,8 @@ function buildTemporalWorkerRepairAction(input: {
     not_configured: repairCommands.start_local_temporal_service,
     server_unreachable: repairCommands.start_local_temporal_service,
     worker_dependency_unavailable: repairCommands.repair_worker_runtime_dependencies,
-    duplicate_worker:
-      'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal',
-    worker_source_stale:
-      'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal',
+    duplicate_worker: supervisorAwareRestartCommand,
+    worker_source_stale: supervisorAwareRestartCommand,
     worker_not_ready: repairCommands.start_managed_worker,
     ready: repairCommands.rerun_production_proof,
   };
@@ -135,6 +138,10 @@ function buildTemporalWorkerRepairAction(input: {
     namespace: input.namespace ?? null,
     task_queue: input.taskQueue ?? null,
     next_command: nextCommandByStatus[input.readinessStatus],
+    restart_strategy: input.readinessStatus === 'duplicate_worker'
+      || input.readinessStatus === 'worker_source_stale'
+        ? 'supervisor_aware_stop_then_supervisor_or_manual_start'
+        : null,
     repair_commands: repairCommands,
   };
 }

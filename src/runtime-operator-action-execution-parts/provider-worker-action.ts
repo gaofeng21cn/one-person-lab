@@ -19,12 +19,11 @@ export function providerWorkerArgs(route: JsonRecord, commandOrSurfaceRef: strin
       command_or_surface_ref: commandOrSurfaceRef,
       supported_commands: [
         'opl family-runtime worker start --provider temporal',
-        'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal',
+        'opl family-runtime repair --provider temporal',
       ],
     });
   }
   const providerIndex = args.indexOf('--provider');
-  const actionIndex = args.indexOf('--action');
   if (
     args[0] === 'worker'
     && args[1] === 'start'
@@ -37,12 +36,9 @@ export function providerWorkerArgs(route: JsonRecord, commandOrSurfaceRef: strin
     } as const;
   }
   if (
-    args[0] !== 'worker'
-    || args[1] !== 'repair'
+    args[0] !== 'repair'
     || providerIndex < 0
     || args[providerIndex + 1] !== 'temporal'
-    || actionIndex < 0
-    || args[actionIndex + 1] !== 'restart'
   ) {
     throw new FrameworkContractError('contract_shape_invalid', 'OPL provider worker route has invalid opl_cli_args.', {
       action_id: stringValue(route.action_id),
@@ -51,15 +47,14 @@ export function providerWorkerArgs(route: JsonRecord, commandOrSurfaceRef: strin
   }
   return {
     mode: 'restart',
-    stopArgs: ['worker', 'stop', '--provider', 'temporal'],
-    startArgs: ['worker', 'start', '--provider', 'temporal'],
+    repairArgs: ['repair', '--provider', 'temporal'],
   } as const;
 }
 
 export function providerWorkerCommand(repair: ReturnType<typeof providerWorkerArgs>) {
   return repair.mode === 'start'
     ? 'opl family-runtime worker start --provider temporal'
-    : 'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal';
+    : 'opl family-runtime repair --provider temporal';
 }
 
 export async function runProviderWorkerRepair(
@@ -72,7 +67,6 @@ export async function runProviderWorkerRepair(
     };
   }
   return {
-    stop: await runFamilyRuntime([...repair.stopArgs]),
-    start: await runFamilyRuntime([...repair.startArgs]),
+    repair: await runFamilyRuntime([...repair.repairArgs]),
   };
 }

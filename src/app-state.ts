@@ -717,16 +717,13 @@ function dryRunFamilyRuntimeResult(surface: string, args: string[]) {
       },
     };
   }
-  if (surface === 'worker_restart') {
+  if (surface === 'provider_repair') {
     return {
-      family_runtime_worker_restart: {
-        action: 'restart',
+      family_runtime_provider: {
+        action: 'repair',
         provider_kind: 'temporal',
         status: 'dry_run',
-        command_preview: [
-          ['opl', 'family-runtime', 'worker', 'stop', '--provider', 'temporal'],
-          ['opl', 'family-runtime', 'worker', 'start', '--provider', 'temporal'],
-        ],
+        command_preview: commandPreview,
       },
     };
   }
@@ -980,18 +977,12 @@ async function executeDirectAppAction(
   }
 
   if (options.actionId === 'provider_worker_restart') {
+    const args = ['repair', '--provider', 'temporal'];
     return {
-      delegatedSurface: 'opl family-runtime worker restart --provider temporal',
+      delegatedSurface: 'opl family-runtime repair --provider temporal',
       result: options.dryRun
-        ? dryRunFamilyRuntimeResult('worker_restart', ['worker', 'restart', '--provider', 'temporal'])
-        : {
-            family_runtime_worker_restart: {
-              action: 'restart',
-              provider_kind: 'temporal',
-              stop: await runFamilyRuntime(['worker', 'stop', '--provider', 'temporal']),
-              start: await runFamilyRuntime(['worker', 'start', '--provider', 'temporal']),
-            },
-          },
+        ? dryRunFamilyRuntimeResult('provider_repair', args)
+        : await runFamilyRuntime(args),
     };
   }
 

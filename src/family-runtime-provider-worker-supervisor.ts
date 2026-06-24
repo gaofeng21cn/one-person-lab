@@ -1,6 +1,4 @@
-import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
@@ -15,38 +13,20 @@ import {
 import {
   resolveFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
+import {
+  escapeXml,
+  inspectProviderWorkerSupervisorState,
+  legacyProviderSloWatchdogPlistPath,
+  LEGACY_PROVIDER_SLO_WATCHDOG_LABEL,
+  providerWorkerSupervisorLaunchctlTarget,
+  providerWorkerSupervisorPlistPath,
+  PROVIDER_WORKER_SUPERVISOR_LABEL,
+  runProviderWorkerSupervisorLaunchctl,
+} from './family-runtime-provider-worker-supervisor-state.ts';
 import type { FamilyRuntimeProviderKind } from './family-runtime-types.ts';
 
 type RuntimePaths = ReturnType<typeof familyRuntimePaths>;
 type ProviderWorkerSupervisorAction = 'status' | 'install' | 'remove' | 'trigger';
-
-const SUPERVISOR_LABEL = 'ai.opl.family-runtime.provider-worker';
-const LEGACY_WATCHDOG_LABEL = 'ai.opl.family-runtime.provider-slo';
-
-function launchAgentsDir() {
-  return path.join(os.homedir(), 'Library', 'LaunchAgents');
-}
-
-function plistPath() {
-  return path.join(launchAgentsDir(), `${SUPERVISOR_LABEL}.plist`);
-}
-
-function legacyWatchdogPlistPath() {
-  return path.join(launchAgentsDir(), `${LEGACY_WATCHDOG_LABEL}.plist`);
-}
-
-function launchctlTarget() {
-  return `gui/${process.getuid?.() ?? 501}`;
-}
-
-function escapeXml(value: string) {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&apos;');
-}
 
 function workerSupervisorCommandForDisplay() {
   return [
@@ -120,7 +100,7 @@ function buildPlist(paths: RuntimePaths) {
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>${SUPERVISOR_LABEL}</string>
+  <string>${PROVIDER_WORKER_SUPERVISOR_LABEL}</string>
   <key>ProgramArguments</key>
   <array>
 ${args}
@@ -142,21 +122,8 @@ ${plistEnvironmentXml(paths)}
 `;
 }
 
-function runLaunchctl(args: string[]) {
-  const result = spawnSync('launchctl', args, {
-    encoding: 'utf8',
-  });
-  return {
-    ok: result.status === 0,
-    status: result.status ?? null,
-    stdout: result.stdout,
-    stderr: result.stderr,
-    args,
-  };
-}
-
 function removeLegacyWatchdog() {
-  const pathToPlist = legacyWatchdogPlistPath();
+  const pathToPlist = legacyProviderSloWatchdogPlistPath();
   if (!fs.existsSync(pathToPlist)) {
     return {
       legacy_plist_exists: false,
@@ -165,7 +132,11 @@ function removeLegacyWatchdog() {
       legacy_plist_path: pathToPlist,
     };
   }
-  const launchctl = runLaunchctl(['bootout', launchctlTarget(), pathToPlist]);
+  const launchctl = runProviderWorkerSupervisorLaunchctl([
+    'bootout',
+    providerWorkerSupervisorLaunchctlTarget(),
+    pathToPlist,
+  ]);
   fs.rmSync(pathToPlist, { force: true });
   return {
     legacy_plist_exists: true,
@@ -175,40 +146,23 @@ function removeLegacyWatchdog() {
   };
 }
 
-function inspectLaunchd() {
-  const pathToPlist = plistPath();
-  const exists = fs.existsSync(pathToPlist);
-  if (!exists) {
-    return {
-      plist_exists: false,
-      launchctl_loaded: false,
-      launchctl: null,
-    };
-  }
-  const launchctl = runLaunchctl(['print', `${launchctlTarget()}/${SUPERVISOR_LABEL}`]);
-  return {
-    plist_exists: true,
-    launchctl_loaded: launchctl.ok,
-    launchctl,
-  };
-}
-
 function basePayload(input: {
   paths: RuntimePaths;
   action: ProviderWorkerSupervisorAction;
   status: string;
-  launchctl?: ReturnType<typeof runLaunchctl> | null;
+  launchctl?: ReturnType<typeof runProviderWorkerSupervisorLaunchctl> | null;
   legacyWatchdog?: ReturnType<typeof removeLegacyWatchdog> | null;
   providerSloTick?: Awaited<ReturnType<typeof runTemporalProviderSloTick>> | null;
+  supervisorState?: ReturnType<typeof inspectProviderWorkerSupervisorState> | null;
 }) {
-  const pathToPlist = plistPath();
+  const pathToPlist = providerWorkerSupervisorPlistPath();
   return {
     surface_kind: 'opl_family_runtime_provider_worker_supervisor',
     provider_kind: 'temporal',
     action: input.action,
     status: input.status,
-    supervisor_label: SUPERVISOR_LABEL,
-    retired_legacy_watchdog_label: LEGACY_WATCHDOG_LABEL,
+    supervisor_label: PROVIDER_WORKER_SUPERVISOR_LABEL,
+    retired_legacy_watchdog_label: LEGACY_PROVIDER_SLO_WATCHDOG_LABEL,
     supervisor_role: 'provider_worker_process_supervisor',
     supervisor_owner: 'opl_provider_runtime_manager',
     command: workerSupervisorCommandForDisplay(),
@@ -223,6 +177,8 @@ function basePayload(input: {
     primary_dispatcher: false,
     health_monitor_only: false,
     provider_slo_tick_is_fallback_health_check: true,
+    supervises_family_runtime_root: input.supervisorState?.supervises_family_runtime_root ?? null,
+    supervisor_state: input.supervisorState ?? null,
     launchctl: input.launchctl ?? null,
     legacy_watchdog_cleanup: input.legacyWatchdog ?? null,
     provider_slo_tick: input.providerSloTick ?? null,
@@ -255,7 +211,7 @@ export async function runProviderWorkerSupervisorCommand(
   }
 
   if (input.action === 'status') {
-    const inspection = inspectLaunchd();
+    const inspection = inspectProviderWorkerSupervisorState(paths);
     return basePayload({
       paths,
       action: input.action,
@@ -263,15 +219,20 @@ export async function runProviderWorkerSupervisorCommand(
         ? 'not_installed'
         : inspection.launchctl_loaded ? 'installed' : 'installed_not_loaded',
       launchctl: inspection.launchctl,
+      supervisorState: inspection,
     });
   }
 
   if (input.action === 'install') {
-    const pathToPlist = plistPath();
+    const pathToPlist = providerWorkerSupervisorPlistPath();
     fs.mkdirSync(path.dirname(pathToPlist), { recursive: true });
     const legacyWatchdog = removeLegacyWatchdog();
     fs.writeFileSync(pathToPlist, buildPlist(paths));
-    const launchctl = runLaunchctl(['bootstrap', launchctlTarget(), pathToPlist]);
+    const launchctl = runProviderWorkerSupervisorLaunchctl([
+      'bootstrap',
+      providerWorkerSupervisorLaunchctlTarget(),
+      pathToPlist,
+    ]);
     const payload = basePayload({
       paths,
       action: input.action,
@@ -288,9 +249,13 @@ export async function runProviderWorkerSupervisorCommand(
   }
 
   if (input.action === 'remove') {
-    const pathToPlist = plistPath();
+    const pathToPlist = providerWorkerSupervisorPlistPath();
     const launchctl = fs.existsSync(pathToPlist)
-      ? runLaunchctl(['bootout', launchctlTarget(), pathToPlist])
+      ? runProviderWorkerSupervisorLaunchctl([
+          'bootout',
+          providerWorkerSupervisorLaunchctlTarget(),
+          pathToPlist,
+        ])
       : null;
     fs.rmSync(pathToPlist, { force: true });
     const legacyWatchdog = removeLegacyWatchdog();

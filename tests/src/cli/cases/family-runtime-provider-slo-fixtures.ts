@@ -128,8 +128,11 @@ export function temporalWorkerStatus(
         : status === 'worker_dependency_unavailable'
         ? 'npm install --include=optional --ignore-scripts=false'
         : status === 'worker_source_stale'
-        ? 'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal'
+        ? 'opl family-runtime worker stop --provider temporal'
         : 'opl family-runtime worker start --provider temporal',
+      restart_strategy: status === 'worker_source_stale'
+        ? 'supervisor_aware_stop_then_supervisor_or_manual_start'
+        : null,
       repair_commands: {
         start_local_temporal_service:
           'opl family-runtime service start --provider temporal',
@@ -141,6 +144,10 @@ export function temporalWorkerStatus(
           'npm install --include=optional --ignore-scripts=false',
         start_managed_worker:
           'opl family-runtime worker start --provider temporal',
+        restart_worker_with_supervisor:
+          'opl family-runtime worker stop --provider temporal',
+        restart_worker_without_supervisor:
+          'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal',
         rerun_production_proof:
           'opl family-runtime residency proof --provider temporal --production',
       },

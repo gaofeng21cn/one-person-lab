@@ -884,8 +884,8 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
       '--dry-run',
     ], env).app_action_execution;
 
-    assert.equal(worker.delegated_surface, 'opl family-runtime worker restart --provider temporal');
-    assert.equal(worker.result.family_runtime_worker_restart.status, 'dry_run');
+    assert.equal(worker.delegated_surface, 'opl family-runtime repair --provider temporal');
+    assert.equal(worker.result.family_runtime_provider.status, 'dry_run');
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }

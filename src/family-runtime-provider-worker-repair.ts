@@ -1,5 +1,10 @@
 import { listStageAttempts } from './family-runtime-stage-attempt-ledger.ts';
 import { openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
+import {
+  inspectProviderWorkerSupervisorState,
+  supervisorOwnsFamilyRuntimeRoot,
+  type ProviderWorkerSupervisorState,
+} from './family-runtime-provider-worker-supervisor-state.ts';
 
 type FamilyRuntimeSqliteDb = ReturnType<typeof openFamilyRuntimeSqlite>;
 
@@ -16,6 +21,8 @@ export type TemporalWorkerRepairDeps = {
   inspectTemporalWorkerLifecycle?: TemporalProviderModule['inspectTemporalWorkerLifecycle'];
   startTemporalWorkerLifecycle?: TemporalProviderModule['startTemporalWorkerLifecycle'];
   stopTemporalWorkerLifecycle?: TemporalProviderModule['stopTemporalWorkerLifecycle'];
+  inspectProviderWorkerSupervisor?: (paths: TemporalWorkerPaths) =>
+    ProviderWorkerSupervisorState | Promise<ProviderWorkerSupervisorState>;
   inspectWorkerRestartGuard?: (input: {
     paths: TemporalWorkerPaths;
     before: TemporalWorkerLifecycle;
@@ -80,7 +87,7 @@ function commandForAction(actionId: string | null) {
     return 'opl family-runtime worker start --provider temporal';
   }
   if (actionId === 'restart_temporal_worker') {
-    return 'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal';
+    return 'opl family-runtime worker stop --provider temporal';
   }
   return null;
 }
@@ -199,6 +206,9 @@ function workerLifecycleReceipt(input: {
   stop?: TemporalWorkerLifecycleStop | null;
   start?: TemporalWorkerLifecycleStart | null;
   restartGuard?: WorkerRestartGuard | null;
+  restartReason?: 'duplicate_worker' | 'worker_source_stale' | null;
+  restartStrategy?: 'manual_stop_then_start' | 'supervisor_keepalive_stop_only' | null;
+  supervisorState?: ProviderWorkerSupervisorState | null;
   error?: unknown;
 }) {
   return {
@@ -213,6 +223,9 @@ function workerLifecycleReceipt(input: {
     stop: input.stop ?? null,
     start: input.start ?? null,
     restart_guard: input.restartGuard ?? null,
+    restart_reason: input.restartReason ?? null,
+    restart_strategy: input.restartStrategy ?? null,
+    supervisor_state: input.supervisorState ?? null,
     blocker_ids: input.restartGuard?.blocker_ids ?? [],
     error: input.error
       ? {
@@ -250,16 +263,24 @@ export async function repairTemporalWorkerLifecycleForProvider(
     ?? provider.startTemporalWorkerLifecycle;
   const stopTemporalWorkerLifecycle = input.deps?.stopTemporalWorkerLifecycle
     ?? provider.stopTemporalWorkerLifecycle;
+  const inspectProviderWorkerSupervisor = input.deps?.inspectProviderWorkerSupervisor
+    ?? ((supervisorPaths: TemporalWorkerPaths) =>
+      inspectProviderWorkerSupervisorState(supervisorPaths as Parameters<typeof inspectProviderWorkerSupervisorState>[0]));
   const inspectWorkerRestartGuard = input.deps?.inspectWorkerRestartGuard
     ?? ((guardInput: { paths: TemporalWorkerPaths; before: TemporalWorkerLifecycle }) =>
       inspectWorkerRestartGuardFromState(guardInput.paths, guardInput.before));
   const before = await inspectTemporalWorkerLifecycle(paths);
   const repairActionId = workerRepairActionId(before);
+  const restartReason = before.lifecycle_status === 'duplicate_worker'
+    ? 'duplicate_worker'
+    : before.lifecycle_status === 'worker_source_stale'
+      ? 'worker_source_stale'
+      : null;
   const canStart = input.allowStart === true
     && before.lifecycle_status === 'worker_not_ready'
     && repairActionId === 'start_temporal_worker';
   const canRestart = input.allowRestart === true
-    && before.lifecycle_status === 'worker_source_stale'
+    && (before.lifecycle_status === 'worker_source_stale' || before.lifecycle_status === 'duplicate_worker')
     && repairActionId === 'restart_temporal_worker';
   if (!canStart && !canRestart) {
     return workerLifecycleReceipt({
@@ -268,6 +289,7 @@ export async function repairTemporalWorkerLifecycleForProvider(
       before,
       after: before,
       repairActionId,
+      restartReason,
     });
   }
   const restartGuard = canRestart
@@ -281,12 +303,23 @@ export async function repairTemporalWorkerLifecycleForProvider(
       after: before,
       repairActionId,
       restartGuard,
+      restartReason,
     });
   }
+  const supervisorState = canRestart
+    ? await inspectProviderWorkerSupervisor(paths)
+    : null;
+  const restartStrategy = canRestart && supervisorOwnsFamilyRuntimeRoot(supervisorState)
+    ? 'supervisor_keepalive_stop_only'
+    : canRestart
+      ? 'manual_stop_then_start'
+      : null;
   try {
     const stop = canRestart ? await stopTemporalWorkerLifecycle(paths) : null;
-    const start = await startTemporalWorkerLifecycle(paths);
-    const after = 'status' in start && start.status
+    const start = restartStrategy === 'supervisor_keepalive_stop_only'
+      ? null
+      : await startTemporalWorkerLifecycle(paths);
+    const after = start && 'status' in start && start.status
       ? start.status as TemporalWorkerLifecycle
       : await inspectTemporalWorkerLifecycle(paths);
     return workerLifecycleReceipt({
@@ -298,6 +331,9 @@ export async function repairTemporalWorkerLifecycleForProvider(
       stop,
       start,
       restartGuard,
+      restartReason,
+      restartStrategy,
+      supervisorState,
     });
   } catch (error) {
     return workerLifecycleReceipt({
@@ -307,6 +343,9 @@ export async function repairTemporalWorkerLifecycleForProvider(
       after: null,
       repairActionId,
       restartGuard,
+      restartReason,
+      restartStrategy,
+      supervisorState,
       error,
     });
   }

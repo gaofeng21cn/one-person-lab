@@ -83,13 +83,16 @@ function temporalProviderWorkerRepairReceipt(
     repair_status: status,
     repair_action_id: repairActionId,
     command: repairActionId === 'restart_temporal_worker'
-      ? 'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal'
+      ? 'opl family-runtime worker stop --provider temporal'
       : 'opl family-runtime worker start --provider temporal',
     before: temporalWorkerStatus(repairActionId === 'restart_temporal_worker' ? 'worker_source_stale' : 'worker_not_ready'),
     after: status === 'executed' ? temporalWorkerStatus('ready') : null,
     stop: null,
     start: null,
     restart_guard: null,
+    restart_reason: repairActionId === 'restart_temporal_worker' ? 'worker_source_stale' : null,
+    restart_strategy: repairActionId === 'restart_temporal_worker' ? 'manual_stop_then_start' : null,
+    supervisor_state: null,
     blocker_ids: [],
     error: null,
     can_execute_domain_repair: false,

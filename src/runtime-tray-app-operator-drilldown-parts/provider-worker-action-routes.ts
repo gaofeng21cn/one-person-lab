@@ -46,7 +46,10 @@ function actionableRepair(readiness: JsonRecord) {
   const repairActionId = stringValue(record(readiness.repair_action).action_id);
   return (
     (lifecycleStatus === 'worker_not_ready' && repairActionId === 'start_temporal_worker')
-    || (lifecycleStatus === 'worker_source_stale' && repairActionId === 'restart_temporal_worker')
+    || (
+      (lifecycleStatus === 'worker_source_stale' || lifecycleStatus === 'duplicate_worker')
+      && repairActionId === 'restart_temporal_worker'
+    )
   );
 }
 
@@ -106,12 +109,15 @@ export function buildProviderWorkerActionRoutes(input: {
       authority_boundary: refsOnlyAuthorityBoundary(),
     }]);
   }
-  if (lifecycleStatus !== 'worker_source_stale' || repairActionId !== 'restart_temporal_worker') {
+  if (
+    (lifecycleStatus !== 'worker_source_stale' && lifecycleStatus !== 'duplicate_worker')
+    || repairActionId !== 'restart_temporal_worker'
+  ) {
     return [];
   }
   return uniqueRefs([{
-    ref: 'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal',
-    opl_cli_args: ['worker', 'repair', '--provider', 'temporal', '--action', 'restart'],
+    ref: 'opl family-runtime repair --provider temporal',
+    opl_cli_args: ['repair', '--provider', 'temporal'],
     role: 'operator_action_route',
     action_id: 'provider-worker:temporal:restart',
     action_kind: 'provider_worker_restart',
@@ -127,7 +133,9 @@ export function buildProviderWorkerActionRoutes(input: {
     provider_worker_repair_action_id: repairActionId,
     provider_worker_repair_command: stringValue(repairAction.next_command),
     provider_worker_required_next_action:
-      'Restart stale Temporal worker before rerunning provider proof or provider-backed Codex stages.',
+      lifecycleStatus === 'duplicate_worker'
+        ? 'Run supervisor-aware Temporal worker repair to collapse duplicate foreground workers before rerunning provider proof or provider-backed Codex stages.'
+        : 'Run supervisor-aware Temporal worker repair before rerunning provider proof or provider-backed Codex stages.',
     expected_surface_kind: 'temporal_worker_lifecycle_start',
     can_execute: false as const,
     ...routeBlock,

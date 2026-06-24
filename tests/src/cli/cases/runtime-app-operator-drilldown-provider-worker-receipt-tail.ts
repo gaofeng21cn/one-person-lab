@@ -119,7 +119,7 @@ test('runtime App drilldown keeps blocked transport redrive behind MAS owner han
 
 test('runtime App drilldown keeps provider worker repair audit-only when MAS owner handoff payload work is the current owner delta', () => {
   const workerRestartRoute = {
-    ref: 'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal',
+    ref: 'opl family-runtime repair --provider temporal',
     action_id: 'provider-worker:temporal:restart',
     action_kind: 'provider_worker_restart',
     owner: 'opl',
@@ -132,9 +132,9 @@ test('runtime App drilldown keeps provider worker repair audit-only when MAS own
     provider_worker_lifecycle_status: 'worker_source_stale',
     provider_worker_repair_action_id: 'restart_temporal_worker',
     provider_worker_repair_command:
-      'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal',
+      'opl family-runtime worker stop --provider temporal',
     provider_worker_required_next_action:
-      'Restart stale Temporal worker before redriving blocked transport or recording MAS owner refs.',
+      'Run supervisor-aware Temporal worker repair before redriving blocked transport or recording MAS owner refs.',
     authority_boundary: {
       can_write_domain_truth: false,
       can_claim_production_ready: false,
