@@ -1,4 +1,6 @@
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
+import path from 'node:path';
+
 import { DOMAIN_ADAPTERS } from './family-runtime-command.ts';
 import { resolveOplModuleExecCommand } from './system-installation/modules.ts';
 
@@ -24,11 +26,10 @@ function medAutoScienceWorkspaceBindingDispatchCommand(payload: Record<string, u
   if (!commandCwd) {
     return null;
   }
+  const runnerPath = path.join(commandCwd, 'scripts', 'run-python-clean.sh');
   return {
     command_preview: [
-      'uv',
-      'run',
-      'python',
+      runnerPath,
       '-m',
       'med_autoscience.cli',
       'domain-handler',

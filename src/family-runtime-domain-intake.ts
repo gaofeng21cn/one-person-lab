@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 import {
@@ -168,11 +169,10 @@ function exportCommandForDomain(
     const workspaceProfile = activeMedautoscienceWorkspaceProfile();
     if (workspaceProfile) {
       const { binding, profileRef } = workspaceProfile;
+      const runnerPath = path.join(binding.workspace_path, 'scripts', 'run-python-clean.sh');
       return {
         argv: [
-          'uv',
-          'run',
-          'python',
+          runnerPath,
           '-m',
           'med_autoscience.cli',
           'domain-handler',

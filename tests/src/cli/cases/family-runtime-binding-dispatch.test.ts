@@ -17,7 +17,7 @@ function writeNodeScript(scriptPath: string, source: string) {
     [
       '#!/usr/bin/env bash',
       'set -euo pipefail',
-      `exec ${shellSingleQuote(process.execPath)} -e ${shellSingleQuote(source)} "$@"`,
+      `exec ${shellSingleQuote(process.execPath)} -e ${shellSingleQuote(source)} -- "$@"`,
       '',
     ].join('\n'),
     { mode: 0o755 },
@@ -49,9 +49,11 @@ test('family-runtime binding tick dispatches MAS tasks through the active worksp
   const boundMasWorkspacePath = path.join(fixtureRoot, 'bound-med-autoscience');
   const boundProfilePath = path.join(fixtureRoot, 'dm-cvd.workspace.toml');
   const managedModulePath = path.join(homeRoot, 'managed-modules', 'med-autoscience');
+  const cleanRunnerPath = path.join(boundMasWorkspacePath, 'scripts', 'run-python-clean.sh');
   const uvPath = path.join(fixtureRoot, 'uv');
-  const uvArgvPath = path.join(fixtureRoot, 'uv.argv');
-  const uvCwdPath = path.join(fixtureRoot, 'uv.cwd');
+  const legacyUvHitPath = path.join(fixtureRoot, 'legacy-uv-hit');
+  const runnerArgvPath = path.join(fixtureRoot, 'clean-runner.argv');
+  const runnerCwdPath = path.join(fixtureRoot, 'clean-runner.cwd');
   const dispatchedTaskPath = path.join(fixtureRoot, 'dispatched-task.json');
   fs.mkdirSync(boundMasWorkspacePath, { recursive: true });
   writeMasCleanRunnerFixture(boundMasWorkspacePath);
@@ -62,15 +64,15 @@ test('family-runtime binding tick dispatches MAS tasks through the active worksp
     '{"scripts":{"unused":"true"}}\n',
     'utf8',
   );
-  writeNodeScript(uvPath, `
+  writeNodeScript(cleanRunnerPath, `
 const fs = require('node:fs');
 const path = require('node:path');
 const args = process.argv.slice(1);
 const boundWorkspacePath = fs.realpathSync(${jsString(boundMasWorkspacePath)});
 const managedModulePath = fs.realpathSync(${jsString(managedModulePath)});
 const cwd = fs.realpathSync(process.cwd());
-fs.writeFileSync(${jsString(uvCwdPath)}, process.cwd() + '\\n');
-fs.writeFileSync(${jsString(uvArgvPath)}, args.map(String).join('\\n') + '\\n');
+fs.writeFileSync(${jsString(runnerCwdPath)}, process.cwd() + '\\n');
+fs.writeFileSync(${jsString(runnerArgvPath)}, args.map(String).join('\\n') + '\\n');
 const joined = \` \${args.join(' ')} \`;
 const largeDomainBody = ${jsString(largeDomainBody)};
 if (cwd === boundWorkspacePath && joined.includes(' domain-handler export ')) {
@@ -117,6 +119,17 @@ if (cwd === managedModulePath) {
 process.stderr.write(\`unexpected uv invocation: cwd=\${process.cwd()} argv=\${args.join(' ')}\\n\`);
 process.exit(64);
 `);
+  fs.writeFileSync(
+    uvPath,
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      `printf 'legacy uv path was called\\n' > ${shellSingleQuote(legacyUvHitPath)}`,
+      'exit 44',
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
   const env = familyRuntimeEnv(stateRoot, {
     HOME: homeRoot,
     PATH: `${fixtureRoot}:${process.env.PATH ?? ''}`,
@@ -146,8 +159,6 @@ process.exit(64);
       '--task-kind',
       'domain_route/owner-handoff',
     ], env);
-    const uvArgv = fs.readFileSync(uvArgvPath, 'utf8').trim().split('\n');
-
     assert.equal(
       tick.family_runtime_tick.hydration.enqueued_count,
       1,
@@ -157,23 +168,34 @@ process.exit(64);
     assert.equal(tick.family_runtime_tick.selected_count, 1);
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
     assert.deepEqual(tick.family_runtime_tick.dispatches[0].command_preview, [
-      'uv',
-      'run',
-      'python',
+      cleanRunnerPath,
       '-m',
       'med_autoscience.cli',
       'domain-handler',
       'dispatch',
       '--task',
-      tick.family_runtime_tick.dispatches[0].command_preview[8],
+      tick.family_runtime_tick.dispatches[0].command_preview[6],
       '--format',
       'json',
     ]);
+    assert.deepEqual(tick.family_runtime_tick.hydration.exports[0].command_preview, [
+      cleanRunnerPath,
+      '-m',
+      'med_autoscience.cli',
+      'domain-handler',
+      'export',
+      '--profile',
+      boundProfilePath,
+      '--format',
+      'json',
+    ]);
+    assert.equal(fs.existsSync(legacyUvHitPath), false);
     assert.equal(
-      fs.realpathSync(fs.readFileSync(uvCwdPath, 'utf8').trim()),
+      fs.realpathSync(fs.readFileSync(runnerCwdPath, 'utf8').trim()),
       fs.realpathSync(boundMasWorkspacePath),
     );
-    assert.deepEqual(uvArgv, tick.family_runtime_tick.dispatches[0].command_preview.slice(1));
+    const runnerArgv = fs.readFileSync(runnerArgvPath, 'utf8').trim().split('\n');
+    assert.deepEqual(runnerArgv, tick.family_runtime_tick.dispatches[0].command_preview.slice(1));
     const dispatchedTask = JSON.parse(fs.readFileSync(dispatchedTaskPath, 'utf8'));
     assert.equal(dispatchedTask.payload.study_id, '002-dm-china-us-mortality-attribution');
     assert.equal(
