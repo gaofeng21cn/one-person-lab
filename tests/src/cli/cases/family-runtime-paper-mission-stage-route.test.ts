@@ -1434,6 +1434,134 @@ test('family-runtime requeues fresh MAS PaperMission handoff after domain gate t
   }
 });
 
+test('family-runtime requeues fresh MAS PaperMission handoff after legacy route identity blocker', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-fresh-identity-'));
+  const originalStateDir = process.env.OPL_STATE_DIR;
+  const dedupeKey = 'paper-mission-route:dm002:fresh-handoff-after-legacy-identity-blocker';
+  const firstHandoffRef =
+    '/tmp/mas-dm-cvd-workspace/ops/medautoscience/paper_mission_consumption_ledger/identity-old/opl_route_handoff.json';
+  const freshHandoffRef =
+    '/tmp/mas-dm-cvd-workspace/ops/medautoscience/paper_mission_consumption_ledger/identity-fresh/opl_route_handoff.json';
+  let taskId = '';
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    const { db } = openQueueDb();
+    const firstPayload = paperMissionRoutePayloadWithWorkspace({
+      route_identity_key: undefined,
+      attempt_idempotency_key: 'dm002:gate-clearing:legacy-blocked::opl-attempt',
+      request_idempotency_key: 'dm002:gate-clearing:legacy-blocked::opl-request',
+      stage_run_request: {
+        request_status: 'requested',
+        requested_by: 'mas_paper_mission_route_handoff',
+        stage_run_created: false,
+        provider_attempt_requested: false,
+      },
+      candidate_ref:
+        '/tmp/mas-dm-cvd-workspace/ops/medautoscience/paper_mission_candidate_package/identity-old/package_manifest.json',
+      paper_mission_transaction_ref: 'paper-mission-transaction:dm002:identity-old',
+      opl_route_command_ref: 'paper-mission-transaction:dm002:identity-old#opl_route_command',
+      opl_route_handoff_record: {
+        handoff_ref: firstHandoffRef,
+      },
+    });
+    const enqueued = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'paper_mission/stage-route',
+      payload: firstPayload,
+      dedupeKey,
+      source: 'test-legacy-identity-blocker',
+    });
+    taskId = enqueued.task.task_id;
+    db.prepare(`
+      UPDATE tasks
+      SET status = 'blocked',
+        last_error = 'paper_mission_route_missing_identity_field:route_identity_key',
+        dead_letter_reason = 'paper_mission_route_missing_identity_field:route_identity_key'
+      WHERE task_id = ?
+    `).run(taskId);
+
+    const freshPayload = paperMissionRoutePayloadWithWorkspace({
+      route_identity_key: undefined,
+      attempt_idempotency_key: undefined,
+      request_idempotency_key: undefined,
+      stage_run_request: {
+        request_status: 'requested',
+        requested_by: 'mas_paper_mission_route_handoff',
+        stage_run_created: false,
+        provider_attempt_requested: false,
+      },
+      candidate_ref:
+        '/tmp/mas-dm-cvd-workspace/ops/medautoscience/paper_mission_candidate_package/identity-fresh/package_manifest.json',
+      paper_mission_transaction_ref: 'paper-mission-transaction:dm002:identity-fresh',
+      opl_route_command_ref: 'paper-mission-transaction:dm002:identity-fresh#opl_route_command',
+      opl_route_handoff_record: {
+        handoff_ref: freshHandoffRef,
+        opl_runtime_carrier: {
+          command_kind: 'start_next_stage',
+          route_target: 'publication_gate_replay',
+          route_identity_key: 'paper-mission-transaction:dm002:identity-fresh::route',
+          attempt_idempotency_key: 'dm002:gate-clearing:identity-fresh::opl-attempt',
+          request_idempotency_key: 'dm002:gate-clearing:identity-fresh::opl-request',
+        },
+      },
+    });
+    const requeued = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'paper_mission/stage-route',
+      payload: freshPayload,
+      dedupeKey,
+      source: 'test-fresh-identity-handoff',
+    });
+    const task = inspectTask(db, taskId);
+    const event = task.events.find((entry) =>
+      entry.event_type === 'task_requeued_from_paper_mission_stage_route_identity_validator_fresh_handoff'
+    );
+
+    assert.equal(requeued.accepted, true);
+    assert.equal(requeued.requeued_from_terminal, true);
+    assert.equal(requeued.idempotent_noop, false);
+    assert.equal(task.task.status, 'queued');
+    assert.equal(task.task.dead_letter_reason, null);
+    assert.equal(task.task.last_error, null);
+    assert.equal(task.task.payload.candidate_ref, freshPayload.candidate_ref);
+    assert.equal(task.task.payload.paper_mission_transaction_ref, freshPayload.paper_mission_transaction_ref);
+    assert.notEqual(event, undefined);
+    assert.equal(event?.payload.reason, 'paper_mission_stage_route_identity_validator_fresh_handoff');
+    assert.equal(
+      event?.payload.previous_identity_blocker_reason,
+      'paper_mission_route_missing_identity_field:route_identity_key',
+    );
+    assert.equal(event?.payload.next_route_identity_key, 'paper-mission-transaction:dm002:identity-fresh::route');
+    assert.equal(event?.payload.next_attempt_idempotency_key, 'dm002:gate-clearing:identity-fresh::opl-attempt');
+    assert.equal(event?.payload.previous_opl_route_handoff_ref, firstHandoffRef);
+    assert.equal(event?.payload.next_opl_route_handoff_ref, freshHandoffRef);
+    assert.equal(event?.payload.authority_boundary.domain_truth_mutation, false);
+    assert.equal(event?.payload.authority_boundary.provider_completion_is_domain_ready, false);
+    db.close();
+
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+    });
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test-paper-route-fresh-identity-redrive'], env);
+    const inspected = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const attempt = inspected.family_runtime_task.stage_attempts[0];
+
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'running');
+    assert.equal(inspected.family_runtime_task.task.status, 'running');
+    assert.equal(inspected.family_runtime_task.task.dead_letter_reason, null);
+    assert.equal(inspected.family_runtime_task.stage_attempts.length, 1);
+    assert.equal(attempt.workspace_locator.route_identity_key, 'paper-mission-transaction:dm002:identity-fresh::route');
+    assert.equal(
+      attempt.workspace_locator.attempt_idempotency_key,
+      'dm002:gate-clearing:identity-fresh::opl-attempt',
+    );
+    assert.equal(attempt.workspace_locator.can_claim_paper_progress, false);
+  } finally {
+    process.env.OPL_STATE_DIR = originalStateDir;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime tick does not promote MAS PaperMission stage-route domain-ready verdicts into OPL success', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-domain-ready-'));
   try {
