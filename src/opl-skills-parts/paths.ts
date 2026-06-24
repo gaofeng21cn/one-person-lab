@@ -51,10 +51,6 @@ export function resolveGeneratedPluginRootForName(canonicalPluginName: string, h
 }
 
 export function resolveRepoRoot(spec: SkillPackSpec) {
-  if (spec.domain_id === 'scholarskills') {
-    return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-  }
-
   const envKey = `OPL_${spec.domain_id.toUpperCase()}_REPO_ROOT`;
   const envValue = normalizeOptionalString(process.env[envKey]);
   if (envValue) {
@@ -62,6 +58,21 @@ export function resolveRepoRoot(spec: SkillPackSpec) {
   }
 
   const siblingRepoRoot = path.join(resolveDefaultFamilyWorkspaceRoot(), spec.project);
+  if (spec.domain_id === 'scholarskills') {
+    const managedRepoRoot = path.join(resolveManagedModulesRoot(), spec.project);
+    const modulePathValue = normalizeOptionalString(process.env[`OPL_MODULE_PATH_${spec.module_id}`]);
+    if (modulePathValue) {
+      return path.resolve(modulePathValue);
+    }
+    if (isDirectory(siblingRepoRoot)) {
+      return siblingRepoRoot;
+    }
+    if (isDirectory(managedRepoRoot)) {
+      return managedRepoRoot;
+    }
+    return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+  }
+
   const gitCheckoutSourceMode = normalizeOptionalString(process.env.OPL_MODULE_SOURCE_MODE) === 'git_checkout'
     || developerModePrefersLocalCheckouts();
   if (gitCheckoutSourceMode && isDirectory(siblingRepoRoot)) {
@@ -112,6 +123,7 @@ export function buildSkillEntryPath(spec: SkillPackSpec, repoRoot: string) {
   }
 
   return resolveFirstExistingPath([
+    path.join(repoRoot, 'skills', spec.canonical_plugin_name, 'SKILL.md'),
     path.join(repoRoot, 'plugins', spec.canonical_plugin_name, 'skills', spec.canonical_plugin_name, 'SKILL.md'),
     path.join(repoRoot, 'plugins', spec.plugin_name, 'skills', spec.plugin_name, 'SKILL.md'),
   ]);

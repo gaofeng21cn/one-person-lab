@@ -173,7 +173,7 @@ const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
     pack_id: 'scholarskills',
     marketplace_id: 'opl-scholarskills-local',
     plugin_id: 'opl-scholarskills',
-    repo_name: 'one-person-lab',
+    repo_name: 'opl-scholarskills',
     display_name: 'OPL ScholarSkills Local',
     category: 'Productivity',
     ownership_kind: 'framework_capability_plugin',

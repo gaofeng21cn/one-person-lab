@@ -285,10 +285,12 @@ function buildCapabilityPluginDistribution(spec: SkillPackSpec) {
     distribution_role: spec.distribution_role,
     ownership_kind: 'framework_capability_plugin',
     source_of_truth: [
-      'plugins/opl-scholarskills/.codex-plugin/plugin.json',
-      'plugins/opl-scholarskills/skills/opl-scholarskills/SKILL.md',
-      'contracts/opl-framework/scholar-skills-capability-modules.json',
+      'opl-scholarskills/.codex-plugin/plugin.json',
+      'opl-scholarskills/skills/opl-scholarskills/SKILL.md',
+      'opl-scholarskills/contracts/scholar-skills-capability-modules.json',
+      'one-person-lab/contracts/opl-framework/scholar-skills-capability-modules.json',
     ],
+    github_repo: 'gaofeng21cn/opl-scholarskills',
     connect_readback_commands: [
       'opl connect skills --domain scholarskills --json',
       'opl connect sync-skills --domain scholarskills --scope project --target-project medautoscience --json',
@@ -306,7 +308,7 @@ function buildCapabilityPluginDistribution(spec: SkillPackSpec) {
       can_create_typed_blocker: false,
       can_write_runtime_queue: false,
     },
-    note: 'OPL ScholarSkills is a repo-tracked OPL-owned capability plugin pack. It is not a MAS/MAG/RCA/BookForge domain module and is not an additional OPL brand module.',
+    note: 'OPL ScholarSkills is an OPL-owned standalone capability plugin pack. It is not a MAS/MAG/RCA/BookForge domain module and is not an additional OPL brand module.',
   };
 }
 

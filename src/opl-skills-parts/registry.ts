@@ -129,7 +129,7 @@ export const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
   {
     domain_id: 'scholarskills',
     module_id: 'SCHOLARSKILLS',
-    project: 'one-person-lab',
+    project: 'opl-scholarskills',
     label: 'OPL ScholarSkills',
     plugin_name: 'opl-scholarskills',
     canonical_plugin_name: 'opl-scholarskills',

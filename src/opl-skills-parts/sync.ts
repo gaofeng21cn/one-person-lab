@@ -141,6 +141,95 @@ function ensureProjectLocalMirrorGitExclude(repoRoot: string, pluginRoot: string
   };
 }
 
+function isDirectory(pathname: string) {
+  return fs.existsSync(pathname) && fs.statSync(pathname).isDirectory();
+}
+
+function copyDirectoryIfPresent(sourceRoot: string, targetRoot: string) {
+  if (!isDirectory(sourceRoot)) {
+    return false;
+  }
+  fs.mkdirSync(path.dirname(targetRoot), { recursive: true });
+  fs.cpSync(sourceRoot, targetRoot, {
+    recursive: true,
+    filter: (source) => {
+      const baseName = path.basename(source);
+      if ([
+        '.git',
+        'outputs',
+        'build',
+        'dist',
+        'node_modules',
+        'render-cache',
+        'assets',
+      ].includes(baseName)) {
+        return false;
+      }
+      return !/\.(png|svg|html|sidecar\.json|layout\.json|lock)$/i.test(baseName);
+    },
+  });
+  return true;
+}
+
+function copyProjectLocalScholarSkillsSource(
+  inspected: InspectFamilySkillPack,
+  targetPluginRoot: string,
+) {
+  fs.rmSync(targetPluginRoot, { recursive: true, force: true });
+  fs.mkdirSync(targetPluginRoot, { recursive: true });
+
+  fs.cpSync(
+    path.join(inspected.plugin_source_path, '.codex-plugin'),
+    path.join(targetPluginRoot, '.codex-plugin'),
+    { recursive: true },
+  );
+  fs.cpSync(
+    path.join(inspected.plugin_source_path, 'skills'),
+    path.join(targetPluginRoot, 'skills'),
+    { recursive: true },
+  );
+
+  const optionalCopied = {
+    contracts: copyDirectoryIfPresent(
+      path.join(inspected.plugin_source_path, 'contracts'),
+      path.join(targetPluginRoot, 'contracts'),
+    ),
+    docs: copyDirectoryIfPresent(
+      path.join(inspected.plugin_source_path, 'docs'),
+      path.join(targetPluginRoot, 'docs'),
+    ),
+    gallery: copyDirectoryIfPresent(
+      path.join(inspected.plugin_source_path, 'gallery'),
+      path.join(targetPluginRoot, 'gallery'),
+    ),
+  };
+
+  return {
+    copy_policy: 'scholarskills_project_local_filtered_copy',
+    copied_roots: [
+      '.codex-plugin',
+      'skills',
+      ...Object.entries(optionalCopied)
+        .filter(([, copied]) => copied)
+        .map(([root]) => root),
+    ],
+    excluded_roots: [
+      '.git',
+      'outputs',
+      'build',
+      'dist',
+      'node_modules',
+      'render-cache',
+      'gallery/**/assets',
+      'gallery/**/*.png',
+      'gallery/**/*.svg',
+      'gallery/**/*.html',
+      'gallery/**/*.sidecar.json',
+      'gallery/**/*.layout.json',
+    ],
+  };
+}
+
 function syncProjectLocalSkillMirror(
   inspected: InspectFamilySkillPack,
   targetProject: SkillPackTargetProject,
@@ -174,9 +263,7 @@ function syncProjectLocalSkillMirror(
   }
 
   const targetPluginRoot = path.join(targetRepoRoot, 'plugins', inspected.canonical_plugin_name);
-  fs.rmSync(targetPluginRoot, { recursive: true, force: true });
-  fs.mkdirSync(path.dirname(targetPluginRoot), { recursive: true });
-  fs.cpSync(inspected.plugin_source_path, targetPluginRoot, { recursive: true });
+  const mirrorCopy = copyProjectLocalScholarSkillsSource(inspected, targetPluginRoot);
   const gitExclude = ensureProjectLocalMirrorGitExclude(targetRepoRoot, targetPluginRoot);
 
   return {
@@ -185,6 +272,7 @@ function syncProjectLocalSkillMirror(
     target_project: targetProject,
     target_repo_root: targetRepoRoot,
     plugin_source_path: inspected.plugin_source_path,
+    project_local_copy: mirrorCopy,
     project_local_plugin_root: targetPluginRoot,
     project_local_plugin_manifest_path: path.join(targetPluginRoot, '.codex-plugin', 'plugin.json'),
     project_local_skill_entry_path: path.join(
