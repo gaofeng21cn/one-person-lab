@@ -70,9 +70,7 @@ function workspaceLocatorFor(row: FamilyRuntimeTaskRow, payload: Record<string, 
     : {};
   const workspaceRoot = optionalString(payload.workspace_root)
     ?? optionalString(payload.domain_workspace_root)
-    ?? optionalString(payload.repo_root)
-    ?? optionalString(exportContext.command_cwd)
-    ?? optionalString(payload.command_cwd);
+    ?? optionalString(payload.repo_root);
   const commandCwd = optionalString(payload.command_cwd)
     ?? optionalString(exportContext.command_cwd);
   const commandSource = optionalString(exportContext.command_source)
@@ -86,6 +84,9 @@ function workspaceLocatorFor(row: FamilyRuntimeTaskRow, payload: Record<string, 
     study_id: optionalString(payload.study_id),
     mission_id: optionalString(payload.mission_id),
     candidate_ref: optionalString(payload.candidate_ref),
+    profile_ref: optionalString(payload.profile_ref) ?? optionalString(payload.profile),
+    source_ref: optionalString(payload.source_ref)
+      ?? optionalString(payload.paper_mission_default_handoff_ref),
     paper_mission_transaction_ref: optionalString(payload.paper_mission_transaction_ref),
     opl_route_command_ref: optionalString(payload.opl_route_command_ref),
     command_kind: optionalString(payload.command_kind),

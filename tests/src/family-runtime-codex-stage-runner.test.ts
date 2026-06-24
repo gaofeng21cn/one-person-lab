@@ -86,6 +86,14 @@ test('Codex stage activity prompt carries refs-only OPL execution authorization 
         workspace_root: '/tmp/mas',
         study_id: '002-dm-china-us-mortality-attribution',
         action_type: 'complete_medical_paper_readiness_surface',
+        candidate_ref: '/tmp/mas/ops/medautoscience/paper_mission_candidate_package/run/002/package_manifest.json',
+        paper_mission_transaction_ref: 'paper-mission-transaction::002::gate-clearing',
+        opl_route_command_ref: 'paper-mission-transaction::002::gate-clearing#opl_route_command',
+        command_kind: 'route_back',
+        route_target: 'gate_clearing_claim_evidence_repair',
+        command_cwd: '/tmp/one-person-lab',
+        command_source: 'env_override',
+        source_ref: '/tmp/mas/ops/medautoscience/paper_mission_consumption_ledger/run/002/opl_route_handoff.json',
       },
       opl_execution_authorization: {
         provider_attempt_ref: 'temporal://attempt/sat_codex_auth_prompt_test',
@@ -114,6 +122,14 @@ test('Codex stage activity prompt carries refs-only OPL execution authorization 
   assert.match(commandPreview, /"OPL_CURRENT_POINTER_REF":"opl:\/\/stage-runs\/app-stage-run%3Amedautoscience%3Adomain-owner-default-executor-dispatch\/current"/);
   assert.match(commandPreview, /"OPL_CLOSEOUT_BINDING_JSON":/);
   assert.match(commandPreview, /"OPL_STAGE_PACKET_REF":"studies\/002\/artifacts\/supervision\/consumer\/default_executor_dispatches\/immutable\/packet.json"/);
+  assert.match(commandPreview, /"OPL_CANDIDATE_REF":"\/tmp\/mas\/ops\/medautoscience\/paper_mission_candidate_package\/run\/002\/package_manifest.json"/);
+  assert.match(commandPreview, /"OPL_PAPER_MISSION_TRANSACTION_REF":"paper-mission-transaction::002::gate-clearing"/);
+  assert.match(commandPreview, /"OPL_ROUTE_COMMAND_REF":"paper-mission-transaction::002::gate-clearing#opl_route_command"/);
+  assert.match(commandPreview, /"OPL_ROUTE_COMMAND_KIND":"route_back"/);
+  assert.match(commandPreview, /"OPL_ROUTE_TARGET":"gate_clearing_claim_evidence_repair"/);
+  assert.match(commandPreview, /"OPL_DOMAIN_COMMAND_CWD":"\/tmp\/one-person-lab"/);
+  assert.match(commandPreview, /"OPL_DOMAIN_COMMAND_SOURCE":"env_override"/);
+  assert.match(commandPreview, /"OPL_ROUTE_HANDOFF_SOURCE_REF":"\/tmp\/mas\/ops\/medautoscience\/paper_mission_consumption_ledger\/run\/002\/opl_route_handoff.json"/);
   assert.match(commandPreview, /do not grant domain truth, artifact, quality, or readiness authority/);
 });
 

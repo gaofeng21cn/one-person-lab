@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import type { EnqueueInput } from '../family-runtime-command.ts';
 
 const HANDOFF_SURFACE_KIND = 'mas_paper_mission_opl_route_handoff_record';
@@ -79,6 +81,7 @@ export type MasPaperMissionRouteHandoffIntakeBlocker = {
     | 'unknown_surface_kind'
     | 'missing_authority_boundary'
     | 'missing_paper_mission_transaction'
+    | 'missing_domain_workspace_root'
     | 'unsupported_route_command'
     | 'forbidden_authority_write'
     | 'forbidden_authority_claim'
@@ -456,8 +459,22 @@ function workspaceRootForRuntimeRequest(handoff: JsonRecord, options: IntakeOpti
   return optionalString(handoff.workspace_root)
     ?? optionalString(handoff.domain_workspace_root)
     ?? optionalString(handoff.repo_root)
-    ?? optionalString(options.workspaceRoot)
-    ?? optionalString(options.commandCwd);
+    ?? workspaceRootFromAbsoluteRef(optionalString(handoff.candidate_ref))
+    ?? workspaceRootFromAbsoluteRef(optionalString(handoff.source_ref))
+    ?? optionalString(options.workspaceRoot);
+}
+
+function workspaceRootFromAbsoluteRef(value: string | null) {
+  if (!value || !path.isAbsolute(value)) {
+    return null;
+  }
+  const normalized = path.normalize(value);
+  const marker = `${path.sep}ops${path.sep}medautoscience${path.sep}`;
+  const index = normalized.indexOf(marker);
+  if (index <= 0) {
+    return null;
+  }
+  return normalized.slice(0, index);
 }
 
 function runtimeRequestInput(
@@ -501,7 +518,8 @@ function runtimeRequestInput(
       opl_route_command_ref: readback.opl_route_command_ref,
       command_kind: readback.command_kind,
       route_target: readback.route_target,
-      ...(workspaceRoot ? { workspace_root: workspaceRoot } : {}),
+      workspace_root: workspaceRoot,
+      domain_workspace_root: workspaceRoot,
       ...(commandCwd
         ? {
             command_cwd: commandCwd,
@@ -707,6 +725,16 @@ export function intakeMasPaperMissionRouteHandoff(
     && handoff.transaction_materialized === true
     && isRuntimeIntakeCommand(commandKind)
   ) {
+    if (!workspaceRootForRuntimeRequest(handoff, options)) {
+      return {
+        ...readback,
+        blockers: [{
+          reason: 'missing_domain_workspace_root',
+          detail: 'MAS paper mission route handoff must carry a domain workspace_root/domain_workspace_root or an absolute candidate/source ref under ops/medautoscience before OPL can start a provider stage.',
+          field: 'workspace_root',
+        }],
+      };
+    }
     const accepted: MasPaperMissionRouteHandoffIntakeReadback = {
       ...readback,
       status: 'accepted_for_runtime_intake',

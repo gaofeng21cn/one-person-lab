@@ -152,7 +152,11 @@ function materializedReadback(overrides: Record<string, unknown> = {}) {
 }
 
 test('MAS paper mission route handoff accepts ready command as OPL runtime request without StageRun or provider claims', () => {
-  const readback = intakeMasPaperMissionRouteHandoff(readyHandoff());
+  const readback = intakeMasPaperMissionRouteHandoff(readyHandoff({
+    domain_workspace_root: '/tmp/yang-workspace',
+  }), {
+    commandCwd: '/tmp/opl-repo',
+  });
 
   assert.equal(readback.surface_kind, 'opl_mas_paper_mission_route_handoff_intake_readback');
   assert.equal(readback.status, 'accepted_for_runtime_intake');
@@ -178,11 +182,40 @@ test('MAS paper mission route handoff accepts ready command as OPL runtime reque
   );
   assert.equal(readback.runtime_request_input?.payload.study_id, '001-paper');
   assert.equal(readback.runtime_request_input?.payload.command_kind, 'start_next_stage');
+  assert.equal(readback.runtime_request_input?.payload.workspace_root, '/tmp/yang-workspace');
+  assert.equal(readback.runtime_request_input?.payload.domain_workspace_root, '/tmp/yang-workspace');
+  assert.equal(readback.runtime_request_input?.payload.command_cwd, '/tmp/opl-repo');
   const requestAuthority = readback.runtime_request_input?.payload.authority_boundary as Record<string, unknown>;
   assert.equal(requestAuthority.can_claim_opl_runtime_enqueued, false);
   assert.equal(requestAuthority.can_claim_provider_running, false);
   assert.equal(requestAuthority.can_claim_paper_progress, false);
   assert.deepEqual(readback.blockers, []);
+});
+
+test('MAS paper mission route handoff fails closed instead of using OPL command cwd as domain workspace', () => {
+  const readback = intakeMasPaperMissionRouteHandoff(readyHandoff({
+    candidate_ref: 'ops/medautoscience/paper_mission_consumption_ledger/001-paper/package_manifest.json',
+  }), {
+    commandCwd: '/tmp/one-person-lab',
+  });
+
+  assert.equal(readback.status, 'rejected');
+  assert.equal(readback.runtime_request_input, null);
+  assert.equal(readback.blockers[0].reason, 'missing_domain_workspace_root');
+});
+
+test('MAS paper mission route handoff can derive domain workspace from absolute candidate ref', () => {
+  const readback = intakeMasPaperMissionRouteHandoff(readyHandoff({
+    candidate_ref:
+      '/tmp/yang-workspace/ops/medautoscience/paper_mission_candidate_package/run/001-paper/package_manifest.json',
+  }), {
+    commandCwd: '/tmp/one-person-lab',
+  });
+
+  assert.equal(readback.status, 'accepted_for_runtime_intake');
+  assert.equal(readback.runtime_request_input?.payload.workspace_root, '/tmp/yang-workspace');
+  assert.equal(readback.runtime_request_input?.payload.domain_workspace_root, '/tmp/yang-workspace');
+  assert.equal(readback.runtime_request_input?.payload.command_cwd, '/tmp/one-person-lab');
 });
 
 test('MAS paper mission materialized readback is normalized into OPL runtime request', () => {

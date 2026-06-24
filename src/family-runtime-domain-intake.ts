@@ -376,7 +376,6 @@ function exportedTaskInputs(
   const paperMissionRouteHandoff = domainId === 'medautoscience'
     ? intakeMasPaperMissionRouteHandoffsFromExport(output, {
         source,
-        workspaceRoot: exportContext.cwd,
         commandCwd: exportContext.cwd,
         commandSource: exportContext.source,
       })
