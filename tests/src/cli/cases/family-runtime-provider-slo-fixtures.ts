@@ -55,6 +55,7 @@ export function temporalWorkerStatus(
     unreachable_reason: null,
     managed_worker_pid: status === 'ready' ? 12345 : null,
     managed_worker_process_alive: status === 'ready',
+    duplicate_worker_pids: [],
     managed_worker_state_path: '/tmp/temporal-worker.json',
     managed_worker_source_version: status === 'worker_not_ready' ? null : status === 'worker_source_stale' ? 'worker-runtime:old' : 'worker-runtime:test',
     expected_worker_source_version: 'worker-runtime:test',

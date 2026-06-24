@@ -89,7 +89,7 @@ function signalManagedWorker(pid: number, signal: NodeJS.Signals) {
   return result;
 }
 
-function findTemporalForegroundWorkerPids(input: {
+export function findTemporalForegroundWorkerPids(input: {
   modulePath: string;
   familyRuntimeRoot?: string;
   excludePids?: number[];

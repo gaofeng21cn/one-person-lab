@@ -60,6 +60,22 @@ function createActiveStageAttempt(
   return created.attempt;
 }
 
+function temporalWorkerStartedLifecycle() {
+  return {
+    surface_kind: 'temporal_worker_lifecycle_start' as const,
+    provider_kind: 'temporal' as const,
+    start_status: 'started' as const,
+    spawned_worker_environment: {
+      OPL_TEMPORAL_ADDRESS: '127.0.0.1:7233',
+      OPL_TEMPORAL_TASK_QUEUE: 'opl-stage-attempts',
+      OPL_TEMPORAL_WORKER_STATUS: 'ready',
+      OPL_CODEX_BIN: null,
+      codex_binary_source: null,
+    },
+    status: temporalWorkerStatus('ready'),
+  };
+}
+
 test('family-runtime provider-slo auto-starts OPL managed Temporal worker before proof', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-slo-worker-autostart-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
@@ -71,12 +87,7 @@ test('family-runtime provider-slo auto-starts OPL managed Temporal worker before
         startCount === 0 ? temporalWorkerStatus('worker_not_ready') : temporalWorkerStatus('ready'),
       startTemporalWorkerLifecycle: async () => {
         startCount += 1;
-        return {
-          surface_kind: 'temporal_worker_lifecycle_start',
-          provider_kind: 'temporal',
-          start_status: 'started',
-          status: temporalWorkerStatus('ready'),
-        };
+        return temporalWorkerStartedLifecycle();
       },
     });
 
@@ -126,12 +137,7 @@ test('family-runtime provider repair restarts stale OPL managed Temporal worker'
       },
       startTemporalWorkerLifecycle: async () => {
         startCount += 1;
-        return {
-          surface_kind: 'temporal_worker_lifecycle_start',
-          provider_kind: 'temporal',
-          start_status: 'started',
-          status: temporalWorkerStatus('ready'),
-        };
+        return temporalWorkerStartedLifecycle();
       },
     });
 
@@ -189,12 +195,7 @@ test('family-runtime provider-slo restarts stale OPL managed Temporal worker bef
       },
       startTemporalWorkerLifecycle: async () => {
         startCount += 1;
-        return {
-          surface_kind: 'temporal_worker_lifecycle_start',
-          provider_kind: 'temporal',
-          start_status: 'started',
-          status: temporalWorkerStatus('ready'),
-        };
+        return temporalWorkerStartedLifecycle();
       },
     });
 
@@ -237,12 +238,7 @@ test('family-runtime provider-slo blocks stale worker repair when lifecycle muta
       },
       startTemporalWorkerLifecycle: async () => {
         startCount += 1;
-        return {
-          surface_kind: 'temporal_worker_lifecycle_start',
-          provider_kind: 'temporal',
-          start_status: 'started',
-          status: temporalWorkerStatus('ready'),
-        };
+        return temporalWorkerStartedLifecycle();
       },
     });
 
@@ -385,12 +381,7 @@ test('family-runtime provider-slo restart guard treats non-running stage attempt
       },
       startTemporalWorkerLifecycle: async () => {
         startCount += 1;
-        return {
-          surface_kind: 'temporal_worker_lifecycle_start',
-          provider_kind: 'temporal',
-          start_status: 'started',
-          status: temporalWorkerStatus('ready'),
-        };
+        return temporalWorkerStartedLifecycle();
       },
     });
 
@@ -567,12 +558,7 @@ test('family-runtime provider repair surfaces missing Temporal worker runtime de
       inspectTemporalWorkerLifecycle: async () => temporalWorkerStatus('worker_dependency_unavailable'),
       startTemporalWorkerLifecycle: async () => {
         startCount += 1;
-        return {
-          surface_kind: 'temporal_worker_lifecycle_start',
-          provider_kind: 'temporal',
-          start_status: 'started',
-          status: temporalWorkerStatus('ready'),
-        };
+        return temporalWorkerStartedLifecycle();
       },
     });
 

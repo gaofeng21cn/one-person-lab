@@ -394,15 +394,16 @@ export async function inspectTemporalStageAttemptVisibilityReadiness(
 
 export async function ensureTemporalStageAttemptVisibilityReady(
   connection: Connection,
-  input: { namespace?: string | null; address?: string | null } = {},
+  input: { namespace?: string | null; address?: string | null; taskQueue?: string | null } = {},
 ) {
   const namespace = input.namespace ?? resolveTemporalNamespace();
   const address = input.address ?? resolveTemporalAddress();
+  const taskQueue = input.taskQueue ?? resolveTemporalTaskQueue();
   if (temporalTestServerAllowsUnindexedVisibility()) {
     return buildTemporalStageAttemptVisibilityReadiness({
       address,
       namespace,
-      taskQueue: resolveTemporalTaskQueue(),
+      taskQueue,
       unindexedTestServer: true,
     });
   }
@@ -413,7 +414,7 @@ export async function ensureTemporalStageAttemptVisibilityReady(
     const readiness = buildTemporalStageAttemptVisibilityReadiness({
       address,
       namespace,
-      taskQueue: resolveTemporalTaskQueue(),
+      taskQueue,
       inspectionError: error instanceof Error ? error.message : String(error),
     });
     throw new FrameworkContractError(
@@ -431,7 +432,7 @@ export async function ensureTemporalStageAttemptVisibilityReady(
   const readiness = buildTemporalStageAttemptVisibilityReadiness({
     address,
     namespace,
-    taskQueue: resolveTemporalTaskQueue(),
+    taskQueue,
     observedCustomAttributes: observed,
   });
   if (readiness.missing_search_attributes.length === 0) {
@@ -464,7 +465,7 @@ export async function ensureTemporalStageAttemptVisibilityReady(
   const refreshedReadiness = buildTemporalStageAttemptVisibilityReadiness({
     address,
     namespace,
-    taskQueue: resolveTemporalTaskQueue(),
+    taskQueue,
     observedCustomAttributes: refreshed,
   });
   if (refreshedReadiness.missing_search_attributes.length > 0) {

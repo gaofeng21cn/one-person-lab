@@ -71,6 +71,7 @@ import {
   writeTemporalWorkerStartingState,
 } from './family-runtime-temporal-provider-parts/worker-residency.ts';
 import {
+  findTemporalForegroundWorkerPids,
   stopOrphanTemporalForegroundWorkers,
   stopWorkerPid,
   temporalForegroundWorkerCommand,
@@ -181,6 +182,11 @@ export async function inspectTemporalWorkerLifecycleWithDetail(
     : false;
   const stateProcessAlive = state ? processIsAlive(state.pid) : false;
   const statePidAlive = stateMatchesConfig && stateProcessAlive;
+  const duplicateWorkerPids = findTemporalForegroundWorkerPids({
+    modulePath: fileURLToPath(import.meta.url),
+    familyRuntimeRoot: paths.root,
+    excludePids: statePidAlive && state?.pid ? [state.pid] : [],
+  });
   const stateProcessExited = Boolean(state && !stateProcessAlive && (state.status === 'ready' || state.status === 'exited'));
   const pidAlive = statePidAlive && stateSourceCurrent;
   const envWorkerReady = process.env.OPL_TEMPORAL_WORKER_ENABLED?.trim() === '1'
@@ -211,6 +217,7 @@ export async function inspectTemporalWorkerLifecycleWithDetail(
     managedWorkerWorkflowBundleSourceVersion: state?.workflow_bundle_source_version ?? null,
     workerDependencyHealth: dependencyHealth,
     staleWorkerPid: statePidAlive && !stateSourceCurrent && state ? state.pid : null,
+    duplicateWorkerPids,
     temporalServiceLifecycle: service,
     visibilityReadiness,
     workerMutationGuard,
@@ -231,13 +238,15 @@ export async function inspectTemporalVisibilityReadiness(options: TemporalClient
 
 export function buildTemporalVisibilityReadiness(input: {
   namespace?: string | null;
+  taskQueue?: string | null;
   presentSearchAttributes?: string[] | null;
 } = {}) {
   const namespace = input.namespace ?? resolveTemporalNamespace();
+  const taskQueue = input.taskQueue ?? resolveTemporalTaskQueue();
   const present = input.presentSearchAttributes ?? null;
   return buildTemporalStageAttemptVisibilityReadiness({
     namespace,
-    taskQueue: resolveTemporalTaskQueue(),
+    taskQueue,
     observedCustomAttributes: present
       ? Object.fromEntries(present.map((attribute) => [attribute, 'Keyword']))
       : null,
@@ -281,11 +290,15 @@ export async function startTemporalStageAttemptWorkflow(
   const workflowInput = requireTemporalStageAttemptWorkflowInputLaunchable(
     buildTemporalStageAttemptWorkflowInput(attempt),
   );
+  const taskQueue = options.paths
+    ? resolveTemporalWorkerTaskQueue(options.paths)
+    : resolveTemporalTaskQueue();
   if (!resolveTemporalAddressForPaths(options.paths).address) requireTemporalAddress();
   return withTemporalClient(async (client, connection) => {
     const visibilityReadiness = await ensureTemporalStageAttemptVisibilityReady(connection, {
       namespace: resolveTemporalNamespace(),
       address: resolveTemporalAddressForPaths(options.paths).address,
+      taskQueue,
     });
     const launchInput: TemporalStageAttemptWorkflowInput = {
       ...workflowInput,
@@ -293,7 +306,7 @@ export async function startTemporalStageAttemptWorkflow(
     };
     const handle = await withTemporalRpcDeadline(client, () => client.workflow.start('StageAttemptWorkflow', {
       args: [launchInput],
-      taskQueue: resolveTemporalTaskQueue(),
+      taskQueue,
       workflowId: attempt.workflow_id,
       staticSummary: `OPL stage attempt ${attempt.stage_attempt_id}`,
       staticDetails: [
@@ -321,7 +334,7 @@ export async function startTemporalStageAttemptWorkflow(
       first_execution_run_id: handle.firstExecutionRunId,
       eagerly_started: handle.eagerlyStarted,
       namespace: resolveTemporalNamespace(),
-      task_queue: resolveTemporalTaskQueue(),
+      task_queue: taskQueue,
       execution_authorization: authorization ?? null,
       execution_authorization_ledger_record: executionAuthorizationLedgerRecord,
       execution_authorization_receipt_refs:
@@ -501,6 +514,11 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
 
 export async function runTemporalWorkerForeground(paths: TemporalWorkerPaths) {
   assertTemporalWorkerMutationAllowed({ moduleUrl: import.meta.url, paths });
+  await stopOrphanTemporalForegroundWorkers({
+    modulePath: fileURLToPath(import.meta.url),
+    familyRuntimeRoot: paths.root,
+    excludePids: [process.pid],
+  });
   const { address } = resolveTemporalAddressForPaths(paths);
   if (!address) {
     throw new FrameworkContractError(

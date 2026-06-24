@@ -20,6 +20,7 @@ import {
   buildTemporalStageAttemptWorkerOptionsForTest,
   buildTemporalWorkerReadiness,
   inspectTemporalWorkerLifecycle,
+  runTemporalWorkerForeground,
   startTemporalWorkerLifecycle,
   stopTemporalWorkerLifecycle,
 } from '../../../../src/family-runtime-temporal-provider.ts';
@@ -829,6 +830,158 @@ test('Temporal worker stop cleans orphan foreground worker after state file is m
       // The lifecycle under test should have removed the fixture process or state file.
     }
     await testEnv.teardown();
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('Temporal worker status fails closed when duplicate foreground workers share one runtime root', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-duplicate-status-'));
+  const workerRoot = path.join(stateRoot, 'family-runtime');
+  const server = await createFakeTemporalServer();
+  const address = server.address;
+  const managed = spawn(process.execPath, [
+    '-e',
+    'setTimeout(() => {}, 30_000);',
+  ], {
+    detached: true,
+    stdio: 'ignore',
+  });
+  const duplicate = spawn(process.execPath, [
+    '-e',
+    'setTimeout(() => {}, 30_000);',
+    '--',
+    '--temporal-worker-foreground',
+    '--family-runtime-root',
+    workerRoot,
+  ], {
+    detached: true,
+    stdio: 'ignore',
+  });
+  managed.unref();
+  duplicate.unref();
+  const previousAddress = process.env.OPL_TEMPORAL_ADDRESS;
+  const previousNamespace = process.env.OPL_TEMPORAL_NAMESPACE;
+  const previousTaskQueue = process.env.OPL_TEMPORAL_TASK_QUEUE;
+  const previousWorkerStatus = process.env.OPL_TEMPORAL_WORKER_STATUS;
+  const previousWorkerEnabled = process.env.OPL_TEMPORAL_WORKER_ENABLED;
+  const previousSourceVersion = process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+  try {
+    assert.equal(typeof managed.pid, 'number');
+    assert.equal(typeof duplicate.pid, 'number');
+    fs.mkdirSync(workerRoot, { recursive: true });
+    fs.writeFileSync(path.join(workerRoot, 'temporal-worker.json'), `${JSON.stringify({
+      provider_kind: 'temporal',
+      pid: managed.pid,
+      address,
+      namespace: 'opl-worker-duplicate-status-test',
+      task_queue: 'opl-worker-duplicate-status',
+      started_at: new Date().toISOString(),
+      status: 'ready',
+      source_version: 'git:duplicate-worker-current',
+    }, null, 2)}\n`);
+
+    process.env.OPL_TEMPORAL_ADDRESS = address;
+    process.env.OPL_TEMPORAL_NAMESPACE = 'opl-worker-duplicate-status-test';
+    process.env.OPL_TEMPORAL_TASK_QUEUE = 'opl-worker-duplicate-status';
+    process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = 'git:duplicate-worker-current';
+    delete process.env.OPL_TEMPORAL_WORKER_STATUS;
+    delete process.env.OPL_TEMPORAL_WORKER_ENABLED;
+
+    const requery = await inspectTemporalWorkerLifecycle({ root: workerRoot });
+
+    assert.equal(requery.lifecycle_status, 'duplicate_worker');
+    assert.equal(requery.worker_ready, false);
+    assert.equal(requery.managed_worker_pid, managed.pid);
+    assert.deepEqual(requery.duplicate_worker_pids, [duplicate.pid]);
+    assert.deepEqual(requery.blockers, ['temporal_worker_duplicate_foreground']);
+    assert.equal(requery.repair_action.action_id, 'restart_temporal_worker');
+  } finally {
+    for (const pid of [managed.pid, duplicate.pid]) {
+      try {
+        process.kill(pid!, 'SIGKILL');
+      } catch {
+        // The lifecycle under test may have removed the fixture process.
+      }
+    }
+    if (previousAddress === undefined) {
+      delete process.env.OPL_TEMPORAL_ADDRESS;
+    } else {
+      process.env.OPL_TEMPORAL_ADDRESS = previousAddress;
+    }
+    if (previousNamespace === undefined) {
+      delete process.env.OPL_TEMPORAL_NAMESPACE;
+    } else {
+      process.env.OPL_TEMPORAL_NAMESPACE = previousNamespace;
+    }
+    if (previousTaskQueue === undefined) {
+      delete process.env.OPL_TEMPORAL_TASK_QUEUE;
+    } else {
+      process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
+    }
+    if (previousWorkerStatus === undefined) {
+      delete process.env.OPL_TEMPORAL_WORKER_STATUS;
+    } else {
+      process.env.OPL_TEMPORAL_WORKER_STATUS = previousWorkerStatus;
+    }
+    if (previousWorkerEnabled === undefined) {
+      delete process.env.OPL_TEMPORAL_WORKER_ENABLED;
+    } else {
+      process.env.OPL_TEMPORAL_WORKER_ENABLED = previousWorkerEnabled;
+    }
+    if (previousSourceVersion === undefined) {
+      delete process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+    } else {
+      process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = previousSourceVersion;
+    }
+    await server.close();
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('Temporal worker foreground startup evicts older same-root foreground workers before configuration checks', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-foreground-evicts-'));
+  const workerRoot = path.join(stateRoot, 'family-runtime');
+  const previousAddress = process.env.OPL_TEMPORAL_ADDRESS;
+  const previousTemporalAddress = process.env.TEMPORAL_ADDRESS;
+  const oldWorker = spawn(process.execPath, [
+    '-e',
+    'setTimeout(() => {}, 30_000);',
+    '--',
+    '--temporal-worker-foreground',
+    '--family-runtime-root',
+    workerRoot,
+  ], {
+    detached: true,
+    stdio: 'ignore',
+  });
+  oldWorker.unref();
+  try {
+    assert.equal(typeof oldWorker.pid, 'number');
+    delete process.env.OPL_TEMPORAL_ADDRESS;
+    delete process.env.TEMPORAL_ADDRESS;
+
+    await assert.rejects(
+      () => runTemporalWorkerForeground({ root: workerRoot }),
+      /Temporal worker foreground requires OPL_TEMPORAL_ADDRESS/,
+    );
+
+    assert.throws(() => process.kill(oldWorker.pid!, 0));
+  } finally {
+    try {
+      process.kill(oldWorker.pid!, 'SIGKILL');
+    } catch {
+      // The foreground startup should have removed the fixture process.
+    }
+    if (previousAddress === undefined) {
+      delete process.env.OPL_TEMPORAL_ADDRESS;
+    } else {
+      process.env.OPL_TEMPORAL_ADDRESS = previousAddress;
+    }
+    if (previousTemporalAddress === undefined) {
+      delete process.env.TEMPORAL_ADDRESS;
+    } else {
+      process.env.TEMPORAL_ADDRESS = previousTemporalAddress;
+    }
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });

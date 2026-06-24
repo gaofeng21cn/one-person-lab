@@ -17,6 +17,7 @@ export type TemporalWorkerReadinessStatus =
   | 'not_configured'
   | 'server_unreachable'
   | 'worker_dependency_unavailable'
+  | 'duplicate_worker'
   | 'worker_source_stale'
   | 'worker_not_ready'
   | 'ready';
@@ -44,6 +45,7 @@ type TemporalWorkerReadinessInput = {
   managedWorkerProcessExited?: boolean | null;
   crashDiagnostic?: Record<string, unknown> | null;
   staleWorkerPid?: number | null;
+  duplicateWorkerPids?: number[] | null;
   temporalServiceLifecycle?: Record<string, unknown> | null;
   visibilityReadiness?: TemporalStageAttemptVisibilityReadiness | null;
   workerMutationGuard?: Record<string, unknown> | null;
@@ -108,6 +110,7 @@ function buildTemporalWorkerRepairAction(input: {
     not_configured: 'configure_temporal_service',
     server_unreachable: 'repair_temporal_service',
     worker_dependency_unavailable: 'repair_temporal_worker_runtime_dependencies',
+    duplicate_worker: 'restart_temporal_worker',
     worker_source_stale: 'restart_temporal_worker',
     worker_not_ready: 'start_temporal_worker',
     ready: 'none',
@@ -116,6 +119,8 @@ function buildTemporalWorkerRepairAction(input: {
     not_configured: repairCommands.start_local_temporal_service,
     server_unreachable: repairCommands.start_local_temporal_service,
     worker_dependency_unavailable: repairCommands.repair_worker_runtime_dependencies,
+    duplicate_worker:
+      'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal',
     worker_source_stale:
       'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal',
     worker_not_ready: repairCommands.start_managed_worker,
@@ -144,11 +149,13 @@ function resolveTemporalWorkerReady(input: {
   workerEnabled: string | null;
   workerStatus: string | null;
   workerDependencyUnavailable?: boolean | null;
+  duplicateWorker?: boolean | null;
   workerSourceStale?: boolean | null;
 }) {
   return Boolean(input.address)
     && input.serverReachable !== false
     && input.workerDependencyUnavailable !== true
+    && input.duplicateWorker !== true
     && input.workerSourceStale !== true
     && (envFlagReady(input.workerEnabled) || envFlagReady(input.workerStatus));
 }
@@ -159,6 +166,7 @@ function buildTemporalWorkerBlockers(input: {
   workerReady: boolean;
   workerDependencyUnavailable?: boolean | null;
   workerProcessExited?: boolean | null;
+  duplicateWorker?: boolean | null;
   workerSourceStale?: boolean | null;
 }) {
   const blockers: string[] = [];
@@ -170,6 +178,10 @@ function buildTemporalWorkerBlockers(input: {
   }
   if (input.address && input.serverReachable !== false && input.workerDependencyUnavailable === true) {
     blockers.push('temporal_worker_dependency_unavailable');
+    return blockers;
+  }
+  if (input.address && input.serverReachable !== false && input.duplicateWorker === true) {
+    blockers.push('temporal_worker_duplicate_foreground');
     return blockers;
   }
   if (input.address && input.serverReachable !== false && input.workerProcessExited === true) {
@@ -198,6 +210,7 @@ function resolveTemporalWorkerReadinessInput(
   const serverReachable = input.serverReachable ?? null;
   const workerDependencyUnavailable =
     input.workerDependencyHealth?.status === 'blocked';
+  const duplicateWorker = Boolean(input.duplicateWorkerPids?.length);
   const workerSourceStale = input.managedWorkerSourceCurrent === false;
   const workerReady = resolveTemporalWorkerReady({
     address,
@@ -205,6 +218,7 @@ function resolveTemporalWorkerReadinessInput(
     workerEnabled,
     workerStatus,
     workerDependencyUnavailable,
+    duplicateWorker,
     workerSourceStale,
   });
   const readinessStatus = resolveTemporalWorkerReadinessStatus({
@@ -212,6 +226,7 @@ function resolveTemporalWorkerReadinessInput(
     serverReachable,
     workerReady,
     workerDependencyUnavailable,
+    duplicateWorker,
     workerSourceStale,
   });
 
@@ -231,6 +246,7 @@ function resolveTemporalWorkerReadinessStatus(input: {
   serverReachable?: boolean | null;
   workerReady?: boolean | null;
   workerDependencyUnavailable?: boolean | null;
+  duplicateWorker?: boolean | null;
   workerSourceStale?: boolean | null;
 }): TemporalWorkerReadinessStatus {
   if (!input.address) {
@@ -241,6 +257,9 @@ function resolveTemporalWorkerReadinessStatus(input: {
   }
   if (input.workerDependencyUnavailable === true) {
     return 'worker_dependency_unavailable';
+  }
+  if (input.duplicateWorker === true) {
+    return 'duplicate_worker';
   }
   if (input.workerSourceStale === true) {
     return 'worker_source_stale';
@@ -321,6 +340,7 @@ export function buildTemporalWorkerReadiness(input: TemporalWorkerReadinessInput
     ...readiness,
     workerDependencyUnavailable: input.workerDependencyHealth?.status === 'blocked',
     workerProcessExited: input.managedWorkerProcessExited === true,
+    duplicateWorker: Boolean(input.duplicateWorkerPids?.length),
     workerSourceStale: input.managedWorkerSourceCurrent === false,
   });
   const repairAction = buildTemporalWorkerRepairAction({
@@ -344,6 +364,7 @@ export function buildTemporalWorkerReadiness(input: TemporalWorkerReadinessInput
     unreachable_reason: input.unreachableReason ?? null,
     managed_worker_pid: input.managedWorkerPid ?? null,
     managed_worker_process_alive: input.managedWorkerProcessAlive ?? (input.managedWorkerPid !== null && input.managedWorkerPid !== undefined),
+    duplicate_worker_pids: input.duplicateWorkerPids ?? [],
     managed_worker_state_path: input.managedWorkerStatePath ?? null,
     managed_worker_source_version: input.managedWorkerSourceVersion ?? null,
     expected_worker_source_version: input.expectedWorkerSourceVersion ?? null,

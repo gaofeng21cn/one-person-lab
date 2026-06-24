@@ -9,6 +9,9 @@ import {
   buildTemporalStageAttemptWorkflowInputForTest,
 } from '../../../../src/family-runtime-temporal-provider.ts';
 import {
+  resolveTemporalWorkerTaskQueue,
+} from '../../../../src/family-runtime-temporal-provider-parts/worker-task-queue.ts';
+import {
   CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
   CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
   DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS,
@@ -223,7 +226,7 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-default-start-'));
   const runtimeRoot = path.join(stateRoot, 'family-runtime');
   const testEnv = await createSearchableTemporalTestEnvironment();
-  const taskQueue = `opl-stage-mas-default-${Date.now()}`;
+  const taskQueue = resolveTemporalWorkerTaskQueue({ root: runtimeRoot });
   const previousEnv = {
     OPL_STATE_DIR: process.env.OPL_STATE_DIR,
     OPL_FAMILY_RUNTIME_PROVIDER: process.env.OPL_FAMILY_RUNTIME_PROVIDER,
@@ -273,7 +276,7 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
     process.env.OPL_TEMPORAL_ADDRESS = '';
     process.env.TEMPORAL_ADDRESS = '';
     process.env.OPL_TEMPORAL_NAMESPACE = testEnv.namespace ?? 'default';
-    process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
+    delete process.env.OPL_TEMPORAL_TASK_QUEUE;
     process.env.OPL_TEMPORAL_WORKER_STATUS = '';
     process.env.OPL_TEMPORAL_WORKER_ENABLED = '';
     process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = 'git:mas-default-start-current';
@@ -311,6 +314,7 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
             status: string;
             temporal_start: {
               surface_kind: string;
+              task_queue: string;
               execution_authorization_ledger_record: {
                 status: string;
               };
@@ -355,6 +359,7 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
 
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'running');
     assert.equal(tick.family_runtime_tick.dispatches[0].temporal_start.surface_kind, 'temporal_stage_attempt_start_receipt');
+    assert.equal(tick.family_runtime_tick.dispatches[0].temporal_start.task_queue, taskQueue);
     assert.equal(
       tick.family_runtime_tick.dispatches[0].temporal_start.execution_authorization_ledger_record.status,
       'recorded',
