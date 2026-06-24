@@ -306,6 +306,13 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
       installer: null,
       scriptBody: null,
     },
+    {
+      project: 'one-person-lab',
+      plugin: 'opl-scholarskills',
+      canonicalPlugin: 'opl-scholarskills',
+      installer: null,
+      scriptBody: null,
+    },
   ];
 
   for (const spec of specs) {
@@ -318,6 +325,21 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
     if (spec.project === 'opl-bookforge') {
       fs.mkdirSync(repoRoot, { recursive: true });
       writeFakeBookForgeGeneratedSurfacePack(repoRoot);
+      continue;
+    }
+    if (spec.project === 'one-person-lab') {
+      const pluginRoot = path.join(repoRoot, 'plugins', spec.canonicalPlugin);
+      const skillRoot = path.join(pluginRoot, 'skills', spec.canonicalPlugin);
+      fs.mkdirSync(path.join(pluginRoot, '.codex-plugin'), { recursive: true });
+      fs.mkdirSync(skillRoot, { recursive: true });
+      fs.writeFileSync(
+        path.join(pluginRoot, '.codex-plugin', 'plugin.json'),
+        JSON.stringify({ name: spec.canonicalPlugin, skills: './skills/' }, null, 2),
+      );
+      fs.writeFileSync(
+        path.join(skillRoot, 'SKILL.md'),
+        `---\nname: ${spec.canonicalPlugin}\ndescription: OPL ScholarSkills fixture capability plugin pack.\n---\n\n# OPL ScholarSkills\n\nThis fixture represents the OPL-owned ScholarSkills capability plugin pack.\n`,
+      );
       continue;
     }
     const pluginRoot = path.join(repoRoot, 'plugins', spec.canonicalPlugin);

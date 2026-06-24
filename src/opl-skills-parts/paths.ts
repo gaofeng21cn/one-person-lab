@@ -141,5 +141,19 @@ export function buildInstallerCommandPreview(
     return ['opl', 'agents', 'interfaces', '--repo-dir', repoRoot, '--format', 'skill'];
   }
 
+  if (spec.domain_id === 'scholarskills') {
+    return [
+      'opl',
+      'connect',
+      'sync-skills',
+      '--domain',
+      spec.domain_id,
+      '--scope',
+      'project',
+      '--target-project',
+      'medautoscience',
+    ];
+  }
+
   return ['opl', 'connect', 'sync-skills', '--domain', spec.domain_id];
 }

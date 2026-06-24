@@ -28,6 +28,7 @@ import { buildOplAppOperatorViewModel } from './app-state-view-model.ts';
 import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
 import { selectAppStateCurrentOwnerDeltaReadModel } from './app-state-current-owner-delta.ts';
 import { executeWorkspaceAppAction } from './app-state-workspace-actions.ts';
+import { syncFamilySkillPacks } from './opl-skills.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -814,6 +815,34 @@ async function executeDirectAppAction(
             },
           }
         : writeOplWorkspaceRootSurface(workspaceRoot),
+    };
+  }
+
+  if (options.actionId === 'scholarskills_project_sync') {
+    return {
+      delegatedSurface: 'opl connect sync-skills --domain scholarskills --scope project --target-project medautoscience',
+      result: options.dryRun
+        ? {
+            skill_sync: {
+              surface_id: 'opl_skill_sync',
+              status: 'dry_run',
+              domain_id: 'scholarskills',
+              scope: 'project',
+              target_project: 'medautoscience',
+              command: 'opl connect sync-skills --domain scholarskills --scope project --target-project medautoscience --json',
+              authority_boundary: {
+                can_write_domain_truth: false,
+                can_sign_owner_receipt: false,
+                can_create_typed_blocker: false,
+                can_write_runtime_queue: false,
+              },
+            },
+          }
+        : syncFamilySkillPacks({
+            domains: ['scholarskills'],
+            scope: 'project',
+            targetProject: 'medautoscience',
+          }),
     };
   }
 

@@ -295,7 +295,7 @@ function formatHumanRootHelp(payload: ReturnType<typeof buildRootHelp>) {
     '  opl console status             Check the OPL Console operator module surface',
     '  opl foundry agents list        List the OPL Foundry Agent series members',
     '  opl connect modules            Inspect managed module health',
-    '  opl connect sync-skills         Sync family skills into the Codex skill path',
+    '  opl connect sync-skills         Sync family skills to their target scope',
     '  opl "your task"                Start from the default Codex runtime',
     '',
     'Common commands:',

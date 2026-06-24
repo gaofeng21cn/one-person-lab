@@ -15,6 +15,9 @@ test('connect skills exposes OPL ScholarSkills as a framework-owned capability p
           surface_kind: string;
           capability_plugin_id: string;
           ownership_kind: string;
+          default_sync_scope: string;
+          default_target_project: string;
+          codex_scope_requires_explicit_request: boolean;
           framework_owned_capability: boolean;
           domain_module: boolean;
           brand_module: boolean;
@@ -46,6 +49,9 @@ test('connect skills exposes OPL ScholarSkills as a framework-owned capability p
   assert.equal(pack.capability_plugin_distribution.surface_kind, 'opl_framework_capability_plugin_distribution');
   assert.equal(pack.capability_plugin_distribution.capability_plugin_id, 'opl-scholarskills');
   assert.equal(pack.capability_plugin_distribution.ownership_kind, 'framework_capability_plugin');
+  assert.equal(pack.capability_plugin_distribution.default_sync_scope, 'project');
+  assert.equal(pack.capability_plugin_distribution.default_target_project, 'medautoscience');
+  assert.equal(pack.capability_plugin_distribution.codex_scope_requires_explicit_request, true);
   assert.equal(pack.capability_plugin_distribution.framework_owned_capability, true);
   assert.equal(pack.capability_plugin_distribution.domain_module, false);
   assert.equal(pack.capability_plugin_distribution.brand_module, false);
@@ -57,8 +63,9 @@ test('connect skills exposes OPL ScholarSkills as a framework-owned capability p
   });
 });
 
-test('connect sync-skills registers OPL ScholarSkills in the managed Codex plugin registry without creating a domain module', () => {
+test('connect sync-skills installs OPL ScholarSkills to the MAS project-local plugin mirror by default', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-connect-home-'));
+  const masRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-mas-root-'));
 
   try {
     const modules = runCli(['connect', 'modules']) as {
@@ -71,6 +78,7 @@ test('connect sync-skills registers OPL ScholarSkills in the managed Codex plugi
     const output = runCli(['connect', 'sync-skills', '--domain', 'scholarskills', '--home', homeRoot], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_MEDAUTOSCIENCE_REPO_ROOT: masRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
     }) as {
@@ -78,6 +86,93 @@ test('connect sync-skills registers OPL ScholarSkills in the managed Codex plugi
         packs: Array<{
           domain_id: string;
           sync_status: string;
+          sync_scope: string;
+          target_project: string;
+          registry_repo_root: string | null;
+          installer_result: {
+            source: string;
+            plugin_source_path: string;
+            project_local_skill_mirror: {
+              status: string;
+              target_scope: string;
+              target_project: string;
+              target_repo_root: string;
+              project_local_plugin_root: string;
+              project_local_plugin_manifest_path: string;
+              project_local_skill_entry_path: string;
+              project_local_git_exclude: {
+                status: string;
+                exclude_path: string | null;
+                pattern: string;
+              };
+              authority_boundary: {
+                can_write_domain_truth: boolean;
+                can_sign_owner_receipt: boolean;
+                can_create_typed_blocker: boolean;
+                can_write_runtime_queue: boolean;
+              };
+            };
+          };
+        }>;
+        codex_plugin_registry: null;
+      };
+    };
+
+    assert.equal(output.skill_sync.packs.length, 1);
+    const pack = output.skill_sync.packs[0];
+    assert.equal(pack.domain_id, 'scholarskills');
+    assert.equal(pack.sync_status, 'synced');
+    assert.equal(pack.sync_scope, 'project');
+    assert.equal(pack.target_project, 'medautoscience');
+    assert.equal(pack.registry_repo_root, null);
+    assert.equal(pack.installer_result.source, 'project_local_capability_skill_mirror');
+    assert.equal(pack.installer_result.plugin_source_path, path.join(repoRoot, 'plugins', 'opl-scholarskills'));
+    const mirror = pack.installer_result.project_local_skill_mirror;
+    assert.equal(mirror.status, 'installed');
+    assert.equal(mirror.target_scope, 'project');
+    assert.equal(mirror.target_project, 'medautoscience');
+    assert.equal(mirror.target_repo_root, masRoot);
+    assert.equal(mirror.project_local_plugin_root, path.join(masRoot, 'plugins', 'opl-scholarskills'));
+    assert.equal(
+      fs.realpathSync(mirror.project_local_plugin_manifest_path),
+      fs.realpathSync(path.join(masRoot, 'plugins', 'opl-scholarskills', '.codex-plugin', 'plugin.json')),
+    );
+    assert.equal(
+      fs.realpathSync(mirror.project_local_skill_entry_path),
+      fs.realpathSync(path.join(masRoot, 'plugins', 'opl-scholarskills', 'skills', 'opl-scholarskills', 'SKILL.md')),
+    );
+    assert.deepEqual(mirror.authority_boundary, {
+      can_write_domain_truth: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_write_runtime_queue: false,
+    });
+    assert.equal(mirror.project_local_git_exclude.status, 'skipped_not_git_repo');
+    assert.equal(mirror.project_local_git_exclude.pattern, '/plugins/opl-scholarskills/');
+    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'config.toml')), false);
+    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'opl-scholarskills', 'SKILL.md')), false);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(masRoot, { recursive: true, force: true });
+  }
+});
+
+test('connect sync-skills registers OPL ScholarSkills in Codex only with explicit codex scope', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-connect-codex-home-'));
+
+  try {
+    const output = runCli(['connect', 'sync-skills', '--domain', 'scholarskills', '--scope', 'codex', '--home', homeRoot], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+    }) as {
+      skill_sync: {
+        packs: Array<{
+          domain_id: string;
+          sync_status: string;
+          sync_scope: string;
+          target_project: string | null;
           registry_repo_root: string;
           installer_result: {
             source: string;
@@ -118,6 +213,8 @@ test('connect sync-skills registers OPL ScholarSkills in the managed Codex plugi
     assert.equal(output.skill_sync.packs.length, 1);
     assert.equal(output.skill_sync.packs[0].domain_id, 'scholarskills');
     assert.equal(output.skill_sync.packs[0].sync_status, 'synced');
+    assert.equal(output.skill_sync.packs[0].sync_scope, 'codex');
+    assert.equal(output.skill_sync.packs[0].target_project, null);
     assert.equal(output.skill_sync.packs[0].registry_repo_root, repoRoot);
     assert.equal(output.skill_sync.packs[0].installer_result.source, 'tracked_codex_plugin_source');
     assert.equal(output.skill_sync.packs[0].installer_result.plugin_source_path, path.join(repoRoot, 'plugins', 'opl-scholarskills'));

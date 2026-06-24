@@ -34,6 +34,8 @@ import {
   FAMILY_SKILL_PACK_SPECS,
   normalizeDomainSelection,
   type InspectFamilySkillPack,
+  type SkillPackSyncScope,
+  type SkillPackTargetProject,
   type SkillPackSpec,
   type SyncFamilySkillPack,
 } from './opl-skills-parts/registry.ts';
@@ -48,6 +50,8 @@ type ReadFamilySkillPacksOptions = {
 
 type SyncFamilySkillPacksOptions = ReadFamilySkillPacksOptions & {
   home?: string;
+  scope?: SkillPackSyncScope;
+  targetProject?: string;
   companionMode?: OplCompanionSkillApplyMode;
   superpowersProfile?: OplSuperpowersProfile;
 };
@@ -287,8 +291,12 @@ function buildCapabilityPluginDistribution(spec: SkillPackSpec) {
     ],
     connect_readback_commands: [
       'opl connect skills --domain scholarskills --json',
-      'opl connect sync-skills --domain scholarskills --json',
+      'opl connect sync-skills --domain scholarskills --scope project --target-project medautoscience --json',
+      'opl connect sync-skills --domain scholarskills --scope codex --json',
     ],
+    default_sync_scope: 'project',
+    default_target_project: 'medautoscience',
+    codex_scope_requires_explicit_request: true,
     framework_owned_capability: true,
     domain_module: false,
     brand_module: false,
@@ -902,6 +910,8 @@ export function syncFamilySkillPackFromRepoRoot(
   options: Partial<{
     home: string;
     registerPlugin?: boolean;
+    scope: SkillPackSyncScope;
+    targetProject: string;
   }> = {},
 ) {
   const spec = FAMILY_SKILL_PACK_SPECS.find((entry) => entry.domain_id === domainId);
@@ -915,16 +925,36 @@ export function syncFamilySkillPackFromRepoRoot(
       },
     );
   }
+  const scope = options.scope ?? defaultSyncScopeForSpec(spec);
+  const targetProject = normalizeTargetProject(options.targetProject);
+  if (scope === 'project' && spec.domain_id !== 'scholarskills') {
+    throw new FrameworkContractError(
+      'cli_usage_error',
+      `Project-local skill sync is only supported for OPL ScholarSkills, not ${spec.domain_id}.`,
+      {
+        domain_id: spec.domain_id,
+        requested_scope: scope,
+        allowed_project_scope_domains: ['scholarskills'],
+      },
+    );
+  }
 
   const result = runSkillPackInstaller(
     inspectFamilySkillPackAtRepoRoot(spec, path.resolve(repoRoot)),
     {
       home: normalizeOptionalString(options.home) ?? undefined,
+      scope,
+      targetProject: scope === 'project' ? targetProject : null,
       resolveCodexHome,
       writeGeneratedPluginSurface: writeOplGeneratedPluginSurface,
     },
   );
-  if (options.registerPlugin !== false && result.sync_status === 'synced' && result.registry_repo_root) {
+  if (
+    scope === 'codex'
+    && options.registerPlugin !== false
+    && result.sync_status === 'synced'
+    && result.registry_repo_root
+  ) {
     const codexPluginRegistry = registerOplFamilyCodexPlugins(
       [domainId as CodexPluginRegistryPackId],
       new Map([[domainId as CodexPluginRegistryPackId, result.registry_repo_root]]),
@@ -940,6 +970,26 @@ export function syncFamilySkillPackFromRepoRoot(
   }
 
   return result;
+}
+
+function defaultSyncScopeForSpec(spec: SkillPackSpec): SkillPackSyncScope {
+  return spec.domain_id === 'scholarskills' ? 'project' : 'codex';
+}
+
+function normalizeTargetProject(value: string | undefined | null): SkillPackTargetProject {
+  const key = normalizeOptionalString(value)?.toLowerCase().replace(/[-_]/g, '') ?? 'medautoscience';
+  if (key === 'mas' || key === 'medautoscience') {
+    return 'medautoscience';
+  }
+
+  throw new FrameworkContractError(
+    'cli_usage_error',
+    `Unknown skill sync target project: ${value}.`,
+    {
+      target_project: value,
+      allowed_target_projects: ['medautoscience', 'med-autoscience', 'mas'],
+    },
+  );
 }
 
 export function readFamilySkillPacks(options: ReadFamilySkillPacksOptions = {}) {
@@ -968,25 +1018,45 @@ export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) 
   const resolvedHome = normalizeOptionalString(options.home) ?? null;
   const inspectedPacks = FAMILY_SKILL_PACK_SPECS
     .filter((spec) => !selectedDomains || selectedDomains.has(spec.domain_id))
-    .map((spec) => inspectFamilySkillPack(spec));
-  const packs = inspectedPacks.map((inspected) => runSkillPackInstaller(inspected, {
+    .map((spec) => ({ spec, inspected: inspectFamilySkillPack(spec) }));
+  const targetProject = normalizeTargetProject(options.targetProject);
+  for (const { spec } of inspectedPacks) {
+    const scope = options.scope ?? defaultSyncScopeForSpec(spec);
+    if (scope === 'project' && spec.domain_id !== 'scholarskills') {
+      throw new FrameworkContractError(
+        'cli_usage_error',
+        `Project-local skill sync is only supported for OPL ScholarSkills, not ${spec.domain_id}.`,
+        {
+          domain_id: spec.domain_id,
+          requested_scope: scope,
+          allowed_project_scope_domains: ['scholarskills'],
+        },
+      );
+    }
+  }
+  const packs = inspectedPacks.map(({ spec, inspected }) => runSkillPackInstaller(inspected, {
     home: resolvedHome ?? undefined,
+    scope: options.scope ?? defaultSyncScopeForSpec(spec),
+    targetProject: (options.scope ?? defaultSyncScopeForSpec(spec)) === 'project' ? targetProject : null,
     resolveCodexHome,
     writeGeneratedPluginSurface: writeOplGeneratedPluginSurface,
   }));
-  const syncedFamilyPluginPacks = packs.filter((pack): pack is SyncFamilySkillPack & { domain_id: OplModuleId } => (
+  const syncedFamilyPluginPacks = packs.filter((pack): pack is SyncFamilySkillPack & { domain_id: CodexPluginRegistryPackId } => (
     pack.sync_status === 'synced'
+    && pack.sync_scope === 'codex'
     && ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent', 'oplbookforge', 'scholarskills'].includes(pack.domain_id)
     && Boolean(pack.registry_repo_root)
   ));
-  const codex_plugin_registry = registerOplFamilyCodexPlugins(
-    syncedFamilyPluginPacks.map((pack) => pack.domain_id as CodexPluginRegistryPackId),
-    new Map(syncedFamilyPluginPacks.map((pack) => [
-      pack.domain_id as CodexPluginRegistryPackId,
-      pack.registry_repo_root ?? pack.repo_root,
-    ])),
-    resolvedHome ?? undefined,
-  );
+  const codex_plugin_registry = syncedFamilyPluginPacks.length > 0
+    ? registerOplFamilyCodexPlugins(
+        syncedFamilyPluginPacks.map((pack) => pack.domain_id as CodexPluginRegistryPackId),
+        new Map(syncedFamilyPluginPacks.map((pack) => [
+          pack.domain_id as CodexPluginRegistryPackId,
+          pack.registry_repo_root ?? pack.repo_root,
+        ])),
+        resolvedHome ?? undefined,
+      )
+    : null;
   const companion_skills = syncOplCompanionSkills(resolvedHome ?? undefined, {
     mode: options.companionMode ?? 'observe',
     superpowersProfile: options.superpowersProfile ?? 'keep',

@@ -8,21 +8,40 @@ import { readFamilySkillPacks } from '../../src/opl-skills.ts';
 import { registerOplFamilyCodexPlugins } from '../../src/system-installation/codex-plugin-registry.ts';
 import type { OplModuleId } from '../../src/system-installation/shared.ts';
 
-test('OPL system skill sync catalog excludes MAS/MDS project-local stage skills', () => {
+test('OPL system skill sync catalog excludes MDS stage skills while exposing ScholarSkills as a project-scoped capability pack', () => {
   const catalog = readFamilySkillPacks().skill_catalog;
   const domainIds = catalog.packs.map((pack) => pack.domain_id);
   const pluginNames = catalog.packs.map((pack) => pack.canonical_plugin_name);
 
-  assert.deepEqual(domainIds, ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent', 'oplbookforge']);
+  assert.deepEqual(domainIds, ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent', 'oplbookforge', 'scholarskills']);
   assert.equal(domainIds.includes('meddeepscientist'), false);
   assert.equal(pluginNames.includes('deepscientist'), false);
   assert.equal(pluginNames.includes('opl-meta-agent'), true);
   assert.equal(pluginNames.includes('opl-bookforge'), true);
+  assert.equal(pluginNames.includes('opl-scholarskills'), true);
   for (const pack of catalog.packs) {
     const generatedOnly = ['opl-meta-agent', 'opl-bookforge'].includes(pack.canonical_plugin_name);
     const ordinaryOperations = pack.command_surface_spine.ordinary_operations as string[];
     const ordinaryPublicCommandSurfaceSpine = pack.command_surface_spine.ordinary_public_command_surface_spine as string[];
     const seriesDelegateToolRefs = pack.mcp_projection.series_delegate_tool_refs as string[];
+    if (pack.canonical_plugin_name === 'opl-scholarskills') {
+      assert.equal(pack.distribution_role, 'framework_capability_plugin_pack');
+      assert.equal(pack.capability_plugin_distribution?.default_sync_scope, 'project');
+      assert.equal(pack.capability_plugin_distribution?.default_target_project, 'medautoscience');
+      assert.equal(pack.capability_plugin_distribution?.domain_module, false);
+      assert.deepEqual(pack.command_preview, [
+        'opl',
+        'connect',
+        'sync-skills',
+        '--domain',
+        'scholarskills',
+        '--scope',
+        'project',
+        '--target-project',
+        'medautoscience',
+      ]);
+      continue;
+    }
     assert.equal(pack.foundry_agent_series.canonical_command_surface, 'opl agents foundry');
     if (pack.canonical_plugin_name === 'opl-meta-agent') {
       assert.equal(pack.foundry_agent_series.generated_surface_only, true);

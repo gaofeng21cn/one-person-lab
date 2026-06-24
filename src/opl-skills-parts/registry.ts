@@ -5,6 +5,8 @@ import { FrameworkContractError } from '../contracts.ts';
 export type SkillPackInstallerKind = 'bash' | 'node';
 export type SkillPackSourceKind = 'repo_plugin_installer' | 'opl_generated_plugin_surface';
 export type SkillPackDistributionRole = 'domain_agent_plugin_pack' | 'framework_capability_plugin_pack';
+export type SkillPackSyncScope = 'project' | 'codex';
+export type SkillPackTargetProject = 'medautoscience';
 
 export type SkillPackSpec = {
   domain_id: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge' | 'scholarskills';
@@ -52,6 +54,8 @@ export type InspectFamilySkillPack = {
 
 export type SyncFamilySkillPack = InspectFamilySkillPack & {
   sync_status: 'synced' | 'skipped';
+  sync_scope: SkillPackSyncScope;
+  target_project: SkillPackTargetProject | null;
   installer_result: Record<string, unknown> | null;
   registry_repo_root: string | null;
   stdout: string;

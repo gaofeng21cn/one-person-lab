@@ -590,11 +590,13 @@ export function buildInternalCommandSpecs(
       },
     },
     'skill-sync': {
-      usage: 'opl skill sync [--domain <domain_id>] [--home <home_path>] [--quiet]',
-      summary: 'Register the family domain plugin packs into the local Codex environment without changing the default Codex runtime semantics.',
+      usage: 'opl skill sync [--domain <domain_id>] [--scope <project|codex>] [--target-project <project_id>] [--home <home_path>] [--quiet]',
+      summary: 'Sync family skill packs to their declared target scope without changing default Codex runtime semantics.',
       examples: [
         'opl skill sync',
         'opl skill sync --domain medautoscience',
+        'opl skill sync --domain scholarskills --scope project --target-project medautoscience',
+        'opl skill sync --domain scholarskills --scope codex',
         'opl skill sync --home /tmp/codex-home',
       ],
       help_surface: 'migration_compatibility',
@@ -603,6 +605,8 @@ export function buildInternalCommandSpecs(
         return syncFamilySkillPacks({
           domains: parsed.domains,
           home: parsed.home,
+          scope: parsed.scope,
+          targetProject: parsed.targetProject,
           companionMode: parsed.companionMode,
           superpowersProfile: parsed.superpowersProfile,
         });

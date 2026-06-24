@@ -277,6 +277,15 @@ export function buildActionCatalog(contracts: FrameworkContracts) {
       mutates: 'opl_module_checkout',
     },
     {
+      action_id: 'scholarskills_project_sync',
+      label: 'Sync OPL ScholarSkills to MAS',
+      surface: 'opl app action execute',
+      delegated_surface: 'opl connect sync-skills --domain scholarskills --scope project --target-project medautoscience',
+      payload_fields: [],
+      mutates: 'mas_project_local_capability_skill_mirror',
+      dry_run_supported: true,
+    },
+    {
       action_id: 'runtime_action_execute',
       label: 'Execute runtime operator action',
       surface: 'opl app action execute',

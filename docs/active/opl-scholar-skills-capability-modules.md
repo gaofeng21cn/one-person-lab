@@ -68,6 +68,24 @@ opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact
 
 仓内还提供 repo-tracked Codex plugin surface：`plugins/opl-scholarskills/.codex-plugin/plugin.json` 与 `plugins/opl-scholarskills/skills/opl-scholarskills/SKILL.md`。该 skill pack 只是把 canonical contract、CLI readback 和 no-authority guard 暴露给 Codex discovery / sync layer；它不是第二真相源，也不能替代 `contracts/opl-framework/scholar-skills-capability-modules.json`、`src/scholar-skills.ts`、domain owner receipt、typed blocker、runtime evidence 或 paper artifact authority。
 
+## Connect 同步与安装落点
+
+ScholarSkills 的默认消费方是 MAS project-local capability mirror，而不是用户系统级 Codex skill registry。`opl connect sync-skills --domain scholarskills --json` 等价于 project scope，默认写入 MAS 项目工作目录：
+
+```text
+<med-autoscience-repo>/plugins/opl-scholarskills/
+```
+
+该目录是 OPL-managed project-local mirror，只承载 `opl-scholarskills` plugin manifest 与 `SKILL.md`，用于 MAS 调用和本地审阅。它不是 MAS domain truth、不是 MAS owner receipt、不是 typed blocker、不是 runtime queue，也不是 publication/package authority。MAS 仓内 `.codex/` 已退役，ScholarSkills 默认同步不得写入 MAS `.codex/skills`。
+
+系统级 Codex 注册仍保留为显式开发者路径：
+
+```bash
+opl connect sync-skills --domain scholarskills --scope codex --json
+```
+
+只有显式 `--scope codex` 才写用户 Codex plugin registry / config；默认 project scope 返回 `codex_plugin_registry=null`。App 可通过 `scholarskills_project_sync` action 调用同一 project-local route，并支持 dry-run readback。
+
 需要把 module id 绑定到真实 OPL runtime environment substrate 时，使用 runtime bridge 命令。它们复用 `opl runtime env prepare/run-context` 的实现，可在明确 `--apply` 时写入 OPL 管理依赖库和 `paper/build/dependency_environment_lock.json`、`dependency_environment_receipt.json`、`dependency_run_context.json`，但仍不写 domain truth、artifact body、owner receipt、typed blocker 或 runtime queue：
 
 ```bash
@@ -94,6 +112,18 @@ MAS current_owner_delta
 ```
 
 当前 OPL 侧落地范围是 10 模块 capability catalog、descriptor validation、CLI readback、module-specific refs-only invoke/receipt candidate 与 runtime env bridge refs。真实 domain owner consumption 要回到 MAS 等 domain repo 的 owner surface；OPL 的 unsigned candidate receipt 不会签 owner receipt，也不会把候选图、表、分析、文本、review、submission package、data manifest 或 intake contract 晋级为论文 truth。
+
+## Display Gallery 人审入口
+
+`opl.scholarskills.display` 的人审 gallery 入口仍由 MAS Display Pack 持有。当前 OPL readback 只引用这些 MAS-owned review refs，不复制或改写 gallery truth：
+
+- `med-autoscience/docs/delivery/medical-display/examples/medical_display_gallery.pdf`
+- `med-autoscience/docs/delivery/medical-display/examples/medical_display_gallery_reference.md`
+- `med-autoscience/docs/delivery/medical-display/examples/display_pack_gallery_status.md`
+- `med-autoscience/docs/delivery/medical-display/examples/gallery_manifest.json`
+- `med-autoscience/docs/delivery/medical-display/examples/medical_display_gallery_assets/gallery_manifest.json`
+
+这些 refs 证明有人可审的 Display gallery surface 存在；它们不证明 visual parity 完成、publication-ready、owner accepted 或 MAS paper artifact ready。当前 MAS gallery status 仍需按 MAS Display Pack owner gate 与 fresh artifact inspection 判定，OPL ScholarSkills 只能把它作为 `visual_audit_or_gallery_preview_ref` 的下游人审入口。
 
 ## CLI Readback
 

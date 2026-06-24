@@ -689,6 +689,15 @@ function parseSkillPackArgs(
       case '--home':
         parsed.home = value;
         break;
+      case '--scope':
+        if (value !== 'project' && value !== 'codex') {
+          throw buildUsageError('Option --scope requires project or codex.', spec, { option: token, value });
+        }
+        parsed.scope = value;
+        break;
+      case '--target-project':
+        parsed.targetProject = value;
+        break;
       case '--mode':
         if (value !== 'observe' && value !== 'ask_to_apply' && value !== 'managed') {
           throw buildUsageError('Option --mode requires observe, ask_to_apply, or managed.', spec, { option: token, value });
