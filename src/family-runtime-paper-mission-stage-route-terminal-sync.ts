@@ -7,9 +7,11 @@ import {
   type StageAttemptStatus,
 } from './family-runtime-stage-attempt-ledger.ts';
 import {
+  DEFAULT_MAX_ATTEMPTS,
   insertEvent,
   insertNotification,
   nowIso,
+  stableId,
   type FamilyRuntimeTaskRow,
 } from './family-runtime-store.ts';
 
@@ -17,6 +19,14 @@ export const PAPER_MISSION_STAGE_ROUTE_TASK_KIND = 'paper_mission/stage-route';
 export const PAPER_MISSION_STAGE_ROUTE_RUNTIME_REQUEST_KIND = 'mas_paper_mission_stage_route';
 
 const PAPER_MISSION_STAGE_ROUTE_DOMAIN_GATE_PENDING_REASON = 'paper_mission_stage_route_domain_gate_pending';
+const PAPER_MISSION_STAGE_ROUTE_TERMINAL_SUCCESSOR_REASON =
+  'paper_mission_stage_route_terminal_closeout_successor_admitted';
+const MAX_TERMINAL_SUCCESSOR_GENERATION = 1;
+const SUCCESSOR_ROUTE_COMMAND_KINDS = new Set([
+  'route_back',
+  'resume_stage',
+  'start_next_stage',
+]);
 const TERMINAL_STAGE_ATTEMPT_STATUSES = new Set<StageAttemptStatus>([
   'blocked',
   'completed',
@@ -31,6 +41,28 @@ type StageAttemptPayload = ReturnType<typeof stageAttemptToPayload>;
 
 function payloadFromTask(row: FamilyRuntimeTaskRow) {
   return JSON.parse(row.payload_json) as Record<string, unknown>;
+}
+
+function optionalString(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function recordValue(value: unknown) {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function numericValue(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function terminalSuccessorGeneration(payload: Record<string, unknown>) {
+  const explicitGeneration = numericValue(payload.terminal_successor_generation);
+  if (explicitGeneration !== null) {
+    return explicitGeneration;
+  }
+  return optionalString(payload.requeued_from_terminal_task_id) ? 1 : 0;
 }
 
 export function isPaperMissionStageRouteTask(
@@ -87,6 +119,178 @@ function hasAcceptedTypedCloseout(attempt: StageAttemptPayload) {
     && attempt.closeout_refs.some((entry) => typeof entry === 'string' && entry.trim().length > 0);
 }
 
+function shouldAdmitSuccessorForTerminalRoute(
+  payload: Record<string, unknown>,
+  terminalAttempt: StageAttemptPayload,
+  nextTask: ReturnType<typeof paperMissionStageRouteTaskStatusForTerminalAttempt>,
+) {
+  const commandKind = optionalString(payload.command_kind);
+  const generation = terminalSuccessorGeneration(payload);
+  return nextTask.status === 'blocked'
+    && nextTask.reason === PAPER_MISSION_STAGE_ROUTE_DOMAIN_GATE_PENDING_REASON
+    && hasAcceptedTypedCloseout(terminalAttempt)
+    && generation < MAX_TERMINAL_SUCCESSOR_GENERATION
+    && Boolean(commandKind && SUCCESSOR_ROUTE_COMMAND_KINDS.has(commandKind));
+}
+
+function successorDedupeKey(row: FamilyRuntimeTaskRow, terminalAttempt: StageAttemptPayload) {
+  return [
+    'paper-mission-route-terminal-successor',
+    row.task_id,
+    terminalAttempt.stage_attempt_id,
+  ].join(':');
+}
+
+function successorPayloadForTerminalAttempt(
+  payload: Record<string, unknown>,
+  row: FamilyRuntimeTaskRow,
+  terminalAttempt: StageAttemptPayload,
+  reason: string,
+) {
+  const stageRunRequest = recordValue(payload.stage_run_request);
+  const authorityBoundary = recordValue(payload.authority_boundary);
+  const generation = terminalSuccessorGeneration(payload) + 1;
+  return {
+    ...payload,
+    runtime_request_status: 'queued_request',
+    terminal_successor_generation: generation,
+    terminal_successor_max_generation: MAX_TERMINAL_SUCCESSOR_GENERATION,
+    terminal_successor_root_task_id: optionalString(payload.terminal_successor_root_task_id) ?? row.task_id,
+    requeued_from_terminal_task_id: row.task_id,
+    requeued_from_terminal_stage_attempt_id: terminalAttempt.stage_attempt_id,
+    requeued_from_terminal_reason: reason,
+    requeued_from_terminal_closeout_refs: terminalAttempt.closeout_refs,
+    requeued_from_terminal_closeout_receipt_status: terminalAttempt.closeout_receipt_status,
+    stage_run_request: {
+      ...stageRunRequest,
+      request_status: 'requested',
+      requested_by: 'paper_mission_stage_route_terminal_closeout',
+      previous_task_id: row.task_id,
+      previous_stage_attempt_id: terminalAttempt.stage_attempt_id,
+      previous_terminal_reason: reason,
+      command_kind: payload.command_kind ?? null,
+      route_target: payload.route_target ?? null,
+      domain_truth_owner: 'med-autoscience',
+      runtime_owner: 'one-person-lab',
+      stage_run_created: false,
+      provider_attempt_requested: false,
+      provider_running: false,
+    },
+    authority_boundary: {
+      ...authorityBoundary,
+      writes_owner_receipt: false,
+      writes_typed_blocker: false,
+      writes_human_gate: false,
+      writes_current_package: false,
+      writes_paper_body: false,
+      can_claim_provider_running: false,
+      can_claim_paper_progress: false,
+      can_claim_runtime_ready: false,
+    },
+  };
+}
+
+function enqueuePaperMissionStageRouteSuccessor(
+  db: DatabaseSync,
+  input: {
+    row: FamilyRuntimeTaskRow;
+    payload: Record<string, unknown>;
+    terminalAttempt: StageAttemptPayload;
+    source: string;
+    reason: string;
+    queuedAt: string;
+  },
+) {
+  const dedupeKey = successorDedupeKey(input.row, input.terminalAttempt);
+  const existing = db.prepare('SELECT * FROM tasks WHERE dedupe_key = ?').get(dedupeKey) as
+    | FamilyRuntimeTaskRow
+    | undefined;
+  if (existing) {
+    return { created: false, taskId: existing.task_id, dedupeKey };
+  }
+  const payload = successorPayloadForTerminalAttempt(
+    input.payload,
+    input.row,
+    input.terminalAttempt,
+    input.reason,
+  );
+  const taskId = stableId('frt', [
+    input.row.domain_id,
+    input.row.task_kind,
+    dedupeKey,
+    payload,
+    input.queuedAt,
+  ]);
+  const task = {
+    task_id: taskId,
+    domain_id: input.row.domain_id,
+    task_kind: input.row.task_kind,
+    payload_json: JSON.stringify(payload),
+    dedupe_key: dedupeKey,
+    priority: input.row.priority,
+    status: 'queued',
+    attempts: 0,
+    max_attempts: DEFAULT_MAX_ATTEMPTS,
+    source: input.source,
+    requires_approval: 0,
+    approved_at: null,
+    lease_owner: null,
+    lease_expires_at: null,
+    last_error: null,
+    dead_letter_reason: null,
+    created_at: input.queuedAt,
+    updated_at: input.queuedAt,
+  };
+  const result = db.prepare(`
+    INSERT OR IGNORE INTO tasks(
+      task_id, domain_id, task_kind, payload_json, dedupe_key, priority, status, attempts, max_attempts,
+      source, requires_approval, approved_at, lease_owner, lease_expires_at, last_error, dead_letter_reason,
+      created_at, updated_at
+    )
+    VALUES (
+      @task_id, @domain_id, @task_kind, @payload_json, @dedupe_key, @priority, @status, @attempts, @max_attempts,
+      @source, @requires_approval, @approved_at, @lease_owner, @lease_expires_at, @last_error, @dead_letter_reason,
+      @created_at, @updated_at
+    )
+  `).run(task);
+  const refreshed = db.prepare('SELECT * FROM tasks WHERE dedupe_key = ?').get(dedupeKey) as
+    | FamilyRuntimeTaskRow
+    | undefined;
+  if (!refreshed) {
+    return { created: false, taskId: null, dedupeKey };
+  }
+  if (result.changes > 0) {
+    insertEvent(db, {
+      taskId: refreshed.task_id,
+      domainId: refreshed.domain_id,
+      eventType: 'task_enqueued',
+      source: input.source,
+      payload: {
+        task_kind: refreshed.task_kind,
+        dedupe_key: dedupeKey,
+        active_hold_id: null,
+        active_hold_reason: null,
+        requeued_from_terminal_task_id: input.row.task_id,
+        requeued_from_terminal_stage_attempt_id: input.terminalAttempt.stage_attempt_id,
+        reason: PAPER_MISSION_STAGE_ROUTE_TERMINAL_SUCCESSOR_REASON,
+      },
+    });
+    insertNotification(db, {
+      taskId: refreshed.task_id,
+      severity: 'info',
+      title: 'MAS PaperMission stage route successor queued',
+      body: `${refreshed.domain_id}:${refreshed.task_kind}`,
+      payload: {
+        status: 'queued',
+        dedupe_key: dedupeKey,
+        requeued_from_terminal_task_id: input.row.task_id,
+        requeued_from_terminal_stage_attempt_id: input.terminalAttempt.stage_attempt_id,
+      },
+    });
+  }
+  return { created: result.changes > 0, taskId: refreshed.task_id, dedupeKey };
+}
+
 function canReconcilePaperMissionStageRouteTask(
   row: FamilyRuntimeTaskRow,
   terminalAttempt: StageAttemptPayload,
@@ -135,6 +339,16 @@ function reconcilePaperMissionStageRouteTaskRowWithAttempt(
   if (result.changes === 0) {
     return false;
   }
+  const successor = shouldAdmitSuccessorForTerminalRoute(payload, terminalAttempt, nextTask)
+    ? enqueuePaperMissionStageRouteSuccessor(db, {
+        row,
+        payload,
+        terminalAttempt,
+        source,
+        reason: nextTask.reason,
+        queuedAt: reconciledAt,
+      })
+    : null;
   insertEvent(db, {
     taskId: row.task_id,
     domainId: row.domain_id,
@@ -154,8 +368,13 @@ function reconcilePaperMissionStageRouteTaskRowWithAttempt(
       closeout_refs: terminalAttempt.closeout_refs,
       closeout_receipt_status: terminalAttempt.closeout_receipt_status,
       domain_ready_verdict: terminalAttempt.route_impact.domain_ready_verdict ?? null,
+      successor_task_id: successor?.taskId ?? null,
+      successor_dedupe_key: successor?.dedupeKey ?? null,
+      successor_created: successor?.created ?? false,
       authority_boundary: {
-        opl: 'queue_attempt_terminal_reconciliation_only',
+        opl: successor
+          ? 'queue_attempt_terminal_reconciliation_and_successor_admission_only'
+          : 'queue_attempt_terminal_reconciliation_only',
         domain: 'truth_quality_artifact_gate_owner',
         domain_truth_mutation: false,
         publication_quality_mutation: false,
@@ -166,6 +385,7 @@ function reconcilePaperMissionStageRouteTaskRowWithAttempt(
         typed_blocker_mutation: false,
         human_gate_mutation: false,
         provider_completion_is_domain_ready: false,
+        successor_provider_admission_requested: false,
         can_claim_provider_running: false,
         can_claim_paper_progress: false,
       },
