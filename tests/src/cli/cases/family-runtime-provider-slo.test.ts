@@ -316,10 +316,17 @@ test('family-runtime provider-worker supervisor installs a KeepAlive resident Te
       'trigger',
       '--provider',
       'temporal',
-    ], env).family_runtime_provider_worker_supervisor;
+    ], {
+      ...env,
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    }).family_runtime_provider_worker_supervisor;
 
     assert.equal(trigger.status, 'triggered');
     assert.equal(trigger.provider_slo_tick.surface_id, 'opl_family_runtime_provider_slo_tick');
+    assert.equal(trigger.provider_slo_tick.provider_worker_repair_receipt.repair_status, 'skipped');
+    assert.equal(trigger.provider_slo_tick.provider_slo_execution_receipt.receipt_status, 'skipped');
+    assert.equal(trigger.provider_slo_tick.provider_slo_execution_receipt.skip_reason, 'cadence_current');
     assert.equal(trigger.provider_slo_tick.authority_boundary.can_write_domain_truth, false);
     assert.equal(trigger.temporal_worker_dependency, true);
     assert.equal(trigger.provider_scheduler_dependency, false);
