@@ -336,6 +336,10 @@ function materializedReadbackToHandoff(payload: JsonRecord) {
     route_target: optionalString(routeCommand?.target),
     stage_terminal_decision_ref: terminalDecisionRef,
     materialized_mission_ref: optionalString(payload.materialized_mission_ref),
+    workspace_root: optionalString(payload.workspace_root),
+    domain_workspace_root: optionalString(payload.domain_workspace_root),
+    repo_root: optionalString(payload.repo_root),
+    profile_ref: optionalString(payload.profile_ref),
     transaction_materialized: true,
     can_submit_to_opl_runtime:
       handoffStatus === 'ready_for_opl_route_command'

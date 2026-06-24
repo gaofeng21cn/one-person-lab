@@ -14,6 +14,8 @@ function readyHandoff(overrides: Record<string, unknown> = {}) {
     study_id: '001-paper',
     mission_id: 'paper-mission::001-paper::gate-clearing::manual',
     candidate_ref: 'ops/medautoscience/paper_mission_consumption_ledger/001-paper/candidate.json',
+    workspace_root: '/tmp/yang-workspace',
+    domain_workspace_root: '/tmp/yang-workspace',
     status: 'accepted_candidate',
     selected_outcome: 'accepted',
     handoff_status: 'ready_for_opl_route_command',
@@ -80,6 +82,8 @@ function materializedReadback(overrides: Record<string, unknown> = {}) {
     mission_id: missionId,
     materialized_mission_ref: 'ops/medautoscience/paper_mission_one_shot_migration/dm002/paper_mission_run.json',
     candidate_manifest_ref: 'ops/medautoscience/paper_mission_one_shot_migration/dm002/candidate_manifest.json',
+    workspace_root: '/tmp/yang-workspace',
+    domain_workspace_root: '/tmp/yang-workspace',
     transaction_state: 'accepted',
     stage_terminal_decision: {
       decision_kind: 'advance',
@@ -195,6 +199,8 @@ test('MAS paper mission route handoff accepts ready command as OPL runtime reque
 test('MAS paper mission route handoff fails closed instead of using OPL command cwd as domain workspace', () => {
   const readback = intakeMasPaperMissionRouteHandoff(readyHandoff({
     candidate_ref: 'ops/medautoscience/paper_mission_consumption_ledger/001-paper/package_manifest.json',
+    workspace_root: '',
+    domain_workspace_root: '',
   }), {
     commandCwd: '/tmp/one-person-lab',
   });

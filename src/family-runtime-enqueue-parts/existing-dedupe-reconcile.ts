@@ -34,7 +34,10 @@ import {
   operatorRetiredStaleResidueBlock,
   transportOnlySucceededDefaultExecutorAdmissionRedriveDecision,
 } from './existing-dedupe-decisions.ts';
-import { listStageAttemptsForTask } from '../family-runtime-stage-attempts.ts';
+import {
+  listStageAttemptsForTask,
+  updateStageAttemptsForTask,
+} from '../family-runtime-stage-attempts.ts';
 
 export {
   defaultExecutorCandidateRow,
@@ -45,6 +48,27 @@ export {
 
 function optionalString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+const PAPER_MISSION_STALE_WORKSPACE_SUPERSEDED_REASON =
+  'paper_mission_stage_route_stale_workspace_superseded_by_domain_workspace_handoff';
+
+function isOplRepoWorkspace(value: string | null) {
+  return Boolean(value && /(?:^|\/)one-person-lab(?:\/|$)/.test(value));
+}
+
+function paperMissionWorkspaceRoot(payload: Record<string, unknown>) {
+  return optionalString(payload.domain_workspace_root)
+    ?? optionalString(payload.workspace_root)
+    ?? optionalString(payload.repo_root);
+}
+
+function isPaperMissionStageRoutePayload(payload: Record<string, unknown>) {
+  return payload.surface_kind === 'opl_mas_paper_mission_route_runtime_request'
+    && (
+      payload.runtime_request_kind === 'mas_paper_mission_stage_route'
+      || payload.runtime_request_kind === undefined
+    );
 }
 
 function isPaperMissionStageRouteReplacementAllowed(input: {
@@ -82,6 +106,106 @@ function isPaperMissionStageRouteReplacementAllowed(input: {
     workspace_root: workspaceRoot,
     previous_status: input.existing.status,
   };
+}
+
+function stalePaperMissionStageRouteWorkspaceReplacement(input: {
+  existing: FamilyRuntimeTaskRow;
+  nextDomainId: string;
+  nextTaskKind: string;
+  existingPayload: Record<string, unknown>;
+  nextPayload: Record<string, unknown>;
+  exportedTaskChanged: boolean;
+  stageAttempts: Array<Record<string, unknown>>;
+}) {
+  if (
+    !input.exportedTaskChanged
+    || input.existing.domain_id !== 'medautoscience'
+    || input.nextDomainId !== 'medautoscience'
+    || input.existing.task_kind !== 'paper_mission/stage-route'
+    || input.nextTaskKind !== 'paper_mission/stage-route'
+    || !isPaperMissionStageRoutePayload(input.existingPayload)
+    || !isPaperMissionStageRoutePayload(input.nextPayload)
+  ) {
+    return null;
+  }
+
+  const nextWorkspaceRoot = paperMissionWorkspaceRoot(input.nextPayload);
+  if (!nextWorkspaceRoot || isOplRepoWorkspace(nextWorkspaceRoot)) {
+    return null;
+  }
+
+  const existingWorkspaceRoot = paperMissionWorkspaceRoot(input.existingPayload)
+    ?? optionalString(input.existingPayload.command_cwd);
+  const staleStageAttemptIds = input.stageAttempts
+    .filter((attempt) => {
+      const status = optionalString(attempt.status);
+      if (
+        status !== 'queued'
+        && status !== 'running'
+        && status !== 'checkpointed'
+        && status !== 'human_gate'
+      ) {
+        return false;
+      }
+      const locator = typeof attempt.workspace_locator === 'object' && attempt.workspace_locator !== null
+        ? attempt.workspace_locator as Record<string, unknown>
+        : {};
+      const attemptWorkspaceRoot = paperMissionWorkspaceRoot(locator)
+        ?? optionalString(locator.command_cwd);
+      return !attemptWorkspaceRoot || isOplRepoWorkspace(attemptWorkspaceRoot);
+    })
+    .map((attempt) => optionalString(attempt.stage_attempt_id))
+    .filter((attemptId): attemptId is string => Boolean(attemptId));
+  const existingWorkspaceStale = !existingWorkspaceRoot || isOplRepoWorkspace(existingWorkspaceRoot);
+  if (!existingWorkspaceStale && staleStageAttemptIds.length === 0) {
+    return null;
+  }
+
+  return {
+    reason: PAPER_MISSION_STALE_WORKSPACE_SUPERSEDED_REASON,
+    previous_workspace_root: existingWorkspaceRoot,
+    next_workspace_root: nextWorkspaceRoot,
+    stale_stage_attempt_ids: staleStageAttemptIds,
+    previous_status: input.existing.status,
+  };
+}
+
+function markPaperMissionStageRouteAttemptsSuperseded(
+  db: DatabaseSync,
+  input: {
+    taskId: string;
+    stageAttemptIds: string[];
+    source: string;
+    previousWorkspaceRoot: string | null;
+    nextWorkspaceRoot: string;
+  },
+) {
+  if (input.stageAttemptIds.length === 0) {
+    return [];
+  }
+  return updateStageAttemptsForTask(db, {
+    taskId: input.taskId,
+    stageAttemptIds: input.stageAttemptIds,
+    status: 'blocked',
+    blockedReason: PAPER_MISSION_STALE_WORKSPACE_SUPERSEDED_REASON,
+    activityEvent: {
+      activity_kind: 'paper_mission_stage_route_workspace_supersession',
+      activity_status: 'blocked',
+      blocked_reason: PAPER_MISSION_STALE_WORKSPACE_SUPERSEDED_REASON,
+      previous_workspace_root: input.previousWorkspaceRoot,
+      next_workspace_root: input.nextWorkspaceRoot,
+      source: input.source,
+      authority_boundary: {
+        opl: 'queue_attempt_workspace_locator_supersession_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        domain_truth_mutation: false,
+        publication_quality_mutation: false,
+        artifact_gate_mutation: false,
+        current_package_mutation: false,
+        provider_completion_is_domain_ready: false,
+      },
+    },
+  });
 }
 
 export function reconcileExistingDedupeTask(
@@ -742,6 +866,57 @@ export function reconcileExistingDedupeTask(
     ? masPaperAutonomyDeadLetterCurrentnessBlock(existing)
     : null;
   const retiredResidueBlock = operatorRetiredStaleResidueBlock(existing);
+  const staleWorkspaceReplacement = retiredResidueBlock
+    ? null
+    : stalePaperMissionStageRouteWorkspaceReplacement({
+        existing,
+        nextDomainId: input.domainId,
+        nextTaskKind: taskKind,
+        existingPayload,
+        nextPayload: payload,
+        exportedTaskChanged,
+        stageAttempts: listStageAttemptsForTask(db, existing.task_id),
+      });
+  if (staleWorkspaceReplacement) {
+    const supersededStageAttempts = markPaperMissionStageRouteAttemptsSuperseded(db, {
+      taskId: existing.task_id,
+      stageAttemptIds: staleWorkspaceReplacement.stale_stage_attempt_ids,
+      source: input.source ?? 'opl-cli',
+      previousWorkspaceRoot: staleWorkspaceReplacement.previous_workspace_root,
+      nextWorkspaceRoot: staleWorkspaceReplacement.next_workspace_root,
+    });
+    const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
+    return applyExistingDedupeRequeue(db, {
+      input,
+      taskKind,
+      exportedPayloadJson,
+      existing,
+      nextStatus,
+      nextRequiresApproval: requiresApproval,
+      nextLastError: initialLastError,
+      createdAt,
+      dedupeKey,
+      activeHoldId: activeHold?.hold_id ?? null,
+      eventType: 'task_requeued_from_paper_mission_stage_route_stale_workspace',
+      eventPayload: {
+        ...staleWorkspaceReplacement,
+        superseded_stage_attempt_ids: supersededStageAttempts
+          .map((attempt: { stage_attempt_id: string }) => attempt.stage_attempt_id),
+        authority_boundary: {
+          opl: 'queue_runtime_workspace_locator_currentness_repair_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          domain_truth_mutation: false,
+          publication_quality_mutation: false,
+          artifact_gate_mutation: false,
+          current_package_mutation: false,
+          provider_stage_attempt_started: false,
+          provider_completion_is_domain_ready: false,
+        },
+      },
+      notificationTitle: 'MAS PaperMission stage route requeued from stale workspace locator',
+      requeuedFromTerminal: true,
+    });
+  }
   const paperMissionStageRouteReplacement = isPaperMissionStageRouteReplacementAllowed({
     existing,
     nextDomainId: input.domainId,

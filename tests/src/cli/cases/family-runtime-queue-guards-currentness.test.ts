@@ -228,6 +228,141 @@ test('family-runtime queue retire allows MAS PaperMission stage-route contract r
   }
 });
 
+test('family-runtime requeues MAS PaperMission stage-route when stale OPL workspace owns the dedupe key', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-paper-route-stale-workspace-'));
+  try {
+    const env = familyRuntimeEnv(stateRoot);
+    const dedupeKey = [
+      'paper-mission-route',
+      '003-dpcc-primary-care-phenotype-treatment-gap',
+      'paper-mission-transaction:dm003:submission',
+      'resume_stage',
+    ].join(':');
+    const enqueued = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_mission/stage-route',
+      '--payload',
+      JSON.stringify({
+        surface_kind: 'opl_mas_paper_mission_route_runtime_request',
+        runtime_request_kind: 'mas_paper_mission_stage_route',
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        paper_mission_transaction_ref: 'paper-mission-transaction:dm003:submission',
+        command_kind: 'resume_stage',
+        route_target: 'submission_milestone_candidate',
+        workspace_root: '/Users/gaofeng/workspace/one-person-lab',
+        command_cwd: '/Users/gaofeng/workspace/one-person-lab',
+      }),
+      '--dedupe-key',
+      dedupeKey,
+      '--source',
+      'test-stale-workspace-before-fix',
+    ], env);
+    const taskId = enqueued.family_runtime_enqueue.task.task_id;
+    const attempt = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'submission_milestone_candidate',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      JSON.stringify({
+        workspace_root: '/Users/gaofeng/workspace/one-person-lab',
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      }),
+      '--source-fingerprint',
+      'paper-route-stale-opl-workspace',
+      '--executor-kind',
+      'codex_cli',
+      '--task',
+      taskId,
+    ], env).family_runtime_stage_attempt.attempt;
+    const db = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
+    try {
+      db.prepare(`
+        UPDATE tasks
+        SET status = 'running', last_error = 'paper_mission_stage_route_temporal_started'
+        WHERE task_id = ?
+      `).run(taskId);
+      db.prepare(`
+        UPDATE stage_attempts
+        SET status = 'running'
+        WHERE stage_attempt_id = ?
+      `).run(attempt.stage_attempt_id);
+    } finally {
+      db.close();
+    }
+
+    const replacement = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_mission/stage-route',
+      '--payload',
+      JSON.stringify({
+        surface_kind: 'opl_mas_paper_mission_route_runtime_request',
+        runtime_request_kind: 'mas_paper_mission_stage_route',
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        paper_mission_transaction_ref: 'paper-mission-transaction:dm003:submission',
+        command_kind: 'resume_stage',
+        route_target: 'submission_milestone_candidate',
+        workspace_root: '/tmp/yang-workspace',
+        domain_workspace_root: '/tmp/yang-workspace',
+        command_cwd: '/tmp/yang-workspace',
+      }),
+      '--dedupe-key',
+      dedupeKey,
+      '--source',
+      'test-paper-route-stale-workspace-replacement',
+    ], env);
+    const task = runCli([
+      'family-runtime',
+      'queue',
+      'inspect',
+      taskId,
+    ], env);
+    const staleAttempt = task.family_runtime_task.stage_attempts.find(
+      (entry: { stage_attempt_id: string }) => entry.stage_attempt_id === attempt.stage_attempt_id,
+    );
+
+    assert.equal(replacement.family_runtime_enqueue.accepted, true);
+    assert.equal(replacement.family_runtime_enqueue.requeued_from_terminal, true);
+    assert.equal(replacement.family_runtime_enqueue.idempotent_noop, false);
+    assert.equal(replacement.family_runtime_enqueue.task.status, 'queued');
+    assert.equal(replacement.family_runtime_enqueue.task.payload.workspace_root, '/tmp/yang-workspace');
+    assert.equal(replacement.family_runtime_enqueue.task.payload.domain_workspace_root, '/tmp/yang-workspace');
+    assert.equal(task.family_runtime_task.task.status, 'queued');
+    assert.equal(task.family_runtime_task.task.payload.workspace_root, '/tmp/yang-workspace');
+    assert.equal(task.family_runtime_task.task.payload.domain_workspace_root, '/tmp/yang-workspace');
+    assert.equal(staleAttempt.status, 'blocked');
+    assert.equal(
+      staleAttempt.blocked_reason,
+      'paper_mission_stage_route_stale_workspace_superseded_by_domain_workspace_handoff',
+    );
+    const requeueEvent = task.family_runtime_task.events.find(
+      (event: { event_type: string }) =>
+        event.event_type === 'task_requeued_from_paper_mission_stage_route_stale_workspace',
+    );
+    assert.ok(requeueEvent);
+    assert.equal(
+      requeueEvent.payload.reason,
+      'paper_mission_stage_route_stale_workspace_superseded_by_domain_workspace_handoff',
+    );
+    assert.deepEqual(requeueEvent.payload.superseded_stage_attempt_ids, [attempt.stage_attempt_id]);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime queue list filters by domain, study, and status for Progress-First monitoring', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-queue-list-filter-'));
   try {
