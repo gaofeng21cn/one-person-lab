@@ -307,7 +307,7 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
       scriptBody: null,
     },
     {
-      project: 'one-person-lab',
+      project: 'opl-scholarskills',
       plugin: 'opl-scholarskills',
       canonicalPlugin: 'opl-scholarskills',
       installer: null,
@@ -327,7 +327,7 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
       writeFakeBookForgeGeneratedSurfacePack(repoRoot);
       continue;
     }
-    if (spec.project === 'one-person-lab') {
+    if (spec.project === 'opl-scholarskills') {
       const pluginRoot = path.join(repoRoot, 'plugins', spec.canonicalPlugin);
       const skillRoot = path.join(pluginRoot, 'skills', spec.canonicalPlugin);
       fs.mkdirSync(path.join(pluginRoot, '.codex-plugin'), { recursive: true });

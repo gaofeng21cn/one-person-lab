@@ -651,7 +651,7 @@ test('opl connect skills discovers OPL-managed module installs without OPL_FAMIL
       OPL_REDCUBE_REPO_ROOT: path.join(missingRepoRoot, 'redcube-ai'),
       OPL_OPLMETAAGENT_REPO_ROOT: path.join(missingRepoRoot, 'opl-meta-agent'),
       OPL_OPLBOOKFORGE_REPO_ROOT: path.join(missingRepoRoot, 'opl-bookforge'),
-      OPL_SCHOLARSKILLS_REPO_ROOT: path.join(missingRepoRoot, 'one-person-lab'),
+      OPL_SCHOLARSKILLS_REPO_ROOT: path.join(workspaceRoot, 'opl-scholarskills'),
     });
 
     const medAutoScience = output.skill_catalog.packs.find(
@@ -672,7 +672,10 @@ test('opl connect skills discovers OPL-managed module installs without OPL_FAMIL
     assert.ok(scholarSkills);
     assert.equal(scholarSkills.repo_found, true);
     assert.equal(scholarSkills.ready_to_sync, true);
-    assert.match(scholarSkills.repo_root, /one-person-lab/);
+    assert.equal(
+      scholarSkills.repo_root,
+      path.join(workspaceRoot, 'opl-scholarskills'),
+    );
     assert.equal(scholarSkills.capability_plugin_distribution.default_sync_scope, 'project');
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });
@@ -884,8 +887,14 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.equal(output.skill_sync.codex_plugin_registry.surface_id, 'opl_codex_plugin_registry');
     assert.equal(output.skill_sync.codex_plugin_registry.summary.registered, 5);
     assert.equal(output.skill_sync.codex_plugin_registry.summary.removed_standalone_mcp_servers, 1);
+    const stateDir = process.env.OPL_STATE_DIR
+      ? path.resolve(process.env.OPL_STATE_DIR)
+      : path.join(homeDir, 'Library', 'Application Support', 'OPL', 'state');
     for (const item of output.skill_sync.codex_plugin_registry.items) {
-      assert.match(item.marketplace_root, /state\/codex-plugin-marketplaces\/.+-local$/);
+      assert.equal(
+        item.marketplace_root,
+        path.join(stateDir, 'codex-plugin-marketplaces', item.marketplace_id),
+      );
       assert.equal(fs.existsSync(item.marketplace_path), true);
       assert.equal(fs.existsSync(item.plugin_manifest_path), true);
     }

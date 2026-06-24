@@ -158,6 +158,8 @@ test('family-runtime intake enqueues ready MAS PaperMission route handoff as OPL
           study_id: '002-dm-china-us-mortality-attribution',
           mission_id: 'paper-mission::002-dm-china-us-mortality-attribution::gate-clearing::manual',
           candidate_ref: 'ops/medautoscience/paper_mission_consumption_ledger/dm002/candidate.json',
+          workspace_root: repoRoot,
+          domain_workspace_root: repoRoot,
           status: 'accepted_candidate',
           selected_outcome: 'accepted',
           handoff_status: 'ready_for_opl_route_command',
@@ -420,6 +422,8 @@ test('family-runtime intake consumes MAS default PaperMission materialized readb
     mission_id: input.missionId,
     materialized_mission_ref: `ops/medautoscience/paper_mission_one_shot_migration/${input.studyId}/paper_mission_run.json`,
     candidate_manifest_ref: `ops/medautoscience/paper_mission_one_shot_migration/${input.studyId}/candidate_manifest.json`,
+    workspace_root: workspaceRoot,
+    domain_workspace_root: workspaceRoot,
     transaction_state: input.status,
     stage_terminal_decision: input.decisionKind === 'advance'
       ? {
