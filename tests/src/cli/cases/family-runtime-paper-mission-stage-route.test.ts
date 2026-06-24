@@ -706,6 +706,122 @@ test('family-runtime backfills successor admission for historical blocked termin
   }
 });
 
+test('family-runtime does not backfill terminal successors from legacy PaperMission routes without route identity', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-terminal-legacy-'));
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_mission/stage-route',
+      '--payload',
+      JSON.stringify(paperMissionRoutePayload({
+        command_kind: 'resume_stage',
+        route_target: 'continue paper-facing submission milestone work',
+      })),
+      '--dedupe-key',
+      'paper-mission-route:dm002:legacy-terminal-backfill',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    runCli(['family-runtime', 'tick', '--source', 'test-paper-route-legacy-start'], env);
+    const runningTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const attemptId = runningTask.family_runtime_task.stage_attempts[0].stage_attempt_id;
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      attemptId,
+      '--stage-packet-ref',
+      'packet:paper-mission-route-dm002-legacy',
+      '--closeout-packet',
+      JSON.stringify({
+        surface_kind: 'stage_attempt_closeout_packet',
+        closeout_refs: ['typed-blocker:legacy-route-identity-missing'],
+        next_owner: 'med-autoscience',
+        domain_ready_verdict: 'domain_gate_pending',
+        route_impact: {
+          decision: 'bounded_repair',
+          next_owner: 'med-autoscience',
+          reason: 'legacy_route_identity_missing',
+        },
+      }),
+    ], env);
+    const afterCloseout = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    assert.equal(afterCloseout.family_runtime_task.task.status, 'blocked');
+    assert.equal(afterCloseout.family_runtime_task.task.last_error, 'paper_mission_stage_route_domain_gate_pending');
+
+    const originalStateDir = process.env.OPL_STATE_DIR;
+    try {
+      process.env.OPL_STATE_DIR = stateRoot;
+      const { db } = openQueueDb();
+      db.prepare('DELETE FROM tasks WHERE dedupe_key = ?').run(`paper-mission-route-terminal-successor:${taskId}:${attemptId}`);
+      db.prepare(`
+        UPDATE tasks
+        SET payload_json = json_remove(
+            payload_json,
+            '$.route_identity_key',
+            '$.attempt_idempotency_key',
+            '$.request_idempotency_key'
+          )
+        WHERE task_id = ?
+      `).run(taskId);
+      db.prepare(`
+        DELETE FROM events
+        WHERE event_type = 'task_enqueued'
+          AND json_extract(payload_json, '$.dedupe_key') = ?
+      `).run(`paper-mission-route-terminal-successor:${taskId}:${attemptId}`);
+      db.close();
+    } finally {
+      process.env.OPL_STATE_DIR = originalStateDir;
+    }
+
+    const backfill = runCli(['family-runtime', 'tick', '--source', 'test-paper-route-legacy-terminal'], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const runningQueue = runCli([
+      'family-runtime',
+      'queue',
+      'list',
+      '--domain',
+      'medautoscience',
+      '--study',
+      '002-dm-china-us-mortality-attribution',
+      '--task-kind',
+      'paper_mission/stage-route',
+      '--status',
+      'running',
+    ], env);
+    const identityNotReadyEvents = task.family_runtime_task.events.filter(
+      (event: { event_type: string; payload: Record<string, unknown> }) =>
+        event.event_type === 'paper_mission_stage_route_terminal_task_reconciled'
+        && event.payload.terminal_successor_identity_ready === false,
+    );
+    const reconcileEvent = identityNotReadyEvents[0];
+
+    assert.equal(backfill.family_runtime_tick.reconciled_paper_mission_stage_route_terminal_count, 1);
+    assert.deepEqual(backfill.family_runtime_tick.reconciled_paper_mission_stage_route_terminal_task_ids, [taskId]);
+    assert.equal(runningQueue.family_runtime_queue.queue.total, 0);
+    assert.equal(task.family_runtime_task.task.status, 'blocked');
+    assert.equal(task.family_runtime_task.task.last_error, 'paper_mission_stage_route_domain_gate_pending');
+    assert.notEqual(reconcileEvent, undefined);
+    assert.equal(identityNotReadyEvents.length, 1);
+    assert.equal(reconcileEvent.payload.successor_task_id, null);
+    assert.equal(reconcileEvent.payload.successor_created, false);
+    assert.equal(reconcileEvent.payload.terminal_successor_identity_ready, false);
+    assert.deepEqual(reconcileEvent.payload.missing_terminal_successor_identity_fields, [
+      'route_identity_key',
+      'attempt_idempotency_key',
+    ]);
+    assert.equal(reconcileEvent.payload.authority_boundary.can_claim_paper_progress, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 for (const commandKind of ['route_back', 'resume_stage'] as const) {
   test(`family-runtime terminal successor admission supports ${commandKind} PaperMission route commands`, () => {
     const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), `opl-paper-mission-stage-route-${commandKind}-`));

@@ -27,6 +27,15 @@ const SUCCESSOR_ROUTE_COMMAND_KINDS = new Set([
   'resume_stage',
   'start_next_stage',
 ]);
+const TERMINAL_SUCCESSOR_REQUIRED_IDENTITY_FIELDS = [
+  'study_id',
+  'paper_mission_transaction_ref',
+  'opl_route_command_ref',
+  'command_kind',
+  'route_target',
+  'route_identity_key',
+  'attempt_idempotency_key',
+] as const;
 const TERMINAL_STAGE_ATTEMPT_STATUSES = new Set<StageAttemptStatus>([
   'blocked',
   'completed',
@@ -134,6 +143,10 @@ function shouldAdmitSuccessorForTerminalRoute(
     && hasAcceptedTypedCloseout(terminalAttempt)
     && generation < MAX_TERMINAL_SUCCESSOR_GENERATION
     && Boolean(commandKind && SUCCESSOR_ROUTE_COMMAND_KINDS.has(commandKind));
+}
+
+function missingTerminalSuccessorIdentityFields(payload: Record<string, unknown>) {
+  return TERMINAL_SUCCESSOR_REQUIRED_IDENTITY_FIELDS.filter((field) => !optionalString(payload[field]));
 }
 
 function successorDedupeKey(row: FamilyRuntimeTaskRow, terminalAttempt: StageAttemptPayload) {
@@ -304,6 +317,22 @@ function existingPaperMissionStageRouteSuccessor(
   ) as FamilyRuntimeTaskRow | undefined;
 }
 
+function existingTerminalSuccessorIdentityNotReadyEvent(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  terminalAttempt: StageAttemptPayload,
+) {
+  return db.prepare(`
+    SELECT 1
+    FROM events
+    WHERE task_id = ?
+      AND event_type = 'paper_mission_stage_route_terminal_task_reconciled'
+      AND json_extract(payload_json, '$.stage_attempt_id') = ?
+      AND json_extract(payload_json, '$.terminal_successor_identity_ready') = 0
+    LIMIT 1
+  `).get(row.task_id, terminalAttempt.stage_attempt_id) as { 1: number } | undefined;
+}
+
 function canReconcilePaperMissionStageRouteTask(
   row: FamilyRuntimeTaskRow,
   terminalAttempt: StageAttemptPayload,
@@ -356,11 +385,18 @@ function reconcilePaperMissionStageRouteTaskRowWithAttempt(
   }
   const nextTask = paperMissionStageRouteTaskStatusForTerminalAttempt(terminalAttempt);
   const reconciledAt = nowIso();
-  const admitSuccessor = shouldAdmitSuccessorForTerminalRoute(payload, terminalAttempt, nextTask);
+  const missingSuccessorIdentityFields = missingTerminalSuccessorIdentityFields(payload);
+  const successorIdentityReady = missingSuccessorIdentityFields.length === 0;
+  if (!successorIdentityReady && existingTerminalSuccessorIdentityNotReadyEvent(db, row, terminalAttempt)) {
+    return false;
+  }
+  const admitSuccessor = successorIdentityReady
+    && shouldAdmitSuccessorForTerminalRoute(payload, terminalAttempt, nextTask);
   if (row.status === 'blocked' && admitSuccessor && existingPaperMissionStageRouteSuccessor(db, row, terminalAttempt)) {
     return false;
   }
-  const backfillOnly = canBackfillBlockedTerminalSuccessor(row, payload, terminalAttempt);
+  const backfillOnly = successorIdentityReady
+    && canBackfillBlockedTerminalSuccessor(row, payload, terminalAttempt);
   const result = db.prepare(`
     UPDATE tasks
     SET status = ?, lease_owner = NULL, lease_expires_at = NULL,
@@ -406,6 +442,8 @@ function reconcilePaperMissionStageRouteTaskRowWithAttempt(
       route_identity_key: payload.route_identity_key ?? null,
       attempt_idempotency_key: payload.attempt_idempotency_key ?? null,
       request_idempotency_key: payload.request_idempotency_key ?? null,
+      terminal_successor_identity_ready: successorIdentityReady,
+      missing_terminal_successor_identity_fields: missingSuccessorIdentityFields,
       stage_attempt_id: terminalAttempt.stage_attempt_id,
       stage_attempt_status: terminalAttempt.status,
       provider_status: terminalAttempt.provider_run.provider_status ?? null,
