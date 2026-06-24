@@ -48,3 +48,16 @@ opl scholar-skills doctor --json
 ```
 
 `materialize` writes a deterministic refs-only `materialized_candidate_package` containing package manifests and an unsigned execution receipt candidate. It must not write artifact bodies or authority surfaces.
+
+## Display Gallery
+
+For `opl.scholarskills.display`, use the OPL-side gallery entry at `docs/active/opl-scholar-skills-display-gallery.md`. It points to the MAS-owned human review gallery:
+
+- `med-autoscience/docs/delivery/medical-display/examples/medical_display_gallery.pdf`
+- `med-autoscience/docs/delivery/medical-display/examples/medical_display_gallery_reference.md`
+- `med-autoscience/docs/delivery/medical-display/examples/display_pack_gallery_status.md`
+- `med-autoscience/docs/delivery/medical-display/examples/display_pack_gallery_quality_audit.md`
+- `med-autoscience/docs/delivery/medical-display/examples/gallery_manifest.json`
+- `med-autoscience/docs/delivery/medical-display/examples/medical_display_gallery_assets/gallery_manifest.json`
+
+Treat these refs as human review and visual-audit preview refs only. They do not prove publication readiness, owner acceptance, artifact authority, or paper truth.

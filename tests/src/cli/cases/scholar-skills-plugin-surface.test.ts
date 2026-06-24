@@ -4,6 +4,7 @@ const pluginRoot = path.join(repoRoot, 'plugins', 'opl-scholarskills');
 const manifestPath = path.join(pluginRoot, '.codex-plugin', 'plugin.json');
 const skillRoot = path.join(pluginRoot, 'skills', 'opl-scholarskills');
 const skillPath = path.join(skillRoot, 'SKILL.md');
+const displayGalleryDocPath = path.join(repoRoot, 'docs', 'active', 'opl-scholar-skills-display-gallery.md');
 
 function readJson(pathname: string) {
   return JSON.parse(fs.readFileSync(pathname, 'utf8'));
@@ -83,6 +84,32 @@ test('OPL ScholarSkills SKILL covers contract modules, commands, and authority g
     'can_create_typed_blocker: false',
     'refs-only',
     'materialized_candidate_package',
+  ]) {
+    assertContains(skill, token);
+  }
+});
+
+test('OPL ScholarSkills exposes a Display gallery human review entry without claiming authority', () => {
+  const skill = readSkill();
+  const displayGallery = fs.readFileSync(displayGalleryDocPath, 'utf8');
+
+  for (const token of [
+    'OPL ScholarSkills Display Gallery',
+    'med-autoscience/docs/delivery/medical-display/examples/medical_display_gallery.pdf',
+    'med-autoscience/docs/delivery/medical-display/examples/display_pack_gallery_quality_audit.md',
+    'visual gallery templates: `37`',
+    'evidence gallery templates: `34`',
+    'publication-ready claim authorized: `false`',
+    'do not prove publication readiness',
+  ]) {
+    assertContains(displayGallery, token);
+  }
+
+  for (const token of [
+    'docs/active/opl-scholar-skills-display-gallery.md',
+    'medical_display_gallery.pdf',
+    'display_pack_gallery_quality_audit.md',
+    'human review and visual-audit preview refs only',
   ]) {
     assertContains(skill, token);
   }

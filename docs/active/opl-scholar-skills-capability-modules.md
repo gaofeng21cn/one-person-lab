@@ -115,11 +115,12 @@ MAS current_owner_delta
 
 ## Display Gallery 人审入口
 
-`opl.scholarskills.display` 的人审 gallery 入口仍由 MAS Display Pack 持有。当前 OPL readback 只引用这些 MAS-owned review refs，不复制或改写 gallery truth：
+`opl.scholarskills.display` 的人审 gallery 入口仍由 MAS Display Pack 持有。OPL 侧入口文档是 [OPL ScholarSkills Display Gallery](./opl-scholar-skills-display-gallery.md)，它只引用这些 MAS-owned review refs，不复制或改写 gallery truth：
 
 - `med-autoscience/docs/delivery/medical-display/examples/medical_display_gallery.pdf`
 - `med-autoscience/docs/delivery/medical-display/examples/medical_display_gallery_reference.md`
 - `med-autoscience/docs/delivery/medical-display/examples/display_pack_gallery_status.md`
+- `med-autoscience/docs/delivery/medical-display/examples/display_pack_gallery_quality_audit.md`
 - `med-autoscience/docs/delivery/medical-display/examples/gallery_manifest.json`
 - `med-autoscience/docs/delivery/medical-display/examples/medical_display_gallery_assets/gallery_manifest.json`
 
