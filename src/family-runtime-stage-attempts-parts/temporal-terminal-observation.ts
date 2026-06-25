@@ -245,6 +245,61 @@ function taskDeadLetterReasonForTemporalNonCompletionBlocker(blocker: string) {
     : 'temporal_stage_attempt_not_completed';
 }
 
+function stringList(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    : [];
+}
+
+function recordList(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is Record<string, unknown> => isRecord(entry))
+    : [];
+}
+
+function blockedCloseoutProjectionFromTemporalObservation(
+  observation: TemporalStageAttemptTerminalObservation,
+) {
+  if (observation.query?.status !== 'blocked') {
+    return null;
+  }
+  const closeoutRefs = stringList(observation.query.closeout_refs);
+  if (closeoutRefs.length === 0) {
+    return null;
+  }
+  return {
+    closeout_refs: closeoutRefs,
+    consumed_refs: stringList(observation.query.consumed_refs),
+    consumed_memory_refs: stringList(observation.query.consumed_memory_refs),
+    writeback_receipt_refs: stringList(observation.query.writeback_receipt_refs),
+    rejected_writes: recordList(observation.query.rejected_writes),
+    route_impact: isRecord(observation.query.route_impact) ? observation.query.route_impact : {},
+  };
+}
+
+function mergeRouteImpact(
+  row: StageAttemptRow,
+  projection: ReturnType<typeof blockedCloseoutProjectionFromTemporalObservation>,
+) {
+  return {
+    ...parseStageAttemptJsonObject(row.route_impact_json),
+    ...(projection?.route_impact ?? {}),
+  };
+}
+
+function mergeCloseoutRefs(
+  row: StageAttemptRow,
+  projection: ReturnType<typeof blockedCloseoutProjectionFromTemporalObservation>,
+) {
+  return [
+    ...new Set([
+      ...parseStageAttemptJsonList(row.closeout_refs_json)
+        .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0),
+      ...(projection?.closeout_refs ?? []),
+    ]),
+  ];
+}
+
 function closeoutPacketFromTemporalCompletedObservation(
   observation: TemporalStageAttemptTerminalObservation,
 ) {
@@ -361,6 +416,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
   }
   const observedAt = nowIso();
   if (nonCompletionBlocker && row.status !== 'completed') {
+    const blockedCloseoutProjection = blockedCloseoutProjectionFromTemporalObservation(observation);
     const providerRun = {
       ...parseStageAttemptJsonObject(row.provider_run_json),
       provider_kind: 'temporal',
@@ -373,6 +429,9 @@ export function syncStageAttemptFromTemporalTerminalObservation(
         workflow_status: observation.workflow_status ?? null,
         query_status: observation.query?.status ?? null,
         reason: nonCompletionBlocker,
+        ...(blockedCloseoutProjection
+          ? { closeout_refs: blockedCloseoutProjection.closeout_refs }
+          : {}),
       },
     };
     const activityEvents = appendActivityEventToRow(row, {
@@ -381,6 +440,16 @@ export function syncStageAttemptFromTemporalTerminalObservation(
       workflow_status: observation.workflow_status ?? null,
       query_status: observation.query?.status ?? null,
       reason: nonCompletionBlocker,
+      ...(blockedCloseoutProjection
+        ? {
+            closeout_refs: blockedCloseoutProjection.closeout_refs,
+            consumed_refs: blockedCloseoutProjection.consumed_refs,
+            consumed_memory_refs: blockedCloseoutProjection.consumed_memory_refs,
+            writeback_receipt_refs: blockedCloseoutProjection.writeback_receipt_refs,
+            rejected_writes: blockedCloseoutProjection.rejected_writes,
+            route_impact: blockedCloseoutProjection.route_impact,
+          }
+        : {}),
       authority_boundary: {
         opl: 'provider_transport_status_projection_only',
         domain: 'truth_quality_artifact_gate_owner',
@@ -389,13 +458,15 @@ export function syncStageAttemptFromTemporalTerminalObservation(
     });
     db.prepare(`
       UPDATE stage_attempts
-      SET status = 'blocked', blocked_reason = ?, provider_run_json = ?, activity_events_json = ?,
-        closeout_receipt_status = NULL, updated_at = ?
+      SET status = 'blocked', blocked_reason = ?, closeout_refs_json = ?, provider_run_json = ?,
+        activity_events_json = ?, route_impact_json = ?, closeout_receipt_status = NULL, updated_at = ?
       WHERE stage_attempt_id = ?
     `).run(
       nonCompletionBlocker,
+      JSON.stringify(mergeCloseoutRefs(row, blockedCloseoutProjection)),
       JSON.stringify(providerRun),
       JSON.stringify(activityEvents),
+      JSON.stringify(mergeRouteImpact(row, blockedCloseoutProjection)),
       observedAt,
       observation.stage_attempt_id,
     );

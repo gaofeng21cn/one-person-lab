@@ -115,7 +115,11 @@ exit 64
       noOutputTimeoutMs: 10_000,
     });
 
-    assert.equal(receipt.closeout_packet, null);
+    assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+      'opl://stage-attempts/sat_live_runner_command_no_progress_test/runtime-blockers/codex_cli_command_execution_no_progress',
+    ]);
+    assert.equal(receipt.closeout_packet?.authority_boundary?.provider_completion_is_domain_ready, false);
     assert.equal(receipt.runner_status.exit_code, 124);
     assert.equal(receipt.process_output_summary?.timeout_reason, 'command_no_progress_timeout');
     assert.equal(receipt.process_output_summary?.blocked_reason, 'codex_cli_command_execution_no_progress');
@@ -184,7 +188,11 @@ exit 64
     });
 
     assert.equal(Date.now() - startedAt < 1_900, true);
-    assert.equal(receipt.closeout_packet, null);
+    assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+      'opl://stage-attempts/sat_unsupported_function_call_test/runtime-blockers/codex_cli_unsupported_function_call',
+    ]);
+    assert.equal(receipt.closeout_packet?.authority_boundary?.provider_completion_is_domain_ready, false);
     assert.equal(receipt.process_output_summary?.blocked_reason, 'codex_cli_unsupported_function_call');
     assert.equal(receipt.process_output_summary?.timeout_reason, 'unsupported_tool_protocol');
     assert.equal(receipt.process_output_summary?.pending_function_call_count, 1);
@@ -344,9 +352,13 @@ exit 64
       noOutputTimeoutMs: 100,
     });
 
-    assert.equal(receipt.closeout_packet, null);
+    assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+      'opl://stage-attempts/sat_resolved_function_call_test/runtime-blockers/codex_cli_typed_closeout_not_materialized',
+    ]);
+    assert.equal(receipt.closeout_packet?.authority_boundary?.provider_completion_is_domain_ready, false);
     assert.equal(receipt.process_output_summary?.timeout_reason, 'no_output_timeout');
-    assert.equal(receipt.process_output_summary?.blocked_reason, undefined);
+    assert.equal(receipt.process_output_summary?.blocked_reason, 'codex_cli_typed_closeout_not_materialized');
     assert.equal(receipt.process_output_summary?.pending_function_call_count, undefined);
     assert.equal(receipt.process_output_summary?.function_call_names, undefined);
   } finally {

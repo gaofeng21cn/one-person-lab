@@ -42,6 +42,12 @@ const TERMINAL_STAGE_ATTEMPT_STATUSES = new Set<StageAttemptStatus>([
   'failed',
   'dead_lettered',
 ]);
+const LIVE_STAGE_ATTEMPT_STATUSES = new Set<StageAttemptStatus>([
+  'queued',
+  'running',
+  'checkpointed',
+  'human_gate',
+]);
 const SUPERSEDABLE_PROVIDER_BLOCKERS = new Set([
   'temporal_stage_attempt_completed_missing_typed_closeout',
 ]);
@@ -110,6 +116,35 @@ function latestLinkedTerminalStageAttempt(row: FamilyRuntimeTaskRow) {
     attempt.task_id === row.task_id
     && TERMINAL_STAGE_ATTEMPT_STATUSES.has(attempt.status)
   );
+}
+
+function hasLaterLiveLinkedStageAttempt(
+  db: DatabaseSync,
+  terminalAttempt: StageAttemptPayload,
+) {
+  if (!terminalAttempt.task_id) {
+    return false;
+  }
+  const laterLiveAttempt = db.prepare(`
+    SELECT stage_attempt_id
+    FROM stage_attempts
+    WHERE task_id = @task_id
+      AND stage_attempt_id != @stage_attempt_id
+      AND status IN (${[...LIVE_STAGE_ATTEMPT_STATUSES].map((status) => `'${status}'`).join(', ')})
+      AND (
+        created_at > @created_at
+        OR (created_at = @created_at AND rowid > (
+          SELECT rowid FROM stage_attempts WHERE stage_attempt_id = @stage_attempt_id
+        ))
+      )
+    ORDER BY created_at DESC, rowid DESC
+    LIMIT 1
+  `).get({
+    task_id: terminalAttempt.task_id,
+    stage_attempt_id: terminalAttempt.stage_attempt_id,
+    created_at: terminalAttempt.created_at,
+  }) as { stage_attempt_id: string } | undefined;
+  return Boolean(laterLiveAttempt);
 }
 
 function paperMissionStageRouteTaskStatusForTerminalAttempt(attempt: StageAttemptPayload) {
@@ -408,6 +443,9 @@ function reconcilePaperMissionStageRouteTaskRowWithAttempt(
     return false;
   }
   if (!TERMINAL_STAGE_ATTEMPT_STATUSES.has(terminalAttempt.status)) {
+    return false;
+  }
+  if (hasLaterLiveLinkedStageAttempt(db, terminalAttempt)) {
     return false;
   }
   if (!canReconcilePaperMissionStageRouteTask(row, terminalAttempt)) {

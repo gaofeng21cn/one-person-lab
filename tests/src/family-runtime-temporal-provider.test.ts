@@ -832,6 +832,90 @@ test('Temporal StageAttemptWorkflow consumes Codex activity typed closeout for p
   }
 });
 
+test('Temporal StageAttemptWorkflow keeps OPL provider-runtime closeout as blocked', async () => {
+  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const taskQueue = `opl-stage-attempt-provider-runtime-closeout-test-${Date.now()}`;
+  try {
+    const worker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue,
+      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      activities: {
+        ...activities,
+        codexStageActivity: async (input: TemporalStageAttemptWorkflowInput) => ({
+          surface_kind: 'temporal_codex_stage_activity_receipt',
+          activity_kind: 'codex_stage_activity',
+          activity_status: 'completed',
+          stage_attempt_id: input.stage_attempt_id,
+          stage_id: input.stage_id,
+          checkpoint_refs: input.checkpoint_refs ?? [],
+          closeout_packet: {
+            surface_kind: 'stage_attempt_closeout_packet',
+            stage_attempt_id: input.stage_attempt_id,
+            closeout_refs: [
+              `opl://stage-attempts/${input.stage_attempt_id}/runtime-blockers/codex_cli_typed_closeout_not_materialized`,
+            ],
+            consumed_refs: ['packet:dm003-submission'],
+            next_owner: input.domain_id,
+            domain_ready_verdict: 'domain_gate_pending',
+            rejected_writes: [{
+              reason: 'codex_cli_typed_closeout_not_materialized',
+              provider_completion_is_domain_ready: false,
+            }],
+            route_impact: {
+              provider_blocker_reason: 'codex_cli_typed_closeout_not_materialized',
+              provider_completion_is_domain_ready: false,
+            },
+            authority_boundary: {
+              opl: 'provider_runtime_closeout_transport_only',
+              domain: 'truth_quality_artifact_gate_owner',
+              can_write_domain_truth: false,
+              can_create_owner_receipt: false,
+              can_create_typed_blocker: false,
+              provider_completion_is_domain_ready: false,
+            },
+          },
+        }),
+      },
+    });
+
+    const result = await worker.runUntil(async () => {
+      const input = workflowInput();
+      const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
+        args: [{
+          ...input,
+          closeout_packet: null,
+        }],
+        taskQueue,
+        workflowId: `wf-temporal-provider-runtime-closeout-test-${Date.now()}`,
+      });
+      return await handle.result();
+    });
+
+    assert.equal(result.status, 'blocked');
+    assert.equal(result.completion_boundary.provider_completion, 'not_completed');
+    assert.deepEqual(result.closeout_refs, [
+      'opl://stage-attempts/sat_temporal_test/runtime-blockers/codex_cli_typed_closeout_not_materialized',
+    ]);
+    const dispatchEvent = result.activity_events.find(
+      (event) => event.activity_kind === 'domain_handler_dispatch_activity',
+    );
+    assert.equal(dispatchEvent?.activity_status, 'blocked');
+    assert.equal(dispatchEvent?.blocked_reason, 'codex_cli_typed_closeout_not_materialized');
+    assert.equal(
+      (dispatchEvent?.route_impact as Record<string, unknown>)?.runtime_blocker_is_domain_owner_answer,
+      false,
+    );
+    assert.equal(
+      (dispatchEvent?.authority_boundary as Record<string, unknown>)?.provider_completion_is_domain_ready,
+      false,
+    );
+  } finally {
+    await testEnv.teardown();
+  }
+});
+
 test('Temporal StageAttemptWorkflow rejects Codex activity closeout for a different stage attempt', async () => {
   const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
   const taskQueue = `opl-stage-attempt-stale-closeout-test-${Date.now()}`;

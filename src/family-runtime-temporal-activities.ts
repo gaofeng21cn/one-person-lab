@@ -126,6 +126,16 @@ export function compactCloseoutPacketForTemporalResult(value: unknown) {
   };
 }
 
+function providerRuntimeCloseoutReason(closeout: ReturnType<typeof normalizeTypedStageCloseoutPacket>) {
+  const authorityBoundary = closeout.authority_boundary;
+  if (readString(authorityBoundary.opl) !== 'provider_runtime_closeout_transport_only') {
+    return null;
+  }
+  return readString(closeout.route_impact?.provider_blocker_reason)
+    ?? readString(closeout.rejected_writes[0]?.reason)
+    ?? 'codex_cli_typed_closeout_not_materialized';
+}
+
 function compactTaskScopeForTemporalResult(value: unknown) {
   if (!isRecord(value)) {
     return null;
@@ -522,6 +532,40 @@ export async function domainHandlerDispatchActivity(input: TemporalStageAttemptW
     };
   }
   const closeout = normalizeTypedStageCloseoutPacket(input.closeout_packet);
+  const providerRuntimeReason = providerRuntimeCloseoutReason(closeout);
+  if (providerRuntimeReason) {
+    const runtimeBlocker = providerRuntimeBlockerCloseout({
+      stageAttemptId: input.stage_attempt_id,
+      stageId: input.stage_id,
+      domainId: input.domain_id,
+      providerBlockerReason: providerRuntimeReason,
+      routeImpact: closeout.route_impact ?? {},
+    });
+    return {
+      surface_kind: 'temporal_domain_handler_dispatch_receipt',
+      activity_kind: 'domain_handler_dispatch_activity',
+      activity_status: 'blocked',
+      stage_attempt_id: input.stage_attempt_id,
+      domain_id: input.domain_id,
+      closeout_refs: runtimeBlocker?.closeout_refs ?? closeout.closeout_refs,
+      consumed_refs: closeout.consumed_refs,
+      consumed_memory_refs: closeout.consumed_memory_refs,
+      writeback_receipt_refs: closeout.writeback_receipt_refs,
+      rejected_writes: runtimeBlocker?.rejected_writes ?? closeout.rejected_writes,
+      next_owner: closeout.next_owner ?? input.domain_id,
+      domain_ready_verdict: null,
+      route_impact: runtimeBlocker?.route_impact ?? closeout.route_impact ?? {},
+      blocked_reason: providerRuntimeReason,
+      closeout_packet_surface_kind: closeout.surface_kind,
+      authority_boundary: {
+        opl: 'domain_handler_transport_only',
+        domain: 'domain_handler_dispatch_and_receipt_owner',
+        provider_runtime_blocker_ref_only: true,
+        provider_runtime_blocker_is_domain_owner_answer: false,
+        provider_completion_is_domain_ready: false,
+      },
+    };
+  }
   return {
     surface_kind: 'temporal_domain_handler_dispatch_receipt',
     activity_kind: 'domain_handler_dispatch_activity',

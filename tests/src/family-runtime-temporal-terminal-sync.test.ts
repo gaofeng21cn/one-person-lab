@@ -527,6 +527,75 @@ test('Temporal blocked terminal observation blocks MAS default executor task wit
   });
 });
 
+test('Temporal blocked terminal observation retains provider-runtime blocker closeout refs', () => {
+  withStageAttemptDb((db) => {
+    const createdAt = new Date().toISOString();
+    createQueueTables(db);
+    insertMasDefaultExecutorTask(db, {
+      taskId: 'task-mas-provider-runtime-blocker-closeout-ref',
+      status: 'succeeded',
+      createdAt,
+    });
+    const attempt = createMasDefaultExecutorAttempt(db, {
+      taskId: 'task-mas-provider-runtime-blocker-closeout-ref',
+      sourceFingerprint: 'sha256:provider-runtime-blocker-closeout-ref',
+    });
+    const runtimeBlockerRef =
+      `opl://stage-attempts/${attempt.stage_attempt_id}/runtime-blockers/codex_cli_typed_closeout_not_materialized`;
+    const synced = syncStageAttemptFromTemporalTerminalObservation(db, {
+      ...blockedTemporalObservation({
+        stageAttemptId: attempt.stage_attempt_id,
+        workflowId: attempt.workflow_id,
+        createdAt,
+        blockedReason: 'codex_cli_typed_closeout_not_materialized',
+      }),
+      query: {
+        ...blockedTemporalObservation({
+          stageAttemptId: attempt.stage_attempt_id,
+          workflowId: attempt.workflow_id,
+          createdAt,
+          blockedReason: 'codex_cli_typed_closeout_not_materialized',
+        }).query,
+        closeout_refs: [runtimeBlockerRef],
+        consumed_refs: ['paper-mission-transaction:dm003-submission-milestone'],
+        rejected_writes: [{
+          surface_kind: 'opl_provider_runtime_typed_blocker_ref',
+          blocker_ref: runtimeBlockerRef,
+          reason: 'codex_cli_typed_closeout_not_materialized',
+          provider_completion_is_domain_ready: false,
+        }],
+        route_impact: {
+          runtime_blocker_ref: runtimeBlockerRef,
+          provider_completion_is_domain_ready: false,
+        },
+        closeout_packet: {
+          surface_kind: 'temporal_domain_handler_dispatch_receipt',
+          activity_status: 'blocked',
+          blocked_reason: 'codex_cli_typed_closeout_not_materialized',
+          closeout_refs: [runtimeBlockerRef],
+          authority_boundary: {
+            opl: 'domain_handler_transport_only',
+            domain: 'domain_handler_dispatch_and_receipt_owner',
+            provider_completion_is_domain_ready: false,
+          },
+        },
+      },
+    });
+    const inspected = inspectStageAttempt(db, attempt.stage_attempt_id);
+    const terminalEvent = inspected.activity_events.find((event) =>
+      event.activity_kind === 'temporal_stage_attempt_terminal_observation'
+    );
+
+    assert.equal(synced?.status, 'blocked');
+    assert.equal(inspected.closeout_receipt_status, null);
+    assert.deepEqual(inspected.closeout_refs, [runtimeBlockerRef]);
+    assert.equal(inspected.route_impact.runtime_blocker_ref, runtimeBlockerRef);
+    assert.equal(inspected.route_impact.provider_completion_is_domain_ready, false);
+    assert.deepEqual(terminalEvent?.closeout_refs, [runtimeBlockerRef]);
+    assert.equal(listStageAttemptCloseouts(db, attempt.stage_attempt_id).length, 0);
+  });
+});
+
 test('Temporal blocked terminal observation classifies Codex activity cancellation as lifecycle blocker', () => {
   withStageAttemptDb((db) => {
     const createdAt = new Date().toISOString();

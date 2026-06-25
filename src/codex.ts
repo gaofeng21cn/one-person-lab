@@ -63,6 +63,7 @@ export interface CodexStreamingCommandOptions {
   onStderrLine?: (line: string) => void;
   onStdoutEvent?: (event: CodexExecEvent) => void;
   onProcessStarted?: (pid: number | null) => void;
+  cwd?: string;
   env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
   signal?: AbortSignal;
   timeoutMs?: number;
@@ -301,6 +302,7 @@ export async function runCodexCommandStreaming(
 
   return await new Promise<CodexCommandResult>((resolve, reject) => {
     const child = spawn(codexBinary.path, args, {
+      cwd: options.cwd,
       env: spawnEnvWithOverlay(options.env),
       detached: true,
       stdio: ['pipe', 'pipe', 'pipe'],

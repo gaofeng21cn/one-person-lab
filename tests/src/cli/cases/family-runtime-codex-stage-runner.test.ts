@@ -12,6 +12,7 @@ import {
 
 test('Codex stage runner resumes the same session to enforce missing typed closeout', async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-stage-runner-workspace-'));
+  const expectedWorkspaceRoot = fs.realpathSync(workspaceRoot);
   const closeout = {
     surface_kind: 'stage_attempt_closeout_packet',
     stage_attempt_id: 'sat_closeout_enforcement',
@@ -50,6 +51,10 @@ if [ "$1" = "exec" ] && [ "$2" = "--skip-git-repo-check" ]; then
   exit 0
 fi
 if [ "$1" = "exec" ] && [ "$2" = "resume" ]; then
+  if [ "$(pwd)" != "${expectedWorkspaceRoot}" ]; then
+    echo "unexpected resume cwd: $(pwd)" >&2
+    exit 66
+  fi
   if [ "$5" != "thread-closeout-enforcement" ]; then
     echo "unexpected resume session: $5" >&2
     exit 65

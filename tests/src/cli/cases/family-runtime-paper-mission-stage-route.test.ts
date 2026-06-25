@@ -1355,7 +1355,6 @@ test('family-runtime redrives PaperMission stage-route typed closeout packet tra
       }),
     });
     const afterDispatch = inspectTask(redrivenDb, enqueued.task.task_id);
-    redrivenDb.close();
     const newestAttempt = afterDispatch.stage_attempts[0];
 
     const blockedAttempt = blockedTask.family_runtime_task.stage_attempts.find((attempt: Record<string, unknown>) =>
@@ -1384,6 +1383,57 @@ test('family-runtime redrives PaperMission stage-route typed closeout packet tra
     assert.equal(newestAttempt.status, 'running');
     assert.equal(newestAttempt.provider_kind, 'temporal');
     assert.notEqual(newestAttempt.stage_attempt_id, originalAttempt.stage_attempt_id);
+    syncStageAttemptFromTemporalTerminalObservation(redrivenDb, {
+      surface_kind: 'temporal_stage_attempt_query_receipt',
+      provider_kind: 'temporal',
+      stage_attempt_id: originalAttempt.stage_attempt_id,
+      workflow_id: originalAttempt.workflow_id,
+      workflow_status: 'COMPLETED',
+      query: {
+        surface_kind: 'temporal_stage_attempt_query',
+        provider_kind: 'temporal',
+        stage_attempt_id: originalAttempt.stage_attempt_id,
+        workflow_id: originalAttempt.workflow_id,
+        domain_id: 'medautoscience',
+        stage_id: originalAttempt.stage_id,
+        status: 'blocked',
+        started_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        activity_events: [],
+        stage_progress_log: {
+          surface_kind: 'temporal_workflow_stage_progress_log',
+          planned_work: {},
+          timeline: [],
+          visibility: {},
+        },
+        checkpoint_refs: [],
+        closeout_refs: [],
+        consumed_refs: [],
+        consumed_memory_refs: [],
+        writeback_receipt_refs: [],
+        rejected_writes: [],
+        next_owner: null,
+        route_impact: {},
+        human_gate_refs: [],
+        signals: [],
+        closeout_packet: null,
+        completion_boundary: {
+          provider_completion: 'not_completed',
+          domain_ready_verdict: null,
+          provider_completion_is_domain_ready: false,
+        },
+        authority_boundary: {
+          opl: 'temporal_workflow_transport_and_control_metadata_only',
+          domain: 'truth_quality_artifact_gate_owner',
+        },
+      },
+    });
+    const afterStaleTerminalSync = inspectTask(redrivenDb, enqueued.task.task_id);
+    assert.equal(afterStaleTerminalSync.task.status, 'running');
+    const newestAttemptAfterStaleTerminalSync = afterStaleTerminalSync.stage_attempts.find((attempt) =>
+      attempt.stage_attempt_id === newestAttempt.stage_attempt_id
+    );
+    assert.equal(newestAttemptAfterStaleTerminalSync?.status, 'running');
     assert.equal(newestAttempt.workspace_locator.study_id, '003-dpcc-primary-care-phenotype-treatment-gap');
     assert.equal(newestAttempt.workspace_locator.can_claim_paper_progress, false);
     assert.equal(newestAttempt.workspace_locator.opl_writes_domain_truth, false);
@@ -1398,6 +1448,7 @@ test('family-runtime redrives PaperMission stage-route typed closeout packet tra
       ),
       true,
     );
+    redrivenDb.close();
   } finally {
     process.env.OPL_STATE_DIR = originalStateDir;
     process.env.OPL_FAMILY_RUNTIME_PROVIDER = originalProvider;

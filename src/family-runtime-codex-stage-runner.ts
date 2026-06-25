@@ -5,6 +5,7 @@ import {
   parseCodexExecOutput,
   recoverCodexExecOutputFromSession,
   runCodexCommandStreaming,
+  type CodexCommandResult,
 } from './codex.ts';
 import {
   AGENT_EXECUTOR_KINDS,
@@ -120,6 +121,66 @@ function closeoutEnforcementPromptFor(input: {
   ].join('\n');
 }
 
+function buildProviderRuntimeCloseoutPacket(input: {
+  attempt: JsonRecord;
+  stagePacketRef: string;
+  blockedReason: string;
+  routeImpact?: JsonRecord | null;
+}) {
+  const stageAttemptId = optionalString(input.attempt.stage_attempt_id) ?? 'unknown-attempt';
+  const idempotencyKey = optionalString(input.attempt.idempotency_key);
+  const stageId = stageIdFromAttempt(input.attempt);
+  const domainId = optionalString(input.attempt.domain_id);
+  return normalizeTypedStageCloseoutPacket({
+    surface_kind: 'stage_attempt_closeout_packet',
+    stage_attempt_id: stageAttemptId,
+    ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {}),
+    closeout_refs: [
+      `opl://stage-attempts/${encodeURIComponent(stageAttemptId)}/runtime-blockers/${encodeURIComponent(input.blockedReason)}`,
+    ],
+    consumed_refs: [input.stagePacketRef],
+    consumed_memory_refs: [],
+    writeback_receipt_refs: [],
+    rejected_writes: [{
+      surface_kind: 'opl_provider_runtime_typed_blocker_ref',
+      blocker_id: input.blockedReason,
+      stage_attempt_id: stageAttemptId,
+      stage_id: stageId,
+      ...(domainId ? { domain_id: domainId } : {}),
+      owner: 'one-person-lab',
+      reason: input.blockedReason,
+      provider_completion_is_domain_ready: false,
+      authority_boundary: {
+        opl: 'provider_runtime_blocker_ref_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        can_write_domain_truth: false,
+        can_create_domain_owner_receipt: false,
+        can_create_domain_typed_blocker: false,
+        can_authorize_quality_verdict: false,
+        can_claim_domain_ready: false,
+      },
+    }],
+    next_owner: domainId ?? null,
+    domain_ready_verdict: 'domain_gate_pending',
+    route_impact: {
+      provider_blocker_reason: input.blockedReason,
+      provider_blocker_surface: 'codex_stage_activity.process_output_summary',
+      runtime_blocker_owner: 'one-person-lab',
+      runtime_blocker_is_domain_owner_answer: false,
+      provider_completion_is_domain_ready: false,
+      ...(input.routeImpact ?? {}),
+    },
+    authority_boundary: {
+      opl: 'provider_runtime_closeout_transport_only',
+      domain: 'truth_quality_artifact_gate_owner',
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+      provider_completion_is_domain_ready: false,
+    },
+  });
+}
+
 async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexStageRunnerReceipt> {
   const runnerMode = normalizeCodexStageRunnerMode(input.runnerMode);
   const stagePacketRef = resolvedStagePacketRef(input);
@@ -178,6 +239,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     workspaceRoot,
   });
   const result = await runCodexCommandStreaming(args, {
+    cwd: workspaceRoot,
     env: {
       ...input.env,
       ...providerEnv,
@@ -212,6 +274,9 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   let closeoutEnforcementStdoutBytes = 0;
   let closeoutEnforcementStderrBytes = 0;
   let closeoutEnforcementFinalMessageChars = 0;
+  let closeoutEnforcementTimeoutReason: string | null = null;
+  let closeoutEnforcementUnsupportedFunctionCalls: NonNullable<CodexCommandResult['unsupportedFunctionCalls']> | null = null;
+  let closeoutEnforcementUnsupportedFunctionCallSessionPath: string | null = null;
   if (
     !closeoutPacket
     && result.timeoutReason !== 'unsupported_tool_protocol'
@@ -248,6 +313,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
         { json: true },
       ),
       {
+        cwd: workspaceRoot,
         env: {
           ...input.env,
           ...providerEnv,
@@ -284,6 +350,10 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     closeoutEnforcementStdoutBytes = Buffer.byteLength(closeoutEnforcementResult.stdout, 'utf8');
     closeoutEnforcementStderrBytes = Buffer.byteLength(closeoutEnforcementResult.stderr, 'utf8');
     closeoutEnforcementFinalMessageChars = enforcementParsed.finalMessage.length;
+    closeoutEnforcementTimeoutReason = closeoutEnforcementResult.timeoutReason ?? null;
+    closeoutEnforcementUnsupportedFunctionCalls = closeoutEnforcementResult.unsupportedFunctionCalls ?? null;
+    closeoutEnforcementUnsupportedFunctionCallSessionPath =
+      closeoutEnforcementResult.unsupportedFunctionCallSessionPath ?? null;
     closeoutPacket = parseCloseoutFromCodexMessages(enforcementParsed.messages);
     closeoutEnforcementStatus = closeoutPacket
       ? 'closeout_found'
@@ -336,11 +406,43 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   });
   closeoutPacket = validatedCloseout.closeoutPacket;
   closeoutRejection = validatedCloseout.rejection;
-  const missingTypedCloseoutBlocker = !closeoutPacket
-    && result.timeoutReason !== 'unsupported_tool_protocol'
-    && result.timeoutReason !== 'activity_cancelled'
-    ? 'codex_cli_typed_closeout_not_materialized'
-    : null;
+  const primaryBlockedReason = closeoutRejection
+    ? `typed_closeout_${closeoutRejection.reason}`
+    : result.timeoutReason === 'command_no_progress_timeout'
+    ? 'codex_cli_command_execution_no_progress'
+    : result.timeoutReason === 'unsupported_tool_protocol'
+      ? 'codex_cli_unsupported_function_call'
+      : result.timeoutReason === 'activity_cancelled'
+        ? 'codex_cli_activity_cancelled'
+        : closeoutEnforcementTimeoutReason === 'command_no_progress_timeout'
+          ? 'codex_cli_closeout_enforcement_command_no_progress'
+          : closeoutEnforcementTimeoutReason === 'unsupported_tool_protocol'
+            ? 'codex_cli_closeout_enforcement_unsupported_function_call'
+            : closeoutEnforcementTimeoutReason === 'activity_cancelled'
+              ? 'codex_cli_closeout_enforcement_activity_cancelled'
+        : !closeoutPacket
+          ? 'codex_cli_typed_closeout_not_materialized'
+          : null;
+  if (!closeoutPacket && primaryBlockedReason) {
+    closeoutPacket = buildProviderRuntimeCloseoutPacket({
+      attempt: input.attempt,
+      stagePacketRef,
+      blockedReason: primaryBlockedReason,
+      routeImpact: {
+        runner_timeout_reason: result.timeoutReason ?? null,
+        closeout_enforcement_timeout_reason: closeoutEnforcementTimeoutReason,
+        pending_function_call_count: closeoutEnforcementUnsupportedFunctionCalls?.length
+          ?? result.unsupportedFunctionCalls?.length
+          ?? null,
+        function_call_names: [
+          ...new Set([
+            ...(result.unsupportedFunctionCalls ?? []).map((call) => call.name),
+            ...(closeoutEnforcementUnsupportedFunctionCalls ?? []).map((call) => call.name),
+          ]),
+        ],
+      },
+    });
+  }
   return {
     ...buildCodexStageRunnerReceipt({
       ...input,
@@ -377,24 +479,15 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
             },
           }
         : {}),
-      ...(result.timeoutReason === 'command_no_progress_timeout'
-        ? { blocked_reason: 'codex_cli_command_execution_no_progress' }
-        : {}),
+      ...(primaryBlockedReason ? { blocked_reason: primaryBlockedReason } : {}),
       ...(result.timeoutReason === 'unsupported_tool_protocol'
         ? {
-            blocked_reason: 'codex_cli_unsupported_function_call',
             pending_function_call_count: result.unsupportedFunctionCalls?.length ?? 0,
             function_call_names: [...new Set((result.unsupportedFunctionCalls ?? []).map((call) => call.name))],
             ...(result.unsupportedFunctionCallSessionPath
               ? { unsupported_function_call_session_path: result.unsupportedFunctionCallSessionPath }
               : {}),
           }
-        : {}),
-      ...(result.timeoutReason === 'activity_cancelled'
-        ? { blocked_reason: 'codex_cli_activity_cancelled' }
-        : {}),
-      ...(missingTypedCloseoutBlocker
-        ? { blocked_reason: missingTypedCloseoutBlocker }
         : {}),
       ...(recoveredSessionPath
         ? {
@@ -435,6 +528,23 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
               stdout_bytes: closeoutEnforcementStdoutBytes,
               stderr_bytes: closeoutEnforcementStderrBytes,
               final_message_chars: closeoutEnforcementFinalMessageChars,
+              ...(closeoutEnforcementTimeoutReason
+                ? { timeout_reason: closeoutEnforcementTimeoutReason }
+                : {}),
+              ...(closeoutEnforcementUnsupportedFunctionCalls
+                ? {
+                    pending_function_call_count: closeoutEnforcementUnsupportedFunctionCalls.length,
+                    function_call_names: [
+                      ...new Set(closeoutEnforcementUnsupportedFunctionCalls.map((call) => call.name)),
+                    ],
+                    ...(closeoutEnforcementUnsupportedFunctionCallSessionPath
+                      ? {
+                          unsupported_function_call_session_path:
+                            closeoutEnforcementUnsupportedFunctionCallSessionPath,
+                        }
+                      : {}),
+                  }
+                : {}),
               authority_boundary: {
                 opl: 'same_session_closeout_enforcement_transport_only',
                 domain: 'truth_quality_artifact_gate_owner',
