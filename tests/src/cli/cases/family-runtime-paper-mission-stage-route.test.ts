@@ -1470,7 +1470,9 @@ test('family-runtime redrives PaperMission stage-route typed closeout packet tra
       }),
     });
     const afterDispatch = inspectTask(redrivenDb, enqueued.task.task_id);
-    const newestAttempt = afterDispatch.stage_attempts[0];
+    const newestAttempt = afterDispatch.stage_attempts.find((attempt) =>
+      attempt.stage_attempt_id === redrive.family_runtime_redrive.redriven_stage_attempt.stage_attempt_id
+    )!;
 
     const blockedAttempt = blockedTask.family_runtime_task.stage_attempts.find((attempt: Record<string, unknown>) =>
       attempt.stage_attempt_id === originalAttempt.stage_attempt_id
@@ -1486,8 +1488,16 @@ test('family-runtime redrives PaperMission stage-route typed closeout packet tra
     );
     assert.equal(redrive.family_runtime_redrive.redriven, true);
     assert.equal(redrive.family_runtime_redrive.task.status, 'queued');
-    assert.equal(redrive.family_runtime_redrive.provider_redrive_started, false);
-    assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt, null);
+    assert.equal(redrive.family_runtime_redrive.provider_redrive_started, true);
+    assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.status, 'queued');
+    assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.executor_kind, 'codex_cli');
+    assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.stage_attempt_executor_policy.executor_kind, 'codex_cli');
+    assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.stage_attempt_executor_policy.model, 'gpt-5.5');
+    assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.stage_attempt_executor_policy.provider, 'openai');
+    assert.equal(
+      redrive.family_runtime_redrive.redriven_stage_attempt.stage_attempt_executor_policy.policy_source,
+      'local_codex_default_materialized_at_stage_attempt_creation',
+    );
     assert.equal(redrive.family_runtime_redrive.redrive_protocol.protocol, 'provider_transport_only');
     assert.equal(redrive.family_runtime_redrive.redrive_protocol.domain_progress_claim, false);
     assert.equal(redrive.family_runtime_redrive.authority_boundary.domain_truth_mutation, false);
@@ -1498,6 +1508,10 @@ test('family-runtime redrives PaperMission stage-route typed closeout packet tra
     assert.equal(newestAttempt.status, 'running');
     assert.equal(newestAttempt.provider_kind, 'temporal');
     assert.notEqual(newestAttempt.stage_attempt_id, originalAttempt.stage_attempt_id);
+    assert.equal(
+      newestAttempt.stage_attempt_id,
+      redrive.family_runtime_redrive.redriven_stage_attempt.stage_attempt_id,
+    );
     syncStageAttemptFromTemporalTerminalObservation(redrivenDb, {
       surface_kind: 'temporal_stage_attempt_query_receipt',
       provider_kind: 'temporal',
@@ -1557,7 +1571,8 @@ test('family-runtime redrives PaperMission stage-route typed closeout packet tra
         event.event_type === 'task_operator_redrive_from_terminal_provider_transport'
         && event.payload.previous_stage_attempt_id === originalAttempt.stage_attempt_id
         && event.payload.previous_stage_attempt_blocked_reason === 'typed_closeout_packet_required'
-        && event.payload.redriven_stage_attempt_id === null
+        && event.payload.redriven_stage_attempt_id === newestAttempt.stage_attempt_id
+        && event.payload.provider_redrive_started === true
         && (event.payload.redrive_protocol as Record<string, unknown>).domain_progress_claim === false
         && (event.payload.authority_boundary as Record<string, unknown>).domain_truth_mutation === false
       ),
@@ -1700,7 +1715,9 @@ test(`family-runtime redrives PaperMission stage-route provider runtime blocker 
       }),
     });
     const afterDispatch = inspectTask(redrivenDb, enqueued.task.task_id);
-    const newestAttempt = afterDispatch.stage_attempts[0];
+    const newestAttempt = afterDispatch.stage_attempts.find((attempt) =>
+      attempt.stage_attempt_id === redrive.family_runtime_redrive.redriven_stage_attempt.stage_attempt_id
+    )!;
     const blockedAttempt = blockedTask.family_runtime_task.stage_attempts.find((attempt: Record<string, unknown>) =>
       attempt.stage_attempt_id === originalAttempt.stage_attempt_id
     );
@@ -1710,8 +1727,16 @@ test(`family-runtime redrives PaperMission stage-route provider runtime blocker 
     assert.deepEqual(blockedAttempt?.closeout_refs, [providerRuntimeBlockerRef]);
     assert.equal(redrive.family_runtime_redrive.redriven, true);
     assert.equal(redrive.family_runtime_redrive.task.status, 'queued');
-    assert.equal(redrive.family_runtime_redrive.provider_redrive_started, false);
-    assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt, null);
+    assert.equal(redrive.family_runtime_redrive.provider_redrive_started, true);
+    assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.status, 'queued');
+    assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.executor_kind, 'codex_cli');
+    assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.stage_attempt_executor_policy.executor_kind, 'codex_cli');
+    assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.stage_attempt_executor_policy.model, 'gpt-5.5');
+    assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.stage_attempt_executor_policy.provider, 'openai');
+    assert.equal(
+      redrive.family_runtime_redrive.redriven_stage_attempt.stage_attempt_executor_policy.policy_source,
+      'local_codex_default_materialized_at_stage_attempt_creation',
+    );
     assert.equal(redrive.family_runtime_redrive.redrive_protocol.protocol, 'provider_transport_only');
     assert.equal(redrive.family_runtime_redrive.redrive_protocol.domain_progress_claim, false);
     assert.equal(redrive.family_runtime_redrive.authority_boundary.domain_truth_mutation, false);
@@ -1722,6 +1747,10 @@ test(`family-runtime redrives PaperMission stage-route provider runtime blocker 
     assert.equal(newestAttempt.status, 'running');
     assert.equal(newestAttempt.provider_kind, 'temporal');
     assert.notEqual(newestAttempt.stage_attempt_id, originalAttempt.stage_attempt_id);
+    assert.equal(
+      newestAttempt.stage_attempt_id,
+      redrive.family_runtime_redrive.redriven_stage_attempt.stage_attempt_id,
+    );
     assert.equal(newestAttempt.workspace_locator.study_id, '003-dpcc-primary-care-phenotype-treatment-gap');
     assert.equal(newestAttempt.workspace_locator.can_claim_paper_progress, false);
     assert.equal(newestAttempt.workspace_locator.opl_writes_domain_truth, false);
@@ -1730,7 +1759,8 @@ test(`family-runtime redrives PaperMission stage-route provider runtime blocker 
         event.event_type === 'task_operator_redrive_from_terminal_provider_transport'
         && event.payload.previous_stage_attempt_id === originalAttempt.stage_attempt_id
         && event.payload.previous_stage_attempt_blocked_reason === providerRuntimeBlockerReason
-        && event.payload.redriven_stage_attempt_id === null
+        && event.payload.redriven_stage_attempt_id === newestAttempt.stage_attempt_id
+        && event.payload.provider_redrive_started === true
         && (event.payload.redrive_protocol as Record<string, unknown>).domain_progress_claim === false
         && (event.payload.authority_boundary as Record<string, unknown>).domain_truth_mutation === false
       ),

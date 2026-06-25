@@ -307,6 +307,29 @@ function closeoutRefsAllowFreshAttemptAfterProviderRuntimeBlocker(closeoutRefs: 
     || closeoutRefs.every((ref) => PROVIDER_RUNTIME_BLOCKER_REF_PATTERN.test(ref));
 }
 
+function pendingAttemptForProviderRedrive(
+  db: DatabaseSync,
+  input: {
+    taskId: string;
+    providerKind: string;
+    stageId: string;
+    sourceFingerprint: string;
+  },
+) {
+  return listStageAttemptsForTask(db, input.taskId)
+    .filter((attempt) => (
+      attempt.provider_kind === input.providerKind
+      && attempt.stage_id === input.stageId
+      && attempt.executor_kind === 'codex_cli'
+      && attempt.source_fingerprint === input.sourceFingerprint
+      && attempt.status === 'queued'
+      && attempt.blocked_reason === null
+      && attempt.closeout_receipt_status === null
+    ))
+    .sort((left, right) => Date.parse(left.updated_at) - Date.parse(right.updated_at))
+    .at(-1) ?? null;
+}
+
 function needsFreshAttemptAfterProviderRuntimeBlocker(
   db: DatabaseSync,
   input: {
@@ -327,6 +350,124 @@ function needsFreshAttemptAfterProviderRuntimeBlocker(
       && closeoutRefsAllowFreshAttemptAfterProviderRuntimeBlocker(closeoutRefs)
       && attempt.closeout_receipt_status === null;
   });
+}
+
+function createPaperMissionStageRouteAttempt(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+  input: {
+    newAttempt: boolean;
+    reusePendingRedriveAttempt?: boolean;
+  },
+) {
+  const blockedReason = forbiddenWriteReason(payload) ?? missingIdentityReason(payload);
+  if (blockedReason) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'PaperMission stage-route redrive requires a valid non-authority runtime request.',
+      {
+        task_id: row.task_id,
+        reason: blockedReason,
+      },
+    );
+  }
+  const sourceFingerprint = sourceFingerprintFor(row, payload);
+  const stageId = routeStageId(payload);
+  const providerKind = resolveFamilyRuntimeProviderKind();
+  const executorPolicy = resolveCodexCliExecutorPolicy(payload);
+  const pendingAttempt = input.reusePendingRedriveAttempt
+    ? pendingAttemptForProviderRedrive(db, {
+        taskId: row.task_id,
+        providerKind,
+        stageId,
+        sourceFingerprint,
+      })
+    : null;
+  const stageAttempt = pendingAttempt
+    ? {
+        created: false,
+        idempotent_noop: true,
+        attempt: pendingAttempt,
+      }
+    : createStageAttempt(db, {
+        domainId: row.domain_id,
+        stageId,
+        providerKind,
+        workspaceLocator: workspaceLocatorFor(row, payload),
+        sourceFingerprint,
+        executorKind: 'codex_cli',
+        stageAttemptExecutorPolicy: executorPolicy.policy,
+        taskId: row.task_id,
+        newAttempt: input.newAttempt,
+        blockedReason: executorPolicy.blockedReason ?? undefined,
+        checkpointRefs: [
+          optionalString(payload.paper_mission_transaction_ref),
+          optionalString(payload.opl_route_command_ref),
+          optionalString(payload.candidate_ref),
+        ].filter((entry): entry is string => Boolean(entry)),
+      });
+  const admittedAttempt = stageAttempt.attempt;
+  if (executorPolicy.blockedReason) {
+    const closeoutRef = `opl://stage-attempts/${
+      encodeURIComponent(admittedAttempt.stage_attempt_id)
+    }/runtime-blockers/${encodeURIComponent(executorPolicy.blockedReason)}`;
+    const blockedAttempts = updateStageAttemptsForTask(db, {
+      taskId: row.task_id,
+      stageAttemptIds: [admittedAttempt.stage_attempt_id],
+      status: 'blocked',
+      blockedReason: executorPolicy.blockedReason,
+      closeoutRefs: [closeoutRef],
+      routeImpact: {
+        provider_blocker_reason: executorPolicy.blockedReason,
+        provider_blocker_surface: executorPolicy.source,
+        runtime_blocker_ref: closeoutRef,
+        runtime_blocker_owner: 'one-person-lab',
+        runtime_blocker_is_domain_owner_answer: false,
+        provider_completion_is_domain_ready: false,
+      },
+      activityEvent: {
+        activity_kind: 'stage_attempt_executor_policy_admission',
+        activity_status: 'blocked',
+        blocked_reason: executorPolicy.blockedReason,
+        policy_source: executorPolicy.source,
+        closeout_refs: [closeoutRef],
+        authority_boundary: {
+          opl: 'executor_policy_admission_gate_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          provider_stage_attempt_started: false,
+          provider_completion_is_domain_ready: false,
+        },
+      },
+    });
+    return {
+      ...stageAttempt,
+      attempt: blockedAttempts[0] ?? admittedAttempt,
+      sourceFingerprint,
+      stageId,
+      providerKind,
+      executorPolicy,
+      closeoutRefs: [closeoutRef],
+    };
+  }
+  return {
+    ...stageAttempt,
+    sourceFingerprint,
+    stageId,
+    providerKind,
+    executorPolicy,
+    closeoutRefs: [],
+  };
+}
+
+export function createPaperMissionStageRouteAttemptForProviderRedrive(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+) {
+  return createPaperMissionStageRouteAttempt(db, row, payload, {
+    newAttempt: true,
+  }).attempt;
 }
 
 export async function dispatchPaperMissionStageRouteTask(
@@ -390,63 +531,23 @@ export async function dispatchPaperMissionStageRouteTask(
   const sourceFingerprint = sourceFingerprintFor(row, payload);
   const stageId = routeStageId(payload);
   const providerKind = resolveFamilyRuntimeProviderKind();
-  const executorPolicy = resolveCodexCliExecutorPolicy(payload);
   const newAttemptAfterProviderRuntimeBlocker = needsFreshAttemptAfterProviderRuntimeBlocker(db, {
     taskId: row.task_id,
     providerKind,
     stageId,
     sourceFingerprint,
   });
-  const stageAttempt = createStageAttempt(db, {
-    domainId: row.domain_id,
-    stageId,
-    providerKind,
-    workspaceLocator: workspaceLocatorFor(row, payload),
-    sourceFingerprint,
-    executorKind: 'codex_cli',
-    stageAttemptExecutorPolicy: executorPolicy.policy,
-    taskId: row.task_id,
+  const stageAttempt = createPaperMissionStageRouteAttempt(db, row, payload, {
     newAttempt: newAttemptAfterProviderRuntimeBlocker,
-    blockedReason: executorPolicy.blockedReason ?? undefined,
-    checkpointRefs: [
-      optionalString(payload.paper_mission_transaction_ref),
-      optionalString(payload.opl_route_command_ref),
-      optionalString(payload.candidate_ref),
-    ].filter((entry): entry is string => Boolean(entry)),
+    reusePendingRedriveAttempt: true,
   });
   const admittedAttempt = stageAttempt.attempt;
+  const executorPolicy = stageAttempt.executorPolicy;
   if (executorPolicy.blockedReason) {
-    const closeoutRef = `opl://stage-attempts/${
-      encodeURIComponent(admittedAttempt.stage_attempt_id)
-    }/runtime-blockers/${encodeURIComponent(executorPolicy.blockedReason)}`;
-    const blockedAttempts = updateStageAttemptsForTask(db, {
-      taskId: row.task_id,
-      stageAttemptIds: [admittedAttempt.stage_attempt_id],
-      status: 'blocked',
-      blockedReason: executorPolicy.blockedReason,
-      closeoutRefs: [closeoutRef],
-      routeImpact: {
-        provider_blocker_reason: executorPolicy.blockedReason,
-        provider_blocker_surface: executorPolicy.source,
-        runtime_blocker_ref: closeoutRef,
-        runtime_blocker_owner: 'one-person-lab',
-        runtime_blocker_is_domain_owner_answer: false,
-        provider_completion_is_domain_ready: false,
-      },
-      activityEvent: {
-        activity_kind: 'stage_attempt_executor_policy_admission',
-        activity_status: 'blocked',
-        blocked_reason: executorPolicy.blockedReason,
-        policy_source: executorPolicy.source,
-        closeout_refs: [closeoutRef],
-        authority_boundary: {
-          opl: 'executor_policy_admission_gate_only',
-          domain: 'truth_quality_artifact_gate_owner',
-          provider_stage_attempt_started: false,
-          provider_completion_is_domain_ready: false,
-        },
-      },
-    });
+    const closeoutRef = stageAttempt.closeoutRefs[0]
+      ?? `opl://stage-attempts/${encodeURIComponent(admittedAttempt.stage_attempt_id)}/runtime-blockers/${
+        encodeURIComponent(executorPolicy.blockedReason)
+      }`;
     db.prepare(`
       UPDATE tasks
       SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
@@ -487,7 +588,7 @@ export async function dispatchPaperMissionStageRouteTask(
       task_id: row.task_id,
       status: 'blocked',
       reason: executorPolicy.blockedReason,
-      stage_attempts: blockedAttempts.length > 0 ? blockedAttempts : [admittedAttempt],
+      stage_attempts: [admittedAttempt],
       closeout_refs: [closeoutRef],
       authority_boundary: {
         can_claim_stage_run_created: true,
