@@ -30,6 +30,7 @@ export type StageAttemptRow = {
   workspace_locator_json: string;
   source_fingerprint: string | null;
   executor_kind: string;
+  stage_attempt_executor_policy_json?: string | null;
   status: StageAttemptStatus;
   checkpoint_refs_json: string;
   closeout_refs_json: string;
@@ -100,6 +101,7 @@ export function createStageAttemptTable(db: DatabaseSync) {
       workspace_locator_json TEXT NOT NULL,
       source_fingerprint TEXT,
       executor_kind TEXT NOT NULL,
+      stage_attempt_executor_policy_json TEXT,
       status TEXT NOT NULL,
       checkpoint_refs_json TEXT NOT NULL,
       closeout_refs_json TEXT NOT NULL,
@@ -143,6 +145,7 @@ export function createStageAttemptTable(db: DatabaseSync) {
   addColumnIfMissing(db, 'stage_attempts', columns, 'activity_events_json', "activity_events_json TEXT NOT NULL DEFAULT '[]'");
   addColumnIfMissing(db, 'stage_attempts', columns, 'route_impact_json', "route_impact_json TEXT NOT NULL DEFAULT '{}'");
   addColumnIfMissing(db, 'stage_attempts', columns, 'closeout_receipt_status', 'closeout_receipt_status TEXT');
+  addColumnIfMissing(db, 'stage_attempts', columns, 'stage_attempt_executor_policy_json', 'stage_attempt_executor_policy_json TEXT');
   db.exec('CREATE INDEX IF NOT EXISTS idx_stage_attempts_idempotency ON stage_attempts(idempotency_key)');
 }
 
@@ -151,6 +154,10 @@ export function stageAttemptToPayload(row: StageAttemptRow) {
   const providerRun = parseJsonObject(row.provider_run_json);
   const activityEvents = parseJsonList(row.activity_events_json);
   const routeImpact = parseJsonObject(row.route_impact_json);
+  const stageAttemptExecutorPolicy = row.stage_attempt_executor_policy_json
+    ? parseJsonObject(row.stage_attempt_executor_policy_json)
+    : {};
+  const hasStageAttemptExecutorPolicy = Object.keys(stageAttemptExecutorPolicy).length > 0;
   const usageProjection = buildStageAttemptUsageProjection({
     stageAttemptId: row.stage_attempt_id,
     status: row.status,
@@ -184,6 +191,7 @@ export function stageAttemptToPayload(row: StageAttemptRow) {
     workspace_locator: parseJsonObject(row.workspace_locator_json),
     source_fingerprint: row.source_fingerprint,
     executor_kind: row.executor_kind,
+    stage_attempt_executor_policy: hasStageAttemptExecutorPolicy ? stageAttemptExecutorPolicy : null,
     status: row.status,
     checkpoint_refs: parseJsonList(row.checkpoint_refs_json),
     closeout_refs: parseJsonList(row.closeout_refs_json),

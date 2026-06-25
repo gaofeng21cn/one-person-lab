@@ -3,6 +3,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { FrameworkContractError } from './contracts.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
 import { resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
+import { readLocalCodexDefaultsIfAvailable } from './local-codex-defaults.ts';
 import {
   createStageAttempt,
   inspectStageAttempt,
@@ -48,6 +49,108 @@ function authorityBoundary(payload: Record<string, unknown>) {
 
 function booleanTrue(value: unknown) {
   return value === true;
+}
+
+function nestedRecord(value: unknown, key: string) {
+  return isRecord(value) && isRecord(value[key]) ? value[key] : null;
+}
+
+function nestedExecutorPolicy(payload: Record<string, unknown>) {
+  return isRecord(payload.stage_attempt_executor_policy)
+    ? { policy: payload.stage_attempt_executor_policy, source: 'payload.stage_attempt_executor_policy' }
+    : isRecord(payload.executor_policy)
+      ? { policy: payload.executor_policy, source: 'payload.executor_policy' }
+      : isRecord(nestedRecord(payload.opl_route_command, 'stage_attempt_executor_policy'))
+        ? {
+            policy: nestedRecord(payload.opl_route_command, 'stage_attempt_executor_policy')!,
+            source: 'payload.opl_route_command.stage_attempt_executor_policy',
+          }
+        : isRecord(nestedRecord(payload.opl_runtime_carrier, 'stage_attempt_executor_policy'))
+          ? {
+              policy: nestedRecord(payload.opl_runtime_carrier, 'stage_attempt_executor_policy')!,
+              source: 'payload.opl_runtime_carrier.stage_attempt_executor_policy',
+            }
+          : isRecord(nestedRecord(nestedRecord(payload.opl_route_handoff_record, 'opl_runtime_carrier'), 'stage_attempt_executor_policy'))
+            ? {
+                policy: nestedRecord(
+                  nestedRecord(payload.opl_route_handoff_record, 'opl_runtime_carrier'),
+                  'stage_attempt_executor_policy',
+                )!,
+                source: 'payload.opl_route_handoff_record.opl_runtime_carrier.stage_attempt_executor_policy',
+              }
+            : null;
+}
+
+function normalizeCodexCliExecutorPolicy(
+  policy: Record<string, unknown>,
+  source: string,
+) {
+  const executorKind = optionalString(policy.executor_kind)?.replace(/-/g, '_') ?? 'codex_cli';
+  if (executorKind !== 'codex_cli') {
+    return {
+      policy: null,
+      blockedReason: 'codex_cli_executor_policy_unsupported',
+      source,
+    };
+  }
+  const model = optionalString(policy.model);
+  const provider = optionalString(policy.provider) ?? optionalString(policy.model_provider);
+  if (!model || !provider) {
+    return {
+      policy: null,
+      blockedReason: 'codex_cli_executor_policy_incomplete',
+      source,
+    };
+  }
+  const reasoningEffort = optionalString(policy.reasoning_effort)
+    ?? optionalString(policy.model_reasoning_effort);
+  return {
+    policy: {
+      ...policy,
+      executor_kind: 'codex_cli',
+      model,
+      provider,
+      ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
+      policy_source: optionalString(policy.policy_source) ?? source,
+      inherited_local_codex_default: policy.inherited_local_codex_default === true,
+    },
+    blockedReason: null,
+    source,
+  };
+}
+
+function resolveCodexCliExecutorPolicy(payload: Record<string, unknown>) {
+  const explicit = nestedExecutorPolicy(payload);
+  if (explicit) {
+    return normalizeCodexCliExecutorPolicy(explicit.policy, explicit.source);
+  }
+  const localDefaults = readLocalCodexDefaultsIfAvailable();
+  if (!localDefaults?.model || !localDefaults.model_provider) {
+    return {
+      policy: null,
+      blockedReason: 'codex_cli_executor_policy_missing',
+      source: 'local_codex_default_unavailable',
+    };
+  }
+  return {
+    policy: {
+      executor_kind: 'codex_cli',
+      model: localDefaults.model,
+      provider: localDefaults.model_provider,
+      ...(localDefaults.reasoning_effort ? { reasoning_effort: localDefaults.reasoning_effort } : {}),
+      policy_source: 'local_codex_default_materialized_at_stage_attempt_creation',
+      local_codex_config_ref: localDefaults.config_path,
+      inherited_local_codex_default: true,
+      authority_boundary: {
+        opl: 'executor_policy_materialization_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        can_write_domain_truth: false,
+        provider_completion_is_domain_ready: false,
+      },
+    },
+    blockedReason: null,
+    source: 'local_codex_default_materialized_at_stage_attempt_creation',
+  };
 }
 
 function routeStageId(payload: Record<string, unknown>) {
@@ -286,6 +389,7 @@ export async function dispatchPaperMissionStageRouteTask(
   const sourceFingerprint = sourceFingerprintFor(row, payload);
   const stageId = routeStageId(payload);
   const providerKind = resolveFamilyRuntimeProviderKind();
+  const executorPolicy = resolveCodexCliExecutorPolicy(payload);
   const newAttemptAfterCloseoutTransportFailure = needsFreshAttemptAfterProviderCloseoutTransportFailure(db, {
     taskId: row.task_id,
     providerKind,
@@ -299,8 +403,10 @@ export async function dispatchPaperMissionStageRouteTask(
     workspaceLocator: workspaceLocatorFor(row, payload),
     sourceFingerprint,
     executorKind: 'codex_cli',
+    stageAttemptExecutorPolicy: executorPolicy.policy,
     taskId: row.task_id,
     newAttempt: newAttemptAfterCloseoutTransportFailure,
+    blockedReason: executorPolicy.blockedReason ?? undefined,
     checkpointRefs: [
       optionalString(payload.paper_mission_transaction_ref),
       optionalString(payload.opl_route_command_ref),
@@ -308,6 +414,87 @@ export async function dispatchPaperMissionStageRouteTask(
     ].filter((entry): entry is string => Boolean(entry)),
   });
   const admittedAttempt = stageAttempt.attempt;
+  if (executorPolicy.blockedReason) {
+    const closeoutRef = `opl://stage-attempts/${
+      encodeURIComponent(admittedAttempt.stage_attempt_id)
+    }/runtime-blockers/${encodeURIComponent(executorPolicy.blockedReason)}`;
+    const blockedAttempts = updateStageAttemptsForTask(db, {
+      taskId: row.task_id,
+      stageAttemptIds: [admittedAttempt.stage_attempt_id],
+      status: 'blocked',
+      blockedReason: executorPolicy.blockedReason,
+      closeoutRefs: [closeoutRef],
+      routeImpact: {
+        provider_blocker_reason: executorPolicy.blockedReason,
+        provider_blocker_surface: executorPolicy.source,
+        runtime_blocker_ref: closeoutRef,
+        runtime_blocker_owner: 'one-person-lab',
+        runtime_blocker_is_domain_owner_answer: false,
+        provider_completion_is_domain_ready: false,
+      },
+      activityEvent: {
+        activity_kind: 'stage_attempt_executor_policy_admission',
+        activity_status: 'blocked',
+        blocked_reason: executorPolicy.blockedReason,
+        policy_source: executorPolicy.source,
+        closeout_refs: [closeoutRef],
+        authority_boundary: {
+          opl: 'executor_policy_admission_gate_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          provider_stage_attempt_started: false,
+          provider_completion_is_domain_ready: false,
+        },
+      },
+    });
+    db.prepare(`
+      UPDATE tasks
+      SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
+        last_error = ?, dead_letter_reason = ?, updated_at = ?
+      WHERE task_id = ?
+    `).run(executorPolicy.blockedReason, executorPolicy.blockedReason, startedAt, row.task_id);
+    insertEvent(db, {
+      taskId: row.task_id,
+      domainId: row.domain_id,
+      eventType: 'paper_mission_stage_route_blocked_executor_policy',
+      source: 'opl-family-runtime',
+      payload: {
+        reason: executorPolicy.blockedReason,
+        policy_source: executorPolicy.source,
+        stage_attempt_id: admittedAttempt.stage_attempt_id,
+        closeout_refs: [closeoutRef],
+        authority_boundary: {
+          opl: 'executor_policy_admission_gate_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          provider_stage_attempt_started: false,
+          provider_completion_is_domain_ready: false,
+          can_claim_paper_progress: false,
+        },
+      },
+    });
+    insertNotification(db, {
+      taskId: row.task_id,
+      severity: 'error',
+      title: 'MAS PaperMission stage route blocked',
+      body: executorPolicy.blockedReason,
+      payload: {
+        reason: executorPolicy.blockedReason,
+        policy_source: executorPolicy.source,
+        closeout_refs: [closeoutRef],
+      },
+    });
+    return {
+      task_id: row.task_id,
+      status: 'blocked',
+      reason: executorPolicy.blockedReason,
+      stage_attempts: blockedAttempts.length > 0 ? blockedAttempts : [admittedAttempt],
+      closeout_refs: [closeoutRef],
+      authority_boundary: {
+        can_claim_stage_run_created: true,
+        can_claim_provider_running: false,
+        can_claim_paper_progress: false,
+      },
+    };
+  }
   let projectedAttempt = admittedAttempt;
   let temporalStart: Record<string, unknown> | null = null;
   let status: 'running' | 'blocked' = 'running';

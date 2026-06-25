@@ -83,6 +83,9 @@ function executorPolicyFromAttempt(attempt: JsonRecord): StageAttemptExecutorPol
     ? attempt.stage_attempt_executor_policy
     : isRecord(attempt.executor_policy)
       ? attempt.executor_policy
+      : isRecord(attempt.workspace_locator)
+        && isRecord(attempt.workspace_locator.stage_attempt_executor_policy)
+        ? attempt.workspace_locator.stage_attempt_executor_policy
       : null;
   return direct;
 }

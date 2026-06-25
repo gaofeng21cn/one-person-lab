@@ -92,6 +92,7 @@ export type TemporalStageAttemptWorkflowInput = {
   workspace_locator: Record<string, unknown>;
   source_fingerprint: string | null;
   executor_kind: string;
+  stage_attempt_executor_policy?: Record<string, unknown> | null;
   retry_budget: Record<string, unknown>;
   task_id?: string | null;
   stage_packet_ref?: string | null;
@@ -327,6 +328,12 @@ function optionalText(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
+function optionalRecord(value: unknown) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
 function stageRunIdFor(input: { domain_id: string; stage_id: string }) {
   return [
     'app-stage-run',
@@ -521,6 +528,7 @@ export function buildTemporalStageAttemptWorkflowInput(
     workspace_locator: Record<string, unknown>;
     source_fingerprint: string | null;
     executor_kind: string;
+    stage_attempt_executor_policy?: unknown;
     retry_budget: Record<string, unknown>;
     idempotency_key?: string | null;
     task_id?: string | null;
@@ -539,6 +547,7 @@ export function buildTemporalStageAttemptWorkflowInput(
     workspace_locator: attempt.workspace_locator,
     source_fingerprint: attempt.source_fingerprint,
     executor_kind: executorKind,
+    stage_attempt_executor_policy: optionalRecord(attempt.stage_attempt_executor_policy),
     retry_budget: attempt.retry_budget,
     task_id: typeof attempt.task_id === 'string' ? attempt.task_id : null,
     stage_packet_ref: checkpointRefs[0] ?? null,

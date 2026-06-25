@@ -30,8 +30,13 @@ type StageRouteDispatchReadback = {
 };
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
+  const codexHome = extra.CODEX_HOME ?? path.join(stateRoot, 'codex-home');
+  if (!extra.CODEX_HOME) {
+    writeCodexDefaultConfig(codexHome);
+  }
   return {
     OPL_STATE_DIR: stateRoot,
+    CODEX_HOME: codexHome,
     ...extra,
   };
 }
@@ -130,6 +135,23 @@ function paperMissionRoutePayloadWithWorkspace(overrides: Record<string, unknown
   });
 }
 
+function writeCodexDefaultConfig(codexHome: string) {
+  fs.mkdirSync(codexHome, { recursive: true });
+  fs.writeFileSync(
+    path.join(codexHome, 'config.toml'),
+    [
+      'model_provider = "openai"',
+      'model = "gpt-5.5"',
+      'model_reasoning_effort = "high"',
+      '',
+      '[model_providers.openai]',
+      'name = "openai"',
+      'base_url = "https://api.openai.com/v1"',
+      '',
+    ].join('\n'),
+  );
+}
+
 test('family-runtime tick admits MAS PaperMission stage-route into OPL StageAttempt without domain dispatch', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-fixture-'));
@@ -187,6 +209,11 @@ test('family-runtime tick admits MAS PaperMission stage-route into OPL StageAtte
     assert.equal(attempt.stage_id, 'publication_gate_replay');
     assert.equal(attempt.provider_kind, 'local_sqlite');
     assert.equal(attempt.executor_kind, 'codex_cli');
+    assert.equal(attempt.stage_attempt_executor_policy.executor_kind, 'codex_cli');
+    assert.equal(attempt.stage_attempt_executor_policy.model, 'gpt-5.5');
+    assert.equal(attempt.stage_attempt_executor_policy.provider, 'openai');
+    assert.equal(attempt.stage_attempt_executor_policy.reasoning_effort, 'high');
+    assert.equal(attempt.stage_attempt_executor_policy.inherited_local_codex_default, true);
     assert.equal(attempt.status, 'queued');
     assert.equal(attempt.workspace_locator.runtime_request_kind, 'mas_paper_mission_stage_route');
     assert.equal(attempt.workspace_locator.study_id, '002-dm-china-us-mortality-attribution');
@@ -227,6 +254,94 @@ test('family-runtime tick admits MAS PaperMission stage-route into OPL StageAtte
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime tick materializes MAS PaperMission stage-route Codex executor policy from local defaults', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-policy-state-'));
+  const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-policy-codex-'));
+  try {
+    writeCodexDefaultConfig(codexHome);
+    const env = familyRuntimeEnv(stateRoot, {
+      CODEX_HOME: codexHome,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_mission/stage-route',
+      '--payload',
+      JSON.stringify(paperMissionRoutePayload()),
+      '--dedupe-key',
+      'paper-mission-route:dm002:policy-materialized',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test-paper-route-policy'], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const attempt = task.family_runtime_task.stage_attempts[0];
+    const workflowInput = buildTemporalStageAttemptWorkflowInput(attempt);
+
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'running');
+    assert.equal(attempt.status, 'queued');
+    assert.equal(attempt.stage_attempt_executor_policy.executor_kind, 'codex_cli');
+    assert.equal(attempt.stage_attempt_executor_policy.model, 'gpt-5.5');
+    assert.equal(attempt.stage_attempt_executor_policy.provider, 'openai');
+    assert.equal(attempt.stage_attempt_executor_policy.reasoning_effort, 'high');
+    assert.equal(
+      attempt.stage_attempt_executor_policy.policy_source,
+      'local_codex_default_materialized_at_stage_attempt_creation',
+    );
+    assert.equal(attempt.stage_attempt_executor_policy.local_codex_config_ref, path.join(codexHome, 'config.toml'));
+    assert.equal(workflowInput.stage_attempt_executor_policy?.provider, 'openai');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(codexHome, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime tick blocks MAS PaperMission stage-route when Codex executor policy cannot be materialized', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-policy-blocked-'));
+  const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-empty-codex-'));
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      CODEX_HOME: codexHome,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_mission/stage-route',
+      '--payload',
+      JSON.stringify(paperMissionRoutePayload()),
+      '--dedupe-key',
+      'paper-mission-route:dm002:policy-missing',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test-paper-route-policy-missing'], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const attempt = task.family_runtime_task.stage_attempts[0];
+
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'blocked');
+    assert.equal(tick.family_runtime_tick.dispatches[0].reason, 'codex_cli_executor_policy_missing');
+    assert.equal(task.family_runtime_task.task.status, 'blocked');
+    assert.equal(task.family_runtime_task.task.dead_letter_reason, 'codex_cli_executor_policy_missing');
+    assert.equal(attempt.status, 'blocked');
+    assert.equal(attempt.blocked_reason, 'codex_cli_executor_policy_missing');
+    assert.equal(attempt.stage_attempt_executor_policy, null);
+    assert.deepEqual(attempt.closeout_refs, [
+      `opl://stage-attempts/${attempt.stage_attempt_id}/runtime-blockers/codex_cli_executor_policy_missing`,
+    ]);
+    assert.equal(attempt.route_impact.provider_blocker_reason, 'codex_cli_executor_policy_missing');
+    assert.equal(attempt.route_impact.runtime_blocker_is_domain_owner_answer, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(codexHome, { recursive: true, force: true });
   }
 });
 

@@ -33,6 +33,7 @@ export type StageAttemptCreateInput = {
   workspaceLocator: Record<string, unknown>;
   sourceFingerprint?: string;
   executorKind?: string;
+  stageAttemptExecutorPolicy?: Record<string, unknown> | null;
   executorBindingRef?: string;
   invocationMode?: string;
   boundedEditRef?: string;
@@ -82,6 +83,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
   const createdAt = nowIso();
   const sourceFingerprint = input.sourceFingerprint?.trim() || null;
   const executorKind = input.executorKind?.trim() || 'codex_cli';
+  const stageAttemptExecutorPolicy = input.stageAttemptExecutorPolicy ?? null;
   const retryBudget = input.retryBudget ?? { max_attempts: 3 };
   const taskId = input.taskId?.trim() || null;
   const baseIdempotencyKey = stableId('idem', [
@@ -90,6 +92,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     providerKind,
     input.workspaceLocator,
     sourceFingerprint,
+    stageAttemptExecutorPolicy,
     taskId,
   ]);
   const newAttemptOrdinal = input.newAttempt
@@ -136,6 +139,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     providerKind,
     input.workspaceLocator,
     sourceFingerprint,
+    stageAttemptExecutorPolicy,
     input.taskId ?? null,
     input.newAttempt ? newAttemptOrdinal : createdAt,
   ]);
@@ -213,6 +217,9 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     workspace_locator_json: JSON.stringify(workspaceLocator),
     source_fingerprint: sourceFingerprint,
     executor_kind: executorKind,
+    stage_attempt_executor_policy_json: stageAttemptExecutorPolicy
+      ? JSON.stringify(stageAttemptExecutorPolicy)
+      : null,
     status: input.blockedReason ? 'blocked' : 'queued',
     checkpoint_refs_json: JSON.stringify(normalizeJsonList(input.checkpointRefs)),
     closeout_refs_json: JSON.stringify(normalizeJsonList(input.closeoutRefs)),
@@ -232,14 +239,14 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
   db.prepare(`
     INSERT INTO stage_attempts(
       stage_attempt_id, idempotency_key, provider_kind, workflow_id, domain_id, stage_id, workspace_locator_json,
-      source_fingerprint, executor_kind, status, checkpoint_refs_json, closeout_refs_json,
+      source_fingerprint, executor_kind, stage_attempt_executor_policy_json, status, checkpoint_refs_json, closeout_refs_json,
       human_gate_refs_json, retry_budget_json, attempt_count, task_id, blocked_reason,
       provider_receipt_json, provider_run_json, activity_events_json, route_impact_json,
       closeout_receipt_status, created_at, updated_at
     )
     VALUES (
       @stage_attempt_id, @idempotency_key, @provider_kind, @workflow_id, @domain_id, @stage_id, @workspace_locator_json,
-      @source_fingerprint, @executor_kind, @status, @checkpoint_refs_json, @closeout_refs_json,
+      @source_fingerprint, @executor_kind, @stage_attempt_executor_policy_json, @status, @checkpoint_refs_json, @closeout_refs_json,
       @human_gate_refs_json, @retry_budget_json, @attempt_count, @task_id, @blocked_reason,
       @provider_receipt_json, @provider_run_json, @activity_events_json, @route_impact_json,
       @closeout_receipt_status, @created_at, @updated_at
