@@ -1967,6 +1967,101 @@ test('family-runtime requeues fresh MAS PaperMission handoff after domain gate t
   }
 });
 
+test('family-runtime requeues fresh MAS PaperMission handoff after recoverable provider runtime blocker', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-provider-recovered-'));
+  const originalStateDir = process.env.OPL_STATE_DIR;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    const { db } = openQueueDb();
+    const dedupeKey = 'paper-mission-route:dm003:fresh-handoff-after-provider-recovered';
+    const firstHandoffRef =
+      '/tmp/mas-dm-cvd-workspace/ops/medautoscience/paper_mission_consumption_ledger/provider-old/opl_route_handoff.json';
+    const freshHandoffRef =
+      '/tmp/mas-dm-cvd-workspace/ops/medautoscience/paper_mission_consumption_ledger/provider-fresh/opl_route_handoff.json';
+    const firstPayload = paperMissionRoutePayloadWithWorkspace({
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      mission_id: 'paper-mission::003-dpcc-primary-care-phenotype-treatment-gap::submission::auto',
+      candidate_ref:
+        '/tmp/mas-dm-cvd-workspace/ops/medautoscience/paper_mission_candidate_package/provider-old/package_manifest.json',
+      paper_mission_transaction_ref: 'paper-mission-transaction:dm003:provider-old',
+      opl_route_command_ref: 'paper-mission-transaction:dm003:provider-old#opl_route_command',
+      command_kind: 'resume_stage',
+      route_target: 'continue paper-facing submission milestone work',
+      route_identity_key: 'paper-mission-transaction:dm003:provider::route',
+      attempt_idempotency_key: 'dm003:provider-recovered::opl-attempt',
+      request_idempotency_key: 'dm003:provider-recovered::opl-request',
+      opl_route_handoff_record: {
+        handoff_ref: firstHandoffRef,
+      },
+    });
+    const enqueued = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'paper_mission/stage-route',
+      payload: firstPayload,
+      dedupeKey,
+      source: 'test-provider-runtime-blocker',
+    });
+    db.prepare(`
+      UPDATE tasks
+      SET status = 'blocked',
+        last_error = 'codex_cli_provider_unavailable',
+        dead_letter_reason = 'codex_cli_provider_unavailable'
+      WHERE task_id = ?
+    `).run(enqueued.task.task_id);
+
+    const freshPayload = paperMissionRoutePayloadWithWorkspace({
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      mission_id: 'paper-mission::003-dpcc-primary-care-phenotype-treatment-gap::submission::auto',
+      candidate_ref:
+        '/tmp/mas-dm-cvd-workspace/ops/medautoscience/paper_mission_candidate_package/provider-fresh/package_manifest.json',
+      paper_mission_transaction_ref: 'paper-mission-transaction:dm003:provider-fresh',
+      opl_route_command_ref: 'paper-mission-transaction:dm003:provider-fresh#opl_route_command',
+      command_kind: 'resume_stage',
+      route_target: 'continue paper-facing submission milestone work',
+      route_identity_key: 'paper-mission-transaction:dm003:provider::route',
+      attempt_idempotency_key: 'dm003:provider-recovered::opl-attempt',
+      request_idempotency_key: 'dm003:provider-recovered::opl-request',
+      opl_route_handoff_record: {
+        handoff_ref: freshHandoffRef,
+      },
+    });
+    const requeued = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'paper_mission/stage-route',
+      payload: freshPayload,
+      dedupeKey,
+      source: 'test-provider-recovered-fresh-handoff',
+    });
+    const task = inspectTask(db, enqueued.task.task_id);
+    const event = task.events.find((entry) =>
+      entry.event_type === 'task_requeued_from_paper_mission_stage_route_provider_runtime_fresh_handoff'
+    );
+
+    assert.equal(requeued.accepted, true);
+    assert.equal(requeued.requeued_from_terminal, true);
+    assert.equal(requeued.idempotent_noop, false);
+    assert.equal(task.task.status, 'queued');
+    assert.equal(task.task.dead_letter_reason, null);
+    assert.equal(task.task.last_error, null);
+    assert.equal(task.task.payload.candidate_ref, freshPayload.candidate_ref);
+    assert.equal(task.task.payload.paper_mission_transaction_ref, freshPayload.paper_mission_transaction_ref);
+    assert.notEqual(event, undefined);
+    assert.equal(event?.payload.reason, 'paper_mission_stage_route_provider_runtime_fresh_handoff');
+    assert.equal(event?.payload.previous_provider_runtime_reason, 'codex_cli_provider_unavailable');
+    assert.equal(event?.payload.previous_candidate_ref, firstPayload.candidate_ref);
+    assert.equal(event?.payload.next_candidate_ref, freshPayload.candidate_ref);
+    assert.equal(event?.payload.previous_opl_route_handoff_ref, firstHandoffRef);
+    assert.equal(event?.payload.next_opl_route_handoff_ref, freshHandoffRef);
+    assert.equal(event?.payload.authority_boundary.domain_truth_mutation, false);
+    assert.equal(event?.payload.authority_boundary.provider_stage_attempt_started, false);
+    assert.equal(event?.payload.authority_boundary.can_claim_paper_progress, false);
+    db.close();
+  } finally {
+    process.env.OPL_STATE_DIR = originalStateDir;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime requeues fresh MAS PaperMission handoff after legacy route identity blocker', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-fresh-identity-'));
   const originalStateDir = process.env.OPL_STATE_DIR;

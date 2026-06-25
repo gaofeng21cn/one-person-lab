@@ -86,6 +86,10 @@ const PAPER_MISSION_DOMAIN_GATE_FRESH_HANDOFF_REASONS = new Set([
   'paper_mission_stage_route_domain_gate_pending',
   'paper_mission_stage_route_domain_authority_required',
 ]);
+const PAPER_MISSION_PROVIDER_RUNTIME_FRESH_HANDOFF_REASONS = new Set([
+  'codex_cli_provider_unavailable',
+  'codex_cli_typed_closeout_not_materialized',
+]);
 const PAPER_MISSION_LEGACY_IDENTITY_BLOCKER_FRESH_HANDOFF_REASONS = new Set([
   'paper_mission_route_missing_identity_field:route_identity_key',
   'paper_mission_route_missing_identity_field:attempt_idempotency_key',
@@ -134,6 +138,83 @@ function changedStringField(
   if (previousValue !== nextValue) {
     changedFields.push(field);
   }
+}
+
+function paperMissionStageRouteFreshHandoffDelta(input: {
+  existing: FamilyRuntimeTaskRow;
+  existingPayload: Record<string, unknown>;
+  nextPayload: Record<string, unknown>;
+}) {
+  const nextWorkspaceRoot = paperMissionWorkspaceRoot(input.nextPayload)
+    ?? optionalString(input.nextPayload.command_cwd);
+  if (!nextWorkspaceRoot || isOplRepoWorkspace(nextWorkspaceRoot)) {
+    return null;
+  }
+
+  const existingWorkspaceRoot = paperMissionWorkspaceRoot(input.existingPayload)
+    ?? optionalString(input.existingPayload.command_cwd);
+  const previousCandidateRef = optionalString(input.existingPayload.candidate_ref);
+  const nextCandidateRef = optionalString(input.nextPayload.candidate_ref);
+  const previousTransactionRef = optionalString(input.existingPayload.paper_mission_transaction_ref);
+  const nextTransactionRef = optionalString(input.nextPayload.paper_mission_transaction_ref);
+  const previousRouteCommandRef = optionalString(input.existingPayload.opl_route_command_ref);
+  const nextRouteCommandRef = optionalString(input.nextPayload.opl_route_command_ref);
+  const previousHandoffRef = paperMissionRouteHandoffRef(input.existingPayload);
+  const nextHandoffRef = paperMissionRouteHandoffRef(input.nextPayload);
+  const previousSourceRef = optionalString(input.existingPayload.source_ref);
+  const nextSourceRef = optionalString(input.nextPayload.source_ref);
+  const previousHandoffRecordJson = stableComparableJson(paperMissionRouteHandoffRecord(input.existingPayload));
+  const nextHandoffRecordJson = stableComparableJson(paperMissionRouteHandoffRecord(input.nextPayload));
+  const previousSourcePayloadJson = stableComparableJson(input.existingPayload.source_payload);
+  const nextSourcePayloadJson = stableComparableJson(input.nextPayload.source_payload);
+  const previousSourceFingerprint = sourceFingerprint(input.existingPayload);
+  const nextSourceFingerprint = sourceFingerprint(input.nextPayload);
+  const changedFields: string[] = [];
+
+  changedStringField(changedFields, 'candidate_ref', previousCandidateRef, nextCandidateRef);
+  changedStringField(
+    changedFields,
+    'paper_mission_transaction_ref',
+    previousTransactionRef,
+    nextTransactionRef,
+  );
+  changedStringField(changedFields, 'opl_route_command_ref', previousRouteCommandRef, nextRouteCommandRef);
+  changedStringField(changedFields, 'opl_route_handoff_ref', previousHandoffRef, nextHandoffRef);
+  changedStringField(changedFields, 'source_ref', previousSourceRef, nextSourceRef);
+  changedStringField(
+    changedFields,
+    'source_fingerprint',
+    previousSourceFingerprint,
+    nextSourceFingerprint,
+  );
+  if (previousHandoffRecordJson !== nextHandoffRecordJson) {
+    changedFields.push('opl_route_handoff_record');
+  }
+  if (previousSourcePayloadJson !== nextSourcePayloadJson) {
+    changedFields.push('source_payload');
+  }
+  if (changedFields.length === 0) {
+    return null;
+  }
+
+  return {
+    previous_workspace_root: existingWorkspaceRoot,
+    next_workspace_root: nextWorkspaceRoot,
+    previous_candidate_ref: previousCandidateRef,
+    next_candidate_ref: nextCandidateRef,
+    previous_paper_mission_transaction_ref: previousTransactionRef,
+    next_paper_mission_transaction_ref: nextTransactionRef,
+    previous_opl_route_command_ref: previousRouteCommandRef,
+    next_opl_route_command_ref: nextRouteCommandRef,
+    previous_opl_route_handoff_ref: previousHandoffRef,
+    next_opl_route_handoff_ref: nextHandoffRef,
+    previous_source_ref: previousSourceRef,
+    next_source_ref: nextSourceRef,
+    previous_source_fingerprint: previousSourceFingerprint,
+    next_source_fingerprint: nextSourceFingerprint,
+    changed_fields: changedFields,
+    previous_status: input.existing.status,
+  };
 }
 
 function isPaperMissionStageRouteReplacementAllowed(input: {
@@ -196,77 +277,50 @@ function paperMissionStageRouteDomainGateFreshHandoffReplacement(input: {
     return null;
   }
 
-  const nextWorkspaceRoot = paperMissionWorkspaceRoot(input.nextPayload)
-    ?? optionalString(input.nextPayload.command_cwd);
-  if (!nextWorkspaceRoot || isOplRepoWorkspace(nextWorkspaceRoot)) {
-    return null;
-  }
-
-  const existingWorkspaceRoot = paperMissionWorkspaceRoot(input.existingPayload)
-    ?? optionalString(input.existingPayload.command_cwd);
-  const previousCandidateRef = optionalString(input.existingPayload.candidate_ref);
-  const nextCandidateRef = optionalString(input.nextPayload.candidate_ref);
-  const previousTransactionRef = optionalString(input.existingPayload.paper_mission_transaction_ref);
-  const nextTransactionRef = optionalString(input.nextPayload.paper_mission_transaction_ref);
-  const previousRouteCommandRef = optionalString(input.existingPayload.opl_route_command_ref);
-  const nextRouteCommandRef = optionalString(input.nextPayload.opl_route_command_ref);
-  const previousHandoffRef = paperMissionRouteHandoffRef(input.existingPayload);
-  const nextHandoffRef = paperMissionRouteHandoffRef(input.nextPayload);
-  const previousSourceRef = optionalString(input.existingPayload.source_ref);
-  const nextSourceRef = optionalString(input.nextPayload.source_ref);
-  const previousHandoffRecordJson = stableComparableJson(paperMissionRouteHandoffRecord(input.existingPayload));
-  const nextHandoffRecordJson = stableComparableJson(paperMissionRouteHandoffRecord(input.nextPayload));
-  const previousSourcePayloadJson = stableComparableJson(input.existingPayload.source_payload);
-  const nextSourcePayloadJson = stableComparableJson(input.nextPayload.source_payload);
-  const previousSourceFingerprint = sourceFingerprint(input.existingPayload);
-  const nextSourceFingerprint = sourceFingerprint(input.nextPayload);
-  const changedFields: string[] = [];
-
-  changedStringField(changedFields, 'candidate_ref', previousCandidateRef, nextCandidateRef);
-  changedStringField(
-    changedFields,
-    'paper_mission_transaction_ref',
-    previousTransactionRef,
-    nextTransactionRef,
-  );
-  changedStringField(changedFields, 'opl_route_command_ref', previousRouteCommandRef, nextRouteCommandRef);
-  changedStringField(changedFields, 'opl_route_handoff_ref', previousHandoffRef, nextHandoffRef);
-  changedStringField(changedFields, 'source_ref', previousSourceRef, nextSourceRef);
-  changedStringField(
-    changedFields,
-    'source_fingerprint',
-    previousSourceFingerprint,
-    nextSourceFingerprint,
-  );
-  if (previousHandoffRecordJson !== nextHandoffRecordJson) {
-    changedFields.push('opl_route_handoff_record');
-  }
-  if (previousSourcePayloadJson !== nextSourcePayloadJson) {
-    changedFields.push('source_payload');
-  }
-  if (changedFields.length === 0) {
+  const delta = paperMissionStageRouteFreshHandoffDelta(input);
+  if (!delta) {
     return null;
   }
 
   return {
     reason: 'paper_mission_stage_route_domain_gate_fresh_handoff',
     previous_domain_gate_reason: previousDomainGateReason,
-    previous_workspace_root: existingWorkspaceRoot,
-    next_workspace_root: nextWorkspaceRoot,
-    previous_candidate_ref: previousCandidateRef,
-    next_candidate_ref: nextCandidateRef,
-    previous_paper_mission_transaction_ref: previousTransactionRef,
-    next_paper_mission_transaction_ref: nextTransactionRef,
-    previous_opl_route_command_ref: previousRouteCommandRef,
-    next_opl_route_command_ref: nextRouteCommandRef,
-    previous_opl_route_handoff_ref: previousHandoffRef,
-    next_opl_route_handoff_ref: nextHandoffRef,
-    previous_source_ref: previousSourceRef,
-    next_source_ref: nextSourceRef,
-    previous_source_fingerprint: previousSourceFingerprint,
-    next_source_fingerprint: nextSourceFingerprint,
-    changed_fields: changedFields,
-    previous_status: input.existing.status,
+    ...delta,
+  };
+}
+
+function paperMissionStageRouteProviderRuntimeFreshHandoffReplacement(input: {
+  existing: FamilyRuntimeTaskRow;
+  nextDomainId: string;
+  nextTaskKind: string;
+  existingPayload: Record<string, unknown>;
+  nextPayload: Record<string, unknown>;
+  exportedTaskChanged: boolean;
+}) {
+  const previousProviderRuntimeReason = input.existing.dead_letter_reason ?? input.existing.last_error ?? '';
+  if (
+    !input.exportedTaskChanged
+    || input.existing.domain_id !== 'medautoscience'
+    || input.nextDomainId !== 'medautoscience'
+    || input.existing.task_kind !== 'paper_mission/stage-route'
+    || input.nextTaskKind !== 'paper_mission/stage-route'
+    || input.existing.status !== 'blocked'
+    || !PAPER_MISSION_PROVIDER_RUNTIME_FRESH_HANDOFF_REASONS.has(previousProviderRuntimeReason)
+    || !isPaperMissionStageRoutePayload(input.existingPayload)
+    || !isPaperMissionStageRoutePayload(input.nextPayload)
+  ) {
+    return null;
+  }
+
+  const delta = paperMissionStageRouteFreshHandoffDelta(input);
+  if (!delta) {
+    return null;
+  }
+
+  return {
+    reason: 'paper_mission_stage_route_provider_runtime_fresh_handoff',
+    previous_provider_runtime_reason: previousProviderRuntimeReason,
+    ...delta,
   };
 }
 
@@ -1168,6 +1222,16 @@ export function reconcileExistingDedupeTask(
         nextPayload: payload,
         exportedTaskChanged,
       });
+  const providerRuntimeFreshHandoffReplacement = retiredResidueBlock
+    ? null
+    : paperMissionStageRouteProviderRuntimeFreshHandoffReplacement({
+        existing,
+        nextDomainId: input.domainId,
+        nextTaskKind: taskKind,
+        existingPayload,
+        nextPayload: payload,
+        exportedTaskChanged,
+      });
   const legacyIdentityFreshHandoffReplacement = retiredResidueBlock
     ? null
     : paperMissionStageRouteLegacyIdentityFreshHandoffReplacement({
@@ -1218,6 +1282,38 @@ export function reconcileExistingDedupeTask(
         },
       },
       notificationTitle: 'MAS PaperMission stage route requeued from fresh domain handoff',
+      requeuedFromTerminal: true,
+    });
+  }
+  if (providerRuntimeFreshHandoffReplacement) {
+    const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
+    return applyExistingDedupeRequeue(db, {
+      input,
+      taskKind,
+      exportedPayloadJson,
+      existing,
+      nextStatus,
+      nextRequiresApproval: requiresApproval,
+      nextLastError: initialLastError,
+      createdAt,
+      dedupeKey,
+      activeHoldId: activeHold?.hold_id ?? null,
+      eventType: 'task_requeued_from_paper_mission_stage_route_provider_runtime_fresh_handoff',
+      eventPayload: {
+        ...providerRuntimeFreshHandoffReplacement,
+        authority_boundary: {
+          opl: 'queue_runtime_currentness_repair_after_provider_runtime_blocker_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          domain_truth_mutation: false,
+          publication_quality_mutation: false,
+          artifact_gate_mutation: false,
+          current_package_mutation: false,
+          provider_stage_attempt_started: false,
+          provider_completion_is_domain_ready: false,
+          can_claim_paper_progress: false,
+        },
+      },
+      notificationTitle: 'MAS PaperMission stage route requeued after provider runtime blocker',
       requeuedFromTerminal: true,
     });
   }
