@@ -77,48 +77,27 @@ function compactAuthorityBoundaryForTemporalResult(value: unknown) {
 }
 
 export function compactCloseoutPacketForTemporalResult(value: unknown) {
-  if (!isRecord(value)) {
-    return null;
-  }
-  const surfaceKind = typeof value.surface_kind === 'string' ? value.surface_kind : null;
-  if (
-    surfaceKind !== 'stage_attempt_closeout_packet'
-    && surfaceKind !== 'stage_memory_closeout_packet'
-    && surfaceKind !== 'domain_stage_closeout_packet'
-  ) {
-    return null;
-  }
-  const closeoutRefs = [
-    ...readStringList(value.closeout_refs),
-    ...(typeof value.closeout_ref === 'string' && value.closeout_ref ? [value.closeout_ref] : []),
-    ...(typeof value.receipt_ref === 'string' && value.receipt_ref ? [value.receipt_ref] : []),
-    ...(typeof value.packet_ref === 'string' && value.packet_ref ? [value.packet_ref] : []),
-  ];
-  if (closeoutRefs.length === 0) {
+  let closeout: ReturnType<typeof normalizeTypedStageCloseoutPacket>;
+  try {
+    closeout = normalizeTypedStageCloseoutPacket(value);
+  } catch {
     return null;
   }
 
   return {
-    surface_kind: surfaceKind,
-    ...(typeof value.stage_attempt_id === 'string' ? { stage_attempt_id: value.stage_attempt_id } : {}),
-    ...(typeof value.idempotency_key === 'string' ? { idempotency_key: value.idempotency_key } : {}),
-    ...(typeof value.closeout_id === 'string' ? { closeout_id: value.closeout_id } : {}),
-    closeout_refs: [...new Set(closeoutRefs)],
-    consumed_refs: readStringList(value.consumed_refs),
-    consumed_memory_refs: readStringList(value.consumed_memory_refs),
-    writeback_receipt_refs: readStringList(value.writeback_receipt_refs),
-    rejected_writes: Array.isArray(value.rejected_writes) ? value.rejected_writes.filter(isRecord) : [],
-    ...(typeof value.next_owner === 'string' ? { next_owner: value.next_owner } : {}),
-    ...(typeof value.domain_ready_verdict === 'string'
-      ? { domain_ready_verdict: value.domain_ready_verdict }
-      : {}),
-    ...(isRecord(value.route_impact) ? { route_impact: value.route_impact } : {}),
-    authority_boundary: isRecord(value.authority_boundary)
-      ? value.authority_boundary
-      : {
-          opl: 'closeout_transport_only',
-          domain: 'truth_quality_artifact_gate_owner',
-        },
+    surface_kind: closeout.surface_kind,
+    ...(closeout.stage_attempt_id ? { stage_attempt_id: closeout.stage_attempt_id } : {}),
+    ...(closeout.idempotency_key ? { idempotency_key: closeout.idempotency_key } : {}),
+    ...(closeout.closeout_id ? { closeout_id: closeout.closeout_id } : {}),
+    closeout_refs: closeout.closeout_refs,
+    consumed_refs: closeout.consumed_refs,
+    consumed_memory_refs: closeout.consumed_memory_refs,
+    writeback_receipt_refs: closeout.writeback_receipt_refs,
+    rejected_writes: closeout.rejected_writes,
+    ...(closeout.next_owner ? { next_owner: closeout.next_owner } : {}),
+    ...(closeout.domain_ready_verdict ? { domain_ready_verdict: closeout.domain_ready_verdict } : {}),
+    ...(closeout.route_impact ? { route_impact: closeout.route_impact } : {}),
+    authority_boundary: closeout.authority_boundary,
     temporal_payload_policy: {
       surface_kind: 'temporal_activity_compacted_closeout_packet',
       full_closeout_body_omitted: true,

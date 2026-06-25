@@ -899,7 +899,15 @@ test('Temporal Codex activity compacts typed closeout packets before activity co
     surface_kind: 'stage_attempt_closeout_packet',
     stage_attempt_id: 'sat_large_temporal_payload',
     idempotency_key: 'idem-large-temporal-payload',
-    closeout_refs: ['receipt:large-closeout'],
+    closeout_refs: [
+      'receipt:large-closeout',
+      {
+        ref_kind: 'stage_attempt_closeout_packet_ref',
+        uri: 'file:///tmp/mas/studies/003/artifacts/supervision/consumer/default_executor_execution/sat_85bd.closeout.json',
+        sha256: 'sha256:003-closeout',
+        size_bytes: 2048,
+      },
+    ],
     consumed_refs: ['paper:draft.md'],
     consumed_memory_refs: ['memory:route-policy'],
     writeback_receipt_refs: ['memory-writeback:receipt-1'],
@@ -926,7 +934,10 @@ test('Temporal Codex activity compacts typed closeout packets before activity co
   assert.ok(compacted);
   assert.equal(compacted.surface_kind, 'stage_attempt_closeout_packet');
   assert.equal(compacted.stage_attempt_id, 'sat_large_temporal_payload');
-  assert.deepEqual(compacted.closeout_refs, ['receipt:large-closeout']);
+  assert.deepEqual(compacted.closeout_refs, [
+    'receipt:large-closeout',
+    'file:///tmp/mas/studies/003/artifacts/supervision/consumer/default_executor_execution/sat_85bd.closeout.json',
+  ]);
   assert.deepEqual(compacted.consumed_refs, ['paper:draft.md']);
   assert.deepEqual(compacted.consumed_memory_refs, ['memory:route-policy']);
   assert.deepEqual(compacted.writeback_receipt_refs, ['memory-writeback:receipt-1']);

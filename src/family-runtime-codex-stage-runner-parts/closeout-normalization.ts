@@ -36,7 +36,7 @@ function readCloseoutRefs(value: unknown) {
       if (direct) {
         return direct;
       }
-      return isRecord(entry) ? optionalString(entry.ref) : null;
+      return isRecord(entry) ? optionalString(entry.ref) ?? optionalString(entry.uri) : null;
     })
     .filter((entry): entry is string => Boolean(entry));
 }
