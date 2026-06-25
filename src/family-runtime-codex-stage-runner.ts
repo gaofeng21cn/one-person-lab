@@ -1,3 +1,7 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
 import { FrameworkContractError } from './contracts.ts';
 import {
   buildCodexExecResumeArgs,
@@ -181,6 +185,129 @@ function buildProviderRuntimeCloseoutPacket(input: {
   });
 }
 
+function stageCloseoutOutputSchema() {
+  return {
+    type: 'object',
+    required: ['surface_kind'],
+    anyOf: [
+      { required: ['closeout_refs'] },
+      { required: ['closeout_ref'] },
+      { required: ['receipt_ref'] },
+      { required: ['packet_ref'] },
+    ],
+    properties: {
+      surface_kind: {
+        enum: [
+          'stage_attempt_closeout_packet',
+          'stage_memory_closeout_packet',
+          'domain_stage_closeout_packet',
+        ],
+      },
+      stage_attempt_id: { type: 'string' },
+      idempotency_key: { type: 'string' },
+      closeout_id: { type: 'string' },
+      closeout_ref: { type: 'string' },
+      closeout_refs: {
+        type: 'array',
+        minItems: 1,
+        items: {
+          anyOf: [
+            { type: 'string' },
+            {
+              type: 'object',
+              anyOf: [
+                { required: ['ref'] },
+                { required: ['uri'] },
+              ],
+              properties: {
+                ref: { type: 'string' },
+                uri: { type: 'string' },
+                ref_kind: { type: 'string' },
+                kind: { type: 'string' },
+                sha256: { type: 'string' },
+                size_bytes: { type: 'number' },
+              },
+              additionalProperties: true,
+            },
+          ],
+        },
+      },
+      receipt_ref: { type: 'string' },
+      packet_ref: { type: 'string' },
+      consumed_refs: {
+        type: 'array',
+        items: { type: 'string' },
+      },
+      consumed_memory_refs: {
+        type: 'array',
+        items: { type: 'string' },
+      },
+      writeback_receipt_refs: {
+        type: 'array',
+        items: { type: 'string' },
+      },
+      rejected_writes: {
+        type: 'array',
+        items: { type: 'object' },
+      },
+      next_owner: {
+        type: ['string', 'null'],
+      },
+      domain_ready_verdict: {
+        type: ['string', 'null'],
+      },
+      user_stage_log: { type: 'object' },
+      stage_log_summary: { type: 'object' },
+      human_stage_log: { type: 'object' },
+      route_impact: { type: 'object' },
+      authority_boundary: { type: 'object' },
+    },
+    additionalProperties: true,
+  };
+}
+
+function createCodexCloseoutCapture() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-stage-closeout-'));
+  const outputLastMessagePath = path.join(root, 'last-message.json');
+  const outputSchemaPath = path.join(root, 'stage-closeout.schema.json');
+  fs.writeFileSync(outputSchemaPath, `${JSON.stringify(stageCloseoutOutputSchema(), null, 2)}\n`, 'utf8');
+  return {
+    root,
+    outputLastMessagePath,
+    outputSchemaPath,
+    cleanup() {
+      fs.rmSync(root, { recursive: true, force: true });
+    },
+  };
+}
+
+function readCapturedLastMessage(filePath: string) {
+  try {
+    const stat = fs.statSync(filePath);
+    const maxLastMessageBytes = 1024 * 1024;
+    if (!stat.isFile() || stat.size <= 0 || stat.size > maxLastMessageBytes) {
+      return null;
+    }
+    return fs.readFileSync(filePath, 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+function parseCapturedCloseoutMessage(filePath: string) {
+  const message = readCapturedLastMessage(filePath);
+  if (!message) {
+    return {
+      closeoutPacket: null,
+      message,
+    };
+  }
+  return {
+    closeoutPacket: parseCloseoutFromCodexMessages([message]),
+    message,
+  };
+}
+
 async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexStageRunnerReceipt> {
   const runnerMode = normalizeCodexStageRunnerMode(input.runnerMode);
   const stagePacketRef = resolvedStagePacketRef(input);
@@ -216,10 +343,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     );
   }
 
-  const args = buildCodexExecArgs(runnerPromptFor(input), {
-    cwd: workspaceRoot,
-    json: true,
-  });
+  const stageCloseoutCapture = createCodexCloseoutCapture();
   const runnerEvents: RunnerEventSummary[] = [];
   let processId: number | null = null;
   const timeoutMs = input.timeoutMs != null
@@ -238,27 +362,36 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     stagePacketRef,
     workspaceRoot,
   });
-  const result = await runCodexCommandStreaming(args, {
-    cwd: workspaceRoot,
-    env: {
-      ...input.env,
-      ...providerEnv,
-    },
-    timeoutMs,
-    noOutputTimeoutMs,
-    commandNoProgressTimeoutMs,
-    signal: input.signal,
-    onProcessStarted(pid) {
-      processId = pid;
-    },
-    onStdoutEvent(event) {
-      const summary = eventSummary(event);
-      runnerEvents.push(summary);
-      input.onRunnerProgress?.(summary);
-    },
-  });
+  try {
+    const args = buildCodexExecArgs(runnerPromptFor(input), {
+      cwd: workspaceRoot,
+      json: true,
+      outputLastMessagePath: stageCloseoutCapture.outputLastMessagePath,
+      outputSchemaPath: stageCloseoutCapture.outputSchemaPath,
+    });
+    const result = await runCodexCommandStreaming(args, {
+      cwd: workspaceRoot,
+      env: {
+        ...input.env,
+        ...providerEnv,
+      },
+      timeoutMs,
+      noOutputTimeoutMs,
+      commandNoProgressTimeoutMs,
+      signal: input.signal,
+      onProcessStarted(pid) {
+        processId = pid;
+      },
+      onStdoutEvent(event) {
+        const summary = eventSummary(event);
+        runnerEvents.push(summary);
+        input.onRunnerProgress?.(summary);
+      },
+    });
   const parsed = parseCodexExecOutput(result.stdout);
-  let closeoutPacket = parseCloseoutFromCodexMessages(parsed.messages);
+  const capturedLastMessage = parseCapturedCloseoutMessage(stageCloseoutCapture.outputLastMessagePath);
+  let closeoutPacket = parseCloseoutFromCodexMessages(parsed.messages)
+    ?? capturedLastMessage.closeoutPacket;
   let recoveredSessionPath: string | null = null;
   let recoveredFinalMessageChars = 0;
   let sessionRecoveryAttempts = 0;
@@ -274,7 +407,8 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   let closeoutEnforcementStdoutBytes = 0;
   let closeoutEnforcementStderrBytes = 0;
   let closeoutEnforcementFinalMessageChars = 0;
-  let closeoutEnforcementTimeoutReason: string | null = null;
+  let closeoutEnforcementCapturedFinalMessageChars = 0;
+  let closeoutEnforcementTimeoutReason: CodexCommandResult['timeoutReason'] | null = null;
   let closeoutEnforcementUnsupportedFunctionCalls: NonNullable<CodexCommandResult['unsupportedFunctionCalls']> | null = null;
   let closeoutEnforcementUnsupportedFunctionCallSessionPath: string | null = null;
   if (
@@ -302,68 +436,80 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     && result.timeoutReason !== 'unsupported_tool_protocol'
     && result.timeoutReason !== 'activity_cancelled'
   ) {
-    const closeoutEnforcementResult = await runCodexCommandStreaming(
-      buildCodexExecResumeArgs(
-        parsed.threadId,
-        closeoutEnforcementPromptFor({
-          attempt: input.attempt,
-          stagePacketRef,
-          previousSessionRecoveryStatus: sessionRecoveryStatus,
-        }),
-        { json: true },
-      ),
-      {
-        cwd: workspaceRoot,
-        env: {
-          ...input.env,
-          ...providerEnv,
+    const closeoutEnforcementCapture = createCodexCloseoutCapture();
+    try {
+      const closeoutEnforcementResult = await runCodexCommandStreaming(
+        buildCodexExecResumeArgs(
+          parsed.threadId,
+          closeoutEnforcementPromptFor({
+            attempt: input.attempt,
+            stagePacketRef,
+            previousSessionRecoveryStatus: sessionRecoveryStatus,
+          }),
+          {
+            json: true,
+            outputLastMessagePath: closeoutEnforcementCapture.outputLastMessagePath,
+            outputSchemaPath: closeoutEnforcementCapture.outputSchemaPath,
+          },
+        ),
+        {
+          cwd: workspaceRoot,
+          env: {
+            ...input.env,
+            ...providerEnv,
+          },
+          timeoutMs: normalizeTimeoutMs(
+            process.env.OPL_CODEX_CLOSEOUT_ENFORCEMENT_TIMEOUT_MS,
+            120_000,
+          ),
+          noOutputTimeoutMs: normalizeTimeoutMs(
+            process.env.OPL_CODEX_CLOSEOUT_ENFORCEMENT_NO_OUTPUT_TIMEOUT_MS,
+            30_000,
+          ),
+          commandNoProgressTimeoutMs: normalizeTimeoutMs(
+            process.env.OPL_CODEX_CLOSEOUT_ENFORCEMENT_COMMAND_NO_PROGRESS_TIMEOUT_MS,
+            30_000,
+          ),
+          signal: input.signal,
+          onStdoutEvent(event) {
+            const summary = eventSummary(event);
+            runnerEvents.push({
+              event_kind: `closeout_enforcement.${summary.event_kind}`,
+              value: summary.value,
+            });
+            input.onRunnerProgress?.({
+              event_kind: `closeout_enforcement.${summary.event_kind}`,
+              value: summary.value,
+            });
+          },
         },
-        timeoutMs: normalizeTimeoutMs(
-          process.env.OPL_CODEX_CLOSEOUT_ENFORCEMENT_TIMEOUT_MS,
-          120_000,
-        ),
-        noOutputTimeoutMs: normalizeTimeoutMs(
-          process.env.OPL_CODEX_CLOSEOUT_ENFORCEMENT_NO_OUTPUT_TIMEOUT_MS,
-          30_000,
-        ),
-        commandNoProgressTimeoutMs: normalizeTimeoutMs(
-          process.env.OPL_CODEX_CLOSEOUT_ENFORCEMENT_COMMAND_NO_PROGRESS_TIMEOUT_MS,
-          30_000,
-        ),
-        signal: input.signal,
-        onStdoutEvent(event) {
-          const summary = eventSummary(event);
-          runnerEvents.push({
-            event_kind: `closeout_enforcement.${summary.event_kind}`,
-            value: summary.value,
-          });
-          input.onRunnerProgress?.({
-            event_kind: `closeout_enforcement.${summary.event_kind}`,
-            value: summary.value,
-          });
-        },
-      },
-    );
-    const enforcementParsed = parseCodexExecOutput(closeoutEnforcementResult.stdout);
-    closeoutEnforcementThreadId = enforcementParsed.threadId;
-    closeoutEnforcementExitCode = closeoutEnforcementResult.exitCode;
-    closeoutEnforcementStdoutBytes = Buffer.byteLength(closeoutEnforcementResult.stdout, 'utf8');
-    closeoutEnforcementStderrBytes = Buffer.byteLength(closeoutEnforcementResult.stderr, 'utf8');
-    closeoutEnforcementFinalMessageChars = enforcementParsed.finalMessage.length;
-    closeoutEnforcementTimeoutReason = closeoutEnforcementResult.timeoutReason ?? null;
-    closeoutEnforcementUnsupportedFunctionCalls = closeoutEnforcementResult.unsupportedFunctionCalls ?? null;
-    closeoutEnforcementUnsupportedFunctionCallSessionPath =
-      closeoutEnforcementResult.unsupportedFunctionCallSessionPath ?? null;
-    closeoutPacket = parseCloseoutFromCodexMessages(enforcementParsed.messages);
-    closeoutEnforcementStatus = closeoutPacket
-      ? 'closeout_found'
-      : closeoutEnforcementResult.timeoutReason
-        ? `closeout_missing:${closeoutEnforcementResult.timeoutReason}`
-        : 'closeout_missing';
-    if (!sessionUsageRef) {
-      sessionUsageRef = extractCodexSessionUsageRef(recoverCodexExecOutputFromSession(
-        closeoutEnforcementThreadId ?? parsed.threadId,
-      ));
+      );
+      const enforcementParsed = parseCodexExecOutput(closeoutEnforcementResult.stdout);
+      const enforcementCaptured = parseCapturedCloseoutMessage(closeoutEnforcementCapture.outputLastMessagePath);
+      closeoutEnforcementThreadId = enforcementParsed.threadId;
+      closeoutEnforcementExitCode = closeoutEnforcementResult.exitCode;
+      closeoutEnforcementStdoutBytes = Buffer.byteLength(closeoutEnforcementResult.stdout, 'utf8');
+      closeoutEnforcementStderrBytes = Buffer.byteLength(closeoutEnforcementResult.stderr, 'utf8');
+      closeoutEnforcementFinalMessageChars = enforcementParsed.finalMessage.length;
+      closeoutEnforcementTimeoutReason = closeoutEnforcementResult.timeoutReason ?? null;
+      closeoutEnforcementUnsupportedFunctionCalls = closeoutEnforcementResult.unsupportedFunctionCalls ?? null;
+      closeoutEnforcementUnsupportedFunctionCallSessionPath =
+        closeoutEnforcementResult.unsupportedFunctionCallSessionPath ?? null;
+      closeoutEnforcementCapturedFinalMessageChars = enforcementCaptured.message?.length ?? 0;
+      closeoutPacket = parseCloseoutFromCodexMessages(enforcementParsed.messages)
+        ?? enforcementCaptured.closeoutPacket;
+      closeoutEnforcementStatus = closeoutPacket
+        ? 'closeout_found'
+        : closeoutEnforcementResult.timeoutReason
+          ? `closeout_missing:${closeoutEnforcementResult.timeoutReason}`
+          : 'closeout_missing';
+      if (!sessionUsageRef) {
+        sessionUsageRef = extractCodexSessionUsageRef(recoverCodexExecOutputFromSession(
+          closeoutEnforcementThreadId ?? parsed.threadId,
+        ));
+      }
+    } finally {
+      closeoutEnforcementCapture.cleanup();
     }
   }
   if (!sessionUsageRef) {
@@ -467,6 +613,9 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       ...(result.timeoutReason ? { timeout_reason: result.timeoutReason } : {}),
       no_output_timeout_ms: result.noOutputTimeoutMs ?? noOutputTimeoutMs,
       command_no_progress_timeout_ms: result.commandNoProgressTimeoutMs ?? commandNoProgressTimeoutMs,
+      ...(capturedLastMessage.message
+        ? { captured_last_message_chars: capturedLastMessage.message.length }
+        : {}),
       ...(result.activeCommand
         ? {
             active_command: {
@@ -528,6 +677,9 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
               stdout_bytes: closeoutEnforcementStdoutBytes,
               stderr_bytes: closeoutEnforcementStderrBytes,
               final_message_chars: closeoutEnforcementFinalMessageChars,
+              ...(closeoutEnforcementCapturedFinalMessageChars > 0
+                ? { captured_last_message_chars: closeoutEnforcementCapturedFinalMessageChars }
+                : {}),
               ...(closeoutEnforcementTimeoutReason
                 ? { timeout_reason: closeoutEnforcementTimeoutReason }
                 : {}),
@@ -558,6 +710,9 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
         : {}),
     },
   };
+  } finally {
+    stageCloseoutCapture.cleanup();
+  }
 }
 
 export async function runAgentStageRunner(input: {

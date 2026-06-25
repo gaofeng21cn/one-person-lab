@@ -86,6 +86,8 @@ export interface CodexExecOptions {
   model?: string;
   provider?: string;
   reasoningEffort?: string;
+  outputLastMessagePath?: string;
+  outputSchemaPath?: string;
 }
 
 export interface ParsedCodexExecOutput {
@@ -208,6 +210,14 @@ export function buildCodexExecArgs(
     args.push('--config', `model_reasoning_effort=${quoteTomlString(options.reasoningEffort)}`);
   }
 
+  if (options.outputSchemaPath) {
+    args.push('--output-schema', options.outputSchemaPath);
+  }
+
+  if (options.outputLastMessagePath) {
+    args.push('--output-last-message', options.outputLastMessagePath);
+  }
+
   args.push(prompt);
   return args;
 }
@@ -233,6 +243,14 @@ export function buildCodexExecResumeArgs(
 
   if (options.reasoningEffort) {
     args.push('--config', `model_reasoning_effort=${quoteTomlString(options.reasoningEffort)}`);
+  }
+
+  if (options.outputSchemaPath) {
+    args.push('--output-schema', options.outputSchemaPath);
+  }
+
+  if (options.outputLastMessagePath) {
+    args.push('--output-last-message', options.outputLastMessagePath);
   }
 
   args.push(sessionId, prompt);

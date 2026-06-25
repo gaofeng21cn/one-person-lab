@@ -423,7 +423,14 @@ exit 64
       timeoutMs: 10_000,
     });
 
-    assert.equal(receipt.closeout_packet, null);
+    assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+      'opl://stage-attempts/sat_prose_prefixed_closeout_test/runtime-blockers/codex_cli_typed_closeout_not_materialized',
+    ]);
+    assert.equal(
+      receipt.closeout_packet?.route_impact?.provider_blocker_reason,
+      'codex_cli_typed_closeout_not_materialized',
+    );
     assert.equal(receipt.runner_status.typed_closeout_required_for_completion, true);
     assert.equal(receipt.runner_status.free_text_closeout_accepted, false);
     const processOutputSummary = receipt.process_output_summary;
@@ -489,6 +496,87 @@ exit 64
   }
 });
 
+test('Codex stage runner captures terminal typed closeout from Codex output-last-message file', async () => {
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    stage_attempt_id: 'sat_output_last_message_closeout_test',
+    closeout_refs: [
+      {
+        ref_kind: 'stage_attempt_closeout_packet_ref',
+        uri: 'file:///tmp/mas/studies/003/artifacts/supervision/consumer/default_executor_execution/sat_output_last_message.closeout.json',
+        sha256: 'sha256:output-last-message-closeout',
+        size_bytes: 4096,
+      },
+    ],
+    next_owner: 'med-autoscience',
+    domain_ready_verdict: 'domain_gate_pending',
+  };
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+output_last_message=""
+output_schema=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --output-last-message)
+      output_last_message="$2"
+      shift 2
+      ;;
+    --output-schema)
+      output_schema="$2"
+      shift 2
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+if [ -z "$output_last_message" ] || [ -z "$output_schema" ]; then
+  echo "missing structured output capture args" >&2
+  exit 64
+fi
+if ! grep -q '"uri"' "$output_schema"; then
+  echo "schema does not allow object uri closeout refs" >&2
+  exit 64
+fi
+printf '%s\\n' '${JSON.stringify(closeout)}' > "$output_last_message"
+printf '{"type":"thread.started","thread_id":"thread-output-last-message-closeout"}\\n'
+printf '{"type":"turn.completed"}\\n'
+exit 0
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_output_last_message_closeout_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        checkpoint_refs: ['checkpoint:output-last-message-closeout'],
+      },
+      stagePacketRef: 'packet:output-last-message-closeout',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+    });
+
+    assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+      'file:///tmp/mas/studies/003/artifacts/supervision/consumer/default_executor_execution/sat_output_last_message.closeout.json',
+    ]);
+    assert.equal(
+      (receipt.process_output_summary?.captured_last_message_chars ?? 0) > JSON.stringify(closeout).length,
+      true,
+    );
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('Codex stage runner rejects typed closeout packets for a different stage attempt', async () => {
   const closeout = {
     surface_kind: 'stage_attempt_closeout_packet',
@@ -528,7 +616,11 @@ exit 64
       timeoutMs: 10_000,
     });
 
-    assert.equal(receipt.closeout_packet, null);
+    assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+      'opl://stage-attempts/sat_current_attempt/runtime-blockers/typed_closeout_stage_attempt_id_mismatch',
+    ]);
+    assert.equal(receipt.closeout_packet?.stage_attempt_id, 'sat_current_attempt');
     assert.equal(receipt.process_output_summary?.closeout_rejection_reason, 'stage_attempt_id_mismatch');
   } finally {
     if (previousCodexBin === undefined) {
@@ -777,7 +869,14 @@ exit 64
       timeoutMs: 10_000,
     });
 
-    assert.equal(receipt.closeout_packet, null);
+    assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+      'opl://stage-attempts/sat_nonterminal_closeout_test/runtime-blockers/codex_cli_typed_closeout_not_materialized',
+    ]);
+    assert.equal(
+      receipt.closeout_packet?.route_impact?.provider_blocker_reason,
+      'codex_cli_typed_closeout_not_materialized',
+    );
   } finally {
     if (previousCodexBin === undefined) {
       delete process.env.OPL_CODEX_BIN;

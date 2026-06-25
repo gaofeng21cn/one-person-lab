@@ -70,6 +70,7 @@ export type CodexStageRunnerProcessOutputSummary = {
     | 'activity_cancelled';
   no_output_timeout_ms?: number | null;
   command_no_progress_timeout_ms?: number | null;
+  captured_last_message_chars?: number;
   active_command?: {
     tool_call_id: string;
     title: string;
@@ -99,6 +100,16 @@ export type CodexStageRunnerProcessOutputSummary = {
     stdout_bytes: number;
     stderr_bytes: number;
     final_message_chars: number;
+    captured_last_message_chars?: number;
+    timeout_reason?:
+      | 'total_timeout'
+      | 'no_output_timeout'
+      | 'command_no_progress_timeout'
+      | 'unsupported_tool_protocol'
+      | 'activity_cancelled';
+    pending_function_call_count?: number;
+    function_call_names?: string[];
+    unsupported_function_call_session_path?: string;
     authority_boundary: {
       opl: 'same_session_closeout_enforcement_transport_only';
       domain: 'truth_quality_artifact_gate_owner';
