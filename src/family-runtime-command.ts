@@ -138,6 +138,7 @@ export type FamilyRuntimeCommandInput =
       studyId?: string;
       sinceHours?: number;
       compactTimeline?: boolean;
+      full?: boolean;
     };
   }
   | {

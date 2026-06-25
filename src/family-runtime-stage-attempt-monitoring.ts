@@ -56,6 +56,7 @@ export type StageAttemptMonitoringFilters = {
   studyId?: string;
   sinceHours?: number;
   compactTimeline?: boolean;
+  full?: boolean;
 };
 
 async function providerReadinessByKind(
@@ -739,9 +740,8 @@ export async function listStageAttemptsWithMonitoringProjection(
   const sinceIso = typeof filters.sinceHours === 'number'
     ? new Date(Date.now() - filters.sinceHours * 60 * 60 * 1000).toISOString()
     : null;
-  const hasExplicitFilters = Boolean(filters.domainId || filters.status || filters.studyId || filters.sinceHours);
-  const effectiveCompactTimeline = filters.compactTimeline === true || !hasExplicitFilters;
-  const auditSafeTimeline = effectiveCompactTimeline && !hasExplicitFilters && filters.compactTimeline !== true;
+  const effectiveCompactTimeline = filters.full === true ? false : true;
+  const auditSafeTimeline = effectiveCompactTimeline && filters.compactTimeline !== true;
   const baseAttempts = listStageAttemptRows(db).map(stageAttemptToPayload);
   const filteredAttempts = baseAttempts.filter((attempt) =>
     attemptMatchesMonitoringFilters(db, attempt, filters, sinceIso)
@@ -759,9 +759,11 @@ export async function listStageAttemptsWithMonitoringProjection(
         })
       )
     : null;
-  const fullAttempts = readinessByKind
-    ? filteredAttempts.map((attempt) => attachCurrentProviderReadiness(attempt, readinessByKind))
-    : filteredAttempts;
+  const fullAttempts = effectiveCompactTimeline
+    ? null
+    : readinessByKind
+      ? filteredAttempts.map((attempt) => attachCurrentProviderReadiness(attempt, readinessByKind))
+      : filteredAttempts;
   return {
     filters: {
       domain_id: filters.domainId ?? null,
@@ -770,6 +772,7 @@ export async function listStageAttemptsWithMonitoringProjection(
       since_hours: filters.sinceHours ?? null,
       since_at: sinceIso,
       compact_timeline: effectiveCompactTimeline,
+      full: filters.full === true,
     },
     summary: {
       total: baseAttempts.length,
@@ -790,7 +793,7 @@ export async function listStageAttemptsWithMonitoringProjection(
         ]),
       ),
     },
-    attempts: compactTimeline ?? fullAttempts,
+    attempts: compactTimeline ?? fullAttempts ?? [],
     compact_timeline: compactTimeline,
   };
 }

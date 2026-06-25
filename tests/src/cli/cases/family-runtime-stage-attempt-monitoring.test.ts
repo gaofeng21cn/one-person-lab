@@ -198,6 +198,7 @@ test('family-runtime attempt list keeps stable array shape for full and compact 
       'medautoscience',
       '--study',
       'DM002',
+      '--full',
     ], familyRuntimeEnv(stateRoot)).family_runtime_stage_attempts;
     const compact = runCli([
       'family-runtime',
@@ -211,7 +212,9 @@ test('family-runtime attempt list keeps stable array shape for full and compact 
     ], familyRuntimeEnv(stateRoot)).family_runtime_stage_attempts;
 
     assert.equal(full.view_mode, 'full');
+    assert.equal(full.filters.full, true);
     assert.equal(compact.view_mode, 'compact_timeline');
+    assert.equal(compact.filters.full, false);
     assert.equal(Array.isArray(full.items), true);
     assert.equal(Array.isArray(full.attempts), true);
     assert.equal(Array.isArray(compact.items), true);
@@ -223,6 +226,71 @@ test('family-runtime attempt list keeps stable array shape for full and compact 
     assert.deepEqual(compact.items, compact.compact_timeline);
     assert.deepEqual(compact.attempts, compact.compact_timeline);
   } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime attempt list defaults filtered readout to bounded audit-safe timeline', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-list-filtered-bounded-'));
+  const db = new DatabaseSync(path.join(stateRoot, 'queue.sqlite'));
+  try {
+    createFamilyRuntimeQueueTables(db);
+    const heavyBody = 'x'.repeat(128_000);
+    for (let index = 0; index < 55; index += 1) {
+      const attempt = createStageAttempt(db, {
+        domainId: 'medautoscience',
+        stageId: `review-${String(index).padStart(2, '0')}`,
+        providerKind: 'local_sqlite',
+        workspaceLocator: {
+          workspace_root: '/tmp/mas',
+          study_id: 'DM003',
+        },
+      }).attempt;
+      db.prepare(`
+        UPDATE stage_attempts
+        SET provider_run_json = ?,
+          activity_events_json = ?,
+          route_impact_json = ?
+        WHERE stage_attempt_id = ?
+      `).run(
+        JSON.stringify({
+          provider_run_id: `provider-run-${index}`,
+          transcript_body: heavyBody,
+        }),
+        JSON.stringify([{
+          event_id: `event-${index}`,
+          payload_body: heavyBody,
+        }]),
+        JSON.stringify({
+          raw_route_payload: heavyBody,
+        }),
+        attempt.stage_attempt_id,
+      );
+    }
+
+    const output = await listStageAttemptsWithMonitoringProjection(db, { root: stateRoot }, {}, {
+      domainId: 'medautoscience',
+      studyId: 'DM003',
+    });
+    const outputJson = JSON.stringify(output);
+
+    assert.equal(output.filters.compact_timeline, true);
+    assert.equal(output.filters.full, false);
+    assert.equal(output.summary.total, 55);
+    assert.equal(output.summary.filtered_total, 55);
+    assert.equal(output.summary.compact_timeline_returned_total, 25);
+    assert.equal(output.summary.compact_timeline_omitted_total, 30);
+    assert.equal(output.summary.compact_timeline_limit, 25);
+    assert.equal(output.attempts.length, 25);
+    assert.equal(output.compact_timeline?.length, 25);
+    assert.deepEqual(output.attempts, output.compact_timeline);
+    assert.equal('provider_run' in output.attempts[0], false);
+    assert.equal('activity_events' in output.attempts[0], false);
+    assert.equal('route_impact' in output.attempts[0], false);
+    assert.equal(outputJson.includes(heavyBody), false);
+    assert.equal(outputJson.length < heavyBody.length * 10, true);
+  } finally {
+    db.close();
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });

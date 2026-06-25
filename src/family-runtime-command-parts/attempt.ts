@@ -59,6 +59,7 @@ function parseAttemptListArgs(rest: string[]): FamilyRuntimeCommandInput {
   let studyId: string | undefined;
   let sinceHours: number | undefined;
   let compactTimeline = false;
+  let full = false;
   for (let index = 1; index < rest.length; index += 1) {
     const token = rest[index];
     const value = rest[index + 1];
@@ -83,12 +84,19 @@ function parseAttemptListArgs(rest: string[]): FamilyRuntimeCommandInput {
       index += 1;
     } else if (token === '--compact-timeline') {
       compactTimeline = true;
+    } else if (token === '--full') {
+      full = true;
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime attempt list option: ${token}.`, {
         option: token,
-        usage: 'opl family-runtime attempt list [--domain <domain>] [--status <status>] [--study <study_id>] [--since-hours <hours>] [--compact-timeline]',
+        usage: 'opl family-runtime attempt list [--domain <domain>] [--status <status>] [--study <study_id>] [--since-hours <hours>] [--compact-timeline] [--full]',
       });
     }
+  }
+  if (compactTimeline && full) {
+    throw new FrameworkContractError('cli_usage_error', 'family-runtime attempt list cannot combine --compact-timeline and --full.', {
+      options: ['--compact-timeline', '--full'],
+    });
   }
   return {
     mode: 'attempt_list',
@@ -98,6 +106,7 @@ function parseAttemptListArgs(rest: string[]): FamilyRuntimeCommandInput {
       studyId,
       sinceHours,
       compactTimeline,
+      full,
     },
   };
 }
