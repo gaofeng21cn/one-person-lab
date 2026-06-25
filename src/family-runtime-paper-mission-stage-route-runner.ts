@@ -294,19 +294,20 @@ function missingIdentityReason(payload: Record<string, unknown>) {
   return null;
 }
 
-const PROVIDER_CLOSEOUT_TRANSPORT_FAILURE_REASONS = new Set([
+const PROVIDER_RUNTIME_BLOCKER_REDRIVE_REASONS = new Set([
   'typed_closeout_packet_required',
   'temporal_stage_attempt_completed_missing_typed_closeout',
   'codex_cli_typed_closeout_not_materialized',
+  'codex_cli_provider_unavailable',
 ]);
 const PROVIDER_RUNTIME_BLOCKER_REF_PATTERN = /^opl:\/\/stage-attempts\/[^/]+\/runtime-blockers\/[^/]+$/;
 
-function closeoutRefsAllowFreshAttemptAfterProviderCloseoutTransportFailure(closeoutRefs: string[]) {
+function closeoutRefsAllowFreshAttemptAfterProviderRuntimeBlocker(closeoutRefs: string[]) {
   return closeoutRefs.length === 0
     || closeoutRefs.every((ref) => PROVIDER_RUNTIME_BLOCKER_REF_PATTERN.test(ref));
 }
 
-function needsFreshAttemptAfterProviderCloseoutTransportFailure(
+function needsFreshAttemptAfterProviderRuntimeBlocker(
   db: DatabaseSync,
   input: {
     taskId: string;
@@ -322,8 +323,8 @@ function needsFreshAttemptAfterProviderCloseoutTransportFailure(
       && attempt.executor_kind === 'codex_cli'
       && attempt.source_fingerprint === input.sourceFingerprint
       && ['blocked', 'failed', 'dead_lettered'].includes(attempt.status)
-      && PROVIDER_CLOSEOUT_TRANSPORT_FAILURE_REASONS.has(attempt.blocked_reason ?? '')
-      && closeoutRefsAllowFreshAttemptAfterProviderCloseoutTransportFailure(closeoutRefs)
+      && PROVIDER_RUNTIME_BLOCKER_REDRIVE_REASONS.has(attempt.blocked_reason ?? '')
+      && closeoutRefsAllowFreshAttemptAfterProviderRuntimeBlocker(closeoutRefs)
       && attempt.closeout_receipt_status === null;
   });
 }
@@ -390,7 +391,7 @@ export async function dispatchPaperMissionStageRouteTask(
   const stageId = routeStageId(payload);
   const providerKind = resolveFamilyRuntimeProviderKind();
   const executorPolicy = resolveCodexCliExecutorPolicy(payload);
-  const newAttemptAfterCloseoutTransportFailure = needsFreshAttemptAfterProviderCloseoutTransportFailure(db, {
+  const newAttemptAfterProviderRuntimeBlocker = needsFreshAttemptAfterProviderRuntimeBlocker(db, {
     taskId: row.task_id,
     providerKind,
     stageId,
@@ -405,7 +406,7 @@ export async function dispatchPaperMissionStageRouteTask(
     executorKind: 'codex_cli',
     stageAttemptExecutorPolicy: executorPolicy.policy,
     taskId: row.task_id,
-    newAttempt: newAttemptAfterCloseoutTransportFailure,
+    newAttempt: newAttemptAfterProviderRuntimeBlocker,
     blockedReason: executorPolicy.blockedReason ?? undefined,
     checkpointRefs: [
       optionalString(payload.paper_mission_transaction_ref),

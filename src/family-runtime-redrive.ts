@@ -40,9 +40,10 @@ const PROVIDER_STAGE_ATTEMPT_REDRIVE_REASONS = [
   ...PROVIDER_TRANSPORT_OPERATOR_REDRIVE_REASONS,
   'temporal_workflow_not_started_or_not_found',
 ] as const;
-const PAPER_MISSION_STAGE_ROUTE_CLOSEOUT_PACKET_REDRIVE_REASONS = [
+const PAPER_MISSION_STAGE_ROUTE_PROVIDER_RUNTIME_REDRIVE_REASONS = [
   'typed_closeout_packet_required',
   'codex_cli_typed_closeout_not_materialized',
+  'codex_cli_provider_unavailable',
 ] as const;
 const PROVIDER_RUNTIME_BLOCKER_REF_PATTERN = /^opl:\/\/stage-attempts\/[^/]+\/runtime-blockers\/[^/]+$/;
 
@@ -50,7 +51,7 @@ type ProviderTransportRedriveReason = typeof PROVIDER_TRANSPORT_REDRIVE_REASONS[
 type ProviderTransportOperatorRedriveReason = typeof PROVIDER_TRANSPORT_OPERATOR_REDRIVE_REASONS[number];
 type ProviderStageAttemptRedriveReason = typeof PROVIDER_STAGE_ATTEMPT_REDRIVE_REASONS[number];
 type PaperMissionStageRouteCloseoutPacketRedriveReason =
-  typeof PAPER_MISSION_STAGE_ROUTE_CLOSEOUT_PACKET_REDRIVE_REASONS[number];
+  typeof PAPER_MISSION_STAGE_ROUTE_PROVIDER_RUNTIME_REDRIVE_REASONS[number];
 type ProviderTransportRedriveTrigger = 'operator' | 'auto';
 type StageAttemptPayload = ReturnType<typeof listStageAttemptsForTask>[number];
 type RedriveAdmission = ReturnType<typeof redriveAdmissionForTask>;
@@ -221,7 +222,7 @@ function providerStageAttemptRedriveReasonAllowed(
   if (isProviderStageAttemptRedriveReason(attempt.blocked_reason)) {
     return true;
   }
-  return PAPER_MISSION_STAGE_ROUTE_CLOSEOUT_PACKET_REDRIVE_REASONS.includes(
+  return PAPER_MISSION_STAGE_ROUTE_PROVIDER_RUNTIME_REDRIVE_REASONS.includes(
     attempt.blocked_reason as PaperMissionStageRouteCloseoutPacketRedriveReason,
   )
     && attempt.executor_kind === 'codex_cli'
@@ -239,7 +240,7 @@ function closeoutRefsAllowProviderTransportRedrive(
   }
   return attempt.executor_kind === 'codex_cli'
     && paperMissionStageRouteRedriveAuthority(row, payload)
-    && PAPER_MISSION_STAGE_ROUTE_CLOSEOUT_PACKET_REDRIVE_REASONS.includes(
+    && PAPER_MISSION_STAGE_ROUTE_PROVIDER_RUNTIME_REDRIVE_REASONS.includes(
       attempt.blocked_reason as PaperMissionStageRouteCloseoutPacketRedriveReason,
     )
     && closeoutRefs.every((ref) => PROVIDER_RUNTIME_BLOCKER_REF_PATTERN.test(ref));
@@ -371,7 +372,7 @@ function redriveTerminalProviderTransportTask(
           allowed_blocked_reasons: paperMissionStageRouteRedriveAuthority(currentRow, currentPayload)
             ? [
                 ...PROVIDER_STAGE_ATTEMPT_REDRIVE_REASONS,
-                ...PAPER_MISSION_STAGE_ROUTE_CLOSEOUT_PACKET_REDRIVE_REASONS,
+                ...PAPER_MISSION_STAGE_ROUTE_PROVIDER_RUNTIME_REDRIVE_REASONS,
               ]
             : PROVIDER_STAGE_ATTEMPT_REDRIVE_REASONS,
           closeout_refs_must_be_empty_or_provider_runtime_blocker_refs: true,

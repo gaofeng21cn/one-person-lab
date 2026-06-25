@@ -1572,7 +1572,11 @@ test('family-runtime redrives PaperMission stage-route typed closeout packet tra
   }
 });
 
-test('family-runtime redrives PaperMission stage-route provider runtime closeout materialization blocker', async () => {
+for (const providerRuntimeBlockerReason of [
+  'codex_cli_typed_closeout_not_materialized',
+  'codex_cli_provider_unavailable',
+]) {
+test(`family-runtime redrives PaperMission stage-route provider runtime blocker ${providerRuntimeBlockerReason}`, async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-runtime-blocker-redrive-'));
   const originalStateDir = process.env.OPL_STATE_DIR;
   const originalProvider = process.env.OPL_FAMILY_RUNTIME_PROVIDER;
@@ -1622,25 +1626,30 @@ test('family-runtime redrives PaperMission stage-route provider runtime closeout
     const startedTask = inspectTask(db, enqueued.task.task_id);
     const originalAttempt = startedTask.stage_attempts[0];
     const providerRuntimeBlockerRef =
-      `opl://stage-attempts/${originalAttempt.stage_attempt_id}/runtime-blockers/codex_cli_typed_closeout_not_materialized`;
+      `opl://stage-attempts/${originalAttempt.stage_attempt_id}/runtime-blockers/${providerRuntimeBlockerReason}`;
     db.prepare(`
       UPDATE tasks
       SET status = 'blocked',
-        last_error = 'codex_cli_typed_closeout_not_materialized',
-        dead_letter_reason = 'codex_cli_typed_closeout_not_materialized',
+        last_error = ?,
+        dead_letter_reason = ?,
         updated_at = ?
       WHERE task_id = ?
-    `).run(new Date().toISOString(), enqueued.task.task_id);
+    `).run(
+      providerRuntimeBlockerReason,
+      providerRuntimeBlockerReason,
+      new Date().toISOString(),
+      enqueued.task.task_id,
+    );
     db.prepare(`
       UPDATE stage_attempts
       SET status = 'blocked',
-        blocked_reason = 'codex_cli_typed_closeout_not_materialized',
+        blocked_reason = ?,
         closeout_refs_json = ?,
         closeout_receipt_status = NULL,
         provider_run_json = json_set(
           provider_run_json,
           '$.provider_status', 'blocked',
-          '$.terminal_observation.reason', 'codex_cli_typed_closeout_not_materialized'
+          '$.terminal_observation.reason', ?
         ),
         route_impact_json = json_set(
           route_impact_json,
@@ -1652,7 +1661,9 @@ test('family-runtime redrives PaperMission stage-route provider runtime closeout
         updated_at = ?
       WHERE stage_attempt_id = ?
     `).run(
+      providerRuntimeBlockerReason,
       JSON.stringify([providerRuntimeBlockerRef]),
+      providerRuntimeBlockerReason,
       providerRuntimeBlockerRef,
       new Date().toISOString(),
       originalAttempt.stage_attempt_id,
@@ -1666,7 +1677,7 @@ test('family-runtime redrives PaperMission stage-route provider runtime closeout
       'redrive',
       enqueued.task.task_id,
       '--reason',
-      'codex_cli_closeout_capture_runner_reloaded',
+      `${providerRuntimeBlockerReason}_cleared`,
       '--source',
       'test-paper-route-runtime-blocker-redrive',
     ], familyRuntimeEnv(stateRoot, {
@@ -1695,7 +1706,7 @@ test('family-runtime redrives PaperMission stage-route provider runtime closeout
     );
 
     assert.equal(blockedTask.family_runtime_task.task.status, 'blocked');
-    assert.equal(blockedAttempt?.blocked_reason, 'codex_cli_typed_closeout_not_materialized');
+    assert.equal(blockedAttempt?.blocked_reason, providerRuntimeBlockerReason);
     assert.deepEqual(blockedAttempt?.closeout_refs, [providerRuntimeBlockerRef]);
     assert.equal(redrive.family_runtime_redrive.redriven, true);
     assert.equal(redrive.family_runtime_redrive.task.status, 'queued');
@@ -1718,7 +1729,7 @@ test('family-runtime redrives PaperMission stage-route provider runtime closeout
       afterDispatch.events.some((event) =>
         event.event_type === 'task_operator_redrive_from_terminal_provider_transport'
         && event.payload.previous_stage_attempt_id === originalAttempt.stage_attempt_id
-        && event.payload.previous_stage_attempt_blocked_reason === 'codex_cli_typed_closeout_not_materialized'
+        && event.payload.previous_stage_attempt_blocked_reason === providerRuntimeBlockerReason
         && event.payload.redriven_stage_attempt_id === null
         && (event.payload.redrive_protocol as Record<string, unknown>).domain_progress_claim === false
         && (event.payload.authority_boundary as Record<string, unknown>).domain_truth_mutation === false
@@ -1733,6 +1744,7 @@ test('family-runtime redrives PaperMission stage-route provider runtime closeout
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
+}
 
 test('family-runtime late typed closeout supersedes provider-only missing closeout blocker', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-late-closeout-'));
