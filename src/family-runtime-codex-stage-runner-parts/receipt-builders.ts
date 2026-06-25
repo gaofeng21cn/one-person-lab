@@ -1,6 +1,7 @@
 import {
   buildCodexCliPreview,
   buildCodexExecArgs,
+  type CodexExecOptions,
 } from '../codex.ts';
 import type {
   AgentExecutionReceipt,
@@ -199,6 +200,7 @@ export function buildCodexStageRunnerReceipt(input: {
   threadId?: string | null;
   timeoutMs?: number | null;
   noOutputTimeoutMs?: number | null;
+  codexExecOptions?: Pick<CodexExecOptions, 'model' | 'provider' | 'reasoningEffort'>;
 }): CodexStageRunnerBaseReceipt {
   const runnerMode = normalizeCodexStageRunnerMode(input.runnerMode);
   const checkpointRefs = checkpointRefsFromAttempt(input.attempt);
@@ -207,6 +209,7 @@ export function buildCodexStageRunnerReceipt(input: {
   const args = buildCodexExecArgs(runnerPromptFor({ attempt: input.attempt, stagePacketRef }), {
     cwd: workspaceRootFromAttempt(input.attempt) ?? undefined,
     json: true,
+    ...input.codexExecOptions,
   });
   return {
     runner_status: {

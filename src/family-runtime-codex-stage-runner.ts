@@ -87,6 +87,14 @@ function executorPolicyFromAttempt(attempt: JsonRecord): StageAttemptExecutorPol
   return direct;
 }
 
+function codexExecOptionsFromPolicy(policy: StageAttemptExecutorPolicy | null) {
+  return {
+    model: optionalString(policy?.model) ?? undefined,
+    provider: optionalString(policy?.provider) ?? undefined,
+    reasoningEffort: optionalString(policy?.reasoning_effort) ?? undefined,
+  };
+}
+
 function executorKindFromAttemptPolicy(attempt: JsonRecord) {
   return normalizeAgentExecutorStageMode(optionalString(executorPolicyFromAttempt(attempt)?.executor_kind));
 }
@@ -394,10 +402,12 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     stagePacketRef,
     workspaceRoot,
   });
+  const codexExecOptions = codexExecOptionsFromPolicy(executorPolicyFromAttempt(input.attempt));
   try {
     const args = buildCodexExecArgs(runnerPromptFor(input), {
       cwd: workspaceRoot,
       json: true,
+      ...codexExecOptions,
       outputLastMessagePath: stageCloseoutCapture.outputLastMessagePath,
       outputSchemaPath: stageCloseoutCapture.outputSchemaPath,
     });
@@ -481,6 +491,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
           }),
           {
             json: true,
+            ...codexExecOptions,
             outputLastMessagePath: closeoutEnforcementCapture.outputLastMessagePath,
             outputSchemaPath: closeoutEnforcementCapture.outputSchemaPath,
           },
@@ -653,6 +664,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     ...buildCodexStageRunnerReceipt({
       ...input,
       stagePacketRef,
+      codexExecOptions,
       runnerMode,
       liveProcessStarted: true,
       processId,
@@ -841,6 +853,7 @@ export function buildCodexStageActivityInput(input: {
   const runnerReceipt = buildCodexStageRunnerReceipt({
     attempt: input.attempt,
     stagePacketRef,
+    codexExecOptions: codexExecOptionsFromPolicy(executorPolicyFromAttempt(input.attempt)),
     runnerMode: codexProjectionRunnerModeFromAttempt(input.attempt),
   });
   return {

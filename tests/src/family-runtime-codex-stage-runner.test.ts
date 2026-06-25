@@ -80,6 +80,42 @@ test('Codex stage activity command preview carries strict terminal closeout cont
   assert.equal(activity.expected_closeout.free_text_closeout_accepted, false);
 });
 
+test('Codex stage activity command preview binds explicit Codex executor policy', () => {
+  const activity = buildCodexStageActivityInput({
+    attempt: {
+      stage_attempt_id: 'sat_codex_policy_preview_test',
+      stage_id: 'domain_owner/default-executor-dispatch',
+      executor_kind: 'codex_cli',
+      stage_attempt_executor_policy: {
+        executor_kind: 'codex_cli',
+        model: 'gpt-5.5',
+        provider: 'openai',
+        reasoning_effort: 'high',
+      },
+      workspace_locator: {
+        workspace_root: '/tmp/mas',
+      },
+      checkpoint_refs: ['packet:from-checkpoint'],
+    },
+  });
+
+  assert.deepEqual(activity.runner_status.command_preview.slice(0, 13), [
+    'codex',
+    'exec',
+    '--skip-git-repo-check',
+    '--full-auto',
+    '--json',
+    '--cd',
+    '/tmp/mas',
+    '--model',
+    'gpt-5.5',
+    '--config',
+    'model_provider="openai"',
+    '--config',
+    'model_reasoning_effort="high"',
+  ]);
+});
+
 test('Codex stage activity prompt carries refs-only OPL execution authorization context', () => {
   const activity = buildCodexStageActivityInput({
     attempt: {
@@ -261,6 +297,81 @@ exit 64
       process.env.OPL_CODEX_BIN = previousCodexBin;
     }
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('Codex stage runner passes stage executor policy to live Codex CLI', async () => {
+  const capturePath = path.join(os.tmpdir(), `opl-codex-stage-runner-policy-${process.pid}.txt`);
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+printf '%s\\n' "$@" > ${JSON.stringify(capturePath)}
+if [ "$1" = "exec" ]; then
+  printf '{"type":"thread.started","thread_id":"thread-stage-runner-policy"}\\n'
+  printf '%s\\n' '${JSON.stringify({
+    type: 'item.completed',
+    item: {
+      type: 'agent_message',
+      id: 'msg-policy',
+      text: JSON.stringify({
+        surface_kind: 'stage_attempt_closeout_packet',
+        closeout_refs: ['receipt:stage-runner-policy'],
+        next_owner: 'med-autoscience',
+        domain_ready_verdict: 'domain_gate_pending',
+      }),
+    },
+  })}'
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_stage_runner_policy_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        executor_kind: 'codex_cli',
+        stage_attempt_executor_policy: {
+          executor_kind: 'codex_cli',
+          model: 'gpt-5.5',
+          provider: 'openai',
+          reasoning_effort: 'high',
+        },
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        checkpoint_refs: ['checkpoint:policy'],
+      },
+      stagePacketRef: 'packet:policy',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+    });
+
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, ['receipt:stage-runner-policy']);
+    const capturedArgs = fs.readFileSync(capturePath, 'utf8').trim().split('\n');
+    assert.deepEqual(capturedArgs.slice(0, 12), [
+      'exec',
+      '--skip-git-repo-check',
+      '--full-auto',
+      '--json',
+      '--cd',
+      fixtureRoot,
+      '--model',
+      'gpt-5.5',
+      '--config',
+      'model_provider="openai"',
+      '--config',
+      'model_reasoning_effort="high"',
+    ]);
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(capturePath, { force: true });
   }
 });
 
