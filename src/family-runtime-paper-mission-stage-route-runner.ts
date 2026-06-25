@@ -6,6 +6,7 @@ import { resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts'
 import {
   createStageAttempt,
   inspectStageAttempt,
+  listStageAttemptsForTask,
   updateStageAttemptsForTask,
 } from './family-runtime-stage-attempts.ts';
 import {
@@ -190,6 +191,33 @@ function missingIdentityReason(payload: Record<string, unknown>) {
   return null;
 }
 
+const PROVIDER_CLOSEOUT_TRANSPORT_FAILURE_REASONS = new Set([
+  'typed_closeout_packet_required',
+  'temporal_stage_attempt_completed_missing_typed_closeout',
+]);
+
+function needsFreshAttemptAfterProviderCloseoutTransportFailure(
+  db: DatabaseSync,
+  input: {
+    taskId: string;
+    providerKind: string;
+    stageId: string;
+    sourceFingerprint: string;
+  },
+) {
+  return listStageAttemptsForTask(db, input.taskId).some((attempt) => {
+    const closeoutRefs = Array.isArray(attempt.closeout_refs) ? attempt.closeout_refs : [];
+    return attempt.provider_kind === input.providerKind
+      && attempt.stage_id === input.stageId
+      && attempt.executor_kind === 'codex_cli'
+      && attempt.source_fingerprint === input.sourceFingerprint
+      && ['blocked', 'failed', 'dead_lettered'].includes(attempt.status)
+      && PROVIDER_CLOSEOUT_TRANSPORT_FAILURE_REASONS.has(attempt.blocked_reason ?? '')
+      && closeoutRefs.length === 0
+      && attempt.closeout_receipt_status === null;
+  });
+}
+
 export async function dispatchPaperMissionStageRouteTask(
   db: DatabaseSync,
   paths: FamilyRuntimePaths,
@@ -251,6 +279,12 @@ export async function dispatchPaperMissionStageRouteTask(
   const sourceFingerprint = sourceFingerprintFor(row, payload);
   const stageId = routeStageId(payload);
   const providerKind = resolveFamilyRuntimeProviderKind();
+  const newAttemptAfterCloseoutTransportFailure = needsFreshAttemptAfterProviderCloseoutTransportFailure(db, {
+    taskId: row.task_id,
+    providerKind,
+    stageId,
+    sourceFingerprint,
+  });
   const stageAttempt = createStageAttempt(db, {
     domainId: row.domain_id,
     stageId,
@@ -259,6 +293,7 @@ export async function dispatchPaperMissionStageRouteTask(
     sourceFingerprint,
     executorKind: 'codex_cli',
     taskId: row.task_id,
+    newAttempt: newAttemptAfterCloseoutTransportFailure,
     checkpointRefs: [
       optionalString(payload.paper_mission_transaction_ref),
       optionalString(payload.opl_route_command_ref),

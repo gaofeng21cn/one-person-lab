@@ -40,6 +40,7 @@ const PROVIDER_STAGE_ATTEMPT_REDRIVE_REASONS = [
   ...PROVIDER_TRANSPORT_OPERATOR_REDRIVE_REASONS,
   'temporal_workflow_not_started_or_not_found',
 ] as const;
+const PAPER_MISSION_STAGE_ROUTE_CLOSEOUT_PACKET_REDRIVE_REASON = 'typed_closeout_packet_required';
 
 type ProviderTransportRedriveReason = typeof PROVIDER_TRANSPORT_REDRIVE_REASONS[number];
 type ProviderTransportOperatorRedriveReason = typeof PROVIDER_TRANSPORT_OPERATOR_REDRIVE_REASONS[number];
@@ -189,12 +190,46 @@ function domainRouteRedriveAuthority(row: FamilyRuntimeTaskRow, payload: Record<
     && projection.authority_boundary.writes_current_package === false;
 }
 
-function terminalProviderTransportAttemptForRedrive(db: DatabaseSync, taskId: string) {
-  const attempts = listStageAttemptsForTask(db, taskId).filter((attempt) => {
+function paperMissionStageRouteRedriveAuthority(row: FamilyRuntimeTaskRow, payload: Record<string, unknown>) {
+  const authority = isRecord(payload.authority_boundary) ? payload.authority_boundary : {};
+  return row.domain_id === 'medautoscience'
+    && row.task_kind === 'paper_mission/stage-route'
+    && payload.runtime_request_kind === 'mas_paper_mission_stage_route'
+    && payload.domain_truth_write !== true
+    && payload.artifact_gate_override !== true
+    && authority.writes_owner_receipt !== true
+    && authority.writes_typed_blocker !== true
+    && authority.writes_human_gate !== true
+    && authority.writes_current_package !== true
+    && authority.writes_paper_body !== true
+    && authority.can_claim_provider_running !== true
+    && authority.can_claim_paper_progress !== true
+    && authority.can_claim_runtime_ready !== true;
+}
+
+function providerStageAttemptRedriveReasonAllowed(
+  attempt: StageAttemptPayload,
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+) {
+  if (isProviderStageAttemptRedriveReason(attempt.blocked_reason)) {
+    return true;
+  }
+  return attempt.blocked_reason === PAPER_MISSION_STAGE_ROUTE_CLOSEOUT_PACKET_REDRIVE_REASON
+    && attempt.executor_kind === 'codex_cli'
+    && paperMissionStageRouteRedriveAuthority(row, payload);
+}
+
+function terminalProviderTransportAttemptForRedrive(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+) {
+  const attempts = listStageAttemptsForTask(db, row.task_id).filter((attempt) => {
     const closeoutRefs = stringList(attempt.closeout_refs);
     return attempt.provider_kind === 'temporal'
       && ['failed', 'blocked', 'dead_lettered'].includes(attempt.status)
-      && isProviderStageAttemptRedriveReason(attempt.blocked_reason)
+      && providerStageAttemptRedriveReasonAllowed(attempt, row, payload)
       && closeoutRefs.length === 0
       && attempt.closeout_receipt_status === null;
   });
@@ -242,7 +277,7 @@ function assertDomainRouteProviderTransportTask(
   row: FamilyRuntimeTaskRow,
   payload: Record<string, unknown>,
 ) {
-  if (!domainRouteRedriveAuthority(row, payload)) {
+  if (!domainRouteRedriveAuthority(row, payload) && !paperMissionStageRouteRedriveAuthority(row, payload)) {
     throwProviderOnlyRedriveBlocked(
       'family-runtime queue redrive requires a provider transport task with OPL redrive authority.',
       'provider_redrive_authority_missing',
@@ -300,7 +335,7 @@ function redriveTerminalProviderTransportTask(
     }
     const currentPayload = parsePayload(currentRow);
     assertDomainRouteProviderTransportTask(currentRow, currentPayload);
-    const terminalAttempt = terminalProviderTransportAttemptForRedrive(db, currentRow.task_id);
+    const terminalAttempt = terminalProviderTransportAttemptForRedrive(db, currentRow, currentPayload);
     if (!terminalAttempt) {
       throwProviderOnlyRedriveBlocked(
         'family-runtime queue redrive requires failed provider attempt evidence without closeout refs.',
@@ -309,7 +344,12 @@ function redriveTerminalProviderTransportTask(
           task_id: currentRow.task_id,
           status: currentRow.status,
           required_stage_attempt_statuses: ['failed', 'blocked', 'dead_lettered'],
-          allowed_blocked_reasons: PROVIDER_STAGE_ATTEMPT_REDRIVE_REASONS,
+          allowed_blocked_reasons: paperMissionStageRouteRedriveAuthority(currentRow, currentPayload)
+            ? [
+                ...PROVIDER_STAGE_ATTEMPT_REDRIVE_REASONS,
+                PAPER_MISSION_STAGE_ROUTE_CLOSEOUT_PACKET_REDRIVE_REASON,
+              ]
+            : PROVIDER_STAGE_ATTEMPT_REDRIVE_REASONS,
           closeout_refs_required_empty: true,
         },
       );
@@ -357,6 +397,7 @@ function redriveTerminalProviderTransportTask(
         operator_reason: input.operatorReason,
         source_fingerprint_changed: false,
         redriven_stage_attempt_id: redrivenAttempt?.stage_attempt_id ?? null,
+        provider_redrive_started: Boolean(redrivenAttempt),
         ...redriveResultBoundary('provider_transport_terminal', 'provider_transport_redrive_only'),
       },
     });
@@ -857,6 +898,11 @@ export function redriveFamilyRuntimeTask(
           source: input.source,
           operatorReason,
         });
+  } else if (paperMissionStageRouteRedriveAuthority(row, payload)) {
+    result = redriveTerminalProviderTransportTask(db, row, payload, {
+      source: input.source,
+      operatorReason,
+    });
   } else {
     throwProviderOnlyRedriveBlocked(
       'family-runtime queue redrive requires a blocked provider transport task or retry-budget provider dead-letter.',

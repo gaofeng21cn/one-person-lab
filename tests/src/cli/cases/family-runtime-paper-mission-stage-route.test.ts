@@ -1201,6 +1201,150 @@ test('family-runtime Temporal completed PaperMission stage-route without typed c
   }
 });
 
+test('family-runtime redrives PaperMission stage-route typed closeout packet transport failure', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-closeout-redrive-'));
+  const originalStateDir = process.env.OPL_STATE_DIR;
+  const originalProvider = process.env.OPL_FAMILY_RUNTIME_PROVIDER;
+  const originalTemporalAddress = process.env.OPL_TEMPORAL_ADDRESS;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    process.env.OPL_FAMILY_RUNTIME_PROVIDER = 'temporal';
+    process.env.OPL_TEMPORAL_ADDRESS = '127.0.0.1:7233';
+    const { db, paths } = openQueueDb();
+    const enqueued = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'paper_mission/stage-route',
+      payload: paperMissionRoutePayloadWithWorkspace({
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        mission_id: 'paper-mission::003-dpcc-primary-care-phenotype-treatment-gap::submission::auto',
+        paper_mission_transaction_ref: 'paper-mission-transaction:dm003:submission',
+        opl_route_command_ref: 'paper-mission-transaction:dm003:submission#opl_route_command',
+        command_kind: 'resume_stage',
+        route_target: 'continue paper-facing submission milestone work',
+        route_identity_key: 'paper-mission-transaction:dm003:submission::route',
+        attempt_idempotency_key: 'dm003:submission:consumed::opl-attempt',
+        request_idempotency_key: 'dm003:submission:consumed::opl-request',
+        stage_run_request: {
+          request_status: 'requested',
+          requested_by: 'mas_paper_mission_route_handoff',
+          route_identity_key: 'paper-mission-transaction:dm003:submission::route',
+          attempt_idempotency_key: 'dm003:submission:consumed::opl-attempt',
+          stage_run_created: false,
+          provider_attempt_requested: false,
+        },
+      }),
+      dedupeKey: 'paper-mission-route:dm003:typed-closeout-redrive',
+      source: 'test',
+    });
+    const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(enqueued.task.task_id) as FamilyRuntimeTaskRow;
+    await dispatchFamilyRuntimeTask(db, paths, row, {
+      temporalProviderModule: async () => ({
+        startTemporalStageAttemptWorkflow: async (attempt) => ({
+          surface_kind: 'temporal_stage_attempt_start_receipt',
+          provider_kind: 'temporal',
+          stage_attempt_id: attempt.stage_attempt_id,
+          workflow_id: attempt.workflow_id,
+          first_execution_run_id: 'run-paper-mission-route-closeout-redrive-original',
+        }),
+      }),
+    });
+    const startedTask = inspectTask(db, enqueued.task.task_id);
+    const originalAttempt = startedTask.stage_attempts[0];
+    db.prepare(`
+      UPDATE tasks
+      SET status = 'blocked',
+        last_error = 'typed_closeout_packet_required',
+        dead_letter_reason = 'typed_closeout_packet_required',
+        updated_at = ?
+      WHERE task_id = ?
+    `).run(new Date().toISOString(), enqueued.task.task_id);
+    db.prepare(`
+      UPDATE stage_attempts
+      SET status = 'blocked',
+        blocked_reason = 'typed_closeout_packet_required',
+        closeout_refs_json = '[]',
+        closeout_receipt_status = NULL,
+        provider_run_json = json_set(
+          provider_run_json,
+          '$.provider_status', 'blocked',
+          '$.terminal_observation.reason', 'typed_closeout_packet_required'
+        ),
+        updated_at = ?
+      WHERE stage_attempt_id = ?
+    `).run(new Date().toISOString(), originalAttempt.stage_attempt_id);
+    db.close();
+
+    const blockedTask = runCli(['family-runtime', 'queue', 'inspect', enqueued.task.task_id], familyRuntimeEnv(stateRoot));
+    const redrive = runCli([
+      'family-runtime',
+      'queue',
+      'redrive',
+      enqueued.task.task_id,
+      '--reason',
+      'typed_closeout_uri_ref_ingestion_fix_reloaded_worker',
+      '--source',
+      'test-paper-route-closeout-redrive',
+    ], familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+      OPL_TEMPORAL_ADDRESS: '127.0.0.1:7233',
+    }));
+    const redrivenTask = runCli(['family-runtime', 'queue', 'inspect', enqueued.task.task_id], familyRuntimeEnv(stateRoot));
+    const redrivenDb = openQueueDb().db;
+    const redrivenRow = redrivenDb.prepare('SELECT * FROM tasks WHERE task_id = ?').get(enqueued.task.task_id) as
+      FamilyRuntimeTaskRow;
+    await dispatchFamilyRuntimeTask(redrivenDb, familyRuntimePaths(), redrivenRow, {
+      temporalProviderModule: async () => ({
+        startTemporalStageAttemptWorkflow: async (attempt) => ({
+          surface_kind: 'temporal_stage_attempt_start_receipt',
+          provider_kind: 'temporal',
+          stage_attempt_id: attempt.stage_attempt_id,
+          workflow_id: attempt.workflow_id,
+          first_execution_run_id: 'run-paper-mission-route-closeout-redrive-new',
+        }),
+      }),
+    });
+    const afterDispatch = inspectTask(redrivenDb, enqueued.task.task_id);
+    redrivenDb.close();
+    const newestAttempt = afterDispatch.stage_attempts[0];
+
+    assert.equal(blockedTask.family_runtime_task.task.status, 'blocked');
+    assert.equal(blockedTask.family_runtime_task.stage_attempts[0].blocked_reason, 'typed_closeout_packet_required');
+    assert.equal(redrive.family_runtime_redrive.redriven, true);
+    assert.equal(redrive.family_runtime_redrive.task.status, 'queued');
+    assert.equal(redrive.family_runtime_redrive.provider_redrive_started, false);
+    assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt, null);
+    assert.equal(redrive.family_runtime_redrive.redrive_protocol.protocol, 'provider_transport_only');
+    assert.equal(redrive.family_runtime_redrive.redrive_protocol.domain_progress_claim, false);
+    assert.equal(redrive.family_runtime_redrive.authority_boundary.domain_truth_mutation, false);
+    assert.equal(redrive.family_runtime_redrive.authority_boundary.owner_receipt_created, false);
+    assert.equal(redrive.family_runtime_redrive.authority_boundary.typed_blocker_created, false);
+    assert.equal(redrivenTask.family_runtime_task.task.status, 'queued');
+    assert.equal(afterDispatch.task.status, 'running');
+    assert.equal(newestAttempt.status, 'running');
+    assert.equal(newestAttempt.provider_kind, 'temporal');
+    assert.notEqual(newestAttempt.stage_attempt_id, originalAttempt.stage_attempt_id);
+    assert.equal(newestAttempt.workspace_locator.study_id, '003-dpcc-primary-care-phenotype-treatment-gap');
+    assert.equal(newestAttempt.workspace_locator.can_claim_paper_progress, false);
+    assert.equal(newestAttempt.workspace_locator.opl_writes_domain_truth, false);
+    assert.equal(
+      afterDispatch.events.some((event) =>
+        event.event_type === 'task_operator_redrive_from_terminal_provider_transport'
+        && event.payload.previous_stage_attempt_id === originalAttempt.stage_attempt_id
+        && event.payload.previous_stage_attempt_blocked_reason === 'typed_closeout_packet_required'
+        && event.payload.redriven_stage_attempt_id === null
+        && (event.payload.redrive_protocol as Record<string, unknown>).domain_progress_claim === false
+        && (event.payload.authority_boundary as Record<string, unknown>).domain_truth_mutation === false
+      ),
+      true,
+    );
+  } finally {
+    process.env.OPL_STATE_DIR = originalStateDir;
+    process.env.OPL_FAMILY_RUNTIME_PROVIDER = originalProvider;
+    process.env.OPL_TEMPORAL_ADDRESS = originalTemporalAddress;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime late typed closeout supersedes provider-only missing closeout blocker', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-late-closeout-'));
   const originalStateDir = process.env.OPL_STATE_DIR;
