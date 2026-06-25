@@ -26,6 +26,7 @@ import {
   assertNoProviderOnlySemanticRedriveBlocker as assertNoProviderOnlySemanticRedriveBlockerImpl,
   assertProviderOnlyRedriveProtocol,
 } from './family-runtime-redrive-parts/semantic-guards.ts';
+import { createPaperMissionStageRouteAttemptForProviderRedrive } from './family-runtime-paper-mission-stage-route-runner.ts';
 
 const PROVIDER_TRANSPORT_REDRIVE_REASONS = [
   'temporal_stage_attempt_start_failed',
@@ -93,10 +94,20 @@ function createRedrivenAttemptForAdmission(
   if (admission.nextStatus !== 'queued') {
     return null;
   }
+  if (paperMissionStageRouteRedriveAuthority(row, payload)) {
+    return createPaperMissionStageRouteAttemptForProviderRedrive(db, row, payload);
+  }
   return ensureProviderHostedStageAttempt(db, row, payload, {
     newAttempt: true,
     eventSource,
   });
+}
+
+function redrivenAttemptTaskBlocker(attempt: StageAttemptPayload | null) {
+  if (attempt?.status !== 'blocked') {
+    return null;
+  }
+  return stringValue(attempt.blocked_reason) ?? 'provider_redrive_attempt_blocked';
 }
 
 function redriveAdmissionEventPayload(admission: RedriveAdmission, redriveKind: ProviderOnlyRedriveKind) {
@@ -403,6 +414,14 @@ function redriveTerminalProviderTransportTask(
       };
     }
     const redrivenAttempt = createRedrivenAttemptForAdmission(db, currentRow, currentPayload, admission, eventSource);
+    const redrivenAttemptBlocker = redrivenAttemptTaskBlocker(redrivenAttempt);
+    if (redrivenAttemptBlocker) {
+      db.prepare(`
+        UPDATE tasks
+        SET status = 'blocked', last_error = ?, dead_letter_reason = ?, updated_at = ?
+        WHERE task_id = ?
+      `).run(redrivenAttemptBlocker, redrivenAttemptBlocker, redrivenAt, currentRow.task_id);
+    }
     const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(currentRow.task_id) as
       FamilyRuntimeTaskRow;
     insertEvent(db, {
@@ -423,6 +442,8 @@ function redriveTerminalProviderTransportTask(
         source_fingerprint_changed: false,
         redriven_stage_attempt_id: redrivenAttempt?.stage_attempt_id ?? null,
         provider_redrive_started: Boolean(redrivenAttempt),
+        redriven_attempt_status: redrivenAttempt?.status ?? null,
+        redriven_attempt_blocked_reason: redrivenAttemptBlocker,
         ...redriveResultBoundary('provider_transport_terminal', 'provider_transport_redrive_only'),
       },
     });
