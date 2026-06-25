@@ -194,7 +194,14 @@ function missingIdentityReason(payload: Record<string, unknown>) {
 const PROVIDER_CLOSEOUT_TRANSPORT_FAILURE_REASONS = new Set([
   'typed_closeout_packet_required',
   'temporal_stage_attempt_completed_missing_typed_closeout',
+  'codex_cli_typed_closeout_not_materialized',
 ]);
+const PROVIDER_RUNTIME_BLOCKER_REF_PATTERN = /^opl:\/\/stage-attempts\/[^/]+\/runtime-blockers\/[^/]+$/;
+
+function closeoutRefsAllowFreshAttemptAfterProviderCloseoutTransportFailure(closeoutRefs: string[]) {
+  return closeoutRefs.length === 0
+    || closeoutRefs.every((ref) => PROVIDER_RUNTIME_BLOCKER_REF_PATTERN.test(ref));
+}
 
 function needsFreshAttemptAfterProviderCloseoutTransportFailure(
   db: DatabaseSync,
@@ -213,7 +220,7 @@ function needsFreshAttemptAfterProviderCloseoutTransportFailure(
       && attempt.source_fingerprint === input.sourceFingerprint
       && ['blocked', 'failed', 'dead_lettered'].includes(attempt.status)
       && PROVIDER_CLOSEOUT_TRANSPORT_FAILURE_REASONS.has(attempt.blocked_reason ?? '')
-      && closeoutRefs.length === 0
+      && closeoutRefsAllowFreshAttemptAfterProviderCloseoutTransportFailure(closeoutRefs)
       && attempt.closeout_receipt_status === null;
   });
 }

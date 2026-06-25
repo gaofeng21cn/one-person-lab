@@ -13,6 +13,7 @@ type RedriveCurrentnessIdentity = NonNullable<ReturnType<typeof redriveCurrentne
 
 const LIVE_PROVIDER_ATTEMPT_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate']);
 const ACCEPTED_CLOSEOUT_RECEIPT_STATUS = 'accepted_typed_closeout';
+const PROVIDER_RUNTIME_BLOCKER_REF_PATTERN = /^opl:\/\/stage-attempts\/[^/]+\/runtime-blockers\/[^/]+$/;
 
 function nestedRecord(value: unknown) {
   return isRecord(value) ? value : null;
@@ -190,6 +191,12 @@ function hasOwnerRefs(value: unknown) {
   );
 }
 
+function hasDomainCloseoutRefs(attempt: StageAttemptPayload) {
+  return stringList(attempt.closeout_refs).some((ref) => (
+    !PROVIDER_RUNTIME_BLOCKER_REF_PATTERN.test(ref)
+  ));
+}
+
 function redriveBlockingDomainCloseoutAttempt(
   attempts: StageAttemptPayload[],
   input: {
@@ -207,7 +214,7 @@ function redriveBlockingDomainCloseoutAttempt(
     )
     && (
       attempt.closeout_receipt_status === ACCEPTED_CLOSEOUT_RECEIPT_STATUS
-      || stringList(attempt.closeout_refs).length > 0
+      || hasDomainCloseoutRefs(attempt)
       || hasOwnerRefs(attempt.route_impact)
     )
   )) ?? null;

@@ -40,11 +40,17 @@ const PROVIDER_STAGE_ATTEMPT_REDRIVE_REASONS = [
   ...PROVIDER_TRANSPORT_OPERATOR_REDRIVE_REASONS,
   'temporal_workflow_not_started_or_not_found',
 ] as const;
-const PAPER_MISSION_STAGE_ROUTE_CLOSEOUT_PACKET_REDRIVE_REASON = 'typed_closeout_packet_required';
+const PAPER_MISSION_STAGE_ROUTE_CLOSEOUT_PACKET_REDRIVE_REASONS = [
+  'typed_closeout_packet_required',
+  'codex_cli_typed_closeout_not_materialized',
+] as const;
+const PROVIDER_RUNTIME_BLOCKER_REF_PATTERN = /^opl:\/\/stage-attempts\/[^/]+\/runtime-blockers\/[^/]+$/;
 
 type ProviderTransportRedriveReason = typeof PROVIDER_TRANSPORT_REDRIVE_REASONS[number];
 type ProviderTransportOperatorRedriveReason = typeof PROVIDER_TRANSPORT_OPERATOR_REDRIVE_REASONS[number];
 type ProviderStageAttemptRedriveReason = typeof PROVIDER_STAGE_ATTEMPT_REDRIVE_REASONS[number];
+type PaperMissionStageRouteCloseoutPacketRedriveReason =
+  typeof PAPER_MISSION_STAGE_ROUTE_CLOSEOUT_PACKET_REDRIVE_REASONS[number];
 type ProviderTransportRedriveTrigger = 'operator' | 'auto';
 type StageAttemptPayload = ReturnType<typeof listStageAttemptsForTask>[number];
 type RedriveAdmission = ReturnType<typeof redriveAdmissionForTask>;
@@ -215,9 +221,28 @@ function providerStageAttemptRedriveReasonAllowed(
   if (isProviderStageAttemptRedriveReason(attempt.blocked_reason)) {
     return true;
   }
-  return attempt.blocked_reason === PAPER_MISSION_STAGE_ROUTE_CLOSEOUT_PACKET_REDRIVE_REASON
+  return PAPER_MISSION_STAGE_ROUTE_CLOSEOUT_PACKET_REDRIVE_REASONS.includes(
+    attempt.blocked_reason as PaperMissionStageRouteCloseoutPacketRedriveReason,
+  )
     && attempt.executor_kind === 'codex_cli'
     && paperMissionStageRouteRedriveAuthority(row, payload);
+}
+
+function closeoutRefsAllowProviderTransportRedrive(
+  attempt: StageAttemptPayload,
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+) {
+  const closeoutRefs = stringList(attempt.closeout_refs);
+  if (closeoutRefs.length === 0) {
+    return true;
+  }
+  return attempt.executor_kind === 'codex_cli'
+    && paperMissionStageRouteRedriveAuthority(row, payload)
+    && PAPER_MISSION_STAGE_ROUTE_CLOSEOUT_PACKET_REDRIVE_REASONS.includes(
+      attempt.blocked_reason as PaperMissionStageRouteCloseoutPacketRedriveReason,
+    )
+    && closeoutRefs.every((ref) => PROVIDER_RUNTIME_BLOCKER_REF_PATTERN.test(ref));
 }
 
 function terminalProviderTransportAttemptForRedrive(
@@ -226,11 +251,10 @@ function terminalProviderTransportAttemptForRedrive(
   payload: Record<string, unknown>,
 ) {
   const attempts = listStageAttemptsForTask(db, row.task_id).filter((attempt) => {
-    const closeoutRefs = stringList(attempt.closeout_refs);
     return attempt.provider_kind === 'temporal'
       && ['failed', 'blocked', 'dead_lettered'].includes(attempt.status)
       && providerStageAttemptRedriveReasonAllowed(attempt, row, payload)
-      && closeoutRefs.length === 0
+      && closeoutRefsAllowProviderTransportRedrive(attempt, row, payload)
       && attempt.closeout_receipt_status === null;
   });
   return attempts.sort((left, right) => Date.parse(left.updated_at) - Date.parse(right.updated_at)).at(-1) ?? null;
@@ -338,7 +362,7 @@ function redriveTerminalProviderTransportTask(
     const terminalAttempt = terminalProviderTransportAttemptForRedrive(db, currentRow, currentPayload);
     if (!terminalAttempt) {
       throwProviderOnlyRedriveBlocked(
-        'family-runtime queue redrive requires failed provider attempt evidence without closeout refs.',
+        'family-runtime queue redrive requires failed provider attempt evidence without domain closeout refs.',
         'provider_transport_attempt_evidence_missing',
         {
           task_id: currentRow.task_id,
@@ -347,10 +371,10 @@ function redriveTerminalProviderTransportTask(
           allowed_blocked_reasons: paperMissionStageRouteRedriveAuthority(currentRow, currentPayload)
             ? [
                 ...PROVIDER_STAGE_ATTEMPT_REDRIVE_REASONS,
-                PAPER_MISSION_STAGE_ROUTE_CLOSEOUT_PACKET_REDRIVE_REASON,
+                ...PAPER_MISSION_STAGE_ROUTE_CLOSEOUT_PACKET_REDRIVE_REASONS,
               ]
             : PROVIDER_STAGE_ATTEMPT_REDRIVE_REASONS,
-          closeout_refs_required_empty: true,
+          closeout_refs_must_be_empty_or_provider_runtime_blocker_refs: true,
         },
       );
     }
