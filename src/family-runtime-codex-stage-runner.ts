@@ -98,6 +98,39 @@ function codexExecOptionsFromPolicy(policy: StageAttemptExecutorPolicy | null) {
   };
 }
 
+function normalizedCodexProviderName(provider?: string | null) {
+  return optionalString(provider)?.toLowerCase() ?? null;
+}
+
+function codexOutputSchemaCapabilityForProvider(provider?: string | null) {
+  const normalizedProvider = normalizedCodexProviderName(provider);
+  if (normalizedProvider === 'gflab') {
+    return {
+      supported: false,
+      policy: 'provider_disabled_gflab_structured_output_request' as const,
+    };
+  }
+  return {
+    supported: true,
+    policy: normalizedProvider
+      ? 'provider_supported_structured_output_request' as const
+      : 'provider_unknown_preserve_codex_default_structured_output_request' as const,
+  };
+}
+
+function codexCloseoutCaptureExecOptions(input: {
+  codexExecOptions: ReturnType<typeof codexExecOptionsFromPolicy>;
+  outputLastMessagePath: string;
+  outputSchemaPath: string;
+}) {
+  const schemaCapability = codexOutputSchemaCapabilityForProvider(input.codexExecOptions.provider);
+  return {
+    ...input.codexExecOptions,
+    outputLastMessagePath: input.outputLastMessagePath,
+    ...(schemaCapability.supported ? { outputSchemaPath: input.outputSchemaPath } : {}),
+  };
+}
+
 function executorKindFromAttemptPolicy(attempt: JsonRecord) {
   return normalizeAgentExecutorStageMode(optionalString(executorPolicyFromAttempt(attempt)?.executor_kind));
 }
@@ -406,13 +439,16 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     workspaceRoot,
   });
   const codexExecOptions = codexExecOptionsFromPolicy(executorPolicyFromAttempt(input.attempt));
+  const outputSchemaCapability = codexOutputSchemaCapabilityForProvider(codexExecOptions.provider);
   try {
     const args = buildCodexExecArgs(runnerPromptFor(input), {
       cwd: workspaceRoot,
       json: true,
-      ...codexExecOptions,
-      outputLastMessagePath: stageCloseoutCapture.outputLastMessagePath,
-      outputSchemaPath: stageCloseoutCapture.outputSchemaPath,
+      ...codexCloseoutCaptureExecOptions({
+        codexExecOptions,
+        outputLastMessagePath: stageCloseoutCapture.outputLastMessagePath,
+        outputSchemaPath: stageCloseoutCapture.outputSchemaPath,
+      }),
     });
     const result = await runCodexCommandStreaming(args, {
       cwd: workspaceRoot,
@@ -494,9 +530,11 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
           }),
           {
             json: true,
-            ...codexExecOptions,
-            outputLastMessagePath: closeoutEnforcementCapture.outputLastMessagePath,
-            outputSchemaPath: closeoutEnforcementCapture.outputSchemaPath,
+            ...codexCloseoutCaptureExecOptions({
+              codexExecOptions,
+              outputLastMessagePath: closeoutEnforcementCapture.outputLastMessagePath,
+              outputSchemaPath: closeoutEnforcementCapture.outputSchemaPath,
+            }),
           },
         ),
         {
@@ -698,6 +736,12 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       ...(capturedLastMessage.message
         ? { captured_last_message_chars: capturedLastMessage.message.length }
         : {}),
+      structured_output_schema: {
+        enabled: outputSchemaCapability.supported,
+        policy: outputSchemaCapability.policy,
+        provider: normalizedCodexProviderName(codexExecOptions.provider),
+        output_last_message_capture_enabled: true,
+      },
       ...(result.activeCommand
         ? {
             active_command: {

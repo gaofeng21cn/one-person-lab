@@ -364,12 +364,204 @@ exit 64
       '--config',
       'model_reasoning_effort="high"',
     ]);
+    assert.notEqual(capturedArgs.indexOf('--output-schema'), -1);
+    assert.notEqual(capturedArgs.indexOf('--output-last-message'), -1);
   } finally {
     if (previousCodexBin === undefined) {
       delete process.env.OPL_CODEX_BIN;
     } else {
       process.env.OPL_CODEX_BIN = previousCodexBin;
     }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(capturePath, { force: true });
+  }
+});
+
+test('Codex stage runner omits structured output schema for gflab while preserving closeout capture', async () => {
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    closeout_refs: ['receipt:gflab-closeout-without-output-schema'],
+    consumed_refs: ['paper:draft.md'],
+    next_owner: 'med-autoscience',
+    domain_ready_verdict: 'domain_gate_pending',
+  };
+  const capturePath = path.join(os.tmpdir(), `opl-codex-stage-runner-gflab-schema-${process.pid}.txt`);
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+output_last_message=""
+output_schema_seen="false"
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --output-last-message)
+      output_last_message="$2"
+      shift 2
+      ;;
+    --output-schema)
+      output_schema_seen="true"
+      shift 2
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+printf '%s\\n%s\\n' "$output_last_message" "$output_schema_seen" > ${JSON.stringify(capturePath)}
+if [ -z "$output_last_message" ]; then
+  echo "missing output-last-message capture" >&2
+  exit 64
+fi
+if [ "$output_schema_seen" = "true" ]; then
+  echo "gflab fixture rejects unsupported output-schema" >&2
+  exit 64
+fi
+printf '%s\\n' '${JSON.stringify(closeout)}' > "$output_last_message"
+printf '{"type":"thread.started","thread_id":"thread-gflab-no-output-schema"}\\n'
+printf '{"type":"turn.completed"}\\n'
+exit 0
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_gflab_no_output_schema_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        executor_kind: 'codex_cli',
+        stage_attempt_executor_policy: {
+          executor_kind: 'codex_cli',
+          model: 'gpt-5.5',
+          provider: 'gflab',
+          reasoning_effort: 'xhigh',
+        },
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        checkpoint_refs: ['checkpoint:gflab-no-output-schema'],
+      },
+      stagePacketRef: 'packet:gflab-no-output-schema',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+    });
+
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+      'receipt:gflab-closeout-without-output-schema',
+    ]);
+    assert.equal(receipt.process_output_summary?.captured_last_message_chars, JSON.stringify(closeout).length + 1);
+    assert.deepEqual(receipt.process_output_summary?.structured_output_schema, {
+      enabled: false,
+      policy: 'provider_disabled_gflab_structured_output_request',
+      provider: 'gflab',
+      output_last_message_capture_enabled: true,
+    });
+    const captured = fs.readFileSync(capturePath, 'utf8').trim().split('\n');
+    assert.notEqual(captured[0], '');
+    assert.equal(captured[1], 'false');
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(capturePath, { force: true });
+  }
+});
+
+test('Codex closeout enforcement also omits structured output schema for gflab', async () => {
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    closeout_refs: ['receipt:gflab-enforcement-without-output-schema'],
+    consumed_refs: ['paper:enforcement.md'],
+    next_owner: 'med-autoscience',
+    domain_ready_verdict: 'domain_gate_pending',
+  };
+  const capturePath = path.join(os.tmpdir(), `opl-codex-stage-runner-gflab-enforcement-${process.pid}.txt`);
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ] && [ "$2" = "resume" ]; then
+  output_last_message=""
+  output_schema_seen="false"
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --output-last-message)
+        output_last_message="$2"
+        shift 2
+        ;;
+      --output-schema)
+        output_schema_seen="true"
+        shift 2
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+  printf '%s\\n%s\\n' "$output_last_message" "$output_schema_seen" > ${JSON.stringify(capturePath)}
+  if [ -z "$output_last_message" ]; then
+    echo "missing enforcement output-last-message capture" >&2
+    exit 64
+  fi
+  if [ "$output_schema_seen" = "true" ]; then
+    echo "gflab enforcement fixture rejects unsupported output-schema" >&2
+    exit 64
+  fi
+  printf '%s\\n' '${JSON.stringify(closeout)}' > "$output_last_message"
+  printf '{"type":"thread.started","thread_id":"thread-gflab-enforcement-closeout"}\\n'
+  printf '{"type":"turn.completed"}\\n'
+  exit 0
+fi
+if [ "$1" = "exec" ]; then
+  printf '{"type":"thread.started","thread_id":"thread-gflab-needs-enforcement"}\\n'
+  printf '{"type":"turn.completed"}\\n'
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  const previousRecoveryTimeout = process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS = '1';
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_gflab_enforcement_no_output_schema_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        executor_kind: 'codex_cli',
+        stage_attempt_executor_policy: {
+          executor_kind: 'codex_cli',
+          model: 'gpt-5.5',
+          provider: 'gflab',
+          reasoning_effort: 'xhigh',
+        },
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        checkpoint_refs: ['checkpoint:gflab-enforcement-no-output-schema'],
+      },
+      stagePacketRef: 'packet:gflab-enforcement-no-output-schema',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+    });
+
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+      'receipt:gflab-enforcement-without-output-schema',
+    ]);
+    assert.equal(receipt.process_output_summary?.closeout_enforcement?.status, 'closeout_found');
+    assert.equal(
+      receipt.process_output_summary?.closeout_enforcement?.captured_last_message_chars,
+      JSON.stringify(closeout).length + 1,
+    );
+    const captured = fs.readFileSync(capturePath, 'utf8').trim().split('\n');
+    assert.notEqual(captured[0], '');
+    assert.equal(captured[1], 'false');
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    previousRecoveryTimeout === undefined
+      ? delete process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS
+      : process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS = previousRecoveryTimeout;
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(capturePath, { force: true });
   }

@@ -73,6 +73,15 @@ export type CodexStageRunnerProcessOutputSummary = {
   no_output_timeout_ms?: number | null;
   command_no_progress_timeout_ms?: number | null;
   captured_last_message_chars?: number;
+  structured_output_schema?: {
+    enabled: boolean;
+    policy:
+      | 'provider_supported_structured_output_request'
+      | 'provider_unknown_preserve_codex_default_structured_output_request'
+      | 'provider_disabled_gflab_structured_output_request';
+    provider: string | null;
+    output_last_message_capture_enabled: true;
+  };
   active_command?: {
     tool_call_id: string;
     title: string;
