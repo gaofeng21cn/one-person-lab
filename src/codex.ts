@@ -39,7 +39,8 @@ export interface CodexCommandResult {
     | 'no_output_timeout'
     | 'command_no_progress_timeout'
     | 'unsupported_tool_protocol'
-    | 'activity_cancelled';
+    | 'activity_cancelled'
+    | 'provider_unavailable';
   noOutputTimeoutMs?: number | null;
   commandNoProgressTimeoutMs?: number | null;
   activeCommand?: CodexCommandActivity | null;
@@ -48,6 +49,10 @@ export interface CodexCommandResult {
     callId: string | null;
   }>;
   unsupportedFunctionCallSessionPath?: string | null;
+  providerErrors?: Array<{
+    message: string;
+    statusCode: number | null;
+  }>;
 }
 
 export interface CodexPassthroughResult {
@@ -338,6 +343,7 @@ export async function runCodexCommandStreaming(
     const activeCommands = new Map<string, CodexCommandActivity>();
     let timedOutActiveCommand: CodexCommandActivity | null = null;
     const unsupportedFunctionCalls: NonNullable<CodexCommandResult['unsupportedFunctionCalls']> = [];
+    const providerErrors: NonNullable<CodexCommandResult['providerErrors']> = [];
     let threadId: string | null = null;
     let unsupportedFunctionCallSessionPath: string | null = null;
     const clearProcessTimeout = () => {
@@ -365,9 +371,11 @@ export async function runCodexCommandStreaming(
           ? 'Codex command execution produced no progress before the command watchdog expired.'
           : reason === 'unsupported_tool_protocol'
             ? 'Codex command emitted an unsupported native function_call without an OPL tool host.'
-            : reason === 'activity_cancelled'
-              ? 'Codex command cancelled by Temporal activity cancellation.'
-              : 'Codex command timed out.';
+            : reason === 'provider_unavailable'
+              ? 'Codex command provider returned an upstream error before a final response was materialized.'
+              : reason === 'activity_cancelled'
+                ? 'Codex command cancelled by Temporal activity cancellation.'
+                : 'Codex command timed out.';
     const finishTimedOut = (reason: NonNullable<CodexCommandResult['timeoutReason']>) => {
       if (completed) {
         return;
@@ -391,6 +399,7 @@ export async function runCodexCommandStreaming(
         ...(timedOutActiveCommand ? { activeCommand: timedOutActiveCommand } : {}),
         ...(unsupportedFunctionCalls.length > 0 ? { unsupportedFunctionCalls } : {}),
         ...(unsupportedFunctionCallSessionPath ? { unsupportedFunctionCallSessionPath } : {}),
+        ...(providerErrors.length > 0 ? { providerErrors } : {}),
       });
     };
     const abortCommand = () => {
@@ -461,6 +470,13 @@ export async function runCodexCommandStreaming(
       unsupportedFunctionCallSessionPath = sessionPath ?? unsupportedFunctionCallSessionPath;
     };
 
+    const recordProviderError = (event: Extract<CodexExecEvent, { type: 'provider_error' }>) => {
+      providerErrors.push({
+        message: event.message,
+        statusCode: event.statusCode,
+      });
+    };
+
     const detectSessionUnsupportedFunctionCalls = () => {
       const recovered = recoverCodexExecOutputFromSession(threadId);
       if (!recovered) {
@@ -492,6 +508,8 @@ export async function runCodexCommandStreaming(
         noOutputTimeout = setTimeout(() => {
           finishTimedOut(detectSessionUnsupportedFunctionCalls()
             ? 'unsupported_tool_protocol'
+            : providerErrors.length > 0
+              ? 'provider_unavailable'
             : 'no_output_timeout');
         }, options.noOutputTimeoutMs);
       }
@@ -517,6 +535,9 @@ export async function runCodexCommandStreaming(
             callId: event.callId,
           }]);
           finishTimedOut('unsupported_tool_protocol');
+        }
+        if (event.type === 'provider_error') {
+          recordProviderError(event);
         }
       }
     });
@@ -580,6 +601,7 @@ export async function runCodexCommandStreaming(
         ...(timedOutActiveCommand ? { activeCommand: timedOutActiveCommand } : {}),
         ...(unsupportedFunctionCalls.length > 0 ? { unsupportedFunctionCalls } : {}),
         ...(unsupportedFunctionCallSessionPath ? { unsupportedFunctionCallSessionPath } : {}),
+        ...(providerErrors.length > 0 ? { providerErrors } : {}),
       });
     });
 

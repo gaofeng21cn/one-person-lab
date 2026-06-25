@@ -185,6 +185,26 @@ function buildProviderRuntimeCloseoutPacket(input: {
   });
 }
 
+function summarizeCodexProviderErrors(errors?: CodexCommandResult['providerErrors'] | null) {
+  const normalized = (errors ?? [])
+    .filter((error) => error.message.trim().length > 0)
+    .map((error) => ({
+      message: error.message.trim(),
+      statusCode: error.statusCode,
+    }));
+  return {
+    count: normalized.length,
+    statusCodes: [
+      ...new Set(normalized
+        .map((error) => error.statusCode)
+        .filter((statusCode): statusCode is number => typeof statusCode === 'number')),
+    ],
+    messages: [
+      ...new Set(normalized.map((error) => error.message)),
+    ].slice(-3),
+  };
+}
+
 function stageCloseoutOutputSchema() {
   return {
     type: 'object',
@@ -411,6 +431,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   let closeoutEnforcementTimeoutReason: CodexCommandResult['timeoutReason'] | null = null;
   let closeoutEnforcementUnsupportedFunctionCalls: NonNullable<CodexCommandResult['unsupportedFunctionCalls']> | null = null;
   let closeoutEnforcementUnsupportedFunctionCallSessionPath: string | null = null;
+  let closeoutEnforcementProviderErrors: NonNullable<CodexCommandResult['providerErrors']> | null = null;
   if (
     !closeoutPacket
     && result.timeoutReason !== 'unsupported_tool_protocol'
@@ -495,6 +516,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       closeoutEnforcementUnsupportedFunctionCalls = closeoutEnforcementResult.unsupportedFunctionCalls ?? null;
       closeoutEnforcementUnsupportedFunctionCallSessionPath =
         closeoutEnforcementResult.unsupportedFunctionCallSessionPath ?? null;
+      closeoutEnforcementProviderErrors = closeoutEnforcementResult.providerErrors ?? null;
       closeoutEnforcementCapturedFinalMessageChars = enforcementCaptured.message?.length ?? 0;
       closeoutPacket = parseCloseoutFromCodexMessages(enforcementParsed.messages)
         ?? enforcementCaptured.closeoutPacket;
@@ -552,8 +574,17 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   });
   closeoutPacket = validatedCloseout.closeoutPacket;
   closeoutRejection = validatedCloseout.rejection;
+  const providerErrorSummary = summarizeCodexProviderErrors(result.providerErrors);
+  const closeoutEnforcementProviderErrorSummary = summarizeCodexProviderErrors(closeoutEnforcementProviderErrors);
+  const providerUnavailable =
+    result.timeoutReason === 'provider_unavailable'
+    || closeoutEnforcementTimeoutReason === 'provider_unavailable'
+    || providerErrorSummary.count > 0
+    || closeoutEnforcementProviderErrorSummary.count > 0;
   const primaryBlockedReason = closeoutRejection
     ? `typed_closeout_${closeoutRejection.reason}`
+    : providerUnavailable
+    ? 'codex_cli_provider_unavailable'
     : result.timeoutReason === 'command_no_progress_timeout'
     ? 'codex_cli_command_execution_no_progress'
     : result.timeoutReason === 'unsupported_tool_protocol'
@@ -586,6 +617,23 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
             ...(closeoutEnforcementUnsupportedFunctionCalls ?? []).map((call) => call.name),
           ]),
         ],
+        ...(providerErrorSummary.count > 0 || closeoutEnforcementProviderErrorSummary.count > 0
+          ? {
+              provider_error_count: providerErrorSummary.count + closeoutEnforcementProviderErrorSummary.count,
+              provider_error_status_codes: [
+                ...new Set([
+                  ...providerErrorSummary.statusCodes,
+                  ...closeoutEnforcementProviderErrorSummary.statusCodes,
+                ]),
+              ],
+              provider_error_messages: [
+                ...new Set([
+                  ...providerErrorSummary.messages,
+                  ...closeoutEnforcementProviderErrorSummary.messages,
+                ]),
+              ].slice(-3),
+            }
+          : {}),
       },
     });
   }
@@ -613,6 +661,13 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       ...(result.timeoutReason ? { timeout_reason: result.timeoutReason } : {}),
       no_output_timeout_ms: result.noOutputTimeoutMs ?? noOutputTimeoutMs,
       command_no_progress_timeout_ms: result.commandNoProgressTimeoutMs ?? commandNoProgressTimeoutMs,
+      ...(providerErrorSummary.count > 0
+        ? {
+            provider_error_count: providerErrorSummary.count,
+            provider_error_status_codes: providerErrorSummary.statusCodes,
+            provider_error_messages: providerErrorSummary.messages,
+          }
+        : {}),
       ...(capturedLastMessage.message
         ? { captured_last_message_chars: capturedLastMessage.message.length }
         : {}),
@@ -682,6 +737,13 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
                 : {}),
               ...(closeoutEnforcementTimeoutReason
                 ? { timeout_reason: closeoutEnforcementTimeoutReason }
+                : {}),
+              ...(closeoutEnforcementProviderErrorSummary.count > 0
+                ? {
+                    provider_error_count: closeoutEnforcementProviderErrorSummary.count,
+                    provider_error_status_codes: closeoutEnforcementProviderErrorSummary.statusCodes,
+                    provider_error_messages: closeoutEnforcementProviderErrorSummary.messages,
+                  }
                 : {}),
               ...(closeoutEnforcementUnsupportedFunctionCalls
                 ? {

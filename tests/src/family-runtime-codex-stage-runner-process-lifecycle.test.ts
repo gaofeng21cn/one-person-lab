@@ -99,6 +99,71 @@ exit 64
   }
 });
 
+test('Codex stage runner classifies upstream provider errors before closeout materialization as provider unavailable', async () => {
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"type":"thread.started","thread_id":"thread-provider-502"}\\n'
+  printf '{"type":"turn.started"}\\n'
+  printf '{"type":"error","message":"Reconnecting... 1/5 (unexpected status 502 Bad Gateway: Upstream request failed, url: https://gflabtoken.cn/v1/responses, request id: req-provider-502)"}\\n'
+  sleep 2
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  const previousRecoveryTimeout = process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS;
+  const previousCloseoutEnforcementTimeout = process.env.OPL_CODEX_CLOSEOUT_ENFORCEMENT_TIMEOUT_MS;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS = '1';
+    process.env.OPL_CODEX_CLOSEOUT_ENFORCEMENT_TIMEOUT_MS = '1';
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_provider_502_test',
+        stage_id: 'analysis-campaign',
+        domain_id: 'medautoscience',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        checkpoint_refs: ['checkpoint:provider-502'],
+      },
+      stagePacketRef: 'packet:provider-502',
+      runnerMode: 'codex_cli',
+      observedAt: '2026-06-25T00:00:00.000Z',
+      timeoutMs: 10_000,
+      noOutputTimeoutMs: 500,
+    });
+
+    assert.equal(receipt.process_output_summary?.timeout_reason, 'provider_unavailable');
+    assert.equal(receipt.process_output_summary?.blocked_reason, 'codex_cli_provider_unavailable');
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+      'opl://stage-attempts/sat_provider_502_test/runtime-blockers/codex_cli_provider_unavailable',
+    ]);
+    assert.equal(receipt.closeout_packet?.route_impact?.provider_error_count, 1);
+    assert.deepEqual(receipt.closeout_packet?.route_impact?.provider_error_status_codes, [502]);
+    assert.equal(receipt.process_output_summary?.provider_error_status_codes?.[0], 502);
+    assert.equal(receipt.closeout_packet?.authority_boundary?.provider_completion_is_domain_ready, false);
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    if (previousRecoveryTimeout === undefined) {
+      delete process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS;
+    } else {
+      process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS = previousRecoveryTimeout;
+    }
+    if (previousCloseoutEnforcementTimeout === undefined) {
+      delete process.env.OPL_CODEX_CLOSEOUT_ENFORCEMENT_TIMEOUT_MS;
+    } else {
+      process.env.OPL_CODEX_CLOSEOUT_ENFORCEMENT_TIMEOUT_MS = previousCloseoutEnforcementTimeout;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('Codex stage runner stops the live Codex process when Temporal activity cancellation aborts the run', async () => {
   const childPidPath = path.join(os.tmpdir(), `opl-codex-cancelled-child-${Date.now()}.txt`);
   const waitForChildPidFile = async () => {
@@ -157,7 +222,10 @@ exit 64
     });
     await cancelWhenChildStarts;
 
-    assert.equal(receipt.closeout_packet, null);
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+      'opl://stage-attempts/sat_activity_cancelled_test/runtime-blockers/codex_cli_activity_cancelled',
+    ]);
+    assert.equal(receipt.closeout_packet?.authority_boundary?.provider_completion_is_domain_ready, false);
     assert.equal(receipt.runner_status.exit_code, 130);
     assert.equal(receipt.process_output_summary?.timeout_reason, 'activity_cancelled');
     assert.equal(receipt.process_output_summary?.blocked_reason, 'codex_cli_activity_cancelled');

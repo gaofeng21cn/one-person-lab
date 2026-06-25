@@ -26,6 +26,11 @@ export type CodexExecEvent =
       callId: string | null;
       name: string;
       arguments: string | null;
+    }
+  | {
+      type: 'provider_error';
+      message: string;
+      statusCode: number | null;
     };
 
 type CodexExecEventParserState = {
@@ -104,6 +109,11 @@ function normalizeInlineText(value: unknown) {
 
 function normalizeChunkText(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value : null;
+}
+
+function providerStatusCodeFromMessage(message: string) {
+  const match = /\bstatus\s+([1-5][0-9][0-9])\b/i.exec(message);
+  return match ? Number.parseInt(match[1], 10) : null;
 }
 
 export function createCodexExecEventParserState(): CodexExecEventParserState {
@@ -186,6 +196,19 @@ export function parseCodexExecEventFromLine(
   if (eventType === 'turn.completed') {
     state.activeCommandIds.clear();
     return { type: 'turn.completed' };
+  }
+
+  if (eventType === 'error') {
+    const message = normalizeInlineText(event.message)
+      ?? normalizeInlineText((event.payload as Record<string, unknown> | undefined)?.message);
+    if (!message) {
+      return null;
+    }
+    return {
+      type: 'provider_error',
+      message,
+      statusCode: providerStatusCodeFromMessage(message),
+    };
   }
 
   const item = event.item;
