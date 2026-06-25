@@ -9,12 +9,49 @@ import type { FamilyRuntimeTaskRow } from '../family-runtime-store.ts';
 import { throwProviderOnlyRedriveBlocked } from './protocol.ts';
 
 type StageAttemptPayload = ReturnType<typeof listStageAttemptsForTask>[number];
-type ProviderRedriveCurrentnessIdentity = NonNullable<ReturnType<typeof redriveCurrentnessIdentity>>;
+type RedriveCurrentnessIdentity = NonNullable<ReturnType<typeof redriveCurrentnessIdentity>>;
 
 const LIVE_PROVIDER_ATTEMPT_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate']);
 const ACCEPTED_CLOSEOUT_RECEIPT_STATUS = 'accepted_typed_closeout';
 
-function redriveCurrentnessIdentity(payload: Record<string, unknown>) {
+function nestedRecord(value: unknown) {
+  return isRecord(value) ? value : null;
+}
+
+function paperMissionStageRouteCurrentnessIdentity(payload: Record<string, unknown>) {
+  if (payload.runtime_request_kind !== 'mas_paper_mission_stage_route') {
+    return null;
+  }
+  const stageRunRequest = nestedRecord(payload.stage_run_request);
+  const handoff = nestedRecord(payload.opl_route_handoff_record);
+  const carrier = nestedRecord(handoff?.opl_runtime_carrier);
+  const routeIdentityKey = stringValue(payload.route_identity_key)
+    ?? stringValue(stageRunRequest?.route_identity_key)
+    ?? stringValue(carrier?.route_identity_key);
+  const attemptIdempotencyKey = stringValue(payload.attempt_idempotency_key)
+    ?? stringValue(payload.idempotency_key)
+    ?? stringValue(stageRunRequest?.attempt_idempotency_key)
+    ?? stringValue(carrier?.attempt_idempotency_key)
+    ?? stringValue(carrier?.idempotency_key);
+  if (!routeIdentityKey || !attemptIdempotencyKey) {
+    return null;
+  }
+  return {
+    identity_kind: 'paper_mission_stage_route' as const,
+    study_id: stringValue(payload.study_id),
+    mission_id: stringValue(payload.mission_id),
+    candidate_ref: stringValue(payload.candidate_ref),
+    paper_mission_transaction_ref: stringValue(payload.paper_mission_transaction_ref),
+    opl_route_command_ref: stringValue(payload.opl_route_command_ref),
+    route_identity_key: routeIdentityKey,
+    attempt_idempotency_key: attemptIdempotencyKey,
+    request_idempotency_key: stringValue(payload.request_idempotency_key)
+      ?? stringValue(stageRunRequest?.request_idempotency_key)
+      ?? stringValue(carrier?.request_idempotency_key),
+  };
+}
+
+function providerAdmissionRedriveCurrentnessIdentity(payload: Record<string, unknown>) {
   const identity = providerAdmissionCurrentnessIdentity(payload, { requirePendingStatus: false });
   if (!identity) {
     return null;
@@ -32,7 +69,17 @@ function redriveCurrentnessIdentity(payload: Record<string, unknown>) {
       || identity.action_fingerprint
     ),
   );
-  return hasSelectedStagePacket && hasCurrentnessBasis ? identity : null;
+  return hasSelectedStagePacket && hasCurrentnessBasis
+    ? {
+        identity_kind: 'provider_admission' as const,
+        provider_admission_identity: identity,
+      }
+    : null;
+}
+
+function redriveCurrentnessIdentity(payload: Record<string, unknown>) {
+  return providerAdmissionRedriveCurrentnessIdentity(payload)
+    ?? paperMissionStageRouteCurrentnessIdentity(payload);
 }
 
 function attemptCurrentnessIdentity(attempt: StageAttemptPayload) {
@@ -41,16 +88,31 @@ function attemptCurrentnessIdentity(attempt: StageAttemptPayload) {
 
 function sameRedriveCurrentnessIdentity(
   attempt: StageAttemptPayload,
-  identity: ProviderRedriveCurrentnessIdentity,
+  identity: RedriveCurrentnessIdentity,
 ) {
   const attemptIdentity = attemptCurrentnessIdentity(attempt);
-  return Boolean(attemptIdentity && sameProviderAdmissionCurrentnessIdentity(attemptIdentity, identity));
+  if (!attemptIdentity || attemptIdentity.identity_kind !== identity.identity_kind) {
+    return false;
+  }
+  if (identity.identity_kind === 'provider_admission') {
+    if (attemptIdentity.identity_kind !== 'provider_admission') {
+      return false;
+    }
+    return sameProviderAdmissionCurrentnessIdentity(
+      attemptIdentity.provider_admission_identity,
+      identity.provider_admission_identity,
+    );
+  }
+  if (attemptIdentity.identity_kind !== 'paper_mission_stage_route') {
+    return false;
+  }
+  return JSON.stringify(attemptIdentity) === JSON.stringify(identity);
 }
 
 function linkedProviderAttemptsForRedrive(
   db: DatabaseSync,
   row: FamilyRuntimeTaskRow,
-  identity: ProviderRedriveCurrentnessIdentity,
+  identity: RedriveCurrentnessIdentity,
 ) {
   return listStageAttemptsForTask(db, row.task_id).filter((attempt) => (
     attempt.provider_kind === 'temporal'
@@ -132,9 +194,13 @@ function redriveBlockingDomainCloseoutAttempt(
   attempts: StageAttemptPayload[],
   input: {
     allowRefsOnlyCheckpointAttemptId?: string | null;
+    currentnessIdentity?: RedriveCurrentnessIdentity | null;
   } = {},
 ) {
-  return attempts.find((attempt) => (
+  const blockingAttempts = input.currentnessIdentity
+    ? attempts.filter((attempt) => sameRedriveCurrentnessIdentity(attempt, input.currentnessIdentity!))
+    : attempts;
+  return blockingAttempts.find((attempt) => (
     !(
       attempt.stage_attempt_id === input.allowRefsOnlyCheckpointAttemptId
       && attempt.closeout_receipt_status === 'domain_handler_receipt_ref_only'
@@ -154,6 +220,20 @@ function liveLinkedProviderAttemptForRedrive(attempts: StageAttemptPayload[]) {
     && LIVE_PROVIDER_ATTEMPT_STATUSES.has(attempt.status)
     && attempt.closeout_receipt_status !== ACCEPTED_CLOSEOUT_RECEIPT_STATUS
   )) ?? null;
+}
+
+function liveProviderAttemptForRedrive(
+  attempts: StageAttemptPayload[],
+  identity: RedriveCurrentnessIdentity | null,
+) {
+  const candidateAttempts = identity
+    ? attempts.filter((attempt) => sameRedriveCurrentnessIdentity(attempt, identity))
+    : attempts;
+  return liveLinkedProviderAttemptForRedrive(candidateAttempts);
+}
+
+function taskPayload(row: FamilyRuntimeTaskRow) {
+  return JSON.parse(row.payload_json) as Record<string, unknown>;
 }
 
 export function assertNoProviderOnlySemanticRedriveBlocker(
@@ -180,8 +260,10 @@ export function assertNoProviderOnlySemanticRedriveBlocker(
     );
   }
   const attempts = listStageAttemptsForTask(db, row.task_id);
+  const currentnessIdentity = redriveCurrentnessIdentity(taskPayload(row));
   const closeoutAttempt = redriveBlockingDomainCloseoutAttempt(attempts, {
     allowRefsOnlyCheckpointAttemptId: input.allowRefsOnlyCheckpointAttemptId,
+    currentnessIdentity,
   });
   if (closeoutAttempt) {
     throwProviderOnlyRedriveBlocked(
@@ -198,7 +280,7 @@ export function assertNoProviderOnlySemanticRedriveBlocker(
       },
     );
   }
-  const liveAttempt = liveLinkedProviderAttemptForRedrive(attempts);
+  const liveAttempt = liveProviderAttemptForRedrive(attempts, currentnessIdentity);
   if (liveAttempt && liveAttempt.stage_attempt_id !== input.allowLiveAttemptId) {
     throwProviderOnlyRedriveBlocked(
       'family-runtime queue redrive does not duplicate a live linked provider attempt.',

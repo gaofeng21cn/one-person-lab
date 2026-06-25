@@ -1272,6 +1272,57 @@ test('family-runtime redrives PaperMission stage-route typed closeout packet tra
         updated_at = ?
       WHERE stage_attempt_id = ?
     `).run(new Date().toISOString(), originalAttempt.stage_attempt_id);
+    const staleWorkspaceLocator = { ...originalAttempt.workspace_locator };
+    delete staleWorkspaceLocator.route_identity_key;
+    delete staleWorkspaceLocator.attempt_idempotency_key;
+    delete staleWorkspaceLocator.request_idempotency_key;
+    staleWorkspaceLocator.candidate_ref = 'ops/medautoscience/paper_mission_candidate_package/legacy/package_manifest.json';
+    const staleCloseoutAt = new Date().toISOString();
+    db.prepare(`
+      INSERT INTO stage_attempts(
+        stage_attempt_id, idempotency_key, provider_kind, workflow_id, domain_id, stage_id, workspace_locator_json,
+        source_fingerprint, executor_kind, status, checkpoint_refs_json, closeout_refs_json,
+        human_gate_refs_json, retry_budget_json, attempt_count, task_id, blocked_reason,
+        provider_receipt_json, provider_run_json, activity_events_json, route_impact_json,
+        closeout_receipt_status, created_at, updated_at
+      )
+      VALUES (
+        @stage_attempt_id, @idempotency_key, @provider_kind, @workflow_id, @domain_id, @stage_id, @workspace_locator_json,
+        @source_fingerprint, @executor_kind, @status, @checkpoint_refs_json, @closeout_refs_json,
+        @human_gate_refs_json, @retry_budget_json, @attempt_count, @task_id, @blocked_reason,
+        @provider_receipt_json, @provider_run_json, @activity_events_json, @route_impact_json,
+        @closeout_receipt_status, @created_at, @updated_at
+      )
+    `).run({
+      stage_attempt_id: 'sat_legacy_accepted_no_currentness_identity',
+      idempotency_key: 'idem_legacy_accepted_no_currentness_identity',
+      provider_kind: 'temporal',
+      workflow_id: 'wf_legacy_accepted_no_currentness_identity',
+      domain_id: 'medautoscience',
+      stage_id: originalAttempt.stage_id,
+      workspace_locator_json: JSON.stringify(staleWorkspaceLocator),
+      source_fingerprint: 'mas_paper_mission_route_source_legacy_no_identity',
+      executor_kind: 'codex_cli',
+      status: 'completed',
+      checkpoint_refs_json: JSON.stringify(['paper-mission-transaction:dm003:legacy']),
+      closeout_refs_json: JSON.stringify(['ops/medautoscience/paper_mission_consumption_ledger/legacy/opl_route_handoff.json']),
+      human_gate_refs_json: JSON.stringify([]),
+      retry_budget_json: JSON.stringify({ max_attempts: 3 }),
+      attempt_count: 1,
+      task_id: enqueued.task.task_id,
+      blocked_reason: null,
+      provider_receipt_json: JSON.stringify({ provider_kind: 'temporal' }),
+      provider_run_json: JSON.stringify({
+        provider_kind: 'temporal',
+        workflow_id: 'wf_legacy_accepted_no_currentness_identity',
+        provider_status: 'completed',
+      }),
+      activity_events_json: JSON.stringify([]),
+      route_impact_json: JSON.stringify({}),
+      closeout_receipt_status: 'accepted_typed_closeout',
+      created_at: staleCloseoutAt,
+      updated_at: staleCloseoutAt,
+    });
     db.close();
 
     const blockedTask = runCli(['family-runtime', 'queue', 'inspect', enqueued.task.task_id], familyRuntimeEnv(stateRoot));
@@ -1307,8 +1358,18 @@ test('family-runtime redrives PaperMission stage-route typed closeout packet tra
     redrivenDb.close();
     const newestAttempt = afterDispatch.stage_attempts[0];
 
+    const blockedAttempt = blockedTask.family_runtime_task.stage_attempts.find((attempt: Record<string, unknown>) =>
+      attempt.stage_attempt_id === originalAttempt.stage_attempt_id
+    );
     assert.equal(blockedTask.family_runtime_task.task.status, 'blocked');
-    assert.equal(blockedTask.family_runtime_task.stage_attempts[0].blocked_reason, 'typed_closeout_packet_required');
+    assert.equal(blockedAttempt?.blocked_reason, 'typed_closeout_packet_required');
+    assert.equal(
+      blockedTask.family_runtime_task.stage_attempts.some((attempt: Record<string, unknown>) =>
+        attempt.stage_attempt_id === 'sat_legacy_accepted_no_currentness_identity'
+        && attempt.closeout_receipt_status === 'accepted_typed_closeout'
+      ),
+      true,
+    );
     assert.equal(redrive.family_runtime_redrive.redriven, true);
     assert.equal(redrive.family_runtime_redrive.task.status, 'queued');
     assert.equal(redrive.family_runtime_redrive.provider_redrive_started, false);
