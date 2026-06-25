@@ -1,5 +1,6 @@
 import { FrameworkContractError } from './contracts.ts';
 import {
+  buildCodexExecResumeArgs,
   buildCodexExecArgs,
   parseCodexExecOutput,
   recoverCodexExecOutputFromSession,
@@ -42,6 +43,7 @@ import {
   normalizeCodexStageRunnerMode,
   resolvedStagePacketRef,
   runnerPromptFor,
+  stageIdFromAttempt,
   workspaceRootFromAttempt,
   checkpointRefsFromAttempt,
   type CodexStageRunnerInput,
@@ -92,6 +94,30 @@ function codexProjectionRunnerModeFromAttempt(attempt: JsonRecord) {
   const executorKind = normalizeAgentExecutorStageMode(optionalString(attempt.executor_kind))
     ?? executorKindFromAttemptPolicy(attempt);
   return executorKind === 'codex_cli' ? 'codex_cli' : explicitMode;
+}
+
+function closeoutEnforcementPromptFor(input: {
+  attempt: JsonRecord;
+  stagePacketRef: string;
+  previousSessionRecoveryStatus: string | null;
+}) {
+  const attemptId = optionalString(input.attempt.stage_attempt_id) ?? 'unknown-attempt';
+  const idempotencyKey = optionalString(input.attempt.idempotency_key);
+  return [
+    'The OPL stage attempt finished without a typed closeout packet.',
+    'You must now close out the same stage attempt.',
+    `Stage attempt id: ${attemptId}`,
+    `Stage id: ${stageIdFromAttempt(input.attempt)}`,
+    `Stage packet ref: ${input.stagePacketRef}`,
+    `Previous closeout recovery status: ${input.previousSessionRecoveryStatus ?? 'unknown'}`,
+    'Final output contract: return exactly one JSON object and nothing else.',
+    'The JSON object MUST have surface_kind stage_attempt_closeout_packet, stage_memory_closeout_packet, or domain_stage_closeout_packet.',
+    'The JSON object MUST include at least one closeout ref.',
+    ...(idempotencyKey ? [`If you include idempotency_key, it MUST equal ${idempotencyKey}.`] : []),
+    'If no domain owner receipt exists, emit a provider-runtime closeout packet with a closeout_ref under opl://stage-attempts/<stage_attempt_id>/runtime-blockers/closeout-not-materialized and rejected_writes explaining that domain truth was not written.',
+    'Do not claim paper progress, publication readiness, owner receipt creation, typed blocker creation, human gate creation, or domain truth mutation unless a real domain-owned ref exists.',
+    'Do not wrap the JSON in Markdown. Do not add prose, code fences, prefixes, suffixes, explanations, or status text before or after the JSON.',
+  ].join('\n');
 }
 
 async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexStageRunnerReceipt> {
@@ -180,6 +206,12 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   let domainReceiptRecoveryRef: string | null = null;
   let masOwnerDispatchBridge: MasOwnerDispatchBridgeResult | null = null;
   let closeoutRejection: ReturnType<typeof validateCloseoutPacketForAttempt>['rejection'] = null;
+  let closeoutEnforcementStatus: string | null = null;
+  let closeoutEnforcementThreadId: string | null = null;
+  let closeoutEnforcementExitCode: number | null = null;
+  let closeoutEnforcementStdoutBytes = 0;
+  let closeoutEnforcementStderrBytes = 0;
+  let closeoutEnforcementFinalMessageChars = 0;
   if (
     !closeoutPacket
     && result.timeoutReason !== 'unsupported_tool_protocol'
@@ -197,6 +229,71 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       recoveredSessionPath = recovered.recovered.sessionPath;
       recoveredFinalMessageChars = recovered.parsed?.finalMessage.length ?? 0;
       sessionUsageRef = extractCodexSessionUsageRef(recovered.recovered);
+    }
+  }
+  if (
+    !closeoutPacket
+    && parsed.threadId
+    && result.timeoutReason !== 'unsupported_tool_protocol'
+    && result.timeoutReason !== 'activity_cancelled'
+  ) {
+    const closeoutEnforcementResult = await runCodexCommandStreaming(
+      buildCodexExecResumeArgs(
+        parsed.threadId,
+        closeoutEnforcementPromptFor({
+          attempt: input.attempt,
+          stagePacketRef,
+          previousSessionRecoveryStatus: sessionRecoveryStatus,
+        }),
+        { json: true },
+      ),
+      {
+        env: {
+          ...input.env,
+          ...providerEnv,
+        },
+        timeoutMs: normalizeTimeoutMs(
+          process.env.OPL_CODEX_CLOSEOUT_ENFORCEMENT_TIMEOUT_MS,
+          120_000,
+        ),
+        noOutputTimeoutMs: normalizeTimeoutMs(
+          process.env.OPL_CODEX_CLOSEOUT_ENFORCEMENT_NO_OUTPUT_TIMEOUT_MS,
+          30_000,
+        ),
+        commandNoProgressTimeoutMs: normalizeTimeoutMs(
+          process.env.OPL_CODEX_CLOSEOUT_ENFORCEMENT_COMMAND_NO_PROGRESS_TIMEOUT_MS,
+          30_000,
+        ),
+        signal: input.signal,
+        onStdoutEvent(event) {
+          const summary = eventSummary(event);
+          runnerEvents.push({
+            event_kind: `closeout_enforcement.${summary.event_kind}`,
+            value: summary.value,
+          });
+          input.onRunnerProgress?.({
+            event_kind: `closeout_enforcement.${summary.event_kind}`,
+            value: summary.value,
+          });
+        },
+      },
+    );
+    const enforcementParsed = parseCodexExecOutput(closeoutEnforcementResult.stdout);
+    closeoutEnforcementThreadId = enforcementParsed.threadId;
+    closeoutEnforcementExitCode = closeoutEnforcementResult.exitCode;
+    closeoutEnforcementStdoutBytes = Buffer.byteLength(closeoutEnforcementResult.stdout, 'utf8');
+    closeoutEnforcementStderrBytes = Buffer.byteLength(closeoutEnforcementResult.stderr, 'utf8');
+    closeoutEnforcementFinalMessageChars = enforcementParsed.finalMessage.length;
+    closeoutPacket = parseCloseoutFromCodexMessages(enforcementParsed.messages);
+    closeoutEnforcementStatus = closeoutPacket
+      ? 'closeout_found'
+      : closeoutEnforcementResult.timeoutReason
+        ? `closeout_missing:${closeoutEnforcementResult.timeoutReason}`
+        : 'closeout_missing';
+    if (!sessionUsageRef) {
+      sessionUsageRef = extractCodexSessionUsageRef(recoverCodexExecOutputFromSession(
+        closeoutEnforcementThreadId ?? parsed.threadId,
+      ));
     }
   }
   if (!sessionUsageRef) {
@@ -239,6 +336,11 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   });
   closeoutPacket = validatedCloseout.closeoutPacket;
   closeoutRejection = validatedCloseout.rejection;
+  const missingTypedCloseoutBlocker = !closeoutPacket
+    && result.timeoutReason !== 'unsupported_tool_protocol'
+    && result.timeoutReason !== 'activity_cancelled'
+    ? 'codex_cli_typed_closeout_not_materialized'
+    : null;
   return {
     ...buildCodexStageRunnerReceipt({
       ...input,
@@ -291,6 +393,9 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       ...(result.timeoutReason === 'activity_cancelled'
         ? { blocked_reason: 'codex_cli_activity_cancelled' }
         : {}),
+      ...(missingTypedCloseoutBlocker
+        ? { blocked_reason: missingTypedCloseoutBlocker }
+        : {}),
       ...(recoveredSessionPath
         ? {
             recovered_session_path: recoveredSessionPath,
@@ -319,6 +424,26 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
             ...(closeoutRejection.idempotency_key
               ? { rejected_closeout_idempotency_key: closeoutRejection.idempotency_key }
               : {}),
+          }
+        : {}),
+      ...(closeoutEnforcementStatus
+        ? {
+            closeout_enforcement: {
+              status: closeoutEnforcementStatus,
+              thread_id: closeoutEnforcementThreadId,
+              exit_code: closeoutEnforcementExitCode,
+              stdout_bytes: closeoutEnforcementStdoutBytes,
+              stderr_bytes: closeoutEnforcementStderrBytes,
+              final_message_chars: closeoutEnforcementFinalMessageChars,
+              authority_boundary: {
+                opl: 'same_session_closeout_enforcement_transport_only',
+                domain: 'truth_quality_artifact_gate_owner',
+                can_write_domain_truth: false,
+                can_create_owner_receipt: false,
+                can_create_typed_blocker: false,
+                provider_completion_is_domain_ready: false,
+              },
+            },
           }
         : {}),
     },

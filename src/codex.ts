@@ -211,6 +211,33 @@ export function buildCodexExecArgs(
   return args;
 }
 
+export function buildCodexExecResumeArgs(
+  sessionId: string,
+  prompt: string,
+  options: Omit<CodexExecOptions, 'cwd'> = {},
+) {
+  const args = ['exec', 'resume', '--skip-git-repo-check'];
+
+  if (options.json) {
+    args.push('--json');
+  }
+
+  if (options.model) {
+    args.push('--model', options.model);
+  }
+
+  if (options.provider) {
+    args.push('--config', `model_provider=${quoteTomlString(options.provider)}`);
+  }
+
+  if (options.reasoningEffort) {
+    args.push('--config', `model_reasoning_effort=${quoteTomlString(options.reasoningEffort)}`);
+  }
+
+  args.push(sessionId, prompt);
+  return args;
+}
+
 export function buildCodexCliPreview(args: string[]) {
   return ['codex', ...args];
 }

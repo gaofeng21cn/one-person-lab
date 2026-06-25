@@ -92,6 +92,22 @@ export type CodexStageRunnerProcessOutputSummary = {
   closeout_rejection_reason?: 'stage_attempt_id_mismatch' | 'idempotency_key_mismatch';
   rejected_closeout_stage_attempt_id?: string;
   rejected_closeout_idempotency_key?: string;
+  closeout_enforcement?: {
+    status: string;
+    thread_id: string | null;
+    exit_code: number | null;
+    stdout_bytes: number;
+    stderr_bytes: number;
+    final_message_chars: number;
+    authority_boundary: {
+      opl: 'same_session_closeout_enforcement_transport_only';
+      domain: 'truth_quality_artifact_gate_owner';
+      can_write_domain_truth: false;
+      can_create_owner_receipt: false;
+      can_create_typed_blocker: false;
+      provider_completion_is_domain_ready: false;
+    };
+  };
 };
 
 export type CodexStageRunnerReceipt = CodexStageRunnerBaseReceipt & {

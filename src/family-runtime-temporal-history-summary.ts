@@ -68,6 +68,9 @@ function historyProcessOutputSummary(value: unknown) {
     ...(typeof summary.session_recovery_attempts === 'number'
       ? { session_recovery_attempts: summary.session_recovery_attempts }
       : {}),
+    ...(isRecord(summary.closeout_enforcement)
+      ? { closeout_enforcement: summary.closeout_enforcement }
+      : {}),
   };
 }
 

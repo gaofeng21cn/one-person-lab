@@ -137,6 +137,7 @@ const readModelGateTestFiles = [
   'tests/src/current-owner-delta-topline.test.ts',
   'tests/src/framework-readiness-attention-actions.test.ts',
   'tests/src/generic-substrate-projection.test.ts',
+  'tests/src/cli/cases/family-runtime-codex-stage-runner.test.ts',
   'tests/src/family-runtime-codex-stage-runner-mas-recovery.test.ts',
   'tests/src/family-runtime-codex-stage-runner.test.ts',
   'tests/src/family-runtime-codex-stage-runner-process-lifecycle.test.ts',
