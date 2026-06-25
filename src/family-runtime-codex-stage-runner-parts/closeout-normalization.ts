@@ -13,6 +13,7 @@ export type TypedStageCloseoutPacket = {
   idempotency_key?: string;
   closeout_id?: string;
   closeout_refs: string[];
+  closeout_ref_metadata?: JsonRecord[];
   consumed_refs: string[];
   consumed_memory_refs: string[];
   writeback_receipt_refs: string[];
@@ -26,19 +27,38 @@ export type TypedStageCloseoutPacket = {
   authority_boundary: JsonRecord;
 };
 
-function readCloseoutRefs(value: unknown) {
+function readCloseoutRefEntries(value: unknown) {
   if (!Array.isArray(value)) {
-    return [];
+    return {
+      refs: [],
+      metadata: [],
+    };
   }
-  return value
-    .map((entry) => {
-      const direct = optionalString(entry);
-      if (direct) {
-        return direct;
-      }
-      return isRecord(entry) ? optionalString(entry.ref) ?? optionalString(entry.uri) : null;
-    })
-    .filter((entry): entry is string => Boolean(entry));
+  const refs: string[] = [];
+  const metadata: JsonRecord[] = [];
+  for (const entry of value) {
+    const direct = optionalString(entry);
+    if (direct) {
+      refs.push(direct);
+      continue;
+    }
+    if (!isRecord(entry)) {
+      continue;
+    }
+    const ref = optionalString(entry.ref) ?? optionalString(entry.uri);
+    if (!ref) {
+      continue;
+    }
+    refs.push(ref);
+    metadata.push({
+      ...entry,
+      ref,
+    });
+  }
+  return {
+    refs,
+    metadata,
+  };
 }
 
 export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageCloseoutPacket {
@@ -67,8 +87,9 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
     );
   }
 
+  const closeoutRefEntries = readCloseoutRefEntries(value.closeout_refs);
   const closeoutRefs = [
-    ...readCloseoutRefs(value.closeout_refs),
+    ...closeoutRefEntries.refs,
     optionalString(value.closeout_ref),
     optionalString(value.receipt_ref),
     optionalString(value.packet_ref),
@@ -85,6 +106,9 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
     ...(optionalString(value.idempotency_key) ? { idempotency_key: optionalString(value.idempotency_key)! } : {}),
     ...(optionalString(value.closeout_id) ? { closeout_id: optionalString(value.closeout_id)! } : {}),
     closeout_refs: [...new Set(closeoutRefs)],
+    ...(closeoutRefEntries.metadata.length > 0
+      ? { closeout_ref_metadata: closeoutRefEntries.metadata }
+      : {}),
     consumed_refs: readStringList(value.consumed_refs),
     consumed_memory_refs: readStringList(value.consumed_memory_refs),
     writeback_receipt_refs: readStringList(value.writeback_receipt_refs),

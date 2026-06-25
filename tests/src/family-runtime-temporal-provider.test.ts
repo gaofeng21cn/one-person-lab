@@ -1022,6 +1022,15 @@ test('Temporal Codex activity compacts typed closeout packets before activity co
     'receipt:large-closeout',
     'file:///tmp/mas/studies/003/artifacts/supervision/consumer/default_executor_execution/sat_85bd.closeout.json',
   ]);
+  assert.deepEqual(compacted.closeout_ref_metadata, [
+    {
+      ref_kind: 'stage_attempt_closeout_packet_ref',
+      uri: 'file:///tmp/mas/studies/003/artifacts/supervision/consumer/default_executor_execution/sat_85bd.closeout.json',
+      ref: 'file:///tmp/mas/studies/003/artifacts/supervision/consumer/default_executor_execution/sat_85bd.closeout.json',
+      sha256: 'sha256:003-closeout',
+      size_bytes: 2048,
+    },
+  ]);
   assert.deepEqual(compacted.consumed_refs, ['paper:draft.md']);
   assert.deepEqual(compacted.consumed_memory_refs, ['memory:route-policy']);
   assert.deepEqual(compacted.writeback_receipt_refs, ['memory-writeback:receipt-1']);
@@ -1034,6 +1043,7 @@ test('Temporal Codex activity compacts typed closeout packets before activity co
   assert.equal(compactedRecord.user_stage_log, undefined);
   assert.equal(compactedRecord.full_transcript, undefined);
   assert.equal(compacted.temporal_payload_policy.full_closeout_body_omitted, true);
+  assert.equal(compacted.temporal_payload_policy.retained_fields.includes('closeout_ref_metadata'), true);
   assert.equal(JSON.stringify(compacted).includes('must-not-enter-temporal-completion'), false);
   assert.ok(
     Buffer.byteLength(JSON.stringify(compacted), 'utf8') < 20_000,

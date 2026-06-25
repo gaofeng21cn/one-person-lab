@@ -14,6 +14,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - `normalizeTypedStageCloseoutPacket` 是 OPL typed closeout ref ingestion 的单一规范化入口；`closeout_refs[]` 支持字符串、`ref` object 和 `uri` object，但仍要求 supported `surface_kind` 和至少一个 closeout ref，不能把任意 JSON 当作 closeout。
+- `closeout_refs` 继续保持 string-list index / ledger / query 合同；object-shaped refs 的 refs-only 元数据保留在 `closeout_ref_metadata[]`，用于 `ref_kind`、`kind`、`uri`、`sha256`、`size_bytes` 等 transport 证据保真，不改变下游 string-only 消费者。
 - Temporal activity completion compaction 必须复用同一 normalization，再裁剪大字段；不得维护第二套只接受 string-list 的 closeout parser。
 - Codex session recovery 的 `task_complete.last_agent_message`、Temporal activity result 和 downstream terminal observation 均按同一 fail-closed 合同处理：合法 refs-only object refs 可恢复，unsupported shape 继续返回缺 typed closeout。
 - 该修复只关闭 OPL runtime closeout transport/currentness 断点；不授权 OPL 写 MAS owner receipt、typed blocker authority file、human gate、publication eval、controller decision、current package、paper body，也不声明 paper progress、domain-ready、publication-ready、runtime-ready 或 production-ready。

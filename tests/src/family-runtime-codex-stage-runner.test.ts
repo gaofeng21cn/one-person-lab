@@ -1,10 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 import { createFakeCodexFixture } from './cli/helpers.ts';
 import { runPublicCodexStageRunner } from './family-runtime-codex-stage-runner-helpers.ts';
-import { buildCodexStageActivityInput } from '../../src/family-runtime-codex-stage-runner.ts';
+import {
+  buildCodexStageActivityInput,
+  createCodexCloseoutCaptureForTest,
+  stageCloseoutOutputSchemaForTest,
+} from '../../src/family-runtime-codex-stage-runner.ts';
 import { FrameworkContractError } from '../../src/contracts.ts';
 
 test('Codex stage activity binds stage packet from checkpoint refs before provider execution', () => {
@@ -131,6 +137,44 @@ test('Codex stage activity prompt carries refs-only OPL execution authorization 
   assert.match(commandPreview, /"OPL_DOMAIN_COMMAND_SOURCE":"env_override"/);
   assert.match(commandPreview, /"OPL_ROUTE_HANDOFF_SOURCE_REF":"\/tmp\/mas\/ops\/medautoscience\/paper_mission_consumption_ledger\/run\/002\/opl_route_handoff.json"/);
   assert.match(commandPreview, /do not grant domain truth, artifact, quality, or readiness authority/);
+});
+
+test('Codex stage closeout output schema accepts refs-only object metadata', () => {
+  const schema = stageCloseoutOutputSchemaForTest() as Record<string, any>;
+  const closeoutRefs = schema.properties.closeout_refs;
+  const objectRefSchema = closeoutRefs.items.anyOf.find((entry: Record<string, unknown>) =>
+    entry.type === 'object'
+  );
+
+  assert.ok(objectRefSchema, 'closeout_refs must allow object refs.');
+  assert.deepEqual(objectRefSchema.anyOf, [
+    { required: ['ref'] },
+    { required: ['uri'] },
+  ]);
+  assert.deepEqual(Object.keys(objectRefSchema.properties).sort(), [
+    'kind',
+    'ref',
+    'ref_kind',
+    'sha256',
+    'size_bytes',
+    'uri',
+  ]);
+});
+
+test('Codex stage closeout capture cleans temp directory after construction failure', () => {
+  let leakedRoot: string | null = null;
+
+  assert.throws(() => {
+    createCodexCloseoutCaptureForTest({
+      writeFileSync(filePath) {
+        leakedRoot = path.dirname(String(filePath));
+        throw new Error('schema write failed');
+      },
+    });
+  }, /schema write failed/);
+
+  assert.ok(leakedRoot, 'test must observe the allocated capture root.');
+  assert.equal(fs.existsSync(leakedRoot), false);
 });
 
 test('Codex stage runner fails closed when live runner lacks packet or workspace binding', async () => {
@@ -511,9 +555,12 @@ test('Codex stage runner captures terminal typed closeout from Codex output-last
     next_owner: 'med-autoscience',
     domain_ready_verdict: 'domain_gate_pending',
   };
+  const captureLogRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-capture-log-'));
+  const captureRootLog = path.join(captureLogRoot, 'capture-root.txt');
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 output_last_message=""
 output_schema=""
+capture_root_log="${captureRootLog}"
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --output-last-message)
@@ -537,6 +584,7 @@ if ! grep -q '"uri"' "$output_schema"; then
   echo "schema does not allow object uri closeout refs" >&2
   exit 64
 fi
+dirname "$output_schema" > "$capture_root_log"
 printf '%s\\n' '${JSON.stringify(closeout)}' > "$output_last_message"
 printf '{"type":"thread.started","thread_id":"thread-output-last-message-closeout"}\\n'
 printf '{"type":"turn.completed"}\\n'
@@ -563,10 +611,21 @@ exit 0
     assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
       'file:///tmp/mas/studies/003/artifacts/supervision/consumer/default_executor_execution/sat_output_last_message.closeout.json',
     ]);
+    assert.deepEqual(receipt.closeout_packet?.closeout_ref_metadata, [
+      {
+        ref_kind: 'stage_attempt_closeout_packet_ref',
+        uri: 'file:///tmp/mas/studies/003/artifacts/supervision/consumer/default_executor_execution/sat_output_last_message.closeout.json',
+        ref: 'file:///tmp/mas/studies/003/artifacts/supervision/consumer/default_executor_execution/sat_output_last_message.closeout.json',
+        sha256: 'sha256:output-last-message-closeout',
+        size_bytes: 4096,
+      },
+    ]);
     assert.equal(
       (receipt.process_output_summary?.captured_last_message_chars ?? 0) > JSON.stringify(closeout).length,
       true,
     );
+    const captureRoot = fs.readFileSync(captureRootLog, 'utf8').trim();
+    assert.equal(fs.existsSync(captureRoot), false);
   } finally {
     if (previousCodexBin === undefined) {
       delete process.env.OPL_CODEX_BIN;
@@ -574,6 +633,7 @@ exit 0
       process.env.OPL_CODEX_BIN = previousCodexBin;
     }
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(captureLogRoot, { recursive: true, force: true });
   }
 });
 

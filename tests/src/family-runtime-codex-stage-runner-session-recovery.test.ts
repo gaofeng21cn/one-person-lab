@@ -170,6 +170,23 @@ exit 64
       'studies/002/artifacts/supervision/consumer/default_executor_execution/history.jsonl#last',
       'file:///tmp/mas/studies/003/artifacts/supervision/consumer/default_executor_execution/sat_85bd.closeout.json',
     ]);
+    assert.deepEqual(receipt.closeout_packet?.closeout_ref_metadata, [
+      {
+        kind: 'typed_blocker_ref',
+        ref: 'studies/002/artifacts/supervision/consumer/default_executor_execution/latest.json#executions[0].typed_blocker',
+      },
+      {
+        kind: 'domain_execution_history_ref',
+        ref: 'studies/002/artifacts/supervision/consumer/default_executor_execution/history.jsonl#last',
+      },
+      {
+        ref_kind: 'stage_attempt_closeout_packet_ref',
+        uri: 'file:///tmp/mas/studies/003/artifacts/supervision/consumer/default_executor_execution/sat_85bd.closeout.json',
+        ref: 'file:///tmp/mas/studies/003/artifacts/supervision/consumer/default_executor_execution/sat_85bd.closeout.json',
+        sha256: 'sha256:003-closeout',
+        size_bytes: 2048,
+      },
+    ]);
     assert.equal(receipt.process_output_summary?.recovered_session_path, sessionPath);
     assert.equal(receipt.process_output_summary?.session_recovery_status, 'closeout_found');
   } finally {

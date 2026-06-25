@@ -205,7 +205,7 @@ function summarizeCodexProviderErrors(errors?: CodexCommandResult['providerError
   };
 }
 
-function stageCloseoutOutputSchema() {
+export function stageCloseoutOutputSchemaForTest() {
   return {
     type: 'object',
     required: ['surface_kind'],
@@ -286,11 +286,19 @@ function stageCloseoutOutputSchema() {
   };
 }
 
-function createCodexCloseoutCapture() {
+export function createCodexCloseoutCaptureForTest(input?: {
+  writeFileSync?: typeof fs.writeFileSync;
+}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-stage-closeout-'));
   const outputLastMessagePath = path.join(root, 'last-message.json');
   const outputSchemaPath = path.join(root, 'stage-closeout.schema.json');
-  fs.writeFileSync(outputSchemaPath, `${JSON.stringify(stageCloseoutOutputSchema(), null, 2)}\n`, 'utf8');
+  const writeFileSync = input?.writeFileSync ?? fs.writeFileSync;
+  try {
+    writeFileSync(outputSchemaPath, `${JSON.stringify(stageCloseoutOutputSchemaForTest(), null, 2)}\n`, 'utf8');
+  } catch (error) {
+    fs.rmSync(root, { recursive: true, force: true });
+    throw error;
+  }
   return {
     root,
     outputLastMessagePath,
@@ -299,6 +307,10 @@ function createCodexCloseoutCapture() {
       fs.rmSync(root, { recursive: true, force: true });
     },
   };
+}
+
+function createCodexCloseoutCapture() {
+  return createCodexCloseoutCaptureForTest();
 }
 
 function readCapturedLastMessage(filePath: string) {
