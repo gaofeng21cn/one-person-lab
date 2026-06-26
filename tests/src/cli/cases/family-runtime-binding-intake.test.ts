@@ -49,15 +49,15 @@ test('family-runtime intake derives MAS domain-handler export from active worksp
   const masWorkspacePath = path.join(fixtureRoot, 'med-autoscience');
   const profilePath = path.join(fixtureRoot, 'nfpitnet.workspace.toml');
   const proofPath = path.join(stateRoot, 'family-runtime', 'proofs', 'latest-temporal-production-proof.json');
-  const uvPath = path.join(fixtureRoot, 'uv');
-  const uvArgvPath = path.join(fixtureRoot, 'uv.argv');
-  const uvCwdPath = path.join(fixtureRoot, 'uv.cwd');
+  const cleanRunnerPath = path.join(masWorkspacePath, 'scripts', 'run-python-clean.sh');
+  const runnerArgvPath = path.join(fixtureRoot, 'clean-runner.argv');
+  const runnerCwdPath = path.join(fixtureRoot, 'clean-runner.cwd');
   fs.mkdirSync(masWorkspacePath, { recursive: true });
-  writeMasCleanRunnerFixture(masWorkspacePath);
   fs.writeFileSync(profilePath, '[workspace]\nname = "nfpitnet"\n', 'utf8');
   fs.mkdirSync(path.dirname(proofPath), { recursive: true });
   fs.writeFileSync(proofPath, '{"closeout_status":"production_residency_proven"}\n', 'utf8');
-  writeJsonEmitterScript(uvPath, {
+  fs.mkdirSync(path.dirname(cleanRunnerPath), { recursive: true });
+  writeJsonEmitterScript(cleanRunnerPath, {
     surface_kind: 'mas_family_domain_handler_export',
     provider_guarded_soak: {
       status: 'available',
@@ -80,8 +80,8 @@ test('family-runtime intake derives MAS domain-handler export from active worksp
       },
     ],
   }, {
-    cwdPath: uvCwdPath,
-    argvPath: uvArgvPath,
+    cwdPath: runnerCwdPath,
+    argvPath: runnerArgvPath,
   });
   const env = familyRuntimeEnv(stateRoot, {
     PATH: `${fixtureRoot}:${process.env.PATH ?? ''}`,
@@ -110,13 +110,11 @@ test('family-runtime intake derives MAS domain-handler export from active worksp
 
     assert.equal(intake.family_runtime_intake.enqueued_count, 1);
     assert.equal(exportResult.status, 'completed');
-    const uvArgv = fs.readFileSync(uvArgvPath, 'utf8').trim().split('\n');
+    const runnerArgv = fs.readFileSync(runnerArgvPath, 'utf8').trim().split('\n');
     assert.equal(exportResult.command_source, 'workspace_binding');
     assert.equal(exportResult.command_cwd, path.resolve(masWorkspacePath));
     assert.deepEqual(exportResult.command_preview, [
-      'uv',
-      'run',
-      'python',
+      cleanRunnerPath,
       '-m',
       'med_autoscience.cli',
       'domain-handler',
@@ -129,10 +127,10 @@ test('family-runtime intake derives MAS domain-handler export from active worksp
       'json',
     ]);
     assert.equal(
-      fs.realpathSync(fs.readFileSync(uvCwdPath, 'utf8').trim()),
+      fs.realpathSync(fs.readFileSync(runnerCwdPath, 'utf8').trim()),
       fs.realpathSync(path.resolve(masWorkspacePath)),
     );
-    assert.deepEqual(uvArgv, exportResult.command_preview.slice(1));
+    assert.deepEqual(runnerArgv, exportResult.command_preview.slice(1));
     assert.equal(queue.family_runtime_queue.tasks[0].task_kind, 'paper_autonomy/guarded-apply');
     assert.equal(queue.family_runtime_queue.tasks[0].payload.provider_attempt_id, 'opl-temporal:nfpitnet:DM002:provider-hosted-guarded-apply');
   } finally {

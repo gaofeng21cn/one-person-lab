@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -21,6 +23,7 @@ const workflowsPath = path.join(__dirname, `family-runtime-temporal-workflows${m
 function baseInput(
   suffix: string,
   closeoutPacket: Record<string, unknown> | null,
+  workspaceRoot: string,
 ): TemporalStageAttemptWorkflowInput {
   return {
     stage_attempt_id: `sat_temporal_residency_${suffix}`,
@@ -28,8 +31,8 @@ function baseInput(
     domain_id: 'medautoscience',
     stage_id: 'analysis-campaign',
     workspace_locator: {
-      workspace_root: '/tmp/mas-temporal-residency-proof',
-      artifact_root: '/tmp/mas-temporal-residency-proof/artifacts',
+      workspace_root: workspaceRoot,
+      artifact_root: path.join(workspaceRoot, 'artifacts'),
     },
     source_fingerprint: `sha256:temporal-residency-${suffix}`,
     executor_kind: 'codex_cli',
@@ -70,12 +73,16 @@ async function createWorker(testEnv: TestWorkflowEnvironment, taskQueue: string)
   });
 }
 
-async function runCompletedAttempt(testEnv: TestWorkflowEnvironment, taskQueue: string) {
+async function runCompletedAttempt(
+  testEnv: TestWorkflowEnvironment,
+  taskQueue: string,
+  workspaceRoot: string,
+) {
   const worker = await createWorker(testEnv, taskQueue);
   const workflowId = `wf-temporal-residency-complete-${Date.now()}`;
   return await worker.runUntil(async () => {
     const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
-      args: [baseInput('complete', typedCloseoutPacket())],
+      args: [baseInput('complete', typedCloseoutPacket(), workspaceRoot)],
       taskQueue,
       workflowId,
     });
@@ -141,12 +148,16 @@ async function requeryCompletedAttemptAfterWorkerRestart(
   });
 }
 
-async function runBlockedAttempt(testEnv: TestWorkflowEnvironment, taskQueue: string) {
+async function runBlockedAttempt(
+  testEnv: TestWorkflowEnvironment,
+  taskQueue: string,
+  workspaceRoot: string,
+) {
   const worker = await createWorker(testEnv, taskQueue);
   const workflowId = `wf-temporal-residency-blocked-${Date.now()}`;
   return await worker.runUntil(async () => {
     const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
-      args: [baseInput('blocked', null)],
+      args: [baseInput('blocked', null, workspaceRoot)],
       taskQueue,
       workflowId,
     });
@@ -162,14 +173,16 @@ async function runBlockedAttempt(testEnv: TestWorkflowEnvironment, taskQueue: st
 export async function runTemporalResidencyProof() {
   const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
   const taskQueue = `opl-temporal-residency-proof-${Date.now()}`;
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-residency-workspace-'));
+  fs.mkdirSync(path.join(workspaceRoot, 'artifacts'), { recursive: true });
   try {
-    const completed = await runCompletedAttempt(testEnv, taskQueue);
+    const completed = await runCompletedAttempt(testEnv, taskQueue, workspaceRoot);
     const requery = await requeryCompletedAttemptAfterWorkerRestart(
       testEnv,
       taskQueue,
       completed.workflow_id,
     );
-    const blocked = await runBlockedAttempt(testEnv, taskQueue);
+    const blocked = await runBlockedAttempt(testEnv, taskQueue, workspaceRoot);
     const completedState = completed.final_state;
     const blockedState = blocked.final_state;
     const requeryState = requery.query_available && 'query' in requery ? requery.query : null;
@@ -239,5 +252,6 @@ export async function runTemporalResidencyProof() {
     };
   } finally {
     await testEnv.teardown();
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 }

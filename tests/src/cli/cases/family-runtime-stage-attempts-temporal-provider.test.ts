@@ -816,6 +816,7 @@ test('family-runtime temporal attempt query reads managed local service state wh
   const { fixtureRoot: codexFixtureRoot, codexPath } = createTemporalCloseoutCodexFixture(
     ['receipt:managed-query'],
   );
+  const masWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-managed-query-mas-'));
   const previousEnv = {
     OPL_STATE_DIR: process.env.OPL_STATE_DIR,
     OPL_TEMPORAL_ADDRESS: process.env.OPL_TEMPORAL_ADDRESS,
@@ -876,7 +877,7 @@ test('family-runtime temporal attempt query reads managed local service state wh
       '--provider',
       'temporal',
       '--workspace-locator',
-      '{"workspace_root":"/tmp/mas"}',
+      JSON.stringify({ workspace_root: masWorkspaceRoot }),
       '--checkpoint-ref',
       'checkpoint:managed-query',
     ]) as TemporalStageAttemptCreateOutput;
@@ -952,6 +953,7 @@ test('family-runtime temporal attempt query reads managed local service state wh
     await testEnv.teardown();
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
+    fs.rmSync(masWorkspaceRoot, { recursive: true, force: true });
   }
 });
 
@@ -962,6 +964,7 @@ test('family-runtime temporal attempt start uses managed worker task queue for e
   const { fixtureRoot: codexFixtureRoot, codexPath } = createTemporalCloseoutCodexFixture(
     ['receipt:managed-start'],
   );
+  const masWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-managed-start-mas-'));
   const previousEnv = {
     OPL_STATE_DIR: process.env.OPL_STATE_DIR,
     OPL_TEMPORAL_ADDRESS: process.env.OPL_TEMPORAL_ADDRESS,
@@ -1020,7 +1023,7 @@ test('family-runtime temporal attempt start uses managed worker task queue for e
       '--provider',
       'temporal',
       '--workspace-locator',
-      '{"workspace_root":"/tmp/mas"}',
+      JSON.stringify({ workspace_root: masWorkspaceRoot }),
       '--checkpoint-ref',
       'checkpoint:managed-start',
     ]) as TemporalStageAttemptCreateOutput;
@@ -1044,5 +1047,6 @@ test('family-runtime temporal attempt start uses managed worker task queue for e
     await testEnv.teardown();
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
+    fs.rmSync(masWorkspaceRoot, { recursive: true, force: true });
   }
 });

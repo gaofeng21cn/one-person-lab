@@ -762,7 +762,7 @@ test('family-runtime residency proof --live runs Temporal test server and real w
     assert.equal(live.restarted_worker_requery.requery_status, 'stage_attempt_query_available_after_worker_restart');
     assert.equal(live.blocked_attempt.status, 'blocked');
     assert.equal(live.blocked_attempt.provider_completion, 'not_completed');
-    assert.equal(live.blocked_attempt.blocked_reason, 'typed_closeout_packet_required');
+    assert.equal(live.blocked_attempt.blocked_reason, 'codex_cli_typed_closeout_not_materialized');
     assert.equal(live.authority_boundary.domain, 'truth_quality_artifact_gate_owner');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
