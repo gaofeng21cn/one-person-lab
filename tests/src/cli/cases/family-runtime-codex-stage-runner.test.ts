@@ -9,6 +9,56 @@ import {
 import {
   runAgentStageRunner,
 } from '../../../../src/family-runtime-codex-stage-runner.ts';
+import {
+  runnerPromptFor,
+} from '../../../../src/family-runtime-codex-stage-runner-parts/input-prompt.ts';
+
+test('Codex stage runner prompt exposes MAS PaperMission stage-route affordance', () => {
+  const prompt = runnerPromptFor({
+    attempt: {
+      stage_attempt_id: 'sat_paper_mission_stage_route',
+      domain_id: 'medautoscience',
+      stage_id: 'continue paper-facing submission milestone work',
+      workspace_locator: {
+        surface_kind: 'opl_mas_paper_mission_stage_route_workspace_locator',
+        task_kind: 'paper_mission/stage-route',
+        runtime_request_kind: 'mas_paper_mission_stage_route',
+        workspace_root: '/Users/gaofeng/workspace/Yang/DM-CVD-Mortality-Risk',
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        command_kind: 'resume_stage',
+        route_target:
+          'continue paper-facing submission milestone work and request OPL route readback',
+        candidate_ref:
+          '/Users/gaofeng/workspace/Yang/DM-CVD-Mortality-Risk/ops/medautoscience/paper_mission_consumption_ledger/run/package_manifest.json',
+        paper_mission_transaction_ref:
+          'paper-mission-transaction::003-dpcc-primary-care-phenotype-treatment-gap',
+        opl_route_command_ref:
+          '/Users/gaofeng/workspace/Yang/DM-CVD-Mortality-Risk/ops/medautoscience/paper_mission_consumption_ledger/run/receipt.json#opl_route_command',
+      },
+      checkpoint_refs: ['paper-mission-stage-packet:dm003'],
+    },
+    stagePacketRef: 'paper-mission-stage-packet:dm003',
+  });
+
+  assert.match(prompt, /paper_mission\/stage-route/);
+  assert.match(prompt, /ops\/medautoscience\/\.venv\/bin\/python3/);
+  assert.match(prompt, /dm-cvd-mortality-risk\.local\.toml/);
+  assert.match(prompt, /paper-mission inspect/);
+  assert.match(prompt, /runtime domain-health-diagnostic/);
+  assert.match(prompt, /managed_study_opl_provider_admission_candidates/);
+  assert.match(prompt, /provider_admission_current_control_state/);
+  assert.match(prompt, /Do not assume a \.study_reports array/);
+  assert.match(prompt, /do not invoke bare medautosci/i);
+  assert.match(prompt, /publication_eval\/latest\.json/);
+  assert.match(prompt, /controller_decisions\/latest\.json/);
+  assert.match(prompt, /owner receipts/);
+  assert.match(prompt, /typed blockers/);
+  assert.match(prompt, /human gates/);
+  assert.match(prompt, /current_package/);
+  assert.match(prompt, /runtime queues/);
+  assert.match(prompt, /provider attempts/);
+  assert.match(prompt, /provider liveness/);
+});
 
 test('Codex stage runner resumes the same session to enforce missing typed closeout', async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-stage-runner-workspace-'));
