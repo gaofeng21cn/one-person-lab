@@ -9,8 +9,11 @@ import {
   recordManagedShellUvCacheRecovery,
 } from './managed-shell-command-env.ts';
 
-const DEFAULT_DOMAIN_HANDLER_TIMEOUT_MS = 120_000;
+const DEFAULT_DOMAIN_HANDLER_DISPATCH_TIMEOUT_MS = 120_000;
+const DEFAULT_DOMAIN_HANDLER_EXPORT_TIMEOUT_MS = 600_000;
 const DEFAULT_DOMAIN_HANDLER_MAX_BUFFER = 10 * 1024 * 1024;
+
+type DomainHandlerTimeoutKind = 'dispatch' | 'export';
 
 type DomainHandlerProcessResult = SpawnSyncReturns<string> & {
   exit_code: number;
@@ -25,17 +28,29 @@ type DomainHandlerProcessResult = SpawnSyncReturns<string> & {
   };
 };
 
-function resolveFamilyRuntimeDomainHandlerTimeoutMs() {
-  const raw = process.env.OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS?.trim();
+function domainHandlerTimeoutEnvName(timeoutKind: DomainHandlerTimeoutKind) {
+  return timeoutKind === 'export'
+    ? 'OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_EXPORT_TIMEOUT_MS'
+    : 'OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS';
+}
+
+function defaultDomainHandlerTimeoutMs(timeoutKind: DomainHandlerTimeoutKind) {
+  return timeoutKind === 'export'
+    ? DEFAULT_DOMAIN_HANDLER_EXPORT_TIMEOUT_MS
+    : DEFAULT_DOMAIN_HANDLER_DISPATCH_TIMEOUT_MS;
+}
+
+function resolveFamilyRuntimeDomainHandlerTimeoutMs(timeoutKind: DomainHandlerTimeoutKind = 'dispatch') {
+  const raw = process.env[domainHandlerTimeoutEnvName(timeoutKind)]?.trim();
   if (!raw) {
-    return DEFAULT_DOMAIN_HANDLER_TIMEOUT_MS;
+    return defaultDomainHandlerTimeoutMs(timeoutKind);
   }
   const parsed = Number(raw);
   if (!Number.isSafeInteger(parsed) || parsed < 1) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS must be a positive integer.',
-      { env: 'OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS', value: raw },
+      `${domainHandlerTimeoutEnvName(timeoutKind)} must be a positive integer.`,
+      { env: domainHandlerTimeoutEnvName(timeoutKind), value: raw },
     );
   }
   return parsed;
@@ -156,13 +171,14 @@ function spawnDomainHandlerCommand(
 export function runFamilyRuntimeDomainHandlerCommand(
   command: string[],
   options: { cwd: string; env?: NodeJS.ProcessEnv; maxBuffer?: number },
+  timeoutKind: DomainHandlerTimeoutKind = 'dispatch',
 ): DomainHandlerProcessResult {
   if (!command[0]) {
     throw new FrameworkContractError('contract_shape_invalid', 'Family runtime domain-handler command is empty.', {
       command,
     });
   }
-  const timeoutMs = resolveFamilyRuntimeDomainHandlerTimeoutMs();
+  const timeoutMs = resolveFamilyRuntimeDomainHandlerTimeoutMs(timeoutKind);
   const baseEnv = options.env ?? process.env;
   const result = spawnDomainHandlerCommand(command, {
     ...options,

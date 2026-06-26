@@ -29,33 +29,55 @@ sleep 30
   return { fixtureRoot, domainHandlerPath };
 }
 
-test('family-runtime domain-handler default timeout covers warm MAS export latency', () => {
+test('family-runtime domain-handler separates dispatch and export default timeouts', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-export-default-timeout-'));
+  const dispatchDomainHandlerPath = path.join(fixtureRoot, 'dispatch');
   const exportDomainHandlerPath = path.join(fixtureRoot, 'export');
+  fs.writeFileSync(
+    dispatchDomainHandlerPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf '{"accepted":true}'
+`,
+    { mode: 0o755 },
+  );
   fs.writeFileSync(
     exportDomainHandlerPath,
     `#!/usr/bin/env bash
 set -euo pipefail
-sleep 1
+sleep 1.5
 printf '{"surface_kind":"mas_family_domain_handler_export","pending_family_tasks":[],"domain_progress_transition_requests":[]}'
 `,
     { mode: 0o755 },
   );
   const previous = process.env.OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS;
-  delete process.env.OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS;
+  const previousExport = process.env.OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_EXPORT_TIMEOUT_MS;
+  delete process.env.OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_EXPORT_TIMEOUT_MS;
+  process.env.OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS = '1000';
   try {
-    const result = runFamilyRuntimeDomainHandlerCommand([exportDomainHandlerPath], {
+    const dispatchResult = runFamilyRuntimeDomainHandlerCommand([dispatchDomainHandlerPath], {
       cwd: fixtureRoot,
     });
+    const exportResult = runFamilyRuntimeDomainHandlerCommand([exportDomainHandlerPath], {
+      cwd: fixtureRoot,
+    }, 'export');
 
-    assert.equal(result.exit_code, 0);
-    assert.equal(result.timed_out, false);
-    assert.equal(result.domain_handler_timeout_ms, 120_000);
+    assert.equal(dispatchResult.exit_code, 0);
+    assert.equal(dispatchResult.timed_out, false);
+    assert.equal(dispatchResult.domain_handler_timeout_ms, 1000);
+    assert.equal(exportResult.exit_code, 0);
+    assert.equal(exportResult.timed_out, false);
+    assert.equal(exportResult.domain_handler_timeout_ms, 600_000);
   } finally {
     if (previous === undefined) {
       delete process.env.OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS;
     } else {
       process.env.OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS = previous;
+    }
+    if (previousExport === undefined) {
+      delete process.env.OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_EXPORT_TIMEOUT_MS;
+    } else {
+      process.env.OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_EXPORT_TIMEOUT_MS = previousExport;
     }
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
@@ -73,6 +95,8 @@ test('family-runtime intake fails closed when a domain export handler times out'
       '--source',
       'timeout-test',
     ], familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS: '5000',
+      OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_EXPORT_TIMEOUT_MS: '100',
       OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportDomainHandler.domainHandlerPath,
     }));
     const exportResult = intake.family_runtime_intake.exports[0];
@@ -113,6 +137,8 @@ test('family-runtime profile module export fails closed when module exec hangs',
       'module-timeout-test',
     ], familyRuntimeEnv(stateRoot, {
       PATH: `${fixtureRoot}:${process.env.PATH ?? ''}`,
+      OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS: '5000',
+      OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_EXPORT_TIMEOUT_MS: '100',
       OPL_MODULE_PATH_MEDAUTOSCIENCE: masFixture.sourceRoot,
       OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE: profilePath,
     }));
@@ -197,6 +223,7 @@ test('family-runtime dispatch fails closed when a domain dispatch handler times 
   const dispatchDomainHandler = hangingDomainHandlerFixture('dispatch');
   try {
     const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_EXPORT_TIMEOUT_MS: '5000',
       OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatchDomainHandler.domainHandlerPath,
     });
     const enqueue = runCli([
@@ -493,6 +520,7 @@ JSON
       'cache-retry-test',
     ], familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS: '5000',
+      OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_EXPORT_TIMEOUT_MS: '5000',
       OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: commandPath,
     }));
     const exportResult = intake.family_runtime_intake.exports[0];

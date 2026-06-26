@@ -5,6 +5,19 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-06-26
+
+### 决策：domain-handler export 与 dispatch timeout 分流
+
+原因：MAS `domain-handler export` 是只读 runtime / mission materialization 路径，DM002/DM003 clean binding 下会包含 PaperMission 默认任务、workspace refs 和 projection payload，耗时可能显著超过 dispatch owner-callable 的保守预算。旧 OPL 统一 `OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS=120000` 同时控制 export 和 dispatch，导致 export 在产生 `paper_mission_default_tasks` 前被 OPL transport timeout 误杀；这不是 MAS PaperMission truth 缺失，也不是合法 paper blocker，而是 OPL domain-handler process timeout 边界错误。
+
+影响：
+
+- `OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS` 只继续控制 dispatch，默认 `120000ms`；dispatch 仍按短预算 fail closed，避免 owner callable 长时间挂起。
+- `OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_EXPORT_TIMEOUT_MS` 控制 export，默认 `600000ms`；`family-runtime intake` 和 generic substrate projection 调用 export 时使用该预算。
+- export 超时仍是 fail-closed OPL transport blocker；加长预算只允许 MAS 只读导出完成，不绕过 managed checkout clean gate、不启动 provider、不写 OPL queue 以外的 runtime state。
+- 该修复只关闭 OPL transport / currentness 误判；不授权 OPL 写 MAS owner receipt、typed blocker、human gate、publication eval、controller decision、current package 或 paper body，也不声明 paper progress、domain-ready、publication-ready、runtime-ready 或 production-ready。
+
 ## 2026-06-25
 
 ### 决策：typed closeout ref ingestion 必须接受 refs-only object refs

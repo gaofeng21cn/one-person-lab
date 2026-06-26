@@ -178,7 +178,7 @@ function readDomainHandlerSubstrateAdapter(entry: DomainManifestCatalogEntry) {
       cwd: process.cwd(),
       env: process.env,
       maxBuffer: 10 * 1024 * 1024,
-    });
+    }, 'export');
     if (result.exit_code !== 0) {
       return {
         status: 'blocked',

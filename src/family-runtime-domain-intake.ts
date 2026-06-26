@@ -488,7 +488,7 @@ export function hydrateDomainTasks(
     const result = runFamilyRuntimeDomainHandlerCommand(command.argv, {
       cwd: command.cwd,
       env: process.env,
-    });
+    }, 'export');
     const stdout = result.stdout ?? '';
     const stderr = result.stderr ?? '';
     const exitCode = result.exit_code;
