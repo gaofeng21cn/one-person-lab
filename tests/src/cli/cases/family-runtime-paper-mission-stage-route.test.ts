@@ -1456,19 +1456,6 @@ test('family-runtime redrives PaperMission stage-route typed closeout packet tra
     }));
     const redrivenTask = runCli(['family-runtime', 'queue', 'inspect', enqueued.task.task_id], familyRuntimeEnv(stateRoot));
     const redrivenDb = openQueueDb().db;
-    const redrivenRow = redrivenDb.prepare('SELECT * FROM tasks WHERE task_id = ?').get(enqueued.task.task_id) as
-      FamilyRuntimeTaskRow;
-    await dispatchFamilyRuntimeTask(redrivenDb, familyRuntimePaths(), redrivenRow, {
-      temporalProviderModule: async () => ({
-        startTemporalStageAttemptWorkflow: async (attempt) => ({
-          surface_kind: 'temporal_stage_attempt_start_receipt',
-          provider_kind: 'temporal',
-          stage_attempt_id: attempt.stage_attempt_id,
-          workflow_id: attempt.workflow_id,
-          first_execution_run_id: 'run-paper-mission-route-closeout-redrive-new',
-        }),
-      }),
-    });
     const afterDispatch = inspectTask(redrivenDb, enqueued.task.task_id);
     const newestAttempt = afterDispatch.stage_attempts.find((attempt) =>
       attempt.stage_attempt_id === redrive.family_runtime_redrive.redriven_stage_attempt.stage_attempt_id
@@ -1487,9 +1474,11 @@ test('family-runtime redrives PaperMission stage-route typed closeout packet tra
       true,
     );
     assert.equal(redrive.family_runtime_redrive.redriven, true);
-    assert.equal(redrive.family_runtime_redrive.task.status, 'queued');
+    assert.equal(redrive.family_runtime_redrive.task.status, 'running');
     assert.equal(redrive.family_runtime_redrive.provider_redrive_started, true);
-    assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.status, 'queued');
+    assert.equal(redrive.family_runtime_redrive.provider_redrive_followthrough.status, 'provider_started');
+    assert.equal(redrive.family_runtime_redrive.provider_redrive_followthrough.provider_started, true);
+    assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.status, 'running');
     assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.executor_kind, 'codex_cli');
     assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.stage_attempt_executor_policy.executor_kind, 'codex_cli');
     assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.stage_attempt_executor_policy.model, 'gpt-5.5');
@@ -1503,7 +1492,7 @@ test('family-runtime redrives PaperMission stage-route typed closeout packet tra
     assert.equal(redrive.family_runtime_redrive.authority_boundary.domain_truth_mutation, false);
     assert.equal(redrive.family_runtime_redrive.authority_boundary.owner_receipt_created, false);
     assert.equal(redrive.family_runtime_redrive.authority_boundary.typed_blocker_created, false);
-    assert.equal(redrivenTask.family_runtime_task.task.status, 'queued');
+    assert.equal(redrivenTask.family_runtime_task.task.status, 'running');
     assert.equal(afterDispatch.task.status, 'running');
     assert.equal(newestAttempt.status, 'running');
     assert.equal(newestAttempt.provider_kind, 'temporal');
@@ -1701,19 +1690,6 @@ test(`family-runtime redrives PaperMission stage-route provider runtime blocker 
     }));
     const redrivenTask = runCli(['family-runtime', 'queue', 'inspect', enqueued.task.task_id], familyRuntimeEnv(stateRoot));
     const redrivenDb = openQueueDb().db;
-    const redrivenRow = redrivenDb.prepare('SELECT * FROM tasks WHERE task_id = ?').get(enqueued.task.task_id) as
-      FamilyRuntimeTaskRow;
-    await dispatchFamilyRuntimeTask(redrivenDb, familyRuntimePaths(), redrivenRow, {
-      temporalProviderModule: async () => ({
-        startTemporalStageAttemptWorkflow: async (attempt) => ({
-          surface_kind: 'temporal_stage_attempt_start_receipt',
-          provider_kind: 'temporal',
-          stage_attempt_id: attempt.stage_attempt_id,
-          workflow_id: attempt.workflow_id,
-          first_execution_run_id: 'run-paper-mission-route-runtime-blocker-redrive-new',
-        }),
-      }),
-    });
     const afterDispatch = inspectTask(redrivenDb, enqueued.task.task_id);
     const newestAttempt = afterDispatch.stage_attempts.find((attempt) =>
       attempt.stage_attempt_id === redrive.family_runtime_redrive.redriven_stage_attempt.stage_attempt_id
@@ -1726,9 +1702,11 @@ test(`family-runtime redrives PaperMission stage-route provider runtime blocker 
     assert.equal(blockedAttempt?.blocked_reason, providerRuntimeBlockerReason);
     assert.deepEqual(blockedAttempt?.closeout_refs, [providerRuntimeBlockerRef]);
     assert.equal(redrive.family_runtime_redrive.redriven, true);
-    assert.equal(redrive.family_runtime_redrive.task.status, 'queued');
+    assert.equal(redrive.family_runtime_redrive.task.status, 'running');
     assert.equal(redrive.family_runtime_redrive.provider_redrive_started, true);
-    assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.status, 'queued');
+    assert.equal(redrive.family_runtime_redrive.provider_redrive_followthrough.status, 'provider_started');
+    assert.equal(redrive.family_runtime_redrive.provider_redrive_followthrough.provider_started, true);
+    assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.status, 'running');
     assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.executor_kind, 'codex_cli');
     assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.stage_attempt_executor_policy.executor_kind, 'codex_cli');
     assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.stage_attempt_executor_policy.model, 'gpt-5.5');
@@ -1742,7 +1720,7 @@ test(`family-runtime redrives PaperMission stage-route provider runtime blocker 
     assert.equal(redrive.family_runtime_redrive.authority_boundary.domain_truth_mutation, false);
     assert.equal(redrive.family_runtime_redrive.authority_boundary.owner_receipt_created, false);
     assert.equal(redrive.family_runtime_redrive.authority_boundary.typed_blocker_created, false);
-    assert.equal(redrivenTask.family_runtime_task.task.status, 'queued');
+    assert.equal(redrivenTask.family_runtime_task.task.status, 'running');
     assert.equal(afterDispatch.task.status, 'running');
     assert.equal(newestAttempt.status, 'running');
     assert.equal(newestAttempt.provider_kind, 'temporal');

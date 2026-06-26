@@ -225,6 +225,13 @@ function paperMissionStageRouteRedriveAuthority(row: FamilyRuntimeTaskRow, paylo
     && authority.can_claim_runtime_ready !== true;
 }
 
+export function isPaperMissionStageRouteProviderRedriveTask(
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+) {
+  return paperMissionStageRouteRedriveAuthority(row, payload);
+}
+
 function providerStageAttemptRedriveReasonAllowed(
   attempt: StageAttemptPayload,
   row: FamilyRuntimeTaskRow,

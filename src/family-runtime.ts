@@ -58,8 +58,15 @@ import {
 import { enqueueTask } from './family-runtime-enqueue.ts';
 import { runSchedulerQueueTick } from './family-runtime-scheduler-tick-runner.ts';
 import { blockPaperMissionStageRouteTasksForProviderPreflight } from './family-runtime-tick.ts';
-import { hydrateDomainTasks, readMasManagedProviderProjection } from './family-runtime-task-dispatch.ts';
-import { redriveFamilyRuntimeTask } from './family-runtime-redrive.ts';
+import {
+  dispatchFamilyRuntimeTask,
+  hydrateDomainTasks,
+  readMasManagedProviderProjection,
+} from './family-runtime-task-dispatch.ts';
+import {
+  isPaperMissionStageRouteProviderRedriveTask,
+  redriveFamilyRuntimeTask,
+} from './family-runtime-redrive.ts';
 import { holdFamilyRuntimeQueueTasks } from './family-runtime-queue-hold.ts';
 import { releaseFamilyRuntimeQueueHold } from './family-runtime-queue-release.ts';
 import { retireFamilyRuntimeQueueResidue } from './family-runtime-queue-retire.ts';
@@ -97,6 +104,85 @@ function providerPreflightBlockedReason(value: unknown) {
     return providerBlocker.blocker_id;
   }
   return 'provider_not_ready';
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function redrivenStageAttemptId(value: unknown) {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const attempt = isRecord(value.redriven_stage_attempt) ? value.redriven_stage_attempt : null;
+  return typeof attempt?.stage_attempt_id === 'string' && attempt.stage_attempt_id.trim()
+    ? attempt.stage_attempt_id.trim()
+    : null;
+}
+
+export async function paperMissionRedriveProviderFollowthrough(
+  db: DatabaseSync,
+  paths: ReturnType<typeof familyRuntimePaths>,
+  taskId: string,
+  redriveResult: Record<string, unknown>,
+  options: {
+    temporalProviderModule?: Parameters<typeof dispatchFamilyRuntimeTask>[3]['temporalProviderModule'];
+  } = {},
+) {
+  const stageAttemptId = redrivenStageAttemptId(redriveResult);
+  if (!stageAttemptId) {
+    return {
+      status: 'not_applicable',
+      reason: 'redrive_did_not_create_stage_attempt',
+      stage_attempt_id: null,
+      provider_started: false,
+    };
+  }
+  const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as FamilyRuntimeTaskRow | undefined;
+  if (!row) {
+    return {
+      status: 'blocked',
+      reason: 'redriven_task_missing',
+      stage_attempt_id: stageAttemptId,
+      provider_started: false,
+    };
+  }
+  const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
+  if (!isPaperMissionStageRouteProviderRedriveTask(row, payload)) {
+    return {
+      status: 'not_applicable',
+      reason: 'not_paper_mission_stage_route_redrive',
+      stage_attempt_id: stageAttemptId,
+      provider_started: false,
+    };
+  }
+  const attempt = inspectStageAttempt(db, stageAttemptId);
+  if (attempt.status !== 'queued') {
+    return {
+      status: 'not_applicable',
+      reason: `redriven_attempt_${attempt.status}`,
+      stage_attempt_id: stageAttemptId,
+      provider_started: false,
+    };
+  }
+  const dispatch = await dispatchFamilyRuntimeTask(db, paths, row, {
+    temporalProviderModule: options.temporalProviderModule ?? temporalProviderModule,
+  });
+  const refreshedAttempt = inspectStageAttempt(db, stageAttemptId);
+  const providerStarted = refreshedAttempt.status === 'running'
+    && isRecord(refreshedAttempt.provider_run)
+    && refreshedAttempt.provider_run.provider_status === 'running';
+  const dispatchRecord = dispatch as Record<string, unknown>;
+  const dispatchReason = typeof dispatchRecord.reason === 'string'
+    ? dispatchRecord.reason
+    : null;
+  return {
+    status: providerStarted ? 'provider_started' : 'provider_not_started',
+    reason: providerStarted ? 'paper_mission_redrive_provider_followthrough_started' : dispatchReason,
+    stage_attempt_id: stageAttemptId,
+    provider_started: providerStarted,
+    dispatch,
+  };
 }
 
 async function syncTemporalStageAttemptsForTask(
@@ -599,15 +685,30 @@ export async function runFamilyRuntime(args: string[]): Promise<Record<string, u
       };
     }
     if (parsed.mode === 'queue_redrive') {
+      const redrive = redriveFamilyRuntimeTask(db, {
+        taskId: parsed.taskId,
+        reason: parsed.reason,
+        source: parsed.source,
+      });
+      const providerFollowthrough = await paperMissionRedriveProviderFollowthrough(db, paths, parsed.taskId, redrive);
+      const refreshedTaskRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(parsed.taskId) as
+        | FamilyRuntimeTaskRow
+        | undefined;
+      const stageAttemptId = redrivenStageAttemptId(redrive);
+      const refreshedStageAttempt = stageAttemptId ? inspectStageAttempt(db, stageAttemptId) : null;
+      const redriveRecord = redrive as Record<string, unknown>;
+      const providerRedriveStarted = providerFollowthrough.status === 'not_applicable'
+        ? redriveRecord.provider_redrive_started ?? null
+        : providerFollowthrough.provider_started;
       return {
         version: 'g2',
         family_runtime_redrive: {
           surface_id: 'opl_family_runtime_redrive',
-          ...redriveFamilyRuntimeTask(db, {
-            taskId: parsed.taskId,
-            reason: parsed.reason,
-            source: parsed.source,
-          }),
+          ...redrive,
+          task: refreshedTaskRow ? taskToPayload(refreshedTaskRow) : redrive.task,
+          redriven_stage_attempt: refreshedStageAttempt ?? redrive.redriven_stage_attempt,
+          provider_redrive_started: providerRedriveStarted,
+          provider_redrive_followthrough: providerFollowthrough,
           queue: queueSummary(db),
         },
       };
