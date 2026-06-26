@@ -152,6 +152,33 @@ function writeCodexDefaultConfig(codexHome: string) {
   );
 }
 
+function setEnvValue(key: string, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[key];
+    return;
+  }
+  process.env[key] = value;
+}
+
+function installDirectDispatchEnv(stateRoot: string, extra: Record<string, string> = {}) {
+  const snapshotKeys = new Set(['OPL_STATE_DIR', 'CODEX_HOME', ...Object.keys(extra)]);
+  const snapshot = new Map([...snapshotKeys].map((key) => [key, process.env[key]] as const));
+  const codexHome = extra.CODEX_HOME ?? path.join(stateRoot, 'codex-home');
+  if (!extra.CODEX_HOME) {
+    writeCodexDefaultConfig(codexHome);
+  }
+  process.env.OPL_STATE_DIR = stateRoot;
+  process.env.CODEX_HOME = codexHome;
+  for (const [key, value] of Object.entries(extra)) {
+    process.env[key] = value;
+  }
+  return () => {
+    for (const [key, value] of snapshot) {
+      setEnvValue(key, value);
+    }
+  };
+}
+
 test('family-runtime tick admits MAS PaperMission stage-route into OPL StageAttempt without domain dispatch', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-fixture-'));
@@ -1043,13 +1070,11 @@ for (const commandKind of ['route_back', 'resume_stage'] as const) {
 
 test('family-runtime Temporal completed PaperMission stage-route without typed closeout becomes explicit blocker', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-temporal-missing-closeout-'));
-  const originalStateDir = process.env.OPL_STATE_DIR;
-  const originalProvider = process.env.OPL_FAMILY_RUNTIME_PROVIDER;
-  const originalTemporalAddress = process.env.OPL_TEMPORAL_ADDRESS;
+  const restoreEnv = installDirectDispatchEnv(stateRoot, {
+    OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    OPL_TEMPORAL_ADDRESS: '127.0.0.1:7233',
+  });
   try {
-    process.env.OPL_STATE_DIR = stateRoot;
-    process.env.OPL_FAMILY_RUNTIME_PROVIDER = 'temporal';
-    process.env.OPL_TEMPORAL_ADDRESS = '127.0.0.1:7233';
     const { db, paths } = openQueueDb();
     const enqueued = enqueueTask(db, {
       domainId: 'medautoscience',
@@ -1140,22 +1165,18 @@ test('family-runtime Temporal completed PaperMission stage-route without typed c
     );
     db.close();
   } finally {
-    process.env.OPL_STATE_DIR = originalStateDir;
-    process.env.OPL_FAMILY_RUNTIME_PROVIDER = originalProvider;
-    process.env.OPL_TEMPORAL_ADDRESS = originalTemporalAddress;
+    restoreEnv();
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
 test('family-runtime redrives PaperMission stage-route typed closeout packet transport failure', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-closeout-redrive-'));
-  const originalStateDir = process.env.OPL_STATE_DIR;
-  const originalProvider = process.env.OPL_FAMILY_RUNTIME_PROVIDER;
-  const originalTemporalAddress = process.env.OPL_TEMPORAL_ADDRESS;
+  const restoreEnv = installDirectDispatchEnv(stateRoot, {
+    OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    OPL_TEMPORAL_ADDRESS: '127.0.0.1:7233',
+  });
   try {
-    process.env.OPL_STATE_DIR = stateRoot;
-    process.env.OPL_FAMILY_RUNTIME_PROVIDER = 'temporal';
-    process.env.OPL_TEMPORAL_ADDRESS = '127.0.0.1:7233';
     const { db, paths } = openQueueDb();
     const enqueued = enqueueTask(db, {
       domainId: 'medautoscience',
@@ -1400,9 +1421,7 @@ test('family-runtime redrives PaperMission stage-route typed closeout packet tra
     );
     redrivenDb.close();
   } finally {
-    process.env.OPL_STATE_DIR = originalStateDir;
-    process.env.OPL_FAMILY_RUNTIME_PROVIDER = originalProvider;
-    process.env.OPL_TEMPORAL_ADDRESS = originalTemporalAddress;
+    restoreEnv();
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
@@ -1413,13 +1432,11 @@ for (const providerRuntimeBlockerReason of [
 ]) {
 test(`family-runtime redrives PaperMission stage-route provider runtime blocker ${providerRuntimeBlockerReason}`, async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-runtime-blocker-redrive-'));
-  const originalStateDir = process.env.OPL_STATE_DIR;
-  const originalProvider = process.env.OPL_FAMILY_RUNTIME_PROVIDER;
-  const originalTemporalAddress = process.env.OPL_TEMPORAL_ADDRESS;
+  const restoreEnv = installDirectDispatchEnv(stateRoot, {
+    OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    OPL_TEMPORAL_ADDRESS: '127.0.0.1:7233',
+  });
   try {
-    process.env.OPL_STATE_DIR = stateRoot;
-    process.env.OPL_FAMILY_RUNTIME_PROVIDER = 'temporal';
-    process.env.OPL_TEMPORAL_ADDRESS = '127.0.0.1:7233';
     const { db, paths } = openQueueDb();
     const enqueued = enqueueTask(db, {
       domainId: 'medautoscience',
@@ -1577,9 +1594,7 @@ test(`family-runtime redrives PaperMission stage-route provider runtime blocker 
     );
     redrivenDb.close();
   } finally {
-    process.env.OPL_STATE_DIR = originalStateDir;
-    process.env.OPL_FAMILY_RUNTIME_PROVIDER = originalProvider;
-    process.env.OPL_TEMPORAL_ADDRESS = originalTemporalAddress;
+    restoreEnv();
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
@@ -1587,13 +1602,11 @@ test(`family-runtime redrives PaperMission stage-route provider runtime blocker 
 
 test('family-runtime late typed closeout supersedes provider-only missing closeout blocker', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-late-closeout-'));
-  const originalStateDir = process.env.OPL_STATE_DIR;
-  const originalProvider = process.env.OPL_FAMILY_RUNTIME_PROVIDER;
-  const originalTemporalAddress = process.env.OPL_TEMPORAL_ADDRESS;
+  const restoreEnv = installDirectDispatchEnv(stateRoot, {
+    OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    OPL_TEMPORAL_ADDRESS: '127.0.0.1:7233',
+  });
   try {
-    process.env.OPL_STATE_DIR = stateRoot;
-    process.env.OPL_FAMILY_RUNTIME_PROVIDER = 'temporal';
-    process.env.OPL_TEMPORAL_ADDRESS = '127.0.0.1:7233';
     const { db, paths } = openQueueDb();
     const enqueued = enqueueTask(db, {
       domainId: 'medautoscience',
@@ -1734,9 +1747,7 @@ test('family-runtime late typed closeout supersedes provider-only missing closeo
     );
     db.close();
   } finally {
-    process.env.OPL_STATE_DIR = originalStateDir;
-    process.env.OPL_FAMILY_RUNTIME_PROVIDER = originalProvider;
-    process.env.OPL_TEMPORAL_ADDRESS = originalTemporalAddress;
+    restoreEnv();
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
@@ -2120,13 +2131,11 @@ test('family-runtime tick does not promote MAS PaperMission stage-route domain-r
 
 test('family-runtime dispatch starts MAS PaperMission stage-route Temporal attempts in the same tick', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-temporal-'));
-  const originalStateDir = process.env.OPL_STATE_DIR;
-  const originalProvider = process.env.OPL_FAMILY_RUNTIME_PROVIDER;
-  const originalTemporalAddress = process.env.OPL_TEMPORAL_ADDRESS;
+  const restoreEnv = installDirectDispatchEnv(stateRoot, {
+    OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    OPL_TEMPORAL_ADDRESS: '127.0.0.1:7233',
+  });
   try {
-    process.env.OPL_STATE_DIR = stateRoot;
-    process.env.OPL_FAMILY_RUNTIME_PROVIDER = 'temporal';
-    process.env.OPL_TEMPORAL_ADDRESS = '127.0.0.1:7233';
     const { db, paths } = openQueueDb();
     const enqueued = enqueueTask(db, {
       domainId: 'medautoscience',
@@ -2177,22 +2186,18 @@ test('family-runtime dispatch starts MAS PaperMission stage-route Temporal attem
     assert.equal(task.events.some((event) => event.event_type === 'paper_mission_stage_route_temporal_started'), true);
     db.close();
   } finally {
-    process.env.OPL_STATE_DIR = originalStateDir;
-    process.env.OPL_FAMILY_RUNTIME_PROVIDER = originalProvider;
-    process.env.OPL_TEMPORAL_ADDRESS = originalTemporalAddress;
+    restoreEnv();
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
 test('family-runtime dispatch blocks MAS PaperMission stage-route when Temporal start fails', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-temporal-block-'));
-  const originalStateDir = process.env.OPL_STATE_DIR;
-  const originalProvider = process.env.OPL_FAMILY_RUNTIME_PROVIDER;
-  const originalTemporalAddress = process.env.OPL_TEMPORAL_ADDRESS;
+  const restoreEnv = installDirectDispatchEnv(stateRoot, {
+    OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    OPL_TEMPORAL_ADDRESS: '',
+  });
   try {
-    process.env.OPL_STATE_DIR = stateRoot;
-    process.env.OPL_FAMILY_RUNTIME_PROVIDER = 'temporal';
-    process.env.OPL_TEMPORAL_ADDRESS = '';
     const { db, paths } = openQueueDb();
     const enqueued = enqueueTask(db, {
       domainId: 'medautoscience',
@@ -2225,9 +2230,7 @@ test('family-runtime dispatch blocks MAS PaperMission stage-route when Temporal 
     assert.equal(task.events.some((event) => event.event_type === 'paper_mission_stage_route_temporal_start_blocked'), true);
     db.close();
   } finally {
-    process.env.OPL_STATE_DIR = originalStateDir;
-    process.env.OPL_FAMILY_RUNTIME_PROVIDER = originalProvider;
-    process.env.OPL_TEMPORAL_ADDRESS = originalTemporalAddress;
+    restoreEnv();
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
