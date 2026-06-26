@@ -6,6 +6,28 @@ import path from 'node:path';
 import { createFakeCodexFixture, shellSingleQuote } from './cli/helpers.ts';
 import { runPublicCodexStageRunner } from './family-runtime-codex-stage-runner-helpers.ts';
 
+function assertProviderRuntimeCloseout(input: {
+  closeoutPacket: Record<string, unknown> | null | undefined;
+  stageAttemptId: string;
+  stagePacketRef: string;
+}) {
+  const expectedRef =
+    `opl://stage-attempts/${input.stageAttemptId}/runtime-blockers/codex_cli_typed_closeout_not_materialized`;
+  assert.equal(input.closeoutPacket?.surface_kind, 'stage_attempt_closeout_packet');
+  assert.equal(input.closeoutPacket?.stage_attempt_id, input.stageAttemptId);
+  assert.deepEqual(input.closeoutPacket?.closeout_refs, [expectedRef]);
+  assert.deepEqual(input.closeoutPacket?.consumed_refs, [input.stagePacketRef]);
+  assert.equal(
+    (input.closeoutPacket?.route_impact as Record<string, unknown> | undefined)?.provider_blocker_reason,
+    'codex_cli_typed_closeout_not_materialized',
+  );
+  assert.equal(
+    (input.closeoutPacket?.authority_boundary as Record<string, unknown> | undefined)
+      ?.provider_completion_is_domain_ready,
+    false,
+  );
+}
+
 test('Codex stage runner recovers MAS default-executor receipt when final closeout message is missing', async () => {
   const threadId = 'thread-mas-default-executor-receipt-recovery';
   const studyId = '003-dpcc-primary-care-phenotype-treatment-gap';
@@ -234,7 +256,11 @@ exit 64
       timeoutMs: 10_000,
     });
 
-    assert.equal(receipt.closeout_packet, null);
+    assertProviderRuntimeCloseout({
+      closeoutPacket: receipt.closeout_packet,
+      stageAttemptId: 'sat_current_auth_recovery_test',
+      stagePacketRef,
+    });
     assert.equal(receipt.process_output_summary?.domain_receipt_recovery_status, 'authorization_binding_mismatch');
   } finally {
     if (previousCodexBin === undefined) {
@@ -487,7 +513,11 @@ exit 64
       timeoutMs: 10_000,
     });
 
-    assert.equal(receipt.closeout_packet, null);
+    assertProviderRuntimeCloseout({
+      closeoutPacket: receipt.closeout_packet,
+      stageAttemptId: 'sat_mas_owner_dispatch_profile_missing_test',
+      stagePacketRef,
+    });
     assert.equal(receipt.process_output_summary?.domain_receipt_recovery_status, 'receipt_not_found');
     assert.equal(receipt.process_output_summary?.mas_owner_dispatch_bridge?.status, 'profile_missing');
   } finally {
@@ -574,7 +604,11 @@ exit 64
       timeoutMs: 10_000,
     });
 
-    assert.equal(receipt.closeout_packet, null);
+    assertProviderRuntimeCloseout({
+      closeoutPacket: receipt.closeout_packet,
+      stageAttemptId: 'sat_stale_mas_receipt_recovery_test',
+      stagePacketRef,
+    });
     assert.equal(receipt.process_output_summary?.domain_receipt_recovery_status, 'matching_execution_not_found');
   } finally {
     if (previousCodexBin === undefined) {
@@ -653,7 +687,11 @@ exit 64
       timeoutMs: 10_000,
     });
 
-    assert.equal(receipt.closeout_packet, null);
+    assertProviderRuntimeCloseout({
+      closeoutPacket: receipt.closeout_packet,
+      stageAttemptId: 'sat_missing_identity_mas_receipt_recovery_test',
+      stagePacketRef,
+    });
     assert.equal(receipt.process_output_summary?.domain_receipt_recovery_status, 'matching_execution_not_found');
   } finally {
     if (previousCodexBin === undefined) {
