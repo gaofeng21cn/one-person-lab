@@ -21,6 +21,8 @@ export const PAPER_MISSION_STAGE_ROUTE_RUNTIME_REQUEST_KIND = 'mas_paper_mission
 const PAPER_MISSION_STAGE_ROUTE_DOMAIN_GATE_PENDING_REASON = 'paper_mission_stage_route_domain_gate_pending';
 const PAPER_MISSION_STAGE_ROUTE_TERMINAL_SUCCESSOR_REASON =
   'paper_mission_stage_route_terminal_closeout_successor_admitted';
+const PAPER_MISSION_STAGE_ROUTE_TERMINAL_SUCCESSOR_POLICY =
+  'terminal_provider_closeout_cannot_self_admit_successor_external_fresh_handoff_required';
 const MAX_TERMINAL_SUCCESSOR_GENERATION = 1;
 const SUCCESSOR_ROUTE_COMMAND_KINDS = new Set([
   'route_back',
@@ -182,6 +184,19 @@ function hasAcceptedTypedCloseout(attempt: StageAttemptPayload) {
 }
 
 function shouldAdmitSuccessorForTerminalRoute(
+  payload: Record<string, unknown>,
+  terminalAttempt: StageAttemptPayload,
+  nextTask: ReturnType<typeof paperMissionStageRouteTaskStatusForTerminalAttempt>,
+) {
+  return terminalCloseoutSelfAdmissionAllowed()
+    && isTerminalSuccessorCandidate(payload, terminalAttempt, nextTask);
+}
+
+function terminalCloseoutSelfAdmissionAllowed() {
+  return false;
+}
+
+function isTerminalSuccessorCandidate(
   payload: Record<string, unknown>,
   terminalAttempt: StageAttemptPayload,
   nextTask: ReturnType<typeof paperMissionStageRouteTaskStatusForTerminalAttempt>,
@@ -398,6 +413,21 @@ function existingTerminalSuccessorIdentityNotReadyEvent(
   `).get(row.task_id, terminalAttempt.stage_attempt_id) as { 1: number } | undefined;
 }
 
+function existingTerminalTaskReconciledEvent(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  terminalAttempt: StageAttemptPayload,
+) {
+  return db.prepare(`
+    SELECT 1
+    FROM events
+    WHERE task_id = ?
+      AND event_type = 'paper_mission_stage_route_terminal_task_reconciled'
+      AND json_extract(payload_json, '$.stage_attempt_id') = ?
+    LIMIT 1
+  `).get(row.task_id, terminalAttempt.stage_attempt_id) as { 1: number } | undefined;
+}
+
 function canReconcilePaperMissionStageRouteTask(
   row: FamilyRuntimeTaskRow,
   terminalAttempt: StageAttemptPayload,
@@ -414,6 +444,11 @@ function canReconcilePaperMissionStageRouteTask(
       SUPERSEDABLE_PROVIDER_BLOCKERS.has(reason)
       || BACKFILLABLE_TERMINAL_ROUTE_BLOCKERS.has(reason)
     );
+}
+
+function hasSupersedableProviderBlocker(row: FamilyRuntimeTaskRow) {
+  const reason = row.dead_letter_reason ?? row.last_error;
+  return typeof reason === 'string' && SUPERSEDABLE_PROVIDER_BLOCKERS.has(reason);
 }
 
 function canBackfillBlockedTerminalSuccessor(
@@ -460,6 +495,17 @@ function reconcilePaperMissionStageRouteTaskRowWithAttempt(
   }
   const admitSuccessor = successorIdentityReady
     && shouldAdmitSuccessorForTerminalRoute(payload, terminalAttempt, nextTask);
+  const terminalSuccessorCandidate = successorIdentityReady
+    && isTerminalSuccessorCandidate(payload, terminalAttempt, nextTask);
+  if (
+    row.status === 'blocked'
+    && !admitSuccessor
+    && !canBackfillBlockedTerminalSuccessor(row, payload, terminalAttempt)
+    && !hasSupersedableProviderBlocker(row)
+    && existingTerminalTaskReconciledEvent(db, row, terminalAttempt)
+  ) {
+    return false;
+  }
   if (row.status === 'blocked' && admitSuccessor && existingPaperMissionStageRouteSuccessor(db, row, terminalAttempt)) {
     return false;
   }
@@ -511,6 +557,8 @@ function reconcilePaperMissionStageRouteTaskRowWithAttempt(
       attempt_idempotency_key: paperMissionStageRouteIdentityValue(payload, 'attempt_idempotency_key'),
       request_idempotency_key: paperMissionStageRouteIdentityValue(payload, 'request_idempotency_key'),
       terminal_successor_identity_ready: successorIdentityReady,
+      terminal_successor_policy: PAPER_MISSION_STAGE_ROUTE_TERMINAL_SUCCESSOR_POLICY,
+      terminal_successor_self_admission_suppressed: terminalSuccessorCandidate,
       missing_terminal_successor_identity_fields: missingSuccessorIdentityFields,
       stage_attempt_id: terminalAttempt.stage_attempt_id,
       stage_attempt_status: terminalAttempt.status,

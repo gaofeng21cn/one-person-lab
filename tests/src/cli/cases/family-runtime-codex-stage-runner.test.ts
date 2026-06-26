@@ -58,6 +58,10 @@ test('Codex stage runner prompt exposes MAS PaperMission stage-route affordance'
   assert.match(prompt, /runtime queues/);
   assert.match(prompt, /provider attempts/);
   assert.match(prompt, /provider liveness/);
+  assert.match(prompt, /already running inside OPL provider-backed runtime/);
+  assert.match(prompt, /Do not recursively enqueue, redrive, tick, start, or submit another OPL runtime task/);
+  assert.match(prompt, /paper-mission drive --submit-opl-runtime/);
+  assert.match(prompt, /create a fresh OPL route handoff as a substitute for a MAS-acceptable owner answer/);
 });
 
 test('Codex stage runner resumes the same session to enforce missing typed closeout', async () => {

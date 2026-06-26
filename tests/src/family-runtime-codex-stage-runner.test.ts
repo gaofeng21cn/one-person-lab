@@ -175,6 +175,32 @@ test('Codex stage activity prompt carries refs-only OPL execution authorization 
   assert.match(commandPreview, /do not grant domain truth, artifact, quality, or readiness authority/);
 });
 
+test('Codex stage activity prompt forbids recursive MAS PaperMission stage-route runtime submission', () => {
+  const activity = buildCodexStageActivityInput({
+    attempt: {
+      stage_attempt_id: 'sat_codex_paper_route_prompt_test',
+      domain_id: 'medautoscience',
+      stage_id: 'continue paper-facing submission milestone work',
+      executor_kind: 'codex_cli',
+      workspace_locator: {
+        surface_kind: 'opl_mas_paper_mission_stage_route_workspace_locator',
+        task_kind: 'paper_mission/stage-route',
+        runtime_request_kind: 'mas_paper_mission_stage_route',
+        workspace_root: '/tmp/mas',
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        command_kind: 'resume_stage',
+        route_target: 'continue paper-facing submission milestone work',
+      },
+      checkpoint_refs: ['paper-mission-stage-packet:dm003'],
+    },
+  });
+
+  const commandPreview = activity.runner_status.command_preview.join('\n');
+  assert.match(commandPreview, /already running inside OPL provider-backed runtime/);
+  assert.match(commandPreview, /Do not recursively enqueue, redrive, tick, start, or submit another OPL runtime task/);
+  assert.match(commandPreview, /paper-mission drive --submit-opl-runtime/);
+});
+
 test('Codex stage closeout output schema accepts refs-only object metadata', () => {
   const schema = stageCloseoutOutputSchemaForTest() as Record<string, any>;
   const closeoutRefs = schema.properties.closeout_refs;
