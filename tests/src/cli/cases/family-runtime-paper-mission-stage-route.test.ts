@@ -3,6 +3,7 @@ import {
   familyRuntimePaths,
   inspectTask,
   openQueueDb,
+  taskToPayload,
   type FamilyRuntimeTaskRow,
 } from '../../../../src/family-runtime-store.ts';
 import {
@@ -10,6 +11,10 @@ import {
   requireTemporalStageAttemptWorkflowInputLaunchable,
 } from '../../../../src/family-runtime-temporal.ts';
 import { enqueueTask } from '../../../../src/family-runtime-enqueue.ts';
+import {
+  paperMissionRedriveProviderFollowthrough,
+} from '../../../../src/family-runtime.ts';
+import { redriveFamilyRuntimeTask } from '../../../../src/family-runtime-redrive.ts';
 import { dispatchFamilyRuntimeTask } from '../../../../src/family-runtime-task-dispatch.ts';
 import { syncStageAttemptFromTemporalTerminalObservation } from '../../../../src/family-runtime-stage-attempts.ts';
 
@@ -26,6 +31,17 @@ type StageRouteDispatchReadback = {
   authority_boundary: {
     can_claim_provider_running: boolean;
     can_claim_paper_progress: boolean;
+  };
+};
+
+type PaperMissionRedriveReadback = {
+  family_runtime_redrive: Record<string, unknown> & {
+    task: Record<string, unknown>;
+    redriven_stage_attempt: Record<string, any>;
+    provider_redrive_started: boolean | null;
+    provider_redrive_followthrough: Record<string, unknown>;
+    redrive_protocol: Record<string, any>;
+    authority_boundary: Record<string, any>;
   };
 };
 
@@ -177,6 +193,62 @@ function installDirectDispatchEnv(stateRoot: string, extra: Record<string, strin
       setEnvValue(key, value);
     }
   };
+}
+
+async function redriveWithInjectedTemporalProvider(
+  taskId: string,
+  input: {
+    reason: string;
+    source: string;
+    firstExecutionRunId: string;
+  },
+): Promise<PaperMissionRedriveReadback> {
+  const { db, paths } = openQueueDb();
+  try {
+    const redrive = redriveFamilyRuntimeTask(db, {
+      taskId,
+      reason: input.reason,
+      source: input.source,
+    });
+    const providerFollowthrough = await paperMissionRedriveProviderFollowthrough(db, paths, taskId, redrive, {
+      temporalProviderModule: async () => ({
+        startTemporalStageAttemptWorkflow: async (attempt) => ({
+          surface_kind: 'temporal_stage_attempt_start_receipt',
+          provider_kind: 'temporal',
+          stage_attempt_id: attempt.stage_attempt_id,
+          workflow_id: attempt.workflow_id,
+          first_execution_run_id: input.firstExecutionRunId,
+        }),
+      }),
+    });
+    const refreshedTaskRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as
+      | FamilyRuntimeTaskRow
+      | undefined;
+    const redriveRecord = redrive as Record<string, unknown>;
+    const stageAttempt = redriveRecord.redriven_stage_attempt as { stage_attempt_id?: unknown } | null | undefined;
+    const stageAttemptId = typeof stageAttempt?.stage_attempt_id === 'string'
+      ? stageAttempt.stage_attempt_id
+      : null;
+    const refreshedStageAttempt = stageAttemptId
+      ? inspectTask(db, taskId).stage_attempts.find((attempt) => attempt.stage_attempt_id === stageAttemptId)
+      : null;
+    const providerRedriveStarted = providerFollowthrough.status === 'not_applicable'
+      ? Boolean(redriveRecord.provider_redrive_started)
+      : providerFollowthrough.provider_started;
+    const familyRuntimeRedrive = {
+      surface_id: 'opl_family_runtime_redrive',
+      ...redrive,
+      task: (refreshedTaskRow ? taskToPayload(refreshedTaskRow) : redriveRecord.task) as Record<string, unknown>,
+      redriven_stage_attempt: (refreshedStageAttempt ?? redriveRecord.redriven_stage_attempt) as Record<string, any>,
+      provider_redrive_started: providerRedriveStarted,
+      provider_redrive_followthrough: providerFollowthrough as Record<string, unknown>,
+    } as PaperMissionRedriveReadback['family_runtime_redrive'];
+    return {
+      family_runtime_redrive: familyRuntimeRedrive,
+    };
+  } finally {
+    db.close();
+  }
 }
 
 test('family-runtime tick admits MAS PaperMission stage-route into OPL StageAttempt without domain dispatch', () => {
@@ -1293,20 +1365,11 @@ test('family-runtime redrives PaperMission stage-route typed closeout packet tra
     db.close();
 
     const blockedTask = runCli(['family-runtime', 'queue', 'inspect', enqueued.task.task_id], familyRuntimeEnv(stateRoot));
-    const redrive = runCli([
-      'family-runtime',
-      'queue',
-      'redrive',
-      enqueued.task.task_id,
-      '--reason',
-      'typed_closeout_uri_ref_ingestion_fix_reloaded_worker',
-      '--source',
-      'test-paper-route-closeout-redrive',
-    ], familyRuntimeEnv(stateRoot, {
-      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
-      OPL_TEMPORAL_ADDRESS: '127.0.0.1:7233',
-    }));
-    const redrivenTask = runCli(['family-runtime', 'queue', 'inspect', enqueued.task.task_id], familyRuntimeEnv(stateRoot));
+    const redrive = await redriveWithInjectedTemporalProvider(enqueued.task.task_id, {
+      reason: 'typed_closeout_uri_ref_ingestion_fix_reloaded_worker',
+      source: 'test-paper-route-closeout-redrive',
+      firstExecutionRunId: 'run-paper-mission-route-closeout-redrive-redriven',
+    });
     const redrivenDb = openQueueDb().db;
     const afterDispatch = inspectTask(redrivenDb, enqueued.task.task_id);
     const newestAttempt = afterDispatch.stage_attempts.find((attempt) =>
@@ -1344,7 +1407,6 @@ test('family-runtime redrives PaperMission stage-route typed closeout packet tra
     assert.equal(redrive.family_runtime_redrive.authority_boundary.domain_truth_mutation, false);
     assert.equal(redrive.family_runtime_redrive.authority_boundary.owner_receipt_created, false);
     assert.equal(redrive.family_runtime_redrive.authority_boundary.typed_blocker_created, false);
-    assert.equal(redrivenTask.family_runtime_task.task.status, 'running');
     assert.equal(afterDispatch.task.status, 'running');
     assert.equal(newestAttempt.status, 'running');
     assert.equal(newestAttempt.provider_kind, 'temporal');
@@ -1523,20 +1585,11 @@ test(`family-runtime redrives PaperMission stage-route provider runtime blocker 
     db.close();
 
     const blockedTask = runCli(['family-runtime', 'queue', 'inspect', enqueued.task.task_id], familyRuntimeEnv(stateRoot));
-    const redrive = runCli([
-      'family-runtime',
-      'queue',
-      'redrive',
-      enqueued.task.task_id,
-      '--reason',
-      `${providerRuntimeBlockerReason}_cleared`,
-      '--source',
-      'test-paper-route-runtime-blocker-redrive',
-    ], familyRuntimeEnv(stateRoot, {
-      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
-      OPL_TEMPORAL_ADDRESS: '127.0.0.1:7233',
-    }));
-    const redrivenTask = runCli(['family-runtime', 'queue', 'inspect', enqueued.task.task_id], familyRuntimeEnv(stateRoot));
+    const redrive = await redriveWithInjectedTemporalProvider(enqueued.task.task_id, {
+      reason: `${providerRuntimeBlockerReason}_cleared`,
+      source: 'test-paper-route-runtime-blocker-redrive',
+      firstExecutionRunId: `run-paper-mission-route-runtime-blocker-redriven-${providerRuntimeBlockerReason}`,
+    });
     const redrivenDb = openQueueDb().db;
     const afterDispatch = inspectTask(redrivenDb, enqueued.task.task_id);
     const newestAttempt = afterDispatch.stage_attempts.find((attempt) =>
@@ -1568,7 +1621,6 @@ test(`family-runtime redrives PaperMission stage-route provider runtime blocker 
     assert.equal(redrive.family_runtime_redrive.authority_boundary.domain_truth_mutation, false);
     assert.equal(redrive.family_runtime_redrive.authority_boundary.owner_receipt_created, false);
     assert.equal(redrive.family_runtime_redrive.authority_boundary.typed_blocker_created, false);
-    assert.equal(redrivenTask.family_runtime_task.task.status, 'running');
     assert.equal(afterDispatch.task.status, 'running');
     assert.equal(newestAttempt.status, 'running');
     assert.equal(newestAttempt.provider_kind, 'temporal');
