@@ -62,7 +62,7 @@ OPL family 的目标形态固定为 `OPL Framework -> One Person Lab App -> Foun
 ```text
 Declarative Domain Pack
   + OPL generated/hosted surfaces
-  + standard authority functions
+  + minimal authority functions
 ```
 
 `Codex CLI` 是当前第一公民 executor。Temporal-backed provider 是 production online runtime 的必需 substrate；`local_sqlite` 只允许作为 dev/CI/offline diagnostic baseline。`hermes_agent`、`claude_code`、`antigravity_cli` 等只能作为显式非默认 executor adapter/backend。
