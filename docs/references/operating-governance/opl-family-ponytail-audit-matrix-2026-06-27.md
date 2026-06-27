@@ -870,3 +870,22 @@ Current next-route rules:
 | closed | MAS `tests/test_cli_cases/paper_mission_commands.py` | Entry file is below target at 789 lines. | Do not continue splitting unless it regrows or a new natural family appears. |
 | candidate | MAS `tests/test_adapter_retirement_boundary_cases/test_private_runtime_residue_active_callers.py` | Still over the 1500-line split signal at 2091 lines after the domain-authority refs split. | Only select another test-only natural family after fresh active-caller / authority-boundary readback; forbidden write set remains MAS `src/**`, `contracts/**`, `docs/**`, runtime queues, owner receipts, typed blockers, provider attempts, and publication/control authority. |
 | watch | OPL/App/other OPL-owned line-budget | Current fresh scans found no selected over-budget OPL-owned mutation with a safe natural boundary. | Continue only from fresh over-budget output, stale-lane cleanup, or clear delete/shrink evidence. |
+
+## 2026-06-28 Refactor Patrol Landing Round 38
+
+This continuation completed the MAS private-runtime-residue active-caller test split from a clean/current MAS main worktree. It only touched tests, did not touch upstream fork bodies, and does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `med-autoscience` | `refactor_patrol` | Reduced `tests/test_adapter_retirement_boundary_cases/test_private_runtime_residue_active_callers.py` to an aggregate entry and split its three natural case families into `private_runtime_residue_active_callers.py`, `runtime_surface_no_authority_audit.py`, and `runtime_surface_no_authority_violation_guards.py`; the prior `domain_authority_refs_index.py` case remains unchanged. | MAS `main/origin` advanced to `0154ee24a`; root split-module pytest passed 5/5; root aggregate `scripts/run-pytest-clean.sh tests/test_adapter_retirement_boundary_cases/test_private_runtime_residue_active_callers.py -q` passed 5/5; `git diff --check HEAD~1..HEAD` passed; line readback: aggregate entry 11, case files 398, 608, 1100, and 144; candidate worktree removed and patch-equivalent branch deleted; remote readback `origin/main` = `0154ee24a821da447b63a9fa03d9cdd8ee3f66e5`. | This closes the over-1500-line entry file. `runtime_surface_no_authority_violation_guards.py` is 1100 lines, slightly above the 1000-line preferred target but below the 1500 split signal; do not split further unless a fresh natural sub-family appears. |
+
+### Round 38 Queue Adjustment
+
+Current next-route rules:
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| closed | MAS `tests/test_cli_cases/paper_mission_commands.py` | Entry file is below target at 789 lines. | Do not continue splitting unless it regrows or a new natural family appears. |
+| closed | MAS `tests/test_adapter_retirement_boundary_cases/test_private_runtime_residue_active_callers.py` | Aggregate entry is now 11 lines; case files are 398, 608, 1100, and 144 lines. | Reopen only if the 1100-line violation-guard file gains a clear natural sub-family or regrows beyond the split signal. |
+| watch | OPL/App/other OPL-owned line-budget | Current fresh scans found no selected over-budget OPL-owned mutation with a safe natural boundary. | Continue only from fresh over-budget output, stale-lane cleanup, or clear delete/shrink evidence. |
