@@ -4,12 +4,9 @@ import { ServiceError } from '@temporalio/client';
 import { FrameworkContractError } from './contracts.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
 import type { queryStageAttempt } from './family-runtime-stage-attempts.ts';
+import { queryTemporalStageAttemptWorkflow as defaultQueryTemporalStageAttemptWorkflow } from './family-runtime-temporal-provider-parts/attempt-query.ts';
 
-async function temporalProviderModule() {
-  return await import('./family-runtime-temporal-provider.ts');
-}
-
-type QueryTemporalStageAttemptWorkflow = typeof import('./family-runtime-temporal-provider.ts')['queryTemporalStageAttemptWorkflow'];
+type QueryTemporalStageAttemptWorkflow = typeof defaultQueryTemporalStageAttemptWorkflow;
 
 export const DEFAULT_TEMPORAL_STAGE_ATTEMPT_QUERY_TIMEOUT_MS = 3_000;
 
@@ -104,7 +101,7 @@ export async function queryTemporalStageAttemptReadModel(
   try {
     const timeoutMs = readTemporalStageAttemptQueryTimeoutMs();
     const queryTemporalStageAttemptWorkflow = options.queryTemporalStageAttemptWorkflow
-      ?? (await temporalProviderModule()).queryTemporalStageAttemptWorkflow;
+      ?? defaultQueryTemporalStageAttemptWorkflow;
     return await withReadModelTimeout(
       queryTemporalStageAttemptWorkflow(attempt, {
         paths: options.paths,
