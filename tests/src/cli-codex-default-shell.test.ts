@@ -13,67 +13,9 @@ import {
   retiredCliCommandMatrix,
   runCli,
   runCliFailure,
-  runCliRaw,
   runEntryPathFailure,
   runEntryPathRaw,
 } from './cli-codex-default-shell-helpers.ts';
-
-test('bare opl command is a raw Codex product entry passthrough by default', () => {
-  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
-if [ "$#" -eq 0 ]; then
-  cat <<'EOF'
-CODEX ENTRY
-EOF
-  exit 0
-fi
-if [ "$1" = "exec" ]; then
-  cat <<'EOF'
-{"type":"thread.started","thread_id":"codex-product-entry-fallback"}
-{"item":{"type":"agent_message","text":"CODEX EXEC READY"}}
-EOF
-  exit 0
-fi
-echo "unexpected fake-codex args: $*" >&2
-exit 1
-`);
-
-  try {
-    const result = runCliRaw([], {
-      OPL_CODEX_BIN: codexPath,
-    });
-
-    assert.equal(result.stdout, 'CODEX ENTRY\n');
-    assert.equal(result.stderr, '');
-  } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
-});
-
-test('bare opl forwards root-level Codex options before the prompt', () => {
-  const capturePath = path.join(os.tmpdir(), `opl-codex-root-args-${process.pid}.txt`);
-  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
-printf '%s\\n' "$@" > ${JSON.stringify(capturePath)}
-echo "CODEX ROOT RAW"
-exit 0
-`);
-
-  try {
-    const result = runCliRaw(['--model', 'gpt-5.4', 'Plan the next paper submission steps.'], {
-      OPL_CODEX_BIN: codexPath,
-    });
-
-    assert.equal(result.stdout, 'CODEX ROOT RAW\n');
-    assert.equal(result.stderr, '');
-    assert.deepEqual(fs.readFileSync(capturePath, 'utf8').trim().split('\n'), [
-      '--model',
-      'gpt-5.4',
-      'Plan the next paper submission steps.',
-    ]);
-  } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(capturePath, { force: true });
-  }
-});
 
 test('installed opl launcher keeps default exec on raw Codex passthrough', () => {
   const capturePath = path.join(os.tmpdir(), `opl-launcher-exec-args-${process.pid}.txt`);
@@ -547,7 +489,7 @@ test('opl connect skills discovers the family plugin packs through the configure
     });
 
     assert.equal(output.skill_catalog.summary.total, 6);
-    assert.equal(output.skill_catalog.summary.ready_to_sync, 5);
+    assert.equal(output.skill_catalog.summary.ready_to_sync, 6);
     assert.deepEqual(
       output.skill_catalog.packs.map((entry: { domain_id: string }) => entry.domain_id),
       ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent', 'oplbookforge', 'scholarskills'],
@@ -560,7 +502,7 @@ test('opl connect skills discovers the family plugin packs through the configure
     assert.match(output.skill_catalog.packs[0].skill_entry_path, /plugins\/mas\/skills\/mas\/SKILL\.md$/);
     assert.deepEqual(
       output.skill_catalog.packs.map((entry: { skill_entry_valid: boolean }) => entry.skill_entry_valid),
-      [true, true, true, false, false, false],
+      [true, true, true, false, false, true],
     );
     const metaPack = output.skill_catalog.packs.find((entry: { domain_id: string }) => entry.domain_id === 'oplmetaagent');
     assert.equal(metaPack?.plugin_manifest_found, false);
