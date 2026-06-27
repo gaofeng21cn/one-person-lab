@@ -21,7 +21,6 @@ import {
   type RunnerEventSummary,
 } from './input-prompt.ts';
 import type { TypedStageCloseoutPacket } from './closeout-normalization.ts';
-import type { MasOwnerDispatchBridgeResult } from './mas-owner-dispatch-bridge.ts';
 import type { JsonRecord } from './shared.ts';
 
 type CodexStageRunnerStatus = {
@@ -100,7 +99,6 @@ export type CodexStageRunnerProcessOutputSummary = {
   session_recovery_attempts?: number;
   domain_receipt_recovery_status?: string;
   domain_receipt_recovery_ref?: string;
-  mas_owner_dispatch_bridge?: MasOwnerDispatchBridgeResult;
   closeout_rejection_reason?: 'stage_attempt_id_mismatch' | 'idempotency_key_mismatch';
   rejected_closeout_stage_attempt_id?: string;
   rejected_closeout_idempotency_key?: string;
