@@ -480,6 +480,7 @@ exit 1
   try {
     const output = runCli(['system', 'update'], {
       HOME: homeRoot,
+      OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
       OPL_CODEX_UPDATE_COMMAND: updateScript,
