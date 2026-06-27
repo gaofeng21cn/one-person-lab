@@ -20,6 +20,7 @@ Machine boundary: 本目录只保存旧 compatibility / gateway / federation / r
 
 ## 分区
 
+- [Domain Foundry CLI 历史 tombstone](./domain-foundry-cli-tombstone.md)
 - [Gateway / federation 兼容语料](./gateway-federation/README.md)
 
 当前 runtime/framework 规划统一回到 [OPL stage-led agent framework roadmap](../../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md)。

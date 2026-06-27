@@ -348,12 +348,12 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ### 决策：新增 OPL Pack，品牌模块 taxonomy 从九模块扩展为当前十模块
 
-原因：九模块基线已经证明品牌模块作为 Framework 顶层 taxonomy 有价值，但 `Declarative Domain Pack + Authority ABI + pack compiler + generated/hosted surfaces + standard authority functions` 不是 Atlas、Stagecraft、Foundry Lab 或 Connect 的子细节。Atlas 负责 catalog/discovery，Stagecraft 负责 stage 内认知设计，Foundry Lab 负责 agent improvement control plane，Connect 负责外部接口和分发 transport；把 Pack 强塞进这些模块会模糊 domain pack source、authority ABI、generated surface input 和 domain owner boundary。
+原因：九模块基线已经证明品牌模块作为 Framework 顶层 taxonomy 有价值，但 `Declarative Domain Pack + Authority ABI + pack compiler + generated/hosted surfaces + minimal authority functions` 不是 Atlas、Stagecraft、Foundry Lab 或 Connect 的子细节。Atlas 负责 catalog/discovery，Stagecraft 负责 stage 内认知设计，Foundry Lab 负责 agent improvement control plane，Connect 负责外部接口和分发 transport；把 Pack 强塞进这些模块会模糊 domain pack source、authority ABI、generated surface input 和 domain owner boundary。
 
 影响：
 
 - 当前 OPL Framework 品牌模块读作十模块：`OPL Charter`、`OPL Atlas`、`OPL Workspace`、`OPL Pack`、`OPL Stagecraft`、`OPL Runway`、`OPL Vault`、`OPL Console`、`OPL Foundry Lab` 和 `OPL Connect`。
-- `OPL Pack` 持有 Declarative Domain Pack、authority ABI、pack compiler、generated/hosted surfaces 和 standard authority functions 的模块级 read/validate/doctor 语义；它不接管 domain handler implementation、owner receipt、typed blocker、quality verdict、artifact authority、App release truth 或 production readiness。
+- `OPL Pack` 持有 Declarative Domain Pack、authority ABI、pack compiler、generated/hosted surfaces 和 minimal authority functions 的模块级 read/validate/doctor 语义；minimal authority functions 仍通过标准 ABI 返回 refs / receipt / typed blocker / safe action，不接管 domain handler implementation、owner receipt、typed blocker、quality verdict、artifact authority、App release truth 或 production readiness。
 - 2026-06-07 的九模块决策保留为历史基线，表示品牌模块 taxonomy 正式进入 Framework 设计语言；它不是模块数量上限。后续新增或拆分模块必须证明独立 bounded context、owner、purpose、machine boundary、authority false flags、L4/L5 口径和 docs/contracts/tests foldback。
 - 核心五件套、`docs/references/brand-modules/*`、contracts README、CLI help 和 focused tests 必须以 registry 的当前模块集为准，避免把旧“九模块”写成当前硬约束。
 - Foundry Agent CLI series 仍使用自己的 ordinary spine，不复制 OPL Framework 品牌模块；旧 machine 字段名若保留 `nine` 只按兼容字段读取，不得作为当前 taxonomy 事实。
@@ -430,8 +430,8 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - `opl agents foundry status|inspect|interfaces|validate|doctor|peers` 成为 Foundry Agent series 的普通 CLI command spine，表达 `workspace -> work -> stage -> run -> vault -> handoff -> connect` 的同源执行链。
-- MAS/MAG/RCA 的品牌 CLI 字段是 series identity / shorthand，不再等同于本机 PATH-safe 可执行命令。机器可执行 smoke 必须投影到当前 domain direct launcher：MAS 使用 `medautosci foundry ...`；MAG 使用 repo-local clean runner 或已刷新后的 `medautogrant foundry ...`，不得把可能被 TeX Live 占用的裸 `mag` 当作 Codex smoke；RCA 使用 repo-local `npm run --prefix <redcube-ai-repo> redcube -- foundry ...`，不得假设全局 `rca` 或 `redcube` 已安装。
-- Agent CLI 的机器输出统一接受 `--json`；历史 `--format json` 可以保留为兼容别名。OPL 聚合面 `opl foundry agents list|inspect` 必须投影 `cli_smoke`，把品牌入口、兼容入口和 JSON flag alias 写成可测试字段。
+- MAS/MAG/RCA 的品牌 CLI 字段是 series identity / shorthand，不再等同于本机 PATH-safe 可执行命令。当前标准 public / active surface 是 OPL generated/hosted Foundry Agent surfaces 与 domain-owned direct skill / handler path；旧专属命令只作为历史 provenance 读取，不能作为当前 standard surface、当前验证目标、membership/status/list 分组依据、兼容面或新 Agent 模板。相关 tombstone 见 `docs/history/compatibility/domain-foundry-cli-tombstone.md`。
+- Agent CLI 的机器输出统一接受 `--json`。OPL 聚合面 `opl foundry agents list|inspect` 只能投影当前 generated/hosted series surface、membership/status policy 和 no-authority flags；不得为旧专属命令保留验证字段、入口别名或 JSON flag alias。
 - `contracts/opl-framework/foundry-agent-series-contract.json` 固定 series CLI policy、Skill/MCP surface policy 和旧实现桶退役策略；新 scaffold 生成的 `contracts/foundry_agent_series.json` 必须继承这些字段。
 - `opl connect skills` / `opl connect sync-skills` 输出同一 series contract 派生的 `foundry_agent_series`、series spine projection、`mcp_projection` 和旧桶退役策略，Skill/MCP 不再另起一套解释。
 - 旧 `skill`、`module/modules`、`packages`、`engine` 等实现桶作为普通入口已退役并 fail closed 到 Connect；`runtime`、`family-runtime`、`index`、`stage-artifact`、`domain`、`system`、`status`、`session` 等只能作为诊断、迁移或内部治理下钻，不进入 root help 的普通入口。
