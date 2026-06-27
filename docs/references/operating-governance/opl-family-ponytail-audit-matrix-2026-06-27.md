@@ -194,3 +194,38 @@ This follow-up continued line-budget-first cleanup with three parallel subagent 
 | `med-autoscience` | `owner_lane` | Still no mutation. | Fresh inherited gate still identifies `/Users/gaofeng/workspace/.worktrees/mas-owner-fallback-20260627` as owner of the PaperMission command/test write set; root remains `main...origin/main [ahead 1]`. | MAS line-budget cleanup remains same-write-set owner-gated until that lane is resolved, absorbed, or explicitly handed off. |
 
 Round-5 worktrees and branches were removed after patch-equivalence (`git cherry main <branch>` returned `-`) and push/readback. Subagents were closed after main-session diff review, root verification, absorption, push, and cleanup.
+
+## 2026-06-27 Refactor Patrol Landing Round 6
+
+This follow-up continued line-budget-first cleanup with three OPL test-split worktrees and one Hermes shell worktree. It does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `one-person-lab` | `refactor_patrol` | `tests/src/family-runtime-temporal-provider.test.ts` split closeout payload compaction cases into `tests/src/family-runtime-temporal-provider-cases/closeout-payload-compaction.ts`; local `main` commit `6213ee48`, remote `origin/main` later read back at `7a59e117`. | Lane rerun passed focused entry 25/25, `npm run typecheck`, `git diff --check`, and line readback. Main rerun across Round 6 OPL targets passed 65/65, `npm run typecheck`, `git diff --check`, and `npm run --silent line-budget -- --list`. Line readback: entry file 977 lines; new case file 79 lines. | This is Temporal provider test structure evidence only. It does not prove live Temporal/runtime/provider readiness. |
+| `one-person-lab` | `refactor_patrol` | `tests/src/cli/cases/family-runtime-stage-attempts-temporal-provider.test.ts` split local-ledger fail-closed cases into `family-runtime-stage-attempts-temporal-provider-cases/local-ledger-fail-closed.ts`; local `main` commit `31847cdd`, remote `origin/main` later read back at `7a59e117`. | Lane rerun passed focused entry 12/12, `npm run typecheck`, `git diff --check`, and line readback. Main Round 6 aggregate rerun passed 65/65 plus typecheck/diff/line-budget readback. Line readback: entry file 953 lines; new case file 119 lines. | This is stage-attempt test structure evidence only. It does not prove runtime readiness, provider readiness, or domain progress. |
+| `one-person-lab` | `refactor_patrol` | `tests/src/cli-codex-default-shell.test.ts` split raw Codex passthrough cases into `tests/src/cli-codex-default-shell-cases/raw-codex-passthrough.ts`; local `main` commit `7a59e117`, remote readback `origin/main` = `7a59e117b8d25428d4e81ac976c93044790e455c`. | Subagent found pre-existing focused failure from stale ScholarSkills expectations; main session updated `ready_to_sync` and `skill_entry_valid` expectations to current six-pack fake workspace behavior, then reran focused entry 28/28, `npm run typecheck`, `git diff --check`, and line readback. Main Round 6 aggregate rerun passed 65/65 plus typecheck/diff/line-budget readback. Line readback: entry file 979 lines; raw passthrough case file 178 lines. | The stale assertion fix is test-maintenance for already-current ScholarSkills package-channel behavior, not a new capability or readiness claim. |
+| `opl-hermes-shell` | `refactor_patrol` | Electron window zoom helpers split from `electron/main.cjs` into `electron/parts/window-zoom.cjs` with focused tests; local `main` commit `5373cea`, remote readback `origin/main` = `5373cea49bee09608783984fe9783ac8d47588d7`. | Main rerun passed `node --check electron/main.cjs`, `node --check electron/parts/window-zoom.cjs`, `node --check electron/parts/window-zoom.test.cjs`, `node --test electron/parts/window-zoom.test.cjs` 4/4, `npm run typecheck`, `git diff --check`, and line readback. Line readback: `electron/main.cjs` 5533 lines; helper 69 lines; test 86 lines. | `electron/main.cjs` remains P0 structure debt. No Electron GUI runtime smoke, App truth, or Windows terminal live claim is made. |
+
+Round-6 worktrees and branches were removed after patch-equivalence (`git cherry main <branch>` returned `-`) and push/readback. Subagents were closed after main-session diff review, verification, absorption, push, and cleanup.
+
+### Round 6 Queue Adjustment
+
+Completed exact OPL items removed from the current line-budget queue:
+
+- `tests/src/family-runtime-temporal-provider.test.ts`: now 977 lines.
+- `tests/src/cli/cases/family-runtime-stage-attempts-temporal-provider.test.ts`: now 953 lines.
+- `tests/src/cli-codex-default-shell.test.ts`: now 979 lines.
+
+Fresh OPL `npm run --silent line-budget -- --list` after Round 6 reports 9 remaining advisory-budget files:
+
+| Priority | File | Lines | Next route |
+| --- | --- | ---: | --- |
+| P0 | `src/opl-skills.ts` | 1192 | Source split only after caller/boundary inspection; prefer registry / descriptor / rendering boundary. |
+| P0 | `src/standard-domain-agent-scaffold-validation.ts` | 1142 | Source split only by validation phase / contract boundary. |
+| P0 | `src/family-runtime.ts` | 1085 | Inspect existing runtime part boundaries before editing. |
+| P0 | `src/family-runtime-tick.ts` | 1065 | Inspect tick phase and runtime authority boundary before editing. |
+| P0 | `src/app-state.ts` | 1054 | Split only with clear App state owner boundary. |
+| P1 | `tests/src/cli/cases/workspace-domain.descriptor.test.ts` | 1033 | Cheap focused test split by descriptor case family. |
+| P1 | `tests/src/cli/cases/agent-lab.test.ts` | 1025 | Cheap focused test split by agent-lab command behavior. |
+| P1 | `tests/src/family-runtime-temporal-terminal-sync.test.ts` | 1012 | Cheap focused test split by terminal-sync scenario. |
+| P1 | `src/family-runtime-enqueue-parts/existing-dedupe-reconcile.ts` | 1004 | Near-limit residual; avoid mechanical four-line split unless a natural helper boundary is found. |
