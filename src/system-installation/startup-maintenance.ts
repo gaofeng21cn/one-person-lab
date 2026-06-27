@@ -7,6 +7,7 @@ import { runOplEngineAction } from './engine-actions.ts';
 import { resolveFrameworkUpdateTargetRoot, runOplFrameworkSelfUpdate } from './framework-self-update.ts';
 import { buildOplModules, runOplModuleAction } from './modules.ts';
 import { resolveProjectRoot } from './shared.ts';
+import { runScholarSkillsSourceMaintenance } from './scholarskills-source.ts';
 
 type ModuleStatus = ReturnType<typeof buildOplModules>['modules']['modules'][number];
 type OplSystemEnvironment = Awaited<ReturnType<typeof buildOplEnvironment>>['system_environment'];
@@ -39,6 +40,7 @@ type StartupMaintenanceEngineTarget = {
 
 type StartupMaintenanceTarget = StartupMaintenanceModuleTarget | StartupMaintenanceEngineTarget;
 type StartupMaintenanceFrameworkTarget = ReturnType<typeof runOplFrameworkSelfUpdate>;
+type StartupMaintenanceCapabilityTarget = ReturnType<typeof runScholarSkillsSourceMaintenance>;
 type StartupMaintenanceScope = 'all' | 'runtime_toolchain';
 
 function buildTarget(
@@ -319,6 +321,15 @@ function summarizeFrameworkTargets(targets: StartupMaintenanceFrameworkTarget[])
   };
 }
 
+function summarizeCapabilityTargets(targets: StartupMaintenanceCapabilityTarget[]) {
+  return {
+    total_targets_count: targets.length,
+    completed_targets_count: targets.filter((entry) => entry.status === 'completed').length,
+    skipped_targets_count: targets.filter((entry) => entry.status === 'skipped').length,
+    manual_required_targets_count: targets.filter((entry) => entry.status === 'manual_required').length,
+  };
+}
+
 async function maybeRunEngineStartupMaintenance(
   contracts: FrameworkContracts,
   environment: OplSystemEnvironment,
@@ -405,9 +416,13 @@ export async function runOplStartupMaintenance(
     ? []
     : buildOplModules().modules.modules.filter((module) => module.default_install);
   const moduleTargets = initialModules.map((module) => runModuleStartupMaintenance(module));
+  const capabilityTargets: StartupMaintenanceCapabilityTarget[] = scope === 'runtime_toolchain'
+    ? []
+    : [runScholarSkillsSourceMaintenance()];
   const frameworkSummary = summarizeFrameworkTargets(frameworkTargets);
   const engineSummary = summarizeTargets(engineTargets);
   const summary = summarizeTargets(moduleTargets);
+  const capabilitySummary = summarizeCapabilityTargets(capabilityTargets);
   const managedReceiptRecord = recordManagedInstallUpdateReceipts(
     moduleTargets
       .map(buildManagedReceiptInput)
@@ -426,6 +441,7 @@ export async function runOplStartupMaintenance(
       status: summary.manual_required_targets_count > 0
         || engineSummary.manual_required_targets_count > 0
         || frameworkSummary.manual_required_targets_count > 0
+        || capabilitySummary.manual_required_targets_count > 0
         ? 'manual_required'
         : 'completed',
       update_channel: readOplUpdateChannel().channel,
@@ -438,20 +454,30 @@ export async function runOplStartupMaintenance(
         scope,
         framework_summary: frameworkSummary,
         engine_summary: engineSummary,
+        capability_summary: capabilitySummary,
         summary,
         framework_targets: frameworkTargets,
         engine_targets: engineTargets,
+        capability_targets: capabilityTargets,
         module_targets: moduleTargets,
         managed_install_update_receipts: managedReceiptRecord,
         plugin_cache_freshness: {
           status: syncedDomains.length > 0
             ? 'freshened'
-            : summary.manual_required_targets_count > 0
+            : summary.manual_required_targets_count > 0 || capabilitySummary.manual_required_targets_count > 0
               ? 'manual_required'
-              : 'already_current',
-          source: 'module_turnkey_skill_sync',
+              : capabilitySummary.completed_targets_count > 0
+                ? 'source_refreshed'
+                : 'already_current',
+          source: capabilitySummary.total_targets_count > 0
+            ? 'module_turnkey_skill_sync_and_capability_source'
+            : 'module_turnkey_skill_sync',
           synced_domain_packs_count: syncedDomains.length,
           synced_domain_packs: syncedDomains,
+          managed_capability_sources_count: capabilityTargets.filter((target) => target.status === 'completed').length,
+          managed_capability_sources: capabilityTargets
+            .filter((target) => target.status === 'completed')
+            .map((target) => target.target_id),
         },
         restart_reload_prompt: {
           required: syncedDomains.length > 0,
@@ -468,7 +494,9 @@ export async function runOplStartupMaintenance(
         notes: [
           'Startup maintenance refreshes the managed OPL Framework runtime only when an explicit framework update source is configured.',
           'Startup maintenance updates clean OPL-managed module checkouts and syncs generated plugin/skill surfaces.',
+          'Startup maintenance installs or updates the managed OPL ScholarSkills source so App workspace/quest sync can materialize it into the active paper directory.',
           'Dirty, ahead, diverged, no-upstream, env override, sibling workspace, and invalid checkouts are reported for manual review.',
+          'OPL ScholarSkills is a framework capability plugin pack, not a domain module; workspace/quest-local sync is still explicit and target-bound.',
           'This action never writes domain truth, domain memory body, artifact body, quality verdict, export verdict, or domain daemons.',
         ],
       },

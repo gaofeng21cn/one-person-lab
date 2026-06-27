@@ -70,6 +70,13 @@ opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact
 
 ## Connect 同步与安装落点
 
+普通 OPL App 用户路径分两层：
+
+1. `opl system startup-maintenance --json` 由 App-managed runtime / startup-maintenance 自动安装或更新 `OPL ScholarSkills` source 到 OPL managed modules root（默认 `<OPL_STATE_DIR>/modules/opl-scholarskills`，或显式 `OPL_MODULES_ROOT/opl-scholarskills`）。这个 target 是 `capability_source`，不是 `DOMAIN_MODULE_SPECS` 里的 domain module，也不会把 ScholarSkills 计入 OPL 品牌 agent module。
+2. 具体论文 workspace / quest 需要调用 App action 或 CLI，把当前 managed source 过滤同步到该论文工作目录。App action 是 `scholarskills_workspace_sync` / `scholarskills_quest_sync`；CLI surface 是下面的 `opl connect sync-skills ... --target-*`。
+
+只有显式 `OPL_SCHOLARSKILLS_REPO_ROOT`、`OPL_MODULE_PATH_SCHOLARSKILLS` 或 Developer Mode local checkout 时，startup-maintenance 才把本地 checkout 作为开发者 source 观察，不自动覆盖。普通 App 用户默认走 managed source 自动更新。
+
 ScholarSkills 的论文执行默认落点是 workspace / quest-local Codex discovery skill，而不是用户系统级 Codex skill registry，也不是 MAS project mirror。面向具体论文 workspace 或 quest 时，使用：
 
 ```bash
@@ -93,7 +100,7 @@ opl connect sync-skills --domain scholarskills --scope quest --target-quest <que
 opl connect sync-skills --domain scholarskills --scope codex --json
 ```
 
-只有显式 `--scope codex` 才写用户 Codex plugin registry / config；默认 project scope 返回 `codex_plugin_registry=null`。App 可通过 `scholarskills_project_sync` action 调用同一 project-local route，并支持 dry-run readback。
+只有显式 `--scope codex` 才写用户 Codex plugin registry / config；默认 workspace/quest sync 返回 `codex_plugin_registry=null`。App 的普通用户同步入口是 `scholarskills_workspace_sync` / `scholarskills_quest_sync`，支持 dry-run readback；project-local mirror 只保留为显式 CLI/developer route，不作为 App 普通论文执行路径。
 
 需要把 module id 绑定到真实 OPL runtime environment substrate 时，使用 runtime bridge 命令。它们复用 `opl runtime env prepare/run-context` 的实现，可在明确 `--apply` 时写入 OPL 管理依赖库和 `paper/build/dependency_environment_lock.json`、`dependency_environment_receipt.json`、`dependency_run_context.json`，但仍不写 domain truth、artifact body、owner receipt、typed blocker 或 runtime queue：
 

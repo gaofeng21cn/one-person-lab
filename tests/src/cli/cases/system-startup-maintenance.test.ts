@@ -5,6 +5,7 @@ import {
   createBookForgeGeneratedSurfaceRemote,
   createDomainModuleRemote,
   createOmaGeneratedSurfaceRemote,
+  createScholarSkillsRemote,
   readPackageChannelMarker,
   withCliTimeout,
   writeStartupPackageChannelFixture,
@@ -40,6 +41,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
   const bookForgeRemote = createBookForgeGeneratedSurfaceRemote({
     logPath,
   });
+  const scholarSkillsRemote = createScholarSkillsRemote();
 
   try {
     const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
@@ -52,6 +54,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
       OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
+      OPL_SCHOLARSKILLS_REPO_URL: scholarSkillsRemote.remoteRoot,
       OPL_GIT_RETRY_ATTEMPTS: '1',
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
     })) as {
@@ -69,10 +72,27 @@ test('system startup-maintenance installs clean managed modules and returns App 
             completed_targets_count: number;
             manual_required_targets_count: number;
           };
+          capability_summary: {
+            completed_targets_count: number;
+            manual_required_targets_count: number;
+          };
           framework_targets: Array<{
             target_id: string;
             status: string;
             reason: string;
+          }>;
+          capability_targets: Array<{
+            target_id: string;
+            capability_plugin_id: string;
+            status: string;
+            reason: string;
+            action: string | null;
+            checkout_path: string;
+            managed_checkout_path: string;
+            git_after: { head_sha: string | null } | null;
+            source_policy: { configured_by: string; app_managed_auto_update: boolean };
+            workspace_sync_command_ref: string;
+            quest_sync_command_ref: string;
           }>;
           module_targets: Array<{
             target_id: string;
@@ -97,6 +117,8 @@ test('system startup-maintenance installs clean managed modules and returns App 
             status: string;
             source: string;
             synced_domain_packs_count: number;
+            managed_capability_sources_count: number;
+            managed_capability_sources: string[];
           };
           restart_reload_prompt: {
             required: boolean;
@@ -115,6 +137,39 @@ test('system startup-maintenance installs clean managed modules and returns App 
     assert.equal(output.system_action.details.authority_boundary.can_install_domain_daemon, false);
     assert.equal(output.system_action.details.summary.completed_targets_count, 5);
     assert.equal(output.system_action.details.summary.manual_required_targets_count, 0);
+    assert.equal(output.system_action.details.capability_summary.completed_targets_count, 1);
+    assert.equal(output.system_action.details.capability_summary.manual_required_targets_count, 0);
+    assert.deepEqual(output.system_action.details.capability_targets.map((target) => [
+      target.target_id,
+      target.capability_plugin_id,
+      target.status,
+      target.reason,
+      target.action,
+      target.source_policy.configured_by,
+      target.source_policy.app_managed_auto_update,
+    ]), [
+      ['scholarskills', 'opl-scholarskills', 'completed', 'scholarskills_source_missing', 'install', 'repo_url_override', true],
+    ]);
+    assert.equal(
+      output.system_action.details.capability_targets[0].workspace_sync_command_ref,
+      'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <workspace-root> --json',
+    );
+    assert.equal(
+      output.system_action.details.capability_targets[0].quest_sync_command_ref,
+      'opl connect sync-skills --domain scholarskills --scope quest --target-quest <quest-root> --json',
+    );
+    assert.equal(
+      output.system_action.details.capability_targets[0].managed_checkout_path,
+      path.join(modulesRoot, 'opl-scholarskills'),
+    );
+    assert.equal(
+      output.system_action.details.capability_targets[0].git_after?.head_sha,
+      scholarSkillsRemote.getHeadSha(),
+    );
+    assert.equal(
+      fs.existsSync(path.join(modulesRoot, 'opl-scholarskills', 'skills', 'opl-scholarskills', 'SKILL.md')),
+      true,
+    );
     assert.deepEqual(output.system_action.details.framework_targets.map((target) => [
       target.target_id,
       target.status,
@@ -165,8 +220,10 @@ test('system startup-maintenance installs clean managed modules and returns App 
       ],
     );
     assert.equal(output.system_action.details.plugin_cache_freshness.status, 'freshened');
-    assert.equal(output.system_action.details.plugin_cache_freshness.source, 'module_turnkey_skill_sync');
+    assert.equal(output.system_action.details.plugin_cache_freshness.source, 'module_turnkey_skill_sync_and_capability_source');
     assert.equal(output.system_action.details.plugin_cache_freshness.synced_domain_packs_count, 5);
+    assert.equal(output.system_action.details.plugin_cache_freshness.managed_capability_sources_count, 1);
+    assert.deepEqual(output.system_action.details.plugin_cache_freshness.managed_capability_sources, ['scholarskills']);
     assert.equal(output.system_action.details.restart_reload_prompt.required, true);
     assert.equal(output.system_action.details.restart_reload_prompt.action, 'reload_app_and_codex_plugin_cache');
     assert.deepEqual(output.system_action.details.restart_reload_prompt.affected_domains, [
@@ -278,6 +335,160 @@ test('system startup-maintenance installs clean managed modules and returns App 
     fs.rmSync(rcaRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(metaRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(bookForgeRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(scholarSkillsRemote.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('system startup-maintenance makes managed ScholarSkills source available for workspace sync', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-scholarskills-home-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-scholarskills-workspace-'));
+  const modulesRoot = path.join(homeRoot, 'managed-modules');
+  const logPath = path.join(homeRoot, 'startup-maintenance-scholarskills.log');
+  const masRemote = createDomainModuleRemote({
+    repoName: 'med-autoscience',
+    pluginName: 'mas',
+    installerKind: 'bash',
+    logPath,
+  });
+  const magRemote = createDomainModuleRemote({
+    repoName: 'med-autogrant',
+    pluginName: 'mag',
+    installerKind: 'bash',
+    logPath,
+  });
+  const rcaRemote = createDomainModuleRemote({
+    repoName: 'redcube-ai',
+    pluginName: 'rca',
+    installerKind: 'node',
+    logPath,
+  });
+  const metaRemote = createOmaGeneratedSurfaceRemote({
+    logPath,
+  });
+  const bookForgeRemote = createBookForgeGeneratedSurfaceRemote({
+    logPath,
+  });
+  const scholarSkillsRemote = createScholarSkillsRemote();
+
+  try {
+    const startup = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_MODULES_ROOT: modulesRoot,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_SCHOLARSKILLS_REPO_URL: scholarSkillsRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: masRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_MEDAUTOGRANT: magRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
+      OPL_GIT_RETRY_ATTEMPTS: '1',
+      ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
+    })) as {
+      system_action: {
+        details: {
+          capability_targets: Array<{
+            status: string;
+            action: string | null;
+            managed_checkout_path: string;
+            git_after: { head_sha: string | null } | null;
+          }>;
+        };
+      };
+    };
+
+    assert.deepEqual(startup.system_action.details.capability_targets.map((target) => [
+      target.status,
+      target.action,
+      target.managed_checkout_path,
+      target.git_after?.head_sha,
+    ]), [
+      ['completed', 'install', path.join(modulesRoot, 'opl-scholarskills'), scholarSkillsRemote.getHeadSha()],
+    ]);
+
+    const sync = runCli([
+      'connect',
+      'sync-skills',
+      '--domain',
+      'scholarskills',
+      '--scope',
+      'workspace',
+      '--target-workspace',
+      workspaceRoot,
+      '--home',
+      homeRoot,
+    ], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_MODULES_ROOT: modulesRoot,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+    }) as {
+      skill_sync: {
+        packs: Array<{
+          domain_id: string;
+          sync_status: string;
+          repo_root: string;
+          target_root: string;
+          workspace_or_quest_local_skill_root: string;
+          installer_result: {
+            workspace_or_quest_local_skill: {
+              install_receipt: {
+                source_repo_path: string;
+                source_head: string | null;
+                target_scope: string;
+                target_root: string;
+                authority_flags: {
+                  can_write_domain_truth: boolean;
+                  can_write_runtime_queue: boolean;
+                  can_install_system_codex_skill_by_default?: boolean;
+                };
+              };
+              copy: {
+                copied_roots: string[];
+              };
+            };
+          };
+        }>;
+      };
+    };
+
+    const pack = sync.skill_sync.packs[0];
+    const skillRoot = path.join(workspaceRoot, '.codex', 'skills', 'opl-scholarskills');
+    assert.equal(pack.domain_id, 'scholarskills');
+    assert.equal(pack.sync_status, 'synced');
+    assert.equal(pack.repo_root, path.join(modulesRoot, 'opl-scholarskills'));
+    assert.equal(pack.target_root, workspaceRoot);
+    assert.equal(pack.workspace_or_quest_local_skill_root, skillRoot);
+    assert.deepEqual(pack.installer_result.workspace_or_quest_local_skill.copy.copied_roots, [
+      'SKILL.md',
+      'contracts',
+      'docs',
+      'gallery',
+    ]);
+    assert.equal(fs.existsSync(path.join(skillRoot, 'SKILL.md')), true);
+    assert.equal(fs.existsSync(path.join(skillRoot, 'contracts', 'scholar-skills-capability-modules.json')), true);
+    assert.equal(fs.existsSync(path.join(skillRoot, 'docs', 'README.md')), true);
+    assert.equal(fs.existsSync(path.join(skillRoot, 'gallery', 'medical-display', 'gallery_snapshot.json')), true);
+    assert.equal(fs.existsSync(path.join(skillRoot, 'gallery', 'medical-display', 'assets')), false);
+    assert.equal(fs.existsSync(path.join(skillRoot, 'outputs')), false);
+    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'opl-scholarskills', 'SKILL.md')), false);
+    const receipt = pack.installer_result.workspace_or_quest_local_skill.install_receipt;
+    assert.equal(receipt.source_repo_path, path.join(modulesRoot, 'opl-scholarskills'));
+    assert.equal(receipt.source_head, scholarSkillsRemote.getHeadSha());
+    assert.equal(receipt.target_scope, 'workspace');
+    assert.equal(receipt.target_root, workspaceRoot);
+    assert.equal(receipt.authority_flags.can_write_domain_truth, false);
+    assert.equal(receipt.authority_flags.can_write_runtime_queue, false);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    fs.rmSync(masRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(magRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(rcaRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(metaRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(bookForgeRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(scholarSkillsRemote.fixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -330,6 +541,7 @@ exit 1
       OPL_MODULE_PATH_MEDAUTOGRANT: developerCheckout,
       OPL_MODULE_PATH_REDCUBE: developerCheckout,
       OPL_MODULE_PATH_OPLMETAAGENT: developerCheckout,
+      OPL_MODULE_PATH_SCHOLARSKILLS: developerCheckout,
       PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
     }) as {
@@ -449,6 +661,7 @@ test('system startup-maintenance silently updates package-channel modules and sy
     version: '26.6.11-nightly',
     modules: moduleFixtures('v2'),
   });
+  const scholarSkillsRemote = createScholarSkillsRemote();
 
   try {
     for (const moduleId of ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent', 'oplbookforge']) {
@@ -470,6 +683,7 @@ test('system startup-maintenance silently updates package-channel modules and sy
       OPL_PACKAGES_OWNER: 'owner',
       OPL_RELEASE_VERSION: '26.6.3',
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_SCHOLARSKILLS_REPO_URL: scholarSkillsRemote.remoteRoot,
       PATH: `${secondChannel.fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
     })) as {
       system_action: {
@@ -578,6 +792,7 @@ test('system startup-maintenance silently updates package-channel modules and sy
     assert.doesNotMatch(curlLog, /one-person-lab-manifest\/manifests\/26\.6\.3/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(scholarSkillsRemote.fixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -615,6 +830,7 @@ test('system startup-maintenance installs OMA managed root when only a sibling c
   const bookForgeRemote = createBookForgeGeneratedSurfaceRemote({
     logPath,
   });
+  const scholarSkillsRemote = createScholarSkillsRemote();
 
   try {
     fs.mkdirSync(onePersonLabRoot, { recursive: true });
@@ -630,6 +846,7 @@ test('system startup-maintenance installs OMA managed root when only a sibling c
       OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
+      OPL_SCHOLARSKILLS_REPO_URL: scholarSkillsRemote.remoteRoot,
       OPL_STATE_DIR: stateRoot,
       OPL_DEVELOPER_MODE_GH_FIXTURE: JSON.stringify({ login: 'ordinary-user' }),
       OPL_GIT_RETRY_ATTEMPTS: '1',
@@ -685,6 +902,7 @@ test('system startup-maintenance installs OMA managed root when only a sibling c
     fs.rmSync(rcaRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(metaRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(bookForgeRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(scholarSkillsRemote.fixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -716,6 +934,7 @@ test('system startup-maintenance does not block all modules on a timed-out modul
   const bookForgeRemote = createBookForgeGeneratedSurfaceRemote({
     logPath,
   });
+  const scholarSkillsRemote = createScholarSkillsRemote();
 
   try {
     fs.writeFileSync(
@@ -744,6 +963,7 @@ test('system startup-maintenance does not block all modules on a timed-out modul
       OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
+      OPL_SCHOLARSKILLS_REPO_URL: scholarSkillsRemote.remoteRoot,
       OPL_MODULE_ACTION_STEP_TIMEOUT_MS: '100',
       OPL_GIT_RETRY_ATTEMPTS: '1',
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
@@ -833,6 +1053,7 @@ test('system startup-maintenance does not block all modules on a timed-out modul
     fs.rmSync(rcaRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(metaRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(bookForgeRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(scholarSkillsRemote.fixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -864,6 +1085,7 @@ test('system startup-maintenance syncs explicit developer checkouts and reports 
   const bookForgeRemote = createBookForgeGeneratedSurfaceRemote({
     logPath,
   });
+  const scholarSkillsRemote = createScholarSkillsRemote();
   const masDeveloperCheckout = path.join(homeRoot, 'developer-med-autoscience');
 
   try {
@@ -878,6 +1100,7 @@ test('system startup-maintenance syncs explicit developer checkouts and reports 
       OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
+      OPL_SCHOLARSKILLS_REPO_URL: scholarSkillsRemote.remoteRoot,
       OPL_GIT_RETRY_ATTEMPTS: '1',
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
     }) as {
@@ -910,6 +1133,7 @@ test('system startup-maintenance syncs explicit developer checkouts and reports 
       OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
+      OPL_SCHOLARSKILLS_REPO_URL: scholarSkillsRemote.remoteRoot,
       OPL_GIT_RETRY_ATTEMPTS: '1',
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
     }) as {
@@ -960,5 +1184,6 @@ test('system startup-maintenance syncs explicit developer checkouts and reports 
     fs.rmSync(rcaRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(metaRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(bookForgeRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(scholarSkillsRemote.fixtureRoot, { recursive: true, force: true });
   }
 });

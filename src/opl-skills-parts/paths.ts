@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { developerModePrefersLocalCheckouts } from '../developer-mode-source-policy.ts';
 import { resolveDefaultFamilyWorkspaceRoot } from '../family-workspace-root.ts';
@@ -64,13 +63,13 @@ export function resolveRepoRoot(spec: SkillPackSpec) {
     if (modulePathValue) {
       return path.resolve(modulePathValue);
     }
-    if (isDirectory(siblingRepoRoot)) {
+    if (developerModePrefersLocalCheckouts() && isDirectory(siblingRepoRoot)) {
       return siblingRepoRoot;
     }
     if (isDirectory(managedRepoRoot)) {
       return managedRepoRoot;
     }
-    return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+    return managedRepoRoot;
   }
 
   const gitCheckoutSourceMode = normalizeOptionalString(process.env.OPL_MODULE_SOURCE_MODE) === 'git_checkout'

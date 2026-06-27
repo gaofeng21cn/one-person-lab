@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import { assert, createFakeCodexFixture, fs, os, path, runCli, test } from '../helpers.ts';
 import { computePackageChannelTreeSha256 } from '../../../../src/system-installation/module-package-channel.ts';
 import { writeFakeBookForgeGeneratedSurfacePack } from '../../cli-codex-default-shell-helpers.ts';
+import { createScholarSkillsRemote } from './system-startup-maintenance-cases/shared.ts';
 
 import './managed-update-kernel-cases/lock-contention.ts';
 
@@ -430,6 +431,7 @@ test('update apply for agent package channel executes the managed adapter and re
     version: '26.6.99-nightly',
     modules: updateModules,
   });
+  const scholarSkillsRemote = createScholarSkillsRemote();
   const codexFixture = createFakeCodexFixture(`
 if [ "$1" = "--version" ]; then
   echo "codex-cli 0.134.0"
@@ -447,6 +449,7 @@ exit 2
       ...moduleEnv,
       OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+      OPL_SCHOLARSKILLS_REPO_URL: scholarSkillsRemote.remoteRoot,
       OPL_PACKAGES_OWNER: 'owner',
       OPL_PACKAGE_CHANNEL_MANIFEST_REF: 'ghcr.io/owner/one-person-lab-manifest:26.6.99-nightly',
       PATH: `${codexFixture.fixtureRoot}${path.delimiter}${packageChannel.fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
@@ -547,7 +550,12 @@ exit 2
                 app_consumer: string;
               };
             };
-            post_apply_actions: Array<{ action_id: string; status: string; result_ref: string | null }>;
+            post_apply_actions: Array<{
+              action_id: string;
+              status: string;
+              result_ref: string | null;
+              result: Record<string, unknown> | null;
+            }>;
           }>;
           receipt_record: {
             status: string;
@@ -604,6 +612,17 @@ exit 2
     assert.deepEqual(
       output.managed_update.execution.adapter_results[0].post_apply_actions.map((entry) => entry.status),
       ['completed', 'completed', 'completed'],
+    );
+    const capabilityExposure = output.managed_update.execution.adapter_results[0].post_apply_actions.find((entry) => (
+      entry.action_id === 'capability_exposure'
+    ));
+    assert.deepEqual(
+      (capabilityExposure?.result?.target_bound_scholarskills_sync as Record<string, unknown> | undefined),
+      {
+        status: 'awaiting_workspace_or_quest_target',
+        workspace_command_ref: 'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <workspace-root> --json',
+        quest_command_ref: 'opl connect sync-skills --domain scholarskills --scope quest --target-quest <quest-root> --json',
+      },
     );
     assert.equal(output.managed_update.execution.receipt_record.status, 'recorded');
     assert.equal(output.managed_update.execution.receipt_record.recorded_receipt_count, 1);
@@ -727,6 +746,7 @@ exit 2
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(scholarSkillsRemote.fixtureRoot, { recursive: true, force: true });
   }
 });
 

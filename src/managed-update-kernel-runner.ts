@@ -8,6 +8,7 @@ import {
 import { rollbackManagedModulePackageChannel } from './system-installation/module-package-channel.ts';
 import { runOplSystemAction } from './system-installation/system-actions.ts';
 import { runOplStartupMaintenance } from './system-installation/startup-maintenance.ts';
+import { runScholarSkillsSourceMaintenance } from './system-installation/scholarskills-source.ts';
 import type { FrameworkContracts } from './types.ts';
 import {
   buildManagedUpdateKernelProjection,
@@ -74,6 +75,18 @@ function nestedRecord(value: unknown, key: string) {
 
 function nestedString(value: unknown, key: string) {
   return isRecord(value) ? stringValue(value[key]) : null;
+}
+
+function readSkipReason(entry: Record<string, unknown>) {
+  const installerResult = nestedRecord(entry, 'installer_result');
+  const workspaceOrQuest = nestedRecord(installerResult, 'workspace_or_quest_local_skill');
+  return nestedString(workspaceOrQuest, 'skip_reason');
+}
+
+function isExpectedTargetBoundScholarSkillsSkip(entry: Record<string, unknown>) {
+  return nestedString(entry, 'domain_id') === 'scholarskills'
+    && nestedString(entry, 'sync_status') === 'skipped'
+    && readSkipReason(entry) === 'workspace_or_quest_target_required';
 }
 
 function adapterResultRef(componentId: string, operation: ManagedUpdateOperation, payload: Record<string, unknown> | null) {
@@ -196,15 +209,23 @@ function buildAgentPackagePostApplyActions(
     ];
   }
 
+  const scholarSkillsSource = runScholarSkillsSourceMaintenance();
   const skillSync = syncFamilySkillPacks({
     companionMode: 'observe',
     superpowersProfile: 'keep',
   }) as unknown as Record<string, unknown>;
   const skillSyncPayload = nestedRecord(skillSync, 'skill_sync');
   const skillSyncSummary = nestedRecord(skillSyncPayload, 'summary');
-  const skippedCount = Number(skillSyncSummary?.skipped ?? 0);
+  const skillSyncPacks = records(skillSyncPayload?.packs);
+  const unexpectedSkippedCount = skillSyncPacks
+    .filter((entry) => nestedString(entry, 'sync_status') === 'skipped')
+    .filter((entry) => !isExpectedTargetBoundScholarSkillsSkip(entry))
+    .length;
   const syncedCount = Number(skillSyncSummary?.synced ?? 0);
-  const skillSyncStatus: AdapterPostApplyAction['status'] = skippedCount > 0 && syncedCount === 0
+  const scholarSkillsSourceStatus: AdapterPostApplyAction['status'] =
+    scholarSkillsSource.status === 'manual_required' ? 'manual_required' : 'completed';
+  const skillSyncStatus: AdapterPostApplyAction['status'] = scholarSkillsSourceStatus === 'manual_required'
+    || (unexpectedSkippedCount > 0 && syncedCount === 0)
     ? 'manual_required'
     : 'completed';
 
@@ -230,7 +251,15 @@ function buildAgentPackagePostApplyActions(
       result_ref: adapterResultRef('capability_exposure', operation, skillSyncPayload),
       result: {
         source: 'agent_package_channel_post_apply',
+        scholarskills_source: scholarSkillsSource as unknown as Record<string, unknown>,
         skill_sync_summary: skillSyncSummary,
+        target_bound_scholarskills_sync: {
+          status: skillSyncPacks.some(isExpectedTargetBoundScholarSkillsSkip)
+            ? 'awaiting_workspace_or_quest_target'
+            : 'not_applicable',
+          workspace_command_ref: 'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <workspace-root> --json',
+          quest_command_ref: 'opl connect sync-skills --domain scholarskills --scope quest --target-quest <quest-root> --json',
+        },
       },
     },
   ];

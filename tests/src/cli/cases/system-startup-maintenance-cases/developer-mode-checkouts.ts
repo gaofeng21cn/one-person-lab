@@ -4,6 +4,7 @@ import {
   createBookForgeGeneratedSurfaceRemote,
   createDomainModuleRemote,
   createOmaGeneratedSurfaceRemote,
+  createScholarSkillsRemote,
   withCliTimeout,
 } from './shared.ts';
 
@@ -36,12 +37,14 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
   const bookForgeRemote = createBookForgeGeneratedSurfaceRemote({
     logPath,
   });
+  const scholarSkillsRemote = createScholarSkillsRemote();
   const siblingCheckouts = {
     medautoscience: path.join(workspaceRoot, 'med-autoscience'),
     medautogrant: path.join(workspaceRoot, 'med-autogrant'),
     redcube: path.join(workspaceRoot, 'redcube-ai'),
     oplmetaagent: path.join(workspaceRoot, 'opl-meta-agent'),
     oplbookforge: path.join(workspaceRoot, 'opl-bookforge'),
+    scholarskills: path.join(workspaceRoot, 'opl-scholarskills'),
   };
 
   try {
@@ -51,6 +54,7 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
     runGitFixtureCommand(workspaceRoot, ['clone', rcaRemote.remoteRoot, siblingCheckouts.redcube]);
     runGitFixtureCommand(workspaceRoot, ['clone', metaRemote.remoteRoot, siblingCheckouts.oplmetaagent]);
     runGitFixtureCommand(workspaceRoot, ['clone', bookForgeRemote.remoteRoot, siblingCheckouts.oplbookforge]);
+    runGitFixtureCommand(workspaceRoot, ['clone', scholarSkillsRemote.remoteRoot, siblingCheckouts.scholarskills]);
 
     const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
       HOME: homeRoot,
@@ -66,6 +70,7 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
           'gaofeng21cn/redcube-ai': 'admin',
           'gaofeng21cn/opl-meta-agent': 'admin',
           'gaofeng21cn/opl-bookforge': 'admin',
+          'gaofeng21cn/opl-scholarskills': 'admin',
         },
       }),
       OPL_GIT_RETRY_ATTEMPTS: '1',
@@ -108,6 +113,15 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
             status: string;
             synced_domain_packs_count: number;
           };
+          capability_targets: Array<{
+            target_id: string;
+            status: string;
+            reason: string;
+            action: string | null;
+            install_origin_before: string;
+            checkout_path: string;
+            git_after: { head_sha: string | null } | null;
+          }>;
           restart_reload_prompt: {
             required: boolean;
           };
@@ -121,6 +135,25 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
     assert.equal(output.system_action.details.managed_install_update_receipts.recorded_receipt_count, 0);
     assert.equal(output.system_action.details.plugin_cache_freshness.status, 'freshened');
     assert.equal(output.system_action.details.plugin_cache_freshness.synced_domain_packs_count, 5);
+    assert.deepEqual(output.system_action.details.capability_targets.map((target) => [
+      target.target_id,
+      target.status,
+      target.reason,
+      target.action,
+      target.install_origin_before,
+      target.checkout_path,
+      target.git_after?.head_sha,
+    ]), [
+      [
+        'scholarskills',
+        'skipped',
+        'developer_scholarskills_source_visible_not_app_managed',
+        null,
+        'sibling_workspace',
+        siblingCheckouts.scholarskills,
+        scholarSkillsRemote.getHeadSha(),
+      ],
+    ]);
     assert.equal(output.system_action.details.restart_reload_prompt.required, true);
 
     for (const target of output.system_action.details.module_targets) {
@@ -171,5 +204,6 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
     fs.rmSync(rcaRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(metaRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(bookForgeRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(scholarSkillsRemote.fixtureRoot, { recursive: true, force: true });
   }
 });
