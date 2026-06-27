@@ -26,6 +26,7 @@ const FOUNDRY_AGENT_PEERS = [
     agent_id: 'mas',
     domain_id: 'medautoscience',
     label: 'Med Auto Science',
+    series_membership: 'standard_domain_agent',
     brand_cli: 'mas',
     direct_domain_cli: 'medautosci',
     codex_executable_cli: 'medautosci',
@@ -33,11 +34,13 @@ const FOUNDRY_AGENT_PEERS = [
     work_alias: 'study',
     ordinary_golden_path:
       'study -> stage -> domain owner receipt or typed blocker -> research artifact handoff',
+    domain_native_foundry_cli: 'medautosci foundry',
   },
   {
     agent_id: 'mag',
     domain_id: 'medautogrant',
     label: 'Med Auto Grant',
+    series_membership: 'standard_domain_agent',
     brand_cli: 'mag',
     direct_domain_cli: 'medautogrant',
     codex_executable_cli: '<med-autogrant-repo>/scripts/run-python-clean.sh -m med_autogrant.cli',
@@ -45,11 +48,13 @@ const FOUNDRY_AGENT_PEERS = [
     work_alias: 'grant',
     ordinary_golden_path:
       'grant -> stage -> domain owner receipt or typed blocker -> grant deliverable handoff',
+    domain_native_foundry_cli: 'medautogrant foundry',
   },
   {
     agent_id: 'rca',
     domain_id: 'redcube',
     label: 'RedCube AI',
+    series_membership: 'standard_domain_agent',
     brand_cli: 'rca',
     direct_domain_cli: 'redcube',
     codex_executable_cli: 'npm run --prefix <redcube-ai-repo> redcube --',
@@ -57,11 +62,13 @@ const FOUNDRY_AGENT_PEERS = [
     work_alias: 'deck',
     ordinary_golden_path:
       'deck -> stage -> domain owner receipt or typed blocker -> visual deliverable handoff',
+    domain_native_foundry_cli: 'redcube foundry',
   },
   {
     agent_id: 'oma',
     domain_id: 'oplmetaagent',
     label: 'OPL Meta Agent',
+    series_membership: 'standard_domain_agent',
     brand_cli: 'oma',
     direct_domain_cli: 'opl agents interfaces --repo-dir <opl-meta-agent-repo>',
     codex_executable_cli: 'opl foundry agents inspect oma',
@@ -69,12 +76,12 @@ const FOUNDRY_AGENT_PEERS = [
     work_alias: 'agent',
     ordinary_golden_path:
       'target agent -> stage -> target owner answer -> mechanism or work-order handoff',
-    generated_surface_only: true,
   },
   {
     agent_id: 'opl-bookforge',
     domain_id: 'oplbookforge',
     label: 'OPL Book Forge',
+    series_membership: 'standard_domain_agent',
     brand_cli: 'opl-bookforge',
     direct_domain_cli: 'opl agents interfaces --repo-dir <opl-bookforge-repo>',
     codex_executable_cli: 'opl foundry agents inspect opl-bookforge',
@@ -82,11 +89,16 @@ const FOUNDRY_AGENT_PEERS = [
     work_alias: 'book',
     ordinary_golden_path:
       'book -> stage -> domain owner receipt or typed blocker -> manuscript package handoff',
-    generated_surface_only: true,
   },
 ] as const;
 
 type FoundryAgentPeer = typeof FOUNDRY_AGENT_PEERS[number];
+
+function buildPeerSeriesSummary(peer: FoundryAgentPeer) {
+  const summary = { ...peer } as Record<string, unknown>;
+  delete summary.domain_native_foundry_cli;
+  return summary;
+}
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -212,66 +224,61 @@ function buildAuthorityBoundary(contract: JsonRecord) {
 }
 
 function buildPeerProjection(peer: FoundryAgentPeer) {
-  const generatedSurfaceOnly = Boolean('generated_surface_only' in peer && peer.generated_surface_only);
-  const domainFoundryCli = peer.direct_domain_cli;
+  const agentInspectCommandSurface = `opl foundry agents inspect ${peer.agent_id}`;
+  const domainNativeFoundryCli = 'domain_native_foundry_cli' in peer
+    ? peer.domain_native_foundry_cli
+    : null;
   const codexExecutableCli = peer.codex_executable_cli;
   const brandCliPathSafe = false;
-  const foundryCommandSurface = generatedSurfaceOnly
-    ? `opl foundry agents inspect ${peer.agent_id}`
-    : `${domainFoundryCli} foundry`;
-  const compatibilityCommandSurface = generatedSurfaceOnly
-    ? peer.direct_domain_cli
-    : `${peer.direct_domain_cli} foundry`;
-  const foundryOperations = generatedSurfaceOnly
-    ? FOUNDRY_AGENT_OPERATIONS.map((operation) => `opl agents foundry ${operation}`)
-    : FOUNDRY_AGENT_OPERATIONS.map((operation) => `${domainFoundryCli} foundry ${operation}`);
-  const compatibilityOperations = generatedSurfaceOnly
-    ? [peer.direct_domain_cli]
-    : FOUNDRY_AGENT_OPERATIONS.map((operation) => `${peer.direct_domain_cli} foundry ${operation}`);
-  const cliSmoke = generatedSurfaceOnly
-    ? {
-        executable_brand_cli_command_surface: null,
-        executable_compatibility_command_surface: null,
-        status_json_command: `opl foundry agents inspect ${peer.agent_id} --json`,
-        compatibility_status_json_command: peer.direct_domain_cli,
-        json_flag_aliases: ['--json'],
-        help_smoke_commands: [
-          `opl foundry agents inspect ${peer.agent_id} --json`,
-          'opl agents foundry status --json',
-        ],
-      }
-    : {
-        executable_brand_cli_command_surface: brandCliPathSafe ? `${peer.brand_cli} foundry` : null,
-        executable_direct_cli_command_surface: `${codexExecutableCli} foundry`,
-        executable_compatibility_command_surface: compatibilityCommandSurface,
-        status_json_command: `${codexExecutableCli} foundry status --json`,
-        compatibility_status_json_command: `${peer.direct_domain_cli} foundry status --json`,
-        legacy_format_json_command: `${peer.direct_domain_cli} foundry status --format json`,
-        json_flag_aliases: ['--json', '--format json'],
-        help_smoke_commands: [
-          `${codexExecutableCli} --help`,
-          `${codexExecutableCli} foundry status --json`,
-          `${peer.direct_domain_cli} foundry status --json`,
-        ],
-      };
+  const compatibilityCommandSurface = domainNativeFoundryCli ?? peer.direct_domain_cli;
+  const foundryOperations = FOUNDRY_AGENT_OPERATIONS.map((operation) => `opl agents foundry ${operation}`);
+  const compatibilityOperations = domainNativeFoundryCli
+    ? FOUNDRY_AGENT_OPERATIONS.map((operation) => `${domainNativeFoundryCli} ${operation}`)
+    : [peer.direct_domain_cli];
+  const executableDirectFoundrySurface = domainNativeFoundryCli ? `${codexExecutableCli} foundry` : null;
+  const executableDirectStatusJsonCommand = domainNativeFoundryCli
+    ? `${codexExecutableCli} foundry status --json`
+    : null;
+  const compatibilityStatusJsonCommand = domainNativeFoundryCli
+    ? `${domainNativeFoundryCli} status --json`
+    : peer.direct_domain_cli;
+  const cliSmoke = {
+    executable_brand_cli_command_surface: brandCliPathSafe ? `${peer.brand_cli} foundry` : null,
+    executable_direct_cli_command_surface: executableDirectFoundrySurface,
+    executable_compatibility_command_surface: domainNativeFoundryCli ? compatibilityCommandSurface : null,
+    status_json_command: `${agentInspectCommandSurface} --json`,
+    executable_direct_status_json_command: executableDirectStatusJsonCommand,
+    compatibility_status_json_command: compatibilityStatusJsonCommand,
+    legacy_format_json_command: domainNativeFoundryCli ? `${domainNativeFoundryCli} status --format json` : null,
+    json_flag_aliases: ['--json'],
+    compatibility_json_flag_aliases: domainNativeFoundryCli ? ['--json', '--format json'] : ['--json'],
+    help_smoke_commands: [
+      `${agentInspectCommandSurface} --json`,
+      'opl agents foundry status --json',
+      ...(executableDirectStatusJsonCommand ? [executableDirectStatusJsonCommand] : []),
+    ],
+  };
 
   return {
-    ...peer,
+    ...buildPeerSeriesSummary(peer),
     series: 'OPL Foundry Agent',
     series_id: 'opl_foundry_agent_series.v1',
-    foundry_command_surface: foundryCommandSurface,
+    series_membership: peer.series_membership,
+    foundry_command_surface: agentInspectCommandSurface,
+    default_foundry_command_surface: agentInspectCommandSurface,
+    canonical_series_command_surface: 'opl agents foundry',
+    domain_native_foundry_command_surface: domainNativeFoundryCli,
     compatibility_command_surface: compatibilityCommandSurface,
     foundry_operations: foundryOperations,
     compatibility_operations: compatibilityOperations,
-    executable_direct_cli_command_surface: generatedSurfaceOnly ? null : `${codexExecutableCli} foundry`,
-    brand_cli_path_safe_executable: generatedSurfaceOnly ? false : brandCliPathSafe,
-    generated_surface_only: generatedSurfaceOnly,
+    executable_direct_cli_command_surface: executableDirectFoundrySurface,
+    brand_cli_path_safe_executable: brandCliPathSafe,
     cli_smoke: cliSmoke,
     ordinary_spine: ['workspace', 'work', 'stage', 'run', 'vault', 'handoff', 'connect'].map((object) => ({
       object,
-      command_pattern: generatedSurfaceOnly
-        ? `opl foundry agents inspect ${peer.agent_id}`
-        : `${peer.direct_domain_cli} ${object} ...`,
+      command_pattern: domainNativeFoundryCli
+        ? `${peer.direct_domain_cli} ${object} ...`
+        : agentInspectCommandSurface,
       domain_alias:
         object === 'work'
           ? peer.work_alias
@@ -405,7 +412,7 @@ export function buildFoundryAgentCliSpine(operation: FoundryAgentCliOperation, a
         command_pattern: `<agent> ${object} ...`,
         purpose_ref: `${FOUNDRY_AGENT_SERIES_CONTRACT_REF}#/agent_cli_command_surface_policy/ordinary_public_command_surface_spine/${object}`,
       })),
-      peers: FOUNDRY_AGENT_PEERS.map((entry) => ({ ...entry })),
+      peers: FOUNDRY_AGENT_PEERS.map(buildPeerSeriesSummary),
       command_surface_policy: {
         policy_id: readString(commandSurfacePolicy.policy_id, 'agent_cli_command_surface_policy.policy_id'),
         agent_cli_uses_foundry_series_spine: readBoolean(
@@ -482,9 +489,7 @@ export function buildFoundryAgentInspect(args: string[]) {
     version: 'g2',
     foundry_agent: {
       surface_kind: 'opl_foundry_agent_series_agent_inspect',
-      status: ('generated_surface_only' in peer && peer.generated_surface_only)
-        ? 'generated_surface_only'
-        : 'direct_domain_surface_ready',
+      status: 'standard_domain_agent',
       ...buildPeerProjection(peer),
       series_contract_ref: FOUNDRY_AGENT_SERIES_CONTRACT_REF,
       direct_cli_command_surface_policy: {

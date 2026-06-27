@@ -7,6 +7,8 @@ export type SkillPackSourceKind = 'repo_plugin_installer' | 'opl_generated_plugi
 export type SkillPackDistributionRole = 'domain_agent_plugin_pack' | 'framework_capability_plugin_pack';
 export type SkillPackSyncScope = 'project' | 'codex' | 'workspace' | 'quest';
 export type SkillPackTargetProject = 'medautoscience';
+export type StandardAgentSeriesMembership = 'standard_domain_agent';
+export type SkillPackSourceKindRole = 'transport_install_detail_not_agent_membership_or_status';
 
 export type SkillPackSpec = {
   domain_id: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge' | 'scholarskills';
@@ -21,6 +23,20 @@ export type SkillPackSpec = {
   installer_relative_paths: string[];
 };
 
+export type InspectFamilySkillPackPluginTransport = {
+  surface_kind: 'opl_connect_plugin_transport';
+  source_kind: SkillPackSourceKind;
+  source_kind_role: SkillPackSourceKindRole;
+  repo_plugin_installer: boolean;
+  opl_generated_plugin_surface: boolean;
+  generated_skill_surface_ready: boolean;
+  generated_skill_surface_status: string | null;
+  installer_kind: SkillPackInstallerKind;
+  command_preview: string[];
+  generation_preview_command: string[] | null;
+  public_agent_list_must_not_split_by_transport: boolean;
+};
+
 export type InspectFamilySkillPack = {
   domain_id: string;
   project: string;
@@ -28,11 +44,20 @@ export type InspectFamilySkillPack = {
   plugin_name: string;
   canonical_plugin_name: string;
   distribution_role: SkillPackDistributionRole;
+  agent_series_membership: StandardAgentSeriesMembership | null;
+  agent_projection_policy: {
+    standard_membership: StandardAgentSeriesMembership;
+    plugin_transport_is_membership_axis: false;
+    plugin_transport_is_status_axis: false;
+    generated_surface_is_membership_axis: false;
+    generated_surface_is_status_axis: false;
+  } | null;
   foundry_agent_series: Record<string, unknown>;
   command_surface_spine: Record<string, unknown>;
   mcp_projection: Record<string, unknown>;
   legacy_implementation_bucket_policy: Record<string, unknown>;
   capability_plugin_distribution: Record<string, unknown> | null;
+  plugin_transport: InspectFamilySkillPackPluginTransport;
   plugin_source_path: string;
   repo_root: string;
   repo_found: boolean;
@@ -45,6 +70,7 @@ export type InspectFamilySkillPack = {
   installer_path: string;
   installer_found: boolean;
   source_kind: SkillPackSourceKind;
+  source_kind_role: SkillPackSourceKindRole;
   generated_skill_surface_ready: boolean;
   generated_skill_surface_status: string | null;
   ready_to_sync: boolean;

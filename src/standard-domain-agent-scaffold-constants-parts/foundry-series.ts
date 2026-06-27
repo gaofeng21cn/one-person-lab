@@ -15,6 +15,19 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
   product_model: 'OPL Framework -> One Person Lab App -> Foundry Agents',
   standard_agent_requirement:
     'foundry_agents_share_identity_stage_authority_progress_currentness_closeout_and_app_projection_packets',
+  agent_membership_projection_policy: {
+    surface_kind: 'opl_foundry_agent_membership_projection_policy',
+    version: 'foundry-agent-membership-projection.v1',
+    policy_id: 'standard_agent_membership_not_surface_origin',
+    default_membership: 'standard_domain_agent',
+    public_agent_list_must_not_split_by_generated_surface: true,
+    public_agent_list_must_not_split_by_plugin_transport: true,
+    generated_surface_is_membership_axis: false,
+    generated_surface_is_status_axis: false,
+    plugin_transport_is_membership_axis: false,
+    plugin_transport_is_status_axis: false,
+    generated_surface_only_field_public_default: false,
+  },
   series_design_profile: {
     surface_kind: 'opl_foundry_agent_series_design_profile',
     version: 'foundry-agent-series-design-profile.v1',

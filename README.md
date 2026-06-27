@@ -151,8 +151,7 @@ Source of truth: https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/re
 - Continue strengthening long-task progress with recovery, retry, human approval, stage review, and clearer progress views.
 - Use OPL Meta Agent as the Agent Foundry entry for building new domain agents, taking over testing for existing agents, and organizing Agent Lab mechanism evolution.
 - Stabilize the Research, Grant, Presentation, and Book Foundry user experience.
-- Keep Book Foundry on an owner-gated production path until manuscript quality, export handoff, direct runtime parity, and owner receipts support stronger claims.
-- Maintain Book Forge as a default OPL Connect / App visible surface while keeping production-ready book-writing claims fail-closed.
+- Maintain Book Forge as a default standard Foundry Agent surface in OPL Connect / App while keeping manuscript quality, export handoff, publication, and production-ready claims owner-gated.
 - Bring Patent, Award, Thesis, and Review work into the same product family.
 - Unify module installation, skill sync, artifact browsing, and workspace recovery across domain agents.
 

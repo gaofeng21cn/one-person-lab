@@ -24,6 +24,9 @@ test('agents conformance exposes Foundry Agent OS family standard without author
   retargetReadyRepo(omaRepo, 'opl-meta-agent', 'OPL Meta Agent');
   configureReadyMetaMorphology(omaRepo);
 
+  const bookForgeRepo = buildReadyAgentRepo();
+  retargetReadyRepo(bookForgeRepo, 'opl-bookforge', 'OPL Book Forge');
+
   const payload = runCli([
     'agents',
     'conformance',
@@ -35,6 +38,8 @@ test('agents conformance exposes Foundry Agent OS family standard without author
     `rca=${rcaRepo}`,
     '--agent',
     `oma=${omaRepo}`,
+    '--agent',
+    `opl-bookforge=${bookForgeRepo}`,
   ]);
   const report = payload.standard_domain_agent_conformance;
   const foundry = report.foundry_agent_os_conformance;
@@ -45,10 +50,8 @@ test('agents conformance exposes Foundry Agent OS family standard without author
   assert.equal(foundry.status, 'passed');
   assert.equal(report.summary.foundry_agent_os_conformance_status, 'passed');
   assert.equal(foundry.pattern_id, 'foundry_agent_os_standard.v1');
-  assert.deepEqual(foundry.applies_to_domain_agents, ['mas', 'mag', 'rca', 'oma']);
-  assert.deepEqual(foundry.observed_domain_agent_ids, ['mas', 'mag', 'rca', 'oma']);
-  assert.deepEqual(foundry.observed_support_extension_agent_ids, []);
-  assert.deepEqual(foundry.observed_support_extension_domain_ids, []);
+  assert.deepEqual(foundry.applies_to_domain_agents, ['mas', 'mag', 'rca', 'oma', 'opl-bookforge']);
+  assert.deepEqual(foundry.observed_domain_agent_ids, ['mas', 'mag', 'rca', 'oma', 'opl-bookforge']);
   assert.deepEqual(foundry.unknown_non_standard_agent_ids, []);
   assert.deepEqual(foundry.missing_domain_agent_ids, []);
   assert.deepEqual(foundry.capability_registry_boundary.owner_modules, [
@@ -127,22 +130,15 @@ test('agents conformance exposes Foundry Agent OS family standard without author
   assert.equal(foundry.flagship_experience_mapping.false_ready_claims.includes('paper_done'), true);
   assert.equal(foundry.flagship_experience_mapping.false_ready_claims.includes('brand_l5_done'), true);
   assert.equal(foundry.flagship_experience_mapping.false_ready_claims.includes('production_ready'), true);
-  assert.equal(
-    foundry.support_extension_policy.support_extensions_are_not_foundry_agent_os_standard_members,
-    true,
+  assert.equal(foundry.standard_membership_policy.policy_id, 'foundry_agent_standard_membership_is_not_surface_origin.v1');
+  assert.deepEqual(
+    foundry.standard_membership_policy.standard_member_agent_ids,
+    ['mas', 'mag', 'rca', 'oma', 'opl-bookforge'],
   );
+  assert.equal(foundry.standard_membership_policy.generated_surface_is_membership_axis, false);
+  assert.equal(foundry.standard_membership_policy.generated_surface_is_status_axis, false);
   assert.equal(
-    foundry.support_extension_policy.support_extension_agent_ids.includes('opl-bookforge'),
-    true,
-  );
-  assert.equal(
-    foundry.support_extension_policy.false_ready_boundary
-      .support_extension_pass_can_claim_standard_agent_membership,
-    false,
-  );
-  assert.equal(
-    foundry.support_extension_policy.false_ready_boundary
-      .support_extension_pass_can_claim_foundry_agent_os_complete,
+    foundry.standard_membership_policy.false_ready_boundary.generated_surface_can_claim_domain_ready,
     false,
   );
 
@@ -150,8 +146,6 @@ test('agents conformance exposes Foundry Agent OS family standard without author
     assert.equal(domain.status, 'passed');
     assert.equal(domain.standard_membership, 'standard_domain_agent');
     assert.equal(domain.foundry_agent_os_standard_member, true);
-    assert.equal(domain.support_extension_role, null);
-    assert.deepEqual(domain.support_extension_policy_refs, []);
     assert.equal(domain.default_read_root, 'current_owner_delta');
     assert.equal(domain.raw_worklist_generates_default_next_action, false);
     assert.equal(domain.provider_completion_counts_as_domain_completion, false);
@@ -203,7 +197,7 @@ test('Foundry Agent OS canonicalizes OPL Meta Agent as OMA without renaming doma
   const oma = foundry.domains[0];
 
   assert.equal(foundry.status, 'blocked');
-  assert.deepEqual(foundry.missing_domain_agent_ids, ['mas', 'mag', 'rca']);
+  assert.deepEqual(foundry.missing_domain_agent_ids, ['mas', 'mag', 'rca', 'opl-bookforge']);
   assert.deepEqual(foundry.observed_domain_agent_ids, ['oma']);
   assert.equal(oma.domain_id, 'opl-meta-agent');
   assert.equal(oma.requested_agent_id, 'opl-meta-agent');
@@ -216,7 +210,7 @@ test('Foundry Agent OS canonicalizes OPL Meta Agent as OMA without renaming doma
   );
 });
 
-test('Foundry Agent OS classifies BookForge as support extension without adding it to the standard set', () => {
+test('Foundry Agent OS treats BookForge as a standard member without using generated surface as a membership axis', () => {
   const masRepo = buildReadyAgentRepo();
   retargetReadyRepo(masRepo, 'med-autoscience', 'Med Auto Science');
 
@@ -255,10 +249,8 @@ test('Foundry Agent OS classifies BookForge as support extension without adding 
   );
 
   assert.equal(foundry.status, 'passed');
-  assert.deepEqual(foundry.applies_to_domain_agents, ['mas', 'mag', 'rca', 'oma']);
-  assert.deepEqual(foundry.observed_domain_agent_ids, ['mas', 'mag', 'rca', 'oma']);
-  assert.deepEqual(foundry.observed_support_extension_agent_ids, ['opl-bookforge']);
-  assert.deepEqual(foundry.observed_support_extension_domain_ids, ['opl-bookforge']);
+  assert.deepEqual(foundry.applies_to_domain_agents, ['mas', 'mag', 'rca', 'oma', 'opl-bookforge']);
+  assert.deepEqual(foundry.observed_domain_agent_ids, ['mas', 'mag', 'rca', 'oma', 'opl-bookforge']);
   assert.deepEqual(foundry.unknown_non_standard_agent_ids, []);
   assert.deepEqual(foundry.missing_domain_agent_ids, []);
   assert.equal(
@@ -268,31 +260,13 @@ test('Foundry Agent OS classifies BookForge as support extension without adding 
   assert.ok(bookForge);
   assert.equal(bookForge.domain_id, 'opl-bookforge');
   assert.equal(bookForge.requested_agent_id, 'opl-bookforge');
-  assert.equal(bookForge.standard_membership, 'support_extension');
-  assert.equal(bookForge.foundry_agent_os_standard_member, false);
-  assert.equal(
-    bookForge.support_extension_role,
-    'generated_surface_only_projection_not_foundry_agent_os_standard_member',
-  );
-  assert.equal(
-    bookForge.support_extension_policy_refs.includes(
-      'src/foundry-agent-cli-spine.ts#FOUNDRY_AGENT_PEERS.generated_surface_only',
-    ),
-    true,
-  );
+  assert.equal(bookForge.standard_membership, 'standard_domain_agent');
+  assert.equal(bookForge.foundry_agent_os_standard_member, true);
   assert.equal(bookForge.status, 'passed');
   assert.equal(bookForge.false_authority_flags.conformance_pass_can_claim_domain_ready, false);
   assert.equal(bookForge.false_authority_flags.conformance_pass_can_claim_production_ready, false);
-  assert.equal(
-    foundry.support_extension_policy.false_ready_boundary
-      .support_extension_pass_can_claim_domain_ready,
-    false,
-  );
-  assert.equal(
-    foundry.support_extension_policy.false_ready_boundary
-      .support_extension_pass_can_claim_production_ready,
-    false,
-  );
+  assert.equal(foundry.standard_membership_policy.generated_surface_is_membership_axis, false);
+  assert.equal(foundry.standard_membership_policy.generated_surface_is_status_axis, false);
 });
 
 test('Foundry Agent OS still blocks unknown non-standard agents', () => {
@@ -310,7 +284,6 @@ test('Foundry Agent OS still blocks unknown non-standard agents', () => {
 
   assert.equal(foundry.status, 'blocked');
   assert.deepEqual(foundry.observed_domain_agent_ids, []);
-  assert.deepEqual(foundry.observed_support_extension_agent_ids, []);
   assert.deepEqual(foundry.unknown_non_standard_agent_ids, ['custom-agent']);
   assert.equal(unknown.standard_membership, 'unknown_non_standard_agent');
   assert.equal(unknown.foundry_agent_os_standard_member, false);

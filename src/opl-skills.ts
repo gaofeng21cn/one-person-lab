@@ -34,6 +34,7 @@ import {
   FAMILY_SKILL_PACK_SPECS,
   normalizeDomainSelection,
   type InspectFamilySkillPack,
+  type InspectFamilySkillPackPluginTransport,
   type SkillPackSyncScope,
   type SkillPackTargetProject,
   type SkillPackSpec,
@@ -162,7 +163,6 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
   const policyRelease = readObjectField(contract, 'shared_policy_release');
   const foundryAgentId = spec.canonical_plugin_name === 'opl-meta-agent' ? 'oma' : spec.canonical_plugin_name;
   const brandCli = spec.canonical_plugin_name === 'opl-meta-agent' ? 'oma' : spec.canonical_plugin_name;
-  const generatedSurfaceOnly = spec.source_kind === 'opl_generated_plugin_surface';
   const directCli = spec.canonical_plugin_name === 'opl-meta-agent'
     ? 'opl agents interfaces --repo-dir <opl-meta-agent-repo>'
     : spec.canonical_plugin_name === 'opl-bookforge'
@@ -192,18 +192,19 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
           : 'agent';
   const ordinaryOperations = readStringListField(commandSurface, 'ordinary_operations');
   const ordinarySpine = readStringListField(commandSurface, 'ordinary_public_command_surface_spine');
-  const directCliFoundryCommandSurface = generatedSurfaceOnly
-    ? `opl foundry agents inspect ${foundryAgentId}`
-    : `${directCli} foundry`;
-  const compatibilityFoundryCommandSurface = generatedSurfaceOnly
-    ? directCli
-    : `${directCli} foundry`;
-  const directCliFoundryOperations = generatedSurfaceOnly
-    ? ordinaryOperations.map((operation) => `opl agents foundry ${operation}`)
-    : ordinaryOperations.map((operation) => `${directCli} foundry ${operation}`);
-  const compatibilityFoundryOperations = generatedSurfaceOnly
-    ? [directCli]
-    : ordinaryOperations.map((operation) => `${directCli} foundry ${operation}`);
+  const defaultFoundryCommandSurface = `opl foundry agents inspect ${foundryAgentId}`;
+  const seriesFoundryOperations = ordinaryOperations.map((operation) => `opl agents foundry ${operation}`);
+  const domainNativeFoundryCommandSurface = spec.canonical_plugin_name === 'mas'
+    ? 'medautosci foundry'
+    : spec.canonical_plugin_name === 'mag'
+      ? 'medautogrant foundry'
+      : spec.canonical_plugin_name === 'rca'
+        ? 'redcube foundry'
+        : null;
+  const compatibilityFoundryCommandSurface = domainNativeFoundryCommandSurface ?? directCli;
+  const compatibilityFoundryOperations = domainNativeFoundryCommandSurface
+    ? ordinaryOperations.map((operation) => `${domainNativeFoundryCommandSurface} ${operation}`)
+    : [directCli];
 
   return {
     foundry_agent_series: {
@@ -211,6 +212,7 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
       series_label: readStringField(commandSurface, 'agent_cli_series_label'),
       foundry_agent_id: foundryAgentId,
       domain_id: spec.domain_id,
+      series_membership: 'standard_domain_agent',
       canonical_command_surface: readStringField(commandSurface, 'canonical_opl_command_surface'),
       product_model: readStringField(contract, 'product_model'),
       series_contract_ref: FOUNDRY_AGENT_SERIES_CONTRACT_REF,
@@ -220,12 +222,13 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
       direct_domain_cli: directCli,
       direct_cli: directCli,
       codex_executable_cli: codexExecutableCli,
-      direct_cli_foundry_command_surface: directCliFoundryCommandSurface,
-      codex_executable_foundry_command_surface: generatedSurfaceOnly
-        ? directCliFoundryCommandSurface
-        : `${codexExecutableCli} foundry`,
+      direct_cli_foundry_command_surface: defaultFoundryCommandSurface,
+      default_foundry_command_surface: defaultFoundryCommandSurface,
+      domain_native_foundry_command_surface: domainNativeFoundryCommandSurface,
+      codex_executable_foundry_command_surface: domainNativeFoundryCommandSurface
+        ? `${codexExecutableCli} foundry`
+        : defaultFoundryCommandSurface,
       compatibility_foundry_command_surface: compatibilityFoundryCommandSurface,
-      generated_surface_only: generatedSurfaceOnly,
       ordinary_golden_path:
         `${workAlias} -> stage -> domain owner receipt or typed blocker -> handoff`,
     },
@@ -233,12 +236,13 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
       surface_kind: 'opl_foundry_agent_skill_command_surface_spine_projection',
       ordinary_public_command_surface_spine: ordinarySpine,
       ordinary_operations: ordinaryOperations,
-      direct_cli_foundry_operations: directCliFoundryOperations,
+      direct_cli_foundry_operations: seriesFoundryOperations,
+      default_foundry_operations: seriesFoundryOperations,
       compatibility_foundry_operations: compatibilityFoundryOperations,
       work_alias: workAlias,
-      work_alias_command_pattern: generatedSurfaceOnly
-        ? `opl foundry agents inspect ${foundryAgentId}`
-        : `${directCli} ${workAlias} ...`,
+      work_alias_command_pattern: domainNativeFoundryCommandSurface
+        ? `${directCli} ${workAlias} ...`
+        : defaultFoundryCommandSurface,
       required_public_surface_derivatives: readStringListField(commandSurface, 'required_public_surface_derivatives'),
       skill_sync_command_surface: readStringField(skillMcp, 'canonical_skill_sync_command_surface'),
       skill_inspect_command_surface: readStringField(skillMcp, 'canonical_skill_connect_command_surface'),
@@ -257,10 +261,16 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
         'mcp_descriptor_must_delegate_to_series_spine',
       ),
       series_delegate_tool_refs: [
-        generatedSurfaceOnly ? 'opl agents foundry interfaces' : `${directCli} foundry interfaces`,
-        generatedSurfaceOnly ? 'opl agents foundry status' : `${directCli} foundry status`,
+        'opl agents foundry interfaces',
+        'opl agents foundry status',
         `opl foundry agents inspect ${foundryAgentId}`,
       ],
+      compatibility_delegate_tool_refs: domainNativeFoundryCommandSurface
+        ? [
+            `${domainNativeFoundryCommandSurface} interfaces`,
+            `${domainNativeFoundryCommandSurface} status`,
+          ]
+        : [directCli],
       legacy_standalone_mcp_servers_retired: readBooleanField(
         skillMcp,
         'legacy_standalone_mcp_servers_retired',
@@ -885,6 +895,21 @@ function inspectFamilySkillPackAtRepoRoot(
     repoFound && pluginManifestFound && skillEntryFound && skillEntryValidation.valid;
   const seriesProjection = buildFoundryAgentSeriesProjection(spec);
   const capabilityPluginDistribution = buildCapabilityPluginDistribution(spec);
+  const pluginTransport: InspectFamilySkillPackPluginTransport = {
+    surface_kind: 'opl_connect_plugin_transport',
+    source_kind: spec.source_kind,
+    source_kind_role: 'transport_install_detail_not_agent_membership_or_status',
+    repo_plugin_installer: spec.source_kind === 'repo_plugin_installer',
+    opl_generated_plugin_surface: spec.source_kind === 'opl_generated_plugin_surface',
+    generated_skill_surface_ready: generatedSkillSurface.ready,
+    generated_skill_surface_status: generatedSkillSurface.status,
+    installer_kind: spec.installer_kind,
+    command_preview: buildInstallerCommandPreview(spec, repoRoot),
+    generation_preview_command: spec.source_kind === 'opl_generated_plugin_surface'
+      ? ['opl', 'agents', 'interfaces', '--repo-dir', repoRoot, '--format', 'skill']
+      : null,
+    public_agent_list_must_not_split_by_transport: spec.distribution_role === 'domain_agent_plugin_pack',
+  };
 
   return {
     domain_id: spec.domain_id,
@@ -893,8 +918,21 @@ function inspectFamilySkillPackAtRepoRoot(
     plugin_name: spec.plugin_name,
     canonical_plugin_name: spec.canonical_plugin_name,
     distribution_role: spec.distribution_role,
+    agent_series_membership: spec.distribution_role === 'domain_agent_plugin_pack'
+      ? 'standard_domain_agent'
+      : null,
+    agent_projection_policy: spec.distribution_role === 'domain_agent_plugin_pack'
+      ? {
+          standard_membership: 'standard_domain_agent',
+          plugin_transport_is_membership_axis: false,
+          plugin_transport_is_status_axis: false,
+          generated_surface_is_membership_axis: false,
+          generated_surface_is_status_axis: false,
+        }
+      : null,
     ...seriesProjection,
     capability_plugin_distribution: capabilityPluginDistribution,
+    plugin_transport: pluginTransport,
     plugin_source_path: pluginSourcePath,
     repo_root: repoRoot,
     repo_found: repoFound,
@@ -907,11 +945,12 @@ function inspectFamilySkillPackAtRepoRoot(
     installer_path: installerPath,
     installer_found: installerFound,
     source_kind: spec.source_kind,
+    source_kind_role: 'transport_install_detail_not_agent_membership_or_status',
     generated_skill_surface_ready: generatedSkillSurface.ready,
     generated_skill_surface_status: generatedSkillSurface.status,
     ready_to_sync: repoPluginReady || (repoFound && generatedSkillSurface.ready),
     installer_kind: spec.installer_kind,
-    command_preview: buildInstallerCommandPreview(spec, repoRoot),
+    command_preview: pluginTransport.command_preview,
   };
 }
 

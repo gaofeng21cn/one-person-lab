@@ -319,29 +319,25 @@ test('framework tranche backlog exposes current selection and closed tranche arc
     ),
   );
   assert.equal(
-    readback.foundry_support_extension_membership_readback.surface_kind,
-    'opl_foundry_support_extension_membership_readback',
+    readback.foundry_standard_agent_membership_readback.surface_kind,
+    'opl_foundry_standard_agent_membership_readback',
   );
   assert.equal(
-    readback.foundry_support_extension_membership_readback.status,
+    readback.foundry_standard_agent_membership_readback.status,
     'closed_structure_gate_not_live_evidence',
   );
   assert.deepEqual(
-    readback.foundry_support_extension_membership_readback.standard_member_agent_ids,
-    ['mas', 'mag', 'rca', 'oma'],
-  );
-  assert.deepEqual(
-    readback.foundry_support_extension_membership_readback.support_extension_agent_ids,
-    ['opl-bookforge'],
+    readback.foundry_standard_agent_membership_readback.standard_member_agent_ids,
+    ['mas', 'mag', 'rca', 'oma', 'opl-bookforge'],
   );
   assert.equal(
-    readback.foundry_support_extension_membership_readback.false_ready_guard
-      .support_extension_pass_can_claim_standard_agent_membership,
+    readback.foundry_standard_agent_membership_readback.public_projection_policy
+      .generated_surface_or_hosted_route_is_membership_axis,
     false,
   );
   assert.equal(
-    readback.foundry_support_extension_membership_readback.authority_boundary
-      .can_promote_bookforge_to_standard_foundry_agent_os_member,
+    readback.foundry_standard_agent_membership_readback.false_ready_guard
+      .standard_membership_can_claim_domain_ready,
     false,
   );
   assert.equal(readback.authority_boundary.can_create_second_active_backlog, false);

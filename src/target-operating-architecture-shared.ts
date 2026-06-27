@@ -327,6 +327,7 @@ export const TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_AGENTS = [
   'mag',
   'rca',
   'oma',
+  'opl-bookforge',
 ] as const;
 
 export const TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_CAPABILITY_REGISTRY_MODULES = [

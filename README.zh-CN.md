@@ -150,9 +150,8 @@ One Person Lab 同时包含框架、桌面工作台和专业 Agent 三层：
 - 完善桌面应用的首次安装包、更新通道和跨平台发布流程。
 - 继续强化长任务推进能力，让恢复、重试、人工确认、阶段审阅和进度展示更加完整。
 - 将 OPL Meta Agent 作为智能体工坊入口，用于开发新领域智能体、接管既有智能体测试，并通过 Agent Lab 组织机制自进化。
-- 推进研究工坊、基金工坊、汇报工坊三条产品线的稳定交付体验。
-- 让图书工坊保持 owner-gated 路线，直到书稿质量、导出交接和 hosted runtime 证据足以支撑更强声明。
-- 在 generated surface、runtime handoff 和 App 产品 owner 证据到位后，再把 Book Forge 纳入默认 OPL Connect / App 可见面。
+- 推进研究工坊、基金工坊、汇报工坊和图书工坊的稳定交付体验。
+- 将 Book Forge 作为默认标准 Foundry Agent surface 纳入 OPL Connect / App 可见面，同时继续让书稿质量、导出交接、出版和 production-ready 声明保持 owner-gated。
 - 将专利、报奖、论文、审稿等高价值知识工作纳入同一产品家族。
 - 统一领域智能体的安装、模块发现、技能同步、产物浏览和工作区恢复体验。
 

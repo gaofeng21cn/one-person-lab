@@ -170,6 +170,40 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     scaffold.foundry_agent_series_contract.surface_kind,
     'opl_foundry_agent_series_contract',
   );
+  assert.equal(
+    scaffold.foundry_agent_series_contract.agent_membership_projection_policy.policy_id,
+    'standard_agent_membership_not_surface_origin',
+  );
+  assert.equal(
+    scaffold.foundry_agent_series_contract.agent_membership_projection_policy.default_membership,
+    'standard_domain_agent',
+  );
+  assert.equal(
+    scaffold.foundry_agent_series_contract.agent_membership_projection_policy
+      .public_agent_list_must_not_split_by_generated_surface,
+    true,
+  );
+  assert.equal(
+    scaffold.foundry_agent_series_contract.agent_membership_projection_policy
+      .public_agent_list_must_not_split_by_plugin_transport,
+    true,
+  );
+  assert.equal(
+    scaffold.foundry_agent_series_contract.agent_membership_projection_policy.generated_surface_is_membership_axis,
+    false,
+  );
+  assert.equal(
+    scaffold.foundry_agent_series_contract.agent_membership_projection_policy.generated_surface_is_status_axis,
+    false,
+  );
+  assert.equal(
+    scaffold.foundry_agent_series_contract.agent_membership_projection_policy.plugin_transport_is_membership_axis,
+    false,
+  );
+  assert.equal(
+    scaffold.foundry_agent_series_contract.agent_membership_projection_policy.plugin_transport_is_status_axis,
+    false,
+  );
   assert.deepEqual(scaffold.foundry_agent_series_contract.shared_progress_projection_fields, [
     'progress_delta_classification',
     'deliverable_progress_delta',

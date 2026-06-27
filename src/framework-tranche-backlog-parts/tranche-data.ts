@@ -145,7 +145,7 @@ export const MAS_CONFORMANCE_RESIDUE_CLOSEOUT_READBACK = {
     blocked_count: 0,
     passed_count: 5,
     residual_subreadback_scope:
-      'opl_bookforge_foundry_agent_os_membership_classified_as_support_extension_not_mas_private_control_owner_delta_residue',
+      'foundry_agent_os_membership_uses_five_standard_members_not_mas_private_control_owner_delta_residue',
   },
   closed_residue_boundary: {
     source_marker_authority_ref:
@@ -196,38 +196,39 @@ export const MAS_CONFORMANCE_RESIDUE_CLOSEOUT_READBACK = {
   },
 };
 
-export const FOUNDRY_SUPPORT_EXTENSION_MEMBERSHIP_READBACK = {
-  surface_kind: 'opl_foundry_support_extension_membership_readback',
+export const FOUNDRY_STANDARD_AGENT_MEMBERSHIP_READBACK = {
+  surface_kind: 'opl_foundry_standard_agent_membership_readback',
   status: 'closed_structure_gate_not_live_evidence',
   owner: 'one-person-lab',
   guard_role:
-    'bookforge_generated_surface_only_peer_is_classified_as_support_extension_not_foundry_agent_os_standard_member',
+    'foundry_agent_standard_membership_is_not_split_by_generated_surface_opl_hosted_command_route_or_plugin_transport',
   cli_readback_command: './bin/opl agents conformance --family-defaults --json',
-  standard_member_agent_ids: ['mas', 'mag', 'rca', 'oma'],
-  support_extension_agent_ids: ['opl-bookforge'],
-  support_extensions: [
-    {
-      agent_id: 'opl-bookforge',
-      classification: 'generated_surface_only_support_extension',
-      standard_membership: false,
-      generated_surface_only: true,
-      source_refs: [
-        'src/foundry-agent-cli-spine.ts#FOUNDRY_AGENT_PEERS.generated_surface_only',
-        'src/standard-domain-agent-family-repos.ts#DEFAULT_FAMILY_REPOS',
-        'src/standard-domain-agent-conformance-foundry-agent-os.ts#FOUNDRY_AGENT_OS_SUPPORT_EXTENSIONS',
-      ],
-      readback_fields: [
-        '.standard_domain_agent_conformance.foundry_agent_os_conformance.observed_support_extension_agent_ids',
-        '.standard_domain_agent_conformance.foundry_agent_os_conformance.observed_support_extension_domain_ids',
-        '.standard_domain_agent_conformance.foundry_agent_os_conformance.support_extension_policy',
-      ],
-    },
+  standard_member_agent_ids: ['mas', 'mag', 'rca', 'oma', 'opl-bookforge'],
+  public_projection_policy: {
+    standard_membership_value: 'standard_domain_agent',
+    generated_surface_or_hosted_route_is_membership_axis: false,
+    generated_surface_or_hosted_route_is_status_axis: false,
+    plugin_transport_source_kind_is_membership_axis: false,
+    plugin_transport_source_kind_is_status_axis: false,
+    list_and_inspect_must_not_emit_surface_mode: true,
+    list_and_inspect_must_not_emit_generated_surface_only: true,
+    connect_skills_must_project_source_kind_as_transport_only: true,
+  },
+  readback_fields: [
+    '.standard_domain_agent_conformance.foundry_agent_os_conformance.applies_to_domain_agents',
+    '.standard_domain_agent_conformance.foundry_agent_os_conformance.observed_domain_agent_ids',
+    '.standard_domain_agent_conformance.foundry_agent_os_conformance.standard_membership_policy',
+    '.foundry_agents.agents[].series_membership',
+    '.skill_catalog.packs[].agent_series_membership',
+    '.skill_catalog.packs[].plugin_transport.source_kind_role',
   ],
   non_live_evidence: [
-    'OPL_agents_conformance_classifies_BookForge_as_support_extension',
-    'OPL_foundry_agent_os_observed_standard_agent_ids_exclude_support_extensions',
+    'OPL_agents_conformance_classifies_BookForge_as_standard_domain_agent',
+    'OPL_foundry_agent_os_observed_standard_agent_ids_include_five_standard_agents',
+    'OPL_foundry_agent_list_omits_surface_mode_and_generated_surface_only_classification_fields',
+    'OPL_connect_skills_source_kind_is_transport_detail_not_agent_membership',
     'OPL_foundry_agent_os_unknown_non_standard_agent_still_blocks',
-    'OPL_agents_conformance_family_defaults_foundry_os_unblocked_without_BookForge_ready_claim',
+    'OPL_agents_conformance_family_defaults_foundry_os_unblocked_without_any_domain_ready_claim',
   ],
   deferred_evidence: [
     'BookForge_domain_owner_acceptance',
@@ -238,16 +239,15 @@ export const FOUNDRY_SUPPORT_EXTENSION_MEMBERSHIP_READBACK = {
   authority_boundary: {
     ...NO_SECOND_TRUTH_AUTHORITY_BOUNDARY,
     can_write_bookforge_domain_truth: false,
-    can_promote_bookforge_to_standard_foundry_agent_os_member: false,
     can_claim_bookforge_domain_ready: false,
     can_claim_bookforge_production_ready: false,
     can_claim_foundry_agent_os_complete: false,
   },
   false_ready_guard: {
-    support_extension_pass_can_claim_standard_agent_membership: false,
-    support_extension_pass_can_claim_domain_ready: false,
-    support_extension_pass_can_claim_production_ready: false,
-    support_extension_pass_can_claim_full_goal_complete: false,
+    standard_membership_can_claim_domain_ready: false,
+    standard_membership_can_claim_production_ready: false,
+    standard_membership_can_claim_full_goal_complete: false,
+    generated_surface_or_hosted_route_can_claim_domain_ready: false,
   },
 };
 
@@ -532,8 +532,8 @@ export const FRAMEWORK_TRANCHE_MILESTONES: FrameworkTrancheMilestone[] = [
     current_truth_refs: [
       'contracts/opl-framework/domain-pack-compiler-contract.json',
       'src/domain-pack-compiler.ts',
-      'src/standard-domain-agent-conformance-foundry-agent-os.ts#FOUNDRY_AGENT_OS_SUPPORT_EXTENSIONS',
-      'src/framework-tranche-backlog-parts/tranche-data.ts#FOUNDRY_SUPPORT_EXTENSION_MEMBERSHIP_READBACK',
+      'src/standard-domain-agent-conformance-foundry-agent-os.ts#buildFoundryAgentOsConformance',
+      'src/framework-tranche-backlog-parts/tranche-data.ts#FOUNDRY_STANDARD_AGENT_MEMBERSHIP_READBACK',
       'docs/active/current-state-vs-ideal-gap.md',
       'domain repos: contracts/private_functional_surface_policy.json',
       'redcube-ai@b0603a1a:contracts/generated_surface_handoff.json#OPL_GENERATED_SURFACE_EXIT_GATE.false_ready_guard',

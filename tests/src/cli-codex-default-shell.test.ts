@@ -565,22 +565,36 @@ test('opl connect skills discovers the family plugin packs through the configure
     const metaPack = output.skill_catalog.packs.find((entry: { domain_id: string }) => entry.domain_id === 'oplmetaagent');
     assert.equal(metaPack?.plugin_manifest_found, false);
     assert.equal(metaPack?.installer_found, false);
+    assert.equal(metaPack?.agent_series_membership, 'standard_domain_agent');
+    assert.equal(metaPack?.agent_projection_policy.plugin_transport_is_membership_axis, false);
     assert.equal(metaPack?.generated_skill_surface_ready, true);
     assert.equal(metaPack?.source_kind, 'opl_generated_plugin_surface');
+    assert.equal(metaPack?.source_kind_role, 'transport_install_detail_not_agent_membership_or_status');
+    assert.equal(metaPack?.plugin_transport.source_kind, 'opl_generated_plugin_surface');
+    assert.equal(metaPack?.plugin_transport.source_kind_role, 'transport_install_detail_not_agent_membership_or_status');
     assert.equal(metaPack?.ready_to_sync, true);
-    assert.deepEqual(metaPack?.command_preview?.slice(0, 3), ['opl', 'agents', 'interfaces']);
+    assert.deepEqual(metaPack?.command_preview, ['opl', 'connect', 'sync-skills', '--domain', 'oplmetaagent']);
+    assert.deepEqual(metaPack?.plugin_transport.generation_preview_command?.slice(0, 3), ['opl', 'agents', 'interfaces']);
     assert.equal(metaPack?.foundry_agent_series?.canonical_command_surface, 'opl agents foundry');
+    assert.equal(metaPack?.foundry_agent_series?.direct_cli_foundry_command_surface, 'opl foundry agents inspect oma');
     assert.equal(metaPack?.command_surface_spine?.skill_sync_command_surface, 'opl connect sync-skills');
     assert.equal(metaPack?.mcp_projection?.mcp_descriptor_must_delegate_to_series_spine, true);
     assert.equal(metaPack?.legacy_implementation_bucket_policy?.ordinary_public_command_surface_allowed, false);
     const bookforgePack = output.skill_catalog.packs.find((entry: { domain_id: string }) => entry.domain_id === 'oplbookforge');
     assert.equal(bookforgePack?.plugin_manifest_found, false);
     assert.equal(bookforgePack?.installer_found, false);
+    assert.equal(bookforgePack?.agent_series_membership, 'standard_domain_agent');
+    assert.equal(bookforgePack?.agent_projection_policy.plugin_transport_is_membership_axis, false);
     assert.equal(bookforgePack?.generated_skill_surface_ready, true);
     assert.equal(bookforgePack?.source_kind, 'opl_generated_plugin_surface');
+    assert.equal(bookforgePack?.source_kind_role, 'transport_install_detail_not_agent_membership_or_status');
+    assert.equal(bookforgePack?.plugin_transport.source_kind, 'opl_generated_plugin_surface');
+    assert.equal(bookforgePack?.plugin_transport.source_kind_role, 'transport_install_detail_not_agent_membership_or_status');
     assert.equal(bookforgePack?.ready_to_sync, true);
-    assert.deepEqual(bookforgePack?.command_preview?.slice(0, 3), ['opl', 'agents', 'interfaces']);
+    assert.deepEqual(bookforgePack?.command_preview, ['opl', 'connect', 'sync-skills', '--domain', 'oplbookforge']);
+    assert.deepEqual(bookforgePack?.plugin_transport.generation_preview_command?.slice(0, 3), ['opl', 'agents', 'interfaces']);
     assert.equal(bookforgePack?.foundry_agent_series?.canonical_command_surface, 'opl agents foundry');
+    assert.equal(bookforgePack?.foundry_agent_series?.direct_cli_foundry_command_surface, 'opl foundry agents inspect opl-bookforge');
     assert.equal(bookforgePack?.foundry_agent_series?.compatibility_foundry_command_surface, 'opl agents interfaces --repo-dir <opl-bookforge-repo>');
     assert.equal(bookforgePack?.command_surface_spine?.work_alias, 'book');
     const scholarSkillsPack = output.skill_catalog.packs.find((entry: { domain_id: string }) => entry.domain_id === 'scholarskills');
@@ -600,7 +614,7 @@ test('opl connect skills discovers the family plugin packs through the configure
       '--target-workspace',
       '<workspace-root>',
     ]);
-    const previewOutput = runCli(metaPack.command_preview.slice(1), {
+    const previewOutput = runCli(metaPack.plugin_transport.generation_preview_command.slice(1), {
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
       OPL_STATE_DIR: stateDir,
     });

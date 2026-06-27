@@ -20,7 +20,6 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
   assert.equal(pluginNames.includes('opl-bookforge'), true);
   assert.equal(pluginNames.includes('opl-scholarskills'), true);
   for (const pack of catalog.packs) {
-    const generatedOnly = ['opl-meta-agent', 'opl-bookforge'].includes(pack.canonical_plugin_name);
     const ordinaryOperations = pack.command_surface_spine.ordinary_operations as string[];
     const ordinaryPublicCommandSurfaceSpine = pack.command_surface_spine.ordinary_public_command_surface_spine as string[];
     const seriesDelegateToolRefs = pack.mcp_projection.series_delegate_tool_refs as string[];
@@ -45,28 +44,47 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
       ]);
       continue;
     }
+    assert.equal(pack.agent_series_membership, 'standard_domain_agent');
+    const agentProjectionPolicy = pack.agent_projection_policy;
+    if (agentProjectionPolicy === null) {
+      assert.fail('domain agent plugin packs must declare an agent projection policy');
+    }
+    assert.equal(agentProjectionPolicy.standard_membership, 'standard_domain_agent');
+    assert.equal(agentProjectionPolicy.plugin_transport_is_membership_axis, false);
+    assert.equal(agentProjectionPolicy.plugin_transport_is_status_axis, false);
     assert.equal(pack.foundry_agent_series.canonical_command_surface, 'opl agents foundry');
+    assert.equal(pack.foundry_agent_series.series_membership, 'standard_domain_agent');
+    assert.equal('surface_mode' in pack.foundry_agent_series, false);
+    assert.equal('generated_surface_only' in pack.foundry_agent_series, false);
+    assert.equal(
+      pack.foundry_agent_series.direct_cli_foundry_command_surface,
+      `opl foundry agents inspect ${pack.foundry_agent_series.foundry_agent_id}`,
+    );
+    assert.equal(pack.plugin_transport.source_kind_role, 'transport_install_detail_not_agent_membership_or_status');
+    assert.equal(pack.plugin_transport.public_agent_list_must_not_split_by_transport, true);
     if (pack.canonical_plugin_name === 'opl-meta-agent') {
-      assert.equal(pack.foundry_agent_series.generated_surface_only, true);
       assert.equal(pack.foundry_agent_series.direct_cli_foundry_command_surface, 'opl foundry agents inspect oma');
       assert.equal(pack.foundry_agent_series.compatibility_foundry_command_surface, 'opl agents interfaces --repo-dir <opl-meta-agent-repo>');
+      assert.equal(pack.foundry_agent_series.domain_native_foundry_command_surface, null);
     } else if (pack.canonical_plugin_name === 'opl-bookforge') {
-      assert.equal(pack.foundry_agent_series.generated_surface_only, true);
       assert.equal(pack.foundry_agent_series.brand_cli, 'opl-bookforge');
       assert.equal(pack.foundry_agent_series.direct_cli, 'opl agents interfaces --repo-dir <opl-bookforge-repo>');
       assert.equal(pack.foundry_agent_series.direct_cli_foundry_command_surface, 'opl foundry agents inspect opl-bookforge');
       assert.equal(pack.foundry_agent_series.compatibility_foundry_command_surface, 'opl agents interfaces --repo-dir <opl-bookforge-repo>');
+      assert.equal(pack.foundry_agent_series.domain_native_foundry_command_surface, null);
       assert.equal(pack.command_surface_spine.work_alias, 'book');
     } else if (pack.canonical_plugin_name === 'mas') {
       assert.equal(pack.foundry_agent_series.brand_cli, 'mas');
       assert.equal(pack.foundry_agent_series.direct_cli, 'medautosci');
-      assert.equal(pack.foundry_agent_series.direct_cli_foundry_command_surface, 'medautosci foundry');
+      assert.equal(pack.foundry_agent_series.direct_cli_foundry_command_surface, 'opl foundry agents inspect mas');
+      assert.equal(pack.foundry_agent_series.domain_native_foundry_command_surface, 'medautosci foundry');
       assert.equal(pack.foundry_agent_series.codex_executable_foundry_command_surface, 'medautosci foundry');
       assert.equal(pack.foundry_agent_series.compatibility_foundry_command_surface, 'medautosci foundry');
     } else if (pack.canonical_plugin_name === 'mag') {
       assert.equal(pack.foundry_agent_series.brand_cli, 'mag');
       assert.equal(pack.foundry_agent_series.direct_cli, 'medautogrant');
-      assert.equal(pack.foundry_agent_series.direct_cli_foundry_command_surface, 'medautogrant foundry');
+      assert.equal(pack.foundry_agent_series.direct_cli_foundry_command_surface, 'opl foundry agents inspect mag');
+      assert.equal(pack.foundry_agent_series.domain_native_foundry_command_surface, 'medautogrant foundry');
       assert.equal(
         pack.foundry_agent_series.codex_executable_foundry_command_surface,
         '<med-autogrant-repo>/scripts/run-python-clean.sh -m med_autogrant.cli foundry',
@@ -74,7 +92,8 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     } else if (pack.canonical_plugin_name === 'rca') {
       assert.equal(pack.foundry_agent_series.brand_cli, 'rca');
       assert.equal(pack.foundry_agent_series.direct_cli, 'redcube');
-      assert.equal(pack.foundry_agent_series.direct_cli_foundry_command_surface, 'redcube foundry');
+      assert.equal(pack.foundry_agent_series.direct_cli_foundry_command_surface, 'opl foundry agents inspect rca');
+      assert.equal(pack.foundry_agent_series.domain_native_foundry_command_surface, 'redcube foundry');
       assert.equal(
         pack.foundry_agent_series.codex_executable_foundry_command_surface,
         'npm run --prefix <redcube-ai-repo> redcube -- foundry',
@@ -89,18 +108,8 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     assert.equal(ordinaryOperations.includes('status'), true);
     assert.equal(ordinaryPublicCommandSurfaceSpine.includes('work'), true);
     assert.equal(pack.mcp_projection.mcp_descriptor_must_delegate_to_series_spine, true);
-    assert.equal(
-      seriesDelegateToolRefs.includes(
-        generatedOnly ? 'opl agents foundry interfaces' : `${pack.foundry_agent_series.direct_cli} foundry interfaces`,
-      ),
-      true,
-    );
-    assert.equal(
-      seriesDelegateToolRefs.includes(
-        generatedOnly ? 'opl agents foundry status' : `${pack.foundry_agent_series.direct_cli} foundry status`,
-      ),
-      true,
-    );
+    assert.equal(seriesDelegateToolRefs.includes('opl agents foundry interfaces'), true);
+    assert.equal(seriesDelegateToolRefs.includes('opl agents foundry status'), true);
     assert.equal(pack.legacy_implementation_bucket_policy.ordinary_public_command_surface_allowed, false);
   }
 });

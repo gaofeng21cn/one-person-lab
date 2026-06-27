@@ -457,10 +457,15 @@ test('target operating architecture contract freezes resource, authority, lane, 
     contract.foundry_agent_os_standard.target_shape,
     'OPL Agent OS + Domain Declarative Pack + Domain Minimal Authority Kernel + Domain Capability Registry',
   );
-  assert.deepEqual(contract.foundry_agent_os_standard.applies_to_domain_agents, ['mas', 'mag', 'rca', 'oma']);
+  assert.deepEqual(contract.foundry_agent_os_standard.applies_to_domain_agents, ['mas', 'mag', 'rca', 'oma', 'opl-bookforge']);
   assert.equal(contract.foundry_agent_os_standard.domain_pack_examples.mas, 'Medical Research Pack');
+  assert.equal(contract.foundry_agent_os_standard.domain_pack_examples['opl-bookforge'], 'Book Manuscript Pack');
   assert.equal(
     contract.foundry_agent_os_standard.domain_authority_kernel_examples.mag.includes('fundability quality/export verdict'),
+    true,
+  );
+  assert.equal(
+    contract.foundry_agent_os_standard.domain_authority_kernel_examples['opl-bookforge'].includes('book manuscript truth'),
     true,
   );
   assert.deepEqual(

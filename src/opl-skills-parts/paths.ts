@@ -149,10 +149,6 @@ export function buildInstallerCommandPreview(
   repoRoot: string,
   _home?: string,
 ) {
-  if (spec.source_kind === 'opl_generated_plugin_surface') {
-    return ['opl', 'agents', 'interfaces', '--repo-dir', repoRoot, '--format', 'skill'];
-  }
-
   if (spec.domain_id === 'scholarskills') {
     return [
       'opl',

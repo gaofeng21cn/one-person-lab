@@ -293,7 +293,7 @@ function formatHumanRootHelp(payload: ReturnType<typeof buildRootHelp>) {
     '  opl runway doctor              Check the OPL Runway runtime substrate surface',
     '  opl vault status               Check the OPL Vault evidence module surface',
     '  opl console status             Check the OPL Console operator module surface',
-    '  opl foundry agents list        List the OPL Foundry Agent series members',
+    '  opl foundry agents list        List the standard OPL Foundry Agent series members',
     '  opl connect modules            Inspect managed module health',
     '  opl connect sync-skills         Sync family skills to their target scope',
     '  opl "your task"                Start from the default Codex runtime',

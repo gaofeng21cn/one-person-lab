@@ -83,7 +83,7 @@ export function validateFoundryAgentOsStandard(filePath: string, value: unknown)
 
   const domainPackExamples: Record<string, string> = {};
   const domainAuthorityKernelExamples: Record<string, string[]> = {};
-  for (const agentId of TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_AGENTS) {
+  for (const agentId of appliesToDomainAgents) {
     domainPackExamples[agentId] = expectString(
       domainPackExamplesRaw[agentId],
       `foundry_agent_os_standard.domain_pack_examples.${agentId}`,

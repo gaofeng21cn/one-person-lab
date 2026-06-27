@@ -1021,13 +1021,15 @@
       "mas",
       "mag",
       "rca",
-      "oma"
+      "oma",
+      "opl-bookforge"
     ],
     "domain_pack_examples": {
       "mas": "Medical Research Pack",
       "mag": "Grant Pack",
       "rca": "Visual Deliverable Pack",
-      "oma": "Agent-Building Pack"
+      "oma": "Agent-Building Pack",
+      "opl-bookforge": "Book Manuscript Pack"
     },
     "domain_authority_kernel_examples": {
       "mas": [
@@ -1060,6 +1062,14 @@
         "mechanism proposal materialization",
         "target-agent no-forbidden-write proof",
         "target-agent typed blocker signer"
+      ],
+      "opl-bookforge": [
+        "book manuscript truth",
+        "manuscript quality/export verdict",
+        "book artifact authority",
+        "style/reference memory accept/reject",
+        "owner receipt signer",
+        "typed blocker signer"
       ]
     },
     "opl_module_mapping": [

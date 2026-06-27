@@ -492,6 +492,9 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, enforce
   const seriesDesignProfile = isPlainRecord(contract?.series_design_profile)
     ? contract.series_design_profile
     : null;
+  const agentMembershipProjectionPolicy = isPlainRecord(contract?.agent_membership_projection_policy)
+    ? contract.agent_membership_projection_policy
+    : null;
   const workspaceTopologyProfile = isPlainRecord(contract?.workspace_topology_profile)
     ? contract.workspace_topology_profile
     : null;
@@ -805,6 +808,33 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, enforce
     readOptionalString(contract?.product_layer) === STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT.product_layer
       ? null
       : 'foundry_agent_series_product_layer_invalid',
+    readOptionalString(agentMembershipProjectionPolicy?.policy_id) === 'standard_agent_membership_not_surface_origin'
+      ? null
+      : 'foundry_agent_membership_projection_policy_missing',
+    readOptionalString(agentMembershipProjectionPolicy?.default_membership) === 'standard_domain_agent'
+      ? null
+      : 'foundry_agent_membership_projection_default_invalid',
+    agentMembershipProjectionPolicy?.public_agent_list_must_not_split_by_generated_surface === true
+      ? null
+      : 'foundry_agent_membership_projection_public_list_must_not_split_by_generated_surface',
+    agentMembershipProjectionPolicy?.public_agent_list_must_not_split_by_plugin_transport === true
+      ? null
+      : 'foundry_agent_membership_projection_public_list_must_not_split_by_plugin_transport',
+    agentMembershipProjectionPolicy?.generated_surface_is_membership_axis === false
+      ? null
+      : 'foundry_agent_membership_projection_generated_surface_must_not_be_membership_axis',
+    agentMembershipProjectionPolicy?.generated_surface_is_status_axis === false
+      ? null
+      : 'foundry_agent_membership_projection_generated_surface_must_not_be_status_axis',
+    agentMembershipProjectionPolicy?.plugin_transport_is_membership_axis === false
+      ? null
+      : 'foundry_agent_membership_projection_plugin_transport_must_not_be_membership_axis',
+    agentMembershipProjectionPolicy?.plugin_transport_is_status_axis === false
+      ? null
+      : 'foundry_agent_membership_projection_plugin_transport_must_not_be_status_axis',
+    agentMembershipProjectionPolicy?.generated_surface_only_field_public_default === false
+      ? null
+      : 'foundry_agent_membership_projection_generated_surface_only_must_not_be_public_default',
     readOptionalString(contract?.domain_id) ? null : 'foundry_agent_series_missing_domain_id',
     readOptionalString(contract?.foundry_agent_id) ? null : 'foundry_agent_series_missing_foundry_agent_id',
     readOptionalString(contract?.authority_owner) ? null : 'foundry_agent_series_missing_authority_owner',
@@ -875,6 +905,7 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, enforce
     required_stage_packets: requiredStagePackets,
     shared_progress_projection_fields: sharedProgressProjectionFields,
     series_design_profile: seriesDesignProfile,
+    agent_membership_projection_policy: agentMembershipProjectionPolicy,
     workspace_topology_profile: workspaceTopologyProfile,
     contract_version_policy: contractVersionPolicy,
     shared_release_pin_strategy: sharedReleasePinStrategy,

@@ -393,18 +393,20 @@ export const MINIMAL_TARGET_OPERATING_ARCHITECTURE_CONTRACT: TargetOperatingArch
     pattern_id: 'foundry_agent_os_standard.v1',
     source_pattern_ref: 'human_doc:mas_opl_agent_os_target_operating_architecture',
     target_shape: 'OPL Agent OS + Domain Declarative Pack + Domain Minimal Authority Kernel + Domain Capability Registry',
-    applies_to_domain_agents: ['mas', 'mag', 'rca', 'oma'],
+    applies_to_domain_agents: ['mas', 'mag', 'rca', 'oma', 'opl-bookforge'],
     domain_pack_examples: {
       mas: 'Medical Research Pack',
       mag: 'Grant Pack',
       rca: 'Visual Deliverable Pack',
       oma: 'Agent-Building Pack',
+      'opl-bookforge': 'Book Manuscript Pack',
     },
     domain_authority_kernel_examples: {
       mas: ['medical research truth', 'owner receipt signer'],
       mag: ['grant truth', 'owner receipt signer'],
       rca: ['visual truth', 'owner receipt signer'],
       oma: ['agent-building semantics', 'target-agent typed blocker signer'],
+      'opl-bookforge': ['book manuscript truth', 'owner receipt signer'],
     },
     opl_module_mapping: [
       {
