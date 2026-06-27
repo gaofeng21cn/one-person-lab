@@ -327,3 +327,23 @@ Current next-route rules:
 | P0 | MAS PaperMission command/test source | Same-write-set owner-gated by MAS PaperMission/domain-handler work, not safe as an OPL refactor patrol mutation. | Re-audit only after the owning MAS lane is resolved, absorbed, or explicitly handed off. |
 | P1 | App `tmp/active-shell-checkout-backups/**`, generated `out/**`, dependency `node_modules/**`, release artifacts | Inventory noise, not App-owned source structure debt. | Exclude from selected batch; if cleanup is needed, route to artifact/cache lifecycle, not source refactor. |
 | P1 | OPL family non-fork repos | OPL root line-budget queue is empty; other repos need fresh repo-native source-purity/line-budget scans before mutation. | Mutate only with clean or unrelated dirty write set, authority-aware owner route, focused verification, and no fork-body path. |
+
+## 2026-06-28 Refactor Patrol Landing Round 10
+
+This follow-up continued the corrected non-fork rule. It did not touch upstream fork bodies and does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `redcube-ai` | `refactor_patrol` | `packages/redcube-domain-entry/src/actions/domain-action-adapter-parts/physical-source-morphology-policy.ts` split shared constants/source-structure metadata into `physical-source-morphology-policy-constants.ts`; pushed `main` commit `e9277f0e`. | Root main rerun: `npm run --silent build` passed; `node --experimental-strip-types --test tests/opl-agent-pack-contracts-source-morphology.test.ts tests/rca-private-platform-retirement-readback.test.ts` passed 9/9; `npm run --silent line-budget` passed; line readback: entry file 969 lines, constants part 99 lines; remote readback `origin/main` = `e9277f0e968b9f44bc289eae5e010e56440b2a14`; candidate branch patch-equivalent and cleaned. | This is behavior-preserving RCA machine-policy source structure evidence only. It does not authorize physical delete, default-caller cutover, visual readiness, export readiness, domain readiness, or production readiness. RCA canonical metadata test was already red on root `main` with `functional_privatization_audit` source/contract drift and remains a separate contract-alignment lane. |
+| `med-autoscience` | `read_only_candidate` | Subagent audit identified `tests/test_display_pack_renderer_structure.py` as the safest next non-authority test split candidate. | MAS root was clean but ahead 1; candidate is test-only and avoids contracts, generated gallery payload, paper authority, owner receipts, typed blockers, runtime DB, and source implementation. | Not mutated in Round 10 because RCA was already selected and verified. Next MAS lane should preserve the original test entry path and run `scripts/run-pytest-clean.sh tests/test_display_pack_renderer_structure.py tests/display_pack_renderer_structure_cases -q`. |
+
+### Round 10 Queue Adjustment
+
+Current next-route rules:
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| P0 | MAS `tests/test_display_pack_renderer_structure.py` | Safest fresh non-authority >1000-line candidate from MAS audit. | Use a MAS worktree; only split tests into `tests/display_pack_renderer_structure_cases/**`; do not touch renderer implementation, contracts, gallery payload, or paper authority. |
+| P1 | RCA canonical metadata drift | `tests/opl-agent-pack-contracts-canonical.test.ts` fails on current RCA `main` due to `functional_privatization_audit` source/contract shape drift unrelated to Round 10. | Route to a separate RCA contract-alignment lane; do not hide it behind structure cleanup. |
+| P1 | App / BookForge / OMA large tracked files | Current large hits are images, PDFs, lockfiles, workflows, or JSON contracts. | Do not split as source structure debt; only mutate when a repo-native owner route says the machine contract or workflow itself needs semantic change. |
