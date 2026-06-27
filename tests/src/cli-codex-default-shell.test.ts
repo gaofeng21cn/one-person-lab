@@ -576,7 +576,7 @@ test('opl connect skills discovers the family plugin packs through the configure
     assert.deepEqual(metaPack?.command_preview, ['opl', 'connect', 'sync-skills', '--domain', 'oplmetaagent']);
     assert.deepEqual(metaPack?.plugin_transport.generation_preview_command?.slice(0, 3), ['opl', 'agents', 'interfaces']);
     assert.equal(metaPack?.foundry_agent_series?.canonical_command_surface, 'opl agents foundry');
-    assert.equal(metaPack?.foundry_agent_series?.direct_cli_foundry_command_surface, 'opl foundry agents inspect oma');
+    assert.equal(metaPack?.foundry_agent_series?.default_foundry_command_surface, 'opl foundry agents inspect oma');
     assert.equal(metaPack?.command_surface_spine?.skill_sync_command_surface, 'opl connect sync-skills');
     assert.equal(metaPack?.mcp_projection?.mcp_descriptor_must_delegate_to_series_spine, true);
     assert.equal(metaPack?.legacy_implementation_bucket_policy?.ordinary_public_command_surface_allowed, false);
@@ -594,8 +594,10 @@ test('opl connect skills discovers the family plugin packs through the configure
     assert.deepEqual(bookforgePack?.command_preview, ['opl', 'connect', 'sync-skills', '--domain', 'oplbookforge']);
     assert.deepEqual(bookforgePack?.plugin_transport.generation_preview_command?.slice(0, 3), ['opl', 'agents', 'interfaces']);
     assert.equal(bookforgePack?.foundry_agent_series?.canonical_command_surface, 'opl agents foundry');
-    assert.equal(bookforgePack?.foundry_agent_series?.direct_cli_foundry_command_surface, 'opl foundry agents inspect opl-bookforge');
-    assert.equal(bookforgePack?.foundry_agent_series?.compatibility_foundry_command_surface, 'opl agents interfaces --repo-dir <opl-bookforge-repo>');
+    assert.equal(bookforgePack?.foundry_agent_series?.default_foundry_command_surface, 'opl foundry agents inspect opl-bookforge');
+    assert.equal('compatibility_foundry_command_surface' in bookforgePack.foundry_agent_series, false);
+    assert.equal('domain_native_foundry_command_surface' in bookforgePack.foundry_agent_series, false);
+    assert.equal('direct_domain_cli' in bookforgePack.foundry_agent_series, false);
     assert.equal(bookforgePack?.command_surface_spine?.work_alias, 'book');
     const scholarSkillsPack = output.skill_catalog.packs.find((entry: { domain_id: string }) => entry.domain_id === 'scholarskills');
     assert.equal(scholarSkillsPack?.distribution_role, 'framework_capability_plugin_pack');

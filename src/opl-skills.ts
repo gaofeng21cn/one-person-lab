@@ -163,24 +163,6 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
   const policyRelease = readObjectField(contract, 'shared_policy_release');
   const foundryAgentId = spec.canonical_plugin_name === 'opl-meta-agent' ? 'oma' : spec.canonical_plugin_name;
   const brandCli = spec.canonical_plugin_name === 'opl-meta-agent' ? 'oma' : spec.canonical_plugin_name;
-  const directCli = spec.canonical_plugin_name === 'opl-meta-agent'
-    ? 'opl agents interfaces --repo-dir <opl-meta-agent-repo>'
-    : spec.canonical_plugin_name === 'opl-bookforge'
-      ? 'opl agents interfaces --repo-dir <opl-bookforge-repo>'
-    : spec.canonical_plugin_name === 'mas'
-      ? 'medautosci'
-      : spec.canonical_plugin_name === 'mag'
-        ? 'medautogrant'
-        : 'redcube';
-  const codexExecutableCli = spec.canonical_plugin_name === 'opl-meta-agent'
-    ? `opl foundry agents inspect ${foundryAgentId}`
-    : spec.canonical_plugin_name === 'opl-bookforge'
-      ? `opl foundry agents inspect ${foundryAgentId}`
-    : spec.canonical_plugin_name === 'mas'
-      ? 'medautosci'
-      : spec.canonical_plugin_name === 'mag'
-        ? '<med-autogrant-repo>/scripts/run-python-clean.sh -m med_autogrant.cli'
-        : 'npm run --prefix <redcube-ai-repo> redcube --';
   const workAlias = spec.canonical_plugin_name === 'mas'
     ? 'study'
     : spec.canonical_plugin_name === 'mag'
@@ -194,17 +176,6 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
   const ordinarySpine = readStringListField(commandSurface, 'ordinary_public_command_surface_spine');
   const defaultFoundryCommandSurface = `opl foundry agents inspect ${foundryAgentId}`;
   const seriesFoundryOperations = ordinaryOperations.map((operation) => `opl agents foundry ${operation}`);
-  const domainNativeFoundryCommandSurface = spec.canonical_plugin_name === 'mas'
-    ? 'medautosci foundry'
-    : spec.canonical_plugin_name === 'mag'
-      ? 'medautogrant foundry'
-      : spec.canonical_plugin_name === 'rca'
-        ? 'redcube foundry'
-        : null;
-  const compatibilityFoundryCommandSurface = domainNativeFoundryCommandSurface ?? directCli;
-  const compatibilityFoundryOperations = domainNativeFoundryCommandSurface
-    ? ordinaryOperations.map((operation) => `${domainNativeFoundryCommandSurface} ${operation}`)
-    : [directCli];
 
   return {
     foundry_agent_series: {
@@ -219,16 +190,7 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
       domain_contract_ref: readStringField(versionPolicy, 'domain_contract_ref'),
       policy_release_ref: readStringField(policyRelease, 'policy_release_contract_ref'),
       brand_cli: brandCli,
-      direct_domain_cli: directCli,
-      direct_cli: directCli,
-      codex_executable_cli: codexExecutableCli,
-      direct_cli_foundry_command_surface: defaultFoundryCommandSurface,
       default_foundry_command_surface: defaultFoundryCommandSurface,
-      domain_native_foundry_command_surface: domainNativeFoundryCommandSurface,
-      codex_executable_foundry_command_surface: domainNativeFoundryCommandSurface
-        ? `${codexExecutableCli} foundry`
-        : defaultFoundryCommandSurface,
-      compatibility_foundry_command_surface: compatibilityFoundryCommandSurface,
       ordinary_golden_path:
         `${workAlias} -> stage -> domain owner receipt or typed blocker -> handoff`,
     },
@@ -236,13 +198,9 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
       surface_kind: 'opl_foundry_agent_skill_command_surface_spine_projection',
       ordinary_public_command_surface_spine: ordinarySpine,
       ordinary_operations: ordinaryOperations,
-      direct_cli_foundry_operations: seriesFoundryOperations,
       default_foundry_operations: seriesFoundryOperations,
-      compatibility_foundry_operations: compatibilityFoundryOperations,
       work_alias: workAlias,
-      work_alias_command_pattern: domainNativeFoundryCommandSurface
-        ? `${directCli} ${workAlias} ...`
-        : defaultFoundryCommandSurface,
+      work_alias_command_pattern: defaultFoundryCommandSurface,
       required_public_surface_derivatives: readStringListField(commandSurface, 'required_public_surface_derivatives'),
       skill_sync_command_surface: readStringField(skillMcp, 'canonical_skill_sync_command_surface'),
       skill_inspect_command_surface: readStringField(skillMcp, 'canonical_skill_connect_command_surface'),
@@ -265,12 +223,6 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
         'opl agents foundry status',
         `opl foundry agents inspect ${foundryAgentId}`,
       ],
-      compatibility_delegate_tool_refs: domainNativeFoundryCommandSurface
-        ? [
-            `${domainNativeFoundryCommandSurface} interfaces`,
-            `${domainNativeFoundryCommandSurface} status`,
-          ]
-        : [directCli],
       legacy_standalone_mcp_servers_retired: readBooleanField(
         skillMcp,
         'legacy_standalone_mcp_servers_retired',

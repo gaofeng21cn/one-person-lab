@@ -718,5 +718,8 @@ test('bin/opl routes Foundry Agent series commands into the OPL CLI instead of C
   const output = JSON.parse(result.stdout);
   assert.equal(output.foundry_agent.surface_kind, 'opl_foundry_agent_series_agent_inspect');
   assert.equal(output.foundry_agent.agent_id, 'mas');
-  assert.equal(output.foundry_agent.compatibility_command_surface, 'medautosci foundry');
+  assert.equal(output.foundry_agent.foundry_command_surface, 'opl foundry agents inspect mas');
+  assert.equal('compatibility_command_surface' in output.foundry_agent, false);
+  assert.equal('domain_native_foundry_command_surface' in output.foundry_agent, false);
+  assert.equal('direct_domain_cli' in output.foundry_agent, false);
 });

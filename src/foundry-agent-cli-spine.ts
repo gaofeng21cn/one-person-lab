@@ -28,13 +28,10 @@ const FOUNDRY_AGENT_PEERS = [
     label: 'Med Auto Science',
     series_membership: 'standard_domain_agent',
     brand_cli: 'mas',
-    direct_domain_cli: 'medautosci',
-    codex_executable_cli: 'medautosci',
     domain_alias: 'study',
     work_alias: 'study',
     ordinary_golden_path:
       'study -> stage -> domain owner receipt or typed blocker -> research artifact handoff',
-    domain_native_foundry_cli: 'medautosci foundry',
   },
   {
     agent_id: 'mag',
@@ -42,13 +39,10 @@ const FOUNDRY_AGENT_PEERS = [
     label: 'Med Auto Grant',
     series_membership: 'standard_domain_agent',
     brand_cli: 'mag',
-    direct_domain_cli: 'medautogrant',
-    codex_executable_cli: '<med-autogrant-repo>/scripts/run-python-clean.sh -m med_autogrant.cli',
     domain_alias: 'grant',
     work_alias: 'grant',
     ordinary_golden_path:
       'grant -> stage -> domain owner receipt or typed blocker -> grant deliverable handoff',
-    domain_native_foundry_cli: 'medautogrant foundry',
   },
   {
     agent_id: 'rca',
@@ -56,13 +50,10 @@ const FOUNDRY_AGENT_PEERS = [
     label: 'RedCube AI',
     series_membership: 'standard_domain_agent',
     brand_cli: 'rca',
-    direct_domain_cli: 'redcube',
-    codex_executable_cli: 'npm run --prefix <redcube-ai-repo> redcube --',
     domain_alias: 'deck',
     work_alias: 'deck',
     ordinary_golden_path:
       'deck -> stage -> domain owner receipt or typed blocker -> visual deliverable handoff',
-    domain_native_foundry_cli: 'redcube foundry',
   },
   {
     agent_id: 'oma',
@@ -70,8 +61,6 @@ const FOUNDRY_AGENT_PEERS = [
     label: 'OPL Meta Agent',
     series_membership: 'standard_domain_agent',
     brand_cli: 'oma',
-    direct_domain_cli: 'opl agents interfaces --repo-dir <opl-meta-agent-repo>',
-    codex_executable_cli: 'opl foundry agents inspect oma',
     domain_alias: 'agent',
     work_alias: 'agent',
     ordinary_golden_path:
@@ -83,8 +72,6 @@ const FOUNDRY_AGENT_PEERS = [
     label: 'OPL Book Forge',
     series_membership: 'standard_domain_agent',
     brand_cli: 'opl-bookforge',
-    direct_domain_cli: 'opl agents interfaces --repo-dir <opl-bookforge-repo>',
-    codex_executable_cli: 'opl foundry agents inspect opl-bookforge',
     domain_alias: 'book',
     work_alias: 'book',
     ordinary_golden_path:
@@ -96,7 +83,6 @@ type FoundryAgentPeer = typeof FOUNDRY_AGENT_PEERS[number];
 
 function buildPeerSeriesSummary(peer: FoundryAgentPeer) {
   const summary = { ...peer } as Record<string, unknown>;
-  delete summary.domain_native_foundry_cli;
   return summary;
 }
 
@@ -225,37 +211,15 @@ function buildAuthorityBoundary(contract: JsonRecord) {
 
 function buildPeerProjection(peer: FoundryAgentPeer) {
   const agentInspectCommandSurface = `opl foundry agents inspect ${peer.agent_id}`;
-  const domainNativeFoundryCli = 'domain_native_foundry_cli' in peer
-    ? peer.domain_native_foundry_cli
-    : null;
-  const codexExecutableCli = peer.codex_executable_cli;
   const brandCliPathSafe = false;
-  const compatibilityCommandSurface = domainNativeFoundryCli ?? peer.direct_domain_cli;
   const foundryOperations = FOUNDRY_AGENT_OPERATIONS.map((operation) => `opl agents foundry ${operation}`);
-  const compatibilityOperations = domainNativeFoundryCli
-    ? FOUNDRY_AGENT_OPERATIONS.map((operation) => `${domainNativeFoundryCli} ${operation}`)
-    : [peer.direct_domain_cli];
-  const executableDirectFoundrySurface = domainNativeFoundryCli ? `${codexExecutableCli} foundry` : null;
-  const executableDirectStatusJsonCommand = domainNativeFoundryCli
-    ? `${codexExecutableCli} foundry status --json`
-    : null;
-  const compatibilityStatusJsonCommand = domainNativeFoundryCli
-    ? `${domainNativeFoundryCli} status --json`
-    : peer.direct_domain_cli;
   const cliSmoke = {
     executable_brand_cli_command_surface: brandCliPathSafe ? `${peer.brand_cli} foundry` : null,
-    executable_direct_cli_command_surface: executableDirectFoundrySurface,
-    executable_compatibility_command_surface: domainNativeFoundryCli ? compatibilityCommandSurface : null,
     status_json_command: `${agentInspectCommandSurface} --json`,
-    executable_direct_status_json_command: executableDirectStatusJsonCommand,
-    compatibility_status_json_command: compatibilityStatusJsonCommand,
-    legacy_format_json_command: domainNativeFoundryCli ? `${domainNativeFoundryCli} status --format json` : null,
     json_flag_aliases: ['--json'],
-    compatibility_json_flag_aliases: domainNativeFoundryCli ? ['--json', '--format json'] : ['--json'],
     help_smoke_commands: [
       `${agentInspectCommandSurface} --json`,
       'opl agents foundry status --json',
-      ...(executableDirectStatusJsonCommand ? [executableDirectStatusJsonCommand] : []),
     ],
   };
 
@@ -267,18 +231,12 @@ function buildPeerProjection(peer: FoundryAgentPeer) {
     foundry_command_surface: agentInspectCommandSurface,
     default_foundry_command_surface: agentInspectCommandSurface,
     canonical_series_command_surface: 'opl agents foundry',
-    domain_native_foundry_command_surface: domainNativeFoundryCli,
-    compatibility_command_surface: compatibilityCommandSurface,
     foundry_operations: foundryOperations,
-    compatibility_operations: compatibilityOperations,
-    executable_direct_cli_command_surface: executableDirectFoundrySurface,
     brand_cli_path_safe_executable: brandCliPathSafe,
     cli_smoke: cliSmoke,
     ordinary_spine: ['workspace', 'work', 'stage', 'run', 'vault', 'handoff', 'connect'].map((object) => ({
       object,
-      command_pattern: domainNativeFoundryCli
-        ? `${peer.direct_domain_cli} ${object} ...`
-        : agentInspectCommandSurface,
+      command_pattern: agentInspectCommandSurface,
       domain_alias:
         object === 'work'
           ? peer.work_alias
@@ -492,7 +450,7 @@ export function buildFoundryAgentInspect(args: string[]) {
       status: 'standard_domain_agent',
       ...buildPeerProjection(peer),
       series_contract_ref: FOUNDRY_AGENT_SERIES_CONTRACT_REF,
-      direct_cli_command_surface_policy: {
+      command_surface_policy: {
         must_expose_foundry_operations: [...FOUNDRY_AGENT_OPERATIONS],
         first_screen_must_identify_series: true,
         old_implementation_buckets_are_diagnostic_only: true,
