@@ -774,3 +774,22 @@ Current next-route rules:
 | P0 | MAS `tests/test_cli_cases/paper_mission_commands.py` | Still over the split signal, now 1633 lines. | Split one remaining small family from clean/current MAS main; target entry below 1500 first, then below 1000 if natural boundaries remain. |
 | P1 | MAS `drive_and_route_handoff.py` | 928 lines, near the soft target. | Do not add more tests to this file; split only if it grows or gains a clearer sub-family boundary. |
 | P1 | RCA canonical metadata drift | Separate contract/source alignment issue. | Route to contract-alignment lane, not line-budget cleanup. |
+
+## 2026-06-28 Refactor Patrol Landing Round 33
+
+This continuation landed the MAS PaperMission materialized-readback test split from a clean/current MAS main worktree. It did not touch upstream fork bodies and does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `med-autoscience` | `refactor_patrol` | Moved the two governed materialized-readback tests into `tests/test_cli_cases/paper_mission_command_cases/materialized_readback.py`, preserving the original entry path via import. | MAS `main/origin` advanced to `befdc5bf3`; root `scripts/run-pytest-clean.sh tests/test_cli_cases/paper_mission_command_cases/materialized_readback.py -q` passed 2/2; root `scripts/run-pytest-clean.sh tests/test_cli_cases/paper_mission_commands.py -q` passed 46/46; `git diff --check` passed; line readback: entry 1282, materialized case 357, drive/route case 928, consume case 896, package case 632; candidate worktree removed and patch-equivalent branch deleted; remote readback `origin/main` = `befdc5bf3d97187f86b499bb5ae8b4e45b76ca5a`. | `paper_mission_commands.py` is now below the 1500-line split signal but still over the 1000-line preferred target. Continue only if a natural remaining family boundary is selected from clean/current MAS main; do not add to near-budget case files. |
+
+### Round 33 Queue Adjustment
+
+Current next-route rules:
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| P0 | MAS `tests/test_cli_cases/paper_mission_commands.py` | Below the 1500-line split signal at 1282 lines, still above the 1000-line preferred target. | Re-audit the remaining 12 tests; split again only on a clear natural test-family boundary with focused case verification. |
+| P1 | MAS near-budget case files | `drive_and_route_handoff.py` is 928 lines and `consume_submission_package.py` is 896 lines. | Do not append more tests to these files; split them later only if they grow or gain clearer sub-family boundaries. |
+| P1 | RCA canonical metadata drift | Separate contract/source alignment issue. | Route to contract-alignment lane, not line-budget cleanup. |
