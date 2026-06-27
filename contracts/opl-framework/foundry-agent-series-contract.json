@@ -5,6 +5,20 @@
   "product_layer": "foundry_agent",
   "product_model": "OPL Framework -> One Person Lab App -> Foundry Agents",
   "standard_agent_requirement": "foundry_agents_share_identity_stage_authority_progress_currentness_closeout_and_app_projection_packets",
+  "standard_agent_registry": {
+    "surface_kind": "opl_standard_agent_registry_pointer",
+    "version": "standard-agent-registry-pointer.v1",
+    "canonical_registry_ref": "src/standard-agent-registry.ts",
+    "membership_value": "standard_domain_agent",
+    "derived_projection_surfaces": [
+      "src/foundry-agent-cli-spine.ts",
+      "src/opl-skills.ts",
+      "src/standard-domain-agent-conformance-foundry-agent-os.ts",
+      "contracts/opl-framework/target-operating-architecture-contract.json"
+    ],
+    "public_agent_identity_must_derive_from_registry": true,
+    "alias_tables_must_derive_from_registry": true
+  },
   "agent_membership_projection_policy": {
     "surface_kind": "opl_foundry_agent_membership_projection_policy",
     "version": "foundry-agent-membership-projection.v1",

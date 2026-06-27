@@ -1,4 +1,8 @@
 import { unique } from './standard-domain-agent-conformance-utils.ts';
+import {
+  STANDARD_AGENT_REGISTRY_REF,
+  resolveStandardAgent,
+} from './standard-agent-registry.ts';
 import type { RepoConformanceReport } from './standard-domain-agent-conformance.ts';
 import type { FrameworkContracts } from './types.ts';
 
@@ -8,21 +12,7 @@ function statusFromBlockers(blockers: string[]) {
 
 function canonicalFoundryAgentId(report: RepoConformanceReport) {
   const rawId = report.requested_agent_id ?? report.domain_id;
-  const normalized = rawId.toLowerCase().replace(/[^a-z0-9]/g, '');
-  const aliases: Record<string, string> = {
-    mas: 'mas',
-    medautoscience: 'mas',
-    mag: 'mag',
-    medautogrant: 'mag',
-    rca: 'rca',
-    redcube: 'rca',
-    redcubeai: 'rca',
-    oma: 'oma',
-    oplmetaagent: 'oma',
-    bookforge: 'opl-bookforge',
-    oplbookforge: 'opl-bookforge',
-  };
-  return aliases[normalized] ?? rawId;
+  return resolveStandardAgent(rawId)?.agent_id ?? rawId;
 }
 
 function buildFoundryAgentOsDomainConformance(
@@ -210,6 +200,7 @@ export function buildFoundryAgentOsConformance(
     owner: 'one-person-lab',
     status: statusFromBlockers(blockers),
     pattern_id: standard.pattern_id,
+    standard_agent_registry_ref: STANDARD_AGENT_REGISTRY_REF,
     target_shape: standard.target_shape,
     source_pattern_ref: standard.source_pattern_ref,
     applies_to_domain_agents: expectedAgents,
@@ -232,6 +223,7 @@ export function buildFoundryAgentOsConformance(
     flagship_experience_mapping: flagshipMapping,
     standard_membership_policy: {
       policy_id: 'foundry_agent_standard_membership_is_not_surface_origin.v1',
+      source_ref: STANDARD_AGENT_REGISTRY_REF,
       standard_member_agent_ids: expectedAgents,
       generated_surface_is_membership_axis: false,
       generated_surface_is_status_axis: false,

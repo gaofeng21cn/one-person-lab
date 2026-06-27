@@ -160,6 +160,7 @@ export interface TargetOperatingArchitectureContract {
   foundry_agent_os_standard: {
     pattern_id: string;
     source_pattern_ref: string;
+    standard_agent_registry_ref: string;
     target_shape: string;
     applies_to_domain_agents: string[];
     domain_pack_examples: Record<string, string>;

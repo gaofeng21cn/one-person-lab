@@ -453,6 +453,7 @@ test('target operating architecture contract freezes resource, authority, lane, 
   }
 
   assert.equal(contract.foundry_agent_os_standard.pattern_id, 'foundry_agent_os_standard.v1');
+  assert.equal(contract.foundry_agent_os_standard.standard_agent_registry_ref, 'src/standard-agent-registry.ts');
   assert.equal(
     contract.foundry_agent_os_standard.target_shape,
     'OPL Agent OS + Domain Declarative Pack + Domain Minimal Authority Kernel + Domain Capability Registry',

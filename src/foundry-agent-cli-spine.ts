@@ -1,6 +1,11 @@
 import fs from 'node:fs';
 
 import { FrameworkContractError } from './contracts.ts';
+import {
+  STANDARD_AGENT_REGISTRY,
+  STANDARD_AGENT_REGISTRY_REF,
+  resolveStandardAgent,
+} from './standard-agent-registry.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -21,69 +26,21 @@ const FOUNDRY_AGENT_SERIES_CONTRACT_URL = new URL(
   import.meta.url,
 );
 
-const FOUNDRY_AGENT_PEERS = [
-  {
-    agent_id: 'mas',
-    domain_id: 'medautoscience',
-    label: 'Med Auto Science',
-    series_membership: 'standard_domain_agent',
-    brand_cli: 'mas',
-    domain_alias: 'study',
-    work_alias: 'study',
-    ordinary_golden_path:
-      'study -> stage -> domain owner receipt or typed blocker -> research artifact handoff',
-  },
-  {
-    agent_id: 'mag',
-    domain_id: 'medautogrant',
-    label: 'Med Auto Grant',
-    series_membership: 'standard_domain_agent',
-    brand_cli: 'mag',
-    domain_alias: 'grant',
-    work_alias: 'grant',
-    ordinary_golden_path:
-      'grant -> stage -> domain owner receipt or typed blocker -> grant deliverable handoff',
-  },
-  {
-    agent_id: 'rca',
-    domain_id: 'redcube',
-    label: 'RedCube AI',
-    series_membership: 'standard_domain_agent',
-    brand_cli: 'rca',
-    domain_alias: 'deck',
-    work_alias: 'deck',
-    ordinary_golden_path:
-      'deck -> stage -> domain owner receipt or typed blocker -> visual deliverable handoff',
-  },
-  {
-    agent_id: 'oma',
-    domain_id: 'oplmetaagent',
-    label: 'OPL Meta Agent',
-    series_membership: 'standard_domain_agent',
-    brand_cli: 'oma',
-    domain_alias: 'agent',
-    work_alias: 'agent',
-    ordinary_golden_path:
-      'target agent -> stage -> target owner answer -> mechanism or work-order handoff',
-  },
-  {
-    agent_id: 'opl-bookforge',
-    domain_id: 'oplbookforge',
-    label: 'OPL Book Forge',
-    series_membership: 'standard_domain_agent',
-    brand_cli: 'opl-bookforge',
-    domain_alias: 'book',
-    work_alias: 'book',
-    ordinary_golden_path:
-      'book -> stage -> domain owner receipt or typed blocker -> manuscript package handoff',
-  },
-] as const;
+const FOUNDRY_AGENT_PEERS = STANDARD_AGENT_REGISTRY;
 
-type FoundryAgentPeer = typeof FOUNDRY_AGENT_PEERS[number];
+type FoundryAgentPeer = typeof STANDARD_AGENT_REGISTRY[number];
 
 function buildPeerSeriesSummary(peer: FoundryAgentPeer) {
-  const summary = { ...peer } as Record<string, unknown>;
-  return summary;
+  return {
+    agent_id: peer.agent_id,
+    domain_id: peer.domain_id,
+    label: peer.label,
+    series_membership: peer.series_membership,
+    brand_cli: peer.brand_cli,
+    domain_alias: peer.domain_alias,
+    work_alias: peer.work_alias,
+    ordinary_golden_path: peer.ordinary_golden_path,
+  };
 }
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -164,6 +121,7 @@ function readFoundryAgentSeriesContract() {
 function buildSeriesRefs(contract: JsonRecord) {
   return {
     series_contract_ref: FOUNDRY_AGENT_SERIES_CONTRACT_REF,
+    standard_agent_registry_ref: STANDARD_AGENT_REGISTRY_REF,
     domain_contract_ref: readString(
       readRecord(contract.contract_version_policy, 'contract_version_policy').domain_contract_ref,
       'contract_version_policy.domain_contract_ref',
@@ -263,18 +221,7 @@ function buildPeerProjection(peer: FoundryAgentPeer) {
 }
 
 function resolvePeer(agentId: string) {
-  const normalized = agentId.trim().toLowerCase();
-  return FOUNDRY_AGENT_PEERS.find((peer) =>
-    peer.agent_id === normalized
-    || peer.domain_id === normalized
-    || peer.domain_alias === normalized
-    || peer.work_alias === normalized
-    || (peer.agent_id === 'oma' && normalized === 'opl-meta-agent')
-    || (peer.agent_id === 'opl-bookforge' && ['bookforge', 'book-forge', 'oplbookforge', 'opl_bookforge'].includes(normalized))
-    || (peer.agent_id === 'rca' && normalized === 'redcube-ai')
-    || (peer.agent_id === 'mas' && normalized === 'med-autoscience')
-    || (peer.agent_id === 'mag' && normalized === 'med-autogrant')
-  );
+  return resolveStandardAgent(agentId);
 }
 
 function parseAgentInspectArgs(args: string[]) {
@@ -360,6 +307,11 @@ export function buildFoundryAgentCliSpine(operation: FoundryAgentCliOperation, a
       ordinary_command_surface: true,
       operations,
       refs: buildSeriesRefs(contract),
+      standard_agent_registry: {
+        source_ref: STANDARD_AGENT_REGISTRY_REF,
+        canonical_membership: 'standard_domain_agent',
+        agent_ids: FOUNDRY_AGENT_PEERS.map((entry) => entry.agent_id),
+      },
       series_identity: {
         version: readString(contract.version, 'version'),
         product_layer: readString(contract.product_layer, 'product_layer'),
@@ -450,6 +402,7 @@ export function buildFoundryAgentInspect(args: string[]) {
       status: 'standard_domain_agent',
       ...buildPeerProjection(peer),
       series_contract_ref: FOUNDRY_AGENT_SERIES_CONTRACT_REF,
+      standard_agent_registry_ref: STANDARD_AGENT_REGISTRY_REF,
       command_surface_policy: {
         must_expose_foundry_operations: [...FOUNDRY_AGENT_OPERATIONS],
         first_screen_must_identify_series: true,

@@ -41,6 +41,10 @@ import {
   type SyncFamilySkillPack,
 } from './opl-skills-parts/registry.ts';
 import { runSkillPackInstaller } from './opl-skills-parts/sync.ts';
+import {
+  STANDARD_AGENT_REGISTRY_REF,
+  resolveStandardAgentByCanonicalPluginName,
+} from './standard-agent-registry.ts';
 
 export const resolveDefaultFamilyWorkspaceRoot = resolveDefaultFamilyWorkspaceRootImpl;
 export const resolveFamilyWorkspaceRootFromRepoRoot = resolveFamilyWorkspaceRootFromRepoRootImpl;
@@ -161,17 +165,19 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
   const retirement = readObjectField(contract, 'legacy_implementation_bucket_retirement_policy');
   const versionPolicy = readObjectField(contract, 'contract_version_policy');
   const policyRelease = readObjectField(contract, 'shared_policy_release');
-  const foundryAgentId = spec.canonical_plugin_name === 'opl-meta-agent' ? 'oma' : spec.canonical_plugin_name;
-  const brandCli = spec.canonical_plugin_name === 'opl-meta-agent' ? 'oma' : spec.canonical_plugin_name;
-  const workAlias = spec.canonical_plugin_name === 'mas'
-    ? 'study'
-    : spec.canonical_plugin_name === 'mag'
-      ? 'grant'
-      : spec.canonical_plugin_name === 'rca'
-        ? 'deck'
-        : spec.canonical_plugin_name === 'opl-bookforge'
-          ? 'book'
-          : 'agent';
+  const standardAgent = resolveStandardAgentByCanonicalPluginName(spec.canonical_plugin_name);
+  if (!standardAgent) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      `Domain agent skill pack is missing from the StandardAgentRegistry: ${spec.canonical_plugin_name}.`,
+      {
+        canonical_plugin_name: spec.canonical_plugin_name,
+      },
+    );
+  }
+  const foundryAgentId = standardAgent.agent_id;
+  const brandCli = standardAgent.brand_cli;
+  const workAlias = standardAgent.work_alias;
   const ordinaryOperations = readStringListField(commandSurface, 'ordinary_operations');
   const ordinarySpine = readStringListField(commandSurface, 'ordinary_public_command_surface_spine');
   const defaultFoundryCommandSurface = `opl foundry agents inspect ${foundryAgentId}`;
@@ -187,12 +193,12 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
       canonical_command_surface: readStringField(commandSurface, 'canonical_opl_command_surface'),
       product_model: readStringField(contract, 'product_model'),
       series_contract_ref: FOUNDRY_AGENT_SERIES_CONTRACT_REF,
+      standard_agent_registry_ref: STANDARD_AGENT_REGISTRY_REF,
       domain_contract_ref: readStringField(versionPolicy, 'domain_contract_ref'),
       policy_release_ref: readStringField(policyRelease, 'policy_release_contract_ref'),
       brand_cli: brandCli,
       default_foundry_command_surface: defaultFoundryCommandSurface,
-      ordinary_golden_path:
-        `${workAlias} -> stage -> domain owner receipt or typed blocker -> handoff`,
+      ordinary_golden_path: standardAgent.ordinary_golden_path,
     },
     command_surface_spine: {
       surface_kind: 'opl_foundry_agent_skill_command_surface_spine_projection',

@@ -7,6 +7,7 @@ import {
   BRAND_MODULE_IDS,
   expectNonEmptyStringArray,
 } from './brand-module-contracts.ts';
+import { listStandardAgentIds } from './standard-agent-registry.ts';
 
 export function expectFalseBoolean(value: unknown, field: string, filePath: string) {
   if (value !== false) {
@@ -322,13 +323,7 @@ export const TARGET_ARCHITECTURE_ONE_SHOT_PLAN_STATUSES = [
   'external_owner_gated',
 ] as const;
 
-export const TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_AGENTS = [
-  'mas',
-  'mag',
-  'rca',
-  'oma',
-  'opl-bookforge',
-] as const;
+export const TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_AGENTS = listStandardAgentIds();
 
 export const TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_CAPABILITY_REGISTRY_MODULES = [
   'atlas',

@@ -11,6 +11,9 @@ import {
   requireEveryValue,
 } from './brand-module-contracts.ts';
 import {
+  STANDARD_AGENT_REGISTRY_REF,
+} from './standard-agent-registry.ts';
+import {
   TARGET_ARCHITECTURE_EXPERIENCE_AXIS_IDS,
   TARGET_ARCHITECTURE_FLAGSHIP_CONTRACT_SURFACES,
   TARGET_ARCHITECTURE_FLAGSHIP_FALSE_READY_CLAIMS,
@@ -55,6 +58,19 @@ export function validateFoundryAgentOsStandard(filePath: string, value: unknown)
       file: filePath,
       field: 'foundry_agent_os_standard.target_shape',
       actual: targetShape,
+    });
+  }
+  const standardAgentRegistryRef = expectString(
+    value.standard_agent_registry_ref,
+    'foundry_agent_os_standard.standard_agent_registry_ref',
+    filePath,
+  );
+  if (standardAgentRegistryRef !== STANDARD_AGENT_REGISTRY_REF) {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.standard_agent_registry_ref must point at the canonical StandardAgentRegistry.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.standard_agent_registry_ref',
+      actual: standardAgentRegistryRef,
+      expected: STANDARD_AGENT_REGISTRY_REF,
     });
   }
 
@@ -247,6 +263,7 @@ export function validateFoundryAgentOsStandard(filePath: string, value: unknown)
   return {
     pattern_id: patternId,
     source_pattern_ref: expectString(value.source_pattern_ref, 'foundry_agent_os_standard.source_pattern_ref', filePath),
+    standard_agent_registry_ref: standardAgentRegistryRef,
     target_shape: targetShape,
     applies_to_domain_agents: appliesToDomainAgents,
     domain_pack_examples: domainPackExamples,

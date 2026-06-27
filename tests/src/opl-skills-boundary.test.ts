@@ -87,6 +87,7 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     assert.equal(agentProjectionPolicy.plugin_transport_is_status_axis, false);
     assert.equal(pack.foundry_agent_series.canonical_command_surface, 'opl agents foundry');
     assert.equal(pack.foundry_agent_series.series_membership, 'standard_domain_agent');
+    assert.equal(pack.foundry_agent_series.standard_agent_registry_ref, 'src/standard-agent-registry.ts');
     assert.equal('surface_mode' in pack.foundry_agent_series, false);
     assert.equal('generated_surface_only' in pack.foundry_agent_series, false);
     assert.equal(

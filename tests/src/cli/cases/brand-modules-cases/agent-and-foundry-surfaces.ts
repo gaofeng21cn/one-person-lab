@@ -84,6 +84,9 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying OPL bra
 
     assert.equal(output.series_id, 'opl_foundry_agent_series.v1');
     assert.equal(output.series_label, 'OPL Foundry Agent');
+    assert.equal(output.standard_agent_registry.source_ref, 'src/standard-agent-registry.ts');
+    assert.deepEqual(output.standard_agent_registry.agent_ids, ['mas', 'mag', 'rca', 'oma', 'opl-bookforge']);
+    assert.equal(output.refs.standard_agent_registry_ref, 'src/standard-agent-registry.ts');
     assert.equal(output.operation, operation);
     assert.equal(output.canonical_command_surface, 'opl agents foundry');
     assert.equal(output.status, operation === 'doctor' ? 'pass' : 'valid');
@@ -190,6 +193,7 @@ test('OPL Foundry Agent index exposes MAS MAG RCA OMA Book Forge as one standard
 
   const mas = runCli(['foundry', 'agents', 'inspect', 'mas']).foundry_agent;
   assert.equal(mas.status, 'standard_domain_agent');
+  assert.equal(mas.standard_agent_registry_ref, 'src/standard-agent-registry.ts');
   assert.equal('surface_mode' in mas, false);
   assert.equal('generated_surface_only' in mas, false);
   assert.equal(mas.series_membership, 'standard_domain_agent');
@@ -203,6 +207,10 @@ test('OPL Foundry Agent index exposes MAS MAG RCA OMA Book Forge as one standard
   assert.equal('executable_brand_cli_frontdoor' in mas.cli_smoke, false);
   assert.equal(mas.cli_smoke.status_json_command, 'opl foundry agents inspect mas --json');
   assert.equal(mas.mcp_projection.mcp_descriptor_must_delegate_to_series_spine, true);
+
+  const masAlias = runCli(['foundry', 'agents', 'inspect', 'med-autoscience']).foundry_agent;
+  assert.equal(masAlias.agent_id, 'mas');
+  assert.equal(masAlias.status, 'standard_domain_agent');
 
   const mag = runCli(['foundry', 'agents', 'inspect', 'mag']).foundry_agent;
   assert.equal(mag.status, 'standard_domain_agent');
@@ -244,6 +252,7 @@ test('OPL Foundry Agent index exposes MAS MAG RCA OMA Book Forge as one standard
 
   const bookforge = runCli(['foundry', 'agents', 'inspect', 'opl-bookforge']).foundry_agent;
   assert.equal(bookforge.status, 'standard_domain_agent');
+  assert.equal(bookforge.standard_agent_registry_ref, 'src/standard-agent-registry.ts');
   assert.equal('surface_mode' in bookforge, false);
   assert.equal('generated_surface_only' in bookforge, false);
   assert.equal(bookforge.series_membership, 'standard_domain_agent');
@@ -254,4 +263,8 @@ test('OPL Foundry Agent index exposes MAS MAG RCA OMA Book Forge as one standard
   assert.equal(bookforge.cli_smoke.status_json_command, 'opl foundry agents inspect opl-bookforge --json');
   assert.equal(bookforge.cli_smoke.executable_brand_cli_command_surface, null);
   assert.equal(bookforge.command_surface_policy.first_screen_must_identify_series, true);
+
+  const bookforgeAlias = runCli(['foundry', 'agents', 'inspect', 'bookforge']).foundry_agent;
+  assert.equal(bookforgeAlias.agent_id, 'opl-bookforge');
+  assert.equal(bookforgeAlias.status, 'standard_domain_agent');
 });

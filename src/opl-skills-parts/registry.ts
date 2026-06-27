@@ -1,6 +1,10 @@
 import path from 'node:path';
 
 import { FrameworkContractError } from '../contracts.ts';
+import {
+  STANDARD_AGENT_REGISTRY,
+  standardAgentDomainAliasEntries,
+} from '../standard-agent-registry.ts';
 
 export type SkillPackInstallerKind = 'bash' | 'node';
 export type SkillPackSourceKind = 'repo_plugin_installer' | 'opl_generated_plugin_surface';
@@ -98,69 +102,18 @@ export type SyncFamilySkillPack = InspectFamilySkillPack & {
 };
 
 export const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
-  {
-    domain_id: 'medautoscience',
-    module_id: 'MEDAUTOSCIENCE',
-    project: 'med-autoscience',
-    label: 'Med Auto Science',
-    plugin_name: 'med-autoscience',
-    canonical_plugin_name: 'mas',
-    source_kind: 'repo_plugin_installer',
-    distribution_role: 'domain_agent_plugin_pack',
-    installer_kind: 'bash',
-    installer_relative_paths: [path.join('scripts', 'install-codex-plugin.sh')],
-  },
-  {
-    domain_id: 'medautogrant',
-    module_id: 'MEDAUTOGRANT',
-    project: 'med-autogrant',
-    label: 'Med Auto Grant',
-    plugin_name: 'med-autogrant',
-    canonical_plugin_name: 'mag',
-    source_kind: 'repo_plugin_installer',
-    distribution_role: 'domain_agent_plugin_pack',
-    installer_kind: 'bash',
-    installer_relative_paths: [path.join('scripts', 'install-codex-plugin.sh')],
-  },
-  {
-    domain_id: 'redcube',
-    module_id: 'REDCUBE',
-    project: 'redcube-ai',
-    label: 'RedCube AI',
-    plugin_name: 'redcube-ai',
-    canonical_plugin_name: 'rca',
-    source_kind: 'repo_plugin_installer',
-    distribution_role: 'domain_agent_plugin_pack',
-    installer_kind: 'node',
-    installer_relative_paths: [
-      path.join('scripts', 'install-codex-plugin.ts'),
-      path.join('scripts', 'install-codex-plugin.mjs'),
-    ],
-  },
-  {
-    domain_id: 'oplmetaagent',
-    module_id: 'OPLMETAAGENT',
-    project: 'opl-meta-agent',
-    label: 'OPL Meta Agent',
-    plugin_name: 'opl-meta-agent',
-    canonical_plugin_name: 'opl-meta-agent',
-    source_kind: 'opl_generated_plugin_surface',
-    distribution_role: 'domain_agent_plugin_pack',
-    installer_kind: 'node',
-    installer_relative_paths: [],
-  },
-  {
-    domain_id: 'oplbookforge',
-    module_id: 'OPLBOOKFORGE',
-    project: 'opl-bookforge',
-    label: 'OPL Book Forge',
-    plugin_name: 'opl-bookforge',
-    canonical_plugin_name: 'opl-bookforge',
-    source_kind: 'opl_generated_plugin_surface',
-    distribution_role: 'domain_agent_plugin_pack',
-    installer_kind: 'node',
-    installer_relative_paths: [],
-  },
+  ...STANDARD_AGENT_REGISTRY.map((entry) => ({
+    domain_id: entry.domain_id,
+    module_id: entry.module_id,
+    project: entry.project,
+    label: entry.label,
+    plugin_name: entry.plugin_name,
+    canonical_plugin_name: entry.canonical_plugin_name,
+    source_kind: entry.source_kind,
+    distribution_role: 'domain_agent_plugin_pack' as const,
+    installer_kind: entry.installer_kind,
+    installer_relative_paths: entry.installer_relative_paths.map((relativePath) => path.join(...relativePath.split('/'))),
+  })),
   {
     domain_id: 'scholarskills',
     module_id: 'SCHOLARSKILLS',
@@ -176,29 +129,10 @@ export const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
 ];
 
 const DOMAIN_ALIAS_MAP = new Map<string, SkillPackSpec['domain_id']>([
-  ['mas', 'medautoscience'],
-  ['medautoscience', 'medautoscience'],
-  ['med-autoscience', 'medautoscience'],
-  ['med_auto_science', 'medautoscience'],
-  ['mag', 'medautogrant'],
-  ['medautogrant', 'medautogrant'],
-  ['med-autogrant', 'medautogrant'],
-  ['med_auto_grant', 'medautogrant'],
-  ['rca', 'redcube'],
-  ['redcube', 'redcube'],
-  ['redcube-ai', 'redcube'],
-  ['redcube_ai', 'redcube'],
-  ['oplmetaagent', 'oplmetaagent'],
-  ['opl-meta-agent', 'oplmetaagent'],
-  ['opl_meta_agent', 'oplmetaagent'],
-  ['meta-agent', 'oplmetaagent'],
-  ['meta_agent', 'oplmetaagent'],
-  ['bookforge', 'oplbookforge'],
-  ['book-forge', 'oplbookforge'],
-  ['book_forge', 'oplbookforge'],
-  ['oplbookforge', 'oplbookforge'],
-  ['opl-bookforge', 'oplbookforge'],
-  ['opl_bookforge', 'oplbookforge'],
+  ...standardAgentDomainAliasEntries().map((entry) => [
+    entry.alias,
+    entry.domain_id as SkillPackSpec['domain_id'],
+  ] as const),
   ['scholarskills', 'scholarskills'],
   ['scholar-skills', 'scholarskills'],
   ['scholar_skills', 'scholarskills'],
