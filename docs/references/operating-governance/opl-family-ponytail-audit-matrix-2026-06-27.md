@@ -168,3 +168,15 @@ This follow-up continued line-budget-first cleanup with disjoint worktrees. It d
 | `med-autoscience` | `owner_lane` | Still no mutation. | MAS target test/source write set remains owned by `/Users/gaofeng/workspace/.worktrees/mas-owner-fallback-20260627`. | MAS line-budget cleanup remains same-write-set owner-gated until that lane is resolved, absorbed, or handed off. |
 
 Round-3 temporary worktrees are cleanup candidates after push/readback and absorption audit. The older OPL worktree `codex/opl-currentness-20260627` remains outside this tranche and must not be deleted by this cleanup route.
+
+## 2026-06-27 Refactor Patrol Landing Round 4
+
+This follow-up continued line-budget-first cleanup. It does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `one-person-lab` | `refactor_patrol` | `tests/src/cli/cases/family-runtime-domain-progress-transition-runtime.test.ts` split out human-gate replay cases; local `main` commit `fba1b9c7`. | Main rerun: `node --experimental-strip-types --test tests/src/cli/cases/family-runtime-domain-progress-transition-runtime.test.ts` passed 23/23; `npm run typecheck` passed; `git diff --check origin/main..HEAD` passed. Line readback: entry file 949 lines; new part 211 lines. | This is test structure cleanup only. It does not prove live runtime readiness or domain progress. |
+| `opl-hermes-shell` | `refactor_patrol` | Desktop log buffer / rotation / flush controller split from `electron/main.cjs`; local `main` commit `6e3db35`. | Main rerun: desktop-log/window/gateway focused tests passed 40/40; `node --check` for touched files passed; `npm run typecheck` passed; `git diff --check origin/main..HEAD` passed. Line readback: `electron/main.cjs` 5745 lines. | `electron/main.cjs` remains P0 structure debt. No Electron GUI runtime smoke claim is made. |
+| `one-person-lab` | `active_lane` | `system-startup-maintenance` split remains in progress in `/Users/gaofeng/workspace/.worktrees/opl-system-startup-maintenance-test-split-20260627`. | Fresh status during closeout: branch `codex/opl-system-startup-maintenance-test-split-20260627` was ahead 1 / behind 1 with dirty `tests/src/cli/cases/system-startup-maintenance-startup.test.ts`. | Do not absorb, push, or clean this lane until the owner returns a candidate or hands off the write set. |
+
+Round-4 completed worktrees are cleanup candidates after push/readback and patch-equivalence audit. The active system-startup worktree remains owned by its worker and is not part of this closeout.
