@@ -89,6 +89,7 @@ const PAPER_MISSION_DOMAIN_GATE_FRESH_HANDOFF_REASONS = new Set([
 const PAPER_MISSION_PROVIDER_RUNTIME_FRESH_HANDOFF_REASONS = new Set([
   'codex_cli_provider_unavailable',
   'codex_cli_typed_closeout_not_materialized',
+  'closeout_not_materialized',
 ]);
 const PAPER_MISSION_LEGACY_IDENTITY_BLOCKER_FRESH_HANDOFF_REASONS = new Set([
   'paper_mission_route_missing_identity_field:route_identity_key',

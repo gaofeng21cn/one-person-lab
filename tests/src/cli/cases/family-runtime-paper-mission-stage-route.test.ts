@@ -1915,13 +1915,18 @@ test('family-runtime requeues fresh MAS PaperMission handoff after recoverable p
       dedupeKey,
       source: 'test-provider-runtime-blocker',
     });
+    const providerRuntimeBlockerReason = 'closeout_not_materialized';
     db.prepare(`
       UPDATE tasks
       SET status = 'blocked',
-        last_error = 'codex_cli_provider_unavailable',
-        dead_letter_reason = 'codex_cli_provider_unavailable'
+        last_error = ?,
+        dead_letter_reason = ?
       WHERE task_id = ?
-    `).run(enqueued.task.task_id);
+    `).run(
+      providerRuntimeBlockerReason,
+      providerRuntimeBlockerReason,
+      enqueued.task.task_id,
+    );
 
     const freshPayload = paperMissionRoutePayloadWithWorkspace({
       study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
@@ -1961,7 +1966,7 @@ test('family-runtime requeues fresh MAS PaperMission handoff after recoverable p
     assert.equal(task.task.payload.paper_mission_transaction_ref, freshPayload.paper_mission_transaction_ref);
     assert.notEqual(event, undefined);
     assert.equal(event?.payload.reason, 'paper_mission_stage_route_provider_runtime_fresh_handoff');
-    assert.equal(event?.payload.previous_provider_runtime_reason, 'codex_cli_provider_unavailable');
+    assert.equal(event?.payload.previous_provider_runtime_reason, providerRuntimeBlockerReason);
     assert.equal(event?.payload.previous_candidate_ref, firstPayload.candidate_ref);
     assert.equal(event?.payload.next_candidate_ref, freshPayload.candidate_ref);
     assert.equal(event?.payload.previous_opl_route_handoff_ref, firstHandoffRef);
