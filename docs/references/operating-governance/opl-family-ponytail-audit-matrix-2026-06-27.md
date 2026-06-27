@@ -81,3 +81,31 @@ These counts are inventory signals only. They do not prove dead code, safe delet
 | Broad high-authority cleanup target | `done` | `100%` | MAS focused retirement suite 19 pass; MAG strict guard `cleanup_candidate_count=0`; RCA tail readback `tail_surface_count=0`, `cleanup_candidate_count=0`; OMA compact/full readback `cleanup_candidate_count=0`, `retained_current_count=30`; all batch worktrees/branches cleaned. | Completion is cleanup/readback closeout, not runtime/domain/release readiness. Retained current surfaces remain but are no longer unresolved cleanup candidates. | Future physical deletes require new no-active-caller or parity evidence. |
 | Authority blockers mapped | `done` | `100%` | matrix rows identify MAS/MAG/RCA/App/ScholarSkills owner boundaries and now distinguish owner permission from function-safety evidence. | Owner authorization no longer blocks user-owned repos; safety evidence still blocks unsafe deletes. | Use this matrix as intake plus rerun repo-native guards before each delete. |
 | Temporary Ponytail lane cleanup | `done` | `100%` | MAS/RCA cherry-picked lanes recorded and cleaned; OMA batch2/3/4 worktrees and branches cleaned; MAG cleanup worktrees cleaned; prior OPL/App/ScholarSkills/BookForge Ponytail lanes already cleaned. | Unrelated active dirty writes remain outside this batch, including OPL root test files and MAS PaperMission/domain-handler files. | No further cleanup for this Ponytail batch. |
+
+## Governance Automation Split
+
+The two Codex automations now share the same authority-aware matrix shape but keep separate owners:
+
+| Automation | Primary route | Owns | Does not own | Handoff rule |
+| --- | --- | --- | --- | --- |
+| `opl-family` / `OPL family 合理重构巡检` | `refactor_patrol` | line-budget-first / overlong-file-first structure work, natural splits, cycle breaks, duplicate helper merges, over-wide export shrink, low-risk YAGNI cleanup. | docs SSOT, active truth owner migration, runtime/domain/release readiness, owner receipt or typed blocker authority. | Docs / machine truth conflict routes to `governance_ssot`. |
+| `opl` / `OPL系列项目治理与过时面退役` | `governance_ssot` | SSOT-first docs governance, docs lifecycle cleanup, machine truth alignment, retired public surface leakage, SSOT-coupled retirement. | Pure long-file cleanup, circular dependency cleanup, duplicate helper cleanup, or wrapper cleanup that does not create a docs / machine truth conflict. | Pure complexity candidates route to `refactor_patrol`. |
+
+`opl-family` next run must treat line-budget-first / overlong-file-first as the mainline: at least 70% of the selected batch should come from >1000-line file governance, line-budget ratchet, cycles, or duplicate helpers unless fresh gates prove no safe semantic split, owner-blocked state, or dirty write-set conflict. Low-value wrapper cleanup is only filler. `opl` stays SSOT-first and may pull a long-file / cycle / duplicate-helper candidate into its batch only when that candidate is actively causing docs / machine truth conflict, second truth, or retired public surface leakage.
+
+### Next Refactor Patrol Queue
+
+Fresh `npm run --silent line-budget -- --list` on 2026-06-27 reported 20 OPL files above the 1000-line advisory budget. Next `opl-family` should start from these P0/P1 candidates before another wrapper cleanup tranche:
+
+| Priority | File | Lines | Preferred boundary |
+| --- | --- | ---: | --- |
+| P0 | `tests/src/cli/cases/family-runtime-paper-mission-stage-route.test.ts` | 2458 | test scenario / stage-route behavior cases |
+| P0 | `src/family-runtime-enqueue-parts/existing-dedupe-reconcile.ts` | 1542 | dedupe reconciliation phase / helper boundary |
+| P0 | `tests/src/cli/cases/family-runtime-binding-intake.test.ts` | 1414 | binding intake scenario groups |
+| P0 | `tests/src/cli/cases/family-runtime-current-control-provider-admission-cases/transition-runtime-readback-intake.ts` | 1352 | provider-admission readback case families |
+| P1 | `tests/src/family-runtime-codex-stage-runner.test.ts` | 1277 | stage-runner lifecycle / process interaction scenarios |
+| P1 | `tests/src/cli/cases/system-startup-maintenance.test.ts` | 1235 | startup vs maintenance behavior cases |
+| P1 | `src/opl-skills.ts` | 1192 | skill registry / descriptor / rendering boundary |
+| P1 | `tests/src/cli/cases/family-runtime-worker-lifecycle.test.ts` | 1146 | worker lifecycle scenario groups |
+| P1 | `src/standard-domain-agent-scaffold-validation.ts` | 1142 | validation phase / contract boundary |
+| P1 | `tests/src/cli/cases/family-runtime-domain-progress-transition-runtime.test.ts` | 1142 | transition-runtime behavior cases |
