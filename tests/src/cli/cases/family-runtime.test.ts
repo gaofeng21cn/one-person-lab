@@ -436,7 +436,7 @@ task = json.loads(Path(sys.argv[1]).read_text())
 print(json.dumps({
     "ok": True,
     "closeout_packet": {
-        "surface_kind": "stage_attempt_closeout_packet",
+        "surface_kind": "domain_stage_closeout_packet",
         "closeout_refs": ["mag-dispatch:task-option"],
         "next_owner": "med-autogrant",
         "domain_ready_verdict": "domain_gate_pending",

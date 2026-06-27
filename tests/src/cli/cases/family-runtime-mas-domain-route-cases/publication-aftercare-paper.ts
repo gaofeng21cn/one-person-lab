@@ -52,7 +52,7 @@ cat <<'JSON'
   "accepted": true,
   "surface_kind": "mas_family_domain_handler_dispatch_receipt",
   "closeout_packet": {
-    "surface_kind": "stage_attempt_closeout_packet",
+    "surface_kind": "domain_stage_closeout_packet",
     "closeout_refs": ["mas-receipt:DM002/aftercare-analysis-queued"],
     "next_owner": "med-autoscience",
     "domain_ready_verdict": "domain_gate_pending",
@@ -166,7 +166,7 @@ cat <<'JSON'
   "accepted": true,
   "surface_kind": "mas_family_domain_handler_dispatch_receipt",
   "closeout_packet": {
-    "surface_kind": "stage_attempt_closeout_packet",
+    "surface_kind": "domain_stage_closeout_packet",
     "closeout_refs": ["mas-receipt:DM002/aftercare-reviewer-refresh-queued"],
     "next_owner": "med-autoscience",
     "domain_ready_verdict": "domain_gate_pending",
