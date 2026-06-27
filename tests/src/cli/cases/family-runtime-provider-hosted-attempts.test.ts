@@ -38,7 +38,7 @@ assert payload["study_id"] == "DM002"
 print(json.dumps({
     "accepted": True,
     "closeout_packet": {
-        "surface_kind": "stage_attempt_closeout_packet",
+        "surface_kind": "domain_stage_closeout_packet",
         "closeout_refs": ["mas-domain-handler-dispatch:DM002:guarded-apply"],
         "consumed_refs": ["mas:paper-autonomy:DM002:guarded-apply"],
         "writeback_receipt_refs": ["mas:owner-receipt:DM002:guarded-apply"],
@@ -100,7 +100,7 @@ test('family-runtime dispatch ingests typed closeout packet before marking attem
   const dispatch = createJsonDispatchFixture({
     accepted: true,
     closeout_packet: {
-      surface_kind: 'stage_attempt_closeout_packet',
+      surface_kind: 'domain_stage_closeout_packet',
       closeout_refs: ['receipt:typed-dispatch-closeout'],
       consumed_refs: ['evidence:dispatch'],
       consumed_memory_refs: ['memory:route-policy'],
@@ -164,7 +164,7 @@ test('family-runtime dispatch ingests typed closeout packet before marking attem
   }
 });
 
-test('family-runtime maps MAS guarded apply domain-handler receipts into typed closeout ledger', () => {
+test('family-runtime keeps legacy MAS guarded apply receipts as diagnostic refs only', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-guarded-receipt-'));
   const dispatch = createDispatchFixture(`
 python3 - "$TASK_PATH" <<'PY'
@@ -253,19 +253,13 @@ PY
     const attempt = task.family_runtime_task.stage_attempts[0];
 
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
-    assert.equal(attempt.status, 'completed');
-    assert.equal(attempt.closeout_receipt_status, 'accepted_typed_closeout');
+    assert.equal(attempt.status, 'checkpointed');
+    assert.equal(attempt.closeout_receipt_status, 'domain_handler_receipt_ref_only');
     assert.deepEqual(attempt.closeout_refs, [
       'artifacts/runtime/opl_family_domain_handler/dispatch_receipts/receipt.json',
-      `mas-domain-handler-dispatch:${taskId}`,
     ]);
-    assert.equal(attempt.route_impact.decision, 'typed_blocker');
-    assert.equal(attempt.route_impact.guarded_apply_status, 'blocked_no_mas_owner_apply_receipt');
-    assert.equal(attempt.route_impact.provider_attempt_state, 'mas_owner_receipt_missing');
-    assert.equal(attempt.route_impact.forbidden_write_guard_result, 'fail_closed_no_forbidden_writes');
-    assert.equal(attempt.route_impact.writes_performed, false);
-    assert.equal(attempt.route_impact.next_owner, 'med-autoscience');
-    assert.equal(attempt.route_impact.domain_ready_verdict, 'domain_gate_pending');
+    assert.equal(attempt.route_impact.decision, undefined);
+    assert.equal(attempt.activity_events.at(-1).activity_status, 'checkpointed');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
@@ -292,6 +286,37 @@ print(json.dumps({
     "domain_id": "redcube_ai",
     "action": task["action"],
     "task_id": task["task_id"],
+    "closeout_packet": {
+        "surface_kind": "domain_stage_closeout_packet",
+        "closeout_refs": [
+            "rca-no-regression:visual-stage:unit-no-regression",
+            "workspace-runtime-ref:no-regression-evidence:unit-no-regression",
+            "/tmp/rca-workspace/.redcube/runtime/evidence/no-regression/unit-no-regression.json"
+        ],
+        "consumed_refs": [
+            "/controlled_visual_stage_attempt",
+            "/controlled_soak_no_regression_attempt"
+        ],
+        "writeback_receipt_refs": [],
+        "rejected_writes": [],
+        "next_owner": "redcube-ai",
+        "domain_ready_verdict": "domain_gate_pending",
+        "route_impact": {
+            "decision": "no_regression_evidence",
+            "action": task["action"],
+            "result_surface_kind": "no_regression_evidence",
+            "no_regression_evidence_observed": True,
+            "no_regression_evidence_ref": "rca-no-regression:visual-stage:unit-no-regression",
+            "runtime_locator_ref": "workspace-runtime-ref:no-regression-evidence:unit-no-regression",
+            "evidence_file": "/tmp/rca-workspace/.redcube/runtime/evidence/no-regression/unit-no-regression.json",
+            "typed_blocker_count": 0,
+            "writes_performed": False
+        },
+        "authority_boundary": {
+            "opl": "closeout_transport_only",
+            "domain": "truth_quality_artifact_gate_owner"
+        }
+    },
     "result_surface": {
         "surface_kind": "no_regression_evidence",
         "return_shape": "no_regression_evidence",
@@ -377,6 +402,37 @@ assert task["output_dir"] == "/tmp/mag/runtime"
 print(json.dumps({
     "ok": True,
     "command": "domain-handler-dispatch",
+    "closeout_packet": {
+        "surface_kind": "domain_stage_closeout_packet",
+        "closeout_refs": [
+            "mag-domain-handler-receipt:guarded-run",
+            "mag-stage-attempt:review_and_rebuttal"
+        ],
+        "consumed_refs": [],
+        "consumed_memory_refs": [],
+        "writeback_receipt_refs": [],
+        "rejected_writes": [],
+        "next_owner": "med-autogrant",
+        "domain_ready_verdict": "domain_gate_pending",
+        "route_impact": {
+            "decision": "domain_handler_autonomy_controller_guarded_action",
+            "action": task["action"],
+            "status": "accepted",
+            "result_surface_kind": "domain_handler_autonomy_controller_guarded_action",
+            "receipt_status": None,
+            "owner_receipt_ref": None,
+            "lifecycle_receipt_ref": None,
+            "no_regression_evidence_ref": None,
+            "no_regression_evidence_observed": False,
+            "lifecycle_receipt_observed": False,
+            "typed_blocker_count": 0,
+            "writes_performed": False
+        },
+        "authority_boundary": {
+            "opl": "closeout_transport_only",
+            "domain": "truth_quality_artifact_gate_owner"
+        }
+    },
     "domain_handler_dispatch": {
         "surface_kind": "mag_product_domain_handler_dispatch",
         "task_id": task["task_id"],
@@ -452,6 +508,36 @@ receipt_ref = task["controlled_stage_attempt"]["owner_receipt_refs"][0]
 print(json.dumps({
     "ok": True,
     "command": "domain-handler-dispatch",
+    "closeout_packet": {
+        "surface_kind": "domain_stage_closeout_packet",
+        "closeout_refs": [
+            receipt_ref
+        ],
+        "consumed_refs": [],
+        "consumed_memory_refs": [],
+        "writeback_receipt_refs": [],
+        "rejected_writes": [],
+        "next_owner": "med-autogrant",
+        "domain_ready_verdict": "domain_gate_pending",
+        "route_impact": {
+            "decision": "no_regression_evidence",
+            "action": task["action"],
+            "status": "completed",
+            "result_surface_kind": "domain_handler_stage_attempt_closeout_result",
+            "receipt_status": None,
+            "owner_receipt_ref": receipt_ref,
+            "lifecycle_receipt_ref": None,
+            "no_regression_evidence_ref": receipt_ref,
+            "no_regression_evidence_observed": True,
+            "lifecycle_receipt_observed": False,
+            "typed_blocker_count": 0,
+            "writes_performed": False
+        },
+        "authority_boundary": {
+            "opl": "closeout_transport_only",
+            "domain": "truth_quality_artifact_gate_owner"
+        }
+    },
     "domain_handler_dispatch": {
         "surface_kind": "mag_product_domain_handler_dispatch",
         "task_id": task["task_id"],
@@ -539,6 +625,45 @@ assert task["action"] == "lifecycle/receipt"
 print(json.dumps({
     "ok": True,
     "command": "domain-handler-dispatch",
+    "closeout_packet": {
+        "surface_kind": "domain_stage_closeout_packet",
+        "closeout_refs": [
+            "mag-runtime-receipts/lifecycle/cleanup-blocker-1.json"
+        ],
+        "consumed_refs": [
+            "/product_entry_manifest/lifecycle_guarded_apply_proof",
+            "/product_entry_manifest/owner_receipt_contract"
+        ],
+        "consumed_memory_refs": [],
+        "writeback_receipt_refs": [],
+        "rejected_writes": [
+            {
+                "blocker_kind": "mag_lifecycle_owner_receipt_required",
+                "owner": "med-autogrant",
+                "receipt_ref": "mag-runtime-receipts/lifecycle/cleanup-blocker-1.json"
+            }
+        ],
+        "next_owner": "med-autogrant",
+        "domain_ready_verdict": "domain_gate_pending",
+        "route_impact": {
+            "decision": "typed_blocker",
+            "action": task["action"],
+            "status": "completed",
+            "result_surface_kind": "domain_handler_lifecycle_receipt_result",
+            "receipt_status": None,
+            "owner_receipt_ref": None,
+            "lifecycle_receipt_ref": "mag-runtime-receipts/lifecycle/cleanup-blocker-1.json",
+            "no_regression_evidence_ref": None,
+            "no_regression_evidence_observed": False,
+            "lifecycle_receipt_observed": True,
+            "typed_blocker_count": 1,
+            "writes_performed": False
+        },
+        "authority_boundary": {
+            "opl": "closeout_transport_only",
+            "domain": "truth_quality_artifact_gate_owner"
+        }
+    },
     "domain_handler_dispatch": {
         "surface_kind": "mag_product_domain_handler_dispatch",
         "task_id": task["task_id"],
@@ -632,6 +757,45 @@ assert task["task_kind"] == "stage-attempt/closeout"
 print(json.dumps({
     "ok": True,
     "command": "domain-handler-dispatch",
+    "closeout_packet": {
+        "surface_kind": "domain_stage_closeout_packet",
+        "closeout_refs": [
+            task["controlled_stage_attempt"]["owner_receipt_refs"][0],
+            "mag-domain-handler-receipt:stage-closeout"
+        ],
+        "consumed_refs": [
+            "/product_entry_manifest/controlled_stage_attempt_projection",
+            "/product_entry_manifest/owner_receipt_contract"
+        ],
+        "consumed_memory_refs": [
+            "mag-memory:accepted:goal-mag"
+        ],
+        "writeback_receipt_refs": [
+            "mag-memory-writeback:accepted:goal-mag",
+            "mag-memory-writeback:rejected:goal-mag"
+        ],
+        "rejected_writes": [],
+        "next_owner": "med-autogrant",
+        "domain_ready_verdict": "domain_gate_pending",
+        "route_impact": {
+            "decision": "domain_owner_receipt",
+            "action": task["action"],
+            "status": "completed",
+            "result_surface_kind": "domain_handler_stage_attempt_closeout_result",
+            "receipt_status": None,
+            "owner_receipt_ref": task["controlled_stage_attempt"]["owner_receipt_refs"][0],
+            "lifecycle_receipt_ref": None,
+            "no_regression_evidence_ref": None,
+            "no_regression_evidence_observed": False,
+            "lifecycle_receipt_observed": False,
+            "typed_blocker_count": 0,
+            "writes_performed": False
+        },
+        "authority_boundary": {
+            "opl": "closeout_transport_only",
+            "domain": "truth_quality_artifact_gate_owner"
+        }
+    },
     "domain_handler_dispatch": {
         "surface_kind": "mag_product_domain_handler_dispatch",
         "task_id": task["task_id"],

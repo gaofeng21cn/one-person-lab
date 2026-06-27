@@ -30,11 +30,15 @@ function firstRecord(...values: unknown[]) {
   return values.find(isRecord) as JsonRecord | undefined;
 }
 
-export function closeoutPacketFromDomainHandlerOutput(output: Record<string, unknown>) {
+export function canonicalCloseoutPacketFromDomainHandlerOutput(output: Record<string, unknown>) {
   const explicitPacket = firstRecord(output.closeout_packet);
-  if (explicitPacket) {
+  if (explicitPacket?.surface_kind === 'domain_stage_closeout_packet') {
     return explicitPacket;
   }
+  return null;
+}
+
+export function legacyCloseoutPacketFromDomainHandlerOutput(output: Record<string, unknown>) {
   const rcaPacket = rcaCloseoutPacketFromDomainHandlerOutput(output);
   if (rcaPacket) {
     return rcaPacket;

@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 
-import { closeoutPacketFromDomainHandlerOutput } from './family-runtime-domain-handler-closeout.ts';
+import { canonicalCloseoutPacketFromDomainHandlerOutput } from './family-runtime-domain-handler-closeout.ts';
 import { dispatchCommandForDomain, parseDispatchOutput } from './family-runtime-dispatch-command.ts';
 import { writeFamilyRuntimeDispatchTask } from './family-runtime-dispatch-task.ts';
 import {
@@ -601,7 +601,7 @@ export async function dispatchFamilyRuntimeTask(
 
   if (succeeded) {
     const closeoutRefs = closeoutRefsFromDomainHandlerOutput(output);
-    const typedCloseoutPacket = closeoutPacketFromDomainHandlerOutput(output);
+    const typedCloseoutPacket = canonicalCloseoutPacketFromDomainHandlerOutput(output);
     if (isDomainRouteOplAttemptAdmissionRequested(output)) {
       const observation = masDomainOwnerAnswerObservationFromRecords([
         { source: 'task_payload', value: payload },
