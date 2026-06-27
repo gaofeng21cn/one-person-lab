@@ -366,3 +366,22 @@ Current next-route rules:
 | P0 | MAS PaperMission command/test source | Still same-write-set owner-gated by older MAS owner/fallback work, not safe as this refactor patrol mutation. | Re-audit only after the owning MAS lane is resolved, absorbed, or explicitly handed off. |
 | P1 | RCA canonical metadata drift | `tests/opl-agent-pack-contracts-canonical.test.ts` fails on current RCA `main` due to `functional_privatization_audit` source/contract shape drift unrelated to Round 10. | Route to a separate RCA contract-alignment lane; do not hide it behind structure cleanup. |
 | P1 | OPL family non-fork repos | Re-scan with repo-native source-purity/line-budget tools before selecting another mutation. | Mutate only with clean or unrelated dirty write set, authority-aware owner route, focused verification, and no fork-body path. |
+
+## 2026-06-28 Refactor Patrol Landing Round 12
+
+This follow-up continued MAS test-only structure cleanup after a fresh non-fork source scan. It did not touch upstream fork bodies and does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `med-autoscience` | `refactor_patrol` | `tests/test_scientific_capability_registry.py` split into `tests/scientific_capability_registry_cases/` while preserving the original test entry path; pushed `main` commit `38ed96c15`. | Root main rerun: `scripts/run-pytest-clean.sh tests/test_scientific_capability_registry.py tests/scientific_capability_registry_cases -q` passed 29/29; `git diff --check HEAD~1..HEAD` passed; line readback: original entry 2385 -> 7 lines, largest case file 843 lines; candidate branch patch-equivalent and cleaned; remote readback `origin/main` = `38ed96c15c3b3ac65dda7a0912927816f56b32a3`. | This is MAS scientific-capability registry test structure evidence only. It did not touch registry implementation, contracts, docs, external capability source truth, PaperMission truth, owner receipts, typed blockers, human gates, runtime DB, or provider queues. Existing `mas-owner-fallback-20260627` and `mas-paper-delta-ref-adoption-20260628` worktrees remain separate owner lanes and were not cleaned by this route. |
+
+### Round 12 Queue Adjustment
+
+Fresh non-fork scan after Round 12 still reports MAS source/test files over the advisory budget, but most remaining P0 items are PaperMission or runtime-authority adjacent. Current next-route rules:
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| P0 | MAS PaperMission command/test source | Same-write-set owner-gated by older MAS owner/fallback and paper-delta lanes. | Do not mutate until the owning MAS lanes are resolved, absorbed, or explicitly handed off. |
+| P1 | MAS non-PaperMission tests over 1000 lines | Some remain candidates, but each needs a fresh active-caller/write-set gate because many protect runtime authority, retired-surface provenance, or owner-route readbacks. | Prefer test-only case extraction with focused `scripts/run-pytest-clean.sh`; avoid source/contract/runtime writes unless separately authorized. |
+| P1 | RCA canonical metadata drift | Current RCA root has unrelated `functional_privatization_audit` source/contract shape drift. | Route to a separate contract-alignment lane; do not hide it behind structure cleanup. |
