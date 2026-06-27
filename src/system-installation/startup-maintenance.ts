@@ -7,7 +7,7 @@ import { runOplEngineAction } from './engine-actions.ts';
 import { resolveFrameworkUpdateTargetRoot, runOplFrameworkSelfUpdate } from './framework-self-update.ts';
 import { buildOplModules, runOplModuleAction } from './modules.ts';
 import { resolveProjectRoot } from './shared.ts';
-import { runScholarSkillsSourceMaintenance } from './scholarskills-source.ts';
+import { runScholarSkillsSourceMaintenance } from './scholarskills-package-channel.ts';
 
 type ModuleStatus = ReturnType<typeof buildOplModules>['modules']['modules'][number];
 type OplSystemEnvironment = Awaited<ReturnType<typeof buildOplEnvironment>>['system_environment'];
@@ -467,15 +467,15 @@ export async function runOplStartupMaintenance(
             : summary.manual_required_targets_count > 0 || capabilitySummary.manual_required_targets_count > 0
               ? 'manual_required'
               : capabilitySummary.completed_targets_count > 0
-                ? 'source_refreshed'
+                ? 'package_refreshed'
                 : 'already_current',
           source: capabilitySummary.total_targets_count > 0
-            ? 'module_turnkey_skill_sync_and_capability_source'
+            ? 'module_turnkey_skill_sync_and_framework_capability_package'
             : 'module_turnkey_skill_sync',
           synced_domain_packs_count: syncedDomains.length,
           synced_domain_packs: syncedDomains,
-          managed_capability_sources_count: capabilityTargets.filter((target) => target.status === 'completed').length,
-          managed_capability_sources: capabilityTargets
+          managed_capability_packages_count: capabilityTargets.filter((target) => target.status === 'completed').length,
+          managed_capability_packages: capabilityTargets
             .filter((target) => target.status === 'completed')
             .map((target) => target.target_id),
         },
@@ -494,7 +494,7 @@ export async function runOplStartupMaintenance(
         notes: [
           'Startup maintenance refreshes the managed OPL Framework runtime only when an explicit framework update source is configured.',
           'Startup maintenance updates clean OPL-managed module checkouts and syncs generated plugin/skill surfaces.',
-          'Startup maintenance installs or updates the managed OPL ScholarSkills source so App workspace/quest sync can materialize it into the active paper directory.',
+          'Startup maintenance installs or updates OPL ScholarSkills from the managed GHCR agent package channel so App workspace/quest sync can materialize it into the active paper directory.',
           'Dirty, ahead, diverged, no-upstream, env override, sibling workspace, and invalid checkouts are reported for manual review.',
           'OPL ScholarSkills is a framework capability plugin pack, not a domain module; workspace/quest-local sync is still explicit and target-bound.',
           'This action never writes domain truth, domain memory body, artifact body, quality verdict, export verdict, or domain daemons.',

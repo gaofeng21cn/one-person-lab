@@ -79,6 +79,7 @@ test('packages manifest exposes active package-channel coordinates for module in
         };
         modules: Record<string, {
           artifact: string;
+          scope: string;
           package_channel_status: string;
           package_lifecycle_status: string;
           package_lifecycle_reason: string;
@@ -161,7 +162,7 @@ test('packages manifest exposes active package-channel coordinates for module in
   );
   assert.equal(
     output.packages_manifest.release_automation.daily_package_channel.comparison,
-    'module_source_fingerprint',
+    'package_source_fingerprint',
   );
   assert.equal(
     output.packages_manifest.release_automation.daily_package_channel.no_change_behavior,
@@ -316,6 +317,22 @@ test('packages manifest exposes active package-channel coordinates for module in
     output.packages_manifest.packages.modules.oplmetaagent.developer_git_checkout_override.repo_url,
     'https://github.com/gaofeng21cn/opl-meta-agent.git',
   );
+  assert.equal(
+    output.packages_manifest.packages.modules.scholarskills.artifact,
+    'ghcr.io/gaofeng21cn/one-person-lab-modules/opl-scholarskills:26.4.27',
+  );
+  assert.equal(
+    output.packages_manifest.packages.modules.scholarskills.scope,
+    'framework_capability_package',
+  );
+  assert.equal(
+    output.packages_manifest.packages.modules.scholarskills.current_install_update_source,
+    'package_channel',
+  );
+  assert.equal(
+    output.packages_manifest.packages.modules.scholarskills.developer_git_checkout_override.repo_url,
+    'https://github.com/gaofeng21cn/opl-scholarskills.git',
+  );
 });
 
 test('package archive builder writes channel manifest checksums git source and release discipline gate', () => {
@@ -328,6 +345,7 @@ test('package archive builder writes channel manifest checksums git source and r
     medautogrant: createGitModuleRemoteFixture('med-autogrant'),
     redcube: createGitModuleRemoteFixture('redcube-ai'),
     oplmetaagent: createGitModuleRemoteFixture('opl-meta-agent'),
+    scholarskills: createGitModuleRemoteFixture('opl-scholarskills'),
   };
 
   const archiveBuilderOutput = execFileSync(process.execPath, [
@@ -352,6 +370,7 @@ test('package archive builder writes channel manifest checksums git source and r
       OPL_MODULE_PATH_MEDAUTOGRANT: fixtures.medautogrant.sourceRoot,
       OPL_MODULE_PATH_REDCUBE: fixtures.redcube.sourceRoot,
       OPL_MODULE_PATH_OPLMETAAGENT: fixtures.oplmetaagent.sourceRoot,
+      OPL_MODULE_PATH_SCHOLARSKILLS: fixtures.scholarskills.sourceRoot,
     },
   });
   const archiveBuilderResult = JSON.parse(archiveBuilderOutput) as {
@@ -430,8 +449,15 @@ test('package archive builder writes channel manifest checksums git source and r
     'published_to_ghcr_by_packages_workflow',
   );
   assert.match(manifest.packages.modules.oplmetaagent.source_archive.sha256, /^[0-9a-f]{64}$/);
+  assert.equal(
+    manifest.packages.modules.scholarskills.source_git.head_sha,
+    fixtures.scholarskills.getHeadSha(),
+  );
+  assert.equal(manifest.packages.modules.scholarskills.scope, 'framework_capability_package');
+  assert.match(manifest.packages.modules.scholarskills.source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.match(checksums, /med-autoscience-26\.4\.31\.tar\.gz/);
   assert.match(checksums, /opl-meta-agent-26\.4\.31\.tar\.gz/);
+  assert.match(checksums, /opl-scholarskills-26\.4\.31\.tar\.gz/);
   assert.match(checksums, new RegExp(manifest.packages.modules.medautoscience.source_archive.sha256));
 
   execFileSync(process.execPath, [
@@ -454,6 +480,7 @@ test('package archive builder refreshes reused managed clones before archiving s
     medautogrant: createGitModuleRemoteFixture('med-autogrant'),
     redcube: createGitModuleRemoteFixture('redcube-ai'),
     oplmetaagent: createGitModuleRemoteFixture('opl-meta-agent'),
+    scholarskills: createGitModuleRemoteFixture('opl-scholarskills'),
   };
   fs.writeFileSync(
     gitConfigPath,
@@ -471,6 +498,7 @@ test('package archive builder refreshes reused managed clones before archiving s
     OPL_MODULE_PATH_MEDAUTOGRANT: fixtures.medautogrant.sourceRoot,
     OPL_MODULE_PATH_REDCUBE: fixtures.redcube.sourceRoot,
     OPL_MODULE_PATH_OPLMETAAGENT: fixtures.oplmetaagent.sourceRoot,
+    OPL_MODULE_PATH_SCHOLARSKILLS: fixtures.scholarskills.sourceRoot,
   };
 
   execFileSync(process.execPath, [

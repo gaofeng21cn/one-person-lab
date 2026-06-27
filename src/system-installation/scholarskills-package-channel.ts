@@ -5,38 +5,47 @@ import { developerModePrefersLocalCheckouts } from '../developer-mode-source-pol
 import { resolveDefaultFamilyWorkspaceRoot } from '../family-workspace-root.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../runtime-state-paths.ts';
 import {
-  assertGitSuccess,
   normalizeOptionalString,
+  type DomainModuleSpec,
   type GitRepoSnapshot,
   type OplModuleInstallOrigin,
 } from './shared.ts';
 import {
-  inspectGitRepo,
-  isGitRepo,
-  resolveRemoteGitRetryAttempts,
-  runRemoteGitWithRetry,
-} from './module-git.ts';
+  installManagedModuleFromPackageChannel,
+  rollbackManagedModulePackageChannel,
+} from './module-package-channel.ts';
+import { inspectPackagedModule, readPackagedModuleMarker } from './module-packaged.ts';
+import { inspectGitRepo, isGitRepo } from './module-git.ts';
 
 const SCHOLARSKILLS_REPO_NAME = 'opl-scholarskills';
-const SCHOLARSKILLS_DEFAULT_REPO_URL = 'https://github.com/gaofeng21cn/opl-scholarskills.git';
+
+export const SCHOLARSKILLS_PACKAGE_SPEC: DomainModuleSpec = {
+  module_id: 'scholarskills',
+  label: 'OPL ScholarSkills',
+  repo_name: SCHOLARSKILLS_REPO_NAME,
+  repo_url: 'https://github.com/gaofeng21cn/opl-scholarskills.git',
+  scope: 'framework_capability_package',
+  default_install: true,
+  description: 'Framework capability package for paper/workspace-local scholarly skills used by OPL-hosted agents.',
+};
 
 type ScholarSkillsSourceAction = 'install' | 'update' | null;
 
 type ScholarSkillsSourcePolicy = {
-  effective_install_update_source: 'managed_git_checkout' | 'developer_git_checkout';
+  effective_install_update_source: 'package_channel' | 'developer_git_checkout';
   configured_by:
-    | 'app_managed_default'
+    | 'agent_latest_package_channel'
     | 'developer_mode'
     | 'env_repo_root_override'
-    | 'module_path_override'
-    | 'repo_url_override';
+    | 'module_path_override';
+  package_channel_auto_update: boolean;
   app_managed_auto_update: boolean;
   low_level_override_env: string | null;
   app_setting_surface: 'Developer Mode' | null;
 };
 
 export type ScholarSkillsSourceTarget = {
-  target_type: 'capability_source';
+  target_type: 'framework_capability_package';
   target_id: 'scholarskills';
   capability_plugin_id: 'opl-scholarskills';
   status: 'completed' | 'skipped' | 'manual_required';
@@ -80,12 +89,8 @@ function resolveManagedModulesRoot() {
   return path.resolve(explicitRoot ?? path.join(statePaths.state_dir, 'modules'));
 }
 
-function resolveManagedSourcePath() {
+export function resolveManagedScholarSkillsSourcePath() {
   return path.join(resolveManagedModulesRoot(), SCHOLARSKILLS_REPO_NAME);
-}
-
-function resolveRepoUrl() {
-  return normalizeOptionalString(process.env.OPL_SCHOLARSKILLS_REPO_URL) ?? SCHOLARSKILLS_DEFAULT_REPO_URL;
 }
 
 function buildSourcePolicy(configuredBy: ScholarSkillsSourcePolicy['configured_by']): ScholarSkillsSourcePolicy {
@@ -93,6 +98,7 @@ function buildSourcePolicy(configuredBy: ScholarSkillsSourcePolicy['configured_b
     return {
       effective_install_update_source: 'developer_git_checkout',
       configured_by: configuredBy,
+      package_channel_auto_update: false,
       app_managed_auto_update: false,
       low_level_override_env: configuredBy === 'env_repo_root_override'
         ? 'OPL_SCHOLARSKILLS_REPO_ROOT'
@@ -104,26 +110,37 @@ function buildSourcePolicy(configuredBy: ScholarSkillsSourcePolicy['configured_b
   }
 
   return {
-    effective_install_update_source: 'managed_git_checkout',
+    effective_install_update_source: 'package_channel',
     configured_by: configuredBy,
+    package_channel_auto_update: true,
     app_managed_auto_update: true,
-    low_level_override_env: configuredBy === 'repo_url_override' ? 'OPL_SCHOLARSKILLS_REPO_URL' : null,
+    low_level_override_env: null,
     app_setting_surface: null,
   };
 }
 
-function inspectSource(): ScholarSkillsSourceInspection {
-  const repoUrl = resolveRepoUrl();
-  const managedCheckoutPath = resolveManagedSourcePath();
+function packageChannelGitSnapshot(sourcePath: string) {
+  const marker = readPackagedModuleMarker(sourcePath, SCHOLARSKILLS_PACKAGE_SPEC);
+  if (!marker) {
+    return null;
+  }
+  return {
+    ...marker.source_git,
+    dirty: inspectPackagedModule(sourcePath, SCHOLARSKILLS_PACKAGE_SPEC)?.dirty ?? marker.source_git.dirty,
+  };
+}
+
+export function inspectScholarSkillsSource(): ScholarSkillsSourceInspection {
+  const managedCheckoutPath = resolveManagedScholarSkillsSourcePath();
   const envRepoRoot = normalizeOptionalString(process.env.OPL_SCHOLARSKILLS_REPO_ROOT);
   const modulePath = normalizeOptionalString(process.env.OPL_MODULE_PATH_SCHOLARSKILLS);
   const siblingCheckoutPath = path.join(resolveDefaultFamilyWorkspaceRoot(), SCHOLARSKILLS_REPO_NAME);
   const developerModeLocal = developerModePrefersLocalCheckouts();
-  const repoUrlOverride = Boolean(normalizeOptionalString(process.env.OPL_SCHOLARSKILLS_REPO_URL));
   const candidates: Array<{
     checkout_path: string;
     install_origin_before: OplModuleInstallOrigin;
     source_policy: ScholarSkillsSourcePolicy;
+    source_kind: 'developer' | 'managed';
   }> = [];
 
   if (envRepoRoot) {
@@ -131,6 +148,7 @@ function inspectSource(): ScholarSkillsSourceInspection {
       checkout_path: path.resolve(envRepoRoot),
       install_origin_before: 'env_override',
       source_policy: buildSourcePolicy('env_repo_root_override'),
+      source_kind: 'developer',
     });
   }
   if (modulePath) {
@@ -138,6 +156,7 @@ function inspectSource(): ScholarSkillsSourceInspection {
       checkout_path: path.resolve(modulePath),
       install_origin_before: 'env_override',
       source_policy: buildSourcePolicy('module_path_override'),
+      source_kind: 'developer',
     });
   }
   if (developerModeLocal) {
@@ -145,21 +164,50 @@ function inspectSource(): ScholarSkillsSourceInspection {
       checkout_path: siblingCheckoutPath,
       install_origin_before: 'sibling_workspace',
       source_policy: buildSourcePolicy('developer_mode'),
+      source_kind: 'developer',
     });
   }
   candidates.push({
     checkout_path: managedCheckoutPath,
     install_origin_before: 'managed_root',
-    source_policy: buildSourcePolicy(repoUrlOverride ? 'repo_url_override' : 'app_managed_default'),
+    source_policy: buildSourcePolicy('agent_latest_package_channel'),
+    source_kind: 'managed',
   });
 
   for (const candidate of candidates) {
     if (!fs.existsSync(candidate.checkout_path)) {
       continue;
     }
+    if (candidate.source_kind === 'managed') {
+      const packaged = inspectPackagedModule(candidate.checkout_path, SCHOLARSKILLS_PACKAGE_SPEC);
+      if (!packaged) {
+        return {
+          repo_url: SCHOLARSKILLS_PACKAGE_SPEC.repo_url,
+          install_origin_before: 'invalid_checkout',
+          health_status_before: 'invalid_checkout',
+          checkout_path: candidate.checkout_path,
+          managed_checkout_path: managedCheckoutPath,
+          git_before: null,
+          source_policy: candidate.source_policy,
+        };
+      }
+      return {
+        repo_url: SCHOLARSKILLS_PACKAGE_SPEC.repo_url,
+        install_origin_before: candidate.install_origin_before,
+        health_status_before: packaged.dirty ? 'dirty' : 'ready',
+        checkout_path: candidate.checkout_path,
+        managed_checkout_path: managedCheckoutPath,
+        git_before: {
+          ...packaged.git,
+          dirty: packaged.dirty,
+        },
+        source_policy: candidate.source_policy,
+      };
+    }
+
     if (!isGitRepo(candidate.checkout_path)) {
       return {
-        repo_url: repoUrl,
+        repo_url: SCHOLARSKILLS_PACKAGE_SPEC.repo_url,
         install_origin_before: 'invalid_checkout',
         health_status_before: 'invalid_checkout',
         checkout_path: candidate.checkout_path,
@@ -168,9 +216,9 @@ function inspectSource(): ScholarSkillsSourceInspection {
         source_policy: candidate.source_policy,
       };
     }
-    const git = inspectGitRepo(candidate.checkout_path, candidate.install_origin_before === 'managed_root');
+    const git = inspectGitRepo(candidate.checkout_path, false);
     return {
-      repo_url: repoUrl,
+      repo_url: SCHOLARSKILLS_PACKAGE_SPEC.repo_url,
       install_origin_before: candidate.install_origin_before,
       health_status_before: git.dirty ? 'dirty' : 'ready',
       checkout_path: candidate.checkout_path,
@@ -181,13 +229,13 @@ function inspectSource(): ScholarSkillsSourceInspection {
   }
 
   return {
-    repo_url: repoUrl,
+    repo_url: SCHOLARSKILLS_PACKAGE_SPEC.repo_url,
     install_origin_before: 'missing',
     health_status_before: 'missing',
     checkout_path: managedCheckoutPath,
     managed_checkout_path: managedCheckoutPath,
     git_before: null,
-    source_policy: buildSourcePolicy(repoUrlOverride ? 'repo_url_override' : 'app_managed_default'),
+    source_policy: buildSourcePolicy('agent_latest_package_channel'),
   };
 }
 
@@ -196,7 +244,7 @@ function buildTarget(
   input: Pick<ScholarSkillsSourceTarget, 'status' | 'reason' | 'action' | 'git_after' | 'result' | 'error'>,
 ): ScholarSkillsSourceTarget {
   return {
-    target_type: 'capability_source',
+    target_type: 'framework_capability_package',
     target_id: 'scholarskills',
     capability_plugin_id: 'opl-scholarskills',
     workspace_sync_command_ref: 'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <workspace-root> --json',
@@ -218,42 +266,54 @@ function normalizeError(error: unknown) {
     return error.toJSON() as Record<string, unknown>;
   }
   return {
-    code: 'scholarskills_source_maintenance_failed',
+    code: 'scholarskills_package_channel_maintenance_failed',
     message: error instanceof Error ? error.message : String(error),
   };
 }
 
-function installManagedSource(inspection: ScholarSkillsSourceInspection) {
-  fs.mkdirSync(path.dirname(inspection.managed_checkout_path), { recursive: true });
-  const cloneResult = runRemoteGitWithRetry([
-    'clone',
-    inspection.repo_url,
-    inspection.managed_checkout_path,
-  ]);
-  assertGitSuccess(cloneResult, 'Failed to clone OPL ScholarSkills managed source.', {
-    repo_url: inspection.repo_url,
-    checkout_path: inspection.managed_checkout_path,
-    git_attempts: resolveRemoteGitRetryAttempts(),
-  });
+export function scholarSkillsStateForAgentPackageChannel() {
+  const inspection = inspectScholarSkillsSource();
+  const recommendedAction: ScholarSkillsSourceAction =
+    inspection.source_policy.effective_install_update_source === 'package_channel'
+      ? inspection.install_origin_before === 'missing'
+        ? 'install'
+        : inspection.health_status_before === 'ready'
+          ? 'update'
+          : null
+      : null;
+  return {
+    module_id: 'scholarskills',
+    label: SCHOLARSKILLS_PACKAGE_SPEC.label,
+    scope: SCHOLARSKILLS_PACKAGE_SPEC.scope,
+    default_install: true,
+    installed: inspection.install_origin_before !== 'missing'
+      && inspection.health_status_before !== 'invalid_checkout',
+    install_origin: inspection.install_origin_before,
+    health_status: inspection.health_status_before,
+    checkout_path: inspection.checkout_path,
+    managed_checkout_path: inspection.managed_checkout_path,
+    source_policy: inspection.source_policy,
+    git: inspection.git_before,
+    recommended_action: recommendedAction,
+    available_actions: recommendedAction ? [recommendedAction] : [],
+  };
 }
 
-function updateManagedSource(inspection: ScholarSkillsSourceInspection) {
-  const pullResult = runRemoteGitWithRetry(['pull', '--ff-only'], inspection.checkout_path);
-  assertGitSuccess(pullResult, 'Failed to update OPL ScholarSkills managed source.', {
-    repo_url: inspection.repo_url,
-    checkout_path: inspection.checkout_path,
-    git_attempts: resolveRemoteGitRetryAttempts(),
-  });
+export function rollbackManagedScholarSkillsPackageChannel() {
+  return rollbackManagedModulePackageChannel(
+    SCHOLARSKILLS_PACKAGE_SPEC,
+    resolveManagedScholarSkillsSourcePath(),
+  );
 }
 
 export function runScholarSkillsSourceMaintenance(): ScholarSkillsSourceTarget {
-  const inspection = inspectSource();
+  const inspection = inspectScholarSkillsSource();
   const developerSource = inspection.source_policy.effective_install_update_source === 'developer_git_checkout';
 
   if (inspection.health_status_before === 'invalid_checkout') {
     return buildTarget(inspection, {
       status: 'manual_required',
-      reason: 'invalid_scholarskills_source_checkout',
+      reason: 'invalid_scholarskills_package_source',
       action: null,
       git_after: null,
       result: null,
@@ -280,23 +340,7 @@ export function runScholarSkillsSourceMaintenance(): ScholarSkillsSourceTarget {
   if (inspection.health_status_before === 'dirty') {
     return buildTarget(inspection, {
       status: 'manual_required',
-      reason: 'dirty_scholarskills_managed_source',
-      action: null,
-      git_after: inspection.git_before,
-      result: null,
-      error: null,
-    });
-  }
-
-  if (
-    inspection.git_before?.sync_status === 'ahead'
-    || inspection.git_before?.sync_status === 'diverged'
-    || inspection.git_before?.sync_status === 'no_upstream'
-    || inspection.git_before?.sync_status === 'unknown'
-  ) {
-    return buildTarget(inspection, {
-      status: 'manual_required',
-      reason: `${inspection.git_before.sync_status}_scholarskills_managed_source`,
+      reason: 'dirty_scholarskills_package_channel_root',
       action: null,
       git_after: inspection.git_before,
       result: null,
@@ -306,26 +350,24 @@ export function runScholarSkillsSourceMaintenance(): ScholarSkillsSourceTarget {
 
   const action: ScholarSkillsSourceAction = inspection.install_origin_before === 'missing' ? 'install' : 'update';
   try {
-    if (action === 'install') {
-      installManagedSource(inspection);
-    } else {
-      updateManagedSource(inspection);
-    }
-    const gitAfter = inspectGitRepo(inspection.managed_checkout_path, true);
+    installManagedModuleFromPackageChannel(
+      SCHOLARSKILLS_PACKAGE_SPEC,
+      inspection.managed_checkout_path,
+    );
+    const gitAfter = packageChannelGitSnapshot(inspection.managed_checkout_path);
     return buildTarget(inspection, {
       status: 'completed',
       reason: action === 'install'
-        ? 'scholarskills_source_missing'
-        : inspection.git_before?.sync_status === 'behind'
-          ? 'scholarskills_source_update_available'
-          : 'scholarskills_source_refresh',
+        ? 'scholarskills_package_channel_missing'
+        : 'scholarskills_package_channel_refresh',
       action,
       git_after: gitAfter,
       result: {
-        source: 'app_managed_scholarskills_source',
+        source: 'agent_package_channel',
         source_ready: true,
         source_root: inspection.managed_checkout_path,
-        source_head_sha: gitAfter.head_sha,
+        source_head_sha: gitAfter?.head_sha ?? null,
+        package_channel_auto_update: true,
         app_managed_workspace_sync_required: true,
         workspace_sync_command_ref: 'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <workspace-root> --json',
         quest_sync_command_ref: 'opl connect sync-skills --domain scholarskills --scope quest --target-quest <quest-root> --json',
@@ -335,7 +377,7 @@ export function runScholarSkillsSourceMaintenance(): ScholarSkillsSourceTarget {
   } catch (error) {
     return buildTarget(inspection, {
       status: 'manual_required',
-      reason: `${action ?? 'inspect'}_scholarskills_source_failed`,
+      reason: `${action ?? 'inspect'}_scholarskills_package_channel_failed`,
       action,
       git_after: inspection.git_before,
       result: null,

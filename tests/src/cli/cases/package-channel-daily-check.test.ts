@@ -40,7 +40,7 @@ function runDailyCheck(args: string[]) {
   }));
 }
 
-test('daily package channel check skips when module source fingerprints are unchanged', () => {
+test('daily package channel check skips when package source fingerprints are unchanged', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-daily-check-'));
   const candidate = path.join(tempRoot, 'candidate.json');
   const current = path.join(tempRoot, 'current.json');
@@ -71,10 +71,10 @@ test('daily package channel check skips when module source fingerprints are unch
   assert.equal(summary.reason, 'package_channel_unchanged');
   assert.equal(summary.publish_required, false);
   assert.equal(summary.version, '26.6.3-nightly');
-  assert.deepEqual(summary.changed_modules, []);
+  assert.deepEqual(summary.changed_packages, []);
 });
 
-test('daily package channel check publishes when a module source fingerprint changes', () => {
+test('daily package channel check publishes when a package source fingerprint changes', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-daily-check-'));
   const candidate = path.join(tempRoot, 'candidate.json');
   const current = path.join(tempRoot, 'current.json');
@@ -104,7 +104,7 @@ test('daily package channel check publishes when a module source fingerprint cha
   assert.equal(summary.status, 'publish_required');
   assert.equal(summary.reason, 'package_channel_changed');
   assert.equal(summary.publish_required, true);
-  assert.deepEqual(summary.changed_modules, ['medautoscience']);
+  assert.deepEqual(summary.changed_packages, ['medautoscience']);
 });
 
 test('daily package channel check fails closed when no current channel manifest is available', () => {

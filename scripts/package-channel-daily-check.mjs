@@ -38,7 +38,7 @@ function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
-function moduleFingerprint(manifest) {
+function packageFingerprint(manifest) {
   const modules = manifest.packages?.modules ?? {};
   return Object.fromEntries(
     Object.entries(modules)
@@ -53,13 +53,13 @@ function moduleFingerprint(manifest) {
   );
 }
 
-function changedModules(candidateFingerprint, currentFingerprint) {
-  const moduleIds = new Set([
+function changedPackages(candidateFingerprint, currentFingerprint) {
+  const packageIds = new Set([
     ...Object.keys(candidateFingerprint),
     ...Object.keys(currentFingerprint),
   ]);
-  return [...moduleIds]
-    .filter((moduleId) => JSON.stringify(candidateFingerprint[moduleId] ?? null) !== JSON.stringify(currentFingerprint[moduleId] ?? null))
+  return [...packageIds]
+    .filter((packageId) => JSON.stringify(candidateFingerprint[packageId] ?? null) !== JSON.stringify(currentFingerprint[packageId] ?? null))
     .sort();
 }
 
@@ -69,10 +69,10 @@ function buildSummary(options) {
     throw new Error(`Current channel manifest does not exist: ${options.currentManifest ?? '<missing>'}`);
   }
   const current = readJson(options.currentManifest);
-  const candidateFingerprint = moduleFingerprint(candidate);
+  const candidateFingerprint = packageFingerprint(candidate);
 
-  const currentFingerprint = moduleFingerprint(current);
-  const changed = changedModules(candidateFingerprint, currentFingerprint);
+  const currentFingerprint = packageFingerprint(current);
+  const changed = changedPackages(candidateFingerprint, currentFingerprint);
   return {
     status: changed.length > 0 ? 'publish_required' : 'skipped',
     reason: changed.length > 0 ? 'package_channel_changed' : 'package_channel_unchanged',
@@ -80,7 +80,7 @@ function buildSummary(options) {
     version: options.version,
     candidate_manifest: options.candidateManifest,
     current_manifest: options.currentManifest,
-    changed_modules: changed,
+    changed_packages: changed,
     candidate_fingerprint: candidateFingerprint,
     current_fingerprint: currentFingerprint,
   };

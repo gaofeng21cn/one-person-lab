@@ -257,8 +257,8 @@ export function writeStartupPackageChannelFixture(input: {
   root: string;
   version: string;
   modules: Array<{
-    moduleId: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge';
-    repoName: 'med-autoscience' | 'med-autogrant' | 'redcube-ai' | 'opl-meta-agent' | 'opl-bookforge';
+    moduleId: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge' | 'scholarskills';
+    repoName: 'med-autoscience' | 'med-autogrant' | 'redcube-ai' | 'opl-meta-agent' | 'opl-bookforge' | 'opl-scholarskills';
     sourceHeadSha: string;
     files: Record<string, string>;
   }>;

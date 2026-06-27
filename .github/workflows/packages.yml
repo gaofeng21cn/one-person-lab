@@ -32,7 +32,7 @@ env:
 
 jobs:
   module-packages:
-    name: Prepare module source archives
+    name: Prepare package source archives
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

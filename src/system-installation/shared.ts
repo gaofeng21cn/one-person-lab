@@ -12,7 +12,8 @@ export type OplModuleId =
   | 'medautogrant'
   | 'oplmetaagent'
   | 'oplbookforge'
-  | 'redcube';
+  | 'redcube'
+  | 'scholarskills';
 
 export type OplModuleAction =
   | 'install'
@@ -52,7 +53,7 @@ export type DomainModuleSpec = {
   label: string;
   repo_name: string;
   repo_url: string;
-  scope: 'domain_module' | 'runtime_dependency';
+  scope: 'domain_module' | 'runtime_dependency' | 'framework_capability_package';
   default_install: boolean;
   description: string;
 };
@@ -152,7 +153,7 @@ export type ModuleSourcePolicy = {
 export type ModuleInspection = {
   module_id: OplModuleId;
   label: string;
-  scope: 'domain_module' | 'runtime_dependency';
+  scope: 'domain_module' | 'runtime_dependency' | 'framework_capability_package';
   default_install: boolean;
   description: string;
   repo_url: string;

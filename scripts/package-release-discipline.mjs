@@ -116,7 +116,7 @@ function validateManifest(manifest) {
   assertCondition(automation?.daily_package_channel?.workflow === PACKAGE_DAILY_WORKFLOW_PATH, 'daily package channel workflow path drifted', failures);
   assertCondition(automation?.daily_package_channel?.version_template === '<utc_yy.m.d>-nightly', 'daily package channel version template drifted', failures);
   assertCondition(automation?.daily_package_channel?.change_detector === 'scripts/package-channel-daily-check.mjs', 'daily package channel detector drifted', failures);
-  assertCondition(automation?.daily_package_channel?.comparison === 'module_source_fingerprint', 'daily package channel comparison must use module source fingerprints', failures);
+  assertCondition(automation?.daily_package_channel?.comparison === 'package_source_fingerprint', 'daily package channel comparison must use package source fingerprints', failures);
   assertCondition(automation?.daily_package_channel?.no_change_behavior === 'skip_without_publish', 'daily package channel must skip without publish when unchanged', failures);
   assertCondition(automation?.daily_package_channel?.publish_gate === 'daily_package_channel_changed', 'daily package channel publish gate drifted', failures);
   assertCondition(automation?.daily_package_channel?.manual_repair_trigger === 'workflow_dispatch', 'daily package channel manual repair trigger drifted', failures);
@@ -126,6 +126,10 @@ function validateManifest(manifest) {
   for (const [moduleId, entry] of Object.entries(modules)) {
     validateModule(moduleId, entry, failures);
   }
+  assertCondition(Object.hasOwn(modules, 'scholarskills'), 'package channel must include OPL ScholarSkills as a managed capability package', failures);
+  assertCondition(modules.scholarskills?.repo_name === 'opl-scholarskills', 'scholarskills package repo name drifted', failures);
+  assertCondition(modules.scholarskills?.scope === 'framework_capability_package', 'scholarskills must remain a framework capability package, not a domain module', failures);
+  assertCondition(modules.scholarskills?.current_install_update_source === 'package_channel', 'scholarskills must use package channel for ordinary installs and updates', failures);
 
   assertCondition(!Object.hasOwn(manifest.packages ?? {}, 'webui_docker_image'), 'Framework package manifest must not carry App-owned WebUI image coordinates', failures);
 

@@ -256,6 +256,10 @@ function buildCapabilityPluginDistribution(spec: SkillPackSpec) {
       'one-person-lab/contracts/opl-framework/scholar-skills-capability-modules.json',
     ],
     github_repo: 'gaofeng21cn/opl-scholarskills',
+    ordinary_install_update_source: 'ghcr_agent_package_channel',
+    package_channel_manifest_ref: 'ghcr.io/<owner>/one-person-lab-manifest:<tag>',
+    package_artifact_ref: 'ghcr.io/<owner>/one-person-lab-modules/opl-scholarskills:<opl_version>',
+    developer_checkout_source: 'Developer Mode or explicit OPL_SCHOLARSKILLS_REPO_ROOT / OPL_MODULE_PATH_SCHOLARSKILLS',
     connect_readback_commands: [
       'opl connect skills --domain scholarskills --json',
       'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <workspace-root> --json',

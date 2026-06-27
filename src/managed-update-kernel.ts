@@ -2,6 +2,7 @@ import { readOplUpdateChannel, readOplWorkspaceRoot } from './system-preferences
 import type { FrameworkContracts } from './types.ts';
 import { buildOplEnvironment } from './system-installation/environment.ts';
 import { buildOplModules } from './system-installation/modules.ts';
+import { scholarSkillsStateForAgentPackageChannel } from './system-installation/scholarskills-package-channel.ts';
 import {
   findLatestManagedUpdateReceipt,
   managedUpdateComponentReceiptLedgerFilePath,
@@ -599,7 +600,7 @@ function buildAgentPackageComponent(modules: Record<string, unknown>[], channel:
     provider_id: 'agent_package_channel',
     adapter_id: 'agent_package_channel_adapter',
     policy_id: 'ordinary_user_non_development_silent_background',
-    label: 'MAS/MAG/RCA/OMA managed agent packages',
+    label: 'OPL managed agent packages',
     state,
     channel,
     current: {
@@ -620,7 +621,7 @@ function buildAgentPackageComponent(modules: Record<string, unknown>[], channel:
         state === 'current' ? 'True' : 'False',
         state === 'current' ? 'AgentPackagesCurrent' : 'AgentPackageMaintenanceAvailable',
         state === 'current'
-          ? 'Managed default agent packages are current or have no clean update available.'
+          ? 'Managed default agent and capability packages are current or have no clean update available.'
           : 'Managed package-channel maintenance is available for clean OPL module roots.',
       ),
       condition(
@@ -678,7 +679,7 @@ function buildAgentPackageComponent(modules: Record<string, unknown>[], channel:
             readOnlyCommand(
               'inspect_connect_modules',
               'opl connect modules --json',
-              'Read the managed module package-channel projection.',
+              'Read the managed package-channel projection.',
             ),
           ]
           : [
@@ -713,7 +714,7 @@ function buildAgentPackageComponent(modules: Record<string, unknown>[], channel:
       can_claim_quality_or_export_verdict: false,
     },
     notes: [
-      'GHCR package channel is the ordinary non-development source for managed agent packages.',
+      'GHCR package channel is the ordinary non-development source for managed agent and capability packages.',
       'Package-channel freshness does not claim domain readiness, artifact authority, quality verdict, or export readiness.',
     ],
   };
@@ -886,7 +887,10 @@ export async function buildManagedUpdateKernelProjection(
   const channel = readOplUpdateChannel().channel;
   const environment = (await buildOplEnvironment(contracts)).system_environment as Record<string, unknown>;
   const modulesPayload = buildOplModules({ profile: 'fast' }).modules;
-  const modules = modulesPayload.modules as Record<string, unknown>[];
+  const modules = [
+    ...(modulesPayload.modules as Record<string, unknown>[]),
+    scholarSkillsStateForAgentPackageChannel() as unknown as Record<string, unknown>,
+  ];
   const appBinary = buildAppBinaryComponent(channel);
   const runtimeToolchain = buildRuntimeToolchainComponent(environment, channel);
   const agentPackages = buildAgentPackageComponent(modules, channel);

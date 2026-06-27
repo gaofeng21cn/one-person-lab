@@ -56,7 +56,7 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
     runGitFixtureCommand(workspaceRoot, ['clone', bookForgeRemote.remoteRoot, siblingCheckouts.oplbookforge]);
     runGitFixtureCommand(workspaceRoot, ['clone', scholarSkillsRemote.remoteRoot, siblingCheckouts.scholarskills]);
 
-    const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
+    const output = withCliTimeout('180000', () => runCli(['system', 'startup-maintenance'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,

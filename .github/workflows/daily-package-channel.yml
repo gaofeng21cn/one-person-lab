@@ -10,7 +10,7 @@ on:
         required: false
         type: string
       force_publish:
-        description: Publish even when the module source fingerprint is unchanged
+        description: Publish even when the package source fingerprint is unchanged
         required: false
         type: boolean
         default: false
@@ -24,7 +24,7 @@ env:
 
 jobs:
   detect-package-channel-change:
-    name: Detect module package-channel changes
+    name: Detect package-channel source changes
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:

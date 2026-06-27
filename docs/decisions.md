@@ -5,6 +5,21 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-06-27
+
+### 决策：framework capability package 复用 GHCR agent package channel，不新增专属 source manager
+
+原因：`OPL ScholarSkills` 是 OPL-owned 学术能力模块库，供 MAS/MAG/RCA/OMA 等 agent 同步到具体 workspace / quest 使用。它需要随普通 App / non-development 路径自动安装、更新、回滚和投影，但不能因此新建一套独立 git clone / pull / path manager；否则普通用户会出现 domain module package channel 与 capability skill source 两套维护路径，增加运维成本，也会让 App 更新与 daily package channel 的 source fingerprint 判断失真。
+
+影响：
+
+- `OPL ScholarSkills` 作为 `framework_capability_package` 纳入 `src/package-distribution.ts` 和 GHCR `one-person-lab-manifest` / `one-person-lab-modules/opl-scholarskills:<version>` package channel。普通 App 用户路径只从 package channel 安装 / 更新 / 回滚，不使用 ScholarSkills 专属 git clone / pull manager。
+- `.github/workflows/daily-package-channel.yml` 继续通过 `packages.yml` 发布统一 package channel；change detector 比较 package source fingerprint，覆盖 domain module、Foundry module 与 framework capability package。新增 capability package 必须复用这条 channel，而不是新建 daily job 或 source manager。
+- `opl update status/apply/rollback --component agent_package_channel --json` 与 `opl system startup-maintenance --json` 把 ScholarSkills 作为 package-channel target 处理；dirty package root、Developer Mode checkout、显式 `OPL_SCHOLARSKILLS_REPO_ROOT` / `OPL_MODULE_PATH_SCHOLARSKILLS` 只进入开发者观察或 manual-required 语义，不被普通 App silent update 覆盖。
+- `opl connect sync-skills --domain scholarskills --scope workspace|quest ... --json` 仍是论文工作目录的 Codex discovery skill 同步入口。同步来源是当前 managed package，落点是目标 workspace / quest 的 `.codex/skills/opl-scholarskills/`，不是系统 Codex skill registry，也不是 MAS 程序仓默认 mirror。
+- 新增 framework capability package 的统一步骤是：加入 package distribution spec、archive / manifest / checksum 生成、release discipline gate、managed update/startup/workspace sync 测试和人读文档；不得把文档、gallery 中间产物、render cache 或 heavy generated assets 默认塞进 git/package。
+- 该决策不改变 domain authority。ScholarSkills package channel readiness 不授权 MAS/MAG/RCA/OMA domain truth、quality verdict、artifact authority、owner receipt、typed blocker、runtime queue 或 publication/export readiness。
+
 ## 2026-06-26
 
 ### 决策：domain-handler export 与 dispatch timeout 分流

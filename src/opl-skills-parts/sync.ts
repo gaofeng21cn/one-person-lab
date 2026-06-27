@@ -3,6 +3,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 import { resolveDefaultFamilyWorkspaceRoot } from '../family-workspace-root.ts';
+import { PACKAGED_MODULE_MARKER_FILE } from '../packaged-module-marker.ts';
 import type {
   InspectFamilySkillPack,
   SkillPackSyncScope,
@@ -326,10 +327,27 @@ function resolveGitHead(repoRoot: string) {
     encoding: 'utf8',
   });
   if (result.status !== 0) {
-    return null;
+    return resolvePackagedSourceHead(repoRoot);
   }
   const head = result.stdout.trim();
-  return head || null;
+  return head || resolvePackagedSourceHead(repoRoot);
+}
+
+function resolvePackagedSourceHead(repoRoot: string) {
+  const markerPath = path.join(repoRoot, PACKAGED_MODULE_MARKER_FILE);
+  if (!fs.existsSync(markerPath) || !fs.statSync(markerPath).isFile()) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(fs.readFileSync(markerPath, 'utf8')) as Record<string, unknown>;
+    const sourceGit = parsed.source_git && typeof parsed.source_git === 'object'
+      ? parsed.source_git as Record<string, unknown>
+      : null;
+    const head = sourceGit?.head_sha;
+    return typeof head === 'string' && head.trim().length > 0 ? head.trim() : null;
+  } catch {
+    return null;
+  }
 }
 
 function writeJsonFile(filePath: string, value: unknown) {

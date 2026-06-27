@@ -4,7 +4,6 @@ import crypto from 'node:crypto';
 import { assert, createFakeCodexFixture, fs, os, path, runCli, test } from '../helpers.ts';
 import { computePackageChannelTreeSha256 } from '../../../../src/system-installation/module-package-channel.ts';
 import { writeFakeBookForgeGeneratedSurfacePack } from '../../cli-codex-default-shell-helpers.ts';
-import { createScholarSkillsRemote } from './system-startup-maintenance-cases/shared.ts';
 
 import './managed-update-kernel-cases/lock-contention.ts';
 
@@ -48,6 +47,25 @@ function writePackagedModuleFixture(input: {
           body_markdown: `# ${input.skillName}\n`,
         },
       }, null, 2),
+      'utf8',
+    );
+  } else if (input.moduleId === 'scholarskills') {
+    fs.mkdirSync(path.join(input.root, '.codex-plugin'), { recursive: true });
+    fs.mkdirSync(path.join(input.root, 'skills', 'opl-scholarskills'), { recursive: true });
+    fs.writeFileSync(
+      path.join(input.root, '.codex-plugin', 'plugin.json'),
+      JSON.stringify({ name: 'opl-scholarskills', skills: './skills/' }, null, 2),
+      'utf8',
+    );
+    fs.writeFileSync(
+      path.join(input.root, 'skills', 'opl-scholarskills', 'SKILL.md'),
+      `---\nname: opl-scholarskills\ndescription: opl-scholarskills fixture.\n---\n\n# opl-scholarskills\n`,
+      'utf8',
+    );
+    fs.mkdirSync(path.join(input.root, 'contracts'), { recursive: true });
+    fs.writeFileSync(
+      path.join(input.root, 'contracts', 'scholar-skills-capability-modules.json'),
+      JSON.stringify({ fixture: 'managed-update-packaged-module' }, null, 2),
       'utf8',
     );
   } else {
@@ -194,6 +212,14 @@ function writeManagedUpdateModuleFixtures(homeRoot: string) {
       headSha: 'bookforge-head-sha',
       previousHeadSha: 'bookforge-previous-head-sha',
     },
+    {
+      moduleId: 'scholarskills',
+      repoName: 'opl-scholarskills',
+      pluginName: 'opl-scholarskills',
+      skillName: 'opl-scholarskills',
+      headSha: 'scholarskills-head-sha',
+      previousHeadSha: 'scholarskills-previous-head-sha',
+    },
   ] as const;
   const env: Record<string, string> = {
     OPL_MODULES_ROOT: modulesRoot,
@@ -206,10 +232,10 @@ function writeManagedUpdateModuleFixtures(homeRoot: string) {
 }
 
 type ManagedUpdateModuleFixture = {
-  moduleId: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge';
-  repoName: 'med-autoscience' | 'med-autogrant' | 'redcube-ai' | 'opl-meta-agent' | 'opl-bookforge';
-  pluginName: 'mas' | 'mag' | 'rca' | 'opl-meta-agent' | 'opl-bookforge';
-  skillName: 'mas' | 'mag' | 'rca' | 'opl-meta-agent' | 'opl-bookforge';
+  moduleId: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge' | 'scholarskills';
+  repoName: 'med-autoscience' | 'med-autogrant' | 'redcube-ai' | 'opl-meta-agent' | 'opl-bookforge' | 'opl-scholarskills';
+  pluginName: 'mas' | 'mag' | 'rca' | 'opl-meta-agent' | 'opl-bookforge' | 'opl-scholarskills';
+  skillName: 'mas' | 'mag' | 'rca' | 'opl-meta-agent' | 'opl-bookforge' | 'opl-scholarskills';
   sourceHeadSha: string;
 };
 
@@ -239,6 +265,27 @@ function writeModuleSourceFiles(root: string, module: ManagedUpdateModuleFixture
           body_markdown: `# OMA ${label}\n`,
         },
       }, null, 2),
+      'utf8',
+    );
+    return;
+  }
+  if (module.moduleId === 'scholarskills') {
+    fs.mkdirSync(path.join(root, 'skills', 'opl-scholarskills'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.codex-plugin'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.codex-plugin', 'plugin.json'),
+      JSON.stringify({ name: 'opl-scholarskills', skills: './skills/' }, null, 2),
+      'utf8',
+    );
+    fs.writeFileSync(
+      path.join(root, 'skills', 'opl-scholarskills', 'SKILL.md'),
+      `---\nname: opl-scholarskills\ndescription: ScholarSkills ${label}.\n---\n\n# ScholarSkills ${label}\n`,
+      'utf8',
+    );
+    fs.mkdirSync(path.join(root, 'contracts'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'contracts', 'scholar-skills-capability-modules.json'),
+      JSON.stringify({ fixture: label }, null, 2),
       'utf8',
     );
     return;
@@ -425,13 +472,19 @@ test('update apply for agent package channel executes the managed adapter and re
       skillName: 'opl-bookforge',
       sourceHeadSha: 'bookforge-updated-head-sha',
     },
+    {
+      moduleId: 'scholarskills',
+      repoName: 'opl-scholarskills',
+      pluginName: 'opl-scholarskills',
+      skillName: 'opl-scholarskills',
+      sourceHeadSha: 'scholarskills-updated-head-sha',
+    },
   ];
   const packageChannel = writeManagedUpdatePackageChannelFixture({
     root: path.join(homeRoot, 'channel-update'),
     version: '26.6.99-nightly',
     modules: updateModules,
   });
-  const scholarSkillsRemote = createScholarSkillsRemote();
   const codexFixture = createFakeCodexFixture(`
 if [ "$1" = "--version" ]; then
   echo "codex-cli 0.134.0"
@@ -449,7 +502,6 @@ exit 2
       ...moduleEnv,
       OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
-      OPL_SCHOLARSKILLS_REPO_URL: scholarSkillsRemote.remoteRoot,
       OPL_PACKAGES_OWNER: 'owner',
       OPL_PACKAGE_CHANNEL_MANIFEST_REF: 'ghcr.io/owner/one-person-lab-manifest:26.6.99-nightly',
       PATH: `${codexFixture.fixtureRoot}${path.delimiter}${packageChannel.fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
@@ -588,7 +640,7 @@ exit 2
     assert.equal(output.managed_update.execution.adapter_results[0].apply_mode, 'auto_apply');
     assert.equal(output.managed_update.execution.adapter_results[0].status_detail.auto_apply_eligible, true);
     assert.equal(output.managed_update.execution.adapter_results[0].status_detail.app_background_safe, true);
-    assert.equal(output.managed_update.execution.adapter_results[0].status_detail.clean_managed_targets_count, 5);
+    assert.equal(output.managed_update.execution.adapter_results[0].status_detail.clean_managed_targets_count, 6);
     assert.equal(output.managed_update.execution.adapter_results[0].status_detail.manual_required_targets_count, 0);
     assert.equal(output.managed_update.execution.adapter_results[0].status_detail.post_apply_status, 'completed');
     assert.equal(output.managed_update.execution.adapter_results[0].status_detail.reload_status, 'recommended');
@@ -668,7 +720,7 @@ exit 2
     assert.equal(receiptLedger.receipts[0].apply_mode, 'auto_apply');
     assert.equal(receiptLedger.receipts[0].status_detail.auto_apply_eligible, true);
     assert.equal(receiptLedger.receipts[0].status_detail.app_background_safe, true);
-    assert.equal(receiptLedger.receipts[0].status_detail.clean_managed_targets_count, 5);
+    assert.equal(receiptLedger.receipts[0].status_detail.clean_managed_targets_count, 6);
     assert.equal(receiptLedger.receipts[0].status_detail.manual_required_targets_count, 0);
     assert.equal(receiptLedger.receipts[0].status_detail.post_apply_status, 'completed');
     assert.equal(receiptLedger.receipts[0].status_detail.reload_status, 'recommended');
@@ -703,6 +755,11 @@ exit 2
       JSON.parse(fs.readFileSync(path.join(moduleEnv.OPL_MODULES_ROOT, 'med-autoscience', 'opl-runtime-module.json'), 'utf8'))
         .source_git.head_sha,
       'mas-updated-head-sha',
+    );
+    assert.equal(
+      JSON.parse(fs.readFileSync(path.join(moduleEnv.OPL_MODULES_ROOT, 'opl-scholarskills', 'opl-runtime-module.json'), 'utf8'))
+        .source_git.head_sha,
+      'scholarskills-updated-head-sha',
     );
     assert.equal(
       JSON.parse(fs.readFileSync(path.join(`${moduleEnv.OPL_MODULES_ROOT}/med-autoscience.previous`, 'opl-runtime-module.json'), 'utf8'))
@@ -746,7 +803,6 @@ exit 2
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(scholarSkillsRemote.fixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -789,6 +845,13 @@ test('update rollback for agent package channel restores recorded previous packa
       pluginName: 'opl-bookforge',
       skillName: 'opl-bookforge',
       sourceHeadSha: 'bookforge-rollback-current-sha',
+    },
+    {
+      moduleId: 'scholarskills',
+      repoName: 'opl-scholarskills',
+      pluginName: 'opl-scholarskills',
+      skillName: 'opl-scholarskills',
+      sourceHeadSha: 'scholarskills-rollback-current-sha',
     },
   ];
   const packageChannel = writeManagedUpdatePackageChannelFixture({
@@ -839,7 +902,7 @@ exit 2
     assert.equal(rollback.managed_update.operation, 'rollback');
     assert.equal(rollback.managed_update.execution.status, 'completed');
     assert.equal(rollback.managed_update.execution.adapter_results[0].status, 'completed');
-    assert.equal(rollback.managed_update.execution.adapter_results[0].result.summary.completed_targets_count, 5);
+    assert.equal(rollback.managed_update.execution.adapter_results[0].result.summary.completed_targets_count, 6);
     assert.equal(rollback.managed_update.execution.receipt_record.status, 'recorded');
     assert.equal(rollback.managed_update.execution.receipt_record.recorded_receipt_count, 1);
     assert.equal(rollback.managed_update.components[0].receipt.verify_result, 'passed');
@@ -853,6 +916,16 @@ exit 2
       JSON.parse(fs.readFileSync(path.join(`${moduleEnv.OPL_MODULES_ROOT}/med-autoscience.previous`, 'opl-runtime-module.json'), 'utf8'))
         .source_git.head_sha,
       'mas-rollback-current-sha',
+    );
+    assert.equal(
+      JSON.parse(fs.readFileSync(path.join(moduleEnv.OPL_MODULES_ROOT, 'opl-scholarskills', 'opl-runtime-module.json'), 'utf8'))
+        .source_git.head_sha,
+      'scholarskills-head-sha',
+    );
+    assert.equal(
+      JSON.parse(fs.readFileSync(path.join(`${moduleEnv.OPL_MODULES_ROOT}/opl-scholarskills.previous`, 'opl-runtime-module.json'), 'utf8'))
+        .source_git.head_sha,
+      'scholarskills-rollback-current-sha',
     );
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });

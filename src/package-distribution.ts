@@ -5,14 +5,20 @@ import path from 'node:path';
 import { getOplReleaseRepo, getOplReleaseVersion } from './opl-release.ts';
 import { readBundledCodexDefaultProfile } from './local-codex-defaults.ts';
 
-type PackageModuleId = 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge';
+type PackageModuleId =
+  | 'medautoscience'
+  | 'medautogrant'
+  | 'redcube'
+  | 'oplmetaagent'
+  | 'oplbookforge'
+  | 'scholarskills';
 
 type PackageModuleSpec = {
   module_id: PackageModuleId;
   label: string;
   repo_name: string;
   repo_url: string;
-  scope: 'domain_module' | 'runtime_dependency';
+  scope: 'domain_module' | 'runtime_dependency' | 'framework_capability_package';
   package_name: string;
 };
 
@@ -69,6 +75,14 @@ const MODULE_SPECS: PackageModuleSpec[] = [
     repo_url: 'https://github.com/gaofeng21cn/opl-bookforge.git',
     scope: 'domain_module',
     package_name: 'opl-bookforge',
+  },
+  {
+    module_id: 'scholarskills',
+    label: 'OPL ScholarSkills',
+    repo_name: 'opl-scholarskills',
+    repo_url: 'https://github.com/gaofeng21cn/opl-scholarskills.git',
+    scope: 'framework_capability_package',
+    package_name: 'opl-scholarskills',
   },
 ];
 
@@ -152,7 +166,7 @@ function buildReleaseAutomation(retainVersions: number, rollbackVersion: string 
       schedule: 'daily',
       version_template: '<utc_yy.m.d>-nightly',
       change_detector: 'scripts/package-channel-daily-check.mjs',
-      comparison: 'module_source_fingerprint',
+      comparison: 'package_source_fingerprint',
       ignored_fields: ['opl_version', 'generated_at', 'artifact tag'],
       no_change_behavior: 'skip_without_publish',
       publish_gate: 'daily_package_channel_changed',
