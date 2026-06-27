@@ -347,3 +347,22 @@ Current next-route rules:
 | P0 | MAS `tests/test_display_pack_renderer_structure.py` | Safest fresh non-authority >1000-line candidate from MAS audit. | Use a MAS worktree; only split tests into `tests/display_pack_renderer_structure_cases/**`; do not touch renderer implementation, contracts, gallery payload, or paper authority. |
 | P1 | RCA canonical metadata drift | `tests/opl-agent-pack-contracts-canonical.test.ts` fails on current RCA `main` due to `functional_privatization_audit` source/contract shape drift unrelated to Round 10. | Route to a separate RCA contract-alignment lane; do not hide it behind structure cleanup. |
 | P1 | App / BookForge / OMA large tracked files | Current large hits are images, PDFs, lockfiles, workflows, or JSON contracts. | Do not split as source structure debt; only mutate when a repo-native owner route says the machine contract or workflow itself needs semantic change. |
+
+## 2026-06-28 Refactor Patrol Landing Round 11
+
+This follow-up landed the MAS Round 10 read-only candidate under the corrected non-fork rule. It did not touch upstream fork bodies and does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `med-autoscience` | `refactor_patrol` | `tests/test_display_pack_renderer_structure.py` split into `tests/display_pack_renderer_structure_cases/` while preserving the original test entry path; pushed `main` commit `59ce17ecd`. | Root main rerun: `scripts/run-pytest-clean.sh tests/test_display_pack_renderer_structure.py tests/display_pack_renderer_structure_cases -q` passed 27/27; `git diff --check HEAD~1..HEAD` passed; line readback: original entry 1216 -> 7 lines, largest case file 448 lines; candidate branch patch-equivalent and cleaned; remote readback `origin/main` = `59ce17ecd3dd24f5efa71e83843304b6765d2d71`. | This is MAS display-pack test structure evidence only. It did not touch renderer implementation, contracts, generated gallery payload, docs assets, PaperMission truth, owner receipts, typed blockers, human gates, runtime DB, or provider queues. Existing `mas-owner-fallback-20260627` and `mas-paper-delta-ref-adoption-20260628` worktrees remain separate owner lanes and were not cleaned by this route. |
+
+### Round 11 Queue Adjustment
+
+Current next-route rules:
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| P0 | MAS PaperMission command/test source | Still same-write-set owner-gated by older MAS owner/fallback work, not safe as this refactor patrol mutation. | Re-audit only after the owning MAS lane is resolved, absorbed, or explicitly handed off. |
+| P1 | RCA canonical metadata drift | `tests/opl-agent-pack-contracts-canonical.test.ts` fails on current RCA `main` due to `functional_privatization_audit` source/contract shape drift unrelated to Round 10. | Route to a separate RCA contract-alignment lane; do not hide it behind structure cleanup. |
+| P1 | OPL family non-fork repos | Re-scan with repo-native source-purity/line-budget tools before selecting another mutation. | Mutate only with clean or unrelated dirty write set, authority-aware owner route, focused verification, and no fork-body path. |
