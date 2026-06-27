@@ -910,3 +910,22 @@ Current next-route rules:
 | closed | MAS `tests/test_adapter_retirement_boundary_cases/test_private_runtime_residue_active_callers.py` | Aggregate entry is 11 lines; case files are 398, 608, 1100, and 144 lines. | Reopen only if the 1100-line violation-guard file gains a clear natural sub-family or regrows beyond the split signal. |
 | watch | App workflow and contract files | Fresh scan still shows workflows/contracts over 1000, but no selected semantic split has been proven. | Do not split YAML/contracts mechanically; require repo-native owner route and focused verification. |
 | watch | MAS source/authority-adjacent files | Fresh scan still shows many over-1000 MAS source/contract/docs files. | Keep source/contracts/docs owner-gated unless a fresh MAS owner route and authority-safe verification prove a specific cleanup. |
+
+## 2026-06-28 Refactor Patrol Landing Round 40
+
+This continuation landed another MAS test-only PaperRecovery structure split from a clean/current MAS main worktree. It did not touch upstream fork bodies and does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `med-autoscience` | `refactor_patrol` | Moved provider-admission transition tests into `tests/test_paper_recovery_state_cases/provider_admission_transition_cases.py` and moved two running-attempt identity tests into the existing `running_attempt_identity_cases.py`, preserving the original `tests/test_paper_recovery_state.py` entry path via imports. | MAS `main/origin` advanced to `b51e49b1b`; `scripts/run-pytest-clean.sh tests/test_paper_recovery_state_cases/provider_admission_transition_cases.py -q` passed 4/4; `scripts/run-pytest-clean.sh tests/test_paper_recovery_state_cases/running_attempt_identity_cases.py -q` passed 3/3; `scripts/run-pytest-clean.sh tests/test_paper_recovery_state.py -q -k 'not terminal_selector_residue_yields_successor_over_stale_progress_first_owner_receipt'` passed 31/31 with one deselected; `git diff --check` passed; line readback: aggregate entry 1461, provider-admission case 252, running-attempt case 109; candidate worktree removed and branch deleted; remote readback `origin/main` = `b51e49b1b5d8afde461cc97bfc283300cd049c85`. | Full `tests/test_paper_recovery_state.py -q` remains red because the same `test_terminal_selector_residue_yields_successor_over_stale_progress_first_owner_receipt` assertion already fails on MAS `origin/main` before this split. Treat that as a separate MAS behavior/test expectation issue, not as structure-split evidence. |
+
+### Round 40 Queue Adjustment
+
+Current next-route rules:
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| watch | MAS `tests/test_paper_recovery_state.py` | Entry file is now below the 1500-line split signal at 1461 lines, but still above the 1000-line preferred target. | Do not keep shaving mechanically; continue only if a fresh natural test-family boundary appears and the existing red behavior/test-expectation issue is either fixed or explicitly excluded as baseline evidence. |
+| watch | MAS PaperRecovery behavior/test expectation | Full aggregate has one baseline failure in `test_terminal_selector_residue_yields_successor_over_stale_progress_first_owner_receipt`, present on `origin/main` before Round 40. | Route as a separate MAS behavior/test-expectation lane; do not hide it inside structure cleanup. |
+| watch | MAS source/authority-adjacent files | Fresh scans still show many over-1000 MAS source/contract/docs files. | Keep source/contracts/docs owner-gated unless a fresh MAS owner route and authority-safe verification prove a specific cleanup. |
