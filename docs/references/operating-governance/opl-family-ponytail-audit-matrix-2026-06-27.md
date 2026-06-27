@@ -950,3 +950,25 @@ Current next-route rules:
 | watch | MAS `tests/test_paper_recovery_state.py` | Entry file remains below the 1500-line split signal at 1461 lines, but above the 1000-line preferred target. | Do not keep shaving mechanically; continue only if a fresh natural test-family boundary appears. |
 | no_safe_change | MAS `tests/test_domain_health_diagnostic_cases/supervisor_and_progress_cases_cases/test_obligation_actuator_postcondition.py` | Prior trial split failed the original entry-path pytest execution despite collect-only seeing tests. | Do not absorb this as a structure cleanup lane until the entry-path pytest behavior is understood or a different repo-native verification target is selected. |
 | watch | MAS source/authority-adjacent files | Fresh scans still show many over-1000 MAS source/contract/docs files. | Keep source/contracts/docs owner-gated unless a fresh MAS owner route and authority-safe verification prove a specific cleanup. |
+
+## 2026-06-28 Refactor Patrol Landing Round 42
+
+This continuation closed one stale OPL worktree, refreshed App currentness, and landed one MAS test-only OPL current-control handoff split. It did not touch upstream fork bodies and does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `one-person-lab` | `stale_lane_cleanup` | Removed stale worktree `/Users/gaofeng/workspace/.github-ci-opl-20260628` and local branch `fix/github-ci-20260628-opl-ci-contract`. | `worktree_absorption_audit.py --target-ref main` classified the worktree as `exact-merged`; post-cleanup `codex_ops_gate.py status` reports `stale_or_diverged_worktrees=[]`; root `HEAD == origin/main == 8e565f5aa9b01c4143de5786ae901612d01ad9f2`. | This is workspace hygiene only, not source/runtime/readiness evidence. |
+| `one-person-lab-app` | `currentness_preflight` | Fast-forwarded App root from `51a36d5` to `7ea4152a` to keep subsequent App scans current. | `git pull --ff-only` added `docs/release/records/v26.6.27-release-owner-receipt.json`; post-readback `HEAD == origin/main == 7ea4152a5bdb143cdbf57d7e73c6a66d1f0de9f6`; `git ls-files shells/aionui _external/hermes-agent` returned 0 tracked files. | This is currentness hygiene only. It did not modify App fork/reference bodies and does not prove App release readiness. |
+| `med-autoscience` | `refactor_patrol` | Split `tests/study_progress_cases/opl_current_control_state_handoff_projection.py` by moving owner-receipt closeout cases to `opl_current_control_state_handoff_projection_cases/owner_receipt_closeout.py` and supervisor tick audit to `opl_current_control_state_handoff_projection_cases/supervisor_tick_audit.py`, preserving the aggregate entry through imports. | MAS `main/origin` advanced to `470f4213b`; split case pytest passed 7/7; aggregate entry passed 18/18 with two deselected pre-existing failures; the same two failures were reproduced on MAS `origin/main` before this split; `git diff --check HEAD~1..HEAD` passed; line readback: aggregate entry 1434, owner-receipt case 448, supervisor-tick case 86; candidate worktree and branch were deleted. | Full aggregate still has two pre-existing assertions expecting `paper_progress_delta.token_usage_total == 0` where current behavior returns `None`; route separately as MAS behavior/test-expectation cleanup, not as this structure split. |
+
+### Round 42 Queue Adjustment
+
+Current next-route rules:
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| closed | OPL `.github-ci-opl-20260628` stale worktree | Exact-merged worktree and local branch were removed. | Reopen only if a fresh `codex_ops_gate` reports a real stale/diverged worktree. |
+| closed | MAS `tests/study_progress_cases/opl_current_control_state_handoff_projection.py` over-1500 split signal | Entry file is now below the 1500-line split signal at 1434 lines. | Do not keep shaving mechanically; continue only if a fresh natural test-family boundary appears. |
+| watch | MAS OPL current-control handoff aggregate baseline | Two assertions fail on current `origin/main` before the split: `paper_progress_delta.token_usage_total` is `None`, not `0`. | Route as separate behavior/test-expectation cleanup if desired; do not hide it inside structure cleanup. |
+| watch | MAS source/authority-adjacent files | Fresh scans still show many over-1000 MAS source/contract/docs files. | Keep source/contracts/docs owner-gated unless a fresh MAS owner route and authority-safe verification prove a specific cleanup. |
