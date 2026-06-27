@@ -992,3 +992,22 @@ Current next-route rules:
 | watch | MAS default-executor transition-request behavior/test expectation | Multiple transition-request/default-executor assertions fail on current MAS main before and after Round 43. | Route as separate MAS behavior/test-expectation cleanup if selected; do not hide it inside structure cleanup. |
 | watch | MAS next test-only over-1500 candidates | Fresh prior scan pointed to `tests/study_progress_cases/current_executable_owner_action_cases/dm003_owner_receipt_running_handoff.py` around 1608 lines. | Select only after fresh scan confirms it still exceeds the split signal and a natural case-family boundary is clear; forbidden write set remains MAS `src/**`, `contracts/**`, `docs/**`, runtime queues, owner receipts, typed blockers, provider attempts, and publication/control authority. |
 | no_safe_change | MAS `tests/test_domain_health_diagnostic_cases/supervisor_and_progress_cases_cases/test_obligation_actuator_postcondition.py` | Prior trial split failed the original entry-path pytest execution despite collect-only seeing tests. | Do not absorb this as a structure cleanup lane until the entry-path pytest behavior is understood or a different repo-native verification target is selected. |
+
+## 2026-06-28 Refactor Patrol Landing Round 44
+
+This continuation landed one MAS test-only DM003 owner-receipt progress-first split from a clean/current MAS main worktree. It did not touch upstream fork bodies and does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `med-autoscience` | `refactor_patrol` | Moved the terminal-closeout-over-stale-successor case and the progress-first running AI reviewer handoff case from `tests/study_progress_cases/current_executable_owner_action_cases/dm003_owner_receipt_running_handoff.py` into `dm003_owner_receipt_progress_first.py`, preserving the aggregate entry through `tests/study_progress_cases/current_executable_owner_action.py`. | MAS `main/origin` advanced to `ee3ca8109`; root `scripts/run-pytest-clean.sh tests/study_progress_cases/current_executable_owner_action_cases/dm003_owner_receipt_progress_first.py -q` passed 2/2; aggregate moved tests passed 2/2 through `tests/study_progress_cases/current_executable_owner_action.py`; aggregate collect-only saw 125 tests; `git diff --check HEAD~1..HEAD` passed; line readback: source case file 1608 -> 1386, new progress-first case file 233, aggregate entry 30; remote readback `origin/main` = `ee3ca81095d1238f161a24599fdda71ee66d6a01`; candidate worktree removed and branch deleted. | Structure split only. No runtime readiness, publication readiness, paper progress, owner receipt validity, typed blocker validity, provider readiness, current-package authority, App release readiness, or production readiness is claimed. |
+
+### Round 44 Queue Adjustment
+
+Current next-route rules:
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| closed | MAS `tests/study_progress_cases/current_executable_owner_action_cases/dm003_owner_receipt_running_handoff.py` over-1500 split signal | File is now below the 1500-line split signal at 1386 lines. | Do not keep shaving mechanically; continue only if a fresh natural test-family boundary appears. |
+| no_safe_change | MAS `tests/test_domain_health_diagnostic_cases/supervisor_and_progress_cases_cases/test_obligation_actuator_postcondition.py` | Prior trial split failed the original entry-path pytest execution despite collect-only seeing tests. | Do not absorb this as a structure cleanup lane until the entry-path pytest behavior is understood or a different repo-native verification target is selected. |
+| watch | MAS source/authority-adjacent files | Fresh scans still show many over-1000 MAS source/contract/docs files. | Keep source/contracts/docs owner-gated unless a fresh MAS owner route and authority-safe verification prove a specific cleanup. |
