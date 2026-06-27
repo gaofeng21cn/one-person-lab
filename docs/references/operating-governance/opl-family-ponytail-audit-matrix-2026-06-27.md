@@ -385,3 +385,24 @@ Fresh non-fork scan after Round 12 still reports MAS source/test files over the 
 | P0 | MAS PaperMission command/test source | Same-write-set owner-gated by older MAS owner/fallback and paper-delta lanes. | Do not mutate until the owning MAS lanes are resolved, absorbed, or explicitly handed off. |
 | P1 | MAS non-PaperMission tests over 1000 lines | Some remain candidates, but each needs a fresh active-caller/write-set gate because many protect runtime authority, retired-surface provenance, or owner-route readbacks. | Prefer test-only case extraction with focused `scripts/run-pytest-clean.sh`; avoid source/contract/runtime writes unless separately authorized. |
 | P1 | RCA canonical metadata drift | Current RCA root has unrelated `functional_privatization_audit` source/contract shape drift. | Route to a separate contract-alignment lane; do not hide it behind structure cleanup. |
+
+## 2026-06-28 Refactor Patrol Landing Round 13
+
+This follow-up continued MAS test-only structure cleanup after a fresh non-fork write-set gate. It did not touch upstream fork bodies and does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `med-autoscience` | `refactor_patrol` | `tests/test_provider_admission_current_control_arbiter.py` split into `tests/test_provider_admission_current_control_cases/current_control_arbiter_cases.py` and `tests/test_provider_admission_current_control_cases/provider_admission_report_sync_cases.py` while preserving the original test entry path; pushed `main` commit `0150b5e6`. | Root main rerun: `scripts/run-pytest-clean.sh tests/test_provider_admission_current_control_arbiter.py -q` passed 35/35; `scripts/run-pytest-clean.sh tests/test_provider_admission_current_control_arbiter.py tests/test_provider_admission_current_control_cases -q` passed 46/46; `git diff --check HEAD~1..HEAD` passed; line readback: original entry 1728 -> 6 lines, new case files 403 and 1334 lines; candidate branch patch-equivalent and cleaned; remote readback `origin/main` = `0150b5e6a59600f95b11712c8730d7ad2ea6a7cd`. | This is MAS provider-admission current-control test structure evidence only. It did not touch `src/med_autoscience/**`, contracts, docs, PaperMission truth, owner receipts, typed blockers, human gates, runtime DB, or provider queues. Existing MAS `mas-paper-current-candidate-identity-20260628`, `mas-owner-fallback-20260627`, and `mas-paper-delta-ref-adoption-20260628` worktrees remain separate owner lanes and were not cleaned by this route. |
+
+### Round 13 Queue Adjustment
+
+Fresh gate before Round 13 found MAS root clean and aligned with `origin/main`, with an unrelated dirty worktree under `codex/paper-mission-current-candidate-identity-20260628` touching PaperMission authority/test files. The selected provider-admission test split had a disjoint write set and stayed test-only.
+
+Current next-route rules:
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| P0 | MAS PaperMission command/test source | Same-write-set owner-gated by active/older MAS PaperMission owner lanes. | Do not mutate until the owning MAS lanes are resolved, absorbed, or explicitly handed off. |
+| P1 | MAS non-PaperMission tests over 1000 lines | Some remain candidates, but each needs a fresh active-caller/write-set gate because many protect runtime authority, retired-surface provenance, or owner-route readbacks. | Prefer test-only case extraction with focused `scripts/run-pytest-clean.sh`; avoid source/contract/runtime writes unless separately authorized. |
+| P1 | RCA canonical metadata drift | Current RCA root has unrelated `functional_privatization_audit` source/contract shape drift. | Route to a separate contract-alignment lane; do not hide it behind structure cleanup. |
