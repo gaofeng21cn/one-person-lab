@@ -679,6 +679,14 @@ export async function dispatchFamilyRuntimeTask(
       stageAttemptIds: activeStageAttemptIds,
       status: 'completed',
       closeoutRefs,
+      ...(closeoutRefs.length > 0
+        ? { routeImpact: {
+            closeout_refs: closeoutRefs,
+            receipt_ref: cleanOptionalString(output.receipt_ref)
+              ?? cleanOptionalString(output.closeout_ref)
+              ?? closeoutRefs[0],
+          } }
+        : {}),
       activityEvent: {
         activity_kind: 'domain_handler_dispatch_activity',
         activity_status: typedCloseoutPacket ? 'typed_closeout_received' : 'checkpointed',

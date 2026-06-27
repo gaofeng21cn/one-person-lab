@@ -857,6 +857,8 @@ exit 44
       'export',
       '--profile',
       explicitProfilePath,
+      '--study-id',
+      '002-dm-china-us-mortality-attribution',
       '--format',
       'json',
     ]);
