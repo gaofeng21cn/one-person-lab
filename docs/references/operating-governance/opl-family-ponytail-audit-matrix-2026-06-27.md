@@ -123,3 +123,34 @@ This follow-up applied the automation split above and landed the first line-budg
 | `med-autoscience` | `owner_lane` | No mutation. | Fresh root status had unresolved conflicts in `src/med_autoscience/cli_parts/paper_mission_commands.py`, `src/med_autoscience/paper_mission_authority.py`, and `tests/test_paper_mission_drive_followthrough.py`, plus `main...origin/main [ahead 1, behind 8]`. | MAS line-budget work is blocked until the active conflict/dirty owner lane is resolved or handed off. |
 
 Temporary worktrees created by this tranche were cleaned after absorption for OPL, App, MAG, and Hermes shell. The remaining OPL worktree `codex/opl-currentness-20260627` was not created by this tranche and was left untouched.
+
+## 2026-06-27 Refactor Patrol Landing Round 2
+
+This follow-up continued the same line-budget-first route. It does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `one-person-lab` | `refactor_patrol` | `tests/src/cli/cases/family-runtime-paper-mission-stage-route.test.ts` split into helper, provider-redrive, requeue-dispatch, and terminal case files; local `main` commit `6e215bcf`. | Main rerun: `node --experimental-strip-types --test tests/src/cli/cases/family-runtime-paper-mission-stage-route.test.ts` passed 26/26; `npm run typecheck` passed; `git diff --check main...HEAD` passed in the candidate worktree before absorption. Line readback after absorption: root file 379 lines; largest split file 849 lines. | This is test structure cleanup only. It does not claim MAS PaperMission progress, owner receipt validity, typed blocker validity, provider readiness, or runtime readiness. |
+| `opl-bookforge` | `refactor_patrol` | `runtime/native_helpers/bookforge_project_hygiene.py` split out status helpers to `runtime/native_helpers/bookforge_project_hygiene_parts/status.py`; local `main` commit `c15da99`. | Main rerun: `npm run verify` exit 0; source byproduct hygiene passed; artifact lifecycle handoff contract passed. Line readback after absorption: main helper 974 lines; new status part 88 lines. | Verify output is not book delivery, final export, publication readiness, or owner acceptance evidence. Root `main` also contains prior local commits `fafed9d` and `352218d`. |
+| `opl-hermes-shell` | `refactor_patrol` | `CodexAppServerClient` split from `electron/opl-codex-gateway.cjs` to `electron/parts/codex-app-server-client.cjs` with focused helper tests; local `main` commit `2484cab`. | Main rerun: `node --test electron/parts/codex-app-server-client.test.cjs electron/opl-codex-gateway.test.cjs` passed 30/30; `npm run typecheck` passed; candidate `node --check` and `git diff --check main...HEAD` passed before absorption. Line readback after absorption: gateway 2168 lines; client part 405 lines. | Hermes shell remains a candidate shell, not App truth. `electron/main.cjs` remains P0 structure debt at 6021 lines and `electron/opl-codex-gateway.cjs` remains above the advisory budget. |
+| `med-autoscience` | `owner_lane` | Still no mutation in this refactor lane. | Subagent gate found an existing worktree `/Users/gaofeng/workspace/.worktrees/mas-owner-fallback-20260627` modifying the same target file `tests/test_cli_cases/paper_mission_commands.py` and related source, so this lane did not write MAS. | MAS line-budget work remains same-write-set owner-gated until the active MAS owner-fallback lane is resolved, absorbed, or explicitly handed off. |
+
+Second-round temporary worktrees were absorbed to their target `main` branches and are ready for cleanup after push/readback. The older OPL worktree `codex/opl-currentness-20260627` remains outside this tranche and must not be deleted by this cleanup route.
+
+### Refactor Patrol Queue Adjustment
+
+Completed or demoted from the current P0 queue:
+
+- `tests/src/cli/cases/family-runtime-paper-mission-stage-route.test.ts`: now 379 lines; split files are all below 1000 lines.
+- `runtime/native_helpers/bookforge_project_hygiene.py`: now 974 lines; no longer above the advisory budget.
+- `electron/opl-codex-gateway.cjs`: reduced from 2568 to 2168 lines but remains P0 because it is still well above the advisory budget.
+
+Next high-value candidates after this round:
+
+| Priority | File | Current reason | Gate |
+| --- | --- | --- | --- |
+| P0 | `electron/main.cjs` in `opl-hermes-shell` | Still 6021 lines after first split. | Split only along stable Electron responsibility boundaries with focused `node --check`, focused tests, and `npm run typecheck`. |
+| P0 | `electron/opl-codex-gateway.cjs` in `opl-hermes-shell` | Still 2168 lines after client extraction. | Continue one responsibility block at a time; no new gateway framework. |
+| P0 | `tests/src/cli/cases/family-runtime-binding-intake.test.ts` in `one-person-lab` | Previously P0 and still owner-gated by unrelated dirty/currentness lanes. | Mutate only after write-set ownership is clean or handed off. |
+| P0 | MAS `tests/test_cli_cases/paper_mission_commands.py` / PaperMission command source | High line count but same-write-set conflict exists. | Do not write until `mas-owner-fallback-20260627` is resolved or handed off. |
+| P1 | OPL provider-admission / stage-runner / startup-maintenance long tests | Still useful line-budget candidates. | Choose only if focused verification stays cheap and authority surfaces are untouched. |
