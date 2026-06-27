@@ -288,11 +288,17 @@ Completed exact OPL items removed from the current line-budget queue:
 - `src/family-runtime-tick.ts`: now 986 lines.
 - `src/family-runtime-enqueue-parts/existing-dedupe-reconcile.ts`: now 963 lines.
 
-Fresh OPL `npm run --silent line-budget -- --list` after Round 8 returned no entries, so the currently tracked OPL advisory-budget queue is empty. The next `opl-family` refactor patrol should switch from OPL source line-budget retirement to the next family structure queue:
+Fresh OPL `npm run --silent line-budget -- --list` after Round 8 returned no entries, so the currently tracked OPL advisory-budget queue is empty. The next `opl-family` refactor patrol must not treat upstream fork bodies as OPL structure debt.
 
 | Priority | File | Current reason | Gate |
 | --- | --- | --- | --- |
-| P0 | `electron/main.cjs` in `opl-hermes-shell` | Still 5466 lines after install-stamp extraction. | Continue one stable Electron responsibility block at a time with `node --check`, focused `node --test`, `npm run typecheck`, and diff check. |
-| P0 | `electron/opl-codex-gateway.cjs` in `opl-hermes-shell` | Still 1903 lines after previous gateway extractions. | Split only along existing gateway responsibilities; no new gateway framework. |
+| excluded | `electron/main.cjs` and `electron/opl-codex-gateway.cjs` in `opl-hermes-shell` | Upstream Hermes Desktop fork body, not OPL-owned structure debt. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay/adapter/docs/contracts/packaging/test shell. |
+| excluded | `opl-aion-shell/**` and `one-person-lab-app/shells/aionui/**` | Upstream AionUI fork body. | Read-only fork-boundary audit only; App-owned tests under `one-person-lab-app/tests/**` remain eligible when they do not modify the fork body. |
 | P0 | MAS PaperMission command/test source | Still same-write-set owner-gated by `/Users/gaofeng/workspace/.worktrees/mas-owner-fallback-20260627`. | Do not mutate until that owner lane is resolved, absorbed, or explicitly handed off. |
-| P1 | Other OPL family repos | Re-scan with repo-native line-budget/source-purity tools after Hermes/MAS gates. | Mutate only when fresh repo status is clean or the dirty write set is unrelated and owner-classified. |
+| P1 | Other OPL family repos | Re-scan with repo-native line-budget/source-purity tools after MAS gate. | Mutate only when fresh repo status is clean or the dirty write set is unrelated and owner-classified. |
+
+### Upstream Fork Exclusion Correction
+
+After Round 8, `opl-hermes-shell` fork-body refactor commits were reverted because Hermes Desktop upstream source should remain easy to upgrade. Revert evidence: `opl-hermes-shell` commit `fa60d9e` (`revert: restore upstream Hermes shell code`) restored `electron/main.cjs` and `electron/opl-codex-gateway.cjs` to fork-body shape, deleted the OPL refactor-only parts, passed `node --check` on both entry files, passed `npm run typecheck`, passed `git diff --cached --check` before commit, and pushed with remote readback `origin/main` = `fa60d9e9e981b30534a67b9032554f4e78b45a81`.
+
+The corrected standing rule is: `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, and `_external/hermes-agent/**` are not OPL cleanup/refactor targets by default. They may be inspected to classify fork/overlay boundaries, but selected write sets must be limited to clearly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell files.
