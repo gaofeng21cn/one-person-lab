@@ -13,6 +13,7 @@ import {
   stageAttemptToPayload,
 } from './family-runtime-stage-attempt-ledger.ts';
 import { buildStageProgressLog } from './family-runtime-stage-progress-log.ts';
+import { buildStageAttemptRuntimeCurrentness } from './family-runtime-stage-attempt-runtime-currentness.ts';
 import type {
   FamilyRuntimeDomainId,
   FamilyRuntimeProviderKind,
@@ -77,8 +78,15 @@ function attachCurrentProviderReadiness(
   readinessByKind: Map<FamilyRuntimeProviderKind, CurrentProviderReadiness>,
 ) {
   const currentProviderReadiness = readinessByKind.get(attempt.provider_kind) ?? null;
+  const runtimeCurrentness = buildStageAttemptRuntimeCurrentness({
+    ledgerStatus: attempt.status,
+    providerKind: attempt.provider_kind,
+    providerRun: attempt.provider_run,
+  });
   return {
     ...attempt,
+    effective_runtime_status: runtimeCurrentness.effective_runtime_status,
+    runtime_currentness: runtimeCurrentness,
     current_provider_readiness: currentProviderReadiness,
     provider_readiness_currentness: providerReadinessCurrentness(currentProviderReadiness, {
       currentProviderReadinessRef: 'attempt.current_provider_readiness',
@@ -534,6 +542,8 @@ function compactOperatorSummary(input: {
     attempt: input.attempt.stage_attempt_id,
     task: input.attempt.task_id,
     status: input.attempt.status,
+    effective_runtime_status: input.stageProgressLog.runtime_currentness.effective_runtime_status,
+    runtime_currentness: input.stageProgressLog.runtime_currentness,
     stage: input.attempt.stage_id,
     study: input.studyId,
     domain: input.attempt.domain_id,
@@ -665,6 +675,8 @@ function compactTimelineForAttempt(
     study_id: studyId,
     stage_id: attempt.stage_id,
     status: attempt.status,
+    effective_runtime_status: stageProgressLog.runtime_currentness.effective_runtime_status,
+    runtime_currentness: stageProgressLog.runtime_currentness,
     blocked_reason: attempt.blocked_reason,
     current_provider_readiness: compactProviderReadiness(currentProviderReadiness),
     provider_readiness_currentness: readinessCurrentness,
@@ -698,6 +710,8 @@ function compactTimelineForAttempt(
       study_id: base.study_id,
       stage_id: base.stage_id,
       status: base.status,
+      effective_runtime_status: base.effective_runtime_status,
+      runtime_currentness: base.runtime_currentness,
       blocked_reason: base.blocked_reason,
       updated_at: base.updated_at,
       progress_delta_classification: base.progress_delta_classification,
@@ -714,6 +728,8 @@ function compactTimelineForAttempt(
       operator_summary: {
         attempt: base.operator_summary.attempt,
         status: base.operator_summary.status,
+        effective_runtime_status: base.operator_summary.effective_runtime_status,
+        runtime_currentness: base.operator_summary.runtime_currentness,
         stage: base.operator_summary.stage,
         study: base.operator_summary.study,
         domain: base.operator_summary.domain,

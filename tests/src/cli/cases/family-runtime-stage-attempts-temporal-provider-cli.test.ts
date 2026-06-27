@@ -204,6 +204,67 @@ test('family-runtime attempt query exposes stable top-level attempt alias', () =
   }
 });
 
+test('family-runtime temporal attempt query/list do not treat stale running ledger as running proof', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-stale-running-attempt-'));
+  try {
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'review',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas","study_id":"dm002"}',
+    ], familyRuntimeEnv(stateRoot));
+    const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
+    const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
+    const staleLedger = spawnSync(process.execPath, [
+      '--experimental-strip-types',
+      '-e',
+      `import { DatabaseSync } from 'node:sqlite';
+const db = new DatabaseSync(${JSON.stringify(queueDb)});
+db.prepare("UPDATE stage_attempts SET status = 'running', provider_run_json = '{}' WHERE stage_attempt_id = ?").run(${JSON.stringify(attemptId)});
+db.close();`,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+      },
+    });
+    assert.equal(staleLedger.status, 0, staleLedger.stderr);
+
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    });
+    const query = runCli(['family-runtime', 'attempt', 'query', attemptId], env);
+    const stageQuery = query.family_runtime_stage_attempt_query.stage_attempt_query;
+    const list = runCli(['family-runtime', 'attempt', 'list', '--domain', 'medautoscience'], env);
+    const listed = list.family_runtime_stage_attempts.attempts.find(
+      (attempt: { stage_attempt_id: string }) => attempt.stage_attempt_id === attemptId,
+    );
+
+    assert.equal(stageQuery.attempt.status, 'running');
+    assert.equal(stageQuery.operator_visibility.effective_runtime_status, 'not_running');
+    assert.equal(stageQuery.operator_visibility.runtime_currentness.running_proof_status, 'not_running');
+    assert.equal(stageQuery.operator_visibility.runtime_currentness.projection_status, 'stale_projection');
+    assert.equal(stageQuery.operator_visibility.runtime_currentness.observed_provider_status, null);
+    assert.equal(stageQuery.operator_visibility.runtime_currentness.observed_last_heartbeat_at, null);
+    assert.deepEqual(stageQuery.operator_visibility.runtime_currentness.running_proof_sources, []);
+    assert.equal(listed.effective_runtime_status, 'not_running');
+    assert.equal(listed.runtime_currentness.running_proof_status, 'not_running');
+    assert.equal(listed.operator_summary.effective_runtime_status, 'not_running');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime temporal attempt start refuses non-temporal attempts', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-start-provider-'));
   try {

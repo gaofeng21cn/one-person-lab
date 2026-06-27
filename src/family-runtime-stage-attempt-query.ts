@@ -22,6 +22,7 @@ import { buildStageAttemptTruePathProof } from './family-runtime-stage-attempt-t
 import { buildModelRouteCostProjection } from './family-runtime-stage-attempt-usage.ts';
 import type { TemporalStageAttemptVisibilityReadiness } from './family-runtime-temporal-visibility.ts';
 import { providerReadinessCurrentness } from './family-runtime-stage-attempt-provider-readiness-currentness.ts';
+import { buildStageAttemptRuntimeCurrentness } from './family-runtime-stage-attempt-runtime-currentness.ts';
 import {
   buildStageAttemptCloseoutRefsOnlyContract,
   buildStageAttemptLaunchEnvelope,
@@ -89,6 +90,12 @@ export function queryStageAttempt(
   const readinessCurrentness = providerReadinessCurrentness(currentProviderReadiness, {
     currentProviderReadinessRef: 'stage_attempt_query.current_provider_readiness',
     creationReceiptRef: 'stage_attempt_query.attempt.provider_receipt',
+  });
+  const runtimeCurrentness = buildStageAttemptRuntimeCurrentness({
+    ledgerStatus: attempt.status,
+    providerKind: attempt.provider_kind,
+    providerRun: attempt.provider_run,
+    temporalQuery: options.temporalQuery,
   });
   const closeoutRefs = stringListFrom(attempt.closeout_refs);
   const consumedRefs = stringListFrom(latestCloseout?.consumed_refs);
@@ -285,6 +292,7 @@ export function queryStageAttempt(
       operator_conflicts: conflictOrBlockerEnvelopes,
       ...genericProjections,
       provider_readiness_currentness: readinessCurrentness,
+      runtime_currentness: runtimeCurrentness,
       usage_projection: attempt.usage_projection,
       memory_trace_projection: stageProgressLog.memory_trace_projection,
       model_route_cost_projection: modelRouteCostProjection,
@@ -298,6 +306,8 @@ export function queryStageAttempt(
         attempt_id: attempt.stage_attempt_id,
         stage_id: attempt.stage_id,
         status: attempt.status,
+        effective_runtime_status: runtimeCurrentness.effective_runtime_status,
+        runtime_currentness: runtimeCurrentness,
         current_provider_readiness: currentProviderReadiness,
         provider_readiness_currentness: readinessCurrentness,
         codex_stage_activity_timeout_policy: workflowContract?.activity_timeout_policy.codex_stage_activity ?? null,

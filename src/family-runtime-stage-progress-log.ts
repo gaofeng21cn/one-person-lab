@@ -15,6 +15,7 @@ import {
   progressDeltaReceiptDeltaClassFromStageClassification,
   type StageProgressDeltaClassification,
 } from './progress-delta-receipt.ts';
+import { buildStageAttemptRuntimeCurrentness } from './family-runtime-stage-attempt-runtime-currentness.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -789,6 +790,11 @@ export function buildStageProgressLog(input: StageProgressLogInput) {
     providerRun: input.providerRun,
     visibilityReadiness: input.temporalVisibilityReadiness,
   });
+  const runtimeCurrentness = buildStageAttemptRuntimeCurrentness({
+    ledgerStatus: input.status,
+    providerKind: input.providerKind,
+    providerRun: input.providerRun,
+  });
   const progressDeltaReceipt = progressDeltaReceiptForUserStageLog(input, userStageLog);
   return {
     surface_kind: 'opl_stage_progress_log',
@@ -798,6 +804,7 @@ export function buildStageProgressLog(input: StageProgressLogInput) {
     domain_id: input.domainId,
     stage_id: input.stageId,
     temporal_visibility: temporalVisibility,
+    runtime_currentness: runtimeCurrentness,
     temporal_webui_ref: buildTemporalWebUiRef(temporalVisibility),
     intended_work: {
       provider_kind: input.providerKind,
@@ -823,6 +830,8 @@ export function buildStageProgressLog(input: StageProgressLogInput) {
     },
     actual_work: {
       status: input.status,
+      effective_runtime_status: runtimeCurrentness.effective_runtime_status,
+      runtime_currentness: runtimeCurrentness,
       blocked_reason: input.blockedReason ?? null,
       provider_status: stringValue(input.providerRun.provider_status),
       closeout_receipt_status: input.closeoutReceiptStatus ?? null,
