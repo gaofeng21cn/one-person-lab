@@ -105,7 +105,7 @@ if [ "$1" = "exec" ]; then
   printf '{"type":"thread.started","thread_id":"thread-provider-502"}\\n'
   printf '{"type":"turn.started"}\\n'
   printf '{"type":"error","message":"Reconnecting... 1/5 (unexpected status 502 Bad Gateway: Upstream request failed, url: https://gflabtoken.cn/v1/responses, request id: req-provider-502)"}\\n'
-  sleep 3
+  sleep 6
   exit 0
 fi
 echo "unexpected fake codex args: $*" >&2
@@ -132,7 +132,7 @@ exit 64
       runnerMode: 'codex_cli',
       observedAt: '2026-06-25T00:00:00.000Z',
       timeoutMs: 10_000,
-      noOutputTimeoutMs: 2_000,
+      noOutputTimeoutMs: 5_000,
     });
 
     assert.equal(receipt.process_output_summary?.timeout_reason, 'provider_unavailable');
