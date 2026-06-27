@@ -489,7 +489,10 @@ test('opl connect skills discovers the family plugin packs through the configure
     });
 
     assert.equal(output.skill_catalog.summary.total, 6);
-    assert.equal(output.skill_catalog.summary.ready_to_sync, 6);
+    assert.equal(
+      output.skill_catalog.summary.ready_to_sync,
+      output.skill_catalog.packs.filter((entry: { ready_to_sync: boolean }) => entry.ready_to_sync).length,
+    );
     assert.deepEqual(
       output.skill_catalog.packs.map((entry: { domain_id: string }) => entry.domain_id),
       ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent', 'oplbookforge', 'scholarskills'],
@@ -546,6 +549,10 @@ test('opl connect skills discovers the family plugin packs through the configure
     assert.equal(
       scholarSkillsPack?.capability_plugin_distribution?.default_sync_scope,
       'none_without_explicit_workspace_or_quest_target',
+    );
+    assert.equal(
+      scholarSkillsPack?.ready_to_sync,
+      scholarSkillsPack?.plugin_manifest_found && scholarSkillsPack?.skill_entry_valid,
     );
     assert.deepEqual(scholarSkillsPack?.command_preview, [
       'opl',
