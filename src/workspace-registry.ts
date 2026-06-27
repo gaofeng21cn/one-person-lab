@@ -164,10 +164,12 @@ function normalizeWorkspaceBinding(binding: Partial<WorkspaceBinding>): Workspac
     archived_at: binding.archived_at ? String(binding.archived_at) : null,
   };
 
-  const derivedDirectEntry = buildDerivedDirectEntryLocator(normalized.direct_entry.workspace_locator);
-  normalized.direct_entry.command = normalized.direct_entry.command ?? derivedDirectEntry.command;
-  normalized.direct_entry.manifest_command =
-    normalized.direct_entry.manifest_command ?? derivedDirectEntry.manifest_command;
+  if (!normalized.direct_entry.command || !normalized.direct_entry.manifest_command) {
+    const derivedDirectEntry = buildDerivedDirectEntryLocatorForBinding(normalized);
+    normalized.direct_entry.command = normalized.direct_entry.command ?? derivedDirectEntry.command;
+    normalized.direct_entry.manifest_command =
+      normalized.direct_entry.manifest_command ?? derivedDirectEntry.manifest_command;
+  }
 
   return normalized;
 }
@@ -495,6 +497,37 @@ function buildDerivedDirectEntryLocator(workspaceLocator: BoundWorkspaceLocator 
     command: null,
     manifest_command: null,
   };
+}
+
+function buildDerivedDirectEntryLocatorForBinding(binding: WorkspaceBinding) {
+  try {
+    return buildDerivedDirectEntryLocator(binding.direct_entry.workspace_locator);
+  } catch (error) {
+    if (
+      binding.status === 'active'
+      && !isStaleMasLocatorOnlyBinding(binding, error)
+    ) {
+      throw error;
+    }
+    return {
+      command: null,
+      manifest_command: null,
+    };
+  }
+}
+
+function isStaleMasLocatorOnlyBinding(binding: WorkspaceBinding, error: unknown) {
+  if (binding.direct_entry.workspace_locator?.surface_kind !== 'med_autoscience_workspace_profile') {
+    return false;
+  }
+  if (binding.direct_entry.command || binding.direct_entry.manifest_command) {
+    return false;
+  }
+  return (
+    error instanceof FrameworkContractError
+    && error.code === 'cli_usage_error'
+    && String(error.message).includes('run-python-clean.sh')
+  );
 }
 
 function setProjectActiveBinding(

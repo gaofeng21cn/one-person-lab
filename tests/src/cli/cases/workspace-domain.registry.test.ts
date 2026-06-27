@@ -151,6 +151,134 @@ test('workspace registry hydrates derived RCA manifest commands for legacy locat
   }
 });
 
+test('workspace registry ignores active stale MAS locator-only bindings during readback', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stale-mas-binding-state-'));
+  const staleWorkspace = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stale-mas-binding-root-'));
+  const workspaceRegistryPath = path.join(stateRoot, 'workspace-registry.json');
+
+  try {
+    fs.mkdirSync(stateRoot, { recursive: true });
+    fs.writeFileSync(workspaceRegistryPath, `${JSON.stringify({
+      version: 'g2',
+      bindings: [
+        {
+          binding_id: 'active-stale-mas-binding',
+          project_id: 'medautoscience',
+          project: 'med-autoscience',
+          workspace_path: staleWorkspace,
+          label: 'Active stale MAS Binding',
+          status: 'active',
+          direct_entry: {
+            command: null,
+            manifest_command: null,
+            url: null,
+            workspace_locator: {
+              surface_kind: 'med_autoscience_workspace_profile',
+              workspace_root: staleWorkspace,
+              profile_ref: path.join(staleWorkspace, 'profile.toml'),
+              input_path: null,
+            },
+          },
+          created_at: '2026-06-07T00:00:00.000Z',
+          updated_at: '2026-06-07T00:00:00.000Z',
+          archived_at: null,
+        },
+      ],
+    }, null, 2)}\n`);
+
+    const catalogOutput = runCli(['workspace', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const mas = catalogOutput.workspace_catalog.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'medautoscience',
+    );
+    assert.equal(mas.active_binding.binding_id, 'active-stale-mas-binding');
+    assert.equal(mas.bindings_count.total, 1);
+    assert.equal(mas.bindings_count.direct_entry_ready, 0);
+    assert.equal(mas.bindings_count.manifest_ready, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(staleWorkspace, { recursive: true, force: true });
+  }
+});
+
+test('workspace bind replaces active stale MAS locator-only bindings during readback', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stale-mas-binding-state-'));
+  const staleWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stale-mas-binding-old-'));
+  const currentWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stale-mas-binding-current-'));
+  const workspaceRegistryPath = path.join(stateRoot, 'workspace-registry.json');
+  const profilePath = path.join(currentWorkspaceRoot, 'profiles', 'local.toml');
+
+  try {
+    fs.mkdirSync(stateRoot, { recursive: true });
+    fs.mkdirSync(path.join(currentWorkspaceRoot, 'scripts'), { recursive: true });
+    fs.mkdirSync(path.dirname(profilePath), { recursive: true });
+    fs.writeFileSync(path.join(currentWorkspaceRoot, 'scripts', 'run-python-clean.sh'), '#!/bin/sh\n');
+    fs.writeFileSync(profilePath, 'workspace_root = "."\n');
+    fs.writeFileSync(workspaceRegistryPath, `${JSON.stringify({
+      version: 'g2',
+      bindings: [
+        {
+          binding_id: 'stale-mas-binding',
+          project_id: 'medautoscience',
+          project: 'med-autoscience',
+          workspace_path: staleWorkspaceRoot,
+          label: 'stale MAS binding',
+          status: 'active',
+          direct_entry: {
+            command: null,
+            manifest_command: null,
+            url: null,
+            workspace_locator: {
+              surface_kind: 'med_autoscience_workspace_profile',
+              workspace_root: staleWorkspaceRoot,
+              profile_ref: profilePath,
+              input_path: null,
+            },
+          },
+          created_at: '2026-06-27T00:00:00.000Z',
+          updated_at: '2026-06-27T00:00:00.000Z',
+          archived_at: null,
+        },
+      ],
+    }, null, 2)}\n`);
+    fs.rmSync(staleWorkspaceRoot, { recursive: true, force: true });
+
+    const bindOutput = runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      currentWorkspaceRoot,
+      '--profile',
+      profilePath,
+      '--label',
+      'current MAS binding',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const binding = bindOutput.workspace_catalog.binding;
+    assert.equal(bindOutput.workspace_catalog.action, 'bind');
+    assert.equal(binding.project_id, 'medautoscience');
+    assert.equal(binding.status, 'active');
+    assert.equal(binding.workspace_path, currentWorkspaceRoot);
+    assert.match(binding.direct_entry.command, /run-python-clean\.sh/);
+
+    const staleBinding = bindOutput.workspace_catalog.bindings.find(
+      (entry: { binding_id: string }) => entry.binding_id === 'stale-mas-binding',
+    );
+    assert.equal(staleBinding.status, 'inactive');
+    assert.equal(staleBinding.direct_entry.command, null);
+    assert.equal(staleBinding.direct_entry.manifest_command, null);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(staleWorkspaceRoot, { recursive: true, force: true });
+    fs.rmSync(currentWorkspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('workspace fleet report audits bound workspaces without executing direct-entry commands', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-fleet-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-fleet-root-'));
