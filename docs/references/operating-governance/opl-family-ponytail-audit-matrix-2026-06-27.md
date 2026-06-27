@@ -109,3 +109,17 @@ Fresh `npm run --silent line-budget -- --list` on 2026-06-27 reported 20 OPL fil
 | P1 | `tests/src/cli/cases/family-runtime-worker-lifecycle.test.ts` | 1146 | worker lifecycle scenario groups |
 | P1 | `src/standard-domain-agent-scaffold-validation.ts` | 1142 | validation phase / contract boundary |
 | P1 | `tests/src/cli/cases/family-runtime-domain-progress-transition-runtime.test.ts` | 1142 | transition-runtime behavior cases |
+
+## 2026-06-27 Refactor Patrol Landing
+
+This follow-up applied the automation split above and landed the first line-budget-first tranche. It does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `one-person-lab` | `refactor_patrol` | `src/family-runtime-enqueue-parts/existing-dedupe-reconcile.ts` split into PaperMission replacement and live-attempt helpers; local `main` commit `f3c80f31`. | `npm run typecheck` passed; `node --experimental-strip-types --test tests/src/cli/cases/family-runtime-paper-mission-stage-route.test.ts` passed 26/26; `node scripts/line-budget.mjs --list` shows the file at 1004 lines; `git diff --check HEAD~1..HEAD` passed. | File is now near-limit, not fully under 1000; next natural split should avoid a mechanical four-line cut. |
+| `one-person-lab-app` | `refactor_patrol` | Full first-install runtime release-boundary cases split into cache/acceleration and package-size case files; local `main` commits `a9dcae8`, `fc12b1a`. | Focused Node test over the three case files passed 16/16 with `OPL_APP_SHELL_ROOT=/Users/gaofeng/workspace/one-person-lab-app/shells/aionui`; `git diff --check HEAD~2..HEAD` passed; target file is 979 lines. | Full App release/user-path readiness remains App release-gate work, not proven by this test split. |
+| `med-autogrant` | `refactor_patrol` | `tests/test_opl_standard_pack.py` physical morphology assertions moved to focused test file; local `main` commit `4795aca`. | `make test-line-budget-strict` passed; `./scripts/verify.sh source-purity:strict` passed; `./scripts/run-pytest-clean.sh -q tests/test_opl_standard_pack_physical_morphology.py` passed 1/1; `git diff --check HEAD~1..HEAD` passed. | Existing `functional_privatization_audit` generated/contract drift noted by the worker is outside this split. |
+| `opl-hermes-shell` | `refactor_patrol` | Electron main split into link-title, media-preview, and open-external parts; local `main` commits `37098b3`, `97c81bf`. | `node --check` for main and new parts passed; focused Node tests passed 12/12; `npm run typecheck` passed; `git diff --check HEAD~2..HEAD` passed; `electron/main.cjs` reduced from 6762 to 6021 lines. | Hermes shell remains a candidate shell, not App truth. `electron/main.cjs` and `electron/opl-codex-gateway.cjs` remain P0 structure debt. |
+| `med-autoscience` | `owner_lane` | No mutation. | Fresh root status had unresolved conflicts in `src/med_autoscience/cli_parts/paper_mission_commands.py`, `src/med_autoscience/paper_mission_authority.py`, and `tests/test_paper_mission_drive_followthrough.py`, plus `main...origin/main [ahead 1, behind 8]`. | MAS line-budget work is blocked until the active conflict/dirty owner lane is resolved or handed off. |
+
+Temporary worktrees created by this tranche were cleaned after absorption for OPL, App, MAG, and Hermes shell. The remaining OPL worktree `codex/opl-currentness-20260627` was not created by this tranche and was left untouched.
