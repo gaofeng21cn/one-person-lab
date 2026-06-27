@@ -717,3 +717,22 @@ Current next-route rules:
 | P0 | MAS `tests/test_cli_cases/paper_mission_commands.py` | Still the largest tracked MAS test file, now 3340 lines. | Re-audit the next natural family before editing; prefer a small test-only family with focused case-file verification. |
 | P1 | MAS package-candidate tests | High-value but larger blocks. | Split only after finding smaller sub-family boundaries; avoid a single huge move. |
 | P1 | RCA canonical metadata drift | Separate contract/source alignment issue. | Route to contract-alignment lane, not line-budget cleanup. |
+
+## 2026-06-28 Refactor Patrol Landing Round 30
+
+This continuation landed another small natural MAS PaperMission command test split from a clean/current MAS main worktree. It did not touch upstream fork bodies and does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `med-autoscience` | `refactor_patrol` | Moved the two one-shot migration tests into `tests/test_cli_cases/paper_mission_command_cases/one_shot_migration.py`, preserving the original entry path via import. | MAS `main/origin` advanced to `bf08bef83`; root `scripts/run-pytest-clean.sh tests/test_cli_cases/paper_mission_command_cases/one_shot_migration.py -q` passed 2/2; root `scripts/run-pytest-clean.sh tests/test_cli_cases/paper_mission_commands.py -q` passed 46/46; `git diff --check HEAD~1..HEAD` passed; line readback: entry 3162, one-shot case 189, consume case 896; candidate worktree removed and patch-equivalent branch deleted; remote readback `origin/main` = `bf08bef83c957791eecc2e8fca0a4163e5ad5635`. | `paper_mission_commands.py` remains over budget at 3162 lines. Continue with the next natural test family from clean/current MAS main; package-candidate tests remain larger and need smaller sub-family boundaries before moving. |
+
+### Round 30 Queue Adjustment
+
+Current next-route rules:
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| P0 | MAS `tests/test_cli_cases/paper_mission_commands.py` | Still the largest tracked MAS test file, now 3162 lines. | Re-audit the next natural family before editing; prefer a small test-only family with focused case-file verification. |
+| P1 | MAS package-candidate tests | High-value but larger blocks. | Split only after finding smaller sub-family boundaries; avoid a single huge move. |
+| P1 | RCA canonical metadata drift | Separate contract/source alignment issue. | Route to contract-alignment lane, not line-budget cleanup. |
