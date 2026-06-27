@@ -306,3 +306,24 @@ Fresh OPL `npm run --silent line-budget -- --list` after Round 8 returned no ent
 After Round 8, `opl-hermes-shell` fork-body refactor commits were reverted because Hermes Desktop upstream source should remain easy to upgrade. Revert evidence: `opl-hermes-shell` commit `fa60d9e` (`revert: restore upstream Hermes shell code`) restored `electron/main.cjs` and `electron/opl-codex-gateway.cjs` to fork-body shape, deleted the OPL refactor-only parts, passed `node --check` on both entry files, passed `npm run typecheck`, passed `git diff --cached --check` before commit, and pushed with remote readback `origin/main` = `fa60d9e9e981b30534a67b9032554f4e78b45a81`.
 
 The corrected standing rule is: `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, and `_external/hermes-agent/**` are not OPL cleanup/refactor targets by default. They may be inspected to classify fork/overlay boundaries, but selected write sets must be limited to clearly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell files.
+
+## 2026-06-28 Refactor Patrol Landing Round 9
+
+This follow-up used the corrected fork-boundary rule. It did not touch `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, or `_external/hermes-agent/**`, and it does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `one-person-lab-app` | `refactor_patrol` | `tests/release/app-release-boundary-cases/release-plan-and-publishing.ts` split Full package optimization fixture helpers into `release-plan-full-package-fixtures.ts`; local `main` commit `51a36d5`. | Main rerun: `node --experimental-strip-types --test tests/release/app-release-boundary-cases/release-plan-and-publishing.ts` passed 12/12; `git diff --check HEAD~1..HEAD` passed; `git cherry main codex/app-release-plan-fixtures-split-20260628` returned `- f38df97`; line readback: entry file 896 lines, fixture file 141 lines. | This is App-owned release-boundary test structure evidence only. It does not modify the AionUI fork body and does not prove App release/install/user-path readiness. |
+
+### Round 9 Queue Adjustment
+
+Fresh OPL root readback on 2026-06-28: `npm run --silent line-budget -- --list` returned no entries, and root `main` was clean and aligned with `origin/main` before this docs update. App source scan found the only App-owned tracked over-1000-line candidate in the active release test surface was `tests/release/app-release-boundary-cases/release-plan-and-publishing.ts` at 1029 lines; it is now 896 lines after Round 9. The larger App scan hits were under `tmp/active-shell-checkout-backups/**`, `node_modules/**`, `out/**`, or release artifacts, so they are generated/dependency/fork-adjacent residue and not refactor write sets.
+
+Current next-route rules:
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| P0 | MAS PaperMission command/test source | Same-write-set owner-gated by MAS PaperMission/domain-handler work, not safe as an OPL refactor patrol mutation. | Re-audit only after the owning MAS lane is resolved, absorbed, or explicitly handed off. |
+| P1 | App `tmp/active-shell-checkout-backups/**`, generated `out/**`, dependency `node_modules/**`, release artifacts | Inventory noise, not App-owned source structure debt. | Exclude from selected batch; if cleanup is needed, route to artifact/cache lifecycle, not source refactor. |
+| P1 | OPL family non-fork repos | OPL root line-budget queue is empty; other repos need fresh repo-native source-purity/line-budget scans before mutation. | Mutate only with clean or unrelated dirty write set, authority-aware owner route, focused verification, and no fork-body path. |
