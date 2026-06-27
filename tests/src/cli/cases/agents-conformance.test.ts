@@ -56,9 +56,28 @@ test('agents conformance reports structural readiness separately from production
     actionMetadataSurface.domain_allowed_role,
     'domain_action_ids_handler_refs_or_refs_only_metadata_source',
   );
+  assert.equal(actionMetadataSurface.status, 'advisory_diagnostic_observed');
+  assert.equal(
+    actionMetadataSurface.advisory_diagnostic_refs.includes('contracts/action_catalog.json'),
+    true,
+  );
+  assert.equal(
+    actionMetadataSurface.advisory_diagnostic_policy,
+    'filename_contract_text_and_prose_refs_are_diagnostic_only_not_admission_blockers',
+  );
+  assert.equal(actionMetadataSurface.observed_source_refs_role, 'compatibility_alias_for_advisory_diagnostic_refs');
   assert.equal(
     actionMetadataSurface.observed_source_refs.includes('contracts/action_catalog.json'),
     true,
+  );
+  assert.equal(platformSurfaces.reports[0].hard_gate.status, 'passed');
+  assert.equal(
+    platformSurfaces.reports[0].hard_gate.source_policy,
+    'machine_contracts_receipts_and_proofs_only',
+  );
+  assert.equal(
+    platformSurfaces.reports[0].advisory_diagnostics.can_block_standard_agent_admission,
+    false,
   );
   assert.equal(platformSurfaces.authority_boundary.report_can_claim_domain_ready, false);
 
@@ -239,6 +258,15 @@ test('agents conformance reports structural readiness separately from production
   assert.equal(repo.private_surface_checks.domain_can_claim_generic_runtime_owner, false);
   assert.equal(repo.platform_surface_ownership_checks.status, 'passed');
   assert.equal(repo.platform_surface_ownership_checks.generic_subdomain_count, 7);
+  assert.equal(repo.platform_surface_ownership_checks.hard_gate.status, 'passed');
+  assert.equal(
+    repo.platform_surface_ownership_checks.hard_gate.source_policy,
+    'machine_contracts_receipts_and_proofs_only',
+  );
+  assert.equal(
+    repo.platform_surface_ownership_checks.advisory_diagnostics.can_block_standard_agent_admission,
+    false,
+  );
   assert.deepEqual(repo.platform_surface_ownership_checks.explicit_forbidden_owner_claims, []);
   assert.equal(repo.platform_surface_ownership_checks.authority_boundary.report_can_claim_production_ready, false);
   assert.equal(repo.generated_interface_checks.generated_interfaces_status, 'ready');

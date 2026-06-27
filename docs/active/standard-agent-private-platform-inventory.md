@@ -61,7 +61,7 @@ OPL read-model 只作为 fresh-live source 使用：`opl agents conformance --fa
 | MAS legacy DHD / default-executor / current-control active runtime path | 已落地切断 active owner-dispatch bridge | Codex stage runner 不再在缺 typed closeout 时主动调用 MAS owner dispatch；只允许读取已存在的 legacy default-executor execution receipt 作为 migration/diagnostic recovery，否则生成 OPL provider-runtime closeout blocker。旧 current-control / default-executor queue diagnostic 仍作为迁移输入与非退化测试存在，不再作为普通 MAS paper mission active route。 |
 | MAS/MAG/RCA handler closeout 多形状 parser | 已定位，未在本轮删除 | 目标是 canonical `domain_stage_closeout_packet`；旧 closeout 形状应进入显式 migration parser，而不是继续扩展主路径。 |
 | Standard Agent registry / alias tables 重复 | 已定位，未在本轮删除 | 可后续抽成单一 `StandardAgentRegistry`，但本轮不为低风险重复引入更大接口。 |
-| platform ownership 文本/文件名扫描 | 已定位，未在本轮删除 | hard gate 应只读 machine contracts、receipts 和 proofs；文本扫描应降为 advisory，避免 prose/path 污染 owner 判断。 |
+| platform ownership 文本/文件名扫描 | 已落地 hard/advisory 分层 | `agent-platform-surface-ownership` 的 hard gate 只读 machine contracts、receipts 和 proofs；filename、Markdown prose 和 contract text 扫描只进入 `advisory_diagnostics` / `advisory_diagnostic_refs`，不能阻断 standard OPL agent admission。 |
 
 ## 分类词表
 

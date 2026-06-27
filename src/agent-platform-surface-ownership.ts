@@ -280,6 +280,13 @@ function activeProgramFiles(repoDir: string) {
   ));
 }
 
+function proseFile(pathname: string) {
+  return /^README(?:\.[\w-]+)?\.md$/i.test(pathname) || (
+    pathname.startsWith('docs/')
+    && /\.md$/i.test(pathname)
+  );
+}
+
 function searchableRecords(value: unknown, currentPath = '$'): Array<{ path: string; text: string }> {
   if (typeof value === 'string') {
     return [{ path: currentPath, text: value }];
@@ -333,7 +340,7 @@ function surfaceTextFromContracts(repoDir: string) {
   });
 }
 
-function sourceRefsForSubdomain(repoDir: string, aliases: readonly string[]) {
+function diagnosticRefsForSubdomain(repoDir: string, aliases: readonly string[]) {
   const normalizedAliases = aliases.map((alias) => alias.toLowerCase());
   const filenameRefs = activeProgramFiles(repoDir)
     .filter((relativePath) => normalizedAliases.some((alias) => (
@@ -344,7 +351,32 @@ function sourceRefsForSubdomain(repoDir: string, aliases: readonly string[]) {
   const contractRefs = surfaceTextFromContracts(repoDir)
     .filter((entry) => normalizedAliases.some((alias) => entry.text.toLowerCase().includes(alias)))
     .map((entry) => `${entry.source_path}${entry.json_path === '$' ? '' : `#${entry.json_path}`}`);
-  return unique([...filenameRefs, ...contractRefs]).slice(0, 20);
+  const proseRefs = gitTrackedOrWalkedFiles(repoDir)
+    .filter(proseFile)
+    .filter((relativePath) => {
+      try {
+        const text = fs.readFileSync(path.join(repoDir, relativePath), 'utf8').toLowerCase();
+        return normalizedAliases.some((alias) => text.includes(alias.replace(/_/g, ' '))
+          || text.includes(alias.replace(/_/g, '-'))
+          || text.includes(alias));
+      } catch {
+        return false;
+      }
+    })
+    .slice(0, 12);
+  return unique([
+    ...filenameRefs.slice(0, 8),
+    ...contractRefs.slice(0, 8),
+    ...proseRefs.slice(0, 8),
+  ]);
+}
+
+function hardGateEvidenceRefs(repoDir: string) {
+  return [
+    'contracts/functional_privatization_audit.json#authority_boundary',
+    'contracts/private_functional_surface_policy.json#authority_boundary',
+    'contracts/physical_source_morphology_policy.json#authority_boundary',
+  ].filter((ref) => fs.existsSync(path.join(repoDir, ref.split('#')[0])));
 }
 
 function explicitForbiddenOwnerClaims(repoDir: string) {
@@ -420,15 +452,23 @@ export function buildAgentPlatformSurfaceOwnershipForRepo(repoDir: string, reque
   const resolvedRepoDir = path.resolve(repoDir);
   const domainId = normalizeDomainSelection(readDomainId(resolvedRepoDir, requestedAgentId ?? null));
   const explicitClaims = explicitForbiddenOwnerClaims(resolvedRepoDir);
+  const hardEvidenceRefs = hardGateEvidenceRefs(resolvedRepoDir);
   const genericSubdomains = OPL_OWNED_GENERIC_SUBDOMAINS.map((subdomain) => {
-    const sourceRefs = sourceRefsForSubdomain(resolvedRepoDir, subdomain.surface_aliases);
+    const diagnosticRefs = diagnosticRefsForSubdomain(resolvedRepoDir, subdomain.surface_aliases);
     return {
       subdomain_id: subdomain.subdomain_id,
       owner: 'one-person-lab',
       opl_primitive: subdomain.opl_primitive,
       domain_allowed_role: subdomain.domain_allowed_role,
-      status: sourceRefs.length > 0 ? 'declared_or_observed' : 'available_without_repo_local_declaration',
-      observed_source_refs: sourceRefs,
+      status: diagnosticRefs.length > 0
+        ? 'advisory_diagnostic_observed'
+        : 'available_without_repo_local_declaration',
+      hard_gate_evidence_refs: hardEvidenceRefs,
+      advisory_diagnostic_refs: diagnosticRefs,
+      advisory_diagnostic_policy:
+        'filename_contract_text_and_prose_refs_are_diagnostic_only_not_admission_blockers',
+      observed_source_refs: diagnosticRefs,
+      observed_source_refs_role: 'compatibility_alias_for_advisory_diagnostic_refs',
     };
   });
   const blockers = explicitClaims.map((claim) => (
@@ -445,6 +485,23 @@ export function buildAgentPlatformSurfaceOwnershipForRepo(repoDir: string, reque
     generic_subdomains: genericSubdomains,
     explicit_forbidden_owner_claims: explicitClaims,
     blockers,
+    hard_gate: {
+      status: blockers.length === 0 ? 'passed' : 'blocked',
+      source_policy: 'machine_contracts_receipts_and_proofs_only',
+      evidence_refs: hardEvidenceRefs,
+      blocker_count: blockers.length,
+      explicit_forbidden_owner_claims: explicitClaims,
+    },
+    advisory_diagnostics: {
+      status: 'reported_not_blocking',
+      source_policy:
+        'filename_markdown_prose_and_contract_text_scans_are_for_operator_diagnosis_only',
+      can_block_standard_agent_admission: false,
+      diagnostic_ref_count: genericSubdomains.reduce(
+        (total, subdomain) => total + subdomain.advisory_diagnostic_refs.length,
+        0,
+      ),
+    },
     retained_domain_authority: RETAINED_DOMAIN_AUTHORITY,
     migration_gate: {
       replacement_parity_required: true,
@@ -909,6 +966,10 @@ export function buildAgentPlatformSurfaceOwnershipReport(args: string[]) {
           (total, report) => total + report.explicit_forbidden_owner_claims.length,
           0,
         ),
+        hard_gate_source_policy: 'machine_contracts_receipts_and_proofs_only',
+        advisory_diagnostic_source_policy:
+          'filename_markdown_prose_and_contract_text_scans_reported_not_blocking',
+        advisory_diagnostics_can_block_standard_agent_admission: false,
       },
       reports,
       authority_boundary: {
