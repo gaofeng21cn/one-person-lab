@@ -1029,3 +1029,21 @@ Current next-route rules:
 | excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
 | closed | MAS `tests/test_domain_health_diagnostic_cases/supervisor_and_progress_cases_cases/test_obligation_actuator_postcondition.py` over-1500 split signal | File is now below the 1500-line split signal at 1273 lines, and the aggregate entry validates 117/117. | Do not run nested child `test_*.py` files directly as the structure gate; use the aggregate entry for this case family. |
 | watch | MAS source/authority-adjacent files | Fresh test-only over-1500 queue is empty in MAS and OPL from the last scan; remaining over-1000 source/contracts/docs require owner-gated authority-safe lanes. | Keep source/contracts/docs owner-gated unless a fresh MAS/OPL owner route and authority-safe verification prove a specific cleanup. |
+
+## 2026-06-28 Refactor Patrol Landing Round 46
+
+This continuation landed one MAS source-level helper split from a clean/current isolated worktree. It did not touch upstream fork bodies, contracts, docs, runtime queues, provider attempts, Yang authority, owner receipts, typed blockers, human gates, or current-package authority. It does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `med-autoscience` | `refactor_patrol` | Moved PaperMission output-root guard constants and helper functions from `src/med_autoscience/cli_parts/paper_mission_commands.py` into `src/med_autoscience/cli_parts/paper_mission_output_roots.py`, preserving the existing private helper names through imports. | MAS `main/origin` advanced to `5ad4d6099`; root `scripts/run-pytest-clean.sh tests/test_cli_cases/paper_mission_command_cases/output_guards.py -q` passed 6/6; root `scripts/run-pytest-clean.sh tests/test_cli_cases/paper_mission_commands.py -q -k "output or package or consume"` passed 27/27 with 19 deselected; root `scripts/run-pytest-clean.sh tests/test_paper_mission_drive_followthrough.py -q` passed 9/9; `git diff --check HEAD~1..HEAD` passed; line readback: `paper_mission_commands.py` 5407 -> 5307, new output-root helper file 120; remote readback `origin/main` = `5ad4d609917c910a6c47b7f290195ab9e34bf4d6`; candidate worktree and branch were deleted. | Source file remains over 1500 lines, but this round only moved a pure, authority-safe helper family with focused command/output guard coverage. Continue source-level cleanup only for fresh natural helper families with authority-safe verification; do not mechanically split authority logic. |
+
+### Round 46 Queue Adjustment
+
+Current next-route rules:
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| watch | MAS `src/med_autoscience/cli_parts/paper_mission_commands.py` | Still over 1500 lines, but the output-root guard family is closed. | Continue only if a fresh natural helper family is isolated and focused tests cover it. Forbidden write set remains contracts, docs, runtime queues, provider attempts, Yang authority, owner receipts, typed blockers, human gates, and current-package authority. |
+| watch | MAS source/authority-adjacent files | Fresh scans still show over-1000 MAS source files. | Keep source/contracts/docs owner-gated unless a fresh MAS owner route and authority-safe verification prove a specific cleanup. |
