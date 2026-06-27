@@ -851,3 +851,22 @@ Current next-route rules:
 | closed | MAS `tests/test_cli_cases/paper_mission_commands.py` | Entry file is below target at 789 lines. | Do not continue splitting unless it regrows or a new natural family appears. |
 | closed | RCA canonical metadata drift | Current RCA focused canonical contract test passes on `ac702805`. | Reopen only on fresh failing canonical contract evidence. |
 | watch | OPL/App/other OPL-owned line-budget | Current fresh scans found no selected over-budget OPL-owned mutation with a safe natural boundary. | Continue only from fresh over-budget output, stale-lane cleanup, or clear delete/shrink evidence. |
+
+## 2026-06-28 Refactor Patrol Landing Round 37
+
+This continuation landed a MAS adapter-retirement boundary test split from a clean/current MAS main worktree. It only touched tests, did not touch upstream fork bodies, and does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `med-autoscience` | `refactor_patrol` | Moved the two `domain_authority_refs_index` retirement-boundary tests into `tests/test_adapter_retirement_boundary_cases/domain_authority_refs_index.py`, preserving the existing aggregate entry path through `test_private_runtime_residue_active_callers.py`. | MAS `main/origin` advanced to `afeac7837`; root `scripts/run-pytest-clean.sh tests/test_adapter_retirement_boundary_cases/domain_authority_refs_index.py -q` passed 2/2; root `scripts/run-pytest-clean.sh tests/test_adapter_retirement_boundary_cases/test_private_runtime_residue_active_callers.py -q` passed 4/4; `git diff --check HEAD~1..HEAD` passed; line readback: aggregate entry 2091, new case file 144; candidate worktree removed and patch-equivalent branch deleted; remote readback `origin/main` = `afeac783758bc376af85b29322089bb5b6c0e06e`. | `test_private_runtime_residue_active_callers.py` remains over 1500 lines. Continue only with fresh, test-only, natural sub-family splits that do not touch MAS source, contracts, docs, runtime authority, owner receipts, typed blockers, queues, provider attempts, or publication/control authority. |
+
+### Round 37 Queue Adjustment
+
+Current next-route rules:
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| closed | MAS `tests/test_cli_cases/paper_mission_commands.py` | Entry file is below target at 789 lines. | Do not continue splitting unless it regrows or a new natural family appears. |
+| candidate | MAS `tests/test_adapter_retirement_boundary_cases/test_private_runtime_residue_active_callers.py` | Still over the 1500-line split signal at 2091 lines after the domain-authority refs split. | Only select another test-only natural family after fresh active-caller / authority-boundary readback; forbidden write set remains MAS `src/**`, `contracts/**`, `docs/**`, runtime queues, owner receipts, typed blockers, provider attempts, and publication/control authority. |
+| watch | OPL/App/other OPL-owned line-budget | Current fresh scans found no selected over-budget OPL-owned mutation with a safe natural boundary. | Continue only from fresh over-budget output, stale-lane cleanup, or clear delete/shrink evidence. |
