@@ -755,3 +755,22 @@ Current next-route rules:
 | P0 | MAS `tests/test_cli_cases/paper_mission_commands.py` | Still the largest tracked MAS test file, now 2250 lines. | Re-audit remaining families before editing; avoid appending to `drive_and_route_handoff.py` because it is already 928 lines. |
 | P1 | MAS package-candidate tests | High-value but larger blocks. | Split only after finding smaller sub-family boundaries; avoid a single huge move. |
 | P1 | RCA canonical metadata drift | Separate contract/source alignment issue. | Route to contract-alignment lane, not line-budget cleanup. |
+
+## 2026-06-28 Refactor Patrol Landing Round 32
+
+This continuation landed the MAS PaperMission package-candidate test split from a clean/current MAS main worktree. It did not touch upstream fork bodies and does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `med-autoscience` | `refactor_patrol` | Moved the two package-candidate materialization tests into `tests/test_cli_cases/paper_mission_command_cases/package_candidate.py`, preserving the original entry path via import. | MAS `main/origin` advanced to `19592a945`; root `scripts/run-pytest-clean.sh tests/test_cli_cases/paper_mission_command_cases/package_candidate.py -q` passed 2/2; root `scripts/run-pytest-clean.sh tests/test_cli_cases/paper_mission_commands.py -q` passed 46/46; `git diff --check HEAD~1..HEAD` passed; line readback: entry 1633, package case 632, drive/route case 928; candidate worktree removed and patch-equivalent branch deleted; remote readback `origin/main` = `19592a9459e6070dc681e77e843144564df3095b`. | `paper_mission_commands.py` remains over the 1500-line split signal at 1633 lines. Re-audit the remaining dispatch/start/materialized-readback families and split one small family without adding to near-budget case files. |
+
+### Round 32 Queue Adjustment
+
+Current next-route rules:
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| P0 | MAS `tests/test_cli_cases/paper_mission_commands.py` | Still over the split signal, now 1633 lines. | Split one remaining small family from clean/current MAS main; target entry below 1500 first, then below 1000 if natural boundaries remain. |
+| P1 | MAS `drive_and_route_handoff.py` | 928 lines, near the soft target. | Do not add more tests to this file; split only if it grows or gains a clearer sub-family boundary. |
+| P1 | RCA canonical metadata drift | Separate contract/source alignment issue. | Route to contract-alignment lane, not line-budget cleanup. |
