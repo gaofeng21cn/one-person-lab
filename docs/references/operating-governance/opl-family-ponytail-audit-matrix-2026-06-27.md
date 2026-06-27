@@ -5,6 +5,10 @@ Purpose: `opl_family_ponytail_cleanup_audit_matrix`
 State: `active_closeout_snapshot`
 Machine boundary: 本文是 2026-06-27 首轮 Ponytail cleanup 矩阵、执行波次与 closeout 快照。它记录已经落地的 cleanup / reclassification / retention guard，不声明 domain ready / App release ready / production ready、不替代 owner receipt、typed blocker、runtime truth、release truth 或机器合同。后续执行必须重新读取 fresh `git status`、owner docs、contracts/source/tests/readback 与 repo-native 验证输出。
 
+## Current Hard Guard
+
+Effective from the 2026-06-27 upstream fork correction, older Hermes/Aion rows in this matrix are history only and must not be reused as future cleanup candidates. `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, and `_external/hermes-agent/**` are upstream fork / reference bodies by default. They may be inspected to classify fork owner and OPL overlay boundaries, but selected write sets must be limited to clearly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell files. Fork-body source/tests should be classified as `not_safe` / `blocked_owner_gated` with reason `upstream_fork_excluded`.
+
 ## Fresh Evidence
 
 - 本轮最终 closeout readback：`med-autogrant`、`redcube-ai`、`opl-meta-agent` root checkout clean；`one-person-lab` root 只有非本轮 dirty 测试写集 `tests/src/cli/cases/family-runtime-binding-intake.test.ts`、`tests/src/family-runtime-codex-stage-runner-process-lifecycle.test.ts`；`med-autoscience` root 有非本轮 PaperMission / domain-handler followthrough dirty 写集，且 `main...origin/main [behind 1]`，本轮 cleanup 未覆盖这些 dirty paths。各 repo 的本轮 Ponytail 临时 worktree 已清理；剩余 dirty 写集不属于本轮 cleanup。
