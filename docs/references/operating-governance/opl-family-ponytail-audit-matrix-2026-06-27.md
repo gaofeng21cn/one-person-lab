@@ -972,3 +972,23 @@ Current next-route rules:
 | closed | MAS `tests/study_progress_cases/opl_current_control_state_handoff_projection.py` over-1500 split signal | Entry file is now below the 1500-line split signal at 1434 lines. | Do not keep shaving mechanically; continue only if a fresh natural test-family boundary appears. |
 | watch | MAS OPL current-control handoff aggregate baseline | Two assertions fail on current `origin/main` before the split: `paper_progress_delta.token_usage_total` is `None`, not `0`. | Route as separate behavior/test-expectation cleanup if desired; do not hide it inside structure cleanup. |
 | watch | MAS source/authority-adjacent files | Fresh scans still show many over-1000 MAS source/contract/docs files. | Keep source/contracts/docs owner-gated unless a fresh MAS owner route and authority-safe verification prove a specific cleanup. |
+
+## 2026-06-28 Refactor Patrol Landing Round 43
+
+This continuation landed one MAS test-only default-executor current-owner transition-request split from a clean/current MAS main worktree. It did not touch upstream fork bodies and does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `med-autoscience` | `refactor_patrol` | Moved four current-owner transition-request tests from `tests/test_cli_cases/owner_route_handoff_command_cases/default_executor_current_owner_action_cases.py` into `default_executor_current_owner_action_transition_request_cases.py`, preserving the aggregate entry through `tests/test_cli_cases/owner_route_handoff_command.py`. | MAS `main/origin` advanced to `8dfac602b`; root focused stable moved tests `scripts/run-pytest-clean.sh tests/test_cli_cases/owner_route_handoff_command.py -q -k "consumes_transition_request_after_owner_receipt or consumes_transition_request_from_current_control_handoff_terminal_surface"` passed 2/2; aggregate collect-only saw 133 tests; `git diff --check` passed after EOF cleanup; line readback: source case file 1863 -> 1395, new transition-request case file 482, aggregate entry 22; remote readback `origin/main` = `8dfac602b79f0a36cce7dcebd88b00b80540fdc2`; candidate worktree removed and branch deleted. | Two moved tests still fail, and the same failures were reproduced on MAS `origin/main` before this split: `projects_current_control_transition_request_to_opl_task` and `suppresses_stale_transition_request_when_current_owner_action_changed`. Three adjacent transition-dispatch tests also fail on current main. Route these as separate MAS behavior/test-expectation cleanup, not as structure-split evidence. |
+
+### Round 43 Queue Adjustment
+
+Current next-route rules:
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| closed | MAS `tests/test_cli_cases/owner_route_handoff_command_cases/default_executor_current_owner_action_cases.py` over-1500 split signal | File is now below the 1500-line split signal at 1395 lines. | Do not keep shaving mechanically; continue only if a fresh natural test-family boundary appears. |
+| watch | MAS default-executor transition-request behavior/test expectation | Multiple transition-request/default-executor assertions fail on current MAS main before and after Round 43. | Route as separate MAS behavior/test-expectation cleanup if selected; do not hide it inside structure cleanup. |
+| watch | MAS next test-only over-1500 candidates | Fresh prior scan pointed to `tests/study_progress_cases/current_executable_owner_action_cases/dm003_owner_receipt_running_handoff.py` around 1608 lines. | Select only after fresh scan confirms it still exceeds the split signal and a natural case-family boundary is clear; forbidden write set remains MAS `src/**`, `contracts/**`, `docs/**`, runtime queues, owner receipts, typed blockers, provider attempts, and publication/control authority. |
+| no_safe_change | MAS `tests/test_domain_health_diagnostic_cases/supervisor_and_progress_cases_cases/test_obligation_actuator_postcondition.py` | Prior trial split failed the original entry-path pytest execution despite collect-only seeing tests. | Do not absorb this as a structure cleanup lane until the entry-path pytest behavior is understood or a different repo-native verification target is selected. |
