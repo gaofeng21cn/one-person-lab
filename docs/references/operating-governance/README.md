@@ -26,6 +26,7 @@ Currentness policy：本目录不冻结 hard blocker、stage attempt、route、w
 | `opl-family-directory-governance.md` | `support_reference` | Family repo layout 的目录治理支撑。 |
 | `family-structure-advisory-report.md` | `support_reference` | 结构 advisory 稳定读法与命令入口；不复制 fresh generated counts、line lists 或 public-surface risk 列表。 |
 | `opl-family-ponytail-cleanup-runbook.md` | `support_reference` | Ponytail cleanup 的矩阵字段、启动策略、第一批 lane 边界和完成度审计模板；不复制 fresh audit finding，不授权物理删除。 |
+| `opl-family-ponytail-audit-matrix-2026-06-27.md` | `active_support_snapshot` | 2026-06-27 OPL family Ponytail cleanup 首轮只读矩阵、候选波次和 owner blockers；后续执行必须重新读取 fresh repo state。 |
 
 ## 已归档的 Gateway-Derived Surface
 
