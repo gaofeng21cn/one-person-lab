@@ -1,4 +1,5 @@
 import { assert, fs, os, path, runCli, shellSingleQuote, test } from '../helpers.ts';
+import { FrameworkContractError } from '../../../../src/contracts.ts';
 import {
   familyRuntimePaths,
   inspectTask,
@@ -1482,6 +1483,170 @@ test('family-runtime redrives PaperMission stage-route typed closeout packet tra
       true,
     );
     redrivenDb.close();
+  } finally {
+    restoreEnv();
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime blocks non-advancing PaperMission route-back redrive without MAS owner delta', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-nonadvancing-routeback-'));
+  const restoreEnv = installDirectDispatchEnv(stateRoot, {
+    OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    OPL_TEMPORAL_ADDRESS: '127.0.0.1:7233',
+  });
+  try {
+    const { db, paths } = openQueueDb();
+    const payload = paperMissionRoutePayloadWithWorkspace({
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      mission_id: 'paper-mission::003-dpcc-primary-care-phenotype-treatment-gap::submission::auto',
+      candidate_ref:
+        '/tmp/mas-dm-cvd-workspace/ops/medautoscience/paper_mission_candidate_package/submission/package_manifest.json',
+      paper_mission_transaction_ref: 'paper-mission-transaction:dm003:submission',
+      opl_route_command_ref: 'paper-mission-transaction:dm003:submission#opl_route_command',
+      command_kind: 'route_back',
+      route_target: 'continue paper-facing submission milestone work',
+      route_identity_key: 'paper-mission-transaction:dm003:submission::route',
+      attempt_idempotency_key: 'dm003:submission:route-back::opl-attempt',
+      request_idempotency_key: 'dm003:submission:route-back::opl-request',
+      opl_route_handoff_record: {
+        handoff_ref:
+          '/tmp/mas-dm-cvd-workspace/ops/medautoscience/paper_mission_consumption_ledger/submission/opl_route_handoff.json',
+      },
+      stage_run_request: {
+        request_status: 'requested',
+        requested_by: 'mas_paper_mission_route_handoff',
+        route_identity_key: 'paper-mission-transaction:dm003:submission::route',
+        attempt_idempotency_key: 'dm003:submission:route-back::opl-attempt',
+        stage_run_created: false,
+        provider_attempt_requested: false,
+      },
+    });
+    const enqueued = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'paper_mission/stage-route',
+      payload,
+      dedupeKey: 'paper-mission-route:dm003:nonadvancing-routeback',
+      source: 'test',
+    });
+    const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(enqueued.task.task_id) as FamilyRuntimeTaskRow;
+    await dispatchFamilyRuntimeTask(db, paths, row, {
+      temporalProviderModule: async () => ({
+        startTemporalStageAttemptWorkflow: async (attempt) => ({
+          surface_kind: 'temporal_stage_attempt_start_receipt',
+          provider_kind: 'temporal',
+          stage_attempt_id: attempt.stage_attempt_id,
+          workflow_id: attempt.workflow_id,
+          first_execution_run_id: 'run-paper-mission-route-nonadvancing-original',
+        }),
+      }),
+    });
+    const startedTask = inspectTask(db, enqueued.task.task_id);
+    const originalAttempt = startedTask.stage_attempts[0];
+    syncStageAttemptFromTemporalTerminalObservation(db, {
+      surface_kind: 'temporal_stage_attempt_query_receipt',
+      provider_kind: 'temporal',
+      stage_attempt_id: originalAttempt.stage_attempt_id,
+      workflow_id: originalAttempt.workflow_id,
+      workflow_status: 'COMPLETED',
+      query: {
+        surface_kind: 'temporal_stage_attempt_query',
+        provider_kind: 'temporal',
+        stage_attempt_id: originalAttempt.stage_attempt_id,
+        workflow_id: originalAttempt.workflow_id,
+        domain_id: 'medautoscience',
+        stage_id: originalAttempt.stage_id,
+        status: 'completed',
+        started_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        activity_events: [],
+        stage_progress_log: {
+          surface_kind: 'temporal_workflow_stage_progress_log',
+          planned_work: {},
+          timeline: [],
+          visibility: {},
+        },
+        checkpoint_refs: [],
+        closeout_refs: ['route-back:dm003:submission:needs-executor-delta'],
+        consumed_refs: [],
+        consumed_memory_refs: [],
+        writeback_receipt_refs: [],
+        rejected_writes: [],
+        next_owner: 'med-autoscience',
+        route_impact: {
+          command_kind: 'route_back',
+          route_target: 'continue paper-facing submission milestone work',
+          route_identity_key: 'paper-mission-transaction:dm003:submission::route',
+          paper_mission_transaction_ref: 'paper-mission-transaction:dm003:submission',
+          reason: 'route_back_same_transaction_requires_executor_delta',
+          next_owner: 'med-autoscience',
+          domain_ready_verdict: 'domain_gate_pending',
+        },
+        human_gate_refs: [],
+        signals: [],
+        closeout_packet: {
+          closeout_packet_surface_kind: 'stage_attempt_closeout_packet',
+        },
+        completion_boundary: {
+          provider_completion: 'completed',
+          domain_ready_verdict: 'domain_gate_pending',
+          provider_completion_is_domain_ready: false,
+        },
+        authority_boundary: {
+          opl: 'temporal_workflow_transport_and_control_metadata_only',
+          domain: 'truth_quality_artifact_gate_owner',
+        },
+      },
+    });
+    db.prepare(`
+      UPDATE tasks
+      SET status = 'blocked',
+        last_error = 'codex_cli_typed_closeout_not_materialized',
+        dead_letter_reason = 'codex_cli_typed_closeout_not_materialized',
+        updated_at = ?
+      WHERE task_id = ?
+    `).run(new Date().toISOString(), enqueued.task.task_id);
+    db.close();
+
+    try {
+      await redriveWithInjectedTemporalProvider(enqueued.task.task_id, {
+        reason: 'operator_retry_without_new_owner_delta',
+        source: 'test-paper-route-nonadvancing-routeback-redrive',
+        firstExecutionRunId: 'run-paper-mission-route-nonadvancing-redriven',
+      });
+      assert.fail('expected non-advancing route-back redrive to be blocked');
+    } catch (error) {
+      assert.equal(error instanceof FrameworkContractError, true);
+      const details = (error as FrameworkContractError).details as Record<string, unknown>;
+      assert.equal(details.reason, 'non_advancing_route_back');
+      assert.equal(details.provider_redrive_started, false);
+      assert.equal(details.required_owner_delta, 'mas_owned_executor_delta_required');
+      assert.equal(details.paper_mission_transaction_ref, 'paper-mission-transaction:dm003:submission');
+      assert.equal(details.route_identity_key, 'paper-mission-transaction:dm003:submission::route');
+      assert.deepEqual(details.accepted_advancing_delta_shapes, [
+        'candidate_hash',
+        'owner_answer_ref',
+        'typed_blocker_ref',
+        'human_gate_ref',
+        'paper_facing_delta_ref',
+      ]);
+      assert.equal(
+        (details.authority_boundary as Record<string, unknown>).provider_redrive_started,
+        false,
+      );
+      assert.equal(
+        (details.authority_boundary as Record<string, unknown>).domain_progress_claim,
+        false,
+      );
+    }
+
+    const afterDb = openQueueDb().db;
+    const after = inspectTask(afterDb, enqueued.task.task_id);
+    assert.equal(after.task.status, 'blocked');
+    assert.equal(after.task.dead_letter_reason, 'codex_cli_typed_closeout_not_materialized');
+    assert.equal(after.stage_attempts.length, 1);
+    assert.equal(after.stage_attempts[0].stage_attempt_id, originalAttempt.stage_attempt_id);
+    afterDb.close();
   } finally {
     restoreEnv();
     fs.rmSync(stateRoot, { recursive: true, force: true });

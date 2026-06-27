@@ -378,6 +378,7 @@ function redriveTerminalProviderTransportTask(
     }
     const currentPayload = parsePayload(currentRow);
     assertDomainRouteProviderTransportTask(currentRow, currentPayload);
+    assertNoProviderOnlySemanticRedriveBlocker(db, currentRow);
     const terminalAttempt = terminalProviderTransportAttemptForRedrive(db, currentRow, currentPayload);
     if (!terminalAttempt) {
       throwProviderOnlyRedriveBlocked(
@@ -397,7 +398,6 @@ function redriveTerminalProviderTransportTask(
         },
       );
     }
-    assertNoProviderOnlySemanticRedriveBlocker(db, currentRow);
     const admission = redriveAdmissionForTask(db, currentRow, currentPayload);
     const nextStatus = admission.nextStatus;
     const claim = db.prepare(`

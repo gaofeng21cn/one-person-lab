@@ -14,6 +14,13 @@ type RedriveCurrentnessIdentity = NonNullable<ReturnType<typeof redriveCurrentne
 const LIVE_PROVIDER_ATTEMPT_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate']);
 const ACCEPTED_CLOSEOUT_RECEIPT_STATUS = 'accepted_typed_closeout';
 const PROVIDER_RUNTIME_BLOCKER_REF_PATTERN = /^opl:\/\/stage-attempts\/[^/]+\/runtime-blockers\/[^/]+$/;
+const ACCEPTED_ADVANCING_DELTA_SHAPES = [
+  'candidate_hash',
+  'owner_answer_ref',
+  'typed_blocker_ref',
+  'human_gate_ref',
+  'paper_facing_delta_ref',
+] as const;
 
 function nestedRecord(value: unknown) {
   return isRecord(value) ? value : null;
@@ -191,6 +198,127 @@ function hasOwnerRefs(value: unknown) {
   );
 }
 
+function hasStringField(record: Record<string, unknown>, fields: string[]) {
+  return fields.some((field) => {
+    const value = record[field];
+    return stringValue(value) || stringList(value).length > 0;
+  });
+}
+
+function hasNestedStringField(record: Record<string, unknown>, fields: string[]) {
+  return hasStringField(record, fields)
+    || Object.values(record).some((value) => isRecord(value) && hasStringField(value, fields));
+}
+
+function hasCandidateHash(payload: Record<string, unknown>) {
+  return hasNestedStringField(payload, [
+    'candidate_hash',
+    'candidate_content_hash',
+    'candidate_fingerprint',
+    'package_hash',
+    'package_content_hash',
+    'source_content_hash',
+  ]);
+}
+
+function hasOwnerAnswerShape(payload: Record<string, unknown>) {
+  return hasNestedStringField(payload, [
+    'owner_answer_ref',
+    'owner_answer_refs',
+    'domain_owner_receipt_ref',
+    'domain_owner_receipt_refs',
+    'owner_receipt_ref',
+    'owner_receipt_refs',
+    'domain_receipt_ref',
+    'domain_receipt_refs',
+    'route_back_evidence_ref',
+    'route_back_evidence_refs',
+  ]);
+}
+
+function hasTypedBlockerRef(payload: Record<string, unknown>) {
+  return hasNestedStringField(payload, [
+    'typed_blocker_ref',
+    'typed_blocker_refs',
+    'latest_typed_blocker_ref',
+  ]);
+}
+
+function hasHumanGateRef(payload: Record<string, unknown>) {
+  return hasNestedStringField(payload, [
+    'human_gate_ref',
+    'human_gate_refs',
+  ]);
+}
+
+function hasPaperFacingDeltaRef(payload: Record<string, unknown>) {
+  return hasNestedStringField(payload, [
+    'paper_facing_delta_ref',
+    'paper_facing_delta_refs',
+    'paper_delta_ref',
+    'paper_delta_refs',
+    'paper_body_delta_ref',
+    'paper_body_delta_refs',
+    'submission_delta_ref',
+    'submission_delta_refs',
+    'manuscript_delta_ref',
+    'manuscript_delta_refs',
+  ]);
+}
+
+function hasAdvancingOwnerDelta(payload: Record<string, unknown>) {
+  return hasCandidateHash(payload)
+    || hasOwnerAnswerShape(payload)
+    || hasTypedBlockerRef(payload)
+    || hasHumanGateRef(payload)
+    || hasPaperFacingDeltaRef(payload);
+}
+
+function routeBackOrDomainGateSignal(attempt: StageAttemptPayload) {
+  const routeImpact = isRecord(attempt.route_impact) ? attempt.route_impact : {};
+  const workspaceLocator = isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
+  const commandKind = stringValue(routeImpact.command_kind) ?? stringValue(workspaceLocator.command_kind);
+  const domainReadyVerdict = stringValue(routeImpact.domain_ready_verdict);
+  const reason = stringValue(routeImpact.reason) ?? stringValue(attempt.blocked_reason);
+  if (commandKind === 'route_back') {
+    return 'route_back';
+  }
+  if (domainReadyVerdict === 'domain_gate_pending') {
+    return 'domain_gate_pending';
+  }
+  const closeoutRefSignal = stringList(attempt.closeout_refs).find((ref) =>
+    ref.startsWith('route-back:')
+    || ref.startsWith('route_back:')
+    || ref.startsWith('domain-gate:')
+    || ref.startsWith('domain_gate:')
+  );
+  if (closeoutRefSignal) {
+    return closeoutRefSignal.startsWith('route') ? 'route_back' : 'domain_gate_pending';
+  }
+  return reason?.includes('route_back') || reason?.includes('domain_gate')
+    ? reason
+    : null;
+}
+
+function nonAdvancingRouteBackAttempt(
+  attempts: StageAttemptPayload[],
+  input: {
+    currentnessIdentity: RedriveCurrentnessIdentity | null;
+    payload: Record<string, unknown>;
+  },
+) {
+  if (!input.currentnessIdentity || hasAdvancingOwnerDelta(input.payload)) {
+    return null;
+  }
+  return attempts.find((attempt) => (
+    sameRedriveCurrentnessIdentity(attempt, input.currentnessIdentity!)
+    && attempt.closeout_receipt_status === ACCEPTED_CLOSEOUT_RECEIPT_STATUS
+    && routeBackOrDomainGateSignal(attempt)
+    && !hasOwnerRefs(attempt.route_impact)
+    && stringList(attempt.human_gate_refs).length === 0
+  )) ?? null;
+}
+
 function hasDomainCloseoutRefs(attempt: StageAttemptPayload) {
   return stringList(attempt.closeout_refs).some((ref) => (
     !PROVIDER_RUNTIME_BLOCKER_REF_PATTERN.test(ref)
@@ -267,7 +395,35 @@ export function assertNoProviderOnlySemanticRedriveBlocker(
     );
   }
   const attempts = listStageAttemptsForTask(db, row.task_id);
-  const currentnessIdentity = redriveCurrentnessIdentity(taskPayload(row));
+  const payload = taskPayload(row);
+  const currentnessIdentity = redriveCurrentnessIdentity(payload);
+  const nonAdvancingAttempt = nonAdvancingRouteBackAttempt(attempts, {
+    currentnessIdentity,
+    payload,
+  });
+  if (nonAdvancingAttempt) {
+    throwProviderOnlyRedriveBlocked(
+      'family-runtime queue redrive requires a fresh MAS-owned executor delta after route-back/domain-gate closeout.',
+      'non_advancing_route_back',
+      {
+        task_id: row.task_id,
+        status: row.status,
+        dead_letter_reason: row.dead_letter_reason,
+        stage_attempt_id: nonAdvancingAttempt.stage_attempt_id,
+        route_back_signal: routeBackOrDomainGateSignal(nonAdvancingAttempt),
+        paper_mission_transaction_ref: stringValue(payload.paper_mission_transaction_ref),
+        route_identity_key: stringValue(currentnessIdentity?.identity_kind === 'paper_mission_stage_route'
+          ? currentnessIdentity.route_identity_key
+          : null),
+        attempt_idempotency_key: stringValue(currentnessIdentity?.identity_kind === 'paper_mission_stage_route'
+          ? currentnessIdentity.attempt_idempotency_key
+          : null),
+        accepted_advancing_delta_shapes: [...ACCEPTED_ADVANCING_DELTA_SHAPES],
+        required_owner_delta: 'mas_owned_executor_delta_required',
+        provider_redrive_started: false,
+      },
+    );
+  }
   const closeoutAttempt = redriveBlockingDomainCloseoutAttempt(attempts, {
     allowRefsOnlyCheckpointAttemptId: input.allowRefsOnlyCheckpointAttemptId,
     currentnessIdentity,
