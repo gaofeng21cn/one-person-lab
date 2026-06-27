@@ -7,8 +7,10 @@ import {
   appendDomainProgressTransitionRuntimeResult,
   createDomainProgressTransitionRuntimeLog,
   normalizeDomainProgressTransitionCommand,
-  reconcileDomainProgressTransitionFixedPoint,
 } from '../../../../../src/family-runtime-domain-progress-transition-runtime.ts';
+import {
+  reconcileDomainProgressTransitionFixedPoint,
+} from '../../../../../src/family-runtime-domain-progress-transition-runtime-parts/fixed-point-replay.ts';
 
 test('DomainProgressTransitionRuntime fail-closed incomplete transaction returns stable readback shape without appending', () => {
   const command = normalizeDomainProgressTransitionCommand(currentControlCommandOutboxRecord({

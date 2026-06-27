@@ -20,18 +20,22 @@ import {
   buildNonAdvancingApplyRuntimeResult,
   appendDomainProgressTransitionRuntimeResult,
   appendDomainProgressTransitionRuntimeResultJsonl,
-  consumeDomainProgressHumanGateResumeToken,
   createDomainProgressTransitionRuntimeLog,
-  currentDomainProgressTransitionAggregateVersion,
   normalizeDomainProgressTransitionCommand,
+} from '../../../../src/family-runtime-domain-progress-transition-runtime.ts';
+import {
+  reconcileDomainProgressTransitionFixedPoint,
+  replayDomainProgressTransitionTrace,
+} from '../../../../src/family-runtime-domain-progress-transition-runtime-parts/fixed-point-replay.ts';
+import {
+  consumeDomainProgressHumanGateResumeToken,
+  currentDomainProgressTransitionAggregateVersion,
   readDomainProgressHumanGateResumeToken,
   readDomainProgressTransitionIdempotency,
   readDomainProgressTransitionIdempotencyJsonl,
   readDomainProgressTransitionRuntimeLogJsonl,
   rebuildDomainProgressTransitionReadModel,
-  reconcileDomainProgressTransitionFixedPoint,
-  replayDomainProgressTransitionTrace,
-} from '../../../../src/family-runtime-domain-progress-transition-runtime.ts';
+} from '../../../../src/family-runtime-domain-progress-transition-runtime-parts/runtime-results.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {

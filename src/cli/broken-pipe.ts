@@ -10,11 +10,11 @@ function errorCode(error: unknown) {
     : null;
 }
 
-export function isBrokenPipeError(error: unknown) {
+function isBrokenPipeError(error: unknown) {
   return errorCode(error) === 'EPIPE';
 }
 
-export function installBrokenPipeExitHandler(
+function installBrokenPipeExitHandler(
   stream: PipeLikeStream,
   exit: (code: number) => never | void = process.exit,
 ) {

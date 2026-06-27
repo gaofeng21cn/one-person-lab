@@ -2,7 +2,6 @@ import {
   DOMAIN_PROGRESS_POLICY_ADAPTER_CONTRACT,
   normalizeDomainProgressPolicyAdapterRequest,
 } from './family-runtime-domain-progress-transition-runtime-parts/policy-adapter.ts';
-import { auditDomainProgressTransitionReplay } from './family-runtime-domain-progress-transition-runtime-parts/replay-audit.ts';
 import {
   DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
   DOMAIN_PROGRESS_TRANSITION_RUNTIME_MODULE,
@@ -27,34 +26,22 @@ export {
   readDomainProgressTransitionRuntimeReadbackJsonl,
 } from './family-runtime-domain-progress-transition-runtime-parts/live-readback.ts';
 
-export { auditDomainProgressTransitionReplay };
 export {
   appendDomainProgressTransitionRuntimeResult,
   appendDomainProgressTransitionRuntimeResultJsonl,
   buildDomainProgressTransitionRuntimeResult,
   createDomainProgressTransitionRuntimeLog,
-  currentDomainProgressTransitionAggregateVersion,
-  readDomainProgressHumanGateResumeToken,
-  consumeDomainProgressHumanGateResumeToken,
-  readDomainProgressTransitionIdempotency,
-  readDomainProgressTransitionIdempotencyJsonl,
-  readDomainProgressTransitionRuntimeLogJsonl,
-  rebuildDomainProgressTransitionReadModel,
 } from './family-runtime-domain-progress-transition-runtime-parts/runtime-results.ts';
 export {
   buildNonAdvancingApplyRuntimeResult,
-  reconcileDomainProgressTransitionFixedPoint,
-  replayDomainProgressTransitionTrace,
 } from './family-runtime-domain-progress-transition-runtime-parts/fixed-point-replay.ts';
 export {
   DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
   DOMAIN_PROGRESS_TRANSITION_RUNTIME_MODULE,
-  readDomainProgressStageRunIdentity,
 } from './family-runtime-domain-progress-transition-runtime-parts/shared.ts';
 export type {
   DomainProgressTransitionBlocked,
   DomainProgressTransitionCommandContext,
-  DomainProgressTransitionRuntimeLog,
 } from './family-runtime-domain-progress-transition-runtime-parts/shared.ts';
 export { DOMAIN_PROGRESS_POLICY_ADAPTER_CONTRACT };
 
