@@ -469,3 +469,23 @@ Current next-route rules:
 | P0 | MAS PaperMission command/test source | Stale worktree ownership is resolved, but files remain PaperMission authority-adjacent. | Re-audit from clean/current MAS main before any mutation; only proceed with a narrow test-only split or source shrink if fresh active-caller, no-forbidden-write, and focused repo-native tests cover it. |
 | P1 | MAS non-PaperMission tests over 1000 lines | Candidate pool is shrinking; each remaining item needs fresh item-level authority/write-set gate because many protect runtime authority, retired-surface provenance, or owner-route readbacks. | Prefer test-only case extraction with focused `scripts/run-pytest-clean.sh`; avoid source/contract/runtime writes unless separately authorized. |
 | P1 | RCA canonical metadata drift | Current RCA root has unrelated `functional_privatization_audit` source/contract shape drift. | Route to a separate contract-alignment lane; do not hide it behind structure cleanup. |
+
+## 2026-06-28 Refactor Patrol Landing Round 17
+
+This follow-up first absorbed a stale PaperMission owner-lane behavior fix, then landed a test-only split for the same command surface. It did not touch upstream fork bodies and does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `med-autoscience` | `owner_lane_absorption` | Absorbed `paper-mission-delta-ref-adoption-20260628`, preserving external PaperMission delta refs on non-authority candidate package outputs and materialized paper-facing artifacts. | MAS `main/origin` advanced to `930e8905b`; root `scripts/run-pytest-clean.sh tests/test_cli_cases/paper_mission_commands.py -q` passed 46/46; `git diff --check HEAD~1..HEAD` passed; `git cherry main codex/paper-mission-delta-ref-adoption-20260628` returned `- 1f2c53bee`; worktree/branch cleaned. | This is candidate-package boundary behavior, not paper progress, publication readiness, owner receipt, typed blocker, human gate, runtime queue/provider mutation, or current-package authority. |
+| `med-autoscience` | `refactor_patrol` | Split the 441-line submission milestone candidate package command case out of `tests/test_cli_cases/paper_mission_commands.py` into `tests/test_cli_cases/paper_mission_command_cases/submission_milestone_candidate_package.py`, with shared helpers in `paper_mission_command_helpers.py`. | MAS `main/origin` advanced to `7d30a3fa`; root `scripts/run-pytest-clean.sh tests/test_cli_cases/paper_mission_commands.py -q` passed 46/46; new case file passed 1/1; previous failing drive/dispatch regression slice passed 2/2; `git diff --check HEAD~1..HEAD` passed; line readback: entry 4421, helper 412, case 449; candidate worktree/branch cleaned. | `paper_mission_commands.py` remains over budget at 4421 lines. Next split should continue moving natural command cases out without touching `src/med_autoscience/**` unless a separate owner lane requires it. |
+
+### Round 17 Queue Adjustment
+
+Current next-route rules:
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| P0 | MAS `tests/test_cli_cases/paper_mission_commands.py` | Still the largest tracked MAS test file, now 4421 lines after first natural case extraction. | Continue test-only command-case extraction from clean/current MAS main; run full `paper_mission_commands.py` focused test and new case test after each split. |
+| P1 | MAS non-PaperMission tests over 1000 lines | Candidate pool remains available but each item needs fresh item-level authority/write-set gate. | Prefer test-only case extraction with `scripts/run-pytest-clean.sh`; avoid source/contract/runtime writes unless separately authorized. |
+| P1 | RCA canonical metadata drift | Separate contract/source alignment issue. | Route to contract-alignment lane, not line-budget cleanup. |
