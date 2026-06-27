@@ -831,4 +831,23 @@ Current next-route rules:
 | closed | MAS `tests/test_cli_cases/paper_mission_commands.py` | Entry file is below target at 789 lines. | Do not continue splitting unless it regrows or a new natural family appears. |
 | watch | OPL root line-budget | Fresh `npm run --silent line-budget -- --list` returned no entries. | Do not split sub-1000 files mechanically; pick future candidates only from fresh over-budget output or clear delete/shrink evidence. |
 | watch | App generated/fork-adjacent scans | Large App hits are under ignored/generated/tmp/release-artifact or upstream fork/reference paths; active App-owned release test files are under 1000. | Exclude generated artifacts, tmp active-shell backups, `shells/aionui/**`, and `_external/hermes-agent/**`; mutate only App-owned source/tests with fresh focused verification. |
-| P1 | RCA canonical metadata drift | Separate contract/source alignment issue. | Route to contract-alignment lane, not line-budget cleanup. |
+| closed | RCA canonical metadata drift | Current RCA focused canonical contract test passes on `ac702805`. | Reopen only on fresh failing canonical contract evidence. |
+
+## 2026-06-28 RCA Canonical Metadata Drift Closeout
+
+This continuation did not require a new RCA mutation. It re-audited the stale matrix P1 and found it already closed by recent RCA mainline commits.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `redcube-ai` | `contract_alignment_closeout` | Closed the matrix P1 for RCA canonical metadata drift as already resolved on current `main`. | RCA root clean/current at `main == origin/main == ac702805bed149361fbe0d9beea3cf6254fe17ac`; focused canonical contract test `node --experimental-strip-types --test tests/opl-agent-pack-contracts-canonical.test.ts` passed 1/1; `npm run --silent default-caller-tail:readback` reported `tail_surface_count=0`, `cleanup_candidate_count=0`, `missing_evidence_surface_count=0`, `owner_delta_route_count=0`, `owner_delta_required=false`; `./scripts/verify.sh default-caller-tail:strict` passed; `./scripts/verify.sh line-budget` passed. | This is contract/test/readback closure only. It does not claim visual deliverable readiness, export readiness, quality verdict authority, owner receipt validity, typed blocker validity, domain readiness, or production readiness. |
+
+### Round 36 Queue Adjustment
+
+Current next-route rules:
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| closed | MAS `tests/test_cli_cases/paper_mission_commands.py` | Entry file is below target at 789 lines. | Do not continue splitting unless it regrows or a new natural family appears. |
+| closed | RCA canonical metadata drift | Current RCA focused canonical contract test passes on `ac702805`. | Reopen only on fresh failing canonical contract evidence. |
+| watch | OPL/App/other OPL-owned line-budget | Current fresh scans found no selected over-budget OPL-owned mutation with a safe natural boundary. | Continue only from fresh over-budget output, stale-lane cleanup, or clear delete/shrink evidence. |
