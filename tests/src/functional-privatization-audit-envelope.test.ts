@@ -155,6 +155,51 @@ test('functional privatization audit envelope reports MAG evidence requests with
   assert.equal(audit.envelope.authority_boundary.opl_can_authorize_quality_or_export, false);
 });
 
+test('functional privatization audit reads MAS canonical modules as standard contract source', () => {
+  const audit = buildFunctionalPrivatizationAudit({
+    target_domain_id: 'med-autoscience',
+    functional_privatization_audit: {
+      surface_kind: 'functional_privatization_audit',
+      target_domain_id: 'med-autoscience',
+      functional_surface_classification: {
+        A_opl_owned_mas_consumes: ['legacy_helper_name_not_the_source'],
+      },
+      modules: [
+        {
+          module_id: 'domain_authority_refs_index',
+          classification: 'domain_authority_refs',
+          owner: 'med-autoscience',
+          code_paths: ['src/med_autoscience/runtime_protocol/domain_authority_refs_index.py'],
+        },
+        {
+          module_id: 'study_stage_policy_pack',
+          classification: 'declarative_pack_generated_surface',
+          owner: 'med-autoscience',
+        },
+        {
+          module_id: 'study_truth',
+          classification: 'minimal_authority_function',
+          owner: 'med-autoscience',
+        },
+      ],
+    },
+  });
+
+  assert.equal(audit.envelope.source_field, 'functional_privatization_audit');
+  assert.equal(audit.envelope.source_field_role, 'standard_contract_source');
+  assert.deepEqual(audit.envelope.legacy_import_source_fields, []);
+  assert.equal(audit.summary.total_module_count, 3);
+  assert.deepEqual(audit.modules.map((entry) => entry.module_id), [
+    'domain_authority_refs_index',
+    'study_stage_policy_pack',
+    'study_truth',
+  ]);
+  assert.equal(audit.modules[0].migration_class, 'refs_only_domain_adapter');
+  assert.equal(audit.summary.refs_only_domain_adapter_count, 1);
+  assert.equal(audit.summary.declarative_pack_count, 1);
+  assert.equal(audit.summary.minimal_authority_function_count, 1);
+});
+
 test('functional privatization audit accepts explicit semantic equivalence evidence refs', () => {
   const audit = buildFunctionalPrivatizationAudit({
     target_domain_id: 'redcube',

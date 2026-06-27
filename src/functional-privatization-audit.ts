@@ -399,6 +399,7 @@ function migrationClass(value: unknown): FunctionalPrivatizationMigrationClass {
     || text === 'refs_only_projection'
     || text === 'domain_handler_target'
     || text === 'domain_handler_target_only'
+    || text === 'domain_authority_refs'
   ) {
     return 'refs_only_domain_adapter';
   }
@@ -913,7 +914,7 @@ export function buildFunctionalPrivatizationAudit(
     };
   }
   const modules =
-    sourceField === 'functional_consumer_boundary' || isRecord(source.functional_surface_classification)
+    sourceField === 'functional_consumer_boundary'
       ? itemsFromMasBoundary(source)
       : itemsFromStructuredAudit(source);
   const requiredOplReplacementPrimitives = unique([
