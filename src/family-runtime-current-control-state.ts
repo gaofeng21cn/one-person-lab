@@ -20,6 +20,9 @@ import {
   missingStageRunCurrentnessIdentityFields,
 } from './family-runtime-stage-run-currentness-identity.ts';
 import {
+  isPaperMissionStageRouteTask,
+} from './family-runtime-paper-mission-stage-route-terminal-sync.ts';
+import {
   masDomainOwnerAnswerObservationFromRecords,
   OPL_ATTEMPT_ADMISSION_PROVIDER_START_PENDING_REASON,
   OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
@@ -411,6 +414,19 @@ function domainHandlerProviderAdmissionRequested(
     && attempt.closeout_receipt_status === 'domain_handler_receipt_ref_only';
 }
 
+function paperMissionStageRouteAdmissionRequested(
+  task: FamilyRuntimeTaskRow | undefined,
+  taskPayload: Record<string, unknown>,
+  attempt: ControlAttemptRow | undefined,
+) {
+  return Boolean(
+    task
+    && !attempt
+    && ['queued', 'retry_waiting', 'running'].includes(task.status)
+    && isPaperMissionStageRouteTask(task, taskPayload),
+  );
+}
+
 function isLiveProviderAttempt(attempt: ControlAttemptRow | undefined, providerRun: Record<string, unknown>) {
   if (!attempt) {
     return false;
@@ -707,7 +723,10 @@ function deriveCurrentControlStateFromRows(
       },
     };
   }
-  if (domainHandlerProviderAdmissionRequested(task, current)) {
+  if (
+    domainHandlerProviderAdmissionRequested(task, current)
+    || paperMissionStageRouteAdmissionRequested(task, taskPayload, current)
+  ) {
     return {
       ...base,
       reconciliation_status: 'provider_admission_requested',

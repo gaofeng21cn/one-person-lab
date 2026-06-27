@@ -46,6 +46,34 @@ function enqueueDefaultTask(db: DatabaseSync, payload: Record<string, unknown> =
   return result.task;
 }
 
+function enqueuePaperMissionStageRouteTask(db: DatabaseSync, payload: Record<string, unknown> = {}) {
+  const result = enqueueTask(db, {
+    domainId: 'medautoscience',
+    taskKind: 'paper_mission/stage-route',
+    payload: {
+      surface_kind: 'opl_mas_paper_mission_route_runtime_request',
+      schema_version: 1,
+      runtime_request_status: 'queued_request',
+      runtime_request_kind: 'mas_paper_mission_stage_route',
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      mission_id: 'paper-mission::003',
+      candidate_ref: '/tmp/yang/ops/medautoscience/paper_mission_candidate_package/run/003/package_manifest.json',
+      paper_mission_transaction_ref: 'paper-mission-transaction::003::submission_milestone_candidate::followthrough',
+      opl_route_command_ref: 'paper-mission-transaction::003::submission_milestone_candidate::followthrough#opl_route_command',
+      command_kind: 'resume_stage',
+      route_target: 'continue paper-facing submission milestone work',
+      workspace_root: '/tmp/yang',
+      domain_workspace_root: '/tmp/yang',
+      route_command_materialized: true,
+      ...payload,
+    },
+    dedupeKey: `paper-mission-route:${crypto.randomUUID()}`,
+    source: 'test',
+  });
+  assert.ok(result.task);
+  return result.task;
+}
+
 function createTaskAttempt(
   db: DatabaseSync,
   task: ReturnType<typeof enqueueDefaultTask>,
@@ -114,6 +142,41 @@ test('current control state binds MAS default executor task freshness to domain 
     assert.equal(state.reconciliation_status, 'running');
     assert.deepEqual(state.stale_epoch_kinds, []);
     assert.equal(state.source_fingerprint, 'opl-stage-source:derived');
+  });
+});
+
+test('current control state treats queued MAS PaperMission stage-route as provider admission requested', () => {
+  withDb((db) => {
+    const task = enqueuePaperMissionStageRouteTask(db, {
+      route_identity_key: undefined,
+      attempt_idempotency_key: undefined,
+      request_idempotency_key: undefined,
+      opl_route_handoff_record: {
+        opl_runtime_carrier: {
+          action_type: 'continue_same_stage',
+          work_unit_id: 'submission_milestone_candidate',
+          work_unit_fingerprint: 'paper-mission::003::submission_milestone_candidate::followthrough',
+          route_identity_key: 'paper-mission-transaction::003::submission_milestone_candidate::followthrough::route',
+          attempt_idempotency_key: '003::submission_milestone_candidate::followthrough::opl-attempt',
+          request_idempotency_key: '003::submission_milestone_candidate::followthrough::opl-request',
+        },
+      },
+    });
+
+    const state = deriveCurrentControlStateForTask(db, task.task_id);
+    const identity = state.stage_run_currentness_identity as Record<string, unknown>;
+
+    assert.equal(state.reconciliation_status, 'provider_admission_requested');
+    assert.equal(state.current_attempt_state, 'provider_start_pending');
+    assert.equal(state.blocker_reason, 'provider_attempt_start_pending');
+    assert.equal(identity.route_identity_key, 'paper-mission-transaction::003::submission_milestone_candidate::followthrough::route');
+    assert.equal(identity.attempt_idempotency_key, '003::submission_milestone_candidate::followthrough::opl-attempt');
+    assert.equal(identity.idempotency_key, '003::submission_milestone_candidate::followthrough::opl-attempt');
+    assert.equal(identity.work_unit_id, 'submission_milestone_candidate');
+    assert.equal(identity.work_unit_fingerprint, 'paper-mission::003::submission_milestone_candidate::followthrough');
+    assert.equal(state.running_provider_attempt, false);
+    assert.equal(Object.hasOwn(state, 'domain_ready'), false);
+    assert.equal(Object.hasOwn(state, 'publication_ready'), false);
   });
 });
 

@@ -18,6 +18,10 @@ function nestedRecord(source: JsonRecord, ...keys: string[]) {
   return current;
 }
 
+function firstRecord(...values: Array<JsonRecord | null>) {
+  return values.find((value): value is JsonRecord => Boolean(value)) ?? {};
+}
+
 function stringList(value: unknown) {
   return Array.isArray(value)
     ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
@@ -75,6 +79,13 @@ export function buildStageRunCurrentnessIdentity(
   const currentOwnerDelta = input.currentOwnerDelta ?? {};
   const providerAdmissionIdentity = recordValue(taskPayload.provider_admission_identity)
     ?? recordValue(stageAttempt.provider_admission_identity);
+  const stageRunRequest = recordValue(taskPayload.stage_run_request) ?? {};
+  const paperMissionRouteIdentity = firstRecord(
+    recordValue(taskPayload.opl_runtime_carrier),
+    nestedRecord(taskPayload, 'opl_route_handoff_record', 'opl_runtime_carrier'),
+    recordValue(taskPayload.opl_route_handoff_record),
+    stageRunRequest,
+  );
   const ownerRoute = recordValue(taskPayload.owner_route) ?? {};
   const sourceRefs = recordValue(ownerRoute.source_refs) ?? {};
   const currentnessContract = recordValue(ownerRoute.currentness_contract) ?? {};
@@ -114,24 +125,29 @@ export function buildStageRunCurrentnessIdentity(
       ?? optionalString(currentOwnerDelta.quest_id),
     stage_id: optionalString(stageAttempt.stage_id)
       ?? optionalString(taskPayload.stage_id)
-      ?? optionalString(workspaceLocator.task_kind),
+      ?? optionalString(workspaceLocator.task_kind)
+      ?? optionalString(task?.task_kind),
     stage_attempt_id: optionalString(stageAttempt.stage_attempt_id),
     action_type: optionalString(taskPayload.action_type)
+      ?? optionalString(paperMissionRouteIdentity.action_type)
       ?? optionalString(currentOwnerDelta.action_type)
       ?? optionalString(nestedRecord(taskPayload, 'source_action')?.action_type),
     work_unit_id: optionalString(basis.work_unit_id)
       ?? optionalString(taskPayload.work_unit_id)
+      ?? optionalString(paperMissionRouteIdentity.work_unit_id)
       ?? optionalString(workspaceLocator.work_unit_id)
       ?? optionalString(currentOwnerDelta.work_unit_id)
       ?? optionalString(nestedRecord(taskPayload, 'source_action', 'next_work_unit')?.unit_id)
       ?? optionalString(taskPayload.action_type),
     work_unit_fingerprint: optionalString(basis.work_unit_fingerprint)
       ?? optionalString(taskPayload.work_unit_fingerprint)
+      ?? optionalString(paperMissionRouteIdentity.work_unit_fingerprint)
       ?? optionalString(taskPayload.source_fingerprint)
       ?? optionalString(workspaceLocator.work_unit_fingerprint)
       ?? optionalString(workspaceLocator.domain_source_fingerprint)
       ?? optionalString(currentOwnerDelta.work_unit_fingerprint),
     source_fingerprint: optionalString(taskPayload.source_fingerprint)
+      ?? optionalString(paperMissionRouteIdentity.work_unit_fingerprint)
       ?? optionalString(workspaceLocator.domain_source_fingerprint)
       ?? optionalString(workspaceLocator.source_fingerprint)
       ?? optionalString(stageAttempt.source_fingerprint)
@@ -151,15 +167,19 @@ export function buildStageRunCurrentnessIdentity(
       ?? optionalString(taskPayload.source_eval_id)
       ?? optionalString(workspaceLocator.source_eval_id),
     idempotency_key: optionalString(taskPayload.attempt_idempotency_key)
+      ?? optionalString(paperMissionRouteIdentity.attempt_idempotency_key)
       ?? optionalString(taskPayload.idempotency_key)
+      ?? optionalString(paperMissionRouteIdentity.idempotency_key)
       ?? optionalString(providerAdmissionIdentity?.attempt_idempotency_key)
       ?? optionalString(providerAdmissionIdentity?.idempotency_key)
       ?? optionalString(stageAttempt.idempotency_key)
       ?? optionalString(taskPayload.source_fingerprint)
       ?? optionalString(workspaceLocator.domain_source_fingerprint),
     route_identity_key: optionalString(taskPayload.route_identity_key)
+      ?? optionalString(paperMissionRouteIdentity.route_identity_key)
       ?? optionalString(providerAdmissionIdentity?.route_identity_key),
     attempt_idempotency_key: optionalString(taskPayload.attempt_idempotency_key)
+      ?? optionalString(paperMissionRouteIdentity.attempt_idempotency_key)
       ?? optionalString(providerAdmissionIdentity?.attempt_idempotency_key),
     recovery_obligation_id: optionalString(taskPayload.recovery_obligation_id)
       ?? optionalString(providerAdmissionIdentity?.recovery_obligation_id)
