@@ -229,3 +229,36 @@ Fresh OPL `npm run --silent line-budget -- --list` after Round 6 reports 9 remai
 | P1 | `tests/src/cli/cases/agent-lab.test.ts` | 1025 | Cheap focused test split by agent-lab command behavior. |
 | P1 | `tests/src/family-runtime-temporal-terminal-sync.test.ts` | 1012 | Cheap focused test split by terminal-sync scenario. |
 | P1 | `src/family-runtime-enqueue-parts/existing-dedupe-reconcile.ts` | 1004 | Near-limit residual; avoid mechanical four-line split unless a natural helper boundary is found. |
+
+## 2026-06-27 Refactor Patrol Landing Round 7
+
+This follow-up continued line-budget-first cleanup with four OPL lanes and one Hermes shell lane. It does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `one-person-lab` | `refactor_patrol` | `tests/src/cli/cases/workspace-domain.descriptor.test.ts` split missing optional descriptor surfaces case into `workspace-domain.descriptor-cases/missing-optional-surfaces.ts`; local `main` commit `548abedb`, pushed before final Round 7 at `b6f14f41`. | Lane focused entry passed 3/3. Main first Round 7 aggregate rerun passed workspace-domain/agent-lab/app-action 31/31, `npm run typecheck`, `git diff --check`, and line-budget readback. Line readback: entry file 999 lines; new case 47 lines. | This is descriptor test structure evidence only, not domain admission readiness. Entry is just under advisory budget; future edits should continue case extraction instead of growing the entry. |
+| `one-person-lab` | `refactor_patrol` | `tests/src/cli/cases/agent-lab.test.ts` split export and cost-estimate cases into `agent-lab-cases/export-and-cost.ts`; local `main` commit `91111fc9`, pushed before final Round 7 at `b6f14f41`. | Lane focused entry passed 22/22. Main first Round 7 aggregate rerun passed 31/31 plus typecheck/diff/line-budget readback. Line readback: entry file 957 lines; new case 70 lines. | This is Agent Lab test structure evidence only. It does not prove external suite/runtime readiness. |
+| `one-person-lab` | `refactor_patrol` | `src/app-state.ts` split App action execution into `src/app-state-parts/action-execute.ts`; local `main` commit `b6f14f41`, remote readback before terminal-sync follow-up `b6f14f4163738b521a082c4c9f15186cf7c0fec2`. | Main-session lane rerun passed `tests/src/cli/cases/app-action.test.ts` 6/6, `npm run typecheck`, `git diff --check`, and line readback. Main first Round 7 aggregate rerun passed 31/31 plus typecheck/diff/line-budget readback. Line readback: `src/app-state.ts` 444 lines; action-execute part 617 lines. | This is source structure cleanup of the App action producer, not App release/user-path readiness. Public import path remains via re-export. |
+| `one-person-lab` | `refactor_patrol` | `tests/src/family-runtime-temporal-terminal-sync.test.ts` split attempt precedence cases and helpers into `family-runtime-temporal-terminal-sync-cases/`; local `main` commit `3007c528`, remote readback `origin/main` = `3007c5281e59d266f4ffa55f8856066c1064725d`. | Lane focused entry passed 14/14. Main final Round 7 aggregate rerun passed workspace-domain/agent-lab/app-action/terminal-sync 45/45, `npm run typecheck`, `git diff --check`, and line-budget readback. Line readback: entry file 630 lines; new case 162 lines; helper 251 lines. | This is Temporal terminal-sync test structure evidence only. It does not prove live Temporal runtime readiness or provider readiness. |
+| `opl-hermes-shell` | `refactor_patrol` | Electron window-state helpers split from `electron/main.cjs` into `electron/parts/window-state.cjs` with focused tests; local `main` commit `01b205f`, remote readback `origin/main` = `01b205f99fc2c8724c925ac58886716b4a7ecb20`. | Main rerun passed `node --check` for main/helper/test, `node --test electron/parts/window-state.test.cjs` 4/4, `npm run typecheck`, `git diff --check`, and line readback. Line readback: `electron/main.cjs` 5509 lines; helper 63 lines; test 89 lines. | `electron/main.cjs` remains P0 structure debt. No Electron GUI runtime smoke, App truth, or Windows terminal live claim is made. |
+
+Round-7 worktrees and branches were removed after patch-equivalence (`git cherry main <branch>` returned `-`) and push/readback. Round-7 subagents were closed after main-session diff review, verification, absorption, push, and cleanup.
+
+### Round 7 Queue Adjustment
+
+Completed exact OPL items removed from the current line-budget queue:
+
+- `src/app-state.ts`: now 444 lines.
+- `tests/src/cli/cases/workspace-domain.descriptor.test.ts`: now 999 lines.
+- `tests/src/cli/cases/agent-lab.test.ts`: now 957 lines.
+- `tests/src/family-runtime-temporal-terminal-sync.test.ts`: now 630 lines.
+
+Fresh OPL `npm run --silent line-budget -- --list` after Round 7 reports 5 remaining advisory-budget files:
+
+| Priority | File | Lines | Next route |
+| --- | --- | ---: | --- |
+| P0 | `src/opl-skills.ts` | 1192 | Split generated plugin surface / inspection / sync boundary only after caller inspection. |
+| P0 | `src/standard-domain-agent-scaffold-validation.ts` | 1142 | Split validation groups by pack files / stage refs / Foundry contract boundary. |
+| P0 | `src/family-runtime.ts` | 1085 | Inspect CLI action clusters before editing; preserve public `runFamilyRuntime` path. |
+| P0 | `src/family-runtime-tick.ts` | 1065 | Split only along existing tick-parts maintenance/default-executor boundaries with focused provider-hosted tests. |
+| P1 | `src/family-runtime-enqueue-parts/existing-dedupe-reconcile.ts` | 1004 | Near-limit residual; avoid mechanical four-line split unless a natural helper boundary is found. |
