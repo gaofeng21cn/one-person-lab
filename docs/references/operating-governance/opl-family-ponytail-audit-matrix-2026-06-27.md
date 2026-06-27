@@ -793,3 +793,22 @@ Current next-route rules:
 | P0 | MAS `tests/test_cli_cases/paper_mission_commands.py` | Below the 1500-line split signal at 1282 lines, still above the 1000-line preferred target. | Re-audit the remaining 12 tests; split again only on a clear natural test-family boundary with focused case verification. |
 | P1 | MAS near-budget case files | `drive_and_route_handoff.py` is 928 lines and `consume_submission_package.py` is 896 lines. | Do not append more tests to these files; split them later only if they grow or gain clearer sub-family boundaries. |
 | P1 | RCA canonical metadata drift | Separate contract/source alignment issue. | Route to contract-alignment lane, not line-budget cleanup. |
+
+## 2026-06-28 Refactor Patrol Landing Round 34
+
+This continuation landed the MAS PaperMission domain-handler dispatch/export test split from a clean/current MAS main worktree. It did not touch upstream fork bodies and does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `med-autoscience` | `refactor_patrol` | Moved the six domain-entry/domain-handler export and dispatch tests into `tests/test_cli_cases/paper_mission_command_cases/domain_handler_dispatch.py`, preserving the original entry path via import. | MAS `main/origin` advanced to `88e6dd5e1`; root `scripts/run-pytest-clean.sh tests/test_cli_cases/paper_mission_command_cases/domain_handler_dispatch.py -q` passed 6/6; root `scripts/run-pytest-clean.sh tests/test_cli_cases/paper_mission_commands.py -q` passed 46/46; `git diff --check` passed; line readback: entry 789, domain-handler case 514, drive/route case 928, consume case 896; candidate worktree removed and patch-equivalent branch deleted; remote readback `origin/main` = `88e6dd5e1b738f5b3383ab615d37b5ee262434ca`. | `paper_mission_commands.py` is now below both the 1500-line split signal and 1000-line preferred target. Treat this entry-file cleanup as closed unless it regrows; next refactor patrol candidates should come from other OPL family structure debt. |
+
+### Round 34 Queue Adjustment
+
+Current next-route rules:
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| closed | MAS `tests/test_cli_cases/paper_mission_commands.py` | Entry file is now 789 lines with focused case files for consume, output guards, one-shot migration, package candidate, drive/route, materialized readback, domain handler, and submission milestone package. | Do not continue splitting this entry file unless it regrows or a new natural family appears. |
+| P1 | MAS near-budget case files | `drive_and_route_handoff.py` is 928 lines and `consume_submission_package.py` is 896 lines. | Do not append more tests to these files; split them later only if they grow or gain clearer sub-family boundaries. |
+| P1 | RCA canonical metadata drift | Separate contract/source alignment issue. | Route to contract-alignment lane, not line-budget cleanup. |
