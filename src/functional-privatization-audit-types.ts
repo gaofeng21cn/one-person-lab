@@ -1,5 +1,6 @@
 import type {
   FunctionalPrivatizationAuditEnvelope,
+  FunctionalPrivatizationAuditSourceFieldRole,
   FunctionalSourcePurityTailReadModel,
 } from './functional-privatization-envelope.ts';
 import type {
@@ -119,6 +120,8 @@ export type FunctionalPrivatizationAudit = {
   status: 'missing' | 'resolved';
   envelope: FunctionalPrivatizationAuditEnvelope;
   source_field: string | null;
+  source_field_role: FunctionalPrivatizationAuditSourceFieldRole | null;
+  legacy_import_source_fields: string[];
   target_domain_id: string | null;
   summary: {
     total_module_count: number;

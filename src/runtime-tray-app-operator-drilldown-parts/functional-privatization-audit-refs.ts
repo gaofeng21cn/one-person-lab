@@ -229,6 +229,8 @@ export function functionalPrivatizationAuditRefs(projects: DomainManifestCatalog
       status: stringValue(audit.status) ?? project.status,
       envelope: compactFunctionalPrivatizationAuditEnvelope(audit.envelope),
       source_field: stringValue(audit.source_field),
+      source_field_role: stringValue(audit.source_field_role),
+      legacy_import_source_fields: stringList(audit.legacy_import_source_fields),
       summary,
       required_opl_replacement_primitives:
         stringList(audit.required_opl_replacement_primitives),

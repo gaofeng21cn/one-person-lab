@@ -734,6 +734,18 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
     );
     assert.equal(mas.family_agent_descriptor.skill_catalog.skill_count, 2);
     assert.equal(mas.family_agent_descriptor.functional_privatization_audit.status, 'resolved');
+    assert.equal(
+      mas.family_agent_descriptor.functional_privatization_audit.source_field_role,
+      'legacy_import_adapter',
+    );
+    assert.deepEqual(
+      mas.family_agent_descriptor.functional_privatization_audit.legacy_import_source_fields,
+      ['functional_consumer_boundary'],
+    );
+    assert.deepEqual(
+      mas.family_agent_descriptor.functional_privatization_audit.envelope.accepted_source_shapes,
+      ['functional_privatization_audit'],
+    );
     assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.total_module_count, 6);
     assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.default_watchlist_count, 0);
     assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.default_hidden_cleared_count, 6);
@@ -890,6 +902,18 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
     );
     assert.equal(mag.family_agent_descriptor.functional_privatization_audit.status, 'resolved');
     assert.equal(
+      mag.family_agent_descriptor.functional_privatization_audit.source_field_role,
+      'legacy_import_adapter',
+    );
+    assert.deepEqual(
+      mag.family_agent_descriptor.functional_privatization_audit.legacy_import_source_fields,
+      ['mag_consumer_thinning_contract.privatized_functional_module_audit'],
+    );
+    assert.deepEqual(
+      mag.family_agent_descriptor.functional_privatization_audit.envelope.accepted_source_shapes,
+      ['functional_privatization_audit'],
+    );
+    assert.equal(
       mag.family_agent_descriptor.functional_privatization_audit.required_opl_replacement_primitives.includes(
         'operator_workbench_shell',
       ),
@@ -916,6 +940,18 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
 
     const rca = runCli(['agents', 'descriptor', '--domain', 'rca'], env);
     assert.equal(rca.family_agent_descriptor.functional_privatization_audit.status, 'resolved');
+    assert.equal(
+      rca.family_agent_descriptor.functional_privatization_audit.source_field_role,
+      'legacy_import_adapter',
+    );
+    assert.deepEqual(
+      rca.family_agent_descriptor.functional_privatization_audit.legacy_import_source_fields,
+      ['privatized_functional_module_audit'],
+    );
+    assert.deepEqual(
+      rca.family_agent_descriptor.functional_privatization_audit.envelope.accepted_source_shapes,
+      ['functional_privatization_audit'],
+    );
     assert.equal(
       rca.family_agent_descriptor.functional_privatization_audit.modules
         .find((module: { module_id: string }) => module.module_id === 'native_helper_envelope_wrapper')

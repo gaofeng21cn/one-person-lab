@@ -3,6 +3,7 @@ import {
   buildFunctionalPrivatizationAuditEnvelopeFromAudit,
   buildFunctionalSourcePurityTailReadModel,
   FUNCTIONAL_PRIVATIZATION_AUDIT_ENVELOPE_CONTRACT,
+  type FunctionalPrivatizationAuditSourceFieldRole,
 } from './functional-privatization-envelope.ts';
 import { privatePlatformResidueGateFromRecord } from './private-platform-residue-deletion-gate.ts';
 import type {
@@ -284,26 +285,89 @@ function oplReplacementExpectations(source: JsonRecord, manifest: JsonRecord) {
 }
 
 function selectedAuditSource(manifest: JsonRecord) {
-  const direct =
-    nestedRecord(manifest, ['functional_privatization_audit'])
-    ?? nestedRecord(manifest, ['privatized_functional_module_audit'])
-    ?? nestedRecord(manifest, ['mag_consumer_thinning_contract', 'privatized_functional_module_audit'])
-    ?? nestedRecord(manifest, ['runtime_framework', 'rca_thin_surface_policy', 'privatized_functional_module_audit'])
-    ?? nestedRecord(manifest, ['functional_consumer_boundary']);
-  if (!direct) {
-    return { source: null, sourceField: null };
+  const standardSource = nestedRecord(manifest, ['functional_privatization_audit']);
+  if (standardSource) {
+    if (isRecord(standardSource.functional_consumer_boundary)) {
+      return {
+        source: standardSource.functional_consumer_boundary,
+        sourceField: 'functional_consumer_boundary',
+        sourceFieldRole: 'legacy_import_adapter' as const,
+        legacyImportSourceFields: ['functional_consumer_boundary'],
+      };
+    }
+    if (isRecord(standardSource.privatized_functional_module_audit)) {
+      return {
+        source: standardSource.privatized_functional_module_audit,
+        sourceField: 'privatized_functional_module_audit',
+        sourceFieldRole: 'legacy_import_adapter' as const,
+        legacyImportSourceFields: ['privatized_functional_module_audit'],
+      };
+    }
+    if (isRecord(standardSource.mag_consumer_thinning_contract)
+      && isRecord(standardSource.mag_consumer_thinning_contract.privatized_functional_module_audit)) {
+      return {
+        source: standardSource.mag_consumer_thinning_contract.privatized_functional_module_audit,
+        sourceField: 'mag_consumer_thinning_contract.privatized_functional_module_audit',
+        sourceFieldRole: 'legacy_import_adapter' as const,
+        legacyImportSourceFields: ['mag_consumer_thinning_contract.privatized_functional_module_audit'],
+      };
+    }
+    if (isRecord(standardSource.runtime_framework)
+      && isRecord(standardSource.runtime_framework.rca_thin_surface_policy)
+      && isRecord(standardSource.runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit)) {
+      return {
+        source: standardSource.runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit,
+        sourceField: 'runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit',
+        sourceFieldRole: 'legacy_import_adapter' as const,
+        legacyImportSourceFields: [
+          'runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit',
+        ],
+      };
+    }
+    return {
+      source: standardSource,
+      sourceField: 'functional_privatization_audit',
+      sourceFieldRole: 'standard_contract_source' as const,
+      legacyImportSourceFields: [],
+    };
   }
-  const sourceField =
-    manifest.functional_privatization_audit === direct
-      ? 'functional_privatization_audit'
-      : manifest.privatized_functional_module_audit === direct
-        ? 'privatized_functional_module_audit'
-        : nestedRecord(manifest, ['mag_consumer_thinning_contract', 'privatized_functional_module_audit']) === direct
-          ? 'mag_consumer_thinning_contract.privatized_functional_module_audit'
-          : nestedRecord(manifest, ['runtime_framework', 'rca_thin_surface_policy', 'privatized_functional_module_audit']) === direct
-            ? 'runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit'
-            : 'functional_consumer_boundary';
-  return { source: direct, sourceField };
+
+  const legacySources: Array<{
+    source: JsonRecord | null;
+    sourceField: string;
+  }> = [
+    {
+      source: nestedRecord(manifest, ['privatized_functional_module_audit']),
+      sourceField: 'privatized_functional_module_audit',
+    },
+    {
+      source: nestedRecord(manifest, ['mag_consumer_thinning_contract', 'privatized_functional_module_audit']),
+      sourceField: 'mag_consumer_thinning_contract.privatized_functional_module_audit',
+    },
+    {
+      source: nestedRecord(manifest, ['runtime_framework', 'rca_thin_surface_policy', 'privatized_functional_module_audit']),
+      sourceField: 'runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit',
+    },
+    {
+      source: nestedRecord(manifest, ['functional_consumer_boundary']),
+      sourceField: 'functional_consumer_boundary',
+    },
+  ];
+  const legacy = legacySources.find((entry) => entry.source);
+  if (!legacy?.source) {
+    return {
+      source: null,
+      sourceField: null,
+      sourceFieldRole: null,
+      legacyImportSourceFields: [] as string[],
+    };
+  }
+  return {
+    source: legacy.source,
+    sourceField: legacy.sourceField,
+    sourceFieldRole: 'legacy_import_adapter' as FunctionalPrivatizationAuditSourceFieldRole,
+    legacyImportSourceFields: [legacy.sourceField],
+  };
 }
 
 function migrationClass(value: unknown): FunctionalPrivatizationMigrationClass {
@@ -767,6 +831,8 @@ export function buildFunctionalPrivatizationAudit(
       envelope: buildFunctionalPrivatizationAuditEnvelopeFromAudit({
         status: 'missing',
         sourceField: null,
+        sourceFieldRole: null,
+        legacyImportSourceFields: [],
         targetDomainId: null,
         summary: EMPTY_SUMMARY,
         evidenceGateProjection: gates,
@@ -775,6 +841,8 @@ export function buildFunctionalPrivatizationAudit(
         blockers,
       }),
       source_field: null,
+      source_field_role: null,
+      legacy_import_source_fields: [],
       target_domain_id: null,
       summary: EMPTY_SUMMARY,
       source_purity_tail_read_model: buildFunctionalSourcePurityTailReadModel(EMPTY_SUMMARY),
@@ -795,7 +863,12 @@ export function buildFunctionalPrivatizationAudit(
       },
     };
   }
-  const { source, sourceField } = selectedAuditSource(manifest);
+  const {
+    source,
+    sourceField,
+    sourceFieldRole,
+    legacyImportSourceFields,
+  } = selectedAuditSource(manifest);
   if (!source) {
     const blockers = ['functional_privatization_audit_missing'];
     const gates = buildEmptyFunctionalEvidenceGateProjection();
@@ -807,6 +880,8 @@ export function buildFunctionalPrivatizationAudit(
       envelope: buildFunctionalPrivatizationAuditEnvelopeFromAudit({
         status: 'missing',
         sourceField: null,
+        sourceFieldRole: null,
+        legacyImportSourceFields: [],
         targetDomainId,
         summary: EMPTY_SUMMARY,
         evidenceGateProjection: gates,
@@ -815,6 +890,8 @@ export function buildFunctionalPrivatizationAudit(
         blockers,
       }),
       source_field: null,
+      source_field_role: null,
+      legacy_import_source_fields: [],
       target_domain_id: targetDomainId,
       summary: EMPTY_SUMMARY,
       source_purity_tail_read_model: buildFunctionalSourcePurityTailReadModel(EMPTY_SUMMARY),
@@ -862,6 +939,8 @@ export function buildFunctionalPrivatizationAudit(
     envelope: buildFunctionalPrivatizationAuditEnvelopeFromAudit({
       status: 'resolved',
       sourceField,
+      sourceFieldRole,
+      legacyImportSourceFields,
       targetDomainId,
       summary,
       evidenceGateProjection: gates,
@@ -870,6 +949,8 @@ export function buildFunctionalPrivatizationAudit(
       blockers,
     }),
     source_field: sourceField,
+    source_field_role: sourceFieldRole,
+    legacy_import_source_fields: legacyImportSourceFields,
     target_domain_id: targetDomainId,
     summary,
     source_purity_tail_read_model: buildFunctionalSourcePurityTailReadModel(summary),

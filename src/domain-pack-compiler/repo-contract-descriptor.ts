@@ -31,10 +31,6 @@ function stringList(value: unknown) {
     .filter((entry): entry is string => Boolean(entry));
 }
 
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
 function statusOf(value: unknown) {
   return isRecord(value) ? optionalString(value.status) : null;
 }
@@ -116,39 +112,16 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
   const generatedSurfaceHandoffRaw = readRepoJson(repoDir, 'contracts/generated_surface_handoff.json');
   const packCompilerInput = readRepoJson(repoDir, 'contracts/pack_compiler_input.json');
   const memoryDescriptor = readRepoJson(repoDir, 'contracts/memory_descriptor.json');
-  const functionalBoundary = isRecord(functionalAuditRaw) && isRecord(functionalAuditRaw.functional_consumer_boundary)
-    ? functionalAuditRaw.functional_consumer_boundary
-    : null;
-  const boundaryGeneratedHandoff = isRecord(functionalBoundary?.generated_surface_handoff)
-    ? functionalBoundary.generated_surface_handoff
-    : null;
-  const generatedSurfaceHandoff =
-    generatedSurfaceHandoffRaw || boundaryGeneratedHandoff
-      ? {
-          ...(isRecord(generatedSurfaceHandoffRaw) ? generatedSurfaceHandoffRaw : {}),
-          ...(isRecord(boundaryGeneratedHandoff) ? {
-            mas_functional_consumer_handoff_status: boundaryGeneratedHandoff.status,
-            active_caller_cutover_status: boundaryGeneratedHandoff.active_caller_cutover_status,
-            production_consumption_status: boundaryGeneratedHandoff.production_consumption_status,
-            handoff_surfaces: recordList(boundaryGeneratedHandoff.handoff_surfaces),
-          } : {}),
-        }
-      : null;
+  const generatedSurfaceHandoff = isRecord(generatedSurfaceHandoffRaw) ? generatedSurfaceHandoffRaw : null;
   const targetDomainId =
     actionCatalog?.target_domain_id
     ?? stageControlPlane?.target_domain_id
     ?? optionalString((domainDescriptor as JsonRecord).domain_id)
     ?? path.basename(repoDir);
-  const functionalAuditManifest =
-    functionalBoundary
-      ? {
-          target_domain_id: targetDomainId,
-          functional_consumer_boundary: functionalBoundary,
-        }
-      : {
-          target_domain_id: targetDomainId,
-          functional_privatization_audit: functionalAuditRaw ?? undefined,
-        };
+  const functionalAuditManifest = {
+    target_domain_id: targetDomainId,
+    functional_privatization_audit: functionalAuditRaw ?? undefined,
+  };
   const functionalAudit = buildFunctionalPrivatizationAudit(functionalAuditManifest);
   const blockerReasons = [
     actionCatalog ? null : 'missing_contract:contracts/action_catalog.json',
@@ -253,8 +226,21 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
       },
       functional_privatization_audit: {
         status: functionalAudit.status,
+        envelope: functionalAudit.envelope,
+        source_field: functionalAudit.source_field,
+        source_field_role: functionalAudit.source_field_role,
+        legacy_import_source_fields: functionalAudit.legacy_import_source_fields,
+        target_domain_id: functionalAudit.target_domain_id,
         summary: functionalAudit.summary,
+        source_purity_tail_read_model: functionalAudit.source_purity_tail_read_model,
         modules: functionalAudit.modules,
+        standard_domain_pack_inventory: functionalAudit.standard_domain_pack_inventory,
+        authority_function_inventory: functionalAudit.authority_function_inventory,
+        private_platform_residue_inventory: functionalAudit.private_platform_residue_inventory,
+        required_opl_replacement_primitives: functionalAudit.required_opl_replacement_primitives,
+        external_evidence_request_pack: functionalAudit.external_evidence_request_pack,
+        authority_boundary: functionalAudit.authority_boundary,
+        blockers: functionalAudit.blockers,
       },
     },
     repoDir,

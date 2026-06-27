@@ -517,6 +517,24 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     scaffold.functional_privatization_audit_contract.standardization_layers.includes('private_platform_residue_inventory'),
     true,
   );
+  assert.deepEqual(scaffold.functional_privatization_audit_contract.accepted_source_fields, [
+    'functional_privatization_audit',
+  ]);
+  assert.equal(
+    scaffold.functional_privatization_audit_contract.legacy_import_source_fields.includes(
+      'functional_consumer_boundary',
+    ),
+    true,
+  );
+  assert.equal(
+    scaffold.functional_privatization_audit_contract.source_shape_policy.legacy_import_adapter_only,
+    true,
+  );
+  assert.equal(
+    scaffold.functional_privatization_audit_contract.source_shape_policy
+      .new_agents_must_emit_canonical_functional_privatization_audit,
+    true,
+  );
   assert.equal(scaffold.retirement_gate.delete_policy, 'delete_or_history_tombstone_only');
   assert.equal(scaffold.retirement_gate.opl_can_execute_domain_repo_delete, false);
   assert.equal(scaffold.retirement_gate.executable_plan_surface, 'family_runtime_lifecycle_apply');

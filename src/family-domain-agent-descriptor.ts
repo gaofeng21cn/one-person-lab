@@ -500,6 +500,8 @@ function buildFunctionalPrivatizationProjection(manifest: NormalizedDomainManife
     status: componentStatus(entry, audit?.status === 'resolved'),
     envelope: audit?.envelope ?? null,
     source_field: audit?.source_field ?? null,
+    source_field_role: audit?.source_field_role ?? null,
+    legacy_import_source_fields: audit?.legacy_import_source_fields ?? [],
     target_domain_id: audit?.target_domain_id ?? manifest?.target_domain_id ?? null,
     summary: audit?.summary ?? emptySummary,
     source_purity_tail_read_model:

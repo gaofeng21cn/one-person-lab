@@ -47,6 +47,10 @@ test('functional privatization audit envelope normalizes MAS functional consumer
   assert.equal(audit.envelope.surface_kind, 'opl_functional_privatization_audit_envelope');
   assert.equal(audit.envelope.state, 'resolved');
   assert.equal(audit.envelope.source_field, 'functional_consumer_boundary');
+  assert.equal(audit.envelope.source_field_role, 'legacy_import_adapter');
+  assert.deepEqual(audit.envelope.accepted_source_shapes, ['functional_privatization_audit']);
+  assert.deepEqual(audit.envelope.legacy_import_source_fields, ['functional_consumer_boundary']);
+  assert.equal(audit.envelope.source_shape_policy.legacy_import_adapter_only, true);
   assert.equal(audit.envelope.summary.standard_domain_pack_inventory_count, 1);
   assert.equal(audit.envelope.summary.authority_function_inventory_count, 1);
   assert.equal(audit.envelope.summary.private_platform_residue_inventory_count, 1);
@@ -111,6 +115,11 @@ test('functional privatization audit envelope reports MAG evidence requests with
   });
 
   assert.equal(audit.envelope.source_field, 'mag_consumer_thinning_contract.privatized_functional_module_audit');
+  assert.equal(audit.envelope.source_field_role, 'legacy_import_adapter');
+  assert.deepEqual(audit.envelope.accepted_source_shapes, ['functional_privatization_audit']);
+  assert.deepEqual(audit.envelope.legacy_import_source_fields, [
+    'mag_consumer_thinning_contract.privatized_functional_module_audit',
+  ]);
   assert.equal(audit.envelope.summary.external_evidence_request_count, 1);
   assert.equal(audit.envelope.summary.external_evidence_open_request_count, 1);
   assert.equal(audit.envelope.summary.replacement_expectation_count, 1);
@@ -175,6 +184,9 @@ test('functional privatization audit accepts explicit semantic equivalence evide
   });
 
   const module = audit.modules[0];
+  assert.equal(audit.envelope.source_field, 'functional_privatization_audit');
+  assert.equal(audit.envelope.source_field_role, 'standard_contract_source');
+  assert.deepEqual(audit.envelope.legacy_import_source_fields, []);
   assert.equal(module.semantic_equivalence_status, 'cleared_by_boundary');
   assert.match(module.semantic_equivalence_reason, /refs-only boundary proof/);
   assert.deepEqual(module.semantic_equivalence_evidence_refs, [
@@ -196,6 +208,16 @@ test('functional privatization audit envelope contract is tracked and contract-l
 
   assert.deepEqual(contract, FUNCTIONAL_PRIVATIZATION_AUDIT_ENVELOPE_CONTRACT);
   assert.equal(contract.ai_first_contract_light_policy.contract_floor_only, true);
+  assert.deepEqual(contract.accepted_source_shapes, ['functional_privatization_audit']);
+  assert.equal(contract.source_shape_policy.legacy_repo_local_shapes_are_standard_contract, false);
+  assert.equal(contract.source_shape_policy.legacy_import_adapter_only, true);
+  assert.equal(contract.source_shape_policy.new_agents_must_emit_canonical_functional_privatization_audit, true);
+  assert.equal(
+    contract.legacy_import_source_shapes.includes(
+      'runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit',
+    ),
+    true,
+  );
   assert.equal(contract.ai_first_contract_light_policy.mechanical_completion_can_close_domain_quality, false);
   assert.deepEqual(contract.semantic_equivalence_evidence_gate.status_values, [
     'not_required',
@@ -208,5 +230,4 @@ test('functional privatization audit envelope contract is tracked and contract-l
     /owner receipt before private residue closure/,
   );
   assert.equal(contract.authority_boundary.envelope_can_claim_private_residue_deleted, false);
-  assert.ok(contract.accepted_source_shapes.includes('runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit'));
 });
