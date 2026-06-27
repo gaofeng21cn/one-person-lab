@@ -166,6 +166,7 @@ export const STANDARD_AGENT_REGISTRY = [
       'bookforge',
       'book-forge',
       'book_forge',
+      'obf',
       'oplbookforge',
       'opl-bookforge',
       'opl_bookforge',

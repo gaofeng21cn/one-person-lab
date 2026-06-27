@@ -5,6 +5,8 @@ import path from 'node:path';
 import { test } from 'node:test';
 
 import { readFamilySkillPacks } from '../../src/opl-skills.ts';
+import { normalizeDomainSelection } from '../../src/opl-skills-parts/registry.ts';
+import { resolveStandardAgent } from '../../src/standard-agent-registry.ts';
 import { registerOplFamilyCodexPlugins } from '../../src/system-installation/codex-plugin-registry.ts';
 import type { OplModuleId } from '../../src/system-installation/shared.ts';
 
@@ -40,6 +42,15 @@ function assertNoRetiredFoundrySeriesFields(pack: FoundryProjectionPack) {
     assert.equal(field in pack.mcp_projection, false);
   }
 }
+
+test('OBF resolves to OPL Book Forge through the standard agent registry aliases', () => {
+  for (const alias of ['OBF', 'obf']) {
+    const agent = resolveStandardAgent(alias);
+    assert.equal(agent?.domain_id, 'oplbookforge');
+    assert.equal(agent?.label, 'OPL Book Forge');
+    assert.deepEqual([...normalizeDomainSelection([alias])!], ['oplbookforge']);
+  }
+});
 
 test('OPL system skill sync catalog excludes MDS stage skills while exposing ScholarSkills as a target-scoped capability pack', () => {
   const catalog = readFamilySkillPacks().skill_catalog;
