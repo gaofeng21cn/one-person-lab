@@ -44,7 +44,7 @@ These counts are inventory signals only. They do not prove dead code, safe delet
 | `opl-meta-agent` | Main is ahead and clean; OMA script-to-pack batch4 landed and worktrees cleaned. | Compact/full readbacks report `cleanup_candidate_count=0`, `retained_current_count=30`, `missing_evidence_item_count=0`; retained rows are current authority or repo-native verification surfaces, not cleanup candidates. |
 | `opl-bookforge` | Main is ahead and clean; unused hygiene constant cleanup landed. | Further cleanup must still protect book artifact/materialization authority. |
 | `one-person-lab-app` | Main is ahead and clean; Hermes candidate evidence ledger docs shrink landed. | App owns GUI shell, install, release, and user path truth; cleanup is not release readiness. |
-| `opl-scholarskills` | Main is ahead and clean; README/gallery snapshot prose now points to manifest truth. | Treat as capability source of truth; do not copy or delete capability semantics from OPL/MAS without source owner route. |
+| `opl-scholarskills` | Main is clean/current at `0648ef164e10f2b7fe3ae43ab12059066d3c5106`; README/gallery snapshot prose points to manifest truth and the medical display gallery package was pushed with artifact fingerprints recorded. | Treat as capability source of truth; do not copy or delete capability semantics from OPL/MAS without source owner route. |
 
 ## Matrix
 
@@ -811,4 +811,24 @@ Current next-route rules:
 | excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
 | closed | MAS `tests/test_cli_cases/paper_mission_commands.py` | Entry file is now 789 lines with focused case files for consume, output guards, one-shot migration, package candidate, drive/route, materialized readback, domain handler, and submission milestone package. | Do not continue splitting this entry file unless it regrows or a new natural family appears. |
 | P1 | MAS near-budget case files | `drive_and_route_handoff.py` is 928 lines and `consume_submission_package.py` is 896 lines. | Do not append more tests to these files; split them later only if they grow or gain clearer sub-family boundaries. |
+| P1 | RCA canonical metadata drift | Separate contract/source alignment issue. | Route to contract-alignment lane, not line-budget cleanup. |
+
+## 2026-06-28 ScholarSkills Capability-Source Push Closeout
+
+This continuation did not select a new cleanup/refactor write set. It closed a pending absorption/currentness gap for the OPL-owned ScholarSkills capability source package after fresh verification.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `opl-scholarskills` | `capability_source_closeout` | Pushed the four local ScholarSkills gallery / display-quality commits through `0648ef1` to `origin/main`; root is now clean/current. | `scripts/verify.sh` passed with `verify ok: opl-scholarskills plugin, contract, gallery package, and no-authority boundaries are valid`; `git diff --check origin/main..HEAD` passed before push; remote readback `origin/main = 0648ef164e10f2b7fe3ae43ab12059066d3c5106`; artifact fingerprints: `medical_display_gallery.pdf` sha256 `cc5dbcd7d44de9b4a8d0936bfa32fd9ecd58c2a5a8f8c41b9cde57e971570a11`, `gallery_manifest.json` sha256 `b66ebed0868095c28412ea6c4dcc866091a0c9c2143eb469fca76e650a9466c6`, `gallery_snapshot.json` sha256 `1c8149fee7c540038f29fc1a3b02769309ccbdf7a9dff8b234cf01f877394ade`, `display_pack_gallery_quality_audit.md` sha256 `ade9bfd259b3e370150e31c91605cdeb15cb6be67e26c0ce306e81cda3f2ca92`. | This is ScholarSkills package/currentness evidence only. It is not MAS publication readiness, domain truth, owner acceptance, quality verdict authority, runtime readiness, or App release readiness. |
+
+### Round 35 Queue Adjustment
+
+Current next-route rules:
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| closed | MAS `tests/test_cli_cases/paper_mission_commands.py` | Entry file is below target at 789 lines. | Do not continue splitting unless it regrows or a new natural family appears. |
+| watch | OPL root line-budget | Fresh `npm run --silent line-budget -- --list` returned no entries. | Do not split sub-1000 files mechanically; pick future candidates only from fresh over-budget output or clear delete/shrink evidence. |
+| watch | App generated/fork-adjacent scans | Large App hits are under ignored/generated/tmp/release-artifact or upstream fork/reference paths; active App-owned release test files are under 1000. | Exclude generated artifacts, tmp active-shell backups, `shells/aionui/**`, and `_external/hermes-agent/**`; mutate only App-owned source/tests with fresh focused verification. |
 | P1 | RCA canonical metadata drift | Separate contract/source alignment issue. | Route to contract-alignment lane, not line-budget cleanup. |
