@@ -52,6 +52,41 @@ function readRecordArray(value: unknown) {
   return Array.isArray(value) ? value.filter(isPlainRecord) : [];
 }
 
+function forbiddenActivePublicFoundryFieldName(key: string) {
+  return key.startsWith('domain_native_foundry')
+    || key === 'legacy_format_json_command'
+    || key === 'compatibility_command_surface'
+    || (key.startsWith('compatibility') && key.includes('foundry'));
+}
+
+function activePublicFoundryFieldAllowedByPath(pathParts: string[]) {
+  return pathParts.includes('standard_public_projection_policy')
+    || pathParts.includes('history')
+    || pathParts.includes('tombstone');
+}
+
+function findForbiddenActivePublicFoundryFields(value: unknown, pathParts: string[] = []): string[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((entry, index) =>
+      findForbiddenActivePublicFoundryFields(entry, [...pathParts, String(index)])
+    );
+  }
+  if (!isPlainRecord(value)) {
+    return [];
+  }
+  return Object.entries(value).flatMap(([key, entry]) => {
+    const currentPath = [...pathParts, key];
+    const selfFinding = forbiddenActivePublicFoundryFieldName(key)
+      && !activePublicFoundryFieldAllowedByPath(currentPath)
+      ? [`foundry_agent_public_projection_forbidden_field:${key}`]
+      : [];
+    return [
+      ...selfFinding,
+      ...findForbiddenActivePublicFoundryFields(entry, currentPath),
+    ];
+  });
+}
+
 function recordValue(value: unknown): Record<string, unknown> {
   return isPlainRecord(value) ? value : {};
 }
@@ -495,6 +530,15 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, enforce
   const agentMembershipProjectionPolicy = isPlainRecord(contract?.agent_membership_projection_policy)
     ? contract.agent_membership_projection_policy
     : null;
+  const standardPublicProjectionPolicy = isPlainRecord(contract?.standard_public_projection_policy)
+    ? contract.standard_public_projection_policy
+    : null;
+  const allowedActivePublicFoundrySurfaces = readStringArray(
+    standardPublicProjectionPolicy?.allowed_active_public_foundry_surfaces,
+  );
+  const allowedLegacyRetentionContexts = readStringArray(
+    standardPublicProjectionPolicy?.non_standard_surface_retention_contexts,
+  );
   const workspaceTopologyProfile = isPlainRecord(contract?.workspace_topology_profile)
     ? contract.workspace_topology_profile
     : null;
@@ -835,6 +879,57 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, enforce
     agentMembershipProjectionPolicy?.generated_surface_only_field_public_default === false
       ? null
       : 'foundry_agent_membership_projection_generated_surface_only_must_not_be_public_default',
+    standardPublicProjectionPolicy ? null : 'foundry_agent_standard_public_projection_policy_missing',
+    readOptionalString(standardPublicProjectionPolicy?.surface_kind)
+      === 'opl_foundry_agent_standard_public_projection_policy'
+      ? null
+      : 'foundry_agent_standard_public_projection_policy_surface_kind_invalid',
+    readOptionalString(standardPublicProjectionPolicy?.standard_public_foundry_surface)
+      === 'opl_generated_hosted_series'
+      ? null
+      : 'foundry_agent_standard_public_surface_must_be_opl_generated_hosted_series',
+    readOptionalString(standardPublicProjectionPolicy?.canonical_inspect_command_pattern)
+      === 'opl foundry agents inspect <agent_id>'
+      ? null
+      : 'foundry_agent_standard_public_inspect_command_invalid',
+    allowedActivePublicFoundrySurfaces.includes('opl_foundry_agent_series_spine')
+      ? null
+      : 'foundry_agent_standard_public_surface_missing_series_spine',
+    allowedActivePublicFoundrySurfaces.includes('opl_family_hosted_surfaces')
+      ? null
+      : 'foundry_agent_standard_public_surface_missing_family_hosted_surfaces',
+    standardPublicProjectionPolicy?.active_public_projection_allows_non_opl_foundry_cli === false
+      ? null
+      : 'foundry_agent_non_opl_foundry_cli_must_not_be_public_standard_surface',
+    standardPublicProjectionPolicy?.active_public_projection_allows_domain_owned_cli_as_standard_surface === false
+      ? null
+      : 'foundry_agent_domain_owned_cli_must_not_be_public_standard_surface',
+    standardPublicProjectionPolicy?.active_public_projection_allows_retired_surface_aliases === false
+      ? null
+      : 'foundry_agent_retired_surface_aliases_must_not_be_public_standard_surface',
+    standardPublicProjectionPolicy?.active_public_projection_allows_compatibility_aliases === false
+      ? null
+      : 'foundry_agent_compatibility_aliases_must_not_be_public_standard_surface',
+    standardPublicProjectionPolicy?.active_public_projection_allows_legacy_json_aliases === false
+      ? null
+      : 'foundry_agent_legacy_json_aliases_must_not_be_public_standard_surface',
+    standardPublicProjectionPolicy?.minimal_authority_functions_are_membership_axis === false
+      ? null
+      : 'foundry_agent_minimal_authority_functions_must_not_be_membership_axis',
+    standardPublicProjectionPolicy?.domain_owned_helpers_are_membership_axis === false
+      ? null
+      : 'foundry_agent_domain_owned_helpers_must_not_be_membership_axis',
+    readOptionalString(standardPublicProjectionPolicy?.allowed_domain_owned_helper_context)
+      === 'minimal_authority_functions_only'
+      ? null
+      : 'foundry_agent_domain_owned_helper_context_invalid',
+    allowedLegacyRetentionContexts.includes('history')
+      ? null
+      : 'foundry_agent_legacy_foundry_history_retention_context_missing',
+    allowedLegacyRetentionContexts.includes('tombstone')
+      ? null
+      : 'foundry_agent_legacy_foundry_tombstone_retention_context_missing',
+    ...findForbiddenActivePublicFoundryFields(contract),
     readOptionalString(contract?.domain_id) ? null : 'foundry_agent_series_missing_domain_id',
     readOptionalString(contract?.foundry_agent_id) ? null : 'foundry_agent_series_missing_foundry_agent_id',
     readOptionalString(contract?.authority_owner) ? null : 'foundry_agent_series_missing_authority_owner',

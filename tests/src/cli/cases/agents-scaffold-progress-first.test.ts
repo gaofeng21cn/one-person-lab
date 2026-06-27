@@ -135,6 +135,109 @@ test('agents scaffold validation blocks Foundry contracts that split standard me
   }
 });
 
+test('agents scaffold emits pure OPL-hosted public Foundry surface policy', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-pure-public-surface-'));
+
+  try {
+    runCli([
+      'agents',
+      'scaffold',
+      '--target-dir',
+      targetDir,
+      '--domain-id',
+      'foundry-pure-public-surface',
+    ]);
+    const foundryContract = JSON.parse(
+      fs.readFileSync(path.join(targetDir, 'contracts/foundry_agent_series.json'), 'utf8'),
+    );
+    const publicSurfacePolicy = foundryContract.standard_public_projection_policy;
+
+    assert.equal(publicSurfacePolicy.surface_kind, 'opl_foundry_agent_standard_public_projection_policy');
+    assert.equal(publicSurfacePolicy.standard_public_foundry_surface, 'opl_generated_hosted_series');
+    assert.equal(publicSurfacePolicy.canonical_inspect_command_pattern, 'opl foundry agents inspect <agent_id>');
+    assert.deepEqual(publicSurfacePolicy.allowed_active_public_foundry_surfaces, [
+      'opl_foundry_agent_series_spine',
+      'opl_family_hosted_surfaces',
+    ]);
+    assert.equal(publicSurfacePolicy.active_public_projection_allows_non_opl_foundry_cli, false);
+    assert.equal(publicSurfacePolicy.active_public_projection_allows_domain_owned_cli_as_standard_surface, false);
+    assert.equal(publicSurfacePolicy.active_public_projection_allows_retired_surface_aliases, false);
+    assert.equal(publicSurfacePolicy.active_public_projection_allows_compatibility_aliases, false);
+    assert.equal(publicSurfacePolicy.active_public_projection_allows_legacy_json_aliases, false);
+    assert.equal(publicSurfacePolicy.minimal_authority_functions_are_membership_axis, false);
+    assert.equal(publicSurfacePolicy.domain_owned_helpers_are_membership_axis, false);
+    assert.equal(publicSurfacePolicy.allowed_domain_owned_helper_context, 'minimal_authority_functions_only');
+    assert.deepEqual(publicSurfacePolicy.non_standard_surface_retention_contexts, [
+      'history',
+      'tombstone',
+    ]);
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
+test('agents scaffold validation blocks active public legacy Foundry command fields', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-legacy-public-fields-'));
+
+  try {
+    runCli([
+      'agents',
+      'scaffold',
+      '--target-dir',
+      targetDir,
+      '--domain-id',
+      'foundry-legacy-public-fields',
+    ]);
+    const foundryContractPath = path.join(targetDir, 'contracts/foundry_agent_series.json');
+    const foundryContract = JSON.parse(fs.readFileSync(foundryContractPath, 'utf8'));
+    foundryContract.domain_native_foundry_command_surface = 'medautosci foundry';
+    foundryContract.domain_native_foundry_cli = 'medautosci foundry';
+    foundryContract.compatibility_foundry_command_surface = 'medautosci foundry';
+    foundryContract.compatibility_command_surface = 'medautosci foundry';
+    foundryContract.legacy_format_json_command = 'medautosci foundry status --format json';
+    foundryContract.app_projection_policy.compatibility_foundry_command_surface = 'medautosci foundry';
+    fs.writeFileSync(foundryContractPath, `${JSON.stringify(foundryContract, null, 2)}\n`);
+
+    const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
+    assert.equal(validated.mode, 'validate');
+    assert.equal(validated.state, 'validation_blocked');
+    assert.equal(validated.validation.status, 'blocked');
+    assert.equal(validated.validation.foundry_agent_series_validation.status, 'blocked');
+    assert.equal(
+      validated.validation.blockers.includes(
+        'foundry_agent_public_projection_forbidden_field:domain_native_foundry_command_surface',
+      ),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.includes(
+        'foundry_agent_public_projection_forbidden_field:domain_native_foundry_cli',
+      ),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.includes(
+        'foundry_agent_public_projection_forbidden_field:compatibility_foundry_command_surface',
+      ),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.includes(
+        'foundry_agent_public_projection_forbidden_field:compatibility_command_surface',
+      ),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.includes(
+        'foundry_agent_public_projection_forbidden_field:legacy_format_json_command',
+      ),
+      true,
+    );
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
 test('agents scaffold emits canonical Foundry series design profile', () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-series-profile-'));
 

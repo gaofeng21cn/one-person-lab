@@ -618,6 +618,29 @@
           "plugin_transport_is_membership_axis": false,
           "plugin_transport_is_status_axis": false
         },
+        "standard_public_projection_policy": {
+          "surface_kind": "opl_foundry_agent_standard_public_projection_policy",
+          "version": "foundry-agent-standard-public-projection.v1",
+          "policy_id": "standard_agent_public_foundry_surface_is_opl_generated_hosted_series",
+          "standard_public_foundry_surface": "opl_generated_hosted_series",
+          "canonical_inspect_command_pattern": "opl foundry agents inspect <agent_id>",
+          "allowed_active_public_foundry_surfaces": [
+            "opl_foundry_agent_series_spine",
+            "opl_family_hosted_surfaces"
+          ],
+          "active_public_projection_allows_non_opl_foundry_cli": false,
+          "active_public_projection_allows_domain_owned_cli_as_standard_surface": false,
+          "active_public_projection_allows_retired_surface_aliases": false,
+          "active_public_projection_allows_compatibility_aliases": false,
+          "active_public_projection_allows_legacy_json_aliases": false,
+          "minimal_authority_functions_are_membership_axis": false,
+          "domain_owned_helpers_are_membership_axis": false,
+          "allowed_domain_owned_helper_context": "minimal_authority_functions_only",
+          "non_standard_surface_retention_contexts": [
+            "history",
+            "tombstone"
+          ]
+        },
         "series_design_profile": {
           "surface_kind": "opl_foundry_agent_series_design_profile",
           "version": "foundry-agent-series-design-profile.v1",
@@ -1487,6 +1510,29 @@
         "public_agent_list_must_not_split_by_plugin_transport": true,
         "plugin_transport_is_membership_axis": false,
         "plugin_transport_is_status_axis": false
+      },
+      "standard_public_projection_policy": {
+        "surface_kind": "opl_foundry_agent_standard_public_projection_policy",
+        "version": "foundry-agent-standard-public-projection.v1",
+        "policy_id": "standard_agent_public_foundry_surface_is_opl_generated_hosted_series",
+        "standard_public_foundry_surface": "opl_generated_hosted_series",
+        "canonical_inspect_command_pattern": "opl foundry agents inspect <agent_id>",
+        "allowed_active_public_foundry_surfaces": [
+          "opl_foundry_agent_series_spine",
+          "opl_family_hosted_surfaces"
+        ],
+        "active_public_projection_allows_non_opl_foundry_cli": false,
+        "active_public_projection_allows_domain_owned_cli_as_standard_surface": false,
+        "active_public_projection_allows_retired_surface_aliases": false,
+        "active_public_projection_allows_compatibility_aliases": false,
+        "active_public_projection_allows_legacy_json_aliases": false,
+        "minimal_authority_functions_are_membership_axis": false,
+        "domain_owned_helpers_are_membership_axis": false,
+        "allowed_domain_owned_helper_context": "minimal_authority_functions_only",
+        "non_standard_surface_retention_contexts": [
+          "history",
+          "tombstone"
+        ]
       },
       "series_design_profile": {
         "surface_kind": "opl_foundry_agent_series_design_profile",
