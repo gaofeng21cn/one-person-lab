@@ -262,3 +262,37 @@ Fresh OPL `npm run --silent line-budget -- --list` after Round 7 reports 5 remai
 | P0 | `src/family-runtime.ts` | 1085 | Inspect CLI action clusters before editing; preserve public `runFamilyRuntime` path. |
 | P0 | `src/family-runtime-tick.ts` | 1065 | Split only along existing tick-parts maintenance/default-executor boundaries with focused provider-hosted tests. |
 | P1 | `src/family-runtime-enqueue-parts/existing-dedupe-reconcile.ts` | 1004 | Near-limit residual; avoid mechanical four-line split unless a natural helper boundary is found. |
+
+## 2026-06-27 Refactor Patrol Landing Round 8
+
+This follow-up continued line-budget-first source cleanup with five OPL source lanes and one Hermes shell lane. It does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `one-person-lab` | `refactor_patrol` | `src/opl-skills.ts` split generated plugin surface into `src/opl-skills-parts/generated-plugin.ts`; local `main` commit `14005bbb`. | Main rerun: `node --experimental-strip-types --test tests/src/opl-skills-boundary.test.ts tests/src/cli/cases/agents-scaffold-validation-failures.test.ts tests/src/cli/cases/agents-conformance-stage-pack-v2.test.ts tests/src/cli/cases/agents-conformance.test.ts tests/src/cli/cases/family-runtime-paper-mission-stage-route.test.ts` passed 58/58; `npm run typecheck` passed; `git diff --check` passed; `npm run --silent line-budget -- --list` returned no entries. Line readback: `src/opl-skills.ts` 701 lines; generated plugin part 506 lines. | This is skills source structure evidence only. It does not prove skill install/runtime readiness. |
+| `one-person-lab` | `refactor_patrol` | `src/standard-domain-agent-scaffold-validation.ts` split by foundry contract, pack files, shared helpers, stage refs, and user stage log; local `main` commit `8b50880d`. | Same Round 8 OPL main rerun passed 58/58 plus typecheck/diff/line-budget readback. Line readback: entry 158 lines; largest new part `foundry-contract.ts` 543 lines. | This is scaffold validation source structure evidence only. It does not change standard agent authority or domain admission readiness. |
+| `one-person-lab` | `refactor_patrol` | `src/family-runtime.ts` split provider follow-through helper into `src/family-runtime-parts/provider-followthrough.ts`; local `main` commit `c65b3ccd`. | Same Round 8 OPL main rerun passed 58/58 plus typecheck/diff/line-budget readback. Line readback: `src/family-runtime.ts` 991 lines; helper 114 lines. | Public `runFamilyRuntime` entry remains in place; this is not runtime readiness evidence. |
+| `one-person-lab` | `refactor_patrol` | `src/family-runtime-tick.ts` split PaperMission stage-route provider preflight into `src/family-runtime-tick-parts/paper-mission-stage-route-preflight.ts`; local `main` commit `db54652f`. | Same Round 8 OPL main rerun passed 58/58 plus typecheck/diff/line-budget readback. Line readback: `src/family-runtime-tick.ts` 986 lines; preflight part 94 lines. | This preserves the existing PaperMission authority boundary; it does not claim MAS paper progress or provider readiness. |
+| `one-person-lab` | `refactor_patrol` | `src/family-runtime-enqueue-parts/existing-dedupe-reconcile.ts` split resolved owner-answer materialization into `existing-dedupe-resolved-owner-answer.ts`; local `main` commit `2a164bbc`. | Same Round 8 OPL main rerun passed 58/58 plus typecheck/diff/line-budget readback. Line readback: reconcile file 963 lines; helper 87 lines. | This was a natural materialization boundary, not a mechanical four-line cut. It does not change queue/provider/domain authority. |
+| `opl-hermes-shell` | `refactor_patrol` | Electron install stamp loader split from `electron/main.cjs` into `electron/parts/install-stamp.cjs` with focused tests; local `main` commit `30f462a`. | Main rerun passed `node --check electron/main.cjs`, `node --check electron/parts/install-stamp.cjs`, `node --check electron/parts/install-stamp.test.cjs`, `node --test electron/parts/install-stamp.test.cjs` 3/3, `npm run typecheck`, and `git diff --check`. Line readback: `electron/main.cjs` 5466 lines; gateway 1903 lines; helper 50 lines. | `electron/main.cjs` and `electron/opl-codex-gateway.cjs` remain P0 structure debt. No Electron GUI runtime smoke, App truth, or release readiness claim is made. |
+
+Round-8 candidate worktrees are cleanup candidates after push/readback and patch-equivalence audit. During absorption, an incomplete untracked root residue under `src/standard-domain-agent-scaffold-validation-parts/` was moved to `/tmp/opl-scaffold-validation-parts-root-residue-20260627232951` before the verified scaffold split was cherry-picked.
+
+### Round 8 Queue Adjustment
+
+Completed exact OPL items removed from the current line-budget queue:
+
+- `src/opl-skills.ts`: now 701 lines.
+- `src/standard-domain-agent-scaffold-validation.ts`: now 158 lines.
+- `src/family-runtime.ts`: now 991 lines.
+- `src/family-runtime-tick.ts`: now 986 lines.
+- `src/family-runtime-enqueue-parts/existing-dedupe-reconcile.ts`: now 963 lines.
+
+Fresh OPL `npm run --silent line-budget -- --list` after Round 8 returned no entries, so the currently tracked OPL advisory-budget queue is empty. The next `opl-family` refactor patrol should switch from OPL source line-budget retirement to the next family structure queue:
+
+| Priority | File | Current reason | Gate |
+| --- | --- | --- | --- |
+| P0 | `electron/main.cjs` in `opl-hermes-shell` | Still 5466 lines after install-stamp extraction. | Continue one stable Electron responsibility block at a time with `node --check`, focused `node --test`, `npm run typecheck`, and diff check. |
+| P0 | `electron/opl-codex-gateway.cjs` in `opl-hermes-shell` | Still 1903 lines after previous gateway extractions. | Split only along existing gateway responsibilities; no new gateway framework. |
+| P0 | MAS PaperMission command/test source | Still same-write-set owner-gated by `/Users/gaofeng/workspace/.worktrees/mas-owner-fallback-20260627`. | Do not mutate until that owner lane is resolved, absorbed, or explicitly handed off. |
+| P1 | Other OPL family repos | Re-scan with repo-native line-budget/source-purity tools after Hermes/MAS gates. | Mutate only when fresh repo status is clean or the dirty write set is unrelated and owner-classified. |
