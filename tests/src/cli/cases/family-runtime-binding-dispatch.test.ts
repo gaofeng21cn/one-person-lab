@@ -186,6 +186,8 @@ process.exit(64);
       'export',
       '--profile',
       boundProfilePath,
+      '--study-id',
+      '002-dm-china-us-mortality-attribution',
       '--format',
       'json',
     ]);

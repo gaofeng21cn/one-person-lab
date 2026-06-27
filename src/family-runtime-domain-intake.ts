@@ -124,10 +124,21 @@ function masProductionProofArgs(paths?: ReturnType<typeof familyRuntimePaths>) {
   return proofPath ? ['--opl-production-proof', proofPath] : [];
 }
 
+function masStudyScopeArgs(taskScope?: FamilyRuntimeTaskScope) {
+  const studyIds = [...new Set(
+    (taskScope?.payloadMatches ?? [])
+      .filter((match) => match.path === 'study_id')
+      .map((match) => match.value.trim())
+      .filter(Boolean),
+  )];
+  return studyIds.flatMap((studyId) => ['--study-id', studyId]);
+}
+
 function exportCommandForDomain(
   domainId: FamilyRuntimeDomainId,
   paths?: ReturnType<typeof familyRuntimePaths>,
   domainProfiles?: FamilyRuntimeDomainProfiles,
+  taskScope?: FamilyRuntimeTaskScope,
 ): DomainExportCommand | null {
   const override = process.env[`OPL_FAMILY_RUNTIME_${domainId.toUpperCase()}_EXPORT`]?.trim();
   if (override) {
@@ -146,6 +157,7 @@ function exportCommandForDomain(
         'export',
         '--profile',
         profile,
+        ...masStudyScopeArgs(taskScope),
         ...masProductionProofArgs(paths),
         '--format',
         'json',
@@ -179,6 +191,7 @@ function exportCommandForDomain(
           'export',
           '--profile',
           profileRef,
+          ...masStudyScopeArgs(taskScope),
           ...masProductionProofArgs(paths),
           '--format',
           'json',
@@ -471,7 +484,7 @@ export function hydrateDomainTasks(
   let suppressedCount = 0;
   let paperAutonomySupervisorDecisionConsumedCount = 0;
   for (const domainId of domains) {
-    const command = exportCommandForDomain(domainId, paths, input.domainProfiles);
+    const command = exportCommandForDomain(domainId, paths, input.domainProfiles, input.taskScope);
     if (!command) {
       exports.push({ domain_id: domainId, status: 'skipped', reason: 'export_command_not_configured' });
       continue;
