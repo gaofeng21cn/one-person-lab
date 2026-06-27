@@ -7,7 +7,7 @@ Machine boundary: 本文是 2026-06-27 首轮 Ponytail cleanup 矩阵、执行�
 
 ## Current Hard Guard
 
-Effective from the 2026-06-27 upstream fork correction, older Hermes/Aion rows in this matrix are history only and must not be reused as future cleanup candidates. `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, and `_external/hermes-agent/**` are upstream fork / reference bodies by default. They may be inspected to classify fork owner and OPL overlay boundaries, but selected write sets must be limited to clearly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell files. Fork-body source/tests should be classified as `not_safe` / `blocked_owner_gated` with reason `upstream_fork_excluded`.
+Effective from the 2026-06-27 upstream fork correction, older Hermes/Aion rows in this matrix are history only and must not be reused as future cleanup candidates. `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, and `one-person-lab-app/_external/hermes-agent/**` are upstream fork / reference bodies by default. They may be inspected to classify fork owner and OPL overlay boundaries, but selected write sets must be limited to clearly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell files. Fork-body source/tests should be classified as `not_safe` / `blocked_owner_gated` with reason `upstream_fork_excluded`.
 
 ## Fresh Evidence
 
@@ -306,11 +306,11 @@ Fresh OPL `npm run --silent line-budget -- --list` after Round 8 returned no ent
 
 After Round 8, `opl-hermes-shell` fork-body refactor commits were reverted because Hermes Desktop upstream source should remain easy to upgrade. Revert evidence: `opl-hermes-shell` commit `fa60d9e` (`revert: restore upstream Hermes shell code`) restored `electron/main.cjs` and `electron/opl-codex-gateway.cjs` to fork-body shape, deleted the OPL refactor-only parts, passed `node --check` on both entry files, passed `npm run typecheck`, passed `git diff --cached --check` before commit, and pushed with remote readback `origin/main` = `fa60d9e9e981b30534a67b9032554f4e78b45a81`.
 
-The corrected standing rule is: `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, and `_external/hermes-agent/**` are not OPL cleanup/refactor targets by default. They may be inspected to classify fork/overlay boundaries, but selected write sets must be limited to clearly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell files.
+The corrected standing rule is: `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, and `one-person-lab-app/_external/hermes-agent/**` are not OPL cleanup/refactor targets by default. They may be inspected to classify fork/overlay boundaries, but selected write sets must be limited to clearly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell files.
 
 ## 2026-06-28 Refactor Patrol Landing Round 9
 
-This follow-up used the corrected fork-boundary rule. It did not touch `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, or `_external/hermes-agent/**`, and it does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+This follow-up used the corrected fork-boundary rule. It did not touch `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, or `one-person-lab-app/_external/hermes-agent/**`, and it does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
 
 | Repo | Route | Result | Fresh evidence | Residual |
 | --- | --- | --- | --- | --- |
@@ -324,7 +324,7 @@ Current next-route rules:
 
 | Priority | File or surface | Current reason | Gate |
 | --- | --- | --- | --- |
-| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
 | P0 | MAS PaperMission command/test source | Same-write-set owner-gated by MAS PaperMission/domain-handler work, not safe as an OPL refactor patrol mutation. | Re-audit only after the owning MAS lane is resolved, absorbed, or explicitly handed off. |
 | P1 | App `tmp/active-shell-checkout-backups/**`, generated `out/**`, dependency `node_modules/**`, release artifacts | Inventory noise, not App-owned source structure debt. | Exclude from selected batch; if cleanup is needed, route to artifact/cache lifecycle, not source refactor. |
 | P1 | OPL family non-fork repos | OPL root line-budget queue is empty; other repos need fresh repo-native source-purity/line-budget scans before mutation. | Mutate only with clean or unrelated dirty write set, authority-aware owner route, focused verification, and no fork-body path. |
@@ -344,7 +344,7 @@ Current next-route rules:
 
 | Priority | File or surface | Current reason | Gate |
 | --- | --- | --- | --- |
-| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
 | P0 | MAS `tests/test_display_pack_renderer_structure.py` | Safest fresh non-authority >1000-line candidate from MAS audit. | Use a MAS worktree; only split tests into `tests/display_pack_renderer_structure_cases/**`; do not touch renderer implementation, contracts, gallery payload, or paper authority. |
 | P1 | RCA canonical metadata drift | `tests/opl-agent-pack-contracts-canonical.test.ts` fails on current RCA `main` due to `functional_privatization_audit` source/contract shape drift unrelated to Round 10. | Route to a separate RCA contract-alignment lane; do not hide it behind structure cleanup. |
 | P1 | App / BookForge / OMA large tracked files | Current large hits are images, PDFs, lockfiles, workflows, or JSON contracts. | Do not split as source structure debt; only mutate when a repo-native owner route says the machine contract or workflow itself needs semantic change. |
@@ -363,7 +363,7 @@ Current next-route rules:
 
 | Priority | File or surface | Current reason | Gate |
 | --- | --- | --- | --- |
-| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
 | P0 | MAS PaperMission command/test source | Still same-write-set owner-gated by older MAS owner/fallback work, not safe as this refactor patrol mutation. | Re-audit only after the owning MAS lane is resolved, absorbed, or explicitly handed off. |
 | P1 | RCA canonical metadata drift | `tests/opl-agent-pack-contracts-canonical.test.ts` fails on current RCA `main` due to `functional_privatization_audit` source/contract shape drift unrelated to Round 10. | Route to a separate RCA contract-alignment lane; do not hide it behind structure cleanup. |
 | P1 | OPL family non-fork repos | Re-scan with repo-native source-purity/line-budget tools before selecting another mutation. | Mutate only with clean or unrelated dirty write set, authority-aware owner route, focused verification, and no fork-body path. |
@@ -382,7 +382,7 @@ Fresh non-fork scan after Round 12 still reports MAS source/test files over the 
 
 | Priority | File or surface | Current reason | Gate |
 | --- | --- | --- | --- |
-| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
 | P0 | MAS PaperMission command/test source | Same-write-set owner-gated by older MAS owner/fallback and paper-delta lanes. | Do not mutate until the owning MAS lanes are resolved, absorbed, or explicitly handed off. |
 | P1 | MAS non-PaperMission tests over 1000 lines | Some remain candidates, but each needs a fresh active-caller/write-set gate because many protect runtime authority, retired-surface provenance, or owner-route readbacks. | Prefer test-only case extraction with focused `scripts/run-pytest-clean.sh`; avoid source/contract/runtime writes unless separately authorized. |
 | P1 | RCA canonical metadata drift | Current RCA root has unrelated `functional_privatization_audit` source/contract shape drift. | Route to a separate contract-alignment lane; do not hide it behind structure cleanup. |
@@ -403,7 +403,7 @@ Current next-route rules:
 
 | Priority | File or surface | Current reason | Gate |
 | --- | --- | --- | --- |
-| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
 | P0 | MAS PaperMission command/test source | Same-write-set owner-gated by active/older MAS PaperMission owner lanes. | Do not mutate until the owning MAS lanes are resolved, absorbed, or explicitly handed off. |
 | P1 | MAS non-PaperMission tests over 1000 lines | Some remain candidates, but each needs a fresh active-caller/write-set gate because many protect runtime authority, retired-surface provenance, or owner-route readbacks. | Prefer test-only case extraction with focused `scripts/run-pytest-clean.sh`; avoid source/contract/runtime writes unless separately authorized. |
 | P1 | RCA canonical metadata drift | Current RCA root has unrelated `functional_privatization_audit` source/contract shape drift. | Route to a separate contract-alignment lane; do not hide it behind structure cleanup. |
@@ -424,7 +424,7 @@ Current next-route rules:
 
 | Priority | File or surface | Current reason | Gate |
 | --- | --- | --- | --- |
-| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
 | P0 | MAS PaperMission command/test source | Same-write-set owner-gated by active/older MAS PaperMission owner lanes. | Do not mutate until the owning MAS lanes are resolved, absorbed, or explicitly handed off. |
 | P1 | MAS non-PaperMission tests over 1000 lines | Some remain candidates, but each needs a fresh active-caller/write-set gate because many protect runtime authority, retired-surface provenance, or owner-route readbacks. | Prefer test-only case extraction with focused `scripts/run-pytest-clean.sh`; avoid source/contract/runtime writes unless separately authorized. |
 | P1 | RCA canonical metadata drift | Current RCA root has unrelated `functional_privatization_audit` source/contract shape drift. | Route to a separate contract-alignment lane; do not hide it behind structure cleanup. |
@@ -444,7 +444,7 @@ Current next-route rules:
 
 | Priority | File or surface | Current reason | Gate |
 | --- | --- | --- | --- |
-| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
 | P0 | MAS remaining PaperMission source/test long files | Still overlap stale/diverged owner lanes or active PaperMission authority surfaces. | Do not mutate until the owning MAS lanes are resolved, absorbed, or explicitly handed off. |
 | P1 | MAS non-PaperMission tests over 1000 lines | Candidate pool is shrinking; each remaining item needs fresh item-level authority/write-set gate because many protect runtime authority, retired-surface provenance, or owner-route readbacks. | Prefer test-only case extraction with focused `scripts/run-pytest-clean.sh`; avoid source/contract/runtime writes unless separately authorized. |
 | P1 | RCA canonical metadata drift | Current RCA root has unrelated `functional_privatization_audit` source/contract shape drift. | Route to a separate contract-alignment lane; do not hide it behind structure cleanup. |
@@ -465,7 +465,7 @@ Current next-route rules:
 
 | Priority | File or surface | Current reason | Gate |
 | --- | --- | --- | --- |
-| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
 | P0 | MAS PaperMission command/test source | Stale worktree ownership is resolved, but files remain PaperMission authority-adjacent. | Re-audit from clean/current MAS main before any mutation; only proceed with a narrow test-only split or source shrink if fresh active-caller, no-forbidden-write, and focused repo-native tests cover it. |
 | P1 | MAS non-PaperMission tests over 1000 lines | Candidate pool is shrinking; each remaining item needs fresh item-level authority/write-set gate because many protect runtime authority, retired-surface provenance, or owner-route readbacks. | Prefer test-only case extraction with focused `scripts/run-pytest-clean.sh`; avoid source/contract/runtime writes unless separately authorized. |
 | P1 | RCA canonical metadata drift | Current RCA root has unrelated `functional_privatization_audit` source/contract shape drift. | Route to a separate contract-alignment lane; do not hide it behind structure cleanup. |
@@ -485,7 +485,7 @@ Current next-route rules:
 
 | Priority | File or surface | Current reason | Gate |
 | --- | --- | --- | --- |
-| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
 | P0 | MAS `tests/test_cli_cases/paper_mission_commands.py` | Still the largest tracked MAS test file, now 4421 lines after first natural case extraction. | Continue test-only command-case extraction from clean/current MAS main; run full `paper_mission_commands.py` focused test and new case test after each split. |
 | P1 | MAS non-PaperMission tests over 1000 lines | Candidate pool remains available but each item needs fresh item-level authority/write-set gate. | Prefer test-only case extraction with `scripts/run-pytest-clean.sh`; avoid source/contract/runtime writes unless separately authorized. |
 | P1 | RCA canonical metadata drift | Separate contract/source alignment issue. | Route to contract-alignment lane, not line-budget cleanup. |
@@ -504,7 +504,7 @@ Current next-route rules:
 
 | Priority | File or surface | Current reason | Gate |
 | --- | --- | --- | --- |
-| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
 | P0 | MAS `tests/test_cli_cases/paper_mission_commands.py` | Still the largest tracked MAS test file, now 4302 lines after two natural case extractions. | Continue one-case-at-a-time test-only extraction from clean/current MAS main; run full `paper_mission_commands.py` focused test and each new case test after each split. |
 | P1 | MAS non-PaperMission tests over 1000 lines | Candidate pool remains available but each item needs fresh item-level authority/write-set gate. | Prefer test-only case extraction with `scripts/run-pytest-clean.sh`; avoid source/contract/runtime writes unless separately authorized. |
 | P1 | RCA canonical metadata drift | Separate contract/source alignment issue. | Route to contract-alignment lane, not line-budget cleanup. |
@@ -523,7 +523,7 @@ Current next-route rules:
 
 | Priority | File or surface | Current reason | Gate |
 | --- | --- | --- | --- |
-| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
 | P0 | MAS `tests/test_cli_cases/paper_mission_commands.py` | Still the largest tracked MAS test file, now 4077 lines after three natural case extractions. | Continue one-case-at-a-time test-only extraction from clean/current MAS main; run full `paper_mission_commands.py` focused test and each new case test after each split. |
 | P1 | MAS non-PaperMission tests over 1000 lines | Candidate pool remains available but each item needs fresh item-level authority/write-set gate. | Prefer test-only case extraction with `scripts/run-pytest-clean.sh`; avoid source/contract/runtime writes unless separately authorized. |
 | P1 | RCA canonical metadata drift | Separate contract/source alignment issue. | Route to contract-alignment lane, not line-budget cleanup. |
@@ -542,7 +542,7 @@ Current next-route rules:
 
 | Priority | File or surface | Current reason | Gate |
 | --- | --- | --- | --- |
-| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
 | P0 | MAS `tests/test_cli_cases/paper_mission_commands.py` | Still the largest tracked MAS test file, now 3940 lines after four natural case extractions. | Continue one-case-at-a-time test-only extraction from clean/current MAS main; run full `paper_mission_commands.py` focused test and each new case test after each split. |
 | P1 | MAS non-PaperMission tests over 1000 lines | Candidate pool remains available but each item needs fresh item-level authority/write-set gate. | Prefer test-only case extraction with `scripts/run-pytest-clean.sh`; avoid source/contract/runtime writes unless separately authorized. |
 | P1 | RCA canonical metadata drift | Separate contract/source alignment issue. | Route to contract-alignment lane, not line-budget cleanup. |
@@ -561,7 +561,26 @@ Current next-route rules:
 
 | Priority | File or surface | Current reason | Gate |
 | --- | --- | --- | --- |
-| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
 | P0 | MAS `tests/test_cli_cases/paper_mission_commands.py` | Still the largest tracked MAS test file, now 3826 lines after five natural case extractions. | Continue one-case-at-a-time test-only extraction from clean/current MAS main; run full `paper_mission_commands.py` focused test and each new case test after each split. |
+| P1 | MAS non-PaperMission tests over 1000 lines | Candidate pool remains available but each item needs fresh item-level authority/write-set gate. | Prefer test-only case extraction with `scripts/run-pytest-clean.sh`; avoid source/contract/runtime writes unless separately authorized. |
+| P1 | RCA canonical metadata drift | Separate contract/source alignment issue. | Route to contract-alignment lane, not line-budget cleanup. |
+
+## 2026-06-28 Refactor Patrol Landing Round 22
+
+This continuation landed another MAS PaperMission command test split from a clean/current MAS main worktree. It did not touch upstream fork bodies and does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `med-autoscience` | `refactor_patrol` | Moved the repeated route-back consume-candidate case into `tests/test_cli_cases/paper_mission_command_cases/consume_submission_package.py`, preserving the original entry path via import. | MAS `main/origin` advanced to `cdc3e268d`; root `scripts/run-pytest-clean.sh tests/test_cli_cases/paper_mission_command_cases/consume_submission_package.py -q` passed 5/5; root `scripts/run-pytest-clean.sh tests/test_cli_cases/paper_mission_commands.py -q` passed 46/46; `git diff --check HEAD~1..HEAD` passed; line readback: entry 3749, consume case 585; candidate worktree removed and patch-equivalent branch deleted; remote readback `origin/main` = `cdc3e268d141f1e407961935bbf1df15b60df35c`. | `paper_mission_commands.py` remains over budget at 3749 lines. Continue one-case-at-a-time test-only extraction from clean/current MAS main; keep authority/source/runtime surfaces out of this refactor lane. |
+
+### Round 22 Queue Adjustment
+
+Current next-route rules:
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| P0 | MAS `tests/test_cli_cases/paper_mission_commands.py` | Still the largest tracked MAS test file, now 3749 lines after six natural case extractions. | Continue one-case-at-a-time test-only extraction from clean/current MAS main; run full `paper_mission_commands.py` focused test and each new case test after each split. |
 | P1 | MAS non-PaperMission tests over 1000 lines | Candidate pool remains available but each item needs fresh item-level authority/write-set gate. | Prefer test-only case extraction with `scripts/run-pytest-clean.sh`; avoid source/contract/runtime writes unless separately authorized. |
 | P1 | RCA canonical metadata drift | Separate contract/source alignment issue. | Route to contract-alignment lane, not line-budget cleanup. |
