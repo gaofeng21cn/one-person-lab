@@ -889,3 +889,24 @@ Current next-route rules:
 | closed | MAS `tests/test_cli_cases/paper_mission_commands.py` | Entry file is below target at 789 lines. | Do not continue splitting unless it regrows or a new natural family appears. |
 | closed | MAS `tests/test_adapter_retirement_boundary_cases/test_private_runtime_residue_active_callers.py` | Aggregate entry is now 11 lines; case files are 398, 608, 1100, and 144 lines. | Reopen only if the 1100-line violation-guard file gains a clear natural sub-family or regrows beyond the split signal. |
 | watch | OPL/App/other OPL-owned line-budget | Current fresh scans found no selected over-budget OPL-owned mutation with a safe natural boundary. | Continue only from fresh over-budget output, stale-lane cleanup, or clear delete/shrink evidence. |
+
+## 2026-06-28 Refactor Patrol Landing Round 39
+
+This continuation landed one OPL-owned test-structure split from a fresh `origin/main` worktree. It did not touch upstream fork bodies and does not declare runtime, domain, release, App, grant, visual, paper, book, or production readiness.
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `one-person-lab` | `refactor_patrol` | Split `tests/src/cli/cases/system-management.test.ts` into a thin aggregate entry plus `system-management-cases/help.ts`, `system-status.ts`, `system-initialize.ts`, `install.ts`, and `shared.ts`. | Candidate worktree based on fresh `origin/main` `18bfcaea`; focused `node --experimental-strip-types --test tests/src/cli/cases/system-management.test.ts` passed 10/10 after temporarily linking existing root `node_modules` for dependency resolution; `git diff --check` passed; `npm run --silent line-budget -- --list` returned no entries; line readback: aggregate 4 lines, case files 20/330/403/232, shared 35. | This is behavior-preserving test structure evidence only. Root checkout was one commit behind during implementation and must fast-forward before absorption/push claims from root. |
+
+### Round 39 Queue Adjustment
+
+Current next-route rules:
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies. | Read-only fork-boundary audit only; no cleanup/refactor/line-budget write set unless the target is explicitly OPL-owned overlay, adapter, docs, contracts, packaging metadata, or test shell. |
+| closed | OPL `tests/src/cli/cases/system-management.test.ts` | Aggregate entry is now 4 lines; largest new case file is 403 lines. | Reopen only if it regrows or a new natural system-management family appears. |
+| closed | MAS `tests/test_cli_cases/paper_mission_commands.py` | Entry file is below target at 789 lines. | Do not continue splitting unless it regrows or a new natural family appears. |
+| closed | MAS `tests/test_adapter_retirement_boundary_cases/test_private_runtime_residue_active_callers.py` | Aggregate entry is 11 lines; case files are 398, 608, 1100, and 144 lines. | Reopen only if the 1100-line violation-guard file gains a clear natural sub-family or regrows beyond the split signal. |
+| watch | App workflow and contract files | Fresh scan still shows workflows/contracts over 1000, but no selected semantic split has been proven. | Do not split YAML/contracts mechanically; require repo-native owner route and focused verification. |
+| watch | MAS source/authority-adjacent files | Fresh scan still shows many over-1000 MAS source/contract/docs files. | Keep source/contracts/docs owner-gated unless a fresh MAS owner route and authority-safe verification prove a specific cleanup. |
