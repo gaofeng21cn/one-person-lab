@@ -99,7 +99,10 @@ export type CodexStageRunnerProcessOutputSummary = {
   session_recovery_attempts?: number;
   domain_receipt_recovery_status?: string;
   domain_receipt_recovery_ref?: string;
-  closeout_rejection_reason?: 'stage_attempt_id_mismatch' | 'idempotency_key_mismatch';
+  closeout_rejection_reason?:
+    | 'stage_attempt_id_mismatch'
+    | 'idempotency_key_mismatch'
+    | 'paper_mission_stage_route_user_stage_log_missing';
   rejected_closeout_stage_attempt_id?: string;
   rejected_closeout_idempotency_key?: string;
   provider_error_count?: number;

@@ -27,6 +27,39 @@ export type TypedStageCloseoutPacket = {
   authority_boundary: JsonRecord;
 };
 
+function normalizedDomainId(attempt: JsonRecord) {
+  const locator = isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
+  const raw = optionalString(attempt.domain_id)
+    ?? optionalString(locator.domain_id)
+    ?? optionalString(locator.project_id);
+  const normalized = raw?.toLowerCase().replace(/[-_]/g, '');
+  return normalized === 'mas' || normalized === 'medautoscience' ? 'medautoscience' : raw;
+}
+
+function isMasPaperMissionStageRouteAttempt(attempt: JsonRecord) {
+  const locator = isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
+  return normalizedDomainId(attempt) === 'medautoscience'
+    && (
+      optionalString(locator.task_kind) === 'paper_mission/stage-route'
+      || optionalString(locator.runtime_request_kind) === 'mas_paper_mission_stage_route'
+      || optionalString(locator.surface_kind) === 'opl_mas_paper_mission_stage_route_workspace_locator'
+    );
+}
+
+function hasDomainProvidedStageLog(closeoutPacket: TypedStageCloseoutPacket) {
+  return isRecord(closeoutPacket.user_stage_log)
+    || isRecord(closeoutPacket.stage_log_summary)
+    || isRecord(closeoutPacket.human_stage_log)
+    || (
+      isRecord(closeoutPacket.route_impact)
+      && (
+        isRecord(closeoutPacket.route_impact.user_stage_log)
+        || isRecord(closeoutPacket.route_impact.stage_log_summary)
+        || isRecord(closeoutPacket.route_impact.human_stage_log)
+      )
+    );
+}
+
 function readCloseoutRefEntries(value: unknown) {
   if (!Array.isArray(value)) {
     return {
@@ -155,6 +188,16 @@ export function validateCloseoutPacketForAttempt(input: {
         reason: 'idempotency_key_mismatch' as const,
         stage_attempt_id: closeoutPacket.stage_attempt_id ?? null,
         idempotency_key: closeoutPacket.idempotency_key,
+      },
+    };
+  }
+  if (isMasPaperMissionStageRouteAttempt(input.attempt) && !hasDomainProvidedStageLog(closeoutPacket)) {
+    return {
+      closeoutPacket: null,
+      rejection: {
+        reason: 'paper_mission_stage_route_user_stage_log_missing' as const,
+        stage_attempt_id: closeoutPacket.stage_attempt_id ?? null,
+        idempotency_key: closeoutPacket.idempotency_key ?? null,
       },
     };
   }

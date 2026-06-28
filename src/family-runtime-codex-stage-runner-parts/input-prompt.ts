@@ -108,6 +108,8 @@ function paperMissionStageRoutePromptLines(input: { attempt: JsonRecord }) {
     'This attempt is already running inside OPL provider-backed runtime for the route command. Do not recursively enqueue, redrive, tick, start, or submit another OPL runtime task from inside this attempt.',
     'Do not run paper-mission drive --submit-opl-runtime, paper-mission consume-candidate flows that submit OPL runtime, OPL queue redrive/enqueue/tick/start commands, or create a fresh OPL route handoff as a substitute for a MAS-acceptable owner answer.',
     'Do not write or synthesize MAS authority surfaces: publication_eval/latest.json, controller_decisions/latest.json, owner receipts, typed blockers, human gates, current_package, runtime queues, provider attempts, or Yang authority files.',
+    'The final JSON closeout for this PaperMission stage-route must include domain-provided user-readable stage semantics in user_stage_log, stage_log_summary, human_stage_log, or route_impact.user_stage_log/stage_log_summary/human_stage_log.',
+    'The stage log must name the paper-facing delta, owner/gate verdict, platform repair delta, remaining blocker, evidence refs, and next forced paper action; if no such domain semantic summary is available, return a typed blocker/route impact saying domain_user_stage_log_or_typed_blocker_with_lineage_required.',
     'If the current attempt cannot produce a MAS-acceptable owner answer, the final JSON closeout must say so with closeout refs/rejected writes and must not repackage provider liveness, diagnostics, or platform repair as submission readiness.',
   ];
   return lines.filter((line): line is string => typeof line === 'string');

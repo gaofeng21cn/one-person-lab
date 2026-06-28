@@ -123,6 +123,73 @@ exit 64
   }
 });
 
+test('Codex stage runner rejects MAS PaperMission stage-route closeout without user stage log', async () => {
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    closeout_refs: ['receipt:paper-route-record-only'],
+    next_owner: 'med-autoscience',
+    domain_ready_verdict: 'domain_gate_pending',
+  };
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"type":"thread.started","thread_id":"thread-paper-route-record-only-closeout"}\\n'
+  printf '{"type":"turn.started"}\\n'
+  printf '%s\\n' '${JSON.stringify({ type: 'item.completed', item: { type: 'agent_message', id: 'msg-1', text: JSON.stringify(closeout) } })}'
+  printf '{"type":"turn.completed"}\\n'
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_paper_route_record_only_closeout_test',
+        stage_id: 'submission_milestone_candidate::followthrough::followthrough-02',
+        domain_id: 'medautoscience',
+        workspace_locator: {
+          surface_kind: 'opl_mas_paper_mission_stage_route_workspace_locator',
+          task_kind: 'paper_mission/stage-route',
+          runtime_request_kind: 'mas_paper_mission_stage_route',
+          workspace_root: fixtureRoot,
+          study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+          route_target: 'submission_milestone_candidate::followthrough::followthrough-02',
+        },
+        checkpoint_refs: ['paper-mission-stage-packet:dm003-record-only'],
+      },
+      stagePacketRef: 'paper-mission-stage-packet:dm003-record-only',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+    });
+
+    assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+      'opl://stage-attempts/sat_paper_route_record_only_closeout_test/runtime-blockers/typed_closeout_paper_mission_stage_route_user_stage_log_missing',
+    ]);
+    assert.equal(
+      receipt.closeout_packet?.route_impact?.provider_blocker_reason,
+      'typed_closeout_paper_mission_stage_route_user_stage_log_missing',
+    );
+    assert.equal(
+      receipt.process_output_summary?.closeout_rejection_reason,
+      'paper_mission_stage_route_user_stage_log_missing',
+    );
+    assert.equal(
+      receipt.process_output_summary?.blocked_reason,
+      'typed_closeout_paper_mission_stage_route_user_stage_log_missing',
+    );
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('Codex stage runner captures terminal typed closeout from Codex output-last-message file', async () => {
   const closeout = {
     surface_kind: 'stage_attempt_closeout_packet',
