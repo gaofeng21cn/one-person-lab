@@ -63,6 +63,7 @@ jobs:
           json-limit: '50'
           compare-ref: origin/main
           output-dir: artifacts/opl-quality-details
+          timeout-seconds: '120'
 
       - name: Upload OPL quality details
         uses: actions/upload-artifact@v7

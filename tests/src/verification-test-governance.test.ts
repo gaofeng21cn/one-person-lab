@@ -65,6 +65,7 @@ const sentruxAdvisoryWorkflowPatterns = [
   /continue-on-error: true/,
   /compare-ref: origin\/main/,
   /json-limit: '50'/,
+  /timeout-seconds: '120'/,
   /path: artifacts\/opl-quality-details\/quality-details\.json/,
   /actions\/upload-artifact@v7/,
   /name: opl-quality-details/,
@@ -74,13 +75,24 @@ const qualityDetailsActionPatterns = [
   /actions\/setup-node@v6/,
   /node-version: '24'/,
   /npm ci --prefix "\$GITHUB_ACTION_PATH\/\.\.\/\.\.\/\.\."/,
+  /node "\$GITHUB_ACTION_PATH\/emit-quality-details\.mjs"/,
   /OPL_QUALITY_DETAILS_COMPARE_REF/,
-  /quality_root="\$\(cd "\$OPL_QUALITY_DETAILS_ROOT" && pwd\)"/,
-  /git -C "\$quality_root" fetch --no-tags origin "\+\$\{compare_branch\}:refs\/remotes\/origin\/\$\{compare_branch\}"/,
-  /git -C "\$quality_root" rev-parse --verify "\$OPL_QUALITY_DETAILS_COMPARE_REF\^\{commit\}"/,
-  /--compare-ref "\$OPL_QUALITY_DETAILS_COMPARE_REF"/,
-  /quality details --root "\$quality_root" --format markdown/,
-  /quality details --root "\$quality_root" --format json/,
+  /OPL_QUALITY_DETAILS_TIMEOUT_SECONDS/,
+  /timeout-seconds/,
+];
+
+const qualityDetailsActionScriptPatterns = [
+  /const qualityRoot = fs\.realpathSync\(rootInput\)/,
+  /execFileSync\('git', \['-C', qualityRoot, 'fetch', '--no-tags', 'origin'/,
+  /execFileSync\('git', \['-C', qualityRoot, 'rev-parse', '--verify'/,
+  /compareArgs\.push\('--compare-ref', compareRef\)/,
+  /function runOplQualityDetails\(args, outputFile\)/,
+  /child\.kill\('SIGTERM'\)/,
+  /status: 124/,
+  /function writeDiagnostic\(status, reason\)/,
+  /diagnostic:/,
+  /qualityDetailsArgs\('markdown', markdownLimit\)/,
+  /qualityDetailsArgs\('json', jsonLimit\)/,
 ];
 
 const nativeHelperPrebuildWorkflowPatterns = [
@@ -169,6 +181,7 @@ test('GitHub verification workflow runs native and local structure gates', () =>
 test('Sentrux advisory workflow publishes OPL quality details sidecar', () => {
   assertFilePatterns('.github/workflows/sentrux-advisory.yml', sentruxAdvisoryWorkflowPatterns);
   assertFilePatterns('.github/actions/quality-details/action.yml', qualityDetailsActionPatterns);
+  assertFilePatterns('.github/actions/quality-details/emit-quality-details.mjs', qualityDetailsActionScriptPatterns);
 });
 
 test('GitHub native helper prebuild workflow packs release artifacts across supported platforms', () => {
