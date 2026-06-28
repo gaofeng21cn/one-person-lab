@@ -15,7 +15,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 - MAS domain-handler / stage admission 的 target ref 必须来自 OPL 声明的 domain checkout policy，普通路径默认读 `origin/main` 或同等 release/pinned target。
 - clean checkout 落后 target ref 时，OPL 可自动 `fetch` 并 `ff-only` 到 target ref；dirty checkout、diverged checkout 或无法证明 target ref 的 checkout 必须 fail closed，不得继续 admission。
-- attempt/readback 必须记录 `workspace_path`、`head_sha`、`target_ref` 和 `currentness_status`；`currentness_status` 至少区分 `current`、`fast_forwarded`、`dirty_fail_closed`、`diverged_fail_closed` 和 `target_unresolved_fail_closed`。
+- attempt/readback 必须记录 `workspace_path`、`head_sha`、`target_ref` 和 `currentness_status`；`currentness_status` 至少区分 `current`、`fast_forwarded`、`dirty_fail_closed`、`diverged_fail_closed`、`target_unresolved_fail_closed`、`git_unreadable_fail_closed`、`fetch_failed_fail_closed`、`fast_forward_failed_fail_closed` 和 `ahead_fail_closed`。
 - 该 gate 只证明 OPL 将调用的 domain-handler checkout current；它不写 MAS domain truth、不签 MAS owner receipt、不创建 MAS typed blocker / human gate、不写 publication eval / controller decision / current package / paper body，也不声明 MAS paper progress、domain-ready、runtime-ready、publication-ready 或 production-ready。
 
 ### 决策：标准 Agent 不默认暴露 standalone MCP，MCP 由 OPL Connect 统一精选投影

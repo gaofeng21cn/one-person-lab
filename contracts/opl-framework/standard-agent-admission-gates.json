@@ -110,7 +110,11 @@
         "fail_closed_currentness_statuses": [
           "dirty_fail_closed",
           "diverged_fail_closed",
-          "target_unresolved_fail_closed"
+          "target_unresolved_fail_closed",
+          "git_unreadable_fail_closed",
+          "fetch_failed_fail_closed",
+          "fast_forward_failed_fail_closed",
+          "ahead_fail_closed"
         ],
         "hot_reload_modules": false,
         "auto_fetch_fast_forward_only_when_clean_behind_target": true,

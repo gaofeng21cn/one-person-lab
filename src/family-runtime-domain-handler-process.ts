@@ -43,6 +43,7 @@ type DomainHandlerCheckoutCurrentnessPreflight = {
     | 'fetch_failed_fail_closed'
     | 'fast_forward_failed_fail_closed'
     | 'ahead_fail_closed';
+  workspace_path: string;
   target_ref?: string;
   head_sha?: string;
   target_sha?: string;
@@ -216,13 +217,14 @@ function preflightDomainHandlerCheckoutCurrentness(
   cwd: string,
   env: NodeJS.ProcessEnv,
 ): DomainHandlerCheckoutCurrentnessPreflight {
+  const workspacePath = path.resolve(cwd);
   if (!commandRunsFromCheckout(command, cwd)) {
-    return { status: 'not_git_checkout', currentness_status: 'not_git_checkout' };
+    return { status: 'not_git_checkout', currentness_status: 'not_git_checkout', workspace_path: workspacePath };
   }
 
   const inside = runGit(cwd, ['rev-parse', '--is-inside-work-tree']);
   if (inside.status !== 0 || gitOutput(inside) !== 'true') {
-    return { status: 'not_git_checkout', currentness_status: 'not_git_checkout' };
+    return { status: 'not_git_checkout', currentness_status: 'not_git_checkout', workspace_path: workspacePath };
   }
 
   const head = runGit(cwd, ['rev-parse', 'HEAD']);
@@ -231,6 +233,7 @@ function preflightDomainHandlerCheckoutCurrentness(
     return {
       status: 'blocked',
       currentness_status: 'git_unreadable_fail_closed',
+      workspace_path: workspacePath,
       reason: 'git_head_unreadable',
       detail: gitErrorDetail(head),
     };
@@ -241,6 +244,7 @@ function preflightDomainHandlerCheckoutCurrentness(
     return {
       status: 'blocked',
       currentness_status: 'git_unreadable_fail_closed',
+      workspace_path: workspacePath,
       reason: 'git_status_unreadable',
       head_sha: headSha,
       detail: gitErrorDetail(status),
@@ -250,6 +254,7 @@ function preflightDomainHandlerCheckoutCurrentness(
     return {
       status: 'blocked',
       currentness_status: 'dirty_fail_closed',
+      workspace_path: workspacePath,
       reason: 'dirty_checkout',
       head_sha: headSha,
       detail: 'Domain-handler checkout has uncommitted changes; refusing to run against a mutable source tree.',
@@ -262,6 +267,7 @@ function preflightDomainHandlerCheckoutCurrentness(
     return {
       status: 'blocked',
       currentness_status: 'fetch_failed_fail_closed',
+      workspace_path: workspacePath,
       reason: 'git_fetch_failed',
       target_ref: targetRef,
       head_sha: headSha,
@@ -274,6 +280,7 @@ function preflightDomainHandlerCheckoutCurrentness(
     return {
       status: 'blocked',
       currentness_status: 'target_unresolved_fail_closed',
+      workspace_path: workspacePath,
       reason: 'target_ref_unreadable',
       target_ref: targetRef,
       head_sha: headSha,
@@ -285,6 +292,7 @@ function preflightDomainHandlerCheckoutCurrentness(
     return {
       status: 'current',
       currentness_status: 'current',
+      workspace_path: workspacePath,
       target_ref: targetRef,
       head_sha: headSha,
       target_sha: targetSha,
@@ -298,6 +306,7 @@ function preflightDomainHandlerCheckoutCurrentness(
       return {
         status: 'blocked',
         currentness_status: 'fast_forward_failed_fail_closed',
+        workspace_path: workspacePath,
         reason: 'fast_forward_failed',
         target_ref: targetRef,
         head_sha: headSha,
@@ -309,6 +318,7 @@ function preflightDomainHandlerCheckoutCurrentness(
     return {
       status: 'fast_forwarded',
       currentness_status: 'fast_forwarded',
+      workspace_path: workspacePath,
       target_ref: targetRef,
       head_sha: newHead.status === 0 ? gitOutput(newHead) : targetSha,
       target_sha: targetSha,
@@ -319,6 +329,7 @@ function preflightDomainHandlerCheckoutCurrentness(
   return {
     status: 'blocked',
     currentness_status: targetAncestor.status === 0 ? 'ahead_fail_closed' : 'diverged_fail_closed',
+    workspace_path: workspacePath,
     reason: targetAncestor.status === 0 ? 'checkout_ahead_of_target' : 'diverged_checkout',
     target_ref: targetRef,
     head_sha: headSha,

@@ -263,6 +263,7 @@ test('domain handler command fast-forwards a clean checkout before running', () 
     assert.equal(result.exit_code, 0);
     assert.equal(preflight?.status, 'fast_forwarded');
     assert.equal(preflight?.currentness_status, 'fast_forwarded');
+    assert.equal(preflight?.workspace_path, checkoutRoot);
     assert.equal(preflight?.target_ref, 'origin/main');
     assert.equal(runGit(checkoutRoot, ['rev-parse', 'HEAD']), targetSha);
     assert.equal(fs.readFileSync(observedHeadPath, 'utf8').trim(), targetSha);
@@ -339,6 +340,7 @@ test('domain handler command blocks dirty or diverged checkouts before running',
         testCase.reason === 'dirty_checkout' ? 'dirty_fail_closed' : 'diverged_fail_closed',
         testCase.name,
       );
+      assert.equal(preflight?.workspace_path, checkoutRoot, testCase.name);
       assert.equal(preflight?.reason, testCase.reason, testCase.name);
       assert.equal(fs.existsSync(markerPath), false, testCase.name);
     } finally {
