@@ -143,3 +143,50 @@ test('stage attempt closeout replay repairs accepted attempts that missed closeo
     assert.equal(listStageAttemptCloseouts(db, attemptId).length, 1);
   });
 });
+
+test('stage attempt closeout replay can backfill missing provider run token usage', () => {
+  withStageAttemptDb((db) => {
+    const created = createStageAttempt(db, {
+      domainId: 'medautoscience',
+      stageId: 'publication_handoff',
+      providerKind: 'local_sqlite',
+      workspaceLocator: { workspace_root: '/tmp/mas' },
+      sourceFingerprint: 'sha256:handoff-token-backfill',
+    });
+    const attemptId = created.attempt.stage_attempt_id;
+    const packet = {
+      surface_kind: 'stage_attempt_closeout_packet',
+      closeout_id: 'closeout:publication-handoff-token-backfill',
+      closeout_refs: ['typed-blocker:publication-handoff-token-backfill'],
+      next_owner: 'med-autoscience',
+      domain_ready_verdict: 'domain_gate_pending',
+    };
+
+    ingestStageAttemptCloseout(db, {
+      stageAttemptId: attemptId,
+      packet,
+    });
+    const replay = ingestStageAttemptCloseout(db, {
+      stageAttemptId: attemptId,
+      packet,
+      costSummary: {
+        cost_status: 'observed',
+        usage_ref: 'codex_session_usage:backfill#sha256:usage',
+        token_usage: {
+          input_tokens: 300,
+          output_tokens: 90,
+          total_tokens: 390,
+        },
+      },
+    });
+    const persistedCostSummary = replay.attempt.provider_run.cost_summary as {
+      token_usage: { total_tokens: number };
+    };
+
+    assert.equal(replay.closeout.idempotent_noop, true);
+    assert.equal(persistedCostSummary.token_usage.total_tokens, 390);
+    assert.equal(replay.attempt.usage_projection.telemetry_status, 'observed');
+    assert.equal(replay.attempt.usage_projection.token.total_tokens_observed, 390);
+    assert.equal(inspectStageAttempt(db, attemptId).activity_events.length, 2);
+  });
+});

@@ -50,6 +50,12 @@ function humanGateRefsForAttempt(attempt: ReturnType<typeof inspectStageAttempt>
     : [];
 }
 
+function optionalRecord(value: unknown) {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
 function attemptAlreadyAbsorbedCloseout(
   attempt: ReturnType<typeof inspectStageAttempt>,
   packet: TypedStageCloseoutPacket,
@@ -70,12 +76,14 @@ function syncAttemptRowFromAcceptedCloseout(
     packet: TypedStageCloseoutPacket;
     closeoutId: string;
     observedAt: string;
+    costSummary?: Record<string, unknown> | null;
   },
 ) {
   if (
     input.attempt.status === 'completed'
     && input.attempt.closeout_receipt_status === 'accepted_typed_closeout'
     && attemptAlreadyAbsorbedCloseout(input.attempt, input.packet)
+    && (!input.costSummary || optionalRecord(input.attempt.provider_run.cost_summary))
   ) {
     reconcilePaperMissionStageRouteTerminalTaskForAttempt(db, {
       stageAttemptId: input.stageAttemptId,
@@ -91,12 +99,19 @@ function syncAttemptRowFromAcceptedCloseout(
     provider_status: 'completed',
     completed_at: input.observedAt,
     last_heartbeat_at: input.observedAt,
+    ...(input.costSummary ? { cost_summary: input.costSummary } : {}),
   };
   const activityEvents = appendActivityEventToRow(currentRow, {
     activity_kind: 'typed_closeout_ingest',
     activity_status: 'completed',
     closeout_id: input.closeoutId,
     closeout_refs: input.packet.closeout_refs,
+    ...(input.costSummary
+      ? {
+          usage_projection_source: 'provider_run.cost_summary',
+          cost_summary_persisted_to_provider_run: true,
+        }
+      : {}),
   });
   db.prepare(`
     UPDATE stage_attempts
@@ -126,10 +141,12 @@ export function ingestStageAttemptCloseout(
   input: {
     stageAttemptId: string;
     packet: TypedStageCloseoutPacket | Record<string, unknown>;
+    costSummary?: Record<string, unknown> | null;
   },
 ) {
   const attempt = inspectStageAttempt(db, input.stageAttemptId);
   const packet = normalizeTypedStageCloseoutPacket(input.packet);
+  const costSummary = optionalRecord(input.costSummary);
   const createdAt = nowIso();
   const closeoutId = packet.closeout_id
     ?? stableId('closeout', [input.stageAttemptId, packet.surface_kind, packet.closeout_refs]);
@@ -173,6 +190,7 @@ export function ingestStageAttemptCloseout(
       packet,
       closeoutId,
       observedAt: createdAt,
+      costSummary,
     });
     return {
       attempt: syncedAttempt,
@@ -199,6 +217,7 @@ export function ingestStageAttemptCloseout(
     packet,
     closeoutId,
     observedAt: createdAt,
+    costSummary,
   });
   return {
     attempt: syncedAttempt,

@@ -8,6 +8,7 @@ import {
   listStageAttemptCloseouts,
   syncStageAttemptFromTemporalTerminalObservation,
 } from '../../src/family-runtime-stage-attempts.ts';
+import { queryStageAttempt } from '../../src/family-runtime-stage-attempt-query.ts';
 import { markStageAttemptCancelRequested } from '../../src/family-runtime-stage-attempt-control.ts';
 import {
   buildTemporalStageAttemptMissingWorkflowCancelReceipt,
@@ -626,5 +627,100 @@ test('Temporal completed terminal observation ingests closeout refs into local a
     ]);
     assert.equal(inspected.provider_run.provider_status, 'completed');
     assert.equal(listStageAttemptCloseouts(db, attempt.stage_attempt_id).length, 1);
+  });
+});
+
+test('Temporal completed terminal observation persists Codex activity token usage into attempt projections', () => {
+  withStageAttemptDb((db) => {
+    const createdAt = new Date().toISOString();
+    const attempt = createMasDefaultExecutorAttempt(db, {
+      sourceFingerprint: 'sha256:mas-default-completed-token-usage',
+    });
+    const synced = syncStageAttemptFromTemporalTerminalObservation(db, {
+      surface_kind: 'temporal_stage_attempt_query_receipt',
+      provider_kind: 'temporal',
+      stage_attempt_id: attempt.stage_attempt_id,
+      workflow_id: attempt.workflow_id,
+      workflow_status: 'COMPLETED',
+      query: {
+        surface_kind: 'temporal_stage_attempt_query',
+        provider_kind: 'temporal',
+        stage_attempt_id: attempt.stage_attempt_id,
+        workflow_id: attempt.workflow_id,
+        domain_id: 'medautoscience',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        status: 'completed',
+        started_at: createdAt,
+        updated_at: createdAt,
+        activity_events: [{
+          activity_kind: 'codex_stage_activity',
+          activity_status: 'completed',
+          cost_summary: {
+            cost_status: 'observed',
+            estimated_cost_usd: 0.17,
+            usage_ref: 'codex_session_usage:dm002-stage#sha256:token123',
+            session_usage_refs: {
+              session_ref: 'codex_session:dm002-stage',
+              source_path: '/tmp/codex-home/sessions/2026/06/28/dm002-stage.jsonl',
+              source_hash: 'sha256:token123',
+              billing_boundary: 'refs_only_absolute_cumulative_total_delta',
+            },
+            token_usage: {
+              input_tokens: 1900,
+              output_tokens: 640,
+              total_tokens: 2540,
+            },
+          },
+        }],
+        checkpoint_refs: ['dispatch:mas-default-writer-start'],
+        closeout_refs: ['artifacts/supervision/reconcile/latest.json'],
+        consumed_refs: ['dispatch:mas-default-writer-start'],
+        consumed_memory_refs: [],
+        writeback_receipt_refs: ['receipt:writer-handoff'],
+        rejected_writes: [],
+        next_owner: 'medautoscience',
+        route_impact: {},
+        human_gate_refs: [],
+        signals: [],
+        closeout_packet: {
+          surface_kind: 'temporal_domain_handler_dispatch_receipt',
+          closeout_packet_surface_kind: 'domain_stage_closeout_packet',
+          closeout_refs: ['artifacts/supervision/reconcile/latest.json'],
+        },
+        completion_boundary: {
+          provider_completion: 'completed',
+          domain_ready_verdict: 'domain_gate_pending',
+          provider_completion_is_domain_ready: false,
+        },
+        authority_boundary: {
+          opl: 'temporal_workflow_transport_and_control_metadata_only',
+          domain: 'truth_quality_artifact_gate_owner',
+        },
+      },
+    });
+    const inspected = inspectStageAttempt(db, attempt.stage_attempt_id);
+    const query = queryStageAttempt(db, attempt.stage_attempt_id).stage_attempt_query;
+    const usage = query.usage_projection;
+    const userStageLog = query.stage_progress_log.user_stage_log;
+    const persistedCostSummary = inspected.provider_run.cost_summary as {
+      token_usage: { total_tokens: number };
+    };
+
+    assert.equal(synced?.status, 'completed');
+    assert.equal(persistedCostSummary.token_usage.total_tokens, 2540);
+    assert.equal(usage.telemetry_status, 'observed');
+    assert.equal(usage.token.observed_count, 1);
+    assert.equal(usage.token.input_tokens_observed, 1900);
+    assert.equal(usage.token.output_tokens_observed, 640);
+    assert.equal(usage.token.total_tokens_observed, 2540);
+    assert.deepEqual(usage.token.source_refs, [
+      'codex_session_usage:dm002-stage#sha256:token123',
+      'codex_session:dm002-stage',
+    ]);
+    assert.equal(usage.cost.estimated_cost_usd_observed, 0.17);
+    assert.equal(query.operator_visibility.usage_projection.token.total_tokens_observed, 2540);
+    assert.equal(query.stage_progress_log.usage_telemetry.telemetry_status, 'observed');
+    assert.equal(userStageLog.token_usage.status, 'observed');
+    assert.equal(userStageLog.token_usage.total_tokens, 2540);
   });
 });
