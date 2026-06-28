@@ -97,9 +97,8 @@ test('OPL ScholarSkills exposes a Display gallery human review entry without cla
     'OPL ScholarSkills Display Gallery',
     'med-autoscience/docs/delivery/medical-display/examples/medical_display_gallery.pdf',
     'med-autoscience/docs/delivery/medical-display/examples/display_pack_gallery_quality_audit.md',
-    'visual gallery templates: `37`',
-    'evidence gallery templates: `34`',
-    'publication-ready claim authorized: `false`',
+    'Gallery status、template count、renderer policy、style profile、palette ref 和 audit finding 都从 MAS-owned gallery status / manifest / quality audit 读取。',
+    'OPL active doc 只冻结 ref 位置、owner boundary 和维护命令，不冻结高漂移 audit 数字。',
     'do not prove publication readiness',
   ]) {
     assertContains(displayGallery, token);
