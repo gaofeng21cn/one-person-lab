@@ -246,6 +246,99 @@ function summarizeCodexProviderErrors(errors?: CodexCommandResult['providerError
   };
 }
 
+function readObservedTokenTotal(value: unknown) {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const status = optionalString(value.status);
+  const totalTokens = typeof value.total_tokens === 'number' && Number.isFinite(value.total_tokens)
+    ? value.total_tokens
+    : null;
+  return status === 'observed' && totalTokens !== null && totalTokens > 0 ? totalTokens : null;
+}
+
+function hasObservedTokenUsage(value: unknown) {
+  return readObservedTokenTotal(value) !== null;
+}
+
+function withCodexTokenAccounting(
+  closeoutPacket: TypedStageCloseoutPacket | null,
+  costSummary: ReturnType<typeof codexStageRunnerCostSummaryFrom>,
+) {
+  if (!closeoutPacket) {
+    return closeoutPacket;
+  }
+  const tokenUsage = costSummary.token_usage;
+  if (!tokenUsage || tokenUsage.total_tokens <= 0) {
+    return closeoutPacket;
+  }
+  const observedTokenUsage = {
+    status: 'observed',
+    input_tokens: tokenUsage.input_tokens,
+    output_tokens: tokenUsage.output_tokens,
+    total_tokens: tokenUsage.total_tokens,
+    source: costSummary.session_usage_refs
+      ? 'codex_session_usage_delta'
+      : 'codex_runner_declared_token_usage',
+    billing_boundary: costSummary.session_usage_refs?.billing_boundary
+      ?? costSummary.billing_boundary,
+  };
+  const usageRefs = [
+    optionalString(costSummary.usage_ref),
+    optionalString(costSummary.session_usage_refs?.session_ref),
+  ].filter((ref): ref is string => Boolean(ref));
+  const mergedUsageRefs = [
+    ...new Set([
+      ...(closeoutPacket.usage_refs ?? []),
+      ...usageRefs,
+    ]),
+  ];
+  const closeoutTokenUsage = hasObservedTokenUsage(closeoutPacket.token_usage)
+    ? closeoutPacket.token_usage
+    : observedTokenUsage;
+  const withStageLogAccounting = (stageLog: JsonRecord | undefined) => {
+    if (!stageLog) {
+      return undefined;
+    }
+    const stageLogUsageRefs = [
+      ...new Set([
+        ...(
+          Array.isArray(stageLog.token_usage_refs)
+            ? stageLog.token_usage_refs.filter((ref): ref is string => typeof ref === 'string' && ref.trim().length > 0)
+            : []
+        ),
+        ...mergedUsageRefs,
+      ]),
+    ];
+    return {
+      ...stageLog,
+      token_usage: hasObservedTokenUsage(stageLog.token_usage)
+        ? stageLog.token_usage
+        : closeoutTokenUsage,
+      ...(stageLogUsageRefs.length > 0 ? { token_usage_refs: stageLogUsageRefs } : {}),
+    };
+  };
+  return {
+    ...closeoutPacket,
+    token_usage: closeoutTokenUsage,
+    ...(mergedUsageRefs.length > 0 ? { usage_refs: mergedUsageRefs } : {}),
+    ...(costSummary.session_usage_refs ? { session_usage_refs: costSummary.session_usage_refs } : {}),
+    cost_summary: isRecord(closeoutPacket.cost_summary) ? closeoutPacket.cost_summary : costSummary,
+    ...(closeoutPacket.user_stage_log
+      ? { user_stage_log: withStageLogAccounting(closeoutPacket.user_stage_log) }
+      : {}),
+    ...(closeoutPacket.paper_stage_log
+      ? { paper_stage_log: withStageLogAccounting(closeoutPacket.paper_stage_log) }
+      : {}),
+    ...(closeoutPacket.stage_log_summary
+      ? { stage_log_summary: withStageLogAccounting(closeoutPacket.stage_log_summary) }
+      : {}),
+    ...(closeoutPacket.human_stage_log
+      ? { human_stage_log: withStageLogAccounting(closeoutPacket.human_stage_log) }
+      : {}),
+  };
+}
+
 export function stageCloseoutOutputSchemaForTest() {
   return {
     type: 'object',
@@ -692,6 +785,8 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       },
     });
   }
+  const costSummary = codexStageRunnerCostSummaryFrom(result.stdout, runnerMode, sessionUsageRef);
+  closeoutPacket = withCodexTokenAccounting(closeoutPacket, costSummary);
   return {
     ...buildCodexStageRunnerReceipt({
       ...input,
@@ -708,7 +803,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       timeoutMs,
       noOutputTimeoutMs,
     }),
-    cost_summary: codexStageRunnerCostSummaryFrom(result.stdout, runnerMode, sessionUsageRef),
+    cost_summary: costSummary,
     closeout_packet: closeoutPacket,
     process_output_summary: {
       exit_code: result.exitCode,

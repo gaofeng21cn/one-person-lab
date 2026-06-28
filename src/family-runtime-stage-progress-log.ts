@@ -525,10 +525,12 @@ function progressDeltaReceiptForUserStageLog(input: StageProgressLogInput, userS
 
 function domainStageSummary(input: StageProgressLogInput) {
   return firstRecordFrom(input.latestCloseout, [
+    'paper_stage_log',
     'user_stage_log',
     'stage_log_summary',
     'human_stage_log',
   ]) ?? firstRecordFrom(input.routeImpact, [
+    'paper_stage_log',
     'user_stage_log',
     'stage_log_summary',
     'human_stage_log',
@@ -601,6 +603,7 @@ function buildUserStageLog(input: StageProgressLogInput, durationMsObserved: num
   const semanticSource = semanticSummary
     ? isRecord(input.latestCloseout)
       && [
+        'paper_stage_log',
         'user_stage_log',
         'stage_log_summary',
         'human_stage_log',

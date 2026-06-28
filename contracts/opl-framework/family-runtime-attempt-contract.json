@@ -219,9 +219,14 @@
       "consumed_memory_refs",
       "writeback_receipt_refs",
       "rejected_writes",
+      "paper_stage_log",
       "user_stage_log",
       "human_stage_log",
       "stage_log_summary",
+      "token_usage",
+      "usage_refs",
+      "session_usage_refs",
+      "cost_summary",
       "route_impact",
       "next_owner",
       "domain_ready_verdict"
@@ -357,9 +362,11 @@
       "purpose": "user-facing stage progress summary for stage, problem, domain deliverable work, duration, token usage, cost, outcome, blockers, and evidence refs",
       "accounting_policy": "OPL must project duration/token/cost status, source refs, and explicit missing reasons from the stage attempt ledger; duration may use provider or attempt wall-clock fallback for user readability while duration_telemetry_status stays missing until usage telemetry exists",
       "domain_semantic_sources": [
+        "typed_closeout_packet.paper_stage_log",
         "typed_closeout_packet.user_stage_log",
         "typed_closeout_packet.stage_log_summary",
         "typed_closeout_packet.human_stage_log",
+        "route_impact.paper_stage_log",
         "route_impact.user_stage_log",
         "route_impact.stage_log_summary",
         "route_impact.human_stage_log"

@@ -119,6 +119,17 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
   ]) {
     assert.ok((contract.required_ledger_fields as string[]).includes(field));
   }
+  const typedCloseoutContract = contract.typed_closeout_contract as Record<string, unknown>;
+  const trackedCloseoutRefs = typedCloseoutContract.tracked_refs as string[];
+  for (const field of [
+    'paper_stage_log',
+    'token_usage',
+    'usage_refs',
+    'session_usage_refs',
+    'cost_summary',
+  ]) {
+    assert.ok(trackedCloseoutRefs.includes(field));
+  }
   for (const field of [
     'attempt_count',
     'retry_policy',
@@ -250,9 +261,11 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'opl_time_usage_refs_plus_domain_provided_human_semantics_no_domain_inference',
   );
   assert.deepEqual(userStageLog.domain_semantic_sources, [
+    'typed_closeout_packet.paper_stage_log',
     'typed_closeout_packet.user_stage_log',
     'typed_closeout_packet.stage_log_summary',
     'typed_closeout_packet.human_stage_log',
+    'route_impact.paper_stage_log',
     'route_impact.user_stage_log',
     'route_impact.stage_log_summary',
     'route_impact.human_stage_log',

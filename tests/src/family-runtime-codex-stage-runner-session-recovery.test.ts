@@ -5,6 +5,57 @@ import path from 'node:path';
 
 import { createFakeCodexFixture } from './cli/helpers.ts';
 import { runPublicCodexStageRunner } from './family-runtime-codex-stage-runner-helpers.ts';
+import {
+  normalizeTypedStageCloseoutPacket,
+  validateCloseoutPacketForAttempt,
+} from '../../src/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
+
+test('typed closeout normalization preserves paper stage token telemetry', () => {
+  const packet = normalizeTypedStageCloseoutPacket({
+    surface_kind: 'domain_stage_closeout_packet',
+    closeout_refs: ['receipt:paper-stage-log-token-telemetry'],
+    next_owner: 'med-autoscience',
+    domain_ready_verdict: 'domain_gate_pending',
+    token_usage: {
+      status: 'observed',
+      input_tokens: 12,
+      output_tokens: 8,
+      total_tokens: 20,
+    },
+    usage_refs: ['codex_session_usage:paper#sha256:usage'],
+    paper_stage_log: {
+      stage_goal: 'materialize submission package',
+      token_usage: {
+        status: 'observed',
+        input_tokens: 12,
+        output_tokens: 8,
+        total_tokens: 20,
+      },
+      token_usage_refs: ['codex_session_usage:paper#sha256:usage'],
+    },
+  });
+  const validation = validateCloseoutPacketForAttempt({
+    closeoutPacket: packet,
+    attempt: {
+      stage_attempt_id: 'sat_paper_stage_log_token_telemetry_test',
+      domain_id: 'med-autoscience',
+      workspace_locator: {
+        task_kind: 'paper_mission/stage-route',
+      },
+    },
+  });
+
+  assert.equal(validation.rejection, null);
+  assert.equal(
+    (validation.closeoutPacket?.token_usage as { total_tokens?: number } | undefined)?.total_tokens,
+    20,
+  );
+  assert.deepEqual(validation.closeoutPacket?.usage_refs, ['codex_session_usage:paper#sha256:usage']);
+  assert.equal(
+    (validation.closeoutPacket?.paper_stage_log?.token_usage as { total_tokens?: number } | undefined)?.total_tokens,
+    20,
+  );
+});
 
 test('Codex stage runner recovers terminal typed closeout from matching Codex session JSONL', async () => {
   const closeout = {
@@ -310,6 +361,19 @@ exit 64
       receipt.cost_summary.session_usage_refs?.ignored_usage_fields.includes('last_token_usage'),
       true,
     );
+    assert.deepEqual(receipt.closeout_packet?.token_usage, {
+      status: 'observed',
+      input_tokens: 160,
+      output_tokens: 90,
+      total_tokens: 250,
+      source: 'codex_session_usage_delta',
+      billing_boundary: 'refs_only_absolute_cumulative_total_delta',
+    });
+    assert.deepEqual(receipt.closeout_packet?.usage_refs, [
+      receipt.cost_summary.usage_ref,
+      `codex_session:${threadId}`,
+    ]);
+    assert.equal(receipt.closeout_packet?.user_stage_log, undefined);
   } finally {
     if (previousCodexBin === undefined) {
       delete process.env.OPL_CODEX_BIN;

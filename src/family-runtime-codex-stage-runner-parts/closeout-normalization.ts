@@ -20,6 +20,11 @@ export type TypedStageCloseoutPacket = {
   rejected_writes: JsonRecord[];
   next_owner: string | null;
   domain_ready_verdict: string | null;
+  token_usage?: JsonRecord;
+  usage_refs?: string[];
+  session_usage_refs?: JsonRecord;
+  cost_summary?: JsonRecord;
+  paper_stage_log?: JsonRecord;
   user_stage_log?: JsonRecord;
   stage_log_summary?: JsonRecord;
   human_stage_log?: JsonRecord;
@@ -47,13 +52,15 @@ function isMasPaperMissionStageRouteAttempt(attempt: JsonRecord) {
 }
 
 function hasDomainProvidedStageLog(closeoutPacket: TypedStageCloseoutPacket) {
-  return isRecord(closeoutPacket.user_stage_log)
+  return isRecord(closeoutPacket.paper_stage_log)
+    || isRecord(closeoutPacket.user_stage_log)
     || isRecord(closeoutPacket.stage_log_summary)
     || isRecord(closeoutPacket.human_stage_log)
     || (
       isRecord(closeoutPacket.route_impact)
       && (
-        isRecord(closeoutPacket.route_impact.user_stage_log)
+        isRecord(closeoutPacket.route_impact.paper_stage_log)
+        || isRecord(closeoutPacket.route_impact.user_stage_log)
         || isRecord(closeoutPacket.route_impact.stage_log_summary)
         || isRecord(closeoutPacket.route_impact.human_stage_log)
       )
@@ -148,6 +155,11 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
     rejected_writes: readRecordList(value.rejected_writes),
     next_owner: optionalString(value.next_owner),
     domain_ready_verdict: optionalString(value.domain_ready_verdict),
+    ...(isRecord(value.token_usage) ? { token_usage: value.token_usage } : {}),
+    ...(readStringList(value.usage_refs).length > 0 ? { usage_refs: readStringList(value.usage_refs) } : {}),
+    ...(isRecord(value.session_usage_refs) ? { session_usage_refs: value.session_usage_refs } : {}),
+    ...(isRecord(value.cost_summary) ? { cost_summary: value.cost_summary } : {}),
+    ...(isRecord(value.paper_stage_log) ? { paper_stage_log: value.paper_stage_log } : {}),
     ...(isRecord(value.user_stage_log) ? { user_stage_log: value.user_stage_log } : {}),
     ...(isRecord(value.stage_log_summary) ? { stage_log_summary: value.stage_log_summary } : {}),
     ...(isRecord(value.human_stage_log) ? { human_stage_log: value.human_stage_log } : {}),
