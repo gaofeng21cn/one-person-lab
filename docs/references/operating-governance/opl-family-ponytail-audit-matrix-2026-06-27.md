@@ -1216,3 +1216,18 @@ Current next-route rules:
 | watch | MAS line-budget advisory queue | Fresh post-round `scripts/run-python-clean.sh scripts/line_budget.py` reports 87 advisory issues after Round 54. | Next run must re-scan current main and select another coherent 2-5 item batch; prefer test/projection natural families before authority-heavy source. |
 | blocked_owner_gated | MAS owner-route default-executor current-owner action tail | Round 52 baseline-red behavior/test-expectation still applies unless fresh evidence changes. | Do not reselect as structure cleanup until baseline behavior is fixed or the lane is explicitly selected as behavior/test-expectation cleanup. |
 | excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies。 | 只做 read-only fork-boundary audit；除非目标明确是 OPL-owned overlay、adapter、docs、contracts、packaging metadata 或 test shell，否则不纳入 cleanup/refactor/line-budget 写集。 |
+
+
+## 2026-06-28 运行协议更新：selected-batch burn-down 防微切片
+
+本次只更新 OPL family Ponytail / governance 的执行协议，不作为源码重构、domain runtime、release readiness、paper progress、owner receipt、typed blocker 或 production readiness 证据。
+
+| Surface | Update | Fresh readback | Effect |
+| --- | --- | --- | --- |
+| `opl-family` automation | 在 `refactor_worklist -> selected batch -> batch closeout` 之外新增 `refactor_burn_down`，逐项维护 selected batch 状态。 | `/Users/gaofeng/.codex/automations/opl-family/automation.toml` 通过 `tomllib` 解析；prompt 含 `refactor_burn_down`、`批次燃尽审计`、`selected_batch_burn_down_complete`、`continuation_required`、`unfinished_selected_batch`。 | 后续 refactor patrol 不能因一个 worktree/subagent/commit/test file 完成就 closeout；必须覆盖 selected batch 全部项，或写入未完成项并要求下轮恢复。 |
+| `opl` automation | 在 `truth_owner_map -> governance_worklist -> selected batch -> batch closeout` 之外新增 `governance_burn_down`，逐项维护 selected batch 状态。 | `/Users/gaofeng/.codex/automations/opl/automation.toml` 通过 `tomllib` 解析；prompt 含 `governance_burn_down`、`批次燃尽审计`、`selected_batch_burn_down_complete`、`continuation_required`、`unfinished_selected_batch`。 | 后续 governance run 不能把单个 docs/SSOT lane 当成整轮治理；partial batch 必须原样写入 memory 并优先恢复。 |
+| Both automations | 保留 upstream fork hard exclusion：`opl-hermes-shell/**`、`opl-aion-shell/**`、`one-person-lab-app/shells/aionui/**`、`one-person-lab-app/_external/hermes-agent/**`。 | 两份 prompt 均含 hard exclusion terms。 | 这些上游 fork 主体仍只能 read-only fork-boundary audit；除非明确是 OPL-owned overlay/adapter/docs/contracts/packaging/test shell，否则不进入 cleanup/refactor/line-budget/SSOT deletion 写集。 |
+
+### Updated Stop Condition
+
+后续每轮 closeout 必须满足：`selected_batch_size == burn_down item count`，且 `verified_lane_count + blocked/no_safe/not_safe count` 覆盖全部 selected items。若模型上下文、时间、工具失败或用户中断导致 partial batch，必须写 `unfinished_selected_batch` 与 `continuation_required=true`；不得缩小 batch、重写目标或把已完成小切片包装成完整巡检。
