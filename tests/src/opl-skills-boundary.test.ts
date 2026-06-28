@@ -102,8 +102,14 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     }
     assert.equal(pack.agent_series_membership, 'standard_domain_agent');
     if (pack.source_kind === 'repo_plugin_installer') {
-      assert.equal(pack.plugin_manifest_valid, true);
-      assert.deepEqual(pack.plugin_manifest_errors, []);
+      if (pack.repo_found) {
+        assert.equal(pack.plugin_manifest_found, true);
+        assert.equal(pack.plugin_manifest_valid, true);
+        assert.deepEqual(pack.plugin_manifest_errors, []);
+      } else {
+        assert.equal(pack.plugin_manifest_found, false);
+        assert.deepEqual(pack.plugin_manifest_errors, []);
+      }
     } else {
       assert.equal(pack.source_kind, 'opl_generated_plugin_surface');
       assert.equal(pack.generated_skill_surface_ready, true);
