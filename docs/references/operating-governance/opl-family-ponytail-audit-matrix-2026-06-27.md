@@ -1136,3 +1136,21 @@ Current next-route rules:
 ### Anti-Micro-Slice Operating Rule
 
 后续 OPL family Ponytail / refactor patrol 不以“单个文件拆分完成”作为 run closeout。每轮先冻结候选池，再选择一个 coherent batch；一个 lane 结束后回到同一 worklist 继续取下一项，直到 selected batch 完结、至少 2 个高价值 mutation / stale cleanup 被吸收，或剩余候选都有可记录的同写集冲突、owner gate、upstream fork exclusion、无语义边界、无验证入口、snapshot/currentness drift 或预算边界。若只完成 0-1 个 mutation，必须写 `batch_underfilled_reason`，不能把微切片包装成完整巡检。
+
+## 2026-06-28 重构批次落地 Round 51
+
+本轮从 fresh MAS `origin/main` 继续执行小批量结构治理，先关闭 exact-merged stale worktree，再落地一个自然测试族拆分。没有触碰上游 fork body、MAS source authority、runtime queue、provider attempt、Yang authority、owner receipt、typed blocker、human gate、current-package authority、paper body 或 publication authority。
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `med-autoscience` | `stale_lane_cleanup` | 删除 exact-merged local worktree / branch `codex/mas-telemetry-stage-rca-20260628`，并删除同名远端临时 branch。 | 清理后 `git worktree list --porcelain` 仅剩 MAS root；`codex_ops_gate.py status` 显示 `worktree_count=1`、无 dirty/stale worktree；MAS `HEAD == origin/main == 0fb6847a147e0e8a3e0e8b59918f3f7cbb62415b`。 | 这是 workspace hygiene/currentness cleanup，不是 runtime telemetry readiness 或 domain progress evidence。 |
+| `med-autoscience` | `refactor_patrol_batch` | 拆分 `tests/test_study_progress_mission_summary.py`：materialized run/readback 与 governed consumption readback 测试移入 `tests/test_study_progress_mission_summary_cases/`，原入口保留 9/9 aggregate import。 | Pushed MAS commit `0fb6847a1`; focused aggregate `scripts/run-pytest-clean.sh tests/test_study_progress_mission_summary.py -q` passed 9/9；direct cases `scripts/run-pytest-clean.sh tests/test_study_progress_mission_summary_cases/materialized_run_readback.py tests/test_study_progress_mission_summary_cases/governed_consumption_readback.py -q` passed 5/5；`git diff --check HEAD~1..HEAD` passed；line readback: entry 426 lines, cases 569 / 448 / 4 / 0 lines；remote readback `origin/main=0fb6847a147e0e8a3e0e8b59918f3f7cbb62415b`。 | 测试结构 evidence only。MAS line-budget advisory 仍有其他 >1500 / >1000 files；后续继续从 fresh 8-12 candidate pool 选 2-5 item batch，不机械拆 authority source。 |
+
+### Round 51 Queue Adjustment
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| closed | MAS `tests/test_study_progress_mission_summary.py` preferred-boundary debt | Entry file now 426 lines; new cases are 569, 448, 4, and 0 lines with aggregate 9/9 and direct 5/5 passing. | Reopen only if this test family regrows or fresh failures point to the split boundary. |
+| closed | MAS `codex/mas-telemetry-stage-rca-20260628` temporary lane | Worktree and local/remote branch cleaned after exact-merged readback. | Reopen only if fresh worktree gate reports a new stale/diverged MAS lane. |
+| watch | MAS line-budget advisory queue | Fresh `scripts/run-python-clean.sh scripts/line_budget.py` still reports broad source/test advisory items. | Next run must re-scan current main and select a coherent 2-5 item batch; prefer test/projection natural families before authority-heavy source. |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies。 | 只做 read-only fork-boundary audit；除非目标明确是 OPL-owned overlay、adapter、docs、contracts、packaging metadata 或 test shell，否则不纳入 cleanup/refactor/line-budget 写集。 |
