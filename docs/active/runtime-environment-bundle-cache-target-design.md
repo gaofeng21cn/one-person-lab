@@ -405,10 +405,10 @@ ready、App release ready 或 full Plan Completion Audit。
   `test-transition-runtime-readback-source-boundary-20260621` lane 已吸收、push、ledger
   close，worktree / branch 均已不存在。
 - `med-autoscience` root `main...origin/main` clean，HEAD 为
-  `79514e41fff09f577c1a2d0fdcfabbef0c8e5a48`；`019eda68-4a4d-7050-a2b0-1e44308df2a8`
-  仍 active / in-progress，并持有
-  `.worktrees/lidocaineq-parity-audit-20260621` 的 LidocaineQ/gallery/cohort-flow dirty
-  写集，该 worktree 当前落后 `origin/main` 6 个提交。总控未接管、未改写、未清理该写集。
+  `79514e41fff09f577c1a2d0fdcfabbef0c8e5a48`；当时的 MAS
+  LidocaineQ/gallery/cohort-flow lane 只作为 2026-06-21 handoff snapshot 记录。
+  后续行动必须重新读取 MAS owner repo、thread/worktree 和 currentness gate，不能把本节当作当前
+  MAS worktree truth。
 - `019ee959-b3bb-7ad3-bac6-25c266cbed9c` 已恢复为
   `核实MAS绘图模板风格`，pin 且未归档；其 recovery worktree 只作为 MAS 绘图业务上下文
   保留，不参与本轮吸收。
@@ -526,16 +526,16 @@ Fresh App / Console consumer boundary evidence：
 - `npm run test:release-boundary` 通过 `164` 项。
 - 这些只证明 App/Console consumer boundary 和 false-ready guard，不证明 App release ready。
 
-当前未完成 / 等待 handoff：
+2026-06-21 historical handoff snapshot：
 
-- `019eda68-4a4d-7050-a2b0-1e44308df2a8` 仍持有 active
-  `lidocaineq-parity-audit-20260621` 写集。总控应等待该 lane 完成或明确 handoff 后，
-  再独立复核 diff、重跑 OPL prepare、Gallery 正向/负向证据、focused tests、视觉审计和
-  LidocaineQ artifact evidence。
-- 本轮未在 MAS `main` 修复或吸收 active parity/audit 写集；该写集仍包含大量 Gallery
-  renderer、payload、artifact 和 parity audit 改动，并落后 `origin/main` 6 个提交。
-- `ggconsort cohort-flow Gallery evidence`、`LidocaineQ parity audit done`、
-  `MAS docs/examples foldback to main`、`absorb/push/cleanup active MAS lane` 仍不可 claim。
+- 该段只记录当时未由 OPL 总控接管的 MAS LidocaineQ/gallery/parity lane 边界。
+  它不是当前 MAS owner route、worktree currentness 或 handoff 状态。
+- 若未来继续 MAS Gallery / LidocaineQ / cohort-flow 工作，必须先在 MAS 仓重新读取 root/worktree
+  currentness、owner thread、dirty write set、diff、OPL prepare、Gallery 正向/负向证据、
+  focused tests、视觉审计和 artifact evidence。
+- 本节不能声明 `ggconsort cohort-flow Gallery evidence`、`LidocaineQ parity audit done`、
+  `MAS docs/examples foldback to main`、MAS lane absorption / push / cleanup、domain ready、
+  publication ready、App release ready 或 production ready。
 
 ## 2026-06-21 续跑证据折返
 
@@ -551,15 +551,13 @@ Current gate：
   `codex_ops_gate.py status --repo /Users/gaofeng/workspace/one-person-lab
   --run-profile-checks` 返回 `may_write=true`、`cleanup_needed=false`。
 - `med-autoscience` root `main...origin/main` clean，HEAD 为
-  `79514e41fff09f577c1a2d0fdcfabbef0c8e5a48`。线程
-  `019eda68-4a4d-7050-a2b0-1e44308df2a8` 仍为 active / in-progress，并持有
-  `.worktrees/lidocaineq-parity-audit-20260621` dirty worktree；该 worktree 在 gate
-  readback 中为 `behind_target`，相对 `origin/main` behind `6`。总控未接管、未改写、
-  未清理该写集。
+  `79514e41fff09f577c1a2d0fdcfabbef0c8e5a48`。当时观察到的 MAS
+  LidocaineQ/gallery/parity worktree 只作为 historical snapshot 记录；本节不再作为当前
+  MAS handoff、owner thread 或 worktree currentness 依据。
 - 线程 `019ee959-b3bb-7ad3-bac6-25c266cbed9c` 维持 pin / 未归档 / 标题
   `核实MAS绘图模板风格`，绑定 recovery worktree
   `/Users/gaofeng/.codex/worktrees/67a3/med-autoscience`，只作为 MAS 绘图业务上下文；
-  不并发写 `019eda68` 的 LidocaineQ/gallery/parity 写集。
+  不并发写前述 historical MAS LidocaineQ/gallery/parity 写集。
 - `one-person-lab-app` root `main...origin/main` clean，HEAD 为
   `88f869f2129a038536a4832ae168df2c82c34629`；存在独立 release/size dirty
   worktrees。本轮只验证 App/Console consumer boundary，不接管 release/size lanes。
@@ -640,7 +638,8 @@ Fresh MAS Gallery consumer evidence on `med-autoscience` main：
   `cohort_flow_figure.design.*`，`renderer_family=python`，dependency environment 为空。
   虽然 manifest 保留 `r_ggplot2_ggconsort_reporting_flow_v1` dependency intent 和
   `checked_in_renderer_uses_ggconsort=true` contract refs，但 main Gallery 尚未证明
-  cohort flow 真实走 ggconsort；该项仍等待 `019eda68` active lane handoff/吸收验证。
+  cohort flow 真实走 ggconsort；该项在 2026-06-21 snapshot 中仍需要 MAS owner repo
+  后续证据，当前判断必须 fresh-read MAS。
 
 Fresh fail-closed evidence：
 
@@ -674,10 +673,11 @@ Fresh App / Console consumer boundary evidence：
 - 这些证据只证明 App/Console consumer boundary 和 release false-ready guard，不证明 App
   release ready。
 
-Remaining gate：
+Historical boundary：
 
-- `019eda68-4a4d-7050-a2b0-1e44308df2a8` 未 handoff 前，总控不能接管、rebase、吸收、
-  push 或清理其 LidocaineQ/gallery/parity dirty write set。
-- 目标中仍未完成的主项是：`ggconsort cohort-flow Gallery evidence`、`LidocaineQ parity
-  audit/artifact evidence`、MAS docs/examples foldback 到 `main`、MAS active lane 的
-  main-session independent diff review / verification / absorb / push / cleanup。
+- 本节只说明 2026-06-21 当时 OPL 总控没有接管 MAS LidocaineQ/gallery/parity 写集；
+  不给出当前 MAS owner route、thread state、worktree state 或 cleanup 授权。
+- 后续继续这些 MAS 项目前，先以 MAS 仓 fresh evidence 重新判定：
+  `ggconsort cohort-flow Gallery evidence`、`LidocaineQ parity audit/artifact evidence`、
+  MAS docs/examples foldback、main-session independent diff review / verification /
+  absorb / push / cleanup。
