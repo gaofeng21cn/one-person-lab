@@ -54,6 +54,129 @@ const expectedEngineIdsByModule = {
   'opl.scholarskills.intake': 'scholar_intake_candidate_source_engine',
 } satisfies Record<typeof moduleIds[number], string>;
 
+const expectedEngineSpecByModule = {
+  'opl.scholarskills.display': {
+    required: ['title', 'source_refs'],
+    optional: ['variables', 'panel_plan', 'figure_type', 'cohort_ref', 'color_vision', 'grayscale', 'panel_to_code_review', 'source_preservation'],
+    checks: ['visual_qa_preview', 'programmatic_figure_audit', 'final_size_inspection', 'color_vision/grayscale', 'panel_to_code_review', 'source_preservation', 'owner_gate_required'],
+    sections: ['visual_qa_preview', 'programmatic_figure_audit', 'final_size_inspection', 'color_vision/grayscale', 'panel_to_code_review', 'source_preservation'],
+  },
+  'opl.scholarskills.tables': {
+    required: ['title', 'source_refs'],
+    optional: ['title', 'columns', 'row_groups', 'footnotes', 'stat_refs', 'booktabs_or_minimal_ink', 'table_qc', 'claim_table_alignment'],
+    checks: ['table_shell', 'metric_extraction', 'booktabs_or_minimal_ink', 'table_qc', 'claim_table_alignment', 'owner_gate_required'],
+    sections: ['table_shell', 'metric_extraction', 'booktabs_or_minimal_ink', 'table_qc', 'claim_table_alignment'],
+  },
+  'opl.scholarskills.stats': {
+    required: ['analysis_question', 'source_refs'],
+    optional: ['analysis_question', 'model', 'variables', 'cohort_ref', 'sensitivity_checks', 'effect_size_or_metric_extraction', 'reproducibility_check', 'statistical_review', 'no_statistical_conclusion_claim'],
+    checks: ['analysis_plan', 'effect_size_or_metric_extraction', 'reproducibility_check', 'statistical_review', 'no_statistical_conclusion_claim', 'owner_gate_required'],
+    sections: ['analysis_plan', 'effect_size_or_metric_extraction', 'reproducibility_check', 'statistical_review', 'no_statistical_conclusion_claim'],
+  },
+  'opl.scholarskills.omics': {
+    required: ['pipeline_goal', 'source_refs'],
+    optional: ['pipeline_goal', 'feature_set', 'normalization', 'batch_correction', 'matrix_ref', 'omics_visualization_plan', 'pathway_context', 'domain_review', 'no_omics_truth_claim'],
+    checks: ['feature_matrix_qc', 'omics_visualization_plan', 'pathway_context', 'domain_review', 'no_omics_truth_claim', 'owner_gate_required'],
+    sections: ['feature_matrix_qc', 'omics_visualization_plan', 'pathway_context', 'domain_review', 'no_omics_truth_claim'],
+  },
+  'opl.scholarskills.lit': {
+    required: ['question', 'source_refs'],
+    optional: ['question', 'databases', 'query_terms', 'inclusion_criteria', 'citation_refs', 'source_verification', 'citation_coverage', 'evidence_map', 'metadata_scrape', 'claim_support'],
+    checks: ['citation_manifest', 'source_verification', 'citation_coverage', 'evidence_map', 'metadata_scrape', 'claim_support', 'owner_gate_required'],
+    sections: ['citation_manifest', 'source_verification', 'citation_coverage', 'evidence_map', 'metadata_scrape', 'claim_support'],
+  },
+  'opl.scholarskills.write': {
+    required: ['section_goal', 'source_refs'],
+    optional: ['section_goal', 'outline', 'claims', 'target_journal', 'tone', 'reverse_outline', 'claim_evidence_map', 'source_trace', 'unsupported_claim_route_back'],
+    checks: ['section_outline', 'reverse_outline', 'claim_evidence_map', 'source_trace', 'unsupported_claim_route_back', 'owner_gate_required'],
+    sections: ['section_outline', 'reverse_outline', 'claim_evidence_map', 'source_trace', 'unsupported_claim_route_back'],
+  },
+  'opl.scholarskills.review': {
+    required: ['review_scope', 'source_refs'],
+    optional: ['review_scope', 'rubric', 'concerns', 'acceptance_criteria', 'route_back_refs', 'revision_action', 'halt_or_revert_rule', 'route_back', 'residual_risk'],
+    checks: ['adversarial_review', 'revision_action', 'halt_or_revert_rule', 'route_back', 'residual_risk', 'owner_gate_required'],
+    sections: ['adversarial_review', 'revision_action', 'halt_or_revert_rule', 'route_back', 'residual_risk'],
+  },
+  'opl.scholarskills.submit': {
+    required: ['submission_goal', 'source_refs'],
+    optional: ['submission_goal', 'journal', 'required_files', 'cover_letter_points', 'compliance_checks', 'journal_rule', 'format_sanity', 'ai_disclosure', 'rebuttal_audit', 'no_publication_ready_authorization'],
+    checks: ['submission_checklist', 'journal_rule', 'format_sanity', 'ai_disclosure', 'rebuttal_audit', 'no_publication_ready_authorization', 'owner_gate_required'],
+    sections: ['submission_checklist', 'journal_rule', 'format_sanity', 'ai_disclosure', 'rebuttal_audit', 'no_publication_ready_authorization'],
+  },
+  'opl.scholarskills.data': {
+    required: ['dataset_goal', 'source_refs'],
+    optional: [
+      'dataset_goal',
+      'dataset_refs',
+      'variables',
+      'provenance',
+      'privacy_constraints',
+      'metadata_scrape',
+      'source_lineage',
+      'artifact_bundle_manifest',
+      'data_dictionary',
+      'privacy_access_tier',
+      'study_refs',
+      'semantic_dictionary_refs',
+      'retention_policy_refs',
+      'storage_tier_refs',
+      'authoritative_body_refs',
+      'derived_copy_refs',
+      'analytical_format_refs',
+      'cold_restore_refs',
+      'read_model_refs',
+    ],
+    checks: [
+      'metadata_scrape',
+      'source_lineage',
+      'artifact_bundle_manifest',
+      'data_dictionary',
+      'privacy_access_tier',
+      'dataset_goal_present',
+      'source_refs_present',
+      'dataset_manifest_required',
+      'registry_lineage_required',
+      'semantic_readiness_required',
+      'study_binding_required',
+      'privacy_access_tier_required',
+      'retention_guardrail_required',
+      'storage_tier_required',
+      'authoritative_body_boundary_required',
+      'derived_copy_inventory_required',
+      'analytical_format_strategy_required',
+      'cold_restore_proof_required_before_body_retirement',
+      'read_model_boundary_required',
+      'lineage_readiness_required',
+      'owner_gate_required',
+    ],
+    sections: [
+      'metadata_scrape',
+      'source_lineage',
+      'artifact_bundle_manifest',
+      'data_dictionary',
+      'privacy_access_tier',
+      'retention_guardrail',
+      'storage_tier',
+      'authoritative_body_boundary',
+      'derived_copy_inventory',
+      'analytical_format_strategy',
+      'cold_restore_proof',
+      'read_model_boundary',
+    ],
+  },
+  'opl.scholarskills.intake': {
+    required: ['intake_goal', 'source_refs'],
+    optional: ['intake_goal', 'source_snapshot', 'owner', 'blocked_inputs', 'input_contract', 'adoption_contract', 'scope_boundary'],
+    checks: ['upstream_commit', 'included_excluded_paths', 'dry_run_readback', 'input_contract', 'adoption_contract', 'scope_boundary', 'owner_gate_required'],
+    sections: ['upstream_commit', 'included_excluded_paths', 'dry_run_readback', 'input_contract', 'adoption_contract', 'scope_boundary'],
+  },
+} satisfies Record<typeof moduleIds[number], {
+  required: string[];
+  optional: string[];
+  checks: string[];
+  sections: string[];
+}>;
+
 function readJson(filePath: string) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
@@ -65,8 +188,15 @@ test('scholar-skills materialize emits non-authoritative candidate artifact bodi
     const payload = {
       title: 'Risk-adjusted outcome trend',
       source_refs: ['mas:source/cohort-v1'],
+      visual_qa_preview: 'review exported preview before owner consumption',
+      programmatic_figure_audit: 'audit geometry, labels, and source-bound panels',
+      final_size_inspection: 'inspect at final journal target size',
       variables: ['age', 'hba1c', 'mortality'],
       cohort_ref: 'mas:source/cohort-v1',
+      color_vision: 'color-vision safe palette',
+      grayscale: 'grayscale distinguishability check',
+      panel_to_code_review: 'panel code review ref',
+      source_preservation: 'source refs preserved through rendering',
     };
     const first = runCli([
       'scholar-skills',
@@ -108,6 +238,14 @@ test('scholar-skills materialize emits non-authoritative candidate artifact bodi
     assert.equal(first.candidate_artifact_bodies[0].engine_id, expectedEngineIdsByModule['opl.scholarskills.display']);
     assert.equal(first.candidate_artifact_bodies[0].validation_status, 'pass');
     assert.equal(first.candidate_artifact_bodies[0].input_requirements.required_artifact_root_ref, true);
+    assert.deepEqual(
+      first.candidate_artifact_bodies[0].input_requirements.required_payload_fields,
+      expectedEngineSpecByModule['opl.scholarskills.display'].required,
+    );
+    assert.deepEqual(
+      first.candidate_artifact_bodies[0].input_requirements.optional_payload_fields,
+      expectedEngineSpecByModule['opl.scholarskills.display'].optional,
+    );
     assert.equal(first.candidate_artifact_bodies[0].kind, 'display_pack_agent_orchestration');
     assert.equal(first.candidate_artifact_bodies[0].ref, 'artifact-root:display-pack-candidates/display_pack_agent_orchestration');
     assert.equal(first.candidate_artifact_bodies[0].sha256.startsWith('sha256:'), true);
@@ -120,6 +258,11 @@ test('scholar-skills materialize emits non-authoritative candidate artifact bodi
     assert.equal(first.written_files.includes(first.candidate_artifact_bodies[0].body_path), true);
     assert.equal(first.file_sha256[first.candidate_artifact_bodies[0].body_path], first.candidate_artifact_bodies[0].body_sha256);
     assert.equal(fs.existsSync(first.candidate_artifact_bodies[0].body_path), true);
+    const svg = fs.readFileSync(first.candidate_artifact_bodies[0].body_path, 'utf8');
+    assert.equal(svg.includes('section: visual_qa_preview'), true);
+    assert.equal(svg.includes('section: programmatic_figure_audit'), true);
+    assert.equal(svg.includes('section: final_size_inspection'), true);
+    assert.equal(svg.includes('section: color_vision/grayscale'), true);
 
     const manifest = readJson(first.artifact_manifest_path);
     const moduleCandidate = readJson(first.module_candidate_path);
@@ -226,7 +369,14 @@ test('scholar-skills materialize writes deterministic module-specific bodies for
         assert.equal(body.engine_version, '2026-06-24');
         assert.equal(body.validation_status, 'pass');
         assert.equal(body.validation_checks.some((check: { check_id: string }) => check.check_id === 'authority_boundary_false'), true);
-        assert.equal(body.input_requirements.required_payload_fields.includes('source_refs'), true);
+        assert.deepEqual(body.input_requirements.required_payload_fields, expectedEngineSpecByModule[moduleId].required);
+        assert.deepEqual(body.input_requirements.optional_payload_fields, expectedEngineSpecByModule[moduleId].optional);
+        assert.deepEqual(
+          body.validation_checks
+            .map((check: { check_id: string }) => check.check_id)
+            .filter((checkId: string) => expectedEngineSpecByModule[moduleId].checks.includes(checkId)),
+          expectedEngineSpecByModule[moduleId].checks,
+        );
         assert.equal(body.body_included, true);
         assert.equal(body.body_carried_to_owner_request, false);
         assert.equal(body.readiness_notes.some((note: string) => note.includes('domain owner gate')), true);
@@ -240,6 +390,10 @@ test('scholar-skills materialize writes deterministic module-specific bodies for
           assert.equal(candidate.status, 'candidate_artifact_engine_output');
           assert.equal(candidate.engine.engine_id, expectedEngineIdsByModule[moduleId]);
           assert.equal(candidate.validation.owner_gate_required, true);
+          assert.deepEqual(
+            candidate.candidate.sections.map((section: { section_id: string }) => section.section_id),
+            expectedEngineSpecByModule[moduleId].sections,
+          );
           assert.equal(candidate.receipt_metadata.unsigned, true);
           assert.deepEqual(candidate.missing_inputs, candidate.input_requirements.required_payload_fields.filter((field: string) => field !== 'source_refs'));
           assert.equal(candidate.body_carried_to_owner_request, false);
@@ -262,6 +416,9 @@ test('scholar-skills materialize writes deterministic module-specific bodies for
           const text = fs.readFileSync(body.body_path, 'utf8');
           assert.equal(text.includes(expectedEngineIdsByModule[moduleId]), true);
           assert.equal(text.includes('owner gate') || text.includes('owner-gate'), true);
+          for (const section of expectedEngineSpecByModule[moduleId].sections.slice(0, body.body_format === 'svg' ? 4 : undefined)) {
+            assert.equal(text.includes(section), true);
+          }
         }
       }
     }
