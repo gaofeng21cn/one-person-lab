@@ -96,3 +96,71 @@ test('family-runtime intake derives MAS domain-handler export from active worksp
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('family-runtime intake blocks stale MAS workspace binding without clean runner', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-binding-missing-runner-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-binding-missing-runner-'));
+  const masWorkspacePath = path.join(fixtureRoot, 'med-autoscience');
+  const profilePath = path.join(fixtureRoot, 'dm-cvd.workspace.toml');
+  const workspaceRegistryPath = path.join(stateRoot, 'workspace-registry.json');
+  fs.mkdirSync(masWorkspacePath, { recursive: true });
+  fs.mkdirSync(stateRoot, { recursive: true });
+  fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
+
+  try {
+    fs.writeFileSync(workspaceRegistryPath, `${JSON.stringify({
+      version: 'g2',
+      bindings: [
+        {
+          binding_id: 'active-stale-mas-binding',
+          project_id: 'medautoscience',
+          project: 'med-autoscience',
+          workspace_path: masWorkspacePath,
+          label: 'Active stale MAS binding',
+          status: 'active',
+          direct_entry: {
+            command: null,
+            manifest_command: null,
+            url: null,
+            workspace_locator: {
+              surface_kind: 'med_autoscience_workspace_profile',
+              workspace_root: masWorkspacePath,
+              profile_ref: profilePath,
+              input_path: null,
+            },
+          },
+          created_at: '2026-06-28T00:00:00.000Z',
+          updated_at: '2026-06-28T00:00:00.000Z',
+          archived_at: null,
+        },
+      ],
+    }, null, 2)}\n`, 'utf8');
+
+    const intake = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+      '--source',
+      'missing-runner-binding',
+    ], familyRuntimeEnv(stateRoot));
+    const exportResult = intake.family_runtime_intake.exports[0];
+
+    assert.equal(intake.family_runtime_intake.enqueued_count, 0);
+    assert.equal(intake.family_runtime_intake.blocked_count, 1);
+    assert.equal(exportResult.status, 'blocked');
+    assert.equal(exportResult.command_source, 'workspace_binding');
+    assert.equal(exportResult.reason, 'mas_workspace_binding_clean_runner_missing');
+    assert.equal(
+      exportResult.required_path,
+      path.join(masWorkspacePath, 'scripts', 'run-python-clean.sh'),
+    );
+    assert.equal(
+      exportResult.repair_action.action_id,
+      'rebind_or_archive_stale_mas_workspace_binding',
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});

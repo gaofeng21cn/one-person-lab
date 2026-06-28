@@ -51,6 +51,11 @@ type DomainExportCommand = {
   source: 'env_override' | 'module_exec_profile' | 'workspace_binding';
   owner_fingerprint: string;
   module?: ModuleInspection;
+  unavailable?: {
+    reason: string;
+    required_path?: string;
+    repair_action?: Record<string, unknown>;
+  };
 };
 
 type EnqueueTaskResult = {
@@ -182,6 +187,30 @@ function exportCommandForDomain(
     if (workspaceProfile) {
       const { binding, profileRef } = workspaceProfile;
       const runnerPath = path.join(binding.workspace_path, 'scripts', 'run-python-clean.sh');
+      if (!fs.existsSync(runnerPath) || !fs.statSync(runnerPath).isFile()) {
+        return {
+          argv: [runnerPath],
+          cwd: binding.workspace_path,
+          source: 'workspace_binding',
+          owner_fingerprint: [
+            'workspace_binding',
+            binding.workspace_path,
+            profileRef,
+            'runner_missing',
+          ].join(':'),
+          unavailable: {
+            reason: 'mas_workspace_binding_clean_runner_missing',
+            required_path: runnerPath,
+            repair_action: {
+              action_id: 'rebind_or_archive_stale_mas_workspace_binding',
+              next_commands: [
+                'opl workspace bind --project medautoscience --path <current-med-autoscience-checkout> --profile <dm-cvd-profile>',
+                'opl workspace archive --project medautoscience --path <stale-workspace-path>',
+              ],
+            },
+          },
+        };
+      }
       return {
         argv: [
           runnerPath,
@@ -487,6 +516,20 @@ export function hydrateDomainTasks(
     const command = exportCommandForDomain(domainId, paths, input.domainProfiles, input.taskScope);
     if (!command) {
       exports.push({ domain_id: domainId, status: 'skipped', reason: 'export_command_not_configured' });
+      continue;
+    }
+    if (command.unavailable) {
+      blockedCount += 1;
+      exports.push({
+        domain_id: domainId,
+        status: 'blocked',
+        command_preview: command.argv,
+        command_cwd: command.cwd,
+        command_source: command.source,
+        reason: command.unavailable.reason,
+        required_path: command.unavailable.required_path,
+        repair_action: command.unavailable.repair_action,
+      });
       continue;
     }
     const dirtyBlock = dirtyModuleExportBlock(command);
