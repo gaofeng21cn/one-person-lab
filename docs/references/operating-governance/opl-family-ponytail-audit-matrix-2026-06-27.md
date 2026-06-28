@@ -1257,3 +1257,43 @@ Current next-route rules:
 ### Round 55 Run-Level Counters
 
 `candidate_pool_total=87`; `selected_batch_size=3`; `completed_mutation_or_cleanup_count=3`; `verified_lane_count=3`; `skipped_candidate_count_by_reason={}`; `continuation_attempt_count=1`; `stop_condition=selected batch exhausted`; `batch_underfilled_reason=not_applicable`; `unfinished_selected_batch=none`; `selected_batch_burn_down_complete=true`; `continuation_required=false`.
+
+## 2026-06-28 重构批次落地 Round 56
+
+本轮继续执行 selected-batch burn-down 协议。候选池来自 fresh MAS line-budget advisory；selected batch 选择三个互不冲突、基线通过、自然边界清晰的 owner-route / DHD / PaperRecovery test-projection 入口，并在隔离 worktree 中完成、验证、吸收、推送和清理。没有触碰上游 fork body、MAS runtime queue、provider attempt、owner receipt、typed blocker、human gate、current-package authority、paper body 或 publication authority。
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `med-autoscience` | `refactor_patrol_batch` | 拆分 `tests/study_progress_cases/current_executable_owner_action_cases/dm003_owner_receipt_running_handoff.py`，将 terminal closeout successor cases 移入 `dm003_owner_receipt_running_handoff_cases/terminal_closeout_successor_cases.py`。 | Pushed MAS commit `86150db75aaa431170ae5baa4d8f472c1ce54a6f`；direct split cases passed 18/18；aggregate selected suite passed 32/32；`git diff --check HEAD~1..HEAD` passed；remote readback `origin/main=86150db75aaa431170ae5baa4d8f472c1ce54a6f`。Line readback: entry 1386 -> 791 lines; new case 1049 lines. | Test/projection structure evidence only；不声明 paper progress、runtime readiness、publication readiness、owner receipt validity、typed blocker validity、provider readiness、current-package authority 或 production readiness。 |
+| `med-autoscience` | `refactor_patrol_batch` | 拆分 `tests/owner_route_reconcile_cases/test_current_write_routeback_projection.py`，将 provider admission / stale projection cases 移入 `test_current_write_routeback_projection_cases/provider_admission_and_stale_projection_cases.py`。 | Same commit `86150db75`；direct split case included in 18/18 direct verification；aggregate included in 32/32 verification；line-budget advisory count reduced from 84 to 81. Line readback: entry 1378 -> 719 lines; new case 680 lines. | Test/projection structure evidence only。Reopen only if this owner-route projection family regrows or fresh failures point to this split boundary. |
+| `med-autoscience` | `refactor_patrol_batch` | 拆分 `tests/test_domain_health_diagnostic_cases/supervisor_and_progress_cases_cases/provider_admission_report_currentness_cases.py`，将 owner-gate transition request cases 移入 `provider_admission_report_currentness_cases_cases/owner_gate_transition_request_cases.py`。 | Same commit `86150db75`；direct split case included in 18/18 direct verification；aggregate included in 32/32 verification；post-round `scripts/run-python-clean.sh scripts/line_budget.py` readback reported 81 advisory issues. Line readback: entry 1340 -> 723 lines; new case 665 lines. | Test/projection structure evidence only。DHD / PaperRecovery / owner-route authority semantics remain protected by repo-native tests and owner boundaries. |
+
+### Round 56 Queue Adjustment
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| closed | MAS `dm003_owner_receipt_running_handoff.py` selected split | Entry is now 791 lines with aggregate/direct verification passing. | Reopen only if this entry regrows above budget or DM003 running-handoff failures point to this split boundary. |
+| closed | MAS `test_current_write_routeback_projection.py` selected split | Entry is now 719 lines with provider-admission/stale-projection cases separated. | Reopen only for fresh owner-route projection family growth or regression. |
+| closed | MAS `provider_admission_report_currentness_cases.py` selected split | Entry is now 723 lines with owner-gate transition-request tests separated. | Reopen only if provider-admission currentness tests regrow or fail around this boundary. |
+| watch | MAS line-budget advisory queue | Fresh post-round `scripts/run-python-clean.sh scripts/line_budget.py` reports 81 advisory issues after Round 56. | Next run must re-scan current main and select another coherent 2-5 item batch; prefer test/projection natural families before authority-heavy source. |
+| unrelated_dirty | MAS display renderer / layout test files | MAS root had unrelated dirty `src/med_autoscience/display_pack_gallery_parts/design_svg_renderer.py` and `tests/test_python_illustration_renderer_layouts.py` after this round. | Do not overwrite or fold these into Round 56; route separately if selected by the display owner lane. |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies。 | 只做 read-only fork-boundary audit；除非目标明确是 OPL-owned overlay、adapter、docs、contracts、packaging metadata 或 test shell，否则不纳入 cleanup/refactor/line-budget 写集。 |
+
+### Round 56 Run-Level Counters
+
+`candidate_pool_total=84`; `selected_batch_size=3`; `completed_mutation_or_cleanup_count=3`; `verified_lane_count=3`; `skipped_candidate_count_by_reason={}`; `continuation_attempt_count=1`; `stop_condition=selected batch exhausted`; `batch_underfilled_reason=not_applicable`; `unfinished_selected_batch=none`; `selected_batch_burn_down_complete=true`; `continuation_required=false`.
+
+## 2026-06-28 运行协议更新：work-package batch 防微切片
+
+本次只更新 OPL family Ponytail / governance 的执行协议，不作为源码重构、domain runtime、release readiness、paper progress、owner receipt、typed blocker 或 production readiness 证据。
+
+| Surface | Update | Fresh readback | Effect |
+| --- | --- | --- | --- |
+| `opl-family` automation | 将最小交付单位从 `refactor_worklist + selected batch` 加强为 `refactor_worklist + work_package_matrix + selected work-package batch + batch closeout`。 | `/Users/gaofeng/.codex/automations/opl-family/automation.toml` 通过 `tomllib` 解析；prompt 含 `work_package_matrix`、`selected_work_package_count`、`selected_child_candidate_count`、`why_not_micro_slice`、`low_value_micro_slice`、`upstream_fork_excluded`。 | 后续 refactor patrol 必须先把 8-12 个候选按语义边界聚合为 work packages，再选 2-5 个包燃尽；单个低收益文件切片必须合并或跳过。 |
+| `opl` automation | 将最小交付单位从 `truth_owner_map + governance_worklist + selected batch` 加强为 `truth_owner_map + governance_worklist + work_package_matrix + selected work-package batch + batch closeout`。 | `/Users/gaofeng/.codex/automations/opl/automation.toml` 通过 `tomllib` 解析；prompt 含 `work_package_matrix`、`selected_work_package_count`、`selected_child_candidate_count`、`why_not_micro_slice`、`low_value_micro_slice`、`upstream_fork_excluded`。 | 后续 governance run 必须先按 truth-owner / docs lifecycle / machine boundary 聚合治理包，再选 3-7 个包燃尽；单个低收益 prose cleanup 不能包装成整轮治理。 |
+| Both automations | run-level counters 增加 `work_package_total`、`selected_work_package_count`、`selected_child_candidate_count`，burn-down 项从单候选改为 `package_id + child_candidate_ids`。 | 两份 prompt 均通过 TOML parse，并含新增 counter / work-package 字段。 | closeout 不再只看完成了几个 commit 或文件；必须证明 selected work-package batch 和其 child candidates 已全部覆盖、跳过或写入 continuation。 |
+| Both automations | 保留 upstream fork hard exclusion：`opl-hermes-shell/**`、`opl-aion-shell/**`、`one-person-lab-app/shells/aionui/**`、`one-person-lab-app/_external/hermes-agent/**`。 | 两份 prompt 均含 `upstream_fork_excluded`。 | 上游 fork 主体仍只能 read-only fork-boundary audit；不纳入 cleanup/refactor/line-budget/SSOT deletion 写集、复杂度减少指标或 backlog 压力。 |
+
+### Updated Work-Package Stop Condition
+
+后续每轮 closeout 必须满足：`selected_work_package_count == burn_down item count`，`selected_child_candidate_count` 覆盖全部 selected package 的 `child_candidate_ids`，且 `verified_lane_count + blocked/no_safe/not_safe count` 覆盖全部 selected work packages。若模型上下文、时间、工具失败或用户中断导致 partial batch，必须写 `unfinished_selected_batch` 与 `continuation_required=true`；不得缩小 batch、重写目标或把已完成小切片包装成完整巡检。
