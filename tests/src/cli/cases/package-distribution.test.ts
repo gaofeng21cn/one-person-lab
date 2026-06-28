@@ -376,6 +376,7 @@ test('package archive builder writes channel manifest checksums git source and r
   const archiveBuilderResult = JSON.parse(archiveBuilderOutput) as {
     clone_root: string;
     modules_dir: string;
+    release_discipline_workflows: string[];
   };
 
   const releaseManifestPath = path.join(outDir, 'opl-release-manifest.json');
@@ -391,6 +392,14 @@ test('package archive builder writes channel manifest checksums git source and r
 
   assert.equal(archiveBuilderResult.clone_root, defaultCloneRoot);
   assert.equal(archiveBuilderResult.modules_dir, path.join(outDir, 'modules'));
+  assert.deepEqual(archiveBuilderResult.release_discipline_workflows, [
+    '.github/workflows/packages.yml',
+    '.github/workflows/release-package-channel.yml',
+    '.github/workflows/daily-package-channel.yml',
+  ]);
+  assert.equal(fs.existsSync(path.join(outDir, '.github/workflows/packages.yml')), true);
+  assert.equal(fs.existsSync(path.join(outDir, '.github/workflows/release-package-channel.yml')), true);
+  assert.equal(fs.existsSync(path.join(outDir, '.github/workflows/daily-package-channel.yml')), true);
   assert.equal(relativeCloneRootFromOutDir === '' || !relativeCloneRootFromOutDir.startsWith('..'), false);
   assert.equal(path.relative(repoRoot, archiveBuilderResult.clone_root).startsWith('..'), true);
   assert.equal(channelManifest.opl_version, manifest.opl_version);
@@ -465,7 +474,7 @@ test('package archive builder writes channel manifest checksums git source and r
     '--manifest',
     releaseManifestPath,
   ], {
-    cwd: repoRoot,
+    cwd: os.tmpdir(),
     encoding: 'utf8',
   });
 });

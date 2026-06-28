@@ -150,6 +150,24 @@ function writeChecksumFile(outDir, archives) {
   return checksumPath;
 }
 
+const releaseWorkflowPaths = [
+  '.github/workflows/packages.yml',
+  '.github/workflows/release-package-channel.yml',
+  '.github/workflows/daily-package-channel.yml',
+];
+
+function copyReleaseDisciplineWorkflows(outDir) {
+  const copied = [];
+  for (const workflow of releaseWorkflowPaths) {
+    const source = path.join(repoRoot, workflow);
+    const target = path.join(outDir, workflow);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(source, target);
+    copied.push(workflow);
+  }
+  return copied;
+}
+
 function main() {
   const options = parseArgs(process.argv.slice(2));
   const rollbackVersion = readPreviousManifestVersion(options.previousManifest);
@@ -186,6 +204,7 @@ function main() {
   }
 
   const checksumPath = writeChecksumFile(options.outDir, archives);
+  const releaseDisciplineWorkflows = copyReleaseDisciplineWorkflows(options.outDir);
   const manifestPath = writeOplPackageManifest(path.join(options.outDir, 'opl-release-manifest.json'), manifest);
   const channelManifestPath = writeOplPackageManifest(
     path.join(options.outDir, 'opl-channel-manifest.json'),
@@ -196,6 +215,7 @@ function main() {
     manifest: manifestPath,
     channel_manifest: channelManifestPath,
     checksums: checksumPath,
+    release_discipline_workflows: releaseDisciplineWorkflows,
     modules_dir: modulesOutDir,
     clone_root: options.cloneRoot,
     modules: Object.values(manifest.packages.modules).map((entry) => ({

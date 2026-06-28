@@ -149,22 +149,23 @@ function validateManifest(manifest) {
   return failures;
 }
 
-function validateWorkflow(manifest, failures) {
+function validateWorkflow(manifest, manifestPath, failures) {
   const workflow = manifest.release_automation?.artifact_build?.workflow;
   if (typeof workflow !== 'string' || workflow.length === 0) {
     failures.push('package workflow path missing from manifest release automation');
     return;
   }
 
-  const workflowPath = path.resolve(process.cwd(), workflow);
+  const packageRoot = path.dirname(manifestPath);
+  const workflowPath = path.resolve(packageRoot, workflow);
   if (!fs.existsSync(workflowPath)) {
     failures.push(`package workflow file missing: ${workflow}`);
     return;
   }
 
   const source = fs.readFileSync(workflowPath, 'utf8');
-  const releaseCallerWorkflowPath = path.resolve(process.cwd(), PACKAGE_RELEASE_CALLER_WORKFLOW_PATH);
-  const dailyWorkflowPath = path.resolve(process.cwd(), PACKAGE_DAILY_WORKFLOW_PATH);
+  const releaseCallerWorkflowPath = path.resolve(packageRoot, PACKAGE_RELEASE_CALLER_WORKFLOW_PATH);
+  const dailyWorkflowPath = path.resolve(packageRoot, PACKAGE_DAILY_WORKFLOW_PATH);
   const releaseCallerSource = fs.existsSync(releaseCallerWorkflowPath)
     ? fs.readFileSync(releaseCallerWorkflowPath, 'utf8')
     : '';
@@ -210,7 +211,7 @@ function main() {
   const options = parseArgs(process.argv.slice(2));
   const manifest = JSON.parse(fs.readFileSync(options.manifest, 'utf8'));
   const failures = validateManifest(manifest);
-  validateWorkflow(manifest, failures);
+  validateWorkflow(manifest, options.manifest, failures);
   if (failures.length > 0) {
     console.error(JSON.stringify({
       status: 'failed',
