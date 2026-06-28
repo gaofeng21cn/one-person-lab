@@ -221,11 +221,75 @@ test('family-runtime attempt list keeps stable array shape for full and compact 
     assert.equal(Array.isArray(compact.attempts), true);
     assert.equal(full.items[0].stage_attempt_id, attempt.stage_attempt_id);
     assert.equal(full.attempts[0].stage_attempt_id, attempt.stage_attempt_id);
+    assert.equal(full.attempts[0].provider_kind, 'local_sqlite');
     assert.equal(compact.items[0].stage_attempt_id, attempt.stage_attempt_id);
     assert.equal(compact.attempts[0].stage_attempt_id, attempt.stage_attempt_id);
+    assert.equal('provider_run' in full.attempts[0], false);
+    assert.equal('activity_events' in full.attempts[0], false);
+    assert.equal('route_impact' in full.attempts[0], false);
     assert.deepEqual(compact.items, compact.compact_timeline);
     assert.deepEqual(compact.attempts, compact.compact_timeline);
   } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime attempt list --full keeps study-filtered output bounded', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-list-full-bounded-'));
+  const db = new DatabaseSync(path.join(stateRoot, 'queue.sqlite'));
+  try {
+    createFamilyRuntimeQueueTables(db);
+    const heavyBody = 'x'.repeat(512_000);
+    const attempt = createStageAttempt(db, {
+      domainId: 'medautoscience',
+      stageId: 'submission_milestone_candidate::followthrough::followthrough-01',
+      providerKind: 'temporal',
+      workspaceLocator: {
+        workspace_root: '/tmp/mas',
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      },
+    }).attempt;
+    db.prepare(`
+      UPDATE stage_attempts
+      SET provider_run_json = ?,
+        activity_events_json = ?,
+        route_impact_json = ?
+      WHERE stage_attempt_id = ?
+    `).run(
+      JSON.stringify({
+        provider_status: 'running',
+        transcript_body: heavyBody,
+      }),
+      JSON.stringify([{
+        event_id: 'event-heavy',
+        payload_body: heavyBody,
+      }]),
+      JSON.stringify({
+        raw_route_payload: heavyBody,
+      }),
+      attempt.stage_attempt_id,
+    );
+
+    const output = await listStageAttemptsWithMonitoringProjection(db, { root: stateRoot }, {}, {
+      domainId: 'medautoscience',
+      studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+      full: true,
+    });
+    const outputJson = JSON.stringify(output);
+
+    assert.equal(output.filters.full, true);
+    assert.equal(output.filters.compact_timeline, false);
+    assert.equal(output.summary.filtered_total, 1);
+    assert.equal(output.attempts.length, 1);
+    assert.equal(output.attempts[0].stage_attempt_id, attempt.stage_attempt_id);
+    assert.equal(output.attempts[0].provider_kind, 'temporal');
+    assert.equal('provider_run' in output.attempts[0], false);
+    assert.equal('activity_events' in output.attempts[0], false);
+    assert.equal('route_impact' in output.attempts[0], false);
+    assert.equal(outputJson.includes(heavyBody), false);
+    assert.equal(outputJson.length < 50_000, true);
+  } finally {
+    db.close();
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });

@@ -671,6 +671,7 @@ function compactTimelineForAttempt(
   const base = {
     stage_attempt_id: attempt.stage_attempt_id,
     task_id: attempt.task_id,
+    provider_kind: attempt.provider_kind,
     domain_id: attempt.domain_id,
     study_id: studyId,
     stage_id: attempt.stage_id,
@@ -777,9 +778,9 @@ export async function listStageAttemptsWithMonitoringProjection(
     : null;
   const fullAttempts = effectiveCompactTimeline
     ? null
-    : readinessByKind
-      ? filteredAttempts.map((attempt) => attachCurrentProviderReadiness(attempt, readinessByKind))
-      : filteredAttempts;
+    : filteredAttempts.map((attempt) =>
+        compactTimelineForAttempt(db, attempt, readinessByKind.get(attempt.provider_kind) ?? null)
+      );
   return {
     filters: {
       domain_id: filters.domainId ?? null,
