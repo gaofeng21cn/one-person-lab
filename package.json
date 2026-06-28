@@ -91,16 +91,19 @@
     "new-machine:codex-bootstrap:docker-smoke": "node ./scripts/new-machine-codex-bootstrap-docker-smoke.mjs"
   },
   "dependencies": {
-    "@temporalio/activity": "^1.17.1",
-    "@temporalio/client": "^1.17.1",
-    "@temporalio/common": "^1.17.1",
-    "@temporalio/worker": "^1.17.1",
-    "@temporalio/workflow": "^1.17.1"
+    "@temporalio/activity": "^1.18.1",
+    "@temporalio/client": "^1.18.1",
+    "@temporalio/common": "^1.18.1",
+    "@temporalio/worker": "^1.18.1",
+    "@temporalio/workflow": "^1.18.1"
   },
   "devDependencies": {
-    "@temporalio/testing": "^1.17.1",
+    "@temporalio/testing": "^1.18.1",
     "@types/node": "^24.5.2",
     "typescript": "^5.8.3"
+  },
+  "overrides": {
+    "protobufjs": "7.6.4"
   },
   "license": "Apache-2.0"
 }
