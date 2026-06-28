@@ -21,6 +21,15 @@ const retiredFoundrySmokeFields = [
   'compatibility_json_flag_aliases',
 ] as const;
 
+const forbiddenRuntimeMcpReadinessFields = [
+  'unified_mcp_server_ready',
+  'unified_mcp_server_readiness',
+  'runtime_server_ready',
+  'runtime_server_readiness',
+  'runtime_server_url',
+  'runtime_server_command',
+] as const;
+
 function assertNoRetiredFoundryProjectionFields(agent: Record<string, unknown>) {
   for (const field of retiredFoundryProjectionFields) {
     assert.equal(field in agent, false);
@@ -28,6 +37,12 @@ function assertNoRetiredFoundryProjectionFields(agent: Record<string, unknown>) 
   const cliSmoke = agent.cli_smoke as Record<string, unknown>;
   for (const field of retiredFoundrySmokeFields) {
     assert.equal(field in cliSmoke, false);
+  }
+}
+
+function assertNoRuntimeMcpReadinessClaim(surface: Record<string, unknown>) {
+  for (const field of forbiddenRuntimeMcpReadinessFields) {
+    assert.equal(field in surface, false);
   }
 }
 
@@ -87,6 +102,7 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying OPL bra
     assert.equal(output.standard_agent_registry.source_ref, 'src/standard-agent-registry.ts');
     assert.deepEqual(output.standard_agent_registry.agent_ids, ['mas', 'mag', 'rca', 'oma', 'opl-bookforge']);
     assert.equal(output.refs.standard_agent_registry_ref, 'src/standard-agent-registry.ts');
+    assert.equal(output.refs.policy_release_ref, 'contracts/opl-framework/foundry-agent-series-policy-release.json');
     assert.equal(output.operation, operation);
     assert.equal(output.canonical_command_surface, 'opl agents foundry');
     assert.equal(output.status, operation === 'doctor' ? 'pass' : 'valid');
@@ -123,10 +139,12 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying OPL bra
     assert.equal(output.mcp_and_skill_policy.standard_agent_standalone_mcp_default_enabled, false);
     assert.equal(output.mcp_and_skill_policy.standard_agent_plugin_manifest_must_not_expose_mcp_servers, true);
     assert.equal(output.mcp_and_skill_policy.unified_mcp_projection_owner, 'one-person-lab');
+    assert.equal(output.mcp_and_skill_policy.future_unified_mcp_server_strategy, 'opl_owned_unified_server_when_runtime_verified');
     assert.equal(output.mcp_and_skill_policy.all_cli_commands_are_mcp_tools, false);
     assert.equal(output.mcp_and_skill_policy.progressive_discovery_required_for_large_catalogs, true);
     assert.equal(output.mcp_and_skill_policy.toolset_filtering_required_for_broad_surfaces, true);
     assert.equal(output.mcp_and_skill_policy.expose_legacy_buckets_as_diagnostic_or_migration_only, true);
+    assertNoRuntimeMcpReadinessClaim(output.mcp_and_skill_policy);
     assert.equal(
       output.retired_implementation_buckets.some((entry: { bucket: string }) => entry.bucket === 'skill'),
       true,

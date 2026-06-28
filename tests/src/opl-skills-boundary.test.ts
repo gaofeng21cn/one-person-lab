@@ -25,6 +25,15 @@ const retiredMcpProjectionFields = [
   'compatibility_delegate_tool_refs',
 ] as const;
 
+const forbiddenRuntimeMcpReadinessFields = [
+  'unified_mcp_server_ready',
+  'unified_mcp_server_readiness',
+  'runtime_server_ready',
+  'runtime_server_readiness',
+  'runtime_server_url',
+  'runtime_server_command',
+] as const;
+
 type FoundryProjectionPack = {
   foundry_agent_series: Record<string, unknown>;
   command_surface_spine: Record<string, unknown>;
@@ -39,6 +48,9 @@ function assertNoRetiredFoundrySeriesFields(pack: FoundryProjectionPack) {
     assert.equal(field in pack.command_surface_spine, false);
   }
   for (const field of retiredMcpProjectionFields) {
+    assert.equal(field in pack.mcp_projection, false);
+  }
+  for (const field of forbiddenRuntimeMcpReadinessFields) {
     assert.equal(field in pack.mcp_projection, false);
   }
 }
