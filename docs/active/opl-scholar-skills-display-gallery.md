@@ -23,17 +23,11 @@ These refs do not prove publication readiness.
 - `med-autoscience/docs/delivery/medical-display/examples/gallery_manifest.json`
 - `med-autoscience/docs/delivery/medical-display/examples/medical_display_gallery_assets/gallery_manifest.json`
 
-当前 fresh audit 口径：
+Fresh readback 口径：
 
-- Gallery status: `rendered`
-- visual gallery templates: `37`
-- evidence gallery templates: `34`
-- composition storyboard pages: `6`
-- default data-evidence renderer: `r_ggplot2`
-- current Python evidence templates: `0`
-- style profile: `student_curated_clinical_publication_v1`
-- journal palette ref: `lidocaineq_figure_template_palette_20260621`
-- publication-ready claim authorized: `false`
+- Gallery status、template count、renderer policy、style profile、palette ref 和 audit finding 都从 MAS-owned gallery status / manifest / quality audit 读取。
+- OPL active doc 只冻结 ref 位置、owner boundary 和维护命令，不冻结高漂移 audit 数字。
+- Publication-ready / figure-ready / current-package-ready claim 必须由 MAS owner gate 或 typed blocker 关闭；gallery rendered、manifest present、audit clean 或 OPL ScholarSkills ref observed 都不能授权这些 claim。
 
 ## Scholar Display 调用边界
 

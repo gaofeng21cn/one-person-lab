@@ -42,7 +42,7 @@ OPL 品牌模块的 L4 rollout 计划已退出 active path：当前十模块 `L4
 | --- | --- | --- | --- |
 | `current-state-vs-ideal-gap.md` | 唯一 active owner / gap register | 是，但只维护当前 live gap，不维护 dated closeout。 | 本文的 `Active Planning Gap Register`、`测试 / 证据差距`、`Active-Goal Agent Prompt`。 |
 | `ordinary-progress-spine-and-audit-sidecar-plan.md` | ordinary/audit 分层目标规划支撑 | 不作为独立 backlog。P0-P5 只作设计标准和验收词表。 | 已落地与未落地状态折回 `current-state-vs-ideal-gap.md` 的 operating-model / owner-evidence / production-tail gap。 |
-| `foundry-agent-os-family-target-implementation-plan.md` | Foundry Agent OS family target 支撑 | 不作为独立 backlog。W0-W6 structural landing 已折回；W7 只剩 live owner evidence / production evidence。 | `current-state-vs-ideal-gap.md#active-planning-gap-register`。 |
+| `foundry-agent-os-family-target-implementation-plan.md` | Foundry Agent OS family target 支撑 | 不作为独立 backlog。W0-W6 structural landing 已折回；MAS/MAG/RCA/OMA/BookForge 的 W7 只剩 live owner evidence / production evidence。 | `current-state-vs-ideal-gap.md#active-planning-gap-register`。 |
 | `opl-family-ideal-operating-model-redesign.md` | north-star / audit standard | 不作为 active backlog。 | 用 `meets_target` / `needs_demotion` / `needs_retirement` 审计；当前缺口只由唯一 active owner 维护。 |
 | `opl-foundry-agent-target-operating-architecture.md` | 目标架构支撑 | 不作为执行队列。 | 机器落地状态回 `current-state-vs-ideal-gap.md`，长期架构边界仍可作为 review 标准。 |
 | `opl-stage-native-kernel-rollout-plan.md` | Stage Native Kernel 设计支撑 | 不作为独立 rollout。 | StageRun / controlled canary / closeout-binding 状态回唯一 active owner；live domain progression 仍归 domain owner evidence。 |
@@ -51,6 +51,9 @@ OPL 品牌模块的 L4 rollout 计划已退出 active path：当前十模块 `L4
 | `opl-family-purpose-first-current-design-audit.md` | purpose-first audit 来源 | 不维护新计划。 | 审计分类折回 active gap register 或 history/provenance。 |
 | `standard-agent-private-platform-inventory.md` | private-platform 分类台账 | 不维护拆文件流水。 | cleanup / physical delete 只作为 refs-only owner decision lane 回 active gap register。 |
 | `opl-family-development-reference.md` | 系列开发参考 | 不维护 backlog。 | 新增/迁移按 owner 分层执行；当前 open gap 不在本文冻结。 |
+| `opl-scholar-skills-capability-modules.md` | ScholarSkills capability package 支撑 | 不作为 standard domain agent、品牌模块或 MAS truth backlog。 | 能力模块、package channel、Connect sync 和 no-authority guard 回 OPL Pack / Connect / Atlas；真实论文证据回 MAS/domain owner。 |
+| `opl-scholar-skills-artifact-engines.md` | ScholarSkills candidate engine 支撑 | 不维护 domain artifact authority。 | OPL-generated candidate bodies 只作为 owner-gate 输入；artifact truth、quality verdict 和 publication readiness 回 domain owner。 |
+| `opl-scholar-skills-display-gallery.md` | Scholar Display gallery 人审入口 | 不冻结 MAS Display Pack audit counters。 | OPL 只记录 MAS-owned gallery refs 和 fresh readback 命令；gallery truth、figure readiness 和 publication claim 回 MAS Display Pack / MAS owner。 |
 | `development-document-portfolio.md` | 文档组合治理支撑 | 不维护执行顺序。 | 只管文档归位、降级、归档规则；当前 active 缺口回唯一 active owner。 |
 
 因此，“active 规划未落地”只能按唯一 active owner 的 live gap 读取：domain owner answer / typed blocker、Brand L5 真实运营证据、provider long-soak、App release verdict、memory/artifact lifecycle receipt、private-platform physical-delete owner decision 等。support 文档里残留的 P0-P5、W0-W7、audit lanes、rollout phases、matrix rows 或 external-practice checklist 都不是第二 backlog。
@@ -80,6 +83,9 @@ OPL 品牌模块的 L4 rollout 计划已退出 active path：当前十模块 `L4
 - `opl-family-purpose-first-current-design-audit.md`：active_support 审计来源；保留目的优先审计结论，不替代 active gap owner、domain active plan 或 live machine truth。
 - `opl-family-development-reference.md`：OPL 系列项目开发主参考；固定全局计划放 OPL、单仓计划回各 repo、通用能力上收 OPL、过时兼容面直接退役、docs 目录按同名 canonical taxonomy 对齐。
 - `standard-agent-private-platform-inventory.md`：private-platform inventory；按 owner subdomain、agent、surface group 和 migration gate 分类，不记录逐日拆文件流水或 line-count ledger。
+- `opl-scholar-skills-capability-modules.md`：ScholarSkills capability package 支撑；说明 ScholarSkills 是 OPL Pack / Connect / Atlas 管理的 capability library，不是 standard domain agent、品牌模块或 MAS truth owner。
+- `opl-scholar-skills-artifact-engines.md`：ScholarSkills candidate artifact engine 支撑；说明十模块 OPL-generated candidate body 的 CLI、package shape 和 no-authority guard。
+- `opl-scholar-skills-display-gallery.md`：Scholar Display gallery 人审入口；只引用 MAS-owned Display Pack gallery refs 和 fresh readback 入口，不在 OPL active doc 冻结高漂移 gallery counters。
 - `development-document-portfolio.md`：开发文档组合整理入口；按内容判断旧文档应吸收、保留、降级、退役还是归档。
 
 当前 runtime 命名与边界说明在 [runtime/](../runtime/README.md)。
