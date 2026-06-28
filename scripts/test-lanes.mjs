@@ -405,6 +405,7 @@ const lanes = {
       'tests/src/cli/cases/package-channel-daily-check.test.ts',
       'tests/src/cli/cases/runtime-tray-mas-portal.test.ts',
       'tests/src/cli-codex-default-shell.test.ts',
+      'tests/src/cli-codex-default-shell-sync-skills.test.ts',
       'tests/src/cli-codex-default-shell-passthrough.test.ts',
       'tests/src/runtime-state-paths.test.ts',
       'tests/src/family-domain-catalog.test.ts',
