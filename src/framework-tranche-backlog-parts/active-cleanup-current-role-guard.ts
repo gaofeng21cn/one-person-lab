@@ -22,11 +22,11 @@ const REGRESSION_GUARD_REFS = [
   'tests/src/cli/cases/framework-readiness-cli-surface.test.ts',
 ] as const;
 
-export function buildActiveCleanupNoResurrectionGuardReadback() {
+export function buildActiveCleanupCurrentRoleGuardReadback() {
   return {
-    surface_kind: 'opl_active_cleanup_no_resurrection_guard_readback',
+    surface_kind: 'opl_active_cleanup_current_role_guard_readback',
     readback_role:
-      'active_cleanup_no_resurrection_policy_aggregate_not_completion_audit_not_delete_authority',
+      'active_cleanup_current_role_policy_aggregate_not_completion_audit_not_delete_authority',
     owner: 'one-person-lab',
     status: 'closed_structure_gate_not_live_evidence',
     milestone_ids: [
@@ -47,18 +47,18 @@ export function buildActiveCleanupNoResurrectionGuardReadback() {
     regression_guard_refs: [...REGRESSION_GUARD_REFS],
     source_api_readback_refs: [
       'buildFrameworkTrancheBacklogReadback',
-      'buildActiveCleanupNoResurrectionGuardReadback',
+      'buildActiveCleanupCurrentRoleGuardReadback',
       'buildGeneratedHostedBoundaryReadback',
       'buildStandardAgentLandingAcceptanceGuardReadback',
       'buildDomainSourceRefIntegrityGuard',
     ],
     source_cli_readback_refs: [
-      'opl framework tranche-backlog --family-defaults --json .framework_tranche_backlog.active_cleanup_no_resurrection_guard',
+      'opl framework tranche-backlog --family-defaults --json .framework_tranche_backlog.active_cleanup_current_role_guard',
       'opl agents conformance --family-defaults --json',
       'opl agents residue-decisions --family-defaults --json .private_platform_residue_owner_decisions',
       'opl agents default-callers --family-defaults --json',
     ],
-    blocked_resurrection_surface_classes: [
+    forbidden_surface_roles: [
       'legacy_operator_default_path',
       'compatibility_alias_default_path',
       'gateway_frontdoor_federation_active_route',
@@ -71,6 +71,14 @@ export function buildActiveCleanupNoResurrectionGuardReadback() {
       'stale_cross_repo_contract_alias',
       'private_residue_inventory_as_ordinary_owner_delta',
       'docs_readmodel_refs_only_ready_claim',
+    ],
+    allowed_current_surface_roles: [
+      'opl_generated_hosted_surface',
+      'domain_handler_target',
+      'refs_only_adapter',
+      'minimal_authority_function',
+      'repo_native_verification_wrapper',
+      'history_or_tombstone_reference',
     ],
     active_guard_coverage: {
       docs_and_help_default_path_guard:
@@ -91,7 +99,7 @@ export function buildActiveCleanupNoResurrectionGuardReadback() {
     structural_closeout_guard: {
       can_close_non_live_structure_gate: true,
       required_current_truth_surfaces: [
-        'generated_default_entry_no_resurrection_gate',
+        'generated_default_entry_current_role_guard',
         'active_path_residue_scan',
         'stale_compat_retirement_guard',
         'private_platform_residue_owner_decisions_contract',

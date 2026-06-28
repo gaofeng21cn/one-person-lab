@@ -249,8 +249,8 @@ test('framework tranche backlog exposes generated surface and domain source guar
     sourceRefGuardsByRepo['med-autogrant'].compact_cleanup_readiness_summary_ref,
     'med-autogrant:contracts/private_functional_surface_policy.json#/physical_source_morphology_policy/retirement_readback_cleanup_guard/compact_cleanup_readiness_summary',
   );
-  assert.equal(sourceRefGuardsByRepo['med-autogrant'].compact_cleanup_candidate_count, 7);
-  assert.equal(sourceRefGuardsByRepo['med-autogrant'].compact_cleanup_owner_delta_required, true);
+  assert.equal(sourceRefGuardsByRepo['med-autogrant'].compact_cleanup_candidate_count, 0);
+  assert.equal(sourceRefGuardsByRepo['med-autogrant'].compact_cleanup_owner_delta_required, false);
   assert.equal(sourceRefGuardsByRepo['med-autogrant'].compact_cleanup_can_apply_cleanup, false);
   assert.equal(sourceRefGuardsByRepo['med-autogrant'].compact_cleanup_can_authorize_physical_delete, false);
   assert.equal(sourceRefGuardsByRepo['med-autogrant'].compact_cleanup_can_claim_domain_ready, false);

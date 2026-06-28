@@ -279,9 +279,9 @@ export function buildFoundryAgentCliSpine(operation: FoundryAgentCliOperation, a
   const contract = readFoundryAgentSeriesContract();
   const commandSurfacePolicy = readRecord(contract.agent_cli_command_surface_policy, 'agent_cli_command_surface_policy');
   const skillMcpPolicy = readRecord(contract.skill_mcp_surface_policy, 'skill_mcp_surface_policy');
-  const retirementPolicy = readRecord(
-    contract.legacy_implementation_bucket_retirement_policy,
-    'legacy_implementation_bucket_retirement_policy',
+  const nonStandardImplementationPolicy = readRecord(
+    contract.non_standard_implementation_bucket_policy,
+    'non_standard_implementation_bucket_policy',
   );
   const ordinarySpine = readStringList(
     commandSurfacePolicy.ordinary_public_command_surface_spine,
@@ -335,8 +335,11 @@ export function buildFoundryAgentCliSpine(operation: FoundryAgentCliOperation, a
           commandSurfacePolicy.agent_cli_must_not_replicate_top_level_modules,
           'agent_cli_command_surface_policy.agent_cli_must_not_replicate_top_level_modules',
         ),
-        old_implementation_buckets_are_not_ordinary_command_surfaces:
-          readBoolean(retirementPolicy.ordinary_public_command_surface_allowed, 'legacy_implementation_bucket_retirement_policy.ordinary_public_command_surface_allowed') === false,
+        non_standard_implementation_buckets_are_not_ordinary_command_surfaces:
+          readBoolean(
+            nonStandardImplementationPolicy.ordinary_public_command_surface_allowed,
+            'non_standard_implementation_bucket_policy.ordinary_public_command_surface_allowed',
+          ) === false,
       },
       mcp_and_skill_policy: {
         skill_pack_must_delegate_to_series_spine: readBoolean(

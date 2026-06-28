@@ -111,11 +111,11 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       'app_action',
     ]);
     assert.equal(
-      foundryAgentSeries.legacy_implementation_bucket_retirement_policy.ordinary_public_command_surface_allowed,
+      foundryAgentSeries.non_standard_implementation_bucket_policy.ordinary_public_command_surface_allowed,
       false,
     );
     assert.ok(
-      foundryAgentSeries.legacy_implementation_bucket_retirement_policy.retired_bucket_prefixes.includes('skill'),
+      foundryAgentSeries.non_standard_implementation_bucket_policy.non_standard_bucket_prefixes.includes('skill'),
     );
     assert.equal(
       foundryAgentSeries.skill_mcp_surface_policy.skill_pack_must_delegate_to_series_spine,

@@ -154,7 +154,7 @@ test('agents scaffold emits pure OPL-hosted public Foundry surface policy', () =
     ]);
     assert.equal(publicSurfacePolicy.active_public_projection_allows_non_opl_foundry_cli, false);
     assert.equal(publicSurfacePolicy.active_public_projection_allows_domain_owned_cli_as_standard_surface, false);
-    assert.equal(publicSurfacePolicy.active_public_projection_allows_retired_surface_aliases, false);
+    assert.equal(publicSurfacePolicy.active_public_projection_allows_forbidden_surface_roles, false);
     assert.equal(publicSurfacePolicy.active_public_projection_allows_compatibility_aliases, false);
     assert.equal(publicSurfacePolicy.active_public_projection_allows_legacy_json_aliases, false);
     assert.equal(publicSurfacePolicy.minimal_authority_functions_are_membership_axis, false);
@@ -169,7 +169,7 @@ test('agents scaffold emits pure OPL-hosted public Foundry surface policy', () =
   }
 });
 
-test('agents scaffold validation blocks active public legacy Foundry command fields', () => {
+test('agents scaffold validation blocks active public forbidden Foundry role fields', () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-legacy-public-fields-'));
 
   try {
@@ -183,12 +183,13 @@ test('agents scaffold validation blocks active public legacy Foundry command fie
     ]);
     const foundryContractPath = path.join(targetDir, 'contracts/foundry_agent_series.json');
     const foundryContract = JSON.parse(fs.readFileSync(foundryContractPath, 'utf8'));
-    foundryContract.domain_native_foundry_command_surface = 'medautosci foundry';
-    foundryContract.domain_native_foundry_cli = 'medautosci foundry';
-    foundryContract.compatibility_foundry_command_surface = 'medautosci foundry';
-    foundryContract.compatibility_command_surface = 'medautosci foundry';
-    foundryContract.legacy_format_json_command = 'medautosci foundry status --format json';
-    foundryContract.app_projection_policy.compatibility_foundry_command_surface = 'medautosci foundry';
+    foundryContract.public_surface_role = 'compatibility_alias';
+    foundryContract.foundry_public_surface_role = 'domain_owned_cli_as_standard_surface';
+    foundryContract.forbidden_public_surface_roles = [
+      'compatibility_alias',
+      'legacy_json_alias',
+    ];
+    foundryContract.app_projection_policy.public_surface_role = 'compatibility_alias';
     fs.writeFileSync(foundryContractPath, `${JSON.stringify(foundryContract, null, 2)}\n`);
 
     const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
@@ -198,31 +199,19 @@ test('agents scaffold validation blocks active public legacy Foundry command fie
     assert.equal(validated.validation.foundry_agent_series_validation.status, 'blocked');
     assert.equal(
       validated.validation.blockers.includes(
-        'foundry_agent_public_projection_forbidden_field:domain_native_foundry_command_surface',
+        'foundry_agent_public_projection_forbidden_role_field:public_surface_role',
       ),
       true,
     );
     assert.equal(
       validated.validation.blockers.includes(
-        'foundry_agent_public_projection_forbidden_field:domain_native_foundry_cli',
+        'foundry_agent_public_projection_forbidden_role_field:foundry_public_surface_role',
       ),
       true,
     );
     assert.equal(
       validated.validation.blockers.includes(
-        'foundry_agent_public_projection_forbidden_field:compatibility_foundry_command_surface',
-      ),
-      true,
-    );
-    assert.equal(
-      validated.validation.blockers.includes(
-        'foundry_agent_public_projection_forbidden_field:compatibility_command_surface',
-      ),
-      true,
-    );
-    assert.equal(
-      validated.validation.blockers.includes(
-        'foundry_agent_public_projection_forbidden_field:legacy_format_json_command',
+        'foundry_agent_public_projection_forbidden_role_field:forbidden_public_surface_roles',
       ),
       true,
     );

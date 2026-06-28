@@ -39,7 +39,7 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
     ],
     active_public_projection_allows_non_opl_foundry_cli: false,
     active_public_projection_allows_domain_owned_cli_as_standard_surface: false,
-    active_public_projection_allows_retired_surface_aliases: false,
+    active_public_projection_allows_forbidden_surface_roles: false,
     active_public_projection_allows_compatibility_aliases: false,
     active_public_projection_allows_legacy_json_aliases: false,
     minimal_authority_functions_are_membership_axis: false,
@@ -257,12 +257,12 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
     agent_cli_must_use_series_spine: true,
     agent_cli_must_not_replicate_top_level_modules: true,
   },
-  legacy_implementation_bucket_retirement_policy: {
-    surface_kind: 'opl_foundry_agent_legacy_implementation_bucket_retirement_policy',
+  non_standard_implementation_bucket_policy: {
+    surface_kind: 'opl_foundry_agent_non_standard_implementation_bucket_policy',
     version: 'foundry-agent-legacy-bucket-retirement.v1',
     ordinary_public_command_surface_allowed: false,
     replacement_command_surface: 'opl agents foundry',
-    retired_bucket_prefixes: [
+    non_standard_bucket_prefixes: [
       'runtime',
       'family-runtime',
       'index',
@@ -280,8 +280,8 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
       'scoped_help_for_replacement',
       'internal_contract_validation',
     ],
-    retired_buckets_cannot_claim_series_identity: true,
-    retired_buckets_cannot_replace_connect_skill_mcp_command_surface: true,
+    non_standard_buckets_cannot_claim_series_identity: true,
+    non_standard_buckets_cannot_replace_connect_skill_mcp_command_surface: true,
   },
   skill_mcp_surface_policy: {
     surface_kind: 'opl_foundry_agent_skill_mcp_surface_policy',

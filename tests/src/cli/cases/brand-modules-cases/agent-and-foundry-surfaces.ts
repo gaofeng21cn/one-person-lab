@@ -2,23 +2,44 @@ import { assert, runCli, test } from '../../helpers.ts';
 
 import { expectedModuleIds } from './shared.ts';
 
-const retiredFoundryProjectionFields = [
-  'domain_native_foundry_command_surface',
-  'compatibility_command_surface',
-  'compatibility_operations',
-  'executable_direct_cli_command_surface',
-  'direct_domain_cli',
-  'direct_cli_foundry_command_surface',
-  'direct_cli_command_surface_policy',
+const allowedFoundryAgentListFields = [
+  'agent_id',
+  'brand_cli',
+  'brand_cli_path_safe_executable',
+  'canonical_series_command_surface',
+  'cli_smoke',
+  'connect_command_surfaces',
+  'default_foundry_command_surface',
+  'domain_alias',
+  'domain_id',
+  'foundry_command_surface',
+  'foundry_operations',
+  'label',
+  'mcp_projection',
+  'ordinary_golden_path',
+  'ordinary_spine',
+  'series',
+  'series_id',
+  'series_membership',
+  'work_alias',
+  'work_object',
 ] as const;
 
-const retiredFoundrySmokeFields = [
-  'executable_direct_cli_command_surface',
-  'executable_compatibility_command_surface',
-  'executable_direct_status_json_command',
-  'compatibility_status_json_command',
-  'legacy_format_json_command',
-  'compatibility_json_flag_aliases',
+const allowedFoundryAgentInspectFields = [
+  ...allowedFoundryAgentListFields,
+  'authority_boundary',
+  'command_surface_policy',
+  'series_contract_ref',
+  'standard_agent_registry_ref',
+  'status',
+  'surface_kind',
+] as const;
+
+const allowedFoundryCliSmokeFields = [
+  'executable_brand_cli_command_surface',
+  'help_smoke_commands',
+  'json_flag_aliases',
+  'status_json_command',
 ] as const;
 
 const forbiddenRuntimeMcpReadinessFields = [
@@ -30,14 +51,13 @@ const forbiddenRuntimeMcpReadinessFields = [
   'runtime_server_command',
 ] as const;
 
-function assertNoRetiredFoundryProjectionFields(agent: Record<string, unknown>) {
-  for (const field of retiredFoundryProjectionFields) {
-    assert.equal(field in agent, false);
-  }
+function assertOnlyAllowedFoundryProjectionFields(
+  agent: Record<string, unknown>,
+  allowedFields: readonly string[],
+) {
+  assert.deepEqual(Object.keys(agent).sort(), [...allowedFields].sort());
   const cliSmoke = agent.cli_smoke as Record<string, unknown>;
-  for (const field of retiredFoundrySmokeFields) {
-    assert.equal(field in cliSmoke, false);
-  }
+  assert.deepEqual(Object.keys(cliSmoke).sort(), [...allowedFoundryCliSmokeFields].sort());
 }
 
 function assertNoRuntimeMcpReadinessClaim(surface: Record<string, unknown>) {
@@ -108,7 +128,10 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying OPL bra
     assert.equal(output.status, operation === 'doctor' ? 'pass' : 'valid');
     assert.equal(output.command_surface_policy.agent_cli_uses_foundry_series_spine, true);
     assert.equal(output.command_surface_policy.agent_cli_does_not_replicate_opl_nine_brand_modules, true);
-    assert.equal(output.command_surface_policy.old_implementation_buckets_are_not_ordinary_command_surfaces, true);
+    assert.equal(
+      output.command_surface_policy.non_standard_implementation_buckets_are_not_ordinary_command_surfaces,
+      true,
+    );
     assert.equal('canonical_frontdoor' in output, false);
     assert.equal('frontdoor_policy' in output, false);
     assert.equal('ordinary_frontdoor' in output, false);
@@ -130,8 +153,18 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying OPL bra
         'standard_domain_agent',
       ],
     );
-    assert.equal(output.peers.some((entry: { surface_mode?: string }) => 'surface_mode' in entry), false);
-    assert.equal(output.peers.some((entry: { generated_surface_only?: boolean }) => 'generated_surface_only' in entry), false);
+    for (const peer of output.peers) {
+      assert.deepEqual(Object.keys(peer).sort(), [
+        'agent_id',
+        'brand_cli',
+        'domain_alias',
+        'domain_id',
+        'label',
+        'ordinary_golden_path',
+        'series_membership',
+        'work_alias',
+      ]);
+    }
     assert.equal(output.authority_boundary.generated_surface_can_write_domain_truth, false);
     assert.equal(output.authority_boundary.generated_surface_can_create_owner_receipt, false);
     assert.equal(output.mcp_and_skill_policy.skill_pack_must_delegate_to_series_spine, true);
@@ -145,7 +178,7 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying OPL bra
     assert.equal(output.mcp_and_skill_policy.toolset_filtering_required_for_broad_surfaces, true);
     assert.equal('expose_legacy_buckets_as_diagnostic_or_migration_only' in output.mcp_and_skill_policy, false);
     assertNoRuntimeMcpReadinessClaim(output.mcp_and_skill_policy);
-    assert.equal('retired_implementation_buckets' in output, false);
+    assert.equal('non_standard_implementation_buckets' in output, false);
   }
 });
 
@@ -197,32 +230,19 @@ test('OPL Foundry Agent index exposes MAS MAG RCA OMA Book Forge as one standard
       ['--json'],
     ],
   );
-  assert.equal(list.agents.some((entry: { surface_mode?: string }) => 'surface_mode' in entry), false);
-  assert.equal(list.agents.some((entry: { generated_surface_only?: boolean }) => 'generated_surface_only' in entry), false);
-  assert.equal(
-    list.agents.some((entry: Record<string, unknown>) =>
-      retiredFoundryProjectionFields.some((field) => field in entry)
-    ),
-    false,
-  );
-  assert.equal(
-    list.agents.some((entry: { cli_smoke: Record<string, unknown> }) =>
-      retiredFoundrySmokeFields.some((field) => field in entry.cli_smoke)
-    ),
-    false,
-  );
+  for (const agent of list.agents) {
+    assertOnlyAllowedFoundryProjectionFields(agent, allowedFoundryAgentListFields);
+  }
 
   const mas = runCli(['foundry', 'agents', 'inspect', 'mas']).foundry_agent;
   assert.equal(mas.status, 'standard_domain_agent');
   assert.equal(mas.standard_agent_registry_ref, 'src/standard-agent-registry.ts');
-  assert.equal('surface_mode' in mas, false);
-  assert.equal('generated_surface_only' in mas, false);
   assert.equal(mas.series_membership, 'standard_domain_agent');
   assert.equal(mas.work_object.natural_alias, 'study');
   assert.equal(mas.brand_cli, 'mas');
   assert.equal(mas.cli_smoke.executable_brand_cli_command_surface, null);
   assert.equal(mas.foundry_command_surface, 'opl foundry agents inspect mas');
-  assertNoRetiredFoundryProjectionFields(mas);
+  assertOnlyAllowedFoundryProjectionFields(mas, allowedFoundryAgentInspectFields);
   assert.equal('foundry_frontdoor' in mas, false);
   assert.equal('compatibility_frontdoor' in mas, false);
   assert.equal('executable_brand_cli_frontdoor' in mas.cli_smoke, false);
@@ -237,12 +257,10 @@ test('OPL Foundry Agent index exposes MAS MAG RCA OMA Book Forge as one standard
 
   const mag = runCli(['foundry', 'agents', 'inspect', 'mag']).foundry_agent;
   assert.equal(mag.status, 'standard_domain_agent');
-  assert.equal('surface_mode' in mag, false);
-  assert.equal('generated_surface_only' in mag, false);
   assert.equal(mag.series_membership, 'standard_domain_agent');
   assert.equal(mag.brand_cli, 'mag');
   assert.equal(mag.foundry_command_surface, 'opl foundry agents inspect mag');
-  assertNoRetiredFoundryProjectionFields(mag);
+  assertOnlyAllowedFoundryProjectionFields(mag, allowedFoundryAgentInspectFields);
   assert.equal(mag.cli_smoke.executable_brand_cli_command_surface, null);
   assert.equal(
     mag.cli_smoke.status_json_command,
@@ -251,12 +269,10 @@ test('OPL Foundry Agent index exposes MAS MAG RCA OMA Book Forge as one standard
 
   const rca = runCli(['foundry', 'agents', 'inspect', 'rca']).foundry_agent;
   assert.equal(rca.status, 'standard_domain_agent');
-  assert.equal('surface_mode' in rca, false);
-  assert.equal('generated_surface_only' in rca, false);
   assert.equal(rca.series_membership, 'standard_domain_agent');
   assert.equal(rca.brand_cli, 'rca');
   assert.equal(rca.foundry_command_surface, 'opl foundry agents inspect rca');
-  assertNoRetiredFoundryProjectionFields(rca);
+  assertOnlyAllowedFoundryProjectionFields(rca, allowedFoundryAgentInspectFields);
   assert.equal(rca.cli_smoke.executable_brand_cli_command_surface, null);
   assert.equal(
     rca.cli_smoke.status_json_command,
@@ -265,24 +281,20 @@ test('OPL Foundry Agent index exposes MAS MAG RCA OMA Book Forge as one standard
 
   const oma = runCli(['foundry', 'agents', 'inspect', 'oma']).foundry_agent;
   assert.equal(oma.status, 'standard_domain_agent');
-  assert.equal('surface_mode' in oma, false);
-  assert.equal('generated_surface_only' in oma, false);
   assert.equal(oma.series_membership, 'standard_domain_agent');
   assert.equal(oma.foundry_command_surface, 'opl foundry agents inspect oma');
-  assertNoRetiredFoundryProjectionFields(oma);
+  assertOnlyAllowedFoundryProjectionFields(oma, allowedFoundryAgentInspectFields);
   assert.equal(oma.cli_smoke.executable_brand_cli_command_surface, null);
   assert.equal(oma.command_surface_policy.first_screen_must_identify_series, true);
 
   const bookforge = runCli(['foundry', 'agents', 'inspect', 'opl-bookforge']).foundry_agent;
   assert.equal(bookforge.status, 'standard_domain_agent');
   assert.equal(bookforge.standard_agent_registry_ref, 'src/standard-agent-registry.ts');
-  assert.equal('surface_mode' in bookforge, false);
-  assert.equal('generated_surface_only' in bookforge, false);
   assert.equal(bookforge.series_membership, 'standard_domain_agent');
   assert.equal(bookforge.work_object.natural_alias, 'book');
   assert.equal(bookforge.brand_cli, 'opl-bookforge');
   assert.equal(bookforge.foundry_command_surface, 'opl foundry agents inspect opl-bookforge');
-  assertNoRetiredFoundryProjectionFields(bookforge);
+  assertOnlyAllowedFoundryProjectionFields(bookforge, allowedFoundryAgentInspectFields);
   assert.equal(bookforge.cli_smoke.status_json_command, 'opl foundry agents inspect opl-bookforge --json');
   assert.equal(bookforge.cli_smoke.executable_brand_cli_command_surface, null);
   assert.equal(bookforge.command_surface_policy.first_screen_must_identify_series, true);

@@ -45,8 +45,8 @@ export function buildDomainSourceRefIntegrityGuard(noSecondTruthAuthorityBoundar
           'med-autogrant:contracts/private_functional_surface_policy.json#/physical_source_morphology_policy/retirement_readback_cleanup_guard/compact_cleanup_readiness_summary',
         compact_cleanup_readiness_readback_ref:
           'med-autogrant:authority source-purity --format json#compact_cleanup_readiness_summary',
-        compact_cleanup_candidate_count: 7,
-        compact_cleanup_owner_delta_required: true,
+        compact_cleanup_candidate_count: 0,
+        compact_cleanup_owner_delta_required: false,
         compact_cleanup_can_apply_cleanup: false,
         compact_cleanup_can_authorize_physical_delete: false,
         compact_cleanup_can_claim_domain_ready: false,

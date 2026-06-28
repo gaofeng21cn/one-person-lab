@@ -1,7 +1,7 @@
 import { assert, fs, path, repoRoot, runCli, test } from '../helpers.ts';
 
 const guardParts = [
-  ['active-cleanup-no-resurrection-guard.ts', 'buildActiveCleanupNoResurrectionGuardReadback'],
+  ['active-cleanup-current-role-guard.ts', 'buildActiveCleanupCurrentRoleGuardReadback'],
   ['domain-progress-runtime-guard.ts', 'buildDomainProgressTransitionRuntimeGuardReadback'],
   ['runtime-environment-guard.ts', 'buildRuntimeEnvironmentSubstrateGuardReadback'],
   ['ordinary-progress-guard.ts', 'buildOrdinaryProgressGuardReadback'],
@@ -11,15 +11,15 @@ const guardParts = [
   ['standard-agent-landing-guard.ts', 'buildStandardAgentLandingAcceptanceGuardReadback'],
 ] as const;
 
-test('framework tranche backlog exposes active cleanup no-resurrection guard without authority claims', () => {
+test('framework tranche backlog exposes active cleanup current-role guard without authority claims', () => {
   const readback = runCli([
     'framework',
     'tranche-backlog',
     '--family-defaults',
   ]).framework_tranche_backlog;
-  const guard = readback.active_cleanup_no_resurrection_guard;
+  const guard = readback.active_cleanup_current_role_guard;
 
-  assert.equal(guard.surface_kind, 'opl_active_cleanup_no_resurrection_guard_readback');
+  assert.equal(guard.surface_kind, 'opl_active_cleanup_current_role_guard_readback');
   assert.equal(guard.status, 'closed_structure_gate_not_live_evidence');
   assert.deepEqual(guard.milestone_ids, [
     'strict_source_purity_private_wrapper_retirement',
@@ -29,15 +29,17 @@ test('framework tranche backlog exposes active cleanup no-resurrection guard wit
     'support_repo_profile_no_resurrection',
   ]);
   assert.ok(
-    guard.blocked_resurrection_surface_classes.includes(
+    guard.forbidden_surface_roles.includes(
       'AGUI_foreground_or_default_GUI_route',
     ),
   );
   assert.ok(
-    guard.blocked_resurrection_surface_classes.includes(
+    guard.forbidden_surface_roles.includes(
       'private_residue_inventory_as_ordinary_owner_delta',
     ),
   );
+  assert.ok(guard.allowed_current_surface_roles.includes('domain_handler_target'));
+  assert.ok(guard.allowed_current_surface_roles.includes('refs_only_adapter'));
   assert.ok(
     guard.regression_guard_refs.includes('tests/src/active-path-residue-scan.test.ts'),
   );

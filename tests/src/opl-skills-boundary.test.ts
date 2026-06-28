@@ -10,19 +10,52 @@ import { resolveStandardAgent } from '../../src/standard-agent-registry.ts';
 import { registerOplFamilyCodexPlugins } from '../../src/system-installation/codex-plugin-registry.ts';
 import type { OplModuleId } from '../../src/system-installation/shared.ts';
 
-const retiredFoundrySeriesFields = [
-  'domain_native_foundry_command_surface',
-  'codex_executable_foundry_command_surface',
-  'compatibility_foundry_command_surface',
-  'direct_domain_cli',
+const allowedFoundrySeriesFields = [
+  'brand_cli',
+  'canonical_command_surface',
+  'default_foundry_command_surface',
+  'domain_contract_ref',
+  'domain_id',
+  'foundry_agent_id',
+  'ordinary_golden_path',
+  'policy_release_ref',
+  'product_model',
+  'series_contract_ref',
+  'series_id',
+  'series_label',
+  'series_membership',
+  'standard_agent_registry_ref',
 ] as const;
 
-const retiredCommandSpineFields = [
-  'compatibility_foundry_operations',
+const allowedCommandSpineFields = [
+  'agent_cli_must_not_replicate_top_level_modules',
+  'agent_cli_must_use_series_spine',
+  'default_foundry_operations',
+  'foundry_agent_inspect_command_surface',
+  'ordinary_operations',
+  'ordinary_public_command_surface_spine',
+  'required_public_surface_derivatives',
+  'skill_inspect_command_surface',
+  'skill_sync_command_surface',
+  'surface_kind',
+  'work_alias',
+  'work_alias_command_pattern',
 ] as const;
 
-const retiredMcpProjectionFields = [
-  'compatibility_delegate_tool_refs',
+const allowedMcpProjectionFields = [
+  'cli_mcp_relationship_policy',
+  'descriptor_ref',
+  'domain_repo_mcp_server_role',
+  'future_unified_mcp_server_strategy',
+  'legacy_standalone_mcp_servers_retired',
+  'mcp_context_budget_policy',
+  'mcp_descriptor_must_delegate_to_series_spine',
+  'plugin_registry_is_canonical_transport',
+  'series_delegate_tool_refs',
+  'standard_agent_plugin_manifest_must_not_expose_mcp_servers',
+  'standard_agent_standalone_mcp_default_enabled',
+  'surface_kind',
+  'unified_mcp_projection_owner',
 ] as const;
 
 const forbiddenRuntimeMcpReadinessFields = [
@@ -40,16 +73,10 @@ type FoundryProjectionPack = {
   mcp_projection: Record<string, unknown>;
 };
 
-function assertNoRetiredFoundrySeriesFields(pack: FoundryProjectionPack) {
-  for (const field of retiredFoundrySeriesFields) {
-    assert.equal(field in pack.foundry_agent_series, false);
-  }
-  for (const field of retiredCommandSpineFields) {
-    assert.equal(field in pack.command_surface_spine, false);
-  }
-  for (const field of retiredMcpProjectionFields) {
-    assert.equal(field in pack.mcp_projection, false);
-  }
+function assertOnlyAllowedFoundrySeriesFields(pack: FoundryProjectionPack) {
+  assert.deepEqual(Object.keys(pack.foundry_agent_series).sort(), [...allowedFoundrySeriesFields].sort());
+  assert.deepEqual(Object.keys(pack.command_surface_spine).sort(), [...allowedCommandSpineFields].sort());
+  assert.deepEqual(Object.keys(pack.mcp_projection).sort(), [...allowedMcpProjectionFields].sort());
   for (const field of forbiddenRuntimeMcpReadinessFields) {
     assert.equal(field in pack.mcp_projection, false);
   }
@@ -134,13 +161,11 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     assert.equal(pack.foundry_agent_series.canonical_command_surface, 'opl agents foundry');
     assert.equal(pack.foundry_agent_series.series_membership, 'standard_domain_agent');
     assert.equal(pack.foundry_agent_series.standard_agent_registry_ref, 'src/standard-agent-registry.ts');
-    assert.equal('surface_mode' in pack.foundry_agent_series, false);
-    assert.equal('generated_surface_only' in pack.foundry_agent_series, false);
     assert.equal(
       pack.foundry_agent_series.default_foundry_command_surface,
       `opl foundry agents inspect ${pack.foundry_agent_series.foundry_agent_id}`,
     );
-    assertNoRetiredFoundrySeriesFields(pack);
+    assertOnlyAllowedFoundrySeriesFields(pack);
     assert.equal(pack.plugin_transport.source_kind_role, 'transport_install_detail_not_agent_membership_or_status');
     assert.equal(pack.plugin_transport.public_agent_list_must_not_split_by_transport, true);
     if (pack.canonical_plugin_name === 'opl-meta-agent') {

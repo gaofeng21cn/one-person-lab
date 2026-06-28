@@ -210,8 +210,7 @@ export const FOUNDRY_STANDARD_AGENT_MEMBERSHIP_READBACK = {
     generated_surface_or_hosted_route_is_status_axis: false,
     plugin_transport_source_kind_is_membership_axis: false,
     plugin_transport_source_kind_is_status_axis: false,
-    list_and_inspect_must_not_emit_surface_mode: true,
-    list_and_inspect_must_not_emit_generated_surface_only: true,
+    list_and_inspect_must_match_current_public_field_allowlist: true,
     connect_skills_must_project_source_kind_as_transport_only: true,
   },
   readback_fields: [
@@ -225,7 +224,7 @@ export const FOUNDRY_STANDARD_AGENT_MEMBERSHIP_READBACK = {
   non_live_evidence: [
     'OPL_agents_conformance_classifies_BookForge_as_standard_domain_agent',
     'OPL_foundry_agent_os_observed_standard_agent_ids_include_five_standard_agents',
-    'OPL_foundry_agent_list_omits_surface_mode_and_generated_surface_only_classification_fields',
+    'OPL_foundry_agent_list_and_inspect_match_current_public_field_allowlist',
     'OPL_connect_skills_source_kind_is_transport_detail_not_agent_membership',
     'OPL_foundry_agent_os_unknown_non_standard_agent_still_blocks',
     'OPL_agents_conformance_family_defaults_foundry_os_unblocked_without_any_domain_ready_claim',

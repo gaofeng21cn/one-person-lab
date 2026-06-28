@@ -6,10 +6,9 @@ import {
 import { isPlainRecord, readOptionalString, readStringArray } from './shared.ts';
 
 function forbiddenActivePublicFoundryFieldName(key: string) {
-  return key.startsWith('domain_native_foundry')
-    || key === 'legacy_format_json_command'
-    || key === 'compatibility_command_surface'
-    || (key.startsWith('compatibility') && key.includes('foundry'));
+  return key === 'public_surface_role'
+    || key === 'foundry_public_surface_role'
+    || key === 'forbidden_public_surface_roles';
 }
 
 function activePublicFoundryFieldAllowedByPath(pathParts: string[]) {
@@ -31,7 +30,7 @@ function findForbiddenActivePublicFoundryFields(value: unknown, pathParts: strin
     const currentPath = [...pathParts, key];
     const selfFinding = forbiddenActivePublicFoundryFieldName(key)
       && !activePublicFoundryFieldAllowedByPath(currentPath)
-      ? [`foundry_agent_public_projection_forbidden_field:${key}`]
+      ? [`foundry_agent_public_projection_forbidden_role_field:${key}`]
       : [];
     return [
       ...selfFinding,
@@ -433,9 +432,9 @@ export function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, 
     standardPublicProjectionPolicy?.active_public_projection_allows_domain_owned_cli_as_standard_surface === false
       ? null
       : 'foundry_agent_domain_owned_cli_must_not_be_public_standard_surface',
-    standardPublicProjectionPolicy?.active_public_projection_allows_retired_surface_aliases === false
+    standardPublicProjectionPolicy?.active_public_projection_allows_forbidden_surface_roles === false
       ? null
-      : 'foundry_agent_retired_surface_aliases_must_not_be_public_standard_surface',
+      : 'foundry_agent_forbidden_surface_roles_must_not_be_public_standard_surface',
     standardPublicProjectionPolicy?.active_public_projection_allows_compatibility_aliases === false
       ? null
       : 'foundry_agent_compatibility_aliases_must_not_be_public_standard_surface',
