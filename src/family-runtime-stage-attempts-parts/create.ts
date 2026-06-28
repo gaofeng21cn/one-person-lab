@@ -42,6 +42,7 @@ export type StageAttemptCreateInput = {
   checkpointRefs?: string[];
   closeoutRefs?: string[];
   humanGateRefs?: string[];
+  routeImpact?: Record<string, unknown>;
   blockedReason?: string;
   launchAdmissionGate?: object;
   launchInvocation?: object;
@@ -231,7 +232,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     provider_receipt_json: JSON.stringify(providerReceipt),
     provider_run_json: JSON.stringify(providerRun),
     activity_events_json: JSON.stringify(initialActivityEvents),
-    route_impact_json: JSON.stringify({}),
+    route_impact_json: JSON.stringify(input.routeImpact ?? {}),
     closeout_receipt_status: null,
     created_at: createdAt,
     updated_at: createdAt,

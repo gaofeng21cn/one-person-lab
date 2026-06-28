@@ -409,10 +409,39 @@ test('family-runtime dispatch starts MAS PaperMission stage-route Temporal attem
   });
   try {
     const { db, paths } = openQueueDb();
+    const userStageLog = {
+      surface_kind: 'opl_user_stage_log',
+      semantic_status: 'provided_by_domain',
+      semantic_source: 'med_autoscience.paper_mission_stage_route',
+      stage_name: 'PaperMission stage route for DM002',
+      problem_summary: 'MAS routed a submission milestone candidate through OPL.',
+      stage_goal: 'Carry the route command without claiming MAS paper authority.',
+      progress_delta_classification: 'deliverable_progress',
+      deliverable_progress_delta: {
+        delta_count: 1,
+        delta_refs: ['ops/medautoscience/paper_mission_candidate_package/dm002/candidate.json'],
+      },
+      platform_repair_delta: {
+        delta_count: 0,
+        delta_refs: [],
+      },
+      next_forced_delta: 'domain_owner_answer_or_human_gate_or_non_synonymous_paper_delta',
+      stage_work_done: ['materialized start_next_stage request'],
+      changed_stage_surfaces: ['ops/medautoscience/paper_mission_candidate_package/dm002/candidate.json'],
+      outcome: 'domain_gate_pending',
+      remaining_blockers: ['paper_mission_stage_route_domain_gate_pending'],
+      evidence_refs: ['paper-mission-transaction:dm002:1'],
+    };
     const enqueued = enqueueTask(db, {
       domainId: 'medautoscience',
       taskKind: 'paper_mission/stage-route',
-      payload: paperMissionRoutePayloadWithWorkspace(),
+      payload: paperMissionRoutePayloadWithWorkspace({
+        route_impact: {
+          decision: 'start_next_stage',
+          domain_ready_verdict: 'domain_gate_pending',
+          user_stage_log: userStageLog,
+        },
+      }),
       dedupeKey: 'paper-mission-route:dm002:temporal-start',
       source: 'test',
     });
@@ -449,6 +478,35 @@ test('family-runtime dispatch starts MAS PaperMission stage-route Temporal attem
     assert.equal(task.stage_attempts[0].workspace_locator.workspace_root, '/tmp/mas-dm-cvd-workspace');
     assert.equal(task.stage_attempts[0].workspace_locator.command_cwd, '/tmp/mas-dm-cvd-workspace');
     assert.equal(task.stage_attempts[0].workspace_locator.command_source, 'workspace_binding');
+    assert.equal(task.stage_attempts[0].route_impact.decision, 'start_next_stage');
+    const attemptRouteImpact = task.stage_attempts[0].route_impact as {
+      user_stage_log?: { semantic_status?: string };
+    };
+    assert.equal(
+      attemptRouteImpact.user_stage_log?.semantic_status,
+      'provided_by_domain',
+    );
+    const queriedAttempt = runCli([
+      'family-runtime',
+      'attempt',
+      'query',
+      task.stage_attempts[0].stage_attempt_id,
+      '--json',
+    ], familyRuntimeEnv(stateRoot));
+    const stageProgressLog =
+      queriedAttempt.family_runtime_stage_attempt_query.stage_attempt_query.stage_progress_log;
+    assert.equal(
+      stageProgressLog.user_stage_log.semantic_status,
+      'provided_by_domain',
+    );
+    assert.equal(
+      stageProgressLog.user_stage_log.semantic_source,
+      'route_impact',
+    );
+    assert.equal(
+      stageProgressLog.user_stage_log.progress_delta_classification,
+      'deliverable_progress',
+    );
     const launchableInput = requireTemporalStageAttemptWorkflowInputLaunchable(
       buildTemporalStageAttemptWorkflowInput(task.stage_attempts[0]),
     );

@@ -81,6 +81,20 @@ function nestedExecutorPolicy(payload: Record<string, unknown>) {
             : null;
 }
 
+function routeImpactForAttempt(payload: Record<string, unknown>) {
+  const routeImpact = isRecord(payload.route_impact) ? { ...payload.route_impact } : {};
+  if (!isRecord(routeImpact.user_stage_log) && isRecord(payload.user_stage_log)) {
+    routeImpact.user_stage_log = payload.user_stage_log;
+  }
+  if (!isRecord(routeImpact.stage_log_summary) && isRecord(payload.stage_log_summary)) {
+    routeImpact.stage_log_summary = payload.stage_log_summary;
+  }
+  if (!isRecord(routeImpact.human_stage_log) && isRecord(payload.human_stage_log)) {
+    routeImpact.human_stage_log = payload.human_stage_log;
+  }
+  return routeImpact;
+}
+
 function normalizeCodexCliExecutorPolicy(
   policy: Record<string, unknown>,
   source: string,
@@ -406,6 +420,7 @@ function createPaperMissionStageRouteAttempt(
           optionalString(payload.opl_route_command_ref),
           optionalString(payload.candidate_ref),
         ].filter((entry): entry is string => Boolean(entry)),
+        routeImpact: routeImpactForAttempt(payload),
       });
   const admittedAttempt = stageAttempt.attempt;
   if (executorPolicy.blockedReason) {
