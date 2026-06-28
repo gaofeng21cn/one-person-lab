@@ -51,6 +51,7 @@ const LIVE_STAGE_ATTEMPT_STATUSES = new Set<StageAttemptStatus>([
   'human_gate',
 ]);
 const SUPERSEDABLE_PROVIDER_BLOCKERS = new Set([
+  'paper_mission_stage_route_temporal_start_failed',
   'temporal_stage_attempt_completed_missing_typed_closeout',
 ]);
 const BACKFILLABLE_TERMINAL_ROUTE_BLOCKERS = new Set([

@@ -449,6 +449,95 @@ test('family-runtime does not backfill terminal successors from legacy PaperMiss
   }
 });
 
+test('family-runtime terminal closeout supersedes prior Temporal start failure for PaperMission route tasks', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-terminal-start-failed-'));
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_mission/stage-route',
+      '--payload',
+      JSON.stringify(paperMissionRoutePayload()),
+      '--dedupe-key',
+      'paper-mission-route:dm002:terminal-start-failed',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    runCli(['family-runtime', 'tick', '--source', 'test-paper-route-start-failed-start'], env);
+    const runningTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const attemptId = runningTask.family_runtime_task.stage_attempts[0].stage_attempt_id;
+
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      attemptId,
+      '--stage-packet-ref',
+      'packet:paper-mission-route-dm002-start-failed',
+      '--closeout-packet',
+      JSON.stringify({
+        surface_kind: 'stage_attempt_closeout_packet',
+        closeout_refs: ['typed-blocker:domain-gate-after-temporal-start-failure'],
+        next_owner: 'med-autoscience',
+        domain_ready_verdict: 'domain_gate_pending',
+        route_impact: {
+          decision: 'bounded_repair',
+          next_owner: 'med-autoscience',
+          reason: 'domain_gate_after_temporal_start_failure',
+        },
+      }),
+    ], env);
+
+    const originalStateDir = process.env.OPL_STATE_DIR;
+    try {
+      process.env.OPL_STATE_DIR = stateRoot;
+      const { db } = openQueueDb();
+      db.prepare(`
+        UPDATE tasks
+        SET status = 'blocked',
+          last_error = 'paper_mission_stage_route_temporal_start_failed',
+          dead_letter_reason = 'paper_mission_stage_route_temporal_start_failed'
+        WHERE task_id = ?
+      `).run(taskId);
+      db.prepare(`
+        DELETE FROM events
+        WHERE task_id = ?
+          AND event_type = 'paper_mission_stage_route_terminal_task_reconciled'
+          AND json_extract(payload_json, '$.stage_attempt_id') = ?
+      `).run(taskId, attemptId);
+      db.close();
+    } finally {
+      process.env.OPL_STATE_DIR = originalStateDir;
+    }
+
+    const reconcile = runCli(['family-runtime', 'tick', '--source', 'test-paper-route-start-failed-terminal'], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const terminalEvents = task.family_runtime_task.events.filter((event: { event_type: string }) =>
+      event.event_type === 'paper_mission_stage_route_terminal_task_reconciled'
+    );
+
+    assert.equal(reconcile.family_runtime_tick.reconciled_paper_mission_stage_route_terminal_count, 1);
+    assert.deepEqual(reconcile.family_runtime_tick.reconciled_paper_mission_stage_route_terminal_task_ids, [taskId]);
+    assert.equal(task.family_runtime_task.task.status, 'blocked');
+    assert.equal(task.family_runtime_task.task.last_error, 'paper_mission_stage_route_domain_gate_pending');
+    assert.equal(task.family_runtime_task.task.dead_letter_reason, 'paper_mission_stage_route_domain_gate_pending');
+    assert.equal(task.family_runtime_task.stage_attempts[0].status, 'completed');
+    assert.equal(task.family_runtime_task.stage_attempts[0].closeout_receipt_status, 'accepted_typed_closeout');
+    assert.equal(terminalEvents.length, 1);
+    assert.equal(terminalEvents[0].payload.previous_status, 'blocked');
+    assert.equal(terminalEvents[0].payload.next_status, 'blocked');
+    assert.equal(terminalEvents[0].payload.reason, 'paper_mission_stage_route_domain_gate_pending');
+    assert.equal(terminalEvents[0].payload.authority_boundary.can_claim_paper_progress, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 for (const commandKind of ['route_back', 'resume_stage'] as const) {
   test(`family-runtime terminal closeout does not self-admit ${commandKind} PaperMission route commands`, () => {
     const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), `opl-paper-mission-stage-route-${commandKind}-`));
