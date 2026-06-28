@@ -613,7 +613,6 @@
           "public_agent_list_must_not_split_by_generated_surface": true,
           "generated_surface_is_membership_axis": false,
           "generated_surface_is_status_axis": false,
-          "generated_surface_only_field_public_default": false,
           "public_agent_list_must_not_split_by_plugin_transport": true,
           "plugin_transport_is_membership_axis": false,
           "plugin_transport_is_status_axis": false
@@ -1540,7 +1539,6 @@
         "public_agent_list_must_not_split_by_generated_surface": true,
         "generated_surface_is_membership_axis": false,
         "generated_surface_is_status_axis": false,
-        "generated_surface_only_field_public_default": false,
         "public_agent_list_must_not_split_by_plugin_transport": true,
         "plugin_transport_is_membership_axis": false,
         "plugin_transport_is_status_axis": false

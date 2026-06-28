@@ -26,7 +26,6 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
     generated_surface_is_status_axis: false,
     plugin_transport_is_membership_axis: false,
     plugin_transport_is_status_axis: false,
-    generated_surface_only_field_public_default: false,
   },
   standard_public_projection_policy: {
     surface_kind: 'opl_foundry_agent_standard_public_projection_policy',

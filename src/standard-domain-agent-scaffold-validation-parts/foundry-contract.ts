@@ -408,9 +408,6 @@ export function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, 
     agentMembershipProjectionPolicy?.plugin_transport_is_status_axis === false
       ? null
       : 'foundry_agent_membership_projection_plugin_transport_must_not_be_status_axis',
-    agentMembershipProjectionPolicy?.generated_surface_only_field_public_default === false
-      ? null
-      : 'foundry_agent_membership_projection_generated_surface_only_must_not_be_public_default',
     standardPublicProjectionPolicy ? null : 'foundry_agent_standard_public_projection_policy_missing',
     readOptionalString(standardPublicProjectionPolicy?.surface_kind)
       === 'opl_foundry_agent_standard_public_projection_policy'

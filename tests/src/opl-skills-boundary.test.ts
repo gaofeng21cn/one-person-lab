@@ -184,7 +184,7 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     assert.equal(mcpContextBudgetPolicy.full_cli_mirror_forbidden, true);
     assert.equal(seriesDelegateToolRefs.includes('opl agents foundry interfaces'), true);
     assert.equal(seriesDelegateToolRefs.includes('opl agents foundry status'), true);
-    assert.equal(pack.legacy_implementation_bucket_policy.ordinary_public_command_surface_allowed, false);
+    assert.equal('legacy_implementation_bucket_policy' in pack, false);
   }
 });
 

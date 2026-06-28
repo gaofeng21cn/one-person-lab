@@ -59,7 +59,6 @@ export type InspectFamilySkillPack = {
   foundry_agent_series: Record<string, unknown>;
   command_surface_spine: Record<string, unknown>;
   mcp_projection: Record<string, unknown>;
-  legacy_implementation_bucket_policy: Record<string, unknown>;
   capability_plugin_distribution: Record<string, unknown> | null;
   plugin_transport: InspectFamilySkillPackPluginTransport;
   plugin_source_path: string;

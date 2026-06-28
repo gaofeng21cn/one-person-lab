@@ -155,14 +155,12 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
       foundry_agent_series: {},
       command_surface_spine: {},
       mcp_projection: {},
-      legacy_implementation_bucket_policy: {},
     };
   }
 
   const contract = readFoundryAgentSeriesContract();
   const commandSurface = readObjectField(contract, 'agent_cli_command_surface_policy');
   const skillMcp = readObjectField(contract, 'skill_mcp_surface_policy');
-  const retirement = readObjectField(contract, 'legacy_implementation_bucket_retirement_policy');
   const versionPolicy = readObjectField(contract, 'contract_version_policy');
   const policyRelease = readObjectField(contract, 'shared_policy_release');
   const standardAgent = resolveStandardAgentByCanonicalPluginName(spec.canonical_plugin_name);
@@ -247,13 +245,6 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
         'legacy_standalone_mcp_servers_retired',
       ),
       plugin_registry_is_canonical_transport: true,
-    },
-    legacy_implementation_bucket_policy: {
-      surface_kind: 'opl_foundry_agent_legacy_bucket_policy_projection',
-      ordinary_public_command_surface_allowed: readBooleanField(retirement, 'ordinary_public_command_surface_allowed'),
-      replacement_command_surface: readStringField(retirement, 'replacement_command_surface'),
-      retired_bucket_prefixes: readStringListField(retirement, 'retired_bucket_prefixes'),
-      allowed_retained_read_surfaces: readStringListField(retirement, 'allowed_retained_read_surfaces'),
     },
   };
 }

@@ -60,7 +60,7 @@ test('opl connect skills discovers the family plugin packs through the configure
     assert.equal(metaPack?.foundry_agent_series?.default_foundry_command_surface, 'opl foundry agents inspect oma');
     assert.equal(metaPack?.command_surface_spine?.skill_sync_command_surface, 'opl connect sync-skills');
     assert.equal(metaPack?.mcp_projection?.mcp_descriptor_must_delegate_to_series_spine, true);
-    assert.equal(metaPack?.legacy_implementation_bucket_policy?.ordinary_public_command_surface_allowed, false);
+    assert.equal('legacy_implementation_bucket_policy' in metaPack, false);
     const bookforgePack = output.skill_catalog.packs.find((entry: { domain_id: string }) => entry.domain_id === 'oplbookforge');
     assert.equal(bookforgePack?.plugin_manifest_found, false);
     assert.equal(bookforgePack?.installer_found, false);

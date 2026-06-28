@@ -86,7 +86,6 @@ test('agents scaffold validation blocks Foundry contracts that split standard me
     foundryContract.agent_membership_projection_policy.generated_surface_is_status_axis = true;
     foundryContract.agent_membership_projection_policy.plugin_transport_is_membership_axis = true;
     foundryContract.agent_membership_projection_policy.plugin_transport_is_status_axis = true;
-    foundryContract.agent_membership_projection_policy.generated_surface_only_field_public_default = true;
     fs.writeFileSync(foundryContractPath, `${JSON.stringify(foundryContract, null, 2)}\n`);
 
     const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
@@ -121,12 +120,6 @@ test('agents scaffold validation blocks Foundry contracts that split standard me
     assert.equal(
       validated.validation.blockers.includes(
         'foundry_agent_membership_projection_plugin_transport_must_not_be_status_axis',
-      ),
-      true,
-    );
-    assert.equal(
-      validated.validation.blockers.includes(
-        'foundry_agent_membership_projection_generated_surface_only_must_not_be_public_default',
       ),
       true,
     );
@@ -264,7 +257,6 @@ test('agents scaffold emits canonical Foundry series design profile', () => {
     assert.equal(membershipPolicy.generated_surface_is_status_axis, false);
     assert.equal(membershipPolicy.plugin_transport_is_membership_axis, false);
     assert.equal(membershipPolicy.plugin_transport_is_status_axis, false);
-    assert.equal(membershipPolicy.generated_surface_only_field_public_default, false);
     assert.equal(profile.surface_kind, 'opl_foundry_agent_series_design_profile');
     assert.equal(profile.profile_id, 'opl_foundry_agent_series_design_profile.v1');
     assert.deepEqual(profile.shared_lifecycle_pipeline, [

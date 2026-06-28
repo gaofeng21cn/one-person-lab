@@ -143,12 +143,9 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying OPL bra
     assert.equal(output.mcp_and_skill_policy.all_cli_commands_are_mcp_tools, false);
     assert.equal(output.mcp_and_skill_policy.progressive_discovery_required_for_large_catalogs, true);
     assert.equal(output.mcp_and_skill_policy.toolset_filtering_required_for_broad_surfaces, true);
-    assert.equal(output.mcp_and_skill_policy.expose_legacy_buckets_as_diagnostic_or_migration_only, true);
+    assert.equal('expose_legacy_buckets_as_diagnostic_or_migration_only' in output.mcp_and_skill_policy, false);
     assertNoRuntimeMcpReadinessClaim(output.mcp_and_skill_policy);
-    assert.equal(
-      output.retired_implementation_buckets.some((entry: { bucket: string }) => entry.bucket === 'skill'),
-      true,
-    );
+    assert.equal('retired_implementation_buckets' in output, false);
   }
 });
 

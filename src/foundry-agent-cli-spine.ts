@@ -384,16 +384,7 @@ export function buildFoundryAgentCliSpine(operation: FoundryAgentCliOperation, a
           'skill_mcp_surface_policy.mcp_context_budget_policy.toolset_filtering_required_for_broad_surfaces',
         ),
         expose_foundry_spine: true,
-        expose_legacy_buckets_as_diagnostic_or_migration_only: true,
       },
-      retired_implementation_buckets: readStringList(
-        retirementPolicy.retired_bucket_prefixes,
-        'legacy_implementation_bucket_retirement_policy.retired_bucket_prefixes',
-      ).map((bucket) => ({
-        bucket,
-        replacement: readString(retirementPolicy.replacement_command_surface, 'legacy_implementation_bucket_retirement_policy.replacement_command_surface'),
-        retained_scope: 'diagnostic_or_migration_only',
-      })),
       authority_boundary: buildAuthorityBoundary(contract),
     },
   };
