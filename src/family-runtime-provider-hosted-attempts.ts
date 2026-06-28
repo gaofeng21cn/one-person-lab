@@ -24,6 +24,10 @@ import {
 } from './family-runtime-stage-run-currentness-identity.ts';
 import { providerAdmissionCurrentnessIdentity } from './family-runtime-mas-current-control-admission-currentness.ts';
 import { buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-gate.ts';
+import { preflightMasWorkspaceCheckoutCurrentness } from './family-runtime-checkout-currentness.ts';
+import {
+  type DomainHandlerCheckoutCurrentnessPreflight,
+} from './family-runtime-domain-handler-process.ts';
 export {
   defaultExecutorDispatchRef,
   defaultExecutorSourceFingerprint,
@@ -868,6 +872,37 @@ function sourceFingerprintForProviderHostedTask(row: FamilyRuntimeTaskRow, paylo
   return stableId('task_source', [row.domain_id, row.task_kind, row.task_id]);
 }
 
+function providerHostedCheckoutCurrentnessPreflight(
+  row: FamilyRuntimeTaskRow,
+  workspaceLocator: Record<string, unknown>,
+): DomainHandlerCheckoutCurrentnessPreflight | null {
+  return preflightMasWorkspaceCheckoutCurrentness({
+    domainId: row.domain_id,
+    workspaceLocator,
+  });
+}
+
+function combineStageAdmissionGateWithCheckoutCurrentness(
+  admissionGate: ReturnType<typeof buildStageAdmissionLaunchGate>,
+  checkoutCurrentnessPreflight: DomainHandlerCheckoutCurrentnessPreflight | null,
+) {
+  if (!checkoutCurrentnessPreflight) {
+    return admissionGate;
+  }
+  if (checkoutCurrentnessPreflight.status !== 'blocked') {
+    return {
+      ...admissionGate,
+      checkout_currentness_preflight: checkoutCurrentnessPreflight,
+    };
+  }
+  return {
+    ...admissionGate,
+    status: 'blocked' as const,
+    blocked_reason: checkoutCurrentnessPreflight.reason ?? 'checkout_currentness_blocked',
+    checkout_currentness_preflight: checkoutCurrentnessPreflight,
+  };
+}
+
 export function ensureProviderHostedStageAttempt(
   db: DatabaseSync,
   row: FamilyRuntimeTaskRow,
@@ -938,6 +973,10 @@ export function ensureProviderHostedStageAttempt(
     idempotencyKey: expectedSourceFingerprint,
     requireAdmission: stageAdmissionRequired(payload),
   });
+  const stageLaunchAdmissionGate = combineStageAdmissionGateWithCheckoutCurrentness(
+    admissionGate,
+    providerHostedCheckoutCurrentnessPreflight(row, workspaceLocator),
+  );
   const result = createStageAttempt(db, {
     domainId: row.domain_id,
     stageId,
@@ -950,14 +989,15 @@ export function ensureProviderHostedStageAttempt(
     checkpointRefs: isDefaultExecutorDispatchTask(row, payload)
       ? defaultExecutorStageCheckpointRefs(payload)
       : undefined,
-    blockedReason: admissionGate.blocked_reason ?? undefined,
+    blockedReason: stageLaunchAdmissionGate.blocked_reason ?? undefined,
+    launchAdmissionGate: stageLaunchAdmissionGate,
   });
   insertEvent(db, {
     taskId: row.task_id,
     domainId: row.domain_id,
     eventType: result.idempotent_noop
       ? 'stage_attempt_idempotent_noop'
-      : admissionGate.status === 'blocked'
+      : stageLaunchAdmissionGate.status === 'blocked'
         ? 'stage_attempt_blocked_by_admission_gate'
       : 'stage_attempt_created_for_provider_hosted_task',
     source: options.eventSource ?? 'opl-family-runtime',
@@ -970,7 +1010,7 @@ export function ensureProviderHostedStageAttempt(
       new_attempt_reason: forceNewAttemptAfterTransportOnlyAdmission
         ? DEFAULT_EXECUTOR_TRANSPORT_ONLY_ADMISSION_SUPERSEDED_REASON
         : null,
-      stage_launch_admission_gate: admissionGate,
+      stage_launch_admission_gate: stageLaunchAdmissionGate,
     },
   });
   return result.attempt;

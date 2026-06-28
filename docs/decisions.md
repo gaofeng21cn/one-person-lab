@@ -7,16 +7,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-06-28
 
-### 决策：MAS domain-handler 使用 admission 前 clean checkout currentness gate，不做热加载
+### 决策：MAS domain-handler / provider-hosted stage 使用 admission 前 clean checkout currentness gate，不做热加载
 
-原因：MAS 作为标准 OPL Agent 在 OPL 基座运行时，OPL 必须在 domain-handler / stage admission 前确认将要调用的 MAS checkout 与目标 ref 一致，避免从 stale checkout 继续导出 stage route、owner handoff 或 PaperMission refs。这个机制不是热加载模块，也不是在进程内替换已加载代码；它是 admission 前的 workspace currentness gate。
+原因：MAS 作为标准 OPL Agent 在 OPL 基座运行时，OPL 必须在 domain-handler export/dispatch、provider-hosted stage admission、provider transport start 和 Codex runner launch 前确认将要调用的 MAS checkout 与目标 ref 一致，避免从 stale checkout 继续导出 stage route、owner handoff、StageAttempt workspace locator 或 PaperMission refs。这个机制不是热加载模块，也不是在进程内替换已加载代码；它是 admission / launch 前的 workspace currentness gate。
 
 影响：
 
-- MAS domain-handler / stage admission 的 target ref 必须来自 OPL 声明的 domain checkout policy，普通路径默认读 `origin/main` 或同等 release/pinned target。
+- MAS domain-handler / provider-hosted stage admission / provider transport start / Codex runner launch 的 target ref 必须来自 OPL 声明的 domain checkout policy，普通路径默认读 `origin/main` 或同等 release/pinned target。
 - clean checkout 落后 target ref 时，OPL 可自动 `fetch` 并 `ff-only` 到 target ref；dirty checkout、diverged checkout 或无法证明 target ref 的 checkout 必须 fail closed，不得继续 admission。
-- attempt/readback 必须记录 `workspace_path`、`head_sha`、`target_ref` 和 `currentness_status`；`currentness_status` 至少区分 `current`、`fast_forwarded`、`dirty_fail_closed`、`diverged_fail_closed`、`target_unresolved_fail_closed`、`git_unreadable_fail_closed`、`fetch_failed_fail_closed`、`fast_forward_failed_fail_closed` 和 `ahead_fail_closed`。
-- 该 gate 只证明 OPL 将调用的 domain-handler checkout current；它不写 MAS domain truth、不签 MAS owner receipt、不创建 MAS typed blocker / human gate、不写 publication eval / controller decision / current package / paper body，也不声明 MAS paper progress、domain-ready、runtime-ready、publication-ready 或 production-ready。
+- attempt/readback 必须记录 `workspace_path`、`head_sha`、`target_ref` 和 `currentness_status`；`currentness_status` 至少区分 `current`、`fast_forwarded`、`dirty_fail_closed`、`diverged_fail_closed`、`target_unresolved_fail_closed`、`git_unreadable_fail_closed`、`fetch_failed_fail_closed`、`fast_forward_failed_fail_closed` 和 `ahead_fail_closed`。provider-hosted admission 的 evidence 进入 `stage_launch_admission_gate.checkout_currentness_preflight`，transport start / runner launch 的 blocker 进入 stage attempt activity 或 runner error details。
+- 该 gate 只证明 OPL 将调用或启动的 MAS checkout current；它不写 MAS domain truth、不签 MAS owner receipt、不创建 MAS typed blocker / human gate、不写 publication eval / controller decision / current package / paper body，也不声明 MAS paper progress、domain-ready、runtime-ready、publication-ready 或 production-ready。
 
 ### 决策：标准 Agent 不默认暴露 standalone MCP，MCP 由 OPL Connect 统一精选投影
 

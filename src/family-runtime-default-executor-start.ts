@@ -23,6 +23,7 @@ import {
   findLiveDefaultExecutorStudyAttempt,
   refreshDefaultExecutorLiveAttemptTaskLease,
 } from './family-runtime-provider-hosted-attempts.ts';
+import { preflightMasWorkspaceCheckoutCurrentness } from './family-runtime-checkout-currentness.ts';
 
 type FamilyRuntimePaths = ReturnType<typeof familyRuntimePaths>;
 type StageAttemptPayload = ReturnType<typeof listStageAttemptsForTask>[number];
@@ -192,6 +193,66 @@ function blockTaskForTemporalStartFailure(
       error: input.errorMessage,
     },
   });
+}
+
+function blockTaskForCheckoutCurrentnessFailure(
+  db: DatabaseSync,
+  input: {
+    row: FamilyRuntimeTaskRow;
+    launchableAttempt: StageAttemptPayload;
+    checkoutCurrentnessPreflight: NonNullable<ReturnType<typeof preflightMasWorkspaceCheckoutCurrentness>>;
+  },
+) {
+  const reason = input.checkoutCurrentnessPreflight.reason ?? 'checkout_currentness_blocked';
+  const blockedAt = nowIso();
+  db.prepare(`
+    UPDATE tasks
+    SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
+      last_error = ?, dead_letter_reason = ?, updated_at = ?
+    WHERE task_id = ?
+  `).run(reason, reason, blockedAt, input.row.task_id);
+  const blockedStageAttempts = updateStageAttemptsForTask(db, {
+    taskId: input.row.task_id,
+    stageAttemptIds: [input.launchableAttempt.stage_attempt_id],
+    status: 'blocked',
+    blockedReason: reason,
+    activityEvent: {
+      activity_kind: 'stage_attempt_checkout_currentness_preflight',
+      activity_status: 'blocked',
+      reason,
+      checkout_currentness_preflight: input.checkoutCurrentnessPreflight,
+      authority_boundary: {
+        opl: 'provider_transport_start_gate_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        provider_completion_is_domain_ready: false,
+      },
+    },
+  });
+  insertEvent(db, {
+    taskId: input.row.task_id,
+    domainId: input.row.domain_id,
+    eventType: 'stage_attempt_checkout_currentness_blocked',
+    source: 'opl-family-runtime',
+    payload: {
+      stage_attempt_id: input.launchableAttempt.stage_attempt_id,
+      reason,
+      checkout_currentness_preflight: input.checkoutCurrentnessPreflight,
+    },
+  });
+  insertNotification(db, {
+    taskId: input.row.task_id,
+    severity: 'error',
+    title: 'Family runtime default executor checkout currentness blocked',
+    body: reason,
+    payload: {
+      reason,
+      stage_attempt_id: input.launchableAttempt.stage_attempt_id,
+      checkout_currentness_preflight: input.checkoutCurrentnessPreflight,
+    },
+  });
+  return blockedStageAttempts.length > 0
+    ? blockedStageAttempts
+    : listStageAttemptsForTask(db, input.row.task_id);
 }
 
 function claimDefaultExecutorTask(
@@ -382,6 +443,27 @@ export async function startDefaultExecutorStageAttempt(
       error: errorMessage,
       admitted_stage_attempt: launchableAttempt,
       stage_attempts: listStageAttemptsForTask(db, row.task_id),
+    };
+  }
+  const checkoutCurrentnessPreflight = preflightMasWorkspaceCheckoutCurrentness({
+    domainId: launchableAttempt.domain_id,
+    workspaceLocator: launchableAttempt.workspace_locator,
+  });
+  if (checkoutCurrentnessPreflight?.status === 'blocked') {
+    const blockedStageAttempts = blockTaskForCheckoutCurrentnessFailure(db, {
+      row,
+      launchableAttempt,
+      checkoutCurrentnessPreflight,
+    });
+    return {
+      task_id: row.task_id,
+      status: 'blocked',
+      reason: checkoutCurrentnessPreflight.reason ?? 'checkout_currentness_blocked',
+      error: checkoutCurrentnessPreflight.reason ?? 'checkout_currentness_blocked',
+      admitted_stage_attempt: blockedStageAttempts.find(
+        (attempt) => attempt.stage_attempt_id === launchableAttempt.stage_attempt_id,
+      ) ?? launchableAttempt,
+      stage_attempts: blockedStageAttempts,
     };
   }
 

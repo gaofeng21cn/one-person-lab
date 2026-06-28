@@ -30,7 +30,7 @@ type DomainHandlerProcessResult = SpawnSyncReturns<string> & {
   };
 };
 
-type DomainHandlerCheckoutCurrentnessPreflight = {
+export type DomainHandlerCheckoutCurrentnessPreflight = {
   status: 'not_git_checkout' | 'current' | 'fast_forwarded' | 'blocked';
   currentness_status:
     | 'not_git_checkout'
@@ -212,16 +212,11 @@ function freshManagedRootRetryTrigger(result: SpawnSyncReturns<string>, exitCode
   return null;
 }
 
-function preflightDomainHandlerCheckoutCurrentness(
-  command: string[],
+export function preflightGitCheckoutCurrentness(
   cwd: string,
-  env: NodeJS.ProcessEnv,
+  env: NodeJS.ProcessEnv = process.env,
 ): DomainHandlerCheckoutCurrentnessPreflight {
   const workspacePath = path.resolve(cwd);
-  if (!commandRunsFromCheckout(command, cwd)) {
-    return { status: 'not_git_checkout', currentness_status: 'not_git_checkout', workspace_path: workspacePath };
-  }
-
   const inside = runGit(cwd, ['rev-parse', '--is-inside-work-tree']);
   if (inside.status !== 0 || gitOutput(inside) !== 'true') {
     return { status: 'not_git_checkout', currentness_status: 'not_git_checkout', workspace_path: workspacePath };
@@ -336,6 +331,18 @@ function preflightDomainHandlerCheckoutCurrentness(
     target_sha: targetSha,
     detail: 'Domain-handler checkout is not a clean fast-forward from the target ref; refusing to run against a non-current source tree.',
   };
+}
+
+function preflightDomainHandlerCheckoutCurrentness(
+  command: string[],
+  cwd: string,
+  env: NodeJS.ProcessEnv,
+): DomainHandlerCheckoutCurrentnessPreflight {
+  const workspacePath = path.resolve(cwd);
+  if (!commandRunsFromCheckout(command, cwd)) {
+    return { status: 'not_git_checkout', currentness_status: 'not_git_checkout', workspace_path: workspacePath };
+  }
+  return preflightGitCheckoutCurrentness(workspacePath, env);
 }
 
 function normalizeDomainHandlerResult(

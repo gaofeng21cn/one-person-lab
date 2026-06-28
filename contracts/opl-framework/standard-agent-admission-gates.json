@@ -91,10 +91,13 @@
         "gate_id": "clean_checkout_currentness_gate",
         "requirement_kind": "workspace_currentness",
         "required_for_formal_admission": true,
-        "summary": "Before domain-handler or stage admission, OPL must use a clean domain checkout at the declared target ref. Clean checkouts behind the target may be fetched and fast-forwarded only; dirty, diverged, or unresolved-target checkouts fail closed.",
+        "summary": "Before domain-handler export/dispatch, provider-hosted stage admission, provider transport start, or Codex runner launch, OPL must use a clean domain checkout at the declared target ref. Clean checkouts behind the target may be fetched and fast-forwarded only; dirty, diverged, or unresolved-target checkouts fail closed.",
         "required_evidence_refs": [
           "opl_runtime:domain_checkout_policy",
           "opl_runtime:domain_handler_admission_readback",
+          "opl_runtime:provider_hosted_stage_admission_readback",
+          "opl_runtime:stage_attempt_transport_start_readback",
+          "opl_runtime:codex_stage_runner_launch_readback",
           "candidate_domain_repo:declared_target_ref"
         ],
         "required_declarations": [

@@ -1,7 +1,9 @@
 import { spawnSync } from 'node:child_process';
+import { DatabaseSync } from 'node:sqlite';
 
 import {
   assert,
+  createGitModuleRemoteFixture,
   fs,
   os,
   path,
@@ -9,6 +11,8 @@ import {
   runCli,
   test,
 } from '../helpers.ts';
+import { createFamilyRuntimeQueueTables } from '../../../../src/family-runtime-store.ts';
+import { createStageAttempt } from '../../../../src/family-runtime-stage-attempts.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -27,7 +31,7 @@ test('family-runtime temporal attempt signal fails closed when Temporal address 
       '--domain',
       'medautoscience',
       '--stage',
-      'review',
+      'scout',
       '--provider',
       'temporal',
       '--workspace-locator',
@@ -63,6 +67,55 @@ test('family-runtime temporal attempt signal fails closed when Temporal address 
     assert.match(output.error.message, /OPL_TEMPORAL_ADDRESS/);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime temporal attempt start blocks dirty MAS checkout before Temporal transport', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-start-currentness-'));
+  const masFixture = createGitModuleRemoteFixture('med-autoscience');
+  const checkoutRoot = path.join(masFixture.fixtureRoot, 'dirty-checkout');
+  try {
+    const clone = spawnSync('git', ['clone', masFixture.remoteRoot, checkoutRoot], {
+      cwd: path.dirname(checkoutRoot),
+      encoding: 'utf8',
+    });
+    assert.equal(clone.status, 0, clone.stderr);
+    const queueDbPath = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
+    fs.mkdirSync(path.dirname(queueDbPath), { recursive: true });
+    const db = new DatabaseSync(queueDbPath);
+    createFamilyRuntimeQueueTables(db);
+    const created = createStageAttempt(db, {
+      domainId: 'medautoscience',
+      stageId: 'historical-queued-default-executor',
+      providerKind: 'temporal',
+      workspaceLocator: { workspace_root: checkoutRoot },
+      sourceFingerprint: 'test:historical-queued-currentness',
+      executorKind: 'codex_cli',
+      checkpointRefs: ['packet:historical-queued-currentness'],
+    });
+    db.close();
+    fs.writeFileSync(path.join(checkoutRoot, 'dirty-uncommitted.txt'), 'dirty\n', 'utf8');
+    const attemptId = created.attempt.stage_attempt_id;
+    const started = runCli([
+      'family-runtime',
+      'attempt',
+      'start',
+      attemptId,
+    ], familyRuntimeEnv(stateRoot, {
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    }));
+    const result = started.family_runtime_stage_attempt_start;
+
+    assert.equal(result.temporal_start, null);
+    assert.equal(result.attempt.status, 'blocked');
+    assert.equal(result.attempt.blocked_reason, 'dirty_checkout');
+    assert.equal(result.checkout_currentness_preflight.status, 'blocked');
+    assert.equal(result.checkout_currentness_preflight.currentness_status, 'dirty_fail_closed');
+    assert.equal(result.checkout_currentness_preflight.workspace_path, checkoutRoot);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(masFixture.fixtureRoot, { recursive: true, force: true });
   }
 });
 

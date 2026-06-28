@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError, loadFrameworkContracts } from './contracts.ts';
+import { preflightMasWorkspaceCheckoutCurrentness } from './family-runtime-checkout-currentness.ts';
 import {
   parseFamilyRuntimeCommand,
 } from './family-runtime-command.ts';
@@ -27,6 +28,7 @@ import {
   signalStageAttempt,
   stageAttemptSummary,
   syncStageAttemptFromTemporalTerminalObservation,
+  updateStageAttemptsForTask,
 } from './family-runtime-stage-attempts.ts';
 import { listStageAttemptsWithMonitoringProjection } from './family-runtime-stage-attempt-monitoring.ts';
 import { markStageAttemptCancelRequested } from './family-runtime-stage-attempt-control.ts';
@@ -145,6 +147,89 @@ function recordTemporalStartOnAttempt(
     SET provider_run_json = ?, updated_at = ?
     WHERE stage_attempt_id = ?
   `).run(JSON.stringify(providerRun), updatedAt, attempt.stage_attempt_id);
+}
+
+function combineLaunchGateWithCheckoutCurrentness<T extends object>(
+  gate: T,
+  checkoutCurrentnessPreflight: ReturnType<typeof preflightMasWorkspaceCheckoutCurrentness>,
+) {
+  if (!checkoutCurrentnessPreflight) {
+    return gate;
+  }
+  if (checkoutCurrentnessPreflight.status !== 'blocked') {
+    return {
+      ...gate,
+      checkout_currentness_preflight: checkoutCurrentnessPreflight,
+    } as T & { checkout_currentness_preflight: typeof checkoutCurrentnessPreflight };
+  }
+  return {
+    ...gate,
+    status: 'blocked',
+    gate_action: 'block_stage_launch',
+    block_reason: checkoutCurrentnessPreflight.reason ?? 'checkout_currentness_blocked',
+    blocked_reason: checkoutCurrentnessPreflight.reason ?? 'checkout_currentness_blocked',
+    checkout_currentness_preflight: checkoutCurrentnessPreflight,
+  } as T & {
+    status: 'blocked';
+    gate_action: 'block_stage_launch';
+    block_reason: string;
+    blocked_reason: string;
+    checkout_currentness_preflight: typeof checkoutCurrentnessPreflight;
+  };
+}
+
+function blockAttemptForCheckoutCurrentness(
+  db: DatabaseSync,
+  input: {
+    attempt: ReturnType<typeof inspectStageAttempt>;
+    checkoutCurrentnessPreflight: NonNullable<ReturnType<typeof preflightMasWorkspaceCheckoutCurrentness>>;
+  },
+) {
+  const reason = input.checkoutCurrentnessPreflight.reason ?? 'checkout_currentness_blocked';
+  const activityEvent = {
+    activity_kind: 'stage_attempt_checkout_currentness_preflight',
+    activity_status: 'blocked',
+    reason,
+    checkout_currentness_preflight: input.checkoutCurrentnessPreflight,
+    authority_boundary: {
+      opl: 'provider_transport_start_gate_only',
+      domain: 'truth_quality_artifact_gate_owner',
+      provider_completion_is_domain_ready: false,
+    },
+  };
+  if (!input.attempt.task_id) {
+    const updatedAt = nowIso();
+    const providerRun = {
+      ...input.attempt.provider_run,
+      provider_status: 'blocked',
+      last_heartbeat_at: updatedAt,
+    };
+    const activityEvents = [
+      ...input.attempt.activity_events,
+      { event_time: updatedAt, ...activityEvent },
+    ];
+    db.prepare(`
+      UPDATE stage_attempts
+      SET status = 'blocked', blocked_reason = ?, provider_run_json = ?,
+        activity_events_json = ?, updated_at = ?
+      WHERE stage_attempt_id = ?
+    `).run(
+      reason,
+      JSON.stringify(providerRun),
+      JSON.stringify(activityEvents),
+      updatedAt,
+      input.attempt.stage_attempt_id,
+    );
+    return inspectStageAttempt(db, input.attempt.stage_attempt_id);
+  }
+  const blockedAttempts = updateStageAttemptsForTask(db, {
+    taskId: input.attempt.task_id,
+    stageAttemptIds: [input.attempt.stage_attempt_id],
+    status: 'blocked',
+    blockedReason: reason,
+    activityEvent,
+  });
+  return blockedAttempts[0] ?? inspectStageAttempt(db, input.attempt.stage_attempt_id);
 }
 
 function approveTask(
@@ -691,7 +776,14 @@ export async function runFamilyRuntime(args: string[]): Promise<Record<string, u
             requireAdmission: true,
           })
         : null;
-      const stageLaunchAdmissionGate = requiredStageAdmissionGate ?? defaultStageLaunchAdmissionGate;
+      const checkoutCurrentnessPreflight = preflightMasWorkspaceCheckoutCurrentness({
+        domainId: parsed.input.domainId,
+        workspaceLocator: parsed.input.workspaceLocator,
+      });
+      const stageLaunchAdmissionGate = combineLaunchGateWithCheckoutCurrentness(
+        requiredStageAdmissionGate ?? defaultStageLaunchAdmissionGate,
+        checkoutCurrentnessPreflight,
+      );
       const launchInvocation = buildStageLaunchInvocationProjection({
         domainId: parsed.input.domainId,
         stageId: parsed.input.stageId,
@@ -709,6 +801,9 @@ export async function runFamilyRuntime(args: string[]): Promise<Record<string, u
         admissionPlaneId: stageLaunchAdmissionGate.plane_id,
       });
       const blockedReason =
+        checkoutCurrentnessPreflight?.status === 'blocked'
+          ? checkoutCurrentnessPreflight.reason ?? 'checkout_currentness_blocked'
+          :
         launchInvocation.blocker_reason
         ?? requiredStageAdmissionGate?.blocked_reason
         ?? parsed.input.blockedReason
@@ -722,6 +817,8 @@ export async function runFamilyRuntime(args: string[]): Promise<Record<string, u
       });
       const { attempt } = result;
       const stageLaunchBlockedByAdmission =
+        checkoutCurrentnessPreflight?.status === 'blocked'
+        ||
         Boolean(launchInvocation.blocker_reason)
         ||
         requiredStageAdmissionGate?.status === 'blocked'
@@ -775,6 +872,36 @@ export async function runFamilyRuntime(args: string[]): Promise<Record<string, u
     }
     if (parsed.mode === 'attempt_start') {
       const attempt = inspectStageAttempt(db, parsed.stageAttemptId);
+      const checkoutCurrentnessPreflight = preflightMasWorkspaceCheckoutCurrentness({
+        domainId: attempt.domain_id,
+        workspaceLocator: attempt.workspace_locator,
+      });
+      if (checkoutCurrentnessPreflight?.status === 'blocked') {
+        const projectedAttempt = blockAttemptForCheckoutCurrentness(db, {
+          attempt,
+          checkoutCurrentnessPreflight,
+        });
+        insertEvent(db, {
+          taskId: projectedAttempt.task_id,
+          domainId: projectedAttempt.domain_id,
+          eventType: 'stage_attempt_checkout_currentness_blocked',
+          source: 'opl-cli',
+          payload: {
+            stage_attempt_id: attempt.stage_attempt_id,
+            reason: checkoutCurrentnessPreflight.reason ?? 'checkout_currentness_blocked',
+            checkout_currentness_preflight: checkoutCurrentnessPreflight,
+          },
+        });
+        return {
+          version: 'g2',
+          family_runtime_stage_attempt_start: {
+            surface_id: 'opl_family_runtime_stage_attempt_start',
+            attempt: projectedAttempt,
+            temporal_start: null,
+            checkout_currentness_preflight: checkoutCurrentnessPreflight,
+          },
+        };
+      }
       const { startTemporalStageAttemptWorkflow } = await temporalProviderModule();
       const temporal_start = await startTemporalStageAttemptWorkflow(attempt, { paths });
       recordTemporalStartOnAttempt(db, attempt, temporal_start);

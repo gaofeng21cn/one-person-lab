@@ -274,6 +274,7 @@ test('standard agent admission gates freeze required package boundaries without 
     'identity',
     'domain_truth_owner',
     'generated_surface_default_entry',
+    'clean_checkout_currentness_gate',
     'standard_pack_abi',
     'stage_artifact_contract',
     'execution_model',

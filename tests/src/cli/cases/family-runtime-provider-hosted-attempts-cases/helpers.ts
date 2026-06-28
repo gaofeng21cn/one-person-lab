@@ -1,5 +1,6 @@
 import {
   assert,
+  createGitModuleRemoteFixture,
   fs,
   os,
   path,
@@ -87,6 +88,7 @@ export function familyRuntimeEnv(stateRoot: string, extra: Record<string, string
 
 export {
   assert,
+  createGitModuleRemoteFixture,
   fs,
   os,
   path,

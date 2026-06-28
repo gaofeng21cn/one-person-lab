@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { FrameworkContractError } from './contracts.ts';
+import { preflightMasWorkspaceCheckoutCurrentness } from './family-runtime-checkout-currentness.ts';
 import {
   buildCodexExecResumeArgs,
   buildCodexExecArgs,
@@ -411,6 +412,22 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
         executor_kind: optionalString(input.attempt.executor_kind) ?? 'codex_cli',
         blocked_reason: 'codex_cli_workspace_root_missing',
         required: ['workspace_locator.workspace_root or workspace_locator.repo_root'],
+      },
+    );
+  }
+  const checkoutCurrentnessPreflight = preflightMasWorkspaceCheckoutCurrentness({
+    domainId: input.attempt.domain_id,
+    workspaceLocator: isRecord(input.attempt.workspace_locator) ? input.attempt.workspace_locator : null,
+  });
+  if (checkoutCurrentnessPreflight?.status === 'blocked') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Live codex_cli stage runner requires a current clean MAS workspace checkout.',
+      {
+        stage_attempt_id: optionalString(input.attempt.stage_attempt_id),
+        executor_kind: optionalString(input.attempt.executor_kind) ?? 'codex_cli',
+        blocked_reason: checkoutCurrentnessPreflight.reason ?? 'checkout_currentness_blocked',
+        checkout_currentness_preflight: checkoutCurrentnessPreflight,
       },
     );
   }

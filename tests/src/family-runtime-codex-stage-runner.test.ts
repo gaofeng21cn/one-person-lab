@@ -3,15 +3,17 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 import './family-runtime-codex-stage-runner-cases/terminal-closeout-capture.ts';
 
-import { createFakeCodexFixture } from './cli/helpers.ts';
+import { createFakeCodexFixture, createGitModuleRemoteFixture } from './cli/helpers.ts';
 import { runPublicCodexStageRunner } from './family-runtime-codex-stage-runner-helpers.ts';
 import {
   buildCodexStageActivityInput,
   createCodexCloseoutCaptureForTest,
   stageCloseoutOutputSchemaForTest,
+  runAgentStageRunner,
 } from '../../src/family-runtime-codex-stage-runner.ts';
 import { FrameworkContractError } from '../../src/contracts.ts';
 
@@ -663,6 +665,49 @@ exit 64
       process.env.OPL_CODEX_BIN = previousCodexBin;
     }
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('Codex stage runner blocks dirty MAS checkout before launching Codex', async () => {
+  const masFixture = createGitModuleRemoteFixture('med-autoscience');
+  const checkoutRoot = path.join(masFixture.fixtureRoot, 'dirty-runner-checkout');
+  const clone = spawnSync('git', ['clone', masFixture.remoteRoot, checkoutRoot], {
+    cwd: path.dirname(checkoutRoot),
+    encoding: 'utf8',
+  });
+  assert.equal(clone.status, 0, clone.stderr);
+  fs.writeFileSync(path.join(checkoutRoot, 'dirty-uncommitted.txt'), 'dirty\n', 'utf8');
+  try {
+    await assert.rejects(
+      () => runAgentStageRunner({
+        attempt: {
+          stage_attempt_id: 'sat_dirty_runner_checkout',
+          workflow_id: 'wf_dirty_runner_checkout',
+          task_id: 'frt_dirty_runner_checkout',
+          domain_id: 'medautoscience',
+          stage_id: 'domain_owner/default-executor-dispatch',
+          executor_kind: 'codex_cli',
+          workspace_locator: {
+            workspace_root: checkoutRoot,
+          },
+          checkpoint_refs: ['packet:dirty-runner-checkout'],
+        },
+        stagePacketRef: 'packet:dirty-runner-checkout',
+        runnerMode: 'codex_cli',
+        timeoutMs: 10_000,
+      }),
+      (error: unknown) => {
+        assert.ok(error instanceof FrameworkContractError);
+        assert.equal(error.details?.blocked_reason, 'dirty_checkout');
+        assert.equal(
+          (error.details?.checkout_currentness_preflight as Record<string, unknown>)?.currentness_status,
+          'dirty_fail_closed',
+        );
+        return true;
+      },
+    );
+  } finally {
+    fs.rmSync(masFixture.fixtureRoot, { recursive: true, force: true });
   }
 });
 
