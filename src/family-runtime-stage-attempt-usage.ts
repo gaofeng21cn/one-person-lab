@@ -308,6 +308,7 @@ function usageInputs(input: StageAttemptUsageInput) {
   const activityEvents = input.activityEvents.filter(isRecord);
   const routeUsage = usageRecord(input.routeImpact.usage_projection);
   return [
+    { ref: `stage_attempt:${input.stageAttemptId}#provider_run`, usage: input.providerRun },
     { ref: `stage_attempt:${input.stageAttemptId}#provider_run.usage_projection`, usage: providerUsage },
     ...activityEvents.map((event, index) => ({
       ref: `stage_attempt:${input.stageAttemptId}#activity_events[${index}]`,

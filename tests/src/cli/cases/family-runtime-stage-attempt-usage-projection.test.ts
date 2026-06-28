@@ -39,6 +39,16 @@ const providerRun = {
   provider_status: 'running',
   started_at: '2026-05-16T00:00:00.000Z',
   completed_at: '2026-05-16T00:07:30.000Z',
+  cost_summary: {
+    cost_status: 'observed',
+    estimated_cost_usd: 0.12,
+    usage_ref: 'codex_session_usage:provider-run-session#sha256:def456',
+    token_usage: {
+      input_tokens: 600,
+      output_tokens: 220,
+      total_tokens: 820
+    }
+  },
   usage_projection: {
     api_call_count: 3,
     cadence_ref: 'cadence:provider-heartbeat'
@@ -135,9 +145,9 @@ db.close();`;
     assert.equal(projection.surface_kind, 'opl_stage_attempt_usage_projection');
     assert.equal(projection.projection_scope, 'stage_attempt');
     assert.equal(projection.availability, 'usage_observed');
-    assert.equal(projection.token.observed_count, 2);
-    assert.equal(projection.token.total_tokens_observed, 1820);
-    assert.equal(projection.cost.estimated_cost_usd_observed, 0.51);
+    assert.equal(projection.token.observed_count, 3);
+    assert.equal(projection.token.total_tokens_observed, 2640);
+    assert.equal(projection.cost.estimated_cost_usd_observed, 0.63);
     assert.equal(projection.api_calls.count_observed, 6);
     assert.equal(projection.duration.observed_count, 3);
     assert.equal(projection.cadence.observed_count, 3);
@@ -146,7 +156,9 @@ db.close();`;
     assert.equal(projection.retry_budget.remaining_attempts, 3);
     assert.equal(projection.retry_budget.pressure_status, 'retry_budget_available');
     assert.equal(projection.source_refs.includes(`stage_attempt:${attemptId}#retry_budget`), true);
+    assert.equal(projection.source_refs.includes(`stage_attempt:${attemptId}#provider_run`), true);
     assert.equal(projection.source_refs.includes(`stage_attempt:${attemptId}#route_impact.usage_projection`), true);
+    assert.equal(projection.token.source_refs.includes('codex_session_usage:provider-run-session#sha256:def456'), true);
     assert.equal(projection.token.source_refs.includes('codex_session_usage:session-usage-projection#sha256:abc123'), true);
     assert.equal(projection.source_refs.includes('codex_session:session-usage-projection'), true);
     assert.equal(projection.authority_boundary.can_change_executor, false);
@@ -164,14 +176,14 @@ db.close();`;
     assert.equal(modelRouteCost.route.tier, 'premium_reasoning');
     assert.deepEqual(modelRouteCost.route.tier_refs, ['route-tier:premium-reasoning']);
     assert.deepEqual(modelRouteCost.route.fallback_refs, ['fallback-route:disabled/no-auto-degrade']);
-    assert.equal(modelRouteCost.observed_usage_linkage.token.total_tokens_observed, 1820);
-    assert.equal(modelRouteCost.observed_usage_linkage.cost.estimated_cost_usd_observed, 0.51);
+    assert.equal(modelRouteCost.observed_usage_linkage.token.total_tokens_observed, 2640);
+    assert.equal(modelRouteCost.observed_usage_linkage.cost.estimated_cost_usd_observed, 0.63);
     assert.deepEqual(modelRouteCost.observed_usage_linkage.token.source_refs, projection.token.source_refs);
     assert.deepEqual(modelRouteCost.observed_usage_linkage.cost.source_refs, projection.cost.source_refs);
     assert.equal(modelRouteCost.authority_boundary.can_change_executor, false);
     assert.equal(modelRouteCost.authority_boundary.can_auto_degrade, false);
     assert.equal(modelRouteCost.authority_boundary.can_replace_quality_gate, false);
-    assert.equal(visibility.usage_projection.token.total_tokens_observed, 1820);
+    assert.equal(visibility.usage_projection.token.total_tokens_observed, 2640);
     assert.equal(
       visibility.model_route_cost_projection.selected_model.model_ref,
       'model-profile:codex/gpt-5.3-codex-high',
@@ -179,7 +191,7 @@ db.close();`;
     assert.equal(
       query.family_runtime_stage_attempt_query.stage_attempt_query.stage_progress_log
         .model_route_cost_projection.observed_usage_linkage.cost.estimated_cost_usd_observed,
-      0.51,
+      0.63,
     );
     const progressDeltaReceipt =
       query.family_runtime_stage_attempt_query.stage_attempt_query.stage_progress_log.progress_delta_receipt;
