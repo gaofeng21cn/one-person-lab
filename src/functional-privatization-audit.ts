@@ -60,6 +60,7 @@ export const FUNCTIONAL_PRIVATIZATION_AUDIT_CONTRACT = {
     'declarative_pack',
     'minimal_authority_function',
     'refs_only_domain_adapter',
+    'opl_storage_substrate_mas_refs_projection',
     'domain_handler_target',
     'native_helper_implementation',
     'temporary_migration_bridge',
@@ -403,6 +404,9 @@ function migrationClass(value: unknown): FunctionalPrivatizationMigrationClass {
   ) {
     return 'refs_only_domain_adapter';
   }
+  if (text === 'opl_storage_substrate_mas_refs_projection') {
+    return 'opl_storage_substrate_mas_refs_projection';
+  }
   if (
     text === 'opl_generated_surface'
     || text === 'generated_surface'
@@ -524,6 +528,12 @@ function standardizationLayer(item: FunctionalPrivatizationAuditItemDraft): {
     return {
       layer: 'standard_domain_pack_inventory',
       reason: 'domain_supplied_standard_pack_content_not_private_platform',
+    };
+  }
+  if (item.migration_class === 'opl_storage_substrate_mas_refs_projection') {
+    return {
+      layer: 'standard_domain_pack_inventory',
+      reason: 'opl_storage_substrate_with_domain_refs_projection_not_private_platform_residue',
     };
   }
   if (item.migration_class === 'minimal_authority_function' || item.migration_class === 'domain_authority') {

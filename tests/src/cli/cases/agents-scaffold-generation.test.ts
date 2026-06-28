@@ -385,6 +385,7 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       'declarative_pack',
       'minimal_authority_function',
       'refs_only_domain_adapter',
+      'opl_storage_substrate_mas_refs_projection',
       'domain_handler_target',
       'native_helper_implementation',
       'temporary_migration_bridge',

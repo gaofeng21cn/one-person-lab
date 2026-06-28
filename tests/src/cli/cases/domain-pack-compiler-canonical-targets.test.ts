@@ -1,5 +1,6 @@
 import { assert, fs, path, runCli, test } from '../helpers.ts';
 import { buildReadyAgentRepo, writeJson } from './agents-conformance-fixtures.ts';
+import { buildFunctionalPrivatizationAudit } from '../../../../src/functional-privatization-audit.ts';
 
 test('generated interfaces expose a family-defaults source for readiness drilldown', () => {
   const report = runCli([
@@ -111,6 +112,44 @@ test('generated interfaces and default callers accept domain action adapter expo
     ),
     true,
   );
+});
+
+test('generated interfaces accept OPL storage substrate with MAS refs projection as standard inventory', () => {
+  const repoDir = buildReadyAgentRepo();
+  const auditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
+  const audit = JSON.parse(fs.readFileSync(auditPath, 'utf8'));
+  audit.modules.push({
+    module_id: 'runtime_storage_maintenance',
+    classification: 'domain_authority_refs',
+    migration_class: 'opl_storage_substrate_mas_refs_projection',
+    owner: 'one-person-lab',
+    code_paths: ['src/med_autoscience/controllers/restore_proof_compaction_helpers.py'],
+    current_ref_status: 'opl_owned_storage_substrate_mas_refs_only_projection',
+    authority_boundary: 'opl_storage_substrate_mas_refs_only_projection_no_generic_cleanup_policy_owner',
+    retention_reason: 'OPL owns runtime storage maintenance; MAS exposes refs only.',
+  });
+  writeJson(auditPath, audit);
+
+  const bundle = runCli(['agents', 'interfaces', '--repo-dir', repoDir]).generated_agent_interfaces;
+  assert.equal(bundle.status, 'ready');
+  const normalizedAudit = buildFunctionalPrivatizationAudit({ functional_privatization_audit: audit });
+  const storageModule = normalizedAudit.modules.find(
+    (module: { module_id: string }) => module.module_id === 'runtime_storage_maintenance',
+  );
+  if (!storageModule) {
+    throw new Error('runtime_storage_maintenance module missing from normalized audit');
+  }
+  assert.equal(storageModule.migration_class, 'opl_storage_substrate_mas_refs_projection');
+  assert.equal(storageModule.standardization_layer, 'standard_domain_pack_inventory');
+  assert.equal(normalizedAudit.summary.default_watchlist_count, 0);
+
+  const defaultCallers = runCli([
+    'agents',
+    'default-callers',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).agent_default_caller_readiness;
+  assert.equal(defaultCallers.status, 'ready_domain_evidence_required');
 });
 
 test('generated interfaces project stage pack v2 tool affordance boundaries into all stage routes', () => {

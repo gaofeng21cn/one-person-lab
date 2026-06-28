@@ -410,6 +410,7 @@ export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
           'declarative_pack',
           'minimal_authority_function',
           'refs_only_domain_adapter',
+          'opl_storage_substrate_mas_refs_projection',
           'temporary_migration_bridge',
           'diagnostic_cleanup_path',
           'provenance_or_fixture',
