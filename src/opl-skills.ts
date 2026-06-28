@@ -307,6 +307,40 @@ function readSkillFrontmatter(content: string) {
   return { name, description, body };
 }
 
+function validatePluginManifest(spec: SkillPackSpec, pluginManifestPath: string, pluginManifestFound: boolean) {
+  const errors: string[] = [];
+
+  if (!pluginManifestFound) {
+    return { valid: false, errors };
+  }
+
+  let manifest: unknown;
+  try {
+    manifest = JSON.parse(fs.readFileSync(pluginManifestPath, 'utf8')) as unknown;
+  } catch (error) {
+    return {
+      valid: false,
+      errors: [`failed_to_read_plugin_manifest:${error instanceof Error ? error.message : String(error)}`],
+    };
+  }
+
+  if (!isRecord(manifest)) {
+    return {
+      valid: false,
+      errors: ['plugin_manifest_root_not_object'],
+    };
+  }
+
+  if (spec.distribution_role === 'domain_agent_plugin_pack' && 'mcpServers' in manifest) {
+    errors.push('standard_domain_agent_manifest_must_not_expose_standalone_mcp_servers');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
+
 function validateSkillEntry(spec: SkillPackSpec, skillEntryPath: string, skillEntryFound: boolean) {
   const errors: string[] = [];
 
@@ -359,11 +393,12 @@ function inspectFamilySkillPackAtRepoRoot(
   const installerPath = buildInstallerPath(spec, repoRoot);
   const pluginManifestFound = fs.existsSync(pluginManifestPath) && fs.statSync(pluginManifestPath).isFile();
   const skillEntryFound = fs.existsSync(skillEntryPath) && fs.statSync(skillEntryPath).isFile();
+  const pluginManifestValidation = validatePluginManifest(spec, pluginManifestPath, pluginManifestFound);
   const skillEntryValidation = validateSkillEntry(spec, skillEntryPath, skillEntryFound);
   const installerFound = fs.existsSync(installerPath) && fs.statSync(installerPath).isFile();
   const generatedSkillSurface = inspectGeneratedSkillSurface(spec, repoRoot);
   const repoPluginReady =
-    repoFound && pluginManifestFound && skillEntryFound && skillEntryValidation.valid;
+    repoFound && pluginManifestFound && pluginManifestValidation.valid && skillEntryFound && skillEntryValidation.valid;
   const seriesProjection = buildFoundryAgentSeriesProjection(spec);
   const capabilityPluginDistribution = buildCapabilityPluginDistribution(spec);
   const pluginTransport: InspectFamilySkillPackPluginTransport = {
@@ -409,6 +444,8 @@ function inspectFamilySkillPackAtRepoRoot(
     repo_found: repoFound,
     plugin_manifest_path: pluginManifestPath,
     plugin_manifest_found: pluginManifestFound,
+    plugin_manifest_valid: pluginManifestValidation.valid,
+    plugin_manifest_errors: pluginManifestValidation.errors,
     skill_entry_path: skillEntryPath,
     skill_entry_found: skillEntryFound,
     skill_entry_valid: skillEntryValidation.valid,

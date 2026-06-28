@@ -67,6 +67,8 @@ export type InspectFamilySkillPack = {
   repo_found: boolean;
   plugin_manifest_path: string;
   plugin_manifest_found: boolean;
+  plugin_manifest_valid: boolean;
+  plugin_manifest_errors: string[];
   skill_entry_path: string;
   skill_entry_found: boolean;
   skill_entry_valid: boolean;

@@ -903,6 +903,39 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
   }
 });
 
+test('opl connect sync-skills refuses standard agent manifests that expose standalone MCP servers', () => {
+  const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-sync-mcp-drift-'));
+  const { workspaceRoot } = createFakeFamilySkillWorkspace(captureDir);
+  const homeDir = path.join(captureDir, 'home');
+  const codexHome = path.join(homeDir, '.codex');
+  const masManifestPath = path.join(workspaceRoot, 'med-autoscience', 'plugins', 'mas', '.codex-plugin', 'plugin.json');
+  const masManifest = JSON.parse(fs.readFileSync(masManifestPath, 'utf8'));
+  masManifest.mcpServers = './.mcp.json';
+  fs.writeFileSync(masManifestPath, `${JSON.stringify(masManifest, null, 2)}\n`, 'utf8');
+  fs.mkdirSync(codexHome, { recursive: true });
+
+  try {
+    const output = runCli(['connect', 'sync-skills', '--domain', 'mas'], {
+      HOME: homeDir,
+      CODEX_HOME: codexHome,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+    });
+
+    const masPack = output.skill_sync.packs.find((entry: { canonical_plugin_name: string }) => entry.canonical_plugin_name === 'mas');
+    assert.equal(masPack.sync_status, 'skipped');
+    assert.equal(masPack.ready_to_sync, false);
+    assert.equal(masPack.plugin_manifest_valid, false);
+    assert.deepEqual(masPack.plugin_manifest_errors, [
+      'standard_domain_agent_manifest_must_not_expose_standalone_mcp_servers',
+    ]);
+    assert.equal(output.skill_sync.codex_plugin_registry, null);
+    assert.equal(fs.existsSync(path.join(codexHome, 'config.toml')), false);
+  } finally {
+    fs.rmSync(captureDir, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('opl connect sync-skills follows Developer Mode sibling checkouts over managed module copies', () => {
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-sync-devmode-'));
   const { workspaceRoot } = createFakeFamilySkillWorkspace(captureDir);

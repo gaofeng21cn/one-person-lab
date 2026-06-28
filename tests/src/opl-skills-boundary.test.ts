@@ -89,6 +89,8 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
       continue;
     }
     assert.equal(pack.agent_series_membership, 'standard_domain_agent');
+    assert.equal(pack.plugin_manifest_valid, true);
+    assert.deepEqual(pack.plugin_manifest_errors, []);
     const agentProjectionPolicy = pack.agent_projection_policy;
     if (agentProjectionPolicy === null) {
       assert.fail('domain agent plugin packs must declare an agent projection policy');
