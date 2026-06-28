@@ -97,8 +97,38 @@ export function stageAttemptSummary(db: DatabaseSync) {
   const rows = db.prepare(`
     SELECT status, COUNT(*) AS count FROM stage_attempts GROUP BY status ORDER BY status
   `).all() as Array<{ status: StageAttemptStatus; count: number }>;
+  const reasonRows = db.prepare(`
+    SELECT status, COALESCE(blocked_reason, 'unclassified') AS reason, COUNT(*) AS count
+    FROM stage_attempts
+    WHERE status IN ('blocked', 'failed')
+    GROUP BY status, reason
+    ORDER BY count DESC, status, reason
+    LIMIT 25
+  `).all() as Array<{ status: StageAttemptStatus; reason: string; count: number }>;
+  const stageRows = db.prepare(`
+    SELECT status, stage_id, COALESCE(blocked_reason, 'unclassified') AS reason, COUNT(*) AS count
+    FROM stage_attempts
+    WHERE status IN ('blocked', 'failed')
+    GROUP BY status, stage_id, reason
+    ORDER BY count DESC, status, stage_id, reason
+    LIMIT 25
+  `).all() as Array<{ status: StageAttemptStatus; stage_id: string; reason: string; count: number }>;
   return {
     total: rows.reduce((sum, row) => sum + row.count, 0),
     by_status: Object.fromEntries(rows.map((row) => [row.status, row.count])),
+    repair_breakdown: {
+      sample_limit: 25,
+      by_status_reason: reasonRows.map((row) => ({
+        status: row.status,
+        reason: row.reason,
+        attempt_count: row.count,
+      })),
+      by_status_stage_reason: stageRows.map((row) => ({
+        status: row.status,
+        stage_id: row.stage_id,
+        reason: row.reason,
+        attempt_count: row.count,
+      })),
+    },
   };
 }

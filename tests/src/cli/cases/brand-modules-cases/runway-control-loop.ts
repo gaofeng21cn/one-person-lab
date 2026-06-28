@@ -353,6 +353,35 @@ test('Runway recovery-repair classifies blocked and failed attempts into operato
         blocked: 3,
         failed: 2,
       },
+      repair_breakdown: {
+        sample_limit: 25,
+        by_status_reason: [
+          {
+            status: 'blocked',
+            reason: 'mas_owner_answer_typed_blocker_observed',
+            attempt_count: 3,
+          },
+          {
+            status: 'failed',
+            reason: 'temporal_workflow_failed',
+            attempt_count: 2,
+          },
+        ],
+        by_status_stage_reason: [
+          {
+            status: 'blocked',
+            stage_id: 'domain_route/reconcile-apply',
+            reason: 'mas_owner_answer_typed_blocker_observed',
+            attempt_count: 3,
+          },
+          {
+            status: 'failed',
+            stage_id: 'domain_owner/default-executor-dispatch',
+            reason: 'temporal_workflow_failed',
+            attempt_count: 2,
+          },
+        ],
+      },
     },
     authority_boundary: {
       can_execute_domain_action: false,
@@ -386,6 +415,32 @@ test('Runway recovery-repair classifies blocked and failed attempts into operato
   assert.deepEqual(repair.attempt_repair_queue.items.map((item: Record<string, unknown>) => item.command), [
     'opl family-runtime attempt list --status blocked --json',
     'opl family-runtime attempt list --status failed --json',
+  ]);
+  assert.deepEqual(repair.attempt_repair_queue.breakdown.by_status_reason, [
+    {
+      status: 'blocked',
+      reason: 'mas_owner_answer_typed_blocker_observed',
+      attempt_count: 3,
+    },
+    {
+      status: 'failed',
+      reason: 'temporal_workflow_failed',
+      attempt_count: 2,
+    },
+  ]);
+  assert.deepEqual(repair.attempt_repair_queue.breakdown.by_status_stage_reason, [
+    {
+      status: 'blocked',
+      stage_id: 'domain_route/reconcile-apply',
+      reason: 'mas_owner_answer_typed_blocker_observed',
+      attempt_count: 3,
+    },
+    {
+      status: 'failed',
+      stage_id: 'domain_owner/default-executor-dispatch',
+      reason: 'temporal_workflow_failed',
+      attempt_count: 2,
+    },
   ]);
   assert.equal(repair.attempt_repair_queue.authority_boundary.can_write_domain_truth, false);
   assert.equal(repair.attempt_repair_queue.authority_boundary.can_create_typed_blocker, false);

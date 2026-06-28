@@ -32,6 +32,23 @@ type RunwayRepairAction = {
   failed_attempt_count?: number;
 };
 
+type StageAttemptRepairBreakdownEntry = {
+  status: string;
+  reason: string;
+  attempt_count: number;
+  stage_id?: string;
+};
+
+type StageAttemptSummary = {
+  total: number;
+  by_status: Record<string, number>;
+  repair_breakdown?: {
+    sample_limit: number;
+    by_status_reason: StageAttemptRepairBreakdownEntry[];
+    by_status_stage_reason: StageAttemptRepairBreakdownEntry[];
+  };
+};
+
 const FALSE_AUTHORITY_BOUNDARY = {
   can_execute_domain_action: false,
   can_write_domain_truth: false,
@@ -74,7 +91,7 @@ function schedulerNeedsRepair(status: string | null) {
   return status === 'attention_required' || status === 'blocked_provider_not_ready';
 }
 
-function buildAttemptRepairQueue(attempts: { total: number; by_status: Record<string, number> }) {
+function buildAttemptRepairQueue(attempts: StageAttemptSummary) {
   const blockedAttemptCount = countStatus(attempts, ['blocked']);
   const failedAttemptCount = countStatus(attempts, ['failed']);
   const items = [
@@ -109,6 +126,11 @@ function buildAttemptRepairQueue(attempts: { total: number; by_status: Record<st
       repairable_attempt_count: blockedAttemptCount + failedAttemptCount,
       blocked_attempt_count: blockedAttemptCount,
       failed_attempt_count: failedAttemptCount,
+    },
+    breakdown: attempts.repair_breakdown ?? {
+      sample_limit: 0,
+      by_status_reason: [],
+      by_status_stage_reason: [],
     },
     default_repair_command: items[0]?.command ?? null,
     items,
