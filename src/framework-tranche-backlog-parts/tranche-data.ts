@@ -385,7 +385,7 @@ export const NEXT_TRANCHE_SELECTED_LANES: TrancheExecutionLane[] = [
       'support_repo_profile_no_resurrection',
     ],
     lane_status:
-      'active_tranche_backlog_machine_foldback_for_current_non_live_structure_work_order',
+      'closed_archive_tranche_backlog_machine_foldback_non_live_provenance',
     write_set_class: 'opl_framework_tranche_backlog_current_selection_and_closeout_foldback',
     required_surfaces: [
       'source',

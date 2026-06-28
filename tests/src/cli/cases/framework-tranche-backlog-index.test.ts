@@ -183,6 +183,16 @@ test('framework tranche backlog exposes current selection and closed tranche arc
     closedSelectionArchiveLanesById['opl-tranche-backlog-foldback-20260622d'].repo,
     'one-person-lab',
   );
+  assert.equal(
+    closedSelectionArchiveLanesById['opl-tranche-backlog-foldback-20260622d'].lane_status,
+    'closed_archive_tranche_backlog_machine_foldback_non_live_provenance',
+  );
+  assert.equal(
+    closedSelectionArchiveLanesById[
+      'opl-tranche-backlog-foldback-20260622d'
+    ].lane_status.includes('active_tranche'),
+    false,
+  );
   assert.ok(
     closedSelectionArchiveLanesById['opl-tranche-backlog-foldback-20260622d']
       .non_live_completion_evidence_required.includes(
