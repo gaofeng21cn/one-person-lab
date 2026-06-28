@@ -56,6 +56,33 @@
     "push_ref",
     "cleanup_ref"
   ],
+  "hundred_percent_evidence_boundary": {
+    "classification_required": true,
+    "minimum_required_kind": "fresh_executable_or_owner_bound_ref",
+    "docs_refs_tests_commit_only_can_score_100": false,
+    "subagent_lane_mapping_required_for_lane_evidence": true,
+    "readback_contract_landed_can_claim_complete": false,
+    "accepted_fresh_executable_or_owner_bound_ref_kinds": [
+      "cli_output_ref",
+      "runtime_artifact_ref",
+      "run_receipt_ref",
+      "owner_receipt_ref",
+      "typed_blocker_ref",
+      "end_to_end_acceptance_ref"
+    ],
+    "insufficient_100_percent_evidence_kinds": [
+      "docs_updated",
+      "catalog_landed",
+      "plan_landed",
+      "read_model_landed",
+      "refs_only_surface_landed",
+      "contract_landed",
+      "tests_passed_only",
+      "commit_pushed_only",
+      "subagent_reported_complete",
+      "worktree_merged_only"
+    ]
+  },
   "insufficient_completion_evidence": [
     "docs_updated",
     "catalog_landed",

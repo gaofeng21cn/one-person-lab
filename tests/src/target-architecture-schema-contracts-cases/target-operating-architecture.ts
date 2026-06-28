@@ -528,6 +528,45 @@ test('target operating architecture contract freezes resource, authority, lane, 
       requiredClaim,
     );
   }
+  assert.equal(
+    contract.foundry_agent_os_standard.os_readback_contract.completion_audit_contract_ref,
+    'contracts/opl-framework/opl-flow-completion-audit-contract.json',
+  );
+  assert.equal(contract.foundry_agent_os_standard.os_readback_contract.claim_scope, 'thorough_landing');
+  assert.equal(contract.foundry_agent_os_standard.os_readback_contract.requires_lane_to_plan_mapping, true);
+  assert.equal(contract.foundry_agent_os_standard.os_readback_contract.requires_main_session_fresh_verification, true);
+  assert.equal(
+    contract.foundry_agent_os_standard.os_readback_contract.docs_refs_tests_commit_only_can_score_100,
+    false,
+  );
+  assert.equal(
+    contract.foundry_agent_os_standard.os_readback_contract.readback_contract_landed_can_claim_complete,
+    false,
+  );
+  for (const acceptedEvidenceKind of ['cli_output_ref', 'runtime_artifact_ref', 'owner_receipt_ref', 'typed_blocker_ref']) {
+    assert.equal(
+      contract.foundry_agent_os_standard.os_readback_contract.accepted_100_percent_evidence_kinds.includes(
+        acceptedEvidenceKind,
+      ),
+      true,
+      acceptedEvidenceKind,
+    );
+  }
+  for (const insufficientEvidenceKind of [
+    'docs_updated',
+    'refs_only_surface_landed',
+    'tests_passed_only',
+    'commit_pushed_only',
+    'subagent_reported_complete',
+  ]) {
+    assert.equal(
+      contract.foundry_agent_os_standard.os_readback_contract.insufficient_100_percent_evidence_kinds.includes(
+        insufficientEvidenceKind,
+      ),
+      true,
+      insufficientEvidenceKind,
+    );
+  }
   for (const [claim, allowed] of Object.entries(contract.foundry_agent_os_standard.authority_boundary)) {
     assert.equal(allowed, false, `foundry agent OS standard must not claim ${claim}`);
   }

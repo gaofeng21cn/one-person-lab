@@ -183,6 +183,17 @@ export interface TargetOperatingArchitectureContract {
       must_not_create: string[];
     };
     cross_agent_conformance_required_claims: string[];
+    os_readback_contract: {
+      surface_kind: string;
+      completion_audit_contract_ref: string;
+      claim_scope: string;
+      requires_lane_to_plan_mapping: true;
+      requires_main_session_fresh_verification: true;
+      docs_refs_tests_commit_only_can_score_100: false;
+      readback_contract_landed_can_claim_complete: false;
+      accepted_100_percent_evidence_kinds: string[];
+      insufficient_100_percent_evidence_kinds: string[];
+    };
     implementation_lane_refs: string[];
     authority_boundary: Record<string, false>;
     forbidden_claims: string[];

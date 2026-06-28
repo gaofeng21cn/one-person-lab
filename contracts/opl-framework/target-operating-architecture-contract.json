@@ -1169,6 +1169,35 @@
       "vault_console_runway_do_not_sign_owner_answer",
       "capability_registry_fails_open_unless_current_delta_requires_ref"
     ],
+    "os_readback_contract": {
+      "surface_kind": "foundry_agent_os_readback_contract",
+      "completion_audit_contract_ref": "contracts/opl-framework/opl-flow-completion-audit-contract.json",
+      "claim_scope": "thorough_landing",
+      "requires_lane_to_plan_mapping": true,
+      "requires_main_session_fresh_verification": true,
+      "docs_refs_tests_commit_only_can_score_100": false,
+      "readback_contract_landed_can_claim_complete": false,
+      "accepted_100_percent_evidence_kinds": [
+        "cli_output_ref",
+        "runtime_artifact_ref",
+        "run_receipt_ref",
+        "owner_receipt_ref",
+        "typed_blocker_ref",
+        "end_to_end_acceptance_ref"
+      ],
+      "insufficient_100_percent_evidence_kinds": [
+        "docs_updated",
+        "catalog_landed",
+        "plan_landed",
+        "read_model_landed",
+        "refs_only_surface_landed",
+        "contract_landed",
+        "tests_passed_only",
+        "commit_pushed_only",
+        "subagent_reported_complete",
+        "worktree_merged_only"
+      ]
+    },
     "implementation_lane_refs": [
       "human_doc:foundry_agent_os_family_target_implementation_plan",
       "contracts/opl-framework/brand-module-registry.json",

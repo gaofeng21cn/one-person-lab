@@ -247,6 +247,68 @@ export function validateFoundryAgentOsStandard(filePath: string, value: unknown)
     'foundry_agent_os_standard.cross_agent_conformance_required_claims',
     filePath,
   );
+  const readbackContractRaw = value.os_readback_contract;
+  if (!isRecord(readbackContractRaw)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.os_readback_contract must be an object.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.os_readback_contract',
+    });
+  }
+  const readbackSurfaceKind = expectString(
+    readbackContractRaw.surface_kind,
+    'foundry_agent_os_standard.os_readback_contract.surface_kind',
+    filePath,
+  );
+  if (readbackSurfaceKind !== 'foundry_agent_os_readback_contract') {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.os_readback_contract.surface_kind must be foundry_agent_os_readback_contract.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.os_readback_contract.surface_kind',
+      actual: readbackSurfaceKind,
+    });
+  }
+  const readbackCompletionAuditContractRef = expectString(
+    readbackContractRaw.completion_audit_contract_ref,
+    'foundry_agent_os_standard.os_readback_contract.completion_audit_contract_ref',
+    filePath,
+  );
+  if (readbackCompletionAuditContractRef !== 'contracts/opl-framework/opl-flow-completion-audit-contract.json') {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.os_readback_contract must bind to the OPL Flow completion audit contract.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.os_readback_contract.completion_audit_contract_ref',
+      actual: readbackCompletionAuditContractRef,
+    });
+  }
+  const readbackClaimScope = expectString(
+    readbackContractRaw.claim_scope,
+    'foundry_agent_os_standard.os_readback_contract.claim_scope',
+    filePath,
+  );
+  if (readbackClaimScope !== 'thorough_landing') {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.os_readback_contract.claim_scope must stay thorough_landing.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.os_readback_contract.claim_scope',
+      actual: readbackClaimScope,
+    });
+  }
+  const acceptedReadbackEvidenceKinds = expectNonEmptyStringArray(
+    readbackContractRaw.accepted_100_percent_evidence_kinds,
+    'foundry_agent_os_standard.os_readback_contract.accepted_100_percent_evidence_kinds',
+    filePath,
+  );
+  const insufficientReadbackEvidenceKinds = expectNonEmptyStringArray(
+    readbackContractRaw.insufficient_100_percent_evidence_kinds,
+    'foundry_agent_os_standard.os_readback_contract.insufficient_100_percent_evidence_kinds',
+    filePath,
+  );
+  for (const insufficientEvidenceKind of ['docs_updated', 'refs_only_surface_landed', 'tests_passed_only', 'commit_pushed_only', 'subagent_reported_complete']) {
+    if (!insufficientReadbackEvidenceKinds.includes(insufficientEvidenceKind)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.os_readback_contract is missing a false-completion evidence kind.', {
+        file: filePath,
+        field: 'foundry_agent_os_standard.os_readback_contract.insufficient_100_percent_evidence_kinds',
+        missing: insufficientEvidenceKind,
+      });
+    }
+  }
 
   const forbiddenClaims = expectNonEmptyStringArray(
     value.forbidden_claims,
@@ -284,6 +346,33 @@ export function validateFoundryAgentOsStandard(filePath: string, value: unknown)
       must_not_create: mustNotCreate,
     },
     cross_agent_conformance_required_claims: conformanceClaims,
+    os_readback_contract: {
+      surface_kind: readbackSurfaceKind,
+      completion_audit_contract_ref: readbackCompletionAuditContractRef,
+      claim_scope: readbackClaimScope,
+      requires_lane_to_plan_mapping: expectTrueBoolean(
+        readbackContractRaw.requires_lane_to_plan_mapping,
+        'foundry_agent_os_standard.os_readback_contract.requires_lane_to_plan_mapping',
+        filePath,
+      ),
+      requires_main_session_fresh_verification: expectTrueBoolean(
+        readbackContractRaw.requires_main_session_fresh_verification,
+        'foundry_agent_os_standard.os_readback_contract.requires_main_session_fresh_verification',
+        filePath,
+      ),
+      docs_refs_tests_commit_only_can_score_100: expectFalseBoolean(
+        readbackContractRaw.docs_refs_tests_commit_only_can_score_100,
+        'foundry_agent_os_standard.os_readback_contract.docs_refs_tests_commit_only_can_score_100',
+        filePath,
+      ),
+      readback_contract_landed_can_claim_complete: expectFalseBoolean(
+        readbackContractRaw.readback_contract_landed_can_claim_complete,
+        'foundry_agent_os_standard.os_readback_contract.readback_contract_landed_can_claim_complete',
+        filePath,
+      ),
+      accepted_100_percent_evidence_kinds: acceptedReadbackEvidenceKinds,
+      insufficient_100_percent_evidence_kinds: insufficientReadbackEvidenceKinds,
+    },
     implementation_lane_refs: expectNonEmptyStringArray(
       value.implementation_lane_refs,
       'foundry_agent_os_standard.implementation_lane_refs',
