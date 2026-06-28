@@ -47,27 +47,50 @@ function milestoneCounts() {
 function buildCurrentTrancheReadback(
   rollforwardGuard: ReturnType<typeof buildTrancheRollforwardGuard>,
 ) {
-  const selectedLaneCount = NEXT_TRANCHE_SELECTED_LANES.length;
-  const selectedMilestoneIds = [
-    ...new Set(NEXT_TRANCHE_SELECTED_LANES.flatMap((lane) => lane.milestone_ids)),
-  ];
-  const lanes = NEXT_TRANCHE_SELECTED_LANES.map((lane) => ({
+  const activeMilestoneIds = new Set(
+    FRAMEWORK_TRANCHE_MILESTONES
+      .filter((milestone) => milestone.state === 'open' || milestone.state === 'partial')
+      .map((milestone) => milestone.milestone_id),
+  );
+  const activeLanes = NEXT_TRANCHE_SELECTED_LANES.filter((lane) =>
+    lane.milestone_ids.some((milestoneId) => activeMilestoneIds.has(milestoneId)),
+  );
+  const archivedLanes = NEXT_TRANCHE_SELECTED_LANES.map((lane) => ({
     ...lane,
     authority_boundary: { ...NO_SECOND_TRUTH_AUTHORITY_BOUNDARY },
   }));
+  const selectedLaneCount = activeLanes.length;
+  const selectedMilestoneIds = [
+    ...new Set(activeLanes.flatMap((lane) => lane.milestone_ids)),
+  ];
+  const closedOrAdvancedStructuralMilestoneIds = [
+    ...new Set(
+      NEXT_TRANCHE_SELECTED_LANES
+        .flatMap((lane) => lane.milestone_ids)
+        .filter((milestoneId) => !activeMilestoneIds.has(milestoneId)),
+    ),
+  ];
+  const lanes = activeLanes.map((lane) => ({
+    ...lane,
+    authority_boundary: { ...NO_SECOND_TRUTH_AUTHORITY_BOUNDARY },
+  }));
+  const selectedLaneCountWithinPolicy =
+    selectedLaneCount === 0 || (selectedLaneCount >= 2 && selectedLaneCount <= 4);
   return {
     tranche_id: 'opl-family-ideal-operating-model-tranche-20260622d',
     tranche_role:
       'fresh_non_live_functional_structure_tranche_selected_not_full_completion_audit',
     current_work_order_status:
-      selectedLaneCount >= 2 && selectedLaneCount <= 4
-        ? 'active_non_live_structure_lanes_selected'
-        : 'selected_lane_count_outside_policy',
+      selectedLaneCount === 0
+        ? 'no_active_non_live_structure_lanes_selected'
+        : selectedLaneCount >= 2 && selectedLaneCount <= 4
+          ? 'active_non_live_structure_lanes_selected'
+          : 'selected_lane_count_outside_policy',
     selected_lane_count: selectedLaneCount,
-    selected_lane_count_within_policy: selectedLaneCount >= 2 && selectedLaneCount <= 4,
+    selected_lane_count_within_policy: selectedLaneCountWithinPolicy,
     selected_milestone_ids: selectedMilestoneIds,
-    closed_or_advanced_structural_milestone_ids: [],
-    next_selection_required: false,
+    closed_or_advanced_structural_milestone_ids: closedOrAdvancedStructuralMilestoneIds,
+    next_selection_required: selectedLaneCount === 0,
     closed_tranche_ref: rollforwardGuard.archived_tranche_readback.tranche_id,
     lane_selection_policy: {
       prefer_open_coherent_worktree_owned_by_current_session: true,
@@ -96,10 +119,12 @@ function buildCurrentTrancheReadback(
     ],
     tranche_closeout_progress: {
       progress_status:
-        'domain_lane_remote_readbacks_landed_self_lane_requires_post_push_readback',
+        selectedLaneCount === 0
+          ? 'no_pending_self_lane_all_selected_structure_milestones_closed'
+          : 'domain_lane_remote_readbacks_landed_self_lane_requires_post_push_readback',
       selected_lane_count: selectedLaneCount,
-      remote_readback_matched_lane_count: 2,
-      pending_self_lane_count: 1,
+      remote_readback_matched_lane_count: selectedLaneCount === 0 ? 0 : 2,
+      pending_self_lane_count: selectedLaneCount === 0 ? 0 : 1,
       absorbed_remote_readbacks: [
         {
           lane_id: 'rca-private-platform-json-readback-20260622d',
@@ -121,11 +146,25 @@ function buildCurrentTrancheReadback(
         },
       ],
       self_lane_closeout_evidence_ref:
-        'one-person-lab main push plus fresh git ls-remote origin refs/heads/main after this readback is absorbed',
+        selectedLaneCount === 0
+          ? 'one-person-lab self lane already absorbed before this readback; fresh git status and remote sha readback still required for currentness claims'
+          : 'one-person-lab main push plus fresh git ls-remote origin refs/heads/main after this readback is absorbed',
       false_ready_boundary: {
         static_backlog_can_self_certify_own_push: false,
         external_remote_sha_readback_can_claim_runtime_ready: false,
         tranche_closeout_progress_can_claim_full_goal_completion: false,
+      },
+    },
+    closed_selection_archive: {
+      tranche_id: 'opl-family-ideal-operating-model-tranche-20260622d',
+      archive_role:
+        'closed_non_live_structure_selection_archive_not_current_work_order',
+      selected_lane_count: NEXT_TRANCHE_SELECTED_LANES.length,
+      lanes: archivedLanes,
+      false_ready_boundary: {
+        closed_selection_archive_can_claim_full_goal_completion: false,
+        closed_selection_archive_can_claim_runtime_ready: false,
+        closed_selection_archive_can_claim_domain_ready: false,
       },
     },
     full_goal_completion_guard: {

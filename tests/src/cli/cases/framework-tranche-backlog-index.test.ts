@@ -18,7 +18,7 @@ test('framework tranche backlog exposes current selection and closed tranche arc
   assert.equal(readback.milestone_state_counts.open, 0);
   assert.equal(readback.milestone_state_counts.partial, 0);
   assert.equal(readback.milestone_state_counts.closed_structure_gate, 8);
-  assert.equal(readback.current_tranche.selected_lane_count, 3);
+  assert.equal(readback.current_tranche.selected_lane_count, 0);
   assert.equal(readback.current_tranche.selected_lane_count_within_policy, true);
   assert.equal(
     readback.current_tranche.tranche_role,
@@ -26,20 +26,24 @@ test('framework tranche backlog exposes current selection and closed tranche arc
   );
   assert.equal(
     readback.current_tranche.current_work_order_status,
-    'active_non_live_structure_lanes_selected',
+    'no_active_non_live_structure_lanes_selected',
   );
-  assert.deepEqual(readback.current_tranche.selected_milestone_ids, [
+  assert.deepEqual(readback.current_tranche.selected_milestone_ids, []);
+  assert.deepEqual(readback.current_tranche.closed_or_advanced_structural_milestone_ids, [
     'strict_source_purity_private_wrapper_retirement',
     'support_repo_profile_no_resurrection',
   ]);
-  assert.deepEqual(readback.current_tranche.closed_or_advanced_structural_milestone_ids, []);
-  assert.equal(readback.current_tranche.next_selection_required, false);
+  assert.equal(readback.current_tranche.next_selection_required, true);
   assert.equal(
     readback.current_tranche.closed_tranche_ref,
     'opl-family-ideal-operating-model-tranche-20260622c',
   );
   assert.deepEqual(
     readback.current_tranche.lanes.map((lane: { lane_id: string }) => lane.lane_id),
+    [],
+  );
+  assert.deepEqual(
+    readback.current_tranche.closed_selection_archive.lanes.map((lane: { lane_id: string }) => lane.lane_id),
     [
       'opl-tranche-backlog-foldback-20260622d',
       'rca-private-platform-json-readback-20260622d',
@@ -123,11 +127,11 @@ test('framework tranche backlog exposes current selection and closed tranche arc
   assert.ok(readback.current_tranche.required_closeout_evidence.includes('worktree_and_branch_cleanup'));
   assert.equal(
     readback.current_tranche.tranche_closeout_progress.progress_status,
-    'domain_lane_remote_readbacks_landed_self_lane_requires_post_push_readback',
+    'no_pending_self_lane_all_selected_structure_milestones_closed',
   );
-  assert.equal(readback.current_tranche.tranche_closeout_progress.selected_lane_count, 3);
-  assert.equal(readback.current_tranche.tranche_closeout_progress.remote_readback_matched_lane_count, 2);
-  assert.equal(readback.current_tranche.tranche_closeout_progress.pending_self_lane_count, 1);
+  assert.equal(readback.current_tranche.tranche_closeout_progress.selected_lane_count, 0);
+  assert.equal(readback.current_tranche.tranche_closeout_progress.remote_readback_matched_lane_count, 0);
+  assert.equal(readback.current_tranche.tranche_closeout_progress.pending_self_lane_count, 0);
   assert.deepEqual(
     readback.current_tranche.tranche_closeout_progress.absorbed_remote_readbacks.map(
       (entry: { lane_id: string; commit_sha: string; remote_sha_matches_local: boolean }) => ({
@@ -162,79 +166,82 @@ test('framework tranche backlog exposes current selection and closed tranche arc
   const lanesById = Object.fromEntries(
     readback.last_closed_tranche.lanes.map((lane: { lane_id: string }) => [lane.lane_id, lane]),
   );
-  const currentLanesById = Object.fromEntries(
-    readback.current_tranche.lanes.map((lane: { lane_id: string }) => [lane.lane_id, lane]),
+  const closedSelectionArchiveLanesById = Object.fromEntries(
+    readback.current_tranche.closed_selection_archive.lanes.map((lane: { lane_id: string }) => [
+      lane.lane_id,
+      lane,
+    ]),
   );
   assert.deepEqual(
-    currentLanesById['opl-tranche-backlog-foldback-20260622d'].milestone_ids,
+    closedSelectionArchiveLanesById['opl-tranche-backlog-foldback-20260622d'].milestone_ids,
     [
       'strict_source_purity_private_wrapper_retirement',
       'support_repo_profile_no_resurrection',
     ],
   );
   assert.equal(
-    currentLanesById['opl-tranche-backlog-foldback-20260622d'].repo,
+    closedSelectionArchiveLanesById['opl-tranche-backlog-foldback-20260622d'].repo,
     'one-person-lab',
   );
   assert.ok(
-    currentLanesById['opl-tranche-backlog-foldback-20260622d']
+    closedSelectionArchiveLanesById['opl-tranche-backlog-foldback-20260622d']
       .non_live_completion_evidence_required.includes(
         'OPL_framework_tranche_backlog_remote_readbacks_reflect_RCA_and_OPL_DOC_origin_main_sha',
       ),
   );
   assert.ok(
-    currentLanesById['opl-tranche-backlog-foldback-20260622d'].forbidden_scope.includes(
+    closedSelectionArchiveLanesById['opl-tranche-backlog-foldback-20260622d'].forbidden_scope.includes(
       'AGUI_update_or_foreground_resurrection',
     ),
   );
   assert.equal(
-    currentLanesById['opl-tranche-backlog-foldback-20260622d']
+    closedSelectionArchiveLanesById['opl-tranche-backlog-foldback-20260622d']
       .authority_boundary.can_claim_plan_completion,
     false,
   );
   assert.deepEqual(
-    currentLanesById['rca-private-platform-json-readback-20260622d'].milestone_ids,
+    closedSelectionArchiveLanesById['rca-private-platform-json-readback-20260622d'].milestone_ids,
     ['strict_source_purity_private_wrapper_retirement'],
   );
   assert.equal(
-    currentLanesById['rca-private-platform-json-readback-20260622d'].repo,
+    closedSelectionArchiveLanesById['rca-private-platform-json-readback-20260622d'].repo,
     'redcube-ai',
   );
   assert.ok(
-    currentLanesById['rca-private-platform-json-readback-20260622d']
+    closedSelectionArchiveLanesById['rca-private-platform-json-readback-20260622d']
       .required_surfaces.includes('API_readback'),
   );
   assert.ok(
-    currentLanesById['rca-private-platform-json-readback-20260622d']
+    closedSelectionArchiveLanesById['rca-private-platform-json-readback-20260622d']
       .non_live_completion_evidence_required.includes(
         'RCA_private_platform_direct_JSON_readback_over_64KB_is_parseable',
       ),
   );
   assert.ok(
-    currentLanesById['rca-private-platform-json-readback-20260622d'].forbidden_scope.includes(
+    closedSelectionArchiveLanesById['rca-private-platform-json-readback-20260622d'].forbidden_scope.includes(
       'visual_ready_or_exportable_claim',
     ),
   );
   assert.deepEqual(
-    currentLanesById['opl-doc-native-support-readback-20260622d'].milestone_ids,
+    closedSelectionArchiveLanesById['opl-doc-native-support-readback-20260622d'].milestone_ids,
     ['support_repo_profile_no_resurrection'],
   );
   assert.equal(
-    currentLanesById['opl-doc-native-support-readback-20260622d'].repo,
+    closedSelectionArchiveLanesById['opl-doc-native-support-readback-20260622d'].repo,
     'opl-doc',
   );
   assert.ok(
-    currentLanesById['opl-doc-native-support-readback-20260622d']
+    closedSelectionArchiveLanesById['opl-doc-native-support-readback-20260622d']
       .required_surfaces.includes('API_readback'),
   );
   assert.ok(
-    currentLanesById['opl-doc-native-support-readback-20260622d']
+    closedSelectionArchiveLanesById['opl-doc-native-support-readback-20260622d']
       .non_live_completion_evidence_required.includes(
         'OPL_DOC_native_check_materializes_support_profile_guard_and_audit',
       ),
   );
   assert.ok(
-    currentLanesById['opl-doc-native-support-readback-20260622d'].forbidden_scope.includes(
+    closedSelectionArchiveLanesById['opl-doc-native-support-readback-20260622d'].forbidden_scope.includes(
       'Foundry_Agent_truth_set_membership_claim',
     ),
   );
