@@ -1297,3 +1297,24 @@ Current next-route rules:
 ### Updated Work-Package Stop Condition
 
 后续每轮 closeout 必须满足：`selected_work_package_count == burn_down item count`，`selected_child_candidate_count` 覆盖全部 selected package 的 `child_candidate_ids`，且 `verified_lane_count + blocked/no_safe/not_safe count` 覆盖全部 selected work packages。若模型上下文、时间、工具失败或用户中断导致 partial batch，必须写 `unfinished_selected_batch` 与 `continuation_required=true`；不得缩小 batch、重写目标或把已完成小切片包装成完整巡检。
+
+## 2026-06-28 重构批次落地 Round 57 partial work-package
+
+本轮从 fresh MAS `origin/main` 继续执行 work-package batch 协议。候选池来自 MAS line-budget advisory；在隔离 worktree 中完成并吸收一个明确 test-structure work package。由于本轮只完成 1 个 work package，按新的 anti-micro-slice 规则不声明 run-level selected batch 完成，后续必须从 fresh work-package matrix 继续选择 2-5 个结构包，或恢复未完成 batch。
+
+| Repo | Work package | Child candidates | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- | --- |
+| `med-autoscience` | `mas-current-work-unit-repair-progress-gate-publication-split-round57` | `tests/test_current_work_unit_cases/repair_progress_current_action_cases.py` gate/publication repair family | 将 5 个 gate / publication repair tests 移入 `tests/test_current_work_unit_cases/repair_progress_current_action_cases_cases/gate_and_publication_repair_cases.py`，原 entry 继续通过 aggregate import 暴露。 | Pushed MAS commit `1889ddd35973c91b248aa6d368cb87e4d86988f2`; direct new case passed 5/5; entry passed 20/20; aggregate `tests/test_current_work_unit.py` passed 117/117; `git diff --check origin/main..HEAD` passed before absorption; post-round `scripts/run-python-clean.sh scripts/line_budget.py` reported 81 advisory issues. Line readback: entry 1316 -> 911 lines; new case 412 lines. | Test structure evidence only；不声明 paper progress、runtime readiness、publication readiness、owner receipt validity、typed blocker validity、provider readiness、current-package authority、App release readiness 或 production readiness。 |
+
+### Round 57 Queue Adjustment
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| closed | MAS `repair_progress_current_action_cases.py` selected work package | Entry is now 911 lines with direct/entry/aggregate verification passing. | Reopen only if this entry regrows above budget or repair-progress current-work-unit failures point to this split boundary. |
+| watch | MAS line-budget advisory queue | Fresh post-round `scripts/run-python-clean.sh scripts/line_budget.py` reports 81 advisory issues after Round 57 partial. | Next run must re-scan current main and select another coherent 2-5 work-package batch; prefer test/projection natural families before authority-heavy source. |
+| continuation_required | Refactor patrol work-package batch | Only one work package landed in this continuation, below the selected-batch burn-down goal. | Next run must not call the patrol complete from Round 57; either freeze a new 8-12 candidate pool with 2-5 selected work packages or explicitly write no-safe batch reasons. |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies。 | 只做 read-only fork-boundary audit；除非目标明确是 OPL-owned overlay、adapter、docs、contracts、packaging metadata 或 test shell，否则不纳入 cleanup/refactor/line-budget 写集。 |
+
+### Round 57 Run-Level Counters
+
+`candidate_pool_total=82`; `work_package_total=1 materialized from selected safe candidate`; `selected_batch_size=1 partial`; `selected_work_package_count=1`; `selected_child_candidate_count=1`; `completed_mutation_or_cleanup_count=1`; `verified_lane_count=1`; `skipped_candidate_count_by_reason={}`; `continuation_attempt_count=1`; `stop_condition=turn_budget_partial_after_one_verified_package`; `batch_underfilled_reason=partial_continuation_not_run_level_closeout`; `unfinished_selected_batch=continue_from_fresh_work_package_matrix`; `selected_batch_burn_down_complete=false`; `continuation_required=true`.
