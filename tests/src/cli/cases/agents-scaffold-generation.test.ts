@@ -130,6 +130,22 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       'opl connect sync-skills',
     );
     assert.equal(
+      foundryAgentSeries.skill_mcp_surface_policy.standard_agent_standalone_mcp_default_enabled,
+      false,
+    );
+    assert.equal(
+      foundryAgentSeries.skill_mcp_surface_policy.standard_agent_plugin_manifest_must_not_expose_mcp_servers,
+      true,
+    );
+    assert.equal(
+      foundryAgentSeries.skill_mcp_surface_policy.cli_mcp_relationship_policy.all_cli_commands_are_mcp_tools,
+      false,
+    );
+    assert.equal(
+      foundryAgentSeries.skill_mcp_surface_policy.mcp_context_budget_policy.progressive_discovery_required_for_large_catalogs,
+      true,
+    );
+    assert.equal(
       foundryAgentSeries.contract_version_policy.current_version,
       'foundry-agent-series.v1',
     );

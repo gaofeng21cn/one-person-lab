@@ -144,6 +144,11 @@ function readBooleanField(source: Record<string, unknown>, field: string) {
   return value;
 }
 
+function cloneJsonRecordField(source: Record<string, unknown>, field: string) {
+  const value = readObjectField(source, field);
+  return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+}
+
 function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
   if (spec.distribution_role !== 'domain_agent_plugin_pack') {
     return {
@@ -224,6 +229,19 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
         'opl agents foundry status',
         `opl foundry agents inspect ${foundryAgentId}`,
       ],
+      standard_agent_standalone_mcp_default_enabled: readBooleanField(
+        skillMcp,
+        'standard_agent_standalone_mcp_default_enabled',
+      ),
+      standard_agent_plugin_manifest_must_not_expose_mcp_servers: readBooleanField(
+        skillMcp,
+        'standard_agent_plugin_manifest_must_not_expose_mcp_servers',
+      ),
+      unified_mcp_projection_owner: readStringField(skillMcp, 'opl_unified_mcp_projection_owner'),
+      future_unified_mcp_server_strategy: readStringField(skillMcp, 'future_unified_mcp_server_strategy'),
+      domain_repo_mcp_server_role: readStringField(skillMcp, 'domain_repo_mcp_server_role'),
+      cli_mcp_relationship_policy: cloneJsonRecordField(skillMcp, 'cli_mcp_relationship_policy'),
+      mcp_context_budget_policy: cloneJsonRecordField(skillMcp, 'mcp_context_budget_policy'),
       legacy_standalone_mcp_servers_retired: readBooleanField(
         skillMcp,
         'legacy_standalone_mcp_servers_retired',

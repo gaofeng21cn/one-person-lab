@@ -214,8 +214,10 @@ function buildPeerProjection(peer: FoundryAgentPeer) {
     },
     mcp_projection: {
       descriptor_owner: 'one-person-lab',
-      domain_repo_mcp_role: 'domain_handler_target_or_direct_protocol_adapter_only',
+      domain_repo_mcp_role: 'direct_protocol_adapter_or_proof_lane_only',
       mcp_descriptor_must_delegate_to_series_spine: true,
+      standard_agent_standalone_mcp_default_enabled: false,
+      all_cli_commands_are_mcp_tools: false,
     },
   };
 }
@@ -344,6 +346,42 @@ export function buildFoundryAgentCliSpine(operation: FoundryAgentCliOperation, a
         mcp_descriptor_must_delegate_to_series_spine: readBoolean(
           skillMcpPolicy.mcp_descriptor_must_delegate_to_series_spine,
           'skill_mcp_surface_policy.mcp_descriptor_must_delegate_to_series_spine',
+        ),
+        standard_agent_standalone_mcp_default_enabled: readBoolean(
+          skillMcpPolicy.standard_agent_standalone_mcp_default_enabled,
+          'skill_mcp_surface_policy.standard_agent_standalone_mcp_default_enabled',
+        ),
+        standard_agent_plugin_manifest_must_not_expose_mcp_servers: readBoolean(
+          skillMcpPolicy.standard_agent_plugin_manifest_must_not_expose_mcp_servers,
+          'skill_mcp_surface_policy.standard_agent_plugin_manifest_must_not_expose_mcp_servers',
+        ),
+        unified_mcp_projection_owner: readString(
+          skillMcpPolicy.opl_unified_mcp_projection_owner,
+          'skill_mcp_surface_policy.opl_unified_mcp_projection_owner',
+        ),
+        future_unified_mcp_server_strategy: readString(
+          skillMcpPolicy.future_unified_mcp_server_strategy,
+          'skill_mcp_surface_policy.future_unified_mcp_server_strategy',
+        ),
+        cli_surface_role: readString(
+          readRecord(skillMcpPolicy.cli_mcp_relationship_policy, 'skill_mcp_surface_policy.cli_mcp_relationship_policy').cli_surface_role,
+          'skill_mcp_surface_policy.cli_mcp_relationship_policy.cli_surface_role',
+        ),
+        mcp_surface_role: readString(
+          readRecord(skillMcpPolicy.cli_mcp_relationship_policy, 'skill_mcp_surface_policy.cli_mcp_relationship_policy').mcp_surface_role,
+          'skill_mcp_surface_policy.cli_mcp_relationship_policy.mcp_surface_role',
+        ),
+        all_cli_commands_are_mcp_tools: readBoolean(
+          readRecord(skillMcpPolicy.cli_mcp_relationship_policy, 'skill_mcp_surface_policy.cli_mcp_relationship_policy').all_cli_commands_are_mcp_tools,
+          'skill_mcp_surface_policy.cli_mcp_relationship_policy.all_cli_commands_are_mcp_tools',
+        ),
+        progressive_discovery_required_for_large_catalogs: readBoolean(
+          readRecord(skillMcpPolicy.mcp_context_budget_policy, 'skill_mcp_surface_policy.mcp_context_budget_policy').progressive_discovery_required_for_large_catalogs,
+          'skill_mcp_surface_policy.mcp_context_budget_policy.progressive_discovery_required_for_large_catalogs',
+        ),
+        toolset_filtering_required_for_broad_surfaces: readBoolean(
+          readRecord(skillMcpPolicy.mcp_context_budget_policy, 'skill_mcp_surface_policy.mcp_context_budget_policy').toolset_filtering_required_for_broad_surfaces,
+          'skill_mcp_surface_policy.mcp_context_budget_policy.toolset_filtering_required_for_broad_surfaces',
         ),
         expose_foundry_spine: true,
         expose_legacy_buckets_as_diagnostic_or_migration_only: true,

@@ -5,6 +5,20 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-06-28
+
+### 决策：标准 Agent 不默认暴露 standalone MCP，MCP 由 OPL Connect 统一精选投影
+
+原因：Codex App 里只有 MAS 出现 MCP 的直接原因是 MAS plugin manifest 曾携带 `mcpServers`，把 MAS 作为独立 plugin MCP 暴露；这会让标准 OPL Agent 的 public surface 因 transport 细节分裂。进一步看，成熟 MCP 工程经验也不支持把完整 CLI 平铺成 MCP 工具：MCP 官方 client best practices、GitHub MCP server、Stripe MCP 和 Speakeasy dynamic toolsets 都把大 surface 通过 progressive discovery、toolsets、search/details/read/write、read-only / exclude / human confirmation 和 lazy schema 控制上下文和权限。OPL 因此选择统一策略：插件/Skill 是当前 Codex App 可见主面，MCP 是 OPL Connect 持有的精选 agent-facing descriptor / invocation surface，未来 unified MCP server 只有经过 runtime 验证后才开放。
+
+影响：
+
+- `contracts/opl-framework/foundry-agent-series-contract.json#/skill_mcp_surface_policy` 固定 `standard_agent_standalone_mcp_default_enabled=false`、`standard_agent_plugin_manifest_must_not_expose_mcp_servers=true`、`opl_unified_mcp_projection_owner=one-person-lab` 和 `future_unified_mcp_server_strategy=opl_owned_unified_server_when_runtime_verified`。
+- CLI/MCP 关系固定为：CLI 是 authoritative broad operator / control / debug / admin surface；MCP 是 curated agent-facing discovery / invocation surface；`all_cli_commands_are_mcp_tools=false`，不得默认 mirror 全量 CLI。
+- `opl connect skills --json` / `opl connect sync-skills --json` 对所有标准 agent 投影同一 `mcp_projection`；`opl foundry agents inspect --json` 也显示 standalone MCP 默认关闭和 full CLI mirror 禁止。
+- MAS/MAG/RCA/OMA/BookForge plugin manifest 不得用 `mcpServers` 暴露 standalone server；repo-local MCP server 只可作为 direct protocol adapter、domain handler target、proof lane、fixture 或 migration/provenance 保留。
+- 未来 OPL unified MCP server 必须按 toolsets / progressive discovery / descriptor-first lazy schema / read-only default / explicit mutation gate 设计；mutation tool 不得绕过 domain owner receipt、typed blocker、human gate、quality/export verdict、artifact authority 或 release verdict。
+
 ## 2026-06-27
 
 ### 决策：framework capability package 复用 GHCR agent package channel，不新增专属 source manager

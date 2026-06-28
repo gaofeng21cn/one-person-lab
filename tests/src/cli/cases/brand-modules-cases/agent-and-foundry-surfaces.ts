@@ -120,6 +120,12 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying OPL bra
     assert.equal(output.authority_boundary.generated_surface_can_create_owner_receipt, false);
     assert.equal(output.mcp_and_skill_policy.skill_pack_must_delegate_to_series_spine, true);
     assert.equal(output.mcp_and_skill_policy.mcp_descriptor_must_delegate_to_series_spine, true);
+    assert.equal(output.mcp_and_skill_policy.standard_agent_standalone_mcp_default_enabled, false);
+    assert.equal(output.mcp_and_skill_policy.standard_agent_plugin_manifest_must_not_expose_mcp_servers, true);
+    assert.equal(output.mcp_and_skill_policy.unified_mcp_projection_owner, 'one-person-lab');
+    assert.equal(output.mcp_and_skill_policy.all_cli_commands_are_mcp_tools, false);
+    assert.equal(output.mcp_and_skill_policy.progressive_discovery_required_for_large_catalogs, true);
+    assert.equal(output.mcp_and_skill_policy.toolset_filtering_required_for_broad_surfaces, true);
     assert.equal(output.mcp_and_skill_policy.expose_legacy_buckets_as_diagnostic_or_migration_only, true);
     assert.equal(
       output.retired_implementation_buckets.some((entry: { bucket: string }) => entry.bucket === 'skill'),
@@ -207,6 +213,8 @@ test('OPL Foundry Agent index exposes MAS MAG RCA OMA Book Forge as one standard
   assert.equal('executable_brand_cli_frontdoor' in mas.cli_smoke, false);
   assert.equal(mas.cli_smoke.status_json_command, 'opl foundry agents inspect mas --json');
   assert.equal(mas.mcp_projection.mcp_descriptor_must_delegate_to_series_spine, true);
+  assert.equal(mas.mcp_projection.standard_agent_standalone_mcp_default_enabled, false);
+  assert.equal(mas.mcp_projection.all_cli_commands_are_mcp_tools, false);
 
   const masAlias = runCli(['foundry', 'agents', 'inspect', 'med-autoscience']).foundry_agent;
   assert.equal(masAlias.agent_id, 'mas');
