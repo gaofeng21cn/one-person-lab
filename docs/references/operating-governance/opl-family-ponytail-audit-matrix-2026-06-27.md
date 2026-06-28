@@ -1231,3 +1231,29 @@ Current next-route rules:
 ### Updated Stop Condition
 
 后续每轮 closeout 必须满足：`selected_batch_size == burn_down item count`，且 `verified_lane_count + blocked/no_safe/not_safe count` 覆盖全部 selected items。若模型上下文、时间、工具失败或用户中断导致 partial batch，必须写 `unfinished_selected_batch` 与 `continuation_required=true`；不得缩小 batch、重写目标或把已完成小切片包装成完整巡检。
+
+
+## 2026-06-28 重构批次落地 Round 55
+
+本轮从 fresh MAS `origin/main` 继续执行 selected-batch burn-down 协议。候选池来自 line-budget advisory；selected batch 选择三个互不冲突、基线通过、自然边界清晰的测试 / projection 入口，并在隔离 worktree 中完成、验证、吸收、推送和清理。没有触碰上游 fork body、MAS source authority、contracts、docs、runtime queue、provider attempt、Yang authority、owner receipt、typed blocker、human gate、current-package authority、paper body 或 publication authority。
+
+| Repo | Route | Result | Fresh evidence | Residual |
+| --- | --- | --- | --- | --- |
+| `med-autoscience` | `refactor_patrol_batch` | 拆分 `tests/study_progress_cases/current_executable_owner_action_cases/gate_replay_precedence.py`：surface-refresh / same-eval / different-ref gate-followthrough 测试移入 `gate_replay_precedence_cases/surface_refresh_and_same_eval_cases.py`。 | Pushed MAS commit `2947d12b`; direct split cases included in 27/27；aggregate selected suite passed 49/49；`git diff --check HEAD~1..HEAD` passed；remote readback `origin/main=2947d12b293bcb0a0cb4466014fc0cd1d5d6cb70`。Line readback: entry 1289 -> 584 lines; new case 720 lines. | Test/projection structure evidence only；不声明 paper progress、runtime readiness、publication readiness、owner receipt validity、typed blocker validity、provider readiness、current-package authority 或 production readiness。 |
+| `med-autoscience` | `refactor_patrol_batch` | 拆分 `tests/study_progress_cases/current_executable_owner_action_cases/publication_readiness_repair_precedence.py`：specificity targets、finalize route、cutover/readiness blocker 相关测试移入 `publication_readiness_repair_precedence_cases/specificity_and_finalize_cases.py`。 | Same commit `2947d12b`; direct split case included in 27/27 direct verification；aggregate included in 49/49 verification；post-round `scripts/run-python-clean.sh scripts/line_budget.py` readback reported 84 advisory issues. Line readback: entry 1347 -> 602 lines; new case 760 lines. | Test/projection structure evidence only。Reopen only if this family regrows or fresh failures point to this split boundary. |
+| `med-autoscience` | `refactor_patrol_batch` | 拆分 `tests/test_provider_admission_current_control_cases/provider_admission_report_sync_cases.py`：transition request、runtime health live attempt、typed-blocker/readback lift 测试移入 `provider_admission_report_sync_cases_cases/transition_runtime_readback_cases.py`。 | Same commit `2947d12b`; direct split case included in 27/27 direct verification；aggregate included in 49/49 verification；line-budget advisory count reduced from 87 to 84. Line readback: entry 1334 -> 568 lines; new case 780 lines. | Test/projection structure evidence only。Reopen only if provider-admission sync tests regrow or fail around transition/runtime/readback boundaries. |
+
+### Round 55 Queue Adjustment
+
+| Priority | File or surface | Current reason | Gate |
+| --- | --- | --- | --- |
+| closed | MAS `gate_replay_precedence.py` selected split | Entry is now 584 lines with aggregate/direct verification passing. | Reopen only if this entry regrows above budget or current-owner gate replay failures point to this split boundary. |
+| closed | MAS `publication_readiness_repair_precedence.py` selected split | Entry is now 602 lines with aggregate/direct verification passing. | Reopen only for fresh publication-readiness precedence family growth or regression. |
+| closed | MAS `provider_admission_report_sync_cases.py` selected split | Entry is now 568 lines with transition/runtime/readback tests separated. | Reopen only if provider-admission report sync tests regrow or fail around this boundary. |
+| watch | MAS line-budget advisory queue | Fresh post-round `scripts/run-python-clean.sh scripts/line_budget.py` reports 84 advisory issues after Round 55. | Next run must re-scan current main and select another coherent 2-5 item batch; prefer test/projection natural families before authority-heavy source. |
+| blocked_owner_gated | MAS owner-route default-executor current-owner action tail | Round 52 baseline-red behavior/test-expectation still applies unless fresh evidence changes. | Do not reselect as structure cleanup until baseline behavior is fixed or the lane is explicitly selected as behavior/test-expectation cleanup. |
+| excluded | `opl-hermes-shell/**`, `opl-aion-shell/**`, `one-person-lab-app/shells/aionui/**`, `one-person-lab-app/_external/hermes-agent/**` | Upstream fork / reference bodies。 | 只做 read-only fork-boundary audit；除非目标明确是 OPL-owned overlay、adapter、docs、contracts、packaging metadata 或 test shell，否则不纳入 cleanup/refactor/line-budget 写集。 |
+
+### Round 55 Run-Level Counters
+
+`candidate_pool_total=87`; `selected_batch_size=3`; `completed_mutation_or_cleanup_count=3`; `verified_lane_count=3`; `skipped_candidate_count_by_reason={}`; `continuation_attempt_count=1`; `stop_condition=selected batch exhausted`; `batch_underfilled_reason=not_applicable`; `unfinished_selected_batch=none`; `selected_batch_burn_down_complete=true`; `continuation_required=false`.
