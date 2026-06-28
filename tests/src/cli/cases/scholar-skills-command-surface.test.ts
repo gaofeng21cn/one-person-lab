@@ -84,6 +84,11 @@ const expectedReceiptRefFamiliesByModule = {
     'study_binding_ref',
     'privacy_access_tier_ref',
     'retention_guardrail_ref',
+    'storage_tier_ref',
+    'authoritative_body_boundary_ref',
+    'derived_copy_inventory_ref',
+    'analytical_format_strategy_ref',
+    'cold_restore_proof_ref',
     'read_model_boundary_ref',
     'lineage_readiness_ref',
   ],
@@ -113,6 +118,11 @@ const expectedArtifactRefFamiliesByModule = {
     'study_binding',
     'privacy_access_tier',
     'retention_guardrail',
+    'storage_tier',
+    'authoritative_body_boundary',
+    'derived_copy_inventory',
+    'analytical_format_strategy',
+    'cold_restore_proof',
     'read_model_boundary',
     'lineage_readiness',
   ],
@@ -265,6 +275,21 @@ test('opl scholar-skills exposes module-specific capability profiles for every S
     assert.equal(output.execution_receipt_candidate.counts_as_owner_receipt, false);
     assert.equal(output.execution_receipt_candidate.can_authorize_publication_readiness, false);
     assert.equal(output.execution_receipt_candidate.authority_boundary.can_write_domain_truth, false);
+    if (moduleId === 'opl.scholarskills.data') {
+      assert.equal(profile.stage_fit.includes('storage_tier_review'), true);
+      assert.equal(profile.stage_fit.includes('authoritative_body_boundary_review'), true);
+      assert.equal(profile.stage_fit.includes('derived_copy_inventory_review'), true);
+      assert.equal(profile.stage_fit.includes('analytical_format_strategy_review'), true);
+      assert.equal(profile.stage_fit.includes('cold_restore_proof_review'), true);
+      assert.equal(
+        profile.required_ref_families.includes('authoritative_body_boundary'),
+        true,
+      );
+      assert.equal(
+        profile.required_ref_families.includes('cold_restore_proof'),
+        true,
+      );
+    }
   }
 });
 

@@ -30,6 +30,11 @@ const expectedArtifactRefFamiliesByModule = {
     'study_binding',
     'privacy_access_tier',
     'retention_guardrail',
+    'storage_tier',
+    'authoritative_body_boundary',
+    'derived_copy_inventory',
+    'analytical_format_strategy',
+    'cold_restore_proof',
     'read_model_boundary',
     'lineage_readiness',
   ],
@@ -239,6 +244,20 @@ test('scholar-skills materialize writes deterministic module-specific bodies for
           assert.deepEqual(candidate.missing_inputs, candidate.input_requirements.required_payload_fields.filter((field: string) => field !== 'source_refs'));
           assert.equal(candidate.body_carried_to_owner_request, false);
           assert.equal(candidate.authority_flags.can_sign_owner_receipt, false);
+          if (moduleId === 'opl.scholarskills.data') {
+            const sectionIds = candidate.candidate.sections.map((section: { section_id: string }) => section.section_id);
+            assert.equal(sectionIds.includes('storage_tier'), true);
+            assert.equal(sectionIds.includes('authoritative_body_boundary'), true);
+            assert.equal(sectionIds.includes('derived_copy_inventory'), true);
+            assert.equal(sectionIds.includes('analytical_format_strategy'), true);
+            assert.equal(sectionIds.includes('cold_restore_proof'), true);
+            assert.equal(
+              candidate.candidate.quality_checks_required.includes('cold_restore_proof_required_before_body_retirement'),
+              true,
+            );
+            assert.equal(candidate.input_requirements.optional_payload_fields.includes('storage_tier_refs'), true);
+            assert.equal(candidate.input_requirements.optional_payload_fields.includes('cold_restore_refs'), true);
+          }
         } else {
           const text = fs.readFileSync(body.body_path, 'utf8');
           assert.equal(text.includes(expectedEngineIdsByModule[moduleId]), true);

@@ -729,6 +729,11 @@
         "study_data_binding_review",
         "privacy_access_tier_review",
         "retention_guardrail_review",
+        "storage_tier_review",
+        "authoritative_body_boundary_review",
+        "derived_copy_inventory_review",
+        "analytical_format_strategy_review",
+        "cold_restore_proof_review",
         "read_model_boundary_review"
       ],
       "input_schema_refs": [
@@ -781,6 +786,11 @@
           "study_binding_ref",
           "privacy_access_tier_ref",
           "retention_guardrail_ref",
+          "storage_tier_ref",
+          "authoritative_body_boundary_ref",
+          "derived_copy_inventory_ref",
+          "analytical_format_strategy_ref",
+          "cold_restore_proof_ref",
           "read_model_boundary_ref"
         ],
         "can_claim_quality_verdict": false
