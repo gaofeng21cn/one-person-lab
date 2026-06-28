@@ -16,7 +16,17 @@ export const MODULE_REQUIRED_ARTIFACT_REF_FAMILIES = {
   'opl.scholarskills.write': ['draft_section_manifest', 'source_trace'],
   'opl.scholarskills.review': ['reviewer_report', 'route_back'],
   'opl.scholarskills.submit': ['package_manifest', 'submission_checklist'],
-  'opl.scholarskills.data': ['data_manifest', 'lineage_readiness'],
+  'opl.scholarskills.data': [
+    'data_manifest',
+    'dataset_manifest',
+    'registry_lineage',
+    'semantic_readiness',
+    'study_binding',
+    'privacy_access_tier',
+    'retention_guardrail',
+    'read_model_boundary',
+    'lineage_readiness',
+  ],
   'opl.scholarskills.intake': ['source_snapshot', 'adoption_contract'],
 } as const satisfies Record<ScholarSkillModuleId, readonly string[]>;
 
@@ -83,6 +93,13 @@ export const MODULE_EXECUTION_RECEIPT_REF_FAMILIES = {
     'dependency_profile',
     'prepared_run_context',
     'data_manifest',
+    'dataset_manifest',
+    'registry_lineage',
+    'semantic_readiness',
+    'study_binding',
+    'privacy_access_tier',
+    'retention_guardrail',
+    'read_model_boundary',
     'lineage_readiness',
   ],
   'opl.scholarskills.intake': [

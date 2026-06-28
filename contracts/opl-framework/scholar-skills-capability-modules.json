@@ -723,13 +723,20 @@
       "stage_fit": [
         "source_data_profile",
         "data_dictionary",
-        "analysis_dataset_handoff"
+        "analysis_dataset_handoff",
+        "data_asset_contract_review",
+        "semantic_readiness_review",
+        "study_data_binding_review",
+        "privacy_access_tier_review",
+        "retention_guardrail_review",
+        "read_model_boundary_review"
       ],
       "input_schema_refs": [
         "scholarskills_data_input.v1"
       ],
       "output_schema_refs": [
-        "scholarskills_data_output_refs.v1"
+        "scholarskills_data_output_refs.v1",
+        "scholarskills_data_asset_refs.v1"
       ],
       "dependency_profile_refs": [
         "runtime_env_dependency_profile:scholarskills_data_v1"
@@ -767,7 +774,14 @@
         "required_ref_shapes": [
           "source_data_ref",
           "dictionary_ref",
-          "data_qc_ref"
+          "data_qc_ref",
+          "dataset_manifest_ref",
+          "registry_lineage_ref",
+          "semantic_readiness_ref",
+          "study_binding_ref",
+          "privacy_access_tier_ref",
+          "retention_guardrail_ref",
+          "read_model_boundary_ref"
         ],
         "can_claim_quality_verdict": false
       },

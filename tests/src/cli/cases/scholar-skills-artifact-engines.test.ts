@@ -22,7 +22,17 @@ const expectedArtifactRefFamiliesByModule = {
   'opl.scholarskills.write': ['draft_section_manifest', 'source_trace'],
   'opl.scholarskills.review': ['reviewer_report', 'route_back'],
   'opl.scholarskills.submit': ['package_manifest', 'submission_checklist'],
-  'opl.scholarskills.data': ['data_manifest', 'lineage_readiness'],
+  'opl.scholarskills.data': [
+    'data_manifest',
+    'dataset_manifest',
+    'registry_lineage',
+    'semantic_readiness',
+    'study_binding',
+    'privacy_access_tier',
+    'retention_guardrail',
+    'read_model_boundary',
+    'lineage_readiness',
+  ],
   'opl.scholarskills.intake': ['source_snapshot', 'adoption_contract'],
 } satisfies Record<typeof moduleIds[number], string[]>;
 

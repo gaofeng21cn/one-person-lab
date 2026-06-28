@@ -78,6 +78,13 @@ const expectedReceiptRefFamiliesByModule = {
     'dependency_profile_ref',
     'prepared_run_context_ref',
     'data_manifest_ref',
+    'dataset_manifest_ref',
+    'registry_lineage_ref',
+    'semantic_readiness_ref',
+    'study_binding_ref',
+    'privacy_access_tier_ref',
+    'retention_guardrail_ref',
+    'read_model_boundary_ref',
     'lineage_readiness_ref',
   ],
   'opl.scholarskills.intake': [
@@ -98,7 +105,17 @@ const expectedArtifactRefFamiliesByModule = {
   'opl.scholarskills.write': ['draft_section_manifest', 'source_trace'],
   'opl.scholarskills.review': ['reviewer_report', 'route_back'],
   'opl.scholarskills.submit': ['package_manifest', 'submission_checklist'],
-  'opl.scholarskills.data': ['data_manifest', 'lineage_readiness'],
+  'opl.scholarskills.data': [
+    'data_manifest',
+    'dataset_manifest',
+    'registry_lineage',
+    'semantic_readiness',
+    'study_binding',
+    'privacy_access_tier',
+    'retention_guardrail',
+    'read_model_boundary',
+    'lineage_readiness',
+  ],
   'opl.scholarskills.intake': ['source_snapshot', 'adoption_contract'],
 } satisfies Record<ExpectedModuleId, string[]>;
 
