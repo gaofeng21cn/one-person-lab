@@ -24,10 +24,10 @@ import {
 } from './family-runtime-stage-run-currentness-identity.ts';
 import { providerAdmissionCurrentnessIdentity } from './family-runtime-mas-current-control-admission-currentness.ts';
 import { buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-gate.ts';
-import { preflightMasWorkspaceCheckoutCurrentness } from './family-runtime-checkout-currentness.ts';
 import {
-  type DomainHandlerCheckoutCurrentnessPreflight,
-} from './family-runtime-domain-handler-process.ts';
+  combineStageAdmissionGateWithCheckoutCurrentness,
+  providerHostedCheckoutCurrentnessPreflight,
+} from './family-runtime-provider-hosted-attempts-parts/admission-currentness.ts';
 export {
   defaultExecutorDispatchRef,
   defaultExecutorSourceFingerprint,
@@ -870,37 +870,6 @@ function sourceFingerprintForProviderHostedTask(row: FamilyRuntimeTaskRow, paylo
     }
   }
   return stableId('task_source', [row.domain_id, row.task_kind, row.task_id]);
-}
-
-function providerHostedCheckoutCurrentnessPreflight(
-  row: FamilyRuntimeTaskRow,
-  workspaceLocator: Record<string, unknown>,
-): DomainHandlerCheckoutCurrentnessPreflight | null {
-  return preflightMasWorkspaceCheckoutCurrentness({
-    domainId: row.domain_id,
-    workspaceLocator,
-  });
-}
-
-function combineStageAdmissionGateWithCheckoutCurrentness(
-  admissionGate: ReturnType<typeof buildStageAdmissionLaunchGate>,
-  checkoutCurrentnessPreflight: DomainHandlerCheckoutCurrentnessPreflight | null,
-) {
-  if (!checkoutCurrentnessPreflight) {
-    return admissionGate;
-  }
-  if (checkoutCurrentnessPreflight.status !== 'blocked') {
-    return {
-      ...admissionGate,
-      checkout_currentness_preflight: checkoutCurrentnessPreflight,
-    };
-  }
-  return {
-    ...admissionGate,
-    status: 'blocked' as const,
-    blocked_reason: checkoutCurrentnessPreflight.reason ?? 'checkout_currentness_blocked',
-    checkout_currentness_preflight: checkoutCurrentnessPreflight,
-  };
 }
 
 export function ensureProviderHostedStageAttempt(
