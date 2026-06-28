@@ -61,7 +61,7 @@ const sentruxAdvisoryWorkflowPatterns = [
   /sentrux check \./,
   /\.\/scripts\/install-sentrux-ci\.sh/,
   /uses: \.\/\.github\/actions\/quality-details/,
-  /timeout-minutes: 20/,
+  /timeout-minutes: 5/,
   /continue-on-error: true/,
   /compare-ref: origin\/main/,
   /json-limit: '50'/,

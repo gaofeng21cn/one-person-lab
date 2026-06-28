@@ -54,7 +54,7 @@ jobs:
           fi
 
       - name: Run OPL quality details
-        timeout-minutes: 20
+        timeout-minutes: 5
         continue-on-error: true
         uses: ./.github/actions/quality-details
         with:
