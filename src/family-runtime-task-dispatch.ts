@@ -664,6 +664,9 @@ export async function dispatchFamilyRuntimeTask(
         command_preview: command.command_preview,
         command_cwd: command.cwd,
         output,
+        ...(result.checkout_currentness_preflight
+          ? { checkout_currentness_preflight: result.checkout_currentness_preflight }
+          : {}),
         ...(result.recovery ? { domain_handler_recovery: result.recovery } : {}),
       },
     });
@@ -782,6 +785,9 @@ export async function dispatchFamilyRuntimeTask(
     command_cwd: command.cwd,
     exit_code: exitCode,
     error: errorMessage,
+    ...(result.checkout_currentness_preflight
+      ? { checkout_currentness_preflight: result.checkout_currentness_preflight }
+      : {}),
     ...(result.recovery ? { domain_handler_recovery: result.recovery } : {}),
     stage_attempts: stageAttempts.length > 0 ? stageAttempts : runningStageAttempts,
   };

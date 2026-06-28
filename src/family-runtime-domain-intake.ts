@@ -557,6 +557,9 @@ export function hydrateDomainTasks(
         command_cwd: command.cwd,
         command_source: command.source,
         error: domainHandlerResultErrorMessage(result, 'Domain export'),
+        ...(result.checkout_currentness_preflight
+          ? { checkout_currentness_preflight: result.checkout_currentness_preflight }
+          : {}),
         ...(result.recovery ? { domain_handler_recovery: result.recovery } : {}),
       });
       continue;

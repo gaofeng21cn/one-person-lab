@@ -7,6 +7,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-06-28
 
+### 决策：MAS domain-handler 使用 admission 前 clean checkout currentness gate，不做热加载
+
+原因：MAS 作为标准 OPL Agent 在 OPL 基座运行时，OPL 必须在 domain-handler / stage admission 前确认将要调用的 MAS checkout 与目标 ref 一致，避免从 stale checkout 继续导出 stage route、owner handoff 或 PaperMission refs。这个机制不是热加载模块，也不是在进程内替换已加载代码；它是 admission 前的 workspace currentness gate。
+
+影响：
+
+- MAS domain-handler / stage admission 的 target ref 必须来自 OPL 声明的 domain checkout policy，普通路径默认读 `origin/main` 或同等 release/pinned target。
+- clean checkout 落后 target ref 时，OPL 可自动 `fetch` 并 `ff-only` 到 target ref；dirty checkout、diverged checkout 或无法证明 target ref 的 checkout 必须 fail closed，不得继续 admission。
+- attempt/readback 必须记录 `workspace_path`、`head_sha`、`target_ref` 和 `currentness_status`；`currentness_status` 至少区分 `current`、`fast_forwarded`、`dirty_fail_closed`、`diverged_fail_closed` 和 `target_unresolved_fail_closed`。
+- 该 gate 只证明 OPL 将调用的 domain-handler checkout current；它不写 MAS domain truth、不签 MAS owner receipt、不创建 MAS typed blocker / human gate、不写 publication eval / controller decision / current package / paper body，也不声明 MAS paper progress、domain-ready、runtime-ready、publication-ready 或 production-ready。
+
 ### 决策：标准 Agent 不默认暴露 standalone MCP，MCP 由 OPL Connect 统一精选投影
 
 原因：Codex App 里只有 MAS 出现 MCP 的直接原因是 MAS plugin manifest 曾携带 `mcpServers`，把 MAS 作为独立 plugin MCP 暴露；这会让标准 OPL Agent 的 public surface 因 transport 细节分裂。进一步看，成熟 MCP 工程经验也不支持把完整 CLI 平铺成 MCP 工具：MCP 官方 client best practices、GitHub MCP server、Stripe MCP 和 Speakeasy dynamic toolsets 都把大 surface 通过 progressive discovery、toolsets、search/details/read/write、read-only / exclude / human confirmation 和 lazy schema 控制上下文和权限。OPL 因此选择统一策略：插件/Skill 是当前 Codex App 可见主面，MCP 是 OPL Connect 持有的精选 agent-facing descriptor / invocation surface，未来 unified MCP server 只有经过 runtime 验证后才开放。

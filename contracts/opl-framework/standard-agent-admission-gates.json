@@ -20,6 +20,7 @@
       "identity",
       "domain_truth_owner",
       "generated_surface_default_entry",
+      "clean_checkout_currentness_gate",
       "standard_pack_abi",
       "stage_artifact_contract",
       "execution_model",
@@ -84,6 +85,43 @@
           "domain_ready",
           "production_ready",
           "generated_surface_is_domain_authority"
+        ]
+      },
+      {
+        "gate_id": "clean_checkout_currentness_gate",
+        "requirement_kind": "workspace_currentness",
+        "required_for_formal_admission": true,
+        "summary": "Before domain-handler or stage admission, OPL must use a clean domain checkout at the declared target ref. Clean checkouts behind the target may be fetched and fast-forwarded only; dirty, diverged, or unresolved-target checkouts fail closed.",
+        "required_evidence_refs": [
+          "opl_runtime:domain_checkout_policy",
+          "opl_runtime:domain_handler_admission_readback",
+          "candidate_domain_repo:declared_target_ref"
+        ],
+        "required_declarations": [
+          "workspace_path",
+          "head_sha",
+          "target_ref",
+          "currentness_status"
+        ],
+        "allowed_currentness_statuses": [
+          "current",
+          "fast_forwarded"
+        ],
+        "fail_closed_currentness_statuses": [
+          "dirty_fail_closed",
+          "diverged_fail_closed",
+          "target_unresolved_fail_closed"
+        ],
+        "hot_reload_modules": false,
+        "auto_fetch_fast_forward_only_when_clean_behind_target": true,
+        "forbidden_claims": [
+          "domain_ready",
+          "production_ready",
+          "runtime_ready",
+          "owner_receipt_created",
+          "typed_blocker_created",
+          "domain_truth_written",
+          "hot_reload_completed"
         ]
       },
       {
@@ -229,6 +267,11 @@
     "opl_can_claim_production_ready": false,
     "scaffold_signal_can_admit_domain": false,
     "generated_surface_can_admit_domain": false,
+    "clean_checkout_currentness_gate_can_claim_domain_ready": false,
+    "clean_checkout_currentness_gate_can_write_domain_truth": false,
+    "clean_checkout_currentness_gate_can_create_owner_receipt": false,
+    "clean_checkout_currentness_gate_can_create_typed_blocker": false,
+    "clean_checkout_currentness_gate_is_hot_reload": false,
     "descriptor_pass_can_claim_domain_ready": false,
     "conformance_pass_can_claim_production_ready": false,
     "file_presence_counts_as_stage_complete": false,

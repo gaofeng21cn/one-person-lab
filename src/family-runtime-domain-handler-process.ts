@@ -1,5 +1,6 @@
 import { spawnSync, type SpawnSyncOptionsWithStringEncoding, type SpawnSyncReturns } from 'node:child_process';
 import fs from 'node:fs';
+import path from 'node:path';
 
 import { FrameworkContractError } from './contracts.ts';
 import {
@@ -19,6 +20,7 @@ type DomainHandlerProcessResult = SpawnSyncReturns<string> & {
   exit_code: number;
   timed_out: boolean;
   domain_handler_timeout_ms: number;
+  checkout_currentness_preflight?: DomainHandlerCheckoutCurrentnessPreflight;
   recovery?: {
     trigger_kind: 'uv_cache_archive_missing' | 'managed_python_env_missing_dependency';
     first_exit_code: number;
@@ -26,6 +28,26 @@ type DomainHandlerProcessResult = SpawnSyncReturns<string> & {
     retry_tmp_root: string;
     first_error_excerpt: string;
   };
+};
+
+type DomainHandlerCheckoutCurrentnessPreflight = {
+  status: 'not_git_checkout' | 'current' | 'fast_forwarded' | 'blocked';
+  currentness_status:
+    | 'not_git_checkout'
+    | 'current'
+    | 'fast_forwarded'
+    | 'dirty_fail_closed'
+    | 'diverged_fail_closed'
+    | 'target_unresolved_fail_closed'
+    | 'git_unreadable_fail_closed'
+    | 'fetch_failed_fail_closed'
+    | 'fast_forward_failed_fail_closed'
+    | 'ahead_fail_closed';
+  target_ref?: string;
+  head_sha?: string;
+  target_sha?: string;
+  reason?: string;
+  detail?: string;
 };
 
 function domainHandlerTimeoutEnvName(timeoutKind: DomainHandlerTimeoutKind) {
@@ -90,6 +112,75 @@ function resultExitCode(result: SpawnSyncReturns<string>, timedOut: boolean) {
   return timedOut ? 124 : result.status ?? (result.error ? 127 : 1);
 }
 
+function runGit(cwd: string, args: string[]) {
+  return spawnSync('git', args, {
+    cwd,
+    encoding: 'utf8',
+    maxBuffer: 1024 * 1024,
+    timeout: 30_000,
+  });
+}
+
+function gitOutput(result: SpawnSyncReturns<string>) {
+  return (result.stdout ?? '').trim();
+}
+
+function gitErrorDetail(result: SpawnSyncReturns<string>) {
+  return shortExcerpt([
+    result.error?.message,
+    result.stderr,
+    result.stdout,
+  ].filter(Boolean).join('\n'));
+}
+
+function checkoutCurrentnessTargetRef(env: NodeJS.ProcessEnv) {
+  return env.OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_CURRENTNESS_TARGET_REF?.trim() || 'origin/main';
+}
+
+function commandRunsFromCheckout(command: string[], cwd: string) {
+  const executable = command[0];
+  if (!executable || (!path.isAbsolute(executable) && !executable.includes('/'))) {
+    return false;
+  }
+  const resolvedExecutable = path.resolve(cwd, executable);
+  const resolvedCwd = path.resolve(cwd);
+  const relative = path.relative(resolvedCwd, resolvedExecutable);
+  return Boolean(relative) && !relative.startsWith('..') && !path.isAbsolute(relative);
+}
+
+function failClosedDomainHandlerResult(
+  timeoutMs: number,
+  preflight: DomainHandlerCheckoutCurrentnessPreflight,
+): DomainHandlerProcessResult {
+  return {
+    pid: 0,
+    output: [null, null, JSON.stringify({
+      surface_kind: 'opl_domain_handler_checkout_currentness_preflight',
+      accepted: false,
+      reason: preflight.reason,
+      blocked_reason: preflight.reason,
+      detail: preflight.detail,
+      checkout_currentness_preflight: preflight,
+    })],
+    stdout: `${JSON.stringify({
+      surface_kind: 'opl_domain_handler_checkout_currentness_preflight',
+      accepted: false,
+      reason: preflight.reason,
+      blocked_reason: preflight.reason,
+      detail: preflight.detail,
+      checkout_currentness_preflight: preflight,
+    })}\n`,
+    stderr: '',
+    status: 1,
+    signal: null,
+    error: undefined,
+    exit_code: 1,
+    timed_out: false,
+    domain_handler_timeout_ms: timeoutMs,
+    checkout_currentness_preflight: preflight,
+  };
+}
+
 function resultText(result: SpawnSyncReturns<string>) {
   return [
     result.error?.message,
@@ -120,9 +211,126 @@ function freshManagedRootRetryTrigger(result: SpawnSyncReturns<string>, exitCode
   return null;
 }
 
+function preflightDomainHandlerCheckoutCurrentness(
+  command: string[],
+  cwd: string,
+  env: NodeJS.ProcessEnv,
+): DomainHandlerCheckoutCurrentnessPreflight {
+  if (!commandRunsFromCheckout(command, cwd)) {
+    return { status: 'not_git_checkout', currentness_status: 'not_git_checkout' };
+  }
+
+  const inside = runGit(cwd, ['rev-parse', '--is-inside-work-tree']);
+  if (inside.status !== 0 || gitOutput(inside) !== 'true') {
+    return { status: 'not_git_checkout', currentness_status: 'not_git_checkout' };
+  }
+
+  const head = runGit(cwd, ['rev-parse', 'HEAD']);
+  const headSha = head.status === 0 ? gitOutput(head) : undefined;
+  if (head.status !== 0) {
+    return {
+      status: 'blocked',
+      currentness_status: 'git_unreadable_fail_closed',
+      reason: 'git_head_unreadable',
+      detail: gitErrorDetail(head),
+    };
+  }
+
+  const status = runGit(cwd, ['status', '--porcelain']);
+  if (status.status !== 0) {
+    return {
+      status: 'blocked',
+      currentness_status: 'git_unreadable_fail_closed',
+      reason: 'git_status_unreadable',
+      head_sha: headSha,
+      detail: gitErrorDetail(status),
+    };
+  }
+  if (gitOutput(status)) {
+    return {
+      status: 'blocked',
+      currentness_status: 'dirty_fail_closed',
+      reason: 'dirty_checkout',
+      head_sha: headSha,
+      detail: 'Domain-handler checkout has uncommitted changes; refusing to run against a mutable source tree.',
+    };
+  }
+
+  const targetRef = checkoutCurrentnessTargetRef(env);
+  const fetch = runGit(cwd, ['fetch', '--quiet', 'origin']);
+  if (fetch.status !== 0) {
+    return {
+      status: 'blocked',
+      currentness_status: 'fetch_failed_fail_closed',
+      reason: 'git_fetch_failed',
+      target_ref: targetRef,
+      head_sha: headSha,
+      detail: gitErrorDetail(fetch),
+    };
+  }
+
+  const target = runGit(cwd, ['rev-parse', '--verify', targetRef]);
+  if (target.status !== 0) {
+    return {
+      status: 'blocked',
+      currentness_status: 'target_unresolved_fail_closed',
+      reason: 'target_ref_unreadable',
+      target_ref: targetRef,
+      head_sha: headSha,
+      detail: gitErrorDetail(target),
+    };
+  }
+  const targetSha = gitOutput(target);
+  if (headSha === targetSha) {
+    return {
+      status: 'current',
+      currentness_status: 'current',
+      target_ref: targetRef,
+      head_sha: headSha,
+      target_sha: targetSha,
+    };
+  }
+
+  const headAncestor = runGit(cwd, ['merge-base', '--is-ancestor', 'HEAD', targetRef]);
+  if (headAncestor.status === 0) {
+    const merge = runGit(cwd, ['merge', '--ff-only', targetRef]);
+    if (merge.status !== 0) {
+      return {
+        status: 'blocked',
+        currentness_status: 'fast_forward_failed_fail_closed',
+        reason: 'fast_forward_failed',
+        target_ref: targetRef,
+        head_sha: headSha,
+        target_sha: targetSha,
+        detail: gitErrorDetail(merge),
+      };
+    }
+    const newHead = runGit(cwd, ['rev-parse', 'HEAD']);
+    return {
+      status: 'fast_forwarded',
+      currentness_status: 'fast_forwarded',
+      target_ref: targetRef,
+      head_sha: newHead.status === 0 ? gitOutput(newHead) : targetSha,
+      target_sha: targetSha,
+    };
+  }
+
+  const targetAncestor = runGit(cwd, ['merge-base', '--is-ancestor', targetRef, 'HEAD']);
+  return {
+    status: 'blocked',
+    currentness_status: targetAncestor.status === 0 ? 'ahead_fail_closed' : 'diverged_fail_closed',
+    reason: targetAncestor.status === 0 ? 'checkout_ahead_of_target' : 'diverged_checkout',
+    target_ref: targetRef,
+    head_sha: headSha,
+    target_sha: targetSha,
+    detail: 'Domain-handler checkout is not a clean fast-forward from the target ref; refusing to run against a non-current source tree.',
+  };
+}
+
 function normalizeDomainHandlerResult(
   result: SpawnSyncReturns<string>,
   timeoutMs: number,
+  checkoutCurrentnessPreflight?: DomainHandlerCheckoutCurrentnessPreflight,
   recovery?: DomainHandlerProcessResult['recovery'],
 ): DomainHandlerProcessResult {
   const timedOut = errorCode(result.error) === 'ETIMEDOUT';
@@ -132,6 +340,7 @@ function normalizeDomainHandlerResult(
     exit_code: resultExitCode(result, timedOut),
     timed_out: timedOut,
     domain_handler_timeout_ms: timeoutMs,
+    ...(checkoutCurrentnessPreflight ? { checkout_currentness_preflight: checkoutCurrentnessPreflight } : {}),
     ...(recovery ? { recovery } : {}),
   };
 }
@@ -180,6 +389,10 @@ export function runFamilyRuntimeDomainHandlerCommand(
   }
   const timeoutMs = resolveFamilyRuntimeDomainHandlerTimeoutMs(timeoutKind);
   const baseEnv = options.env ?? process.env;
+  const checkoutCurrentnessPreflight = preflightDomainHandlerCheckoutCurrentness(command, options.cwd, baseEnv);
+  if (checkoutCurrentnessPreflight.status === 'blocked') {
+    return failClosedDomainHandlerResult(timeoutMs, checkoutCurrentnessPreflight);
+  }
   const result = spawnDomainHandlerCommand(command, {
     ...options,
     env: buildManagedShellEnvWithUvCacheRecovery(options.cwd, baseEnv),
@@ -188,7 +401,7 @@ export function runFamilyRuntimeDomainHandlerCommand(
   const exitCode = resultExitCode(result, timedOut);
   const retryTrigger = freshManagedRootRetryTrigger(result, exitCode);
   if (!retryTrigger) {
-    return normalizeDomainHandlerResult(result, timeoutMs);
+    return normalizeDomainHandlerResult(result, timeoutMs, checkoutCurrentnessPreflight);
   }
 
   const retryTmpRoot = buildManagedShellRecoveryTmpRoot(options.cwd, baseEnv);
@@ -211,7 +424,7 @@ export function runFamilyRuntimeDomainHandlerCommand(
       firstErrorExcerpt,
     });
   }
-  return normalizeDomainHandlerResult(retry, timeoutMs, {
+  return normalizeDomainHandlerResult(retry, timeoutMs, checkoutCurrentnessPreflight, {
     trigger_kind: retryTrigger,
     first_exit_code: exitCode,
     retry_exit_code: retryExitCode,

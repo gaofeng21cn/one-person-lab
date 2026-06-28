@@ -1,5 +1,22 @@
+import { spawnSync } from 'node:child_process';
+
 import { assert, createGitModuleRemoteFixture, fs, os, path, repoRoot, runCli, shellSingleQuote, test } from '../helpers.ts';
 import { runFamilyRuntimeDomainHandlerCommand } from '../../../../src/family-runtime-domain-handler-process.ts';
+
+function runGit(cwd: string, args: string[]) {
+  const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
+  assert.equal(result.status, 0, `git ${args.join(' ')}\nstdout=${result.stdout}\nstderr=${result.stderr}`);
+  return result.stdout.trim();
+}
+
+function cloneGitModuleCheckout(remoteRoot: string, checkoutRoot: string) {
+  runGit(path.dirname(checkoutRoot), ['clone', remoteRoot, checkoutRoot]);
+  return checkoutRoot;
+}
+
+function readDomainHandlerCheckoutPreflight(result: unknown) {
+  return (result as { checkout_currentness_preflight?: Record<string, unknown> }).checkout_currentness_preflight;
+}
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -215,6 +232,118 @@ test('family-runtime profile module hydrate fails closed on dirty managed module
     fs.rmSync(masFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('domain handler command fast-forwards a clean checkout before running', () => {
+  const masFixture = createGitModuleRemoteFixture('med-autoscience', {
+    extraFiles: {
+      'domain-handler': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        'git rev-parse HEAD > "$OPL_TEST_OBSERVED_HEAD_PATH"',
+        'printf \'{"surface_kind":"mas_family_domain_handler_export","pending_family_tasks":[]}\'',
+        '',
+      ].join('\n'),
+    },
+    executableFiles: ['domain-handler'],
+  });
+  const checkoutRoot = cloneGitModuleCheckout(masFixture.remoteRoot, path.join(masFixture.fixtureRoot, 'clean-behind-checkout'));
+  const observedHeadPath = path.join(masFixture.fixtureRoot, 'handler-head.txt');
+  const commandPath = path.join(checkoutRoot, 'domain-handler');
+  const targetSha = masFixture.advance('CURRENTNESS.md', 'target\n', 'Advance target ref');
+
+  try {
+    const result = runFamilyRuntimeDomainHandlerCommand([commandPath], {
+      cwd: checkoutRoot,
+      env: { OPL_TEST_OBSERVED_HEAD_PATH: observedHeadPath },
+    }, 'export');
+    const preflight = readDomainHandlerCheckoutPreflight(result);
+
+    assert.equal(result.exit_code, 0);
+    assert.equal(preflight?.status, 'fast_forwarded');
+    assert.equal(preflight?.currentness_status, 'fast_forwarded');
+    assert.equal(preflight?.target_ref, 'origin/main');
+    assert.equal(runGit(checkoutRoot, ['rev-parse', 'HEAD']), targetSha);
+    assert.equal(fs.readFileSync(observedHeadPath, 'utf8').trim(), targetSha);
+  } finally {
+    fs.rmSync(masFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('domain handler command blocks dirty or diverged checkouts before running', () => {
+  const cases: Array<{
+    name: string;
+    reason: string;
+    prepare: (checkoutRoot: string) => void;
+  }> = [
+    {
+      name: 'dirty',
+      reason: 'dirty_checkout',
+      prepare(checkoutRoot) {
+        fs.writeFileSync(path.join(checkoutRoot, 'dirty-uncommitted.txt'), 'dirty\n', 'utf8');
+      },
+    },
+    {
+      name: 'diverged',
+      reason: 'diverged_checkout',
+      prepare(checkoutRoot) {
+        fs.writeFileSync(path.join(checkoutRoot, 'LOCAL.md'), 'local\n', 'utf8');
+        runGit(checkoutRoot, ['add', 'LOCAL.md']);
+        runGit(checkoutRoot, [
+          '-c',
+          'user.name=OPL Test',
+          '-c',
+          'user.email=opl@example.test',
+          'commit',
+          '-m',
+          'Local divergent change',
+        ]);
+      },
+    },
+  ];
+
+  for (const testCase of cases) {
+    const masFixture = createGitModuleRemoteFixture('med-autoscience', {
+      extraFiles: {
+        'domain-handler': [
+          '#!/usr/bin/env bash',
+          'set -euo pipefail',
+          'printf "ran\\n" > "$OPL_TEST_MARKER_PATH"',
+          'printf \'{"surface_kind":"mas_family_domain_handler_export","pending_family_tasks":[]}\'',
+          '',
+        ].join('\n'),
+      },
+      executableFiles: ['domain-handler'],
+    });
+    const checkoutRoot = cloneGitModuleCheckout(
+      masFixture.remoteRoot,
+      path.join(masFixture.fixtureRoot, `${testCase.name}-checkout`),
+    );
+    const markerPath = path.join(masFixture.fixtureRoot, `${testCase.name}-domain-handler-ran.txt`);
+    const commandPath = path.join(checkoutRoot, 'domain-handler');
+    masFixture.advance(`${testCase.name}-REMOTE.md`, 'remote\n', `Advance remote for ${testCase.name}`);
+    testCase.prepare(checkoutRoot);
+
+    try {
+      const result = runFamilyRuntimeDomainHandlerCommand([commandPath], {
+        cwd: checkoutRoot,
+        env: { OPL_TEST_MARKER_PATH: markerPath },
+      }, 'export');
+      const preflight = readDomainHandlerCheckoutPreflight(result);
+
+      assert.notEqual(result.exit_code, 0, testCase.name);
+      assert.equal(preflight?.status, 'blocked', testCase.name);
+      assert.equal(
+        preflight?.currentness_status,
+        testCase.reason === 'dirty_checkout' ? 'dirty_fail_closed' : 'diverged_fail_closed',
+        testCase.name,
+      );
+      assert.equal(preflight?.reason, testCase.reason, testCase.name);
+      assert.equal(fs.existsSync(markerPath), false, testCase.name);
+    } finally {
+      fs.rmSync(masFixture.fixtureRoot, { recursive: true, force: true });
+    }
   }
 });
 
