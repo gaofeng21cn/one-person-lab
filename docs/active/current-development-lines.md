@@ -12,11 +12,11 @@ Last reviewed: `2026-06-14`
 
 本文只回答一个支撑问题：各类工作应回到哪个长期 owner。它不排序下一步、不维护路线图、不冻结 live counter、readiness 摘要、receipt id、attempt id、workorder 数、branch/worktree 或 closeout 过程。
 
-当前 active 支撑读法必须 wrapper-aware。`framework readiness` 读 `.framework_readiness`，`framework operating-maturity` 读 `.framework_operating_maturity`，App/operator drilldown 读 `.app_operator_drilldown`，Brand L5 读 `.brand_module_l5_status`，attempt list 读 `.family_runtime_stage_attempts`。当前 durable 目标仍是 `W7 owner-evidence / production-tail closure`；本文不能把 workspace binding foldback、provider capability refs-only evidence、docs foldback、source split、verified ledger、conformance pass、App projection 或 `open_count=0` 写成 owner gate 关闭。
+当前 active 支撑读法必须 wrapper-aware。`framework readiness` 读 `.framework_readiness`，`framework operating-maturity` 读 `.framework_operating_maturity`，App/operator drilldown 读 `.app_operator_drilldown`，Brand L5 读 `.brand_module_l5_status`，attempt list 读 `.family_runtime_stage_attempts`。当前 durable 目标按 `functional-structure-first-with-live-evidence-deferred` 读取：active 默认先处理 source、contract、CLI/API、readback、App shell、generated surface、wrapper retirement、docs SSOT 和 no-second-truth guard；W7 owner-evidence / production-tail closure 只在后置 Live Evidence lane 维护。本文不能把 workspace binding foldback、provider capability refs-only evidence、docs foldback、source split、verified ledger、conformance pass、App projection 或 `open_count=0` 写成 owner gate 关闭。
 
 当前 runtime 边界固定为 Codex-default executor 进入 provider-backed Stage Attempt；legacy wrapper、provenance、diagnostic、history 或 fixture 只作为支撑证据和退役语境，不进入 ordinary owner root。
 
-原先分散的 purpose-first audit、MVP friction、Stage Native Kernel、App cockpit、wrapper retirement、OMA script-to-pack 和 domain canary 线都只按同一个 owner map 读取。已落地结构能力写回对应 owner repo；当前状态、maturity、open evidence lane 和 active-goal baton 归 `docs/status.md` 与 `current-state-vs-ideal-gap.md`，不由本文冻结 branch、SHA、receipt id 或 closeout 流水。未闭合项只能保留为 domain-owned live evidence、App release/user-path evidence、wrapper retirement gate、memory/artifact/lifecycle receipt 或 support no-resurrection tail。因此不能写成 publication-ready、grant-ready、visual-ready、target-agent ready、App release-ready、domain ready、production ready 或 L5 complete。
+原先分散的 purpose-first audit、MVP friction、Stage Native Kernel、App cockpit、wrapper retirement、OMA script-to-pack 和 domain canary 线都只按同一个 owner map 读取。已落地结构能力写回对应 owner repo；当前状态、非 live 缺口和 active-goal baton 归 `docs/status.md` 与 `current-state-vs-ideal-gap.md`，不由本文冻结 branch、SHA、receipt id 或 closeout 流水。未闭合 live evidence 只能在独立维护入口或 owner repo evidence surface 读取；active owner 只保留功能/结构缺口、wrapper retirement gate、docs SSOT 和 support no-resurrection tail。因此不能写成 publication-ready、grant-ready、visual-ready、target-agent ready、App release-ready、domain ready、production ready 或 L5 complete。
 
 统一目标仍是：
 
@@ -30,9 +30,9 @@ OPL Framework current_owner_delta root
 
 审计标准回到 [OPL Family Ideal Operating Model Redesign](./opl-family-ideal-operating-model-redesign.md)：每个新优化项只能归为 `meets_target`、`needs_demotion` 或 `needs_retirement`。
 
-## Live Truth 入口
+## 功能/结构读入
 
-每轮开发先读 live 机器面，不从本文继承旧数字：
+每轮开发先读 repo source、contracts、tests、CLI/read-model 和 owner docs，不从本文继承旧数字。下列命令用于确认结构/readback边界和 false-ready guard；不要把它们返回的 evidence counters 变成本文件的 active backlog：
 
 ```bash
 rtk opl framework readiness --family-defaults --json
