@@ -522,17 +522,30 @@ function canReconcilePaperMissionStageRouteTask(
   if (row.status === 'running') {
     return true;
   }
-  if (row.status !== 'blocked' || !hasAcceptedTypedCloseout(terminalAttempt)) {
+  if (row.status !== 'blocked') {
     return false;
   }
   const reason = row.dead_letter_reason ?? row.last_error;
+  const hasCloseoutRefs = terminalAttempt.closeout_refs.some(
+    (entry) => typeof entry === 'string' && entry.trim().length > 0,
+  );
+  if (
+    !hasAcceptedTypedCloseout(terminalAttempt)
+    && !(
+      typeof reason === 'string'
+      && BACKFILLABLE_TERMINAL_RECEIPT_BLOCKERS.has(reason)
+      && hasCloseoutRefs
+    )
+  ) {
+    return false;
+  }
   return typeof reason === 'string'
     && (
       SUPERSEDABLE_PROVIDER_BLOCKERS.has(reason)
       || BACKFILLABLE_TERMINAL_ROUTE_BLOCKERS.has(reason)
       || (
         BACKFILLABLE_TERMINAL_RECEIPT_BLOCKERS.has(reason)
-        && terminalAttempt.closeout_refs.some((entry) => typeof entry === 'string' && entry.trim().length > 0)
+        && hasCloseoutRefs
       )
     );
 }
