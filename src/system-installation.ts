@@ -9,6 +9,7 @@ export type {
 export { buildOplEnvironment } from './system-installation/environment.ts';
 export { runOplEngineAction } from './system-installation/engine-actions.ts';
 export { buildOplInitialize } from './system-installation/initialize.ts';
+export { buildOplDockerWebuiDoctor } from './system-installation/docker-webui-doctor.ts';
 export { buildOplModules, runOplModuleAction } from './system-installation/modules.ts';
 export { applyOplSeedManifest, readOplSeedInstallManifest } from './system-installation/seed-manifest.ts';
 export { runOplStartupMaintenance } from './system-installation/startup-maintenance.ts';

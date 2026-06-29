@@ -35,6 +35,7 @@ test('public and internal command specs no longer carry removed UI adapter comma
     false,
   );
   assert.equal(typeof publicSpecs.system.handler, 'function');
+  assert.equal(typeof publicSpecs['system docker-webui doctor'].handler, 'function');
   assert.equal(publicSpecs['web bundle'], undefined);
   assert.equal(publicSpecs['web package'], undefined);
   assert.equal(publicSpecs['module install'], undefined);
@@ -195,6 +196,7 @@ test('default help advertises Connect canonical installation surfaces while reti
   assert.equal(commands.includes('system reinstall-support'), false);
   assert.equal(commands.includes('system update'), false);
   assert.equal(commands.includes('system startup-maintenance'), false);
+  assert.equal(commands.includes('system docker-webui doctor'), false);
   assert.equal(commands.includes('system reconcile-modules'), false);
   assert.equal(commands.includes('system configure-codex'), false);
   assert.equal(commands.includes('system repair-native-helpers'), false);
@@ -209,6 +211,7 @@ test('default help advertises Connect canonical installation surfaces while reti
     );
   }
   assert.equal(runCli(['help', 'system', 'initialize']).help.command, 'system initialize');
+  assert.equal(runCli(['help', 'system', 'docker-webui', 'doctor']).help.command, 'system docker-webui doctor');
   assert.equal(runCli(['help', 'engine', 'install']).help.command, 'engine install');
   assert.equal(runCli(['help', 'update', 'status']).help.command, 'update status');
   assert.equal(commands.includes('connect modules'), true);

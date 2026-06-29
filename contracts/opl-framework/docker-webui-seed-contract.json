@@ -11,8 +11,40 @@
     "canonical_seed_metadata_path": "/opt/opl/seed/metadata.json",
     "state_file": "${OPL_STATE_DIR:-<data-dir>/opl/state}/install-manifest.json",
     "commands": [
+      "opl system docker-webui doctor --json",
       "opl system seed-apply --from <seed-dir> --data-dir <data-dir> --projects-dir <projects-dir> --json",
       "opl system startup-maintenance --json"
+    ]
+  },
+  "doctor_read_model": {
+    "command": "opl system docker-webui doctor --json",
+    "surface_kind": "opl_docker_webui_doctor",
+    "execution_policy": "read_only_json_first",
+    "stable_status_values": [
+      "ok",
+      "attention",
+      "not_configured"
+    ],
+    "observation_status_values": [
+      "configured",
+      "not_configured",
+      "exists",
+      "missing",
+      "found",
+      "invalid",
+      "not_visible"
+    ],
+    "next_action_status_values": [
+      "recommended",
+      "available"
+    ],
+    "forbidden_claims": [
+      "release_ready",
+      "runtime_ready",
+      "module_current",
+      "domain_truth",
+      "owner_receipt",
+      "typed_blocker"
     ]
   },
   "image_manifest": {

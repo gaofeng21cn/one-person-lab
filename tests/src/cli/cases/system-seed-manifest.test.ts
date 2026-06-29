@@ -121,6 +121,192 @@ test('system seed-apply records env-driven image manifest and is idempotent', ()
   }
 });
 
+test('system docker-webui doctor reports missing seed boundary without repairs', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-webui-doctor-missing-home-'));
+  const dataDir = path.join(homeRoot, 'data');
+  const projectsDir = path.join(homeRoot, 'projects');
+  const stateDir = path.join(homeRoot, 'state');
+
+  try {
+    const output = runCli(['system', 'docker-webui', 'doctor'], {
+      HOME: homeRoot,
+      AIONUI_DATA_DIR: dataDir,
+      OPL_PROJECTS_DIR: projectsDir,
+      OPL_STATE_DIR: stateDir,
+      AIONUI_PORT: '3000',
+      PATH: process.env.PATH ?? '',
+    }) as {
+      docker_webui_doctor: {
+        surface_kind: string;
+        status: string;
+        summary: {
+          install_manifest_status: string;
+          data_dir_status: string;
+          projects_dir_status: string;
+          browser_url_status: string;
+        };
+        paths: {
+          install_manifest_file: string;
+        };
+        observations: Array<{
+          observation_id: string;
+          status: string;
+        }>;
+        next_actions: Array<{
+          action_id: string;
+          status: string;
+          command: string;
+          reason: string;
+        }>;
+        authority_boundary: {
+          readonly: boolean;
+          executes_repairs: boolean;
+          runs_startup_maintenance: boolean;
+          can_claim_release_ready: boolean;
+          can_claim_runtime_ready: boolean;
+          can_claim_module_current: boolean;
+        };
+      };
+    };
+
+    assert.equal(output.docker_webui_doctor.surface_kind, 'opl_docker_webui_doctor');
+    assert.equal(output.docker_webui_doctor.status, 'attention');
+    assert.equal(output.docker_webui_doctor.summary.install_manifest_status, 'missing');
+    assert.equal(output.docker_webui_doctor.summary.data_dir_status, 'missing');
+    assert.equal(output.docker_webui_doctor.summary.projects_dir_status, 'missing');
+    assert.equal(output.docker_webui_doctor.summary.browser_url_status, 'configured');
+    assert.equal(output.docker_webui_doctor.paths.install_manifest_file, path.join(stateDir, 'install-manifest.json'));
+    const observations = new Map(output.docker_webui_doctor.observations.map((entry) => [
+      entry.observation_id,
+      entry.status,
+    ]));
+    assert.equal(observations.get('docker_webui_data_dir'), 'missing');
+    assert.equal(observations.get('docker_webui_projects_dir'), 'missing');
+    assert.equal(observations.get('seed_install_manifest'), 'missing');
+    assert.equal(observations.get('startup_maintenance_guidance'), 'not_configured');
+    assert.equal(observations.get('browser_url'), 'configured');
+    assert.deepEqual(
+      output.docker_webui_doctor.next_actions.map((entry) => [entry.action_id, entry.status, entry.reason]),
+      [
+        ['run_seed_apply', 'recommended', 'seed_install_manifest_missing_or_invalid'],
+        ['run_startup_maintenance', 'available', 'refresh_seed_boundary_and_managed_update_guidance'],
+      ],
+    );
+    assert.equal(output.docker_webui_doctor.authority_boundary.readonly, true);
+    assert.equal(output.docker_webui_doctor.authority_boundary.executes_repairs, false);
+    assert.equal(output.docker_webui_doctor.authority_boundary.runs_startup_maintenance, false);
+    assert.equal(output.docker_webui_doctor.authority_boundary.can_claim_release_ready, false);
+    assert.equal(output.docker_webui_doctor.authority_boundary.can_claim_runtime_ready, false);
+    assert.equal(output.docker_webui_doctor.authority_boundary.can_claim_module_current, false);
+    assert.equal(fs.existsSync(stateDir), false);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('system docker-webui doctor reads persisted seed manifest and browser URL', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-webui-doctor-seeded-home-'));
+  const seedDir = path.join(homeRoot, 'image-seed');
+  const dataDir = path.join(homeRoot, 'data');
+  const projectsDir = path.join(dataDir, 'projects');
+  fs.mkdirSync(seedDir, { recursive: true });
+  fs.writeFileSync(path.join(seedDir, 'image-manifest.json'), JSON.stringify({
+    image_version: '26.7.2-webui',
+    image_digest: 'sha256:doctor-seed',
+    seed_strategy: 'payload_preheated',
+  }, null, 2));
+
+  try {
+    runCli([
+      'system',
+      'seed-apply',
+      '--from',
+      seedDir,
+      '--data-dir',
+      dataDir,
+      '--projects-dir',
+      projectsDir,
+    ], {
+      HOME: homeRoot,
+      PATH: process.env.PATH ?? '',
+    });
+
+    const output = runCli(['system', 'docker-webui', 'doctor'], {
+      HOME: homeRoot,
+      AIONUI_DATA_DIR: dataDir,
+      AIONUI_BROWSER_URL: 'http://localhost:3000/',
+      PATH: process.env.PATH ?? '',
+    }) as {
+      docker_webui_doctor: {
+        status: string;
+        summary: {
+          install_manifest_status: string;
+          data_dir_status: string;
+          projects_dir_status: string;
+          browser_url_status: string;
+        };
+        install_manifest: {
+          status: string;
+          surface_kind: string;
+          seed_status: string;
+          image: {
+            version: string | null;
+            digest: string | null;
+            seed_strategy: string | null;
+            seed_strategy_status: string | null;
+          };
+          component_ids: string[];
+        };
+        browser: {
+          url: string | null;
+          url_status: string;
+        };
+        next_actions: Array<{ action_id: string }>;
+        authority_boundary: {
+          can_write_domain_truth: boolean;
+          can_write_runtime_db: boolean;
+          can_create_owner_receipt: boolean;
+          can_claim_runtime_ready: boolean;
+        };
+      };
+    };
+
+    assert.equal(output.docker_webui_doctor.status, 'ok');
+    assert.equal(output.docker_webui_doctor.summary.install_manifest_status, 'found');
+    assert.equal(output.docker_webui_doctor.summary.data_dir_status, 'exists');
+    assert.equal(output.docker_webui_doctor.summary.projects_dir_status, 'exists');
+    assert.equal(output.docker_webui_doctor.summary.browser_url_status, 'configured');
+    assert.equal(output.docker_webui_doctor.install_manifest.status, 'found');
+    assert.equal(output.docker_webui_doctor.install_manifest.surface_kind, 'opl_seed_install_manifest');
+    assert.equal(output.docker_webui_doctor.install_manifest.seed_status, 'applied');
+    assert.equal(output.docker_webui_doctor.install_manifest.image.version, '26.7.2-webui');
+    assert.equal(output.docker_webui_doctor.install_manifest.image.digest, 'sha256:doctor-seed');
+    assert.equal(output.docker_webui_doctor.install_manifest.image.seed_strategy, 'payload_preheated');
+    assert.equal(output.docker_webui_doctor.install_manifest.image.seed_strategy_status, 'accepted');
+    assert.deepEqual(output.docker_webui_doctor.install_manifest.component_ids, [
+      'image_manifest',
+      'opl_framework',
+      'codex_cli',
+      'companion_skills',
+      'domain_modules',
+      'data_dir',
+      'projects_dir',
+    ]);
+    assert.equal(output.docker_webui_doctor.browser.url, 'http://localhost:3000/');
+    assert.equal(output.docker_webui_doctor.browser.url_status, 'configured');
+    assert.deepEqual(
+      output.docker_webui_doctor.next_actions.map((entry) => entry.action_id),
+      ['run_startup_maintenance'],
+    );
+    assert.equal(output.docker_webui_doctor.authority_boundary.can_write_domain_truth, false);
+    assert.equal(output.docker_webui_doctor.authority_boundary.can_write_runtime_db, false);
+    assert.equal(output.docker_webui_doctor.authority_boundary.can_create_owner_receipt, false);
+    assert.equal(output.docker_webui_doctor.authority_boundary.can_claim_runtime_ready, false);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('system seed-apply materializes image seed contract into data volume receipts', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-seed-apply-contract-home-'));
   const seedDir = path.join(homeRoot, 'image-seed');

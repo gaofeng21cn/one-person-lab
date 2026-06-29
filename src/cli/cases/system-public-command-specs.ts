@@ -6,6 +6,7 @@ import { buildOplFrameworkSemanticHygieneAudit } from '../../framework-semantic-
 import { syncOplCompanionSkills } from '../../install-companions.ts';
 import { syncFamilySkillPacks } from '../../opl-skills.ts';
 import { buildOplSystemDependencyDoctor } from '../../system-installation/dependency-doctor.ts';
+import { buildOplDockerWebuiDoctor } from '../../system-installation/docker-webui-doctor.ts';
 import { buildOplEnvironment } from '../../system-installation/environment.ts';
 import { buildOplInitialize } from '../../system-installation/initialize.ts';
 import { runOplSystemAction } from '../../system-installation/system-actions.ts';
@@ -330,6 +331,16 @@ export function buildPublicSystemCommandSpecs(
       'startup-maintenance',
       'Run App startup maintenance for clean managed modules, image seed state, plugin cache freshness, and reload guidance.',
       'startup_maintenance',
+    ),
+    'system docker-webui doctor': buildNoArgSpec(
+      {
+        usage: 'opl system docker-webui doctor',
+        summary:
+          'Read Docker/WebUI data, seed install manifest, startup-maintenance guidance, and browser URL observations without applying repairs.',
+        examples: ['opl system docker-webui doctor --json'],
+        group: 'system',
+      },
+      () => buildOplDockerWebuiDoctor(),
     ),
     'system seed-apply': {
       usage: 'opl system seed-apply [--from <seed-dir>] [--data-dir <data-dir>] [--projects-dir <projects-dir>]',
