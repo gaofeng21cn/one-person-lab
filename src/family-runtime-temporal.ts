@@ -94,6 +94,7 @@ export type TemporalStageAttemptWorkflowInput = {
   executor_kind: string;
   stage_attempt_executor_policy?: Record<string, unknown> | null;
   retry_budget: Record<string, unknown>;
+  route_impact?: Record<string, unknown>;
   task_id?: string | null;
   stage_packet_ref?: string | null;
   checkpoint_refs?: string[];
@@ -530,6 +531,7 @@ export function buildTemporalStageAttemptWorkflowInput(
     executor_kind: string;
     stage_attempt_executor_policy?: unknown;
     retry_budget: Record<string, unknown>;
+    route_impact?: Record<string, unknown>;
     idempotency_key?: string | null;
     task_id?: string | null;
     checkpoint_refs?: unknown[];
@@ -549,6 +551,7 @@ export function buildTemporalStageAttemptWorkflowInput(
     executor_kind: executorKind,
     stage_attempt_executor_policy: optionalRecord(attempt.stage_attempt_executor_policy),
     retry_budget: attempt.retry_budget,
+    route_impact: optionalRecord(attempt.route_impact) ?? {},
     task_id: typeof attempt.task_id === 'string' ? attempt.task_id : null,
     stage_packet_ref: checkpointRefs[0] ?? null,
     checkpoint_refs: checkpointRefs,

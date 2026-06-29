@@ -510,7 +510,13 @@ test('family-runtime dispatch starts MAS PaperMission stage-route Temporal attem
     const launchableInput = requireTemporalStageAttemptWorkflowInputLaunchable(
       buildTemporalStageAttemptWorkflowInput(task.stage_attempts[0]),
     );
+    const launchableRouteImpact = launchableInput.route_impact as {
+      user_stage_log?: { semantic_status?: string };
+      domain_ready_verdict?: string;
+    };
     assert.equal(launchableInput.workspace_locator.workspace_root, '/tmp/mas-dm-cvd-workspace');
+    assert.equal(launchableRouteImpact.user_stage_log?.semantic_status, 'provided_by_domain');
+    assert.equal(launchableRouteImpact.domain_ready_verdict, 'domain_gate_pending');
     assert.equal(task.stage_attempts[0].attempt_count, 1);
     assert.equal(task.stage_attempts[0].provider_run.provider_status, 'running');
     assert.equal(task.events.some((event) => event.event_type === 'paper_mission_stage_route_temporal_started'), true);

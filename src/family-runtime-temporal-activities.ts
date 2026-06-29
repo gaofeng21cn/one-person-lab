@@ -55,6 +55,72 @@ function readBoolean(value: unknown) {
   return typeof value === 'boolean' ? value : null;
 }
 
+function compactStringList(value: unknown, maxEntries = 12, maxChars = 240) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    .slice(0, maxEntries)
+    .map((entry) => (entry.length > maxChars ? `${entry.slice(0, maxChars)}...[omitted:${entry.length} chars]` : entry));
+}
+
+function compactDomainStageLogForRouteImpact(value: unknown) {
+  if (!isRecord(value)) {
+    return null;
+  }
+  return {
+    ...(readString(value.surface_kind) ? { surface_kind: readString(value.surface_kind) } : {}),
+    ...(readString(value.semantic_status) ? { semantic_status: readString(value.semantic_status) } : {}),
+    ...(readString(value.semantic_source) ? { semantic_source: readString(value.semantic_source) } : {}),
+    ...(readString(value.stage_name) ? { stage_name: readString(value.stage_name) } : {}),
+    ...(readString(value.problem_summary) ? { problem_summary: readString(value.problem_summary) } : {}),
+    ...(readString(value.stage_goal) ? { stage_goal: readString(value.stage_goal) } : {}),
+    ...(readString(value.progress_delta_classification)
+      ? { progress_delta_classification: readString(value.progress_delta_classification) }
+      : {}),
+    ...(isRecord(value.deliverable_progress_delta)
+      ? { deliverable_progress_delta: value.deliverable_progress_delta }
+      : {}),
+    ...(isRecord(value.platform_repair_delta)
+      ? { platform_repair_delta: value.platform_repair_delta }
+      : {}),
+    ...(readString(value.next_forced_delta) ? { next_forced_delta: readString(value.next_forced_delta) } : {}),
+    ...(readString(value.outcome) ? { outcome: readString(value.outcome) } : {}),
+    ...(compactStringList(value.stage_work_done).length > 0
+      ? { stage_work_done: compactStringList(value.stage_work_done) }
+      : {}),
+    ...(compactStringList(value.changed_stage_surfaces).length > 0
+      ? { changed_stage_surfaces: compactStringList(value.changed_stage_surfaces) }
+      : {}),
+    ...(compactStringList(value.remaining_blockers).length > 0
+      ? { remaining_blockers: compactStringList(value.remaining_blockers) }
+      : {}),
+    ...(compactStringList(value.evidence_refs).length > 0 ? { evidence_refs: compactStringList(value.evidence_refs) } : {}),
+  };
+}
+
+function closeoutRouteImpactForTemporalResult(
+  closeout: ReturnType<typeof normalizeTypedStageCloseoutPacket>,
+) {
+  const routeImpact = closeout.route_impact ? { ...closeout.route_impact } : {};
+  if (!isRecord(routeImpact.paper_stage_log) && isRecord(closeout.paper_stage_log)) {
+    routeImpact.paper_stage_log = compactDomainStageLogForRouteImpact(closeout.paper_stage_log) ?? closeout.paper_stage_log;
+  }
+  if (!isRecord(routeImpact.user_stage_log) && isRecord(closeout.user_stage_log)) {
+    routeImpact.user_stage_log = compactDomainStageLogForRouteImpact(closeout.user_stage_log) ?? closeout.user_stage_log;
+  }
+  if (!isRecord(routeImpact.stage_log_summary) && isRecord(closeout.stage_log_summary)) {
+    routeImpact.stage_log_summary = compactDomainStageLogForRouteImpact(closeout.stage_log_summary)
+      ?? closeout.stage_log_summary;
+  }
+  if (!isRecord(routeImpact.human_stage_log) && isRecord(closeout.human_stage_log)) {
+    routeImpact.human_stage_log = compactDomainStageLogForRouteImpact(closeout.human_stage_log)
+      ?? closeout.human_stage_log;
+  }
+  return routeImpact;
+}
+
 function compactAuthorityBoundaryForTemporalResult(value: unknown) {
   const authority = isRecord(value) ? value : {};
   return {
@@ -84,6 +150,7 @@ export function compactCloseoutPacketForTemporalResult(value: unknown) {
     return null;
   }
 
+  const routeImpact = closeoutRouteImpactForTemporalResult(closeout);
   return {
     surface_kind: closeout.surface_kind,
     ...(closeout.stage_attempt_id ? { stage_attempt_id: closeout.stage_attempt_id } : {}),
@@ -97,7 +164,7 @@ export function compactCloseoutPacketForTemporalResult(value: unknown) {
     rejected_writes: closeout.rejected_writes,
     ...(closeout.next_owner ? { next_owner: closeout.next_owner } : {}),
     ...(closeout.domain_ready_verdict ? { domain_ready_verdict: closeout.domain_ready_verdict } : {}),
-    ...(closeout.route_impact ? { route_impact: closeout.route_impact } : {}),
+    ...(Object.keys(routeImpact).length > 0 ? { route_impact: routeImpact } : {}),
     authority_boundary: closeout.authority_boundary,
     temporal_payload_policy: {
       surface_kind: 'temporal_activity_compacted_closeout_packet',

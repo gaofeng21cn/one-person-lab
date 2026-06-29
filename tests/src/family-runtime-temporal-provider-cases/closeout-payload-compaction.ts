@@ -36,7 +36,21 @@ test('Temporal Codex activity compacts typed closeout packets before activity co
       paper_work_done: ['y'.repeat(2_000_000)],
     },
     user_stage_log: {
-      body: 'z'.repeat(2_000_000),
+      surface_kind: 'opl_user_stage_log',
+      semantic_status: 'provided_by_domain',
+      semantic_source: 'med_autoscience.paper_mission_stage_route',
+      stage_name: 'PaperMission route followthrough',
+      problem_summary: 'MAS routed a current submission package through OPL.',
+      stage_goal: 'Preserve domain-provided route semantics without carrying the full body.',
+      progress_delta_classification: 'deliverable_progress',
+      deliverable_progress_delta: {
+        delta_count: 1,
+        delta_refs: ['package:dm003-submission-ready'],
+      },
+      stage_work_done: ['z'.repeat(2_000_000)],
+      changed_stage_surfaces: ['manuscript/current_package'],
+      remaining_blockers: [],
+      evidence_refs: ['paper-mission:dm003'],
     },
     full_transcript: 'must-not-enter-temporal-completion',
   };
@@ -64,7 +78,33 @@ test('Temporal Codex activity compacts typed closeout packets before activity co
   assert.deepEqual(compacted.rejected_writes, [{ reason: 'domain_truth_write_forbidden', body: 'small ref-only reason' }]);
   assert.equal(compacted.next_owner, 'med-autoscience');
   assert.equal(compacted.domain_ready_verdict, 'domain_gate_pending');
-  assert.deepEqual(compacted.route_impact, { next_owner: 'publication_gate' });
+  assert.deepEqual(compacted.route_impact, {
+    next_owner: 'publication_gate',
+    paper_stage_log: {
+      stage_name: 'run_gate_clearing_batch',
+      stage_work_done: [
+        `${'x'.repeat(240)}...[omitted:2000000 chars]`,
+      ],
+    },
+    user_stage_log: {
+      surface_kind: 'opl_user_stage_log',
+      semantic_status: 'provided_by_domain',
+      semantic_source: 'med_autoscience.paper_mission_stage_route',
+      stage_name: 'PaperMission route followthrough',
+      problem_summary: 'MAS routed a current submission package through OPL.',
+      stage_goal: 'Preserve domain-provided route semantics without carrying the full body.',
+      progress_delta_classification: 'deliverable_progress',
+      deliverable_progress_delta: {
+        delta_count: 1,
+        delta_refs: ['package:dm003-submission-ready'],
+      },
+      stage_work_done: [
+        `${'z'.repeat(240)}...[omitted:2000000 chars]`,
+      ],
+      changed_stage_surfaces: ['manuscript/current_package'],
+      evidence_refs: ['paper-mission:dm003'],
+    },
+  });
   const compactedRecord = compacted as Record<string, unknown>;
   assert.equal(compactedRecord.paper_stage_log, undefined);
   assert.equal(compactedRecord.user_stage_log, undefined);
@@ -72,6 +112,7 @@ test('Temporal Codex activity compacts typed closeout packets before activity co
   assert.equal(compacted.temporal_payload_policy.full_closeout_body_omitted, true);
   assert.equal(compacted.temporal_payload_policy.retained_fields.includes('closeout_ref_metadata'), true);
   assert.equal(JSON.stringify(compacted).includes('must-not-enter-temporal-completion'), false);
+  assert.equal(JSON.stringify(compacted).includes('z'.repeat(1_000)), false);
   assert.ok(
     Buffer.byteLength(JSON.stringify(compacted), 'utf8') < 20_000,
     'Temporal completion payload must stay refs-only and small.',
