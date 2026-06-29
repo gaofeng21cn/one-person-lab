@@ -40,7 +40,7 @@ OPL 品牌模块的 L4 rollout 计划已退出 active path：当前十模块 `L4
 
 | 文档 | 当前角色 | 是否仍有未落地规划 | 缺口归位 |
 | --- | --- | --- | --- |
-| `current-state-vs-ideal-gap.md` | 唯一 active owner / gap register | 是，但只维护当前功能/结构 gap，不维护 dated closeout 或 live evidence worklist。 | 本文的 `Active Planning Gap Register`、`Ready / Release 声明边界`、`Next-Round Agent Prompt`。 |
+| `current-state-vs-ideal-gap.md` | 唯一 active owner / gap register | 是，但只维护当前功能/结构 gap，不维护 dated closeout 或 ready/release evidence worklist。 | 本文的 `Active Planning Gap Register`、`Ready / Release 声明边界`、`Next-Round Agent Prompt`。 |
 | `ordinary-progress-spine-and-audit-sidecar-plan.md` | ordinary/audit 分层目标规划支撑 | 不作为独立 backlog。P0-P5 只作设计标准和验收词表。 | 已落地与未落地状态折回 `current-state-vs-ideal-gap.md` 的 operating-model / functional-structure gap；live evidence 指向独立维护入口。 |
 | `foundry-agent-os-family-target-implementation-plan.md` | Foundry Agent OS family target 支撑 | 不作为独立 backlog。W0-W6 structural landing 已折回；W7 live owner evidence / production evidence 后置。 | 非 live 缺口回 `current-state-vs-ideal-gap.md#active-planning-gap-register`；live evidence 回独立维护入口。 |
 | `opl-family-ideal-operating-model-redesign.md` | north-star / audit standard | 不作为 active backlog。 | 用 `meets_target` / `needs_demotion` / `needs_retirement` 审计；当前缺口只由唯一 active owner 维护。 |
