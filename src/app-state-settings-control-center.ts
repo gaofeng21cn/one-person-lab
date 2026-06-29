@@ -36,6 +36,16 @@ type SettingsControlCenterGroup = {
   ordinary_entry_policy: string;
 };
 
+type SettingsSecondaryRoute = {
+  route_id: string;
+  group_id: string;
+  parent_route_id: string;
+  label: string;
+  role: string;
+  action_section_ids: string[];
+  ordinary_entry_policy: string;
+};
+
 const SETTINGS_CONTROL_CENTER_CONTRACT_REF =
   'contracts/opl-framework/settings-control-center-action-read-model-contract.json';
 
@@ -106,6 +116,54 @@ const SETTINGS_CONTROL_CENTER_GROUPS: SettingsControlCenterGroup[] = [
     route_id: 'advanced',
     action_section_ids: ['codex_surface', 'updates'],
     ordinary_entry_policy: 'top_level_control_center_route',
+  },
+];
+
+const SETTINGS_CONTROL_CENTER_SECONDARY_ROUTES: SettingsSecondaryRoute[] = [
+  {
+    route_id: 'workspace',
+    group_id: 'overview',
+    parent_route_id: 'general',
+    label: 'Workspace',
+    role: 'workspace_root_permissions_and_user_work_product_location',
+    action_section_ids: ['workspace', 'runtime_roots'],
+    ordinary_entry_policy: 'secondary_page_under_overview_task_entry',
+  },
+  {
+    route_id: 'local-services',
+    group_id: 'maintenance_updates',
+    parent_route_id: 'environment',
+    label: 'Local Services',
+    role: 'codex_temporal_background_services_and_capability_pack_health',
+    action_section_ids: ['codex_surface', 'capabilities', 'packages'],
+    ordinary_entry_policy: 'secondary_page_under_maintenance_updates',
+  },
+  {
+    route_id: 'about',
+    group_id: 'advanced',
+    parent_route_id: 'advanced',
+    label: 'About',
+    role: 'version_links_and_release_notes',
+    action_section_ids: ['updates'],
+    ordinary_entry_policy: 'secondary_page_under_advanced',
+  },
+  {
+    route_id: 'update',
+    group_id: 'maintenance_updates',
+    parent_route_id: 'environment',
+    label: 'Update',
+    role: 'app_update_status_and_post_update_guidance',
+    action_section_ids: ['updates'],
+    ordinary_entry_policy: 'secondary_page_under_maintenance_updates',
+  },
+  {
+    route_id: 'theme',
+    group_id: 'preferences',
+    parent_route_id: 'appearance',
+    label: 'Theme',
+    role: 'appearance_theme_preferences',
+    action_section_ids: [],
+    ordinary_entry_policy: 'secondary_page_under_preferences',
   },
 ];
 
@@ -476,6 +534,8 @@ function buildSettingsIa(taskEntries: ReturnType<typeof buildTaskEntries>) {
     surface_kind: 'opl_settings_control_center_ia.v1',
     ordinary_entry: 'settings_control_center',
     entry_policy: 'top_level_control_center_route',
+    ordinary_route_ids: SETTINGS_CONTROL_CENTER_GROUPS.map((group) => group.route_id),
+    secondary_or_deep_link_route_ids: SETTINGS_CONTROL_CENTER_SECONDARY_ROUTES.map((route) => route.route_id),
     route_groups: SETTINGS_CONTROL_CENTER_GROUPS.map((group) => ({
       route_id: group.route_id,
       group_id: group.group_id,
@@ -485,6 +545,20 @@ function buildSettingsIa(taskEntries: ReturnType<typeof buildTaskEntries>) {
       action_ids: taskEntries
         .filter((entry) => group.action_section_ids.includes(entry.section_id))
         .map((entry) => entry.action_id),
+    })),
+    secondary_or_deep_link_routes: SETTINGS_CONTROL_CENTER_SECONDARY_ROUTES.map((route) => ({
+      route_id: route.route_id,
+      group_id: route.group_id,
+      parent_route_id: route.parent_route_id,
+      label: route.label,
+      role: route.role,
+      action_section_ids: route.action_section_ids,
+      action_ids: taskEntries
+        .filter((entry) => route.action_section_ids.includes(entry.section_id))
+        .map((entry) => entry.action_id),
+      route_scope: 'secondary_or_deep_link',
+      ordinary_entry_policy: route.ordinary_entry_policy,
+      app_shell_must_not_promote_to_top_level_tab: true,
     })),
     app_shell_contract: {
       app_consumes_read_model_only: true,

@@ -673,6 +673,37 @@ exit 1
       'settings_rollback_runtime_toolchain',
     ]);
     assert.equal(output.app_state.settings_control_center.settings_ia.ordinary_entry, 'settings_control_center');
+    assert.deepEqual(output.app_state.settings_control_center.settings_ia.ordinary_route_ids, [
+      'general',
+      'access',
+      'capabilities',
+      'environment',
+      'storage',
+      'appearance',
+      'advanced',
+    ]);
+    assert.deepEqual(output.app_state.settings_control_center.settings_ia.secondary_or_deep_link_route_ids, [
+      'workspace',
+      'local-services',
+      'about',
+      'update',
+      'theme',
+    ]);
+    assert.deepEqual(
+      output.app_state.settings_control_center.settings_ia.secondary_or_deep_link_routes.map((entry: AppStateListEntry) => [
+        entry.route_id,
+        entry.group_id,
+        entry.parent_route_id,
+        entry.app_shell_must_not_promote_to_top_level_tab,
+      ]),
+      [
+        ['workspace', 'overview', 'general', true],
+        ['local-services', 'maintenance_updates', 'environment', true],
+        ['about', 'advanced', 'advanced', true],
+        ['update', 'maintenance_updates', 'environment', true],
+        ['theme', 'preferences', 'appearance', true],
+      ],
+    );
     assert.equal(
       output.app_state.settings_control_center.settings_ia.app_shell_contract.shell_must_not_execute_unlisted_actions,
       true,

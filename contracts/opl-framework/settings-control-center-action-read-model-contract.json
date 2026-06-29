@@ -18,6 +18,23 @@
       "issue_queue",
       "action_catalog"
     ],
+    "ordinary_route_ids": [
+      "general",
+      "access",
+      "capabilities",
+      "environment",
+      "storage",
+      "appearance",
+      "advanced"
+    ],
+    "secondary_or_deep_link_route_ids": [
+      "workspace",
+      "local-services",
+      "about",
+      "update",
+      "theme"
+    ],
+    "secondary_or_deep_link_route_policy": "route_metadata_visible_for_search_and_task_entry_navigation_but_not_promoted_to_top_level_tabs",
     "shell_policy": {
       "app_consumes_read_model_only": true,
       "aion_shell_is_renderer_only": true,
