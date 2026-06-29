@@ -696,13 +696,20 @@ test(`family-runtime redrives PaperMission stage-route provider runtime blocker 
 });
 }
 
-test('family-runtime late typed closeout supersedes provider-only missing closeout blocker', async () => {
+test('family-runtime late typed closeout preserves PaperMission route impact and blocks same-lineage provider redrive', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-late-closeout-'));
   const restoreEnv = installDirectDispatchEnv(stateRoot, {
     OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     OPL_TEMPORAL_ADDRESS: '127.0.0.1:7233',
   });
   try {
+    const userStageLog = {
+      surface_kind: 'opl_user_stage_log',
+      semantic_status: 'provided_by_domain',
+      semantic_source: 'med_autoscience.paper_mission_stage_route',
+      stage_name: 'PaperMission stage route late closeout for DM002',
+      progress_delta_classification: 'owner_route_transport',
+    };
     const { db, paths } = openQueueDb();
     const enqueued = enqueueTask(db, {
       domainId: 'medautoscience',
@@ -810,6 +817,17 @@ test('family-runtime late typed closeout supersedes provider-only missing closeo
         next_owner: 'med-autoscience',
         route_impact: {
           reason: 'late_closeout_domain_gate_pending',
+          command_kind: 'route_back',
+          route_target: 'publication_gate_replay',
+          route_identity_key: 'paper-mission-transaction:dm002:1::route',
+          paper_mission_transaction_ref: 'paper-mission-transaction:dm002:1',
+          next_owner: 'med-autoscience',
+          domain_ready_verdict: 'domain_gate_pending',
+          user_stage_log: userStageLog,
+          observed_failure_class: 'late_typed_closeout_after_provider_blocker',
+          mission_artifact_impact: 'dm002_owner_route_not_advanced_without_mas_executor_delta',
+          target_artifact_or_owner_path: 'paper_mission_run:002-dm-china-us-mortality-attribution#owner_route',
+          recommended_next_action: 'MAS-owned executor must consume the OPL transition receipt and emit an advancing owner delta before OPL provider redrive',
         },
         human_gate_refs: [],
         signals: [],
@@ -835,13 +853,78 @@ test('family-runtime late typed closeout supersedes provider-only missing closeo
     assert.equal(terminalTask.stage_attempts[0].status, 'completed');
     assert.equal(terminalTask.stage_attempts[0].closeout_receipt_status, 'accepted_typed_closeout');
     assert.deepEqual(terminalTask.stage_attempts[0].closeout_refs, ['typed-blocker:late-domain-gate']);
-    assert.equal(
-      terminalTask.events.filter((event) =>
+    const terminalReconcileEvent = terminalTask.events.filter((event) =>
         event.event_type === 'paper_mission_stage_route_terminal_task_reconciled'
-      ).at(-1)?.payload.reason,
-      'paper_mission_stage_route_domain_gate_pending',
+      ).at(-1);
+    assert.equal(terminalReconcileEvent?.payload.reason, 'paper_mission_stage_route_domain_gate_pending');
+    assert.equal(terminalReconcileEvent?.payload.opl_transition_receipt.role, 'transport_receipt_only');
+    assert.equal(terminalReconcileEvent?.payload.opl_transition_receipt.receipt_status, 'terminal_closeout_observed');
+    assert.equal(
+      terminalReconcileEvent?.payload.opl_transition_receipt.route_impact.user_stage_log.semantic_status,
+      'provided_by_domain',
+    );
+    assert.equal(
+      terminalReconcileEvent?.payload.opl_transition_receipt.route_impact.user_stage_log.semantic_source,
+      'med_autoscience.paper_mission_stage_route',
+    );
+    assert.equal(
+      terminalReconcileEvent?.payload.opl_transition_receipt.route_impact.user_stage_log.progress_delta_classification,
+      'owner_route_transport',
+    );
+    assert.equal(
+      terminalReconcileEvent?.payload.opl_transition_receipt.route_impact.observed_failure_class,
+      'late_typed_closeout_after_provider_blocker',
+    );
+    assert.equal(
+      terminalReconcileEvent?.payload.opl_transition_receipt.mas_impact_receipt.observed_failure_class,
+      'late_typed_closeout_after_provider_blocker',
+    );
+    assert.equal(
+      terminalReconcileEvent?.payload.opl_transition_receipt.mas_impact_receipt.mission_artifact_impact,
+      'dm002_owner_route_not_advanced_without_mas_executor_delta',
+    );
+    assert.equal(
+      terminalReconcileEvent?.payload.opl_transition_receipt.mas_impact_receipt.recommended_next_action,
+      'MAS-owned executor must consume the OPL transition receipt and emit an advancing owner delta before OPL provider redrive',
+    );
+    assert.equal(
+      terminalReconcileEvent?.payload.opl_transition_receipt.authority_boundary.writes_owner_receipt,
+      false,
+    );
+    assert.equal(
+      terminalReconcileEvent?.payload.opl_transition_receipt.authority_boundary.can_claim_paper_progress,
+      false,
+    );
+    assert.deepEqual(
+      terminalReconcileEvent?.payload.mas_impact_receipt,
+      terminalReconcileEvent?.payload.opl_transition_receipt.mas_impact_receipt,
     );
     db.close();
+
+    try {
+      await redriveWithInjectedTemporalProvider(enqueued.task.task_id, {
+        reason: 'operator_retry_after_late_closeout_without_mas_executor_delta',
+        source: 'test-paper-route-late-closeout-redrive',
+        firstExecutionRunId: 'run-paper-mission-route-late-closeout-redrive',
+      });
+      assert.fail('expected late closeout same-lineage redrive to require MAS-owned executor delta');
+    } catch (error) {
+      assert.equal(error instanceof FrameworkContractError, true);
+      const details = (error as FrameworkContractError).details as Record<string, unknown>;
+      assert.equal(details.reason, 'non_advancing_route_back');
+      assert.equal(details.required_owner_delta, 'mas_owned_executor_delta_required');
+      assert.equal(details.provider_redrive_started, false);
+      assert.equal(details.paper_mission_transaction_ref, 'paper-mission-transaction:dm002:1');
+      assert.equal(details.route_identity_key, 'paper-mission-transaction:dm002:1::route');
+    }
+
+    const afterDb = openQueueDb().db;
+    const after = inspectTask(afterDb, enqueued.task.task_id);
+    assert.equal(after.stage_attempts.length, 1);
+    assert.equal(after.stage_attempts[0].stage_attempt_id, attempt.stage_attempt_id);
+    assert.equal(after.task.status, 'blocked');
+    assert.equal(after.task.dead_letter_reason, 'paper_mission_stage_route_domain_gate_pending');
+    afterDb.close();
   } finally {
     restoreEnv();
     fs.rmSync(stateRoot, { recursive: true, force: true });
