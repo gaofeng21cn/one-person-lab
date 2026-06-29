@@ -13,6 +13,7 @@ import {
   defaultFamilyRepoInputs,
   DEFAULT_FAMILY_REPOS,
 } from './standard-domain-agent-family-repos.ts';
+import { resolveStandardAgent } from './standard-agent-registry.ts';
 import {
   buildStageArtifactKernelAdoptionChecks,
   buildStageRunCanaryEvidenceChecks,
@@ -53,6 +54,22 @@ function readDomainId(repoDir: string, fallback: string | null) {
     ?? optionalString(descriptor.domain_label)
     ?? fallback
     ?? path.basename(repoDir);
+}
+
+function canonicalAgentIdForInput(input: RepoInput) {
+  const rawId = input.requested_agent_id ?? path.basename(input.repo_dir);
+  return resolveStandardAgent(rawId)?.agent_id ?? rawId;
+}
+
+function isFrameworkCapabilityPackageInput(input: RepoInput) {
+  if (canonicalAgentIdForInput(input) !== 'opl-scholarskills') {
+    return false;
+  }
+  const repoDir = path.resolve(input.repo_dir);
+  if (fs.existsSync(path.join(repoDir, 'contracts', 'domain_descriptor.json'))) {
+    return false;
+  }
+  return fs.existsSync(path.join(repoDir, 'contracts', 'scholar-skills-capability-modules.json'));
 }
 
 function directLegacyPackRootFields(packCompilerInput: unknown) {
@@ -358,14 +375,93 @@ function buildRepoConformance(input: RepoInput, contracts: FrameworkContracts) {
 
 export type RepoConformanceReport = ReturnType<typeof buildRepoConformance>;
 
+function buildFrameworkCapabilityPackageConformance(input: RepoInput) {
+  const repoDir = path.resolve(input.repo_dir);
+  const capabilityContract = readJsonFile(repoDir, 'contracts/scholar-skills-capability-modules.json');
+  const contract = isRecord(capabilityContract.payload) ? capabilityContract.payload : null;
+  const authorityBoundary = isRecord(contract?.authority_boundary)
+    ? contract.authority_boundary
+    : null;
+  const pluginManifestPath = path.join(repoDir, '.codex-plugin', 'plugin.json');
+  const skillEntryPath = path.join(repoDir, 'skills', 'opl-scholarskills', 'SKILL.md');
+  const blockers = unique([
+    canonicalAgentIdForInput(input) === 'opl-scholarskills'
+      ? null
+      : `framework_capability_package_agent_invalid:${input.requested_agent_id ?? path.basename(repoDir)}`,
+    capabilityContract.status === 'resolved'
+      ? null
+      : `scholarskills_capability_contract_${capabilityContract.status}`,
+    contract?.contract_id === 'opl_scholarskills_capability_modules'
+      ? null
+      : 'scholarskills_capability_contract_id_invalid',
+    authorityBoundary?.can_claim_domain_ready === false
+      ? null
+      : 'scholarskills_capability_can_claim_domain_ready_must_be_false',
+    authorityBoundary?.can_claim_runtime_ready === false
+      ? null
+      : 'scholarskills_capability_can_claim_runtime_ready_must_be_false',
+    authorityBoundary?.can_write_domain_truth === false
+      ? null
+      : 'scholarskills_capability_can_write_domain_truth_must_be_false',
+    authorityBoundary?.can_sign_owner_receipt === false
+      ? null
+      : 'scholarskills_capability_can_sign_owner_receipt_must_be_false',
+    authorityBoundary?.can_create_typed_blocker === false
+      ? null
+      : 'scholarskills_capability_can_create_typed_blocker_must_be_false',
+    authorityBoundary?.can_schedule_runtime === false
+      ? null
+      : 'scholarskills_capability_can_schedule_runtime_must_be_false',
+    fs.existsSync(pluginManifestPath)
+      ? null
+      : 'scholarskills_capability_plugin_manifest_missing',
+    fs.existsSync(skillEntryPath)
+      ? null
+      : 'scholarskills_capability_skill_entry_missing',
+  ].filter((entry): entry is string => Boolean(entry)));
+
+  return {
+    repo_dir: repoDir,
+    requested_agent_id: input.requested_agent_id,
+    domain_id: 'scholarskills',
+    canonical_agent_id: 'opl-scholarskills',
+    package_scope: 'framework_capability_package',
+    status: blockers.length === 0 ? 'passed' : 'blocked',
+    contract_status: capabilityContract.status,
+    capability_contract_ref: 'contracts/scholar-skills-capability-modules.json',
+    plugin_manifest_path: '.codex-plugin/plugin.json',
+    skill_entry_path: 'skills/opl-scholarskills/SKILL.md',
+    authority_boundary: {
+      can_claim_domain_ready: authorityBoundary?.can_claim_domain_ready ?? null,
+      can_claim_runtime_ready: authorityBoundary?.can_claim_runtime_ready ?? null,
+      can_write_domain_truth: authorityBoundary?.can_write_domain_truth ?? null,
+      can_sign_owner_receipt: authorityBoundary?.can_sign_owner_receipt ?? null,
+      can_create_typed_blocker: authorityBoundary?.can_create_typed_blocker ?? null,
+      can_schedule_runtime: authorityBoundary?.can_schedule_runtime ?? null,
+    },
+    blockers,
+  };
+}
+
+export type FrameworkCapabilityPackageConformanceReport =
+  ReturnType<typeof buildFrameworkCapabilityPackageConformance>;
+
 export function buildStandardDomainAgentConformanceReport(
   args: string[],
   contracts: FrameworkContracts = loadFrameworkContracts(),
 ) {
   const repos = parseConformanceArgs(args);
-  const reports = repos.map((repo) => buildRepoConformance(repo, contracts));
-  const passedCount = reports.filter((report) => report.status === 'passed').length;
-  const blockedCount = reports.length - passedCount;
+  const frameworkCapabilityPackageInputs = repos.filter(isFrameworkCapabilityPackageInput);
+  const standardAgentInputs = repos.filter((repo) => !frameworkCapabilityPackageInputs.includes(repo));
+  const frameworkCapabilityPackages = frameworkCapabilityPackageInputs
+    .map((repo) => buildFrameworkCapabilityPackageConformance(repo));
+  const reports = standardAgentInputs.map((repo) => buildRepoConformance(repo, contracts));
+  const totalRepoCount = reports.length + frameworkCapabilityPackages.length;
+  const passedCount = [
+    ...reports,
+    ...frameworkCapabilityPackages,
+  ].filter((report) => report.status === 'passed').length;
+  const blockedCount = totalRepoCount - passedCount;
   const productionEvidenceTailCount = reports.reduce(
     (total, report) => total + report.evidence_tail_classification.tail_items.length,
     0,
@@ -384,7 +480,11 @@ export function buildStandardDomainAgentConformanceReport(
       ? liveStageRunProgressEvidenceWorklist.open_domain_count
       : 0;
   const familyLiveConformanceProbe = buildFamilyAgentLiveConformanceProbe(reports, contracts);
-  const foundryAgentOsConformance = buildFoundryAgentOsConformance(reports, contracts);
+  const foundryAgentOsConformance = buildFoundryAgentOsConformance(
+    reports,
+    contracts,
+    frameworkCapabilityPackages,
+  );
   return {
     version: 'g2',
     passed_count: passedCount,
@@ -410,7 +510,7 @@ export function buildStandardDomainAgentConformanceReport(
       surface_kind: 'opl_standard_domain_agent_conformance_report',
       owner: 'one-person-lab',
       status: structuralConformanceStatus,
-      total_repo_count: reports.length,
+      total_repo_count: totalRepoCount,
       passed_count: passedCount,
       blocked_count: blockedCount,
       structural_conformance_status: structuralConformanceStatus,
@@ -431,7 +531,7 @@ export function buildStandardDomainAgentConformanceReport(
       stage_run_domain_adoption_read_model: stageRunDomainAdoptionReadModel,
       foundry_agent_os_conformance: foundryAgentOsConformance,
       summary: {
-        total_repo_count: reports.length,
+        total_repo_count: totalRepoCount,
         passed_count: passedCount,
         blocked_count: blockedCount,
         structural_conformance_status: structuralConformanceStatus,
@@ -457,6 +557,7 @@ export function buildStandardDomainAgentConformanceReport(
       },
       family_live_conformance_probe: familyLiveConformanceProbe,
       reports,
+      framework_capability_packages: frameworkCapabilityPackages,
       authority_boundary: {
         opl_can_write_domain_truth: false,
         opl_can_write_memory_body: false,

@@ -11,22 +11,41 @@ test('generated interfaces expose a family-defaults source for readiness drilldo
 
   assert.equal(report.surface_kind, 'opl_generated_agent_interfaces_family_report');
   assert.equal(report.owner, 'one-person-lab');
-  assert.equal(report.status, 'ready');
+  assert.equal(report.status, 'blocked');
   assert.equal(report.summary.total_domain_count, report.reports.length);
-  for (const agentId of ['med-autoscience', 'med-autogrant', 'redcube_ai', 'opl-meta-agent']) {
+  for (const agentId of [
+    'med-autoscience',
+    'med-autogrant',
+    'redcube_ai',
+    'opl-meta-agent',
+    'opl-bookforge',
+    'opl-scholarskills',
+  ]) {
     assert.equal(
       report.reports.some((entry: { agent_id: string }) => entry.agent_id === agentId),
       true,
     );
   }
-  assert.equal(report.summary.ready_domain_count, report.summary.total_domain_count);
-  assert.equal(report.summary.blocked_domain_count, 0);
+  assert.equal(report.summary.ready_domain_count, 5);
+  assert.equal(report.summary.blocked_domain_count, 1);
   assert.equal(
     report.reports.some((entry: { agent_id: string; repo_dir: string }) => (
       entry.agent_id === 'opl-meta-agent'
       && entry.repo_dir.endsWith('/opl-meta-agent')
     )),
     true,
+  );
+  const scholarSkills = report.reports.find((entry: { agent_id: string }) =>
+    entry.agent_id === 'opl-scholarskills'
+  );
+  if (!scholarSkills) {
+    throw new Error('opl-scholarskills generated interface report missing');
+  }
+  assert.equal(scholarSkills.generated_agent_interfaces.status, 'blocked');
+  assert.equal(
+    scholarSkills.generated_agent_interfaces.generated_surface_consumption_bundle
+      .consumption_status_counts.blocked,
+    8,
   );
   assert.equal(report.authority_boundary.report_can_claim_domain_ready, false);
   assert.equal(report.authority_boundary.report_can_claim_production_ready, false);

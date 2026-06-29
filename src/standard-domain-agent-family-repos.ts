@@ -14,6 +14,7 @@ export const DEFAULT_FAMILY_REPOS = [
   { requested_agent_id: 'rca', directory: 'redcube-ai' },
   { requested_agent_id: 'opl-meta-agent', directory: 'opl-meta-agent' },
   { requested_agent_id: 'opl-bookforge', directory: 'opl-bookforge' },
+  { requested_agent_id: 'opl-scholarskills', directory: 'opl-scholarskills' },
 ] as const;
 
 const SOURCE_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -21,6 +22,11 @@ const OPL_REPO_ROOT = path.resolve(SOURCE_DIR, '..');
 
 function unique<T>(items: T[]): T[] {
   return Array.from(new Set(items));
+}
+
+function hasDefaultFamilyConformanceSurface(repoDir: string) {
+  return fs.existsSync(path.join(repoDir, 'contracts', 'domain_descriptor.json'))
+    || fs.existsSync(path.join(repoDir, 'contracts', 'scholar-skills-capability-modules.json'));
 }
 
 function workspaceCandidatesFrom(seed: string) {
@@ -52,7 +58,7 @@ export function defaultFamilyRepoInputs(): StandardDomainAgentRepoInput[] {
     for (const repo of DEFAULT_FAMILY_REPOS) {
       const repoDir = path.join(workspaceRoot, repo.directory);
       if (
-        fs.existsSync(path.join(repoDir, 'contracts', 'domain_descriptor.json'))
+        hasDefaultFamilyConformanceSurface(repoDir)
         && !repos.some((entry) => path.resolve(entry.repo_dir) === path.resolve(repoDir))
       ) {
         repos.push({

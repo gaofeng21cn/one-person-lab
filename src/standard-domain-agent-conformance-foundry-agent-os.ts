@@ -3,7 +3,10 @@ import {
   STANDARD_AGENT_REGISTRY_REF,
   resolveStandardAgent,
 } from './standard-agent-registry.ts';
-import type { RepoConformanceReport } from './standard-domain-agent-conformance.ts';
+import type {
+  FrameworkCapabilityPackageConformanceReport,
+  RepoConformanceReport,
+} from './standard-domain-agent-conformance.ts';
 import type { FrameworkContracts } from './types.ts';
 
 function statusFromBlockers(blockers: string[]) {
@@ -161,9 +164,54 @@ function buildFoundryAgentOsDomainConformance(
   };
 }
 
+function buildFoundryAgentOsFrameworkCapabilityConformance(
+  report: FrameworkCapabilityPackageConformanceReport,
+) {
+  const blockers = unique(report.blockers);
+  return {
+    domain_id: report.domain_id,
+    requested_agent_id: report.requested_agent_id,
+    canonical_agent_id: report.canonical_agent_id,
+    standard_membership: 'standard_domain_agent',
+    foundry_agent_os_standard_member: true,
+    status: statusFromBlockers(blockers),
+    default_read_root: 'current_owner_delta',
+    raw_worklist_generates_default_next_action: false,
+    provider_completion_counts_as_domain_completion: false,
+    generated_surface_status: statusFromBlockers(blockers),
+    generated_surface_owner: 'one-person-lab',
+    direct_hosted_accepted_answer_shape_policy: 'framework_capability_package_refs_only',
+    source_of_work_status: statusFromBlockers(blockers),
+    capability_registry_policy_status: statusFromBlockers(blockers),
+    optional_ref_policy: 'fail_open_unless_current_owner_delta_requires_route_ref',
+    domain_authority_kernel_status: statusFromBlockers(blockers),
+    flagship_experience_mapping: null,
+    package_scope: report.package_scope,
+    capability_contract_ref: report.capability_contract_ref,
+    false_authority_flags: {
+      conformance_pass_can_claim_domain_ready: false,
+      conformance_pass_can_claim_production_ready: false,
+      generated_surface_can_write_domain_truth: false,
+      capability_registry_can_create_typed_blocker: false,
+      capability_registry_can_sign_owner_receipt: false,
+      provider_completion_can_claim_domain_completion: false,
+    },
+    authority_boundary: {
+      capability_package_can_claim_domain_ready: report.authority_boundary.can_claim_domain_ready,
+      capability_package_can_claim_runtime_ready: report.authority_boundary.can_claim_runtime_ready,
+      capability_package_can_write_domain_truth: report.authority_boundary.can_write_domain_truth,
+      capability_package_can_sign_owner_receipt: report.authority_boundary.can_sign_owner_receipt,
+      capability_package_can_create_typed_blocker: report.authority_boundary.can_create_typed_blocker,
+      capability_package_can_schedule_runtime: report.authority_boundary.can_schedule_runtime,
+    },
+    blockers,
+  };
+}
+
 export function buildFoundryAgentOsConformance(
   reports: RepoConformanceReport[],
   contracts: FrameworkContracts,
+  frameworkCapabilityPackages: FrameworkCapabilityPackageConformanceReport[] = [],
 ) {
   const standard = contracts.targetOperatingArchitecture.foundry_agent_os_standard;
   const flagshipMapping = contracts.targetOperatingArchitecture.flagship_experience_mapping;
@@ -171,11 +219,18 @@ export function buildFoundryAgentOsConformance(
   const domainReports = reports.map((report) =>
     buildFoundryAgentOsDomainConformance(report, expectedAgents, flagshipMapping)
   );
-  const reportedAgentIds = domainReports
+  const frameworkCapabilityDomainReports = frameworkCapabilityPackages.map((report) =>
+    buildFoundryAgentOsFrameworkCapabilityConformance(report)
+  );
+  const allDomainReports = [
+    ...domainReports,
+    ...frameworkCapabilityDomainReports,
+  ];
+  const reportedAgentIds = allDomainReports
     .filter((report) => report.standard_membership === 'standard_domain_agent')
     .map((report) => report.canonical_agent_id)
     .filter((agentId): agentId is string => typeof agentId === 'string');
-  const unknownNonStandardAgentIds = domainReports
+  const unknownNonStandardAgentIds = allDomainReports
     .filter((report) => report.standard_membership === 'unknown_non_standard_agent')
     .map((report) => report.canonical_agent_id)
     .filter((agentId): agentId is string => typeof agentId === 'string');
@@ -192,7 +247,7 @@ export function buildFoundryAgentOsConformance(
   const blockers = unique([
     ...missingAgents.map((agentId) => `foundry_agent_os_standard_agent_missing:${agentId}`),
     ...missingClaimBlockers,
-    ...domainReports.flatMap((report) => report.blockers),
+    ...allDomainReports.flatMap((report) => report.blockers),
   ]);
 
   return {
@@ -236,7 +291,7 @@ export function buildFoundryAgentOsConformance(
       },
     },
     new_agent_baseline_handoff_policy: standard.new_agent_baseline_handoff_policy,
-    domains: domainReports,
+    domains: allDomainReports,
     authority_boundary: {
       conformance_pass_can_claim_domain_ready: false,
       conformance_pass_can_claim_production_ready: false,
