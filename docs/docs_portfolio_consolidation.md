@@ -48,7 +48,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | --- | --- | --- |
 | `docs/` root | 文档入口、核心五件套、docs governance | `README.md`、核心五件套、本文件。 |
 | `docs/active/` | 当前执行、当前计划、当前差距、active baton、当前完成门槛 | `current-state-vs-ideal-gap.md` 是唯一 active owner；family 开发主参考、当前开发线路、生产闭环差距矩阵、ideal operating model、目标架构、Stage Native Kernel rollout 和设计审计只作 active support。 |
-| `docs/public/` | 仓库首页之后的公开产品方向支撑 | roadmap、task map、operating model、UHS 叙事。 |
+| `docs/public/` | 仓库首页之后给外部读者继续阅读的公开文档入口 | 白皮书、roadmap、task map、operating model、UHS 叙事。 |
 | `docs/product/` | One Person Lab App/workbench、operator entry、product entry、action-routing shell | public surface index 与 App/workbench 消费边界。 |
 | `docs/runtime/` | framework runtime、provider/executor、control plane、projection/read model、resume/wakeup、repair 语义 | runtime 命名与边界合同。 |
 | `docs/delivery/` | 通用 artifact/package/export lifecycle shell、locator、restore/retention、handoff projection | artifact/package lifecycle boundary。domain delivery authority 留在 MAS/MAG/RCA；runtime artifact body 外置规则回 policies。 |
@@ -84,7 +84,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | `docs/history/process/plans/2026-06-01-standard-agent-design-consistency-audit.md` | `history_provenance` | 2026-06-01 MAS/MAG/RCA/OMA 同源设计和历史残留审计快照。 | 只作过程审计；当前结构同源结论回 live conformance/descriptors/default-caller surfaces 与 active inventory。 |
 | `docs/history/process/plans/2026-06-03-opl-family-purpose-first-design-audit.md` | `history_provenance` | 2026-06-03 OPL family purpose-first 顶层设计审计快照。 | 只作过程审计；当前 owner、gap、下一步和完成口径回 active gap plan、closure matrix 和核心五件套。 |
 | `docs/history/process/plans/2026-06-04-opl-foundry-agent-mvp-friction-audit.md` | `history_provenance` | 2026-06-04 OPL Foundry Agent MVP friction 诊断、fresh evidence 和阻力分类快照。 | 只作历史诊断；当前目标操作架构、迁移阶段和验收门回 active target architecture，当前 gap 回 active gap plan。 |
-| `docs/public/*` | `public_support` | 公开 roadmap、task map、operating model 和 UHS 叙事。 | 保持 public 支撑；不作为实现 backlog。 |
+| `docs/public/*` | `public_support` | 外部读者公开入口；白皮书、roadmap、task map、operating model 和 UHS 叙事。 | 保持 public 支撑；不作为实现 backlog、release/readiness proof 或 owner receipt。 |
 | `docs/product/README.md` 与 `docs/product/opl-public-surface-index.md` | `active_support` | App/workbench、operator/product entry、public surface 与 action routing 边界。 | 保持 product 支撑；App release truth 回 App 仓和 artifact。 |
 | `docs/runtime/opl-runtime-naming-and-boundary-contract.md` | `active_support` | Codex-default executor、Temporal provider、explicit executor adapter 与 retired runtime vocabulary 边界。 | 保持 runtime 支撑；机器 truth 回 contracts/source/CLI/runtime ledger。 |
 | `docs/delivery/artifact-package-lifecycle-boundary.md` | `active_support` | 通用 artifact/package/export lifecycle shell 与 domain delivery authority split。 | 保持 delivery 支撑；不写 domain verdict。 |

@@ -202,6 +202,8 @@ OPL 采用 AI-first、executor-first、contract-light 的 surface 模型：activ
 ### 文档
 
 - [文档索引](./docs/README.md)
+- [公开文档入口](./docs/public/README.md)
+- [OPL 白皮书](./docs/public/whitepaper/README.md)
 - [项目概览](./docs/project.md)
 - [当前状态](./docs/status.md)
 - [架构](./docs/architecture.md)

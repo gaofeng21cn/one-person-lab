@@ -402,7 +402,7 @@ function main() {
     'OPL Pack',
     'OPL Stagecraft',
     '抓大放小',
-    'MedAutoScience',
+    'Med Auto Science',
     'Foundry Agents',
     '生成脚本统一派生',
   ];

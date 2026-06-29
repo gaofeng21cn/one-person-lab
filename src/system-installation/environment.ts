@@ -13,21 +13,86 @@ import type { FrameworkContracts } from '../types.ts';
 import { buildOplDeveloperModeSurface } from './developer-mode.ts';
 import { resolveCodexVersion } from './engine-helpers.ts';
 import { buildOplModules } from './modules.ts';
+import type {
+  OplSystemInitializeEventHandler,
+} from './shared.ts';
+import {
+  createOplSystemInitializeEventEmitter,
+  withOplSystemInitializeEventPhase,
+} from './shared.ts';
 
-export async function buildOplEnvironment(contracts: FrameworkContracts) {
+type OplEnvironmentBuildOptions = {
+  onInitializeEvent?: OplSystemInitializeEventHandler;
+};
+
+export async function buildOplEnvironment(
+  contracts: FrameworkContracts,
+  options: OplEnvironmentBuildOptions = {},
+) {
+  const events = createOplSystemInitializeEventEmitter(options.onInitializeEvent);
   const statePaths = ensureOplStateDir(resolveOplStatePaths());
   const codexDefaults = readLocalCodexDefaultsIfAvailable();
   const codexDefaultProfile = readBundledCodexDefaultProfile();
-  const codexBinary = resolveCodexVersion();
-  const providerKind = resolveFamilyRuntimeProviderKind();
-  const familyRuntimeProvider = await inspectFamilyRuntimeProviderWithLifecycle(
-    providerKind,
-    familyRuntimePaths(),
-    { managedProviderProjection: readMasManagedProviderProjection() },
+  const codexBinary = await withOplSystemInitializeEventPhase(
+    events,
+    'codex',
+    'Inspect Codex CLI and default profile',
+    () => resolveCodexVersion(),
+    (codex) => ({
+      health_status: codex.installed ? codex.version_status : 'missing',
+      installed: codex.installed,
+      version_status: codex.version_status,
+    }),
   );
-  const nativeHelpers = buildNativeHelperHealthStatus();
-  const modulesPayload = buildOplModules().modules;
-  const developerMode = buildOplDeveloperModeSurface(buildOplEndpoints());
+  const providerKind = await withOplSystemInitializeEventPhase(
+    events,
+    'family_runtime_provider',
+    'Resolve family runtime provider selection',
+    () => resolveFamilyRuntimeProviderKind(),
+    (kind) => ({ provider_kind: kind }),
+  );
+  const familyRuntimeProvider = await withOplSystemInitializeEventPhase(
+    events,
+    'family_runtime_provider',
+    'Inspect family runtime provider readiness',
+    () => inspectFamilyRuntimeProviderWithLifecycle(
+      providerKind,
+      familyRuntimePaths(),
+      { managedProviderProjection: readMasManagedProviderProjection() },
+    ),
+    (provider) => ({
+      status: provider.status,
+      ready: provider.ready,
+      degraded_reason: provider.degraded_reason,
+    }),
+  );
+  const nativeHelpers = await withOplSystemInitializeEventPhase(
+    events,
+    'native_helpers',
+    'Inspect native helper toolchain',
+    () => buildNativeHelperHealthStatus(),
+    (helpers) => ({ health_status: helpers.health_status }),
+  );
+  const modulesPayload = await withOplSystemInitializeEventPhase(
+    events,
+    'modules',
+    'Inspect OPL module checkouts',
+    () => buildOplModules().modules,
+    (modules) => ({
+      installed_modules_count: modules.summary.installed_modules_count,
+      total_modules_count: modules.summary.total_modules_count,
+    }),
+  );
+  const developerMode = await withOplSystemInitializeEventPhase(
+    events,
+    'developer_mode',
+    'Inspect Developer Mode settings',
+    () => buildOplDeveloperModeSurface(buildOplEndpoints()),
+    (surface) => ({
+      status: surface.status,
+      enabled: surface.enabled,
+    }),
+  );
   const moduleSummary = modulesPayload.summary;
   const codexIssues = [...codexBinary.issues];
   const codexDiagnostics = [...codexBinary.diagnostics];

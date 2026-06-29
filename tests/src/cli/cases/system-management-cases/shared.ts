@@ -9,6 +9,7 @@ export {
   path,
   runCli,
   runCliAsync,
+  runCliRaw,
   test,
 } from '../../helpers.ts';
 export {

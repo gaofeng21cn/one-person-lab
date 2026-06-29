@@ -4,18 +4,18 @@
   "title": "One Person Lab 白皮书",
   "short_title": "OPL 白皮书",
   "subtitle": "让复杂知识工作从一次问答走向持续交付",
-  "publication_date": "2026-06-08",
+  "publication_date": "2026-06-29",
   "owner": "One Person Lab",
   "purpose": "public_user_facing_whitepaper",
   "state": "active_public_support",
   "machine_boundary": "Human-readable whitepaper. Machine truth remains in contracts, source, CLI/API behavior, runtime ledger, provider receipts, domain-owned manifests, App release evidence, and real workspace evidence.",
   "audience": "希望理解 OPL 品牌、产品定位、设计逻辑和 Foundry Agents 运行方式的用户、合作者、早期采用者和技术决策者。",
-  "thesis": "OPL 的核心承诺，是把论文、基金、汇报、专利等复杂成果从一次问答推进到持续审阅、修订和交付。",
+  "thesis": "OPL 的核心承诺，是把论文、基金、汇报、书籍、专利等复杂成果从一次问答推进到持续审阅、修订和交付。",
   "positioning": [
-    "OPL 面向复杂知识工作的持续交付，让论文、基金、汇报、专利、答辩、审稿等工作以阶段方式推进到成果交付。",
+    "OPL 面向复杂知识工作的持续交付，让论文、基金、汇报、书籍、专利、答辩、审稿等工作以阶段方式推进到成果交付。",
     "OPL 是正式知识工作的智能体运行框架，围绕阶段、工作空间、证据、权限、恢复和交接设计。",
     "One Person Lab App 是用户工作台，负责把 Framework 和 Foundry Agents 转化为可见、可操作、可检查的产品体验。",
-    "Foundry Agents 是运行在 OPL 上的专业智能体，例如 Research、Grant、Presentation 和未来的 IP、Award、Thesis、Review。",
+    "Foundry Agents 是运行在 OPL 上的专业智能体，例如 Research、Grant、Presentation、Book 和 Agent-building；IP、Award、Thesis、Review 等会在领域边界成熟后继续加入。",
     "OPL 的设计从用户要交付的成果反推到系统合同：用户要的是可靠推进，系统就必须提供阶段、权限、证据、文件、恢复和交接。"
   ],
   "sections": [
@@ -57,12 +57,12 @@
       "lead": "OPL 的当前品牌模块来自长周期知识工作的真实摩擦：一次性回答需要延伸为持续交付，自动化脚本需要连接专家判断，界面可见性需要连接质量完成。",
       "paragraphs": [
         "第一层来源，是 OPL 自己要服务的任务：论文、基金、汇报、专利、报奖、学位论文、审稿和修回。这些任务都有明确交付物，也都有大量中间判断。它们要求 AI 能做专业工作，同时要求系统能说清楚当前阶段、材料来源、文件位置、质量门、阻塞原因和下一步。",
-        "第二层来源，是 MAS、MAG、RCA 等 Foundry Agents 的真实实践。医学研究需要证据包、稿件、发表质量门；基金写作需要方向判断、申请书结构、模拟评审和修订；视觉交付需要故事线、渲染、审阅和导出。不同领域的内容不同，但它们都需要同一类运行外围：阶段、工作空间、回执、阻塞、产物 lineage、状态投影和恢复机制。",
+        "第二层来源，是 MAS、MAG、RCA、Book Forge 和 OPL Meta Agent 等 Foundry Agents 的真实实践。医学研究需要证据包、稿件、发表质量门；基金写作需要方向判断、申请书结构、模拟评审和修订；视觉交付需要故事线、渲染、审阅和导出；书籍写作需要大纲、章节、风格和出版交接；智能体构建需要脚手架、测试接管、机制改进和回滚。不同领域的内容不同，但它们都需要同一类运行外围：阶段、工作空间、回执、阻塞、产物 lineage、状态投影和恢复机制。",
         "第三层来源，是成熟工程系统的分层经验。OPL 借鉴 catalog、durable execution、operator pattern、artifact lineage、machine-readable descriptor 和 ADR 这样的治理思想，并把这些原则落到 One Person Lab 自己的用户路径、专业智能体和交付边界里。"
       ],
       "bullets": [
         "从用户痛点来：复杂成果从一次回答延伸为持续推进。",
-        "从领域实践来：MAS、MAG、RCA 证明不同专业 agent 需要共享运行骨架。",
+        "从领域实践来：MAS、MAG、RCA、Book Forge 和 OPL Meta Agent 证明不同专业 agent 需要共享运行骨架。",
         "从工程经验来：可发现、可恢复、可审计、可派生的系统才容易长期维护。"
       ]
     },
@@ -99,9 +99,10 @@
         {
           "title": "One Person Lab App",
           "kicker": "用户工作台",
-          "body": "App 是 OPL 的产品入口。它把运行状态、工作空间和 Foundry Agent 投影组织成可操作工作台：选择任务、查看进度、打开文件、处理阻塞、接收更新。它把任务、阶段、阻塞、交付物、来源引用和下一步动作呈现为清楚界面。",
+          "body": "App 是 OPL 的产品入口。它把运行状态、工作空间和 Foundry Agent 投影组织成可操作工作台：选择任务、查看进度、打开文件、处理阻塞、接收更新。当前普通用户形态是 OPL-branded App shell：用户面对的是 OPL 任务和 Foundry Agent 入口，而不是底层 backend 或 executor 选择器。",
           "bullets": [
             "App 固定 Codex CLI 作为标准执行路径。",
+            "App 消费 Framework 和 domain-owned 投影，不复制 runtime 或领域真相。",
             "App 负责界面产品事实、发布门、用户教程和可用性验证。",
             "App 负责展示和交互，质量完成结论回到对应领域智能体。"
           ]
@@ -109,7 +110,7 @@
         {
           "title": "Foundry Agents",
           "kicker": "领域智能体",
-          "body": "Foundry Agents 是 MAS、MAG、RCA、OMA 以及未来 Patent、Award、Thesis、Review 等领域智能体。它们像专业团队里的不同角色：研究、基金、视觉交付、智能体构建各自有材料理解、审阅标准和交付边界。它们以统一 OPL 结构运行，并保留自己的领域判断、质量门、产物权威和直接使用路径。",
+          "body": "Foundry Agents 是 MAS、MAG、RCA、OPL Meta Agent、OPL Book Forge 以及未来 Patent、Award、Thesis、Review 等领域智能体。它们像专业团队里的不同角色：研究、基金、视觉交付、智能体构建和书籍写作各自有材料理解、审阅标准和交付边界。它们以统一 OPL 结构运行，并保留自己的领域判断、质量门、产物权威和直接使用路径。",
           "bullets": [
             "同一生命周期：材料进入、阶段执行、质量门、负责人回执、交付物交接。",
             "不同领域保留不同输入、输出、知识、评价标准和权威动作。",
@@ -131,43 +132,61 @@
     },
     {
       "id": "philosophy",
-      "title": "设计哲学：让 AI 做专家工作，让系统守住边界",
-      "lead": "OPL 最重要的设计逻辑，是同时保留 AI 的自由度和系统的纪律。AI 在阶段内完成开放式专家工作，系统提供可审计、可恢复、可交接的边界。",
+      "title": "设计原则：让 AI 做专家工作，让系统守住边界",
+      "lead": "OPL 的设计原则不是一组抽象口号，而是一套面向复杂交付的品牌判断：先从成果反推系统，再把 AI 执行、阶段推进、责任边界、证据回执和用户可见进度组织成同一条工作线。AI 在阶段内完成开放式专家工作，系统提供可审计、可恢复、可交接的边界。",
       "cards": [
         {
-          "title": "AI-first",
+          "title": "成果优先",
+          "kicker": "从交付物反推系统",
+          "body": "OPL 先问用户要交付什么：论文、基金、汇报、书稿、专利，还是一个可接力的智能体。目录、状态、运行时、队列和验证都服务这个目的；不能产出下一版成果、责任方、证据或交接的设计面，都应收薄、下沉或归档。",
+          "bullets": [
+            "用户目标决定系统形状，不让历史实现反向定义用户路径。",
+            "真实进度按成果、决策、交接和可接力增量计算。"
+          ]
+        },
+        {
+          "title": "AI 执行优先",
           "kicker": "能力来自更强执行者",
-          "body": "复杂知识工作交给 AI 执行者做开放式判断、写作、评审和修订。代码提供目标、上下文、权限、工具和质量边界，把专家行为留给最合适的执行者。这就是 OPL 能跟随更强模型、更好提示词、更好技能一起变强的原因。",
+          "body": "复杂知识工作交给 AI 执行者做开放式判断、写作、评审和修订。系统提供目标、上下文、权限、工具和质量边界，把专家行为留给最合适的执行者；当前默认且第一公民执行者是 Codex CLI，其他执行者必须显式接入并留下回执和审计。",
           "bullets": [
             "模型升级、提示词改进、技能改进会直接提升系统能力。",
             "合同定义安全和可恢复下限，专家判断保留在阶段执行与质量门中。"
           ]
         },
         {
-          "title": "Executor-first",
-          "kicker": "阶段内最小执行单位是 Agent executor",
-          "body": "OPL 让一个被选中的执行者在一个阶段内完成接近人类专家的真实工作包。阶段把目标、上下文、工具和质量边界聚合在一起，让成果推进保持连续。",
-          "bullets": [
-            "默认执行者是 Codex CLI。",
-            "其他执行者通过显式 adapter 接入，并必须提供回执、审计和失败保护语义。"
-          ]
-        },
-        {
-          "title": "Stage-led",
-          "kicker": "大型任务按阶段推进",
-          "body": "论文、基金、视觉交付和答辩材料都有自然阶段。OPL 把阶段作为可观察、可恢复、可审计的工作单元。阶段让 AI 有空间完成专家工作，也让用户能看到工作推进到了哪里。",
+          "title": "阶段包启动",
+          "kicker": "启动的是阶段包，不是自由脚本",
+          "body": "OPL 把阶段作为可观察、可恢复、可审计的工作单元。它启动的是带 owner、输入、输出、权限、预期回执和质量边界的 stage pack，而不是一段自由形态脚本。这样 AI 可以在阶段内自由判断，系统仍能在启动、执行和收口时知道该检查什么、该交给谁、该留下什么证据。",
           "bullets": [
             "每个阶段有目标、输入、输出、知识、工具边界和质量门。",
-            "阶段收口回到负责人回执、结构化阻塞、人工确认或路线调整。"
+            "阶段内策略留给执行者，阶段外边界留给系统。"
           ]
         },
         {
-          "title": "Contract-light",
+          "title": "轻合同",
           "kicker": "合同只守安全和可恢复下限",
-          "body": "合同负责责任方、权限、安全动作、回执、阻塞、审计、恢复和状态投影。质量结论由独立审阅者、领域质量门或负责人回执给出；就绪状态聚合启动条件和证据缺口。这样做让机械检查、运行状态和专家质量判断各有边界。",
+          "body": "合同负责责任方、权限、安全动作、回执、阻塞、审计、恢复和状态投影，只守系统下限。工具、技能、知识和评价标准是可用能力和边界，不是流程脚本；执行者可以选择、组合、跳过或替代工具，系统只固定权限、凭据、可写范围、副作用和禁止越权。",
           "bullets": [
-            "机械检查只能定位缺口。",
-            "质量裁决来自独立审阅者、领域质量门或负责人回执。"
+            "工具目录说明能做什么和不能做什么。",
+            "工具编排留在阶段内的专家执行空间。"
+          ]
+        },
+        {
+          "title": "专家判断优先",
+          "kicker": "专家判断优先于机械信号",
+          "body": "schema 完整、provider 完成、read model 可读、generated surface ready 或 checklist 通过，都只能说明某个机器面可用。论文质量、基金可资助性、视觉交付、书稿完成度和最终导出判断，必须回到独立 AI reviewer、领域质量门、负责人回执或结构化阻塞。",
+          "bullets": [
+            "机械信号定位缺口，不能签发质量结论。",
+            "正式判断必须由对应责任面给出。"
+          ]
+        },
+        {
+          "title": "阶段承诺组合",
+          "kicker": "阶段之间用承诺组合",
+          "body": "OPL 用 requires / ensures 表达阶段之间的前置和产出关系。下游阶段需要什么，上游阶段承诺了什么，证据是否新鲜，责任方是否匹配，都必须能被看见。可静态验证的身份、责任方、引用、范围和禁止越权属于启动安全；AI 输出、人类决策、外部系统结果、产物修改、记忆写回和领域裁决属于运行时边界。",
+          "bullets": [
+            "组合关系在启动前检查。",
+            "缺口回到结构化阻塞、人工确认或路线回退，不由系统猜测补齐。"
           ]
         },
         {
@@ -180,7 +199,16 @@
           ]
         },
         {
-          "title": "Owner boundary",
+          "title": "阻塞有纪律",
+          "kicker": "只让真正的大边界阻断",
+          "body": "OPL 只把启动安全、越权、关键运行事件缺失、组合关系不满足、硬性人工确认和执行者绑定缺失这类问题设为硬阻塞。容量、监控、假设、回放和 reviewer attention 进入建议或路线回退，避免诊断细节反向卡住普通推进。",
+          "bullets": [
+            "硬阻塞保护不可错的大边界。",
+            "建议性信号服务审计、排障和下一轮改进。"
+          ]
+        },
+        {
+          "title": "责任边界清楚",
           "kicker": "每个判断都有责任方",
           "body": "Framework、App 和 Foundry Agents 各有自己的权威边界。OPL 管通用运行外围，领域智能体管领域事实，App 管用户界面和发布证据。清楚的责任边界是长期可维护的前提。",
           "bullets": [
@@ -189,12 +217,21 @@
           ]
         },
         {
-          "title": "Progress-first",
+          "title": "进度优先",
           "kicker": "用户需要看见下一步",
           "body": "OPL 默认把责任方变化放在最前面：当前等待谁、需要什么交付增量、缺什么回执或阻塞说明。用户首先看到可推进状态，然后再按需要展开事件、trace 和诊断信息。",
           "bullets": [
             "进度来自产物、证据、决策和交接。",
             "诊断细节在展开详情中呈现。"
+          ]
+        },
+        {
+          "title": "不制造假就绪",
+          "kicker": "没有证据就不声明 ready",
+          "body": "descriptor ready、read model 可读、generated surface proof、provider proof、cleanup proof 或测试通过，都不能被包装成 domain ready、artifact ready 或 production evidence complete。每个未闭合边界都必须返回结构化阻塞、人工确认、回执冲突或路线回退，而不是用 fallback verdict 补语义。",
+          "bullets": [
+            "ready claim 必须绑定对应责任方证据。",
+            "OPL 宁可暴露缺口，也不制造第二真相源。"
           ]
         }
       ]
@@ -216,7 +253,7 @@
         {
           "title": "OPL Atlas",
           "kicker": "可发现目录",
-          "body": "Atlas 管理智能体、能力、入口、责任方、依赖和生命周期目录。用户需要知道 OPL 能做什么，系统需要知道能力来自哪里、谁负责、如何调用、当前生命周期是什么。Atlas 把这些信息放进可发现目录。",
+          "body": "Atlas 管理智能体、能力、入口、责任方、依赖和生命周期目录。用户需要知道 OPL 能做什么，系统需要知道能力来自哪里、谁负责、如何调用、当前生命周期是什么。Atlas 把 Foundry Agents、能力包、工具卡和公开入口放进可发现目录。",
           "bullets": [
             "负责能力发现和目录组织。",
             "把领域描述、模块注册和公开入口放进统一目录。"
@@ -234,16 +271,16 @@
         {
           "title": "OPL Pack",
           "kicker": "Domain Pack 与 authority ABI",
-          "body": "Pack 定义 Foundry Agent 如何声明自己的 domain pack、stage/action refs、authority functions、generated surface 输入和 pack compiler 对齐状态。它回答一个领域智能体怎样被 OPL 标准化接入，同时不让 OPL 接管领域 handler、owner receipt 或质量裁决。",
+          "body": "Pack 定义 Foundry Agent 如何声明自己的 domain pack、stage/action refs、authority functions、capability registry、generated surface 输入和 pack compiler 对齐状态。它回答一个领域智能体怎样被 OPL 标准化接入，同时不让 OPL 接管领域 handler、owner receipt 或质量裁决。",
           "bullets": [
-            "固定 domain pack、authority ABI 和 generated surface 输入。",
+            "固定 domain pack、capability registry、authority ABI 和 generated surface 输入。",
             "让标准智能体更容易生成、验证、分发和维护。"
           ]
         },
         {
           "title": "OPL Stagecraft",
           "kicker": "阶段内认知计算设计",
-          "body": "Stagecraft 负责阶段设计、提示词、技能、工具可用性、知识、评价标准和独立质量门。它回答这个阶段要让 AI 怎样像专家一样工作，并在保留开放式专家空间的同时，让输入、输出和边界可审计。",
+          "body": "Stagecraft 负责阶段设计、提示词、技能、工具可用性、知识、评价标准、能力调用策略和独立质量门。它回答这个阶段要让 AI 怎样像专家一样工作，并在保留开放式专家空间的同时，让输入、输出和边界可审计。像 OPL ScholarSkills 这样的能力包，进入这里作为可复用专业能力，而不是新的领域真相源。",
           "bullets": [
             "工具目录说明可用能力、权限和边界。",
             "复杂质量判断进入独立阶段或质量门。"
@@ -288,7 +325,7 @@
         {
           "title": "OPL Connect",
           "kicker": "外部调用和分发连接",
-          "body": "Connect 把同一合同派生到 CLI、MCP、OpenAI/AI SDK tools、Skill/plugin、模块安装、发布/安装分发和漂移检查。它回答同一套能力怎样被安装、发现、调用和分享。",
+          "body": "Connect 把同一合同派生到 CLI、MCP delegate projection、OpenAI/AI SDK tools、Skill/plugin、模块安装、package channel、发布/安装分发和漂移检查。它回答同一套能力怎样被安装、发现、调用和分享，同时避免把每个 CLI 命令平铺成新的工具真相源。",
           "bullets": [
             "让能力可以被安装、同步、发现和调用。",
             "保持外部调用与领域自有语义一致。"
@@ -299,10 +336,10 @@
     {
       "id": "foundry-agents",
       "title": "Foundry Agents：同一骨架，不同领域",
-      "lead": "Foundry Agents 让 OPL 的品牌进入具体专业场景：研究、基金、视觉交付、智能体构建，以及未来的专利、报奖、论文和审稿。每个 agent 都面向一个高价值工作流，拥有自己的领域知识、质量门和交付权威，同时共享 OPL 的 stage-led 运行骨架。",
+      "lead": "Foundry Agents 让 OPL 的品牌进入具体专业场景：研究、基金、视觉交付、书籍写作、智能体构建，以及未来的专利、报奖、论文和审稿。每个 agent 都面向一个高价值工作流，拥有自己的领域知识、质量门和交付权威，同时共享 OPL 的 stage-led 运行骨架。",
       "cards": [
         {
-          "title": "MedAutoScience",
+          "title": "Med Auto Science",
           "kicker": "Research Foundry",
           "body": "面向医学和科研论文工作流，从数据、文献、研究问题、分析、证据包到稿件和投稿包。研究工作特别需要证据、审阅、修订和投稿边界，所以 MAS 持有研究事实、发表质量门、产物权威和负责人回执。",
           "bullets": [
@@ -311,7 +348,7 @@
           ]
         },
         {
-          "title": "MedAutoGrant",
+          "title": "Med Auto Grant",
           "kicker": "Grant Foundry",
           "body": "面向基金方向判断、申请书写作、作者侧模拟评审和修订。基金工作需要重新组织问题、创新点、技术路线和评审说服力；MAG 复用研究证据和记忆，同时保持基金事实与可资助性评审边界。",
           "bullets": [
@@ -338,9 +375,18 @@
           ]
         },
         {
+          "title": "OPL Book Forge",
+          "kicker": "Book Foundry",
+          "body": "面向书籍、长篇手稿、章节结构、风格控制、参考材料整合和出版交接。书籍写作需要长期上下文、章节级推进、版本控制、审阅和导出边界；Book Forge 持有书稿事实、质量/导出判断和 manuscript package 交接权威。",
+          "bullets": [
+            "用户感知：把想法、材料和章节推进成可审阅、可导出的书稿包。",
+            "OPL 负责运行骨架、阶段投影、产物 lineage 和托管入口。"
+          ]
+        },
+        {
           "title": "未来 Foundries",
           "kicker": "IP / Award / Thesis / Review",
-          "body": "IP、Award、Thesis、Review 等工作流会沿用同一骨架：材料进入、领域包解释、阶段式执行、独立质量门、负责人回执或结构化阻塞、交付物交接、OPL 投影。它们会在对应领域边界成熟后成为新的 Foundry。",
+          "body": "IP、Award、Thesis、Review 等工作流会沿用同一骨架：材料进入、领域包解释、阶段式执行、独立质量门、负责人回执或结构化阻塞、交付物交接、OPL 投影。它们会在对应领域边界、质量门和交付权威成熟后成为新的 Foundry。",
           "bullets": [
             "每个新智能体都有自己的领域事实和质量边界。",
             "共享 OPL runtime，并把领域差异保留在对应 Foundry 内。"
@@ -357,7 +403,7 @@
         "第二，责任边界清楚。Framework 持有框架事实；App 持有产品和展示事实；Foundry Agent 持有领域事实、质量结论和产物权威。每个判断都有归属，投影、运行和质量结论保持清楚分工。",
         "第三，证据以引用和 lineage 方式保存。OPL 记录回执、结构化阻塞、lineage、当前指针和恢复证明，让任务可以被审计和恢复；领域正文、产物内容和质量裁决保留在对应责任方处。",
         "第四，用户默认看到下一步动作。工作台优先回答当前等待谁、缺什么、下一步能做什么，再提供事件、trace、计数和诊断详情。",
-        "第五，系统从单一来源派生多个入口。CLI、App、Skill、MCP、AI SDK tool、plugin 和 release/install 分发都围绕同一 contract surface 生成，避免每个入口各说各话。",
+        "第五，系统从单一来源派生多个入口。CLI、App、Skill/plugin、MCP delegate projection、OpenAI/AI SDK tool、package channel 和 release/install 分发都围绕同一 contract surface 生成，避免每个入口各说各话。",
         "第六，设计始终从用户要交付的成果反推。默认入口聚焦进度、产物、证据、阻塞、责任方和下一步；诊断细节进入展开详情和维护面。这样的减法治理让 OPL 保持清楚、专业和可维护。"
       ],
       "bullets": [
@@ -370,7 +416,7 @@
       "title": "用户会如何感知 OPL",
       "lead": "OPL 的用户体验目标，是让复杂知识工作呈现为一条可以持续推进、可以检查、可以交接的工作线。",
       "paragraphs": [
-        "在 App 中，用户选择任务和 Foundry Agent。标准路径使用 Codex CLI 执行者；运行和 provider 状态被组织成就绪状态、当前责任方、下一步动作和展开详情。",
+        "在 App 中，用户选择任务和 Foundry Agent。标准路径使用 Codex CLI 执行者；运行和 provider 状态被组织成就绪状态、当前责任方、下一步动作和展开详情。普通用户不需要选择底层 executor、backend 或 shell 实现；这些差异留在开发者和 operator 诊断面。",
         "在工作空间中，用户看到材料、阶段输出、交付物和当前指针。运行状态解释工作如何推进，项目文件承载可检查、可复制、可分享和可归档的交付物。",
         "在长期任务中，用户看到每个阶段的进度、阻塞和交接。任务可能需要人类批准、补材料、接受路线调整或等待领域负责人回执，但这些状态都会显式出现。",
         "用户从任务入口进入，查看当前阶段，打开产物，处理必要阻塞，并在关键节点做判断。复杂运行细节由系统组织，面向用户呈现为清楚的进度、文件、证据和下一步。"

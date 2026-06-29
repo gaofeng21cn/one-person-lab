@@ -14,8 +14,13 @@ import type {
   OplInitializeChecklistItem,
   OplInitializePhase,
   OplInitializeSectionId,
+  OplSystemInitializeEventHandler,
 } from './shared.ts';
-import { resolveProjectRoot } from './shared.ts';
+import {
+  createOplSystemInitializeEventEmitter,
+  resolveProjectRoot,
+  withOplSystemInitializeEventPhase,
+} from './shared.ts';
 import {
   buildOplFirstRunLogSurface,
   buildOplGuiFirstRunAutomationContract,
@@ -47,8 +52,8 @@ function buildInitializeOptionalStatus(installedCount: number) {
   return installedCount > 0 ? 'ready' : 'attention_needed';
 }
 
-function buildRecommendedSkillsStatus() {
-  return buildOplRecommendedSkills().some((skill) => skill.status === 'ready') ? 'ready' : 'attention_needed';
+function buildRecommendedSkillsStatus(recommendedSkills: ReturnType<typeof buildOplRecommendedSkills>) {
+  return recommendedSkills.some((skill) => skill.status === 'ready') ? 'ready' : 'attention_needed';
 }
 
 function buildInitializeChecklistItem(input: OplInitializeChecklistItem): OplInitializeChecklistItem {
@@ -75,11 +80,52 @@ function lastAttempt(status: string, detail: Record<string, unknown> = {}) {
   };
 }
 
-export async function buildOplInitialize(contracts: FrameworkContracts) {
-  const environmentPayload = await buildOplEnvironment(contracts);
-  const modulesPayload = buildOplModules();
-  const settings = readOplRuntimeModes();
-  const workspaceRoot = readOplWorkspaceRoot();
+type OplInitializeBuildOptions = {
+  onEvent?: OplSystemInitializeEventHandler;
+};
+
+export async function buildOplInitialize(
+  contracts: FrameworkContracts,
+  options: OplInitializeBuildOptions = {},
+) {
+  const events = createOplSystemInitializeEventEmitter(options.onEvent);
+  const environmentPayload = await withOplSystemInitializeEventPhase(
+    events,
+    'environment',
+    'Inspect local OPL environment',
+    () => buildOplEnvironment(contracts, { onInitializeEvent: events.relay }),
+    (payload) => ({ overall_status: payload.system_environment.overall_status }),
+  );
+  const modulesPayload = await withOplSystemInitializeEventPhase(
+    events,
+    'modules',
+    'Build domain module readiness summary',
+    () => buildOplModules(),
+    (payload) => ({
+      installed_modules_count: payload.modules.summary.installed_modules_count,
+      total_modules_count: payload.modules.summary.total_modules_count,
+    }),
+  );
+  const settings = await withOplSystemInitializeEventPhase(
+    events,
+    'settings',
+    'Read local runtime settings',
+    () => readOplRuntimeModes(),
+    (payload) => ({
+      interaction_mode: payload.interaction_mode,
+      execution_mode: payload.execution_mode,
+    }),
+  );
+  const workspaceRoot = await withOplSystemInitializeEventPhase(
+    events,
+    'workspace_root',
+    'Read workspace root selection',
+    () => readOplWorkspaceRoot(),
+    (payload) => ({
+      health_status: payload.health_status,
+      selected_path: payload.selected_path,
+    }),
+  );
   const updateChannel = readOplUpdateChannel();
   const endpoints = buildOplEndpoints();
   const environment = environmentPayload.system_environment;
@@ -88,13 +134,32 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
   const defaultModuleTotal = moduleSummary.default_modules_count ?? moduleSummary.total_modules_count;
   const defaultModuleInstalled = moduleSummary.installed_default_modules_count ?? moduleSummary.installed_modules_count;
   const defaultModuleReady = moduleSummary.healthy_default_modules_count ?? moduleSummary.healthy_modules_count;
-  const recommendedSkills = buildOplRecommendedSkills();
-  const guiShell = buildOplGuiShellSurface(resolveProjectRoot());
+  const recommendedSkills = await withOplSystemInitializeEventPhase(
+    events,
+    'recommended_skills',
+    'Inspect recommended skill bundle',
+    () => buildOplRecommendedSkills(),
+    (skills) => ({
+      total: skills.length,
+      ready: skills.filter((skill) => skill.status === 'ready').length,
+      missing: skills.filter((skill) => skill.status === 'missing').length,
+    }),
+  );
+  const guiShell = await withOplSystemInitializeEventPhase(
+    events,
+    'gui_shell',
+    'Inspect OPL App GUI shell surface',
+    () => buildOplGuiShellSurface(resolveProjectRoot()),
+    (surface) => ({
+      sibling_checkout_found: surface.sibling_checkout_found,
+    }),
+  );
   const codex = environment.core_engines.codex;
   const familyRuntimeProvider = environment.core_engines.family_runtime_provider;
   const codexCliReady = codex.health_status === 'ready';
   const codexConfigReady = codex.config_status === 'detected' && codex.api_key_present === true;
   const providerReady = familyRuntimeProvider.health_status === 'ready';
+  const recommendedSkillsStatus = buildRecommendedSkillsStatus(recommendedSkills);
   const coreReady =
     workspaceRoot.health_status === 'ready'
     && codexCliReady
@@ -349,19 +414,19 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
     buildInitializeChecklistItem({
       item_id: 'recommended_skills',
       label: 'Recommended Skills',
-      status: buildRecommendedSkillsStatus(),
+      status: recommendedSkillsStatus,
       required: false,
       blocking: false,
       readiness_layer: 'optional',
-      severity: buildRecommendedSkillsStatus() === 'ready' ? 'info' : 'maintenance',
+      severity: recommendedSkillsStatus === 'ready' ? 'info' : 'maintenance',
       user_action_required: false,
-      auto_action_available: buildRecommendedSkillsStatus() !== 'ready',
+      auto_action_available: recommendedSkillsStatus !== 'ready',
       action_command_ref: 'opl system startup-maintenance',
-      last_attempt: lastAttempt(buildRecommendedSkillsStatus(), {
+      last_attempt: lastAttempt(recommendedSkillsStatus, {
         ready_skills_count: recommendedSkills.filter((skill) => skill.status === 'ready').length,
         total_skills_count: recommendedSkills.length,
       }),
-      next_visible_step: buildRecommendedSkillsStatus() === 'ready'
+      next_visible_step: recommendedSkillsStatus === 'ready'
         ? 'Recommended Codex skills are visible.'
         : 'Run startup maintenance to sync missing companion skills when their sources are available.',
       section_id: 'modules',
@@ -464,7 +529,7 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
   const optionalCompletedCount = optionalChecklist.filter((item) => item.status === 'ready').length;
   const isFirstRun = workspaceRoot.source === 'default_home' && overallState !== 'ready_to_finalize';
 
-  return {
+  const payload = {
     version: 'g2',
     system_initialize: {
       surface_id: 'opl_system_initialize',
@@ -617,4 +682,5 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
       ],
     },
   };
+  return payload;
 }

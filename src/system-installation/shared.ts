@@ -92,6 +92,95 @@ export type OplInitializeSectionId =
 
 export type OplInitializePhase = 'workspace_root' | 'environment' | 'modules' | 'review';
 
+export type OplSystemInitializeEventPhase =
+  | 'environment'
+  | 'codex'
+  | 'family_runtime_provider'
+  | 'native_helpers'
+  | 'modules'
+  | 'developer_mode'
+  | 'settings'
+  | 'workspace_root'
+  | 'recommended_skills'
+  | 'gui_shell'
+  | 'summary';
+
+export type OplSystemInitializeEventType =
+  | 'phase_start'
+  | 'phase_done'
+  | 'complete';
+
+export type OplSystemInitializeEvent = {
+  surface_id: 'opl_system_initialize_event';
+  event_type: OplSystemInitializeEventType;
+  phase: OplSystemInitializeEventPhase;
+  label: string;
+  sequence: number;
+  observed_at: string;
+  duration_ms?: number;
+  payload?: Record<string, unknown>;
+};
+
+export type OplSystemInitializeEventHandler = (event: OplSystemInitializeEvent) => void;
+
+export function createOplSystemInitializeEventEmitter(
+  onEvent: OplSystemInitializeEventHandler | undefined,
+) {
+  let sequence = 0;
+
+  const emit = (
+    eventType: 'phase_start' | 'phase_done',
+    phase: OplSystemInitializeEventPhase,
+    label: string,
+    detail: Record<string, unknown> = {},
+  ) => {
+    if (!onEvent) return;
+    onEvent({
+      surface_id: 'opl_system_initialize_event',
+      event_type: eventType,
+      phase,
+      label,
+      sequence: ++sequence,
+      observed_at: new Date().toISOString(),
+      ...detail,
+    });
+  };
+
+  return {
+    relay: (event: OplSystemInitializeEvent) => {
+      if (!onEvent) return;
+      onEvent({
+        ...event,
+        sequence: ++sequence,
+      });
+    },
+    emitStart: (phase: OplSystemInitializeEventPhase, label: string) => emit('phase_start', phase, label),
+    emitDone: (
+      phase: OplSystemInitializeEventPhase,
+      label: string,
+      startedAt: number,
+      payload: Record<string, unknown> = {},
+    ) => emit('phase_done', phase, label, {
+      duration_ms: Date.now() - startedAt,
+      ...(Object.keys(payload).length > 0 ? { payload } : {}),
+    }),
+  };
+}
+
+export async function withOplSystemInitializeEventPhase<T>(
+  events: ReturnType<typeof createOplSystemInitializeEventEmitter>,
+  phase: OplSystemInitializeEventPhase,
+  label: string,
+  build: () => T | Promise<T>,
+  payload: (result: T) => Record<string, unknown> = () => ({}),
+) {
+  const startedAt = Date.now();
+  events.emitStart(phase, label);
+  const result = await build();
+  events.emitDone(phase, label, startedAt, payload(result));
+  return result;
+}
+
 export type OplInitializeActionDescriptor = {
   action_id: string;
   label: string;

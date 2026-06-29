@@ -1,4 +1,4 @@
-import { assert, assertBlockedDeveloperModeSurface, assertDeveloperModeAction, createCodexConfigFixture, createFakeCodexFixture, createManagedDomainModuleFixtures, fs, os, path, runCli, test } from './shared.ts';
+import { assert, assertBlockedDeveloperModeSurface, assertDeveloperModeAction, createCodexConfigFixture, createFakeCodexFixture, createManagedDomainModuleFixtures, fs, os, path, runCli, runCliRaw, test } from './shared.ts';
 
 test('system initialize aggregates environment modules settings workspace and system surfaces', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-home-'));
@@ -254,6 +254,106 @@ exit 1
     assert.equal(output.system_initialize.endpoints.system_settings, '/api/opl/system/settings');
     assert.equal(output.system_initialize.endpoints.system_action, '/api/opl/system/actions');
     assert.equal(output.system_initialize.endpoints.workspace_root, '/api/opl/workspaces/root');
+  } finally {
+    fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('system initialize events stream real diagnostic phases and final public payload', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-events-home-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-events-workspace-'));
+  const codexConfigFixture = createCodexConfigFixture({
+    model: 'gpt-5.4-opl',
+    reasoningEffort: 'high',
+    baseUrl: 'https://codex-opl.example.test/v1',
+    apiKey: 'codex-opl-key',
+  });
+  const codexFixture = createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex-cli 0.125.0"
+  exit 0
+fi
+echo "Unsupported codex fixture command: $*" >&2
+exit 1
+`);
+
+  try {
+    const result = runCliRaw(
+      ['system', 'initialize', '--events'],
+      {
+        HOME: homeRoot,
+        CODEX_HOME: codexConfigFixture.codexHome,
+        OPL_STATE_DIR: stateDir,
+        OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
+        OPL_WORKSPACE_ROOT: workspaceRoot,
+        OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
+        OPL_FAMILY_RUNTIME_PROVIDER: '',
+        OPL_TEMPORAL_ADDRESS: '',
+        TEMPORAL_ADDRESS: '',
+        PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+      },
+    );
+    const lines = result.stdout.trim().split('\n');
+    const entries = lines.map((line) => JSON.parse(line) as {
+      version: string;
+      event: {
+        surface_id: string;
+        event_type: string;
+        phase: string;
+        label: string;
+        sequence: number;
+        duration_ms?: number;
+        payload?: any;
+      };
+    });
+    const events = entries.map((entry) => entry.event);
+    const finalEvent = events.at(-1);
+
+    assert.equal(entries.every((entry) => entry.version === 'g2'), true);
+    assert.equal(events.every((event) => event.surface_id === 'opl_system_initialize_event'), true);
+    assert.deepEqual(events.map((event) => event.sequence), events.map((_, index) => index + 1));
+    assert.equal(events.some((event) => event.event_type === 'phase_start'), true);
+    assert.equal(events.some((event) => event.event_type === 'phase_done'), true);
+    for (const phase of [
+      'environment',
+      'codex',
+      'family_runtime_provider',
+      'native_helpers',
+      'developer_mode',
+      'modules',
+      'settings',
+      'workspace_root',
+      'recommended_skills',
+      'gui_shell',
+    ]) {
+      assert.equal(events.some((event) => event.phase === phase), true, phase);
+    }
+    assert.ok(events.find((event) => event.phase === 'codex' && event.event_type === 'phase_done')?.duration_ms !== undefined);
+    assert.equal(finalEvent?.event_type, 'complete');
+    assert.equal(finalEvent?.phase, 'summary');
+    assert.equal(finalEvent?.payload.system_initialize.surface_id, 'opl_system_initialize');
+    assert.equal(finalEvent?.payload.system_initialize.workspace_root.selected_path, workspaceRoot);
+
+    const jsonOutput = runCli(
+      ['system', 'initialize'],
+      {
+        HOME: homeRoot,
+        CODEX_HOME: codexConfigFixture.codexHome,
+        OPL_STATE_DIR: stateDir,
+        OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
+        OPL_WORKSPACE_ROOT: workspaceRoot,
+        OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
+        OPL_FAMILY_RUNTIME_PROVIDER: '',
+        OPL_TEMPORAL_ADDRESS: '',
+        TEMPORAL_ADDRESS: '',
+        PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+      },
+    ) as { system_initialize: { surface_id: string } };
+    assert.equal(jsonOutput.system_initialize.surface_id, 'opl_system_initialize');
   } finally {
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });

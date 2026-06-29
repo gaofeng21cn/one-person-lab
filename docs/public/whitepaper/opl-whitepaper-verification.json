@@ -1,14 +1,14 @@
 {
   "status": "opl_whitepaper_ready",
-  "generated_at": "2026-06-08T00:00:00.000Z",
+  "generated_at": "2026-06-29T00:00:00.000Z",
   "source": "docs/public/whitepaper/opl-whitepaper.source.json",
   "generated_markdown": "docs/public/whitepaper/opl-whitepaper.md",
   "generated_pdf": "docs/public/whitepaper/opl-whitepaper.pdf",
   "pdf_write_status": "preserved_existing_equivalent_pdf",
   "temp_markdown": "tmp/pdfs/opl-whitepaper/opl-whitepaper.pandoc.md",
   "rendered_dir": "tmp/pdfs/opl-whitepaper/rendered",
-  "rendered_pages": 10,
-  "pdf_pages": 10,
+  "rendered_pages": 11,
+  "pdf_pages": 11,
   "pdf_page_size_pts": {
     "width": 612,
     "height": 792
@@ -20,7 +20,7 @@
     "OPL Pack",
     "OPL Stagecraft",
     "抓大放小",
-    "MedAutoScience",
+    "Med Auto Science",
     "Foundry Agents",
     "生成脚本统一派生"
   ],
@@ -28,8 +28,8 @@
   "tools": {
     "pandoc": "/opt/homebrew/bin/pandoc",
     "xelatex": "/Users/gaofeng/Library/TinyTeX/bin/universal-darwin/xelatex",
-    "pdftoppm": "/opt/homebrew/bin/pdftoppm",
-    "pdfinfo": "/opt/homebrew/bin/pdfinfo",
+    "pdftoppm": "/Users/gaofeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/pdftoppm",
+    "pdfinfo": "/Users/gaofeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/pdfinfo",
     "pdftotext": "/opt/homebrew/bin/pdftotext"
   },
   "references": [

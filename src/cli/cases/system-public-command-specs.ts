@@ -107,6 +107,10 @@ function buildNoArgSpec(
   return spec;
 }
 
+function writeJsonLine(payload: unknown) {
+  process.stdout.write(`${JSON.stringify(payload)}\n`);
+}
+
 export function buildPublicSystemCommandSpecs(
   getContracts: () => FrameworkContracts,
 ): Record<string, CommandSpec> {
@@ -232,6 +236,46 @@ export function buildPublicSystemCommandSpecs(
     },
   };
 
+  const systemInitializeSpec: CommandSpec = {
+    usage: 'opl system initialize [--events]',
+    summary: 'Show the first-run initialization surface for system, modules, and workspace root.',
+    examples: ['opl system initialize', 'opl system initialize --events'],
+    group: 'system',
+    handler: async (args) => {
+      if (args.length === 0) {
+        return buildPublicSystemInitializePayload(await buildOplInitialize(getContracts()));
+      }
+      if (args.length === 1 && args[0] === '--events') {
+        let lastSequence = 0;
+        const payload = buildPublicSystemInitializePayload(await buildOplInitialize(getContracts(), {
+          onEvent: (event) => {
+            lastSequence = event.sequence;
+            writeJsonLine({
+              version: 'g2',
+              event,
+            });
+          },
+        }));
+        writeJsonLine({
+          version: 'g2',
+          event: {
+            surface_id: 'opl_system_initialize_event',
+            event_type: 'complete',
+            phase: 'summary',
+            label: 'Initialize payload ready',
+            sequence: lastSequence + 1,
+            observed_at: new Date().toISOString(),
+            payload,
+          },
+        });
+        return { __handled: true as const };
+      }
+      throw buildUsageError(`Unknown system initialize option: ${args[0]}.`, systemInitializeSpec, {
+        option: args[0],
+      });
+    },
+  };
+
   return {
     system: buildNoArgSpec(
       {
@@ -242,15 +286,7 @@ export function buildPublicSystemCommandSpecs(
       },
       async () => buildPublicSystemPayload(await buildOplEnvironment(getContracts())),
     ),
-    'system initialize': buildNoArgSpec(
-      {
-        usage: 'opl system initialize',
-        summary: 'Show the first-run initialization surface for system, modules, and workspace root.',
-        examples: ['opl system initialize'],
-        group: 'system',
-      },
-      async () => buildPublicSystemInitializePayload(await buildOplInitialize(getContracts())),
-    ),
+    'system initialize': systemInitializeSpec,
     'system semantic-hygiene': buildNoArgSpec(
       {
         usage: 'opl system semantic-hygiene',
