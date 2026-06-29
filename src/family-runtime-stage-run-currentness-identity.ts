@@ -166,18 +166,15 @@ export function buildStageRunCurrentnessIdentity(
       ?? optionalString(providerAdmissionIdentity?.source_eval_id)
       ?? optionalString(taskPayload.source_eval_id)
       ?? optionalString(workspaceLocator.source_eval_id),
-    idempotency_key: optionalString(taskPayload.request_idempotency_key)
+    idempotency_key: optionalString(taskPayload.next_action_id)
+      ?? optionalString(paperMissionRouteIdentity.next_action_id)
+      ?? optionalString(providerAdmissionIdentity?.next_action_id)
+      ?? optionalString(taskPayload.request_idempotency_key)
       ?? optionalString(paperMissionRouteIdentity.request_idempotency_key)
       ?? optionalString(providerAdmissionIdentity?.request_idempotency_key)
       ?? optionalString(taskPayload.idempotency_key)
       ?? optionalString(paperMissionRouteIdentity.idempotency_key)
-      ?? optionalString(providerAdmissionIdentity?.idempotency_key)
-      ?? optionalString(taskPayload.attempt_idempotency_key)
-      ?? optionalString(paperMissionRouteIdentity.attempt_idempotency_key)
-      ?? optionalString(providerAdmissionIdentity?.attempt_idempotency_key)
-      ?? optionalString(stageAttempt.idempotency_key)
-      ?? optionalString(taskPayload.source_fingerprint)
-      ?? optionalString(workspaceLocator.domain_source_fingerprint),
+      ?? optionalString(providerAdmissionIdentity?.idempotency_key),
     route_identity_key: optionalString(taskPayload.route_identity_key)
       ?? optionalString(paperMissionRouteIdentity.route_identity_key)
       ?? optionalString(providerAdmissionIdentity?.route_identity_key),

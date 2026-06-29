@@ -305,6 +305,70 @@ test('preserves explicit MAS provider admission identity fields in StageRun curr
   assert.deepEqual(missingStageRunCurrentnessIdentityFields(identity), []);
 });
 
+test('does not treat StageAttempt idempotency as MAS NextAction request identity', () => {
+  const identity = buildStageRunCurrentnessIdentity({
+    task: {
+      domain_id: 'medautoscience',
+      task_id: 'frt-current',
+      payload: {
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        stage_id: 'paper_mission/stage-route',
+        action_type: 'continue_same_stage',
+        work_unit_id: 'submission_milestone_candidate',
+        work_unit_fingerprint: 'paper-mission::003::submission_milestone_candidate::followthrough',
+        source_fingerprint: 'mas-source:fresh',
+        truth_epoch: 'truth-epoch-current',
+        runtime_health_epoch: 'runtime-health-current',
+        source_eval_id: 'paper-mission-eval::current',
+        route_identity_key: 'paper-mission-route::003::submission_milestone_candidate',
+        attempt_idempotency_key: 'paper-mission-attempt::003::submission_milestone_candidate',
+        dispatch_ref: 'paper-mission-transaction::003::submission_milestone_candidate#opl_route_command',
+        stage_packet_ref: 'paper-mission-transaction::003::submission_milestone_candidate#opl_route_command',
+        stage_packet_refs: [
+          'paper-mission-transaction::003::submission_milestone_candidate#opl_route_command',
+        ],
+      },
+    },
+    stageAttempt: {
+      domain_id: 'medautoscience',
+      stage_id: 'paper_mission/stage-route',
+      stage_attempt_id: 'sat-paper-mission-current',
+      task_id: 'frt-current',
+      idempotency_key: 'stage-attempt-ledger::sat-paper-mission-current',
+      source_fingerprint: 'mas-source:fresh',
+    },
+  });
+
+  assert.equal(identity.idempotency_key, null);
+  assert.equal(
+    identity.attempt_idempotency_key,
+    'paper-mission-attempt::003::submission_milestone_candidate',
+  );
+  assert.equal(identity.provider_attempt_ref, 'opl://stage-attempts/sat-paper-mission-current');
+  assert.deepEqual(missingStageRunCurrentnessIdentityFields(identity), ['idempotency_key']);
+  assert.equal(sameStageRunRouteCurrentnessIdentity(identity, identity), false);
+});
+
+test('uses explicit MAS NextAction id before request idempotency for request identity', () => {
+  const base = baseInput();
+  const basePayload = (base.task as Record<string, unknown>).payload as Record<string, unknown>;
+  const identity = buildStageRunCurrentnessIdentity(baseInput({
+    task: {
+      ...base.task,
+      payload: {
+        ...basePayload,
+        next_action_id: 'mas-next-action::003::submission_milestone_candidate',
+        request_idempotency_key: 'mas-request::003::submission_milestone_candidate',
+        attempt_idempotency_key: 'mas-attempt::003::submission_milestone_candidate',
+      },
+    },
+  }));
+
+  assert.equal(identity.idempotency_key, 'mas-next-action::003::submission_milestone_candidate');
+  assert.equal(identity.attempt_idempotency_key, 'mas-attempt::003::submission_milestone_candidate');
+  assert.equal(missingStageRunCurrentnessIdentityFields(identity).includes('idempotency_key'), false);
+});
+
 test('fails closed when required StageRun currentness identity fields are missing', () => {
   const identity = buildStageRunCurrentnessIdentity({
     task: {
