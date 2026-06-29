@@ -283,7 +283,7 @@ exit 1
 
   try {
     const result = runCliRaw(
-      ['system', 'initialize', '--events'],
+      ['system', 'initialize', '--events', '--json'],
       {
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,

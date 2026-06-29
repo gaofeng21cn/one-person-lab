@@ -237,9 +237,9 @@ export function buildPublicSystemCommandSpecs(
   };
 
   const systemInitializeSpec: CommandSpec = {
-    usage: 'opl system initialize [--events]',
+    usage: 'opl system initialize [--events] [--json]',
     summary: 'Show the first-run initialization surface for system, modules, and workspace root.',
-    examples: ['opl system initialize', 'opl system initialize --events'],
+    examples: ['opl system initialize --json', 'opl system initialize --events --json'],
     group: 'system',
     handler: async (args) => {
       if (args.length === 0) {
