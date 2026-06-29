@@ -117,11 +117,11 @@ Domain repo 不应长期维护 generic scheduler、generic queue、generic attem
 
 单仓文档只写本仓目标、当前差距、与 OPL 的 owner boundary、哪些能力应上收、哪些能力必须保留在本仓。目录结构应与 OPL family taxonomy 保持同名一致，代码内部结构可以按领域实现差异保留，但 OPL-facing skeleton、docs taxonomy 和 owner boundary 应统一。不在 MAS 文档维护 MAG/RCA backlog，不在 MAG 文档维护 MAS/RCA backlog，不在 RCA 文档维护 MAS/MAG backlog。
 
-gap plan 和开发计划的差距项必须拆成两类：`功能/结构差距` 记录 owner 边界、模块归属、接口退役、generated surface、目录/合同/调用链仍未到目标态的部分；`测试/证据差距` 记录真实 workspace receipt、provider-hosted apply、live soak、coverage、no-forbidden-write proof、regression proof、App drilldown evidence 等验收缺口。已经具备功能但缺少真实证据时，只能写进测试/证据差距；不能混写成“功能还没做”。
+gap plan 和开发计划默认只维护 `功能/结构差距`：owner 边界、模块归属、接口退役、generated surface、目录/合同/调用链、source morphology、App/shell contract、no-second-truth guard 和历史遗留清理仍未到目标态的部分。Release、readiness、production、Brand L5、真实 workspace receipt、provider-hosted apply、live soak、App release/user-path、owner receipt、typed blocker、human gate、physical delete authorization 或真实项目 evidence 不放进 active gap 表；这些只在对应声明或不可逆 owner decision 前回独立 evidence owner 做 fresh gate。
 
-反过来，classification surface closed、descriptor aligned、generated descriptor ready、selected proof passed 或 no-regression fixture passed，也不能把仍未完成的生产 caller 迁移、App/workbench 产品化、refs-only 收薄、legacy physical retirement、source_ref refresh 或私有函数 AI-first 审计吞进测试/证据差距。只要目标 owner、调用链、物理代码路径或文档目录职责还未到理想态，就继续是功能/结构差距。
+反过来，classification surface closed、descriptor aligned、generated descriptor ready、selected proof passed 或 no-regression fixture passed，也不能把仍未完成的生产 caller 迁移、App/workbench 产品化、refs-only 收薄、legacy physical retirement、source_ref refresh 或私有函数 AI-first 审计从功能/结构差距中抹掉。只要目标 owner、调用链、物理代码路径或文档目录职责还未到理想态，就继续是功能/结构差距。
 
-当某个 domain 的结构 closure 未来被真实迁移和 no-active-caller proof 明确关闭时，后续文档才可以把剩余验收改写为测试/证据差距。不能提前把 descriptor ready、classification closed、no-regression fixture、read-model proof 或 provider proof 写成结构 closure。
+当某个 domain 的结构 closure 未来被真实迁移和 no-active-caller proof 明确关闭时，后续文档只能把 ready / release / production 类证据路由到独立 evidence owner，不能在 active plan 中重建第二 evidence backlog。不能提前把 descriptor ready、classification closed、no-regression fixture、read-model proof 或 provider proof 写成结构 closure。
 
 ### App / Workbench 负责
 
