@@ -231,7 +231,13 @@ test('Foundry Agent OS canonicalizes OPL Meta Agent as OMA without renaming doma
   const oma = foundry.domains[0];
 
   assert.equal(foundry.status, 'blocked');
-  assert.deepEqual(foundry.missing_domain_agent_ids, ['mas', 'mag', 'rca', 'opl-bookforge']);
+  assert.deepEqual(foundry.missing_domain_agent_ids, [
+    'mas',
+    'mag',
+    'rca',
+    'opl-bookforge',
+    'opl-scholarskills',
+  ]);
   assert.deepEqual(foundry.observed_domain_agent_ids, ['oma']);
   assert.equal(oma.domain_id, 'opl-meta-agent');
   assert.equal(oma.requested_agent_id, 'opl-meta-agent');
