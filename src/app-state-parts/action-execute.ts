@@ -9,6 +9,7 @@ import { runOplEngineAction } from '../system-installation/engine-actions.ts';
 import { type OplEngineAction, type OplModuleAction, type OplModuleId } from '../system-installation/shared.ts';
 import { executeWorkspaceAppAction } from '../app-state-workspace-actions.ts';
 import { syncFamilySkillPacks } from '../opl-skills.ts';
+import { buildManagedUpdateKernelProjection } from '../managed-update-kernel.ts';
 import type { FrameworkContracts } from '../types.ts';
 import { settingsControlCenterActionById } from '../app-state-settings-control-center.ts';
 
@@ -276,6 +277,12 @@ function buildSettingsControlCenterDryRun(actionId: string, payload: JsonRecord)
       requested: payload,
       payload_fields: action?.payload_fields ?? [],
       mutates: action?.mutates ?? 'unknown',
+      confirmation_required: action?.confirmation_required ?? false,
+      danger_level: action?.danger_level ?? 'unknown',
+      impact: action?.impact ?? null,
+      rollback_action_id: action?.rollback_action_id ?? null,
+      follow_up_action_ids: action?.follow_up_action_ids ?? [],
+      verify_action_id: action?.verify_action_id ?? null,
       command_preview: ['opl', 'app', 'action', 'execute', '--action', actionId],
       authority_boundary: {
         can_write_domain_truth: false,
@@ -288,9 +295,24 @@ function buildSettingsControlCenterDryRun(actionId: string, payload: JsonRecord)
         can_read_artifact_body: false,
         can_authorize_quality_verdict: false,
         can_claim_app_release_ready: false,
+        can_claim_production_ready: false,
       },
     },
   };
+}
+
+function settingsVerifyWorkspacePayload(payload: JsonRecord) {
+  const workspacePath = stringPayloadField(payload, 'workspace_path')
+    ?? stringPayloadField(payload, 'workspacePath')
+    ?? stringPayloadField(payload, 'workspace')
+    ?? stringPayloadField(payload, 'path');
+  if (!workspacePath) {
+    throw new FrameworkContractError('cli_usage_error', 'settings_verify_workspace action requires payload.workspace_path.', {
+      action_id: 'settings_verify_workspace',
+      required: ['workspace_path'],
+    });
+  }
+  return workspacePath;
 }
 
 function buildSettingsPruneRuntimeRootsPlan() {
@@ -505,6 +527,20 @@ async function executeDirectAppAction(
     };
   }
 
+  if (options.actionId === 'settings_verify_workspace') {
+    const workspacePath = settingsVerifyWorkspacePayload(options.payload);
+    return {
+      delegatedSurface: 'opl workspace health',
+      result: options.dryRun
+        ? buildSettingsControlCenterDryRun(options.actionId, options.payload)
+        : executeWorkspaceAppAction(contracts, {
+          actionId: 'workspace_health',
+          payload: { workspace_path: workspacePath },
+          dryRun: false,
+        })?.result,
+    };
+  }
+
   if (options.actionId === 'settings_sync_capabilities') {
     return {
       delegatedSurface: 'opl connect reconcile-modules',
@@ -546,10 +582,29 @@ async function executeDirectAppAction(
     };
   }
 
+  if (options.actionId === 'settings_check_app_update') {
+    return {
+      delegatedSurface: 'opl update check --component app_binary',
+      result: options.dryRun
+        ? buildSettingsControlCenterDryRun(options.actionId, options.payload)
+        : await buildManagedUpdateKernelProjection(contracts, {
+          operation: 'check',
+          componentId: 'app_binary',
+        }),
+    };
+  }
+
   if (options.actionId === 'settings_prune_runtime_roots_dry_run') {
     return {
       delegatedSurface: 'opl settings control-center cleanup_plan --dry-run',
       result: buildSettingsPruneRuntimeRootsPlan(),
+    };
+  }
+
+  if (options.actionId === 'settings_rollback_runtime_toolchain') {
+    return {
+      delegatedSurface: 'opl update rollback --component runtime_toolchain',
+      result: buildSettingsControlCenterDryRun(options.actionId, options.payload),
     };
   }
 

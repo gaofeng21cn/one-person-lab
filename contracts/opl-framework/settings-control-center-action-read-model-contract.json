@@ -1,11 +1,30 @@
 {
-  "contract_kind": "opl_settings_control_center_action_read_model_contract.v1",
+  "contract_kind": "opl_settings_control_center_action_read_model_contract.v2",
   "surface_kind": "opl_settings_control_center_contract",
   "owner": "one-person-lab",
   "scope": "Framework-owned Settings Control Center read/action surface for App settings without moving domain truth into the App or shell.",
-  "schema_version": "settings-control-center.v1",
+  "schema_version": "settings-control-center.v2",
+  "compatibility_schema_versions": [
+    "settings-control-center.v1"
+  ],
   "read_surface": "opl app state --profile fast|full --json#settings_control_center",
   "action_surface": "opl app action execute --json",
+  "settings_ia": {
+    "ordinary_entry": "settings_control_center",
+    "required_fields": [
+      "settings_ia",
+      "control_center_groups",
+      "action_sections",
+      "issue_queue",
+      "action_catalog"
+    ],
+    "shell_policy": {
+      "app_consumes_read_model_only": true,
+      "aion_shell_is_renderer_only": true,
+      "shell_must_not_infer_domain_truth": true,
+      "shell_must_not_execute_unlisted_actions": true
+    }
+  },
   "control_center_groups": [
     "overview",
     "setup_access",
@@ -17,29 +36,68 @@
   ],
   "action_sections": [
     "model_access",
+    "workspace",
     "capabilities",
     "packages",
     "codex_surface",
+    "updates",
     "runtime_roots"
+  ],
+  "issue_status_codes": [
+    "needs_reload",
+    "manual_required",
+    "dirty_checkout",
+    "failed_with_repair",
+    "developer_profile_active"
   ],
   "allowed_action_ids": [
     "settings_repair_model_access",
+    "settings_verify_workspace",
     "settings_sync_capabilities",
     "settings_apply_opl_packages",
     "settings_reload_codex_surface",
-    "settings_prune_runtime_roots_dry_run"
+    "settings_check_app_update",
+    "settings_prune_runtime_roots_dry_run",
+    "settings_rollback_runtime_toolchain"
   ],
   "action_taxonomy": {
     "settings_repair_model_access": "settings.model_access.repair",
+    "settings_verify_workspace": "settings.workspace.verify",
     "settings_sync_capabilities": "settings.capabilities.sync",
     "settings_apply_opl_packages": "settings.packages.apply",
     "settings_reload_codex_surface": "settings.codex_surface.reload",
-    "settings_prune_runtime_roots_dry_run": "settings.runtime_roots.cleanup_plan"
+    "settings_check_app_update": "settings.updates.check_app_update",
+    "settings_prune_runtime_roots_dry_run": "settings.runtime_roots.cleanup_plan",
+    "settings_rollback_runtime_toolchain": "settings.updates.rollback_runtime_toolchain"
+  },
+  "action_catalog_required_metadata": {
+    "stable_id": true,
+    "impact": true,
+    "confirmation_required": true,
+    "danger_level": true,
+    "rollback_action_id": true,
+    "follow_up_action_ids": true,
+    "verify_action_id": true,
+    "authority_flags": {
+      "can_write_domain_truth": false,
+      "can_sign_domain_receipt": false,
+      "can_create_owner_receipt": false,
+      "can_create_typed_blocker": false,
+      "can_write_runtime_queue": false,
+      "can_write_provider_queue": false,
+      "can_read_memory_body": false,
+      "can_read_artifact_body": false,
+      "can_authorize_quality_verdict": false,
+      "can_claim_app_release_ready": false,
+      "can_claim_production_ready": false
+    }
   },
   "dry_run_apply_verify_boundary": {
     "dry_run": "preflight_only_no_domain_or_runtime_authority_write",
     "apply": "delegates_only_to_existing_opl_owned_app_action_routes",
     "verify": "read_existing_opl_app_state_or_existing_opl_owned_status_actions",
+    "issue_queue": "user_readable_projection_from_existing_app_state_and_update_status_codes_only",
+    "app_update_check": "reads_managed_update_projection_app_release_truth_remains_app_repo_owned",
     "runtime_roots_cleanup": "dry_run_plan_only_no_delete"
   },
   "authority_boundary": {

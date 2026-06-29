@@ -653,19 +653,30 @@ exit 1
     assert.equal(output.app_state.paths.modules_root, path.join(stateDir, 'modules'));
     assert.equal(output.app_state.paths.workspace_root_path, homeRoot);
     assert.equal(output.app_state.paths.logs_dir, path.join(stateDir, 'logs'));
-    assert.equal(output.app_state.settings_control_center.surface_kind, 'opl_settings_control_center.v1');
-    assert.equal(output.app_state.settings_control_center.schema_version, 'settings-control-center.v1');
+    assert.equal(output.app_state.settings_control_center.surface_kind, 'opl_settings_control_center.v2');
+    assert.equal(output.app_state.settings_control_center.schema_version, 'settings-control-center.v2');
+    assert.deepEqual(output.app_state.settings_control_center.compatibility_schema_versions, [
+      'settings-control-center.v1',
+    ]);
     assert.equal(
       output.app_state.settings_control_center.contract_ref,
       'contracts/opl-framework/settings-control-center-action-read-model-contract.json',
     );
     assert.deepEqual(output.app_state.settings_control_center.allowed_action_ids, [
       'settings_repair_model_access',
+      'settings_verify_workspace',
       'settings_sync_capabilities',
       'settings_apply_opl_packages',
       'settings_reload_codex_surface',
+      'settings_check_app_update',
       'settings_prune_runtime_roots_dry_run',
+      'settings_rollback_runtime_toolchain',
     ]);
+    assert.equal(output.app_state.settings_control_center.settings_ia.ordinary_entry, 'settings_control_center');
+    assert.equal(
+      output.app_state.settings_control_center.settings_ia.app_shell_contract.shell_must_not_execute_unlisted_actions,
+      true,
+    );
     assert.deepEqual(
       output.app_state.settings_control_center.sections.map((entry: AppStateListEntry) => entry.section_id),
       ['overview', 'setup_access', 'capabilities', 'maintenance_updates', 'data_storage', 'preferences', 'advanced'],
@@ -676,7 +687,7 @@ exit 1
     );
     assert.deepEqual(
       output.app_state.settings_control_center.action_sections.map((entry: AppStateListEntry) => entry.section_id),
-      ['model_access', 'capabilities', 'packages', 'codex_surface', 'runtime_roots'],
+      ['model_access', 'workspace', 'capabilities', 'packages', 'codex_surface', 'updates', 'runtime_roots'],
     );
     assert.equal(
       output.app_state.settings_control_center.control_center_groups.find(
@@ -695,6 +706,38 @@ exit 1
         (entry: AppStateListEntry) => entry.action_id === 'settings_prune_runtime_roots_dry_run',
       )?.mutates,
       'none_read_only',
+    );
+    assert.equal(
+      output.app_state.settings_control_center.action_catalog.find(
+        (entry: AppStateListEntry) => entry.action_id === 'settings_rollback_runtime_toolchain',
+      )?.danger_level,
+      'high',
+    );
+    assert.equal(
+      output.app_state.settings_control_center.action_catalog.every(
+        (entry: AppStateListEntry) => entry.authority_flags.can_write_domain_truth === false,
+      ),
+      true,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.issue_catalog.some(
+        (entry: AppStateListEntry) => entry.status_code === 'dirty_checkout'
+          && entry.recommended_action_id === 'settings_sync_capabilities',
+      ),
+      true,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.issue_queue.some(
+        (entry: AppStateListEntry) => entry.status_code === 'manual_required'
+          && entry.issue_id === 'model_access_manual_required',
+      ),
+      true,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.issue_queue.every(
+        (entry: AppStateListEntry) => entry.authority_flags.can_create_typed_blocker === false,
+      ),
+      true,
     );
     assert.equal(
       output.app_state.settings_control_center.task_entries.find(

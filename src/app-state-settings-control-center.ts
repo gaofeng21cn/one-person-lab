@@ -2,14 +2,20 @@ type JsonRecord = Record<string, unknown>;
 
 type SettingsAction = {
   action_id: string;
+  stable_id: string;
   label: string;
   section_id: string;
-  task_kind: 'read' | 'repair' | 'sync' | 'apply' | 'reload' | 'cleanup_plan' | 'configure';
+  task_kind: 'read' | 'repair' | 'sync' | 'apply' | 'reload' | 'cleanup_plan' | 'configure' | 'verify' | 'check' | 'rollback';
   taxonomy: string;
   delegated_surface: string;
   payload_fields: string[];
   mutates: string;
   dry_run_supported: boolean;
+  confirmation_required: boolean;
+  danger_level: 'none' | 'low' | 'medium' | 'high';
+  impact: string;
+  follow_up_action_ids: string[];
+  rollback_action_id?: string;
   verify_action_id?: string;
 };
 
@@ -35,10 +41,13 @@ const SETTINGS_CONTROL_CENTER_CONTRACT_REF =
 
 const SETTINGS_CONTROL_CENTER_ACTION_IDS = [
   'settings_repair_model_access',
+  'settings_verify_workspace',
   'settings_sync_capabilities',
   'settings_apply_opl_packages',
   'settings_reload_codex_surface',
+  'settings_check_app_update',
   'settings_prune_runtime_roots_dry_run',
+  'settings_rollback_runtime_toolchain',
 ] as const;
 
 const SETTINGS_CONTROL_CENTER_GROUPS: SettingsControlCenterGroup[] = [
@@ -47,7 +56,7 @@ const SETTINGS_CONTROL_CENTER_GROUPS: SettingsControlCenterGroup[] = [
     label: 'Overview',
     role: 'control_center_summary',
     route_id: 'general',
-    action_section_ids: ['model_access', 'capabilities', 'packages', 'runtime_roots'],
+    action_section_ids: ['model_access', 'workspace', 'capabilities', 'packages', 'updates', 'runtime_roots'],
     ordinary_entry_policy: 'top_level_control_center_route',
   },
   {
@@ -55,7 +64,7 @@ const SETTINGS_CONTROL_CENTER_GROUPS: SettingsControlCenterGroup[] = [
     label: 'Setup & Access',
     role: 'connect_models_accounts_workspace_web_remote',
     route_id: 'access',
-    action_section_ids: ['model_access', 'codex_surface'],
+    action_section_ids: ['model_access', 'workspace', 'codex_surface'],
     ordinary_entry_policy: 'top_level_control_center_route',
   },
   {
@@ -71,7 +80,7 @@ const SETTINGS_CONTROL_CENTER_GROUPS: SettingsControlCenterGroup[] = [
     label: 'Maintenance & Updates',
     role: 'updates_packages_repairs_service_health',
     route_id: 'environment',
-    action_section_ids: ['packages', 'capabilities', 'runtime_roots'],
+    action_section_ids: ['packages', 'updates', 'capabilities', 'runtime_roots'],
     ordinary_entry_policy: 'top_level_control_center_route',
   },
   {
@@ -95,7 +104,7 @@ const SETTINGS_CONTROL_CENTER_GROUPS: SettingsControlCenterGroup[] = [
     label: 'Advanced',
     role: 'developer_diagnostics_versions_links_raw_refs',
     route_id: 'advanced',
-    action_section_ids: ['codex_surface'],
+    action_section_ids: ['codex_surface', 'updates'],
     ordinary_entry_policy: 'top_level_control_center_route',
   },
 ];
@@ -107,6 +116,13 @@ const SETTINGS_CONTROL_CENTER_ACTION_SECTIONS: SettingsSection[] = [
     description: 'Codex CLI, configured model profile, API key presence, and Developer Mode authority.',
     state: 'available',
     source_ref: 'app_state.core.codex + app_state.developer_mode',
+  },
+  {
+    section_id: 'workspace',
+    label: 'Workspace',
+    description: 'Workspace root, health readback, and user-safe validation entrypoints.',
+    state: 'available',
+    source_ref: 'app_state.paths + app_state.actions#workspace_health',
   },
   {
     section_id: 'capabilities',
@@ -130,6 +146,13 @@ const SETTINGS_CONTROL_CENTER_ACTION_SECTIONS: SettingsSection[] = [
     source_ref: 'app_state.actions#settings_reload_codex_surface',
   },
   {
+    section_id: 'updates',
+    label: 'Updates',
+    description: 'App update checks, managed update projection, reload guidance, and explicit rollback planning.',
+    state: 'available',
+    source_ref: 'opl update status/check + app_state.release',
+  },
+  {
     section_id: 'runtime_roots',
     label: 'Runtime roots',
     description: 'Workspace root, modules root, state root, and non-mutating cleanup planning.',
@@ -141,6 +164,7 @@ const SETTINGS_CONTROL_CENTER_ACTION_SECTIONS: SettingsSection[] = [
 export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
   {
     action_id: 'settings_repair_model_access',
+    stable_id: 'repair_model_access',
     label: 'Repair model access',
     section_id: 'model_access',
     task_kind: 'repair',
@@ -153,10 +177,32 @@ export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
     ],
     mutates: 'opl_developer_supervisor_config',
     dry_run_supported: true,
+    confirmation_required: true,
+    danger_level: 'medium',
+    impact: 'May update the OPL Developer Mode supervisor config used for model-access and repository repair routing.',
+    follow_up_action_ids: ['developer_supervisor_refresh'],
     verify_action_id: 'developer_supervisor_refresh',
   },
   {
+    action_id: 'settings_verify_workspace',
+    stable_id: 'verify_workspace',
+    label: 'Verify workspace',
+    section_id: 'workspace',
+    task_kind: 'verify',
+    taxonomy: 'settings.workspace.verify',
+    delegated_surface: 'opl workspace health',
+    payload_fields: ['workspace_path'],
+    mutates: 'none_read_only',
+    dry_run_supported: true,
+    confirmation_required: false,
+    danger_level: 'none',
+    impact: 'Reads workspace health and generated OPL workspace projections without writing domain truth or owner receipts.',
+    follow_up_action_ids: [],
+    verify_action_id: 'workspace_health',
+  },
+  {
     action_id: 'settings_sync_capabilities',
+    stable_id: 'sync_capabilities',
     label: 'Sync capabilities',
     section_id: 'capabilities',
     task_kind: 'sync',
@@ -165,10 +211,15 @@ export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
     payload_fields: [],
     mutates: 'opl_module_checkout',
     dry_run_supported: true,
+    confirmation_required: true,
+    danger_level: 'medium',
+    impact: 'Reconciles OPL module checkouts and capability exposure through existing OPL-owned routes.',
+    follow_up_action_ids: ['provider_scheduler_status', 'settings_reload_codex_surface'],
     verify_action_id: 'provider_scheduler_status',
   },
   {
     action_id: 'settings_apply_opl_packages',
+    stable_id: 'apply_opl_packages',
     label: 'Apply OPL packages',
     section_id: 'packages',
     task_kind: 'apply',
@@ -177,10 +228,16 @@ export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
     payload_fields: [],
     mutates: 'opl_module_checkout',
     dry_run_supported: true,
+    confirmation_required: true,
+    danger_level: 'medium',
+    impact: 'Applies package-channel updates only through existing managed module update routes.',
+    follow_up_action_ids: ['settings_reload_codex_surface', 'provider_scheduler_status'],
+    rollback_action_id: 'settings_rollback_runtime_toolchain',
     verify_action_id: 'provider_scheduler_status',
   },
   {
     action_id: 'settings_reload_codex_surface',
+    stable_id: 'reload_codex_surface',
     label: 'Reload Codex surface',
     section_id: 'codex_surface',
     task_kind: 'reload',
@@ -189,10 +246,32 @@ export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
     payload_fields: ['scope', 'target_path'],
     mutates: 'opl_codex_visible_skill_projection',
     dry_run_supported: true,
+    confirmation_required: true,
+    danger_level: 'low',
+    impact: 'Regenerates Codex-visible skill/plugin projection for an explicit workspace or quest target.',
+    follow_up_action_ids: ['developer_supervisor_refresh'],
     verify_action_id: 'developer_supervisor_refresh',
   },
   {
+    action_id: 'settings_check_app_update',
+    stable_id: 'check_app_update',
+    label: 'Check App update',
+    section_id: 'updates',
+    task_kind: 'check',
+    taxonomy: 'settings.updates.check_app_update',
+    delegated_surface: 'opl update check --component app_binary',
+    payload_fields: [],
+    mutates: 'none_read_only',
+    dry_run_supported: true,
+    confirmation_required: false,
+    danger_level: 'none',
+    impact: 'Reads the managed update projection for the App binary component; App release truth remains App-owned.',
+    follow_up_action_ids: ['settings_reload_codex_surface'],
+    verify_action_id: 'settings_check_app_update',
+  },
+  {
     action_id: 'settings_prune_runtime_roots_dry_run',
+    stable_id: 'prune_runtime_roots_dry_run',
     label: 'Plan runtime roots cleanup',
     section_id: 'runtime_roots',
     task_kind: 'cleanup_plan',
@@ -201,7 +280,28 @@ export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
     payload_fields: [],
     mutates: 'none_read_only',
     dry_run_supported: true,
+    confirmation_required: false,
+    danger_level: 'low',
+    impact: 'Reports runtime root cleanup candidates only; it never deletes runtime roots.',
+    follow_up_action_ids: [],
     verify_action_id: 'settings_prune_runtime_roots_dry_run',
+  },
+  {
+    action_id: 'settings_rollback_runtime_toolchain',
+    stable_id: 'rollback_runtime_toolchain',
+    label: 'Plan runtime toolchain rollback',
+    section_id: 'updates',
+    task_kind: 'rollback',
+    taxonomy: 'settings.updates.rollback_runtime_toolchain',
+    delegated_surface: 'opl update rollback --component runtime_toolchain',
+    payload_fields: ['receipt_ref'],
+    mutates: 'none_read_only',
+    dry_run_supported: true,
+    confirmation_required: true,
+    danger_level: 'high',
+    impact: 'Projects the explicit runtime-toolchain rollback route; actual pointer rollback stays behind the managed update authority.',
+    follow_up_action_ids: ['settings_check_app_update', 'settings_reload_codex_surface'],
+    verify_action_id: 'settings_check_app_update',
   },
 ];
 
@@ -213,11 +313,94 @@ function asString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
+function asList(value: unknown): JsonRecord[] {
+  return Array.isArray(value) ? value.filter((entry): entry is JsonRecord => Boolean(entry) && typeof entry === 'object' && !Array.isArray(entry)) : [];
+}
+
 function statusTone(status: string | null) {
   if (!status) return 'unknown';
   return ['ready', 'healthy', 'ok', 'installed', 'enabled', 'stable'].includes(status)
     ? 'ready'
     : 'attention_needed';
+}
+
+const SETTINGS_ISSUE_CATALOG = [
+  {
+    status_code: 'needs_reload',
+    label: 'Reload needed',
+    user_message: 'A settings or package change needs the Codex-visible surface to be reloaded before the App can show the latest capabilities.',
+    severity: 'notice',
+    recommended_action_id: 'settings_reload_codex_surface',
+  },
+  {
+    status_code: 'manual_required',
+    label: 'Manual attention required',
+    user_message: 'The Framework can show the safe next action, but this item needs an explicit user or owner action before OPL may mutate anything.',
+    severity: 'warning',
+    recommended_action_id: 'settings_verify_workspace',
+  },
+  {
+    status_code: 'dirty_checkout',
+    label: 'Dirty checkout blocks managed action',
+    user_message: 'A visible module checkout has local changes. OPL must not overwrite it from Settings.',
+    severity: 'warning',
+    recommended_action_id: 'settings_sync_capabilities',
+  },
+  {
+    status_code: 'failed_with_repair',
+    label: 'Repair route available',
+    user_message: 'A managed component reported a failed state with an explicit repair or verification route.',
+    severity: 'error',
+    recommended_action_id: 'settings_sync_capabilities',
+  },
+  {
+    status_code: 'developer_profile_active',
+    label: 'Developer profile active',
+    user_message: 'Developer Mode is active, so Settings may expose supervised repair routes without becoming a domain truth owner.',
+    severity: 'info',
+    recommended_action_id: 'settings_repair_model_access',
+  },
+] as const;
+
+function actionCatalogEntry(action: SettingsAction) {
+  return {
+    stable_id: action.stable_id,
+    action_id: action.action_id,
+    label: action.label,
+    section_id: action.section_id,
+    task_kind: action.task_kind,
+    taxonomy: action.taxonomy,
+    route: routeFor(action.action_id),
+    delegated_surface: action.delegated_surface,
+    payload_fields: action.payload_fields,
+    payload_required: action.payload_fields.length > 0,
+    mutates: action.mutates,
+    dry_run_supported: action.dry_run_supported,
+    confirmation_required: action.confirmation_required,
+    danger_level: action.danger_level,
+    impact: action.impact,
+    rollback_action_id: action.rollback_action_id ?? null,
+    follow_up_action_ids: action.follow_up_action_ids,
+    verify_action_id: action.verify_action_id ?? null,
+    verify_route: action.verify_action_id ? routeFor(action.verify_action_id) : null,
+    authority_flags: settingsAuthorityFlags(),
+  };
+}
+
+function settingsAuthorityFlags() {
+  return {
+    can_write_domain_truth: false,
+    can_sign_domain_receipt: false,
+    can_create_owner_receipt: false,
+    can_create_typed_blocker: false,
+    can_write_runtime_queue: false,
+    can_write_provider_queue: false,
+    can_read_memory_body: false,
+    can_read_artifact_body: false,
+    can_authorize_quality_verdict: false,
+    can_claim_app_release_ready: false,
+    can_claim_production_ready: false,
+  };
 }
 
 function routeFor(actionId: string) {
@@ -235,6 +418,9 @@ function actionState(action: SettingsAction, input: BuildSettingsControlCenterIn
   }
   if (action.action_id === 'settings_prune_runtime_roots_dry_run') {
     return 'plan_only';
+  }
+  if (action.action_id === 'settings_rollback_runtime_toolchain') {
+    return 'manual_required';
   }
   return 'ready';
 }
@@ -260,6 +446,7 @@ function groupState(group: SettingsControlCenterGroup, input: BuildSettingsContr
 function buildTaskEntries(input: BuildSettingsControlCenterInput) {
   return SETTINGS_CONTROL_CENTER_ACTIONS.map((action) => ({
     task_id: action.action_id,
+    stable_id: action.stable_id,
     action_id: action.action_id,
     section_id: action.section_id,
     label: action.label,
@@ -274,16 +461,133 @@ function buildTaskEntries(input: BuildSettingsControlCenterInput) {
     payload_fields: action.payload_fields,
     payload_required: action.payload_fields.length > 0,
     dry_run_supported: action.dry_run_supported,
+    confirmation_required: action.confirmation_required,
+    danger_level: action.danger_level,
+    impact: action.impact,
+    rollback_action_id: action.rollback_action_id ?? null,
+    follow_up_action_ids: action.follow_up_action_ids,
     mutates: action.mutates,
-    authority_flags: {
-      can_write_domain_truth: false,
-      can_sign_domain_receipt: false,
-      can_create_owner_receipt: false,
-      can_create_typed_blocker: false,
-      can_write_runtime_queue: false,
-      can_authorize_quality_verdict: false,
-      can_claim_app_release_ready: false,
+    authority_flags: settingsAuthorityFlags(),
+  }));
+}
+
+function buildSettingsIa(taskEntries: ReturnType<typeof buildTaskEntries>) {
+  return {
+    surface_kind: 'opl_settings_control_center_ia.v1',
+    ordinary_entry: 'settings_control_center',
+    entry_policy: 'top_level_control_center_route',
+    route_groups: SETTINGS_CONTROL_CENTER_GROUPS.map((group) => ({
+      route_id: group.route_id,
+      group_id: group.group_id,
+      label: group.label,
+      role: group.role,
+      action_section_ids: group.action_section_ids,
+      action_ids: taskEntries
+        .filter((entry) => group.action_section_ids.includes(entry.section_id))
+        .map((entry) => entry.action_id),
+    })),
+    app_shell_contract: {
+      app_consumes_read_model_only: true,
+      aion_shell_is_renderer_only: true,
+      shell_must_not_infer_domain_truth: true,
+      shell_must_not_execute_unlisted_actions: true,
     },
+  };
+}
+
+function issueRoute(actionId: string | null) {
+  return actionId ? routeFor(actionId) : null;
+}
+
+function buildIssueQueue(input: BuildSettingsControlCenterInput) {
+  const issues: Array<Record<string, unknown>> = [];
+  const codex = asRecord(asRecord(input.core).codex);
+  const developerProfile = asRecord(asRecord(input.developerMode).developer_profile);
+  const developerEffectiveState = asString(input.developerMode.effective_state);
+  const moduleItems = asList(input.modules.items);
+  const temporal = asRecord(asRecord(input.provider).temporal);
+
+  if (codex.api_key_present !== true) {
+    issues.push({
+      issue_id: 'model_access_manual_required',
+      status_code: 'manual_required',
+      label: 'Model access is not configured',
+      user_message: 'Codex model access is missing or unreadable. Configure model access before running agent tasks from Settings.',
+      severity: 'warning',
+      source_ref: 'app_state.core.codex.api_key_present',
+      recommended_action_id: 'settings_repair_model_access',
+      route: issueRoute('settings_repair_model_access'),
+    });
+  }
+
+  const dirtyModules = moduleItems.filter((entry) => asString(entry.health_status) === 'dirty');
+  if (dirtyModules.length > 0) {
+    issues.push({
+      issue_id: 'module_dirty_checkout',
+      status_code: 'dirty_checkout',
+      label: 'Local module checkout has uncommitted changes',
+      user_message: 'One or more module checkouts are dirty. Settings will not overwrite them; review or commit those changes first.',
+      severity: 'warning',
+      source_ref: 'app_state.modules.items[].health_status',
+      affected_ids: dirtyModules.map((entry) => asString(entry.module_id)).filter(Boolean),
+      recommended_action_id: 'settings_sync_capabilities',
+      route: issueRoute('settings_sync_capabilities'),
+    });
+  }
+
+  const manualModules = moduleItems.filter((entry) =>
+    ['missing', 'invalid_checkout'].includes(asString(entry.health_status) ?? '')
+  );
+  if (manualModules.length > 0) {
+    issues.push({
+      issue_id: 'module_install_manual_required',
+      status_code: 'manual_required',
+      label: 'OPL package attention required',
+      user_message: 'One or more default OPL packages are missing or invalid. Use the package actions only through OPL-owned routes.',
+      severity: 'warning',
+      source_ref: 'app_state.modules.items[].health_status',
+      affected_ids: manualModules.map((entry) => asString(entry.module_id)).filter(Boolean),
+      recommended_action_id: 'settings_apply_opl_packages',
+      route: issueRoute('settings_apply_opl_packages'),
+    });
+  }
+
+  const temporalStatus = asString(temporal.health_status) ?? asString(temporal.status);
+  if (temporalStatus && !['ready', 'healthy', 'ok', 'installed', 'enabled', 'stable'].includes(temporalStatus)) {
+    issues.push({
+      issue_id: 'provider_failed_with_repair',
+      status_code: 'failed_with_repair',
+      label: 'Runtime provider needs repair or verification',
+      user_message: 'The selected runtime provider is not ready. Settings can point to existing repair routes but cannot mark domain work ready.',
+      severity: 'error',
+      source_ref: 'app_state.provider.temporal',
+      recommended_action_id: 'settings_sync_capabilities',
+      route: issueRoute('settings_sync_capabilities'),
+    });
+  }
+
+  if (
+    ['ready', 'limited'].includes(asString(developerProfile.status) ?? '')
+    && developerEffectiveState
+    && developerEffectiveState !== 'disabled'
+    && developerEffectiveState !== 'blocked'
+  ) {
+    issues.push({
+      issue_id: 'developer_profile_active',
+      status_code: 'developer_profile_active',
+      label: 'Developer Mode profile is active',
+      user_message: 'Developer Mode can expose supervised repair routes. This does not authorize domain truth writes or release-ready claims.',
+      severity: 'info',
+      source_ref: 'app_state.developer_mode.developer_profile',
+      recommended_action_id: 'settings_repair_model_access',
+      route: issueRoute('settings_repair_model_access'),
+    });
+  }
+
+  return issues.map((issue) => ({
+    ...issue,
+    owner_surface: 'opl_framework_settings_control_center',
+    authority_flags: settingsAuthorityFlags(),
   }));
 }
 
@@ -303,10 +607,12 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
   const releaseChannel = asString(input.release.channel) ?? 'unknown';
   const moduleSummary = asRecord(asRecord(input.modules).summary);
   const taskEntries = buildTaskEntries(input);
+  const issueQueue = buildIssueQueue(input);
 
   return {
-    surface_kind: 'opl_settings_control_center.v1',
-    schema_version: 'settings-control-center.v1',
+    surface_kind: 'opl_settings_control_center.v2',
+    schema_version: 'settings-control-center.v2',
+    compatibility_schema_versions: ['settings-control-center.v1'],
     profile: input.profile,
     owner: 'one-person-lab',
     contract_ref: SETTINGS_CONTROL_CENTER_CONTRACT_REF,
@@ -321,7 +627,9 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
       module_health: `${moduleSummary.healthy_default_modules_count ?? 0}/${moduleSummary.default_modules_count ?? 0}`,
       temporal_provider: statusTone(asString(temporal.status) ?? asString(temporal.health_status)),
       release_channel: releaseChannel,
+      issue_count: issueQueue.length,
     },
+    settings_ia: buildSettingsIa(taskEntries),
     control_center_groups: SETTINGS_CONTROL_CENTER_GROUPS.map((group) => ({
       ...group,
       state: groupState(group, input),
@@ -339,9 +647,15 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
       task_entry_count: taskEntries.filter((entry) => entry.section_id === section.section_id).length,
     })),
     task_entries: taskEntries,
+    action_catalog: SETTINGS_CONTROL_CENTER_ACTIONS.map(actionCatalogEntry),
     action_taxonomy: Object.fromEntries(
       SETTINGS_CONTROL_CENTER_ACTIONS.map((action) => [action.action_id, action.taxonomy]),
     ),
+    issue_catalog: SETTINGS_ISSUE_CATALOG.map((issue) => ({
+      ...issue,
+      route: issueRoute(issue.recommended_action_id),
+    })),
+    issue_queue: issueQueue,
     dry_run_apply_verify_boundary: {
       dry_run: 'preflight_only_no_domain_or_runtime_authority_write',
       apply: 'delegates_only_to_existing_opl_owned_app_action_routes',

@@ -9,6 +9,12 @@ type AppActionCatalogEntry = {
   payload_fields: string[];
   mutates: string;
   dry_run_supported?: boolean;
+  confirmation_required?: boolean;
+  danger_level?: string;
+  impact?: string;
+  rollback_action_id?: string;
+  follow_up_action_ids?: string[];
+  verify_action_id?: string;
 };
 
 function annotateAppActionRoute(action: AppActionCatalogEntry) {
@@ -319,6 +325,12 @@ export function buildActionCatalog(contracts: FrameworkContracts) {
       payload_fields: action.payload_fields,
       mutates: action.mutates,
       dry_run_supported: action.dry_run_supported,
+      confirmation_required: action.confirmation_required,
+      danger_level: action.danger_level,
+      impact: action.impact,
+      rollback_action_id: action.rollback_action_id,
+      follow_up_action_ids: action.follow_up_action_ids,
+      verify_action_id: action.verify_action_id,
     })),
     ...workspaceActionsFromNorm(contracts.agentWorkspaceNorm),
     {

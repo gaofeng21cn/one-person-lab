@@ -112,10 +112,13 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       'workspace_report',
       'workspace_fleet_report',
       'settings_repair_model_access',
+      'settings_verify_workspace',
       'settings_sync_capabilities',
       'settings_apply_opl_packages',
       'settings_reload_codex_surface',
+      'settings_check_app_update',
       'settings_prune_runtime_roots_dry_run',
+      'settings_rollback_runtime_toolchain',
     ]) {
       assert.ok(actions.has(actionId), `missing App action: ${actionId}`);
       assert.equal(actions.get(actionId)?.delegated_surface.startsWith('opl '), true);
@@ -227,6 +230,11 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       'developerSupervisorAutoEnableGithubLogin',
     ]);
     assert.equal(actions.get('settings_repair_model_access')?.mutates, 'opl_developer_supervisor_config');
+    assert.equal(actions.get('settings_repair_model_access')?.confirmation_required, true);
+    assert.equal(actions.get('settings_repair_model_access')?.danger_level, 'medium');
+    assert.equal(actions.get('settings_verify_workspace')?.delegated_surface, 'opl workspace health');
+    assert.deepEqual(actions.get('settings_verify_workspace')?.payload_fields, ['workspace_path']);
+    assert.equal(actions.get('settings_verify_workspace')?.mutates, 'none_read_only');
     assert.equal(actions.get('settings_sync_capabilities')?.delegated_surface, 'opl connect reconcile-modules');
     assert.deepEqual(actions.get('settings_sync_capabilities')?.payload_fields, []);
     assert.equal(actions.get('settings_sync_capabilities')?.can_submit_to_safe_action_shell, true);
@@ -242,6 +250,14 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       'opl app action execute --action settings_prune_runtime_roots_dry_run',
     );
     assert.equal(actions.get('settings_prune_runtime_roots_dry_run')?.mutates, 'none_read_only');
+    assert.equal(actions.get('settings_check_app_update')?.delegated_surface, 'opl update check --component app_binary');
+    assert.equal(actions.get('settings_check_app_update')?.mutates, 'none_read_only');
+    assert.equal(
+      actions.get('settings_rollback_runtime_toolchain')?.delegated_surface,
+      'opl update rollback --component runtime_toolchain',
+    );
+    assert.deepEqual(actions.get('settings_rollback_runtime_toolchain')?.payload_fields, ['receipt_ref']);
+    assert.equal(actions.get('settings_rollback_runtime_toolchain')?.danger_level, 'high');
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
@@ -931,6 +947,8 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
     assert.equal(settingsRepair.delegated_surface, 'opl system developer-supervisor');
     assert.equal(settingsRepair.result.settings_control_center_action.status, 'dry_run');
     assert.equal(settingsRepair.result.settings_control_center_action.taxonomy, 'settings.model_access.repair');
+    assert.equal(settingsRepair.result.settings_control_center_action.confirmation_required, true);
+    assert.equal(settingsRepair.result.settings_control_center_action.danger_level, 'medium');
     assert.equal(
       settingsRepair.result.settings_control_center_action.authority_boundary.can_write_domain_truth,
       false,
@@ -947,6 +965,21 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
 
     assert.equal(settingsSync.delegated_surface, 'opl connect reconcile-modules');
     assert.equal(settingsSync.result.settings_control_center_action.task_kind, 'sync');
+
+    const settingsVerify = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'settings_verify_workspace',
+      '--payload',
+      '{"workspace_path":"/tmp/opl-workspace"}',
+      '--dry-run',
+    ], env).app_action_execution;
+
+    assert.equal(settingsVerify.delegated_surface, 'opl workspace health');
+    assert.equal(settingsVerify.result.settings_control_center_action.task_kind, 'verify');
+    assert.deepEqual(settingsVerify.result.settings_control_center_action.payload_fields, ['workspace_path']);
 
     const settingsReload = runCli([
       'app',
@@ -965,6 +998,19 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
     );
     assert.deepEqual(settingsReload.result.settings_control_center_action.payload_fields, ['scope', 'target_path']);
 
+    const appUpdate = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'settings_check_app_update',
+      '--dry-run',
+    ], env).app_action_execution;
+
+    assert.equal(appUpdate.delegated_surface, 'opl update check --component app_binary');
+    assert.equal(appUpdate.result.settings_control_center_action.task_kind, 'check');
+    assert.equal(appUpdate.result.settings_control_center_action.mutates, 'none_read_only');
+
     const cleanupPlan = runCli([
       'app',
       'action',
@@ -976,6 +1022,24 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
     assert.equal(cleanupPlan.delegated_surface, 'opl settings control-center cleanup_plan --dry-run');
     assert.equal(cleanupPlan.result.settings_runtime_roots_cleanup_plan.status, 'dry_run_plan_only');
     assert.equal(cleanupPlan.result.settings_runtime_roots_cleanup_plan.authority_boundary.can_delete_runtime_roots, false);
+
+    const rollbackPlan = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'settings_rollback_runtime_toolchain',
+      '--payload',
+      '{"receipt_ref":"opl://managed-update/runtime_toolchain/apply/example"}',
+    ], env).app_action_execution;
+
+    assert.equal(rollbackPlan.delegated_surface, 'opl update rollback --component runtime_toolchain');
+    assert.equal(rollbackPlan.result.settings_control_center_action.task_kind, 'rollback');
+    assert.equal(rollbackPlan.result.settings_control_center_action.danger_level, 'high');
+    assert.equal(
+      rollbackPlan.result.settings_control_center_action.authority_boundary.can_write_runtime_queue,
+      false,
+    );
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
