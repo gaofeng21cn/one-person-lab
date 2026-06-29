@@ -29,6 +29,7 @@ Last reviewed: `2026-06-30`
 | MAG grant readiness / submission-ready / fundability / export | `med-autogrant` owner receipts、human-gate receipts、quality/export/package evidence | MAG evidence lane；provider completion 或 package existence 不是 grant-ready。 |
 | RCA visual ready / exportable / handoffable / no-regression | `redcube-ai` visual artifacts、review/export gates、owner receipts、typed blockers、workspace evidence | RCA evidence lane；mock proof或单次样片不是 production soak。 |
 | OMA target-agent ready / promotion / live registry-App consumption | `opl-meta-agent` target owner receipts、developer work-order receipts、OPL/App registry evidence | OMA evidence lane；candidate package 或 suite pass 不是 target ready。 |
+| BookForge long-book / publication proof / final export acceptance | `opl-bookforge` manuscript/package refs、proof/export receipts、owner acceptance、workspace lifecycle receipts | BookForge evidence lane；scaffold、pilot export、render helper 或 OMA evidence 不是 publication-ready。 |
 
 ## 禁止混写
 
@@ -48,6 +49,7 @@ Last reviewed: `2026-06-30`
 | `med-autogrant` | product/status/user-loop/domain-handler/domain_runtime/autonomy/CLI handler shells 仍是 physical-delete-not-authorized tail；需要 OPL generated/default caller parity、no-active-caller、owner receipt / typed blocker、no-forbidden-write 和 tombstone/provenance 后再删或收薄。 |
 | `redcube-ai` | generated/default caller thinning、repo-local adapter delete after cutover、compatibility-free retirement、naming / legacy string hygiene 仍是 active source hygiene tail；visual production evidence 后置。 |
 | `opl-meta-agent` | strict source-purity / script-to-pack hygiene 仍需持续治理；新增或保留 scripts/materializers 必须有真实 active caller、repo-local refs、no-forbidden-write 和退役门。 |
+| `opl-bookforge` | 标准 scaffold/interface、golden-path route、revision entrypoint、PDF/proof helper plumbing、artifact lifecycle handoff refs、default-caller structural gates 与 evidence package navigation 仍需持续守住 structural boundary；long-book / final export / owner acceptance evidence 后置。 |
 | `one-person-lab-app` | App-owned contracts、active-shell sync、GUI definition stack、Settings / Storage / release-boundary validators 和 shell-candidate policy 仍是功能/结构维护面；packaged GUI / clean-VM / release cohort evidence 后置。 |
 
 ## 验证入口
