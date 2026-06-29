@@ -51,20 +51,19 @@ function isMasPaperMissionStageRouteAttempt(attempt: JsonRecord) {
     );
 }
 
-function hasDomainProvidedStageLog(closeoutPacket: TypedStageCloseoutPacket) {
-  return isRecord(closeoutPacket.paper_stage_log)
-    || isRecord(closeoutPacket.user_stage_log)
-    || isRecord(closeoutPacket.stage_log_summary)
-    || isRecord(closeoutPacket.human_stage_log)
-    || (
-      isRecord(closeoutPacket.route_impact)
-      && (
-        isRecord(closeoutPacket.route_impact.paper_stage_log)
-        || isRecord(closeoutPacket.route_impact.user_stage_log)
-        || isRecord(closeoutPacket.route_impact.stage_log_summary)
-        || isRecord(closeoutPacket.route_impact.human_stage_log)
-      )
-    );
+function recordHasDomainProvidedStageLog(value: JsonRecord) {
+  return isRecord(value.paper_stage_log)
+    || isRecord(value.user_stage_log)
+    || isRecord(value.stage_log_summary)
+    || isRecord(value.human_stage_log);
+}
+
+function hasDomainProvidedStageLog(closeoutPacket: TypedStageCloseoutPacket, attempt: JsonRecord) {
+  const closeoutRouteImpact = isRecord(closeoutPacket.route_impact) ? closeoutPacket.route_impact : {};
+  const attemptRouteImpact = isRecord(attempt.route_impact) ? attempt.route_impact : {};
+  return recordHasDomainProvidedStageLog(closeoutPacket)
+    || recordHasDomainProvidedStageLog(closeoutRouteImpact)
+    || recordHasDomainProvidedStageLog(attemptRouteImpact);
 }
 
 function readCloseoutRefEntries(value: unknown) {
@@ -203,7 +202,7 @@ export function validateCloseoutPacketForAttempt(input: {
       },
     };
   }
-  if (isMasPaperMissionStageRouteAttempt(input.attempt) && !hasDomainProvidedStageLog(closeoutPacket)) {
+  if (isMasPaperMissionStageRouteAttempt(input.attempt) && !hasDomainProvidedStageLog(closeoutPacket, input.attempt)) {
     return {
       closeoutPacket: null,
       rejection: {

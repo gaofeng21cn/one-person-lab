@@ -190,6 +190,98 @@ exit 64
   }
 });
 
+test('Codex stage runner accepts MAS PaperMission stage-route closeout when attempt route impact carries user stage log', async () => {
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    closeout_refs: ['receipt:paper-route-attempt-route-impact-stage-log'],
+    next_owner: 'med-autoscience',
+    domain_ready_verdict: 'domain_gate_pending',
+  };
+  const userStageLog = {
+    surface_kind: 'opl_user_stage_log',
+    schema_version: 1,
+    semantic_status: 'provided_by_domain',
+    semantic_source: 'med_autoscience.paper_mission_stage_route',
+    stage_name: 'PaperMission stage route for 002-dm-china-us-mortality-attribution',
+    problem_summary: 'MAS PaperMission routed non-authority paper-facing candidate refs.',
+    stage_goal: 'Carry the PaperMission route command without claiming submission readiness.',
+    progress_delta_classification: 'deliverable_progress',
+    deliverable_progress_delta: {
+      delta_count: 1,
+      delta_refs: [
+        '/tmp/mas-dm-cvd-workspace/ops/medautoscience/paper_mission_candidate_package/paper_mission_drive/002/package_manifest.json',
+      ],
+      delta_summary: 'non-authority paper-facing candidate refs routed',
+    },
+    platform_repair_delta: {
+      delta_count: 0,
+      delta_refs: [],
+      delta_summary: null,
+    },
+    owner_gate_verdict: {
+      verdict: 'route_back',
+      owner: 'med-autoscience',
+      blocked_reason: 'paper_mission_stage_route_domain_gate_pending',
+    },
+    remaining_blockers: ['paper_mission_stage_route_domain_gate_pending'],
+    next_forced_delta: 'domain_owner_answer_or_human_gate_or_non_synonymous_paper_delta',
+    evidence_refs: ['paper-mission-transaction:dm002:followthrough-02'],
+  };
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"type":"thread.started","thread_id":"thread-paper-route-attempt-route-impact-stage-log"}\\n'
+  printf '{"type":"turn.started"}\\n'
+  printf '%s\\n' '${JSON.stringify({ type: 'item.completed', item: { type: 'agent_message', id: 'msg-1', text: JSON.stringify(closeout) } })}'
+  printf '{"type":"turn.completed"}\\n'
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_paper_route_attempt_route_impact_stage_log_test',
+        stage_id: 'submission_milestone_candidate::followthrough::followthrough-02',
+        domain_id: 'medautoscience',
+        workspace_locator: {
+          surface_kind: 'opl_mas_paper_mission_stage_route_workspace_locator',
+          task_kind: 'paper_mission/stage-route',
+          runtime_request_kind: 'mas_paper_mission_stage_route',
+          workspace_root: fixtureRoot,
+          study_id: '002-dm-china-us-mortality-attribution',
+          route_target: 'submission_milestone_candidate::followthrough::followthrough-02',
+        },
+        route_impact: {
+          decision: 'route_back',
+          domain_ready_verdict: 'domain_gate_pending',
+          user_stage_log: userStageLog,
+        },
+        checkpoint_refs: ['paper-mission-stage-packet:dm002-route-impact-stage-log'],
+      },
+      stagePacketRef: 'paper-mission-stage-packet:dm002-route-impact-stage-log',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+    });
+
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+      'receipt:paper-route-attempt-route-impact-stage-log',
+    ]);
+    assert.equal(receipt.closeout_packet?.route_impact, undefined);
+    assert.equal(receipt.process_output_summary?.blocked_reason, undefined);
+    assert.equal(receipt.process_output_summary?.closeout_rejection_reason, undefined);
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('Codex stage runner captures terminal typed closeout from Codex output-last-message file', async () => {
   const closeout = {
     surface_kind: 'stage_attempt_closeout_packet',
