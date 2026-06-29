@@ -47,7 +47,7 @@ opl system seed-apply \
   --json
 ```
 
-`opl system docker-webui doctor --json` 是排障用只读 JSON read model。它聚合可见的 `AIONUI_DATA_DIR` / `OPL_DATA_DIR` / `OPL_PROJECTS_DIR`、`install-manifest.json` 状态、镜像版本 / digest、`startup-maintenance` 下一步 guidance、Codex API key presence readback 和可推导的浏览器 URL / port env；它不执行修复、不创建目录、不运行 startup-maintenance、不写 API key、不声明 release ready、runtime ready 或 module current。稳定顶层状态是 `ok`、`attention`、`not_configured`；首启状态机字段在 `startup_state.phase` 中表达 `not_configured`、`api_key_missing`、`needs_startup_maintenance`、`initializing`、`seed_applied`、`enterable`、`repairable_failure`；单项 observation 使用 `configured`、`not_configured`、`exists`、`missing`、`found`、`invalid`、`not_visible`、`present`。`diagnostic_summary` 是安装器 / 教程友好的扁平汇总，包含 image version / digest、data/projects、browser URL、install manifest、startup maintenance、API key、next actions，并固定 `runtime_readiness_claim: not_claimed` / `can_claim_runtime_ready: false`。
+`opl system docker-webui doctor --json` 是排障用只读 JSON read model。它聚合可见的 `AIONUI_DATA_DIR` / `OPL_DATA_DIR` / `OPL_PROJECTS_DIR`、`install-manifest.json` 状态、镜像版本 / digest、`startup-maintenance` 下一步 guidance、Codex API key presence readback、可推导的浏览器 URL / port env，以及 `docker_runtime` 下的 Docker CLI / daemon、WebUI 容器、镜像、`/data` 和 `/projects` mount、端口绑定只读 readback；它不执行修复、不创建目录、不运行 startup-maintenance、不写 API key、不 pull image、不启停容器、不声明 release ready、runtime ready 或 module current。稳定顶层状态是 `ok`、`attention`、`not_configured`；首启状态机字段在 `startup_state.phase` 中表达 `not_configured`、`api_key_missing`、`needs_startup_maintenance`、`initializing`、`seed_applied`、`enterable`、`repairable_failure`；单项 observation 使用 `configured`、`not_configured`、`reachable`、`unreachable`、`exists`、`missing`、`found`、`invalid`、`not_visible`、`present`。`diagnostic_summary` 是安装器 / 教程友好的扁平汇总，包含 image version / digest、Docker runtime / daemon / container / image status、data/projects、browser URL、install manifest、startup maintenance、API key、next actions，并固定 `runtime_readiness_claim: not_claimed` / `can_claim_runtime_ready: false`。
 
 `opl system startup-maintenance --json` 也会执行同一 seed apply，并在 `system_action.details.seed_boundary` 返回本次镜像 seed、Framework 安装目录、Codex/toolchain、modules/skills、数据目录和项目目录的 receipt 状态。两条路径都会写入：
 
@@ -128,6 +128,7 @@ http://127.0.0.1:3000/
 | `HOME` | 仅在运行 OPL CLI / Codex CLI 时作为普通进程 Home 使用 |
 | `OPL_IMAGE_MANIFEST_PATH` | OPL CLI seed/app startup-maintenance 路径读取的镜像 manifest |
 | `OPL_IMAGE_SEED_DIR` | OPL CLI seed/app startup-maintenance 路径读取的镜像 seed 目录 |
+| `OPL_WEBUI_IMAGE` | `opl system docker-webui doctor --json` 用于只读 `docker image inspect` 的 WebUI image ref；未设置时尝试从 seed manifest image refs 读取 |
 | `OPL_DATA_DIR` | OPL CLI seed/app startup-maintenance 路径的数据目录；未设置时可由 `AIONUI_DATA_DIR` 提供 |
 | `OPL_PROJECTS_DIR` | OPL CLI seed/app startup-maintenance 路径的项目目录；默认 `<data-dir>/projects` |
 | `OPL_STATE_DIR` | OPL CLI 状态目录，例如 `/data/opl/state` |
