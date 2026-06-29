@@ -208,7 +208,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 影响：
 
-- `providerAdmissionCurrentnessIdentity` 必须把 `stage_packet_ref`、规范化 `stage_packet_refs`、`route_identity_key` 和 `attempt_idempotency_key` 纳入 current-control admission identity；`idempotency_key` 只能兜底 attempt idempotency，不能替代 route identity。
+- `providerAdmissionCurrentnessIdentity` 必须把 `stage_packet_ref`、规范化 `stage_packet_refs`、`route_identity_key` 和 `attempt_idempotency_key` 纳入 current-control admission identity；早期曾允许 `idempotency_key` 兜底 attempt idempotency，但该口径已被 2026-06-29 NextAction identity follow-through 收紧：request / NextAction identity 与 attempt identity 必须分开，通用 `idempotency_key` 不再兜底 provider attempt identity。
 - `sameProviderAdmissionCurrentnessIdentity` 比较上述字段。只要 selected stage packet 或 route / attempt key 不一致，即使 work-unit id、fingerprint、source eval、truth/runtime epoch 与 source fingerprint 相同，也必须视为 stale / fresh identity 差异，允许 queued admission refresh、terminal attempt stale requeue 或 tick reconcile。
 - OPL 仍只处理 generic Runway / current-control identity，不解释 domain recovery semantics，不签 domain owner receipt，不创建 domain typed blocker，不写 domain study/runtime artifacts，也不声明 domain ready、App release ready、Brand L5 或 production ready。
 
