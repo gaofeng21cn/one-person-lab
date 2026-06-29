@@ -7,8 +7,8 @@
   "pdf_write_status": "preserved_existing_equivalent_pdf",
   "temp_markdown": "tmp/pdfs/opl-whitepaper/opl-whitepaper.pandoc.md",
   "rendered_dir": "tmp/pdfs/opl-whitepaper/rendered",
-  "rendered_pages": 11,
-  "pdf_pages": 11,
+  "rendered_pages": 10,
+  "pdf_pages": 10,
   "pdf_page_size_pts": {
     "width": 612,
     "height": 792
