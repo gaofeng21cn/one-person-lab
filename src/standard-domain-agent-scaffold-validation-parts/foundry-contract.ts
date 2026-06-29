@@ -432,9 +432,9 @@ export function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, 
     standardPublicProjectionPolicy?.active_public_projection_allows_domain_owned_cli_as_standard_surface === false
       ? null
       : 'foundry_agent_domain_owned_cli_must_not_be_public_standard_surface',
-    standardPublicProjectionPolicy?.active_public_projection_allows_forbidden_surface_roles === false
-      ? null
-      : 'foundry_agent_forbidden_surface_roles_must_not_be_public_standard_surface',
+    standardPublicProjectionPolicy?.active_public_projection_allows_forbidden_surface_roles === true
+      ? 'foundry_agent_forbidden_surface_roles_must_not_be_public_standard_surface'
+      : null,
     standardPublicProjectionPolicy?.active_public_projection_allows_compatibility_aliases === false
       ? null
       : 'foundry_agent_compatibility_aliases_must_not_be_public_standard_surface',

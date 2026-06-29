@@ -220,6 +220,37 @@ test('agents scaffold validation blocks active public forbidden Foundry role fie
   }
 });
 
+test('agents scaffold validation does not treat missing forbidden-role allow flag as public role exposure', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-implicit-forbidden-role-policy-'));
+
+  try {
+    runCli([
+      'agents',
+      'scaffold',
+      '--target-dir',
+      targetDir,
+      '--domain-id',
+      'foundry-implicit-forbidden-role-policy',
+    ]);
+    const foundryContractPath = path.join(targetDir, 'contracts/foundry_agent_series.json');
+    const foundryContract = JSON.parse(fs.readFileSync(foundryContractPath, 'utf8'));
+    delete foundryContract.standard_public_projection_policy
+      .active_public_projection_allows_forbidden_surface_roles;
+    fs.writeFileSync(foundryContractPath, `${JSON.stringify(foundryContract, null, 2)}\n`);
+
+    const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
+    assert.equal(
+      validated.validation.blockers.includes(
+        'foundry_agent_forbidden_surface_roles_must_not_be_public_standard_surface',
+      ),
+      false,
+    );
+    assert.equal(validated.validation.foundry_agent_series_validation.status, 'passed');
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
 test('agents scaffold emits canonical Foundry series design profile', () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-series-profile-'));
 
