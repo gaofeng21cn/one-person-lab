@@ -302,6 +302,24 @@ function normalizeMaterializedSkillPermissions(root: string) {
   }
 }
 
+function isPathWithin(parentPath: string, childPath: string) {
+  const relativePath = path.relative(parentPath, childPath);
+  return relativePath === '' || (relativePath !== '' && !relativePath.startsWith('..') && !path.isAbsolute(relativePath));
+}
+
+function normalizeManagedCompanionSourcePermissions(home: string, sourceRoot: string) {
+  const companionSourcesRoot = resolveCompanionSourcesRoot(home);
+  const resolvedCompanionSourcesRoot = fs.existsSync(companionSourcesRoot)
+    ? fs.realpathSync(companionSourcesRoot)
+    : path.resolve(companionSourcesRoot);
+  const resolvedSourceRoot = fs.existsSync(sourceRoot)
+    ? fs.realpathSync(sourceRoot)
+    : path.resolve(sourceRoot);
+  if (isPathWithin(resolvedCompanionSourcesRoot, resolvedSourceRoot)) {
+    normalizeMaterializedSkillPermissions(resolvedSourceRoot);
+  }
+}
+
 function writeMaterializedFile(sourceFile: string, targetFile: string) {
   fs.mkdirSync(path.dirname(targetFile), { recursive: true });
   fs.writeFileSync(targetFile, fs.readFileSync(sourceFile), { mode: 0o644 });
@@ -428,6 +446,7 @@ function materializeOfficeCliSkillSource(home: string, skillId: string) {
   if (!fs.existsSync(repoDir) || !fs.existsSync(path.join(sourceRoot, 'SKILL.md'))) {
     return null;
   }
+  normalizeManagedCompanionSourcePermissions(home, sourceRoot);
   if (skillId === 'officecli') {
     materializeSkillFile(path.join(sourceRoot, 'SKILL.md'), materializedRoot);
   } else {
@@ -446,6 +465,7 @@ function materializeUiUxProMaxSkillSource(home: string) {
   if (!fs.existsSync(skillFile) || !fs.existsSync(sourceRoot)) {
     return null;
   }
+  normalizeManagedCompanionSourcePermissions(home, repoDir);
   const materializedRoot = path.join(resolveCompanionSourcesRoot(home), 'materialized', 'ui-ux-pro-max');
   fs.rmSync(materializedRoot, { recursive: true, force: true });
   fs.mkdirSync(materializedRoot, { recursive: true });
@@ -468,6 +488,7 @@ function materializeMineruDocumentExtractorSkillSource(home: string) {
   if (!fs.existsSync(path.join(repoDir, 'SKILL.md'))) {
     return null;
   }
+  normalizeManagedCompanionSourcePermissions(home, repoDir);
   const materializedRoot = path.join(resolveCompanionSourcesRoot(home), 'materialized', 'mineru-document-extractor');
   materializeSingleSkillRoot(repoDir, materializedRoot);
   return resolveSkillSourceCandidate(materializedRoot);

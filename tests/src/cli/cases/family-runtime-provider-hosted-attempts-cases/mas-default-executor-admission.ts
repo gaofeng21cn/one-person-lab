@@ -271,7 +271,7 @@ test('family-runtime admits MAS publication gate owner default executor dispatch
       });
       assert.equal(identity.route_identity_key, 'mas-route::002::publication-gate-owner');
       assert.equal(identity.attempt_idempotency_key, 'mas-attempt::002::publication-gate-owner');
-      assert.equal(identity.idempotency_key, 'mas-attempt::002::publication-gate-owner');
+      assert.equal(identity.idempotency_key, 'mas-provider-admission::002::publication-gate-owner');
       assert.equal(attempts.length, 1);
       assert.equal(attempts[0].stage_attempt_id, attempt.stage_attempt_id);
     });

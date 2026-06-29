@@ -305,6 +305,51 @@ test('preserves explicit MAS provider admission identity fields in StageRun curr
   assert.deepEqual(missingStageRunCurrentnessIdentityFields(identity), []);
 });
 
+test('uses MAS provider admission identity instead of source fingerprint for admission currentness id', () => {
+  const identity = buildStageRunCurrentnessIdentity({
+    task: {
+      domain_id: 'medautoscience',
+      task_id: 'frt-publication-gate-owner',
+      payload: {
+        study_id: '002-dm-china-us-mortality-attribution',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        action_type: 'publication_handoff_owner_gate',
+        work_unit_id: 'publication_handoff_owner_gate',
+        work_unit_fingerprint: 'publication-gate-owner-source',
+        source_fingerprint: 'publication-gate-owner-source',
+        truth_epoch: 'truth-epoch::publication-gate-owner',
+        runtime_health_epoch: 'runtime-health::publication-gate-owner',
+        source_eval_id: 'publication-eval::publication-gate-owner',
+        route_identity_key: 'mas-route::002::publication-gate-owner',
+        attempt_idempotency_key: 'mas-attempt::002::publication-gate-owner',
+        dispatch_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/publication_handoff_owner_gate.json',
+        stage_packet_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/publication_handoff_owner_gate.json',
+        stage_packet_refs: [
+          'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/publication_handoff_owner_gate.json',
+        ],
+        provider_admission_identity: {
+          status: 'provider_admission_pending',
+          route_identity_key: 'mas-route::002::publication-gate-owner',
+          attempt_idempotency_key: 'mas-attempt::002::publication-gate-owner',
+          idempotency_key: 'mas-provider-admission::002::publication-gate-owner',
+        },
+      },
+    },
+    stageAttempt: {
+      domain_id: 'medautoscience',
+      stage_id: 'domain_owner/default-executor-dispatch',
+      stage_attempt_id: 'sat-publication-gate-owner',
+      task_id: 'frt-publication-gate-owner',
+      source_fingerprint: 'publication-gate-owner-source',
+    },
+  });
+
+  assert.equal(identity.source_fingerprint, 'publication-gate-owner-source');
+  assert.equal(identity.idempotency_key, 'mas-provider-admission::002::publication-gate-owner');
+  assert.equal(identity.attempt_idempotency_key, 'mas-attempt::002::publication-gate-owner');
+  assert.deepEqual(missingStageRunCurrentnessIdentityFields(identity), []);
+});
+
 test('does not derive StageRun currentness identity from MAS legacy current-owner or exact-id fields', () => {
   const identity = buildStageRunCurrentnessIdentity({
     task: {

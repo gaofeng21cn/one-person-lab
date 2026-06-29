@@ -697,7 +697,7 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
       runtime_health_epoch: optionalString(payload.runtime_health_epoch)
         ?? optionalString(basis?.runtime_health_epoch)
         ?? optionalString(payload.source_fingerprint),
-      idempotency_key: optionalString(payload.idempotency_key) ?? optionalString(payload.source_fingerprint),
+      idempotency_key: optionalString(payload.idempotency_key),
     })) {
       if (value) {
         locator[targetKey] = value;
