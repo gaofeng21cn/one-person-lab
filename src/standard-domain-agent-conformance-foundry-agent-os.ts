@@ -235,6 +235,7 @@ export function buildFoundryAgentOsConformance(
         generated_surface_can_claim_foundry_agent_os_complete: false,
       },
     },
+    new_agent_baseline_handoff_policy: standard.new_agent_baseline_handoff_policy,
     domains: domainReports,
     authority_boundary: {
       conformance_pass_can_claim_domain_ready: false,

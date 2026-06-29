@@ -458,9 +458,17 @@ test('target operating architecture contract freezes resource, authority, lane, 
     contract.foundry_agent_os_standard.target_shape,
     'OPL Agent OS + Domain Declarative Pack + Domain Minimal Authority Kernel + Domain Capability Registry',
   );
-  assert.deepEqual(contract.foundry_agent_os_standard.applies_to_domain_agents, ['mas', 'mag', 'rca', 'oma', 'opl-bookforge']);
+  assert.deepEqual(contract.foundry_agent_os_standard.applies_to_domain_agents, [
+    'mas',
+    'mag',
+    'rca',
+    'oma',
+    'opl-bookforge',
+    'opl-scholarskills',
+  ]);
   assert.equal(contract.foundry_agent_os_standard.domain_pack_examples.mas, 'Medical Research Pack');
   assert.equal(contract.foundry_agent_os_standard.domain_pack_examples['opl-bookforge'], 'Book Manuscript Pack');
+  assert.equal(contract.foundry_agent_os_standard.domain_pack_examples['opl-scholarskills'], 'Scholar Capability Pack');
   assert.equal(
     contract.foundry_agent_os_standard.domain_authority_kernel_examples.mag.includes('fundability quality/export verdict'),
     true,
@@ -469,6 +477,32 @@ test('target operating architecture contract freezes resource, authority, lane, 
     contract.foundry_agent_os_standard.domain_authority_kernel_examples['opl-bookforge'].includes('book manuscript truth'),
     true,
   );
+  assert.equal(
+    contract.foundry_agent_os_standard.domain_authority_kernel_examples['opl-scholarskills'].includes('candidate scientific capability refs'),
+    true,
+  );
+  assert.equal(
+    contract.foundry_agent_os_standard.new_agent_baseline_handoff_policy.surface_kind,
+    'opl_foundry_new_agent_baseline_handoff_policy',
+  );
+  assert.deepEqual(contract.foundry_agent_os_standard.new_agent_baseline_handoff_policy.required_gates, [
+    'scaffold_validation',
+    'generated_interface_projection',
+    'agent_lab_baseline_or_takeover_suite',
+    'independent_reviewer_assessment',
+    'oma_improvement_or_no_patch_loop',
+    'delivery_receipt_or_work_order_or_typed_blocker',
+  ]);
+  assert.equal(
+    contract.foundry_agent_os_standard.new_agent_baseline_handoff_policy.scaffold_or_generated_interface_can_claim_complete,
+    false,
+  );
+  assert.deepEqual(contract.foundry_agent_os_standard.new_agent_baseline_handoff_policy.accepted_terminal_outcomes, [
+    'delivery_receipt',
+    'no_patch_coordination_receipt',
+    'developer_patch_work_order',
+    'typed_blocker',
+  ]);
   assert.deepEqual(
     contract.foundry_agent_os_standard.capability_registry_boundary.owner_modules,
     ['atlas', 'pack', 'stagecraft'],

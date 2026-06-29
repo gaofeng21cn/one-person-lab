@@ -165,6 +165,18 @@ export interface TargetOperatingArchitectureContract {
     applies_to_domain_agents: string[];
     domain_pack_examples: Record<string, string>;
     domain_authority_kernel_examples: Record<string, string[]>;
+    new_agent_baseline_handoff_policy: {
+      surface_kind: string;
+      policy_id: string;
+      owner: string;
+      oma_owner: string;
+      required_gates: string[];
+      scaffold_or_generated_interface_can_claim_complete: false;
+      conformance_or_suite_pass_can_claim_complete: false;
+      exactly_one_terminal_outcome_required: true;
+      accepted_terminal_outcomes: string[];
+      authority_boundary: Record<string, false>;
+    };
     opl_module_mapping: Array<{
       target_capability: string;
       primary_module: BrandModuleId;

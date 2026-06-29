@@ -86,9 +86,9 @@ export function validateFoundryAgentOsStandard(filePath: string, value: unknown)
     filePath,
   );
 
-  const domainPackExamplesRaw = value.domain_pack_examples;
-  const domainAuthorityKernelExamplesRaw = value.domain_authority_kernel_examples;
-  const capabilityRegistryRaw = value.capability_registry_boundary;
+const domainPackExamplesRaw = value.domain_pack_examples;
+const domainAuthorityKernelExamplesRaw = value.domain_authority_kernel_examples;
+const capabilityRegistryRaw = value.capability_registry_boundary;
   if (!isRecord(domainPackExamplesRaw) || !isRecord(domainAuthorityKernelExamplesRaw) || !isRecord(capabilityRegistryRaw)) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
@@ -110,6 +110,67 @@ export function validateFoundryAgentOsStandard(filePath: string, value: unknown)
       `foundry_agent_os_standard.domain_authority_kernel_examples.${agentId}`,
       filePath,
     );
+  }
+
+  const newAgentBaselineHandoffPolicyRaw = value.new_agent_baseline_handoff_policy;
+  if (!isRecord(newAgentBaselineHandoffPolicyRaw)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'foundry_agent_os_standard.new_agent_baseline_handoff_policy must be an object.',
+      { file: filePath, field: 'foundry_agent_os_standard.new_agent_baseline_handoff_policy' },
+    );
+  }
+  const newAgentBaselineHandoffSurfaceKind = expectString(
+    newAgentBaselineHandoffPolicyRaw.surface_kind,
+    'foundry_agent_os_standard.new_agent_baseline_handoff_policy.surface_kind',
+    filePath,
+  );
+  if (newAgentBaselineHandoffSurfaceKind !== 'opl_foundry_new_agent_baseline_handoff_policy') {
+    throw new FrameworkContractError('contract_shape_invalid', 'new agent baseline handoff policy must use the OPL Foundry policy surface.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.new_agent_baseline_handoff_policy.surface_kind',
+      actual: newAgentBaselineHandoffSurfaceKind,
+    });
+  }
+  const newAgentBaselineRequiredGates = expectNonEmptyStringArray(
+    newAgentBaselineHandoffPolicyRaw.required_gates,
+    'foundry_agent_os_standard.new_agent_baseline_handoff_policy.required_gates',
+    filePath,
+  );
+  for (const requiredGate of [
+    'scaffold_validation',
+    'generated_interface_projection',
+    'agent_lab_baseline_or_takeover_suite',
+    'independent_reviewer_assessment',
+    'oma_improvement_or_no_patch_loop',
+    'delivery_receipt_or_work_order_or_typed_blocker',
+  ]) {
+    if (!newAgentBaselineRequiredGates.includes(requiredGate)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'new agent baseline handoff policy is missing a required gate.', {
+        file: filePath,
+        field: 'foundry_agent_os_standard.new_agent_baseline_handoff_policy.required_gates',
+        missing: requiredGate,
+      });
+    }
+  }
+  const acceptedTerminalOutcomes = expectNonEmptyStringArray(
+    newAgentBaselineHandoffPolicyRaw.accepted_terminal_outcomes,
+    'foundry_agent_os_standard.new_agent_baseline_handoff_policy.accepted_terminal_outcomes',
+    filePath,
+  );
+  for (const acceptedOutcome of [
+    'delivery_receipt',
+    'no_patch_coordination_receipt',
+    'developer_patch_work_order',
+    'typed_blocker',
+  ]) {
+    if (!acceptedTerminalOutcomes.includes(acceptedOutcome)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'new agent baseline handoff policy is missing an accepted terminal outcome.', {
+        file: filePath,
+        field: 'foundry_agent_os_standard.new_agent_baseline_handoff_policy.accepted_terminal_outcomes',
+        missing: acceptedOutcome,
+      });
+    }
   }
 
   const mappingRaw = value.opl_module_mapping;
@@ -330,6 +391,46 @@ export function validateFoundryAgentOsStandard(filePath: string, value: unknown)
     applies_to_domain_agents: appliesToDomainAgents,
     domain_pack_examples: domainPackExamples,
     domain_authority_kernel_examples: domainAuthorityKernelExamples,
+    new_agent_baseline_handoff_policy: {
+      surface_kind: newAgentBaselineHandoffSurfaceKind,
+      policy_id: expectString(
+        newAgentBaselineHandoffPolicyRaw.policy_id,
+        'foundry_agent_os_standard.new_agent_baseline_handoff_policy.policy_id',
+        filePath,
+      ),
+      owner: expectString(
+        newAgentBaselineHandoffPolicyRaw.owner,
+        'foundry_agent_os_standard.new_agent_baseline_handoff_policy.owner',
+        filePath,
+      ),
+      oma_owner: expectString(
+        newAgentBaselineHandoffPolicyRaw.oma_owner,
+        'foundry_agent_os_standard.new_agent_baseline_handoff_policy.oma_owner',
+        filePath,
+      ),
+      required_gates: newAgentBaselineRequiredGates,
+      scaffold_or_generated_interface_can_claim_complete: expectFalseBoolean(
+        newAgentBaselineHandoffPolicyRaw.scaffold_or_generated_interface_can_claim_complete,
+        'foundry_agent_os_standard.new_agent_baseline_handoff_policy.scaffold_or_generated_interface_can_claim_complete',
+        filePath,
+      ),
+      conformance_or_suite_pass_can_claim_complete: expectFalseBoolean(
+        newAgentBaselineHandoffPolicyRaw.conformance_or_suite_pass_can_claim_complete,
+        'foundry_agent_os_standard.new_agent_baseline_handoff_policy.conformance_or_suite_pass_can_claim_complete',
+        filePath,
+      ),
+      exactly_one_terminal_outcome_required: expectTrueBoolean(
+        newAgentBaselineHandoffPolicyRaw.exactly_one_terminal_outcome_required,
+        'foundry_agent_os_standard.new_agent_baseline_handoff_policy.exactly_one_terminal_outcome_required',
+        filePath,
+      ),
+      accepted_terminal_outcomes: acceptedTerminalOutcomes,
+      authority_boundary: validateFalseBoundaryRecord(
+        filePath,
+        newAgentBaselineHandoffPolicyRaw.authority_boundary,
+        'foundry_agent_os_standard.new_agent_baseline_handoff_policy.authority_boundary',
+      ),
+    },
     opl_module_mapping: mapping,
     capability_registry_boundary: {
       owner_modules: ownerModules,

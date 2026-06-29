@@ -184,6 +184,41 @@ export const STANDARD_AGENT_REGISTRY = [
       'typed blocker signer',
     ],
   },
+  {
+    agent_id: 'opl-scholarskills',
+    domain_id: 'scholarskills',
+    label: 'OPL ScholarSkills',
+    series_membership: STANDARD_AGENT_SERIES_MEMBERSHIP,
+    brand_cli: 'opl-scholarskills',
+    plugin_name: 'opl-scholarskills',
+    canonical_plugin_name: 'opl-scholarskills',
+    project: 'opl-scholarskills',
+    module_id: 'SCHOLARSKILLS',
+    source_kind: 'opl_generated_plugin_surface',
+    installer_kind: 'node',
+    installer_relative_paths: [],
+    domain_alias: 'scholarskills',
+    work_alias: 'capability',
+    aliases: [
+      'scholarskills',
+      'scholar-skills',
+      'scholar_skills',
+      'opl-scholarskills',
+      'opl_scholarskills',
+      'capability',
+      'capabilities',
+    ],
+    ordinary_golden_path:
+      'capability request -> candidate scientific capability refs -> domain owner consumption or typed blocker',
+    domain_pack_example: 'Scholar Capability Pack',
+    domain_authority_kernel_examples: [
+      'candidate scientific capability refs',
+      'unsigned execution receipt candidate refs',
+      'non-authoritative candidate artifact bodies',
+      'module-level no-authority guard',
+      'domain owner consumption handoff refs',
+    ],
+  },
 ] as const satisfies readonly StandardAgentRegistryEntry[];
 
 export type StandardAgentId = typeof STANDARD_AGENT_REGISTRY[number]['agent_id'];

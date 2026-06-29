@@ -103,18 +103,20 @@ export type SyncFamilySkillPack = InspectFamilySkillPack & {
 };
 
 export const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
-  ...STANDARD_AGENT_REGISTRY.map((entry) => ({
-    domain_id: entry.domain_id,
-    module_id: entry.module_id,
-    project: entry.project,
-    label: entry.label,
-    plugin_name: entry.plugin_name,
-    canonical_plugin_name: entry.canonical_plugin_name,
-    source_kind: entry.source_kind,
-    distribution_role: 'domain_agent_plugin_pack' as const,
-    installer_kind: entry.installer_kind,
-    installer_relative_paths: entry.installer_relative_paths.map((relativePath) => path.join(...relativePath.split('/'))),
-  })),
+  ...STANDARD_AGENT_REGISTRY
+    .filter((entry) => entry.agent_id !== 'opl-scholarskills')
+    .map((entry) => ({
+      domain_id: entry.domain_id,
+      module_id: entry.module_id,
+      project: entry.project,
+      label: entry.label,
+      plugin_name: entry.plugin_name,
+      canonical_plugin_name: entry.canonical_plugin_name,
+      source_kind: entry.source_kind,
+      distribution_role: 'domain_agent_plugin_pack' as const,
+      installer_kind: entry.installer_kind,
+      installer_relative_paths: entry.installer_relative_paths.map((relativePath) => path.join(...relativePath.split('/'))),
+    })),
   {
     domain_id: 'scholarskills',
     module_id: 'SCHOLARSKILLS',

@@ -1023,14 +1023,16 @@
       "mag",
       "rca",
       "oma",
-      "opl-bookforge"
+      "opl-bookforge",
+      "opl-scholarskills"
     ],
     "domain_pack_examples": {
       "mas": "Medical Research Pack",
       "mag": "Grant Pack",
       "rca": "Visual Deliverable Pack",
       "oma": "Agent-Building Pack",
-      "opl-bookforge": "Book Manuscript Pack"
+      "opl-bookforge": "Book Manuscript Pack",
+      "opl-scholarskills": "Scholar Capability Pack"
     },
     "domain_authority_kernel_examples": {
       "mas": [
@@ -1071,6 +1073,13 @@
         "style/reference memory accept/reject",
         "owner receipt signer",
         "typed blocker signer"
+      ],
+      "opl-scholarskills": [
+        "candidate scientific capability refs",
+        "unsigned execution receipt candidate refs",
+        "non-authoritative candidate artifact bodies",
+        "module-level no-authority guard",
+        "domain owner consumption handoff refs"
       ]
     },
     "opl_module_mapping": [
@@ -1226,7 +1235,37 @@
       "vault_ref_is_owner_receipt_authority",
       "runway_provider_completion_is_domain_completion",
       "console_view_is_app_release_ready"
-    ]
+    ],
+    "new_agent_baseline_handoff_policy": {
+      "surface_kind": "opl_foundry_new_agent_baseline_handoff_policy",
+      "policy_id": "opl.foundry.new_agent_baseline_handoff.v1",
+      "owner": "one-person-lab",
+      "oma_owner": "opl-meta-agent",
+      "required_gates": [
+        "scaffold_validation",
+        "generated_interface_projection",
+        "agent_lab_baseline_or_takeover_suite",
+        "independent_reviewer_assessment",
+        "oma_improvement_or_no_patch_loop",
+        "delivery_receipt_or_work_order_or_typed_blocker"
+      ],
+      "scaffold_or_generated_interface_can_claim_complete": false,
+      "conformance_or_suite_pass_can_claim_complete": false,
+      "exactly_one_terminal_outcome_required": true,
+      "accepted_terminal_outcomes": [
+        "delivery_receipt",
+        "no_patch_coordination_receipt",
+        "developer_patch_work_order",
+        "typed_blocker"
+      ],
+      "authority_boundary": {
+        "opl_can_write_target_domain_truth": false,
+        "opl_can_sign_target_owner_receipt": false,
+        "opl_can_create_target_typed_blocker": false,
+        "oma_can_claim_target_domain_ready": false,
+        "oma_can_promote_default_agent_without_gate": false
+      }
+    }
   },
   "flagship_experience_mapping": {
     "mapping_id": "mas_research_foundry_flagship_experience.v1",

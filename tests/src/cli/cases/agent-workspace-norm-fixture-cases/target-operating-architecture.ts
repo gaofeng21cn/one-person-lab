@@ -394,13 +394,14 @@ export const MINIMAL_TARGET_OPERATING_ARCHITECTURE_CONTRACT: TargetOperatingArch
     source_pattern_ref: 'human_doc:mas_opl_agent_os_target_operating_architecture',
     standard_agent_registry_ref: 'src/standard-agent-registry.ts',
     target_shape: 'OPL Agent OS + Domain Declarative Pack + Domain Minimal Authority Kernel + Domain Capability Registry',
-    applies_to_domain_agents: ['mas', 'mag', 'rca', 'oma', 'opl-bookforge'],
+    applies_to_domain_agents: ['mas', 'mag', 'rca', 'oma', 'opl-bookforge', 'opl-scholarskills'],
     domain_pack_examples: {
       mas: 'Medical Research Pack',
       mag: 'Grant Pack',
       rca: 'Visual Deliverable Pack',
       oma: 'Agent-Building Pack',
       'opl-bookforge': 'Book Manuscript Pack',
+      'opl-scholarskills': 'Scholar Capability Pack',
     },
     domain_authority_kernel_examples: {
       mas: ['medical research truth', 'owner receipt signer'],
@@ -408,6 +409,37 @@ export const MINIMAL_TARGET_OPERATING_ARCHITECTURE_CONTRACT: TargetOperatingArch
       rca: ['visual truth', 'owner receipt signer'],
       oma: ['agent-building semantics', 'target-agent typed blocker signer'],
       'opl-bookforge': ['book manuscript truth', 'owner receipt signer'],
+      'opl-scholarskills': ['candidate scientific capability refs', 'domain owner consumption handoff refs'],
+    },
+    new_agent_baseline_handoff_policy: {
+      surface_kind: 'opl_foundry_new_agent_baseline_handoff_policy',
+      policy_id: 'opl.foundry.new_agent_baseline_handoff.v1',
+      owner: 'one-person-lab',
+      oma_owner: 'opl-meta-agent',
+      required_gates: [
+        'scaffold_validation',
+        'generated_interface_projection',
+        'agent_lab_baseline_or_takeover_suite',
+        'independent_reviewer_assessment',
+        'oma_improvement_or_no_patch_loop',
+        'delivery_receipt_or_work_order_or_typed_blocker',
+      ],
+      scaffold_or_generated_interface_can_claim_complete: false,
+      conformance_or_suite_pass_can_claim_complete: false,
+      exactly_one_terminal_outcome_required: true,
+      accepted_terminal_outcomes: [
+        'delivery_receipt',
+        'no_patch_coordination_receipt',
+        'developer_patch_work_order',
+        'typed_blocker',
+      ],
+      authority_boundary: {
+        opl_can_write_target_domain_truth: false,
+        opl_can_sign_target_owner_receipt: false,
+        opl_can_create_target_typed_blocker: false,
+        oma_can_claim_target_domain_ready: false,
+        oma_can_promote_default_agent_without_gate: false,
+      },
     },
     opl_module_mapping: [
       {
