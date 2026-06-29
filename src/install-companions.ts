@@ -284,30 +284,67 @@ function pickFirstExistingSkillSource(paths: string[]) {
   return null;
 }
 
+function normalizeMaterializedSkillPermissions(root: string) {
+  if (!fs.existsSync(root)) {
+    return;
+  }
+  const stat = fs.statSync(root);
+  if (stat.isDirectory()) {
+    fs.chmodSync(root, 0o755);
+    for (const entry of fs.readdirSync(root)) {
+      normalizeMaterializedSkillPermissions(path.join(root, entry));
+    }
+    return;
+  }
+  if (stat.isFile()) {
+    const executableBits = stat.mode & 0o111;
+    fs.chmodSync(root, executableBits ? 0o755 : 0o644);
+  }
+}
+
+function writeMaterializedFile(sourceFile: string, targetFile: string) {
+  fs.mkdirSync(path.dirname(targetFile), { recursive: true });
+  fs.writeFileSync(targetFile, fs.readFileSync(sourceFile), { mode: 0o644 });
+  fs.chmodSync(targetFile, 0o644);
+}
+
+function copyMaterializedTree(sourceRoot: string, targetRoot: string) {
+  const stat = fs.statSync(sourceRoot);
+  if (stat.isDirectory()) {
+    fs.mkdirSync(targetRoot, { recursive: true, mode: 0o755 });
+    fs.chmodSync(targetRoot, 0o755);
+    for (const entry of fs.readdirSync(sourceRoot)) {
+      copyMaterializedTree(path.join(sourceRoot, entry), path.join(targetRoot, entry));
+    }
+    return;
+  }
+  if (stat.isFile()) {
+    writeMaterializedFile(sourceRoot, targetRoot);
+  }
+}
+
 function materializeSkillDir(sourceRoot: string, targetRoot: string) {
   fs.rmSync(targetRoot, { recursive: true, force: true });
-  fs.mkdirSync(targetRoot, { recursive: true });
-  fs.cpSync(sourceRoot, targetRoot, {
-    recursive: true,
-    dereference: true,
-    preserveTimestamps: true,
-  });
+  copyMaterializedTree(sourceRoot, targetRoot);
+  normalizeMaterializedSkillPermissions(targetRoot);
 }
 
 function materializeSkillFile(sourceFile: string, targetRoot: string) {
   fs.rmSync(targetRoot, { recursive: true, force: true });
   fs.mkdirSync(targetRoot, { recursive: true });
-  fs.copyFileSync(sourceFile, path.join(targetRoot, 'SKILL.md'));
+  writeMaterializedFile(sourceFile, path.join(targetRoot, 'SKILL.md'));
+  normalizeMaterializedSkillPermissions(targetRoot);
 }
 
 function materializeSingleSkillRoot(sourceRoot: string, targetRoot: string) {
   fs.rmSync(targetRoot, { recursive: true, force: true });
   fs.mkdirSync(targetRoot, { recursive: true });
-  fs.copyFileSync(path.join(sourceRoot, 'SKILL.md'), path.join(targetRoot, 'SKILL.md'));
+  writeMaterializedFile(path.join(sourceRoot, 'SKILL.md'), path.join(targetRoot, 'SKILL.md'));
   const metaPath = path.join(sourceRoot, '_meta.json');
   if (fs.existsSync(metaPath)) {
-    fs.copyFileSync(metaPath, path.join(targetRoot, '_meta.json'));
+    writeMaterializedFile(metaPath, path.join(targetRoot, '_meta.json'));
   }
+  normalizeMaterializedSkillPermissions(targetRoot);
 }
 
 function cloneOrUpdateRepo(repoUrl: string, repoDir: string) {
@@ -359,12 +396,7 @@ function downloadArchiveToDirectory(archiveUrl: string, targetRoot: string) {
       return false;
     }
     fs.rmSync(targetRoot, { recursive: true, force: true });
-    fs.mkdirSync(path.dirname(targetRoot), { recursive: true });
-    fs.cpSync(unpackedRoot, targetRoot, {
-      recursive: true,
-      dereference: true,
-      preserveTimestamps: true,
-    });
+    copyMaterializedTree(unpackedRoot, targetRoot);
     return true;
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -417,17 +449,14 @@ function materializeUiUxProMaxSkillSource(home: string) {
   const materializedRoot = path.join(resolveCompanionSourcesRoot(home), 'materialized', 'ui-ux-pro-max');
   fs.rmSync(materializedRoot, { recursive: true, force: true });
   fs.mkdirSync(materializedRoot, { recursive: true });
-  fs.copyFileSync(skillFile, path.join(materializedRoot, 'SKILL.md'));
+  writeMaterializedFile(skillFile, path.join(materializedRoot, 'SKILL.md'));
   for (const entry of ['data', 'scripts', 'templates']) {
     const source = path.join(sourceRoot, entry);
     if (fs.existsSync(source)) {
-      fs.cpSync(source, path.join(materializedRoot, entry), {
-        recursive: true,
-        dereference: true,
-        preserveTimestamps: true,
-      });
+      copyMaterializedTree(source, path.join(materializedRoot, entry));
     }
   }
+  normalizeMaterializedSkillPermissions(materializedRoot);
   return resolveSkillSourceCandidate(materializedRoot);
 }
 

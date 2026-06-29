@@ -17,9 +17,34 @@ import {
 } from './shared.ts';
 
 const DEFAULT_MINIMUM_CODEX_CLI_VERSION = '0.125.0';
-const CODEX_MACOS_ARM64_TARGET = 'aarch64-apple-darwin';
 const DEFAULT_CODEX_LATEST_TIMEOUT_MS = 5000;
 const CODEX_RUNTIME_UPDATER_VERSION = 'opl-runtime-toolchain-updater.v1';
+const CODEX_PLATFORM_TARGETS = {
+  'darwin:arm64': {
+    packageName: '@openai/codex-darwin-arm64',
+    targetTriple: 'aarch64-apple-darwin',
+  },
+  'darwin:x64': {
+    packageName: '@openai/codex-darwin-x64',
+    targetTriple: 'x86_64-apple-darwin',
+  },
+  'linux:arm64': {
+    packageName: '@openai/codex-linux-arm64',
+    targetTriple: 'aarch64-unknown-linux-musl',
+  },
+  'linux:x64': {
+    packageName: '@openai/codex-linux-x64',
+    targetTriple: 'x86_64-unknown-linux-musl',
+  },
+  'win32:arm64': {
+    packageName: '@openai/codex-win32-arm64',
+    targetTriple: 'aarch64-pc-windows-msvc',
+  },
+  'win32:x64': {
+    packageName: '@openai/codex-win32-x64',
+    targetTriple: 'x86_64-pc-windows-msvc',
+  },
+} as const;
 
 type ParsedCliVersion = {
   version: string;
@@ -57,6 +82,8 @@ type InstalledCodexPayload = {
   missing_platform_package_spec: string | null;
 };
 
+type CodexPlatformTarget = (typeof CODEX_PLATFORM_TARGETS)[keyof typeof CODEX_PLATFORM_TARGETS];
+
 function resolveMinimumCodexCliVersion() {
   return normalizeOptionalString(process.env.OPL_MIN_CODEX_CLI_VERSION)
     ?? DEFAULT_MINIMUM_CODEX_CLI_VERSION;
@@ -71,6 +98,17 @@ function resolveCodexLatestTimeoutMs() {
 
 function resolveHomeDir() {
   return normalizeOptionalString(process.env.HOME) ?? os.homedir();
+}
+
+function resolveCodexPlatformTarget(): CodexPlatformTarget {
+  const platform = normalizeOptionalString(process.env.OPL_CODEX_PLATFORM_OVERRIDE) ?? process.platform;
+  const arch = normalizeOptionalString(process.env.OPL_CODEX_ARCH_OVERRIDE) ?? process.arch;
+  const key = `${platform}:${arch}` as keyof typeof CODEX_PLATFORM_TARGETS;
+  const target = CODEX_PLATFORM_TARGETS[key];
+  if (!target) {
+    throw new Error(`Unsupported Codex runtime platform: ${platform}/${arch}`);
+  }
+  return target;
 }
 
 function runtimeRootFromCodexPath(binaryPath: string | null | undefined) {
@@ -227,8 +265,8 @@ function inspectRuntimeCodexToolchain(
     system_tool_priority: 'prefer_compatible_system_codex_from_env_or_path',
     managed_payloads: ['codex_cli', 'codex_path_rg'],
     platform_package_materialization_policy: {
-      package_name: '@openai/codex-darwin-arm64',
-      target_triple: CODEX_MACOS_ARM64_TARGET,
+      package_name: resolveCodexPlatformTarget().packageName,
+      target_triple: resolveCodexPlatformTarget().targetTriple,
       source_of_truth: 'npm_optional_dependency_or_preseeded_platform_tarball',
       explicit_install_when_optional_payload_missing: true,
       install_scope: 'app_owned_stage_prefix_only',
@@ -498,32 +536,35 @@ function normalizePackageBinEntry(packageJson: Record<string, unknown> | null, b
 }
 
 function resolveInstalledCodexPlatformSpec(packageRoot: string) {
+  const target = resolveCodexPlatformTarget();
   const packageJson = readPackageJson(packageRoot);
   const optionalDependencies = packageJson?.optionalDependencies;
   if (!optionalDependencies || typeof optionalDependencies !== 'object') {
     return null;
   }
-  const spec = (optionalDependencies as Record<string, unknown>)['@openai/codex-darwin-arm64'];
+  const spec = (optionalDependencies as Record<string, unknown>)[target.packageName];
   return typeof spec === 'string' && spec.trim().length > 0
-    ? `@openai/codex-darwin-arm64@${spec}`
+    ? `${target.packageName}@${spec}`
     : null;
 }
 
 function findInstalledCodexPayload(packageRoot: string): InstalledCodexPayload {
+  const target = resolveCodexPlatformTarget();
+  const packageBaseName = target.packageName.split('/').pop()!;
   const scopedPackageRoot = path.dirname(packageRoot);
-  const siblingPlatformPackageRoot = path.join(scopedPackageRoot, 'codex-darwin-arm64');
-  const nestedPlatformPackageRoot = path.join(packageRoot, 'node_modules', '@openai', 'codex-darwin-arm64');
+  const siblingPlatformPackageRoot = path.join(scopedPackageRoot, packageBaseName);
+  const nestedPlatformPackageRoot = path.join(packageRoot, 'node_modules', '@openai', packageBaseName);
   const siblingPlatformVendorRoot = path.join(
     siblingPlatformPackageRoot,
     'vendor',
-    CODEX_MACOS_ARM64_TARGET,
+    target.targetTriple,
   );
   const platformVendorRoot = path.join(
     nestedPlatformPackageRoot,
     'vendor',
-    CODEX_MACOS_ARM64_TARGET,
+    target.targetTriple,
   );
-  const localVendorRoot = path.join(packageRoot, 'vendor', CODEX_MACOS_ARM64_TARGET);
+  const localVendorRoot = path.join(packageRoot, 'vendor', target.targetTriple);
   const vendorCodex = findExistingFile([
     path.join(siblingPlatformVendorRoot, 'bin', 'codex'),
     path.join(platformVendorRoot, 'bin', 'codex'),
@@ -670,11 +711,13 @@ function copyDirectoryContents(sourceRoot: string, targetRoot: string) {
 }
 
 function materializePreseededCodexPlatformPackage(stageAttemptRoot: string, platformTarballPath: string) {
+  const target = resolveCodexPlatformTarget();
+  const packageBaseName = target.packageName.split('/').pop()!;
   const extractedRoot = extractTarballToDirectory(
     platformTarballPath,
-    path.join(stageAttemptRoot, '.preseed', 'codex-darwin-arm64'),
+    path.join(stageAttemptRoot, '.preseed', packageBaseName),
   );
-  const platformPackageRoot = path.join(stageAttemptRoot, 'node_modules', '@openai', 'codex-darwin-arm64');
+  const platformPackageRoot = path.join(stageAttemptRoot, 'node_modules', '@openai', packageBaseName);
   copyDirectoryContents(extractedRoot, platformPackageRoot);
   return {
     package_root: platformPackageRoot,

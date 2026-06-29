@@ -154,6 +154,7 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
       assert.equal(item?.status, 'synced');
       assert.equal(item?.action, 'symlink');
       assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillName, 'SKILL.md')), true);
+      assert.match(fs.readFileSync(path.join(homeRoot, 'codex-home', 'skills', skillName, 'SKILL.md'), 'utf8'), /#/);
     }
     assert.equal(fs.existsSync(path.join(homeRoot, '.local', 'bin', 'officecli')), true);
     assert.equal(fs.existsSync(path.join(homeRoot, '.local', 'bin', 'mineru-open-api')), true);
@@ -204,6 +205,42 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('managed companion sync writes materialized skills with readable permissions', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-readable-skills-home-'));
+  const env = createFakeCompanionInstallEnv(homeRoot);
+  const mineruSkillPath = path.join(env.OPL_MINERU_DOCUMENT_EXTRACTOR_SOURCE_ROOT, 'SKILL.md');
+  const mineruMetaPath = path.join(env.OPL_MINERU_DOCUMENT_EXTRACTOR_SOURCE_ROOT, '_meta.json');
+  fs.chmodSync(mineruSkillPath, 0o200);
+  fs.chmodSync(mineruMetaPath, 0o200);
+
+  try {
+    const output = runCli(['skill', 'companion', 'apply', '--mode', 'managed', '--superpowers', 'keep'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      PATH: `${path.join(homeRoot, '.local', 'bin')}:/usr/bin:/bin`,
+      ...env,
+    }) as {
+      companion_skills: {
+        items: Array<{ skill_id: string; status: string; source_path: string | null }>;
+      };
+    };
+
+    const mineru = output.companion_skills.items.find((entry) => entry.skill_id === 'mineru-document-extractor');
+    assert.equal(mineru?.status, 'synced');
+    assert.equal(mineru?.source_path, path.join(homeRoot, 'companion-sources', 'materialized', 'mineru-document-extractor'));
+
+    const materializedSkillPath = path.join(homeRoot, 'companion-sources', 'materialized', 'mineru-document-extractor', 'SKILL.md');
+    const targetSkillPath = path.join(homeRoot, 'codex-home', 'skills', 'mineru-document-extractor', 'SKILL.md');
+    assert.equal((fs.statSync(materializedSkillPath).mode & 0o777), 0o644);
+    assert.equal((fs.statSync(path.join(path.dirname(materializedSkillPath), '_meta.json')).mode & 0o777), 0o644);
+    assert.match(fs.readFileSync(targetSkillPath, 'utf8'), /mineru-document-extractor/);
+  } finally {
+    fs.chmodSync(mineruSkillPath, 0o644);
+    fs.chmodSync(mineruMetaPath, 0o644);
+    fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
 
