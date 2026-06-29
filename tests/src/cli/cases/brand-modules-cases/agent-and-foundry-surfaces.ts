@@ -114,13 +114,15 @@ test('agent-owned internal modules expose the same branding spine without becomi
 });
 
 test('Foundry Agent series exposes a shared CLI spine instead of copying OPL brand modules into each agent', () => {
+  const expectedStandardAgentIds = ['mas', 'mag', 'rca', 'oma', 'opl-bookforge', 'opl-scholarskills'];
+
   for (const operation of ['status', 'inspect', 'interfaces', 'validate', 'doctor', 'peers']) {
     const output = runCli(['agents', 'foundry', operation]).foundry_agent_cli_spine;
 
     assert.equal(output.series_id, 'opl_foundry_agent_series.v1');
     assert.equal(output.series_label, 'OPL Foundry Agent');
     assert.equal(output.standard_agent_registry.source_ref, 'src/standard-agent-registry.ts');
-    assert.deepEqual(output.standard_agent_registry.agent_ids, ['mas', 'mag', 'rca', 'oma', 'opl-bookforge']);
+    assert.deepEqual(output.standard_agent_registry.agent_ids, expectedStandardAgentIds);
     assert.equal(output.refs.standard_agent_registry_ref, 'src/standard-agent-registry.ts');
     assert.equal(output.refs.policy_release_ref, 'contracts/opl-framework/foundry-agent-series-policy-release.json');
     assert.equal(output.operation, operation);
@@ -141,17 +143,11 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying OPL bra
     );
     assert.deepEqual(
       output.peers.map((entry: { agent_id: string }) => entry.agent_id),
-      ['mas', 'mag', 'rca', 'oma', 'opl-bookforge'],
+      expectedStandardAgentIds,
     );
     assert.deepEqual(
       output.peers.map((entry: { series_membership: string }) => entry.series_membership),
-      [
-        'standard_domain_agent',
-        'standard_domain_agent',
-        'standard_domain_agent',
-        'standard_domain_agent',
-        'standard_domain_agent',
-      ],
+      expectedStandardAgentIds.map(() => 'standard_domain_agent'),
     );
     for (const peer of output.peers) {
       assert.deepEqual(Object.keys(peer).sort(), [
@@ -182,53 +178,37 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying OPL bra
   }
 });
 
-test('OPL Foundry Agent index exposes MAS MAG RCA OMA Book Forge as one standard series', () => {
+test('OPL Foundry Agent index exposes all standard agents as one standard series', () => {
   const list = runCli(['foundry', 'agents', 'list']).foundry_agents;
+  const expectedStandardAgentIds = ['mas', 'mag', 'rca', 'oma', 'opl-bookforge', 'opl-scholarskills'];
+
   assert.deepEqual(
     list.agents.map((entry: { agent_id: string }) => entry.agent_id),
-    ['mas', 'mag', 'rca', 'oma', 'opl-bookforge'],
+    expectedStandardAgentIds,
   );
   assert.deepEqual(
     list.agents.map((entry: { series_membership: string }) => entry.series_membership),
-    [
-      'standard_domain_agent',
-      'standard_domain_agent',
-      'standard_domain_agent',
-      'standard_domain_agent',
-      'standard_domain_agent',
-    ],
+    expectedStandardAgentIds.map(() => 'standard_domain_agent'),
   );
   assert.deepEqual(
     list.agents.map((entry: { foundry_command_surface: string }) => entry.foundry_command_surface),
-    [
-      'opl foundry agents inspect mas',
-      'opl foundry agents inspect mag',
-      'opl foundry agents inspect rca',
-      'opl foundry agents inspect oma',
-      'opl foundry agents inspect opl-bookforge',
-    ],
+    expectedStandardAgentIds.map((agentId) => `opl foundry agents inspect ${agentId}`),
   );
   assert.deepEqual(
     list.agents.map((entry: { canonical_series_command_surface: string }) => entry.canonical_series_command_surface),
-    ['opl agents foundry', 'opl agents foundry', 'opl agents foundry', 'opl agents foundry', 'opl agents foundry'],
+    expectedStandardAgentIds.map(() => 'opl agents foundry'),
   );
   assert.deepEqual(
     list.agents.map((entry: { cli_smoke: { executable_brand_cli_command_surface: string | null } }) =>
       entry.cli_smoke.executable_brand_cli_command_surface
     ),
-    [null, null, null, null, null],
+    expectedStandardAgentIds.map(() => null),
   );
   assert.deepEqual(
     list.agents.map((entry: { cli_smoke: { json_flag_aliases: string[] } }) =>
       entry.cli_smoke.json_flag_aliases
     ),
-    [
-      ['--json'],
-      ['--json'],
-      ['--json'],
-      ['--json'],
-      ['--json'],
-    ],
+    expectedStandardAgentIds.map(() => ['--json']),
   );
   for (const agent of list.agents) {
     assertOnlyAllowedFoundryProjectionFields(agent, allowedFoundryAgentListFields);
