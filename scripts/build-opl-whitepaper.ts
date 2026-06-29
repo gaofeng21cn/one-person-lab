@@ -323,6 +323,10 @@ function extractPdfText(pdfFile: string) {
   return result.stdout;
 }
 
+function normalizePdfTextForTermCheck(text: string) {
+  return text.replace(/[\u2010-\u2015]/g, '-');
+}
+
 function fileSha1(filePath: string) {
   return crypto.createHash('sha1').update(fs.readFileSync(filePath)).digest('hex');
 }
@@ -394,13 +398,17 @@ function main() {
   if (info.page_size_pts.height <= info.page_size_pts.width) {
     throw new Error(`Expected portrait PDF, got ${info.page_size_pts.width}x${info.page_size_pts.height} pts.`);
   }
-  const text = extractPdfText(pdfPath);
+  const text = normalizePdfTextForTermCheck(extractPdfText(pdfPath));
   const requiredTerms = [
     'One Person Lab 白皮书',
     'OPL Framework',
     'OPL Charter',
     'OPL Pack',
     'OPL Stagecraft',
+    'AI-first',
+    '交付即推进',
+    '目标先于路径',
+    '真相归主',
     '抓大放小',
     'Med Auto Science',
     'Foundry Agents',
