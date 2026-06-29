@@ -946,19 +946,11 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-05-08
 
-### 历史决策：Hermes 恢复为 OPL family 默认在线 substrate
+### 历史指针：Hermes-first / hosted-runtime 回滚叙事已迁入 history
 
-状态：已被 2026-05-10 的 Temporal-backed provider 决策 supersede。保留本段只作为已退役 Hermes-first 回滚背景和迁移期实现口径，不作为当前默认 topology、安装纪律或 readiness 目标。
+状态：已被 2026-05-10 Temporal-backed provider 决策 supersede。旧 Hermes 默认在线 substrate、Gateway、cron/webhook wakeup、Full package payload、system initialize readiness、hybrid provider adapter，以及“默认安装依赖降为显式 hosted/runtime adapter”的中间回滚语境，已迁入 [退役 runtime / gateway / GUI 决策历史](./history/runtime-substrate/retired-decisions-history.md)。
 
-压缩读法：本历史决策只保留当时的判断来源：OPL 曾把 24h online product capability 寄托在上游 `Hermes-Agent`，并据此写过默认安装、Gateway、cron/webhook wakeup、Full package payload、system initialize readiness 和 hybrid provider adapter 口径。当前 SSOT 已回到 2026-05-10 Temporal-backed provider 决策、核心五件套、runtime 命名边界和 family runtime online substrate contract。
-
-当前处置：Temporal-backed provider 是 production online runtime 的必需 substrate；`Codex CLI` 是默认且第一公民 executor；`hermes_agent`、`claude_code`、`antigravity_cli` 只能作为显式非默认 executor adapter/backend。旧 Hermes online runtime、Gateway、provider/readiness、cron/webhook bridge、Full package Hermes payload 和 hybrid provider compatibility 只保留为 history / provenance / diagnostic / negative guard，不恢复为安装路径、readiness 目标、default executor、provider fallback、compatibility interface 或 current worklist。历史 `intake` / `hydrate` 中仍有效的 typed queue 语义已由 OPL/Temporal provider owned path 承接。
-
-### 历史决策：Hermes 从默认安装依赖降为显式 hosted/runtime adapter
-
-状态：先被 2026-05-08 已退役 Hermes-first online substrate 决策取代，又被 2026-05-10 Temporal-backed provider 决策 supersede。保留本段用于解释 2026-05-08 早期误判和回滚背景，不作为当前实现口径。
-
-压缩读法：本段只解释 2026-05-08 前后曾出现的中间回滚语境：OPL 一度把默认运行时收敛到 `Codex CLI + domain entries`，并把 Hermes hosted / online-management 作为非阻塞或显式 adapter 语境读取。当前安装、首启、Full package 和 readiness 口径不从本段继承；它们回到 Temporal-backed provider 决策、App release owner 和 live install/readiness contracts。`hermes_agent` 继续只按 canonical 显式非默认 executor adapter/backend 读取。
+当前读法：Temporal-backed provider 是 production online runtime 的必需 substrate；`Codex CLI` 是默认且第一公民 executor；`hermes_agent`、`claude_code`、`antigravity_cli` 只能作为显式非默认 executor adapter/backend。历史 Hermes provider / Gateway / readiness / compat 叙事不得恢复为安装路径、readiness 目标、default executor、provider fallback、compatibility interface 或 current worklist。
 
 ### 决策：引入 Family Action Catalog 作为 action metadata 单一声明面
 
@@ -1038,11 +1030,11 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-05-02
 
-### 历史决策：首启 readiness 拆分为 core/domain 可用与 Hermes online-management 渐进就绪
+### 历史指针：Hermes online-management 首启 readiness 已迁入 history
 
-状态：先被 2026-05-08 的 Hermes-first online substrate 决策取代，又被 2026-05-10 的 Temporal-backed production runtime 决策 supersede。当前 Full OPL readiness 要求 Temporal-backed family runtime provider ready；本段只保留迁移背景。
+状态：先被 2026-05-08 Hermes-first online substrate 决策取代，又被 2026-05-10 Temporal-backed production runtime 决策 supersede。旧 core/domain 可用与 Hermes online-management 渐进就绪分层已迁入 [退役 runtime / gateway / GUI 决策历史](./history/runtime-substrate/retired-decisions-history.md)。
 
-压缩读法：本段只保留首启 readiness 分层的历史来源。迁移期曾把 Hermes online-management gateway 当作非阻塞渐进就绪项；当前该层已经被 family runtime provider readiness 取代。`opl install`、`opl system initialize`、App 首启和公开 README 的当前读法是 Core、Domain modules、Temporal-backed family runtime provider 和 App release/user-path evidence 分层；不得把 Hermes gateway、online-management pending 或 provider adapter 写回当前安装行为、首屏层级、readiness blocker 或 compatibility surface。`hermes_agent` 只作为显式非默认 executor adapter/backend 保留。
+当前读法：`opl install`、`opl system initialize`、App 首启和公开 README 的 current readiness 按 Core、Domain modules、Temporal-backed family runtime provider 和 App release/user-path evidence 分层；不得把 Hermes gateway、online-management pending 或 provider adapter 写回当前安装行为、首屏层级、readiness blocker 或 compatibility surface。
 
 ## 2026-04-27
 
@@ -1110,7 +1102,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 状态：Runtime Manager 作为产品控制面继续有效；“Hermes 上”这一目标 substrate 已被 2026-05-10 的 Temporal-backed provider 决策 supersede。后续按 provider-backed Runtime Manager 解释。
 
-原因：历史上曾计划把长跑托管任务注册到外部 `Hermes-Agent` online runtime substrate，由它负责 session、scheduler、wakeup、interrupt/resume、memory、delivery、approval、cron 与 webhook。当前这一路线已被 Temporal-backed provider 取代；保留本段只解释 Runtime Manager 为什么需要产品级 provision、version pin、profile wiring、typed family queue、domain task registration hydration、诊断、恢复入口、native helper catalog 与高频状态索引，而不是复制一套 runtime kernel。
+原因：Runtime Manager 需要产品级 provision、version pin、profile wiring、typed family queue、domain task registration hydration、诊断、恢复入口、native helper catalog 与高频状态索引，但不应复制一套 runtime kernel。早期 “Hermes 上” / 自有 sidecar 叙事已迁入 [退役 runtime / gateway / GUI 决策历史](./history/runtime-substrate/retired-decisions-history.md)。
 
 当前读法：Runtime Manager 的细节 SSOT 已转到 `contracts/opl-framework/runtime-manager-contract.json`、`docs/references/runtime-substrate/opl-runtime-manager-target.md`、`docs/runtime/opl-runtime-naming-and-boundary-contract.md`、source/tests 和 fresh CLI/read-model。本文只保留决策来源与 no-resurrection 边界：
 
@@ -1135,15 +1127,11 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-04-23
 
-### 决策：gateway-first 合同语料退到 reference / history 层
+### 历史指针：gateway-first / federation 合同语料已迁入 history
 
-原因：当前 `OPL` 的一等主线已经明确是 `Codex-default session/runtime + explicit activation layer + family skill sync/discovery`。继续把 `gateway-federation`、`opl-federation-contract`、`opl-routed-action-gateway` 与 `contracts/opl-framework/*` 这批旧语料写成默认公开集成合同，只会制造第二真相。
+状态：gateway-first / federation / routed-action 语料不再是 active compatibility 或默认公开集成合同。历史读法、迁移背景和 no-resurrection 边界见 [退役 runtime / gateway / GUI 决策历史](./history/runtime-substrate/retired-decisions-history.md)。
 
-影响：
-
-- 这批 gateway-first 语料继续 repo-tracked，但角色收口为 reference / history / negative-guard surface，不作为兼容接口
-- 当前真相优先回到 `README*`、核心五件套与 `contracts/README.md`
-- 已收录 domain 的实际接入单元继续写成 repo-owned capability surface 与单一 app skill
+当前读法：OPL 当前真相优先回到 `README*`、核心五件套与 `contracts/README.md`；已收录 domain 的实际接入单元继续写成 repo-owned capability surface 与单一 app skill。
 
 ### 决策：`OPL` 默认合同冻结为 `Codex-default session runtime + explicit activation layer`
 
@@ -1210,23 +1198,11 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-04-20
 
-### 历史决策：公开产品模型曾重置为 `Product API`
+### 历史指针：Product API / 旧本地 UI adapter 公开模型已迁入 history
 
-原因：旧本地 UI adapter 体系把 GUI 启动、环境管理、工作空间、任务、进度、文件、领域接线和 hosted 试验语义揉在了一层，已经不适合当前 `OPL + 独立界面仓` 目标形态。
+状态：旧 Product API、旧本地 UI adapter、entry-guide、domain-wiring、hosted bundle/package 语义已退出当前主线。历史读法见 [退役 runtime / gateway / GUI 决策历史](./history/runtime-substrate/retired-decisions-history.md)。
 
-影响：
-
-- 当前公开模型统一收敛为：
-  - `system`
-  - `engines`
-  - `modules`
-  - `agents`
-  - `workspaces`
-  - `sessions`
-  - `progress`
-  - `artifacts`
-- `opl` shell / TUI、GUI 外壳与 CLI 共同消费这组产品资源
-- 旧本地 UI adapter 公开语义退出当前主线
+当前读法：当前产品与 GUI 边界回到 OPL Framework、One Person Lab App、AionUI mainline shell、runtime/product docs 和 App-owned release/user-path evidence。
 
 ### 决策：Domain Agents 与 OPL 保持松耦合
 
@@ -1238,54 +1214,25 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 各个领域仓继续持有智能体入口、领域逻辑、运行规则与交付物
 - 通过 `OPL` 调用领域智能体，与直接在 `Codex` 里调用该智能体，工作逻辑保持一致
 
-### 决策：旧本地 UI adapter 相关公开语义进入退役清单
+### 历史指针：旧本地 UI adapter 退役清单已迁入 history
 
-原因：这些语义属于上一阶段的公开设计，继续保留在主线里会污染当前开发和文档。
-
-影响：
-
-- 当前主线不再把旧本地 UI adapter、entry-guide、domain-wiring、hosted bundle/package 作为公开产品主语。
-- 相关文档只留在参考层或历史层
+旧本地 UI adapter、entry-guide、domain-wiring、hosted bundle/package 只作为 provenance 阅读；当前主线不再把它们作为公开产品主语。历史读法见 [退役 runtime / gateway / GUI 决策历史](./history/runtime-substrate/retired-decisions-history.md)。
 
 ## 2026-04-19
 
-### 决策：GUI 主线冻结为“OPL 主仓共享运行时 + 独立界面仓”
+### 历史指针：frontdoor-era GUI 分仓和外部 GUI 基座叙事已迁入 history
 
-原因：GUI 壳与 `OPL` 运行时需要保持分仓演进；`OPL` 主仓只保留运行时真相与接口面，真正的 GUI 主线放在独立界面仓里推进。
+状态：`OPL 主仓共享运行时 + 独立界面仓` 和外部 GUI 基座语境区分已经被 2026-05-15 App clean 产品仓、2026-06-03 GUI shell owner surface 和 App-owned contracts 吸收。历史读法见 [退役 runtime / gateway / GUI 决策历史](./history/runtime-substrate/retired-decisions-history.md)。
 
-影响：
-
-- `OPL` 主仓只保留 CLI 产品入口、工作空间 / 会话 / 进度 / 交付物真相、release distribution surface，以及 Codex-default runtime config；Hermes mode config 只保留历史语境
-- 独立界面仓负责真正的 GUI 外壳
-- 一键安装默认打开已安装 GUI；macOS 上缺失时自动下载、挂载并安装 `one-person-lab-app` release 中匹配当前平台的 OPL 品牌 Electron DMG
-
-### 决策：外部 GUI 基座只在“当前主线 / 基准 / 参考 / 备线”语境出现
-
-原因：必须持续区分“上游参考对象”和“当前已经真实集成的对象”。
-
-影响：
-
-- AionUI codebase 可以作为当前 GUI 主线基座出现在 current status / implementation planning，但必须明确用户交付物是 OPL 品牌壳
-- 外部 GUI 产品名只能用于基准或参考语境；当前 GUI 主线只承认 `opl-aion-shell` 这一 OPL 品牌壳，并由 `one-person-lab-app` 打包发布给用户
-- 只有真实集成发生后，才允许在 current status / current implementation 里写成已集成事实
+当前读法：AionUI mainline shell 是 App 当前 GUI 主线；Hermes Desktop 是 App-owned 唯一 foreground alternative；AGUI/CopilotKit 只作为 archived technical proof / explicit replay provenance。
 
 ## 2026-04-11
 
-### 历史决策：`Hermes-Agent` 命名只指上游外部项目 / 服务
+### 历史指针：Hermes 命名 / runtime substrate 早期决策已迁入 history
 
-状态：命名边界仍有效，但 runtime substrate 目标已被 Temporal-backed provider 决策 supersede。当前 `Hermes-Agent` 文案可用于上游项目 / 服务本体，以及 `hermes_agent` canonical 显式非默认 executor adapter/backend 的标签；旧 Hermes provider / Gateway / readiness / compat 文案只属于历史 provenance、诊断语料或负向 guard。不得再把 Hermes 写成 OPL provider、默认 runtime substrate、readiness path 或兼容接口。
+状态：早期 `Hermes-Agent` 命名和统一 runtime substrate 叙事已被 Temporal-backed provider、explicit executor adapter/backend 和 Codex CLI first-class executor 口径吸收。历史读法见 [退役 runtime / gateway / GUI 决策历史](./history/runtime-substrate/retired-decisions-history.md)。
 
-原因：避免把仓内 shim、helper 或 scaffold 误写成“已接入 Hermes-Agent”，同时避免把当前 canonical `hermes_agent` executor adapter/backend 误删为旧 Hermes provider/Gateway 残留。
-
-### 历史决策：统一 runtime substrate，不强制统一具体执行器
-
-状态：历史决策，已被 2026-05 的 provider-backed family runtime / Temporal production required substrate 口径吸收。当前读法是：Temporal-backed family runtime provider 承担 production online substrate；`Hermes-Agent` 不再是 runtime provider / Gateway / readiness path，但 `hermes_agent` 仍可作为显式非默认 executor adapter/backend。`Codex CLI` 当前仍是家族默认且第一公民的具体执行器，默认模式是 `autonomous`。
-
-影响：
-
-- family runtime provider 统一负责 stage attempt、signal/query/history、receipt 和 operator projection 等 substrate 能力；历史 `Hermes Kernel` / online-management gateway 说法只作为迁移期背景
-- `OPL` 与各领域仓继续按当前 owner split 负责 activation、authority boundary、object contract 和 audit truth；旧 `gateway` 只作为历史词汇保留，不恢复为 active compatibility surface
-- 具体任务执行继续通过领域内部的执行路径完成
+当前读法：`Hermes-Agent` 文案可用于上游项目 / 服务本体，以及 `hermes_agent` canonical 显式非默认 executor adapter/backend 的标签；不得再把 Hermes 写成 OPL provider、默认 runtime substrate、readiness path 或兼容接口。
 
 ### 决策：家族第一公民执行器正式名称冻结为 `Codex CLI`
 
