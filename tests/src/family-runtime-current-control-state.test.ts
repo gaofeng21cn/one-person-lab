@@ -171,7 +171,7 @@ test('current control state treats queued MAS PaperMission stage-route as provid
     assert.equal(state.blocker_reason, 'provider_attempt_start_pending');
     assert.equal(identity.route_identity_key, 'paper-mission-transaction::003::submission_milestone_candidate::followthrough::route');
     assert.equal(identity.attempt_idempotency_key, '003::submission_milestone_candidate::followthrough::opl-attempt');
-    assert.equal(identity.idempotency_key, '003::submission_milestone_candidate::followthrough::opl-attempt');
+    assert.equal(identity.idempotency_key, '003::submission_milestone_candidate::followthrough::opl-request');
     assert.equal(identity.work_unit_id, 'submission_milestone_candidate');
     assert.equal(identity.work_unit_fingerprint, 'paper-mission::003::submission_milestone_candidate::followthrough');
     assert.equal(state.running_provider_attempt, false);

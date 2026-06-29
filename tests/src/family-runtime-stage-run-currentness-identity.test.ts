@@ -89,7 +89,7 @@ test('builds a reusable StageRun currentness identity from task and attempt refs
     truth_epoch: 'truth-epoch-1',
     runtime_health_epoch: 'runtime-health-1',
     source_eval_id: 'publication-eval::current',
-    idempotency_key: 'attempt::003::publication-gate-replay',
+    idempotency_key: 'provider-admission::003::sha256:gate-replay-current',
     route_identity_key: 'route::003::publication-gate-replay',
     attempt_idempotency_key: 'attempt::003::publication-gate-replay',
     recovery_obligation_id: null,
@@ -266,6 +266,7 @@ test('preserves explicit MAS provider admission identity fields in StageRun curr
         status: 'provider_admission_pending',
         route_identity_key: 'mas-route::003::ai-reviewer',
         attempt_idempotency_key: 'mas-attempt::003::ai-reviewer',
+        request_idempotency_key: 'mas-request::003::ai-reviewer',
         idempotency_key: 'mas-provider-admission::003::ai-reviewer',
       },
       owner_route_currentness_basis: {
@@ -286,11 +287,12 @@ test('preserves explicit MAS provider admission identity fields in StageRun curr
 
   assert.equal(identity.route_identity_key, 'mas-route::003::ai-reviewer');
   assert.equal(identity.attempt_idempotency_key, 'mas-attempt::003::ai-reviewer');
-  assert.equal(identity.idempotency_key, 'mas-attempt::003::ai-reviewer');
+  assert.equal(identity.idempotency_key, 'mas-request::003::ai-reviewer');
   assert.deepEqual(identity.provider_admission_identity, {
     status: 'provider_admission_pending',
     route_identity_key: 'mas-route::003::ai-reviewer',
     attempt_idempotency_key: 'mas-attempt::003::ai-reviewer',
+    request_idempotency_key: 'mas-request::003::ai-reviewer',
     idempotency_key: 'mas-provider-admission::003::ai-reviewer',
   });
   assert.deepEqual(identity.owner_route_currentness_basis, {
