@@ -46,6 +46,12 @@ export type PaperMissionRedriveReadback = {
   };
 };
 
+type PaperMissionRoutePayload = Record<string, unknown> & {
+  candidate_ref: string;
+  paper_mission_transaction_ref: string;
+  route_impact?: Record<string, unknown>;
+};
+
 export function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   const codexHome = extra.CODEX_HOME ?? path.join(stateRoot, 'codex-home');
   if (!extra.CODEX_HOME) {
@@ -72,8 +78,10 @@ export function writeDispatchTrap(scriptPath: string, proofPath: string) {
   );
 }
 
-export function paperMissionRoutePayload(overrides: Record<string, unknown> = {}) {
-  return {
+export function paperMissionRoutePayload<T extends Record<string, unknown> = Record<string, never>>(
+  overrides: T = {} as T,
+): PaperMissionRoutePayload & T {
+  const payload = {
     surface_kind: 'opl_mas_paper_mission_route_runtime_request',
     schema_version: 1,
     runtime_request_status: 'queued_request',
@@ -110,9 +118,12 @@ export function paperMissionRoutePayload(overrides: Record<string, unknown> = {}
     },
     ...overrides,
   };
+  return payload as PaperMissionRoutePayload & T;
 }
 
-export function paperMissionRoutePayloadWithCarrierIdentityOnly(overrides: Record<string, unknown> = {}) {
+export function paperMissionRoutePayloadWithCarrierIdentityOnly<
+  T extends Record<string, unknown> = Record<string, never>,
+>(overrides: T = {} as T) {
   const routeIdentityKey = 'paper-mission-transaction:dm002:1::route';
   const attemptIdempotencyKey = 'dm002:gate-clearing:accepted-candidate::opl-attempt';
   const requestIdempotencyKey = 'dm002:gate-clearing:accepted-candidate::opl-request';
@@ -140,7 +151,9 @@ export function paperMissionRoutePayloadWithCarrierIdentityOnly(overrides: Recor
   return payload;
 }
 
-export function paperMissionRoutePayloadWithWorkspace(overrides: Record<string, unknown> = {}) {
+export function paperMissionRoutePayloadWithWorkspace<T extends Record<string, unknown> = Record<string, never>>(
+  overrides: T = {} as T,
+) {
   return paperMissionRoutePayload({
     workspace_root: '/tmp/mas-dm-cvd-workspace',
     command_cwd: '/tmp/mas-dm-cvd-workspace',

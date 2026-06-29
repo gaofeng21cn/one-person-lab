@@ -209,6 +209,72 @@ function routeImpactForTransitionReceipt(terminalAttempt: StageAttemptPayload) {
   return Object.keys(routeImpact).length > 0 ? routeImpact : null;
 }
 
+const MAS_IMPACT_RECEIPT_FORBIDDEN_AUTHORITY_WRITES = [
+  'mas_owner_receipt',
+  'mas_typed_blocker',
+  'mas_human_gate',
+  'mas_current_package',
+  'mas_paper_body',
+  'mas_publication_eval_latest',
+  'mas_controller_decision',
+  'runtime_db_or_provider_queue_hand_edit',
+] as const;
+
+function masImpactReceiptForTerminalAttempt(input: {
+  payload: Record<string, unknown>;
+  terminalAttempt: StageAttemptPayload;
+  nextTask: ReturnType<typeof paperMissionStageRouteTaskStatusForTerminalAttempt>;
+}) {
+  const routeImpact = recordValue(input.terminalAttempt.route_impact);
+  const studyId = paperMissionStageRouteIdentityValue(input.payload, 'study_id')
+    ?? optionalString(input.payload.study_id);
+  const routeTarget = paperMissionStageRouteIdentityValue(input.payload, 'route_target')
+    ?? optionalString(routeImpact.route_target);
+  const nextOwner = optionalString(routeImpact.next_owner)
+    ?? optionalString(input.payload.next_owner)
+    ?? 'med-autoscience';
+  const observedFailureClass = optionalString(routeImpact.observed_failure_class)
+    ?? (input.nextTask.status === 'dead_letter'
+      ? 'provider_terminal_failure'
+      : input.nextTask.reason === PAPER_MISSION_STAGE_ROUTE_DOMAIN_GATE_PENDING_REASON
+        ? 'mas_owner_route_pending_after_opl_terminal_closeout'
+        : 'typed_runtime_blocker_observed');
+  const missionArtifactImpact = optionalString(routeImpact.mission_artifact_impact)
+    ?? (input.nextTask.status === 'dead_letter'
+      ? 'target_artifact_not_unblocked_provider_terminal_failure'
+      : 'target_artifact_not_advanced_mas_owner_consumption_required');
+  const targetArtifactOrOwnerPath = optionalString(routeImpact.target_artifact_or_owner_path)
+    ?? routeTarget
+    ?? paperMissionStageRouteIdentityValue(input.payload, 'opl_route_command_ref')
+    ?? paperMissionStageRouteIdentityValue(input.payload, 'paper_mission_transaction_ref')
+    ?? nextOwner;
+  const recommendedNextAction = optionalString(routeImpact.recommended_next_action)
+    ?? (studyId
+      ? `run MAS PaperMission inspect for study ${studyId} and consume the OPL transition receipt before claiming paper progress`
+      : 'run MAS PaperMission inspect for this route command and consume the OPL transition receipt before claiming paper progress');
+
+  return {
+    surface_kind: 'mas_impact_receipt',
+    schema_version: 1,
+    observed_failure_class: observedFailureClass,
+    mission_artifact_impact: missionArtifactImpact,
+    target_artifact_or_owner_path: targetArtifactOrOwnerPath,
+    recommended_next_action: recommendedNextAction,
+    forbidden_authority_writes: [...MAS_IMPACT_RECEIPT_FORBIDDEN_AUTHORITY_WRITES],
+    authority_boundary: {
+      role: 'impact_receipt_projection_only',
+      writes_domain_truth: false,
+      writes_owner_receipt: false,
+      writes_typed_blocker: false,
+      writes_human_gate: false,
+      writes_current_package: false,
+      writes_paper_body: false,
+      can_claim_paper_progress: false,
+      can_claim_runtime_ready: false,
+    },
+  };
+}
+
 function oplTransitionReceiptForTerminalAttempt(input: {
   row: FamilyRuntimeTaskRow;
   payload: Record<string, unknown>;
@@ -248,6 +314,11 @@ function oplTransitionReceiptForTerminalAttempt(input: {
     closeout_receipt_status: input.terminalAttempt.closeout_receipt_status,
     blocked_reason: input.nextTask.reason,
     route_impact: routeImpactForTransitionReceipt(input.terminalAttempt),
+    mas_impact_receipt: masImpactReceiptForTerminalAttempt({
+      payload: input.payload,
+      terminalAttempt: input.terminalAttempt,
+      nextTask: input.nextTask,
+    }),
     can_change_stage_terminal_decision: false,
     can_select_next_owner: false,
     authority_boundary: {
@@ -681,6 +752,7 @@ function reconcilePaperMissionStageRouteTaskRowWithAttempt(
       provider_status: terminalAttempt.provider_run.provider_status ?? null,
       closeout_refs: terminalAttempt.closeout_refs,
       closeout_receipt_status: terminalAttempt.closeout_receipt_status,
+      mas_impact_receipt: oplTransitionReceipt.mas_impact_receipt,
       opl_transition_receipt: oplTransitionReceipt,
       domain_ready_verdict: terminalAttempt.route_impact.domain_ready_verdict ?? null,
       successor_task_id: successor?.taskId ?? null,

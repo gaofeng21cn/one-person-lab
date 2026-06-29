@@ -58,6 +58,10 @@ test('family-runtime typed closeout reconciles terminal MAS PaperMission stage-r
           next_owner: 'med-autoscience',
           reason: 'opl_runtime_live_readback_required',
           user_stage_log: userStageLog,
+          observed_failure_class: 'opl_runtime_live_readback_gap',
+          mission_artifact_impact: 'dm002_owner_route_not_unblocked_until_mas_consumes_opl_receipt',
+          target_artifact_or_owner_path: 'paper_mission_run:002-dm-china-us-mortality-attribution#owner_route',
+          recommended_next_action: 'medautosci paper-mission inspect --study 002-dm-china-us-mortality-attribution --format json',
         },
       }),
     ], env);
@@ -173,6 +177,43 @@ test('family-runtime typed closeout reconciles terminal MAS PaperMission stage-r
     assert.equal(
       terminalReconcileEvents[0].payload.opl_transition_receipt.authority_boundary.writes_owner_receipt,
       false,
+    );
+    assert.equal(
+      terminalReconcileEvents[0].payload.opl_transition_receipt.mas_impact_receipt.observed_failure_class,
+      'opl_runtime_live_readback_gap',
+    );
+    assert.equal(
+      terminalReconcileEvents[0].payload.opl_transition_receipt.mas_impact_receipt.mission_artifact_impact,
+      'dm002_owner_route_not_unblocked_until_mas_consumes_opl_receipt',
+    );
+    assert.equal(
+      terminalReconcileEvents[0].payload.opl_transition_receipt.mas_impact_receipt.target_artifact_or_owner_path,
+      'paper_mission_run:002-dm-china-us-mortality-attribution#owner_route',
+    );
+    assert.equal(
+      terminalReconcileEvents[0].payload.opl_transition_receipt.mas_impact_receipt.recommended_next_action,
+      'medautosci paper-mission inspect --study 002-dm-china-us-mortality-attribution --format json',
+    );
+    assert.deepEqual(
+      terminalReconcileEvents[0].payload.opl_transition_receipt.mas_impact_receipt.forbidden_authority_writes,
+      [
+        'mas_owner_receipt',
+        'mas_typed_blocker',
+        'mas_human_gate',
+        'mas_current_package',
+        'mas_paper_body',
+        'mas_publication_eval_latest',
+        'mas_controller_decision',
+        'runtime_db_or_provider_queue_hand_edit',
+      ],
+    );
+    assert.equal(
+      terminalReconcileEvents[0].payload.opl_transition_receipt.mas_impact_receipt.authority_boundary.writes_owner_receipt,
+      false,
+    );
+    assert.deepEqual(
+      terminalReconcileEvents[0].payload.mas_impact_receipt,
+      terminalReconcileEvents[0].payload.opl_transition_receipt.mas_impact_receipt,
     );
     assert.equal(runningQueue.family_runtime_queue.queue.total, 0);
     assert.equal(terminalReconcileEvents[0].payload.successor_task_id, null);
