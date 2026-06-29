@@ -148,6 +148,7 @@ const readModelGateTestFiles = [
   'tests/src/family-runtime-agent-stage-runner.test.ts',
   'tests/src/family-runtime-temporal-provider.test.ts',
   'tests/src/agent-executor.test.ts',
+  'tests/src/cli/cases/system-seed-manifest.test.ts',
   'tests/src/cli/cases/system-startup-maintenance.test.ts',
   'tests/src/cli/cases/system-module-package-channel.test.ts',
   'tests/src/cli/cases/system-configure-codex.test.ts',
@@ -317,6 +318,7 @@ const readModelGateTemporalHeavyTestFiles = [
 ];
 
 const readModelGateStartupMaintenanceHeavyTestFiles = [
+  'tests/src/cli/cases/system-seed-manifest.test.ts',
   'tests/src/cli/cases/system-startup-maintenance.test.ts',
 ];
 
