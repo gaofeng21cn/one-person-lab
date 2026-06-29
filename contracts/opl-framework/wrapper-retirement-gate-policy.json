@@ -13,7 +13,8 @@
   "read_model_count_semantics": {
     "deletion_evidence_worklist_count": "active open retirement gate items only",
     "surface_retirement_gate_count": "all generated or hosted default-caller retirement gates, including closed owner-decision refs",
-    "closed_surface_retirement_gate_count": "retirement gates with owner decision ref observed and therefore removed from the active deletion worklist"
+    "closed_surface_retirement_gate_count": "retirement gates with owner decision ref observed and therefore removed from the active deletion worklist",
+    "closed_surface_detail_default_payload_policy": "closed retirement gate details are omitted from default payload; use counts, tombstone/provenance refs, and active worklist detail only when open"
   },
   "owner_delete_keep_or_blocker_decision_shapes": [
     "physical_delete_authorization_ref",

@@ -333,6 +333,12 @@ function repoDeletionGateSummary(
   const activeWorklists = recordList(report.deletion_evidence_worklists);
   const surfaceRetirementGates = recordList(report.surface_retirement_gates);
   const worklists = surfaceRetirementGates.length > 0 ? surfaceRetirementGates : activeWorklists;
+  const surfaceRetirementGateCount = surfaceRetirementGates.length > 0
+    ? surfaceRetirementGates.length
+    : numberValue(summary.surface_retirement_gate_count);
+  const closedSurfaceRetirementGateCount = surfaceRetirementGates.length > 0
+    ? Math.max(0, surfaceRetirementGates.length - activeWorklists.length)
+    : numberValue(summary.closed_surface_retirement_gate_count);
   const physicalDeleteBlockedBy =
     stringList(deletionGate.physical_delete_blocked_by).length > 0
       ? stringList(deletionGate.physical_delete_blocked_by)
@@ -349,13 +355,13 @@ function repoDeletionGateSummary(
     numberValue(summary.missing_no_forbidden_write_proof_count);
   const missingTombstoneOrProvenanceRefCount =
     numberValue(summary.missing_tombstone_or_provenance_ref_count);
-  const allRequirementsObserved = worklists.length > 0
+  const allRequirementsObserved = surfaceRetirementGateCount > 0
     && missingDomainOwnerReceiptOrTypedBlockerCount === 0
     && missingNoActiveCallerProofCount === 0
     && missingNoForbiddenWriteProofCount === 0
     && missingTombstoneOrProvenanceRefCount === 0;
   const prerequisitesObserved = deleteOrKeepPrerequisitesObserved({
-    worklistCount: worklists.length,
+    worklistCount: surfaceRetirementGateCount,
     missingNoActiveCallerProofCount,
     missingNoForbiddenWriteProofCount,
     missingTombstoneOrProvenanceRefCount,
@@ -370,10 +376,13 @@ function repoDeletionGateSummary(
   const structuralPrerequisitesObservedButDomainOwnerDecisionMissingCount =
     surfaceDeletionGateSummary.reduce((total, surface) => (
       total + surface.structural_prerequisites_observed_but_domain_owner_decision_missing_count
-    ), 0);
+    ), 0)
+    || (prerequisitesObserved && !allRequirementsObserved
+      ? missingDomainOwnerReceiptOrTypedBlockerCount
+      : 0);
 
   const domainId = optionalString(report.domain_id) ?? 'unknown_domain';
-  return {
+  const summaryPayload: JsonRecord = {
     repo_id: domainId,
     domain_id: domainId,
     requested_agent_id: optionalString(report.requested_agent_id),
@@ -385,8 +394,8 @@ function repoDeletionGateSummary(
     blocked_surface_count: numberValue(summary.blocked_surface_count),
     deletion_evidence_worklist_count: activeWorklists.length,
     active_deletion_evidence_worklist_count: activeWorklists.length,
-    surface_retirement_gate_count: worklists.length,
-    closed_surface_retirement_gate_count: Math.max(0, worklists.length - activeWorklists.length),
+    surface_retirement_gate_count: surfaceRetirementGateCount,
+    closed_surface_retirement_gate_count: closedSurfaceRetirementGateCount,
     all_deletion_evidence_requirements_observed: allRequirementsObserved,
     missing_domain_owner_receipt_or_typed_blocker_count:
       missingDomainOwnerReceiptOrTypedBlockerCount,
@@ -432,9 +441,15 @@ function repoDeletionGateSummary(
     needs_drilldown_for_surface_refs: activeWorklists.length > 0,
     ordinary_lane: ordinaryLane,
     cleanup_lane: cleanupLane,
-    surface_owner_decision_gates: surfaceDeletionGateSummary,
-    surface_deletion_gate_summary: surfaceDeletionGateSummary,
   };
+  if (activeWorklists.length > 0) {
+    summaryPayload.surface_owner_decision_gates = surfaceDeletionGateSummary;
+    summaryPayload.surface_deletion_gate_summary = surfaceDeletionGateSummary;
+  } else if (closedSurfaceRetirementGateCount > 0) {
+    summaryPayload.closed_surface_detail_policy =
+      'omitted_from_default_read_model_use_counts_and_tombstone_refs';
+  }
+  return summaryPayload;
 }
 
 export function buildDefaultCallerPhysicalDeleteAuthorityReadModel(
@@ -443,31 +458,31 @@ export function buildDefaultCallerPhysicalDeleteAuthorityReadModel(
 ) {
   const repoSummaries = reports.map((report) => repoDeletionGateSummary(report, policy));
   const deletionEvidenceWorklistCount = repoSummaries.reduce(
-    (total, repo) => total + repo.deletion_evidence_worklist_count,
+    (total, repo) => total + numberValue(repo.deletion_evidence_worklist_count),
     0,
   );
   const surfaceRetirementGateCount = repoSummaries.reduce(
-    (total, repo) => total + repo.surface_retirement_gate_count,
+    (total, repo) => total + numberValue(repo.surface_retirement_gate_count),
     0,
   );
   const closedSurfaceRetirementGateCount = repoSummaries.reduce(
-    (total, repo) => total + repo.closed_surface_retirement_gate_count,
+    (total, repo) => total + numberValue(repo.closed_surface_retirement_gate_count),
     0,
   );
   const missingDomainOwnerReceiptOrTypedBlockerCount = repoSummaries.reduce(
-    (total, repo) => total + repo.missing_domain_owner_receipt_or_typed_blocker_count,
+    (total, repo) => total + numberValue(repo.missing_domain_owner_receipt_or_typed_blocker_count),
     0,
   );
   const missingNoActiveCallerProofCount = repoSummaries.reduce(
-    (total, repo) => total + repo.missing_no_active_caller_proof_count,
+    (total, repo) => total + numberValue(repo.missing_no_active_caller_proof_count),
     0,
   );
   const missingNoForbiddenWriteProofCount = repoSummaries.reduce(
-    (total, repo) => total + repo.missing_no_forbidden_write_proof_count,
+    (total, repo) => total + numberValue(repo.missing_no_forbidden_write_proof_count),
     0,
   );
   const missingTombstoneOrProvenanceRefCount = repoSummaries.reduce(
-    (total, repo) => total + repo.missing_tombstone_or_provenance_ref_count,
+    (total, repo) => total + numberValue(repo.missing_tombstone_or_provenance_ref_count),
     0,
   );
   const allReposHaveDeleteOrKeepPrerequisites = repoSummaries.length > 0
@@ -476,7 +491,7 @@ export function buildDefaultCallerPhysicalDeleteAuthorityReadModel(
     && repoSummaries.every((repo) => repo.all_deletion_evidence_requirements_observed);
   const structuralPrerequisitesObservedButDomainOwnerDecisionMissingCount = repoSummaries.reduce(
     (total, repo) =>
-      total + repo.structural_prerequisites_observed_but_domain_owner_decision_missing_count,
+      total + numberValue(repo.structural_prerequisites_observed_but_domain_owner_decision_missing_count),
     0,
   );
   const ordinaryLane = ordinaryLaneReadout({

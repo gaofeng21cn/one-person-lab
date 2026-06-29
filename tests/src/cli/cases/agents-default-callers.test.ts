@@ -466,44 +466,18 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
   );
   assert.equal(defaultCallers.repo_deletion_gate_summary[0].needs_drilldown_for_surface_refs, false);
   assert.equal(
-    defaultCallers.repo_deletion_gate_summary[0].surface_deletion_gate_summary.length,
-    8,
+    'surface_deletion_gate_summary' in defaultCallers.repo_deletion_gate_summary[0],
+    false,
+  );
+  assert.equal(
+    'surface_owner_decision_gates' in defaultCallers.repo_deletion_gate_summary[0],
+    false,
+  );
+  assert.equal(
+    defaultCallers.repo_deletion_gate_summary[0].closed_surface_detail_policy,
+    'omitted_from_default_read_model_use_counts_and_tombstone_refs',
   );
   assert.equal(defaultCallers.repo_deletion_gate_summary[0].missing_no_active_caller_proof_count, 0);
-  assert.equal(
-    defaultCallers.repo_deletion_gate_summary[0].surface_deletion_gate_summary.every((surface: {
-      no_active_caller_proof_observed: boolean;
-      domain_owner_receipt_or_typed_blocker_observed: boolean;
-      no_forbidden_write_proof_observed: boolean;
-      tombstone_or_provenance_ref_observed: boolean;
-      physical_delete_authorized: boolean;
-      default_caller_delete_ready: boolean;
-      active_deletion_worklist_item: boolean;
-      needs_drilldown_for_surface_refs: boolean;
-      next_required_owner_action: string;
-      accepted_refs_only_result_shapes: string[];
-      delete_or_keep_prerequisites_observed: boolean;
-      owner_decision_required_after_prerequisites_observed: boolean;
-      owner_decision_required_after_all_refs_observed: boolean;
-    }) => (
-      surface.no_active_caller_proof_observed === true
-      && surface.domain_owner_receipt_or_typed_blocker_observed === true
-      && surface.no_forbidden_write_proof_observed === true
-      && surface.tombstone_or_provenance_ref_observed === true
-      && surface.physical_delete_authorized === false
-      && surface.default_caller_delete_ready === false
-      && surface.active_deletion_worklist_item === false
-      && surface.needs_drilldown_for_surface_refs === false
-      && surface.next_required_owner_action === 'domain_owner_choose_delete_authorize_keep_or_typed_blocker'
-      && surface.accepted_refs_only_result_shapes.includes('physical_delete_authorization_ref')
-      && surface.accepted_refs_only_result_shapes.includes('keep_as_authority_adapter_ref')
-      && surface.accepted_refs_only_result_shapes.includes('typed_blocker_ref')
-      && surface.delete_or_keep_prerequisites_observed === true
-      && surface.owner_decision_required_after_prerequisites_observed === true
-      && surface.owner_decision_required_after_all_refs_observed === true
-    )),
-    true,
-  );
   assert.equal(contract.migration_gate.zero_missing_deletion_evidence_is_not_delete_ready, true);
   assert.equal(contract.migration_gate.observed_deletion_evidence_refs_are_refs_only_inputs, true);
   assert.equal(
@@ -576,63 +550,16 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
     0,
   );
   assert.equal(
-    report.surface_retirement_gates.every((worklist: {
-      physical_delete_authorized: boolean;
-      default_caller_delete_ready: boolean;
-      active_deletion_worklist_item: boolean;
-      worklist_item_is_completion_claim: boolean;
-      physical_delete_authorization_status: string;
-      generated_default_caller_readiness_can_authorize_physical_delete: boolean;
-      physical_delete_blocked_by: string[];
-      not_authorized_claims: string[];
-      next_required_owner_action: string;
-      accepted_refs_only_result_shapes: string[];
-      delete_or_keep_prerequisites_observed: boolean;
-      owner_decision_required_after_prerequisites_observed: boolean;
-      owner_decision_required_after_all_refs_observed: boolean;
-      retirement_guard: {
-        target_classes: string[];
-        mandatory_gate_ids: string[];
-        static_retirement_prerequisite_gate_ids: string[];
-        same_work_unit_live_evidence_scope: {
-          gate_id: string;
-          blocks_static_no_active_caller_retirement: boolean;
-        };
-        physical_delete_authorized: boolean;
-      };
-      authority_boundary: { worklist_can_authorize_domain_repo_physical_delete: boolean };
-    }) => (
-      worklist.physical_delete_authorized === false
-      && worklist.default_caller_delete_ready === false
-      && worklist.active_deletion_worklist_item === false
-      && worklist.worklist_item_is_completion_claim === false
-      && worklist.physical_delete_authorization_status === 'not_authorized_by_opl_projection'
-      && worklist.generated_default_caller_readiness_can_authorize_physical_delete === false
-      && worklist.physical_delete_blocked_by.includes('generated_default_caller_readiness_is_not_delete_authority')
-      && worklist.physical_delete_blocked_by.includes(
-        'physical_delete_requires_domain_owner_delete_keep_or_blocker_decision_after_structural_evidence',
-      )
-      && worklist.not_authorized_claims.includes('default_caller_delete_ready')
-      && worklist.not_authorized_claims.includes('domain_repo_physical_delete_authorization')
-      && worklist.next_required_owner_action === 'domain_owner_choose_delete_authorize_keep_or_typed_blocker'
-      && worklist.accepted_refs_only_result_shapes.includes('physical_delete_authorization_ref')
-      && worklist.accepted_refs_only_result_shapes.includes('keep_as_authority_adapter_ref')
-      && worklist.accepted_refs_only_result_shapes.includes('typed_blocker_ref')
-      && worklist.delete_or_keep_prerequisites_observed === true
-      && worklist.owner_decision_required_after_prerequisites_observed === true
-      && worklist.owner_decision_required_after_all_refs_observed === true
-      && worklist.retirement_guard.target_classes.includes('legacy_reconcile_compensation_path')
-      && worklist.retirement_guard.target_classes.includes('retained_domain_wrapper')
-      && worklist.retirement_guard.mandatory_gate_ids.includes('no_active_caller_proof')
-      && worklist.retirement_guard.static_retirement_prerequisite_gate_ids.includes('no_forbidden_write_proof')
-      && worklist.retirement_guard.same_work_unit_live_evidence_scope.gate_id
-        === 'same_work_unit_live_evidence'
-      && worklist.retirement_guard.same_work_unit_live_evidence_scope
-        .blocks_static_no_active_caller_retirement === false
-      && worklist.retirement_guard.physical_delete_authorized === false
-      && worklist.authority_boundary.worklist_can_authorize_domain_repo_physical_delete === false
-    )),
-    true,
+    'surface_retirement_gates' in report,
+    false,
+  );
+  assert.equal(
+    'surface_gates' in report,
+    false,
+  );
+  assert.equal(
+    report.closed_surface_detail_policy,
+    'closed_retirement_gate_details_omitted_from_default_payload',
   );
   assert.equal(defaultCallers.authority_boundary.report_can_authorize_domain_repo_physical_delete, false);
 });

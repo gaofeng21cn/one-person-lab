@@ -80,6 +80,7 @@
     "deletion_evidence_worklist_count_semantics": "active_open_surface_retirement_gate_count_only",
     "surface_retirement_gate_count_semantics": "all_generated_or_hosted_default_caller_retirement_gates_including_closed_owner_decision_refs",
     "closed_surface_retirement_gate_count_semantics": "retirement_gates_with_owner_decision_ref_observed_and_no_active_deletion_worklist_item",
+    "closed_surface_detail_default_payload_policy": "closed_retirement_gate_details_are_omitted_from_default_payload_use_counts_and_tombstone_refs",
     "zero_missing_deletion_evidence_is_not_delete_ready": true,
     "observed_deletion_evidence_refs_are_refs_only_inputs": true,
     "owner_decision_after_structural_prerequisites_observed_required": true,

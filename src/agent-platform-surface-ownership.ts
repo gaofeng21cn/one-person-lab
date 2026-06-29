@@ -106,6 +106,10 @@ function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function record(value: unknown): JsonRecord {
+  return isRecord(value) ? value : {};
+}
+
 function optionalString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
@@ -617,7 +621,7 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
     const acceptedRefsOnlyResultShapes = deleteOrKeepPrerequisitesObserved
       ? [...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES]
       : ['typed_blocker_ref'];
-    return {
+    const report: JsonRecord = {
       surface_kind: 'opl_agent_generated_default_caller_readiness_projection',
       version: 'v1',
       owner: 'one-person-lab',
@@ -656,8 +660,6 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
       generated_wrapper_bundle_status: optionalString(wrapperBundle.status),
       active_caller_target_proof_status: optionalString(targetProof.status),
       active_caller_cutover_proof_status: optionalString(cutoverProof.status),
-      surface_gates: surfaceGates,
-      surface_retirement_gates: surfaceRetirementGates,
       deletion_evidence_worklists: deletionEvidenceWorklists,
       private_platform_residue_deletion_gate: privatePlatformResidueDeletionGate,
       blockers,
@@ -708,6 +710,14 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         domain_truth_verdict_artifact_and_owner_receipt_stay_in_domain: true,
       },
     };
+    if (deletionEvidenceWorklists.length > 0) {
+      report.surface_gates = surfaceGates;
+      report.surface_retirement_gates = surfaceRetirementGates;
+    } else if (surfaceRetirementGates.length > 0) {
+      report.closed_surface_detail_policy =
+        'closed_retirement_gate_details_omitted_from_default_payload';
+    }
+    return report;
   } catch (error) {
     return {
       surface_kind: 'opl_agent_generated_default_caller_readiness_projection',
@@ -768,41 +778,41 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
   ));
   const blockedCount = reports.filter((report) => report.status === 'blocked').length;
   const generatedDefaultCallerSurfaceCount = reports.reduce(
-    (total, report) => total + Number(report.summary.generated_default_caller_surface_count || 0),
+    (total, report) => total + Number(record(report.summary).generated_default_caller_surface_count || 0),
     0,
   );
   const blockedSurfaceCount = reports.reduce(
-    (total, report) => total + Number(report.summary.blocked_surface_count || 0),
+    (total, report) => total + Number(record(report.summary).blocked_surface_count || 0),
     0,
   );
   const deletionEvidenceWorklistCount = reports.reduce(
-    (total, report) => total + Number(report.summary.deletion_evidence_worklist_count || 0),
+    (total, report) => total + Number(record(report.summary).deletion_evidence_worklist_count || 0),
     0,
   );
   const surfaceRetirementGateCount = reports.reduce(
-    (total, report) => total + Number(report.summary.surface_retirement_gate_count || 0),
+    (total, report) => total + Number(record(report.summary).surface_retirement_gate_count || 0),
     0,
   );
   const closedSurfaceRetirementGateCount = reports.reduce(
-    (total, report) => total + Number(report.summary.closed_surface_retirement_gate_count || 0),
+    (total, report) => total + Number(record(report.summary).closed_surface_retirement_gate_count || 0),
     0,
   );
   const missingDomainOwnerReceiptOrTypedBlockerCount = reports.reduce(
     (total, report) => (
-      total + Number(report.summary.missing_domain_owner_receipt_or_typed_blocker_count || 0)
+      total + Number(record(report.summary).missing_domain_owner_receipt_or_typed_blocker_count || 0)
     ),
     0,
   );
   const missingNoActiveCallerProofCount = reports.reduce(
-    (total, report) => total + Number(report.summary.missing_no_active_caller_proof_count || 0),
+    (total, report) => total + Number(record(report.summary).missing_no_active_caller_proof_count || 0),
     0,
   );
   const missingNoForbiddenWriteProofCount = reports.reduce(
-    (total, report) => total + Number(report.summary.missing_no_forbidden_write_proof_count || 0),
+    (total, report) => total + Number(record(report.summary).missing_no_forbidden_write_proof_count || 0),
     0,
   );
   const missingTombstoneOrProvenanceRefCount = reports.reduce(
-    (total, report) => total + Number(report.summary.missing_tombstone_or_provenance_ref_count || 0),
+    (total, report) => total + Number(record(report.summary).missing_tombstone_or_provenance_ref_count || 0),
     0,
   );
   const physicalDeleteAuthorityReadModel =

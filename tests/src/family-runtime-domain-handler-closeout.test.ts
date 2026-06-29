@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 
 import {
   canonicalCloseoutPacketFromDomainHandlerOutput,
-  legacyCloseoutPacketFromDomainHandlerOutput,
 } from '../../src/family-runtime-domain-handler-closeout.ts';
 
 test('domain-handler ordinary closeout accepts only canonical domain_stage_closeout_packet', () => {
@@ -34,11 +33,4 @@ test('domain-handler ordinary closeout accepts only canonical domain_stage_close
   assert.equal(canonicalCloseoutPacketFromDomainHandlerOutput(canonical), canonical.closeout_packet);
   assert.equal(canonicalCloseoutPacketFromDomainHandlerOutput(nonDomainTypedPacket), null);
   assert.equal(canonicalCloseoutPacketFromDomainHandlerOutput(legacyMasReceipt), null);
-
-  const imported = legacyCloseoutPacketFromDomainHandlerOutput(legacyMasReceipt);
-  assert.equal(imported?.surface_kind, 'domain_stage_closeout_packet');
-  assert.deepEqual(imported?.closeout_refs, [
-    'mas-runtime/legacy-dispatch-receipt.json',
-    'mas-domain-handler-dispatch:frt_legacy_mas',
-  ]);
 });

@@ -987,7 +987,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - OPL replacement 允许 provider SLO tick、domain registration intake、family runtime tick 和 runtime manager projection；禁止写 domain truth、安装 domain daemon、写 domain memory body、下 quality/export verdict 或直接执行 domain repair。
 - MAS 是 P0 migration consumer：默认 status/ensure/remove/bootstrap 应委托 OPL replacement；MAS 只保留 paper-progress SLO 语义、owner receipt、typed blocker、safe action refs 和显式 local legacy diagnostic / cleanup path。
 - MAG/RCA 是 consumer projection：可以引用 OPL `family_scheduler_replacement`、返回 owner receipt / typed blocker / no-regression evidence refs，但不能新增 repo-owned generic scheduler 或 daemon。
-- 后续验收顺序是 focused replacement proof、domain active caller migration、no-active-caller proof、legacy physical retirement，再进入 cross-repo integration、provider SLO 和 live soak。
+- `opl agents default-callers` 已承载 domain active caller migration、no-active-caller proof 与 legacy physical retirement 的 closed no-resurrection/readback guard；它们不再作为 OPL active migration sequence。后续只有 domain owner 显式返回 `physical_delete_authorization_ref` 时才进入物理删除，否则保留 authority adapter / tombstone / typed blocker 路径，再按 cross-repo integration、provider SLO 和 live soak 做后置证据。
 
 ### 决策：MAS monolith / MDS 默认依赖退役上升为 family companion-retirement 原则
 
