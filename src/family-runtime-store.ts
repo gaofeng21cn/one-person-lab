@@ -455,6 +455,23 @@ function eventToPayload(row: FamilyRuntimeEventRow) {
   };
 }
 
+function latestPaperMissionTransitionReceipt(events: ReturnType<typeof eventToPayload>[]) {
+  for (const event of [...events].reverse()) {
+    if (event.event_type !== 'paper_mission_stage_route_terminal_task_reconciled') {
+      continue;
+    }
+    const payload = isRecord(event.payload) ? event.payload : {};
+    const receipt = payload.opl_transition_receipt;
+    if (
+      isRecord(receipt)
+      && receipt.surface_kind === 'opl_transition_receipt'
+    ) {
+      return receipt;
+    }
+  }
+  return null;
+}
+
 function notificationToPayload(row: FamilyRuntimeNotificationRow) {
   return {
     notification_id: row.notification_id,
@@ -586,10 +603,25 @@ export function inspectTask(db: DatabaseSync, taskId: string) {
   const notifications = (db.prepare(`
     SELECT * FROM notifications WHERE task_id = ? ORDER BY created_at ASC
   `).all(taskId) as FamilyRuntimeNotificationRow[]).map(notificationToPayload);
+  const taskPayload = taskToPayload(task);
+  const currentControlState = deriveCurrentControlStateForTask(db, taskId);
+  const transitionReceipt = latestPaperMissionTransitionReceipt(events);
+  const receiptProjection = transitionReceipt
+    ? {
+        opl_transition_receipt: transitionReceipt,
+        mas_impact_receipt: isRecord(transitionReceipt.mas_impact_receipt)
+          ? transitionReceipt.mas_impact_receipt
+          : null,
+      }
+    : {};
   return {
     task: {
-      ...taskToPayload(task),
-      current_control_state: deriveCurrentControlStateForTask(db, taskId),
+      ...taskPayload,
+      ...receiptProjection,
+      current_control_state: {
+        ...currentControlState,
+        ...receiptProjection,
+      },
     },
     stage_attempts: listStageAttemptsForTask(db, taskId),
     events,

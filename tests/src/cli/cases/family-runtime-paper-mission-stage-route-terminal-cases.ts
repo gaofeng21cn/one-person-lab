@@ -215,6 +215,18 @@ test('family-runtime typed closeout reconciles terminal MAS PaperMission stage-r
       terminalReconcileEvents[0].payload.mas_impact_receipt,
       terminalReconcileEvents[0].payload.opl_transition_receipt.mas_impact_receipt,
     );
+    assert.deepEqual(
+      task.family_runtime_task.task.opl_transition_receipt,
+      terminalReconcileEvents[0].payload.opl_transition_receipt,
+    );
+    assert.deepEqual(
+      task.family_runtime_task.task.current_control_state.opl_transition_receipt,
+      terminalReconcileEvents[0].payload.opl_transition_receipt,
+    );
+    assert.equal(
+      task.family_runtime_task.task.current_control_state.mas_impact_receipt.observed_failure_class,
+      'opl_runtime_live_readback_gap',
+    );
     assert.equal(runningQueue.family_runtime_queue.queue.total, 0);
     assert.equal(terminalReconcileEvents[0].payload.successor_task_id, null);
     assert.equal(terminalReconcileEvents[0].payload.successor_created, false);
@@ -408,6 +420,10 @@ test('family-runtime backfills OPL transition receipt for historical terminal re
     assert.equal(receiptEvents[0].payload.opl_transition_receipt.surface_kind, 'opl_transition_receipt');
     assert.equal(receiptEvents[0].payload.opl_transition_receipt.receipt_status, 'terminal_closeout_observed');
     assert.equal(receiptEvents[0].payload.opl_transition_receipt.authority_boundary.can_claim_paper_progress, false);
+    assert.deepEqual(
+      task.family_runtime_task.task.current_control_state.opl_transition_receipt,
+      receiptEvents[0].payload.opl_transition_receipt,
+    );
 
     const repeatedBackfill = runCli(['family-runtime', 'tick', '--source', 'test-paper-route-receipt-backfill-repeat'], env);
     const repeatedTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
@@ -502,6 +518,10 @@ test('family-runtime backfills OPL transition receipt for stage-route user-stage
     assert.equal(
       receiptEvents[0].payload.opl_transition_receipt.authority_boundary.writes_typed_blocker,
       false,
+    );
+    assert.deepEqual(
+      task.family_runtime_task.task.current_control_state.opl_transition_receipt,
+      receiptEvents[0].payload.opl_transition_receipt,
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
