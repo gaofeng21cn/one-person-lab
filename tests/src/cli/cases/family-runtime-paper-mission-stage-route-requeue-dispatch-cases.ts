@@ -196,6 +196,93 @@ test('family-runtime requeues fresh MAS PaperMission handoff after recoverable p
   }
 });
 
+test('family-runtime reopens operator-retired MAS PaperMission stage-route residue from current route contract', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-retired-residue-'));
+  const originalStateDir = process.env.OPL_STATE_DIR;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    const { db } = openQueueDb();
+    const dedupeKey = 'paper-mission-route:user-stage-log-v1:dm003:retired-residue';
+    const retiredPayload = paperMissionRoutePayloadWithWorkspace({
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      candidate_ref: '/tmp/mas-dm-cvd-workspace/ops/medautoscience/paper_mission_candidate_package/dm003/package_manifest.json',
+      paper_mission_transaction_ref: 'paper-mission-transaction:dm003:retired-residue',
+      opl_route_command_ref: 'paper-mission-transaction:dm003:retired-residue#opl_route_command',
+      command_kind: 'route_back',
+      route_target: 'submission_milestone_candidate::followthrough::followthrough-02',
+      route_impact: {
+        decision: 'route_back',
+        domain_ready_verdict: 'domain_gate_pending',
+        user_stage_log: {
+          surface_kind: 'opl_user_stage_log',
+          semantic_status: 'provided_by_domain',
+          semantic_source: 'med_autoscience.paper_mission_stage_route',
+          stage_name: 'PaperMission stage route for DM003',
+          progress_delta_classification: 'deliverable_progress',
+        },
+      },
+    });
+    const enqueued = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'paper_mission/stage-route',
+      payload: retiredPayload,
+      dedupeKey,
+      source: 'test-retired-residue',
+    });
+    db.prepare(`
+      UPDATE tasks
+      SET status = 'blocked',
+        last_error = 'operator_retired_stale_runtime_residue:stale_dm003_route_rows',
+        dead_letter_reason = 'operator_retired_stale_runtime_residue:stale_dm003_route_rows'
+      WHERE task_id = ?
+    `).run(enqueued.task.task_id);
+
+    const currentPayload = {
+      ...retiredPayload,
+      workspace_root: '/tmp/mas-dm-cvd-workspace',
+      command_cwd: '/tmp/mas-dm-cvd-workspace',
+      request_idempotency_key: 'dm003:terminal-owner-gate:opl-request',
+      route_impact: {
+        ...retiredPayload.route_impact as Record<string, unknown>,
+        evidence_refs: ['route-back:paper-mission-terminal-owner-gate:dm003:fresh'],
+      },
+    };
+    const reopened = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'paper_mission/stage-route',
+      payload: currentPayload,
+      dedupeKey,
+      source: 'test-retired-residue-reopen',
+    });
+    const task = inspectTask(db, enqueued.task.task_id);
+    const event = task.events.find((entry) =>
+      entry.event_type === 'task_requeued_from_paper_mission_stage_route_contract_replacement'
+    );
+
+    assert.equal(reopened.accepted, true);
+    assert.equal(reopened.requeued_from_terminal, true);
+    assert.equal(reopened.idempotent_noop, false);
+    assert.equal(reopened.task.task_id, enqueued.task.task_id);
+    assert.equal(task.task.status, 'queued');
+    assert.equal(task.task.last_error, null);
+    assert.equal(task.task.dead_letter_reason, null);
+    assert.equal(task.task.payload.workspace_root, '/tmp/mas-dm-cvd-workspace');
+    assert.equal(task.task.payload.request_idempotency_key, 'dm003:terminal-owner-gate:opl-request');
+    assert.equal(task.task.payload.route_impact.user_stage_log.semantic_status, 'provided_by_domain');
+    assert.notEqual(event, undefined);
+    assert.equal(event?.payload.reason, 'paper_mission_stage_route_runtime_contract_replaced_after_operator_retire');
+    assert.equal(event?.payload.operator_retirement_reason, 'stale_dm003_route_rows');
+    assert.equal(event?.payload.authority_boundary.domain_truth_mutation, false);
+    assert.equal(event?.payload.authority_boundary.publication_quality_mutation, false);
+    assert.equal(event?.payload.authority_boundary.artifact_gate_mutation, false);
+    assert.equal(event?.payload.authority_boundary.current_package_mutation, false);
+    db.close();
+  } finally {
+    process.env.OPL_STATE_DIR = originalStateDir;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime requeues fresh MAS PaperMission handoff after legacy route identity blocker', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-fresh-identity-'));
   const originalStateDir = process.env.OPL_STATE_DIR;

@@ -215,7 +215,7 @@ export async function StageAttemptWorkflow(
     writeback_receipt_refs: [],
     rejected_writes: [],
     next_owner: null,
-    route_impact: {},
+    route_impact: asRecord(input.route_impact),
     human_gate_refs: [],
     signals: [],
     closeout_packet: null,

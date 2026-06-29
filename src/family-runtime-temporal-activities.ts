@@ -477,6 +477,8 @@ function providerRuntimeBlockerCloseout(input: {
     }],
     route_impact: {
       ...input.routeImpact,
+      provider_blocker_reason: input.providerBlockerReason,
+      provider_blocker_surface: 'codex_stage_activity.process_output_summary',
       runtime_blocker_ref: blockerRef,
       runtime_blocker_owner: 'one-person-lab',
       runtime_blocker_is_domain_owner_answer: false,

@@ -645,6 +645,99 @@ test('Temporal StageAttemptWorkflow surfaces Codex runner protocol blockers befo
   }
 });
 
+test('Temporal StageAttemptWorkflow preserves MAS stage-route user stage log on provider blockers', async () => {
+  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const taskQueue = `opl-stage-attempt-runner-user-log-blocker-test-${Date.now()}`;
+  const userStageLog = {
+    surface_kind: 'opl_user_stage_log',
+    semantic_status: 'provided_by_domain',
+    semantic_source: 'med_autoscience.paper_mission_stage_route',
+    progress_delta_classification: 'deliverable_progress',
+  };
+  try {
+    const worker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue,
+      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      activities: {
+        ...activities,
+        codexStageActivity: async (input: TemporalStageAttemptWorkflowInput) => ({
+          surface_kind: 'temporal_codex_stage_activity_receipt',
+          activity_kind: 'codex_stage_activity',
+          activity_status: 'completed',
+          stage_attempt_id: input.stage_attempt_id,
+          stage_id: input.stage_id,
+          checkpoint_refs: input.checkpoint_refs ?? [],
+          closeout_packet: {
+            surface_kind: 'stage_attempt_closeout_packet',
+            closeout_refs: [
+              `opl://stage-attempts/${input.stage_attempt_id}/runtime-blockers/typed_closeout_paper_mission_stage_route_user_stage_log_missing`,
+            ],
+            consumed_refs: input.checkpoint_refs ?? [],
+            consumed_memory_refs: [],
+            writeback_receipt_refs: [],
+            rejected_writes: [{
+              reason: 'typed_closeout_paper_mission_stage_route_user_stage_log_missing',
+            }],
+            next_owner: input.domain_id,
+            domain_ready_verdict: 'domain_gate_pending',
+            route_impact: {
+              ...(input.route_impact ?? {}),
+              user_stage_log: userStageLog,
+            },
+            authority_boundary: {
+              opl: 'provider_runtime_closeout_transport_only',
+              domain: 'truth_quality_artifact_gate_owner',
+              provider_completion_is_domain_ready: false,
+            },
+          },
+          process_output_summary: {
+            exit_code: 0,
+            blocked_reason: 'typed_closeout_paper_mission_stage_route_user_stage_log_missing',
+          },
+        }),
+      },
+    });
+
+    const result = await worker.runUntil(async () => {
+      const input = workflowInput();
+      const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
+        args: [{
+          ...input,
+          closeout_packet: null,
+          route_impact: {
+            user_stage_log: userStageLog,
+          },
+        }],
+        taskQueue,
+        workflowId: `wf-temporal-runner-user-log-blocker-test-${Date.now()}`,
+      });
+      return await handle.result();
+    });
+
+    assert.equal(result.status, 'blocked');
+    assert.equal(
+      (result.route_impact.user_stage_log as Record<string, unknown>)?.semantic_status,
+      'provided_by_domain',
+    );
+    assert.equal(
+      (result.route_impact as Record<string, unknown>)?.provider_blocker_reason,
+      'typed_closeout_paper_mission_stage_route_user_stage_log_missing',
+    );
+    const dispatchEvent = result.activity_events.find(
+      (event) => event.activity_kind === 'domain_handler_dispatch_activity',
+    );
+    assert.equal(
+      ((dispatchEvent?.route_impact as Record<string, unknown>)?.user_stage_log as Record<string, unknown>)
+        ?.semantic_source,
+      'med_autoscience.paper_mission_stage_route',
+    );
+  } finally {
+    await testEnv.teardown();
+  }
+});
+
 test('Temporal Codex activity result stored in history is refs-only by default', async () => {
   const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
   const taskQueue = `opl-stage-attempt-activity-summary-test-${Date.now()}`;

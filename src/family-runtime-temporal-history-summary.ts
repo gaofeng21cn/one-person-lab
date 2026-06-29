@@ -82,9 +82,12 @@ export function providerBlockerFromCodexResult(value: JsonRecord) {
   if (!blockedReason) {
     return null;
   }
+  const closeoutPacket = asRecord(value.closeout_packet);
+  const closeoutRouteImpact = asRecord(closeoutPacket.route_impact);
   return {
     blocked_reason: blockedReason,
     route_impact: {
+      ...closeoutRouteImpact,
       provider_blocker_reason: blockedReason,
       provider_blocker_surface: 'codex_stage_activity.process_output_summary',
       runner_timeout_reason: typeof summary.timeout_reason === 'string' ? summary.timeout_reason : null,
