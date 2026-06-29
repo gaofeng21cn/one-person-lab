@@ -12,7 +12,7 @@ Machine boundary: 本文是人读 cleanup runbook 与矩阵模板。它不承载
 Source of truth：
 
 - 文档生命周期与落点：[`docs/docs_portfolio_consolidation.md`](../../docs_portfolio_consolidation.md)。
-- 维护开发 taste：[`TASTE.md`](../../../TASTE.md)，尤其是目的优先、历史面及时退役、薄入口与最小充分验证。
+- 维护开发 taste：用户级 `~/.codex/TASTE.md`，尤其是真相归主、目标先于路径、单源派生、结构收敛和证据匹配风险。
 - Cleanup candidate 输入：fresh `ponytail-audit` 输出、repo-native structure advisory、当前代码调用链、contracts/source/tests/readback。
 - Owner boundary：OPL 持有 framework/shared primitive、generated/hosted surface、projection 与 cleanup gate；MAS/MAG/RCA 持有各自 domain truth、quality/export verdict、artifact authority、owner receipt 与 typed blocker；App 仓持有 GUI/product/release truth。
 
@@ -32,7 +32,7 @@ Ponytail cleanup 默认分三步启动：
 | 单仓落地 | 在 owner 清楚、写集隔离、验证入口明确的单仓执行最小 slice。 | 删除无 caller 的旧面、收薄 command/docs、行为保持拆分、更新本仓 docs/history/tombstone。 | 不替 domain repo 签 receipt，不写 runtime DB/provider/domain authority，不制造兼容 shim。 |
 | 小批量 shared-boundary 联动 | 多仓共享边界确实需要同步时，按 owner surface 分成小批 lane。 | 先落 framework/shared primitive 或 App projection，再由 domain repo 消费；每批有独立验证和吸收证据。 | 不用一次性大改覆盖六仓，不把 OPL refs-only projection 当成 domain physical delete authority。 |
 
-启动前必须读当前 repo 的 `AGENTS.md`、`TASTE.md`、相关 owner docs 和 fresh `git status` / worktree gate。存在并发 lane 时，dirty 文件只阻塞同一写集；不相交的 docs/command lane 可以继续。
+启动前必须读当前 repo 的 `AGENTS.md`、用户级 `~/.codex/TASTE.md`、相关 owner docs 和 fresh `git status` / worktree gate。存在并发 lane 时，dirty 文件只阻塞同一写集；不相交的 docs/command lane 可以继续。
 
 ## 审计矩阵字段
 

@@ -94,20 +94,18 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 当 OPL primitive、pack compiler 或 App shell 还不够成熟时，应在 OPL 层定义缺口、必要时调研外部成熟系统，并把结论沉淀为 OPL generic primitive / generated surface / policy；不得让 MAS/MAG/RCA 各自复制私有平台。
 - 文档和计划必须先设理想态，再找差距；差距不是妥协清单。为了理想态，可以做革命式重构并完全抛弃旧模块、旧接口、旧测试、旧目录和旧文案；处理清楚 active caller、替代 surface、provenance 和必要证据后，不保留历史兼容面。
 
-## OPL 10 项原则
+## OPL 内部 8 项原则
 
-这 10 项原则是核心五件套、active gap、closure matrix 与 contracts README 的共同读法。它们把 `AI-first`、`executor-first`、`Codex-first` 和 `contract-light` 拆开：开放式专家工作优先交给 AI executor；stage 内最小执行单位是 Agent executor；当前默认且第一公民 executor 是 `Codex CLI`；合同只保边界、安全、审计、receipt、阻塞、恢复和 projection 下限。
+这 8 项原则是核心五件套、active gap、closure matrix、contracts README 与用户级 `~/.codex/TASTE.md` 的共同读法。公开白皮书保留 5 条高层哲学；内部读面用这 8 条承接原十项机器边界、contract-light 语义和长期维护偏好。
 
-1. Stage pack 是启动单位；OPL 准入并启动 stage，不启动自由形态 workflow script。
-2. AI-first / executor-first 执行不被静态合同写死；合同只绑定 prompt、skill、tool affordance boundary、knowledge refs、expected receipt 和 authority boundary；工具 refs 是 affordance catalog，不是 workflow script。
-3. `Codex CLI` 是默认 selected executor；`hermes_agent`、`claude_code`、`antigravity_cli` 或其他 executor adapter 只能通过 request、stage attempt 或 handoff 显式绑定，并以 `executor_binding_ref`、receipt / audit / fail-closed 证明连接。
-4. AI 原生专家判断优先；机械分数、checklist、contract completeness、descriptor ready、provider completion 和 generated-surface proof 只能作为 advisory，除非独立 AI stage 或 domain-owned quality gate 返回 receipt / typed blocker / route-back verdict，否则不能替代专家判断。
-5. `requires` / `ensures` 组合在启动前检查；domain judgment 仍是 runtime / domain-owned 结果。
-6. `verified_static_core` 只覆盖 identity、owner、refs、scope、composition 与 forbidden-authority 约束。
-7. `runtime_enforced_boundary` 覆盖 AI 输出、人类决策、外部系统、artifact mutation、memory writeback 与 domain verdict。
-8. Hard blocker 只覆盖启动安全、越权、关键 runtime event 记录缺失、composition 不满足、hard human gate 或 executor binding 缺失。
-9. capacity、monitor、assumption、cohort-loop、replay 和 domain-owner review 信号折叠为 `opl stages readiness --family-defaults` 与单仓 `opl stages readiness --domain <domain>` 的 advisory refs，不作为独立 launch-authority schema。
-10. descriptor ready、read model 可读、generated-surface proof、provider proof 或 cleanup proof 都不等于 domain ready、artifact ready 或 production evidence complete；每个阻断或未闭合边界都必须返回 typed blocker、human gate、receipt conflict 或 route-back ref，不用 fallback verdict 补语义。
+1. **真相归主**：领域事实、质量裁决、产物权威、owner receipt 和 typed blocker 留在对应 owner。OPL 只持有 framework-level runtime / activation / discovery / projection；App 只持有产品入口、GUI product truth、release gate 和用户投影；read model、generated surface、provider proof 或 cleanup proof 不能签发 domain ready、artifact ready、quality verdict 或 production ready。
+2. **抓大放小**：hard blocker 只覆盖启动安全、越权、关键 runtime event 记录缺失、composition 不满足、hard human gate、executor binding、不可逆权限和负责人回执。capacity、monitor、assumption、cohort-loop、replay、domain-owner review、diagnostic proof、L5 evidence 细项和 provider ops detail 默认进入 advisory refs、audit、cleanup 或 evidence lane；只有破坏大边界时才升级。
+3. **目标先于路径**：先按用户目标、owner decision、human gate、artifact delta 或可接力结果定义进度，再选择 runtime、queue、stage、docs、测试和修复路径。OPL substrate 是路径不是目标；除越权、缺少必要输入或同一写集 ownership 冲突外，platform repair 不能吞掉目标主线。
+4. **AI-first, contract-light**：开放式专家工作优先交给 AI executor；`Codex CLI` 是默认 selected executor，`hermes_agent`、`claude_code`、`antigravity_cli` 或其他 adapter 只能通过 request、stage attempt 或 handoff 显式绑定，并以 `executor_binding_ref`、receipt / audit / fail-closed 证明连接。合同只绑定 prompt、skill、tool affordance boundary、knowledge refs、expected receipt、authority boundary 和恢复/投影下限；工具 refs 是 affordance catalog，不是 workflow script。
+5. **阶段交付，交付即推进**：Stage pack 是启动单位；OPL 准入并启动带目标、输入、输出、owner、权限、质量门和回执形态的 stage，不启动自由形态 workflow script。`requires` / `ensures` 组合在启动前检查；domain judgment 仍是 runtime / domain-owned 结果。阶段形成可接力成果、owner receipt、typed blocker、human gate、route-back 或明确停止决策后，就进入下一步。
+6. **单源派生，薄入口**：关键动作、阶段、合同、路由、状态和描述符从 canonical source 派生到 CLI、API、App、Skill/plugin、MCP、文档和报表。入口稳定而薄，复杂逻辑进入清楚模块；`verified_static_core` 只覆盖 identity、owner、refs、scope、composition 与 forbidden-authority 约束。
+7. **结构收敛，历史退役**：当前责任面替代旧入口后，旧模块、alias、facade、wrapper、兼容测试和过时文档应删除、归档或 tombstone。历史只保留 provenance，不继续污染当前路径；旧 gateway、federation、frontdoor 等路线只能在 history / tombstone 语境中出现。
+8. **证据匹配风险**：文档和结构整理用最小充分验证；权限、artifact mutation、memory writeback、人类决策、外部系统、domain verdict、release/currentness/readiness claim 必须用对应 owner receipt、live/readback、runtime artifact 或端到端证据。`runtime_enforced_boundary` 覆盖 AI 输出、人类决策、外部系统、artifact mutation、memory writeback 与 domain verdict。descriptor ready、read model 可读、generated-surface proof、provider proof 或 cleanup proof 都不等于 domain ready、artifact ready 或 production evidence complete；每个阻断或未闭合边界都必须返回 typed blocker、human gate、receipt conflict 或 route-back ref，不用 fallback verdict 补语义。
 
 ## 当前公开产品模型
 

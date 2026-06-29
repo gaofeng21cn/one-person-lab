@@ -430,7 +430,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - ordinary App/CLI/operator path 继续以 `current_owner_delta` 为唯一 planning root。raw worklist、evidence ledger、provider trace、route variant menu、private residue inventory、cleanup delete gate、L5 evidence ledger 和 release diagnostics 不得覆盖当前 domain / App / human / provider owner answer。
 - 新增 surface / gate / contract / read model 必须先声明 default lane、hard-blocker upgrade condition、demotion condition、protected boundary 和 accepted answer shape；答不出这些问题时，只能作为 diagnostic/reference 起步。
 - 该决策不减少 launch safety、authority boundary、receipt binding、forbidden-write、domain owner receipt、typed blocker、quality gate、release gate 或 physical delete gate 的要求；它只防止这些要求的支撑细节反向成为普通进展卡点。
-- 本决策的长期维护 taste 固定在 `TASTE.md`；当前 active owner、gap 和下一步回到 `docs/active/current-state-vs-ideal-gap.md`；机器预算回到 `contracts/opl-framework/surface-budget-policy.json` 的 `grip_big_release_small_review`。支撑文档、审计矩阵和 production evidence lane 不维护第二 ordinary backlog。
+- 本决策的长期维护 taste 固定在用户级 `~/.codex/TASTE.md`；当前 active owner、gap 和下一步回到 `docs/active/current-state-vs-ideal-gap.md`；机器预算回到 `contracts/opl-framework/surface-budget-policy.json` 的 `grip_big_release_small_review`。支撑文档、审计矩阵和 production evidence lane 不维护第二 ordinary backlog。
 - Production evidence lane 只接收真实用户路径、跨 agent scaleout、long-soak、release/install、operator repair loop、owner acceptance、no-regression 或等价证据。缺这些证据只能说明 production evidence tail 未闭合，不能抢占 `current_owner_delta` 普通接力，也不能写成 production ready。
 
 ### 决策：App-owned Codex runtime updater 不修改全局 Homebrew / npm / system Codex

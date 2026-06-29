@@ -10,10 +10,6 @@
       "role": "repo_agent_working_rules"
     },
     {
-      "path": "TASTE.md",
-      "role": "maintenance_preferences"
-    },
-    {
       "path": "docs/README.md",
       "role": "docs_entry"
     },
@@ -39,13 +35,6 @@
     }
   ],
   "doc_profile": "opl_framework",
-  "flow_profile": "opl_framework",
-  "machine_truth_surfaces": [
-    "contracts",
-    "src",
-    "tests",
-    "package.json"
-  ],
   "flow_closeout_gates": [
     {
       "kind": "completion_audit",
@@ -58,6 +47,13 @@
         "release_ready_claim"
       ]
     }
+  ],
+  "flow_profile": "opl_framework",
+  "machine_truth_surfaces": [
+    "contracts",
+    "src",
+    "tests",
+    "package.json"
   ],
   "managed_by_plugins": {
     "opl-doc": {
@@ -87,15 +83,10 @@
           "kind": "repo_agent_instructions",
           "management": "managed_block",
           "path": "AGENTS.md"
-        },
-        {
-          "kind": "maintenance_preferences",
-          "management": "managed_block",
-          "path": "TASTE.md"
         }
       ],
       "management": "workflow_profile_pointer",
-      "version": "0.1.0"
+      "version": "0.1.7"
     }
   },
   "owned_by_repo": [
