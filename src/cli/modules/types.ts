@@ -89,6 +89,12 @@ type SystemDependencyCliInput = {
   apply?: boolean;
 };
 
+type SystemSeedApplyCliInput = {
+  seedDir?: string;
+  dataDir?: string;
+  projectsDir?: string;
+};
+
 type ObservabilityExportCliInput = {
   format: 'json' | 'openmetrics';
 };
@@ -279,6 +285,7 @@ export type {
   SkillPacksCliInput,
   SystemConfigureCodexCliInput,
   SystemDependencyCliInput,
+  SystemSeedApplyCliInput,
   TurnkeyInstallCliInput,
   UpdateChannelCliInput,
   WebCliInput,

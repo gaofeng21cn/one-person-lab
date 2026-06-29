@@ -1,0 +1,109 @@
+{
+  "surface_id": "opl_docker_webui_seed_contract",
+  "schema_version": "opl_docker_webui_seed_contract.v1",
+  "owner": "OPL Framework",
+  "purpose": "Define the Framework-owned image seed, data-volume install manifest, and startup-maintenance reconcile receipt boundary for Docker/WebUI runtimes.",
+  "runtime_truth_boundary": {
+    "source_of_truth": "OPL Framework install/update/receipt runtime truth",
+    "not_second_runtime_truth": true,
+    "webui_shell_owner": "one-person-lab-app / opl-aion-shell",
+    "canonical_image_manifest_path": "/opt/opl/image-manifest.json",
+    "canonical_seed_metadata_path": "/opt/opl/seed/metadata.json",
+    "state_file": "${OPL_STATE_DIR:-<data-dir>/opl/state}/install-manifest.json",
+    "commands": [
+      "opl system seed-apply --from <seed-dir> --data-dir <data-dir> --projects-dir <projects-dir> --json",
+      "opl system startup-maintenance --json"
+    ]
+  },
+  "image_manifest": {
+    "seed_strategy_values": [
+      "payload_manifest",
+      "payload_preheated",
+      "metadata_only"
+    ],
+    "stable_latest_policy": {
+      "metadata_only_allowed": false,
+      "forbidden_third_strategy_names": [
+        "manifest_payload_dir"
+      ]
+    }
+  },
+  "seed_metadata": {
+    "filename": "/opt/opl/seed/metadata.json",
+    "schema": "dev.onepersonlab.opl-webui-image-seed.v1",
+    "full_seed_minimum_component_ids": [
+      "opl_framework",
+      "codex_cli",
+      "companion_skills",
+      "domain_modules"
+    ],
+    "component_required_fields": [
+      "id",
+      "version",
+      "source",
+      "payload_path",
+      "receipt_kind"
+    ],
+    "component_integrity_requirement": "Each component must provide sha256 or source_fingerprint.",
+    "component_materialization": [
+      {
+        "component_id": "opl_framework",
+        "materialized_path": "<data-dir>/opl/framework"
+      },
+      {
+        "component_id": "codex_cli",
+        "materialized_path": "<data-dir>/opl/toolchains/codex"
+      },
+      {
+        "component_id": "companion_skills",
+        "materialized_path": "<data-dir>/opl/skills"
+      },
+      {
+        "component_id": "domain_modules",
+        "materialized_path": "<data-dir>/opl/modules"
+      }
+    ]
+  },
+  "install_manifest_public_shape": {
+    "component_ids": [
+      "image_manifest",
+      "opl_framework",
+      "codex_cli",
+      "companion_skills",
+      "domain_modules",
+      "data_dir",
+      "projects_dir"
+    ],
+    "legacy_component_ids_not_public": [
+      "framework_install_dir",
+      "codex_toolchain",
+      "modules_skills"
+    ],
+    "component_fields": [
+      "component_id",
+      "component_kind",
+      "version",
+      "source",
+      "payload_path",
+      "receipt_kind",
+      "receipt_ref",
+      "sha256",
+      "source_fingerprint",
+      "materialized_path",
+      "size_bytes"
+    ],
+    "operation_kinds": [
+      "image_seed",
+      "managed_update",
+      "migration"
+    ]
+  },
+  "authority_boundary": {
+    "can_write_domain_truth": false,
+    "can_write_runtime_db": false,
+    "can_write_provider_queue": false,
+    "can_create_owner_receipt": false,
+    "can_claim_ready_or_current": false,
+    "api_key_configuration_is_separate": true
+  }
+}

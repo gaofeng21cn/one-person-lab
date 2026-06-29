@@ -6,6 +6,7 @@ import type {
   OplModuleCliInput,
   SystemDependencyCliInput,
   SystemConfigureCodexCliInput,
+  SystemSeedApplyCliInput,
   SessionRuntimeCliInput,
   TurnkeyInstallCliInput,
   UpdateChannelCliInput,
@@ -715,6 +716,46 @@ function parseSystemDependencyArgs(
   return parsed;
 }
 
+function parseSystemSeedApplyArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): SystemSeedApplyCliInput {
+  const parsed: SystemSeedApplyCliInput = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, { token });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, { option: token });
+    }
+
+    switch (token) {
+      case '--from':
+        parsed.seedDir = value;
+        break;
+      case '--data-dir':
+        parsed.dataDir = value;
+        break;
+      case '--projects-dir':
+        parsed.projectsDir = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for system seed-apply command: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
 function parseDeveloperSupervisorArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -821,6 +862,7 @@ export {
   parseSessionRuntimeArgs,
   parseSystemConfigureCodexArgs,
   parseSystemDependencyArgs,
+  parseSystemSeedApplyArgs,
   parseTurnkeyInstallArgs,
   parseUpdateChannelArgs,
   parseWorkspaceAdoptArgs,

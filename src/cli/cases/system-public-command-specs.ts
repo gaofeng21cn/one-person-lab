@@ -21,6 +21,7 @@ import {
   parseDeveloperSupervisorArgs,
   parseSystemDependencyArgs,
   parseSystemConfigureCodexArgs,
+  parseSystemSeedApplyArgs,
   parseUpdateChannelArgs,
 } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
@@ -330,11 +331,31 @@ export function buildPublicSystemCommandSpecs(
       'Run App startup maintenance for clean managed modules, image seed state, plugin cache freshness, and reload guidance.',
       'startup_maintenance',
     ),
-    'system seed-apply': buildSystemActionSpec(
-      'seed-apply',
-      'Record Docker/WebUI image seed, data volume, projects directory, and component receipt boundaries.',
-      'seed_apply',
-    ),
+    'system seed-apply': {
+      usage: 'opl system seed-apply [--from <seed-dir>] [--data-dir <data-dir>] [--projects-dir <projects-dir>]',
+      summary: 'Record Docker/WebUI image seed, data volume, projects directory, and component receipt boundaries.',
+      examples: [
+        'opl system seed-apply --json',
+        'opl system seed-apply --from /opt/opl/seed --data-dir /data --projects-dir /projects --json',
+      ],
+      group: 'system',
+      handler: async (args) => {
+        const parsed = parseSystemSeedApplyArgs(args, {
+          usage: 'opl system seed-apply [--from <seed-dir>] [--data-dir <data-dir>] [--projects-dir <projects-dir>]',
+          examples: [
+            'opl system seed-apply --json',
+            'opl system seed-apply --from /opt/opl/seed --data-dir /data --projects-dir /projects --json',
+          ],
+        });
+        return buildPublicSystemActionPayload(
+          await runOplSystemAction(getContracts(), 'seed_apply', {
+            seedDir: parsed.seedDir,
+            dataDir: parsed.dataDir,
+            projectsDir: parsed.projectsDir,
+          }),
+        );
+      },
+    },
     'system repair-native-helpers': buildNoArgSpec(
       {
         usage: 'opl system repair-native-helpers',

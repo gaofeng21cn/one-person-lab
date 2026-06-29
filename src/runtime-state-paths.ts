@@ -42,11 +42,18 @@ function normalizeExplicitStateDir() {
   return process.env.OPL_STATE_DIR?.trim() || null;
 }
 
-export function resolveOplStatePaths(): OplStatePaths {
+function normalizeDockerDataDir() {
+  return process.env.OPL_DATA_DIR?.trim() || process.env.AIONUI_DATA_DIR?.trim() || null;
+}
+
+export function resolveOplStatePaths(input: { dataDir?: string | null } = {}): OplStatePaths {
   const explicitStateDir = normalizeExplicitStateDir();
   const homeDir = process.env.HOME?.trim() || os.homedir();
+  const dockerDataDir = input.dataDir?.trim() || normalizeDockerDataDir();
   const stateDir = explicitStateDir
     ? path.resolve(explicitStateDir)
+    : dockerDataDir
+      ? path.join(path.resolve(dockerDataDir), 'opl', 'state')
     : path.join(homeDir, 'Library', 'Application Support', 'OPL', 'state');
 
   return {

@@ -38,7 +38,11 @@ WebUI 容器的 runtime 环境变量由 `opl-aion-shell` 的 Dockerfile / web-cl
 预热版 Docker/WebUI 镜像可以把 OPL Framework、模块/skill seed、Codex/toolchain 和镜像 manifest 作为镜像层输入；持久化运行状态仍应落在数据卷。OPL CLI 的 seed 维护入口是：
 
 ```bash
-opl system seed-apply --json
+opl system seed-apply \
+  --from /opt/opl/seed \
+  --data-dir /data \
+  --projects-dir /projects \
+  --json
 ```
 
 `opl system startup-maintenance --json` 也会执行同一 seed apply，并在 `system_action.details.seed_boundary` 返回本次镜像 seed、Framework 安装目录、Codex/toolchain、modules/skills、数据目录和项目目录的 receipt 状态。两条路径都会写入：
@@ -51,25 +55,36 @@ opl system seed-apply --json
 
 seed apply 读取的输入：
 
-| 变量 | 用途 |
+| 输入 | 用途 |
 | --- | --- |
-| `OPL_IMAGE_MANIFEST_PATH` | 镜像内提供的 image manifest JSON 路径；用于报告镜像入口版本、digest 或 revision |
-| `OPL_IMAGE_SEED_DIR` | 镜像内预热 seed 目录；用于报告 modules/skills seed 来源 |
-| `AIONUI_DATA_DIR` | WebUI 数据目录；未设置 `OPL_DATA_DIR` 时作为 OPL data dir |
-| `OPL_DATA_DIR` | OPL CLI 维护路径的数据目录，优先级高于 `AIONUI_DATA_DIR` |
-| `OPL_PROJECTS_DIR` | 项目目录；未设置时默认为 `<data-dir>/projects` |
+| `--from <seed-dir>` / `OPL_IMAGE_SEED_DIR` | 镜像内预热 seed 目录；canonical 路径是 `/opt/opl/seed`，metadata 文件是 `/opt/opl/seed/metadata.json` |
+| `--data-dir <data-dir>` / `OPL_DATA_DIR` / `AIONUI_DATA_DIR` | OPL CLI 维护路径的数据目录；显式 CLI 参数优先 |
+| `--projects-dir <projects-dir>` / `OPL_PROJECTS_DIR` | 项目目录；未设置时默认为 `<data-dir>/projects` |
+| `OPL_IMAGE_MANIFEST_PATH` | 镜像内提供的 image manifest JSON 路径；canonical 路径是 `/opt/opl/image-manifest.json`，用于报告镜像入口版本、digest、revision 和 `seed_strategy` |
+| `OPL_IMAGE_SEED_METADATA_PATH` | seed metadata JSON 路径；未设置时优先读 `/opt/opl/seed/metadata.json` |
 | `OPL_STATE_DIR` | OPL 状态目录；推荐 `/data/opl/state` |
 
 `install-manifest.json` 是 OPL Framework 的安装/seed 边界 readback，不是 release readiness、provider readiness、domain truth、owner receipt、typed blocker 或 human gate。组件 receipt 至少区分：
 
 - `image_manifest`
-- `framework_install_dir`
-- `codex_toolchain`
-- `modules_skills`
+- `opl_framework`
+- `codex_cli`
+- `companion_skills`
+- `domain_modules`
 - `data_dir`
 - `projects_dir`
 
-组件状态只表示本次命令是否观察到对应文件或目录；缺少可验证输入时报告 `pending` 或 `not_available`。`opl system` 和 `opl system initialize` 的 `seed_install` read model 会回显 `image_version`、`image_digest`、`data_dir`、`projects_dir` 和 manifest 路径，并显式报告 `readiness_claim: not_claimed` / `can_claim_ready_or_current: false`。
+镜像 manifest 的 canonical 路径是 `/opt/opl/image-manifest.json`。`seed_strategy` 只接受 `payload_manifest`、`payload_preheated` 或 `metadata_only`；`metadata_only` 只允许 slim 镜像，stable/latest full seed 禁止，不能新增 `manifest_payload_dir` 这类第三种名字。
+
+镜像 seed metadata 文件是 `/opt/opl/seed/metadata.json`，schema 固定为 `dev.onepersonlab.opl-webui-image-seed.v1`。full seed 至少应包含 `opl_framework`、`codex_cli`、`companion_skills` 和 `domain_modules` 四类组件。每个组件应提供 `id`、`version`、`source`、`payload_path`、`receipt_kind`，并提供 `sha256` 或 `source_fingerprint`。`seed-apply` 会把这些 payload materialize 到 data volume 下的 Framework-owned 位置，并在 public `components[]` 与 `receipts[]` 中写入 canonical `component_id`、`component_kind`、`receipt_ref`、`payload_path`、`materialized_path`、`receipt_kind`、`sha256` / `source_fingerprint` 和 size。旧内部 id `framework_install_dir`、`codex_toolchain`、`modules_skills` 只可作为 legacy input mapping，不应出现在 public install manifest / CLI JSON 给 App/Shell gate 消费。
+
+`component_kind` / receipt operation 只允许表达：
+
+- `image_seed`：来自镜像 seed 的首次物化或观察。
+- `managed_update`：由 Framework managed update / runtime toolchain 维护的观察面。
+- `migration`：数据卷目录和项目目录等 persistent volume reconcile。
+
+组件状态只表示本次命令是否观察到或物化对应文件或目录；缺少可验证输入时报告 `pending` 或 `not_available`。`opl system` 和 `opl system initialize` 的 `seed_install` read model 会回显 `image_version`、`image_digest`、`data_dir`、`projects_dir` 和 manifest 路径，并显式报告 `readiness_claim: not_claimed` / `can_claim_ready_or_current: false`。
 
 ## 标准浏览器访问
 
@@ -171,9 +186,22 @@ CODEX_HOME=/data/codex \
 AIONUI_DATA_DIR=/data \
 OPL_STATE_DIR=/data/opl/state \
 OPL_PROJECTS_DIR=/projects \
-OPL_IMAGE_MANIFEST_PATH=/app/aionui-web/opl-image-manifest.json \
-OPL_IMAGE_SEED_DIR=/app/aionui-web/opl-image-seed \
+OPL_IMAGE_MANIFEST_PATH=/opt/opl/image-manifest.json \
+OPL_IMAGE_SEED_DIR=/opt/opl/seed \
+OPL_IMAGE_SEED_METADATA_PATH=/opt/opl/seed/metadata.json \
 opl system startup-maintenance --json
+```
+
+如果维护 service 只执行 seed materialization，也可以用显式参数，不需要写宿主全局目录：
+
+```bash
+HOME=/data \
+CODEX_HOME=/data/codex \
+opl system seed-apply \
+  --from /opt/opl/seed \
+  --data-dir /data \
+  --projects-dir /projects \
+  --json
 ```
 
 WebUI 可以读取 `system_action.details.seed_boundary` 或后续 `opl system initialize --json` 的 `system_initialize.seed_install` 展示“镜像入口版本”和“OPL 数据卷安装状态”。
@@ -197,8 +225,8 @@ curl -fsS http://127.0.0.1:3000/api/auth/user
 ## 运行维护说明
 
 - 持久化 `/data`，让 WebUI 状态在容器重启后保留；如果部署中显式运行 OPL CLI / Codex CLI，也把 workspace、Codex 配置和缓存放进同一个受管 volume。
-- 把用户项目目录作为独立 `/projects` 或 `/data/projects` 挂载；用 `OPL_PROJECTS_DIR` 告诉 OPL CLI 当前项目根。
-- 预热版镜像启动维护用 `opl system seed-apply --json` 或 `opl system startup-maintenance --json` 写入 `/data/opl/state/install-manifest.json`，供 WebUI 展示 seed/install readback。
+- 把用户项目目录作为独立 `/projects` 挂载；用 `OPL_PROJECTS_DIR` 告诉 OPL CLI 当前项目根。
+- 预热版镜像启动维护用 `opl system seed-apply --from <seed-dir> --data-dir /data --projects-dir <projects-dir> --json` 或 `opl system startup-maintenance --json` 写入 `/data/opl/state/install-manifest.json`，供 WebUI 展示 seed/install readback。
 - 需要容器内 Codex 默认配置时，使用显式 OPL CLI 配置步骤或预置 `CODEX_HOME=/data/codex`，不要只给 WebUI entrypoint 传 `OPL_CODEX_*`。
 - companion skills、OfficeCLI、MinerU 和 Full runtime payload 继续走 `opl install`、`opl skill companion apply`、App Full first-install package 或显式挂载的 managed payload；不要假设 WebUI 镜像已经内置这些 payload。
 - provider API key 使用部署 secrets 管理。

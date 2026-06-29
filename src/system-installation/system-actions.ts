@@ -293,7 +293,11 @@ export async function runOplSystemAction(
   }
 
   if (action === 'seed_apply') {
-    const seedApply = await applyOplSeedManifest();
+    const seedApply = await applyOplSeedManifest({
+      seedDir: input.seedDir,
+      dataDir: input.dataDir,
+      projectsDir: input.projectsDir,
+    });
     return {
       version: 'g2',
       system_action: {
