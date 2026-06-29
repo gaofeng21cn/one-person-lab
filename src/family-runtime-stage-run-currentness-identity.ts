@@ -76,7 +76,6 @@ export function buildStageRunCurrentnessIdentity(
   const task = input.task ?? {};
   const taskPayload = input.taskPayload ?? recordValue(task.payload) ?? {};
   const stageAttempt = input.stageAttempt ?? {};
-  const currentOwnerDelta = input.currentOwnerDelta ?? {};
   const providerAdmissionIdentity = recordValue(taskPayload.provider_admission_identity)
     ?? recordValue(stageAttempt.provider_admission_identity);
   const stageRunRequest = recordValue(taskPayload.stage_run_request) ?? {};
@@ -96,7 +95,6 @@ export function buildStageRunCurrentnessIdentity(
     ?? recordValue(currentnessContract.basis)
     ?? recordValue(taskPayload.owner_route_currentness_basis)
     ?? recordValue(workspaceLocator.owner_route_currentness_basis)
-    ?? recordValue(currentOwnerDelta.currentness_basis)
     ?? {};
   const dispatchRef = optionalString(taskPayload.dispatch_ref)
     ?? optionalString(workspaceLocator.dispatch_ref)
@@ -120,9 +118,7 @@ export function buildStageRunCurrentnessIdentity(
     schema_version: 1,
     domain_id: optionalString(stageAttempt.domain_id) ?? optionalString(task.domain_id),
     study_id_or_quest_id: optionalString(taskPayload.study_id)
-      ?? optionalString(taskPayload.quest_id)
-      ?? optionalString(currentOwnerDelta.study_id)
-      ?? optionalString(currentOwnerDelta.quest_id),
+      ?? optionalString(taskPayload.quest_id),
     stage_id: optionalString(stageAttempt.stage_id)
       ?? optionalString(taskPayload.stage_id)
       ?? optionalString(workspaceLocator.task_kind)
@@ -130,13 +126,11 @@ export function buildStageRunCurrentnessIdentity(
     stage_attempt_id: optionalString(stageAttempt.stage_attempt_id),
     action_type: optionalString(taskPayload.action_type)
       ?? optionalString(paperMissionRouteIdentity.action_type)
-      ?? optionalString(currentOwnerDelta.action_type)
       ?? optionalString(nestedRecord(taskPayload, 'source_action')?.action_type),
     work_unit_id: optionalString(basis.work_unit_id)
       ?? optionalString(taskPayload.work_unit_id)
       ?? optionalString(paperMissionRouteIdentity.work_unit_id)
       ?? optionalString(workspaceLocator.work_unit_id)
-      ?? optionalString(currentOwnerDelta.work_unit_id)
       ?? optionalString(nestedRecord(taskPayload, 'source_action', 'next_work_unit')?.unit_id)
       ?? optionalString(taskPayload.action_type),
     work_unit_fingerprint: optionalString(basis.work_unit_fingerprint)
@@ -144,14 +138,12 @@ export function buildStageRunCurrentnessIdentity(
       ?? optionalString(paperMissionRouteIdentity.work_unit_fingerprint)
       ?? optionalString(taskPayload.source_fingerprint)
       ?? optionalString(workspaceLocator.work_unit_fingerprint)
-      ?? optionalString(workspaceLocator.domain_source_fingerprint)
-      ?? optionalString(currentOwnerDelta.work_unit_fingerprint),
+      ?? optionalString(workspaceLocator.domain_source_fingerprint),
     source_fingerprint: optionalString(taskPayload.source_fingerprint)
       ?? optionalString(paperMissionRouteIdentity.work_unit_fingerprint)
       ?? optionalString(workspaceLocator.domain_source_fingerprint)
       ?? optionalString(workspaceLocator.source_fingerprint)
-      ?? optionalString(stageAttempt.source_fingerprint)
-      ?? optionalString(currentOwnerDelta.source_fingerprint),
+      ?? optionalString(stageAttempt.source_fingerprint),
     truth_epoch: optionalString(basis.truth_epoch)
       ?? optionalString(providerAdmissionIdentity?.truth_epoch)
       ?? optionalString(taskPayload.truth_epoch)

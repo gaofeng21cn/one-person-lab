@@ -180,6 +180,79 @@ test('current control state treats queued MAS PaperMission stage-route as provid
   });
 });
 
+test('current control state uses MAS NextAction request identity instead of legacy current-owner fields', () => {
+  withDb((db) => {
+    const task = enqueuePaperMissionStageRouteTask(db, {
+      stage_run_request: {
+        action_type: 'continue_same_stage',
+        work_unit_id: 'submission_milestone_candidate',
+        work_unit_fingerprint: 'paper-mission::003::submission_milestone_candidate::followthrough',
+        next_action_id: 'mas-next-action::003::submission_milestone_candidate',
+        route_identity_key: 'paper-mission-transaction::003::submission_milestone_candidate::route',
+        attempt_idempotency_key: '003::submission_milestone_candidate::followthrough::opl-attempt',
+        request_idempotency_key: '003::submission_milestone_candidate::followthrough::opl-request',
+      },
+      owner_route_currentness_basis: {
+        work_unit_id: 'submission_milestone_candidate',
+        work_unit_fingerprint: 'paper-mission::003::submission_milestone_candidate::followthrough',
+        truth_epoch: 'mas-truth::003::followthrough',
+        runtime_health_epoch: 'opl-runtime-health::003::followthrough',
+        source_eval_id: 'paper-mission-eval::003::followthrough',
+      },
+      source_fingerprint: 'mas-source::003::followthrough',
+      current_work_unit: {
+        work_unit_id: 'legacy_current_work_unit',
+        exact_work_unit_id: 'legacy_exact_work_unit_id',
+        source_fingerprint: 'legacy-source',
+      },
+      exact_work_unit_id: 'legacy_exact_work_unit_id',
+      current_executable_owner_action: {
+        action_type: 'legacy_owner_action',
+        work_unit_id: 'legacy_owner_work_unit',
+        exact_work_unit_id: 'legacy_owner_exact_work_unit_id',
+        request_idempotency_key: 'legacy-owner-request',
+      },
+    });
+
+    const state = deriveCurrentControlStateForTask(db, task.task_id);
+    const identity = state.stage_run_currentness_identity as Record<string, unknown>;
+
+    assert.equal(state.reconciliation_status, 'provider_admission_requested');
+    assert.equal(identity.action_type, 'continue_same_stage');
+    assert.equal(identity.work_unit_id, 'submission_milestone_candidate');
+    assert.equal(
+      identity.work_unit_fingerprint,
+      'paper-mission::003::submission_milestone_candidate::followthrough',
+    );
+    assert.equal(identity.source_fingerprint, 'mas-source::003::followthrough');
+    assert.equal(identity.truth_epoch, 'mas-truth::003::followthrough');
+    assert.equal(identity.runtime_health_epoch, 'opl-runtime-health::003::followthrough');
+    assert.equal(identity.source_eval_id, 'paper-mission-eval::003::followthrough');
+    assert.equal(identity.idempotency_key, 'mas-next-action::003::submission_milestone_candidate');
+    assert.equal(
+      identity.route_identity_key,
+      'paper-mission-transaction::003::submission_milestone_candidate::route',
+    );
+    assert.equal(
+      identity.attempt_idempotency_key,
+      '003::submission_milestone_candidate::followthrough::opl-attempt',
+    );
+    assert.deepEqual(
+      [
+        identity.action_type,
+        identity.work_unit_id,
+        identity.work_unit_fingerprint,
+        identity.source_fingerprint,
+        identity.idempotency_key,
+      ].filter((value) => typeof value === 'string' && value.includes('legacy')),
+      [],
+    );
+    assert.equal(Object.hasOwn(state, 'domain_ready'), false);
+    assert.equal(Object.hasOwn(state, 'publication_ready'), false);
+    assert.equal(Object.hasOwn(state, 'artifact_ready'), false);
+  });
+});
+
 test('current control state exposes active provider attempt identity without domain readiness claims', () => {
   withDb((db) => {
     const task = enqueueDefaultTask(db, {

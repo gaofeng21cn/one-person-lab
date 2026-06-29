@@ -305,6 +305,71 @@ test('preserves explicit MAS provider admission identity fields in StageRun curr
   assert.deepEqual(missingStageRunCurrentnessIdentityFields(identity), []);
 });
 
+test('does not derive StageRun currentness identity from MAS legacy current-owner or exact-id fields', () => {
+  const identity = buildStageRunCurrentnessIdentity({
+    task: {
+      domain_id: 'medautoscience',
+      task_id: 'frt-current',
+      payload: {
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        stage_id: 'paper_mission/stage-route',
+        next_action_id: 'mas-next-action::003::submission_milestone_candidate',
+        route_identity_key: 'route::003::submission_milestone_candidate',
+        attempt_idempotency_key: 'attempt::003::submission_milestone_candidate',
+        dispatch_ref: 'paper-mission-transaction::003::submission_milestone_candidate#opl_route_command',
+        stage_packet_ref: 'paper-mission-transaction::003::submission_milestone_candidate#opl_route_command',
+        stage_packet_refs: [
+          'paper-mission-transaction::003::submission_milestone_candidate#opl_route_command',
+        ],
+      },
+    },
+    currentOwnerDelta: {
+      study_id: 'legacy-study-id',
+      quest_id: 'legacy-quest-id',
+      action_type: 'legacy_owner_action',
+      work_unit_id: 'legacy_work_unit',
+      work_unit_fingerprint: 'legacy-fingerprint',
+      source_fingerprint: 'legacy-source',
+      current_work_unit: 'legacy_current_work_unit',
+      exact_work_unit_id: 'legacy_exact_work_unit_id',
+      current_executable_owner_action: {
+        action_type: 'legacy_nested_owner_action',
+        exact_work_unit_id: 'legacy_nested_exact_work_unit_id',
+      },
+      currentness_basis: {
+        work_unit_id: 'legacy_basis_work_unit',
+        work_unit_fingerprint: 'legacy-basis-fingerprint',
+        truth_epoch: 'legacy-truth-epoch',
+        runtime_health_epoch: 'legacy-runtime-health-epoch',
+        source_eval_id: 'legacy-source-eval',
+      },
+    },
+  });
+
+  assert.equal(identity.study_id_or_quest_id, '003-dpcc-primary-care-phenotype-treatment-gap');
+  assert.equal(identity.action_type, null);
+  assert.equal(identity.work_unit_id, null);
+  assert.equal(identity.work_unit_fingerprint, null);
+  assert.equal(identity.source_fingerprint, null);
+  assert.equal(identity.truth_epoch, null);
+  assert.equal(identity.runtime_health_epoch, null);
+  assert.equal(identity.source_eval_id, null);
+  assert.equal(identity.idempotency_key, 'mas-next-action::003::submission_milestone_candidate');
+  assert.equal(identity.route_identity_key, 'route::003::submission_milestone_candidate');
+  assert.equal(identity.attempt_idempotency_key, 'attempt::003::submission_milestone_candidate');
+  assert.deepEqual(missingStageRunCurrentnessIdentityFields(identity), [
+    'stage_attempt_id',
+    'action_type',
+    'work_unit_id',
+    'work_unit_fingerprint',
+    'source_fingerprint',
+    'truth_epoch',
+    'runtime_health_epoch',
+    'source_eval_id',
+  ]);
+  assert.equal(sameStageRunRouteCurrentnessIdentity(identity, identity), false);
+});
+
 test('does not treat StageAttempt idempotency as MAS NextAction request identity', () => {
   const identity = buildStageRunCurrentnessIdentity({
     task: {
