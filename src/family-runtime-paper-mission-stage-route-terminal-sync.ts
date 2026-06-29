@@ -57,6 +57,10 @@ const SUPERSEDABLE_PROVIDER_BLOCKERS = new Set([
 const BACKFILLABLE_TERMINAL_ROUTE_BLOCKERS = new Set([
   PAPER_MISSION_STAGE_ROUTE_DOMAIN_GATE_PENDING_REASON,
 ]);
+const BACKFILLABLE_TERMINAL_RECEIPT_BLOCKERS = new Set([
+  PAPER_MISSION_STAGE_ROUTE_DOMAIN_GATE_PENDING_REASON,
+  'typed_closeout_paper_mission_stage_route_user_stage_log_missing',
+]);
 
 type StageAttemptPayload = ReturnType<typeof stageAttemptToPayload>;
 
@@ -526,6 +530,10 @@ function canReconcilePaperMissionStageRouteTask(
     && (
       SUPERSEDABLE_PROVIDER_BLOCKERS.has(reason)
       || BACKFILLABLE_TERMINAL_ROUTE_BLOCKERS.has(reason)
+      || (
+        BACKFILLABLE_TERMINAL_RECEIPT_BLOCKERS.has(reason)
+        && terminalAttempt.closeout_refs.some((entry) => typeof entry === 'string' && entry.trim().length > 0)
+      )
     );
 }
 

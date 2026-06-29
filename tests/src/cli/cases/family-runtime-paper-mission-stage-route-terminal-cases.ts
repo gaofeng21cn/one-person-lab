@@ -363,6 +363,90 @@ test('family-runtime backfills OPL transition receipt for historical terminal re
   }
 });
 
+test('family-runtime backfills OPL transition receipt for stage-route user-stage-log closeout blockers', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-user-log-receipt-'));
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_mission/stage-route',
+      '--payload',
+      JSON.stringify(paperMissionRoutePayload({
+        command_kind: 'route_back',
+        route_target: 'submission_milestone_candidate::followthrough::followthrough-02',
+      })),
+      '--dedupe-key',
+      'paper-mission-route:dm002:user-stage-log-receipt',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    runCli(['family-runtime', 'tick', '--source', 'test-paper-route-user-log-start'], env);
+    const runningTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const attemptId = runningTask.family_runtime_task.stage_attempts[0].stage_attempt_id;
+
+    const originalStateDir = process.env.OPL_STATE_DIR;
+    try {
+      process.env.OPL_STATE_DIR = stateRoot;
+      const { db } = openQueueDb();
+      db.prepare(`
+        UPDATE tasks
+        SET status = 'blocked',
+          last_error = 'typed_closeout_paper_mission_stage_route_user_stage_log_missing',
+          dead_letter_reason = 'typed_closeout_paper_mission_stage_route_user_stage_log_missing'
+        WHERE task_id = ?
+      `).run(taskId);
+      db.prepare(`
+        UPDATE stage_attempts
+        SET status = 'blocked',
+          blocked_reason = 'typed_closeout_paper_mission_stage_route_user_stage_log_missing',
+          closeout_refs_json = ?
+        WHERE stage_attempt_id = ?
+      `).run(JSON.stringify([
+        `opl://stage-attempts/${attemptId}/runtime-blockers/typed_closeout_paper_mission_stage_route_user_stage_log_missing`,
+      ]), attemptId);
+      db.prepare(`
+        INSERT INTO events(task_id, domain_id, event_type, source, payload_json, created_at)
+        VALUES(?, 'medautoscience', 'paper_mission_stage_route_terminal_task_reconciled', 'legacy-test', ?, datetime('now'))
+      `).run(taskId, JSON.stringify({
+        stage_attempt_id: attemptId,
+        reason: 'typed_closeout_paper_mission_stage_route_user_stage_log_missing',
+      }));
+      db.close();
+    } finally {
+      process.env.OPL_STATE_DIR = originalStateDir;
+    }
+
+    const backfill = runCli(['family-runtime', 'tick', '--source', 'test-paper-route-user-log-receipt'], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const receiptEvents = task.family_runtime_task.events.filter((event: { event_type: string; payload: Record<string, any> }) =>
+      event.event_type === 'paper_mission_stage_route_terminal_task_reconciled'
+      && event.payload.opl_transition_receipt
+    );
+
+    assert.equal(backfill.family_runtime_tick.reconciled_paper_mission_stage_route_terminal_count, 1);
+    assert.equal(receiptEvents.length, 1);
+    assert.equal(
+      receiptEvents[0].payload.opl_transition_receipt.blocked_reason,
+      'typed_closeout_paper_mission_stage_route_user_stage_log_missing',
+    );
+    assert.equal(
+      receiptEvents[0].payload.opl_transition_receipt.receipt_status,
+      'typed_runtime_blocker_observed',
+    );
+    assert.equal(
+      receiptEvents[0].payload.opl_transition_receipt.authority_boundary.writes_typed_blocker,
+      false,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime does not self-admit terminal successor when route identity exists only in nested OPL carrier', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-terminal-nested-'));
   try {
