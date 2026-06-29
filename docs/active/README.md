@@ -40,7 +40,7 @@ OPL 品牌模块的 L4 rollout 计划已退出 active path：当前十模块 `L4
 
 | 文档 | 当前角色 | 是否仍有未落地规划 | 缺口归位 |
 | --- | --- | --- | --- |
-| `current-state-vs-ideal-gap.md` | 唯一 active owner / gap register | 是，但只维护当前非 live 功能/结构 gap，不维护 dated closeout 或 live evidence worklist。 | 本文的 `Active Planning Gap Register`、`后置 Live Evidence 维护`、`Next-Round Agent Prompt`。 |
+| `current-state-vs-ideal-gap.md` | 唯一 active owner / gap register | 是，但只维护当前功能/结构 gap，不维护 dated closeout 或 live evidence worklist。 | 本文的 `Active Planning Gap Register`、`Ready / Release 声明边界`、`Next-Round Agent Prompt`。 |
 | `ordinary-progress-spine-and-audit-sidecar-plan.md` | ordinary/audit 分层目标规划支撑 | 不作为独立 backlog。P0-P5 只作设计标准和验收词表。 | 已落地与未落地状态折回 `current-state-vs-ideal-gap.md` 的 operating-model / functional-structure gap；live evidence 指向独立维护入口。 |
 | `foundry-agent-os-family-target-implementation-plan.md` | Foundry Agent OS family target 支撑 | 不作为独立 backlog。W0-W6 structural landing 已折回；W7 live owner evidence / production evidence 后置。 | 非 live 缺口回 `current-state-vs-ideal-gap.md#active-planning-gap-register`；live evidence 回独立维护入口。 |
 | `opl-family-ideal-operating-model-redesign.md` | north-star / audit standard | 不作为 active backlog。 | 用 `meets_target` / `needs_demotion` / `needs_retirement` 审计；当前缺口只由唯一 active owner 维护。 |
@@ -58,7 +58,7 @@ OPL 品牌模块的 L4 rollout 计划已退出 active path：当前十模块 `L4
 
 因此，“active 规划未落地”只能按唯一 active owner 的非 live 功能/结构 gap 读取；domain owner answer / typed blocker、Brand L5 真实运营证据、provider long-soak、App release verdict、memory/artifact lifecycle receipt、private-platform physical-delete owner decision 等归独立 Live Evidence 维护入口或 owner repo evidence surface。support 文档里残留的 P0-P5、W0-W7、audit lanes、rollout phases、matrix rows 或 external-practice checklist 都不是第二 backlog。
 
-2026-06-30 起，live / production / release / owner-evidence tail 的维护入口单独放在 [OPL Family Live Evidence 维护入口](../references/operating-governance/family-live-evidence-maintenance.md)。本目录只描述 active 文档角色和非 live 功能/结构缺口，不再把 release cohort、provider tick、Brand L5 receipt、App packaged smoke、domain owner receipt、typed blocker、human gate、run id 或 dated closeout 流水列成 active planning backlog。
+2026-06-30 起，live / production / release / owner-evidence tail 的维护入口单独放在 [OPL Family Live Evidence 维护入口](../references/operating-governance/family-live-evidence-maintenance.md)。本目录只描述 active 文档角色和功能/结构缺口，不再把 release cohort、provider tick、Brand L5 receipt、App packaged smoke、domain owner receipt、typed blocker、human gate、run id 或 dated closeout 流水列成 active planning backlog。
 
 当前真相仍然先看：
 
@@ -74,7 +74,7 @@ OPL 品牌模块的 L4 rollout 计划已退出 active path：当前十模块 `L4
 
 ## 内容
 
-- `current-state-vs-ideal-gap.md`：唯一 active owner；维护当前目标、完成进度、功能/结构差距、测试/证据差距、active-goal baton 和验证入口；承接 Stage Native Kernel rollout 的当前落地状态和仍未闭合的 App/domain canary/cleanup tail。
+- `current-state-vs-ideal-gap.md`：唯一 active owner；维护当前目标、完成进度、功能/结构差距、active-goal baton 和验证入口；承接 Stage Native Kernel rollout 的当前落地状态和仍未闭合的 App/domain canary/cleanup tail。
 - `ordinary-progress-spine-and-audit-sidecar-plan.md`：active_support 完整治理规划；定义 ordinary progress spine、audit sidecar、artifact tiering、readiness JIT、MDS / DeepScientist smoothness learning、OPL 基座优化和 P0-P5 验收门；不声明 implementation landed。
 - `foundry-agent-os-family-target-implementation-plan.md`：active_support 目标实施规划；把 MAS Agent OS 方案提升为 family-level Foundry Agent OS pattern，固定 OPL / domain 分权、Capability Registry 边界、cross-agent target delta 和后续实施 lanes；不声明 domain ready、Brand L5 或 production ready。
 - `opl-family-ideal-operating-model-redesign.md`：active_reference / north-star 标准；提供 `目的反推必要性，MVP 检查阻碍性` 的统一 operating model、`multi-plane operating system` 顶层重设、外部成熟工程经验吸收分类和三类审计结论。
