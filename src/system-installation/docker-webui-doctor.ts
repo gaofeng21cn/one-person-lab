@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 import { resolveOplStatePaths } from '../runtime-state-paths.ts';
 import { readLocalCodexDefaultsIfAvailable } from '../local-codex-defaults.ts';
@@ -9,6 +10,8 @@ type DoctorStatus = 'ok' | 'attention' | 'not_configured';
 type ObservationStatus =
   | 'configured'
   | 'not_configured'
+  | 'reachable'
+  | 'unreachable'
   | 'exists'
   | 'missing'
   | 'found'
@@ -30,6 +33,12 @@ type Observation = {
   severity: 'info' | 'attention';
   message: string;
   refs: Record<string, unknown>;
+};
+
+type DockerCommandReadback = {
+  status: 'ok' | 'error' | 'not_found';
+  stdout: string;
+  stderr: string;
 };
 
 function optionalEnv(name: string) {
@@ -68,6 +77,147 @@ function readArray(value: unknown, key: string) {
 
 function hasUsableManifest(manifest: Record<string, unknown> | null) {
   return readString(manifest, 'surface_kind') === 'opl_seed_install_manifest';
+}
+
+function runDockerReadback(args: string[]): DockerCommandReadback {
+  const result = spawnSync('docker', args, {
+    encoding: 'utf8',
+    timeout: 2500,
+  });
+  if (result.error && 'code' in result.error && result.error.code === 'ENOENT') {
+    return { status: 'not_found', stdout: '', stderr: result.error.message };
+  }
+  if (result.status === 0) {
+    return { status: 'ok', stdout: result.stdout.trim(), stderr: result.stderr.trim() };
+  }
+  const stderr = result.stderr?.trim() || result.stdout?.trim() || result.error?.message || 'docker command failed';
+  return { status: 'error', stdout: result.stdout?.trim() ?? '', stderr };
+}
+
+function parseDockerJson(stdout: string): Record<string, unknown> | null {
+  try {
+    const parsed = JSON.parse(stdout);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function readDockerImageRef(manifestImage: Record<string, unknown> | null) {
+  return optionalEnv('OPL_WEBUI_IMAGE')
+    ?? readString(manifestImage, 'image_ref')
+    ?? readString(manifestImage, 'ref')
+    ?? readString(manifestImage, 'repository');
+}
+
+function buildDockerRuntimeReadback(input: {
+  imageRef: string | null;
+  dataDir: string | null;
+  projectsDir: string | null;
+  port: string | null;
+}) {
+  const dockerVersion = runDockerReadback(['version', '--format', '{{.Client.Version}}']);
+  const dockerInfo = dockerVersion.status === 'ok'
+    ? runDockerReadback(['info', '--format', '{{.ServerVersion}}'])
+    : { status: 'error' as const, stdout: '', stderr: 'docker client not available' };
+  const ps = dockerInfo.status === 'ok'
+    ? runDockerReadback([
+      'ps',
+      '--filter',
+      'label=com.docker.compose.service=one-person-lab-webui',
+      '--format',
+      '{{json .}}',
+    ])
+    : { status: 'error' as const, stdout: '', stderr: 'docker daemon not reachable' };
+  const containerRows = ps.status === 'ok'
+    ? ps.stdout.split(/\r?\n/).filter(Boolean).map(parseDockerJson).filter((entry): entry is Record<string, unknown> => Boolean(entry))
+    : [];
+  const firstContainer = containerRows[0] ?? null;
+  const containerId = readString(firstContainer, 'ID');
+  const containerName = readString(firstContainer, 'Names') ?? readString(firstContainer, 'Names');
+  const inspectTarget = containerId ?? containerName;
+  const inspect = inspectTarget
+    ? runDockerReadback(['inspect', inspectTarget])
+    : { status: 'error' as const, stdout: '', stderr: 'no matching WebUI container was visible' };
+  let inspectPayload: Record<string, unknown> | null = null;
+  if (inspect.status === 'ok') {
+    try {
+      const parsed = JSON.parse(inspect.stdout);
+      inspectPayload = Array.isArray(parsed) && parsed[0] && typeof parsed[0] === 'object'
+        ? parsed[0] as Record<string, unknown>
+        : null;
+    } catch {
+      inspectPayload = null;
+    }
+  }
+  const mounts = Array.isArray(inspectPayload?.Mounts) ? inspectPayload.Mounts as Array<Record<string, unknown>> : [];
+  const dataMount = mounts.find((entry) => readString(entry, 'Destination') === '/data') ?? null;
+  const projectsMount = mounts.find((entry) => readString(entry, 'Destination') === '/projects') ?? null;
+  const networkSettings = readRecord(inspectPayload, 'NetworkSettings');
+  const ports = readRecord(networkSettings, 'Ports');
+  const imageInspect = input.imageRef
+    ? runDockerReadback(['image', 'inspect', input.imageRef, '--format', '{{json .}}'])
+    : { status: 'error' as const, stdout: '', stderr: 'image reference not configured' };
+  const imagePayload = imageInspect.status === 'ok' ? parseDockerJson(imageInspect.stdout) : null;
+
+  return {
+    status: dockerInfo.status === 'ok'
+      ? containerRows.length > 0 ? 'container_visible' : 'daemon_reachable'
+      : dockerVersion.status === 'not_found' ? 'docker_cli_missing' : 'daemon_unreachable',
+    docker_cli: {
+      status: dockerVersion.status === 'ok' ? 'present' : dockerVersion.status === 'not_found' ? 'missing' : 'error',
+      client_version: dockerVersion.status === 'ok' ? dockerVersion.stdout : null,
+      error: dockerVersion.status === 'ok' ? null : dockerVersion.stderr,
+    },
+    daemon: {
+      status: dockerInfo.status === 'ok' ? 'reachable' : 'unreachable',
+      server_version: dockerInfo.status === 'ok' ? dockerInfo.stdout : null,
+      error: dockerInfo.status === 'ok' ? null : dockerInfo.stderr,
+    },
+    container: {
+      status: containerRows.length > 0 ? 'visible' : dockerInfo.status === 'ok' ? 'not_visible' : 'not_checked',
+      id: containerId,
+      name: containerName,
+      image: readString(firstContainer, 'Image') ?? readString(inspectPayload, 'Image'),
+      ports: readString(firstContainer, 'Ports'),
+      inspect_status: inspectTarget ? inspect.status : 'not_run',
+      error: inspect.status === 'ok' ? null : inspect.stderr,
+    },
+    image: {
+      ref: input.imageRef,
+      status: input.imageRef ? imageInspect.status === 'ok' ? 'present' : 'not_visible' : 'not_configured',
+      id: readString(imagePayload, 'Id'),
+      digest: Array.isArray(imagePayload?.RepoDigests) ? imagePayload.RepoDigests[0] ?? null : null,
+      error: imageInspect.status === 'ok' ? null : imageInspect.stderr,
+    },
+    mounts: {
+      data: {
+        status: dataMount ? 'visible' : inspectPayload ? 'not_visible' : 'not_checked',
+        expected_host_path: input.dataDir,
+        source: readString(dataMount, 'Source'),
+        destination: readString(dataMount, 'Destination'),
+      },
+      projects: {
+        status: projectsMount ? 'visible' : inspectPayload ? 'not_visible' : 'not_checked',
+        expected_host_path: input.projectsDir,
+        source: readString(projectsMount, 'Source'),
+        destination: readString(projectsMount, 'Destination'),
+      },
+    },
+    ports: {
+      expected_host_port: input.port,
+      status: ports ? 'visible' : inspectPayload ? 'not_visible' : 'not_checked',
+      bindings: ports ?? null,
+    },
+    authority_boundary: {
+      readonly: true,
+      starts_or_stops_containers: false,
+      pulls_images: false,
+      mutates_mounts: false,
+    },
+  };
 }
 
 function summarizeSeedComponents(components: unknown[]) {
@@ -201,6 +351,7 @@ export function buildOplDockerWebuiDoctor() {
         install_manifest_file: statePaths.install_manifest_file,
       },
       image: startupReadback.image,
+      docker_runtime: startupReadback.docker_runtime,
       install_manifest: {
         status: manifestStatus,
         surface_kind: readString(installManifest, 'surface_kind'),
@@ -278,6 +429,13 @@ export function buildDockerWebuiStartupReadback() {
   const seedStrategyStatus = readString(manifestImage, 'seed_strategy_status');
   const dataDirStatus = pathStatus(dataDir);
   const projectsDirStatus = pathStatus(projectsDir);
+  const imageRef = readDockerImageRef(manifestImage);
+  const dockerRuntime = buildDockerRuntimeReadback({
+    imageRef,
+    dataDir,
+    projectsDir,
+    port,
+  });
   const webuiEnvVisible = Boolean(
     aionuiDataDir
     || oplDataDir
@@ -373,6 +531,25 @@ export function buildDockerWebuiStartupReadback() {
         browser_url: browserUrl,
       },
     ),
+    buildObservation(
+      'docker_runtime',
+      dockerRuntime.daemon.status === 'reachable' ? 'reachable' : 'unreachable',
+      dockerRuntime.daemon.status === 'reachable'
+        ? 'Docker daemon is reachable for read-only WebUI diagnostics.'
+        : 'Docker daemon is not reachable; doctor reports Docker runtime as not visible without applying repairs.',
+      {
+        docker_cli_status: dockerRuntime.docker_cli.status,
+        daemon_status: dockerRuntime.daemon.status,
+        container_status: dockerRuntime.container.status,
+        image_status: dockerRuntime.image.status,
+        mount_status: {
+          data: dockerRuntime.mounts.data.status,
+          projects: dockerRuntime.mounts.projects.status,
+        },
+        port_status: dockerRuntime.ports.status,
+        readonly: dockerRuntime.authority_boundary.readonly,
+      },
+    ),
   ];
 
   const attention = observations.filter((entry) => entry.severity === 'attention');
@@ -438,6 +615,7 @@ export function buildDockerWebuiStartupReadback() {
     observations,
     nextActions,
     image: {
+      ref: imageRef,
       version: readString(manifestImage, 'version'),
       digest: readString(manifestImage, 'digest'),
       seed_strategy: readString(manifestImage, 'seed_strategy'),
@@ -445,6 +623,7 @@ export function buildDockerWebuiStartupReadback() {
       source_manifest_status: readString(manifestImage, 'source_manifest_status'),
       manifest_path: readString(manifestImage, 'manifest_path'),
     },
+    docker_runtime: dockerRuntime,
     startup_state: {
       phase: startupPhase,
       api_key_required: true,
@@ -490,6 +669,10 @@ export function buildDockerWebuiStartupReadback() {
       status: startupPhase,
       image_version: readString(manifestImage, 'version'),
       image_digest: readString(manifestImage, 'digest'),
+      docker_runtime_status: dockerRuntime.status,
+      docker_daemon_status: dockerRuntime.daemon.status,
+      docker_container_status: dockerRuntime.container.status,
+      docker_image_status: dockerRuntime.image.status,
       data_dir: dataDir,
       data_dir_status: dataDirStatus,
       projects_dir: projectsDir,
