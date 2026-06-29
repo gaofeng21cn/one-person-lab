@@ -25,6 +25,49 @@
       "attention",
       "not_configured"
     ],
+    "startup_phase_values": [
+      "not_configured",
+      "api_key_missing",
+      "needs_startup_maintenance",
+      "initializing",
+      "seed_applied",
+      "enterable",
+      "repairable_failure"
+    ],
+    "startup_state_fields": [
+      "phase",
+      "api_key_required",
+      "api_key_present",
+      "seed_applied",
+      "initializing",
+      "enterable",
+      "needs_startup_maintenance",
+      "repairable_failure",
+      "runtime_readiness_claim",
+      "can_claim_runtime_ready",
+      "can_claim_release_ready",
+      "can_claim_module_current",
+      "reasons"
+    ],
+    "diagnostic_summary_fields": [
+      "status",
+      "image_version",
+      "image_digest",
+      "data_dir",
+      "data_dir_status",
+      "projects_dir",
+      "projects_dir_status",
+      "browser_url",
+      "browser_url_status",
+      "install_manifest_status",
+      "seed_status",
+      "startup_maintenance_status",
+      "api_key_status",
+      "next_action_ids",
+      "diagnostic_friendly",
+      "runtime_readiness_claim",
+      "can_claim_runtime_ready"
+    ],
     "observation_status_values": [
       "configured",
       "not_configured",
@@ -32,11 +75,27 @@
       "missing",
       "found",
       "invalid",
-      "not_visible"
+      "not_visible",
+      "present"
     ],
     "next_action_status_values": [
       "recommended",
       "available"
+    ],
+    "api_key_readback": {
+      "source": "local_codex_defaults_read_model",
+      "stable_status_values": [
+        "present",
+        "missing"
+      ],
+      "secret_value_redacted": true,
+      "write_surface": "opl system configure-codex --api-key-stdin --json"
+    },
+    "startup_maintenance_status_values": [
+      "needed",
+      "initializing",
+      "seed_applied",
+      "repairable_failure"
     ],
     "forbidden_claims": [
       "release_ready",

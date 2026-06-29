@@ -47,7 +47,7 @@ opl system seed-apply \
   --json
 ```
 
-`opl system docker-webui doctor --json` 是排障用只读 JSON read model。它聚合可见的 `AIONUI_DATA_DIR` / `OPL_DATA_DIR` / `OPL_PROJECTS_DIR`、`install-manifest.json` 状态、`startup-maintenance` 下一步 guidance 和可推导的浏览器 URL / port env；它不执行修复、不创建目录、不运行 startup-maintenance、不声明 release ready、runtime ready 或 module current。稳定顶层状态是 `ok`、`attention`、`not_configured`；单项 observation 使用 `configured`、`not_configured`、`exists`、`missing`、`found`、`invalid`、`not_visible`。
+`opl system docker-webui doctor --json` 是排障用只读 JSON read model。它聚合可见的 `AIONUI_DATA_DIR` / `OPL_DATA_DIR` / `OPL_PROJECTS_DIR`、`install-manifest.json` 状态、镜像版本 / digest、`startup-maintenance` 下一步 guidance、Codex API key presence readback 和可推导的浏览器 URL / port env；它不执行修复、不创建目录、不运行 startup-maintenance、不写 API key、不声明 release ready、runtime ready 或 module current。稳定顶层状态是 `ok`、`attention`、`not_configured`；首启状态机字段在 `startup_state.phase` 中表达 `not_configured`、`api_key_missing`、`needs_startup_maintenance`、`initializing`、`seed_applied`、`enterable`、`repairable_failure`；单项 observation 使用 `configured`、`not_configured`、`exists`、`missing`、`found`、`invalid`、`not_visible`、`present`。`diagnostic_summary` 是安装器 / 教程友好的扁平汇总，包含 image version / digest、data/projects、browser URL、install manifest、startup maintenance、API key、next actions，并固定 `runtime_readiness_claim: not_claimed` / `can_claim_runtime_ready: false`。
 
 `opl system startup-maintenance --json` 也会执行同一 seed apply，并在 `system_action.details.seed_boundary` 返回本次镜像 seed、Framework 安装目录、Codex/toolchain、modules/skills、数据目录和项目目录的 receipt 状态。两条路径都会写入：
 
@@ -89,6 +89,8 @@ seed apply 读取的输入：
 - `migration`：数据卷目录和项目目录等 persistent volume reconcile。
 
 组件状态只表示本次命令是否观察到或物化对应文件或目录；缺少可验证输入时报告 `pending` 或 `not_available`。`opl system` 和 `opl system initialize` 的 `seed_install` read model 会回显 `image_version`、`image_digest`、`data_dir`、`projects_dir` 和 manifest 路径，并显式报告 `readiness_claim: not_claimed` / `can_claim_ready_or_current: false`。
+
+`opl system startup-maintenance --json` 的 `system_action.details.docker_webui_startup` 复用 doctor 的只读首启状态机，但 `startup_maintenance.execution_policy` 会标成 `executed_by_startup_maintenance`。这只说明本次维护命令已经执行 seed/materialization 和 managed-maintenance 路径；如果 `api_key.status` 仍是 `missing`，安装器应提示运行 `opl system configure-codex --api-key-stdin --json`，不要把 seed applied 展示成 Codex provider 或 runtime ready。
 
 ## 标准浏览器访问
 

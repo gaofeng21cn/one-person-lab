@@ -3,6 +3,7 @@ import type { FrameworkContracts } from '../types.ts';
 import { recordManagedInstallUpdateReceipts } from '../managed-install-update-ledger.ts';
 
 import { buildOplEnvironment } from './environment.ts';
+import { buildDockerWebuiStartupReadback } from './docker-webui-doctor.ts';
 import { runOplEngineAction } from './engine-actions.ts';
 import { resolveFrameworkUpdateTargetRoot, runOplFrameworkSelfUpdate } from './framework-self-update.ts';
 import { buildOplModules, runOplModuleAction } from './modules.ts';
@@ -435,6 +436,7 @@ export async function runOplStartupMaintenance(
     .filter((domainId): domainId is string => Boolean(domainId));
   const seedApply = await applyOplSeedManifest();
   const refreshedEnvironment = (await buildOplEnvironment(contracts)).system_environment;
+  const dockerWebuiStartup = buildDockerWebuiStartupReadback();
 
   return {
     version: 'g2',
@@ -463,6 +465,17 @@ export async function runOplStartupMaintenance(
         capability_targets: capabilityTargets,
         module_targets: moduleTargets,
         seed_boundary: seedApply.seed_apply,
+        docker_webui_startup: {
+          startup_state: dockerWebuiStartup.startup_state,
+          diagnostic_summary: dockerWebuiStartup.diagnostic_summary,
+          startup_maintenance: {
+            ...dockerWebuiStartup.startup_maintenance,
+            execution_policy: 'executed_by_startup_maintenance',
+          },
+          api_key: dockerWebuiStartup.api_key,
+          image: dockerWebuiStartup.image,
+          next_actions: dockerWebuiStartup.nextActions,
+        },
         managed_install_update_receipts: managedReceiptRecord,
         plugin_cache_freshness: {
           status: syncedDomains.length > 0

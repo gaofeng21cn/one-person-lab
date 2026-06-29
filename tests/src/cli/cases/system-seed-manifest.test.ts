@@ -18,6 +18,21 @@ function writeDeveloperCheckout(root: string) {
   ]);
 }
 
+function writeCodexConfigWithApiKey(codexHome: string) {
+  fs.mkdirSync(codexHome, { recursive: true });
+  fs.writeFileSync(path.join(codexHome, 'config.toml'), [
+    'model_provider = "openai"',
+    'model = "gpt-5.5"',
+    'model_reasoning_effort = "xhigh"',
+    '',
+    '[model_providers.openai]',
+    'name = "OpenAI"',
+    'base_url = "https://api.openai.com/v1"',
+    'experimental_bearer_token = "test-api-key"',
+    '',
+  ].join('\n'), 'utf8');
+}
+
 test('system seed-apply records env-driven image manifest and is idempotent', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-seed-apply-home-'));
   const dataDir = path.join(homeRoot, 'data');
@@ -144,6 +159,20 @@ test('system docker-webui doctor reports missing seed boundary without repairs',
           data_dir_status: string;
           projects_dir_status: string;
           browser_url_status: string;
+          api_key_status: string;
+          startup_phase: string;
+        };
+        startup_state: {
+          phase: string;
+          api_key_present: boolean;
+          needs_startup_maintenance: boolean;
+          runtime_readiness_claim: string;
+          can_claim_runtime_ready: boolean;
+        };
+        api_key: {
+          status: string;
+          present: boolean;
+          value_redacted: boolean;
         };
         paths: {
           install_manifest_file: string;
@@ -175,6 +204,16 @@ test('system docker-webui doctor reports missing seed boundary without repairs',
     assert.equal(output.docker_webui_doctor.summary.data_dir_status, 'missing');
     assert.equal(output.docker_webui_doctor.summary.projects_dir_status, 'missing');
     assert.equal(output.docker_webui_doctor.summary.browser_url_status, 'configured');
+    assert.equal(output.docker_webui_doctor.summary.api_key_status, 'missing');
+    assert.equal(output.docker_webui_doctor.summary.startup_phase, 'api_key_missing');
+    assert.equal(output.docker_webui_doctor.startup_state.phase, 'api_key_missing');
+    assert.equal(output.docker_webui_doctor.startup_state.api_key_present, false);
+    assert.equal(output.docker_webui_doctor.startup_state.needs_startup_maintenance, true);
+    assert.equal(output.docker_webui_doctor.startup_state.runtime_readiness_claim, 'not_claimed');
+    assert.equal(output.docker_webui_doctor.startup_state.can_claim_runtime_ready, false);
+    assert.equal(output.docker_webui_doctor.api_key.status, 'missing');
+    assert.equal(output.docker_webui_doctor.api_key.present, false);
+    assert.equal(output.docker_webui_doctor.api_key.value_redacted, true);
     assert.equal(output.docker_webui_doctor.paths.install_manifest_file, path.join(stateDir, 'install-manifest.json'));
     const observations = new Map(output.docker_webui_doctor.observations.map((entry) => [
       entry.observation_id,
@@ -184,12 +223,14 @@ test('system docker-webui doctor reports missing seed boundary without repairs',
     assert.equal(observations.get('docker_webui_projects_dir'), 'missing');
     assert.equal(observations.get('seed_install_manifest'), 'missing');
     assert.equal(observations.get('startup_maintenance_guidance'), 'not_configured');
+    assert.equal(observations.get('codex_api_key'), 'missing');
     assert.equal(observations.get('browser_url'), 'configured');
     assert.deepEqual(
       output.docker_webui_doctor.next_actions.map((entry) => [entry.action_id, entry.status, entry.reason]),
       [
+        ['configure_codex_api_key', 'recommended', 'codex_api_key_missing'],
         ['run_seed_apply', 'recommended', 'seed_install_manifest_missing_or_invalid'],
-        ['run_startup_maintenance', 'available', 'refresh_seed_boundary_and_managed_update_guidance'],
+        ['run_startup_maintenance', 'recommended', 'seed_boundary_or_startup_maintenance_needed'],
       ],
     );
     assert.equal(output.docker_webui_doctor.authority_boundary.readonly, true);
@@ -209,7 +250,9 @@ test('system docker-webui doctor reads persisted seed manifest and browser URL',
   const seedDir = path.join(homeRoot, 'image-seed');
   const dataDir = path.join(homeRoot, 'data');
   const projectsDir = path.join(dataDir, 'projects');
+  const codexHome = path.join(homeRoot, 'codex-home');
   fs.mkdirSync(seedDir, { recursive: true });
+  writeCodexConfigWithApiKey(codexHome);
   fs.writeFileSync(path.join(seedDir, 'image-manifest.json'), JSON.stringify({
     image_version: '26.7.2-webui',
     image_digest: 'sha256:doctor-seed',
@@ -233,6 +276,7 @@ test('system docker-webui doctor reads persisted seed manifest and browser URL',
 
     const output = runCli(['system', 'docker-webui', 'doctor'], {
       HOME: homeRoot,
+      CODEX_HOME: codexHome,
       AIONUI_DATA_DIR: dataDir,
       AIONUI_BROWSER_URL: 'http://localhost:3000/',
       PATH: process.env.PATH ?? '',
@@ -244,6 +288,16 @@ test('system docker-webui doctor reads persisted seed manifest and browser URL',
           data_dir_status: string;
           projects_dir_status: string;
           browser_url_status: string;
+          api_key_status: string;
+          startup_phase: string;
+        };
+        startup_state: {
+          phase: string;
+          api_key_present: boolean;
+          seed_applied: boolean;
+          enterable: boolean;
+          runtime_readiness_claim: string;
+          can_claim_runtime_ready: boolean;
         };
         install_manifest: {
           status: string;
@@ -256,6 +310,20 @@ test('system docker-webui doctor reads persisted seed manifest and browser URL',
             seed_strategy_status: string | null;
           };
           component_ids: string[];
+          component_summary: {
+            total_count: number;
+            current_count: number;
+          };
+        };
+        startup_maintenance: {
+          status: string;
+          command: string;
+          execution_policy: string;
+        };
+        api_key: {
+          status: string;
+          present: boolean;
+          value_redacted: boolean;
         };
         browser: {
           url: string | null;
@@ -276,6 +344,14 @@ test('system docker-webui doctor reads persisted seed manifest and browser URL',
     assert.equal(output.docker_webui_doctor.summary.data_dir_status, 'exists');
     assert.equal(output.docker_webui_doctor.summary.projects_dir_status, 'exists');
     assert.equal(output.docker_webui_doctor.summary.browser_url_status, 'configured');
+    assert.equal(output.docker_webui_doctor.summary.api_key_status, 'present');
+    assert.equal(output.docker_webui_doctor.summary.startup_phase, 'enterable');
+    assert.equal(output.docker_webui_doctor.startup_state.phase, 'enterable');
+    assert.equal(output.docker_webui_doctor.startup_state.api_key_present, true);
+    assert.equal(output.docker_webui_doctor.startup_state.seed_applied, true);
+    assert.equal(output.docker_webui_doctor.startup_state.enterable, true);
+    assert.equal(output.docker_webui_doctor.startup_state.runtime_readiness_claim, 'not_claimed');
+    assert.equal(output.docker_webui_doctor.startup_state.can_claim_runtime_ready, false);
     assert.equal(output.docker_webui_doctor.install_manifest.status, 'found');
     assert.equal(output.docker_webui_doctor.install_manifest.surface_kind, 'opl_seed_install_manifest');
     assert.equal(output.docker_webui_doctor.install_manifest.seed_status, 'applied');
@@ -292,6 +368,14 @@ test('system docker-webui doctor reads persisted seed manifest and browser URL',
       'data_dir',
       'projects_dir',
     ]);
+    assert.equal(output.docker_webui_doctor.install_manifest.component_summary.total_count, 7);
+    assert.equal(output.docker_webui_doctor.install_manifest.component_summary.current_count >= 3, true);
+    assert.equal(output.docker_webui_doctor.startup_maintenance.status, 'seed_applied');
+    assert.equal(output.docker_webui_doctor.startup_maintenance.command, 'opl system startup-maintenance --json');
+    assert.equal(output.docker_webui_doctor.startup_maintenance.execution_policy, 'not_executed_by_doctor');
+    assert.equal(output.docker_webui_doctor.api_key.status, 'present');
+    assert.equal(output.docker_webui_doctor.api_key.present, true);
+    assert.equal(output.docker_webui_doctor.api_key.value_redacted, true);
     assert.equal(output.docker_webui_doctor.browser.url, 'http://localhost:3000/');
     assert.equal(output.docker_webui_doctor.browser.url_status, 'configured');
     assert.deepEqual(
@@ -628,14 +712,42 @@ test('system startup-maintenance reports seed boundary for WebUI first run', () 
               reason: string;
             }>;
           };
+          docker_webui_startup: {
+            startup_state: {
+              phase: string;
+              seed_applied: boolean;
+              api_key_present: boolean;
+              runtime_readiness_claim: string;
+              can_claim_runtime_ready: boolean;
+            };
+            startup_maintenance: {
+              status: string;
+              execution_policy: string;
+            };
+            api_key: {
+              status: string;
+              present: boolean;
+              value_redacted: boolean;
+            };
+            diagnostic_summary: {
+              status: string;
+              startup_maintenance_status: string;
+              can_claim_runtime_ready: boolean;
+            };
+          };
           refreshed_system_environment: {
             seed_install: {
               status: string;
+              startup_state: string;
+              seed_applied: boolean;
+              needs_startup_maintenance: boolean;
               image_version: string | null;
               image_digest: string | null;
               data_dir: string | null;
               projects_dir: string | null;
               manifest_file: string;
+              api_key_status: string;
+              api_key_present: boolean;
               readiness_claim: string;
               can_claim_ready_or_current: boolean;
             };
@@ -664,10 +776,40 @@ test('system startup-maintenance reports seed boundary for WebUI first run', () 
     assert.equal(components.get('domain_modules')?.state, 'not_available');
     assert.equal(components.get('data_dir')?.state, 'current');
     assert.equal(components.get('projects_dir')?.state, 'current');
+    assert.equal(output.system_action.details.docker_webui_startup.startup_state.phase, 'api_key_missing');
+    assert.equal(output.system_action.details.docker_webui_startup.startup_state.seed_applied, true);
+    assert.equal(output.system_action.details.docker_webui_startup.startup_state.api_key_present, false);
+    assert.equal(
+      output.system_action.details.docker_webui_startup.startup_state.runtime_readiness_claim,
+      'not_claimed',
+    );
+    assert.equal(output.system_action.details.docker_webui_startup.startup_state.can_claim_runtime_ready, false);
+    assert.equal(output.system_action.details.docker_webui_startup.startup_maintenance.status, 'seed_applied');
+    assert.equal(
+      output.system_action.details.docker_webui_startup.startup_maintenance.execution_policy,
+      'executed_by_startup_maintenance',
+    );
+    assert.equal(output.system_action.details.docker_webui_startup.api_key.status, 'missing');
+    assert.equal(output.system_action.details.docker_webui_startup.api_key.present, false);
+    assert.equal(output.system_action.details.docker_webui_startup.api_key.value_redacted, true);
+    assert.equal(output.system_action.details.docker_webui_startup.diagnostic_summary.status, 'api_key_missing');
+    assert.equal(
+      output.system_action.details.docker_webui_startup.diagnostic_summary.startup_maintenance_status,
+      'seed_applied',
+    );
+    assert.equal(output.system_action.details.docker_webui_startup.diagnostic_summary.can_claim_runtime_ready, false);
     assert.equal(output.system_action.details.refreshed_system_environment.seed_install.status, 'applied');
+    assert.equal(output.system_action.details.refreshed_system_environment.seed_install.startup_state, 'seed_applied');
+    assert.equal(output.system_action.details.refreshed_system_environment.seed_install.seed_applied, true);
+    assert.equal(
+      output.system_action.details.refreshed_system_environment.seed_install.needs_startup_maintenance,
+      false,
+    );
     assert.equal(output.system_action.details.refreshed_system_environment.seed_install.image_version, '26.6.31-webui');
     assert.equal(output.system_action.details.refreshed_system_environment.seed_install.data_dir, dataDir);
     assert.equal(output.system_action.details.refreshed_system_environment.seed_install.projects_dir, projectsDir);
+    assert.equal(output.system_action.details.refreshed_system_environment.seed_install.api_key_status, 'not_detected');
+    assert.equal(output.system_action.details.refreshed_system_environment.seed_install.api_key_present, false);
     assert.equal(output.system_action.details.refreshed_system_environment.seed_install.readiness_claim, 'not_claimed');
     assert.equal(
       output.system_action.details.refreshed_system_environment.seed_install.can_claim_ready_or_current,

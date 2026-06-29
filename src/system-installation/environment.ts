@@ -178,6 +178,9 @@ export async function buildOplEnvironment(
       },
       seed_install: seedInstallManifest ? {
         status: seedInstallManifest.status ?? 'unknown',
+        startup_state: seedInstallManifest.status === 'applied' ? 'seed_applied' : 'initializing',
+        seed_applied: seedInstallManifest.status === 'applied',
+        needs_startup_maintenance: seedInstallManifest.status !== 'applied',
         image_version: isRecord(seedInstallManifest.image)
           ? seedInstallManifest.image.version ?? null
           : null,
@@ -191,15 +194,22 @@ export async function buildOplEnvironment(
           ? seedInstallManifest.install.projects_dir ?? null
           : null,
         manifest_file: statePaths.install_manifest_file,
+        api_key_status: codexConfigStatus,
+        api_key_present: Boolean(codexDefaults?.provider_api_key),
         readiness_claim: 'not_claimed',
         can_claim_ready_or_current: false,
       } : {
         status: 'not_applied',
+        startup_state: 'needs_startup_maintenance',
+        seed_applied: false,
+        needs_startup_maintenance: true,
         image_version: null,
         image_digest: null,
         data_dir: null,
         projects_dir: null,
         manifest_file: statePaths.install_manifest_file,
+        api_key_status: codexConfigStatus,
+        api_key_present: Boolean(codexDefaults?.provider_api_key),
         readiness_claim: 'not_claimed',
         can_claim_ready_or_current: false,
       },
