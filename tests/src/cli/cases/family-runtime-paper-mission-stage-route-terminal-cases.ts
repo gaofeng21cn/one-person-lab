@@ -280,6 +280,89 @@ test('family-runtime does not backfill successor admission for historical blocke
   }
 });
 
+test('family-runtime backfills OPL transition receipt for historical terminal reconcile events', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-terminal-receipt-backfill-'));
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_mission/stage-route',
+      '--payload',
+      JSON.stringify(paperMissionRoutePayload()),
+      '--dedupe-key',
+      'paper-mission-route:dm002:terminal-receipt-backfill',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    runCli(['family-runtime', 'tick', '--source', 'test-paper-route-receipt-backfill-start'], env);
+    const runningTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const attemptId = runningTask.family_runtime_task.stage_attempts[0].stage_attempt_id;
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      attemptId,
+      '--stage-packet-ref',
+      'packet:paper-mission-route-dm002-receipt-backfill',
+      '--closeout-packet',
+      JSON.stringify({
+        surface_kind: 'stage_attempt_closeout_packet',
+        closeout_refs: ['typed-blocker:receipt-backfill-required'],
+        next_owner: 'med-autoscience',
+        domain_ready_verdict: 'domain_gate_pending',
+      }),
+    ], env);
+
+    const originalStateDir = process.env.OPL_STATE_DIR;
+    try {
+      process.env.OPL_STATE_DIR = stateRoot;
+      const { db } = openQueueDb();
+      db.prepare(`
+        UPDATE events
+        SET payload_json = json_remove(payload_json, '$.opl_transition_receipt')
+        WHERE task_id = ?
+          AND event_type = 'paper_mission_stage_route_terminal_task_reconciled'
+          AND json_extract(payload_json, '$.stage_attempt_id') = ?
+      `).run(taskId, attemptId);
+      db.close();
+    } finally {
+      process.env.OPL_STATE_DIR = originalStateDir;
+    }
+
+    const backfill = runCli(['family-runtime', 'tick', '--source', 'test-paper-route-receipt-backfill-terminal'], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const receiptEvents = task.family_runtime_task.events.filter((event: { event_type: string; payload: Record<string, any> }) =>
+      event.event_type === 'paper_mission_stage_route_terminal_task_reconciled'
+      && event.payload.opl_transition_receipt
+    );
+
+    assert.equal(backfill.family_runtime_tick.reconciled_paper_mission_stage_route_terminal_count, 1);
+    assert.deepEqual(backfill.family_runtime_tick.reconciled_paper_mission_stage_route_terminal_task_ids, [taskId]);
+    assert.equal(receiptEvents.length, 1);
+    assert.equal(receiptEvents[0].payload.opl_transition_receipt.surface_kind, 'opl_transition_receipt');
+    assert.equal(receiptEvents[0].payload.opl_transition_receipt.receipt_status, 'terminal_closeout_observed');
+    assert.equal(receiptEvents[0].payload.opl_transition_receipt.authority_boundary.can_claim_paper_progress, false);
+
+    const repeatedBackfill = runCli(['family-runtime', 'tick', '--source', 'test-paper-route-receipt-backfill-repeat'], env);
+    const repeatedTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    assert.equal(repeatedBackfill.family_runtime_tick.reconciled_paper_mission_stage_route_terminal_count, 0);
+    assert.equal(
+      repeatedTask.family_runtime_task.events.filter((event: { event_type: string; payload: Record<string, any> }) =>
+        event.event_type === 'paper_mission_stage_route_terminal_task_reconciled'
+        && event.payload.opl_transition_receipt
+      ).length,
+      1,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime does not self-admit terminal successor when route identity exists only in nested OPL carrier', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-terminal-nested-'));
   try {

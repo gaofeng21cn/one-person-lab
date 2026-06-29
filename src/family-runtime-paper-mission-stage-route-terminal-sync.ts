@@ -490,6 +490,7 @@ function existingTerminalSuccessorIdentityNotReadyEvent(
       AND event_type = 'paper_mission_stage_route_terminal_task_reconciled'
       AND json_extract(payload_json, '$.stage_attempt_id') = ?
       AND json_extract(payload_json, '$.terminal_successor_identity_ready') = 0
+      AND json_type(payload_json, '$.opl_transition_receipt') IS NOT NULL
     LIMIT 1
   `).get(row.task_id, terminalAttempt.stage_attempt_id) as { 1: number } | undefined;
 }
@@ -505,6 +506,7 @@ function existingTerminalTaskReconciledEvent(
     WHERE task_id = ?
       AND event_type = 'paper_mission_stage_route_terminal_task_reconciled'
       AND json_extract(payload_json, '$.stage_attempt_id') = ?
+      AND json_type(payload_json, '$.opl_transition_receipt') IS NOT NULL
     LIMIT 1
   `).get(row.task_id, terminalAttempt.stage_attempt_id) as { 1: number } | undefined;
 }
