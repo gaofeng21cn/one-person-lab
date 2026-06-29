@@ -17,6 +17,13 @@ test('family-runtime typed closeout reconciles terminal MAS PaperMission stage-r
     const env = familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
     });
+    const userStageLog = {
+      surface_kind: 'opl_user_stage_log',
+      semantic_status: 'provided_by_domain',
+      semantic_source: 'med_autoscience.paper_mission_stage_route',
+      stage_name: 'PaperMission stage route for DM002',
+      progress_delta_classification: 'deliverable_progress',
+    };
     const enqueue = runCli([
       'family-runtime',
       'enqueue',
@@ -50,6 +57,7 @@ test('family-runtime typed closeout reconciles terminal MAS PaperMission stage-r
           decision: 'bounded_repair',
           next_owner: 'med-autoscience',
           reason: 'opl_runtime_live_readback_required',
+          user_stage_log: userStageLog,
         },
       }),
     ], env);
@@ -137,6 +145,18 @@ test('family-runtime typed closeout reconciles terminal MAS PaperMission stage-r
     assert.equal(
       terminalReconcileEvents[0].payload.opl_transition_receipt.typed_runtime_blocker_ref,
       'typed-blocker:opl_runtime_live_readback_required',
+    );
+    assert.equal(
+      terminalReconcileEvents[0].payload.opl_transition_receipt.route_impact.user_stage_log.semantic_status,
+      'provided_by_domain',
+    );
+    assert.equal(
+      terminalReconcileEvents[0].payload.opl_transition_receipt.route_impact.user_stage_log.semantic_source,
+      'med_autoscience.paper_mission_stage_route',
+    );
+    assert.equal(
+      terminalReconcileEvents[0].payload.opl_transition_receipt.route_impact.user_stage_log.progress_delta_classification,
+      'deliverable_progress',
     );
     assert.equal(
       terminalReconcileEvents[0].payload.opl_transition_receipt.can_change_stage_terminal_decision,

@@ -204,6 +204,11 @@ function firstCloseoutRef(terminalAttempt: StageAttemptPayload) {
   ) ?? null;
 }
 
+function routeImpactForTransitionReceipt(terminalAttempt: StageAttemptPayload) {
+  const routeImpact = recordValue(terminalAttempt.route_impact);
+  return Object.keys(routeImpact).length > 0 ? routeImpact : null;
+}
+
 function oplTransitionReceiptForTerminalAttempt(input: {
   row: FamilyRuntimeTaskRow;
   payload: Record<string, unknown>;
@@ -242,6 +247,7 @@ function oplTransitionReceiptForTerminalAttempt(input: {
     closeout_refs: input.terminalAttempt.closeout_refs,
     closeout_receipt_status: input.terminalAttempt.closeout_receipt_status,
     blocked_reason: input.nextTask.reason,
+    route_impact: routeImpactForTransitionReceipt(input.terminalAttempt),
     can_change_stage_terminal_decision: false,
     can_select_next_owner: false,
     authority_boundary: {

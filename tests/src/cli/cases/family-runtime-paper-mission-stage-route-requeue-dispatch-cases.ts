@@ -203,7 +203,7 @@ test('family-runtime reopens operator-retired MAS PaperMission stage-route resid
     process.env.OPL_STATE_DIR = stateRoot;
     const { db } = openQueueDb();
     const dedupeKey = 'paper-mission-route:user-stage-log-v1:dm003:retired-residue';
-    const retiredPayload = paperMissionRoutePayloadWithWorkspace({
+    const retiredPayload: Record<string, unknown> = paperMissionRoutePayloadWithWorkspace({
       study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
       candidate_ref: '/tmp/mas-dm-cvd-workspace/ops/medautoscience/paper_mission_candidate_package/dm003/package_manifest.json',
       paper_mission_transaction_ref: 'paper-mission-transaction:dm003:retired-residue',
