@@ -600,6 +600,14 @@ exit 1
       true,
     );
     assert.equal(
+      output.app_state.operator.workbench.sections.some(
+        (entry: AppStateListEntry) => entry.section_id === 'settings_control_center'
+          && entry.source_ref === 'app_state.settings_control_center'
+          && entry.lazy === false,
+      ),
+      true,
+    );
+    assert.equal(
       output.app_state.operator.workbench.navigation.replacement_policy,
       'app_repo_owns_navigation_truth_shell_renders_typed_items',
     );
@@ -645,6 +653,66 @@ exit 1
     assert.equal(output.app_state.paths.modules_root, path.join(stateDir, 'modules'));
     assert.equal(output.app_state.paths.workspace_root_path, homeRoot);
     assert.equal(output.app_state.paths.logs_dir, path.join(stateDir, 'logs'));
+    assert.equal(output.app_state.settings_control_center.surface_kind, 'opl_settings_control_center.v1');
+    assert.equal(output.app_state.settings_control_center.schema_version, 'settings-control-center.v1');
+    assert.equal(
+      output.app_state.settings_control_center.contract_ref,
+      'contracts/opl-framework/settings-control-center-action-read-model-contract.json',
+    );
+    assert.deepEqual(output.app_state.settings_control_center.allowed_action_ids, [
+      'settings_repair_model_access',
+      'settings_sync_capabilities',
+      'settings_apply_opl_packages',
+      'settings_reload_codex_surface',
+      'settings_prune_runtime_roots_dry_run',
+    ]);
+    assert.deepEqual(
+      output.app_state.settings_control_center.sections.map((entry: AppStateListEntry) => entry.section_id),
+      ['overview', 'setup_access', 'capabilities', 'maintenance_updates', 'data_storage', 'preferences', 'advanced'],
+    );
+    assert.deepEqual(
+      output.app_state.settings_control_center.control_center_groups.map((entry: AppStateListEntry) => entry.group_id),
+      ['overview', 'setup_access', 'capabilities', 'maintenance_updates', 'data_storage', 'preferences', 'advanced'],
+    );
+    assert.deepEqual(
+      output.app_state.settings_control_center.action_sections.map((entry: AppStateListEntry) => entry.section_id),
+      ['model_access', 'capabilities', 'packages', 'codex_surface', 'runtime_roots'],
+    );
+    assert.equal(
+      output.app_state.settings_control_center.control_center_groups.find(
+        (entry: AppStateListEntry) => entry.group_id === 'data_storage',
+      )?.route_id,
+      'storage',
+    );
+    assert.equal(
+      output.app_state.settings_control_center.task_entries.every((entry: AppStateListEntry) =>
+        entry.route.startsWith('opl app action execute --action settings_')
+      ),
+      true,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.task_entries.find(
+        (entry: AppStateListEntry) => entry.action_id === 'settings_prune_runtime_roots_dry_run',
+      )?.mutates,
+      'none_read_only',
+    );
+    assert.equal(
+      output.app_state.settings_control_center.task_entries.find(
+        (entry: AppStateListEntry) => entry.action_id === 'settings_reload_codex_surface',
+      )?.payload_required,
+      true,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.dry_run_apply_verify_boundary.runtime_roots_cleanup,
+      'dry_run_plan_only_no_delete',
+    );
+    assert.equal(output.app_state.settings_control_center.authority_boundary.can_write_domain_truth, false);
+    assert.equal(output.app_state.settings_control_center.authority_boundary.can_create_owner_receipt, false);
+    assert.equal(output.app_state.settings_control_center.authority_boundary.can_create_typed_blocker, false);
+    assert.deepEqual(
+      output.app_state.operator.workbench.settings_control_center,
+      output.app_state.settings_control_center,
+    );
     assert.equal(output.app_state.opl_agent_codex_context.source, 'one-person-lab-app/product_profile');
     assert.equal(output.app_state.opl_agent_codex_context.policy, 'app_repo_owns_gui_context_text');
     assert.equal(output.app_state.modules.source.mode, 'managed_runtime');

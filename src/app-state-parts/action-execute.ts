@@ -10,6 +10,7 @@ import { type OplEngineAction, type OplModuleAction, type OplModuleId } from '..
 import { executeWorkspaceAppAction } from '../app-state-workspace-actions.ts';
 import { syncFamilySkillPacks } from '../opl-skills.ts';
 import type { FrameworkContracts } from '../types.ts';
+import { settingsControlCenterActionById } from '../app-state-settings-control-center.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -170,6 +171,29 @@ function scholarskillsQuestRootPayload(payload: JsonRecord) {
   return questRoot;
 }
 
+function settingsReloadCodexSurfacePayload(payload: JsonRecord): {
+  scope: 'workspace' | 'quest';
+  targetPath: string;
+} {
+  const scope = stringPayloadField(payload, 'scope');
+  const targetPath = stringPayloadField(payload, 'target_path')
+    ?? stringPayloadField(payload, 'targetPath')
+    ?? stringPayloadField(payload, 'path');
+  if (scope !== 'workspace' && scope !== 'quest') {
+    throw new FrameworkContractError('cli_usage_error', 'settings_reload_codex_surface action requires payload.scope workspace or quest.', {
+      action_id: 'settings_reload_codex_surface',
+      allowed_scopes: ['workspace', 'quest'],
+    });
+  }
+  if (!targetPath) {
+    throw new FrameworkContractError('cli_usage_error', 'settings_reload_codex_surface action requires payload.target_path.', {
+      action_id: 'settings_reload_codex_surface',
+      required: ['target_path'],
+    });
+  }
+  return { scope, targetPath };
+}
+
 function booleanPayloadField(payload: JsonRecord, field: string, fallback = false) {
   const value = payload[field];
   return typeof value === 'boolean' ? value : fallback;
@@ -235,6 +259,69 @@ function dryRunModuleAction(action: OplModuleAction, moduleId: OplModuleId) {
       module_id: moduleId,
       action,
       status: 'dry_run',
+    },
+  };
+}
+
+function buildSettingsControlCenterDryRun(actionId: string, payload: JsonRecord) {
+  const action = settingsControlCenterActionById(actionId);
+  return {
+    settings_control_center_action: {
+      surface_kind: 'opl_settings_control_center_action_preflight.v1',
+      action_id: actionId,
+      label: action?.label ?? actionId,
+      status: 'dry_run',
+      task_kind: action?.task_kind ?? 'unknown',
+      taxonomy: action?.taxonomy ?? null,
+      requested: payload,
+      payload_fields: action?.payload_fields ?? [],
+      mutates: action?.mutates ?? 'unknown',
+      command_preview: ['opl', 'app', 'action', 'execute', '--action', actionId],
+      authority_boundary: {
+        can_write_domain_truth: false,
+        can_sign_domain_receipt: false,
+        can_create_owner_receipt: false,
+        can_create_typed_blocker: false,
+        can_write_runtime_queue: false,
+        can_write_provider_queue: false,
+        can_read_memory_body: false,
+        can_read_artifact_body: false,
+        can_authorize_quality_verdict: false,
+        can_claim_app_release_ready: false,
+      },
+    },
+  };
+}
+
+function buildSettingsPruneRuntimeRootsPlan() {
+  return {
+    settings_runtime_roots_cleanup_plan: {
+      surface_kind: 'opl_settings_runtime_roots_cleanup_plan.v1',
+      status: 'dry_run_plan_only',
+      action_id: 'settings_prune_runtime_roots_dry_run',
+      inspected_roots: [
+        'OPL_STATE_DIR',
+        'OPL_MODULES_ROOT',
+        'OPL_FAMILY_WORKSPACE_ROOT',
+        'configured_workspace_root',
+      ],
+      allowed_operation: 'report_candidates_only',
+      forbidden_operations: [
+        'delete_files',
+        'write_domain_truth',
+        'write_runtime_queue',
+        'sign_owner_receipt',
+        'create_typed_blocker',
+      ],
+      verify_surface: 'opl app state --profile full --json#settings_control_center',
+      authority_boundary: {
+        can_write_domain_truth: false,
+        can_sign_domain_receipt: false,
+        can_create_owner_receipt: false,
+        can_create_typed_blocker: false,
+        can_write_runtime_queue: false,
+        can_delete_runtime_roots: false,
+      },
     },
   };
 }
@@ -401,6 +488,68 @@ async function executeDirectAppAction(
             },
           }
         : writeOplWorkspaceRootSurface(workspaceRoot),
+    };
+  }
+
+  if (options.actionId === 'settings_repair_model_access') {
+    return {
+      delegatedSurface: 'opl system developer-supervisor',
+      result: options.dryRun
+        ? buildSettingsControlCenterDryRun(options.actionId, options.payload)
+        : await runOplSystemAction(contracts, 'developer_supervisor', {
+          developerSupervisorEnabled: stringPayloadField(options.payload, 'developerSupervisorEnabled') as 'auto' | 'on' | 'off' | undefined,
+          developerSupervisorMode: stringPayloadField(options.payload, 'developerSupervisorMode') as 'external_observe' | 'developer_apply_safe' | undefined,
+          developerSupervisorAutoEnableGithubLogin:
+            stringPayloadField(options.payload, 'developerSupervisorAutoEnableGithubLogin') ?? undefined,
+        }),
+    };
+  }
+
+  if (options.actionId === 'settings_sync_capabilities') {
+    return {
+      delegatedSurface: 'opl connect reconcile-modules',
+      result: options.dryRun
+        ? buildSettingsControlCenterDryRun(options.actionId, options.payload)
+        : await runOplSystemAction(contracts, 'reconcile_modules'),
+    };
+  }
+
+  if (options.actionId === 'settings_apply_opl_packages') {
+    return {
+      delegatedSurface: 'opl connect update --module <all-default-modules>',
+      result: options.dryRun
+        ? buildSettingsControlCenterDryRun(options.actionId, options.payload)
+        : await Promise.all([
+          runOplModuleAction('update', 'medautoscience'),
+          runOplModuleAction('update', 'medautogrant'),
+          runOplModuleAction('update', 'redcube'),
+          runOplModuleAction('update', 'oplmetaagent'),
+          runOplModuleAction('update', 'oplbookforge'),
+        ]),
+    };
+  }
+
+  if (options.actionId === 'settings_reload_codex_surface') {
+    const reload = settingsReloadCodexSurfacePayload(options.payload);
+    return {
+      delegatedSurface: reload.scope === 'workspace'
+        ? 'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <target_path>'
+        : 'opl connect sync-skills --domain scholarskills --scope quest --target-quest <target_path>',
+      result: options.dryRun
+        ? buildSettingsControlCenterDryRun(options.actionId, options.payload)
+        : syncFamilySkillPacks({
+            domains: ['scholarskills'],
+            scope: reload.scope,
+            targetWorkspace: reload.scope === 'workspace' ? reload.targetPath : undefined,
+            targetQuest: reload.scope === 'quest' ? reload.targetPath : undefined,
+          }),
+    };
+  }
+
+  if (options.actionId === 'settings_prune_runtime_roots_dry_run') {
+    return {
+      delegatedSurface: 'opl settings control-center cleanup_plan --dry-run',
+      result: buildSettingsPruneRuntimeRootsPlan(),
     };
   }
 

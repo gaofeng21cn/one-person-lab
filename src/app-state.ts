@@ -15,6 +15,7 @@ import { readOplWorkspaceRoot } from './system-preferences.ts';
 import path from 'node:path';
 import { resolveDefaultFamilyWorkspaceRoot } from './opl-skills.ts';
 import { buildActionCatalog } from './app-state-action-catalog.ts';
+import { buildSettingsControlCenter } from './app-state-settings-control-center.ts';
 import { parseAppStateProfile, type AppStateProfile } from './app-state-profile.ts';
 import { buildAppStateRuntimeActivityItems } from './app-state-runtime-activity.ts';
 import { buildOplAppOperatorViewModel } from './app-state-view-model.ts';
@@ -377,6 +378,15 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
     },
     items: modules,
   };
+  const settingsControlCenter = buildSettingsControlCenter({
+    profile,
+    core,
+    developerMode,
+    modules: modulesState,
+    provider,
+    release,
+    paths,
+  });
   const operator = buildOplAppOperatorViewModel({
     profile,
     core,
@@ -386,6 +396,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
     release,
     paths,
     actions,
+    settingsControlCenter,
     uiDefaults,
     runtimeActivityItems,
     brandSystemProfile: contracts.brandSystemProfile as unknown as JsonRecord,
@@ -429,6 +440,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
         items: buildAssistants(modules),
       },
       release,
+      settings_control_center: settingsControlCenter,
       operator,
       runtime_workbench: fullRuntimeWorkbenchSummary(fullRuntimeDrilldown),
       paths,

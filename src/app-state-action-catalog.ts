@@ -1,4 +1,5 @@
 import type { AgentWorkspaceNormContract, FrameworkContracts } from './types.ts';
+import { SETTINGS_CONTROL_CENTER_ACTIONS } from './app-state-settings-control-center.ts';
 
 type AppActionCatalogEntry = {
   action_id: string;
@@ -310,6 +311,15 @@ export function buildActionCatalog(contracts: FrameworkContracts) {
       payload_fields: ['path'],
       mutates: 'opl_workspace_root_config',
     },
+    ...SETTINGS_CONTROL_CENTER_ACTIONS.map((action) => ({
+      action_id: action.action_id,
+      label: action.label,
+      surface: 'opl app action execute' as const,
+      delegated_surface: action.delegated_surface,
+      payload_fields: action.payload_fields,
+      mutates: action.mutates,
+      dry_run_supported: action.dry_run_supported,
+    })),
     ...workspaceActionsFromNorm(contracts.agentWorkspaceNorm),
     {
       action_id: 'provider_scheduler_status',

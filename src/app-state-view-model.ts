@@ -11,6 +11,7 @@ type OplAppOperatorViewModelInput = {
   release: JsonRecord;
   paths: JsonRecord;
   actions: ReadonlyArray<JsonRecord>;
+  settingsControlCenter: JsonRecord;
   uiDefaults: JsonRecord;
   runtimeActivityItems: ReadonlyArray<JsonRecord>;
   brandSystemProfile: JsonRecord;
@@ -174,6 +175,13 @@ function buildSections(input: OplAppOperatorViewModelInput) {
       label: 'Runtime settings',
       state: asNumber(moduleSummary.default_modules_count) === null ? 'unknown' : 'ready',
       source_ref: 'app_state.modules + app_state.provider',
+      lazy: false,
+    },
+    {
+      section_id: 'settings_control_center',
+      label: 'Settings Control Center',
+      state: asString(asRecord(input.settingsControlCenter).surface_kind) ? 'available' : 'unknown',
+      source_ref: 'app_state.settings_control_center',
       lazy: false,
     },
     {
@@ -773,6 +781,7 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
       ordinary_cockpit: ordinaryCockpit,
       brand_experience_profile: brandExperienceProfile,
       one_shot_plan_landing: oneShotPlanLanding,
+      settings_control_center: input.settingsControlCenter,
       ...currentOwnerDeltaTopline,
       summary_cards: buildSummaryCards(input),
       sections: buildSections(input),

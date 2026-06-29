@@ -833,6 +833,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 2026-06-08 追加：`opl workspace fleet report` 是 `workspace list` 的 sibling surface，不改变 `workspace list` registry-only 语义。fleet report 只从 registry binding 和 workspace-local `workspace_index.json` / generated reports 读结构状态，输出 ready / blocked / archived_binding / not_bound 和 lifecycle counts；它不得执行 direct-entry command、manifest command 或 domain product-entry resolver，不得把 domain manifest 解析结果写成 readiness。`opl workspace project lifecycle` 是 pause / resume / lock / supersede / archive 的统一 runtime；`workspace project delete` 只返回 owner-receipt safe-delete gate，OPL 不执行 physical delete。shared resource provenance 只允许在 `opl_resource_manifest.json.resources[]` 中记录 refs、checksum、provenance、reuse、staleness，`body_ref` 必须规范为空；`workspace upgrade` 必须保留这些记录，`workspace inventory` 只投影 refs-only record。
 - 2026-06-10 追加：active workspace binding 指向不存在目录时，`opl domain manifests` 必须报告 `workspace_missing`、`stale_binding_count` 和 `stale_binding_project_ids`；active binding 缺 `manifest_command` 时，必须报告 `manifest_not_configured_count` 和 `manifest_not_configured_project_ids`。二者属于 OPL registry currentness / binding configuration attention，不属于 domain manifest command failure；不得计入 `failed_count`、`live_failed_project_ids` 或 framework stage diagnostic failure。真实 manifest command failure、timeout、invalid JSON 和 invalid manifest 仍按原 fail-closed 路径暴露。
 
+### 决策：Settings Control Center read/action surface 归 OPL Framework，App/Aion 只消费投影
+
+原因：One Person Lab App 的 Settings Control Center 需要把 model access、capability sync、OPL packages、Codex surface reload 和 runtime roots cleanup planning 组织成用户任务导向的设置面。如果这些状态由 App 或 Aion shell 分别拼接 `connect`、`system`、provider 和 workspace 命令，GUI 很容易反向成为 runtime truth、domain truth 或 release truth owner。稳定边界应是 OPL Framework 继续持有 `opl app state/action`，App 只消费 read model 与 action envelope。
+
+影响：
+
+- `contracts/opl-framework/settings-control-center-action-read-model-contract.json` 冻结 Settings Control Center 的 sections、allowed action ids、action taxonomy、dry-run / apply / verify 边界和 authority false flags。
+- `opl app state --profile fast|full --json` 输出 `settings_control_center`，并在 operator workbench 中引用同一对象；它是 GUI-ready projection，不写 domain truth、不读取 artifact/memory body、不签 owner receipt、不创建 typed blocker，也不声明 App release ready 或 production ready。
+- `settings_repair_model_access`、`settings_sync_capabilities`、`settings_apply_opl_packages`、`settings_reload_codex_surface` 和 `settings_prune_runtime_roots_dry_run` 只通过既有 `opl app action execute` envelope 暴露；apply 类动作只能委托现有 OPL-owned system/module/skill routes，cleanup 只提供 dry-run plan，不删除 runtime roots。
+- App repo 继续持有 GUI product truth、page-state contract、release artifact 和 shell validation；Aion shell 只实现渲染与 IPC adapter，不能把 Settings Control Center 的 domain/runtime truth 搬到 shell。
+
 ### 决策：generic workspace / source / artifact / memory substrate 由 OPL 持有 locator / index / lifecycle / projection，domain agent 持有 truth / body / verdict / authority
 
 原因：MAS/MAG/RCA 都需要把真实运行 workspace、source refs、artifact refs 和 memory refs 暴露给 OPL App、CLI 与 runtime manager，但这些 refs 背后的正文、交付物内容、记忆内容、质量判断和 owner receipt authority 不能迁入 OPL。把这一层落成独立 machine-readable contract 和 CLI projection，可以让 OPL Framework 成为可运行的 generic substrate surface，同时避免制造第二 domain truth。

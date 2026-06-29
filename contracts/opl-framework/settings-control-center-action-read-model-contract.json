@@ -1,0 +1,70 @@
+{
+  "contract_kind": "opl_settings_control_center_action_read_model_contract.v1",
+  "surface_kind": "opl_settings_control_center_contract",
+  "owner": "one-person-lab",
+  "scope": "Framework-owned Settings Control Center read/action surface for App settings without moving domain truth into the App or shell.",
+  "schema_version": "settings-control-center.v1",
+  "read_surface": "opl app state --profile fast|full --json#settings_control_center",
+  "action_surface": "opl app action execute --json",
+  "control_center_groups": [
+    "overview",
+    "setup_access",
+    "capabilities",
+    "maintenance_updates",
+    "data_storage",
+    "preferences",
+    "advanced"
+  ],
+  "action_sections": [
+    "model_access",
+    "capabilities",
+    "packages",
+    "codex_surface",
+    "runtime_roots"
+  ],
+  "allowed_action_ids": [
+    "settings_repair_model_access",
+    "settings_sync_capabilities",
+    "settings_apply_opl_packages",
+    "settings_reload_codex_surface",
+    "settings_prune_runtime_roots_dry_run"
+  ],
+  "action_taxonomy": {
+    "settings_repair_model_access": "settings.model_access.repair",
+    "settings_sync_capabilities": "settings.capabilities.sync",
+    "settings_apply_opl_packages": "settings.packages.apply",
+    "settings_reload_codex_surface": "settings.codex_surface.reload",
+    "settings_prune_runtime_roots_dry_run": "settings.runtime_roots.cleanup_plan"
+  },
+  "dry_run_apply_verify_boundary": {
+    "dry_run": "preflight_only_no_domain_or_runtime_authority_write",
+    "apply": "delegates_only_to_existing_opl_owned_app_action_routes",
+    "verify": "read_existing_opl_app_state_or_existing_opl_owned_status_actions",
+    "runtime_roots_cleanup": "dry_run_plan_only_no_delete"
+  },
+  "authority_boundary": {
+    "framework_owner": "one-person-lab",
+    "app_repo_owner": "one-person-lab-app_gui_product_truth_only",
+    "shell_owner": "thin_renderer_and_ipc_adapter",
+    "can_write_domain_truth": false,
+    "can_sign_domain_receipt": false,
+    "can_create_owner_receipt": false,
+    "can_create_typed_blocker": false,
+    "can_write_runtime_queue": false,
+    "can_write_provider_queue": false,
+    "can_read_memory_body": false,
+    "can_read_artifact_body": false,
+    "can_authorize_quality_verdict": false,
+    "can_claim_app_release_ready": false,
+    "can_claim_production_ready": false
+  },
+  "non_goals": [
+    "does_not_replace_domain_action_catalog",
+    "does_not_write_domain_truth",
+    "does_not_sign_owner_receipt",
+    "does_not_create_typed_blocker",
+    "does_not_delete_runtime_roots",
+    "does_not_define_app_release_truth",
+    "does_not_make_aion_shell_a_truth_owner"
+  ]
+}
