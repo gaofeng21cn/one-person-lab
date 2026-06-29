@@ -175,3 +175,40 @@ Carry-forward scope:
 - For MAG/RCA/OMA repo-local wrapper or adapter tails, require generated/default-caller consumption, no-active-caller proof, owner receipt or typed blocker, no-forbidden-write proof, and repo-native verification before physical deletion.
 - For App candidate shells, release workflow, installer, and Homebrew surfaces, use App-owned contracts and release-boundary validators as the authority; do not let shell-carrier or design-reference evidence retire App product authority.
 - Preserve negative guards and tombstones when they are the machine-readable no-resurrection boundary.
+
+## 2026-06-29 cleanup closeout readback
+
+This follow-up records the compact final state of the OPL / MAG / RCA cleanup
+optimization list. It is docs-only provenance for the closeout batch; it does
+not reopen the physical-delete plan, replace repo-local owner docs, or claim
+runtime, release, domain, production, App, Brand L5, owner-receipt or typed
+blocker readiness.
+
+| Area | Final state | Evidence boundary |
+| --- | --- | --- |
+| OPL retired decisions history | Landed/current on OPL `origin/main` through `d569a9f32edcf9ab772cce35f697f27fa838a64a` and current head `e66cdd076d8c6a45a15fb533d140b62a2c25c2e7`. | `d569a9f3 docs: archive retired runtime decision history`; `e66cdd07 fix(release): pin default App release currentness`; both are ancestors of OPL `origin/main` in the 2026-06-29 readback. |
+| RCA current-program split | Landed/current in RCA at `78efea47620cf32ae7be34b1a8284f81dc283104`. | `78efea47 refactor(contracts): split current program generator`; RCA `main...origin/main`; commit is ancestor of RCA `origin/main`. The split covers the current-program leaf / index / manifest / script generator surface. |
+| MAG source policy split | Landed/current in MAG at `c6f2058bd14c87a7bd8f1b8761578bb54a5533bc`. | `c6f2058 refactor(source): split standard pack source policy`; MAG `main...origin/main`; commit is ancestor of MAG `origin/main`. |
+| MAS backlog | Deferred to MAS owner docs and MAS repo truth. | This OPL history note does not carry MAS backlog authority, paper progress, package authority, owner receipt, typed blocker, or runtime readiness. |
+| Aion / Hermes shell surfaces | Excluded from this OPL / MAG / RCA cleanup closeout. | Aion/Hermes shell work remains upstream-fork / App-owned / explicit adapter context, not an OPL main-repo cleanup tail for this batch. |
+
+Primary OPL brand module: `OPL Charter`, because this closeout only governs
+docs lifecycle and cross-repo cleanup provenance. Coordinating modules:
+`OPL Runway` and `OPL Foundry Lab`, because the recorded landed work touches
+runtime/history boundary wording and standard-agent cleanup surfaces. Not
+touched: source, tests, contracts, release artifacts, provider queues, domain
+truth, owner receipts, typed blockers, MAS backlog bodies, Aion shell bodies or
+Hermes shell bodies.
+
+L1 docs verification boundary for this follow-up:
+
+```bash
+rtk git diff --check
+rtk rg -n '^(<<<<<<<|=======|>>>>>>>)' README* docs
+rtk opl-doc-doctor doctor . --format json
+```
+
+Passing these checks proves only this history/provenance patch is syntactically
+clean and remains inside the docs portfolio. The repo-local implementation and
+verification evidence for RCA, MAG and OPL remains in their named commits,
+git history, repo-native checks and owner docs.
