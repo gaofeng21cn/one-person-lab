@@ -80,6 +80,27 @@ function readRefsFromFields(source: JsonRecord | null | undefined, fields: strin
   }));
 }
 
+function ownerDecisionResultShape(input: {
+  physicalDeleteAuthorizationRefs: string[];
+  keepAsAuthorityAdapterRefs: string[];
+  ownerReceiptRefs: string[];
+  typedBlockerRefs: string[];
+}) {
+  if (input.physicalDeleteAuthorizationRefs.length > 0) {
+    return 'physical_delete_authorization_ref';
+  }
+  if (input.keepAsAuthorityAdapterRefs.length > 0) {
+    return 'keep_as_authority_adapter_ref';
+  }
+  if (input.typedBlockerRefs.length > 0) {
+    return 'typed_blocker_ref';
+  }
+  if (input.ownerReceiptRefs.length > 0) {
+    return 'owner_receipt_ref';
+  }
+  return null;
+}
+
 function defaultCallerTargetAllowed(targetKind: string) {
   return (DEFAULT_CALLER_TARGET_KINDS as readonly string[]).includes(targetKind);
 }
@@ -168,13 +189,31 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
       ]),
       ...stringList(target?.current_surface_refs),
     ]);
-    const observedDomainReceiptOrBlockerRefs = readRefsFromFields(bridgeExitGate, [
+    const observedOwnerReceiptRefs = readRefsFromFields(bridgeExitGate, [
       'owner_receipt_refs',
       'owner_receipt_ref',
       'domain_owner_receipt_refs',
       'domain_owner_receipt_ref',
+    ]);
+    const observedPhysicalDeleteAuthorizationRefs = readRefsFromFields(bridgeExitGate, [
+      'physical_delete_authorization_refs',
+      'physical_delete_authorization_ref',
+    ]);
+    const observedKeepAsAuthorityAdapterRefs = readRefsFromFields(bridgeExitGate, [
+      'keep_as_authority_adapter_refs',
+      'keep_as_authority_adapter_ref',
+      'keep_as_authority_refs',
+      'keep_as_authority_ref',
+    ]);
+    const observedTypedBlockerRefs = readRefsFromFields(bridgeExitGate, [
       'typed_blocker_refs',
       'typed_blocker_ref',
+    ]);
+    const observedDomainReceiptOrBlockerRefs = unique([
+      ...observedPhysicalDeleteAuthorizationRefs,
+      ...observedKeepAsAuthorityAdapterRefs,
+      ...observedOwnerReceiptRefs,
+      ...observedTypedBlockerRefs,
     ]);
     const observedNoActiveCallerRefs = readRefsFromFields(bridgeExitGate, [
       'no_active_caller_refs',
@@ -205,10 +244,23 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
     const allDeletionEvidenceRequirementsObserved =
       deleteOrKeepPrerequisitesObserved
       && observedDomainReceiptOrBlockerRefs.length > 0;
+    const worklistStatus = ready
+      ? (
+        allDeletionEvidenceRequirementsObserved
+          ? 'owner_decision_observed_retirement_gate_closed'
+          : 'domain_evidence_required'
+      )
+      : 'blocked_until_replacement_ready';
+    const ownerDecisionShape = ownerDecisionResultShape({
+      physicalDeleteAuthorizationRefs: observedPhysicalDeleteAuthorizationRefs,
+      keepAsAuthorityAdapterRefs: observedKeepAsAuthorityAdapterRefs,
+      ownerReceiptRefs: observedOwnerReceiptRefs,
+      typedBlockerRefs: observedTypedBlockerRefs,
+    });
     const deletionEvidenceWorklist = {
       surface_kind: 'opl_default_caller_surface_deletion_evidence_worklist',
       surface_id: surfaceId,
-      status: ready ? 'domain_evidence_required' : 'blocked_until_replacement_ready',
+      status: worklistStatus,
       requirement_ids: DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS,
       replacement_parity: {
         status: ready ? 'observed' : 'blocked',
@@ -238,6 +290,11 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
         status: observedDomainReceiptOrBlockerRefs.length > 0 ? 'observed' : 'required_from_domain_owner',
         accepted_result_shapes: [...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES],
         evidence_refs: observedDomainReceiptOrBlockerRefs,
+        owner_decision_result_shape: ownerDecisionShape,
+        physical_delete_authorization_refs: observedPhysicalDeleteAuthorizationRefs,
+        keep_as_authority_adapter_refs: observedKeepAsAuthorityAdapterRefs,
+        owner_receipt_refs: observedOwnerReceiptRefs,
+        typed_blocker_refs: observedTypedBlockerRefs,
       },
       no_forbidden_write_proof: {
         status: observedNoForbiddenWriteRefs.length > 0 ? 'observed' : 'required_before_physical_delete',
@@ -254,6 +311,11 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
       audit_reason: optionalString(target?.audit_reason),
       semantic_equivalence_status: optionalString(target?.semantic_equivalence_status),
       semantic_equivalence_reason: optionalString(target?.semantic_equivalence_reason),
+      owner_decision_result_shape: ownerDecisionShape,
+      physical_delete_authorization_refs: observedPhysicalDeleteAuthorizationRefs,
+      keep_as_authority_adapter_refs: observedKeepAsAuthorityAdapterRefs,
+      owner_receipt_refs: observedOwnerReceiptRefs,
+      typed_blocker_refs: observedTypedBlockerRefs,
       physical_delete_authorized: false,
       default_caller_delete_ready: false,
       generated_default_caller_readiness_can_authorize_physical_delete: false,
@@ -269,6 +331,7 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
         ? [...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES]
         : ['typed_blocker_ref'],
       owner_decision_required_after_all_refs_observed: allDeletionEvidenceRequirementsObserved,
+      active_deletion_worklist_item: worklistStatus !== 'owner_decision_observed_retirement_gate_closed',
       not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
       retirement_guard: {
         target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],

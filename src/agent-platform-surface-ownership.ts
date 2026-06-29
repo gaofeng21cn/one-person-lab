@@ -582,29 +582,32 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
       ...surfaceBlockers,
     ].filter((entry): entry is string => Boolean(entry));
     const replacementReady = blockers.length === 0;
-    const deletionEvidenceWorklists = surfaceGates.map((gate) => gate.deletion_evidence_worklist);
-    const missingDomainEvidenceCount = deletionEvidenceWorklists.filter((worklist) => (
+    const surfaceRetirementGates = surfaceGates.map((gate) => gate.deletion_evidence_worklist);
+    const deletionEvidenceWorklists = surfaceRetirementGates.filter((worklist) =>
+      worklist.active_deletion_worklist_item !== false
+    );
+    const missingDomainEvidenceCount = surfaceRetirementGates.filter((worklist) => (
       isRecord(worklist.domain_owner_receipt_or_typed_blocker)
       && optionalString(worklist.domain_owner_receipt_or_typed_blocker.status) !== 'observed'
     )).length;
-    const missingNoActiveCallerProofCount = deletionEvidenceWorklists.filter((worklist) => (
+    const missingNoActiveCallerProofCount = surfaceRetirementGates.filter((worklist) => (
       isRecord(worklist.no_active_caller_proof)
       && optionalString(worklist.no_active_caller_proof.status) !== 'observed'
     )).length;
-    const missingNoForbiddenWriteCount = deletionEvidenceWorklists.filter((worklist) => (
+    const missingNoForbiddenWriteCount = surfaceRetirementGates.filter((worklist) => (
       isRecord(worklist.no_forbidden_write_proof)
       && optionalString(worklist.no_forbidden_write_proof.status) !== 'observed'
     )).length;
-    const missingTombstoneOrProvenanceCount = deletionEvidenceWorklists.filter((worklist) => (
+    const missingTombstoneOrProvenanceCount = surfaceRetirementGates.filter((worklist) => (
       isRecord(worklist.tombstone_or_provenance_ref)
       && optionalString(worklist.tombstone_or_provenance_ref.status) !== 'observed'
     )).length;
-    const allDeletionEvidenceRequirementsObserved = deletionEvidenceWorklists.length > 0
+    const allDeletionEvidenceRequirementsObserved = surfaceRetirementGates.length > 0
       && missingDomainEvidenceCount === 0
       && missingNoActiveCallerProofCount === 0
       && missingNoForbiddenWriteCount === 0
       && missingTombstoneOrProvenanceCount === 0;
-    const deleteOrKeepPrerequisitesObserved = deletionEvidenceWorklists.length > 0
+    const deleteOrKeepPrerequisitesObserved = surfaceRetirementGates.length > 0
       && missingNoActiveCallerProofCount === 0
       && missingNoForbiddenWriteCount === 0
       && missingTombstoneOrProvenanceCount === 0;
@@ -628,6 +631,9 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         blocked_surface_count: surfaceBlockers.length,
         blocker_count: blockers.length,
         deletion_evidence_worklist_count: deletionEvidenceWorklists.length,
+        surface_retirement_gate_count: surfaceRetirementGates.length,
+        closed_surface_retirement_gate_count:
+          surfaceRetirementGates.length - deletionEvidenceWorklists.length,
         missing_domain_owner_receipt_or_typed_blocker_count: missingDomainEvidenceCount,
         missing_no_active_caller_proof_count: missingNoActiveCallerProofCount,
         missing_no_forbidden_write_proof_count: missingNoForbiddenWriteCount,
@@ -651,6 +657,7 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
       active_caller_target_proof_status: optionalString(targetProof.status),
       active_caller_cutover_proof_status: optionalString(cutoverProof.status),
       surface_gates: surfaceGates,
+      surface_retirement_gates: surfaceRetirementGates,
       deletion_evidence_worklists: deletionEvidenceWorklists,
       private_platform_residue_deletion_gate: privatePlatformResidueDeletionGate,
       blockers,
@@ -772,6 +779,14 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
     (total, report) => total + Number(report.summary.deletion_evidence_worklist_count || 0),
     0,
   );
+  const surfaceRetirementGateCount = reports.reduce(
+    (total, report) => total + Number(report.summary.surface_retirement_gate_count || 0),
+    0,
+  );
+  const closedSurfaceRetirementGateCount = reports.reduce(
+    (total, report) => total + Number(report.summary.closed_surface_retirement_gate_count || 0),
+    0,
+  );
   const missingDomainOwnerReceiptOrTypedBlockerCount = reports.reduce(
     (total, report) => (
       total + Number(report.summary.missing_domain_owner_receipt_or_typed_blocker_count || 0)
@@ -806,6 +821,9 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
     version: 'g1',
     blocked_count: blockedCount,
     deletion_evidence_worklist_count: deletionEvidenceWorklistCount,
+    active_deletion_evidence_worklist_count: deletionEvidenceWorklistCount,
+    surface_retirement_gate_count: surfaceRetirementGateCount,
+    closed_surface_retirement_gate_count: closedSurfaceRetirementGateCount,
     missing_domain_owner_receipt_or_typed_blocker_count:
       missingDomainOwnerReceiptOrTypedBlockerCount,
     missing_no_active_caller_proof_count: missingNoActiveCallerProofCount,
@@ -847,6 +865,9 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
       generated_default_caller_surface_count: generatedDefaultCallerSurfaceCount,
       blocked_surface_count: blockedSurfaceCount,
       deletion_evidence_worklist_count: deletionEvidenceWorklistCount,
+      active_deletion_evidence_worklist_count: deletionEvidenceWorklistCount,
+      surface_retirement_gate_count: surfaceRetirementGateCount,
+      closed_surface_retirement_gate_count: closedSurfaceRetirementGateCount,
       missing_domain_owner_receipt_or_typed_blocker_count:
         missingDomainOwnerReceiptOrTypedBlockerCount,
       missing_no_active_caller_proof_count: missingNoActiveCallerProofCount,
@@ -887,6 +908,9 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
         generated_default_caller_surface_count: generatedDefaultCallerSurfaceCount,
         blocked_surface_count: blockedSurfaceCount,
         deletion_evidence_worklist_count: deletionEvidenceWorklistCount,
+        active_deletion_evidence_worklist_count: deletionEvidenceWorklistCount,
+        surface_retirement_gate_count: surfaceRetirementGateCount,
+        closed_surface_retirement_gate_count: closedSurfaceRetirementGateCount,
         missing_domain_owner_receipt_or_typed_blocker_count:
           missingDomainOwnerReceiptOrTypedBlockerCount,
         missing_no_active_caller_proof_count: missingNoActiveCallerProofCount,

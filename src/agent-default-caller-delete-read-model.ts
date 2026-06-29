@@ -42,6 +42,10 @@ function stringList(value: unknown) {
     : [];
 }
 
+function unique(values: string[]) {
+  return [...new Set(values.filter(Boolean))];
+}
+
 function numberValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
@@ -84,6 +88,12 @@ function ownerDecisionStatus(prerequisitesObserved: boolean, allRequirementsObse
     return 'owner_decision_required';
   }
   return 'owner_decision_observed_refs_only_not_delete_authorized';
+}
+
+function ownerDecisionShapeFromWorklist(worklist: JsonRecord) {
+  const domainDecision = record(worklist.domain_owner_receipt_or_typed_blocker);
+  return optionalString(worklist.owner_decision_result_shape)
+    ?? optionalString(domainDecision.owner_decision_result_shape);
 }
 
 function structuralPrerequisiteGateGroup(input: {
@@ -258,6 +268,7 @@ function compactSurfaceDeletionGate(worklist: JsonRecord) {
   const allRequirementsObserved = prerequisitesObserved
     && statusIsObserved(worklist.domain_owner_receipt_or_typed_blocker);
   const missingDomainOwnerDecisionCount = prerequisitesObserved && !allRequirementsObserved ? 1 : 0;
+  const domainDecision = record(worklist.domain_owner_receipt_or_typed_blocker);
   return {
     surface_id: optionalString(worklist.surface_id) ?? 'unknown_surface',
     status: optionalString(worklist.status) ?? 'unknown',
@@ -270,7 +281,25 @@ function compactSurfaceDeletionGate(worklist: JsonRecord) {
     tombstone_or_provenance_ref_observed: statusIsObserved(worklist.tombstone_or_provenance_ref),
     physical_delete_authorized: false,
     default_caller_delete_ready: false,
-    needs_drilldown_for_surface_refs: true,
+    active_deletion_worklist_item: worklist.active_deletion_worklist_item !== false,
+    needs_drilldown_for_surface_refs: worklist.active_deletion_worklist_item !== false,
+    owner_decision_result_shape: ownerDecisionShapeFromWorklist(worklist),
+    physical_delete_authorization_refs: unique([
+      ...stringList(worklist.physical_delete_authorization_refs),
+      ...stringList(domainDecision.physical_delete_authorization_refs),
+    ]),
+    keep_as_authority_adapter_refs: unique([
+      ...stringList(worklist.keep_as_authority_adapter_refs),
+      ...stringList(domainDecision.keep_as_authority_adapter_refs),
+    ]),
+    owner_receipt_refs: unique([
+      ...stringList(worklist.owner_receipt_refs),
+      ...stringList(domainDecision.owner_receipt_refs),
+    ]),
+    typed_blocker_refs: unique([
+      ...stringList(worklist.typed_blocker_refs),
+      ...stringList(domainDecision.typed_blocker_refs),
+    ]),
     owner_decision_status: ownerDecisionStatus(prerequisitesObserved, allRequirementsObserved),
     structural_prerequisites_observed_but_domain_owner_decision_missing_count:
       missingDomainOwnerDecisionCount,
@@ -301,7 +330,9 @@ function repoDeletionGateSummary(
 ) {
   const summary = record(report.summary);
   const deletionGate = record(report.deletion_gate);
-  const worklists = recordList(report.deletion_evidence_worklists);
+  const activeWorklists = recordList(report.deletion_evidence_worklists);
+  const surfaceRetirementGates = recordList(report.surface_retirement_gates);
+  const worklists = surfaceRetirementGates.length > 0 ? surfaceRetirementGates : activeWorklists;
   const physicalDeleteBlockedBy =
     stringList(deletionGate.physical_delete_blocked_by).length > 0
       ? stringList(deletionGate.physical_delete_blocked_by)
@@ -352,7 +383,10 @@ function repoDeletionGateSummary(
       numberValue(summary.generated_default_caller_surface_count),
     ready_surface_count: numberValue(summary.ready_surface_count),
     blocked_surface_count: numberValue(summary.blocked_surface_count),
-    deletion_evidence_worklist_count: worklists.length,
+    deletion_evidence_worklist_count: activeWorklists.length,
+    active_deletion_evidence_worklist_count: activeWorklists.length,
+    surface_retirement_gate_count: worklists.length,
+    closed_surface_retirement_gate_count: Math.max(0, worklists.length - activeWorklists.length),
     all_deletion_evidence_requirements_observed: allRequirementsObserved,
     missing_domain_owner_receipt_or_typed_blocker_count:
       missingDomainOwnerReceiptOrTypedBlockerCount,
@@ -395,7 +429,7 @@ function repoDeletionGateSummary(
     ...ownerDecisionReadout(prerequisitesObserved, allRequirementsObserved),
     physical_delete_blocked_by: physicalDeleteBlockedBy,
     not_authorized_claims: notAuthorizedClaims,
-    needs_drilldown_for_surface_refs: worklists.length > 0,
+    needs_drilldown_for_surface_refs: activeWorklists.length > 0,
     ordinary_lane: ordinaryLane,
     cleanup_lane: cleanupLane,
     surface_owner_decision_gates: surfaceDeletionGateSummary,
@@ -410,6 +444,14 @@ export function buildDefaultCallerPhysicalDeleteAuthorityReadModel(
   const repoSummaries = reports.map((report) => repoDeletionGateSummary(report, policy));
   const deletionEvidenceWorklistCount = repoSummaries.reduce(
     (total, repo) => total + repo.deletion_evidence_worklist_count,
+    0,
+  );
+  const surfaceRetirementGateCount = repoSummaries.reduce(
+    (total, repo) => total + repo.surface_retirement_gate_count,
+    0,
+  );
+  const closedSurfaceRetirementGateCount = repoSummaries.reduce(
+    (total, repo) => total + repo.closed_surface_retirement_gate_count,
     0,
   );
   const missingDomainOwnerReceiptOrTypedBlockerCount = repoSummaries.reduce(
@@ -452,6 +494,9 @@ export function buildDefaultCallerPhysicalDeleteAuthorityReadModel(
     status: 'not_authorized_by_opl_projection',
     total_repo_count: repoSummaries.length,
     deletion_evidence_worklist_count: deletionEvidenceWorklistCount,
+    active_deletion_evidence_worklist_count: deletionEvidenceWorklistCount,
+    surface_retirement_gate_count: surfaceRetirementGateCount,
+    closed_surface_retirement_gate_count: closedSurfaceRetirementGateCount,
     all_repos_all_deletion_evidence_requirements_observed:
       allReposAllDeletionEvidenceRequirementsObserved,
     all_repos_delete_or_keep_prerequisites_observed:
