@@ -16,6 +16,7 @@ import { buildOplModules } from './modules.ts';
 import type {
   OplSystemInitializeEventHandler,
 } from './shared.ts';
+import { readOplSeedInstallManifest } from './seed-manifest.ts';
 import {
   createOplSystemInitializeEventEmitter,
   withOplSystemInitializeEventPhase,
@@ -31,6 +32,7 @@ export async function buildOplEnvironment(
 ) {
   const events = createOplSystemInitializeEventEmitter(options.onInitializeEvent);
   const statePaths = ensureOplStateDir(resolveOplStatePaths());
+  const seedInstallManifest = readOplSeedInstallManifest();
   const codexDefaults = readLocalCodexDefaultsIfAvailable();
   const codexDefaultProfile = readBundledCodexDefaultProfile();
   const codexBinary = await withOplSystemInitializeEventPhase(
@@ -172,6 +174,34 @@ export async function buildOplEnvironment(
         runtime_modes_file: statePaths.runtime_modes_file,
         update_channel_file: statePaths.update_channel_file,
         developer_supervisor_config_file: statePaths.developer_supervisor_config_file,
+        install_manifest_file: statePaths.install_manifest_file,
+      },
+      seed_install: seedInstallManifest ? {
+        status: seedInstallManifest.status ?? 'unknown',
+        image_version: isRecord(seedInstallManifest.image)
+          ? seedInstallManifest.image.version ?? null
+          : null,
+        image_digest: isRecord(seedInstallManifest.image)
+          ? seedInstallManifest.image.digest ?? null
+          : null,
+        data_dir: isRecord(seedInstallManifest.install)
+          ? seedInstallManifest.install.data_dir ?? null
+          : null,
+        projects_dir: isRecord(seedInstallManifest.install)
+          ? seedInstallManifest.install.projects_dir ?? null
+          : null,
+        manifest_file: statePaths.install_manifest_file,
+        readiness_claim: 'not_claimed',
+        can_claim_ready_or_current: false,
+      } : {
+        status: 'not_applied',
+        image_version: null,
+        image_digest: null,
+        data_dir: null,
+        projects_dir: null,
+        manifest_file: statePaths.install_manifest_file,
+        readiness_claim: 'not_claimed',
+        can_claim_ready_or_current: false,
       },
       notes: [
         'OPL owns the user-facing initialization surface and reports Codex readiness separately from configured family runtime provider readiness.',
@@ -181,7 +211,12 @@ export async function buildOplEnvironment(
         'AionUI provides the GUI/WebUI shell; OPL no longer hosts a local Product API service on port 8787.',
         'Domain modules are tracked separately so the GUI can manage install and upgrade actions from one settings area.',
         'Developer Mode is exposed as a settings surface backed by the existing developer_supervisor system action and includes GitHub identity, repository authority, and Agent Lab repair route projections.',
+        'Docker/WebUI seed state is reported from the install manifest when startup maintenance or seed-apply has recorded it; this read model does not claim runtime readiness.',
       ],
     },
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }

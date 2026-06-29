@@ -6,6 +6,7 @@ import { buildOplEnvironment } from './environment.ts';
 import { runOplEngineAction } from './engine-actions.ts';
 import { resolveFrameworkUpdateTargetRoot, runOplFrameworkSelfUpdate } from './framework-self-update.ts';
 import { buildOplModules, runOplModuleAction } from './modules.ts';
+import { applyOplSeedManifest } from './seed-manifest.ts';
 import { resolveProjectRoot } from './shared.ts';
 import { runScholarSkillsSourceMaintenance } from './scholarskills-package-channel.ts';
 
@@ -432,6 +433,7 @@ export async function runOplStartupMaintenance(
     .filter((target) => readSkillSyncStatus(target) === 'completed')
     .map((target) => readSkillSyncDomain(target))
     .filter((domainId): domainId is string => Boolean(domainId));
+  const seedApply = await applyOplSeedManifest();
   const refreshedEnvironment = (await buildOplEnvironment(contracts)).system_environment;
 
   return {
@@ -460,6 +462,7 @@ export async function runOplStartupMaintenance(
         engine_targets: engineTargets,
         capability_targets: capabilityTargets,
         module_targets: moduleTargets,
+        seed_boundary: seedApply.seed_apply,
         managed_install_update_receipts: managedReceiptRecord,
         plugin_cache_freshness: {
           status: syncedDomains.length > 0
@@ -497,6 +500,7 @@ export async function runOplStartupMaintenance(
           'Startup maintenance installs or updates OPL ScholarSkills from the managed GHCR agent package channel so App workspace/quest sync can materialize it into the active paper directory.',
           'Dirty, ahead, diverged, no-upstream, env override, sibling workspace, and invalid checkouts are reported for manual review.',
           'OPL ScholarSkills is a framework capability plugin pack, not a domain module; workspace/quest-local sync is still explicit and target-bound.',
+          'Docker/WebUI startup records image seed, /data, and /projects boundaries in the OPL state install manifest without claiming runtime or domain readiness.',
           'This action never writes domain truth, domain memory body, artifact body, quality verdict, export verdict, or domain daemons.',
         ],
       },

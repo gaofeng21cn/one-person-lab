@@ -117,7 +117,7 @@ export function buildPublicSystemCommandSpecs(
   const buildSystemActionSpec = (
     command: string,
     summary: string,
-    action: 'reconcile_modules' | 'startup_maintenance',
+    action: 'reconcile_modules' | 'startup_maintenance' | 'seed_apply',
   ) => buildNoArgSpec(
     {
       usage: `opl system ${command}`,
@@ -327,8 +327,13 @@ export function buildPublicSystemCommandSpecs(
     ),
     'system startup-maintenance': buildSystemActionSpec(
       'startup-maintenance',
-      'Run App startup maintenance for clean managed modules, plugin cache freshness, and reload guidance.',
+      'Run App startup maintenance for clean managed modules, image seed state, plugin cache freshness, and reload guidance.',
       'startup_maintenance',
+    ),
+    'system seed-apply': buildSystemActionSpec(
+      'seed-apply',
+      'Record Docker/WebUI image seed, data volume, projects directory, and component receipt boundaries.',
+      'seed_apply',
     ),
     'system repair-native-helpers': buildNoArgSpec(
       {

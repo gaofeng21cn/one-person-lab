@@ -36,6 +36,7 @@ export type OplSystemAction =
   | 'update'
   | 'reconcile_modules'
   | 'startup_maintenance'
+  | 'seed_apply'
   | 'dependency_maintenance'
   | 'update_channel'
   | 'developer_supervisor'

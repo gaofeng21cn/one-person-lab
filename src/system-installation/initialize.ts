@@ -593,6 +593,7 @@ export async function buildOplInitialize(
       core_engines: environment.core_engines,
       codex_default_profile: codex.default_profile,
       native_helpers: environment.native_helpers,
+      seed_install: environment.seed_install,
       module_summary: moduleSummary,
       domain_modules: modulesPayload.modules,
       recommended_skills: {

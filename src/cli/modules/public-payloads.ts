@@ -12,6 +12,7 @@ type OplEnvironmentProjection = {
   gui_shell: unknown;
   developer_mode: unknown;
   managed_paths: unknown;
+  seed_install: unknown;
   notes: unknown;
 };
 
@@ -32,6 +33,7 @@ type OplInitializeProjection = {
   core_engines: unknown;
   codex_default_profile: unknown;
   native_helpers: unknown;
+  seed_install: unknown;
   domain_modules: OplModulesProjection;
   recommended_skills: unknown;
   gui_shell: unknown;
@@ -63,6 +65,7 @@ function buildPublicSystemFromOplEnvironment(environment: OplEnvironmentProjecti
     gui_shell: environment.gui_shell,
     developer_mode: environment.developer_mode,
     managed_paths: environment.managed_paths,
+    seed_install: environment.seed_install,
     notes: environment.notes,
   };
 }
@@ -91,6 +94,7 @@ function buildPublicSystemInitializePayload(
       core_engines: payload.system_initialize.core_engines,
       codex_default_profile: payload.system_initialize.codex_default_profile,
       native_helpers: payload.system_initialize.native_helpers,
+      seed_install: payload.system_initialize.seed_install,
       domain_modules: {
         surface_id: 'opl_modules',
         modules_root: domainModules.modules_root,

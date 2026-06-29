@@ -33,6 +33,7 @@ export type OplStatePaths = {
   agent_lab_risk_tier_auto_promotion_ledger_file: string;
   developer_mode_closeout_ledger_file: string;
   domain_manifest_projection_cache_file: string;
+  install_manifest_file: string;
   desktop_config_file: string;
   desktop_pilot_root: string;
 };
@@ -124,6 +125,7 @@ export function resolveOplStatePaths(): OplStatePaths {
     ),
     developer_mode_closeout_ledger_file: path.join(stateDir, 'developer-mode-closeout-ledger.json'),
     domain_manifest_projection_cache_file: path.join(stateDir, 'domain-manifest-projection-cache.json'),
+    install_manifest_file: path.join(stateDir, 'install-manifest.json'),
     desktop_config_file: path.join(stateDir, 'desktop-pilot', 'config', 'desktop-config.json'),
     desktop_pilot_root: path.join(stateDir, 'desktop-pilot'),
   };

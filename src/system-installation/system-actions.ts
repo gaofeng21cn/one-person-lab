@@ -15,6 +15,7 @@ import { runOplSystemDependencyMaintenance } from './dependency-doctor.ts';
 import { buildOplEnvironment } from './environment.ts';
 import { resolveFrameworkUpdateTargetRoot, runOplFrameworkSelfUpdate } from './framework-self-update.ts';
 import { buildOplModules, runOplModuleAction } from './modules.ts';
+import { applyOplSeedManifest } from './seed-manifest.ts';
 import { resolveProjectRoot } from './shared.ts';
 import { runOplStartupMaintenance } from './startup-maintenance.ts';
 import type {
@@ -289,6 +290,20 @@ export async function runOplSystemAction(
 
   if (action === 'startup_maintenance') {
     return runOplStartupMaintenance(contracts);
+  }
+
+  if (action === 'seed_apply') {
+    const seedApply = await applyOplSeedManifest();
+    return {
+      version: 'g2',
+      system_action: {
+        action,
+        status: seedApply.seed_apply.status,
+        update_channel: readOplUpdateChannel().channel,
+        workspace_root: readOplWorkspaceRoot(),
+        details: seedApply.seed_apply,
+      },
+    };
   }
 
   if (action === 'dependency_maintenance') {
