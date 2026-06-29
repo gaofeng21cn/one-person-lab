@@ -178,6 +178,86 @@ function paperMissionStageRouteTaskStatusForTerminalAttempt(attempt: StageAttemp
   };
 }
 
+function transitionReceiptStatusForTerminalAttempt(
+  terminalAttempt: StageAttemptPayload,
+  nextTask: ReturnType<typeof paperMissionStageRouteTaskStatusForTerminalAttempt>,
+) {
+  if (nextTask.status === 'dead_letter') {
+    return 'provider_terminal_blocked';
+  }
+  if (terminalAttempt.closeout_receipt_status === 'accepted_typed_closeout') {
+    return 'terminal_closeout_observed';
+  }
+  if (nextTask.reason === PAPER_MISSION_STAGE_ROUTE_DOMAIN_GATE_PENDING_REASON) {
+    return 'domain_gate_pending';
+  }
+  return 'typed_runtime_blocker_observed';
+}
+
+function firstCloseoutRef(terminalAttempt: StageAttemptPayload) {
+  return terminalAttempt.closeout_refs.find(
+    (entry) => typeof entry === 'string' && entry.trim().length > 0,
+  ) ?? null;
+}
+
+function oplTransitionReceiptForTerminalAttempt(input: {
+  row: FamilyRuntimeTaskRow;
+  payload: Record<string, unknown>;
+  terminalAttempt: StageAttemptPayload;
+  nextTask: ReturnType<typeof paperMissionStageRouteTaskStatusForTerminalAttempt>;
+}) {
+  const stageAttemptId = input.terminalAttempt.stage_attempt_id;
+  const taskId = input.row.task_id;
+  return {
+    surface_kind: 'opl_transition_receipt',
+    schema_version: 1,
+    receipt_status: transitionReceiptStatusForTerminalAttempt(input.terminalAttempt, input.nextTask),
+    role: 'transport_receipt_only',
+    source_event_type: 'paper_mission_stage_route_terminal_task_reconciled',
+    study_id: paperMissionStageRouteIdentityValue(input.payload, 'study_id') ?? input.payload.study_id ?? null,
+    mission_id: paperMissionStageRouteIdentityValue(input.payload, 'mission_id') ?? input.payload.mission_id ?? null,
+    paper_mission_transaction_ref: paperMissionStageRouteIdentityValue(
+      input.payload,
+      'paper_mission_transaction_ref',
+    ),
+    opl_route_command_ref: paperMissionStageRouteIdentityValue(input.payload, 'opl_route_command_ref'),
+    command_kind: paperMissionStageRouteIdentityValue(input.payload, 'command_kind'),
+    route_target: paperMissionStageRouteIdentityValue(input.payload, 'route_target'),
+    route_identity_key: paperMissionStageRouteIdentityValue(input.payload, 'route_identity_key'),
+    attempt_idempotency_key: paperMissionStageRouteIdentityValue(input.payload, 'attempt_idempotency_key'),
+    request_idempotency_key: paperMissionStageRouteIdentityValue(input.payload, 'request_idempotency_key'),
+    task_id: taskId,
+    task_status: input.row.status,
+    reconciled_task_status: input.nextTask.status,
+    stage_attempt_id: stageAttemptId,
+    stage_attempt_status: input.terminalAttempt.status,
+    stage_attempt_ref: stageAttemptId ? `opl://stage-attempts/${stageAttemptId}` : null,
+    runtime_closeout_ref: firstCloseoutRef(input.terminalAttempt)
+      ?? (taskId ? `opl://family-runtime/tasks/${taskId}/terminal-closeout-readback` : null),
+    typed_runtime_blocker_ref: firstCloseoutRef(input.terminalAttempt),
+    closeout_refs: input.terminalAttempt.closeout_refs,
+    closeout_receipt_status: input.terminalAttempt.closeout_receipt_status,
+    blocked_reason: input.nextTask.reason,
+    can_change_stage_terminal_decision: false,
+    can_select_next_owner: false,
+    authority_boundary: {
+      role: 'transport_receipt_only',
+      writes_domain_truth: false,
+      writes_owner_receipt: false,
+      writes_typed_blocker: false,
+      writes_human_gate: false,
+      writes_current_package: false,
+      writes_paper_body: false,
+      writes_publication_eval_latest: false,
+      writes_controller_decision: false,
+      can_claim_provider_running: false,
+      can_claim_paper_progress: false,
+      can_claim_runtime_ready: false,
+      can_claim_submission_ready: false,
+    },
+  };
+}
+
 function hasAcceptedTypedCloseout(attempt: StageAttemptPayload) {
   return attempt.status === 'completed'
     && attempt.closeout_receipt_status === 'accepted_typed_closeout'
@@ -488,6 +568,12 @@ function reconcilePaperMissionStageRouteTaskRowWithAttempt(
     return false;
   }
   const nextTask = paperMissionStageRouteTaskStatusForTerminalAttempt(terminalAttempt);
+  const oplTransitionReceipt = oplTransitionReceiptForTerminalAttempt({
+    row,
+    payload,
+    terminalAttempt,
+    nextTask,
+  });
   const reconciledAt = nowIso();
   const missingSuccessorIdentityFields = missingTerminalSuccessorIdentityFields(payload);
   const successorIdentityReady = missingSuccessorIdentityFields.length === 0;
@@ -566,6 +652,7 @@ function reconcilePaperMissionStageRouteTaskRowWithAttempt(
       provider_status: terminalAttempt.provider_run.provider_status ?? null,
       closeout_refs: terminalAttempt.closeout_refs,
       closeout_receipt_status: terminalAttempt.closeout_receipt_status,
+      opl_transition_receipt: oplTransitionReceipt,
       domain_ready_verdict: terminalAttempt.route_impact.domain_ready_verdict ?? null,
       successor_task_id: successor?.taskId ?? null,
       successor_dedupe_key: successor?.dedupeKey ?? null,
