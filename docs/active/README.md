@@ -58,6 +58,8 @@ OPL 品牌模块的 L4 rollout 计划已退出 active path：当前十模块 `L4
 
 因此，“active 规划未落地”只能按唯一 active owner 的 live gap 读取：domain owner answer / typed blocker、Brand L5 真实运营证据、provider long-soak、App release verdict、memory/artifact lifecycle receipt、private-platform physical-delete owner decision 等。support 文档里残留的 P0-P5、W0-W7、audit lanes、rollout phases、matrix rows 或 external-practice checklist 都不是第二 backlog。
 
+2026-06-30 起，live / production / release / owner-evidence tail 的维护入口单独放在 [OPL Family Live Evidence 维护入口](../references/operating-governance/family-live-evidence-maintenance.md)。本目录只描述 active 文档角色和非 live 功能/结构缺口，不再把 release cohort、provider tick、Brand L5 receipt、App packaged smoke、domain owner receipt、typed blocker、human gate、run id 或 dated closeout 流水列成 active planning backlog。
+
 当前真相仍然先看：
 
 - [文档索引](../README.md)

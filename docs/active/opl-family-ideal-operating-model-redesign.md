@@ -12,6 +12,8 @@ Last reviewed: `2026-06-21`
 
 本文中的 lane、plane、primitive 和 support index 都只能作为验收标签或审计口径使用。需要记录当前 gap、执行 owner、下一步 baton、完成口径或 live evidence intake 时，必须折回 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md) 或核心五件套；不能在本文维护第二 active backlog、第二 ordinary route、第二 owner queue 或第二 truth source。
 
+2026-06-30 SSOT refresh：本文不再维护 live evidence intake。理想 operating model 只描述目标结构、owner split、ordinary path、primitive 边界和 forbidden-claim 标准；live / production / release / Brand L5 / owner-chain evidence 的维护入口是 [OPL Family Live Evidence 维护入口](../references/operating-governance/family-live-evidence-maintenance.md)。因此本文不列 App release cohort、provider long-soak、Brand L5 receipt、domain owner receipt、typed blocker、human gate、run id、attempt id 或 dated closeout 流水。
+
 Live Evidence 后置是本文当前读法的一等原则。本文定义的是理想状态、操作架构和审计标准；落地顺序默认先完成功能/结构面：source、contract、CLI/API、readback、App shell、generated / hosted surface、wrapper retirement、DomainProgressTransitionRuntime / domain policy adapter、memory/artifact/lifecycle functional boundary 和 no-second-truth guard。owner-chain live evidence、provider long-soak、Brand L5 operating evidence、App release cohort、真实用户路径、跨 agent scaleout、大型 live ledger refresh 和真实论文 / 项目运行证据属于后置 Live Evidence / production evidence lane；它们不能反向变成普通功能清理的默认 blocker，也不能被功能/结构完成外推为 readiness。
 
 2026-06-10 refresh：本文进一步把 MAS/OPL 的理想形态重设为 `multi-plane operating system`。核心判断是：更丝滑的 MAS 推进不来自更多默认 worklist、更多 proof 或更厚 preflight，而来自一个 ordinary progress contract 加上彼此分离的 durable runtime、artifact、evidence、decision、observability 和 improvement 平面。所有外部成熟工程经验只作为 pattern source；它们不能成为 OPL 第二 runtime、MAS 第二 truth、第二 selector 或第二 active backlog。

@@ -12,6 +12,8 @@ Last reviewed: `2026-06-12`
 
 本文不做当前落地度盘点，不冻结路线优先级，也不声明任何模块已经达到 L5 或 production ready。需要行动顺序时回到 [OPL Family 当前状态与理想目标差距](../../active/current-state-vs-ideal-gap.md)。需要底层 north-star owner boundary 时回到 [OPL 与 Foundry Agents 理想目标态](./opl-family-agent-ideal-state.md)。需要 operating model 分类时回到 [OPL Family Ideal Operating Model Redesign](../../active/opl-family-ideal-operating-model-redesign.md)。
 
+2026-06-30 SSOT refresh：本文不维护 live evidence / production evidence / release evidence / Brand L5 / owner-chain scaleout worklist。理想系统评估只回答“目标形态应该是什么”和“哪些边界不能被误读”；live evidence 的独立维护入口是 [OPL Family Live Evidence 维护入口](../operating-governance/family-live-evidence-maintenance.md)。因此本文中的 L5、long-soak、release/user path、owner acceptance 只作为理想验收类型出现，不作为当前 active gap 或执行清单。
+
 ## 结论
 
 理想的 OPL Family 应该是一个 `AI-native internal agent platform`：

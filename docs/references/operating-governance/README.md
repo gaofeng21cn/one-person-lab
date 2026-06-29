@@ -7,7 +7,7 @@ Status: `support_reference_index`
 Owner: `One Person Lab`
 Machine boundary: 仅人读索引；机器可读 governance 行为必须使用 contracts、schemas、source、CLI/API 行为、生成产物或语义化 `human_doc:*` id。
 
-本目录收纳 governance、quality projection、incident learning、operator projection、domain memory、目录治理、结构 advisory 和 cleanup runbook 参考。
+本目录收纳 governance、quality projection、incident learning、operator projection、domain memory、目录治理、结构 advisory、cleanup runbook 和 live evidence 维护参考。
 
 当前 OPL topology 不是 gateway-first。旧 gateway-derived operating matrices 已迁入 [Gateway-Derived Operating Governance 归档](../../history/compatibility/gateway-federation/operating-governance/README.md)，只保留 provenance 与 reviewability。请只把这些标签理解为历史词汇；它们不是 active compatibility interface，当前机器可读行为必须来自核心五件套、当前 contracts、source、CLI/API 行为、runtime ledger 或 domain-owned manifest。
 
@@ -25,6 +25,7 @@ Currentness policy：本目录不冻结 hard blocker、stage attempt、route、w
 | `family-incident-learning-loop.md` | `support_reference` | Incident learning 支撑；domain truth 仍由 domain 持有。 |
 | `opl-family-directory-governance.md` | `support_reference` | Family repo layout 的目录治理支撑。 |
 | `family-structure-advisory-report.md` | `support_reference` | 结构 advisory 稳定读法与命令入口；不复制 fresh generated counts、line lists 或 public-surface risk 列表。 |
+| `family-live-evidence-maintenance.md` | `support_reference` | Live / production / release / owner evidence 的独立维护入口；防止 live evidence tail 混入 ideal/current gap 和 active development 文档。 |
 | `opl-family-ponytail-cleanup-runbook.md` | `support_reference` | Ponytail cleanup 的矩阵字段、启动策略、第一批 lane 边界和完成度审计模板；不复制 fresh audit finding，不授权物理删除。 |
 | `opl-family-ponytail-audit-matrix-2026-06-27.md` | `active_support_snapshot` | 2026-06-27 OPL family Ponytail cleanup 首轮只读矩阵、候选波次和 owner blockers；后续执行必须重新读取 fresh repo state。 |
 

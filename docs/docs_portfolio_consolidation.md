@@ -107,6 +107,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | `docs/references/convergence-governance/*` | `support_reference` | 当前仍有效的收敛治理规则、文档生命周期 playbook、intake 模板、shared release 维护和 stage control plane 支撑。 | 单次 rollout、dated execution board、closeout evidence 和已被 taxonomy 吸收的同步记录进入 history；有效规则上提后才可作为当前治理依据。 |
 | `docs/history/process/convergence-governance/*` | `history_or_tombstone` | 早期四仓同步、executor follow-up、用户面成熟度、文档治理 rollout、产品分层 closeout 和外部 orchestration learning 的历史快照。 | 只作 provenance；不得恢复为 active roadmap、manifest 要求、provider/readiness path 或 compatibility surface。 |
 | `docs/references/operating-governance/*` | `support_reference` | quality、operator projection、memory governance、family governance 和 structure advisory 稳定读法支撑。 | 保持支撑参考；fresh generated counts、line lists、public-surface risk 列表和 dated structure snapshots 留在命令输出或 history/provenance，不复制进 active/reference 正文；gateway-derived 旧 matrix 留 history。 |
+| `docs/references/operating-governance/family-live-evidence-maintenance.md` | `support_reference` | OPL family live / production / release / owner-evidence lane 的独立维护入口。 | 保持 live evidence 后置读法；active gap / ideal-state / active development 文档只保留功能面、结构面、历史遗留清理和 owner-route 指针，不维护 live receipt/run/cohort 流水。 |
 | `docs/references/domain-admission/*` | `support_reference` | candidate backlog 和准入支撑参考。 | 保持 reference；正式准入规则回 specs。 |
 | `docs/history/**` | `history_or_tombstone` | 退役路线、完成计划、frontdoor/gateway/federation/OMX/process provenance。 | 不作为 active owner；有用结论先吸收再保留原文。 |
 
