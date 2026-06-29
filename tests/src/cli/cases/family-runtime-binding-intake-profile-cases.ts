@@ -114,6 +114,129 @@ exit 44
   }
 });
 
+test('family-runtime module path override uses active MAS binding profile without running bound workspace', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-module-profile-binding-home-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-module-profile-binding-'));
+  const stateRoot = path.join(homeRoot, 'opl-state');
+  const boundMasWorkspacePath = path.join(fixtureRoot, 'dirty-bound-med-autoscience');
+  const profilePath = path.join(fixtureRoot, 'dm-cvd.workspace.toml');
+  const boundRunnerHitPath = path.join(fixtureRoot, 'bound-runner-hit');
+  const runnerArgvPath = path.join(fixtureRoot, 'runner.argv');
+  const runnerCwdPath = path.join(fixtureRoot, 'runner.cwd');
+  const masFixture = createGitModuleRemoteFixture('med-autoscience', {
+    extraFiles: {
+      'scripts/run-python-clean.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        `printf '%s\\n' "$PWD" > ${shellSingleQuote(runnerCwdPath)}`,
+        `: > ${shellSingleQuote(runnerArgvPath)}`,
+        `for arg in "$@"; do printf '%s\\n' "$arg" >> ${shellSingleQuote(runnerArgvPath)}; done`,
+        `exec ${shellSingleQuote(process.execPath)} -e ${shellSingleQuote(`process.stdout.write(${jsString(`${JSON.stringify({
+          surface_kind: 'mas_family_domain_handler_export',
+          pending_family_tasks: [
+            {
+              domain_id: 'medautoscience',
+              task_kind: 'paper_mission/stage-route',
+              priority: 100,
+              source: 'dm003-binding-profile-module-export',
+              dedupe_key: 'paper-mission-route:dm003:fresh-binding-profile-module-export',
+              payload: {
+                study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+                reason: 'latest_handoff_available_from_clean_module_export',
+              },
+            },
+          ],
+        }, null, 2)}\n`)});`)} -- "$@"`,
+        '',
+      ].join('\n'),
+    },
+    executableFiles: ['scripts/run-python-clean.sh'],
+  });
+  fs.mkdirSync(boundMasWorkspacePath, { recursive: true });
+  fs.writeFileSync(path.join(boundMasWorkspacePath, 'dirty-root-marker.txt'), 'must-not-run-bound-workspace\n', 'utf8');
+  fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
+  writeMasCleanRunnerFixture(boundMasWorkspacePath, {
+    profilePath,
+    manifest: {
+      surface_kind: 'family_domain_agent_manifest',
+      target_domain_id: 'medautoscience',
+      domain_id: 'medautoscience',
+    },
+  });
+  fs.renameSync(
+    path.join(boundMasWorkspacePath, 'scripts', 'run-python-clean.sh'),
+    path.join(boundMasWorkspacePath, 'scripts', 'run-python-clean.sh.fixture-product-entry'),
+  );
+  fs.writeFileSync(
+    path.join(boundMasWorkspacePath, 'scripts', 'run-python-clean.sh'),
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'if [[ "$*" == *"domain-handler export"* ]]; then',
+      `  printf 'bound workspace domain export was called\\n' > ${shellSingleQuote(boundRunnerHitPath)}`,
+      '  exit 44',
+      'fi',
+      'exec "$0.fixture-product-entry" "$@"',
+      '',
+    ].join('\n'),
+    { encoding: 'utf8', mode: 0o755 },
+  );
+  const env = familyRuntimeEnv(stateRoot, {
+    HOME: homeRoot,
+    OPL_MODULES_ROOT: path.join(homeRoot, 'managed-modules'),
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: masFixture.sourceRoot,
+  });
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      boundMasWorkspacePath,
+      '--profile',
+      profilePath,
+    ], env);
+    const intake = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+      '--source',
+      'dm003-binding-profile-module-export',
+    ], env);
+    const exportResult = intake.family_runtime_intake.exports[0];
+    const runnerPath = path.join(masFixture.sourceRoot, 'scripts', 'run-python-clean.sh');
+    const runnerArgv = fs.readFileSync(runnerArgvPath, 'utf8').trim().split('\n');
+
+    assert.equal(intake.family_runtime_intake.enqueued_count, 1);
+    assert.equal(exportResult.status, 'completed');
+    assert.equal(exportResult.command_source, 'module_exec_profile');
+    assert.equal(exportResult.command_cwd, masFixture.sourceRoot);
+    assert.deepEqual(exportResult.command_preview, [
+      runnerPath,
+      '-m',
+      'med_autoscience.cli',
+      'domain-handler',
+      'export',
+      '--profile',
+      profilePath,
+      '--format',
+      'json',
+    ]);
+    assert.equal(
+      fs.realpathSync(fs.readFileSync(runnerCwdPath, 'utf8').trim()),
+      fs.realpathSync(masFixture.sourceRoot),
+    );
+    assert.deepEqual(runnerArgv, exportResult.command_preview.slice(1));
+    assert.equal(fs.existsSync(boundRunnerHitPath), false);
+  } finally {
+    fs.rmSync(masFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime intake --profile overrides active MAS workspace binding', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-cli-profile-home-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-cli-profile-'));

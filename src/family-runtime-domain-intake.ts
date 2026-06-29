@@ -155,13 +155,16 @@ function exportCommandForDomain(
     };
   }
   if (domainId === 'medautoscience') {
-    const profile = resolveExplicitMedautoscienceDomainProfile(domainProfiles);
-    if (profile) {
+    const explicitProfile = resolveExplicitMedautoscienceDomainProfile(domainProfiles);
+    const workspaceProfile = activeMedautoscienceWorkspaceProfile();
+    const modulePathOverride = process.env.OPL_MODULE_PATH_MEDAUTOSCIENCE?.trim();
+    const moduleProfile = explicitProfile ?? (modulePathOverride ? workspaceProfile?.profileRef : null);
+    if (moduleProfile) {
       const command = resolveOplModuleExecCommand('medautoscience', [
         'domain-handler',
         'export',
         '--profile',
-        profile,
+        moduleProfile,
         ...masStudyScopeArgs(taskScope),
         ...masProductionProofArgs(paths),
         '--format',
@@ -174,7 +177,7 @@ function exportCommandForDomain(
         module: command.module,
         owner_fingerprint: [
           'module_exec_profile',
-          profile,
+          moduleProfile,
           command.module_id,
           command.module.install_origin,
           command.module.git?.head_sha ?? 'unknown-head',
@@ -183,7 +186,6 @@ function exportCommandForDomain(
       };
     }
 
-    const workspaceProfile = activeMedautoscienceWorkspaceProfile();
     if (workspaceProfile) {
       const { binding, profileRef } = workspaceProfile;
       const runnerPath = path.join(binding.workspace_path, 'scripts', 'run-python-clean.sh');
