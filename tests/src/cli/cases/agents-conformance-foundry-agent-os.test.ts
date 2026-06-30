@@ -116,6 +116,33 @@ test('agents conformance exposes Foundry Agent OS family standard without author
     true,
   );
   assert.equal(
+    foundry.conformance_required_claims.includes('default_cli_skill_app_product_entry_route_through_stage_run_owner_delta'),
+    true,
+  );
+  assert.equal(foundry.default_owner_route_policy.surface_kind, 'foundry_agent_default_owner_route_policy');
+  assert.deepEqual(foundry.default_owner_route_policy.applies_to_agent_ids, [
+    'mag',
+    'rca',
+    'oma',
+    'opl-bookforge',
+  ]);
+  assert.equal(foundry.default_owner_route_policy.default_route_root, 'current_owner_delta');
+  assert.equal(foundry.default_owner_route_policy.default_execution_resource, 'StageRun');
+  assert.deepEqual(foundry.default_owner_route_policy.generated_surface_entrypoints, [
+    'cli',
+    'skill_plugin',
+    'product_entry',
+    'status_read_model',
+    'workbench',
+  ]);
+  assert.equal(
+    foundry.default_owner_route_policy.private_wrapper_disposition,
+    'repo_local_runner_private_wrapper_or_generic_owner_surface_is_migration_residue_or_deletion_gate_not_default_owner',
+  );
+  assert.equal(foundry.default_owner_route_policy.false_authority_boundary.stage_run_can_claim_domain_ready, false);
+  assert.equal(foundry.default_owner_route_policy.false_authority_boundary.generated_surface_can_bypass_stage_run, false);
+  assert.equal(foundry.default_owner_route_policy.false_authority_boundary.private_wrapper_can_be_default_owner, false);
+  assert.equal(
     foundry.forbidden_claims.includes('agent_os_contract_is_domain_ready'),
     true,
   );
@@ -153,7 +180,7 @@ test('agents conformance exposes Foundry Agent OS family standard without author
   assert.equal(foundry.standard_membership_policy.policy_id, 'foundry_agent_standard_membership_is_not_surface_origin.v1');
   assert.deepEqual(
     foundry.standard_membership_policy.standard_member_agent_ids,
-    ['mas', 'mag', 'rca', 'oma', 'opl-bookforge', 'opl-scholarskills'],
+    ['mas', 'mag', 'rca', 'oma', 'opl-bookforge'],
   );
   assert.deepEqual(foundry.new_agent_baseline_handoff_policy.required_gates, [
     'scaffold_validation',
@@ -228,6 +255,31 @@ test('agents conformance exposes Foundry Agent OS family standard without author
   assert.equal(mas.flagship_experience_mapping.authority_boundary.can_sign_mas_owner_receipt, false);
   assert.equal(mas.flagship_experience_mapping.private_platform_residue_inputs.includes('private_scheduler'), true);
   assert.equal(mas.flagship_experience_mapping.private_platform_residue_inputs.includes('private_workbench'), true);
+  assert.equal(mas.default_owner_route, null);
+
+  for (const agentId of ['mag', 'rca', 'oma', 'opl-bookforge']) {
+    const domain = foundry.domains.find((entry: { canonical_agent_id: string }) =>
+      entry.canonical_agent_id === agentId
+    );
+    assert.ok(domain);
+    assert.equal(domain.default_owner_route.status, 'default_stage_run_owner_route');
+    assert.equal(domain.default_owner_route.route_root, 'current_owner_delta');
+    assert.equal(domain.default_owner_route.execution_resource, 'StageRun');
+    assert.deepEqual(domain.default_owner_route.generated_surface_entrypoints, [
+      'cli',
+      'skill_plugin',
+      'product_entry',
+      'status_read_model',
+      'workbench',
+    ]);
+    assert.equal(
+      domain.default_owner_route.private_wrapper_disposition,
+      'repo_local_runner_private_wrapper_or_generic_owner_surface_is_migration_residue_or_deletion_gate_not_default_owner',
+    );
+    assert.equal(domain.default_owner_route.false_authority_boundary.stage_run_can_sign_owner_receipt, false);
+    assert.equal(domain.default_owner_route.false_authority_boundary.stage_run_can_create_typed_blocker, false);
+    assert.equal(domain.default_owner_route.false_authority_boundary.conformance_pass_can_claim_runtime_ready, false);
+  }
 
   const mag = foundry.domains.find((domain: { canonical_agent_id: string }) =>
     domain.canonical_agent_id === 'mag'

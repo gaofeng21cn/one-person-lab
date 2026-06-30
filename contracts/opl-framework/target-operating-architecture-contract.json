@@ -1169,13 +1169,42 @@
         "typed blocker"
       ]
     },
+    "default_owner_route_policy": {
+      "surface_kind": "foundry_agent_default_owner_route_policy",
+      "applies_to_agent_ids": [
+        "mag",
+        "rca",
+        "oma",
+        "opl-bookforge"
+      ],
+      "default_route_root": "current_owner_delta",
+      "default_execution_resource": "StageRun",
+      "generated_surface_entrypoints": [
+        "cli",
+        "skill_plugin",
+        "product_entry",
+        "status_read_model",
+        "workbench"
+      ],
+      "owner_boundary": "Default CLI, skill, App, product-entry, conformance and operator readbacks route ordinary work through OPL StageRun and current_owner_delta; the domain agent remains the owner for owner receipt, typed blocker, quality/export verdict, artifact authority, and route-back refs.",
+      "private_wrapper_disposition": "repo_local_runner_private_wrapper_or_generic_owner_surface_is_migration_residue_or_deletion_gate_not_default_owner",
+      "false_authority_boundary": {
+        "stage_run_can_claim_domain_ready": false,
+        "stage_run_can_sign_owner_receipt": false,
+        "stage_run_can_create_typed_blocker": false,
+        "generated_surface_can_bypass_stage_run": false,
+        "private_wrapper_can_be_default_owner": false,
+        "conformance_pass_can_claim_runtime_ready": false
+      }
+    },
     "cross_agent_conformance_required_claims": [
       "default_read_root_is_current_owner_delta",
       "domain_authority_false_flags_on_opl_modules",
       "generated_surfaces_do_not_write_domain_truth",
       "conformance_pass_does_not_claim_domain_ready",
       "vault_console_runway_do_not_sign_owner_answer",
-      "capability_registry_fails_open_unless_current_delta_requires_ref"
+      "capability_registry_fails_open_unless_current_delta_requires_ref",
+      "default_cli_skill_app_product_entry_route_through_stage_run_owner_delta"
     ],
     "os_readback_contract": {
       "surface_kind": "foundry_agent_os_readback_contract",

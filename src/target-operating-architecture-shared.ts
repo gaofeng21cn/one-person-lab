@@ -338,6 +338,7 @@ export const TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_CONFORMANCE_CLAIMS = [
   'conformance_pass_does_not_claim_domain_ready',
   'vault_console_runway_do_not_sign_owner_answer',
   'capability_registry_fails_open_unless_current_delta_requires_ref',
+  'default_cli_skill_app_product_entry_route_through_stage_run_owner_delta',
 ] as const;
 
 export const TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_FORBIDDEN_CLAIMS = [

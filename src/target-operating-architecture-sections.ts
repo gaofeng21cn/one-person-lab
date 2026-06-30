@@ -22,6 +22,7 @@ import {
   TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_CAPABILITY_REGISTRY_MODULES,
   TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_CONFORMANCE_CLAIMS,
   TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_FORBIDDEN_CLAIMS,
+  TARGET_ARCHITECTURE_GENERATED_SURFACES,
   TARGET_ARCHITECTURE_LANES,
   TARGET_ARCHITECTURE_MAS_FLAGSHIP_JOURNEY_ARTIFACTS,
   TARGET_ARCHITECTURE_ONE_SHOT_PLAN_IDS,
@@ -338,6 +339,107 @@ const capabilityRegistryRaw = value.capability_registry_boundary;
     }
   }
 
+  const defaultOwnerRoutePolicyRaw = value.default_owner_route_policy;
+  if (!isRecord(defaultOwnerRoutePolicyRaw)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.default_owner_route_policy must be an object.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.default_owner_route_policy',
+    });
+  }
+  const defaultOwnerRoutePolicySurfaceKind = expectString(
+    defaultOwnerRoutePolicyRaw.surface_kind,
+    'foundry_agent_os_standard.default_owner_route_policy.surface_kind',
+    filePath,
+  );
+  if (defaultOwnerRoutePolicySurfaceKind !== 'foundry_agent_default_owner_route_policy') {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.default_owner_route_policy must use the Foundry Agent default owner route policy surface.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.default_owner_route_policy.surface_kind',
+      actual: defaultOwnerRoutePolicySurfaceKind,
+    });
+  }
+  const defaultOwnerRoutePolicyAgentIds = expectNonEmptyStringArray(
+    defaultOwnerRoutePolicyRaw.applies_to_agent_ids,
+    'foundry_agent_os_standard.default_owner_route_policy.applies_to_agent_ids',
+    filePath,
+  );
+  for (const agentId of defaultOwnerRoutePolicyAgentIds) {
+    if (!appliesToDomainAgents.includes(agentId)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.default_owner_route_policy.applies_to_agent_ids must reference standard domain agents.', {
+        file: filePath,
+        field: 'foundry_agent_os_standard.default_owner_route_policy.applies_to_agent_ids',
+        actual: agentId,
+      });
+    }
+  }
+  requireEveryValue(
+    defaultOwnerRoutePolicyAgentIds,
+    ['mag', 'rca', 'oma', 'opl-bookforge'],
+    'foundry_agent_os_standard.default_owner_route_policy.applies_to_agent_ids',
+    filePath,
+  );
+  const defaultOwnerRouteRoot = expectString(
+    defaultOwnerRoutePolicyRaw.default_route_root,
+    'foundry_agent_os_standard.default_owner_route_policy.default_route_root',
+    filePath,
+  );
+  if (defaultOwnerRouteRoot !== 'current_owner_delta') {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.default_owner_route_policy.default_route_root must be current_owner_delta.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.default_owner_route_policy.default_route_root',
+      actual: defaultOwnerRouteRoot,
+    });
+  }
+  const defaultExecutionResource = expectString(
+    defaultOwnerRoutePolicyRaw.default_execution_resource,
+    'foundry_agent_os_standard.default_owner_route_policy.default_execution_resource',
+    filePath,
+  );
+  if (defaultExecutionResource !== 'StageRun') {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.default_owner_route_policy.default_execution_resource must be StageRun.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.default_owner_route_policy.default_execution_resource',
+      actual: defaultExecutionResource,
+    });
+  }
+  const generatedSurfaceEntrypoints = expectNonEmptyStringArray(
+    defaultOwnerRoutePolicyRaw.generated_surface_entrypoints,
+    'foundry_agent_os_standard.default_owner_route_policy.generated_surface_entrypoints',
+    filePath,
+  );
+  for (const entrypoint of generatedSurfaceEntrypoints) {
+    if (!TARGET_ARCHITECTURE_GENERATED_SURFACES.includes(entrypoint as typeof TARGET_ARCHITECTURE_GENERATED_SURFACES[number])) {
+      throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.default_owner_route_policy.generated_surface_entrypoints must be generated or hosted surfaces.', {
+        file: filePath,
+        field: 'foundry_agent_os_standard.default_owner_route_policy.generated_surface_entrypoints',
+        actual: entrypoint,
+      });
+    }
+  }
+  requireEveryValue(
+    generatedSurfaceEntrypoints,
+    ['cli', 'skill_plugin', 'product_entry', 'status_read_model', 'workbench'],
+    'foundry_agent_os_standard.default_owner_route_policy.generated_surface_entrypoints',
+    filePath,
+  );
+  const privateWrapperDisposition = expectString(
+    defaultOwnerRoutePolicyRaw.private_wrapper_disposition,
+    'foundry_agent_os_standard.default_owner_route_policy.private_wrapper_disposition',
+    filePath,
+  );
+  if (privateWrapperDisposition !== 'repo_local_runner_private_wrapper_or_generic_owner_surface_is_migration_residue_or_deletion_gate_not_default_owner') {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.default_owner_route_policy.private_wrapper_disposition must keep private wrappers out of the default owner route.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.default_owner_route_policy.private_wrapper_disposition',
+      actual: privateWrapperDisposition,
+    });
+  }
+  const defaultOwnerRouteFalseAuthority = validateFalseBoundaryRecord(
+    filePath,
+    defaultOwnerRoutePolicyRaw.false_authority_boundary,
+    'foundry_agent_os_standard.default_owner_route_policy.false_authority_boundary',
+  );
+
   const conformanceClaims = expectNonEmptyStringArray(
     value.cross_agent_conformance_required_claims,
     'foundry_agent_os_standard.cross_agent_conformance_required_claims',
@@ -487,6 +589,20 @@ const capabilityRegistryRaw = value.capability_registry_boundary;
       optional_ref_missing_default: optionalRefMissingDefault,
       route_required_ref_missing: routeRequiredRefMissing,
       must_not_create: mustNotCreate,
+    },
+    default_owner_route_policy: {
+      surface_kind: defaultOwnerRoutePolicySurfaceKind,
+      applies_to_agent_ids: defaultOwnerRoutePolicyAgentIds,
+      default_route_root: defaultOwnerRouteRoot,
+      default_execution_resource: defaultExecutionResource,
+      generated_surface_entrypoints: generatedSurfaceEntrypoints,
+      owner_boundary: expectString(
+        defaultOwnerRoutePolicyRaw.owner_boundary,
+        'foundry_agent_os_standard.default_owner_route_policy.owner_boundary',
+        filePath,
+      ),
+      private_wrapper_disposition: privateWrapperDisposition,
+      false_authority_boundary: defaultOwnerRouteFalseAuthority,
     },
     cross_agent_conformance_required_claims: conformanceClaims,
     os_readback_contract: {

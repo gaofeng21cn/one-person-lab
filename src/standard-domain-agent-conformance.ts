@@ -66,9 +66,6 @@ function isFrameworkCapabilityPackageInput(input: RepoInput) {
     return false;
   }
   const repoDir = path.resolve(input.repo_dir);
-  if (fs.existsSync(path.join(repoDir, 'contracts', 'domain_descriptor.json'))) {
-    return false;
-  }
   return fs.existsSync(path.join(repoDir, 'contracts', 'scholar-skills-capability-modules.json'));
 }
 
