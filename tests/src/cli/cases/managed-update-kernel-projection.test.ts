@@ -18,6 +18,17 @@ function readManagedUpdateKernelContract() {
       default_policy?: string;
       mutation_scope?: string;
       apply_allowed?: boolean;
+      managed_kernel_apply_allowed?: boolean;
+      status_fields?: string[];
+      carrier_variants?: Array<{
+        carrier_type: string;
+        host_update_route: string;
+        managed_kernel_apply_allowed: boolean;
+        host_executor_required: boolean;
+        manual_required: boolean;
+        data_volume_preservation_proof_required?: boolean;
+        preserved_mounts?: string[];
+      }>;
       auto_apply?: {
         mode: string;
         app_background_safe: boolean;
@@ -46,6 +57,7 @@ function readManagedUpdateKernelContract() {
 test('managed update kernel contract keeps runtime and agent post-apply execution shapes explicit', () => {
   const contract = readManagedUpdateKernelContract();
   assert.deepEqual(contract.components, [
+    'installation_carrier',
     'runtime_substrate',
     'capability_packages',
     'codex_surface',
@@ -57,6 +69,36 @@ test('managed update kernel contract keeps runtime and agent post-apply executio
     contract.providers.some((entry) => entry.provider_id === 'app_binary'),
     false,
   );
+
+  const installationCarrier = contract.providers.find((entry) => entry.provider_id === 'installation_carrier');
+  assert.ok(installationCarrier);
+  assert.equal(installationCarrier.default_policy, 'carrier_specific_status_with_host_update_route');
+  assert.equal(installationCarrier.mutation_scope, 'projection_only_no_opl_update_apply_component_target');
+  assert.equal(installationCarrier.apply_allowed, false);
+  assert.equal(installationCarrier.managed_kernel_apply_allowed, false);
+  assert.equal(installationCarrier.status_fields?.includes('carrier_type'), true);
+  assert.equal(installationCarrier.status_fields?.includes('image_ref'), true);
+  assert.equal(installationCarrier.status_fields?.includes('image_digest'), true);
+  assert.equal(installationCarrier.status_fields?.includes('host_update_route'), true);
+  assert.equal(installationCarrier.status_fields?.includes('data_volume_preservation'), true);
+  const dockerWebuiImage = installationCarrier.carrier_variants?.find((entry) =>
+    entry.carrier_type === 'docker_webui_image'
+  );
+  assert.ok(dockerWebuiImage);
+  assert.equal(dockerWebuiImage.host_update_route, 'host_executor_runs_documented_installer_or_compose_pull_and_up');
+  assert.equal(dockerWebuiImage.managed_kernel_apply_allowed, false);
+  assert.equal(dockerWebuiImage.host_executor_required, true);
+  assert.equal(dockerWebuiImage.manual_required, true);
+  assert.equal(dockerWebuiImage.data_volume_preservation_proof_required, true);
+  assert.equal(dockerWebuiImage.preserved_mounts?.includes('OnePersonLab/data -> /data'), true);
+  const linuxPackageCarrier = installationCarrier.carrier_variants?.find((entry) =>
+    entry.carrier_type === 'linux_package_carrier'
+  );
+  assert.ok(linuxPackageCarrier);
+  assert.equal(linuxPackageCarrier.host_update_route, 'host_package_manager_or_documented_host_executor');
+  assert.equal(linuxPackageCarrier.managed_kernel_apply_allowed, false);
+  assert.equal(linuxPackageCarrier.host_executor_required, true);
+  assert.equal(linuxPackageCarrier.manual_required, true);
 
   const runtime = contract.providers.find((entry) => entry.provider_id === 'runtime_substrate');
   assert.ok(runtime);
@@ -274,7 +316,7 @@ exit 2
       'post_apply_action_statuses',
       'reload_guidance',
     ]);
-    assert.equal(output.managed_update.summary.total_components_count, 5);
+    assert.equal(output.managed_update.summary.total_components_count, 6);
     assert.equal(Number.isInteger(output.managed_update.summary.failed_with_repair_components_count), true);
     assert.equal(Number.isInteger(output.managed_update.summary.skipped_manual_required_components_count), true);
     assert.equal(output.managed_update.authority_boundary.can_mutate_user_global_homebrew, false);
@@ -283,7 +325,7 @@ exit 2
     assert.equal(output.managed_update.authority_boundary.can_claim_quality_or_export_verdict, false);
     assert.deepEqual(
       output.managed_update.components.map((entry) => entry.component_id),
-      ['runtime_substrate', 'capability_packages', 'codex_surface', 'companion_tools', 'workflow_profile'],
+      ['installation_carrier', 'runtime_substrate', 'capability_packages', 'codex_surface', 'companion_tools', 'workflow_profile'],
     );
     assert.equal(
       output.managed_update.components.every((component) =>
@@ -294,6 +336,73 @@ exit 2
           && typeof entry.message === 'string'
           && Number.isInteger(entry.observed_generation)
         )
+      ),
+      true,
+    );
+
+    const installationCarrier = output.managed_update.components.find((entry) =>
+      entry.component_id === 'installation_carrier'
+    );
+    assert.ok(installationCarrier);
+    assert.equal(installationCarrier.provider_id, 'installation_carrier');
+    assert.equal(installationCarrier.adapter_id, 'installation_carrier_status_adapter');
+    assert.equal(installationCarrier.policy_id, 'carrier_specific_status_with_host_update_route');
+    assert.equal(installationCarrier.state, 'skipped_manual_required');
+    assert.equal(installationCarrier.auto_apply.mode, 'projection_only');
+    assert.equal(installationCarrier.auto_apply.eligible, false);
+    assert.equal(installationCarrier.auto_apply.app_background_safe, false);
+    assert.equal(installationCarrier.auto_apply.command_ref, null);
+    assert.equal(
+      installationCarrier.auto_apply.blocked_reasons.includes(
+        'installation_carrier_requires_carrier_specific_host_update_route',
+      ),
+      true,
+    );
+    assert.equal(installationCarrier.current.managed_kernel_apply_allowed, false);
+    assert.equal(installationCarrier.current.opl_update_apply_must_not_claim_carrier_update_complete, true);
+    const carrierVariants = installationCarrier.current.carrier_variants as Array<{
+      carrier_type: string;
+      currentness: string;
+      update_available: string;
+      image_ref?: string;
+      image_digest?: string | null;
+      host_update_route: string;
+      host_executor_required: boolean;
+      manual_required: boolean;
+      data_volume_preservation: { required: boolean; preserved_mounts?: string[] };
+      managed_kernel_apply_allowed: boolean;
+    }>;
+    const dockerWebuiImage = carrierVariants.find((entry) => entry.carrier_type === 'docker_webui_image');
+    assert.ok(dockerWebuiImage);
+    assert.equal(dockerWebuiImage.image_ref, 'ghcr.io/gaofeng21cn/one-person-lab-webui:stable');
+    assert.equal(dockerWebuiImage.image_digest, null);
+    assert.equal(dockerWebuiImage.currentness, 'unknown');
+    assert.equal(dockerWebuiImage.update_available, 'unknown');
+    assert.equal(dockerWebuiImage.host_update_route, 'host_executor_runs_documented_installer_or_compose_pull_and_up');
+    assert.equal(dockerWebuiImage.host_executor_required, true);
+    assert.equal(dockerWebuiImage.manual_required, true);
+    assert.equal(dockerWebuiImage.data_volume_preservation.required, true);
+    assert.equal(dockerWebuiImage.data_volume_preservation.preserved_mounts?.includes('OnePersonLab/data -> /data'), true);
+    assert.equal(dockerWebuiImage.managed_kernel_apply_allowed, false);
+    const linuxPackageCarrier = carrierVariants.find((entry) => entry.carrier_type === 'linux_package_carrier');
+    assert.ok(linuxPackageCarrier);
+    assert.equal(linuxPackageCarrier.currentness, 'unknown');
+    assert.equal(linuxPackageCarrier.update_available, 'unknown');
+    assert.equal(linuxPackageCarrier.host_update_route, 'host_package_manager_or_documented_host_executor');
+    assert.equal(linuxPackageCarrier.host_executor_required, true);
+    assert.equal(linuxPackageCarrier.manual_required, true);
+    assert.equal(linuxPackageCarrier.managed_kernel_apply_allowed, false);
+    assert.equal(installationCarrier.receipt.apply_mode, 'projection_only');
+    assert.equal(installationCarrier.receipt.status_detail.manual_required_targets_count, 2);
+    assert.equal(installationCarrier.receipt.content_identity_fields.includes('carrier_type'), true);
+    assert.equal(installationCarrier.receipt.content_identity_fields.includes('image_ref'), true);
+    assert.equal(installationCarrier.authority_boundary.can_replace_docker_webui_image, false);
+    assert.equal(installationCarrier.authority_boundary.can_run_docker_socket_or_host_executor, false);
+    assert.equal(installationCarrier.authority_boundary.can_update_linux_package_carrier, false);
+    assert.equal(installationCarrier.authority_boundary.can_claim_carrier_update_complete, false);
+    assert.equal(
+      installationCarrier.conditions.some((entry) =>
+        entry.type === 'ManagedKernelApplyForbidden' && entry.status === 'True'
       ),
       true,
     );
@@ -480,6 +589,76 @@ exit 2
       agents.plan.command_refs.every((entry) => entry.destructive === false),
       true,
     );
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('update apply does not execute the projection-only Installation Carrier component', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-update-installation-carrier-apply-'));
+  const codexFixture = createFakeCodexFixture(`
+if [ "$1" = "--version" ]; then
+  echo "codex-cli 0.134.0"
+  exit 0
+fi
+echo "Unsupported codex fixture command: $*" >&2
+exit 2
+`);
+
+  try {
+    const output = runCli(['update', 'apply', '--component', 'installation_carrier'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_STATE_DIR: path.join(homeRoot, 'state'),
+      OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
+      OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
+      PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+    }) as {
+      managed_update: {
+        operation: string;
+        operation_mode: string;
+        requested_component_id: string;
+        summary: { execution_status: string };
+        components: Array<{
+          component_id: string;
+          auto_apply: {
+            mode: string;
+            eligible: boolean;
+            app_background_safe: boolean;
+            command_ref: string | null;
+            blocked_reasons: string[];
+          };
+          current: { managed_kernel_apply_allowed: boolean };
+          authority_boundary: Record<string, boolean>;
+        }>;
+        execution: {
+          status: string;
+          adapter_results: unknown[];
+          receipt_record: { receipts: unknown[] };
+        };
+      };
+    };
+
+    assert.equal(output.managed_update.operation, 'apply');
+    assert.equal(output.managed_update.operation_mode, 'controlled_apply');
+    assert.equal(output.managed_update.requested_component_id, 'installation_carrier');
+    assert.equal(output.managed_update.summary.execution_status, 'skipped');
+    assert.equal(output.managed_update.components.length, 1);
+    const component = output.managed_update.components[0];
+    assert.equal(component.component_id, 'installation_carrier');
+    assert.equal(component.auto_apply.mode, 'projection_only');
+    assert.equal(component.auto_apply.eligible, false);
+    assert.equal(component.auto_apply.app_background_safe, false);
+    assert.equal(component.auto_apply.command_ref, null);
+    assert.equal(
+      component.auto_apply.blocked_reasons.includes('installation_carrier_requires_carrier_specific_host_update_route'),
+      true,
+    );
+    assert.equal(component.current.managed_kernel_apply_allowed, false);
+    assert.equal(component.authority_boundary.can_replace_docker_webui_image, false);
+    assert.deepEqual(output.managed_update.execution.adapter_results, []);
+    assert.deepEqual(output.managed_update.execution.receipt_record.receipts, []);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });

@@ -278,6 +278,7 @@ function normalizeAdapterId(value: unknown): ManagedUpdateProviderAdapterId | nu
     return 'codex_surface_status_adapter';
   }
   return value === 'runtime_substrate_adapter'
+    || value === 'installation_carrier_status_adapter'
     || value === 'capability_packages_adapter'
     || value === 'codex_surface_status_adapter'
     || value === 'companion_tools_status_adapter'

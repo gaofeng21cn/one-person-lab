@@ -51,6 +51,73 @@
   },
   "providers": [
     {
+      "provider_id": "installation_carrier",
+      "adapter_id": "installation_carrier_status_adapter",
+      "owner": "one-person-lab-app",
+      "role": "App installation carrier status projection for macOS app, Docker/WebUI image, and Linux package carrier routes",
+      "authority": "App-owned install/update taxonomy defines carrier variants; Framework projects status and safe routes only.",
+      "default_policy": "carrier_specific_status_with_host_update_route",
+      "mutation_scope": "projection_only_no_opl_update_apply_component_target",
+      "apply_allowed": false,
+      "managed_kernel_apply_allowed": false,
+      "opl_update_apply_must_not_claim_carrier_update_complete": true,
+      "status_fields": [
+        "carrier_type",
+        "carrier_status",
+        "currentness",
+        "update_available",
+        "image_ref",
+        "image_digest",
+        "container_id",
+        "compose_file",
+        "package_manager",
+        "host_update_route",
+        "host_executor_required",
+        "manual_required",
+        "data_volume_preservation",
+        "repair_actions"
+      ],
+      "carrier_variants": [
+        {
+          "carrier_type": "docker_webui_image",
+          "carrier_status_source": "GHCR image digest, compose/container image readback, and Docker/WebUI installer or smoke-gate diagnostics",
+          "host_update_route": "host_executor_runs_documented_installer_or_compose_pull_and_up",
+          "host_update_route_examples": [
+            "install-docker-webui.sh --yes --update",
+            "install-docker-webui.ps1 -Yes -Update",
+            "docker compose pull && docker compose up -d"
+          ],
+          "managed_kernel_apply_allowed": false,
+          "host_executor_required": true,
+          "manual_required": true,
+          "currentness_values": [
+            "unknown",
+            "current",
+            "update_available"
+          ],
+          "data_volume_preservation_proof_required": true,
+          "preserved_mounts": [
+            "OnePersonLab/data -> /data",
+            "OnePersonLab/projects -> /projects"
+          ]
+        },
+        {
+          "carrier_type": "linux_package_carrier",
+          "carrier_status_source": "host package manager, package metadata, or documented Linux package carrier readback",
+          "host_update_route": "host_package_manager_or_documented_host_executor",
+          "managed_kernel_apply_allowed": false,
+          "host_executor_required": true,
+          "manual_required": true,
+          "currentness_values": [
+            "unknown",
+            "current",
+            "update_available"
+          ]
+        }
+      ],
+      "repair_action_scope": "carrier_specific_check_download_host_route_or_manual_recovery_only"
+    },
+    {
       "provider_id": "runtime_substrate",
       "adapter_id": "runtime_substrate_adapter",
       "owner": "one-person-lab-app-and-opl-framework",
@@ -127,6 +194,7 @@
     }
   ],
   "components": [
+    "installation_carrier",
     "runtime_substrate",
     "capability_packages",
     "codex_surface",
@@ -134,6 +202,7 @@
     "workflow_profile"
   ],
   "component_classes": [
+    "installation_carrier",
     "runtime_substrate",
     "capability_packages",
     "codex_surface",
@@ -141,6 +210,11 @@
     "workflow_profile"
   ],
   "legacy_component_aliases": [
+    {
+      "legacy_component_id": "app_binary",
+      "component_id": "installation_carrier",
+      "scope": "transition_cli_selector_only"
+    },
     {
       "legacy_component_id": "runtime_toolchain",
       "component_id": "runtime_substrate",
