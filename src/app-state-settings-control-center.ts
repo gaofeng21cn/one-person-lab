@@ -58,6 +58,12 @@ const SETTINGS_CONTROL_CENTER_ACTION_IDS = [
   'settings_check_app_update',
   'settings_prune_runtime_roots_dry_run',
   'settings_rollback_runtime_toolchain',
+  'settings_install_docker_webui',
+  'settings_configure_webui_api_key',
+  'settings_select_webui_seed',
+  'settings_run_webui_startup_maintenance',
+  'settings_open_docker_webui',
+  'settings_diagnose_docker_webui',
 ] as const;
 
 const SETTINGS_CONTROL_CENTER_GROUPS: SettingsControlCenterGroup[] = [
@@ -66,7 +72,7 @@ const SETTINGS_CONTROL_CENTER_GROUPS: SettingsControlCenterGroup[] = [
     label: 'Overview',
     role: 'control_center_summary',
     route_id: 'general',
-    action_section_ids: ['model_access', 'workspace', 'capabilities', 'packages', 'updates', 'runtime_roots'],
+    action_section_ids: ['model_access', 'docker_webui', 'workspace', 'capabilities', 'packages', 'updates', 'runtime_roots'],
     ordinary_entry_policy: 'top_level_control_center_route',
   },
   {
@@ -74,7 +80,7 @@ const SETTINGS_CONTROL_CENTER_GROUPS: SettingsControlCenterGroup[] = [
     label: 'Setup & Access',
     role: 'connect_models_accounts_workspace_web_remote',
     route_id: 'access',
-    action_section_ids: ['model_access', 'workspace', 'codex_surface'],
+    action_section_ids: ['model_access', 'docker_webui', 'workspace', 'codex_surface'],
     ordinary_entry_policy: 'top_level_control_center_route',
   },
   {
@@ -90,7 +96,7 @@ const SETTINGS_CONTROL_CENTER_GROUPS: SettingsControlCenterGroup[] = [
     label: 'Maintenance & Updates',
     role: 'updates_packages_repairs_service_health',
     route_id: 'environment',
-    action_section_ids: ['packages', 'updates', 'capabilities', 'runtime_roots'],
+    action_section_ids: ['docker_webui', 'packages', 'updates', 'capabilities', 'runtime_roots'],
     ordinary_entry_policy: 'top_level_control_center_route',
   },
   {
@@ -135,7 +141,7 @@ const SETTINGS_CONTROL_CENTER_SECONDARY_ROUTES: SettingsSecondaryRoute[] = [
     parent_route_id: 'environment',
     label: 'Local Services',
     role: 'codex_temporal_background_services_and_capability_pack_health',
-    action_section_ids: ['codex_surface', 'capabilities', 'packages'],
+    action_section_ids: ['docker_webui', 'codex_surface', 'capabilities', 'packages'],
     ordinary_entry_policy: 'secondary_page_under_maintenance_updates',
   },
   {
@@ -202,6 +208,13 @@ const SETTINGS_CONTROL_CENTER_ACTION_SECTIONS: SettingsSection[] = [
     description: 'Codex-visible skill/plugin metadata refresh routes.',
     state: 'available',
     source_ref: 'app_state.actions#settings_reload_codex_surface',
+  },
+  {
+    section_id: 'docker_webui',
+    label: 'Docker WebUI',
+    description: 'One-click install, Codex API key setup, image seed selection, startup maintenance, browser entry, and read-only recovery diagnostics.',
+    state: 'available',
+    source_ref: 'opl install + opl system configure-codex + opl system startup-maintenance + opl system docker-webui doctor',
   },
   {
     section_id: 'updates',
@@ -361,6 +374,108 @@ export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
     follow_up_action_ids: ['settings_check_app_update', 'settings_reload_codex_surface'],
     verify_action_id: 'settings_check_app_update',
   },
+  {
+    action_id: 'settings_install_docker_webui',
+    stable_id: 'install_docker_webui',
+    label: 'Install Docker WebUI',
+    section_id: 'docker_webui',
+    task_kind: 'apply',
+    taxonomy: 'settings.docker_webui.install',
+    delegated_surface: 'opl install',
+    payload_fields: [],
+    mutates: 'opl_framework_install_surface',
+    dry_run_supported: true,
+    confirmation_required: true,
+    danger_level: 'medium',
+    impact: 'Runs the existing OPL install route for Codex, provider profile, modules, skills, and GUI/WebUI entrypoints without defining WebUI release truth.',
+    follow_up_action_ids: ['settings_configure_webui_api_key', 'settings_run_webui_startup_maintenance', 'settings_diagnose_docker_webui'],
+    verify_action_id: 'settings_diagnose_docker_webui',
+  },
+  {
+    action_id: 'settings_configure_webui_api_key',
+    stable_id: 'configure_webui_api_key',
+    label: 'Configure WebUI API key',
+    section_id: 'docker_webui',
+    task_kind: 'configure',
+    taxonomy: 'settings.docker_webui.configure_api_key',
+    delegated_surface: 'printf <api-key> | opl system configure-codex --api-key-stdin',
+    payload_fields: [],
+    mutates: 'local_codex_provider_config',
+    dry_run_supported: true,
+    confirmation_required: true,
+    danger_level: 'medium',
+    impact: 'Points the operator to the existing stdin-only Codex config route; Settings must not carry API keys in JSON payloads or logs.',
+    follow_up_action_ids: ['settings_run_webui_startup_maintenance', 'settings_diagnose_docker_webui'],
+    verify_action_id: 'settings_diagnose_docker_webui',
+  },
+  {
+    action_id: 'settings_select_webui_seed',
+    stable_id: 'select_webui_seed',
+    label: 'Select WebUI image seed',
+    section_id: 'docker_webui',
+    task_kind: 'configure',
+    taxonomy: 'settings.docker_webui.select_seed',
+    delegated_surface: 'OPL_IMAGE_MANIFEST_PATH=<manifest> OPL_IMAGE_SEED_DIR=<seed> opl system startup-maintenance --json',
+    payload_fields: ['image_manifest_path', 'image_seed_dir'],
+    mutates: 'opl_seed_install_manifest',
+    dry_run_supported: true,
+    confirmation_required: true,
+    danger_level: 'medium',
+    impact: 'Selects the image manifest and seed inputs consumed by the existing startup-maintenance path; it does not pull images or publish WebUI releases.',
+    follow_up_action_ids: ['settings_run_webui_startup_maintenance', 'settings_diagnose_docker_webui'],
+    verify_action_id: 'settings_diagnose_docker_webui',
+  },
+  {
+    action_id: 'settings_run_webui_startup_maintenance',
+    stable_id: 'run_webui_startup_maintenance',
+    label: 'Run WebUI startup maintenance',
+    section_id: 'docker_webui',
+    task_kind: 'repair',
+    taxonomy: 'settings.docker_webui.startup_maintenance',
+    delegated_surface: 'opl system startup-maintenance',
+    payload_fields: [],
+    mutates: 'opl_managed_runtime_and_seed_state',
+    dry_run_supported: true,
+    confirmation_required: true,
+    danger_level: 'medium',
+    impact: 'Runs the existing seed/materialization and managed-maintenance path, then reports Docker WebUI startup readback without claiming runtime ready.',
+    follow_up_action_ids: ['settings_diagnose_docker_webui', 'settings_open_docker_webui'],
+    verify_action_id: 'settings_diagnose_docker_webui',
+  },
+  {
+    action_id: 'settings_open_docker_webui',
+    stable_id: 'open_docker_webui',
+    label: 'Open Docker WebUI',
+    section_id: 'docker_webui',
+    task_kind: 'read',
+    taxonomy: 'settings.docker_webui.open',
+    delegated_surface: 'opl system docker-webui doctor --json#docker_webui_doctor.browser.url',
+    payload_fields: [],
+    mutates: 'none_read_only',
+    dry_run_supported: true,
+    confirmation_required: false,
+    danger_level: 'none',
+    impact: 'Reads the browser URL from the existing Docker WebUI doctor read model; the App shell owns actual browser navigation.',
+    follow_up_action_ids: ['settings_diagnose_docker_webui'],
+    verify_action_id: 'settings_diagnose_docker_webui',
+  },
+  {
+    action_id: 'settings_diagnose_docker_webui',
+    stable_id: 'diagnose_docker_webui',
+    label: 'Diagnose Docker WebUI',
+    section_id: 'docker_webui',
+    task_kind: 'verify',
+    taxonomy: 'settings.docker_webui.diagnose',
+    delegated_surface: 'opl system docker-webui doctor',
+    payload_fields: [],
+    mutates: 'none_read_only',
+    dry_run_supported: true,
+    confirmation_required: false,
+    danger_level: 'none',
+    impact: 'Reads Docker CLI, daemon, image, container, mount, port, seed, API key, startup phase, and operator next actions without mutating runtime state.',
+    follow_up_action_ids: ['settings_configure_webui_api_key', 'settings_run_webui_startup_maintenance'],
+    verify_action_id: 'settings_diagnose_docker_webui',
+  },
 ];
 
 function asRecord(value: unknown): JsonRecord {
@@ -470,12 +585,19 @@ function actionState(action: SettingsAction, input: BuildSettingsControlCenterIn
     const codex = asRecord(asRecord(input.core).codex);
     return codex.api_key_present === true ? 'ready' : 'attention_needed';
   }
+  if (action.action_id === 'settings_configure_webui_api_key') {
+    const codex = asRecord(asRecord(input.core).codex);
+    return codex.api_key_present === true ? 'ready' : 'attention_needed';
+  }
   if (action.action_id === 'settings_sync_capabilities' || action.action_id === 'settings_apply_opl_packages') {
     const summary = asRecord(asRecord(input.modules).summary);
     return summary.healthy_default_modules_count === summary.default_modules_count ? 'ready' : 'attention_needed';
   }
   if (action.action_id === 'settings_prune_runtime_roots_dry_run') {
     return 'plan_only';
+  }
+  if (action.action_id === 'settings_open_docker_webui' || action.action_id === 'settings_diagnose_docker_webui') {
+    return 'ready';
   }
   if (action.action_id === 'settings_rollback_runtime_toolchain') {
     return 'manual_required';
@@ -740,11 +862,11 @@ function buildIssueQueue(input: BuildSettingsControlCenterInput) {
       issue_id: 'model_access_manual_required',
       status_code: 'manual_required',
       label: 'Model access is not configured',
-      user_message: 'Codex model access is missing or unreadable. Configure model access before running agent tasks from Settings.',
+      user_message: 'Codex model access is missing or unreadable. Configure the API key before running WebUI or agent tasks from Settings.',
       severity: 'warning',
       source_ref: 'app_state.core.codex.api_key_present',
-      recommended_action_id: 'settings_repair_model_access',
-      route: issueRoute('settings_repair_model_access'),
+      recommended_action_id: 'settings_configure_webui_api_key',
+      route: issueRoute('settings_configure_webui_api_key'),
     });
   }
 

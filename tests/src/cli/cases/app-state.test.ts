@@ -671,6 +671,12 @@ exit 1
       'settings_check_app_update',
       'settings_prune_runtime_roots_dry_run',
       'settings_rollback_runtime_toolchain',
+      'settings_install_docker_webui',
+      'settings_configure_webui_api_key',
+      'settings_select_webui_seed',
+      'settings_run_webui_startup_maintenance',
+      'settings_open_docker_webui',
+      'settings_diagnose_docker_webui',
     ]);
     assert.equal(output.app_state.settings_control_center.settings_ia.ordinary_entry, 'settings_control_center');
     assert.deepEqual(output.app_state.settings_control_center.settings_ia.ordinary_route_ids, [
@@ -793,7 +799,7 @@ exit 1
     );
     assert.deepEqual(
       output.app_state.settings_control_center.action_sections.map((entry: AppStateListEntry) => entry.section_id),
-      ['model_access', 'workspace', 'capabilities', 'packages', 'codex_surface', 'updates', 'runtime_roots'],
+      ['model_access', 'workspace', 'capabilities', 'packages', 'codex_surface', 'docker_webui', 'updates', 'runtime_roots'],
     );
     assert.equal(
       output.app_state.settings_control_center.control_center_groups.find(
@@ -840,6 +846,13 @@ exit 1
       true,
     );
     assert.equal(
+      output.app_state.settings_control_center.issue_queue.some(
+        (entry: AppStateListEntry) => entry.issue_id === 'model_access_manual_required'
+          && entry.recommended_action_id === 'settings_configure_webui_api_key',
+      ),
+      true,
+    );
+    assert.equal(
       output.app_state.settings_control_center.issue_queue.every(
         (entry: AppStateListEntry) => entry.authority_flags.can_create_typed_blocker === false,
       ),
@@ -850,6 +863,33 @@ exit 1
         (entry: AppStateListEntry) => entry.action_id === 'settings_reload_codex_surface',
       )?.payload_required,
       true,
+    );
+    const dockerWebuiActions = output.app_state.settings_control_center.task_entries.filter(
+      (entry: AppStateListEntry) => entry.section_id === 'docker_webui',
+    );
+    assert.deepEqual(
+      dockerWebuiActions.map((entry: AppStateListEntry) => entry.action_id),
+      [
+        'settings_install_docker_webui',
+        'settings_configure_webui_api_key',
+        'settings_select_webui_seed',
+        'settings_run_webui_startup_maintenance',
+        'settings_open_docker_webui',
+        'settings_diagnose_docker_webui',
+      ],
+    );
+    assert.equal(
+      dockerWebuiActions.every((entry: AppStateListEntry) =>
+        entry.authority_flags.can_claim_app_release_ready === false
+          && entry.authority_flags.can_claim_production_ready === false
+      ),
+      true,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.action_catalog.find(
+        (entry: AppStateListEntry) => entry.action_id === 'settings_diagnose_docker_webui',
+      )?.delegated_surface,
+      'opl system docker-webui doctor',
     );
     assert.equal(
       output.app_state.settings_control_center.dry_run_apply_verify_boundary.runtime_roots_cleanup,

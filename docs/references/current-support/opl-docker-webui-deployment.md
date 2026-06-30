@@ -92,6 +92,21 @@ seed apply 读取的输入：
 
 `opl system startup-maintenance --json` 的 `system_action.details.docker_webui_startup` 复用 doctor 的只读首启状态机，但 `startup_maintenance.execution_policy` 会标成 `executed_by_startup_maintenance`。这只说明本次维护命令已经执行 seed/materialization 和 managed-maintenance 路径；如果 `api_key.status` 仍是 `missing`，安装器应提示运行 `opl system configure-codex --api-key-stdin --json`，不要把 seed applied 展示成 Codex provider 或 runtime ready。
 
+## App / Settings 默认入口
+
+Framework 侧默认 Settings read-model 通过 `opl app state --profile fast|full --json#settings_control_center` 暴露 Docker/WebUI action section。App / WebUI shell 应消费这些 action refs，而不是自己推导 Docker、seed、API key 或 startup 状态：
+
+| action_id | 现有委托入口 | 用户含义 |
+| --- | --- | --- |
+| `settings_install_docker_webui` | `opl install --skip-gui-open` | 执行 Framework 既有一键安装入口；不声明 App/WebUI release ready |
+| `settings_configure_webui_api_key` | `printf <api-key> \| opl system configure-codex --api-key-stdin --json` | 通过 stdin-only 路径写 Codex provider config；API key 不进入 Settings JSON payload |
+| `settings_select_webui_seed` | `OPL_IMAGE_MANIFEST_PATH=<manifest> OPL_IMAGE_SEED_DIR=<seed> opl system startup-maintenance --json` | 选择镜像 manifest / seed 输入并进入既有维护路径 |
+| `settings_run_webui_startup_maintenance` | `opl system startup-maintenance --json` | 执行 seed/materialization 和 managed-maintenance，返回 Docker WebUI startup readback |
+| `settings_open_docker_webui` | `opl system docker-webui doctor --json#docker_webui_doctor.browser.url` | 从 doctor read model 读取浏览器 URL；实际打开浏览器归 App shell |
+| `settings_diagnose_docker_webui` | `opl system docker-webui doctor --json` | 只读诊断 Docker CLI、daemon、container、image、mount、port、seed、API key 和下一步 |
+
+这些 action 的 authority boundary 仍固定为不能写 domain truth、owner receipt、typed blocker、runtime/provider queue，也不能声明 App release ready、runtime ready 或 production ready。Live Evidence、release evidence、真实容器访问和 owner acceptance 仍是后置验收 lane。
+
 ## 标准浏览器访问
 
 用持久化数据目录和远程浏览器访问启动 WebUI：

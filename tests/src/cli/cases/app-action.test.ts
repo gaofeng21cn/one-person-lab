@@ -119,9 +119,21 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       'settings_check_app_update',
       'settings_prune_runtime_roots_dry_run',
       'settings_rollback_runtime_toolchain',
+      'settings_install_docker_webui',
+      'settings_configure_webui_api_key',
+      'settings_select_webui_seed',
+      'settings_run_webui_startup_maintenance',
+      'settings_open_docker_webui',
+      'settings_diagnose_docker_webui',
     ]) {
       assert.ok(actions.has(actionId), `missing App action: ${actionId}`);
-      assert.equal(actions.get(actionId)?.delegated_surface.startsWith('opl '), true);
+      const delegatedSurface = actions.get(actionId)?.delegated_surface ?? '';
+      assert.equal(
+        delegatedSurface.startsWith('opl ')
+          || delegatedSurface.startsWith('printf <api-key> | opl ')
+          || delegatedSurface.includes(' opl system startup-maintenance'),
+        true,
+      );
     }
     assert.deepEqual(actions.get('module_update')?.payload_fields, ['module_id']);
     assert.equal(actions.get('module_update')?.route_requires_domain_or_app_payload, true);
@@ -258,6 +270,33 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     );
     assert.deepEqual(actions.get('settings_rollback_runtime_toolchain')?.payload_fields, ['receipt_ref']);
     assert.equal(actions.get('settings_rollback_runtime_toolchain')?.danger_level, 'high');
+    assert.equal(actions.get('settings_install_docker_webui')?.delegated_surface, 'opl install');
+    assert.equal(actions.get('settings_install_docker_webui')?.confirmation_required, true);
+    assert.equal(
+      actions.get('settings_configure_webui_api_key')?.delegated_surface,
+      'printf <api-key> | opl system configure-codex --api-key-stdin',
+    );
+    assert.deepEqual(actions.get('settings_configure_webui_api_key')?.payload_fields, []);
+    assert.equal(actions.get('settings_configure_webui_api_key')?.danger_level, 'medium');
+    assert.equal(
+      actions.get('settings_select_webui_seed')?.delegated_surface,
+      'OPL_IMAGE_MANIFEST_PATH=<manifest> OPL_IMAGE_SEED_DIR=<seed> opl system startup-maintenance --json',
+    );
+    assert.deepEqual(actions.get('settings_select_webui_seed')?.payload_fields, [
+      'image_manifest_path',
+      'image_seed_dir',
+    ]);
+    assert.equal(
+      actions.get('settings_run_webui_startup_maintenance')?.delegated_surface,
+      'opl system startup-maintenance',
+    );
+    assert.equal(
+      actions.get('settings_open_docker_webui')?.delegated_surface,
+      'opl system docker-webui doctor --json#docker_webui_doctor.browser.url',
+    );
+    assert.equal(actions.get('settings_open_docker_webui')?.mutates, 'none_read_only');
+    assert.equal(actions.get('settings_diagnose_docker_webui')?.delegated_surface, 'opl system docker-webui doctor');
+    assert.equal(actions.get('settings_diagnose_docker_webui')?.mutates, 'none_read_only');
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
@@ -1044,6 +1083,103 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
       rollbackPlan.result.settings_control_center_action.authority_boundary.can_write_runtime_queue,
       false,
     );
+
+    const webuiInstall = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'settings_install_docker_webui',
+      '--dry-run',
+    ], env).app_action_execution;
+
+    assert.equal(webuiInstall.delegated_surface, 'opl install --skip-gui-open');
+    assert.equal(webuiInstall.result.settings_control_center_action.status, 'manual_command_preview');
+    assert.deepEqual(webuiInstall.result.settings_control_center_action.command_preview, [
+      'opl',
+      'install',
+      '--skip-gui-open',
+      '--json',
+    ]);
+
+    const webuiApiKey = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'settings_configure_webui_api_key',
+      '--dry-run',
+    ], env).app_action_execution;
+
+    assert.equal(webuiApiKey.delegated_surface, 'printf <api-key> | opl system configure-codex --api-key-stdin');
+    assert.equal(webuiApiKey.result.settings_control_center_action.status, 'manual_command_preview');
+    assert.equal(webuiApiKey.result.settings_control_center_action.authority_boundary.carries_api_key_secret, false);
+
+    const webuiSeed = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'settings_select_webui_seed',
+      '--payload',
+      '{"image_manifest_path":"/opt/opl/image-manifest.json","image_seed_dir":"/opt/opl/seed"}',
+      '--dry-run',
+    ], env).app_action_execution;
+
+    assert.equal(
+      webuiSeed.delegated_surface,
+      'OPL_IMAGE_MANIFEST_PATH=<manifest> OPL_IMAGE_SEED_DIR=<seed> opl system startup-maintenance --json',
+    );
+    assert.deepEqual(webuiSeed.result.settings_control_center_action.command_preview, [
+      'OPL_IMAGE_MANIFEST_PATH=/opt/opl/image-manifest.json',
+      'OPL_IMAGE_SEED_DIR=/opt/opl/seed',
+      'opl',
+      'system',
+      'startup-maintenance',
+      '--json',
+    ]);
+
+    const webuiStartup = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'settings_run_webui_startup_maintenance',
+      '--dry-run',
+    ], env).app_action_execution;
+
+    assert.equal(webuiStartup.delegated_surface, 'opl system startup-maintenance');
+    assert.equal(webuiStartup.result.settings_control_center_action.task_kind, 'repair');
+
+    const webuiOpen = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'settings_open_docker_webui',
+      '--dry-run',
+    ], {
+      ...env,
+      AIONUI_PORT: '3000',
+    }).app_action_execution;
+
+    assert.equal(webuiOpen.delegated_surface, 'opl system docker-webui doctor --json#docker_webui_doctor.browser.url');
+    assert.equal(webuiOpen.result.docker_webui_browser_entry.status, 'url_available');
+    assert.equal(webuiOpen.result.docker_webui_browser_entry.browser_url, 'http://127.0.0.1:3000/');
+    assert.equal(webuiOpen.result.docker_webui_browser_entry.authority_boundary.can_claim_runtime_ready, false);
+
+    const webuiDoctor = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'settings_diagnose_docker_webui',
+      '--dry-run',
+    ], env).app_action_execution;
+
+    assert.equal(webuiDoctor.delegated_surface, 'opl system docker-webui doctor');
+    assert.equal(webuiDoctor.result.docker_webui_doctor.surface_kind, 'opl_docker_webui_doctor');
+    assert.equal(webuiDoctor.result.docker_webui_doctor.authority_boundary.can_claim_runtime_ready, false);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }

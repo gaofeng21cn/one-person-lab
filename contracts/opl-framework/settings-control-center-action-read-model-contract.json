@@ -87,6 +87,7 @@
     "capabilities",
     "packages",
     "codex_surface",
+    "docker_webui",
     "updates",
     "runtime_roots"
   ],
@@ -105,7 +106,13 @@
     "settings_reload_codex_surface",
     "settings_check_app_update",
     "settings_prune_runtime_roots_dry_run",
-    "settings_rollback_runtime_toolchain"
+    "settings_rollback_runtime_toolchain",
+    "settings_install_docker_webui",
+    "settings_configure_webui_api_key",
+    "settings_select_webui_seed",
+    "settings_run_webui_startup_maintenance",
+    "settings_open_docker_webui",
+    "settings_diagnose_docker_webui"
   ],
   "action_taxonomy": {
     "settings_repair_model_access": "settings.model_access.repair",
@@ -115,7 +122,13 @@
     "settings_reload_codex_surface": "settings.codex_surface.reload",
     "settings_check_app_update": "settings.updates.check_app_update",
     "settings_prune_runtime_roots_dry_run": "settings.runtime_roots.cleanup_plan",
-    "settings_rollback_runtime_toolchain": "settings.updates.rollback_runtime_toolchain"
+    "settings_rollback_runtime_toolchain": "settings.updates.rollback_runtime_toolchain",
+    "settings_install_docker_webui": "settings.docker_webui.install",
+    "settings_configure_webui_api_key": "settings.docker_webui.configure_api_key",
+    "settings_select_webui_seed": "settings.docker_webui.select_seed",
+    "settings_run_webui_startup_maintenance": "settings.docker_webui.startup_maintenance",
+    "settings_open_docker_webui": "settings.docker_webui.open",
+    "settings_diagnose_docker_webui": "settings.docker_webui.diagnose"
   },
   "action_catalog_required_metadata": {
     "stable_id": true,
@@ -145,7 +158,8 @@
     "verify": "read_existing_opl_app_state_or_existing_opl_owned_status_actions",
     "issue_queue": "user_readable_projection_from_existing_app_state_and_update_status_codes_only",
     "app_update_check": "reads_managed_update_projection_app_release_truth_remains_app_repo_owned",
-    "runtime_roots_cleanup": "dry_run_plan_only_no_delete"
+    "runtime_roots_cleanup": "dry_run_plan_only_no_delete",
+    "docker_webui": "delegates_to_existing_install_configure_startup_maintenance_doctor_routes_without_secret_payloads_or_release_runtime_ready_claims"
   },
   "authority_boundary": {
     "framework_owner": "one-person-lab",
