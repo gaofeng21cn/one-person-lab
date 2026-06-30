@@ -432,8 +432,8 @@ export function buildFoundryAgentInspect(args: string[]) {
     version: 'g2',
     foundry_agent: {
       surface_kind: 'opl_foundry_agent_series_agent_inspect',
-      status: 'standard_domain_agent',
       ...buildPeerProjection(peer),
+      status: peer.series_membership,
       series_contract_ref: FOUNDRY_AGENT_SERIES_CONTRACT_REF,
       standard_agent_registry_ref: STANDARD_AGENT_REGISTRY_REF,
       command_surface_policy: {
