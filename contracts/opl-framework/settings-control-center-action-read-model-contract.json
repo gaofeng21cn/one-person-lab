@@ -13,6 +13,7 @@
     "ordinary_entry": "settings_control_center",
     "required_fields": [
       "settings_ia",
+      "app_settings_read_model",
       "control_center_groups",
       "action_sections",
       "issue_queue",
@@ -39,6 +40,35 @@
       "app_consumes_read_model_only": true,
       "aion_shell_is_renderer_only": true,
       "shell_must_not_infer_domain_truth": true,
+      "shell_must_not_execute_unlisted_actions": true
+    }
+  },
+  "app_settings_read_model": {
+    "surface_kind": "opl_app_settings_read_model.v1",
+    "purpose": "Typed App/Aion-consumable Settings model derived from OPL app state so shell adapters do not reconstruct policy.",
+    "required_fields": [
+      "page_structure",
+      "codex_model_policy",
+      "access_api_key",
+      "workspace_services",
+      "local_environment",
+      "action_policy"
+    ],
+    "source_refs": [
+      "app_state.core.codex",
+      "app_state.developer_mode",
+      "app_state.modules",
+      "app_state.provider",
+      "app_state.paths",
+      "app_state.release",
+      "app_state.settings_control_center.settings_ia",
+      "app_state.settings_control_center.action_catalog"
+    ],
+    "shell_policy": {
+      "app_consumes_read_model_only": true,
+      "aion_shell_is_renderer_only": true,
+      "shell_must_not_rewrite_model_or_reasoning_policy": true,
+      "shell_must_not_infer_api_key_or_workspace_service_truth": true,
       "shell_must_not_execute_unlisted_actions": true
     }
   },

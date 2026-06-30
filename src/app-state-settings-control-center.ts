@@ -569,6 +569,160 @@ function buildSettingsIa(taskEntries: ReturnType<typeof buildTaskEntries>) {
   };
 }
 
+function buildAppSettingsReadModel(
+  input: BuildSettingsControlCenterInput,
+  taskEntries: ReturnType<typeof buildTaskEntries>,
+  issueQueue: Array<Record<string, unknown>>,
+  settingsIa: ReturnType<typeof buildSettingsIa>,
+) {
+  const codex = asRecord(asRecord(input.core).codex);
+  const defaultProfile = asRecord(codex.default_profile);
+  const developerProfile = asRecord(asRecord(input.developerMode).developer_profile);
+  const moduleSummary = asRecord(asRecord(input.modules).summary);
+  const moduleSource = asRecord(asRecord(input.modules).source);
+  const temporal = asRecord(asRecord(input.provider).temporal);
+  const workspaceRoot = asRecord(input.paths.workspace_root);
+  const familyWorkspaceRoot = asRecord(input.paths.family_workspace_root);
+  const modelAccessStatus = codex.api_key_present === true ? 'ready' : 'attention_needed';
+  const temporalStatus = asString(temporal.health_status) ?? asString(temporal.status);
+  const moduleHealth = `${moduleSummary.healthy_default_modules_count ?? 0}/${moduleSummary.default_modules_count ?? 0}`;
+
+  return {
+    surface_kind: 'opl_app_settings_read_model.v1',
+    schema_version: 'opl_app_settings_read_model.v1',
+    owner: 'one-person-lab',
+    source_surface: 'app_state.settings_control_center',
+    source_refs: [
+      'app_state.core.codex',
+      'app_state.developer_mode',
+      'app_state.modules',
+      'app_state.provider',
+      'app_state.paths',
+      'app_state.release',
+      'app_state.settings_control_center.settings_ia',
+      'app_state.settings_control_center.action_catalog',
+    ],
+    shell_policy: {
+      app_consumes_read_model_only: true,
+      aion_shell_is_renderer_only: true,
+      shell_must_not_rewrite_model_or_reasoning_policy: true,
+      shell_must_not_infer_api_key_or_workspace_service_truth: true,
+      shell_must_not_execute_unlisted_actions: true,
+    },
+    page_structure: {
+      ordinary_entry: settingsIa.ordinary_entry,
+      ordinary_route_ids: settingsIa.ordinary_route_ids,
+      secondary_or_deep_link_route_ids: settingsIa.secondary_or_deep_link_route_ids,
+      route_groups: settingsIa.route_groups,
+      secondary_or_deep_link_routes: settingsIa.secondary_or_deep_link_routes,
+      action_sections: SETTINGS_CONTROL_CENTER_ACTION_SECTIONS.map((section) => ({
+        section_id: section.section_id,
+        label: section.label,
+        state: sectionState(section.section_id, input),
+        source_ref: section.source_ref,
+        action_ids: taskEntries
+          .filter((entry) => entry.section_id === section.section_id)
+          .map((entry) => entry.action_id),
+      })),
+    },
+    codex_model_policy: {
+      source_ref: 'app_state.core.codex',
+      model: asString(codex.default_model) ?? asString(defaultProfile.model) ?? 'unknown',
+      reasoning_effort: asString(codex.default_reasoning_effort) ?? asString(defaultProfile.model_reasoning_effort),
+      model_provider: asString(defaultProfile.model_provider),
+      provider_name: asString(defaultProfile.provider_name),
+      provider_base_url: asString(codex.provider_base_url) ?? asString(defaultProfile.base_url),
+      config_path: asString(codex.config_path),
+      profile_source: codex.config_path ? 'local_codex_config' : 'bundled_opl_default_profile',
+      api_key_present: codex.api_key_present === true,
+      access_status: modelAccessStatus,
+      repair_action_id: 'settings_repair_model_access',
+      shell_must_not_rewrite_policy: true,
+    },
+    access_api_key: {
+      source_ref: 'app_state.core.codex.api_key_present',
+      status: modelAccessStatus,
+      api_key_present: codex.api_key_present === true,
+      config_path: asString(codex.config_path),
+      required_for: 'agent_tasks_from_settings',
+      repair_action_id: 'settings_repair_model_access',
+      repair_route: routeFor('settings_repair_model_access'),
+      developer_mode: {
+        status: asString(input.developerMode.status),
+        effective_state: asString(input.developerMode.effective_state),
+        mode: asString(input.developerMode.mode),
+        developer_profile_status: asString(developerProfile.status),
+      },
+    },
+    workspace_services: {
+      workspace_root: {
+        source_ref: 'app_state.paths.workspace_root',
+        selected_path: asString(workspaceRoot.selected_path) ?? asString(input.paths.workspace_root_path),
+        source: asString(workspaceRoot.source),
+        exists: workspaceRoot.exists === true,
+        writable: workspaceRoot.writable === true,
+        health_status: asString(workspaceRoot.health_status) ?? 'unknown',
+        verify_action_id: 'settings_verify_workspace',
+        verify_route: routeFor('settings_verify_workspace'),
+      },
+      family_workspace_root: {
+        source_ref: 'app_state.paths.family_workspace_root',
+        selected_path: asString(familyWorkspaceRoot.selected_path),
+        source: asString(familyWorkspaceRoot.source),
+        role: asString(familyWorkspaceRoot.role),
+      },
+      modules: {
+        source_ref: 'app_state.modules.summary',
+        source_mode: asString(moduleSource.mode),
+        modules_root: asString(input.paths.modules_root),
+        default_modules_count: moduleSummary.default_modules_count ?? 0,
+        healthy_default_modules_count: moduleSummary.healthy_default_modules_count ?? 0,
+        health: moduleHealth,
+        sync_action_id: 'settings_sync_capabilities',
+        apply_action_id: 'settings_apply_opl_packages',
+      },
+      local_services: {
+        source_ref: 'app_state.provider.temporal',
+        temporal_provider: statusTone(temporalStatus),
+        temporal_health_status: asString(temporal.health_status),
+        temporal_status: asString(temporal.status),
+        selected_provider: asString(input.provider.selected_provider),
+        service_action_ids: [
+          'settings_sync_capabilities',
+          'settings_apply_opl_packages',
+          'settings_reload_codex_surface',
+        ],
+      },
+    },
+    local_environment: {
+      source_ref: 'app_state.paths + app_state.release + app_state.provider',
+      state_dir: asString(input.paths.state_dir),
+      modules_root: asString(input.paths.modules_root),
+      logs_dir: asString(input.paths.logs_dir),
+      update_channel_file: asString(input.paths.update_channel_file),
+      developer_supervisor_config_file: asString(input.paths.developer_supervisor_config_file),
+      release_channel: asString(input.release.channel) ?? 'unknown',
+      app_update_action_id: 'settings_check_app_update',
+      runtime_roots_cleanup_action_id: 'settings_prune_runtime_roots_dry_run',
+      runtime_toolchain_rollback_action_id: 'settings_rollback_runtime_toolchain',
+      temporal_provider: statusTone(temporalStatus),
+    },
+    action_policy: {
+      source_ref: 'app_state.settings_control_center.action_catalog',
+      action_surface: 'opl app action execute --json',
+      allowed_action_ids: [...SETTINGS_CONTROL_CENTER_ACTION_IDS],
+      payload_required_action_ids: taskEntries
+        .filter((entry) => entry.payload_required)
+        .map((entry) => entry.action_id),
+      dry_run_supported_action_ids: taskEntries
+        .filter((entry) => entry.dry_run_supported)
+        .map((entry) => entry.action_id),
+      issue_count: issueQueue.length,
+      authority_flags: settingsAuthorityFlags(),
+    },
+  };
+}
+
 function issueRoute(actionId: string | null) {
   return actionId ? routeFor(actionId) : null;
 }
@@ -682,6 +836,7 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
   const moduleSummary = asRecord(asRecord(input.modules).summary);
   const taskEntries = buildTaskEntries(input);
   const issueQueue = buildIssueQueue(input);
+  const settingsIa = buildSettingsIa(taskEntries);
 
   return {
     surface_kind: 'opl_settings_control_center.v2',
@@ -703,7 +858,8 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
       release_channel: releaseChannel,
       issue_count: issueQueue.length,
     },
-    settings_ia: buildSettingsIa(taskEntries),
+    settings_ia: settingsIa,
+    app_settings_read_model: buildAppSettingsReadModel(input, taskEntries, issueQueue, settingsIa),
     control_center_groups: SETTINGS_CONTROL_CENTER_GROUPS.map((group) => ({
       ...group,
       state: groupState(group, input),

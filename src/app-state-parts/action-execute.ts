@@ -272,6 +272,7 @@ function buildSettingsControlCenterDryRun(actionId: string, payload: JsonRecord)
       action_id: actionId,
       label: action?.label ?? actionId,
       status: 'dry_run',
+      read_model_ref: 'app_state.settings_control_center.app_settings_read_model',
       task_kind: action?.task_kind ?? 'unknown',
       taxonomy: action?.taxonomy ?? null,
       requested: payload,

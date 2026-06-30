@@ -946,6 +946,10 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
 
     assert.equal(settingsRepair.delegated_surface, 'opl system developer-supervisor');
     assert.equal(settingsRepair.result.settings_control_center_action.status, 'dry_run');
+    assert.equal(
+      settingsRepair.result.settings_control_center_action.read_model_ref,
+      'app_state.settings_control_center.app_settings_read_model',
+    );
     assert.equal(settingsRepair.result.settings_control_center_action.taxonomy, 'settings.model_access.repair');
     assert.equal(settingsRepair.result.settings_control_center_action.confirmation_required, true);
     assert.equal(settingsRepair.result.settings_control_center_action.danger_level, 'medium');
