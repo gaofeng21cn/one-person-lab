@@ -20,6 +20,30 @@ import {
   configureReadyMetaMorphology,
   retargetReadyRepo,
 } from './agents-conformance-fixtures.ts';
+import { MINIMAL_SCHOLAR_SKILLS_CAPABILITY_MODULES_CONTRACT } from './agent-workspace-norm-fixture.ts';
+
+function addScholarSkillsCapabilityPackage(workspaceRoot: string) {
+  const repoDir = path.join(workspaceRoot, 'opl-scholarskills');
+  fs.mkdirSync(path.join(repoDir, 'contracts'), { recursive: true });
+  fs.mkdirSync(path.join(repoDir, '.codex-plugin'), { recursive: true });
+  fs.mkdirSync(path.join(repoDir, 'skills', 'opl-scholarskills'), { recursive: true });
+  fs.writeFileSync(
+    path.join(repoDir, 'contracts', 'scholar-skills-capability-modules.json'),
+    `${JSON.stringify(MINIMAL_SCHOLAR_SKILLS_CAPABILITY_MODULES_CONTRACT, null, 2)}\n`,
+    'utf8',
+  );
+  fs.writeFileSync(
+    path.join(repoDir, '.codex-plugin', 'plugin.json'),
+    `${JSON.stringify({ name: 'opl-scholarskills', skills: './skills/' }, null, 2)}\n`,
+    'utf8',
+  );
+  fs.writeFileSync(
+    path.join(repoDir, 'skills', 'opl-scholarskills', 'SKILL.md'),
+    '---\nname: opl-scholarskills\ndescription: OPL ScholarSkills fixture capability plugin pack.\n---\n\n# OPL ScholarSkills\n',
+    'utf8',
+  );
+  return repoDir;
+}
 
 test('family-runtime evidence-worklist uses repo-native default-caller readiness before manifest projection', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-default-caller-repo-native-'));
@@ -285,6 +309,61 @@ test('family-runtime evidence-worklist keeps family default-caller deletion scop
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('agents default-callers excludes ScholarSkills capability packages from family deletion gates', () => {
+  const familyWorkspaceRoot = createMinimalFamilyWorkspaceRoot({
+    includeOplMetaAgent: true,
+    buildRepo: (domainId, domainLabel) => {
+      const repoDir = buildReadyAgentRepo();
+      retargetReadyRepo(repoDir, domainId, domainLabel);
+      if (domainId === 'opl-meta-agent') {
+        configureReadyMetaMorphology(repoDir);
+      }
+      return repoDir;
+    },
+  });
+  const scholarSkillsRepo = addScholarSkillsCapabilityPackage(familyWorkspaceRoot);
+  const env = {
+    OPL_FAMILY_WORKSPACE_ROOT: familyWorkspaceRoot,
+  };
+
+  try {
+    const conformance = runCli([
+      'agents',
+      'conformance',
+      '--family-defaults',
+    ], env).standard_domain_agent_conformance;
+    assert.deepEqual(
+      conformance.framework_capability_packages.map((entry: { canonical_agent_id: string }) =>
+        entry.canonical_agent_id
+      ),
+      ['opl-scholarskills'],
+    );
+    assert.equal(conformance.framework_capability_packages[0].repo_dir, scholarSkillsRepo);
+    assert.equal(conformance.framework_capability_packages[0].status, 'passed');
+
+    const defaultCallers = runCli([
+      'agents',
+      'default-callers',
+      '--family-defaults',
+    ], env);
+    const repoIds = defaultCallers.physical_delete_authority_read_model.owner_decision_gate_by_repo.map(
+      (repo: { repo_id: string }) => repo.repo_id,
+    );
+
+    assert.deepEqual(repoIds, [
+      'med-autoscience',
+      'med-autogrant',
+      'redcube-ai',
+      'opl-meta-agent',
+    ]);
+    assert.equal(defaultCallers.physical_delete_authority_read_model.total_repo_count, 4);
+    assert.equal(defaultCallers.deletion_evidence_worklist_count, 32);
+    assert.equal(defaultCallers.active_deletion_evidence_worklist_count, 32);
+  } finally {
     fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
   }
 });

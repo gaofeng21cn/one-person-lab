@@ -5,8 +5,8 @@ import { spawnSync } from 'node:child_process';
 import { buildGeneratedAgentInterfaces } from './domain-pack-compiler.ts';
 import { FrameworkContractError } from './contracts.ts';
 import {
-  defaultFamilyRepoInputs,
-  DEFAULT_FAMILY_REPOS,
+  defaultStandardDomainAgentRepoInputs,
+  DEFAULT_STANDARD_DOMAIN_AGENT_REPOS,
 } from './standard-domain-agent-family-repos.ts';
 import { buildDefaultCallerPhysicalDeleteAuthorityReadModel } from './agent-default-caller-delete-read-model.ts';
 import { buildFunctionalPrivatizationAudit } from './functional-privatization-audit.ts';
@@ -223,11 +223,11 @@ function parseRepoArgs(args: string[], commandName: string): RepoInput[] {
     });
   }
 
-  const selected = repos.length > 0 ? repos : defaultFamilyRepoInputs();
+  const selected = repos.length > 0 ? repos : defaultStandardDomainAgentRepoInputs();
   if (selected.length === 0) {
     throw new FrameworkContractError('cli_usage_error', `${commandName} could not discover family agent repos.`, {
       usage,
-      default_repo_directories: DEFAULT_FAMILY_REPOS.map((repo) => repo.directory),
+      default_repo_directories: DEFAULT_STANDARD_DOMAIN_AGENT_REPOS.map((repo) => repo.directory),
       env_override: 'OPL_FAMILY_WORKSPACE_ROOT',
     });
   }

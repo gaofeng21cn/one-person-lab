@@ -4,8 +4,8 @@ import { FrameworkContractError } from './contracts.ts';
 import type { DomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import { buildFamilyAgentDescriptorList } from './family-domain-agent-descriptor.ts';
 import {
-  defaultFamilyRepoInputs,
-  DEFAULT_FAMILY_REPOS,
+  defaultStandardDomainAgentRepoInputs,
+  DEFAULT_STANDARD_DOMAIN_AGENT_REPOS,
 } from './standard-domain-agent-family-repos.ts';
 import {
   STANDARD_AGENT_PACK_ABI,
@@ -561,11 +561,11 @@ function buildPackCompilerProjection(descriptor: JsonRecord) {
 
 function buildCompilerDomains(contracts: FrameworkContracts, options: DomainPackCompilerOptions = {}) {
   if (options.familyDefaults) {
-    const repos = defaultFamilyRepoInputs();
+    const repos = defaultStandardDomainAgentRepoInputs();
     if (repos.length === 0) {
       throw new FrameworkContractError('cli_usage_error', 'pack compiler family-defaults could not discover family agent repos.', {
         usage: 'opl agents pack-compiler --family-defaults',
-        default_repo_directories: DEFAULT_FAMILY_REPOS.map((repo) => repo.directory),
+        default_repo_directories: DEFAULT_STANDARD_DOMAIN_AGENT_REPOS.map((repo) => repo.directory),
         env_override: 'OPL_FAMILY_WORKSPACE_ROOT',
       });
     }
@@ -687,11 +687,11 @@ export function buildGeneratedAgentInterfaces(contracts: FrameworkContracts, arg
   }
 
   if (familyDefaults) {
-    const repos = defaultFamilyRepoInputs();
+    const repos = defaultStandardDomainAgentRepoInputs();
     if (repos.length === 0) {
       throw new FrameworkContractError('cli_usage_error', 'generated interfaces could not discover family agent repos.', {
         usage: 'opl agents interfaces --family-defaults [--format <cli|mcp|skill|product-entry|openai|ai-sdk>]',
-        default_repo_directories: DEFAULT_FAMILY_REPOS.map((repo) => repo.directory),
+        default_repo_directories: DEFAULT_STANDARD_DOMAIN_AGENT_REPOS.map((repo) => repo.directory),
         env_override: 'OPL_FAMILY_WORKSPACE_ROOT',
       });
     }

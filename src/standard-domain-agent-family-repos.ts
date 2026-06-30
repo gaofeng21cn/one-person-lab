@@ -17,6 +17,10 @@ export const DEFAULT_FAMILY_REPOS = [
   { requested_agent_id: 'opl-scholarskills', directory: 'opl-scholarskills' },
 ] as const;
 
+export const DEFAULT_STANDARD_DOMAIN_AGENT_REPOS = DEFAULT_FAMILY_REPOS.filter((repo) =>
+  repo.requested_agent_id !== 'opl-scholarskills'
+);
+
 const SOURCE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const OPL_REPO_ROOT = path.resolve(SOURCE_DIR, '..');
 
@@ -27,6 +31,10 @@ function unique<T>(items: T[]): T[] {
 function hasDefaultFamilyConformanceSurface(repoDir: string) {
   return fs.existsSync(path.join(repoDir, 'contracts', 'domain_descriptor.json'))
     || fs.existsSync(path.join(repoDir, 'contracts', 'scholar-skills-capability-modules.json'));
+}
+
+function hasStandardDomainAgentSurface(repoDir: string) {
+  return fs.existsSync(path.join(repoDir, 'contracts', 'domain_descriptor.json'));
 }
 
 function workspaceCandidatesFrom(seed: string) {
@@ -42,7 +50,10 @@ function workspaceCandidatesFrom(seed: string) {
   return candidates;
 }
 
-export function defaultFamilyRepoInputs(): StandardDomainAgentRepoInput[] {
+function discoverFamilyRepoInputs(
+  repoDefaults: readonly { requested_agent_id: string; directory: string }[],
+  hasSurface: (repoDir: string) => boolean,
+): StandardDomainAgentRepoInput[] {
   const configuredWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT?.trim();
   const workspaceRoots = unique([
     ...(configuredWorkspaceRoot
@@ -55,10 +66,10 @@ export function defaultFamilyRepoInputs(): StandardDomainAgentRepoInput[] {
 
   const repos: StandardDomainAgentRepoInput[] = [];
   for (const workspaceRoot of workspaceRoots) {
-    for (const repo of DEFAULT_FAMILY_REPOS) {
+    for (const repo of repoDefaults) {
       const repoDir = path.join(workspaceRoot, repo.directory);
       if (
-        hasDefaultFamilyConformanceSurface(repoDir)
+        hasSurface(repoDir)
         && !repos.some((entry) => path.resolve(entry.repo_dir) === path.resolve(repoDir))
       ) {
         repos.push({
@@ -69,4 +80,12 @@ export function defaultFamilyRepoInputs(): StandardDomainAgentRepoInput[] {
     }
   }
   return repos;
+}
+
+export function defaultFamilyRepoInputs(): StandardDomainAgentRepoInput[] {
+  return discoverFamilyRepoInputs(DEFAULT_FAMILY_REPOS, hasDefaultFamilyConformanceSurface);
+}
+
+export function defaultStandardDomainAgentRepoInputs(): StandardDomainAgentRepoInput[] {
+  return discoverFamilyRepoInputs(DEFAULT_STANDARD_DOMAIN_AGENT_REPOS, hasStandardDomainAgentSurface);
 }
