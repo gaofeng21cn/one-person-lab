@@ -207,7 +207,7 @@ test('builtin Codex update stages and atomically applies selected OPL runtime bi
               version: string | null;
               latest_version_status: string;
               update_available: boolean;
-              runtime_toolchain_updater: {
+              runtime_substrate_updater: {
                 global_toolchain_mutation_allowed: boolean;
                 latest_version_status: string;
               };
@@ -225,20 +225,20 @@ test('builtin Codex update stages and atomically applies selected OPL runtime bi
     assert.equal(output.engine_action.system.core_engines.codex.latest_version_status, 'current');
     assert.equal(output.engine_action.system.core_engines.codex.update_available, false);
     assert.equal(
-      output.engine_action.system.core_engines.codex.runtime_toolchain_updater.global_toolchain_mutation_allowed,
+      output.engine_action.system.core_engines.codex.runtime_substrate_updater.global_toolchain_mutation_allowed,
       false,
     );
     assert.equal(
-      output.engine_action.system.core_engines.codex.runtime_toolchain_updater.latest_version_status,
+      output.engine_action.system.core_engines.codex.runtime_substrate_updater.latest_version_status,
       'current',
     );
-    assert.match(output.engine_action.stdout, /opl_runtime_toolchain_update_receipt/);
+    assert.match(output.engine_action.stdout, /opl_runtime_substrate_update_receipt/);
     assert.match(output.engine_action.stdout, /codex-darwin-arm64/);
     assert.doesNotMatch(fs.readFileSync(npmLog, 'utf8'), / -g( |$)/);
     assert.match(fs.readFileSync(runtimeCodex, 'utf8'), /0\.134\.0/);
     assert.match(fs.readFileSync(runtimeRg, 'utf8'), /rg new/);
     const receipt = parseRuntimeCodexUpdateReceipt(output.engine_action.stdout);
-    assert.equal(receipt.surface_kind, 'opl_runtime_toolchain_update_receipt');
+    assert.equal(receipt.surface_kind, 'opl_runtime_substrate_update_receipt');
     assert.equal(receipt.update_strategy, 'app_owned_stage_verify_atomic_apply');
     assert.equal(receipt.global_toolchain_mutation_allowed, false);
     assert.equal(receipt.source_kind, 'platform_vendor_binary');
@@ -413,7 +413,7 @@ test('builtin Codex install explicitly materializes missing npm platform package
       /@openai\/codex-darwin-arm64@npm:@openai\/codex@0\.141\.0-darwin-arm64/,
     );
     const receipt = parseRuntimeCodexUpdateReceipt(output.engine_action.stdout);
-    assert.equal(receipt.surface_kind, 'opl_runtime_toolchain_update_receipt');
+    assert.equal(receipt.surface_kind, 'opl_runtime_substrate_update_receipt');
     assert.equal(receipt.update_strategy, 'app_owned_stage_verify_atomic_apply');
     assert.equal(receipt.global_toolchain_mutation_allowed, false);
     assert.equal(receipt.source_kind, 'platform_vendor_binary');

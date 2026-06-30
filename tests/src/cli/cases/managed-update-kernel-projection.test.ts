@@ -368,7 +368,7 @@ exit 2
   }
 });
 
-test('update plan can be scoped to agent packages and preserves safe command refs', () => {
+test('update plan can be scoped to capability packages and preserves safe command refs', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-update-plan-'));
   const codexFixture = createFakeCodexFixture(`
 if [ "$1" = "--version" ]; then

@@ -71,7 +71,7 @@ export function buildUpdateCommandSpecs(
     'update status': buildUpdateSpec(
       'status',
       'opl update status [--component <component_id>]',
-      'Read the unified managed update status projection for App, runtime/toolchain, agent packages, and Codex capability exposure.',
+      'Read the unified managed update status projection for installation carrier, runtime substrate, capability packages, companion tools, Codex Surface, workflow profile, and user data.',
       ['opl update status --json', 'opl update status --component capability_packages --json'],
       getContracts,
     ),

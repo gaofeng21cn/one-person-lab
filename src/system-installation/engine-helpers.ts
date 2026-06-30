@@ -922,7 +922,7 @@ function buildBuiltinCodexRuntimeActionSpec(): OplShellActionSpec {
   return {
     strategy: 'builtin',
     command_preview: ['npm', ...buildCodexRuntimeNpmInstallArgs(path.join(paths.staging_root, '<attempt>'))],
-    note: 'Uses the OPL App-owned runtime/toolchain stage and atomically applies current/bin/codex; it does not modify global Homebrew, npm, or system Codex installations.',
+    note: 'Uses the OPL App-owned Runtime Substrate stage and atomically applies current/bin/codex; it does not modify global Homebrew, npm, or system Codex installations.',
     executable: (cwd?: string) => runBuiltinCodexRuntimeInstallOrUpdate(cwd),
   };
 }

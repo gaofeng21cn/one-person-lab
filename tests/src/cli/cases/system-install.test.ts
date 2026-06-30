@@ -691,7 +691,7 @@ test('system initialize accepts App-managed runtime Codex when PATH has no Codex
             binary_source: string | null;
             health_status: string;
             issues: string[];
-            runtime_toolchain_updater: {
+            runtime_substrate_updater: {
               current_binary_installed: boolean;
               current_binary_path: string;
               current_version_status: string;
@@ -709,15 +709,15 @@ test('system initialize accepts App-managed runtime Codex when PATH has no Codex
     assert.equal(output.system_initialize.core_engines.codex.health_status, 'ready');
     assert.deepEqual(output.system_initialize.core_engines.codex.issues, []);
     assert.equal(
-      output.system_initialize.core_engines.codex.runtime_toolchain_updater.current_binary_path,
+      output.system_initialize.core_engines.codex.runtime_substrate_updater.current_binary_path,
       runtimeCodex,
     );
     assert.equal(
-      output.system_initialize.core_engines.codex.runtime_toolchain_updater.current_binary_installed,
+      output.system_initialize.core_engines.codex.runtime_substrate_updater.current_binary_installed,
       true,
     );
     assert.equal(
-      output.system_initialize.core_engines.codex.runtime_toolchain_updater.current_version_status,
+      output.system_initialize.core_engines.codex.runtime_substrate_updater.current_version_status,
       'compatible',
     );
   } finally {

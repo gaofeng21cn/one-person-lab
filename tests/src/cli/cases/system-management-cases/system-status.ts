@@ -51,7 +51,7 @@ exit 1
             health_status: string;
             issues: string[];
             diagnostics: string[];
-            runtime_toolchain_updater: {
+            runtime_substrate_updater: {
               global_toolchain_mutation_allowed: boolean;
               platform_package_materialization_policy: {
                 package_name: string;
@@ -131,7 +131,7 @@ exit 1
     assert.deepEqual(output.system.core_engines.codex.issues, []);
     assert.deepEqual(output.system.core_engines.codex.diagnostics, []);
     const materializationPolicy = output.system.core_engines.codex
-      .runtime_toolchain_updater.platform_package_materialization_policy;
+      .runtime_substrate_updater.platform_package_materialization_policy;
     assert.equal(materializationPolicy.package_name, '@openai/codex-darwin-arm64');
     assert.equal(materializationPolicy.target_triple, 'aarch64-apple-darwin');
     assert.equal(materializationPolicy.source_of_truth, 'npm_optional_dependency_or_preseeded_platform_tarball');
