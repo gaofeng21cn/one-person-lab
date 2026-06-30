@@ -136,22 +136,30 @@
       "receipt_kind"
     ],
     "component_integrity_requirement": "Each component must provide sha256 or source_fingerprint.",
+    "component_materialization_policy": {
+      "payload_manifest": "copy payload components into the data volume materialized paths.",
+      "payload_preheated": "keep preheated payload components in the runtime image and record their in-image payload paths as materialized paths; do not file-copy large preheated runtime trees such as node_modules into Docker Desktop bind mounts during first run."
+    },
     "component_materialization": [
       {
         "component_id": "opl_framework",
-        "materialized_path": "<data-dir>/opl/framework"
+        "materialized_path": "<data-dir>/opl/framework",
+        "payload_preheated_materialized_path": "<seed-dir>/payload/opl_framework"
       },
       {
         "component_id": "codex_cli",
-        "materialized_path": "<data-dir>/opl/toolchains/codex"
+        "materialized_path": "<data-dir>/opl/toolchains/codex",
+        "payload_preheated_materialized_path": "<seed-dir>/payload/codex_cli"
       },
       {
         "component_id": "companion_skills",
-        "materialized_path": "<data-dir>/opl/skills"
+        "materialized_path": "<data-dir>/opl/skills",
+        "payload_preheated_materialized_path": "<seed-dir>/payload/companion_skills"
       },
       {
         "component_id": "domain_modules",
-        "materialized_path": "<data-dir>/opl/modules"
+        "materialized_path": "<data-dir>/opl/modules",
+        "payload_preheated_materialized_path": "<seed-dir>/payload/domain_modules"
       }
     ]
   },

@@ -17,6 +17,7 @@ type SeedComponentId =
   | 'data_dir'
   | 'projects_dir';
 type ImageSeedStrategy = 'payload_manifest' | 'payload_preheated' | 'metadata_only' | 'not_configured' | 'invalid';
+type SeedMaterializationMode = 'copy_to_data_volume' | 'preheated_in_image';
 
 type SeedComponentReceipt = {
   component_id: SeedComponentId;
@@ -299,17 +300,7 @@ function directorySizeBytes(root: string | null) {
 
 function copyDirectoryContents(source: string, target: string) {
   if (!fs.existsSync(source) || !fs.statSync(source).isDirectory()) return false;
-  fs.mkdirSync(target, { recursive: true });
-  for (const entry of fs.readdirSync(source)) {
-    const from = path.join(source, entry);
-    const to = path.join(target, entry);
-    const stat = fs.statSync(from);
-    if (stat.isDirectory()) {
-      copyDirectoryContents(from, to);
-    } else if (stat.isFile() && !fs.existsSync(to)) {
-      fs.copyFileSync(from, to);
-    }
-  }
+  fs.cpSync(source, target, { recursive: true, force: false, errorOnExist: false });
   return true;
 }
 
@@ -441,13 +432,23 @@ function resolvePayloadPath(seedDir: string | null, component: Record<string, un
   return path.isAbsolute(payload) ? payload : path.resolve(seedDir ?? '.', payload);
 }
 
+function resolveSeedMaterializationMode(metadataManifest: Record<string, unknown> | null): SeedMaterializationMode {
+  return optionalString(metadataManifest?.strategy) === 'payload_preheated'
+    ? 'preheated_in_image'
+    : 'copy_to_data_volume';
+}
+
 function materializeSeedPayload(
   componentId: SeedComponentId,
   sourcePath: string | null,
   dataDir: string | null,
   projectsDir: string | null,
+  mode: SeedMaterializationMode,
 ) {
   if (!sourcePath || !fs.existsSync(sourcePath)) return null;
+  if (mode === 'preheated_in_image') {
+    return sourcePath;
+  }
   const targetRoot = componentId === 'opl_framework'
     ? dataDir && path.join(dataDir, 'opl', 'framework')
     : componentId === 'codex_cli'
@@ -565,10 +566,14 @@ export async function applyOplSeedManifest(options: OplSeedApplyOptions = {}): P
   const codexPayload = resolvePayloadPath(seedDir, codexSeed);
   const skillsPayload = resolvePayloadPath(seedDir, skillsSeed);
   const modulesPayload = resolvePayloadPath(seedDir, modulesSeed);
-  const frameworkMaterialized = materializeSeedPayload('opl_framework', frameworkPayload, dataDir, projectsDir);
-  const codexMaterialized = materializeSeedPayload('codex_cli', codexPayload, dataDir, projectsDir);
-  const skillsMaterialized = materializeSeedPayload('companion_skills', skillsPayload, dataDir, projectsDir);
-  const modulesMaterialized = materializeSeedPayload('domain_modules', modulesPayload, dataDir, projectsDir);
+  const materializationMode = resolveSeedMaterializationMode(seedMetadata.manifest);
+  const materializedReason = materializationMode === 'preheated_in_image'
+    ? 'image_seed_payload_preheated'
+    : 'image_seed_payload_materialized';
+  const frameworkMaterialized = materializeSeedPayload('opl_framework', frameworkPayload, dataDir, projectsDir, materializationMode);
+  const codexMaterialized = materializeSeedPayload('codex_cli', codexPayload, dataDir, projectsDir, materializationMode);
+  const skillsMaterialized = materializeSeedPayload('companion_skills', skillsPayload, dataDir, projectsDir, materializationMode);
+  const modulesMaterialized = materializeSeedPayload('domain_modules', modulesPayload, dataDir, projectsDir, materializationMode);
   const components = [
     buildComponent({
       component_id: 'image_manifest',
@@ -594,7 +599,7 @@ export async function applyOplSeedManifest(options: OplSeedApplyOptions = {}): P
       label: 'OPL Framework install dir',
       state: pathExists(frameworkMaterialized ?? frameworkInstallDir) ? 'current' : 'pending',
       reason: frameworkMaterialized
-        ? 'image_seed_payload_materialized'
+        ? materializedReason
         : pathExists(frameworkInstallDir)
           ? 'framework_dir_found'
           : 'framework_dir_missing',
@@ -620,7 +625,7 @@ export async function applyOplSeedManifest(options: OplSeedApplyOptions = {}): P
       label: 'Codex/toolchain',
       state: codexMaterialized || codexToolchain.installed ? 'current' : 'not_available',
       reason: codexMaterialized
-        ? 'image_seed_payload_materialized'
+        ? materializedReason
         : codexToolchain.installed
           ? 'codex_cli_detected'
           : 'codex_cli_not_detected',
@@ -646,7 +651,7 @@ export async function applyOplSeedManifest(options: OplSeedApplyOptions = {}): P
       label: 'Companion skills',
       state: pathExists(skillsMaterialized) || pathExists(skillsRoot) ? 'current' : 'not_available',
       reason: skillsMaterialized
-        ? 'image_seed_payload_materialized'
+        ? materializedReason
         : pathExists(skillsRoot)
           ? 'packaged_skills_root_found'
           : 'no_companion_skills_seed_detected',
@@ -672,7 +677,7 @@ export async function applyOplSeedManifest(options: OplSeedApplyOptions = {}): P
       label: 'Domain modules',
       state: pathExists(modulesMaterialized) || pathExists(modulesRoot) ? 'current' : 'not_available',
       reason: modulesMaterialized
-        ? 'image_seed_payload_materialized'
+        ? materializedReason
         : pathExists(modulesRoot)
           ? 'modules_root_found'
           : 'no_domain_modules_seed_detected',

@@ -39,6 +39,19 @@ function writeExecutable(filePath: string, contents: string) {
   fs.chmodSync(filePath, 0o755);
 }
 
+function removeTree(root: string) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      fs.rmSync(root, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      if (attempt === 4 || !error || typeof error !== 'object' || !('code' in error) || error.code !== 'ENOTEMPTY') {
+        throw error;
+      }
+    }
+  }
+}
+
 function writeFakeDockerForWebuiDoctor(binDir: string) {
   writeExecutable(path.join(binDir, 'docker'), `#!/usr/bin/env node
 const args = process.argv.slice(2);
@@ -208,7 +221,7 @@ test('system seed-apply records env-driven image manifest and is idempotent', ()
     assert.equal(second.system_action.details.install.created_directories.length, 0);
     assert.equal(second.system_action.details.components.length, 7);
   } finally {
-    fs.rmSync(homeRoot, { recursive: true, force: true });
+    removeTree(homeRoot);
   }
 });
 
@@ -317,7 +330,7 @@ test('system docker-webui doctor reports missing seed boundary without repairs',
     assert.equal(output.docker_webui_doctor.authority_boundary.can_claim_module_current, false);
     assert.equal(fs.existsSync(stateDir), false);
   } finally {
-    fs.rmSync(homeRoot, { recursive: true, force: true });
+    removeTree(homeRoot);
   }
 });
 
@@ -656,9 +669,13 @@ test('system seed-apply materializes image seed contract into data volume receip
   fs.mkdirSync(modulesPayload, { recursive: true });
   fs.mkdirSync(skillsPayload, { recursive: true });
   fs.writeFileSync(path.join(frameworkPayload, 'package.json'), '{"name":"opl-framework-seed"}\n');
+  fs.mkdirSync(path.join(frameworkPayload, 'nested', 'bin'), { recursive: true });
+  fs.writeFileSync(path.join(frameworkPayload, 'nested', 'bin', 'tool.js'), 'seed-tool\n');
   fs.writeFileSync(codexPayload, 'codex-binary-fixture\n');
   fs.writeFileSync(path.join(skillsPayload, 'skills.json'), '{"skills":["companion"]}\n');
   fs.writeFileSync(path.join(modulesPayload, 'modules.json'), '{"modules":["domain"]}\n');
+  fs.mkdirSync(path.join(dataDir, 'opl', 'framework'), { recursive: true });
+  fs.writeFileSync(path.join(dataDir, 'opl', 'framework', 'package.json'), '{"name":"local-framework"}\n');
   fs.writeFileSync(path.join(seedDir, 'image-manifest.json'), JSON.stringify({
     image_version: '26.7.1-webui',
     image_digest: 'sha256:image-contract',
@@ -777,6 +794,8 @@ test('system seed-apply materializes image seed contract into data volume receip
     assert.equal(output.system_action.details.install.data_dir, dataDir);
     assert.equal(output.system_action.details.install.projects_dir, projectsDir);
     assert.equal(fs.existsSync(path.join(dataDir, 'opl', 'framework', 'package.json')), true);
+    assert.equal(fs.readFileSync(path.join(dataDir, 'opl', 'framework', 'package.json'), 'utf8'), '{"name":"local-framework"}\n');
+    assert.equal(fs.readFileSync(path.join(dataDir, 'opl', 'framework', 'nested', 'bin', 'tool.js'), 'utf8'), 'seed-tool\n');
     assert.equal(fs.existsSync(path.join(dataDir, 'opl', 'toolchains', 'codex', 'codex')), true);
     assert.equal(fs.existsSync(path.join(dataDir, 'opl', 'skills', 'skills.json')), true);
     assert.equal(fs.existsSync(path.join(dataDir, 'opl', 'modules', 'modules.json')), true);
@@ -858,6 +877,135 @@ test('system seed-apply materializes image seed contract into data volume receip
     }) as typeof output;
     assert.equal(second.system_action.details.reconcile.previous_manifest_status, 'found');
     assert.equal(second.system_action.details.reconcile.migration_receipts_count, 2);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('system seed-apply records preheated image seed payloads without copying large runtime trees into data volume', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-seed-apply-preheated-home-'));
+  const seedDir = path.join(homeRoot, 'image-seed');
+  const dataDir = path.join(homeRoot, 'data');
+  const projectsDir = path.join(dataDir, 'projects');
+  const frameworkPayload = path.join(seedDir, 'payload', 'opl_framework');
+  const codexPayload = path.join(seedDir, 'payload', 'codex_cli');
+  const modulesPayload = path.join(seedDir, 'payload', 'domain_modules');
+  const skillsPayload = path.join(seedDir, 'payload', 'companion_skills');
+  fs.mkdirSync(path.join(frameworkPayload, 'node_modules', 'large-package'), { recursive: true });
+  fs.mkdirSync(path.join(codexPayload, 'bin'), { recursive: true });
+  fs.mkdirSync(modulesPayload, { recursive: true });
+  fs.mkdirSync(skillsPayload, { recursive: true });
+  fs.writeFileSync(path.join(frameworkPayload, 'package.json'), '{"name":"opl-framework-preheated"}\n');
+  fs.writeFileSync(path.join(frameworkPayload, 'node_modules', 'large-package', 'index.js'), 'preheated-runtime\n');
+  fs.writeFileSync(path.join(codexPayload, 'bin', 'codex'), 'codex-preheated\n');
+  fs.writeFileSync(path.join(skillsPayload, 'seed.json'), '{"skills":[]}\n');
+  fs.writeFileSync(path.join(modulesPayload, 'seed.json'), '{"modules":[]}\n');
+  fs.writeFileSync(path.join(seedDir, 'image-manifest.json'), JSON.stringify({
+    image_version: '26.7.1-webui',
+    image_digest: 'sha256:image-preheated',
+    seed_strategy: 'payload_manifest',
+  }, null, 2));
+  fs.writeFileSync(path.join(seedDir, 'metadata.json'), JSON.stringify({
+    schema: 'dev.onepersonlab.opl-webui-image-seed.v1',
+    strategy: 'payload_preheated',
+    components: [
+      {
+        id: 'opl_framework',
+        version: '0.1.0-preheated',
+        source: 'image:/opt/opl/seed/payload/opl_framework',
+        receipt_kind: 'image_seed',
+        payload_path: 'payload/opl_framework',
+        source_fingerprint: 'git:framework-preheated',
+      },
+      {
+        id: 'codex_cli',
+        version: 'codex-preheated',
+        source: 'image:/opt/opl/seed/payload/codex_cli',
+        receipt_kind: 'image_seed',
+        payload_path: 'payload/codex_cli',
+        sha256: 'sha256:declared-codex-preheated',
+      },
+      {
+        id: 'companion_skills',
+        version: 'skills-preheated',
+        source: 'image:/opt/opl/seed/payload/companion_skills',
+        receipt_kind: 'image_seed',
+        payload_path: 'payload/companion_skills',
+        source_fingerprint: 'skills:preheated',
+      },
+      {
+        id: 'domain_modules',
+        version: 'modules-preheated',
+        source: 'image:/opt/opl/seed/payload/domain_modules',
+        receipt_kind: 'image_seed',
+        payload_path: 'payload/domain_modules',
+        source_fingerprint: 'modules:preheated',
+      },
+    ],
+  }, null, 2));
+
+  try {
+    const output = runCli([
+      'system',
+      'seed-apply',
+      '--from',
+      seedDir,
+      '--data-dir',
+      dataDir,
+      '--projects-dir',
+      projectsDir,
+    ], {
+      HOME: homeRoot,
+      PATH: process.env.PATH ?? '',
+    }) as {
+      system_action: {
+        status: string;
+        details: {
+          components: Array<{
+            component_id: string;
+            state: string;
+            reason: string;
+            component_kind: string;
+            payload_path: string | null;
+            materialized_path: string | null;
+          }>;
+          receipts: Array<{
+            component_id: string;
+            status: string;
+            reason: string;
+            source_path: string | null;
+            target_path: string | null;
+          }>;
+        };
+      };
+    };
+
+    assert.equal(output.system_action.status, 'applied');
+    assert.equal(fs.existsSync(path.join(dataDir, 'opl', 'framework', 'node_modules')), false);
+    assert.equal(fs.existsSync(path.join(dataDir, 'opl', 'toolchains', 'codex', 'bin', 'codex')), false);
+
+    const components = new Map<string, (typeof output.system_action.details.components)[number]>(
+      output.system_action.details.components.map((component) => [
+        component.component_id,
+        component,
+      ]),
+    );
+    const framework = components.get('opl_framework');
+    assert.equal(framework?.state, 'current');
+    assert.equal(framework?.component_kind, 'image_seed');
+    assert.equal(framework?.reason, 'image_seed_payload_preheated');
+    assert.equal(framework?.payload_path, frameworkPayload);
+    assert.equal(framework?.materialized_path, frameworkPayload);
+
+    const codex = components.get('codex_cli');
+    assert.equal(codex?.reason, 'image_seed_payload_preheated');
+    assert.equal(codex?.materialized_path, codexPayload);
+
+    const receipt = output.system_action.details.receipts.find((entry) => entry.component_id === 'opl_framework');
+    assert.equal(receipt?.status, 'completed');
+    assert.equal(receipt?.reason, 'image_seed_payload_preheated');
+    assert.equal(receipt?.source_path, frameworkPayload);
+    assert.equal(receipt?.target_path, frameworkPayload);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
@@ -1094,6 +1242,6 @@ test('system startup-maintenance reports seed boundary for WebUI first run', () 
     assert.equal(initialize.system_initialize.seed_install.readiness_claim, 'not_claimed');
     assert.equal(initialize.system_initialize.seed_install.can_claim_ready_or_current, false);
   } finally {
-    fs.rmSync(homeRoot, { recursive: true, force: true });
+    removeTree(homeRoot);
   }
 });
