@@ -126,6 +126,9 @@ export type MasPaperMissionRouteHandoffIntakeReadback = {
   can_claim_provider_running: false;
   can_claim_paper_progress: false;
   can_claim_runtime_ready: false;
+  owner_route: JsonRecord | null;
+  next_action: JsonRecord | null;
+  handoff_projection: JsonRecord | null;
   runtime_request_input: EnqueueInput | null;
   accepted_command_packet: {
     surface_kind: typeof COMMAND_PACKET_SURFACE_KIND;
@@ -420,6 +423,9 @@ function baseReadback(
     can_claim_provider_running: false,
     can_claim_paper_progress: false,
     can_claim_runtime_ready: false,
+    owner_route: null,
+    next_action: null,
+    handoff_projection: null,
     runtime_request_input: null,
     accepted_command_packet: {
       surface_kind: COMMAND_PACKET_SURFACE_KIND,
@@ -666,6 +672,109 @@ function waitKindFor(handoffStatus: string | null, commandKind: SupportedCommand
   return handoffStatus;
 }
 
+function ownerWaitProjection(
+  handoff: JsonRecord,
+  readback: MasPaperMissionRouteHandoffIntakeReadback,
+  waitKind: string,
+) {
+  const isHumanGate = waitKind === 'human_gate_authority';
+  const owner = isHumanGate ? 'human_or_domain_owner' : 'med-autoscience';
+  const acceptedReturnShapes = isHumanGate
+    ? ['human_gate_ref', 'owner_decision_ref', 'owner_chain_ref']
+    : ['domain_typed_blocker_ref', 'typed_blocker_ref', 'owner_chain_ref', 'no_regression_ref'];
+  const actionKind = isHumanGate
+    ? 'human_gate_resolution_required'
+    : 'domain_typed_blocker_resolution_required';
+  const nextRequiredDelta = isHumanGate
+    ? 'record_human_gate_or_owner_decision_ref_for_mas_paper_mission'
+    : 'record_domain_typed_blocker_ref_for_mas_paper_mission';
+  const commandTarget = readback.route_target;
+  const handoffRef = readback.opl_route_command_ref
+    ?? readback.paper_mission_transaction_ref
+    ?? readback.candidate_ref;
+  const ownerRoute = {
+    surface_kind: 'opl_mas_paper_mission_owner_route_projection',
+    schema_version: 1,
+    route_status: 'owner_wait',
+    wait_kind: waitKind,
+    domain_truth_owner: 'med-autoscience',
+    runtime_owner: 'one-person-lab',
+    resolution_owner: owner,
+    declared_next_owner: optionalString(handoff.next_owner),
+    study_id: readback.study_id,
+    mission_id: readback.mission_id,
+    command_kind: readback.command_kind,
+    route_target: commandTarget,
+    paper_mission_transaction_ref: readback.paper_mission_transaction_ref,
+    opl_route_command_ref: readback.opl_route_command_ref,
+    route_identity_key: readback.route_identity_key,
+    request_idempotency_key: readback.request_idempotency_key,
+    can_submit_to_opl_runtime: false,
+    can_write_domain_truth: false,
+    can_create_owner_receipt: false,
+    can_create_typed_blocker: false,
+    can_create_human_gate: false,
+    can_claim_paper_progress: false,
+  };
+  const nextAction = {
+    surface_kind: 'opl_mas_paper_mission_owner_route_next_action',
+    schema_version: 1,
+    action_kind: actionKind,
+    step_kind: actionKind,
+    owner,
+    current_owner: owner,
+    domain_id: 'medautoscience',
+    study_id: readback.study_id,
+    mission_id: readback.mission_id,
+    route_status: 'owner_wait',
+    wait_kind: waitKind,
+    next_required_delta: nextRequiredDelta,
+    payload_requirement: nextRequiredDelta,
+    accepted_return_shapes: acceptedReturnShapes,
+    required_return_shapes: acceptedReturnShapes,
+    handoff_ref: handoffRef,
+    can_submit_to_opl_runtime: false,
+    can_execute_domain_action: false,
+    can_write_domain_truth: false,
+    can_create_owner_receipt: false,
+    can_create_typed_blocker: false,
+    can_claim_paper_progress: false,
+  };
+  const handoffProjection = {
+    surface_kind: 'opl_mas_paper_mission_executable_owner_handoff_projection',
+    schema_version: 1,
+    handoff_status: 'ready_for_owner_consumption',
+    handoff_kind: isHumanGate ? 'human_gate_authority_handoff' : 'typed_blocker_authority_handoff',
+    owner,
+    domain_id: 'medautoscience',
+    input_refs: [
+      readback.paper_mission_transaction_ref,
+      readback.opl_route_command_ref,
+      readback.candidate_ref,
+    ].filter((value): value is string => typeof value === 'string' && value.length > 0),
+    payload: {
+      study_id: readback.study_id,
+      mission_id: readback.mission_id,
+      command_kind: readback.command_kind,
+      route_target: commandTarget,
+      paper_mission_transaction_ref: readback.paper_mission_transaction_ref,
+      opl_route_command_ref: readback.opl_route_command_ref,
+      route_identity_key: readback.route_identity_key,
+      request_idempotency_key: readback.request_idempotency_key,
+    },
+    expected_return_shapes: acceptedReturnShapes,
+    opl_authority_boundary: {
+      can_submit_to_runtime_queue: false,
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_create_human_gate: false,
+      can_claim_paper_progress: false,
+    },
+  };
+  return { ownerRoute, nextAction, handoffProjection };
+}
+
 function handoffFromTask(task: JsonRecord) {
   if (
     task.surface_kind === HANDOFF_SURFACE_KIND
@@ -830,10 +939,14 @@ export function intakeMasPaperMissionRouteHandoff(
     waitKind === 'typed_blocker_authority'
     || waitKind === 'human_gate_authority'
   ) {
+    const waitProjection = ownerWaitProjection(handoff, readback, waitKind);
     return {
       ...readback,
       status: 'typed_wait',
       wait_kind: waitKind,
+      owner_route: waitProjection.ownerRoute,
+      next_action: waitProjection.nextAction,
+      handoff_projection: waitProjection.handoffProjection,
     };
   }
 

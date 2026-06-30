@@ -415,6 +415,22 @@ test('MAS paper mission route handoff emits typed waits for blocker human gate a
   }));
   assert.equal(typedBlocker.status, 'typed_wait');
   assert.equal(typedBlocker.wait_kind, 'typed_blocker_authority');
+  assert.equal(typedBlocker.owner_route?.resolution_owner, 'med-autoscience');
+  assert.equal(typedBlocker.next_action?.action_kind, 'domain_typed_blocker_resolution_required');
+  assert.equal(
+    typedBlocker.next_action?.payload_requirement,
+    'record_domain_typed_blocker_ref_for_mas_paper_mission',
+  );
+  assert.deepEqual(typedBlocker.next_action?.required_return_shapes, [
+    'domain_typed_blocker_ref',
+    'typed_blocker_ref',
+    'owner_chain_ref',
+    'no_regression_ref',
+  ]);
+  assert.equal(typedBlocker.handoff_projection?.handoff_kind, 'typed_blocker_authority_handoff');
+  const typedBlockerBoundary =
+    typedBlocker.handoff_projection?.opl_authority_boundary as Record<string, unknown>;
+  assert.equal(typedBlockerBoundary.can_create_typed_blocker, false);
   assert.equal(typedBlocker.runtime_start_requested, false);
   assert.equal(typedBlocker.writes_opl_outbox, false);
 
@@ -430,6 +446,14 @@ test('MAS paper mission route handoff emits typed waits for blocker human gate a
   }));
   assert.equal(humanGate.status, 'typed_wait');
   assert.equal(humanGate.wait_kind, 'human_gate_authority');
+  assert.equal(humanGate.owner_route?.resolution_owner, 'human_or_domain_owner');
+  assert.equal(humanGate.next_action?.action_kind, 'human_gate_resolution_required');
+  assert.deepEqual(humanGate.next_action?.required_return_shapes, [
+    'human_gate_ref',
+    'owner_decision_ref',
+    'owner_chain_ref',
+  ]);
+  assert.equal(humanGate.handoff_projection?.handoff_kind, 'human_gate_authority_handoff');
   assert.equal(humanGate.runtime_start_requested, false);
 
   const complete = intakeMasPaperMissionRouteHandoff(readyHandoff({

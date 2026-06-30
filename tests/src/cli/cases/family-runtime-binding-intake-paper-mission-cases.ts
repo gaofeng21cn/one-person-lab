@@ -215,6 +215,35 @@ test('family-runtime intake keeps MAS PaperMission typed blocker handoff out of 
     assert.equal(intake.exports[0].exported_count, 0);
     assert.equal(routeIntake.readbacks[0].status, 'typed_wait');
     assert.equal(routeIntake.readbacks[0].wait_kind, 'typed_blocker_authority');
+    assert.equal(routeIntake.readbacks[0].owner_route.route_status, 'owner_wait');
+    assert.equal(routeIntake.readbacks[0].owner_route.resolution_owner, 'med-autoscience');
+    assert.equal(routeIntake.readbacks[0].owner_route.can_create_typed_blocker, false);
+    assert.equal(
+      routeIntake.readbacks[0].next_action.action_kind,
+      'domain_typed_blocker_resolution_required',
+    );
+    assert.equal(
+      routeIntake.readbacks[0].next_action.payload_requirement,
+      'record_domain_typed_blocker_ref_for_mas_paper_mission',
+    );
+    assert.deepEqual(routeIntake.readbacks[0].next_action.required_return_shapes, [
+      'domain_typed_blocker_ref',
+      'typed_blocker_ref',
+      'owner_chain_ref',
+      'no_regression_ref',
+    ]);
+    assert.equal(
+      routeIntake.readbacks[0].handoff_projection.handoff_kind,
+      'typed_blocker_authority_handoff',
+    );
+    assert.equal(
+      routeIntake.readbacks[0].handoff_projection.handoff_status,
+      'ready_for_owner_consumption',
+    );
+    assert.equal(
+      routeIntake.readbacks[0].handoff_projection.opl_authority_boundary.can_submit_to_runtime_queue,
+      false,
+    );
     assert.equal(routeIntake.readbacks[0].runtime_start_requested, false);
     assert.equal(routeIntake.readbacks[0].writes_opl_outbox, false);
     assert.equal(routeIntake.readbacks[0].can_claim_runtime_enqueued, false);
