@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `family_ideal_state_gap_plan`
 State: `active_plan`
 Machine boundary: 本文是人读 gap / completion map。机器真相继续归 `contracts/`、源码、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、真实 workspace 与 App evidence。
-Last reviewed: `2026-06-29`
+Last reviewed: `2026-06-30`
 
 ## 读法
 
@@ -23,9 +23,14 @@ Last reviewed: `2026-06-29`
 | `med-autogrant` | product/status/user-loop/domain-handler/domain_runtime/autonomy/CLI handler shells 仍是 physical-delete-not-authorized tail；删除或收薄前需要 generated/default caller parity、no-active-caller、owner receipt / typed blocker、no-forbidden-write 和 tombstone/provenance。 |
 | `redcube-ai` | generated/default caller thinning、repo-local adapter delete after cutover、compatibility-free retirement、naming / legacy string hygiene 仍是 strict source hygiene tail。 |
 | `opl-meta-agent` | strict source-purity / script-to-pack hygiene 仍需持续治理；新增或保留 scripts/materializers 必须有真实 active caller、repo-local refs、no-forbidden-write 和退役门。 |
+| `opl-bookforge` | 标准 scaffold/interface、golden-path route、revision entrypoint、PDF/proof helper plumbing、artifact lifecycle handoff refs、default-caller structural gates 与 evidence package navigation 仍需持续守住 structural boundary；long-book / final export / owner acceptance evidence 后置。 |
 | `one-person-lab-app` | App-owned contracts、active-shell sync、GUI definition stack、Settings / Storage / release-boundary validators 和 shell-candidate policy 仍是功能/结构维护面；packaged GUI / clean-VM / release cohort evidence 后置。 |
 
 当前基本开发原则是先关闭功能面 / 结构面缺口：source、contract、CLI/API、readback、App shell、generated / hosted surface、domain pack、owner-route guard、wrapper retirement、DomainProgressTransitionRuntime / policy adapter、memory/artifact/lifecycle functional boundary 和 no-second-truth guard。Release / readiness / production 类证据只在对应声明或不可逆 owner decision 前作为 hard gate；它们不得阻塞可独立完成的功能/结构清理。反过来，功能/结构完成、docs foldback、contract pass、focused tests、verified refs-only ledger 或 projection clean 也不能声明 release-ready、Brand L5、provider production ready、domain ready 或 production ready。
+
+七个默认 OPL series repo 若逐项完成上述非 live 缺口，只能判断为达到当前 `功能 / 结构理想基线`：默认路径、合同/source/readback、generated / hosted surface、App shell、wrapper retirement、文档 SSOT 和 no-second-truth guard 已按目标态归位。它仍不等于完整原定理想态已全部达成；原定理想态中的 release / production / Brand L5 / owner acceptance / real-project run / long-soak / final artifact verdict 继续归独立 Live Evidence lane 和各 owner repo evidence surface。
+
+2026-06-30 functional closure audit 吸收结论：新的调研建议值得吸收为下一轮规划 lens，但不能作为最新 runtime truth 或 ready claim。下一轮标题和检查重点应从 `cleanup audit` 收敛为 `functional closure audit`：少按 `legacy/compat/dirty/stale` 关键词做卫生扫描，多检查 StageRun、receipt、typed blocker resolution、Settings control plane、Docker WebUI、generated/default caller 和 default App/skill/CLI path 是否形成 owner 可执行闭环。支撑 repo、Homebrew、Aion/Hermes、ScholarSkills 或 OPL Doc 只作为 carrier/support/capability-pack 边界纳入，不扩张默认七仓 truth set。
 
 2026-06-28 readback cleanup boundary：fresh `opl framework tranche-backlog --family-defaults --json` 当前读作 `milestone_state_counts.closed_structure_gate=8`、`current_tranche.current_work_order_status=no_active_non_live_structure_lanes_selected`、`current_tranche.selected_lane_count=0`、`current_tranche.next_selection_required=true`。这表示现有 non-live structure tranche 只剩 archive / provenance / next-selection guard，不表示 ideal operating model、Brand L5、App release、domain readiness、production readiness 或 Plan Completion Audit 已完成。下一条 cleanup / foldback lane 必须从 fresh gap/readback 重新选择；若只做 refs-only/docs/readback cleanup，完成口径只能是对应人读面或 readback 解释不再误导，不能把 `closed_structure_gate`、queue empty、remote SHA、focused tests 或 docs foldback 外推为 runtime / domain / owner evidence closure。
 
@@ -200,6 +205,7 @@ Workspace Protocol 的当前 active 口径只保留结构边界：`Workspace Gro
 | `Foundry Agent OS W0-W6 structure` | `done` | `100% for target ABI / functional skeleton` | target ABI、conformance、generated/direct parity、capability resolver、domain kernel manifests 和 App cockpit contract 已归位。 | W7 live / owner evidence 后置，不作为本文 active backlog。 |
 | `docs active single truth` | `done` | `100% for documentation governance` | 本文持有 active owner；support/history/reference 分层已明确。 | 持续防止 dated proof、receipt 流水、branch/worktree closeout 和 long checklist 回流。 |
 | `remaining functional cleanup` | `partial` | `按 repo owner 逐项推进` | family-level 剩余缺口只限 source morphology、strict source-purity、generated/default caller thinning、App/product contract drift、wrapper/no-resurrection 和 docs SSOT。 | 从下方 `功能 / 结构差距` 选择写集清楚的 lane；不以 release/readiness 证据缺失阻塞可独立清理。 |
+| `functional closure audit` | `partial` | `planning lens absorbed; repo implementation pending` | 调研建议已吸收为下一轮 active lens：功能面不再只看历史残留是否被清掉，还要看默认路径是否能把 StageRun、receipt、typed blocker、Settings / Docker WebUI 和 generated/default caller 串成 owner 可执行闭环。 | 按下方任务列表逐 repo 落地；验收只计 source/contract/CLI/App/readback/default path 功能闭环，不计 release / production / live owner evidence。 |
 
 ## Active Planning Gap Register
 
@@ -213,6 +219,10 @@ Workspace Protocol 的当前 active 口径只保留结构边界：`Workspace Gro
 | `domain_private_residue_retirement` | Wrapper / facade / alias / helper 删除门已收敛到 cleanup lane；default-caller / physical-delete read model 只投影 refs-only owner-decision shape。 | 没有 owner physical-delete / keep-as-authority / typed-blocker decision 时不物理删除；同时不得为旧面新增 compatibility facade。 | Domain repo owners + OPL cleanup gate。 |
 | `app_workbench_runtime` | Ordinary cockpit、Settings Control Center v2、App operator drilldown 和 release/user-path false-positive guard 已分层。 | App-owned contracts、active-shell sync、GUI definition stack、Settings / Storage / release-boundary validators 和 shell-candidate policy 继续按 App repo 收口。 | One Person Lab App + OPL product surface。 |
 | `source_structure_operator_readback` | Source-structure readback、line-budget strict ratchet、source-boundary split 和 framework tranche guard 已形成维护入口。 | 新增或回归超长 source/test 文件时按语义边界拆分；历史 reviewed baseline 只作 ratchet，不作为继续堆叠理由。 | 各 repo owner；优先薄入口 + parts/cases/modules。 |
+| `functional_closure_default_paths` | StageRun / current owner delta / generated surfaces / Settings Control Center / App shell 相关结构面已散落在各 owner repo。 | 需要逐 repo 确认默认命令、默认 App 入口和默认 skill/plugin 调用是否真的走 StageRun / generated-hosted / owner-answer accepted shape；不能只看 conformance 或 readback 可见。 | OPL Framework + MAS/MAG/RCA/OMA/BookForge/App owners；输出 default-path cutover diff、typed blocker owner-route diff 或 explicit no-code proof。 |
+| `app_docker_webui_beginner_path` | App release/user-path evidence 已拆出后置 lane，Docker WebUI / installer / runtime proxy / operator progress 仍主要作为 App 产品路径与 release diagnostics 支撑存在。 | 需要把 Docker WebUI beginner path 拆成非 live 功能任务：安装入口、API key / model access、runtime proxy smoke、启动 doctor、失败恢复和 operator progress 的用户可执行路径；release cohort / clean-VM evidence 继续后置。 | One Person Lab App + OPL product surface；关闭口径是 App-owned contracts / guides / validators / action surface 一致，不是 release-ready。 |
+| `settings_control_plane_unification` | OPL Settings Control Center v2、App settings contracts 和 Aion/Hermes shell carrier 已有边界。 | 需要防止 App 与 Aion/Hermes 各自解释 Settings、model、reasoning policy；policy 应从 OPL/App product profile 或 contracts 派生，shell 只做 adapter。 | OPL App + Aion/Hermes support owners；关闭口径是 single policy source、adapter read/action parity 和 no-second-settings-truth guard。 |
+| `mas_typed_blocker_resolution_route` | MAS typed blocker、owner answer accepted shape、StageRun closeout binding 和 App/operator current work-unit projection 已能被 OPL 消费。 | 需要把 typed blocker resolution 从“可见 gap/readback”推进为“执行者可接手 owner route”：谁处理、交付什么 paper-facing delta、引用哪个 accepted answer shape、如何 route-back。 | MAS owner + OPL Runtime；关闭口径是 source/contract/CLI/readback 支持可执行 owner route，不是 paper acceptance。 |
 
 ## 抓大放小风险审计
 
@@ -293,8 +303,8 @@ Release、production、Brand L5、owner-chain scaleout、真实项目运行、ph
 
 ## Next-Round Agent Prompt
 
-- Primary lane: `functional-structure-first`。优先选择可以直接落地的功能/结构缺口：MAG/RCA strict source-purity thinning / wrapper retirement、OMA script-to-pack hygiene 与 target-agent work-order guard、App active shell / Hermes alternative convergence、OPL Doc / support profile no-authority no-resurrection、OPL primitive upcollect、Domain Pack / generated-hosted surfaces 消费、current_owner_delta ordinary path guard、DomainProgressTransitionRuntime / policy adapter 功能边界、memory/artifact/lifecycle callable/readback/review-repair functional boundary。处理这些 lane 时仍要读取 owner boundary 来防 false-ready 和避免越权，但不得把 release/readiness 证据尾项自动变成本轮默认 blocker。
-- Current first cut: 先从 `功能/结构差距` 中选择写集清楚、owner repo 明确、repo-native 验证可跑、不会要求真实长跑或用户项目证据的条目。`current_owner_delta_owner_answer`、domain owner-chain scaleout、Brand L5、App release/user path、provider long-soak、private platform physical delete、memory/artifact/lifecycle owner receipt 等只在本轮目标明确是 readiness/release/L5/production claim，或功能清理会触发不可逆 deletion / mutation 时，才提升为 hard gate。
+- Primary lane: `functional-closure-audit`。优先选择可以直接落地的功能闭环缺口：App / Docker WebUI beginner path、Settings control plane single policy source、MAS typed blocker executable owner route、MAG/RCA/BookForge/OMA default path StageRun / generated surface consumption audit，以及仍在 active path 上的 wrapper / fallback / private caller retirement。处理这些 lane 时仍要读取 owner boundary 来防 false-ready 和避免越权，但不得把 release/readiness 证据尾项自动变成本轮默认 blocker。
+- Current first cut: 先从 `功能/结构差距` 和 `Active Planning Gap Register` 中选择写集清楚、owner repo 明确、repo-native 验证可跑、不会要求真实长跑或用户项目证据的条目。推荐顺序是：1. App / Docker WebUI 普通用户路径 functional hardening；2. App 与 Aion/Hermes Settings / model / reasoning policy 单源化；3. MAS typed blocker resolution 到可执行 owner route；4. MAG/RCA/BookForge/OMA 默认命令、默认 App 入口、默认 skill/plugin 是否真走 StageRun / generated-hosted / accepted owner-answer path；5. source morphology、strict source-purity、generated/default caller thinning、wrapper/no-resurrection 和 docs SSOT。`current_owner_delta_owner_answer`、domain owner-chain scaleout、Brand L5、App release/user path、provider long-soak、private platform physical delete、memory/artifact/lifecycle owner receipt 等只在本轮目标明确是 readiness/release/L5/production claim，或功能清理会触发不可逆 deletion / mutation 时，才提升为 hard gate。
 - Write scope: 默认只改明确的 source / contract / CLI/API / readback / App shell / generated surface / docs SSOT / tombstone-provenance 写集；MAS/MAG/RCA/OMA/App/brand 仓只有在功能/结构 owner、验证命令和禁止范围明确时才写。不要在 MAS 或其他 domain 仓新增 external-learning selector、第二 active backlog、always-on sidecar 或默认 preflight。
 - Non-goals: 不让 OPL 生成 MAS/MAG/RCA/OMA owner receipt、typed blocker、quality/export/review receipt、human gate、App release verdict、Brand L5 verdict、physical delete authorization 或 production-ready claim；不把 conformance pass、generated parity、verified refs-only ledger、provider completion、App projection 或 docs foldback 写成理想生产态完成。
 - Functional truth inputs: 先重读 source、contracts、tests、CLI/read-model、domain-owned manifest、App/product contracts、git worktree/branch/PR state 和相关 owner docs，不从本文继承旧 counters。本仓核查 CLI/readback shape 时使用 repo-local `./bin/opl`，不要用全局 `opl` 版本判断本仓当前行为：
@@ -317,10 +327,10 @@ Release、production、Brand L5、owner-chain scaleout、真实项目运行、ph
 - Execution discipline: 每次只选一个功能/结构 lane 或一组写集完全不相交的 lanes。能安全并行时为 MAS/MAG/RCA/OMA/App 分 worktree / subagent；主会话必须复核 diff、验证、吸收、push 和清理。已有并发 worktree / dirty 文件一律按外部 owner lane 处理，除非用户明确授权，不得吸收、清理或覆盖。
 
 - Required actions:
-  1. 从 `功能 / 结构差距` 和 owner repo active plan 选择当前非 live 缺口，优先 source morphology、strict source-purity、generated/default caller thinning、App contract/shell drift、wrapper retirement、history/tombstone/provenance。
-  2. 对每个候选标注 `owner_repo`、active caller、replacement owner、no-active-caller / no-forbidden-write / tombstone 证明、验证命令和 forbidden claims。
+  1. 从 `功能 / 结构差距`、`Active Planning Gap Register` 和 owner repo active plan 选择当前非 live 缺口，优先 default-path closure、Settings policy unification、Docker WebUI beginner path、MAS typed blocker executable route、source morphology、strict source-purity、generated/default caller thinning、App contract/shell drift、wrapper retirement、history/tombstone/provenance。
+  2. 对每个候选标注 `owner_repo`、默认入口、active caller、replacement owner、accepted answer shape、no-active-caller / no-forbidden-write / tombstone 证明、验证命令和 forbidden claims。
   3. 若只需 OPL readout/regression guard，保持 domain repos read-only；若必须写 domain/App 仓，先确认 source owner、consumer owner、写集和 repo-native 验证。
-  4. 更新 focused tests / contracts / docs 中必要的机器边界，确保 conformance pass、generated surface ready、verified refs-only receipt、provider completion 和 L4/L5 counter 都不能声明 domain ready。
+  4. 更新 focused tests / contracts / docs 中必要的机器边界，确保 conformance pass、generated surface ready、verified refs-only receipt、provider completion、release diagnostics、Docker WebUI smoke 和 L4/L5 counter 都不能声明 domain ready、App release ready 或 production ready。
 - Verification commands: OPL readout/regression lane 最小验证为 `rtk npm run typecheck`、`rtk npm run test:fast`、`rtk npm run test:meta`；domain/App/brand owner evidence lane 还必须跑对应 repo-native verification；若只做 docs baton 更新，最小验证为 `rtk git diff --check` 和 `rtk rg -n '^(<<<<<<<|=======|>>>>>>>)' docs/active docs/status.md docs/decisions.md`。
 - Completion gate: 只能归类为 `functional_structure_landed`、`source_cleanup_landed`、`history_tombstone_landed`、`no_second_truth_guard_landed`、`needs_owner_decision_for_irreversible_cleanup` 或 `hygiene_only_supporting_active_gap`；不得关闭全局理想生产态，也不得把 structural landing 写成 live evidence closure。
 - Foldback target: 非 live 当前结论折回本文、核心五件套、必要 contracts/tests 和 support docs；dated proof、worktree/branch closeout 和 receipt 流水进入 runtime ledger、提交历史、history/tombstone 或 domain-owned provenance。
