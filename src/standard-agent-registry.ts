@@ -1,4 +1,4 @@
-export type StandardAgentSeriesMembership = 'standard_domain_agent';
+export type StandardAgentSeriesMembership = 'standard_domain_agent' | 'framework_capability_package';
 
 export type StandardAgentRegistryEntry = {
   agent_id: string;
@@ -23,6 +23,7 @@ export type StandardAgentRegistryEntry = {
 
 export const STANDARD_AGENT_REGISTRY_REF = 'src/standard-agent-registry.ts';
 export const STANDARD_AGENT_SERIES_MEMBERSHIP = 'standard_domain_agent' as const;
+export const FRAMEWORK_CAPABILITY_PACKAGE_MEMBERSHIP = 'framework_capability_package' as const;
 
 export const STANDARD_AGENT_REGISTRY = [
   {
@@ -188,7 +189,7 @@ export const STANDARD_AGENT_REGISTRY = [
     agent_id: 'opl-scholarskills',
     domain_id: 'scholarskills',
     label: 'OPL ScholarSkills',
-    series_membership: STANDARD_AGENT_SERIES_MEMBERSHIP,
+    series_membership: FRAMEWORK_CAPABILITY_PACKAGE_MEMBERSHIP,
     brand_cli: 'opl-scholarskills',
     plugin_name: 'opl-scholarskills',
     canonical_plugin_name: 'opl-scholarskills',
@@ -229,6 +230,12 @@ function normalizeAgentKey(value: string) {
 
 export function listStandardAgentIds() {
   return STANDARD_AGENT_REGISTRY.map((entry) => entry.agent_id);
+}
+
+export function listStandardDomainAgentIds() {
+  return STANDARD_AGENT_REGISTRY
+    .filter((entry) => entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP)
+    .map((entry) => entry.agent_id);
 }
 
 export function resolveStandardAgent(value: string) {

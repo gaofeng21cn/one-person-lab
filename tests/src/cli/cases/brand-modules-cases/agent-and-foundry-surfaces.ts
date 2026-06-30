@@ -147,7 +147,7 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying OPL bra
     );
     assert.deepEqual(
       output.peers.map((entry: { series_membership: string }) => entry.series_membership),
-      expectedStandardAgentIds.map(() => 'standard_domain_agent'),
+      ['standard_domain_agent', 'standard_domain_agent', 'standard_domain_agent', 'standard_domain_agent', 'standard_domain_agent', 'framework_capability_package'],
     );
     for (const peer of output.peers) {
       assert.deepEqual(Object.keys(peer).sort(), [
@@ -188,7 +188,7 @@ test('OPL Foundry Agent index exposes all standard agents as one standard series
   );
   assert.deepEqual(
     list.agents.map((entry: { series_membership: string }) => entry.series_membership),
-    expectedStandardAgentIds.map(() => 'standard_domain_agent'),
+    ['standard_domain_agent', 'standard_domain_agent', 'standard_domain_agent', 'standard_domain_agent', 'standard_domain_agent', 'framework_capability_package'],
   );
   assert.deepEqual(
     list.agents.map((entry: { foundry_command_surface: string }) => entry.foundry_command_surface),
@@ -282,4 +282,11 @@ test('OPL Foundry Agent index exposes all standard agents as one standard series
   const bookforgeAlias = runCli(['foundry', 'agents', 'inspect', 'bookforge']).foundry_agent;
   assert.equal(bookforgeAlias.agent_id, 'opl-bookforge');
   assert.equal(bookforgeAlias.status, 'standard_domain_agent');
+
+  const scholarSkills = runCli(['foundry', 'agents', 'inspect', 'opl-scholarskills']).foundry_agent;
+  assert.equal(scholarSkills.status, 'framework_capability_package');
+  assert.equal(scholarSkills.series_membership, 'framework_capability_package');
+  assert.equal(scholarSkills.work_object.natural_alias, 'capability');
+  assert.equal(scholarSkills.foundry_command_surface, 'opl foundry agents inspect opl-scholarskills');
+  assertOnlyAllowedFoundryProjectionFields(scholarSkills, allowedFoundryAgentInspectFields);
 });
