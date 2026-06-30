@@ -12,6 +12,8 @@ import { syncFamilySkillPacks } from '../opl-skills.ts';
 import { buildManagedUpdateKernelProjection } from '../managed-update-kernel.ts';
 import type { FrameworkContracts } from '../types.ts';
 import { settingsControlCenterActionById } from '../app-state-settings-control-center.ts';
+import { buildOplDockerWebuiDoctor } from '../system-installation/docker-webui-doctor.ts';
+import { runOplTurnkeyInstall } from '../system-installation/turnkey.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -272,6 +274,7 @@ function buildSettingsControlCenterDryRun(actionId: string, payload: JsonRecord)
       action_id: actionId,
       label: action?.label ?? actionId,
       status: 'dry_run',
+      read_model_ref: 'app_state.settings_control_center.app_settings_read_model',
       task_kind: action?.task_kind ?? 'unknown',
       taxonomy: action?.taxonomy ?? null,
       requested: payload,
@@ -346,6 +349,85 @@ function buildSettingsPruneRuntimeRootsPlan() {
       },
     },
   };
+}
+
+function buildDockerWebuiSettingsManualAction(actionId: string, commandPreview: string[], payload: JsonRecord) {
+  const action = settingsControlCenterActionById(actionId);
+  return {
+    settings_control_center_action: {
+      surface_kind: 'opl_settings_control_center_action_preflight.v1',
+      action_id: actionId,
+      label: action?.label ?? actionId,
+      status: 'manual_command_preview',
+      task_kind: action?.task_kind ?? 'unknown',
+      taxonomy: action?.taxonomy ?? null,
+      requested: payload,
+      payload_fields: action?.payload_fields ?? [],
+      mutates: action?.mutates ?? 'unknown',
+      confirmation_required: action?.confirmation_required ?? false,
+      danger_level: action?.danger_level ?? 'unknown',
+      impact: action?.impact ?? null,
+      rollback_action_id: action?.rollback_action_id ?? null,
+      follow_up_action_ids: action?.follow_up_action_ids ?? [],
+      verify_action_id: action?.verify_action_id ?? null,
+      command_preview: commandPreview,
+      authority_boundary: {
+        carries_api_key_secret: false,
+        can_write_domain_truth: false,
+        can_sign_domain_receipt: false,
+        can_create_owner_receipt: false,
+        can_create_typed_blocker: false,
+        can_write_runtime_queue: false,
+        can_write_provider_queue: false,
+        can_claim_app_release_ready: false,
+        can_claim_runtime_ready: false,
+        can_claim_production_ready: false,
+      },
+    },
+  };
+}
+
+function dockerWebuiSeedEnv(payload: JsonRecord) {
+  const imageManifestPath = stringPayloadField(payload, 'image_manifest_path')
+    ?? stringPayloadField(payload, 'imageManifestPath');
+  const imageSeedDir = stringPayloadField(payload, 'image_seed_dir')
+    ?? stringPayloadField(payload, 'imageSeedDir');
+  return {
+    imageManifestPath,
+    imageSeedDir,
+    commandPreview: [
+      ...(imageManifestPath ? [`OPL_IMAGE_MANIFEST_PATH=${imageManifestPath}`] : []),
+      ...(imageSeedDir ? [`OPL_IMAGE_SEED_DIR=${imageSeedDir}`] : []),
+      'opl',
+      'system',
+      'startup-maintenance',
+      '--json',
+    ],
+  };
+}
+
+async function withTemporaryEnv<T>(updates: Record<string, string | null>, run: () => Promise<T>) {
+  const previous = Object.fromEntries(
+    Object.keys(updates).map((key) => [key, process.env[key]]),
+  );
+  for (const [key, value] of Object.entries(updates)) {
+    if (value === null) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  }
+  try {
+    return await run();
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  }
 }
 
 function schedulerTickArgs(payload: JsonRecord) {
@@ -605,6 +687,78 @@ async function executeDirectAppAction(
     return {
       delegatedSurface: 'opl update rollback --component runtime_toolchain',
       result: buildSettingsControlCenterDryRun(options.actionId, options.payload),
+    };
+  }
+
+  if (options.actionId === 'settings_install_docker_webui') {
+    return {
+      delegatedSurface: 'opl install --skip-gui-open',
+      result: options.dryRun
+        ? buildDockerWebuiSettingsManualAction(options.actionId, ['opl', 'install', '--skip-gui-open', '--json'], options.payload)
+        : await runOplTurnkeyInstall(contracts, { skipGuiOpen: true }),
+    };
+  }
+
+  if (options.actionId === 'settings_configure_webui_api_key') {
+    return {
+      delegatedSurface: 'printf <api-key> | opl system configure-codex --api-key-stdin',
+      result: buildDockerWebuiSettingsManualAction(
+        options.actionId,
+        ['printf', '<api-key>', '|', 'opl', 'system', 'configure-codex', '--api-key-stdin', '--json'],
+        options.payload,
+      ),
+    };
+  }
+
+  if (options.actionId === 'settings_select_webui_seed') {
+    const seed = dockerWebuiSeedEnv(options.payload);
+    return {
+      delegatedSurface: 'OPL_IMAGE_MANIFEST_PATH=<manifest> OPL_IMAGE_SEED_DIR=<seed> opl system startup-maintenance --json',
+      result: options.dryRun
+        ? buildDockerWebuiSettingsManualAction(options.actionId, seed.commandPreview, options.payload)
+        : await withTemporaryEnv({
+          OPL_IMAGE_MANIFEST_PATH: seed.imageManifestPath,
+          OPL_IMAGE_SEED_DIR: seed.imageSeedDir,
+        }, () => runOplSystemAction(contracts, 'startup_maintenance')),
+    };
+  }
+
+  if (options.actionId === 'settings_run_webui_startup_maintenance') {
+    return {
+      delegatedSurface: 'opl system startup-maintenance',
+      result: options.dryRun
+        ? buildDockerWebuiSettingsManualAction(options.actionId, ['opl', 'system', 'startup-maintenance', '--json'], options.payload)
+        : await runOplSystemAction(contracts, 'startup_maintenance'),
+    };
+  }
+
+  if (options.actionId === 'settings_open_docker_webui') {
+    const doctor = buildOplDockerWebuiDoctor();
+    return {
+      delegatedSurface: 'opl system docker-webui doctor --json#docker_webui_doctor.browser.url',
+      result: {
+        docker_webui_browser_entry: {
+          surface_kind: 'opl_docker_webui_browser_entry.v1',
+          action_id: options.actionId,
+          status: doctor.docker_webui_doctor.browser.url ? 'url_available' : 'url_not_visible',
+          browser_url: doctor.docker_webui_doctor.browser.url,
+          verify_action_id: 'settings_diagnose_docker_webui',
+          doctor_summary: doctor.docker_webui_doctor.diagnostic_summary,
+          authority_boundary: {
+            mutates: 'none_read_only',
+            shell_owns_browser_navigation: true,
+            can_claim_runtime_ready: false,
+            can_claim_app_release_ready: false,
+          },
+        },
+      },
+    };
+  }
+
+  if (options.actionId === 'settings_diagnose_docker_webui') {
+    return {
+      delegatedSurface: 'opl system docker-webui doctor',
+      result: buildOplDockerWebuiDoctor(),
     };
   }
 

@@ -671,6 +671,12 @@ exit 1
       'settings_check_app_update',
       'settings_prune_runtime_roots_dry_run',
       'settings_rollback_runtime_toolchain',
+      'settings_install_docker_webui',
+      'settings_configure_webui_api_key',
+      'settings_select_webui_seed',
+      'settings_run_webui_startup_maintenance',
+      'settings_open_docker_webui',
+      'settings_diagnose_docker_webui',
     ]);
     assert.equal(output.app_state.settings_control_center.settings_ia.ordinary_entry, 'settings_control_center');
     assert.deepEqual(output.app_state.settings_control_center.settings_ia.ordinary_route_ids, [
@@ -708,6 +714,81 @@ exit 1
       output.app_state.settings_control_center.settings_ia.app_shell_contract.shell_must_not_execute_unlisted_actions,
       true,
     );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.surface_kind,
+      'opl_app_settings_read_model.v1',
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.shell_policy
+        .shell_must_not_rewrite_model_or_reasoning_policy,
+      true,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.shell_policy
+        .shell_must_not_infer_api_key_or_workspace_service_truth,
+      true,
+    );
+    assert.deepEqual(
+      output.app_state.settings_control_center.app_settings_read_model.page_structure.ordinary_route_ids,
+      output.app_state.settings_control_center.settings_ia.ordinary_route_ids,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.codex_model_policy.model,
+      output.app_state.core.codex.default_model,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.codex_model_policy.reasoning_effort,
+      output.app_state.core.codex.default_reasoning_effort,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.codex_model_policy.shell_must_not_rewrite_policy,
+      true,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.access_api_key.api_key_present,
+      output.app_state.core.codex.api_key_present,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.access_api_key.repair_action_id,
+      'settings_repair_model_access',
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.workspace_services.workspace_root.selected_path,
+      output.app_state.paths.workspace_root_path,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.workspace_services.workspace_root.verify_action_id,
+      'settings_verify_workspace',
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.workspace_services.modules.health,
+      output.app_state.settings_control_center.status_summary.module_health,
+    );
+    assert.deepEqual(
+      output.app_state.settings_control_center.app_settings_read_model.workspace_services.local_services.service_action_ids,
+      [
+        'settings_sync_capabilities',
+        'settings_apply_opl_packages',
+        'settings_reload_codex_surface',
+      ],
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.local_environment.state_dir,
+      output.app_state.paths.state_dir,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.local_environment.app_update_action_id,
+      'settings_check_app_update',
+    );
+    assert.deepEqual(
+      output.app_state.settings_control_center.app_settings_read_model.action_policy.allowed_action_ids,
+      output.app_state.settings_control_center.allowed_action_ids,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.action_policy.authority_flags
+        .can_write_domain_truth,
+      false,
+    );
     assert.deepEqual(
       output.app_state.settings_control_center.sections.map((entry: AppStateListEntry) => entry.section_id),
       ['overview', 'setup_access', 'capabilities', 'maintenance_updates', 'data_storage', 'preferences', 'advanced'],
@@ -718,7 +799,7 @@ exit 1
     );
     assert.deepEqual(
       output.app_state.settings_control_center.action_sections.map((entry: AppStateListEntry) => entry.section_id),
-      ['model_access', 'workspace', 'capabilities', 'packages', 'codex_surface', 'updates', 'runtime_roots'],
+      ['model_access', 'workspace', 'capabilities', 'packages', 'codex_surface', 'docker_webui', 'updates', 'runtime_roots'],
     );
     assert.equal(
       output.app_state.settings_control_center.control_center_groups.find(
@@ -765,6 +846,13 @@ exit 1
       true,
     );
     assert.equal(
+      output.app_state.settings_control_center.issue_queue.some(
+        (entry: AppStateListEntry) => entry.issue_id === 'model_access_manual_required'
+          && entry.recommended_action_id === 'settings_configure_webui_api_key',
+      ),
+      true,
+    );
+    assert.equal(
       output.app_state.settings_control_center.issue_queue.every(
         (entry: AppStateListEntry) => entry.authority_flags.can_create_typed_blocker === false,
       ),
@@ -775,6 +863,33 @@ exit 1
         (entry: AppStateListEntry) => entry.action_id === 'settings_reload_codex_surface',
       )?.payload_required,
       true,
+    );
+    const dockerWebuiActions = output.app_state.settings_control_center.task_entries.filter(
+      (entry: AppStateListEntry) => entry.section_id === 'docker_webui',
+    );
+    assert.deepEqual(
+      dockerWebuiActions.map((entry: AppStateListEntry) => entry.action_id),
+      [
+        'settings_install_docker_webui',
+        'settings_configure_webui_api_key',
+        'settings_select_webui_seed',
+        'settings_run_webui_startup_maintenance',
+        'settings_open_docker_webui',
+        'settings_diagnose_docker_webui',
+      ],
+    );
+    assert.equal(
+      dockerWebuiActions.every((entry: AppStateListEntry) =>
+        entry.authority_flags.can_claim_app_release_ready === false
+          && entry.authority_flags.can_claim_production_ready === false
+      ),
+      true,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.action_catalog.find(
+        (entry: AppStateListEntry) => entry.action_id === 'settings_diagnose_docker_webui',
+      )?.delegated_surface,
+      'opl system docker-webui doctor',
     );
     assert.equal(
       output.app_state.settings_control_center.dry_run_apply_verify_boundary.runtime_roots_cleanup,

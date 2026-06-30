@@ -464,11 +464,24 @@ test('target operating architecture contract freezes resource, authority, lane, 
     'rca',
     'oma',
     'opl-bookforge',
+  ]);
+  assert.deepEqual(contract.foundry_agent_os_standard.framework_capability_packages?.map((entry) => entry.agent_id), [
     'opl-scholarskills',
   ]);
+  assert.equal(
+    contract.foundry_agent_os_standard.framework_capability_packages?.[0]?.package_scope,
+    'framework_capability_package',
+  );
+  assert.equal(
+    contract.foundry_agent_os_standard.framework_capability_packages?.[0]?.authority_boundary.can_claim_publication_readiness,
+    false,
+  );
+  assert.equal(
+    contract.foundry_agent_os_standard.framework_capability_packages?.[0]?.capability_pack_example,
+    'Scholar Capability Pack',
+  );
   assert.equal(contract.foundry_agent_os_standard.domain_pack_examples.mas, 'Medical Research Pack');
   assert.equal(contract.foundry_agent_os_standard.domain_pack_examples['opl-bookforge'], 'Book Manuscript Pack');
-  assert.equal(contract.foundry_agent_os_standard.domain_pack_examples['opl-scholarskills'], 'Scholar Capability Pack');
   assert.equal(
     contract.foundry_agent_os_standard.domain_authority_kernel_examples.mag.includes('fundability quality/export verdict'),
     true,
@@ -478,7 +491,7 @@ test('target operating architecture contract freezes resource, authority, lane, 
     true,
   );
   assert.equal(
-    contract.foundry_agent_os_standard.domain_authority_kernel_examples['opl-scholarskills'].includes('candidate scientific capability refs'),
+    contract.foundry_agent_os_standard.framework_capability_packages?.[0]?.authority_ref_examples.includes('candidate scientific capability refs'),
     true,
   );
   assert.equal(

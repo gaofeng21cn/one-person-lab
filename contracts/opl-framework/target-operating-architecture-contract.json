@@ -1023,8 +1023,7 @@
       "mag",
       "rca",
       "oma",
-      "opl-bookforge",
-      "opl-scholarskills"
+      "opl-bookforge"
     ],
     "domain_pack_examples": {
       "mas": "Medical Research Pack",
@@ -1265,7 +1264,34 @@
         "oma_can_claim_target_domain_ready": false,
         "oma_can_promote_default_agent_without_gate": false
       }
-    }
+    },
+    "framework_capability_packages": [
+      {
+        "agent_id": "opl-scholarskills",
+        "package_scope": "framework_capability_package",
+        "capability_contract_ref": "contracts/opl-framework/scholar-skills-capability-modules.json",
+        "public_projection": "opl_foundry_agent_series_refs_only_capability_package",
+        "authority_boundary": {
+          "can_claim_domain_ready": false,
+          "can_claim_runtime_ready": false,
+          "can_claim_quality_verdict": false,
+          "can_claim_artifact_authority": false,
+          "can_claim_publication_readiness": false,
+          "can_write_domain_truth": false,
+          "can_sign_owner_receipt": false,
+          "can_create_typed_blocker": false,
+          "can_schedule_runtime": false
+        },
+        "capability_pack_example": "Scholar Capability Pack",
+        "authority_ref_examples": [
+          "candidate scientific capability refs",
+          "unsigned execution receipt candidate refs",
+          "non-authoritative candidate artifact bodies",
+          "module-level no-authority guard",
+          "domain owner consumption handoff refs"
+        ]
+      }
+    ]
   },
   "flagship_experience_mapping": {
     "mapping_id": "mas_research_foundry_flagship_experience.v1",

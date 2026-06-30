@@ -163,6 +163,15 @@ export interface TargetOperatingArchitectureContract {
     standard_agent_registry_ref: string;
     target_shape: string;
     applies_to_domain_agents: string[];
+    framework_capability_packages?: Array<{
+      agent_id: string;
+      package_scope: string;
+      capability_pack_example: string;
+      authority_ref_examples: string[];
+      capability_contract_ref: string;
+      public_projection: string;
+      authority_boundary: Record<string, false>;
+    }>;
     domain_pack_examples: Record<string, string>;
     domain_authority_kernel_examples: Record<string, string[]>;
     new_agent_baseline_handoff_policy: {

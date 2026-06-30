@@ -172,8 +172,9 @@ function buildFoundryAgentOsFrameworkCapabilityConformance(
     domain_id: report.domain_id,
     requested_agent_id: report.requested_agent_id,
     canonical_agent_id: report.canonical_agent_id,
-    standard_membership: 'standard_domain_agent',
-    foundry_agent_os_standard_member: true,
+    standard_membership: 'framework_capability_package',
+    foundry_agent_os_standard_member: false,
+    foundry_agent_os_public_projection_member: true,
     status: statusFromBlockers(blockers),
     default_read_root: 'current_owner_delta',
     raw_worklist_generates_default_next_action: false,
@@ -216,6 +217,7 @@ export function buildFoundryAgentOsConformance(
   const standard = contracts.targetOperatingArchitecture.foundry_agent_os_standard;
   const flagshipMapping = contracts.targetOperatingArchitecture.flagship_experience_mapping;
   const expectedAgents = standard.applies_to_domain_agents;
+  const expectedFrameworkCapabilityPackages = standard.framework_capability_packages?.map((entry) => entry.agent_id) ?? [];
   const domainReports = reports.map((report) =>
     buildFoundryAgentOsDomainConformance(report, expectedAgents, flagshipMapping)
   );
@@ -234,7 +236,13 @@ export function buildFoundryAgentOsConformance(
     .filter((report) => report.standard_membership === 'unknown_non_standard_agent')
     .map((report) => report.canonical_agent_id)
     .filter((agentId): agentId is string => typeof agentId === 'string');
+  const frameworkCapabilityPackageIds = allDomainReports
+    .filter((report) => report.standard_membership === 'framework_capability_package')
+    .map((report) => report.canonical_agent_id)
+    .filter((agentId): agentId is string => typeof agentId === 'string');
   const missingAgents = expectedAgents.filter((agentId) => !reportedAgentIds.includes(agentId));
+  const missingFrameworkCapabilityPackages = expectedFrameworkCapabilityPackages
+    .filter((agentId) => !frameworkCapabilityPackageIds.includes(agentId));
   const missingClaimBlockers = [
     'default_read_root_is_current_owner_delta',
     'domain_authority_false_flags_on_opl_modules',
@@ -246,6 +254,7 @@ export function buildFoundryAgentOsConformance(
     .map((claim) => `foundry_agent_os_standard_claim_missing:${claim}`);
   const blockers = unique([
     ...missingAgents.map((agentId) => `foundry_agent_os_standard_agent_missing:${agentId}`),
+    ...missingFrameworkCapabilityPackages.map((agentId) => `foundry_agent_os_framework_capability_package_missing:${agentId}`),
     ...missingClaimBlockers,
     ...allDomainReports.flatMap((report) => report.blockers),
   ]);
@@ -259,9 +268,12 @@ export function buildFoundryAgentOsConformance(
     target_shape: standard.target_shape,
     source_pattern_ref: standard.source_pattern_ref,
     applies_to_domain_agents: expectedAgents,
+    framework_capability_package_ids: expectedFrameworkCapabilityPackages,
     observed_domain_agent_ids: reportedAgentIds,
+    observed_framework_capability_package_ids: frameworkCapabilityPackageIds,
     unknown_non_standard_agent_ids: unknownNonStandardAgentIds,
     missing_domain_agent_ids: missingAgents,
+    missing_framework_capability_package_ids: missingFrameworkCapabilityPackages,
     conformance_required_claims: standard.cross_agent_conformance_required_claims,
     forbidden_claims: standard.forbidden_claims,
     module_mapping: standard.opl_module_mapping,

@@ -86,6 +86,47 @@ export function validateFoundryAgentOsStandard(filePath: string, value: unknown)
     filePath,
   );
 
+  const frameworkCapabilityPackagesRaw = value.framework_capability_packages;
+  const frameworkCapabilityPackages = Array.isArray(frameworkCapabilityPackagesRaw)
+    ? frameworkCapabilityPackagesRaw.map((entry, index) => {
+        if (!isRecord(entry)) {
+          throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.framework_capability_packages entries must be objects.', {
+            file: filePath,
+            field: `foundry_agent_os_standard.framework_capability_packages[${index}]`,
+          });
+        }
+        return {
+          agent_id: expectString(entry.agent_id, `foundry_agent_os_standard.framework_capability_packages[${index}].agent_id`, filePath),
+          package_scope: expectString(entry.package_scope, `foundry_agent_os_standard.framework_capability_packages[${index}].package_scope`, filePath),
+          capability_pack_example: expectString(entry.capability_pack_example, `foundry_agent_os_standard.framework_capability_packages[${index}].capability_pack_example`, filePath),
+          authority_ref_examples: expectNonEmptyStringArray(entry.authority_ref_examples, `foundry_agent_os_standard.framework_capability_packages[${index}].authority_ref_examples`, filePath),
+          capability_contract_ref: expectString(entry.capability_contract_ref, `foundry_agent_os_standard.framework_capability_packages[${index}].capability_contract_ref`, filePath),
+          public_projection: expectString(entry.public_projection, `foundry_agent_os_standard.framework_capability_packages[${index}].public_projection`, filePath),
+          authority_boundary: validateFalseBoundaryRecord(
+            filePath,
+            entry.authority_boundary,
+            `foundry_agent_os_standard.framework_capability_packages[${index}].authority_boundary`,
+          ),
+        };
+      })
+    : [];
+  const frameworkCapabilityPackageIds = frameworkCapabilityPackages.map((entry) => entry.agent_id);
+  if (!frameworkCapabilityPackageIds.includes('opl-scholarskills')) {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.framework_capability_packages must include opl-scholarskills.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.framework_capability_packages',
+    });
+  }
+  for (const entry of frameworkCapabilityPackages) {
+    if (entry.agent_id === 'opl-scholarskills' && entry.package_scope !== 'framework_capability_package') {
+      throw new FrameworkContractError('contract_shape_invalid', 'ScholarSkills must stay a framework capability package.', {
+        file: filePath,
+        field: 'foundry_agent_os_standard.framework_capability_packages',
+        actual: entry.package_scope,
+      });
+    }
+  }
+
 const domainPackExamplesRaw = value.domain_pack_examples;
 const domainAuthorityKernelExamplesRaw = value.domain_authority_kernel_examples;
 const capabilityRegistryRaw = value.capability_registry_boundary;
@@ -389,6 +430,7 @@ const capabilityRegistryRaw = value.capability_registry_boundary;
     standard_agent_registry_ref: standardAgentRegistryRef,
     target_shape: targetShape,
     applies_to_domain_agents: appliesToDomainAgents,
+    framework_capability_packages: frameworkCapabilityPackages,
     domain_pack_examples: domainPackExamples,
     domain_authority_kernel_examples: domainAuthorityKernelExamples,
     new_agent_baseline_handoff_policy: {
