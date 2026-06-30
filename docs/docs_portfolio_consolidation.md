@@ -123,6 +123,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 - `docs/decisions.md` 可以保留决策日期日志，但被 supersede 的段落必须显式标注当前读法。
 - path-stable reference/spec 如果仍因 contract、human_doc 或 audit context 保留原路径，必须在索引或文件开头说明生命周期；不得恢复旧 provider、Gateway、frontdoor、compatibility、direct-entry 或 host-agent-only 叙述为 active plan。
 - 2026-06-03 起，`docs/active/current-state-vs-ideal-gap.md` 是 compact active gap plan；它不再承载 dated App/runtime/domain evidence ledger。相关归档见 [OPL Active Gap Plan Lifecycle Cleanup](./history/process/plans/2026-06-03-opl-active-gap-plan-lifecycle-cleanup.md)。2026-06-30 起，默认七仓非 live 功能/结构 gap 闭合时，该文档按 no-gap baton 维护；已完成功能/结构推进折回 [OPL family functional gap closure foldback](./history/process/plans/2026-06-30-opl-family-functional-gap-closure-foldback.md)。
+- 用户原始 8 条调研建议的当前 tracker 只允许作为 `current-state-vs-ideal-gap.md` 内的 compact audit index：保留主题、当前功能 / 结构闭环、后置 owner/evidence lane 和 completion audit 入口；不得追加 branch/worktree、receipt id、attempt id、workflow run、closeout transcript 或逐轮 readback proof。若某条建议重新变成 active gap，必须从 fresh repo truth 另开 lane，并把过程写入 history / runtime ledger / owner repo provenance。
 
 ## 七仓治理范围与目录状态
 
