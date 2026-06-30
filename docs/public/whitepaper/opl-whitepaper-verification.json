@@ -3,7 +3,7 @@
   "generated_at": "2026-06-29T00:00:00.000Z",
   "source_markdown": "docs/public/whitepaper/opl-whitepaper.md",
   "generated_pdf": "docs/public/whitepaper/opl-whitepaper.pdf",
-  "pdf_write_status": "updated_pdf",
+  "pdf_write_status": "preserved_existing_equivalent_pdf",
   "temp_markdown": "tmp/pdfs/opl-whitepaper/opl-whitepaper.pandoc.md",
   "rendered_dir": "tmp/pdfs/opl-whitepaper/rendered",
   "rendered_pages": 10,

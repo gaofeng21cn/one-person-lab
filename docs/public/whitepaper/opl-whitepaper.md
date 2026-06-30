@@ -2,6 +2,8 @@
 
 > 让复杂知识工作从一次问答走向持续交付
 
+<!-- Owner: `One Person Lab`; Purpose: `public_whitepaper_body_source`; State: `active_public_source`; Machine boundary: Human-readable whitepaper body source. Public artifact index and update workflow live in `docs/public/whitepaper/README.md`; generated PDF and verification JSON come from `npm run docs:whitepaper`; runtime, release, domain, production, owner-receipt, and current product truth stay in their owning contracts, source, CLI/API/read-model, runtime ledgers, receipts, and evidence surfaces. -->
+
 发布日期：2026-06-29
 
 适用对象：希望理解 OPL 能解决什么问题、怎样推进复杂工作、以及专业智能体如何协作的用户、合作者、早期采用者和技术决策者。
