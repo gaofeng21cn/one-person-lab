@@ -496,7 +496,7 @@ exit 2
 `);
 
   try {
-    const output = withCliTimeout('120000', () => runCli(['update', 'apply', '--component', 'agent_package_channel'], {
+    const output = withCliTimeout('120000', () => runCli(['update', 'apply', '--component', 'capability_packages'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: stateRoot,
@@ -635,9 +635,9 @@ exit 2
       path.join(stateRoot, 'managed-update-component-receipts.json'),
     );
     assert.equal(output.managed_update.execution.status, 'completed');
-    assert.equal(output.managed_update.execution.adapter_results[0].adapter_id, 'agent_package_channel_adapter');
+    assert.equal(output.managed_update.execution.adapter_results[0].adapter_id, 'capability_packages_adapter');
     assert.equal(output.managed_update.execution.adapter_results[0].status, 'completed');
-    assert.equal(output.managed_update.execution.adapter_results[0].reason, 'managed_modules_reconciled_and_capability_exposure_synced');
+    assert.equal(output.managed_update.execution.adapter_results[0].reason, 'managed_modules_reconciled_and_codex_surface_synced');
     assert.equal(output.managed_update.execution.adapter_results[0].apply_mode, 'auto_apply');
     assert.equal(output.managed_update.execution.adapter_results[0].status_detail.auto_apply_eligible, true);
     assert.equal(output.managed_update.execution.adapter_results[0].status_detail.app_background_safe, true);
@@ -653,21 +653,21 @@ exit 2
     assert.equal(output.managed_update.execution.adapter_results[0].result.apply_mode, 'auto_apply');
     assert.equal(output.managed_update.execution.adapter_results[0].result.app_background_safe, true);
     assert.equal(output.managed_update.execution.adapter_results[0].result.auto_apply_scope, 'clean_opl_managed_module_roots_only');
-    assert.equal(output.managed_update.execution.adapter_results[0].result.read_model_guidance.status_plane, 'opl update status --component agent_package_channel --json');
+    assert.equal(output.managed_update.execution.adapter_results[0].result.read_model_guidance.status_plane, 'opl update status --component capability_packages --json');
     assert.equal(
       output.managed_update.execution.adapter_results[0].result.read_model_guidance.component_receipt_ledger,
       path.join(stateRoot, 'managed-update-component-receipts.json'),
     );
     assert.deepEqual(
       output.managed_update.execution.adapter_results[0].post_apply_actions.map((entry) => entry.action_id),
-      ['reconcile_modules', 'sync_skills', 'capability_exposure'],
+      ['reconcile_modules', 'sync_skills', 'codex_surface'],
     );
     assert.deepEqual(
       output.managed_update.execution.adapter_results[0].post_apply_actions.map((entry) => entry.status),
       ['completed', 'completed', 'completed'],
     );
     const capabilityExposure = output.managed_update.execution.adapter_results[0].post_apply_actions.find((entry) => (
-      entry.action_id === 'capability_exposure'
+      entry.action_id === 'codex_surface'
     ));
     assert.deepEqual(
       (capabilityExposure?.result?.target_bound_scholarskills_sync as Record<string, unknown> | undefined),
@@ -679,7 +679,7 @@ exit 2
     );
     assert.equal(output.managed_update.execution.receipt_record.status, 'recorded');
     assert.equal(output.managed_update.execution.receipt_record.recorded_receipt_count, 1);
-    assert.equal(output.managed_update.execution.receipt_record.receipt_refs[0].startsWith('opl://managed-update/agent_package_channel/apply/'), true);
+    assert.equal(output.managed_update.execution.receipt_record.receipt_refs[0].startsWith('opl://managed-update/capability_packages/apply/'), true);
     assert.equal(fs.existsSync(path.join(stateRoot, 'managed-update-kernel.lock')), false);
     const receiptLedger = JSON.parse(
       fs.readFileSync(path.join(stateRoot, 'managed-update-component-receipts.json'), 'utf8'),
@@ -713,7 +713,7 @@ exit 2
       }>;
     };
     assert.equal(receiptLedger.receipts.length, 1);
-    assert.equal(receiptLedger.receipts[0].component_id, 'agent_package_channel');
+    assert.equal(receiptLedger.receipts[0].component_id, 'capability_packages');
     assert.equal(receiptLedger.receipts[0].operation, 'apply');
     assert.equal(receiptLedger.receipts[0].verify_result, 'passed');
     assert.equal(typeof receiptLedger.receipts[0].activated_at, 'string');
@@ -727,7 +727,7 @@ exit 2
     assert.equal(receiptLedger.receipts[0].status_detail.reload_status, 'recommended');
     assert.deepEqual(
       receiptLedger.receipts[0].post_apply_action_statuses.map((entry) => entry.action_id),
-      ['reconcile_modules', 'sync_skills', 'capability_exposure'],
+      ['reconcile_modules', 'sync_skills', 'codex_surface'],
     );
     assert.equal(receiptLedger.receipts[0].reload_guidance.reload_recommended, true);
     assert.deepEqual(receiptLedger.receipts[0].reload_guidance.reload_targets, [
@@ -737,7 +737,7 @@ exit 2
     assert.equal(receiptLedger.receipts[0].authority_boundary.can_write_domain_truth, false);
     assert.equal(typeof receiptLedger.receipts[0].adapter_result_ref, 'string');
     const agents = output.managed_update.components[0];
-    assert.equal(agents.component_id, 'agent_package_channel');
+    assert.equal(agents.component_id, 'capability_packages');
     assert.equal(agents.auto_apply.eligible, true);
     assert.equal(agents.auto_apply.app_background_safe, true);
     assert.equal(agents.receipt.last_receipt_ref, receiptLedger.receipts[0].receipt_ref);
@@ -768,7 +768,7 @@ exit 2
       'mas-head-sha',
     );
 
-    const status = withCliTimeout('120000', () => runCli(['update', 'status', '--component', 'agent_package_channel'], {
+    const status = withCliTimeout('120000', () => runCli(['update', 'status', '--component', 'capability_packages'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: stateRoot,
@@ -881,14 +881,14 @@ exit 2
   };
 
   try {
-    withCliTimeout('120000', () => runCli(['update', 'apply', '--component', 'agent_package_channel'], env));
+    withCliTimeout('120000', () => runCli(['update', 'apply', '--component', 'capability_packages'], env));
     assert.equal(
       JSON.parse(fs.readFileSync(path.join(moduleEnv.OPL_MODULES_ROOT, 'med-autoscience', 'opl-runtime-module.json'), 'utf8'))
         .source_git.head_sha,
       'mas-rollback-current-sha',
     );
 
-    const rollback = withCliTimeout('120000', () => runCli(['update', 'rollback', '--component', 'agent_package_channel'], env)) as {
+    const rollback = withCliTimeout('120000', () => runCli(['update', 'rollback', '--component', 'capability_packages'], env)) as {
       managed_update: {
         operation: string;
         execution: {
@@ -907,7 +907,7 @@ exit 2
     assert.equal(rollback.managed_update.execution.receipt_record.status, 'recorded');
     assert.equal(rollback.managed_update.execution.receipt_record.recorded_receipt_count, 1);
     assert.equal(rollback.managed_update.components[0].receipt.verify_result, 'passed');
-    assert.match(rollback.managed_update.components[0].receipt.rollback_ref ?? '', /^opl:\/\/managed-update\/agent_package_channel\/rollback\//);
+    assert.match(rollback.managed_update.components[0].receipt.rollback_ref ?? '', /^opl:\/\/managed-update\/capability_packages\/rollback\//);
     assert.equal(
       JSON.parse(fs.readFileSync(path.join(moduleEnv.OPL_MODULES_ROOT, 'med-autoscience', 'opl-runtime-module.json'), 'utf8'))
         .source_git.head_sha,

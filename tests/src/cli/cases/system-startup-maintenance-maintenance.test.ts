@@ -269,7 +269,7 @@ test('system startup-maintenance silently updates package-channel modules and sy
     ] as const) {
       const target = targets.get(moduleId);
       assert.equal(target?.status, 'completed');
-      assert.equal(target?.reason, 'agent_package_channel_refresh');
+      assert.equal(target?.reason, 'capability_packages_refresh');
       assert.equal(target?.action, 'update');
       assert.equal(target?.git_before?.sync_status, 'no_upstream');
       assert.equal(target?.result.module.git?.head_sha, headSha);

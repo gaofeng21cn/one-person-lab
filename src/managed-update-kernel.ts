@@ -1,5 +1,12 @@
+import os from 'node:os';
+
 import { readOplUpdateChannel, readOplWorkspaceRoot } from './system-preferences.ts';
 import type { FrameworkContracts } from './types.ts';
+import {
+  resolveMineruOpenApiTool,
+  resolveOfficeCliTool,
+  type OplCompanionToolSyncItem,
+} from './install-companions-parts/tools.ts';
 import { buildOplEnvironment } from './system-installation/environment.ts';
 import { buildOplModules } from './system-installation/modules.ts';
 import { scholarSkillsStateForAgentPackageChannel } from './system-installation/scholarskills-package-channel.ts';
@@ -15,15 +22,16 @@ import { managedUpdateLockFilePath, MANAGED_UPDATE_LOCK_STALE_AFTER_SECONDS } fr
 
 export type ManagedUpdateOperation = 'status' | 'check' | 'plan' | 'apply' | 'repair' | 'rollback';
 export type ManagedUpdateProviderId =
-  | 'app_binary'
-  | 'runtime_toolchain'
-  | 'agent_package_channel'
-  | 'capability_exposure';
+  | 'runtime_substrate'
+  | 'capability_packages'
+  | 'codex_surface'
+  | 'companion_tools';
 export type ManagedUpdateProviderAdapterId =
-  | 'electron_standard_updater'
-  | 'runtime_toolchain_adapter'
-  | 'agent_package_channel_adapter'
-  | 'codex_exposure_status_adapter';
+  | 'runtime_substrate_adapter'
+  | 'capability_packages_adapter'
+  | 'codex_surface_status_adapter'
+  | 'companion_tools_status_adapter';
+type ManagedUpdateComponentClass = ManagedUpdateProviderId;
 export type ManagedUpdateConditionStatus = 'True' | 'False' | 'Unknown';
 export type ManagedUpdateComponentState =
   | 'current'
@@ -54,6 +62,7 @@ type ManagedUpdateComponent = {
   component_id: string;
   provider_id: ManagedUpdateProviderId;
   adapter_id: ManagedUpdateProviderAdapterId;
+  component_class: ManagedUpdateComponentClass;
   policy_id: string;
   label: string;
   state: ManagedUpdateComponentState;
@@ -113,8 +122,15 @@ export type ManagedUpdateKernelInput = {
 };
 
 const COMPONENT_ALIASES: Record<string, string> = {
-  agent_packages: 'agent_package_channel',
-  agent_package_channel: 'agent_package_channel',
+  runtime_toolchain: 'runtime_substrate',
+  runtime_substrate: 'runtime_substrate',
+  codex_cli_fallback: 'runtime_substrate',
+  embedded_codex_executor: 'runtime_substrate',
+  agent_packages: 'capability_packages',
+  agent_package_channel: 'capability_packages',
+  capability_packages: 'capability_packages',
+  capability_exposure: 'codex_surface',
+  codex_surface: 'codex_surface',
 };
 
 const MANAGED_UPDATE_KERNEL_ID = 'opl_managed_updater_kernel';
@@ -300,84 +316,17 @@ function statusDetail(input: {
   };
 }
 
-function buildAppBinaryComponent(channel: string): ManagedUpdateComponent {
-  const postApplyHooks = ['replace_desktop_app_bundle_after_standard_updater_download'];
-  const detail = statusDetail({ component_state: 'current' });
-  const reloadGuidance = noReloadGuidance();
-  return {
-    component_id: 'app_binary',
-    provider_id: 'app_binary',
-    adapter_id: 'electron_standard_updater',
-    policy_id: 'user_visible_release_channel_check',
-    label: 'One Person Lab desktop App',
-    state: 'current',
-    channel,
-    current: {
-      source: 'app_release_standard_updater',
-      updater_metadata: ['latest-mac.yml', 'latest-arm64-mac.yml'],
-    },
-    target: null,
-    conditions: [
-      condition(
-        'BoundaryReady',
-        'True',
-        'DesktopAssetsOnly',
-        'Standard updater metadata is projected as desktop App assets only.',
-      ),
-    ],
-    lifecycle: KERNEL_LIFECYCLE,
-    post_apply_hooks: postApplyHooks,
-    auto_apply: noAutoApply('desktop_app_standard_updater_projection'),
-    status_detail: detail,
-    post_apply_guidance: {
-      required: false,
-      command_refs: [],
-      reload_guidance: reloadGuidance,
-    },
-    plan: {
-      action: 'none',
-      summary: 'Desktop App update checks stay in the App-owned standard updater.',
-      command_refs: [
-        readOnlyCommand(
-          'inspect_app_release_contract',
-          'opl update status --component app_binary --json',
-          'Read the App updater boundary projection.',
-        ),
-      ],
-    },
-    receipt: componentReceipt({
-      component_id: 'app_binary',
-      source_manifest_ref: 'github_release_standard_updater_metadata',
-      post_apply_hooks: postApplyHooks,
-      apply_mode: 'projection_only',
-      status_detail: detail,
-      reload_guidance: reloadGuidance,
-      content_identity_fields: ['release_tag', 'asset_sha256', 'updater_metadata_sha256'],
-    }),
-    authority_boundary: {
-      can_update_desktop_app_bundle: true,
-      can_update_full_first_install_assets: false,
-      can_update_domain_modules: false,
-      can_claim_domain_ready: false,
-    },
-    notes: [
-      'This projection exists so App binary updates appear in the same status plane.',
-      'Full first-install assets and managed agent packages are not standard updater targets.',
-    ],
-  };
-}
-
-function buildRuntimeToolchainComponent(systemEnvironment: Record<string, unknown>, channel: string): ManagedUpdateComponent {
+function buildRuntimeSubstrateComponent(systemEnvironment: Record<string, unknown>, channel: string): ManagedUpdateComponent {
   const coreEngines = asRecord(systemEnvironment.core_engines);
   const codex = asRecord(coreEngines?.codex);
-  const runtimeToolchain = asRecord(codex?.runtime_toolchain_updater);
+  const runtimeSubstrate = asRecord(codex?.runtime_substrate_updater) ?? asRecord(codex?.runtime_toolchain_updater);
   const installed = booleanValue(codex, 'installed') === true;
   const updateAvailable = booleanValue(codex, 'update_available') === true;
-  const runtimeLatestStatus = stringValue(runtimeToolchain, 'latest_version_status');
+  const runtimeLatestStatus = stringValue(runtimeSubstrate, 'latest_version_status');
   const binarySource = stringValue(codex, 'binary_source');
-  const currentPointer = runtimeToolchain?.current_root ?? null;
-  const stagedRoot = runtimeToolchain?.staging_root ?? null;
-  const rollbackPointer = runtimeToolchain?.rollback_pointer ?? null;
+  const currentPointer = runtimeSubstrate?.current_root ?? null;
+  const stagedRoot = runtimeSubstrate?.staging_root ?? null;
+  const rollbackPointer = runtimeSubstrate?.rollback_pointer ?? null;
   const state: ManagedUpdateComponentState =
     !installed
       ? 'failed_with_repair'
@@ -393,11 +342,12 @@ function buildRuntimeToolchainComponent(systemEnvironment: Record<string, unknow
   const reloadGuidance = noReloadGuidance();
 
   return {
-    component_id: 'runtime_toolchain',
-    provider_id: 'runtime_toolchain',
-    adapter_id: 'runtime_toolchain_adapter',
+    component_id: 'runtime_substrate',
+    provider_id: 'runtime_substrate',
+    adapter_id: 'runtime_substrate_adapter',
+    component_class: 'runtime_substrate',
     policy_id: 'silent_background_verified_stage_apply_on_next_restart',
-    label: 'App-owned runtime/toolchain layer',
+    label: 'App-owned runtime substrate',
     state,
     channel,
     current: {
@@ -409,7 +359,12 @@ function buildRuntimeToolchainComponent(systemEnvironment: Record<string, unknow
       current_pointer: currentPointer,
       staged_root: stagedRoot,
       rollback_pointer: rollbackPointer,
-      runtime_toolchain_updater: runtimeToolchain,
+      embedded_codex_executor: {
+        executor_id: 'embedded_codex_executor',
+        selected_binary_path: codex?.binary_path ?? null,
+        selected_binary_source: binarySource,
+      },
+      runtime_substrate_updater: runtimeSubstrate,
     },
     target: state === 'current'
       ? null
@@ -423,10 +378,10 @@ function buildRuntimeToolchainComponent(systemEnvironment: Record<string, unknow
       condition(
         'Ready',
         state === 'current' ? 'True' : 'False',
-        state === 'current' ? 'RuntimeToolchainCurrent' : 'RuntimeToolchainNeedsMaintenance',
+        state === 'current' ? 'RuntimeSubstrateCurrent' : 'RuntimeSubstrateNeedsMaintenance',
         state === 'current'
-          ? 'App-owned runtime/toolchain projection is current.'
-          : 'App-owned runtime/toolchain maintenance is available through controlled OPL commands.',
+          ? 'App-owned runtime substrate projection is current.'
+          : 'App-owned runtime substrate maintenance is available through controlled OPL commands.',
       ),
       condition(
         'GlobalMutationBlocked',
@@ -442,7 +397,7 @@ function buildRuntimeToolchainComponent(systemEnvironment: Record<string, unknow
       eligible: state !== 'current',
       app_background_safe: false,
       scope: 'app_owned_runtime_root_only',
-      command_ref: state === 'current' ? null : 'opl update apply --component runtime_toolchain --json',
+      command_ref: state === 'current' ? null : 'opl update apply --component runtime_substrate --json',
       blocked_reasons: [],
     },
     status_detail: detail,
@@ -454,14 +409,14 @@ function buildRuntimeToolchainComponent(systemEnvironment: Record<string, unknow
     plan: {
       action,
       summary: state === 'current'
-        ? 'No runtime/toolchain update is required.'
-        : 'Stage and verify App-owned runtime/toolchain payloads through startup maintenance or engine update.',
+        ? 'No runtime substrate update is required.'
+        : 'Stage and verify App-owned runtime substrate payloads through startup maintenance or engine update.',
       command_refs: state === 'current'
         ? [
           readOnlyCommand(
             'inspect_system_environment',
             'opl system --json',
-            'Read the runtime/toolchain environment projection.',
+            'Read the runtime substrate environment projection.',
           ),
         ]
         : [
@@ -471,14 +426,14 @@ function buildRuntimeToolchainComponent(systemEnvironment: Record<string, unknow
             'Stage, verify, and apply App-owned runtime maintenance without global tool mutation.',
           ),
           controlledCommand(
-            'update_codex_runtime_fallback',
+            'update_embedded_codex_executor',
             'opl engine update --engine codex --json',
-            'Refresh the App-owned Codex fallback when the selected toolchain is outdated.',
+            'Refresh the App-owned embedded Codex executor when the selected substrate is outdated.',
           ),
         ],
     },
     receipt: componentReceipt({
-      component_id: 'runtime_toolchain',
+      component_id: 'runtime_substrate',
       source_manifest_ref: 'app-runtime-update-channel.json',
       from_version: typeof codex?.version === 'string' ? codex.version : null,
       to_version: typeof codex?.latest_version === 'string' ? codex.latest_version : null,
@@ -499,7 +454,7 @@ function buildRuntimeToolchainComponent(systemEnvironment: Record<string, unknow
       can_claim_domain_ready: false,
     },
     notes: [
-      'Runtime/toolchain updates share the managed update kernel lifecycle but keep an App-owned runtime authority boundary.',
+      'Runtime substrate updates share the managed update kernel lifecycle but keep an App-owned runtime authority boundary.',
       'Compatible newer system tools may be selected at runtime after checks; they are not silently upgraded by OPL.',
     ],
   };
@@ -535,7 +490,7 @@ function moduleState(module: Record<string, unknown>): ManagedUpdateComponentSta
   return 'current';
 }
 
-function buildAgentPackageComponent(modules: Record<string, unknown>[], channel: string): ManagedUpdateComponent {
+function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], channel: string): ManagedUpdateComponent {
   const defaultModules = modules.filter((entry) => booleanValue(entry, 'default_install') === true);
   const moduleStates = defaultModules.map((entry) => ({
     module_id: stringValue(entry, 'module_id'),
@@ -596,11 +551,12 @@ function buildAgentPackageComponent(modules: Record<string, unknown>[], channel:
   });
 
   return {
-    component_id: 'agent_package_channel',
-    provider_id: 'agent_package_channel',
-    adapter_id: 'agent_package_channel_adapter',
+    component_id: 'capability_packages',
+    provider_id: 'capability_packages',
+    adapter_id: 'capability_packages_adapter',
+    component_class: 'capability_packages',
     policy_id: 'ordinary_user_non_development_silent_background',
-    label: 'OPL managed agent packages',
+    label: 'OPL managed capability packages',
     state,
     channel,
     current: {
@@ -619,9 +575,9 @@ function buildAgentPackageComponent(modules: Record<string, unknown>[], channel:
       condition(
         'Ready',
         state === 'current' ? 'True' : 'False',
-        state === 'current' ? 'AgentPackagesCurrent' : 'AgentPackageMaintenanceAvailable',
+        state === 'current' ? 'CapabilityPackagesCurrent' : 'CapabilityPackageMaintenanceAvailable',
         state === 'current'
-          ? 'Managed default agent and capability packages are current or have no clean update available.'
+          ? 'Managed default capability packages are current or have no clean update available.'
           : 'Managed package-channel maintenance is available for clean OPL module roots.',
       ),
       condition(
@@ -636,7 +592,7 @@ function buildAgentPackageComponent(modules: Record<string, unknown>[], channel:
         manualCount > 0 ? 'ManualSourceVisible' : 'CleanManagedRootsOnly',
         manualCount > 0
           ? 'At least one module is dirty, developer-sourced, or otherwise manual; silent update is blocked for that module.'
-          : 'Silent agent package updates are limited to clean OPL-managed module roots.',
+          : 'Silent capability package updates are limited to clean OPL-managed module roots.',
       ),
     ],
     lifecycle: KERNEL_LIFECYCLE,
@@ -646,7 +602,7 @@ function buildAgentPackageComponent(modules: Record<string, unknown>[], channel:
       eligible: autoApplyEligible,
       app_background_safe: cleanManagedScopeSafe,
       scope: 'clean_opl_managed_module_roots_only',
-      command_ref: autoApplyEligible ? 'opl update apply --component agent_package_channel --json' : null,
+      command_ref: autoApplyEligible ? 'opl update apply --component capability_packages --json' : null,
       blocked_reasons: manualCount > 0
         ? ['manual_or_developer_checkout_visible']
         : [],
@@ -662,9 +618,9 @@ function buildAgentPackageComponent(modules: Record<string, unknown>[], channel:
     plan: {
       action,
       summary: action === 'none'
-        ? 'No managed agent package maintenance is required.'
+        ? 'No managed capability package maintenance is required.'
         : action === 'manual_review'
-          ? 'Manual review is required before OPL can update one or more agent package roots.'
+          ? 'Manual review is required before OPL can update one or more capability package roots.'
           : 'Reconcile managed modules from the GHCR package channel, then sync Codex-visible skills and plugins.',
       command_refs: action === 'manual_review'
         ? [
@@ -696,7 +652,7 @@ function buildAgentPackageComponent(modules: Record<string, unknown>[], channel:
           ],
     },
     receipt: componentReceipt({
-      component_id: 'agent_package_channel',
+      component_id: 'capability_packages',
       source_manifest_ref: 'ghcr.io/gaofeng21cn/one-person-lab-manifest:stable',
       post_apply_hooks: postApplyHooks,
       apply_mode: cleanManagedScopeSafe ? 'auto_apply' : 'manual_required',
@@ -714,14 +670,14 @@ function buildAgentPackageComponent(modules: Record<string, unknown>[], channel:
       can_claim_quality_or_export_verdict: false,
     },
     notes: [
-      'GHCR package channel is the ordinary non-development source for managed agent and capability packages.',
+      'GHCR package channel is the ordinary non-development source for managed capability packages.',
       'Package-channel freshness does not claim domain readiness, artifact authority, quality verdict, or export readiness.',
     ],
   };
 }
 
-function buildCapabilityExposureComponent(agentPackages: ManagedUpdateComponent, channel: string): ManagedUpdateComponent {
-  const needsReload = agentPackages.plan.command_refs.some((entry) => entry.action_id === 'sync_codex_skills');
+function buildCodexSurfaceComponent(capabilityPackages: ManagedUpdateComponent, channel: string): ManagedUpdateComponent {
+  const needsReload = capabilityPackages.plan.command_refs.some((entry) => entry.action_id === 'sync_codex_skills');
   const postApplyHooks = ['sync_plugin_registry', 'sync_plugin_packaged_skills', 'sync_oma_generated_plugin_surface'];
   const reloadGuidance: ManagedUpdateReloadGuidance = needsReload
     ? {
@@ -740,11 +696,12 @@ function buildCapabilityExposureComponent(agentPackages: ManagedUpdateComponent,
     reload_status: needsReload ? 'recommended' : 'not_required',
   });
   return {
-    component_id: 'capability_exposure',
-    provider_id: 'capability_exposure',
-    adapter_id: 'codex_exposure_status_adapter',
+    component_id: 'codex_surface',
+    provider_id: 'codex_surface',
+    adapter_id: 'codex_surface_status_adapter',
+    component_class: 'codex_surface',
     policy_id: 'display_visibility_and_repair_actions_without_duplicate_semantics',
-    label: 'Codex plugin and skill exposure',
+    label: 'Codex plugin and skill surface',
     state: needsReload ? 'needs_reload' : 'current',
     channel,
     current: {
@@ -780,7 +737,7 @@ function buildCapabilityExposureComponent(agentPackages: ManagedUpdateComponent,
       eligible: needsReload,
       app_background_safe: needsReload,
       scope: 'codex_plugin_registry_and_skill_projection_only',
-      command_ref: needsReload ? 'opl update apply --component capability_exposure --json' : null,
+      command_ref: needsReload ? 'opl update apply --component codex_surface --json' : null,
       blocked_reasons: [],
     },
     status_detail: detail,
@@ -816,7 +773,7 @@ function buildCapabilityExposureComponent(agentPackages: ManagedUpdateComponent,
         ],
     },
     receipt: componentReceipt({
-      component_id: 'capability_exposure',
+      component_id: 'codex_surface',
       source_manifest_ref: 'module_post_apply_projection',
       post_apply_hooks: postApplyHooks,
       apply_mode: needsReload ? 'auto_apply' : 'projection_only',
@@ -833,7 +790,160 @@ function buildCapabilityExposureComponent(agentPackages: ManagedUpdateComponent,
       can_claim_domain_ready: false,
     },
     notes: [
-      'Capability exposure is a post-apply projection, not a separate agent update source.',
+      'Codex surface is a capability packages post-apply projection, not a separate package update source.',
+    ],
+  };
+}
+
+function companionToolState(tool: OplCompanionToolSyncItem): ManagedUpdateComponentState {
+  if (tool.status === 'ready' || tool.status === 'installed') {
+    return 'current';
+  }
+  if (tool.status === 'missing') {
+    return 'failed_with_repair';
+  }
+  return 'skipped_manual_required';
+}
+
+function buildCompanionToolsComponent(channel: string): ManagedUpdateComponent {
+  const home = process.env.HOME?.trim() || os.homedir();
+  const tools: OplCompanionToolSyncItem[] = [
+    resolveOfficeCliTool(home) ?? {
+      tool_id: 'officecli',
+      binary_path: null,
+      version: null,
+      status: 'missing',
+      action: 'none',
+      note: 'officecli binary is not available.',
+    },
+    resolveMineruOpenApiTool(home) ?? {
+      tool_id: 'mineru-open-api',
+      binary_path: null,
+      version: null,
+      status: 'missing',
+      action: 'none',
+      note: 'mineru-open-api binary is not available.',
+    },
+  ];
+  const toolStates = tools.map((tool) => ({
+    tool_id: tool.tool_id === 'mineru-open-api' ? 'mineru_open_api' : tool.tool_id,
+    binary_path: tool.binary_path,
+    version: tool.version,
+    status: tool.status,
+    state: companionToolState(tool),
+    action: tool.action,
+    note: tool.note,
+  }));
+  const missingCount = toolStates.filter((entry) => entry.state === 'failed_with_repair').length;
+  const manualCount = toolStates.filter((entry) => entry.state === 'skipped_manual_required').length;
+  const state: ManagedUpdateComponentState = manualCount > 0
+    ? 'skipped_manual_required'
+    : missingCount > 0
+      ? 'failed_with_repair'
+      : 'current';
+  const action = state === 'current' ? 'none' : state === 'failed_with_repair' ? 'install' : 'manual_review';
+  const detail = statusDetail({
+    component_state: state,
+    clean_managed_targets_count: toolStates.length - missingCount - manualCount,
+    manual_required_targets_count: manualCount,
+    post_apply_status: state === 'current' ? 'skipped' : 'not_run',
+  });
+  const reloadGuidance = noReloadGuidance();
+
+  return {
+    component_id: 'companion_tools',
+    provider_id: 'companion_tools',
+    adapter_id: 'companion_tools_status_adapter',
+    component_class: 'companion_tools',
+    policy_id: 'recommended_companion_tools_observe_or_managed_install',
+    label: 'Recommended companion tools',
+    state,
+    channel,
+    current: {
+      source: 'opl_companion_skill_sync_tools',
+      tools: toolStates,
+    },
+    target: state === 'current'
+      ? null
+      : {
+        tools: toolStates
+          .filter((entry) => entry.state !== 'current')
+          .map((entry) => entry.tool_id),
+      },
+    conditions: [
+      condition(
+        'ToolsReady',
+        state === 'current' ? 'True' : 'False',
+        state === 'current' ? 'CompanionToolsCurrent' : 'CompanionToolsNeedMaintenance',
+        state === 'current'
+          ? 'Recommended companion tools are available.'
+          : 'Recommended companion tools are separate from the runtime substrate and need companion maintenance.',
+      ),
+    ],
+    lifecycle: KERNEL_LIFECYCLE,
+    post_apply_hooks: ['inspect_companion_tools'],
+    auto_apply: {
+      mode: state === 'current' ? 'projection_only' : 'manual_required',
+      eligible: false,
+      app_background_safe: false,
+      scope: 'recommended_companion_tools_only',
+      command_ref: null,
+      blocked_reasons: state === 'current' ? [] : ['companion_tool_install_requires_explicit_companion_apply'],
+    },
+    status_detail: detail,
+    post_apply_guidance: {
+      required: state !== 'current',
+      command_refs: state === 'current' ? [] : ['opl skill companion status --json'],
+      reload_guidance: reloadGuidance,
+    },
+    plan: {
+      action,
+      summary: state === 'current'
+        ? 'No companion tool maintenance is required.'
+        : 'Inspect recommended companion tools separately from the runtime substrate.',
+      command_refs: state === 'current'
+        ? [
+          readOnlyCommand(
+            'inspect_companion_tools',
+            'opl skill companion status --json',
+            'Read companion tool status without changing user skill configuration.',
+          ),
+        ]
+        : [
+          manualCommand(
+            'inspect_companion_tools',
+            'opl skill companion status --json',
+            'Inspect missing or failed recommended companion tools.',
+          ),
+          manualCommand(
+            'apply_companion_tools',
+            'opl skill companion apply --mode managed --json',
+            'Install recommended companion tools only through the companion skill route.',
+          ),
+        ],
+    },
+    receipt: componentReceipt({
+      component_id: 'companion_tools',
+      source_manifest_ref: 'opl_companion_skill_sync_tools',
+      post_apply_hooks: ['inspect_companion_tools'],
+      apply_mode: state === 'current' ? 'projection_only' : 'manual_required',
+      status_detail: detail,
+      reload_guidance: reloadGuidance,
+      repair_action: state === 'current' ? null : 'inspect_companion_tools',
+      content_identity_fields: ['tool_id', 'binary_path', 'version'],
+    }),
+    authority_boundary: {
+      can_install_companion_tools: true,
+      can_mutate_runtime_substrate: false,
+      can_mutate_homebrew: false,
+      can_mutate_global_npm: false,
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_claim_domain_ready: false,
+    },
+    notes: [
+      'Companion tools are status-classified separately from the runtime substrate.',
+      'The managed update kernel may project companion tool status but does not turn tool availability into domain truth or owner receipts.',
     ],
   };
 }
@@ -891,12 +1001,12 @@ export async function buildManagedUpdateKernelProjection(
     ...(modulesPayload.modules as Record<string, unknown>[]),
     scholarSkillsStateForAgentPackageChannel() as unknown as Record<string, unknown>,
   ];
-  const appBinary = buildAppBinaryComponent(channel);
-  const runtimeToolchain = buildRuntimeToolchainComponent(environment, channel);
-  const agentPackages = buildAgentPackageComponent(modules, channel);
-  const capabilityExposure = buildCapabilityExposureComponent(agentPackages, channel);
+  const runtimeSubstrate = buildRuntimeSubstrateComponent(environment, channel);
+  const capabilityPackages = buildCapabilityPackagesComponent(modules, channel);
+  const codexSurface = buildCodexSurfaceComponent(capabilityPackages, channel);
+  const companionTools = buildCompanionToolsComponent(channel);
   const selectedComponents = filterComponents(
-    [appBinary, runtimeToolchain, agentPackages, capabilityExposure],
+    [runtimeSubstrate, capabilityPackages, codexSurface, companionTools],
     input.componentId,
   );
 
@@ -937,6 +1047,7 @@ export async function buildManagedUpdateKernelProjection(
         can_mutate_app_owned_runtime_root: false,
         can_silently_update_clean_managed_modules: false,
         can_sync_codex_plugin_skill_projection: false,
+        can_install_companion_tools: false,
         can_mutate_user_global_homebrew: false,
         can_mutate_user_global_npm: false,
         can_mutate_system_path_tools: false,
@@ -948,7 +1059,7 @@ export async function buildManagedUpdateKernelProjection(
         can_claim_quality_or_export_verdict: false,
       },
       notes: [
-        'This kernel unifies update status, plan, receipt, and repair projections across App binary, runtime/toolchain, agent packages, and Codex capability exposure.',
+        'This kernel unifies update status, plan, receipt, and repair projections across runtime substrate, capability packages, Codex surface, and companion tools.',
         'Real artifact fetch/verify/stage/activate remains provider-specific; this surface exposes the shared state machine and safe action refs.',
         'Package freshness and runtime maintenance do not imply domain readiness, owner receipt authority, artifact authority, quality verdict, or export readiness.',
       ],

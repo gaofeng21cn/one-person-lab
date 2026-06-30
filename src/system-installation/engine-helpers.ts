@@ -18,7 +18,7 @@ import {
 
 const DEFAULT_MINIMUM_CODEX_CLI_VERSION = '0.125.0';
 const DEFAULT_CODEX_LATEST_TIMEOUT_MS = 5000;
-const CODEX_RUNTIME_UPDATER_VERSION = 'opl-runtime-toolchain-updater.v1';
+const CODEX_RUNTIME_UPDATER_VERSION = 'opl-runtime-substrate-updater.v1';
 const CODEX_PLATFORM_TARGETS = {
   'darwin:arm64': {
     packageName: '@openai/codex-darwin-arm64',
@@ -255,7 +255,7 @@ function inspectRuntimeCodexToolchain(
   const latestPolicy = resolveLatestVersionStatus(currentPolicy.parsed_version, latestVersion);
 
   return {
-    surface_kind: 'opl_runtime_toolchain_updater',
+    surface_kind: 'opl_runtime_substrate_updater',
     updater_version: CODEX_RUNTIME_UPDATER_VERSION,
     owner: 'opl_app_runtime',
     target_toolchain: 'codex_cli',
@@ -423,7 +423,7 @@ export function resolveCodexVersion(options: { skipLatestLookup?: boolean } = {}
       candidates: [],
       issues: ['codex_cli_missing'],
       diagnostics: [],
-      runtime_toolchain_updater: inspectRuntimeCodexToolchain(minimumVersion, null),
+      runtime_substrate_updater: inspectRuntimeCodexToolchain(minimumVersion, null),
     };
   }
 
@@ -464,7 +464,7 @@ export function resolveCodexVersion(options: { skipLatestLookup?: boolean } = {}
     candidates,
     issues: blockingIssues,
     diagnostics,
-    runtime_toolchain_updater: inspectRuntimeCodexToolchain(minimumVersion, latestVersion),
+    runtime_substrate_updater: inspectRuntimeCodexToolchain(minimumVersion, latestVersion),
   };
 }
 
@@ -863,7 +863,7 @@ function runBuiltinCodexRuntimeInstallOrUpdate(cwd?: string) {
         installResult.stderr,
         JSON.stringify({
           opl_runtime_codex_update: {
-            surface_kind: 'opl_runtime_toolchain_update_receipt',
+            surface_kind: 'opl_runtime_substrate_update_receipt',
             updater_version: CODEX_RUNTIME_UPDATER_VERSION,
             owner: 'opl_app_runtime',
             target_toolchain: 'codex_cli',
@@ -899,7 +899,7 @@ function runBuiltinCodexRuntimeInstallOrUpdate(cwd?: string) {
         installResult.stderr,
         JSON.stringify({
           opl_runtime_codex_update: {
-            surface_kind: 'opl_runtime_toolchain_update_receipt',
+            surface_kind: 'opl_runtime_substrate_update_receipt',
             updater_version: CODEX_RUNTIME_UPDATER_VERSION,
             owner: 'opl_app_runtime',
             target_toolchain: 'codex_cli',

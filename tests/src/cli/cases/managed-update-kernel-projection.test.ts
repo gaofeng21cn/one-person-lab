@@ -7,6 +7,8 @@ function readManagedUpdateKernelContract() {
       'utf8',
     ),
   ) as {
+    components: string[];
+    component_classes: string[];
     providers: Array<{
       provider_id: string;
       controlled_execution_path?: string;
@@ -30,7 +32,7 @@ function readManagedUpdateKernelContract() {
         reload_status_values: string[];
       };
       reload_guidance_shape: { required_fields: string[]; reload_targets: string[] };
-      runtime_toolchain_adapter_result_shape: {
+      runtime_substrate_adapter_result_shape: {
         required_fields: string[];
         controlled_execution_path: string;
       };
@@ -40,23 +42,35 @@ function readManagedUpdateKernelContract() {
 
 test('managed update kernel contract keeps runtime and agent post-apply execution shapes explicit', () => {
   const contract = readManagedUpdateKernelContract();
-  const runtime = contract.providers.find((entry) => entry.provider_id === 'runtime_toolchain');
+  assert.deepEqual(contract.components, [
+    'runtime_substrate',
+    'capability_packages',
+    'codex_surface',
+    'companion_tools',
+  ]);
+  assert.deepEqual(contract.component_classes, contract.components);
+  assert.equal(
+    contract.providers.some((entry) => entry.provider_id === 'app_binary'),
+    false,
+  );
+
+  const runtime = contract.providers.find((entry) => entry.provider_id === 'runtime_substrate');
   assert.ok(runtime);
   assert.equal(runtime.controlled_execution_path, 'opl system startup-maintenance --json');
   assert.equal(runtime.repair_action, 'run_startup_maintenance');
   assert.equal(runtime.rollback_action, 'restart_app_with_previous_runtime_pointer_or_run_startup_maintenance');
 
-  const agents = contract.providers.find((entry) => entry.provider_id === 'agent_package_channel');
+  const agents = contract.providers.find((entry) => entry.provider_id === 'capability_packages');
   assert.ok(agents);
   assert.equal(agents.auto_apply?.mode, 'auto_apply');
   assert.equal(agents.auto_apply?.app_background_safe, true);
-  assert.equal(agents.auto_apply?.command_ref, 'opl update apply --component agent_package_channel --json');
+  assert.equal(agents.auto_apply?.command_ref, 'opl update apply --component capability_packages --json');
   assert.equal(agents.auto_apply?.eligible_scope, 'clean_opl_managed_module_roots_only');
   assert.equal(agents.auto_apply?.blocked_when.includes('dirty checkout'), true);
   assert.deepEqual(agents.post_apply_actions, [
     'reconcile_modules',
     'sync_skills',
-    'capability_exposure',
+    'codex_surface',
   ]);
   assert.deepEqual(contract.runner_result_shape.adapter_post_apply_action_shape.required_fields, [
     'action_id',
@@ -93,15 +107,15 @@ test('managed update kernel contract keeps runtime and agent post-apply executio
     'one_person_lab_app',
     'codex_plugin_cache',
   ]);
-  assert.deepEqual(contract.runner_result_shape.runtime_toolchain_adapter_result_shape.required_fields, [
+  assert.deepEqual(contract.runner_result_shape.runtime_substrate_adapter_result_shape.required_fields, [
     'action',
     'receipt_ref',
     'rollback_ref',
     'repair_action',
   ]);
   assert.equal(
-    contract.runner_result_shape.runtime_toolchain_adapter_result_shape.controlled_execution_path,
-    'startup_maintenance_runtime_toolchain_adapter',
+    contract.runner_result_shape.runtime_substrate_adapter_result_shape.controlled_execution_path,
+    'startup_maintenance_runtime_substrate_adapter',
   );
 });
 
@@ -259,7 +273,7 @@ exit 2
     assert.equal(output.managed_update.authority_boundary.can_claim_quality_or_export_verdict, false);
     assert.deepEqual(
       output.managed_update.components.map((entry) => entry.component_id),
-      ['app_binary', 'runtime_toolchain', 'agent_package_channel', 'capability_exposure'],
+      ['runtime_substrate', 'capability_packages', 'codex_surface', 'companion_tools'],
     );
     assert.equal(
       output.managed_update.components.every((component) =>
@@ -274,10 +288,10 @@ exit 2
       true,
     );
 
-    const runtime = output.managed_update.components.find((entry) => entry.component_id === 'runtime_toolchain');
+    const runtime = output.managed_update.components.find((entry) => entry.component_id === 'runtime_substrate');
     assert.ok(runtime);
-    assert.equal(runtime.provider_id, 'runtime_toolchain');
-    assert.equal(runtime.adapter_id, 'runtime_toolchain_adapter');
+    assert.equal(runtime.provider_id, 'runtime_substrate');
+    assert.equal(runtime.adapter_id, 'runtime_substrate_adapter');
     assert.equal(runtime.policy_id, 'silent_background_verified_stage_apply_on_next_restart');
     assert.equal(runtime.state, 'update_available');
     assert.equal(typeof runtime.current.current_pointer, 'string');
@@ -292,16 +306,16 @@ exit 2
     assert.equal(runtime.authority_boundary.can_mutate_homebrew, false);
     assert.equal(runtime.authority_boundary.can_mutate_global_npm, false);
 
-    const agents = output.managed_update.components.find((entry) => entry.component_id === 'agent_package_channel');
+    const agents = output.managed_update.components.find((entry) => entry.component_id === 'capability_packages');
     assert.ok(agents);
-    assert.equal(agents.provider_id, 'agent_package_channel');
-    assert.equal(agents.adapter_id, 'agent_package_channel_adapter');
+    assert.equal(agents.provider_id, 'capability_packages');
+    assert.equal(agents.adapter_id, 'capability_packages_adapter');
     assert.equal(agents.policy_id, 'ordinary_user_non_development_silent_background');
     assert.equal(agents.current.tag_role, 'selector_only');
     assert.equal(agents.auto_apply.mode, 'auto_apply');
     assert.equal(agents.auto_apply.eligible, true);
     assert.equal(agents.auto_apply.app_background_safe, true);
-    assert.equal(agents.auto_apply.command_ref, 'opl update apply --component agent_package_channel --json');
+    assert.equal(agents.auto_apply.command_ref, 'opl update apply --component capability_packages --json');
     assert.equal(agents.auto_apply.scope, 'clean_opl_managed_module_roots_only');
     assert.equal(agents.status_detail.auto_apply_eligible, true);
     assert.equal(agents.status_detail.app_background_safe, true);
@@ -327,14 +341,19 @@ exit 2
     assert.equal(agents.authority_boundary.can_overwrite_dirty_checkout, false);
     assert.equal(agents.authority_boundary.can_write_domain_truth, false);
 
-    const exposure = output.managed_update.components.find((entry) => entry.component_id === 'capability_exposure');
+    const exposure = output.managed_update.components.find((entry) => entry.component_id === 'codex_surface');
     assert.ok(exposure);
-    assert.equal(exposure.adapter_id, 'codex_exposure_status_adapter');
+    assert.equal(exposure.adapter_id, 'codex_surface_status_adapter');
     assert.equal(exposure.receipt.source_manifest_ref, 'module_post_apply_projection');
     assert.equal(
       exposure.conditions.some((entry) => entry.type === 'DerivedProjection' && entry.status === 'True'),
       true,
     );
+
+    const companionTools = output.managed_update.components.find((entry) => entry.component_id === 'companion_tools');
+    assert.ok(companionTools);
+    assert.equal(companionTools.adapter_id, 'companion_tools_status_adapter');
+    assert.equal(companionTools.current.source, 'opl_companion_skill_sync_tools');
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
@@ -353,7 +372,7 @@ exit 2
 `);
 
   try {
-    const output = runCli(['update', 'plan', '--component', 'agent_package_channel'], {
+    const output = runCli(['update', 'plan', '--component', 'capability_packages'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: path.join(homeRoot, 'state'),
@@ -385,11 +404,11 @@ exit 2
     };
 
     assert.equal(output.managed_update.operation, 'plan');
-    assert.equal(output.managed_update.requested_component_id, 'agent_package_channel');
+    assert.equal(output.managed_update.requested_component_id, 'capability_packages');
     assert.equal(output.managed_update.components.length, 1);
     const agents = output.managed_update.components[0];
-    assert.equal(agents.component_id, 'agent_package_channel');
-    assert.equal(agents.provider_id, 'agent_package_channel');
+    assert.equal(agents.component_id, 'capability_packages');
+    assert.equal(agents.provider_id, 'capability_packages');
     assert.equal(agents.receipt.schema_version, 'opl_managed_update_component_receipt.v1');
     assert.equal(agents.receipt.source_manifest_ref, 'ghcr.io/gaofeng21cn/one-person-lab-manifest:stable');
     assert.equal(agents.receipt.content_identity_fields.includes('digest'), true);
@@ -401,7 +420,7 @@ exit 2
     assert.equal(agents.receipt.reload_guidance.reload_recommended, true);
     assert.equal(agents.auto_apply.eligible, true);
     assert.equal(agents.auto_apply.app_background_safe, true);
-    assert.equal(agents.auto_apply.command_ref, 'opl update apply --component agent_package_channel --json');
+    assert.equal(agents.auto_apply.command_ref, 'opl update apply --component capability_packages --json');
     assert.deepEqual(agents.post_apply_guidance.command_refs, [
       'opl connect reconcile-modules --json',
       'opl connect sync-skills --json',
@@ -446,8 +465,8 @@ exit 2
 
     assert.equal(output.managed_update.requested_component_id, 'agent_packages');
     assert.equal(output.managed_update.components.length, 1);
-    assert.equal(output.managed_update.components[0].component_id, 'agent_package_channel');
-    assert.equal(output.managed_update.components[0].provider_id, 'agent_package_channel');
+    assert.equal(output.managed_update.components[0].component_id, 'capability_packages');
+    assert.equal(output.managed_update.components[0].provider_id, 'capability_packages');
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });

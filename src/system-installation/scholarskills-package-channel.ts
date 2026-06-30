@@ -363,7 +363,7 @@ export function runScholarSkillsSourceMaintenance(): ScholarSkillsSourceTarget {
       action,
       git_after: gitAfter,
       result: {
-        source: 'agent_package_channel',
+        source: 'capability_packages',
         source_ready: true,
         source_root: inspection.managed_checkout_path,
         source_head_sha: gitAfter?.head_sha ?? null,

@@ -23,7 +23,7 @@ test('update apply reports lock contention without running a parallel writer', (
   );
 
   try {
-    const failure = runCliFailure(['update', 'apply', '--component', 'agent_package_channel'], {
+    const failure = runCliFailure(['update', 'apply', '--component', 'capability_packages'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: stateRoot,

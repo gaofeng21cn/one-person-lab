@@ -51,19 +51,10 @@
   },
   "providers": [
     {
-      "provider_id": "app_binary",
-      "adapter_id": "electron_standard_updater",
-      "owner": "one-person-lab-app",
-      "role": "desktop_app_standard_updater_projection",
-      "authority": "App release metadata and Electron updater assets remain App-owned.",
-      "default_policy": "background_download_then_user_restart",
-      "mutation_scope": "desktop_app_bundle_only"
-    },
-    {
-      "provider_id": "runtime_toolchain",
-      "adapter_id": "runtime_toolchain_adapter",
+      "provider_id": "runtime_substrate",
+      "adapter_id": "runtime_substrate_adapter",
       "owner": "one-person-lab-app-and-opl-framework",
-      "role": "app_owned_runtime_fallback_and_toolchain_layer",
+      "role": "app_owned_runtime_substrate_with_embedded_codex_executor",
       "authority": "App-owned runtime roots, current pointer, staged root, health smoke, and rollback pointer.",
       "default_policy": "silent_stage_apply_on_restart_or_startup_maintenance",
       "mutation_scope": "app_owned_runtime_root_only",
@@ -72,8 +63,8 @@
       "rollback_action": "restart_app_with_previous_runtime_pointer_or_run_startup_maintenance"
     },
     {
-      "provider_id": "agent_package_channel",
-      "adapter_id": "agent_package_channel_adapter",
+      "provider_id": "capability_packages",
+      "adapter_id": "capability_packages_adapter",
       "owner": "one-person-lab-managed-modules",
       "role": "GHCR module package channel for MAS/MAG/RCA/OMA ordinary users",
       "authority": "GHCR tag selects a channel target; digest or sha identifies installed content.",
@@ -82,7 +73,7 @@
       "auto_apply": {
         "mode": "auto_apply",
         "app_background_safe": true,
-        "command_ref": "opl update apply --component agent_package_channel --json",
+        "command_ref": "opl update apply --component capability_packages --json",
         "eligible_scope": "clean_opl_managed_module_roots_only",
         "eligible_when": [
           "default managed module root is missing and can be installed into the managed root",
@@ -102,26 +93,68 @@
       "post_apply_actions": [
         "reconcile_modules",
         "sync_skills",
-        "capability_exposure"
+        "codex_surface"
       ]
     },
     {
-      "provider_id": "capability_exposure",
-      "adapter_id": "codex_exposure_status_adapter",
+      "provider_id": "codex_surface",
+      "adapter_id": "codex_surface_status_adapter",
       "owner": "one-person-lab-connect",
       "role": "Codex plugin registry, plugin-packaged skills, and generated OMA plugin surface projection",
       "authority": "Derived exposure from managed module state, not a second domain truth source.",
       "default_policy": "post_apply_sync_then_reload_prompt_when_cache_changes",
       "mutation_scope": "codex_plugin_registry_and_skill_projection_only"
+    },
+    {
+      "provider_id": "companion_tools",
+      "adapter_id": "companion_tools_status_adapter",
+      "owner": "one-person-lab-companion-tools",
+      "role": "recommended Office and document extraction tool status class",
+      "authority": "Companion tools such as officecli and mineru_open_api are tool availability, not runtime substrate or domain truth.",
+      "default_policy": "manual_companion_status_or_explicit_companion_apply",
+      "mutation_scope": "recommended_companion_tools_only"
     }
   ],
   "components": [
-    "app_binary",
-    "runtime_toolchain",
-    "agent_package_channel",
-    "capability_exposure"
+    "runtime_substrate",
+    "capability_packages",
+    "codex_surface",
+    "companion_tools"
   ],
-  "runtime_toolchain_required_projection_fields": [
+  "component_classes": [
+    "runtime_substrate",
+    "capability_packages",
+    "codex_surface",
+    "companion_tools"
+  ],
+  "legacy_component_aliases": [
+    {
+      "legacy_component_id": "runtime_toolchain",
+      "component_id": "runtime_substrate",
+      "scope": "transition_cli_selector_only"
+    },
+    {
+      "legacy_component_id": "codex_cli_fallback",
+      "component_id": "runtime_substrate",
+      "scope": "transition_cli_selector_only"
+    },
+    {
+      "legacy_component_id": "agent_packages",
+      "component_id": "capability_packages",
+      "scope": "transition_cli_selector_only"
+    },
+    {
+      "legacy_component_id": "agent_package_channel",
+      "component_id": "capability_packages",
+      "scope": "transition_cli_selector_only"
+    },
+    {
+      "legacy_component_id": "capability_exposure",
+      "component_id": "codex_surface",
+      "scope": "transition_cli_selector_only"
+    }
+  ],
+  "runtime_substrate_required_projection_fields": [
     "current_pointer",
     "staged_root",
     "rollback_pointer"
@@ -215,14 +248,14 @@
         "codex_plugin_cache"
       ]
     },
-    "runtime_toolchain_adapter_result_shape": {
+    "runtime_substrate_adapter_result_shape": {
       "required_fields": [
         "action",
         "receipt_ref",
         "rollback_ref",
         "repair_action"
       ],
-      "controlled_execution_path": "startup_maintenance_runtime_toolchain_adapter"
+      "controlled_execution_path": "startup_maintenance_runtime_substrate_adapter"
     },
     "receipt_ledger_file": "managed-update-component-receipts.json",
     "lock_file": "managed-update-kernel.lock"

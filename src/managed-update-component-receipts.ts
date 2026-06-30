@@ -268,12 +268,35 @@ function normalizeOperation(value: unknown): ManagedUpdateOperation | null {
 }
 
 function normalizeAdapterId(value: unknown): ManagedUpdateProviderAdapterId | null {
-  return value === 'electron_standard_updater'
-    || value === 'runtime_toolchain_adapter'
-    || value === 'agent_package_channel_adapter'
-    || value === 'codex_exposure_status_adapter'
+  if (value === 'runtime_toolchain_adapter') {
+    return 'runtime_substrate_adapter';
+  }
+  if (value === 'agent_package_channel_adapter') {
+    return 'capability_packages_adapter';
+  }
+  if (value === 'codex_exposure_status_adapter') {
+    return 'codex_surface_status_adapter';
+  }
+  return value === 'runtime_substrate_adapter'
+    || value === 'capability_packages_adapter'
+    || value === 'codex_surface_status_adapter'
+    || value === 'companion_tools_status_adapter'
     ? value
     : null;
+}
+
+function normalizeComponentId(value: unknown) {
+  const componentId = optionalString(value);
+  if (componentId === 'runtime_toolchain' || componentId === 'codex_cli_fallback') {
+    return 'runtime_substrate';
+  }
+  if (componentId === 'agent_packages' || componentId === 'agent_package_channel') {
+    return 'capability_packages';
+  }
+  if (componentId === 'capability_exposure') {
+    return 'codex_surface';
+  }
+  return componentId;
 }
 
 function normalizeReceipt(value: unknown): ManagedUpdateComponentReceipt | null {
@@ -282,8 +305,8 @@ function normalizeReceipt(value: unknown): ManagedUpdateComponentReceipt | null 
   }
   const receiptRef = optionalString(value.receipt_ref);
   const operation = normalizeOperation(value.operation);
-  const componentId = optionalString(value.component_id);
-  const providerId = optionalString(value.provider_id);
+  const componentId = normalizeComponentId(value.component_id);
+  const providerId = normalizeComponentId(value.provider_id);
   const adapterId = normalizeAdapterId(value.adapter_id);
   const activatedAt = optionalString(value.activated_at);
   if (!receiptRef || !operation || !componentId || !providerId || !adapterId || !activatedAt) {

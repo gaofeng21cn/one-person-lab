@@ -362,7 +362,7 @@ exit 65
     assert.equal(payload.managed_update.surface_id, 'opl_managed_updater_kernel');
     assert.deepEqual(
       payload.managed_update.components.map((component: { component_id: string }) => component.component_id),
-      ['app_binary', 'runtime_toolchain', 'agent_package_channel', 'capability_exposure'],
+      ['runtime_substrate', 'capability_packages', 'codex_surface', 'companion_tools'],
     );
     assert.equal(result.stderr, '');
     assert.equal(fs.readFileSync(capturePath, 'utf8').trim(), '--version');

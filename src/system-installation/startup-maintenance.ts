@@ -43,7 +43,7 @@ type StartupMaintenanceEngineTarget = {
 type StartupMaintenanceTarget = StartupMaintenanceModuleTarget | StartupMaintenanceEngineTarget;
 type StartupMaintenanceFrameworkTarget = ReturnType<typeof runOplFrameworkSelfUpdate>;
 type StartupMaintenanceCapabilityTarget = ReturnType<typeof runScholarSkillsSourceMaintenance>;
-type StartupMaintenanceScope = 'all' | 'runtime_toolchain';
+type StartupMaintenanceScope = 'all' | 'runtime_substrate';
 
 function buildTarget(
   module: ModuleStatus,
@@ -107,7 +107,7 @@ function buildManualReason(module: ModuleStatus) {
 
 function buildAutoUpdateReason(module: ModuleStatus) {
   if (module.source_policy.effective_install_update_source === 'package_channel') {
-    return 'agent_package_channel_refresh';
+    return 'capability_packages_refresh';
   }
   return module.git?.sync_status === 'behind'
     ? 'module_update_available'
@@ -366,7 +366,7 @@ async function maybeRunEngineStartupMaintenance(
       error: null,
     });
   }
-  const runtimeToolchain = codex.runtime_toolchain_updater;
+  const runtimeToolchain = codex.runtime_substrate_updater;
   const selectedRuntimeCodex =
     typeof runtimeToolchain.current_binary_path === 'string'
     && codex.binary_path === runtimeToolchain.current_binary_path;
@@ -377,7 +377,7 @@ async function maybeRunEngineStartupMaintenance(
   ) {
     return buildEngineTarget(environment, {
       status: 'skipped',
-      reason: 'compatible_system_codex_selected_runtime_toolchain_current',
+      reason: 'compatible_system_codex_selected_runtime_substrate_current',
       action: null,
       result: null,
       error: null,
@@ -414,11 +414,11 @@ export async function runOplStartupMaintenance(
     runOplFrameworkSelfUpdate({ targetRoot: resolveFrameworkUpdateTargetRoot(resolveProjectRoot()) }),
   ];
   const engineTargets = [await maybeRunEngineStartupMaintenance(contracts, initialEnvironment)];
-  const initialModules = scope === 'runtime_toolchain'
+  const initialModules = scope === 'runtime_substrate'
     ? []
     : buildOplModules().modules.modules.filter((module) => module.default_install);
   const moduleTargets = initialModules.map((module) => runModuleStartupMaintenance(module));
-  const capabilityTargets: StartupMaintenanceCapabilityTarget[] = scope === 'runtime_toolchain'
+  const capabilityTargets: StartupMaintenanceCapabilityTarget[] = scope === 'runtime_substrate'
     ? []
     : [runScholarSkillsSourceMaintenance()];
   const frameworkSummary = summarizeFrameworkTargets(frameworkTargets);
@@ -452,8 +452,8 @@ export async function runOplStartupMaintenance(
       workspace_root: readOplWorkspaceRoot(),
       details: {
         surface_kind: 'opl_app_startup_maintenance',
-        mode: scope === 'runtime_toolchain'
-          ? 'runtime_toolchain_adapter_startup'
+        mode: scope === 'runtime_substrate'
+          ? 'runtime_substrate_adapter_startup'
           : 'clean_managed_environment_startup',
         scope,
         framework_summary: frameworkSummary,

@@ -9,7 +9,6 @@ import { runOplEngineAction } from '../system-installation/engine-actions.ts';
 import { type OplEngineAction, type OplModuleAction, type OplModuleId } from '../system-installation/shared.ts';
 import { executeWorkspaceAppAction } from '../app-state-workspace-actions.ts';
 import { syncFamilySkillPacks } from '../opl-skills.ts';
-import { buildManagedUpdateKernelProjection } from '../managed-update-kernel.ts';
 import type { FrameworkContracts } from '../types.ts';
 import { settingsControlCenterActionById } from '../app-state-settings-control-center.ts';
 import { buildOplDockerWebuiDoctor } from '../system-installation/docker-webui-doctor.ts';
@@ -665,14 +664,20 @@ async function executeDirectAppAction(
   }
 
   if (options.actionId === 'settings_check_app_update') {
+    const dryRun = buildSettingsControlCenterDryRun(options.actionId, options.payload);
     return {
-      delegatedSurface: 'opl update check --component app_binary',
-      result: options.dryRun
-        ? buildSettingsControlCenterDryRun(options.actionId, options.payload)
-        : await buildManagedUpdateKernelProjection(contracts, {
-          operation: 'check',
-          componentId: 'app_binary',
-        }),
+      delegatedSurface: 'one-person-lab-app installation_carrier.macos_app status',
+      result: {
+        settings_control_center_action: dryRun.settings_control_center_action,
+        installation_carrier_status: {
+          carrier_type: 'macos_app',
+          carrier_variant: 'installation_carrier.macos_app',
+          status_source: 'one-person-lab-app',
+          update_route: 'electron_standard_updater_or_homebrew_cask',
+          framework_managed_update_kernel_owned: false,
+          opl_update_apply_allowed: false,
+        },
+      },
     };
   }
 

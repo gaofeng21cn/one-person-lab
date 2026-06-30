@@ -131,7 +131,8 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       assert.equal(
         delegatedSurface.startsWith('opl ')
           || delegatedSurface.startsWith('printf <api-key> | opl ')
-          || delegatedSurface.includes(' opl system startup-maintenance'),
+          || delegatedSurface.includes(' opl system startup-maintenance')
+          || delegatedSurface === 'one-person-lab-app installation_carrier.macos_app status',
         true,
       );
     }
@@ -262,7 +263,10 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       'opl app action execute --action settings_prune_runtime_roots_dry_run',
     );
     assert.equal(actions.get('settings_prune_runtime_roots_dry_run')?.mutates, 'none_read_only');
-    assert.equal(actions.get('settings_check_app_update')?.delegated_surface, 'opl update check --component app_binary');
+    assert.equal(
+      actions.get('settings_check_app_update')?.delegated_surface,
+      'one-person-lab-app installation_carrier.macos_app status',
+    );
     assert.equal(actions.get('settings_check_app_update')?.mutates, 'none_read_only');
     assert.equal(
       actions.get('settings_rollback_runtime_toolchain')?.delegated_surface,
@@ -1050,9 +1054,11 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
       '--dry-run',
     ], env).app_action_execution;
 
-    assert.equal(appUpdate.delegated_surface, 'opl update check --component app_binary');
+    assert.equal(appUpdate.delegated_surface, 'one-person-lab-app installation_carrier.macos_app status');
     assert.equal(appUpdate.result.settings_control_center_action.task_kind, 'check');
     assert.equal(appUpdate.result.settings_control_center_action.mutates, 'none_read_only');
+    assert.equal(appUpdate.result.installation_carrier_status.carrier_variant, 'installation_carrier.macos_app');
+    assert.equal(appUpdate.result.installation_carrier_status.opl_update_apply_allowed, false);
 
     const cleanupPlan = runCli([
       'app',

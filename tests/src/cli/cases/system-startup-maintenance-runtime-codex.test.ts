@@ -103,7 +103,7 @@ test('system startup-maintenance applies staged App-owned runtime Codex update w
               codex: {
                 version: string | null;
                 latest_version_status: string;
-                runtime_toolchain_updater: {
+                runtime_substrate_updater: {
                   global_toolchain_mutation_allowed: boolean;
                   latest_version_status: string;
                 };
@@ -123,7 +123,7 @@ test('system startup-maintenance applies staged App-owned runtime Codex update w
     assert.equal(engineTarget.result?.command_preview.includes('-g'), false);
     assert.match(engineTarget.result?.command_preview.join(' ') ?? '', /--prefix/);
     assert.match(engineTarget.result?.note ?? '', /does not modify global Homebrew, npm, or system Codex/);
-    assert.match(engineTarget.result?.stdout ?? '', /opl_runtime_toolchain_update_receipt/);
+    assert.match(engineTarget.result?.stdout ?? '', /opl_runtime_substrate_update_receipt/);
     assert.match(engineTarget.result?.stdout ?? '', /codex-darwin-arm64/);
     assert.equal(output.system_action.details.engine_summary.completed_targets_count, 1);
     assert.equal(output.system_action.details.engine_summary.manual_required_targets_count, 0);
@@ -136,12 +136,12 @@ test('system startup-maintenance applies staged App-owned runtime Codex update w
       'current',
     );
     assert.equal(
-      output.system_action.details.refreshed_system_environment.core_engines.codex.runtime_toolchain_updater
+      output.system_action.details.refreshed_system_environment.core_engines.codex.runtime_substrate_updater
         .global_toolchain_mutation_allowed,
       false,
     );
     assert.equal(
-      output.system_action.details.refreshed_system_environment.core_engines.codex.runtime_toolchain_updater
+      output.system_action.details.refreshed_system_environment.core_engines.codex.runtime_substrate_updater
         .latest_version_status,
       'current',
     );
@@ -222,7 +222,7 @@ test('system startup-maintenance installs missing App-owned runtime Codex on cle
                 version: string | null;
                 version_status: string;
                 latest_version_status: string;
-                runtime_toolchain_updater: {
+                runtime_substrate_updater: {
                   global_toolchain_mutation_allowed: boolean;
                   current_binary_installed: boolean;
                   latest_version_status: string;
@@ -245,7 +245,7 @@ test('system startup-maintenance installs missing App-owned runtime Codex on cle
     assert.equal(engineTarget.result?.command_preview.includes('-g'), false);
     assert.match(engineTarget.result?.command_preview.join(' ') ?? '', /--prefix/);
     assert.match(engineTarget.result?.note ?? '', /does not modify global Homebrew, npm, or system Codex/);
-    assert.match(engineTarget.result?.stdout ?? '', /opl_runtime_toolchain_update_receipt/);
+    assert.match(engineTarget.result?.stdout ?? '', /opl_runtime_substrate_update_receipt/);
     assert.equal(output.system_action.details.engine_summary.completed_targets_count, 1);
     assert.equal(output.system_action.details.engine_summary.manual_required_targets_count, 0);
     assert.equal(output.system_action.details.refreshed_system_environment.core_engines.codex.installed, true);
@@ -262,17 +262,17 @@ test('system startup-maintenance installs missing App-owned runtime Codex on cle
       'current',
     );
     assert.equal(
-      output.system_action.details.refreshed_system_environment.core_engines.codex.runtime_toolchain_updater
+      output.system_action.details.refreshed_system_environment.core_engines.codex.runtime_substrate_updater
         .global_toolchain_mutation_allowed,
       false,
     );
     assert.equal(
-      output.system_action.details.refreshed_system_environment.core_engines.codex.runtime_toolchain_updater
+      output.system_action.details.refreshed_system_environment.core_engines.codex.runtime_substrate_updater
         .current_binary_installed,
       true,
     );
     assert.equal(
-      output.system_action.details.refreshed_system_environment.core_engines.codex.runtime_toolchain_updater
+      output.system_action.details.refreshed_system_environment.core_engines.codex.runtime_substrate_updater
         .latest_version_status,
       'current',
     );
