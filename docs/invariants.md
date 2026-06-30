@@ -134,6 +134,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `功能/结构差距` 以标准 OPL Agent 目标态为准；不符合目标态的现有通用功能面，即使当前可运行，也必须写成上收、generated surface 替换、收薄或退役对象。
 - `测试/证据差距` 承载后置 Live Evidence / production evidence / L5 evidence；只有当缺口直接影响启动安全、authority boundary、owner answer shape、不可逆 mutation、closeout admission、release/production claim 或 physical delete authorization 时，才可阻塞对应当前动作。否则它只能作为 readiness / release / production / owner acceptance 的后置验收项。
 - `当前实际` 只能作为迁移起点、风险和证据来源；不得反向约束理想态，不得把现有私有实现包装成长期设计。
+- Gap 文档是当前 active work tracker，不是完成史。功能/结构 gap 落地后，active gap 文档必须删除或重写已关闭条目；当前没有 gap 时保持薄 no-gap baton。已完成的调研、规划、closeout、branch/worktree、receipt 流水和验证过程只能进入 `docs/history/**`、runtime ledger、owner repo provenance 或提交历史。
 
 ## 合同面
 

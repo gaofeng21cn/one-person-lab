@@ -7,21 +7,23 @@ Machine boundary: 本文是人读政策。机器真相继续归 contracts、sche
 
 ## 当前政策
 
-OPL series docs governance 默认覆盖六个 repo：`one-person-lab`、`med-autoscience`、`med-autogrant`、`redcube-ai`、`opl-meta-agent` 和 `one-person-lab-app`。其中 OPL、MAS、MAG、RCA 采用同一套 strict canonical docs 目录：
+OPL series docs governance 默认覆盖七个 repo：`one-person-lab`、`med-autoscience`、`med-autogrant`、`redcube-ai`、`opl-meta-agent`、`opl-bookforge` 和 `one-person-lab-app`。其中 OPL、MAS、MAG、RCA 采用同一套 strict canonical docs 目录：
 
 `active/public/product/runtime/delivery/source/policies/specs/references/history`
 
 这套目录不是按“当前有没有文件”决定保留，而是按 repo 长期生命周期职责决定保留。OPL/MAS/MAG/RCA 的目录如果承接长期职责，可以暂时只有索引；但索引必须写清 owner、purpose、state、machine boundary、当前承载状态和何时应新增正文。没有长期职责的目录不进入 taxonomy。
 
-`opl-meta-agent` 和 `one-person-lab-app` 纳入同一治理巡检，但按各自 repo 职责治理：OMA 可以保持 target-agent builder 所需的轻量 docs 形态；App docs 归产品、release、testing、user guides 和 screenshot lifecycle。它们只有在出现长期 public、product、runtime、delivery、source、policies、specs 或 history 内容时，才新增对应目录索引。
+`opl-meta-agent`、`opl-bookforge` 和 `one-person-lab-app` 纳入同一治理巡检，但按各自 repo 职责治理：OMA 可以保持 target-agent builder 所需的轻量 docs 形态；BookForge 按 OPL-compatible authoring agent / artifact lifecycle owner 治理；App docs 归产品、release、testing、user guides 和 screenshot lifecycle。它们只有在出现长期 public、product、runtime、delivery、source、policies、specs 或 history 内容时，才新增对应目录索引。
 
 ## 文档基本原则
 
 OPL 系列开发文档必须先设理想态，再用现状找差距。理想态不是从当前代码和历史目录里折中推出来的，而是从目标产品、目标架构、标准 OPL Agent 形态、owner boundary 和长期可维护性推导出来的。
 
-差距文档不是妥协清单。它的任务是把现状与理想态之间的距离逐项显性化，并给出上收、重构、收薄、迁移、删除或归档路径。为了理想态，可以做革命式重构，可以完全抛弃旧模块、旧接口、旧测试、旧目录和旧文案；只要 active caller、证据、provenance 和替代 surface 被处理清楚，就不需要为历史兼容保留额外接口。
+差距文档不是妥协清单，也不是完成史。它的任务是把当前现状与理想态之间仍然存在的距离逐项显性化，并给出上收、重构、收薄、迁移、删除或归档路径。为了理想态，可以做革命式重构，可以完全抛弃旧模块、旧接口、旧测试、旧目录和旧文案；只要 active caller、证据、provenance 和替代 surface 被处理清楚，就不需要为历史兼容保留额外接口。
 
 因此，文档中的 `当前实际` 只用于描述迁移起点和风险，不用于限制理想态。`功能/结构差距` 记录目标结构还未达到的 owner、模块、接口、目录、调用链和 generated surface 缺口；`测试/证据差距` 记录目标结构已经落位但还缺真实 receipt、workspace proof、provider-hosted apply、App drilldown、soak 或 regression proof 的缺口。不得把“当前已有实现”写成“长期合理”，也不得把“缺少证据”写成“功能必须继续留在旧位置”。
+
+当某个功能/结构 gap 已经落地，active gap 文档必须删除或重写该条目，只保留当前守门面、后置 evidence 指针或 compact history pointer。若当前范围内没有 active gap，gap 文档应保持薄 current-state / no-gap / next-audit baton，而不是继续保存已完成任务清单。已完成 gap 的调研、规划、worktree closeout、branch/SHA、receipt 流水和验证过程进入 `docs/history/**`、runtime ledger、owner repo provenance 或提交历史。
 
 ## 中文 canonical 规则
 

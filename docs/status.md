@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `status`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
-更新时间：`2026-06-29`
+更新时间：`2026-06-30`
 
 Plugin native profile pointer: `contracts/opl-native-profile.json` 只声明 OPL Flow / OPL Doc 插件同步与 drift 检查所需的 repo-native profile；它不是 framework truth、runtime truth、domain truth、artifact authority、owner receipt 或 production-ready 证据。
 
@@ -15,6 +15,8 @@ Currentness / CI hygiene 当前读法：调研或历史 closeout 中的本地 ah
 GUI route policy 当前读法：One Person Lab App 的 GUI 主线固定为 `one-person-lab-app` 消费 `opl-aion-shell` 的 OPL-branded AionUI shell；Hermes Desktop / `hermes-codex` 是唯一 foreground alternative GUI candidate；AG-UI/CopilotKit / `agui-codex` / `opl-agui-codex-shell` 只作为 archived technical proof 与显式 replay surface 保留。除非用户明确要求 AGUI replay 或历史技术验证审计，OPL 主仓、App 仓、AionUI shell 仓和 AGUI shell 仓都不应继续把 AGUI 纳入默认开发、验证、polish、release、adoption 或功能面落地路线。App GUI product truth、candidate policy、active-shell validation 和 release gate 继续归 `one-person-lab-app`，OPL Framework 只记录消费边界和 runtime/action projection。
 
 Live Evidence 后置 / 功能结构优先是当前 OPL family 日常开发原则。普通开发优先关闭功能面与结构面缺口：source / contract / CLI / API / readback / App shell 可用，generated / hosted surface 消费清楚，私有 wrapper / facade / compat residue 退役或 tombstone，no-second-truth 和 false-ready guard 可执行。Live Evidence、production evidence 和 L5 evidence 仍是最终 readiness / release / production / 品牌成熟度验收所必需的后置 lane，包括 owner-chain live scaleout、provider long-soak、Brand L5 operating evidence、App release cohort、真实用户路径、跨 agent scaleout、大型 live ledger refresh、真实论文 / 项目运行证据。它们不得在默认开发中阻塞可独立完成的功能/结构清理，也不得被 docs、refs-only ledger、contract pass、test pass 或 projection clean 替代为 ready claim。
+
+Docs gap lifecycle 当前读法：理想态文档继续定义目标和不变量，不因实现已落地而降低标准；`docs/active/current-state-vs-ideal-gap.md` 是 active work tracker，不是完成史。2026-06-30 默认七仓非 live 功能/结构基线已经折回 `functional_structure_baseline_landed` 后，active gap 文档只保留当前 no-gap 判断、后置 live evidence 指针、forbidden claims 和下一轮 fresh-audit baton。已完成的 gap 调研、规划、closeout、branch/worktree、receipt 流水和验证过程进入 `docs/history/**`、runtime ledger、owner repo provenance 或提交历史，不再污染 active gap / ideal-state / active development 文档。
 
 标准 Agent MCP 当前读法：MAS/MAG/RCA/OMA/BookForge 不默认暴露 per-agent standalone MCP server，Codex App 可见面统一来自 plugin / skill / OPL-generated surface。`opl connect skills --json` 的 `skill_catalog.packs[].mcp_projection` 是当前机器读面；关键字段应显示 `standard_agent_standalone_mcp_default_enabled=false`、`unified_mcp_projection_owner=one-person-lab` 和 `cli_mcp_relationship_policy.all_cli_commands_are_mcp_tools=false`。未来 unified MCP server 属于 OPL Connect 的后续 runtime/server lane，必须先证明 toolsets、progressive discovery、lazy schema、read-only default 和 owner-gated mutation；当前 contract/test/readback 只证明 policy 和 projection landed，不声明 MCP server runtime ready。
 
