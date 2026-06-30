@@ -111,10 +111,63 @@
       "can_claim_complete": false,
       "reason": "Repo-backed cross-agent negative samples exist for MAS/MAG/RCA/OMA/family-default false-completion signals; production caller and long-soak tails remain open."
     },
+    "functional_closure_default_path_followthrough": {
+      "status": "functional_structure_followthrough_required",
+      "can_claim_complete": false,
+      "reason": "Default CLI/App/skill/plugin paths must be checked against StageRun, generated-hosted surface consumption, and accepted owner-answer shape in each owner repo before the functional-structure baseline can close."
+    },
     "long_soak_real_user_path_owner_evidence": {
       "status": "evidence_required",
       "can_claim_complete": false,
       "reason": "Long-soak and real user path evidence require owner refs and cannot be inferred from provider completion or refs-only ledgers."
+    }
+  },
+  "functional_closure_followthrough": {
+    "surface_kind": "opl_standard_agent_functional_closure_followthrough",
+    "status": "implementation_required",
+    "can_claim_functional_structure_baseline_complete": false,
+    "scope": "non_live_functional_structure_only",
+    "owner_repos": [
+      "one-person-lab",
+      "med-autoscience",
+      "med-autogrant",
+      "redcube-ai",
+      "opl-meta-agent",
+      "opl-bookforge",
+      "one-person-lab-app"
+    ],
+    "required_followthrough_items": [
+      "app_docker_webui_beginner_path",
+      "settings_control_plane_single_policy_source",
+      "mas_typed_blocker_executable_owner_route",
+      "mag_rca_bookforge_oma_default_path_stage_run_generated_surface_audit",
+      "source_morphology_strict_source_purity_default_caller_thinning",
+      "wrapper_fallback_private_caller_retirement",
+      "active_docs_foldback"
+    ],
+    "accepted_closure_evidence": [
+      "source_or_contract_diff",
+      "default_path_readback_or_focused_test",
+      "no_active_caller_or_tombstone_ref",
+      "accepted_owner_answer_shape_ref",
+      "repo_active_plan_foldback"
+    ],
+    "forbidden_completion_evidence": [
+      "release_cohort",
+      "clean_vm_smoke",
+      "provider_long_soak",
+      "Brand_L5_evidence",
+      "domain_owner_acceptance",
+      "final_artifact_verdict"
+    ],
+    "authority_boundary": {
+      "can_claim_release_ready": false,
+      "can_claim_production_ready": false,
+      "can_claim_domain_ready": false,
+      "can_claim_Brand_L5": false,
+      "can_sign_owner_receipt": false,
+      "can_create_typed_blocker": false,
+      "can_authorize_physical_delete": false
     }
   },
   "negative_conformance_cases": [

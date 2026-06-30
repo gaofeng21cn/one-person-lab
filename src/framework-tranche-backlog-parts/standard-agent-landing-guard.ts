@@ -158,6 +158,7 @@ export function buildStandardAgentLandingAcceptanceGuardReadback(
       residue_target_kinds: stringList(privateResidueLedger.residue_target_kinds),
       allowed_owner_decisions: stringList(privateResidueLedger.allowed_owner_decisions),
     },
+    functional_closure_followthrough: evidenceStatus.functional_closure_followthrough,
     oma_target_agent_work_order_guard: evidenceStatus.oma_target_agent_work_order_guard,
     negative_conformance_summary: {
       case_count: negativeCases.length,

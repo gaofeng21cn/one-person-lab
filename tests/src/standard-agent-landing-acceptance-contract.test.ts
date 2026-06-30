@@ -109,11 +109,37 @@ test('standard agent landing evidence status keeps evidence tails open', () => {
     'generated_surface_production_consumption',
     'oma_target_agent_work_order_guard',
     'cross_agent_negative_conformance',
+    'functional_closure_default_path_followthrough',
     'long_soak_real_user_path_owner_evidence',
   ]) {
-    assert.equal(ledger.open_evidence_tails[openTail].status, 'evidence_required', openTail);
+    assert.ok(
+      ['evidence_required', 'functional_structure_followthrough_required'].includes(
+        ledger.open_evidence_tails[openTail].status,
+      ),
+      openTail,
+    );
     assert.equal(ledger.open_evidence_tails[openTail].can_claim_complete, false, openTail);
   }
+
+  const followthrough = ledger.functional_closure_followthrough;
+  assert.equal(followthrough.surface_kind, 'opl_standard_agent_functional_closure_followthrough');
+  assert.equal(followthrough.scope, 'non_live_functional_structure_only');
+  assert.equal(followthrough.can_claim_functional_structure_baseline_complete, false);
+  assert.deepEqual(followthrough.owner_repos, [
+    'one-person-lab',
+    'med-autoscience',
+    'med-autogrant',
+    'redcube-ai',
+    'opl-meta-agent',
+    'opl-bookforge',
+    'one-person-lab-app',
+  ]);
+  assert.ok(followthrough.required_followthrough_items.includes('app_docker_webui_beginner_path'));
+  assert.ok(followthrough.required_followthrough_items.includes('mas_typed_blocker_executable_owner_route'));
+  assert.ok(followthrough.accepted_closure_evidence.includes('default_path_readback_or_focused_test'));
+  assert.ok(followthrough.forbidden_completion_evidence.includes('provider_long_soak'));
+  assert.equal(followthrough.authority_boundary.can_claim_release_ready, false);
+  assert.equal(followthrough.authority_boundary.can_create_typed_blocker, false);
 
   assert.ok(gates.cross_agent_negative_conformance.evidence_refs.includes(negativeSamplesPath));
   assert.equal(
