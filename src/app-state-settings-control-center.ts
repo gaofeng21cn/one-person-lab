@@ -1,3 +1,5 @@
+import { buildDockerWebuiSettingsReadModel } from './app-state-settings-control-center-parts/docker-webui-read-model.ts';
+
 type JsonRecord = Record<string, unknown>;
 
 type SettingsAction = {
@@ -816,6 +818,7 @@ function buildAppSettingsReadModel(
         ],
       },
     },
+    docker_webui: buildDockerWebuiSettingsReadModel(input, taskEntries, issueQueue),
     local_environment: {
       source_ref: 'app_state.paths + app_state.release + app_state.provider',
       state_dir: asString(input.paths.state_dir),

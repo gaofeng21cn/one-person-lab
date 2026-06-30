@@ -177,6 +177,71 @@ function ordinaryLaneReadout(input: {
   };
 }
 
+function activeLegacyCallerDeletionGate(input: {
+  deletionEvidenceWorklistCount: number;
+  missingDomainOwnerReceiptOrTypedBlockerCount: number;
+  missingNoActiveCallerProofCount: number;
+  missingNoForbiddenWriteProofCount: number;
+  missingTombstoneOrProvenanceRefCount: number;
+  prerequisitesObserved: boolean;
+  allRequirementsObserved: boolean;
+  repoCount: number;
+}) {
+  const missingGateIds = [
+    input.missingNoActiveCallerProofCount > 0 ? 'no_active_caller_proof' : null,
+    input.missingNoForbiddenWriteProofCount > 0 ? 'no_forbidden_write_proof' : null,
+    input.missingTombstoneOrProvenanceRefCount > 0 ? 'tombstone_or_provenance_ref' : null,
+    input.prerequisitesObserved && input.missingDomainOwnerReceiptOrTypedBlockerCount > 0
+      ? 'domain_owner_receipt_or_typed_blocker'
+      : null,
+  ].filter((entry): entry is string => Boolean(entry));
+  const ownerDecisionRequired = input.prerequisitesObserved && !input.allRequirementsObserved;
+  const executableNextAction = ownerDecisionRequired
+      ? DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION
+    : input.deletionEvidenceWorklistCount > 0
+      ? 'inspect_active_deletion_evidence_worklists'
+      : 'no_active_delete_worklist_items';
+  return {
+    surface_kind: 'opl_active_legacy_caller_deletion_gate_read_model',
+    status: ownerDecisionRequired
+        ? 'owner_decision_required_after_structural_prerequisites'
+      : input.deletionEvidenceWorklistCount > 0
+        ? 'active_worklist_open'
+        : 'no_active_worklist_not_delete_authorized',
+    repo_count: input.repoCount,
+    active_deletion_evidence_worklist_count: input.deletionEvidenceWorklistCount,
+    executable_next_action: executableNextAction,
+    action_route: ownerDecisionRequired
+      ? 'opl agents default-callers --family-defaults --json#physical_delete_authority_read_model'
+      : input.deletionEvidenceWorklistCount > 0
+        ? 'opl agents default-callers --family-defaults --json#deletion_evidence_worklists'
+        : 'opl agents default-callers --family-defaults --json#physical_delete_authority_read_model',
+    missing_gate_ids: missingGateIds,
+    missing_counts: {
+      domain_owner_receipt_or_typed_blocker:
+        input.missingDomainOwnerReceiptOrTypedBlockerCount,
+      no_active_caller_proof: input.missingNoActiveCallerProofCount,
+      no_forbidden_write_proof: input.missingNoForbiddenWriteProofCount,
+      tombstone_or_provenance_ref: input.missingTombstoneOrProvenanceRefCount,
+    },
+    owner_surface: input.prerequisitesObserved
+      ? 'domain_repo_owner_delete_keep_or_typed_blocker_decision'
+      : 'opl_generated_or_hosted_surface_gate_refs',
+    stop_condition: input.prerequisitesObserved
+      ? 'domain_owner_decision_ref_observed_or_typed_blocker_ref_observed'
+      : 'replacement_parity_no_active_caller_no_forbidden_write_and_tombstone_refs_observed',
+    physical_delete_authorized: false,
+    default_caller_delete_ready: false,
+    authority_boundary: {
+      read_model_can_authorize_physical_delete: false,
+      read_model_can_delete_domain_repo_files: false,
+      read_model_can_write_domain_truth: false,
+      read_model_can_create_typed_blocker: false,
+      docs_foldback_can_authorize_physical_delete: false,
+    },
+  };
+}
+
 function privatePlatformCleanupOwnerDecisionWorkOrder(residueGateCount: number) {
   return {
     surface_kind: 'opl_private_platform_residue_owner_decision_work_order',
@@ -502,6 +567,16 @@ export function buildDefaultCallerPhysicalDeleteAuthorityReadModel(
   const privatePlatformCleanupLane = mergePrivatePlatformCleanupLanes(
     repoSummaries.map((repo) => record(repo.cleanup_lane)),
   );
+  const legacyCallerDeletionGate = activeLegacyCallerDeletionGate({
+    deletionEvidenceWorklistCount,
+    missingDomainOwnerReceiptOrTypedBlockerCount,
+    missingNoActiveCallerProofCount,
+    missingNoForbiddenWriteProofCount,
+    missingTombstoneOrProvenanceRefCount,
+    prerequisitesObserved: allReposHaveDeleteOrKeepPrerequisites,
+    allRequirementsObserved: allReposAllDeletionEvidenceRequirementsObserved,
+    repoCount: repoSummaries.length,
+  });
   return {
     surface_kind: 'opl_default_caller_physical_delete_authority_read_model',
     projection_policy:
@@ -537,6 +612,7 @@ export function buildDefaultCallerPhysicalDeleteAuthorityReadModel(
     generated_default_caller_readiness_can_authorize_physical_delete: false,
     physical_delete_authorization_status: 'not_authorized_by_opl_projection',
     physical_delete_authority_owner: 'domain_repo_owner_after_receipt_parity',
+    active_legacy_caller_deletion_gate: legacyCallerDeletionGate,
     owner_decision_status: ownerDecisionStatus(
       allReposHaveDeleteOrKeepPrerequisites,
       allReposAllDeletionEvidenceRequirementsObserved,

@@ -138,6 +138,16 @@
   "delete_gate_read_model_boundary": {
     "delete_gate_read_model_can_surface_missing_refs": true,
     "delete_gate_read_model_can_surface_false_authority_flags": true,
+    "active_legacy_caller_deletion_gate_default_read_model": "opl agents default-callers --family-defaults --json#physical_delete_authority_read_model.active_legacy_caller_deletion_gate",
+    "active_legacy_caller_deletion_gate_required_fields": [
+      "active_deletion_evidence_worklist_count",
+      "executable_next_action",
+      "action_route",
+      "missing_gate_ids",
+      "owner_surface",
+      "stop_condition",
+      "authority_boundary"
+    ],
     "delete_gate_read_model_can_authorize_physical_delete": false,
     "delete_gate_read_model_can_replace_domain_owner_receipt_or_typed_blocker": false
   },

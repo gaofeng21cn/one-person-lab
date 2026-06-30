@@ -51,6 +51,7 @@
       "codex_model_policy",
       "access_api_key",
       "workspace_services",
+      "docker_webui",
       "local_environment",
       "action_policy"
     ],
@@ -64,6 +65,30 @@
       "app_state.settings_control_center.settings_ia",
       "app_state.settings_control_center.action_catalog"
     ],
+    "docker_webui": {
+      "surface_kind": "opl_settings_docker_webui_read_model.v1",
+      "purpose": "Default App/Aion-consumable WebUI setup read model for one-click install, API key configuration, seed/image selection, runtime proxy, failure recovery, and operator next actions without running Docker probes on ordinary Settings reads.",
+      "required_fields": [
+        "one_click_install",
+        "api_key_configuration",
+        "seed_image_selection",
+        "startup_maintenance",
+        "runtime_proxy",
+        "failure_recovery",
+        "ordinary_next_actions",
+        "authority_boundary"
+      ],
+      "doctor_surface": "opl system docker-webui doctor --json",
+      "doctor_read_model_ref": "docker_webui_doctor",
+      "policy": {
+        "app_and_opl_are_policy_action_source": true,
+        "aion_shell_is_adapter_view_model_consumer_only": true,
+        "shell_must_not_copy_webui_policy": true,
+        "ordinary_settings_read_must_not_probe_docker": true,
+        "secret_payload_policy": "stdin_only_never_json_or_logs",
+        "runtime_readiness_claim": "not_claimed"
+      }
+    },
     "shell_policy": {
       "app_consumes_read_model_only": true,
       "aion_shell_is_renderer_only": true,

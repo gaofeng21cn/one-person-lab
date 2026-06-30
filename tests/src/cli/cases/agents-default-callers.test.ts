@@ -72,6 +72,33 @@ test('agents default-callers waits for structural prerequisites before delete or
     false,
   );
   assert.equal(
+    defaultCallers.physical_delete_authority_read_model.active_legacy_caller_deletion_gate.status,
+    'active_worklist_open',
+  );
+  assert.deepEqual(
+    defaultCallers.active_legacy_caller_deletion_gate,
+    defaultCallers.physical_delete_authority_read_model.active_legacy_caller_deletion_gate,
+  );
+  assert.deepEqual(
+    defaultCallersPayload.active_legacy_caller_deletion_gate,
+    defaultCallers.active_legacy_caller_deletion_gate,
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.active_legacy_caller_deletion_gate
+      .executable_next_action,
+    'inspect_active_deletion_evidence_worklists',
+  );
+  assert.deepEqual(
+    defaultCallers.physical_delete_authority_read_model.active_legacy_caller_deletion_gate
+      .missing_gate_ids,
+    ['no_forbidden_write_proof', 'tombstone_or_provenance_ref'],
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.active_legacy_caller_deletion_gate
+      .authority_boundary.read_model_can_authorize_physical_delete,
+    false,
+  );
+  assert.equal(
     defaultCallers.physical_delete_authority_read_model.next_required_owner_action,
     'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
   );
@@ -384,6 +411,25 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
     'domain_owner_choose_delete_authorize_keep_or_typed_blocker',
   );
   assert.equal(
+    defaultCallers.physical_delete_authority_read_model.active_legacy_caller_deletion_gate.status,
+    'no_active_worklist_not_delete_authorized',
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.active_legacy_caller_deletion_gate
+      .executable_next_action,
+    'no_active_delete_worklist_items',
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.active_legacy_caller_deletion_gate
+      .stop_condition,
+    'domain_owner_decision_ref_observed_or_typed_blocker_ref_observed',
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.active_legacy_caller_deletion_gate
+      .physical_delete_authorized,
+    false,
+  );
+  assert.equal(
     defaultCallers.physical_delete_authority_read_model.delete_or_keep_prerequisites_observed,
     true,
   );
@@ -642,6 +688,20 @@ test('agents default-callers asks domain owner to choose delete keep or blocker 
   assert.equal(
     defaultCallers.physical_delete_authority_read_model.next_required_owner_action,
     'domain_owner_choose_delete_authorize_keep_or_typed_blocker',
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.active_legacy_caller_deletion_gate.status,
+    'owner_decision_required_after_structural_prerequisites',
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.active_legacy_caller_deletion_gate
+      .executable_next_action,
+    'domain_owner_choose_delete_authorize_keep_or_typed_blocker',
+  );
+  assert.deepEqual(
+    defaultCallers.physical_delete_authority_read_model.active_legacy_caller_deletion_gate
+      .missing_gate_ids,
+    ['domain_owner_receipt_or_typed_blocker'],
   );
   assert.deepEqual(
     defaultCallers.physical_delete_authority_read_model.accepted_refs_only_result_shapes,

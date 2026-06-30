@@ -773,6 +773,56 @@ exit 1
       ],
     );
     assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.docker_webui.surface_kind,
+      'opl_settings_docker_webui_read_model.v1',
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.docker_webui.doctor_surface,
+      'opl system docker-webui doctor --json',
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.docker_webui.api_key_configuration.status,
+      'attention_needed',
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.docker_webui.api_key_configuration.secret_payload_policy,
+      'stdin_only_never_json_or_logs',
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.docker_webui.seed_image_selection.image_manifest_path_env,
+      'OPL_IMAGE_MANIFEST_PATH',
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.docker_webui.runtime_proxy.browser_url_ref,
+      'docker_webui_doctor.browser.url',
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.docker_webui.runtime_proxy.can_claim_runtime_ready,
+      false,
+    );
+    assert.deepEqual(
+      output.app_state.settings_control_center.app_settings_read_model.docker_webui.ordinary_next_actions.map(
+        (entry: AppStateListEntry) => entry.action_id,
+      ),
+      [
+        'settings_configure_webui_api_key',
+        'settings_install_docker_webui',
+        'settings_select_webui_seed',
+        'settings_run_webui_startup_maintenance',
+        'settings_diagnose_docker_webui',
+      ],
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.docker_webui.authority_boundary
+        .aion_shell_is_adapter_view_model_consumer_only,
+      true,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.docker_webui.authority_boundary
+        .shell_must_not_copy_webui_policy,
+      true,
+    );
+    assert.equal(
       output.app_state.settings_control_center.app_settings_read_model.local_environment.state_dir,
       output.app_state.paths.state_dir,
     );

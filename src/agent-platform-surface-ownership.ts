@@ -862,6 +862,8 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
     owner_decision_status: ownerDecisionStatus,
     structural_prerequisites_observed_but_domain_owner_decision_missing_count:
       structuralOwnerDecisionMissingCount,
+    active_legacy_caller_deletion_gate:
+      physicalDeleteAuthorityReadModel.active_legacy_caller_deletion_gate,
     physical_delete_authority_read_model: physicalDeleteAuthorityReadModel,
     repo_deletion_gate_summary:
       physicalDeleteAuthorityReadModel.repo_deletion_gate_summary,
@@ -907,6 +909,8 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
       owner_decision_status: ownerDecisionStatus,
       structural_prerequisites_observed_but_domain_owner_decision_missing_count:
         structuralOwnerDecisionMissingCount,
+      active_legacy_caller_deletion_gate:
+        physicalDeleteAuthorityReadModel.active_legacy_caller_deletion_gate,
       physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
       physical_delete_authority_read_model: physicalDeleteAuthorityReadModel,
       repo_deletion_gate_summary:
