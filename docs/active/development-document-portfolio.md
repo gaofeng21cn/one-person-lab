@@ -139,3 +139,19 @@ Do not append future tranche logs here. New docs-governance records must be comp
 | `one-person-lab-app` | publishing / generated guide governance | `docs/publishing/README.md` and guide generators | `owner_lane` | `delivery_support` | existing dirty generated/public assets | none this tranche | publishing/generator/generated/public write set | L1/L3 depending owner | owner lane after dirty resolution | app-publishing | blocked_owner_gated |
 
 Selected batch原则：只做 `selected` 行；其余行留作下一轮治理范围，不因本轮局部修复声称七仓全部 docs 逐段覆盖。
+
+## 2026-06-30 七仓 Coverage Ledger
+
+本 ledger 只记录本轮 SSOT / OPL Doc 治理覆盖，不是完成证明。计数排除了 `node_modules`、外部 fork、shell checkout、`tmp` 和非 `docs/**` 的运行产物；root `README*.md` 单独计数。全量目标仍是逐段审查所有 root `README*` 与 `docs/**/*.md`，当前只完成 selected semantic batch。
+
+| Repo | Root README files | docs markdown files | Reviewed / edited this tranche | Unreviewed or deferred themes | Next write scope |
+| --- | --- | --- | --- | --- | --- |
+| `one-person-lab` | 2 | 247 | Active family gap owner, SSOT worklist, coverage ledger. | Long support refs such as operating-governance audit matrix, `docs/decisions.md`, runtime bundle/cache active design, Foundry target architecture, broad history folders. | Continue topic batches from docs portfolio; do not expand active gap into a completed-work ledger. |
+| `med-autoscience` | 2 | 294 | Runtime README duplicate link was fixed; active plan prompt fields normalized to executable OPL Doc baton. | MAS active source-morphology plan detail, medical-display delivery portfolio, `docs/decisions.md`, runtime/source/delivery large support families, history indexes. | First do read-only theme map for source morphology and medical-display before editing. |
+| `med-autogrant` | 2 | 51 | Active plan prompt fields normalized; current false-ready / physical-delete gate remains in active owner. | Specs lifecycle dated support specs, active/status repetition, private inventory, history coverage ledgers. | Inbound-ref scan before compressing specs lifecycle or private inventory. |
+| `redcube-ai` | 2 | 93 | Active gap explicit remainder compressed into SSOT table; prompt fields normalized. | History/process re-expansion guard, private inventory, product/runtime/source support docs, reference ideal-state detail. | Add topic-level history/process guard and inspect private inventory only after source/ref owner map is clear. |
+| `opl-meta-agent` | 2 | 14 | Active plan prompt fields normalized; private inventory dated cleanup batches compressed into current migration gates. | History process index, source-purity / script-to-pack contract cross-links, docs README rule density. | Keep private inventory as gate owner; move future dated cleanup batches to history/provenance. |
+| `opl-bookforge` | 2 | 28 | Active plan prompt fields normalized; decisions date-log compressed into durable decision themes. | Evidence package payloads, reference revision-routing handoff, runtime README files, evidence/history leaves. | Keep `docs/evidence/README.md` as evidence index; do not pull evidence leaves into status or active plan. |
+| `one-person-lab-app` | 2 | 47 | Active plan prompt fields normalized; prior GUI spec link fix remains selected batch output. | Publishing/generated user-guide dirty write set, release README, GUI inventory/spec long support docs, status/release evidence routing. | Owner lane must resolve/absorb App publishing dirty write set before governance writes under `docs/publishing/**` or generated guide assets. |
+
+Carry-forward rule：下一轮必须从上表的 `Unreviewed or deferred themes` 选 semantic theme，先定 SSOT，再读 peer docs 和 machine truth。不得把本轮 prompt-field normalization、selected compression 或 doctor pass 写成七仓 docs 全量覆盖完成。
