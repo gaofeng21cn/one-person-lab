@@ -162,3 +162,106 @@ test('generated interfaces reject retired wrapper names as implicit canonical su
   assert.equal(statusTarget.proof_status, 'blocked_missing_handoff_and_active_caller_proof');
   assert.equal(workbenchTarget.proof_status, 'blocked_missing_handoff_and_active_caller_proof');
 });
+
+test('generated interfaces expose active legacy caller deletion gate refs without authorizing delete', () => {
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-delete-gate-'));
+  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+  const fixtures = loadFamilyManifestFixtures();
+  const bridgeExitGate = {
+    no_forbidden_write_refs: ['no-forbidden-write:mas/status-read-model'],
+    tombstone_refs: ['tombstone:mas/status-read-model'],
+    provenance_refs: ['provenance:mas/status-read-model'],
+    physical_delete_authorized: false,
+  };
+  const bridgedMas = attachManifestSurface(
+    attachManifestSurface(
+      withPackCompilerReadySurfaces(fixtures.medautoscience, {
+        agentId: 'mas',
+        targetDomainId: 'med-autoscience',
+        owner: 'MedAutoScience',
+        actionId: 'study_packet',
+        stageId: 'study_stage',
+        memoryRefId: 'mas_publication_route_memory',
+      }),
+      'functional_privatization_audit',
+      {
+        surface_kind: 'functional_privatization_audit',
+        target_domain_id: 'med-autoscience',
+        modules: [
+          {
+            module_id: 'legacy_progress_portal_status',
+            classification: 'refs_only_adapter',
+            owner: 'med-autoscience',
+            code_paths: ['src/med_autoscience/progress_portal.py'],
+            current_surface_refs: ['status_read_model'],
+            active_callers: ['OPL generated status read model'],
+            active_caller_status: 'refs_only_domain_adapter_target',
+            migration_action: 'keep progress portal as refs-only domain adapter until owner delete decision',
+            bridge_exit_gate: bridgeExitGate,
+          },
+        ],
+      },
+    ),
+    'generated_surface_handoff',
+    {
+      surface_kind: 'opl_generated_surface_handoff',
+      schema_version: 1,
+      domain_id: 'med-autoscience',
+      generated_surface_owner: 'one-person-lab',
+      domain_repo_can_own_generated_surface: false,
+      handoff_surfaces: [
+        {
+          surface_id: 'status_read_model',
+          current_paths: ['src/med_autoscience/progress_portal.py'],
+          current_role: 'refs_only_domain_adapter_target',
+          target_role: 'refs_only_domain_adapter_target',
+        },
+      ],
+    },
+  );
+
+  runCli([
+    'workspace',
+    'bind',
+    '--project',
+    'medautoscience',
+    '--path',
+    repoRoot,
+    '--manifest-command',
+    buildManifestCommand(bridgedMas),
+  ], env);
+
+  const readout = runCli(['agents', 'interfaces', '--domain', 'mas'], env)
+    .generated_agent_interfaces.active_legacy_caller_deletion_gate_readout;
+  const statusGate = readout.surfaces.find(
+    (surface: { surface_id: string }) => surface.surface_id === 'product_status',
+  );
+
+  assert.equal(readout.surface_kind, 'opl_active_legacy_caller_deletion_gate_readout');
+  assert.equal(readout.readout_can_authorize_domain_repo_physical_delete, false);
+  assert.equal(readout.physical_delete_authorized, false);
+  assert.equal(readout.next_required_owner_action, 'domain_owner_choose_delete_authorize_keep_or_typed_blocker');
+  assert.deepEqual(readout.accepted_refs_only_result_shapes, [
+    'physical_delete_authorization_ref',
+    'keep_as_authority_adapter_ref',
+    'typed_blocker_ref',
+  ]);
+  assert.ok(statusGate);
+  assert.equal(statusGate.active_caller_module_id, 'legacy_progress_portal_status');
+  assert.equal(statusGate.replacement_parity, 'observed');
+  assert.deepEqual(statusGate.no_active_caller_proof_refs, [
+    'generated_wrapper_bundle.descriptor_scope.product_status',
+    'active_caller_target_proof.surface_targets.status_read_model',
+  ]);
+  assert.deepEqual(statusGate.no_forbidden_write_refs, ['no-forbidden-write:mas/status-read-model']);
+  assert.deepEqual(statusGate.tombstone_or_provenance_refs, [
+    'tombstone:mas/status-read-model',
+    'provenance:mas/status-read-model',
+    'status_read_model',
+  ]);
+  assert.equal(statusGate.structural_prerequisites_observed, true);
+  assert.equal(statusGate.owner_decision_required, true);
+  assert.deepEqual(statusGate.owner_decision_refs, []);
+  assert.equal(statusGate.physical_delete_authorized, false);
+});

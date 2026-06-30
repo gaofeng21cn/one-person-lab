@@ -18,6 +18,13 @@ import {
   handoffSurfaceFor,
 } from './generated-interface-active-caller-proof.ts';
 import { buildGeneratedSurfaceConsumptionBundle } from './generated-surface-consumption.ts';
+import { defaultCallerSurfaceGates } from '../default-caller-surface-gates.ts';
+import {
+  DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES,
+  DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
+  DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
+  DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
+} from '../default-caller-retirement-guard.ts';
 
 type JsonRecord = Record<string, unknown>;
 export type GeneratedInterfaceFormat = FamilyActionExportFormat | 'product-entry';
@@ -718,6 +725,92 @@ function buildGeneratedWrapperBundle(
   };
 }
 
+function buildActiveLegacyCallerDeletionGateReadout(
+  activeCallerTargetProof: ReturnType<typeof buildActiveCallerTargetProof>,
+  generatedWrapperBundle: ReturnType<typeof buildGeneratedWrapperBundle>,
+) {
+  const gates = defaultCallerSurfaceGates({
+    active_caller_target_proof: activeCallerTargetProof,
+    generated_wrapper_bundle: generatedWrapperBundle,
+  });
+  const surfaces = gates.map((gate) => {
+    const worklist: JsonRecord = isRecord(gate.deletion_evidence_worklist)
+      ? gate.deletion_evidence_worklist
+      : {};
+    const activeCallerCutover: JsonRecord = isRecord(worklist.active_caller_cutover)
+      ? worklist.active_caller_cutover
+      : {};
+    const replacementParity: JsonRecord = isRecord(worklist.replacement_parity) ? worklist.replacement_parity : {};
+    const noActiveCaller: JsonRecord = isRecord(worklist.no_active_caller_proof) ? worklist.no_active_caller_proof : {};
+    const noForbiddenWrite: JsonRecord = isRecord(worklist.no_forbidden_write_proof)
+      ? worklist.no_forbidden_write_proof
+      : {};
+    const tombstoneOrProvenance = isRecord(worklist.tombstone_or_provenance_ref)
+      ? worklist.tombstone_or_provenance_ref
+      : {};
+    return {
+      surface_id: gate.surface_id,
+      active_caller_module_id: gate.active_caller_module_id,
+      proof_status: gate.active_caller_proof_status,
+      target_kind: gate.active_caller_target_kind,
+      replacement_parity: optionalString(replacementParity.status) === 'observed' ? 'observed' : 'blocked_or_missing',
+      replacement_parity_refs: stringList(replacementParity.source_refs),
+      no_active_caller_proof_refs: stringList(noActiveCaller.evidence_refs),
+      no_forbidden_write_refs: stringList(noForbiddenWrite.evidence_refs),
+      tombstone_or_provenance_refs: stringList(tombstoneOrProvenance.evidence_refs),
+      owner_decision_refs: stringList(worklist.owner_decision_refs),
+      owner_decision_result_shape: optionalString(worklist.owner_decision_result_shape),
+      active_caller_cutover: activeCallerCutover,
+      bridge_exit_gate: isRecord(worklist.bridge_exit_gate) ? worklist.bridge_exit_gate : null,
+      structural_prerequisites_observed: worklist.delete_or_keep_prerequisites_observed === true,
+      owner_decision_required: worklist.owner_decision_required_after_prerequisites_observed === true,
+      physical_delete_authorized: false,
+    };
+  });
+  const structuralReadyCount = surfaces.filter((surface) => surface.structural_prerequisites_observed).length;
+  const ownerDecisionObservedCount = surfaces.filter((surface) => surface.owner_decision_refs.length > 0).length;
+  return {
+    surface_kind: 'opl_active_legacy_caller_deletion_gate_readout',
+    version: 'opl-active-legacy-caller-deletion-gate-readout.v1',
+    owner: 'one-person-lab',
+    status: surfaces.length === 0
+      ? 'no_active_caller_targets'
+      : structuralReadyCount === surfaces.length
+        ? 'owner_decision_route_required'
+        : 'deletion_gate_evidence_required',
+    source_refs: [
+      'generated_agent_interfaces.active_caller_target_proof',
+      'generated_agent_interfaces.generated_direct_parity',
+    ],
+    required_before_physical_delete: [
+      'replacement_parity',
+      'no_active_caller_proof',
+      'no_forbidden_write_proof',
+      'tombstone_or_provenance_ref',
+      'owner_delete_keep_or_typed_blocker_decision',
+    ],
+    static_retirement_prerequisite_gate_ids: [
+      ...DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
+    ],
+    same_work_unit_live_evidence_scope: {
+      ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
+    },
+    surface_count: surfaces.length,
+    structural_prerequisites_observed_count: structuralReadyCount,
+    owner_decision_observed_count: ownerDecisionObservedCount,
+    missing_no_forbidden_write_count: surfaces.filter((surface) => surface.no_forbidden_write_refs.length === 0).length,
+    missing_tombstone_or_provenance_count:
+      surfaces.filter((surface) => surface.tombstone_or_provenance_refs.length === 0).length,
+    next_required_owner_action: DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
+    accepted_refs_only_result_shapes: [
+      ...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES,
+    ],
+    physical_delete_authorized: false,
+    readout_can_authorize_domain_repo_physical_delete: false,
+    surfaces,
+  };
+}
+
 export function buildGeneratedInterfaceBundle(
   descriptor: JsonRecord,
   compilerStatus: string,
@@ -825,6 +918,10 @@ export function buildGeneratedInterfaceBundle(
     domain_handler: domainHandler,
     workbench,
     active_caller_target_proof: activeCallerTargetProof,
+    active_legacy_caller_deletion_gate_readout: buildActiveLegacyCallerDeletionGateReadout(
+      activeCallerTargetProof,
+      generatedWrapperBundle,
+    ),
     stage_routes: include('product-entry') || selectedFormat === 'all'
       ? buildStageRoutes(stageControlPlane)
       : [],
@@ -883,6 +980,7 @@ export function selectGeneratedInterfaceBundleFormat(
     generated_surface_consumption_bundle: bundle.generated_surface_consumption_bundle,
     active_caller_cutover_proof: bundle.active_caller_cutover_proof,
     active_caller_target_proof: bundle.active_caller_target_proof,
+    active_legacy_caller_deletion_gate_readout: bundle.active_legacy_caller_deletion_gate_readout,
     stage_routes: selectedFormat === 'product-entry' ? bundle.stage_routes : [],
     parity: bundle.parity,
     generated_direct_parity: bundle.generated_direct_parity,
