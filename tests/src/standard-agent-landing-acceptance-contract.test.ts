@@ -115,7 +115,7 @@ test('standard agent landing evidence status keeps evidence tails open', () => {
     assert.ok(
       ['evidence_required', 'functional_structure_followthrough_required'].includes(
         ledger.open_evidence_tails[openTail].status,
-      ),
+      ) || ledger.open_evidence_tails[openTail].status === 'functional_structure_baseline_landed',
       openTail,
     );
     assert.equal(ledger.open_evidence_tails[openTail].can_claim_complete, false, openTail);
@@ -124,7 +124,9 @@ test('standard agent landing evidence status keeps evidence tails open', () => {
   const followthrough = ledger.functional_closure_followthrough;
   assert.equal(followthrough.surface_kind, 'opl_standard_agent_functional_closure_followthrough');
   assert.equal(followthrough.scope, 'non_live_functional_structure_only');
-  assert.equal(followthrough.can_claim_functional_structure_baseline_complete, false);
+  assert.equal(followthrough.status, 'functional_structure_baseline_landed');
+  assert.equal(followthrough.can_claim_functional_structure_baseline_complete, true);
+  assert.equal(followthrough.landed_commits['med-autoscience'], '3fde902283f3e9b2e2c55ef3ff541bba70a49dca');
   assert.deepEqual(followthrough.owner_repos, [
     'one-person-lab',
     'med-autoscience',

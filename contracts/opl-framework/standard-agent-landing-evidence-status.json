@@ -112,9 +112,9 @@
       "reason": "Repo-backed cross-agent negative samples exist for MAS/MAG/RCA/OMA/family-default false-completion signals; production caller and long-soak tails remain open."
     },
     "functional_closure_default_path_followthrough": {
-      "status": "functional_structure_followthrough_required",
+      "status": "functional_structure_baseline_landed",
       "can_claim_complete": false,
-      "reason": "Default CLI/App/skill/plugin paths must be checked against StageRun, generated-hosted surface consumption, and accepted owner-answer shape in each owner repo before the functional-structure baseline can close."
+      "reason": "Default CLI/App/skill/plugin paths were checked and updated in the seven owner repos for the non-live functional/structural baseline; release, production, Brand L5, domain-ready, owner-acceptance, long-soak, and real-user-path evidence remain separate tails."
     },
     "long_soak_real_user_path_owner_evidence": {
       "status": "evidence_required",
@@ -124,9 +124,18 @@
   },
   "functional_closure_followthrough": {
     "surface_kind": "opl_standard_agent_functional_closure_followthrough",
-    "status": "implementation_required",
-    "can_claim_functional_structure_baseline_complete": false,
+    "status": "functional_structure_baseline_landed",
+    "can_claim_functional_structure_baseline_complete": true,
     "scope": "non_live_functional_structure_only",
+    "landed_commits": {
+      "one-person-lab": "0bfbbb394923a5b41bcc8dc54c14623071a6e764",
+      "med-autoscience": "3fde902283f3e9b2e2c55ef3ff541bba70a49dca",
+      "med-autogrant": "c1fcdf2c109f1c1b3cff8e0fe5a9f637f6833723",
+      "redcube-ai": "d0b4ee4ddb1dc65c471e0d6165383a1b111fb919",
+      "opl-meta-agent": "b4f4e14b0df8221730011b53c6b0a12ad85b6462",
+      "opl-bookforge": "3f9000f9ebe7861ef145d4cae2cbdb16d8244207",
+      "one-person-lab-app": "8a29e629fdac6d4c91827eeb96b9a809e7b35a78"
+    },
     "owner_repos": [
       "one-person-lab",
       "med-autoscience",
