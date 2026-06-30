@@ -663,6 +663,19 @@ function runCompanionToolsAdapter(): AdapterExecutionResult {
   };
 }
 
+function runWorkflowProfileAdapter(): AdapterExecutionResult {
+  return {
+    component_id: 'workflow_profile',
+    adapter_id: 'workflow_profile_adapter',
+    status: 'skipped',
+    reason: 'workflow_profile_requires_codex_semantic_merge',
+    result_ref: null,
+    result: null,
+    error: null,
+    apply_mode: 'projection_only',
+  };
+}
+
 async function runAdapter(
   contracts: FrameworkContracts,
   operation: ManagedUpdateOperation,
@@ -680,6 +693,9 @@ async function runAdapter(
     }
     if (componentId === 'companion_tools') {
       return runCompanionToolsAdapter();
+    }
+    if (componentId === 'workflow_profile') {
+      return runWorkflowProfileAdapter();
     }
     return {
       component_id: componentId,
@@ -702,7 +718,9 @@ async function runAdapter(
             ? 'codex_surface_status_adapter'
             : componentId === 'companion_tools'
               ? 'companion_tools_status_adapter'
-              : 'codex_surface_status_adapter';
+              : componentId === 'workflow_profile'
+                ? 'workflow_profile_adapter'
+                : 'codex_surface_status_adapter';
     return {
       component_id: componentId,
       adapter_id: adapterId,

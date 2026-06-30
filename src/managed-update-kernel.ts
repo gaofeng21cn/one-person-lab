@@ -25,12 +25,14 @@ export type ManagedUpdateProviderId =
   | 'runtime_substrate'
   | 'capability_packages'
   | 'codex_surface'
-  | 'companion_tools';
+  | 'companion_tools'
+  | 'workflow_profile';
 export type ManagedUpdateProviderAdapterId =
   | 'runtime_substrate_adapter'
   | 'capability_packages_adapter'
   | 'codex_surface_status_adapter'
-  | 'companion_tools_status_adapter';
+  | 'companion_tools_status_adapter'
+  | 'workflow_profile_adapter';
 type ManagedUpdateComponentClass = ManagedUpdateProviderId;
 export type ManagedUpdateConditionStatus = 'True' | 'False' | 'Unknown';
 export type ManagedUpdateComponentState =
@@ -131,6 +133,7 @@ const COMPONENT_ALIASES: Record<string, string> = {
   capability_packages: 'capability_packages',
   capability_exposure: 'codex_surface',
   codex_surface: 'codex_surface',
+  workflow_profile: 'workflow_profile',
 };
 
 const MANAGED_UPDATE_KERNEL_ID = 'opl_managed_updater_kernel';
@@ -948,6 +951,101 @@ function buildCompanionToolsComponent(channel: string): ManagedUpdateComponent {
   };
 }
 
+function buildWorkflowProfileComponent(channel: string): ManagedUpdateComponent {
+  const managedProfileParts = ['codex_profile_agents', 'codex_profile_taste', 'codex_profile_prompts'];
+  const detail = statusDetail({
+    component_state: 'current',
+    post_apply_status: 'skipped',
+    reload_status: 'not_required',
+  });
+  const reloadGuidance = noReloadGuidance();
+
+  return {
+    component_id: 'workflow_profile',
+    provider_id: 'workflow_profile',
+    adapter_id: 'workflow_profile_adapter',
+    component_class: 'workflow_profile',
+    policy_id: 'semantic_merge_required_no_silent_overwrite',
+    label: 'OPL Flow workflow profile',
+    state: 'current',
+    channel,
+    current: {
+      source: 'OPL Flow AGENTS/TASTE/prompts profile',
+      managed_profile_parts: managedProfileParts,
+      semantic_merge_required: true,
+      silent_overwrite_allowed: false,
+      profile_pointer: 'contracts/opl-native-profile.json',
+    },
+    target: null,
+    conditions: [
+      condition(
+        'SemanticMergeRequired',
+        'True',
+        'NoSilentProfileOverwrite',
+        'Existing user AGENTS.md, TASTE.md, and prompt files require Codex semantic merge instead of updater apply.',
+      ),
+      condition(
+        'WorkflowProfileCurrent',
+        'True',
+        'NoProfileDeltaReported',
+        'No workflow profile delta is reported by the current projection.',
+      ),
+    ],
+    lifecycle: KERNEL_LIFECYCLE,
+    post_apply_hooks: ['semantic_merge_packet'],
+    auto_apply: {
+      mode: 'projection_only',
+      eligible: false,
+      app_background_safe: false,
+      scope: 'workflow_profile_semantic_merge_only',
+      command_ref: null,
+      blocked_reasons: ['workflow_profile_requires_codex_semantic_merge'],
+    },
+    status_detail: detail,
+    post_apply_guidance: {
+      required: false,
+      command_refs: ['Codex semantic merge packet for OPL Flow profile changes'],
+      reload_guidance: reloadGuidance,
+    },
+    plan: {
+      action: 'none',
+      summary: 'Workflow profile is current; future OPL Flow profile changes require Codex semantic merge, not opl update apply.',
+      command_refs: [
+        manualCommand(
+          'workflow_profile_semantic_merge',
+          'Codex semantic merge packet for OPL Flow AGENTS.md, TASTE.md, and prompts',
+          'Merge workflow profile changes semantically without silently overwriting user Codex profile files.',
+        ),
+      ],
+    },
+    receipt: componentReceipt({
+      component_id: 'workflow_profile',
+      source_manifest_ref: 'opl-flow://workflow-profile',
+      post_apply_hooks: ['semantic_merge_packet'],
+      apply_mode: 'projection_only',
+      status_detail: detail,
+      reload_guidance: reloadGuidance,
+      repair_action: null,
+      content_identity_fields: ['profile_id', 'profile_version', 'agents_hash', 'taste_hash', 'prompts_hash'],
+    }),
+    authority_boundary: {
+      can_write_user_codex_profile: false,
+      can_silently_overwrite_agents_md: false,
+      can_silently_overwrite_taste_md: false,
+      can_silently_overwrite_prompts: false,
+      can_require_codex_semantic_merge: true,
+      can_mutate_runtime_substrate: false,
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_claim_domain_ready: false,
+    },
+    notes: [
+      'Workflow profile status is projected in the managed update plane so Settings can show OPL Flow profile merge guidance.',
+      'The managed update kernel does not apply workflow profile changes; existing user profiles require Codex semantic merge packets.',
+    ],
+  };
+}
+
 function filterComponents(components: ManagedUpdateComponent[], componentId: string | undefined) {
   if (!componentId) {
     return components;
@@ -1005,8 +1103,9 @@ export async function buildManagedUpdateKernelProjection(
   const capabilityPackages = buildCapabilityPackagesComponent(modules, channel);
   const codexSurface = buildCodexSurfaceComponent(capabilityPackages, channel);
   const companionTools = buildCompanionToolsComponent(channel);
+  const workflowProfile = buildWorkflowProfileComponent(channel);
   const selectedComponents = filterComponents(
-    [runtimeSubstrate, capabilityPackages, codexSurface, companionTools],
+    [runtimeSubstrate, capabilityPackages, codexSurface, companionTools, workflowProfile],
     input.componentId,
   );
 
@@ -1059,7 +1158,7 @@ export async function buildManagedUpdateKernelProjection(
         can_claim_quality_or_export_verdict: false,
       },
       notes: [
-        'This kernel unifies update status, plan, receipt, and repair projections across runtime substrate, capability packages, Codex surface, and companion tools.',
+        'This kernel unifies update status, plan, receipt, and repair projections across runtime substrate, capability packages, Codex surface, companion tools, and workflow profile.',
         'Real artifact fetch/verify/stage/activate remains provider-specific; this surface exposes the shared state machine and safe action refs.',
         'Package freshness and runtime maintenance do not imply domain readiness, owner receipt authority, artifact authority, quality verdict, or export readiness.',
       ],

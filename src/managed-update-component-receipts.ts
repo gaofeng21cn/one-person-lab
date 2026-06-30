@@ -281,6 +281,7 @@ function normalizeAdapterId(value: unknown): ManagedUpdateProviderAdapterId | nu
     || value === 'capability_packages_adapter'
     || value === 'codex_surface_status_adapter'
     || value === 'companion_tools_status_adapter'
+    || value === 'workflow_profile_adapter'
     ? value
     : null;
 }

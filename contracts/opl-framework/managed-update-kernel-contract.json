@@ -114,19 +114,31 @@
       "authority": "Companion tools such as officecli and mineru_open_api are tool availability, not runtime substrate or domain truth.",
       "default_policy": "manual_companion_status_or_explicit_companion_apply",
       "mutation_scope": "recommended_companion_tools_only"
+    },
+    {
+      "provider_id": "workflow_profile",
+      "adapter_id": "workflow_profile_adapter",
+      "owner": "opl-flow",
+      "role": "OPL Flow workflow profile status and semantic merge guidance",
+      "authority": "User Codex profile surfaces require semantic merge and must not be silently overwritten.",
+      "default_policy": "semantic_merge_required_no_silent_overwrite",
+      "mutation_scope": "projection_only_no_opl_update_apply_component_target",
+      "apply_allowed": false
     }
   ],
   "components": [
     "runtime_substrate",
     "capability_packages",
     "codex_surface",
-    "companion_tools"
+    "companion_tools",
+    "workflow_profile"
   ],
   "component_classes": [
     "runtime_substrate",
     "capability_packages",
     "codex_surface",
-    "companion_tools"
+    "companion_tools",
+    "workflow_profile"
   ],
   "legacy_component_aliases": [
     {

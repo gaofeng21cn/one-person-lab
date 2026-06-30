@@ -15,6 +15,9 @@ function readManagedUpdateKernelContract() {
       repair_action?: string;
       rollback_action?: string;
       post_apply_actions?: string[];
+      default_policy?: string;
+      mutation_scope?: string;
+      apply_allowed?: boolean;
       auto_apply?: {
         mode: string;
         app_background_safe: boolean;
@@ -47,6 +50,7 @@ test('managed update kernel contract keeps runtime and agent post-apply executio
     'capability_packages',
     'codex_surface',
     'companion_tools',
+    'workflow_profile',
   ]);
   assert.deepEqual(contract.component_classes, contract.components);
   assert.equal(
@@ -72,6 +76,12 @@ test('managed update kernel contract keeps runtime and agent post-apply executio
     'sync_skills',
     'codex_surface',
   ]);
+
+  const workflowProfile = contract.providers.find((entry) => entry.provider_id === 'workflow_profile');
+  assert.ok(workflowProfile);
+  assert.equal(workflowProfile.default_policy, 'semantic_merge_required_no_silent_overwrite');
+  assert.equal(workflowProfile.mutation_scope, 'projection_only_no_opl_update_apply_component_target');
+  assert.equal(workflowProfile.apply_allowed, false);
   assert.deepEqual(contract.runner_result_shape.adapter_post_apply_action_shape.required_fields, [
     'action_id',
     'command_ref',
@@ -264,7 +274,7 @@ exit 2
       'post_apply_action_statuses',
       'reload_guidance',
     ]);
-    assert.equal(output.managed_update.summary.total_components_count, 4);
+    assert.equal(output.managed_update.summary.total_components_count, 5);
     assert.equal(Number.isInteger(output.managed_update.summary.failed_with_repair_components_count), true);
     assert.equal(Number.isInteger(output.managed_update.summary.skipped_manual_required_components_count), true);
     assert.equal(output.managed_update.authority_boundary.can_mutate_user_global_homebrew, false);
@@ -273,7 +283,7 @@ exit 2
     assert.equal(output.managed_update.authority_boundary.can_claim_quality_or_export_verdict, false);
     assert.deepEqual(
       output.managed_update.components.map((entry) => entry.component_id),
-      ['runtime_substrate', 'capability_packages', 'codex_surface', 'companion_tools'],
+      ['runtime_substrate', 'capability_packages', 'codex_surface', 'companion_tools', 'workflow_profile'],
     );
     assert.equal(
       output.managed_update.components.every((component) =>
@@ -362,6 +372,37 @@ exit 2
     assert.ok(companionTools);
     assert.equal(companionTools.adapter_id, 'companion_tools_status_adapter');
     assert.equal(companionTools.current.source, 'opl_companion_skill_sync_tools');
+
+    const workflowProfile = output.managed_update.components.find((entry) => entry.component_id === 'workflow_profile');
+    assert.ok(workflowProfile);
+    assert.equal(workflowProfile.adapter_id, 'workflow_profile_adapter');
+    assert.equal(workflowProfile.policy_id, 'semantic_merge_required_no_silent_overwrite');
+    assert.equal(workflowProfile.state, 'current');
+    assert.equal(workflowProfile.auto_apply.mode, 'projection_only');
+    assert.equal(workflowProfile.auto_apply.eligible, false);
+    assert.equal(workflowProfile.auto_apply.app_background_safe, false);
+    assert.equal(workflowProfile.auto_apply.command_ref, null);
+    assert.equal(
+      workflowProfile.auto_apply.blocked_reasons.includes('workflow_profile_requires_codex_semantic_merge'),
+      true,
+    );
+    assert.equal(workflowProfile.current.semantic_merge_required, true);
+    assert.equal(workflowProfile.current.silent_overwrite_allowed, false);
+    assert.deepEqual(workflowProfile.current.managed_profile_parts, [
+      'codex_profile_agents',
+      'codex_profile_taste',
+      'codex_profile_prompts',
+    ]);
+    assert.equal(workflowProfile.receipt.source_manifest_ref, 'opl-flow://workflow-profile');
+    assert.equal(workflowProfile.receipt.apply_mode, 'projection_only');
+    assert.equal(workflowProfile.authority_boundary.can_write_user_codex_profile, false);
+    assert.equal(workflowProfile.authority_boundary.can_silently_overwrite_agents_md, false);
+    assert.equal(workflowProfile.authority_boundary.can_silently_overwrite_taste_md, false);
+    assert.equal(workflowProfile.authority_boundary.can_silently_overwrite_prompts, false);
+    assert.equal(
+      workflowProfile.conditions.some((entry) => entry.type === 'SemanticMergeRequired' && entry.status === 'True'),
+      true,
+    );
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
@@ -492,6 +533,73 @@ exit 2
     assert.equal(output.managed_update.components[0].auto_apply.eligible, false);
     assert.equal(output.managed_update.components[0].auto_apply.app_background_safe, false);
     assert.equal(output.managed_update.components[0].auto_apply.command_ref, null);
+    assert.deepEqual(output.managed_update.execution.adapter_results, []);
+    assert.deepEqual(output.managed_update.execution.receipt_record.receipts, []);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('update apply does not execute the projection-only Workflow Profile component', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-update-workflow-profile-apply-'));
+  const codexFixture = createFakeCodexFixture(`
+if [ "$1" = "--version" ]; then
+  echo "codex-cli 0.134.0"
+  exit 0
+fi
+echo "Unsupported codex fixture command: $*" >&2
+exit 2
+`);
+
+  try {
+    const output = runCli(['update', 'apply', '--component', 'workflow_profile'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_STATE_DIR: path.join(homeRoot, 'state'),
+      OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
+      OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
+      PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+    }) as {
+      managed_update: {
+        operation: string;
+        operation_mode: string;
+        requested_component_id: string;
+        summary: { execution_status: string };
+        components: Array<{
+          component_id: string;
+          auto_apply: {
+            mode: string;
+            eligible: boolean;
+            app_background_safe: boolean;
+            command_ref: string | null;
+            blocked_reasons: string[];
+          };
+        }>;
+        execution: {
+          status: string;
+          adapter_results: unknown[];
+          receipt_record: { receipts: unknown[] };
+        };
+      };
+    };
+
+    assert.equal(output.managed_update.operation, 'apply');
+    assert.equal(output.managed_update.operation_mode, 'controlled_apply');
+    assert.equal(output.managed_update.requested_component_id, 'workflow_profile');
+    assert.equal(output.managed_update.summary.execution_status, 'skipped');
+    assert.equal(output.managed_update.components.length, 1);
+    assert.equal(output.managed_update.components[0].component_id, 'workflow_profile');
+    assert.equal(output.managed_update.components[0].auto_apply.mode, 'projection_only');
+    assert.equal(output.managed_update.components[0].auto_apply.eligible, false);
+    assert.equal(output.managed_update.components[0].auto_apply.app_background_safe, false);
+    assert.equal(output.managed_update.components[0].auto_apply.command_ref, null);
+    assert.equal(
+      output.managed_update.components[0].auto_apply.blocked_reasons.includes(
+        'workflow_profile_requires_codex_semantic_merge',
+      ),
+      true,
+    );
     assert.deepEqual(output.managed_update.execution.adapter_results, []);
     assert.deepEqual(output.managed_update.execution.receipt_record.receipts, []);
   } finally {
