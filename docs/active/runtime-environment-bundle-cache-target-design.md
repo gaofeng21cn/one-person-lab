@@ -321,7 +321,7 @@ Gate：相同 lock 产生相同 cache key；cache hit/miss 被记录但不替代
 
 - Standard App 默认 small installer + lazy runtime materialization。
 - Full App 可选择 embedded layers 或 offline runtime kit。
-- Release size budget 按 App binary、embedded runtime layers、external runtime kit 分开
+- Release size budget 按 installation carrier、embedded runtime layers、external runtime kit 分开
   度量。
 
 Gate：Full/standard install evidence 各自 cohort-bound；remote runtime kit digest verified。

@@ -141,8 +141,17 @@ function componentMatches(component: ManagedUpdateProjectionComponent, component
   return component.component_id === componentId || component.provider_id === componentId;
 }
 
+function componentIsMutableForOperation(component: ManagedUpdateProjectionComponent, operation: ManagedUpdateOperation) {
+  if (operation === 'status' || operation === 'check' || operation === 'plan') {
+    return true;
+  }
+  return component.auto_apply.mode !== 'projection_only';
+}
+
 function selectedComponentIds(input: ManagedUpdateKernelInput, projection: ManagedUpdateProjection) {
-  const ids = projection.managed_update.components.map((component) => component.component_id);
+  const ids = projection.managed_update.components
+    .filter((component) => componentIsMutableForOperation(component, input.operation))
+    .map((component) => component.component_id);
   return input.componentId ? ids : ids.filter((id) => id !== 'companion_tools');
 }
 

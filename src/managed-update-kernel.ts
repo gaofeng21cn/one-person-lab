@@ -733,12 +733,12 @@ function buildCodexSurfaceComponent(capabilityPackages: ManagedUpdateComponent, 
     lifecycle: KERNEL_LIFECYCLE,
     post_apply_hooks: postApplyHooks,
     auto_apply: {
-      mode: needsReload ? 'auto_apply' : 'projection_only',
-      eligible: needsReload,
-      app_background_safe: needsReload,
+      mode: 'projection_only',
+      eligible: false,
+      app_background_safe: false,
       scope: 'codex_plugin_registry_and_skill_projection_only',
-      command_ref: needsReload ? 'opl update apply --component codex_surface --json' : null,
-      blocked_reasons: [],
+      command_ref: null,
+      blocked_reasons: needsReload ? ['codex_surface_is_post_apply_projection_only'] : [],
     },
     status_detail: detail,
     post_apply_guidance: {
@@ -750,7 +750,7 @@ function buildCodexSurfaceComponent(capabilityPackages: ManagedUpdateComponent, 
       action: needsReload ? 'reload' : 'none',
       summary: needsReload
         ? 'Sync skills/plugins after managed package updates, then reload the App/Codex plugin cache if needed.'
-        : 'Capability exposure is current.',
+        : 'Codex Surface projection is current.',
       command_refs: needsReload
         ? [
           controlledCommand(

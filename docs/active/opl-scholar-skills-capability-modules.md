@@ -72,7 +72,7 @@ opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact
 
 普通 OPL App 用户路径分两层：
 
-1. `opl system startup-maintenance --json` 由 App-managed runtime / startup-maintenance 通过 GHCR `one-person-lab-manifest` agent package channel 自动安装或更新 `OPL ScholarSkills` package 到 OPL managed modules root（默认 `<OPL_STATE_DIR>/modules/opl-scholarskills`，或显式 `OPL_MODULES_ROOT/opl-scholarskills`）。这个 target 是 `framework_capability_package`，不是 `DOMAIN_MODULE_SPECS` 里的 domain module，也不会把 ScholarSkills 计入 OPL 品牌 agent module。普通 App / non-development 路径不维护 ScholarSkills 专属 git clone / pull source manager。
+1. `opl system startup-maintenance --json` 由 App-managed runtime / startup-maintenance 通过 GHCR `one-person-lab-manifest` capability packages channel 自动安装或更新 `OPL ScholarSkills` package 到 OPL managed modules root（默认 `<OPL_STATE_DIR>/modules/opl-scholarskills`，或显式 `OPL_MODULES_ROOT/opl-scholarskills`）。这个 target 是 `framework_capability_package`，不是 `DOMAIN_MODULE_SPECS` 里的 domain module，也不会把 ScholarSkills 计入 OPL 品牌 agent module。普通 App / non-development 路径不维护 ScholarSkills 专属 git clone / pull source manager。
 2. 具体论文 workspace / quest 需要调用 App action 或 CLI，把当前 managed package 里的 filtered skill pack 同步到该论文工作目录。App action 是 `scholarskills_workspace_sync` / `scholarskills_quest_sync`；CLI surface 是下面的 `opl connect sync-skills ... --target-*`。
 
 只有显式 `OPL_SCHOLARSKILLS_REPO_ROOT`、`OPL_MODULE_PATH_SCHOLARSKILLS` 或 Developer Mode local checkout 时，startup-maintenance 才把本地 checkout 作为开发者 source 观察，不自动覆盖。普通 App 用户默认走 GHCR package channel 自动安装 / 更新，并把 package marker 里的 `source_git.head_sha` 作为 workspace / quest sync receipt 的 source head。

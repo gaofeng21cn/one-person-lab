@@ -107,7 +107,7 @@ function normalizeRetainVersions(value?: number) {
 
 function buildReleaseAutomation(retainVersions: number, rollbackVersion: string | null) {
   return {
-    status: 'active_managed_ghcr_agent_package_channel',
+    status: 'active_managed_ghcr_capability_packages',
     package_lifecycle_status: 'active_release_channel',
     workflow_trigger_policy: PACKAGE_WORKFLOW_TRIGGER_POLICY,
     remote_publish_status: PACKAGE_REMOTE_PUBLISH_STATUS,
@@ -220,12 +220,12 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
     release_channel: process.env.OPL_RELEASE_CHANNEL?.trim() || 'stable',
     generated_at: generatedAt,
     module_install_update_source: 'package_channel',
-    package_consumption_status: 'ordinary_app_users_consume_managed_ghcr_agent_package_channel',
+    package_consumption_status: 'ordinary_app_users_consume_managed_ghcr_capability_packages',
     developer_module_source_override: {
       env: 'OPL_MODULE_SOURCE_MODE=git_checkout',
       scope: 'developer_mode_checkout',
       app_setting_surface: 'Developer Mode',
-      rule: 'Developer Mode is the App/system settings surface for repo checkout module sources; ordinary App users consume the GHCR agent package channel as the non-development install/update source.',
+      rule: 'Developer Mode is the App/system settings surface for repo checkout module sources; ordinary App users consume the GHCR capability packages channel as the non-development install/update source.',
       low_level_env_role: 'diagnostic_ci_override',
     },
     release_automation: buildReleaseAutomation(retainVersions, rollbackVersion),
@@ -275,7 +275,7 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
             artifact: buildPackageRef(owner, spec.package_name, version),
             package_channel_status: 'active_release_channel',
             package_lifecycle_status: 'active_release_channel',
-            package_lifecycle_reason: 'ordinary App users and package-channel installs consume the GHCR agent package channel; domain truth remains repo-owned',
+            package_lifecycle_reason: 'ordinary App users and package-channel installs consume the GHCR capability packages channel; domain truth remains repo-owned',
             remote_publish_status: 'published_to_ghcr_by_packages_workflow',
             package_consumption_status: 'consumed_by_package_channel_installs',
             current_install_update_source: 'package_channel',

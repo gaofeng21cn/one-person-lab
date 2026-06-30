@@ -102,8 +102,9 @@
       "owner": "one-person-lab-connect",
       "role": "Codex plugin registry, plugin-packaged skills, and generated OMA plugin surface projection",
       "authority": "Derived exposure from managed module state, not a second domain truth source.",
-      "default_policy": "post_apply_sync_then_reload_prompt_when_cache_changes",
-      "mutation_scope": "codex_plugin_registry_and_skill_projection_only"
+      "default_policy": "post_apply_projection_then_reload_prompt_when_cache_changes",
+      "mutation_scope": "projection_only_no_opl_update_apply_component_target",
+      "apply_allowed": false
     },
     {
       "provider_id": "companion_tools",

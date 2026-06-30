@@ -32,7 +32,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-06-27
 
-### 决策：framework capability package 复用 GHCR agent package channel，不新增专属 source manager
+### 决策：framework capability package 复用 GHCR capability packages channel，不新增专属 source manager
 
 原因：`OPL ScholarSkills` 是 OPL-owned 学术能力模块库，供 MAS/MAG/RCA/OMA 等 agent 同步到具体 workspace / quest 使用。它需要随普通 App / non-development 路径自动安装、更新、回滚和投影，但不能因此新建一套独立 git clone / pull / path manager；否则普通用户会出现 domain module package channel 与 capability skill source 两套维护路径，增加运维成本，也会让 App 更新与 daily package channel 的 source fingerprint 判断失真。
 

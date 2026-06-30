@@ -433,7 +433,7 @@ function withCliTimeout<T>(timeoutMs: string, fn: () => T): T {
   }
 }
 
-test('update apply for agent package channel executes the managed adapter and records component receipts', () => {
+test('update apply for capability packages executes the managed adapter and records component receipts', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-update-apply-agent-'));
   const stateRoot = path.join(homeRoot, 'state');
   const moduleEnv = writeManagedUpdateModuleFixtures(homeRoot);
@@ -807,7 +807,7 @@ exit 2
   }
 });
 
-test('update rollback for agent package channel restores recorded previous package roots', () => {
+test('update rollback for capability packages restores recorded previous package roots', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-update-rollback-agent-'));
   const stateRoot = path.join(homeRoot, 'state');
   const moduleEnv = writeManagedUpdateModuleFixtures(homeRoot);

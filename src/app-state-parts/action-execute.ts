@@ -688,9 +688,9 @@ async function executeDirectAppAction(
     };
   }
 
-  if (options.actionId === 'settings_rollback_runtime_toolchain') {
+  if (options.actionId === 'settings_rollback_runtime_substrate') {
     return {
-      delegatedSurface: 'opl update rollback --component runtime_toolchain',
+      delegatedSurface: 'opl update rollback --component runtime_substrate',
       result: buildSettingsControlCenterDryRun(options.actionId, options.payload),
     };
   }

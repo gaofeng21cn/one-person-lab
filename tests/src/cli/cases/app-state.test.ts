@@ -670,7 +670,7 @@ exit 1
       'settings_reload_codex_surface',
       'settings_check_app_update',
       'settings_prune_runtime_roots_dry_run',
-      'settings_rollback_runtime_toolchain',
+      'settings_rollback_runtime_substrate',
       'settings_install_docker_webui',
       'settings_configure_webui_api_key',
       'settings_select_webui_seed',
@@ -871,7 +871,7 @@ exit 1
     );
     assert.equal(
       output.app_state.settings_control_center.action_catalog.find(
-        (entry: AppStateListEntry) => entry.action_id === 'settings_rollback_runtime_toolchain',
+        (entry: AppStateListEntry) => entry.action_id === 'settings_rollback_runtime_substrate',
       )?.danger_level,
       'high',
     );

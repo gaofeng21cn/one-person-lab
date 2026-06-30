@@ -59,7 +59,7 @@ const SETTINGS_CONTROL_CENTER_ACTION_IDS = [
   'settings_reload_codex_surface',
   'settings_check_app_update',
   'settings_prune_runtime_roots_dry_run',
-  'settings_rollback_runtime_toolchain',
+  'settings_rollback_runtime_substrate',
   'settings_install_docker_webui',
   'settings_configure_webui_api_key',
   'settings_select_webui_seed',
@@ -305,7 +305,7 @@ export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
     danger_level: 'medium',
     impact: 'Applies package-channel updates only through existing managed module update routes.',
     follow_up_action_ids: ['settings_reload_codex_surface', 'provider_scheduler_status'],
-    rollback_action_id: 'settings_rollback_runtime_toolchain',
+    rollback_action_id: 'settings_rollback_runtime_substrate',
     verify_action_id: 'provider_scheduler_status',
   },
   {
@@ -360,19 +360,19 @@ export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
     verify_action_id: 'settings_prune_runtime_roots_dry_run',
   },
   {
-    action_id: 'settings_rollback_runtime_toolchain',
-    stable_id: 'rollback_runtime_toolchain',
-    label: 'Plan runtime toolchain rollback',
+    action_id: 'settings_rollback_runtime_substrate',
+    stable_id: 'rollback_runtime_substrate',
+    label: 'Plan runtime substrate rollback',
     section_id: 'updates',
     task_kind: 'rollback',
-    taxonomy: 'settings.updates.rollback_runtime_toolchain',
-    delegated_surface: 'opl update rollback --component runtime_toolchain',
+    taxonomy: 'settings.updates.rollback_runtime_substrate',
+    delegated_surface: 'opl update rollback --component runtime_substrate',
     payload_fields: ['receipt_ref'],
     mutates: 'none_read_only',
     dry_run_supported: true,
     confirmation_required: true,
     danger_level: 'high',
-    impact: 'Projects the explicit runtime-toolchain rollback route; actual pointer rollback stays behind the managed update authority.',
+    impact: 'Projects the explicit runtime substrate rollback route; actual pointer rollback stays behind the managed update authority.',
     follow_up_action_ids: ['settings_check_app_update', 'settings_reload_codex_surface'],
     verify_action_id: 'settings_check_app_update',
   },
@@ -601,7 +601,7 @@ function actionState(action: SettingsAction, input: BuildSettingsControlCenterIn
   if (action.action_id === 'settings_open_docker_webui' || action.action_id === 'settings_diagnose_docker_webui') {
     return 'ready';
   }
-  if (action.action_id === 'settings_rollback_runtime_toolchain') {
+  if (action.action_id === 'settings_rollback_runtime_substrate') {
     return 'manual_required';
   }
   return 'ready';
@@ -829,7 +829,7 @@ function buildAppSettingsReadModel(
       release_channel: asString(input.release.channel) ?? 'unknown',
       app_update_action_id: 'settings_check_app_update',
       runtime_roots_cleanup_action_id: 'settings_prune_runtime_roots_dry_run',
-      runtime_toolchain_rollback_action_id: 'settings_rollback_runtime_toolchain',
+      runtime_substrate_rollback_action_id: 'settings_rollback_runtime_substrate',
       temporal_provider: statusTone(temporalStatus),
     },
     action_policy: {

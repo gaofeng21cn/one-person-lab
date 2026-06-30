@@ -118,7 +118,7 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       'settings_reload_codex_surface',
       'settings_check_app_update',
       'settings_prune_runtime_roots_dry_run',
-      'settings_rollback_runtime_toolchain',
+      'settings_rollback_runtime_substrate',
       'settings_install_docker_webui',
       'settings_configure_webui_api_key',
       'settings_select_webui_seed',
@@ -269,11 +269,11 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     );
     assert.equal(actions.get('settings_check_app_update')?.mutates, 'none_read_only');
     assert.equal(
-      actions.get('settings_rollback_runtime_toolchain')?.delegated_surface,
-      'opl update rollback --component runtime_toolchain',
+      actions.get('settings_rollback_runtime_substrate')?.delegated_surface,
+      'opl update rollback --component runtime_substrate',
     );
-    assert.deepEqual(actions.get('settings_rollback_runtime_toolchain')?.payload_fields, ['receipt_ref']);
-    assert.equal(actions.get('settings_rollback_runtime_toolchain')?.danger_level, 'high');
+    assert.deepEqual(actions.get('settings_rollback_runtime_substrate')?.payload_fields, ['receipt_ref']);
+    assert.equal(actions.get('settings_rollback_runtime_substrate')?.danger_level, 'high');
     assert.equal(actions.get('settings_install_docker_webui')?.delegated_surface, 'opl install');
     assert.equal(actions.get('settings_install_docker_webui')?.confirmation_required, true);
     assert.equal(
@@ -1077,12 +1077,12 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
       'action',
       'execute',
       '--action',
-      'settings_rollback_runtime_toolchain',
+      'settings_rollback_runtime_substrate',
       '--payload',
-      '{"receipt_ref":"opl://managed-update/runtime_toolchain/apply/example"}',
+      '{"receipt_ref":"opl://managed-update/runtime_substrate/apply/example"}',
     ], env).app_action_execution;
 
-    assert.equal(rollbackPlan.delegated_surface, 'opl update rollback --component runtime_toolchain');
+    assert.equal(rollbackPlan.delegated_surface, 'opl update rollback --component runtime_substrate');
     assert.equal(rollbackPlan.result.settings_control_center_action.task_kind, 'rollback');
     assert.equal(rollbackPlan.result.settings_control_center_action.danger_level, 'high');
     assert.equal(
