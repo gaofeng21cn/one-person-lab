@@ -1,4 +1,5 @@
 import { buildCurrentOwnerDeltaTopline } from './current-owner-delta-topline.ts';
+import { buildTaskRunProjectionV2 } from './app-state-task-run-projection.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -881,6 +882,7 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
       activity_center: buildActivityCenter(input),
       domain_lane_map: buildDomainLaneMap(input),
       task_drilldowns: buildTaskDrilldowns(input),
+      task_run_projection_v2: buildTaskRunProjectionV2(runtimeActivityDrilldowns(input)),
       safe_action_routes: safeActionRoutes,
       refresh_policy: {
         summary_poll_interval_seconds: 10,

@@ -1087,6 +1087,25 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
               action_receipt: Record<string, any>;
               workflow_refs: Record<string, any>;
             }>;
+            task_run_projection_v2: {
+              surface_kind: string;
+              schema_version: string;
+              refs_only: boolean;
+              source_ref: string;
+              summary: Record<string, number>;
+              tasks: Array<{
+                task_identity: Record<string, any>;
+                status: Record<string, any>;
+                progress: Record<string, any>;
+                conditions: Array<Record<string, any>>;
+                evidence_cards: Array<Record<string, any>>;
+                action_cards: Array<Record<string, any>>;
+                resource_cards: Array<Record<string, any>>;
+                diagnostics_ref: string;
+                authority_boundary?: Record<string, any>;
+              }>;
+              authority_boundary: Record<string, any>;
+            };
           };
           visual_ref_groups: {
             active_project_refs: Array<{ study_id?: string; state: string }>;
@@ -1220,6 +1239,81 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
     assert.equal('body' in runningTask.artifact_or_blocker, false);
     assert.equal('body' in runningTask.review_receipt, false);
     assert.equal('body' in runningTask.workflow_refs, false);
+
+    const taskRunProjection = output.app_state.operator.workbench.task_run_projection_v2;
+    assert.equal(taskRunProjection.surface_kind, 'task_run_projection_v2');
+    assert.equal(taskRunProjection.schema_version, 'task-run-projection.v2');
+    assert.equal(taskRunProjection.refs_only, true);
+    assert.equal(taskRunProjection.source_ref, 'app_state.operator.workbench.task_drilldowns');
+    assert.deepEqual(taskRunProjection.summary, {
+      task_count: 3,
+      running_task_count: 1,
+      attention_task_count: 1,
+      recent_task_count: 1,
+    });
+    assert.equal(taskRunProjection.authority_boundary.can_write_domain_truth, false);
+    assert.equal(taskRunProjection.authority_boundary.can_read_artifact_body, false);
+    assert.equal(taskRunProjection.authority_boundary.can_read_memory_body, false);
+    assert.equal(taskRunProjection.authority_boundary.can_create_owner_receipt, false);
+    assert.equal(taskRunProjection.authority_boundary.can_create_typed_blocker, false);
+    assert.equal(taskRunProjection.authority_boundary.can_authorize_quality_verdict, false);
+    assert.equal('provider_completion_is_domain_ready' in taskRunProjection.authority_boundary, false);
+
+    const runningProjection = taskRunProjection.tasks.find(
+      (entry) => entry.task_identity.study_id === '002-dm-china-us-mortality-attribution',
+    );
+    assert.ok(runningProjection);
+    assert.equal(runningProjection.task_identity.task_id, 'medautoscience:study:002-dm-china-us-mortality-attribution');
+    assert.equal(runningProjection.status.state, 'running');
+    assert.equal(runningProjection.status.active_run_ref?.endsWith('.active_run_id'), true);
+    assert.equal(runningProjection.progress.progress_ref.endsWith('.progress'), true);
+    assert.equal(runningProjection.progress.stage_ref.endsWith('.stage'), true);
+    assert.deepEqual(
+      runningProjection.conditions.map((condition) => condition.type),
+      ['task_status', 'owner_route', 'evidence_refs'],
+    );
+    for (const condition of runningProjection.conditions) {
+      assert.deepEqual(
+        Object.keys(condition),
+        ['type', 'status', 'reason', 'message', 'severity', 'owner', 'last_transition_time', 'ref'],
+      );
+      assert.equal(typeof condition.ref, 'string');
+    }
+    assert.equal(
+      runningProjection.evidence_cards.every((card) =>
+        typeof card.ref === 'string'
+          && typeof card.summary === 'string'
+          && !('body' in card)
+          && !('artifact_body' in card)
+          && !('domain_verdict' in card)
+      ),
+      true,
+    );
+    assert.equal(
+      runningProjection.action_cards.every((card) =>
+        typeof card.ref === 'string'
+          && typeof card.summary === 'string'
+          && !('body' in card)
+          && !('receipt_body' in card)
+      ),
+      true,
+    );
+    assert.equal(
+      runningProjection.resource_cards.every((card) =>
+        typeof card.ref === 'string'
+          && typeof card.summary === 'string'
+          && !('body' in card)
+          && !('resource_body' in card)
+      ),
+      true,
+    );
+    assert.equal(runningProjection.diagnostics_ref, 'app_state.provider.temporal');
+    const projectionWithoutDiagnostics = JSON.stringify({
+      ...runningProjection,
+      diagnostics_ref: undefined,
+    });
+    assert.equal(projectionWithoutDiagnostics.includes('provider'), false);
+    assert.equal(projectionWithoutDiagnostics.includes('Temporal'), false);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(masRepoRoot, { recursive: true, force: true });
