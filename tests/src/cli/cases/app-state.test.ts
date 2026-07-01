@@ -1029,7 +1029,18 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
               recent_projects: Array<{ study_id?: string; state: string }>;
             };
             domain_lane_map: { lanes: Array<{ domain_id: string; active_task_count: number; tasks: Array<{ study_id?: string; state: string }> }> };
-            task_drilldowns: Array<{ study_id?: string; state: string; source_ref_count: number }>;
+            task_drilldowns: Array<{
+              study_id?: string;
+              state: string;
+              source_ref_count: number;
+              stage: Record<string, any>;
+              progress: Record<string, any>;
+              next_owner: Record<string, any>;
+              artifact_or_blocker: Record<string, any>;
+              review_receipt: Record<string, any>;
+              action_receipt: Record<string, any>;
+              workflow_refs: Record<string, any>;
+            }>;
           };
           visual_ref_groups: {
             active_project_refs: Array<{ study_id?: string; state: string }>;
@@ -1138,6 +1149,28 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
       output.app_state.operator.workbench.task_drilldowns.every((entry) => !entry.study_id || entry.source_ref_count > 0),
       true,
     );
+    const runningTask = output.app_state.operator.workbench.task_drilldowns.find(
+      (entry) => entry.study_id === '002-dm-china-us-mortality-attribution',
+    );
+    assert.ok(runningTask);
+    assert.equal(runningTask.stage.stage_id, 'live');
+    assert.equal(runningTask.stage.current_ref.includes('task_drilldowns'), true);
+    assert.equal(runningTask.progress.status, 'running');
+    assert.equal(runningTask.next_owner.owner, 'medautoscience');
+    assert.equal(runningTask.artifact_or_blocker.content_policy, 'refs_only_no_artifact_body');
+    assert.equal(runningTask.artifact_or_blocker.canonical_ref.includes('/tasks/'), true);
+    assert.equal(Array.isArray(runningTask.artifact_or_blocker.export_bundle_refs), true);
+    assert.equal(runningTask.artifact_or_blocker.export_bundle_refs[0].includes('/export-bundles/latest'), true);
+    assert.equal(runningTask.review_receipt.authority_policy, 'receipt_summary_refs_only_no_quality_verdict_authority');
+    assert.equal(runningTask.review_receipt.receipt_ref.includes('/reviewer-receipt'), true);
+    assert.equal(runningTask.action_receipt.action_id, 'task_action_receipt_preview');
+    assert.equal(runningTask.action_receipt.dry_run_required, true);
+    assert.equal(runningTask.workflow_refs.content_policy, 'refs_only_no_workflow_body');
+    assert.equal(runningTask.workflow_refs.current_workflow_ref.includes('/workflows/current'), true);
+    assert.equal('artifact_body' in runningTask.artifact_or_blocker, false);
+    assert.equal('body' in runningTask.artifact_or_blocker, false);
+    assert.equal('body' in runningTask.review_receipt, false);
+    assert.equal('body' in runningTask.workflow_refs, false);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(masRepoRoot, { recursive: true, force: true });

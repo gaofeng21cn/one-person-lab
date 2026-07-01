@@ -265,6 +265,61 @@ function dryRunModuleAction(action: OplModuleAction, moduleId: OplModuleId) {
   };
 }
 
+function buildTaskActionReceiptPreview(payload: JsonRecord) {
+  const taskId = stringPayloadField(payload, 'task_id')
+    ?? stringPayloadField(payload, 'taskId')
+    ?? 'unbound_task';
+  const actionRef = stringPayloadField(payload, 'action_ref')
+    ?? stringPayloadField(payload, 'actionRef')
+    ?? null;
+  return {
+    task_action_receipt_preview: {
+      surface_kind: 'opl_app_task_action_receipt_preview.v1',
+      action_id: 'task_action_receipt_preview',
+      status: 'dry_run_refs_only',
+      task_id: taskId,
+      action_ref: actionRef,
+      receipt_ref: `opl://app-action-previews/${encodeURIComponent(taskId)}/receipt`,
+      plan: {
+        summary: 'Preview task action receipt refs for App confirmation.',
+        required_mode: 'dry_run',
+        owner_route: 'domain_owner_route_required_for_execute',
+      },
+      write_targets: [],
+      risk: {
+        danger_level: 'medium',
+        mutation_policy: 'no_writes_preview_only',
+      },
+      expected_output: {
+        receipt_ref: `opl://app-action-previews/${encodeURIComponent(taskId)}/receipt`,
+        content_policy: 'refs_only_no_action_receipt_body',
+      },
+      command_preview: [
+        'opl',
+        'app',
+        'action',
+        'execute',
+        '--action',
+        'task_action_receipt_preview',
+        '--payload',
+        '<json>',
+        '--dry-run',
+      ],
+      authority_boundary: {
+        can_write_domain_truth: false,
+        can_mutate_artifact_body: false,
+        can_read_artifact_body: false,
+        can_create_owner_receipt: false,
+        can_sign_domain_receipt: false,
+        can_authorize_quality_verdict: false,
+        can_authorize_export_verdict: false,
+        execution_requires_domain_owner_route: true,
+        temporal_is_diagnostics_only: true,
+      },
+    },
+  };
+}
+
 function buildSettingsControlCenterDryRun(actionId: string, payload: JsonRecord) {
   const action = settingsControlCenterActionById(actionId);
   return {
@@ -591,6 +646,22 @@ async function executeDirectAppAction(
             },
           }
         : writeOplWorkspaceRootSurface(workspaceRoot),
+    };
+  }
+
+  if (options.actionId === 'task_action_receipt_preview') {
+    if (!options.dryRun) {
+      throw new FrameworkContractError('cli_usage_error', 'task_action_receipt_preview is a dry-run App preview only; execute through the domain owner route.', {
+        action_id: options.actionId,
+        required_mode: 'dry_run',
+        can_write_domain_truth: false,
+        can_mutate_artifact_body: false,
+        can_create_owner_receipt: false,
+      });
+    }
+    return {
+      delegatedSurface: 'opl app action execute --action task_action_receipt_preview --dry-run',
+      result: buildTaskActionReceiptPreview(options.payload),
     };
   }
 

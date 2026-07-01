@@ -1,4 +1,4 @@
-import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import { assert, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
 
 const defaultDeveloperModePermissionsFixture = JSON.stringify({
   user: { login: 'gaofeng21cn' },
@@ -125,6 +125,7 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       'settings_run_webui_startup_maintenance',
       'settings_open_docker_webui',
       'settings_diagnose_docker_webui',
+      'task_action_receipt_preview',
     ]) {
       assert.ok(actions.has(actionId), `missing App action: ${actionId}`);
       const delegatedSurface = actions.get(actionId)?.delegated_surface ?? '';
@@ -233,6 +234,13 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.deepEqual(actions.get('provider_scheduler_tick')?.payload_fields, ['force', 'limit', 'hydrate', 'profile']);
     assert.equal(actions.get('provider_scheduler_tick')?.route_requires_domain_or_app_payload, true);
     assert.equal(actions.get('provider_scheduler_tick')?.can_submit_to_safe_action_shell, false);
+    assert.equal(
+      actions.get('task_action_receipt_preview')?.delegated_surface,
+      'opl app action execute --action task_action_receipt_preview --dry-run',
+    );
+    assert.deepEqual(actions.get('task_action_receipt_preview')?.payload_fields, ['task_id', 'action_ref']);
+    assert.equal(actions.get('task_action_receipt_preview')?.mutates, 'none_read_only');
+    assert.equal(actions.get('task_action_receipt_preview')?.dry_run_supported, true);
     assert.equal(
       actions.get('settings_repair_model_access')?.delegated_surface,
       'opl system developer-supervisor',
@@ -935,6 +943,53 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
     assert.equal(moduleSync.delegated_surface, 'opl connect reconcile-modules');
     assert.equal(moduleSync.result.system_action.action, 'reconcile_modules');
     assert.equal(moduleSync.result.system_action.status, 'dry_run');
+
+    const actionReceipt = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'task_action_receipt_preview',
+      '--payload',
+      '{"task_id":"medautoscience:study:002","action_ref":"app_state.operator.workbench.task_drilldowns.002.action_receipt"}',
+      '--dry-run',
+    ], env).app_action_execution;
+
+    assert.equal(
+      actionReceipt.delegated_surface,
+      'opl app action execute --action task_action_receipt_preview --dry-run',
+    );
+    assert.equal(actionReceipt.result.task_action_receipt_preview.status, 'dry_run_refs_only');
+    assert.equal(actionReceipt.result.task_action_receipt_preview.task_id, 'medautoscience:study:002');
+    assert.equal(actionReceipt.result.task_action_receipt_preview.plan.required_mode, 'dry_run');
+    assert.deepEqual(actionReceipt.result.task_action_receipt_preview.write_targets, []);
+    assert.equal(actionReceipt.result.task_action_receipt_preview.risk.mutation_policy, 'no_writes_preview_only');
+    assert.equal(
+      actionReceipt.result.task_action_receipt_preview.expected_output.content_policy,
+      'refs_only_no_action_receipt_body',
+    );
+    assert.equal(
+      actionReceipt.result.task_action_receipt_preview.authority_boundary.can_create_owner_receipt,
+      false,
+    );
+    assert.equal(
+      actionReceipt.result.task_action_receipt_preview.authority_boundary.temporal_is_diagnostics_only,
+      true,
+    );
+
+    const nonDryRunActionReceipt = runCliFailure([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'task_action_receipt_preview',
+      '--payload',
+      '{"task_id":"medautoscience:study:002"}',
+    ], env);
+
+    assert.equal(nonDryRunActionReceipt.payload.error.code, 'cli_usage_error');
+    assert.equal(nonDryRunActionReceipt.payload.error.details.required_mode, 'dry_run');
+    assert.equal(nonDryRunActionReceipt.payload.error.details.can_create_owner_receipt, false);
 
     const scheduler = runCli([
       'app',

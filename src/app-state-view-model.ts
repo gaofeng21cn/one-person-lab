@@ -244,6 +244,72 @@ function commandRoute(item: JsonRecord) {
   return asString(commands[0]?.command);
 }
 
+function taskUserProjectionRefs(input: {
+  taskId: string;
+  domainId: string;
+  state: string;
+  stageId: string;
+  stageLabel: string | null;
+  blockerRefCount: number;
+}) {
+  const encodedTaskId = encodeURIComponent(input.taskId);
+  const encodedDomainId = encodeURIComponent(input.domainId);
+  const encodedStageId = encodeURIComponent(input.stageId);
+  return {
+    stage: {
+      stage_id: input.stageId,
+      label: input.stageLabel,
+      current_ref: `app_state.operator.workbench.task_drilldowns.${encodedTaskId}`,
+      lineage_ref: `opl://domains/${encodedDomainId}/stages/${encodedStageId}/lineage`,
+      conformance_ref: 'contracts/opl-framework/stage-run-kernel-contract.json#app_user_task_projection',
+    },
+    progress: {
+      status: input.state,
+      label: input.stageLabel ?? input.state,
+      source_ref: `app_state.operator.workbench.task_drilldowns.${encodedTaskId}`,
+    },
+    next_owner: {
+      owner: input.domainId,
+      source_ref: `app_state.operator.workbench.task_drilldowns.${encodedTaskId}`,
+    },
+    artifact_or_blocker: {
+      current_ref: `app_state.operator.workbench.task_drilldowns.${encodedTaskId}`,
+      canonical_ref: `opl://domains/${encodedDomainId}/tasks/${encodedTaskId}/canonical`,
+      export_ref: `opl://domains/${encodedDomainId}/tasks/${encodedTaskId}/exports`,
+      export_bundle_refs: [
+        `opl://domains/${encodedDomainId}/tasks/${encodedTaskId}/export-bundles/latest`,
+      ],
+      lineage_ref: `opl://domains/${encodedDomainId}/stages/${encodedStageId}/lineage`,
+      receipt_ref: `opl://domains/${encodedDomainId}/tasks/${encodedTaskId}/artifact-receipt`,
+      conformance_ref: 'contracts/opl-framework/stage-artifact-runtime-contract.json#refs_only_artifact_projection',
+      blocker_ref_count: input.blockerRefCount,
+      content_policy: 'refs_only_no_artifact_body',
+    },
+    review_receipt: {
+      reviewer_ref: `opl://domains/${encodedDomainId}/reviewers/default`,
+      check_ref: `opl://domains/${encodedDomainId}/tasks/${encodedTaskId}/review-check`,
+      status: input.blockerRefCount > 0 ? 'attention_needed' : 'refs_available',
+      issue_ref_count: input.blockerRefCount,
+      issues_ref: `app_state.operator.workbench.task_drilldowns.${encodedTaskId}.blocker_refs`,
+      next_action: input.blockerRefCount > 0 ? 'route_to_domain_owner' : 'wait_for_domain_owner_receipt',
+      receipt_ref: `opl://domains/${encodedDomainId}/tasks/${encodedTaskId}/reviewer-receipt`,
+      authority_policy: 'receipt_summary_refs_only_no_quality_verdict_authority',
+    },
+    action_receipt: {
+      action_id: 'task_action_receipt_preview',
+      route: 'opl app action execute --action task_action_receipt_preview --dry-run',
+      dry_run_required: true,
+      preview_ref: `opl://app-action-previews/${encodedTaskId}/receipt`,
+      content_policy: 'refs_only_no_action_receipt_body',
+    },
+    workflow_refs: {
+      current_workflow_ref: `opl://domains/${encodedDomainId}/tasks/${encodedTaskId}/workflows/current`,
+      stage_workflow_ref: `opl://domains/${encodedDomainId}/stages/${encodedStageId}/workflow`,
+      content_policy: 'refs_only_no_workflow_body',
+    },
+  };
+}
+
 function activityState(item: JsonRecord) {
   const lane = asString(item.lane);
   if (lane === 'running') {
@@ -276,17 +342,28 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
     ?? asString(item.action_summary)
     ?? asString(item.summary);
   const route = commandRoute(item);
+  const state = activityState(item);
+  const stageId = asString(item.status) ?? asString(item.health_status) ?? asString(item.lane) ?? 'runtime_activity';
+  const blockerRefCount = asRecordArray(item.blockers).length;
+  const refs = taskUserProjectionRefs({
+    taskId,
+    domainId: asString(item.project_id) ?? 'opl',
+    state,
+    stageId,
+    stageLabel: asString(item.status_label),
+    blockerRefCount,
+  });
 
   return {
     task_id: taskId,
     domain_id: asString(item.project_id) ?? 'opl',
     domain_label: asString(item.project_label) ?? asString(item.domain_owner) ?? 'OPL',
     title,
-    state: activityState(item),
+    state,
     status: asString(item.status),
     status_label: asString(item.status_label),
     priority_bucket: activityPriorityBucket(item),
-    active_stage_id: asString(item.status) ?? asString(item.health_status) ?? asString(item.lane),
+    active_stage_id: stageId,
     active_stage_label: asString(item.status_label),
     active_run_id: activeRunId,
     next_visible_step: nextVisibleStep,
@@ -294,15 +371,16 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
     workspace_path: asString(item.workspace_path),
     study_id: studyId,
     source_ref_count: sourceRefCount(item),
-    blocker_ref_count: asRecordArray(item.blockers).length,
+    blocker_ref_count: blockerRefCount,
     safe_action_ref_count: route ? 1 : 0,
     paper_route_lens_ref_count: 0,
+    ...refs,
     active_path: [
       {
         node_id: taskId,
         node_kind: studyId ? 'mas_study_runtime_projection' : 'runtime_activity_projection',
         label: title,
-        state: activityState(item),
+        state,
         owner: 'opl_framework',
         ref: route,
       },
@@ -319,6 +397,15 @@ function moduleTaskDrilldowns(input: OplAppOperatorViewModelInput) {
     const moduleId = asString(module.module_id) ?? `module-${index + 1}`;
     const label = asString(module.label) ?? moduleId;
     const healthStatus = asString(module.health_status) ?? asString(module.status) ?? 'unknown';
+    const blockerRefCount = statusTone(healthStatus) === 'ready' ? 0 : 1;
+    const refs = taskUserProjectionRefs({
+      taskId: moduleId,
+      domainId: moduleId,
+      state: healthStatus,
+      stageId: 'module_runtime',
+      stageLabel: null,
+      blockerRefCount,
+    });
     return {
       task_id: moduleId,
       domain_id: moduleId,
@@ -327,8 +414,9 @@ function moduleTaskDrilldowns(input: OplAppOperatorViewModelInput) {
       active_stage_id: 'module_runtime',
       stage_attempt_ids: [],
       safe_action_ref_count: 0,
-      blocker_ref_count: statusTone(healthStatus) === 'ready' ? 0 : 1,
+      blocker_ref_count: blockerRefCount,
       paper_route_lens_ref_count: 0,
+      ...refs,
       active_path: [
         {
           node_id: `module:${moduleId}`,
