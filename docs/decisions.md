@@ -7,6 +7,20 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-07-01
 
+### 决策：Linux/Docker WebUI 的 OPL 本体更新走 runtime_substrate Framework artifact，不更新 Docker image
+
+原因：Docker WebUI 内部运行的 OPL 本体本质上是 Linux runtime root，普通用户需要的是在 WebUI/CLI 里更新 OPL Framework runtime，而不是让容器内进程控制宿主 Docker daemon 去拉取和替换镜像。Docker image、entrypoint、base OS、compose 和端口/volume 映射仍是 Installation Carrier；容器内 `opl update apply --component runtime_substrate --json` 只能维护挂载数据卷中的 OPL Runtime Fabric。
+
+影响：
+
+- Docker/WebUI 和裸 Linux 共用 `runtime_substrate` 更新语义；`opl update apply --component runtime_substrate --json` 通过 Framework artifact channel 下载、校验、stage、依赖安装、激活 OPL Framework runtime，并写 `.opl-framework-source.json` metadata。
+- Docker/WebUI 默认 target root 是 `${OPL_DATA_DIR}/opl/framework` 或 `${AIONUI_DATA_DIR}/opl/framework`，即通常的 `/data/opl/framework`。这让 OPL 本体更新留在 mounted data volume 中，避免写回 image seed，也避免旧 image seed 在后续启动时覆盖 newer managed root。
+- 首次 artifact apply 可以从当前 image seed / project root 生成 `/data/opl/framework.previous` 作为 rollback root；后续 apply 用 previous/current pointer 语义回滚。
+- Framework artifact staging 允许跨文件系统：临时目录可能在 `/tmp`，目标可能在 Docker Desktop bind mount `/data`。实现必须先把 stage materialize 到 target parent 下的 incoming root，再在同一文件系统内切换 current/previous，避免 `EXDEV` 跨设备 rename 失败。
+- `opl system startup-maintenance` 的普通后台启动不得无条件消费 Framework channel；只有 runtime_substrate scope / managed-update apply 这类显式运行时维护路径才执行 OPL 本体 artifact apply。
+- 该能力不授权容器内 Docker socket、Watchtower、compose 操作或 host executor。Docker/WebUI image refresh 仍由 App/installer 的 host-side Installation Carrier route 处理，并必须证明 data/projects volume preservation。
+- 该能力只证明 OPL Framework runtime update/rollback 机制；不单独声明 GHCR channel latest/current、Docker image release-ready、App release-ready、domain module ready 或 family production-ready。release/currentness 必须另有 channel artifact readback、checksum、same-cohort image/manifest 和 owner gate。
+
 ### 决策：OPL family 语言选型按 owner boundary 克制分工，不把 Rust 扩成核心语言
 
 原因：OPL family 已经形成清楚的 owner 分层：Framework / App / generated surface / runtime control plane 需要稳定的 CLI、JSON readback、contract 消费和 Codex / Electron / Node 生态；MAS/MAG/RCA/BookForge 等 domain agent 需要科学计算、文档、PDF/Office、统计、ML 和 domain-native helper 生态；native helper / state index / sysprobe 则需要少量跨平台系统能力。成熟的 polyglot 口径不是增加语言数量，而是在问题边界确实不同且收益能抵消认知成本时才引入第二语言。因此 family 默认保持 TypeScript / Node 优先，Python 用于科学 / 文档 / native helper execution，Rust 只用于系统边界和 hot path native helper。
