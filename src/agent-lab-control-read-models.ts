@@ -10,6 +10,193 @@ function unique(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
 
+function refsOrDefault(values: string[] | undefined, defaultValues: string[]) {
+  const refs = unique(values ?? defaultValues);
+  return refs.length > 0 ? refs : defaultValues;
+}
+
+type DomainFeedbackSelfEvolutionInput = {
+  sourceRefs?: string[];
+  externalSuiteRefs?: string[];
+  developerWorkOrderCandidateRefs?: string[];
+  completionRefs?: string[];
+  blockerRefs?: string[];
+};
+
+type FeedbackWorkOrderStatus = 'queued' | 'runnable' | 'completed_or_blocker';
+
+function feedbackWorkOrderItem(input: {
+  workOrderRef: string;
+  domainId: string;
+  status: FeedbackWorkOrderStatus;
+  triggerRef: string;
+  externalSuiteRef?: string;
+  developerWorkOrderCandidateRef?: string;
+  completionRef?: string;
+  blockerRef?: string;
+}) {
+  const refFields = [
+    input.triggerRef,
+    input.externalSuiteRef,
+    input.developerWorkOrderCandidateRef,
+    input.completionRef,
+    input.blockerRef,
+  ].filter((entry): entry is string => Boolean(entry));
+  return {
+    surface_kind: 'opl_agent_lab_feedback_work_order_status_item',
+    work_order_ref: input.workOrderRef,
+    domain_id: input.domainId,
+    status: input.status,
+    state: input.status,
+    trigger_ref: input.triggerRef,
+    external_suite_ref: input.externalSuiteRef ?? null,
+    developer_work_order_candidate_ref: input.developerWorkOrderCandidateRef ?? null,
+    completion_ref: input.completionRef ?? null,
+    blocker_ref: input.blockerRef ?? null,
+    ref_fields: refFields,
+    refs_only: true,
+    runnable: input.status === 'runnable',
+    terminal: input.status === 'completed_or_blocker',
+    action_route_ref: input.status === 'runnable'
+      ? `work-order-execute-candidate:${input.domainId}/${input.workOrderRef.split(':').pop()}`
+      : null,
+    execution_surface: input.status === 'runnable' ? 'opl work-order execute' : null,
+    execution_precondition: input.status === 'runnable'
+      ? 'materialized_developer_work_order_file_required'
+      : 'not_runnable_from_projection',
+    terminal_outcome: input.status === 'completed_or_blocker'
+      ? input.blockerRef
+        ? 'blocked_with_domain_owned_typed_blocker_ref'
+        : 'completed_refs_observed'
+      : null,
+    authority_boundary: AGENT_LAB_CONTROL_AUTHORITY_BOUNDARY,
+  };
+}
+
+export function buildAgentLabDomainFeedbackSelfEvolutionReadModel(
+  input: DomainFeedbackSelfEvolutionInput = {},
+) {
+  const sourceRefs = unique(input.sourceRefs ?? []);
+  const externalSuiteRefs = refsOrDefault(input.externalSuiteRefs, [
+    'external-suite-ref:mas/paper-mission-feedback',
+  ]);
+  const developerWorkOrderCandidateRefs = refsOrDefault(input.developerWorkOrderCandidateRefs, [
+    'developer-work-order-candidate-ref:mas/paper-mission-feedback-repair',
+  ]);
+  const completionRefs = refsOrDefault(input.completionRefs, [
+    'work-order-completion-ref:agent-lab/feedback-loop/no-domain-write-proof',
+  ]);
+  const blockerRefs = refsOrDefault(input.blockerRefs, [
+    'typed-blocker-ref:domain-owner/feedback-work-order-owner-required',
+  ]);
+
+  const queued = feedbackWorkOrderItem({
+    workOrderRef: 'feedback-work-order:mas/external-suite-feedback-intake',
+    domainId: 'med-autoscience',
+    status: 'queued',
+    triggerRef: externalSuiteRefs[0],
+    externalSuiteRef: externalSuiteRefs[0],
+  });
+  const runnable = feedbackWorkOrderItem({
+    workOrderRef: 'feedback-work-order:mas/developer-work-order-candidate',
+    domainId: 'med-autoscience',
+    status: 'runnable',
+    triggerRef: developerWorkOrderCandidateRefs[0],
+    externalSuiteRef: externalSuiteRefs[0],
+    developerWorkOrderCandidateRef: developerWorkOrderCandidateRefs[0],
+  });
+  const completed = feedbackWorkOrderItem({
+    workOrderRef: 'feedback-work-order:agent-lab/completed-or-blocker-readback',
+    domainId: 'med-autoscience',
+    status: 'completed_or_blocker',
+    triggerRef: completionRefs[0] ?? blockerRefs[0],
+    externalSuiteRef: externalSuiteRefs[0],
+    developerWorkOrderCandidateRef: developerWorkOrderCandidateRefs[0],
+    completionRef: completionRefs[0],
+    blockerRef: blockerRefs[0],
+  });
+  const workOrderStatusItems = [queued, runnable, completed];
+
+  return {
+    surface_kind: 'opl_agent_lab_domain_feedback_self_evolution_read_model',
+    version: 'opl-agent-lab.v1.domain-feedback-self-evolution',
+    read_model_id: stableId('oaldf', [
+      sourceRefs,
+      externalSuiteRefs,
+      developerWorkOrderCandidateRefs,
+      completionRefs,
+      blockerRefs,
+      workOrderStatusItems.map((item) => item.work_order_ref),
+    ]),
+    status: 'work_order_status_projection_ready',
+    refs_only: true,
+    intake_role: 'refs_only_external_suite_and_developer_work_order_candidate_projection',
+    accepted_input_ref_kinds: [
+      'domain_feedback_external_suite_ref',
+      'developer_work_order_candidate_ref',
+      'work_order_completion_ref',
+      'domain_owned_typed_blocker_ref',
+    ],
+    status_shape: ['queued', 'runnable', 'completed_or_blocker'],
+    source_refs: sourceRefs,
+    external_suite_refs: externalSuiteRefs,
+    developer_work_order_candidate_refs: developerWorkOrderCandidateRefs,
+    completion_refs: completionRefs,
+    blocker_refs: blockerRefs,
+    work_order_status_items: workOrderStatusItems,
+    status_buckets: {
+      queued: workOrderStatusItems
+        .filter((item) => item.status === 'queued')
+        .map((item) => item.work_order_ref),
+      runnable: workOrderStatusItems
+        .filter((item) => item.status === 'runnable')
+        .map((item) => item.work_order_ref),
+      completed_or_blocker: workOrderStatusItems
+        .filter((item) => item.status === 'completed_or_blocker')
+        .map((item) => item.work_order_ref),
+    },
+    summary: {
+      work_order_count: workOrderStatusItems.length,
+      queued_count: workOrderStatusItems.filter((item) => item.status === 'queued').length,
+      runnable_count: workOrderStatusItems.filter((item) => item.status === 'runnable').length,
+      completed_or_blocker_count: workOrderStatusItems
+        .filter((item) => item.status === 'completed_or_blocker').length,
+      external_suite_ref_count: externalSuiteRefs.length,
+      developer_work_order_candidate_ref_count: developerWorkOrderCandidateRefs.length,
+      completion_ref_count: completionRefs.length,
+      blocker_ref_count: blockerRefs.length,
+    },
+    app_projection: {
+      surface_kind: 'opl_agent_lab_feedback_work_order_app_projection',
+      queue_source_ref: 'agent_lab.domain_feedback_self_evolution.work_order_status_items',
+      app_state_ref: 'app_state.operator.workbench.agent_lab_feedback_self_evolution',
+      action_surface: 'opl work-order execute',
+      action_surface_is_existing_primitive: true,
+      creates_runner_or_queue: false,
+      writes_runtime_db: false,
+      writes_provider_queue: false,
+      writes_domain_truth: false,
+    },
+    non_goals: [
+      'second_runner_or_queue',
+      'domain_truth_write',
+      'owner_receipt_creation',
+      'typed_blocker_body_creation',
+      'human_gate_body_creation',
+      'provider_queue_mutation',
+      'runtime_db_mutation',
+    ],
+    authority_boundary: {
+      ...AGENT_LAB_CONTROL_AUTHORITY_BOUNDARY,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_create_human_gate: false,
+      can_write_provider_queue: false,
+      can_write_runtime_db: false,
+    },
+  };
+}
+
 export function buildAgentLabLogDrivenMechanismCandidateReadModel(sourceRefs: string[] = []) {
   const logEvidence = {
     usage_log_refs: [

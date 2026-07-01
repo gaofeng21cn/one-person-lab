@@ -79,6 +79,7 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.equal(result.readiness.ready_to_emit_review_trace_ledger, true);
   assert.equal(result.readiness.ready_to_emit_log_driven_mechanism_candidates, true);
   assert.equal(result.readiness.ready_to_emit_aris_maturity_controls, true);
+  assert.equal(result.readiness.ready_to_emit_domain_feedback_work_order_status, true);
   assert.equal(result.readiness.ready_to_emit_ahe_evidence_read_model, true);
   assert.equal(result.readiness.ready_to_emit_executor_capability_aperture, true);
   assert.equal(result.readiness.ready_to_emit_codex_attempt_trace_flywheel, true);
@@ -140,6 +141,15 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.equal(result.aris_maturity_controls.controls.fail_closed_invariants.missing_context_policy,
     'fail_closed_with_typed_blocker_ref');
   assert.equal(result.aris_maturity_controls.controls.mcp_stream_reliability_policy.no_silent_drop, true);
+  assert.equal(result.domain_feedback_self_evolution.surface_kind,
+    'opl_agent_lab_domain_feedback_self_evolution_read_model');
+  assert.equal(result.domain_feedback_self_evolution.status, 'work_order_status_projection_ready');
+  assert.equal(result.domain_feedback_self_evolution.summary.queued_count, 1);
+  assert.equal(result.domain_feedback_self_evolution.summary.runnable_count, 1);
+  assert.equal(result.domain_feedback_self_evolution.summary.completed_or_blocker_count, 1);
+  assert.equal(result.domain_feedback_self_evolution.app_projection.creates_runner_or_queue, false);
+  assert.equal(result.domain_feedback_self_evolution.authority_boundary.can_write_runtime_db, false);
+  assert.equal(result.domain_feedback_self_evolution.authority_boundary.can_create_owner_receipt, false);
   assert.equal(result.codex_attempt_trace_flywheel.surface_kind,
     'opl_agent_lab_codex_attempt_trace_flywheel');
   assert.equal(result.codex_attempt_trace_flywheel.summary.codex_cli_attempt_count, 3);
@@ -243,6 +253,8 @@ test('Agent Lab workbench read model is ready for App consumption without taking
   assert.equal(result.source_results.log_driven_mechanism_candidate_read_model_ref,
     result.log_driven_mechanism_candidates.read_model_id);
   assert.equal(result.source_results.aris_maturity_controls_ref, result.aris_maturity_controls.read_model_id);
+  assert.equal(result.source_results.domain_feedback_self_evolution_ref,
+    result.domain_feedback_self_evolution.read_model_id);
   assert.equal(result.source_results.ahe_evidence_read_model_ref, result.ahe_evidence.read_model_id);
   assert.equal(result.source_results.executor_capability_aperture_ref,
     result.executor_capability_aperture.read_model_id);
@@ -255,6 +267,10 @@ test('Agent Lab workbench read model is ready for App consumption without taking
     result.token_cost_estimates.map((estimate: any) => estimate.estimate_id));
   assert.equal(result.aris_maturity_controls.summary.effort_level_count, 4);
   assert.equal(result.aris_maturity_controls.summary.assurance_level_count, 4);
+  assert.equal(result.domain_feedback_self_evolution.summary.work_order_count, 3);
+  assert.equal(result.domain_feedback_self_evolution.status_buckets.runnable.length, 1);
+  assert.equal(result.domain_feedback_self_evolution.app_projection.action_surface, 'opl work-order execute');
+  assert.equal(result.domain_feedback_self_evolution.authority_boundary.can_write_provider_queue, false);
   assert.equal(result.ahe_evidence.surface_kind, 'opl_agent_lab_ahe_evidence_read_model');
   assert.equal(result.ahe_evidence.summary.promotion_authorized_count, 0);
   assert.equal(result.executor_capability_aperture.surface_kind,

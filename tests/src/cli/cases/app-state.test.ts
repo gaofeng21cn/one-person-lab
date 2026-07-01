@@ -614,6 +614,40 @@ exit 1
     assert.equal(output.app_state.operator.workbench.action_queue.item_limit, 16);
     assert.equal(output.app_state.operator.workbench.action_queue.items.length > 0, true);
     assert.equal(output.app_state.operator.workbench.action_queue.items[0].item_id.startsWith('action:'), true);
+    assert.equal(
+      output.app_state.agent_lab_feedback_self_evolution.surface_kind,
+      'opl_agent_lab_domain_feedback_self_evolution_read_model',
+    );
+    assert.equal(
+      output.app_state.operator.workbench.agent_lab_feedback_self_evolution.read_model_id,
+      output.app_state.agent_lab_feedback_self_evolution.read_model_id,
+    );
+    assert.deepEqual(
+      output.app_state.operator.workbench.agent_lab_feedback_self_evolution.status_shape,
+      ['queued', 'runnable', 'completed_or_blocker'],
+    );
+    assert.equal(
+      output.app_state.operator.workbench.agent_lab_feedback_self_evolution.summary.runnable_count,
+      1,
+    );
+    const agentLabFeedbackQueueItems = output.app_state.operator.workbench.action_queue.items
+      .filter((entry: AppStateListEntry) => entry.item_id.startsWith('agent_lab_feedback:'));
+    assert.deepEqual(
+      agentLabFeedbackQueueItems.map((entry: AppStateListEntry) => entry.state),
+      ['queued', 'runnable', 'completed_or_blocker'],
+    );
+    assert.equal(
+      agentLabFeedbackQueueItems.find((entry: AppStateListEntry) => entry.state === 'runnable')
+        ?.execution_surface,
+      'opl work-order execute',
+    );
+    assert.equal(
+      agentLabFeedbackQueueItems.every((entry: AppStateListEntry) =>
+        entry.authority_boundary.can_write_domain_truth === false
+          && entry.authority_boundary.can_write_owner_receipt === false
+      ),
+      true,
+    );
     assert.equal(output.app_state.operator.workbench.domain_lane_map.lanes.length, 5);
     assert.equal(output.app_state.operator.workbench.task_drilldowns.length, 5);
     assert.equal(output.app_state.operator.workbench.safe_action_routes.length > 0, true);

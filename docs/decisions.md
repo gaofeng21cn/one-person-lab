@@ -5,6 +5,19 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-07-02
+
+### 决策：Agent Lab domain feedback 自进化只投影 work-order 状态，不接管执行或 domain authority
+
+原因：MAS 等 domain agent 会产出 refs-only external suite、review/eval evidence 和 developer work-order candidate。OPL Agent Lab 需要把这些反馈接到自进化闭环，让 App/status/read-model 能看到 `queued`、`runnable`、`completed_or_blocker` 的 work-order 状态；但如果 Agent Lab 同时实现第二套 runner、queue、typed blocker/human gate body 或 owner receipt，就会把 domain truth 和 OPL runtime authority 再次分裂。
+
+影响：
+
+- `contracts/opl-framework/agent-lab-contract.json#domain_feedback_self_evolution_surface` 固定机器边界：输入只接受 domain feedback external suite refs、developer work-order candidate refs、completion refs 和 domain-owned blocker refs；输出只投影 work-order status shape。
+- `src/agent-lab-control-read-models.ts` 的 `buildAgentLabDomainFeedbackSelfEvolutionReadModel` 是 canonical builder；`agent-lab complete`、`agent-lab workbench` 和 `opl app state` 只消费同一 read-model。
+- `runnable` 只表示已有 developer work-order candidate 可交给现有 `opl work-order execute` 原语；Agent Lab 不新增 runner/queue，不写 runtime DB/provider queue，不执行 MAS truth mutation。
+- `completed_or_blocker` 只携带 completion ref 或 domain-owned typed blocker ref；OPL 不创建 owner receipt、typed blocker body、human gate body、quality/export verdict、paper progress 或 domain-ready claim。
+
 ## 2026-07-01
 
 ### 决策：Linux/Docker WebUI 的 OPL 本体更新走 runtime_substrate Framework artifact，不更新 Docker image

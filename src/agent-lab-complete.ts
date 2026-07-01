@@ -21,6 +21,7 @@ import {
 } from './agent-lab-developer-mode.ts';
 export {
   buildAgentLabArisMaturityControlsReadModel,
+  buildAgentLabDomainFeedbackSelfEvolutionReadModel,
   buildAgentLabLogDrivenMechanismCandidateReadModel,
 } from './agent-lab-control-read-models.ts';
 export { buildAgentLabAheEvidenceReadModel } from './agent-lab-ahe-evidence.ts';
@@ -30,6 +31,7 @@ export { buildAgentLabOptimizeResult } from './agent-lab-optimizer-read-models.t
 export { buildAgentLabVariantComparisonReadModel } from './agent-lab-variant-comparison.ts';
 import {
   buildAgentLabArisMaturityControlsReadModel,
+  buildAgentLabDomainFeedbackSelfEvolutionReadModel,
   buildAgentLabLogDrivenMechanismCandidateReadModel,
 } from './agent-lab-control-read-models.ts';
 import { buildAgentLabStageExecutorPolicyReadModel } from './agent-lab-stage-executor-policy.ts';
@@ -80,6 +82,9 @@ export function buildCompleteAgentLabControlPlane() {
     sampleResult.result_id,
     longlineResult.result_id,
   ]);
+  const domainFeedbackSelfEvolution = buildAgentLabDomainFeedbackSelfEvolutionReadModel({
+    sourceRefs: [sampleResult.result_id, longlineResult.result_id],
+  });
   const aheEvidence = sampleResult.ahe_evidence;
   const executorCapabilityAperture = sampleResult.executor_capability_aperture;
   const codexAttemptTraceFlywheel = sampleResult.codex_attempt_trace_flywheel;
@@ -212,6 +217,7 @@ export function buildCompleteAgentLabControlPlane() {
     integration_contract_read_model: integrationContracts,
     review_trace_ledger: reviewTraceLedger,
     aris_maturity_controls: arisMaturityControls,
+    domain_feedback_self_evolution: domainFeedbackSelfEvolution,
     variant_comparison_read_model: variantComparison,
     stage_executor_policy_read_model: stageExecutorPolicy,
     rl_boundary: {
@@ -237,6 +243,7 @@ export function buildCompleteAgentLabControlPlane() {
     ready_to_emit_review_trace_ledger: true,
     ready_to_emit_log_driven_mechanism_candidates: true,
     ready_to_emit_aris_maturity_controls: true,
+    ready_to_emit_domain_feedback_work_order_status: true,
     ready_to_emit_ahe_evidence_read_model: true,
     ready_to_emit_executor_capability_aperture: true,
     ready_to_emit_codex_attempt_trace_flywheel: true,
@@ -267,6 +274,7 @@ export function buildCompleteAgentLabControlPlane() {
     review_trace_ledger: reviewTraceLedger,
     log_driven_mechanism_candidates: logDrivenCandidates,
     aris_maturity_controls: arisMaturityControls,
+    domain_feedback_self_evolution: domainFeedbackSelfEvolution,
     ahe_evidence: aheEvidence,
     executor_capability_aperture: executorCapabilityAperture,
     codex_attempt_trace_flywheel: codexAttemptTraceFlywheel,
@@ -287,6 +295,7 @@ export function buildCompleteAgentLabControlPlane() {
       'model training or weight deployment inside OPL core',
       'domain truth, artifact, memory body, quality verdict, owner receipt, or managed runtime mutation from developer-mode patrol routes',
       'ARIS runtime dependency',
+      'second runner or queue for domain feedback work orders',
       'Codex attempt trace replay as domain quality verdict',
     ],
     authority_boundary: AUTHORITY_BOUNDARY,
@@ -351,6 +360,7 @@ export function buildAgentLabWorkbenchReadModel() {
       complete.review_trace_ledger.ledger_ref,
       complete.log_driven_mechanism_candidates.read_model_id,
       complete.aris_maturity_controls.read_model_id,
+      complete.domain_feedback_self_evolution.read_model_id,
       complete.ahe_evidence.read_model_id,
       complete.executor_capability_aperture.read_model_id,
       complete.codex_attempt_trace_flywheel.read_model_id,
@@ -370,6 +380,7 @@ export function buildAgentLabWorkbenchReadModel() {
       review_trace_ledger_ref: complete.review_trace_ledger.ledger_ref,
       log_driven_mechanism_candidate_read_model_ref: complete.log_driven_mechanism_candidates.read_model_id,
       aris_maturity_controls_ref: complete.aris_maturity_controls.read_model_id,
+      domain_feedback_self_evolution_ref: complete.domain_feedback_self_evolution.read_model_id,
       ahe_evidence_read_model_ref: complete.ahe_evidence.read_model_id,
       executor_capability_aperture_ref: complete.executor_capability_aperture.read_model_id,
       codex_attempt_trace_flywheel_ref: complete.codex_attempt_trace_flywheel.read_model_id,
@@ -395,6 +406,7 @@ export function buildAgentLabWorkbenchReadModel() {
     review_trace_ledger: complete.review_trace_ledger,
     log_driven_mechanism_candidates: complete.log_driven_mechanism_candidates,
     aris_maturity_controls: complete.aris_maturity_controls,
+    domain_feedback_self_evolution: complete.domain_feedback_self_evolution,
     ahe_evidence: complete.ahe_evidence,
     executor_capability_aperture: complete.executor_capability_aperture,
     codex_attempt_trace_flywheel: complete.codex_attempt_trace_flywheel,

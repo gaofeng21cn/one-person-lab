@@ -18,6 +18,7 @@ type OplAppOperatorViewModelInput = {
   brandSystemProfile: JsonRecord;
   targetOperatingArchitecture: JsonRecord;
   currentOwnerDeltaReadModel?: JsonRecord;
+  agentLabFeedbackSelfEvolution?: JsonRecord;
 };
 
 const FORBIDDEN_FAST_PROFILE_FIELDS = [
@@ -186,6 +187,13 @@ function buildSections(input: OplAppOperatorViewModelInput) {
       lazy: false,
     },
     {
+      section_id: 'agent_lab_feedback',
+      label: 'Agent Lab feedback',
+      state: asString(asRecord(input.agentLabFeedbackSelfEvolution).status) ?? 'unknown',
+      source_ref: 'app_state.operator.workbench.agent_lab_feedback_self_evolution',
+      lazy: false,
+    },
+    {
       section_id: 'full_runtime_drilldown',
       label: 'Full runtime drilldown',
       state: 'lazy',
@@ -209,27 +217,70 @@ function buildNavigation() {
 
 function buildActionQueue(input: OplAppOperatorViewModelInput) {
   const limit = input.profile === 'fast' ? 16 : 48;
+  const feedbackItems = feedbackWorkOrderQueueItems(input);
+  const actionLimit = Math.max(0, limit - feedbackItems.length);
   return {
-    items: input.actions.slice(0, limit).map((action, index) => {
-      const actionId = asString(action.action_id) ?? `app-action-${index + 1}`;
-      const payloadFree = actionIsPayloadFree(action);
-      return {
-        item_id: `action:${actionId}`,
-        task_id: actionId,
-        title: asString(action.label) ?? actionId,
-        subtitle: asString(action.delegated_surface) ?? 'opl app action execute',
-        domain_id: asString(action.module_id) ?? 'opl',
-        domain_label: 'OPL',
-        state: payloadFree ? 'ready' : 'payload_required',
-        priority_bucket: payloadFree ? 'can_dry_run' : 'needs_payload',
-        safe_action_ref_count: payloadFree ? 1 : 0,
-        blocker_ref_count: payloadFree ? 0 : 1,
-        paper_route_lens_ref_count: 0,
-      };
-    }),
+    items: [
+      ...input.actions.slice(0, actionLimit).map((action, index) => {
+        const actionId = asString(action.action_id) ?? `app-action-${index + 1}`;
+        const payloadFree = actionIsPayloadFree(action);
+        return {
+          item_id: `action:${actionId}`,
+          task_id: actionId,
+          title: asString(action.label) ?? actionId,
+          subtitle: asString(action.delegated_surface) ?? 'opl app action execute',
+          domain_id: asString(action.module_id) ?? 'opl',
+          domain_label: 'OPL',
+          state: payloadFree ? 'ready' : 'payload_required',
+          priority_bucket: payloadFree ? 'can_dry_run' : 'needs_payload',
+          safe_action_ref_count: payloadFree ? 1 : 0,
+          blocker_ref_count: payloadFree ? 0 : 1,
+          paper_route_lens_ref_count: 0,
+        };
+      }),
+      ...feedbackItems,
+    ],
     item_limit: limit,
-    source_ref: 'app_state.actions',
+    source_ref: 'app_state.actions + app_state.operator.workbench.agent_lab_feedback_self_evolution',
   };
+}
+
+function feedbackWorkOrderStatusItems(input: OplAppOperatorViewModelInput) {
+  return asRecordArray(asRecord(input.agentLabFeedbackSelfEvolution).work_order_status_items);
+}
+
+function feedbackWorkOrderQueueItems(input: OplAppOperatorViewModelInput) {
+  return feedbackWorkOrderStatusItems(input).map((item, index) => {
+    const workOrderRef = asString(item.work_order_ref) ?? `agent-lab-feedback-work-order-${index + 1}`;
+    const status = asString(item.status) ?? 'queued';
+    const runnable = item.runnable === true;
+    const blockerRef = asString(item.blocker_ref);
+    return {
+      item_id: `agent_lab_feedback:${encodeURIComponent(workOrderRef)}`,
+      task_id: workOrderRef,
+      title: workOrderRef,
+      subtitle: 'Agent Lab feedback work-order projection',
+      domain_id: asString(item.domain_id) ?? 'opl',
+      domain_label: asString(item.domain_id) ?? 'OPL',
+      state: status,
+      priority_bucket: status === 'runnable'
+        ? 'can_execute_work_order'
+        : status === 'completed_or_blocker'
+          ? 'terminal_or_blocked'
+          : 'queued',
+      safe_action_ref_count: runnable ? 1 : 0,
+      blocker_ref_count: blockerRef ? 1 : 0,
+      paper_route_lens_ref_count: 0,
+      trigger_ref: asString(item.trigger_ref),
+      external_suite_ref: asString(item.external_suite_ref),
+      developer_work_order_candidate_ref: asString(item.developer_work_order_candidate_ref),
+      completion_ref: asString(item.completion_ref),
+      blocker_ref: blockerRef,
+      action_route_ref: asString(item.action_route_ref),
+      execution_surface: asString(item.execution_surface),
+      authority_boundary: asRecord(item.authority_boundary),
+    };
+  });
 }
 
 function sourceRefCount(item: JsonRecord) {
@@ -840,6 +891,7 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
   const ordinaryCockpit = buildOrdinaryCockpit(currentOwnerDeltaTopline, input);
   const brandExperienceProfile = buildBrandExperienceProfile(input);
   const oneShotPlanLanding = buildOneShotPlanLandingProfile(input);
+  const agentLabFeedbackSelfEvolution = asRecord(input.agentLabFeedbackSelfEvolution);
   const lazyRefs = [
     {
       ref_id: 'full_app_state_refresh',
@@ -873,6 +925,7 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
       ordinary_cockpit: ordinaryCockpit,
       brand_experience_profile: brandExperienceProfile,
       one_shot_plan_landing: oneShotPlanLanding,
+      agent_lab_feedback_self_evolution: agentLabFeedbackSelfEvolution,
       settings_control_center: input.settingsControlCenter,
       ...currentOwnerDeltaTopline,
       summary_cards: buildSummaryCards(input),
@@ -910,6 +963,11 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
         ref: action.route,
         label: action.label,
         action_id: action.action_id,
+      })),
+      agent_lab_feedback_work_order_refs: feedbackWorkOrderStatusItems(input).map((item) => ({
+        ref: asString(item.work_order_ref),
+        label: asString(item.status),
+        action_route_ref: asString(item.action_route_ref),
       })),
       lazy_refs: lazyRefs,
     },

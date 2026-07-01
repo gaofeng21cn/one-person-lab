@@ -76,7 +76,11 @@
     "owner_route_refs",
     "stage_completion_policy_refs",
     "stage_completion_policy_blocker_refs",
-    "domain_stage_completion_closeout_outcome_refs"
+    "domain_stage_completion_closeout_outcome_refs",
+    "domain_feedback_external_suite_refs",
+    "developer_work_order_candidate_refs",
+    "feedback_work_order_completion_refs",
+    "feedback_work_order_blocker_refs"
   ],
   "required_observations": [
     "task_manifests_observed",
@@ -121,7 +125,11 @@
       "promotable_candidate_count",
       "memory_body_observed",
       "forbidden_authority_flag_count",
-      "stage_completion_policy_blocker_count"
+      "stage_completion_policy_blocker_count",
+      "feedback_work_order_count",
+      "feedback_work_order_queued_count",
+      "feedback_work_order_runnable_count",
+      "feedback_work_order_completed_or_blocker_count"
     ],
     "ref_fields": [
       "task_refs",
@@ -185,8 +193,46 @@
       "no_forbidden_write_refs",
       "owner_route_refs",
       "stage_completion_policy_refs",
-      "stage_completion_policy_blocker_refs"
+      "stage_completion_policy_blocker_refs",
+      "domain_feedback_external_suite_refs",
+      "developer_work_order_candidate_refs",
+      "feedback_work_order_status_refs",
+      "feedback_work_order_completion_refs",
+      "feedback_work_order_blocker_refs"
     ]
+  },
+  "domain_feedback_self_evolution_surface": {
+    "surface_kind": "opl_agent_lab_domain_feedback_self_evolution_read_model",
+    "version": "opl-agent-lab.v1.domain-feedback-self-evolution",
+    "refs_only": true,
+    "purpose": "Project domain feedback external suite refs and developer work-order candidate refs into queued, runnable, and completed-or-blocker work-order status shapes for App/status consumption.",
+    "input_ref_groups": [
+      "domain_feedback_external_suite_refs",
+      "developer_work_order_candidate_refs",
+      "feedback_work_order_completion_refs",
+      "feedback_work_order_blocker_refs"
+    ],
+    "statuses": [
+      "queued",
+      "runnable",
+      "completed_or_blocker"
+    ],
+    "consumer_outputs": [
+      "agent_lab_complete.domain_feedback_self_evolution",
+      "agent_lab_workbench.domain_feedback_self_evolution",
+      "app_state.agent_lab_feedback_self_evolution",
+      "app_state.operator.workbench.agent_lab_feedback_self_evolution",
+      "app_state.operator.workbench.action_queue.items[agent_lab_feedback:*]"
+    ],
+    "authority_boundary": {
+      "can_create_second_runner_or_queue": false,
+      "can_write_runtime_db": false,
+      "can_write_provider_queue": false,
+      "can_write_domain_truth": false,
+      "can_create_owner_receipt": false,
+      "can_create_typed_blocker": false,
+      "can_create_human_gate": false
+    }
   },
   "efficiency_nonregression_surface": {
     "surface_kind": "opl_agent_lab_efficiency_nonregression_read_model",
