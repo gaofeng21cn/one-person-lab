@@ -385,6 +385,23 @@ function copyDirectoryContents(sourceRoot: string, targetRoot: string) {
   return copied;
 }
 
+function moveDirectory(sourceRoot: string, targetRoot: string) {
+  try {
+    fs.renameSync(sourceRoot, targetRoot);
+  } catch (error) {
+    if (!(error instanceof Error) || (error as NodeJS.ErrnoException).code !== 'EXDEV') {
+      throw error;
+    }
+    fs.cpSync(sourceRoot, targetRoot, {
+      recursive: true,
+      errorOnExist: true,
+      force: false,
+      verbatimSymlinks: true,
+    });
+    fs.rmSync(sourceRoot, { recursive: true, force: true });
+  }
+}
+
 function resolveFallbackPreviousFrameworkRoot(targetRoot: string) {
   const explicit = normalizeOptionalString(process.env.OPL_FRAMEWORK_PREVIOUS_ROOT_SOURCE);
   if (explicit && fs.existsSync(explicit) && fs.statSync(explicit).isDirectory() && isOplFrameworkRoot(explicit)) {
@@ -491,8 +508,12 @@ function extractArchiveToStage(archivePath: string, stageRoot: string) {
 function activateFrameworkStage(targetRoot: string, stageRoot: string) {
   const previousRoot = `${targetRoot}${FRAMEWORK_PREVIOUS_ROOT_SUFFIX}`;
   const rollbackRef = `opl://managed-update/runtime_substrate/framework/rollback/${encodeURIComponent(previousRoot)}`;
+  const incomingRoot = `${targetRoot}.incoming-${process.pid}-${Date.now()}`;
+  fs.mkdirSync(path.dirname(targetRoot), { recursive: true });
   fs.rmSync(previousRoot, { recursive: true, force: true });
+  fs.rmSync(incomingRoot, { recursive: true, force: true });
   try {
+    moveDirectory(stageRoot, incomingRoot);
     if (fs.existsSync(targetRoot)) {
       fs.renameSync(targetRoot, previousRoot);
     } else {
@@ -501,9 +522,9 @@ function activateFrameworkStage(targetRoot: string, stageRoot: string) {
         copyDirectoryContents(fallbackPreviousRoot, previousRoot);
       }
     }
-    fs.mkdirSync(path.dirname(targetRoot), { recursive: true });
-    fs.renameSync(stageRoot, targetRoot);
+    fs.renameSync(incomingRoot, targetRoot);
   } catch (error) {
+    fs.rmSync(incomingRoot, { recursive: true, force: true });
     if (!fs.existsSync(targetRoot) && fs.existsSync(previousRoot)) {
       fs.renameSync(previousRoot, targetRoot);
     }
