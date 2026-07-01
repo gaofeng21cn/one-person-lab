@@ -141,10 +141,29 @@ function archiveModule(spec, repoPath, modulesOutDir, version) {
   };
 }
 
+function archiveFramework(repoPath, frameworkOutDir, version) {
+  fs.mkdirSync(frameworkOutDir, { recursive: true });
+  const archiveName = `one-person-lab-framework-${version}.tar.gz`;
+  const archivePath = path.join(frameworkOutDir, archiveName);
+  fs.rmSync(archivePath, { force: true });
+  run('git', ['archive', '--format=tar.gz', '--prefix=one-person-lab/', '-o', archivePath, 'HEAD'], {
+    cwd: repoPath,
+  });
+  const stat = fs.statSync(archivePath);
+  return {
+    file_name: archiveName,
+    path: archivePath,
+    size: stat.size,
+    sha256: sha256File(archivePath),
+    head_sha: readGitValue(repoPath, ['rev-parse', 'HEAD']),
+    branch: readGitValue(repoPath, ['branch', '--show-current']) || null,
+  };
+}
+
 function writeChecksumFile(outDir, archives) {
   const checksumPath = path.join(outDir, 'SHA256SUMS');
   const lines = archives
-    .map((archive) => `${archive.sha256}  modules/${archive.file_name}`)
+    .map((archive) => `${archive.sha256}  ${archive.relative_path}`)
     .sort();
   fs.writeFileSync(checksumPath, `${lines.join('\n')}\n`, 'utf8');
   return checksumPath;
@@ -180,12 +199,36 @@ function main() {
   });
   const version = manifest.opl_version;
   const modulesOutDir = path.join(options.outDir, 'modules');
+  const frameworkOutDir = path.join(options.outDir, 'framework');
   const archives = [];
+  const frameworkArchive = archiveFramework(repoRoot, frameworkOutDir, version);
+  archives.push({
+    ...frameworkArchive,
+    relative_path: `framework/${frameworkArchive.file_name}`,
+  });
+  manifest.packages.framework_core.source_archive = {
+    file_name: frameworkArchive.file_name,
+    size: frameworkArchive.size,
+    sha256: frameworkArchive.sha256,
+  };
+  manifest.packages.framework_core.checksum = {
+    algorithm: 'sha256',
+    value: frameworkArchive.sha256,
+    file: 'SHA256SUMS',
+  };
+  manifest.packages.framework_core.source_git = {
+    repo_url: 'https://github.com/gaofeng21cn/one-person-lab.git',
+    branch: frameworkArchive.branch,
+    head_sha: frameworkArchive.head_sha,
+  };
 
   for (const spec of getOplPackageModuleSpecs()) {
     const repoPath = resolveModuleRepo(spec, options.cloneRoot);
     const archive = archiveModule(spec, repoPath, modulesOutDir, version);
-    archives.push(archive);
+    archives.push({
+      ...archive,
+      relative_path: `modules/${archive.file_name}`,
+    });
     manifest.packages.modules[spec.module_id].source_archive = {
       file_name: archive.file_name,
       size: archive.size,
@@ -217,7 +260,13 @@ function main() {
     checksums: checksumPath,
     release_discipline_workflows: releaseDisciplineWorkflows,
     modules_dir: modulesOutDir,
+    framework_dir: frameworkOutDir,
     clone_root: options.cloneRoot,
+    framework_core: {
+      artifact: manifest.packages.framework_core.artifact,
+      source_archive: manifest.packages.framework_core.source_archive,
+      source_git: manifest.packages.framework_core.source_git,
+    },
     modules: Object.values(manifest.packages.modules).map((entry) => ({
       module_id: entry.module_id,
       artifact: entry.artifact,

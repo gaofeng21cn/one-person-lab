@@ -90,6 +90,11 @@ jobs:
               --artifact-type application/vnd.onepersonlab.module.source.v1 \
               "${archive}:application/vnd.onepersonlab.module.source.v1+gzip"
           done
+          framework_archive="dist/opl-packages/framework/one-person-lab-framework-${OPL_RELEASE_VERSION}.tar.gz"
+          test -f "$framework_archive"
+          oras push "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-framework:${OPL_RELEASE_VERSION}" \
+            --artifact-type application/vnd.onepersonlab.framework.source.v1 \
+            "${framework_archive}:application/vnd.onepersonlab.framework.source.v1+gzip"
           oras push "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-manifest:${OPL_RELEASE_VERSION}" \
             --artifact-type application/vnd.onepersonlab.release.manifest.v1 \
             "dist/opl-packages/opl-release-manifest.json:application/vnd.onepersonlab.release.manifest.v1+json" \

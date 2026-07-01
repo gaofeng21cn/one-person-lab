@@ -7,6 +7,8 @@ function writeManifest(filePath: string, input: {
   generatedAt: string;
   moduleHead: string;
   moduleSha: string;
+  frameworkHead?: string;
+  frameworkSha?: string;
 }) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(
@@ -16,6 +18,11 @@ function writeManifest(filePath: string, input: {
       opl_version: input.version,
       generated_at: input.generatedAt,
       packages: {
+        framework_core: {
+          artifact: `ghcr.io/owner/one-person-lab-framework:${input.version}`,
+          source_archive: { sha256: input.frameworkSha ?? 'f'.repeat(64) },
+          source_git: { head_sha: input.frameworkHead ?? 'e'.repeat(40) },
+        },
         modules: {
           medautoscience: {
             module_id: 'medautoscience',
@@ -105,6 +112,41 @@ test('daily package channel check publishes when a package source fingerprint ch
   assert.equal(summary.reason, 'package_channel_changed');
   assert.equal(summary.publish_required, true);
   assert.deepEqual(summary.changed_packages, ['medautoscience']);
+});
+
+test('daily package channel check publishes when framework core fingerprint changes', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-daily-check-'));
+  const candidate = path.join(tempRoot, 'candidate.json');
+  const current = path.join(tempRoot, 'current.json');
+
+  writeManifest(candidate, {
+    version: '26.6.3-nightly',
+    generatedAt: '2026-06-03T00:00:00.000Z',
+    moduleHead: 'a'.repeat(40),
+    moduleSha: 'b'.repeat(64),
+    frameworkHead: 'c'.repeat(40),
+    frameworkSha: 'd'.repeat(64),
+  });
+  writeManifest(current, {
+    version: '26.6.3-nightly',
+    generatedAt: '2026-06-02T00:00:00.000Z',
+    moduleHead: 'a'.repeat(40),
+    moduleSha: 'b'.repeat(64),
+    frameworkHead: 'e'.repeat(40),
+    frameworkSha: 'f'.repeat(64),
+  });
+
+  const summary = runDailyCheck([
+    '--candidate-manifest',
+    candidate,
+    '--current-manifest',
+    current,
+    '--version',
+    '26.6.3-nightly',
+  ]);
+
+  assert.equal(summary.status, 'publish_required');
+  assert.deepEqual(summary.changed_packages, ['framework_core']);
 });
 
 test('daily package channel check fails closed when no current channel manifest is available', () => {

@@ -40,7 +40,7 @@ function readJson(filePath) {
 
 function packageFingerprint(manifest) {
   const modules = manifest.packages?.modules ?? {};
-  return Object.fromEntries(
+  const fingerprints = Object.fromEntries(
     Object.entries(modules)
       .map(([moduleId, entry]) => [
         moduleId,
@@ -51,6 +51,14 @@ function packageFingerprint(manifest) {
       ])
       .sort(([left], [right]) => left.localeCompare(right)),
   );
+  const frameworkCore = manifest.packages?.framework_core;
+  if (frameworkCore) {
+    fingerprints.framework_core = {
+      source_git_head_sha: frameworkCore?.source_git?.head_sha ?? null,
+      source_archive_sha256: frameworkCore?.source_archive?.sha256 ?? null,
+    };
+  }
+  return Object.fromEntries(Object.entries(fingerprints).sort(([left], [right]) => left.localeCompare(right)));
 }
 
 function changedPackages(candidateFingerprint, currentFingerprint) {

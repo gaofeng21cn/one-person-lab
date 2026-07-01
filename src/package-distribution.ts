@@ -98,6 +98,10 @@ function buildPackageRef(owner: string, name: string, version: string) {
   return `ghcr.io/${owner}/one-person-lab-modules/${name}:${version}`;
 }
 
+function buildFrameworkRef(owner: string, version: string) {
+  return `ghcr.io/${owner}/one-person-lab-framework:${version}`;
+}
+
 function normalizeRetainVersions(value?: number) {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     return 3;
@@ -260,6 +264,46 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
           'ghcr_oci_archive_pushed',
           'retention_policy_recorded',
         ],
+      },
+      framework_core: {
+        package_name: 'one-person-lab-framework',
+        label: 'OPL Framework Core',
+        version,
+        artifact_kind: 'framework_source_archive',
+        artifact: buildFrameworkRef(owner, version),
+        package_channel_status: 'active_release_channel',
+        package_lifecycle_status: 'active_release_channel',
+        remote_publish_status: 'published_to_ghcr_by_packages_workflow',
+        package_consumption_status: 'consumed_by_runtime_substrate_updates',
+        current_install_update_source: 'opl_release_channel_manifest',
+        developer_git_checkout_override: {
+          repo_url: 'https://github.com/gaofeng21cn/one-person-lab.git',
+          ref: 'main',
+          app_setting_surface: 'Developer Mode',
+          env: 'OPL_FRAMEWORK_UPDATE_SOURCE',
+          env_role: 'low_level_diagnostic_ci_override',
+        },
+        release_discipline: {
+          package_channel_status: 'active_release_channel',
+          package_lifecycle_status: 'active_release_channel',
+          workflow_trigger_policy: PACKAGE_WORKFLOW_TRIGGER_POLICY,
+          current_latest_source: 'opl_release_channel_manifest',
+          developer_override_source: 'git_checkout',
+          required_gates: [
+            'source_archive_built_from_head',
+            'sha256_recorded',
+            'channel_manifest_written',
+            'ghcr_framework_artifact_published',
+            'release_manifest_published',
+            'runtime_substrate_apply_and_rollback_tested',
+          ],
+          rollback: rollbackVersion
+            ? {
+                version: rollbackVersion,
+                source: 'previous_channel_manifest',
+              }
+            : null,
+        },
       },
       modules: Object.fromEntries(
         MODULE_SPECS.map((spec) => [

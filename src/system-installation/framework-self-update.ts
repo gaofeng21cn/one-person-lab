@@ -3,6 +3,9 @@ import os from 'node:os';
 import path from 'node:path';
 
 import {
+  FrameworkContractError,
+} from '../contracts.ts';
+import {
   assertGitSuccess,
   normalizeOptionalString,
   runCommand,
@@ -10,6 +13,22 @@ import {
   type CommandResult,
 } from './shared.ts';
 import { inspectGitRepo } from './module-git.ts';
+
+const FRAMEWORK_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.framework.source.v1+gzip';
+const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';
+
+type OciImageRef = {
+  registry: string;
+  repository: string;
+  tag: string;
+  image: string;
+};
+
+type OciLayer = {
+  mediaType?: string;
+  digest?: string;
+  annotations?: Record<string, string>;
+};
 
 type FrameworkDependencyInstall = {
   required: boolean;
@@ -100,6 +119,175 @@ function resolveFrameworkUpdateArchive(explicitArchive?: string | null) {
 
 function resolveFrameworkUpdateArchiveSha256(explicitSha256?: string | null) {
   return normalizeOptionalString(explicitSha256 ?? process.env.OPL_FRAMEWORK_UPDATE_ARCHIVE_SHA256) ?? null;
+}
+
+function resolvePackageOwner() {
+  return normalizeOptionalString(process.env.OPL_PACKAGES_OWNER) ?? 'gaofeng21cn';
+}
+
+function resolvePackageChannelTag() {
+  return normalizeOptionalString(process.env.OPL_PACKAGE_CHANNEL_TAG)
+    ?? normalizeOptionalString(process.env.OPL_PACKAGE_CHANNEL_VERSION)
+    ?? 'latest';
+}
+
+function parseImageRef(raw: string): OciImageRef {
+  const [registry, ...repositoryParts] = raw.split('/');
+  if (!registry || repositoryParts.length === 0) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Invalid OCI image reference.', { image: raw });
+  }
+  let repository = repositoryParts.join('/');
+  let tag = 'latest';
+  const separator = repository.lastIndexOf(':');
+  if (separator > repository.lastIndexOf('/')) {
+    tag = repository.slice(separator + 1);
+    repository = repository.slice(0, separator);
+  }
+  return {
+    registry,
+    repository,
+    tag,
+    image: `${registry}/${repository}`,
+  };
+}
+
+function resolveChannelManifestRef() {
+  const explicit = normalizeOptionalString(process.env.OPL_PACKAGE_CHANNEL_MANIFEST_REF);
+  if (explicit) return parseImageRef(explicit);
+  return parseImageRef(`ghcr.io/${resolvePackageOwner()}/one-person-lab-manifest:${resolvePackageChannelTag()}`);
+}
+
+function runCurl(args: string[], errorKind: string, details: Record<string, unknown>, capture = true) {
+  const curlBin = normalizeOptionalString(process.env.OPL_CURL_BIN) ?? 'curl';
+  const result = runCommand(curlBin, args, undefined, { maxBuffer: 64 * 1024 * 1024 });
+  if (result.exitCode !== 0) {
+    throw new FrameworkContractError('build_command_failed', `Failed to fetch OPL Framework runtime artifact: ${errorKind}.`, {
+      ...details,
+        command: [curlBin, ...args],
+      stdout: result.stdout,
+      stderr: result.stderr,
+    });
+  }
+  return capture ? result.stdout : '';
+}
+
+function fetchGhcrToken(imageRef: OciImageRef) {
+  if (imageRef.registry !== 'ghcr.io') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Only ghcr.io OPL Framework runtime artifact refs are supported.', {
+      image: `${imageRef.image}:${imageRef.tag}`,
+    });
+  }
+  const scope = `repository:${imageRef.repository}:pull`;
+  const tokenUrl = `https://${imageRef.registry}/token?service=${encodeURIComponent(imageRef.registry)}&scope=${encodeURIComponent(scope)}`;
+  const payload = runCurl(['-fsSL', tokenUrl], 'ghcr_token', { image: imageRef.image, tag: imageRef.tag });
+  const parsed = JSON.parse(payload) as { token?: string };
+  if (!parsed.token) {
+    throw new FrameworkContractError('contract_shape_invalid', 'GHCR token response is missing token.', {
+      image: imageRef.image,
+      tag: imageRef.tag,
+    });
+  }
+  return parsed.token;
+}
+
+function fetchOciManifest(imageRef: OciImageRef, token: string) {
+  const manifestUrl = `https://${imageRef.registry}/v2/${imageRef.repository}/manifests/${imageRef.tag}`;
+  const payload = runCurl([
+    '-fsSL',
+    '-H',
+    `Authorization: Bearer ${token}`,
+    '-H',
+    'Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json',
+    manifestUrl,
+  ], 'oci_manifest', { image: imageRef.image, tag: imageRef.tag });
+  return JSON.parse(payload) as { layers?: OciLayer[] };
+}
+
+function fetchOciBlob(imageRef: OciImageRef, token: string, digest: string, targetPath: string) {
+  const blobUrl = `https://${imageRef.registry}/v2/${imageRef.repository}/blobs/${digest}`;
+  runCurl([
+    '-fsSL',
+    '-H',
+    `Authorization: Bearer ${token}`,
+    blobUrl,
+    '-o',
+    targetPath,
+  ], 'oci_blob', { image: imageRef.image, tag: imageRef.tag, digest }, false);
+}
+
+function selectLayer(manifest: { layers?: OciLayer[] }, mediaType: string, titleSuffix?: string) {
+  const layers = Array.isArray(manifest.layers) ? manifest.layers : [];
+  return layers.find((layer) => layer.mediaType === mediaType)
+    ?? (titleSuffix
+      ? layers.find((layer) => String(layer.annotations?.['org.opencontainers.image.title'] ?? '').endsWith(titleSuffix))
+      : null)
+    ?? null;
+}
+
+function readFrameworkChannelEntry() {
+  const imageRef = resolveChannelManifestRef();
+  const token = fetchGhcrToken(imageRef);
+  const manifest = fetchOciManifest(imageRef, token);
+  const layer = selectLayer(manifest, CHANNEL_MANIFEST_LAYER_MEDIA_TYPE, 'opl-channel-manifest.json');
+  if (!layer?.digest) {
+    throw new FrameworkContractError('contract_shape_invalid', 'OPL channel manifest layer is missing.', {
+      image: imageRef.image,
+      tag: imageRef.tag,
+    });
+  }
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-channel-manifest-'));
+  try {
+    const manifestPath = path.join(tempRoot, 'opl-channel-manifest.json');
+    fetchOciBlob(imageRef, token, layer.digest, manifestPath);
+    const channelManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as {
+      opl_version?: string;
+      packages?: {
+        framework_core?: {
+          artifact?: string;
+          source_archive?: { sha256?: string };
+          source_git?: { head_sha?: string };
+        };
+      };
+    };
+    const framework = channelManifest.packages?.framework_core;
+    const artifact = normalizeOptionalString(framework?.artifact);
+    if (!artifact) {
+      throw new FrameworkContractError('contract_shape_invalid', 'OPL channel manifest is missing packages.framework_core.artifact.', {
+        channel_version: channelManifest.opl_version ?? null,
+      });
+    }
+    return {
+      channel_version: normalizeOptionalString(channelManifest.opl_version),
+      artifact,
+      source_archive_sha256: normalizeOptionalString(framework?.source_archive?.sha256),
+      source_git_head_sha: normalizeOptionalString(framework?.source_git?.head_sha),
+    };
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+}
+
+function fetchFrameworkArtifactFromChannel(tempRoot: string) {
+  const entry = readFrameworkChannelEntry();
+  const imageRef = parseImageRef(entry.artifact);
+  const token = fetchGhcrToken(imageRef);
+  const manifest = fetchOciManifest(imageRef, token);
+  const layer = selectLayer(manifest, FRAMEWORK_LAYER_MEDIA_TYPE, `one-person-lab-framework-${entry.channel_version ?? imageRef.tag}.tar.gz`);
+  if (!layer?.digest) {
+    throw new FrameworkContractError('contract_shape_invalid', 'OPL Framework runtime artifact layer is missing.', {
+      image: imageRef.image,
+      tag: imageRef.tag,
+    });
+  }
+  const archivePath = path.join(tempRoot, 'one-person-lab-framework.tar.gz');
+  fetchOciBlob(imageRef, token, layer.digest, archivePath);
+  return {
+    archivePath,
+    expectedSha256: entry.source_archive_sha256,
+    artifactRef: entry.artifact,
+    channelVersion: entry.channel_version,
+    sourceGitHeadSha: entry.source_git_head_sha,
+  };
 }
 
 export function resolveFrameworkUpdateTargetRoot(defaultTargetRoot: string) {
@@ -318,15 +506,98 @@ function buildResult(
   };
 }
 
+function applyFrameworkArchive(input: FrameworkSelfUpdateInput & {
+  targetRoot: string;
+  sourceArchive: string;
+  expectedSha256: string | null;
+  sourceGitHeadSha?: string | null;
+}) {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-update-'));
+  try {
+    verifyArchiveSha256(input.sourceArchive, input.expectedSha256);
+    const stageRoot = path.join(tempRoot, 'stage');
+    const extractedRoot = extractArchiveToStage(input.sourceArchive, stageRoot);
+    if (!isOplFrameworkRoot(extractedRoot)) {
+      return buildResult('manual_required', 'framework_update_archive_not_framework_root', {
+        target_root: input.targetRoot,
+        source_root: extractedRoot,
+        source_head_sha: input.sourceGitHeadSha ?? null,
+        source_archive: input.sourceArchive,
+        source_archive_sha256: input.expectedSha256,
+        previous_root: null,
+        rollback_ref: null,
+        copied_file_count: 0,
+        dependency_install: skippedDependencyInstall(false),
+        metadata_ref: null,
+      });
+    }
+    const finalStageRoot = path.join(tempRoot, 'framework-stage');
+    const copiedFileCount = copyDirectoryContents(extractedRoot, finalStageRoot);
+    const dependencyInstallRequired = dependencyInputsChanged(finalStageRoot, input.targetRoot);
+    const dependencyInstall = dependencyInstallRequired && !shouldSkipDependencyInstall(input)
+      ? runDependencyInstall(finalStageRoot)
+      : skippedDependencyInstall(dependencyInstallRequired);
+    if (dependencyInstall.status === 'failed') {
+      return buildResult('manual_required', 'framework_dependency_install_failed', {
+        target_root: input.targetRoot,
+        source_root: extractedRoot,
+        source_head_sha: input.sourceGitHeadSha ?? null,
+        source_archive: input.sourceArchive,
+        source_archive_sha256: input.expectedSha256,
+        previous_root: null,
+        rollback_ref: null,
+        copied_file_count: copiedFileCount,
+        dependency_install: dependencyInstall,
+        metadata_ref: null,
+      });
+    }
+    const activation = activateFrameworkStage(input.targetRoot, finalStageRoot);
+    const metadataRef = writeFrameworkSourceMetadata({
+      targetRoot: input.targetRoot,
+      sourceRoot: extractedRoot,
+      sourceHeadSha: input.sourceGitHeadSha ?? null,
+      sourceArchive: input.sourceArchive,
+      sourceArchiveSha256: input.expectedSha256,
+      previousRoot: activation.previousRoot,
+      rollbackRef: activation.rollbackRef,
+      copiedFileCount,
+    });
+    return buildResult('completed', 'framework_runtime_artifact_applied', {
+      target_root: input.targetRoot,
+      source_root: extractedRoot,
+      source_head_sha: input.sourceGitHeadSha ?? null,
+      source_archive: input.sourceArchive,
+      source_archive_sha256: input.expectedSha256,
+      previous_root: activation.previousRoot,
+      rollback_ref: activation.rollbackRef,
+      copied_file_count: copiedFileCount,
+      dependency_install: dependencyInstall,
+      metadata_ref: metadataRef,
+    });
+  } catch (error) {
+    return buildResult('manual_required', 'framework_update_archive_apply_failed', {
+      target_root: input.targetRoot,
+      source_root: null,
+      source_head_sha: input.sourceGitHeadSha ?? null,
+      source_archive: input.sourceArchive,
+      source_archive_sha256: input.expectedSha256,
+      previous_root: null,
+      rollback_ref: null,
+      copied_file_count: 0,
+      dependency_install: skippedDependencyInstall(false),
+      metadata_ref: error instanceof Error ? error.message : String(error),
+    });
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+}
+
 export function runOplFrameworkSelfUpdate(
   input: FrameworkSelfUpdateInput,
 ): OplFrameworkUpdateTargetResult {
   const targetRoot = path.resolve(input.targetRoot);
   const sourceArchiveRaw = resolveFrameworkUpdateArchive(input.sourceArchive);
   const sourceRootRaw = resolveFrameworkUpdateSource(input.sourceRoot);
-  if (!sourceArchiveRaw && !sourceRootRaw) {
-    return buildResult('skipped', 'framework_update_source_not_configured');
-  }
 
   if (!fs.existsSync(targetRoot) || !fs.statSync(targetRoot).isDirectory() || !isOplFrameworkRoot(targetRoot)) {
     return buildResult('manual_required', 'framework_update_target_invalid', {
@@ -375,75 +646,32 @@ export function runOplFrameworkSelfUpdate(
       });
     }
     const expectedSha256 = resolveFrameworkUpdateArchiveSha256(input.sourceArchiveSha256);
-    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-update-'));
+    return applyFrameworkArchive({
+      ...input,
+      targetRoot,
+      sourceArchive,
+      expectedSha256,
+    });
+  }
+
+  if (!sourceRootRaw) {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-channel-artifact-'));
     try {
-      verifyArchiveSha256(sourceArchive, expectedSha256);
-      const stageRoot = path.join(tempRoot, 'stage');
-      const extractedRoot = extractArchiveToStage(sourceArchive, stageRoot);
-      if (!isOplFrameworkRoot(extractedRoot)) {
-        return buildResult('manual_required', 'framework_update_archive_not_framework_root', {
-          target_root: targetRoot,
-          source_root: extractedRoot,
-          source_head_sha: null,
-          source_archive: sourceArchive,
-          source_archive_sha256: expectedSha256,
-          previous_root: null,
-          rollback_ref: null,
-          copied_file_count: 0,
-          dependency_install: skippedDependencyInstall(false),
-          metadata_ref: null,
-        });
-      }
-      const finalStageRoot = path.join(tempRoot, 'framework-stage');
-      const copiedFileCount = copyDirectoryContents(extractedRoot, finalStageRoot);
-      const dependencyInstallRequired = dependencyInputsChanged(finalStageRoot, targetRoot);
-      const dependencyInstall = dependencyInstallRequired && !shouldSkipDependencyInstall(input)
-        ? runDependencyInstall(finalStageRoot)
-        : skippedDependencyInstall(dependencyInstallRequired);
-      if (dependencyInstall.status === 'failed') {
-        return buildResult('manual_required', 'framework_dependency_install_failed', {
-          target_root: targetRoot,
-          source_root: extractedRoot,
-          source_head_sha: null,
-          source_archive: sourceArchive,
-          source_archive_sha256: expectedSha256,
-          previous_root: null,
-          rollback_ref: null,
-          copied_file_count: copiedFileCount,
-          dependency_install: dependencyInstall,
-          metadata_ref: null,
-        });
-      }
-      const activation = activateFrameworkStage(targetRoot, finalStageRoot);
-      const metadataRef = writeFrameworkSourceMetadata({
+      const artifact = fetchFrameworkArtifactFromChannel(tempRoot);
+      return applyFrameworkArchive({
+        ...input,
         targetRoot,
-        sourceRoot: extractedRoot,
-        sourceHeadSha: null,
-        sourceArchive,
-        sourceArchiveSha256: expectedSha256,
-        previousRoot: activation.previousRoot,
-        rollbackRef: activation.rollbackRef,
-        copiedFileCount,
-      });
-      return buildResult('completed', 'framework_runtime_artifact_applied', {
-        target_root: targetRoot,
-        source_root: extractedRoot,
-        source_head_sha: null,
-        source_archive: sourceArchive,
-        source_archive_sha256: expectedSha256,
-        previous_root: activation.previousRoot,
-        rollback_ref: activation.rollbackRef,
-        copied_file_count: copiedFileCount,
-        dependency_install: dependencyInstall,
-        metadata_ref: metadataRef,
+        sourceArchive: artifact.archivePath,
+        expectedSha256: artifact.expectedSha256,
+        sourceGitHeadSha: artifact.sourceGitHeadSha,
       });
     } catch (error) {
-      return buildResult('manual_required', 'framework_update_archive_apply_failed', {
+      return buildResult('manual_required', 'framework_update_channel_artifact_unavailable', {
         target_root: targetRoot,
         source_root: null,
         source_head_sha: null,
-        source_archive: sourceArchive,
-        source_archive_sha256: expectedSha256,
+        source_archive: null,
+        source_archive_sha256: null,
         previous_root: null,
         rollback_ref: null,
         copied_file_count: 0,
@@ -453,10 +681,6 @@ export function runOplFrameworkSelfUpdate(
     } finally {
       fs.rmSync(tempRoot, { recursive: true, force: true });
     }
-  }
-
-  if (!sourceRootRaw) {
-    return buildResult('skipped', 'framework_update_source_not_configured');
   }
   const sourceRoot = path.resolve(sourceRootRaw);
   if (!fs.existsSync(sourceRoot) || !fs.statSync(sourceRoot).isDirectory() || !isOplFrameworkRoot(sourceRoot)) {
@@ -632,8 +856,17 @@ export function readOplFrameworkRuntimeUpdateStatus(defaultTargetRoot: string) {
   const sourceRootRaw = resolveFrameworkUpdateSource();
   const sourceArchive = sourceArchiveRaw ? path.resolve(sourceArchiveRaw) : null;
   const sourceRoot = sourceRootRaw ? path.resolve(sourceRootRaw) : null;
+  let channelEntry: ReturnType<typeof readFrameworkChannelEntry> | null = null;
+  if (!sourceArchive && !sourceRoot) {
+    try {
+      channelEntry = readFrameworkChannelEntry();
+    } catch {
+      channelEntry = null;
+    }
+  }
   const previousRoot = `${targetRoot}${FRAMEWORK_PREVIOUS_ROOT_SUFFIX}`;
   const metadataPath = path.join(targetRoot, FRAMEWORK_SOURCE_METADATA_FILE);
+  const channelArtifactAvailable = Boolean(channelEntry?.artifact);
   return {
     target_root: targetRoot,
     target_valid: fs.existsSync(targetRoot) && fs.statSync(targetRoot).isDirectory() && isOplFrameworkRoot(targetRoot),
@@ -645,10 +878,14 @@ export function readOplFrameworkRuntimeUpdateStatus(defaultTargetRoot: string) {
     source_root: sourceRoot,
     source_root_configured: Boolean(sourceRoot),
     source_root_exists: Boolean(sourceRoot && fs.existsSync(sourceRoot) && fs.statSync(sourceRoot).isDirectory()),
-    update_configured: Boolean(sourceArchive || sourceRoot),
+    channel_artifact: channelEntry?.artifact ?? null,
+    channel_version: channelEntry?.channel_version ?? null,
+    channel_source_archive_sha256: channelEntry?.source_archive_sha256 ?? null,
+    update_configured: Boolean(sourceArchive || sourceRoot || channelEntry),
     update_available: Boolean(
       (sourceArchive && fs.existsSync(sourceArchive) && fs.statSync(sourceArchive).isFile())
-      || (sourceRoot && fs.existsSync(sourceRoot) && fs.statSync(sourceRoot).isDirectory()),
+      || (sourceRoot && fs.existsSync(sourceRoot) && fs.statSync(sourceRoot).isDirectory())
+      || channelArtifactAvailable,
     ),
     previous_root: previousRoot,
     previous_root_available: fs.existsSync(previousRoot) && fs.statSync(previousRoot).isDirectory() && isOplFrameworkRoot(previousRoot),

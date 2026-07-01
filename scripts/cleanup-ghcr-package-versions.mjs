@@ -147,6 +147,14 @@ function packageTargets(manifest) {
       protected_tags: cleanupPolicy.protected_tags ?? [],
     })),
     {
+      package_name: manifest.packages.framework_core.package_name,
+      package_kind: 'framework_core',
+      lifecycle_status: manifest.packages.framework_core.package_lifecycle_status,
+      retain_versions: cleanupPolicy.retain_versions,
+      execution_mode: cleanupPolicy.execution_mode,
+      protected_tags: cleanupPolicy.protected_tags ?? [],
+    },
+    {
       package_name: 'one-person-lab-manifest',
       package_kind: 'active_channel_manifest',
       lifecycle_status: manifest.release_automation.package_lifecycle_status,

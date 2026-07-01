@@ -77,6 +77,13 @@ test('packages manifest exposes active package-channel coordinates for module in
           };
           required_gates: string[];
         };
+        framework_core: {
+          package_name: string;
+          artifact: string;
+          package_consumption_status: string;
+          current_install_update_source: string;
+          release_discipline: { required_gates: string[] };
+        };
         modules: Record<string, {
           artifact: string;
           scope: string;
@@ -182,6 +189,14 @@ test('packages manifest exposes active package-channel coordinates for module in
   );
   assert.ok(output.packages_manifest.release_automation.cleanup.protected_tags.includes('latest'));
   assert.equal(Object.hasOwn(output.packages_manifest.packages, 'webui_docker_image'), false);
+  assert.equal(output.packages_manifest.packages.framework_core.package_name, 'one-person-lab-framework');
+  assert.equal(output.packages_manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:26.4.27');
+  assert.equal(output.packages_manifest.packages.framework_core.package_consumption_status, 'consumed_by_runtime_substrate_updates');
+  assert.equal(output.packages_manifest.packages.framework_core.current_install_update_source, 'opl_release_channel_manifest');
+  assert.equal(
+    output.packages_manifest.packages.framework_core.release_discipline.required_gates.includes('runtime_substrate_apply_and_rollback_tested'),
+    true,
+  );
   assert.equal(
     output.packages_manifest.packages.native_helper.channel_status,
     'active_ghcr_oci_prebuild',
@@ -376,6 +391,7 @@ test('package archive builder writes channel manifest checksums git source and r
   const archiveBuilderResult = JSON.parse(archiveBuilderOutput) as {
     clone_root: string;
     modules_dir: string;
+    framework_dir: string;
     release_discipline_workflows: string[];
   };
 
@@ -392,6 +408,7 @@ test('package archive builder writes channel manifest checksums git source and r
 
   assert.equal(archiveBuilderResult.clone_root, defaultCloneRoot);
   assert.equal(archiveBuilderResult.modules_dir, path.join(outDir, 'modules'));
+  assert.equal(archiveBuilderResult.framework_dir, path.join(outDir, 'framework'));
   assert.deepEqual(archiveBuilderResult.release_discipline_workflows, [
     '.github/workflows/packages.yml',
     '.github/workflows/release-package-channel.yml',
@@ -424,6 +441,12 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.release_automation.daily_package_channel.version_template, '<utc_yy.m.d>-nightly');
   assert.equal(manifest.release_automation.daily_package_channel.force_publish_input, 'force_publish');
   assert.equal(Object.hasOwn(manifest.packages, 'webui_docker_image'), false);
+  assert.equal(manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:26.4.31');
+  assert.match(manifest.packages.framework_core.source_archive.sha256, /^[0-9a-f]{64}$/);
+  assert.match(manifest.packages.framework_core.source_git.head_sha, /^[0-9a-f]{40}$/);
+  assert.equal(channelManifest.packages.framework_core.artifact, manifest.packages.framework_core.artifact);
+  assert.match(checksums, /one-person-lab-framework-26\.4\.31\.tar\.gz/);
+  assert.match(checksums, new RegExp(manifest.packages.framework_core.source_archive.sha256));
   assert.equal(manifest.packages.native_helper.channel_status, 'active_ghcr_oci_prebuild');
   assert.equal(manifest.packages.native_helper.retention_policy.retain_versions, 4);
   assert.ok(manifest.packages.native_helper.retention_policy.protected_tags.includes('latest'));
@@ -565,6 +588,7 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.doesNotMatch(workflow, /webui-image:/);
   assert.match(workflow, /oras push/);
   assert.match(workflow, /one-person-lab-modules/);
+  assert.match(workflow, /one-person-lab-framework/);
   assert.match(workflow, /one-person-lab-manifest:\$\{OPL_RELEASE_VERSION\}/);
   assert.match(workflow, /oras tag "ghcr\.io\/\$\{OPL_PACKAGES_OWNER\}\/one-person-lab-manifest:\$\{OPL_RELEASE_VERSION\}" stable/);
   assert.doesNotMatch(workflow, /docker\/build-push-action/);
@@ -658,6 +682,12 @@ test('GHCR package cleanup dry-runs active native helper and active package-chan
       { id: 23, updated_at: '2026-05-01T00:00:00Z', metadata: { container: { tags: ['26.5.1'] } } },
       { id: 24, updated_at: '2026-04-30T00:00:00Z', metadata: { container: { tags: ['26.4.30'] } } },
     ],
+    'one-person-lab-framework': [
+      { id: 31, updated_at: '2026-05-06T00:00:00Z', metadata: { container: { tags: ['26.5.6'] } } },
+      { id: 32, updated_at: '2026-05-02T00:00:00Z', metadata: { container: { tags: ['26.5.2-a'] } } },
+      { id: 33, updated_at: '2026-05-01T00:00:00Z', metadata: { container: { tags: ['26.5.1'] } } },
+      { id: 34, updated_at: '2026-04-30T00:00:00Z', metadata: { container: { tags: ['26.4.30'] } } },
+    ],
   };
   const { binDir, env } = writeFakeGh(tempRoot, packageVersions, new Set(['one-person-lab-modules/opl-meta-agent']));
   const summaryPath = path.join(tempRoot, 'summary.json');
@@ -696,6 +726,10 @@ test('GHCR package cleanup dry-runs active native helper and active package-chan
   const manifest = summary.packages.find((entry: { package_name: string }) => entry.package_name === 'one-person-lab-manifest');
   assert.equal(manifest.package_kind, 'active_channel_manifest');
   assert.equal(manifest.lifecycle_status, 'active_release_channel');
+  const frameworkCore = summary.packages.find((entry: { package_name: string }) => entry.package_name === 'one-person-lab-framework');
+  assert.equal(frameworkCore.package_kind, 'framework_core');
+  assert.equal(frameworkCore.lifecycle_status, 'active_release_channel');
+  assert.deepEqual(frameworkCore.candidates.map((candidate: { id: number }) => candidate.id), [34]);
   const missing = summary.packages.find((entry: { package_name: string }) => entry.package_name === 'one-person-lab-modules/opl-meta-agent');
   assert.equal(missing.status, 'not_found_or_unreadable');
 });

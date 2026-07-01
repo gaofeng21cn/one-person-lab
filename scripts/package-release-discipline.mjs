@@ -80,6 +80,24 @@ function validateModule(moduleId, entry, failures) {
   }
 }
 
+function validateFrameworkCore(entry, failures) {
+  assertCondition(entry?.package_channel_status === 'active_release_channel', 'framework_core: package channel must be active', failures);
+  assertCondition(entry?.package_lifecycle_status === 'active_release_channel', 'framework_core: lifecycle must be active', failures);
+  assertCondition(entry?.remote_publish_status === 'published_to_ghcr_by_packages_workflow', 'framework_core: GHCR publication status drifted', failures);
+  assertCondition(entry?.package_consumption_status === 'consumed_by_runtime_substrate_updates', 'framework_core: must be consumed by runtime_substrate updates', failures);
+  assertCondition(entry?.current_install_update_source === 'opl_release_channel_manifest', 'framework_core: current source must be the channel manifest', failures);
+  assertCondition(typeof entry?.artifact === 'string' && entry.artifact.includes('one-person-lab-framework'), 'framework_core: artifact must point to one-person-lab-framework', failures);
+  assertCondition(entry?.release_discipline?.required_gates?.includes('ghcr_framework_artifact_published'), 'framework_core: release gates must publish framework artifact', failures);
+  assertCondition(entry?.release_discipline?.required_gates?.includes('runtime_substrate_apply_and_rollback_tested'), 'framework_core: release gates must require runtime_substrate apply/rollback test', failures);
+  assertCondition(entry?.developer_git_checkout_override?.env === 'OPL_FRAMEWORK_UPDATE_SOURCE', 'framework_core: developer override must use existing framework self-update source env', failures);
+  assertCondition(typeof entry?.source_archive?.file_name === 'string', 'framework_core: source archive missing file name', failures);
+  assertCondition(Number.isFinite(entry?.source_archive?.size) && entry.source_archive.size > 0, 'framework_core: source archive size is invalid', failures);
+  assertCondition(isSha256(entry?.source_archive?.sha256), 'framework_core: source archive sha256 is invalid', failures);
+  assertCondition(entry?.checksum?.algorithm === 'sha256', 'framework_core: checksum algorithm must be sha256', failures);
+  assertCondition(isSha256(entry?.checksum?.value), 'framework_core: checksum value is invalid', failures);
+  assertCondition(isGitSha(entry?.source_git?.head_sha), 'framework_core: source git head sha is invalid', failures);
+}
+
 function validateManifest(manifest) {
   const failures = [];
   const automation = manifest.release_automation;
@@ -130,6 +148,7 @@ function validateManifest(manifest) {
   assertCondition(modules.scholarskills?.repo_name === 'opl-scholarskills', 'scholarskills package repo name drifted', failures);
   assertCondition(modules.scholarskills?.scope === 'framework_capability_package', 'scholarskills must remain a framework capability package, not a domain module', failures);
   assertCondition(modules.scholarskills?.current_install_update_source === 'package_channel', 'scholarskills must use package channel for ordinary installs and updates', failures);
+  validateFrameworkCore(manifest.packages?.framework_core, failures);
 
   assertCondition(!Object.hasOwn(manifest.packages ?? {}, 'webui_docker_image'), 'Framework package manifest must not carry App-owned WebUI image coordinates', failures);
 
@@ -182,6 +201,7 @@ function validateWorkflow(manifest, manifestPath, failures) {
   assertCondition(!/\n\s*push:\n/.test(source), 'package workflow must not restore tag-push publishing', failures);
   assertCondition(/oras\s+push/.test(source), 'package workflow must push module archives and release manifest to GHCR', failures);
   assertCondition(/one-person-lab-modules/.test(source), 'package workflow must publish module packages', failures);
+  assertCondition(/one-person-lab-framework/.test(source), 'package workflow must publish OPL Framework runtime artifact', failures);
   assertCondition(/one-person-lab-manifest/.test(source), 'package workflow must publish release manifest package', failures);
   assertCondition(!/docker\/build-push-action/.test(source), 'package workflow must not publish WebUI image from Framework repo', failures);
   assertCondition(!/webui-image:/.test(source), 'package workflow must not restore Framework-owned WebUI image job', failures);
