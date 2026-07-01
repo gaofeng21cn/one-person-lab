@@ -23,9 +23,11 @@ function readManagedUpdateKernelContract() {
       carrier_variants?: Array<{
         carrier_type: string;
         host_update_route: string;
+        host_update_route_examples?: string[];
         managed_kernel_apply_allowed: boolean;
         host_executor_required: boolean;
         manual_required: boolean;
+        manual_required_when?: string[];
         data_volume_preservation_proof_required?: boolean;
         preserved_mounts?: string[];
       }>;
@@ -96,9 +98,11 @@ test('managed update kernel contract keeps runtime and agent post-apply executio
   );
   assert.ok(linuxPackageCarrier);
   assert.equal(linuxPackageCarrier.host_update_route, 'host_package_manager_or_documented_host_executor');
+  assert.equal(linuxPackageCarrier.host_update_route_examples?.includes('sudo dnf upgrade one-person-lab'), true);
   assert.equal(linuxPackageCarrier.managed_kernel_apply_allowed, false);
   assert.equal(linuxPackageCarrier.host_executor_required, true);
   assert.equal(linuxPackageCarrier.manual_required, true);
+  assert.equal(linuxPackageCarrier.manual_required_when?.includes('host_policy_disallows_app_executor'), true);
 
   const runtime = contract.providers.find((entry) => entry.provider_id === 'runtime_substrate');
   assert.ok(runtime);
@@ -366,9 +370,15 @@ exit 2
       update_available: string;
       image_ref?: string;
       image_digest?: string | null;
+      package_manager?: string | null;
+      package_name?: string | null;
+      installed_version?: string | null;
+      detected_package_managers?: string[];
       host_update_route: string;
+      host_update_route_examples?: string[];
       host_executor_required: boolean;
       manual_required: boolean;
+      manual_required_when?: string[];
       data_volume_preservation: { required: boolean; preserved_mounts?: string[] };
       managed_kernel_apply_allowed: boolean;
     }>;
@@ -389,9 +399,24 @@ exit 2
     assert.equal(linuxPackageCarrier.currentness, 'unknown');
     assert.equal(linuxPackageCarrier.update_available, 'unknown');
     assert.equal(linuxPackageCarrier.host_update_route, 'host_package_manager_or_documented_host_executor');
+    assert.equal(Array.isArray(linuxPackageCarrier.detected_package_managers), true);
+    assert.equal(Object.hasOwn(linuxPackageCarrier, 'package_manager'), true);
+    assert.equal(Object.hasOwn(linuxPackageCarrier, 'package_name'), true);
+    assert.equal(Object.hasOwn(linuxPackageCarrier, 'installed_version'), true);
+    assert.equal(linuxPackageCarrier.host_update_route_examples?.includes('sudo apt update && sudo apt install --only-upgrade one-person-lab'), true);
     assert.equal(linuxPackageCarrier.host_executor_required, true);
     assert.equal(linuxPackageCarrier.manual_required, true);
+    assert.equal(linuxPackageCarrier.manual_required_when?.includes('repository_or_signature_configuration_required'), true);
     assert.equal(linuxPackageCarrier.managed_kernel_apply_allowed, false);
+    assert.equal(installationCarrier.current.host_update_route, 'carrier_specific_host_update_route_required');
+    assert.equal(
+      (installationCarrier.current.host_update_route_examples as string[]).includes('sudo zypper update one-person-lab'),
+      true,
+    );
+    assert.equal(
+      (installationCarrier.current.host_update_route_examples as string[]).includes('docker compose pull && docker compose up -d'),
+      true,
+    );
     assert.equal(installationCarrier.receipt.apply_mode, 'projection_only');
     assert.equal(installationCarrier.receipt.status_detail.manual_required_targets_count, 2);
     assert.equal(installationCarrier.receipt.content_identity_fields.includes('carrier_type'), true);
