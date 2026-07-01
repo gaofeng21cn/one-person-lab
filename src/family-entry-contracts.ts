@@ -160,7 +160,7 @@ const SHARED_HANDOFF_KEYS = [
   'opl_return_surface',
 ] as const;
 
-export const DEFAULT_FAMILY_GATEWAY_SHARED_HANDOFF_ENVELOPE = [
+export const DEFAULT_FAMILY_ENTRY_SHARED_HANDOFF_ENVELOPE = [
   'target_domain_id',
   'task_intent',
   'entry_mode',
@@ -529,7 +529,7 @@ export function buildFamilyUserInteractionContract(
   ) ?? [];
   const sharedHandoffEnvelope = Array.from(
     new Set([
-      ...DEFAULT_FAMILY_GATEWAY_SHARED_HANDOFF_ENVELOPE,
+      ...DEFAULT_FAMILY_ENTRY_SHARED_HANDOFF_ENVELOPE,
       ...extraEnvelope,
     ]),
   );

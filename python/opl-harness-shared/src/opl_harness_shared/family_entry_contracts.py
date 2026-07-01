@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-DEFAULT_FAMILY_GATEWAY_SHARED_HANDOFF_ENVELOPE = (
+DEFAULT_FAMILY_ENTRY_SHARED_HANDOFF_ENVELOPE = (
     "target_domain_id",
     "task_intent",
     "entry_mode",
@@ -397,7 +397,7 @@ def build_family_user_interaction_contract(
         "extra_shared_handoff_envelope",
     ) or []
     shared_handoff_envelope: list[str] = []
-    for field in (*DEFAULT_FAMILY_GATEWAY_SHARED_HANDOFF_ENVELOPE, *extra_envelope):
+    for field in (*DEFAULT_FAMILY_ENTRY_SHARED_HANDOFF_ENVELOPE, *extra_envelope):
         if field not in shared_handoff_envelope:
             shared_handoff_envelope.append(field)
     return build_user_interaction_contract(

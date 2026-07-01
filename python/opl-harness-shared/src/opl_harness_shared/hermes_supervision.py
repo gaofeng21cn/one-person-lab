@@ -152,14 +152,14 @@ def job_drift(
     return drift
 
 
-def status_summary(*, status: str, gateway_service_loaded: bool, job_present: bool, drift_reasons: list[str]) -> str:
+def status_summary(*, status: str, hermes_service_loaded: bool, job_present: bool, drift_reasons: list[str]) -> str:
     if status == "loaded":
         if drift_reasons:
             return "Hermes-hosted runtime supervision 已在线，但当前注册项与期望 contract 存在漂移。"
         return "Hermes-hosted runtime supervision 已在线，workspace 级监管会持续刷新。"
     if status == "not_loaded":
-        if not gateway_service_loaded and job_present:
-            return "Hermes-hosted runtime supervision 已注册，但 Hermes gateway 当前未在线。"
+        if not hermes_service_loaded and job_present:
+            return "Hermes-hosted runtime supervision 已注册，但 Hermes supervision service 当前未在线。"
         if job_present:
             return "Hermes-hosted runtime supervision 已注册，但当前未处于调度中。"
         return "Hermes-hosted runtime supervision 还没有进入可调度状态。"

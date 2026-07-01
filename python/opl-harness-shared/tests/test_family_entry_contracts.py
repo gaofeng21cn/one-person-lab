@@ -140,7 +140,7 @@ def test_family_entry_contract_helpers_build_and_validate_gateway_payloads() -> 
     assert validated["recommended_route_surface"] == "product_entry_surface"
 
 
-def test_family_entry_contract_helpers_expose_default_family_gateway_payloads() -> None:
+def test_family_entry_contract_helpers_expose_default_family_entry_payloads() -> None:
     contract = build_family_user_interaction_contract(
         shared_downstream_entry="MedAutoScienceDomainEntry",
         extra_shared_handoff_envelope=["entry_session_contract"],
