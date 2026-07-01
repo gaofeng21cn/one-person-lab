@@ -1279,12 +1279,34 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
       );
       assert.equal(typeof condition.ref, 'string');
     }
+    const attentionProjection = taskRunProjection.tasks.find(
+      (entry) => entry.task_identity.study_id === '003-dpcc-primary-care-phenotype-treatment-gap',
+    );
+    assert.ok(attentionProjection);
+    assert.equal(
+      attentionProjection.conditions.find((condition) => condition.type === 'task_status')?.reason,
+      'attention_lane_selected',
+    );
+    assert.equal(
+      attentionProjection.conditions.find((condition) => condition.type === 'owner_route')?.reason,
+      'attention_lane_selected',
+    );
     assert.equal(
       runningProjection.evidence_cards.every((card) =>
-        typeof card.ref === 'string'
+        typeof card.kind === 'string'
+          && typeof card.owner === 'string'
+          && 'updated_at' in card
+          && typeof card.title === 'string'
+          && typeof card.ref === 'string'
           && typeof card.summary === 'string'
+          && typeof card.why_it_matters === 'string'
+          && card.open_action?.required_mode === 'dry_run'
+          && typeof card.content_policy === 'string'
           && !('body' in card)
           && !('artifact_body' in card)
+          && !('receipt_body' in card)
+          && !('verdict' in card)
+          && !('quality_verdict' in card)
           && !('domain_verdict' in card)
       ),
       true,
@@ -1293,19 +1315,45 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
       runningProjection.action_cards.every((card) =>
         typeof card.ref === 'string'
           && typeof card.summary === 'string'
+          && card.risk?.mutation_policy === 'no_writes_preview_only'
+          && Array.isArray(card.write_targets)
+          && card.write_targets.length === 0
+          && card.expected_output?.content_policy === 'refs_only_no_action_receipt_body'
+          && typeof card.rollback_ref === 'string'
+          && typeof card.verify_ref === 'string'
+          && card.open_action?.required_mode === 'dry_run'
           && !('body' in card)
           && !('receipt_body' in card)
+          && !('verdict' in card)
+          && !('quality_verdict' in card)
       ),
       true,
     );
     assert.equal(
       runningProjection.resource_cards.every((card) =>
-        typeof card.ref === 'string'
+        typeof card.resource_kind === 'string'
+          && typeof card.owner === 'string'
+          && typeof card.ref === 'string'
           && typeof card.summary === 'string'
+          && typeof card.status_ref === 'string'
+          && typeof card.usage_ref === 'string'
+          && typeof card.quota_ref === 'string'
+          && typeof card.permission_ref === 'string'
+          && typeof card.cost_estimate_ref === 'string'
+          && card.open_action?.required_mode === 'dry_run'
           && !('body' in card)
           && !('resource_body' in card)
+          && !('verdict' in card)
       ),
       true,
+    );
+    assert.deepEqual(
+      runningProjection.evidence_cards.map((card) => card.kind),
+      ['source_refs', 'artifact_or_blocker_refs', 'review_receipt_refs'],
+    );
+    assert.deepEqual(
+      runningProjection.resource_cards.map((card) => card.resource_kind),
+      ['workspace', 'workflow'],
     );
     assert.equal(runningProjection.diagnostics_ref, 'app_state.provider.temporal');
     const projectionWithoutDiagnostics = JSON.stringify({
