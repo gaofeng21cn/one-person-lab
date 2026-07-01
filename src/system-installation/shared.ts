@@ -285,6 +285,7 @@ export type OplSystemActionInput = Partial<{
   developerSupervisorMode: 'external_observe' | 'developer_apply_safe';
   developerSupervisorAutoEnableGithubLogin: string;
   dependencyProfile: string;
+  startupMaintenanceScope: 'all' | 'runtime_substrate';
   seedDir: string;
   dataDir: string;
   projectsDir: string;

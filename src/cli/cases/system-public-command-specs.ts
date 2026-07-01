@@ -23,6 +23,7 @@ import {
   parseSystemDependencyArgs,
   parseSystemConfigureCodexArgs,
   parseSystemSeedApplyArgs,
+  parseSystemStartupMaintenanceArgs,
   parseUpdateChannelArgs,
 } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
@@ -119,7 +120,7 @@ export function buildPublicSystemCommandSpecs(
   const buildSystemActionSpec = (
     command: string,
     summary: string,
-    action: 'reconcile_modules' | 'startup_maintenance' | 'seed_apply',
+    action: 'reconcile_modules' | 'seed_apply',
   ) => buildNoArgSpec(
     {
       usage: `opl system ${command}`,
@@ -129,6 +130,24 @@ export function buildPublicSystemCommandSpecs(
     },
     async () => buildPublicSystemActionPayload(await runOplSystemAction(getContracts(), action)),
   );
+
+  const systemStartupMaintenanceSpec: CommandSpec = {
+    usage: 'opl system startup-maintenance [--scope <all|runtime_substrate>]',
+    summary: 'Run App startup maintenance for clean managed modules, image seed state, plugin cache freshness, and reload guidance.',
+    examples: [
+      'opl system startup-maintenance',
+      'opl system startup-maintenance --scope runtime_substrate',
+    ],
+    group: 'system',
+    handler: async (args) => {
+      const parsed = parseSystemStartupMaintenanceArgs(args, systemStartupMaintenanceSpec);
+      return buildPublicSystemActionPayload(
+        await runOplSystemAction(getContracts(), 'startup_maintenance', {
+          startupMaintenanceScope: parsed.scope,
+        }),
+      );
+    },
+  };
 
   const systemUpdateChannelSpec: CommandSpec = {
     usage: 'opl system update-channel [--channel <stable|preview>]',
@@ -327,11 +346,7 @@ export function buildPublicSystemCommandSpecs(
       'Install missing modules and update clean domain modules to the latest git upstream.',
       'reconcile_modules',
     ),
-    'system startup-maintenance': buildSystemActionSpec(
-      'startup-maintenance',
-      'Run App startup maintenance for clean managed modules, image seed state, plugin cache freshness, and reload guidance.',
-      'startup_maintenance',
-    ),
+    'system startup-maintenance': systemStartupMaintenanceSpec,
     'system docker-webui doctor': buildNoArgSpec(
       {
         usage: 'opl system docker-webui doctor',

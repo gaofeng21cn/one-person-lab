@@ -95,6 +95,10 @@ type SystemSeedApplyCliInput = {
   projectsDir?: string;
 };
 
+type SystemStartupMaintenanceCliInput = {
+  scope?: 'all' | 'runtime_substrate';
+};
+
 type ObservabilityExportCliInput = {
   format: 'json' | 'openmetrics';
 };
@@ -286,6 +290,7 @@ export type {
   SystemConfigureCodexCliInput,
   SystemDependencyCliInput,
   SystemSeedApplyCliInput,
+  SystemStartupMaintenanceCliInput,
   TurnkeyInstallCliInput,
   UpdateChannelCliInput,
   WebCliInput,

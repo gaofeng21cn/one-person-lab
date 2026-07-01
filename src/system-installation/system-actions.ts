@@ -289,7 +289,9 @@ export async function runOplSystemAction(
   }
 
   if (action === 'startup_maintenance') {
-    return runOplStartupMaintenance(contracts);
+    return runOplStartupMaintenance(contracts, {
+      scope: input.startupMaintenanceScope,
+    });
   }
 
   if (action === 'seed_apply') {

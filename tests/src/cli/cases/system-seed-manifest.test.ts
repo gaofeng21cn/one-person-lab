@@ -1245,3 +1245,78 @@ test('system startup-maintenance reports seed boundary for WebUI first run', () 
     removeTree(homeRoot);
   }
 });
+
+test('system startup-maintenance accepts runtime substrate scope for WebUI entrypoint startup', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-runtime-substrate-home-'));
+  const dataDir = path.join(homeRoot, 'data');
+  const stateDir = path.join(dataDir, 'opl', 'state');
+  const projectsDir = path.join(homeRoot, 'project-volume');
+  const imageManifestPath = path.join(homeRoot, 'image-manifest.json');
+  fs.writeFileSync(imageManifestPath, JSON.stringify({
+    image_version: '26.7.1-webui',
+    image_digest: 'sha256:runtime-substrate',
+    seed_strategy: 'payload_preheated',
+  }, null, 2));
+
+  try {
+    const output = withCliTimeout('120000', () => runCli([
+      'system',
+      'startup-maintenance',
+      '--scope',
+      'runtime_substrate',
+    ], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_STATE_DIR: stateDir,
+      AIONUI_DATA_DIR: dataDir,
+      OPL_PROJECTS_DIR: projectsDir,
+      OPL_IMAGE_MANIFEST_PATH: imageManifestPath,
+      OPL_IMAGE_SEED_DIR: path.join(homeRoot, 'missing-seed-dir'),
+      OPL_MODULES_ROOT: path.join(homeRoot, 'managed-modules'),
+      PATH: process.env.PATH ?? '',
+      ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
+    })) as {
+      system_action: {
+        details: {
+          mode: string;
+          scope: string;
+          summary: {
+            total_targets_count: number;
+          };
+          capability_summary: {
+            total_targets_count: number;
+          };
+          module_targets: unknown[];
+          capability_targets: unknown[];
+          seed_boundary: {
+            image: {
+              version: string | null;
+              digest: string | null;
+              seed_strategy: string;
+              seed_strategy_status: string;
+            };
+            install: {
+              data_dir: string;
+              projects_dir: string;
+            };
+          };
+        };
+      };
+    };
+
+    assert.equal(output.system_action.details.mode, 'runtime_substrate_adapter_startup');
+    assert.equal(output.system_action.details.scope, 'runtime_substrate');
+    assert.equal(output.system_action.details.summary.total_targets_count, 0);
+    assert.equal(output.system_action.details.capability_summary.total_targets_count, 0);
+    assert.deepEqual(output.system_action.details.module_targets, []);
+    assert.deepEqual(output.system_action.details.capability_targets, []);
+    assert.equal(output.system_action.details.seed_boundary.image.version, '26.7.1-webui');
+    assert.equal(output.system_action.details.seed_boundary.image.digest, 'sha256:runtime-substrate');
+    assert.equal(output.system_action.details.seed_boundary.image.seed_strategy, 'payload_preheated');
+    assert.equal(output.system_action.details.seed_boundary.image.seed_strategy_status, 'accepted');
+    assert.equal(output.system_action.details.seed_boundary.install.data_dir, dataDir);
+    assert.equal(output.system_action.details.seed_boundary.install.projects_dir, projectsDir);
+  } finally {
+    removeTree(homeRoot);
+  }
+});
