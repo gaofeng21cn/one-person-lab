@@ -52,3 +52,52 @@ test('explicit Hermes-Agent executor fails closed when binary is missing', () =>
   assert.equal(failure.payload.error.details.executor_kind, 'hermes_agent');
   assert.equal(failure.payload.error.details.fallback_allowed, false);
 });
+
+test('Codex executor receipt exposes model route and local config provenance', () => {
+  const fake = makeExecutable(
+    'codex',
+    '#!/bin/sh\nprintf \'{"type":"thread.started","thread_id":"thread_receipt"}\\n{"type":"agent_message","message":"ok"}\\n\'\n',
+  );
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-executor-codex-home-'));
+  const codexHome = path.join(homeRoot, 'codex-home');
+  const requestRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-executor-codex-request-'));
+  const requestPath = path.join(requestRoot, 'request.json');
+  fs.writeFileSync(requestPath, JSON.stringify({
+    executor_kind: 'codex_cli',
+    prompt: 'Execute through Codex CLI.',
+    cwd: repoRoot,
+    model: 'gpt-5.5',
+    provider: 'gflab',
+    reasoning_effort: 'xhigh',
+  }));
+
+  try {
+    const run = runCli(['executor', 'run', '--request', requestPath], {
+      OPL_CODEX_BIN: fake.file,
+      CODEX_HOME: codexHome,
+      PATH: '',
+    });
+    const proof = run.agent_execution_receipt.proof;
+    assert.equal(run.agent_execution_receipt.executor_kind, 'codex_cli');
+    assert.equal(proof.model, 'gpt-5.5');
+    assert.equal(proof.provider, 'gflab');
+    assert.equal(proof.reasoning_effort, 'xhigh');
+    assert.equal(proof.codex_binary_path, fake.file);
+    assert.equal(proof.codex_binary_source, 'env');
+    assert.equal(proof.codex_home, codexHome);
+    assert.equal(proof.codex_config_path, path.join(codexHome, 'config.toml'));
+    assert.deepEqual(proof.command_preview.slice(0, 5), [
+      'codex',
+      'exec',
+      '--skip-git-repo-check',
+      '--full-auto',
+      '--json',
+    ]);
+    assert.equal(proof.command_preview.includes('--model'), true);
+    assert.equal(proof.command_preview.includes('gpt-5.5'), true);
+  } finally {
+    fs.rmSync(fake.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(requestRoot, { recursive: true, force: true });
+  }
+});

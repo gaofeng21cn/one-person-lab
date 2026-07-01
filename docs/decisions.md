@@ -5,6 +5,21 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-07-01
+
+### 决策：OPL family 语言选型按 owner boundary 克制分工，不把 Rust 扩成核心语言
+
+原因：OPL family 已经形成清楚的 owner 分层：Framework / App / generated surface / runtime control plane 需要稳定的 CLI、JSON readback、contract 消费和 Codex / Electron / Node 生态；MAS/MAG/RCA/BookForge 等 domain agent 需要科学计算、文档、PDF/Office、统计、ML 和 domain-native helper 生态；native helper / state index / sysprobe 则需要少量跨平台系统能力。成熟的 polyglot 口径不是增加语言数量，而是在问题边界确实不同且收益能抵消认知成本时才引入第二语言。因此 family 默认保持 TypeScript / Node 优先，Python 用于科学 / 文档 / native helper execution，Rust 只用于系统边界和 hot path native helper。
+
+影响：
+
+- `TypeScript / Node` 是 OPL Framework 控制面、App / shell UI、CLI、JSON readback、contracts 消费、安装 / 更新编排、Codex surface、manifest / receipt / owner-route 编排和 domain orchestration 的默认语言。
+- `Python` 继续服务 MAS / MAG 这类科学与文档主仓，以及 RCA / BookForge 的 Office/PPT/PDF、截图 / 导出、统计 / ML、数据分析和 domain-native helper。Python helper 必须挂在 domain route、proof lane、contract、owner receipt / typed blocker 或 refs-only output 边界下，不能绕过 domain truth 或替代 AI-first quality verdict。
+- `Rust` 只作为 OPL-owned native helper / state-index / sysprobe / watcher / file scan / cross-platform native boundary 的实现语言；它可以加速系统探测、artifact discovery、session / progress / artifact projection，但不得持有 OPL core orchestration、domain truth、owner receipt、typed blocker、quality verdict 或 runtime authority。
+- App GUI 当前继续以 Electron / Node / TypeScript 为主；除非 native reliability / security / performance 边界有明确收益，不因为 Tauri/Rust 模式本身而迁移 GUI shell。
+- 跨语言 shared surface 必须尽量从 machine-readable contract / schema / generated projection 派生；TS helper 与 Python mirror 可以存在，但不得继续复制 domain semantics 或形成两套 source of truth。
+- 该决策不要求任何仓库迁移语言，不声明 release/currentness/readiness，也不新增 contract surface；后续新增语言或扩大 Rust/Python/TS 边界时，必须说明 owner、machine boundary、active caller、验证口径和不能用现有语言解决的理由。
+
 ## 2026-06-28
 
 ### 决策：MAS domain-handler / provider-hosted stage 使用 admission 前 clean checkout currentness gate，不做热加载

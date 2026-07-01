@@ -7,6 +7,7 @@ import {
   buildCodexCliPreview,
   buildCodexExecArgs,
   parseCodexExecOutput,
+  resolveCodexBinary,
   runCodexCommand,
 } from './codex.ts';
 
@@ -429,6 +430,8 @@ function normalizeReceipt(value: unknown, fallback: {
 
 function runCodexExecutor(request: AgentExecutionRequest, executorKind: AgentExecutorKind): AgentExecutionReceipt {
   const json = request.json ?? true;
+  const codexBinary = resolveCodexBinary();
+  const codexHome = text(process.env.CODEX_HOME);
   const model = resolvePolicyValue(
     request.model,
     request.request_executor_policy?.model,
@@ -472,6 +475,10 @@ function runCodexExecutor(request: AgentExecutionRequest, executorKind: AgentExe
     proof: {
       command_preview: buildCodexCliPreview(args),
       default_executor: true,
+      codex_binary_path: codexBinary?.path ?? null,
+      codex_binary_source: codexBinary?.source ?? null,
+      codex_home: codexHome,
+      codex_config_path: codexHome ? path.join(codexHome, 'config.toml') : null,
       model: model ?? null,
       provider: provider ?? null,
       reasoning_effort: reasoningEffort ?? null,
