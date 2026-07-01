@@ -249,6 +249,83 @@ exit 1
   }
 });
 
+test('system startup-maintenance applies package channel framework artifact into Docker data managed root by default', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-framework-docker-data-'));
+  const dataRoot = path.join(homeRoot, 'data');
+  const expectedTargetRoot = path.join(dataRoot, 'opl', 'framework');
+  const sourceParent = path.join(homeRoot, 'artifact-source');
+  const sourceRoot = path.join(sourceParent, 'one-person-lab');
+  const archivePath = path.join(homeRoot, 'one-person-lab-framework.tar.gz');
+  const codexFixture = createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex-cli 0.134.0"
+  exit 0
+fi
+echo "Unsupported codex fixture command: $*" >&2
+exit 1
+`);
+
+  try {
+    writeMinimalFrameworkRoot(sourceRoot, 'new-docker-data-framework');
+    execFileSync('tar', ['-czf', archivePath, '-C', sourceParent, 'one-person-lab']);
+    const channel = writeFakeFrameworkChannel({
+      root: path.join(homeRoot, 'channel'),
+      version: '26.7.10',
+      archivePath,
+      archiveSha256: sha256(archivePath),
+    });
+
+    const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance', '--scope', 'runtime_substrate'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_DATA_DIR: dataRoot,
+      OPL_FRAMEWORK_UPDATE_SKIP_DEPENDENCY_INSTALL: '1',
+      OPL_PACKAGE_CHANNEL_MANIFEST_REF: 'ghcr.io/owner/one-person-lab-manifest:26.7.10',
+      OPL_CURL_BIN: path.join(channel.fakeBin, 'curl'),
+      OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
+      PATH: `${channel.fakeBin}${path.delimiter}${codexFixture.fixtureRoot}${path.delimiter}/usr/bin:/bin`,
+    })) as {
+      system_action: {
+        status: string;
+        details: {
+          framework_summary: {
+            completed_targets_count: number;
+            manual_required_targets_count: number;
+          };
+          framework_targets: Array<{
+            status: string;
+            reason: string;
+            result: {
+              target_root: string;
+              previous_root: string;
+              rollback_ref: string;
+              metadata_ref: string;
+            };
+          }>;
+        };
+      };
+    };
+
+    assert.equal(output.system_action.status, 'completed');
+    assert.equal(output.system_action.details.framework_summary.completed_targets_count, 1);
+    assert.equal(output.system_action.details.framework_summary.manual_required_targets_count, 0);
+    assert.equal(output.system_action.details.framework_targets[0].status, 'completed');
+    assert.equal(output.system_action.details.framework_targets[0].reason, 'framework_runtime_artifact_applied');
+    assert.equal(output.system_action.details.framework_targets[0].result.target_root, expectedTargetRoot);
+    assert.equal(output.system_action.details.framework_targets[0].result.previous_root, `${expectedTargetRoot}.previous`);
+    assert.match(output.system_action.details.framework_targets[0].result.rollback_ref, /^opl:\/\/managed-update\/runtime_substrate\/framework\/rollback\//);
+    assert.equal(fs.readFileSync(path.join(expectedTargetRoot, 'MARKER.txt'), 'utf8'), 'new-docker-data-framework\n');
+    assert.equal(fs.existsSync(path.join(`${expectedTargetRoot}.previous`, 'package.json')), true);
+    assert.equal(fs.existsSync(path.join(expectedTargetRoot, '.git')), false);
+    const metadata = JSON.parse(fs.readFileSync(output.system_action.details.framework_targets[0].result.metadata_ref, 'utf8'));
+    assert.equal(metadata.source_head_sha, 'f'.repeat(40));
+    assert.equal(metadata.previous_root, `${expectedTargetRoot}.previous`);
+  } finally {
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('update rollback for runtime_substrate restores previous OPL Framework runtime root', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-substrate-framework-rollback-'));
   const targetRoot = path.join(homeRoot, 'data', 'opl', 'framework-current');

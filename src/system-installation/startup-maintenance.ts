@@ -411,7 +411,10 @@ export async function runOplStartupMaintenance(
   const scope = options.scope ?? 'all';
   const initialEnvironment = (await buildOplEnvironment(contracts)).system_environment;
   const frameworkTargets: StartupMaintenanceFrameworkTarget[] = [
-    runOplFrameworkSelfUpdate({ targetRoot: resolveFrameworkUpdateTargetRoot(resolveProjectRoot()) }),
+    runOplFrameworkSelfUpdate({
+      targetRoot: resolveFrameworkUpdateTargetRoot(resolveProjectRoot()),
+      allowChannelArtifact: scope === 'runtime_substrate',
+    }),
   ];
   const engineTargets = [await maybeRunEngineStartupMaintenance(contracts, initialEnvironment)];
   const initialModules = scope === 'runtime_substrate'

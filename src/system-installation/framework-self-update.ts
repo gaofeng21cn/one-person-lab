@@ -2,12 +2,14 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { resolveOplStatePaths } from '../runtime-state-paths.ts';
 import {
   FrameworkContractError,
 } from '../contracts.ts';
 import {
   assertGitSuccess,
   normalizeOptionalString,
+  resolveProjectRoot,
   runCommand,
   runGit,
   type CommandResult,
@@ -80,6 +82,7 @@ type FrameworkSelfUpdateInput = {
   sourceRoot?: string | null;
   sourceArchive?: string | null;
   sourceArchiveSha256?: string | null;
+  allowChannelArtifact?: boolean;
   allowDirtySource?: boolean;
   skipDependencyInstall?: boolean;
 };
@@ -291,8 +294,25 @@ function fetchFrameworkArtifactFromChannel(tempRoot: string) {
 }
 
 export function resolveFrameworkUpdateTargetRoot(defaultTargetRoot: string) {
+  const explicitTargetRoot = normalizeOptionalString(process.env.OPL_FRAMEWORK_UPDATE_TARGET_ROOT);
+  if (explicitTargetRoot) {
+    return path.resolve(explicitTargetRoot);
+  }
+  const dockerDataDir = normalizeOptionalString(process.env.OPL_DATA_DIR)
+    ?? normalizeOptionalString(process.env.AIONUI_DATA_DIR);
+  if (dockerDataDir) {
+    return path.join(path.resolve(dockerDataDir), 'opl', 'framework');
+  }
+  const stateDir = normalizeOptionalString(process.env.OPL_STATE_DIR);
+  if (stateDir) {
+    return path.resolve(stateDir, '..', 'framework');
+  }
+  const paths = resolveOplStatePaths();
+  const appSupportDir = path.dirname(paths.state_dir);
   return path.resolve(
-    normalizeOptionalString(process.env.OPL_FRAMEWORK_UPDATE_TARGET_ROOT) ?? defaultTargetRoot,
+    appSupportDir.includes(`${path.sep}Library${path.sep}Application Support${path.sep}OPL`)
+      ? path.join(appSupportDir, 'framework')
+      : defaultTargetRoot,
   );
 }
 
@@ -365,9 +385,21 @@ function copyDirectoryContents(sourceRoot: string, targetRoot: string) {
   return copied;
 }
 
+function resolveFallbackPreviousFrameworkRoot(targetRoot: string) {
+  const explicit = normalizeOptionalString(process.env.OPL_FRAMEWORK_PREVIOUS_ROOT_SOURCE);
+  if (explicit && fs.existsSync(explicit) && fs.statSync(explicit).isDirectory() && isOplFrameworkRoot(explicit)) {
+    return path.resolve(explicit);
+  }
+  const projectRoot = resolveProjectRoot();
+  if (!pathsReferToSameLocation(projectRoot, targetRoot) && isOplFrameworkRoot(projectRoot)) {
+    return projectRoot;
+  }
+  return null;
+}
+
 function runDependencyInstall(targetRoot: string): FrameworkDependencyInstall {
   const command = 'npm';
-  const args = ['install', '--include=optional', '--ignore-scripts=false'];
+  const args = ['install', '--include=dev', '--include=optional', '--ignore-scripts=false'];
   const result: CommandResult = runCommand(command, args, targetRoot, {
     maxBuffer: 16 * 1024 * 1024,
     timeoutMs: 180_000,
@@ -463,6 +495,11 @@ function activateFrameworkStage(targetRoot: string, stageRoot: string) {
   try {
     if (fs.existsSync(targetRoot)) {
       fs.renameSync(targetRoot, previousRoot);
+    } else {
+      const fallbackPreviousRoot = resolveFallbackPreviousFrameworkRoot(targetRoot);
+      if (fallbackPreviousRoot) {
+        copyDirectoryContents(fallbackPreviousRoot, previousRoot);
+      }
     }
     fs.mkdirSync(path.dirname(targetRoot), { recursive: true });
     fs.renameSync(stageRoot, targetRoot);
@@ -598,8 +635,28 @@ export function runOplFrameworkSelfUpdate(
   const targetRoot = path.resolve(input.targetRoot);
   const sourceArchiveRaw = resolveFrameworkUpdateArchive(input.sourceArchive);
   const sourceRootRaw = resolveFrameworkUpdateSource(input.sourceRoot);
+  const allowChannelArtifact = input.allowChannelArtifact !== false;
+  const archiveOrChannelApplyRequested = Boolean(sourceArchiveRaw || (!sourceRootRaw && allowChannelArtifact));
 
-  if (!fs.existsSync(targetRoot) || !fs.statSync(targetRoot).isDirectory() || !isOplFrameworkRoot(targetRoot)) {
+  if (!sourceArchiveRaw && !sourceRootRaw && !allowChannelArtifact) {
+    return buildResult('skipped', 'framework_update_channel_not_requested', {
+      target_root: targetRoot,
+      source_root: null,
+      source_head_sha: null,
+      source_archive: null,
+      source_archive_sha256: null,
+      previous_root: null,
+      rollback_ref: null,
+      copied_file_count: 0,
+      dependency_install: skippedDependencyInstall(false),
+      metadata_ref: null,
+    });
+  }
+
+  if (
+    fs.existsSync(targetRoot)
+    && (!fs.statSync(targetRoot).isDirectory() || !isOplFrameworkRoot(targetRoot))
+  ) {
     return buildResult('manual_required', 'framework_update_target_invalid', {
       target_root: targetRoot,
       source_root: sourceRootRaw ? path.resolve(sourceRootRaw) : null,
@@ -614,7 +671,22 @@ export function runOplFrameworkSelfUpdate(
     });
   }
 
-  if (isGitRepo(targetRoot)) {
+  if (!fs.existsSync(targetRoot) && !archiveOrChannelApplyRequested) {
+    return buildResult('manual_required', 'framework_update_target_invalid', {
+      target_root: targetRoot,
+      source_root: sourceRootRaw ? path.resolve(sourceRootRaw) : null,
+      source_head_sha: null,
+      source_archive: sourceArchiveRaw ? path.resolve(sourceArchiveRaw) : null,
+      source_archive_sha256: null,
+      previous_root: null,
+      rollback_ref: null,
+      copied_file_count: 0,
+      dependency_install: skippedDependencyInstall(false),
+      metadata_ref: null,
+    });
+  }
+
+  if (fs.existsSync(targetRoot) && isGitRepo(targetRoot)) {
     return buildResult('skipped', 'framework_update_target_is_developer_checkout', {
       target_root: targetRoot,
       source_root: sourceRootRaw ? path.resolve(sourceRootRaw) : null,
