@@ -176,7 +176,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
       target.status,
       target.reason,
     ]), [
-      ['opl-framework', 'skipped', 'framework_update_source_not_configured'],
+      ['opl-framework', 'skipped', 'framework_update_channel_not_requested'],
     ]);
     assert.equal(
       output.system_action.details.managed_install_update_receipts.surface_kind,

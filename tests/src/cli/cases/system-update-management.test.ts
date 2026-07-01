@@ -305,7 +305,7 @@ EOF
     assert.equal(output.system_action.details.summary.skipped_targets_count, 7);
     assert.equal(output.system_action.details.summary.manual_required_targets_count, 0);
     assert.equal(targets.get('framework:opl-framework')?.status, 'skipped');
-    assert.equal(targets.get('framework:opl-framework')?.reason, 'framework_update_source_not_configured');
+    assert.equal(targets.get('framework:opl-framework')?.reason, 'framework_update_channel_not_requested');
     assert.equal(targets.get('engine:codex')?.status, 'skipped');
     assert.equal(targets.get('engine:codex')?.reason, 'selected_codex_ready');
     assert.equal(targets.has('engine:hermes'), false);
