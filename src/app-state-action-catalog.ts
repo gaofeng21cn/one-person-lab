@@ -322,6 +322,18 @@ export function buildActionCatalog(contracts: FrameworkContracts) {
       impact: 'user_task_action_receipt_preview_refs_only',
     },
     {
+      action_id: 'task_export_bundle_preview',
+      label: 'Preview reproducibility export bundle',
+      surface: 'opl app action execute',
+      delegated_surface: 'opl app action execute --action task_export_bundle_preview --dry-run',
+      payload_fields: ['task_id', 'export_bundle_ref'],
+      mutates: 'none_read_only',
+      dry_run_supported: true,
+      confirmation_required: true,
+      danger_level: 'medium',
+      impact: 'reproducibility_export_bundle_receipt_preview_refs_only',
+    },
+    {
       action_id: 'workspace_root_set',
       label: 'Configure workspace root',
       surface: 'opl app action execute',

@@ -284,6 +284,7 @@ function taskUserProjectionRefs(input: {
       conformance_ref: 'contracts/opl-framework/stage-artifact-runtime-contract.json#refs_only_artifact_projection',
       blocker_ref_count: input.blockerRefCount,
       content_policy: 'refs_only_no_artifact_body',
+      export_bundle_action_ref: 'app_state.actions#task_export_bundle_preview',
     },
     review_receipt: {
       reviewer_ref: `opl://domains/${encodedDomainId}/reviewers/default`,
@@ -301,6 +302,8 @@ function taskUserProjectionRefs(input: {
       dry_run_required: true,
       preview_ref: `opl://app-action-previews/${encodedTaskId}/receipt`,
       content_policy: 'refs_only_no_action_receipt_body',
+      export_bundle_action_id: 'task_export_bundle_preview',
+      export_bundle_route: 'opl app action execute --action task_export_bundle_preview --dry-run',
     },
     workflow_refs: {
       current_workflow_ref: `opl://domains/${encodedDomainId}/tasks/${encodedTaskId}/workflows/current`,

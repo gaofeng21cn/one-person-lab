@@ -320,6 +320,63 @@ function buildTaskActionReceiptPreview(payload: JsonRecord) {
   };
 }
 
+function buildTaskExportBundlePreview(payload: JsonRecord) {
+  const taskId = stringPayloadField(payload, 'task_id')
+    ?? stringPayloadField(payload, 'taskId')
+    ?? 'unbound_task';
+  const exportBundleRef = stringPayloadField(payload, 'export_bundle_ref')
+    ?? stringPayloadField(payload, 'exportBundleRef')
+    ?? `opl://domains/unbound/tasks/${encodeURIComponent(taskId)}/export-bundles/latest`;
+  return {
+    task_export_bundle_preview: {
+      surface_kind: 'opl_app_task_export_bundle_preview.v1',
+      action_id: 'task_export_bundle_preview',
+      status: 'dry_run_refs_only',
+      task_id: taskId,
+      export_bundle_ref: exportBundleRef,
+      receipt_ref: `opl://app-action-previews/${encodeURIComponent(taskId)}/export-bundle-receipt`,
+      plan: {
+        summary: 'Preview reproducibility export bundle receipt refs for App confirmation.',
+        required_mode: 'dry_run',
+        owner_route: 'domain_owner_export_bundle_action_required_for_execute',
+      },
+      write_targets: [],
+      risk: {
+        danger_level: 'medium',
+        mutation_policy: 'no_writes_preview_only',
+      },
+      expected_output: {
+        export_bundle_ref: exportBundleRef,
+        receipt_ref: `opl://app-action-previews/${encodeURIComponent(taskId)}/export-bundle-receipt`,
+        content_policy: 'refs_only_no_export_bundle_body',
+      },
+      command_preview: [
+        'opl',
+        'app',
+        'action',
+        'execute',
+        '--action',
+        'task_export_bundle_preview',
+        '--payload',
+        '<json>',
+        '--dry-run',
+      ],
+      authority_boundary: {
+        can_generate_domain_export_bundle: false,
+        can_write_domain_truth: false,
+        can_mutate_artifact_body: false,
+        can_read_artifact_body: false,
+        can_create_owner_receipt: false,
+        can_sign_domain_receipt: false,
+        can_authorize_quality_verdict: false,
+        can_authorize_export_verdict: false,
+        execution_requires_domain_owner_route: true,
+        temporal_is_diagnostics_only: true,
+      },
+    },
+  };
+}
+
 function buildSettingsControlCenterDryRun(actionId: string, payload: JsonRecord) {
   const action = settingsControlCenterActionById(actionId);
   return {
@@ -662,6 +719,22 @@ async function executeDirectAppAction(
     return {
       delegatedSurface: 'opl app action execute --action task_action_receipt_preview --dry-run',
       result: buildTaskActionReceiptPreview(options.payload),
+    };
+  }
+
+  if (options.actionId === 'task_export_bundle_preview') {
+    if (!options.dryRun) {
+      throw new FrameworkContractError('cli_usage_error', 'task_export_bundle_preview is a dry-run App preview only; generate bundles through the domain owner route.', {
+        action_id: options.actionId,
+        required_mode: 'dry_run',
+        can_generate_domain_export_bundle: false,
+        can_write_domain_truth: false,
+        can_create_owner_receipt: false,
+      });
+    }
+    return {
+      delegatedSurface: 'opl app action execute --action task_export_bundle_preview --dry-run',
+      result: buildTaskExportBundlePreview(options.payload),
     };
   }
 

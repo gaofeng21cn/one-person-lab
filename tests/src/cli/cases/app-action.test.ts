@@ -126,6 +126,7 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       'settings_open_docker_webui',
       'settings_diagnose_docker_webui',
       'task_action_receipt_preview',
+      'task_export_bundle_preview',
     ]) {
       assert.ok(actions.has(actionId), `missing App action: ${actionId}`);
       const delegatedSurface = actions.get(actionId)?.delegated_surface ?? '';
@@ -241,6 +242,13 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.deepEqual(actions.get('task_action_receipt_preview')?.payload_fields, ['task_id', 'action_ref']);
     assert.equal(actions.get('task_action_receipt_preview')?.mutates, 'none_read_only');
     assert.equal(actions.get('task_action_receipt_preview')?.dry_run_supported, true);
+    assert.equal(
+      actions.get('task_export_bundle_preview')?.delegated_surface,
+      'opl app action execute --action task_export_bundle_preview --dry-run',
+    );
+    assert.deepEqual(actions.get('task_export_bundle_preview')?.payload_fields, ['task_id', 'export_bundle_ref']);
+    assert.equal(actions.get('task_export_bundle_preview')?.mutates, 'none_read_only');
+    assert.equal(actions.get('task_export_bundle_preview')?.dry_run_supported, true);
     assert.equal(
       actions.get('settings_repair_model_access')?.delegated_surface,
       'opl system developer-supervisor',
@@ -977,6 +985,34 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
       true,
     );
 
+    const exportBundle = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'task_export_bundle_preview',
+      '--payload',
+      '{"task_id":"medautoscience:study:002","export_bundle_ref":"opl://domains/medautoscience/tasks/002/export-bundles/latest"}',
+      '--dry-run',
+    ], env).app_action_execution;
+
+    assert.equal(
+      exportBundle.delegated_surface,
+      'opl app action execute --action task_export_bundle_preview --dry-run',
+    );
+    assert.equal(exportBundle.result.task_export_bundle_preview.status, 'dry_run_refs_only');
+    assert.equal(exportBundle.result.task_export_bundle_preview.task_id, 'medautoscience:study:002');
+    assert.equal(exportBundle.result.task_export_bundle_preview.plan.required_mode, 'dry_run');
+    assert.deepEqual(exportBundle.result.task_export_bundle_preview.write_targets, []);
+    assert.equal(
+      exportBundle.result.task_export_bundle_preview.expected_output.content_policy,
+      'refs_only_no_export_bundle_body',
+    );
+    assert.equal(
+      exportBundle.result.task_export_bundle_preview.authority_boundary.can_generate_domain_export_bundle,
+      false,
+    );
+
     const nonDryRunActionReceipt = runCliFailure([
       'app',
       'action',
@@ -990,6 +1026,20 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
     assert.equal(nonDryRunActionReceipt.payload.error.code, 'cli_usage_error');
     assert.equal(nonDryRunActionReceipt.payload.error.details.required_mode, 'dry_run');
     assert.equal(nonDryRunActionReceipt.payload.error.details.can_create_owner_receipt, false);
+
+    const nonDryRunExportBundle = runCliFailure([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'task_export_bundle_preview',
+      '--payload',
+      '{"task_id":"medautoscience:study:002"}',
+    ], env);
+
+    assert.equal(nonDryRunExportBundle.payload.error.code, 'cli_usage_error');
+    assert.equal(nonDryRunExportBundle.payload.error.details.required_mode, 'dry_run');
+    assert.equal(nonDryRunExportBundle.payload.error.details.can_generate_domain_export_bundle, false);
 
     const scheduler = runCli([
       'app',

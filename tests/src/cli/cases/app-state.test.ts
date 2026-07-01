@@ -715,8 +715,54 @@ exit 1
       true,
     );
     assert.equal(
+      output.app_state.settings_control_center.capability_task_awareness_refs.surface_kind,
+      'opl_settings_capability_task_awareness_refs.v1',
+    );
+    assert.equal(
+      output.app_state.settings_control_center.capability_task_awareness_refs.content_policy,
+      'refs_only_no_skill_body_no_workflow_body',
+    );
+    assert.equal(
+      output.app_state.settings_control_center.capability_task_awareness_refs.capability_health_refs.length > 0,
+      true,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.capability_task_awareness_refs.capability_health_refs.every(
+        (entry: AppStateListEntry) =>
+          typeof entry.id === 'string'
+          && typeof entry.title === 'string'
+          && typeof entry.status === 'string'
+          && typeof entry.ref === 'string'
+          && typeof entry.owner === 'string'
+          && typeof entry.next_action === 'string',
+      ),
+      true,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.capability_task_awareness_refs.connector_readiness_refs.some(
+        (entry: AppStateListEntry) => entry.id === 'temporal_provider'
+          && entry.ref === 'app_state.provider.temporal',
+      ),
+      true,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.capability_task_awareness_refs.workflow_refs.some(
+        (entry: AppStateListEntry) => entry.id === 'task_export_bundle_preview'
+          && entry.ref === 'app_state.actions#task_export_bundle_preview',
+      ),
+      true,
+    );
+    assert.equal(
+      'body' in output.app_state.settings_control_center.capability_task_awareness_refs.workflow_refs[0],
+      false,
+    );
+    assert.equal(
       output.app_state.settings_control_center.app_settings_read_model.surface_kind,
       'opl_app_settings_read_model.v1',
+    );
+    assert.deepEqual(
+      output.app_state.settings_control_center.app_settings_read_model.capability_task_awareness_refs,
+      output.app_state.settings_control_center.capability_task_awareness_refs,
     );
     assert.equal(
       output.app_state.settings_control_center.app_settings_read_model.shell_policy
@@ -1161,10 +1207,13 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
     assert.equal(runningTask.artifact_or_blocker.canonical_ref.includes('/tasks/'), true);
     assert.equal(Array.isArray(runningTask.artifact_or_blocker.export_bundle_refs), true);
     assert.equal(runningTask.artifact_or_blocker.export_bundle_refs[0].includes('/export-bundles/latest'), true);
+    assert.equal(runningTask.artifact_or_blocker.export_bundle_action_ref, 'app_state.actions#task_export_bundle_preview');
     assert.equal(runningTask.review_receipt.authority_policy, 'receipt_summary_refs_only_no_quality_verdict_authority');
     assert.equal(runningTask.review_receipt.receipt_ref.includes('/reviewer-receipt'), true);
     assert.equal(runningTask.action_receipt.action_id, 'task_action_receipt_preview');
     assert.equal(runningTask.action_receipt.dry_run_required, true);
+    assert.equal(runningTask.action_receipt.export_bundle_action_id, 'task_export_bundle_preview');
+    assert.equal(runningTask.action_receipt.export_bundle_route, 'opl app action execute --action task_export_bundle_preview --dry-run');
     assert.equal(runningTask.workflow_refs.content_policy, 'refs_only_no_workflow_body');
     assert.equal(runningTask.workflow_refs.current_workflow_ref.includes('/workflows/current'), true);
     assert.equal('artifact_body' in runningTask.artifact_or_blocker, false);

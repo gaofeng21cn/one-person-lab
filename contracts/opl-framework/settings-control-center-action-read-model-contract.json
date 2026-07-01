@@ -51,6 +51,7 @@
       "codex_model_policy",
       "access_api_key",
       "workspace_services",
+      "capability_task_awareness_refs",
       "docker_webui",
       "local_environment",
       "action_policy"
@@ -63,8 +64,21 @@
       "app_state.paths",
       "app_state.release",
       "app_state.settings_control_center.settings_ia",
-      "app_state.settings_control_center.action_catalog"
+      "app_state.settings_control_center.action_catalog",
+      "app_state.settings_control_center.capability_task_awareness_refs"
     ],
+    "capability_task_awareness_refs": {
+      "surface_kind": "opl_settings_capability_task_awareness_refs.v1",
+      "purpose": "Refs-only Settings/Capabilities slice for capability health, connector readiness, reusable workflow refs, and export bundle preview entrypoints without moving domain truth into Settings.",
+      "required_fields": [
+        "capability_health_refs",
+        "connector_readiness_refs",
+        "workflow_refs",
+        "content_policy",
+        "authority_boundary"
+      ],
+      "content_policy": "refs_only_no_skill_body_no_workflow_body"
+    },
     "docker_webui": {
       "surface_kind": "opl_settings_docker_webui_read_model.v1",
       "purpose": "Default App/Aion-consumable WebUI setup read model for one-click install, API key configuration, seed/image selection, runtime proxy, failure recovery, and operator next actions without running Docker probes on ordinary Settings reads.",
@@ -154,6 +168,18 @@
     "settings_run_webui_startup_maintenance": "settings.docker_webui.startup_maintenance",
     "settings_open_docker_webui": "settings.docker_webui.open",
     "settings_diagnose_docker_webui": "settings.docker_webui.diagnose"
+  },
+  "task_action_refs": {
+    "task_action_receipt_preview": {
+      "action_surface": "opl app action execute --action task_action_receipt_preview --dry-run",
+      "content_policy": "refs_only_no_action_receipt_body",
+      "non_dry_run_policy": "fail_closed_requires_domain_owner_route"
+    },
+    "task_export_bundle_preview": {
+      "action_surface": "opl app action execute --action task_export_bundle_preview --dry-run",
+      "content_policy": "refs_only_no_export_bundle_body",
+      "non_dry_run_policy": "fail_closed_requires_domain_owner_route"
+    }
   },
   "action_catalog_required_metadata": {
     "stable_id": true,

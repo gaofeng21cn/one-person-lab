@@ -582,6 +582,89 @@ function routeFor(actionId: string) {
   return `opl app action execute --action ${actionId}`;
 }
 
+function moduleRef(entry: JsonRecord) {
+  const moduleId = asString(entry.module_id) ?? 'unknown';
+  return `app_state.modules.items.${moduleId}`;
+}
+
+function buildCapabilityTaskAwarenessRefs(input: BuildSettingsControlCenterInput) {
+  const moduleItems = asList(input.modules.items);
+  const temporal = asRecord(asRecord(input.provider).temporal);
+  const temporalStatus = asString(temporal.health_status) ?? asString(temporal.status) ?? 'unknown';
+  return {
+    surface_kind: 'opl_settings_capability_task_awareness_refs.v1',
+    source_refs: [
+      'app_state.modules.items',
+      'app_state.provider.temporal',
+      'app_state.actions#task_action_receipt_preview',
+      'app_state.actions#task_export_bundle_preview',
+      'app_state.operator.workbench.task_drilldowns[].workflow_refs',
+    ],
+    capability_health_refs: moduleItems.map((entry) => {
+      const moduleId = asString(entry.module_id) ?? 'unknown';
+      const status = asString(entry.health_status) ?? 'unknown';
+      return {
+        id: moduleId,
+        title: asString(entry.label) ?? moduleId,
+        status,
+        ref: moduleRef(entry),
+        owner: 'one-person-lab',
+        next_action: status === 'ready'
+          ? 'none'
+          : asString(entry.recommended_action) ?? 'settings_sync_capabilities',
+      };
+    }),
+    connector_readiness_refs: [
+      {
+        id: 'temporal_provider',
+        title: 'Temporal provider',
+        status: statusTone(temporalStatus),
+        ref: 'app_state.provider.temporal',
+        owner: 'one-person-lab',
+        next_action: statusTone(temporalStatus) === 'ready'
+          ? 'provider_scheduler_status'
+          : 'settings_sync_capabilities',
+      },
+      {
+        id: 'codex_surface',
+        title: 'Codex-visible capability surface',
+        status: 'refs_available',
+        ref: 'app_state.actions#settings_reload_codex_surface',
+        owner: 'one-person-lab',
+        next_action: 'settings_reload_codex_surface',
+      },
+    ],
+    workflow_refs: [
+      {
+        id: 'task_action_receipt_preview',
+        title: 'Plan-approve-run receipt preview',
+        status: 'dry_run_refs_only',
+        ref: 'app_state.actions#task_action_receipt_preview',
+        owner: 'one-person-lab',
+        next_action: 'execute_dry_run_preview',
+      },
+      {
+        id: 'task_export_bundle_preview',
+        title: 'Reproducibility export bundle preview',
+        status: 'dry_run_refs_only',
+        ref: 'app_state.actions#task_export_bundle_preview',
+        owner: 'one-person-lab',
+        next_action: 'execute_dry_run_preview',
+      },
+      {
+        id: 'current_task_workflow_refs',
+        title: 'Current task workflow refs',
+        status: 'refs_available',
+        ref: 'app_state.operator.workbench.task_drilldowns[].workflow_refs',
+        owner: 'domain_owner_projection',
+        next_action: 'list_refs_only_no_workflow_body',
+      },
+    ],
+    content_policy: 'refs_only_no_skill_body_no_workflow_body',
+    authority_boundary: settingsAuthorityFlags(),
+  };
+}
+
 function actionState(action: SettingsAction, input: BuildSettingsControlCenterInput) {
   if (action.action_id === 'settings_repair_model_access') {
     const codex = asRecord(asRecord(input.core).codex);
@@ -710,6 +793,7 @@ function buildAppSettingsReadModel(
   const modelAccessStatus = codex.api_key_present === true ? 'ready' : 'attention_needed';
   const temporalStatus = asString(temporal.health_status) ?? asString(temporal.status);
   const moduleHealth = `${moduleSummary.healthy_default_modules_count ?? 0}/${moduleSummary.default_modules_count ?? 0}`;
+  const capabilityTaskAwarenessRefs = buildCapabilityTaskAwarenessRefs(input);
 
   return {
     surface_kind: 'opl_app_settings_read_model.v1',
@@ -725,6 +809,7 @@ function buildAppSettingsReadModel(
       'app_state.release',
       'app_state.settings_control_center.settings_ia',
       'app_state.settings_control_center.action_catalog',
+      'app_state.settings_control_center.capability_task_awareness_refs',
     ],
     shell_policy: {
       app_consumes_read_model_only: true,
@@ -804,6 +889,9 @@ function buildAppSettingsReadModel(
         health: moduleHealth,
         sync_action_id: 'settings_sync_capabilities',
         apply_action_id: 'settings_apply_opl_packages',
+        capability_health_refs: capabilityTaskAwarenessRefs.capability_health_refs,
+        connector_readiness_refs: capabilityTaskAwarenessRefs.connector_readiness_refs,
+        workflow_refs: capabilityTaskAwarenessRefs.workflow_refs,
       },
       local_services: {
         source_ref: 'app_state.provider.temporal',
@@ -832,6 +920,7 @@ function buildAppSettingsReadModel(
       runtime_substrate_rollback_action_id: 'settings_rollback_runtime_substrate',
       temporal_provider: statusTone(temporalStatus),
     },
+    capability_task_awareness_refs: capabilityTaskAwarenessRefs,
     action_policy: {
       source_ref: 'app_state.settings_control_center.action_catalog',
       action_surface: 'opl app action execute --json',
@@ -962,6 +1051,7 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
   const taskEntries = buildTaskEntries(input);
   const issueQueue = buildIssueQueue(input);
   const settingsIa = buildSettingsIa(taskEntries);
+  const capabilityTaskAwarenessRefs = buildCapabilityTaskAwarenessRefs(input);
 
   return {
     surface_kind: 'opl_settings_control_center.v2',
@@ -985,6 +1075,7 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
     },
     settings_ia: settingsIa,
     app_settings_read_model: buildAppSettingsReadModel(input, taskEntries, issueQueue, settingsIa),
+    capability_task_awareness_refs: capabilityTaskAwarenessRefs,
     control_center_groups: SETTINGS_CONTROL_CENTER_GROUPS.map((group) => ({
       ...group,
       state: groupState(group, input),
