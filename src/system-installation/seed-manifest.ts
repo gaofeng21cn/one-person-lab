@@ -304,6 +304,12 @@ function copyDirectoryContents(source: string, target: string) {
   return true;
 }
 
+function isOplFrameworkRoot(root: string) {
+  return fs.existsSync(path.join(root, 'package.json'))
+    && fs.existsSync(path.join(root, 'src', 'cli.ts'))
+    && fs.existsSync(path.join(root, 'bin', 'opl'));
+}
+
 function receiptRef(operation: SeedComponentKind, componentId: SeedComponentId, version: string | null, digest: string | null) {
   return `opl://system-seed/${operation}/${componentId}/${encodeURIComponent(version ?? digest ?? 'local')}`;
 }
@@ -463,6 +469,9 @@ function materializeSeedPayload(
   if (!targetRoot) return null;
   const stat = fs.statSync(sourcePath);
   if (stat.isDirectory()) {
+    if (componentId === 'opl_framework' && fs.existsSync(targetRoot) && isOplFrameworkRoot(targetRoot)) {
+      return targetRoot;
+    }
     copyDirectoryContents(sourcePath, targetRoot);
     return targetRoot;
   }

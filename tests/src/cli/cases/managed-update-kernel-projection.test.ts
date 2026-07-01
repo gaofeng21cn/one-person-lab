@@ -108,7 +108,8 @@ test('managed update kernel contract keeps runtime and agent post-apply executio
   assert.ok(runtime);
   assert.equal(runtime.controlled_execution_path, 'opl system startup-maintenance --json');
   assert.equal(runtime.repair_action, 'run_startup_maintenance');
-  assert.equal(runtime.rollback_action, 'restart_app_with_previous_runtime_pointer_or_run_startup_maintenance');
+  assert.equal(runtime.rollback_action, 'rollback_opl_framework_runtime_or_restart_app_with_previous_runtime_pointer');
+  assert.equal(runtime.status_fields?.includes('opl_framework_runtime'), true);
 
   const agents = contract.providers.find((entry) => entry.provider_id === 'capability_packages');
   assert.ok(agents);
@@ -441,12 +442,18 @@ exit 2
     assert.equal(typeof runtime.current.current_pointer, 'string');
     assert.equal(typeof runtime.current.staged_root, 'string');
     assert.equal(Object.hasOwn(runtime.current, 'rollback_pointer'), true);
+    assert.equal(Object.hasOwn(runtime.current, 'opl_framework_runtime'), true);
+    const frameworkRuntime = runtime.current.opl_framework_runtime as Record<string, unknown>;
+    assert.equal(frameworkRuntime.command_ref, 'opl update apply --component runtime_substrate --json');
+    assert.equal(frameworkRuntime.rollback_command_ref, 'opl update rollback --component runtime_substrate --json');
     assert.equal(typeof runtime.target?.staged_root, 'string');
     assert.equal(runtime.plan.command_refs.some((entry) => entry.command === 'opl system startup-maintenance --json'), true);
     assert.equal(runtime.receipt.schema_version, 'opl_managed_update_component_receipt.v1');
     assert.equal(runtime.receipt.source_manifest_ref, 'app-runtime-update-channel.json');
     assert.equal(runtime.receipt.verify_result, 'not_run_projection_only');
-    assert.deepEqual(runtime.receipt.post_apply_hooks, ['startup_smoke', 'swap_runtime_current_pointer_with_rollback']);
+    assert.deepEqual(runtime.receipt.post_apply_hooks, ['startup_smoke', 'apply_opl_framework_runtime', 'swap_runtime_current_pointer_with_rollback']);
+    assert.equal(runtime.receipt.content_identity_fields.includes('opl_framework_runtime'), true);
+    assert.equal(runtime.authority_boundary.can_mutate_opl_framework_runtime, true);
     assert.equal(runtime.authority_boundary.can_mutate_homebrew, false);
     assert.equal(runtime.authority_boundary.can_mutate_global_npm, false);
 

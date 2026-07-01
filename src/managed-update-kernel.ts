@@ -9,7 +9,9 @@ import {
   type OplCompanionToolSyncItem,
 } from './install-companions-parts/tools.ts';
 import { buildOplEnvironment } from './system-installation/environment.ts';
+import { readOplFrameworkRuntimeUpdateStatus } from './system-installation/framework-self-update.ts';
 import { buildOplModules } from './system-installation/modules.ts';
+import { resolveProjectRoot } from './system-installation/shared.ts';
 import { scholarSkillsStateForAgentPackageChannel } from './system-installation/scholarskills-package-channel.ts';
 import {
   findLatestManagedUpdateReceipt,
@@ -611,8 +613,10 @@ function buildRuntimeSubstrateComponent(systemEnvironment: Record<string, unknow
   const coreEngines = asRecord(systemEnvironment.core_engines);
   const codex = asRecord(coreEngines?.codex);
   const runtimeSubstrate = asRecord(codex?.runtime_substrate_updater) ?? asRecord(codex?.runtime_toolchain_updater);
+  const frameworkRuntime = readOplFrameworkRuntimeUpdateStatus(resolveProjectRoot());
   const installed = booleanValue(codex, 'installed') === true;
   const updateAvailable = booleanValue(codex, 'update_available') === true;
+  const frameworkUpdateAvailable = frameworkRuntime.update_available && !frameworkRuntime.target_is_developer_checkout;
   const runtimeLatestStatus = stringValue(runtimeSubstrate, 'latest_version_status');
   const binarySource = stringValue(codex, 'binary_source');
   const currentPointer = runtimeSubstrate?.current_root ?? null;
@@ -621,11 +625,11 @@ function buildRuntimeSubstrateComponent(systemEnvironment: Record<string, unknow
   const state: ManagedUpdateComponentState =
     !installed
       ? 'failed_with_repair'
-      : updateAvailable || runtimeLatestStatus === 'outdated'
+      : updateAvailable || runtimeLatestStatus === 'outdated' || frameworkUpdateAvailable
         ? 'update_available'
         : 'current';
   const action = state === 'current' ? 'none' : state === 'failed_with_repair' ? 'install' : 'update';
-  const postApplyHooks = ['startup_smoke', 'swap_runtime_current_pointer_with_rollback'];
+  const postApplyHooks = ['startup_smoke', 'apply_opl_framework_runtime', 'swap_runtime_current_pointer_with_rollback'];
   const detail = statusDetail({
     component_state: state,
     post_apply_status: state === 'current' ? 'skipped' : 'not_run',
@@ -655,12 +659,21 @@ function buildRuntimeSubstrateComponent(systemEnvironment: Record<string, unknow
         selected_binary_path: codex?.binary_path ?? null,
         selected_binary_source: binarySource,
       },
+      opl_framework_runtime: frameworkRuntime,
       runtime_substrate_updater: runtimeSubstrate,
     },
     target: state === 'current'
       ? null
       : {
         codex_latest_version: codex?.latest_version ?? null,
+        opl_framework_runtime: frameworkUpdateAvailable
+          ? {
+            target_root: frameworkRuntime.target_root,
+            source_archive: frameworkRuntime.source_archive,
+            source_root: frameworkRuntime.source_root,
+            rollback_ref: frameworkRuntime.rollback_ref,
+          }
+          : null,
         staged_root: stagedRoot,
         current_pointer: currentPointer,
         rollback_pointer: rollbackPointer,
@@ -679,6 +692,20 @@ function buildRuntimeSubstrateComponent(systemEnvironment: Record<string, unknow
         'True',
         'AppOwnedRuntimeOnly',
         'Managed runtime updates must not mutate user Homebrew, global npm, system PATH Codex, or system Temporal.',
+      ),
+      condition(
+        'OplFrameworkRuntimeUpdate',
+        frameworkUpdateAvailable ? 'True' : 'False',
+        frameworkRuntime.target_is_developer_checkout
+          ? 'FrameworkDeveloperCheckoutSkipped'
+          : frameworkUpdateAvailable
+            ? 'FrameworkRuntimeUpdateConfigured'
+            : 'FrameworkRuntimeUpdateSourceNotConfigured',
+        frameworkRuntime.target_is_developer_checkout
+          ? 'OPL Framework runtime target is a developer checkout and is not mutated by managed runtime updates.'
+          : frameworkUpdateAvailable
+            ? 'OPL Framework runtime archive or source is configured for controlled runtime_substrate apply.'
+            : 'OPL Framework runtime self-update is idle until an explicit runtime artifact or source is configured.',
       ),
     ],
     lifecycle: KERNEL_LIFECYCLE,
@@ -733,12 +760,14 @@ function buildRuntimeSubstrateComponent(systemEnvironment: Record<string, unknow
       status_detail: detail,
       reload_guidance: reloadGuidance,
       repair_action: state === 'failed_with_repair' ? 'run_startup_maintenance' : null,
-      content_identity_fields: ['runtime_version', 'sha256', 'current_pointer', 'staged_root'],
+      content_identity_fields: ['runtime_version', 'sha256', 'current_pointer', 'staged_root', 'opl_framework_runtime'],
     }),
     authority_boundary: {
       can_mutate_app_owned_runtime_root: true,
+      can_mutate_opl_framework_runtime: true,
       can_swap_current_pointer: true,
       can_rollback_pointer: true,
+      can_rollback_opl_framework_runtime: frameworkRuntime.previous_root_available,
       can_mutate_homebrew: false,
       can_mutate_global_npm: false,
       can_mutate_system_path_tools: false,

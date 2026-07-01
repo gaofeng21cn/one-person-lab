@@ -20,6 +20,8 @@ import {
   type ManagedUpdateOperation,
   type ManagedUpdateProviderAdapterId,
 } from './managed-update-kernel.ts';
+import { resolveFrameworkUpdateTargetRoot, runOplFrameworkSelfRollback } from './system-installation/framework-self-update.ts';
+import { resolveProjectRoot } from './system-installation/shared.ts';
 import {
   acquireManagedUpdateLock,
   MANAGED_UPDATE_LOCK_STALE_AFTER_SECONDS,
@@ -162,20 +164,29 @@ async function runRuntimeSubstrateAdapter(
   const receiptRef = runtimeAdapterReceiptRef(operation);
   const rollbackRef = runtimeRollbackRef(receiptRef);
   if (operation === 'rollback') {
+    const frameworkRollback = runOplFrameworkSelfRollback({
+      targetRoot: resolveFrameworkUpdateTargetRoot(resolveProjectRoot()),
+    });
+    const status = systemActionStatus(frameworkRollback);
     return {
       component_id: 'runtime_substrate',
       adapter_id: 'runtime_substrate_adapter',
-      status: 'manual_required',
+      status,
       reason: 'startup_maintenance_runtime_substrate_adapter',
       result_ref: receiptRef,
       result: {
         surface_kind: 'runtime_substrate_adapter_result',
         action: operation,
-        status: 'manual_required',
+        status,
         receipt_ref: receiptRef,
         rollback_ref: rollbackRef,
-        repair_action: 'restart_app_with_previous_runtime_pointer_or_run_startup_maintenance',
-        manual_required_reason: 'runtime_pointer_rollback_requires_app_runtime_pointer_support',
+        repair_action: status === 'completed'
+          ? 'run_startup_maintenance'
+          : 'restart_app_with_previous_runtime_pointer_or_run_startup_maintenance',
+        framework_rollback: frameworkRollback,
+        manual_required_reason: status === 'manual_required'
+          ? frameworkRollback.reason
+          : null,
       },
       error: null,
     };

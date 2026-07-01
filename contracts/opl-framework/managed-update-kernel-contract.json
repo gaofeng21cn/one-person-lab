@@ -142,7 +142,13 @@
       "mutation_scope": "app_owned_runtime_root_only",
       "controlled_execution_path": "opl system startup-maintenance --json",
       "repair_action": "run_startup_maintenance",
-      "rollback_action": "restart_app_with_previous_runtime_pointer_or_run_startup_maintenance"
+      "rollback_action": "rollback_opl_framework_runtime_or_restart_app_with_previous_runtime_pointer",
+      "status_fields": [
+        "current_pointer",
+        "staged_root",
+        "rollback_pointer",
+        "opl_framework_runtime"
+      ]
     },
     {
       "provider_id": "capability_packages",
@@ -259,7 +265,8 @@
   "runtime_substrate_required_projection_fields": [
     "current_pointer",
     "staged_root",
-    "rollback_pointer"
+    "rollback_pointer",
+    "opl_framework_runtime"
   ],
   "operation_modes": {
     "status": "read_only_projection",

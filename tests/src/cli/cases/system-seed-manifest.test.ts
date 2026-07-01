@@ -39,6 +39,15 @@ function writeExecutable(filePath: string, contents: string) {
   fs.chmodSync(filePath, 0o755);
 }
 
+function writeMinimalFrameworkRoot(root: string, marker: string) {
+  fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'bin'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'opl-framework-fixture' }, null, 2), 'utf8');
+  fs.writeFileSync(path.join(root, 'src', 'cli.ts'), `export const marker = ${JSON.stringify(marker)};\n`, 'utf8');
+  fs.writeFileSync(path.join(root, 'bin', 'opl'), '#!/usr/bin/env node\n', { mode: 0o755 });
+  fs.writeFileSync(path.join(root, 'MARKER.txt'), `${marker}\n`, 'utf8');
+}
+
 function removeTree(root: string) {
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
@@ -220,6 +229,63 @@ test('system seed-apply records env-driven image manifest and is idempotent', ()
     assert.equal(second.system_action.status, 'applied');
     assert.equal(second.system_action.details.install.created_directories.length, 0);
     assert.equal(second.system_action.details.components.length, 7);
+  } finally {
+    removeTree(homeRoot);
+  }
+});
+
+test('system seed-apply preserves existing managed OPL Framework runtime root in data volume', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-seed-framework-preserve-home-'));
+  const dataDir = path.join(homeRoot, 'data');
+  const stateDir = path.join(dataDir, 'opl', 'state');
+  const seedDir = path.join(homeRoot, 'image-seed');
+  const imageManifestPath = path.join(homeRoot, 'image-manifest.json');
+  const seedFramework = path.join(seedDir, 'framework');
+  const dataFramework = path.join(dataDir, 'opl', 'framework');
+
+  try {
+    writeMinimalFrameworkRoot(seedFramework, 'image-seed-framework');
+    writeMinimalFrameworkRoot(dataFramework, 'runtime-updated-framework');
+    fs.writeFileSync(imageManifestPath, JSON.stringify({
+      image_version: '26.7.1-webui',
+      image_digest: 'sha256:seed-preserve',
+      seed_strategy: 'payload_manifest',
+    }, null, 2));
+    fs.writeFileSync(path.join(seedDir, 'metadata.json'), JSON.stringify({
+      strategy: 'payload_manifest',
+      components: [
+        {
+          id: 'opl_framework',
+          source: 'framework',
+          payload_path: 'framework',
+          version: '26.7.1-image-seed',
+        },
+      ],
+    }, null, 2));
+
+    const output = runCli(['system', 'seed-apply'], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+      OPL_DATA_DIR: dataDir,
+      OPL_IMAGE_MANIFEST_PATH: imageManifestPath,
+      OPL_IMAGE_SEED_DIR: seedDir,
+      PATH: process.env.PATH ?? '',
+    }) as {
+      system_action: {
+        details: {
+          components: Array<{
+            component_id: string;
+            reason: string;
+            materialized_path: string | null;
+          }>;
+        };
+      };
+    };
+
+    const framework = output.system_action.details.components.find((component) => component.component_id === 'opl_framework');
+    assert.equal(framework?.reason, 'image_seed_payload_materialized');
+    assert.equal(framework?.materialized_path, dataFramework);
+    assert.equal(fs.readFileSync(path.join(dataFramework, 'MARKER.txt'), 'utf8'), 'runtime-updated-framework\n');
   } finally {
     removeTree(homeRoot);
   }

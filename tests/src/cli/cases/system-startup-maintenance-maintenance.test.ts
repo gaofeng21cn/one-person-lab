@@ -1,3 +1,5 @@
+import { execFileSync } from 'node:child_process';
+
 import { assert, createFakeCodexFixture, fs, os, path, runCli, test } from '../helpers.ts';
 import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
 import {
@@ -10,6 +12,166 @@ import {
 } from './system-startup-maintenance-cases/shared.ts';
 import type { StartupPackageChannelModuleFixture } from './system-startup-maintenance-cases/shared.ts';
 import { scholarSkillsPackageFixture } from './system-startup-maintenance-fixtures.ts';
+
+function writeMinimalFrameworkRoot(root: string, marker: string) {
+  fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'bin'), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, 'package.json'),
+    JSON.stringify({ name: 'opl-framework-fixture', version: '0.0.0-fixture' }, null, 2),
+    'utf8',
+  );
+  fs.writeFileSync(path.join(root, 'package-lock.json'), JSON.stringify({ lockfileVersion: 3 }, null, 2), 'utf8');
+  fs.writeFileSync(path.join(root, 'src', 'cli.ts'), `export const marker = ${JSON.stringify(marker)};\n`, 'utf8');
+  fs.writeFileSync(path.join(root, 'bin', 'opl'), '#!/usr/bin/env node\nconsole.log("opl fixture");\n', { mode: 0o755 });
+  fs.writeFileSync(path.join(root, 'MARKER.txt'), `${marker}\n`, 'utf8');
+}
+
+function sha256(filePath: string) {
+  return execFileSync('shasum', ['-a', '256', filePath], { encoding: 'utf8' }).trim().split(/\s+/)[0];
+}
+
+test('system startup-maintenance applies OPL Framework runtime archive to a managed Linux Docker root', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-framework-archive-'));
+  const targetRoot = path.join(homeRoot, 'data', 'opl', 'framework-current');
+  const sourceParent = path.join(homeRoot, 'artifact-source');
+  const sourceRoot = path.join(sourceParent, 'one-person-lab');
+  const archivePath = path.join(homeRoot, 'one-person-lab-framework.tar.gz');
+  const codexFixture = createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex-cli 0.134.0"
+  exit 0
+fi
+echo "Unsupported codex fixture command: $*" >&2
+exit 1
+`);
+
+  try {
+    writeMinimalFrameworkRoot(targetRoot, 'old-framework');
+    writeMinimalFrameworkRoot(sourceRoot, 'new-framework');
+    execFileSync('tar', ['-czf', archivePath, '-C', sourceParent, 'one-person-lab']);
+
+    const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance', '--scope', 'runtime_substrate'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_DATA_DIR: path.join(homeRoot, 'data'),
+      OPL_STATE_DIR: path.join(homeRoot, 'data', 'opl', 'state'),
+      OPL_FRAMEWORK_UPDATE_TARGET_ROOT: targetRoot,
+      OPL_FRAMEWORK_UPDATE_ARCHIVE: archivePath,
+      OPL_FRAMEWORK_UPDATE_ARCHIVE_SHA256: sha256(archivePath),
+      OPL_FRAMEWORK_UPDATE_SKIP_DEPENDENCY_INSTALL: '1',
+      OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
+      PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+    })) as {
+      system_action: {
+        status: string;
+        details: {
+          framework_summary: {
+            completed_targets_count: number;
+            manual_required_targets_count: number;
+          };
+          framework_targets: Array<{
+            target_id: string;
+            status: string;
+            reason: string;
+            result: {
+              target_root: string;
+              source_archive: string;
+              previous_root: string;
+              rollback_ref: string;
+              metadata_ref: string;
+            };
+          }>;
+        };
+      };
+    };
+
+    assert.equal(output.system_action.status, 'completed');
+    assert.equal(output.system_action.details.framework_summary.completed_targets_count, 1);
+    assert.equal(output.system_action.details.framework_summary.manual_required_targets_count, 0);
+    assert.equal(output.system_action.details.framework_targets[0].target_id, 'opl-framework');
+    assert.equal(output.system_action.details.framework_targets[0].status, 'completed');
+    assert.equal(output.system_action.details.framework_targets[0].reason, 'framework_runtime_artifact_applied');
+    assert.equal(fs.readFileSync(path.join(targetRoot, 'MARKER.txt'), 'utf8'), 'new-framework\n');
+    assert.equal(fs.readFileSync(path.join(`${targetRoot}.previous`, 'MARKER.txt'), 'utf8'), 'old-framework\n');
+    assert.equal(output.system_action.details.framework_targets[0].result.target_root, targetRoot);
+    assert.equal(output.system_action.details.framework_targets[0].result.source_archive, archivePath);
+    assert.equal(output.system_action.details.framework_targets[0].result.previous_root, `${targetRoot}.previous`);
+    assert.match(output.system_action.details.framework_targets[0].result.rollback_ref, /^opl:\/\/managed-update\/runtime_substrate\/framework\/rollback\//);
+    const metadata = JSON.parse(fs.readFileSync(output.system_action.details.framework_targets[0].result.metadata_ref, 'utf8'));
+    assert.equal(metadata.surface_kind, 'opl_framework_runtime_source');
+    assert.equal(metadata.source_archive, archivePath);
+    assert.equal(metadata.previous_root, `${targetRoot}.previous`);
+  } finally {
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('update rollback for runtime_substrate restores previous OPL Framework runtime root', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-substrate-framework-rollback-'));
+  const targetRoot = path.join(homeRoot, 'data', 'opl', 'framework-current');
+  const previousRoot = `${targetRoot}.previous`;
+  const codexFixture = createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex-cli 0.134.0"
+  exit 0
+fi
+echo "Unsupported codex fixture command: $*" >&2
+exit 1
+`);
+
+  try {
+    writeMinimalFrameworkRoot(targetRoot, 'new-framework');
+    writeMinimalFrameworkRoot(previousRoot, 'old-framework');
+
+    const output = withCliTimeout('120000', () => runCli(['update', 'rollback', '--component', 'runtime_substrate'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_DATA_DIR: path.join(homeRoot, 'data'),
+      OPL_STATE_DIR: path.join(homeRoot, 'data', 'opl', 'state'),
+      OPL_FRAMEWORK_UPDATE_TARGET_ROOT: targetRoot,
+      OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
+      PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+    })) as {
+      managed_update: {
+        execution: {
+          status: string;
+          adapter_results: Array<{
+            status: string;
+            result: {
+              framework_rollback: {
+                status: string;
+                reason: string;
+                result: {
+                  target_root: string;
+                  rollback_root: string;
+                };
+              };
+            };
+          }>;
+        };
+        components: Array<{
+          receipt: { verify_result: string; rollback_ref: string | null };
+        }>;
+      };
+    };
+
+    assert.equal(output.managed_update.execution.status, 'completed');
+    assert.equal(output.managed_update.execution.adapter_results[0].status, 'completed');
+    assert.equal(output.managed_update.execution.adapter_results[0].result.framework_rollback.status, 'completed');
+    assert.equal(output.managed_update.execution.adapter_results[0].result.framework_rollback.reason, 'framework_runtime_rollback_completed');
+    assert.equal(output.managed_update.execution.adapter_results[0].result.framework_rollback.result.target_root, targetRoot);
+    assert.equal(output.managed_update.execution.adapter_results[0].result.framework_rollback.result.rollback_root, `${targetRoot}.rolled-back`);
+    assert.equal(output.managed_update.components[0].receipt.verify_result, 'passed');
+    assert.match(output.managed_update.components[0].receipt.rollback_ref ?? '', /^opl:\/\/managed-update\/runtime_substrate\/rollback\//);
+    assert.equal(fs.readFileSync(path.join(targetRoot, 'MARKER.txt'), 'utf8'), 'old-framework\n');
+    assert.equal(fs.readFileSync(path.join(`${targetRoot}.rolled-back`, 'MARKER.txt'), 'utf8'), 'new-framework\n');
+  } finally {
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
 
 test('system startup-maintenance refreshes Codex CLI before module maintenance when latest is newer', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-codex-home-'));
