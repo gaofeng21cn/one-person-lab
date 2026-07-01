@@ -12,7 +12,7 @@
 <p align="center">Move papers, grants, presentations, patents, and other demanding projects beyond one-shot answers into sustained progress, review, revision, and delivery.</p>
 
 <p align="center">
-  <img src="assets/branding/opl-stage-led-delivery-overview-v2.png" alt="One Person Lab stage-led delivery model" width="100%" />
+  <img src="assets/branding/opl-stage-delivery-model.png" alt="One Person Lab stage-led delivery model" width="100%" />
 </p>
 
 ## Why One Person Lab
@@ -89,7 +89,7 @@ With this design, OPL keeps attention on real progress: whether the next version
 Workflow tools are strongest when the task is deterministic: call a few tools, fill a few fields, and produce a fixed output. High-value knowledge work behaves more like a professional team moving a project forward: someone prepares material, someone creates, someone reviews, someone revises, and someone closes out delivery. OPL organizes those roles and stages so AI keeps producing inspectable, editable, deliverable work.
 
 <p align="center">
-  <img src="assets/branding/opl-stage-led-delivery-overview.png" alt="One Person Lab compared with workflow-style agents" width="100%" />
+  <img src="assets/branding/opl-knowledge-delivery-advantage.png" alt="One Person Lab compared with workflow-style agents" width="100%" />
 </p>
 
 ## Product Layers
