@@ -4,7 +4,6 @@ Owner: `One Person Lab`
 Purpose: `family_development_reference`
 State: `active_support`
 Machine boundary: 本文是人读开发参考。机器可读真相继续归 `contracts/`、源码、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、真实 workspace 与 App 证据。
-Last reviewed: `2026-06-15`
 
 ## 结论
 

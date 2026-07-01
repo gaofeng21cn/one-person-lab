@@ -4,7 +4,6 @@ Owner: `One Person Lab`
 Purpose: `production_closure_gap_matrix_support`
 State: `active_support`
 Machine boundary: 本文是人读 production closure 证据门支撑。机器真相继续归 `contracts/`、source code、CLI/API behavior、runtime ledgers、provider receipts、domain-owned manifests 与真实 workspace / App evidence。
-Last reviewed: `2026-06-12`
 
 ## 读法
 

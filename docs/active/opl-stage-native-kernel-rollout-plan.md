@@ -4,7 +4,6 @@ Owner: `One Person Lab`
 Purpose: `stage_native_kernel_design_support`
 State: `active_support`
 Machine boundary: 本文是人读设计支撑与反膨胀约束。机器真相继续归 `contracts/`、schema、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、Stage Folder、owner receipt、typed blocker、真实 workspace 与 App evidence。当前落地状态、剩余 gap、下一步 owner 和验证入口只回到 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。
-Last reviewed: `2026-06-12`
 
 ## 读法
 

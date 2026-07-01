@@ -4,7 +4,6 @@ Owner: `One Person Lab`
 Purpose: `current_owner_map_support`
 State: `active_support`
 Machine boundary: 本文是人读路线支撑。机器真相继续归 `contracts/`、source code、CLI/API behavior、runtime ledgers、provider receipts、domain-owned manifests 和真实 workspace / App evidence。
-Last reviewed: `2026-06-14`
 
 ## 读法
 
