@@ -40,6 +40,21 @@ function readManagedUpdateKernelContract() {
         blocked_when: string[];
       };
     }>;
+    update_plane_state_machine: {
+      state_axis: string[];
+      states: Array<{
+        state_id: string;
+        allowed_component_classes: string[];
+      }>;
+      component_routes: Array<{
+        component_class: string;
+        canonical_route_state: string;
+        readback_state: string;
+        owner: string;
+        not_opl_update_apply_target?: boolean;
+        semantic_merge_required?: boolean;
+      }>;
+    };
     runner_result_shape: {
       adapter_post_apply_action_shape: { required_fields: string[]; status_values: string[] };
       adapter_status_detail_shape: {
@@ -71,6 +86,39 @@ test('managed update kernel contract keeps runtime and agent post-apply executio
     contract.providers.some((entry) => entry.provider_id === 'app_binary'),
     false,
   );
+  assert.deepEqual(contract.update_plane_state_machine.state_axis, [
+    'auto_apply',
+    'controlled_apply',
+    'prompt_only',
+    'projection_only',
+  ]);
+  assert.deepEqual(
+    contract.update_plane_state_machine.component_routes.map((entry) => entry.component_class),
+    contract.component_classes,
+  );
+
+  const routeByClass = new Map(
+    contract.update_plane_state_machine.component_routes.map((entry) => [entry.component_class, entry]),
+  );
+  assert.equal(routeByClass.get('capability_packages')?.canonical_route_state, 'auto_apply');
+  assert.equal(routeByClass.get('runtime_substrate')?.canonical_route_state, 'controlled_apply');
+  assert.equal(routeByClass.get('installation_carrier')?.canonical_route_state, 'prompt_only');
+  assert.equal(routeByClass.get('installation_carrier')?.readback_state, 'projection_only');
+  assert.equal(routeByClass.get('installation_carrier')?.not_opl_update_apply_target, true);
+  assert.equal(routeByClass.get('codex_surface')?.canonical_route_state, 'projection_only');
+  assert.equal(routeByClass.get('workflow_profile')?.canonical_route_state, 'prompt_only');
+  assert.equal(routeByClass.get('workflow_profile')?.semantic_merge_required, true);
+
+  for (const route of contract.update_plane_state_machine.component_routes) {
+    assert.equal(
+      contract.update_plane_state_machine.state_axis.includes(route.canonical_route_state),
+      true,
+    );
+    assert.equal(
+      contract.update_plane_state_machine.state_axis.includes(route.readback_state),
+      true,
+    );
+  }
 
   const installationCarrier = contract.providers.find((entry) => entry.provider_id === 'installation_carrier');
   assert.ok(installationCarrier);

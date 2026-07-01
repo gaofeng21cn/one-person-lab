@@ -33,6 +33,174 @@
     "failed_with_repair",
     "skipped_manual_required"
   ],
+  "update_plane_state_machine": {
+    "purpose": "single_minimal_semantics_for_runtime_fabric_environment_materializer_artifact_channel_carrier_route_workflow_profile_and_host_update",
+    "state_axis": [
+      "auto_apply",
+      "controlled_apply",
+      "prompt_only",
+      "projection_only"
+    ],
+    "states": [
+      {
+        "state_id": "auto_apply",
+        "meaning": "Framework may fetch, verify, stage, activate, run post-apply hooks, and write a component receipt without asking when the managed target is clean.",
+        "allowed_component_classes": [
+          "capability_packages"
+        ],
+        "required_identity": [
+          "digest",
+          "sha256",
+          "source_fingerprint",
+          "git_head_sha"
+        ],
+        "forbidden_when": [
+          "dirty checkout",
+          "developer checkout",
+          "ahead",
+          "diverged",
+          "no_upstream",
+          "unknown identity"
+        ]
+      },
+      {
+        "state_id": "controlled_apply",
+        "meaning": "Framework may mutate only an OPL/App-owned runtime root through an explicit controlled command and receipt.",
+        "allowed_component_classes": [
+          "runtime_substrate"
+        ],
+        "required_identity": [
+          "current_pointer",
+          "staged_root",
+          "rollback_pointer",
+          "runtime_version"
+        ],
+        "forbidden_when": [
+          "would mutate Homebrew",
+          "would mutate global npm",
+          "would mutate system PATH Codex",
+          "would mutate system Temporal",
+          "target is developer checkout"
+        ]
+      },
+      {
+        "state_id": "prompt_only",
+        "meaning": "Framework may show owner-specific route guidance, but the actual update belongs to the host, App release, package manager, or Codex semantic merge owner.",
+        "allowed_component_classes": [
+          "installation_carrier",
+          "workflow_profile",
+          "companion_tools"
+        ],
+        "required_identity": [
+          "route_owner",
+          "route_ref",
+          "manual_required_reason"
+        ],
+        "forbidden_when": [
+          "would claim host carrier replacement",
+          "would silently overwrite user profile",
+          "would require host executor without host proof"
+        ]
+      },
+      {
+        "state_id": "projection_only",
+        "meaning": "Framework may expose status, reload guidance, refs, and safe action labels derived from another owner; it is not an apply target.",
+        "allowed_component_classes": [
+          "codex_surface",
+          "installation_carrier",
+          "workflow_profile"
+        ],
+        "required_identity": [
+          "source_projection_ref",
+          "authority_boundary"
+        ],
+        "forbidden_when": [
+          "would create domain truth",
+          "would create owner receipt",
+          "would claim App release currentness",
+          "would claim carrier update complete"
+        ]
+      }
+    ],
+    "component_routes": [
+      {
+        "component_class": "installation_carrier",
+        "canonical_route_state": "prompt_only",
+        "readback_state": "projection_only",
+        "owner": "one-person-lab-app",
+        "examples": [
+          "desktop_app_bundle",
+          "docker_webui_image",
+          "linux_package_carrier"
+        ],
+        "not_runtime_substrate": true,
+        "not_opl_update_apply_target": true
+      },
+      {
+        "component_class": "runtime_substrate",
+        "canonical_route_state": "controlled_apply",
+        "readback_state": "controlled_apply",
+        "owner": "one-person-lab-app-and-opl-framework",
+        "examples": [
+          "app_owned_runtime_root",
+          "embedded_codex_executor",
+          "opl_framework_runtime_artifact_channel"
+        ],
+        "not_installation_carrier": true,
+        "not_global_toolchain": true
+      },
+      {
+        "component_class": "capability_packages",
+        "canonical_route_state": "auto_apply",
+        "readback_state": "auto_apply",
+        "owner": "one-person-lab-managed-modules",
+        "examples": [
+          "domain_module_package_channel",
+          "framework_capability_package_channel"
+        ],
+        "not_installation_carrier": true,
+        "not_domain_truth": true
+      },
+      {
+        "component_class": "codex_surface",
+        "canonical_route_state": "projection_only",
+        "readback_state": "projection_only",
+        "owner": "one-person-lab-connect",
+        "examples": [
+          "plugin_registry_projection",
+          "skill_reload_guidance",
+          "generated_oma_plugin_surface"
+        ],
+        "not_apply_target": true,
+        "not_domain_truth": true
+      },
+      {
+        "component_class": "companion_tools",
+        "canonical_route_state": "prompt_only",
+        "readback_state": "prompt_only",
+        "owner": "one-person-lab-companion-tools",
+        "examples": [
+          "officecli",
+          "mineru_open_api"
+        ],
+        "not_runtime_substrate": true,
+        "not_domain_truth": true
+      },
+      {
+        "component_class": "workflow_profile",
+        "canonical_route_state": "prompt_only",
+        "readback_state": "projection_only",
+        "owner": "opl-flow",
+        "examples": [
+          "human_doc:repo_agent_instructions",
+          "human_doc:user_taste_profile",
+          "human_doc:codex_role_prompts"
+        ],
+        "not_opl_update_apply_target": true,
+        "semantic_merge_required": true
+      }
+    ]
+  },
   "idempotency_lock": {
     "lock_id": "opl_managed_updater_kernel.global",
     "lock_scope": "single_writer_for_fetch_verify_stage_activate_post_apply_write_receipt",
