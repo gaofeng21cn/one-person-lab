@@ -4,6 +4,14 @@ import { assert, createCodexConfigFixture, createFakeCodexFixture, createGitModu
 import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
 import { writeFakeBookForgeGeneratedSurfacePack } from '../../cli-codex-default-shell-helpers.ts';
 
+function writeFrameworkFixtureRoot(root: string, marker: string) {
+  fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'bin'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'opl-framework-fixture' }), 'utf8');
+  fs.writeFileSync(path.join(root, 'src', 'cli.ts'), `// ${marker}\n`, 'utf8');
+  fs.writeFileSync(path.join(root, 'bin', 'opl'), '#!/usr/bin/env bash\n', { encoding: 'utf8', mode: 0o755 });
+}
+
 test('system ignores retired Hermes env outside family runtime provider selection', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-retired-hermes-update-home-'));
 
@@ -197,6 +205,8 @@ exit 1
 test('system update skips ready targets updates available targets and reports dirty module skips', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-system-update-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');
+  const frameworkSourceRoot = path.join(homeRoot, 'framework-source');
+  const frameworkTargetRoot = path.join(homeRoot, 'framework-target');
   const turnkeyLogPath = path.join(homeRoot, 'turnkey.log');
   const codexFixture = createFakeCodexFixture(`
 if [[ "$1" == "--version" ]]; then
@@ -247,6 +257,19 @@ EOF
   });
   const metaAgentRemote = createGitModuleRemoteFixture('opl-meta-agent');
   const bookForgeRemote = createGitModuleRemoteFixture('opl-bookforge');
+  writeFrameworkFixtureRoot(frameworkSourceRoot, 'framework source fixture');
+  writeFrameworkFixtureRoot(frameworkTargetRoot, 'old framework target fixture');
+  runGitFixtureCommand(frameworkSourceRoot, ['init', '--initial-branch', 'main']);
+  runGitFixtureCommand(frameworkSourceRoot, ['add', '-A']);
+  runGitFixtureCommand(frameworkSourceRoot, [
+    '-c',
+    'user.name=OPL Test',
+    '-c',
+    'user.email=opl@example.test',
+    'commit',
+    '-m',
+    'Initial framework fixture',
+  ]);
   const env = {
     HOME: homeRoot,
     OPL_MODULES_ROOT: modulesRoot,
@@ -255,6 +278,9 @@ EOF
     OPL_MODULE_REPO_URL_OPLMETAAGENT: metaAgentRemote.remoteRoot,
     OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
     OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+    OPL_FRAMEWORK_UPDATE_SOURCE: frameworkSourceRoot,
+    OPL_FRAMEWORK_UPDATE_TARGET_ROOT: frameworkTargetRoot,
+    OPL_FRAMEWORK_UPDATE_SKIP_DEPENDENCY_INSTALL: '1',
     OPL_CODEX_CLI_LATEST_VERSION: '0.125.0',
     PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
   };
@@ -301,11 +327,11 @@ EOF
     assert.equal(output.system_action.action, 'update');
     assert.equal(output.system_action.status, 'completed');
     assert.equal(output.system_action.details.summary.total_targets_count, 8);
-    assert.equal(output.system_action.details.summary.completed_targets_count, 1);
-    assert.equal(output.system_action.details.summary.skipped_targets_count, 7);
+    assert.equal(output.system_action.details.summary.completed_targets_count, 2);
+    assert.equal(output.system_action.details.summary.skipped_targets_count, 6);
     assert.equal(output.system_action.details.summary.manual_required_targets_count, 0);
-    assert.equal(targets.get('framework:opl-framework')?.status, 'skipped');
-    assert.equal(targets.get('framework:opl-framework')?.reason, 'framework_update_channel_not_requested');
+    assert.equal(targets.get('framework:opl-framework')?.status, 'completed');
+    assert.equal(targets.get('framework:opl-framework')?.reason, 'framework_runtime_source_refreshed');
     assert.equal(targets.get('engine:codex')?.status, 'skipped');
     assert.equal(targets.get('engine:codex')?.reason, 'selected_codex_ready');
     assert.equal(targets.has('engine:hermes'), false);
