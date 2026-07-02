@@ -4,7 +4,6 @@ Owner: `One Person Lab`
 Purpose: `opl_family_ideal_system_assessment`
 State: `support_reference`
 Machine boundary: 本文是人读 north-star 评估和设计参考。当前事实、gap、计数、receipt、release verdict、domain ready、production ready 继续归 `docs/active/current-state-vs-ideal-gap.md`、核心五件套、contracts、source、CLI/API、runtime ledger、provider receipt、domain-owned manifests、App release/user-path evidence 和真实 workspace evidence。
-Last reviewed: `2026-06-12`
 
 ## 读法
 
@@ -12,7 +11,7 @@ Last reviewed: `2026-06-12`
 
 本文不做当前落地度盘点，不冻结路线优先级，也不声明任何模块已经达到 L5 或 production ready。需要行动顺序时回到 [OPL Family 当前状态与理想目标差距](../../active/current-state-vs-ideal-gap.md)。需要底层 north-star owner boundary 时回到 [OPL 与 Foundry Agents 理想目标态](./opl-family-agent-ideal-state.md)。需要 operating model 分类时回到 [OPL Family Ideal Operating Model Redesign](../../active/opl-family-ideal-operating-model-redesign.md)。
 
-2026-06-30 SSOT refresh：本文不维护 live evidence / production evidence / release evidence / Brand L5 / owner-chain scaleout worklist。理想系统评估只回答“目标形态应该是什么”和“哪些边界不能被误读”；live evidence 的独立维护入口是 [OPL Family Live Evidence 维护入口](../operating-governance/family-live-evidence-maintenance.md)。因此本文中的 L5、long-soak、release/user path、owner acceptance 只作为理想验收类型出现，不作为当前 active gap 或执行清单。
+Currentness policy：本文不维护 live evidence / production evidence / release evidence / Brand L5 / owner-chain scaleout worklist。理想系统评估只回答“目标形态应该是什么”和“哪些边界不能被误读”；live evidence 的独立维护入口是 [OPL Family Live Evidence 维护入口](../operating-governance/family-live-evidence-maintenance.md)。因此本文中的 L5、long-soak、release/user path、owner acceptance 只作为理想验收类型出现，不作为当前 active gap 或执行清单。
 
 ## 结论
 

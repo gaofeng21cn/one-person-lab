@@ -4,6 +4,7 @@ Owner: `One Person Lab`
 Purpose: `brand_module_design`
 State: `support_reference`
 Machine boundary: 本文是人读目标态参考。机器真相继续归核心五件套、contracts、source、CLI/API 行为、App projection、status foldback 和 runtime evidence。
+Currentness policy: 本文不冻结 Charter L4 状态、命令通过状态、App descriptor refs、runtime evidence 或 release/domain readiness。当前 Charter 结构状态必须从 fresh `opl charter status|validate|doctor --json`、brand-module contracts、source/tests 和 status foldback 读取。
 
 ## 品牌定位
 
@@ -64,7 +65,7 @@ opl charter validate --json
 opl charter doctor --json
 ```
 
-这些命令由 `contracts/opl-framework/brand-module-surfaces.json#modules.charter` 定义，并从同一 Charter read-model 派生 CLI、App descriptor、validation、doctor 与 status 输出。因此 `Charter` 当前可以声明达到 Workspace 级 `L4_structural_baseline`；该声明只覆盖结构完成度，不覆盖 L5、domain ready、App release ready 或 production ready。
+这些命令由 `contracts/opl-framework/brand-module-surfaces.json#modules.charter` 定义，并从同一 Charter read-model 派生 CLI、App descriptor、validation、doctor 与 status 输出。Fresh readback of those surfaces can support reading `Charter` as Workspace 级 `L4_structural_baseline`；该声明只覆盖结构完成度，不覆盖 L5、domain ready、App release ready 或 production ready。
 
 当前 App / descriptor refs：
 

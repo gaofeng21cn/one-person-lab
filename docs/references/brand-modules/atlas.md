@@ -4,6 +4,7 @@ Owner: `One Person Lab`
 Purpose: `brand_module_design`
 State: `support_reference`
 Machine boundary: 本文是人读目标态参考。机器真相继续归 domain descriptors、contracts、source、CLI/API 行为、App projection、generated catalog/read-model、conformance report 和 status foldback。
+Currentness policy: 本文不冻结 Atlas L4 状态、catalog graph、descriptor refs、conformance pass、App projection 或 release/domain readiness。当前 Atlas 结构状态必须从 fresh `opl atlas status|validate|doctor --json`、generated catalog/read-model、contracts、source/tests 和 conformance readback 读取。
 
 ## 品牌定位
 
@@ -70,7 +71,7 @@ opl atlas validate --json
 opl atlas doctor --json
 ```
 
-这些命令由 `contracts/opl-framework/brand-module-surfaces.json#modules.atlas` 定义，并从同一 Atlas catalog/read-model 派生 CLI、App descriptor、validation、doctor 与 status 输出。因此 `Atlas` 当前可以声明达到 Workspace 级 `L4_structural_baseline`；该声明只覆盖结构完成度，不覆盖 MAS/MAG/RCA/OMA ready、handler readiness、App release evidence 或 production ready。
+这些命令由 `contracts/opl-framework/brand-module-surfaces.json#modules.atlas` 定义，并从同一 Atlas catalog/read-model 派生 CLI、App descriptor、validation、doctor 与 status 输出。Fresh readback of those surfaces can support reading `Atlas` as Workspace 级 `L4_structural_baseline`；该声明只覆盖结构完成度，不覆盖 MAS/MAG/RCA/OMA ready、handler readiness、App release evidence 或 production ready。
 
 当前 App / descriptor refs：
 

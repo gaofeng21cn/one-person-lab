@@ -4,6 +4,7 @@ Owner: `One Person Lab`
 Purpose: `brand_module_maturity_assessment`
 State: `support_reference`
 Machine boundary: 本文是人读现状对照。当前完成度、计数、receipt、release 和 runtime truth 继续以 fresh CLI/read-model、contracts、source、runtime ledger、provider receipt、domain-owned manifests、App release/user-path evidence 和真实 workspace evidence 为准。
+Currentness policy: 本文不冻结模块完成度、L5 evidence 数量、owner acceptance refs、blocker refs、命令通过状态或 release/runtime truth。本文只保留成熟度读法、false-authority boundary 和可回到机器真相的读取入口；当前状态必须从 fresh `opl <module> status|validate|doctor --json`、brand-module contracts、runtime evidence ledger、App release evidence 和 domain owner surfaces 读取。
 
 ## 读法
 
@@ -28,7 +29,7 @@ Machine boundary: 本文是人读现状对照。当前完成度、计数、recei
 - 机器边界清楚：runtime-state 只做 provider backing/provenance，不替代 stage folder、owner receipt 或 typed blocker。
 - 多 surface 同源：CLI/App/descriptor delegates 绑定到同一 command contract。
 
-## 当前十模块完成度
+## 模块完成度读法
 
 严格按 Workspace 级模块完成度口径，`L4 baseline` 要求模块自己有可执行 surface：对象模型、schema/contract、模块级 CLI family、App/read-model、validate、doctor、interfaces、测试和状态文档。当前实现分两层：
 
