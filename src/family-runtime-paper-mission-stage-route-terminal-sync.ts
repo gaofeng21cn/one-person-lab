@@ -298,6 +298,8 @@ function oplTransitionReceiptForTerminalAttempt(input: {
     opl_route_command_ref: paperMissionStageRouteIdentityValue(input.payload, 'opl_route_command_ref'),
     command_kind: paperMissionStageRouteIdentityValue(input.payload, 'command_kind'),
     route_target: paperMissionStageRouteIdentityValue(input.payload, 'route_target'),
+    work_unit_id: paperMissionStageRouteIdentityValue(input.payload, 'work_unit_id'),
+    work_unit_fingerprint: paperMissionStageRouteIdentityValue(input.payload, 'work_unit_fingerprint'),
     route_identity_key: paperMissionStageRouteIdentityValue(input.payload, 'route_identity_key'),
     attempt_idempotency_key: paperMissionStageRouteIdentityValue(input.payload, 'attempt_idempotency_key'),
     request_idempotency_key: paperMissionStageRouteIdentityValue(input.payload, 'request_idempotency_key'),
