@@ -7,6 +7,19 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-07-02
 
+### 决策：标准 OPL Agent 用 Stage 主提示词承载阶段策略，不把 stage 定义成专业 Skill
+
+原因：MAS 的历史实现把部分 stage 主提示词物化成 `.codex/skills/medical-research-*`，容易让人误以为 OPL 标准智能体需要一类独立的 stage 专用 Skill。RCA 和 BookForge 的实际形态更接近标准：`agent/stages/` 定义阶段目标、输入输出、owner boundary、quality gate 与 route-back，`agent/prompts/` 承载 stage 执行主提示词，`agent/skills/` 或外部 specialist pack 承载专业方法。这个模型更符合 AI-first：stage 只说明“这一阶段怎么推进和守边界”，专业 Skill、工具、知识库和 connector 负责“具体专业任务怎么做好”。
+
+影响：
+
+- 标准 OPL Agent 的 canonical stage source 是 domain repo 内的 `agent/stages/` + `agent/prompts/`；Codex Skill、App action、CLI action、MCP descriptor 或 hosted runner input 都是可生成 / 可投影的消费面，不是 stage 的唯一源头。
+- MAS 当前保留 overlay template 生成 `.codex/skills/medical-research-write|review|figure` 的兼容物理形态，但文档和规划按 stage 主提示词读取：它们负责阶段进入、证据门槛、route-back、owner gate、handoff 和可用 specialist/tool refs，不负责维护医学写作、审稿或图件设计的专业 playbook。
+- Professional specialist skill 默认放在 domain agent repo 的 `agent/skills/`；体量大、依赖重、跨 workspace 复用、独立发布或需要单源维护时，拆到专业 pack repo。MAS 的 `medical-manuscript-writing`、`medical-manuscript-review`、`medical-figure-design` 和 `medical-research-lit` 因为医学论文专业面重，由 `mas-scholar-skills` 维护并通过 OPL Connect 同步。
+- 工具和外部资源接入进入 OPL Connect / Fabric：PubMed、数据库、HPC、渲染器、存储和软件环境返回 source refs、invocation refs、receipt candidates 和 no-authority boundary；它们不决定 domain truth、质量 verdict 或 owner acceptance。
+- 默认防止策略固定为三段：stage 主提示词不得冒充专业技能或 domain verdict；professional specialist skill 不得签 owner receipt、typed blocker、human gate、publication readiness 或 artifact authority；tool/connector 不得把 transport/read receipt 升级成领域判断。
+- 后续改造优先更新 domain stage pack、prompt、professional skill、knowledge/rubric refs 和独立 reviewer gate；不得把开放式专家判断下沉成脚本流程，也不得为了统一把所有 stage 强制物化为 Codex Skill。
+
 ### 决策：PubMed 文献入口进入 OPL Connect，MAS 保留科研判断与论文权威
 
 原因：MAS 的文献检索原型过去主要靠 ScholarSkills/skill 说明和领域脚本承接，触发快，但稳定性、错误语义、source ref 结构和跨 App / Workspace / 本机 CLI 复用不够统一。OPL Connect 作为 Fabric 的通用连接能力，应承接高频外部资源的稳定 read-only connector；MAS/ScholarSkills 继续承接医学论文写作、审阅、图表和 citation judgment 的 AI-first 专家策略。
@@ -15,7 +28,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 - `opl connect pubmed search --query <query> --limit <n> --json` 成为 PubMed 第一条稳定 read-only connector 入口，返回 normalized `pubmed:<pmid>` refs、metadata、source URLs、connector invocation ref、ledger receipt candidate ref 和 no-authority boundary。
 - 该 connector 只调用 PubMed E-utilities 和输出 refs/metadata，不保存全文、不创建 OPL 文献库、不写 MAS paper truth、不签 owner receipt、不创建 typed blocker / human gate，也不声明引用质量、论文进度、publication-ready、domain-ready 或 production-ready。
-- MAS scout/write/review/figure Skill 可以优先调用该 connector 获取文献 refs；医学取舍、证据链、claim-evidence map、review ledger、写作质量和 owner route 仍归 MAS。
+- MAS `scout`、`write`、`review`、`figure` 等 stage 主提示词可以优先调用该 connector 获取文献 refs；医学取舍、证据链、claim-evidence map、review ledger、写作质量和 owner route 仍归 MAS。
 - ScholarSkills / MAS Scholar Skills 仍可提供医学文献检索 playbook、query 设计、筛选策略和专门 Skill；高频稳定资源访问逐步从 skill 原型沉淀为 Connect connector，避免把 API 稳定性、限流和 source ref normalization 留在领域 prompt 里。
 - `OPL Fabric` 是通用资源底座，`OPL Connect` 是其中可独立调用的连接能力；Console 可治理和展示 connector 策略，但不是 Connect 的唯一入口。本机 OPL App、在线 Workspace、CLI 和 domain agent 都可以按权限与 profile 直接调用 Connect。
 

@@ -1,13 +1,13 @@
 import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
 
-const MAS_MEDICAL_OWNER_SKILL_PACK_IDS = [
+const MAS_MEDICAL_PROFESSIONAL_SKILL_PACK_IDS = [
   'mas-scholar-skills',
   'medical-research-lit',
-  'medical-research-write',
-  'medical-research-review',
-  'medical-research-figure',
+  'medical-manuscript-writing',
+  'medical-manuscript-review',
+  'medical-figure-design',
 ] as const;
-const MAS_MEDICAL_SPECIALIST_SKILL_PACK_IDS = MAS_MEDICAL_OWNER_SKILL_PACK_IDS.slice(1);
+const MAS_MEDICAL_SPECIALIST_SKILL_PACK_IDS = MAS_MEDICAL_PROFESSIONAL_SKILL_PACK_IDS.slice(1);
 
 function createScholarSkillsRepoFixture(options: { specialistSkills?: string[] } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mas-scholar-skills-source-'));
@@ -202,7 +202,7 @@ test('connect skills exposes MAS Scholar Skills as a framework-owned capability 
     assert.deepEqual(pack.mas_scholar_skills_profile.required_skill_pack, ['mas-scholar-skills']);
     assert.deepEqual(
       pack.mas_scholar_skills_profile.default_skill_pack,
-      Array.from(MAS_MEDICAL_OWNER_SKILL_PACK_IDS),
+      Array.from(MAS_MEDICAL_PROFESSIONAL_SKILL_PACK_IDS),
     );
     assert.equal(pack.mas_scholar_skills_profile.install_target.target_scope, 'inspect');
     assert.equal(pack.mas_scholar_skills_profile.install_target.target_root, null);
@@ -661,12 +661,12 @@ test('connect sync-skills installs materialized MAS ScholarSkills specialist dir
     assert.equal(localSkill.mas_scholar_skills_profile_manifest_path, path.join(skillRoot, '.opl-mas-scholarskills-sync-manifest.json'));
     assert.equal(fs.existsSync(localSkill.mas_scholar_skills_profile_manifest_path), true);
     assert.deepEqual(profile.required_skill_pack, ['mas-scholar-skills']);
-    assert.deepEqual(profile.default_skill_pack, Array.from(MAS_MEDICAL_OWNER_SKILL_PACK_IDS));
+    assert.deepEqual(profile.default_skill_pack, Array.from(MAS_MEDICAL_PROFESSIONAL_SKILL_PACK_IDS));
     assert.equal(profile.install_target.target_scope, 'workspace');
     assert.equal(profile.install_target.target_root, workspaceRoot);
     assert.equal(profile.install_target.install_root, path.join(workspaceRoot, '.codex', 'skills'));
     assert.equal(profile.install_target.system_codex_skill_install_default, false);
-    for (const packId of MAS_MEDICAL_OWNER_SKILL_PACK_IDS) {
+    for (const packId of MAS_MEDICAL_PROFESSIONAL_SKILL_PACK_IDS) {
       assert.equal(profilePacks.get(packId)?.source_status, 'materialized');
       assert.equal(profilePacks.get(packId)?.installed, true);
     }

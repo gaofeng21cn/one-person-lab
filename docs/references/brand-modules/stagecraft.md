@@ -21,6 +21,8 @@ Fresh readback can support reading `Stagecraft` as Workspace 级 `L4_structural_
 ## 设计理念
 
 - Stage 是专家工作单元，不是脚本节点。
+- Stage 主提示词是 stage strategy ref，不是专业 Skill。标准源头是 domain repo 内的 `agent/stages/` 和 `agent/prompts/`；Codex Skill 物化只是某些 agent 的兼容投影。
+- Professional specialist skill 承担专业方法、风格、审稿、图件、文献或工具使用 playbook；它可以放在 domain repo，也可以在体量大或需要跨 workspace 复用时拆到外部 specialist pack。
 - Tool catalog / Tool Arsenal 是 affordance catalog，不是 workflow script。
 - AI-first：规划、创作、评审、路线判断和修订由 selected executor 完成。
 - Contract-light：合同只固定目标、refs、owner、scope、authority boundary、quality gate 和 receipt 下限。
