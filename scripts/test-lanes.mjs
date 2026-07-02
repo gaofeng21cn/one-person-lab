@@ -93,6 +93,8 @@ const fastTestFiles = [
   'tests/src/agent-lab-complete.test.ts',
   'tests/src/agent-lab-ahe-evidence.test.ts',
   'tests/src/agent-lab-maturity-controls.test.ts',
+  'tests/src/agent-lab-feedbackops.test.ts',
+  'tests/src/cli/cases/feedbackops.test.ts',
   'tests/src/family-stage-proof-bundle.test.ts',
   'tests/src/family-stage-cohort-loop.test.ts',
   'tests/src/family-stage-runtime-budget.test.ts',
