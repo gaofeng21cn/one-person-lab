@@ -17,6 +17,8 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 contrac
 - Descriptor-only delegates：MCP/Skill/OpenAI/AI SDK 可以描述和 delegate，但不成为 OPL runtime owner。
 - Release evidence is separate：install transport 与 semantic truth 分开；Homebrew/App release 只能证明安装路径，不证明 domain ready。
 - No wrapper drift：generated surface 必须能追踪 source fingerprint 和 generated artifact fingerprint。
+- Direct invocation：Connect 可被 CLI、OPL App action、family runtime 或 MAS/MAG/RCA 等 domain-owned 流程直接调用；Console 只是可选展示 / operator projection，不是 Connect 的前置依赖。
+- Fabric relationship：Runtime Fabric 是 OPL 的通用资源底座；Connect 属于 Fabric 上的资源连接 / 分发 / discovery 能力之一，但 `opl connect *`、App action 和 runtime 调用面可以独立执行，不需要先经过 Console。
 
 ## 核心对象
 
@@ -32,6 +34,7 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 contrac
 | `app_action_descriptor` | App action list / execute 的合同。 |
 | `release_channel` | Homebrew、DMG、Full bundle、Docker/WebUI、GHCR 等分发入口。 |
 | `generated_drift_manifest` | source input 与 generated artifact 的对齐状态。 |
+| `profile_driven_skill_sync_manifest` | 对 MAS Scholar Skills 等 profile/overlay 驱动的 skill pack，同步输出 required/default pack、安装落点、source status 与 false-authority boundary。 |
 
 Workspace 级 L4 的 Connect 对象模型必须把 semantic authority 与 transport/install evidence 拆开。最低模型如下：
 
@@ -84,6 +87,13 @@ opl brand-modules inspect --module connect --json
 ```
 
 Connect 暴露 Skill/MCP/plugin/install transport 时，必须能指回 Foundry Agent series spine：`opl connect skills` 和 `opl connect sync-skills` 输出 `foundry_agent_series`、`command_surface_spine`、`mcp_projection` 与旧桶退役策略。旧 `opl skill list|sync` 和 `opl module *` 只保留 fail-closed replacement，不再作为普通入口。
+
+MAS Scholar Skills 同步模型：
+
+- `opl connect sync-skills --domain scholarskills` 继续兼容旧入口；无 workspace/quest target 时只输出 skipped/readback，不把 skill 写入 MAS repo 或系统 Codex。
+- MAS profile/overlay 决定 required/default skill pack；Connect 只按显式 registry/profile manifest 安装、同步和发现，不判断 MAS 质量、paper truth、owner receipt、typed blocker 或 runtime queue。
+- 当前 source repo 若只有 `opl-scholarskills` 总入口，`medical-research-figure`、`medical-research-write`、`medical-research-review` 等 specialist pack 必须在 manifest 中显示 `available-but-not-materialized` 或 `source-missing`，不得靠目录启发式猜测。
+- workspace/quest scope 的默认落点是 `<target>/.codex/skills/`；project scope 仍是显式、非默认、deprecated-for-paper-execution 的 MAS project-local mirror；codex scope 仍需显式请求。
 
 理想文档：
 

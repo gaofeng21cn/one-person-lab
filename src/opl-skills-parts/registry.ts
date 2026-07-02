@@ -60,6 +60,7 @@ export type InspectFamilySkillPack = {
   command_surface_spine: Record<string, unknown>;
   mcp_projection: Record<string, unknown>;
   capability_plugin_distribution: Record<string, unknown> | null;
+  mas_scholar_skills_profile: Record<string, unknown> | null;
   plugin_transport: InspectFamilySkillPackPluginTransport;
   plugin_source_path: string;
   repo_root: string;

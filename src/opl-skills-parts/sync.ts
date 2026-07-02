@@ -4,6 +4,12 @@ import { spawnSync } from 'node:child_process';
 
 import { resolveDefaultFamilyWorkspaceRoot } from '../family-workspace-root.ts';
 import { PACKAGED_MODULE_MARKER_FILE } from '../packaged-module-marker.ts';
+import {
+  buildMasScholarSkillsProfileManifest,
+  MAS_SCHOLAR_SKILLS_PROFILE_PACKS,
+  materializedMasScholarSkillsPackIds,
+  SCHOLARSKILLS_AUTHORITY_FALSE_FLAGS,
+} from './scholarskills-profile.ts';
 import type {
   InspectFamilySkillPack,
   SkillPackSyncScope,
@@ -32,17 +38,6 @@ type ScholarSkillsCopyPolicy = {
   copy_policy: string;
   copied_roots: string[];
   excluded_roots: string[];
-};
-
-const SCHOLARSKILLS_AUTHORITY_FALSE_FLAGS = {
-  can_write_domain_truth: false,
-  can_sign_owner_receipt: false,
-  can_create_typed_blocker: false,
-  can_write_runtime_queue: false,
-  can_write_owner_receipt: false,
-  can_write_paper_body: false,
-  can_write_artifact_authority: false,
-  can_authorize_publication_readiness: false,
 };
 
 const SCHOLARSKILLS_EXCLUDED_ROOTS = [
@@ -262,6 +257,26 @@ function copyDirectoryIfPresent(sourceRoot: string, targetRoot: string) {
   return true;
 }
 
+function copySkillDirectoryIfPresent(sourceRoot: string, targetRoot: string) {
+  if (!isDirectory(sourceRoot)) {
+    return false;
+  }
+  fs.rmSync(targetRoot, { recursive: true, force: true });
+  fs.mkdirSync(path.dirname(targetRoot), { recursive: true });
+  fs.cpSync(sourceRoot, targetRoot, {
+    recursive: true,
+    filter: (source) => ![
+      '.git',
+      'outputs',
+      'build',
+      'dist',
+      'node_modules',
+      'render-cache',
+    ].includes(path.basename(source)),
+  });
+  return true;
+}
+
 function copyScholarSkillsOptionalReferenceRoots(
   sourceRoot: string,
   targetRoot: string,
@@ -350,6 +365,45 @@ function resolvePackagedSourceHead(repoRoot: string) {
   }
 }
 
+function copyMaterializedMasScholarSkillsSpecialistDirs(
+  inspected: InspectFamilySkillPack,
+  targetCodexSkillsRoot: string,
+) {
+  const installedPackIds = ['opl-scholarskills'];
+  for (const pack of MAS_SCHOLAR_SKILLS_PROFILE_PACKS) {
+    if (pack.pack_id === 'opl-scholarskills') {
+      continue;
+    }
+    const sourceSkillDir = path.join(inspected.plugin_source_path, 'skills', pack.skill_dir);
+    const targetSkillDir = path.join(targetCodexSkillsRoot, pack.skill_dir);
+    if (copySkillDirectoryIfPresent(sourceSkillDir, targetSkillDir)) {
+      writeJsonFile(path.join(targetSkillDir, '.opl-connect-skill-sync.json'), {
+        surface_kind: 'opl_connect_managed_mas_scholar_skills_specialist_dir',
+        schema_version: 'g1',
+        pack_id: pack.pack_id,
+        source_skill_dir: sourceSkillDir,
+      });
+      installedPackIds.push(pack.pack_id);
+    } else if (isOplConnectManagedSpecialistDir(targetSkillDir)) {
+      fs.rmSync(targetSkillDir, { recursive: true, force: true });
+    }
+  }
+  return installedPackIds;
+}
+
+function isOplConnectManagedSpecialistDir(targetSkillDir: string) {
+  const markerPath = path.join(targetSkillDir, '.opl-connect-skill-sync.json');
+  if (!fs.existsSync(markerPath)) {
+    return false;
+  }
+  try {
+    const marker = JSON.parse(fs.readFileSync(markerPath, 'utf8')) as Record<string, unknown>;
+    return marker.surface_kind === 'opl_connect_managed_mas_scholar_skills_specialist_dir';
+  } catch {
+    return false;
+  }
+}
+
 function writeJsonFile(filePath: string, value: unknown) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
@@ -361,10 +415,9 @@ function copyWorkspaceOrQuestLocalScholarSkillsSkill(
   targetScope: Extract<SkillPackSyncScope, 'workspace' | 'quest'>,
 ) {
   const resolvedTargetRoot = path.resolve(targetRoot);
+  const targetCodexSkillsRoot = path.join(resolvedTargetRoot, '.codex', 'skills');
   const skillRoot = path.join(
-    resolvedTargetRoot,
-    '.codex',
-    'skills',
+    targetCodexSkillsRoot,
     inspected.canonical_plugin_name,
   );
 
@@ -384,6 +437,22 @@ function copyWorkspaceOrQuestLocalScholarSkillsSkill(
     ],
     excluded_roots: SCHOLARSKILLS_EXCLUDED_ROOTS,
   };
+  const installedPackIds = copyMaterializedMasScholarSkillsSpecialistDirs(
+    inspected,
+    targetCodexSkillsRoot,
+  );
+  const masScholarSkillsProfile = buildMasScholarSkillsProfileManifest({
+    sourceRoot: inspected.repo_root,
+    pluginSourcePath: inspected.plugin_source_path,
+    targetScope,
+    targetRoot: resolvedTargetRoot,
+    installRoot: targetCodexSkillsRoot,
+    installedPackIds,
+  });
+  const masScholarSkillsProfileManifestPath = path.join(
+    skillRoot,
+    '.opl-mas-scholarskills-sync-manifest.json',
+  );
   const receiptPath = path.join(skillRoot, '.opl-install-receipt.json');
   const gitExclude = ensureManagedPathGitExclude(
     resolvedTargetRoot,
@@ -407,8 +476,11 @@ function copyWorkspaceOrQuestLocalScholarSkillsSkill(
     copied_roots: copyPolicy.copied_roots,
     excluded_roots: copyPolicy.excluded_roots,
     git_exclude: gitExclude,
+    mas_scholar_skills_profile_manifest_path: masScholarSkillsProfileManifestPath,
+    mas_scholar_skills_profile: masScholarSkillsProfile,
     authority_flags: SCHOLARSKILLS_AUTHORITY_FALSE_FLAGS,
   };
+  writeJsonFile(masScholarSkillsProfileManifestPath, masScholarSkillsProfile);
   writeJsonFile(receiptPath, receipt);
 
   return {
@@ -422,6 +494,8 @@ function copyWorkspaceOrQuestLocalScholarSkillsSkill(
     codex_discovery_kind: 'workspace_or_quest_local_skill',
     copy: copyPolicy,
     workspace_or_quest_git_exclude: gitExclude,
+    mas_scholar_skills_profile_manifest_path: masScholarSkillsProfileManifestPath,
+    mas_scholar_skills_profile: masScholarSkillsProfile,
     authority_boundary: SCHOLARSKILLS_AUTHORITY_FALSE_FLAGS,
   };
 }
@@ -461,6 +535,20 @@ function syncProjectLocalSkillMirror(
   const targetPluginRoot = path.join(targetRepoRoot, 'plugins', inspected.canonical_plugin_name);
   const mirrorCopy = copyProjectLocalScholarSkillsSource(inspected, targetPluginRoot);
   const gitExclude = ensureProjectLocalMirrorGitExclude(targetRepoRoot, targetPluginRoot);
+  const masScholarSkillsProfile = buildMasScholarSkillsProfileManifest({
+    sourceRoot: inspected.repo_root,
+    pluginSourcePath: inspected.plugin_source_path,
+    targetScope: 'project',
+    targetProject,
+    targetRoot: targetRepoRoot,
+    installRoot: targetPluginRoot,
+    installedPackIds: materializedMasScholarSkillsPackIds(inspected.plugin_source_path),
+  });
+  const masScholarSkillsProfileManifestPath = path.join(
+    targetPluginRoot,
+    '.opl-mas-scholarskills-sync-manifest.json',
+  );
+  writeJsonFile(masScholarSkillsProfileManifestPath, masScholarSkillsProfile);
 
   return {
     status: 'installed',
@@ -480,6 +568,8 @@ function syncProjectLocalSkillMirror(
     project_local_git_exclude: gitExclude,
     project_mirror_deprecated_for_paper_execution: true,
     project_mirror_non_default_paper_execution_path: true,
+    mas_scholar_skills_profile_manifest_path: masScholarSkillsProfileManifestPath,
+    mas_scholar_skills_profile: masScholarSkillsProfile,
     authority_boundary: {
       ...SCHOLARSKILLS_AUTHORITY_FALSE_FLAGS,
     },

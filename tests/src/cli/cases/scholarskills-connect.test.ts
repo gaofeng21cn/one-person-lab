@@ -1,6 +1,6 @@
 import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
 
-function createScholarSkillsRepoFixture() {
+function createScholarSkillsRepoFixture(options: { specialistSkills?: string[] } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-source-'));
   const pluginDir = path.join(root, '.codex-plugin');
   const skillDir = path.join(root, 'skills', 'opl-scholarskills');
@@ -20,6 +20,15 @@ function createScholarSkillsRepoFixture() {
     path.join(repoRoot, 'plugins', 'opl-scholarskills', 'skills', 'opl-scholarskills', 'SKILL.md'),
     path.join(skillDir, 'SKILL.md'),
   );
+  for (const specialistSkill of options.specialistSkills ?? []) {
+    const specialistDir = path.join(root, 'skills', specialistSkill);
+    fs.mkdirSync(specialistDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(specialistDir, 'SKILL.md'),
+      `---\nname: ${specialistSkill}\ndescription: Fixture ${specialistSkill} skill.\n---\n\n# ${specialistSkill}\n`,
+      'utf8',
+    );
+  }
   fs.writeFileSync(
     path.join(root, 'contracts', 'scholar-skills-capability-modules.json'),
     JSON.stringify({ fixture: 'external-repo-contract' }, null, 2),
@@ -65,6 +74,12 @@ test('connect skills exposes OPL ScholarSkills as a framework-owned capability p
             project_mirror_non_default_paper_execution_path: boolean;
             project_scope_requires_explicit_request: boolean;
             codex_scope_requires_explicit_request: boolean;
+            profile_driven_sync_model: {
+              profile_owner: string;
+              connect_role: string;
+              manifest_projection_ref: string;
+              source_status_values: string[];
+            };
             framework_owned_capability: boolean;
             domain_module: boolean;
             brand_module: boolean;
@@ -73,6 +88,43 @@ test('connect skills exposes OPL ScholarSkills as a framework-owned capability p
               can_sign_owner_receipt: boolean;
               can_create_typed_blocker: boolean;
               can_write_runtime_queue: boolean;
+              can_write_owner_receipt: boolean;
+              can_write_paper_body: boolean;
+              can_write_artifact_authority: boolean;
+              can_authorize_publication_readiness: boolean;
+            };
+          };
+          mas_scholar_skills_profile: {
+            surface_kind: string;
+            profile_id: string;
+            profile_driver: {
+              owner: string;
+              connect_role: string;
+              connect_does_not_own_quality_or_domain_truth: boolean;
+            };
+            required_skill_pack: string[];
+            default_skill_pack: string[];
+            install_target: {
+              target_scope: string;
+              target_root: string | null;
+              install_root: string | null;
+              system_codex_skill_install_default: boolean;
+            };
+            packs: Array<{
+              pack_id: string;
+              source_status: string;
+              installed: boolean;
+              install_target_skill_root: string | null;
+            }>;
+            authority_boundary: {
+              can_write_domain_truth: boolean;
+              can_sign_owner_receipt: boolean;
+              can_create_typed_blocker: boolean;
+              can_write_runtime_queue: boolean;
+              can_write_owner_receipt: boolean;
+              can_write_paper_body: boolean;
+              can_write_artifact_authority: boolean;
+              can_authorize_publication_readiness: boolean;
             };
           };
         }>;
@@ -122,6 +174,49 @@ test('connect skills exposes OPL ScholarSkills as a framework-owned capability p
       true,
     );
     assert.equal(pack.capability_plugin_distribution.codex_scope_requires_explicit_request, true);
+    assert.equal(pack.capability_plugin_distribution.profile_driven_sync_model.profile_owner, 'MAS profile/overlay');
+    assert.equal(pack.capability_plugin_distribution.profile_driven_sync_model.connect_role, 'install_sync_discovery_only');
+    assert.equal(
+      pack.capability_plugin_distribution.profile_driven_sync_model.manifest_projection_ref,
+      'skill_catalog.packs[].mas_scholar_skills_profile',
+    );
+    assert.deepEqual(pack.capability_plugin_distribution.profile_driven_sync_model.source_status_values, [
+      'materialized',
+      'available-but-not-materialized',
+      'source-missing',
+    ]);
+    assert.equal(pack.mas_scholar_skills_profile.surface_kind, 'opl_mas_scholar_skills_profile_sync_manifest');
+    assert.equal(pack.mas_scholar_skills_profile.profile_id, 'mas_scholar_skills_sync_profile.v1');
+    assert.equal(pack.mas_scholar_skills_profile.profile_driver.owner, 'MAS profile/overlay');
+    assert.equal(pack.mas_scholar_skills_profile.profile_driver.connect_role, 'install_sync_discovery_only');
+    assert.equal(pack.mas_scholar_skills_profile.profile_driver.connect_does_not_own_quality_or_domain_truth, true);
+    assert.deepEqual(pack.mas_scholar_skills_profile.required_skill_pack, ['opl-scholarskills']);
+    assert.deepEqual(pack.mas_scholar_skills_profile.default_skill_pack, [
+      'opl-scholarskills',
+      'medical-research-figure',
+      'medical-research-write',
+      'medical-research-review',
+    ]);
+    assert.equal(pack.mas_scholar_skills_profile.install_target.target_scope, 'inspect');
+    assert.equal(pack.mas_scholar_skills_profile.install_target.target_root, null);
+    assert.equal(pack.mas_scholar_skills_profile.install_target.install_root, null);
+    assert.equal(pack.mas_scholar_skills_profile.install_target.system_codex_skill_install_default, false);
+    const profilePacks = new Map(pack.mas_scholar_skills_profile.packs.map((entry) => [entry.pack_id, entry]));
+    assert.equal(profilePacks.get('opl-scholarskills')?.source_status, 'materialized');
+    assert.equal(profilePacks.get('opl-scholarskills')?.installed, false);
+    assert.equal(profilePacks.get('medical-research-figure')?.source_status, 'available-but-not-materialized');
+    assert.equal(profilePacks.get('medical-research-write')?.source_status, 'available-but-not-materialized');
+    assert.equal(profilePacks.get('medical-research-review')?.source_status, 'available-but-not-materialized');
+    assert.deepEqual(pack.mas_scholar_skills_profile.authority_boundary, {
+      can_write_domain_truth: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_write_runtime_queue: false,
+      can_write_owner_receipt: false,
+      can_write_paper_body: false,
+      can_write_artifact_authority: false,
+      can_authorize_publication_readiness: false,
+    });
     assert.equal(pack.capability_plugin_distribution.framework_owned_capability, true);
     assert.equal(pack.capability_plugin_distribution.domain_module, false);
     assert.equal(pack.capability_plugin_distribution.brand_module, false);
@@ -471,6 +566,147 @@ test('connect sync-skills installs OPL ScholarSkills to a workspace-local Codex 
     assert.equal(receipt.skill_root, skillRoot);
     assert.equal(receipt.source_repo_path, sourceRoot);
     assert.deepEqual(receipt.authority_flags, {
+      can_write_domain_truth: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_write_runtime_queue: false,
+      can_write_owner_receipt: false,
+      can_write_paper_body: false,
+      can_write_artifact_authority: false,
+      can_authorize_publication_readiness: false,
+    });
+  } finally {
+    fs.rmSync(sourceRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('connect sync-skills installs materialized MAS ScholarSkills specialist dirs from the profile registry', () => {
+  const sourceRoot = createScholarSkillsRepoFixture({
+    specialistSkills: ['medical-research-figure', 'medical-research-write'],
+  });
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-profile-home-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-profile-workspace-'));
+  const preexistingReviewRoot = path.join(workspaceRoot, '.codex', 'skills', 'medical-research-review');
+  fs.mkdirSync(preexistingReviewRoot, { recursive: true });
+  fs.writeFileSync(
+    path.join(preexistingReviewRoot, 'SKILL.md'),
+    '---\nname: review\ndescription: MAS-owned review overlay.\n---\n\n# Review\n',
+    'utf8',
+  );
+
+  try {
+    const output = runCli([
+      'connect',
+      'sync-skills',
+      '--domain',
+      'scholarskills',
+      '--scope',
+      'workspace',
+      '--target-workspace',
+      workspaceRoot,
+      '--home',
+      homeRoot,
+    ], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_SCHOLARSKILLS_REPO_ROOT: sourceRoot,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+    }) as {
+      skill_sync: {
+        packs: Array<{
+          installer_result: {
+            workspace_or_quest_local_skill: {
+              mas_scholar_skills_profile_manifest_path: string;
+              mas_scholar_skills_profile: {
+                required_skill_pack: string[];
+                default_skill_pack: string[];
+                install_target: {
+                  target_scope: string;
+                  target_root: string;
+                  install_root: string;
+                  system_codex_skill_install_default: boolean;
+                };
+                packs: Array<{
+                  pack_id: string;
+                  source_status: string;
+                  installed: boolean;
+                  install_target_skill_root: string;
+                }>;
+                authority_boundary: {
+                  can_write_domain_truth: boolean;
+                  can_sign_owner_receipt: boolean;
+                  can_create_typed_blocker: boolean;
+                  can_write_runtime_queue: boolean;
+                  can_write_owner_receipt: boolean;
+                  can_write_paper_body: boolean;
+                  can_write_artifact_authority: boolean;
+                  can_authorize_publication_readiness: boolean;
+                };
+              };
+            };
+          };
+        }>;
+      };
+    };
+
+    const localSkill = output.skill_sync.packs[0].installer_result.workspace_or_quest_local_skill;
+    const profile = localSkill.mas_scholar_skills_profile;
+    const skillRoot = path.join(workspaceRoot, '.codex', 'skills', 'opl-scholarskills');
+    const profilePacks = new Map(profile.packs.map((entry) => [entry.pack_id, entry]));
+
+    assert.equal(localSkill.mas_scholar_skills_profile_manifest_path, path.join(skillRoot, '.opl-mas-scholarskills-sync-manifest.json'));
+    assert.equal(fs.existsSync(localSkill.mas_scholar_skills_profile_manifest_path), true);
+    assert.deepEqual(profile.required_skill_pack, ['opl-scholarskills']);
+    assert.deepEqual(profile.default_skill_pack, [
+      'opl-scholarskills',
+      'medical-research-figure',
+      'medical-research-write',
+      'medical-research-review',
+    ]);
+    assert.equal(profile.install_target.target_scope, 'workspace');
+    assert.equal(profile.install_target.target_root, workspaceRoot);
+    assert.equal(profile.install_target.install_root, path.join(workspaceRoot, '.codex', 'skills'));
+    assert.equal(profile.install_target.system_codex_skill_install_default, false);
+    assert.equal(profilePacks.get('opl-scholarskills')?.source_status, 'materialized');
+    assert.equal(profilePacks.get('opl-scholarskills')?.installed, true);
+    assert.equal(profilePacks.get('medical-research-figure')?.source_status, 'materialized');
+    assert.equal(profilePacks.get('medical-research-figure')?.installed, true);
+    assert.equal(profilePacks.get('medical-research-write')?.source_status, 'materialized');
+    assert.equal(profilePacks.get('medical-research-write')?.installed, true);
+    assert.equal(profilePacks.get('medical-research-review')?.source_status, 'available-but-not-materialized');
+    assert.equal(profilePacks.get('medical-research-review')?.installed, false);
+    assert.equal(
+      fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'medical-research-figure', 'SKILL.md')),
+      true,
+    );
+    assert.equal(
+      fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'medical-research-write', 'SKILL.md')),
+      true,
+    );
+    assert.equal(
+      fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'medical-research-figure', '.opl-connect-skill-sync.json')),
+      true,
+    );
+    assert.equal(
+      fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'medical-research-write', '.opl-connect-skill-sync.json')),
+      true,
+    );
+    assert.equal(
+      fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'medical-research-review', 'SKILL.md')),
+      true,
+    );
+    assert.equal(
+      fs.readFileSync(path.join(workspaceRoot, '.codex', 'skills', 'medical-research-review', 'SKILL.md'), 'utf8').includes('MAS-owned review overlay'),
+      true,
+    );
+    assert.equal(
+      fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'medical-research-review', '.opl-connect-skill-sync.json')),
+      false,
+    );
+    assert.deepEqual(profile.authority_boundary, {
       can_write_domain_truth: false,
       can_sign_owner_receipt: false,
       can_create_typed_blocker: false,

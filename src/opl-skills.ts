@@ -25,6 +25,7 @@ import {
   resolveCodexHome,
   resolveRepoRoot,
 } from './opl-skills-parts/paths.ts';
+import { buildMasScholarSkillsProfileManifest } from './opl-skills-parts/scholarskills-profile.ts';
 import {
   FAMILY_SKILL_PACK_SPECS,
   normalizeDomainSelection,
@@ -284,6 +285,17 @@ function buildCapabilityPluginDistribution(spec: SkillPackSpec) {
     project_mirror_non_default_paper_execution_path: true,
     project_scope_requires_explicit_request: true,
     codex_scope_requires_explicit_request: true,
+    profile_driven_sync_model: {
+      surface_kind: 'opl_mas_scholar_skills_profile_sync_model',
+      profile_owner: 'MAS profile/overlay',
+      connect_role: 'install_sync_discovery_only',
+      manifest_projection_ref: 'skill_catalog.packs[].mas_scholar_skills_profile',
+      source_status_values: [
+        'materialized',
+        'available-but-not-materialized',
+        'source-missing',
+      ],
+    },
     framework_owned_capability: true,
     domain_module: false,
     brand_module: false,
@@ -410,6 +422,16 @@ function inspectFamilySkillPackAtRepoRoot(
     repoFound && pluginManifestFound && pluginManifestValidation.valid && skillEntryFound && skillEntryValidation.valid;
   const seriesProjection = buildFoundryAgentSeriesProjection(spec);
   const capabilityPluginDistribution = buildCapabilityPluginDistribution(spec);
+  const masScholarSkillsProfile = spec.domain_id === 'scholarskills'
+    ? buildMasScholarSkillsProfileManifest({
+        sourceRoot: repoRoot,
+        pluginSourcePath,
+        targetScope: 'inspect',
+        targetRoot: null,
+        installRoot: null,
+        installedPackIds: [],
+      })
+    : null;
   const pluginTransport: InspectFamilySkillPackPluginTransport = {
     surface_kind: 'opl_connect_plugin_transport',
     source_kind: spec.source_kind,
@@ -447,6 +469,7 @@ function inspectFamilySkillPackAtRepoRoot(
       : null,
     ...seriesProjection,
     capability_plugin_distribution: capabilityPluginDistribution,
+    mas_scholar_skills_profile: masScholarSkillsProfile,
     plugin_transport: pluginTransport,
     plugin_source_path: pluginSourcePath,
     repo_root: repoRoot,
