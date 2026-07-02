@@ -35,7 +35,7 @@ test('opl connect skills discovers the family plugin packs through the configure
     );
     assert.deepEqual(
       output.skill_catalog.packs.map((entry: { canonical_plugin_name: string }) => entry.canonical_plugin_name),
-      ['mas', 'mag', 'rca', 'opl-meta-agent', 'opl-bookforge', 'opl-scholarskills'],
+      ['mas', 'mag', 'rca', 'opl-meta-agent', 'opl-bookforge', 'mas-scholar-skills'],
     );
     assert.match(output.skill_catalog.packs[0].plugin_manifest_path, /plugins\/mas\/\.codex-plugin\/plugin\.json$/);
     assert.match(output.skill_catalog.packs[0].skill_entry_path, /plugins\/mas\/skills\/mas\/SKILL\.md$/);
@@ -168,7 +168,7 @@ test('opl connect skills discovers OPL-managed module installs without OPL_FAMIL
       OPL_REDCUBE_REPO_ROOT: path.join(missingRepoRoot, 'redcube-ai'),
       OPL_OPLMETAAGENT_REPO_ROOT: path.join(missingRepoRoot, 'opl-meta-agent'),
       OPL_OPLBOOKFORGE_REPO_ROOT: path.join(missingRepoRoot, 'opl-bookforge'),
-      OPL_SCHOLARSKILLS_REPO_ROOT: path.join(workspaceRoot, 'opl-scholarskills'),
+      OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT: path.join(workspaceRoot, 'mas-scholar-skills'),
     });
 
     const medAutoScience = output.skill_catalog.packs.find(
@@ -191,7 +191,7 @@ test('opl connect skills discovers OPL-managed module installs without OPL_FAMIL
     assert.equal(scholarSkills.ready_to_sync, true);
     assert.equal(
       scholarSkills.repo_root,
-      path.join(workspaceRoot, 'opl-scholarskills'),
+      path.join(workspaceRoot, 'mas-scholar-skills'),
     );
     assert.equal(
       scholarSkills.capability_plugin_distribution.default_sync_scope,
@@ -338,7 +338,7 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.equal(scholarSkillsPack.registry_repo_root, null);
     assert.equal(scholarSkillsPack.installer_result, null);
     assert.equal(
-      fs.existsSync(path.join(workspaceRoot, 'med-autoscience', 'plugins', 'opl-scholarskills', 'skills', 'opl-scholarskills', 'SKILL.md')),
+      fs.existsSync(path.join(workspaceRoot, 'med-autoscience', 'plugins', 'mas-scholar-skills', 'skills', 'mas-scholar-skills', 'SKILL.md')),
       false,
     );
     assert.equal(metaGeneratedPack.installer_result.generated_surface, 'opl_generated_codex_plugin_descriptor');
@@ -445,7 +445,7 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.match(config, /\[plugins\."rca@rca-local"\]/);
     assert.match(config, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
     assert.match(config, /\[plugins\."opl-bookforge@opl-bookforge-local"\]/);
-    assert.doesNotMatch(config, /\[plugins\."opl-scholarskills@opl-scholarskills-local"\]/);
+    assert.doesNotMatch(config, /\[plugins\."mas-scholar-skills@mas-scholar-skills-local"\]/);
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
@@ -532,7 +532,7 @@ test('opl connect sync-skills follows Developer Mode sibling checkouts over mana
     assert.equal(scholarSkillsPack.sync_scope, 'workspace');
     assert.equal(scholarSkillsPack.target_root, null);
     assert.equal(
-      fs.existsSync(path.join(workspaceRoot, 'med-autoscience', 'plugins', 'opl-scholarskills', 'skills', 'opl-scholarskills', 'SKILL.md')),
+      fs.existsSync(path.join(workspaceRoot, 'med-autoscience', 'plugins', 'mas-scholar-skills', 'skills', 'mas-scholar-skills', 'SKILL.md')),
       false,
     );
   } finally {

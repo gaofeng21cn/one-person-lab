@@ -7,6 +7,18 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-07-02
 
+### 决策：PubMed 文献入口进入 OPL Connect，MAS 保留科研判断与论文权威
+
+原因：MAS 的文献检索原型过去主要靠 ScholarSkills/skill 说明和领域脚本承接，触发快，但稳定性、错误语义、source ref 结构和跨 App / Workspace / 本机 CLI 复用不够统一。OPL Connect 作为 Fabric 的通用连接能力，应承接高频外部资源的稳定 read-only connector；MAS/ScholarSkills 继续承接医学论文写作、审阅、图表和 citation judgment 的 AI-first 专家策略。
+
+影响：
+
+- `opl connect pubmed search --query <query> --limit <n> --json` 成为 PubMed 第一条稳定 read-only connector 入口，返回 normalized `pubmed:<pmid>` refs、metadata、source URLs、connector invocation ref、ledger receipt candidate ref 和 no-authority boundary。
+- 该 connector 只调用 PubMed E-utilities 和输出 refs/metadata，不保存全文、不创建 OPL 文献库、不写 MAS paper truth、不签 owner receipt、不创建 typed blocker / human gate，也不声明引用质量、论文进度、publication-ready、domain-ready 或 production-ready。
+- MAS scout/write/review/figure Skill 可以优先调用该 connector 获取文献 refs；医学取舍、证据链、claim-evidence map、review ledger、写作质量和 owner route 仍归 MAS。
+- ScholarSkills / MAS Scholar Skills 仍可提供医学文献检索 playbook、query 设计、筛选策略和专门 Skill；高频稳定资源访问逐步从 skill 原型沉淀为 Connect connector，避免把 API 稳定性、限流和 source ref normalization 留在领域 prompt 里。
+- `OPL Fabric` 是通用资源底座，`OPL Connect` 是其中可独立调用的连接能力；Console 可治理和展示 connector 策略，但不是 Connect 的唯一入口。本机 OPL App、在线 Workspace、CLI 和 domain agent 都可以按权限与 profile 直接调用 Connect。
+
 ### 决策：FeedbackOps 是所有标准 Agent 的显式用户反馈入口，执行仍走 OMA work-order 与目标 owner closeout
 
 原因：用户对 MAS、MAG、RCA、BookForge、ScholarSkills 或其它标准 OPL agent 的交付结果提出明确建议时，反馈不应只靠前台 Codex 临时修，也不应只在 MAS 特化流程中触发。成熟做法是把用户反馈作为可幂等事件进入控制面，之后由 external suite、OMA developer work-order、既有 `opl work-order execute`、目标 repo owner closeout 和 App read-model 串联。OPL 不能因此新增第二套 runner/queue，也不能替目标 agent 签质量结论或 owner receipt。
@@ -87,14 +99,14 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ### 决策：framework capability package 复用 GHCR capability packages channel，不新增专属 source manager
 
-原因：`OPL ScholarSkills` 是 OPL-owned 学术能力模块库，供 MAS/MAG/RCA/OMA 等 agent 同步到具体 workspace / quest 使用。它需要随普通 App / non-development 路径自动安装、更新、回滚和投影，但不能因此新建一套独立 git clone / pull / path manager；否则普通用户会出现 domain module package channel 与 capability skill source 两套维护路径，增加运维成本，也会让 App 更新与 daily package channel 的 source fingerprint 判断失真。
+原因：`MAS Scholar Skills` 是 OPL-owned 学术能力模块库，供 MAS/MAG/RCA/OMA 等 agent 同步到具体 workspace / quest 使用。它需要随普通 App / non-development 路径自动安装、更新、回滚和投影，但不能因此新建一套独立 git clone / pull / path manager；否则普通用户会出现 domain module package channel 与 capability skill source 两套维护路径，增加运维成本，也会让 App 更新与 daily package channel 的 source fingerprint 判断失真。
 
 影响：
 
-- `OPL ScholarSkills` 作为 `framework_capability_package` 纳入 `src/package-distribution.ts` 和 GHCR `one-person-lab-manifest` / `one-person-lab-modules/opl-scholarskills:<version>` package channel。普通 App 用户路径只从 package channel 安装 / 更新 / 回滚，不使用 ScholarSkills 专属 git clone / pull manager。
+- `MAS Scholar Skills` 作为 `framework_capability_package` 纳入 `src/package-distribution.ts` 和 GHCR `one-person-lab-manifest` / `one-person-lab-modules/mas-scholar-skills:<version>` package channel。普通 App 用户路径只从 package channel 安装 / 更新 / 回滚，不使用 ScholarSkills 专属 git clone / pull manager。
 - `.github/workflows/daily-package-channel.yml` 继续通过 `packages.yml` 发布统一 package channel；change detector 比较 package source fingerprint，覆盖 domain module、Foundry module 与 framework capability package。新增 capability package 必须复用这条 channel，而不是新建 daily job 或 source manager。
-- `opl update status/apply/rollback --component capability_packages --json` 与 `opl system startup-maintenance --json` 把 ScholarSkills 作为 package-channel target 处理；dirty package root、Developer Mode checkout、显式 `OPL_SCHOLARSKILLS_REPO_ROOT` / `OPL_MODULE_PATH_SCHOLARSKILLS` 只进入开发者观察或 manual-required 语义，不被普通 App silent update 覆盖。
-- `opl connect sync-skills --domain scholarskills --scope workspace|quest ... --json` 仍是论文工作目录的 Codex discovery skill 同步入口。同步来源是当前 managed package，落点是目标 workspace / quest 的 `.codex/skills/opl-scholarskills/`，不是系统 Codex skill registry，也不是 MAS 程序仓默认 mirror。
+- `opl update status/apply/rollback --component capability_packages --json` 与 `opl system startup-maintenance --json` 把 ScholarSkills 作为 package-channel target 处理；dirty package root、Developer Mode checkout、显式 `OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT` / `OPL_MODULE_PATH_SCHOLARSKILLS` 只进入开发者观察或 manual-required 语义，不被普通 App silent update 覆盖。
+- `opl connect sync-skills --domain scholarskills --scope workspace|quest ... --json` 仍是论文工作目录的 Codex discovery skill 同步入口。同步来源是当前 managed package，落点是目标 workspace / quest 的 `.codex/skills/mas-scholar-skills/`，不是系统 Codex skill registry，也不是 MAS 程序仓默认 mirror。
 - 新增 framework capability package 的统一步骤是：加入 package distribution spec、archive / manifest / checksum 生成、release discipline gate、managed update/startup/workspace sync 测试和人读文档；不得把文档、gallery 中间产物、render cache 或 heavy generated assets 默认塞进 git/package。
 - 该决策不改变 domain authority。ScholarSkills package channel readiness 不授权 MAS/MAG/RCA/OMA domain truth、quality verdict、artifact authority、owner receipt、typed blocker、runtime queue 或 publication/export readiness。
 
@@ -290,7 +302,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `contracts/opl-framework/standard-agent-landing-evidence-status.json` 成为标准 Agent landing 的 evidence/status ledger，七个 gate 必须逐项记录 `satisfied`、`evidence_required` 或 `satisfied_or_owner_typed_blocker`；generated-surface production consumption、OMA target-agent samples、cross-agent negative conformance scaleout 和 long-soak / real-user-path owner evidence 不能被误报 complete。
 - 标准 Agent 完成必须同时看真实 `agent/` pack semantics、generated surface production consumption、private-platform residue owner decision、`current_owner_delta` single ordinary route、stage-route arbiter / stop-loss、OMA target-agent work-order guard 和 cross-agent negative conformance。
 - `descriptor_ready`、`generated_interface_ready`、`standard_pack_conformance_passed`、`suite_pass`、`Agent_Lab_pass`、`functional_structure_gap_count_zero` / `classification_zero`、`provider_completed`、`verified_refs_only_ledger`、`App_projection_ready` 和 `contract_landed` 都只能作为输入，不能声明 domain ready、caller migration、physical retirement、target owner acceptance、Brand L5 或 production readiness。
-- `contracts/opl-framework/target-operating-architecture-contract.json#foundry_agent_os_standard.new_agent_baseline_handoff_policy` 固定 OMA 新建 target agent 的 family-level handoff gate；`opl agents conformance` 必须投影同一 policy。OPL ScholarSkills 保持 Foundry public projection 下的 `framework_capability_package`，不是 standard domain agent；其 capability refs 只作为 domain owner consumption / typed blocker 输入，不能成为第二 runtime、第二 truth 或 production-ready evidence。
+- `contracts/opl-framework/target-operating-architecture-contract.json#foundry_agent_os_standard.new_agent_baseline_handoff_policy` 固定 OMA 新建 target agent 的 family-level handoff gate；`opl agents conformance` 必须投影同一 policy。MAS Scholar Skills 保持 Foundry public projection 下的 `framework_capability_package`，不是 standard domain agent；其 capability refs 只作为 domain owner consumption / typed blocker 输入，不能成为第二 runtime、第二 truth 或 production-ready evidence。
 - OMA / new-agent builder / takeover path 必须在缺 target owner route、source morphology、generated surface consumption、private residue decision、no-forbidden-write proof 或 owner answer shape 时返回 typed blocker / developer work order；`opl work-order execute` 在执行前按这六项 fail closed 并写 refs-only typed blocker。OMA 不能签 target owner receipt、创建 target typed blocker、写 target truth 或在缺 target owner evidence 时 promotion 默认 agent。
 - MAS-specific `paper_recovery_state` 留在 MAS；OPL 只上收 generic stage-route currentness、recovery obligation identity、StageRun execution、attempt ledger、closeout refs-only transport、operator projection shell 和 private residue decision ledger。
 

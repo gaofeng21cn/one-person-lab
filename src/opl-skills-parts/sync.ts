@@ -369,9 +369,9 @@ function copyMaterializedMasScholarSkillsSpecialistDirs(
   inspected: InspectFamilySkillPack,
   targetCodexSkillsRoot: string,
 ) {
-  const installedPackIds = ['opl-scholarskills'];
+  const installedPackIds = ['mas-scholar-skills'];
   for (const pack of MAS_SCHOLAR_SKILLS_PROFILE_PACKS) {
-    if (pack.pack_id === 'opl-scholarskills') {
+    if (pack.pack_id === 'mas-scholar-skills') {
       continue;
     }
     const sourceSkillDir = path.join(inspected.plugin_source_path, 'skills', pack.skill_dir);

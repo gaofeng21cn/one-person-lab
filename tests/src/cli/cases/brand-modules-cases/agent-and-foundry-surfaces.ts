@@ -114,7 +114,7 @@ test('agent-owned internal modules expose the same branding spine without becomi
 });
 
 test('Foundry Agent series exposes a shared CLI spine instead of copying OPL brand modules into each agent', () => {
-  const expectedStandardAgentIds = ['mas', 'mag', 'rca', 'oma', 'opl-bookforge', 'opl-scholarskills'];
+  const expectedStandardAgentIds = ['mas', 'mag', 'rca', 'oma', 'opl-bookforge', 'mas-scholar-skills'];
 
   for (const operation of ['status', 'inspect', 'interfaces', 'validate', 'doctor', 'peers']) {
     const output = runCli(['agents', 'foundry', operation]).foundry_agent_cli_spine;
@@ -180,7 +180,7 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying OPL bra
 
 test('OPL Foundry Agent index exposes all standard agents as one standard series', () => {
   const list = runCli(['foundry', 'agents', 'list']).foundry_agents;
-  const expectedStandardAgentIds = ['mas', 'mag', 'rca', 'oma', 'opl-bookforge', 'opl-scholarskills'];
+  const expectedStandardAgentIds = ['mas', 'mag', 'rca', 'oma', 'opl-bookforge', 'mas-scholar-skills'];
 
   assert.deepEqual(
     list.agents.map((entry: { agent_id: string }) => entry.agent_id),
@@ -283,10 +283,10 @@ test('OPL Foundry Agent index exposes all standard agents as one standard series
   assert.equal(bookforgeAlias.agent_id, 'opl-bookforge');
   assert.equal(bookforgeAlias.status, 'standard_domain_agent');
 
-  const scholarSkills = runCli(['foundry', 'agents', 'inspect', 'opl-scholarskills']).foundry_agent;
+  const scholarSkills = runCli(['foundry', 'agents', 'inspect', 'mas-scholar-skills']).foundry_agent;
   assert.equal(scholarSkills.status, 'framework_capability_package');
   assert.equal(scholarSkills.series_membership, 'framework_capability_package');
   assert.equal(scholarSkills.work_object.natural_alias, 'capability');
-  assert.equal(scholarSkills.foundry_command_surface, 'opl foundry agents inspect opl-scholarskills');
+  assert.equal(scholarSkills.foundry_command_surface, 'opl foundry agents inspect mas-scholar-skills');
   assertOnlyAllowedFoundryProjectionFields(scholarSkills, allowedFoundryAgentInspectFields);
 });

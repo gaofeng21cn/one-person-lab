@@ -149,7 +149,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
       target.source_policy.configured_by,
       target.source_policy.app_managed_auto_update,
     ]), [
-      ['scholarskills', 'opl-scholarskills', 'completed', 'scholarskills_package_channel_missing', 'install', 'agent_latest_package_channel', true],
+      ['scholarskills', 'mas-scholar-skills', 'completed', 'scholarskills_package_channel_missing', 'install', 'agent_latest_package_channel', true],
     ]);
     assert.equal(
       output.system_action.details.capability_targets[0].workspace_sync_command_ref,
@@ -161,14 +161,14 @@ test('system startup-maintenance installs clean managed modules and returns App 
     );
     assert.equal(
       output.system_action.details.capability_targets[0].managed_checkout_path,
-      path.join(modulesRoot, 'opl-scholarskills'),
+      path.join(modulesRoot, 'mas-scholar-skills'),
     );
     assert.equal(
       output.system_action.details.capability_targets[0].git_after?.head_sha,
       'scholarskills-v1-sha',
     );
     assert.equal(
-      fs.existsSync(path.join(modulesRoot, 'opl-scholarskills', 'skills', 'opl-scholarskills', 'SKILL.md')),
+      fs.existsSync(path.join(modulesRoot, 'mas-scholar-skills', 'skills', 'mas-scholar-skills', 'SKILL.md')),
       true,
     );
     assert.deepEqual(output.system_action.details.framework_targets.map((target) => [
@@ -410,7 +410,7 @@ test('system startup-maintenance makes managed ScholarSkills source available fo
       target.managed_checkout_path,
       target.git_after?.head_sha,
     ]), [
-      ['completed', 'install', path.join(modulesRoot, 'opl-scholarskills'), 'scholarskills-v1-sha'],
+      ['completed', 'install', path.join(modulesRoot, 'mas-scholar-skills'), 'scholarskills-v1-sha'],
     ]);
 
     const sync = runCli([
@@ -461,10 +461,10 @@ test('system startup-maintenance makes managed ScholarSkills source available fo
     };
 
     const pack = sync.skill_sync.packs[0];
-    const skillRoot = path.join(workspaceRoot, '.codex', 'skills', 'opl-scholarskills');
+    const skillRoot = path.join(workspaceRoot, '.codex', 'skills', 'mas-scholar-skills');
     assert.equal(pack.domain_id, 'scholarskills');
     assert.equal(pack.sync_status, 'synced');
-    assert.equal(pack.repo_root, path.join(modulesRoot, 'opl-scholarskills'));
+    assert.equal(pack.repo_root, path.join(modulesRoot, 'mas-scholar-skills'));
     assert.equal(pack.target_root, workspaceRoot);
     assert.equal(pack.workspace_or_quest_local_skill_root, skillRoot);
     assert.deepEqual(pack.installer_result.workspace_or_quest_local_skill.copy.copied_roots, [
@@ -479,9 +479,9 @@ test('system startup-maintenance makes managed ScholarSkills source available fo
     assert.equal(fs.existsSync(path.join(skillRoot, 'gallery', 'medical-display', 'gallery_snapshot.json')), true);
     assert.equal(fs.existsSync(path.join(skillRoot, 'gallery', 'medical-display', 'assets')), false);
     assert.equal(fs.existsSync(path.join(skillRoot, 'outputs')), false);
-    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'opl-scholarskills', 'SKILL.md')), false);
+    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'mas-scholar-skills', 'SKILL.md')), false);
     const receipt = pack.installer_result.workspace_or_quest_local_skill.install_receipt;
-    assert.equal(receipt.source_repo_path, path.join(modulesRoot, 'opl-scholarskills'));
+    assert.equal(receipt.source_repo_path, path.join(modulesRoot, 'mas-scholar-skills'));
     assert.equal(receipt.source_head, 'scholarskills-v1-sha');
     assert.equal(receipt.target_scope, 'workspace');
     assert.equal(receipt.target_root, workspaceRoot);

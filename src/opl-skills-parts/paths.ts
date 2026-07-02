@@ -58,16 +58,33 @@ export function resolveRepoRoot(spec: SkillPackSpec) {
 
   const siblingRepoRoot = path.join(resolveDefaultFamilyWorkspaceRoot(), spec.project);
   if (spec.domain_id === 'scholarskills') {
+    const canonicalRepoRoot = normalizeOptionalString(process.env.OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT);
+    if (canonicalRepoRoot) {
+      return path.resolve(canonicalRepoRoot);
+    }
+    const legacyRepoRoot = normalizeOptionalString(process.env.OPL_SCHOLARSKILLS_REPO_ROOT);
+    if (legacyRepoRoot) {
+      return path.resolve(legacyRepoRoot);
+    }
     const managedRepoRoot = path.join(resolveManagedModulesRoot(), spec.project);
-    const modulePathValue = normalizeOptionalString(process.env[`OPL_MODULE_PATH_${spec.module_id}`]);
+    const modulePathValue = normalizeOptionalString(process.env.OPL_MODULE_PATH_SCHOLARSKILLS)
+      ?? normalizeOptionalString(process.env.OPL_MODULE_PATH_MAS_SCHOLAR_SKILLS);
     if (modulePathValue) {
       return path.resolve(modulePathValue);
     }
+    const legacySiblingRepoRoot = path.join(resolveDefaultFamilyWorkspaceRoot(), 'opl-scholarskills');
+    const legacyManagedRepoRoot = path.join(resolveManagedModulesRoot(), 'opl-scholarskills');
     if (developerModePrefersLocalCheckouts() && isDirectory(siblingRepoRoot)) {
       return siblingRepoRoot;
     }
+    if (developerModePrefersLocalCheckouts() && isDirectory(legacySiblingRepoRoot)) {
+      return legacySiblingRepoRoot;
+    }
     if (isDirectory(managedRepoRoot)) {
       return managedRepoRoot;
+    }
+    if (isDirectory(legacyManagedRepoRoot)) {
+      return legacyManagedRepoRoot;
     }
     return managedRepoRoot;
   }
@@ -108,6 +125,9 @@ export function buildPluginManifestPath(spec: SkillPackSpec, repoRoot: string) {
     path.join(repoRoot, '.codex-plugin', 'plugin.json'),
     path.join(repoRoot, 'plugins', spec.canonical_plugin_name, '.codex-plugin', 'plugin.json'),
     path.join(repoRoot, 'plugins', spec.plugin_name, '.codex-plugin', 'plugin.json'),
+    ...(spec.domain_id === 'scholarskills'
+      ? [path.join(repoRoot, 'plugins', 'opl-scholarskills', '.codex-plugin', 'plugin.json')]
+      : []),
   ]);
 }
 
@@ -125,6 +145,12 @@ export function buildSkillEntryPath(spec: SkillPackSpec, repoRoot: string) {
     path.join(repoRoot, 'skills', spec.canonical_plugin_name, 'SKILL.md'),
     path.join(repoRoot, 'plugins', spec.canonical_plugin_name, 'skills', spec.canonical_plugin_name, 'SKILL.md'),
     path.join(repoRoot, 'plugins', spec.plugin_name, 'skills', spec.plugin_name, 'SKILL.md'),
+    ...(spec.domain_id === 'scholarskills'
+      ? [
+          path.join(repoRoot, 'skills', 'opl-scholarskills', 'SKILL.md'),
+          path.join(repoRoot, 'plugins', 'opl-scholarskills', 'skills', 'opl-scholarskills', 'SKILL.md'),
+        ]
+      : []),
   ]);
 }
 

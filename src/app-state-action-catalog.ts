@@ -285,7 +285,7 @@ export function buildActionCatalog(contracts: FrameworkContracts) {
     },
     {
       action_id: 'scholarskills_workspace_sync',
-      label: 'Sync OPL ScholarSkills to workspace',
+      label: 'Sync MAS Scholar Skills to workspace',
       surface: 'opl app action execute',
       delegated_surface: 'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <workspace_root>',
       payload_fields: ['workspace_root'],
@@ -294,7 +294,7 @@ export function buildActionCatalog(contracts: FrameworkContracts) {
     },
     {
       action_id: 'scholarskills_quest_sync',
-      label: 'Sync OPL ScholarSkills to quest',
+      label: 'Sync MAS Scholar Skills to quest',
       surface: 'opl app action execute',
       delegated_surface: 'opl connect sync-skills --domain scholarskills --scope quest --target-quest <quest_root>',
       payload_fields: ['quest_root'],

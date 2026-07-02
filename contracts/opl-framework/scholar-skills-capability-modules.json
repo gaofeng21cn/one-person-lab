@@ -3,7 +3,7 @@
   "schema_version": "1.0.0",
   "owner": "One Person Lab",
   "state": "active_structural_baseline",
-  "brand_family": "OPL ScholarSkills",
+  "brand_family": "MAS Scholar Skills",
   "purpose": "Canonical capability-module catalog for OPL-hosted scholarly skills that can be discovered by OPL Atlas, packaged by OPL Pack, prepared through OPL runtime env, invoked by OPL Runway, and consumed by domain agents as refs-only candidate outputs.",
   "machine_boundary": "This contract describes independent capability modules and their descriptor, dependency, run-context, artifact, receipt, and quality-evidence refs. It does not add an eleventh OPL brand module, execute domain stages, write domain truth, mutate artifact bodies, schedule runtime attempts, sign owner receipts, create typed blockers, or claim runtime, domain, quality, artifact, publication, App, or production readiness.",
   "runtime_environment_bridge": {
@@ -69,7 +69,7 @@
   "modules": [
     {
       "module_id": "opl.scholarskills.display",
-      "brand_family": "OPL ScholarSkills",
+      "brand_family": "MAS Scholar Skills",
       "display_name": "Scholar Display",
       "stage_fit": [
         "figure_plan",
@@ -156,7 +156,7 @@
     },
     {
       "module_id": "opl.scholarskills.tables",
-      "brand_family": "OPL ScholarSkills",
+      "brand_family": "MAS Scholar Skills",
       "display_name": "Scholar Tables",
       "stage_fit": [
         "table_shell",
@@ -236,7 +236,7 @@
     },
     {
       "module_id": "opl.scholarskills.stats",
-      "brand_family": "OPL ScholarSkills",
+      "brand_family": "MAS Scholar Skills",
       "display_name": "Scholar Stats",
       "stage_fit": [
         "analysis_plan",
@@ -316,7 +316,7 @@
     },
     {
       "module_id": "opl.scholarskills.omics",
-      "brand_family": "OPL ScholarSkills",
+      "brand_family": "MAS Scholar Skills",
       "display_name": "Scholar Omics",
       "stage_fit": [
         "omics_preflight",
@@ -396,7 +396,7 @@
     },
     {
       "module_id": "opl.scholarskills.lit",
-      "brand_family": "OPL ScholarSkills",
+      "brand_family": "MAS Scholar Skills",
       "display_name": "Scholar Lit",
       "stage_fit": [
         "literature_map",
@@ -476,7 +476,7 @@
     },
     {
       "module_id": "opl.scholarskills.write",
-      "brand_family": "OPL ScholarSkills",
+      "brand_family": "MAS Scholar Skills",
       "display_name": "Scholar Write",
       "stage_fit": [
         "section_draft",
@@ -557,7 +557,7 @@
     },
     {
       "module_id": "opl.scholarskills.review",
-      "brand_family": "OPL ScholarSkills",
+      "brand_family": "MAS Scholar Skills",
       "display_name": "Scholar Review",
       "stage_fit": [
         "reviewer_comment_map",
@@ -638,7 +638,7 @@
     },
     {
       "module_id": "opl.scholarskills.submit",
-      "brand_family": "OPL ScholarSkills",
+      "brand_family": "MAS Scholar Skills",
       "display_name": "Scholar Submit",
       "stage_fit": [
         "submission_checklist",
@@ -718,7 +718,7 @@
     },
     {
       "module_id": "opl.scholarskills.data",
-      "brand_family": "OPL ScholarSkills",
+      "brand_family": "MAS Scholar Skills",
       "display_name": "Scholar Data",
       "stage_fit": [
         "source_data_profile",
@@ -822,7 +822,7 @@
     },
     {
       "module_id": "opl.scholarskills.intake",
-      "brand_family": "OPL ScholarSkills",
+      "brand_family": "MAS Scholar Skills",
       "display_name": "Scholar Intake",
       "stage_fit": [
         "source_intake",

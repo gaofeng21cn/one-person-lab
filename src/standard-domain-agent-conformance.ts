@@ -62,7 +62,7 @@ function canonicalAgentIdForInput(input: RepoInput) {
 }
 
 function isFrameworkCapabilityPackageInput(input: RepoInput) {
-  if (canonicalAgentIdForInput(input) !== 'opl-scholarskills') {
+  if (canonicalAgentIdForInput(input) !== 'mas-scholar-skills') {
     return false;
   }
   const repoDir = path.resolve(input.repo_dir);
@@ -380,9 +380,9 @@ function buildFrameworkCapabilityPackageConformance(input: RepoInput) {
     ? contract.authority_boundary
     : null;
   const pluginManifestPath = path.join(repoDir, '.codex-plugin', 'plugin.json');
-  const skillEntryPath = path.join(repoDir, 'skills', 'opl-scholarskills', 'SKILL.md');
+  const skillEntryPath = path.join(repoDir, 'skills', 'mas-scholar-skills', 'SKILL.md');
   const blockers = unique([
-    canonicalAgentIdForInput(input) === 'opl-scholarskills'
+    canonicalAgentIdForInput(input) === 'mas-scholar-skills'
       ? null
       : `framework_capability_package_agent_invalid:${input.requested_agent_id ?? path.basename(repoDir)}`,
     capabilityContract.status === 'resolved'
@@ -421,13 +421,13 @@ function buildFrameworkCapabilityPackageConformance(input: RepoInput) {
     repo_dir: repoDir,
     requested_agent_id: input.requested_agent_id,
     domain_id: 'scholarskills',
-    canonical_agent_id: 'opl-scholarskills',
+    canonical_agent_id: 'mas-scholar-skills',
     package_scope: 'framework_capability_package',
     status: blockers.length === 0 ? 'passed' : 'blocked',
     contract_status: capabilityContract.status,
     capability_contract_ref: 'contracts/scholar-skills-capability-modules.json',
     plugin_manifest_path: '.codex-plugin/plugin.json',
-    skill_entry_path: 'skills/opl-scholarskills/SKILL.md',
+    skill_entry_path: 'skills/mas-scholar-skills/SKILL.md',
     authority_boundary: {
       can_claim_domain_ready: authorityBoundary?.can_claim_domain_ready ?? null,
       can_claim_runtime_ready: authorityBoundary?.can_claim_runtime_ready ?? null,

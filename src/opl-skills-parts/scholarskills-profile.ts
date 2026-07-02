@@ -28,40 +28,22 @@ type MasScholarSkillsTargetScope = SkillPackSyncScope | 'inspect';
 
 export const MAS_SCHOLAR_SKILLS_PROFILE_PACKS: MasScholarSkillsPack[] = [
   {
-    pack_id: 'opl-scholarskills',
-    skill_dir: 'opl-scholarskills',
-    label: 'OPL ScholarSkills aggregate entry',
+    pack_id: 'mas-scholar-skills',
+    skill_dir: 'mas-scholar-skills',
+    label: 'MAS Scholar Skills aggregate entry',
     role: 'aggregate_entry',
     required_by_profile: true,
     default_by_profile: true,
     missing_source_status: 'source-missing',
   },
   {
-    pack_id: 'medical-research-figure',
-    skill_dir: 'medical-research-figure',
-    label: 'Medical research figure specialist',
+    pack_id: 'medical-research-lit',
+    skill_dir: 'medical-research-lit',
+    label: 'Medical research literature specialist',
     role: 'specialist_entry',
     required_by_profile: false,
     default_by_profile: true,
-    missing_source_status: 'available-but-not-materialized',
-  },
-  {
-    pack_id: 'medical-research-write',
-    skill_dir: 'medical-research-write',
-    label: 'Medical research writing specialist',
-    role: 'specialist_entry',
-    required_by_profile: false,
-    default_by_profile: true,
-    missing_source_status: 'available-but-not-materialized',
-  },
-  {
-    pack_id: 'medical-research-review',
-    skill_dir: 'medical-research-review',
-    label: 'Medical research review specialist',
-    role: 'specialist_entry',
-    required_by_profile: false,
-    default_by_profile: true,
-    missing_source_status: 'available-but-not-materialized',
+    missing_source_status: 'source-missing',
   },
 ];
 

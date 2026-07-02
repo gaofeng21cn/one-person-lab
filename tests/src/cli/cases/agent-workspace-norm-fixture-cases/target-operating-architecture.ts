@@ -394,14 +394,14 @@ export const MINIMAL_TARGET_OPERATING_ARCHITECTURE_CONTRACT: TargetOperatingArch
     source_pattern_ref: 'human_doc:mas_opl_agent_os_target_operating_architecture',
     standard_agent_registry_ref: 'src/standard-agent-registry.ts',
     target_shape: 'OPL Agent OS + Domain Declarative Pack + Domain Minimal Authority Kernel + Domain Capability Registry',
-    applies_to_domain_agents: ['mas', 'mag', 'rca', 'oma', 'opl-bookforge', 'opl-scholarskills'],
+    applies_to_domain_agents: ['mas', 'mag', 'rca', 'oma', 'opl-bookforge', 'mas-scholar-skills'],
     domain_pack_examples: {
       mas: 'Medical Research Pack',
       mag: 'Grant Pack',
       rca: 'Visual Deliverable Pack',
       oma: 'Agent-Building Pack',
       'opl-bookforge': 'Book Manuscript Pack',
-      'opl-scholarskills': 'Scholar Capability Pack',
+      'mas-scholar-skills': 'Scholar Capability Pack',
     },
     domain_authority_kernel_examples: {
       mas: ['medical research truth', 'owner receipt signer'],
@@ -409,7 +409,7 @@ export const MINIMAL_TARGET_OPERATING_ARCHITECTURE_CONTRACT: TargetOperatingArch
       rca: ['visual truth', 'owner receipt signer'],
       oma: ['agent-building semantics', 'target-agent typed blocker signer'],
       'opl-bookforge': ['book manuscript truth', 'owner receipt signer'],
-      'opl-scholarskills': ['candidate scientific capability refs', 'domain owner consumption handoff refs'],
+      'mas-scholar-skills': ['candidate scientific capability refs', 'domain owner consumption handoff refs'],
     },
     new_agent_baseline_handoff_policy: {
       surface_kind: 'opl_foundry_new_agent_baseline_handoff_policy',

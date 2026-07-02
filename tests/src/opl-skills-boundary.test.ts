@@ -101,12 +101,12 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
   assert.equal(pluginNames.includes('deepscientist'), false);
   assert.equal(pluginNames.includes('opl-meta-agent'), true);
   assert.equal(pluginNames.includes('opl-bookforge'), true);
-  assert.equal(pluginNames.includes('opl-scholarskills'), true);
+  assert.equal(pluginNames.includes('mas-scholar-skills'), true);
   for (const pack of catalog.packs) {
     const ordinaryOperations = pack.command_surface_spine.ordinary_operations as string[];
     const ordinaryPublicCommandSurfaceSpine = pack.command_surface_spine.ordinary_public_command_surface_spine as string[];
     const seriesDelegateToolRefs = pack.mcp_projection.series_delegate_tool_refs as string[];
-    if (pack.canonical_plugin_name === 'opl-scholarskills') {
+    if (pack.canonical_plugin_name === 'mas-scholar-skills') {
       assert.equal(pack.distribution_role, 'framework_capability_plugin_pack');
       assert.equal(
         pack.capability_plugin_distribution?.default_sync_scope,

@@ -164,14 +164,14 @@ export function createDomainModuleRemote(input: {
 }
 
 export function createScholarSkillsRemote() {
-  return createGitModuleRemoteFixture('opl-scholarskills', {
+  return createGitModuleRemoteFixture('mas-scholar-skills', {
     extraFiles: {
       '.codex-plugin/plugin.json': fs.readFileSync(
-        path.join('plugins', 'opl-scholarskills', '.codex-plugin', 'plugin.json'),
+        path.join('plugins', 'mas-scholar-skills', '.codex-plugin', 'plugin.json'),
         'utf8',
       ),
-      'skills/opl-scholarskills/SKILL.md': fs.readFileSync(
-        path.join('plugins', 'opl-scholarskills', 'skills', 'opl-scholarskills', 'SKILL.md'),
+      'skills/mas-scholar-skills/SKILL.md': fs.readFileSync(
+        path.join('plugins', 'mas-scholar-skills', 'skills', 'mas-scholar-skills', 'SKILL.md'),
         'utf8',
       ),
       'contracts/scholar-skills-capability-modules.json': JSON.stringify({
@@ -258,7 +258,7 @@ export function writeStartupPackageChannelFixture(input: {
   version: string;
   modules: Array<{
     moduleId: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge' | 'scholarskills';
-    repoName: 'med-autoscience' | 'med-autogrant' | 'redcube-ai' | 'opl-meta-agent' | 'opl-bookforge' | 'opl-scholarskills';
+    repoName: 'med-autoscience' | 'med-autogrant' | 'redcube-ai' | 'opl-meta-agent' | 'opl-bookforge' | 'mas-scholar-skills';
     sourceHeadSha: string;
     files: Record<string, string>;
   }>;

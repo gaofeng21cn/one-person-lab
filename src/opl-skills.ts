@@ -257,20 +257,20 @@ function buildCapabilityPluginDistribution(spec: SkillPackSpec) {
 
   return {
     surface_kind: 'opl_framework_capability_plugin_distribution',
-    capability_plugin_id: 'opl-scholarskills',
+    capability_plugin_id: 'mas-scholar-skills',
     distribution_role: spec.distribution_role,
     ownership_kind: 'framework_capability_plugin',
     source_of_truth: [
-      'opl-scholarskills/.codex-plugin/plugin.json',
-      'opl-scholarskills/skills/opl-scholarskills/SKILL.md',
-      'opl-scholarskills/contracts/scholar-skills-capability-modules.json',
+      'mas-scholar-skills/.codex-plugin/plugin.json',
+      'mas-scholar-skills/skills/mas-scholar-skills/SKILL.md',
+      'mas-scholar-skills/contracts/scholar-skills-capability-modules.json',
       'one-person-lab/contracts/opl-framework/scholar-skills-capability-modules.json',
     ],
-    github_repo: 'gaofeng21cn/opl-scholarskills',
+    github_repo: 'gaofeng21cn/mas-scholar-skills',
     ordinary_install_update_source: 'ghcr_capability_packages_channel',
     package_channel_manifest_ref: 'ghcr.io/<owner>/one-person-lab-manifest:<tag>',
-    package_artifact_ref: 'ghcr.io/<owner>/one-person-lab-modules/opl-scholarskills:<opl_version>',
-    developer_checkout_source: 'Developer Mode or explicit OPL_SCHOLARSKILLS_REPO_ROOT / OPL_MODULE_PATH_SCHOLARSKILLS',
+    package_artifact_ref: 'ghcr.io/<owner>/one-person-lab-modules/mas-scholar-skills:<opl_version>',
+    developer_checkout_source: 'Developer Mode or explicit OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT / OPL_MODULE_PATH_SCHOLARSKILLS',
     connect_readback_commands: [
       'opl connect skills --domain scholarskills --json',
       'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <workspace-root> --json',
@@ -305,7 +305,7 @@ function buildCapabilityPluginDistribution(spec: SkillPackSpec) {
       can_create_typed_blocker: false,
       can_write_runtime_queue: false,
     },
-    note: 'OPL ScholarSkills is an OPL-owned standalone capability plugin pack. It is not a MAS/MAG/RCA/BookForge domain module and is not an additional OPL brand module.',
+    note: 'MAS Scholar Skills is an OPL-owned standalone capability plugin pack. It is not a MAS/MAG/RCA/BookForge domain module and is not an additional OPL brand module.',
   };
 }
 
@@ -521,7 +521,7 @@ export function syncFamilySkillPackFromRepoRoot(
   if (scope === 'project' && spec.domain_id !== 'scholarskills') {
     throw new FrameworkContractError(
       'cli_usage_error',
-      `Project-local skill sync is only supported for OPL ScholarSkills, not ${spec.domain_id}.`,
+      `Project-local skill sync is only supported for MAS Scholar Skills, not ${spec.domain_id}.`,
       {
         domain_id: spec.domain_id,
         requested_scope: scope,
@@ -678,7 +678,7 @@ export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) 
     if (scope === 'project' && spec.domain_id !== 'scholarskills') {
       throw new FrameworkContractError(
         'cli_usage_error',
-        `Project-local skill sync is only supported for OPL ScholarSkills, not ${spec.domain_id}.`,
+        `Project-local skill sync is only supported for MAS Scholar Skills, not ${spec.domain_id}.`,
         {
           domain_id: spec.domain_id,
           requested_scope: scope,
@@ -689,7 +689,7 @@ export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) 
     if ((scope === 'workspace' || scope === 'quest') && spec.domain_id !== 'scholarskills') {
       throw new FrameworkContractError(
         'cli_usage_error',
-        `Workspace/quest-local skill sync is only supported for OPL ScholarSkills, not ${spec.domain_id}.`,
+        `Workspace/quest-local skill sync is only supported for MAS Scholar Skills, not ${spec.domain_id}.`,
         {
           domain_id: spec.domain_id,
           requested_scope: scope,

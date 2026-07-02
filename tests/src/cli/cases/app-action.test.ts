@@ -381,7 +381,7 @@ test('app action execute exposes ScholarSkills workspace sync as dry-run before 
     assert.equal(output.app_action_execution.result.skill_sync.target_workspace, workspaceRoot);
     assert.equal(
       output.app_action_execution.result.skill_sync.target_skill_path,
-      `${workspaceRoot}/.codex/skills/opl-scholarskills`,
+      `${workspaceRoot}/.codex/skills/mas-scholar-skills`,
     );
     assert.equal(
       output.app_action_execution.result.skill_sync.command,
@@ -397,7 +397,7 @@ test('app action execute exposes ScholarSkills workspace sync as dry-run before 
       can_write_artifact_authority: false,
       can_authorize_publication_readiness: false,
     });
-    assert.equal(fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'opl-scholarskills')), false);
+    assert.equal(fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'mas-scholar-skills')), false);
     assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'config.toml')), false);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });

@@ -1,7 +1,7 @@
-# OPL ScholarSkills Candidate Artifact Engines
+# MAS Scholar Skills Candidate Artifact Engines
 
 Owner: `One Person Lab`
-Purpose: 说明 `OPL ScholarSkills` 十模块非权威 candidate artifact body 生成器的 CLI 入口、输出边界和 authority guard。
+Purpose: 说明 `MAS Scholar Skills` 十模块非权威 candidate artifact body 生成器的 CLI 入口、输出边界和 authority guard。
 State: `active_executable_candidate_artifact_engine_surface`
 Machine boundary: 本文是人读导航。机器真相以 `src/scholar-skills.ts`、`src/scholar-skills-parts/artifact-engines.ts`、`src/cli/cases/public-command-specs-parts/scholar-skills.ts`、`tests/src/cli/cases/scholar-skills-artifact-engines.test.ts` 与 `opl scholar-skills materialize --json` readback 为准。
 

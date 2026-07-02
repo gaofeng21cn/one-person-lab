@@ -425,7 +425,7 @@ function buildValidation(contractRoot: ScholarSkillsCapabilityModulesContract) {
     {
       check_id: 'module_count',
       status: contractRoot.modules.length === 10 ? 'pass' : 'fail',
-      detail: 'Contract must expose the ten branded OPL ScholarSkills capability modules.',
+      detail: 'Contract must expose the ten branded MAS Scholar Skills capability modules.',
     },
     {
       check_id: 'unique_module_ids',

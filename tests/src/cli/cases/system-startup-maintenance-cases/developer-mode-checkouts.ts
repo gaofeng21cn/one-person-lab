@@ -44,7 +44,7 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
     redcube: path.join(workspaceRoot, 'redcube-ai'),
     oplmetaagent: path.join(workspaceRoot, 'opl-meta-agent'),
     oplbookforge: path.join(workspaceRoot, 'opl-bookforge'),
-    scholarskills: path.join(workspaceRoot, 'opl-scholarskills'),
+    scholarskills: path.join(workspaceRoot, 'mas-scholar-skills'),
   };
 
   try {
@@ -70,7 +70,7 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
           'gaofeng21cn/redcube-ai': 'admin',
           'gaofeng21cn/opl-meta-agent': 'admin',
           'gaofeng21cn/opl-bookforge': 'admin',
-          'gaofeng21cn/opl-scholarskills': 'admin',
+          'gaofeng21cn/mas-scholar-skills': 'admin',
         },
       }),
       OPL_GIT_RETRY_ATTEMPTS: '1',

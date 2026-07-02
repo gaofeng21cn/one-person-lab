@@ -61,7 +61,7 @@ export interface ScholarSkillRuntimeBridgeEnvelopePolicy {
 
 export interface ScholarSkillCapabilityModuleDescriptor {
   module_id: ScholarSkillModuleId;
-  brand_family: 'OPL ScholarSkills';
+  brand_family: 'MAS Scholar Skills';
   display_name: string;
   stage_fit: string[];
   input_schema_refs: string[];
@@ -86,7 +86,7 @@ export interface ScholarSkillsCapabilityModulesContract {
   schema_version: string;
   owner: string;
   state: string;
-  brand_family: 'OPL ScholarSkills';
+  brand_family: 'MAS Scholar Skills';
   purpose: string;
   machine_boundary: string;
   runtime_environment_bridge: {

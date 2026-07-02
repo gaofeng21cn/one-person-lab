@@ -1031,7 +1031,7 @@
       "rca": "Visual Deliverable Pack",
       "oma": "Agent-Building Pack",
       "opl-bookforge": "Book Manuscript Pack",
-      "opl-scholarskills": "Scholar Capability Pack"
+      "mas-scholar-skills": "Scholar Capability Pack"
     },
     "domain_authority_kernel_examples": {
       "mas": [
@@ -1073,7 +1073,7 @@
         "owner receipt signer",
         "typed blocker signer"
       ],
-      "opl-scholarskills": [
+      "mas-scholar-skills": [
         "candidate scientific capability refs",
         "unsigned execution receipt candidate refs",
         "non-authoritative candidate artifact bodies",
@@ -1296,7 +1296,7 @@
     },
     "framework_capability_packages": [
       {
-        "agent_id": "opl-scholarskills",
+        "agent_id": "mas-scholar-skills",
         "package_scope": "framework_capability_package",
         "capability_contract_ref": "contracts/opl-framework/scholar-skills-capability-modules.json",
         "public_projection": "opl_foundry_agent_series_refs_only_capability_package",

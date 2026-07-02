@@ -923,7 +923,7 @@ async function executeDirectAppAction(
               domain_id: 'scholarskills',
               scope: 'workspace',
               target_workspace: workspaceRoot,
-              target_skill_path: `${workspaceRoot}/.codex/skills/opl-scholarskills`,
+              target_skill_path: `${workspaceRoot}/.codex/skills/mas-scholar-skills`,
               command: `opl connect sync-skills --domain scholarskills --scope workspace --target-workspace ${workspaceRoot} --json`,
               authority_boundary: {
                 can_write_domain_truth: false,
@@ -957,7 +957,7 @@ async function executeDirectAppAction(
               domain_id: 'scholarskills',
               scope: 'quest',
               target_quest: questRoot,
-              target_skill_path: `${questRoot}/.codex/skills/opl-scholarskills`,
+              target_skill_path: `${questRoot}/.codex/skills/mas-scholar-skills`,
               command: `opl connect sync-skills --domain scholarskills --scope quest --target-quest ${questRoot} --json`,
               authority_boundary: {
                 can_write_domain_truth: false,

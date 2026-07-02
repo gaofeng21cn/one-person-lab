@@ -1,9 +1,9 @@
 import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
 
 function createScholarSkillsRepoFixture(options: { specialistSkills?: string[] } = {}) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-source-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mas-scholar-skills-source-'));
   const pluginDir = path.join(root, '.codex-plugin');
-  const skillDir = path.join(root, 'skills', 'opl-scholarskills');
+  const skillDir = path.join(root, 'skills', 'mas-scholar-skills');
   const galleryDir = path.join(root, 'gallery', 'medical-display');
   fs.mkdirSync(pluginDir, { recursive: true });
   fs.mkdirSync(skillDir, { recursive: true });
@@ -13,11 +13,11 @@ function createScholarSkillsRepoFixture(options: { specialistSkills?: string[] }
   fs.mkdirSync(path.join(galleryDir, 'assets'), { recursive: true });
 
   fs.cpSync(
-    path.join(repoRoot, 'plugins', 'opl-scholarskills', '.codex-plugin', 'plugin.json'),
+    path.join(repoRoot, 'plugins', 'mas-scholar-skills', '.codex-plugin', 'plugin.json'),
     path.join(pluginDir, 'plugin.json'),
   );
   fs.cpSync(
-    path.join(repoRoot, 'plugins', 'opl-scholarskills', 'skills', 'opl-scholarskills', 'SKILL.md'),
+    path.join(repoRoot, 'plugins', 'mas-scholar-skills', 'skills', 'mas-scholar-skills', 'SKILL.md'),
     path.join(skillDir, 'SKILL.md'),
   );
   for (const specialistSkill of options.specialistSkills ?? []) {
@@ -43,11 +43,11 @@ function createScholarSkillsRepoFixture(options: { specialistSkills?: string[] }
   return root;
 }
 
-test('connect skills exposes OPL ScholarSkills as a framework-owned capability plugin pack', () => {
+test('connect skills exposes MAS Scholar Skills as a framework-owned capability plugin pack', () => {
   const sourceRoot = createScholarSkillsRepoFixture();
   try {
     const output = runCli(['connect', 'skills', '--domain', 'scholarskills'], {
-      OPL_SCHOLARSKILLS_REPO_ROOT: sourceRoot,
+      OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT: sourceRoot,
     }) as {
       skill_catalog: {
         packs: Array<{
@@ -139,19 +139,19 @@ test('connect skills exposes OPL ScholarSkills as a framework-owned capability p
     assert.equal(output.skill_catalog.summary.ready_to_sync, 1);
     const pack = output.skill_catalog.packs[0];
     assert.equal(pack.domain_id, 'scholarskills');
-    assert.equal(pack.project, 'opl-scholarskills');
-    assert.equal(pack.canonical_plugin_name, 'opl-scholarskills');
+    assert.equal(pack.project, 'mas-scholar-skills');
+    assert.equal(pack.canonical_plugin_name, 'mas-scholar-skills');
     assert.equal(pack.distribution_role, 'framework_capability_plugin_pack');
     assert.equal(pack.ready_to_sync, true);
     assert.equal(pack.repo_root, sourceRoot);
     assert.equal(pack.plugin_source_path, sourceRoot);
     assert.equal(pack.plugin_manifest_path, path.join(sourceRoot, '.codex-plugin', 'plugin.json'));
-    assert.equal(pack.skill_entry_path, path.join(sourceRoot, 'skills', 'opl-scholarskills', 'SKILL.md'));
+    assert.equal(pack.skill_entry_path, path.join(sourceRoot, 'skills', 'mas-scholar-skills', 'SKILL.md'));
     assert.equal(pack.capability_plugin_distribution.surface_kind, 'opl_framework_capability_plugin_distribution');
-    assert.equal(pack.capability_plugin_distribution.capability_plugin_id, 'opl-scholarskills');
+    assert.equal(pack.capability_plugin_distribution.capability_plugin_id, 'mas-scholar-skills');
     assert.equal(pack.capability_plugin_distribution.ownership_kind, 'framework_capability_plugin');
-    assert.equal(pack.capability_plugin_distribution.github_repo, 'gaofeng21cn/opl-scholarskills');
-    assert.equal(pack.capability_plugin_distribution.source_of_truth.includes('opl-scholarskills/.codex-plugin/plugin.json'), true);
+    assert.equal(pack.capability_plugin_distribution.github_repo, 'gaofeng21cn/mas-scholar-skills');
+    assert.equal(pack.capability_plugin_distribution.source_of_truth.includes('mas-scholar-skills/.codex-plugin/plugin.json'), true);
     assert.equal(pack.capability_plugin_distribution.default_sync_scope, 'none_without_explicit_workspace_or_quest_target');
     assert.equal(pack.capability_plugin_distribution.default_target_project, null);
     assert.deepEqual(pack.capability_plugin_distribution.recommended_paper_execution_scopes, [
@@ -190,23 +190,19 @@ test('connect skills exposes OPL ScholarSkills as a framework-owned capability p
     assert.equal(pack.mas_scholar_skills_profile.profile_driver.owner, 'MAS profile/overlay');
     assert.equal(pack.mas_scholar_skills_profile.profile_driver.connect_role, 'install_sync_discovery_only');
     assert.equal(pack.mas_scholar_skills_profile.profile_driver.connect_does_not_own_quality_or_domain_truth, true);
-    assert.deepEqual(pack.mas_scholar_skills_profile.required_skill_pack, ['opl-scholarskills']);
+    assert.deepEqual(pack.mas_scholar_skills_profile.required_skill_pack, ['mas-scholar-skills']);
     assert.deepEqual(pack.mas_scholar_skills_profile.default_skill_pack, [
-      'opl-scholarskills',
-      'medical-research-figure',
-      'medical-research-write',
-      'medical-research-review',
+      'mas-scholar-skills',
+      'medical-research-lit',
     ]);
     assert.equal(pack.mas_scholar_skills_profile.install_target.target_scope, 'inspect');
     assert.equal(pack.mas_scholar_skills_profile.install_target.target_root, null);
     assert.equal(pack.mas_scholar_skills_profile.install_target.install_root, null);
     assert.equal(pack.mas_scholar_skills_profile.install_target.system_codex_skill_install_default, false);
     const profilePacks = new Map(pack.mas_scholar_skills_profile.packs.map((entry) => [entry.pack_id, entry]));
-    assert.equal(profilePacks.get('opl-scholarskills')?.source_status, 'materialized');
-    assert.equal(profilePacks.get('opl-scholarskills')?.installed, false);
-    assert.equal(profilePacks.get('medical-research-figure')?.source_status, 'available-but-not-materialized');
-    assert.equal(profilePacks.get('medical-research-write')?.source_status, 'available-but-not-materialized');
-    assert.equal(profilePacks.get('medical-research-review')?.source_status, 'available-but-not-materialized');
+    assert.equal(profilePacks.get('mas-scholar-skills')?.source_status, 'materialized');
+    assert.equal(profilePacks.get('mas-scholar-skills')?.installed, false);
+    assert.equal(profilePacks.get('medical-research-lit')?.source_status, 'source-missing');
     assert.deepEqual(pack.mas_scholar_skills_profile.authority_boundary, {
       can_write_domain_truth: false,
       can_sign_owner_receipt: false,
@@ -233,14 +229,14 @@ test('connect skills exposes OPL ScholarSkills as a framework-owned capability p
 
 test('connect sync-skills without a target does not install ScholarSkills to MAS or system Codex', () => {
   const sourceRoot = createScholarSkillsRepoFixture();
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-connect-home-'));
-  const masRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-mas-root-'));
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mas-scholar-skills-connect-home-'));
+  const masRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mas-scholar-skills-mas-root-'));
 
   try {
     const output = runCli(['connect', 'sync-skills', '--domain', 'scholarskills', '--home', homeRoot], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
-      OPL_SCHOLARSKILLS_REPO_ROOT: sourceRoot,
+      OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT: sourceRoot,
       OPL_MEDAUTOSCIENCE_REPO_ROOT: masRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
@@ -290,8 +286,8 @@ test('connect sync-skills without a target does not install ScholarSkills to MAS
     assert.deepEqual(pack.installer_result.workspace_or_quest_local_skill.required, [
       '--target-workspace <path> or --target-root <path>',
     ]);
-    assert.equal(fs.existsSync(path.join(masRoot, 'plugins', 'opl-scholarskills')), false);
-    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'opl-scholarskills', 'SKILL.md')), false);
+    assert.equal(fs.existsSync(path.join(masRoot, 'plugins', 'mas-scholar-skills')), false);
+    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'mas-scholar-skills', 'SKILL.md')), false);
   } finally {
     fs.rmSync(sourceRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
@@ -299,10 +295,10 @@ test('connect sync-skills without a target does not install ScholarSkills to MAS
   }
 });
 
-test('connect sync-skills installs OPL ScholarSkills to the MAS project-local plugin mirror only with explicit project scope', () => {
+test('connect sync-skills installs MAS Scholar Skills to the MAS project-local plugin mirror only with explicit project scope', () => {
   const sourceRoot = createScholarSkillsRepoFixture();
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-connect-home-'));
-  const masRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-mas-root-'));
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mas-scholar-skills-connect-home-'));
+  const masRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mas-scholar-skills-mas-root-'));
 
   try {
     const modules = runCli(['connect', 'modules']) as {
@@ -326,7 +322,7 @@ test('connect sync-skills installs OPL ScholarSkills to the MAS project-local pl
     ], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
-      OPL_SCHOLARSKILLS_REPO_ROOT: sourceRoot,
+      OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT: sourceRoot,
       OPL_MEDAUTOSCIENCE_REPO_ROOT: masRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
@@ -406,14 +402,14 @@ test('connect sync-skills installs OPL ScholarSkills to the MAS project-local pl
     assert.equal(mirror.target_repo_root, masRoot);
     assert.equal(mirror.project_mirror_deprecated_for_paper_execution, true);
     assert.equal(mirror.project_mirror_non_default_paper_execution_path, true);
-    assert.equal(mirror.project_local_plugin_root, path.join(masRoot, 'plugins', 'opl-scholarskills'));
+    assert.equal(mirror.project_local_plugin_root, path.join(masRoot, 'plugins', 'mas-scholar-skills'));
     assert.equal(
       fs.realpathSync(mirror.project_local_plugin_manifest_path),
-      fs.realpathSync(path.join(masRoot, 'plugins', 'opl-scholarskills', '.codex-plugin', 'plugin.json')),
+      fs.realpathSync(path.join(masRoot, 'plugins', 'mas-scholar-skills', '.codex-plugin', 'plugin.json')),
     );
     assert.equal(
       fs.realpathSync(mirror.project_local_skill_entry_path),
-      fs.realpathSync(path.join(masRoot, 'plugins', 'opl-scholarskills', 'skills', 'opl-scholarskills', 'SKILL.md')),
+      fs.realpathSync(path.join(masRoot, 'plugins', 'mas-scholar-skills', 'skills', 'mas-scholar-skills', 'SKILL.md')),
     );
     assert.deepEqual(mirror.project_local_copy.copied_roots, [
       '.codex-plugin',
@@ -426,10 +422,10 @@ test('connect sync-skills installs OPL ScholarSkills to the MAS project-local pl
       mirror.project_local_copy.excluded_roots.includes('outputs'),
       true,
     );
-    assert.equal(fs.existsSync(path.join(masRoot, 'plugins', 'opl-scholarskills', 'outputs')), false);
-    assert.equal(fs.existsSync(path.join(masRoot, 'plugins', 'opl-scholarskills', '.git')), false);
-    assert.equal(fs.existsSync(path.join(masRoot, 'plugins', 'opl-scholarskills', 'gallery', 'medical-display', 'assets')), false);
-    assert.equal(fs.existsSync(path.join(masRoot, 'plugins', 'opl-scholarskills', 'gallery', 'medical-display', 'medical_display_gallery.pdf')), true);
+    assert.equal(fs.existsSync(path.join(masRoot, 'plugins', 'mas-scholar-skills', 'outputs')), false);
+    assert.equal(fs.existsSync(path.join(masRoot, 'plugins', 'mas-scholar-skills', '.git')), false);
+    assert.equal(fs.existsSync(path.join(masRoot, 'plugins', 'mas-scholar-skills', 'gallery', 'medical-display', 'assets')), false);
+    assert.equal(fs.existsSync(path.join(masRoot, 'plugins', 'mas-scholar-skills', 'gallery', 'medical-display', 'medical_display_gallery.pdf')), true);
     assert.deepEqual(mirror.authority_boundary, {
       can_write_domain_truth: false,
       can_sign_owner_receipt: false,
@@ -441,9 +437,9 @@ test('connect sync-skills installs OPL ScholarSkills to the MAS project-local pl
       can_authorize_publication_readiness: false,
     });
     assert.equal(mirror.project_local_git_exclude.status, 'skipped_not_git_repo');
-    assert.equal(mirror.project_local_git_exclude.pattern, '/plugins/opl-scholarskills/');
+    assert.equal(mirror.project_local_git_exclude.pattern, '/plugins/mas-scholar-skills/');
     assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'config.toml')), false);
-    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'opl-scholarskills', 'SKILL.md')), false);
+    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'mas-scholar-skills', 'SKILL.md')), false);
   } finally {
     fs.rmSync(sourceRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
@@ -451,10 +447,10 @@ test('connect sync-skills installs OPL ScholarSkills to the MAS project-local pl
   }
 });
 
-test('connect sync-skills installs OPL ScholarSkills to a workspace-local Codex discovery skill', () => {
+test('connect sync-skills installs MAS Scholar Skills to a workspace-local Codex discovery skill', () => {
   const sourceRoot = createScholarSkillsRepoFixture();
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-workspace-home-'));
-  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-paper-workspace-'));
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mas-scholar-skills-workspace-home-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mas-scholar-skills-paper-workspace-'));
 
   try {
     const output = runCli([
@@ -471,7 +467,7 @@ test('connect sync-skills installs OPL ScholarSkills to a workspace-local Codex 
     ], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
-      OPL_SCHOLARSKILLS_REPO_ROOT: sourceRoot,
+      OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT: sourceRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
     }) as {
@@ -524,7 +520,7 @@ test('connect sync-skills installs OPL ScholarSkills to a workspace-local Codex 
     assert.equal(pack.installer_result.source, 'workspace_or_quest_local_codex_skill');
 
     const localSkill = pack.installer_result.workspace_or_quest_local_skill;
-    const skillRoot = path.join(workspaceRoot, '.codex', 'skills', 'opl-scholarskills');
+    const skillRoot = path.join(workspaceRoot, '.codex', 'skills', 'mas-scholar-skills');
     assert.equal(pack.workspace_or_quest_local_skill_root, skillRoot);
     assert.equal(localSkill.status, 'installed');
     assert.equal(localSkill.target_scope, 'workspace');
@@ -544,7 +540,7 @@ test('connect sync-skills installs OPL ScholarSkills to a workspace-local Codex 
     assert.equal(fs.existsSync(path.join(skillRoot, 'gallery', 'medical-display', 'assets')), false);
     assert.equal(fs.existsSync(path.join(skillRoot, 'outputs')), false);
     assert.equal(fs.existsSync(path.join(skillRoot, '.git')), false);
-    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'opl-scholarskills', 'SKILL.md')), false);
+    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'mas-scholar-skills', 'SKILL.md')), false);
 
     const receipt = JSON.parse(fs.readFileSync(path.join(skillRoot, '.opl-install-receipt.json'), 'utf8')) as {
       receipt_kind: string;
@@ -584,10 +580,10 @@ test('connect sync-skills installs OPL ScholarSkills to a workspace-local Codex 
 
 test('connect sync-skills installs materialized MAS ScholarSkills specialist dirs from the profile registry', () => {
   const sourceRoot = createScholarSkillsRepoFixture({
-    specialistSkills: ['medical-research-figure', 'medical-research-write'],
+    specialistSkills: ['medical-research-lit'],
   });
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-profile-home-'));
-  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-profile-workspace-'));
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mas-scholar-skills-profile-home-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mas-scholar-skills-profile-workspace-'));
   const preexistingReviewRoot = path.join(workspaceRoot, '.codex', 'skills', 'medical-research-review');
   fs.mkdirSync(preexistingReviewRoot, { recursive: true });
   fs.writeFileSync(
@@ -611,7 +607,7 @@ test('connect sync-skills installs materialized MAS ScholarSkills specialist dir
     ], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
-      OPL_SCHOLARSKILLS_REPO_ROOT: sourceRoot,
+      OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT: sourceRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
     }) as {
@@ -654,44 +650,30 @@ test('connect sync-skills installs materialized MAS ScholarSkills specialist dir
 
     const localSkill = output.skill_sync.packs[0].installer_result.workspace_or_quest_local_skill;
     const profile = localSkill.mas_scholar_skills_profile;
-    const skillRoot = path.join(workspaceRoot, '.codex', 'skills', 'opl-scholarskills');
+    const skillRoot = path.join(workspaceRoot, '.codex', 'skills', 'mas-scholar-skills');
     const profilePacks = new Map(profile.packs.map((entry) => [entry.pack_id, entry]));
 
     assert.equal(localSkill.mas_scholar_skills_profile_manifest_path, path.join(skillRoot, '.opl-mas-scholarskills-sync-manifest.json'));
     assert.equal(fs.existsSync(localSkill.mas_scholar_skills_profile_manifest_path), true);
-    assert.deepEqual(profile.required_skill_pack, ['opl-scholarskills']);
+    assert.deepEqual(profile.required_skill_pack, ['mas-scholar-skills']);
     assert.deepEqual(profile.default_skill_pack, [
-      'opl-scholarskills',
-      'medical-research-figure',
-      'medical-research-write',
-      'medical-research-review',
+      'mas-scholar-skills',
+      'medical-research-lit',
     ]);
     assert.equal(profile.install_target.target_scope, 'workspace');
     assert.equal(profile.install_target.target_root, workspaceRoot);
     assert.equal(profile.install_target.install_root, path.join(workspaceRoot, '.codex', 'skills'));
     assert.equal(profile.install_target.system_codex_skill_install_default, false);
-    assert.equal(profilePacks.get('opl-scholarskills')?.source_status, 'materialized');
-    assert.equal(profilePacks.get('opl-scholarskills')?.installed, true);
-    assert.equal(profilePacks.get('medical-research-figure')?.source_status, 'materialized');
-    assert.equal(profilePacks.get('medical-research-figure')?.installed, true);
-    assert.equal(profilePacks.get('medical-research-write')?.source_status, 'materialized');
-    assert.equal(profilePacks.get('medical-research-write')?.installed, true);
-    assert.equal(profilePacks.get('medical-research-review')?.source_status, 'available-but-not-materialized');
-    assert.equal(profilePacks.get('medical-research-review')?.installed, false);
+    assert.equal(profilePacks.get('mas-scholar-skills')?.source_status, 'materialized');
+    assert.equal(profilePacks.get('mas-scholar-skills')?.installed, true);
+    assert.equal(profilePacks.get('medical-research-lit')?.source_status, 'materialized');
+    assert.equal(profilePacks.get('medical-research-lit')?.installed, true);
     assert.equal(
-      fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'medical-research-figure', 'SKILL.md')),
+      fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'medical-research-lit', 'SKILL.md')),
       true,
     );
     assert.equal(
-      fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'medical-research-write', 'SKILL.md')),
-      true,
-    );
-    assert.equal(
-      fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'medical-research-figure', '.opl-connect-skill-sync.json')),
-      true,
-    );
-    assert.equal(
-      fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'medical-research-write', '.opl-connect-skill-sync.json')),
+      fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'medical-research-lit', '.opl-connect-skill-sync.json')),
       true,
     );
     assert.equal(
@@ -723,10 +705,10 @@ test('connect sync-skills installs materialized MAS ScholarSkills specialist dir
   }
 });
 
-test('connect sync-skills installs OPL ScholarSkills to a quest-local Codex discovery skill', () => {
+test('connect sync-skills installs MAS Scholar Skills to a quest-local Codex discovery skill', () => {
   const sourceRoot = createScholarSkillsRepoFixture();
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-quest-home-'));
-  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-paper-workspace-'));
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mas-scholar-skills-quest-home-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mas-scholar-skills-paper-workspace-'));
   const questRoot = path.join(workspaceRoot, 'runtime', 'quests', '002-dm-example');
   fs.mkdirSync(questRoot, { recursive: true });
 
@@ -745,7 +727,7 @@ test('connect sync-skills installs OPL ScholarSkills to a quest-local Codex disc
     ], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
-      OPL_SCHOLARSKILLS_REPO_ROOT: sourceRoot,
+      OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT: sourceRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
     }) as {
@@ -767,7 +749,7 @@ test('connect sync-skills installs OPL ScholarSkills to a quest-local Codex disc
     };
 
     const pack = output.skill_sync.packs[0];
-    const skillRoot = path.join(questRoot, '.codex', 'skills', 'opl-scholarskills');
+    const skillRoot = path.join(questRoot, '.codex', 'skills', 'mas-scholar-skills');
     assert.equal(pack.sync_status, 'synced');
     assert.equal(pack.sync_scope, 'quest');
     assert.equal(pack.target_scope, 'quest');
@@ -784,15 +766,15 @@ test('connect sync-skills installs OPL ScholarSkills to a quest-local Codex disc
   }
 });
 
-test('connect sync-skills registers OPL ScholarSkills in Codex only with explicit codex scope', () => {
+test('connect sync-skills registers MAS Scholar Skills in Codex only with explicit codex scope', () => {
   const sourceRoot = createScholarSkillsRepoFixture();
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-connect-codex-home-'));
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mas-scholar-skills-connect-codex-home-'));
 
   try {
     const output = runCli(['connect', 'sync-skills', '--domain', 'scholarskills', '--scope', 'codex', '--home', homeRoot], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
-      OPL_SCHOLARSKILLS_REPO_ROOT: sourceRoot,
+      OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT: sourceRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
     }) as {
@@ -855,8 +837,8 @@ test('connect sync-skills registers OPL ScholarSkills in Codex only with explici
     const item = registry.items[0];
     assert.equal(item.module_id, null);
     assert.equal(item.pack_id, 'scholarskills');
-    assert.equal(item.plugin_id, 'opl-scholarskills');
-    assert.equal(item.marketplace_id, 'opl-scholarskills-local');
+    assert.equal(item.plugin_id, 'mas-scholar-skills');
+    assert.equal(item.marketplace_id, 'mas-scholar-skills-local');
     assert.equal(item.plugin_source_path, sourceRoot);
     assert.equal(item.plugin_manifest_path, path.join(sourceRoot, '.codex-plugin', 'plugin.json'));
     assert.equal(item.status, 'registered');
@@ -873,10 +855,10 @@ test('connect sync-skills registers OPL ScholarSkills in Codex only with explici
     });
 
     const codexConfig = fs.readFileSync(path.join(homeRoot, 'codex-home', 'config.toml'), 'utf8');
-    assert.match(codexConfig, /\[marketplaces\.opl-scholarskills-local\]/);
-    assert.match(codexConfig, /\[plugins\."opl-scholarskills@opl-scholarskills-local"\]/);
+    assert.match(codexConfig, /\[marketplaces\.mas-scholar-skills-local\]/);
+    assert.match(codexConfig, /\[plugins\."mas-scholar-skills@mas-scholar-skills-local"\]/);
     assert.equal(
-      fs.realpathSync(path.join(item.marketplace_root, 'plugins', 'opl-scholarskills')),
+      fs.realpathSync(path.join(item.marketplace_root, 'plugins', 'mas-scholar-skills')),
       fs.realpathSync(sourceRoot),
     );
   } finally {

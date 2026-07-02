@@ -23,10 +23,10 @@ import {
 import { MINIMAL_SCHOLAR_SKILLS_CAPABILITY_MODULES_CONTRACT } from './agent-workspace-norm-fixture.ts';
 
 function addScholarSkillsCapabilityPackage(workspaceRoot: string) {
-  const repoDir = path.join(workspaceRoot, 'opl-scholarskills');
+  const repoDir = path.join(workspaceRoot, 'mas-scholar-skills');
   fs.mkdirSync(path.join(repoDir, 'contracts'), { recursive: true });
   fs.mkdirSync(path.join(repoDir, '.codex-plugin'), { recursive: true });
-  fs.mkdirSync(path.join(repoDir, 'skills', 'opl-scholarskills'), { recursive: true });
+  fs.mkdirSync(path.join(repoDir, 'skills', 'mas-scholar-skills'), { recursive: true });
   fs.writeFileSync(
     path.join(repoDir, 'contracts', 'scholar-skills-capability-modules.json'),
     `${JSON.stringify(MINIMAL_SCHOLAR_SKILLS_CAPABILITY_MODULES_CONTRACT, null, 2)}\n`,
@@ -34,12 +34,12 @@ function addScholarSkillsCapabilityPackage(workspaceRoot: string) {
   );
   fs.writeFileSync(
     path.join(repoDir, '.codex-plugin', 'plugin.json'),
-    `${JSON.stringify({ name: 'opl-scholarskills', skills: './skills/' }, null, 2)}\n`,
+    `${JSON.stringify({ name: 'mas-scholar-skills', skills: './skills/' }, null, 2)}\n`,
     'utf8',
   );
   fs.writeFileSync(
-    path.join(repoDir, 'skills', 'opl-scholarskills', 'SKILL.md'),
-    '---\nname: opl-scholarskills\ndescription: OPL ScholarSkills fixture capability plugin pack.\n---\n\n# OPL ScholarSkills\n',
+    path.join(repoDir, 'skills', 'mas-scholar-skills', 'SKILL.md'),
+    '---\nname: mas-scholar-skills\ndescription: MAS Scholar Skills fixture capability plugin pack.\n---\n\n# MAS Scholar Skills\n',
     'utf8',
   );
   return repoDir;
@@ -340,7 +340,7 @@ test('agents default-callers excludes ScholarSkills capability packages from fam
       conformance.framework_capability_packages.map((entry: { canonical_agent_id: string }) =>
         entry.canonical_agent_id
       ),
-      ['opl-scholarskills'],
+      ['mas-scholar-skills'],
     );
     assert.equal(conformance.framework_capability_packages[0].repo_dir, scholarSkillsRepo);
     assert.equal(conformance.framework_capability_packages[0].status, 'passed');

@@ -334,7 +334,7 @@ test('packages manifest exposes active package-channel coordinates for module in
   );
   assert.equal(
     output.packages_manifest.packages.modules.scholarskills.artifact,
-    'ghcr.io/gaofeng21cn/one-person-lab-modules/opl-scholarskills:26.4.27',
+    'ghcr.io/gaofeng21cn/one-person-lab-modules/mas-scholar-skills:26.4.27',
   );
   assert.equal(
     output.packages_manifest.packages.modules.scholarskills.scope,
@@ -346,7 +346,7 @@ test('packages manifest exposes active package-channel coordinates for module in
   );
   assert.equal(
     output.packages_manifest.packages.modules.scholarskills.developer_git_checkout_override.repo_url,
-    'https://github.com/gaofeng21cn/opl-scholarskills.git',
+    'https://github.com/gaofeng21cn/mas-scholar-skills.git',
   );
 });
 
@@ -360,7 +360,7 @@ test('package archive builder writes channel manifest checksums git source and r
     medautogrant: createGitModuleRemoteFixture('med-autogrant'),
     redcube: createGitModuleRemoteFixture('redcube-ai'),
     oplmetaagent: createGitModuleRemoteFixture('opl-meta-agent'),
-    scholarskills: createGitModuleRemoteFixture('opl-scholarskills'),
+    scholarskills: createGitModuleRemoteFixture('mas-scholar-skills'),
   };
 
   const archiveBuilderOutput = execFileSync(process.execPath, [
@@ -489,7 +489,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.match(manifest.packages.modules.scholarskills.source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.match(checksums, /med-autoscience-26\.4\.31\.tar\.gz/);
   assert.match(checksums, /opl-meta-agent-26\.4\.31\.tar\.gz/);
-  assert.match(checksums, /opl-scholarskills-26\.4\.31\.tar\.gz/);
+  assert.match(checksums, /mas-scholar-skills-26\.4\.31\.tar\.gz/);
   assert.match(checksums, new RegExp(manifest.packages.modules.medautoscience.source_archive.sha256));
 
   execFileSync(process.execPath, [
@@ -512,7 +512,7 @@ test('package archive builder refreshes reused managed clones before archiving s
     medautogrant: createGitModuleRemoteFixture('med-autogrant'),
     redcube: createGitModuleRemoteFixture('redcube-ai'),
     oplmetaagent: createGitModuleRemoteFixture('opl-meta-agent'),
-    scholarskills: createGitModuleRemoteFixture('opl-scholarskills'),
+    scholarskills: createGitModuleRemoteFixture('mas-scholar-skills'),
   };
   fs.writeFileSync(
     gitConfigPath,

@@ -246,8 +246,8 @@ function validateModule(filePath: string, entry: unknown, index: number): Schola
     });
   }
   const moduleId = expectScholarSkillModuleId(entry.module_id, 'module_id', filePath);
-  if (entry.brand_family !== 'OPL ScholarSkills') {
-    throw new FrameworkContractError('contract_shape_invalid', 'ScholarSkills module brand_family must be OPL ScholarSkills.', {
+  if (entry.brand_family !== 'MAS Scholar Skills') {
+    throw new FrameworkContractError('contract_shape_invalid', 'ScholarSkills module brand_family must be MAS Scholar Skills.', {
       file: filePath,
       index,
       module_id: moduleId,
@@ -264,7 +264,7 @@ function validateModule(filePath: string, entry: unknown, index: number): Schola
 
   return {
     module_id: moduleId,
-    brand_family: 'OPL ScholarSkills',
+    brand_family: 'MAS Scholar Skills',
     display_name: expectString(entry.display_name, 'display_name', filePath),
     stage_fit: expectNonEmptyStringArray(entry.stage_fit, 'stage_fit', filePath),
     input_schema_refs: expectNonEmptyStringArray(entry.input_schema_refs, 'input_schema_refs', filePath),
@@ -320,8 +320,8 @@ export function validateScholarSkillsCapabilityModules(
       field: 'contract_id',
     });
   }
-  if (value.brand_family !== 'OPL ScholarSkills') {
-    throw new FrameworkContractError('contract_shape_invalid', 'ScholarSkills contract brand_family must be OPL ScholarSkills.', {
+  if (value.brand_family !== 'MAS Scholar Skills') {
+    throw new FrameworkContractError('contract_shape_invalid', 'ScholarSkills contract brand_family must be MAS Scholar Skills.', {
       file: filePath,
       field: 'brand_family',
     });
@@ -375,7 +375,7 @@ export function validateScholarSkillsCapabilityModules(
     schema_version: expectString(value.schema_version, 'schema_version', filePath),
     owner: expectString(value.owner, 'owner', filePath),
     state: expectString(value.state, 'state', filePath),
-    brand_family: 'OPL ScholarSkills',
+    brand_family: 'MAS Scholar Skills',
     purpose: expectString(value.purpose, 'purpose', filePath),
     machine_boundary: expectString(value.machine_boundary, 'machine_boundary', filePath),
     runtime_environment_bridge: {

@@ -307,9 +307,9 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
       scriptBody: null,
     },
     {
-      project: 'opl-scholarskills',
-      plugin: 'opl-scholarskills',
-      canonicalPlugin: 'opl-scholarskills',
+      project: 'mas-scholar-skills',
+      plugin: 'mas-scholar-skills',
+      canonicalPlugin: 'mas-scholar-skills',
       installer: null,
       scriptBody: null,
     },
@@ -327,7 +327,7 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
       writeFakeBookForgeGeneratedSurfacePack(repoRoot);
       continue;
     }
-    if (spec.project === 'opl-scholarskills') {
+    if (spec.project === 'mas-scholar-skills') {
       const pluginRoot = path.join(repoRoot, 'plugins', spec.canonicalPlugin);
       const skillRoot = path.join(pluginRoot, 'skills', spec.canonicalPlugin);
       fs.mkdirSync(path.join(pluginRoot, '.codex-plugin'), { recursive: true });
@@ -338,7 +338,7 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
       );
       fs.writeFileSync(
         path.join(skillRoot, 'SKILL.md'),
-        `---\nname: ${spec.canonicalPlugin}\ndescription: OPL ScholarSkills fixture capability plugin pack.\n---\n\n# OPL ScholarSkills\n\nThis fixture represents the OPL-owned ScholarSkills capability plugin pack.\n`,
+        `---\nname: ${spec.canonicalPlugin}\ndescription: MAS Scholar Skills fixture capability plugin pack.\n---\n\n# MAS Scholar Skills\n\nThis fixture represents the OPL-owned ScholarSkills capability plugin pack.\n`,
       );
       continue;
     }

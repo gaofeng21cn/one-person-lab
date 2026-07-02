@@ -8,6 +8,7 @@ const FAMILY_REPO_DIRECTORIES = [
   'redcube-ai',
   'opl-meta-agent',
   'opl-bookforge',
+  'mas-scholar-skills',
   'opl-scholarskills',
 ] as const;
 

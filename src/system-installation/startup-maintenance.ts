@@ -513,9 +513,9 @@ export async function runOplStartupMaintenance(
         notes: [
           'Startup maintenance refreshes the managed OPL Framework runtime only when an explicit framework update source is configured.',
           'Startup maintenance updates clean OPL-managed module checkouts and syncs generated plugin/skill surfaces.',
-          'Startup maintenance installs or updates OPL ScholarSkills from the managed GHCR capability packages channel so App workspace/quest sync can materialize it into the active paper directory.',
+          'Startup maintenance installs or updates MAS Scholar Skills from the managed GHCR capability packages channel so App workspace/quest sync can materialize it into the active paper directory.',
           'Dirty, ahead, diverged, no-upstream, env override, sibling workspace, and invalid checkouts are reported for manual review.',
-          'OPL ScholarSkills is a framework capability plugin pack, not a domain module; workspace/quest-local sync is still explicit and target-bound.',
+          'MAS Scholar Skills is a framework capability plugin pack, not a domain module; workspace/quest-local sync is still explicit and target-bound.',
           'Docker/WebUI startup records image seed, /data, and /projects boundaries in the OPL state install manifest without claiming runtime or domain readiness.',
           'This action never writes domain truth, domain memory body, artifact body, quality verdict, export verdict, or domain daemons.',
         ],

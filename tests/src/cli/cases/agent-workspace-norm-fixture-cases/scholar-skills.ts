@@ -39,7 +39,7 @@ function moduleFixture(moduleId: ScholarSkillModuleId): ScholarSkillCapabilityMo
   const profile = moduleId.replace('opl.scholarskills.', '');
   return {
     module_id: moduleId,
-    brand_family: 'OPL ScholarSkills',
+    brand_family: 'MAS Scholar Skills',
     display_name: `Scholar ${profile}`,
     stage_fit: [`${profile}_fixture_stage`],
     input_schema_refs: [`fixture:${profile}:input`],
@@ -80,7 +80,7 @@ export const MINIMAL_SCHOLAR_SKILLS_CAPABILITY_MODULES_CONTRACT: ScholarSkillsCa
   schema_version: 'test',
   owner: 'One Person Lab',
   state: 'fixture',
-  brand_family: 'OPL ScholarSkills',
+  brand_family: 'MAS Scholar Skills',
   purpose: 'Fixture ScholarSkills capability module catalog.',
   machine_boundary: 'Fixture only; no authority or runtime readiness claim.',
   runtime_environment_bridge: {

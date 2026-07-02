@@ -1,4 +1,5 @@
 import { buildOplPackageManifest } from '../../../package-distribution.ts';
+import { runOplConnectPubMedSearch } from '../../../opl-connect-pubmed.ts';
 import { buildOplModules, runOplModuleAction, runOplModuleExec } from '../../../system-installation/modules.ts';
 import {
   buildPublicModuleActionPayload,
@@ -6,6 +7,7 @@ import {
   buildPublicModulesPayload,
 } from '../../modules/public-payloads.ts';
 import {
+  buildUsageError,
   cloneCommandSpec,
   parseOplModuleArgs,
   parseOplModuleExecArgs,
@@ -14,6 +16,62 @@ import type { CommandSpec } from '../../modules/support.ts';
 import { buildNoArgSpec, commandActionSummary } from './shared.ts';
 
 type ModuleAction = 'install' | 'update' | 'reinstall' | 'remove';
+
+type PubMedSearchArgs = {
+  query: string;
+  limit: number;
+};
+
+function parsePubMedSearchArgs(args: string[], spec: CommandSpec): PubMedSearchArgs {
+  let query: string | null = null;
+  let limit = 10;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (token === '--json') continue;
+    if (token === '--query') {
+      const value = args[index + 1];
+      if (!value) {
+        throw buildUsageError('connect pubmed search requires a value for --query.', spec, {
+          option: '--query',
+        });
+      }
+      query = value.trim();
+      index += 1;
+      continue;
+    }
+    if (token === '--limit') {
+      const value = args[index + 1];
+      if (!value) {
+        throw buildUsageError('connect pubmed search requires a value for --limit.', spec, {
+          option: '--limit',
+        });
+      }
+      const parsed = Number(value);
+      if (!Number.isInteger(parsed) || parsed < 1 || parsed > 50) {
+        throw buildUsageError('connect pubmed search --limit must be an integer from 1 to 50.', spec, {
+          option: '--limit',
+          value,
+          allowed_range: '1..50',
+        });
+      }
+      limit = parsed;
+      index += 1;
+      continue;
+    }
+    throw buildUsageError(`Unknown connect pubmed search option: ${token}.`, spec, {
+      option: token,
+    });
+  }
+
+  if (!query) {
+    throw buildUsageError('connect pubmed search requires --query.', spec, {
+      required: ['--query'],
+    });
+  }
+
+  return { query, limit };
+}
 
 function buildModuleActionSpec(
   action: ModuleAction,
@@ -110,6 +168,19 @@ export function buildConnectCommandSpecs(
           runOplModuleExec(parsed.moduleId, parsed.args),
         );
       },
+    },
+    'connect pubmed search': {
+      usage: 'opl connect pubmed search --query <query> [--limit <n>]',
+      summary: 'Search PubMed through the OPL Connect read-only literature connector and return normalized source refs.',
+      examples: [
+        'opl connect pubmed search --query "diabetes mortality prediction" --limit 5 --json',
+      ],
+      group: 'connect',
+      help_surface: 'default',
+      handler: async (args) =>
+        runOplConnectPubMedSearch(
+          parsePubMedSearchArgs(args, connectCommandSpecs['connect pubmed search']),
+        ),
     },
     'connect skills': cloneCommandSpec(commandSpecs['skill-list'], {
       usage: 'opl connect skills [--domain <domain_id>]',

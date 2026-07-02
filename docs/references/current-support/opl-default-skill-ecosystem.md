@@ -25,7 +25,7 @@ OPL family domain agent 默认不写入顶层 `[mcp_servers.*]` standalone serve
 
 这里的 generated surface 是 Codex 可见暴露面，不是默认 companion skill sync 清单。Full runtime 可以携带 OPL Meta Agent 或其他 skill/module payload，但随包存在不等于已经写入用户级 `~/.codex/skills`；是否写入由 `opl connect sync-skills`、startup maintenance 或显式 managed companion sync 决定。
 
-MAS Scholar Skills 采用 profile-driven 同步模型：MAS profile/overlay 决定 required/default pack，OPL Connect 只负责安装、同步和发现。当前 `opl-scholarskills` 总入口是 required/default pack；`medical-research-figure`、`medical-research-write`、`medical-research-review` 等 specialist pack 是显式 registry slot。source repo 未物化这些目录时，`opl connect skills --domain scholarskills --json` 和 `opl connect sync-skills --domain scholarskills ... --json` 必须显示 `available-but-not-materialized` 或 `source-missing`，不能把缺目录猜成已安装，也不能把 Connect 输出写成 MAS quality/domain truth。
+MAS Scholar Skills 采用 profile-driven 同步模型：MAS profile/overlay 决定 required/default pack，OPL Connect 只负责安装、同步和发现。当前 `mas-scholar-skills` 总入口是 required/default pack；`medical-research-figure`、`medical-research-write`、`medical-research-review` 等 specialist pack 是显式 registry slot。source repo 未物化这些目录时，`opl connect skills --domain scholarskills --json` 和 `opl connect sync-skills --domain scholarskills ... --json` 必须显示 `available-but-not-materialized` 或 `source-missing`，不能把缺目录猜成已安装，也不能把 Connect 输出写成 MAS quality/domain truth。
 
 MDS 内部的 `scout`、`review`、`baseline`、`experiment`、`write` 等项目专用 skill 不属于 OPL 默认系统级生态。它们应该留在 MAS 控制下的项目目录或 domain runtime 内部，不升级为 OPL 默认 family skill。
 

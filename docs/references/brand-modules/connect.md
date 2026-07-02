@@ -33,6 +33,7 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 contrac
 | `ai_sdk_tool_descriptor` | AI SDK tool schema。 |
 | `app_action_descriptor` | App action list / execute 的合同。 |
 | `release_channel` | Homebrew、DMG、Full bundle、Docker/WebUI、GHCR 等分发入口。 |
+| `external_source_connector` | PubMed 等外部资源的只读连接器，返回 normalized source refs、request/read receipt 和 no-authority boundary。 |
 | `generated_drift_manifest` | source input 与 generated artifact 的对齐状态。 |
 | `profile_driven_skill_sync_manifest` | 对 MAS Scholar Skills 等 profile/overlay 驱动的 skill pack，同步输出 required/default pack、安装落点、source status 与 false-authority boundary。 |
 
@@ -78,6 +79,7 @@ opl connect doctor --json
 opl agents foundry interfaces --json
 opl agents interfaces --family-defaults --json
 opl actions export --domain <id> --json
+opl connect pubmed search --query <query> --limit <n> --json
 opl connect skills --json
 opl connect sync-skills --json
 opl connect install --module <agent> --json
@@ -88,11 +90,13 @@ opl brand-modules inspect --module connect --json
 
 Connect 暴露 Skill/MCP/plugin/install transport 时，必须能指回 Foundry Agent series spine：`opl connect skills` 和 `opl connect sync-skills` 输出 `foundry_agent_series`、`command_surface_spine`、`mcp_projection` 与旧桶退役策略。旧 `opl skill list|sync` 和 `opl module *` 只保留 fail-closed replacement，不再作为普通入口。
 
+Connect 暴露外部资源连接器时，必须保持“平台接入”和“领域判断”分离。第一条稳定 connector 是 `opl connect pubmed search`：它只调用 PubMed E-utilities，返回 `pubmed:<pmid>` source refs、标题、期刊、作者、DOI、URL、connector invocation ref 和 ledger receipt candidate ref；它不保存全文、不建立第二文献库、不判断引用质量、不写 MAS paper truth，也不签 owner receipt。MAS 的 scout/write/review/figure 等 Skill 可以把该 connector 作为稳定文献入口消费，再由 MAS 自己完成 citation judgment、claim-evidence map、review ledger、论文质量判断和 owner route。
+
 MAS Scholar Skills 同步模型：
 
 - `opl connect sync-skills --domain scholarskills` 继续兼容旧入口；无 workspace/quest target 时只输出 skipped/readback，不把 skill 写入 MAS repo 或系统 Codex。
 - MAS profile/overlay 决定 required/default skill pack；Connect 只按显式 registry/profile manifest 安装、同步和发现，不判断 MAS 质量、paper truth、owner receipt、typed blocker 或 runtime queue。
-- 当前 source repo 若只有 `opl-scholarskills` 总入口，`medical-research-figure`、`medical-research-write`、`medical-research-review` 等 specialist pack 必须在 manifest 中显示 `available-but-not-materialized` 或 `source-missing`，不得靠目录启发式猜测。
+- 当前 source repo 若只有 `mas-scholar-skills` 总入口，`medical-research-figure`、`medical-research-write`、`medical-research-review` 等 specialist pack 必须在 manifest 中显示 `available-but-not-materialized` 或 `source-missing`，不得靠目录启发式猜测。
 - workspace/quest scope 的默认落点是 `<target>/.codex/skills/`；project scope 仍是显式、非默认、deprecated-for-paper-execution 的 MAS project-local mirror；codex scope 仍需显式请求。
 
 理想文档：
@@ -116,6 +120,7 @@ contracts/opl-framework/public-surface-index.json
 ## Authority boundary
 
 - Connect 持有 external surface generation、descriptor distribution、install transport 和 drift evidence。
+- Connect 持有 external source connector 的 API 调用、normalized refs、错误/限流语义和 invocation receipt candidate；domain agent 持有引用取舍、证据解释、artifact 写入和 owner verdict。
 - Atlas、Stagecraft、Workspace、Runway、Vault 持有被派生 surface 的 canonical source。
 - Capability Invocation lifecycle descriptor 只描述 Pack 的三层 lifecycle；soft/scored 层不执行工具，hard gate 只引用 `current_owner_delta`，不让 Connect 判断 domain readiness。
 - App release、Homebrew、Full bundle、skill/plugin sync 只证明 transport/install path；domain ready 继续归 domain owner 和 runtime evidence。

@@ -466,7 +466,7 @@ test('target operating architecture contract freezes resource, authority, lane, 
     'opl-bookforge',
   ]);
   assert.deepEqual(contract.foundry_agent_os_standard.framework_capability_packages?.map((entry) => entry.agent_id), [
-    'opl-scholarskills',
+    'mas-scholar-skills',
   ]);
   assert.equal(
     contract.foundry_agent_os_standard.framework_capability_packages?.[0]?.package_scope,

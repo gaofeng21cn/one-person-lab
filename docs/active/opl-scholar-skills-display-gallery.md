@@ -1,4 +1,4 @@
-# OPL ScholarSkills Display Gallery
+# MAS Scholar Skills Display Gallery
 
 Owner: `One Person Lab`
 Purpose: `human_review_entry_for_scholar_display_capability`
@@ -27,7 +27,7 @@ Fresh readback 口径：
 
 - Gallery status、template count、renderer policy、style profile、palette ref 和 audit finding 都从 MAS-owned gallery status / manifest / quality audit 读取。
 - OPL active doc 只冻结 ref 位置、owner boundary 和维护命令，不冻结高漂移 audit 数字。
-- Publication-ready / figure-ready / current-package-ready claim 必须由 MAS owner gate 或 typed blocker 关闭；gallery rendered、manifest present、audit clean 或 OPL ScholarSkills ref observed 都不能授权这些 claim。
+- Publication-ready / figure-ready / current-package-ready claim 必须由 MAS owner gate 或 typed blocker 关闭；gallery rendered、manifest present、audit clean 或 MAS Scholar Skills ref observed 都不能授权这些 claim。
 
 ## Scholar Display 调用边界
 
@@ -36,7 +36,7 @@ ScholarSkills 输出的 `visual_audit_or_gallery_preview_ref` 应指向上述 MA
 调用链仍保持：
 
 ```text
-OPL ScholarSkills display descriptor
+MAS Scholar Skills display descriptor
   -> candidate display refs / execution receipt candidate
   -> MAS owner-consumption readback
   -> MAS owner gate accept / reject / route back
@@ -60,4 +60,4 @@ cd /Users/gaofeng/workspace/med-autoscience
 ./scripts/run-python-clean.sh scripts/build-display-pack-gallery.py --publish-docs --package-only
 ```
 
-OPL ScholarSkills 文档只能引用这些 refs 和 fresh readback；不要在 OPL repo 复制 gallery assets，也不要把 MAS gallery manifest 当成 OPL-owned truth。
+MAS Scholar Skills 文档只能引用这些 refs 和 fresh readback；不要在 OPL repo 复制 gallery assets，也不要把 MAS gallery manifest 当成 OPL-owned truth。

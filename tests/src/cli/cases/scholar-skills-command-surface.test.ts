@@ -199,7 +199,7 @@ test('ScholarSkills capability module descriptor contract is loaded and exposes 
   const contracts = loadFrameworkContracts(repoRoot);
 
   assert.equal(contracts.scholarSkillsCapabilityModules.contract_id, 'opl_scholarskills_capability_modules');
-  assert.equal(contracts.scholarSkillsCapabilityModules.brand_family, 'OPL ScholarSkills');
+  assert.equal(contracts.scholarSkillsCapabilityModules.brand_family, 'MAS Scholar Skills');
   assert.deepEqual(
     contracts.scholarSkillsCapabilityModules.modules.map((entry) => entry.module_id),
     expectedModuleIds,

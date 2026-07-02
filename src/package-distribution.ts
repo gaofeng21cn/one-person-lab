@@ -78,11 +78,11 @@ const MODULE_SPECS: PackageModuleSpec[] = [
   },
   {
     module_id: 'scholarskills',
-    label: 'OPL ScholarSkills',
-    repo_name: 'opl-scholarskills',
-    repo_url: 'https://github.com/gaofeng21cn/opl-scholarskills.git',
+    label: 'MAS Scholar Skills',
+    repo_name: 'mas-scholar-skills',
+    repo_url: 'https://github.com/gaofeng21cn/mas-scholar-skills.git',
     scope: 'framework_capability_package',
-    package_name: 'opl-scholarskills',
+    package_name: 'mas-scholar-skills',
   },
 ];
 

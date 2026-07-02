@@ -4,15 +4,15 @@ import type { StartupPackageChannelModuleFixture } from './system-startup-mainte
 export function scholarSkillsPackageFixture(versionLabel: string): StartupPackageChannelModuleFixture {
   return {
     moduleId: 'scholarskills',
-    repoName: 'opl-scholarskills',
+    repoName: 'mas-scholar-skills',
     sourceHeadSha: `scholarskills-${versionLabel}-sha`,
     files: {
       '.codex-plugin/plugin.json': fs.readFileSync(
-        path.join('plugins', 'opl-scholarskills', '.codex-plugin', 'plugin.json'),
+        path.join('plugins', 'mas-scholar-skills', '.codex-plugin', 'plugin.json'),
         'utf8',
       ),
-      'skills/opl-scholarskills/SKILL.md': fs.readFileSync(
-        path.join('plugins', 'opl-scholarskills', 'skills', 'opl-scholarskills', 'SKILL.md'),
+      'skills/mas-scholar-skills/SKILL.md': fs.readFileSync(
+        path.join('plugins', 'mas-scholar-skills', 'skills', 'mas-scholar-skills', 'SKILL.md'),
         'utf8',
       ),
       'contracts/scholar-skills-capability-modules.json': JSON.stringify({

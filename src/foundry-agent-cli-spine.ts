@@ -237,12 +237,12 @@ function parseAgentInspectArgs(args: string[]) {
     'cli_usage_error',
     'foundry agents inspect requires one agent id.',
     {
-      usage: 'opl foundry agents inspect <mas|mag|rca|oma|opl-bookforge|opl-scholarskills>',
+      usage: 'opl foundry agents inspect <mas|mag|rca|oma|opl-bookforge|mas-scholar-skills>',
       examples: [
         'opl foundry agents inspect mas --json',
         'opl foundry agents inspect --agent rca --json',
         'opl foundry agents inspect opl-bookforge --json',
-        'opl foundry agents inspect opl-scholarskills --json',
+        'opl foundry agents inspect mas-scholar-skills --json',
       ],
       unexpected_args: args,
     },

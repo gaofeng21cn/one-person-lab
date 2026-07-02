@@ -17,13 +17,13 @@ import {
 import { inspectPackagedModule, readPackagedModuleMarker } from './module-packaged.ts';
 import { inspectGitRepo, isGitRepo } from './module-git.ts';
 
-const SCHOLARSKILLS_REPO_NAME = 'opl-scholarskills';
+const SCHOLARSKILLS_REPO_NAME = 'mas-scholar-skills';
 
 export const SCHOLARSKILLS_PACKAGE_SPEC: DomainModuleSpec = {
   module_id: 'scholarskills',
-  label: 'OPL ScholarSkills',
+  label: 'MAS Scholar Skills',
   repo_name: SCHOLARSKILLS_REPO_NAME,
-  repo_url: 'https://github.com/gaofeng21cn/opl-scholarskills.git',
+  repo_url: 'https://github.com/gaofeng21cn/mas-scholar-skills.git',
   scope: 'framework_capability_package',
   default_install: true,
   description: 'Framework capability package for paper/workspace-local scholarly skills used by OPL-hosted agents.',
@@ -47,7 +47,7 @@ type ScholarSkillsSourcePolicy = {
 export type ScholarSkillsSourceTarget = {
   target_type: 'framework_capability_package';
   target_id: 'scholarskills';
-  capability_plugin_id: 'opl-scholarskills';
+  capability_plugin_id: 'mas-scholar-skills';
   status: 'completed' | 'skipped' | 'manual_required';
   reason: string;
   action: ScholarSkillsSourceAction;
@@ -101,7 +101,7 @@ function buildSourcePolicy(configuredBy: ScholarSkillsSourcePolicy['configured_b
       package_channel_auto_update: false,
       app_managed_auto_update: false,
       low_level_override_env: configuredBy === 'env_repo_root_override'
-        ? 'OPL_SCHOLARSKILLS_REPO_ROOT'
+        ? 'OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT'
         : configuredBy === 'module_path_override'
           ? 'OPL_MODULE_PATH_SCHOLARSKILLS'
           : null,
@@ -132,9 +132,12 @@ function packageChannelGitSnapshot(sourcePath: string) {
 
 export function inspectScholarSkillsSource(): ScholarSkillsSourceInspection {
   const managedCheckoutPath = resolveManagedScholarSkillsSourcePath();
-  const envRepoRoot = normalizeOptionalString(process.env.OPL_SCHOLARSKILLS_REPO_ROOT);
-  const modulePath = normalizeOptionalString(process.env.OPL_MODULE_PATH_SCHOLARSKILLS);
+  const envRepoRoot = normalizeOptionalString(process.env.OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT)
+    ?? normalizeOptionalString(process.env.OPL_SCHOLARSKILLS_REPO_ROOT);
+  const modulePath = normalizeOptionalString(process.env.OPL_MODULE_PATH_SCHOLARSKILLS)
+    ?? normalizeOptionalString(process.env.OPL_MODULE_PATH_MAS_SCHOLAR_SKILLS);
   const siblingCheckoutPath = path.join(resolveDefaultFamilyWorkspaceRoot(), SCHOLARSKILLS_REPO_NAME);
+  const legacySiblingCheckoutPath = path.join(resolveDefaultFamilyWorkspaceRoot(), 'opl-scholarskills');
   const developerModeLocal = developerModePrefersLocalCheckouts();
   const candidates: Array<{
     checkout_path: string;
@@ -162,6 +165,12 @@ export function inspectScholarSkillsSource(): ScholarSkillsSourceInspection {
   if (developerModeLocal) {
     candidates.push({
       checkout_path: siblingCheckoutPath,
+      install_origin_before: 'sibling_workspace',
+      source_policy: buildSourcePolicy('developer_mode'),
+      source_kind: 'developer',
+    });
+    candidates.push({
+      checkout_path: legacySiblingCheckoutPath,
       install_origin_before: 'sibling_workspace',
       source_policy: buildSourcePolicy('developer_mode'),
       source_kind: 'developer',
@@ -246,7 +255,7 @@ function buildTarget(
   return {
     target_type: 'framework_capability_package',
     target_id: 'scholarskills',
-    capability_plugin_id: 'opl-scholarskills',
+    capability_plugin_id: 'mas-scholar-skills',
     workspace_sync_command_ref: 'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <workspace-root> --json',
     quest_sync_command_ref: 'opl connect sync-skills --domain scholarskills --scope quest --target-quest <quest-root> --json',
     authority_boundary: {

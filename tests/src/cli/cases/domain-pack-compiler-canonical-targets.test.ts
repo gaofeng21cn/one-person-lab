@@ -19,7 +19,7 @@ test('generated interfaces expose a family-defaults source for readiness drilldo
     'redcube_ai',
     'opl-meta-agent',
     'opl-bookforge',
-    'opl-scholarskills',
+    'mas-scholar-skills',
   ]) {
     assert.equal(
       report.reports.some((entry: { agent_id: string }) => entry.agent_id === agentId),
@@ -36,10 +36,10 @@ test('generated interfaces expose a family-defaults source for readiness drilldo
     true,
   );
   const scholarSkills = report.reports.find((entry: { agent_id: string }) =>
-    entry.agent_id === 'opl-scholarskills'
+    entry.agent_id === 'mas-scholar-skills'
   );
   if (!scholarSkills) {
-    throw new Error('opl-scholarskills generated interface report missing');
+    throw new Error('mas-scholar-skills generated interface report missing');
   }
   assert.equal(scholarSkills.generated_agent_interfaces.status, 'blocked');
   assert.equal(

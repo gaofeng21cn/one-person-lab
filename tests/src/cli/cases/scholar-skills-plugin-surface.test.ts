@@ -1,8 +1,8 @@
 import { assert, fs, loadFrameworkContracts, path, repoRoot, test } from '../helpers.ts';
 
-const pluginRoot = path.join(repoRoot, 'plugins', 'opl-scholarskills');
+const pluginRoot = path.join(repoRoot, 'plugins', 'mas-scholar-skills');
 const manifestPath = path.join(pluginRoot, '.codex-plugin', 'plugin.json');
-const skillRoot = path.join(pluginRoot, 'skills', 'opl-scholarskills');
+const skillRoot = path.join(pluginRoot, 'skills', 'mas-scholar-skills');
 const skillPath = path.join(skillRoot, 'SKILL.md');
 const displayGalleryDocPath = path.join(repoRoot, 'docs', 'active', 'opl-scholar-skills-display-gallery.md');
 
@@ -24,14 +24,14 @@ function assertContains(contents: string, token: string) {
   assert.equal(contents.includes(token), true, `Expected SKILL.md to include ${token}`);
 }
 
-test('OPL ScholarSkills plugin manifest exposes a repo-tracked skill pack', () => {
+test('MAS Scholar Skills plugin manifest exposes a repo-tracked skill pack', () => {
   const manifest = readJson(manifestPath);
 
-  assert.equal(manifest.name, 'opl-scholarskills');
+  assert.equal(manifest.name, 'mas-scholar-skills');
   assert.equal(manifest.version, '0.1.0');
   assert.equal(manifest.skills, './skills/');
   assert.equal(manifest.author.name, 'One Person Lab');
-  assert.equal(manifest.interface.displayName, 'OPL ScholarSkills');
+  assert.equal(manifest.interface.displayName, 'MAS Scholar Skills');
   assert.equal(manifest.interface.category, 'Productivity');
   assert.equal(manifest.interface.capabilities.includes('Skill'), true);
   assert.equal(manifest.interface.capabilities.includes('CLI'), true);
@@ -43,14 +43,14 @@ test('OPL ScholarSkills plugin manifest exposes a repo-tracked skill pack', () =
   assert.equal(fs.existsSync(skillPath), true);
 });
 
-test('OPL ScholarSkills SKILL frontmatter is discoverable by Codex', () => {
+test('MAS Scholar Skills SKILL frontmatter is discoverable by Codex', () => {
   const metadata = frontmatter(readSkill());
 
-  assert.match(metadata, /^name:\s+opl-scholarskills$/m);
-  assert.match(metadata, /^description:\s+".*OPL ScholarSkills.*MAS owner.*"$/m);
+  assert.match(metadata, /^name:\s+mas-scholar-skills$/m);
+  assert.match(metadata, /^description:\s+".*MAS Scholar Skills.*MAS owner.*"$/m);
 });
 
-test('OPL ScholarSkills SKILL covers contract modules, commands, and authority guardrails', () => {
+test('MAS Scholar Skills SKILL covers contract modules, commands, and authority guardrails', () => {
   const skill = readSkill();
   const contract = loadFrameworkContracts(repoRoot).scholarSkillsCapabilityModules;
 
@@ -89,12 +89,12 @@ test('OPL ScholarSkills SKILL covers contract modules, commands, and authority g
   }
 });
 
-test('OPL ScholarSkills exposes a Display gallery human review entry without claiming authority', () => {
+test('MAS Scholar Skills exposes a Display gallery human review entry without claiming authority', () => {
   const skill = readSkill();
   const displayGallery = fs.readFileSync(displayGalleryDocPath, 'utf8');
 
   for (const token of [
-    'OPL ScholarSkills Display Gallery',
+    'MAS Scholar Skills Display Gallery',
     'med-autoscience/docs/delivery/medical-display/examples/medical_display_gallery.pdf',
     'med-autoscience/docs/delivery/medical-display/examples/display_pack_gallery_quality_audit.md',
     'Gallery status、template count、renderer policy、style profile、palette ref 和 audit finding 都从 MAS-owned gallery status / manifest / quality audit 读取。',

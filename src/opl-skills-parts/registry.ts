@@ -20,7 +20,7 @@ export type SkillPackSpec = {
   project: string;
   label: string;
   plugin_name: string;
-  canonical_plugin_name: 'mas' | 'mag' | 'rca' | 'opl-meta-agent' | 'opl-bookforge' | 'opl-scholarskills';
+  canonical_plugin_name: 'mas' | 'mag' | 'rca' | 'opl-meta-agent' | 'opl-bookforge' | 'mas-scholar-skills';
   source_kind: SkillPackSourceKind;
   distribution_role: SkillPackDistributionRole;
   installer_kind: SkillPackInstallerKind;
@@ -105,7 +105,7 @@ export type SyncFamilySkillPack = InspectFamilySkillPack & {
 
 export const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
   ...STANDARD_AGENT_REGISTRY
-    .filter((entry) => entry.agent_id !== 'opl-scholarskills')
+    .filter((entry) => entry.agent_id !== 'mas-scholar-skills')
     .map((entry) => ({
       domain_id: entry.domain_id,
       module_id: entry.module_id,
@@ -121,10 +121,10 @@ export const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
   {
     domain_id: 'scholarskills',
     module_id: 'SCHOLARSKILLS',
-    project: 'opl-scholarskills',
-    label: 'OPL ScholarSkills',
-    plugin_name: 'opl-scholarskills',
-    canonical_plugin_name: 'opl-scholarskills',
+    project: 'mas-scholar-skills',
+    label: 'MAS Scholar Skills',
+    plugin_name: 'mas-scholar-skills',
+    canonical_plugin_name: 'mas-scholar-skills',
     source_kind: 'repo_plugin_installer',
     distribution_role: 'framework_capability_plugin_pack',
     installer_kind: 'node',
@@ -140,6 +140,8 @@ const DOMAIN_ALIAS_MAP = new Map<string, SkillPackSpec['domain_id']>([
   ['scholarskills', 'scholarskills'],
   ['scholar-skills', 'scholarskills'],
   ['scholar_skills', 'scholarskills'],
+  ['mas-scholar-skills', 'scholarskills'],
+  ['mas_scholar_skills', 'scholarskills'],
   ['opl-scholarskills', 'scholarskills'],
   ['opl_scholarskills', 'scholarskills'],
 ]);

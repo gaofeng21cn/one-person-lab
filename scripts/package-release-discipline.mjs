@@ -144,8 +144,8 @@ function validateManifest(manifest) {
   for (const [moduleId, entry] of Object.entries(modules)) {
     validateModule(moduleId, entry, failures);
   }
-  assertCondition(Object.hasOwn(modules, 'scholarskills'), 'package channel must include OPL ScholarSkills as a managed capability package', failures);
-  assertCondition(modules.scholarskills?.repo_name === 'opl-scholarskills', 'scholarskills package repo name drifted', failures);
+  assertCondition(Object.hasOwn(modules, 'scholarskills'), 'package channel must include MAS Scholar Skills as a managed capability package', failures);
+  assertCondition(modules.scholarskills?.repo_name === 'mas-scholar-skills', 'scholarskills package repo name drifted', failures);
   assertCondition(modules.scholarskills?.scope === 'framework_capability_package', 'scholarskills must remain a framework capability package, not a domain module', failures);
   assertCondition(modules.scholarskills?.current_install_update_source === 'package_channel', 'scholarskills must use package channel for ordinary installs and updates', failures);
   validateFrameworkCore(manifest.packages?.framework_core, failures);

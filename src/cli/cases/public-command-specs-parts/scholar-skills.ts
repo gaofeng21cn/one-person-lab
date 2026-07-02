@@ -343,7 +343,7 @@ export function buildScholarSkillsCommandSpecs(
   const specs: Record<string, CommandSpec> = {
     'scholar-skills list': {
       usage: 'opl scholar-skills list',
-      summary: 'List OPL ScholarSkills capability modules and their refs-only authority boundary.',
+      summary: 'List MAS Scholar Skills capability modules and their refs-only authority boundary.',
       examples: ['opl scholar-skills list --json'],
       group: 'scholar-skills',
       handler: (args) => {
@@ -353,7 +353,7 @@ export function buildScholarSkillsCommandSpecs(
     },
     'scholar-skills inspect': {
       usage: 'opl scholar-skills inspect --module <module_id>',
-      summary: 'Inspect one OPL ScholarSkills capability module descriptor.',
+      summary: 'Inspect one MAS Scholar Skills capability module descriptor.',
       examples: [
         'opl scholar-skills inspect --module opl.scholarskills.display --json',
         'opl scholar-skills inspect --id opl.scholarskills.display --json',

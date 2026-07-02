@@ -1,13 +1,13 @@
-# OPL ScholarSkills Capability Modules
+# MAS Scholar Skills Capability Modules
 
 Owner: `One Person Lab`
-Purpose: 说明 `OPL ScholarSkills` 能力模块库的机器入口、十大品牌模块关系、runtime environment bridge 和 domain-agent 消费边界。
+Purpose: 说明 `MAS Scholar Skills` 能力模块库的机器入口、十大品牌模块关系、runtime environment bridge 和 domain-agent 消费边界。
 State: `active_structural_baseline`
 Machine boundary: 本文是人读导航。机器真相以 `contracts/opl-framework/scholar-skills-capability-modules.json`、`src/scholar-skills.ts` 与 `opl scholar-skills * --json` readback 为准。
 
 ## 基本定位
 
-`OPL ScholarSkills` 是 OPL family 的学术能力模块库，不是第十一个 OPL 品牌模块。它给 MAS、MAG、RCA、OMA 或后续 Foundry Agent 提供一组可发现、可校验、可接入 OPL runtime env 的 `capability module` descriptor。
+`MAS Scholar Skills` 是 OPL family 的学术能力模块库，不是第十一个 OPL 品牌模块。它给 MAS、MAG、RCA、OMA 或后续 Foundry Agent 提供一组可发现、可校验、可接入 OPL runtime env 的 `capability module` descriptor。
 
 十大 OPL 品牌模块仍保持原职责：
 
@@ -66,16 +66,16 @@ opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact
 
 当 `materialize --emit-candidate-artifacts` 显式启用时，ScholarSkills 会调用十个 OPL-owned deterministic candidate artifact engine，为每个模块写出专业候选体、`input_requirements`、`validation_checks`、`engine_receipt_ref` 和 sha256 refs。Display 输出 SVG visual-plan candidate；Write/Review/Submit 输出 Markdown candidate；Tables/Stats/Omics/Lit/Data/Intake 输出 JSON structured candidate。该 engine 输出比 refs-only body 更接近可消费 artifact，但仍保持 `counts_as_paper_truth=false`、`counts_as_owner_receipt=false`、`can_authorize_publication_readiness=false`、`can_claim_quality_verdict=false`、`can_claim_artifact_authority=false`，不能替代 domain owner consumption。
 
-仓内还提供 repo-tracked Codex plugin surface：`plugins/opl-scholarskills/.codex-plugin/plugin.json` 与 `plugins/opl-scholarskills/skills/opl-scholarskills/SKILL.md`。该 skill pack 只是把 canonical contract、CLI readback 和 no-authority guard 暴露给 Codex discovery / sync layer；它不是第二真相源，也不能替代 `contracts/opl-framework/scholar-skills-capability-modules.json`、`src/scholar-skills.ts`、domain owner receipt、typed blocker、runtime evidence 或 paper artifact authority。
+仓内还提供 repo-tracked Codex plugin surface：`plugins/mas-scholar-skills/.codex-plugin/plugin.json` 与 `plugins/mas-scholar-skills/skills/mas-scholar-skills/SKILL.md`。该 skill pack 只是把 canonical contract、CLI readback 和 no-authority guard 暴露给 Codex discovery / sync layer；它不是第二真相源，也不能替代 `contracts/opl-framework/scholar-skills-capability-modules.json`、`src/scholar-skills.ts`、domain owner receipt、typed blocker、runtime evidence 或 paper artifact authority。
 
 ## Connect 同步与安装落点
 
 普通 OPL App 用户路径分两层：
 
-1. `opl system startup-maintenance --json` 由 App-managed runtime / startup-maintenance 通过 GHCR `one-person-lab-manifest` capability packages channel 自动安装或更新 `OPL ScholarSkills` package 到 OPL managed modules root（默认 `<OPL_STATE_DIR>/modules/opl-scholarskills`，或显式 `OPL_MODULES_ROOT/opl-scholarskills`）。这个 target 是 `framework_capability_package`，不是 `DOMAIN_MODULE_SPECS` 里的 domain module，也不会把 ScholarSkills 计入 OPL 品牌 agent module。普通 App / non-development 路径不维护 ScholarSkills 专属 git clone / pull source manager。
+1. `opl system startup-maintenance --json` 由 App-managed runtime / startup-maintenance 通过 GHCR `one-person-lab-manifest` capability packages channel 自动安装或更新 `MAS Scholar Skills` package 到 OPL managed modules root（默认 `<OPL_STATE_DIR>/modules/mas-scholar-skills`，或显式 `OPL_MODULES_ROOT/mas-scholar-skills`）。这个 target 是 `framework_capability_package`，不是 `DOMAIN_MODULE_SPECS` 里的 domain module，也不会把 ScholarSkills 计入 OPL 品牌 agent module。普通 App / non-development 路径不维护 ScholarSkills 专属 git clone / pull source manager。
 2. 具体论文 workspace / quest 需要调用 App action 或 CLI，把当前 managed package 里的 filtered skill pack 同步到该论文工作目录。App action 是 `scholarskills_workspace_sync` / `scholarskills_quest_sync`；CLI surface 是下面的 `opl connect sync-skills ... --target-*`。
 
-只有显式 `OPL_SCHOLARSKILLS_REPO_ROOT`、`OPL_MODULE_PATH_SCHOLARSKILLS` 或 Developer Mode local checkout 时，startup-maintenance 才把本地 checkout 作为开发者 source 观察，不自动覆盖。普通 App 用户默认走 GHCR package channel 自动安装 / 更新，并把 package marker 里的 `source_git.head_sha` 作为 workspace / quest sync receipt 的 source head。
+只有显式 `OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT`、`OPL_MODULE_PATH_SCHOLARSKILLS` 或 Developer Mode local checkout 时，startup-maintenance 才把本地 checkout 作为开发者 source 观察，不自动覆盖。普通 App 用户默认走 GHCR package channel 自动安装 / 更新，并把 package marker 里的 `source_git.head_sha` 作为 workspace / quest sync receipt 的 source head。
 
 ScholarSkills 的论文执行默认落点是 workspace / quest-local Codex discovery skill，而不是用户系统级 Codex skill registry，也不是 MAS project mirror。面向具体论文 workspace 或 quest 时，使用：
 
@@ -84,15 +84,15 @@ opl connect sync-skills --domain scholarskills --scope workspace --target-worksp
 opl connect sync-skills --domain scholarskills --scope quest --target-quest <quest-root> --json
 ```
 
-这会把 filtered skill pack 写入 `<target>/.codex/skills/opl-scholarskills/`，并生成 `.opl-install-receipt.json`，记录 source repo path、source HEAD、target scope/root、copy policy、copied/excluded roots 与 authority false flags。复制内容只包括 `SKILL.md` 以及必要 contracts/docs/gallery review refs；`.git`、`outputs`、`build`、`dist`、`node_modules`、`render-cache` 和 heavy gallery assets/intermediate files 不进入目标 workspace / quest。Gallery 的人审文档与 lightweight manifest 应随 `opl-scholarskills` package 分发；重型生成中间结果、render cache 和批量图片资产不得进入 git/package 默认同步面。
+这会把 filtered skill pack 写入 `<target>/.codex/skills/mas-scholar-skills/`，并生成 `.opl-install-receipt.json`，记录 source repo path、source HEAD、target scope/root、copy policy、copied/excluded roots 与 authority false flags。复制内容只包括 `SKILL.md` 以及必要 contracts/docs/gallery review refs；`.git`、`outputs`、`build`、`dist`、`node_modules`、`render-cache` 和 heavy gallery assets/intermediate files 不进入目标 workspace / quest。Gallery 的人审文档与 lightweight manifest 应随 `mas-scholar-skills` package 分发；重型生成中间结果、render cache 和批量图片资产不得进入 git/package 默认同步面。
 
 兼容的 project mirror 仍保留给开发和 review，但必须显式请求：
 
 ```text
-<med-autoscience-repo>/plugins/opl-scholarskills/
+<med-autoscience-repo>/plugins/mas-scholar-skills/
 ```
 
-该目录是 OPL-managed project-local mirror，只承载 `opl-scholarskills` plugin manifest 与 `SKILL.md`，用于开发、review 和 MAS project-local 能力面审阅；它是 deprecated / non-default paper execution path。它不是 MAS domain truth、不是 MAS owner receipt、不是 typed blocker、不是 runtime queue，也不是 publication/package authority。MAS 仓内 `.codex/` 已退役，project scope 不得写入 MAS `.codex/skills`。裸 `opl connect sync-skills --domain scholarskills --json` / `opl connect sync-skills --json` 不会再隐式写 MAS 程序仓 mirror；没有 workspace/quest target 时只返回 skipped/readback。
+该目录是 OPL-managed project-local mirror，只承载 `mas-scholar-skills` plugin manifest 与 `SKILL.md`，用于开发、review 和 MAS project-local 能力面审阅；它是 deprecated / non-default paper execution path。它不是 MAS domain truth、不是 MAS owner receipt、不是 typed blocker、不是 runtime queue，也不是 publication/package authority。MAS 仓内 `.codex/` 已退役，project scope 不得写入 MAS `.codex/skills`。裸 `opl connect sync-skills --domain scholarskills --json` / `opl connect sync-skills --json` 不会再隐式写 MAS 程序仓 mirror；没有 workspace/quest target 时只返回 skipped/readback。
 
 系统级 Codex 注册仍保留为显式开发者路径：
 
@@ -131,7 +131,7 @@ MAS current_owner_delta
 
 ## Display Gallery 人审入口
 
-`opl.scholarskills.display` 的人审 gallery 入口仍由 MAS Display Pack 持有。OPL 侧入口文档是 [OPL ScholarSkills Display Gallery](./opl-scholar-skills-display-gallery.md)，它只引用这些 MAS-owned review refs，不复制或改写 gallery truth：
+`opl.scholarskills.display` 的人审 gallery 入口仍由 MAS Display Pack 持有。OPL 侧入口文档是 [MAS Scholar Skills Display Gallery](./opl-scholar-skills-display-gallery.md)，它只引用这些 MAS-owned review refs，不复制或改写 gallery truth：
 
 - `med-autoscience/docs/delivery/medical-display/examples/medical_display_gallery.pdf`
 - `med-autoscience/docs/delivery/medical-display/examples/medical_display_gallery_reference.md`
@@ -140,7 +140,7 @@ MAS current_owner_delta
 - `med-autoscience/docs/delivery/medical-display/examples/gallery_manifest.json`
 - `med-autoscience/docs/delivery/medical-display/examples/medical_display_gallery_assets/gallery_manifest.json`
 
-这些 refs 证明有人可审的 Display gallery surface 存在；它们不证明 visual parity 完成、publication-ready、owner accepted 或 MAS paper artifact ready。当前 MAS gallery status 仍需按 MAS Display Pack owner gate 与 fresh artifact inspection 判定，OPL ScholarSkills 只能把它作为 `visual_audit_or_gallery_preview_ref` 的下游人审入口。
+这些 refs 证明有人可审的 Display gallery surface 存在；它们不证明 visual parity 完成、publication-ready、owner accepted 或 MAS paper artifact ready。当前 MAS gallery status 仍需按 MAS Display Pack owner gate 与 fresh artifact inspection 判定，MAS Scholar Skills 只能把它作为 `visual_audit_or_gallery_preview_ref` 的下游人审入口。
 
 ## CLI Readback
 

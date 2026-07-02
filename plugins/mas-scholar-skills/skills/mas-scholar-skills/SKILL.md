@@ -1,11 +1,11 @@
 ---
-name: opl-scholarskills
-description: "Operate OPL ScholarSkills as a Codex skill pack for repo-tracked scholarly capability modules, standard opl scholar-skills CLI readbacks, refs-only materialized candidate packages, and MAS owner-gated authority boundaries. Use when Codex needs ScholarSkills module guidance without claiming runtime, domain, quality, artifact, owner receipt, or production authority."
+name: mas-scholar-skills
+description: "Operate MAS Scholar Skills as a Codex skill pack for repo-tracked scholarly capability modules, standard opl scholar-skills CLI readbacks, refs-only materialized candidate packages, and MAS owner-gated authority boundaries. Use when Codex needs ScholarSkills module guidance without claiming runtime, domain, quality, artifact, owner receipt, or production authority."
 ---
 
-# OPL ScholarSkills
+# MAS Scholar Skills
 
-Use OPL ScholarSkills as a repo-tracked Codex entry for scholarly capability modules. Treat `contracts/opl-framework/scholar-skills-capability-modules.json` and `src/scholar-skills.ts` as the source of truth.
+Use MAS Scholar Skills as a repo-tracked Codex entry for scholarly capability modules. Treat `contracts/opl-framework/scholar-skills-capability-modules.json` and `src/scholar-skills.ts` as the source of truth.
 
 ## Boundary
 
@@ -15,7 +15,7 @@ Use OPL ScholarSkills as a repo-tracked Codex entry for scholarly capability mod
 
 ## Modules
 
-The ten OPL ScholarSkills modules are:
+The ten MAS Scholar Skills modules are:
 
 - `opl.scholarskills.display` - Scholar Display
 - `opl.scholarskills.tables` - Scholar Tables

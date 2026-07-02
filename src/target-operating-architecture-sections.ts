@@ -112,14 +112,14 @@ export function validateFoundryAgentOsStandard(filePath: string, value: unknown)
       })
     : [];
   const frameworkCapabilityPackageIds = frameworkCapabilityPackages.map((entry) => entry.agent_id);
-  if (!frameworkCapabilityPackageIds.includes('opl-scholarskills')) {
-    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.framework_capability_packages must include opl-scholarskills.', {
+  if (!frameworkCapabilityPackageIds.includes('mas-scholar-skills')) {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.framework_capability_packages must include mas-scholar-skills.', {
       file: filePath,
       field: 'foundry_agent_os_standard.framework_capability_packages',
     });
   }
   for (const entry of frameworkCapabilityPackages) {
-    if (entry.agent_id === 'opl-scholarskills' && entry.package_scope !== 'framework_capability_package') {
+    if (entry.agent_id === 'mas-scholar-skills' && entry.package_scope !== 'framework_capability_package') {
       throw new FrameworkContractError('contract_shape_invalid', 'ScholarSkills must stay a framework capability package.', {
         file: filePath,
         field: 'foundry_agent_os_standard.framework_capability_packages',

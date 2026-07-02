@@ -52,15 +52,15 @@ function writePackagedModuleFixture(input: {
     );
   } else if (input.moduleId === 'scholarskills') {
     fs.mkdirSync(path.join(input.root, '.codex-plugin'), { recursive: true });
-    fs.mkdirSync(path.join(input.root, 'skills', 'opl-scholarskills'), { recursive: true });
+    fs.mkdirSync(path.join(input.root, 'skills', 'mas-scholar-skills'), { recursive: true });
     fs.writeFileSync(
       path.join(input.root, '.codex-plugin', 'plugin.json'),
-      JSON.stringify({ name: 'opl-scholarskills', skills: './skills/' }, null, 2),
+      JSON.stringify({ name: 'mas-scholar-skills', skills: './skills/' }, null, 2),
       'utf8',
     );
     fs.writeFileSync(
-      path.join(input.root, 'skills', 'opl-scholarskills', 'SKILL.md'),
-      `---\nname: opl-scholarskills\ndescription: opl-scholarskills fixture.\n---\n\n# opl-scholarskills\n`,
+      path.join(input.root, 'skills', 'mas-scholar-skills', 'SKILL.md'),
+      `---\nname: mas-scholar-skills\ndescription: mas-scholar-skills fixture.\n---\n\n# mas-scholar-skills\n`,
       'utf8',
     );
     fs.mkdirSync(path.join(input.root, 'contracts'), { recursive: true });
@@ -215,9 +215,9 @@ function writeManagedUpdateModuleFixtures(homeRoot: string) {
     },
     {
       moduleId: 'scholarskills',
-      repoName: 'opl-scholarskills',
-      pluginName: 'opl-scholarskills',
-      skillName: 'opl-scholarskills',
+      repoName: 'mas-scholar-skills',
+      pluginName: 'mas-scholar-skills',
+      skillName: 'mas-scholar-skills',
       headSha: 'scholarskills-head-sha',
       previousHeadSha: 'scholarskills-previous-head-sha',
     },
@@ -234,9 +234,9 @@ function writeManagedUpdateModuleFixtures(homeRoot: string) {
 
 type ManagedUpdateModuleFixture = {
   moduleId: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge' | 'scholarskills';
-  repoName: 'med-autoscience' | 'med-autogrant' | 'redcube-ai' | 'opl-meta-agent' | 'opl-bookforge' | 'opl-scholarskills';
-  pluginName: 'mas' | 'mag' | 'rca' | 'opl-meta-agent' | 'opl-bookforge' | 'opl-scholarskills';
-  skillName: 'mas' | 'mag' | 'rca' | 'opl-meta-agent' | 'opl-bookforge' | 'opl-scholarskills';
+  repoName: 'med-autoscience' | 'med-autogrant' | 'redcube-ai' | 'opl-meta-agent' | 'opl-bookforge' | 'mas-scholar-skills';
+  pluginName: 'mas' | 'mag' | 'rca' | 'opl-meta-agent' | 'opl-bookforge' | 'mas-scholar-skills';
+  skillName: 'mas' | 'mag' | 'rca' | 'opl-meta-agent' | 'opl-bookforge' | 'mas-scholar-skills';
   sourceHeadSha: string;
 };
 
@@ -271,16 +271,16 @@ function writeModuleSourceFiles(root: string, module: ManagedUpdateModuleFixture
     return;
   }
   if (module.moduleId === 'scholarskills') {
-    fs.mkdirSync(path.join(root, 'skills', 'opl-scholarskills'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'skills', 'mas-scholar-skills'), { recursive: true });
     fs.mkdirSync(path.join(root, '.codex-plugin'), { recursive: true });
     fs.writeFileSync(
       path.join(root, '.codex-plugin', 'plugin.json'),
-      JSON.stringify({ name: 'opl-scholarskills', skills: './skills/' }, null, 2),
+      JSON.stringify({ name: 'mas-scholar-skills', skills: './skills/' }, null, 2),
       'utf8',
     );
     fs.writeFileSync(
-      path.join(root, 'skills', 'opl-scholarskills', 'SKILL.md'),
-      `---\nname: opl-scholarskills\ndescription: ScholarSkills ${label}.\n---\n\n# ScholarSkills ${label}\n`,
+      path.join(root, 'skills', 'mas-scholar-skills', 'SKILL.md'),
+      `---\nname: mas-scholar-skills\ndescription: ScholarSkills ${label}.\n---\n\n# ScholarSkills ${label}\n`,
       'utf8',
     );
     fs.mkdirSync(path.join(root, 'contracts'), { recursive: true });
@@ -475,9 +475,9 @@ test('update apply for capability packages executes the managed adapter and reco
     },
     {
       moduleId: 'scholarskills',
-      repoName: 'opl-scholarskills',
-      pluginName: 'opl-scholarskills',
-      skillName: 'opl-scholarskills',
+      repoName: 'mas-scholar-skills',
+      pluginName: 'mas-scholar-skills',
+      skillName: 'mas-scholar-skills',
       sourceHeadSha: 'scholarskills-updated-head-sha',
     },
   ];
@@ -758,7 +758,7 @@ exit 2
       'mas-updated-head-sha',
     );
     assert.equal(
-      JSON.parse(fs.readFileSync(path.join(moduleEnv.OPL_MODULES_ROOT, 'opl-scholarskills', 'opl-runtime-module.json'), 'utf8'))
+      JSON.parse(fs.readFileSync(path.join(moduleEnv.OPL_MODULES_ROOT, 'mas-scholar-skills', 'opl-runtime-module.json'), 'utf8'))
         .source_git.head_sha,
       'scholarskills-updated-head-sha',
     );
@@ -849,9 +849,9 @@ test('update rollback for capability packages restores recorded previous package
     },
     {
       moduleId: 'scholarskills',
-      repoName: 'opl-scholarskills',
-      pluginName: 'opl-scholarskills',
-      skillName: 'opl-scholarskills',
+      repoName: 'mas-scholar-skills',
+      pluginName: 'mas-scholar-skills',
+      skillName: 'mas-scholar-skills',
       sourceHeadSha: 'scholarskills-rollback-current-sha',
     },
   ];
@@ -919,12 +919,12 @@ exit 2
       'mas-rollback-current-sha',
     );
     assert.equal(
-      JSON.parse(fs.readFileSync(path.join(moduleEnv.OPL_MODULES_ROOT, 'opl-scholarskills', 'opl-runtime-module.json'), 'utf8'))
+      JSON.parse(fs.readFileSync(path.join(moduleEnv.OPL_MODULES_ROOT, 'mas-scholar-skills', 'opl-runtime-module.json'), 'utf8'))
         .source_git.head_sha,
       'scholarskills-head-sha',
     );
     assert.equal(
-      JSON.parse(fs.readFileSync(path.join(`${moduleEnv.OPL_MODULES_ROOT}/opl-scholarskills.previous`, 'opl-runtime-module.json'), 'utf8'))
+      JSON.parse(fs.readFileSync(path.join(`${moduleEnv.OPL_MODULES_ROOT}/mas-scholar-skills.previous`, 'opl-runtime-module.json'), 'utf8'))
         .source_git.head_sha,
       'scholarskills-rollback-current-sha',
     );
