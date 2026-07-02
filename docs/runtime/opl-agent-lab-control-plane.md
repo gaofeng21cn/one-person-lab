@@ -76,6 +76,36 @@ Agent Lab 可以持有：
 
 当 Agent Lab 展示 MAS/MAG/RCA 的质量、进度或交付状态时，只能引用 domain-owned eval/proof/receipt/artifact locator。它不能把 provider completion、harness pass、descriptor aligned、agent-lab score 或 OPL operator judgment 写成 domain ready verdict。
 
+## FeedbackOps 显式用户反馈入口
+
+`FeedbackOps` 是所有标准 OPL agent 共用的显式用户反馈入口。当用户对 MAS、MAG、RCA、BookForge、ScholarSkills 或其它 agent 的交付结果提出明确建议、导师意见、审稿意见或质量缺口时，OPL 应先把它记录为 `opl_delivery_feedback_event`，再路由到 `target_agent_feedback_external_suite`。这个入口是事件和 refs 投影，不是新的目标仓 truth store。
+
+最小链路是：
+
+```text
+explicit user feedback
+  -> opl feedback submit
+  -> target_agent_feedback_external_suite
+  -> OMA developer work-order candidate
+  -> existing opl work-order execute when Developer Mode route allows
+  -> target owner receipt / typed blocker / human gate / completion ref
+  -> opl feedback reconcile + App action queue projection
+```
+
+反馈捕获不要求 Developer Mode，因为记录用户明确反馈本身不改变目标仓、论文、图表或质量结论。Developer Mode 只约束 repo 修复、work-order 执行、promotion 和 closeout 路径；没有 `active_direct` 或 `direct_repo_fix` route 时，FeedbackOps 只能投影为 `queued_requires_developer_mode`。即使 work-order 可执行，OPL 也只调用既有 `opl work-order execute` 原语，不创建第二套 runner、runtime queue 或 provider queue。
+
+FeedbackOps 明确不持有：
+
+- target-domain truth；
+- artifact body；
+- domain memory body；
+- publication、fundability、visual quality 或 export verdict；
+- owner receipt；
+- typed blocker body；
+- human gate body。
+
+这些结论只能由目标 agent owner surface 返回。OPL FeedbackOps 只保留 event id、idempotency key、delivery ref、feedback ref、external suite ref、developer work-order candidate ref、completion ref、blocker ref、状态桶和 App action-queue refs。
+
 当 Agent Lab 检查标准 Foundry Agent stage 时，必须把 `domain_stage_completion_policy` 当成 admission / conformance 输入。合规 stage 的默认闭环是：stage executor 产出工作结果，domain stage owner 在 stage 内做内容完成判断并输出标准 closeout packet，OPL runtime 只消费 packet 来记录 attempt、执行 next-stage transition 和投影 next owner delta。Agent Lab 可以检查 policy ref、closeout packet ref、completion owner、accepted outcome、accepted owner receipt / typed blocker / human gate / route-back refs 和 forbidden authority flags；它不能自己判断内容是否足够完成，也不能把 provider completion、file presence、suite pass、conformance pass 或 scorecard pass 当作 domain stage closeout。
 
 Agent Lab 对这类错误必须输出 blocker，而不是把它们降级为 advisory warning：缺失 `stage_completion_policy_ref`、`surface_kind` 不是 `domain_stage_completion_policy`、`completion_judgment_owner` 不是 `domain_stage`、`closeout_packet_required=false`、`provider_completion_is_domain_completion=true`、`opl_content_judgment_allowed=true`、`next_stage_transition_owner` 不是 `opl_runtime`、required outcomes 不含 completed / wait-owner / route-back / blocked / rejected，或 accepted closeout refs 不支持 owner receipt、typed blocker、human gate 和 route-back。这个 blocker 是标准 agent conformance blocker，不是目标 domain owner receipt，也不授权 OPL 写 domain truth。

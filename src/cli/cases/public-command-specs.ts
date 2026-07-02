@@ -56,6 +56,7 @@ import type { FrameworkContracts } from '../../types.ts';
 import { buildPublicSystemCommandSpecs } from './system-public-command-specs.ts';
 import { buildPublicAgentLabCommandSpecs } from './agent-lab-public-command-specs.ts';
 import { buildPublicWorkOrderCommandSpecs } from './work-order-public-command-specs.ts';
+import { buildPublicFeedbackOpsCommandSpecs } from './feedbackops-public-command-specs.ts';
 import { buildPublicRuntimeCommandSpecs } from './runtime-public-command-specs.ts';
 import {
   buildPublicEngineActionPayload,
@@ -140,6 +141,7 @@ export function buildPublicCommandSpecs(
   const systemCommandSpecs = buildPublicSystemCommandSpecs(getContracts);
   const agentLabCommandSpecs = buildPublicAgentLabCommandSpecs();
   const workOrderCommandSpecs = buildPublicWorkOrderCommandSpecs();
+  const feedbackOpsCommandSpecs = buildPublicFeedbackOpsCommandSpecs();
   const runtimeCommandSpecs = buildPublicRuntimeCommandSpecs(commandSpecs);
   const brandCommandSpecs = buildBrandCommandSpecs(getContracts);
   const connectCommandSpecs = buildConnectCommandSpecs(commandSpecs, systemCommandSpecs);
@@ -234,6 +236,7 @@ export function buildPublicCommandSpecs(
     ...connectCommandSpecs,
     ...updateCommandSpecs,
     ...workOrderCommandSpecs,
+    ...feedbackOpsCommandSpecs,
     ...okfCommandSpecs,
     ...scholarSkillsCommandSpecs,
     'framework locate': {
