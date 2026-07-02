@@ -45,6 +45,33 @@ export const MAS_SCHOLAR_SKILLS_PROFILE_PACKS: MasScholarSkillsPack[] = [
     default_by_profile: true,
     missing_source_status: 'source-missing',
   },
+  {
+    pack_id: 'medical-research-write',
+    skill_dir: 'medical-research-write',
+    label: 'Medical research writing specialist',
+    role: 'specialist_entry',
+    required_by_profile: false,
+    default_by_profile: true,
+    missing_source_status: 'source-missing',
+  },
+  {
+    pack_id: 'medical-research-review',
+    skill_dir: 'medical-research-review',
+    label: 'Medical research review specialist',
+    role: 'specialist_entry',
+    required_by_profile: false,
+    default_by_profile: true,
+    missing_source_status: 'source-missing',
+  },
+  {
+    pack_id: 'medical-research-figure',
+    skill_dir: 'medical-research-figure',
+    label: 'Medical research figure specialist',
+    role: 'specialist_entry',
+    required_by_profile: false,
+    default_by_profile: true,
+    missing_source_status: 'source-missing',
+  },
 ];
 
 function sourceSkillEntryPath(pluginSourcePath: string, skillDir: string) {
