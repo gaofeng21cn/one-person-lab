@@ -96,7 +96,7 @@ MAS Scholar Skills 同步模型：
 
 - `opl connect sync-skills --domain scholarskills` 继续兼容旧入口；无 workspace/quest target 时只输出 skipped/readback，不把 skill 写入 MAS repo 或系统 Codex。
 - MAS profile/overlay 决定 required/default skill pack；Connect 只按显式 registry/profile manifest 分发、安装、同步和发现，不判断 MAS 质量、paper truth、owner receipt、typed blocker 或 runtime queue。
-- 当前默认 medical-paper professional specialist pack 是 `medical-research-lit`、`medical-manuscript-writing`、`medical-manuscript-review`、`medical-figure-design`。MAS 的 stage 主提示词不由 Connect 同步；Connect 只同步外部专业 Skill 和资源连接能力。source repo 若只有 `mas-scholar-skills` 总入口，所有未物化 specialist pack 必须在 manifest 中显示 `available-but-not-materialized` 或 `source-missing`，不得靠目录启发式猜测。
+- 当前默认 medical-paper professional specialist pack 是 `medical-research-lit`、`medical-manuscript-writing`、`medical-manuscript-review`、`medical-figure-design`、`medical-statistical-review`、`medical-table-design`、`medical-submission-prep`。MAS 的 stage 主提示词不由 Connect 同步；Connect 只同步外部专业 Skill 和资源连接能力。source repo 若只有 `mas-scholar-skills` 总入口，所有未物化 specialist pack 必须在 manifest 中显示 `available-but-not-materialized` 或 `source-missing`，不得靠目录启发式猜测。
 - workspace/quest scope 的默认落点是 `<target>/.codex/skills/`；project scope 仍是显式、非默认、deprecated-for-paper-execution 的 MAS project-local mirror；codex scope 仍需显式请求。
 - 这些 Skill 包是 MAS 可消费的同步能力源，不是 MAS domain truth、runtime owner gate、owner receipt、typed blocker、artifact authority 或 publication/export readiness。
 

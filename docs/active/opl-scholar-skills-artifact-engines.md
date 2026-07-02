@@ -7,7 +7,7 @@ Machine boundary: 本文是人读导航。机器真相以 `src/scholar-skills.ts
 
 ## 品牌模块边界
 
-本能力属于 OPL-owned ScholarSkills capability library，不新增第十一个 OPL 品牌模块。
+本能力属于 OPL-owned MAS Scholar Skills 外置增强包，不新增第十一个 OPL 品牌模块，也不替代 MAS 专业 Skill 或 MAS owner gate。
 
 - 主模块：`Pack` 承载 candidate package、manifest、body paths 和 sha256。
 - 协同模块：`Atlas` 发现 module descriptor，`Runway` 承载 invocation / execution receipt candidate 形状，`Vault` 承载 refs、lineage 和 evidence refs，`Console` 读取 CLI JSON readback。
@@ -66,3 +66,5 @@ opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact
 - runtime DB、runtime queue、MAS/Yang 或 domain repo 写入。
 
 `artifact_body_written=true` 只表示当前 `output-root` 内写了非权威 candidate body 文件；它不改变 `can_mutate_artifact_body=false`，也不授权任何 domain-owned artifact mutation。
+
+Candidate engine 与七个 `medical-*` 专业 Skill 是两层：engine 提供 deterministic refs-only body 和 receipt metadata；`medical-manuscript-writing`、`medical-manuscript-review`、`medical-figure-design`、`medical-research-lit`、`medical-statistical-review`、`medical-table-design`、`medical-submission-prep` 提供 Codex 可执行的专业 playbook。OPL Connect 负责把这些 Skill 同步到 workspace / quest discovery path；MAS 负责消费、采纳或 route-back。
