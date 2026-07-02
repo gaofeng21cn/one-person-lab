@@ -145,7 +145,7 @@ test('family-runtime paper-autonomy supervisor readback returns only identity-bo
     assert.equal(readback.authority_boundary.opl_can_create_domain_typed_blocker, false);
     assert.equal(readback.authority_boundary.readback_can_execute_transition, false);
     assert.equal(readback.substrate_modules.runway, true);
-    assert.equal(readback.substrate_modules.vault, true);
+    assert.equal(readback.substrate_modules.ledger, true);
     assert.equal(readback.substrate_modules.console, true);
 
     fs.writeFileSync(identityPath, JSON.stringify({

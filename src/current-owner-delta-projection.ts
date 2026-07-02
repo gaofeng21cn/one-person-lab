@@ -406,7 +406,7 @@ function auditSidecarPolicy(input: {
   return {
     surface_kind: 'opl_audit_sidecar_policy',
     sidecar_id: 'audit_sidecar_policy',
-    role: 'passive_evidence_vault_and_drilldown',
+    role: 'passive_evidence_ledger_and_drilldown',
     default_planning_role: 'never_default_planning_root_until_folded_into_current_owner_delta',
     raw_worklist_can_generate_default_next_action: false,
     raw_evidence_can_generate_default_next_action: false,
@@ -636,7 +636,7 @@ function buildCurrentOwnerDeltaProjection(input: {
     audit_sidecar_policy: auditSidecar,
     audit_tail_policy:
       'raw_worklist_raw_evidence_replay_typed_blocker_group_private_residue_are_passive_until_folded',
-    evidence_vault_policy: 'record_everything_plan_from_nothing',
+    evidence_ledger_policy: 'record_everything_plan_from_nothing',
     delta_id: [
       'current-owner-delta',
       sanitizeIdPart(domain),
@@ -727,7 +727,7 @@ function buildCurrentOwnerDeltaProjection(input: {
       typed_blocker_group_can_drive_default_planning: false,
       private_residue_inventory_can_drive_default_planning: false,
       audit_tail_can_drive_default_planning: false,
-      evidence_vault_event_is_progress_claim: false,
+      evidence_ledger_event_is_progress_claim: false,
       blocked_refs_only_can_drive_default_planning: false,
     },
   };

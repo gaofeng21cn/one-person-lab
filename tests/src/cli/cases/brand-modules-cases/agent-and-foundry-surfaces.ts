@@ -139,7 +139,7 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying OPL bra
     assert.equal('ordinary_frontdoor' in output, false);
     assert.deepEqual(
       output.spine.map((entry: { object: string }) => entry.object),
-      ['workspace', 'work', 'stage', 'run', 'vault', 'handoff', 'connect'],
+      ['workspace', 'work', 'stage', 'run', 'ledger', 'handoff', 'connect'],
     );
     assert.deepEqual(
       output.peers.map((entry: { agent_id: string }) => entry.agent_id),

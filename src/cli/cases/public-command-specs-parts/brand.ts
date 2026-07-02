@@ -33,11 +33,25 @@ export function buildBrandCommandSpecs(
     ...buildBrandModuleSurfaceSpecs(getContracts, 'pack', 'brand-pack'),
     ...buildBrandModuleSurfaceSpecs(getContracts, 'stagecraft', 'brand-stagecraft'),
     ...buildBrandModuleSurfaceSpecs(getContracts, 'runway', 'brand-runway'),
-    ...buildBrandModuleSurfaceSpecs(getContracts, 'vault', 'brand-vault'),
+    ...buildBrandModuleSurfaceSpecs(getContracts, 'ledger', 'brand-ledger'),
     ...buildBrandModuleSurfaceSpecs(getContracts, 'console', 'brand-console'),
     ...buildBrandModuleSurfaceSpecs(getContracts, 'foundry-lab', 'brand-foundry-lab'),
     ...buildBrandModuleSurfaceSpecs(getContracts, 'connect', 'brand-connect'),
   };
+  const vaultAliasSpecs = Object.fromEntries(
+    Object.entries(brandModuleSurfaceSpecs)
+      .filter(([command]) => command.startsWith('ledger '))
+      .map(([command, spec]) => [
+        command.replace(/^ledger/, 'vault'),
+        {
+          ...spec,
+          usage: spec.usage.replace('opl ledger', 'opl vault'),
+          summary: `Deprecated alias for ${spec.usage}; OPL Ledger is the canonical evidence module.`,
+          examples: spec.examples.map((example) => example.replace('opl ledger', 'opl vault')),
+          help_surface: 'migration_compatibility' as const,
+        },
+      ]),
+  );
 
   const brandCommandSpecs: Record<string, CommandSpec> = {
     ...buildBrandPackCommandSpecs(),
@@ -121,6 +135,7 @@ export function buildBrandCommandSpecs(
     },
     ...buildBrandOperatingModelCommandSpecs(getContracts),
     ...brandModuleSurfaceSpecs,
+    ...vaultAliasSpecs,
     'agents modules list': {
       usage: 'opl agents modules list',
       summary: 'List domain-agent internal brand-module spines without making them OPL platform modules.',

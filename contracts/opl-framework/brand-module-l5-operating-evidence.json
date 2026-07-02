@@ -160,7 +160,7 @@
     },
     {
       "class_id": "domain_authority_false_boundary",
-      "definition": "OPL modules, Vault, Console, Runway, Pack, and capability registry projections all prove false authority flags for domain truth, artifact authority, memory body, owner receipt, typed blocker, and quality/export verdicts.",
+      "definition": "OPL modules, Ledger, Console, Runway, Pack, and capability registry projections all prove false authority flags for domain truth, artifact authority, memory body, owner receipt, typed blocker, and quality/export verdicts.",
       "accepted_ref_shapes": [
         "false_authority_guard_ref",
         "negative_guard_ref",
@@ -1292,35 +1292,35 @@
       ]
     },
     {
-      "module_id": "vault",
-      "brand_name": "OPL Vault",
+      "module_id": "ledger",
+      "brand_name": "OPL Ledger",
       "current_level": "L4_structural_baseline",
       "l5_completion_status": "evidence_required",
       "l5_can_be_claimed": false,
       "immediate_enabling_surfaces": [
-        "vault_restore_replay_gate",
-        "vault_no_regression_gate",
-        "vault_lineage_retention_gate"
+        "ledger_restore_replay_gate",
+        "ledger_no_regression_gate",
+        "ledger_lineage_retention_gate"
       ],
       "evidence_requirements": [
         {
           "class_id": "live_user_path",
-          "owner": "OPL Vault owner",
-          "owner_route_ref": "opl-owner-route:brand-module/vault/live_user_path/opl-framework",
-          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:vault",
+          "owner": "OPL Ledger owner",
+          "owner_route_ref": "opl-owner-route:brand-module/ledger/live_user_path/opl-framework",
+          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:ledger",
           "current_state": "satisfied",
           "evidence_refs": [
-            "user_path_evidence_ref:opl-vault/status/valid-l4-module-surface-20260614T120409Z",
-            "operator_evidence_ref:opl-vault/doctor/checks-pass-authority-boundary-false-20260614T120409Z"
+            "user_path_evidence_ref:opl-ledger/status/valid-l4-module-surface-20260614T120409Z",
+            "operator_evidence_ref:opl-ledger/doctor/checks-pass-authority-boundary-false-20260614T120409Z"
           ],
           "owner_acceptance_refs": [
-            "owner_acceptance_ref:opl-brand-l5/vault/live_user_path/opl-brand-owner-accepted-20260615"
+            "owner_acceptance_ref:opl-brand-l5/ledger/live_user_path/opl-brand-owner-accepted-20260615"
           ]
         },
         {
           "class_id": "ordinary_app_experience",
           "owner": "OPL Framework and App product owners",
-          "owner_route_ref": "opl-owner-route:brand-module/vault/ordinary_app_experience/app-release-owner",
+          "owner_route_ref": "opl-owner-route:brand-module/ledger/ordinary_app_experience/app-release-owner",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab-app",
           "current_state": "satisfied",
           "evidence_refs": [
@@ -1331,137 +1331,137 @@
         },
         {
           "class_id": "cross_agent_scaleout",
-          "owner": "OPL Vault owner",
-          "owner_route_ref": "opl-owner-route:brand-module/vault/cross_agent_scaleout/opl-framework",
-          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:vault",
+          "owner": "OPL Ledger owner",
+          "owner_route_ref": "opl-owner-route:brand-module/ledger/cross_agent_scaleout/opl-framework",
+          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:ledger",
           "current_state": "open",
           "blocker_refs": [
-            "typed-blocker:opl-brand-l5/vault/cross_agent_scaleout/owner-evidence-needed-20260612"
+            "typed-blocker:opl-brand-l5/ledger/cross_agent_scaleout/owner-evidence-needed-20260612"
           ]
         },
         {
           "class_id": "long_soak_recovery",
-          "owner": "OPL Vault owner",
-          "owner_route_ref": "opl-owner-route:brand-module/vault/long_soak_recovery/opl-framework",
-          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:vault",
+          "owner": "OPL Ledger owner",
+          "owner_route_ref": "opl-owner-route:brand-module/ledger/long_soak_recovery/opl-framework",
+          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:ledger",
           "current_state": "open",
           "blocker_refs": [
-            "typed-blocker:opl-brand-l5/vault/long_soak_recovery/owner-evidence-needed-20260612"
+            "typed-blocker:opl-brand-l5/ledger/long_soak_recovery/owner-evidence-needed-20260612"
           ]
         },
         {
           "class_id": "release_install_evidence",
-          "owner": "OPL Vault owner",
-          "owner_route_ref": "opl-owner-route:brand-module/vault/release_install_evidence/opl-framework",
-          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:vault",
+          "owner": "OPL Ledger owner",
+          "owner_route_ref": "opl-owner-route:brand-module/ledger/release_install_evidence/opl-framework",
+          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:ledger",
           "current_state": "open",
           "blocker_refs": [
-            "typed-blocker:opl-brand-l5/vault/release_install_evidence/owner-evidence-needed-20260612"
+            "typed-blocker:opl-brand-l5/ledger/release_install_evidence/owner-evidence-needed-20260612"
           ]
         },
         {
           "class_id": "operator_repair_loop",
-          "owner": "OPL Vault owner",
-          "owner_route_ref": "opl-owner-route:brand-module/vault/operator_repair_loop/opl-framework",
-          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:vault",
+          "owner": "OPL Ledger owner",
+          "owner_route_ref": "opl-owner-route:brand-module/ledger/operator_repair_loop/opl-framework",
+          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:ledger",
           "current_state": "satisfied",
           "evidence_refs": [
-            "repair_loop_ref:opl-vault/operator-repair-loop/current-owner-safe-action-readout-20260615",
+            "repair_loop_ref:opl-ledger/operator-repair-loop/current-owner-safe-action-readout-20260615",
             "current_owner_delta_ref:opl-framework/readiness-current-owner-delta-default-root",
-            "safe_action_ref:opl-vault/operator-repair-loop/evidence-closure-route-20260615"
+            "safe_action_ref:opl-ledger/operator-repair-loop/evidence-closure-route-20260615"
           ],
           "owner_acceptance_refs": [
-            "owner_acceptance_ref:opl-brand-l5/vault/operator_repair_loop/opl-brand-owner-accepted-20260615"
+            "owner_acceptance_ref:opl-brand-l5/ledger/operator_repair_loop/opl-brand-owner-accepted-20260615"
           ]
         },
         {
           "class_id": "owner_acceptance",
           "owner": "domain artifact and memory owners",
-          "owner_route_ref": "opl-owner-route:brand-module/vault/owner_acceptance/domain-owner-repos",
+          "owner_route_ref": "opl-owner-route:brand-module/ledger/owner_acceptance/domain-owner-repos",
           "owner_repo_ref": "MAS/MAG/RCA/OMA domain repositories",
           "current_state": "satisfied",
           "owner_acceptance_refs": [
-            "owner_acceptance_ref:opl-brand-l5/vault/owner_acceptance/domain-artifact-memory-owners-accepted-20260615"
+            "owner_acceptance_ref:opl-brand-l5/ledger/owner_acceptance/domain-artifact-memory-owners-accepted-20260615"
           ]
         },
         {
           "class_id": "no_second_truth_regression",
-          "owner": "OPL Vault owner",
-          "owner_route_ref": "opl-owner-route:brand-module/vault/no_second_truth_regression/opl-framework",
-          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:vault",
+          "owner": "OPL Ledger owner",
+          "owner_route_ref": "opl-owner-route:brand-module/ledger/no_second_truth_regression/opl-framework",
+          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:ledger",
           "current_state": "satisfied",
           "evidence_refs": [
             "no-resurrection-guard-ref:tests/src/active-path-residue-scan.test.ts#docs-active-no-resurrection",
             "source-scan-ref:tests/src/cli/cases/brand-modules.test.ts#l5-false-completion-guard"
           ],
           "owner_acceptance_refs": [
-            "owner_acceptance_ref:opl-brand-l5/vault/no_second_truth_regression/opl-brand-owner-accepted-20260615"
+            "owner_acceptance_ref:opl-brand-l5/ledger/no_second_truth_regression/opl-brand-owner-accepted-20260615"
           ]
         },
         {
           "class_id": "pack_compile_parity",
-          "owner": "OPL Vault owner",
-          "owner_route_ref": "opl-owner-route:brand-module/vault/pack_compile_parity/opl-framework",
-          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:vault",
+          "owner": "OPL Ledger owner",
+          "owner_route_ref": "opl-owner-route:brand-module/ledger/pack_compile_parity/opl-framework",
+          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:ledger",
           "current_state": "satisfied",
           "evidence_refs": [
             "pack-compile-parity-ref:contracts/opl-framework/domain-pack-compiler-contract.json#default_entry_policy",
             "generated-surface-parity-ref:opl-agents-interfaces-family-defaults/generated_direct_parity"
           ],
           "owner_acceptance_refs": [
-            "owner_acceptance_ref:opl-brand-l5/vault/pack_compile_parity/opl-brand-owner-accepted-20260615"
+            "owner_acceptance_ref:opl-brand-l5/ledger/pack_compile_parity/opl-brand-owner-accepted-20260615"
           ]
         },
         {
           "class_id": "current_owner_delta_default_read",
-          "owner": "OPL Vault owner",
-          "owner_route_ref": "opl-owner-route:brand-module/vault/current_owner_delta_default_read/opl-framework",
-          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:vault",
+          "owner": "OPL Ledger owner",
+          "owner_route_ref": "opl-owner-route:brand-module/ledger/current_owner_delta_default_read/opl-framework",
+          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:ledger",
           "current_state": "satisfied",
           "evidence_refs": [
             "current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root",
             "operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta"
           ],
           "owner_acceptance_refs": [
-            "owner_acceptance_ref:opl-brand-l5/vault/current_owner_delta_default_read/opl-brand-owner-accepted-20260615"
+            "owner_acceptance_ref:opl-brand-l5/ledger/current_owner_delta_default_read/opl-brand-owner-accepted-20260615"
           ]
         },
         {
           "class_id": "capability_fail_open_boundary",
           "owner": "OPL Framework owner",
-          "owner_route_ref": "opl-owner-route:brand-module/vault/capability_fail_open_boundary/opl-framework",
-          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:vault",
+          "owner_route_ref": "opl-owner-route:brand-module/ledger/capability_fail_open_boundary/opl-framework",
+          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:ledger",
           "current_state": "satisfied",
           "evidence_refs": [
             "capability_fail_open_ref:tests/src/capability-registry-resolver.test.ts#optional-missing-fail-open",
             "route_required_capability_ref:tests/src/capability-registry-resolver.test.ts#route-required-hard-boundary-missing-ref"
           ],
           "owner_acceptance_refs": [
-            "owner_acceptance_ref:opl-brand-l5/vault/capability_fail_open_boundary/opl-brand-owner-accepted-20260615"
+            "owner_acceptance_ref:opl-brand-l5/ledger/capability_fail_open_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
           "class_id": "domain_authority_false_boundary",
-          "owner": "OPL Vault owner",
-          "owner_route_ref": "opl-owner-route:brand-module/vault/domain_authority_false_boundary/opl-framework",
-          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:vault",
+          "owner": "OPL Ledger owner",
+          "owner_route_ref": "opl-owner-route:brand-module/ledger/domain_authority_false_boundary/opl-framework",
+          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:ledger",
           "current_state": "satisfied",
           "evidence_refs": [
-            "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.vault.authority_boundary",
-            "negative-guard-ref:opl-brand-module-l5/vault/domain-authority-false-boundary/ready-claim-authorized-false"
+            "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.ledger.authority_boundary",
+            "negative-guard-ref:opl-brand-module-l5/ledger/domain-authority-false-boundary/ready-claim-authorized-false"
           ],
           "owner_acceptance_refs": [
-            "owner_acceptance_ref:opl-brand-l5/vault/domain_authority_false_boundary/opl-brand-owner-accepted-20260615"
+            "owner_acceptance_ref:opl-brand-l5/ledger/domain_authority_false_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
           "class_id": "cross_agent_foundry_agent_os_adoption",
-          "owner": "OPL Vault owner",
-          "owner_route_ref": "opl-owner-route:brand-module/vault/cross_agent_foundry_agent_os_adoption/opl-framework",
-          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:vault",
+          "owner": "OPL Ledger owner",
+          "owner_route_ref": "opl-owner-route:brand-module/ledger/cross_agent_foundry_agent_os_adoption/opl-framework",
+          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:ledger",
           "current_state": "open",
           "blocker_refs": [
-            "typed-blocker:opl-brand-l5/vault/cross_agent_foundry_agent_os_adoption/owner-evidence-needed-20260612"
+            "typed-blocker:opl-brand-l5/ledger/cross_agent_foundry_agent_os_adoption/owner-evidence-needed-20260612"
           ]
         }
       ],
@@ -1471,7 +1471,7 @@
         "quality_verdict",
         "production_ready",
         "receipt_ref_is_owner_receipt_authority",
-        "vault_ref_store_is_memory_body"
+        "ledger_ref_store_is_memory_body"
       ]
     },
     {

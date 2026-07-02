@@ -224,7 +224,7 @@
       "schema_version": 1,
       "source_target_design": "human_doc:domain_progress_transition_runtime_target_design",
       "status": "runtime_slice_landed_non_ready",
-      "purpose": "Land the minimal generic OPL substrate for domain progress transitions through existing Runway, Pack, Stagecraft, Console, and Vault responsibilities without creating an eleventh brand module or a domain truth source.",
+      "purpose": "Land the minimal generic OPL substrate for domain progress transitions through existing Runway, Pack, Stagecraft, Console, and Ledger responsibilities without creating an eleventh brand module or a domain truth source.",
       "implementation_refs": {
         "runtime_source": "src/family-runtime-domain-progress-transition-runtime.ts",
         "current_control_consumer": "src/family-runtime-domain-intake-parts/current-control-provider-admission.ts",
@@ -270,7 +270,7 @@
         "Pack": "owns domain-declared transition request and normalized command/outbox/event shape, aggregate identity, expected version, postcondition/outcome, and authority ABI refs",
         "Stagecraft": "owns StageRun identity, stage packet refs, transition decision vocabulary, and runner/replay semantics",
         "Console": "owns operator read-model metadata including observed_generation, derived_generation, NonAdvancingApply, and typed blocked reason projection",
-        "Vault": "owns append-only outbox/event/replay refs and evidence retention without domain body authority"
+        "Ledger": "owns append-only outbox/event/replay refs and evidence retention without domain body authority"
       },
       "allowed_transition_decisions": [
         "execute_current_owner_delta",
@@ -560,9 +560,9 @@
             "telemetry"
           ]
         },
-        "VaultReplayEvidence": {
+        "LedgerReplayEvidence": {
           "existing_surfaces": [
-            "evidence-vault-event.schema.json",
+            "evidence-ledger-event.schema.json",
             "family-product-operator-projection.runtime_observability_export",
             "trace_span_correlation_refs"
           ],

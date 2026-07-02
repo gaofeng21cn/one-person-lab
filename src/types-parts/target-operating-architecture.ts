@@ -91,8 +91,8 @@ export interface TargetOperatingArchitectureContract {
   };
   catalog_and_telemetry: {
     atlas_catalogs: string[];
-    vault_ref_streams: string[];
-    vault_policy: string;
+    ledger_ref_streams: string[];
+    ledger_policy: string;
     telemetry_body_policy: string;
   };
   app_console_policy: {

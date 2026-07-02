@@ -37,8 +37,8 @@
       "operations": ["status", "inspect", "interfaces", "validate", "doctor"]
     },
     {
-      "module_id": "vault",
-      "command": "opl vault",
+      "module_id": "ledger",
+      "command": "opl ledger",
       "operations": ["status", "inspect", "interfaces", "validate", "doctor"]
     },
     {
@@ -98,10 +98,10 @@
         "command_pattern": "opl agents modules inspect --domain <domain_id> --module agent-runway"
       },
       {
-        "agent_module_id": "agent-vault",
-        "platform_analogue_module_id": "vault",
-        "purpose": "Domain-agent internal Vault spine that maps to the OPL platform vault module without becoming a platform module.",
-        "command_pattern": "opl agents modules inspect --domain <domain_id> --module agent-vault"
+        "agent_module_id": "agent-ledger",
+        "platform_analogue_module_id": "ledger",
+        "purpose": "Domain-agent internal Ledger spine that maps to the OPL platform ledger module without becoming a platform module.",
+        "command_pattern": "opl agents modules inspect --domain <domain_id> --module agent-ledger"
       },
       {
         "agent_module_id": "agent-console",
@@ -140,7 +140,7 @@
     {
       "command_prefix": "opl brand-modules",
       "primary_module_id": "charter",
-      "secondary_module_ids": ["atlas", "workspace", "pack", "stagecraft", "runway", "vault", "console", "foundry-lab", "connect"],
+      "secondary_module_ids": ["atlas", "workspace", "pack", "stagecraft", "runway", "ledger", "console", "foundry-lab", "connect"],
       "status": "active_aggregate_registry_command_surface",
       "migration_target": "Keep as aggregate registry/read-model while module-owned command surfaces provide per-module status/inspect/validate/doctor.",
       "command_refs": [

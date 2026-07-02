@@ -4,6 +4,7 @@ import type {
   BrandModuleRegistryContract,
   BrandModuleSurfacesContract,
   BrandSystemProfileContract,
+  SourceModuleMapContract,
 } from '../../../../../src/types.ts';
 
 const MINIMAL_BRAND_MODULE_IDS = [
@@ -13,7 +14,7 @@ const MINIMAL_BRAND_MODULE_IDS = [
   'pack',
   'stagecraft',
   'runway',
-  'vault',
+  'ledger',
   'console',
   'foundry-lab',
   'connect',
@@ -116,6 +117,35 @@ export const MINIMAL_BRAND_MODULE_REGISTRY_CONTRACT: BrandModuleRegistryContract
     },
     forbidden_claims: ['domain_ready'],
   })),
+};
+
+export const MINIMAL_SOURCE_MODULE_MAP_CONTRACT: SourceModuleMapContract = {
+  version: 'source-module-map.test',
+  scope: 'opl_framework_source_module_map',
+  owner: 'one-person-lab',
+  purpose: 'test fixture',
+  state: 'test_fixture',
+  machine_boundary: 'test fixture',
+  source_root: 'src',
+  physical_module_root: 'src/modules',
+  alignment_rules: ['test fixture'],
+  modules: MINIMAL_BRAND_MODULE_IDS.map((moduleId) => ({
+    module_id: moduleId,
+    brand_name: `OPL ${moduleId}`,
+    physical_root: `src/modules/${moduleId}`,
+    public_entrypoint: `src/modules/${moduleId}/index.ts`,
+    primary_source_globs: [`src/${moduleId}/**`],
+    shared_source_globs: [],
+    owner_note: 'test fixture',
+  })),
+  shared_kernel: [
+    {
+      path: 'src/types.ts',
+      primary_module_id: 'charter',
+      consumer_module_ids: [...MINIMAL_BRAND_MODULE_IDS],
+      role: 'test fixture',
+    },
+  ],
 };
 
 export const MINIMAL_BRAND_MODULE_SURFACES_CONTRACT: BrandModuleSurfacesContract = {
@@ -476,7 +506,7 @@ export const MINIMAL_BRAND_CLI_GOVERNANCE_CONTRACT: BrandCliGovernanceContract =
     {
       command_prefix: 'opl brand-modules',
       primary_module_id: 'charter',
-      secondary_module_ids: ['atlas', 'workspace', 'stagecraft', 'runway', 'vault', 'console', 'foundry-lab', 'connect'],
+      secondary_module_ids: ['atlas', 'workspace', 'stagecraft', 'runway', 'ledger', 'console', 'foundry-lab', 'connect'],
       status: 'test_fixture',
       migration_target: 'test fixture',
       command_refs: ['opl brand-modules list --json'],

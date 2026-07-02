@@ -120,13 +120,13 @@ opl charter doctor --json
 
 `Charter` 持有 OPL Framework 的品牌模块注册、产品层级、术语生命周期、authority matrix、ADR/RFC supersession 和 forbidden claim 规则。它可以阻止 ownerless module、过期术语回流、跨 owner claim 和文档生命周期漂移。
 
-它不持有 domain truth、artifact body、quality verdict、runtime readiness、App release truth、provider completion、owner receipt 或 typed blocker authority。domain repo、Runway、Stagecraft、Vault、Console 和 App 仍分别持有自己的机器真相。
+它不持有 domain truth、artifact body、quality verdict、runtime readiness、App release truth、provider completion、owner receipt 或 typed blocker authority。domain repo、Runway、Stagecraft、Ledger、Console 和 App 仍分别持有自己的机器真相。
 
 ## 不做什么
 
 - 不替 `Runway` 判断 runtime ready。
 - 不替 `Stagecraft` 定义 stage 内部策略细节。
-- 不替 `Vault` 签 receipt 或 closeout。
+- 不替 `Ledger` 签 receipt 或 closeout。
 - 不替 `Console` 设计具体页面。
 - 不把 ADR 写成永久不可改的神谕；被 supersede 的决策必须标出当前读法。
 

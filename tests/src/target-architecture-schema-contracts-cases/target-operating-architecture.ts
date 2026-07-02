@@ -20,7 +20,7 @@ test('target operating architecture contract freezes resource, authority, lane, 
     'current_owner_delta_first',
     'single_writer_stage_transition_authority',
     'declarative_domain_pack_generated_surfaces_authority_abi',
-    'passive_evidence_vault',
+    'passive_evidence_ledger',
     'one_ordinary_golden_path_per_agent',
     'small_idempotent_reconcilers',
     'app_console_thin_default_surface',
@@ -80,7 +80,7 @@ test('target operating architecture contract freezes resource, authority, lane, 
     'one_person_lab_app',
     'agent_lab',
     'read_model',
-    'evidence_vault',
+    'evidence_ledger',
     'worklist',
     'runway_control_loop',
     'progress_reconciler',
@@ -269,8 +269,8 @@ test('target operating architecture contract freezes resource, authority, lane, 
 
   assert.equal(contract.catalog_and_telemetry.atlas_catalogs.includes('contracts'), true);
   assert.equal(contract.catalog_and_telemetry.atlas_catalogs.includes('release_channels'), true);
-  assert.equal(contract.catalog_and_telemetry.vault_ref_streams.includes('artifact_lineage_refs'), true);
-  assert.equal(contract.catalog_and_telemetry.vault_policy, 'record_everything_plan_from_nothing');
+  assert.equal(contract.catalog_and_telemetry.ledger_ref_streams.includes('artifact_lineage_refs'), true);
+  assert.equal(contract.catalog_and_telemetry.ledger_policy, 'record_everything_plan_from_nothing');
   assert.equal(contract.catalog_and_telemetry.telemetry_body_policy, 'refs_only_no_artifact_or_memory_body');
 
   assert.deepEqual(contract.app_console_policy.default_screen_fields, [
@@ -566,7 +566,7 @@ test('target operating architecture contract freezes resource, authority, lane, 
     'domain_authority_false_flags_on_opl_modules',
     'generated_surfaces_do_not_write_domain_truth',
     'conformance_pass_does_not_claim_domain_ready',
-    'vault_console_runway_do_not_sign_owner_answer',
+    'ledger_console_runway_do_not_sign_owner_answer',
     'capability_registry_fails_open_unless_current_delta_requires_ref',
   ]) {
     assert.equal(
@@ -623,7 +623,7 @@ test('target operating architecture contract freezes resource, authority, lane, 
     'pack_compile_is_quality_verdict',
     'generated_surface_writes_domain_truth',
     'current_owner_delta_projection_signs_owner_answer',
-    'vault_ref_is_owner_receipt_authority',
+    'ledger_ref_is_owner_receipt_authority',
     'runway_provider_completion_is_domain_completion',
     'console_view_is_app_release_ready',
   ]) {

@@ -15,6 +15,7 @@ test('brand module registry is loaded as a required framework contract', () => {
   assert.equal(contracts.brandModuleSurfaces.scope, 'opl_brand_module_executable_surfaces');
   assert.equal(contracts.brandModuleL5OperatingEvidence.scope, 'opl_brand_module_l5_operating_evidence');
   assert.equal(contracts.brandSystemProfile.scope, 'opl_brand_system_freeze_profile');
+  assert.equal(contracts.sourceModuleMap.scope, 'opl_framework_source_module_map');
   assert.deepEqual(
     contracts.brandModuleRegistry.modules.map((entry) => entry.module_id),
     expectedModuleIds,
@@ -26,6 +27,14 @@ test('brand module registry is loaded as a required framework contract', () => {
   assert.deepEqual(
     contracts.brandModuleL5OperatingEvidence.modules.map((entry) => entry.module_id),
     expectedModuleIds,
+  );
+  assert.deepEqual(
+    contracts.sourceModuleMap.modules.map((entry) => entry.module_id),
+    expectedModuleIds,
+  );
+  assert.deepEqual(
+    contracts.sourceModuleMap.modules.map((entry) => entry.physical_root),
+    expectedModuleIds.map((moduleId) => `src/modules/${moduleId}`),
   );
 });
 

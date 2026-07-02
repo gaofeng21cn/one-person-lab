@@ -25,6 +25,7 @@ import {
   validateBrandCliGovernance,
   validateBrandModuleRegistry,
   validateBrandModuleSurfaces,
+  validateSourceModuleMap,
 } from './brand-module-contracts.ts';
 import { validateBrandModuleL5OperatingEvidence } from './brand-module-l5-operating-evidence-contract.ts';
 import { validateBrandSystemProfile } from './brand-system-profile-contract.ts';
@@ -48,6 +49,7 @@ const REQUIRED_CONTRACT_FILE_NAMES = [
   'brand-module-surfaces.json',
   'brand-module-l5-operating-evidence.json',
   'brand-system-profile.json',
+  'source-module-map.json',
   'target-operating-architecture-contract.json',
   'scholar-skills-capability-modules.json',
   'pack-bundle-contract.json',
@@ -784,6 +786,11 @@ const REQUIRED_CONTRACT_FILES = [
     schema_version: (contracts: FrameworkContracts) => contracts.brandSystemProfile.version,
   },
   {
+    contract_id: 'source_module_map',
+    file_name: 'source-module-map.json',
+    schema_version: (contracts: FrameworkContracts) => contracts.sourceModuleMap.version,
+  },
+  {
     contract_id: 'target_operating_architecture',
     file_name: 'target-operating-architecture-contract.json',
     schema_version: (contracts: FrameworkContracts) => contracts.targetOperatingArchitecture.schema_version,
@@ -876,6 +883,10 @@ export function loadFrameworkContracts(
       brandSystemProfile: validateBrandSystemProfile(
         path.join(contractsDir, 'brand-system-profile.json'),
         parseJsonFile(path.join(contractsDir, 'brand-system-profile.json')),
+      ),
+      sourceModuleMap: validateSourceModuleMap(
+        path.join(contractsDir, 'source-module-map.json'),
+        parseJsonFile(path.join(contractsDir, 'source-module-map.json')),
       ),
       targetOperatingArchitecture: validateTargetOperatingArchitecture(
         path.join(contractsDir, 'target-operating-architecture-contract.json'),

@@ -63,7 +63,7 @@
         "one_person_lab_app",
         "runtime_provider",
         "agent_lab",
-        "evidence_vault",
+        "evidence_ledger",
         "read_model",
         "worklist",
         "stage_transition_authority"

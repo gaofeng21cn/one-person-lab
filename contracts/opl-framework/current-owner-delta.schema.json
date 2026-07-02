@@ -19,7 +19,7 @@
     "artifact_tier_policy",
     "audit_sidecar_policy",
     "audit_tail_policy",
-    "evidence_vault_policy",
+    "evidence_ledger_policy",
     "delta_id",
     "domain",
     "desired_delta_kind",
@@ -48,7 +48,7 @@
     "audit_tail_policy": {
       "const": "raw_worklist_raw_evidence_replay_typed_blocker_group_private_residue_are_passive_until_folded"
     },
-    "evidence_vault_policy": {
+    "evidence_ledger_policy": {
       "const": "record_everything_plan_from_nothing"
     },
     "ordinary_progress_spine": {
@@ -188,7 +188,7 @@
           "const": "opl_audit_sidecar_policy"
         },
         "role": {
-          "const": "passive_evidence_vault_and_drilldown"
+          "const": "passive_evidence_ledger_and_drilldown"
         },
         "default_planning_role": {
           "const": "never_default_planning_root_until_folded_into_current_owner_delta"

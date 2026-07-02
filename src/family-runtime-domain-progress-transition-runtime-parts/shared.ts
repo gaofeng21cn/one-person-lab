@@ -8,7 +8,7 @@ export const DOMAIN_PROGRESS_TRANSITION_RUNTIME_MODULE = {
     pack: 'ABI and generated domain command surface input',
     stagecraft: 'stage grammar, transition policy shape, and accepted answer shape',
     console: 'current owner delta and next action projection',
-    vault: 'refs-only event, receipt, lineage, and replay evidence',
+    ledger: 'refs-only event, receipt, lineage, and replay evidence',
   },
   not_a_new_brand_module: true,
 } as const;

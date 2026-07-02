@@ -47,7 +47,7 @@ Currentness policy: 本文不冻结模块完成度、L5 evidence 数量、owner 
 | `OPL Pack` | `L4_structural_baseline` | 达到 Workspace 结构基线 | 已有 `brand-module-surfaces.json#modules.pack`、`opl pack status|inspect|interfaces|validate|doctor --json`，并补 `domain-packs|authority-abi|generated-surfaces|compiler` 对象视图；Agent Tool Arsenal / Capability Invocation OS 归 Pack 的 ABI 边界，Pack 只定义 domain pack / capability invocation ABI / authority ABI / generated-surface input 和 compiler read-model，不替 domain owner 生成 handler、owner receipt、typed blocker、current-owner authorization 或 quality verdict。 |
 | `OPL Stagecraft` | `L4_structural_baseline` | 达到 Workspace 结构基线 | 已有 `brand-module-surfaces.json#modules.stagecraft`、`opl stagecraft status|inspect|interfaces|validate|doctor --json`，并补 `stages|graph|receipts|blockers` 对象视图；StageRun/cognitive kernel/capability use policy/receipt/blocker refs 保持 refs-only。 |
 | `OPL Runway` | `L4_structural_baseline` | 达到 Workspace 结构基线 | 已有 `brand-module-surfaces.json#modules.runway`、`opl runway status|inspect|interfaces|validate|doctor --json`，并补 `queue|attempts|provider|blockers` 对象视图；Temporal/provider/worker lifecycle/readiness、SLO repair 和 attempt refs 仍不等于 production long-soak 或 domain ready。 |
-| `OPL Vault` | `L4_structural_baseline` | 达到 Workspace 结构基线 | 已有 `brand-module-surfaces.json#modules.vault`、`opl vault status|inspect|interfaces|validate|doctor --json`，并补 `evidence|artifacts|receipts|lineage` 对象视图；Vault 只持有 refs-only evidence/lineage/read-model，不读取 body。 |
+| `OPL Ledger` | `L4_structural_baseline` | 达到 Workspace 结构基线 | 已有 `brand-module-surfaces.json#modules.ledger`、`opl ledger status|inspect|interfaces|validate|doctor --json`，并补 `evidence|artifacts|receipts|lineage` 对象视图；Ledger 只持有 refs-only evidence/lineage/read-model，不读取 body。 |
 | `OPL Console` | `L4_structural_baseline` | 达到 Workspace 结构基线 | 已有 `brand-module-surfaces.json#modules.console`、`opl console status|inspect|interfaces|validate|doctor --json`，并补 `actions|read-model|drilldown` 对象视图；本仓只证明 App state/action/invocation-plan projection producer，不声明 App GUI release truth、owner answer 或 domain readiness。 |
 | `OPL Foundry Lab` | `L4_structural_baseline` | 达到 Workspace 结构基线 | 已有 `brand-module-surfaces.json#modules.foundry-lab`、`opl foundry-lab status|inspect|interfaces|validate|doctor --json`，并补 `blueprints|work-orders|conformance|promotions` 对象视图；不替 target domain owner 签 acceptance。 |
 | `OPL Connect` | `L4_structural_baseline` | 达到 Workspace 结构基线 | 已有 `brand-module-surfaces.json#modules.connect`、`opl connect status|inspect|interfaces|validate|doctor --json`，并补 `descriptors|packages|channels|drift` 对象视图；MCP/OpenAI/AI SDK/Skill/ToolResultEnvelope descriptor、transport/install success 与 semantic authority 分开。 |
@@ -66,7 +66,7 @@ L5 不是再补一层文档，而是把模块变成可持续运营能力：
 - `Pack`: domain pack / authority ABI / generated-surface input / pack compiler drift gate 能在 MAS/MAG/RCA/OMA 和新 Foundry Agents 中长期生成、验证、修复并获得 domain owner acceptance。
 - `Stagecraft`: 多个真实 domain stage 持续产出独立 quality gate、owner receipt、typed blocker 或 route-back evidence。
 - `Runway`: Temporal-backed durable orchestration、Runway worker lifecycle/readiness surface、部署 substrate、queue、lease、retry/dead-letter、human gate 和 recovery 在长窗口内稳定承接真实 owner chain。
-- `Vault`: memory/artifact/lifecycle/restore/no-regression receipts 在多个 domain 中形成 body-free、可验证、可回放的运营 ledger。
+- `Ledger`: memory/artifact/lifecycle/restore/no-regression receipts 在多个 domain 中形成 body-free、可验证、可回放的运营 ledger。
 - `Console`: App 普通用户路径有同 cohort release/user-path evidence，能稳定展示 current owner、accepted answer shape、artifact/blocker 和 repair loop。
 - `Foundry Lab`: agent improvement loop 能从 evidence -> work order -> canary -> promotion/rollback -> owner acceptance 持续闭环。
 - `Connect`: CLI/MCP/Skill/OpenAI/AI SDK/App/release/install surfaces 从同一 contract 派生，并有 drift matrix、release evidence 和安装证据。
@@ -101,7 +101,7 @@ opl workspace interfaces --json
 opl pack status|inspect|interfaces|validate|doctor --json
 opl stagecraft status|inspect|interfaces|validate|doctor --json
 opl runway status|inspect|interfaces|validate|doctor --json
-opl vault status|inspect|interfaces|validate|doctor --json
+opl ledger status|inspect|interfaces|validate|doctor --json
 opl console status|inspect|interfaces|validate|doctor --json
 opl foundry-lab status|inspect|interfaces|validate|doctor --json
 opl connect status|inspect|interfaces|validate|doctor --json
@@ -116,7 +116,7 @@ opl workspace l5-status --json
 opl pack l5-status --json
 opl stagecraft l5-status --json
 opl runway l5-status --json
-opl vault l5-status --json
+opl ledger l5-status --json
 opl console l5-status --json
 opl foundry-lab l5-status --json
 opl connect l5-status --json
@@ -145,7 +145,7 @@ opl pack domain-packs --json
 opl pack authority-abi --json
 opl stagecraft receipts --json
 opl runway queue --json
-opl vault evidence --json
+opl ledger evidence --json
 opl console actions --json
 opl foundry-lab blueprints --json
 opl connect drift --json
@@ -168,6 +168,6 @@ npm run typecheck
 - 任何模块的 `L5` 都不能由 docs foldback、contract validation、conformance pass、provider completion、verified ledger 或 App projection 单独声明。
 - `Stagecraft L4` 不等于 quality gate 全部真实闭合。
 - `Runway L4` 不等于 production long-soak complete。
-- `Vault L4` 不等于 artifact/memory body authority 已迁给 OPL。
+- `Ledger L4` 不等于 artifact/memory body authority 已迁给 OPL。
 - `Console L4` 不等于 App release ready。
 - `Connect L4` 不等于所有安装/分发路径已有真实 release/install evidence。

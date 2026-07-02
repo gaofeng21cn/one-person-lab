@@ -19,7 +19,7 @@ const BRAND_MODULE_OBJECT_VIEWS: Partial<Record<BrandModuleId, readonly string[]
   pack: ['domain-packs', 'authority-abi', 'generated-surfaces', 'compiler'],
   stagecraft: ['stages', 'graph', 'receipts', 'blockers'],
   runway: ['queue', 'attempts', 'provider', 'blockers'],
-  vault: ['evidence', 'artifacts', 'receipts', 'lineage'],
+  ledger: ['evidence', 'artifacts', 'receipts', 'lineage'],
   console: ['actions', 'read-model', 'drilldown'],
   'foundry-lab': ['blueprints', 'work-orders', 'conformance', 'promotions'],
   connect: ['descriptors', 'packages', 'channels', 'drift'],

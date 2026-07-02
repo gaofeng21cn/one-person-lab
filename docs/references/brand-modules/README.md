@@ -39,7 +39,7 @@ OPL 借鉴的是成熟工程的分层原则，不引入外部 runtime dependency
 | [OPL Pack](./pack.md) | Declarative Domain Pack、Capability Invocation ABI、authority ABI、execution view、operational card、result envelope、pack compiler、generated/hosted surfaces 和 standard authority functions。 | OPL Framework + Foundry Agent owners |
 | [OPL Stagecraft](./stagecraft.md) | Stage 设计、认知计算、capability use policy、tool affordance、quality gate 和 handoff。 | OPL Framework + Foundry Agent |
 | [OPL Runway](./runway.md) | Durable execution、typed queue、lease、retry/dead-letter、wakeup 和 human gate。 | OPL Framework |
-| [OPL Vault](./vault.md) | Evidence、receipt、typed blocker、artifact lineage、restore/provenance 和 refs-only ledger。 | OPL Framework + domain authority owner |
+| [OPL Ledger](./ledger.md) | Evidence、receipt、typed blocker、artifact lineage、restore/provenance 和 refs-only ledger。 | OPL Framework + domain authority owner |
 | [OPL Console](./console.md) | App/operator 工作台，消费 execution view、operational card、result envelope、current owner、invocation plan、next action、阻塞、产物和 drilldown。 | One Person Lab App |
 | [OPL Foundry Lab](./foundry-lab.md) | Agent 创建、测试接管、机制改进、canary、promotion 和 rollback。 | OPL Framework + OPL Meta Agent |
 | [OPL Connect](./connect.md) | CLI、MCP、OpenAI/AI SDK tools、execution view / operational card / ToolResultEnvelope descriptor、Skill/plugin、release/install 分发。 | OPL Framework + App release owner |
@@ -53,7 +53,7 @@ OPL Charter
   -> OPL Pack
   -> OPL Stagecraft
   -> OPL Runway
-  -> OPL Vault
+  -> OPL Ledger
   -> OPL Console
   -> OPL Foundry Lab
   -> OPL Connect
@@ -67,12 +67,12 @@ OPL Charter
 - `Pack` 固定 domain pack、Capability Invocation ABI、authority ABI、execution view、operational card、result envelope、pack compiler 和 generated-surface 输入，不接管 domain handler 或 owner verdict。
 - `Stagecraft` 是 stage 内认知工作设计和 capability use policy，不承担 durable runtime。
 - `Runway` 只负责把 stage attempt 跑起来、恢复和收口，不创建 domain verdict。
-- `Vault` 只保存 refs、receipt、blocker、lineage 和 provenance，不保存 memory/artifact body。
+- `Ledger` 只保存 refs、receipt、blocker、lineage 和 provenance，不保存 memory/artifact body。
 - `Console` 只消费 projection、invocation plan、execution view、operational card 和 result envelope，不读取 MAS 原始合同细节，也不成为第二 runtime 或第二 domain truth。
 - `Foundry Lab` 只改进 agent 机制和生成 work order，不接管 domain authority。
 - `Connect` 只把同一合同派生为不同外部调用面的 descriptors，不导出 MAS 原始合同细节，不重新解释语义或把 tool result envelope 写成 authority outcome。
 
-Agent Tool Arsenal / Capability Invocation OS 不新增品牌模块。它以 `OPL Pack` 为 ABI owner；合同是生成/校验材料，Agent ordinary path 只消费 Pack 派生的 execution view、operational card 和 result envelope。`Atlas`、`Stagecraft`、`Console`、`Connect` 分别消费 catalog、use-policy、current-owner projection / ordinary execution view 和 descriptor/export 边界；`Runway` / `Vault` 只承运执行与 refs evidence。
+Agent Tool Arsenal / Capability Invocation OS 不新增品牌模块。它以 `OPL Pack` 为 ABI owner；合同是生成/校验材料，Agent ordinary path 只消费 Pack 派生的 execution view、operational card 和 result envelope。`Atlas`、`Stagecraft`、`Console`、`Connect` 分别消费 catalog、use-policy、current-owner projection / ordinary execution view 和 descriptor/export 边界；`Runway` / `Ledger` 只承运执行与 refs evidence。
 
 ## 当前完成度对照
 
@@ -82,6 +82,27 @@ Agent Tool Arsenal / Capability Invocation OS 不新增品牌模块。它以 `OP
 
 ```text
 contracts/opl-framework/brand-system-profile.json
+contracts/opl-framework/source-module-map.json
+src/modules/
 opl contract validate --json
 node --experimental-strip-types --test tests/src/cli/cases/brand-modules.test.ts
 ```
+
+## 代码组织对齐
+
+OPL Framework 的物理代码组织以 `src/modules/` 作为品牌模块入口。每个顶层品牌模块都有对应目录：
+
+```text
+src/modules/charter
+src/modules/atlas
+src/modules/workspace
+src/modules/pack
+src/modules/stagecraft
+src/modules/runway
+src/modules/ledger
+src/modules/console
+src/modules/foundry-lab
+src/modules/connect
+```
+
+当前历史源码仍有大量文件位于 `src/` 根层。它们的归属由 `contracts/opl-framework/source-module-map.json` 统一声明：新代码优先进入对应 `src/modules/<module_id>/`，已有 root-level 文件在可保持行为不变时再逐步迁入。这样维护者既能一眼看到十个模块，也能通过机器合同查清旧文件属于哪个模块。

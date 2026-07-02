@@ -23,7 +23,7 @@ test('target architecture schema contracts keep owner delta root and audit tail 
     'contracts/opl-framework/stage-artifact-unit.schema.json',
     'contracts/opl-framework/progress-delta-receipt.schema.json',
     'contracts/opl-framework/owner-answer.schema.json',
-    'contracts/opl-framework/evidence-vault-event.schema.json',
+    'contracts/opl-framework/evidence-ledger-event.schema.json',
     'contracts/opl-framework/golden-path-profile.schema.json',
     'contracts/opl-framework/stop-loss-policy.schema.json',
     'contracts/opl-framework/default-surface-budget.schema.json',
@@ -60,7 +60,7 @@ test('target architecture schema contracts keep owner delta root and audit tail 
     'raw_worklist_raw_evidence_replay_typed_blocker_group_private_residue_are_passive_until_folded',
   );
   assert.equal(
-    ownerDelta.properties.evidence_vault_policy.const,
+    ownerDelta.properties.evidence_ledger_policy.const,
     'record_everything_plan_from_nothing',
   );
   assert.equal(
@@ -130,27 +130,27 @@ test('target architecture schema contracts keep owner delta root and audit tail 
     false,
   );
 
-  const evidenceVault = schemas['contracts/opl-framework/evidence-vault-event.schema.json'];
+  const evidenceLedger = schemas['contracts/opl-framework/evidence-ledger-event.schema.json'];
   assert.equal(
-    evidenceVault.properties.vault_policy.const,
+    evidenceLedger.properties.ledger_policy.const,
     'record_everything_plan_from_nothing',
   );
   assert.equal(
-    evidenceVault.$defs.authority_boundary.properties.event_can_create_default_action_without_delta.const,
+    evidenceLedger.$defs.authority_boundary.properties.event_can_create_default_action_without_delta.const,
     false,
   );
-  assert.equal(evidenceVault.$defs.authority_boundary.properties.raw_worklist_can_drive_default_planning.const, false);
-  assert.equal(evidenceVault.$defs.authority_boundary.properties.raw_evidence_can_drive_default_planning.const, false);
-  assert.equal(evidenceVault.$defs.authority_boundary.properties.replay_packet_can_drive_default_planning.const, false);
+  assert.equal(evidenceLedger.$defs.authority_boundary.properties.raw_worklist_can_drive_default_planning.const, false);
+  assert.equal(evidenceLedger.$defs.authority_boundary.properties.raw_evidence_can_drive_default_planning.const, false);
+  assert.equal(evidenceLedger.$defs.authority_boundary.properties.replay_packet_can_drive_default_planning.const, false);
   assert.equal(
-    evidenceVault.$defs.authority_boundary.properties.typed_blocker_group_can_drive_default_planning.const,
+    evidenceLedger.$defs.authority_boundary.properties.typed_blocker_group_can_drive_default_planning.const,
     false,
   );
   assert.equal(
-    evidenceVault.$defs.authority_boundary.properties.private_residue_inventory_can_drive_default_planning.const,
+    evidenceLedger.$defs.authority_boundary.properties.private_residue_inventory_can_drive_default_planning.const,
     false,
   );
-  assert.equal(evidenceVault.$defs.authority_boundary.properties.opl_can_write_domain_truth.const, false);
+  assert.equal(evidenceLedger.$defs.authority_boundary.properties.opl_can_write_domain_truth.const, false);
 
   const capabilityResolver = schemas['contracts/opl-framework/capability-registry-resolver.schema.json'];
   assert.equal(capabilityResolver.properties.surface_kind.const, 'opl_capability_registry_resolution');

@@ -192,7 +192,7 @@ function buildPeerProjection(peer: FoundryAgentPeer) {
     foundry_operations: foundryOperations,
     brand_cli_path_safe_executable: brandCliPathSafe,
     cli_smoke: cliSmoke,
-    ordinary_spine: ['workspace', 'work', 'stage', 'run', 'vault', 'handoff', 'connect'].map((object) => ({
+    ordinary_spine: ['workspace', 'work', 'stage', 'run', 'ledger', 'handoff', 'connect'].map((object) => ({
       object,
       command_pattern: agentInspectCommandSurface,
       domain_alias:

@@ -628,7 +628,7 @@ test('help returns command discovery and runnable examples', () => {
   assert.equal(output.help.command, null);
   assert.equal(output.help.usage, 'opl [command ...|request...] [args]');
   assert.ok(
-    ['charter status', 'atlas inspect', 'stagecraft interfaces', 'runway doctor', 'vault validate', 'console status', 'foundry-lab inspect', 'connect sync-skills', 'agents foundry status'].every((command) =>
+    ['charter status', 'atlas inspect', 'stagecraft interfaces', 'runway doctor', 'ledger validate', 'console status', 'foundry-lab inspect', 'connect sync-skills', 'agents foundry status'].every((command) =>
       output.help.commands.some((entry: { command: string }) => entry.command === command),
     ),
   );

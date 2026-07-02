@@ -5,6 +5,7 @@ import type {
   BrandModuleId,
   BrandModuleRegistryContract,
   BrandModuleSurfacesContract,
+  SourceModuleMapContract,
 } from './types.ts';
 import {
   FrameworkContractError,
@@ -28,7 +29,7 @@ export const BRAND_MODULE_IDS = [
   'pack',
   'stagecraft',
   'runway',
-  'vault',
+  'ledger',
   'console',
   'foundry-lab',
   'connect',
@@ -371,6 +372,128 @@ export function requireEveryValue<T extends string>(
       expected: [...expected],
     });
   }
+}
+
+function expectModuleScopedPath(value: unknown, field: string, filePath: string, moduleId: BrandModuleId, suffix = '') {
+  const actual = expectString(value, field, filePath);
+  const expected = `src/modules/${moduleId}${suffix}`;
+  if (actual !== expected) {
+    throw new FrameworkContractError('contract_shape_invalid', `${field} must match the brand module physical path.`, {
+      file: filePath,
+      field,
+      module_id: moduleId,
+      expected,
+      actual,
+    });
+  }
+  return actual;
+}
+
+export function validateSourceModuleMap(
+  filePath: string,
+  value: unknown,
+): SourceModuleMapContract {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'source-module-map.json must contain an object root.',
+      { file: filePath },
+    );
+  }
+
+  const modulesRaw = value.modules;
+  const sharedKernelRaw = value.shared_kernel;
+  if (!Array.isArray(modulesRaw) || !Array.isArray(sharedKernelRaw)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'source-module-map.json must contain modules and shared_kernel arrays.',
+      { file: filePath },
+    );
+  }
+
+  const sourceRoot = expectString(value.source_root, 'source_root', filePath);
+  const physicalModuleRoot = expectString(value.physical_module_root, 'physical_module_root', filePath);
+  if (sourceRoot !== 'src' || physicalModuleRoot !== 'src/modules') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'source-module-map.json must map the canonical src/modules physical root.',
+      {
+        file: filePath,
+        source_root: sourceRoot,
+        physical_module_root: physicalModuleRoot,
+      },
+    );
+  }
+
+  const seen = new Set<string>();
+  const modules = modulesRaw.map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each source module map entry must be an object.', {
+        file: filePath,
+        index,
+      });
+    }
+
+    const moduleId = expectBrandModuleId(entry.module_id, 'module_id', filePath);
+    if (seen.has(moduleId)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each source module map module id must be unique.', {
+        file: filePath,
+        index,
+        module_id: moduleId,
+      });
+    }
+    seen.add(moduleId);
+
+    return {
+      module_id: moduleId,
+      brand_name: expectString(entry.brand_name, 'brand_name', filePath),
+      physical_root: expectModuleScopedPath(entry.physical_root, 'physical_root', filePath, moduleId),
+      public_entrypoint: expectModuleScopedPath(entry.public_entrypoint, 'public_entrypoint', filePath, moduleId, '/index.ts'),
+      primary_source_globs: expectNonEmptyStringArray(entry.primary_source_globs, 'primary_source_globs', filePath),
+      shared_source_globs: expectStringArray(entry.shared_source_globs, 'shared_source_globs', filePath),
+      owner_note: expectString(entry.owner_note, 'owner_note', filePath),
+    };
+  });
+
+  for (const moduleId of BRAND_MODULE_IDS) {
+    if (!seen.has(moduleId)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'source-module-map.json must cover every brand module.', {
+        file: filePath,
+        missing_module_id: moduleId,
+      });
+    }
+  }
+
+  const sharedKernel = sharedKernelRaw.map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each shared kernel entry must be an object.', {
+        file: filePath,
+        index,
+      });
+    }
+
+    return {
+      path: expectString(entry.path, 'path', filePath),
+      primary_module_id: expectBrandModuleId(entry.primary_module_id, 'primary_module_id', filePath),
+      consumer_module_ids: expectStringArray(entry.consumer_module_ids, 'consumer_module_ids', filePath)
+        .map((moduleId, moduleIndex) => expectBrandModuleId(moduleId, `consumer_module_ids.${moduleIndex}`, filePath)),
+      role: expectString(entry.role, 'role', filePath),
+    };
+  });
+
+  return {
+    version: expectString(value.version, 'version', filePath),
+    scope: expectString(value.scope, 'scope', filePath),
+    owner: expectString(value.owner, 'owner', filePath),
+    purpose: expectString(value.purpose, 'purpose', filePath),
+    state: expectString(value.state, 'state', filePath),
+    machine_boundary: expectString(value.machine_boundary, 'machine_boundary', filePath),
+    source_root: sourceRoot,
+    physical_module_root: physicalModuleRoot,
+    alignment_rules: expectNonEmptyStringArray(value.alignment_rules, 'alignment_rules', filePath),
+    modules,
+    shared_kernel: sharedKernel,
+  };
 }
 
 export function validateBrandCliGovernance(

@@ -1232,12 +1232,12 @@
       "notes": "Runway owns the control-loop runtime module: runtime intent admission, queue/readiness reconciliation, provider attempt orchestration refs, handoff gates, and recovery repair. The executable read surfaces are status/inspect/interfaces/validate/doctor plus readiness/reconcile/handoff-gates/recovery-repair/control-loop status. recovery-repair exposes provider repair, worker restart guard, and a refs-only attempt_repair_queue for blocked/failed attempt operator review. Temporal not configured, service down, worker not ready, or scheduler missing is provider_not_ready/OPL repair action, not domain readiness. Temporal is durable substrate, worker supervision is process liveness, and the Progress Reconciler is the semantic/execution loop projection; Runway does not write domain truth, sign owner receipts, create typed blockers, convert provider completion into domain readiness, or close L5 production long-soak."
     },
     {
-      "module_id": "vault",
-      "brand_name": "OPL Vault",
-      "command_prefix": "vault",
-      "surface_kind_prefix": "opl_vault",
+      "module_id": "ledger",
+      "brand_name": "OPL Ledger",
+      "command_prefix": "ledger",
+      "surface_kind_prefix": "opl_ledger",
       "state": "L4_module_surface_baseline",
-      "module_doc_ref": "human_doc:opl_brand_module_vault",
+      "module_doc_ref": "human_doc:opl_brand_module_ledger",
       "object_model": {
         "primary_objects": [
           "evidence_event",
@@ -1248,7 +1248,7 @@
           "restore_proof"
         ],
         "canonical_contract_refs": [
-          "contracts/opl-framework/evidence-vault-event.schema.json",
+          "contracts/opl-framework/evidence-ledger-event.schema.json",
           "contracts/opl-framework/state-index-kernel-contract.json",
           "contracts/opl-framework/stage-artifact-runtime-contract.json",
           "contracts/opl-framework/role-artifact-ref.schema.json",
@@ -1257,21 +1257,21 @@
           "contracts/opl-framework/target-operating-architecture-contract.json"
         ],
         "read_model_refs": [
-          "opl vault status --json",
-          "opl vault inspect --json"
+          "opl ledger status --json",
+          "opl ledger inspect --json"
         ]
       },
       "native_cli_family": {
-        "status": "opl vault status --json",
-        "inspect": "opl vault inspect --json",
-        "interfaces": "opl vault interfaces --json",
-        "validate": "opl vault validate --json",
-        "doctor": "opl vault doctor --json",
+        "status": "opl ledger status --json",
+        "inspect": "opl ledger inspect --json",
+        "interfaces": "opl ledger interfaces --json",
+        "validate": "opl ledger validate --json",
+        "doctor": "opl ledger doctor --json",
         "additional_commands": [
-          "opl vault evidence --json",
-          "opl vault artifacts --json",
-          "opl vault receipts --json",
-          "opl vault lineage --json",
+          "opl ledger evidence --json",
+          "opl ledger artifacts --json",
+          "opl ledger receipts --json",
+          "opl ledger lineage --json",
           "opl index doctor --json",
           "opl index integrity-check --json",
           "opl stage-artifact status --json"
@@ -1280,20 +1280,20 @@
       "app_read_model": {
         "descriptors": [
           {
-            "action_id": "vault_status",
-            "command": "opl vault status --json",
+            "action_id": "ledger_status",
+            "command": "opl ledger status --json",
             "mutation": false,
             "descriptor_only": true
           },
           {
-            "action_id": "vault_inspect",
-            "command": "opl vault inspect --json",
+            "action_id": "ledger_inspect",
+            "command": "opl ledger inspect --json",
             "mutation": false,
             "descriptor_only": true
           },
           {
-            "action_id": "vault_doctor",
-            "command": "opl vault doctor --json",
+            "action_id": "ledger_doctor",
+            "command": "opl ledger doctor --json",
             "mutation": false,
             "descriptor_only": true
           }
@@ -1305,21 +1305,21 @@
       },
       "descriptor_surface": {
         "delegate_ids": [
-          "vault_surface_contract",
-          "vault_cli_family"
+          "ledger_surface_contract",
+          "ledger_cli_family"
         ],
         "descriptor_refs": [
-          "contracts/opl-framework/brand-module-surfaces.json#modules.vault",
-          "opl vault interfaces --json",
-          "contracts/opl-framework/evidence-vault-event.schema.json",
+          "contracts/opl-framework/brand-module-surfaces.json#modules.ledger",
+          "opl ledger interfaces --json",
+          "contracts/opl-framework/evidence-ledger-event.schema.json",
           "contracts/opl-framework/state-index-kernel-contract.json",
-          "contracts/opl-framework/brand-module-registry.json#modules.vault"
+          "contracts/opl-framework/brand-module-registry.json#modules.ledger"
         ]
       },
       "validation": {
         "commands": [
-          "opl vault validate --json",
-          "opl vault doctor --json",
+          "opl ledger validate --json",
+          "opl ledger doctor --json",
           "opl contract validate --json"
         ],
         "checks": [
@@ -1332,8 +1332,8 @@
           "forbidden_claims"
         ],
         "required_refs": [
-          "contracts/opl-framework/brand-module-surfaces.json#modules.vault",
-          "contracts/opl-framework/brand-module-registry.json#modules.vault"
+          "contracts/opl-framework/brand-module-surfaces.json#modules.ledger",
+          "contracts/opl-framework/brand-module-registry.json#modules.ledger"
         ]
       },
       "doctor": {
@@ -1357,9 +1357,9 @@
       "status": {
         "completion_level": "L4_structural_baseline",
         "evidence_refs": [
-          "contracts/opl-framework/brand-module-surfaces.json#modules.vault",
-          "opl vault validate --json",
-          "opl vault doctor --json",
+          "contracts/opl-framework/brand-module-surfaces.json#modules.ledger",
+          "opl ledger validate --json",
+          "opl ledger doctor --json",
           "human_doc:opl_brand_module_maturity_against_workspace",
           "human_doc:opl_delivery_index",
           "human_doc:opl_status"
@@ -1371,7 +1371,7 @@
           "quality_verdict",
           "production_ready",
           "receipt_ref_is_owner_receipt_authority",
-          "vault_ref_store_is_memory_body"
+          "ledger_ref_store_is_memory_body"
         ]
       },
       "authority_boundary": {
@@ -1394,9 +1394,9 @@
         "quality_verdict",
         "production_ready",
         "receipt_ref_is_owner_receipt_authority",
-        "vault_ref_store_is_memory_body"
+        "ledger_ref_store_is_memory_body"
       ],
-      "notes": "Vault owns refs-only evidence, receipt refs, blocker refs, lineage, restore, and index audit surfaces; it does not store artifact or memory bodies and does not turn refs into owner authority."
+      "notes": "Ledger owns refs-only evidence, receipt refs, blocker refs, lineage, restore, and index audit surfaces; it does not store artifact or memory bodies and does not turn refs into owner authority."
     },
     {
       "module_id": "console",

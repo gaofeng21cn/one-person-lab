@@ -138,10 +138,10 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
     'connect',
     'console',
     'foundry-lab',
+    'ledger',
     'pack',
     'runway',
     'stagecraft',
-    'vault',
     'workspace',
   ]);
   assert.equal(moduleMapping.runway.role, 'runtime_materialization_and_run_consumption');

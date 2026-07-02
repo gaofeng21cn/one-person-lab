@@ -322,7 +322,7 @@ export function buildFoundryAgentOsConformance(
     'domain_authority_false_flags_on_opl_modules',
     'generated_surfaces_do_not_write_domain_truth',
     'conformance_pass_does_not_claim_domain_ready',
-    'vault_console_runway_do_not_sign_owner_answer',
+    'ledger_console_runway_do_not_sign_owner_answer',
     'capability_registry_fails_open_unless_current_delta_requires_ref',
     'default_cli_skill_app_product_entry_route_through_stage_run_owner_delta',
   ].filter((claim) => !standard.cross_agent_conformance_required_claims.includes(claim))
@@ -388,7 +388,7 @@ export function buildFoundryAgentOsConformance(
       capability_registry_can_create_typed_blocker: false,
       capability_registry_can_sign_owner_receipt: false,
       capability_registry_can_claim_domain_authority: false,
-      vault_console_runway_can_sign_owner_answer: false,
+      ledger_console_runway_can_sign_owner_answer: false,
       provider_completion_can_claim_domain_completion: false,
     },
     blockers,

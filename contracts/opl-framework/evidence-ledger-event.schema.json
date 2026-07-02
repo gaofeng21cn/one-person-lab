@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://one-person-lab.local/contracts/opl-framework/evidence-vault-event.schema.json",
-  "schema_id": "opl.evidence_vault_event.v1",
-  "surface_kind": "opl_evidence_vault_event_schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/evidence-ledger-event.schema.json",
+  "schema_id": "opl.evidence_ledger_event.v1",
+  "surface_kind": "opl_evidence_ledger_event_schema",
   "owner": "one-person-lab",
-  "purpose": "Define the passive audit-only evidence vault event shape for raw evidence, provider traces, replay packets, receipt ledgers, typed blocker groups, soak refs, no-regression refs, cleanup provenance, and diagnostic signals.",
+  "purpose": "Define the passive audit-only evidence ledger event shape for raw evidence, provider traces, replay packets, receipt ledgers, typed blocker groups, soak refs, no-regression refs, cleanup provenance, and diagnostic signals.",
   "state": "active_contract",
-  "machine_boundary": "Evidence Vault records bounded refs and summaries for audit, replay, and drilldown; events do not change delivery state unless explicitly folded into an owner answer, hard gate, typed blocker, or current owner delta.",
+  "machine_boundary": "Evidence Ledger records bounded refs and summaries for audit, replay, and drilldown; events do not change delivery state unless explicitly folded into an owner answer, hard gate, typed blocker, or current owner delta.",
   "type": "object",
   "additionalProperties": true,
   "required": [
@@ -15,17 +15,17 @@
     "event_id",
     "event_kind",
     "evidence_class",
-    "vault_policy",
+    "ledger_policy",
     "source_ref",
     "fold_state",
     "authority_boundary"
   ],
   "properties": {
     "surface_kind": {
-      "const": "opl_evidence_vault_event"
+      "const": "opl_evidence_ledger_event"
     },
     "schema_version": {
-      "const": "evidence-vault-event.v1"
+      "const": "evidence-ledger-event.v1"
     },
     "event_id": {
       "type": "string",
@@ -55,7 +55,7 @@
         "owner_delta_input"
       ]
     },
-    "vault_policy": {
+    "ledger_policy": {
       "const": "record_everything_plan_from_nothing"
     },
     "source_ref": {

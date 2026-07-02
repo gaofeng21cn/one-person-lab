@@ -19,7 +19,7 @@ const BRAND_MODULE_IDS = [
   'pack',
   'stagecraft',
   'runway',
-  'vault',
+  'ledger',
   'console',
   'foundry-lab',
   'connect',

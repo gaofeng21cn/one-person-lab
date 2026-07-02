@@ -432,7 +432,7 @@ export function assertCurrentOwnerDeltaProjection(
     'raw_worklist_raw_evidence_replay_typed_blocker_group_private_residue_are_passive_until_folded',
   );
   assert.equal(
-    currentOwnerDelta.evidence_vault_policy,
+    currentOwnerDelta.evidence_ledger_policy,
     'record_everything_plan_from_nothing',
   );
   assert.equal(typeof currentOwnerDelta.delta_id, 'string');

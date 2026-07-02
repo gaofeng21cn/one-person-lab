@@ -198,13 +198,13 @@
     "domain_repos_declare_strategy_not_generic_runtime": true,
     "candidate_pool_is_stage_internal_artifact": true,
     "meta_review_updates_are_proposals_until_owner_acceptance": true,
-    "evidence_vault_events_are_audit_only_until_folded_into_owner_delta_or_owner_answer": true
+    "evidence_ledger_events_are_audit_only_until_folded_into_owner_delta_or_owner_answer": true
   },
   "contract_refs": [
     "contracts/opl-framework/current-owner-delta.schema.json",
     "contracts/opl-framework/stage-artifact-unit.schema.json",
     "contracts/opl-framework/owner-answer.schema.json",
-    "contracts/opl-framework/evidence-vault-event.schema.json",
+    "contracts/opl-framework/evidence-ledger-event.schema.json",
     "contracts/opl-framework/golden-path-profile.schema.json",
     "contracts/opl-framework/foundry-agent-series-contract.json",
     "contracts/opl-framework/stage-route-scheduler-contract.json"

@@ -161,7 +161,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - OPL 文档只维护 Framework runtime、Runway StageRun、typed queue、attempt ledger、`current_owner_delta`、generated/hosted descriptors、App/workbench projection、refs-only evidence 和 shared primitive 的 SSOT。
 - MAS 文档和 MAS repo-owned contracts/source/CLI 继续维护 `PaperMissionRun`、legacy truth import pack、mission input / decision constraint、publication quality、AI reviewer / auditor verdict、publication gate、artifact/current package authority、owner receipt、typed blocker、human gate、evidence/review ledger 和 paper mission consume verdict。
 - OPL 可以消费 MAS `paper_mission/start_or_resume` refs、承载 hosted attempt、记录 provider observation、投影 next owner、运输 owner answer refs 或把合法 owner answer 折回 `current_owner_delta`；OPL 不能签 MAS owner receipt、创建 MAS typed blocker、写 MAS publication eval / controller decision / current package / paper body，也不能授权 MAS publication-ready、paper-progress、domain-ready 或 production-ready。
-- 品牌模块归位：`OPL Charter` 固定 no-second-truth 边界；`OPL Runway` 承载 runtime envelope；`OPL Pack` / `OPL Connect` 承载 generated/hosted descriptors；`OPL Console` 投影 `current_owner_delta` 和 mission refs；`OPL Vault` 仅保存 refs-only evidence。
+- 品牌模块归位：`OPL Charter` 固定 no-second-truth 边界；`OPL Runway` 承载 runtime envelope；`OPL Pack` / `OPL Connect` 承载 generated/hosted descriptors；`OPL Console` 投影 `current_owner_delta` 和 mission refs；`OPL Ledger` 仅保存 refs-only evidence。
 - 旧 DHD、owner-route、default-executor dispatch、PaperRecovery 或 MAS legacy blocker 在 OPL 文档中只能出现为 diagnostic、migration、provenance、ABI carrier 或 non-degradation evidence，不得作为普通用户默认 paper mission route。
 
 后续决策：
@@ -184,7 +184,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - `contracts/opl-framework/okf-context-bundle-contract.json` 成为 OPL-owned OKF context bundle 边界合同；`src/okf-context-bundle.ts` 和 `opl okf validate|inspect|project-pack|project-repo --json` 提供可执行投影、校验、读回和物化入口。
-- OKF 映射到现有品牌模块，不新增模块：主模块是 `OPL Atlas`、`OPL Pack`、`OPL Stagecraft` 和 `OPL Connect`；协同模块是 `OPL Vault`、`OPL Console`、`OPL Workspace` 和 `OPL Foundry Lab`。`OPL Runway`、Stage Transition Authority、domain quality verdict、owner receipt、typed blocker、artifact authority 和 production readiness 不消费 OKF 作为授权证据。
+- OKF 映射到现有品牌模块，不新增模块：主模块是 `OPL Atlas`、`OPL Pack`、`OPL Stagecraft` 和 `OPL Connect`；协同模块是 `OPL Ledger`、`OPL Console`、`OPL Workspace` 和 `OPL Foundry Lab`。`OPL Runway`、Stage Transition Authority、domain quality verdict、owner receipt、typed blocker、artifact authority 和 production readiness 不消费 OKF 作为授权证据。
 - `opl okf project-pack --pack <pack_compiler_input.json> --output <dir>` 只把 Foundry Agent declarative pack refs 投影成 body-free OKF bundle；`opl okf project-repo --repo <domain_repo> --output <dir>` 在同一边界内读取 domain repo 的 `contracts/pack_compiler_input.json` 和可选 `contracts/memory_descriptor.json`，把 pack refs 与 memory locator refs 合成完整 body-free bundle。prompt、skill、knowledge、quality gate、artifact、memory body 和 domain truth 仍留在 domain repo。
 - `buildOkfMemoryLocatorConcept` 只生成 memory locator concept，默认 `resource_body_mode=body_free_locator`，不复制 memory body，不接受/拒绝 writeback，不替 MAS/MAG/RCA/OMA owner 做 memory authority decision。
 - 原生 OKF frontmatter 只作为 opt-in advisory migration lane：稳定 domain-owned `agent/**/*.md` 可以携带 OKF-compatible `type`、`body_owner`、`domain_authority` metadata，并通过 `opl okf native-frontmatter inspect --repo <domain_repo> --json` 做只读 advisory readiness readback；默认 bundle source 仍是 exporter-generated body-free projection。OPL 只能 preserve / validate / inspect / project refs-only metadata，不能通过 frontmatter 迁移成为正文 owner、domain truth owner、artifact authority、owner receipt / typed blocker authority、runtime scheduler 或 readiness gate。
@@ -198,7 +198,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - `contracts/opl-framework/advisory-knowledge-boundary-contract.json` 成为 family-level 机器边界。
-- OPL Atlas / Pack / Stagecraft / Runway / Vault / Console / Connect 只能承载 catalog、locator、knowledge refs、prompt-context refs、consumed refs、writeback proposal refs、router receipt refs 和 operator projection。
+- OPL Atlas / Pack / Stagecraft / Runway / Ledger / Console / Connect 只能承载 catalog、locator、knowledge refs、prompt-context refs、consumed refs、writeback proposal refs、router receipt refs 和 operator projection。
 - OPL 不持有 memory Markdown body，不接受/拒绝 writeback，不依据 memory refs 生成 route verdict、quality/export/publication/submission verdict、owner receipt 或 typed blocker。
 - 缺少 advisory memory 默认不阻断 stage launch；memory 冲突默认进入 route-back / human gate / reviewer attention，只有 source/data authority、owner identity、forbidden write、不可逆 mutation、hard reviewer / publication / final export / submission claim 或 owner answer claim 才成为 hard gate。
 - 2026-06-20 follow-through：`contracts/opl-framework/advisory-knowledge-boundary-contract.json` 增加 `gate_intent` 和三栏 operator projection 机器边界。`context` 进入参考建议，`advisory_check` 进入软缺口，只有绑定具体 claim/source/owner authority ref 的 `claim_gate` / `authority_gate` 可进入硬 owner gate；`src/advisory-knowledge-boundary.ts` 只生成 projection，不写 domain truth、不读取 memory body、不接受/拒绝 writeback、不签 owner receipt、不创建 typed blocker，也不授权 quality/export/domain-ready verdict。
@@ -251,7 +251,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - OPL 持有 `DomainProgressTransitionRuntime`：append-only authority event log、domain-declared outbox record intake、fixed-point reconciler、exactly-one transition、StageRun identity、idempotency、projection metadata、replay、NonAdvancingApply 分类、human gate resume、closeout transport 和 operator projection。
-- 该能力是 `Stage Transition Authority + Runway control-loop runtime` 的标准 runtime form，不新增品牌模块。品牌主责是 `OPL Runway`；协同模块是 `Pack`、`Stagecraft`、`Console`、`Vault`、`Atlas`、`Workspace`、`Foundry Lab` 和 `Connect`。
+- 该能力是 `Stage Transition Authority + Runway control-loop runtime` 的标准 runtime form，不新增品牌模块。品牌主责是 `OPL Runway`；协同模块是 `Pack`、`Stagecraft`、`Console`、`Ledger`、`Atlas`、`Workspace`、`Foundry Lab` 和 `Connect`。
 - MAS/MAG/RCA/OMA 只提供 Domain Progress Policy Adapter：声明 domain stage、domain gate、human gate、artifact delta、owner receipt shape、typed blocker shape、quality verdict boundary、forbidden write 和 domain authority verdict。
 - OPL 只能消费 domain emit 的 transition request / OPL-native command record、owner answer、typed blocker、human gate 和 provider observation，并在 OPL 内部形成 command/event/outbox runtime result；不得根据 action_queue、read-model 形状或 recovery 文案自行推导下一步 domain action，也不得签 domain owner receipt、创建 domain typed blocker、写 domain study/runtime artifacts、声明 domain ready/production ready。
 - domain 仓内已存在的 scheduler、event log、outbox、fixed-point runtime、status/workbench shell 或 generic transition runner 只能作为 migration input、refs-only adapter、diagnostic/provenance 或 retirement candidate；新增投入默认服务 OPL runtime contract 和 domain policy adapter contract。
@@ -387,14 +387,14 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - `opl-family-ideal-operating-model-redesign.md` 固定为 `active_reference`：只表达 north-star、评估标准、plane / primitive 分类和 acceptance standard，不维护第二 owner queue、第二 ordinary route、第二 truth source 或 worktree closeout。
-- `current-state-vs-ideal-gap.md` 继续是唯一 active owner：multi-plane operating model、OPL 基座优化、Runway / Console / Vault false-authority、`current_owner_delta` single ordinary route、证据缺口、next action 和完成口径都折回该文档。
-- Ordinary App/CLI/operator route 固定为 fresh `current_owner_delta`。Runway 只承接 durable execution / repair / reconcile，Console 只承接 owner-action projection，Vault 只承接 refs-only evidence / telemetry / audit packet；它们都不能生成 domain owner answer、domain typed blocker、quality/export/review verdict、artifact authority、App release verdict、Brand L5、physical delete authorization 或 ready declaration。
-- OPL 基座优化只推进 generated/hosted surfaces、durable Runway、Stage Artifact Unit、passive Vault、Console owner-action producer、Foundry Lab work-order loop 和 human/domain owner decision gate；domain repo 私有 scheduler、queue、dashboard、status shell、generic wrapper 或 selector 只能作为迁移输入、diagnostic/support surface 或 retirement candidate。
+- `current-state-vs-ideal-gap.md` 继续是唯一 active owner：multi-plane operating model、OPL 基座优化、Runway / Console / Ledger false-authority、`current_owner_delta` single ordinary route、证据缺口、next action 和完成口径都折回该文档。
+- Ordinary App/CLI/operator route 固定为 fresh `current_owner_delta`。Runway 只承接 durable execution / repair / reconcile，Console 只承接 owner-action projection，Ledger 只承接 refs-only evidence / telemetry / audit packet；它们都不能生成 domain owner answer、domain typed blocker、quality/export/review verdict、artifact authority、App release verdict、Brand L5、physical delete authorization 或 ready declaration。
+- OPL 基座优化只推进 generated/hosted surfaces、durable Runway、Stage Artifact Unit、passive Ledger、Console owner-action producer、Foundry Lab work-order loop 和 human/domain owner decision gate；domain repo 私有 scheduler、queue、dashboard、status shell、generic wrapper 或 selector 只能作为迁移输入、diagnostic/support surface 或 retirement candidate。
 - 后续 docs foldback 只能关闭 `hygiene_only_supporting_active_gap` 或支撑具体 owner-evidence work order；不能用 docs updated、plane health、provider completion、verified refs-only ledger、conformance pass 或 App projection 声明 domain ready、App release ready、Brand L5 或 production ready。
 
 ### 决策：MAS Agent OS 方案提升为 family-level Foundry Agent OS 标准
 
-原因：MAS 的目标态已经明确为 `OPL Agent OS + MAS Declarative Medical Research Pack + MAS Minimal Authority Kernel + Scientific Capability Registry`。这不是 MAS 单仓特例，而是 MAS/MAG/RCA/OMA 都需要的标准 OPL Agent 形态：OPL 上收通用 runtime、StageRun、Pack compiler、generated/hosted surfaces、Console、Vault、Runway 和 conformance；domain 仓只保留无法声明化的最小 authority kernel。
+原因：MAS 的目标态已经明确为 `OPL Agent OS + MAS Declarative Medical Research Pack + MAS Minimal Authority Kernel + Scientific Capability Registry`。这不是 MAS 单仓特例，而是 MAS/MAG/RCA/OMA 都需要的标准 OPL Agent 形态：OPL 上收通用 runtime、StageRun、Pack compiler、generated/hosted surfaces、Console、Ledger、Runway 和 conformance；domain 仓只保留无法声明化的最小 authority kernel。
 
 影响：
 
@@ -403,7 +403,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `Domain Capability Registry` 不是第 11 个品牌模块；它由 `OPL Atlas` 持 catalog、`OPL Pack` 持 ABI、`OPL Stagecraft` 持 use policy。默认行为是 `current_owner_delta_bound_jit_or_fail_open`，只有当前 owner delta route-required ref 缺失且影响 source/data/evidence、owner-route identity、forbidden write、irreversible mutation 或 hard reviewer/publication gate 时才升级 blocker。
 - MAS external-learning 后续优化必须并入 family-level Capability Registry。OPL `W3` 负责 current-delta-bound resolver / selector、fail-open policy 和 route-required blocker policy；MAS/MAG/RCA/OMA 只在各自 domain pack / authority kernel 中声明可消费 refs、forbidden authority、owner receipt / typed blocker / quality gate 晋级边界，不另建 domain-local selector、always-on sidecar 或第二 active backlog。
 - `brand-module-registry.json`、`brand-module-surfaces.json` 和 `brand-module-l5-operating-evidence.json` 同步补充 Pack compile parity、`current_owner_delta` default read、capability fail-open、domain-authority false boundary 和 cross-agent adoption 证据类。
-- Cross-agent conformance 必须证明 default read root 是 `current_owner_delta`，OPL generated / hosted surfaces 不写 domain truth，Vault / Console / Runway / Pack 不签 owner receipt、不创建 typed blocker、不授权 quality/export verdict，conformance pass 不等于 domain ready。
+- Cross-agent conformance 必须证明 default read root 是 `current_owner_delta`，OPL generated / hosted surfaces 不写 domain truth，Ledger / Console / Runway / Pack 不签 owner receipt、不创建 typed blocker、不授权 quality/export verdict，conformance pass 不等于 domain ready。
 - 当前完整实施规划入口是 `docs/active/foundry-agent-os-family-target-implementation-plan.md`；当前 active gap、执行顺序和完成口径仍回 `docs/active/current-state-vs-ideal-gap.md`，避免产生第二 active backlog。
 - 当前读法：MAG/RCA/OMA/BookForge 的 default CLI、Skill/plugin、App/product-entry、status read model、workbench 和 conformance readback 必须把 ordinary owner route 表达为 `StageRun + current_owner_delta`；repo-local runner、private wrapper、generic owner surface 或旧 product/status shell 只能作为 migration residue / deletion gate / diagnostic。`generated_direct_parity`、Capability Registry resolver ABI、W7 refs-only intake、owner-route work orders、private-platform retirement work order 和 owner evidence ref-shape readout 是 machine readback 输入，不是 completion truth。它们不能替代真实 owner receipt、typed blocker、human gate、reviewer/quality/export receipt、long-soak、release/install、physical delete owner decision 或 owner acceptance evidence；`open_count=0`、conformance pass、App projection 或 docs foldback 均不得授权 domain ready、App release ready、Brand L5 或 production ready。
 - 本决策不声明 MAS/MAG/RCA/OMA 已 domain ready，不声明 App release ready、Brand L5 或 production ready；后续必须由 domain-owned owner receipt、typed blocker、quality/export/review receipt、human gate、no-regression ref 或真实 L5 operating evidence 关闭。
@@ -449,7 +449,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 影响：
 
-- 当前 OPL Framework 品牌模块读作十模块：`OPL Charter`、`OPL Atlas`、`OPL Workspace`、`OPL Pack`、`OPL Stagecraft`、`OPL Runway`、`OPL Vault`、`OPL Console`、`OPL Foundry Lab` 和 `OPL Connect`。
+- 当前 OPL Framework 品牌模块读作十模块：`OPL Charter`、`OPL Atlas`、`OPL Workspace`、`OPL Pack`、`OPL Stagecraft`、`OPL Runway`、`OPL Ledger`、`OPL Console`、`OPL Foundry Lab` 和 `OPL Connect`。
 - `OPL Pack` 持有 Declarative Domain Pack、authority ABI、pack compiler、generated/hosted surfaces 和 minimal authority functions 的模块级 read/validate/doctor 语义；minimal authority functions 仍通过标准 ABI 返回 refs / receipt / typed blocker / safe action，不接管 domain handler implementation、owner receipt、typed blocker、quality verdict、artifact authority、App release truth 或 production readiness。
 - 2026-06-07 的九模块决策保留为历史基线，表示品牌模块 taxonomy 正式进入 Framework 设计语言；它不是模块数量上限。后续新增或拆分模块必须证明独立 bounded context、owner、purpose、machine boundary、authority false flags、L4/L5 口径和 docs/contracts/tests foldback。
 - 核心五件套、`docs/references/brand-modules/*`、contracts README、CLI help 和 focused tests 必须以 registry 的当前模块集为准，避免把旧“九模块”写成当前硬约束。
@@ -503,7 +503,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ### 决策：采用 OPL 九个品牌模块作为长期顶层 taxonomy
 
-原因：OPL 已经从单一 CLI/runtime 项目演进成 `OPL Framework -> One Person Lab App -> Foundry Agents` 的 family-level 系统。仅用 runtime、workspace、stage、App、Agent Lab 等局部技术名组织长期设计，会让 owner boundary、文档分层、contract 入口、用户理解和后续重构继续分散。九个品牌模块把这些能力收成可管理的 bounded context：`OPL Charter`、`OPL Atlas`、`OPL Workspace`、`OPL Stagecraft`、`OPL Runway`、`OPL Vault`、`OPL Console`、`OPL Foundry Lab` 和 `OPL Connect`。
+原因：OPL 已经从单一 CLI/runtime 项目演进成 `OPL Framework -> One Person Lab App -> Foundry Agents` 的 family-level 系统。仅用 runtime、workspace、stage、App、Agent Lab 等局部技术名组织长期设计，会让 owner boundary、文档分层、contract 入口、用户理解和后续重构继续分散。九个品牌模块把这些能力收成可管理的 bounded context：`OPL Charter`、`OPL Atlas`、`OPL Workspace`、`OPL Stagecraft`、`OPL Runway`、`OPL Ledger`、`OPL Console`、`OPL Foundry Lab` 和 `OPL Connect`。
 
 2026-06-08 追加：本决策定义的是品牌模块 taxonomy 的采用基线，不是模块数量上限。当前 taxonomy 已扩展为十模块，并新增 `OPL Pack` 承接 Domain Pack、Authority ABI、pack compiler 和 generated/hosted surfaces 的独立边界。
 
@@ -513,7 +513,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 新增 capability、CLI/App surface、contract、read model、docs support、release/install path 或 external interface 时，应能归入一个主品牌模块，并写清该模块不拥有的 truth / authority。
 - 成熟度按 `L1 conceptual`、`L2 emerging`、`L3 structural`、`L4 executable baseline`、`L5 production operating maturity` 管理。`OPL Workspace` 当前只是 `L4 executable baseline`，不能外推为 domain ready、App release ready 或 production ready。
 - `L5` 需要真实用户路径、跨 agent scaleout、长跑/恢复 evidence、release/install evidence、运维闭环和 owner acceptance。docs foldback、conformance pass、provider completion、verified ledger 或 App projection 只能作为输入，不能单独形成 L5 结论。
-- `Charter / Atlas / Runway / Vault` 是下一轮 L3/L4 优先补强对象；`Console / Foundry Lab / Connect` 的成熟度必须绑定 App release/user-path、agent improvement loop、install/release drift matrix 和真实 owner evidence。
+- `Charter / Atlas / Runway / Ledger` 是下一轮 L3/L4 优先补强对象；`Console / Foundry Lab / Connect` 的成熟度必须绑定 App release/user-path、agent improvement loop、install/release drift matrix 和真实 owner evidence。
 
 ### 决策：Foundry Agent CLI 使用系列 spine，不复制 OPL Framework 品牌模块
 
@@ -521,7 +521,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 影响：
 
-- `opl agents foundry status|inspect|interfaces|validate|doctor|peers` 成为 Foundry Agent series 的普通 CLI command spine，表达 `workspace -> work -> stage -> run -> vault -> handoff -> connect` 的同源执行链。
+- `opl agents foundry status|inspect|interfaces|validate|doctor|peers` 成为 Foundry Agent series 的普通 CLI command spine，表达 `workspace -> work -> stage -> run -> ledger -> handoff -> connect` 的同源执行链。
 - MAS/MAG/RCA 的品牌 CLI 字段是 series identity / shorthand，不再等同于本机 PATH-safe 可执行命令。当前标准 public / active surface 是 OPL generated/hosted Foundry Agent surfaces 与 domain-owned direct skill / handler path；旧专属命令只作为历史 provenance 读取，不能作为当前 standard surface、当前验证目标、membership/status/list 分组依据、兼容面或新 Agent 模板。相关 tombstone 见 `docs/history/compatibility/domain-foundry-cli-tombstone.md`。
 - Agent CLI 的机器输出统一接受 `--json`。OPL 聚合面 `opl foundry agents list|inspect` 只能投影当前 generated/hosted series surface、membership/status policy 和 no-authority flags；不得为旧专属命令保留验证字段、入口别名或 JSON flag alias。
 - `contracts/opl-framework/foundry-agent-series-contract.json` 固定 series CLI policy、Skill/MCP surface policy 和旧实现桶退役策略；新 scaffold 生成的 `contracts/foundry_agent_series.json` 必须继承这些字段。

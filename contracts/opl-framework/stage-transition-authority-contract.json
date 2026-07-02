@@ -108,7 +108,7 @@
       "may_authorize_domain_ready": false
     },
     {
-      "producer_kind": "evidence_vault",
+      "producer_kind": "evidence_ledger",
       "allowed_intent_kinds": [
         "evidence_observation"
       ],
@@ -198,7 +198,7 @@
     "file presence",
     "conformance passed",
     "agent lab candidate",
-    "evidence vault event",
+    "evidence ledger event",
     "old controller decision",
     "stale typed blocker",
     "stale owner receipt"

@@ -37,7 +37,7 @@ test('DomainProgressTransitionRuntime first slice stays inside existing brand-mo
   assert.match(slice.brand_module_partition.Pack, /command\/outbox\/event shape/);
   assert.match(slice.brand_module_partition.Stagecraft, /StageRun identity/);
   assert.match(slice.brand_module_partition.Console, /read-model metadata/);
-  assert.match(slice.brand_module_partition.Vault, /outbox\/event\/replay refs/);
+  assert.match(slice.brand_module_partition.Ledger, /outbox\/event\/replay refs/);
   assert.equal(
     slice.concepts.TransitionDecisionEngine.durable_substrate_first_slice.current_latest_policy,
     'exactly_one_latest_current_decision_per_obligation_identity',

@@ -828,7 +828,7 @@
             "workspace",
             "stagecraft",
             "runway",
-            "vault",
+            "ledger",
             "console",
             "foundry-lab",
             "connect"
@@ -858,7 +858,7 @@
             "work",
             "stage",
             "run",
-            "vault",
+            "ledger",
             "handoff",
             "connect"
           ],
@@ -1754,7 +1754,7 @@
           "workspace",
           "stagecraft",
           "runway",
-          "vault",
+          "ledger",
           "console",
           "foundry-lab",
           "connect"
@@ -1784,7 +1784,7 @@
           "work",
           "stage",
           "run",
-          "vault",
+          "ledger",
           "handoff",
           "connect"
         ],

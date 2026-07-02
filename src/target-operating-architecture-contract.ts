@@ -305,12 +305,12 @@ export function validateTargetOperatingArchitecture(
     filePath,
   );
   requireEveryValue(atlasCatalogs, TARGET_ARCHITECTURE_ATLAS_CATALOGS, 'catalog_and_telemetry.atlas_catalogs', filePath);
-  const vaultRefStreams = expectNonEmptyStringArray(
-    catalogRaw.vault_ref_streams,
-    'catalog_and_telemetry.vault_ref_streams',
+  const ledgerRefStreams = expectNonEmptyStringArray(
+    catalogRaw.ledger_ref_streams,
+    'catalog_and_telemetry.ledger_ref_streams',
     filePath,
   );
-  requireEveryValue(vaultRefStreams, TARGET_ARCHITECTURE_VAULT_REF_STREAMS, 'catalog_and_telemetry.vault_ref_streams', filePath);
+  requireEveryValue(ledgerRefStreams, TARGET_ARCHITECTURE_VAULT_REF_STREAMS, 'catalog_and_telemetry.ledger_ref_streams', filePath);
 
   const defaultScreenFields = expectNonEmptyStringArray(
     appConsoleRaw.default_screen_fields,
@@ -509,8 +509,8 @@ export function validateTargetOperatingArchitecture(
     },
     catalog_and_telemetry: {
       atlas_catalogs: atlasCatalogs,
-      vault_ref_streams: vaultRefStreams,
-      vault_policy: expectString(catalogRaw.vault_policy, 'catalog_and_telemetry.vault_policy', filePath),
+      ledger_ref_streams: ledgerRefStreams,
+      ledger_policy: expectString(catalogRaw.ledger_policy, 'catalog_and_telemetry.ledger_policy', filePath),
       telemetry_body_policy: expectString(catalogRaw.telemetry_body_policy, 'catalog_and_telemetry.telemetry_body_policy', filePath),
     },
     app_console_policy: {

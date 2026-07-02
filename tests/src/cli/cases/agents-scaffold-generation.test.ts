@@ -82,7 +82,7 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       'workspace',
       'stagecraft',
       'runway',
-      'vault',
+      'ledger',
       'console',
       'foundry-lab',
       'connect',
@@ -100,7 +100,7 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       'work',
       'stage',
       'run',
-      'vault',
+      'ledger',
       'handoff',
       'connect',
     ]);

@@ -1,0 +1,277 @@
+{
+  "version": "source-module-map.v1",
+  "scope": "opl_framework_source_module_map",
+  "owner": "OPL Framework",
+  "purpose": "Canonical source-organization map that aligns the OPL Framework codebase with the ten brand modules.",
+  "state": "active_contract",
+  "machine_boundary": "This contract maps source ownership and physical module entrypoints. It does not move runtime truth, domain truth, artifact bodies, owner receipts, typed blockers, or production readiness into brand modules.",
+  "source_root": "src",
+  "physical_module_root": "src/modules",
+  "alignment_rules": [
+    "Each brand module has a matching physical entrypoint under src/modules/<module_id>/.",
+    "New module-owned source should start under the matching src/modules/<module_id>/ directory.",
+    "Legacy root-level src files remain valid while they are listed by primary_source_globs or shared_source_globs.",
+    "Shared kernel files must declare a primary owner module and explicit consumer modules.",
+    "Moving legacy root-level files is a follow-up refactor only when imports, tests, and runtime surfaces can be kept behavior-preserving."
+  ],
+  "modules": [
+    {
+      "module_id": "charter",
+      "brand_name": "OPL Charter",
+      "physical_root": "src/modules/charter",
+      "public_entrypoint": "src/modules/charter/index.ts",
+      "primary_source_globs": [
+        "src/brand-module-contracts.ts",
+        "src/brand-modules.ts",
+        "src/brand-system-profile-contract.ts",
+        "src/contract-validation.ts",
+        "src/contracts.ts"
+      ],
+      "shared_source_globs": [
+        "src/types.ts",
+        "src/types-parts/**"
+      ],
+      "owner_note": "Charter owns framework contracts, brand grammar, module registry validation, and shared type barrels."
+    },
+    {
+      "module_id": "atlas",
+      "brand_name": "OPL Atlas",
+      "physical_root": "src/modules/atlas",
+      "public_entrypoint": "src/modules/atlas/index.ts",
+      "primary_source_globs": [
+        "src/domain-*",
+        "src/family-domain-*",
+        "src/family-entry-*",
+        "src/family-shared-release.ts",
+        "src/resolver.ts",
+        "src/standard-agent-registry.ts"
+      ],
+      "shared_source_globs": [
+        "src/domain-manifest/**"
+      ],
+      "owner_note": "Atlas owns discoverability, descriptors, catalogs, domain selection, and public metadata graphs."
+    },
+    {
+      "module_id": "workspace",
+      "brand_name": "OPL Workspace",
+      "physical_root": "src/modules/workspace",
+      "public_entrypoint": "src/modules/workspace/index.ts",
+      "primary_source_globs": [
+        "src/agent-workspace-*",
+        "src/family-workspace-root.ts",
+        "src/workspace-*"
+      ],
+      "shared_source_globs": [
+        "src/workspace-diagnostics-parts/**",
+        "src/workspace-initializer-parts/**",
+        "src/workspace-lifecycle-parts/**"
+      ],
+      "owner_note": "Workspace owns project topology, inspectable workspace structure, user files, shared materials, and workspace validation."
+    },
+    {
+      "module_id": "pack",
+      "brand_name": "OPL Pack",
+      "physical_root": "src/modules/pack",
+      "public_entrypoint": "src/modules/pack/index.ts",
+      "primary_source_globs": [
+        "src/domain-pack-compiler.ts",
+        "src/pack-*",
+        "src/scholar-skills*",
+        "src/skill-catalog.ts",
+        "src/standard-domain-agent-stage-pack-*"
+      ],
+      "shared_source_globs": [
+        "src/domain-pack-compiler/**",
+        "src/pack-os-parts/**",
+        "src/scholar-skills-parts/**"
+      ],
+      "owner_note": "Pack owns declarative domain packs, capability invocation ABI, generated surfaces, pack compiler, and skill/package contracts."
+    },
+    {
+      "module_id": "stagecraft",
+      "brand_name": "OPL Stagecraft",
+      "physical_root": "src/modules/stagecraft",
+      "public_entrypoint": "src/modules/stagecraft/index.ts",
+      "primary_source_globs": [
+        "src/cognitive-*",
+        "src/family-stage-*",
+        "src/family-transition-*",
+        "src/quality-*",
+        "src/stage-*"
+      ],
+      "shared_source_globs": [
+        "src/quality-details/**"
+      ],
+      "owner_note": "Stagecraft owns stage design, cognitive computation, stage policy, quality gates, and handoff semantics."
+    },
+    {
+      "module_id": "runway",
+      "brand_name": "OPL Runway",
+      "physical_root": "src/modules/runway",
+      "public_entrypoint": "src/modules/runway/index.ts",
+      "primary_source_globs": [
+        "src/agent-executor.ts",
+        "src/codex*",
+        "src/family-orchestration*",
+        "src/family-runtime*",
+        "src/functional-agent-runtime-harness.ts",
+        "src/generic-substrate-projection.ts",
+        "src/managed-runtime-contract.ts",
+        "src/native-*",
+        "src/observability-export.ts",
+        "src/opl-runtime-paths.ts",
+        "src/opl-session-runtime.ts",
+        "src/runtime-*",
+        "src/session-ledger.ts",
+        "src/terminal.ts"
+      ],
+      "shared_source_globs": [
+        "src/family-orchestration-parts/**",
+        "src/family-runtime-*/**",
+        "src/family-runtime-parts/**",
+        "src/opl-runtime-paths/**",
+        "src/runtime-environment-substrate-parts/**",
+        "src/runtime-operator-action-execution-parts/**"
+      ],
+      "owner_note": "Runway owns durable execution, queues, provider lifecycle, worker/service substrate, runtime state, and operational recovery."
+    },
+    {
+      "module_id": "ledger",
+      "brand_name": "OPL Ledger",
+      "physical_root": "src/modules/ledger",
+      "public_entrypoint": "src/modules/ledger/index.ts",
+      "primary_source_globs": [
+        "src/*ledger*",
+        "src/*receipt*",
+        "src/*evidence*",
+        "src/*provenance*",
+        "src/current-owner-delta-*",
+        "src/evidence-*",
+        "src/handoff-bundle*",
+        "src/memory-artifact-lifecycle-*",
+        "src/progress-delta-receipt.ts",
+        "src/research-evidence-pack.ts"
+      ],
+      "shared_source_globs": [
+        "src/current-owner-delta-parts/**"
+      ],
+      "owner_note": "Ledger owns refs-only evidence records, receipts, provenance, lineage, restore references, and audit trails."
+    },
+    {
+      "module_id": "console",
+      "brand_name": "OPL Console",
+      "physical_root": "src/modules/console",
+      "public_entrypoint": "src/modules/console/index.ts",
+      "primary_source_globs": [
+        "src/aionui-*",
+        "src/app-*",
+        "src/automation-companions.ts",
+        "src/management/**",
+        "src/product-entry*",
+        "src/runtime-manager.ts",
+        "src/runtime-modes.ts",
+        "src/runtime-tray-*",
+        "src/status-narration.ts",
+        "src/system-preferences.ts"
+      ],
+      "shared_source_globs": [
+        "src/app-state-parts/**",
+        "src/app-state-settings-control-center-parts/**",
+        "src/product-entry-companions/**",
+        "src/product-entry-parts/**",
+        "src/runtime-tray-*-parts/**"
+      ],
+      "owner_note": "Console owns App/operator projections, action catalog, status narration, drilldown, and human-facing operating surfaces."
+    },
+    {
+      "module_id": "foundry-lab",
+      "brand_name": "OPL Foundry Lab",
+      "physical_root": "src/modules/foundry-lab",
+      "public_entrypoint": "src/modules/foundry-lab/index.ts",
+      "primary_source_globs": [
+        "src/agent-*",
+        "src/framework-*",
+        "src/foundry-*",
+        "src/oma-*",
+        "src/opl-meta-agent-*",
+        "src/research-hypothesis-*",
+        "src/standard-domain-agent-*"
+      ],
+      "shared_source_globs": [
+        "src/agent-lab-complete-parts/**",
+        "src/framework-operating-maturity-parts/**",
+        "src/framework-tranche-backlog-parts/**",
+        "src/opl-meta-agent-consumption-parts/**",
+        "src/standard-domain-agent-scaffold-constants-parts/**",
+        "src/standard-domain-agent-scaffold-validation-parts/**"
+      ],
+      "owner_note": "Foundry Lab owns agent creation, conformance, evaluation, mechanism improvement, promotion, and rollback surfaces."
+    },
+    {
+      "module_id": "connect",
+      "brand_name": "OPL Connect",
+      "physical_root": "src/modules/connect",
+      "public_entrypoint": "src/modules/connect/index.ts",
+      "primary_source_globs": [
+        "src/capability-registry-resolver.ts",
+        "src/developer-mode*",
+        "src/install-companions*",
+        "src/local-codex-defaults.ts",
+        "src/managed-install-*",
+        "src/managed-shell-*",
+        "src/managed-update-*",
+        "src/opl-acp-*",
+        "src/opl-connect-*",
+        "src/opl-framework-locator.ts",
+        "src/opl-release.ts",
+        "src/opl-skills.ts",
+        "src/owner-id.ts",
+        "src/package-distribution.ts",
+        "src/packaged-module-marker.ts",
+        "src/system-installation.ts"
+      ],
+      "shared_source_globs": [
+        "src/install-companions/**",
+        "src/install-companions-parts/**",
+        "src/system-installation/**"
+      ],
+      "owner_note": "Connect owns external descriptors, adapters, install/update distribution, plugin/skill sync, and connector surfaces."
+    }
+  ],
+  "shared_kernel": [
+    {
+      "path": "src/cli.ts",
+      "primary_module_id": "charter",
+      "consumer_module_ids": [
+        "charter",
+        "atlas",
+        "workspace",
+        "pack",
+        "stagecraft",
+        "runway",
+        "ledger",
+        "console",
+        "foundry-lab",
+        "connect"
+      ],
+      "role": "Single CLI dispatcher for all module command families."
+    },
+    {
+      "path": "src/types.ts",
+      "primary_module_id": "charter",
+      "consumer_module_ids": [
+        "charter",
+        "atlas",
+        "workspace",
+        "pack",
+        "stagecraft",
+        "runway",
+        "ledger",
+        "console",
+        "foundry-lab",
+        "connect"
+      ],
+      "role": "Shared public type barrel."
+    }
+  ]
+}

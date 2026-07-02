@@ -5,7 +5,7 @@ export const expectedModuleIds = [
   'pack',
   'stagecraft',
   'runway',
-  'vault',
+  'ledger',
   'console',
   'foundry-lab',
   'connect',

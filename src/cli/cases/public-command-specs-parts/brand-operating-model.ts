@@ -99,8 +99,8 @@ const OPERATING_MODEL_PLANE_PROJECTION_METADATA: Record<string, {
     projection_role: 'refs_only_evidence_and_telemetry_projection',
     source_contract_fields: [
       'multi_plane_operating_system.planes.evidence_telemetry_plane',
-      'catalog_and_telemetry.vault_ref_streams',
-      'catalog_and_telemetry.vault_policy',
+      'catalog_and_telemetry.ledger_ref_streams',
+      'catalog_and_telemetry.ledger_policy',
       'resource_model.resource_kinds.EvidenceRef',
     ],
     resource_kind_refs: ['EvidenceRef', 'OwnerAnswer', 'StageArtifactUnit'],

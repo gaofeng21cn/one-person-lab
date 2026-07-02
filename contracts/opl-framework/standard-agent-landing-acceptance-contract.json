@@ -33,7 +33,7 @@
       "StageRun execution substrate",
       "typed queue and attempt ledger",
       "retry/dead-letter/resume/wakeup shell",
-      "state index and refs-only vault",
+      "state index and refs-only ledger",
       "generic lifecycle and locator shell",
       "operator/App projection shell",
       "private-platform residue decision ledger",

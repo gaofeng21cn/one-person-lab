@@ -119,7 +119,7 @@ opl contract validate --json
 | `read_model.pack.capability_execution_view` | Agent ordinary path 的执行视图，只包含可执行 action、input shape、owner/action refs 和 false-authority flags。 |
 | `read_model.pack.capability_invocation_lifecycle` | Capability Invocation OS 三层 lifecycle 的 projection，供 Console / Connect / Runway 读取同一 soft/scored/hard gate 语义。 |
 | `read_model.pack.agent_operational_card` | Agent ordinary path 的操作卡，承接 tool affordance、expected result envelope 和 handoff refs。 |
-| `read_model.pack.tool_result_envelope` | ToolResultEnvelope projection，供 Console / Connect / Vault 读结果载体。 |
+| `read_model.pack.tool_result_envelope` | ToolResultEnvelope projection，供 Console / Connect / Ledger 读结果载体。 |
 | `read_model.pack.generated_surfaces` | generated bundle、descriptor refs、source/generated fingerprint 和 drift state。 |
 | `read_model.pack.compiler` | pack compiler validation、drift summary、next owner action 和 false-authority boundary。 |
 
@@ -176,7 +176,7 @@ App read-model 只投影 Pack refs 和 Pack 生成的 ordinary consumption views
 - 不让 ToolResultEnvelope、tool card、capability registry hit 或 tool availability 变成 owner answer、current-owner authorization、quality verdict 或 artifact authority。
 - 不让 capability invocation lifecycle 本身变成 domain authority；hard gate 只能引用 `current_owner_delta`，Runway 不能因此写 domain truth、owner receipt 或 typed blocker。
 - 不让 Agent ordinary path 直接消费 MAS 原始合同细节；普通路径只消费 Pack 生成/校验后的 execution view、operational card 和 result envelope。
-- 不让 Pack 接管 Atlas catalog、Stagecraft stage semantics、Runway durable execution、Vault evidence body、Console release truth、Foundry Lab improvement verdict 或 Connect transport/install evidence。
+- 不让 Pack 接管 Atlas catalog、Stagecraft stage semantics、Runway durable execution、Ledger evidence body、Console release truth、Foundry Lab improvement verdict 或 Connect transport/install evidence。
 
 ## L4 / L5 成熟度读法
 

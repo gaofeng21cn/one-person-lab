@@ -5,7 +5,7 @@ export type BrandModuleId =
   | 'pack'
   | 'stagecraft'
   | 'runway'
-  | 'vault'
+  | 'ledger'
   | 'console'
   | 'foundry-lab'
   | 'connect';
@@ -168,6 +168,37 @@ export interface BrandModuleRegistryContract {
   }>;
   external_reference_principles: string[];
   modules: BrandModuleRegistryEntry[];
+}
+
+export interface SourceModuleMapEntry {
+  module_id: BrandModuleId;
+  brand_name: string;
+  physical_root: string;
+  public_entrypoint: string;
+  primary_source_globs: string[];
+  shared_source_globs: string[];
+  owner_note: string;
+}
+
+export interface SourceModuleMapSharedKernelEntry {
+  path: string;
+  primary_module_id: BrandModuleId;
+  consumer_module_ids: BrandModuleId[];
+  role: string;
+}
+
+export interface SourceModuleMapContract {
+  version: string;
+  scope: string;
+  owner: string;
+  purpose: string;
+  state: string;
+  machine_boundary: string;
+  source_root: string;
+  physical_module_root: string;
+  alignment_rules: string[];
+  modules: SourceModuleMapEntry[];
+  shared_kernel: SourceModuleMapSharedKernelEntry[];
 }
 
 export interface BrandCliPlatformCommandSurface {

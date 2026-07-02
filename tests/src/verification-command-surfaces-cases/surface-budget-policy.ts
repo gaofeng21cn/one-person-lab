@@ -412,7 +412,7 @@ test('surface budget policy keeps diagnostic lenses out of default stage entrypo
   );
   assert.equal(
     policy.grip_big_release_small_review.ordinary_progress_spine.audit_sidecar_role,
-    'passive_evidence_vault_and_drilldown',
+    'passive_evidence_ledger_and_drilldown',
   );
   assert.deepEqual(policy.grip_big_release_small_review.artifact_tiers, [
     'T0_progress_delta',

@@ -201,7 +201,7 @@ test('advisory knowledge boundary maps brand modules to refs-only responsibiliti
   const contract = readJson(contractPath);
   const modules = record(contract.brand_module_boundaries);
 
-  for (const moduleId of ['atlas', 'pack', 'stagecraft', 'runway', 'vault', 'console', 'connect']) {
+  for (const moduleId of ['atlas', 'pack', 'stagecraft', 'runway', 'ledger', 'console', 'connect']) {
     const moduleBoundary = record(modules[moduleId]);
     assert.equal(Array.isArray(moduleBoundary.may_hold), true);
     assert.equal(Array.isArray(moduleBoundary.must_not_hold), true);
@@ -215,7 +215,7 @@ test('advisory knowledge boundary maps brand modules to refs-only responsibiliti
   ]);
   assert.equal((record(modules.stagecraft).must_not_hold as unknown[]).includes('route_scoring'), true);
   assert.equal(
-    (record(modules.vault).must_not_hold as unknown[]).includes('domain_memory_body_store'),
+    (record(modules.ledger).must_not_hold as unknown[]).includes('domain_memory_body_store'),
     true,
   );
   assert.equal(

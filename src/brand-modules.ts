@@ -33,7 +33,7 @@ const BRAND_MODULE_DOC_PATHS: Record<BrandModuleId, string> = {
   pack: 'docs/references/brand-modules/pack.md',
   stagecraft: 'docs/references/brand-modules/stagecraft.md',
   runway: 'docs/references/brand-modules/runway.md',
-  vault: 'docs/references/brand-modules/vault.md',
+  ledger: 'docs/references/brand-modules/ledger.md',
   console: 'docs/references/brand-modules/console.md',
   'foundry-lab': 'docs/references/brand-modules/foundry-lab.md',
   connect: 'docs/references/brand-modules/connect.md',

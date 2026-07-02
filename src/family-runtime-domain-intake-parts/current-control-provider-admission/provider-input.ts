@@ -627,7 +627,7 @@ function domainProgressTransitionExecuteApply(input: {
       Pack: 'domain-declared command/outbox identity and postcondition',
       Stagecraft: 'StageRun identity and stage packet replay semantics',
       Console: 'read-model metadata projection',
-      Vault: 'append-only outbox/event/replay refs',
+      Ledger: 'append-only outbox/event/replay refs',
     },
     exactly_one_apply: {
       scope: 'stage_run_identity',

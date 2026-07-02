@@ -203,7 +203,7 @@ export function buildOrdinaryProgressGuardReadback(contracts: FrameworkContracts
       active_gap_owner_ref: 'docs/active/current-state-vs-ideal-gap.md',
       tranche_backlog_is_execution_index_only: true,
       readiness_readback_is_projection_only: true,
-      worklist_and_evidence_vault_are_audit_sidecars: true,
+      worklist_and_evidence_ledger_are_audit_sidecars: true,
       app_operator_projection_can_not_replace_current_owner_delta: true,
     },
     authority_boundary: { ...ORDINARY_PROGRESS_GUARD_AUTHORITY },

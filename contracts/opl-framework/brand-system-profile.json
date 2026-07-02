@@ -23,7 +23,7 @@
       "layer_id": "opl_framework",
       "product_name": "OPL Framework",
       "user_understanding": "The foundation that makes agents creatable, runnable, recoverable, and auditable.",
-      "maintainer_understanding": "Agent platform, runtime, contracts, pack compiler, generated surfaces, Vault, Runway, and Console projection producer.",
+      "maintainer_understanding": "Agent platform, runtime, contracts, pack compiler, generated surfaces, Ledger, Runway, and Console projection producer.",
       "owner": "one-person-lab",
       "authority_boundary": [
         "owns_framework_runtime_contracts",
@@ -67,7 +67,7 @@
       "pack",
       "stagecraft",
       "runway",
-      "vault",
+      "ledger",
       "console",
       "foundry-lab",
       "connect"
@@ -110,10 +110,10 @@
         "surface_contract_ref": "contracts/opl-framework/brand-module-surfaces.json#modules.runway"
       },
       {
-        "module_id": "vault",
+        "module_id": "ledger",
         "product_grammar_role": "refs-only evidence, receipt, typed blocker, lineage, restore, and provenance",
-        "registry_ref": "contracts/opl-framework/brand-module-registry.json#modules.vault",
-        "surface_contract_ref": "contracts/opl-framework/brand-module-surfaces.json#modules.vault"
+        "registry_ref": "contracts/opl-framework/brand-module-registry.json#modules.ledger",
+        "surface_contract_ref": "contracts/opl-framework/brand-module-surfaces.json#modules.ledger"
       },
       {
         "module_id": "console",
@@ -238,7 +238,7 @@
       "Say typed blocker only when an owner-signed blocker ref names the required owner and next safe action.",
       "Say human gate when the next action requires owner or human input.",
       "Do not turn provider completion, file presence, verified ledger refs, or contract validation into owner acceptance.",
-      "Do not let OPL Framework, Console, Vault, or Connect claim domain quality, artifact authority, or production readiness."
+      "Do not let OPL Framework, Console, Ledger, or Connect claim domain quality, artifact authority, or production readiness."
     ]
   },
   "authority_boundary": {

@@ -85,7 +85,7 @@ opl agent-lab workflow-template run --template <id> --project <target-agent-dir>
 opl work-order execute --work-order <file> --json
 ```
 
-Foundry Agent series 的普通 CLI spine 是 `workspace / work / stage / run / vault / handoff / connect`。OPL brand modules 继续作为 framework taxonomy；`runtime`、`family-runtime`、`index`、`stage-artifact`、`skill/module/packages/engine` 等旧实现桶不再作为 Foundry Agent 用户 command surface。
+Foundry Agent series 的普通 CLI spine 是 `workspace / work / stage / run / ledger / handoff / connect`。OPL brand modules 继续作为 framework taxonomy；`runtime`、`family-runtime`、`index`、`stage-artifact`、`skill/module/packages/engine` 等旧实现桶不再作为 Foundry Agent 用户 command surface。
 
 ## RHO 与 Dynamic workflow runner
 
@@ -119,7 +119,7 @@ contracts/opl-framework/standard-domain-agent-skeleton-contract.json
 - Dynamic workflow runner 是 executable suite topology / work-order runner：它可以组织 topology、verifier、work-order sequence 和 runner receipt refs；不能成为普通用户 workflow compiler、runtime substrate、非默认 executor launcher、domain truth owner、quality verdict owner 或 owner receipt signer。
 - Target domain owner 持有 domain truth、owner receipt、artifact authority、domain quality verdict 和最终 adoption/rollback 裁决。
 - OPL Meta Agent 可作为 builder/tester module 提供 work order 和测试接管能力，但不成为 OPL Framework 或目标 domain 的 truth owner。
-- Console、Atlas 和 Vault 只能消费 Foundry Lab 输出的 descriptor、receipt 或 refs，不从 Lab 推导 domain ready。
+- Console、Atlas 和 Ledger 只能消费 Foundry Lab 输出的 descriptor、receipt 或 refs，不从 Lab 推导 domain ready。
 
 ## Forbidden claims
 

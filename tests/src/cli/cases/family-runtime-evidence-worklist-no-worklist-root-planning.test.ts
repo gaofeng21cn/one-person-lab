@@ -147,7 +147,7 @@ test('family-runtime evidence-worklist keeps raw worklist roots out of current o
     'raw_worklist_raw_evidence_replay_typed_blocker_group_private_residue_are_passive_until_folded',
   );
   assert.equal(
-    projection.current_owner_delta.evidence_vault_policy,
+    projection.current_owner_delta.evidence_ledger_policy,
     'record_everything_plan_from_nothing',
   );
   assert.equal(

@@ -153,7 +153,7 @@
       "default_next_action_derives_from": "current_owner_delta",
       "lightweight_receipt": "ProgressDeltaReceipt",
       "lightweight_receipt_tier": "T0_progress_delta",
-      "audit_sidecar_role": "passive_evidence_vault_and_drilldown"
+      "audit_sidecar_role": "passive_evidence_ledger_and_drilldown"
     },
     "artifact_tiers": [
       "T0_progress_delta",

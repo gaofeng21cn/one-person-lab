@@ -132,7 +132,7 @@ export function runFamilyRuntimePaperAutonomySupervisorDecideCommand(
       },
       substrate_modules: {
         runway: true,
-        vault: true,
+        ledger: true,
         console: true,
       },
       authority_boundary: authorityBoundary,
@@ -162,7 +162,7 @@ function supervisorReadbackPayload(input: {
     ledger_paths: input.ledger_paths,
     substrate_modules: {
       runway: true,
-      vault: true,
+      ledger: true,
       console: true,
     },
     authority_boundary: authorityBoundary,

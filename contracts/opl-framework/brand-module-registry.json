@@ -585,16 +585,16 @@
       ]
     },
     {
-      "module_id": "vault",
-      "brand_name": "OPL Vault",
+      "module_id": "ledger",
+      "brand_name": "OPL Ledger",
       "owner": "OPL Framework + domain authority owner",
       "purpose": "Refs-only evidence, receipt, typed blocker, artifact lineage, restore/provenance, and read-model ledger.",
       "state": "active_structural_baseline",
-      "machine_boundary": "Vault stores and validates refs-only evidence projections. It does not store artifact or memory bodies, accept/reject memory writes, or sign owner receipts.",
-      "module_doc_ref": "human_doc:opl_brand_module_vault",
+      "machine_boundary": "Ledger stores and validates refs-only evidence projections. It does not store artifact or memory bodies, accept/reject memory writes, or sign owner receipts.",
+      "module_doc_ref": "human_doc:opl_brand_module_ledger",
       "contract_refs": [
         "contracts/opl-framework/brand-module-surfaces.json",
-        "contracts/opl-framework/evidence-vault-event.schema.json",
+        "contracts/opl-framework/evidence-ledger-event.schema.json",
         "contracts/opl-framework/state-index-kernel-contract.json",
         "contracts/opl-framework/stage-artifact-runtime-contract.json",
         "contracts/opl-framework/role-artifact-ref.schema.json",
@@ -603,32 +603,32 @@
         "contracts/opl-framework/target-operating-architecture-contract.json"
       ],
       "cli_surfaces": [
-        "opl vault status --json",
-        "opl vault inspect --json",
-        "opl vault interfaces --json",
-        "opl vault validate --json",
-        "opl vault doctor --json",
+        "opl ledger status --json",
+        "opl ledger inspect --json",
+        "opl ledger interfaces --json",
+        "opl ledger validate --json",
+        "opl ledger doctor --json",
         "opl index doctor --json",
         "opl index integrity-check --json",
         "opl stage-artifact validate --json",
         "opl stage-artifact status --json"
       ],
       "app_surfaces": [
-        "app_action:vault_status",
-        "app_action:vault_inspect",
+        "app_action:ledger_status",
+        "app_action:ledger_inspect",
         "opl runtime app-operator-drilldown --detail full --json",
         "opl app state --profile full --json"
       ],
       "descriptor_surfaces": [
-        "opl vault interfaces --json",
-        "contracts/opl-framework/brand-module-surfaces.json#modules.vault",
-        "contracts/opl-framework/evidence-vault-event.schema.json",
+        "opl ledger interfaces --json",
+        "contracts/opl-framework/brand-module-surfaces.json#modules.ledger",
+        "contracts/opl-framework/evidence-ledger-event.schema.json",
         "contracts/opl-framework/state-index-kernel-contract.json",
-        "contracts/opl-framework/brand-module-registry.json#modules.vault"
+        "contracts/opl-framework/brand-module-registry.json#modules.ledger"
       ],
       "validation_surfaces": [
-        "opl vault validate --json",
-        "opl vault doctor --json",
+        "opl ledger validate --json",
+        "opl ledger doctor --json",
         "opl index integrity-check --json",
         "opl stage-artifact validate --json",
         "opl contract validate --json"
@@ -671,7 +671,7 @@
         "quality_verdict",
         "production_ready",
         "receipt_ref_is_owner_receipt_authority",
-        "vault_ref_store_is_memory_body"
+        "ledger_ref_store_is_memory_body"
       ]
     },
     {

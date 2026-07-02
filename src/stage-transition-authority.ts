@@ -24,7 +24,7 @@ const STAGE_TRANSITION_PRODUCER_KINDS = [
   'one_person_lab_app',
   'runtime_provider',
   'agent_lab',
-  'evidence_vault',
+  'evidence_ledger',
   'read_model',
   'worklist',
   'stage_transition_authority',
@@ -390,7 +390,7 @@ function buildCurrentOwnerDelta(intent: StageTransitionIntent, acceptedTransitio
     default_planning_root: 'current_owner_delta',
     audit_tail_policy:
       'raw_worklist_raw_evidence_replay_typed_blocker_group_private_residue_are_passive_until_folded',
-    evidence_vault_policy: 'record_everything_plan_from_nothing',
+    evidence_ledger_policy: 'record_everything_plan_from_nothing',
     delta_id: stableId('cod', [
       intent.stage_run_id,
       intent.generation,

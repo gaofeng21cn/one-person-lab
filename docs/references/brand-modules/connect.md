@@ -13,7 +13,7 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 contrac
 
 ## 设计理念
 
-- One source, many surfaces：所有调用面从 Atlas / Stagecraft / Workspace / Runway / Vault 的合同派生。
+- One source, many surfaces：所有调用面从 Atlas / Stagecraft / Workspace / Runway / Ledger 的合同派生。
 - Descriptor-only delegates：MCP/Skill/OpenAI/AI SDK 可以描述和 delegate，但不成为 OPL runtime owner。
 - Release evidence is separate：install transport 与 semantic truth 分开；Homebrew/App release 只能证明安装路径，不证明 domain ready。
 - No wrapper drift：generated surface 必须能追踪 source fingerprint 和 generated artifact fingerprint。
@@ -42,7 +42,7 @@ Workspace 级 L4 的 Connect 对象模型必须把 semantic authority 与 transp
 | 对象 | L4 验收含义 |
 | --- | --- |
 | `connect_read_model` | external surfaces、module install health、descriptor drift、transport channel 和 semantic source refs 的分层状态。 |
-| `semantic_surface_ref` | Atlas/Stagecraft/Workspace/Runway/Vault/domain pack 等 canonical contract refs；决定接口语义。 |
+| `semantic_surface_ref` | Atlas/Stagecraft/Workspace/Runway/Ledger/domain pack 等 canonical contract refs；决定接口语义。 |
 | `transport_install_ref` | Homebrew、App updater、Full bundle、skill/plugin sync、module install、package manifest 等安装/分发证据；只证明 transport。 |
 | `generated_interface_bundle` | CLI/MCP/Skill/OpenAI/AI SDK/App action descriptor bundle 与 source/generated fingerprint。 |
 | `connect_validation_report` | descriptor consistency、fingerprint、module install contract、fresh-install matrix 和 false authority flags。 |
@@ -122,7 +122,7 @@ contracts/opl-framework/public-surface-index.json
 
 - Connect 持有 external surface generation、descriptor distribution、install transport 和 drift evidence。
 - Connect 持有 external source connector 的 API 调用、normalized refs、错误/限流语义和 invocation receipt candidate；domain agent 持有引用取舍、证据解释、artifact 写入和 owner verdict。
-- Atlas、Stagecraft、Workspace、Runway、Vault 持有被派生 surface 的 canonical source。
+- Atlas、Stagecraft、Workspace、Runway、Ledger 持有被派生 surface 的 canonical source。
 - Capability Invocation lifecycle descriptor 只描述 Pack 的三层 lifecycle；soft/scored 层不执行工具，hard gate 只引用 `current_owner_delta`，不让 Connect 判断 domain readiness。
 - App release、Homebrew、Full bundle、skill/plugin sync 只证明 transport/install path；domain ready 继续归 domain owner 和 runtime evidence。
 - 非默认 executor adapter 只能通过显式 descriptor、binding 和 validation refs 暴露。

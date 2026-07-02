@@ -7,7 +7,7 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 App con
 
 ## 品牌定位
 
-`OPL Console` 是 App/operator 工作台模块。它把 OPL Framework、Foundry Agents、Workspace、Runway、Vault 和 capability invocation plan 的投影转成用户能看懂、能行动、能检查产物的界面。
+`OPL Console` 是 App/operator 工作台模块。它把 OPL Framework、Foundry Agents、Workspace、Runway、Ledger 和 capability invocation plan 的投影转成用户能看懂、能行动、能检查产物的界面。
 
 一句话：`Console` 管“用户和 operator 当前应该看什么、点什么、等待谁、检查哪个产物”。
 
@@ -26,7 +26,7 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 App con
 | `task_entry` | MAS/MAG/RCA/OMA 或 future agent 的任务入口。 |
 | `workspace_panel` | 当前 workspace、project、stage outputs、inspection roots。 |
 | `runway_panel` | attempt、provider state、heartbeat、human gate、repair route。 |
-| `vault_panel` | receipt、typed blocker、artifact lineage、evidence refs。 |
+| `ledger_panel` | receipt、typed blocker、artifact lineage、evidence refs。 |
 | `action_route` | owner-aware safe action、App action 或 human gate action。 |
 | `invocation_plan_card` | 从 `current_owner_delta` 派生的 CapabilityInvocationPlan / next callable projection，供 operator 理解下一步工具或 owner action。 |
 | `capability_invocation_lifecycle_projection` | 从 Pack lifecycle 派生的 soft discovery、scored fit、hard gate 投影，帮助 operator 区分 advisory 候选、可解释 fit 和必须 fail-closed 的 current-owner gate。 |

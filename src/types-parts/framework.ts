@@ -12,6 +12,7 @@ import type {
   BrandModuleRegistryContract,
   BrandModuleSurfacesContract,
   BrandSystemProfileContract,
+  SourceModuleMapContract,
 } from './brand-contracts.ts';
 import type { PackBundleContract } from './pack-bundle.ts';
 import type { PackOsContract } from './pack-os.ts';
@@ -50,6 +51,7 @@ export interface FrameworkContracts {
   brandModuleSurfaces: BrandModuleSurfacesContract;
   brandModuleL5OperatingEvidence: BrandModuleL5OperatingEvidenceContract;
   brandSystemProfile: BrandSystemProfileContract;
+  sourceModuleMap: SourceModuleMapContract;
   targetOperatingArchitecture: TargetOperatingArchitectureContract;
   packOs: PackOsContract;
   packBundle: PackBundleContract;
@@ -69,6 +71,7 @@ export interface ContractValidationEntry {
     | 'brand_module_surfaces'
     | 'brand_module_l5_operating_evidence'
     | 'brand_system_profile'
+    | 'source_module_map'
     | 'target_operating_architecture'
     | 'pack_os'
     | 'pack_bundle'

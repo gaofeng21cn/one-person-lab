@@ -242,7 +242,7 @@
       "may_hold": ["attempt_consumed_refs", "closeout_writeback_receipt_refs", "typed_blocker_refs"],
       "must_not_hold": ["domain_progress_from_memory_refs", "domain_ready_from_memory_refs", "production_ready_from_memory_refs"]
     },
-    "vault": {
+    "ledger": {
       "may_hold": ["refs_only_index", "receipt_locator", "opaque_payload_ref", "freshness_projection"],
       "must_not_hold": ["domain_memory_body_store", "domain_truth_store", "quality_verdict_store", "artifact_authority"]
     },
