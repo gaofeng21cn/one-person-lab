@@ -64,6 +64,31 @@ test('Codex stage runner prompt exposes MAS PaperMission stage-route affordance'
   assert.match(prompt, /create a fresh OPL route handoff as a substitute for a MAS-acceptable owner answer/);
 });
 
+test('Codex stage runner derives MAS PaperMission profile from the target workspace root', () => {
+  const prompt = runnerPromptFor({
+    attempt: {
+      stage_attempt_id: 'sat_obesity_paper_mission_stage_route',
+      domain_id: 'medautoscience',
+      stage_id: 'medical_methods_and_registry_reporting_repair',
+      workspace_locator: {
+        surface_kind: 'opl_mas_paper_mission_stage_route_workspace_locator',
+        task_kind: 'paper_mission/stage-route',
+        runtime_request_kind: 'mas_paper_mission_stage_route',
+        workspace_root: '/Users/gaofeng/workspace/Yang/Obesity',
+        study_id: 'obesity_multicenter_phenotype_atlas',
+        command_kind: 'resume_stage',
+        route_target: 'medical_methods_and_registry_reporting_repair',
+      },
+      checkpoint_refs: ['paper-mission-stage-packet:obesity'],
+    },
+    stagePacketRef: 'paper-mission-stage-packet:obesity',
+  });
+
+  assert.match(prompt, /Profile ref: \/Users\/gaofeng\/workspace\/Yang\/Obesity\/ops\/medautoscience\/profiles\/obesity\.local\.toml/);
+  assert.doesNotMatch(prompt, /dm-cvd-mortality-risk\.local\.toml/);
+  assert.match(prompt, /paper-mission inspect --profile "\/Users\/gaofeng\/workspace\/Yang\/Obesity\/ops\/medautoscience\/profiles\/obesity\.local\.toml"/);
+});
+
 test('Codex stage runner resumes the same session to enforce missing typed closeout', async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-stage-runner-workspace-'));
   const expectedWorkspaceRoot = fs.realpathSync(workspaceRoot);

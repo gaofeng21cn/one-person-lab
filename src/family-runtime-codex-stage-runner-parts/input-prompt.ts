@@ -78,16 +78,42 @@ function isMasPaperMissionStageRouteAttempt(attempt: JsonRecord) {
     );
 }
 
+function profileSlugFromWorkspaceRoot(workspaceRoot: string) {
+  if (workspaceRoot.startsWith('$')) {
+    return null;
+  }
+  const basename = workspaceRoot.split(/[\\/]/).filter(Boolean).at(-1);
+  const slug = basename
+    ?.trim()
+    .replace(/[_\s]+/g, '-')
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || null;
+}
+
+function paperMissionProfileRef(locator: JsonRecord, workspaceRoot: string) {
+  const explicitProfile = optionalString(locator.profile_ref)
+    ?? optionalString(locator.profile_path)
+    ?? optionalString(locator.profile);
+  if (explicitProfile) {
+    return explicitProfile;
+  }
+  const slug = profileSlugFromWorkspaceRoot(workspaceRoot);
+  if (slug) {
+    return `${workspaceRoot}/ops/medautoscience/profiles/${slug}.local.toml`;
+  }
+  return '$OPL_PROFILE_REF';
+}
+
 function paperMissionStageRoutePromptLines(input: { attempt: JsonRecord }) {
   if (!isMasPaperMissionStageRouteAttempt(input.attempt)) {
     return [];
   }
   const locator = workspaceLocatorFromAttempt(input.attempt);
   const workspaceRoot = workspaceRootFromAttempt(input.attempt) ?? '$OPL_WORKSPACE_ROOT';
-  const profileRef = optionalString(locator.profile_ref)
-    ?? optionalString(locator.profile_path)
-    ?? optionalString(locator.profile)
-    ?? `${workspaceRoot}/ops/medautoscience/profiles/dm-cvd-mortality-risk.local.toml`;
+  const profileRef = paperMissionProfileRef(locator, workspaceRoot);
   const studyId = optionalString(locator.study_id) ?? '$OPL_STUDY_ID';
   const pythonEntrypoint = `${workspaceRoot}/ops/medautoscience/.venv/bin/python3`;
   const runtimeRoot = `${workspaceRoot}/runtime/quests`;
