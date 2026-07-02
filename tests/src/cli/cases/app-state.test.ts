@@ -25,6 +25,33 @@ echo "Unsupported codex fixture command: $*" >&2
 exit 1
 `);
   const stateDir = path.join(homeRoot, 'opl-state');
+  fs.mkdirSync(stateDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(stateDir, 'agent-lab-feedbackops-events.json'),
+    `${JSON.stringify([
+      {
+        surface_kind: 'opl_delivery_feedback_event',
+        version: 'opl-feedbackops.v1',
+        event_id: 'feedback_event_app_state_fixture',
+        idempotency_key: 'app-state-feedbackops-fixture',
+        target_agent_id: 'mas',
+        delivery_ref: 'paper:obesity/current-package',
+        feedback_ref: 'user-feedback:obesity/high-quality-sci',
+        feedback_kind: 'quality_gap',
+        external_suite_ref: 'domain-feedback-external-suite-ref:mas/obesity-feedbackops',
+        developer_work_order_candidate_ref: 'developer-work-order-candidate-ref:mas/obesity-feedbackops',
+        completion_ref: null,
+        blocker_ref: null,
+        authority_boundary: {
+          can_write_target_domain_truth: false,
+          can_create_owner_receipt: false,
+          can_create_typed_blocker: false,
+          can_create_human_gate: false,
+        },
+      },
+    ], null, 2)}\n`,
+    'utf8',
+  );
 
   try {
     const output = runCli(['app', 'state', '--profile', 'fast'], {
@@ -630,6 +657,23 @@ exit 1
       output.app_state.operator.workbench.agent_lab_feedback_self_evolution.summary.runnable_count,
       1,
     );
+    assert.equal(output.app_state.feedbackops.surface_kind, 'opl_feedbackops_read_model');
+    assert.equal(
+      output.app_state.operator.workbench.feedbackops.read_model_id,
+      output.app_state.feedbackops.read_model_id,
+    );
+    assert.equal(output.app_state.operator.workbench.feedbackops.intake_event_count, 1);
+    assert.equal(
+      output.app_state.operator.workbench.feedbackops.summary.queued_requires_developer_mode_count,
+      1,
+    );
+    assert.equal(
+      output.app_state.operator.workbench.sections.some(
+        (entry: AppStateListEntry) => entry.section_id === 'feedbackops'
+          && entry.source_ref === 'app_state.operator.workbench.feedbackops',
+      ),
+      true,
+    );
     const agentLabFeedbackQueueItems = output.app_state.operator.workbench.action_queue.items
       .filter((entry: AppStateListEntry) => entry.item_id.startsWith('agent_lab_feedback:'));
     assert.deepEqual(
@@ -641,6 +685,15 @@ exit 1
         ?.execution_surface,
       'opl work-order execute',
     );
+    const feedbackOpsQueueItems = output.app_state.operator.workbench.action_queue.items
+      .filter((entry: AppStateListEntry) => entry.item_id.startsWith('feedbackops:'));
+    assert.deepEqual(
+      feedbackOpsQueueItems.map((entry: AppStateListEntry) => entry.state),
+      ['queued_requires_developer_mode'],
+    );
+    assert.equal(feedbackOpsQueueItems[0].priority_bucket, 'requires_developer_mode');
+    assert.equal(feedbackOpsQueueItems[0].execution_surface, null);
+    assert.equal(feedbackOpsQueueItems[0].authority_boundary.can_write_target_domain_truth, false);
     assert.equal(
       agentLabFeedbackQueueItems.every((entry: AppStateListEntry) =>
         entry.authority_boundary.can_write_domain_truth === false

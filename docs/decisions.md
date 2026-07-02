@@ -7,6 +7,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-07-02
 
+### 决策：FeedbackOps 是所有标准 Agent 的显式用户反馈入口，执行仍走 OMA work-order 与目标 owner closeout
+
+原因：用户对 MAS、MAG、RCA、BookForge、ScholarSkills 或其它标准 OPL agent 的交付结果提出明确建议时，反馈不应只靠前台 Codex 临时修，也不应只在 MAS 特化流程中触发。成熟做法是把用户反馈作为可幂等事件进入控制面，之后由 external suite、OMA developer work-order、既有 `opl work-order execute`、目标 repo owner closeout 和 App read-model 串联。OPL 不能因此新增第二套 runner/queue，也不能替目标 agent 签质量结论或 owner receipt。
+
+影响：
+
+- `opl feedback submit|read|reconcile` 成为通用 refs-only feedback intake/readback 入口；捕获反馈不要求 Developer Mode。
+- `contracts/opl-framework/agent-lab-contract.json#feedbackops_delivery_feedback_surface` 固定 `target_agent_feedback_external_suite` profile、状态 `suite_ready / queued_requires_developer_mode / executable / completed_or_blocker`、App action-queue 投影和 authority boundary。
+- Developer Mode 只控制 repo 修复 / work-order 执行 / promotion 路由；没有 direct route 时只能读成 `queued_requires_developer_mode`，不能因为 `status=ready` 就自动可执行。
+- MAS/ScholarSkills 等目标 agent 仍持有 domain truth、artifact body、quality/export verdict、owner receipt、typed blocker 和 human gate。OPL FeedbackOps 只搬运 refs、状态和合法执行入口。
+
 ### 决策：Agent Lab domain feedback 自进化只投影 work-order 状态，不接管执行或 domain authority
 
 原因：MAS 等 domain agent 会产出 refs-only external suite、review/eval evidence 和 developer work-order candidate。OPL Agent Lab 需要把这些反馈接到自进化闭环，让 App/status/read-model 能看到 `queued`、`runnable`、`completed_or_blocker` 的 work-order 状态；但如果 Agent Lab 同时实现第二套 runner、queue、typed blocker/human gate body 或 owner receipt，就会把 domain truth 和 OPL runtime authority 再次分裂。

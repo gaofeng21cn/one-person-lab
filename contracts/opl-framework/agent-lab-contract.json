@@ -234,6 +234,64 @@
       "can_create_human_gate": false
     }
   },
+  "feedbackops_delivery_feedback_surface": {
+    "surface_kind": "opl_feedbackops_read_model",
+    "version": "opl-feedbackops.v1",
+    "refs_only": true,
+    "purpose": "Capture explicit user delivery feedback for any standard OPL agent, expose external-suite and developer-work-order refs, and project them into App/action-queue status without writing target-domain truth.",
+    "event_surface": "opl_delivery_feedback_event",
+    "event_ledger_file_ref": "runtime_state_paths.agent_lab_feedbackops_event_ledger_file",
+    "cli": [
+      "opl feedback submit",
+      "opl feedback read",
+      "opl feedback reconcile"
+    ],
+    "input_ref_groups": [
+      "target_agent_id",
+      "delivery_ref",
+      "feedback_ref",
+      "feedback_text_ref",
+      "domain_feedback_external_suite_refs",
+      "developer_work_order_candidate_refs",
+      "feedback_work_order_completion_refs",
+      "feedback_work_order_blocker_refs"
+    ],
+    "accepted_feedback_profiles": [
+      "target_agent_feedback_external_suite"
+    ],
+    "statuses": [
+      "suite_ready",
+      "queued_requires_developer_mode",
+      "executable",
+      "completed_or_blocker"
+    ],
+    "trigger_policy": {
+      "feedback_capture_requires_developer_mode": false,
+      "external_suite_route": "target_agent_feedback_external_suite",
+      "developer_work_order_execution_surface": "opl work-order execute",
+      "developer_mode_required_for_execution": true,
+      "target_owner_closeout_required_for_domain_truth": true
+    },
+    "consumer_outputs": [
+      "feedbackops.read_model",
+      "feedbackops.reconcile_receipt",
+      "app_state.feedbackops",
+      "app_state.operator.workbench.feedbackops",
+      "app_state.operator.workbench.action_queue.items[feedbackops:*]"
+    ],
+    "authority_boundary": {
+      "can_create_second_runner_or_queue": false,
+      "can_write_runtime_db": false,
+      "can_write_provider_queue": false,
+      "can_write_target_domain_truth": false,
+      "can_write_target_domain_memory_body": false,
+      "can_mutate_target_domain_artifact_body": false,
+      "can_authorize_target_domain_quality_or_export": false,
+      "can_create_owner_receipt": false,
+      "can_create_typed_blocker": false,
+      "can_create_human_gate": false
+    }
+  },
   "efficiency_nonregression_surface": {
     "surface_kind": "opl_agent_lab_efficiency_nonregression_read_model",
     "version": "opl-agent-lab.v1.efficiency-nonregression",

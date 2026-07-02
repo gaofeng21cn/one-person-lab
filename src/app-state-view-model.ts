@@ -19,6 +19,7 @@ type OplAppOperatorViewModelInput = {
   targetOperatingArchitecture: JsonRecord;
   currentOwnerDeltaReadModel?: JsonRecord;
   agentLabFeedbackSelfEvolution?: JsonRecord;
+  feedbackOps?: JsonRecord;
 };
 
 const FORBIDDEN_FAST_PROFILE_FIELDS = [
@@ -194,6 +195,13 @@ function buildSections(input: OplAppOperatorViewModelInput) {
       lazy: false,
     },
     {
+      section_id: 'feedbackops',
+      label: 'FeedbackOps',
+      state: asString(asRecord(input.feedbackOps).status) ?? 'unknown',
+      source_ref: 'app_state.operator.workbench.feedbackops',
+      lazy: false,
+    },
+    {
       section_id: 'full_runtime_drilldown',
       label: 'Full runtime drilldown',
       state: 'lazy',
@@ -217,7 +225,10 @@ function buildNavigation() {
 
 function buildActionQueue(input: OplAppOperatorViewModelInput) {
   const limit = input.profile === 'fast' ? 16 : 48;
-  const feedbackItems = feedbackWorkOrderQueueItems(input);
+  const feedbackItems = [
+    ...feedbackWorkOrderQueueItems(input),
+    ...feedbackOpsQueueItems(input),
+  ];
   const actionLimit = Math.max(0, limit - feedbackItems.length);
   return {
     items: [
@@ -241,12 +252,16 @@ function buildActionQueue(input: OplAppOperatorViewModelInput) {
       ...feedbackItems,
     ],
     item_limit: limit,
-    source_ref: 'app_state.actions + app_state.operator.workbench.agent_lab_feedback_self_evolution',
+    source_ref: 'app_state.actions + app_state.operator.workbench.agent_lab_feedback_self_evolution + app_state.operator.workbench.feedbackops',
   };
 }
 
 function feedbackWorkOrderStatusItems(input: OplAppOperatorViewModelInput) {
   return asRecordArray(asRecord(input.agentLabFeedbackSelfEvolution).work_order_status_items);
+}
+
+function feedbackOpsStatusItems(input: OplAppOperatorViewModelInput) {
+  return asRecordArray(asRecord(input.feedbackOps).work_order_status_items);
 }
 
 function feedbackWorkOrderQueueItems(input: OplAppOperatorViewModelInput) {
@@ -268,6 +283,42 @@ function feedbackWorkOrderQueueItems(input: OplAppOperatorViewModelInput) {
         : status === 'completed_or_blocker'
           ? 'terminal_or_blocked'
           : 'queued',
+      safe_action_ref_count: runnable ? 1 : 0,
+      blocker_ref_count: blockerRef ? 1 : 0,
+      paper_route_lens_ref_count: 0,
+      trigger_ref: asString(item.trigger_ref),
+      external_suite_ref: asString(item.external_suite_ref),
+      developer_work_order_candidate_ref: asString(item.developer_work_order_candidate_ref),
+      completion_ref: asString(item.completion_ref),
+      blocker_ref: blockerRef,
+      action_route_ref: asString(item.action_route_ref),
+      execution_surface: asString(item.execution_surface),
+      authority_boundary: asRecord(item.authority_boundary),
+    };
+  });
+}
+
+function feedbackOpsQueueItems(input: OplAppOperatorViewModelInput) {
+  return feedbackOpsStatusItems(input).map((item, index) => {
+    const workOrderRef = asString(item.work_order_ref) ?? `feedbackops-work-order-${index + 1}`;
+    const status = asString(item.status) ?? 'suite_ready';
+    const runnable = item.runnable === true;
+    const blockerRef = asString(item.blocker_ref);
+    return {
+      item_id: `feedbackops:${encodeURIComponent(workOrderRef)}`,
+      task_id: workOrderRef,
+      title: workOrderRef,
+      subtitle: 'FeedbackOps delivery feedback projection',
+      domain_id: asString(item.domain_id) ?? 'opl',
+      domain_label: asString(item.domain_id) ?? 'OPL',
+      state: status,
+      priority_bucket: status === 'executable'
+        ? 'can_execute_work_order'
+        : status === 'queued_requires_developer_mode'
+          ? 'requires_developer_mode'
+          : status === 'completed_or_blocker'
+            ? 'terminal_or_blocked'
+            : 'suite_ready',
       safe_action_ref_count: runnable ? 1 : 0,
       blocker_ref_count: blockerRef ? 1 : 0,
       paper_route_lens_ref_count: 0,
@@ -926,6 +977,7 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
       brand_experience_profile: brandExperienceProfile,
       one_shot_plan_landing: oneShotPlanLanding,
       agent_lab_feedback_self_evolution: agentLabFeedbackSelfEvolution,
+      feedbackops: input.feedbackOps ?? {},
       settings_control_center: input.settingsControlCenter,
       ...currentOwnerDeltaTopline,
       summary_cards: buildSummaryCards(input),
@@ -965,6 +1017,11 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
         action_id: action.action_id,
       })),
       agent_lab_feedback_work_order_refs: feedbackWorkOrderStatusItems(input).map((item) => ({
+        ref: asString(item.work_order_ref),
+        label: asString(item.status),
+        action_route_ref: asString(item.action_route_ref),
+      })),
+      feedbackops_work_order_refs: feedbackOpsStatusItems(input).map((item) => ({
         ref: asString(item.work_order_ref),
         label: asString(item.status),
         action_route_ref: asString(item.action_route_ref),

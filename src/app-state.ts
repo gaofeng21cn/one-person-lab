@@ -22,6 +22,7 @@ import { buildOplAppOperatorViewModel } from './app-state-view-model.ts';
 import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
 import { selectAppStateCurrentOwnerDeltaReadModel } from './app-state-current-owner-delta.ts';
 import { buildAgentLabDomainFeedbackSelfEvolutionReadModel } from './agent-lab-control-read-models.ts';
+import { buildFeedbackOpsReadModel } from './agent-lab-feedbackops.ts';
 
 export { parseAppActionExecuteArgs, runOplAppActionExecute } from './app-state-parts/action-execute.ts';
 
@@ -354,6 +355,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
   const agentLabFeedbackSelfEvolution = buildAgentLabDomainFeedbackSelfEvolutionReadModel({
     sourceRefs: ['app-state:operator-workbench'],
   });
+  const feedbackOps = buildFeedbackOpsReadModel({ developerMode });
   const paths = {
     home_dir: statePaths.home_dir,
     state_dir: statePaths.state_dir,
@@ -407,6 +409,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
     targetOperatingArchitecture: contracts.targetOperatingArchitecture as unknown as JsonRecord,
     currentOwnerDeltaReadModel,
     agentLabFeedbackSelfEvolution,
+    feedbackOps,
   });
 
   return {
@@ -448,6 +451,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
       settings_control_center: settingsControlCenter,
       operator,
       agent_lab_feedback_self_evolution: agentLabFeedbackSelfEvolution,
+      feedbackops: feedbackOps,
       runtime_workbench: fullRuntimeWorkbenchSummary(fullRuntimeDrilldown),
       paths,
       actions,
