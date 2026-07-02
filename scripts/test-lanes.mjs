@@ -116,6 +116,7 @@ const fastTestFiles = [
   'tests/src/cli/cases/scholar-skills-artifact-engines.test.ts',
   'tests/src/cli/cases/scholar-skills-plugin-surface.test.ts',
   'tests/src/cli/cases/scholarskills-connect.test.ts',
+  'tests/src/cli/cases/connect-pubmed.test.ts',
   'tests/src/cli/cases/runtime-research-evidence-pack-read-model.test.ts',
   'tests/src/cli/cases/runtime-research-hypothesis-portfolio-read-model.test.ts',
   'tests/src/family-stage-pack-registry.test.ts',
