@@ -339,6 +339,7 @@ const lanes = {
       'tests/src/advisory-knowledge-boundary-contract.test.ts',
       'tests/src/opl-flow-completion-audit-contract.test.ts',
       'tests/src/verification-test-governance.test.ts',
+      'tests/src/source-module-boundary.test.ts',
       'tests/src/cli-modularization.test.ts',
       'tests/src/runtime-state-paths.test.ts',
       'tests/src/runtime-environment-substrate.test.ts',
