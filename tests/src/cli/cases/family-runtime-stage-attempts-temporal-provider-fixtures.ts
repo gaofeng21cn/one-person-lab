@@ -6,11 +6,11 @@ import {
 import {
   STANDARD_PROGRESS_DELTA_POLICY,
   STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
-} from '../../../../src/standard-domain-agent-scaffold-constants.ts';
+} from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
 import type {
   TemporalStageAttemptWorkflowInput,
   TemporalStageAttemptWorkflowState,
-} from '../../../../src/family-runtime-temporal.ts';
+} from '../../../../src/modules/runway/family-runtime-temporal.ts';
 
 export type TemporalStageAttemptCreateOutput = {
   family_runtime_stage_attempt: {

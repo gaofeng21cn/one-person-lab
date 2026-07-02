@@ -9,8 +9,8 @@ import {
   runCli,
   test,
 } from '../helpers.ts';
-import { buildFrameworkReadinessSummary } from '../../../../src/framework-readiness.ts';
-import { buildRuntimeTraySnapshot } from '../../../../src/runtime-tray-snapshot.ts';
+import { buildFrameworkReadinessSummary } from '../../../../src/modules/foundry-lab/framework-readiness.ts';
+import { buildRuntimeTraySnapshot } from '../../../../src/modules/console/runtime-tray-snapshot.ts';
 import { buildManyStageManifest } from './runtime-app-operator-drilldown-summary-fixtures.ts';
 import { createFamilyWorkspaceFixture } from './runtime-app-operator-drilldown-helpers.ts';
 

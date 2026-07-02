@@ -5,7 +5,7 @@ import {
   createStageAttempt,
   inspectStageAttempt,
   syncStageAttemptFromTemporalTerminalObservation,
-} from '../../../src/family-runtime-stage-attempts.ts';
+} from '../../../src/modules/runway/family-runtime-stage-attempts.ts';
 import {
   blockedTemporalObservation,
   createMasDefaultExecutorAttempt,

@@ -7,7 +7,7 @@ import {
   runCli,
   test,
 } from '../helpers.ts';
-import { buildFrameworkReadinessSummary } from '../../../../src/framework-readiness.ts';
+import { buildFrameworkReadinessSummary } from '../../../../src/modules/foundry-lab/framework-readiness.ts';
 import { createFamilyWorkspaceFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
 function restoreEnvVar(name: string, previousValue: string | undefined): void {

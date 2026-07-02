@@ -8,7 +8,7 @@ import {
   buildProgressDeltaReceipt,
   PROGRESS_DELTA_RECEIPT_DELTA_CLASSES,
   validateProgressDeltaReceipt,
-} from '../../src/progress-delta-receipt.ts';
+} from '../../src/modules/ledger/progress-delta-receipt.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');

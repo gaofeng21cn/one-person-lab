@@ -5,7 +5,7 @@ import {
   buildDomainDispatchEvidenceWorkorderPacket,
   compactDomainDispatchEvidenceWorkorderAttentionItems,
   compactDomainDispatchEvidenceWorkorderGroupAttentionItems,
-} from '../../src/domain-dispatch-evidence-workorder-packet.ts';
+} from '../../src/modules/ledger/domain-dispatch-evidence-workorder-packet.ts';
 
 function typedBlockerPath(value: unknown) {
   return (value as { typed_blocker_path: { success_claimed: boolean } }).typed_blocker_path;

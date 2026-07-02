@@ -1,0 +1,157 @@
+import {
+  runPackBundleCheckCommand,
+  runPackBundleManifestCommand,
+  runPackBundleWriteCommand,
+} from '../../../../modules/pack/pack-bundle.ts';
+import {
+  runPackOsCacheCommand,
+  runPackOsDistributeCommand,
+  runPackOsInstallCommand,
+  runPackOsInspectCommand,
+  runPackOsLockCommand,
+  runPackOsMasDisplaySmokeCommand,
+  runPackOsRegistryCommand,
+  runPackOsValidateCommand,
+} from '../../../../modules/pack/pack-os.ts';
+import { assertNoArgs, buildCommandHelp } from '../../modules/support.ts';
+import type { CommandSpec } from '../../modules/support.ts';
+
+export function buildBrandPackCommandSpecs(): Record<string, CommandSpec> {
+  const specs: Record<string, CommandSpec> = {
+    'pack bundle': {
+      usage: 'opl pack bundle <manifest|write|check> --assembly <path>',
+      summary: 'Manage source parts to generated aggregate bundles without making generated JSON the source of truth.',
+      examples: [
+        'opl pack bundle manifest --assembly contracts/stage_control_plane.bundle-assembly.json --json',
+        'opl pack bundle write --assembly contracts/stage_control_plane.bundle-assembly.json --json',
+        'opl pack bundle check --assembly contracts/stage_control_plane.bundle-assembly.json --json',
+      ],
+      group: 'brand-pack',
+      subcommands: [
+        {
+          command: 'pack bundle manifest',
+          usage: 'opl pack bundle manifest --assembly <path>',
+          summary: 'Build the refs-only source digest manifest for a generated aggregate bundle.',
+        },
+        {
+          command: 'pack bundle write',
+          usage: 'opl pack bundle write --assembly <path>',
+          summary: 'Regenerate the aggregate JSON and bundle manifest from source parts.',
+        },
+        {
+          command: 'pack bundle check',
+          usage: 'opl pack bundle check --assembly <path>',
+          summary: 'Check that the generated aggregate and manifest still match the source parts.',
+        },
+      ],
+      handler: (args) => {
+        assertNoArgs(args, specs['pack bundle']);
+        return buildCommandHelp('pack bundle', specs['pack bundle']);
+      },
+    },
+    'pack bundle manifest': {
+      usage: 'opl pack bundle manifest --assembly <path>',
+      summary: 'Build the refs-only source digest manifest for a generated aggregate bundle.',
+      examples: [
+        'opl pack bundle manifest --assembly contracts/stage_control_plane.bundle-assembly.json --json',
+      ],
+      group: 'brand-pack',
+      handler: runPackBundleManifestCommand,
+    },
+    'pack bundle write': {
+      usage: 'opl pack bundle write --assembly <path>',
+      summary: 'Regenerate aggregate JSON and manifest from editable source parts.',
+      examples: [
+        'opl pack bundle write --assembly contracts/stage_control_plane.bundle-assembly.json --json',
+      ],
+      group: 'brand-pack',
+      handler: runPackBundleWriteCommand,
+    },
+    'pack bundle check': {
+      usage: 'opl pack bundle check --assembly <path>',
+      summary: 'Validate that a generated aggregate and manifest still match editable source parts.',
+      examples: [
+        'opl pack bundle check --assembly contracts/stage_control_plane.bundle-assembly.json --json',
+      ],
+      group: 'brand-pack',
+      handler: runPackBundleCheckCommand,
+    },
+    'pack os inspect': {
+      usage: 'opl pack os inspect --descriptor <path>',
+      summary: 'Inspect a generic capability-pack descriptor through OPL Pack OS without claiming domain authority.',
+      examples: [
+        'opl pack os inspect --descriptor display_pack.json --json',
+      ],
+      group: 'brand-pack',
+      handler: runPackOsInspectCommand,
+    },
+    'pack os install': {
+      usage: 'opl pack os install --descriptor <path> --registry <path> [--cache-root <dir>]',
+      summary: 'Install a generic capability-pack descriptor into the OPL refs-only Pack OS registry and cache.',
+      examples: [
+        'opl pack os install --descriptor display_pack.json --registry build/pack-registry.json --json',
+        'opl pack os install --descriptor display_pack.json --registry build/pack-registry.json --cache-root build/pack-cache --json',
+      ],
+      group: 'brand-pack',
+      handler: runPackOsInstallCommand,
+    },
+    'pack os registry': {
+      usage: 'opl pack os registry --registry <path>',
+      summary: 'Read an OPL Pack OS registry without claiming pack quality or domain readiness.',
+      examples: [
+        'opl pack os registry --registry build/pack-registry.json --json',
+      ],
+      group: 'brand-pack',
+      handler: runPackOsRegistryCommand,
+    },
+    'pack os cache': {
+      usage: 'opl pack os cache --descriptor <path> --cache-root <dir>',
+      summary: 'Materialize present local pack resources into an OPL content-addressed cache.',
+      examples: [
+        'opl pack os cache --descriptor display_pack.json --cache-root build/pack-cache --json',
+      ],
+      group: 'brand-pack',
+      handler: runPackOsCacheCommand,
+    },
+    'pack os distribute': {
+      usage: 'opl pack os distribute --descriptor <path> --output <path> [--cache-root <dir>]',
+      summary: 'Write a refs-only Pack OS distribution bundle manifest for a generic capability pack.',
+      examples: [
+        'opl pack os distribute --descriptor display_pack.json --output build/pack-distribution.json --json',
+        'opl pack os distribute --descriptor display_pack.json --output build/pack-distribution.json --cache-root build/pack-cache --json',
+      ],
+      group: 'brand-pack',
+      handler: runPackOsDistributeCommand,
+    },
+    'pack os lock': {
+      usage: 'opl pack os lock --descriptor <path> [--output <path>]',
+      summary: 'Resolve a generic capability-pack descriptor into a refs-only Pack OS lock.',
+      examples: [
+        'opl pack os lock --descriptor display_pack.json --json',
+        'opl pack os lock --descriptor display_pack.json --output build/pack-lock.json --json',
+      ],
+      group: 'brand-pack',
+      handler: runPackOsLockCommand,
+    },
+    'pack os validate': {
+      usage: 'opl pack os validate --descriptor <path>',
+      summary: 'Validate the generic Pack OS descriptor boundary and false-authority flags.',
+      examples: [
+        'opl pack os validate --descriptor display_pack.json --json',
+      ],
+      group: 'brand-pack',
+      handler: runPackOsValidateCommand,
+    },
+    'pack os mas-display-smoke': {
+      usage: 'opl pack os mas-display-smoke --contract <path> [--output <path>]',
+      summary: 'Consume a MAS Display Pack v2 contract into a refs-only Pack OS lock and audit smoke.',
+      examples: [
+        'opl pack os mas-display-smoke --contract contracts/display-pack-contract.v2.json --json',
+        'opl pack os mas-display-smoke --contract contracts/display-pack-contract.v2.json --output build/pack-lock.json --json',
+      ],
+      group: 'brand-pack',
+      handler: runPackOsMasDisplaySmokeCommand,
+    },
+  };
+  return specs;
+}

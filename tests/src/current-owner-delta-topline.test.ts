@@ -6,7 +6,7 @@ import path from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import {
   recordStageRunExecutionAuthorizationReceipts,
-} from '../../src/stage-run-execution-authorization-ledger.ts';
+} from '../../src/modules/stagecraft/stage-run-execution-authorization-ledger.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');

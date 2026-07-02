@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { runTemporalResidencyProof } from '../src/family-runtime-temporal-residency-proof.ts';
-import { runTemporalProductionResidencyProof } from '../src/family-runtime-temporal-provider.ts';
-import { resolveOplStatePaths } from '../src/runtime-state-paths.ts';
+import { runTemporalResidencyProof } from '../src/modules/runway/family-runtime-temporal-residency-proof.ts';
+import { runTemporalProductionResidencyProof } from '../src/modules/runway/family-runtime-temporal-provider.ts';
+import { resolveOplStatePaths } from '../src/modules/runway/runtime-state-paths.ts';
 
 const production = process.argv.includes('--production');
 const stateDir = resolveOplStatePaths().state_dir;

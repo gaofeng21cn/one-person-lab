@@ -4,7 +4,7 @@ import test from 'node:test';
 import {
   buildAgentLabArisMaturityControlsReadModel,
   buildAgentLabDomainFeedbackSelfEvolutionReadModel,
-} from '../../src/agent-lab-complete.ts';
+} from '../../src/modules/foundry-lab/agent-lab-complete.ts';
 
 test('Agent Lab absorbs ARIS maturity controls as refs-only policies without ARIS runtime dependency', () => {
   const result = buildAgentLabArisMaturityControlsReadModel(['suite:opl-agent-lab-sample-suite']);

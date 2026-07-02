@@ -7,12 +7,12 @@ import { fileURLToPath } from 'node:url';
 import {
   adaptGrantTransitionOracleToFamilyTransitionSpec,
   buildGrantTransitionOracleMatrixCases,
-} from '../../src/family-transition-oracle-ingestion.ts';
+} from '../../src/modules/stagecraft/family-transition-oracle-ingestion.ts';
 import {
   runFamilyTransition,
   runFamilyTransitionMatrix,
   type FamilyTransitionSpec,
-} from '../../src/family-transition-runner.ts';
+} from '../../src/modules/stagecraft/family-transition-runner.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');

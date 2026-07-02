@@ -33,9 +33,9 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 
 ## 品牌模块架构
 
-OPL 的三层产品认知说明“面向谁”，当前十个品牌模块说明 Framework 内部能力如何高内聚、低耦合地演进。品牌模块不是新的 runtime，也不是第二 truth source；它们把已经存在的 contracts、source、CLI/App 行为、read model、runtime ledger、provider receipt 和 docs support 归入稳定 owner boundary。
+OPL 的三层产品认知说明“面向谁”，当前十个品牌模块说明 Framework 内部能力如何高内聚、低耦合地演进。品牌模块不是新的 runtime，也不是第二 truth source；它们把已经存在的 contracts、source、CLI/App/Cloud 产品行为、read model、runtime ledger、provider receipt 和 docs support 归入稳定 owner boundary。App / Cloud 可以用这些模块命名用户可见能力，但 Framework 代码仍按模块 owner 物理落在 `src/modules/<module_id>/`。
 
-代码层的对齐入口是 `src/modules/` 与 `contracts/opl-framework/source-module-map.json`。`src/modules/<module_id>/` 让维护者直接看到当前十个 Framework 模块；source map 把仍在 `src/` 根层的历史文件按模块归属、共享 kernel 和 legacy glob 归位。新代码默认进入对应模块目录；已有 root-level 文件只有在导入链路、测试和 runtime surface 都能保持行为不变时才迁移。
+代码层的终局组织是 `src/modules/`。`src/modules/<module_id>/` 是当前十个 Framework 模块的真实物理边界，每个模块通过自己的 `index.ts` 暴露 public index，`src/modules/index.ts` 只做模块 public export 聚合。`contracts/opl-framework/source-module-map.json` 是归属校验面，不是第二套目录规划。`entrypoints/` 和 `kernel/` 属于非品牌技术层：前者承接 CLI / product / adapter 启动面，后者承接共享 runtime primitive；二者必须挂靠并服务十大模块，不获得独立 brand owner。新代码默认进入 owning module；跨模块调用只走 owning module public index；root-level `src/*.ts` 不再接受新扩展。
 
 | 模块 | 主聚合面 | 主要消费 | 明确不拥有 |
 | --- | --- | --- | --- |

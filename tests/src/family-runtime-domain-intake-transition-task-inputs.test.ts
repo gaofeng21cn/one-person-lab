@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { transitionTaskInputsFromMatrix } from '../../src/family-runtime-domain-intake-parts/transition-task-inputs.ts';
+import { transitionTaskInputsFromMatrix } from '../../src/modules/runway/family-runtime-domain-intake-parts/transition-task-inputs.ts';
 
 test('transition matrix intake emits family transition task input with authority boundary', () => {
   const transition = {

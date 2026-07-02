@@ -14,32 +14,32 @@ import {
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 
-import * as activities from '../../src/family-runtime-temporal-activities.ts';
+import * as activities from '../../src/modules/runway/family-runtime-temporal-activities.ts';
 import {
   buildTemporalStageAttemptWorkflowContract,
   type TemporalStageAttemptWorkflowInput,
   type TemporalStageAttemptWorkflowState,
-} from '../../src/family-runtime-temporal.ts';
+} from '../../src/modules/runway/family-runtime-temporal.ts';
 import {
   DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
   DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
-} from '../../src/family-runtime-temporal-constants.ts';
+} from '../../src/modules/runway/family-runtime-temporal-constants.ts';
 import {
   humanGateSignal,
   stageAttemptQuery,
   StageAttemptWorkflow,
   stageAttemptOperatorUpdate,
   userInstructionSignal,
-} from '../../src/family-runtime-temporal-workflows.ts';
+} from '../../src/modules/runway/family-runtime-temporal-workflows.ts';
 import {
   buildTemporalStageAttemptWorkflowInputForTest,
   buildTemporalStageAttemptReplayGateForTest,
   buildTemporalWorkerReadiness,
-} from '../../src/family-runtime-temporal-provider.ts';
+} from '../../src/modules/runway/family-runtime-temporal-provider.ts';
 import {
   buildTemporalStageAttemptSearchAttributes,
   buildTemporalStageAttemptVisibilityReadiness,
-} from '../../src/family-runtime-temporal-visibility.ts';
+} from '../../src/modules/runway/family-runtime-temporal-visibility.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');

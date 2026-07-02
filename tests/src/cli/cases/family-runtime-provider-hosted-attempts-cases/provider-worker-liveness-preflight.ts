@@ -6,13 +6,13 @@ import {
   withIsolatedFamilyRuntimeEnv,
 } from './mas-default-executor-current-source-helpers.ts';
 
-import { runSchedulerTick } from '../../../../../src/family-runtime-scheduler.ts';
-import type { inspectFamilyRuntimeProvidersWithLifecycle } from '../../../../../src/family-runtime-providers.ts';
-import type { runTemporalProviderSloTick } from '../../../../../src/family-runtime-provider-slo-executor.ts';
+import { runSchedulerTick } from '../../../../../src/modules/runway/family-runtime-scheduler.ts';
+import type { inspectFamilyRuntimeProvidersWithLifecycle } from '../../../../../src/modules/runway/family-runtime-providers.ts';
+import type { runTemporalProviderSloTick } from '../../../../../src/modules/runway/family-runtime-provider-slo-executor.ts';
 import {
   createFamilyRuntimeQueueTables,
   familyRuntimePaths,
-} from '../../../../../src/family-runtime-store.ts';
+} from '../../../../../src/modules/runway/family-runtime-store.ts';
 
 type ProviderInspection = Awaited<ReturnType<typeof inspectFamilyRuntimeProvidersWithLifecycle>>;
 type ProviderSloTick = Awaited<ReturnType<typeof runTemporalProviderSloTick>>;

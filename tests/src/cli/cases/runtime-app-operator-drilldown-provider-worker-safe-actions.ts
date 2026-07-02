@@ -9,19 +9,19 @@ import {
   runCli,
   test,
 } from '../helpers.ts';
-import type { JsonRecord } from '../../../../src/runtime-tray-snapshot-types.ts';
+import type { JsonRecord } from '../../../../src/modules/console/runtime-tray-snapshot-types.ts';
 import {
   applyAppOperatorDrilldownDetail,
-} from '../../../../src/runtime-tray-app-operator-drilldown-parts/detail-view.ts';
+} from '../../../../src/modules/console/runtime-tray-app-operator-drilldown-parts/detail-view.ts';
 import {
   recordAppReleaseUserPathEvidenceReceipts,
-} from '../../../../src/app-release-user-path-evidence-ledger.ts';
+} from '../../../../src/modules/console/app-release-user-path-evidence-ledger.ts';
 import {
   buildProviderWorkerActionRoutes,
-} from '../../../../src/runtime-tray-app-operator-drilldown-parts/provider-worker-action-routes.ts';
+} from '../../../../src/modules/console/runtime-tray-app-operator-drilldown-parts/provider-worker-action-routes.ts';
 import {
   buildProviderSchedulerActionRoutes,
-} from '../../../../src/runtime-tray-app-operator-drilldown-parts/provider-scheduler-action-routes.ts';
+} from '../../../../src/modules/console/runtime-tray-app-operator-drilldown-parts/provider-scheduler-action-routes.ts';
 
 test('runtime App drilldown exposes provider worker start route when Temporal service is reachable but worker is not ready', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-worker-start-route-'));

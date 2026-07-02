@@ -1,4 +1,4 @@
-import type { AgentWorkspaceNormContract } from '../../../../../src/types.ts';
+import type { AgentWorkspaceNormContract } from '../../../../../src/kernel/types.ts';
 
 export const MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT: AgentWorkspaceNormContract = {
   surface_kind: 'opl_agent_workspace_norm_contract',

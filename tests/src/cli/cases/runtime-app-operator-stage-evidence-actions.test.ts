@@ -11,16 +11,16 @@ import {
   runCliFailure,
   test,
 } from '../helpers.ts';
-import { buildStageLaunchInvocationProjection } from '../../../../src/family-runtime-launch-invocation.ts';
-import { openQueueDb, stableId } from '../../../../src/family-runtime-store.ts';
-import { createStageAttempt } from '../../../../src/family-runtime-stage-attempts.ts';
+import { buildStageLaunchInvocationProjection } from '../../../../src/modules/runway/family-runtime-launch-invocation.ts';
+import { openQueueDb, stableId } from '../../../../src/modules/runway/family-runtime-store.ts';
+import { createStageAttempt } from '../../../../src/modules/runway/family-runtime-stage-attempts.ts';
 import {
   applyAppOperatorDrilldownDetail,
-} from '../../../../src/runtime-tray-app-operator-drilldown-parts/detail-view.ts';
+} from '../../../../src/modules/console/runtime-tray-app-operator-drilldown-parts/detail-view.ts';
 import {
   STANDARD_PROGRESS_DELTA_POLICY,
   STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
-} from '../../../../src/standard-domain-agent-scaffold-constants.ts';
+} from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
 
 function buildReviewStageEvidenceManifest() {
   const masManifest = structuredClone(loadFamilyManifestFixtures().medautoscience);

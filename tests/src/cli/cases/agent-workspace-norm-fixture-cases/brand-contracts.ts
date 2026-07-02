@@ -5,7 +5,7 @@ import type {
   BrandModuleSurfacesContract,
   BrandSystemProfileContract,
   SourceModuleMapContract,
-} from '../../../../../src/types.ts';
+} from '../../../../../src/kernel/types.ts';
 
 const MINIMAL_BRAND_MODULE_IDS = [
   'charter',

@@ -17,8 +17,8 @@ import {
   statusStageArtifactRuntime,
   validateStageArtifactRuntime,
   workbenchStageArtifactRuntime,
-} from '../../src/stage-artifact-runtime.ts';
-import { FrameworkContractError } from '../../src/contracts.ts';
+} from '../../src/modules/stagecraft/stage-artifact-runtime.ts';
+import { FrameworkContractError } from '../../src/modules/charter/contracts.ts';
 import { runCli } from './cli/helpers-parts/runner.ts';
 
 function withTempState<T>(fn: (root: string) => T) {

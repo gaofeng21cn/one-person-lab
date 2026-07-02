@@ -9,7 +9,7 @@ import {
 } from '../helpers.ts';
 import {
   STAGE_TRANSITION_INTENT_AUTHORITY_BOUNDARY,
-} from '../../../../src/stage-transition-authority.ts';
+} from '../../../../src/modules/stagecraft/stage-transition-authority.ts';
 
 function transitionIntent(overrides: Record<string, unknown> = {}) {
   return {

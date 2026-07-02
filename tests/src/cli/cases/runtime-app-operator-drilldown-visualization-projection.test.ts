@@ -4,7 +4,7 @@ import {
 } from '../helpers.ts';
 import {
   buildRuntimeVisualizationProjection,
-} from '../../../../src/runtime-tray-app-operator-drilldown-parts/runtime-visualization-projection.ts';
+} from '../../../../src/modules/console/runtime-tray-app-operator-drilldown-parts/runtime-visualization-projection.ts';
 
 test('runtime visualization projection exposes canonical stage progress and Temporal refs only', () => {
   const projection = buildRuntimeVisualizationProjection({

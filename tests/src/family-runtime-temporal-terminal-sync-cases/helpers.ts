@@ -3,8 +3,8 @@ import { DatabaseSync } from 'node:sqlite';
 import {
   createStageAttempt,
   createStageAttemptTable,
-} from '../../../src/family-runtime-stage-attempts.ts';
-import { createFamilyRuntimeQueueTables } from '../../../src/family-runtime-store.ts';
+} from '../../../src/modules/runway/family-runtime-stage-attempts.ts';
+import { createFamilyRuntimeQueueTables } from '../../../src/modules/runway/family-runtime-store.ts';
 
 export function withStageAttemptDb(fn: (db: DatabaseSync) => void) {
   const db = new DatabaseSync(':memory:');

@@ -170,9 +170,9 @@ test('framework repository does not own App release or Full DMG publishing entry
 });
 
 test('framework release discovery consumes App repo assets without publishing them', async () => {
-  const release = await import('../../src/opl-release.ts');
-  const installCompanions = await import('../../src/install-companions.ts');
-  const marker = await import('../../src/packaged-module-marker.ts');
+  const release = await import('../../src/modules/connect/opl-release.ts');
+  const installCompanions = await import('../../src/modules/connect/install-companions.ts');
+  const marker = await import('../../src/modules/connect/packaged-module-marker.ts');
 
   assert.equal(release.getOplReleaseRepo(), 'gaofeng21cn/one-person-lab-app');
   assert.equal(

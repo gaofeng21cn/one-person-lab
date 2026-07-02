@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {
   buildSkillCatalog,
   buildSkillDescriptor,
-} from '../../src/skill-catalog.ts';
+} from '../../src/modules/pack/skill-catalog.ts';
 
 test('skill catalog helpers normalize shared command and skill descriptors', () => {
   const masSkill = buildSkillDescriptor({

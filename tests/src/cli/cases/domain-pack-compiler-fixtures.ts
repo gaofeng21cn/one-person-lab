@@ -7,7 +7,7 @@ import {
   repoRoot,
   runCli,
 } from '../helpers.ts';
-import { STANDARD_AGENT_PACK_ABI } from '../../../../src/standard-domain-agent-scaffold-constants.ts';
+import { STANDARD_AGENT_PACK_ABI } from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
 import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
 export type JsonRecord = Record<string, unknown>;

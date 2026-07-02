@@ -2,7 +2,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import net from 'node:net';
 
 import { assert, createFamilyContractsFixtureRoot, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
-import { resolveTemporalWorkerTaskQueue } from '../../../../src/family-runtime-temporal-provider-parts/worker-task-queue.ts';
+import { resolveTemporalWorkerTaskQueue } from '../../../../src/modules/runway/family-runtime-temporal-provider-parts/worker-task-queue.ts';
 
 test('runtime snapshot projects provider continuous proof receipt without domain readiness authority', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-provider-proof-state-'));

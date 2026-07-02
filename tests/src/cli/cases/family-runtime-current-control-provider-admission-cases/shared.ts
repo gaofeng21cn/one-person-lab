@@ -1,9 +1,9 @@
 import { DatabaseSync } from 'node:sqlite';
 
 import { assert, fs, os, path, runCli, shellSingleQuote, test } from '../../helpers.ts';
-import { enqueueTask } from '../../../../../src/family-runtime-enqueue.ts';
-import { ensureProviderHostedStageAttempt } from '../../../../../src/family-runtime-provider-hosted-attempts.ts';
-import type { FamilyRuntimeTaskRow } from '../../../../../src/family-runtime-store.ts';
+import { enqueueTask } from '../../../../../src/modules/runway/family-runtime-enqueue.ts';
+import { ensureProviderHostedStageAttempt } from '../../../../../src/modules/runway/family-runtime-provider-hosted-attempts.ts';
+import type { FamilyRuntimeTaskRow } from '../../../../../src/modules/runway/family-runtime-store.ts';
 import {
   createQueueTables,
   defaultExecutorPayload,

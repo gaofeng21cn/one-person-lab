@@ -11,7 +11,7 @@ import {
   getOplPackageModuleSpecs,
   sha256File,
   writeOplPackageManifest,
-} from '../src/package-distribution.ts';
+} from '../src/modules/connect/package-distribution.ts';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 

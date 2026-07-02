@@ -5,12 +5,12 @@ import {
   path,
   test,
 } from '../helpers.ts';
-import { runExternalEvidenceApply } from '../../../../src/external-evidence-ledger.ts';
-import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/family-runtime-evidence-worklist.ts';
+import { runExternalEvidenceApply } from '../../../../src/modules/ledger/external-evidence-ledger.ts';
+import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/modules/runway/family-runtime-evidence-worklist.ts';
 import {
   recordStageRunExecutionAuthorizationReceipts,
-} from '../../../../src/stage-run-execution-authorization-ledger.ts';
-import type { FrameworkContracts } from '../../../../src/types.ts';
+} from '../../../../src/modules/stagecraft/stage-run-execution-authorization-ledger.ts';
+import type { FrameworkContracts } from '../../../../src/kernel/types.ts';
 import {
   assertCurrentOwnerDeltaReadModel,
   assertCurrentOwnerDeltaToplineNextAction,

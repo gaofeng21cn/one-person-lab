@@ -3,7 +3,7 @@ import {
 } from '../helpers.ts';
 import type {
   runTemporalProviderSloTick,
-} from '../../../../src/family-runtime-provider-slo-executor.ts';
+} from '../../../../src/modules/runway/family-runtime-provider-slo-executor.ts';
 
 type ProviderSloTick = Awaited<ReturnType<typeof runTemporalProviderSloTick>>;
 

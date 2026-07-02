@@ -14,11 +14,11 @@ import {
   withIsolatedFamilyRuntimeEnv,
 } from './mas-default-executor-current-source-helpers.ts';
 
-import { dispatchFamilyRuntimeTask } from '../../../../../src/family-runtime-task-dispatch.ts';
-import { runFamilyRuntimeQueueTick } from '../../../../../src/family-runtime-tick.ts';
-import type { FamilyRuntimeTaskScope } from '../../../../../src/family-runtime-command.ts';
-import { ensureProviderHostedStageAttempt } from '../../../../../src/family-runtime-provider-hosted-attempts.ts';
-import { familyRuntimePaths, type FamilyRuntimeTaskRow } from '../../../../../src/family-runtime-store.ts';
+import { dispatchFamilyRuntimeTask } from '../../../../../src/modules/runway/family-runtime-task-dispatch.ts';
+import { runFamilyRuntimeQueueTick } from '../../../../../src/modules/runway/family-runtime-tick.ts';
+import type { FamilyRuntimeTaskScope } from '../../../../../src/modules/runway/family-runtime-command.ts';
+import { ensureProviderHostedStageAttempt } from '../../../../../src/modules/runway/family-runtime-provider-hosted-attempts.ts';
+import { familyRuntimePaths, type FamilyRuntimeTaskRow } from '../../../../../src/modules/runway/family-runtime-store.ts';
 
 type TickDispatch = { task_id: string };
 

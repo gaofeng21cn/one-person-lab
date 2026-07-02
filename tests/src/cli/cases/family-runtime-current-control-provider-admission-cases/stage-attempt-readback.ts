@@ -16,7 +16,7 @@ import {
   writeDefaultExecutorDispatchPacket,
   writeJsonEmitterScript,
 } from './shared.ts';
-import { deriveCurrentControlStateForTask } from '../../../../../src/family-runtime-current-control-state.ts';
+import { deriveCurrentControlStateForTask } from '../../../../../src/modules/runway/family-runtime-current-control-state.ts';
 
 test('family-runtime current-control recovery obligation id flows into stage attempt and read model without authority escalation', () => {
   const db = new DatabaseSync(':memory:');

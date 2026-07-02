@@ -7,9 +7,9 @@ import path from 'node:path';
 import { createFakeCodexFixture } from './cli/helpers.ts';
 import {
   runAgentStageRunner,
-} from '../../src/family-runtime-codex-stage-runner.ts';
-import type { AgentExecutionReceipt } from '../../src/agent-executor.ts';
-import { FrameworkContractError } from '../../src/contracts.ts';
+} from '../../src/modules/runway/family-runtime-codex-stage-runner.ts';
+import type { AgentExecutionReceipt } from '../../src/modules/runway/agent-executor.ts';
+import { FrameworkContractError } from '../../src/modules/charter/contracts.ts';
 
 type AgentStageRunnerReceipt = {
   runner_status: {

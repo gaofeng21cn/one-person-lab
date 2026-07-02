@@ -4,9 +4,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { normalizeFamilyStageControlPlane } from '../../src/family-stage-control-plane-contract.ts';
-import { buildFamilyStageRuntimeBudgetProjection } from '../../src/family-stage-runtime-budget.ts';
-import type { FamilyStageControlPlane } from '../../src/family-stage-control-plane-contract.ts';
+import { normalizeFamilyStageControlPlane } from '../../src/modules/stagecraft/family-stage-control-plane-contract.ts';
+import { buildFamilyStageRuntimeBudgetProjection } from '../../src/modules/stagecraft/family-stage-runtime-budget.ts';
+import type { FamilyStageControlPlane } from '../../src/modules/stagecraft/family-stage-control-plane-contract.ts';
 
 type JsonRecord = Record<string, unknown>;
 

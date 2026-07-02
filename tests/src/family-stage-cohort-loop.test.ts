@@ -4,9 +4,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { buildFamilyStageCohortLoopProjection } from '../../src/family-stage-cohort-loop.ts';
-import { normalizeFamilyStageControlPlane } from '../../src/family-stage-control-plane-contract.ts';
-import type { FamilyStageControlPlane } from '../../src/family-stage-control-plane-contract.ts';
+import { buildFamilyStageCohortLoopProjection } from '../../src/modules/stagecraft/family-stage-cohort-loop.ts';
+import { normalizeFamilyStageControlPlane } from '../../src/modules/stagecraft/family-stage-control-plane-contract.ts';
+import type { FamilyStageControlPlane } from '../../src/modules/stagecraft/family-stage-control-plane-contract.ts';
 
 type JsonRecord = Record<string, unknown>;
 

@@ -8,8 +8,8 @@ import {
   runCli,
   test,
 } from '../helpers.ts';
-import { loadFrameworkContracts } from '../../../../src/contracts.ts';
-import { buildRuntimeTraySnapshot } from '../../../../src/runtime-tray-snapshot.ts';
+import { loadFrameworkContracts } from '../../../../src/modules/charter/contracts.ts';
+import { buildRuntimeTraySnapshot } from '../../../../src/modules/console/runtime-tray-snapshot.ts';
 import { buildManyStageManifest } from './runtime-app-operator-drilldown-summary-fixtures.ts';
 
 test('runtime tray summary can use a non-authoritative manifest projection cache when live manifest is slow', async () => {

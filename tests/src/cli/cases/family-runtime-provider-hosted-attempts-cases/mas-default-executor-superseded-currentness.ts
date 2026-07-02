@@ -2,12 +2,12 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { assert, fs, os, path, test } from './helpers.ts';
 
-import { enqueueTask } from '../../../../../src/family-runtime-enqueue.ts';
-import { hydrateDomainTasks } from '../../../../../src/family-runtime-domain-intake.ts';
-import { ensureProviderHostedStageAttempt } from '../../../../../src/family-runtime-provider-hosted-attempts.ts';
-import { familyRuntimePaths } from '../../../../../src/family-runtime-store.ts';
-import { runFamilyRuntimeQueueTick } from '../../../../../src/family-runtime-tick.ts';
-import { listStageAttemptsForTask } from '../../../../../src/family-runtime-stage-attempts.ts';
+import { enqueueTask } from '../../../../../src/modules/runway/family-runtime-enqueue.ts';
+import { hydrateDomainTasks } from '../../../../../src/modules/runway/family-runtime-domain-intake.ts';
+import { ensureProviderHostedStageAttempt } from '../../../../../src/modules/runway/family-runtime-provider-hosted-attempts.ts';
+import { familyRuntimePaths } from '../../../../../src/modules/runway/family-runtime-store.ts';
+import { runFamilyRuntimeQueueTick } from '../../../../../src/modules/runway/family-runtime-tick.ts';
+import { listStageAttemptsForTask } from '../../../../../src/modules/runway/family-runtime-stage-attempts.ts';
 import {
   createQueueTables,
   defaultExecutorPayload,

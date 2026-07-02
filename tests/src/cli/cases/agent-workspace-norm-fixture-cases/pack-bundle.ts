@@ -1,4 +1,4 @@
-import type { PackBundleContract } from '../../../../../src/types.ts';
+import type { PackBundleContract } from '../../../../../src/kernel/types.ts';
 
 export const MINIMAL_PACK_BUNDLE_CONTRACT: PackBundleContract = {
   schema_version: 1,

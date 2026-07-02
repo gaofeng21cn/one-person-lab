@@ -8,7 +8,7 @@ import {
   buildPackBundleManifest,
   buildPackBundleValidation,
   writePackBundleAggregate,
-} from '../../src/pack-bundle.ts';
+} from '../../src/modules/pack/pack-bundle.ts';
 
 function writeSource(root: string) {
   const sourceRoot = path.join(root, 'contract.source');

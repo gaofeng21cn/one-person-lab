@@ -4,10 +4,10 @@ import {
 } from '../helpers.ts';
 import {
   applyAppOperatorDrilldownDetail,
-} from '../../../../src/runtime-tray-app-operator-drilldown-parts/detail-view.ts';
+} from '../../../../src/modules/console/runtime-tray-app-operator-drilldown-parts/detail-view.ts';
 import {
   buildProviderWorkerActionRoutes,
-} from '../../../../src/runtime-tray-app-operator-drilldown-parts/provider-worker-action-routes.ts';
+} from '../../../../src/modules/console/runtime-tray-app-operator-drilldown-parts/provider-worker-action-routes.ts';
 
 test('runtime App drilldown selects provider worker repair before provider proof when worker source is stale', () => {
   const drilldown = applyAppOperatorDrilldownDetail({

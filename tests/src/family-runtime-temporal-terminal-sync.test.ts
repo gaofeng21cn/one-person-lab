@@ -7,12 +7,12 @@ import {
   inspectStageAttempt,
   listStageAttemptCloseouts,
   syncStageAttemptFromTemporalTerminalObservation,
-} from '../../src/family-runtime-stage-attempts.ts';
-import { queryStageAttempt } from '../../src/family-runtime-stage-attempt-query.ts';
-import { markStageAttemptCancelRequested } from '../../src/family-runtime-stage-attempt-control.ts';
+} from '../../src/modules/runway/family-runtime-stage-attempts.ts';
+import { queryStageAttempt } from '../../src/modules/runway/family-runtime-stage-attempt-query.ts';
+import { markStageAttemptCancelRequested } from '../../src/modules/runway/family-runtime-stage-attempt-control.ts';
 import {
   buildTemporalStageAttemptMissingWorkflowCancelReceipt,
-} from '../../src/family-runtime-temporal-provider.ts';
+} from '../../src/modules/runway/family-runtime-temporal-provider.ts';
 import {
   blockedTemporalObservation,
   canceledTemporalObservation,

@@ -6,7 +6,7 @@ import {
   normalizeStageTransitionIntent,
   rebuildStageTransitionAuthorityReadModel,
   STAGE_TRANSITION_INTENT_AUTHORITY_BOUNDARY,
-} from '../../src/stage-transition-authority.ts';
+} from '../../src/modules/stagecraft/stage-transition-authority.ts';
 
 function baseIntent(overrides: Record<string, unknown> = {}) {
   return {

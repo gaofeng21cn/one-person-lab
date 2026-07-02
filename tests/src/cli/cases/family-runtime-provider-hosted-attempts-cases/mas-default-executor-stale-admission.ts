@@ -9,19 +9,19 @@ import {
   test,
 } from './helpers.ts';
 
-import { runSchedulerQueueTick } from '../../../../../src/family-runtime-scheduler-tick-runner.ts';
-import { runFamilyRuntimeQueueTick } from '../../../../../src/family-runtime-tick.ts';
+import { runSchedulerQueueTick } from '../../../../../src/modules/runway/family-runtime-scheduler-tick-runner.ts';
+import { runFamilyRuntimeQueueTick } from '../../../../../src/modules/runway/family-runtime-tick.ts';
 import {
   createFamilyRuntimeQueueTables,
   familyRuntimePaths,
   listEvents,
   type FamilyRuntimeTaskRow,
-} from '../../../../../src/family-runtime-store.ts';
-import { ensureProviderHostedStageAttempt } from '../../../../../src/family-runtime-provider-hosted-attempts.ts';
+} from '../../../../../src/modules/runway/family-runtime-store.ts';
+import { ensureProviderHostedStageAttempt } from '../../../../../src/modules/runway/family-runtime-provider-hosted-attempts.ts';
 import {
   ingestStageAttemptCloseout,
   listStageAttemptsForTask,
-} from '../../../../../src/family-runtime-stage-attempts.ts';
+} from '../../../../../src/modules/runway/family-runtime-stage-attempts.ts';
 
 type TickDispatch = { task_id: string; status?: string };
 type QueueTickWithMasDefaultExecutorRedrive = Awaited<

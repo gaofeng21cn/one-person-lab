@@ -2,7 +2,7 @@ import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loa
 import {
   STANDARD_PROGRESS_DELTA_POLICY,
   STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
-} from '../../../../src/standard-domain-agent-scaffold-constants.ts';
+} from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
 
 type JsonRecord = Record<string, unknown>;
 function buildStageControlPlane(targetDomainId: string, stageId: string, options: {

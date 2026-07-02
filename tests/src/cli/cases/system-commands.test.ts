@@ -1,14 +1,14 @@
 import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
-import { buildInternalCommandSpecs } from '../../../../src/cli/cases/private-command-specs.ts';
-import { buildPublicCommandSpecs } from '../../../../src/cli/cases/public-command-specs.ts';
+import { buildInternalCommandSpecs } from '../../../../src/entrypoints/cli/cases/private-command-specs.ts';
+import { buildPublicCommandSpecs } from '../../../../src/entrypoints/cli/cases/public-command-specs.ts';
 import {
   familyStageDiagnosticLensCommands,
   familyStageDerivedLensByCommand,
-} from '../../../../src/family-stage-derived-lenses.ts';
-import { buildDomainManifestCatalog } from '../../../../src/domain-manifest/catalog-builder.ts';
-import { buildCurrentDashboardSurfaceRefs, buildCurrentReadinessProjection } from '../../../../src/management/readiness.ts';
-import { buildOplDashboard } from '../../../../src/management/runtime-dashboard.ts';
-import { buildWorkspaceCatalog } from '../../../../src/workspace-registry.ts';
+} from '../../../../src/modules/stagecraft/family-stage-derived-lenses.ts';
+import { buildDomainManifestCatalog } from '../../../../src/modules/atlas/domain-manifest/catalog-builder.ts';
+import { buildCurrentDashboardSurfaceRefs, buildCurrentReadinessProjection } from '../../../../src/modules/console/management/readiness.ts';
+import { buildOplDashboard } from '../../../../src/modules/console/management/runtime-dashboard.ts';
+import { buildWorkspaceCatalog } from '../../../../src/modules/workspace/workspace-registry.ts';
 
 test('public and internal command specs no longer carry removed UI adapter command ids', () => {
   const contracts = loadFrameworkContracts({ contractsDir });

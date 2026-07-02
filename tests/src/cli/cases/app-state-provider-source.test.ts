@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 
 import { assert, buildManifestCommand, fs, loadFamilyManifestFixtures, os, path, runCli, test } from '../helpers.ts';
 import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
-import { resolveTemporalWorkerTaskQueue } from '../../../../src/family-runtime-temporal-provider-parts/worker-task-queue.ts';
+import { resolveTemporalWorkerTaskQueue } from '../../../../src/modules/runway/family-runtime-temporal-provider-parts/worker-task-queue.ts';
 
 function buildMasManifestWithManagedTemporalProjection(managedTemporal: Record<string, unknown>) {
   const fixtures = loadFamilyManifestFixtures();

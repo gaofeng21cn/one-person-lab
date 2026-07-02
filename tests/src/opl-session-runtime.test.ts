@@ -6,7 +6,7 @@ import {
   buildInteractionSurfaceCatalog,
   buildOplSessionRuntimeCatalog,
   buildOplSessionRuntimeDescriptor,
-} from '../../src/opl-session-runtime.ts';
+} from '../../src/modules/runway/opl-session-runtime.ts';
 
 test('opl session runtime descriptor helper 输出稳定的 canonical surfaces、executor policy 与资源顺序', () => {
   const descriptor = buildOplSessionRuntimeDescriptor({

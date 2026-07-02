@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   compactCloseoutPacketForTemporalResult,
-} from '../../../src/family-runtime-temporal-activities.ts';
+} from '../../../src/modules/runway/family-runtime-temporal-activities.ts';
 
 test('Temporal Codex activity compacts typed closeout packets before activity completion', () => {
   const largeCloseout = {

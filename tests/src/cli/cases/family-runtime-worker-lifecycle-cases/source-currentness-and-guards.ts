@@ -9,22 +9,22 @@ import {
 } from '../../helpers.ts';
 import {
   DEFAULT_TEMPORAL_TASK_QUEUE,
-} from '../../../../../src/family-runtime-temporal.ts';
+} from '../../../../../src/modules/runway/family-runtime-temporal.ts';
 import {
   buildTemporalWorkerReadiness,
-} from '../../../../../src/family-runtime-temporal-provider.ts';
+} from '../../../../../src/modules/runway/family-runtime-temporal-provider.ts';
 import {
   buildTemporalWorkerMutationGuard,
-} from '../../../../../src/family-runtime-temporal-provider-parts/worker-source-guard.ts';
+} from '../../../../../src/modules/runway/family-runtime-temporal-provider-parts/worker-source-guard.ts';
 import {
   resolveTemporalWorkerTaskQueue,
   resolveTemporalWorkerTaskQueueDetail,
-} from '../../../../../src/family-runtime-temporal-provider-parts/worker-task-queue.ts';
+} from '../../../../../src/modules/runway/family-runtime-temporal-provider-parts/worker-task-queue.ts';
 import {
   currentWorkerSourceVersion,
   workerSourceVersionDiagnostic,
   workerSourceVersionsEquivalent,
-} from '../../../../../src/family-runtime-temporal-provider-parts/worker-state.ts';
+} from '../../../../../src/modules/runway/family-runtime-temporal-provider-parts/worker-state.ts';
 
 test('Temporal worker source version ignores documentation-only git HEAD drift', () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-worker-runtime-source-version-'));

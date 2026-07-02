@@ -16,14 +16,14 @@ import {
   withIsolatedFamilyRuntimeEnv,
 } from './mas-default-executor-single-flight-helpers.ts';
 
-import { startDefaultExecutorStageAttempt } from '../../../../../src/family-runtime-default-executor-start.ts';
-import { ensureProviderHostedStageAttempt } from '../../../../../src/family-runtime-provider-hosted-attempts.ts';
-import { familyRuntimePaths } from '../../../../../src/family-runtime-store.ts';
+import { startDefaultExecutorStageAttempt } from '../../../../../src/modules/runway/family-runtime-default-executor-start.ts';
+import { ensureProviderHostedStageAttempt } from '../../../../../src/modules/runway/family-runtime-provider-hosted-attempts.ts';
+import { familyRuntimePaths } from '../../../../../src/modules/runway/family-runtime-store.ts';
 import {
   listStageAttemptsForTask,
-} from '../../../../../src/family-runtime-stage-attempts.ts';
-import { enqueueTask } from '../../../../../src/family-runtime-enqueue.ts';
-import type { TemporalStageAttemptWorkflowState } from '../../../../../src/family-runtime-temporal.ts';
+} from '../../../../../src/modules/runway/family-runtime-stage-attempts.ts';
+import { enqueueTask } from '../../../../../src/modules/runway/family-runtime-enqueue.ts';
+import type { TemporalStageAttemptWorkflowState } from '../../../../../src/modules/runway/family-runtime-temporal.ts';
 
 type QueryTemporalStageAttemptReadModel = NonNullable<
   Parameters<typeof startDefaultExecutorStageAttempt>[2]['queryTemporalStageAttemptReadModel']

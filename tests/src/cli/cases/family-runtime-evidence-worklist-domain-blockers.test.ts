@@ -20,13 +20,13 @@ import {
 } from './family-runtime-evidence-worklist-helpers.ts';
 import {
   buildProductionTailNextActionLedger,
-} from '../../../../src/production-evidence-tail-ledger.ts';
-import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/family-runtime-evidence-worklist.ts';
-import { openQueueDb } from '../../../../src/family-runtime-store.ts';
+} from '../../../../src/modules/ledger/production-evidence-tail-ledger.ts';
+import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/modules/runway/family-runtime-evidence-worklist.ts';
+import { openQueueDb } from '../../../../src/modules/runway/family-runtime-store.ts';
 import {
   createStageAttempt,
   ingestStageAttemptCloseout,
-} from '../../../../src/family-runtime-stage-attempts.ts';
+} from '../../../../src/modules/runway/family-runtime-stage-attempts.ts';
 
 function completedTemporalObservationWithTypedBlocker(input: {
   stageAttemptId: string;

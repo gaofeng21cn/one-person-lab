@@ -14,8 +14,8 @@ import {
   createCodexCloseoutCaptureForTest,
   stageCloseoutOutputSchemaForTest,
   runAgentStageRunner,
-} from '../../src/family-runtime-codex-stage-runner.ts';
-import { FrameworkContractError } from '../../src/contracts.ts';
+} from '../../src/modules/runway/family-runtime-codex-stage-runner.ts';
+import { FrameworkContractError } from '../../src/modules/charter/contracts.ts';
 
 test('Codex stage activity binds stage packet from checkpoint refs before provider execution', () => {
   const activity = buildCodexStageActivityInput({

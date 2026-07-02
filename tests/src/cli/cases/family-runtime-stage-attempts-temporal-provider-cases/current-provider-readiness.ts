@@ -13,7 +13,7 @@ import {
   assertCurrentProviderReadiness,
   assertProviderReadinessCurrentness,
 } from '../family-runtime-stage-attempts-temporal-provider-fixtures.ts';
-import { resolveTemporalWorkerTaskQueue } from '../../../../../src/family-runtime-temporal-provider-parts/worker-task-queue.ts';
+import { resolveTemporalWorkerTaskQueue } from '../../../../../src/modules/runway/family-runtime-temporal-provider-parts/worker-task-queue.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {

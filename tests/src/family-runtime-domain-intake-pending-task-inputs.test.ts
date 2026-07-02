@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { toPendingTaskInputs } from '../../src/family-runtime-domain-intake-parts/pending-task-inputs.ts';
+import { toPendingTaskInputs } from '../../src/modules/runway/family-runtime-domain-intake-parts/pending-task-inputs.ts';
 
 const exportContext = {
   cwd: '/tmp/domain-workspace',

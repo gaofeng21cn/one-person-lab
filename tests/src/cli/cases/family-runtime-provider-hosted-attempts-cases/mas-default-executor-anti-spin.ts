@@ -11,14 +11,14 @@ import {
   withIsolatedFamilyRuntimeEnv,
 } from './mas-default-executor-single-flight-helpers.ts';
 
-import { enqueueTask } from '../../../../../src/family-runtime-enqueue.ts';
-import { familyRuntimePaths, type FamilyRuntimeTaskRow } from '../../../../../src/family-runtime-store.ts';
-import { runFamilyRuntimeQueueTick } from '../../../../../src/family-runtime-tick.ts';
-import { ensureProviderHostedStageAttempt } from '../../../../../src/family-runtime-provider-hosted-attempts.ts';
+import { enqueueTask } from '../../../../../src/modules/runway/family-runtime-enqueue.ts';
+import { familyRuntimePaths, type FamilyRuntimeTaskRow } from '../../../../../src/modules/runway/family-runtime-store.ts';
+import { runFamilyRuntimeQueueTick } from '../../../../../src/modules/runway/family-runtime-tick.ts';
+import { ensureProviderHostedStageAttempt } from '../../../../../src/modules/runway/family-runtime-provider-hosted-attempts.ts';
 import {
   ingestStageAttemptCloseout,
   listStageAttemptsForTask,
-} from '../../../../../src/family-runtime-stage-attempts.ts';
+} from '../../../../../src/modules/runway/family-runtime-stage-attempts.ts';
 
 function insertQueuedDefaultExecutorTask(
   db: DatabaseSync,

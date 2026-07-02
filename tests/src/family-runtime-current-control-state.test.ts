@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 
-import { enqueueTask } from '../../src/family-runtime-enqueue.ts';
-import { createFamilyRuntimeQueueTables, inspectTask } from '../../src/family-runtime-store.ts';
+import { enqueueTask } from '../../src/modules/runway/family-runtime-enqueue.ts';
+import { createFamilyRuntimeQueueTables, inspectTask } from '../../src/modules/runway/family-runtime-store.ts';
 import {
   createStageAttempt,
   ingestStageAttemptCloseout,
   recordStageAttemptActivityHeartbeat,
-} from '../../src/family-runtime-stage-attempts.ts';
-import { deriveCurrentControlStateForTask } from '../../src/family-runtime-current-control-state.ts';
+} from '../../src/modules/runway/family-runtime-stage-attempts.ts';
+import { deriveCurrentControlStateForTask } from '../../src/modules/runway/family-runtime-current-control-state.ts';
 
 function withDb(fn: (db: DatabaseSync) => void) {
   const db = new DatabaseSync(':memory:');

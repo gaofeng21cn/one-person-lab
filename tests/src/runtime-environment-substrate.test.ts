@@ -15,7 +15,7 @@ function readJson(relativePath: string): Json {
 
 test('runtime environment substrate keeps shared helpers split behind a thin facade', () => {
   const facade = fs.readFileSync(
-    path.join(repoRoot, 'src/runtime-environment-substrate-parts/shared.ts'),
+    path.join(repoRoot, 'src/modules/runway/runtime-environment-substrate-parts/shared.ts'),
     'utf8',
   );
   const partFiles = [
@@ -33,7 +33,7 @@ test('runtime environment substrate keeps shared helpers split behind a thin fac
 
   for (const fileName of partFiles) {
     const source = fs.readFileSync(
-      path.join(repoRoot, 'src/runtime-environment-substrate-parts', fileName),
+      path.join(repoRoot, 'src/modules/runway/runtime-environment-substrate-parts', fileName),
       'utf8',
     );
     assert.ok(

@@ -7,8 +7,8 @@ import path from 'node:path';
 import {
   readCurrentOwnerDeltaReadModelProjectionCache,
   writeCurrentOwnerDeltaReadModelProjectionCache,
-} from '../../src/current-owner-delta-read-model-cache.ts';
-import { resolveOplStatePaths } from '../../src/runtime-state-paths.ts';
+} from '../../src/modules/ledger/current-owner-delta-read-model-cache.ts';
+import { resolveOplStatePaths } from '../../src/modules/runway/runtime-state-paths.ts';
 
 function readModel(sourceFingerprint = 'sha256:current-owner-delta-cache') {
   return {

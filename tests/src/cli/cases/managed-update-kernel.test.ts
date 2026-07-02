@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 
 import { assert, createFakeCodexFixture, fs, os, path, runCli, test } from '../helpers.ts';
-import { computePackageChannelTreeSha256 } from '../../../../src/system-installation/module-package-channel.ts';
+import { computePackageChannelTreeSha256 } from '../../../../src/modules/connect/system-installation/module-package-channel.ts';
 import { writeFakeBookForgeGeneratedSurfacePack } from '../../cli-codex-default-shell-helpers.ts';
 
 import './managed-update-kernel-cases/lock-contention.ts';

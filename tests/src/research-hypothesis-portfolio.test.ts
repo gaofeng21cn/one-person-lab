@@ -28,7 +28,7 @@ function schemaDef(schema: JsonRecord, name: string): JsonRecord {
 
 async function loadHelper() {
   try {
-    return await import('../../src/research-hypothesis-portfolio.ts');
+    return await import('../../src/modules/foundry-lab/research-hypothesis-portfolio.ts');
   } catch (error) {
     assert.fail(error instanceof Error ? error.message : 'research hypothesis portfolio helper module should load');
   }

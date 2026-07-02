@@ -11,7 +11,7 @@ import {
   runCli,
   test,
 } from '../helpers.ts';
-import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/family-runtime-evidence-worklist.ts';
+import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/modules/runway/family-runtime-evidence-worklist.ts';
 import {
   createFamilyWorkspaceFixture,
   createOmaContractFixture,

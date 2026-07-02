@@ -4,8 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import type { WorkspaceBinding } from '../../src/workspace-registry.ts';
-import { resolveBindingManifest } from '../../src/domain-manifest/resolver.ts';
+import type { WorkspaceBinding } from '../../src/modules/workspace/workspace-registry.ts';
+import { resolveBindingManifest } from '../../src/modules/atlas/domain-manifest/resolver.ts';
 import { loadFamilyManifestFixtures } from './cli/helpers.ts';
 
 function withEnvVar<T>(name: string, value: string | undefined, run: () => T): T {

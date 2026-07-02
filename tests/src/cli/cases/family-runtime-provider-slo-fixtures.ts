@@ -1,9 +1,9 @@
 import {
   buildTemporalWorkerLifecycleContract,
-} from '../../../../src/family-runtime-temporal-provider.ts';
+} from '../../../../src/modules/runway/family-runtime-temporal-provider.ts';
 import {
   buildTemporalStageAttemptVisibilityReadiness,
-} from '../../../../src/family-runtime-temporal-visibility.ts';
+} from '../../../../src/modules/runway/family-runtime-temporal-visibility.ts';
 
 export type TemporalWorkerStatusKind =
   | 'worker_not_ready'

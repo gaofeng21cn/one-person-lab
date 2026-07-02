@@ -1,9 +1,9 @@
 import { DatabaseSync } from 'node:sqlite';
 
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
-import { createFamilyRuntimeQueueTables } from '../../../../src/family-runtime-store.ts';
-import { listStageAttemptsWithMonitoringProjection } from '../../../../src/family-runtime-stage-attempt-monitoring.ts';
-import { createStageAttempt } from '../../../../src/family-runtime-stage-attempts.ts';
+import { createFamilyRuntimeQueueTables } from '../../../../src/modules/runway/family-runtime-store.ts';
+import { listStageAttemptsWithMonitoringProjection } from '../../../../src/modules/runway/family-runtime-stage-attempt-monitoring.ts';
+import { createStageAttempt } from '../../../../src/modules/runway/family-runtime-stage-attempts.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {

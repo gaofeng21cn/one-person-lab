@@ -6,7 +6,7 @@ import {
   buildPaperAutonomySupervisorDecisionReadback,
   recordPaperAutonomySupervisorDecision,
   type PaperAutonomyStageRunIdentity,
-} from '../../../../src/family-runtime-paper-autonomy.ts';
+} from '../../../../src/modules/runway/family-runtime-paper-autonomy.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {

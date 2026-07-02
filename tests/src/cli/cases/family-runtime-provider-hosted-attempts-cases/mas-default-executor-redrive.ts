@@ -11,8 +11,8 @@ import {
   runCliFailure,
   test,
 } from './helpers.ts';
-import { redriveBlockedDefaultExecutorProviderTransportTask } from '../../../../../src/family-runtime-redrive.ts';
-import type { FamilyRuntimeTaskRow } from '../../../../../src/family-runtime-store.ts';
+import { redriveBlockedDefaultExecutorProviderTransportTask } from '../../../../../src/modules/runway/family-runtime-redrive.ts';
+import type { FamilyRuntimeTaskRow } from '../../../../../src/modules/runway/family-runtime-store.ts';
 
 function defaultExecutorPayload(sourceFingerprint: string) {
   return {

@@ -8,7 +8,7 @@ import { runPublicCodexStageRunner } from './family-runtime-codex-stage-runner-h
 import {
   normalizeTypedStageCloseoutPacket,
   validateCloseoutPacketForAttempt,
-} from '../../src/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
+} from '../../src/modules/runway/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
 
 test('typed closeout normalization preserves paper stage token telemetry', () => {
   const packet = normalizeTypedStageCloseoutPacket({

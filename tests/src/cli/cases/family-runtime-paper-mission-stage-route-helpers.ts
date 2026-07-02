@@ -1,23 +1,23 @@
 import { assert, fs, os, path, runCli, shellSingleQuote, test } from '../helpers.ts';
-import { FrameworkContractError } from '../../../../src/contracts.ts';
+import { FrameworkContractError } from '../../../../src/modules/charter/contracts.ts';
 import {
   familyRuntimePaths,
   inspectTask,
   openQueueDb,
   taskToPayload,
   type FamilyRuntimeTaskRow,
-} from '../../../../src/family-runtime-store.ts';
+} from '../../../../src/modules/runway/family-runtime-store.ts';
 import {
   buildTemporalStageAttemptWorkflowInput,
   requireTemporalStageAttemptWorkflowInputLaunchable,
-} from '../../../../src/family-runtime-temporal.ts';
-import { enqueueTask } from '../../../../src/family-runtime-enqueue.ts';
+} from '../../../../src/modules/runway/family-runtime-temporal.ts';
+import { enqueueTask } from '../../../../src/modules/runway/family-runtime-enqueue.ts';
 import {
   paperMissionRedriveProviderFollowthrough,
-} from '../../../../src/family-runtime.ts';
-import { redriveFamilyRuntimeTask } from '../../../../src/family-runtime-redrive.ts';
-import { dispatchFamilyRuntimeTask } from '../../../../src/family-runtime-task-dispatch.ts';
-import { syncStageAttemptFromTemporalTerminalObservation } from '../../../../src/family-runtime-stage-attempts.ts';
+} from '../../../../src/modules/runway/family-runtime.ts';
+import { redriveFamilyRuntimeTask } from '../../../../src/modules/runway/family-runtime-redrive.ts';
+import { dispatchFamilyRuntimeTask } from '../../../../src/modules/runway/family-runtime-task-dispatch.ts';
+import { syncStageAttemptFromTemporalTerminalObservation } from '../../../../src/modules/runway/family-runtime-stage-attempts.ts';
 
 export type StageRouteDispatchReadback = {
   status: 'running' | 'blocked';

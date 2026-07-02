@@ -13,7 +13,7 @@ import {
   buildPackOsLock,
   buildPackOsRegistry,
   buildPackOsValidation,
-} from '../../src/pack-os.ts';
+} from '../../src/modules/pack/pack-os.ts';
 
 function writeDescriptor(root: string, overrides: Record<string, unknown> = {}) {
   fs.mkdirSync(path.join(root, 'templates'), { recursive: true });

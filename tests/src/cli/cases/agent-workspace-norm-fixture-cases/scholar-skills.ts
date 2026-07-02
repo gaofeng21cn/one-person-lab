@@ -3,7 +3,7 @@ import type {
   ScholarSkillCapabilityModuleDescriptor,
   ScholarSkillModuleId,
   ScholarSkillsCapabilityModulesContract,
-} from '../../../../../src/types.ts';
+} from '../../../../../src/kernel/types.ts';
 
 const AUTHORITY_BOUNDARY: ScholarSkillAuthorityBoundary = {
   can_claim_domain_ready: false,

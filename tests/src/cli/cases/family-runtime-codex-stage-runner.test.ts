@@ -8,10 +8,10 @@ import {
 } from '../helpers.ts';
 import {
   runAgentStageRunner,
-} from '../../../../src/family-runtime-codex-stage-runner.ts';
+} from '../../../../src/modules/runway/family-runtime-codex-stage-runner.ts';
 import {
   runnerPromptFor,
-} from '../../../../src/family-runtime-codex-stage-runner-parts/input-prompt.ts';
+} from '../../../../src/modules/runway/family-runtime-codex-stage-runner-parts/input-prompt.ts';
 
 test('Codex stage runner prompt exposes MAS PaperMission stage-route affordance', () => {
   const prompt = runnerPromptFor({

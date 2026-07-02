@@ -10,7 +10,7 @@ import {
 import {
   STANDARD_PROGRESS_DELTA_POLICY,
   STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
-} from '../../../../src/standard-domain-agent-scaffold-constants.ts';
+} from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
 import { writeFakeOmaGeneratedSurfacePack } from '../../cli-codex-default-shell-helpers.ts';
 
 export function insertProviderProof(stateRoot: string) {

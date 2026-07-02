@@ -14,7 +14,7 @@ import {
   buildSessionContinuity,
   buildTaskLifecycle,
   buildTaskSurfaceDescriptor,
-} from '../../src/runtime-task-companions.ts';
+} from '../../src/modules/runway/runtime-task-companions.ts';
 
 test('runtime task companion helpers normalize MAS, MAG, and RCA style payloads', () => {
   const runtimeInventory = buildRuntimeInventory({

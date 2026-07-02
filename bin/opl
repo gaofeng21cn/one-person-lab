@@ -14,20 +14,20 @@ done
 ROOT_DIR="$(cd "$(dirname "$SOURCE_PATH")/.." && pwd)"
 
 run_opl() {
-  if [[ -f "$ROOT_DIR/src/cli.ts" ]]; then
-    exec node --experimental-strip-types "$ROOT_DIR/src/cli.ts" "$@"
+  if [[ -f "$ROOT_DIR/src/entrypoints/cli.ts" ]]; then
+    exec node --experimental-strip-types "$ROOT_DIR/src/entrypoints/cli.ts" "$@"
   fi
 
-  exec node "$ROOT_DIR/dist/cli.js" "$@"
+  exec node "$ROOT_DIR/dist/entrypoints/cli.js" "$@"
 }
 
 invoke_opl() {
-  if [[ -f "$ROOT_DIR/src/cli.ts" ]]; then
-    node --experimental-strip-types "$ROOT_DIR/src/cli.ts" "$@"
+  if [[ -f "$ROOT_DIR/src/entrypoints/cli.ts" ]]; then
+    node --experimental-strip-types "$ROOT_DIR/src/entrypoints/cli.ts" "$@"
     return
   fi
 
-  node "$ROOT_DIR/dist/cli.js" "$@"
+  node "$ROOT_DIR/dist/entrypoints/cli.js" "$@"
 }
 
 run_codex() {

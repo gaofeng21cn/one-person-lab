@@ -9,7 +9,7 @@ import {
 } from '../helpers.ts';
 import {
   applyAppOperatorDrilldownDetail,
-} from '../../../../src/runtime-tray-app-operator-drilldown-parts/detail-view.ts';
+} from '../../../../src/modules/console/runtime-tray-app-operator-drilldown-parts/detail-view.ts';
 
 function record(value: unknown): Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value)

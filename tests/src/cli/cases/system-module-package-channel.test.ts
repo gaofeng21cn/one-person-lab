@@ -11,7 +11,7 @@ import {
   runCliFailure,
   test,
 } from '../helpers.ts';
-import { rollbackManagedModulePackageChannel } from '../../../../src/system-installation/module-package-channel.ts';
+import { rollbackManagedModulePackageChannel } from '../../../../src/modules/connect/system-installation/module-package-channel.ts';
 
 const MODULE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.module.source.v1+gzip';
 const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';

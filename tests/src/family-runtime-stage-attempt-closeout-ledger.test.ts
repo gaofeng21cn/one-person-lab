@@ -2,14 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 
-import { FrameworkContractError } from '../../src/contracts.ts';
+import { FrameworkContractError } from '../../src/modules/charter/contracts.ts';
 import {
   createStageAttempt,
   createStageAttemptTable,
   ingestStageAttemptCloseout,
   inspectStageAttempt,
   listStageAttemptCloseouts,
-} from '../../src/family-runtime-stage-attempts.ts';
+} from '../../src/modules/runway/family-runtime-stage-attempts.ts';
 
 function withStageAttemptDb(fn: (db: DatabaseSync) => void) {
   const db = new DatabaseSync(':memory:');

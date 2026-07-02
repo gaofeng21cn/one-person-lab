@@ -20,7 +20,7 @@ import {
   buildFamilyOrchestrationTemplate,
   resolveActiveRunId,
   resolveProgramId,
-} from '../../src/family-orchestration.ts';
+} from '../../src/modules/runway/family-orchestration.ts';
 
 type Json = Record<string, unknown>;
 

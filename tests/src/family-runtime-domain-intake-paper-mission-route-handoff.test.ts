@@ -4,7 +4,7 @@ import test from 'node:test';
 import {
   intakeMasPaperMissionRouteHandoff,
   intakeMasPaperMissionRouteHandoffsFromExport,
-} from '../../src/family-runtime-domain-intake-parts/paper-mission-route-handoff.ts';
+} from '../../src/modules/runway/family-runtime-domain-intake-parts/paper-mission-route-handoff.ts';
 
 function readyHandoff(overrides: Record<string, unknown> = {}) {
   return {

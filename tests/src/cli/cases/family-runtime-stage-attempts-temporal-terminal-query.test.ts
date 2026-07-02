@@ -3,17 +3,17 @@ import { Worker } from '@temporalio/worker';
 import { ServiceError } from '@temporalio/client';
 import { DatabaseSync } from 'node:sqlite';
 
-import * as activities from '../../../../src/family-runtime-temporal-activities.ts';
-import { buildTemporalStageAttemptWorkflowInputForTest } from '../../../../src/family-runtime-temporal-provider.ts';
-import { queryTemporalStageAttemptReadModel } from '../../../../src/family-runtime-temporal-query.ts';
-import { createStageAttempt, ingestStageAttemptCloseout } from '../../../../src/family-runtime-stage-attempts.ts';
-import { enqueueTask } from '../../../../src/family-runtime-enqueue.ts';
-import { openQueueDb } from '../../../../src/family-runtime-store.ts';
+import * as activities from '../../../../src/modules/runway/family-runtime-temporal-activities.ts';
+import { buildTemporalStageAttemptWorkflowInputForTest } from '../../../../src/modules/runway/family-runtime-temporal-provider.ts';
+import { queryTemporalStageAttemptReadModel } from '../../../../src/modules/runway/family-runtime-temporal-query.ts';
+import { createStageAttempt, ingestStageAttemptCloseout } from '../../../../src/modules/runway/family-runtime-stage-attempts.ts';
+import { enqueueTask } from '../../../../src/modules/runway/family-runtime-enqueue.ts';
+import { openQueueDb } from '../../../../src/modules/runway/family-runtime-store.ts';
 import type {
   TemporalStageAttemptWorkflowInput,
   TemporalStageAttemptWorkflowState,
-} from '../../../../src/family-runtime-temporal.ts';
-import { runFamilyRuntime } from '../../../../src/family-runtime.ts';
+} from '../../../../src/modules/runway/family-runtime-temporal.ts';
+import { runFamilyRuntime } from '../../../../src/modules/runway/family-runtime.ts';
 import {
   assert,
   fs,

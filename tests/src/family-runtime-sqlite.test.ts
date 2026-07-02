@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {
   familyRuntimeSqliteSidecarPolicy,
   openFamilyRuntimeSqlite,
-} from '../../src/family-runtime-sqlite.ts';
+} from '../../src/modules/runway/family-runtime-sqlite.ts';
 
 const EXPECTED_BUSY_TIMEOUT_MS = 5_000;
 

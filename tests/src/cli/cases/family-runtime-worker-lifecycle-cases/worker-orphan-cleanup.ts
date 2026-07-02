@@ -13,10 +13,10 @@ import {
   runTemporalWorkerForeground,
   startTemporalWorkerLifecycle,
   stopTemporalWorkerLifecycle,
-} from '../../../../../src/family-runtime-temporal-provider.ts';
+} from '../../../../../src/modules/runway/family-runtime-temporal-provider.ts';
 import {
   stopOrphanTemporalForegroundWorkers,
-} from '../../../../../src/family-runtime-temporal-provider-parts/worker-process.ts';
+} from '../../../../../src/modules/runway/family-runtime-temporal-provider-parts/worker-process.ts';
 
 test('Temporal worker stop cleans orphan foreground worker after state file is missing', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-orphan-stop-'));

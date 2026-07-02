@@ -7,10 +7,10 @@ import {
 } from '../helpers.ts';
 import {
   buildMasDomainRouteSupportProjection,
-} from '../../../../src/family-runtime-mas-domain-route.ts';
+} from '../../../../src/modules/runway/family-runtime-mas-domain-route.ts';
 import {
   buildAppOperatorDrilldown,
-} from '../../../../src/runtime-tray-app-operator-drilldown.ts';
+} from '../../../../src/modules/console/runtime-tray-app-operator-drilldown.ts';
 
 function useTempState(t: { after: (fn: () => void) => void }, prefix: string) {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), prefix));

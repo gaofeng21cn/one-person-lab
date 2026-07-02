@@ -16,20 +16,20 @@ import {
 } from '../helpers.ts';
 import {
   DEFAULT_TEMPORAL_TASK_QUEUE,
-} from '../../../../src/family-runtime-temporal.ts';
+} from '../../../../src/modules/runway/family-runtime-temporal.ts';
 import {
   buildTemporalStageAttemptWorkerOptionsForTest,
   buildTemporalWorkerReadiness,
   inspectTemporalWorkerLifecycle,
   startTemporalWorkerLifecycle,
   stopTemporalWorkerLifecycle,
-} from '../../../../src/family-runtime-temporal-provider.ts';
+} from '../../../../src/modules/runway/family-runtime-temporal-provider.ts';
 import {
   runTemporalWorkerResidentLoop,
-} from '../../../../src/family-runtime-temporal-provider-parts/worker-residency.ts';
+} from '../../../../src/modules/runway/family-runtime-temporal-provider-parts/worker-residency.ts';
 import {
   resolveTemporalWorkerTaskQueue,
-} from '../../../../src/family-runtime-temporal-provider-parts/worker-task-queue.ts';
+} from '../../../../src/modules/runway/family-runtime-temporal-provider-parts/worker-task-queue.ts';
 
 async function createFakeTemporalServer() {
   const sockets = new Set<net.Socket>();

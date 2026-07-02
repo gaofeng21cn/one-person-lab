@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { resolveFamilyWorkspaceRootFromRepoRoot } from '../../src/opl-skills.ts';
+import { resolveFamilyWorkspaceRootFromRepoRoot } from '../../src/modules/connect/opl-skills.ts';
 import {
   binPath,
   createFakeCodexFixture,

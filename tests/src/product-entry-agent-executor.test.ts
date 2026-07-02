@@ -5,8 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { createFakeCodexFixture } from './cli/helpers.ts';
-import type { AgentExecutionReceipt } from '../../src/agent-executor.ts';
-import { runProductEntryExec } from '../../src/product-entry.ts';
+import type { AgentExecutionReceipt } from '../../src/modules/runway/agent-executor.ts';
+import { runProductEntryExec } from '../../src/modules/console/product-entry.ts';
 
 function makeExecutable(name: string, body: string) {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-product-entry-executor-'));

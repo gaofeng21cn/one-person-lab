@@ -31,7 +31,7 @@ import {
   type PaperAutonomyStageRunIdentity,
   type PaperAutonomySupervisorDecisionKind,
   type PaperAutonomySupervisorDecisionLedgerEntry,
-} from '../../src/family-runtime-paper-autonomy.ts';
+} from '../../src/modules/runway/family-runtime-paper-autonomy.ts';
 
 function identity(overrides: Partial<PaperAutonomyStageRunIdentity> = {}): PaperAutonomyStageRunIdentity {
   return {

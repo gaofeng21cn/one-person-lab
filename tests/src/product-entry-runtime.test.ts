@@ -4,12 +4,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { loadFrameworkContracts, validateFrameworkContracts } from '../../src/contracts.ts';
-import { buildProductEntryHandoffEnvelope } from '../../src/product-entry-handoff-envelope.ts';
-import { buildProductEntrySessionPrompt } from '../../src/product-entry-parts/builders.ts';
+import { loadFrameworkContracts, validateFrameworkContracts } from '../../src/modules/charter/contracts.ts';
+import { buildProductEntryHandoffEnvelope } from '../../src/modules/console/product-entry-handoff-envelope.ts';
+import { buildProductEntrySessionPrompt } from '../../src/modules/console/product-entry-parts/builders.ts';
 import {
   buildProductEntryDoctor,
-} from '../../src/product-entry-runtime.ts';
+} from '../../src/modules/console/product-entry-runtime.ts';
 
 const contractsDir = path.join(process.cwd(), 'contracts', 'opl-framework');
 const repoRoot = process.cwd();

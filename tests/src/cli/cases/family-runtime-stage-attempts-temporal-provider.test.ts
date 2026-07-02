@@ -4,16 +4,16 @@ import { SearchAttributeType } from '@temporalio/common';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 
-import * as activities from '../../../../src/family-runtime-temporal-activities.ts';
+import * as activities from '../../../../src/modules/runway/family-runtime-temporal-activities.ts';
 import {
   buildTemporalStageAttemptWorkflowInputForTest,
   startTemporalStageAttemptWorkflow,
-} from '../../../../src/family-runtime-temporal-provider.ts';
+} from '../../../../src/modules/runway/family-runtime-temporal-provider.ts';
 import {
   resolveTemporalWorkerTaskQueue,
-} from '../../../../src/family-runtime-temporal-provider-parts/worker-task-queue.ts';
-import { buildTemporalStageAttemptWorkflowInput } from '../../../../src/family-runtime-temporal.ts';
-import { runFamilyRuntime } from '../../../../src/family-runtime.ts';
+} from '../../../../src/modules/runway/family-runtime-temporal-provider-parts/worker-task-queue.ts';
+import { buildTemporalStageAttemptWorkflowInput } from '../../../../src/modules/runway/family-runtime-temporal.ts';
+import { runFamilyRuntime } from '../../../../src/modules/runway/family-runtime.ts';
 import {
   assert,
   buildManifestCommand,

@@ -11,9 +11,9 @@ import {
 import { spawnSync } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
 
-import { enqueueTask } from '../../../../../src/family-runtime-enqueue.ts';
-import { ensureProviderHostedStageAttempt } from '../../../../../src/family-runtime-provider-hosted-attempts.ts';
-import { createFamilyRuntimeQueueTables } from '../../../../../src/family-runtime-store.ts';
+import { enqueueTask } from '../../../../../src/modules/runway/family-runtime-enqueue.ts';
+import { ensureProviderHostedStageAttempt } from '../../../../../src/modules/runway/family-runtime-provider-hosted-attempts.ts';
+import { createFamilyRuntimeQueueTables } from '../../../../../src/modules/runway/family-runtime-store.ts';
 
 function withTemporalProviderEnv<T>(fn: () => T) {
   const previous = {

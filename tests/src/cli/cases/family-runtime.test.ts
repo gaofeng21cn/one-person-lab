@@ -16,7 +16,7 @@ import {
   shellSingleQuote,
   test,
 } from '../helpers.ts';
-import { STANDARD_PROGRESS_DELTA_POLICY, STANDARD_TYPED_BLOCKER_LINEAGE_POLICY } from '../../../../src/standard-domain-agent-scaffold-constants.ts';
+import { STANDARD_PROGRESS_DELTA_POLICY, STANDARD_TYPED_BLOCKER_LINEAGE_POLICY } from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
 
 function createDispatchFixture(body: string) {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-dispatch-'));

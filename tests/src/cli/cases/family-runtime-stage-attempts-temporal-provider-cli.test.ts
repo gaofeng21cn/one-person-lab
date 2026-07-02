@@ -11,8 +11,8 @@ import {
   runCli,
   test,
 } from '../helpers.ts';
-import { createFamilyRuntimeQueueTables } from '../../../../src/family-runtime-store.ts';
-import { createStageAttempt } from '../../../../src/family-runtime-stage-attempts.ts';
+import { createFamilyRuntimeQueueTables } from '../../../../src/modules/runway/family-runtime-store.ts';
+import { createStageAttempt } from '../../../../src/modules/runway/family-runtime-stage-attempts.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {

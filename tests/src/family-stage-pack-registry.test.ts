@@ -4,21 +4,21 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { FamilyActionCatalog } from '../../src/family-action-catalog-contract.ts';
-import type { FamilyStageContract, FamilyStageControlPlane } from '../../src/family-stage-control-plane-contract.ts';
-import { buildFamilyStageProofBundle } from '../../src/family-stage-proof-bundle.ts';
+import type { FamilyActionCatalog } from '../../src/modules/console/family-action-catalog-contract.ts';
+import type { FamilyStageContract, FamilyStageControlPlane } from '../../src/modules/stagecraft/family-stage-control-plane-contract.ts';
+import { buildFamilyStageProofBundle } from '../../src/modules/stagecraft/family-stage-proof-bundle.ts';
 import {
   buildFamilyStagePackRegistryEntry,
   buildFamilyStagePackRegistryProjection,
-} from '../../src/family-stage-pack-registry.ts';
-import { buildFamilyStageAssumptionLifecycleProjection } from '../../src/family-stage-assumption-lifecycle.ts';
-import { buildFamilyStageCohortLoopProjection } from '../../src/family-stage-cohort-loop.ts';
-import { buildFamilyStageReplayCertification } from '../../src/family-stage-replay-certification.ts';
-import { buildFamilyStagePackSourceSpecProjection } from '../../src/family-stage-source-spec.ts';
+} from '../../src/modules/stagecraft/family-stage-pack-registry.ts';
+import { buildFamilyStageAssumptionLifecycleProjection } from '../../src/modules/stagecraft/family-stage-assumption-lifecycle.ts';
+import { buildFamilyStageCohortLoopProjection } from '../../src/modules/stagecraft/family-stage-cohort-loop.ts';
+import { buildFamilyStageReplayCertification } from '../../src/modules/stagecraft/family-stage-replay-certification.ts';
+import { buildFamilyStagePackSourceSpecProjection } from '../../src/modules/stagecraft/family-stage-source-spec.ts';
 import {
   STANDARD_PROGRESS_DELTA_POLICY,
   STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
-} from '../../src/standard-domain-agent-scaffold-constants.ts';
+} from '../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
 
 type JsonRecord = Record<string, unknown>;
 

@@ -4,7 +4,7 @@ import test from 'node:test';
 import {
   buildSampleAgentLabSuite,
   runAgentLabSuite,
-} from '../../src/agent-lab.ts';
+} from '../../src/modules/foundry-lab/agent-lab.ts';
 
 test('Agent Lab executor capability aperture accepts declared non-default executor metadata as audit boundary only', () => {
   const suite = buildSampleAgentLabSuite();

@@ -7,9 +7,9 @@ import test from 'node:test';
 import {
   assertDomainDispatchEvidencePayloadReady,
   preflightDomainDispatchEvidencePayload,
-} from '../../src/domain-dispatch-evidence-payload-preflight.ts';
-import { FrameworkContractError } from '../../src/contracts.ts';
-import { recordStageRunExecutionAuthorizationReceipts } from '../../src/stage-run-execution-authorization-ledger.ts';
+} from '../../src/modules/ledger/domain-dispatch-evidence-payload-preflight.ts';
+import { FrameworkContractError } from '../../src/modules/charter/contracts.ts';
+import { recordStageRunExecutionAuthorizationReceipts } from '../../src/modules/stagecraft/stage-run-execution-authorization-ledger.ts';
 
 const route = {
   action_id: 'domain_dispatch:medautoscience:sat-dm003:record',

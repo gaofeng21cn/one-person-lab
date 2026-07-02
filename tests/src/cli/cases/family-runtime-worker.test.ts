@@ -13,9 +13,9 @@ import {
 } from '../helpers.ts';
 import {
   resolveTemporalWorkerForegroundPaths,
-} from '../../../../src/family-runtime-temporal-provider.ts';
-import { resolveTemporalWorkerTaskQueue } from '../../../../src/family-runtime-temporal-provider-parts/worker-task-queue.ts';
-import { startTemporalServiceLifecycle } from '../../../../src/family-runtime-temporal-service.ts';
+} from '../../../../src/modules/runway/family-runtime-temporal-provider.ts';
+import { resolveTemporalWorkerTaskQueue } from '../../../../src/modules/runway/family-runtime-temporal-provider-parts/worker-task-queue.ts';
+import { startTemporalServiceLifecycle } from '../../../../src/modules/runway/family-runtime-temporal-service.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {

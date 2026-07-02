@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { buildAgentLabCostEstimate } from '../../src/agent-lab.ts';
+import { buildAgentLabCostEstimate } from '../../src/modules/foundry-lab/agent-lab.ts';
 
 test('Agent Lab exposes a refs-only RCA 40-slide cost estimate without domain authority', () => {
   assert.equal(typeof buildAgentLabCostEstimate, 'function',

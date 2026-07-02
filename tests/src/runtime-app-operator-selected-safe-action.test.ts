@@ -4,7 +4,7 @@ import test from 'node:test';
 import {
   compareDefaultSelectedSafeActions,
   defaultSelectedSafeActionCandidates,
-} from '../../src/runtime-tray-app-operator-drilldown-parts/selected-safe-action-candidates.ts';
+} from '../../src/modules/console/runtime-tray-app-operator-drilldown-parts/selected-safe-action-candidates.ts';
 
 test('default selected safe action keeps App release user path ahead of OMA production consumption', () => {
   const appReleaseRecord = {

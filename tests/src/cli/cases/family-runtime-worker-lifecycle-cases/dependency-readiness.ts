@@ -4,10 +4,10 @@ import {
 } from '../../helpers.ts';
 import {
   buildTemporalWorkerReadiness,
-} from '../../../../../src/family-runtime-temporal-provider.ts';
+} from '../../../../../src/modules/runway/family-runtime-temporal-provider.ts';
 import {
   inspectTemporalWorkerRuntimeDependencies,
-} from '../../../../../src/family-runtime-temporal-provider-parts/worker-dependencies.ts';
+} from '../../../../../src/modules/runway/family-runtime-temporal-provider-parts/worker-dependencies.ts';
 
 test('Temporal worker readiness blocks missing SWC native workflow bundler dependency', () => {
   const failingRequire = (() => {

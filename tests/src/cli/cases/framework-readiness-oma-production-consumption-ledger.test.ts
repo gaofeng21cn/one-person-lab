@@ -1,6 +1,6 @@
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
-import { recordManagedInstallUpdateReceipts } from '../../../../src/managed-install-update-ledger.ts';
-import { recordOmaAppLivePathReceipts } from '../../../../src/oma-app-live-path-ledger.ts';
+import { recordManagedInstallUpdateReceipts } from '../../../../src/modules/connect/managed-install-update-ledger.ts';
+import { recordOmaAppLivePathReceipts } from '../../../../src/modules/foundry-lab/oma-app-live-path-ledger.ts';
 import {
   createFamilyWorkspaceFixture,
 } from './runtime-app-operator-drilldown-helpers.ts';

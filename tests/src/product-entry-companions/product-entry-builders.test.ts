@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import type {
   FamilyProductEntryManifestSurface,
   FamilyProductEntrySurface,
-} from '../../../src/product-entry-companions.ts';
+} from '../../../src/modules/console/product-entry-companions.ts';
 import {
   buildDeliveryIdentitySurface,
   buildEntrySessionSurface,
@@ -30,7 +30,7 @@ import {
   collectFamilyHumanGateIds,
   validateFamilyProductEntrySurface,
   validateFamilyProductEntryManifest,
-} from '../../../src/product-entry-companions.ts';
+} from '../../../src/modules/console/product-entry-companions.ts';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 

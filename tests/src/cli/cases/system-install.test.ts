@@ -1,6 +1,6 @@
 import { assert, cliPath, contractsDir, createCodexConfigFixture, createFakeLaunchctlFixture, createGitModuleRemoteFixture, fs, loadFrameworkContracts, os, path, repoRoot, runCli, test } from '../helpers.ts';
-import { buildInternalCommandSpecs } from '../../../../src/cli/cases/private-command-specs.ts';
-import { buildPublicCommandSpecs } from '../../../../src/cli/cases/public-command-specs.ts';
+import { buildInternalCommandSpecs } from '../../../../src/entrypoints/cli/cases/private-command-specs.ts';
+import { buildPublicCommandSpecs } from '../../../../src/entrypoints/cli/cases/public-command-specs.ts';
 import { createFakeCompanionInstallEnv, writeFakeCompanionToolBinaries } from './system-install-fixtures.ts';
 
 function disableRemoteCompanionInstall() {

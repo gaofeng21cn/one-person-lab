@@ -1,4 +1,4 @@
-import type { TargetOperatingArchitectureContract } from '../../../../../src/types.ts';
+import type { TargetOperatingArchitectureContract } from '../../../../../src/kernel/types.ts';
 
 export const MINIMAL_TARGET_OPERATING_ARCHITECTURE_CONTRACT: TargetOperatingArchitectureContract = {
   contract_kind: 'opl_target_operating_architecture_contract.v1',

@@ -8,7 +8,7 @@ import {
   inspectCurrentRepoFamilySharedAlignment,
   inspectFamilySharedConsumerAlignment,
   loadSharedOwnerReleaseContract,
-} from '../../src/family-shared-release.ts';
+} from '../../src/modules/atlas/family-shared-release.ts';
 
 const RELEASED_OWNER_COMMIT = 'e92fc99b52a8eae0dffa9859d35164acfb69b858';
 const STALE_OWNER_COMMIT = '6a6823dba7f95de5ae3aafc477167bccb07de74c';

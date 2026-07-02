@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 
-import { loadFrameworkContracts } from '../../src/contracts.ts';
-import { buildHandoffBundle } from '../../src/handoff-bundle.ts';
-import type { BoundaryExplanation, ResolutionResult } from '../../src/types.ts';
+import { loadFrameworkContracts } from '../../src/modules/charter/contracts.ts';
+import { buildHandoffBundle } from '../../src/modules/ledger/handoff-bundle.ts';
+import type { BoundaryExplanation, ResolutionResult } from '../../src/kernel/types.ts';
 
 const contractsDir = path.join(process.cwd(), 'contracts', 'opl-framework');
 const repoRoot = process.cwd();

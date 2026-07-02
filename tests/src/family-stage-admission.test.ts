@@ -4,13 +4,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { buildFamilyStageAdmissionReview } from '../../src/family-stage-admission.ts';
-import type { FamilyActionCatalog } from '../../src/family-action-catalog-contract.ts';
+import { buildFamilyStageAdmissionReview } from '../../src/modules/stagecraft/family-stage-admission.ts';
+import type { FamilyActionCatalog } from '../../src/modules/console/family-action-catalog-contract.ts';
 import {
   normalizeFamilyStageControlPlane,
   type FamilyStageContract,
   type FamilyStageControlPlane,
-} from '../../src/family-stage-control-plane-contract.ts';
+} from '../../src/modules/stagecraft/family-stage-control-plane-contract.ts';
 
 type JsonRecord = Record<string, unknown>;
 

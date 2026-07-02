@@ -1,19 +1,23 @@
-# OPL Framework Source Modules
+# OPL Framework 源码模块
 
 Owner: `OPL Framework`
 Purpose: `source_module_physical_index`
 State: `active_source_index`
-Machine boundary: This directory is the physical entrypoint index for OPL brand modules. Runtime truth, domain truth, artifact bodies, owner receipts, typed blockers, and production readiness stay with their owning runtime, domain, contract, or ledger surfaces.
+Machine boundary: 本目录是 OPL Framework 十大品牌模块的真实物理入口。runtime truth、domain truth、artifact body、owner receipt、typed blocker 和 production readiness 继续归各自 runtime、domain、contract 或 ledger surface。
 
-## Read Order
+## 读法
 
-Use this directory to find the source owner for new framework work:
+维护 Framework 源码时先定位 owning module：
 
-1. Pick the matching brand module directory.
-2. Read that module's `index.ts` for the contract ref and current legacy source globs.
-3. Add new module-owned code under `src/modules/<module_id>/` unless an existing legacy file is the smaller, clearer edit.
+1. 选择对应的品牌模块目录。
+2. 读取该模块的 `index.ts`；它是模块 public index 和 contract ref 的入口。
+3. 新增模块代码放入 `src/modules/<module_id>/`。
+4. 跨模块依赖从 owning module 的 `index.ts` 或 `src/modules/index.ts` public exports 进入。
+5. root-level `src/*.ts` 不再作为新入口或扩展点。
 
-The canonical machine map is `contracts/opl-framework/source-module-map.json`.
+`contracts/opl-framework/source-module-map.json` 是机器归属校验和历史 root 文件 readback，不是 `src/modules/` 的替代组织。
+
+`entrypoints/` 和 `kernel/` 属于非品牌技术层。`entrypoints/` 承接 CLI / product / adapter 启动面，`kernel/` 承接共享 runtime primitive；它们服务十大模块，不拥有独立 brand owner。
 
 ## Modules
 
@@ -27,4 +31,3 @@ The canonical machine map is `contracts/opl-framework/source-module-map.json`.
 - `console`: App/operator projections, actions, drilldown.
 - `foundry-lab`: agent creation, conformance, evaluation, promotion.
 - `connect`: adapters, connectors, install/update, plugin/skill sync.
-

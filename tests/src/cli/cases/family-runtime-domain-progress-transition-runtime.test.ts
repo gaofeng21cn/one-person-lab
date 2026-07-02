@@ -23,18 +23,18 @@ import {
   appendDomainProgressTransitionRuntimeResultJsonl,
   createDomainProgressTransitionRuntimeLog,
   normalizeDomainProgressTransitionCommand,
-} from '../../../../src/family-runtime-domain-progress-transition-runtime.ts';
+} from '../../../../src/modules/runway/family-runtime-domain-progress-transition-runtime.ts';
 import {
   reconcileDomainProgressTransitionFixedPoint,
   replayDomainProgressTransitionTrace,
-} from '../../../../src/family-runtime-domain-progress-transition-runtime-parts/fixed-point-replay.ts';
+} from '../../../../src/modules/runway/family-runtime-domain-progress-transition-runtime-parts/fixed-point-replay.ts';
 import {
   currentDomainProgressTransitionAggregateVersion,
   readDomainProgressTransitionIdempotency,
   readDomainProgressTransitionIdempotencyJsonl,
   readDomainProgressTransitionRuntimeLogJsonl,
   rebuildDomainProgressTransitionReadModel,
-} from '../../../../src/family-runtime-domain-progress-transition-runtime-parts/runtime-results.ts';
+} from '../../../../src/modules/runway/family-runtime-domain-progress-transition-runtime-parts/runtime-results.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {

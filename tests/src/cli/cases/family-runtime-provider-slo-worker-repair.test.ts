@@ -3,20 +3,20 @@ import { DatabaseSync } from 'node:sqlite';
 import { assert, fs, os, path, test } from '../helpers.ts';
 import {
   createFamilyRuntimeQueueTables,
-} from '../../../../src/family-runtime-store.ts';
+} from '../../../../src/modules/runway/family-runtime-store.ts';
 import {
   createStageAttempt,
-} from '../../../../src/family-runtime-stage-attempts.ts';
+} from '../../../../src/modules/runway/family-runtime-stage-attempts.ts';
 import {
   maybeRepairTemporalWorkerForProviderSlo,
-} from '../../../../src/family-runtime-provider-slo-executor.ts';
+} from '../../../../src/modules/runway/family-runtime-provider-slo-executor.ts';
 import {
   repairTemporalWorkerForProviderRepair,
   inspectTemporalWorkerRestartGuardForLifecycle,
-} from '../../../../src/family-runtime-provider-worker-repair.ts';
+} from '../../../../src/modules/runway/family-runtime-provider-worker-repair.ts';
 import {
   familyRuntimePaths,
-} from '../../../../src/family-runtime-store.ts';
+} from '../../../../src/modules/runway/family-runtime-store.ts';
 import {
   temporalWorkerStatus,
 } from './family-runtime-provider-slo-fixtures.ts';

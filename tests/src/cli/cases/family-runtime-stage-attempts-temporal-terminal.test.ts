@@ -2,15 +2,15 @@ import { SearchAttributeType } from '@temporalio/common';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 
-import * as activities from '../../../../src/family-runtime-temporal-activities.ts';
+import * as activities from '../../../../src/modules/runway/family-runtime-temporal-activities.ts';
 import {
   buildTemporalStageAttemptWorkflowInputForTest,
-} from '../../../../src/family-runtime-temporal-provider.ts';
+} from '../../../../src/modules/runway/family-runtime-temporal-provider.ts';
 import type {
   TemporalStageAttemptWorkflowInput,
   TemporalStageAttemptWorkflowState,
-} from '../../../../src/family-runtime-temporal.ts';
-import { runFamilyRuntime } from '../../../../src/family-runtime.ts';
+} from '../../../../src/modules/runway/family-runtime-temporal.ts';
+import { runFamilyRuntime } from '../../../../src/modules/runway/family-runtime.ts';
 import {
   assert,
   fs,

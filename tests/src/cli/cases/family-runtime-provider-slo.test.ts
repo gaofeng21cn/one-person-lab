@@ -6,18 +6,18 @@ import { assert, createFakeCodexFixture, createFakeLaunchctlFixture, fs, os, pat
 import {
   createFamilyRuntimeQueueTables,
   familyRuntimePaths,
-} from '../../../../src/family-runtime-store.ts';
-import { runSchedulerTick } from '../../../../src/family-runtime-scheduler.ts';
+} from '../../../../src/modules/runway/family-runtime-store.ts';
+import { runSchedulerTick } from '../../../../src/modules/runway/family-runtime-scheduler.ts';
 import {
   runTemporalProviderSloTick,
-} from '../../../../src/family-runtime-provider-slo-executor.ts';
-import { inspectFamilyRuntimeProvidersWithLifecycle } from '../../../../src/family-runtime-providers.ts';
+} from '../../../../src/modules/runway/family-runtime-provider-slo-executor.ts';
+import { inspectFamilyRuntimeProvidersWithLifecycle } from '../../../../src/modules/runway/family-runtime-providers.ts';
 import {
   buildProviderContinuousProof,
-} from '../../../../src/family-runtime-provider-continuous-proof.ts';
+} from '../../../../src/modules/runway/family-runtime-provider-continuous-proof.ts';
 import {
   FAMILY_RUNTIME_PROVIDER_KINDS,
-} from '../../../../src/family-runtime-types.ts';
+} from '../../../../src/modules/runway/family-runtime-types.ts';
 import {
   assertBlockedSchedulerTick,
   assertTemporalWorkerLivenessBlocker,

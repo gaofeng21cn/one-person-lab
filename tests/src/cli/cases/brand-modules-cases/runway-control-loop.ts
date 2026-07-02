@@ -1,10 +1,10 @@
 import { spawnSync } from 'node:child_process';
 
 import { assert, fs, os, path, repoRoot, runCli, test } from '../../helpers.ts';
-import { parseRegisteredFamilyRuntimeCommand } from '../../../../../src/family-runtime-command-parts/registry.ts';
+import { parseRegisteredFamilyRuntimeCommand } from '../../../../../src/modules/runway/family-runtime-command-parts/registry.ts';
 import {
   buildRunwayRecoveryRepairProjection,
-} from '../../../../../src/family-runtime-control-loop.ts';
+} from '../../../../../src/modules/runway/family-runtime-control-loop.ts';
 
 const runwayControlLoopStateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runway-control-loop-test-'));
 

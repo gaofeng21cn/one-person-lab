@@ -9,8 +9,8 @@ import { createFakeCodexFixture } from './cli/helpers.ts';
 import {
   runAgentExecutor,
   runAgentExecutorDoctor,
-} from '../../src/agent-executor.ts';
-import { FrameworkContractError } from '../../src/contracts.ts';
+} from '../../src/modules/runway/agent-executor.ts';
+import { FrameworkContractError } from '../../src/modules/charter/contracts.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');

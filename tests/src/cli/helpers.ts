@@ -7,9 +7,9 @@ export { default as os } from 'node:os';
 export { default as path } from 'node:path';
 export { PassThrough } from 'node:stream';
 
-export { FrameworkContractError, loadFrameworkContracts, validateFrameworkContracts } from '../../../src/contracts.ts';
-export { buildProjectProgressBrief } from '../../../src/management/progress.ts';
-export { explainDomainBoundary, selectDomainAgentEntry, resolveRequestSurface } from '../../../src/resolver.ts';
+export { FrameworkContractError, loadFrameworkContracts, validateFrameworkContracts } from '../../../src/modules/charter/contracts.ts';
+export { buildProjectProgressBrief } from '../../../src/modules/console/management/progress.ts';
+export { explainDomainBoundary, selectDomainAgentEntry, resolveRequestSurface } from '../../../src/modules/atlas/resolver.ts';
 
 export { cliPath, contractsDir, familyManifestFixtureDir, repoRoot } from './helpers-parts/constants.ts';
 export { runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliRawInCwd, runCliViaEntryPathInCwd } from './helpers-parts/runner.ts';

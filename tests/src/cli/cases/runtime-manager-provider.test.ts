@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import net from 'node:net';
 
 import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
-import { resolveTemporalWorkerTaskQueue } from '../../../../src/family-runtime-temporal-provider-parts/worker-task-queue.ts';
+import { resolveTemporalWorkerTaskQueue } from '../../../../src/modules/runway/family-runtime-temporal-provider-parts/worker-task-queue.ts';
 
 test('runtime manager reports OPL control plane over provider-backed family runtime', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-state-'));

@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-import { buildSourceStructureOperatorReadback } from '../../src/source-structure-operator-readback.ts';
+import { buildSourceStructureOperatorReadback } from '../../src/modules/charter/source-structure-operator-readback.ts';
 
 function writeLines(file: string, lineCount: number) {
   fs.mkdirSync(path.dirname(file), { recursive: true });

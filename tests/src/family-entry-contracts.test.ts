@@ -18,7 +18,7 @@ import {
   validateSharedHandoff,
   validateSharedHandoffBuilder,
   validateSharedHandoffReturnSurface,
-} from '../../src/family-entry-contracts.ts';
+} from '../../src/modules/atlas/family-entry-contracts.ts';
 
 test('family entry contract helpers build and validate shared domain entry payloads', () => {
   const workspaceCockpit = buildDomainEntryCommandContract({

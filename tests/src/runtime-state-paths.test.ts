@@ -4,8 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { buildOplEndpoints } from '../../src/opl-runtime-paths.ts';
-import { resolveOplStatePaths } from '../../src/runtime-state-paths.ts';
+import { buildOplEndpoints } from '../../src/modules/runway/opl-runtime-paths.ts';
+import { resolveOplStatePaths } from '../../src/modules/runway/runtime-state-paths.ts';
 
 test('OPL endpoint catalog advertises current runtime URLs for public resources and actions', () => {
   const endpoints = buildOplEndpoints('/pilot/opl');

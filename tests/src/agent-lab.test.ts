@@ -7,8 +7,8 @@ import { fileURLToPath } from 'node:url';
 import {
   buildSampleAgentLabSuite,
   runAgentLabSuite,
-} from '../../src/agent-lab.ts';
-import { buildLonglineAgentLabResult } from '../../src/agent-lab-longline.ts';
+} from '../../src/modules/foundry-lab/agent-lab.ts';
+import { buildLonglineAgentLabResult } from '../../src/modules/foundry-lab/agent-lab-longline.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');

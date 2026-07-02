@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildWorklistOwnerDeltaActionProjection,
-} from '../../../../src/family-runtime-evidence-worklist-parts/current-owner-delta-projection.ts';
+} from '../../../../src/modules/runway/family-runtime-evidence-worklist-parts/current-owner-delta-projection.ts';
 
 type WorklistProjectionInput = Parameters<typeof buildWorklistOwnerDeltaActionProjection>[0];
 

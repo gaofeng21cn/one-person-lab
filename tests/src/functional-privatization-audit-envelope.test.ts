@@ -6,10 +6,10 @@ import { fileURLToPath } from 'node:url';
 
 import {
   buildFunctionalPrivatizationAudit,
-} from '../../src/functional-privatization-audit.ts';
+} from '../../src/modules/foundry-lab/functional-privatization-audit.ts';
 import {
   FUNCTIONAL_PRIVATIZATION_AUDIT_ENVELOPE_CONTRACT,
-} from '../../src/functional-privatization-envelope.ts';
+} from '../../src/modules/foundry-lab/functional-privatization-envelope.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');

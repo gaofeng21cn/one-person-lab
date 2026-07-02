@@ -5,7 +5,7 @@ import {
   buildAgentLabEfficiencyNonRegressionReadModel,
   buildSampleAgentLabSuite,
   runAgentLabSuite,
-} from '../../src/agent-lab.ts';
+} from '../../src/modules/foundry-lab/agent-lab.ts';
 
 test('Agent Lab builds refs-only efficiency non-regression read model from suite result and explicit refs', () => {
   const suite = buildSampleAgentLabSuite();

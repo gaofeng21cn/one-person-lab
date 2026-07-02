@@ -16,7 +16,7 @@ import {
   buildProgramSurface,
   buildSourceProvenanceSurface,
   buildWorkflowCoverageItem,
-} from '../../src/product-entry-program-companions.ts';
+} from '../../src/modules/console/product-entry-program-companions.ts';
 
 test('product entry program companions normalize preflight and detailed readiness', () => {
   const preflight = buildProductEntryPreflight({

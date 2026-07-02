@@ -11,10 +11,10 @@ import {
   appendDomainProgressTransitionRuntimeResultJsonl,
   normalizeDomainProgressTransitionCommand,
   readDomainProgressTransitionRuntimeReadbackJsonl,
-} from '../../../../../src/family-runtime-domain-progress-transition-runtime.ts';
+} from '../../../../../src/modules/runway/family-runtime-domain-progress-transition-runtime.ts';
 import {
   reconcileDomainProgressTransitionFixedPoint,
-} from '../../../../../src/family-runtime-domain-progress-transition-runtime-parts/fixed-point-replay.ts';
+} from '../../../../../src/modules/runway/family-runtime-domain-progress-transition-runtime-parts/fixed-point-replay.ts';
 
 test('DomainProgressTransitionRuntime live readback rebuilds complete physical transaction state from JSONL', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-progress-transition-live-readback-'));

@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 
 import { assert, createGitModuleRemoteFixture, fs, os, path, repoRoot, runCli, shellSingleQuote, test } from '../helpers.ts';
-import { runFamilyRuntimeDomainHandlerCommand } from '../../../../src/family-runtime-domain-handler-process.ts';
+import { runFamilyRuntimeDomainHandlerCommand } from '../../../../src/modules/runway/family-runtime-domain-handler-process.ts';
 
 function runGit(cwd: string, args: string[]) {
   const result = spawnSync('git', args, { cwd, encoding: 'utf8' });

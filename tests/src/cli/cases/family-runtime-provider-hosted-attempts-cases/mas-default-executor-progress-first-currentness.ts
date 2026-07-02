@@ -13,9 +13,9 @@ import {
   withIsolatedFamilyRuntimeEnv,
 } from './mas-default-executor-current-source-helpers.ts';
 
-import { ensureProviderHostedStageAttempt } from '../../../../../src/family-runtime-provider-hosted-attempts.ts';
-import { familyRuntimePaths, type FamilyRuntimeTaskRow } from '../../../../../src/family-runtime-store.ts';
-import { runFamilyRuntimeQueueTick } from '../../../../../src/family-runtime-tick.ts';
+import { ensureProviderHostedStageAttempt } from '../../../../../src/modules/runway/family-runtime-provider-hosted-attempts.ts';
+import { familyRuntimePaths, type FamilyRuntimeTaskRow } from '../../../../../src/modules/runway/family-runtime-store.ts';
+import { runFamilyRuntimeQueueTick } from '../../../../../src/modules/runway/family-runtime-tick.ts';
 
 test('family-runtime tick selects newer MAS default executor row when same dispatch stale live attempt is terminal after query', async () => {
   const db = new DatabaseSync(':memory:');

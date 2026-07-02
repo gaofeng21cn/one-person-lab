@@ -11,7 +11,7 @@ import {
   shellSingleQuote,
   test,
 } from '../helpers.ts';
-import { resolveEngineActionSpec } from '../../../../src/system-installation/engine-helpers.ts';
+import { resolveEngineActionSpec } from '../../../../src/modules/connect/system-installation/engine-helpers.ts';
 
 function parseRuntimeCodexUpdateReceipt(stdout: string) {
   const receiptLine = stdout

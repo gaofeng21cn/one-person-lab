@@ -2,11 +2,11 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { assert, test } from './helpers.ts';
 
-import { ensureProviderHostedStageAttempt } from '../../../../../src/family-runtime-provider-hosted-attempts.ts';
+import { ensureProviderHostedStageAttempt } from '../../../../../src/modules/runway/family-runtime-provider-hosted-attempts.ts';
 import {
   listStageAttemptsForTask,
   syncStageAttemptFromTemporalTerminalObservation,
-} from '../../../../../src/family-runtime-stage-attempts.ts';
+} from '../../../../../src/modules/runway/family-runtime-stage-attempts.ts';
 import {
   createQueueTables,
   defaultExecutorPayload,

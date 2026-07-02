@@ -8,7 +8,7 @@ import {
   translateSessionCreatePayload,
   translateSessionLogsPayload,
   translateSessionResumePayload,
-} from '../../src/opl-acp-bridge.ts';
+} from '../../src/modules/connect/opl-acp-bridge.ts';
 
 test('translateSessionCreatePayload 提取 session seed 与 task acceptance', () => {
   const view = translateSessionCreatePayload({

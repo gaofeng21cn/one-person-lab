@@ -1,4 +1,4 @@
-import type { PackOsContract } from '../../../../../src/types.ts';
+import type { PackOsContract } from '../../../../../src/kernel/types.ts';
 
 export const MINIMAL_PACK_OS_CONTRACT: PackOsContract = {
   schema_version: 1,

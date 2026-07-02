@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {
   buildAutomationCatalog,
   buildAutomationDescriptor,
-} from '../../src/automation-companions.ts';
+} from '../../src/modules/console/automation-companions.ts';
 
 test('automation companion helpers normalize shared automation descriptors', () => {
   const masAutomation = buildAutomationDescriptor({

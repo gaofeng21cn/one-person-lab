@@ -6,7 +6,7 @@ import {
   missingStageRunCurrentnessIdentityFields,
   sameStageRunCurrentnessIdentity,
   sameStageRunRouteCurrentnessIdentity,
-} from '../../src/family-runtime-stage-run-currentness-identity.ts';
+} from '../../src/modules/runway/family-runtime-stage-run-currentness-identity.ts';
 
 function baseInput(overrides: Record<string, unknown> = {}) {
   return {

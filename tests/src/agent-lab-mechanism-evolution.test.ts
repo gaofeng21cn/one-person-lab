@@ -4,7 +4,7 @@ import test from 'node:test';
 import {
   buildSampleAgentLabSuite,
   runAgentLabSuite,
-} from '../../src/agent-lab.ts';
+} from '../../src/modules/foundry-lab/agent-lab.ts';
 
 test('Agent Lab projects MAS mechanism evolution inputs as body-free refs for evolve consumption', () => {
   const suite = buildSampleAgentLabSuite();

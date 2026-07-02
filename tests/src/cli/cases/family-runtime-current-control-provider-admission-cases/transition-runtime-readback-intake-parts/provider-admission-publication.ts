@@ -12,7 +12,7 @@ import {
   test,
   writeJsonEmitterScript,
 } from '../shared.ts';
-import { publishCurrentControlProviderAdmissionReadback } from '../../../../../../src/family-runtime-domain-intake-parts/current-control-provider-admission.ts';
+import { publishCurrentControlProviderAdmissionReadback } from '../../../../../../src/modules/runway/family-runtime-domain-intake-parts/current-control-provider-admission.ts';
 
 test('family-runtime refuses to publish provider admission readback from incomplete transition runtime transaction', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-incomplete-transition-readback-'));

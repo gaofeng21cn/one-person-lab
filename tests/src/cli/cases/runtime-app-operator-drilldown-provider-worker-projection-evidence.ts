@@ -4,10 +4,10 @@ import {
 } from '../helpers.ts';
 import {
   applyAppOperatorDrilldownDetail,
-} from '../../../../src/runtime-tray-app-operator-drilldown-parts/detail-view.ts';
+} from '../../../../src/modules/console/runtime-tray-app-operator-drilldown-parts/detail-view.ts';
 import {
   buildProviderActionRoutes,
-} from '../../../../src/runtime-tray-app-operator-drilldown-parts/provider-action-routes.ts';
+} from '../../../../src/modules/console/runtime-tray-app-operator-drilldown-parts/provider-action-routes.ts';
 
 test('runtime App drilldown keeps active attempts with missing progress signals actionable', () => {
   const progressFirstRoutes = buildProviderActionRoutes({

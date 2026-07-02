@@ -5,8 +5,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 
-import { loadFrameworkContracts } from '../../../src/contracts.ts';
-import { buildBrandCommandSpecs } from '../../../src/cli/cases/public-command-specs-parts/brand.ts';
+import { loadFrameworkContracts } from '../../../src/modules/charter/contracts.ts';
+import { buildBrandCommandSpecs } from '../../../src/entrypoints/cli/cases/public-command-specs-parts/brand.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..', '..');

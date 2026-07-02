@@ -4,8 +4,8 @@ import test from 'node:test';
 import {
   reconcileCurrentControlExecutableOwners,
   suppressStaleDefaultExecutorInputs,
-} from '../../src/family-runtime-domain-intake-parts/current-control-reconciliation.ts';
-import type { EnqueueInput } from '../../src/family-runtime-command.ts';
+} from '../../src/modules/runway/family-runtime-domain-intake-parts/current-control-reconciliation.ts';
+import type { EnqueueInput } from '../../src/modules/runway/family-runtime-command.ts';
 
 function defaultExecutorInput(payload: Record<string, unknown>): EnqueueInput {
   return {

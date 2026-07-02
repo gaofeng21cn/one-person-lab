@@ -8,20 +8,20 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 
 test('CLI modularization keeps stable entry files while extracting modules and cases', () => {
-  assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'cli.ts')), true);
-  assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'cli', 'main.ts')), true);
-  assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'cli', 'modules', 'types.ts')), true);
-  assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'cli', 'modules', 'runtime-helpers.ts')), true);
-  assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'cli', 'modules', 'request-parsers.ts')), true);
-  assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'cli', 'modules', 'system-action-parsers.ts')), true);
-  assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'cli', 'modules', 'help-output.ts')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'entrypoints', 'cli.ts')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'entrypoints', 'cli', 'main.ts')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'entrypoints', 'cli', 'modules', 'types.ts')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'entrypoints', 'cli', 'modules', 'runtime-helpers.ts')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'entrypoints', 'cli', 'modules', 'request-parsers.ts')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'entrypoints', 'cli', 'modules', 'system-action-parsers.ts')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'entrypoints', 'cli', 'modules', 'help-output.ts')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'tests', 'src', 'cli.test.ts')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'tests', 'src', 'cli', 'cases')), true);
 });
 
 test('family-runtime command parser keeps a thin public entrypoint and semantic parser parts', () => {
-  const entryPath = path.join(repoRoot, 'src', 'family-runtime-command.ts');
-  const partsRoot = path.join(repoRoot, 'src', 'family-runtime-command-parts');
+  const entryPath = path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-command.ts');
+  const partsRoot = path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-command-parts');
   const entryLines = fs.readFileSync(entryPath, 'utf8').trimEnd().split('\n').length;
   const expectedParserParts = [
     'attempt.ts',
@@ -49,9 +49,9 @@ test('family-runtime command parser keeps a thin public entrypoint and semantic 
 });
 
 test('standard domain-agent conformance keeps physical morphology in scoped modules', () => {
-  const entryPath = path.join(repoRoot, 'src', 'standard-domain-agent-conformance.ts');
-  const morphologyPath = path.join(repoRoot, 'src', 'standard-domain-agent-conformance-physical-morphology.ts');
-  const utilsPath = path.join(repoRoot, 'src', 'standard-domain-agent-conformance-utils.ts');
+  const entryPath = path.join(repoRoot, 'src', 'modules', 'foundry-lab', 'standard-domain-agent-conformance.ts');
+  const morphologyPath = path.join(repoRoot, 'src', 'modules', 'foundry-lab', 'standard-domain-agent-conformance-physical-morphology.ts');
+  const utilsPath = path.join(repoRoot, 'src', 'modules', 'foundry-lab', 'standard-domain-agent-conformance-utils.ts');
   const entrySource = fs.readFileSync(entryPath, 'utf8');
   const morphologySource = fs.readFileSync(morphologyPath, 'utf8');
   const entryLines = entrySource.trimEnd().split('\n').length;

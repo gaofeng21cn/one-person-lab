@@ -4,18 +4,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { buildFamilyStageAdmissionReview } from '../../src/family-stage-admission.ts';
-import type { FamilyActionCatalog } from '../../src/family-action-catalog-contract.ts';
-import type { FamilyStageContract, FamilyStageControlPlane } from '../../src/family-stage-control-plane-contract.ts';
-import { buildFamilyStageProofBundle } from '../../src/family-stage-proof-bundle.ts';
+import { buildFamilyStageAdmissionReview } from '../../src/modules/stagecraft/family-stage-admission.ts';
+import type { FamilyActionCatalog } from '../../src/modules/console/family-action-catalog-contract.ts';
+import type { FamilyStageContract, FamilyStageControlPlane } from '../../src/modules/stagecraft/family-stage-control-plane-contract.ts';
+import { buildFamilyStageProofBundle } from '../../src/modules/stagecraft/family-stage-proof-bundle.ts';
 import {
   buildFamilyStageReplayCertification,
   buildFamilyStageReplayEvidenceFromControlPlane,
-} from '../../src/family-stage-replay-certification.ts';
+} from '../../src/modules/stagecraft/family-stage-replay-certification.ts';
 import {
   STANDARD_PROGRESS_DELTA_POLICY,
   STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
-} from '../../src/standard-domain-agent-scaffold-constants.ts';
+} from '../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
 
 type JsonRecord = Record<string, unknown>;
 

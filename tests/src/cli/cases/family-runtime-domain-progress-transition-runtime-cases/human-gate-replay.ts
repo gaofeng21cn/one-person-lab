@@ -7,16 +7,16 @@ import {
   appendDomainProgressTransitionRuntimeResult,
   createDomainProgressTransitionRuntimeLog,
   normalizeDomainProgressTransitionCommand,
-} from '../../../../../src/family-runtime-domain-progress-transition-runtime.ts';
+} from '../../../../../src/modules/runway/family-runtime-domain-progress-transition-runtime.ts';
 import {
   reconcileDomainProgressTransitionFixedPoint,
   replayDomainProgressTransitionTrace,
-} from '../../../../../src/family-runtime-domain-progress-transition-runtime-parts/fixed-point-replay.ts';
+} from '../../../../../src/modules/runway/family-runtime-domain-progress-transition-runtime-parts/fixed-point-replay.ts';
 import {
   consumeDomainProgressHumanGateResumeToken,
   readDomainProgressHumanGateResumeToken,
   rebuildDomainProgressTransitionReadModel,
-} from '../../../../../src/family-runtime-domain-progress-transition-runtime-parts/runtime-results.ts';
+} from '../../../../../src/modules/runway/family-runtime-domain-progress-transition-runtime-parts/runtime-results.ts';
 
 test('DomainProgressTransitionRuntime fixed-point helper chooses exactly one transition or NonAdvancingApply and exposes human gate token', () => {
   const command = normalizeDomainProgressTransitionCommand({

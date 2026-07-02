@@ -6,7 +6,7 @@ import {
   DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS,
   DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
   DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
-} from '../../../../../src/family-runtime-temporal-constants.ts';
+} from '../../../../../src/modules/runway/family-runtime-temporal-constants.ts';
 import {
   assert,
   fs,

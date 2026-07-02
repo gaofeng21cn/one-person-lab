@@ -4,9 +4,9 @@ import {
   assert,
   test,
 } from './helpers.ts';
-import { enqueueTask } from '../../../../../src/family-runtime-enqueue.ts';
-import { ensureProviderHostedStageAttempt } from '../../../../../src/family-runtime-provider-hosted-attempts.ts';
-import { listStageAttemptsForTask } from '../../../../../src/family-runtime-stage-attempts.ts';
+import { enqueueTask } from '../../../../../src/modules/runway/family-runtime-enqueue.ts';
+import { ensureProviderHostedStageAttempt } from '../../../../../src/modules/runway/family-runtime-provider-hosted-attempts.ts';
+import { listStageAttemptsForTask } from '../../../../../src/modules/runway/family-runtime-stage-attempts.ts';
 import {
   createQueueTables,
   defaultExecutorPayload,

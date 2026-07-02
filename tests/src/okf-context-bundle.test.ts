@@ -8,7 +8,7 @@ import {
   buildOkfContextBundleProjection,
   inspectOkfNativeFrontmatter,
   validateOkfContextBundle,
-} from '../../src/okf-context-bundle.ts';
+} from '../../src/modules/pack/okf-context-bundle.ts';
 
 function createBundle(files: Record<string, string>) {
   const root = mkdtempSync(join(tmpdir(), 'opl-okf-bundle-'));

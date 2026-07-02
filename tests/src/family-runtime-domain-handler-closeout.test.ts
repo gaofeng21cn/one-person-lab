@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   canonicalCloseoutPacketFromDomainHandlerOutput,
-} from '../../src/family-runtime-domain-handler-closeout.ts';
+} from '../../src/modules/runway/family-runtime-domain-handler-closeout.ts';
 
 test('domain-handler ordinary closeout accepts only canonical domain_stage_closeout_packet', () => {
   const canonical = {

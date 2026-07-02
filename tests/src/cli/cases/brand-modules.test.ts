@@ -6,7 +6,7 @@ import './brand-modules-cases/l5-evidence-gate.ts';
 import './brand-modules-cases/module-command-surfaces.ts';
 import './brand-modules-cases/runway-control-loop.ts';
 import { expectedModuleIds, type L5Module } from './brand-modules-cases/shared.ts';
-import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/family-runtime-evidence-worklist.ts';
+import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/modules/runway/family-runtime-evidence-worklist.ts';
 
 test('brand module registry is loaded as a required framework contract', () => {
   const contracts = loadFrameworkContracts(repoRoot);

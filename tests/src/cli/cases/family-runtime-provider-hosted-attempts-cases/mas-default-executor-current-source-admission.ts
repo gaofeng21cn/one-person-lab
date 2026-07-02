@@ -13,10 +13,10 @@ import {
   withIsolatedFamilyRuntimeEnv,
 } from './mas-default-executor-current-source-helpers.ts';
 
-import { runFamilyRuntimeQueueTick } from '../../../../../src/family-runtime-tick.ts';
-import { enqueueTask } from '../../../../../src/family-runtime-enqueue.ts';
-import { familyRuntimePaths, type FamilyRuntimeTaskRow } from '../../../../../src/family-runtime-store.ts';
-import { ensureProviderHostedStageAttempt } from '../../../../../src/family-runtime-provider-hosted-attempts.ts';
+import { runFamilyRuntimeQueueTick } from '../../../../../src/modules/runway/family-runtime-tick.ts';
+import { enqueueTask } from '../../../../../src/modules/runway/family-runtime-enqueue.ts';
+import { familyRuntimePaths, type FamilyRuntimeTaskRow } from '../../../../../src/modules/runway/family-runtime-store.ts';
+import { ensureProviderHostedStageAttempt } from '../../../../../src/modules/runway/family-runtime-provider-hosted-attempts.ts';
 
 test('family-runtime tick selects the current MAS default executor source and skips older queued residue', async () => {
   const db = new DatabaseSync(':memory:');

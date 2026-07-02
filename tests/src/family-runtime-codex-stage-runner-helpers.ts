@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-import { runAgentStageRunner } from '../../src/family-runtime-codex-stage-runner.ts';
+import { runAgentStageRunner } from '../../src/modules/runway/family-runtime-codex-stage-runner.ts';
 
 export async function runPublicCodexStageRunner(
   input: Parameters<typeof runAgentStageRunner>[0],

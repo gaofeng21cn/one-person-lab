@@ -8,13 +8,13 @@ import {
   buildQualityGateRuntimeBinding,
   QUALITY_GATE_RUNTIME_ALLOWED_RECEIPT_KINDS,
   validateQualityGateRuntimeBinding,
-} from '../../src/quality-gate-runtime.ts';
+} from '../../src/modules/stagecraft/quality-gate-runtime.ts';
 import {
   evaluateStageRunExecutionAuthorization,
-} from '../../src/stage-run-kernel.ts';
+} from '../../src/modules/stagecraft/stage-run-kernel.ts';
 import {
   currentOwnerDeltaWithClosedStageRunAnswer,
-} from '../../src/current-owner-delta-stage-run-closeout.ts';
+} from '../../src/modules/ledger/current-owner-delta-stage-run-closeout.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');

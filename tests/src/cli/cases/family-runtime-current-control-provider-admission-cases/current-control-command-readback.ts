@@ -16,7 +16,7 @@ import {
   buildDomainProgressTransitionRuntimeResult,
   normalizeDomainProgressTransitionCommand,
   readDomainProgressTransitionRuntimeReadbackJsonl,
-} from '../../../../../src/family-runtime-domain-progress-transition-runtime.ts';
+} from '../../../../../src/modules/runway/family-runtime-domain-progress-transition-runtime.ts';
 
 function completeRuntimeReadbackForCommand(input: {
   workspaceRoot: string;

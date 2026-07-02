@@ -2,8 +2,8 @@ import {
   assert,
   test,
 } from '../helpers.ts';
-import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/family-runtime-evidence-worklist.ts';
-import type { FrameworkContracts } from '../../../../src/types.ts';
+import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/modules/runway/family-runtime-evidence-worklist.ts';
+import type { FrameworkContracts } from '../../../../src/kernel/types.ts';
 import {
   MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT,
   MINIMAL_BRAND_CLI_GOVERNANCE_CONTRACT,

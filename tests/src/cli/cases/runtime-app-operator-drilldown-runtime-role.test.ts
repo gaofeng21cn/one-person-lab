@@ -7,7 +7,7 @@ import {
 } from '../helpers.ts';
 import {
   buildAppOperatorDrilldown,
-} from '../../../../src/runtime-tray-app-operator-drilldown.ts';
+} from '../../../../src/modules/console/runtime-tray-app-operator-drilldown.ts';
 
 function emptyDrilldown(detailLevel?: 'summary' | 'full') {
   return buildAppOperatorDrilldown({

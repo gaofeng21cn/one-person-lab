@@ -1,5 +1,5 @@
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
-import { recordManagedInstallUpdateReceipts } from '../../../../src/managed-install-update-ledger.ts';
+import { recordManagedInstallUpdateReceipts } from '../../../../src/modules/connect/managed-install-update-ledger.ts';
 import { createFamilyWorkspaceFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
 test('framework readiness consumes OPL-managed OMA install update receipts', () => {

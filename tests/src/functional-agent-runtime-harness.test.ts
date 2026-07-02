@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import {
   buildConstructedFunctionalAgentRuntimeHarnessInput,
   runFunctionalAgentRuntimeHarness,
-} from '../../src/functional-agent-runtime-harness.ts';
+} from '../../src/modules/runway/functional-agent-runtime-harness.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');

@@ -1,0 +1,692 @@
+import {
+  inspectSelectedFamilyRuntimeProvidersWithLifecycle,
+  resolveFamilyRuntimeProviderKind,
+} from '../runway/family-runtime-providers.ts';
+import {
+  MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
+  MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
+  OPL_RUNTIME_OWNER_ROUTE,
+  buildMasDomainRouteSupportProjection,
+} from '../runway/family-runtime-mas-domain-route.ts';
+import { readMasManagedProviderProjection } from '../runway/family-runtime-mas-managed-provider-projection.ts';
+import { familyRuntimePaths } from '../runway/family-runtime-store.ts';
+import { DEFAULT_NATIVE_HELPERS, buildNativeHelperProjection, runNativeHelperRepairAction } from '../runway/native-helper-runtime.ts';
+import { buildStandardDomainAgentScaffold } from '../foundry-lab/standard-domain-agent-scaffold.ts';
+
+const ADMITTED_DOMAIN_OWNERS = [
+  {
+    domain_id: 'medautoscience',
+    domain_owner: 'med-autoscience',
+    executor_owner: 'codex_cli_or_stage_selected_executor',
+  },
+  {
+    domain_id: 'medautogrant',
+    domain_owner: 'med-autogrant',
+    executor_owner: 'codex_cli_or_stage_selected_executor',
+  },
+  {
+    domain_id: 'redcube',
+    domain_owner: 'redcube-ai',
+    executor_owner: 'codex_cli_or_stage_selected_executor',
+  },
+] as const;
+
+const DOMAIN_REGISTRATION_REGISTRY = [
+  {
+    domain_id: 'medautoscience',
+    project: 'med-autoscience',
+    registration_id: 'mas.opl_runtime_manager.registration.v1',
+    expected_registration_surface: {
+      surface_kind: 'opl_runtime_manager_domain_registration',
+      ref: '/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration',
+      command: 'uv run python -m med_autoscience.cli skill-catalog --profile <profile> --format json',
+    },
+    consumable_projection_refs: [
+      '/skill_catalog/skills/0/domain_projection/runtime_continuity',
+      '/progress_projection/domain_projection/research_runtime_control_projection',
+      '/artifact_inventory/artifact_surface',
+      '/automation/automations/0',
+    ],
+    state_index_inputs: {
+      workspace_registry_index: '/workspace_locator',
+      managed_session_ledger_index: '/session_continuity',
+      artifact_projection_index: '/artifact_inventory',
+      attention_queue_index: '/automation/automations/0',
+      runtime_health_snapshot_index: '/runtime_inventory',
+    },
+  },
+  {
+    domain_id: 'medautogrant',
+    project: 'med-autogrant',
+    registration_id: 'mag.opl_runtime_manager.registration.v1',
+    expected_registration_surface: {
+      surface_kind: 'opl_runtime_manager_domain_registration',
+      ref: '/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration',
+      command: 'uv run python -m med_autogrant skill-catalog --input <workspace.json> --format json',
+    },
+    consumable_projection_refs: [
+      '/skill_catalog/skills/0/domain_projection/runtime_continuity',
+      '/runtime_control/semantic_closure',
+      '/artifact_inventory',
+      '/automation/automations/1',
+    ],
+    state_index_inputs: {
+      workspace_registry_index: '/workspace_locator',
+      managed_session_ledger_index: '/session_continuity',
+      artifact_projection_index: '/artifact_inventory',
+      attention_queue_index: '/automation/automations/1',
+      runtime_health_snapshot_index: '/runtime_inventory',
+    },
+  },
+  {
+    domain_id: 'redcube',
+    project: 'redcube-ai',
+    registration_id: 'rca.opl_runtime_manager.registration.v1',
+    expected_registration_surface: {
+      surface_kind: 'opl_runtime_manager_domain_registration',
+      ref: '/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration',
+      command: 'redcube product manifest --workspace-root <workspace_root>',
+    },
+    consumable_projection_refs: [
+      '/skill_catalog/skills/0/domain_projection/runtime_continuity',
+      '/product_entry_shell/opl_bridge',
+      '/artifact_inventory',
+      '/review_state',
+      '/publication_projection',
+    ],
+    state_index_inputs: {
+      workspace_registry_index: '/workspace_locator',
+      managed_session_ledger_index: '/session_continuity',
+      artifact_projection_index: '/artifact_inventory',
+      attention_queue_index: '/automation/automations/0',
+      runtime_health_snapshot_index: '/runtime_inventory',
+    },
+  },
+] as const;
+
+const FAMILY_SCHEDULER_REPLACEMENT = {
+  surface_kind: 'opl_family_scheduler_replacement',
+  version: 'v1',
+  owner: 'one-person-lab',
+  scheduler_owner: 'opl_provider_runtime_manager',
+  cadence_owner: 'provider_backed_family_runtime',
+  replacement_status: 'replacement_contract_available',
+  contract_ref: 'contracts/opl-framework/runtime-manager-contract.json#/family_scheduler_replacement',
+  allowed_opl_targets: [
+    'provider_slo_tick',
+    'domain_registration_intake',
+    'family_runtime_tick',
+    'runtime_manager_projection',
+  ],
+  command_set: {
+    status: 'opl runtime manager',
+    provider_slo_tick: 'opl family-runtime provider-slo tick --provider temporal',
+    domain_registration_intake: 'opl family-runtime intake --domain <domain_id>',
+    family_runtime_tick: 'opl family-runtime tick --source provider-scheduler --hydrate',
+  },
+  state_refs: {
+    provider_slo_receipts: '${OPL_STATE_DIR}/family-runtime/provider-slo',
+    family_runtime_queue: '${OPL_STATE_DIR}/family-runtime/queue.sqlite',
+    stage_attempt_ledger: '${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_attempts',
+    events_ledger: '${OPL_STATE_DIR}/family-runtime/events.jsonl',
+  },
+  managed_domains: [
+    {
+      domain_id: 'medautoscience',
+      domain_owner: 'med-autoscience',
+      migration_priority: 'p0',
+      legacy_scheduler_owner: null,
+      legacy_scheduler_residue_policy: 'history_tombstone_or_negative_guard_only',
+      replacement_role:
+        'OPL owns scheduler lifecycle, cadence, provider SLO tick, queue intake, attempt ledger, and projection; MAS keeps paper-progress SLO semantics, owner receipt, typed blocker, and safe action refs.',
+      required_domain_refs: [
+        MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
+        OPL_RUNTIME_OWNER_ROUTE,
+        MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
+        'mas_opl_runtime_workbench_projection',
+        'sidecar_owner_receipt_or_typed_blocker',
+        'no_forbidden_write_evidence',
+      ],
+    },
+    {
+      domain_id: 'medautogrant',
+      domain_owner: 'med-autogrant',
+      migration_priority: 'p1',
+      legacy_scheduler_owner: null,
+      replacement_role:
+        'MAG consumes OPL scheduler replacement through refs, owner receipts, typed blockers, and guarded grant actions without adding a repo-owned daemon.',
+      required_domain_refs: [
+        'product_entry_manifest',
+        'grant_owner_receipt_or_typed_blocker',
+        'grant_memory_ref',
+        'no_forbidden_write_evidence',
+      ],
+    },
+    {
+      domain_id: 'redcube',
+      domain_owner: 'redcube-ai',
+      migration_priority: 'p2',
+      legacy_scheduler_owner: null,
+      replacement_role:
+        'RCA consumes OPL scheduler replacement through sidecar/action/status refs while keeping visual deliverable sequencing inside domain execution.',
+      required_domain_refs: [
+        'product_entry_manifest',
+        'visual_owner_receipt_or_typed_blocker',
+        'visual_memory_ref',
+        'no_forbidden_write_evidence',
+      ],
+    },
+  ],
+  authority_boundary: {
+    can_write_domain_truth: false,
+    can_write_domain_memory_body: false,
+    can_authorize_domain_quality: false,
+    can_authorize_domain_export: false,
+    can_install_domain_daemon: false,
+    can_execute_domain_repair_command_directly: false,
+    can_enqueue_provider_stage_attempts: true,
+    can_record_opl_provider_receipts: true,
+    can_project_operator_workbench: true,
+  },
+  migration_gate: {
+    active_domain_callers_must_use_replacement_owner: true,
+    legacy_domain_scheduler_must_be_explicit_diagnostic_or_tombstone: true,
+    no_active_launchagent_install_from_domain_default: true,
+  },
+} as const;
+
+const DAEMON_POLICY = {
+  surface_kind: 'opl_runtime_manager_daemon_policy',
+  local_daemon_added: false,
+  opl_domain_daemon_installation_allowed: false,
+  cadence_owner: 'provider_backed_family_runtime',
+  runtime_kernel_owner: 'provider_backed_family_runtime',
+  provider_backed_cadence_surface: 'opl family-runtime provider-slo tick --provider temporal',
+  domain_launchagent_policy: {
+    medautoscience: 'legacy_diagnostic_cleanup_only',
+    medautogrant: 'not_installed_or_maintained_by_opl',
+    redcube: 'not_installed_or_maintained_by_opl',
+  },
+  allowed_domain_daemon_role: 'legacy_diagnostic_cleanup_only',
+  sidecar_promotion_gate:
+    'Only promote beyond provider adapters if configured providers cannot express required task, wakeup, approval, audit, or product isolation contracts.',
+  authority_boundary: {
+    can_install_opl_daemon: false,
+    can_install_domain_daemon: false,
+    can_maintain_domain_daemon: false,
+    can_start_legacy_domain_launchagent: false,
+    can_record_provider_cadence_receipt: true,
+  },
+} as const;
+
+const NATIVE_HELPER_PROTOCOL = {
+  version: 'opl_native_helper.v1',
+  language: 'rust',
+  transport: 'cli_stdio',
+  input: 'json_object_on_stdin',
+  output: 'json_object_on_stdout',
+  error_shape: {
+    ok: false,
+    errors: ['{code,message}'],
+  },
+} as const;
+
+const NATIVE_HELPERS = [
+  {
+    helper_id: 'opl-sysprobe',
+    priority: 'p1_native_helper',
+    binary: 'opl-sysprobe',
+    crate: 'opl-native-helper',
+    purpose: 'portable system, toolchain, and runtime dependency inspection',
+    contract_ref: 'contracts/opl-framework/native-helper-contract.json#/helpers/opl-sysprobe',
+  },
+  {
+    helper_id: 'opl-doctor-native',
+    priority: 'p1_native_helper',
+    binary: 'opl-doctor-native',
+    crate: 'opl-native-helper',
+    purpose: 'native doctor snapshot for local toolchain and runtime readiness inputs',
+    contract_ref: 'contracts/opl-framework/native-helper-contract.json#/helpers/opl-doctor-native',
+  },
+  {
+    helper_id: 'opl-runtime-watch',
+    priority: 'p1_native_helper',
+    binary: 'opl-runtime-watch',
+    crate: 'opl-native-helper',
+    purpose: 'snapshot watched runtime roots and emit deterministic change fingerprints',
+    contract_ref: 'contracts/opl-framework/native-helper-contract.json#/helpers/opl-runtime-watch',
+  },
+  {
+    helper_id: 'opl-artifact-indexer',
+    priority: 'p2_high_frequency_index',
+    binary: 'opl-artifact-indexer',
+    crate: 'opl-native-helper',
+    purpose: 'fast workspace artifact discovery without owning domain truth',
+    contract_ref: 'contracts/opl-framework/native-helper-contract.json#/helpers/opl-artifact-indexer',
+  },
+  {
+    helper_id: 'opl-state-indexer',
+    priority: 'p2_high_frequency_index',
+    binary: 'opl-state-indexer',
+    crate: 'opl-native-helper',
+    purpose: 'high-frequency session, progress, artifact projection, and JSON validity indexing',
+    contract_ref: 'contracts/opl-framework/native-helper-contract.json#/helpers/opl-state-indexer',
+  },
+] as const;
+
+const STATE_INDEX_CATALOG = {
+  workspace_registry_index: {
+    backing_helper_id: 'opl-state-indexer',
+    input_contract: 'workspace_roots[]',
+    output_surface: 'workspace_registry_index',
+  },
+  managed_session_ledger_index: {
+    backing_helper_id: 'opl-state-indexer',
+    input_contract: 'session_ledger_roots[]',
+    output_surface: 'managed_session_ledger_index',
+  },
+  artifact_projection_index: {
+    backing_helper_id: 'opl-artifact-indexer',
+    input_contract: 'workspace_root + artifact_roots[]',
+    output_surface: 'native_artifact_manifest',
+  },
+  attention_queue_index: {
+    backing_helper_id: 'opl-state-indexer',
+    input_contract: 'attention_queue_roots[]',
+    output_surface: 'attention_queue_index',
+  },
+  runtime_health_snapshot_index: {
+    backing_helper_id: 'opl-runtime-watch',
+    input_contract: 'watch_roots[]',
+    output_surface: 'runtime_health_snapshot_index',
+  },
+} as const;
+
+type RuntimeManagerActionMode = 'dry_run' | 'apply';
+type RuntimeManagerActionInput = {
+  mode: RuntimeManagerActionMode;
+  skipNativeHelpers?: boolean;
+  skipFamilyRuntimeProvider?: boolean;
+};
+
+function isNativeHelperAction(actionId: string) {
+  return actionId === 'repair_native_helpers' || actionId === 'refresh_native_indexes';
+}
+
+function isOnlineRuntimeAction(actionId: string) {
+  return actionId === 'configure_temporal_provider';
+}
+
+function filterActionableRuntimeManagerActions(
+  actions: Awaited<ReturnType<typeof buildRuntimeManager>>['runtime_manager']['reconcile']['recommended_actions'],
+  input: RuntimeManagerActionInput,
+) {
+  return actions.filter((action) => {
+    if (input.skipNativeHelpers && isNativeHelperAction(action.action_id)) {
+      return false;
+    }
+    if (input.skipFamilyRuntimeProvider && isOnlineRuntimeAction(action.action_id)) {
+      return false;
+    }
+    return true;
+  });
+}
+
+export async function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = {}) {
+  const { selectedProvider, providerRuntime: providers, provider } =
+    await inspectSelectedFamilyRuntimeProvidersWithLifecycle({
+      requestedProvider: resolveFamilyRuntimeProviderKind(),
+      paths: familyRuntimePaths(),
+      options: {
+        managedProviderProjection: readMasManagedProviderProjection(),
+      },
+    });
+  const nativeHelperProjection = buildNativeHelperProjection(DEFAULT_NATIVE_HELPERS, {
+    persistIndexes: input.persistNativeIndexes,
+  });
+  const reconcile = buildRuntimeManagerReconcile(provider, nativeHelperProjection);
+
+  return {
+    version: 'g2',
+    runtime_manager: {
+      surface_id: 'opl_runtime_manager',
+      layer_role: 'product_control_plane_over_provider_backed_family_runtime',
+      status: provider.ready
+        ? 'ready'
+        : provider.status === 'provider_code_landed_unconfigured'
+          ? 'provider_code_landed_unconfigured'
+          : 'provider_attention_needed',
+      owner_split: {
+        product_control_plane_owner: 'one-person-lab',
+        online_runtime_substrate_owner: 'provider_backed_family_runtime',
+        domain_truth_owners: ADMITTED_DOMAIN_OWNERS,
+        concrete_executor_owner: 'stage_selected_by_domain_contract',
+      },
+      responsibilities: [
+        'select_supported_family_runtime_provider',
+        'project_provider_readiness_and_stage_attempt_history',
+        'own_typed_family_queue_and_domain_dispatch_contracts',
+        'wire_provider_wakeup_signal_delivery_and_approval_transport',
+        'hydrate_domain_task_registration_contracts',
+        'project_runtime_status_into_opl_sessions_progress_artifacts',
+        'provide_runtime_doctor_repair_resume_entrypoints',
+        'catalog_optional_native_helpers',
+        'catalog_high_frequency_state_indexes',
+      ],
+      non_goals: [
+        'not_a_domain_runtime_truth_owner',
+        'not_a_domain_quality_verdict_owner',
+        'not_a_domain_artifact_gate_owner',
+        'not_a_domain_truth_owner',
+        'not_a_concrete_executor',
+        'not_a_private_fork_of_external_executor_runtime',
+      ],
+      family_runtime_queue: {
+        surface_kind: 'opl_family_runtime_queue',
+        command: 'opl family-runtime status',
+        state_path: '${OPL_STATE_DIR}/family-runtime/queue.sqlite',
+        provider_model: 'provider_backed_stage_attempt_runtime',
+        configured_provider: selectedProvider,
+        allowed_providers: providers.allowed_providers,
+        stage_attempt_ledger: '${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_attempts',
+        wakeup_bridge: 'provider wakeup -> opl family-runtime tick --source <provider> --hydrate',
+        webhook_bridge: 'provider signal/webhook -> opl family-runtime enqueue',
+        mas_domain_route_projection: buildMasDomainRouteSupportProjection(),
+      },
+      family_scheduler_replacement: {
+        ...FAMILY_SCHEDULER_REPLACEMENT,
+        configured_provider: selectedProvider,
+        allowed_providers: providers.allowed_providers,
+      },
+      daemon_policy: DAEMON_POLICY,
+      provider_runtime: providers,
+      reconcile,
+      registration_registry: {
+        surface_kind: 'opl_stage_runtime_registration_registry',
+        version: 'v1',
+        registration_status: 'declared_projection_contracts',
+        source_of_truth_rule:
+          'OPL indexes declared domain registration surfaces and must dereference domain-owned durable truth before acting.',
+        domains: DOMAIN_REGISTRATION_REGISTRY,
+        required_domain_registration_fields: [
+          'surface_kind',
+          'registration_id',
+          'domain_id',
+          'domain_owner',
+          'runtime_owner',
+          'domain_entry_surface',
+          'consumable_projection_refs',
+          'state_index_inputs',
+          'non_goals',
+        ],
+      },
+      standard_domain_agent_scaffold: buildStandardDomainAgentScaffold().standard_domain_agent_scaffold,
+      native_helper_target: {
+        status: 'contracted_optional_rust_helpers',
+        language: 'rust',
+        protocol: NATIVE_HELPER_PROTOCOL,
+        allowed_shape: 'small_json_stdio_or_cli_helpers_managed_by_opl',
+        helpers: NATIVE_HELPERS,
+        lifecycle: nativeHelperProjection.lifecycle,
+        runtime: nativeHelperProjection.runtime,
+        non_goals: [
+          'not_a_domain_truth_owner',
+          'not_a_runtime_kernel',
+          'not_a_concrete_executor',
+          'not_a_python_domain_logic_replacement',
+        ],
+      },
+      state_index_target: {
+        status: 'rust_helper_backed_contract_first',
+        index_owner: 'one-person-lab',
+        source_of_truth_rule: 'indexes project runtime surfaces but never replace domain-owned durable truth',
+        index_catalog: STATE_INDEX_CATALOG,
+        persistence: nativeHelperProjection.persistence,
+        candidate_indexes: [
+          'workspace_registry_index',
+          'managed_session_ledger_index',
+          'artifact_projection_index',
+          'attention_queue_index',
+          'runtime_health_snapshot_index',
+        ],
+      },
+      future_sidecar_migration: {
+        enabled_now: false,
+        readiness_value:
+          'Freezing this adapter boundary lowers future migration risk if OPL later needs its own full runtime sidecar.',
+        promotion_gate:
+          'Only promote beyond provider adapters if supported providers cannot express required task, wakeup, approval, audit, or product isolation contracts.',
+      },
+      notes: [
+        'Family runtime is Temporal-backed in production; local_sqlite is the dev/CI/offline local ledger provider, and temporal is the required production durable workflow provider.',
+        'OPL Runtime Manager is the product control plane, typed queue, stage attempt ledger, domain dispatch, and projection layer.',
+        'MAS, MAG, and RCA keep domain-owned truth and route-selected executor semantics.',
+      ],
+    },
+  };
+}
+
+export async function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
+  const before = await buildRuntimeManager({ persistNativeIndexes: false });
+  const recommendedActions = before.runtime_manager.reconcile.recommended_actions;
+  const actionableActions = filterActionableRuntimeManagerActions(recommendedActions, input);
+  const plannedActions = actionableActions.map((action) => ({
+    ...action,
+    execution_status: 'not_executed',
+    dry_run_note:
+      input.skipNativeHelpers || input.skipFamilyRuntimeProvider
+        ? 'Dry run did not run native helper repair, did not write refreshed native indexes, and did not repair or configure the selected family runtime provider. Requested recommendation classes were omitted.'
+        : 'Dry run did not run native helper repair, did not write refreshed native indexes, and did not repair or configure the selected family runtime provider.',
+  }));
+  const plannedNonBlockingActions = plannedActions.filter((action) => action.blocking === false);
+
+  if (input.mode === 'dry_run') {
+    return {
+      version: 'g2',
+      runtime_manager_action: {
+        surface_kind: 'opl_runtime_manager_action',
+        mode: input.mode,
+        dry_run: true,
+        status: 'planned',
+        note:
+          'Dry run did not run native helper repair, did not write refreshed native indexes, and did not repair or configure the selected family runtime provider.',
+        before: summarizeRuntimeManagerForAction(before),
+        after: null,
+        planned_actions: plannedActions,
+        executed_actions: [],
+        non_blocking_actions: plannedNonBlockingActions,
+        background_actions: plannedNonBlockingActions,
+        non_goals: [
+          'does_not_schedule_tasks',
+          'does_not_store_session_memory',
+          'does_not_replace_domain_truth',
+          'does_not_private_fork_external_executor_runtime',
+        ],
+      },
+    };
+  }
+
+  const executedActions = [];
+  let after: Awaited<ReturnType<typeof buildRuntimeManager>> | null = null;
+
+  for (const action of actionableActions) {
+    if (action.action_id === 'configure_temporal_provider') {
+      executedActions.push({
+        action_id: action.action_id,
+        status: 'blocked_manual_configuration_required',
+        blocking: action.blocking,
+        action_lane: 'online_runtime',
+        capability: 'temporal_stage_attempt_provider',
+        command_preview: ['env', 'OPL_TEMPORAL_ADDRESS=<host:port>', 'opl', 'family-runtime', 'status', '--provider', 'temporal'],
+        note:
+          'Temporal provider needs an external Temporal server and worker implementing the OPL stage attempt contract.',
+      });
+      continue;
+    }
+
+    if (action.action_id === 'repair_native_helpers') {
+      const repair = runNativeHelperRepairAction();
+      executedActions.push({
+        action_id: action.action_id,
+        status: repair.status === 'completed' || repair.status === 'skipped_ready' ? 'completed' : repair.status,
+        blocking: action.blocking,
+        action_lane: 'native_helpers',
+        capability: 'native_helper_runtime',
+        command_preview: repair.command_preview,
+        details: repair,
+      });
+      continue;
+    }
+
+    if (action.action_id === 'refresh_native_indexes') {
+      after = await buildRuntimeManager({ persistNativeIndexes: true });
+      const persistence = after.runtime_manager.state_index_target.persistence;
+      executedActions.push({
+        action_id: action.action_id,
+        status: persistence.status === 'written' ? 'completed' : 'failed',
+        blocking: action.blocking,
+        action_lane: 'native_indexes',
+        capability: 'state_index_projection',
+        command_preview: ['opl', 'runtime', 'manager'],
+        details: {
+          persistence_status: persistence.status,
+          freshness: persistence.freshness,
+          index_file: persistence.index_file,
+          errors: persistence.errors,
+        },
+      });
+      continue;
+    }
+
+    executedActions.push({
+      action_id: action.action_id,
+      status: 'skipped_unavailable',
+      blocking: action.blocking,
+      action_lane: 'runtime_manager',
+      capability: 'runtime_manager_reconcile',
+      command_preview: action.command ? action.command.split(' ') : [],
+      note: 'No Runtime Manager apply implementation exists for this recommendation.',
+    });
+  }
+
+  after ??= await buildRuntimeManager({ persistNativeIndexes: false });
+  const afterSummary = summarizeRuntimeManagerForAction(after);
+  const executedNonBlockingActions = executedActions.filter((action) => action.blocking === false);
+  const hasFailure = executedActions.some((action) => action.status === 'failed');
+  const hasSkipped = executedActions.some((action) => action.status === 'skipped_unavailable');
+  const remainingActionableRecommendations = filterActionableRuntimeManagerActions(
+    afterSummary.reconcile.recommended_actions,
+    input,
+  );
+  const status = hasFailure
+    ? 'failed'
+    : hasSkipped || remainingActionableRecommendations.length > 0
+      ? 'completed_with_attention'
+      : 'completed';
+
+  return {
+    version: 'g2',
+    runtime_manager_action: {
+      surface_kind: 'opl_runtime_manager_action',
+      mode: input.mode,
+      dry_run: false,
+      status,
+        note:
+          'Apply executed only Runtime Manager adapter actions backed by existing OPL helper and already-configured provider surfaces.',
+      before: summarizeRuntimeManagerForAction(before),
+      after: afterSummary,
+      planned_actions: plannedActions,
+      executed_actions: executedActions,
+      non_blocking_actions: executedNonBlockingActions,
+      background_actions: executedNonBlockingActions,
+      non_goals: [
+        'does_not_schedule_tasks',
+        'does_not_store_session_memory',
+        'does_not_replace_domain_truth',
+        'does_not_private_fork_external_executor_runtime',
+      ],
+    },
+  };
+}
+
+function summarizeRuntimeManagerForAction(payload: Awaited<ReturnType<typeof buildRuntimeManager>>) {
+  const runtimeManager = payload.runtime_manager;
+
+  return {
+    status: runtimeManager.status,
+    reconcile: runtimeManager.reconcile,
+    native_helper_runtime: {
+      status: runtimeManager.native_helper_target.runtime.status,
+      invocations: runtimeManager.native_helper_target.runtime.invocations.map((invocation) => ({
+        helper_id: invocation.helper_id,
+        status: invocation.status,
+      })),
+    },
+    native_index_persistence: runtimeManager.state_index_target.persistence,
+  };
+}
+
+function buildRuntimeManagerReconcile(
+  provider: Awaited<ReturnType<typeof inspectSelectedFamilyRuntimeProvidersWithLifecycle>>['provider'],
+  nativeHelperProjection: ReturnType<typeof buildNativeHelperProjection>,
+) {
+  const recommendedActions = [];
+  const nativeRuntimeStatus = nativeHelperProjection.runtime.status;
+  const indexFreshnessStatus = nativeHelperProjection.persistence.freshness.status;
+
+  if (provider.provider_kind === 'temporal' && !provider.ready) {
+    recommendedActions.push({
+      action_id: 'configure_temporal_provider',
+      priority: 'p0_online_runtime',
+      blocking: true,
+      action_lane: 'online_runtime',
+      capability: 'temporal_stage_attempt_provider',
+      command: 'OPL_TEMPORAL_ADDRESS=<host:port> opl family-runtime status --provider temporal',
+      reason:
+        'Temporal provider is selected but no Temporal address is configured. Live workflows require an external Temporal server and worker.',
+    });
+  }
+
+  if (nativeRuntimeStatus !== 'available') {
+    recommendedActions.push({
+      action_id: 'repair_native_helpers',
+      priority: 'p1_native_helper',
+      blocking: false,
+      command: 'npm run native:repair',
+      reason: `Native helper runtime is ${nativeRuntimeStatus}.`,
+    });
+  }
+
+  if (indexFreshnessStatus !== 'fresh') {
+    recommendedActions.push({
+      action_id: 'refresh_native_indexes',
+      priority: 'p2_high_frequency_index',
+      blocking: false,
+      command: 'opl runtime manager',
+      reason: `Native state index freshness is ${indexFreshnessStatus}.`,
+    });
+  }
+
+  return {
+    surface_kind: 'opl_runtime_manager_reconcile',
+    version: 'v1',
+    overall_status: recommendedActions.length === 0 ? 'ready' : 'attention_needed',
+    checked_surfaces: {
+      provider_runtime: provider.ready
+        ? 'ready'
+        : provider.status === 'provider_code_landed_unconfigured'
+          ? 'provider_code_landed_unconfigured'
+          : 'provider_attention_needed',
+      native_helper_runtime: nativeRuntimeStatus,
+      native_index_freshness: indexFreshnessStatus,
+      domain_registration_registry: 'declared_projection_contracts',
+    },
+    recommended_actions: recommendedActions,
+    non_goals: [
+      'does_not_schedule_tasks',
+      'does_not_store_session_memory',
+      'does_not_replace_domain_truth',
+      'does_not_private_fork_external_executor_runtime',
+    ],
+  };
+}

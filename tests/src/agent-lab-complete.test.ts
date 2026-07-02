@@ -15,8 +15,8 @@ import {
   buildCompleteAgentLabControlPlane,
   buildDeveloperModeAgentLabRepairRoute,
   buildDeveloperModeAgentLabRepairRouteReadModel,
-} from '../../src/agent-lab-complete.ts';
-import { buildSampleAgentLabSuite } from '../../src/agent-lab.ts';
+} from '../../src/modules/foundry-lab/agent-lab-complete.ts';
+import { buildSampleAgentLabSuite } from '../../src/modules/foundry-lab/agent-lab.ts';
 
 const agentLabStateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-complete-state-'));
 const previousOplStateDir = process.env.OPL_STATE_DIR;

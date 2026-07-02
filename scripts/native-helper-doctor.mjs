@@ -6,8 +6,8 @@ import { fileURLToPath } from 'node:url';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(scriptDir, '..');
-const sourceEntry = path.join(rootDir, 'src', 'native-helper-doctor.ts');
-const builtEntry = path.join(rootDir, 'dist', 'native-helper-doctor.js');
+const sourceEntry = path.join(rootDir, 'src', 'modules', 'runway', 'native-helper-doctor.ts');
+const builtEntry = path.join(rootDir, 'dist', 'modules', 'runway', 'native-helper-doctor.js');
 const hasSource = fs.existsSync(sourceEntry);
 const entry = hasSource ? sourceEntry : builtEntry;
 const args = hasSource ? ['--experimental-strip-types', entry] : [entry];

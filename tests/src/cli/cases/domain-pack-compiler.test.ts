@@ -1,5 +1,5 @@
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, loadFrameworkContracts, os, path, repoRoot, runCli, shellSingleQuote, test } from '../helpers.ts';
-import { buildFamilyAgentDescriptorList } from '../../../../src/family-domain-agent-descriptor.ts';
+import { buildFamilyAgentDescriptorList } from '../../../../src/modules/atlas/family-domain-agent-descriptor.ts';
 import {
   assertReadyPackCompilerSummary,
   PACK_COMPILER_GENERATED_SURFACE_COUNT_PER_DOMAIN,

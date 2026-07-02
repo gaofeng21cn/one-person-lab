@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   buildAdvisoryKnowledgeOperatorProjection,
-} from '../../src/advisory-knowledge-boundary.ts';
+} from '../../src/modules/charter/advisory-knowledge-boundary.ts';
 
 type JsonRecord = Record<string, unknown>;
 

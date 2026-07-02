@@ -7,11 +7,11 @@ import {
   withIsolatedFamilyRuntimeEnv,
 } from './mas-default-executor-current-source-helpers.ts';
 
-import { enqueueTask } from '../../../../../src/family-runtime-enqueue.ts';
-import { runSchedulerTick } from '../../../../../src/family-runtime-scheduler.ts';
-import { familyRuntimePaths } from '../../../../../src/family-runtime-store.ts';
-import { compactSchedulerTickForTemporalResult } from '../../../../../src/family-runtime-temporal-activities.ts';
-import { TEMPORAL_MAX_INLINE_PAYLOAD_BYTES } from '../../../../../src/family-runtime-temporal.ts';
+import { enqueueTask } from '../../../../../src/modules/runway/family-runtime-enqueue.ts';
+import { runSchedulerTick } from '../../../../../src/modules/runway/family-runtime-scheduler.ts';
+import { familyRuntimePaths } from '../../../../../src/modules/runway/family-runtime-store.ts';
+import { compactSchedulerTickForTemporalResult } from '../../../../../src/modules/runway/family-runtime-temporal-activities.ts';
+import { TEMPORAL_MAX_INLINE_PAYLOAD_BYTES } from '../../../../../src/modules/runway/family-runtime-temporal.ts';
 
 function readyProviderLifecycle() {
   return {
@@ -100,7 +100,7 @@ test('family-runtime scheduler tick immediately picks up MAS default-executor pe
           { providerKind: 'temporal', limit: 1, hydrate: true },
           async (source, limit, hydrate, taskScope) => {
             queueTickCalls += 1;
-            const runtime = await import('../../../../../src/family-runtime-tick.ts');
+            const runtime = await import('../../../../../src/modules/runway/family-runtime-tick.ts');
             return runtime.runFamilyRuntimeQueueTick(db, familyRuntimePaths(), {
               source,
               limit,

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { buildAgentLabProgressFirstLoopRiskReport } from '../../../../src/agent-lab.ts';
+import { buildAgentLabProgressFirstLoopRiskReport } from '../../../../src/modules/foundry-lab/agent-lab.ts';
 
 test('Agent Lab marks a stage route cycle without budget or exit as fatal hard-loop risk', () => {
   const report = buildAgentLabProgressFirstLoopRiskReport({

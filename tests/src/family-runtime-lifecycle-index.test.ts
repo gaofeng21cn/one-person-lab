@@ -11,7 +11,7 @@ import {
   recordFamilyRuntimeLifecycleRef,
   reconcileFamilyRuntimeLifecycleRefs,
   runFamilyRuntimeLifecycleApply,
-} from '../../src/family-runtime-lifecycle-index.ts';
+} from '../../src/modules/runway/family-runtime-lifecycle-index.ts';
 
 function withTempState<T>(fn: () => T) {
   const previous = process.env.OPL_STATE_DIR;

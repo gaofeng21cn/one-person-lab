@@ -6,7 +6,7 @@ import {
   path,
 } from './helpers.ts';
 
-import { createFamilyRuntimeQueueTables } from '../../../../../src/family-runtime-store.ts';
+import { createFamilyRuntimeQueueTables } from '../../../../../src/modules/runway/family-runtime-store.ts';
 
 export function withIsolatedFamilyRuntimeEnv<T>(fn: () => T) {
   const previous = {

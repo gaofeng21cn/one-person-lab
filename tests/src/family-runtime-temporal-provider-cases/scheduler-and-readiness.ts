@@ -7,10 +7,10 @@ import path from 'node:path';
 import {
   buildTemporalSchedulerHealthProjection,
   buildTemporalSchedulerTickWorkflowArgs,
-} from '../../../src/family-runtime-temporal-provider-parts/scheduler-cadence.ts';
+} from '../../../src/modules/runway/family-runtime-temporal-provider-parts/scheduler-cadence.ts';
 import {
   buildTemporalWorkerReadiness,
-} from '../../../src/family-runtime-temporal-provider.ts';
+} from '../../../src/modules/runway/family-runtime-temporal-provider.ts';
 
 test('Temporal scheduler health projection surfaces current stale action repair without domain authority', () => {
   const healthy = buildTemporalSchedulerHealthProjection({

@@ -10,8 +10,8 @@ import {
   buildFeedbackOpsReconcileReceipt,
   readFeedbackOpsEvents,
   submitDeliveryFeedbackEvent,
-} from '../../src/agent-lab-feedbackops.ts';
-import { resolveOplStatePaths } from '../../src/runtime-state-paths.ts';
+} from '../../src/modules/foundry-lab/agent-lab-feedbackops.ts';
+import { resolveOplStatePaths } from '../../src/modules/runway/runtime-state-paths.ts';
 import { contractsDir } from './cli/helpers.ts';
 
 function asRecord(value: unknown): Record<string, any> {

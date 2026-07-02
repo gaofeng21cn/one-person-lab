@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { buildAgentLabAheEvidenceReadModel } from '../../src/agent-lab-ahe-evidence.ts';
-import { buildAgentLabCodexAttemptTraceFlywheel } from '../../src/agent-lab-codex-attempt-flywheel.ts';
-import { buildSampleAgentLabSuite } from '../../src/agent-lab.ts';
+import { buildAgentLabAheEvidenceReadModel } from '../../src/modules/foundry-lab/agent-lab-ahe-evidence.ts';
+import { buildAgentLabCodexAttemptTraceFlywheel } from '../../src/modules/foundry-lab/agent-lab-codex-attempt-flywheel.ts';
+import { buildSampleAgentLabSuite } from '../../src/modules/foundry-lab/agent-lab.ts';
 
 function aheRefs(suffix: string) {
   return {

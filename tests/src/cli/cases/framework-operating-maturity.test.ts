@@ -1,4 +1,4 @@
-import { buildFoundryAgentOsOwnerEvidenceIntake } from '../../../../src/foundry-agent-os-owner-evidence-intake.ts';
+import { buildFoundryAgentOsOwnerEvidenceIntake } from '../../../../src/modules/foundry-lab/foundry-agent-os-owner-evidence-intake.ts';
 import { assert, contractsDir, fs, loadFrameworkContracts, os, path, runCli, test } from '../helpers.ts';
 import './framework-operating-maturity-cases/app-release-evidence.ts';
 import './framework-operating-maturity-cases/current-owner-payload-summary.ts';

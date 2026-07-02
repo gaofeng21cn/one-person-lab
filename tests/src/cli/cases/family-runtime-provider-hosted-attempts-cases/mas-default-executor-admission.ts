@@ -11,9 +11,9 @@ import {
   test,
 } from './helpers.ts';
 
-import { ensureProviderHostedStageAttempt } from '../../../../../src/family-runtime-provider-hosted-attempts.ts';
-import { listStageAttemptsForTask } from '../../../../../src/family-runtime-stage-attempts.ts';
-import { buildStageRunCurrentnessIdentity } from '../../../../../src/family-runtime-stage-run-currentness-identity.ts';
+import { ensureProviderHostedStageAttempt } from '../../../../../src/modules/runway/family-runtime-provider-hosted-attempts.ts';
+import { listStageAttemptsForTask } from '../../../../../src/modules/runway/family-runtime-stage-attempts.ts';
+import { buildStageRunCurrentnessIdentity } from '../../../../../src/modules/runway/family-runtime-stage-run-currentness-identity.ts';
 import {
   createQueueTables,
   defaultExecutorPayload,

@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import type { WorkspaceBinding } from '../../src/workspace-registry.ts';
+import type { WorkspaceBinding } from '../../src/modules/workspace/workspace-registry.ts';
 import {
   buildDomainEntryParity,
   buildRecommendedEntrySurfaces,
-} from '../../src/family-domain-catalog.ts';
+} from '../../src/modules/atlas/family-domain-catalog.ts';
 
 type DomainManifestCatalogEntry = Parameters<typeof buildDomainEntryParity>[0][number];
 
