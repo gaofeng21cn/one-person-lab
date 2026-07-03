@@ -29,6 +29,17 @@ import {
   providerHostedCheckoutCurrentnessPreflight,
 } from './family-runtime-provider-hosted-attempts-parts/admission-currentness.ts';
 export {
+  DEFAULT_EXECUTOR_DISPATCH_TASK_KIND,
+  DEFAULT_EXECUTOR_TRANSPORT_ONLY_ADMISSION_SUPERSEDED_REASON,
+  isAdmittedDefaultExecutorNextOwner,
+  isTransportOnlyDefaultExecutorAdmissionCheckpoint,
+} from './family-runtime-provider-hosted-attempts-parts/default-executor-admission.ts';
+import {
+  DEFAULT_EXECUTOR_DISPATCH_TASK_KIND,
+  DEFAULT_EXECUTOR_TRANSPORT_ONLY_ADMISSION_SUPERSEDED_REASON,
+  isAdmittedDefaultExecutorNextOwner,
+} from './family-runtime-provider-hosted-attempts-parts/default-executor-admission.ts';
+export {
   defaultExecutorDispatchRef,
   defaultExecutorSourceFingerprint,
 } from './family-runtime-provider-hosted-attempts-parts/source-identity.ts';
@@ -53,15 +64,6 @@ import {
   uniqueStrings,
   workspaceRootFromProfile,
 } from './family-runtime-provider-hosted-attempts-parts/values.ts';
-
-function isTransportOnlyAdmissionDispatchReceiptRef(value: unknown) {
-  if (typeof value !== 'string') {
-    return false;
-  }
-  return value.includes('/runtime/artifacts/opl_family_domain_handler/dispatch_receipts/')
-    || value.startsWith('runtime/artifacts/opl_family_domain_handler/dispatch_receipts/')
-    || value.includes('/opl_family_domain_handler/dispatch_receipts/');
-}
 
 function isSameDefaultExecutorDispatch(
   left: Record<string, unknown>,
@@ -91,45 +93,12 @@ function isSameDefaultExecutorStudyActionStage(
     && sameStringField(left, right, 'action_type');
 }
 
-export const DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
-export const DEFAULT_EXECUTOR_TRANSPORT_ONLY_ADMISSION_SUPERSEDED_REASON =
-  'transport_only_admission_checkpoint_superseded_by_provider_admission_requeue';
-const DEFAULT_EXECUTOR_NEXT_OWNERS = new Set([
-  'write',
-  'ai_reviewer',
-  'write/ai_reviewer',
-  'analysis-campaign',
-  'gate_clearing_batch',
-  'medautoscience',
-  'publication_gate_owner',
-  'finalize',
-]);
-const DEFAULT_EXECUTOR_NEXT_OWNER_ALIASES = new Map([
-  ['mas', 'medautoscience'],
-  ['med-autoscience', 'medautoscience'],
-  ['med_auto_science', 'medautoscience'],
-]);
 const DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate']);
 const DEFAULT_EXECUTOR_CROSS_TASK_STARTED_ATTEMPT_STATUSES = new Set(['running', 'checkpointed', 'human_gate']);
 const DEFAULT_EXECUTOR_CROSS_TASK_LIVE_TASK_STATUSES = new Set(['queued', 'running', 'retry_waiting', 'succeeded']);
 const DEFAULT_EXECUTOR_TERMINAL_PROVIDER_STATUSES = new Set(['completed', 'failed', 'blocked', 'timed_out']);
 const DEFAULT_EXECUTOR_SUPERSEDED_REASON = 'mas_default_executor_superseded_by_current_source';
 const DEFAULT_EXECUTOR_TASK_LEASE_MS = 5 * 60 * 1000;
-
-export function isTransportOnlyDefaultExecutorAdmissionCheckpoint(
-  attempt: ReturnType<typeof listStageAttempts>[number],
-) {
-  if (
-    attempt.stage_id !== DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
-    || attempt.executor_kind !== 'codex_cli'
-    || attempt.status !== 'checkpointed'
-  ) {
-    return false;
-  }
-  const closeoutRefs = Array.isArray(attempt.closeout_refs) ? attempt.closeout_refs : [];
-  return closeoutRefs.length > 0
-    && closeoutRefs.every(isTransportOnlyAdmissionDispatchReceiptRef);
-}
 
 function hasActiveDefaultExecutorTaskLease(db: DatabaseSync, taskId: string | null) {
   if (!taskId) {
@@ -366,14 +335,6 @@ function familyTransitionResult(payload: Record<string, unknown>) {
     return null;
   }
   return optionalString(transition.transition_id) ? transition : null;
-}
-
-export function isAdmittedDefaultExecutorNextOwner(nextOwner: string | null) {
-  if (nextOwner === null) {
-    return false;
-  }
-  const normalized = nextOwner.trim().toLowerCase();
-  return DEFAULT_EXECUTOR_NEXT_OWNERS.has(DEFAULT_EXECUTOR_NEXT_OWNER_ALIASES.get(normalized) ?? normalized);
 }
 
 export function isDefaultExecutorDispatchTask(

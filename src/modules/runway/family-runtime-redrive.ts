@@ -26,41 +26,22 @@ import {
   assertNoProviderOnlySemanticRedriveBlocker as assertNoProviderOnlySemanticRedriveBlockerImpl,
   assertProviderOnlyRedriveProtocol,
 } from './family-runtime-redrive-parts/semantic-guards.ts';
+import {
+  PAPER_MISSION_STAGE_ROUTE_PROVIDER_RUNTIME_REDRIVE_REASONS,
+  PROVIDER_RUNTIME_BLOCKER_REF_PATTERN,
+  PROVIDER_STAGE_ATTEMPT_REDRIVE_REASONS,
+  PROVIDER_TRANSPORT_REDRIVE_REASONS,
+  STOP_LOSS_DOMAIN_BLOCKER_REASONS,
+  assertProviderTransportRedriveReason,
+  isProviderStageAttemptRedriveReason,
+  type PaperMissionStageRouteCloseoutPacketRedriveReason,
+  type ProviderTransportRedriveReason,
+  type ProviderTransportRedriveTrigger,
+} from './family-runtime-redrive-parts/reasons.ts';
 import { createPaperMissionStageRouteAttemptForProviderRedrive } from './family-runtime-paper-mission-stage-route-runner.ts';
 
-const PROVIDER_TRANSPORT_REDRIVE_REASONS = [
-  'temporal_stage_attempt_start_failed',
-  'temporal_stage_attempt_not_completed',
-  'temporal_stage_attempt_failed',
-] as const;
-const PROVIDER_TRANSPORT_OPERATOR_REDRIVE_REASONS = [
-  ...PROVIDER_TRANSPORT_REDRIVE_REASONS,
-  'temporal_stage_attempt_canceled',
-] as const;
-const PROVIDER_STAGE_ATTEMPT_REDRIVE_REASONS = [
-  ...PROVIDER_TRANSPORT_OPERATOR_REDRIVE_REASONS,
-  'temporal_workflow_not_started_or_not_found',
-] as const;
-const PAPER_MISSION_STAGE_ROUTE_PROVIDER_RUNTIME_REDRIVE_REASONS = [
-  'typed_closeout_packet_required',
-  'codex_cli_typed_closeout_not_materialized',
-  'codex_cli_provider_unavailable',
-] as const;
-const PROVIDER_RUNTIME_BLOCKER_REF_PATTERN = /^opl:\/\/stage-attempts\/[^/]+\/runtime-blockers\/[^/]+$/;
-
-type ProviderTransportRedriveReason = typeof PROVIDER_TRANSPORT_REDRIVE_REASONS[number];
-type ProviderTransportOperatorRedriveReason = typeof PROVIDER_TRANSPORT_OPERATOR_REDRIVE_REASONS[number];
-type ProviderStageAttemptRedriveReason = typeof PROVIDER_STAGE_ATTEMPT_REDRIVE_REASONS[number];
-type PaperMissionStageRouteCloseoutPacketRedriveReason =
-  typeof PAPER_MISSION_STAGE_ROUTE_PROVIDER_RUNTIME_REDRIVE_REASONS[number];
-type ProviderTransportRedriveTrigger = 'operator' | 'auto';
 type StageAttemptPayload = ReturnType<typeof listStageAttemptsForTask>[number];
 type RedriveAdmission = ReturnType<typeof redriveAdmissionForTask>;
-
-const STOP_LOSS_DOMAIN_BLOCKER_REASONS = new Set([
-  'anti_loop_budget_exhausted',
-  'progress_first_owner_delta_required',
-]);
 
 function parsePayload(row: FamilyRuntimeTaskRow) {
   return JSON.parse(row.payload_json) as Record<string, unknown>;
@@ -132,35 +113,6 @@ function stringList(value: unknown) {
 
 function stringValue(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function providerTransportRedriveReasonsForTrigger(trigger: ProviderTransportRedriveTrigger) {
-  return trigger === 'auto'
-    ? PROVIDER_TRANSPORT_REDRIVE_REASONS
-    : PROVIDER_TRANSPORT_OPERATOR_REDRIVE_REASONS;
-}
-
-function assertProviderTransportRedriveReason(
-  value: string | null,
-  trigger: ProviderTransportRedriveTrigger,
-): asserts value is ProviderTransportRedriveReason | ProviderTransportOperatorRedriveReason {
-  const allowedReasons: readonly string[] = providerTransportRedriveReasonsForTrigger(trigger);
-  if (!allowedReasons.includes(value ?? '')) {
-    throwProviderOnlyRedriveBlocked(
-      'family-runtime queue redrive only supports blocked provider-transport default executor tasks.',
-      STOP_LOSS_DOMAIN_BLOCKER_REASONS.has(value ?? '')
-        ? 'same_lineage_stop_loss_domain_blocker'
-        : 'non_provider_transport_blocker',
-      {
-        dead_letter_reason: value,
-        allowed_dead_letter_reasons: allowedReasons,
-      },
-    );
-  }
-}
-
-function isProviderStageAttemptRedriveReason(value: string | null): value is ProviderStageAttemptRedriveReason {
-  return PROVIDER_STAGE_ATTEMPT_REDRIVE_REASONS.includes(value as ProviderStageAttemptRedriveReason);
 }
 
 function providerRetryBudgetDeadLetterEvidenceKind(db: DatabaseSync, taskId: string) {
