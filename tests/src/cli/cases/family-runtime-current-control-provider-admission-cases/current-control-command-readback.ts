@@ -218,11 +218,6 @@ test('family-runtime intake prefers complete OPL readback over MAS request-only 
     nextOwner: 'ai_reviewer',
     idempotencyKey: attemptIdempotencyKey,
   });
-  const liveReadbackWithLegacyProjectionGap = JSON.parse(JSON.stringify(liveReadback)) as Record<string, any>;
-  delete liveReadbackWithLegacyProjectionGap.latest_transaction_readback.same_stage_run_identity;
-  delete liveReadbackWithLegacyProjectionGap.latest_transaction_readback.stage_run_identity_readback;
-  delete liveReadbackWithLegacyProjectionGap.latest_transaction_readback.same_outbox_identity;
-  delete liveReadbackWithLegacyProjectionGap.read_model_readback;
   const requestOnlyCarrier = masDomainProgressTransitionRequest({
     studyId,
     actionType,
@@ -270,9 +265,9 @@ test('family-runtime intake prefers complete OPL readback over MAS request-only 
           route_identity_key: attemptIdempotencyKey,
           attempt_idempotency_key: attemptIdempotencyKey,
           request_idempotency_key: attemptIdempotencyKey,
-          opl_domain_progress_transition_runtime_live_readback: liveReadbackWithLegacyProjectionGap,
+          opl_domain_progress_transition_runtime_live_readback: liveReadback,
         },
-        opl_domain_progress_transition_runtime_live_readback: liveReadbackWithLegacyProjectionGap,
+        opl_domain_progress_transition_runtime_live_readback: liveReadback,
       },
     ],
   }), 'utf8');

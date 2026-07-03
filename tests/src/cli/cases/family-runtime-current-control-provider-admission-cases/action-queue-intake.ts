@@ -241,9 +241,11 @@ test('family-runtime intake preserves MAS owner-route refs for root provider adm
   const liveReadback = {
     surface_kind: 'opl_domain_progress_transition_runtime_live_readback',
     runtime_id: 'opl_domain_progress_transition_runtime',
+    storage_contract: 'append_only_physical_jsonl',
     runtime_kind: 'DomainProgressTransitionRuntime',
     runtime_readback_status: 'complete_transaction',
     transaction_complete: true,
+    append_only_log_entry_count: 1,
     causality: {
       command_id: 'dptc_dm003_owner_route_refs',
       event_id: 'dpte_dm003_owner_route_refs',
@@ -252,6 +254,22 @@ test('family-runtime intake preserves MAS owner-route refs for root provider adm
       source_generation: 'truth-event-000035-39f0b8e96689a623',
       expected_version: 'truth-event-000035-39f0b8e96689a623',
       same_transaction_event_and_outbox: true,
+      runtime_readback_status: 'complete_transaction',
+      transaction_complete: true,
+    },
+    authority_boundary: {
+      authority: false,
+      runtime_owner: 'one-person-lab',
+      opl_can_write_domain_truth: false,
+      opl_can_create_domain_owner_receipt: false,
+      opl_can_create_domain_typed_blocker: false,
+      provider_completion_is_domain_completion: false,
+      provider_completion_is_domain_ready: false,
+      read_model_can_execute: false,
+      projection_can_authorize_provider_admission: false,
+    },
+    replay_audit: {
+      read_model_projection_consumable: true,
     },
     identity: {
       surface_kind: 'opl_domain_progress_transition_identity',
@@ -283,6 +301,7 @@ test('family-runtime intake preserves MAS owner-route refs for root provider adm
       command_present: true,
       event_present: true,
       outbox_item_present: true,
+      same_outbox_identity: true,
       event_id: 'dpte_dm003_owner_route_refs',
       outbox_item_id: 'dpto_dm003_owner_route_refs',
       transition_event_id: 'dpte_dm003_owner_route_refs',
@@ -290,6 +309,13 @@ test('family-runtime intake preserves MAS owner-route refs for root provider adm
       transaction_id: 'dptx_dm003_owner_route_refs',
       same_transaction_event_and_outbox: true,
       same_stage_run_identity: true,
+      stage_run_identity_readback: {
+        stage_run_id: `stage-run:${studyId}:${workUnitId}`,
+        route_identity_key: attemptIdempotencyKey,
+        attempt_idempotency_key: attemptIdempotencyKey,
+        provider_attempt_ref: `opl://provider-admission/${studyId}/${attemptIdempotencyKey}`,
+        attempt_lease_ref: `opl://attempt-leases/${attemptIdempotencyKey}`,
+      },
     },
     read_model_readback: {
       latest_transaction_identity: {
@@ -323,6 +349,11 @@ test('family-runtime intake preserves MAS owner-route refs for root provider adm
       non_advancing_apply: false,
     },
     projection_metadata: {
+      authority: false,
+      projection_role: 'complete_runtime_readback',
+      read_model_projection_consumable: true,
+      runtime_readback_status: 'complete_transaction',
+      transaction_complete: true,
       observed_generation: 'truth-event-000035-39f0b8e96689a623',
       derived_generation: 'truth-event-000035-39f0b8e96689a623',
       lag_status: 'current',
