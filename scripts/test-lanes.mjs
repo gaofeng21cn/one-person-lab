@@ -61,6 +61,7 @@ const fastTestFiles = [
   'tests/src/state-index-kernel-contract.test.ts',
   'tests/src/stage-run-kernel-contract.test.ts',
   'tests/src/progress-delta-receipt-contract.test.ts',
+  'tests/src/json-file-boundary.test.ts',
   'tests/src/quality-gate-runtime-contract.test.ts',
   'tests/src/stage-run-transition-authority-read-model.test.ts',
   'tests/src/stage-transition-authority-contract.test.ts',
