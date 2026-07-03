@@ -19,6 +19,18 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `OPL Connect` 是 Fabric 上可独立调用的连接 / 分发能力，不是 Console 私有后端；`OPL Console` 负责治理、投影、action catalog 和 operator 管理集成；`OPL Ledger` 只保存 refs-only evidence、receipt/blocker refs、lineage 和 provenance。
 - `contracts/opl-framework/source-module-map.json` 只记录源码归属 metadata 和物理入口；更新 owner note 不改变 runtime truth、domain truth、owner receipt、typed blocker、release verdict 或 production readiness。
 
+### 决策：标准智能体能力按 capability_kind 管理，默认内置，满足外置门才拆包
+
+原因：MAS / ScholarSkills / Connect / runtime projection 已经同时存在 stage 主提示词、专业 Skill、工具 connector、reference pack、contract module 和 runtime projection。若只用 “Skill” 统称，会让 stage policy、专业判断、资源访问、机器合同和 Codex discovery 混在一起，进而把 connector receipt、contract pass 或 refs-only projection 误读成 domain authority。
+
+影响：
+
+- 标准能力必须按 [OPL 标准智能体能力管理规范](./policies/standard-agent-capability-management-policy.md) 声明 `capability_kind`、`canonical_owner`、`physical_source`、`runtime_projection`、`sync_policy`、`authority_boundary` 和 `externalization_reason`。
+- `capability_kind` 固定六类：`stage_prompt`、`stage_projection/runtime_projection`、`professional_skill`、`tool_connector`、`reference_pack`、`contract_module`。
+- 默认归属是内置在 domain agent；只有跨 workspace 复用、体量大、引用/模板/脚本多、独立版本维护、多个 stage 反复调用或需要 Codex 原生 discovery 时，才外置为专业 pack、reference pack 或 connector。
+- Connector 只负责资源访问、source refs、invocation refs 和 receipt，不承接专业判断；contract module 只负责机器边界，不伪装成 true Skill。
+- MAS stage prompt / projection 继续归 MAS；八个医学论文 professional specialist skills 归 `mas-scholar-skills` 并通过 OPL Connect 同步；source / intake / omics 不作为 active 外置合同，按各自 owner 内置或后续稳定后再评估。
+
 ## 2026-07-02
 
 ### 决策：标准 OPL Agent 用 Stage 主提示词承载阶段策略，不把 stage 定义成专业 Skill
