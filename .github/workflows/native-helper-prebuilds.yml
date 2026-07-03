@@ -109,7 +109,7 @@ jobs:
         run: |
           set -euo pipefail
           node --experimental-strip-types --input-type=module <<'NODE'
-          import { buildOplPackageManifest } from './src/package-distribution.ts';
+          import { buildOplPackageManifest } from './src/modules/connect/package-distribution.ts';
 
           const nativeHelper = buildOplPackageManifest().packages.native_helper;
           if (nativeHelper.channel_status !== 'active_ghcr_oci_prebuild') {
