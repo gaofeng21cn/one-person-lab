@@ -10,7 +10,6 @@ import {
   buildUsageError,
   cloneCommandSpec,
   parseRegisteredCommandOptions,
-  parseOplModuleArgs,
   parseOplModuleExecArgs,
   validateCommandRegistryCoverage,
 } from '../../modules/support.ts';
@@ -24,6 +23,13 @@ type PubMedSearchArgs = {
   limit: number;
 };
 
+const MODULE_ACTION_COMMANDS = [
+  'connect install',
+  'connect update',
+  'connect reinstall',
+  'connect remove',
+];
+
 function parsePubMedSearchArgs(args: string[], spec: CommandSpec): PubMedSearchArgs {
   const parsed = parseRegisteredCommandOptions('connect pubmed search', args, spec);
   const query = String(parsed.query ?? '').trim();
@@ -36,19 +42,54 @@ function parsePubMedSearchArgs(args: string[], spec: CommandSpec): PubMedSearchA
   return { query, limit: Number(parsed.limit) };
 }
 
+function parseModuleActionArgs(command: string, args: string[], spec: CommandSpec) {
+  const parsed = parseRegisteredCommandOptions(command, args, spec);
+  const moduleId = String(parsed.module ?? '').trim();
+  if (moduleId.length === 0) {
+    throw buildUsageError(`${command} requires --module.`, spec, {
+      required: ['--module'],
+    });
+  }
+  return moduleId;
+}
+
 function buildModuleActionSpec(
   action: ModuleAction,
   usage: string,
   example: string,
 ): CommandSpec {
+  const command = `connect ${action}`;
   const spec: CommandSpec = {
     usage,
     summary: commandActionSummary(action, 'one OPL-managed domain module'),
     examples: [example],
     group: 'module',
+    registry: {
+      command_id: command,
+      parser_adapter: 'node_util_parse_args',
+      options: [
+        {
+          name: 'module',
+          flag: '--module',
+          value_kind: 'string',
+          summary: 'OPL-managed domain module id.',
+          required: true,
+        },
+      ],
+      json_output_schema_ref:
+        `contracts/opl-framework/cli-command-registry.json#/commands/connect_${action}/output_schema`,
+      authority_boundary: {
+        owner: 'OPL Connect',
+        surface: 'managed_module_action',
+        can_write_domain_truth: false,
+        can_create_owner_receipt: false,
+        can_claim_domain_ready: false,
+        can_claim_production_ready: false,
+      },
+    },
     handler: (args) =>
       buildPublicModuleActionPayload(
-        runOplModuleAction(action, parseOplModuleArgs(args, spec).moduleId!),
+        runOplModuleAction(action, parseModuleActionArgs(command, args, spec)),
       ),
   };
   return spec;
@@ -215,7 +256,7 @@ export function buildConnectCommandSpecs(
 
   validateCommandRegistryCoverage(connectCommandSpecs, {
     protectedCommandPrefixes: ['connect pubmed'],
-    requiredCommandIds: ['connect pubmed search'],
+    requiredCommandIds: ['connect pubmed search', ...MODULE_ACTION_COMMANDS],
   });
 
   return connectCommandSpecs;
