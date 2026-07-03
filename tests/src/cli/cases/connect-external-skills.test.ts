@@ -314,6 +314,53 @@ test('connect external-skills sync copies only the selected skill into workspace
   }
 });
 
+test('connect external-skills accepts skill-id alias for MAS helper compatibility', () => {
+  const sourceRoot = createExternalSkillsFixture();
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kdense-skills-alias-workspace-'));
+  try {
+    const inspect = runCli([
+      'connect',
+      'external-skills',
+      'inspect',
+      '--source-root',
+      sourceRoot,
+      '--skill-id',
+      'scanpy',
+    ]) as {
+      opl_connect_external_skills: {
+        skill: { skill_id: string };
+      };
+    };
+    assert.equal(inspect.opl_connect_external_skills.skill.skill_id, 'scanpy');
+
+    const sync = runCli([
+      'connect',
+      'external-skills',
+      'sync',
+      '--source-root',
+      sourceRoot,
+      '--skill-id',
+      'scanpy',
+      '--scope',
+      'workspace',
+      '--target-workspace',
+      workspaceRoot,
+    ]) as {
+      opl_connect_external_skills: {
+        status: string;
+        skill: { skill_id: string };
+        target_skill_root: string;
+      };
+    };
+    assert.equal(sync.opl_connect_external_skills.status, 'synced');
+    assert.equal(sync.opl_connect_external_skills.skill.skill_id, 'scanpy');
+    assert.equal(sync.opl_connect_external_skills.target_skill_root, path.join(workspaceRoot, '.codex', 'skills', 'scanpy'));
+  } finally {
+    fs.rmSync(sourceRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('connect external-skills sync requires an explicit workspace or quest target', () => {
   const sourceRoot = createExternalSkillsFixture();
   try {

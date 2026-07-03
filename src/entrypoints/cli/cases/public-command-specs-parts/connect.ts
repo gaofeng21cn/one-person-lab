@@ -162,8 +162,16 @@ function parseExternalSkillsSearchArgs(args: string[], spec: CommandSpec): Exter
   };
 }
 
+function normalizeExternalSkillSelectionArgs(args: string[]) {
+  return args.map((arg) => (arg === '--skill-id' ? '--skill' : arg));
+}
+
 function parseExternalSkillsInspectArgs(args: string[], spec: CommandSpec): ExternalSkillsInspectArgs {
-  const parsed = parseRegisteredCommandOptions('connect external-skills inspect', args, spec);
+  const parsed = parseRegisteredCommandOptions(
+    'connect external-skills inspect',
+    normalizeExternalSkillSelectionArgs(args),
+    spec,
+  );
   const skill = String(parsed.skill ?? '').trim();
   if (skill.length === 0) {
     throw buildUsageError('connect external-skills inspect requires --skill.', spec, {
@@ -179,7 +187,11 @@ function parseExternalSkillsInspectArgs(args: string[], spec: CommandSpec): Exte
 }
 
 function parseExternalSkillsSyncArgs(args: string[], spec: CommandSpec): ExternalSkillsSyncArgs {
-  const parsed = parseRegisteredCommandOptions('connect external-skills sync', args, spec);
+  const parsed = parseRegisteredCommandOptions(
+    'connect external-skills sync',
+    normalizeExternalSkillSelectionArgs(args),
+    spec,
+  );
   const skill = String(parsed.skill ?? '').trim();
   const scope = String(parsed.scope ?? '').trim();
   if (skill.length === 0) {
