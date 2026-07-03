@@ -73,6 +73,18 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - ScholarSkills / MAS Scholar Skills 仍可提供医学文献检索 playbook、query 设计、筛选策略和专门 Skill；高频稳定资源访问逐步从 skill 原型沉淀为 Connect connector，避免把 API 稳定性、限流和 source ref normalization 留在领域 prompt 里。
 - `OPL Fabric` 是通用资源底座，`OPL Connect` 是其中可独立调用的连接能力；Console 可治理和展示 connector 策略，但不是 Connect 的唯一入口。本机 OPL App、在线 Workspace、CLI 和 domain agent 都可以按权限与 profile 直接调用 Connect。
 
+### 决策：外部科学 Skill 库通过 OPL Connect 可发现和选择性同步，MAS 不全量装载
+
+原因：`K-Dense-AI/scientific-agent-skills` 这类大型 Agent Skills 库对 MAS 有参考价值，也能覆盖组学、单细胞、Nextflow、RDKit、PyHealth 等罕见专科任务。但全量安装会扩大上下文、混淆 MAS 默认八个医学论文专业 Skill 的单源维护边界，并把外部库误读成 MAS 权威。OPL Connect 应承接 source registry、manifest index、search/inspect 和 selective sync，MAS 仍决定何时请求外部能力以及是否采纳候选结果。
+
+影响：
+
+- `opl connect external-skills list|search|inspect|sync --json` 成为外部科学 Skill 库的通用发现面。
+- 当前支持的外部 source 是 `kdense-scientific-agent-skills`，本地路径通过 `--source-root` 或 `OPL_CONNECT_KDENSE_SCIENTIFIC_AGENT_SKILLS_ROOT` 提供。
+- 默认策略是 `selective_sync_only`：只把一个被选中的 skill 同步到 workspace/quest 的 `.codex/skills/<skill-id>/`，并生成 `.opl-install-receipt.json`。
+- 触发方式必须明确：用户显式命名工具/数据库/工作流、MAS 核心专业 Skill route-back、stage prompt 判断默认八技不能覆盖，或任务需要联网、云计算、敏感数据与环境策略。
+- OPL Connect 只负责发现、读取、同步和 receipt；不写 MAS paper truth、不签 owner receipt、不创建 typed blocker / human gate，也不声明 domain-ready、publication-ready 或 production-ready。
+
 ### 决策：FeedbackOps 是所有标准 Agent 的显式用户反馈入口，执行仍走 OMA work-order 与目标 owner closeout
 
 原因：用户对 MAS、MAG、RCA、BookForge、ScholarSkills 或其它标准 OPL agent 的交付结果提出明确建议时，反馈不应只靠前台 Codex 临时修，也不应只在 MAS 特化流程中触发。成熟做法是把用户反馈作为可幂等事件进入控制面，之后由 external suite、OMA developer work-order、既有 `opl work-order execute`、目标 repo owner closeout 和 App read-model 串联。OPL 不能因此新增第二套 runner/queue，也不能替目标 agent 签质量结论或 owner receipt。

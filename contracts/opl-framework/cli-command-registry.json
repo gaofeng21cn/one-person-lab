@@ -7,6 +7,7 @@
   "machine_boundary": "This registry describes command metadata and output schemas. It does not execute commands, write domain truth, create owner receipts, create typed blockers, or claim domain, artifact, App, production, release, or L5 readiness.",
   "protected_command_prefixes": [
     "connect pubmed",
+    "connect external-skills",
     "status"
   ],
   "required_command_ids": [
@@ -405,6 +406,261 @@
                 }
               }
             }
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_external_skills_list": {
+      "command_id": "connect external-skills list",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "source",
+          "flag": "--source",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "source-root",
+          "flag": "--source-root",
+          "value_kind": "string",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_connect_external_skills"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_connect_external_skills": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "sources",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_external_skills_search": {
+      "command_id": "connect external-skills search",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "source",
+          "flag": "--source",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "source-root",
+          "flag": "--source-root",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "query",
+          "flag": "--query",
+          "value_kind": "string",
+          "required": true
+        },
+        {
+          "name": "limit",
+          "flag": "--limit",
+          "value_kind": "integer",
+          "default": 10,
+          "allowed_range": {
+            "min": 1,
+            "max": 50
+          }
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_connect_external_skills"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_connect_external_skills": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "source_id",
+              "query",
+              "results",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_external_skills_inspect": {
+      "command_id": "connect external-skills inspect",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "source",
+          "flag": "--source",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "source-root",
+          "flag": "--source-root",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "skill",
+          "flag": "--skill",
+          "value_kind": "string",
+          "required": true
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_connect_external_skills"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_connect_external_skills": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "source_id",
+              "skill",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_external_skills_sync": {
+      "command_id": "connect external-skills sync",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "source",
+          "flag": "--source",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "source-root",
+          "flag": "--source-root",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "skill",
+          "flag": "--skill",
+          "value_kind": "string",
+          "required": true
+        },
+        {
+          "name": "scope",
+          "flag": "--scope",
+          "value_kind": "string",
+          "required": true
+        },
+        {
+          "name": "target-workspace",
+          "flag": "--target-workspace",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "target-quest",
+          "flag": "--target-quest",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "target-root",
+          "flag": "--target-root",
+          "value_kind": "string",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_connect_external_skills"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_connect_external_skills": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "source_id",
+              "skill",
+              "target_scope",
+              "target_root",
+              "target_skill_root",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
           }
         }
       },
