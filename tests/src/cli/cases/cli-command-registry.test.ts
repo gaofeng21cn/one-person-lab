@@ -28,6 +28,35 @@ test('connect pubmed search exposes registry metadata in command help', () => {
   assert.equal(help.registry.authority_boundary.can_claim_production_ready, false);
 });
 
+test('connect module actions expose registry metadata in command help', () => {
+  const contract = JSON.parse( // reuse-first: allow contract fixture parser
+    fs.readFileSync(
+    path.join(repoRoot, 'contracts', 'opl-framework', 'cli-command-registry.json'),
+    'utf8',
+    ),
+  );
+
+  for (const action of ['install', 'update', 'reinstall', 'remove']) {
+    const help = runCli(['help', 'connect', action]).help;
+    const contractCommand = contract.commands[`connect_${action}`];
+
+    assert.equal(help.registry.command_id, `connect ${action}`);
+    assert.equal(contractCommand.command_id, help.registry.command_id);
+    assert.equal(help.registry.parser_adapter, 'node_util_parse_args');
+    assert.equal(contractCommand.parser_adapter, help.registry.parser_adapter);
+    assert.deepEqual(help.registry.options.map((option: { name: string }) => option.name), ['module']);
+    assert.equal(
+      help.registry.json_output_schema_ref,
+      `contracts/opl-framework/cli-command-registry.json#/commands/connect_${action}/output_schema`,
+    );
+    assert.equal(contractCommand.output_schema.properties.module_action.properties.action.const, action);
+    assert.equal(help.registry.authority_boundary.can_write_domain_truth, false);
+    assert.equal(help.registry.authority_boundary.can_create_owner_receipt, false);
+    assert.equal(help.registry.authority_boundary.can_claim_domain_ready, false);
+    assert.equal(help.registry.authority_boundary.can_claim_production_ready, false);
+  }
+});
+
 test('protected command prefixes cannot bypass registry metadata', () => {
   const specs: Record<string, CommandSpec> = {
     'connect pubmed search': {

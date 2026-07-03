@@ -8,7 +8,278 @@
   "protected_command_prefixes": [
     "connect pubmed"
   ],
+  "required_command_ids": [
+    "connect pubmed search",
+    "connect install",
+    "connect update",
+    "connect reinstall",
+    "connect remove"
+  ],
   "commands": {
+    "connect_install": {
+      "command_id": "connect install",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "module",
+          "flag": "--module",
+          "value_kind": "string",
+          "required": true
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "module_action"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "module_action": {
+            "type": "object",
+            "required": [
+              "surface_id",
+              "action",
+              "status",
+              "module",
+              "turnkey"
+            ],
+            "additionalProperties": true,
+            "properties": {
+              "surface_id": {
+                "const": "opl_module_action"
+              },
+              "action": {
+                "const": "install"
+              },
+              "status": {
+                "const": "completed"
+              },
+              "module": {
+                "type": "object",
+                "required": [
+                  "module_id"
+                ],
+                "additionalProperties": true
+              },
+              "turnkey": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_update": {
+      "command_id": "connect update",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "module",
+          "flag": "--module",
+          "value_kind": "string",
+          "required": true
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "module_action"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "module_action": {
+            "type": "object",
+            "required": [
+              "surface_id",
+              "action",
+              "status",
+              "module",
+              "turnkey"
+            ],
+            "additionalProperties": true,
+            "properties": {
+              "surface_id": {
+                "const": "opl_module_action"
+              },
+              "action": {
+                "const": "update"
+              },
+              "status": {
+                "const": "completed"
+              },
+              "module": {
+                "type": "object",
+                "required": [
+                  "module_id"
+                ],
+                "additionalProperties": true
+              },
+              "turnkey": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_reinstall": {
+      "command_id": "connect reinstall",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "module",
+          "flag": "--module",
+          "value_kind": "string",
+          "required": true
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "module_action"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "module_action": {
+            "type": "object",
+            "required": [
+              "surface_id",
+              "action",
+              "status",
+              "module",
+              "turnkey"
+            ],
+            "additionalProperties": true,
+            "properties": {
+              "surface_id": {
+                "const": "opl_module_action"
+              },
+              "action": {
+                "const": "reinstall"
+              },
+              "status": {
+                "const": "completed"
+              },
+              "module": {
+                "type": "object",
+                "required": [
+                  "module_id"
+                ],
+                "additionalProperties": true
+              },
+              "turnkey": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_remove": {
+      "command_id": "connect remove",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "module",
+          "flag": "--module",
+          "value_kind": "string",
+          "required": true
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "module_action"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "module_action": {
+            "type": "object",
+            "required": [
+              "surface_id",
+              "action",
+              "status",
+              "module",
+              "turnkey"
+            ],
+            "additionalProperties": true,
+            "properties": {
+              "surface_id": {
+                "const": "opl_module_action"
+              },
+              "action": {
+                "const": "remove"
+              },
+              "status": {
+                "const": "completed"
+              },
+              "module": {
+                "type": "object",
+                "required": [
+                  "module_id"
+                ],
+                "additionalProperties": true
+              },
+              "turnkey": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
     "connect_pubmed_search": {
       "command_id": "connect pubmed search",
       "owner": "OPL Connect",
