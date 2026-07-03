@@ -1,26 +1,15 @@
-export type JsonRecord = Record<string, unknown>;
+import {
+  countValue,
+  record,
+  stringList,
+  stringValue,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
+export type { JsonRecord };
+export { record, stringList, stringValue };
 
-export function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-export function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-export function numberValue(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
-}
-
-export function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
+export const numberValue = countValue;
 
 export function firstString(...values: unknown[]) {
   for (const value of values) {
@@ -48,11 +37,12 @@ export function omitPayloadTemplateDeep(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map(omitPayloadTemplateDeep);
   }
-  if (!isRecord(value)) {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     return value;
   }
+  const valueRecord = record(value);
   return Object.fromEntries(
-    Object.entries(value)
+    Object.entries(valueRecord)
       .filter(([key]) => key !== 'payload_template')
       .map(([key, entry]) => [key, omitPayloadTemplateDeep(entry)]),
   );

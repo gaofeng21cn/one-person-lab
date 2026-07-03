@@ -3,30 +3,22 @@ import {
   evidenceTailAuthorityBoundary,
   evidenceTailItem,
   firstString,
-  isRecord,
   normalizeEvidenceTailStatus,
   stringList,
   stringValue,
   type JsonRecord,
 } from './evidence-requirement.ts';
+import {
+  countValue as numberValue,
+  record,
+  recordList,
+} from '../../kernel/json-record.ts';
 
 export const PRODUCTION_EVIDENCE_TAIL_BLOCKING_POLICY =
   'production_evidence_tail_not_a_structural_conformance_stage_launch_or_artifact_authority_pass_condition';
 
 export const PRODUCTION_TAIL_NEXT_ACTION_LEDGER_POLICY =
   'refs_only_next_action_routes_derived_from_declared_tail_refs_without_reading_memory_or_artifact_bodies';
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
-function numberValue(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
-}
 
 function tailAuthorityBoundary(extra: JsonRecord = {}) {
   return evidenceTailAuthorityBoundary(extra);
@@ -50,7 +42,10 @@ function normalizedConformanceTailItem(item: JsonRecord, index: number) {
     nextVerificationCommand: stringValue(item.next_verification_command),
     blockingPolicy: PRODUCTION_EVIDENCE_TAIL_BLOCKING_POLICY,
     authorityBoundary: {
-      source_authority_boundary: isRecord(item.authority_boundary) ? item.authority_boundary : null,
+      source_authority_boundary:
+        item.authority_boundary === record(item.authority_boundary)
+          ? record(item.authority_boundary)
+          : null,
     },
     extra: {
       repo_path: stringValue(item.repo_path),
@@ -153,7 +148,10 @@ function normalizeNextActionItem(item: JsonRecord, index: number) {
     evidence_requirement_model: 'evidence_requirement.v1',
     evidence_requirement: requirement,
     authority_boundary: tailAuthorityBoundary({
-      source_authority_boundary: isRecord(item.authority_boundary) ? item.authority_boundary : null,
+      source_authority_boundary:
+        item.authority_boundary === record(item.authority_boundary)
+          ? record(item.authority_boundary)
+          : null,
       current_ref_is_locator_only: true,
       next_safe_action_route_is_ref_only: true,
       can_close_receipt_without_declared_ref: false,
@@ -177,7 +175,7 @@ function groupNextActionItems(items: JsonRecord[]) {
       stage_id: stringValue(item.stage_id),
       request_id: stringValue(item.request_id),
       stage_or_request: stringValue(item.stage_or_request),
-      items: [],
+      items: [] as JsonRecord[],
     };
     group.items.push(item);
     groups.set(key, group);
@@ -236,7 +234,7 @@ function groupTypedBlockerNextActionItems(items: JsonRecord[]) {
         claim_scope: claimScope,
         typed_blocker_ref:
           typedBlockerRef.startsWith('missing_typed_blocker_ref:') ? null : typedBlockerRef,
-        items: [],
+        items: [] as JsonRecord[],
         stage_or_requests: new Set<string>(),
       };
       group.items.push(item);

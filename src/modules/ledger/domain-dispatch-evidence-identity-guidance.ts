@@ -1,16 +1,8 @@
-import type { JsonRecord } from '../../kernel/types.ts';
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
+import {
+  record,
+  stringValue,
+  type JsonRecord,
+} from '../../kernel/json-record.ts';
 
 export function buildDomainDispatchEvidenceIdentityGuidance(input: {
   routeDomainId: string | null;

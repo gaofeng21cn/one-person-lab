@@ -3,29 +3,17 @@ import {
   currentOwnerDeltaWithClosedStageRunAnswer,
   readModelWithClosedStageRunAnswer,
 } from './current-owner-delta-stage-run-closeout.ts';
-
-type JsonRecord = Record<string, unknown>;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
+import {
+  record,
+  stringList as strings,
+  stringValue as text,
+  type JsonRecord,
+} from '../../kernel/json-record.ts';
 
 function optionalRecord(value: unknown): JsonRecord | null {
-  return isRecord(value) ? value : null;
-}
-
-function text(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function strings(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(text).filter((entry): entry is string => Boolean(entry))
-    : [];
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? record(value)
+    : null;
 }
 
 export function buildCurrentOwnerDeltaTopline(input: {

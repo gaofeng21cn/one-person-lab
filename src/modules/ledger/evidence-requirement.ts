@@ -1,4 +1,12 @@
-export type JsonRecord = Record<string, unknown>;
+import {
+  record,
+  stringList,
+  stringValue,
+  type JsonRecord,
+} from '../../kernel/json-record.ts';
+
+export type { JsonRecord };
+export { stringList, stringValue };
 
 export type EvidenceTailStatus = 'open' | 'closed' | 'blocked' | 'domain_owned_typed_blocker';
 
@@ -55,20 +63,6 @@ const DEFAULT_EVIDENCE_NOT_AUTHORIZED_CLAIMS = [
   'production_ready',
 ];
 
-export function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-export function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-export function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
 export function firstString(...values: unknown[]) {
   for (const value of values) {
     const direct = stringValue(value);
@@ -81,8 +75,9 @@ export function firstString(...values: unknown[]) {
         if (nested) {
           return nested;
         }
-        if (isRecord(entry)) {
-          const ref = stringValue(entry.ref) ?? stringValue(entry.source_ref);
+        const entryRecord = record(entry);
+        if (entryRecord === entry) {
+          const ref = stringValue(entryRecord.ref) ?? stringValue(entryRecord.source_ref);
           if (ref) {
             return ref;
           }
@@ -121,7 +116,7 @@ export function evidenceTailAuthorityBoundary(extra: JsonRecord = {}) {
 }
 
 export function evidenceRequirementFromTailItem(item: JsonRecord): EvidenceRequirement {
-  const nested = isRecord(item.evidence_requirement) ? item.evidence_requirement : {};
+  const nested = record(item.evidence_requirement);
   const owner = firstString(nested.owner, item.owner, item.owner_group, item.domain_owner) ?? 'one-person-lab';
   const domainId = firstString(nested.domain_id, item.domain_id, item.domain, item.domain_owner, item.owner_group)
     ?? owner;

@@ -1,7 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
-
-type JsonRecord = Record<string, unknown>;
+import {
+  record,
+  stringList,
+  stringValue,
+  type JsonRecord,
+} from '../../kernel/json-record.ts';
+import { readJsonPayloadFile } from '../../kernel/json-file.ts';
 
 export type ExternalEvidenceReceiptSemantics =
   | 'domain_owned_receipt_ref'
@@ -13,20 +18,6 @@ export type ExternalEvidenceReceiptClassification = {
   reclassified_typed_blocker_refs: string[];
   receipt_semantics: ExternalEvidenceReceiptSemantics;
 };
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
 
 function uniqueStrings(values: Array<string | null | undefined>) {
   return [...new Set(values.filter((entry): entry is string => Boolean(entry)))];
@@ -73,10 +64,14 @@ function jsonPointerValue(root: unknown, pointer: string) {
       current = current[index];
       continue;
     }
-    if (!isRecord(current) || !(part in current)) {
+    if (current === null || typeof current !== 'object' || Array.isArray(current)) {
       return null;
     }
-    current = current[part];
+    const currentRecord = record(current);
+    if (!(part in currentRecord)) {
+      return null;
+    }
+    current = currentRecord[part];
   }
   return current;
 }
@@ -100,9 +95,11 @@ function workspaceJsonRefTarget(ref: string, domainWorkspacePath: string | null 
     return null;
   }
   try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const parsed = readJsonPayloadFile(filePath);
     const target = jsonPointerValue(parsed, pointer);
-    return isRecord(target) ? target : null;
+    return target !== null && typeof target === 'object' && !Array.isArray(target)
+      ? record(target)
+      : null;
   } catch {
     return null;
   }

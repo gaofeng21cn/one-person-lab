@@ -1,31 +1,16 @@
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { domainDispatchEvidencePayloadRefs } from './domain-dispatch-evidence-payload-refs.ts';
 import { listStageRunExecutionAuthorizationReceipts } from '../stagecraft/index.ts';
-import type { JsonRecord } from '../../kernel/types.ts';
+import {
+  record,
+  recordList,
+  stringList,
+  stringValue,
+  type JsonRecord,
+} from '../../kernel/json-record.ts';
+import { readJsonPayloadFile } from '../../kernel/json-file.ts';
 import fs from 'node:fs';
 import path from 'node:path';
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
 
 function looksLikePlaceholderRef(ref: string) {
   return ref.startsWith('<') && ref.endsWith('>');
@@ -88,12 +73,14 @@ function fragmentRecord(content: JsonRecord, fragment: string | null) {
     .split('/')
     .filter((part) => part.length > 0)
     .reduce<unknown>((current, part) => {
-      if (!isRecord(current)) {
+      if (current === null || typeof current !== 'object' || Array.isArray(current)) {
         return undefined;
       }
-      return current[decodeURIComponent(part)];
+      return record(current)[decodeURIComponent(part)];
     }, content);
-  return isRecord(value) ? value : null;
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? record(value)
+    : null;
 }
 
 function localJsonRefPath(ref: string, route: JsonRecord) {
@@ -139,17 +126,23 @@ function localJsonRefContent(ref: string, route: JsonRecord) {
   }
   let parsed: unknown;
   try {
-    parsed = JSON.parse(fs.readFileSync(target.ref_path, 'utf8'));
+    parsed = readJsonPayloadFile(target.ref_path);
   } catch {
     return null;
   }
-  const content = isRecord(parsed) ? fragmentRecord(parsed, target.fragment) : null;
+  const content =
+    parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? fragmentRecord(record(parsed), target.fragment)
+      : null;
   return content ? { ref, ref_path: target.ref_path, fragment: target.fragment, content } : null;
 }
 
 function identityFromOwnerAnswerContent(content: JsonRecord) {
   const surfaceKind = stringValue(content.surface_kind);
-  const hasCloseoutBinding = isRecord(content.closeout_binding);
+  const hasCloseoutBinding =
+    content.closeout_binding !== null
+    && typeof content.closeout_binding === 'object'
+    && !Array.isArray(content.closeout_binding);
   const hasOwnerAnswerShape = [
     'receipt_kind',
     'domain_blocker',
@@ -283,11 +276,10 @@ function forbiddenPaperLineOwnerChainPayloadClaims(payload: JsonRecord) {
 
 function ownerDeltaResultCloseoutBindingIdentity(payload: JsonRecord) {
   const ownerDeltaResult = payload.owner_delta_result;
-  const results = isRecord(ownerDeltaResult)
-    ? [ownerDeltaResult]
-    : Array.isArray(ownerDeltaResult)
-      ? ownerDeltaResult.filter(isRecord)
-      : [];
+  const results =
+    ownerDeltaResult !== null && typeof ownerDeltaResult === 'object' && !Array.isArray(ownerDeltaResult)
+      ? [record(ownerDeltaResult)]
+      : recordList(ownerDeltaResult);
   const fields = [
     'stage_run_id',
     'stage_manifest_ref',

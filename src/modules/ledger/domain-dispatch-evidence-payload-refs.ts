@@ -1,22 +1,14 @@
-import type { JsonRecord } from '../../kernel/types.ts';
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
+import {
+  record,
+  recordList,
+  stringList,
+  stringValue,
+  type JsonRecord,
+} from '../../kernel/json-record.ts';
 
 function stringRefs(value: unknown) {
   const scalar = stringValue(value);
   return scalar ? [scalar] : stringList(value);
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 function refsFromPayload(payload: JsonRecord, keys: string[]) {
@@ -34,17 +26,15 @@ function uniqueStrings(values: string[]) {
 }
 
 function paperLineOwnerChainResults(payload: JsonRecord) {
-  return Array.isArray(payload.paper_line_owner_chain_results)
-    ? payload.paper_line_owner_chain_results.filter(isRecord)
-    : [];
+  return recordList(payload.paper_line_owner_chain_results);
 }
 
 function ownerDeltaResults(payload: JsonRecord) {
   const result = payload.owner_delta_result;
-  if (isRecord(result)) {
-    return [result];
+  if (result !== null && typeof result === 'object' && !Array.isArray(result)) {
+    return [record(result)];
   }
-  return Array.isArray(result) ? result.filter(isRecord) : [];
+  return recordList(result);
 }
 
 export function domainDispatchEvidencePayloadRefs(payload: JsonRecord) {
