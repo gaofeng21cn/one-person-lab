@@ -1,4 +1,3 @@
-import { buildRuntimeTraySnapshot } from '../console/index.ts';
 import type { FrameworkContracts, JsonRecord } from '../../kernel/types.ts';
 import {
   OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS,
@@ -8,6 +7,10 @@ import {
   type ObservabilityMetricInstrument,
   type ObservabilitySemanticConventionInput,
 } from '../ledger/index.ts';
+import {
+  requireRuntimeTraySnapshotProvider,
+  type RuntimeTraySnapshotProvider,
+} from './runtime-tray-snapshot-provider.ts';
 
 export type ObservabilityExportFormat = 'json' | 'openmetrics';
 
@@ -350,9 +353,16 @@ function buildRuntimeSemanticConventionProjection(input: {
 
 export async function buildObservabilityExport(
   contracts: FrameworkContracts,
-  options: { format?: ObservabilityExportFormat } = {},
+  options: {
+    format?: ObservabilityExportFormat;
+    runtimeSnapshotProvider?: RuntimeTraySnapshotProvider;
+  } = {},
 ) {
-  const payload = await buildRuntimeTraySnapshot(contracts);
+  const runtimeSnapshotProvider = requireRuntimeTraySnapshotProvider(
+    options.runtimeSnapshotProvider,
+    'runtime observability-export',
+  );
+  const payload = await runtimeSnapshotProvider(contracts);
   const snapshot = record(payload.runtime_tray_snapshot);
   const workbench = record(snapshot.stage_attempt_workbench);
   const attempts = recordList(workbench.attempts);

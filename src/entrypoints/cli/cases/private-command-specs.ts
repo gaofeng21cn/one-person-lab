@@ -402,7 +402,9 @@ export function buildInternalCommandSpecs(
         'opl runtime action execute --action action:sat_demo:attempt-query',
         'opl runtime action execute --action action:sat_demo:domain-repair-command:0 --payload \'{"reason":"operator_selected"}\'',
       ],
-      handler: (args) => runRuntimeOperatorActionExecute(getContracts(), args),
+      handler: (args) => runRuntimeOperatorActionExecute(getContracts(), args, {
+        runtimeSnapshotProvider: buildRuntimeTraySnapshot,
+      }),
     },
     'runtime lifecycle apply': {
       usage: 'opl runtime lifecycle apply --mode dry-run|apply|verify --domain <domain_id> [--action <json>|--handoff <json>] [--receipt-ref <ref>]',
@@ -465,7 +467,10 @@ export function buildInternalCommandSpecs(
       ],
       handler: async (args) => {
         const parsed = parseObservabilityExportArgs(args, commandSpecs['runtime observability-export']);
-        const exportPayload = await buildObservabilityExport(getContracts(), { format: parsed.format });
+        const exportPayload = await buildObservabilityExport(getContracts(), {
+          format: parsed.format,
+          runtimeSnapshotProvider: buildRuntimeTraySnapshot,
+        });
         if (parsed.format === 'openmetrics') {
           process.stdout.write(renderObservabilityOpenMetrics(exportPayload));
           return { __handled: true as const };
@@ -546,7 +551,9 @@ export function buildInternalCommandSpecs(
         'opl family-runtime queue release --study 003-dpcc-primary-care-phenotype-treatment-gap --reason manual_pause_for_mas_upgrade',
         'opl family-runtime queue retire --study 003-dpcc-primary-care-phenotype-treatment-gap --task-kind paper_autonomy/guarded-apply --reason superseded_by_publication_handoff_owner_gate',
       ],
-      handler: (args) => runFamilyRuntime(args),
+      handler: (args) => runFamilyRuntime(args, {
+        runtimeSnapshotProvider: buildRuntimeTraySnapshot,
+      }),
     },
     'stage-artifact': {
       usage: 'opl stage-artifact open|commit|status|explain|rebuild|promote|gc|restore|validate|conformance|workbench --domain <domain> --program <id> --topic <id> --deliverable <id>',

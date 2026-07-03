@@ -1,5 +1,4 @@
 import type { FrameworkContracts } from '../../kernel/types.ts';
-import { buildRuntimeTraySnapshot } from '../console/index.ts';
 import type { FamilyRuntimeProviderKind } from './family-runtime-types.ts';
 import { buildProductionTailNextActionLedger } from '../ledger/index.ts';
 import { compactEvidenceEnvelopeProjection } from '../ledger/index.ts';
@@ -38,6 +37,11 @@ import {
   OPEN_WORKLIST_STATUS,
 } from './family-runtime-evidence-worklist-parts/constants.ts';
 import {
+  requireRuntimeTraySnapshotProvider,
+  type RuntimeTraySnapshotEnvelope,
+  type RuntimeTraySnapshotProvider,
+} from './runtime-tray-snapshot-provider.ts';
+import {
   readOnlyWorklistItem,
 } from './family-runtime-evidence-worklist-parts/route-worklist-items.ts';
 import {
@@ -62,7 +66,8 @@ type EvidenceWorklistInput = {
   providerKind: FamilyRuntimeProviderKind;
   executorKind: 'codex_cli';
   detailLevel?: 'summary' | 'full';
-  runtimeSnapshot?: Awaited<ReturnType<typeof buildRuntimeTraySnapshot>>;
+  runtimeSnapshot?: RuntimeTraySnapshotEnvelope;
+  runtimeSnapshotProvider?: RuntimeTraySnapshotProvider;
   stageReadiness?: JsonRecord;
   domainManifests?: DomainManifestCatalog;
   queryTemporalStageAttemptReadModel?: EvidenceWorklistTemporalQuery;
@@ -74,12 +79,17 @@ export async function runFamilyRuntimeEvidenceWorklist(
 ) {
   const domainManifests = domainManifestsForWorklist(contracts, input);
   const stageReadiness = stageReadinessForWorklist(contracts, input, domainManifests);
+  const snapshotOptions = {
+    appOperatorDrilldownDetailLevel: 'full' as const,
+    providerKind: input.providerKind,
+    ...(domainManifests ? { domainManifests } : {}),
+  };
+  const buildSnapshot = () => requireRuntimeTraySnapshotProvider(
+    input.runtimeSnapshotProvider,
+    'family-runtime evidence-worklist',
+  )(contracts, snapshotOptions);
   const preliminarySnapshot = input.runtimeSnapshot
-    ?? await buildRuntimeTraySnapshot(contracts, {
-      appOperatorDrilldownDetailLevel: 'full',
-      providerKind: input.providerKind,
-      ...(domainManifests ? { domainManifests } : {}),
-    });
+    ?? await buildSnapshot();
   const terminalObservationSync = await syncTerminalTemporalAttemptsForEvidenceWorklist({
     ...input,
     candidateStageAttemptIds: input.runtimeSnapshot
@@ -89,11 +99,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
   const snapshot = input.runtimeSnapshot
     ? preliminarySnapshot
     : countValue(record(terminalObservationSync).synced_attempt_count) > 0
-      ? await buildRuntimeTraySnapshot(contracts, {
-          appOperatorDrilldownDetailLevel: 'full',
-          providerKind: input.providerKind,
-          ...(domainManifests ? { domainManifests } : {}),
-        })
+      ? await buildSnapshot()
       : preliminarySnapshot;
   const drilldown = record(snapshot.runtime_tray_snapshot.app_operator_drilldown);
   const {

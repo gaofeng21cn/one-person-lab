@@ -13,6 +13,7 @@ import type { FrameworkContracts } from '../../../kernel/types.ts';
 import { settingsControlCenterActionById } from '../app-state-settings-control-center.ts';
 import { buildOplDockerWebuiDoctor } from '../../connect/index.ts';
 import { runOplTurnkeyInstall } from '../../connect/index.ts';
+import { buildRuntimeTraySnapshot } from '../runtime-tray-snapshot.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -1092,7 +1093,9 @@ export async function runOplAppActionExecute(
       options.actionId,
       ...(Object.keys(options.payload).length > 0 ? ['--payload', JSON.stringify(options.payload)] : []),
       ...(options.dryRun ? ['--dry-run'] : []),
-    ]);
+    ], {
+      runtimeSnapshotProvider: buildRuntimeTraySnapshot,
+    });
   } catch (error) {
     if (!options.dryRun) {
       throw error;

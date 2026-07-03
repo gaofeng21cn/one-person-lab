@@ -81,6 +81,7 @@ import {
   runFamilyRuntimePaperAutonomySupervisorDecideCommand,
   runFamilyRuntimePaperAutonomySupervisorReadbackCommand,
 } from './family-runtime-paper-autonomy-command.ts';
+import type { RuntimeTraySnapshotProvider } from './runtime-tray-snapshot-provider.ts';
 import {
   paperMissionRedriveProviderFollowthrough,
   providerPreflightBlockedReason,
@@ -157,7 +158,10 @@ function approveTask(
   );
 }
 
-export async function runFamilyRuntime(args: string[]): Promise<Record<string, unknown>> {
+export async function runFamilyRuntime(
+  args: string[],
+  options: { runtimeSnapshotProvider?: RuntimeTraySnapshotProvider } = {},
+): Promise<Record<string, unknown>> {
   const parsed = parseFamilyRuntimeCommand(args);
   const { db, paths } = openQueueDb();
   try {
@@ -403,7 +407,9 @@ export async function runFamilyRuntime(args: string[]): Promise<Record<string, u
       return runFamilyRuntimePaperAutonomySupervisorDecideCommand(parsed);
     }
     if (parsed.mode === 'evidence_worklist') {
-      return runFamilyRuntimeEvidenceWorklistCommand(parsed.input);
+      return runFamilyRuntimeEvidenceWorklistCommand(parsed.input, {
+        runtimeSnapshotProvider: options.runtimeSnapshotProvider,
+      });
     }
     if (parsed.mode === 'stage_artifact') {
       return runFamilyRuntimeStageArtifactCommand(parsed.input);

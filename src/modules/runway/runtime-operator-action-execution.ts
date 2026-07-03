@@ -3,7 +3,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
-import { buildRuntimeTraySnapshot } from '../console/index.ts';
 import { runFamilyRuntime } from './family-runtime.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-command.ts';
 import {
@@ -34,6 +33,10 @@ import { domainOwnerPayloadSummaryExecution } from './runtime-operator-action-ex
 import { magManifestSustainedConsumptionExecution } from './runtime-operator-action-execution-parts/mag-manifest-sustained-consumption-action.ts';
 import { blockedActionRouteExecution } from './runtime-operator-action-execution-parts/blocked-action-route.ts';
 import { SUPPORTED_OPL_ACTION_ROUTE_KINDS } from './runtime-operator-action-execution-parts/supported-action-kinds.ts';
+import {
+  requireRuntimeTraySnapshotProvider,
+  type RuntimeTraySnapshotProvider,
+} from './runtime-tray-snapshot-provider.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -42,6 +45,10 @@ type RuntimeActionExecuteOptions = {
   payload: JsonRecord;
   dryRun: boolean;
   approveDomainAction: boolean;
+};
+
+type RuntimeOperatorActionExecuteDependencies = {
+  runtimeSnapshotProvider?: RuntimeTraySnapshotProvider;
 };
 
 function parseJsonObject(value: string, context: string): JsonRecord {
@@ -551,6 +558,7 @@ async function executeRoute(
   contracts: FrameworkContracts,
   route: JsonRecord,
   options: RuntimeActionExecuteOptions,
+  dependencies: RuntimeOperatorActionExecuteDependencies,
 ) {
   const actionKind = stringValue(route.action_kind) ?? '';
   const owner = stringValue(route.owner) ?? stringValue(route.action_owner) ?? '';
@@ -730,7 +738,9 @@ async function executeRoute(
             ? runFamilyAgentLegacyCleanupApply(contracts, runtimeArgs.slice(3))
             : providerWorkerRepair
               ? runProviderWorkerRepair(providerWorkerRepair, runFamilyRuntime)
-            : await runFamilyRuntime(runtimeArgs),
+            : await runFamilyRuntime(runtimeArgs, {
+                runtimeSnapshotProvider: dependencies.runtimeSnapshotProvider,
+              }),
     };
   }
 
@@ -762,7 +772,11 @@ async function executeRoute(
       route_ref: commandOrSurfaceRef,
       action_kind: actionKind,
       executed_runtime_command: `opl family-runtime ${runtimeArgs.join(' ')}`,
-      result: options.dryRun ? null : await runFamilyRuntime(runtimeArgs),
+      result: options.dryRun
+        ? null
+        : await runFamilyRuntime(runtimeArgs, {
+            runtimeSnapshotProvider: dependencies.runtimeSnapshotProvider,
+          }),
     };
   }
 
@@ -799,7 +813,11 @@ async function executeRoute(
       action_kind: actionKind,
       approval_policy: options.approveDomainAction ? 'queued_without_extra_approval' : 'queued_waiting_approval',
       executed_runtime_command: `opl family-runtime ${runtimeArgs.join(' ')}`,
-      result: options.dryRun ? null : await runFamilyRuntime(runtimeArgs),
+      result: options.dryRun
+        ? null
+        : await runFamilyRuntime(runtimeArgs, {
+            runtimeSnapshotProvider: dependencies.runtimeSnapshotProvider,
+          }),
     };
   }
 
@@ -814,9 +832,14 @@ async function executeRoute(
 export async function runRuntimeOperatorActionExecute(
   contracts: FrameworkContracts,
   args: string[],
+  dependencies: RuntimeOperatorActionExecuteDependencies = {},
 ): Promise<JsonRecord> {
   const options = parseRuntimeActionExecuteArgs(args);
-  const snapshotEnvelope = await buildRuntimeTraySnapshot(contracts, {
+  const runtimeSnapshotProvider = requireRuntimeTraySnapshotProvider(
+    dependencies.runtimeSnapshotProvider,
+    'runtime action execute',
+  );
+  const snapshotEnvelope = await runtimeSnapshotProvider(contracts, {
     appOperatorDrilldownDetailLevel: 'full',
   });
   const snapshot = snapshotEnvelope.runtime_tray_snapshot as JsonRecord;
@@ -860,7 +883,7 @@ export async function runRuntimeOperatorActionExecute(
     };
   }
 
-  const execution = await executeRoute(contracts, route, options);
+  const execution = await executeRoute(contracts, route, options, dependencies);
   return {
     runtime_operator_action_execution: {
       surface_kind: 'opl_runtime_operator_action_execution',
