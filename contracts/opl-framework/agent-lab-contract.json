@@ -80,7 +80,16 @@
     "domain_feedback_external_suite_refs",
     "developer_work_order_candidate_refs",
     "feedback_work_order_completion_refs",
-    "feedback_work_order_blocker_refs"
+    "feedback_work_order_blocker_refs",
+    "failure_token_registry_refs",
+    "failure_token_refs",
+    "capability_map_refs",
+    "capability_hit_refs",
+    "canonical_target_path_refs",
+    "required_verification_refs",
+    "forbidden_surface_refs",
+    "owner_closeout_boundary_refs",
+    "self_evolution_work_order_candidate_refs"
   ],
   "required_observations": [
     "task_manifests_observed",
@@ -198,7 +207,16 @@
       "developer_work_order_candidate_refs",
       "feedback_work_order_status_refs",
       "feedback_work_order_completion_refs",
-      "feedback_work_order_blocker_refs"
+      "feedback_work_order_blocker_refs",
+      "failure_token_registry_refs",
+      "failure_token_refs",
+      "capability_map_refs",
+      "capability_hit_refs",
+      "canonical_target_path_refs",
+      "required_verification_refs",
+      "forbidden_surface_refs",
+      "owner_closeout_boundary_refs",
+      "self_evolution_work_order_candidate_refs"
     ]
   },
   "domain_feedback_self_evolution_surface": {
@@ -254,7 +272,15 @@
       "domain_feedback_external_suite_refs",
       "developer_work_order_candidate_refs",
       "feedback_work_order_completion_refs",
-      "feedback_work_order_blocker_refs"
+      "feedback_work_order_blocker_refs",
+      "failure_token_registry_refs",
+      "failure_token_refs",
+      "failure_evidence_refs",
+      "capability_hit_refs",
+      "canonical_target_path_refs",
+      "required_verification_refs",
+      "forbidden_surface_refs",
+      "owner_closeout_boundary_refs"
     ],
     "accepted_feedback_profiles": [
       "target_agent_feedback_external_suite"
@@ -279,6 +305,62 @@
       "app_state.operator.workbench.feedbackops",
       "app_state.operator.workbench.action_queue.items[feedbackops:*]"
     ],
+    "authority_boundary": {
+      "can_create_second_runner_or_queue": false,
+      "can_write_runtime_db": false,
+      "can_write_provider_queue": false,
+      "can_write_target_domain_truth": false,
+      "can_write_target_domain_memory_body": false,
+      "can_mutate_target_domain_artifact_body": false,
+      "can_authorize_target_domain_quality_or_export": false,
+      "can_create_owner_receipt": false,
+      "can_create_typed_blocker": false,
+      "can_create_human_gate": false
+    }
+  },
+  "self_evolution_work_order_surface": {
+    "surface_kind": "opl_self_evolution_work_order_candidate",
+    "version": "opl.self-evolution-work-order.v1",
+    "schema_ref": "contracts/opl-framework/self-evolution-work-order.schema.json",
+    "failure_token_registry_ref": "contracts/opl-framework/agent-lab-failure-token-registry.json",
+    "refs_only": true,
+    "purpose": "Route evaluation, reviewer, runtime, or explicit user feedback evidence to capability-map-owned stage prompts, professional skills, tool connectors, knowledge packs, quality gates, or eval suites without creating a second target-owner authority.",
+    "required_fields": [
+      "failure_evidence_refs",
+      "failure_tokens",
+      "capability_hits",
+      "canonical_target_paths",
+      "required_verification_refs",
+      "forbidden_surfaces",
+      "owner_closeout_boundary"
+    ],
+    "input_ref_groups": [
+      "failure_evidence_refs",
+      "failure_token_refs",
+      "capability_map_refs",
+      "capability_hit_refs",
+      "canonical_target_path_refs",
+      "required_verification_refs",
+      "forbidden_surface_refs",
+      "owner_closeout_boundary_refs"
+    ],
+    "consumer_outputs": [
+      "developer_work_order_candidate",
+      "feedbackops.read_model",
+      "oma.improve_external_suite",
+      "app_state.operator.workbench.agent_lab_self_evolution"
+    ],
+    "owner_closeout_boundary": {
+      "target_owner_acceptance_required": true,
+      "required_return_shapes": [
+        "owner_receipt_ref",
+        "typed_blocker_ref",
+        "human_gate_ref",
+        "route_back_ref"
+      ],
+      "oma_can_write_owner_receipt_body": false,
+      "agent_lab_can_create_typed_blocker": false
+    },
     "authority_boundary": {
       "can_create_second_runner_or_queue": false,
       "can_write_runtime_db": false,

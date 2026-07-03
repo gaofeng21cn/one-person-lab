@@ -175,6 +175,70 @@
         },
         "authority_boundary": {
           "$ref": "#/$defs/authority_boundary"
+        },
+        "failure_token_registry_ref": {
+          "const": "contracts/opl-framework/agent-lab-failure-token-registry.json"
+        },
+        "improvement_tokens": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "verification_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "canonical_target_paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "forbidden_surfaces": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "owner_closeout_boundary": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "owner",
+            "required_return_shapes",
+            "can_write_owner_receipt_body",
+            "can_create_typed_blocker"
+          ],
+          "properties": {
+            "owner": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required_return_shapes": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "owner_receipt_ref",
+                  "typed_blocker_ref",
+                  "human_gate_ref",
+                  "route_back_ref"
+                ]
+              }
+            },
+            "can_write_owner_receipt_body": {
+              "const": false
+            },
+            "can_create_typed_blocker": {
+              "const": false
+            }
+          }
         }
       }
     },

@@ -8,6 +8,7 @@ import {
   buildDeliveryFeedbackEvent,
   buildFeedbackOpsReadModel,
   buildFeedbackOpsReconcileReceipt,
+  buildSelfEvolutionWorkOrderCandidate,
   readFeedbackOpsEvents,
   submitDeliveryFeedbackEvent,
 } from '../../src/modules/foundry-lab/agent-lab-feedbackops.ts';
@@ -110,6 +111,81 @@ test('FeedbackOps read model gates execution on explicit developer-mode direct r
   assert.equal(receipt.execution_owner, 'opl_work_order_execute_when_developer_mode_allows');
 });
 
+test('FeedbackOps carries capability-map evidence for self-evolution work orders', () => {
+  const event = buildDeliveryFeedbackEvent({
+    targetAgentId: 'rca',
+    deliveryRef: 'deck:case-review/current',
+    feedbackRef: 'user-feedback:rca/visual-density',
+    feedbackKind: 'quality_gap',
+    failureTokens: ['ppt_visual_density', 'ppt_visual_review'],
+    failureEvidenceRefs: ['visual-review-ref:rca/case-review/screenshot-qa'],
+    capabilityHitRefs: ['capability-hit-ref:rca/rca-ppt-reviewer'],
+    canonicalTargetPaths: ['agent/professional_skills/rca-ppt-reviewer/SKILL.md'],
+    requiredVerificationRefs: ['npm:test:rca-capability-routing'],
+    forbiddenSurfaces: ['owner_receipt_body', 'visual_export_verdict'],
+    ownerCloseoutBoundaryRef: 'owner-closeout-boundary-ref:rca/visual-owner',
+    developerWorkOrderCandidateRef: 'developer-work-order-candidate-ref:rca/visual-density',
+    idempotencyKey: 'feedbackops-self-evolution',
+  });
+
+  assert.equal(
+    event.failure_token_registry_ref,
+    'contracts/opl-framework/agent-lab-failure-token-registry.json',
+  );
+  assert.equal(
+    event.self_evolution_work_order_schema_ref,
+    'contracts/opl-framework/self-evolution-work-order.schema.json',
+  );
+  assert.deepEqual(event.failure_tokens, ['ppt_visual_density', 'ppt_visual_review']);
+  assert.deepEqual(event.required_verification_refs, ['npm:test:rca-capability-routing']);
+  assert.deepEqual(event.forbidden_surfaces, ['owner_receipt_body', 'visual_export_verdict']);
+
+  const readModel = buildFeedbackOpsReadModel({
+    events: [event],
+    developerMode: { effective_state: 'active_direct', allowed_route: 'direct_repo_fix' },
+  });
+  const item = readModel.work_order_status_items[0];
+  assert.equal(item.status, 'executable');
+  assert.deepEqual(item.failure_tokens, ['ppt_visual_density', 'ppt_visual_review']);
+  assert.deepEqual(item.capability_hit_refs, ['capability-hit-ref:rca/rca-ppt-reviewer']);
+  assert.deepEqual(item.canonical_target_paths, ['agent/professional_skills/rca-ppt-reviewer/SKILL.md']);
+  assert.deepEqual(item.required_verification_refs, ['npm:test:rca-capability-routing']);
+  assert.equal(item.owner_closeout_boundary_ref, 'owner-closeout-boundary-ref:rca/visual-owner');
+  assert.equal(asRecord(item.authority_boundary).can_create_owner_receipt, false);
+});
+
+test('Self-evolution work order candidate binds failure evidence to capability hits and owner closeout', () => {
+  const workOrder = buildSelfEvolutionWorkOrderCandidate({
+    targetAgentId: 'mas',
+    feedbackRef: 'user-feedback:mas/figure-quality',
+    failureEvidenceRefs: ['reviewer-evidence-ref:mas/figure-quality'],
+    failureTokens: ['figure_quality', 'source_data_traceability'],
+    capabilityHits: [
+      {
+        capabilityId: 'medical-figure-design',
+        canonicalTargetPaths: ['skills/medical-figure-design/SKILL.md'],
+        requiredVerificationRefs: ['mas-scholar-skills:scripts/verify.sh'],
+        forbiddenSurfaces: ['paper_truth', 'publication_readiness', 'owner_receipt_body'],
+        owner: 'mas-scholar-skills',
+        ownerCloseoutBoundaryRef: 'owner-closeout-boundary-ref:mas-scholar-skills/medical-figure-design',
+      },
+    ],
+  });
+
+  assert.equal(workOrder.surface_kind, 'opl_self_evolution_work_order_candidate');
+  assert.equal(workOrder.failure_token_registry_ref, 'contracts/opl-framework/agent-lab-failure-token-registry.json');
+  assert.deepEqual(workOrder.failure_evidence_refs, ['reviewer-evidence-ref:mas/figure-quality']);
+  assert.deepEqual(workOrder.failure_tokens, ['figure_quality', 'source_data_traceability']);
+  assert.deepEqual(workOrder.canonical_target_paths, ['skills/medical-figure-design/SKILL.md']);
+  assert.deepEqual(workOrder.required_verification_refs, ['mas-scholar-skills:scripts/verify.sh']);
+  assert.deepEqual(workOrder.forbidden_surfaces, ['paper_truth', 'publication_readiness', 'owner_receipt_body']);
+  assert.equal(workOrder.capability_hits[0].owner_closeout_boundary.owner, 'mas-scholar-skills');
+  assert.equal(workOrder.owner_closeout_boundary.target_owner_acceptance_required, true);
+  assert.equal(workOrder.authority_boundary.can_sign_owner_receipt, false);
+  assert.equal(workOrder.authority_boundary.can_create_typed_blocker, false);
+  assert.equal(workOrder.authority_boundary.can_claim_production_ready, false);
+});
+
 test('FeedbackOps contract declares universal trigger and no-authority boundary', () => {
   const contract = JSON.parse(fs.readFileSync(
     path.join(contractsDir, 'agent-lab-contract.json'),
@@ -127,4 +203,19 @@ test('FeedbackOps contract declares universal trigger and no-authority boundary'
   assert.equal(surface.authority_boundary.can_write_target_domain_truth, false);
   assert.equal(surface.authority_boundary.can_authorize_target_domain_quality_or_export, false);
   assert.equal(surface.authority_boundary.can_create_owner_receipt, false);
+
+  const workOrderSurface = contract.self_evolution_work_order_surface;
+  assert.equal(workOrderSurface.surface_kind, 'opl_self_evolution_work_order_candidate');
+  assert.equal(
+    workOrderSurface.failure_token_registry_ref,
+    'contracts/opl-framework/agent-lab-failure-token-registry.json',
+  );
+  assert.ok(workOrderSurface.required_fields.includes('failure_evidence_refs'));
+  assert.ok(workOrderSurface.required_fields.includes('capability_hits'));
+  assert.ok(workOrderSurface.required_fields.includes('required_verification_refs'));
+  assert.ok(workOrderSurface.required_fields.includes('forbidden_surfaces'));
+  assert.ok(workOrderSurface.required_fields.includes('owner_closeout_boundary'));
+  assert.equal(workOrderSurface.owner_closeout_boundary.oma_can_write_owner_receipt_body, false);
+  assert.equal(workOrderSurface.owner_closeout_boundary.agent_lab_can_create_typed_blocker, false);
+  assert.equal(workOrderSurface.authority_boundary.can_create_owner_receipt, false);
 });

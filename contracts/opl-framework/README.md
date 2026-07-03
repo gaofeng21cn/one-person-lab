@@ -140,6 +140,8 @@ These schema files are the machine-readable OPL target architecture surface. The
 - `advisory-knowledge-boundary-contract.json`
 - `okf-context-bundle-contract.json`
 - `agent-lab-contract.json`
+- `agent-lab-failure-token-registry.json`
+- `self-evolution-work-order.schema.json`
 - `opl-flow-completion-audit-contract.json`
 - `agent-lab-mag-live-acceptance-suite.json`
 - `agent-platform-surface-ownership-contract.json`

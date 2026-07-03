@@ -29,8 +29,47 @@ export type DeliveryFeedbackEventInput = {
   developerWorkOrderCandidateRef?: string | null;
   completionRef?: string | null;
   blockerRef?: string | null;
+  failureTokens?: string[];
+  failureEvidenceRefs?: string[];
+  capabilityHitRefs?: string[];
+  canonicalTargetPaths?: string[];
+  requiredVerificationRefs?: string[];
+  forbiddenSurfaces?: string[];
+  ownerCloseoutBoundaryRef?: string | null;
   idempotencyKey?: string | null;
   sourceRef?: string | null;
+};
+
+export type SelfEvolutionCapabilityHitInput = {
+  capabilityId: string;
+  canonicalTargetPaths: string[];
+  requiredVerificationRefs: string[];
+  forbiddenSurfaces: string[];
+  owner?: string | null;
+  ownerCloseoutBoundaryRef?: string | null;
+};
+
+export type SelfEvolutionWorkOrderInput = {
+  targetAgentId: string;
+  feedbackRef: string;
+  failureEvidenceRefs: string[];
+  failureTokens: string[];
+  capabilityHits: SelfEvolutionCapabilityHitInput[];
+  sourceRef?: string | null;
+};
+
+const FAILURE_TOKEN_REGISTRY_REF = 'contracts/opl-framework/agent-lab-failure-token-registry.json';
+const SELF_EVOLUTION_WORK_ORDER_SCHEMA_REF = 'contracts/opl-framework/self-evolution-work-order.schema.json';
+
+const SELF_EVOLUTION_AUTHORITY_BOUNDARY = {
+  can_write_domain_truth: false,
+  can_write_memory_body: false,
+  can_mutate_artifact_body: false,
+  can_sign_owner_receipt: false,
+  can_create_typed_blocker: false,
+  can_authorize_quality_or_export: false,
+  can_claim_domain_ready: false,
+  can_claim_production_ready: false,
 };
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -39,6 +78,25 @@ function isRecord(value: unknown): value is JsonRecord {
 
 function asString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function stringList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return [...new Set(value
+    .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    .map((entry) => entry.trim()))];
+}
+
+function requiredStringList(value: string[], field: string) {
+  const normalized = stringList(value);
+  if (normalized.length === 0) {
+    throw new FrameworkContractError('contract_shape_invalid', `Self-evolution work order requires ${field}.`, {
+      field,
+    });
+  }
+  return normalized;
 }
 
 function nowIso() {
@@ -101,6 +159,15 @@ export function buildDeliveryFeedbackEvent(input: DeliveryFeedbackEventInput) {
     developer_work_order_candidate_ref: input.developerWorkOrderCandidateRef?.trim() || null,
     completion_ref: input.completionRef?.trim() || null,
     blocker_ref: input.blockerRef?.trim() || null,
+    failure_token_registry_ref: FAILURE_TOKEN_REGISTRY_REF,
+    self_evolution_work_order_schema_ref: SELF_EVOLUTION_WORK_ORDER_SCHEMA_REF,
+    failure_tokens: stringList(input.failureTokens),
+    failure_evidence_refs: stringList(input.failureEvidenceRefs),
+    capability_hit_refs: stringList(input.capabilityHitRefs),
+    canonical_target_paths: stringList(input.canonicalTargetPaths),
+    required_verification_refs: stringList(input.requiredVerificationRefs),
+    forbidden_surfaces: stringList(input.forbiddenSurfaces),
+    owner_closeout_boundary_ref: input.ownerCloseoutBoundaryRef?.trim() || null,
     developer_mode_required_for_execution: true,
     authority_boundary: {
       can_write_target_domain_truth: false,
@@ -111,6 +178,82 @@ export function buildDeliveryFeedbackEvent(input: DeliveryFeedbackEventInput) {
       can_create_typed_blocker: false,
       can_create_human_gate: false,
     },
+  };
+}
+
+function ownerCloseoutBoundary(owner: string, boundaryRef?: string | null) {
+  return {
+    owner,
+    boundary_ref: boundaryRef ?? `owner-closeout-boundary-ref:${owner}`,
+    required_return_shapes: [
+      'owner_receipt_ref',
+      'typed_blocker_ref',
+      'human_gate_ref',
+      'route_back_ref',
+    ],
+    oma_can_write_owner_receipt_body: false,
+    agent_lab_can_create_typed_blocker: false,
+    target_owner_acceptance_required: true,
+  };
+}
+
+export function buildSelfEvolutionWorkOrderCandidate(input: SelfEvolutionWorkOrderInput) {
+  const targetAgentId = requiredString(input.targetAgentId, 'targetAgentId');
+  const feedbackRef = requiredString(input.feedbackRef, 'feedbackRef');
+  const failureEvidenceRefs = requiredStringList(input.failureEvidenceRefs, 'failureEvidenceRefs');
+  const failureTokens = requiredStringList(input.failureTokens, 'failureTokens');
+  if (input.capabilityHits.length === 0) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Self-evolution work order requires capabilityHits.', {
+      field: 'capabilityHits',
+    });
+  }
+  const capabilityHits = input.capabilityHits.map((hit) => {
+    const capabilityId = requiredString(hit.capabilityId, 'capabilityHits.capabilityId');
+    const canonicalTargetPaths = requiredStringList(hit.canonicalTargetPaths, `${capabilityId}.canonicalTargetPaths`);
+    const requiredVerificationRefs = requiredStringList(
+      hit.requiredVerificationRefs,
+      `${capabilityId}.requiredVerificationRefs`,
+    );
+    const forbiddenSurfaces = requiredStringList(hit.forbiddenSurfaces, `${capabilityId}.forbiddenSurfaces`);
+    const owner = hit.owner?.trim() || targetAgentId;
+    return {
+      capability_id: capabilityId,
+      canonical_target_paths: canonicalTargetPaths,
+      required_verification_refs: requiredVerificationRefs,
+      forbidden_surfaces: forbiddenSurfaces,
+      owner_closeout_boundary: ownerCloseoutBoundary(owner, hit.ownerCloseoutBoundaryRef),
+    };
+  });
+  const canonicalTargetPaths = [...new Set(capabilityHits.flatMap((hit) => hit.canonical_target_paths))];
+  const requiredVerificationRefs = [...new Set(capabilityHits.flatMap((hit) => hit.required_verification_refs))];
+  const forbiddenSurfaces = [...new Set(capabilityHits.flatMap((hit) => hit.forbidden_surfaces))];
+  const workOrderId = stableId('self_evolution_work_order', [
+    targetAgentId,
+    feedbackRef,
+    failureEvidenceRefs,
+    failureTokens,
+    capabilityHits.map((hit) => hit.capability_id),
+  ]);
+
+  return {
+    surface_kind: 'opl_self_evolution_work_order_candidate',
+    schema_version: 'opl.self-evolution-work-order.v1',
+    schema_ref: SELF_EVOLUTION_WORK_ORDER_SCHEMA_REF,
+    work_order_id: workOrderId,
+    target_agent_id: targetAgentId,
+    source_ref: input.sourceRef?.trim() || feedbackRef,
+    feedback_ref: feedbackRef,
+    failure_token_registry_ref: FAILURE_TOKEN_REGISTRY_REF,
+    failure_evidence_refs: failureEvidenceRefs,
+    failure_tokens: failureTokens,
+    capability_hits: capabilityHits,
+    canonical_target_paths: canonicalTargetPaths,
+    required_verification_refs: requiredVerificationRefs,
+    forbidden_surfaces: forbiddenSurfaces,
+    owner_closeout_boundary: ownerCloseoutBoundary(targetAgentId),
+    executable_by: 'opl work-order execute',
+    execution_requires_developer_mode: true,
+    authority_boundary: SELF_EVOLUTION_AUTHORITY_BOUNDARY,
   };
 }
 
@@ -209,6 +352,16 @@ export function buildFeedbackOpsReadModel(input: {
       developer_work_order_candidate_ref: asString(event.developer_work_order_candidate_ref),
       completion_ref: asString(event.completion_ref),
       blocker_ref: asString(event.blocker_ref),
+      failure_token_registry_ref: asString(event.failure_token_registry_ref) ?? FAILURE_TOKEN_REGISTRY_REF,
+      self_evolution_work_order_schema_ref:
+        asString(event.self_evolution_work_order_schema_ref) ?? SELF_EVOLUTION_WORK_ORDER_SCHEMA_REF,
+      failure_tokens: stringList(event.failure_tokens),
+      failure_evidence_refs: stringList(event.failure_evidence_refs),
+      capability_hit_refs: stringList(event.capability_hit_refs),
+      canonical_target_paths: stringList(event.canonical_target_paths),
+      required_verification_refs: stringList(event.required_verification_refs),
+      forbidden_surfaces: stringList(event.forbidden_surfaces),
+      owner_closeout_boundary_ref: asString(event.owner_closeout_boundary_ref),
       runnable: status === 'executable',
       terminal: status === 'completed_or_blocker',
       action_route_ref: status === 'executable'
