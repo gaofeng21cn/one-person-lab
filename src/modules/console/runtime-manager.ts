@@ -1,17 +1,17 @@
 import {
   inspectSelectedFamilyRuntimeProvidersWithLifecycle,
   resolveFamilyRuntimeProviderKind,
-} from '../runway/index.ts';
+} from '../runway/family-runtime-providers.ts';
 import {
   MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
   MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
   OPL_RUNTIME_OWNER_ROUTE,
   buildMasDomainRouteSupportProjection,
-} from '../runway/index.ts';
-import { readMasManagedProviderProjection } from '../runway/index.ts';
-import { familyRuntimePaths } from '../runway/index.ts';
-import { DEFAULT_NATIVE_HELPERS, buildNativeHelperProjection, runNativeHelperRepairAction } from '../runway/index.ts';
-import { buildStandardDomainAgentScaffold } from '../foundry-lab/index.ts';
+} from '../runway/family-runtime-mas-domain-route.ts';
+import { readMasManagedProviderProjection } from '../runway/family-runtime-mas-managed-provider-projection.ts';
+import { familyRuntimePaths } from '../runway/family-runtime-store.ts';
+import { DEFAULT_NATIVE_HELPERS, buildNativeHelperProjection, runNativeHelperRepairAction } from '../runway/native-helper-runtime.ts';
+import { buildStandardDomainAgentScaffold } from '../foundry-lab/standard-domain-agent-scaffold.ts';
 
 const ADMITTED_DOMAIN_OWNERS = [
   {
@@ -104,96 +104,98 @@ const DOMAIN_REGISTRATION_REGISTRY = [
   },
 ] as const;
 
-const FAMILY_SCHEDULER_REPLACEMENT = {
-  surface_kind: 'opl_family_scheduler_replacement',
-  version: 'v1',
-  owner: 'one-person-lab',
-  scheduler_owner: 'opl_provider_runtime_manager',
-  cadence_owner: 'provider_backed_family_runtime',
-  replacement_status: 'replacement_contract_available',
-  contract_ref: 'contracts/opl-framework/runtime-manager-contract.json#/family_scheduler_replacement',
-  allowed_opl_targets: [
-    'provider_slo_tick',
-    'domain_registration_intake',
-    'family_runtime_tick',
-    'runtime_manager_projection',
-  ],
-  command_set: {
-    status: 'opl runtime manager',
-    provider_slo_tick: 'opl family-runtime provider-slo tick --provider temporal',
-    domain_registration_intake: 'opl family-runtime intake --domain <domain_id>',
-    family_runtime_tick: 'opl family-runtime tick --source provider-scheduler --hydrate',
-  },
-  state_refs: {
-    provider_slo_receipts: '${OPL_STATE_DIR}/family-runtime/provider-slo',
-    family_runtime_queue: '${OPL_STATE_DIR}/family-runtime/queue.sqlite',
-    stage_attempt_ledger: '${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_attempts',
-    events_ledger: '${OPL_STATE_DIR}/family-runtime/events.jsonl',
-  },
-  managed_domains: [
-    {
-      domain_id: 'medautoscience',
-      domain_owner: 'med-autoscience',
-      migration_priority: 'p0',
-      legacy_scheduler_owner: null,
-      legacy_scheduler_residue_policy: 'history_tombstone_or_negative_guard_only',
-      replacement_role:
-        'OPL owns scheduler lifecycle, cadence, provider SLO tick, queue intake, attempt ledger, and projection; MAS keeps paper-progress SLO semantics, owner receipt, typed blocker, and safe action refs.',
-      required_domain_refs: [
-        MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
-        OPL_RUNTIME_OWNER_ROUTE,
-        MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
-        'mas_opl_runtime_workbench_projection',
-        'sidecar_owner_receipt_or_typed_blocker',
-        'no_forbidden_write_evidence',
-      ],
+function buildFamilySchedulerReplacement() {
+  return {
+    surface_kind: 'opl_family_scheduler_replacement',
+    version: 'v1',
+    owner: 'one-person-lab',
+    scheduler_owner: 'opl_provider_runtime_manager',
+    cadence_owner: 'provider_backed_family_runtime',
+    replacement_status: 'replacement_contract_available',
+    contract_ref: 'contracts/opl-framework/runtime-manager-contract.json#/family_scheduler_replacement',
+    allowed_opl_targets: [
+      'provider_slo_tick',
+      'domain_registration_intake',
+      'family_runtime_tick',
+      'runtime_manager_projection',
+    ],
+    command_set: {
+      status: 'opl runtime manager',
+      provider_slo_tick: 'opl family-runtime provider-slo tick --provider temporal',
+      domain_registration_intake: 'opl family-runtime intake --domain <domain_id>',
+      family_runtime_tick: 'opl family-runtime tick --source provider-scheduler --hydrate',
     },
-    {
-      domain_id: 'medautogrant',
-      domain_owner: 'med-autogrant',
-      migration_priority: 'p1',
-      legacy_scheduler_owner: null,
-      replacement_role:
-        'MAG consumes OPL scheduler replacement through refs, owner receipts, typed blockers, and guarded grant actions without adding a repo-owned daemon.',
-      required_domain_refs: [
-        'product_entry_manifest',
-        'grant_owner_receipt_or_typed_blocker',
-        'grant_memory_ref',
-        'no_forbidden_write_evidence',
-      ],
+    state_refs: {
+      provider_slo_receipts: '${OPL_STATE_DIR}/family-runtime/provider-slo',
+      family_runtime_queue: '${OPL_STATE_DIR}/family-runtime/queue.sqlite',
+      stage_attempt_ledger: '${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_attempts',
+      events_ledger: '${OPL_STATE_DIR}/family-runtime/events.jsonl',
     },
-    {
-      domain_id: 'redcube',
-      domain_owner: 'redcube-ai',
-      migration_priority: 'p2',
-      legacy_scheduler_owner: null,
-      replacement_role:
-        'RCA consumes OPL scheduler replacement through sidecar/action/status refs while keeping visual deliverable sequencing inside domain execution.',
-      required_domain_refs: [
-        'product_entry_manifest',
-        'visual_owner_receipt_or_typed_blocker',
-        'visual_memory_ref',
-        'no_forbidden_write_evidence',
-      ],
+    managed_domains: [
+      {
+        domain_id: 'medautoscience',
+        domain_owner: 'med-autoscience',
+        migration_priority: 'p0',
+        legacy_scheduler_owner: null,
+        legacy_scheduler_residue_policy: 'history_tombstone_or_negative_guard_only',
+        replacement_role:
+          'OPL owns scheduler lifecycle, cadence, provider SLO tick, queue intake, attempt ledger, and projection; MAS keeps paper-progress SLO semantics, owner receipt, typed blocker, and safe action refs.',
+        required_domain_refs: [
+          MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
+          OPL_RUNTIME_OWNER_ROUTE,
+          MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
+          'mas_opl_runtime_workbench_projection',
+          'sidecar_owner_receipt_or_typed_blocker',
+          'no_forbidden_write_evidence',
+        ],
+      },
+      {
+        domain_id: 'medautogrant',
+        domain_owner: 'med-autogrant',
+        migration_priority: 'p1',
+        legacy_scheduler_owner: null,
+        replacement_role:
+          'MAG consumes OPL scheduler replacement through refs, owner receipts, typed blockers, and guarded grant actions without adding a repo-owned daemon.',
+        required_domain_refs: [
+          'product_entry_manifest',
+          'grant_owner_receipt_or_typed_blocker',
+          'grant_memory_ref',
+          'no_forbidden_write_evidence',
+        ],
+      },
+      {
+        domain_id: 'redcube',
+        domain_owner: 'redcube-ai',
+        migration_priority: 'p2',
+        legacy_scheduler_owner: null,
+        replacement_role:
+          'RCA consumes OPL scheduler replacement through sidecar/action/status refs while keeping visual deliverable sequencing inside domain execution.',
+        required_domain_refs: [
+          'product_entry_manifest',
+          'visual_owner_receipt_or_typed_blocker',
+          'visual_memory_ref',
+          'no_forbidden_write_evidence',
+        ],
+      },
+    ],
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_write_domain_memory_body: false,
+      can_authorize_domain_quality: false,
+      can_authorize_domain_export: false,
+      can_install_domain_daemon: false,
+      can_execute_domain_repair_command_directly: false,
+      can_enqueue_provider_stage_attempts: true,
+      can_record_opl_provider_receipts: true,
+      can_project_operator_workbench: true,
     },
-  ],
-  authority_boundary: {
-    can_write_domain_truth: false,
-    can_write_domain_memory_body: false,
-    can_authorize_domain_quality: false,
-    can_authorize_domain_export: false,
-    can_install_domain_daemon: false,
-    can_execute_domain_repair_command_directly: false,
-    can_enqueue_provider_stage_attempts: true,
-    can_record_opl_provider_receipts: true,
-    can_project_operator_workbench: true,
-  },
-  migration_gate: {
-    active_domain_callers_must_use_replacement_owner: true,
-    legacy_domain_scheduler_must_be_explicit_diagnostic_or_tombstone: true,
-    no_active_launchagent_install_from_domain_default: true,
-  },
-} as const;
+    migration_gate: {
+      active_domain_callers_must_use_replacement_owner: true,
+      legacy_domain_scheduler_must_be_explicit_diagnostic_or_tombstone: true,
+      no_active_launchagent_install_from_domain_default: true,
+    },
+  } as const;
+}
 
 const DAEMON_POLICY = {
   surface_kind: 'opl_runtime_manager_daemon_policy',
@@ -394,7 +396,7 @@ export async function buildRuntimeManager(input: { persistNativeIndexes?: boolea
         mas_domain_route_projection: buildMasDomainRouteSupportProjection(),
       },
       family_scheduler_replacement: {
-        ...FAMILY_SCHEDULER_REPLACEMENT,
+        ...buildFamilySchedulerReplacement(),
         configured_provider: selectedProvider,
         allowed_providers: providers.allowed_providers,
       },

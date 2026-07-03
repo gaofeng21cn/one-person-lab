@@ -4,7 +4,7 @@ import { FrameworkContractError } from '../../charter/index.ts';
 import {
   STANDARD_AGENT_REGISTRY,
   standardAgentDomainAliasEntries,
-} from '../../atlas/index.ts';
+} from '../../atlas/standard-agent-registry.ts';
 
 export type SkillPackInstallerKind = 'bash' | 'node';
 export type SkillPackSourceKind = 'repo_plugin_installer' | 'opl_generated_plugin_surface';
@@ -103,48 +103,57 @@ export type SyncFamilySkillPack = InspectFamilySkillPack & {
   stderr: string;
 };
 
-export const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
-  ...STANDARD_AGENT_REGISTRY
-    .filter((entry) => entry.agent_id !== 'mas-scholar-skills')
-    .map((entry) => ({
-      domain_id: entry.domain_id,
-      module_id: entry.module_id,
-      project: entry.project,
-      label: entry.label,
-      plugin_name: entry.plugin_name,
-      canonical_plugin_name: entry.canonical_plugin_name,
-      source_kind: entry.source_kind,
-      distribution_role: 'domain_agent_plugin_pack' as const,
-      installer_kind: entry.installer_kind,
-      installer_relative_paths: entry.installer_relative_paths.map((relativePath) => path.join(...relativePath.split('/'))),
-    })),
-  {
-    domain_id: 'scholarskills',
-    module_id: 'SCHOLARSKILLS',
-    project: 'mas-scholar-skills',
-    label: 'MAS Scholar Skills',
-    plugin_name: 'mas-scholar-skills',
-    canonical_plugin_name: 'mas-scholar-skills',
-    source_kind: 'repo_plugin_installer',
-    distribution_role: 'framework_capability_plugin_pack',
-    installer_kind: 'node',
-    installer_relative_paths: [],
-  },
-];
+let cachedFamilySkillPackSpecs: SkillPackSpec[] | null = null;
+let cachedDomainAliasMap: Map<string, SkillPackSpec['domain_id']> | null = null;
 
-const DOMAIN_ALIAS_MAP = new Map<string, SkillPackSpec['domain_id']>([
-  ...standardAgentDomainAliasEntries().map((entry) => [
-    entry.alias,
-    entry.domain_id as SkillPackSpec['domain_id'],
-  ] as const),
-  ['scholarskills', 'scholarskills'],
-  ['scholar-skills', 'scholarskills'],
-  ['scholar_skills', 'scholarskills'],
-  ['mas-scholar-skills', 'scholarskills'],
-  ['mas_scholar_skills', 'scholarskills'],
-  ['opl-scholarskills', 'scholarskills'],
-  ['opl_scholarskills', 'scholarskills'],
-]);
+export function listFamilySkillPackSpecs(): SkillPackSpec[] {
+  cachedFamilySkillPackSpecs ??= [
+    ...STANDARD_AGENT_REGISTRY
+      .filter((entry) => entry.agent_id !== 'mas-scholar-skills')
+      .map((entry) => ({
+        domain_id: entry.domain_id,
+        module_id: entry.module_id,
+        project: entry.project,
+        label: entry.label,
+        plugin_name: entry.plugin_name,
+        canonical_plugin_name: entry.canonical_plugin_name,
+        source_kind: entry.source_kind,
+        distribution_role: 'domain_agent_plugin_pack' as const,
+        installer_kind: entry.installer_kind,
+        installer_relative_paths: entry.installer_relative_paths.map((relativePath) => path.join(...relativePath.split('/'))),
+      })),
+    {
+      domain_id: 'scholarskills',
+      module_id: 'SCHOLARSKILLS',
+      project: 'mas-scholar-skills',
+      label: 'MAS Scholar Skills',
+      plugin_name: 'mas-scholar-skills',
+      canonical_plugin_name: 'mas-scholar-skills',
+      source_kind: 'repo_plugin_installer',
+      distribution_role: 'framework_capability_plugin_pack',
+      installer_kind: 'node',
+      installer_relative_paths: [],
+    },
+  ];
+  return cachedFamilySkillPackSpecs;
+}
+
+function domainAliasMap() {
+  cachedDomainAliasMap ??= new Map<string, SkillPackSpec['domain_id']>([
+    ...standardAgentDomainAliasEntries().map((entry) => [
+      entry.alias,
+      entry.domain_id as SkillPackSpec['domain_id'],
+    ] as const),
+    ['scholarskills', 'scholarskills'],
+    ['scholar-skills', 'scholarskills'],
+    ['scholar_skills', 'scholarskills'],
+    ['mas-scholar-skills', 'scholarskills'],
+    ['mas_scholar_skills', 'scholarskills'],
+    ['opl-scholarskills', 'scholarskills'],
+    ['opl_scholarskills', 'scholarskills'],
+  ]);
+  return cachedDomainAliasMap;
+}
 
 export function normalizeDomainSelection(domains: string[] | undefined) {
   if (!domains || domains.length === 0) {
@@ -152,16 +161,17 @@ export function normalizeDomainSelection(domains: string[] | undefined) {
   }
 
   const normalized = new Set<SkillPackSpec['domain_id']>();
+  const aliases = domainAliasMap();
   for (const domain of domains) {
     const key = domain.trim().toLowerCase();
-    const resolved = DOMAIN_ALIAS_MAP.get(key);
+    const resolved = aliases.get(key);
     if (!resolved) {
       throw new FrameworkContractError(
         'cli_usage_error',
         `Unknown skill pack domain: ${domain}.`,
         {
           domain,
-          allowed_domains: [...new Set(DOMAIN_ALIAS_MAP.keys())].sort(),
+          allowed_domains: [...new Set(aliases.keys())].sort(),
         },
       );
     }

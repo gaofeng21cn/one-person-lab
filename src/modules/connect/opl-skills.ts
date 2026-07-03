@@ -27,7 +27,7 @@ import {
 } from './opl-skills-parts/paths.ts';
 import { buildMasScholarSkillsProfileManifest } from './opl-skills-parts/scholarskills-profile.ts';
 import {
-  FAMILY_SKILL_PACK_SPECS,
+  listFamilySkillPackSpecs,
   normalizeDomainSelection,
   type InspectFamilySkillPack,
   type InspectFamilySkillPackPluginTransport,
@@ -505,14 +505,15 @@ export function syncFamilySkillPackFromRepoRoot(
     targetRoot: string;
   }> = {},
 ) {
-  const spec = FAMILY_SKILL_PACK_SPECS.find((entry) => entry.domain_id === domainId);
+  const familySkillPackSpecs = listFamilySkillPackSpecs();
+  const spec = familySkillPackSpecs.find((entry) => entry.domain_id === domainId);
   if (!spec) {
     throw new FrameworkContractError(
       'cli_usage_error',
       `Unknown skill pack domain: ${domainId}.`,
       {
         domain_id: domainId,
-        allowed_domains: FAMILY_SKILL_PACK_SPECS.map((entry) => entry.domain_id),
+        allowed_domains: familySkillPackSpecs.map((entry) => entry.domain_id),
       },
     );
   }
@@ -639,7 +640,7 @@ function shouldSkipImplicitScholarSkillsSync(
 
 export function readFamilySkillPacks(options: ReadFamilySkillPacksOptions = {}) {
   const selectedDomains = normalizeDomainSelection(options.domains);
-  const packs = FAMILY_SKILL_PACK_SPECS
+  const packs = listFamilySkillPackSpecs()
     .filter((spec) => !selectedDomains || selectedDomains.has(spec.domain_id))
     .map((spec) => inspectFamilySkillPack(spec));
 
@@ -661,7 +662,7 @@ export function readFamilySkillPacks(options: ReadFamilySkillPacksOptions = {}) 
 export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) {
   const selectedDomains = normalizeDomainSelection(options.domains);
   const resolvedHome = normalizeOptionalString(options.home) ?? null;
-  const inspectedPacks = FAMILY_SKILL_PACK_SPECS
+  const inspectedPacks = listFamilySkillPackSpecs()
     .filter((spec) => !selectedDomains || selectedDomains.has(spec.domain_id))
     .map((spec) => ({ spec, inspected: inspectFamilySkillPack(spec) }));
   const targetProject = normalizeTargetProject(options.targetProject);
