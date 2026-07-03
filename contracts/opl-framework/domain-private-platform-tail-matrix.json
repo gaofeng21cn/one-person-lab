@@ -1,0 +1,411 @@
+{
+  "surface_kind": "opl_domain_private_platform_tail_matrix.v1",
+  "version": "domain-private-platform-tail-matrix.v1",
+  "owner": "one-person-lab",
+  "state": "seed_contract",
+  "contract_ref": "contracts/opl-framework/domain-private-platform-tail-matrix.json",
+  "source_phase": "docs/active/reuse-first-platform-risk-audit-and-landing-plan.md#phase-7-domain-private-platform-retirement",
+  "purpose": "Seed a machine-readable tail matrix for MAS, MAG, RCA, OMA, BookForge, and ScholarSkills private platform retirement without authorizing domain repo deletes or owner acceptance.",
+  "machine_boundary": "This matrix is an OPL readback seed and delete/tombstone planning input. It does not mutate domain repos, write domain truth, sign owner receipts, create typed blockers, authorize physical delete, or claim domain/runtime/production readiness.",
+  "source_surfaces": [
+    "contracts/opl-framework/private-platform-residue-owner-decisions.json",
+    "contracts/opl-framework/wrapper-retirement-gate-policy.json",
+    "contracts/opl-framework/target-operating-architecture-contract.json",
+    "contracts/opl-framework/standard-agent-landing-acceptance-contract.json",
+    "opl agents default-callers --family-defaults --json",
+    "opl agents conformance --family-defaults --json"
+  ],
+  "required_surface_fields": [
+    "domain_id",
+    "surface_id",
+    "private_tail_class",
+    "replacement_opl_primitive",
+    "authority_retained",
+    "delete_or_tombstone_gate",
+    "forbidden_claims",
+    "verification_surface"
+  ],
+  "private_tail_classes": [
+    "scheduler",
+    "queue",
+    "session_store",
+    "workbench",
+    "status_shell",
+    "domain_wrapper",
+    "runtime_watch",
+    "control_plane_shell",
+    "helper_materializer",
+    "package_capability_channel"
+  ],
+  "readback_seed_policy": {
+    "primary_family_readback": "opl agents default-callers --family-defaults --json",
+    "capability_package_readback": "opl agents conformance --family-defaults --json",
+    "contract_loader_check": "tests/src/domain-tail-default-caller-matrix.test.ts",
+    "row_status": "seed_requires_fresh_domain_readback_before_delete_or_tombstone",
+    "physical_delete_authorized": false,
+    "owner_acceptance_claimed": false,
+    "live_readiness_claimed": false
+  },
+  "surfaces": [
+    {
+      "domain_id": "med-autoscience",
+      "repo_id": "med-autoscience",
+      "surface_id": "mas_generic_runtime_retirement_guard",
+      "display_name": "MAS generic runtime no-resurrection tail",
+      "private_tail_class": [
+        "scheduler",
+        "queue",
+        "session_store",
+        "workbench",
+        "status_shell",
+        "runtime_watch"
+      ],
+      "replacement_opl_primitive": [
+        "OPL Runway StageRun",
+        "Temporal-backed provider runtime",
+        "typed queue / attempt projection refs",
+        "current_owner_delta projection",
+        "App/operator generated read model"
+      ],
+      "authority_retained": [
+        "study_truth",
+        "publication_quality_verdict",
+        "artifact_package_authority",
+        "owner_receipt",
+        "typed_blocker",
+        "human_gate"
+      ],
+      "active_caller_readback": {
+        "expected_state": "no_private_generic_runtime_active_caller_or_owner_decision_gate",
+        "readback": "opl agents default-callers --family-defaults --json#reports[domain_id=med-autoscience]",
+        "domain_repo_surface": "MAS repo-native contracts/source/readback"
+      },
+      "delete_or_tombstone_gate": {
+        "gate_status": "owner_decision_or_tombstone_required_before_physical_delete",
+        "required_refs": [
+          "replacement_parity_ref",
+          "no_active_caller_ref",
+          "no_forbidden_write_ref",
+          "tombstone_or_provenance_ref",
+          "domain_owner_delete_keep_or_typed_blocker_ref"
+        ],
+        "physical_delete_authorized": false,
+        "owner_acceptance_claimed": false
+      },
+      "forbidden_claims": [
+        "generic_runtime_ready",
+        "live_readiness_from_structure",
+        "domain_ready",
+        "publication_ready",
+        "physical_delete_authorized_by_opl"
+      ],
+      "verification_surface": {
+        "primary_readback": "opl agents default-callers --family-defaults --json",
+        "contract_readback": "contracts/opl-framework/domain-private-platform-tail-matrix.json#surfaces[domain_id=med-autoscience]",
+        "focused_test": "tests/src/domain-tail-default-caller-matrix.test.ts",
+        "domain_owner_readback_required_before_delete": true
+      }
+    },
+    {
+      "domain_id": "med-autogrant",
+      "repo_id": "med-autogrant",
+      "surface_id": "mag_product_status_user_loop_tail",
+      "display_name": "MAG product/status/user-loop/control-plane tail",
+      "private_tail_class": [
+        "scheduler",
+        "queue",
+        "session_store",
+        "workbench",
+        "status_shell",
+        "control_plane_shell",
+        "domain_wrapper"
+      ],
+      "replacement_opl_primitive": [
+        "OPL generated product/status/workbench surface",
+        "Runway lifecycle primitives",
+        "DomainProgressTransitionRuntime",
+        "App/operator generated action refs"
+      ],
+      "authority_retained": [
+        "fundability_verdict",
+        "grant_strategy_memory_body",
+        "package_authority",
+        "transition_oracle",
+        "owner_receipt",
+        "typed_blocker"
+      ],
+      "active_caller_readback": {
+        "expected_state": "default_caller_owner_decision_gate_or_no_active_caller",
+        "readback": "opl agents default-callers --family-defaults --json#reports[domain_id=med-autogrant]",
+        "domain_repo_surface": "MAG repo-native product/status/user-loop readback"
+      },
+      "delete_or_tombstone_gate": {
+        "gate_status": "owner_decision_or_tombstone_required_before_physical_delete",
+        "required_refs": [
+          "replacement_parity_ref",
+          "no_active_caller_ref",
+          "no_forbidden_write_ref",
+          "tombstone_or_provenance_ref",
+          "domain_owner_delete_keep_or_typed_blocker_ref"
+        ],
+        "physical_delete_authorized": false,
+        "owner_acceptance_claimed": false
+      },
+      "forbidden_claims": [
+        "grant_ready",
+        "private_status_shell_as_owner",
+        "app_projection_as_owner_receipt",
+        "physical_delete_authorized_by_opl"
+      ],
+      "verification_surface": {
+        "primary_readback": "opl agents default-callers --family-defaults --json",
+        "contract_readback": "contracts/opl-framework/domain-private-platform-tail-matrix.json#surfaces[domain_id=med-autogrant]",
+        "focused_test": "tests/src/domain-tail-default-caller-matrix.test.ts",
+        "domain_owner_readback_required_before_delete": true
+      }
+    },
+    {
+      "domain_id": "redcube-ai",
+      "repo_id": "redcube-ai",
+      "surface_id": "rca_route_run_session_product_shell_tail",
+      "display_name": "RCA route-run/session/product shell tail",
+      "private_tail_class": [
+        "scheduler",
+        "queue",
+        "session_store",
+        "workbench",
+        "status_shell",
+        "domain_wrapper",
+        "runtime_watch"
+      ],
+      "replacement_opl_primitive": [
+        "OPL generated domain action/status/workbench surfaces",
+        "Runway StageRun owner route",
+        "RCA minimal authority functions",
+        "App/operator generated read model"
+      ],
+      "authority_retained": [
+        "visual_direction",
+        "review_export_verdict",
+        "artifact_authority",
+        "visual_memory_accept_reject",
+        "native_helper_implementation",
+        "owner_receipt",
+        "typed_blocker"
+      ],
+      "active_caller_readback": {
+        "expected_state": "no_route_run_session_shell_active_caller_or_owner_decision_gate",
+        "readback": "opl agents default-callers --family-defaults --json#reports[domain_id=redcube-ai]",
+        "domain_repo_surface": "RCA repo-native readback and no-forbidden-write proof"
+      },
+      "delete_or_tombstone_gate": {
+        "gate_status": "owner_decision_or_tombstone_required_before_physical_delete",
+        "required_refs": [
+          "replacement_parity_ref",
+          "no_active_caller_ref",
+          "no_forbidden_write_ref",
+          "tombstone_or_provenance_ref",
+          "domain_owner_delete_keep_or_typed_blocker_ref"
+        ],
+        "physical_delete_authorized": false,
+        "owner_acceptance_claimed": false
+      },
+      "forbidden_claims": [
+        "visual_ready",
+        "export_ready",
+        "session_shell_as_owner",
+        "physical_delete_authorized_by_opl"
+      ],
+      "verification_surface": {
+        "primary_readback": "opl agents default-callers --family-defaults --json",
+        "contract_readback": "contracts/opl-framework/domain-private-platform-tail-matrix.json#surfaces[domain_id=redcube-ai]",
+        "focused_test": "tests/src/domain-tail-default-caller-matrix.test.ts",
+        "domain_owner_readback_required_before_delete": true
+      }
+    },
+    {
+      "domain_id": "opl-meta-agent",
+      "repo_id": "opl-meta-agent",
+      "surface_id": "oma_helper_materializer_runner_tail",
+      "display_name": "OMA helper/materializer private runner tail",
+      "private_tail_class": [
+        "helper_materializer",
+        "scheduler",
+        "queue",
+        "session_store",
+        "workbench",
+        "status_shell"
+      ],
+      "replacement_opl_primitive": [
+        "OPL Agent Lab",
+        "Runway StageRun",
+        "promotion gate read model",
+        "work-order execution refs"
+      ],
+      "authority_retained": [
+        "agent_building_semantics",
+        "candidate_package_refs",
+        "work_order_refs",
+        "proposal_materialization_refs",
+        "target_agent_typed_blocker_refs"
+      ],
+      "active_caller_readback": {
+        "expected_state": "helpers_remain_explicit_or_owner_decision_gate_blocks_private_runner",
+        "readback": "opl agents default-callers --family-defaults --json#reports[domain_id=opl-meta-agent]",
+        "domain_repo_surface": "OMA source-structure and script-to-pack readback"
+      },
+      "delete_or_tombstone_gate": {
+        "gate_status": "owner_decision_or_tombstone_required_before_physical_delete",
+        "required_refs": [
+          "replacement_parity_ref",
+          "no_active_caller_ref",
+          "no_forbidden_write_ref",
+          "tombstone_or_provenance_ref",
+          "domain_owner_delete_keep_or_typed_blocker_ref"
+        ],
+        "physical_delete_authorized": false,
+        "owner_acceptance_claimed": false
+      },
+      "forbidden_claims": [
+        "target_agent_ready",
+        "agent_lab_suite_pass_as_owner_acceptance",
+        "materializer_as_private_runner",
+        "physical_delete_authorized_by_opl"
+      ],
+      "verification_surface": {
+        "primary_readback": "opl agents default-callers --family-defaults --json",
+        "contract_readback": "contracts/opl-framework/domain-private-platform-tail-matrix.json#surfaces[domain_id=opl-meta-agent]",
+        "focused_test": "tests/src/domain-tail-default-caller-matrix.test.ts",
+        "domain_owner_readback_required_before_delete": true
+      }
+    },
+    {
+      "domain_id": "opl-bookforge",
+      "repo_id": "opl-bookforge",
+      "surface_id": "bookforge_publication_helper_materializer_tail",
+      "display_name": "BookForge publication helper/materializer tail",
+      "private_tail_class": [
+        "helper_materializer",
+        "session_store",
+        "workbench",
+        "status_shell"
+      ],
+      "replacement_opl_primitive": [
+        "OPL hosted/generated package and workbench surface",
+        "Pack/Workspace primitives",
+        "BookForge minimal authority functions"
+      ],
+      "authority_retained": [
+        "manuscript_domain_pack",
+        "export_authority",
+        "domain_specific_build_helper",
+        "owner_receipt_or_typed_blocker"
+      ],
+      "active_caller_readback": {
+        "expected_state": "helper_materializer_classified_as_authority_function_or_delete_gate",
+        "readback": "opl agents default-callers --family-defaults --json#reports[domain_id=opl-bookforge]",
+        "domain_repo_surface": "BookForge repo-native helper/materializer readback"
+      },
+      "delete_or_tombstone_gate": {
+        "gate_status": "owner_decision_or_tombstone_required_before_physical_delete",
+        "required_refs": [
+          "replacement_parity_ref",
+          "no_active_caller_ref",
+          "no_forbidden_write_ref",
+          "tombstone_or_provenance_ref",
+          "domain_owner_delete_keep_or_typed_blocker_ref"
+        ],
+        "physical_delete_authorized": false,
+        "owner_acceptance_claimed": false
+      },
+      "forbidden_claims": [
+        "book_export_ready",
+        "helper_as_private_runtime",
+        "app_projection_as_export_authority",
+        "physical_delete_authorized_by_opl"
+      ],
+      "verification_surface": {
+        "primary_readback": "opl agents default-callers --family-defaults --json",
+        "contract_readback": "contracts/opl-framework/domain-private-platform-tail-matrix.json#surfaces[domain_id=opl-bookforge]",
+        "focused_test": "tests/src/domain-tail-default-caller-matrix.test.ts",
+        "domain_owner_readback_required_before_delete": true
+      }
+    },
+    {
+      "domain_id": "mas-scholar-skills",
+      "repo_id": "opl-scholarskills",
+      "surface_id": "scholarskills_refs_only_capability_package_tail",
+      "display_name": "ScholarSkills refs-only capability package tail",
+      "private_tail_class": [
+        "package_capability_channel",
+        "status_shell"
+      ],
+      "replacement_opl_primitive": [
+        "OPL Pack/Connect package channel",
+        "framework capability package conformance",
+        "refs-only evidence projection"
+      ],
+      "authority_retained": [
+        "capability_descriptor_refs",
+        "candidate_artifact_engine_refs",
+        "no_authority_boundary"
+      ],
+      "active_caller_readback": {
+        "expected_state": "framework_capability_package_not_standard_domain_agent_default_caller",
+        "readback": "opl agents conformance --family-defaults --json#framework_capability_packages[mas-scholar-skills]",
+        "domain_repo_surface": "ScholarSkills package/channel readback"
+      },
+      "delete_or_tombstone_gate": {
+        "gate_status": "keep_refs_only_capability_package_outside_domain_delete_gate",
+        "required_refs": [
+          "pack_connect_channel_ref",
+          "no_authority_boundary_ref",
+          "not_standard_domain_agent_ref"
+        ],
+        "physical_delete_authorized": false,
+        "owner_acceptance_claimed": false
+      },
+      "forbidden_claims": [
+        "standard_domain_agent",
+        "mas_truth",
+        "typed_blocker_authority",
+        "publication_ready",
+        "physical_delete_authorized_by_opl"
+      ],
+      "verification_surface": {
+        "primary_readback": "opl agents conformance --family-defaults --json",
+        "contract_readback": "contracts/opl-framework/domain-private-platform-tail-matrix.json#surfaces[domain_id=mas-scholar-skills]",
+        "focused_test": "tests/src/domain-tail-default-caller-matrix.test.ts",
+        "domain_owner_readback_required_before_delete": false
+      }
+    }
+  ],
+  "summary": {
+    "surface_count": 6,
+    "domain_ids": [
+      "med-autoscience",
+      "med-autogrant",
+      "redcube-ai",
+      "opl-meta-agent",
+      "opl-bookforge",
+      "mas-scholar-skills"
+    ],
+    "physical_delete_authorized": false,
+    "owner_acceptance_claimed": false,
+    "domain_ready_claimed": false,
+    "production_ready_claimed": false,
+    "live_readiness_claimed": false
+  },
+  "authority_boundary": {
+    "matrix_can_write_domain_truth": false,
+    "matrix_can_mutate_domain_repo_files": false,
+    "matrix_can_sign_domain_owner_receipt": false,
+    "matrix_can_create_typed_blocker": false,
+    "matrix_can_authorize_domain_repo_physical_delete": false,
+    "matrix_can_claim_owner_acceptance": false,
+    "matrix_can_claim_domain_ready": false,
+    "matrix_can_claim_runtime_ready": false,
+    "matrix_can_claim_app_release_ready": false,
+    "matrix_can_claim_production_ready": false
+  }
+}
