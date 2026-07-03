@@ -56,6 +56,7 @@ const fastTestFiles = [
   'tests/src/stage-artifact-runtime.test.ts',
   'tests/src/stage-artifact-contract.test.ts',
   'tests/src/schema-registry.test.ts',
+  'tests/src/domain-tail-default-caller-matrix.test.ts',
   'tests/src/observability-semantic-conventions.test.ts',
   'tests/src/state-index-kernel-contract.test.ts',
   'tests/src/stage-run-kernel-contract.test.ts',

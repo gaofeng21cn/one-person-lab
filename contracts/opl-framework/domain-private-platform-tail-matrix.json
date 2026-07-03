@@ -4,7 +4,7 @@
   "owner": "one-person-lab",
   "state": "seed_contract",
   "contract_ref": "contracts/opl-framework/domain-private-platform-tail-matrix.json",
-  "source_phase": "docs/active/reuse-first-platform-risk-audit-and-landing-plan.md#phase-7-domain-private-platform-retirement",
+  "source_phase": "human_doc:reuse-first-platform-risk-audit.phase7-domain-private-platform-retirement",
   "purpose": "Seed a machine-readable tail matrix for MAS, MAG, RCA, OMA, BookForge, and ScholarSkills private platform retirement without authorizing domain repo deletes or owner acceptance.",
   "machine_boundary": "This matrix is an OPL readback seed and delete/tombstone planning input. It does not mutate domain repos, write domain truth, sign owner receipts, create typed blockers, authorize physical delete, or claim domain/runtime/production readiness.",
   "source_surfaces": [
