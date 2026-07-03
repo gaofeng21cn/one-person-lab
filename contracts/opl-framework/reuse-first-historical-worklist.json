@@ -1,0 +1,160 @@
+{
+  "contract_kind": "opl_reuse_first_historical_worklist.v1",
+  "surface_kind": "opl_reuse_first_historical_worklist",
+  "owner": "one-person-lab",
+  "purpose": "Classify historical reuse-first scan findings into explicit migration, projection-boundary, and owner-decision worklists without weakening the strict diff no-resurrection gate.",
+  "state": "active_contract",
+  "machine_boundary": "This surface classifies historical full-scan findings only. It does not waive new diff findings, prove risk elimination, prove release readiness, prove production readiness, prove domain readiness, prove owner acceptance, or authorize physical deletion.",
+  "default_owner": "OPL Framework Governance",
+  "decision_statuses": [
+    "undecisioned",
+    "accepted_migration_worklist",
+    "allowed_projection_boundary",
+    "must_migrate",
+    "owner_decision_required"
+  ],
+  "false_ready_guard": [
+    "worklist decision is not risk eliminated",
+    "worklist decision is not release ready",
+    "worklist decision is not production ready",
+    "worklist decision is not domain ready",
+    "worklist decision is not owner acceptance"
+  ],
+  "items": [
+    {
+      "id": "phase1-src-modules-schema-cli-boundaries",
+      "status": "accepted_migration_worklist",
+      "categories": [
+        "handwritten_json_boundary"
+      ],
+      "path_prefixes": [
+        "src/modules"
+      ],
+      "owner": "OPL Framework Schema/CLI",
+      "phase": "Phase 1/2",
+      "action": "migrate_to_schema_registry_or_shared_json_boundary",
+      "expiry": "2026-09-30",
+      "decision_ref": "docs/active/reuse-first-platform-risk-audit-and-landing-plan.md#phase-1-schema-boundary-consolidation",
+      "false_ready_guard": [
+        "accepted migration worklist means the historical finding still exists until migrated"
+      ]
+    },
+    {
+      "id": "phase4-src-modules-runtime-queue",
+      "status": "must_migrate",
+      "categories": [
+        "custom_runtime_queue"
+      ],
+      "path_prefixes": [
+        "src/modules"
+      ],
+      "owner": "OPL Runway Runtime",
+      "phase": "Phase 4/5",
+      "action": "move_durable_lifecycle_to_temporal_and_keep_local_store_projection_only",
+      "expiry": "2026-09-30",
+      "decision_ref": "docs/active/reuse-first-platform-risk-audit-and-landing-plan.md#phase-4-runway-temporal-first-runtime"
+    },
+    {
+      "id": "phase6-src-modules-update-package",
+      "status": "owner_decision_required",
+      "categories": [
+        "custom_update_or_package_manager"
+      ],
+      "path_prefixes": [
+        "src/modules"
+      ],
+      "owner": "OPL Managed Update / Pack owners",
+      "phase": "Phase 6/7",
+      "action": "route_update_and_package_materialization_through_owner_boundary",
+      "expiry": "2026-10-31",
+      "decision_ref": "docs/active/reuse-first-platform-risk-audit-and-landing-plan.md#phase-6-managed-update-split"
+    },
+    {
+      "id": "phase10-src-modules-observability",
+      "status": "accepted_migration_worklist",
+      "categories": [
+        "custom_observability_ledger"
+      ],
+      "path_prefixes": [
+        "src/modules"
+      ],
+      "owner": "OPL Observability",
+      "phase": "Phase 10",
+      "action": "map_private_ledger_readbacks_to_opentelemetry_semantic_conventions",
+      "expiry": "2026-10-31",
+      "decision_ref": "docs/active/reuse-first-platform-risk-audit-and-landing-plan.md#phase-10-no-resurrection-governance"
+    },
+    {
+      "id": "phase2-cli-entrypoint-boundaries",
+      "status": "accepted_migration_worklist",
+      "categories": [
+        "handwritten_json_boundary",
+        "custom_update_or_package_manager",
+        "custom_observability_ledger"
+      ],
+      "path_prefixes": [
+        "src/entrypoints"
+      ],
+      "owner": "OPL CLI",
+      "phase": "Phase 2",
+      "action": "move_cli_payload_parsing_to_command_registry_and_shared_json_boundary",
+      "expiry": "2026-09-30",
+      "decision_ref": "docs/active/reuse-first-platform-risk-audit-and-landing-plan.md#phase-2-cli-parsercommand-registry"
+    },
+    {
+      "id": "phase0-contract-provenance-boundaries",
+      "status": "allowed_projection_boundary",
+      "categories": [
+        "custom_observability_ledger",
+        "custom_runtime_queue",
+        "custom_update_or_package_manager"
+      ],
+      "path_prefixes": [
+        "contracts"
+      ],
+      "owner": "OPL Framework Governance",
+      "phase": "Phase 0/10",
+      "action": "keep_as_contract_provenance_and_verify_no_active_runtime_claim",
+      "expiry": "2026-12-31",
+      "decision_ref": "contracts/opl-framework/reuse-first-governance.json"
+    },
+    {
+      "id": "phase0-maintenance-script-boundaries",
+      "status": "owner_decision_required",
+      "categories": [
+        "handwritten_json_boundary",
+        "custom_update_or_package_manager",
+        "custom_observability_ledger"
+      ],
+      "path_prefixes": [
+        "scripts"
+      ],
+      "owner": "OPL Maintainer Tooling",
+      "phase": "Phase 0/10",
+      "action": "keep_scripts_thin_or_move_reusable_logic_to_owned_module_before_expiry",
+      "expiry": "2026-10-31",
+      "decision_ref": "docs/active/reuse-first-platform-risk-audit-and-landing-plan.md#phase-0-reuse-first-gate--inventory-freeze"
+    },
+    {
+      "id": "phase10-test-and-fixture-projections",
+      "status": "allowed_projection_boundary",
+      "categories": [
+        "handwritten_json_boundary",
+        "custom_runtime_queue",
+        "custom_update_or_package_manager",
+        "custom_observability_ledger"
+      ],
+      "path_prefixes": [
+        "tests"
+      ],
+      "owner": "OPL Test Harness",
+      "phase": "Phase 10",
+      "action": "keep_as_regression_fixture_or_projection_assertion_while_production_surface_migrates",
+      "expiry": "2026-12-31",
+      "decision_ref": "tests/src/reuse-first-scan.test.ts",
+      "false_ready_guard": [
+        "test fixture classification does not waive production migration findings"
+      ]
+    }
+  ]
+}
