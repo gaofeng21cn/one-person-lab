@@ -9,45 +9,25 @@ import {
   buildUsageError,
   readPayloadFileText,
 } from '../modules/support.ts';
+import {
+  readJsonObject,
+  readOptionalString,
+  readStringList,
+} from '../modules/json-boundary.ts';
 import type { CommandSpec } from '../modules/support.ts';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  const scalar = optionalString(value);
-  if (scalar) {
-    return [scalar];
-  }
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
 
 function parseRuntimeOmaAppLivePathPayload(
   value: string,
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): OmaAppLivePathReceiptInput {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch (error) {
-    throw buildUsageError('runtime oma-app-live-path record payload must be valid JSON.', spec, {
-      parse_error: error instanceof Error ? error.message : String(error),
-    });
-  }
-  if (!isRecord(parsed)) {
-    throw buildUsageError('runtime oma-app-live-path record payload must be a JSON object.', spec);
-  }
+  const parsed = readJsonObject(value, spec, {
+    parseErrorMessage: 'runtime oma-app-live-path record payload must be valid JSON.',
+    objectErrorMessage: 'runtime oma-app-live-path record payload must be a JSON object.',
+  });
   return {
-    app_live_path_refs: stringList(parsed.app_live_path_refs ?? parsed.app_live_path_ref),
-    app_surface_ref: optionalString(parsed.app_surface_ref),
-    operator_evidence_refs: stringList(
+    app_live_path_refs: readStringList(parsed.app_live_path_refs ?? parsed.app_live_path_ref),
+    app_surface_ref: readOptionalString(parsed.app_surface_ref),
+    operator_evidence_refs: readStringList(
       parsed.operator_evidence_refs ?? parsed.operator_evidence_ref,
     ),
   };

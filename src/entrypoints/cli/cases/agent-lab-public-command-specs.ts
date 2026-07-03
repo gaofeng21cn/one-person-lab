@@ -23,60 +23,40 @@ import {
   buildAgentLabWorkflowTemplatePayload,
   buildAgentLabWorkflowTemplateRunPayload,
 } from '../modules/agent-lab-public-payloads.ts';
+import {
+  readJsonObject,
+  readOptionalString,
+  readStringList,
+} from '../modules/json-boundary.ts';
 import { assertNoArgs, buildUsageError } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  const scalar = optionalString(value);
-  if (scalar) {
-    return [scalar];
-  }
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
 
 function parseRiskTierPromotionPayload(
   value: string,
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): AgentLabRiskTierAutoPromotionReceiptInput {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch (error) {
-    throw buildUsageError('agent-lab risk-tier-promotion record payload must be valid JSON.', spec, {
-      parse_error: error instanceof Error ? error.message : String(error),
-    });
-  }
-  if (!isRecord(parsed)) {
-    throw buildUsageError('agent-lab risk-tier-promotion record payload must be a JSON object.', spec);
-  }
+  const parsed = readJsonObject(value, spec, {
+    parseErrorMessage: 'agent-lab risk-tier-promotion record payload must be valid JSON.',
+    objectErrorMessage: 'agent-lab risk-tier-promotion record payload must be a JSON object.',
+  });
   return {
-    target_repo_id: optionalString(parsed.target_repo_id ?? parsed.target_repo),
-    mechanism_candidate_ref: optionalString(parsed.mechanism_candidate_ref),
-    risk_tier: optionalString(parsed.risk_tier),
-    failure_delta_refs: stringList(parsed.failure_delta_refs ?? parsed.failure_delta_ref),
+    target_repo_id: readOptionalString(parsed.target_repo_id ?? parsed.target_repo),
+    mechanism_candidate_ref: readOptionalString(parsed.mechanism_candidate_ref),
+    risk_tier: readOptionalString(parsed.risk_tier),
+    failure_delta_refs: readStringList(parsed.failure_delta_refs ?? parsed.failure_delta_ref),
     independent_ai_review_receipt_ref:
-      optionalString(parsed.independent_ai_review_receipt_ref),
+      readOptionalString(parsed.independent_ai_review_receipt_ref),
     independent_ai_review_receipt: parsed.independent_ai_review_receipt,
     promotion_receipt_refs:
-      stringList(parsed.promotion_receipt_refs ?? parsed.promotion_receipt_ref),
+      readStringList(parsed.promotion_receipt_refs ?? parsed.promotion_receipt_ref),
     rollback_target_refs:
-      stringList(parsed.rollback_target_refs ?? parsed.rollback_target_ref),
+      readStringList(parsed.rollback_target_refs ?? parsed.rollback_target_ref),
     canary_observation_refs:
-      stringList(parsed.canary_observation_refs ?? parsed.canary_observation_ref),
+      readStringList(parsed.canary_observation_refs ?? parsed.canary_observation_ref),
     no_forbidden_write_refs:
-      stringList(parsed.no_forbidden_write_refs ?? parsed.no_forbidden_write_ref),
-    verification_refs: stringList(parsed.verification_refs ?? parsed.verification_ref),
-    receipt_ref: optionalString(parsed.receipt_ref),
+      readStringList(parsed.no_forbidden_write_refs ?? parsed.no_forbidden_write_ref),
+    verification_refs: readStringList(parsed.verification_refs ?? parsed.verification_ref),
+    receipt_ref: readOptionalString(parsed.receipt_ref),
   };
 }
 

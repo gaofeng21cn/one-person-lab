@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { parseJsonText } from '../../../../kernel/json-file.ts';
 import {
   buildOkfContextBundleFromDomainPack,
   buildOkfContextBundleFromDomainRepo,
@@ -301,7 +302,7 @@ export function buildOkfCommandSpecs(): Record<string, CommandSpec> {
       group: 'contract',
       handler: (args) => {
         const parsed = parseOkfProjectPackArgs(args, okfCommandSpecs['okf project-pack']);
-        const packInput = JSON.parse(
+        const packInput = parseJsonText(
           readFileSync(resolve(parsed.packPath), 'utf8'),
         );
         const projection = buildOkfContextBundleFromDomainPack(packInput, {

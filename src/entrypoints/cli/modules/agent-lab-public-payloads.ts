@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 
+import { parseJsonText } from '../../../kernel/json-file.ts';
 import {
   buildAgentLabExportEnvelope,
   buildAgentLabEvolutionResult,
@@ -384,7 +385,7 @@ function readAgentLabSuiteFile(suitePath: string): AgentLabSuite {
   }
 
   try {
-    return JSON.parse(raw) as AgentLabSuite;
+    return parseJsonText(raw) as AgentLabSuite;
   } catch (error) {
     throw new FrameworkContractError('contract_json_invalid', `Agent Lab suite file contains invalid JSON: ${suitePath}.`, {
       file: suitePath,

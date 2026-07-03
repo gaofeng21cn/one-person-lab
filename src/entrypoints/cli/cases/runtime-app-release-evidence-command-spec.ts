@@ -16,64 +16,44 @@ import {
   buildUsageError,
   readPayloadFileText,
 } from '../modules/support.ts';
+import {
+  readJsonObject,
+  readOptionalString,
+  readStringList,
+} from '../modules/json-boundary.ts';
 import type { CommandSpec } from '../modules/support.ts';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  const scalar = optionalString(value);
-  if (scalar) {
-    return [scalar];
-  }
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
 
 function parseRuntimeAppReleaseEvidencePayload(
   value: string,
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): AppReleaseUserPathEvidenceReceiptInput {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch (error) {
-    throw buildUsageError('runtime app-release-evidence record payload must be valid JSON.', spec, {
-      parse_error: error instanceof Error ? error.message : String(error),
-    });
-  }
-  if (!isRecord(parsed)) {
-    throw buildUsageError('runtime app-release-evidence record payload must be a JSON object.', spec);
-  }
+  const parsed = readJsonObject(value, spec, {
+    parseErrorMessage: 'runtime app-release-evidence record payload must be valid JSON.',
+    objectErrorMessage: 'runtime app-release-evidence record payload must be a JSON object.',
+  });
   return {
-    release_package_refs: stringList(parsed.release_package_refs ?? parsed.release_package_ref),
-    screenshot_refs: stringList(parsed.screenshot_refs ?? parsed.screenshot_ref),
-    reload_prompt_user_path_refs: stringList(
+    release_package_refs: readStringList(parsed.release_package_refs ?? parsed.release_package_ref),
+    screenshot_refs: readStringList(parsed.screenshot_refs ?? parsed.screenshot_ref),
+    reload_prompt_user_path_refs: readStringList(
       parsed.reload_prompt_user_path_refs ?? parsed.reload_prompt_user_path_ref,
     ),
-    provider_state_linkage_refs: stringList(
+    provider_state_linkage_refs: readStringList(
       parsed.provider_state_linkage_refs ?? parsed.provider_state_linkage_ref,
     ),
-    install_evidence_refs: stringList(
+    install_evidence_refs: readStringList(
       parsed.install_evidence_refs ?? parsed.install_evidence_ref,
     ),
-    long_operator_evidence_refs: stringList(
+    long_operator_evidence_refs: readStringList(
       parsed.long_operator_evidence_refs ?? parsed.long_operator_evidence_ref,
     ),
-    release_owner_receipt_refs: stringList(
+    release_owner_receipt_refs: readStringList(
       parsed.release_owner_receipt_refs ?? parsed.release_owner_receipt_ref,
     ),
-    typed_blocker_refs: stringList(parsed.typed_blocker_refs ?? parsed.typed_blocker_ref),
-    owner_acceptance_refs: stringList(
+    typed_blocker_refs: readStringList(parsed.typed_blocker_refs ?? parsed.typed_blocker_ref),
+    owner_acceptance_refs: readStringList(
       parsed.owner_acceptance_refs ?? parsed.owner_acceptance_ref,
     ),
-    receipt_ref: optionalString(parsed.receipt_ref),
+    receipt_ref: readOptionalString(parsed.receipt_ref),
   };
 }
 

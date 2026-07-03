@@ -13,6 +13,7 @@ import {
   buildScholarSkillsValidation,
 } from '../../../../modules/pack/scholar-skills.ts';
 import type { FrameworkContracts } from '../../../../kernel/types.ts';
+import { parseJsonText } from '../../../../kernel/json-file.ts';
 import {
   assertNoArgs,
   buildUsageError,
@@ -320,7 +321,7 @@ function parseMaterializeArgs(args: string[], spec: CommandSpec) {
   if (payloadJson || payloadFile) {
     const payloadText = payloadJson ?? readPayloadFileText(payloadFile ?? '', spec);
     try {
-      payload = JSON.parse(payloadText);
+      payload = parseJsonText(payloadText);
     } catch (error) {
       throw buildUsageError(`${commandLabel} payload must be valid JSON.`, spec, {
         parse_error: error instanceof Error ? error.message : String(error),
