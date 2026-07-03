@@ -10,8 +10,8 @@ import {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
-const modulePath = 'src/current-owner-delta-topline.ts';
-const projectionModulePath = 'src/current-owner-delta-projection.ts';
+const modulePath = 'src/modules/ledger/current-owner-delta-topline.ts';
+const projectionModulePath = 'src/modules/ledger/current-owner-delta-projection.ts';
 
 function authorizationIdentity(input: {
   domainId: string;
