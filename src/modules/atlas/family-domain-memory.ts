@@ -1,16 +1,8 @@
-import fs from 'node:fs';
-
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import type { DomainManifestCatalogEntry } from './domain-manifest/types.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import type { FamilyDomainMemoryRef } from './family-domain-memory-contract.ts';
-import {
-  listStageAttemptCloseouts,
-  listStageAttempts,
-} from '../runway/index.ts';
-import { openFamilyRuntimeSqlite } from '../runway/index.ts';
-import { familyRuntimePaths } from '../runway/index.ts';
 
 function normalizeDomainSelection(value: string) {
   const key = value.trim().toLowerCase();
@@ -163,14 +155,6 @@ function stringList(value: unknown) {
     : [];
 }
 
-function recordList(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is Record<string, unknown> => (
-        typeof entry === 'object' && entry !== null && !Array.isArray(entry)
-      ))
-    : [];
-}
-
 function emptyRuntimeReceiptEvidence(domainId: string, sourceStatus = 'ledger_empty'): RuntimeReceiptEvidence {
   return {
     surface_kind: 'opl_domain_memory_runtime_receipt_evidence',
@@ -199,83 +183,11 @@ function emptyRuntimeReceiptEvidence(domainId: string, sourceStatus = 'ledger_em
   };
 }
 
-function readRuntimeReceiptEvidenceByDomain(): RuntimeReceiptEvidenceIndex {
-  const paths = familyRuntimePaths();
-  if (!fs.existsSync(paths.queue_db)) {
-    return {
-      source_status: 'queue_db_missing',
-      byDomain: new Map<string, RuntimeReceiptEvidence>(),
-    };
-  }
-
-  const db = openFamilyRuntimeSqlite(paths.queue_db, { readOnly: true });
-  try {
-    const attemptsTable = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'stage_attempts'").get();
-    const closeoutsTable = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'stage_attempt_closeouts'").get();
-    if (!attemptsTable || !closeoutsTable) {
-      return {
-        source_status: 'stage_attempt_ledger_missing',
-        byDomain: new Map<string, RuntimeReceiptEvidence>(),
-      };
-    }
-    const byDomain = new Map<string, RuntimeReceiptEvidence>();
-    for (const attempt of listStageAttempts(db)) {
-      const domainId = attempt.domain_id;
-      const closeouts = listStageAttemptCloseouts(db, attempt.stage_attempt_id);
-      if (closeouts.length === 0) {
-        continue;
-      }
-      const current = byDomain.get(domainId) ?? emptyRuntimeReceiptEvidence(domainId, 'stage_attempt_ledger_readable');
-      const consumedMemoryRefs = uniqueStrings([
-        ...current.consumed_memory_refs,
-        ...closeouts.flatMap((closeout) => stringList(closeout.packet.consumed_memory_refs)),
-      ]);
-      const writebackReceiptRefs = uniqueStrings([
-        ...current.writeback_receipt_refs,
-        ...closeouts.flatMap((closeout) => stringList(closeout.packet.writeback_receipt_refs)),
-      ]);
-      const closeoutRefs = uniqueStrings([
-        ...current.closeout_refs,
-        ...closeouts.flatMap((closeout) => stringList(closeout.packet.closeout_refs)),
-      ]);
-      const rejectedWrites = [
-        ...current.rejected_writes,
-        ...closeouts.flatMap((closeout) => recordList(closeout.packet.rejected_writes)),
-      ];
-      const sourceRefs = uniqueStrings([
-        ...current.source_refs,
-        ...closeouts.map((closeout) => `${paths.queue_db}#stage_attempt_closeouts/${closeout.closeout_id}`),
-      ]);
-      byDomain.set(domainId, {
-        ...current,
-        status: 'runtime_closeout_refs_observed',
-        source_status: 'stage_attempt_ledger_readable',
-        summary: {
-          closeout_count: current.summary.closeout_count + closeouts.length,
-          consumed_memory_ref_count: consumedMemoryRefs.length,
-          writeback_receipt_ref_count: writebackReceiptRefs.length,
-          rejected_write_count: rejectedWrites.length,
-          opl_writes_memory_body: false,
-        },
-        consumed_memory_refs: consumedMemoryRefs,
-        writeback_receipt_refs: writebackReceiptRefs,
-        rejected_writes: rejectedWrites,
-        closeout_refs: closeoutRefs,
-        source_refs: sourceRefs,
-      });
-    }
-    return {
-      source_status: 'stage_attempt_ledger_readable',
-      byDomain,
-    };
-  } catch {
-    return {
-      source_status: 'stage_attempt_ledger_unreadable',
-      byDomain: new Map<string, RuntimeReceiptEvidence>(),
-    };
-  } finally {
-    db.close();
-  }
+function emptyRuntimeReceiptEvidenceIndex(sourceStatus = 'runtime_receipt_evidence_not_injected'): RuntimeReceiptEvidenceIndex {
+  return {
+    source_status: sourceStatus,
+    byDomain: new Map<string, RuntimeReceiptEvidence>(),
+  };
 }
 
 function buildRuntimeReceiptEvidenceForDomain(
@@ -307,13 +219,14 @@ type DomainManifestCatalog = ReturnType<typeof buildDomainManifestCatalog>['doma
 type ManifestCatalogOptions = {
   manifestCommandTimeoutMs?: number;
   domainManifests?: DomainManifestCatalog;
+  runtimeReceiptEvidenceIndex?: RuntimeReceiptEvidenceIndex;
 };
 
 function buildMemoryIndex(contracts: FrameworkContracts, options: ManifestCatalogOptions = {}) {
   const catalog = options.domainManifests ?? buildDomainManifestCatalog(contracts, {
     manifestCommandTimeoutMs: options.manifestCommandTimeoutMs,
   }).domain_manifests;
-  const runtimeReceiptEvidenceIndex = readRuntimeReceiptEvidenceByDomain();
+  const runtimeReceiptEvidenceIndex = options.runtimeReceiptEvidenceIndex ?? emptyRuntimeReceiptEvidenceIndex();
   const memories = catalog.projects.map((entry) => buildMemoryIndexEntry(entry, runtimeReceiptEvidenceIndex));
   return {
     domain_manifests: catalog,
@@ -342,7 +255,11 @@ export function buildFamilyDomainMemoryList(contracts: FrameworkContracts, optio
   };
 }
 
-export function buildFamilyDomainMemoryInspect(contracts: FrameworkContracts, args: string[]) {
+export function buildFamilyDomainMemoryInspect(
+  contracts: FrameworkContracts,
+  args: string[],
+  options: ManifestCatalogOptions = {},
+) {
   const parsed = parseOptionArgs(args, ['domain']);
   const normalized = normalizeDomainSelection(parsed.domain);
   const catalog = buildDomainManifestCatalog(contracts).domain_manifests;
@@ -366,7 +283,7 @@ export function buildFamilyDomainMemoryInspect(contracts: FrameworkContracts, ar
   const receiptProjection = descriptor ? buildReceiptProjection(descriptor) : null;
   const runtimeReceiptEvidence = buildRuntimeReceiptEvidenceForDomain(
     entry.project_id,
-    readRuntimeReceiptEvidenceByDomain(),
+    options.runtimeReceiptEvidenceIndex ?? emptyRuntimeReceiptEvidenceIndex(),
   );
   return {
     version: 'g2',
@@ -407,8 +324,12 @@ export function buildFamilyDomainMemoryInspect(contracts: FrameworkContracts, ar
   };
 }
 
-export function buildFamilyDomainMemoryMigrationPlan(contracts: FrameworkContracts, args: string[]) {
-  const inspected = buildFamilyDomainMemoryInspect(contracts, args).family_domain_memory;
+export function buildFamilyDomainMemoryMigrationPlan(
+  contracts: FrameworkContracts,
+  args: string[],
+  options: ManifestCatalogOptions = {},
+) {
+  const inspected = buildFamilyDomainMemoryInspect(contracts, args, options).family_domain_memory;
   const descriptor = inspected.descriptor;
   if (!descriptor) {
     throw new FrameworkContractError(

@@ -5,6 +5,7 @@ import type { FamilyRuntimeDomainProfiles, FamilyRuntimeTaskScope } from './fami
 import { enqueueTask } from './family-runtime-enqueue.ts';
 import { dispatchFamilyRuntimeTask } from './family-runtime-task-dispatch.ts';
 import { hydrateDomainTasks } from './family-runtime-domain-intake.ts';
+import type { FamilyRuntimeDomainIntakeDependencies } from './family-runtime-domain-intake.ts';
 import { queryTemporalStageAttemptReadModel } from './family-runtime-temporal-query.ts';
 import { runFamilyRuntimeQueueTick } from './family-runtime-tick.ts';
 import { familyRuntimePaths } from './family-runtime-store.ts';
@@ -25,6 +26,7 @@ export function runSchedulerQueueTick(
     queryTemporalStageAttemptReadModel?: QueryTemporalStageAttemptReadModel;
     dispatchEnabled?: boolean;
     blockedReason?: string;
+    dependencies?: FamilyRuntimeDomainIntakeDependencies;
   },
 ) {
   if (!options?.temporalProviderModule) {
@@ -36,6 +38,7 @@ export function runSchedulerQueueTick(
         source: `${source}:hydrate`,
         taskScope,
         domainProfiles,
+        dependencies: options.dependencies,
       }, enqueueTask)
       : {
         source,
@@ -80,6 +83,7 @@ export function runSchedulerQueueTick(
     hydrate,
     taskScope,
     domainProfiles,
+    dependencies: options.dependencies,
   }, {
     enqueueTask,
     queryTemporalStageAttempt: (attempt) => (
@@ -88,6 +92,7 @@ export function runSchedulerQueueTick(
     dispatchTask: (queueDb, queuePaths, row) => dispatchFamilyRuntimeTask(queueDb, queuePaths, row, {
       temporalProviderModule: options.temporalProviderModule,
       queryTemporalStageAttemptReadModel: options.queryTemporalStageAttemptReadModel,
+      resolveOplModuleExecCommand: options.dependencies?.resolveOplModuleExecCommand,
     }),
   });
 }

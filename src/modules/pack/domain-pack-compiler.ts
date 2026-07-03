@@ -1,8 +1,6 @@
 import crypto from 'node:crypto';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
-import type { DomainManifestCatalog } from '../atlas/index.ts';
-import { buildFamilyAgentDescriptorList } from '../atlas/index.ts';
 import {
   defaultStandardDomainAgentRepoInputs,
   DEFAULT_STANDARD_DOMAIN_AGENT_REPOS,
@@ -35,8 +33,9 @@ type JsonRecord = Record<string, unknown>;
 const PACK_COMPILER_MANIFEST_COMMAND_TIMEOUT_MS = 120_000;
 
 type DomainPackCompilerOptions = {
-  domainManifests?: DomainManifestCatalog;
   familyDefaults?: boolean;
+  agentDescriptors?: JsonRecord[];
+  loadAgentDescriptors?: () => JsonRecord[];
 };
 
 function recordPathList(value: unknown) {
@@ -565,13 +564,14 @@ function buildCompilerDomains(contracts: FrameworkContracts, options: DomainPack
       )
     );
   }
-  const descriptorList = buildFamilyAgentDescriptorList(contracts, {
-    domainManifests: options.domainManifests,
-    manifestCommandTimeoutMs: PACK_COMPILER_MANIFEST_COMMAND_TIMEOUT_MS,
-    manifestCommandTimeoutPolicy: 'fixed',
-  });
-  const familyAgentDescriptors = descriptorList.family_agent_descriptors;
-  return familyAgentDescriptors.descriptors.map((descriptor) =>
+  const descriptors = options.agentDescriptors ?? options.loadAgentDescriptors?.();
+  if (!descriptors) {
+    throw new FrameworkContractError('cli_usage_error', 'Pack compiler requires Atlas descriptor input when --family-defaults is not used.', {
+      required_input: 'agentDescriptors',
+      owner_boundary: 'Atlas discovers domain manifests; Pack compiles generated surfaces from descriptor input.',
+    });
+  }
+  return descriptors.map((descriptor) =>
     buildPackCompilerProjection(descriptorWithRepoContractInputs(descriptor as JsonRecord))
   );
 }
@@ -674,7 +674,11 @@ export function buildRepoGeneratedInterfaceBundle(
   };
 }
 
-export function buildGeneratedAgentInterfaces(contracts: FrameworkContracts, args: string[]) {
+export function buildGeneratedAgentInterfaces(
+  contracts: FrameworkContracts,
+  args: string[],
+  options: DomainPackCompilerOptions = {},
+) {
   const { domain, repoDir, familyDefaults, format } = parseInterfaceArgs(args);
   if (repoDir) {
     const generated = buildRepoGeneratedInterfaceBundle(repoDir, format);
@@ -734,7 +738,7 @@ export function buildGeneratedAgentInterfaces(contracts: FrameworkContracts, arg
     };
   }
 
-  const domains = buildCompilerDomains(contracts);
+  const domains = buildCompilerDomains(contracts, options);
   const selected = domains.find((candidate) => domainSelectionMatches(candidate as JsonRecord, domain));
   if (!selected) {
     throw new FrameworkContractError('cli_usage_error', `Unknown generated interface domain: ${domain}.`, {

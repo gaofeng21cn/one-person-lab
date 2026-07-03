@@ -21,8 +21,11 @@ export { deriveCurrentControlStateForAttempt, deriveCurrentControlStateForTask }
 export { latestStageAttemptCloseoutPacketsByAttempt, listStageAttemptRows, stageAttemptSignalsByAttempt } from './family-runtime-stage-attempt-ledger.ts';
 export type { FamilyRuntimeDomainId, FamilyRuntimeProviderKind } from './family-runtime-types.ts';
 export { readMasManagedProviderProjection, projectionFromMasManifestEntry } from './family-runtime-mas-managed-provider-projection.ts';
+export { readFamilyDomainMemoryRuntimeReceiptEvidenceByDomain } from './family-domain-memory-runtime-receipts.ts';
 export { buildOplEndpoints } from './opl-runtime-paths.ts';
 export { buildProviderContinuousProof } from './family-runtime-provider-continuous-proof.ts';
+export { applyProviderClosureEvidence, providerClosureEvidence, providerResidencyGapStatus, readProviderContinuousProof } from './family-domain-agent-provider-closure.ts';
+export type { ProviderContinuousProof } from './family-domain-agent-provider-closure.ts';
 export { runFamilyRuntimeEvidenceWorklist } from './family-runtime-evidence-worklist.ts';
 export { buildMasDomainRouteSupportProjection } from './family-runtime-mas-domain-route.ts';
 export { runFamilyRuntimeLifecycleApply, type LifecycleApplyMode } from './family-runtime-lifecycle-index.ts';

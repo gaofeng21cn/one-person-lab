@@ -73,6 +73,7 @@ type EvidenceWorklistInput = {
   stageReplayMissingReceiptExtraReceipts?: StageReplayMissingReceiptReceipt[];
   domainManifests?: DomainManifestCatalog;
   queryTemporalStageAttemptReadModel?: EvidenceWorklistTemporalQuery;
+  defaultCallerReadinessReportBuilder?: (args: string[]) => JsonRecord;
 };
 
 export async function runFamilyRuntimeEvidenceWorklist(

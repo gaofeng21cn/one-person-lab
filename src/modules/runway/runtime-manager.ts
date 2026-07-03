@@ -13,7 +13,6 @@ import {
   buildNativeHelperProjection,
   runNativeHelperRepairAction,
 } from './public/runtime-manager-support.ts';
-import { buildStandardDomainAgentScaffold } from '../foundry-lab/public/standard-domain-agent-scaffold.ts';
 
 const ADMITTED_DOMAIN_OWNERS = [
   {
@@ -313,6 +312,19 @@ type RuntimeManagerActionInput = {
   skipFamilyRuntimeProvider?: boolean;
 };
 
+type RuntimeManagerDependencies = {
+  buildStandardDomainAgentScaffold?: () => {
+    standard_domain_agent_scaffold: Record<string, unknown>;
+  };
+};
+
+function standardDomainAgentScaffoldProjection(dependencies: RuntimeManagerDependencies) {
+  return dependencies.buildStandardDomainAgentScaffold?.().standard_domain_agent_scaffold ?? {
+    status: 'standard_domain_agent_scaffold_builder_not_injected',
+    owner_boundary: 'Foundry Lab owns scaffold generation; Runway projects it only when an entrypoint injects the public Foundry builder.',
+  };
+}
+
 function isNativeHelperAction(actionId: string) {
   return actionId === 'repair_native_helpers' || actionId === 'refresh_native_indexes';
 }
@@ -336,7 +348,10 @@ function filterActionableRuntimeManagerActions(
   });
 }
 
-export async function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = {}) {
+export async function buildRuntimeManager(
+  input: { persistNativeIndexes?: boolean } = {},
+  dependencies: RuntimeManagerDependencies = {},
+) {
   const { selectedProvider, providerRuntime: providers, provider } =
     await inspectSelectedFamilyRuntimeProvidersWithLifecycle({
       requestedProvider: resolveFamilyRuntimeProviderKind(),
@@ -424,7 +439,7 @@ export async function buildRuntimeManager(input: { persistNativeIndexes?: boolea
           'non_goals',
         ],
       },
-      standard_domain_agent_scaffold: buildStandardDomainAgentScaffold().standard_domain_agent_scaffold,
+      standard_domain_agent_scaffold: standardDomainAgentScaffoldProjection(dependencies),
       native_helper_target: {
         status: 'contracted_optional_rust_helpers',
         language: 'rust',
@@ -470,8 +485,11 @@ export async function buildRuntimeManager(input: { persistNativeIndexes?: boolea
   };
 }
 
-export async function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
-  const before = await buildRuntimeManager({ persistNativeIndexes: false });
+export async function runRuntimeManagerAction(
+  input: RuntimeManagerActionInput,
+  dependencies: RuntimeManagerDependencies = {},
+) {
+  const before = await buildRuntimeManager({ persistNativeIndexes: false }, dependencies);
   const recommendedActions = before.runtime_manager.reconcile.recommended_actions;
   const actionableActions = filterActionableRuntimeManagerActions(recommendedActions, input);
   const plannedActions = actionableActions.map((action) => ({
@@ -543,7 +561,7 @@ export async function runRuntimeManagerAction(input: RuntimeManagerActionInput) 
     }
 
     if (action.action_id === 'refresh_native_indexes') {
-      after = await buildRuntimeManager({ persistNativeIndexes: true });
+      after = await buildRuntimeManager({ persistNativeIndexes: true }, dependencies);
       const persistence = after.runtime_manager.state_index_target.persistence;
       executedActions.push({
         action_id: action.action_id,
@@ -573,7 +591,7 @@ export async function runRuntimeManagerAction(input: RuntimeManagerActionInput) 
     });
   }
 
-  after ??= await buildRuntimeManager({ persistNativeIndexes: false });
+  after ??= await buildRuntimeManager({ persistNativeIndexes: false }, dependencies);
   const afterSummary = summarizeRuntimeManagerForAction(after);
   const executedNonBlockingActions = executedActions.filter((action) => action.blocking === false);
   const hasFailure = executedActions.some((action) => action.status === 'failed');

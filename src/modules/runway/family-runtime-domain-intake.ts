@@ -20,8 +20,7 @@ import {
   runFamilyRuntimeDomainHandlerCommand,
   domainHandlerResultErrorMessage,
 } from './family-runtime-domain-handler-process.ts';
-import { resolveOplModuleExecCommand } from '../connect/index.ts';
-import type { ModuleInspection } from '../connect/index.ts';
+import type { OplModuleExecCommandResolver } from './family-runtime-dispatch-command.ts';
 import { taskInputMatchesScope, taskRowMatchesScope } from './family-runtime-task-scope.ts';
 import {
   activeMedautoscienceWorkspaceProfile,
@@ -56,6 +55,21 @@ type DomainExportCommand = {
     required_path?: string;
     repair_action?: Record<string, unknown>;
   };
+};
+
+type ModuleInspection = {
+  module_id: string;
+  install_origin: string;
+  checkout_path: string;
+  health_status: string;
+  git?: {
+    head_sha?: string | null;
+    dirty?: boolean;
+  } | null;
+};
+
+export type FamilyRuntimeDomainIntakeDependencies = {
+  resolveOplModuleExecCommand?: OplModuleExecCommandResolver;
 };
 
 type EnqueueTaskResult = {
@@ -144,6 +158,7 @@ function exportCommandForDomain(
   paths?: ReturnType<typeof familyRuntimePaths>,
   domainProfiles?: FamilyRuntimeDomainProfiles,
   taskScope?: FamilyRuntimeTaskScope,
+  dependencies: FamilyRuntimeDomainIntakeDependencies = {},
 ): DomainExportCommand | null {
   const override = process.env[`OPL_FAMILY_RUNTIME_${domainId.toUpperCase()}_EXPORT`]?.trim();
   if (override) {
@@ -160,7 +175,24 @@ function exportCommandForDomain(
     const modulePathOverride = process.env.OPL_MODULE_PATH_MEDAUTOSCIENCE?.trim();
     const moduleProfile = explicitProfile ?? (modulePathOverride ? workspaceProfile?.profileRef : null);
     if (moduleProfile) {
-      const command = resolveOplModuleExecCommand('medautoscience', [
+      if (!dependencies.resolveOplModuleExecCommand) {
+        return {
+          argv: ['opl', 'modules', 'exec', 'medautoscience'],
+          cwd: process.cwd(),
+          source: 'module_exec_profile',
+          owner_fingerprint: ['module_exec_profile', moduleProfile, 'resolver_not_injected'].join(':'),
+          unavailable: {
+            reason: 'opl_module_exec_resolver_not_injected',
+            repair_action: {
+              action_id: 'inject_connect_module_exec_resolver',
+              next_commands: [
+                'run through an OPL entrypoint that injects OPL Connect module resolution',
+              ],
+            },
+          },
+        };
+      }
+      const command = dependencies.resolveOplModuleExecCommand('medautoscience', [
         'domain-handler',
         'export',
         '--profile',
@@ -501,6 +533,7 @@ export function hydrateDomainTasks(
     source: string;
     taskScope?: FamilyRuntimeTaskScope;
     domainProfiles?: FamilyRuntimeDomainProfiles;
+    dependencies?: FamilyRuntimeDomainIntakeDependencies;
   },
   enqueueTask: EnqueueTask,
 ) {
@@ -515,7 +548,13 @@ export function hydrateDomainTasks(
   let suppressedCount = 0;
   let paperAutonomySupervisorDecisionConsumedCount = 0;
   for (const domainId of domains) {
-    const command = exportCommandForDomain(domainId, paths, input.domainProfiles, input.taskScope);
+    const command = exportCommandForDomain(
+      domainId,
+      paths,
+      input.domainProfiles,
+      input.taskScope,
+      input.dependencies,
+    );
     if (!command) {
       exports.push({ domain_id: domainId, status: 'skipped', reason: 'export_command_not_configured' });
       continue;

@@ -39,10 +39,10 @@
       "module_entrypoints.expected_count=10 with no missing, mismatched, or unexpected module roots",
       "root_ts.top_level_count=0 and target CLI entrypoint exists",
       "cross_module_imports.deep_import_violations.count=0 under --strict-imports",
-      "cross_module_imports.forbidden_dependency_violations.count=0 for configured forbidden_dependencies"
+      "cross_module_imports.forbidden_dependency_violations.count=0 for configured forbidden_dependencies",
+      "cross_module_imports.dependency_cycles.count=0 under --strict-cycles"
     ],
     "partial_gaps": [
-      "cross_module_imports.dependency_cycles remains advisory until --strict-cycles passes",
       "module public index files are still broad public re-export surfaces; strict imports prove import route legality, not minimal API shape",
       "next_forbidden_dependency_candidates are advisory until each pair has a migration path and zero accepted callers"
     ]

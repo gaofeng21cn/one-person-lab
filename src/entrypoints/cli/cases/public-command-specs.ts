@@ -52,6 +52,7 @@ import {
   buildGenericSubstrateProjectionList,
   buildGenericSubstrateWorkbench,
 } from '../../../modules/runway/generic-substrate-projection.ts';
+import { readFamilyDomainMemoryRuntimeReceiptEvidenceByDomain } from '../../../modules/runway/index.ts';
 import { runProductEntryResume } from '../../../modules/console/product-entry-runtime.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import { buildPublicSystemCommandSpecs } from './system-public-command-specs.ts';
@@ -152,6 +153,11 @@ export function buildPublicCommandSpecs(
   const scholarSkillsCommandSpecs = buildScholarSkillsCommandSpecs(getContracts);
   const updateCommandSpecs = buildUpdateCommandSpecs(getContracts);
   const workspaceCommandSpecs = buildWorkspaceCommandSpecs(commandSpecs);
+  const loadAgentDescriptorsForPackCompiler = () =>
+    buildFamilyAgentDescriptorList(getContracts(), {
+      manifestCommandTimeoutMs: 120_000,
+      manifestCommandTimeoutPolicy: 'fixed',
+    }).family_agent_descriptors.descriptors as Record<string, unknown>[];
 
   const engineInstallSpec = buildEngineActionSpec(
     'install',
@@ -605,7 +611,10 @@ export function buildPublicCommandSpecs(
       examples: ['opl agents pack-compiler', 'opl agents pack-compiler --family-defaults'],
       group: 'domain',
       handler: (args) => {
-        return buildDomainPackCompilerList(getContracts(), parsePackCompilerArgs(args));
+        return buildDomainPackCompilerList(getContracts(), {
+          ...parsePackCompilerArgs(args),
+          loadAgentDescriptors: loadAgentDescriptorsForPackCompiler,
+        });
       },
     },
     'agents pack-compiler inspect': {
@@ -616,7 +625,9 @@ export function buildPublicCommandSpecs(
         'opl agents pack-compiler inspect --family-defaults --domain mas',
       ],
       group: 'domain',
-      handler: (args) => buildDomainPackCompilerInspect(getContracts(), args),
+      handler: (args) => buildDomainPackCompilerInspect(getContracts(), args, {
+        loadAgentDescriptors: loadAgentDescriptorsForPackCompiler,
+      }),
     },
     'agents interfaces': {
       usage: 'opl agents interfaces (--family-defaults | --domain <domain> | --repo-dir <path>) [--format <cli|mcp|skill|product-entry|openai|ai-sdk>]',
@@ -628,7 +639,9 @@ export function buildPublicCommandSpecs(
         'opl agents interfaces --domain redcube --format mcp',
       ],
       group: 'domain',
-      handler: (args) => buildGeneratedAgentInterfaces(getContracts(), args),
+      handler: (args) => buildGeneratedAgentInterfaces(getContracts(), args, {
+        loadAgentDescriptors: loadAgentDescriptorsForPackCompiler,
+      }),
     },
     'agents platform-surfaces': {
       usage: 'opl agents platform-surfaces [--repo-dir <path> ...] [--agent <id>=<path> ...] [--family-defaults]',
@@ -720,7 +733,9 @@ export function buildPublicCommandSpecs(
       group: 'domain',
       handler: (args) => {
         assertNoArgs(args, publicCommandSpecs['domain-memory list']);
-        return buildFamilyDomainMemoryList(getContracts());
+        return buildFamilyDomainMemoryList(getContracts(), {
+          runtimeReceiptEvidenceIndex: readFamilyDomainMemoryRuntimeReceiptEvidenceByDomain(),
+        });
       },
     },
     'domain-memory inspect': {
@@ -728,14 +743,18 @@ export function buildPublicCommandSpecs(
       summary: 'Inspect one domain-owned memory locator, receipt projection, and OPL non-authority boundary.',
       examples: ['opl domain-memory inspect --domain mas'],
       group: 'domain',
-      handler: (args) => buildFamilyDomainMemoryInspect(getContracts(), args),
+      handler: (args) => buildFamilyDomainMemoryInspect(getContracts(), args, {
+        runtimeReceiptEvidenceIndex: readFamilyDomainMemoryRuntimeReceiptEvidenceByDomain(),
+      }),
     },
     'domain-memory migration-plan': {
       usage: 'opl domain-memory migration-plan --domain <domain>',
       summary: 'Project domain-owned migration, proposal contract, router receipt, and writeback receipt locators.',
       examples: ['opl domain-memory migration-plan --domain mas'],
       group: 'domain',
-      handler: (args) => buildFamilyDomainMemoryMigrationPlan(getContracts(), args),
+      handler: (args) => buildFamilyDomainMemoryMigrationPlan(getContracts(), args, {
+        runtimeReceiptEvidenceIndex: readFamilyDomainMemoryRuntimeReceiptEvidenceByDomain(),
+      }),
     },
     ...stageCommandSpecs,
     'contract validate': cloneCommandSpec(commandSpecs['validate-contracts'], {

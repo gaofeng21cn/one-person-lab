@@ -31,9 +31,9 @@ src/modules/connect
 | `contracts/opl-framework/source-module-map.json` | 固定十个模块、物理根、public entrypoint、shared kernel 和 source layout。 |
 | `contracts/opl-framework/module-dependency-policy.json` | 固定跨模块 import 规则、thin public entry 规则和 forbidden dependency。 |
 | `scripts/source-module-boundary.mjs` | 检查模块目录、entrypoint、root-level `src/*.ts`、deep cross-module import 和 forbidden dependency。 |
-| `npm run source:modules -- --strict-imports` | 当前维护者默认边界验证命令。 |
+| `npm run source:modules -- --strict-imports --strict-cycles` | 当前维护者默认边界验证命令。 |
 
-当 fresh `source:modules -- --strict-imports` 输出 `status=ok`、十个 module entrypoint 全部存在、root-level `src/*.ts` 为 0、`deep_import_violations.count=0`、`forbidden_dependency_violations.count=0` 时，可以声明“源码模块结构边界已落地”。该声明覆盖源码组织与 import gate，不覆盖 runtime、release、domain readiness、Brand L5 或 production readiness。
+当 fresh `source:modules -- --strict-imports --strict-cycles` 输出 `status=ok`、十个 module entrypoint 全部存在、root-level `src/*.ts` 为 0、`deep_import_violations.count=0`、`forbidden_dependency_violations.count=0`、`dependency_cycles.count=0` 时，可以声明“源码模块结构边界已落地”。该声明覆盖源码组织、public import gate 和模块依赖环硬门，不覆盖 runtime、release、domain readiness、Brand L5 或 production readiness。
 
 ## 完成度审计面
 
@@ -43,9 +43,9 @@ src/modules/connect
 | --- | --- | --- | --- |
 | 十模块物理归位 | `done` | `module_entrypoints.expected_count=10`，且 missing / mismatched / unexpected module roots 为空。 | 新增模块必须先改 `source-module-map.json` 和本 policy。 |
 | target source layout | `done` | `src/entrypoints/cli.ts` 存在，root-level `src/*.ts` 为 0。 | root-level `src/*.ts` 不再作为新 owner 接口。 |
-| deep cross-module import | `done` | `npm run source:modules -- --strict-imports` 下 `deep_import_violations.count=0`。 | 只能证明跨模块 import 路由合法，不能证明 public API 已经最小。 |
+| deep cross-module import | `done` | `npm run source:modules -- --strict-imports --strict-cycles` 下 `deep_import_violations.count=0`。 | 只能证明跨模块 import 路由合法，不能证明 public API 已经最小。 |
 | 第一批 forbidden dependency | `done` | `forbidden_dependency_violations.count=0`。 | 当前只覆盖 `module-dependency-policy.json` 已列出的方向约束。 |
-| dependency cycle | `partial` | 默认 readback 报告 SCC；`--strict-cycles` 将 advisory 升级为失败；当前 SCC 不含 Console / Workspace，edge_count 为 31。 | 当前存在 public-entry-level cycle，不能把 strict import pass 外推为低耦合完成。 |
+| dependency cycle | `done` | `npm run source:modules -- --strict-imports --strict-cycles` 下 `dependency_cycles.count=0`。 | 只能证明当前 public-entry graph 无依赖环，不能证明每个 public API 已经最小。 |
 | public entrypoint 收薄 | `partial` | `index.ts` / `public/**` 作为合法 public surface 被脚本识别。 | 多个模块 `index.ts` 仍是 broad re-export；下一步是按热点拆 thin public entry 或收窄 re-export。 |
 | 下一批 forbidden candidates | `partial` | `module-dependency-policy.json` 的 `next_forbidden_dependency_candidates` 记录候选方向。 | 先用 `pair_counts` 和人工 owner 判断确认迁移路径，再升级为 enforced `forbidden_dependencies`。 |
 
@@ -90,9 +90,9 @@ Console / Runway / Ledger / Connect / Foundry Lab 的边界可按一句话记忆
 
 当前源码模块化可以专业表述为：
 
-> 已完成 Framework 十模块的物理归位、public entrypoint 硬门和 deep cross-module import 清零。
+> 已完成 Framework 十模块的物理归位、public entrypoint 硬门、deep cross-module import 清零和 strict dependency cycle 清零。
 
-这个口径由 `source-module-map.json`、`module-dependency-policy.json` 和 fresh `npm run source:modules -- --strict-imports` 共同支撑。它说明源码 owner、public entrypoint 和 strict import gate 已经进入可执行维护状态。
+这个口径由 `source-module-map.json`、`module-dependency-policy.json` 和 fresh `npm run source:modules -- --strict-imports --strict-cycles` 共同支撑。它说明源码 owner、public entrypoint、strict import gate 和 dependency-cycle gate 已经进入可执行维护状态。
 
 第一批 owner-alignment 已经把四类容易造成语义穿透的实现归位：
 
@@ -119,9 +119,11 @@ Console / Runway / Ledger / Connect / Foundry Lab 的边界可按一句话记忆
 
 2026-07-03 的后续 source owner 收薄把 product-entry handoff bundle 从 Ledger 迁到 Console / Product Entry owner、developer-mode closeout ledger 从 Connect 迁到 Foundry Lab owner、repo generated-interface bundle 组装收回 Pack owner，并把 contract loader 使用的 domain / workspace / pack / ScholarSkills contract validators 迁回 Charter `contract-validators/`。当前 fresh `source:modules` readback 仍为 `status=ok`、`deep_import_violations=0`、`forbidden_dependency_violations=0`，dependency-cycle SCC 不含 Console / Workspace，edge_count 稳定为 31。该口径只证明这些实现的源码 owner 更贴近实际语义，不改变 Ledger evidence vocabulary、Connect connector authority、Pack descriptor authority、Workspace protocol、domain truth、owner receipt、typed blocker、runtime truth、release/currentness claim 或 Brand L5 状态。
 
+2026-07-04 的 strict cycle 收薄把三类反向依赖拆开：Atlas 只消费 manifest / descriptor 字段，不再读取 Runway provider closure；Runway 通过 entrypoint / Connect caller 注入 OPL module exec resolver 和 Foundry scaffold builder，不再直接 import Connect 或 Foundry Lab；local Codex defaults 与 managed runtime contract 下沉到 brand-neutral `kernel/`。当前 fresh `source:modules -- --strict-imports --strict-cycles` readback 为 `status=ok`、`deep_import_violations=0`、`forbidden_dependency_violations=0`、`dependency_cycles.count=0`。该口径只证明源码依赖图已无 public-entry-level 环，不改变 Connect connector authority、Foundry Lab agent scaffold owner、Runway runtime owner、domain truth、owner receipt、typed blocker、runtime truth、release/currentness claim 或 Brand L5 状态。
+
 `module-dependency-policy.json` 也开始记录第一批方向约束：`ledger -> runway`、`stagecraft -> runway`、`workspace -> console`、`foundry-lab -> console` 与 Charter 对 operator / improvement / connector surfaces 的依赖都不允许出现。该约束用于保护 evidence、stage policy、workspace protocol、Foundry improvement readout 与 operator projection 的 owner 边界。
 
-后续治理重点是 public-level 依赖收薄和依赖方向治理。`source:modules` 的 `cross_module_imports.pair_counts` 可以暴露 public API 依赖热点；cycle audit 或人工架构审查可以定位需要调整的依赖方向。此类治理优先通过收窄 public API、拆 thin public entry、移动 brand-neutral primitive 到 `kernel/`、或重新划分调用方向来完成。它们是维护质量和耦合度改进，不改变“十个源码 owner 已归位”的结构结论。当前 dependency cycle 仍按 advisory 读法处理，不能把 strict import pass 外推为模块间已经完全低耦合。当前 public entrypoint 也仍是合法性边界，不是最小 API 证明：模块 `index.ts` 可以是 broad re-export，只有迁移到更薄的 `public/**` 或明确 owner API 后，才能把对应依赖方向升级为更严格 forbidden policy。
+后续治理重点是 public API 收薄和依赖方向治理。`source:modules` 的 `cross_module_imports.pair_counts` 可以暴露 public API 依赖热点；cycle audit 或人工架构审查可以定位需要调整的依赖方向。此类治理优先通过收窄 public API、拆 thin public entry、移动 brand-neutral primitive 到 `kernel/`、或重新划分调用方向来完成。它们是维护质量和耦合度改进，不改变“十个源码 owner 已归位且 strict cycle 清零”的结构结论。当前 public entrypoint 仍是合法性边界，不是最小 API 证明：模块 `index.ts` 可以是 broad re-export，只有迁移到更薄的 `public/**` 或明确 owner API 后，才能把对应依赖方向升级为更严格 forbidden policy。
 
 ## 维护流程
 
@@ -129,4 +131,4 @@ Console / Runway / Ledger / Connect / Foundry Lab 的边界可按一句话记忆
 2. 同模块内部使用相对 import，保持 owner 内聚。
 3. 跨模块消费先提升目标 public API，再从目标 public index 或 `public/**` thin entry 调用。
 4. 新增源码模块时同步更新 `source-module-map.json`、`module-dependency-policy.json`、品牌模块 docs 和 contract support index。
-5. 提交前运行 `npm run source:modules -- --strict-imports`；文档-only 变更至少运行 `git diff --check` 和关键术语落点检查。
+5. 提交前运行 `npm run source:modules -- --strict-imports --strict-cycles`；文档-only 变更至少运行 `git diff --check` 和关键术语落点检查。

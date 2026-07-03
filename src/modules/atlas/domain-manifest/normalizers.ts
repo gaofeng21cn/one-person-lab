@@ -6,7 +6,7 @@ import {
 import { normalizeFamilyActionCatalog } from '../../../kernel/family-action-catalog-contract.ts';
 import { normalizeFamilyStageControlPlane } from '../../stagecraft/index.ts';
 import { normalizeFamilyDomainMemoryRef } from '../family-domain-memory-contract.ts';
-import { normalizeManagedRuntimeContract } from '../../runway/index.ts';
+import { normalizeManagedRuntimeContract } from '../../../kernel/managed-runtime-contract.ts';
 import { normalizeFamilyTransitionSurfaces } from './family-transition-normalizer.ts';
 import {
   normalizeArtifactInventory,

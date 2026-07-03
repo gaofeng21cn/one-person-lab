@@ -1,9 +1,5 @@
 import path from 'node:path';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
-import {
-  buildRuntimeEnvironmentPrepareReadback,
-  buildRuntimeEnvironmentRunContextReadback,
-} from '../runway/index.ts';
 import { materializeCandidateArtifactBodies } from './scholar-skills-parts/artifact-engines.ts';
 import { SCHOLAR_SKILL_MODULE_IDS } from '../../kernel/scholar-skill-module-ids.ts';
 import {
@@ -72,6 +68,87 @@ type MaterializeInput = InvocationInput & {
   payload?: unknown;
   emitCandidateArtifacts?: boolean;
 };
+
+type RuntimeEnvironmentPrepareReadbackBuilder = (input: {
+  domainId: string;
+  profileId: string;
+  platformId: string;
+  requirementProfilePath: string;
+  requirementProfileId?: string;
+  paperRoot: string;
+  apply?: boolean;
+}) => {
+  prepare: {
+    status: string;
+    lock_ref: string | null;
+    receipt_ref: string | null;
+    run_context_ref: string | null;
+    consumer_preflight: Record<string, unknown>;
+  };
+  can_claim_runtime_ready: boolean;
+  can_claim_domain_ready: boolean;
+  can_claim_app_release_ready: boolean;
+};
+
+type RuntimeEnvironmentRunContextReadbackBuilder = (input: {
+  domainId: string;
+  profileId: string;
+  platformId: string;
+  paperRoot: string;
+}) => {
+  run_context: {
+    status?: string;
+    run_context_ref?: string | null;
+    consumer_preflight: Record<string, unknown> & { can_consume_run_context?: boolean };
+    can_schedule_domain_stage: boolean;
+    can_claim_provider_ready: boolean;
+    can_claim_runtime_ready: boolean;
+    can_claim_domain_ready: boolean;
+    can_claim_app_release_ready: boolean;
+  };
+};
+
+type ScholarSkillsRuntimeDependencies = {
+  buildRuntimeEnvironmentPrepareReadback?: RuntimeEnvironmentPrepareReadbackBuilder;
+  buildRuntimeEnvironmentRunContextReadback?: RuntimeEnvironmentRunContextReadbackBuilder;
+};
+
+function unavailableRuntimeEnvironmentPrepareReadback() {
+  return {
+    prepare: {
+      status: 'runtime_environment_builder_not_injected',
+      lock_ref: null,
+      receipt_ref: null,
+      run_context_ref: null,
+      consumer_preflight: {
+        status: 'blocked',
+        reason: 'runtime_environment_builder_not_injected',
+        can_consume_run_context: false,
+      },
+    },
+    can_claim_runtime_ready: false,
+    can_claim_domain_ready: false,
+    can_claim_app_release_ready: false,
+  };
+}
+
+function unavailableRuntimeEnvironmentRunContextReadback() {
+  return {
+    run_context: {
+      status: 'runtime_environment_builder_not_injected',
+      run_context_ref: null,
+      consumer_preflight: {
+        status: 'blocked',
+        reason: 'runtime_environment_builder_not_injected',
+      },
+      can_schedule_domain_stage: false,
+      can_claim_provider_ready: false,
+      can_claim_runtime_ready: false,
+      can_claim_domain_ready: false,
+      can_claim_app_release_ready: false,
+    },
+  };
+}
 
 function contract(contracts: FrameworkContracts): ScholarSkillsCapabilityModulesContract {
   return contracts.scholarSkillsCapabilityModules;
@@ -361,10 +438,12 @@ export function buildScholarSkillsInterfaces(contracts: FrameworkContracts) {
 export function buildScholarSkillsRuntimePrepareReadback(
   contracts: FrameworkContracts,
   input: RuntimePrepareInput,
+  dependencies: ScholarSkillsRuntimeDependencies = {},
 ) {
   const contractRoot = contract(contracts);
   const module = findModuleOrThrow(contractRoot.modules, assertModuleId(input.moduleId));
-  const runtimeEnvironment = buildRuntimeEnvironmentPrepareReadback({
+  const runtimeEnvironment = (dependencies.buildRuntimeEnvironmentPrepareReadback
+    ?? unavailableRuntimeEnvironmentPrepareReadback)({
     domainId: 'scholarskills',
     profileId: input.profile,
     platformId: input.platform,
@@ -413,10 +492,12 @@ export function buildScholarSkillsRuntimePrepareReadback(
 export function buildScholarSkillsRuntimeRunContextReadback(
   contracts: FrameworkContracts,
   input: RuntimeRunContextInput,
+  dependencies: ScholarSkillsRuntimeDependencies = {},
 ) {
   const contractRoot = contract(contracts);
   const module = findModuleOrThrow(contractRoot.modules, assertModuleId(input.moduleId));
-  const runtimeEnvironment = buildRuntimeEnvironmentRunContextReadback({
+  const runtimeEnvironment = (dependencies.buildRuntimeEnvironmentRunContextReadback
+    ?? unavailableRuntimeEnvironmentRunContextReadback)({
     domainId: 'scholarskills',
     profileId: input.profile,
     platformId: input.platform,
@@ -426,7 +507,7 @@ export function buildScholarSkillsRuntimeRunContextReadback(
     version: 'g2',
     scholar_skills_runtime_run_context: {
       surface_kind: 'opl_scholarskills_runtime_run_context_bridge',
-      status: runtimeEnvironment.run_context.status,
+      status: runtimeEnvironment.run_context.status ?? 'unknown',
       module_id: module.module_id,
       profile: input.profile,
       platform: input.platform,
@@ -437,7 +518,8 @@ export function buildScholarSkillsRuntimeRunContextReadback(
       run_context_ref: runtimeEnvironment.run_context.run_context_ref ?? null,
       consumer_preflight: runtimeEnvironment.run_context.consumer_preflight,
       runtime_environment: runtimeEnvironment,
-      can_consume_run_context: runtimeEnvironment.run_context.consumer_preflight.can_consume_run_context,
+      can_consume_run_context:
+        (runtimeEnvironment.run_context.consumer_preflight as Record<string, unknown>).can_consume_run_context === true,
       can_schedule_domain_stage: runtimeEnvironment.run_context.can_schedule_domain_stage,
       can_claim_provider_ready: runtimeEnvironment.run_context.can_claim_provider_ready,
       can_claim_runtime_ready: runtimeEnvironment.run_context.can_claim_runtime_ready,

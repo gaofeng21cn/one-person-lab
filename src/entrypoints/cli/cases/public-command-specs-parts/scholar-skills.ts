@@ -12,6 +12,10 @@ import {
   buildScholarSkillsRunContextEnvelope,
   buildScholarSkillsValidation,
 } from '../../../../modules/pack/scholar-skills.ts';
+import {
+  buildRuntimeEnvironmentPrepareReadback,
+  buildRuntimeEnvironmentRunContextReadback,
+} from '../../../../modules/runway/index.ts';
 import type { FrameworkContracts } from '../../../../kernel/types.ts';
 import { parseJsonText } from '../../../../kernel/json-file.ts';
 import {
@@ -391,6 +395,7 @@ export function buildScholarSkillsCommandSpecs(
           allowRequirementProfileId: true,
           commandLabel: 'scholar-skills runtime-prepare',
         }),
+        { buildRuntimeEnvironmentPrepareReadback },
       ),
     },
     'scholar-skills run-context': {
@@ -422,6 +427,8 @@ export function buildScholarSkillsCommandSpecs(
           profile: parsed.profile,
           platform: parsed.platform ?? '',
           paperRoot: parsed.paperRoot ?? '',
+        }, {
+          buildRuntimeEnvironmentRunContextReadback,
         });
       },
     },

@@ -6,6 +6,7 @@ import type {
   FamilyRuntimeTaskScope,
 } from './family-runtime-command.ts';
 import { hydrateDomainTasks } from './family-runtime-domain-intake.ts';
+import type { FamilyRuntimeDomainIntakeDependencies } from './family-runtime-domain-intake.ts';
 import type { familyRuntimePaths, taskToPayload } from './family-runtime-store.ts';
 import { insertEvent, type FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 import { normalizeTaskScopeForStorage, taskRowMatchesScope } from './family-runtime-task-scope.ts';
@@ -80,6 +81,7 @@ type RunFamilyRuntimeQueueTickInput = {
   hydrate: boolean;
   taskScope?: FamilyRuntimeTaskScope;
   domainProfiles?: FamilyRuntimeDomainProfiles;
+  dependencies?: FamilyRuntimeDomainIntakeDependencies;
 };
 type RunFamilyRuntimeQueueTickHandlers<TDispatch> = {
   enqueueTask: EnqueueTask;
@@ -759,6 +761,7 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
       source: `${input.source}:hydrate`,
       taskScope: input.taskScope,
       domainProfiles: input.domainProfiles,
+      dependencies: input.dependencies,
     }, handlers.enqueueTask)
     : {
       source: input.source,
@@ -815,6 +818,7 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
         source: `${input.source}:post-repair-hydrate`,
         taskScope: input.taskScope,
         domainProfiles: input.domainProfiles,
+        dependencies: input.dependencies,
       }, handlers.enqueueTask);
     }
     if (

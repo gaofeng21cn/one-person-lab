@@ -2,11 +2,33 @@ import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
 import path from 'node:path';
 
 import { DOMAIN_ADAPTERS } from './family-runtime-command.ts';
-import { resolveOplModuleExecCommand } from '../connect/index.ts';
 
 type DomainDispatchCommand = {
   command_preview: string[];
   cwd: string;
+};
+
+export type OplModuleExecCommandResolver = (
+  moduleId: string,
+  args: string[],
+) => {
+  command_preview: string[];
+  working_directory: string;
+  module_id: string;
+  module: {
+    module_id: string;
+    install_origin: string;
+    checkout_path: string;
+    health_status: string;
+    git?: {
+      head_sha?: string | null;
+      dirty?: boolean;
+    } | null;
+  };
+};
+
+export type FamilyRuntimeDispatchDependencies = {
+  resolveOplModuleExecCommand?: OplModuleExecCommandResolver;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -47,6 +69,7 @@ export function dispatchCommandForDomain(
   domainId: FamilyRuntimeDomainId,
   taskPath: string,
   payload: Record<string, unknown> = {},
+  dependencies: FamilyRuntimeDispatchDependencies = {},
 ): DomainDispatchCommand {
   const overrideKeys = domainId === 'medautoscience'
     ? ['OPL_FAMILY_RUNTIME_MAS_DISPATCH', 'OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH']
@@ -68,18 +91,20 @@ export function dispatchCommandForDomain(
     if (workspaceBindingCommand) {
       return workspaceBindingCommand;
     }
-    const moduleCommand = resolveOplModuleExecCommand('medautoscience', [
-      'domain-handler',
-      'dispatch',
-      '--task',
-      taskPath,
-      '--format',
-      'json',
-    ]);
-    return {
-      command_preview: moduleCommand.command_preview,
-      cwd: moduleCommand.working_directory,
-    };
+    if (dependencies.resolveOplModuleExecCommand) {
+      const moduleCommand = dependencies.resolveOplModuleExecCommand('medautoscience', [
+        'domain-handler',
+        'dispatch',
+        '--task',
+        taskPath,
+        '--format',
+        'json',
+      ]);
+      return {
+        command_preview: moduleCommand.command_preview,
+        cwd: moduleCommand.working_directory,
+      };
+    }
   }
 
   const adapter = DOMAIN_ADAPTERS[domainId];

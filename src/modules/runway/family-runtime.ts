@@ -84,6 +84,7 @@ import {
   runFamilyRuntimePaperAutonomySupervisorReadbackCommand,
 } from './family-runtime-paper-autonomy-command.ts';
 import type { RuntimeTraySnapshotProvider } from './runtime-tray-snapshot-provider.ts';
+import type { FamilyRuntimeDomainIntakeDependencies } from './family-runtime-domain-intake.ts';
 import {
   paperMissionRedriveProviderFollowthrough,
   providerPreflightBlockedReason,
@@ -162,7 +163,10 @@ function approveTask(
 
 export async function runFamilyRuntime(
   args: string[],
-  options: { runtimeSnapshotProvider?: RuntimeTraySnapshotProvider } = {},
+  options: {
+    runtimeSnapshotProvider?: RuntimeTraySnapshotProvider;
+    dependencies?: FamilyRuntimeDomainIntakeDependencies;
+  } = {},
 ): Promise<Record<string, unknown>> {
   const parsed = parseFamilyRuntimeCommand(args);
   const { db, paths } = openQueueDb();
@@ -500,6 +504,7 @@ export async function runFamilyRuntime(
             parsed.domainProfiles,
             {
               temporalProviderModule,
+              dependencies: options.dependencies,
             },
           ),
           queue: queueSummary(db),
@@ -519,6 +524,7 @@ export async function runFamilyRuntime(
               source: parsed.source ?? 'manual',
               taskScope: parsed.taskScope,
               domainProfiles: parsed.domainProfiles,
+              dependencies: options.dependencies,
             },
             enqueueTask,
           ),

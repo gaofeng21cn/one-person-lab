@@ -4,12 +4,8 @@ import type { DomainManifestCatalog } from './domain-manifest/catalog-builder.ts
 import type { ManifestCommandTimeoutPolicy } from './domain-manifest/resolver.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from './domain-manifest/types.ts';
 import { buildFamilyActionCatalogParity } from '../../kernel/family-action-catalog-projection.ts';
-import { buildStandardDomainAgentSkeletonInspection } from '../foundry-lab/index.ts';
 import { pickSkillActivationProjection } from './family-domain-catalog.ts';
 import { buildFamilyStageControlPlaneParity } from '../stagecraft/index.ts';
-import {
-  buildFunctionalSourcePurityTailReadModel,
-} from '../foundry-lab/index.ts';
 import {
   adaptGrantTransitionOracleToFamilyTransitionSpec,
   buildGrantTransitionOracleMatrixCases,
@@ -17,9 +13,10 @@ import {
 import {
   runFamilyTransitionMatrix,
 } from '../stagecraft/index.ts';
-import { withOplMetaAgentDescriptorEntry } from '../foundry-lab/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { record, stringValue, type JsonRecord } from '../../kernel/json-record.ts';
+
+const REQUIRED_REPO_SOURCE_DIRS = ['agent', 'contracts', 'runtime', 'docs'] as const;
 
 function normalizeDomainSelection(value: string) {
   const key = value.trim().toLowerCase();
@@ -191,23 +188,126 @@ function buildEntryProjection(entry: DomainManifestCatalogEntry) {
 }
 
 function buildSkeletonProjection(entry: DomainManifestCatalogEntry) {
-  const inspection = buildStandardDomainAgentSkeletonInspection(entry);
+  const skeleton = record(entry.manifest?.standard_domain_agent_skeleton);
+  const hasSkeleton = Object.keys(skeleton).length > 0;
+  const repoSourceBoundary = record(skeleton.repo_source_boundary);
+  const declaredRepoSourceDirs = stringArray(repoSourceBoundary.required_dirs);
+  const missingRepoSourceDirs = REQUIRED_REPO_SOURCE_DIRS.filter((dir) => !declaredRepoSourceDirs.includes(dir));
+  const artifactBoundary = record(skeleton.artifact_boundary);
+  const hasArtifactLocatorSurface = Boolean(artifactBoundary.has_locator_surface);
+  const issues = [
+    hasSkeleton ? null : 'manifest_missing_standard_domain_agent_skeleton',
+    ...missingRepoSourceDirs.map((dir) => `missing_repo_source_dir:${dir}`),
+    declaredRepoSourceDirs.includes('artifacts') ? 'repo_source_skeleton_must_not_include_real_artifacts_dir' : null,
+    artifactBoundary.repo_contains_real_artifacts === true ? 'domain_repo_must_not_contain_real_artifacts' : null,
+    hasSkeleton && artifactBoundary.artifact_roots_are_locators !== true ? 'artifact_roots_must_be_locators' : null,
+    hasSkeleton && !hasArtifactLocatorSurface ? 'artifact_locator_surface_required' : null,
+  ].filter((issue): issue is string => Boolean(issue));
+  const manifestBlocked = entry.status !== 'resolved';
+  const skeletonStatus = manifestBlocked
+    ? 'blocked'
+    : issues.length === 0
+      ? 'aligned'
+      : hasSkeleton
+        ? 'drift_detected'
+        : 'missing';
+  const physicalSkeletonLayoutAudit = Object.keys(record(skeleton.physical_skeleton_layout_audit)).length > 0
+    ? record(skeleton.physical_skeleton_layout_audit)
+    : {
+        status: hasSkeleton
+          ? 'descriptor_aligned_physical_layout_pending'
+          : 'standard_domain_agent_skeleton_missing',
+        source: 'atlas_descriptor_projection',
+        issues,
+      };
+  const providerClosureEvidence = record(skeleton.provider_closure_evidence);
+  const physicalSkeletonEvidence = record(skeleton.physical_skeleton_evidence);
+  const physicalSkeletonFollowThrough = record(skeleton.physical_skeleton_follow_through);
   return {
-    status: inspection.skeleton_status,
-    agent_id: inspection.agent_id,
-    skeleton_source_field: inspection.skeleton_source_field,
-    descriptor_readiness: inspection.descriptor_readiness,
-    physical_skeleton_layout_audit: inspection.physical_skeleton_layout_audit,
-    physical_skeleton_evidence: inspection.physical_skeleton_evidence,
-    physical_skeleton_follow_through_gate: inspection.physical_skeleton_follow_through_gate,
-    production_closure_gap_count: inspection.production_closure_gaps.length,
-    production_closure_gaps: inspection.production_closure_gaps,
-    provider_closure_evidence: inspection.provider_closure_evidence,
-    declared_repo_source_dirs: inspection.declared_repo_source_dirs,
-    missing_repo_source_dirs: inspection.missing_repo_source_dirs,
-    artifact_boundary: inspection.artifact_boundary,
-    contract_refs: inspection.contract_refs,
-    issues: inspection.issues,
+    status: skeletonStatus,
+    agent_id:
+      stringValue(skeleton.agent_id)
+      ?? stringValue(skeleton.skeleton_id)
+      ?? stringValue(entry.manifest?.domain_entry_contract?.domain_agent_entry_spec?.agent_id),
+    skeleton_source_field: hasSkeleton ? entry.manifest?.standard_domain_agent_skeleton_source_field ?? null : null,
+    descriptor_readiness: {
+      status: skeletonStatus,
+      ready: skeletonStatus === 'aligned',
+      required_repo_source_dirs_present: missingRepoSourceDirs.length === 0,
+      artifact_locator_surface_present: hasArtifactLocatorSurface,
+    },
+    physical_skeleton_layout_audit: physicalSkeletonLayoutAudit,
+    physical_skeleton_evidence: Object.keys(physicalSkeletonEvidence).length > 0 ? physicalSkeletonEvidence : null,
+    physical_skeleton_follow_through_gate: Object.keys(physicalSkeletonFollowThrough).length > 0
+      ? physicalSkeletonFollowThrough
+      : null,
+    production_closure_gap_count: arrayValue(skeleton.production_closure_gaps).length,
+    production_closure_gaps: arrayValue(skeleton.production_closure_gaps),
+    provider_closure_evidence: Object.keys(providerClosureEvidence).length > 0
+      ? providerClosureEvidence
+      : {
+          external_temporal_production_residency_proof: {
+            status: 'not_evaluated_in_atlas_descriptor',
+            provider_completion_is_domain_ready: false,
+          },
+        },
+    declared_repo_source_dirs: declaredRepoSourceDirs,
+    missing_repo_source_dirs: missingRepoSourceDirs,
+    artifact_boundary: Object.keys(artifactBoundary).length > 0 ? artifactBoundary : null,
+    contract_refs: Object.keys(record(skeleton.contracts)).length > 0 ? record(skeleton.contracts) : null,
+    issues,
+  };
+}
+
+function stringArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.map((entry) => stringValue(entry)).filter((entry): entry is string => Boolean(entry))
+    : [];
+}
+
+function arrayValue(value: unknown) {
+  return Array.isArray(value) ? value : [];
+}
+
+function buildFunctionalSourcePurityTailReadModel(summary: {
+  total_module_count?: number;
+  standard_domain_pack_inventory_count?: number;
+  authority_function_inventory_count?: number;
+  default_watchlist_count: number;
+  semantic_equivalence_review_count: number;
+  active_private_generic_residue_count: number;
+  blocker_count: number;
+  default_hidden_cleared_count?: number;
+  private_platform_residue_inventory_count: number;
+}) {
+  const defaultActionRequiredCount = Math.max(
+    summary.default_watchlist_count,
+    summary.semantic_equivalence_review_count,
+    summary.active_private_generic_residue_count,
+    summary.blocker_count,
+  );
+  const hasAuditOnlyTail =
+    (summary.default_hidden_cleared_count ?? 0) > 0
+    || summary.private_platform_residue_inventory_count > 0;
+  return {
+    default_action_required_count: defaultActionRequiredCount,
+    action_required_blocker_count: summary.blocker_count,
+    hidden_cleared_audit_ledger_count: summary.default_hidden_cleared_count ?? 0,
+    hidden_cleared_entries_remain_traceable: true,
+    private_platform_residue_inventory_audit_only_count:
+      summary.private_platform_residue_inventory_count,
+    private_platform_residue_inventory_counts_as_action_required: false,
+    private_platform_residue_inventory_counts_as_blocker: false,
+    physical_delete_authorized: false,
+    physical_delete_authority: 'not_authorized_by_descriptor_or_app_read_model',
+    source_purity_tail_status:
+      defaultActionRequiredCount > 0
+        ? 'action_required_tail_open'
+        : hasAuditOnlyTail
+          ? 'audit_only_tail_traceable_no_action_required_blocker'
+          : 'no_source_purity_tail',
+    source_purity_tail_policy:
+      'physical_delete_requires_separate_domain_owner_receipt_or_typed_blocker_no_active_caller_no_forbidden_write_and_replacement_parity',
   };
 }
 
@@ -621,7 +721,7 @@ function buildDescriptor(entry: DomainManifestCatalogEntry) {
 }
 
 function findDescriptorEntry(contracts: FrameworkContracts, domain: string) {
-  const catalog = withOplMetaAgentDescriptorEntry(buildDomainManifestCatalog(contracts).domain_manifests);
+  const catalog = buildDomainManifestCatalog(contracts).domain_manifests;
   const normalized = normalizeDomainSelection(domain);
   const entry = catalog.projects.find((candidate) => {
     const manifest = candidate.manifest;
@@ -649,9 +749,9 @@ function descriptorProviderResidencyGapStatus(descriptors: ReturnType<typeof bui
   const firstStatus = descriptors
     .map((descriptor) =>
       stringValue(
-        descriptor.standard_domain_agent_skeleton.provider_closure_evidence
-          ?.external_temporal_production_residency_proof
-          ?.status,
+        record(record(descriptor.standard_domain_agent_skeleton.provider_closure_evidence)
+          .external_temporal_production_residency_proof)
+          .status,
       )
     )
     .find((status) => status !== null);
@@ -689,8 +789,7 @@ export function buildFamilyAgentDescriptorList(
     manifestCommandTimeoutMs: options.manifestCommandTimeoutMs,
     manifestCommandTimeoutPolicy: options.manifestCommandTimeoutPolicy,
   }).domain_manifests;
-  const expandedCatalog = withOplMetaAgentDescriptorEntry(catalog);
-  const descriptors = expandedCatalog.projects.map(buildDescriptor);
+  const descriptors = catalog.projects.map(buildDescriptor);
   return {
     version: 'g2',
     family_agent_descriptors: {

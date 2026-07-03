@@ -16,7 +16,7 @@ import {
   buildOplFirstRunLogSurface,
 } from './first-run-contract.ts';
 import { buildOplInitialize } from './initialize.ts';
-import { DEFAULT_OPL_MODULE_IDS, runOplModuleAction } from './modules.ts';
+import { DEFAULT_OPL_MODULE_IDS, resolveOplModuleExecCommand, runOplModuleAction } from './modules.ts';
 import { resolveProjectRoot, runCommand } from './shared.ts';
 import type { OplEngineId, OplModuleId, OplTurnkeyInstallInput } from './shared.ts';
 
@@ -413,8 +413,8 @@ export async function runOplTurnkeyInstall(
       skipFamilyRuntimeProvider,
     });
     const familyRuntimeBridge = skipFamilyRuntimeProvider
-      ? await runFamilyRuntime(['status'])
-      : await runFamilyRuntime(['install']);
+      ? await runFamilyRuntime(['status'], { dependencies: { resolveOplModuleExecCommand } })
+      : await runFamilyRuntime(['install'], { dependencies: { resolveOplModuleExecCommand } });
     const familyRuntimeProviderActions = runtimeManagerAction.runtime_manager_action.executed_actions.filter(
       (action) => action.action_lane === 'online_runtime' && action.status !== 'blocked_manual_configuration_required',
     );

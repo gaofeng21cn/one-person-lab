@@ -1,7 +1,11 @@
 import { DatabaseSync } from 'node:sqlite';
 
 import { canonicalCloseoutPacketFromDomainHandlerOutput } from './family-runtime-domain-handler-closeout.ts';
-import { dispatchCommandForDomain, parseDispatchOutput } from './family-runtime-dispatch-command.ts';
+import {
+  dispatchCommandForDomain,
+  parseDispatchOutput,
+  type OplModuleExecCommandResolver,
+} from './family-runtime-dispatch-command.ts';
 import { writeFamilyRuntimeDispatchTask } from './family-runtime-dispatch-task.ts';
 import {
   domainHandlerResultErrorMessage,
@@ -492,6 +496,7 @@ export async function dispatchFamilyRuntimeTask(
   options: {
     temporalProviderModule: TemporalProviderModule;
     queryTemporalStageAttemptReadModel?: QueryTemporalStageAttemptReadModel;
+    resolveOplModuleExecCommand?: OplModuleExecCommandResolver;
   },
 ) {
   const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
@@ -587,7 +592,9 @@ export async function dispatchFamilyRuntimeTask(
   });
 
   const dispatchPath = writeFamilyRuntimeDispatchTask(paths, { ...row, attempts: attempt });
-  const command = dispatchCommandForDomain(row.domain_id, dispatchPath, payload);
+  const command = dispatchCommandForDomain(row.domain_id, dispatchPath, payload, {
+    resolveOplModuleExecCommand: options.resolveOplModuleExecCommand,
+  });
   const result = runFamilyRuntimeDomainHandlerCommand(command.command_preview, {
     cwd: command.cwd,
     env: process.env,

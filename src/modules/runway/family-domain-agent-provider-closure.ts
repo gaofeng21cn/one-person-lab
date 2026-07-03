@@ -4,9 +4,9 @@ import type { DatabaseSync } from 'node:sqlite';
 import {
   buildProviderContinuousProof,
   providerProofStatusIsCurrentlyProven,
-} from '../runway/index.ts';
-import { openFamilyRuntimeSqlite } from '../runway/index.ts';
-import { familyRuntimePaths, listEvents } from '../runway/index.ts';
+} from './family-runtime-provider-continuous-proof.ts';
+import { openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
+import { familyRuntimePaths, listEvents } from './family-runtime-store.ts';
 
 function tableExists(db: DatabaseSync, tableName: string) {
   const row = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(tableName);

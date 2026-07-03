@@ -9,7 +9,6 @@ import {
   parseExternalEvidenceApplyArgs,
   runExternalEvidenceApply,
 } from '../ledger/index.ts';
-import { runFamilyAgentLegacyCleanupApply } from '../foundry-lab/index.ts';
 import {
   assertStageProductionEvidencePayloadReady,
   preflightStageProductionEvidencePayload,
@@ -18,10 +17,6 @@ import {
   assertDomainDispatchEvidencePayloadReady,
   preflightDomainDispatchEvidencePayload,
 } from '../ledger/index.ts';
-import {
-  recordOmaProductionConsumptionReceipts,
-  type OmaProductionConsumptionReceiptInput,
-} from '../foundry-lab/index.ts';
 import { providerSloArgs } from './runtime-operator-action-execution-parts/provider-slo-action.ts';
 import { providerWorkerArgs, providerWorkerCommand, runProviderWorkerRepair } from './runtime-operator-action-execution-parts/provider-worker-action.ts';
 import { providerSchedulerArgs } from './runtime-operator-action-execution-parts/provider-scheduler-action.ts';
@@ -40,6 +35,12 @@ import {
 
 type JsonRecord = Record<string, unknown>;
 
+type OmaProductionConsumptionReceiptInput = {
+  long_soak_refs: string[];
+  typed_blocker_refs: string[];
+  operator_evidence_refs: string[];
+};
+
 type RuntimeActionExecuteOptions = {
   actionId: string;
   payload: JsonRecord;
@@ -49,6 +50,8 @@ type RuntimeActionExecuteOptions = {
 
 type RuntimeOperatorActionExecuteDependencies = {
   runtimeSnapshotProvider?: RuntimeTraySnapshotProvider;
+  runFamilyAgentLegacyCleanupApply?: (contracts: FrameworkContracts, args: string[]) => JsonRecord;
+  recordOmaProductionConsumptionReceipts?: (inputs: OmaProductionConsumptionReceiptInput[]) => JsonRecord;
 };
 
 function parseJsonObject(value: string, context: string): JsonRecord {
@@ -291,7 +294,11 @@ function omaProductionConsumptionDryRunPreflight(input: OmaProductionConsumption
   };
 }
 
-function omaProductionConsumptionExecution(payload: JsonRecord, options: { dryRun: boolean }) {
+function omaProductionConsumptionExecution(
+  payload: JsonRecord,
+  options: { dryRun: boolean },
+  dependencies: RuntimeOperatorActionExecuteDependencies,
+) {
   const input = omaProductionConsumptionPayload(payload);
   if (!options.dryRun && omaProductionConsumptionRefCount(input) === 0) {
     throw new FrameworkContractError(
@@ -312,9 +319,27 @@ function omaProductionConsumptionExecution(payload: JsonRecord, options: { dryRu
         }
       : {
           oma_production_consumption_ledger_record:
-            recordOmaProductionConsumptionReceipts([input]),
+            requireOmaProductionConsumptionRecorder(dependencies)([input]),
         },
   };
+}
+
+function requireOmaProductionConsumptionRecorder(dependencies: RuntimeOperatorActionExecuteDependencies) {
+  if (!dependencies.recordOmaProductionConsumptionReceipts) {
+    throw new FrameworkContractError('contract_shape_invalid', 'OMA production-consumption recorder is not injected.', {
+      required_dependency: 'recordOmaProductionConsumptionReceipts',
+    });
+  }
+  return dependencies.recordOmaProductionConsumptionReceipts;
+}
+
+function requireLegacyCleanupApply(dependencies: RuntimeOperatorActionExecuteDependencies) {
+  if (!dependencies.runFamilyAgentLegacyCleanupApply) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Legacy cleanup apply handler is not injected.', {
+      required_dependency: 'runFamilyAgentLegacyCleanupApply',
+    });
+  }
+  return dependencies.runFamilyAgentLegacyCleanupApply;
 }
 
 function stageAttemptCreateArgs(route: JsonRecord, commandOrSurfaceRef: string) {
@@ -631,7 +656,7 @@ async function executeRoute(
         })
       : null;
     const omaProductionConsumption = omaProductionConsumptionAction
-      ? omaProductionConsumptionExecution(options.payload, { dryRun: options.dryRun })
+      ? omaProductionConsumptionExecution(options.payload, { dryRun: options.dryRun }, dependencies)
       : null;
     const providerWorkerRepair = actionKind === 'provider_worker_start'
       || actionKind === 'provider_worker_restart'
@@ -735,7 +760,7 @@ async function executeRoute(
                 : runExternalEvidenceApply(parseExternalEvidenceApplyArgs(runtimeArgs.slice(3)))),
             }
         : legacyCleanupAction
-            ? runFamilyAgentLegacyCleanupApply(contracts, runtimeArgs.slice(3))
+            ? requireLegacyCleanupApply(dependencies)(contracts, runtimeArgs.slice(3))
             : providerWorkerRepair
               ? runProviderWorkerRepair(providerWorkerRepair, runFamilyRuntime)
             : await runFamilyRuntime(runtimeArgs, {

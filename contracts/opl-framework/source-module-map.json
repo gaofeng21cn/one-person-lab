@@ -87,7 +87,10 @@
         "src/modules/runway/**"
       ],
       "shared_source_globs": [
-        "src/kernel/terminal.ts"
+        "src/kernel/terminal.ts",
+        "src/kernel/managed-runtime-contract.ts",
+        "src/kernel/local-codex-defaults.ts",
+        "src/kernel/local-codex-defaults-parts/**"
       ],
       "owner_note": "Runway owns durable execution, queues, provider lifecycle, worker/service substrate, runtime state, and operational recovery."
     },
@@ -132,7 +135,10 @@
       "primary_source_globs": [
         "src/modules/connect/**"
       ],
-      "shared_source_globs": [],
+      "shared_source_globs": [
+        "src/kernel/local-codex-defaults.ts",
+        "src/kernel/local-codex-defaults-parts/**"
+      ],
       "owner_note": "Connect owns directly callable external descriptors, adapters, source connectors, install/update distribution, plugin/skill sync, and connector surfaces; it is not limited to Console-mediated calls and does not own semantic/domain verdicts."
     }
   ],
@@ -170,6 +176,24 @@
         "connect"
       ],
       "role": "Shared public type barrel."
+    },
+    {
+      "path": "src/kernel/managed-runtime-contract.ts",
+      "primary_module_id": "runway",
+      "consumer_module_ids": [
+        "atlas",
+        "runway"
+      ],
+      "role": "Brand-neutral managed runtime contract normalization shared without making Atlas depend on Runway internals."
+    },
+    {
+      "path": "src/kernel/local-codex-defaults.ts",
+      "primary_module_id": "connect",
+      "consumer_module_ids": [
+        "connect",
+        "runway"
+      ],
+      "role": "Brand-neutral local Codex defaults reader shared without making Runway depend on Connect internals."
     }
   ],
   "auxiliary_source_roots": [

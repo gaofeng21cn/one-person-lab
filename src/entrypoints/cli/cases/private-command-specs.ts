@@ -12,6 +12,8 @@ import {
   buildStandardDomainAgentScaffold,
   buildStandardDomainAgentScaffoldValidation,
 } from '../../../modules/foundry-lab/standard-domain-agent-scaffold.ts';
+import { runFamilyAgentLegacyCleanupApply } from '../../../modules/foundry-lab/family-domain-agent-skeleton.ts';
+import { recordOmaProductionConsumptionReceipts } from '../../../modules/foundry-lab/oma-production-consumption-ledger.ts';
 import { buildStandardDomainAgentScaffoldConsumptionEvidence } from '../../../modules/foundry-lab/standard-domain-agent-template-consumption.ts';
 import { runAgentExecutor, runAgentExecutorDoctor, runAgentExecutorRequestFile } from '../../../modules/runway/agent-executor.ts';
 import { launchDomainEntry } from '../../../modules/atlas/domain-launch.ts';
@@ -23,6 +25,7 @@ import { buildWorkspaceStatus } from '../../../modules/console/management/worksp
 import { runAcpStdioBridge } from '../../../modules/connect/opl-acp-stdio.ts';
 import { syncOplCompanionSkills } from '../../../modules/connect/install-companions.ts';
 import { readFamilySkillPacks, syncFamilySkillPacks } from '../../../modules/connect/opl-skills.ts';
+import { resolveOplModuleExecCommand } from '../../../modules/connect/index.ts';
 import { buildSessionLedger } from '../../../modules/runway/session-ledger.ts';
 import { explainDomainBoundary, selectDomainAgentEntry } from '../../../modules/atlas/resolver.ts';
 import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog } from '../../../modules/workspace/workspace-registry.ts';
@@ -313,7 +316,7 @@ export function buildInternalCommandSpecs(
       examples: ['opl runtime manager'],
       handler: async (args) => {
         assertNoArgs(args, commandSpecs['runtime manager']);
-        return await buildRuntimeManager();
+        return await buildRuntimeManager({}, { buildStandardDomainAgentScaffold });
       },
     },
     'runtime manager action': {
@@ -323,6 +326,7 @@ export function buildInternalCommandSpecs(
       examples: ['opl runtime manager action --dry-run', 'opl runtime manager action --apply'],
       handler: (args) => runRuntimeManagerAction(
         parseRuntimeManagerActionArgs(args, commandSpecs['runtime manager action']),
+        { buildStandardDomainAgentScaffold },
       ),
     },
     'runtime snapshot': {
@@ -404,6 +408,8 @@ export function buildInternalCommandSpecs(
       ],
       handler: (args) => runRuntimeOperatorActionExecute(getContracts(), args, {
         runtimeSnapshotProvider: buildRuntimeTraySnapshot,
+        runFamilyAgentLegacyCleanupApply,
+        recordOmaProductionConsumptionReceipts,
       }),
     },
     'runtime lifecycle apply': {
@@ -553,6 +559,7 @@ export function buildInternalCommandSpecs(
       ],
       handler: (args) => runFamilyRuntime(args, {
         runtimeSnapshotProvider: buildRuntimeTraySnapshot,
+        dependencies: { resolveOplModuleExecCommand },
       }),
     },
     'stage-artifact': {

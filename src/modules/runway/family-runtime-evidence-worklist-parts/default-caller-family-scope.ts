@@ -1,4 +1,3 @@
-import { buildAgentDefaultCallerReadinessReport } from '../../foundry-lab/index.ts';
 import type { JsonRecord } from '../../../kernel/json-record.ts';
 import {
   countValue,
@@ -10,6 +9,7 @@ import {
 
 type EvidenceWorklistFamilyScopeInput = {
   familyDefaults: boolean;
+  defaultCallerReadinessReportBuilder?: (args: string[]) => JsonRecord;
 };
 
 function hasDefaultCallerProjection(drilldown: JsonRecord) {
@@ -48,7 +48,10 @@ function familyDefaultCallerDeletionEvidenceDomains(input: EvidenceWorklistFamil
   if (input.familyDefaults !== true) {
     return [];
   }
-  const readModel = buildAgentDefaultCallerReadinessReport(['--family-defaults']);
+  if (!input.defaultCallerReadinessReportBuilder) {
+    return [];
+  }
+  const readModel = input.defaultCallerReadinessReportBuilder(['--family-defaults']);
   const report = record(readModel.agent_default_caller_readiness);
   return recordList(report.reports).map((repoReport) => {
     const summary = record(repoReport.summary);

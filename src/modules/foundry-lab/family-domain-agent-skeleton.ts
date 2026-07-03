@@ -12,7 +12,7 @@ import {
   providerResidencyGapStatus,
   readProviderContinuousProof,
   type ProviderContinuousProof,
-} from '../atlas/index.ts';
+} from '../runway/index.ts';
 import { buildPhysicalSkeletonFollowThroughGate } from './family-domain-agent-skeleton-parts/legacy-cleanup-evidence.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 

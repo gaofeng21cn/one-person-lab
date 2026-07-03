@@ -4,7 +4,7 @@ import {
 } from '../../foundry-lab/index.ts';
 import type {
   ProviderContinuousProof,
-} from '../../atlas/index.ts';
+} from '../../runway/index.ts';
 import { buildMasDomainRouteSupportProjection } from '../../runway/index.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import {
