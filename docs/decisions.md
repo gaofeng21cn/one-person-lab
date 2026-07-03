@@ -7,6 +7,19 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-07-03
 
+### 决策：Standard Agent AI-first Principle Pack 由 OPL 持有通用原则，domain 持有领域映射
+
+原因：标准 OPL Agent 需要一组跨 MAS / MAG / RCA / OMA / BookForge 都适用的 AI-first 原则，用来说明 stage 内开放式判断、capability 使用、workspace/source intake、owner answer 和 forbidden authority 的默认边界。但这些原则只能固定通用组织方式，不能把医学、基金、视觉、写作或其他领域 intake 判断抽成 OPL-owned Skill；否则会把 locator / refs / read-model / contract pass 误读成 domain source truth 或质量 verdict。
+
+影响：
+
+- OPL 持有 Standard Agent AI-first Principle Pack 的通用层：AI-first / contract-light、stage 主提示词优先、capability_kind 管理、workspace/source intake shell、generated/hosted surface、owner-answer shape、no-second-truth 和 false-ready guard。
+- Domain agent 持有领域特化层：domain intake mapping、source body / source semantics、领域路线选择、专业 Skill / knowledge / rubric、quality/export/review verdict、artifact authority、owner receipt、typed blocker 和 human gate。
+- `intake` 不成为独立 OPL Skill。通用 intake 归 `OPL Workspace` / `OPL Atlas` / `OPL Stagecraft` / `OPL Runway` / `OPL Console` / `OPL Ledger` 的 locator、catalog、stage scope、attempt projection、operator drilldown 和 refs-only evidence；domain intake mapping 留在 domain stage pack、prompt、professional skill 或 domain-owned authority function。
+- 品牌模块组织口径固定为协同承载：`OPL Charter` 冻结原则和 forbidden claims；`OPL Pack` 承载 declarative pack、capability ABI 和 generated/hosted surfaces；`OPL Stagecraft` 承载 stage/prompt/capability use policy；`OPL Workspace` 承载 workspace/source shell；`OPL Atlas` 承载 capability / source / tool-card catalog；`OPL Connect` 承载 connector 与 Skill/descriptor 分发；`OPL Runway`、`OPL Ledger` 和 `OPL Console` 分别承载 durable attempt、refs-only evidence 和 owner-delta-first operator projection。
+- `docs/policies/standard-agent-ai-first-principles.md` 与 `contracts/opl-framework/standard-agent-principles.json` 是该原则包的人读入口和机器边界；domain 仓通过 `contracts/standard-agent-principles-adoption.json`、`agent/principles/opl-standard-agent-principles.md` 和 `agent/principles/domain-specialization.md` 声明采用与领域映射。
+- 该原则包只关闭文档/合同定位缺口，不声明 standard-agent complete、domain ready、target-agent ready、Brand L5、App release ready 或 production ready；docs/read-model/test 绿只能作为结构证据输入。
+
 ### 决策：OPL Cloud 产品语义消费 Framework 模块，不重划物理源码 owner
 
 原因：物理模块化后，Framework 已经有 `src/modules/<module_id>/`、`entrypoints/` 和 `kernel/` 三层源码组织；同时产品叙事里又出现 `OPL Cloud`、在线 `OPL Workspace`、Console、Gateway / API 和 Fabric 等用户可见或资源底座语义。如果把这些产品名反向写成源码模块 owner，会让维护者误以为 Cloud / Workspace 产品、Console 页面、Connect connector 和 Ledger evidence 是同一层事实，进而制造第二 source of truth。

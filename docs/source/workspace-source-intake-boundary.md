@@ -18,6 +18,15 @@ OPL Framework 只负责通用 workspace/source intake shell：
 
 OPL 不判断医学来源、基金材料、视觉素材、引用质量、研究路线、fundability、visual direction 或任何 domain source truth。真实 source body、workspace state、work-in-progress 和运行输入应位于外部 workspace root；developer checkout 不承载这些运行状态。
 
+## Standard Agent 原则与 intake mapping
+
+Standard Agent AI-first Principle Pack 的定位是通用原则包，不是新的 domain intake Skill。`docs/policies/standard-agent-ai-first-principles.md` 和 `contracts/opl-framework/standard-agent-principles.json` 分别持有人读原则和机器边界：
+
+- OPL 只定义通用 workspace/source intake shell：locator、registry、scope refs、stage attempt source fingerprint、refs-only projection、freshness/status、owner answer shape 和 forbidden authority。
+- Domain agent 定义 domain intake mapping：哪些材料算有效输入、source body 如何解释、领域语义如何映射、source readiness verdict 由谁签、缺口如何 route-back 或进入 typed blocker。
+- `intake` 本身不外置为独立 OPL Skill；只有领域专业判断体量大、跨 workspace 复用且满足能力外置门时，才作为 domain-owned professional skill / reference pack / connector 暴露。
+- 文档、read model、contract 或测试只能证明 intake shell / mapping 边界可读；不能证明 source truth current、domain ready、artifact ready、quality verdict、release ready 或 production ready。
+
 ## 临床数据治理使用方式
 
 `medical-data-governance` 可以直接消费 OPL 基座的通用 lifecycle 能力，但只把它们当作 locator、index、projection 和 receipt transport：
@@ -37,6 +46,7 @@ OPL 基座不接管临床数据 body、临床语义映射、source readiness ver
 | Generic substrate projection | OPL 只拥有 workspace/source/artifact/memory locator、index、lifecycle projection、manifest ref transport 和 App/operator workbench grouping。 | `contracts/opl-framework/generic-substrate-projection-contract.json`、`src/generic-substrate-projection.ts`、`tests/src/generic-substrate-projection.test.ts`。 |
 | Stage attempt source intake | Stage attempt 的 workspace/source intake 只投影 workspace root、runtime root、profile ref、source refs、material refs、missing material attention refs 和 source fingerprint。 | `src/runtime-tray-workspace-source-intake.ts`、`tests/src/cli/cases/runtime-tray-stage-attempt-workbench.test.ts`、`opl family-runtime attempt query|inspect`。 |
 | Repo-source boundary | Standard Foundry Agent repo-source 只保存 declarative pack、contracts、minimal authority functions、docs 和 locator refs；真实 workspace/source body 在外部 workspace root。 | `contracts/opl-framework/standard-domain-agent-skeleton-contract.json`、`docs/policies/runtime-artifact-hygiene-policy.md`、`opl agents conformance --family-defaults --json`。 |
+| Standard Agent principle pack | OPL 只持有 AI-first / contract-light / intake shell / false-ready 通用原则；domain intake mapping 与领域判断留在 domain pack。 | `docs/policies/standard-agent-ai-first-principles.md`、`contracts/opl-framework/standard-agent-principles.json`、domain 仓 `contracts/standard-agent-principles-adoption.json`。 |
 | App/workbench projection | App/operator 只能消费 refs-only projection 来展示 workspace/source refs、blocked reason、next owner 和 inspect command。 | `opl runtime app-operator-drilldown --json`、runtime tray source/workbench projection source 和 App-owned tests。 |
 
 ## 当前 owner split
@@ -45,7 +55,7 @@ OPL 基座不接管临床数据 body、临床语义映射、source readiness ver
 | --- | --- |
 | `OPL Framework` | 通用 locator、registry、intake shell、refs-only projection、lifecycle/status projection 和 App/workbench 消费边界。 |
 | `One Person Lab App` | 消费 OPL workbench / operator projection，展示 workspace/source/artifact/memory refs、blocked reason、next owner 和 inspect command；不读取 source body，不生成 source readiness verdict。 |
-| `Foundry Agents` | MAS/MAG/RCA 持有各自 workspace truth、source truth body、source provenance、domain source semantics、source readiness verdict、artifact authority 和 owner receipt。 |
+| `Foundry Agents` | MAS/MAG/RCA 持有各自 workspace truth、source truth body、source provenance、domain intake mapping、domain source semantics、source readiness verdict、artifact authority 和 owner receipt。 |
 
 当某个 source 能力能跨 MAS/MAG/RCA 复用为 locator、registry、transport、read model 或 App drilldown，它应上收到 OPL Framework。只要能力会解释领域来源质量、读取 source body、决定领域路线或签发 source readiness verdict，它必须留在 domain repo。
 
@@ -55,5 +65,6 @@ OPL 基座不接管临床数据 body、临床语义映射、source readiness ver
 - workspace binding、manifest resolved、source fingerprint observed 或 App/workbench 可见等于 domain source truth current。
 - OPL 可读取、整理、重写或接受 source body。
 - OPL 可选择医学研究来源、基金材料、视觉素材或 domain profile。
+- OPL 可把 intake 写成独立 Skill，或用通用 intake shell 替代 domain intake mapping。
 - developer checkout 可作为 runtime workspace root、source body root、work-in-progress root 或真实输入输出根。
 - 为退役 product-entry、gateway-era route、local manager、compat alias、facade 或 wrapper 保留 source/workspace 入口。
