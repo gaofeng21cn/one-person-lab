@@ -123,7 +123,7 @@ OMA 负责 agent-building 语义、stage decomposition、candidate package、dev
 
 1. 先保证 repo source 结构完整：`agent/`、`contracts/`、`runtime/`、`docs/` 都存在，并由 `pack_compiler_input.json` 指向真实非 README 文件。
 2. 再补 Stage 内资源连接：每个 stage 都要能解析 prompt、skill、tool、knowledge 和 quality gate refs。
-3. 再推进 Stage Pack v2：补 plane version、standard pack ABI、tool affordance boundary、receipt schema refs、authority function refs、L4 / L5 entry gate、independent gate 和 stage completion policy。
+3. 再推进 Stage Pack v2：补 plane version、standard pack ABI、tool affordance boundary、receipt schema refs、authority function refs、L4 / L5 entry gate、independent gate 和 stage completion policy。字段级清单见 `docs/policies/stage-pack-v2-migration-checklist.md`。
 4. 最后处理外置能力包：只有高频、重型、跨 stage 或需要独立发布的 professional skill / reference pack 才外置。
 
 通过结构 conformance 只说明目录和合同可消费，不说明 live domain progress、domain ready、production ready、quality / export ready、App release ready 或 owner accepted。
