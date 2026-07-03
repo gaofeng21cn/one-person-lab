@@ -7,6 +7,7 @@ import {
 } from '../runway/runtime-environment-substrate.ts';
 import type { CandidateArtifactBodyEntry } from './scholar-skills-parts/artifact-engines.ts';
 import { materializeCandidateArtifactBodies } from './scholar-skills-parts/artifact-engines.ts';
+import { SCHOLAR_SKILL_MODULE_IDS } from './scholar-skills-contract.ts';
 import {
   AUTHORITY_FALSE_FIELDS,
   MODULE_REQUIRED_ARTIFACT_REF_FAMILIES,
@@ -424,8 +425,8 @@ function buildValidation(contractRoot: ScholarSkillsCapabilityModulesContract) {
   const checks: ValidationCheck[] = [
     {
       check_id: 'module_count',
-      status: contractRoot.modules.length === 10 ? 'pass' : 'fail',
-      detail: 'Contract must expose the ten branded MAS Scholar Skills capability modules.',
+      status: contractRoot.modules.length === SCHOLAR_SKILL_MODULE_IDS.length ? 'pass' : 'fail',
+      detail: `Contract must expose the ${SCHOLAR_SKILL_MODULE_IDS.length} active MAS Scholar Skills capability modules.`,
     },
     {
       check_id: 'unique_module_ids',

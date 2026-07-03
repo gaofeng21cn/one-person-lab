@@ -814,7 +814,7 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.ok(contract.longline_surface.repo_test_candidates_to_move_to_opl.includes(
     'provider-hosted soak orchestration',
   ));
-  assert.equal(packageJson.exports['./agent-lab'], './dist/agent-lab.js');
+  assert.equal(packageJson.exports['./agent-lab'], './dist/modules/foundry-lab/agent-lab.js');
 
   for (const observation of [
     'task_manifests_observed',

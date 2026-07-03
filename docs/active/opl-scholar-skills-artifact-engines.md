@@ -1,7 +1,7 @@
 # MAS Scholar Skills Candidate Artifact Engines
 
 Owner: `One Person Lab`
-Purpose: 说明 `MAS Scholar Skills` 十模块非权威 candidate artifact body 生成器的 CLI 入口、输出边界和 authority guard。
+Purpose: 说明 `MAS Scholar Skills` 八个 active 专业模块的非权威 candidate artifact body 生成器 CLI 入口、输出边界和 authority guard。
 State: `active_executable_candidate_artifact_engine_surface`
 Machine boundary: 本文是人读导航。机器真相以 `src/scholar-skills.ts`、`src/scholar-skills-parts/artifact-engines.ts`、`src/cli/cases/public-command-specs-parts/scholar-skills.ts`、`tests/src/cli/cases/scholar-skills-artifact-engines.test.ts` 与 `opl scholar-skills materialize --json` readback 为准。
 
@@ -32,26 +32,24 @@ opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact
 
 ## Candidate Engine 形状
 
-十个模块都会在 `output-root/candidate_artifacts/<profile>/` 下写出 deterministic executable candidate artifact body：
+八个 active module 都会在 `output-root/candidate_artifacts/<profile>/` 下写出 deterministic executable candidate artifact body：
 
 - Display: SVG visual-plan candidate。
 - Write / Review / Submit: Markdown draft/report/package candidate。
-- Tables / Stats / Omics / Lit / Data / Intake: JSON structured candidate。
+- Tables / Stats / Lit / Data: JSON structured candidate。
 
 每个 body 都携带模块专属 `engine_id`、`engine_version`、`input_requirements`、`validation_checks`、`engine_receipt_ref`、`payload_sha256`、`body_sha256`、`body_policy=opl_generated_non_authoritative_candidate_body_requires_domain_owner_consumption` 和全 false `authority_flags`。JSON body 的根对象是 `opl_scholarskills_executable_candidate_artifact`；Markdown/SVG body 也会嵌入 engine id、payload hash、owner-gate requirement 和 no-authority boundary。`manifest.json`、`module_candidate.json`、`execution_receipt_candidate.json`、`refs_manifest.json` 和顶层 readback 会记录 `candidate_artifact_bodies[].body_path`、`body_ref`、`body_sha256`、`body_format`、`engine_id`、`engine_receipt_ref`、`validation_status`、`input_requirements`、`body_policy` 与 authority flags。
 
-当前十个 engine 是 OPL-owned deterministic candidate builder：
+当前八个 engine 是 OPL-owned deterministic candidate builder：
 
 - Display: `scholar_display_candidate_visual_plan_engine`
 - Tables: `scholar_tables_candidate_table_manifest_engine`
 - Stats: `scholar_stats_candidate_analysis_engine`
-- Omics: `scholar_omics_candidate_pipeline_engine`
 - Lit: `scholar_lit_candidate_evidence_map_engine`
 - Write: `scholar_write_candidate_section_engine`
 - Review: `scholar_review_candidate_report_engine`
 - Submit: `scholar_submit_candidate_package_engine`
 - Data: `scholar_data_candidate_lineage_engine`
-- Intake: `scholar_intake_candidate_source_engine`
 
 这些 engine 可以生成更专业的可消费候选体、输入要求、质量检查清单和 receipt metadata；它们不运行 MAS/MAG/RCA domain workflow，不做医学分析裁决，不签 owner receipt，也不把候选体晋级为论文 truth。
 

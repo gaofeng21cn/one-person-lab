@@ -15,13 +15,11 @@ export const SCHOLAR_SKILL_MODULE_IDS = [
   'opl.scholarskills.display',
   'opl.scholarskills.tables',
   'opl.scholarskills.stats',
-  'opl.scholarskills.omics',
   'opl.scholarskills.lit',
   'opl.scholarskills.write',
   'opl.scholarskills.review',
   'opl.scholarskills.submit',
   'opl.scholarskills.data',
-  'opl.scholarskills.intake',
 ] as const satisfies readonly ScholarSkillModuleId[];
 
 const SCHOLAR_SKILL_AUTHORITY_FIELDS = [

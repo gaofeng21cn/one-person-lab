@@ -11,7 +11,6 @@ export const MODULE_REQUIRED_ARTIFACT_REF_FAMILIES = {
   'opl.scholarskills.display': ['display_pack_agent_orchestration'],
   'opl.scholarskills.tables': ['table_manifest', 'table_qc'],
   'opl.scholarskills.stats': ['analysis_manifest', 'reproducibility_check'],
-  'opl.scholarskills.omics': ['omics_pipeline_manifest', 'feature_matrix_qc'],
   'opl.scholarskills.lit': ['evidence_map', 'citation_manifest'],
   'opl.scholarskills.write': ['draft_section_manifest', 'source_trace'],
   'opl.scholarskills.review': ['reviewer_report', 'route_back'],
@@ -32,7 +31,6 @@ export const MODULE_REQUIRED_ARTIFACT_REF_FAMILIES = {
     'read_model_boundary',
     'lineage_readiness',
   ],
-  'opl.scholarskills.intake': ['source_snapshot', 'adoption_contract'],
 } as const satisfies Record<ScholarSkillModuleId, readonly string[]>;
 
 export const MODULE_EXECUTION_RECEIPT_REF_FAMILIES = {
@@ -57,13 +55,6 @@ export const MODULE_EXECUTION_RECEIPT_REF_FAMILIES = {
     'prepared_run_context',
     'analysis_manifest',
     'reproducibility_check',
-  ],
-  'opl.scholarskills.omics': [
-    'input_fingerprint',
-    'dependency_profile',
-    'prepared_run_context',
-    'omics_pipeline_manifest',
-    'feature_matrix_qc',
   ],
   'opl.scholarskills.lit': [
     'input_fingerprint',
@@ -111,13 +102,6 @@ export const MODULE_EXECUTION_RECEIPT_REF_FAMILIES = {
     'cold_restore_proof',
     'read_model_boundary',
     'lineage_readiness',
-  ],
-  'opl.scholarskills.intake': [
-    'input_fingerprint',
-    'dependency_profile',
-    'prepared_run_context',
-    'source_snapshot',
-    'adoption_contract',
   ],
 } as const satisfies Record<ScholarSkillModuleId, readonly string[]>;
 

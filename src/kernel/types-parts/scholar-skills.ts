@@ -2,13 +2,11 @@ export type ScholarSkillModuleId =
   | 'opl.scholarskills.display'
   | 'opl.scholarskills.tables'
   | 'opl.scholarskills.stats'
-  | 'opl.scholarskills.omics'
   | 'opl.scholarskills.lit'
   | 'opl.scholarskills.write'
   | 'opl.scholarskills.review'
   | 'opl.scholarskills.submit'
-  | 'opl.scholarskills.data'
-  | 'opl.scholarskills.intake';
+  | 'opl.scholarskills.data';
 
 export interface ScholarSkillAuthorityBoundary {
   can_claim_domain_ready: false;

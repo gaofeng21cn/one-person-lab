@@ -4,13 +4,11 @@ const expectedModuleIds = [
   'opl.scholarskills.display',
   'opl.scholarskills.tables',
   'opl.scholarskills.stats',
-  'opl.scholarskills.omics',
   'opl.scholarskills.lit',
   'opl.scholarskills.write',
   'opl.scholarskills.review',
   'opl.scholarskills.submit',
   'opl.scholarskills.data',
-  'opl.scholarskills.intake',
 ] as const;
 
 type ExpectedModuleId = typeof expectedModuleIds[number];
@@ -37,13 +35,6 @@ const expectedReceiptRefFamiliesByModule = {
     'prepared_run_context_ref',
     'analysis_manifest_ref',
     'reproducibility_check_ref',
-  ],
-  'opl.scholarskills.omics': [
-    'input_fingerprint_ref',
-    'dependency_profile_ref',
-    'prepared_run_context_ref',
-    'omics_pipeline_manifest_ref',
-    'feature_matrix_qc_ref',
   ],
   'opl.scholarskills.lit': [
     'input_fingerprint_ref',
@@ -92,20 +83,12 @@ const expectedReceiptRefFamiliesByModule = {
     'read_model_boundary_ref',
     'lineage_readiness_ref',
   ],
-  'opl.scholarskills.intake': [
-    'input_fingerprint_ref',
-    'dependency_profile_ref',
-    'prepared_run_context_ref',
-    'source_snapshot_ref',
-    'adoption_contract_ref',
-  ],
 } satisfies Record<ExpectedModuleId, string[]>;
 
 const expectedArtifactRefFamiliesByModule = {
   'opl.scholarskills.display': ['display_pack_agent_orchestration'],
   'opl.scholarskills.tables': ['table_manifest', 'table_qc'],
   'opl.scholarskills.stats': ['analysis_manifest', 'reproducibility_check'],
-  'opl.scholarskills.omics': ['omics_pipeline_manifest', 'feature_matrix_qc'],
   'opl.scholarskills.lit': ['evidence_map', 'citation_manifest'],
   'opl.scholarskills.write': ['draft_section_manifest', 'source_trace'],
   'opl.scholarskills.review': ['reviewer_report', 'route_back'],
@@ -126,7 +109,6 @@ const expectedArtifactRefFamiliesByModule = {
     'read_model_boundary',
     'lineage_readiness',
   ],
-  'opl.scholarskills.intake': ['source_snapshot', 'adoption_contract'],
 } satisfies Record<ExpectedModuleId, string[]>;
 
 function writeFakeRscript(binDir: string) {
@@ -195,7 +177,7 @@ function writeRequirementProfile(profilePath: string) {
   );
 }
 
-test('ScholarSkills capability module descriptor contract is loaded and exposes ten branded modules', () => {
+test('ScholarSkills capability module descriptor contract is loaded and exposes active professional modules', () => {
   const contracts = loadFrameworkContracts(repoRoot);
 
   assert.equal(contracts.scholarSkillsCapabilityModules.contract_id, 'opl_scholarskills_capability_modules');
@@ -211,7 +193,7 @@ test('opl scholar-skills list returns catalog readback with false authority boun
 
   assert.equal(output.version, 'g2');
   assert.equal(output.scholar_skills.surface_kind, 'opl_scholarskills_capability_module_catalog');
-  assert.equal(output.scholar_skills.module_count, 10);
+  assert.equal(output.scholar_skills.module_count, 8);
   assert.deepEqual(
     output.scholar_skills.modules.map((entry: { module_id: string }) => entry.module_id),
     expectedModuleIds,
@@ -296,7 +278,7 @@ test('opl scholar-skills exposes module-specific capability profiles for every S
 test('opl scholar-skills validate and doctor enforce authority false flags', () => {
   const validation = runCli(['scholar-skills', 'validate', '--json']).scholar_skills_validation;
   assert.equal(validation.status, 'valid');
-  assert.equal(validation.validated_module_count, 10);
+  assert.equal(validation.validated_module_count, 8);
   assert.deepEqual(validation.authority_boundary_violations, []);
   assert.deepEqual(validation.write_boundary_violations, []);
 

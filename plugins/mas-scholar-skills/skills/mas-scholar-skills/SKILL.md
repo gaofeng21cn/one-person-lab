@@ -15,18 +15,16 @@ Use MAS Scholar Skills as a repo-tracked Codex entry for MAS medical-paper capab
 
 ## Modules
 
-The ten MAS Scholar Skills modules are:
+The active MAS Scholar Skills modules are:
 
 - `opl.scholarskills.display` - Scholar Display
 - `opl.scholarskills.tables` - Scholar Tables
 - `opl.scholarskills.stats` - Scholar Stats
-- `opl.scholarskills.omics` - Scholar Omics
 - `opl.scholarskills.lit` - Scholar Lit
 - `opl.scholarskills.write` - Scholar Write
 - `opl.scholarskills.review` - Scholar Review
 - `opl.scholarskills.submit` - Scholar Submit
 - `opl.scholarskills.data` - Medical Data Governance legacy descriptor
-- `opl.scholarskills.intake` - Scholar Intake
 
 The default syncable professional specialist skills are:
 

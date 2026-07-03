@@ -4,20 +4,17 @@ const moduleIds = [
   'opl.scholarskills.display',
   'opl.scholarskills.tables',
   'opl.scholarskills.stats',
-  'opl.scholarskills.omics',
   'opl.scholarskills.lit',
   'opl.scholarskills.write',
   'opl.scholarskills.review',
   'opl.scholarskills.submit',
   'opl.scholarskills.data',
-  'opl.scholarskills.intake',
 ] as const;
 
 const expectedArtifactRefFamiliesByModule = {
   'opl.scholarskills.display': ['display_pack_agent_orchestration'],
   'opl.scholarskills.tables': ['table_manifest', 'table_qc'],
   'opl.scholarskills.stats': ['analysis_manifest', 'reproducibility_check'],
-  'opl.scholarskills.omics': ['omics_pipeline_manifest', 'feature_matrix_qc'],
   'opl.scholarskills.lit': ['evidence_map', 'citation_manifest'],
   'opl.scholarskills.write': ['draft_section_manifest', 'source_trace'],
   'opl.scholarskills.review': ['reviewer_report', 'route_back'],
@@ -38,20 +35,17 @@ const expectedArtifactRefFamiliesByModule = {
     'read_model_boundary',
     'lineage_readiness',
   ],
-  'opl.scholarskills.intake': ['source_snapshot', 'adoption_contract'],
 } satisfies Record<typeof moduleIds[number], string[]>;
 
 const expectedEngineIdsByModule = {
   'opl.scholarskills.display': 'scholar_display_candidate_visual_plan_engine',
   'opl.scholarskills.tables': 'scholar_tables_candidate_table_manifest_engine',
   'opl.scholarskills.stats': 'scholar_stats_candidate_analysis_engine',
-  'opl.scholarskills.omics': 'scholar_omics_candidate_pipeline_engine',
   'opl.scholarskills.lit': 'scholar_lit_candidate_evidence_map_engine',
   'opl.scholarskills.write': 'scholar_write_candidate_section_engine',
   'opl.scholarskills.review': 'scholar_review_candidate_report_engine',
   'opl.scholarskills.submit': 'scholar_submit_candidate_package_engine',
   'opl.scholarskills.data': 'scholar_data_candidate_lineage_engine',
-  'opl.scholarskills.intake': 'scholar_intake_candidate_source_engine',
 } satisfies Record<typeof moduleIds[number], string>;
 
 const expectedEngineSpecByModule = {
@@ -72,12 +66,6 @@ const expectedEngineSpecByModule = {
     optional: ['analysis_question', 'model', 'variables', 'cohort_ref', 'sensitivity_checks', 'effect_size_or_metric_extraction', 'reproducibility_check', 'statistical_review', 'dataset_metric_benchmark', 'result_metric_registry', 'ai_statistical_verdict_candidate', 'no_statistical_conclusion_claim'],
     checks: ['analysis_plan', 'effect_size_or_metric_extraction', 'reproducibility_check', 'statistical_review', 'dataset_metric_benchmark', 'result_metric_registry', 'ai_statistical_verdict_candidate', 'no_statistical_conclusion_claim', 'owner_gate_required'],
     sections: ['analysis_plan', 'effect_size_or_metric_extraction', 'reproducibility_check', 'statistical_review', 'dataset_metric_benchmark', 'result_metric_registry', 'ai_statistical_verdict_candidate', 'no_statistical_conclusion_claim'],
-  },
-  'opl.scholarskills.omics': {
-    required: ['pipeline_goal', 'source_refs'],
-    optional: ['pipeline_goal', 'feature_set', 'normalization', 'batch_correction', 'matrix_ref', 'omics_visualization_plan', 'pathway_context', 'domain_review', 'no_omics_truth_claim'],
-    checks: ['feature_matrix_qc', 'omics_visualization_plan', 'pathway_context', 'domain_review', 'no_omics_truth_claim', 'owner_gate_required'],
-    sections: ['feature_matrix_qc', 'omics_visualization_plan', 'pathway_context', 'domain_review', 'no_omics_truth_claim'],
   },
   'opl.scholarskills.lit': {
     required: ['question', 'source_refs'],
@@ -184,12 +172,6 @@ const expectedEngineSpecByModule = {
       'result_metric_registry',
       'ai_data_readiness_verdict_candidate',
     ],
-  },
-  'opl.scholarskills.intake': {
-    required: ['intake_goal', 'source_refs'],
-    optional: ['intake_goal', 'source_snapshot', 'owner', 'blocked_inputs', 'input_contract', 'adoption_contract', 'scope_boundary', 'multi_source_paper_search', 'research_blueprint_ref', 'ai_intake_adoption_verdict_candidate'],
-    checks: ['upstream_commit', 'included_excluded_paths', 'dry_run_readback', 'input_contract', 'adoption_contract', 'scope_boundary', 'multi_source_paper_search', 'research_blueprint_ref', 'ai_intake_adoption_verdict_candidate', 'owner_gate_required'],
-    sections: ['upstream_commit', 'included_excluded_paths', 'dry_run_readback', 'input_contract', 'adoption_contract', 'scope_boundary', 'multi_source_paper_search', 'research_blueprint_ref', 'ai_intake_adoption_verdict_candidate'],
   },
 } satisfies Record<typeof moduleIds[number], {
   required: string[];
@@ -345,7 +327,7 @@ test('scholar-skills materialize keeps refs-only behavior without candidate arti
   }
 });
 
-test('scholar-skills materialize writes deterministic module-specific bodies for all ten modules', () => {
+test('scholar-skills materialize writes deterministic module-specific bodies for all active professional modules', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholar-skills-artifact-all-'));
   try {
     for (const moduleId of moduleIds) {
