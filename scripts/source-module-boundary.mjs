@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs as parseNodeArgs } from 'node:util';
 
-import { readJsonFile } from './script-json-boundary.mjs';
+import { isJsonObject, readJsonFile } from './script-json-boundary.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = parseCliOptions(process.argv.slice(2));
@@ -199,7 +199,7 @@ function readOptionalJson(file) {
 
 function readPhysicalLayout(contractValue) {
   const value = contractValue.physical_layout;
-  if (!isRecord(value)) {
+  if (!isJsonObject(value)) {
     failures.push('physical_layout: missing source module physical layout contract');
     return {
       stage: 'transition',
@@ -219,13 +219,13 @@ function readPhysicalLayout(contractValue) {
     targetCliEntrypoint,
     legacyCliEntrypoint,
     targetActivationPath: readString(value.target_activation_path, 'physical_layout.target_activation_path'),
-    rootTsPolicy: isRecord(value.root_ts_policy) ? value.root_ts_policy : {},
+    rootTsPolicy: isJsonObject(value.root_ts_policy) ? value.root_ts_policy : {},
   };
 }
 
 function readRootTsPolicy(layoutValue) {
   const policy = layoutValue.rootTsPolicy;
-  if (!isRecord(policy)) {
+  if (!isJsonObject(policy)) {
     failures.push('physical_layout.root_ts_policy: missing root TypeScript policy');
   }
   const allowedKinds = readStringArray(
@@ -240,7 +240,7 @@ function readRootTsPolicy(layoutValue) {
     failures.push('physical_layout.root_ts_policy.allowed_transition_exceptions must be an array');
   }
   const allowedTransitionExceptions = entries.flatMap((entry, index) => {
-    if (!isRecord(entry)) {
+    if (!isJsonObject(entry)) {
       failures.push(`physical_layout.root_ts_policy.allowed_transition_exceptions.${index}: entry must be an object`);
       return [];
     }
@@ -271,7 +271,7 @@ function readModules(contractValue) {
   }
   const seen = new Set();
   return contractValue.modules.flatMap((entry, index) => {
-    if (!isRecord(entry)) {
+    if (!isJsonObject(entry)) {
       failures.push(`modules.${index}: entry must be an object`);
       return [];
     }
@@ -308,8 +308,8 @@ function readModuleDependencyPolicy(policyValue, modulesValue, layoutValue) {
     return defaultPolicy;
   }
 
-  const publicEntrypointRule = isRecord(policyValue.public_entrypoint_rule) ? policyValue.public_entrypoint_rule : {};
-  if (!isRecord(policyValue.public_entrypoint_rule)) {
+  const publicEntrypointRule = isJsonObject(policyValue.public_entrypoint_rule) ? policyValue.public_entrypoint_rule : {};
+  if (!isJsonObject(policyValue.public_entrypoint_rule)) {
     failures.push('module_dependency_policy.public_entrypoint_rule: expected object');
   }
   const policyEntrypointPattern = readString(
@@ -322,24 +322,24 @@ function readModuleDependencyPolicy(policyValue, modulesValue, layoutValue) {
     );
   }
 
-  const dependencyPolicy = isRecord(policyValue.dependency_policy) ? policyValue.dependency_policy : {};
-  if (!isRecord(policyValue.dependency_policy)) {
+  const dependencyPolicy = isJsonObject(policyValue.dependency_policy) ? policyValue.dependency_policy : {};
+  if (!isJsonObject(policyValue.dependency_policy)) {
     failures.push('module_dependency_policy.dependency_policy: expected object');
   }
-  const sourceScanScope = isRecord(policyValue.source_scan_scope) ? policyValue.source_scan_scope : {};
-  if (!isRecord(policyValue.source_scan_scope)) {
+  const sourceScanScope = isJsonObject(policyValue.source_scan_scope) ? policyValue.source_scan_scope : {};
+  if (!isJsonObject(policyValue.source_scan_scope)) {
     failures.push('module_dependency_policy.source_scan_scope: expected object');
   }
-  const deepImportPolicy = isRecord(policyValue.deep_cross_module_imports)
+  const deepImportPolicy = isJsonObject(policyValue.deep_cross_module_imports)
     ? policyValue.deep_cross_module_imports
     : {};
-  if (!isRecord(policyValue.deep_cross_module_imports)) {
+  if (!isJsonObject(policyValue.deep_cross_module_imports)) {
     failures.push('module_dependency_policy.deep_cross_module_imports: expected object');
   }
-  const dependencyCyclePolicy = isRecord(policyValue.module_dependency_cycles)
+  const dependencyCyclePolicy = isJsonObject(policyValue.module_dependency_cycles)
     ? policyValue.module_dependency_cycles
     : {};
-  if (!isRecord(policyValue.module_dependency_cycles)) {
+  if (!isJsonObject(policyValue.module_dependency_cycles)) {
     failures.push('module_dependency_policy.module_dependency_cycles: expected object');
   }
 
@@ -388,7 +388,7 @@ function readForbiddenPairs(value, knownModuleIdSet) {
     return forbidden;
   }
   for (const [index, entry] of value.entries()) {
-    if (!isRecord(entry)) {
+    if (!isJsonObject(entry)) {
       failures.push(`module_dependency_policy.dependency_policy.forbidden_dependencies.${index}: expected object`);
       continue;
     }
@@ -735,8 +735,4 @@ function collectTsFiles(directory, relativeDirectory, files) {
 function relativeFromRoot(file) {
   const relative = path.relative(targetRoot, file);
   return relative.startsWith('..') ? file : normalizeRelativePath(relative);
-}
-
-function isRecord(value) {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
