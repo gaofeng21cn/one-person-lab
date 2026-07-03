@@ -1,16 +1,16 @@
 import fs from 'node:fs';
 
-import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { optionalString, readJsonFileOrNull } from '../../kernel/json-file.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
+import { stringList } from '../../kernel/json-record.ts';
 import {
   FrameworkContractError } from './contracts.ts';
-import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 import type {
   BrandModuleId,
   BrandModuleL5EvidenceClassId,
   FrameworkContracts,
 } from '../../kernel/types.ts';
-
-type JsonRecord = Record<string, unknown>;
 
 type BrandModuleL5EvidenceReceipt = {
   surface_kind: 'opl_brand_module_l5_evidence_receipt';
@@ -66,20 +66,6 @@ type BrandModuleL5EvidenceLedger = {
 
 function nowIso() {
   return new Date().toISOString();
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
 }
 
 function uniqueStrings(values: string[]) {
@@ -247,24 +233,16 @@ function normalizeReceipt(value: unknown): BrandModuleL5EvidenceReceipt | null {
 }
 
 function readBrandModuleL5EvidenceLedger(): BrandModuleL5EvidenceLedger {
-  const file = ledgerPath();
-  if (!fs.existsSync(file)) {
+  const parsed = readJsonFileOrNull(ledgerPath());
+  if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
     return emptyLedger();
   }
-  try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
-    if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
-      return emptyLedger();
-    }
-    return {
-      ...emptyLedger(),
-      receipts: parsed.receipts
-        .map(normalizeReceipt)
-        .filter((receipt): receipt is BrandModuleL5EvidenceReceipt => Boolean(receipt)),
-    };
-  } catch {
-    return emptyLedger();
-  }
+  return {
+    ...emptyLedger(),
+    receipts: parsed.receipts
+      .map(normalizeReceipt)
+      .filter((receipt): receipt is BrandModuleL5EvidenceReceipt => Boolean(receipt)),
+  };
 }
 
 function writeBrandModuleL5EvidenceLedger(ledger: BrandModuleL5EvidenceLedger) {

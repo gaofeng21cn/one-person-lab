@@ -3,6 +3,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+import { readJsonFileResult } from '../../kernel/json-file.ts';
+
 const CODE_EXTENSIONS = new Set([
   '.js',
   '.jsx',
@@ -130,7 +132,8 @@ function isCodeFile(relativePath: string) {
 
 function readJsonContract(contractPath: string) {
   const failures: SourceStructureFinding[] = [];
-  if (!fs.existsSync(contractPath)) {
+  const result = readJsonFileResult(contractPath);
+  if (result.status === 'missing') {
     failures.push({
       finding_kind: 'contract_invalid',
       path: path.basename(contractPath),
@@ -142,22 +145,22 @@ function readJsonContract(contractPath: string) {
     return { contract: null, failures };
   }
 
-  try {
-    return {
-      contract: JSON.parse(fs.readFileSync(contractPath, 'utf8')) as SourceStructureContract,
-      failures,
-    };
-  } catch (error) {
+  if (result.status === 'invalid_json') {
     failures.push({
       finding_kind: 'contract_invalid',
       path: path.basename(contractPath),
       line_count: null,
       limit: null,
       strict_blocks: true,
-      message: `source structure budget contract is not valid JSON: ${(error as Error).message}`,
+      message: `source structure budget contract is not valid JSON: ${result.error}`,
     });
     return { contract: null, failures };
   }
+
+  return {
+    contract: result.payload as SourceStructureContract,
+    failures,
+  };
 }
 
 function loadContract(contractPath: string) {
