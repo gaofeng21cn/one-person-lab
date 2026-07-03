@@ -15,7 +15,19 @@ import {
   parseCodexExecOutput,
   runCodexCommandStreaming,
 } from '../runway/index.ts';
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import {
+  FrameworkContractError,
+  isRecord,
+} from '../../kernel/contract-validation.ts';
+import {
+  parseJsonText,
+  writeJsonPayloadFile,
+} from '../../kernel/json-file.ts';
+import {
+  stringList,
+  stringValue,
+  type JsonRecord,
+} from '../../kernel/json-record.ts';
 import { stableId } from '../../kernel/stable-id.ts';
 import {
   buildExecutionPlanMarkdown,
@@ -25,8 +37,6 @@ import {
   OPL_WORK_ORDER_PRIMITIVE_OWNER,
   type ExecutionSurfaceRef,
 } from './agent-lab-work-order-execution-surfaces.ts';
-
-type JsonRecord = Record<string, unknown>;
 
 export type AgentLabWorkOrderExecutionOptions = {
   workOrderPath: string;
@@ -77,23 +87,9 @@ const WORK_ORDER_EXECUTION_PRESENTATION: WorkOrderExecutionPresentation = {
   commandSurface: 'work-order execute',
 };
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown): string | null {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown): string[] {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-    : [];
-}
-
 function readJson(filePath: string): JsonRecord {
   try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8')) as JsonRecord;
+    return parseJsonText(fs.readFileSync(filePath, 'utf8')) as JsonRecord;
   } catch (error) {
     throw new FrameworkContractError(
       'contract_json_invalid',
@@ -108,7 +104,7 @@ function readJson(filePath: string): JsonRecord {
 
 function writeJson(filePath: string, payload: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`);
+  writeJsonPayloadFile(filePath, payload);
 }
 
 function writeMarkdown(filePath: string, content: string): void {
@@ -276,7 +272,7 @@ function buildCodexPrompt(input: {
     `Target worktree: ${input.worktreePath}`,
     `Target source repo: ${input.targetAgentDir}`,
     `OPL work-order output directory: ${input.outputDir}`,
-    `Work order id: ${optionalString(input.workOrder.work_order_id) ?? 'unknown'}`,
+    `Work order id: ${stringValue(input.workOrder.work_order_id) ?? 'unknown'}`,
     `Allowed editable surfaces: ${JSON.stringify(stringList(input.workOrder.allowed_editable_surfaces))}`,
     `Target repo file hints: ${JSON.stringify(stringList(input.workOrder.target_repo_file_hints))}`,
     `Required verification refs: ${JSON.stringify(stringList(input.workOrder.required_verification_refs))}`,
@@ -295,23 +291,23 @@ function buildCodexPrompt(input: {
 }
 
 function assertExecutableWorkOrder(workOrder: JsonRecord): void {
-  if (optionalString(workOrder.status) !== 'ready_for_target_agent_source_patch') {
+  if (stringValue(workOrder.status) !== 'ready_for_target_agent_source_patch') {
     throw new FrameworkContractError(
       'contract_shape_invalid',
       'OPL work-order execute requires a source patch work order.',
       {
-        work_order_id: optionalString(workOrder.work_order_id),
-        status: optionalString(workOrder.status),
+        work_order_id: stringValue(workOrder.work_order_id),
+        status: stringValue(workOrder.status),
       },
     );
   }
-  if (optionalString(workOrder.executor_lease_ref)?.startsWith('executor-lease:codex-cli/') !== true) {
+  if (stringValue(workOrder.executor_lease_ref)?.startsWith('executor-lease:codex-cli/') !== true) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
       'OPL work-order execute requires a Codex CLI executor lease ref.',
       {
-        work_order_id: optionalString(workOrder.work_order_id),
-        executor_lease_ref: optionalString(workOrder.executor_lease_ref),
+        work_order_id: stringValue(workOrder.work_order_id),
+        executor_lease_ref: stringValue(workOrder.executor_lease_ref),
       },
     );
   }
@@ -321,7 +317,7 @@ function assertExecutableWorkOrder(workOrder: JsonRecord): void {
       'contract_shape_invalid',
       'OPL work-order execute refuses work orders that can write target truth or quality/export verdicts.',
       {
-        work_order_id: optionalString(workOrder.work_order_id),
+        work_order_id: stringValue(workOrder.work_order_id),
         authority_boundary: boundary,
       },
     );
@@ -337,13 +333,13 @@ function missingOmaTargetAgentWorkOrderGuardFields(workOrder: JsonRecord): strin
   if (stringList(workOrder.owner_route_refs).length === 0) {
     missing.push('target_owner_route');
   }
-  if (!isRecord(workOrder.source_morphology_proof) && !optionalString(workOrder.source_morphology_proof_ref)) {
+  if (!isRecord(workOrder.source_morphology_proof) && !stringValue(workOrder.source_morphology_proof_ref)) {
     missing.push('source_morphology');
   }
-  if (!optionalString(machineCloseoutRefs.target_runtime_read_model_consumption_ref)) {
+  if (!stringValue(machineCloseoutRefs.target_runtime_read_model_consumption_ref)) {
     missing.push('generated_surface_consumption');
   }
-  if (!optionalString(workOrder.private_residue_decision_ref)) {
+  if (!stringValue(workOrder.private_residue_decision_ref)) {
     missing.push('private_residue_decision');
   }
   if (
@@ -356,7 +352,7 @@ function missingOmaTargetAgentWorkOrderGuardFields(workOrder: JsonRecord): strin
   ) {
     missing.push('no_forbidden_write_proof');
   }
-  if (!optionalString(machineCloseoutRefs.target_owner_receipt_or_typed_blocker_ref)) {
+  if (!stringValue(machineCloseoutRefs.target_owner_receipt_or_typed_blocker_ref)) {
     missing.push('owner_answer_shape');
   }
   return OMA_TARGET_AGENT_WORK_ORDER_GUARD_FIELDS.filter((field) => missing.includes(field));
@@ -476,11 +472,11 @@ function ownerCloseoutTypedBlocker(input: {
       : null,
     reason: input.reason,
     owner_route_refs: stringList(input.workOrder.owner_route_refs),
-    owner: input.hook ? optionalString(input.hook.owner) ?? 'target-domain' : 'target-domain',
+    owner: input.hook ? stringValue(input.hook.owner) ?? 'target-domain' : 'target-domain',
     can_write_owner_receipt: false,
     command_result: input.commandResult ?? null,
-    hook_action_ref: input.hook ? optionalString(input.hook.action_ref) : null,
-    target_domain_id: optionalString(input.targetAgent.domain_id),
+    hook_action_ref: input.hook ? stringValue(input.hook.action_ref) : null,
+    target_domain_id: stringValue(input.targetAgent.domain_id),
   };
 }
 
@@ -489,7 +485,7 @@ function assertOwnerCloseoutResponseAllowed(response: JsonRecord): void {
     || response.writes_artifact_body !== false
     || response.writes_memory_body !== false
     || response.authorizes_quality_or_export !== false;
-  const returnShape = optionalString(response.return_shape);
+  const returnShape = stringValue(response.return_shape);
   if (
     response.refs_only !== true
     || writesForbiddenBody
@@ -572,7 +568,7 @@ function runTargetOwnerCloseoutHook(input: {
   }
   let response: JsonRecord;
   try {
-    response = JSON.parse(result.stdout ?? '{}') as JsonRecord;
+    response = parseJsonText(result.stdout ?? '{}') as JsonRecord;
     assertOwnerCloseoutResponseAllowed(response);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -593,10 +589,10 @@ function runTargetOwnerCloseoutHook(input: {
   return {
     responsePath,
     closeout: {
-      status: optionalString(response.status) ?? optionalString(response.return_shape) ?? 'owner_closeout_recorded',
-      owner: optionalString(hook.owner) ?? optionalString(response.owner) ?? 'target-domain',
+      status: stringValue(response.status) ?? stringValue(response.return_shape) ?? 'owner_closeout_recorded',
+      owner: stringValue(hook.owner) ?? stringValue(response.owner) ?? 'target-domain',
       owner_route_refs: stringList(input.workOrder.owner_route_refs),
-      hook_action_ref: optionalString(hook.action_ref),
+      hook_action_ref: stringValue(hook.action_ref),
       response_path: responsePath,
       command_result: commandResult,
       hook_result: response,
@@ -677,7 +673,7 @@ function buildDryRunReceipt(input: {
     planned_closeout: {
       owner_route_refs: stringList(input.workOrder.owner_route_refs),
       target_owner_receipt_or_typed_blocker_ref:
-        optionalString(machineCloseoutRefs.target_owner_receipt_or_typed_blocker_ref),
+        stringValue(machineCloseoutRefs.target_owner_receipt_or_typed_blocker_ref),
       closeout_requires_target_owner: true,
     },
     no_executor_launch_proof: {
@@ -759,7 +755,7 @@ async function executeDeveloperWorkOrder(
 ) {
   const workOrderPath = path.resolve(options.workOrderPath);
   const workOrder = readJson(workOrderPath);
-  const workOrderId = optionalString(workOrder.work_order_id) ?? stableId('work-order', [workOrderPath, workOrder]);
+  const workOrderId = stringValue(workOrder.work_order_id) ?? stableId('work-order', [workOrderPath, workOrder]);
   const outputDir = normalizeOutputDir(options.outputDir, workOrderId);
   fs.mkdirSync(outputDir, { recursive: true });
   assertExecutableWorkOrder(workOrder);
@@ -771,7 +767,7 @@ async function executeDeveloperWorkOrder(
   const targetAgent = isRecord(workOrder.target_agent) ? workOrder.target_agent : {};
   const targetAgentDir = path.resolve(
     options.targetAgentDir
-      ?? optionalString(targetAgent.repo_dir)
+      ?? stringValue(targetAgent.repo_dir)
       ?? '',
   );
   if (!targetAgentDir || !fs.existsSync(targetAgentDir)) {
@@ -976,7 +972,7 @@ async function executeDeveloperWorkOrder(
       work_order_stage_execution_bundle_ref: `work-order-stage-execution-bundle:${targetAgent.domain_id ?? 'target-agent'}/${workOrderId}`,
       executor: {
         executor_kind: 'codex_cli',
-        executor_lease_ref: optionalString(workOrder.executor_lease_ref),
+        executor_lease_ref: stringValue(workOrder.executor_lease_ref),
         codex_cli_dispatch_receipt_ref: `codex-cli-dispatch-receipt:${targetAgent.domain_id ?? 'target-agent'}/${workOrderId}`,
         command_preview: buildCodexCliPreview(codexArgs),
         process_id: processId,
