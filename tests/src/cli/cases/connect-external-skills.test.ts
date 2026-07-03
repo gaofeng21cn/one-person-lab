@@ -76,6 +76,80 @@ test('connect external-skills list exposes approved source and skill cards', () 
   }
 });
 
+test('connect external-skills sources add registers a pinned source for later discovery', () => {
+  const sourceRoot = createExternalSkillsFixture();
+  const registryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kdense-skills-registry-'));
+  try {
+    const added = runCli([
+      'connect',
+      'external-skills',
+      'sources',
+      'add',
+      '--source',
+      'kdense',
+      '--repo',
+      'https://github.com/K-Dense-AI/scientific-agent-skills',
+      '--pin',
+      '1e024ea8547ada12039edbe8197aaa959d97763f',
+      '--source-root',
+      sourceRoot,
+      '--registry-root',
+      registryRoot,
+    ]) as {
+      opl_connect_external_skills: {
+        surface_kind: string;
+        status: string;
+        registry_path: string;
+        source: {
+          source_id: string;
+          repo_url: string;
+          pinned_ref: string;
+          source_root: string;
+        };
+        authority_boundary: { can_install_all_skills_by_default: boolean };
+      };
+    };
+
+    assert.equal(added.opl_connect_external_skills.surface_kind, 'opl_connect_external_skill_source_registration');
+    assert.equal(added.opl_connect_external_skills.status, 'registered');
+    assert.equal(added.opl_connect_external_skills.source.source_id, 'kdense-scientific-agent-skills');
+    assert.equal(added.opl_connect_external_skills.source.pinned_ref, '1e024ea8547ada12039edbe8197aaa959d97763f');
+    assert.equal(added.opl_connect_external_skills.authority_boundary.can_install_all_skills_by_default, false);
+    assert.equal(fs.existsSync(added.opl_connect_external_skills.registry_path), true);
+
+    const listed = runCli([
+      'connect',
+      'external-skills',
+      'list',
+      '--registry-root',
+      registryRoot,
+    ]) as {
+      opl_connect_external_skills: {
+        status: string;
+        sources: Array<{
+          source_id: string;
+          registered: boolean;
+          pinned_ref: string;
+          source_root: string;
+        }>;
+        skills: Array<{ skill_id: string }>;
+      };
+    };
+
+    assert.equal(listed.opl_connect_external_skills.status, 'available');
+    assert.equal(listed.opl_connect_external_skills.sources[0].registered, true);
+    assert.equal(listed.opl_connect_external_skills.sources[0].pinned_ref, '1e024ea8547ada12039edbe8197aaa959d97763f');
+    assert.equal(listed.opl_connect_external_skills.sources[0].source_root, sourceRoot);
+    assert.deepEqual(
+      listed.opl_connect_external_skills.skills.map((entry) => entry.skill_id),
+      ['scanpy', 'scientific-writing'],
+    );
+  } finally {
+    fs.rmSync(sourceRoot, { recursive: true, force: true });
+    fs.rmSync(registryRoot, { recursive: true, force: true });
+  }
+});
+
 test('connect external-skills search and inspect return selected skill metadata', () => {
   const sourceRoot = createExternalSkillsFixture();
   try {

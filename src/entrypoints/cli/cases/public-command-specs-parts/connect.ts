@@ -3,6 +3,7 @@ import {
   runOplConnectExternalSkillsInspect,
   runOplConnectExternalSkillsList,
   runOplConnectExternalSkillsSearch,
+  runOplConnectExternalSkillsSourceAdd,
   runOplConnectExternalSkillsSync,
 } from '../../../../modules/connect/opl-connect-external-skills.ts';
 import { runOplConnectPubMedSearch } from '../../../../modules/connect/opl-connect-pubmed.ts';
@@ -33,6 +34,12 @@ type PubMedSearchArgs = {
 type ExternalSkillsBaseArgs = {
   source?: string;
   sourceRoot?: string;
+  registryRoot?: string;
+};
+
+type ExternalSkillsSourceAddArgs = ExternalSkillsBaseArgs & {
+  repo: string;
+  pin: string;
 };
 
 type ExternalSkillsSearchArgs = ExternalSkillsBaseArgs & {
@@ -75,6 +82,25 @@ function parseExternalSkillsBase(command: string, args: string[], spec: CommandS
   return {
     source: readOptionalString(parsed.source) ?? undefined,
     sourceRoot: readOptionalString(parsed['source-root']) ?? undefined,
+    registryRoot: readOptionalString(parsed['registry-root']) ?? undefined,
+  };
+}
+
+function parseExternalSkillsSourceAddArgs(args: string[], spec: CommandSpec): ExternalSkillsSourceAddArgs {
+  const parsed = parseRegisteredCommandOptions('connect external-skills sources add', args, spec);
+  const repo = String(parsed.repo ?? '').trim();
+  const pin = String(parsed.pin ?? '').trim();
+  if (!repo || !pin) {
+    throw buildUsageError('connect external-skills sources add requires --repo and --pin.', spec, {
+      required: ['--repo', '--pin'],
+    });
+  }
+  return {
+    source: readOptionalString(parsed.source) ?? undefined,
+    sourceRoot: readOptionalString(parsed['source-root']) ?? undefined,
+    registryRoot: readOptionalString(parsed['registry-root']) ?? undefined,
+    repo,
+    pin,
   };
 }
 
@@ -89,6 +115,7 @@ function parseExternalSkillsSearchArgs(args: string[], spec: CommandSpec): Exter
   return {
     source: readOptionalString(parsed.source) ?? undefined,
     sourceRoot: readOptionalString(parsed['source-root']) ?? undefined,
+    registryRoot: readOptionalString(parsed['registry-root']) ?? undefined,
     query,
     limit: Number(parsed.limit),
   };
@@ -105,6 +132,7 @@ function parseExternalSkillsInspectArgs(args: string[], spec: CommandSpec): Exte
   return {
     source: readOptionalString(parsed.source) ?? undefined,
     sourceRoot: readOptionalString(parsed['source-root']) ?? undefined,
+    registryRoot: readOptionalString(parsed['registry-root']) ?? undefined,
     skill,
   };
 }
@@ -126,6 +154,7 @@ function parseExternalSkillsSyncArgs(args: string[], spec: CommandSpec): Externa
   return {
     source: readOptionalString(parsed.source) ?? undefined,
     sourceRoot: readOptionalString(parsed['source-root']) ?? undefined,
+    registryRoot: readOptionalString(parsed['registry-root']) ?? undefined,
     skill,
     scope,
     targetWorkspace: readOptionalString(parsed['target-workspace']) ?? undefined,
@@ -217,6 +246,13 @@ export function buildConnectCommandSpecs(
       flag: '--source-root',
       value_kind: 'string' as const,
       summary: 'Local checkout path for the external skill library source.',
+      required: false,
+    },
+    {
+      name: 'registry-root',
+      flag: '--registry-root',
+      value_kind: 'string' as const,
+      summary: 'Root containing the OPL Connect external skill source registry.',
       required: false,
     },
   ];
@@ -339,7 +375,7 @@ export function buildConnectCommandSpecs(
         ),
     },
     'connect external-skills list': {
-      usage: 'opl connect external-skills list [--source <source_id>] [--source-root <path>]',
+      usage: 'opl connect external-skills list [--source <source_id>] [--source-root <path>] [--registry-root <path>]',
       summary: 'List registered external scientific skill libraries and their available skill cards.',
       examples: [
         'opl connect external-skills list --source kdense-scientific-agent-skills --json',
@@ -360,8 +396,45 @@ export function buildConnectCommandSpecs(
           parseExternalSkillsBase('connect external-skills list', args, connectCommandSpecs['connect external-skills list']),
         ),
     },
+    'connect external-skills sources add': {
+      usage: 'opl connect external-skills sources add --source <source_id> --repo <repo_url> --pin <ref> [--source-root <path>] [--registry-root <path>]',
+      summary: 'Register an approved external scientific skill library source without cloning or bulk installing it.',
+      examples: [
+        'opl connect external-skills sources add --source kdense --repo https://github.com/K-Dense-AI/scientific-agent-skills --pin 1e024ea8547ada12039edbe8197aaa959d97763f --source-root /path/to/scientific-agent-skills --json',
+      ],
+      group: 'connect',
+      help_surface: 'default',
+      registry: {
+        command_id: 'connect external-skills sources add',
+        parser_adapter: 'node_util_parse_args',
+        options: [
+          ...externalSkillsBaseOptions,
+          {
+            name: 'repo',
+            flag: '--repo',
+            value_kind: 'string',
+            summary: 'Pinned external skill library repository URL.',
+            required: true,
+          },
+          {
+            name: 'pin',
+            flag: '--pin',
+            value_kind: 'string',
+            summary: 'Pinned external skill library commit, tag, or immutable ref.',
+            required: true,
+          },
+        ],
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/connect_external_skills_sources_add/output_schema',
+        authority_boundary: externalSkillsAuthorityBoundary,
+      },
+      handler: (args) =>
+        runOplConnectExternalSkillsSourceAdd(
+          parseExternalSkillsSourceAddArgs(args, connectCommandSpecs['connect external-skills sources add']),
+        ),
+    },
     'connect external-skills search': {
-      usage: 'opl connect external-skills search --query <query> [--source <source_id>] [--source-root <path>] [--limit <n>]',
+      usage: 'opl connect external-skills search --query <query> [--source <source_id>] [--source-root <path>] [--registry-root <path>] [--limit <n>]',
       summary: 'Search an approved external scientific skill library before selectively syncing one skill.',
       examples: [
         'opl connect external-skills search --query "single cell RNA-seq" --source kdense --limit 5 --json',
@@ -402,7 +475,7 @@ export function buildConnectCommandSpecs(
         ),
     },
     'connect external-skills inspect': {
-      usage: 'opl connect external-skills inspect --skill <skill_id> [--source <source_id>] [--source-root <path>]',
+      usage: 'opl connect external-skills inspect --skill <skill_id> [--source <source_id>] [--source-root <path>] [--registry-root <path>]',
       summary: 'Inspect one external scientific skill card before syncing it into a workspace or quest.',
       examples: [
         'opl connect external-skills inspect --skill scanpy --source kdense --json',
@@ -432,7 +505,7 @@ export function buildConnectCommandSpecs(
         ),
     },
     'connect external-skills sync': {
-      usage: 'opl connect external-skills sync --skill <skill_id> --scope <workspace|quest> [--target-workspace <path>|--target-quest <path>|--target-root <path>] [--source <source_id>] [--source-root <path>]',
+      usage: 'opl connect external-skills sync --skill <skill_id> --scope <workspace|quest> [--target-workspace <path>|--target-quest <path>|--target-root <path>] [--source <source_id>] [--source-root <path>] [--registry-root <path>]',
       summary: 'Selectively sync one approved external scientific skill into a workspace or quest Codex discovery directory.',
       examples: [
         'opl connect external-skills sync --skill scanpy --source kdense --scope workspace --target-workspace /path/to/workspace --json',

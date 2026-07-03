@@ -433,6 +433,12 @@
           "flag": "--source-root",
           "value_kind": "string",
           "required": false
+        },
+        {
+          "name": "registry-root",
+          "flag": "--registry-root",
+          "value_kind": "string",
+          "required": false
         }
       ],
       "output_schema": {
@@ -466,6 +472,74 @@
         "can_claim_production_ready": false
       }
     },
+    "connect_external_skills_sources_add": {
+      "command_id": "connect external-skills sources add",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "source",
+          "flag": "--source",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "source-root",
+          "flag": "--source-root",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "registry-root",
+          "flag": "--registry-root",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "repo",
+          "flag": "--repo",
+          "value_kind": "string",
+          "required": true
+        },
+        {
+          "name": "pin",
+          "flag": "--pin",
+          "value_kind": "string",
+          "required": true
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_connect_external_skills"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_connect_external_skills": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "source",
+              "registry_path",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
     "connect_external_skills_search": {
       "command_id": "connect external-skills search",
       "owner": "OPL Connect",
@@ -480,6 +554,12 @@
         {
           "name": "source-root",
           "flag": "--source-root",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "registry-root",
+          "flag": "--registry-root",
           "value_kind": "string",
           "required": false
         },
@@ -551,6 +631,12 @@
           "required": false
         },
         {
+          "name": "registry-root",
+          "flag": "--registry-root",
+          "value_kind": "string",
+          "required": false
+        },
+        {
           "name": "skill",
           "flag": "--skill",
           "value_kind": "string",
@@ -603,6 +689,12 @@
         {
           "name": "source-root",
           "flag": "--source-root",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "registry-root",
+          "flag": "--registry-root",
           "value_kind": "string",
           "required": false
         },

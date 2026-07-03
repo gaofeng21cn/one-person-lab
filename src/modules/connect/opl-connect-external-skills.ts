@@ -12,6 +12,12 @@ type ExternalSkillScope = 'workspace' | 'quest';
 export type ExternalSkillInput = {
   source?: string;
   sourceRoot?: string;
+  registryRoot?: string;
+};
+
+export type ExternalSkillSourceAddInput = ExternalSkillInput & {
+  repo: string;
+  pin: string;
 };
 
 export type ExternalSkillSearchInput = ExternalSkillInput & {
@@ -51,6 +57,13 @@ const KDENSE_SOURCE = {
   env_root: 'OPL_CONNECT_KDENSE_SCIENTIFIC_AGENT_SKILLS_ROOT',
 };
 
+type ExternalSkillSourceRegistration = {
+  source_id: ExternalSkillSourceId;
+  repo_url: string;
+  pinned_ref: string;
+  source_root?: string;
+};
+
 function normalizeOptionalString(value: string | undefined | null) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
@@ -67,12 +80,57 @@ function normalizeSourceId(value?: string): ExternalSkillSourceId {
   });
 }
 
+function sourceRegistryPath(input: ExternalSkillInput = {}) {
+  const explicitRoot = normalizeOptionalString(input.registryRoot);
+  const root = explicitRoot ? path.resolve(explicitRoot) : resolveDefaultFamilyWorkspaceRoot();
+  return path.join(root, '.opl', 'connect', 'external-skill-sources.json');
+}
+
+function readSourceRegistry(input: ExternalSkillInput = {}) {
+  const registryPath = sourceRegistryPath(input);
+  if (!fs.existsSync(registryPath)) {
+    return {
+      registry_path: registryPath,
+      sources: [] as ExternalSkillSourceRegistration[],
+    };
+  }
+  const parsed = parseJsonText(readTextIfPresent(registryPath)) as {
+    sources?: Array<Partial<ExternalSkillSourceRegistration>>;
+  };
+  return {
+    registry_path: registryPath,
+    sources: (parsed.sources ?? []).flatMap((entry) => {
+      try {
+        const sourceId = normalizeSourceId(String(entry.source_id ?? ''));
+        const repoUrl = normalizeOptionalString(entry.repo_url);
+        const pinnedRef = normalizeOptionalString(entry.pinned_ref);
+        if (!repoUrl || !pinnedRef) return [];
+        return [{
+          source_id: sourceId,
+          repo_url: repoUrl,
+          pinned_ref: pinnedRef,
+          source_root: normalizeOptionalString(entry.source_root) ?? undefined,
+        }];
+      } catch {
+        return [];
+      }
+    }),
+  };
+}
+
+function registeredSource(input: ExternalSkillInput) {
+  const sourceId = normalizeSourceId(input.source);
+  return readSourceRegistry(input).sources.find((entry) => entry.source_id === sourceId) ?? null;
+}
+
 function candidateSourceRoots(input: ExternalSkillInput) {
   const explicit = normalizeOptionalString(input.sourceRoot);
   const envRoot = normalizeOptionalString(process.env[KDENSE_SOURCE.env_root]);
+  const registeredRoot = normalizeOptionalString(registeredSource(input)?.source_root);
   return [
     explicit ? path.resolve(explicit) : null,
     envRoot ? path.resolve(envRoot) : null,
+    registeredRoot ? path.resolve(registeredRoot) : null,
     path.join(resolveDefaultFamilyWorkspaceRoot(), 'scientific-agent-skills'),
     path.join(resolveDefaultFamilyWorkspaceRoot(), 'k-dense-scientific-agent-skills'),
     '/tmp/kdense-scientific-agent-skills',
@@ -86,6 +144,8 @@ function hasSkillRoot(sourceRoot: string) {
 
 function resolveSource(input: ExternalSkillInput = {}) {
   const sourceId = normalizeSourceId(input.source);
+  const registry = readSourceRegistry(input);
+  const registered = registry.sources.find((entry) => entry.source_id === sourceId) ?? null;
   const sourceRoot = candidateSourceRoots(input).find((candidate) => fs.existsSync(candidate) && hasSkillRoot(candidate))
     ?? candidateSourceRoots(input)[0]
     ?? null;
@@ -93,7 +153,11 @@ function resolveSource(input: ExternalSkillInput = {}) {
   return {
     ...KDENSE_SOURCE,
     source_id: sourceId,
+    repo_url: registered?.repo_url ?? KDENSE_SOURCE.repo_url,
+    pinned_ref: registered?.pinned_ref ?? null,
     source_root: sourceRoot,
+    registry_path: registry.registry_path,
+    registered: Boolean(registered),
     status: available ? 'available' : 'source_missing',
     install_policy: 'selective_sync_only',
     default_install: false,
@@ -101,6 +165,52 @@ function resolveSource(input: ExternalSkillInput = {}) {
     next_action: available
       ? null
       : `set ${KDENSE_SOURCE.env_root}=<local scientific-agent-skills checkout> or pass --source-root <path>`,
+  };
+}
+
+export function runOplConnectExternalSkillsSourceAdd(input: ExternalSkillSourceAddInput) {
+  const sourceId = normalizeSourceId(input.source);
+  const repoUrl = normalizeOptionalString(input.repo);
+  const pinnedRef = normalizeOptionalString(input.pin);
+  if (!repoUrl || !pinnedRef) {
+    throw new FrameworkContractError('codex_command_failed', 'External skill source registration requires --repo and --pin.', {
+      required: ['--repo', '--pin'],
+    });
+  }
+
+  const registry = readSourceRegistry(input);
+  const sourceRoot = normalizeOptionalString(input.sourceRoot) ?? undefined;
+  const source: ExternalSkillSourceRegistration = {
+    source_id: sourceId,
+    repo_url: repoUrl,
+    pinned_ref: pinnedRef,
+    ...(sourceRoot ? { source_root: path.resolve(sourceRoot) } : {}),
+  };
+  const nextSources = [
+    ...registry.sources.filter((entry) => entry.source_id !== sourceId),
+    source,
+  ].sort((a, b) => a.source_id.localeCompare(b.source_id));
+  const payload = {
+    registry_kind: 'opl_connect_external_skill_source_registry',
+    version: 'g2',
+    sources: nextSources,
+  };
+  fs.mkdirSync(path.dirname(registry.registry_path), { recursive: true });
+  fs.writeFileSync(registry.registry_path, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+
+  return {
+    version: 'g2',
+    opl_connect_external_skills: {
+      surface_kind: 'opl_connect_external_skill_source_registration',
+      status: 'registered',
+      source,
+      registry_path: registry.registry_path,
+      clone_policy: 'operator_managed_checkout',
+      next_action: sourceRoot
+        ? 'run list/search/inspect against the registered source'
+        : `clone ${repoUrl} at ${pinnedRef}, then rerun sources add with --source-root <checkout>`,
+      authority_boundary: authorityBoundary(),
+    },
   };
 }
 
@@ -258,12 +368,15 @@ export function runOplConnectExternalSkillsList(input: ExternalSkillInput = {}) 
     opl_connect_external_skills: {
       surface_kind: 'opl_connect_external_skill_library_index',
       status: source.status,
+      registry_path: source.registry_path,
       sources: [{
         source_id: source.source_id,
         label: source.label,
         repo_url: source.repo_url,
+        pinned_ref: source.pinned_ref,
         source_kind: source.source_kind,
         source_root: source.source_root,
+        registered: source.registered,
         status: source.status,
         default_install: source.default_install,
         install_policy: source.install_policy,
@@ -290,6 +403,8 @@ export function runOplConnectExternalSkillsSearch(input: ExternalSkillSearchInpu
       surface_kind: 'opl_connect_external_skill_search',
       status: 'completed',
       source_id: source.source_id,
+      source_repo_url: source.repo_url,
+      source_pinned_ref: source.pinned_ref,
       source_root: source.source_root,
       query: input.query,
       results,
@@ -315,6 +430,8 @@ export function runOplConnectExternalSkillsInspect(input: ExternalSkillInspectIn
       surface_kind: 'opl_connect_external_skill_inspect',
       status: 'completed',
       source_id: source.source_id,
+      source_repo_url: source.repo_url,
+      source_pinned_ref: source.pinned_ref,
       source_root: source.source_root,
       skill: card,
       sync_command_ref: `opl connect external-skills sync --source ${source.source_id} --skill ${skillId} --scope workspace --target-workspace <workspace-root> --json`,
@@ -348,6 +465,7 @@ export function runOplConnectExternalSkillsSync(input: ExternalSkillSyncInput) {
     receipt_kind: 'opl_connect_external_skill_sync_receipt',
     source_id: source.source_id,
     source_repo_url: source.repo_url,
+    source_pinned_ref: source.pinned_ref,
     source_root: source.source_root,
     skill_id: skillId,
     target_scope: input.scope,
