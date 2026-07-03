@@ -2,31 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-export type JsonRecord = Record<string, unknown>;
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { optionalString, readJsonFileResult } from '../../kernel/json-file.ts';
+import { recordList, stringList, type JsonRecord } from '../../kernel/json-record.ts';
 
-export function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-export function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-export function stringList(value: unknown) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value
-    .map((entry) => optionalString(entry))
-    .filter((entry): entry is string => Boolean(entry));
-}
-
-export function recordList(value: unknown) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.filter(isRecord);
-}
+export type { JsonRecord };
+export { isRecord, optionalString, recordList, stringList };
 
 export function unique<T>(values: T[]) {
   return [...new Set(values)];
@@ -34,29 +15,13 @@ export function unique<T>(values: T[]) {
 
 export function readJsonFile(repoDir: string, relativePath: string) {
   const absolutePath = path.join(repoDir, relativePath);
-  if (!fs.existsSync(absolutePath)) {
-    return {
-      path: relativePath,
-      status: 'missing',
-      payload: null,
-      error: null,
-    };
-  }
-  try {
-    return {
-      path: relativePath,
-      status: 'resolved',
-      payload: JSON.parse(fs.readFileSync(absolutePath, 'utf8')),
-      error: null,
-    };
-  } catch (error) {
-    return {
-      path: relativePath,
-      status: 'invalid_json',
-      payload: null,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
+  const result = readJsonFileResult(absolutePath);
+  return {
+    path: relativePath,
+    status: result.status,
+    payload: result.payload,
+    error: result.error,
+  };
 }
 
 export function gitTrackedOrWalkedFiles(repoDir: string) {

@@ -1,4 +1,10 @@
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { optionalString } from '../../kernel/json-file.ts';
+import {
+  recordList as readRecordList,
+  stringList as readStringList,
+  type JsonRecord,
+} from '../../kernel/json-record.ts';
 import { buildDomainManifestCatalog } from '../atlas/index.ts';
 import type { DomainManifestCatalog } from '../atlas/index.ts';
 import type { DomainManifestCatalogEntry } from '../atlas/index.ts';
@@ -15,8 +21,6 @@ import {
 } from '../runway/index.ts';
 import { buildPhysicalSkeletonFollowThroughGate } from './family-domain-agent-skeleton-parts/legacy-cleanup-evidence.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
-
-type JsonRecord = Record<string, unknown>;
 
 const REQUIRED_REPO_SOURCE_DIRS = ['agent', 'contracts', 'runtime', 'docs'] as const;
 const ACCEPTED_SKELETON_SURFACE_KINDS = new Set(['standard_domain_agent_skeleton']);
@@ -53,23 +57,6 @@ const PRODUCTION_CLOSURE_GAPS = [
   },
 ] as const;
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function readStringList(value: unknown) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value
-    .map((entry) => optionalString(entry))
-    .filter((entry): entry is string => Boolean(entry));
-}
-
 function uniqueStrings(values: string[]) {
   return [...new Set(values)];
 }
@@ -86,10 +73,6 @@ function readPhysicalRootEvidenceRefs(value: unknown) {
     ...readStringList(value.source_refs),
     ...readStringList(value.repo_refs),
   ].filter((entry): entry is string => Boolean(entry));
-}
-
-function readRecordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
 }
 
 function normalizePhysicalSkeletonEvidence(value: unknown) {

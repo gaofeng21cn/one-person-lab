@@ -1,4 +1,5 @@
 import { AGENT_LAB_AUTHORITY_BOUNDARY } from './agent-lab-authority.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
 import type { AgentLabSuite, AgentLabTaskManifest } from './agent-lab.ts';
 import { stableId } from '../../kernel/stable-id.ts';
 
@@ -48,10 +49,6 @@ const ADVISORY_ONLY_REF_PREFIXES = [
   'schema-completeness:',
   'provider-completion:',
 ];
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
 
 function unique(values: string[]) {
   return [...new Set(values.map((value) => value.trim()).filter((value) => value.length > 0))];

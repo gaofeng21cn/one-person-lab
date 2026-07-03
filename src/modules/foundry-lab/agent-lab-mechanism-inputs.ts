@@ -1,14 +1,11 @@
 import { AGENT_LAB_AUTHORITY_BOUNDARY } from './agent-lab-authority.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
 
 type JsonRecord = Record<string, unknown>;
 
 export type AgentLabMechanismInputTask = {
   mechanism_evolution_inputs?: JsonRecord;
 };
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
 
 function stringList(value: unknown) {
   return Array.isArray(value)

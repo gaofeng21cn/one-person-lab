@@ -1,4 +1,5 @@
 import { AGENT_LAB_AUTHORITY_BOUNDARY } from './agent-lab-authority.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
 import { stableId } from '../../kernel/stable-id.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -15,10 +16,6 @@ export type AgentLabProductionEvidenceRunInput = {
     no_forbidden_write_proof_refs: string[];
   };
 };
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
 
 function unique(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];

@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { optionalString } from '../../kernel/json-file.ts';
 import {
   DEFAULT_STAGE_EXECUTOR_BINDING_REF,
   PACK_COMPILER_CONTRACT,
@@ -31,14 +33,6 @@ const REQUIRED_TOOL_AFFORDANCE_FALSE_FLAGS = [
   'tool_catalog_can_override_stage_goal',
   'tool_catalog_can_authorize_forbidden_write',
 ] as const;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
 
 function stringArray(value: unknown) {
   if (!Array.isArray(value)) {

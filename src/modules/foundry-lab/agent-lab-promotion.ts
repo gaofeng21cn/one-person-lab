@@ -3,6 +3,7 @@ import {
   type AgentLabIndependentAiReviewAssessment,
 } from './agent-lab.ts';
 import { AGENT_LAB_AUTHORITY_BOUNDARY } from './agent-lab-authority.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
 import { stableId } from '../../kernel/stable-id.ts';
 
 export const AGENT_LAB_PROMOTION_AUTHORITY_BOUNDARY = {
@@ -120,10 +121,6 @@ export function reviewReceiptRef(receipt: IndependentAiReviewReceiptInput) {
 
 function reviewReceiptVerdict(receipt: IndependentAiReviewReceiptInput) {
   return typeof receipt.verdict === 'string' ? receipt.verdict : null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 export function reviewReceiptFromRun(

@@ -1,4 +1,5 @@
 import { stableId } from '../../kernel/stable-id.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
 import { AGENT_LAB_AUTHORITY_BOUNDARY, FORBIDDEN_TRUE_AUTHORITY_FLAGS } from './agent-lab-authority.ts';
 import {
   isFixtureReviewReceipt,
@@ -77,10 +78,6 @@ export type {
   AgentLabTaskManifest,
   AgentLabTrajectory,
 } from './agent-lab-parts/model.ts';
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
 
 function unique(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];

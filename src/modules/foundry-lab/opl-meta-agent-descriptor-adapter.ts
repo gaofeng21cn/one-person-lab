@@ -1,12 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { optionalString, readJsonPayloadFile } from '../../kernel/json-file.ts';
+import { recordList, stringList, type JsonRecord } from '../../kernel/json-record.ts';
 import type { DomainManifestCatalog } from '../atlas/index.ts';
 import { normalizeManifest } from '../atlas/index.ts';
 import type { DomainManifestCatalogEntry } from '../atlas/index.ts';
 import { buildOplMetaAgentRegistryExtension } from './opl-meta-agent-consumption.ts';
-
-type JsonRecord = Record<string, unknown>;
 
 const OMA_PROJECT_ID = 'opl-meta-agent';
 const OMA_PROJECT = 'opl-meta-agent';
@@ -27,30 +28,12 @@ const OMA_CONTRACTS = {
   scaleoutEvidence: 'contracts/real_target_agent_scaleout_evidence.json',
 } as const;
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
 function readJson(repoDir: string, relativePath: string): JsonRecord | null {
   const filePath = path.join(repoDir, relativePath);
   if (!fs.existsSync(filePath)) {
     return null;
   }
-  return JSON.parse(fs.readFileSync(filePath, 'utf8')) as JsonRecord;
+  return readJsonPayloadFile(filePath) as JsonRecord;
 }
 
 function ref(refKind: string, refValue: string, role?: string) {

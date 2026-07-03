@@ -1,29 +1,18 @@
 import type { DomainManifestCatalogEntry } from '../../atlas/index.ts';
+import { isRecord } from '../../../kernel/contract-validation.ts';
+import { optionalString } from '../../../kernel/json-file.ts';
+import {
+  recordList as readRecordList,
+  stringList as readStringList,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 
-type JsonRecord = Record<string, unknown>;
 type PhysicalSkeletonLayoutAudit = {
   status: string;
 };
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
 function optionalNumber(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
-}
-
-function readStringList(value: unknown) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value
-    .map((entry) => optionalString(entry))
-    .filter((entry): entry is string => Boolean(entry));
 }
 
 function stringListIsEmpty(value: unknown) {
@@ -46,10 +35,6 @@ function readPhysicalRootEvidenceRefs(value: unknown) {
     ...readStringList(value.source_refs),
     ...readStringList(value.repo_refs),
   ].filter((entry): entry is string => Boolean(entry));
-}
-
-function readRecordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
 }
 
 function readRefsFromFields(value: unknown, fields: string[]) {

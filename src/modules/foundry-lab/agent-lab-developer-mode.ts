@@ -3,6 +3,7 @@ import {
   listDeveloperModeCloseoutReceipts,
   type DeveloperModeCloseoutReceipt,
 } from './developer-mode-closeout-ledger.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
 import { stableId } from '../../kernel/stable-id.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -133,10 +134,6 @@ function stringList(value: unknown) {
     return [];
   }
   return unique(value.filter((entry): entry is string => typeof entry === 'string'));
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 function firstObservationRef(input: PatrolObservationRefsInput) {

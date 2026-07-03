@@ -1,4 +1,6 @@
 import { AGENT_LAB_AUTHORITY_BOUNDARY } from './agent-lab-authority.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { optionalString } from '../../kernel/json-file.ts';
 import { stableId } from '../../kernel/stable-id.ts';
 import type { AgentLabSuite, AgentLabTaskManifest } from './agent-lab.ts';
 
@@ -22,14 +24,6 @@ const EXECUTOR_CAPABILITY_APERTURE_AUTHORITY_BOUNDARY = {
   can_constrain_executor_reasoning: false,
   can_replace_ai_judgment: false,
 };
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
 
 function unique(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
