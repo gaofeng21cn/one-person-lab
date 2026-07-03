@@ -5,7 +5,7 @@ import {
   buildRuntimeEnvironmentRunContextReadback,
 } from '../runway/index.ts';
 import { materializeCandidateArtifactBodies } from './scholar-skills-parts/artifact-engines.ts';
-import { SCHOLAR_SKILL_MODULE_IDS } from './scholar-skills-contract.ts';
+import { SCHOLAR_SKILL_MODULE_IDS } from '../charter/index.ts';
 import {
   AUTHORITY_FALSE_FIELDS,
   MODULE_REQUIRED_ARTIFACT_REF_FAMILIES,
@@ -332,7 +332,7 @@ export function buildScholarSkillsInterfaces(contracts: FrameworkContracts) {
       contract_refs: [
         'contracts/opl-framework/scholar-skills-capability-modules.json',
         'src/scholar-skills.ts',
-        'src/scholar-skills-contract.ts',
+        'src/modules/charter/contract-validators/scholar-skills-contract.ts',
       ],
       runtime_environment_bridge: {
         mode: contractRoot.runtime_environment_bridge.mode,

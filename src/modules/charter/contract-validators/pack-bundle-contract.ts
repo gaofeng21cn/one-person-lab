@@ -3,8 +3,8 @@ import {
   expectString,
   expectStringArray,
   isRecord,
-} from '../../kernel/contract-validation.ts';
-import type { PackBundleContract } from '../../kernel/types.ts';
+} from '../../../kernel/contract-validation.ts';
+import type { PackBundleContract } from '../../../kernel/types.ts';
 
 const ASSEMBLY_REQUIRED_FIELDS = [
   'schema_version',

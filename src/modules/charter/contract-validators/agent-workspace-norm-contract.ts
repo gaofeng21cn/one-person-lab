@@ -4,8 +4,8 @@ import {
   expectString,
   expectStringArray,
   isRecord,
-} from '../../kernel/contract-validation.ts';
-import type { AgentWorkspaceNormContract } from '../../kernel/types.ts';
+} from '../../../kernel/contract-validation.ts';
+import type { AgentWorkspaceNormContract } from '../../../kernel/types.ts';
 
 function requireRecord(value: unknown, field: string, filePath: string) {
   if (!isRecord(value)) {

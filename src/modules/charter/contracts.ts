@@ -21,7 +21,7 @@ import {
   isRecord,
   type ErrorCode,
 } from '../../kernel/contract-validation.ts';
-import { validateAgentWorkspaceNorm } from '../workspace/index.ts';
+import { validateAgentWorkspaceNorm } from './contract-validators/agent-workspace-norm-contract.ts';
 import {
   validateBrandCliGovernance,
   validateBrandModuleRegistry,
@@ -30,10 +30,10 @@ import {
 } from './brand-module-contracts.ts';
 import { validateBrandModuleL5OperatingEvidence } from './brand-module-l5-operating-evidence-contract.ts';
 import { validateBrandSystemProfile } from './brand-system-profile-contract.ts';
-import { validateDomainsRegistry } from '../atlas/index.ts';
-import { validatePackBundleContract } from '../pack/index.ts';
-import { validatePackOsContract } from '../pack/index.ts';
-import { validateScholarSkillsCapabilityModules } from '../pack/index.ts';
+import { validateDomainsRegistry } from './contract-validators/domain-contracts.ts';
+import { validatePackBundleContract } from './contract-validators/pack-bundle-contract.ts';
+import { validatePackOsContract } from './contract-validators/pack-os-contract.ts';
+import { validateScholarSkillsCapabilityModules } from './contract-validators/scholar-skills-contract.ts';
 import { validateTargetOperatingArchitecture } from './target-operating-architecture-contract.ts';
 
 export { FrameworkContractError } from '../../kernel/contract-validation.ts';

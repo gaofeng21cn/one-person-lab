@@ -4,13 +4,13 @@ import type {
   ScholarSkillDataGovernanceAssessmentPolicy,
   ScholarSkillModuleId,
   ScholarSkillsCapabilityModulesContract,
-} from '../../kernel/types.ts';
+} from '../../../kernel/types.ts';
 import {
   FrameworkContractError,
   expectString,
   expectStringArray,
   isRecord,
-} from '../../kernel/contract-validation.ts';
+} from '../../../kernel/contract-validation.ts';
 
 export const SCHOLAR_SKILL_MODULE_IDS = [
   'mas-scholar-skills.display',

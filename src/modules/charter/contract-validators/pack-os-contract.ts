@@ -3,8 +3,8 @@ import {
   expectString,
   expectStringArray,
   isRecord,
-} from '../../kernel/contract-validation.ts';
-import type { PackOsContract } from '../../kernel/types.ts';
+} from '../../../kernel/contract-validation.ts';
+import type { PackOsContract } from '../../../kernel/types.ts';
 
 const DESCRIPTOR_REQUIRED_FIELDS = [
   'pack_id',

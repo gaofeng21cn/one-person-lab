@@ -7,7 +7,6 @@ export const OPL_WORKSPACE_SOURCE_MODULE = {
 
 // Public cross-module surface generated from existing module consumers.
 export { buildAgentWorkspaceNormChecks, buildAgentWorkspaceNormProjection } from './agent-workspace-norm.ts';
-export { validateAgentWorkspaceNorm } from './agent-workspace-norm-contract.ts';
 export { resolveDefaultFamilyWorkspaceRoot, resolveFamilyWorkspaceRootFromRepoRoot } from './family-workspace-root.ts';
 export { adoptWorkspace, doctorWorkspace, validateWorkspace } from './workspace-diagnostics.ts';
 export { ensureWorkspace, initializeWorkspace } from './workspace-initializer.ts';

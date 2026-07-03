@@ -4,8 +4,8 @@ import {
   expectString,
   expectStringArray,
   isRecord,
-} from '../../kernel/contract-validation.ts';
-import type { DomainsRegistry } from '../../kernel/types.ts';
+} from '../../../kernel/contract-validation.ts';
+import type { DomainsRegistry } from '../../../kernel/types.ts';
 
 export function validateDomainsRegistry(
   filePath: string,

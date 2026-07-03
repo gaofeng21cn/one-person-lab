@@ -6,7 +6,6 @@ export const OPL_ATLAS_SOURCE_MODULE = {
 } as const;
 
 // Public cross-module surface generated from existing module consumers.
-export { validateDomainsRegistry } from './domain-contracts.ts';
 export { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 export type { DomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 export { normalizeManifest } from './domain-manifest/normalizers.ts';
