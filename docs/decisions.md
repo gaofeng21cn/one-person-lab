@@ -74,6 +74,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - ScholarSkills / MAS Scholar Skills 仍可提供医学文献检索 playbook、query 设计、筛选策略和专门 Skill；高频稳定资源访问逐步从 skill 原型沉淀为 Connect connector，避免把 API 稳定性、限流和 source ref normalization 留在领域 prompt 里。
 - `OPL Fabric` 是通用资源底座，`OPL Connect` 是其中可独立调用的连接能力；Console 可治理和展示 connector 策略，但不是 Connect 的唯一入口。本机 OPL App、在线 Workspace、CLI 和 domain agent 都可以按权限与 profile 直接调用 Connect。
 
+### 决策：引用 metadata 校验进入 OPL Connect provider receipt 面
+
+原因：医学论文写作和审阅需要稳定的 DOI / PMID / title metadata 交叉核对，但“引用是否支撑论点”“是否可纳入论文证据链”仍是 MAS / domain owner 的科研判断。OPL Connect 因此只提供 provider receipt candidate、cache metadata 和 retry evidence，让 MAS、Workspace 或本机 CLI 可以复用同一条只读校验链路。
+
+影响：
+
+- `opl connect references verify --references-file <json> --providers crossref,pubmed --cache-root <path> --max-retries <n> --json` 成为引用 metadata provider receipt 的稳定入口。
+- 当前已执行 provider 是 Crossref 和 PubMed；OpenAlex 与 Semantic Scholar 先返回 deferred provider receipt requirement，不伪装成已校验。
+- 输出包含 provider evidence、provider receipt candidate refs、cache hit/miss/write 状态、retry attempts 和 no-authority boundary。
+- 该 connector 不写 MAS paper truth、不签 owner receipt、不创建 typed blocker / human gate，不声明 reference truth、citation quality、claim-evidence correctness、publication-ready、domain-ready 或 production-ready。
+
 ### 决策：外部科学 Skill 库通过 OPL Connect 可发现和选择性同步，MAS 不全量装载
 
 原因：`K-Dense-AI/scientific-agent-skills` 这类大型 Agent Skills 库对 MAS 有参考价值，也能覆盖组学、单细胞、Nextflow、RDKit、PyHealth 等罕见专科任务。但全量安装会扩大上下文、混淆 MAS 默认八个医学论文专业 Skill 的单源维护边界，并把外部库误读成 MAS 权威。OPL Connect 应承接 source registry、manifest index、search/inspect 和 selective sync，MAS 仍决定何时请求外部能力以及是否采纳候选结果。

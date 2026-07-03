@@ -28,6 +28,7 @@ type ProviderEvidence = {
   status: 'matched' | 'deferred';
   deferred_reason?: string;
   match_basis: 'doi' | 'pmid' | 'title' | 'none';
+  receipt_ref: string;
   normalized: {
     doi: string | null;
     pmid: string | null;
@@ -40,6 +41,7 @@ type ProviderEvidence = {
   };
   retry_attempts: RetryAttempt[];
 };
+type ProviderEvidenceDraft = Omit<ProviderEvidence, 'receipt_ref'>;
 
 const DEFAULT_CROSSREF_API_BASE = 'https://api.crossref.org';
 const DEFAULT_PUBMED_API_BASE = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
@@ -184,7 +186,7 @@ async function fetchJsonWithRetry(url: URL, maxRetries: number, providerId: Prov
   });
 }
 
-function deferredEvidence(reference: ReferenceRecord, providerId: ProviderId, reason: string): ProviderEvidence {
+function deferredEvidence(reference: ReferenceRecord, providerId: ProviderId, reason: string): ProviderEvidenceDraft {
   return {
     reference_id: reference.id,
     provider_id: providerId,
@@ -205,7 +207,7 @@ function deferredEvidence(reference: ReferenceRecord, providerId: ProviderId, re
   };
 }
 
-async function verifyCrossref(reference: ReferenceRecord, maxRetries: number, timeout: number): Promise<ProviderEvidence> {
+async function verifyCrossref(reference: ReferenceRecord, maxRetries: number, timeout: number): Promise<ProviderEvidenceDraft> {
   if (!reference.doi && !reference.title) {
     return deferredEvidence(reference, 'crossref', 'crossref provider receipt requirement needs a DOI or title');
   }
@@ -254,7 +256,7 @@ function pubmedUrl(endpoint: 'esearch.fcgi' | 'esummary.fcgi', params: Record<st
   return url;
 }
 
-async function verifyPubMed(reference: ReferenceRecord, maxRetries: number, timeout: number): Promise<ProviderEvidence> {
+async function verifyPubMed(reference: ReferenceRecord, maxRetries: number, timeout: number): Promise<ProviderEvidenceDraft> {
   let pmid = reference.pmid;
   let matchBasis: ProviderEvidence['match_basis'] = pmid ? 'pmid' : 'none';
   let retryAttempts: RetryAttempt[] = [];
@@ -306,10 +308,17 @@ async function verifyPubMed(reference: ReferenceRecord, maxRetries: number, time
   };
 }
 
-async function verifyProvider(reference: ReferenceRecord, providerId: ProviderId, maxRetries: number, timeout: number): Promise<ProviderEvidence> {
+async function verifyProvider(reference: ReferenceRecord, providerId: ProviderId, maxRetries: number, timeout: number): Promise<ProviderEvidenceDraft> {
   if (providerId === 'crossref') return verifyCrossref(reference, maxRetries, timeout);
   if (providerId === 'pubmed') return verifyPubMed(reference, maxRetries, timeout);
   return deferredEvidence(reference, providerId, `${providerId} provider receipt requirement is not implemented in the local connector yet`);
+}
+
+function withReceiptRef(evidence: ProviderEvidenceDraft): ProviderEvidence {
+  return {
+    ...evidence,
+    receipt_ref: receiptRef(evidence),
+  };
 }
 
 async function verifyProviderWithCache(
@@ -323,6 +332,7 @@ async function verifyProviderWithCache(
     const cachedEvidence = cached as Omit<ProviderEvidence, 'cache' | 'retry_attempts'>;
     return {
       ...cachedEvidence,
+      receipt_ref: cachedEvidence.receipt_ref ?? receiptRef(cachedEvidence),
       cache: {
         status: 'hit',
         write_status: 'skipped',
@@ -331,7 +341,7 @@ async function verifyProviderWithCache(
       retry_attempts: [],
     };
   }
-  const evidence = await verifyProvider(reference, providerId, input.maxRetries, timeoutMs(input.timeoutMs));
+  const evidence = withReceiptRef(await verifyProvider(reference, providerId, input.maxRetries, timeoutMs(input.timeoutMs)));
   const writeStatus = evidence.status === 'matched'
     ? writeCache(cachePath, {
         ...evidence,
@@ -381,6 +391,7 @@ export async function runOplConnectReferenceVerification(input: ReferenceVerific
     entry.retry_attempts.map((attempt) => ({
       provider_id: entry.provider_id,
       reference_id: entry.reference_id,
+      operation: 'provider_request',
       ...attempt,
     }))
   );
@@ -389,7 +400,8 @@ export async function runOplConnectReferenceVerification(input: ReferenceVerific
     .map((entry) => ({
       reference_id: entry.reference_id,
       provider_id: entry.provider_id,
-      receipt_ref: receiptRef(entry),
+      status: entry.status,
+      receipt_ref: entry.receipt_ref,
       authority: 'provider_receipt_candidate_only',
     }));
   const deferredProviderReceiptRequirements = providerEvidence
