@@ -22,7 +22,14 @@ function defaultStateDir() {
 }
 
 function repoRootFromModuleUrl(moduleUrl: string) {
-  return path.resolve(path.dirname(fileURLToPath(moduleUrl)), '..');
+  let current = path.dirname(fileURLToPath(moduleUrl));
+  while (current !== path.dirname(current)) {
+    if (isGitCheckout(current) || fs.existsSync(path.join(current, 'package.json'))) {
+      return current;
+    }
+    current = path.dirname(current);
+  }
+  return current;
 }
 
 function isGitCheckout(root: string) {

@@ -139,7 +139,13 @@ test('Temporal worker source version currentness follows runtime content hash ac
 test('Temporal worker mutation guard blocks developer checkout against default shared state', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-worker-source-guard-home-'));
   const devRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-worker-source-guard-dev-'));
-  const modulePath = path.join(devRoot, 'src', 'family-runtime-temporal-provider.ts');
+  const modulePath = path.join(
+    devRoot,
+    'src',
+    'modules',
+    'runway',
+    'family-runtime-temporal-provider.ts',
+  );
   const previousHome = process.env.HOME;
   const previousStateDir = process.env.OPL_STATE_DIR;
   const previousAllow = process.env.OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER;
