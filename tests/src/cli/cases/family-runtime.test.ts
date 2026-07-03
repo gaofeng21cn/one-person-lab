@@ -5,6 +5,7 @@ import { TestWorkflowEnvironment } from '@temporalio/testing';
 import {
   assert,
   buildManifestCommand,
+  cliPath,
   createFamilyContractsFixtureRoot,
   fs,
   loadFamilyManifestFixtures,
@@ -89,6 +90,20 @@ test('family-runtime status exposes provider-backed stage attempt runtime and SQ
     assert.equal(output.family_runtime.periodic_execution.authority_boundary.can_install_domain_daemon, false);
     assert.equal(output.family_runtime.state.queue_db, path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
     assert.equal(output.family_runtime.state.queue_schema_version, 2);
+    assert.equal(
+      output.family_runtime.queue_lifecycle_boundary.surface_kind,
+      'opl_family_runtime_queue_temporal_lifecycle_boundary',
+    );
+    assert.equal(
+      output.family_runtime.queue_lifecycle_boundary.sqlite_role,
+      'projection_audit_cache_not_durable_lifecycle_truth',
+    );
+    assert.equal(output.family_runtime.queue_lifecycle_boundary.gate.status, 'pass');
+    assert.equal(
+      output.family_runtime.queue_lifecycle_boundary.field_roles.projection_or_audit_when_temporal_selected
+        .includes('tasks.dead_letter_reason'),
+      true,
+    );
     assert.equal(fs.existsSync(output.family_runtime.state.queue_db), true);
     assert.equal(output.family_runtime.domain_adapters.medautogrant.truth_owner, 'med-autogrant');
     assert.equal(output.family_runtime.stage_attempts.total, 0);
@@ -326,6 +341,79 @@ test('family-runtime temporal provider reports landed code separately from live 
   }
 });
 
+test('family-runtime status flags local queue lifecycle truth when Temporal is selected', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-queue-boundary-'));
+  const dispatch = createDispatchFixture(`
+printf '{"accepted":false,"error":"planned local queue retry"}\\n'
+exit 1
+`);
+  try {
+    const localEnv = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+      OPL_FAMILY_RUNTIME_MEDAUTOGRANT_DISPATCH: dispatch.dispatchPath,
+    });
+    runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautogrant',
+      '--task-kind',
+      'stage-attempt/closeout',
+      '--payload',
+      '{"workspace":"/tmp/mag"}',
+      '--dedupe-key',
+      'mag:test:temporal-queue-boundary',
+    ], localEnv);
+    runCli(['family-runtime', 'tick', '--source', 'test'], localEnv);
+
+    const temporalEnv = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    });
+    const queue = runCli(['family-runtime', 'queue', 'list'], temporalEnv);
+    const status = runCli(['family-runtime', 'status', '--provider', 'temporal'], temporalEnv);
+
+    assert.equal(queue.family_runtime_queue.queue.by_status.retry_waiting, 1);
+    assert.equal(queue.family_runtime_queue.queue_lifecycle_boundary.gate.status, 'attention_needed');
+    assert.equal(queue.family_runtime_queue.queue_lifecycle_boundary.gate.competing_task_count, 1);
+    assert.equal(
+      queue.family_runtime_queue.queue_lifecycle_boundary.gate.competing_tasks[0].status,
+      'retry_waiting',
+    );
+    runCli([
+      'family-runtime',
+      'queue',
+      'retire',
+      '--domain',
+      'medautogrant',
+      '--task-kind',
+      'stage-attempt/closeout',
+      '--reason',
+      'temporal_history_replaces_local_lifecycle_truth',
+    ], temporalEnv);
+    const retiredQueue = runCli(['family-runtime', 'queue', 'list'], temporalEnv);
+
+    assert.equal(retiredQueue.family_runtime_queue.queue.by_status.blocked, 1);
+    assert.equal(
+      retiredQueue.family_runtime_queue.queue_lifecycle_boundary.gate.competing_statuses.includes('blocked'),
+      true,
+    );
+    assert.equal(
+      retiredQueue.family_runtime_queue.queue_lifecycle_boundary.gate.competing_tasks[0].status,
+      'blocked',
+    );
+    assert.equal(status.family_runtime.readiness.queue_truth_competes_with_temporal, true);
+    assert.equal(
+      status.family_runtime.queue_lifecycle_boundary.gate.reason,
+      'local_sqlite_task_lifecycle_status_without_temporal_stage_attempt',
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime temporal provider repair installs visibility Search Attributes when service is reachable', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-provider-repair-'));
   const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
@@ -337,7 +425,7 @@ test('family-runtime temporal provider repair installs visibility Search Attribu
   try {
     const result = spawnSync(process.execPath, [
       '--experimental-strip-types',
-      path.join(repoRoot, 'src', 'cli.ts'),
+      cliPath,
       'family-runtime',
       'repair',
       '--provider',
@@ -876,7 +964,7 @@ test('family-runtime attempt create requires explicit workspace locator', () => 
   try {
     const result = spawnSync(process.execPath, [
       '--experimental-strip-types',
-      path.join(repoRoot, 'src', 'cli.ts'),
+      cliPath,
       'family-runtime',
       'attempt',
       'create',

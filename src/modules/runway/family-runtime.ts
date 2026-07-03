@@ -41,6 +41,7 @@ import { runTemporalProviderSloTick } from './family-runtime-provider-slo-execut
 import { runProviderWorkerSupervisorCommand } from './family-runtime-provider-worker-supervisor.ts';
 import {
   familyRuntimePaths,
+  buildQueueTemporalLifecycleBoundary,
   inspectTask,
   inspectTaskWithStageAttemptProjections,
   insertEvent,
@@ -530,6 +531,7 @@ export async function runFamilyRuntime(args: string[]): Promise<Record<string, u
             ...(filter.status ? { status: filter.status } : {}),
             ...(filter.taskScope ? { taskScope: filter.taskScope } : {}),
           },
+          queue_lifecycle_boundary: buildQueueTemporalLifecycleBoundary(db, resolveFamilyRuntimeProviderKind()),
           queue: queueSummary(db, filter),
           unfiltered_queue: queueSummary(db),
           tasks: listTasks(db, filter),

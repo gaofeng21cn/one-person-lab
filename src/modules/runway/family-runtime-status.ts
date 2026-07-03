@@ -10,6 +10,7 @@ import { buildTemporalProviderLivenessBlocker } from './family-runtime-provider-
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import {
   QUEUE_SCHEMA_VERSION,
+  buildQueueTemporalLifecycleBoundary,
   familyRuntimePaths,
   queueSummary,
 } from './family-runtime-store.ts';
@@ -29,14 +30,22 @@ export async function buildFamilyRuntimeStatusPayload(
   });
   const fullOnlineReady = selectedProvider !== 'local_sqlite' && provider.ready;
   const temporalSelected = selectedProvider === 'temporal';
+  const queueLifecycleBoundary = buildQueueTemporalLifecycleBoundary(db, selectedProvider);
+  const queueTruthCompetesWithTemporal = queueLifecycleBoundary.gate.status === 'attention_needed';
+  const providerCanReplaceDomainDaemons = temporalSelected && provider.ready && !queueTruthCompetesWithTemporal;
   const schedulerReplacementStatus = temporalSelected
     ? provider.ready
-      ? 'provider_ready_scheduler_surface_available'
+      ? queueTruthCompetesWithTemporal
+        ? 'blocked_local_queue_lifecycle_competes_with_temporal'
+        : 'provider_ready_scheduler_surface_available'
       : 'blocked_provider_not_ready'
     : 'dev_offline_provider_cannot_replace_domain_daemons';
   const providerLivenessBlocker = temporalSelected && !provider.ready
     ? buildTemporalProviderLivenessBlocker(provider)
     : null;
+  const degradedReason = provider.degraded_reason
+    ?? (queueTruthCompetesWithTemporal ? 'local_sqlite_queue_lifecycle_competes_with_temporal' : null);
+  const readinessReady = fullOnlineReady && !queueTruthCompetesWithTemporal;
 
   return {
     version: 'g2',
@@ -52,8 +61,8 @@ export async function buildFamilyRuntimeStatusPayload(
       },
       readiness: {
         provider_ready: provider.ready,
-        full_online_ready: fullOnlineReady,
-        durable_online_ready: fullOnlineReady,
+        full_online_ready: readinessReady,
+        durable_online_ready: readinessReady,
         default_standard_agent_runtime_path: 'opl_temporal_hosted_autonomous',
         temporal_hosted_autonomy_default_enabled: true,
         provider_managed_long_running_tasks: true,
@@ -64,9 +73,10 @@ export async function buildFamilyRuntimeStatusPayload(
         production_provider_required: 'temporal',
         selected_provider_role: providerRuntime.provider_catalog[selectedProvider]?.provider_role ?? 'unknown',
         local_sqlite_is_dev_ci_offline_only: selectedProvider === 'local_sqlite',
-        selected_provider_can_replace_domain_daemons: selectedProvider === 'temporal' && provider.ready,
-        degraded: !provider.ready,
-        degraded_reason: provider.degraded_reason,
+        selected_provider_can_replace_domain_daemons: providerCanReplaceDomainDaemons,
+        queue_truth_competes_with_temporal: queueTruthCompetesWithTemporal,
+        degraded: !provider.ready || queueTruthCompetesWithTemporal,
+        degraded_reason: degradedReason,
       },
       provider_runtime: {
         ...providerRuntime,
@@ -87,7 +97,7 @@ export async function buildFamilyRuntimeStatusPayload(
         standard_agent_default_provider: 'temporal',
         domain_agent_internal_loop_allowed: false,
         codex_app_role: 'start_observe_intervene_project_only',
-        selected_provider_can_replace_domain_daemons: temporalSelected && provider.ready,
+        selected_provider_can_replace_domain_daemons: providerCanReplaceDomainDaemons,
         schedule_id: temporalSelected ? 'opl-family-runtime-provider-scheduler' : null,
         workflow_type: temporalSelected ? 'SchedulerTickWorkflow' : null,
         interval_ms: temporalSelected ? 5 * 60 * 1000 : null,
@@ -132,6 +142,7 @@ export async function buildFamilyRuntimeStatusPayload(
         ],
       },
       domain_adapters: DOMAIN_ADAPTERS,
+      queue_lifecycle_boundary: queueLifecycleBoundary,
       queue: queueSummary(db),
       stage_attempts: stageAttemptSummary(db),
     },

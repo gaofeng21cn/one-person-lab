@@ -13,7 +13,7 @@ import {
 } from './family-runtime-current-control-state.ts';
 import { createStageAttemptTable, listStageAttemptsForTask } from './family-runtime-stage-attempt-ledger.ts';
 import { openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
-import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
+import type { FamilyRuntimeDomainId, FamilyRuntimeProviderKind } from './family-runtime-types.ts';
 import { resolveOplStatePaths } from './runtime-state-paths.ts';
 import type { FamilyRuntimeTaskScope } from './family-runtime-command.ts';
 import { taskRowMatchesScope } from './family-runtime-task-scope.ts';
@@ -575,6 +575,137 @@ export function queueSummary(db: DatabaseSync, filter?: FamilyRuntimeTaskListFil
     return counts;
   }, {});
   return { total: rows.length, by_status: byStatus };
+}
+
+const TEMPORAL_COMPETING_QUEUE_STATUSES: FamilyRuntimeTaskStatus[] = [
+  'running',
+  'retry_waiting',
+  'blocked',
+  'dead_letter',
+  'succeeded',
+];
+
+function temporalCompetingQueueTasks(db: DatabaseSync) {
+  const placeholders = TEMPORAL_COMPETING_QUEUE_STATUSES.map(() => '?').join(', ');
+  const rows = db.prepare(`
+    WITH competing_tasks AS (
+      SELECT
+        t.task_id,
+        t.status,
+        t.task_kind,
+        t.dedupe_key,
+        t.updated_at,
+        t.created_at,
+        COUNT(sa.stage_attempt_id) AS stage_attempt_count,
+        SUM(CASE WHEN sa.provider_kind = 'temporal' THEN 1 ELSE 0 END) AS temporal_stage_attempt_count
+      FROM tasks t
+      LEFT JOIN stage_attempts sa ON sa.task_id = t.task_id
+      WHERE t.status IN (${placeholders})
+      GROUP BY t.task_id, t.status, t.task_kind, t.dedupe_key, t.updated_at, t.created_at
+      HAVING SUM(CASE WHEN sa.provider_kind = 'temporal' THEN 1 ELSE 0 END) = 0
+    )
+    SELECT
+      task_id,
+      status,
+      task_kind,
+      dedupe_key,
+      stage_attempt_count,
+      temporal_stage_attempt_count,
+      COUNT(*) OVER() AS total_competing_task_count
+    FROM competing_tasks
+    ORDER BY updated_at DESC, created_at DESC
+    LIMIT 10
+  `).all(...TEMPORAL_COMPETING_QUEUE_STATUSES) as Array<{
+    task_id: string;
+    status: FamilyRuntimeTaskStatus;
+    task_kind: string;
+    dedupe_key: string | null;
+    stage_attempt_count: number;
+    temporal_stage_attempt_count: number;
+    total_competing_task_count: number;
+  }>;
+  return {
+    totalCount: Number(rows[0]?.total_competing_task_count ?? 0),
+    tasks: rows.map((row) => ({
+      task_id: row.task_id,
+      status: row.status,
+      task_kind: row.task_kind,
+      dedupe_key: row.dedupe_key,
+      stage_attempt_count: Number(row.stage_attempt_count ?? 0),
+      temporal_stage_attempt_count: Number(row.temporal_stage_attempt_count ?? 0),
+    })),
+  };
+}
+
+export function buildQueueTemporalLifecycleBoundary(
+  db: DatabaseSync,
+  selectedProvider: FamilyRuntimeProviderKind,
+) {
+  const competing = selectedProvider === 'temporal'
+    ? temporalCompetingQueueTasks(db)
+    : { totalCount: 0, tasks: [] };
+  const gateStatus = competing.totalCount > 0 ? 'attention_needed' : 'pass';
+  return {
+    surface_kind: 'opl_family_runtime_queue_temporal_lifecycle_boundary',
+    selected_provider: selectedProvider,
+    sqlite_role: selectedProvider === 'temporal'
+      ? 'projection_audit_cache_not_durable_lifecycle_truth'
+      : 'dev_ci_offline_diagnostic_queue',
+    temporal_role: 'durable_workflow_activity_retry_dead_letter_and_schedule_truth',
+    field_roles: {
+      projection_or_audit_when_temporal_selected: [
+        'tasks.status',
+        'tasks.attempts',
+        'tasks.lease_owner',
+        'tasks.lease_expires_at',
+        'tasks.last_error',
+        'tasks.dead_letter_reason',
+        'stage_attempts.status',
+        'stage_attempts.provider_run_json',
+        'stage_attempts.activity_events_json',
+        'stage_attempt_signals.*',
+      ],
+      queue_intake_and_dedupe_fields: [
+        'tasks.task_id',
+        'tasks.domain_id',
+        'tasks.task_kind',
+        'tasks.payload_json',
+        'tasks.dedupe_key',
+        'tasks.priority',
+        'tasks.source',
+        'tasks.requires_approval',
+        'tasks.approved_at',
+      ],
+      temporal_owned_lifecycle_when_temporal_selected: [
+        'workflow_history',
+        'workflow_status',
+        'activity_retry_policy',
+        'activity_dead_letter_or_failure',
+        'schedule_cadence',
+        'signal_history',
+      ],
+    },
+    gate: {
+      status: gateStatus,
+      reason: gateStatus === 'attention_needed'
+        ? 'local_sqlite_task_lifecycle_status_without_temporal_stage_attempt'
+        : null,
+      competing_statuses: TEMPORAL_COMPETING_QUEUE_STATUSES,
+      competing_task_count: competing.totalCount,
+      competing_tasks: competing.tasks,
+      readiness_effect: gateStatus === 'attention_needed'
+        ? 'full_online_ready_false_until_temporal_history_or_authority_projection_rebuilds_lifecycle'
+        : 'none',
+    },
+    authority_boundary: {
+      opl_sqlite_can_project_runtime_state: true,
+      opl_sqlite_can_own_temporal_durable_lifecycle: false,
+      temporal_owns_durable_lifecycle_when_selected: selectedProvider === 'temporal',
+      domain: 'truth_quality_artifact_gate_owner',
+      can_write_domain_truth: false,
+      provider_completion_is_domain_ready: false,
+    },
+  };
 }
 
 export function listTasks(db: DatabaseSync, filter?: FamilyRuntimeTaskListFilter) {
