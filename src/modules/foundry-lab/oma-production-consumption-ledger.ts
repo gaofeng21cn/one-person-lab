@@ -1,6 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { optionalString, readJsonPayloadFile } from '../../kernel/json-file.ts';
+import { stringList } from '../../kernel/json-record.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 
 export type OmaProductionConsumptionReceipt = {
@@ -47,20 +50,6 @@ type OmaProductionConsumptionLedger = {
 
 function nowIso() {
   return new Date().toISOString();
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
 }
 
 function uniqueStrings(values: string[]) {
@@ -138,7 +127,7 @@ export function readOmaProductionConsumptionLedger(): OmaProductionConsumptionLe
     return emptyLedger();
   }
   try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
+    const parsed = readJsonPayloadFile(file);
     if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
       return emptyLedger();
     }

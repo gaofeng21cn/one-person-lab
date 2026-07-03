@@ -2,6 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText, readJsonPayloadFile } from '../../kernel/json-file.ts';
+import { countValue, stringValue } from '../../kernel/json-record.ts';
+
 type StartInput = {
   minimumDurationMinutes: number;
   evidenceDir: string;
@@ -30,18 +34,6 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function numberValue(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : null;
-}
-
 function authorityBoundary() {
   return {
     refs_only: true,
@@ -67,7 +59,7 @@ function parseIso(value: string, label: string) {
 }
 
 function readJson(filePath: string) {
-  const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
+  const parsed = readJsonPayloadFile(filePath);
   if (!isRecord(parsed)) {
     throw new Error('OMA long-soak observation workorder must be a JSON object.');
   }
@@ -84,7 +76,7 @@ function readOperatorEvents(filePath: string) {
     .filter((line) => line.length > 0)
     .map((line) => {
       try {
-        const parsed = JSON.parse(line) as unknown;
+        const parsed = parseJsonText(line);
         return isRecord(parsed) ? parsed : null;
       } catch {
         return null;
@@ -206,7 +198,7 @@ export function finishOmaLongSoakObservation(input: FinishInput) {
   const finishedAt = input.finishedAt ?? nowIso();
   const startedMs = parseIso(startedAt, 'started_at');
   const finishedMs = parseIso(finishedAt, 'finished_at');
-  const minimumDurationMinutes = numberValue(workorder.minimum_duration_minutes) ?? 0;
+  const minimumDurationMinutes = countValue(workorder.minimum_duration_minutes);
   const elapsedMinutes = Math.floor((finishedMs - startedMs) / 60000);
   const operatorLogFile = stringValue(workorder.operator_log_file)
     ?? path.join(path.dirname(input.workorderFile), 'operator-observation-events.jsonl');
