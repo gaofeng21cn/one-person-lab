@@ -60,6 +60,32 @@
       ]
     }
   },
+  "export_readback_seed": {
+    "surface_kind": "opl_observability_export_readback_seed",
+    "formats": ["json", "openmetrics"],
+    "source_readback": "opl_observability_semantic_conventions_readback",
+    "semantic_conventions_ref": "contracts/opl-framework/observability-semantic-conventions-contract.json",
+    "signal_groups": {
+      "traces": {
+        "span_name": "opl.stage_attempt",
+        "span_kind": "internal",
+        "source_attributes": "signal_mappings.trace_span.canonical_fields"
+      },
+      "metrics": {
+        "metric_name_prefix": "opl.",
+        "openmetrics_name_prefix": "opl_",
+        "source_instruments": "signal_mappings.metric.instruments",
+        "source_attributes": "signal_mappings.metric.canonical_fields"
+      },
+      "logs": {
+        "event_name": "opl.authority_event",
+        "source_attributes": "signal_mappings.log_event.canonical_fields",
+        "body_included": false
+      }
+    },
+    "body_policy": "refs_only_no_payload_body",
+    "readiness_claim": "not_claimed"
+  },
   "authority_boundary": {
     "ledger_refs_only": true,
     "can_create_private_ledger_ui": false,
@@ -69,6 +95,7 @@
     "can_create_typed_blocker": false,
     "can_claim_domain_ready": false,
     "can_claim_artifact_ready": false,
+    "can_claim_runtime_ready": false,
     "can_claim_production_ready": false
   }
 }

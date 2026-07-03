@@ -4,7 +4,9 @@ import test from 'node:test';
 
 import {
   OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS,
+  buildObservabilitySemanticConventionExportSeed,
   buildObservabilitySemanticConventionReadback,
+  renderObservabilitySemanticConventionOpenMetrics,
 } from '../../src/modules/ledger/observability-semantic-conventions.ts';
 
 const expectedFields = [
@@ -31,6 +33,7 @@ function contract() {
     schema_version: string;
     fields: Array<{ id: string; otel_attribute: string }>;
     signal_mappings: Record<string, { canonical_fields: string[]; instruments?: string[] }>;
+    export_readback_seed: Record<string, unknown>;
     authority_boundary: Record<string, boolean>;
   };
 }
@@ -76,8 +79,12 @@ test('observability semantic conventions freeze the OPL vocabulary and signal ma
       'source_fingerprint',
     ],
   );
+  assert.equal(semanticContract.export_readback_seed.surface_kind, 'opl_observability_export_readback_seed');
+  assert.deepEqual(semanticContract.export_readback_seed.formats, ['json', 'openmetrics']);
+  assert.equal(semanticContract.export_readback_seed.readiness_claim, 'not_claimed');
   assert.equal(semanticContract.authority_boundary.ledger_refs_only, true);
   assert.equal(semanticContract.authority_boundary.can_create_private_ledger_ui, false);
+  assert.equal(semanticContract.authority_boundary.can_claim_runtime_ready, false);
 });
 
 test('observability readback projects current owner refs without becoming a ledger UI', () => {
@@ -124,4 +131,51 @@ test('observability readback projects current owner refs without becoming a ledg
   assert.equal(readback.signals.metric.attributes['opl.task_queue'], 'opl-family-runtime');
   assert.equal(readback.signals.log_event.attributes['opl.receipt_ref'], 'receipt:mas:review');
   assert.deepEqual(readback.signals.log_event.ref_fields, ['route_ref', 'receipt_ref', 'typed_blocker_ref']);
+});
+
+test('observability export seed groups trace metric and log signals without payload body or readiness claims', () => {
+  const seed = buildObservabilitySemanticConventionExportSeed({
+    current_owner_delta: {
+      stage_run_id: 'stage-run:mas:review',
+      current_owner: 'medautoscience',
+      domain_id: 'medautoscience',
+      route_ref: 'route:mas:review',
+      receipt_ref: 'receipt:mas:review',
+      typed_blocker_ref: 'typed-blocker:mas:owner-gate',
+      source_fingerprint: 'sha256:source',
+    },
+    stage_attempt: {
+      attempt_id: 'sat_123',
+      generation: 3,
+    },
+    provider_attempt: {
+      workflow_id: 'workflow:mas:review',
+      task_queue: 'opl-family-runtime',
+    },
+    metric_values: {
+      queue_length: 7,
+      latency_ms: 1200,
+    },
+    payload_body: 'must-not-leak',
+  });
+
+  assert.equal(seed.surface_kind, 'opl_observability_export_readback_seed');
+  assert.equal(seed.summary.readiness_claim, 'not_claimed');
+  assert.equal(seed.summary.observed_metric_count, 2);
+  assert.equal(seed.authority_boundary.can_store_payload_body, false);
+  assert.equal(seed.authority_boundary.can_claim_runtime_ready, false);
+  assert.deepEqual(seed.forbidden_body_fields_present, ['payload_body']);
+  assert.equal(seed.signal_groups.traces[0].span_name, 'opl.stage_attempt');
+  assert.equal(seed.signal_groups.traces[0].attributes['opl.attempt_id'], 'sat_123');
+  assert.equal(seed.signal_groups.metrics[0].openmetrics_name, 'opl_queue_length');
+  assert.equal(seed.signal_groups.metrics[0].value, 7);
+  assert.equal(seed.signal_groups.logs[0].body_included, false);
+  assert.equal(JSON.stringify(seed).includes('must-not-leak'), false);
+
+  const openmetrics = renderObservabilitySemanticConventionOpenMetrics(seed);
+  assert.match(openmetrics, /# TYPE opl_queue_length gauge/);
+  assert.match(openmetrics, /opl_queue_length\{[^}]*opl_domain_id="medautoscience"[^}]*\} 7/);
+  assert.match(openmetrics, /opl_latency_ms\{[^}]*opl_task_queue="opl-family-runtime"[^}]*\} 1200/);
+  assert.match(openmetrics, /can_claim_runtime_ready="false"/);
+  assert.equal(openmetrics.includes('must-not-leak'), false);
 });
