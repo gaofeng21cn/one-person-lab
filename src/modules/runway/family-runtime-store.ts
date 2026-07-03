@@ -3,7 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
 import { stableId } from './family-runtime-ids.ts';
 import { masDomainRouteProjection } from './family-runtime-mas-domain-route.ts';
 import { paperAutonomyProjection } from './family-runtime-paper-autonomy.ts';
@@ -248,7 +249,7 @@ export function openQueueDb() {
 }
 
 export function taskToPayload(row: FamilyRuntimeTaskRow) {
-  const payload = JSON.parse(row.payload_json);
+  const payload = parseJsonText(row.payload_json) as Record<string, any>;
   return {
     task_id: row.task_id,
     domain_id: row.domain_id,
@@ -275,10 +276,6 @@ export function taskToPayload(row: FamilyRuntimeTaskRow) {
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 function stringValue(value: unknown) {
@@ -450,7 +447,7 @@ function eventToPayload(row: FamilyRuntimeEventRow) {
     domain_id: row.domain_id,
     event_type: row.event_type,
     source: row.source,
-    payload: JSON.parse(row.payload_json),
+    payload: parseJsonText(row.payload_json) as Record<string, any>,
     created_at: row.created_at,
   };
 }
@@ -481,7 +478,7 @@ function notificationToPayload(row: FamilyRuntimeNotificationRow) {
     body: row.body,
     channel: row.channel,
     status: row.status,
-    payload: JSON.parse(row.payload_json),
+    payload: parseJsonText(row.payload_json) as Record<string, any>,
     created_at: row.created_at,
   };
 }
