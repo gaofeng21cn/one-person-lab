@@ -1,4 +1,4 @@
-import { getActiveWorkspaceBinding } from '../workspace/workspace-registry.ts';
+import { getActiveWorkspaceBinding } from '../workspace/index.ts';
 import type { FamilyRuntimeDomainProfiles } from './family-runtime-command.ts';
 
 function optionalString(value: unknown) {

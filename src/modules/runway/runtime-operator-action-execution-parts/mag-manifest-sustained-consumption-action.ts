@@ -1,11 +1,11 @@
-import { FrameworkContractError } from '../../charter/contracts.ts';
+import { FrameworkContractError } from '../../charter/index.ts';
 import {
   assertMagManifestSustainedConsumptionReceiptInputReady,
   preflightMagManifestSustainedConsumptionReceiptInput,
   recordMagManifestSustainedConsumptionReceipts,
   verifyMagManifestSustainedConsumptionReceipt,
   type MagManifestSustainedConsumptionReceiptInput,
-} from '../../ledger/mag-manifest-sustained-consumption-ledger.ts';
+} from '../../ledger/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 

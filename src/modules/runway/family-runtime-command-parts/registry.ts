@@ -1,4 +1,4 @@
-import { FrameworkContractError } from '../../charter/contracts.ts';
+import { FrameworkContractError } from '../../charter/index.ts';
 import type { FamilyRuntimeCommandInput } from '../family-runtime-command.ts';
 import { parseAttemptArgs } from './attempt.ts';
 import {

@@ -1,9 +1,9 @@
 import type { DatabaseSync } from 'node:sqlite';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
 import { resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
-import { readLocalCodexDefaultsIfAvailable } from '../connect/local-codex-defaults.ts';
+import { readLocalCodexDefaultsIfAvailable } from '../connect/index.ts';
 import {
   createStageAttempt,
   inspectStageAttempt,

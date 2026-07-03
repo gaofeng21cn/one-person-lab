@@ -1,4 +1,4 @@
-import { canonicalOwnerId } from '../../ledger/evidence-envelope.ts';
+import { canonicalOwnerId } from '../../ledger/index.ts';
 import { record, stringValue, type JsonRecord } from './json-utils.ts';
 
 export function worklistOwnerId(value: unknown) {

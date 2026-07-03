@@ -5,7 +5,7 @@ import { WorkflowIdConflictPolicy, WorkflowIdReusePolicy, WorkflowNotFoundError 
 import { NativeConnection, Worker } from '@temporalio/worker';
 
 import { resolveCodexBinary } from './codex.ts';
-import { FrameworkContractError } from '../charter/contracts.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 import { familyRuntimePaths } from './family-runtime-store.ts';
 import * as activities from './family-runtime-temporal-activities.ts';
 import {
@@ -96,7 +96,7 @@ import {
 } from './family-runtime-temporal-provider-parts/workflow-bundle.ts';
 import {
   recordStageRunExecutionAuthorizationReceipts,
-} from '../stagecraft/stage-run-execution-authorization-ledger.ts';
+} from '../stagecraft/index.ts';
 import {
   runTemporalStageAttemptReplayGate,
 } from './family-runtime-temporal-provider-parts/replay-gate.ts';

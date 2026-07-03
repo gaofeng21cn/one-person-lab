@@ -1,10 +1,10 @@
-import { FrameworkContractError } from '../../charter/contracts.ts';
+import { FrameworkContractError } from '../../charter/index.ts';
 import {
   appReleaseUserPathEvidencePayloadPreflight,
   recordAppReleaseUserPathEvidenceReceipts,
   verifyAppReleaseUserPathEvidenceReceipt,
   type AppReleaseUserPathEvidenceReceiptInput,
-} from '../../console/app-release-user-path-evidence-ledger.ts';
+} from '../../console/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 

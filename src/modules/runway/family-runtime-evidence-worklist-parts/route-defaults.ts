@@ -1,5 +1,5 @@
 import type { FamilyRuntimeProviderKind } from '../family-runtime-types.ts';
-import { canonicalOwnerId } from '../../ledger/evidence-envelope.ts';
+import { canonicalOwnerId } from '../../ledger/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 

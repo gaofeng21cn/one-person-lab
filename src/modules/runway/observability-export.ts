@@ -1,5 +1,5 @@
-import { buildRuntimeTraySnapshot } from '../console/runtime-tray-snapshot.ts';
-import type { JsonRecord } from '../console/runtime-tray-snapshot-types.ts';
+import { buildRuntimeTraySnapshot } from '../console/index.ts';
+import type { JsonRecord } from '../console/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 
 export type ObservabilityExportFormat = 'json' | 'openmetrics';

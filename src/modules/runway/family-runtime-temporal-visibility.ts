@@ -1,6 +1,6 @@
 import type { Connection } from '@temporalio/client';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 import {
   resolveTemporalAddress,
   resolveTemporalNamespace,

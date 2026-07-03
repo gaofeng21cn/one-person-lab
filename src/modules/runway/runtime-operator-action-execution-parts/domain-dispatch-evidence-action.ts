@@ -1,5 +1,5 @@
-import { domainDispatchEvidencePayloadRefs } from '../../ledger/domain-dispatch-evidence-payload-refs.ts';
-import type { JsonRecord } from '../../console/runtime-tray-snapshot-types.ts';
+import { domainDispatchEvidencePayloadRefs } from '../../ledger/index.ts';
+import type { JsonRecord } from '../../console/index.ts';
 import { externalEvidenceApplyArgs } from './external-evidence-action.ts';
 
 export function domainDispatchExternalEvidenceApplyArgs(

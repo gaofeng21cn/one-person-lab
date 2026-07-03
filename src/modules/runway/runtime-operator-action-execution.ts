@@ -2,27 +2,27 @@ import type { FrameworkContracts } from '../../kernel/types.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
-import { buildRuntimeTraySnapshot } from '../console/runtime-tray-snapshot.ts';
+import { FrameworkContractError } from '../charter/index.ts';
+import { buildRuntimeTraySnapshot } from '../console/index.ts';
 import { runFamilyRuntime } from './family-runtime.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-command.ts';
 import {
   parseExternalEvidenceApplyArgs,
   runExternalEvidenceApply,
-} from '../ledger/external-evidence-ledger.ts';
-import { runFamilyAgentLegacyCleanupApply } from '../foundry-lab/family-domain-agent-skeleton.ts';
+} from '../ledger/index.ts';
+import { runFamilyAgentLegacyCleanupApply } from '../foundry-lab/index.ts';
 import {
   assertStageProductionEvidencePayloadReady,
   preflightStageProductionEvidencePayload,
-} from '../stagecraft/stage-production-evidence-payload-preflight.ts';
+} from '../stagecraft/index.ts';
 import {
   assertDomainDispatchEvidencePayloadReady,
   preflightDomainDispatchEvidencePayload,
-} from '../ledger/domain-dispatch-evidence-payload-preflight.ts';
+} from '../ledger/index.ts';
 import {
   recordOmaProductionConsumptionReceipts,
   type OmaProductionConsumptionReceiptInput,
-} from '../foundry-lab/oma-production-consumption-ledger.ts';
+} from '../foundry-lab/index.ts';
 import { providerSloArgs } from './runtime-operator-action-execution-parts/provider-slo-action.ts';
 import { providerWorkerArgs, providerWorkerCommand, runProviderWorkerRepair } from './runtime-operator-action-execution-parts/provider-worker-action.ts';
 import { providerSchedulerArgs } from './runtime-operator-action-execution-parts/provider-scheduler-action.ts';

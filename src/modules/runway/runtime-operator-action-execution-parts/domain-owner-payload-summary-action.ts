@@ -1,11 +1,11 @@
-import { FrameworkContractError } from '../../charter/contracts.ts';
+import { FrameworkContractError } from '../../charter/index.ts';
 import {
   assertDomainOwnerPayloadSummaryReceiptInputReady,
   preflightDomainOwnerPayloadSummaryReceiptInput,
   recordDomainOwnerPayloadSummaryReceipts,
   verifyDomainOwnerPayloadSummaryReceipt,
   type DomainOwnerPayloadSummaryReceiptInput,
-} from '../../ledger/domain-owner-payload-summary-ledger.ts';
+} from '../../ledger/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 

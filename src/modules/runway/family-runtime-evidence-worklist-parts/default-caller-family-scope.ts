@@ -1,4 +1,4 @@
-import { buildAgentDefaultCallerReadinessReport } from '../../foundry-lab/agent-platform-surface-ownership.ts';
+import { buildAgentDefaultCallerReadinessReport } from '../../foundry-lab/index.ts';
 import type { JsonRecord } from './json-utils.ts';
 import {
   countValue,

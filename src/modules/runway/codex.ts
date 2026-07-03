@@ -15,7 +15,7 @@ import {
   terminateChildProcessGroup,
   type CodexExecEvent,
 } from './codex-exec-events.ts';
-import { FrameworkContractError } from '../charter/contracts.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 
 export {
   recoverCodexExecOutputFromSession,

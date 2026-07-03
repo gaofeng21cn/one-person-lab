@@ -6,7 +6,7 @@ import {
   type FamilyTransitionMatrixResult,
   type FamilyTransitionResult,
   type FamilyTransitionSpec,
-} from '../stagecraft/family-transition-runner.ts';
+} from '../stagecraft/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 

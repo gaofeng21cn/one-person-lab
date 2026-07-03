@@ -1,19 +1,19 @@
 import type { DatabaseSync } from 'node:sqlite';
 
-import { loadFrameworkContracts } from '../charter/contracts.ts';
-import { buildDomainManifestCatalog } from '../atlas/domain-manifest/catalog-builder.ts';
-import type { DomainManifestCatalogEntry } from '../atlas/domain-manifest/types.ts';
-import { buildFamilyConflictOrBlockerEnvelope, buildFamilyConflictSubject } from '../stagecraft/family-conflict-envelope.ts';
-import { buildFamilyStageAdmissionReview } from '../stagecraft/family-stage-admission.ts';
-import { buildFamilyStageCohortLoopProjection } from '../stagecraft/family-stage-cohort-loop.ts';
-import { buildFamilyStageRuntimeBudgetProjection } from '../stagecraft/family-stage-runtime-budget.ts';
+import { loadFrameworkContracts } from '../charter/index.ts';
+import { buildDomainManifestCatalog } from '../atlas/index.ts';
+import type { DomainManifestCatalogEntry } from '../atlas/index.ts';
+import { buildFamilyConflictOrBlockerEnvelope, buildFamilyConflictSubject } from '../stagecraft/index.ts';
+import { buildFamilyStageAdmissionReview } from '../stagecraft/index.ts';
+import { buildFamilyStageCohortLoopProjection } from '../stagecraft/index.ts';
+import { buildFamilyStageRuntimeBudgetProjection } from '../stagecraft/index.ts';
 import type {
   FamilyStageAdmissionReview,
   FamilyStageAdmissionStageResult,
-} from '../stagecraft/family-stage-admission.ts';
-import type { FamilyStageCohortLoopStage } from '../stagecraft/family-stage-cohort-loop.ts';
-import type { FamilyStageControlPlane } from '../stagecraft/family-stage-control-plane-contract.ts';
-import type { FamilyStageDescriptor } from '../stagecraft/family-stage-control-plane-contract.ts';
+} from '../stagecraft/index.ts';
+import type { FamilyStageCohortLoopStage } from '../stagecraft/index.ts';
+import type { FamilyStageControlPlane } from '../stagecraft/index.ts';
+import type { FamilyStageDescriptor } from '../stagecraft/index.ts';
 import {
   insertEvent,
   insertNotification,

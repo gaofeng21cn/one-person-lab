@@ -1,10 +1,10 @@
 import { spawnSync, type SpawnSyncOptionsWithStringEncoding } from 'node:child_process';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
-import { resolveBindingManifest } from '../atlas/domain-manifest/resolver.ts';
-import type { DomainManifestCatalogEntry } from '../atlas/domain-manifest/types.ts';
+import { FrameworkContractError } from '../charter/index.ts';
+import { resolveBindingManifest } from '../atlas/index.ts';
+import type { DomainManifestCatalogEntry } from '../atlas/index.ts';
 import { resolveTemporalNamespace, resolveTemporalTaskQueue } from './family-runtime-temporal.ts';
-import { getActiveWorkspaceBinding } from '../workspace/workspace-registry.ts';
+import { getActiveWorkspaceBinding } from '../workspace/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 const DEFAULT_MANAGED_PROVIDER_PROJECTION_TIMEOUT_MS = 2_000;

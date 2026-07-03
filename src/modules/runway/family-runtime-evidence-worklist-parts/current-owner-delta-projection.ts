@@ -1,7 +1,7 @@
 import {
   buildCurrentOwnerDeltaReadModel,
   buildDefaultNextActionFromCurrentOwnerDelta,
-} from '../../ledger/current-owner-delta-projection.ts';
+} from '../../ledger/index.ts';
 import { countValue, record, type JsonRecord } from './json-utils.ts';
 import { worklistOwnerId } from './owner-normalization.ts';
 

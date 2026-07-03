@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 
-import { FrameworkContractError } from '../../charter/contracts.ts';
+import { FrameworkContractError } from '../../charter/index.ts';
 import {
   buildStageAttemptProviderReceipt,
   resolveFamilyRuntimeProviderKind,
@@ -18,13 +18,13 @@ import { stableId } from '../family-runtime-ids.ts';
 import {
   buildDuplicateTaskEnvelope,
   buildFamilyConflictSubject,
-} from '../../stagecraft/family-conflict-envelope.ts';
+} from '../../stagecraft/index.ts';
 import {
   normalizeJsonList,
   normalizeStageId,
   nowIso,
 } from './shared.ts';
-import { recordStageRunExecutionAuthorizationReceipts } from '../../stagecraft/stage-run-execution-authorization-ledger.ts';
+import { recordStageRunExecutionAuthorizationReceipts } from '../../stagecraft/index.ts';
 
 export type StageAttemptCreateInput = {
   domainId: FamilyRuntimeDomainId;

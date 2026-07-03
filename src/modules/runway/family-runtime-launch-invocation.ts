@@ -1,4 +1,4 @@
-import { buildFamilyConflictOrBlockerEnvelope, buildFamilyConflictSubject } from '../stagecraft/family-conflict-envelope.ts';
+import { buildFamilyConflictOrBlockerEnvelope, buildFamilyConflictSubject } from '../stagecraft/index.ts';
 import { stableId } from './family-runtime-store.ts';
 import type { FamilyRuntimeDomainId, FamilyRuntimeProviderKind } from './family-runtime-types.ts';
 

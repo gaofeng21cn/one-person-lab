@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 
-import { FrameworkContractError } from '../../charter/contracts.ts';
+import { FrameworkContractError } from '../../charter/index.ts';
 import {
   normalizeTypedStageCloseoutPacket,
   type TypedStageCloseoutPacket,
@@ -8,7 +8,7 @@ import {
 import {
   buildFamilyConflictSubject,
   buildReceiptConflictEnvelope,
-} from '../../stagecraft/family-conflict-envelope.ts';
+} from '../../stagecraft/index.ts';
 import {
   type StageAttemptCloseoutRow,
   type StageAttemptRow,

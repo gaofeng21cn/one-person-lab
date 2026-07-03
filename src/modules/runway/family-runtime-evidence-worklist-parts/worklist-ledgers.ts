@@ -1,6 +1,6 @@
-import type { buildProductionTailNextActionLedger } from '../../ledger/production-evidence-tail-ledger.ts';
-import { EVIDENCE_REQUIREMENT_MODEL_VERSION } from '../../ledger/evidence-requirement.ts';
-import type { EvidenceRequirement } from '../../ledger/evidence-requirement.ts';
+import type { buildProductionTailNextActionLedger } from '../../ledger/index.ts';
+import { EVIDENCE_REQUIREMENT_MODEL_VERSION } from '../../ledger/index.ts';
+import type { EvidenceRequirement } from '../../ledger/index.ts';
 import { defaultCallerDeletionEvidenceCounts } from './default-caller-deletion-counts.ts';
 import {
   DIAGNOSTIC_ONLY_STATUS,

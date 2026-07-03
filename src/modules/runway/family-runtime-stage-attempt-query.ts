@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 import { buildCodexStageActivityInput } from './family-runtime-codex-stage-runner.ts';
 import { buildFamilyRuntimeControlledApplyContract } from './family-runtime-controlled-apply.ts';
 import { buildFamilyRuntimeLifecyclePrimitives } from './family-runtime-lifecycle.ts';
@@ -8,15 +8,15 @@ import {
   buildFamilyConflictSubject,
   buildStageAttemptConflictOrBlockerEnvelopes,
   canonicalOutcomeForStageAttempt,
-} from '../stagecraft/family-conflict-envelope.ts';
+} from '../stagecraft/index.ts';
 import {
   inspectStageAttemptPayload,
   listStageAttemptCloseouts,
   listStageAttemptSignals,
 } from './family-runtime-stage-attempt-ledger.ts';
 import { buildTemporalStageAttemptWorkflowContract, buildTemporalStageAttemptWorkflowInput } from './family-runtime-temporal.ts';
-import { buildAttemptGenericProjections } from '../console/runtime-tray-stage-attempt-generic-projections.ts';
-import { buildAttemptHumanReviewBurdenBudget } from '../stagecraft/family-human-review-budget.ts';
+import { buildAttemptGenericProjections } from '../console/index.ts';
+import { buildAttemptHumanReviewBurdenBudget } from '../stagecraft/index.ts';
 import { buildStageProgressLog } from './family-runtime-stage-progress-log.ts';
 import { buildStageAttemptTruePathProof } from './family-runtime-stage-attempt-true-path-proof.ts';
 import { buildModelRouteCostProjection } from './family-runtime-stage-attempt-usage.ts';
@@ -26,7 +26,7 @@ import { buildStageAttemptRuntimeCurrentness } from './family-runtime-stage-atte
 import {
   buildStageAttemptCloseoutRefsOnlyContract,
   buildStageAttemptLaunchEnvelope,
-} from '../stagecraft/cognitive-kernel-boundary.ts';
+} from '../stagecraft/index.ts';
 
 type QueryStageAttemptOptions = {
   temporalVisibilityReadiness?: TemporalStageAttemptVisibilityReadiness | null;

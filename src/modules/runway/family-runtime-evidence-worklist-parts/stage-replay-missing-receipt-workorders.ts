@@ -2,12 +2,12 @@ import {
   listStageReplayMissingReceiptReceipts,
   stageReplayMissingReceiptTargetKey,
   type StageReplayMissingReceiptReceipt,
-} from '../../stagecraft/stage-replay-missing-receipt-ledger.ts';
-import { defaultOmaRepoDir } from '../../foundry-lab/opl-meta-agent-consumption.ts';
+} from '../../stagecraft/index.ts';
+import { defaultOmaRepoDir } from '../../foundry-lab/index.ts';
 import {
   omaProductionAcceptanceStageReplayReceipts,
   readOmaProductionAcceptance,
-} from '../../foundry-lab/opl-meta-agent-production-acceptance.ts';
+} from '../../foundry-lab/index.ts';
 import {
   record,
   recordList,

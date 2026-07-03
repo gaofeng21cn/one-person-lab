@@ -1,7 +1,7 @@
 import {
   EVIDENCE_REQUIREMENT_MODEL_VERSION,
   evidenceRequirementFromTailItem,
-} from '../../ledger/evidence-requirement.ts';
+} from '../../ledger/index.ts';
 import {
   NOT_AUTHORIZED_CLAIMS,
 } from './constants.ts';

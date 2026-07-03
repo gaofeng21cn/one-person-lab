@@ -1,6 +1,6 @@
 import {
   domainDispatchEvidenceIdentityGuidanceFromRoute,
-} from '../../ledger/domain-dispatch-evidence-identity-guidance.ts';
+} from '../../ledger/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 

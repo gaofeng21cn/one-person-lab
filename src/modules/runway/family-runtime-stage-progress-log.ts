@@ -4,7 +4,7 @@ import type {
 } from './family-runtime-stage-attempt-usage.ts';
 import {
   buildMemoryTraceProjection,
-} from '../console/runtime-tray-memory-locator-index.ts';
+} from '../console/index.ts';
 import {
   buildTemporalStageAttemptVisibility,
   buildTemporalWebUiRef,
@@ -14,7 +14,7 @@ import {
   buildProgressDeltaReceipt,
   progressDeltaReceiptDeltaClassFromStageClassification,
   type StageProgressDeltaClassification,
-} from '../ledger/progress-delta-receipt.ts';
+} from '../ledger/index.ts';
 import { buildStageAttemptRuntimeCurrentness } from './family-runtime-stage-attempt-runtime-currentness.ts';
 
 type JsonRecord = Record<string, unknown>;

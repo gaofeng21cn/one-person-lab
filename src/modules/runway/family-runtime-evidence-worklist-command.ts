@@ -1,4 +1,4 @@
-import { loadFrameworkContracts } from '../charter/contracts.ts';
+import { loadFrameworkContracts } from '../charter/index.ts';
 import { runFamilyRuntimeEvidenceWorklist } from './family-runtime-evidence-worklist.ts';
 
 export function runFamilyRuntimeEvidenceWorklistCommand(

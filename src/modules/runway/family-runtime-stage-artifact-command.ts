@@ -10,7 +10,7 @@ import {
   statusStageArtifactRuntime,
   validateStageArtifactRuntime,
   workbenchStageArtifactRuntime,
-} from '../stagecraft/stage-artifact-runtime.ts';
+} from '../stagecraft/index.ts';
 import type { FamilyRuntimeCommandInput } from './family-runtime-command.ts';
 
 type StageArtifactInput = Extract<FamilyRuntimeCommandInput, { mode: 'stage_artifact' }>['input'];

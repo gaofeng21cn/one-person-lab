@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 import type { FamilyRuntimeDomainProfiles, FamilyRuntimeTaskScope } from './family-runtime-command.ts';
 import { enqueueTask } from './family-runtime-enqueue.ts';
 import { dispatchFamilyRuntimeTask } from './family-runtime-task-dispatch.ts';

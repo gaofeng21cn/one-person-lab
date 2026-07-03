@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../../charter/contracts.ts';
+import { FrameworkContractError } from '../../charter/index.ts';
 import {
   FAMILY_RUNTIME_DOMAIN_IDS,
   FAMILY_RUNTIME_PROVIDER_KINDS,

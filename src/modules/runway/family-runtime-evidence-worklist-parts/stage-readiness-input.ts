@@ -1,5 +1,5 @@
-import { buildDomainManifestCatalog } from '../../atlas/domain-manifest/catalog-builder.ts';
-import { buildFamilyStageReadinessInspect } from '../../stagecraft/family-stage-control-plane.ts';
+import { buildDomainManifestCatalog } from '../../atlas/index.ts';
+import { buildFamilyStageReadinessInspect } from '../../stagecraft/index.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 
 type JsonRecord = Record<string, unknown>;

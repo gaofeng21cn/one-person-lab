@@ -1,6 +1,6 @@
-import { FrameworkContractError } from '../charter/contracts.ts';
-import { buildDomainManifestCatalog } from '../atlas/domain-manifest/catalog-builder.ts';
-import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from '../atlas/domain-manifest/types.ts';
+import { FrameworkContractError } from '../charter/index.ts';
+import { buildDomainManifestCatalog } from '../atlas/index.ts';
+import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from '../atlas/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import {
   runFamilyRuntimeDomainHandlerCommand,

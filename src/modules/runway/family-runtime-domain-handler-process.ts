@@ -2,13 +2,13 @@ import { spawnSync, type SpawnSyncOptionsWithStringEncoding, type SpawnSyncRetur
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 import {
   buildManagedShellCommandEnv,
   buildManagedShellEnvWithUvCacheRecovery,
   buildManagedShellRecoveryTmpRoot,
   recordManagedShellUvCacheRecovery,
-} from '../connect/managed-shell-command-env.ts';
+} from '../connect/index.ts';
 
 const DEFAULT_DOMAIN_HANDLER_DISPATCH_TIMEOUT_MS = 120_000;
 const DEFAULT_DOMAIN_HANDLER_EXPORT_TIMEOUT_MS = 600_000;

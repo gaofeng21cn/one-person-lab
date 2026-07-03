@@ -20,8 +20,8 @@ import {
   runFamilyRuntimeDomainHandlerCommand,
   domainHandlerResultErrorMessage,
 } from './family-runtime-domain-handler-process.ts';
-import { resolveOplModuleExecCommand } from '../connect/system-installation/modules.ts';
-import type { ModuleInspection } from '../connect/system-installation/shared.ts';
+import { resolveOplModuleExecCommand } from '../connect/index.ts';
+import type { ModuleInspection } from '../connect/index.ts';
 import { taskInputMatchesScope, taskRowMatchesScope } from './family-runtime-task-scope.ts';
 import {
   activeMedautoscienceWorkspaceProfile,

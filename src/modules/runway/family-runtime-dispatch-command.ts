@@ -2,7 +2,7 @@ import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
 import path from 'node:path';
 
 import { DOMAIN_ADAPTERS } from './family-runtime-command.ts';
-import { resolveOplModuleExecCommand } from '../connect/system-installation/modules.ts';
+import { resolveOplModuleExecCommand } from '../connect/index.ts';
 
 type DomainDispatchCommand = {
   command_preview: string[];

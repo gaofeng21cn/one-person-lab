@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 import {
   DEFAULT_EXECUTOR_DISPATCH_TASK_KIND,
   ensureProviderHostedStageAttempt,
