@@ -1,0 +1,343 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/artifact-provenance-ledger-event.schema.json",
+  "schema_id": "opl.artifact_provenance_ledger_event.v1",
+  "surface_kind": "opl_artifact_provenance_ledger_event_schema",
+  "owner": "one-person-lab",
+  "purpose": "Define refs-only Ledger events emitted by Artifact Provenance Bundle record, inspect, doctor, and export surfaces.",
+  "state": "active_contract",
+  "machine_boundary": "Artifact Provenance Ledger events record bundle refs, manifest hashes, section refs, and typed issues only. They must not contain artifact body content, mutate artifacts, write domain truth, create owner receipts, issue typed blockers, authorize quality verdicts, or claim domain, artifact, export, production, or release readiness.",
+  "type": "object",
+  "additionalProperties": false,
+  "propertyNames": {
+    "not": {
+      "enum": [
+        "body",
+        "artifact_body",
+        "artifact_content",
+        "artifact_payload",
+        "body_inline"
+      ]
+    }
+  },
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "event_id",
+    "event_kind",
+    "event_ref",
+    "occurred_at",
+    "artifact_body_read",
+    "refs",
+    "sections",
+    "issues",
+    "issue_count",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_artifact_provenance_ledger_event"
+    },
+    "schema_version": {
+      "const": "artifact-provenance-ledger-event.v1"
+    },
+    "event_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "event_kind": {
+      "type": "string",
+      "enum": [
+        "record",
+        "inspect",
+        "doctor",
+        "export"
+      ]
+    },
+    "event_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "occurred_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "bundle_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "domain_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "artifact_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "bundle_manifest_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "bundle_manifest_hash": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/sha256_hash"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "ledger_file": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "artifact_body_read": {
+      "const": false
+    },
+    "refs": {
+      "$ref": "#/$defs/sections_ref_object"
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/section_ref"
+      }
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/typed_issue"
+      }
+    },
+    "issue_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "authority_boundary": {
+      "$ref": "#/$defs/authority_boundary"
+    }
+  },
+  "$defs": {
+    "ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ref_list": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ref"
+      }
+    },
+    "sections_ref_object": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "inputs",
+        "outputs",
+        "environment",
+        "agent_trace",
+        "reviews",
+        "replay"
+      ],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/ref_list"
+        },
+        "inputs": {
+          "$ref": "#/$defs/ref_list"
+        },
+        "outputs": {
+          "$ref": "#/$defs/ref_list"
+        },
+        "environment": {
+          "$ref": "#/$defs/ref_list"
+        },
+        "agent_trace": {
+          "$ref": "#/$defs/ref_list"
+        },
+        "reviews": {
+          "$ref": "#/$defs/ref_list"
+        },
+        "replay": {
+          "$ref": "#/$defs/ref_list"
+        }
+      }
+    },
+    "section_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "section_key",
+        "refs",
+        "missing_refs",
+        "restricted_refs"
+      ],
+      "properties": {
+        "section_key": {
+          "type": "string",
+          "enum": [
+            "code",
+            "inputs",
+            "outputs",
+            "environment",
+            "agent_trace",
+            "reviews",
+            "replay"
+          ]
+        },
+        "refs": {
+          "$ref": "#/$defs/ref_list"
+        },
+        "missing_refs": {
+          "$ref": "#/$defs/ref_list"
+        },
+        "restricted_refs": {
+          "$ref": "#/$defs/ref_list"
+        }
+      }
+    },
+    "typed_issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "propertyNames": {
+        "not": {
+          "enum": [
+            "body",
+            "artifact_body",
+            "artifact_content",
+            "artifact_payload",
+            "body_inline"
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "severity",
+        "ref",
+        "message",
+        "action"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "error",
+            "warning"
+          ]
+        },
+        "ref": {
+          "$ref": "#/$defs/ref"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "sha256_hash": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "sha256"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ledger_refs_only",
+        "forbidden_claims",
+        "can_read_artifact_body",
+        "can_store_artifact_body",
+        "can_mutate_artifact_body",
+        "can_write_domain_truth",
+        "can_create_owner_receipt",
+        "can_authorize_quality_verdict",
+        "can_claim_domain_ready",
+        "can_claim_artifact_ready",
+        "can_claim_production_ready"
+      ],
+      "properties": {
+        "ledger_refs_only": {
+          "const": true
+        },
+        "forbidden_claims": {
+          "$ref": "#/$defs/ref_list"
+        },
+        "can_read_artifact_body": {
+          "const": false
+        },
+        "can_store_artifact_body": {
+          "const": false
+        },
+        "can_mutate_artifact_body": {
+          "const": false
+        },
+        "can_write_domain_truth": {
+          "const": false
+        },
+        "can_create_owner_receipt": {
+          "const": false
+        },
+        "can_authorize_quality_verdict": {
+          "const": false
+        },
+        "can_claim_domain_ready": {
+          "const": false
+        },
+        "can_claim_artifact_ready": {
+          "const": false
+        },
+        "can_claim_production_ready": {
+          "const": false
+        }
+      }
+    }
+  },
+  "forbidden_body_fields": [
+    "body",
+    "artifact_body",
+    "artifact_content",
+    "artifact_payload",
+    "body_inline"
+  ],
+  "forbidden_authority_claims": [
+    "domain_ready",
+    "artifact_ready",
+    "quality_verdict",
+    "owner_receipt",
+    "typed_blocker_issued",
+    "export_ready",
+    "production_ready",
+    "release_ready"
+  ]
+}

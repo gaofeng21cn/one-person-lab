@@ -7,6 +7,7 @@ import { ensureOplStateDir, resolveOplStatePaths } from '../runway/index.ts';
 
 const SCHEMA_VERSION = 'artifact-provenance-bundle.v1';
 const LEDGER_VERSION = 'opl-artifact-provenance-bundle-ledger.v1';
+const LEDGER_EVENT_SCHEMA_VERSION = 'artifact-provenance-ledger-event.v1';
 const REF_KEYS = [
   'code',
   'inputs',
@@ -59,6 +60,25 @@ type HashEntry = {
   algorithm: 'sha256';
   value: string;
 };
+type IssueSeverity = 'error' | 'warning';
+type ArtifactProvenanceBundleIssue = {
+  code: string;
+  severity: IssueSeverity;
+  ref: string;
+  message: string;
+  action: string;
+};
+type DeclaredRefIssue = {
+  ref: string;
+  source_path: string;
+  section_key: RefKey | null;
+};
+type ArtifactProvenanceBundleSection = {
+  section_key: RefKey;
+  refs: string[];
+  missing_refs: string[];
+  restricted_refs: string[];
+};
 type ArtifactProvenanceBundleAuthorityBoundary = {
   ledger_refs_only: true;
   forbidden_claims: string[];
@@ -108,6 +128,11 @@ type BundleValidation = {
   invalid_hash_fields: string[];
   authority_violations: string[];
   forbidden_body_fields: string[];
+  missing_refs: string[];
+  restricted_refs: string[];
+  issues: ArtifactProvenanceBundleIssue[];
+  issue_count: number;
+  sections: ArtifactProvenanceBundleSection[];
   refs: BundleRefs;
   hash_keys: string[];
   forbidden_claims: string[];
@@ -125,6 +150,9 @@ type ArtifactProvenanceBundleRecord = {
   bundle_manifest_hash: HashEntry;
   refs: BundleRefs;
   hashes: Record<string, HashEntry>;
+  issues: ArtifactProvenanceBundleIssue[];
+  issue_count: number;
+  sections: ArtifactProvenanceBundleSection[];
   index_keys: {
     bundle_id: string;
     domain_artifact: string;
@@ -137,6 +165,27 @@ type ArtifactProvenanceBundleLedger = {
   surface_kind: 'opl_artifact_provenance_bundle_ledger';
   version: typeof LEDGER_VERSION;
   records: ArtifactProvenanceBundleRecord[];
+};
+type ArtifactProvenanceLedgerEventKind = 'record' | 'inspect' | 'doctor' | 'export';
+type ArtifactProvenanceLedgerEvent = {
+  surface_kind: 'opl_artifact_provenance_ledger_event';
+  schema_version: typeof LEDGER_EVENT_SCHEMA_VERSION;
+  event_id: string;
+  event_kind: ArtifactProvenanceLedgerEventKind;
+  event_ref: string;
+  occurred_at: string;
+  bundle_id: string | null;
+  domain_id: string | null;
+  artifact_ref: string | null;
+  bundle_manifest_ref: string | null;
+  bundle_manifest_hash: HashEntry | null;
+  ledger_file: string | null;
+  artifact_body_read: false;
+  refs: BundleRefs;
+  sections: ArtifactProvenanceBundleSection[];
+  issues: ArtifactProvenanceBundleIssue[];
+  issue_count: number;
+  authority_boundary: ArtifactProvenanceBundleAuthorityBoundary;
 };
 
 function nowIso() {
@@ -153,6 +202,18 @@ function optionalString(value: unknown) {
 
 function uniqueStrings(values: string[]) {
   return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
+}
+
+function uniqueIssues(issues: ArtifactProvenanceBundleIssue[]) {
+  const seen = new Set<string>();
+  return issues.filter((issue) => {
+    const key = `${issue.code}\u0000${issue.ref}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
 }
 
 function stringList(value: unknown) {
@@ -191,6 +252,10 @@ function emptyRefs(): BundleRefs {
     reviews: [],
     replay: [],
   };
+}
+
+function isRefKey(value: string): value is RefKey {
+  return REF_KEYS.includes(value as RefKey);
 }
 
 function normalizeRefs(value: unknown) {
@@ -249,7 +314,7 @@ function unknownFields(value: unknown, allowed: Set<string>, prefix: string) {
     .map((key) => prefix ? `${prefix}.${key}` : key);
 }
 
-function isStringArray(value: unknown) {
+function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value)
     && value.every((entry) => typeof entry === 'string' && entry.trim().length > 0);
 }
@@ -264,6 +329,70 @@ function invalidRefFields(value: unknown) {
       .filter((key) => Object.hasOwn(value, key) && !isStringArray(value[key]))
       .map((key) => `refs.${key}`),
   ];
+}
+
+function declaredRefIssueEntries(value: unknown, field: 'missing_refs' | 'restricted_refs') {
+  if (isStringArray(value)) {
+    return value.map((ref, index): DeclaredRefIssue => ({
+      ref,
+      source_path: `${field}[${index}]`,
+      section_key: null,
+    }));
+  }
+  if (!isRecord(value)) {
+    return [];
+  }
+  return Object.entries(value).flatMap(([section, refs]) =>
+    isStringArray(refs)
+      ? refs.map((ref, index): DeclaredRefIssue => ({
+        ref,
+        source_path: `${field}.${section}[${index}]`,
+        section_key: isRefKey(section) ? section : null,
+      }))
+      : []
+  );
+}
+
+function invalidDeclaredRefIssueFields(value: unknown, field: 'missing_refs' | 'restricted_refs') {
+  if (value === undefined) {
+    return [];
+  }
+  if (isStringArray(value)) {
+    return [];
+  }
+  if (!isRecord(value)) {
+    return [field];
+  }
+  return Object.entries(value)
+    .filter(([, refs]) => !isStringArray(refs))
+    .map(([section]) => `${field}.${section}`);
+}
+
+function sectionsForRefs(
+  refs: BundleRefs,
+  missingRefs: DeclaredRefIssue[],
+  restrictedRefs: DeclaredRefIssue[],
+): ArtifactProvenanceBundleSection[] {
+  return REF_KEYS.map((sectionKey) => ({
+    section_key: sectionKey,
+    refs: refs[sectionKey],
+    missing_refs: missingRefs
+      .filter((entry) => entry.section_key === sectionKey)
+      .map((entry) => entry.ref),
+    restricted_refs: restrictedRefs
+      .filter((entry) => entry.section_key === sectionKey)
+      .map((entry) => entry.ref),
+  }));
+}
+
+function typedIssue(
+  code: string,
+  severity: IssueSeverity,
+  ref: string,
+  message: string,
+  action: string,
+): ArtifactProvenanceBundleIssue {
+  return { code, severity, ref, message, action };
 }
 
 function isStrictHashEntry(value: unknown) {
@@ -284,6 +413,52 @@ function invalidAuthorityFields(value: unknown) {
     ...unknownFields(value, ALLOWED_AUTHORITY_FIELDS, 'authority_boundary'),
     isStringArray(value.forbidden_claims) ? null : 'authority_boundary.forbidden_claims',
   ].filter((field): field is string => Boolean(field));
+}
+
+function normalizeIssue(value: unknown): ArtifactProvenanceBundleIssue | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const code = optionalString(value.code);
+  const severity = value.severity === 'error' || value.severity === 'warning' ? value.severity : null;
+  const ref = optionalString(value.ref);
+  const message = optionalString(value.message);
+  const action = optionalString(value.action);
+  return code && severity && ref && message && action
+    ? { code, severity, ref, message, action }
+    : null;
+}
+
+function normalizeIssues(value: unknown) {
+  return Array.isArray(value)
+    ? uniqueIssues(value.map(normalizeIssue).filter((issue): issue is ArtifactProvenanceBundleIssue => Boolean(issue)))
+    : [];
+}
+
+function normalizeSections(value: unknown, fallbackRefs: BundleRefs): ArtifactProvenanceBundleSection[] {
+  if (!Array.isArray(value)) {
+    return sectionsForRefs(fallbackRefs, [], []);
+  }
+  const byKey = new Map<RefKey, ArtifactProvenanceBundleSection>();
+  for (const entry of value) {
+    if (!isRecord(entry) || typeof entry.section_key !== 'string' || !isRefKey(entry.section_key)) {
+      continue;
+    }
+    byKey.set(entry.section_key, {
+      section_key: entry.section_key,
+      refs: stringList(entry.refs),
+      missing_refs: stringList(entry.missing_refs),
+      restricted_refs: stringList(entry.restricted_refs),
+    });
+  }
+  return REF_KEYS.map((sectionKey) =>
+    byKey.get(sectionKey) ?? {
+      section_key: sectionKey,
+      refs: fallbackRefs[sectionKey],
+      missing_refs: [],
+      restricted_refs: [],
+    }
+  );
 }
 
 function resolveBundleManifestPath(bundlePath: string) {
@@ -367,6 +542,9 @@ function collectForbiddenBodyFields(value: unknown, prefix = ''): string[] {
 function validationForLoadedBundle(loaded: LoadedBundle): BundleValidation {
   const record = isRecord(loaded.parsed) ? loaded.parsed : {};
   const rawAuthority = isRecord(record.authority_boundary) ? record.authority_boundary : {};
+  const missingRefEntries = declaredRefIssueEntries(record.missing_refs, 'missing_refs');
+  const restrictedRefEntries = declaredRefIssueEntries(record.restricted_refs, 'restricted_refs');
+  const sections = sectionsForRefs(loaded.manifest.refs, missingRefEntries, restrictedRefEntries);
   const requiredFields: Array<[string, string | null]> = [
     ['schema_version', optionalString(record.schema_version)],
     ['bundle_id', optionalString(record.bundle_id)],
@@ -386,6 +564,8 @@ function validationForLoadedBundle(loaded: LoadedBundle): BundleValidation {
     isRecord(record.refs) && REF_KEYS.some((key) => loaded.manifest.refs[key].length > 0) ? null : 'refs',
     ...invalidRefFields(record.refs),
     isRecord(record.hashes) && Object.keys(loaded.manifest.hashes).length > 0 ? null : 'hashes',
+    ...invalidDeclaredRefIssueFields(record.missing_refs, 'missing_refs'),
+    ...invalidDeclaredRefIssueFields(record.restricted_refs, 'restricted_refs'),
     ...invalidAuthorityFields(rawAuthority),
     ...unknownFields(record, ALLOWED_MANIFEST_FIELDS, ''),
   ].filter((field): field is string => Boolean(field)));
@@ -397,6 +577,57 @@ function validationForLoadedBundle(loaded: LoadedBundle): BundleValidation {
   ].filter((field): field is string => Boolean(field));
   const forbiddenBodyFields = collectForbiddenBodyFields(record);
   const invalidHashes = invalidHashFields(record.hashes);
+  const issues = uniqueIssues([
+    ...missingRefEntries.map((entry) => typedIssue(
+      'missing_ref',
+      'warning',
+      entry.ref,
+      `Bundle manifest declares a missing provenance ref at ${entry.source_path}.`,
+      'Materialize the referenced provenance item or keep this as a typed handoff issue before claiming complete provenance.',
+    )),
+    ...restrictedRefEntries.map((entry) => typedIssue(
+      'restricted_ref',
+      'warning',
+      entry.ref,
+      `Bundle manifest declares a restricted provenance ref at ${entry.source_path}.`,
+      'Keep only the locator/hash in Ledger and route body access through the owning domain or workspace policy.',
+    )),
+    ...missingRequiredFields.map((field) => typedIssue(
+      'manifest_missing_required_field',
+      'error',
+      field,
+      `Bundle manifest is missing required field ${field}.`,
+      'Add the required refs-only manifest field before recording or exporting the bundle.',
+    )),
+    ...invalidFields.map((field) => typedIssue(
+      'manifest_invalid_field',
+      'error',
+      field,
+      `Bundle manifest field ${field} does not match the Artifact Provenance Bundle contract.`,
+      'Repair the manifest shape and keep values as refs, hashes, metadata, or declared issue refs only.',
+    )),
+    ...invalidHashes.map((field) => typedIssue(
+      'manifest_invalid_hash_field',
+      'error',
+      field,
+      `Bundle manifest hash field ${field} is not a strict sha256 entry.`,
+      'Use { "algorithm": "sha256", "value": "<64 lowercase hex chars>" }.',
+    )),
+    ...authorityViolations.map((field) => typedIssue(
+      'authority_violation',
+      'error',
+      field,
+      `Bundle manifest authority boundary violates refs-only Ledger policy at ${field}.`,
+      'Set Ledger authority flags to the non-authoritative refs-only values and leave owner verdicts to the domain owner.',
+    )),
+    ...forbiddenBodyFields.map((field) => typedIssue(
+      'forbidden_body_field',
+      'error',
+      field,
+      `Bundle manifest contains forbidden body field ${field}.`,
+      'Remove artifact body content from the manifest and store only refs, locators, and hashes.',
+    )),
+  ]);
   const status = missingRequiredFields.length === 0
     && invalidFields.length === 0
     && invalidHashes.length === 0
@@ -422,6 +653,11 @@ function validationForLoadedBundle(loaded: LoadedBundle): BundleValidation {
     invalid_hash_fields: invalidHashes,
     authority_violations: authorityViolations,
     forbidden_body_fields: forbiddenBodyFields,
+    missing_refs: uniqueStrings(missingRefEntries.map((entry) => entry.ref)),
+    restricted_refs: uniqueStrings(restrictedRefEntries.map((entry) => entry.ref)),
+    issues,
+    issue_count: issues.length,
+    sections,
     refs: loaded.manifest.refs,
     hash_keys: Object.keys(loaded.manifest.hashes),
     forbidden_claims: loaded.manifest.authority_boundary.forbidden_claims,
@@ -462,6 +698,8 @@ function normalizeRecord(value: unknown): ArtifactProvenanceBundleRecord | null 
   if (!recordRef || !bundleId || !domainId || !artifactRef || !artifactType || !manifestRef || !bundleManifestHash) {
     return null;
   }
+  const refs = normalizeRefs(value.refs);
+  const issues = normalizeIssues(value.issues);
   return {
     surface_kind: 'opl_artifact_provenance_bundle_record',
     record_ref: recordRef,
@@ -472,8 +710,11 @@ function normalizeRecord(value: unknown): ArtifactProvenanceBundleRecord | null 
     artifact_type: artifactType,
     bundle_manifest_ref: manifestRef,
     bundle_manifest_hash: bundleManifestHash,
-    refs: normalizeRefs(value.refs),
+    refs,
     hashes: normalizeHashes(value.hashes),
+    issues,
+    issue_count: issues.length,
+    sections: normalizeSections(value.sections, refs),
     index_keys: {
       bundle_id: bundleId,
       domain_artifact: `${domainId}::${artifactRef}`,
@@ -522,11 +763,109 @@ function assertValidBundle(loaded: LoadedBundle) {
   return validation;
 }
 
+function buildLedgerEvent(input: {
+  eventKind: ArtifactProvenanceLedgerEventKind;
+  bundleId: string | null;
+  domainId: string | null;
+  artifactRef: string | null;
+  bundleManifestRef: string | null;
+  bundleManifestHash: HashEntry | null;
+  ledgerFile: string | null;
+  refs: BundleRefs;
+  sections: ArtifactProvenanceBundleSection[];
+  issues: ArtifactProvenanceBundleIssue[];
+  authorityBoundary: ArtifactProvenanceBundleAuthorityBoundary;
+}): ArtifactProvenanceLedgerEvent {
+  const occurredAt = nowIso();
+  const eventSeed = [
+    input.eventKind,
+    input.bundleId ?? '',
+    input.artifactRef ?? '',
+    input.bundleManifestRef ?? '',
+    input.bundleManifestHash?.value ?? '',
+    occurredAt,
+  ].join('\n');
+  const eventId = crypto.createHash('sha256').update(eventSeed).digest('hex').slice(0, 24);
+  return {
+    surface_kind: 'opl_artifact_provenance_ledger_event',
+    schema_version: LEDGER_EVENT_SCHEMA_VERSION,
+    event_id: eventId,
+    event_kind: input.eventKind,
+    event_ref: `opl://artifact-provenance-ledger-event/${input.eventKind}/${eventId}`,
+    occurred_at: occurredAt,
+    bundle_id: input.bundleId,
+    domain_id: input.domainId,
+    artifact_ref: input.artifactRef,
+    bundle_manifest_ref: input.bundleManifestRef,
+    bundle_manifest_hash: input.bundleManifestHash,
+    ledger_file: input.ledgerFile,
+    artifact_body_read: false,
+    refs: input.refs,
+    sections: input.sections,
+    issues: input.issues,
+    issue_count: input.issues.length,
+    authority_boundary: input.authorityBoundary,
+  };
+}
+
+function inspectRecordedArtifactProvenanceBundle(artifactRef: string) {
+  const ledger = readLedger();
+  const records = ledger.records.filter((record) => record.artifact_ref === artifactRef);
+  const latestRecord = records[0] ?? null;
+  const issues = latestRecord
+    ? latestRecord.issues
+    : [
+      typedIssue(
+        'bundle_record_not_found',
+        'warning',
+        artifactRef,
+        'No recorded Artifact Provenance Bundle was found for this artifact ref in OPL state.',
+        'Run opl ledger bundle record --bundle <path> --domain <id> --artifact <ref> after validating the bundle.',
+      ),
+    ];
+  return {
+    surface_kind: 'opl_artifact_provenance_bundle_record_inspection',
+    status: latestRecord ? 'found' : 'not_found',
+    artifact_ref: artifactRef,
+    ledger_file: ledgerPath(),
+    artifact_body_read: false,
+    record_count: records.length,
+    record: latestRecord,
+    records,
+    issues,
+    issue_count: issues.length,
+    ledger_event: buildLedgerEvent({
+      eventKind: 'inspect',
+      bundleId: latestRecord?.bundle_id ?? null,
+      domainId: latestRecord?.domain_id ?? null,
+      artifactRef,
+      bundleManifestRef: latestRecord?.bundle_manifest_ref ?? null,
+      bundleManifestHash: latestRecord?.bundle_manifest_hash ?? null,
+      ledgerFile: ledgerPath(),
+      refs: latestRecord?.refs ?? emptyRefs(),
+      sections: latestRecord?.sections ?? sectionsForRefs(emptyRefs(), [], []),
+      issues,
+      authorityBoundary: latestRecord?.authority_boundary ?? authorityBoundary(),
+    }),
+  };
+}
+
 export function validateArtifactProvenanceBundle(bundlePath: string) {
   return validationForLoadedBundle(readBundle(bundlePath));
 }
 
-export function inspectArtifactProvenanceBundle(bundlePath: string) {
+export function inspectArtifactProvenanceBundle(input: string | {
+  bundlePath?: string;
+  artifactRef?: string;
+}) {
+  const bundlePath = typeof input === 'string' ? input : input.bundlePath;
+  if (!bundlePath) {
+    const artifactRef = typeof input === 'string' ? null : optionalString(input.artifactRef);
+    if (!artifactRef) {
+      throw new FrameworkContractError('cli_usage_error', 'Artifact provenance bundle inspect requires --bundle or --artifact.', {});
+    }
+    return inspectRecordedArtifactProvenanceBundle(artifactRef);
+  }
   const loaded = readBundle(bundlePath);
   const validation = validationForLoadedBundle(loaded);
   return {
@@ -537,6 +876,22 @@ export function inspectArtifactProvenanceBundle(bundlePath: string) {
     artifact_body_read: false,
     manifest: loaded.manifest,
     validation,
+    issues: validation.issues,
+    issue_count: validation.issue_count,
+    sections: validation.sections,
+    ledger_event: buildLedgerEvent({
+      eventKind: 'inspect',
+      bundleId: loaded.manifest.bundle_id || null,
+      domainId: loaded.manifest.domain_id || null,
+      artifactRef: loaded.manifest.artifact_ref || null,
+      bundleManifestRef: loaded.manifest_path,
+      bundleManifestHash: manifestHash(loaded.manifest_text),
+      ledgerFile: ledgerPath(),
+      refs: loaded.manifest.refs,
+      sections: validation.sections,
+      issues: validation.issues,
+      authorityBoundary: loaded.manifest.authority_boundary,
+    }),
   };
 }
 
@@ -573,6 +928,9 @@ export function recordArtifactProvenanceBundle(input: {
     bundle_manifest_hash: bundleManifestHash,
     refs: loaded.manifest.refs,
     hashes: loaded.manifest.hashes,
+    issues: validation.issues,
+    issue_count: validation.issue_count,
+    sections: validation.sections,
     index_keys: {
       bundle_id: loaded.manifest.bundle_id,
       domain_artifact: `${input.domainId}::${input.artifactRef}`,
@@ -599,6 +957,19 @@ export function recordArtifactProvenanceBundle(input: {
     ledger_file: ledgerPath(),
     record,
     validation,
+    ledger_event: buildLedgerEvent({
+      eventKind: 'record',
+      bundleId: loaded.manifest.bundle_id,
+      domainId: input.domainId,
+      artifactRef: input.artifactRef,
+      bundleManifestRef: loaded.manifest_path,
+      bundleManifestHash,
+      ledgerFile: ledgerPath(),
+      refs: loaded.manifest.refs,
+      sections: validation.sections,
+      issues: validation.issues,
+      authorityBoundary: loaded.manifest.authority_boundary,
+    }),
   };
 }
 
@@ -642,24 +1013,50 @@ export function exportArtifactProvenanceBundle(input: {
     },
     validation,
     authority_boundary: loaded.manifest.authority_boundary,
+    issues: validation.issues,
+    issue_count: validation.issue_count,
+    sections: validation.sections,
+    ledger_event: buildLedgerEvent({
+      eventKind: 'export',
+      bundleId: loaded.manifest.bundle_id,
+      domainId: loaded.manifest.domain_id,
+      artifactRef: loaded.manifest.artifact_ref,
+      bundleManifestRef: loaded.manifest_path,
+      bundleManifestHash: manifestHash(loaded.manifest_text),
+      ledgerFile: ledgerPath(),
+      refs: loaded.manifest.refs,
+      sections: validation.sections,
+      issues: validation.issues,
+      authorityBoundary: loaded.manifest.authority_boundary,
+    }),
   };
 }
 
 export function doctorArtifactProvenanceBundle(bundlePath: string) {
   const validation = validateArtifactProvenanceBundle(bundlePath);
-  const attention = [
-    ...validation.missing_required_fields.map((field) => `missing:${field}`),
-    ...validation.invalid_fields.map((field) => `invalid:${field}`),
-    ...validation.invalid_hash_fields.map((field) => `invalid_hash:${field}`),
-    ...validation.authority_violations.map((field) => `authority:${field}`),
-    ...validation.forbidden_body_fields.map((field) => `body_field:${field}`),
-  ];
+  const attention = validation.issues.map((issue) => `${issue.severity}:${issue.code}:${issue.ref}`);
   return {
     surface_kind: 'opl_artifact_provenance_bundle_doctor',
     status: attention.length === 0 ? 'ok' : 'attention',
     attention,
     artifact_body_read: false,
     validation,
+    issues: validation.issues,
+    issue_count: validation.issue_count,
+    sections: validation.sections,
+    ledger_event: buildLedgerEvent({
+      eventKind: 'doctor',
+      bundleId: validation.bundle_id,
+      domainId: validation.domain_id,
+      artifactRef: validation.artifact_ref,
+      bundleManifestRef: validation.manifest_path,
+      bundleManifestHash: null,
+      ledgerFile: ledgerPath(),
+      refs: validation.refs,
+      sections: validation.sections,
+      issues: validation.issues,
+      authorityBoundary: validation.authority_boundary,
+    }),
     next_action: attention.length === 0
       ? 'no_action_required'
       : 'repair_bundle_manifest_refs_hashes_or_authority_boundary',

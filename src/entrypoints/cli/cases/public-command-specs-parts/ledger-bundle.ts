@@ -43,6 +43,20 @@ function parseBundleArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'exam
   return { bundlePath: parseRequiredOption(args, '--bundle', spec) };
 }
 
+function parseInspectArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'examples'>) {
+  assertKnownOptions(args, ['--bundle', '--artifact'], spec);
+  const hasBundle = args.includes('--bundle');
+  const hasArtifact = args.includes('--artifact');
+  if (hasBundle === hasArtifact) {
+    throw buildUsageError('ledger bundle inspect requires exactly one of --bundle or --artifact.', spec, {
+      required_one_of: ['--bundle', '--artifact'],
+    });
+  }
+  return hasBundle
+    ? { bundlePath: parseRequiredOption(args, '--bundle', spec) }
+    : { artifactRef: parseRequiredOption(args, '--artifact', spec) };
+}
+
 function parseRecordArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'examples'>) {
   assertKnownOptions(args, ['--bundle', '--domain', '--artifact'], spec);
   return {
@@ -81,13 +95,16 @@ export function buildLedgerBundleCommandSpecs(): Record<string, CommandSpec> {
     }),
   };
   specs['ledger bundle inspect'] = {
-    usage: 'opl ledger bundle inspect --bundle <path>',
-    summary: 'Inspect artifact provenance bundle refs, hashes, and authority boundary without reading artifact bodies.',
-    examples: ['opl ledger bundle inspect --bundle bundle.json --json'],
+    usage: 'opl ledger bundle inspect (--bundle <path> | --artifact <ref>)',
+    summary: 'Inspect artifact provenance bundle refs from a manifest or recorded OPL state without reading artifact bodies.',
+    examples: [
+      'opl ledger bundle inspect --bundle bundle.json --json',
+      'opl ledger bundle inspect --artifact artifact://mas/demo --json',
+    ],
     group: 'brand-ledger',
     handler: (args) => ({
       artifact_provenance_bundle_inspection: inspectArtifactProvenanceBundle(
-        parseBundleArgs(args, specs['ledger bundle inspect']).bundlePath,
+        parseInspectArgs(args, specs['ledger bundle inspect']),
       ),
     }),
   };

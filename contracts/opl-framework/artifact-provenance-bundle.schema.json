@@ -72,6 +72,12 @@
         }
       }
     },
+    "missing_refs": {
+      "$ref": "#/$defs/ref_issue_map"
+    },
+    "restricted_refs": {
+      "$ref": "#/$defs/ref_issue_map"
+    },
     "hashes": {
       "type": "object",
       "additionalProperties": {
@@ -103,6 +109,19 @@
         "type": "string",
         "minLength": 1
       }
+    },
+    "ref_issue_map": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ref_list"
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/ref_list"
+          }
+        }
+      ]
     },
     "sha256_hash": {
       "type": "object",
