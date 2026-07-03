@@ -84,11 +84,14 @@ function parsePubMedSearchArgs(args: string[], spec: CommandSpec): PubMedSearchA
 }
 
 function parseReferenceProviders(raw: string, spec: CommandSpec): ReferenceVerificationInput['providers'] {
-  const providers = raw.split(',').map((entry) => entry.trim()).filter(Boolean);
-  const allowed = new Set(['crossref', 'pubmed', 'openalex', 'semantic-scholar']);
+  const providers = raw.split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => entry === 'semantic_scholar' ? 'semantic-scholar' : entry);
+  const allowed = new Set(['crossref', 'pubmed', 'openalex', 'semantic-scholar', 'crossmark', 'publisher']);
   const invalid = providers.filter((provider) => !allowed.has(provider));
   if (providers.length === 0 || invalid.length > 0) {
-    throw buildUsageError('connect references verify requires --providers crossref,pubmed,openalex,semantic-scholar.', spec, {
+    throw buildUsageError('connect references verify requires --providers crossref,pubmed,openalex,semantic-scholar,crossmark,publisher.', spec, {
       providers,
       invalid,
     });
@@ -410,7 +413,7 @@ export function buildConnectCommandSpecs(
         ),
     },
     'connect references verify': {
-      usage: 'opl connect references verify --references-file <json> [--providers crossref,pubmed] [--cache-root <path>] [--max-retries <n>]',
+      usage: 'opl connect references verify --references-file <json> [--providers crossref,pubmed,openalex,semantic-scholar,crossmark,publisher] [--cache-root <path>] [--max-retries <n>]',
       summary: 'Verify literature reference metadata through read-only OPL Connect provider receipts.',
       examples: [
         'opl connect references verify --references-file references.json --providers crossref,pubmed --cache-root .cache/opl-connect --max-retries 1 --json',
@@ -432,7 +435,7 @@ export function buildConnectCommandSpecs(
             name: 'providers',
             flag: '--providers',
             value_kind: 'string',
-            summary: 'Comma-separated provider ids: crossref,pubmed,openalex,semantic-scholar.',
+            summary: 'Comma-separated provider ids: crossref,pubmed,openalex,semantic-scholar,crossmark,publisher.',
             default: 'crossref,pubmed',
           },
           {

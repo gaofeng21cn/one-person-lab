@@ -14,7 +14,7 @@ evidence。它服务 MAS、Workspace、本机 OPL App 和 CLI 的同一条引用
 ## 命令面
 
 ```bash
-opl connect references verify --references-file references.json --providers crossref,pubmed --cache-root .cache/opl-connect --max-retries 1 --json
+opl connect references verify --references-file references.json --providers crossref,pubmed,openalex,semantic-scholar,crossmark --cache-root .cache/opl-connect --max-retries 1 --json
 ```
 
 输入文件可以是数组，也可以是：
@@ -32,8 +32,9 @@ opl connect references verify --references-file references.json --providers cros
 }
 ```
 
-当前可执行 provider 是 Crossref 和 PubMed。OpenAlex 与 Semantic Scholar 先以
-`deferred` 返回 provider receipt requirement，避免把未接入 provider 写成已校验。
+当前可执行 provider 是 Crossref、PubMed、OpenAlex、Semantic Scholar 和
+Crossmark。Publisher/full-text lookup 先以 `deferred` 返回 provider receipt
+requirement，避免把未接入 publisher connector 写成已校验。
 
 ## 输出
 

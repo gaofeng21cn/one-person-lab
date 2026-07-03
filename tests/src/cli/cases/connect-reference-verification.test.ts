@@ -55,6 +55,40 @@ async function startFakeReferenceProviderServer() {
       return;
     }
 
+    if (url.pathname.startsWith('/openalex/works/')) {
+      response.end(JSON.stringify({
+        id: 'https://openalex.org/W123',
+        doi: 'https://doi.org/10.1234/example',
+        title: 'Provider receipt cache and retry evidence',
+        publication_year: 2026,
+        primary_location: {
+          source: {
+            display_name: 'Journal of Connector Evidence',
+          },
+        },
+        ids: {
+          pmid: 'https://pubmed.ncbi.nlm.nih.gov/987654',
+        },
+      }));
+      return;
+    }
+
+    if (url.pathname.startsWith('/semantic/paper/')) {
+      response.end(JSON.stringify({
+        paperId: 'S2-987654',
+        externalIds: {
+          DOI: '10.1234/example',
+          PubMed: '987654',
+        },
+        title: 'Provider receipt cache and retry evidence',
+        year: 2026,
+        publicationVenue: {
+          name: 'Journal of Connector Evidence',
+        },
+      }));
+      return;
+    }
+
     response.statusCode = 404;
     response.end(JSON.stringify({ error: 'not_found' }));
   });
@@ -115,10 +149,14 @@ test('connect references verify returns provider receipts, cache metadata, retri
         request: { providers: string[]; max_retries: number };
         provider_evidence: Array<{
           reference_id: string;
+          provider: string;
           provider_id: string;
+          lookup_status: string;
           status: string;
           match_basis: string;
           receipt_ref: string;
+          matched_identifiers: Record<string, string>;
+          metadata: { title?: string; year?: string; journal?: string };
           normalized: { doi: string | null; pmid: string | null; title: string | null };
           cache: { status: string; write_status: string; cache_ref: string | null };
           retry_attempts: Array<{ attempt: number; status: string; http_status: number | null }>;
@@ -154,14 +192,20 @@ test('connect references verify returns provider receipts, cache metadata, retri
     assert.ok(crossref);
     assert.ok(pubmed);
     assert.equal(crossref.status, 'matched');
+    assert.equal(crossref.provider, 'crossref');
+    assert.equal(crossref.lookup_status, 'found');
     assert.equal(crossref.match_basis, 'doi');
     assert.equal(crossref.normalized.doi, '10.1234/example');
+    assert.equal(crossref.matched_identifiers.doi, '10.1234/example');
+    assert.equal(crossref.metadata.title, 'Provider receipt cache and retry evidence');
     assert.equal(crossref.cache.status, 'miss');
     assert.equal(crossref.cache.write_status, 'written');
     assert.equal(crossref.retry_attempts.length, 2);
     assert.deepEqual(crossref.retry_attempts.map((entry) => entry.status), ['retryable_error', 'success']);
     assert.equal(crossref.receipt_ref.startsWith('opl://connect/references/verify/'), true);
     assert.equal(pubmed.status, 'matched');
+    assert.equal(pubmed.provider, 'pubmed');
+    assert.equal(pubmed.lookup_status, 'found');
     assert.equal(pubmed.match_basis, 'pmid');
     assert.equal(pubmed.normalized.pmid, '987654');
     assert.equal(pubmed.cache.status, 'miss');
@@ -195,7 +239,66 @@ test('connect references verify returns provider receipts, cache metadata, retri
   }
 });
 
-test('connect references verify declares deferred providers without pretending provider truth', async () => {
+test('connect references verify covers OpenAlex and Semantic Scholar provider receipts', async () => {
+  const fakeProviders = await startFakeReferenceProviderServer();
+  try {
+    const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-reference-verification-provider-coverage-'));
+    const referencesFile = path.join(fixtureRoot, 'references.json');
+    fs.writeFileSync(referencesFile, JSON.stringify([
+      {
+        id: 'ref-1',
+        doi: '10.1234/example',
+        title: 'Provider receipt cache and retry evidence',
+      },
+    ]), 'utf8');
+
+    const output = await runCliAsync([
+      'connect',
+      'references',
+      'verify',
+      '--references-file',
+      referencesFile,
+      '--providers',
+      'openalex,semantic_scholar,crossmark',
+      '--max-retries',
+      '1',
+    ], {
+      OPL_CONNECT_OPENALEX_API_BASE: `${fakeProviders.baseUrl}/openalex`,
+      OPL_CONNECT_SEMANTIC_SCHOLAR_API_BASE: `${fakeProviders.baseUrl}/semantic`,
+      OPL_CONNECT_CROSSREF_API_BASE: `${fakeProviders.baseUrl}/crossref`,
+    }) as {
+      opl_connect_reference_verification: {
+        request: { providers: string[] };
+        provider_evidence: Array<{
+          provider: string;
+          provider_id: string;
+          lookup_status: string;
+          status: string;
+          matched_identifiers: Record<string, string>;
+          metadata: { title?: string; journal?: string };
+          retraction_or_update_flags: Record<string, unknown>;
+        }>;
+        provider_receipts: Array<{ provider_id: string; status: string }>;
+      };
+    };
+
+    const result = output.opl_connect_reference_verification;
+    assert.deepEqual(result.request.providers, ['openalex', 'semantic-scholar', 'crossmark']);
+    assert.deepEqual(result.provider_evidence.map((entry) => [entry.provider, entry.lookup_status]), [
+      ['openalex', 'found'],
+      ['semantic_scholar', 'found'],
+      ['crossmark', 'found'],
+    ]);
+    assert.equal(result.provider_evidence[0].matched_identifiers.openalex, 'https://openalex.org/W123');
+    assert.equal(result.provider_evidence[1].matched_identifiers.semantic_scholar, 'S2-987654');
+    assert.equal(result.provider_evidence[2].retraction_or_update_flags.crossmark_metadata_source, 'crossref_rest_api');
+    assert.equal(result.provider_receipts.every((entry) => entry.status === 'matched'), true);
+  } finally {
+    await fakeProviders.close();
+  }
+});
+
+test('connect references verify declares publisher connector requirement without pretending provider truth', async () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-reference-verification-deferred-'));
   const referencesFile = path.join(fixtureRoot, 'references.json');
   fs.writeFileSync(referencesFile, JSON.stringify([
@@ -212,22 +315,22 @@ test('connect references verify declares deferred providers without pretending p
     '--references-file',
     referencesFile,
     '--providers',
-    'openalex,semantic-scholar',
+    'publisher',
   ]) as {
     opl_connect_reference_verification: {
-      provider_evidence: Array<{ provider_id: string; status: string; deferred_reason: string }>;
+      provider_evidence: Array<{ provider: string; provider_id: string; lookup_status: string; status: string; deferred_reason: string }>;
       deferred_provider_receipt_requirements: Array<{ provider_id: string; status: string }>;
     };
   };
 
   const result = output.opl_connect_reference_verification;
   assert.deepEqual(result.provider_evidence.map((entry) => [entry.provider_id, entry.status]), [
-    ['openalex', 'deferred'],
-    ['semantic-scholar', 'deferred'],
+    ['publisher', 'deferred'],
   ]);
+  assert.equal(result.provider_evidence[0].provider, 'publisher');
+  assert.equal(result.provider_evidence[0].lookup_status, 'deferred');
   assert.equal(result.provider_evidence.every((entry) => entry.deferred_reason.includes('provider receipt requirement')), true);
   assert.deepEqual(result.deferred_provider_receipt_requirements.map((entry) => entry.provider_id), [
-    'openalex',
-    'semantic-scholar',
+    'publisher',
   ]);
 });

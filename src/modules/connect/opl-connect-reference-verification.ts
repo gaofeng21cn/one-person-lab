@@ -20,15 +20,28 @@ type ReferenceRecord = {
   title: string | null;
 };
 
-type ProviderId = 'crossref' | 'pubmed' | 'openalex' | 'semantic-scholar';
+type ProviderId = 'crossref' | 'pubmed' | 'openalex' | 'semantic-scholar' | 'crossmark' | 'publisher';
 type RetryAttempt = { attempt: number; status: string; http_status: number | null };
 type ProviderEvidence = {
   reference_id: string;
+  provider: 'crossref' | 'pubmed' | 'openalex' | 'semantic_scholar' | 'crossmark' | 'publisher';
   provider_id: ProviderId;
+  lookup_status: 'found' | 'not_found' | 'deferred' | 'error';
   status: 'matched' | 'deferred';
   deferred_reason?: string;
   match_basis: 'doi' | 'pmid' | 'title' | 'none';
   receipt_ref: string;
+  matched_identifiers: Record<string, string>;
+  metadata: {
+    title?: string;
+    year?: string;
+    journal?: string;
+  };
+  retraction_or_update_flags: Record<string, unknown>;
+  error?: {
+    code: string;
+    message: string;
+  };
   normalized: {
     doi: string | null;
     pmid: string | null;
@@ -45,6 +58,8 @@ type ProviderEvidenceDraft = Omit<ProviderEvidence, 'receipt_ref'>;
 
 const DEFAULT_CROSSREF_API_BASE = 'https://api.crossref.org';
 const DEFAULT_PUBMED_API_BASE = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
+const DEFAULT_OPENALEX_API_BASE = 'https://api.openalex.org';
+const DEFAULT_SEMANTIC_SCHOLAR_API_BASE = 'https://api.semanticscholar.org/graph/v1';
 const DEFAULT_TIMEOUT_MS = 30_000;
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -68,8 +83,9 @@ function normalizeProviders(providers: string[]) {
   const entries = providers.flatMap((entry) => entry.split(','))
     .map((entry) => entry.trim().toLowerCase())
     .filter(Boolean);
-  const unique = [...new Set(entries.length > 0 ? entries : ['crossref', 'pubmed'])];
-  const allowed = new Set(['crossref', 'pubmed', 'openalex', 'semantic-scholar']);
+  const unique = [...new Set(entries.length > 0 ? entries : ['crossref', 'pubmed'])]
+    .map((entry) => entry === 'semantic_scholar' ? 'semantic-scholar' : entry);
+  const allowed = new Set(['crossref', 'pubmed', 'openalex', 'semantic-scholar', 'crossmark', 'publisher']);
   const unsupported = unique.filter((entry) => !allowed.has(entry));
   if (unsupported.length > 0) {
     throw new FrameworkContractError('codex_command_failed', 'Unsupported OPL Connect reference verification provider.', {
@@ -189,10 +205,19 @@ async function fetchJsonWithRetry(url: URL, maxRetries: number, providerId: Prov
 function deferredEvidence(reference: ReferenceRecord, providerId: ProviderId, reason: string): ProviderEvidenceDraft {
   return {
     reference_id: reference.id,
+    provider: providerName(providerId),
     provider_id: providerId,
+    lookup_status: 'deferred',
     status: 'deferred',
     deferred_reason: reason,
     match_basis: 'none',
+    matched_identifiers: identifiersFromReference(reference),
+    metadata: metadataFromReference(reference),
+    retraction_or_update_flags: {},
+    error: {
+      code: 'provider_receipt_requirement_deferred',
+      message: reason,
+    },
     normalized: {
       doi: reference.doi,
       pmid: reference.pmid,
@@ -228,15 +253,26 @@ async function verifyCrossref(reference: ReferenceRecord, maxRetries: number, ti
     return deferredEvidence(reference, 'crossref', 'crossref provider did not return a matching DOI/title item');
   }
   const titleList = Array.isArray(item.title) ? item.title.map(asString).filter(Boolean) : [];
+  const doi = normalizeDoi(asString(item.DOI)) ?? reference.doi;
+  const title = titleList[0] ?? reference.title;
   return {
     reference_id: reference.id,
+    provider: 'crossref',
     provider_id: 'crossref',
+    lookup_status: 'found',
     status: 'matched',
     match_basis: reference.doi ? 'doi' : 'title',
+    matched_identifiers: compactIdentifiers({ doi, pmid: reference.pmid }),
+    metadata: compactMetadata({
+      title,
+      year: crossrefYear(item),
+      journal: firstString(item['container-title']),
+    }),
+    retraction_or_update_flags: crossrefFlags(item),
     normalized: {
-      doi: normalizeDoi(asString(item.DOI)) ?? reference.doi,
+      doi,
       pmid: reference.pmid,
-      title: titleList[0] ?? reference.title,
+      title,
     },
     cache: {
       status: 'disabled',
@@ -244,6 +280,22 @@ async function verifyCrossref(reference: ReferenceRecord, maxRetries: number, ti
       cache_ref: null,
     },
     retry_attempts: retryAttempts,
+  };
+}
+
+async function verifyCrossmark(reference: ReferenceRecord, maxRetries: number, timeout: number): Promise<ProviderEvidenceDraft> {
+  if (!reference.doi) {
+    return deferredEvidence(reference, 'crossmark', 'crossmark provider receipt requirement needs a DOI');
+  }
+  const evidence = await verifyCrossref(reference, maxRetries, timeout);
+  return {
+    ...evidence,
+    provider: 'crossmark',
+    provider_id: 'crossmark',
+    retraction_or_update_flags: {
+      ...evidence.retraction_or_update_flags,
+      crossmark_metadata_source: 'crossref_rest_api',
+    },
   };
 }
 
@@ -291,9 +343,18 @@ async function verifyPubMed(reference: ReferenceRecord, maxRetries: number, time
     .find((entry) => entry.idtype === 'doi')?.value ?? null) ?? reference.doi;
   return {
     reference_id: reference.id,
+    provider: 'pubmed',
     provider_id: 'pubmed',
+    lookup_status: 'found',
     status: 'matched',
     match_basis: matchBasis === 'none' ? 'pmid' : matchBasis,
+    matched_identifiers: compactIdentifiers({ doi, pmid }),
+    metadata: compactMetadata({
+      title: asString(item.title) ?? reference.title,
+      year: yearFromText(asString(item.pubdate) ?? asString(item.sortpubdate)),
+      journal: asString(item.fulljournalname) ?? asString(item.source),
+    }),
+    retraction_or_update_flags: pubmedFlags(item),
     normalized: {
       doi,
       pmid,
@@ -308,10 +369,118 @@ async function verifyPubMed(reference: ReferenceRecord, maxRetries: number, time
   };
 }
 
+async function verifyOpenAlex(reference: ReferenceRecord, maxRetries: number, timeout: number): Promise<ProviderEvidenceDraft> {
+  if (!reference.doi && !reference.title) {
+    return deferredEvidence(reference, 'openalex', 'openalex provider receipt requirement needs a DOI or title');
+  }
+  const baseUrl = apiBase('OPL_CONNECT_OPENALEX_API_BASE', DEFAULT_OPENALEX_API_BASE);
+  const url = reference.doi
+    ? new URL(`${baseUrl}/works/${encodeURIComponent(`https://doi.org/${reference.doi}`)}`)
+    : new URL(`${baseUrl}/works`);
+  if (!reference.doi && reference.title) {
+    url.searchParams.set('search', reference.title);
+    url.searchParams.set('per-page', '1');
+  }
+  const { json, retryAttempts } = await fetchJsonWithRetry(url, maxRetries, 'openalex', timeout);
+  const root = asRecord(json);
+  const item = Array.isArray(root.results) ? asRecord(root.results[0]) : root;
+  if (!asString(item.id)) {
+    return deferredEvidence(reference, 'openalex', 'openalex provider did not return a matching work item');
+  }
+  const ids = asRecord(item.ids);
+  const primaryLocation = asRecord(item.primary_location);
+  const source = asRecord(primaryLocation.source);
+  const doi = normalizeDoi(asString(item.doi) ?? asString(ids.doi)) ?? reference.doi;
+  const pmid = pubmedIdFromUrl(asString(ids.pmid)) ?? reference.pmid;
+  const title = asString(item.title) ?? asString(item.display_name) ?? reference.title;
+  return {
+    reference_id: reference.id,
+    provider: 'openalex',
+    provider_id: 'openalex',
+    lookup_status: 'found',
+    status: 'matched',
+    match_basis: reference.doi ? 'doi' : 'title',
+    matched_identifiers: compactIdentifiers({ doi, pmid, openalex: asString(item.id) }),
+    metadata: compactMetadata({
+      title,
+      year: asString(item.publication_year),
+      journal: asString(source.display_name),
+    }),
+    retraction_or_update_flags: item.is_retracted === true ? { retracted: true } : {},
+    normalized: {
+      doi,
+      pmid,
+      title,
+    },
+    cache: {
+      status: 'disabled',
+      write_status: 'skipped',
+      cache_ref: null,
+    },
+    retry_attempts: retryAttempts,
+  };
+}
+
+async function verifySemanticScholar(reference: ReferenceRecord, maxRetries: number, timeout: number): Promise<ProviderEvidenceDraft> {
+  if (!reference.doi && !reference.title) {
+    return deferredEvidence(reference, 'semantic-scholar', 'semantic-scholar provider receipt requirement needs a DOI or title');
+  }
+  const baseUrl = apiBase('OPL_CONNECT_SEMANTIC_SCHOLAR_API_BASE', DEFAULT_SEMANTIC_SCHOLAR_API_BASE);
+  const fields = 'paperId,externalIds,title,year,venue,publicationVenue';
+  const url = reference.doi
+    ? new URL(`${baseUrl}/paper/${encodeURIComponent(`DOI:${reference.doi}`)}`)
+    : new URL(`${baseUrl}/paper/search`);
+  url.searchParams.set('fields', fields);
+  if (!reference.doi && reference.title) {
+    url.searchParams.set('query', reference.title);
+    url.searchParams.set('limit', '1');
+  }
+  const { json, retryAttempts } = await fetchJsonWithRetry(url, maxRetries, 'semantic-scholar', timeout);
+  const root = asRecord(json);
+  const item = Array.isArray(root.data) ? asRecord(root.data[0]) : root;
+  if (!asString(item.paperId)) {
+    return deferredEvidence(reference, 'semantic-scholar', 'semantic-scholar provider did not return a matching paper item');
+  }
+  const externalIds = asRecord(item.externalIds);
+  const venue = asRecord(item.publicationVenue);
+  const doi = normalizeDoi(asString(externalIds.DOI) ?? asString(externalIds.doi)) ?? reference.doi;
+  const pmid = asString(externalIds.PubMed) ?? asString(externalIds.PMID) ?? reference.pmid;
+  const title = asString(item.title) ?? reference.title;
+  return {
+    reference_id: reference.id,
+    provider: 'semantic_scholar',
+    provider_id: 'semantic-scholar',
+    lookup_status: 'found',
+    status: 'matched',
+    match_basis: reference.doi ? 'doi' : 'title',
+    matched_identifiers: compactIdentifiers({ doi, pmid, semantic_scholar: asString(item.paperId) }),
+    metadata: compactMetadata({
+      title,
+      year: asString(item.year),
+      journal: asString(venue.name) ?? asString(item.venue),
+    }),
+    retraction_or_update_flags: {},
+    normalized: {
+      doi,
+      pmid,
+      title,
+    },
+    cache: {
+      status: 'disabled',
+      write_status: 'skipped',
+      cache_ref: null,
+    },
+    retry_attempts: retryAttempts,
+  };
+}
+
 async function verifyProvider(reference: ReferenceRecord, providerId: ProviderId, maxRetries: number, timeout: number): Promise<ProviderEvidenceDraft> {
   if (providerId === 'crossref') return verifyCrossref(reference, maxRetries, timeout);
   if (providerId === 'pubmed') return verifyPubMed(reference, maxRetries, timeout);
-  return deferredEvidence(reference, providerId, `${providerId} provider receipt requirement is not implemented in the local connector yet`);
+  if (providerId === 'openalex') return verifyOpenAlex(reference, maxRetries, timeout);
+  if (providerId === 'semantic-scholar') return verifySemanticScholar(reference, maxRetries, timeout);
+  if (providerId === 'crossmark') return verifyCrossmark(reference, maxRetries, timeout);
+  return deferredEvidence(reference, providerId, 'publisher provider receipt requirement needs a publisher/full-text connector');
 }
 
 function withReceiptRef(evidence: ProviderEvidenceDraft): ProviderEvidence {
@@ -366,6 +535,76 @@ function receiptRef(evidence: { reference_id: string; provider_id: string; norma
     normalized: evidence.normalized,
   })).digest('hex');
   return `opl://connect/references/verify/${digest}`;
+}
+
+function providerName(providerId: ProviderId): ProviderEvidence['provider'] {
+  return providerId === 'semantic-scholar' ? 'semantic_scholar' : providerId;
+}
+
+function identifiersFromReference(reference: ReferenceRecord): Record<string, string> {
+  return compactIdentifiers({ doi: reference.doi, pmid: reference.pmid });
+}
+
+function metadataFromReference(reference: ReferenceRecord): ProviderEvidence['metadata'] {
+  return compactMetadata({ title: reference.title });
+}
+
+function compactIdentifiers(input: Record<string, string | null | undefined>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(input).filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0),
+  );
+}
+
+function compactMetadata(input: { title?: string | null; year?: string | null; journal?: string | null }): ProviderEvidence['metadata'] {
+  return Object.fromEntries(
+    Object.entries(input).filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0),
+  );
+}
+
+function firstString(value: unknown): string | null {
+  if (Array.isArray(value)) return value.map(asString).find(Boolean) ?? null;
+  return asString(value);
+}
+
+function crossrefYear(item: Record<string, unknown>): string | null {
+  for (const key of ['published-print', 'published-online', 'published', 'created', 'deposited']) {
+    const payload = asRecord(item[key]);
+    const dateParts = payload['date-parts'];
+    if (!Array.isArray(dateParts) || !Array.isArray(dateParts[0])) continue;
+    const year = asString(dateParts[0][0]);
+    if (year) return yearFromText(year);
+  }
+  return null;
+}
+
+function yearFromText(value: string | null): string | null {
+  return value?.match(/\d{4}/)?.[0] ?? null;
+}
+
+function crossrefFlags(item: Record<string, unknown>): Record<string, unknown> {
+  const relation = asRecord(item.relation);
+  const flags: Record<string, unknown> = {};
+  if (relation['is-retracted-by'] || relation['is-withdrawn-by']) flags.retracted = true;
+  if (relation['is-corrected-by'] || relation['has-update']) flags.has_update = true;
+  if (Array.isArray(item['update-to']) && item['update-to'].length > 0) flags.has_update = true;
+  if (asString(item['update-policy'])) flags.crossmark_update_policy = true;
+  return flags;
+}
+
+function pubmedFlags(item: Record<string, unknown>): Record<string, unknown> {
+  const publicationTypes = Array.isArray(item.pubtype)
+    ? item.pubtype.map((entry) => String(entry).toLowerCase()).join(' ')
+    : '';
+  if (publicationTypes.includes('retracted publication')) return { retracted: true };
+  if (publicationTypes.includes('published erratum') || publicationTypes.includes('corrected and republished article')) {
+    return { correction: true };
+  }
+  return {};
+}
+
+function pubmedIdFromUrl(value: string | null): string | null {
+  if (!value) return null;
+  return value.replace(/^https:\/\/pubmed\.ncbi\.nlm\.nih\.gov\//, '').replace(/\/$/, '') || null;
 }
 
 function noAuthorityBoundary() {
