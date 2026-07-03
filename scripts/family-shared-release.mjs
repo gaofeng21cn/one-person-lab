@@ -4,6 +4,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { parseArgs as parseNodeArgs } from 'node:util';
 import { cloneJsonPayload, readJsonFile } from './script-json-boundary.mjs';
 
 export const SHARED_OWNER_RELEASE_CONTRACT_PATH = 'contracts/family-release/shared-owner-release.json';
@@ -511,35 +512,24 @@ export function releaseFamilySharedPins({
   };
 }
 
-function parseArgs(argv, { repoRoot = repoRootFromImportMeta() } = {}) {
-  const [command, ...rest] = argv;
-  const repoOverrides = [];
-  let familyRoot;
-  let ownerCommit;
-  for (let index = 0; index < rest.length; index += 1) {
-    const token = rest[index];
-    if (token === '--family-root') {
-      familyRoot = path.resolve(rest[index + 1]);
-      index += 1;
-      continue;
-    }
-    if (token === '--owner-commit') {
-      ownerCommit = rest[index + 1];
-      index += 1;
-      continue;
-    }
-    if (token === '--repo') {
-      repoOverrides.push(rest[index + 1]);
-      index += 1;
-      continue;
-    }
-    throw new Error(`unknown argument: ${token}`);
-  }
+function parseCliOptions(argv, { repoRoot = repoRootFromImportMeta() } = {}) {
+  const { values, positionals } = parseNodeArgs({
+    args: argv,
+    options: {
+      'family-root': { type: 'string' },
+      'owner-commit': { type: 'string' },
+      repo: { type: 'string', multiple: true, default: [] },
+    },
+    strict: true,
+    allowPositionals: true,
+  });
   return {
-    command: command ?? 'check',
-    familyRoot: familyRoot ?? resolveDefaultFamilyRoot({ repoRoot }),
-    ownerCommit,
-    repoOverrides,
+    command: positionals[0] ?? 'check',
+    familyRoot: values['family-root']
+      ? path.resolve(values['family-root'])
+      : resolveDefaultFamilyRoot({ repoRoot }),
+    ownerCommit: values['owner-commit'],
+    repoOverrides: values.repo,
   };
 }
 
@@ -550,7 +540,7 @@ export function runFamilySharedReleaseCli(
     validatePublishedOwnerCommit = assertPublishedOwnerCommitReachable,
   } = {},
 ) {
-  const parsed = parseArgs(argv, { repoRoot });
+  const parsed = parseCliOptions(argv, { repoRoot });
   const contract = loadSharedOwnerReleaseContract({ repoRoot });
   if (parsed.command === 'check') {
     validatePublishedOwnerCommit({

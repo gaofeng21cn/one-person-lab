@@ -2,11 +2,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseArgs as parseNodeArgs } from 'node:util';
 import ts from 'typescript';
 import { readJsonFile } from './script-json-boundary.mjs';
 
 const defaultRepoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const args = parseArgs(process.argv.slice(2));
+const args = parseCliOptions(process.argv.slice(2));
 const repoRoot = args.root ? path.resolve(args.root) : defaultRepoRoot;
 const contractPath = path.join(repoRoot, 'contracts', 'opl-framework', 'source-module-map.json');
 const contract = readJson(contractPath);
@@ -40,54 +41,35 @@ const summary = {
 
 process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
 
-function parseArgs(argv) {
+function parseCliOptions(argv) {
+  const { values } = parseNodeArgs({
+    args: argv,
+    options: {
+      root: { type: 'string' },
+      apply: { type: 'boolean', default: false },
+      'exports-only': { type: 'boolean', default: false },
+      'imports-only': { type: 'boolean', default: false },
+      'source-module': { type: 'string', multiple: true, default: [] },
+      'source-modules': { type: 'string', multiple: true, default: [] },
+    },
+    strict: true,
+    allowPositionals: false,
+  });
   const parsed = {
-    root: null,
-    apply: false,
-    exportsOnly: false,
-    importsOnly: false,
-    sourceModules: [],
+    root: values.root ?? null,
+    apply: values.apply === true,
+    exportsOnly: values['exports-only'] === true,
+    importsOnly: values['imports-only'] === true,
+    sourceModules: [
+      ...values['source-module'],
+      ...values['source-modules'].flatMap((entry) => entry.split(',')),
+    ],
   };
-  for (let index = 0; index < argv.length; index += 1) {
-    const value = argv[index];
-    if (value === '--root') {
-      parsed.root = readArgValue(argv, index, '--root');
-      index += 1;
-    } else if (value.startsWith('--root=')) {
-      parsed.root = value.slice('--root='.length);
-    } else if (value === '--apply') {
-      parsed.apply = true;
-    } else if (value === '--exports-only') {
-      parsed.exportsOnly = true;
-    } else if (value === '--imports-only') {
-      parsed.importsOnly = true;
-    } else if (value === '--source-module') {
-      parsed.sourceModules.push(readArgValue(argv, index, '--source-module'));
-      index += 1;
-    } else if (value.startsWith('--source-module=')) {
-      parsed.sourceModules.push(value.slice('--source-module='.length));
-    } else if (value === '--source-modules') {
-      parsed.sourceModules.push(...readArgValue(argv, index, '--source-modules').split(','));
-      index += 1;
-    } else if (value.startsWith('--source-modules=')) {
-      parsed.sourceModules.push(...value.slice('--source-modules='.length).split(','));
-    } else {
-      fail(`source module public imports: unknown argument ${value}`);
-    }
-  }
   if (parsed.exportsOnly && parsed.importsOnly) {
     fail('source module public imports: --exports-only and --imports-only cannot be used together');
   }
   parsed.sourceModules = [...new Set(parsed.sourceModules.map((entry) => entry.trim()).filter(Boolean))];
   return parsed;
-}
-
-function readArgValue(argv, index, flag) {
-  const value = argv[index + 1];
-  if (!value) {
-    fail(`source module public imports: ${flag} requires a value`);
-  }
-  return value;
 }
 
 function readJson(file) {

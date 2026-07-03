@@ -5,7 +5,7 @@ import { readJsonFile } from './script-json-boundary.mjs';
 
 import { parseRequiredValueOptions } from './required-value-options.mjs';
 
-function parseArgs(argv) {
+function parseCliOptions(argv) {
   const parsed = {
     manifest: null,
   };
@@ -229,7 +229,7 @@ function validateWorkflow(manifest, manifestPath, failures) {
 }
 
 function main() {
-  const options = parseArgs(process.argv.slice(2));
+const options = parseCliOptions(process.argv.slice(2));
   const manifest = readJsonFile(options.manifest);
   const failures = validateManifest(manifest);
   validateWorkflow(manifest, options.manifest, failures);

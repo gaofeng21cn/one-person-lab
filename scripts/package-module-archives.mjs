@@ -16,7 +16,7 @@ import {
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-function parseArgs(argv) {
+function parseCliOptions(argv) {
   const parsed = {
     version: process.env.OPL_RELEASE_VERSION || undefined,
     outDir: path.join(repoRoot, 'dist', 'packages'),
@@ -189,7 +189,7 @@ function copyReleaseDisciplineWorkflows(outDir) {
 }
 
 function main() {
-  const options = parseArgs(process.argv.slice(2));
+const options = parseCliOptions(process.argv.slice(2));
   const rollbackVersion = readPreviousManifestVersion(options.previousManifest);
   const retainVersions = normalizeRetainVersions(options.retainVersions);
   const manifest = buildOplPackageManifest({

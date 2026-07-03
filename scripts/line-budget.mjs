@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { parseArgs as parseNodeArgs } from 'node:util';
 
 import { countLines } from './source-line-count.mjs';
 import { readJsonFile } from './script-json-boundary.mjs';
@@ -9,8 +10,9 @@ const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '
 const CODE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.mts', '.cts', '.py', '.sh', '.bash', '.zsh', '.rs', '.go']);
 const IGNORED_PARTS = new Set(['node_modules', 'dist', 'build', 'coverage', '.venv', '__pycache__']);
 const IGNORED_SUFFIXES = ['.min.js'];
+const STRICT_FLAG = '--strict';
 
-const args = parseArgs(process.argv.slice(2));
+const args = parseCliOptions(process.argv.slice(2));
 const strictMode = args.strict || strictEnvEnabled(process.env.OPL_LINE_BUDGET_STRICT);
 const targetRoot = args.root ? path.resolve(args.root) : repoRoot;
 const baselinePath = args.baseline
@@ -95,48 +97,33 @@ function isCodeFile(relativePath) {
   return CODE_EXTENSIONS.has(path.extname(relativePath));
 }
 
-function parseArgs(argv) {
-  const parsed = {
-    mode: 'check',
-    root: null,
-    baseline: null,
-    strict: false,
-  };
-  for (let index = 0; index < argv.length; index += 1) {
-    const value = argv[index];
-    if (value === '--list') {
-      parsed.mode = 'list';
-    } else if (value === '--strict') {
-      parsed.strict = true;
-    } else if (value === '--root') {
-      parsed.root = readArgValue(argv, index, '--root');
-      index += 1;
-    } else if (value.startsWith('--root=')) {
-      parsed.root = value.slice('--root='.length);
-    } else if (value === '--baseline') {
-      parsed.baseline = readArgValue(argv, index, '--baseline');
-      index += 1;
-    } else if (value.startsWith('--baseline=')) {
-      parsed.baseline = value.slice('--baseline='.length);
-    } else {
-      process.stderr.write(`line budget: unknown argument ${value}\n`);
-      process.exit(1);
-    }
+function parseCliOptions(argv) {
+  try {
+    const { values } = parseNodeArgs({
+      args: argv,
+      options: {
+        list: { type: 'boolean', default: false },
+        [STRICT_FLAG.slice(2)]: { type: 'boolean', default: false },
+        root: { type: 'string' },
+        baseline: { type: 'string' },
+      },
+      strict: true,
+      allowPositionals: false,
+    });
+    return {
+      mode: values.list ? 'list' : 'check',
+      root: values.root ?? null,
+      baseline: values.baseline ?? null,
+      strict: values.strict === true,
+    };
+  } catch (error) {
+    process.stderr.write(`line budget: ${error instanceof Error ? error.message : String(error)}\n`);
+    process.exit(1);
   }
-  return parsed;
 }
 
 function strictEnvEnabled(value) {
   return value === '1' || value === 'true' || value === 'yes';
-}
-
-function readArgValue(argv, index, flag) {
-  const value = argv[index + 1];
-  if (!value) {
-    process.stderr.write(`line budget: ${flag} requires a value\n`);
-    process.exit(1);
-  }
-  return value;
 }
 
 function loadContract(file) {

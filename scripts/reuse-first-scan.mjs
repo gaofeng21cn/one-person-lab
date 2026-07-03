@@ -3,9 +3,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { parseArgs as parseNodeArgs } from 'node:util';
+
+import { readJsonFile } from './script-json-boundary.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const args = parseArgs(process.argv.slice(2));
+const args = parseCliOptions(process.argv.slice(2));
 const root = args.root ? path.resolve(args.root) : repoRoot;
 const contractPath = args.contract
   ? path.resolve(args.contract)
@@ -75,53 +78,30 @@ if (args.strict && hardGateFindingCount > 0) {
   process.exit(1);
 }
 
-function parseArgs(argv) {
+function parseCliOptions(argv) {
+  const { values } = parseNodeArgs({
+    args: argv,
+    options: {
+      root: { type: 'string' },
+      contract: { type: 'string' },
+      'historical-worklist': { type: 'string' },
+      mode: { type: 'string', default: 'full' },
+      'diff-ref': { type: 'string', default: 'origin/main' },
+      'max-findings': { type: 'string', default: '200' },
+      strict: { type: 'boolean', default: false },
+    },
+    strict: true,
+    allowPositionals: false,
+  });
   const parsed = {
-    root: null,
-    contract: null,
-    mode: 'full',
-    diffRef: 'origin/main',
-    strict: false,
-    maxFindings: 200,
+    root: values.root ?? null,
+    contract: values.contract ?? null,
+    historicalWorklist: values['historical-worklist'] ?? null,
+    mode: values.mode,
+    diffRef: values['diff-ref'],
+    strict: values.strict === true,
+    maxFindings: readPositiveInteger(values['max-findings'], '--max-findings'),
   };
-  for (let index = 0; index < argv.length; index += 1) {
-    const value = argv[index];
-    if (value === '--root') {
-      parsed.root = readArgValue(argv, index, '--root');
-      index += 1;
-    } else if (value.startsWith('--root=')) {
-      parsed.root = value.slice('--root='.length);
-    } else if (value === '--contract') {
-      parsed.contract = readArgValue(argv, index, '--contract');
-      index += 1;
-    } else if (value.startsWith('--contract=')) {
-      parsed.contract = value.slice('--contract='.length);
-    } else if (value === '--historical-worklist') {
-      parsed.historicalWorklist = readArgValue(argv, index, '--historical-worklist');
-      index += 1;
-    } else if (value.startsWith('--historical-worklist=')) {
-      parsed.historicalWorklist = value.slice('--historical-worklist='.length);
-    } else if (value === '--mode') {
-      parsed.mode = readArgValue(argv, index, '--mode');
-      index += 1;
-    } else if (value.startsWith('--mode=')) {
-      parsed.mode = value.slice('--mode='.length);
-    } else if (value === '--diff-ref') {
-      parsed.diffRef = readArgValue(argv, index, '--diff-ref');
-      index += 1;
-    } else if (value.startsWith('--diff-ref=')) {
-      parsed.diffRef = value.slice('--diff-ref='.length);
-    } else if (value === '--max-findings') {
-      parsed.maxFindings = readPositiveInteger(readArgValue(argv, index, '--max-findings'), '--max-findings');
-      index += 1;
-    } else if (value.startsWith('--max-findings=')) {
-      parsed.maxFindings = readPositiveInteger(value.slice('--max-findings='.length), '--max-findings');
-    } else if (value === '--strict') {
-      parsed.strict = true;
-    } else {
-      fail(`reuse-first scan: unknown argument ${value}`);
-    }
-  }
   if (!['full', 'diff'].includes(parsed.mode)) {
     fail('reuse-first scan: --mode must be full or diff');
   }
@@ -136,18 +116,10 @@ function readPositiveInteger(value, flag) {
   return parsed;
 }
 
-function readArgValue(argv, index, flag) {
-  const value = argv[index + 1];
-  if (!value) {
-    fail(`reuse-first scan: ${flag} requires a value`);
-  }
-  return value;
-}
-
 function readContract(file) {
   let parsed;
   try {
-    parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+    parsed = readJsonFile(file);
   } catch (error) {
     fail(`reuse-first scan: failed to read ${file}: ${error.message}`);
   }
@@ -166,7 +138,7 @@ function readHistoricalWorklist(file) {
   }
   let parsed;
   try {
-    parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+    parsed = readJsonFile(file);
   } catch (error) {
     fail(`reuse-first scan: failed to read ${file}: ${error.message}`);
   }

@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { buildOplPackageManifest } from '../src/modules/connect/package-distribution.ts';
 import { parseJsonText } from './script-json-boundary.mjs';
 
-function parseArgs(argv) {
+function parseCliOptions(argv) {
   const parsed = {
     owner: process.env.OPL_PACKAGES_OWNER || 'gaofeng21cn',
     execute: false,
@@ -243,7 +243,7 @@ function cleanup(options) {
 }
 
 try {
-  cleanup(parseArgs(process.argv.slice(2)));
+  cleanup(parseCliOptions(process.argv.slice(2)));
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);

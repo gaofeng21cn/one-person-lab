@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { parseArgs as parseNodeArgs } from 'node:util';
 
 import { countLines } from './source-line-count.mjs';
 
@@ -80,7 +81,7 @@ function repoEntry(name, root, role, options = {}) {
   };
 }
 
-const args = parseArgs(process.argv.slice(2));
+const args = parseCliOptions(process.argv.slice(2));
 const repos = args.repos.length > 0 ? args.repos : DEFAULT_REPOS;
 const report = buildReport(repos);
 
@@ -90,42 +91,26 @@ if (args.format === 'markdown') {
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 }
 
-function parseArgs(argv) {
+function parseCliOptions(argv) {
+  const { values } = parseNodeArgs({
+    args: argv,
+    options: {
+      format: { type: 'string', default: 'json' },
+      repo: { type: 'string', multiple: true, default: [] },
+    },
+    strict: true,
+    allowPositionals: false,
+  });
   const parsed = {
-    format: 'json',
-    repos: [],
+    format: values.format,
+    repos: values.repo.map(parseRepoArg),
   };
-
-  for (let index = 0; index < argv.length; index += 1) {
-    const value = argv[index];
-    if (value === '--format') {
-      parsed.format = readValue(argv, index, '--format');
-      index += 1;
-    } else if (value.startsWith('--format=')) {
-      parsed.format = value.slice('--format='.length);
-    } else if (value === '--repo') {
-      parsed.repos.push(parseRepoArg(readValue(argv, index, '--repo')));
-      index += 1;
-    } else if (value.startsWith('--repo=')) {
-      parsed.repos.push(parseRepoArg(value.slice('--repo='.length)));
-    } else {
-      fail(`Unknown argument: ${value}`);
-    }
-  }
 
   if (!['json', 'markdown'].includes(parsed.format)) {
     fail(`Unsupported --format value: ${parsed.format}`);
   }
 
   return parsed;
-}
-
-function readValue(argv, index, flag) {
-  const value = argv[index + 1];
-  if (!value) {
-    fail(`${flag} requires a value`);
-  }
-  return value;
 }
 
 function parseRepoArg(value) {

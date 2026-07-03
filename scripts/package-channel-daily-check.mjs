@@ -5,7 +5,7 @@ import path from 'node:path';
 import { parseRequiredValueOptions } from './required-value-options.mjs';
 import { readJsonFile } from './script-json-boundary.mjs';
 
-function parseArgs(argv) {
+function parseCliOptions(argv) {
   const parsed = {
     candidateManifest: null,
     currentManifest: null,
@@ -104,7 +104,7 @@ function writeSummary(summaryPath, summary) {
 }
 
 function main() {
-  const options = parseArgs(process.argv.slice(2));
+  const options = parseCliOptions(process.argv.slice(2));
   const summary = buildSummary(options);
   writeSummary(options.summaryPath, summary);
   console.log(JSON.stringify(summary, null, 2));

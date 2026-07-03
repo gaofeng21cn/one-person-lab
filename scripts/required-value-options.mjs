@@ -1,15 +1,25 @@
+import { parseArgs as parseNodeArgs } from 'node:util';
+
 export function parseRequiredValueOptions(argv, handlers) {
-  for (let index = 0; index < argv.length; index += 1) {
-    const token = argv[index];
-    const value = argv[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw new Error(`Missing value for ${token}`);
+  const options = Object.fromEntries(
+    Object.keys(handlers).map((flag) => [
+      flag.replace(/^--/, ''),
+      {
+        type: 'string',
+      },
+    ]),
+  );
+  const { values } = parseNodeArgs({
+    args: argv,
+    options,
+    strict: true,
+    allowPositionals: false,
+  });
+
+  for (const [name, value] of Object.entries(values)) {
+    const handler = handlers[`--${name}`];
+    if (typeof handler === 'function' && typeof value === 'string') {
+      handler(value);
     }
-    const handler = Object.hasOwn(handlers, token) ? handlers[token] : null;
-    if (typeof handler !== 'function') {
-      throw new Error(`Unknown argument: ${token}`);
-    }
-    handler(value);
-    index += 1;
   }
 }

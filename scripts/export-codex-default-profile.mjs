@@ -8,7 +8,7 @@ import { buildCodexDefaultProfileFromLocalConfig } from '../src/modules/connect/
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-function parseArgs(argv) {
+function parseCliOptions(argv) {
   const parsed = {
     out: path.join(repoRoot, 'contracts', 'opl-framework', 'codex-default-profile.json'),
     generatedAt: new Date().toISOString(),
@@ -27,7 +27,7 @@ function parseArgs(argv) {
 }
 
 function main() {
-  const options = parseArgs(process.argv.slice(2));
+  const options = parseCliOptions(process.argv.slice(2));
   const profile = buildCodexDefaultProfileFromLocalConfig(options.generatedAt);
   fs.mkdirSync(path.dirname(options.out), { recursive: true });
   fs.writeFileSync(options.out, `${JSON.stringify(profile, null, 2)}\n`, 'utf8');

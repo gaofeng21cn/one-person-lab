@@ -2,11 +2,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseArgs as parseNodeArgs } from 'node:util';
 
 import { readJsonFile } from './script-json-boundary.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const args = parseArgs(process.argv.slice(2));
+const args = parseCliOptions(process.argv.slice(2));
 const targetRoot = args.root ? path.resolve(args.root) : repoRoot;
 const contractPath = args.contract
   ? path.resolve(args.contract)
@@ -151,53 +152,33 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-function parseArgs(argv) {
-  const parsed = {
-    root: null,
-    contract: null,
-    policy: null,
-    enforceTarget: false,
-    strictImports: false,
-    strictCycles: false,
-  };
-  for (let index = 0; index < argv.length; index += 1) {
-    const value = argv[index];
-    if (value === '--root') {
-      parsed.root = readArgValue(argv, index, '--root');
-      index += 1;
-    } else if (value.startsWith('--root=')) {
-      parsed.root = value.slice('--root='.length);
-    } else if (value === '--contract') {
-      parsed.contract = readArgValue(argv, index, '--contract');
-      index += 1;
-    } else if (value.startsWith('--contract=')) {
-      parsed.contract = value.slice('--contract='.length);
-    } else if (value === '--policy') {
-      parsed.policy = readArgValue(argv, index, '--policy');
-      index += 1;
-    } else if (value.startsWith('--policy=')) {
-      parsed.policy = value.slice('--policy='.length);
-    } else if (value === '--enforce-target') {
-      parsed.enforceTarget = true;
-    } else if (value === '--strict-imports') {
-      parsed.strictImports = true;
-    } else if (value === '--strict-cycles') {
-      parsed.strictCycles = true;
-    } else {
-      process.stderr.write(`source module boundary: unknown argument ${value}\n`);
-      process.exit(1);
-    }
-  }
-  return parsed;
-}
-
-function readArgValue(argv, index, flag) {
-  const value = argv[index + 1];
-  if (!value) {
-    process.stderr.write(`source module boundary: ${flag} requires a value\n`);
+function parseCliOptions(argv) {
+  try {
+    const { values } = parseNodeArgs({
+      args: argv,
+      options: {
+        root: { type: 'string' },
+        contract: { type: 'string' },
+        policy: { type: 'string' },
+        'enforce-target': { type: 'boolean', default: false },
+        'strict-imports': { type: 'boolean', default: false },
+        'strict-cycles': { type: 'boolean', default: false },
+      },
+      strict: true,
+      allowPositionals: false,
+    });
+    return {
+      root: values.root ?? null,
+      contract: values.contract ?? null,
+      policy: values.policy ?? null,
+      enforceTarget: values['enforce-target'] === true,
+      strictImports: values['strict-imports'] === true,
+      strictCycles: values['strict-cycles'] === true,
+    };
+  } catch (error) {
+    process.stderr.write(`source module boundary: ${error instanceof Error ? error.message : String(error)}\n`);
     process.exit(1);
   }
-  return value;
 }
 
 function readJson(file) {
