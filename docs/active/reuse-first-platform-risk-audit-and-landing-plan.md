@@ -217,6 +217,8 @@ OpenTelemetry 给 OPL 的结论：可观测性不要继续扩张成多个私有 
 
 当前机器入口：`contracts/opl-framework/domain-private-platform-tail-matrix.json` 已建立 Phase 7 seed matrix，把 MAS / MAG / RCA / OMA / BookForge / ScholarSkills 的 `private_tail_class`、replacement OPL primitive、retained authority、delete/tombstone gate、forbidden claims 和 verification surface 固定为 refs-only readback 输入。该 seed 只关闭“计划不可机器读取”的缺口；不授权 domain repo 物理删除、不声明 owner acceptance，也不替代 fresh `opl agents default-callers --family-defaults --json` / `opl agents conformance --family-defaults --json` 与 domain repo-native readback。
 
+2026-07-03 lane evidence：`opl agents default-callers --family-defaults --json` 已暴露 `domain_private_platform_tail_matrix` readback，逐 domain 投影 `private_tail_class`、replacement OPL primitive、retained authority、delete/tombstone gate、forbidden claims、`physical_delete_authorized=false` 与 `owner_decision_required`；focused verification 为 `node --experimental-strip-types --test tests/src/domain-tail-default-caller-matrix.test.ts tests/src/cli/cases/agents-default-callers.test.ts`、`npm run typecheck`，并用 wrapper CLI 断言 family-defaults JSON 中 `row_count=6`、MAS `owner_decision_required=true`、ScholarSkills `owner_decision_required=false`。该证据仍只证明 OPL 本仓 readback/verification surface 可执行，不构成 domain repo delete、owner acceptance、domain ready 或 production ready。
+
 完成门：`opl agents default-callers --family-defaults --json` 暴露 no-active-caller 或 owner-decision gate；物理删除只在 owner decision、replacement owner、tombstone/provenance 和 no-forbidden-write 齐备后执行。
 
 ### Phase 8: App/Aion consumer-only enforcement

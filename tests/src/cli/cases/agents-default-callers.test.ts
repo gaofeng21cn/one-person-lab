@@ -50,6 +50,56 @@ test('agents default-callers blocks private generic owner claims without authori
   assert.equal(defaultCallers.authority_boundary.report_can_authorize_domain_repo_physical_delete, false);
 });
 
+test('agents default-callers exposes domain private platform tail matrix readback', () => {
+  const repoDir = buildReadyAgentRepo();
+
+  const payload = runCli([
+    'agents',
+    'default-callers',
+    '--agent',
+    `sample=${repoDir}`,
+  ]);
+  const matrix = payload.agent_default_caller_readiness.domain_private_platform_tail_matrix;
+  const rowsByDomain = new Map(matrix.rows.map((row: { domain_id: string }) => [
+    row.domain_id,
+    row,
+  ]));
+  const mas = rowsByDomain.get('med-autoscience') as {
+    private_tail_class: string[];
+    replacement_opl_primitive: string[];
+    authority_retained: string[];
+    delete_or_tombstone_gate: {
+      physical_delete_authorized: boolean;
+      owner_decision_required: boolean;
+    };
+    forbidden_claims: string[];
+    physical_delete_authorized: boolean;
+    owner_decision_required: boolean;
+  } | undefined;
+  const scholarSkills = rowsByDomain.get('mas-scholar-skills') as {
+    owner_decision_required: boolean;
+    delete_or_tombstone_gate: { owner_decision_required: boolean };
+  } | undefined;
+
+  assert.equal(matrix.surface_kind, 'opl_domain_private_platform_tail_matrix_readback.v1');
+  assert.equal(matrix.contract_ref, 'contracts/opl-framework/domain-private-platform-tail-matrix.json');
+  assert.equal(matrix.row_count, 6);
+  assert.equal(matrix.physical_delete_authorized, false);
+  assert.equal(matrix.authority_boundary.readback_can_authorize_domain_repo_physical_delete, false);
+  assert.ok(mas);
+  assert.equal(mas.private_tail_class.includes('runtime_watch'), true);
+  assert.equal(mas.replacement_opl_primitive.includes('Temporal-backed provider runtime'), true);
+  assert.equal(mas.authority_retained.includes('owner_receipt'), true);
+  assert.equal(mas.delete_or_tombstone_gate.physical_delete_authorized, false);
+  assert.equal(mas.delete_or_tombstone_gate.owner_decision_required, true);
+  assert.equal(mas.physical_delete_authorized, false);
+  assert.equal(mas.owner_decision_required, true);
+  assert.equal(mas.forbidden_claims.includes('physical_delete_authorized_by_opl'), true);
+  assert.ok(scholarSkills);
+  assert.equal(scholarSkills.owner_decision_required, false);
+  assert.equal(scholarSkills.delete_or_tombstone_gate.owner_decision_required, false);
+});
+
 test('agents default-callers waits for structural prerequisites before delete or keep owner choice', () => {
   const repoDir = buildReadyAgentRepo();
 

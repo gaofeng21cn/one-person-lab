@@ -25,6 +25,7 @@ import {
   DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS,
   defaultCallerSurfaceGates,
 } from './default-caller-surface-gates.ts';
+import { buildDomainPrivatePlatformTailMatrixReadback } from './domain-private-platform-tail-matrix.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -776,6 +777,7 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
   const reports = repos.map((repo) => (
     buildAgentDefaultCallerReadinessForRepo(repo.repo_dir, repo.requested_agent_id)
   ));
+  const domainPrivatePlatformTailMatrix = buildDomainPrivatePlatformTailMatrixReadback();
   const blockedCount = reports.filter((report) => report.status === 'blocked').length;
   const generatedDefaultCallerSurfaceCount = reports.reduce(
     (total, report) => total + Number(record(report.summary).generated_default_caller_surface_count || 0),
@@ -864,6 +866,7 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
       structuralOwnerDecisionMissingCount,
     active_legacy_caller_deletion_gate:
       physicalDeleteAuthorityReadModel.active_legacy_caller_deletion_gate,
+    domain_private_platform_tail_matrix: domainPrivatePlatformTailMatrix,
     physical_delete_authority_read_model: physicalDeleteAuthorityReadModel,
     repo_deletion_gate_summary:
       physicalDeleteAuthorityReadModel.repo_deletion_gate_summary,
@@ -911,6 +914,7 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
         structuralOwnerDecisionMissingCount,
       active_legacy_caller_deletion_gate:
         physicalDeleteAuthorityReadModel.active_legacy_caller_deletion_gate,
+      domain_private_platform_tail_matrix: domainPrivatePlatformTailMatrix,
       physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
       physical_delete_authority_read_model: physicalDeleteAuthorityReadModel,
       repo_deletion_gate_summary:

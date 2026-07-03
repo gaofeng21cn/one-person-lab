@@ -23,6 +23,7 @@
     "authority_retained",
     "delete_or_tombstone_gate",
     "forbidden_claims",
+    "owner_decision_required",
     "verification_surface"
   ],
   "private_tail_classes": [
@@ -90,7 +91,8 @@
           "domain_owner_delete_keep_or_typed_blocker_ref"
         ],
         "physical_delete_authorized": false,
-        "owner_acceptance_claimed": false
+        "owner_acceptance_claimed": false,
+        "owner_decision_required": true
       },
       "forbidden_claims": [
         "generic_runtime_ready",
@@ -99,6 +101,7 @@
         "publication_ready",
         "physical_delete_authorized_by_opl"
       ],
+      "owner_decision_required": true,
       "verification_surface": {
         "primary_readback": "opl agents default-callers --family-defaults --json",
         "contract_readback": "contracts/opl-framework/domain-private-platform-tail-matrix.json#surfaces[domain_id=med-autoscience]",
@@ -149,7 +152,8 @@
           "domain_owner_delete_keep_or_typed_blocker_ref"
         ],
         "physical_delete_authorized": false,
-        "owner_acceptance_claimed": false
+        "owner_acceptance_claimed": false,
+        "owner_decision_required": true
       },
       "forbidden_claims": [
         "grant_ready",
@@ -157,6 +161,7 @@
         "app_projection_as_owner_receipt",
         "physical_delete_authorized_by_opl"
       ],
+      "owner_decision_required": true,
       "verification_surface": {
         "primary_readback": "opl agents default-callers --family-defaults --json",
         "contract_readback": "contracts/opl-framework/domain-private-platform-tail-matrix.json#surfaces[domain_id=med-autogrant]",
@@ -208,7 +213,8 @@
           "domain_owner_delete_keep_or_typed_blocker_ref"
         ],
         "physical_delete_authorized": false,
-        "owner_acceptance_claimed": false
+        "owner_acceptance_claimed": false,
+        "owner_decision_required": true
       },
       "forbidden_claims": [
         "visual_ready",
@@ -216,6 +222,7 @@
         "session_shell_as_owner",
         "physical_delete_authorized_by_opl"
       ],
+      "owner_decision_required": true,
       "verification_surface": {
         "primary_readback": "opl agents default-callers --family-defaults --json",
         "contract_readback": "contracts/opl-framework/domain-private-platform-tail-matrix.json#surfaces[domain_id=redcube-ai]",
@@ -264,7 +271,8 @@
           "domain_owner_delete_keep_or_typed_blocker_ref"
         ],
         "physical_delete_authorized": false,
-        "owner_acceptance_claimed": false
+        "owner_acceptance_claimed": false,
+        "owner_decision_required": true
       },
       "forbidden_claims": [
         "target_agent_ready",
@@ -272,6 +280,7 @@
         "materializer_as_private_runner",
         "physical_delete_authorized_by_opl"
       ],
+      "owner_decision_required": true,
       "verification_surface": {
         "primary_readback": "opl agents default-callers --family-defaults --json",
         "contract_readback": "contracts/opl-framework/domain-private-platform-tail-matrix.json#surfaces[domain_id=opl-meta-agent]",
@@ -316,7 +325,8 @@
           "domain_owner_delete_keep_or_typed_blocker_ref"
         ],
         "physical_delete_authorized": false,
-        "owner_acceptance_claimed": false
+        "owner_acceptance_claimed": false,
+        "owner_decision_required": true
       },
       "forbidden_claims": [
         "book_export_ready",
@@ -324,6 +334,7 @@
         "app_projection_as_export_authority",
         "physical_delete_authorized_by_opl"
       ],
+      "owner_decision_required": true,
       "verification_surface": {
         "primary_readback": "opl agents default-callers --family-defaults --json",
         "contract_readback": "contracts/opl-framework/domain-private-platform-tail-matrix.json#surfaces[domain_id=opl-bookforge]",
@@ -363,7 +374,8 @@
           "not_standard_domain_agent_ref"
         ],
         "physical_delete_authorized": false,
-        "owner_acceptance_claimed": false
+        "owner_acceptance_claimed": false,
+        "owner_decision_required": false
       },
       "forbidden_claims": [
         "standard_domain_agent",
@@ -372,6 +384,7 @@
         "publication_ready",
         "physical_delete_authorized_by_opl"
       ],
+      "owner_decision_required": false,
       "verification_surface": {
         "primary_readback": "opl agents conformance --family-defaults --json",
         "contract_readback": "contracts/opl-framework/domain-private-platform-tail-matrix.json#surfaces[domain_id=mas-scholar-skills]",

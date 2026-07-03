@@ -10,6 +10,7 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 type TailGate = {
   physical_delete_authorized: boolean;
   owner_acceptance_claimed: boolean;
+  owner_decision_required: boolean;
   required_refs: string[];
 };
 
@@ -21,6 +22,7 @@ type TailRow = {
   authority_retained: string[];
   delete_or_tombstone_gate: TailGate;
   forbidden_claims: string[];
+  owner_decision_required: boolean;
   verification_surface: {
     primary_readback: string;
     focused_test: string;
@@ -70,6 +72,7 @@ test('domain private platform tail matrix seeds the required family surfaces', (
     'authority_retained',
     'delete_or_tombstone_gate',
     'forbidden_claims',
+    'owner_decision_required',
     'verification_surface',
   ]) {
     assert.ok(contract.required_surface_fields.includes(field));
@@ -102,6 +105,8 @@ test('domain private platform tail matrix stays refs-only and non-authorizing', 
     assert.notEqual(row.delete_or_tombstone_gate.required_refs.length, 0);
     assert.equal(row.delete_or_tombstone_gate.physical_delete_authorized, false);
     assert.equal(row.delete_or_tombstone_gate.owner_acceptance_claimed, false);
+    assert.equal(typeof row.delete_or_tombstone_gate.owner_decision_required, 'boolean');
+    assert.equal(row.owner_decision_required, row.delete_or_tombstone_gate.owner_decision_required);
     assert.equal(row.forbidden_claims.includes('physical_delete_authorized_by_opl'), true);
     assert.ok(row.verification_surface.primary_readback.startsWith('opl agents '));
     assert.equal(
@@ -120,6 +125,8 @@ test('ScholarSkills remains a refs-only capability package outside domain-agent 
     scholarSkills.verification_surface.primary_readback,
     'opl agents conformance --family-defaults --json',
   );
+  assert.equal(scholarSkills.owner_decision_required, false);
+  assert.equal(scholarSkills.delete_or_tombstone_gate.owner_decision_required, false);
   assert.equal(scholarSkills.verification_surface.domain_owner_readback_required_before_delete, false);
   assert.ok(scholarSkills.forbidden_claims.includes('standard_domain_agent'));
   assert.ok(scholarSkills.forbidden_claims.includes('mas_truth'));
