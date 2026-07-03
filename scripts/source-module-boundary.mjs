@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { readJsonFile } from './script-json-boundary.mjs';
+
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = parseArgs(process.argv.slice(2));
 const targetRoot = args.root ? path.resolve(args.root) : repoRoot;
@@ -200,7 +202,7 @@ function readArgValue(argv, index, flag) {
 
 function readJson(file) {
   try {
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
+    return readJsonFile(file);
   } catch (error) {
     process.stderr.write(`source module boundary: failed to read ${file}: ${error.message}\n`);
     process.exit(1);

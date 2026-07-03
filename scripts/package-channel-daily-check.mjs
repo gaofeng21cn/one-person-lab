@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { parseRequiredValueOptions } from './required-value-options.mjs';
+import { readJsonFile } from './script-json-boundary.mjs';
 
 function parseArgs(argv) {
   const parsed = {
@@ -35,7 +36,7 @@ function parseArgs(argv) {
 }
 
 function readJson(filePath) {
-  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  return readJsonFile(filePath);
 }
 
 function packageFingerprint(manifest) {

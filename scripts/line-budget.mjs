@@ -3,6 +3,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 import { countLines } from './source-line-count.mjs';
+import { readJsonFile } from './script-json-boundary.mjs';
 
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const CODE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.mts', '.cts', '.py', '.sh', '.bash', '.zsh', '.rs', '.go']);
@@ -146,7 +147,7 @@ function loadContract(file) {
   }
   let parsed;
   try {
-    parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+    parsed = readJsonFile(file);
   } catch (error) {
     failures.push(`${path.relative(targetRoot, file)}: source structure budget contract is not valid JSON: ${error.message}`);
     return { defaultLimit: 1000, baseline: new Map(), failures };
