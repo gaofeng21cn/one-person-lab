@@ -60,6 +60,7 @@ const DEFAULT_CROSSREF_API_BASE = 'https://api.crossref.org';
 const DEFAULT_PUBMED_API_BASE = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
 const DEFAULT_OPENALEX_API_BASE = 'https://api.openalex.org';
 const DEFAULT_SEMANTIC_SCHOLAR_API_BASE = 'https://api.semanticscholar.org/graph/v1';
+const DEFAULT_PUBLISHER_DOI_BASE = 'https://doi.org';
 const DEFAULT_TIMEOUT_MS = 30_000;
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -83,7 +84,7 @@ function normalizeProviders(providers: string[]) {
   const entries = providers.flatMap((entry) => entry.split(','))
     .map((entry) => entry.trim().toLowerCase())
     .filter(Boolean);
-  const unique = [...new Set(entries.length > 0 ? entries : ['crossref', 'pubmed'])]
+  const unique = [...new Set(entries.length > 0 ? entries : ['crossref', 'pubmed', 'openalex', 'semantic-scholar', 'crossmark', 'publisher'])]
     .map((entry) => entry === 'semantic_scholar' ? 'semantic-scholar' : entry);
   const allowed = new Set(['crossref', 'pubmed', 'openalex', 'semantic-scholar', 'crossmark', 'publisher']);
   const unsupported = unique.filter((entry) => !allowed.has(entry));
@@ -160,14 +161,20 @@ function writeCache(cachePath: string | null, payload: Record<string, unknown>) 
   return 'written';
 }
 
-async function fetchJsonWithRetry(url: URL, maxRetries: number, providerId: ProviderId, timeout: number) {
+async function fetchWithRetry(
+  url: URL,
+  maxRetries: number,
+  providerId: ProviderId,
+  timeout: number,
+  init: RequestInit = {},
+) {
   const retryAttempts: RetryAttempt[] = [];
   let lastError: unknown = null;
   for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
     try {
-      const response = await fetch(url, { signal: controller.signal });
+      const response = await fetch(url, { ...init, signal: controller.signal });
       if (!response.ok) {
         const status = response.status >= 500 && attempt < maxRetries ? 'retryable_error' : 'failed';
         retryAttempts.push({ attempt, status, http_status: response.status });
@@ -179,10 +186,7 @@ async function fetchJsonWithRetry(url: URL, maxRetries: number, providerId: Prov
         });
       }
       retryAttempts.push({ attempt, status: 'success', http_status: response.status });
-      return {
-        json: await response.json() as unknown,
-        retryAttempts,
-      };
+      return { response, retryAttempts };
     } catch (error) {
       lastError = error;
       if (error instanceof FrameworkContractError) throw error;
@@ -200,6 +204,30 @@ async function fetchJsonWithRetry(url: URL, maxRetries: number, providerId: Prov
     cause: lastError instanceof Error ? lastError.message : String(lastError),
     retry_attempts: retryAttempts,
   });
+}
+
+async function fetchJsonWithRetry(url: URL, maxRetries: number, providerId: ProviderId, timeout: number) {
+  const { response, retryAttempts } = await fetchWithRetry(url, maxRetries, providerId, timeout);
+  return {
+    json: await response.json() as unknown,
+    retryAttempts,
+  };
+}
+
+async function fetchTextWithRetry(
+  url: URL,
+  maxRetries: number,
+  providerId: ProviderId,
+  timeout: number,
+  init: RequestInit = {},
+) {
+  const { response, retryAttempts } = await fetchWithRetry(url, maxRetries, providerId, timeout, init);
+  return {
+    text: await response.text(),
+    responseUrl: response.url || url.toString(),
+    contentType: response.headers.get('content-type'),
+    retryAttempts,
+  };
 }
 
 function deferredEvidence(reference: ReferenceRecord, providerId: ProviderId, reason: string): ProviderEvidenceDraft {
@@ -474,13 +502,62 @@ async function verifySemanticScholar(reference: ReferenceRecord, maxRetries: num
   };
 }
 
+async function verifyPublisher(reference: ReferenceRecord, maxRetries: number, timeout: number): Promise<ProviderEvidenceDraft> {
+  if (!reference.doi) {
+    return deferredEvidence(reference, 'publisher', 'publisher provider receipt requirement needs a DOI for DOI resolver landing lookup');
+  }
+  const baseUrl = apiBase('OPL_CONNECT_PUBLISHER_DOI_BASE', DEFAULT_PUBLISHER_DOI_BASE);
+  const url = new URL(`${baseUrl}/${encodeURIComponent(reference.doi)}`);
+  const { text, responseUrl, contentType, retryAttempts } = await fetchTextWithRetry(url, maxRetries, 'publisher', timeout, {
+    headers: {
+      accept: 'text/html,application/xhtml+xml,text/plain;q=0.8,*/*;q=0.5',
+    },
+  });
+  const title = htmlMeta(text, 'citation_title', 'dc.title', 'og:title') ?? htmlTitle(text) ?? reference.title;
+  return {
+    reference_id: reference.id,
+    provider: 'publisher',
+    provider_id: 'publisher',
+    lookup_status: 'found',
+    status: 'matched',
+    match_basis: 'doi',
+    matched_identifiers: compactIdentifiers({
+      doi: reference.doi,
+      pmid: reference.pmid,
+      publisher_landing_url: responseUrl,
+    }),
+    metadata: compactMetadata({
+      title,
+      year: yearFromText(htmlMeta(text, 'citation_publication_date', 'dc.date') ?? ''),
+      journal: htmlMeta(text, 'citation_journal_title', 'citation_publisher'),
+    }),
+    retraction_or_update_flags: {
+      publisher_landing_resolved: true,
+      publisher_lookup_source: 'doi_resolver_landing_page',
+      full_text_body_verified: false,
+      ...(contentType ? { content_type: contentType } : {}),
+    },
+    normalized: {
+      doi: reference.doi,
+      pmid: reference.pmid,
+      title,
+    },
+    cache: {
+      status: 'disabled',
+      write_status: 'skipped',
+      cache_ref: null,
+    },
+    retry_attempts: retryAttempts,
+  };
+}
+
 async function verifyProvider(reference: ReferenceRecord, providerId: ProviderId, maxRetries: number, timeout: number): Promise<ProviderEvidenceDraft> {
   if (providerId === 'crossref') return verifyCrossref(reference, maxRetries, timeout);
   if (providerId === 'pubmed') return verifyPubMed(reference, maxRetries, timeout);
   if (providerId === 'openalex') return verifyOpenAlex(reference, maxRetries, timeout);
   if (providerId === 'semantic-scholar') return verifySemanticScholar(reference, maxRetries, timeout);
   if (providerId === 'crossmark') return verifyCrossmark(reference, maxRetries, timeout);
-  return deferredEvidence(reference, providerId, 'publisher provider receipt requirement needs a publisher/full-text connector');
+  return verifyPublisher(reference, maxRetries, timeout);
 }
 
 function withReceiptRef(evidence: ProviderEvidenceDraft): ProviderEvidence {
@@ -605,6 +682,38 @@ function pubmedFlags(item: Record<string, unknown>): Record<string, unknown> {
 function pubmedIdFromUrl(value: string | null): string | null {
   if (!value) return null;
   return value.replace(/^https:\/\/pubmed\.ncbi\.nlm\.nih\.gov\//, '').replace(/\/$/, '') || null;
+}
+
+function htmlMeta(html: string, ...names: string[]): string | null {
+  const wanted = new Set(names.map((entry) => entry.toLowerCase()));
+  for (const match of html.matchAll(/<meta\b[^>]*>/gi)) {
+    const tag = match[0];
+    const key = (htmlAttribute(tag, 'name') ?? htmlAttribute(tag, 'property'))?.toLowerCase();
+    const content = htmlAttribute(tag, 'content');
+    if (key && content && wanted.has(key)) return decodeHtmlText(content);
+  }
+  return null;
+}
+
+function htmlAttribute(tag: string, name: string): string | null {
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = tag.match(new RegExp(`\\b${escapedName}\\s*=\\s*("[^"]*"|'[^']*'|[^\\s>]+)`, 'i'));
+  if (!match) return null;
+  return match[1].replace(/^["']|["']$/g, '').trim() || null;
+}
+
+function htmlTitle(html: string): string | null {
+  const match = html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
+  return match ? decodeHtmlText(match[1]).replace(/\s+/g, ' ').trim() || null : null;
+}
+
+function decodeHtmlText(value: string): string {
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
 }
 
 function noAuthorityBoundary() {

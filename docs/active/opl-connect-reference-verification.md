@@ -32,9 +32,10 @@ opl connect references verify --references-file references.json --providers cros
 }
 ```
 
-当前可执行 provider 是 Crossref、PubMed、OpenAlex、Semantic Scholar 和
-Crossmark。Publisher/full-text lookup 先以 `deferred` 返回 provider receipt
-requirement，避免把未接入 publisher connector 写成已校验。
+当前可执行 provider 是 Crossref、PubMed、OpenAlex、Semantic Scholar、
+Crossmark 和 Publisher。Publisher provider 通过 DOI resolver 读取 publisher
+landing page metadata；它不下载全文、不验证 paywalled full-text body，也不把
+landing page 命中写成 reference truth。
 
 ## 输出
 

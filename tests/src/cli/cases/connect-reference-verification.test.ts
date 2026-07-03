@@ -89,6 +89,21 @@ async function startFakeReferenceProviderServer() {
       return;
     }
 
+    if (url.pathname.startsWith('/doi/')) {
+      response.setHeader('content-type', 'text/html');
+      response.end(`
+        <html>
+          <head>
+            <meta name="citation_title" content="Publisher landing page title" />
+            <meta name="citation_journal_title" content="Journal of Connector Evidence" />
+            <meta name="citation_publication_date" content="2026-04-03" />
+            <title>Fallback publisher title</title>
+          </head>
+        </html>
+      `);
+      return;
+    }
+
     response.statusCode = 404;
     response.end(JSON.stringify({ error: 'not_found' }));
   });
@@ -239,7 +254,7 @@ test('connect references verify returns provider receipts, cache metadata, retri
   }
 });
 
-test('connect references verify covers OpenAlex and Semantic Scholar provider receipts', async () => {
+test('connect references verify covers OpenAlex, Semantic Scholar, Crossmark, and publisher receipts', async () => {
   const fakeProviders = await startFakeReferenceProviderServer();
   try {
     const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-reference-verification-provider-coverage-'));
@@ -259,13 +274,14 @@ test('connect references verify covers OpenAlex and Semantic Scholar provider re
       '--references-file',
       referencesFile,
       '--providers',
-      'openalex,semantic_scholar,crossmark',
+      'openalex,semantic_scholar,crossmark,publisher',
       '--max-retries',
       '1',
     ], {
       OPL_CONNECT_OPENALEX_API_BASE: `${fakeProviders.baseUrl}/openalex`,
       OPL_CONNECT_SEMANTIC_SCHOLAR_API_BASE: `${fakeProviders.baseUrl}/semantic`,
       OPL_CONNECT_CROSSREF_API_BASE: `${fakeProviders.baseUrl}/crossref`,
+      OPL_CONNECT_PUBLISHER_DOI_BASE: `${fakeProviders.baseUrl}/doi`,
     }) as {
       opl_connect_reference_verification: {
         request: { providers: string[] };
@@ -283,22 +299,27 @@ test('connect references verify covers OpenAlex and Semantic Scholar provider re
     };
 
     const result = output.opl_connect_reference_verification;
-    assert.deepEqual(result.request.providers, ['openalex', 'semantic-scholar', 'crossmark']);
+    assert.deepEqual(result.request.providers, ['openalex', 'semantic-scholar', 'crossmark', 'publisher']);
     assert.deepEqual(result.provider_evidence.map((entry) => [entry.provider, entry.lookup_status]), [
       ['openalex', 'found'],
       ['semantic_scholar', 'found'],
       ['crossmark', 'found'],
+      ['publisher', 'found'],
     ]);
     assert.equal(result.provider_evidence[0].matched_identifiers.openalex, 'https://openalex.org/W123');
     assert.equal(result.provider_evidence[1].matched_identifiers.semantic_scholar, 'S2-987654');
     assert.equal(result.provider_evidence[2].retraction_or_update_flags.crossmark_metadata_source, 'crossref_rest_api');
+    const publisher = result.provider_evidence[3];
+    assert.equal(publisher.matched_identifiers.publisher_landing_url.includes('/doi/'), true);
+    assert.equal(publisher.metadata.title, 'Publisher landing page title');
+    assert.equal(publisher.retraction_or_update_flags.full_text_body_verified, false);
     assert.equal(result.provider_receipts.every((entry) => entry.status === 'matched'), true);
   } finally {
     await fakeProviders.close();
   }
 });
 
-test('connect references verify declares publisher connector requirement without pretending provider truth', async () => {
+test('connect references verify declares publisher DOI requirement without pretending provider truth', async () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-reference-verification-deferred-'));
   const referencesFile = path.join(fixtureRoot, 'references.json');
   fs.writeFileSync(referencesFile, JSON.stringify([
@@ -329,7 +350,7 @@ test('connect references verify declares publisher connector requirement without
   ]);
   assert.equal(result.provider_evidence[0].provider, 'publisher');
   assert.equal(result.provider_evidence[0].lookup_status, 'deferred');
-  assert.equal(result.provider_evidence.every((entry) => entry.deferred_reason.includes('provider receipt requirement')), true);
+  assert.equal(result.provider_evidence.every((entry) => entry.deferred_reason.includes('DOI')), true);
   assert.deepEqual(result.deferred_provider_receipt_requirements.map((entry) => entry.provider_id), [
     'publisher',
   ]);

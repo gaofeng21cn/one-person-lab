@@ -109,7 +109,10 @@ function parseReferenceVerificationArgs(args: string[], spec: CommandSpec): Refe
   }
   return {
     referencesFile,
-    providers: parseReferenceProviders(String(parsed.providers ?? 'crossref,pubmed'), spec),
+    providers: parseReferenceProviders(
+      String(parsed.providers ?? 'crossref,pubmed,openalex,semantic-scholar,crossmark,publisher'),
+      spec,
+    ),
     cacheRoot: readOptionalString(parsed['cache-root']) ?? undefined,
     maxRetries: Number(parsed['max-retries']),
   };
@@ -436,7 +439,7 @@ export function buildConnectCommandSpecs(
             flag: '--providers',
             value_kind: 'string',
             summary: 'Comma-separated provider ids: crossref,pubmed,openalex,semantic-scholar,crossmark,publisher.',
-            default: 'crossref,pubmed',
+            default: 'crossref,pubmed,openalex,semantic-scholar,crossmark,publisher',
           },
           {
             name: 'cache-root',

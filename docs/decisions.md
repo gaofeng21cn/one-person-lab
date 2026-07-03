@@ -81,7 +81,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - `opl connect references verify --references-file <json> --providers crossref,pubmed,openalex,semantic-scholar,crossmark,publisher --cache-root <path> --max-retries <n> --json` 成为引用 metadata provider receipt 的稳定入口。
-- 当前已执行 provider 是 Crossref、PubMed、OpenAlex、Semantic Scholar 和 Crossmark；publisher / full-text lookup 先返回 deferred provider receipt requirement，不伪装成已校验。
+- 当前已执行 provider 是 Crossref、PubMed、OpenAlex、Semantic Scholar、Crossmark 和 Publisher；Publisher 只做 DOI resolver landing page metadata lookup，不下载全文、不验证 paywalled full-text body，也不伪装成 reference truth。
 - 输出包含 provider evidence、provider receipt candidate refs、cache hit/miss/write 状态、retry attempts 和 no-authority boundary。
 - 该 connector 不写 MAS paper truth、不签 owner receipt、不创建 typed blocker / human gate，不声明 reference truth、citation quality、claim-evidence correctness、publication-ready、domain-ready 或 production-ready。
 
