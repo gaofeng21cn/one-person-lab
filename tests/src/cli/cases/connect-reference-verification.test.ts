@@ -118,6 +118,7 @@ test('connect references verify returns provider receipts, cache metadata, retri
           provider_id: string;
           status: string;
           match_basis: string;
+          receipt_ref: string;
           normalized: { doi: string | null; pmid: string | null; title: string | null };
           cache: { status: string; write_status: string; cache_ref: string | null };
           retry_attempts: Array<{ attempt: number; status: string; http_status: number | null }>;
@@ -125,11 +126,12 @@ test('connect references verify returns provider receipts, cache metadata, retri
         provider_receipts: Array<{
           reference_id: string;
           provider_id: string;
+          status: string;
           receipt_ref: string;
           authority: string;
         }>;
         cache: { entries: Array<{ status: string; write_status: string }> };
-        retry_attempts: Array<{ provider_id: string; attempt: number; status: string }>;
+        retry_attempts: Array<{ provider_id: string; operation: string; attempt: number; status: string }>;
         no_authority_boundary: {
           read_only: boolean;
           can_write_domain_truth: boolean;
@@ -158,16 +160,20 @@ test('connect references verify returns provider receipts, cache metadata, retri
     assert.equal(crossref.cache.write_status, 'written');
     assert.equal(crossref.retry_attempts.length, 2);
     assert.deepEqual(crossref.retry_attempts.map((entry) => entry.status), ['retryable_error', 'success']);
+    assert.equal(crossref.receipt_ref.startsWith('opl://connect/references/verify/'), true);
     assert.equal(pubmed.status, 'matched');
     assert.equal(pubmed.match_basis, 'pmid');
     assert.equal(pubmed.normalized.pmid, '987654');
     assert.equal(pubmed.cache.status, 'miss');
     assert.equal(pubmed.cache.write_status, 'written');
+    assert.equal(pubmed.receipt_ref.startsWith('opl://connect/references/verify/'), true);
     assert.equal(result.provider_receipts.length, 2);
+    assert.equal(result.provider_receipts.every((entry) => entry.status === 'matched'), true);
     assert.equal(result.provider_receipts.every((entry) => entry.receipt_ref.startsWith('opl://connect/references/verify/')), true);
     assert.equal(result.provider_receipts.every((entry) => entry.authority === 'provider_receipt_candidate_only'), true);
     assert.equal(result.cache.entries.every((entry) => entry.status === 'miss' && entry.write_status === 'written'), true);
     assert.equal(result.retry_attempts.some((entry) => entry.provider_id === 'crossref' && entry.status === 'retryable_error'), true);
+    assert.equal(result.retry_attempts.every((entry) => entry.operation === 'provider_request'), true);
     assert.deepEqual(result.no_authority_boundary, {
       read_only: true,
       can_write_domain_truth: false,
