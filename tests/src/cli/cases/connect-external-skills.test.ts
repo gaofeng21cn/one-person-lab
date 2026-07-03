@@ -71,7 +71,7 @@ test('connect external-skills list exposes approved source and skill cards', () 
           trigger_policy: ExternalSkillTriggerPolicy;
           skill_count: number;
         }>;
-        skills: Array<{ skill_id: string; description: string }>;
+        skills: Array<{ skill_id: string; description: string; content_sha256: string }>;
         trigger_policy: ExternalSkillTriggerPolicy;
         authority_boundary: {
           selective_sync_only: boolean;
@@ -99,6 +99,7 @@ test('connect external-skills list exposes approved source and skill cards', () 
       output.opl_connect_external_skills.skills.map((entry) => entry.skill_id),
       ['scanpy', 'scientific-writing'],
     );
+    assert.match(output.opl_connect_external_skills.skills[0].content_sha256, /^[a-f0-9]{64}$/);
     assert.deepEqual(output.opl_connect_external_skills.authority_boundary, {
       read_only: true,
       selective_sync_only: true,
@@ -233,6 +234,7 @@ test('connect external-skills search and inspect return selected skill metadata'
         surface_kind: string;
         skill: {
           skill_id: string;
+          content_sha256: string;
           has_references: boolean;
           required_environment_variables: string[];
         };
@@ -243,6 +245,7 @@ test('connect external-skills search and inspect return selected skill metadata'
 
     assert.equal(inspect.opl_connect_external_skills.surface_kind, 'opl_connect_external_skill_inspect');
     assert.equal(inspect.opl_connect_external_skills.skill.skill_id, 'scanpy');
+    assert.match(inspect.opl_connect_external_skills.skill.content_sha256, /^[a-f0-9]{64}$/);
     assert.equal(inspect.opl_connect_external_skills.skill.has_references, true);
     assert.deepEqual(inspect.opl_connect_external_skills.skill.required_environment_variables, ['TEST_API_KEY']);
     assert.match(inspect.opl_connect_external_skills.sync_command_ref, /connect external-skills sync/);
@@ -274,7 +277,7 @@ test('connect external-skills sync copies only the selected skill into workspace
         status: string;
         source_repo_url: string;
         source_pinned_ref: string | null;
-        skill: { skill_id: string };
+        skill: { skill_id: string; content_sha256: string };
         target_scope: string;
         target_root: string;
         target_skill_root: string;
@@ -289,6 +292,7 @@ test('connect external-skills sync copies only the selected skill into workspace
     assert.equal(synced.source_repo_url, 'https://github.com/K-Dense-AI/scientific-agent-skills');
     assert.equal(synced.source_pinned_ref, null);
     assert.equal(synced.skill.skill_id, 'scanpy');
+    assert.match(synced.skill.content_sha256, /^[a-f0-9]{64}$/);
     assert.equal(synced.target_scope, 'workspace');
     assert.equal(synced.target_root, workspaceRoot);
     assert.equal(synced.target_skill_root, path.join(workspaceRoot, '.codex', 'skills', 'scanpy'));
@@ -301,11 +305,13 @@ test('connect external-skills sync copies only the selected skill into workspace
     ) as {
       receipt_kind: string;
       sync_policy: string;
+      skill_content_sha256: string;
       trigger_policy: ExternalSkillTriggerPolicy;
       authority_boundary: { can_install_all_skills_by_default: boolean };
     };
     assert.equal(receipt.receipt_kind, 'opl_connect_external_skill_sync_receipt');
     assert.equal(receipt.sync_policy, 'single_skill_selected_by_user_or_mas_route');
+    assert.equal(receipt.skill_content_sha256, synced.skill.content_sha256);
     assertExternalSkillTriggerPolicy(receipt.trigger_policy);
     assert.equal(receipt.authority_boundary.can_install_all_skills_by_default, false);
   } finally {

@@ -41,6 +41,7 @@ type SkillCard = {
   name: string;
   description: string;
   source_path: string;
+  content_sha256: string;
   has_references: boolean;
   has_scripts: boolean;
   required_environment_variables: string[];
@@ -240,6 +241,28 @@ function readTextIfPresent(filePath: string) {
   }
 }
 
+function digestDirectory(root: string) {
+  const hash = crypto.createHash('sha256');
+  const walk = (current: string) => {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      if (entry.name === '.git') continue;
+      const absolute = path.join(current, entry.name);
+      const relative = path.relative(root, absolute);
+      if (entry.isDirectory()) {
+        walk(absolute);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      hash.update(relative);
+      hash.update('\0');
+      hash.update(fs.readFileSync(absolute));
+      hash.update('\0');
+    }
+  };
+  walk(root);
+  return hash.digest('hex');
+}
+
 function firstYamlString(frontmatter: string, key: string) {
   const match = frontmatter.match(new RegExp(`^${key}:\\s*(.*)$`, 'm'));
   if (!match) return '';
@@ -303,6 +326,7 @@ function readSkillCard(sourceRoot: string, skillId: string): SkillCard | null {
     name,
     description: firstYamlString(frontmatter, 'description'),
     source_path: skillRoot,
+    content_sha256: digestDirectory(skillRoot),
     has_references: fs.existsSync(path.join(skillRoot, 'references')),
     has_scripts: fs.existsSync(path.join(skillRoot, 'scripts')),
     required_environment_variables: extractRequiredEnvironmentVariables(frontmatter),
@@ -360,11 +384,13 @@ function authorityBoundary() {
   };
 }
 
-function sourceDigest(sourceId: string, skillId: string, sourceRoot: string) {
+function sourceDigest(sourceId: string, skillId: string, sourceRepoUrl: string, sourcePinnedRef: string | null, contentSha256: string) {
   return crypto.createHash('sha256').update(JSON.stringify({
     source_id: sourceId,
     skill_id: skillId,
-    source_root: sourceRoot,
+    source_repo_url: sourceRepoUrl,
+    source_pinned_ref: sourcePinnedRef,
+    content_sha256: contentSha256,
   })).digest('hex');
 }
 
@@ -463,7 +489,7 @@ export function runOplConnectExternalSkillsInspect(input: ExternalSkillInspectIn
       sync_command_ref: `opl connect external-skills sync --source ${source.source_id} --skill ${skillId} --scope workspace --target-workspace <workspace-root> --json`,
       receipt_refs: {
         external_skill_source_ref: `opl://connect/external-skills/${source.source_id}/${skillId}`,
-        ledger_receipt_candidate_ref: `opl://ledger/connect/external-skills/${sourceDigest(source.source_id, skillId, source.source_root!)}`,
+        ledger_receipt_candidate_ref: `opl://ledger/connect/external-skills/${sourceDigest(source.source_id, skillId, source.repo_url, source.pinned_ref, card.content_sha256)}`,
       },
       trigger_policy: EXTERNAL_SKILL_TRIGGER_POLICY,
       authority_boundary: authorityBoundary(),
@@ -494,6 +520,7 @@ export function runOplConnectExternalSkillsSync(input: ExternalSkillSyncInput) {
     source_repo_url: source.repo_url,
     source_pinned_ref: source.pinned_ref,
     source_root: source.source_root,
+    skill_content_sha256: card.content_sha256,
     skill_id: skillId,
     target_scope: input.scope,
     target_root: targetRoot,
@@ -521,7 +548,7 @@ export function runOplConnectExternalSkillsSync(input: ExternalSkillSyncInput) {
       install_receipt_path: receiptPath,
       copied_roots: fs.readdirSync(targetSkillRoot).sort(),
       receipt_refs: {
-        external_skill_sync_ref: `opl://connect/external-skills/${source.source_id}/${skillId}/sync/${sourceDigest(source.source_id, skillId, source.source_root!)}`,
+        external_skill_sync_ref: `opl://connect/external-skills/${source.source_id}/${skillId}/sync/${sourceDigest(source.source_id, skillId, source.repo_url, source.pinned_ref, card.content_sha256)}`,
       },
       trigger_policy: EXTERNAL_SKILL_TRIGGER_POLICY,
       authority_boundary: authorityBoundary(),

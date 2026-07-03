@@ -44,7 +44,9 @@ external skill 写入：
 ```
 
 同步时会在目标 skill 目录写入 `.opl-install-receipt.json`，记录 source、
-pin、target scope、trigger policy 和 no-authority boundary。
+pin、选中 Skill 的 `content_sha256`、target scope、trigger policy 和
+no-authority boundary。该 fingerprint 绑定实际同步的 Skill 目录内容；本地
+checkout 路径只作为定位信息，不作为可复现证据。
 
 ## MAS 使用方式
 
