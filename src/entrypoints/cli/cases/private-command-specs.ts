@@ -2,7 +2,7 @@ import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWork
 import { buildOplWorkspaceRootSurface, writeOplWorkspaceRootSurface } from '../../../modules/connect/system-installation/workspace-root.ts';
 import { buildProductEntryHandoffEnvelope } from '../../../modules/console/product-entry-handoff-envelope.ts';
 import { buildProductEntryDoctor, runProductEntryResume } from '../../../modules/console/product-entry-runtime.ts';
-import { buildRuntimeManager, runRuntimeManagerAction } from '../../../modules/console/runtime-manager.ts';
+import { buildRuntimeManager, runRuntimeManagerAction } from '../../../modules/runway/index.ts';
 import { buildRuntimeTraySnapshot } from '../../../modules/console/runtime-tray-snapshot.ts';
 import { buildMemoryArtifactLifecycleReadback } from '../../../modules/ledger/memory-artifact-lifecycle-readback.ts';
 import { runRuntimeOperatorActionExecute } from '../../../modules/runway/runtime-operator-action-execution.ts';

@@ -452,7 +452,7 @@ test('convergence governance snapshots do not promote gateway federation wording
 test('retired internal write and fallback helper exports do not return', () => {
   const sourceExpectations: Array<[string, RegExp[]]> = [
     [
-      'src/modules/console/runtime-modes.ts',
+      'src/kernel/runtime-modes.ts',
       [
         /\bexport\s+function\s+writeOplRuntimeModes\b/,
         /\bFrameworkContractError\b/,

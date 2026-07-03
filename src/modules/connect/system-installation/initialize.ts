@@ -3,7 +3,7 @@ import {
   readOplUpdateChannel,
   readOplWorkspaceRoot,
 } from '../../../kernel/system-preferences.ts';
-import { readOplRuntimeModes } from '../../console/index.ts';
+import { readOplRuntimeModes } from '../../../kernel/runtime-modes.ts';
 import { buildOplGuiShellSurface, buildOplRecommendedSkills } from '../install-companions.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 

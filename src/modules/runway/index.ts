@@ -53,5 +53,6 @@ export { buildNativeIndexSummary } from './native-index-summary.ts';
 export type { OplEndpoints } from './opl-runtime-paths.ts';
 export { buildOplRuntimeEndpoints } from '../../kernel/opl-runtime-endpoints.ts';
 export { buildRuntimeEnvironmentPrepareReadback, buildRuntimeEnvironmentRunContextReadback } from './runtime-environment-substrate.ts';
+export { buildRuntimeManager, runRuntimeManagerAction } from './runtime-manager.ts';
 export { runRuntimeOperatorActionExecute } from './runtime-operator-action-execution.ts';
 export { buildSessionLedger, recordSessionLedgerEntry } from './session-ledger.ts';

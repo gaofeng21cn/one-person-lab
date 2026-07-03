@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 
-import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 
 export type OplAgentMode = 'codex';
 

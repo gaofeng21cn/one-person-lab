@@ -1,7 +1,7 @@
 import { findDomainOrThrow, FrameworkContractError } from '../../charter/index.ts';
 import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from '../../atlas/index.ts';
 import { buildOplRuntimeEndpoints } from '../../runway/index.ts';
-import { readOplRuntimeModes } from '../runtime-modes.ts';
+import { readOplRuntimeModes } from '../../../kernel/runtime-modes.ts';
 import { buildWorkspaceCatalog, getActiveWorkspaceBinding } from '../../workspace/index.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import { buildDomainManifestCatalog } from '../../atlas/index.ts';
