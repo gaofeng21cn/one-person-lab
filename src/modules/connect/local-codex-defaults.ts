@@ -4,6 +4,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from '../charter/contracts.ts';
+import {
+  readCodexAuthState,
+  resolveLocalCodexAccessState,
+} from './local-codex-defaults-parts/access-state.ts';
 
 export type LocalCodexDefaults = {
   config_path: string;
@@ -68,10 +72,6 @@ export const OPL_GATEWAY_BASE_URL = 'https://gflabtoken.cn/v1';
 function normalizeOptionalString(value: string | null | undefined) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function stripTomlInlineComment(line: string) {
@@ -564,76 +564,15 @@ export function readLocalCodexDefaultsIfAvailable() {
   }
 }
 
-function readCodexAuthState(authPath: string) {
-  if (!fs.existsSync(authPath) || !fs.statSync(authPath).isFile()) {
-    return {
-      auth_found: false,
-      codex_login_present: false,
-      auth_api_key_present: false,
-    };
-  }
-
-  try {
-    const parsed = JSON.parse(fs.readFileSync(authPath, 'utf8')) as unknown;
-    const record = isRecord(parsed) ? parsed : {};
-    const authMode = normalizeOptionalString(typeof record.auth_mode === 'string' ? record.auth_mode : undefined);
-    const tokensPresent = record.tokens !== undefined && record.tokens !== null;
-    const authApiKeyPresent = Boolean(
-      normalizeOptionalString(typeof record.OPENAI_API_KEY === 'string' ? record.OPENAI_API_KEY : undefined),
-    );
-
-    return {
-      auth_found: true,
-      codex_login_present: authMode === 'chatgpt' && tokensPresent,
-      auth_api_key_present: authApiKeyPresent,
-    };
-  } catch {
-    return {
-      auth_found: true,
-      codex_login_present: false,
-      auth_api_key_present: false,
-    };
-  }
-}
-
 export function readLocalCodexAccessState(): LocalCodexAccessState {
   const configPath = resolveLocalCodexConfigPath();
   const authPath = resolveLocalCodexAuthPath();
-  const defaults = readLocalCodexDefaultsIfAvailable();
-  const auth = readCodexAuthState(authPath);
-  const envApiKeyPresent = Boolean(
-    normalizeOptionalString(process.env.OPL_CODEX_API_KEY)
-    ?? normalizeOptionalString(process.env.CODEX_API_KEY)
-    ?? normalizeOptionalString(process.env.OPENAI_API_KEY),
-  );
-  const selectedOplGateway = Boolean(
-    defaults?.selected_provider_api_key_present
-    && isOplGatewayBaseUrl(defaults.provider_base_url),
-  );
-  const customProviderReady = Boolean(defaults?.selected_provider_api_key_present && !selectedOplGateway);
-  const modelAccessSource: LocalCodexModelAccessSource = selectedOplGateway
-    ? 'opl_gateway'
-    : auth.codex_login_present
-      ? 'codex_login'
-      : customProviderReady || auth.auth_api_key_present
-        ? 'custom_provider'
-        : envApiKeyPresent
-          ? 'env_api_key'
-          : 'missing';
-
-  return {
-    config_path: configPath,
-    auth_path: authPath,
-    config_found: Boolean(defaults),
-    auth_found: auth.auth_found,
-    api_key_present: Boolean(defaults?.provider_api_key),
-    opl_gateway_configured: Boolean(defaults?.opl_gateway_configured),
-    codex_login_present: auth.codex_login_present,
-    env_api_key_present: envApiKeyPresent,
-    model_access_ready: modelAccessSource !== 'missing',
-    model_access_source: modelAccessSource,
-    provider_base_url: defaults?.provider_base_url ?? null,
-    model: defaults?.model ?? null,
-    reasoning_effort: defaults?.reasoning_effort ?? null,
-  };
+  return resolveLocalCodexAccessState({
+    configPath,
+    authPath,
+    defaults: readLocalCodexDefaultsIfAvailable(),
+    auth: readCodexAuthState(authPath),
+    env: process.env,
+    isOplGatewayBaseUrl,
+  });
 }

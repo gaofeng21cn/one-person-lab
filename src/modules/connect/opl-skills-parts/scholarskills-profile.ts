@@ -110,6 +110,24 @@ export const MAS_SCHOLAR_SKILLS_PROFILE_PACKS: MasScholarSkillsPack[] = [
   },
 ];
 
+export const MAS_SCHOLAR_SKILLS_REQUIRED_PACK_IDS = Object.freeze(
+  MAS_SCHOLAR_SKILLS_PROFILE_PACKS
+    .filter((pack) => pack.required_by_profile)
+    .map((pack) => pack.pack_id),
+);
+
+export const MAS_SCHOLAR_SKILLS_DEFAULT_PACK_IDS = Object.freeze(
+  MAS_SCHOLAR_SKILLS_PROFILE_PACKS
+    .filter((pack) => pack.default_by_profile)
+    .map((pack) => pack.pack_id),
+);
+
+export const MAS_SCHOLAR_SKILLS_SPECIALIST_PACK_IDS = Object.freeze(
+  MAS_SCHOLAR_SKILLS_PROFILE_PACKS
+    .filter((pack) => pack.role === 'specialist_entry')
+    .map((pack) => pack.pack_id),
+);
+
 function sourceSkillEntryPath(pluginSourcePath: string, skillDir: string) {
   return path.join(pluginSourcePath, 'skills', skillDir, 'SKILL.md');
 }
@@ -169,12 +187,8 @@ export function buildMasScholarSkillsProfileManifest(options: {
       connect_role: 'install_sync_discovery_only',
       connect_does_not_own_quality_or_domain_truth: true,
     },
-    required_skill_pack: MAS_SCHOLAR_SKILLS_PROFILE_PACKS
-      .filter((pack) => pack.required_by_profile)
-      .map((pack) => pack.pack_id),
-    default_skill_pack: MAS_SCHOLAR_SKILLS_PROFILE_PACKS
-      .filter((pack) => pack.default_by_profile)
-      .map((pack) => pack.pack_id),
+    required_skill_pack: Array.from(MAS_SCHOLAR_SKILLS_REQUIRED_PACK_IDS),
+    default_skill_pack: Array.from(MAS_SCHOLAR_SKILLS_DEFAULT_PACK_IDS),
     install_target: {
       target_scope: options.targetScope,
       target_project: options.targetProject ?? null,

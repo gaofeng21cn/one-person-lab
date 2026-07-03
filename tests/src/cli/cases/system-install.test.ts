@@ -1,6 +1,7 @@
 import { assert, cliPath, contractsDir, createCodexConfigFixture, createFakeLaunchctlFixture, createGitModuleRemoteFixture, fs, loadFrameworkContracts, os, path, repoRoot, runCli, test } from '../helpers.ts';
 import { buildInternalCommandSpecs } from '../../../../src/entrypoints/cli/cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from '../../../../src/entrypoints/cli/cases/public-command-specs.ts';
+import { OPL_GATEWAY_BASE_URL } from '../../../../src/modules/connect/local-codex-defaults.ts';
 import { createFakeCompanionInstallEnv, writeFakeCompanionToolBinaries } from './system-install-fixtures.ts';
 
 function disableRemoteCompanionInstall() {
@@ -708,6 +709,100 @@ test('system initialize accepts existing Codex login without OPL Gateway API key
   }
 });
 
+test('system initialize accepts environment API key model access without local Codex config', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-env-key-home-'));
+  const codexFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-env-key-bin-'));
+  const codexPath = path.join(codexFixtureRoot, 'codex');
+  fs.writeFileSync(codexPath, '#!/usr/bin/env bash\necho "codex-cli 0.125.0"\n', { mode: 0o755 });
+
+  try {
+    const output = runCli(['system', 'initialize'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPENAI_API_KEY: 'redacted-env-key',
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      PATH: `${codexFixtureRoot}:/usr/bin:/bin`,
+    }) as {
+      system_initialize: {
+        setup_flow: {
+          ready_to_launch: boolean;
+          blocking_items: string[];
+        };
+        core_engines: {
+          codex: {
+            api_key_present: boolean;
+            opl_gateway_configured: boolean;
+            model_access_ready: boolean;
+            model_access_source: string;
+            env_api_key_present: boolean;
+          };
+        };
+      };
+    };
+
+    assert.equal(output.system_initialize.setup_flow.ready_to_launch, true);
+    assert.equal(output.system_initialize.setup_flow.blocking_items.includes('codex_config'), false);
+    assert.equal(output.system_initialize.core_engines.codex.api_key_present, false);
+    assert.equal(output.system_initialize.core_engines.codex.opl_gateway_configured, false);
+    assert.equal(output.system_initialize.core_engines.codex.model_access_ready, true);
+    assert.equal(output.system_initialize.core_engines.codex.model_access_source, 'env_api_key');
+    assert.equal(output.system_initialize.core_engines.codex.env_api_key_present, true);
+    assert.equal(JSON.stringify(output).includes('redacted-env-key'), false);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('system initialize reports selected OPL Gateway config as the model access source', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-opl-gateway-home-'));
+  const codexFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-opl-gateway-bin-'));
+  const codexPath = path.join(codexFixtureRoot, 'codex');
+  const codexConfigFixture = createCodexConfigFixture({
+    providerId: 'gflab',
+    providerName: 'gflab',
+    baseUrl: OPL_GATEWAY_BASE_URL,
+    apiKey: 'opl-gateway-key',
+  });
+  fs.writeFileSync(codexPath, '#!/usr/bin/env bash\necho "codex-cli 0.125.0"\n', { mode: 0o755 });
+
+  try {
+    const output = runCli(['system', 'initialize'], {
+      HOME: homeRoot,
+      CODEX_HOME: codexConfigFixture.codexHome,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      PATH: `${codexFixtureRoot}:/usr/bin:/bin`,
+    }) as {
+      system_initialize: {
+        setup_flow: {
+          ready_to_launch: boolean;
+          blocking_items: string[];
+        };
+        core_engines: {
+          codex: {
+            api_key_present: boolean;
+            opl_gateway_configured: boolean;
+            model_access_ready: boolean;
+            model_access_source: string;
+          };
+        };
+      };
+    };
+
+    assert.equal(output.system_initialize.setup_flow.ready_to_launch, true);
+    assert.equal(output.system_initialize.setup_flow.blocking_items.includes('codex_config'), false);
+    assert.equal(output.system_initialize.core_engines.codex.api_key_present, true);
+    assert.equal(output.system_initialize.core_engines.codex.opl_gateway_configured, true);
+    assert.equal(output.system_initialize.core_engines.codex.model_access_ready, true);
+    assert.equal(output.system_initialize.core_engines.codex.model_access_source, 'opl_gateway');
+    assert.equal(JSON.stringify(output).includes('opl-gateway-key'), false);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
+    fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
+  }
+});
+
 test('system initialize accepts App-managed runtime Codex when PATH has no Codex CLI', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-runtime-codex-home-'));
   const runtimeRoot = path.join(homeRoot, 'runtime');
@@ -746,6 +841,9 @@ test('system initialize accepts App-managed runtime Codex when PATH has no Codex
             binary_path: string | null;
             binary_source: string | null;
             health_status: string;
+            opl_gateway_configured: boolean;
+            model_access_ready: boolean;
+            model_access_source: string;
             issues: string[];
             runtime_substrate_updater: {
               current_binary_installed: boolean;
@@ -763,6 +861,9 @@ test('system initialize accepts App-managed runtime Codex when PATH has no Codex
     assert.equal(output.system_initialize.core_engines.codex.binary_path, runtimeCodex);
     assert.equal(output.system_initialize.core_engines.codex.binary_source, 'runtime');
     assert.equal(output.system_initialize.core_engines.codex.health_status, 'ready');
+    assert.equal(output.system_initialize.core_engines.codex.opl_gateway_configured, false);
+    assert.equal(output.system_initialize.core_engines.codex.model_access_ready, true);
+    assert.equal(output.system_initialize.core_engines.codex.model_access_source, 'custom_provider');
     assert.deepEqual(output.system_initialize.core_engines.codex.issues, []);
     assert.equal(
       output.system_initialize.core_engines.codex.runtime_substrate_updater.current_binary_path,
