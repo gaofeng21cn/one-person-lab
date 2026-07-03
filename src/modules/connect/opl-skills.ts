@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { syncOplCompanionSkills, type OplCompanionSkillApplyMode, type OplSuperpowersProfile } from './install-companions.ts';
 import {
   registerOplFamilyCodexPlugins,

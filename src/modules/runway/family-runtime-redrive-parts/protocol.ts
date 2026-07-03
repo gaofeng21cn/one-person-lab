@@ -1,4 +1,4 @@
-import { FrameworkContractError } from '../../charter/index.ts';
+import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 
 export type ProviderOnlyRedriveKind =
   | 'provider_transport_blocked'

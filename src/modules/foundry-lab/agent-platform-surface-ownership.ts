@@ -3,7 +3,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 import { buildGeneratedAgentInterfaces } from '../pack/index.ts';
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import {
   defaultStandardDomainAgentRepoInputs,
   DEFAULT_STANDARD_DOMAIN_AGENT_REPOS,

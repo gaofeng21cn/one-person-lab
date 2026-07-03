@@ -15,7 +15,7 @@ import {
   parseCodexExecOutput,
   runCodexCommandStreaming,
 } from '../runway/index.ts';
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { stableId } from '../../kernel/stable-id.ts';
 import {
   buildExecutionPlanMarkdown,

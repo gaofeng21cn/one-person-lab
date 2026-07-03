@@ -1,4 +1,4 @@
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 
 export type AppStateProfile = 'fast' | 'full';
 

@@ -1,4 +1,4 @@
-import { FrameworkContractError } from '../../charter/index.ts';
+import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import type { FamilyRuntimeDomainId } from '../family-runtime-types.ts';
 import type { FamilyRuntimeCommandInput } from '../family-runtime-command.ts';
 import { assertDomainId, parsePayload, parsePayloadFile } from './shared.ts';

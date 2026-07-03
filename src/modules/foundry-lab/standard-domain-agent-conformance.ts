@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError, loadFrameworkContracts } from '../charter/index.ts';
+import { loadFrameworkContracts } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import {
   buildAgentWorkspaceNormChecks,
   buildAgentWorkspaceNormProjection,

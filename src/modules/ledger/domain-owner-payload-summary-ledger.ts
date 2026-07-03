@@ -1,8 +1,7 @@
 import fs from 'node:fs';
 
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
-import {
-  FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 
 export type DomainOwnerPayloadSummaryReceipt = {

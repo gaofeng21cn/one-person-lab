@@ -5,7 +5,7 @@ import {
   randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';

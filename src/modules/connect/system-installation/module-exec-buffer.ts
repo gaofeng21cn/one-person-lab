@@ -1,4 +1,4 @@
-import { FrameworkContractError } from '../../charter/index.ts';
+import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 
 const DEFAULT_MODULE_EXEC_MAX_BUFFER = 32 * 1024 * 1024;
 

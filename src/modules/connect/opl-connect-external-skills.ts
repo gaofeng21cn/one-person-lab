@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { resolveDefaultFamilyWorkspaceRoot } from '../workspace/index.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 

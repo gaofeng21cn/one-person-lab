@@ -1,4 +1,4 @@
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { domainDispatchEvidencePayloadRefs } from './domain-dispatch-evidence-payload-refs.ts';
 import { listStageRunExecutionAuthorizationReceipts } from '../stagecraft/index.ts';
 import type { JsonRecord } from '../../kernel/types.ts';

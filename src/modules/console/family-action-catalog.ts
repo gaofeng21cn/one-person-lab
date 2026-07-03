@@ -1,7 +1,7 @@
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { buildDomainManifestCatalog } from '../atlas/index.ts';
 import type { DomainManifestCatalogEntry } from '../atlas/index.ts';
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import type {
   FamilyActionCatalog,
   FamilyActionCatalogAction,

@@ -45,7 +45,7 @@ src/modules/connect
 | target source layout | `done` | `src/entrypoints/cli.ts` 存在，root-level `src/*.ts` 为 0。 | root-level `src/*.ts` 不再作为新 owner 接口。 |
 | deep cross-module import | `done` | `npm run source:modules -- --strict-imports` 下 `deep_import_violations.count=0`。 | 只能证明跨模块 import 路由合法，不能证明 public API 已经最小。 |
 | 第一批 forbidden dependency | `done` | `forbidden_dependency_violations.count=0`。 | 当前只覆盖 `module-dependency-policy.json` 已列出的方向约束。 |
-| dependency cycle | `partial` | 默认 readback 报告 SCC；`--strict-cycles` 将 advisory 升级为失败；当前 SCC 不含 Console，edge_count 为 47。 | 当前存在 public-entry-level cycle，不能把 strict import pass 外推为低耦合完成。 |
+| dependency cycle | `partial` | 默认 readback 报告 SCC；`--strict-cycles` 将 advisory 升级为失败；当前 SCC 不含 Console，edge_count 为 44。 | 当前存在 public-entry-level cycle，不能把 strict import pass 外推为低耦合完成。 |
 | public entrypoint 收薄 | `partial` | `index.ts` / `public/**` 作为合法 public surface 被脚本识别。 | 多个模块 `index.ts` 仍是 broad re-export；下一步是按热点拆 thin public entry 或收窄 re-export。 |
 | 下一批 forbidden candidates | `partial` | `module-dependency-policy.json` 的 `next_forbidden_dependency_candidates` 记录候选方向。 | 先用 `pair_counts` 和人工 owner 判断确认迁移路径，再升级为 enforced `forbidden_dependencies`。 |
 
@@ -105,12 +105,15 @@ Console / Runway / Ledger / Connect / Foundry Lab 的边界可按一句话记忆
 | stage replay missing receipt workorder | `stagecraft` |
 | stage-attempt generic projections 与 memory trace projection | `runway` |
 | family action catalog contract 与 shared schema normalization | `kernel` |
+| `FrameworkContractError` 与合同错误 vocabulary | `kernel` |
 
 2026-07-03 的 Runway -> Console 收薄已分两步完成：先移除 Runway 经由 Console public re-export 反向读取自身 generic projection 的调用，再通过 `runtime-tray-snapshot-provider.ts` 把 `family-runtime-evidence-worklist.ts`、`runtime-operator-action-execution.ts` 和 `observability-export.ts` 改成由 CLI/App/Console caller 显式注入 Console-owned `buildRuntimeTraySnapshot`。当前 fresh `source:modules` readback 中 `runway -> console` pair 已消失。该口径只证明源码依赖方向更清楚，不改变 Console 仍拥有 App/operator snapshot projection 的事实，也不声明 runtime ready、Temporal live migration、domain ready 或 production readiness。
 
 2026-07-03 的 Foundry Lab -> Console 收薄继续沿用 provider injection：`framework readiness`、`framework readiness --detail compact` 和 `framework operating-maturity` 不再直接 import Console 的 runtime tray snapshot builder；public CLI caller 显式注入 Console-owned `buildRuntimeTraySnapshot`。App release user-path evidence 的 payload / workorder projection 迁入 Ledger public surface，Foundry Lab 的 readiness next-safe-action 直接消费 Ledger payload helper 和 runtime snapshot 中的 refs-only evidence。当前 fresh `source:modules -- --strict-imports` readback 中 `foundry-lab -> console` pair 已消失，Console 也不再进入 dependency-cycle SCC；剩余 SCC 覆盖 `atlas`、`charter`、`connect`、`foundry-lab`、`ledger`、`pack`、`runway`、`stagecraft`、`workspace` 九个模块，edge_count 为 47。该口径只证明 Foundry Lab 不再把 Console implementation 当作前置依赖，不改变 Console 作为 App/operator projection owner 的事实，也不声明 owner acceptance、App release ready、domain ready 或 production readiness。
 
 2026-07-03 的 family action catalog 收薄已把 action catalog contract 从 Console 实现面迁到 `src/kernel/family-action-catalog-contract.ts`。Console 只保留 thin re-export facade；Atlas、Connect、Foundry Lab、Pack 和 Stagecraft 等消费者直接从 kernel shared contract 读取。该口径只证明 shared contract owner 与 import direction 更清楚，不改变 domain truth、owner receipt、typed blocker、runtime DB/provider queues 或 release artifacts。
+
+2026-07-03 的 Charter error boundary 收薄把跨模块常用的 `FrameworkContractError` 调整为 `src/kernel/contract-validation.ts` 的 brand-neutral shared primitive。模块实现不再为了抛出统一合同 / CLI 错误而依赖 `charter` public index；`charter` 仍保留对外 re-export，服务旧的 public import surface 和 contract loader 语义。当前 fresh `source:modules -- --strict-imports` readback 中 `stagecraft -> charter`、`workspace -> charter`、`pack -> charter` 这些仅由错误类型造成的 pair 已消失，剩余 SCC edge_count 从 47 收薄到 44。该口径只证明错误 vocabulary 不再放大模块依赖图，不改变 `Charter` 对合同语言与 forbidden claim 的 owner 身份，也不声明 strict cycle 已完成。
 
 `module-dependency-policy.json` 也开始记录第一批方向约束：`ledger -> runway`、`stagecraft -> runway`、`workspace -> console`、`foundry-lab -> console` 与 Charter 对 operator / improvement / connector surfaces 的依赖都不允许出现。该约束用于保护 evidence、stage policy、workspace protocol、Foundry improvement readout 与 operator projection 的 owner 边界。
 

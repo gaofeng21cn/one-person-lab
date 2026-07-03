@@ -1,4 +1,4 @@
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { buildGeneratedAgentInterfaces } from '../pack/index.ts';
 import {
   isRecord,

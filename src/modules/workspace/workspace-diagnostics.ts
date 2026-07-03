@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { parseJsonText, readJsonFileOrNull } from '../../kernel/json-file.ts';
 import { buildAgentWorkspaceNormProjection } from './agent-workspace-norm.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';

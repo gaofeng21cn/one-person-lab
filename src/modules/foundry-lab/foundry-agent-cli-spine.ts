@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import {
   STANDARD_AGENT_REGISTRY,
   STANDARD_AGENT_REGISTRY_REF,

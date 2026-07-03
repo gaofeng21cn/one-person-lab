@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import {
   buildRuntimeEnvironmentPrepareReadback,
   buildRuntimeEnvironmentRunContextReadback,

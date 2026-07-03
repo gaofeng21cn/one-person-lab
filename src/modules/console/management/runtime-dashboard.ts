@@ -1,4 +1,5 @@
-import { findDomainOrThrow, FrameworkContractError } from '../../charter/index.ts';
+import { findDomainOrThrow } from '../../charter/index.ts';
+import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from '../../atlas/index.ts';
 import { buildOplRuntimeEndpoints } from '../../runway/index.ts';
 import { readOplRuntimeModes } from '../../../kernel/runtime-modes.ts';

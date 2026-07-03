@@ -1,5 +1,6 @@
 import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
-import { FrameworkContractError, loadFrameworkContracts } from '../charter/index.ts';
+import { loadFrameworkContracts } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import {
   readBundledCodexDefaultProfile,
   readLocalCodexAccessState,

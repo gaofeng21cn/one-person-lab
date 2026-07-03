@@ -1,4 +1,4 @@
-import { FrameworkContractError } from '../../charter/index.ts';
+import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import type { FamilyRuntimeProviderKind } from '../family-runtime-types.ts';
 import type {
   FamilyRuntimeCommandInput,

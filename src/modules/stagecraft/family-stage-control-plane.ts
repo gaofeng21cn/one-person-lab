@@ -2,7 +2,7 @@ import type { FrameworkContracts } from '../../kernel/types.ts';
 import { buildDomainManifestCatalog } from '../atlas/index.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from '../atlas/index.ts';
 import { withOplMetaAgentStageAttemptEntry } from './family-stage-control-plane-oma.ts';
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import type {
   FamilyStageControlPlane,
   FamilyStageDescriptor,

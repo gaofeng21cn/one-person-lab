@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 
-import { findDomainOrThrow, FrameworkContractError } from '../charter/index.ts';
+import { findDomainOrThrow } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import { resolveWorkspaceLocator } from '../workspace/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';

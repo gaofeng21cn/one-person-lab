@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT } from '../foundry-lab/index.ts';
 import type { AgentWorkspaceNormContract } from '../../kernel/types.ts';

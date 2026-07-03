@@ -1,6 +1,6 @@
 import { buildAgentDefaultCallerReadinessReport } from './agent-platform-surface-ownership.ts';
 import { buildBrandModuleL5Status } from '../charter/index.ts';
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { buildFoundryAgentOsOwnerEvidenceIntake } from './foundry-agent-os-owner-evidence-intake.ts';
 import { FRAMEWORK_READINESS_SOURCE_COMMANDS as SOURCE_COMMANDS } from './framework-readiness-source-commands.ts';
 import {

@@ -1,6 +1,6 @@
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { buildAgentReadinessSummary } from './agent-readiness.ts';
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { buildDomainManifestCatalog } from '../atlas/index.ts';
 import { buildDomainPackCompilerList } from '../pack/index.ts';
 import {

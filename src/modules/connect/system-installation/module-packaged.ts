@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../../charter/index.ts';
+import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { PACKAGED_MODULE_MARKER_FILE } from '../packaged-module-marker.ts';
 import type {
   DomainModuleSpec,

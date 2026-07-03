@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import type { DomainManifestCatalogEntry } from './domain-manifest/types.ts';
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import type { FamilyDomainMemoryRef } from './family-domain-memory-contract.ts';
 import {
   listStageAttemptCloseouts,

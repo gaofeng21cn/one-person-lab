@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { AGENT_LAB_AUTHORITY_BOUNDARY } from './agent-lab-authority.ts';
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { stableId } from '../../kernel/stable-id.ts';
 
 const RHO_AUTHORITY_BOUNDARY = {

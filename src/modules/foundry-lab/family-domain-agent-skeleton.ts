@@ -1,4 +1,4 @@
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { buildDomainManifestCatalog } from '../atlas/index.ts';
 import type { DomainManifestCatalog } from '../atlas/index.ts';
 import type { DomainManifestCatalogEntry } from '../atlas/index.ts';

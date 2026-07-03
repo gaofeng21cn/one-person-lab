@@ -1,4 +1,4 @@
-import { FrameworkContractError } from '../../charter/index.ts';
+import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { runRuntimeOperatorActionExecute } from '../../runway/index.ts';
 import { runOplModuleAction } from '../../connect/index.ts';
 import { runOplSystemAction } from '../../connect/index.ts';

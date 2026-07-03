@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { readJsonFileOrNull } from '../../kernel/json-file.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';

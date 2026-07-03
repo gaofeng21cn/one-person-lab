@@ -1,4 +1,4 @@
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import type { DomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import type { ManifestCommandTimeoutPolicy } from './domain-manifest/resolver.ts';

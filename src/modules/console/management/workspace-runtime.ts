@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 
-import { FrameworkContractError } from '../../charter/index.ts';
+import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { inspectSelectedFamilyRuntimeProvidersWithLifecycle } from '../../runway/index.ts';
 import { readMasManagedProviderProjection } from '../../runway/index.ts';
 import { familyRuntimePaths } from '../../runway/index.ts';

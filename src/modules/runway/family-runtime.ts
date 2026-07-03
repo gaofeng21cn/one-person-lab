@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 
-import { FrameworkContractError, loadFrameworkContracts } from '../charter/index.ts';
+import { loadFrameworkContracts } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { preflightMasWorkspaceCheckoutCurrentness } from './family-runtime-checkout-currentness.ts';
 import {
   parseFamilyRuntimeCommand,

@@ -1,4 +1,4 @@
-import { FrameworkContractError } from '../../charter/index.ts';
+import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import type { FamilyRuntimeCommandInput } from '../family-runtime-command.ts';
 
 function requireValue(token: string, value: string | undefined) {

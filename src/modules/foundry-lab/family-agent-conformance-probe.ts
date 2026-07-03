@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { FrameworkContractError, loadFrameworkContracts } from '../charter/index.ts';
+import { loadFrameworkContracts } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { buildGeneratedAgentInterfaces } from '../pack/index.ts';
 import { normalizeFamilyActionCatalog } from '../../kernel/family-action-catalog-contract.ts';
 import { normalizeFamilyStageControlPlane } from '../stagecraft/index.ts';

@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 
-import { FrameworkContractError } from '../../charter/index.ts';
+import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import {
   inspectFamilyRuntimeProviderWithLifecycle,
 } from '../family-runtime-providers.ts';

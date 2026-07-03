@@ -1,4 +1,4 @@
-import { FrameworkContractError } from '../../charter/index.ts';
+import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import type { FamilyRuntimeCommandInput } from '../family-runtime-command.ts';
 import type { PaperAutonomyStageRunIdentity } from '../family-runtime-paper-autonomy.ts';
 import { parsePayload, parsePayloadFile } from './shared.ts';

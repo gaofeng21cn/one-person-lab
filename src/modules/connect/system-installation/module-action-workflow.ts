@@ -1,4 +1,4 @@
-import { FrameworkContractError } from '../../charter/index.ts';
+import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { syncFamilySkillPackFromRepoRoot } from '../opl-skills.ts';
 import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import {

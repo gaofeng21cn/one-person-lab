@@ -514,6 +514,14 @@ Phase 1、Phase 7、Phase 9 的本轮收薄已吸收进 `main`，属于 schema b
 - Contract/docs：`module-dependency-policy.json` 新增 enforced `foundry-lab -> console` forbidden dependency；source-module reference 文档同步记录 Console 已从 dependency-cycle SCC 中退出。
 - Fresh evidence：`npm run source:modules` 返回 `status=ok`、`deep_import_violations=0`、`forbidden_dependency_violations=0`，`foundry-lab -> console` pair 消失，dependency-cycle SCC 从 10 模块 / edge_count 57 收薄到 9 模块 / edge_count 47；focused readiness / maturity / app-release-user-path tests 39/39 pass，`npm run typecheck` pass，`npm run reuse-first:scan:diff -- --strict` gate_status=ok，`npm test` smoke 76/76 pass。该证据只证明 Foundry / Console owner boundary 与 import gate 收薄，不证明 strict cycles 全部完成、App release ready、domain ready、owner acceptance 或 production readiness。
 
+## Charter Error Boundary Foldback 2026-07-03
+
+本 lane 把 Framework 通用错误词汇从 Charter public entrypoint 使用面收回到 `kernel` owner，避免 Atlas / Connect / Console / Foundry Lab / Ledger / Pack / Runway / Stagecraft / Workspace 因为只需要 `FrameworkContractError` 而额外依赖 Charter；不改变错误码、JSON error shape、CLI exit code、contract truth、owner receipt、typed blocker、runtime truth、release/currentness claim 或 Brand L5 状态。
+
+- Source：非 Charter 模块中的 `FrameworkContractError` import 改为直接读取 `src/kernel/contract-validation.ts`；Charter 继续通过 `src/modules/charter/contracts.ts` re-export 该错误类，以保持 Charter 自身 contract validator 和旧 public entrypoint 行为。
+- Boundary：该改动只移动 shared error vocabulary 的 source owner，不把 Charter contract truth 上收到 kernel，也不把 domain truth、App/operator projection 或 Connect provider receipt 改写成 kernel authority。
+- Fresh evidence：本 lane worktree 中 `./node_modules/.bin/tsc --noEmit` pass，`npm run source:modules` 返回 `status=ok`、`deep_import_violations=0`、`forbidden_dependency_violations=0`，dependency-cycle SCC edge_count 从 47 继续收薄到 44；`npm run reuse-first:scan:diff -- --strict` 返回 `gate_status=ok`。该证据只证明 error-boundary import direction 收薄，不证明 strict cycles 全部完成、production ready、domain ready、owner acceptance、App release ready 或 Brand L5。
+
 ## OPL Connect Reference Verification Lane 2026-07-03
 
 本 lane 把引用 metadata 校验从领域 prompt / 手写脚本候选沉淀为 OPL Connect 的只读 provider receipt surface，不写 MAS truth，不签 owner receipt，不创建 typed blocker。

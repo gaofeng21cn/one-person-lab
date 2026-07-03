@@ -2,7 +2,7 @@ import fs from 'node:fs';
 
 import { resolveOplStatePaths, type OplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import { stableId } from '../../kernel/stable-id.ts';
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 
 type JsonRecord = Record<string, unknown>;
