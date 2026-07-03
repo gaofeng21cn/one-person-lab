@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
+import { readJsonRecordFile } from '../../../kernel/json-file.ts';
 
 export type JsonRecord = Record<string, unknown>;
 
@@ -83,34 +84,17 @@ export function shape(message: string, details: JsonRecord = {}) {
   return new FrameworkContractError('contract_shape_invalid', message, details);
 }
 
+const PACK_DESCRIPTOR_JSON_FILE_BOUNDARY = {
+  missingMessage: (filePath: string) => `Pack descriptor is missing: ${filePath}.`,
+  missingDetails: (filePath: string) => ({ descriptor: filePath }),
+  invalidJsonMessage: (filePath: string) => `Pack descriptor contains invalid JSON: ${filePath}.`,
+  invalidJsonDetails: (filePath: string, cause: string) => ({ descriptor: filePath, cause }),
+  invalidRootMessage: () => 'Pack descriptor root must be a JSON object.',
+  invalidRootDetails: (filePath: string) => ({ descriptor: filePath }),
+};
+
 export function readJsonFile(filePath: string): JsonRecord {
-  let raw: string;
-  try {
-    raw = fs.readFileSync(filePath, 'utf8');
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      throw new FrameworkContractError('contract_file_missing', `Pack descriptor is missing: ${filePath}.`, {
-        descriptor: filePath,
-      });
-    }
-    throw error;
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (error) {
-    throw new FrameworkContractError('contract_json_invalid', `Pack descriptor contains invalid JSON: ${filePath}.`, {
-      descriptor: filePath,
-      cause: error instanceof Error ? error.message : 'JSON parse failed',
-    });
-  }
-
-  if (!isRecord(parsed)) {
-    throw shape('Pack descriptor root must be a JSON object.', { descriptor: filePath });
-  }
-
-  return parsed;
+  return readJsonRecordFile(filePath, PACK_DESCRIPTOR_JSON_FILE_BOUNDARY);
 }
 
 function requireString(record: JsonRecord, field: string, context: string) {

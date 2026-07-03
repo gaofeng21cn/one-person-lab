@@ -1,19 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-type JsonRecord = Record<string, unknown>;
+import { isRecord } from '../../kernel/contract-validation.ts';
+import {
+  optionalString,
+  readJsonFileResult,
+} from '../../kernel/json-file.ts';
+import type { JsonRecord } from '../../kernel/json-file.ts';
 
 interface GeneratedInterfaceTailInput {
   claims_live_soak_complete: boolean;
   claims_domain_ready: boolean;
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function optionalRefString(value: unknown) {
@@ -41,30 +38,6 @@ function recordList(value: unknown) {
     return [];
   }
   return value.filter(isRecord);
-}
-
-function readJsonFile(repoDir: string, relativePath: string) {
-  const absolutePath = path.join(repoDir, relativePath);
-  if (!fs.existsSync(absolutePath)) {
-    return {
-      status: 'missing',
-      payload: null,
-      error: null,
-    };
-  }
-  try {
-    return {
-      status: 'resolved',
-      payload: JSON.parse(fs.readFileSync(absolutePath, 'utf8')),
-      error: null,
-    };
-  } catch (error) {
-    return {
-      status: 'invalid_json',
-      payload: null,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
 }
 
 function firstString(...values: unknown[]) {
@@ -174,7 +147,7 @@ function productionAcceptanceTailItem(
   }
 
   return files.map((relativePath) => {
-    const file = readJsonFile(repoDir, relativePath);
+    const file = readJsonFileResult(path.join(repoDir, relativePath));
     const payload = isRecord(file.payload) ? file.payload : {};
     const closureEvidence = nestedRecord(payload, 'closure_evidence');
     const domainAcceptanceReceipt = nestedRecord(payload, 'domain_acceptance_receipt');

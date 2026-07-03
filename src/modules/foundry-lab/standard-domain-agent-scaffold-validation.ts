@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import standardAgentCapabilityMapSchema from '../../../contracts/opl-framework/standard-agent-capability-map.schema.json' with { type: 'json' };
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { readJsonFileOrNull } from '../../kernel/json-file.ts';
 import { validateJsonSchemaPayload } from '../../kernel/schema-registry.ts';
 import {
   FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
@@ -34,14 +36,6 @@ type CapabilityMapPayload = {
     surface_role: string;
   }>;
 };
-
-function readJsonFile(filePath: string) {
-  try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch {
-    return null;
-  }
-}
 
 function validateCapabilityMap(capabilityMap: unknown) {
   if (capabilityMap === null || capabilityMap === undefined) {
@@ -107,18 +101,22 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     'contracts/workspace_lifecycle_policy.json',
   ];
   const missingContractFiles = requiredContractFiles.filter((file) => !fs.existsSync(path.join(repoDir, file)));
-  const actionCatalog = readJsonFile(path.join(repoDir, 'contracts/action_catalog.json'));
-  const forbiddenRoles = Array.isArray(actionCatalog?.forbidden_generic_owner_roles)
-    ? actionCatalog.forbidden_generic_owner_roles
+  const actionCatalog = readJsonFileOrNull(path.join(repoDir, 'contracts/action_catalog.json'));
+  const actionCatalogRecord = isRecord(actionCatalog) ? actionCatalog : {};
+  const forbiddenRoles = Array.isArray(actionCatalogRecord.forbidden_generic_owner_roles)
+    ? actionCatalogRecord.forbidden_generic_owner_roles
     : [];
   const missingForbiddenRoleGuards = FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES.filter((role) => !forbiddenRoles.includes(role));
-  const descriptor = readJsonFile(path.join(repoDir, 'contracts/domain_descriptor.json'));
-  const authority = descriptor?.authority_boundary || {};
-  const packCompilerInput = readJsonFile(path.join(repoDir, 'contracts/pack_compiler_input.json'));
-  const generatedSurfaceHandoff = readJsonFile(path.join(repoDir, 'contracts/generated_surface_handoff.json'));
-  const capabilityMap = readJsonFile(path.join(repoDir, 'contracts/capability_map.json'));
-  const foundryAgentSeries = readJsonFile(path.join(repoDir, 'contracts/foundry_agent_series.json'));
-  const stageControlPlane = readJsonFile(path.join(repoDir, 'contracts/stage_control_plane.json'));
+  const descriptor = readJsonFileOrNull(path.join(repoDir, 'contracts/domain_descriptor.json'));
+  const descriptorRecord = isRecord(descriptor) ? descriptor : {};
+  const authority = isRecord(descriptorRecord.authority_boundary) ? descriptorRecord.authority_boundary : {};
+  const packCompilerInput = readJsonFileOrNull(path.join(repoDir, 'contracts/pack_compiler_input.json'));
+  const packCompilerInputRecord = isRecord(packCompilerInput) ? packCompilerInput : {};
+  const generatedSurfaceHandoff = readJsonFileOrNull(path.join(repoDir, 'contracts/generated_surface_handoff.json'));
+  const generatedSurfaceHandoffRecord = isRecord(generatedSurfaceHandoff) ? generatedSurfaceHandoff : {};
+  const capabilityMap = readJsonFileOrNull(path.join(repoDir, 'contracts/capability_map.json'));
+  const foundryAgentSeries = readJsonFileOrNull(path.join(repoDir, 'contracts/foundry_agent_series.json'));
+  const stageControlPlane = readJsonFileOrNull(path.join(repoDir, 'contracts/stage_control_plane.json'));
   const stagePackV2Required = requiresStagePackV2(packCompilerInput, stageControlPlane);
   const agentPackValidation = validateAgentPackFiles(repoDir, packCompilerInput, stagePackV2Required);
   const stageRefValidation = validateStageRefs(repoDir, stageControlPlane, stagePackV2Required);
@@ -132,16 +130,16 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     authority.opl_can_write_domain_truth === false ? null : 'opl_can_write_domain_truth_must_be_false',
     authority.opl_can_write_memory_body === false ? null : 'opl_can_write_memory_body_must_be_false',
     authority.opl_can_authorize_quality_or_export === false ? null : 'opl_can_authorize_quality_or_export_must_be_false',
-    packCompilerInput?.generated_surface_owner === 'one-person-lab'
+    packCompilerInputRecord.generated_surface_owner === 'one-person-lab'
       ? null
       : 'pack_compiler_generated_surface_owner_must_be_opl',
-    packCompilerInput?.domain_repo_can_own_generated_surface === false
+    packCompilerInputRecord.domain_repo_can_own_generated_surface === false
       ? null
       : 'pack_compiler_domain_repo_generated_surface_owner_must_be_false',
-    generatedSurfaceHandoff?.generated_surface_owner === 'one-person-lab'
+    generatedSurfaceHandoffRecord.generated_surface_owner === 'one-person-lab'
       ? null
       : 'generated_surface_handoff_owner_must_be_opl',
-    generatedSurfaceHandoff?.domain_repo_can_own_generated_surface === false
+    generatedSurfaceHandoffRecord.domain_repo_can_own_generated_surface === false
       ? null
       : 'generated_surface_handoff_domain_owner_must_be_false',
   ].filter(Boolean);

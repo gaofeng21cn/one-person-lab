@@ -379,6 +379,15 @@ Phase 1、Phase 7、Phase 9 的本轮收薄已吸收进 `main`，属于 schema b
 - Fresh evidence：`node --test --experimental-strip-types tests/src/cli/cases/runtime-developer-mode-closeout-ledger.test.ts` 12/12 pass；`node --test --experimental-strip-types tests/src/cli/cases/runtime-app-operator-drilldown-mas-payload-summary.test.ts tests/src/cli/cases/runtime-app-operator-drilldown-mag-payload-summary.test.ts` 8/8 pass；`node --test --experimental-strip-types tests/src/cli/cases/runtime-app-operator-drilldown-lifecycle.test.ts` 9/9 pass；`npm run typecheck` pass；`npm run reuse-first:scan:diff` gate_status=ok；`git diff --check` pass。
 - Residual boundary：其他 runtime CLI command specs 仍有历史 `handwritten_json_boundary` findings；本 lane 只消化四个低冲突 command specs，不把 diff gate clean 说成 full scan 清零。
 
+## Phase 1 Pack / Foundry JSON File Boundary Lane 2026-07-03
+
+本 lane 只收薄 Pack descriptor/bundle 与 Foundry Lab scaffold/conformance evidence tail 的 JSON file/object boundary；不改变 Pack output shape、Foundry validation blockers、refs-only/authority boundary、domain truth、owner receipts、typed blockers、runtime/provider queues、managed update、observability exporter、App/Aion consumer path 或 release artifacts。
+
+- Source：新增 `src/kernel/json-file.ts`，集中 `readFileSync` / `JSON.parse` / JSON object root / optional string / status-result helper；`JSON.parse` 与 scalar normalization 的 reuse-first allow marker 只放在该共享 helper。`pack-bundle.ts` 删除局部 `readJsonFile` 与 `JSON.parse` object boundary；`pack-os-parts/descriptor.ts` 保留对外 thin `readJsonFile` export 以兼容现有 `pack-os.ts` caller，但实际 JSON/object boundary 复用 kernel helper；`standard-domain-agent-scaffold-validation.ts` 删除局部 nullable JSON parser；`standard-domain-agent-conformance-evidence-tail.ts` 删除局部 `isRecord` / `optionalString` / JSON parse status helper。
+- Boundary：Pack bundle/descriptor 的 `contract_file_missing`、`contract_json_invalid`、`contract_shape_invalid` 错误码、message 和 details key 保持 caller-owned；Foundry scaffold invalid/missing JSON 继续按 nullable payload 进入现有 blockers；conformance evidence tail missing/invalid/resolved status shape 保持不变。
+- Fresh evidence：`node --experimental-strip-types --test tests/src/json-file-boundary.test.ts tests/src/pack-bundle.test.ts tests/src/cli/cases/pack-bundle-command-surface.test.ts tests/src/pack-os.test.ts tests/src/cli/cases/pack-os-command-surface.test.ts tests/src/cli/cases/agents-scaffold-validation-failures.test.ts tests/src/cli/cases/agents-scaffold-progress-first.test.ts tests/src/cli/cases/agents-conformance.test.ts` 59/59 pass；`npm run typecheck` pass；`npm run reuse-first:scan:diff` gate_status=ok；`git diff --check` pass。
+- Residual boundary：本 lane 只消化 Pack/Foundry Lab 四个指定 file/schema boundary；其他 `src/modules/pack/**`、`src/modules/foundry-lab/**` 与跨模块历史 `handwritten_json_boundary` findings 仍在 full-scan worklist 中，不声明 Phase 1 完整完成、production ready、domain ready、owner acceptance 或 release/currentness ready。
+
 ## Post-Absorption Evidence 2026-07-03
 
 本轮四条并行 lanes 已由主会话 cherry-pick 吸收到 `main`，随后执行合并后验证。该证据证明本轮切片在 Framework main 上可编译、可测试、未新增 reuse-first diff 违规；不证明 OPL production ready、domain ready、App release ready、owner acceptance 或历史风险清零。

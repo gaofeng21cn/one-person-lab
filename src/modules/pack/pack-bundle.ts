@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { readJsonRecordFile } from '../../kernel/json-file.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -44,35 +45,14 @@ function jsonText(payload: unknown) {
   return `${JSON.stringify(payload, null, 2)}\n`;
 }
 
-function readJsonFile(filePath: string) {
-  let raw: string;
-  try {
-    raw = fs.readFileSync(filePath, 'utf8');
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      throw new FrameworkContractError('contract_file_missing', `Pack bundle file is missing: ${filePath}.`, {
-        path: filePath,
-      });
-    }
-    throw error;
-  }
-
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (!isRecord(parsed)) {
-      throw shape('Pack bundle JSON root must be an object.', { path: filePath });
-    }
-    return parsed;
-  } catch (error) {
-    if (error instanceof FrameworkContractError) {
-      throw error;
-    }
-    throw new FrameworkContractError('contract_json_invalid', `Pack bundle file contains invalid JSON: ${filePath}.`, {
-      path: filePath,
-      cause: error instanceof Error ? error.message : 'JSON parse failed',
-    });
-  }
-}
+const PACK_BUNDLE_JSON_FILE_BOUNDARY = {
+  missingMessage: (filePath: string) => `Pack bundle file is missing: ${filePath}.`,
+  missingDetails: (filePath: string) => ({ path: filePath }),
+  invalidJsonMessage: (filePath: string) => `Pack bundle file contains invalid JSON: ${filePath}.`,
+  invalidJsonDetails: (filePath: string, cause: string) => ({ path: filePath, cause }),
+  invalidRootMessage: () => 'Pack bundle JSON root must be an object.',
+  invalidRootDetails: (filePath: string) => ({ path: filePath }),
+};
 
 function requireString(record: JsonRecord, field: string, context: string) {
   const value = record[field];
@@ -133,7 +113,7 @@ function validateAuthorityBoundary(boundary: JsonRecord, context: string) {
 function loadAssembly(assemblyPath: string) {
   const resolvedAssemblyPath = path.resolve(assemblyPath);
   const assemblyDir = path.dirname(resolvedAssemblyPath);
-  const assembly = readJsonFile(resolvedAssemblyPath);
+  const assembly = readJsonRecordFile(resolvedAssemblyPath, PACK_BUNDLE_JSON_FILE_BOUNDARY);
   if (assembly.surface_kind !== 'opl_pack_bundle_assembly') {
     throw shape('Pack bundle assembly surface_kind must be opl_pack_bundle_assembly.', {
       path: resolvedAssemblyPath,
@@ -247,14 +227,14 @@ function sourceDigest(sourceEntries: ReturnType<typeof buildSourceEntries>) {
 }
 
 function buildAggregate(assembly: ReturnType<typeof loadAssembly>, digest: string) {
-  const root = readJsonFile(assembly.source_root.path);
+  const root = readJsonRecordFile(assembly.source_root.path, PACK_BUNDLE_JSON_FILE_BOUNDARY);
   const aggregate: JsonRecord = {
     ...root,
   };
   for (const field of assembly.generated_array_fields) {
     aggregate[field.field] = field.order.map((itemRef) => {
       const itemPath = path.resolve(field.source_dir.path, itemRef);
-      return readJsonFile(itemPath);
+      return readJsonRecordFile(itemPath, PACK_BUNDLE_JSON_FILE_BOUNDARY);
     });
   }
   aggregate.generated_by = {
