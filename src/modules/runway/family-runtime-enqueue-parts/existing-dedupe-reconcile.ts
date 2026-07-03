@@ -1,5 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 
+import { parseJsonText } from '../../../kernel/json-file.ts';
 import type { EnqueueInput } from '../family-runtime-command.ts';
 import { deadLetterRedriveDecision } from '../family-runtime-dead-letter-redrive.ts';
 import { defaultExecutorMissingStageNativeOwnerAnswerRedriveDecision } from '../family-runtime-mas-stage-native-owner-answer.ts';
@@ -90,7 +91,7 @@ export function reconcileExistingDedupeTask(
   const exportedTaskChanged = existing.payload_json !== exportedPayloadJson
     || existing.task_kind !== taskKind
     || existing.domain_id !== input.domainId;
-  const existingPayload = JSON.parse(existing.payload_json) as Record<string, unknown>;
+  const existingPayload = parseJsonText(existing.payload_json) as Record<string, unknown>;
   const existingDefaultExecutorDispatchInput = isDefaultExecutorDispatch(existing, existingPayload)
     && isDefaultExecutorDispatchInput(input.domainId, taskKind, payload);
   const defaultExecutorSucceededAdmissionRefresh = existing.status === 'succeeded'

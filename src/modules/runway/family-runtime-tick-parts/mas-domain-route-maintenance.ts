@@ -1,5 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 
+import { parseJsonText } from '../../../kernel/json-file.ts';
+import { recordList } from '../../../kernel/json-record.ts';
 import { insertEvent, type FamilyRuntimeTaskRow } from '../family-runtime-store.ts';
 import { listStageAttemptsForTask, updateStageAttemptsForTask } from '../family-runtime-stage-attempts.ts';
 import { MAS_DOMAIN_ROUTE_RECONCILE_APPLY } from '../family-runtime-mas-domain-route.ts';
@@ -26,14 +28,8 @@ function latestTaskDispatchSucceededOutput(db: DatabaseSync, taskId: string) {
     return null;
   }
   try {
-    const parsed = JSON.parse(row.payload_json) as unknown;
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return null;
-    }
-    const output = (parsed as Record<string, unknown>).output;
-    return output && typeof output === 'object' && !Array.isArray(output)
-      ? output as Record<string, unknown>
-      : null;
+    const parsed = recordList([parseJsonText(row.payload_json)])[0];
+    return recordList([parsed?.output])[0] ?? null;
   } catch {
     return null;
   }

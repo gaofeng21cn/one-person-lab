@@ -1,13 +1,10 @@
 import { DatabaseSync } from 'node:sqlite';
 
+import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import { paperMissionStageRouteIdentityValue } from '../family-runtime-paper-mission-stage-route-terminal-sync.ts';
 import type { FamilyRuntimeTaskRow } from '../family-runtime-store.ts';
 import { updateStageAttemptsForTask } from '../family-runtime-stage-attempts.ts';
 import { sourceFingerprint } from './existing-dedupe-decisions.ts';
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
 
 function recordValue(value: unknown) {
   return typeof value === 'object' && value !== null && !Array.isArray(value)

@@ -1,5 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 
+import { parseJsonText } from '../../../kernel/json-file.ts';
+import { recordList } from '../../../kernel/json-record.ts';
 import {
   insertEvent,
   type FamilyRuntimeTaskRow,
@@ -58,7 +60,7 @@ const SUPERSEDING_DEFAULT_EXECUTOR_STATUSES = new Set([
 ]);
 
 export function payloadFromTask(row: FamilyRuntimeTaskRow) {
-  return JSON.parse(row.payload_json) as Record<string, unknown>;
+  return parseJsonText(row.payload_json) as Record<string, unknown>;
 }
 
 function isNewerTask(
@@ -293,10 +295,6 @@ function completedAcceptedAttemptForTask(db: DatabaseSync, row: FamilyRuntimeTas
   )) ?? null;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
 function completedCloseoutCanReconcileTask(
   row: FamilyRuntimeTaskRow,
   payload: Record<string, unknown>,
@@ -343,9 +341,7 @@ function completedCloseoutCanReconcileTask(
   if (hasMasStageNativeOwnerAnswer(attempt.route_impact, payload)) {
     return true;
   }
-  return attempt.activity_events.some((event) =>
-    isRecord(event) && hasMasStageNativeOwnerAnswer(event, payload)
-  );
+  return recordList(attempt.activity_events).some((event) => hasMasStageNativeOwnerAnswer(event, payload));
 }
 
 function reconcileCompletedCloseoutDefaultExecutorRow(

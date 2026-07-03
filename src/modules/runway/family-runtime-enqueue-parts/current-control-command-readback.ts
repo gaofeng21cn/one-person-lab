@@ -1,15 +1,8 @@
+import { recordList, stringValue as optionalString } from '../../../kernel/json-record.ts';
 import { validCompleteTransitionRuntimeLiveReadback } from '../family-runtime-domain-progress-transition-runtime-parts/live-readback-validation.ts';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
 function firstRecord(...values: unknown[]) {
-  return values.find((value): value is Record<string, unknown> => isRecord(value)) ?? null;
+  return recordList(values)[0] ?? null;
 }
 
 function sameOptionalIdentity(left: string | null, right: string | null) {
@@ -21,12 +14,8 @@ function commandMatchesRuntimeReadback(input: {
   runtimeResult: Record<string, unknown>;
   liveReadback: Record<string, unknown>;
 }) {
-  const runtimeCommand = isRecord(input.runtimeResult.command)
-    ? input.runtimeResult.command
-    : null;
-  const readbackIdentity = isRecord(input.liveReadback.identity)
-    ? input.liveReadback.identity
-    : null;
+  const runtimeCommand = firstRecord(input.runtimeResult.command);
+  const readbackIdentity = firstRecord(input.liveReadback.identity);
   if (!runtimeCommand || !readbackIdentity) {
     return false;
   }
@@ -43,20 +32,18 @@ function commandMatchesRuntimeReadback(input: {
 }
 
 function canonicalCommandReadback(payload: Record<string, unknown>) {
-  const providerAdmissionIdentity = isRecord(payload.provider_admission_identity)
-    ? payload.provider_admission_identity
-    : null;
+  const providerAdmissionIdentity = firstRecord(payload.provider_admission_identity);
+  const domainProgressTransitionRuntime = firstRecord(payload.domain_progress_transition_runtime);
+  const providerDomainProgressTransitionRuntime = firstRecord(
+    providerAdmissionIdentity?.domain_progress_transition_runtime,
+  );
   const command = firstRecord(
     payload.current_control_command_outbox_record,
     payload.current_control_command,
     providerAdmissionIdentity?.current_control_command_outbox_record,
     providerAdmissionIdentity?.current_control_command,
-    isRecord(payload.domain_progress_transition_runtime)
-      ? payload.domain_progress_transition_runtime.command
-      : null,
-    isRecord(providerAdmissionIdentity?.domain_progress_transition_runtime)
-      ? providerAdmissionIdentity.domain_progress_transition_runtime.command
-      : null,
+    domainProgressTransitionRuntime?.command,
+    providerDomainProgressTransitionRuntime?.command,
   );
   const runtimeResult = firstRecord(
     payload.domain_progress_transition_runtime,

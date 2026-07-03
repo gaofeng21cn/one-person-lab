@@ -1,5 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 
+import { parseJsonText } from '../../../kernel/json-file.ts';
+import { record, recordList, stringValue } from '../../../kernel/json-record.ts';
 import {
   providerAdmissionCurrentnessIdentity,
   sameProviderAdmissionCurrentnessIdentity,
@@ -22,17 +24,13 @@ const ACCEPTED_ADVANCING_DELTA_SHAPES = [
   'paper_facing_delta_ref',
 ] as const;
 
-function nestedRecord(value: unknown) {
-  return isRecord(value) ? value : null;
-}
-
 function paperMissionStageRouteCurrentnessIdentity(payload: Record<string, unknown>) {
   if (payload.runtime_request_kind !== 'mas_paper_mission_stage_route') {
     return null;
   }
-  const stageRunRequest = nestedRecord(payload.stage_run_request);
-  const handoff = nestedRecord(payload.opl_route_handoff_record);
-  const carrier = nestedRecord(handoff?.opl_runtime_carrier);
+  const stageRunRequest = record(payload.stage_run_request);
+  const handoff = record(payload.opl_route_handoff_record);
+  const carrier = record(handoff.opl_runtime_carrier);
   const routeIdentityKey = stringValue(payload.route_identity_key)
     ?? stringValue(stageRunRequest?.route_identity_key)
     ?? stringValue(carrier?.route_identity_key);
@@ -185,16 +183,14 @@ export function assertProviderOnlyRedriveProtocol(input: {
 }
 
 function hasOwnerRefs(value: unknown) {
-  if (!isRecord(value)) {
-    return false;
-  }
+  const refs = record(value);
   return Boolean(
-    stringList(value.owner_receipt_refs).length > 0
-    || stringValue(value.owner_receipt_ref)
-    || stringList(value.domain_receipt_refs).length > 0
-    || stringValue(value.domain_receipt_ref)
-    || stringList(value.typed_blocker_refs).length > 0
-    || stringValue(value.typed_blocker_ref)
+    stringList(refs.owner_receipt_refs).length > 0
+    || stringValue(refs.owner_receipt_ref)
+    || stringList(refs.domain_receipt_refs).length > 0
+    || stringValue(refs.domain_receipt_ref)
+    || stringList(refs.typed_blocker_refs).length > 0
+    || stringValue(refs.typed_blocker_ref)
   );
 }
 
@@ -207,7 +203,7 @@ function hasStringField(record: Record<string, unknown>, fields: string[]) {
 
 function hasNestedStringField(record: Record<string, unknown>, fields: string[]) {
   return hasStringField(record, fields)
-    || Object.values(record).some((value) => isRecord(value) && hasStringField(value, fields));
+    || recordList(Object.values(record)).some((value) => hasStringField(value, fields));
 }
 
 function hasCandidateHash(payload: Record<string, unknown>) {
@@ -275,8 +271,8 @@ function hasAdvancingOwnerDelta(payload: Record<string, unknown>) {
 }
 
 function routeBackOrDomainGateSignal(attempt: StageAttemptPayload) {
-  const routeImpact = isRecord(attempt.route_impact) ? attempt.route_impact : {};
-  const workspaceLocator = isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
+  const routeImpact = record(attempt.route_impact);
+  const workspaceLocator = record(attempt.workspace_locator);
   const commandKind = stringValue(routeImpact.command_kind) ?? stringValue(workspaceLocator.command_kind);
   const domainReadyVerdict = stringValue(routeImpact.domain_ready_verdict);
   const reason = stringValue(routeImpact.reason) ?? stringValue(attempt.blocked_reason);
@@ -368,7 +364,7 @@ function liveProviderAttemptForRedrive(
 }
 
 function taskPayload(row: FamilyRuntimeTaskRow) {
-  return JSON.parse(row.payload_json) as Record<string, unknown>;
+  return parseJsonText(row.payload_json) as Record<string, unknown>;
 }
 
 export function assertNoProviderOnlySemanticRedriveBlocker(
@@ -459,16 +455,8 @@ export function assertNoProviderOnlySemanticRedriveBlocker(
   }
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function stringList(value: unknown) {
   return Array.isArray(value)
     ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
     : [];
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }

@@ -1,5 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 
+import { parseJsonText } from '../../../kernel/json-file.ts';
+import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import {
   MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
   hasMasStageNativeOwnerAnswer,
@@ -33,10 +35,6 @@ const MAS_PAPER_AUTONOMY_STALE_DEAD_LETTER_MARKERS = [
 const OPERATOR_RETIRED_STALE_RESIDUE_PREFIX = 'operator_retired_stale_runtime_residue:';
 const DEFAULT_EXECUTOR_SUPERSEDED_REASON = 'mas_default_executor_superseded_by_current_source';
 const TERMINAL_STAGE_ATTEMPT_STATUSES = new Set(['blocked', 'completed', 'dead_lettered', 'failed']);
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
 
 export function sourceFingerprint(payload: Record<string, unknown>) {
   return defaultExecutorDomainSourceFingerprint(payload);
@@ -527,7 +525,7 @@ function transportOnlySucceededDefaultExecutorAdmissionRedriveDecision(
   if (!row) {
     return null;
   }
-  const eventPayload = recordValue(JSON.parse(row.payload_json));
+  const eventPayload = recordValue(parseJsonText(row.payload_json));
   const output = recordValue(eventPayload?.output);
   if (!isDefaultExecutorOplAttemptAdmissionRequested(output)) {
     return null;
@@ -588,7 +586,7 @@ function latestDispatchSucceededPayload(db: DatabaseSync, taskId: string) {
     return null;
   }
   try {
-    return recordValue(JSON.parse(row.payload_json));
+    return recordValue(parseJsonText(row.payload_json));
   } catch {
     return null;
   }
