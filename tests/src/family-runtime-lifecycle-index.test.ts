@@ -396,6 +396,24 @@ test('family runtime lifecycle reconcile detects missing and stale refs without 
     assert.equal(reconciled.summary.can_execute_domain_physical_delete, false);
     assert.equal(reconciled.summary.opl_cleanup_apply_can_execute, true);
     assert.equal(reconciled.delete_ready_proof.proof_status, 'domain_owner_receipt_refs_observed');
+    assert.equal(reconciled.desired_state.surface_kind, 'opl_lifecycle_reconcile_desired_state');
+    assert.equal(reconciled.observed_state.surface_kind, 'opl_lifecycle_reconcile_observed_state');
+    assert.equal(
+      reconciled.reconcile_decision.surface_kind,
+      'opl_kubernetes_style_lifecycle_reconcile_decision',
+    );
+    assert.equal(
+      reconciled.reconcile_decision.next_safe_action,
+      'apply_lifecycle_cleanup_receipt_projection',
+    );
+    assert.equal(reconciled.reconcile_decision.mutation_allowed, true);
+    assert.deepEqual(reconciled.reconcile_decision.forbidden_mutations, [
+      'write_domain_truth',
+      'write_domain_artifact_body',
+      'delete_domain_repo_files',
+      'sign_owner_receipt',
+      'create_typed_blocker',
+    ]);
     assert.equal(reconciled.delete_ready_proof.can_execute_delete, false);
     assert.equal(reconciled.delete_ready_proof.can_execute_domain_physical_delete, false);
     assert.equal(reconciled.delete_ready_proof.opl_cleanup_apply_ready, true);
@@ -427,6 +445,8 @@ test('family runtime lifecycle reconcile detects missing and stale refs without 
     assert.deepEqual(drift.missing_refs.domain_artifact_mutation_receipt_refs, ['mas://receipt/missing']);
     assert.equal(drift.summary.stale_ref_count, 1);
     assert.equal(drift.delete_ready_proof.proof_status, 'blocked_lifecycle_drift_detected');
+    assert.equal(drift.reconcile_decision.next_safe_action, 'wait_owner_or_repair_refs');
+    assert.equal(drift.reconcile_decision.mutation_allowed, false);
     assert.equal(drift.summary.can_execute_delete, false);
     assert.equal(drift.summary.opl_cleanup_apply_can_execute, false);
   });

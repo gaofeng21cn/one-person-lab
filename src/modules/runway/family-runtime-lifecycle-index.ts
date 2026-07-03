@@ -354,6 +354,36 @@ function extraRefs(actual: string[], expected: string[]) {
   return actual.filter((ref) => !expectedSet.has(ref));
 }
 
+function lifecycleReconcileNextSafeAction(input: {
+  driftDetected: boolean;
+  expectedCount: number;
+  domainDeleteReady: boolean;
+}) {
+  if (input.driftDetected) {
+    return {
+      action: 'wait_owner_or_repair_refs',
+      reason: 'desired_and_observed_refs_do_not_match',
+      mutation_allowed: false,
+    };
+  }
+  if (input.domainDeleteReady) {
+    return {
+      action: 'apply_lifecycle_cleanup_receipt_projection',
+      reason: input.expectedCount > 0
+        ? 'expected_owner_receipt_and_restore_refs_observed'
+        : 'owner_receipt_and_restore_refs_inferred_from_observed_refs',
+      mutation_allowed: true,
+    };
+  }
+  return {
+    action: 'observe_only',
+    reason: input.expectedCount > 0
+      ? 'expected_refs_reconciled_but_delete_ready_proof_incomplete'
+      : 'no_expected_refs_and_no_owner_receipt_restore_pair_observed',
+    mutation_allowed: false,
+  };
+}
+
 export function reconcileFamilyRuntimeLifecycleRefs(input: LifecycleReconcileInput = {}) {
   const index = readFamilyRuntimeLifecycleRefs({ domain_id: input.target_domain_id });
   const refs = Array.isArray(index.refs) ? index.refs : [];
@@ -457,6 +487,11 @@ export function reconcileFamilyRuntimeLifecycleRefs(input: LifecycleReconcileInp
         ? expectedDomainReceiptSatisfied && expectedRestoreSatisfied
         : actualDomainReceiptObserved && actualRestoreObserved
     );
+  const nextSafeAction = lifecycleReconcileNextSafeAction({
+    driftDetected,
+    expectedCount,
+    domainDeleteReady,
+  });
 
   return {
     surface_kind: 'family_runtime_lifecycle_reconcile_projection',
@@ -475,6 +510,59 @@ export function reconcileFamilyRuntimeLifecycleRefs(input: LifecycleReconcileInp
       receipt_refs: expectedReceiptRefs,
       restore_proof_refs: expectedRestoreProofRefs,
       domain_artifact_mutation_receipt_refs: expectedDomainArtifactMutationReceiptRefs,
+    },
+    desired_state: {
+      surface_kind: 'opl_lifecycle_reconcile_desired_state',
+      source: 'cli_expected_refs_or_operator_policy',
+      target_domain_id: input.target_domain_id?.trim() || null,
+      generation: [
+        input.target_domain_id?.trim() || 'all-domains',
+        expectedSourceRefs.join(','),
+        expectedReceiptRefs.join(','),
+        expectedRestoreProofRefs.join(','),
+        expectedDomainArtifactMutationReceiptRefs.join(','),
+      ].join('|'),
+      refs: {
+        source_refs: expectedSourceRefs,
+        receipt_refs: expectedReceiptRefs,
+        restore_proof_refs: expectedRestoreProofRefs,
+        domain_artifact_mutation_receipt_refs: expectedDomainArtifactMutationReceiptRefs,
+      },
+    },
+    observed_state: {
+      surface_kind: 'opl_lifecycle_reconcile_observed_state',
+      source: 'family_runtime_lifecycle_index_projection',
+      lifecycle_index_db: index.lifecycle_index_db,
+      indexed_ref_count: refs.length,
+      refs: {
+        source_refs: actualSourceRefs,
+        receipt_refs: actualReceiptRefs,
+        restore_proof_refs: actualRestoreProofRefs,
+        domain_artifact_mutation_receipt_refs: actualDomainArtifactMutationReceiptRefs,
+      },
+      stale_refs: staleRefs,
+    },
+    reconcile_decision: {
+      surface_kind: 'opl_kubernetes_style_lifecycle_reconcile_decision',
+      controller_role: 'desired_current_refs_only_reconciler',
+      idempotency_key: [
+        input.target_domain_id?.trim() || 'all-domains',
+        driftDetected ? 'drift' : 'reconciled',
+        nextSafeAction.action,
+      ].join(':'),
+      next_safe_action: nextSafeAction.action,
+      reason: nextSafeAction.reason,
+      mutation_allowed: nextSafeAction.mutation_allowed,
+      allowed_mutation_surface: nextSafeAction.mutation_allowed
+        ? 'opl family-runtime lifecycle apply --mode apply'
+        : null,
+      forbidden_mutations: [
+        'write_domain_truth',
+        'write_domain_artifact_body',
+        'delete_domain_repo_files',
+        'sign_owner_receipt',
+        'create_typed_blocker',
+      ],
     },
     missing_refs: missing,
     extra_refs: extra,
