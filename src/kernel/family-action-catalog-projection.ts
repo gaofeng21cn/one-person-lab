@@ -4,7 +4,7 @@ import type {
   FamilyActionExportFormat,
   FamilyActionSurfaceDescriptor,
 } from './family-action-catalog-contract.ts';
-import type { JsonRecord } from './json-record.ts';
+import { record, stringValue, type JsonRecord } from './json-record.ts';
 
 type FamilyActionCatalogProjectionManifest = {
   operator_loop_actions?: Record<string, JsonRecord | undefined> | null;
@@ -14,20 +14,12 @@ type FamilyActionCatalogProjectionManifest = {
   } | null;
 };
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
 function surfaceCommand(action: FamilyActionCatalogAction, surface: FamilyActionSurfaceDescriptor | null) {
-  return optionalString(surface?.command) ?? action.source_command.command;
+  return stringValue(surface?.command) ?? action.source_command.command;
 }
 
 function surfaceKind(action: FamilyActionCatalogAction, surface: FamilyActionSurfaceDescriptor | null) {
-  return optionalString(surface?.surface_kind) ?? action.source_command.surface_kind;
+  return stringValue(surface?.surface_kind) ?? action.source_command.surface_kind;
 }
 
 function sourceOfWork(action: FamilyActionCatalogAction) {
@@ -70,7 +62,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       source_of_work: lineage,
     },
     mcp: {
-      name: optionalString(mcpSurface?.tool_name) ?? action.action_id,
+      name: stringValue(mcpSurface?.tool_name) ?? action.action_id,
       description: action.summary,
       command: surfaceCommand(action, mcpSurface),
       surface_kind: surfaceKind(action, mcpSurface),
@@ -81,7 +73,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       source_of_work: lineage,
     },
     skill: {
-      command_contract_id: optionalString(skillSurface?.command_contract_id) ?? action.action_id,
+      command_contract_id: stringValue(skillSurface?.command_contract_id) ?? action.action_id,
       action_id: action.action_id,
       command,
       surface_kind: kind,
@@ -93,7 +85,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       source_of_work: lineage,
     },
     product_entry: {
-      action_key: optionalString(productEntrySurface?.action_key) ?? action.action_id,
+      action_key: stringValue(productEntrySurface?.action_key) ?? action.action_id,
       command: surfaceCommand(action, productEntrySurface),
       surface_kind: surfaceKind(action, productEntrySurface),
       summary: action.summary,
@@ -105,7 +97,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
     openai: {
       type: 'function',
       function: {
-        name: optionalString(openaiSurface?.tool_name) ?? action.action_id,
+        name: stringValue(openaiSurface?.tool_name) ?? action.action_id,
         description: action.summary,
         parameters: {
           type: 'object',
@@ -118,7 +110,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       source_of_work: lineage,
     },
     ai_sdk: {
-      name: optionalString(aiSdkSurface?.tool_name) ?? action.action_id,
+      name: stringValue(aiSdkSurface?.tool_name) ?? action.action_id,
       description: action.summary,
       inputSchemaRef: action.input_schema_ref,
       outputSchemaRef: action.output_schema_ref,
@@ -129,37 +121,39 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
 }
 
 function projectionMatchesAction(value: unknown, action: FamilyActionCatalogAction, command: string) {
-  if (!isRecord(value)) {
+  const entry = record(value);
+  if (Object.keys(entry).length === 0) {
     return false;
   }
-  return optionalString(value.action_id) === action.action_id
-    || optionalString(value.command_contract_id) === action.action_id
-    || optionalString(value.command_contract_id) === optionalString(action.supported_surfaces.skill?.command_contract_id)
-    || optionalString(value.command) === command;
+  return stringValue(entry.action_id) === action.action_id
+    || stringValue(entry.command_contract_id) === action.action_id
+    || stringValue(entry.command_contract_id) === stringValue(action.supported_surfaces.skill?.command_contract_id)
+    || stringValue(entry.command) === command;
 }
 
 function collectSkillProjectionEntries(value: unknown): JsonRecord[] {
   if (Array.isArray(value)) {
     return value.flatMap((entry) => collectSkillProjectionEntries(entry));
   }
-  if (!isRecord(value)) {
+  const entry = record(value);
+  if (Object.keys(entry).length === 0) {
     return [];
   }
 
   const entries: JsonRecord[] = [];
   if (
-    optionalString(value.action_id)
-    || optionalString(value.command_contract_id)
-    || optionalString(value.command)
+    stringValue(entry.action_id)
+    || stringValue(entry.command_contract_id)
+    || stringValue(entry.command)
   ) {
-    entries.push(value);
+    entries.push(entry);
   }
 
-  const directProjection = value.action_catalog_projection;
+  const directProjection = entry.action_catalog_projection;
   entries.push(...collectSkillProjectionEntries(directProjection));
 
-  const groupedProjection = value.action_catalog_projections;
-  if (isRecord(groupedProjection)) {
+  const groupedProjection = record(entry.action_catalog_projections);
+  if (Object.keys(groupedProjection).length > 0) {
     entries.push(...collectSkillProjectionEntries(groupedProjection.skill));
   }
 
@@ -232,7 +226,7 @@ export function buildFamilyActionCatalogParity(
     const manifestAction =
       manifest?.operator_loop_actions?.[action.action_id]
       ?? manifest?.operator_loop_actions?.[projections.product_entry.action_key];
-    if (manifestAction && optionalString(manifestAction.command) !== projections.product_entry.command) {
+    if (manifestAction && stringValue(manifestAction.command) !== projections.product_entry.command) {
       issues.push(`${action.action_id}: operator_loop_actions command diverges from action catalog`);
     }
 
