@@ -2,6 +2,11 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { readJsonPayloadFile } from '../../../kernel/json-file.ts';
+import {
+  record,
+  recordList,
+} from '../../../kernel/json-record.ts';
 import { ensureOplStateDir } from '../runtime-state-paths.ts';
 import type { JsonRecord, RuntimeEnvironmentTargetInput } from './contract.ts';
 
@@ -128,10 +133,9 @@ export function readJsonObject(filePath: string): JsonRecord | null {
   if (!fs.existsSync(filePath)) {
     return null;
   }
-  const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-    ? parsed as JsonRecord
-    : null;
+  const parsed = readJsonPayloadFile(filePath);
+  const payload = record(parsed);
+  return payload === parsed ? payload : null;
 }
 
 export function objects(value: unknown): JsonRecord[] {
@@ -182,10 +186,7 @@ export function readPreparedEnvironmentIndex(): JsonRecord[] {
   if (!fs.existsSync(indexPath)) {
     return [];
   }
-  const parsed = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
-  return Array.isArray(parsed) ? parsed.filter((entry): entry is JsonRecord => (
-    Boolean(entry) && typeof entry === 'object' && !Array.isArray(entry)
-  )) : [];
+  return recordList(readJsonPayloadFile(indexPath));
 }
 
 export function writePreparedEnvironmentIndex(entry: JsonRecord) {

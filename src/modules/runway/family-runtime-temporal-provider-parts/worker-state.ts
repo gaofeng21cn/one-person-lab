@@ -3,6 +3,8 @@ import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { readJsonPayloadFile } from '../../../kernel/json-file.ts';
+import { record } from '../../../kernel/json-record.ts';
 import type { TemporalWorkerPaths } from '../family-runtime-temporal-client.ts';
 
 export type TemporalWorkerState = {
@@ -243,11 +245,12 @@ export function workerSourceVersionDiagnostic(
 
 export function readTemporalWorkerState(paths: TemporalWorkerPaths) {
   try {
-    const parsed = JSON.parse(fs.readFileSync(temporalWorkerStatePath(paths), 'utf8'));
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    const parsed = readJsonPayloadFile(temporalWorkerStatePath(paths));
+    const payload = record(parsed);
+    if (payload !== parsed) {
       return null;
     }
-    const state = parsed as Partial<TemporalWorkerState>;
+    const state = payload as Partial<TemporalWorkerState>;
     if (
       state.provider_kind !== 'temporal'
       || !Number.isInteger(state.pid)

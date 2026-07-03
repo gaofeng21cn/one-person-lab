@@ -1,17 +1,16 @@
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import {
+  record,
+  stringValue,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
+import {
   assertDomainOwnerPayloadSummaryReceiptInputReady,
   preflightDomainOwnerPayloadSummaryReceiptInput,
   recordDomainOwnerPayloadSummaryReceipts,
   verifyDomainOwnerPayloadSummaryReceipt,
   type DomainOwnerPayloadSummaryReceiptInput,
 } from '../../ledger/index.ts';
-
-type JsonRecord = Record<string, unknown>;
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
 
 function stringList(value: unknown) {
   const scalar = stringValue(value);
@@ -23,10 +22,6 @@ function stringList(value: unknown) {
     : [];
 }
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
 function refsFromPayload(payload: JsonRecord, keys: string[]) {
   return keys.flatMap((key) => stringList(payload[key]));
 }
@@ -36,7 +31,7 @@ function domainOwnerPayloadSummaryInput(
   payload: JsonRecord,
 ): DomainOwnerPayloadSummaryReceiptInput {
   return {
-    target_identity: isRecord(route.target_identity) ? route.target_identity : {},
+    target_identity: record(route.target_identity),
     source_ref: stringValue(route.evidence_source_ref) ?? stringValue(route.ref),
     domain_owner_receipt_refs: refsFromPayload(payload, [
       'domain_owner_receipt_refs',

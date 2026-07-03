@@ -1,15 +1,12 @@
-type JsonRecord = Record<string, unknown>;
+import {
+  record,
+  recordList,
+  type JsonRecord,
+} from '../../kernel/json-record.ts';
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function asRecord(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function asRecordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
+function recordOrNull(value: unknown): JsonRecord | null {
+  const payload = record(value);
+  return payload === value ? payload : null;
 }
 
 function asStringList(value: unknown) {
@@ -17,7 +14,7 @@ function asStringList(value: unknown) {
 }
 
 function historyRunnerEventSummary(value: unknown) {
-  return asRecordList(value).map((event) => {
+  return recordList(value).map((event) => {
     const eventKind = typeof event.event_kind === 'string' ? event.event_kind : 'unknown';
     const eventValue = typeof event.value === 'string'
       ? event.value.length > 240
@@ -32,7 +29,7 @@ function historyRunnerEventSummary(value: unknown) {
 }
 
 function historyProcessOutputSummary(value: unknown) {
-  const summary = asRecord(value);
+  const summary = record(value);
   if (Object.keys(summary).length === 0) {
     return undefined;
   }
@@ -68,22 +65,22 @@ function historyProcessOutputSummary(value: unknown) {
     ...(typeof summary.session_recovery_attempts === 'number'
       ? { session_recovery_attempts: summary.session_recovery_attempts }
       : {}),
-    ...(isRecord(summary.closeout_enforcement)
+    ...(recordOrNull(summary.closeout_enforcement)
       ? { closeout_enforcement: summary.closeout_enforcement }
       : {}),
   };
 }
 
 export function providerBlockerFromCodexResult(value: JsonRecord) {
-  const summary = asRecord(value.process_output_summary);
+  const summary = record(value.process_output_summary);
   const blockedReason = typeof summary.blocked_reason === 'string' && summary.blocked_reason.trim()
     ? summary.blocked_reason.trim()
     : null;
   if (!blockedReason) {
     return null;
   }
-  const closeoutPacket = asRecord(value.closeout_packet);
-  const closeoutRouteImpact = asRecord(closeoutPacket.route_impact);
+  const closeoutPacket = record(value.closeout_packet);
+  const closeoutRouteImpact = record(closeoutPacket.route_impact);
   return {
     blocked_reason: blockedReason,
     route_impact: {
@@ -102,9 +99,9 @@ export function providerBlockerFromCodexResult(value: JsonRecord) {
 }
 
 export function codexActivityEventForTemporalHistory(codexResult: JsonRecord) {
-  const runnerStatus = asRecord(codexResult.runner_status);
-  const heartbeatSummary = asRecord(codexResult.heartbeat_summary);
-  const progressSummary = asRecord(codexResult.progress_summary);
+  const runnerStatus = record(codexResult.runner_status);
+  const heartbeatSummary = record(codexResult.heartbeat_summary);
+  const progressSummary = record(codexResult.progress_summary);
   const processOutputSummary = historyProcessOutputSummary(codexResult.process_output_summary);
   const providerBlocker = providerBlockerFromCodexResult(codexResult);
   return {
@@ -153,7 +150,7 @@ export function codexActivityEventForTemporalHistory(codexResult: JsonRecord) {
       runner_events: historyRunnerEventSummary(progressSummary.runner_events),
     },
     ...(processOutputSummary ? { process_output_summary: processOutputSummary } : {}),
-    cost_summary: asRecord(codexResult.cost_summary),
+    cost_summary: record(codexResult.cost_summary),
     ...(providerBlocker ? { provider_blocker: providerBlocker } : {}),
     authority_boundary: {
       opl: 'activity_packet_and_receipt_transport_only',

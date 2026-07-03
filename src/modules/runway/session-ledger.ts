@@ -3,6 +3,7 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { readJsonPayloadFile } from '../../kernel/json-file.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 
 type SessionLedgerFile = {
@@ -106,7 +107,7 @@ function readSessionLedgerFile(): SessionLedgerFile {
   }
 
   try {
-    const parsed = JSON.parse(fs.readFileSync(paths.session_ledger_file, 'utf8')) as Partial<SessionLedgerFile>;
+    const parsed = readJsonPayloadFile(paths.session_ledger_file) as Partial<SessionLedgerFile>;
     if (parsed.version !== 'g2' || !Array.isArray(parsed.entries)) {
       throw new Error('Invalid session ledger shape.');
     }

@@ -1,5 +1,6 @@
-import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+
+import { readJsonPayloadFile } from '../../../kernel/json-file.ts';
 
 export type JsonRecord = Record<string, unknown>;
 
@@ -53,7 +54,7 @@ export const CONTRACT_REF = 'contracts/opl-framework/runtime-environment-substra
 export const CONTRACT_PATH = fileURLToPath(new URL(`../../../../${CONTRACT_REF}`, import.meta.url));
 
 export function readContract(): JsonRecord {
-  return JSON.parse(fs.readFileSync(CONTRACT_PATH, 'utf8')) as JsonRecord;
+  return readJsonPayloadFile(CONTRACT_PATH) as JsonRecord;
 }
 
 export const RUNTIME_ENVIRONMENT_SUBSTRATE_CONTRACT = readContract();

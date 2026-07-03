@@ -4,10 +4,17 @@ import path from 'node:path';
 
 import type { DatabaseSync } from 'node:sqlite';
 
+import { parseJsonText } from '../../kernel/json-file.ts';
+import {
+  record,
+  stringList,
+  type JsonRecord,
+} from '../../kernel/json-record.ts';
 import { openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
 import { resolveOplStatePaths } from './runtime-state-paths.ts';
 
-export type JsonRecord = Record<string, unknown>;
+export type { JsonRecord };
+export { isRecord } from '../../kernel/contract-validation.ts';
 
 export type LifecycleApplyMode = 'dry-run' | 'apply' | 'verify';
 
@@ -52,21 +59,12 @@ export function normalizeText(value: string, field: string) {
   return text;
 }
 
-export function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 export function normalizeOptionalText(value: string | undefined | null) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 export function normalizeStringList(value: unknown) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value
-    .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-    .map((entry) => entry.trim());
+  return stringList(value);
 }
 
 export function sha256(value: unknown) {
@@ -75,10 +73,7 @@ export function sha256(value: unknown) {
 
 export function parsePayload(value: string) {
   try {
-    const parsed = JSON.parse(value);
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-      ? parsed as JsonRecord
-      : {};
+    return record(parseJsonText(value));
   } catch {
     return {};
   }

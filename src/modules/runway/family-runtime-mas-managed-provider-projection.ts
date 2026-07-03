@@ -1,12 +1,18 @@
 import { spawnSync, type SpawnSyncOptionsWithStringEncoding } from 'node:child_process';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
+import {
+  record,
+  stringList,
+  stringValue,
+  type JsonRecord,
+} from '../../kernel/json-record.ts';
 import { resolveBindingManifest } from '../atlas/index.ts';
 import type { DomainManifestCatalogEntry } from '../atlas/index.ts';
 import { resolveTemporalNamespace, resolveTemporalTaskQueue } from './family-runtime-temporal.ts';
 import { getActiveWorkspaceBinding } from '../workspace/index.ts';
 
-type JsonRecord = Record<string, unknown>;
 const DEFAULT_MANAGED_PROVIDER_PROJECTION_TIMEOUT_MS = 2_000;
 
 export type MasManagedProviderProjection = {
@@ -33,22 +39,8 @@ export type MasManagedProviderProjection = {
   };
 };
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
-    : [];
-}
-
 function statusIsReady(value: unknown) {
-  const status = optionalString(value);
+  const status = stringValue(value);
   return status === 'ready'
     || status === 'provider_ready'
     || status === 'managed_temporal_ready'
@@ -98,12 +90,14 @@ function resolveManagedProviderProjectionTimeoutMs() {
 function nestedRecord(value: unknown, path: string[]) {
   let cursor: unknown = value;
   for (const key of path) {
-    if (!isRecord(cursor)) {
+    const current = record(cursor);
+    if (current !== cursor) {
       return null;
     }
-    cursor = cursor[key];
+    cursor = current[key];
   }
-  return isRecord(cursor) ? cursor : null;
+  const result = record(cursor);
+  return result === cursor ? result : null;
 }
 
 function findProjection(payload: unknown, key: string): JsonRecord | null {
@@ -161,9 +155,7 @@ function managedTemporalProjectionReady(projection: JsonRecord) {
 }
 
 function normalizedManagedTemporalAuthorityBoundary(projection: JsonRecord) {
-  const authorityBoundary = isRecord(projection.authority_boundary)
-    ? projection.authority_boundary
-    : {};
+  const authorityBoundary = record(projection.authority_boundary);
   return {
     opl_role: 'projection_consumer_only',
     domain_truth: 'domain_owned',
@@ -179,35 +171,33 @@ function normalizeManagedTemporalProjection(projection: JsonRecord, source: Json
 
   return {
     ...projection,
-    surface_kind: optionalString(projection.surface_kind) ?? 'managed_temporal_state_consistency',
-    projection_status: optionalString(projection.projection_status)
-      ?? optionalString(projection.status)
+    surface_kind: stringValue(projection.surface_kind) ?? 'managed_temporal_state_consistency',
+    projection_status: stringValue(projection.projection_status)
+      ?? stringValue(projection.status)
       ?? 'ready',
-    provider_kind: optionalString(projection.provider_kind) ?? 'temporal',
-    service_status: optionalString(projection.service_status)
-      ?? optionalString(projection.service_readiness)
+    provider_kind: stringValue(projection.provider_kind) ?? 'temporal',
+    service_status: stringValue(projection.service_status)
+      ?? stringValue(projection.service_readiness)
       ?? 'ready',
-    worker_status: optionalString(projection.worker_status)
-      ?? optionalString(projection.worker_readiness)
+    worker_status: stringValue(projection.worker_status)
+      ?? stringValue(projection.worker_readiness)
       ?? 'ready',
-    address: optionalString(projection.address),
-    namespace: optionalString(projection.namespace) ?? resolveTemporalNamespace(),
-    task_queue: optionalString(projection.task_queue) ?? resolveTemporalTaskQueue(),
+    address: stringValue(projection.address),
+    namespace: stringValue(projection.namespace) ?? resolveTemporalNamespace(),
+    task_queue: stringValue(projection.task_queue) ?? resolveTemporalTaskQueue(),
     source_refs: stringList(projection.source_refs),
-    provider_proof_ref: optionalString(projection.provider_proof_ref),
+    provider_proof_ref: stringValue(projection.provider_proof_ref),
     source_manifest: source,
     authority_boundary: normalizedManagedTemporalAuthorityBoundary(projection),
   };
 }
 
 function normalizeLegacyRetirementTombstoneProof(projection: JsonRecord, source: JsonRecord) {
-  const authorityBoundary = isRecord(projection.authority_boundary)
-    ? projection.authority_boundary
-    : {};
+  const authorityBoundary = record(projection.authority_boundary);
   return {
     ...projection,
-    surface_kind: optionalString(projection.surface_kind) ?? 'legacy_retirement_tombstone_proof',
-    status: optionalString(projection.status) ?? 'unknown',
+    surface_kind: stringValue(projection.surface_kind) ?? 'legacy_retirement_tombstone_proof',
+    status: stringValue(projection.status) ?? 'unknown',
     active_default_callers: Array.isArray(projection.active_default_callers)
       ? projection.active_default_callers
       : [],
@@ -235,48 +225,36 @@ function projectionFromPayload(payload: unknown, source: JsonRecord): MasManaged
   const normalizedFamilyStageControlPlane = familyStageControlPlane
     ? {
         ...familyStageControlPlane,
-        surface_kind: optionalString(familyStageControlPlane.surface_kind) ?? 'family_stage_control_plane',
+        surface_kind: stringValue(familyStageControlPlane.surface_kind) ?? 'family_stage_control_plane',
         source_manifest: source,
         authority_boundary: {
           opl_role: 'projection_consumer_only',
           domain_truth: 'domain_owned',
-          ...(
-            isRecord(familyStageControlPlane.authority_boundary)
-              ? familyStageControlPlane.authority_boundary
-              : {}
-          ),
+          ...record(familyStageControlPlane.authority_boundary),
         },
       }
     : null;
   const normalizedDomainMemoryDescriptor = domainMemoryDescriptor
     ? {
         ...domainMemoryDescriptor,
-        surface_kind: optionalString(domainMemoryDescriptor.surface_kind) ?? 'family_domain_memory_descriptor',
+        surface_kind: stringValue(domainMemoryDescriptor.surface_kind) ?? 'family_domain_memory_descriptor',
         source_manifest: source,
         authority_boundary: {
           opl_role: 'projection_consumer_only',
           domain_truth: 'domain_owned',
-          ...(
-            isRecord(domainMemoryDescriptor.authority_boundary)
-              ? domainMemoryDescriptor.authority_boundary
-              : {}
-          ),
+          ...record(domainMemoryDescriptor.authority_boundary),
         },
       }
     : null;
   const normalizedOwnerReceiptContract = ownerReceiptContract
     ? {
         ...ownerReceiptContract,
-        surface_kind: optionalString(ownerReceiptContract.surface_kind) ?? 'owner_receipt_contract',
+        surface_kind: stringValue(ownerReceiptContract.surface_kind) ?? 'owner_receipt_contract',
         source_manifest: source,
         authority_boundary: {
           opl_role: 'projection_consumer_only',
           domain_truth: 'domain_owned',
-          ...(
-            isRecord(ownerReceiptContract.authority_boundary)
-              ? ownerReceiptContract.authority_boundary
-              : {}
-          ),
+          ...record(ownerReceiptContract.authority_boundary),
         },
       }
     : null;
@@ -371,7 +349,7 @@ function projectionFromDomainHandler(options: { domainHandlerTimeoutMs?: number 
     return null;
   }
   try {
-    const parsed = JSON.parse(result.stdout ?? '') as unknown;
+    const parsed = parseJsonText(result.stdout ?? '');
     return projectionFromPayload(parsed, {
       surface_kind: 'mas_family_domain_handler_export_projection_ref',
       command_preview: command,

@@ -1,6 +1,10 @@
+import {
+  record,
+  stringList,
+  stringValue,
+  type JsonRecord,
+} from '../../kernel/json-record.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
-
-type JsonRecord = Record<string, unknown>;
 
 export type FamilyRuntimeControlledApplyContract = {
   surface_kind: 'family_runtime_controlled_apply_contract';
@@ -53,32 +57,21 @@ const MAS_ALLOWED_RETURN_SHAPES = [
   'no_regression_evidence_ref',
 ];
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function stringListFrom(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-    : [];
-}
-
 function controlledApplyRequest(locator: JsonRecord) {
   const direct = locator.controlled_apply_request;
-  if (isRecord(direct)) {
-    return direct;
+  const directRecord = record(direct);
+  if (directRecord === direct) {
+    return directRecord;
   }
   const stage = locator.controlled_stage_attempt;
-  if (isRecord(stage)) {
-    return stage;
+  const stageRecord = record(stage);
+  if (stageRecord === stage) {
+    return stageRecord;
   }
   const soak = locator.controlled_soak_no_regression_attempt;
-  if (isRecord(soak)) {
-    return soak;
+  const soakRecord = record(soak);
+  if (soakRecord === soak) {
+    return soakRecord;
   }
   return null;
 }
@@ -90,31 +83,31 @@ export function buildFamilyRuntimeControlledApplyContract(input: {
   routeImpact?: JsonRecord;
 }): FamilyRuntimeControlledApplyContract {
   const request = controlledApplyRequest(input.workspaceLocator);
-  const contractId = optionalString(request?.contract_id)
+  const contractId = stringValue(request?.contract_id)
     ?? CONTRACT_IDS[input.domainId]
     ?? 'opl_temporal_controlled_domain_stage_attempt_apply_contract';
   const allowedReturnShapes = input.domainId === 'medautoscience'
     ? MAS_ALLOWED_RETURN_SHAPES
     : DEFAULT_ALLOWED_RETURN_SHAPES;
   const ownerReceiptRefs = [
-    ...stringListFrom(request?.owner_receipt_refs),
-    ...stringListFrom(request?.domain_receipt_refs),
-    ...stringListFrom(request?.receipt_refs),
-    ...stringListFrom(request?.quality_gate_receipt_refs),
-    ...stringListFrom(request?.human_gate_refs),
-    ...stringListFrom(request?.route_back_evidence_refs),
-    ...(optionalString(request?.domain_owner_receipt_ref) ? [optionalString(request?.domain_owner_receipt_ref)!] : []),
-    ...(optionalString(request?.quality_gate_receipt_ref) ? [optionalString(request?.quality_gate_receipt_ref)!] : []),
-    ...(optionalString(request?.human_gate_ref) ? [optionalString(request?.human_gate_ref)!] : []),
-    ...(optionalString(request?.route_back_evidence_ref) ? [optionalString(request?.route_back_evidence_ref)!] : []),
+    ...stringList(request?.owner_receipt_refs),
+    ...stringList(request?.domain_receipt_refs),
+    ...stringList(request?.receipt_refs),
+    ...stringList(request?.quality_gate_receipt_refs),
+    ...stringList(request?.human_gate_refs),
+    ...stringList(request?.route_back_evidence_refs),
+    ...(stringValue(request?.domain_owner_receipt_ref) ? [stringValue(request?.domain_owner_receipt_ref)!] : []),
+    ...(stringValue(request?.quality_gate_receipt_ref) ? [stringValue(request?.quality_gate_receipt_ref)!] : []),
+    ...(stringValue(request?.human_gate_ref) ? [stringValue(request?.human_gate_ref)!] : []),
+    ...(stringValue(request?.route_back_evidence_ref) ? [stringValue(request?.route_back_evidence_ref)!] : []),
   ];
   const noRegressionEvidenceRefs = [
-    ...stringListFrom(request?.no_regression_evidence_refs),
-    ...stringListFrom(request?.evidence_refs),
-    ...stringListFrom(input.routeImpact?.no_regression_evidence_refs),
-    ...stringListFrom(input.routeImpact?.evidence_refs),
-    ...(optionalString(input.routeImpact?.no_regression_evidence_ref)
-      ? [optionalString(input.routeImpact?.no_regression_evidence_ref)!]
+    ...stringList(request?.no_regression_evidence_refs),
+    ...stringList(request?.evidence_refs),
+    ...stringList(input.routeImpact?.no_regression_evidence_refs),
+    ...stringList(input.routeImpact?.evidence_refs),
+    ...(stringValue(input.routeImpact?.no_regression_evidence_ref)
+      ? [stringValue(input.routeImpact?.no_regression_evidence_ref)!]
       : []),
   ];
   const typedBlockers = request === null
@@ -145,9 +138,9 @@ export function buildFamilyRuntimeControlledApplyContract(input: {
     stage_id: input.stageId,
     contract_open: true,
     apply_status: applyStatus,
-    requested_action: optionalString(request?.action_kind)
-      ?? optionalString(request?.task_kind)
-      ?? optionalString(request?.surface_kind),
+    requested_action: stringValue(request?.action_kind)
+      ?? stringValue(request?.task_kind)
+      ?? stringValue(request?.surface_kind),
     owner_receipt_refs: ownerReceiptRefs,
     no_regression_evidence_refs: noRegressionEvidenceRefs,
     typed_blockers: typedBlockers,

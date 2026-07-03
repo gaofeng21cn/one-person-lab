@@ -2,7 +2,9 @@ import type { FrameworkContracts } from '../../kernel/types.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
+import { stringValue } from '../../kernel/json-record.ts';
 import { runFamilyRuntime } from './family-runtime.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-command.ts';
 import {
@@ -55,7 +57,7 @@ type RuntimeOperatorActionExecuteDependencies = {
 };
 
 function parseJsonObject(value: string, context: string): JsonRecord {
-  const parsed = JSON.parse(value);
+  const parsed = parseJsonText(value);
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     throw new FrameworkContractError('cli_usage_error', `${context} must be a JSON object.`, {
       context,
@@ -111,14 +113,6 @@ function parseRuntimeActionExecuteArgs(args: string[]): RuntimeActionExecuteOpti
     });
   }
   return { actionId, payload, dryRun, approveDomainAction };
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
 function actionRoutesFromSnapshot(snapshot: JsonRecord) {

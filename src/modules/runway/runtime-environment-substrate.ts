@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { parseJsonText } from '../../kernel/json-file.ts';
 import {
   RUNTIME_ENVIRONMENT_SUBSTRATE_CONTRACT,
   authorityBoundary,
@@ -660,7 +661,7 @@ export function buildRuntimeEnvironmentRunContextReadback(input: RuntimeEnvironm
   if (input.paperRoot) {
     const runContextPath = path.join(path.resolve(input.paperRoot), 'build', 'dependency_run_context.json');
     if (fs.existsSync(runContextPath)) {
-      const runContext = JSON.parse(fs.readFileSync(runContextPath, 'utf8')) as JsonRecord;
+      const runContext = parseJsonText(fs.readFileSync(runContextPath, 'utf8')) as JsonRecord;
       const targetMismatchFields = runContextTargetMismatchFields(target, runContext);
       const consumerPreflight = targetMismatchFields.length === 0
         ? buildRunContextConsumerPreflight('bound')

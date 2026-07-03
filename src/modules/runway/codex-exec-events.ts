@@ -1,3 +1,5 @@
+import { parseJsonText } from '../../kernel/json-file.ts';
+
 export type CodexExecEvent =
   | {
       type: 'thread.started';
@@ -46,7 +48,7 @@ function parseCodexJsonLine(line: string) {
   }
 
   try {
-    return JSON.parse(trimmed) as Record<string, unknown>;
+    return parseJsonText(trimmed) as Record<string, unknown>;
   } catch {
     return null;
   }

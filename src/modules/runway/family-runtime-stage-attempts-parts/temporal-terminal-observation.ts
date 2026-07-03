@@ -2,6 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
+import { readJsonPayloadFile } from '../../../kernel/json-file.ts';
+import {
+  record,
+  recordList,
+  stringList,
+  stringValue,
+} from '../../../kernel/json-record.ts';
 import {
   blockLinkedDefaultExecutorTask,
   markLinkedDefaultExecutorTaskCompleted,
@@ -64,41 +71,35 @@ function providerRunWithTerminalCompletedObservation(
 }
 
 function rowHasCompletedTerminalObservation(row: StageAttemptRow) {
-  const terminalObservation = parseStageAttemptJsonObject(row.provider_run_json).terminal_observation;
-  if (!terminalObservation || typeof terminalObservation !== 'object' || Array.isArray(terminalObservation)) {
+  const terminalObservation = recordOrNull(parseStageAttemptJsonObject(row.provider_run_json).terminal_observation);
+  if (!terminalObservation) {
     return false;
   }
-  return (terminalObservation as Record<string, unknown>).source === 'temporal_stage_attempt_query'
-    && (terminalObservation as Record<string, unknown>).workflow_status === 'COMPLETED'
-    && (terminalObservation as Record<string, unknown>).query_status === 'completed';
+  return terminalObservation.source === 'temporal_stage_attempt_query'
+    && terminalObservation.workflow_status === 'COMPLETED'
+    && terminalObservation.query_status === 'completed';
 }
 
 function isTemporalStageAttemptTerminalObservation(
   observation: unknown,
 ): observation is TemporalStageAttemptTerminalObservation {
+  const payload = recordOrNull(observation);
   return (
-    typeof observation === 'object'
-    && observation !== null
-    && !Array.isArray(observation)
-    && (observation as Record<string, unknown>).surface_kind === 'temporal_stage_attempt_query_receipt'
-    && (observation as Record<string, unknown>).provider_kind === 'temporal'
-    && typeof (observation as Record<string, unknown>).stage_attempt_id === 'string'
-    && typeof (observation as Record<string, unknown>).workflow_id === 'string'
+    payload?.surface_kind === 'temporal_stage_attempt_query_receipt'
+    && payload.provider_kind === 'temporal'
+    && typeof payload.stage_attempt_id === 'string'
+    && typeof payload.workflow_id === 'string'
   );
 }
 
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+function recordOrNull(value: unknown): Record<string, unknown> | null {
+  const payload = record(value);
+  return payload === value ? payload : null;
 }
 
 function readJsonRecordFile(filePath: string) {
   try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
-    return isRecord(parsed) ? parsed : null;
+    return recordOrNull(readJsonPayloadFile(filePath));
   } catch {
     return null;
   }
@@ -106,12 +107,12 @@ function readJsonRecordFile(filePath: string) {
 
 function workspaceRootFromRow(row: StageAttemptRow) {
   const locator = parseStageAttemptJsonObject(row.workspace_locator_json);
-  return optionalString(locator.workspace_root) ?? optionalString(locator.repo_root);
+  return stringValue(locator.workspace_root) ?? stringValue(locator.repo_root);
 }
 
 function studyIdFromRow(row: StageAttemptRow) {
   const locator = parseStageAttemptJsonObject(row.workspace_locator_json);
-  return optionalString(locator.study_id) ?? optionalString(locator.quest_id);
+  return stringValue(locator.study_id) ?? stringValue(locator.quest_id);
 }
 
 function defaultExecutorMaterializedCloseoutPath(row: StageAttemptRow) {
@@ -143,10 +144,10 @@ function sameAttemptMaterializedCloseoutPacket(row: StageAttemptRow) {
     return null;
   }
   const packet = readJsonRecordFile(closeoutPath);
-  if (!packet || optionalString(packet.stage_attempt_id) !== row.stage_attempt_id) {
+  if (!packet || stringValue(packet.stage_attempt_id) !== row.stage_attempt_id) {
     return null;
   }
-  const surfaceKind = optionalString(packet.surface_kind);
+  const surfaceKind = stringValue(packet.surface_kind);
   if (
     surfaceKind !== 'stage_attempt_closeout_packet'
     && surfaceKind !== 'stage_memory_closeout_packet'
@@ -206,14 +207,9 @@ function temporalNonCompletionBlocker(observation: TemporalStageAttemptTerminalO
     return null;
   }
   const closeoutPacket = observation.query.closeout_packet;
-  if (
-    closeoutPacket
-    && typeof closeoutPacket === 'object'
-    && !Array.isArray(closeoutPacket)
-    && typeof closeoutPacket.blocked_reason === 'string'
-    && closeoutPacket.blocked_reason.trim()
-  ) {
-    return closeoutPacket.blocked_reason.trim();
+  const blocker = stringValue(record(closeoutPacket).blocked_reason);
+  if (blocker) {
+    return blocker;
   }
   return 'temporal_stage_attempt_not_completed';
 }
@@ -247,24 +243,12 @@ function taskDeadLetterReasonForTemporalNonCompletionBlocker(blocker: string) {
     : 'temporal_stage_attempt_not_completed';
 }
 
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-    : [];
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is Record<string, unknown> => isRecord(entry))
-    : [];
-}
-
 function latestActivityCostSummaryFromTemporalObservation(
   observation: TemporalStageAttemptTerminalObservation,
 ) {
   const activityEvents = recordList(observation.query?.activity_events);
   const costSummaries = activityEvents
-    .map((event) => isRecord(event.cost_summary) ? event.cost_summary : null)
+    .map((event) => recordOrNull(event.cost_summary))
     .filter((entry): entry is Record<string, unknown> => Boolean(entry));
   return costSummaries.at(-1) ?? null;
 }
@@ -285,7 +269,7 @@ function blockedCloseoutProjectionFromTemporalObservation(
     consumed_memory_refs: stringList(observation.query.consumed_memory_refs),
     writeback_receipt_refs: stringList(observation.query.writeback_receipt_refs),
     rejected_writes: recordList(observation.query.rejected_writes),
-    route_impact: isRecord(observation.query.route_impact) ? observation.query.route_impact : {},
+    route_impact: record(observation.query.route_impact),
   };
 }
 
@@ -395,7 +379,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
     }
     const costSummary = latestActivityCostSummaryFromTemporalObservation(observation);
     const existingProviderRun = parseStageAttemptJsonObject(row.provider_run_json);
-    if (rowHasCompletedTerminalObservation(row) && (!costSummary || isRecord(existingProviderRun.cost_summary))) {
+    if (rowHasCompletedTerminalObservation(row) && (!costSummary || recordOrNull(existingProviderRun.cost_summary))) {
       markLinkedDefaultExecutorTaskCompleted(db, { row, observedAt: nowIso() });
       reconcilePaperMissionStageRouteTerminalObservation(db, observation.stage_attempt_id);
       return null;

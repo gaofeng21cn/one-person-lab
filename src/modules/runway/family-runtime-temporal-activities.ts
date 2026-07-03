@@ -1,5 +1,6 @@
 import { Context, heartbeat } from '@temporalio/activity';
 
+import { isRecord } from '../../kernel/contract-validation.ts';
 import type { TemporalStageAttemptWorkflowInput } from './family-runtime-temporal.ts';
 import {
   DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS,
@@ -20,10 +21,6 @@ import { codexActivityEventForTemporalHistory } from './family-runtime-temporal-
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function closeoutPacketFromRunnerReceipt(receipt: Record<string, unknown>) {

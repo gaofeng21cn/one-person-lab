@@ -4,6 +4,8 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { readJsonPayloadFile } from '../../kernel/json-file.ts';
+import { record } from '../../kernel/json-record.ts';
 import { resolveTemporalAddress } from './family-runtime-temporal.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
 
@@ -38,11 +40,12 @@ function processIsAlive(pid: number) {
 
 function readTemporalServiceState(paths: TemporalServicePaths) {
   try {
-    const parsed = JSON.parse(fs.readFileSync(temporalServiceStatePath(paths), 'utf8'));
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    const parsed = readJsonPayloadFile(temporalServiceStatePath(paths));
+    const payload = record(parsed);
+    if (payload !== parsed) {
       return null;
     }
-    const state = parsed as Partial<TemporalServiceState>;
+    const state = payload as Partial<TemporalServiceState>;
     if (
       state.provider_kind !== 'temporal'
       || (state.service_kind !== 'temporal_cli' && state.service_kind !== 'custom_command')

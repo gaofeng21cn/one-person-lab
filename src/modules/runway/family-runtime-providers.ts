@@ -11,6 +11,7 @@ import {
 import type { MasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { stringValue } from '../../kernel/json-record.ts';
 import {
   FAMILY_RUNTIME_PROVIDER_KINDS,
   type FamilyRuntimeProviderKind,
@@ -78,14 +79,10 @@ function temporalWorkerConfigured() {
     || process.env.OPL_TEMPORAL_WORKER_STATUS?.trim() === 'ready';
 }
 
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
 function buildManagedTemporalWorkerReadiness(projection: Record<string, unknown>) {
-  const address = optionalString(projection.address);
-  const namespace = optionalString(projection.namespace) ?? resolveTemporalNamespace();
-  const taskQueue = optionalString(projection.task_queue) ?? resolveTemporalTaskQueue();
+  const address = stringValue(projection.address);
+  const namespace = stringValue(projection.namespace) ?? resolveTemporalNamespace();
+  const taskQueue = stringValue(projection.task_queue) ?? resolveTemporalTaskQueue();
   return {
     ...buildTemporalWorkerReadiness({
       address,
@@ -98,14 +95,14 @@ function buildManagedTemporalWorkerReadiness(projection: Record<string, unknown>
     }),
     surface_kind: 'temporal_worker_lifecycle_status',
     lifecycle_status: 'domain_projection_only',
-    projection_status: optionalString(projection.projection_status) ?? optionalString(projection.status) ?? 'ready',
+    projection_status: stringValue(projection.projection_status) ?? stringValue(projection.status) ?? 'ready',
     projection_declares_service_ready: projection.service_ready === true
-      || optionalString(projection.service_status) === 'ready'
-      || optionalString(projection.service_readiness) === 'ready',
+      || stringValue(projection.service_status) === 'ready'
+      || stringValue(projection.service_readiness) === 'ready',
     projection_declares_worker_ready: projection.worker_ready === true
       || projection.managed_worker_ready === true
-      || optionalString(projection.worker_status) === 'ready'
-      || optionalString(projection.worker_readiness) === 'ready',
+      || stringValue(projection.worker_status) === 'ready'
+      || stringValue(projection.worker_readiness) === 'ready',
     provider_ready_effect: 'none_projection_only_requires_opl_local_lifecycle_proof',
     authority_boundary: {
       opl: 'managed_temporal_state_projection_consumer_only',

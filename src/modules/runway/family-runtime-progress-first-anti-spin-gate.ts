@@ -1,5 +1,12 @@
 import type { DatabaseSync } from 'node:sqlite';
 
+import { parseJsonText } from '../../kernel/json-file.ts';
+import {
+  record,
+  recordList,
+  stringValue,
+  type JsonRecord,
+} from '../../kernel/json-record.ts';
 import {
   insertEvent,
   insertNotification,
@@ -13,8 +20,6 @@ import {
 import {
   masDomainProgressRefsFromRecord,
 } from './family-runtime-mas-domain-progress-refs.ts';
-
-type JsonRecord = Record<string, unknown>;
 
 export const PROGRESS_FIRST_OWNER_DELTA_REQUIRED_REASON = 'progress_first_owner_delta_required';
 const DEFAULT_ANTI_SPIN_REPEAT_THRESHOLD = 2;
@@ -44,22 +49,6 @@ const ACTION_STOP_LOSS_REPEAT_BUDGETS: Record<string, {
   },
 };
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
 function stringList(value: unknown): string[] {
   if (typeof value === 'string' && value.trim()) {
     return [value.trim()];
@@ -82,7 +71,7 @@ function uniqueStrings(values: Array<string | null>) {
 }
 
 function taskPayload(row: FamilyRuntimeTaskRow) {
-  return JSON.parse(row.payload_json) as JsonRecord;
+  return parseJsonText(row.payload_json) as JsonRecord;
 }
 
 function linkedTaskPayload(db: DatabaseSync, taskId: string | null) {
@@ -92,14 +81,15 @@ function linkedTaskPayload(db: DatabaseSync, taskId: string | null) {
   const row = db.prepare('SELECT payload_json FROM tasks WHERE task_id = ?').get(taskId) as
     | { payload_json: string }
     | undefined;
-  return row ? JSON.parse(row.payload_json) as JsonRecord : null;
+  return row ? parseJsonText(row.payload_json) as JsonRecord : null;
 }
 
 function nestedRecord(recordValue: JsonRecord, keys: string[]) {
   for (const key of keys) {
     const value = recordValue[key];
-    if (isRecord(value)) {
-      return value;
+    const candidate = record(value);
+    if (candidate === value) {
+      return candidate;
     }
   }
   return {};
@@ -141,17 +131,18 @@ function deltaCount(value: unknown) {
   if (typeof value === 'boolean') {
     return value ? 1 : 0;
   }
-  if (!isRecord(value)) {
+  const valueRecord = record(value);
+  if (valueRecord !== value) {
     return 0;
   }
-  const count = numberValue(value.delta_count) || numberValue(value.count);
+  const count = numberValue(valueRecord.delta_count) || numberValue(valueRecord.count);
   if (count > 0) {
     return count;
   }
-  if (booleanValue(value.has_deliverable_delta) || booleanValue(value.has_delta)) {
+  if (booleanValue(valueRecord.has_deliverable_delta) || booleanValue(valueRecord.has_delta)) {
     return 1;
   }
-  return refsFrom(value, ['delta_refs', 'refs', 'evidence_refs']).length;
+  return refsFrom(valueRecord, ['delta_refs', 'refs', 'evidence_refs']).length;
 }
 
 function progressDeltaClassification(value: JsonRecord) {

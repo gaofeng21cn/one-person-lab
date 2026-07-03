@@ -1,22 +1,22 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { parseJsonText } from '../../kernel/json-file.ts';
+import { record } from '../../kernel/json-record.ts';
 import type { FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 import { familyRuntimePaths, taskToPayload } from './family-runtime-store.ts';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 export function writeFamilyRuntimeDispatchTask(
   paths: ReturnType<typeof familyRuntimePaths>,
   row: FamilyRuntimeTaskRow,
 ) {
-  const payload = JSON.parse(row.payload_json) as unknown;
-  const action = isRecord(payload) && typeof payload.action === 'string' && payload.action.trim()
-    ? payload.action.trim()
+  const payload = parseJsonText(row.payload_json);
+  const payloadRecord = record(payload);
+  const isPayloadRecord = payloadRecord === payload;
+  const action = isPayloadRecord && typeof payloadRecord.action === 'string' && payloadRecord.action.trim()
+    ? payloadRecord.action.trim()
     : row.task_kind;
-  const domainHandlerTask = isRecord(payload) ? payload : {};
+  const domainHandlerTask = isPayloadRecord ? payloadRecord : {};
   const taskPayload = taskToPayload(row);
   const dispatchPath = path.join(paths.dispatch_dir, `${row.task_id}.json`);
   fs.writeFileSync(

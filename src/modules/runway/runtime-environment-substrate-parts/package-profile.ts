@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { readJsonPayloadFile } from '../../../kernel/json-file.ts';
 import type { JsonRecord, RPackageRequirement } from './contract.ts';
 import { contentFingerprint, objects } from './target-state.ts';
 
@@ -218,7 +219,7 @@ export function uniqueStrings(values: string[]): string[] {
 }
 
 export function readPrepareProfile(profilePath: string, requirementProfileId?: string) {
-  const profile = JSON.parse(fs.readFileSync(path.resolve(profilePath), 'utf8')) as JsonRecord;
+  const profile = readJsonPayloadFile(path.resolve(profilePath)) as JsonRecord;
   const profileEntries = objects(profile.profiles);
   const selectedProfiles = requirementProfileId
     ? profileEntries.filter((entry) => entry.profile_id === requirementProfileId)

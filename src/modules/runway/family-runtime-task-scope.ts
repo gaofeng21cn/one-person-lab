@@ -1,16 +1,15 @@
+import { parseJsonText } from '../../kernel/json-file.ts';
+import { record } from '../../kernel/json-record.ts';
 import type { FamilyRuntimeTaskScope } from './family-runtime-command.ts';
 import type { FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function payloadValueAtPath(value: Record<string, unknown>, path: string) {
   return path.split('.').reduce<unknown>((current, segment) => {
-    if (!segment || !isRecord(current)) {
+    const currentRecord = record(current);
+    if (!segment || currentRecord !== current) {
       return undefined;
     }
-    return current[segment];
+    return currentRecord[segment];
   }, value);
 }
 
@@ -75,7 +74,7 @@ export function taskRowMatchesScope(row: FamilyRuntimeTaskRow, taskScope?: Famil
     return false;
   }
   if (taskScope.taskKind && row.task_kind !== taskScope.taskKind) {
-    const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
+    const payload = parseJsonText(row.payload_json) as Record<string, unknown>;
     if (payload.provider_admission_source_task_kind !== taskScope.taskKind) {
       return false;
     }
@@ -87,7 +86,7 @@ export function taskRowMatchesScope(row: FamilyRuntimeTaskRow, taskScope?: Famil
   if (!taskScope.payloadMatches?.length) {
     return true;
   }
-  return payloadMatchesTaskScope(JSON.parse(row.payload_json) as Record<string, unknown>, taskScope);
+  return payloadMatchesTaskScope(parseJsonText(row.payload_json) as Record<string, unknown>, taskScope);
 }
 
 export function taskInputMatchesScope(input: {

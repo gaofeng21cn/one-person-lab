@@ -3,6 +3,15 @@ import crypto from 'node:crypto';
 import path from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 
+import {
+  parseJsonText,
+  readJsonPayloadFile,
+} from '../../../kernel/json-file.ts';
+import {
+  record,
+  recordList,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 import { openFamilyRuntimeSqlite } from '../family-runtime-sqlite.ts';
 import { resolveOplStatePaths } from '../runtime-state-paths.ts';
 
@@ -11,8 +20,6 @@ type StateIndexDatabaseDefinition = {
   path: string;
   ensure: () => void;
 };
-
-type JsonRecord = Record<string, unknown>;
 
 type StageFolderProjection = {
   domain_id: string;
@@ -33,10 +40,6 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function text(value: unknown, fallback = '') {
   const normalized = String(value ?? '').trim();
   return normalized || fallback;
@@ -49,13 +52,17 @@ function stringList(value: unknown) {
   return [...new Set(value.map((entry) => text(entry)).filter(Boolean))];
 }
 
+function recordOrNull(value: unknown): JsonRecord | null {
+  const parsed = record(value);
+  return parsed === value ? parsed : null;
+}
+
 function readJsonFile(file: string): JsonRecord | null {
   if (!fs.existsSync(file)) {
     return null;
   }
   try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf-8'));
-    return isRecord(parsed) ? parsed : null;
+    return recordOrNull(readJsonPayloadFile(file));
   } catch {
     return null;
   }
@@ -71,8 +78,8 @@ function readJsonLines(file: string) {
     .filter(Boolean)
     .flatMap((line) => {
       try {
-        const parsed = JSON.parse(line);
-        return isRecord(parsed) ? [parsed] : [];
+        const parsed = recordOrNull(parseJsonText(line));
+        return parsed ? [parsed] : [];
       } catch {
         return [];
       }
@@ -178,7 +185,7 @@ function outputHashes(manifest: JsonRecord | null) {
   if (!Array.isArray(manifest?.output_hashes)) {
     return [] as JsonRecord[];
   }
-  return manifest.output_hashes.filter(isRecord);
+  return recordList(manifest.output_hashes);
 }
 
 function stageAttemptProjections(domainFilter?: string): StageFolderProjection[] {
@@ -492,7 +499,7 @@ function insertStageArtifactLineageRows(db: DatabaseSync, rows: StageFolderProje
     }
     const graphFile = path.join(row.deliverable_root, 'lineage', 'graph.json');
     const graph = readJsonFile(graphFile);
-    const edges = Array.isArray(graph?.edges) ? graph.edges.filter(isRecord) : [];
+    const edges = recordList(graph?.edges);
     for (const edge of edges) {
       const edgeRef = `lineage-edge:${row.domain_id}:${programId}:${text(edge.from)}:${text(edge.to)}`;
       const [stageId, attemptId] = text(edge.from).split('/');

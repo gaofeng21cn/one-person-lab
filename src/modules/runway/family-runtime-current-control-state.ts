@@ -1,5 +1,11 @@
 import type { DatabaseSync } from 'node:sqlite';
 
+import { parseJsonText } from '../../kernel/json-file.ts';
+import {
+  record,
+  stringList,
+  stringValue,
+} from '../../kernel/json-record.ts';
 import type { FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 import {
   isDefaultExecutorDispatchTask,
@@ -57,10 +63,7 @@ function parseRecord(value: unknown) {
     return {};
   }
   try {
-    const parsed = JSON.parse(value) as unknown;
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-      ? parsed as Record<string, unknown>
-      : {};
+    return record(parseJsonText(value));
   } catch {
     return {};
   }
@@ -71,21 +74,11 @@ function parseList(value: string | null | undefined) {
     return [];
   }
   try {
-    const parsed = JSON.parse(value) as unknown;
+    const parsed = parseJsonText(value);
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
 }
 
 function uniqueStrings(values: string[]) {

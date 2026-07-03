@@ -1,21 +1,10 @@
-type JsonRecord = Record<string, unknown>;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function readStringList(value: unknown) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value
-    .map((entry) => optionalString(entry))
-    .filter((entry): entry is string => Boolean(entry));
-}
+import {
+  record,
+  recordList,
+  stringList,
+  stringValue,
+  type JsonRecord,
+} from '../../kernel/json-record.ts';
 
 export type FamilyRuntimeLifecyclePrimitives = {
   surface_kind: 'family_runtime_lifecycle_primitives';
@@ -74,15 +63,8 @@ export type FamilyRuntimeLifecyclePrimitives = {
   };
 };
 
-function readRecordList(value: unknown) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.filter(isRecord);
-}
-
 function lifecycleRequestRef(input: JsonRecord, field: string) {
-  const ref = optionalString(input[field]);
+  const ref = stringValue(input[field]);
   return ref
     ? {
         ref_kind: 'lifecycle_request_ref',
@@ -92,16 +74,16 @@ function lifecycleRequestRef(input: JsonRecord, field: string) {
 }
 
 function buildLifecycleActionDecision(input: JsonRecord): JsonRecord {
-  const actionId = optionalString(input.action_id) ?? 'unnamed_lifecycle_action';
-  const actionKind = optionalString(input.action_kind) ?? 'lifecycle';
-  const authorityOwner = optionalString(input.authority_owner) ?? 'domain_agent';
-  const ownerScope = optionalString(input.owner_scope) ?? 'domain_owned_artifact';
+  const actionId = stringValue(input.action_id) ?? 'unnamed_lifecycle_action';
+  const actionKind = stringValue(input.action_kind) ?? 'lifecycle';
+  const authorityOwner = stringValue(input.authority_owner) ?? 'domain_agent';
+  const ownerScope = stringValue(input.owner_scope) ?? 'domain_owned_artifact';
   const restoreRef = lifecycleRequestRef(input, 'restore_ref');
   const domainReceiptRef = lifecycleRequestRef(input, 'domain_receipt_ref');
   const base = {
     action_id: actionId,
     action_kind: actionKind,
-    target_ref: optionalString(input.target_ref) ?? null,
+    target_ref: stringValue(input.target_ref) ?? null,
     authority_owner: authorityOwner,
     owner_scope: ownerScope,
     restore_ref: restoreRef,
@@ -150,7 +132,7 @@ function buildLifecycleActionDecision(input: JsonRecord): JsonRecord {
 function buildLifecycleGuardedApplyProof(
   locator: JsonRecord,
 ): FamilyRuntimeLifecyclePrimitives['guarded_apply_proof'] {
-  const actions = readRecordList(locator.lifecycle_apply_requests).map(buildLifecycleActionDecision);
+  const actions = recordList(locator.lifecycle_apply_requests).map(buildLifecycleActionDecision);
   const oplApplyPermittedCount = actions.filter((entry) => entry.apply_decision === 'opl_apply_permitted').length;
   const domainReceiptObservedCount = actions.filter((entry) => entry.apply_decision === 'domain_receipt_observed').length;
   const typedBlockerCount = actions.filter((entry) => entry.apply_decision === 'typed_blocker').length;
@@ -192,24 +174,24 @@ export function buildFamilyRuntimeLifecyclePrimitives(input: {
 }): FamilyRuntimeLifecyclePrimitives {
   const locator = input.workspaceLocator;
   const runtimeRoot =
-    optionalString(locator.runtime_root)
-    ?? optionalString(locator.runtimeRoot)
+    stringValue(locator.runtime_root)
+    ?? stringValue(locator.runtimeRoot)
     ?? null;
   const artifactRoot =
-    optionalString(locator.artifact_root)
-    ?? optionalString(locator.artifactRoot)
-    ?? optionalString(locator.workspace_artifact_root)
+    stringValue(locator.artifact_root)
+    ?? stringValue(locator.artifactRoot)
+    ?? stringValue(locator.workspace_artifact_root)
     ?? null;
   const indexedRefs = input.artifactRefs ?? [];
-  const observedRestoreRefs = readStringList(locator.restore_refs);
+  const observedRestoreRefs = stringList(locator.restore_refs);
   return {
     surface_kind: 'family_runtime_lifecycle_primitives',
     artifact_locator_index: {
       locator_kind: 'workspace_runtime_artifact_locator',
       workspace_root:
-        optionalString(locator.workspace_root)
-        ?? optionalString(locator.workspaceRoot)
-        ?? optionalString(locator.workspace)
+        stringValue(locator.workspace_root)
+        ?? stringValue(locator.workspaceRoot)
+        ?? stringValue(locator.workspace)
         ?? null,
       runtime_root: runtimeRoot,
       artifact_root: artifactRoot,
@@ -239,7 +221,7 @@ export function buildFamilyRuntimeLifecyclePrimitives(input: {
       writes_domain_truth: false,
     },
     workspace_lifecycle_metadata: {
-      workspace_locator: isRecord(locator) ? locator : {},
+      workspace_locator: record(locator),
       lifecycle_owner: 'domain_agent',
       provider_attempt_owner: 'opl_framework',
     },

@@ -1,11 +1,12 @@
-type JsonRecord = Record<string, unknown>;
+import {
+  record,
+  stringValue,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+function recordOrNull(value: unknown): JsonRecord | null {
+  const payload = record(value);
+  return payload === value ? payload : null;
 }
 
 export function blockedActionRouteExecution(
@@ -30,9 +31,7 @@ export function blockedActionRouteExecution(
         default_actionability_status: actionabilityStatus,
         route_status_detail: stringValue(route.route_status_detail),
         can_submit_to_safe_action_shell: route.can_submit_to_safe_action_shell === true,
-        provider_worker_mutation_guard: isRecord(route.provider_worker_mutation_guard)
-          ? route.provider_worker_mutation_guard
-          : null,
+        provider_worker_mutation_guard: recordOrNull(route.provider_worker_mutation_guard),
         provider_worker_blocked_action_id: stringValue(route.provider_worker_blocked_action_id),
         authority_boundary: authorityBoundary,
       },

@@ -1,4 +1,8 @@
-type JsonRecord = Record<string, unknown>;
+import {
+  record,
+  stringValue,
+  type JsonRecord,
+} from '../../kernel/json-record.ts';
 
 export type OplInteractionSurfaceId =
   | 'opl_shell'
@@ -85,16 +89,8 @@ const CANONICAL_INTERACTION_SURFACE_ORDER: OplInteractionSurfaceId[] = [
   'acp_shell',
 ];
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
 function requireString(value: unknown, field: string) {
-  const text = optionalString(value);
+  const text = stringValue(value);
   if (!text) {
     throw new Error(`opl session runtime 缺少字符串字段: ${field}`);
   }
@@ -130,6 +126,7 @@ function buildResourceNode(
   input: OplRuntimeResourceNodeInput,
   field: string,
 ): OplRuntimeResourceNode {
+  const metadata = record(input.metadata);
   return {
     id: requireString(input.id, `${field}.id`),
     label: requireString(input.label, `${field}.label`),
@@ -137,7 +134,7 @@ function buildResourceNode(
     status: requireString(input.status, `${field}.status`),
     summary: requireString(input.summary, `${field}.summary`),
     tags: readStringList(input.tags, `${field}.tags`),
-    ...(isRecord(input.metadata) ? { metadata: { ...input.metadata } } : {}),
+    ...(metadata === input.metadata ? { metadata: { ...metadata } } : {}),
   };
 }
 

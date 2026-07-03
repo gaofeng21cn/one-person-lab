@@ -1,6 +1,7 @@
 import type { Connection } from '@temporalio/client';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { stringValue } from '../../kernel/json-record.ts';
 import {
   resolveTemporalAddress,
   resolveTemporalNamespace,
@@ -57,10 +58,6 @@ type TemporalVisibilityReadinessInput = {
   inspectionError?: string | null;
   unindexedTestServer?: boolean;
 };
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
 
 function temporalCliAddressArg(address: string | null) {
   return address ? ` --address ${address}` : '';
@@ -132,7 +129,7 @@ export function temporalStageAttemptTypedSearchAttributes(input: {
   sourceFingerprint?: string | null;
   executorKind: string;
 }) {
-  const blockedReason = optionalString(input.blockedReason);
+  const blockedReason = stringValue(input.blockedReason);
   return {
     OplStageAttemptId: [input.stageAttemptId],
     OplDomainId: [input.domainId],
@@ -261,10 +258,10 @@ export function buildTemporalStageAttemptVisibility(input: {
   if (input.providerKind !== 'temporal') {
     return null;
   }
-  const namespace = optionalString(input.providerRun.namespace) ?? resolveTemporalNamespace();
-  const runId = optionalString(input.providerRun.run_id)
-    ?? optionalString(input.providerRun.first_execution_run_id)
-    ?? optionalString(input.providerRun.diagnostic_run_id);
+  const namespace = stringValue(input.providerRun.namespace) ?? resolveTemporalNamespace();
+  const runId = stringValue(input.providerRun.run_id)
+    ?? stringValue(input.providerRun.first_execution_run_id)
+    ?? stringValue(input.providerRun.diagnostic_run_id);
   return {
     surface_kind: 'temporal_stage_attempt_visibility',
     provider_kind: 'temporal',
@@ -272,9 +269,9 @@ export function buildTemporalStageAttemptVisibility(input: {
     workflow_id: input.workflowId,
     run_id: runId,
     namespace,
-    task_queue: optionalString(input.providerRun.task_queue) ?? resolveTemporalTaskQueue(),
-    workflow_status: optionalString(input.providerRun.workflow_status)
-      ?? optionalString(input.providerRun.provider_status)
+    task_queue: stringValue(input.providerRun.task_queue) ?? resolveTemporalTaskQueue(),
+    workflow_status: stringValue(input.providerRun.workflow_status)
+      ?? stringValue(input.providerRun.provider_status)
       ?? input.status
       ?? null,
     current_phase: input.stagePhase ?? input.status ?? null,

@@ -1,5 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 
+import { parseJsonText } from '../../kernel/json-file.ts';
+import { record, stringValue } from '../../kernel/json-record.ts';
 import type { FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 import type { StageAttemptRow } from './family-runtime-stage-attempt-ledger.ts';
 
@@ -24,19 +26,14 @@ type StageAttemptPayload = {
   activity_events: unknown[];
 };
 
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
 function recordValue(value: unknown): Record<string, unknown> | null {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : null;
+  const parsed = record(value);
+  return parsed === value ? parsed : null;
 }
 
 function jsonRecord(value: string) {
   try {
-    return recordValue(JSON.parse(value));
+    return recordValue(parseJsonText(value));
   } catch {
     return null;
   }
@@ -44,7 +41,7 @@ function jsonRecord(value: string) {
 
 function jsonStringList(value: string) {
   try {
-    return stringList(JSON.parse(value));
+    return stringList(parseJsonText(value));
   } catch {
     return [];
   }
@@ -58,17 +55,17 @@ function stringList(value: unknown) {
 
 function refsFrom(record: Record<string, unknown>, keys: string[]) {
   return keys.flatMap((key) => [
-    optionalString(record[key]),
+    stringValue(record[key]),
     ...stringList(record[key]),
   ]).filter((entry): entry is string => Boolean(entry));
 }
 
 function hasStageNativeContext(record: Record<string, unknown>) {
-  return Boolean(optionalString(record.stage_id) === STAGE_ID
-    || optionalString(record.stage_manifest_ref)?.includes(STAGE_OUTPUTS_FRAGMENT)
-    || optionalString(record.current_pointer_ref)?.includes(STAGE_OUTPUTS_FRAGMENT)
-    || optionalString(record.written_ref)?.includes(STAGE_OUTPUTS_FRAGMENT)
-    || optionalString(record.terminal_outcome_ref)?.includes(STAGE_OUTPUTS_FRAGMENT));
+  return Boolean(stringValue(record.stage_id) === STAGE_ID
+    || stringValue(record.stage_manifest_ref)?.includes(STAGE_OUTPUTS_FRAGMENT)
+    || stringValue(record.current_pointer_ref)?.includes(STAGE_OUTPUTS_FRAGMENT)
+    || stringValue(record.written_ref)?.includes(STAGE_OUTPUTS_FRAGMENT)
+    || stringValue(record.terminal_outcome_ref)?.includes(STAGE_OUTPUTS_FRAGMENT));
 }
 
 function isStageNativeOwnerAnswerRef(ref: string, allowRelative: boolean) {
@@ -94,23 +91,23 @@ function stageNativeRefCandidates(ref: string) {
 function currentFingerprints(payload: Record<string, unknown>) {
   const basis = recordValue(payload.owner_route_currentness_basis);
   return new Set([
-    optionalString(payload.source_fingerprint),
-    optionalString(payload.work_unit_fingerprint),
-    optionalString(payload.idempotency_key),
-    optionalString(basis?.work_unit_fingerprint),
-    optionalString(basis?.source_eval_id),
+    stringValue(payload.source_fingerprint),
+    stringValue(payload.work_unit_fingerprint),
+    stringValue(payload.idempotency_key),
+    stringValue(basis?.work_unit_fingerprint),
+    stringValue(basis?.source_eval_id),
   ].filter((entry): entry is string => Boolean(entry)));
 }
 
 function answerFingerprints(record: Record<string, unknown>) {
   const binding = recordValue(record.closeout_binding);
   return new Set([
-    optionalString(record.source_fingerprint),
-    optionalString(record.work_unit_fingerprint),
-    optionalString(record.idempotency_key),
-    optionalString(binding?.source_fingerprint),
-    optionalString(binding?.work_unit_fingerprint),
-    optionalString(binding?.idempotency_key),
+    stringValue(record.source_fingerprint),
+    stringValue(record.work_unit_fingerprint),
+    stringValue(record.idempotency_key),
+    stringValue(binding?.source_fingerprint),
+    stringValue(binding?.work_unit_fingerprint),
+    stringValue(binding?.idempotency_key),
   ].filter((entry): entry is string => Boolean(entry)));
 }
 
@@ -148,12 +145,12 @@ function closeoutRefsHaveCurrentStageNativeOwnerAnswer(
 
 function directStageNativeAnswer(record: Record<string, unknown>, currentPayload: Record<string, unknown>) {
   if (
-    optionalString(record.surface_kind) === 'medical_paper_readiness_stage_native_closeout'
-    && optionalString(record.status) === 'materialized'
+    stringValue(record.surface_kind) === 'medical_paper_readiness_stage_native_closeout'
+    && stringValue(record.status) === 'materialized'
     && fingerprintsMatch(record, currentPayload)
   ) {
-    const writtenRef = optionalString(record.written_ref)
-      ?? optionalString(record.terminal_outcome_ref);
+    const writtenRef = stringValue(record.written_ref)
+      ?? stringValue(record.terminal_outcome_ref);
     if (!writtenRef || isStageNativeOwnerAnswerRef(writtenRef, true)) {
       return true;
     }
@@ -233,12 +230,12 @@ export function isMasReadinessStageNativeOwnerAction(
 ) {
   return row.domain_id === 'medautoscience'
     && row.task_kind === DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
-    && optionalString(payload.action_type) === READINESS_ACTION
+    && stringValue(payload.action_type) === READINESS_ACTION
     && (
-      optionalString(payload.work_unit_id) === null
-      || optionalString(payload.work_unit_id) === READINESS_ACTION
+      stringValue(payload.work_unit_id) === null
+      || stringValue(payload.work_unit_id) === READINESS_ACTION
     )
-    && optionalString(payload.next_executable_owner)?.toLowerCase() === 'medautoscience';
+    && stringValue(payload.next_executable_owner)?.toLowerCase() === 'medautoscience';
 }
 
 function sourceRefRecords(payload: Record<string, unknown>) {
@@ -251,10 +248,10 @@ export function masReadinessPayloadReferencesStageNativeOwnerAnswer(payload: Rec
   const basis = recordValue(payload.owner_route_currentness_basis);
   const ownerRoute = recordValue(payload.owner_route);
   const refs = [
-    optionalString(payload.work_unit_fingerprint),
-    optionalString(payload.latest_owner_answer_ref),
-    optionalString(payload.latest_owner_receipt_ref),
-    optionalString(payload.latest_typed_blocker_ref),
+    stringValue(payload.work_unit_fingerprint),
+    stringValue(payload.latest_owner_answer_ref),
+    stringValue(payload.latest_owner_receipt_ref),
+    stringValue(payload.latest_typed_blocker_ref),
     ...stringList(payload.owner_receipt_refs),
     ...stringList(payload.typed_blocker_refs),
     ...refsFrom(basis ?? {}, [
@@ -278,12 +275,12 @@ export function masReadinessPayloadReferencesStageNativeOwnerAnswer(payload: Rec
       'latest_typed_blocker_ref',
     ]),
     ...sourceRefRecords(payload).flatMap((record) => {
-      const role = optionalString(record.role) ?? '';
+      const role = stringValue(record.role) ?? '';
       if (!/(owner|typed_blocker|receipt|stage|work_unit|current)/.test(role)) {
         return [];
       }
       return [
-        optionalString(record.ref),
+        stringValue(record.ref),
         ...stringList(record.refs),
       ].filter((entry): entry is string => Boolean(entry));
     }),
@@ -354,10 +351,10 @@ export function defaultExecutorMissingStageNativeOwnerAnswerRedriveDecision(inpu
   }
   return {
     reason: MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
-    previous_source_fingerprint: optionalString(input.existingPayload.source_fingerprint),
-    next_source_fingerprint: optionalString(input.nextPayload.source_fingerprint),
-    previous_work_unit_fingerprint: optionalString(recordValue(input.existingPayload.owner_route_currentness_basis)?.work_unit_fingerprint),
-    next_work_unit_fingerprint: optionalString(recordValue(input.nextPayload.owner_route_currentness_basis)?.work_unit_fingerprint),
+    previous_source_fingerprint: stringValue(input.existingPayload.source_fingerprint),
+    next_source_fingerprint: stringValue(input.nextPayload.source_fingerprint),
+    previous_work_unit_fingerprint: stringValue(recordValue(input.existingPayload.owner_route_currentness_basis)?.work_unit_fingerprint),
+    next_work_unit_fingerprint: stringValue(recordValue(input.nextPayload.owner_route_currentness_basis)?.work_unit_fingerprint),
     stage_attempt_ids: input.stageAttempts.map((attempt) => attempt.stage_attempt_id),
     stage_attempt_statuses: input.stageAttempts.map((attempt) => attempt.status),
   };
