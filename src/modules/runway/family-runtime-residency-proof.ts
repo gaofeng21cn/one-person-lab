@@ -2,7 +2,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { stageAttemptSummary } from './family-runtime-stage-attempts.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
 

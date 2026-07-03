@@ -46,6 +46,25 @@ export interface ScholarSkillQualityEvidence {
   can_claim_quality_verdict: false;
 }
 
+export interface ScholarSkillDataGovernanceAssessmentPolicy {
+  policy_id: string;
+  active_module_id: 'mas-scholar-skills.data';
+  real_specialist_skill_id: 'medical-data-governance';
+  legacy_module_ids: string[];
+  legacy_id_policy: string;
+  required_handoff_refs: string[];
+  assessment_ref_families: string[];
+  operation_receipt_categories: string[];
+  required_checks: string[];
+  no_authority_policy: string;
+  can_write_domain_truth: false;
+  can_mutate_clinical_data_body: false;
+  can_sign_owner_receipt: false;
+  can_create_typed_blocker: false;
+  can_claim_source_readiness: false;
+  can_claim_publication_readiness: false;
+}
+
 export interface ScholarSkillRuntimeBridgeEnvelopePolicy {
   refs_only: true;
   prepared: false;
@@ -61,6 +80,9 @@ export interface ScholarSkillCapabilityModuleDescriptor {
   module_id: ScholarSkillModuleId;
   brand_family: 'MAS Scholar Skills';
   display_name: string;
+  specialist_skill_id?: string;
+  legacy_module_ids?: string[];
+  legacy_module_id_policy?: string;
   stage_fit: string[];
   input_schema_refs: string[];
   output_schema_refs: string[];
@@ -77,6 +99,7 @@ export interface ScholarSkillCapabilityModuleDescriptor {
   authority_boundary: ScholarSkillAuthorityBoundary;
   allowed_writes: string[];
   forbidden_writes: string[];
+  data_governance_assessment_policy?: ScholarSkillDataGovernanceAssessmentPolicy;
 }
 
 export interface ScholarSkillsCapabilityModulesContract {

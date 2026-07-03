@@ -2,7 +2,7 @@ import type { FrameworkContracts } from '../../kernel/types.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { buildRuntimeTraySnapshot } from '../console/index.ts';
 import { runFamilyRuntime } from './family-runtime.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-command.ts';

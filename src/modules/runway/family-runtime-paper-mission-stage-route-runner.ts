@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
 import { resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
 import { readLocalCodexDefaultsIfAvailable } from '../connect/index.ts';

@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import type { FamilyRuntimeDomainProfiles } from './family-runtime-command.ts';
 import type { FamilyRuntimeDomainId, TemporalStageAttemptSignalKind } from './family-runtime-types.ts';
 import {

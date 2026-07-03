@@ -1,6 +1,6 @@
 import { Client, Connection } from '@temporalio/client';
 
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { resolveTemporalNamespace } from './family-runtime-temporal.ts';
 import { resolveTemporalAddressForPaths } from './family-runtime-temporal-service.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';

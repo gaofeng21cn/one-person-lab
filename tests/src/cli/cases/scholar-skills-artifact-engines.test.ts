@@ -22,6 +22,12 @@ const expectedArtifactRefFamiliesByModule = {
   'mas-scholar-skills.data': [
     'data_manifest',
     'dataset_manifest',
+    'data_governance_handoff',
+    'data_governance_assessment',
+    'data_operation_receipt',
+    'manifest_completeness_check',
+    'privacy_tier_check',
+    'study_impact_check',
     'registry_lineage',
     'semantic_readiness',
     'study_binding',
@@ -103,6 +109,13 @@ const expectedEngineSpecByModule = {
       'source_lineage',
       'artifact_bundle_manifest',
       'data_dictionary',
+      'data_governance_handoff',
+      'data_governance_assessment',
+      'data_operation_receipt',
+      'data_operation_category',
+      'manifest_completeness_check',
+      'privacy_tier_check',
+      'study_impact_check',
       'privacy_access_tier',
       'study_refs',
       'semantic_dictionary_refs',
@@ -126,6 +139,15 @@ const expectedEngineSpecByModule = {
       'source_lineage',
       'artifact_bundle_manifest',
       'data_dictionary',
+      'data_governance_handoff',
+      'data_governance_assessment',
+      'data_operation_receipt',
+      'manifest_completeness_declared',
+      'privacy_access_tier_declared',
+      'study_impact_declared',
+      'operation_receipt_category_declared',
+      'legacy_opl_scholarskills_data_alias_only',
+      'no_authority_flags_false',
       'privacy_access_tier',
       'dataset_goal_present',
       'source_refs_present',
@@ -156,6 +178,12 @@ const expectedEngineSpecByModule = {
       'source_lineage',
       'artifact_bundle_manifest',
       'data_dictionary',
+      'data_governance_handoff',
+      'data_governance_assessment',
+      'data_operation_receipt',
+      'manifest_completeness_check',
+      'privacy_tier_check',
+      'study_impact_check',
       'privacy_access_tier',
       'retention_guardrail',
       'storage_tier',
@@ -404,6 +432,12 @@ test('scholar-skills materialize writes deterministic module-specific bodies for
           if (moduleId === 'mas-scholar-skills.data') {
             const sectionIds = candidate.candidate.sections.map((section: { section_id: string }) => section.section_id);
             assert.equal(sectionIds.includes('storage_tier'), true);
+            assert.equal(sectionIds.includes('data_governance_handoff'), true);
+            assert.equal(sectionIds.includes('data_governance_assessment'), true);
+            assert.equal(sectionIds.includes('data_operation_receipt'), true);
+            assert.equal(sectionIds.includes('manifest_completeness_check'), true);
+            assert.equal(sectionIds.includes('privacy_tier_check'), true);
+            assert.equal(sectionIds.includes('study_impact_check'), true);
             assert.equal(sectionIds.includes('authoritative_body_boundary'), true);
             assert.equal(sectionIds.includes('derived_copy_inventory'), true);
             assert.equal(sectionIds.includes('analytical_format_strategy'), true);
@@ -413,6 +447,7 @@ test('scholar-skills materialize writes deterministic module-specific bodies for
               true,
             );
             assert.equal(candidate.input_requirements.optional_payload_fields.includes('storage_tier_refs'), true);
+            assert.equal(candidate.input_requirements.optional_payload_fields.includes('data_operation_category'), true);
             assert.equal(candidate.input_requirements.optional_payload_fields.includes('cold_restore_refs'), true);
           }
         } else {

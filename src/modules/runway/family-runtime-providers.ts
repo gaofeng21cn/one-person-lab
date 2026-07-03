@@ -10,7 +10,7 @@ import {
 } from './family-runtime-temporal-visibility.ts';
 import type { MasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import {
   FAMILY_RUNTIME_PROVIDER_KINDS,
   type FamilyRuntimeProviderKind,

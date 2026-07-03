@@ -1,6 +1,7 @@
 import type {
   ScholarSkillAuthorityBoundary,
   ScholarSkillCapabilityModuleDescriptor,
+  ScholarSkillDataGovernanceAssessmentPolicy,
   ScholarSkillModuleId,
   ScholarSkillsCapabilityModulesContract,
 } from '../../kernel/types.ts';
@@ -80,11 +81,124 @@ function expectNonEmptyStringArray(value: unknown, field: string, filePath: stri
   return items;
 }
 
+function expectOptionalString(value: unknown, field: string, filePath: string) {
+  if (value === undefined) {
+    return undefined;
+  }
+  return expectString(value, field, filePath);
+}
+
 function expectOptionalNonEmptyStringArray(value: unknown, field: string, filePath: string) {
   if (value === undefined) {
     return undefined;
   }
   return expectNonEmptyStringArray(value, field, filePath);
+}
+
+function validateDataGovernanceAssessmentPolicy(
+  filePath: string,
+  value: unknown,
+): ScholarSkillDataGovernanceAssessmentPolicy | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!isRecord(value)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'data_governance_assessment_policy must be an object.', {
+      file: filePath,
+      field: 'data_governance_assessment_policy',
+    });
+  }
+  const policy = {
+    policy_id: expectString(value.policy_id, 'data_governance_assessment_policy.policy_id', filePath),
+    active_module_id: expectString(
+      value.active_module_id,
+      'data_governance_assessment_policy.active_module_id',
+      filePath,
+    ) as 'mas-scholar-skills.data',
+    real_specialist_skill_id: expectString(
+      value.real_specialist_skill_id,
+      'data_governance_assessment_policy.real_specialist_skill_id',
+      filePath,
+    ) as 'medical-data-governance',
+    legacy_module_ids: expectNonEmptyStringArray(
+      value.legacy_module_ids,
+      'data_governance_assessment_policy.legacy_module_ids',
+      filePath,
+    ),
+    legacy_id_policy: expectString(
+      value.legacy_id_policy,
+      'data_governance_assessment_policy.legacy_id_policy',
+      filePath,
+    ),
+    required_handoff_refs: expectNonEmptyStringArray(
+      value.required_handoff_refs,
+      'data_governance_assessment_policy.required_handoff_refs',
+      filePath,
+    ),
+    assessment_ref_families: expectNonEmptyStringArray(
+      value.assessment_ref_families,
+      'data_governance_assessment_policy.assessment_ref_families',
+      filePath,
+    ),
+    operation_receipt_categories: expectNonEmptyStringArray(
+      value.operation_receipt_categories,
+      'data_governance_assessment_policy.operation_receipt_categories',
+      filePath,
+    ),
+    required_checks: expectNonEmptyStringArray(
+      value.required_checks,
+      'data_governance_assessment_policy.required_checks',
+      filePath,
+    ),
+    no_authority_policy: expectString(
+      value.no_authority_policy,
+      'data_governance_assessment_policy.no_authority_policy',
+      filePath,
+    ),
+    can_write_domain_truth: expectFalse(
+      value.can_write_domain_truth,
+      'data_governance_assessment_policy.can_write_domain_truth',
+      filePath,
+    ),
+    can_mutate_clinical_data_body: expectFalse(
+      value.can_mutate_clinical_data_body,
+      'data_governance_assessment_policy.can_mutate_clinical_data_body',
+      filePath,
+    ),
+    can_sign_owner_receipt: expectFalse(
+      value.can_sign_owner_receipt,
+      'data_governance_assessment_policy.can_sign_owner_receipt',
+      filePath,
+    ),
+    can_create_typed_blocker: expectFalse(
+      value.can_create_typed_blocker,
+      'data_governance_assessment_policy.can_create_typed_blocker',
+      filePath,
+    ),
+    can_claim_source_readiness: expectFalse(
+      value.can_claim_source_readiness,
+      'data_governance_assessment_policy.can_claim_source_readiness',
+      filePath,
+    ),
+    can_claim_publication_readiness: expectFalse(
+      value.can_claim_publication_readiness,
+      'data_governance_assessment_policy.can_claim_publication_readiness',
+      filePath,
+    ),
+  };
+  if (policy.active_module_id !== 'mas-scholar-skills.data') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Data governance assessment policy active module id is invalid.', {
+      file: filePath,
+      field: 'data_governance_assessment_policy.active_module_id',
+    });
+  }
+  if (policy.real_specialist_skill_id !== 'medical-data-governance') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Data governance assessment policy specialist skill id is invalid.', {
+      file: filePath,
+      field: 'data_governance_assessment_policy.real_specialist_skill_id',
+    });
+  }
+  return policy;
 }
 
 function validateRuntimeBridgeEnvelopePolicy(filePath: string, value: unknown) {
@@ -264,6 +378,9 @@ function validateModule(filePath: string, entry: unknown, index: number): Schola
     module_id: moduleId,
     brand_family: 'MAS Scholar Skills',
     display_name: expectString(entry.display_name, 'display_name', filePath),
+    specialist_skill_id: expectOptionalString(entry.specialist_skill_id, 'specialist_skill_id', filePath),
+    legacy_module_ids: expectOptionalNonEmptyStringArray(entry.legacy_module_ids, 'legacy_module_ids', filePath),
+    legacy_module_id_policy: expectOptionalString(entry.legacy_module_id_policy, 'legacy_module_id_policy', filePath),
     stage_fit: expectNonEmptyStringArray(entry.stage_fit, 'stage_fit', filePath),
     input_schema_refs: expectNonEmptyStringArray(entry.input_schema_refs, 'input_schema_refs', filePath),
     output_schema_refs: expectNonEmptyStringArray(entry.output_schema_refs, 'output_schema_refs', filePath),
@@ -300,6 +417,10 @@ function validateModule(filePath: string, entry: unknown, index: number): Schola
     authority_boundary: validateScholarSkillAuthorityBoundary(filePath, entry.authority_boundary),
     allowed_writes: expectStringArray(entry.allowed_writes, 'allowed_writes', filePath),
     forbidden_writes: expectNonEmptyStringArray(entry.forbidden_writes, 'forbidden_writes', filePath),
+    data_governance_assessment_policy: validateDataGovernanceAssessmentPolicy(
+      filePath,
+      entry.data_governance_assessment_policy,
+    ),
   };
 }
 

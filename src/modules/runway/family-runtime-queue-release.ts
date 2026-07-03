@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import type { FamilyRuntimeTaskScope } from './family-runtime-command.ts';
 import {
   activeFamilyRuntimeQueueHolds,

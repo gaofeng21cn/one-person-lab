@@ -1,6 +1,6 @@
 import { spawnSync, type SpawnSyncOptionsWithStringEncoding } from 'node:child_process';
 
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { resolveBindingManifest } from '../atlas/index.ts';
 import type { DomainManifestCatalogEntry } from '../atlas/index.ts';
 import { resolveTemporalNamespace, resolveTemporalTaskQueue } from './family-runtime-temporal.ts';

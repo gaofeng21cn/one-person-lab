@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { stableId } from './family-runtime-ids.ts';
 import { masDomainRouteProjection } from './family-runtime-mas-domain-route.ts';
 import { paperAutonomyProjection } from './family-runtime-paper-autonomy.ts';

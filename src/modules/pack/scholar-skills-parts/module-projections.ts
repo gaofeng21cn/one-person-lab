@@ -20,6 +20,9 @@ export function moduleCapabilityProfile(module: ScholarSkillCapabilityModuleDesc
     surface_kind: 'opl_scholarskills_module_capability_profile',
     module_id: module.module_id,
     profile_id: moduleProfileId(module),
+    specialist_skill_id: module.specialist_skill_id,
+    legacy_module_ids: module.legacy_module_ids,
+    legacy_module_id_policy: module.legacy_module_id_policy,
     stage_fit: module.stage_fit,
     input_schema_refs: module.input_schema_refs,
     output_schema_refs: module.output_schema_refs,
@@ -29,6 +32,7 @@ export function moduleCapabilityProfile(module: ScholarSkillCapabilityModuleDesc
     artifact_ref_families: moduleArtifactRefFamilies(module),
     artifact_refs: module.artifact_refs,
     quality_evidence: module.quality_evidence,
+    data_governance_assessment_policy: module.data_governance_assessment_policy,
     required_ref_families: [
       ...new Set([
         ...moduleExecutionReceiptRefFamilies(module),
@@ -45,6 +49,9 @@ export function moduleSummary(module: ScholarSkillCapabilityModuleDescriptor) {
     module_id: module.module_id,
     display_name: module.display_name,
     brand_family: module.brand_family,
+    specialist_skill_id: module.specialist_skill_id,
+    legacy_module_ids: module.legacy_module_ids,
+    legacy_module_id_policy: module.legacy_module_id_policy,
     stage_fit: module.stage_fit,
     input_schema_refs: module.input_schema_refs,
     output_schema_refs: module.output_schema_refs,
@@ -53,6 +60,7 @@ export function moduleSummary(module: ScholarSkillCapabilityModuleDescriptor) {
     invocation_entries: module.invocation_entries,
     artifact_refs: module.artifact_refs,
     quality_evidence: module.quality_evidence,
+    data_governance_assessment_policy: module.data_governance_assessment_policy,
     module_profile: moduleCapabilityProfile(module),
     authority_boundary: module.authority_boundary,
   };
@@ -192,6 +200,7 @@ export function buildModuleCandidatePayload(
       required_ref_shapes: module.quality_evidence.required_ref_shapes,
       can_claim_quality_verdict: module.quality_evidence.can_claim_quality_verdict,
       quality_verdict_owner: 'domain_owner_gate',
+      data_governance_assessment_policy: module.data_governance_assessment_policy,
     },
     owner_consumption: {
       required_for_paper_truth: true,

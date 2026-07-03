@@ -4,7 +4,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 
 import { resolveCodexBinary } from './codex.ts';
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { runTemporalProviderSloTick } from './family-runtime-provider-slo-executor.ts';
 import {
   insertEvent,

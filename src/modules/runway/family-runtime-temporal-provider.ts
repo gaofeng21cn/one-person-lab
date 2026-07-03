@@ -5,7 +5,7 @@ import { WorkflowIdConflictPolicy, WorkflowIdReusePolicy, WorkflowNotFoundError 
 import { NativeConnection, Worker } from '@temporalio/worker';
 
 import { resolveCodexBinary } from './codex.ts';
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { familyRuntimePaths } from './family-runtime-store.ts';
 import * as activities from './family-runtime-temporal-activities.ts';
 import {

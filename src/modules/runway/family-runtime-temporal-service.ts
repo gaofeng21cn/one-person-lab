@@ -3,7 +3,7 @@ import net from 'node:net';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { resolveTemporalAddress } from './family-runtime-temporal.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
 

@@ -641,8 +641,11 @@
       "brand_family": "MAS Scholar Skills",
       "display_name": "Medical Data Governance",
       "specialist_skill_id": "medical-data-governance",
+      "legacy_module_ids": [
+        "opl.scholarskills.data"
+      ],
       "legacy_module_descriptor": true,
-      "legacy_module_id_policy": "legacy_alias opl.scholarskills.data is accepted only for historical provenance; active module_id is mas-scholar-skills.data and active specialist work uses medical-data-governance",
+      "legacy_module_id_policy": "opl.scholarskills.data remains a legacy alias/provenance key only; active module id is mas-scholar-skills.data and active specialist work uses medical-data-governance",
       "stage_fit": [
         "source_data_profile",
         "data_dictionary",
@@ -667,7 +670,8 @@
       ],
       "output_schema_refs": [
         "scholarskills_data_output_refs.v1",
-        "scholarskills_data_asset_refs.v1"
+        "scholarskills_data_asset_refs.v1",
+        "scholarskills_data_governance_assessment_refs.v1#handoff_assessment_operation_checks"
       ],
       "dependency_profile_refs": [
         "runtime_env_dependency_profile:scholarskills_data_v1"
@@ -705,6 +709,11 @@
         "required_ref_shapes": [
           "data_asset_manifest_ref",
           "data_dictionary_ref",
+          "data_governance_assessment_ref",
+          "data_operation_receipt_ref",
+          "manifest_completeness_check_ref",
+          "privacy_tier_check_ref",
+          "study_impact_check_ref",
           "codebook_ref",
           "cleaning_normalization_readiness_ref",
           "derived_variable_registry_ref",
@@ -745,7 +754,55 @@
         "runtime queues/outbox/state",
         "owner receipts",
         "typed blockers"
-      ]
+      ],
+      "data_governance_assessment_policy": {
+        "policy_id": "scholarskills_data_governance_assessment.v1",
+        "active_module_id": "mas-scholar-skills.data",
+        "real_specialist_skill_id": "medical-data-governance",
+        "legacy_module_ids": [
+          "opl.scholarskills.data"
+        ],
+        "legacy_id_policy": "legacy_alias_provenance_only_not_active_module_id",
+        "required_handoff_refs": [
+          "source_pack_ref",
+          "candidate_package_ref",
+          "execution_receipt_ref",
+          "owner_gate_handoff_ref",
+          "data_governance_handoff_ref"
+        ],
+        "assessment_ref_families": [
+          "data_governance_assessment_ref",
+          "data_operation_receipt_ref",
+          "manifest_completeness_check_ref",
+          "privacy_tier_check_ref",
+          "study_impact_check_ref"
+        ],
+        "operation_receipt_categories": [
+          "ingest",
+          "clean",
+          "deidentify",
+          "normalize",
+          "update",
+          "diff",
+          "release",
+          "retire"
+        ],
+        "required_checks": [
+          "manifest_completeness_declared",
+          "privacy_access_tier_declared",
+          "study_impact_declared",
+          "operation_receipt_category_declared",
+          "legacy_opl_scholarskills_data_alias_only",
+          "no_authority_flags_false"
+        ],
+        "no_authority_policy": "refs_only_data_governance_assessment_requires_MAS_or_domain_owner_consumption",
+        "can_write_domain_truth": false,
+        "can_mutate_clinical_data_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_source_readiness": false,
+        "can_claim_publication_readiness": false
+      }
     }
   ]
 }

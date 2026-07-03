@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 
-import { FrameworkContractError } from '../charter/index.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { buildCodexStageActivityInput } from './family-runtime-codex-stage-runner.ts';
 import { buildFamilyRuntimeControlledApplyContract } from './family-runtime-controlled-apply.ts';
 import { buildFamilyRuntimeLifecyclePrimitives } from './family-runtime-lifecycle.ts';
