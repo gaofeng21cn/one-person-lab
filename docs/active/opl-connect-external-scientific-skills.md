@@ -1,41 +1,54 @@
-# OPL Connect External Scientific Skills
+# OPL Connect 外部科学 Skill 库
 
 Owner: OPL Connect
 State: active connector surface
-Machine boundary: machine truth is the CLI surface `opl connect external-skills *`,
-`src/modules/connect/opl-connect-external-skills.ts`, and focused CLI tests.
-This page is a human-facing operating note.
+Machine boundary: 机器真相以 `opl connect external-skills *` CLI、
+`src/modules/connect/opl-connect-external-skills.ts` 和 focused CLI tests 为准。
+本文只做人读操作说明。
 
-OPL Connect can expose approved external Agent Skills libraries as discoverable
-sources without making them MAS truth or installing them by default.
+OPL Connect 负责把经过批准的外部 Agent Skills 库登记成可发现 source，
+并支持按需搜索、查看和选择性同步。MAS 继续持有医学论文判断、产物权威和
+owner route；外部库只提供可选专业能力。
 
-The first supported source is:
+当前第一条外部 source：
 
-- `kdense-scientific-agent-skills`
+- source id: `kdense-scientific-agent-skills`
 - alias: `kdense`
 - upstream: `https://github.com/K-Dense-AI/scientific-agent-skills`
 
-## Command Surface
+## 命令面
 
 ```bash
+opl connect external-skills sources add --source kdense --repo https://github.com/K-Dense-AI/scientific-agent-skills --pin <commit-or-tag> --source-root <scientific-agent-skills-checkout> --json
 opl connect external-skills list --source-root <scientific-agent-skills-checkout> --json
+opl connect external-skills list --registry-root <workspace-root> --json
 opl connect external-skills search --query "single cell RNA-seq" --source kdense --source-root <path> --json
 opl connect external-skills inspect --skill scanpy --source kdense --source-root <path> --json
 opl connect external-skills sync --skill scanpy --scope workspace --target-workspace <workspace-root> --source-root <path> --json
 ```
 
-`list`, `search`, and `inspect` are read-only. `sync` writes exactly one selected
-external skill to:
+`sources add` 写入 OPL Connect source registry，默认位置是：
+
+```text
+<workspace-root>/.opl/connect/external-skill-sources.json
+```
+
+该 registry 记录 source id、repo、pin 和可选本地 checkout 路径。它不 clone
+repo，也不批量安装 skill；checkout 仍由操作者或上层环境管理。
+
+`list`、`search` 和 `inspect` 是只读发现面。`sync` 只把一个明确选中的
+external skill 写入：
 
 ```text
 <workspace-or-quest>/.codex/skills/<skill-id>/
 ```
 
-It also writes `.opl-install-receipt.json` in that skill directory.
+同步时会在目标 skill 目录写入 `.opl-install-receipt.json`，记录 source、
+pin、target scope 和 no-authority boundary。
 
-## MAS Use
+## MAS 使用方式
 
-MAS should use its default medical-paper professional pack first:
+MAS 优先使用默认医学论文专业 Skill 包：
 
 - `medical-manuscript-writing`
 - `medical-manuscript-review`
@@ -46,24 +59,22 @@ MAS should use its default medical-paper professional pack first:
 - `medical-submission-prep`
 - `medical-data-governance`
 
-External skills are for uncommon specialist gaps, for example `scanpy`,
-`pydeseq2`, `pathway-enrichment`, `nextflow`, `rdkit`, or `pyhealth`.
+外部科学 Skill 用于默认包覆盖不到的专科任务，例如 `scanpy`、`pydeseq2`、
+`pathway-enrichment`、`nextflow`、`rdkit` 或 `pyhealth`。
 
-Valid triggers:
+有效触发方式：
 
-- the user names a specific external tool, package, database, or workflow;
-- a MAS professional skill produces a route-back candidate that the core pack
-  does not cover;
-- a MAS stage prompt identifies a specialist capability outside the default
-  eight skills;
-- the task requires external network, cloud compute, sensitive data, or a
-  governed environment policy check before execution.
+- 用户明确命名外部工具、软件包、数据库或工作流；
+- MAS 专业 Skill 生成默认包无法覆盖的 route-back candidate；
+- MAS stage 主提示词识别出默认八个专业 Skill 之外的专科能力；
+- 任务需要联网、云计算、敏感数据或受治理的软件环境策略检查。
 
-## Boundary
+## 边界
 
-OPL Connect owns source discovery, skill cards, selective sync, and sync
-receipts. It does not own MAS stage policy, manuscript truth, reviewer verdicts,
-owner receipts, typed blockers, publication readiness, or artifact authority.
+OPL Connect 持有 source registry、skill cards、search/inspect、选择性同步和
+sync receipt。它不持有 MAS stage policy、manuscript truth、reviewer
+verdict、owner receipt、typed blocker、publication readiness 或 artifact
+authority。
 
-The default policy is `selective_sync_only`. Full-library installation stays out
-of the MAS hot path.
+默认策略是 `selective_sync_only`。MAS 热路径只同步被明确选中的单个外部
+Skill，默认包能力仍由 MAS / `mas-scholar-skills` 的专业 Skill 维护。

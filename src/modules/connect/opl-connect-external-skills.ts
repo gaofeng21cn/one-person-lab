@@ -483,6 +483,8 @@ export function runOplConnectExternalSkillsSync(input: ExternalSkillSyncInput) {
       surface_kind: 'opl_connect_external_skill_sync',
       status: 'synced',
       source_id: source.source_id,
+      source_repo_url: source.repo_url,
+      source_pinned_ref: source.pinned_ref,
       source_root: source.source_root,
       skill: card,
       target_scope: input.scope,

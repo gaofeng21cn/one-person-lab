@@ -229,6 +229,8 @@ test('connect external-skills sync copies only the selected skill into workspace
       opl_connect_external_skills: {
         surface_kind: string;
         status: string;
+        source_repo_url: string;
+        source_pinned_ref: string | null;
         skill: { skill_id: string };
         target_scope: string;
         target_root: string;
@@ -240,6 +242,8 @@ test('connect external-skills sync copies only the selected skill into workspace
     const synced = output.opl_connect_external_skills;
     assert.equal(synced.surface_kind, 'opl_connect_external_skill_sync');
     assert.equal(synced.status, 'synced');
+    assert.equal(synced.source_repo_url, 'https://github.com/K-Dense-AI/scientific-agent-skills');
+    assert.equal(synced.source_pinned_ref, null);
     assert.equal(synced.skill.skill_id, 'scanpy');
     assert.equal(synced.target_scope, 'workspace');
     assert.equal(synced.target_root, workspaceRoot);
