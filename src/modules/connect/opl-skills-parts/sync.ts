@@ -2,6 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
+import { isRecord } from '../../../kernel/contract-validation.ts';
+import {
+  readJsonFileOrNull,
+  writeJsonPayloadFile,
+} from '../../../kernel/json-file.ts';
 import { resolveDefaultFamilyWorkspaceRoot } from '../../workspace/index.ts';
 import { PACKAGED_MODULE_MARKER_FILE } from '../packaged-module-marker.ts';
 import {
@@ -55,10 +60,6 @@ const SCHOLARSKILLS_EXCLUDED_ROOTS = [
   'gallery/**/*.layout.json',
   'gallery/**/*.lock',
 ];
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function resolveHome(home?: string) {
   return home ? path.resolve(home) : (process.env.HOME ?? null);
@@ -353,16 +354,10 @@ function resolvePackagedSourceHead(repoRoot: string) {
   if (!fs.existsSync(markerPath) || !fs.statSync(markerPath).isFile()) {
     return null;
   }
-  try {
-    const parsed = JSON.parse(fs.readFileSync(markerPath, 'utf8')) as Record<string, unknown>;
-    const sourceGit = parsed.source_git && typeof parsed.source_git === 'object'
-      ? parsed.source_git as Record<string, unknown>
-      : null;
-    const head = sourceGit?.head_sha;
-    return typeof head === 'string' && head.trim().length > 0 ? head.trim() : null;
-  } catch {
-    return null;
-  }
+  const parsed = readJsonFileOrNull(markerPath);
+  const sourceGit = isRecord(parsed) && isRecord(parsed.source_git) ? parsed.source_git : null;
+  const head = sourceGit?.head_sha;
+  return typeof head === 'string' && head.trim().length > 0 ? head.trim() : null;
 }
 
 function copyMaterializedMasScholarSkillsSpecialistDirs(
@@ -396,17 +391,13 @@ function isOplConnectManagedSpecialistDir(targetSkillDir: string) {
   if (!fs.existsSync(markerPath)) {
     return false;
   }
-  try {
-    const marker = JSON.parse(fs.readFileSync(markerPath, 'utf8')) as Record<string, unknown>;
-    return marker.surface_kind === 'opl_connect_managed_mas_scholar_skills_specialist_dir';
-  } catch {
-    return false;
-  }
+  const marker = readJsonFileOrNull(markerPath);
+  return isRecord(marker) && marker.surface_kind === 'opl_connect_managed_mas_scholar_skills_specialist_dir';
 }
 
 function writeJsonFile(filePath: string, value: unknown) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+  writeJsonPayloadFile(filePath, value);
 }
 
 function copyWorkspaceOrQuestLocalScholarSkillsSkill(

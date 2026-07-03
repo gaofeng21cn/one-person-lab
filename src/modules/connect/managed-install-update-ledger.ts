@@ -1,6 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { isRecord } from '../../kernel/contract-validation.ts';
+import {
+  readJsonFileOrNull,
+  writeJsonPayloadFile,
+} from '../../kernel/json-file.ts';
+import { stringValue } from '../../kernel/json-record.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 
 type ManagedInstallUpdateAction = 'install' | 'update' | 'reinstall';
@@ -63,14 +69,6 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
 function refsOnlyAuthorityBoundary(): ManagedInstallUpdateReceipt['authority_boundary'] {
   return {
     refs_only: true,
@@ -100,13 +98,13 @@ function normalizeReceipt(value: unknown): ManagedInstallUpdateReceipt | null {
   if (!isRecord(value)) {
     return null;
   }
-  const receiptRef = optionalString(value.receipt_ref);
-  const moduleId = optionalString(value.module_id);
-  const repoName = optionalString(value.repo_name);
-  const action = optionalString(value.action);
-  const reason = optionalString(value.reason);
-  const checkoutPath = optionalString(value.checkout_path);
-  const managedCheckoutPath = optionalString(value.managed_checkout_path);
+  const receiptRef = stringValue(value.receipt_ref);
+  const moduleId = stringValue(value.module_id);
+  const repoName = stringValue(value.repo_name);
+  const action = stringValue(value.action);
+  const reason = stringValue(value.reason);
+  const checkoutPath = stringValue(value.checkout_path);
+  const managedCheckoutPath = stringValue(value.managed_checkout_path);
   if (
     !receiptRef
     || !moduleId
@@ -127,21 +125,21 @@ function normalizeReceipt(value: unknown): ManagedInstallUpdateReceipt | null {
     surface_kind: 'opl_managed_module_install_update_receipt',
     receipt_ref: receiptRef,
     receipt_status: 'recorded',
-    recorded_at: optionalString(value.recorded_at) ?? nowIso(),
+    recorded_at: stringValue(value.recorded_at) ?? nowIso(),
     module_id: moduleId,
     repo_name: repoName,
     action,
     module_action_status: 'completed',
     reason,
-    install_origin_before: optionalString(value.install_origin_before) ?? 'unknown',
+    install_origin_before: stringValue(value.install_origin_before) ?? 'unknown',
     install_origin_after: 'managed_root',
     checkout_path: checkoutPath,
     managed_checkout_path: managedCheckoutPath,
-    git_head_sha: optionalString(value.git_head_sha),
-    git_sync_status: optionalString(value.git_sync_status),
+    git_head_sha: stringValue(value.git_head_sha),
+    git_sync_status: stringValue(value.git_sync_status),
     git_dirty: typeof value.git_dirty === 'boolean' ? value.git_dirty : null,
     skill_sync_status: 'completed',
-    skill_sync_domain: optionalString(value.skill_sync_domain),
+    skill_sync_domain: stringValue(value.skill_sync_domain),
     health_check_status: 'completed',
     source_surface: 'opl_app_startup_maintenance',
     authority_boundary: refsOnlyAuthorityBoundary(),
@@ -153,25 +151,21 @@ export function readManagedInstallUpdateLedger(): ManagedInstallUpdateLedger {
   if (!fs.existsSync(file)) {
     return emptyLedger();
   }
-  try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
-    if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
-      return emptyLedger();
-    }
-    return {
-      ...emptyLedger(),
-      receipts: parsed.receipts
-        .map(normalizeReceipt)
-        .filter((receipt): receipt is ManagedInstallUpdateReceipt => Boolean(receipt)),
-    };
-  } catch {
+  const parsed = readJsonFileOrNull(file);
+  if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
     return emptyLedger();
   }
+  return {
+    ...emptyLedger(),
+    receipts: parsed.receipts
+      .map(normalizeReceipt)
+      .filter((receipt): receipt is ManagedInstallUpdateReceipt => Boolean(receipt)),
+  };
 }
 
 function writeManagedInstallUpdateLedger(ledger: ManagedInstallUpdateLedger) {
   const paths = ensureOplStateDir();
-  fs.writeFileSync(paths.managed_install_update_ledger_file, `${JSON.stringify(ledger, null, 2)}\n`);
+  writeJsonPayloadFile(paths.managed_install_update_ledger_file, ledger);
 }
 
 function receiptRef(input: ManagedInstallUpdateReceiptInput) {
@@ -245,8 +239,8 @@ export function listManagedInstallUpdateReceipts(filters: {
   module_id?: string | null;
   repo_name?: string | null;
 } = {}) {
-  const moduleId = optionalString(filters.module_id);
-  const repoName = optionalString(filters.repo_name);
+  const moduleId = stringValue(filters.module_id);
+  const repoName = stringValue(filters.repo_name);
   return readManagedInstallUpdateLedger().receipts.filter((receipt) =>
     (!moduleId || receipt.module_id === moduleId)
     && (!repoName || receipt.repo_name === repoName)

@@ -41,6 +41,14 @@ export function parseJsonText(raw: string): unknown {
   return JSON.parse(raw); // reuse-first: allow central JSON file boundary parse.
 }
 
+export function formatJsonPayload(payload: unknown): string {
+  return `${JSON.stringify(payload, null, 2)}\n`; // reuse-first: allow central JSON file boundary serialization.
+}
+
+export function writeJsonPayloadFile(filePath: string, payload: unknown) {
+  fs.writeFileSync(filePath, formatJsonPayload(payload), 'utf8');
+}
+
 export function readJsonPayloadFile(filePath: string): unknown {
   return parseJsonText(fs.readFileSync(filePath, 'utf8'));
 }

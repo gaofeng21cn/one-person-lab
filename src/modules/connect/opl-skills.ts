@@ -1,7 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import {
+  FrameworkContractError,
+  isRecord,
+} from '../../kernel/contract-validation.ts';
+import {
+  parseJsonText,
+  readJsonFileResult,
+} from '../../kernel/json-file.ts';
 import { syncOplCompanionSkills, type OplCompanionSkillApplyMode, type OplSuperpowersProfile } from './install-companions.ts';
 import {
   registerOplFamilyCodexPlugins,
@@ -67,15 +74,9 @@ const FOUNDRY_AGENT_SERIES_CONTRACT_URL = new URL(
 );
 let cachedFoundryAgentSeriesContract: Record<string, unknown> | null = null;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function readFoundryAgentSeriesContract() {
   if (!cachedFoundryAgentSeriesContract) {
-    const contract = JSON.parse(
-      fs.readFileSync(FOUNDRY_AGENT_SERIES_CONTRACT_URL, 'utf8'),
-    ) as unknown;
+    const contract = parseJsonText(fs.readFileSync(FOUNDRY_AGENT_SERIES_CONTRACT_URL, 'utf8'));
     if (!isRecord(contract)) {
       throw new FrameworkContractError(
         'contract_shape_invalid',
@@ -147,7 +148,7 @@ function readBooleanField(source: Record<string, unknown>, field: string) {
 
 function cloneJsonRecordField(source: Record<string, unknown>, field: string) {
   const value = readObjectField(source, field);
-  return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+  return structuredClone(value) as Record<string, unknown>;
 }
 
 function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
@@ -335,15 +336,14 @@ function validatePluginManifest(spec: SkillPackSpec, pluginManifestPath: string,
     return { valid: false, errors };
   }
 
-  let manifest: unknown;
-  try {
-    manifest = JSON.parse(fs.readFileSync(pluginManifestPath, 'utf8')) as unknown;
-  } catch (error) {
+  const manifestRead = readJsonFileResult(pluginManifestPath);
+  if (manifestRead.status !== 'resolved') {
     return {
       valid: false,
-      errors: [`failed_to_read_plugin_manifest:${error instanceof Error ? error.message : String(error)}`],
+      errors: [`failed_to_read_plugin_manifest:${manifestRead.error ?? 'missing'}`],
     };
   }
+  const manifest = manifestRead.payload;
 
   if (!isRecord(manifest)) {
     return {
