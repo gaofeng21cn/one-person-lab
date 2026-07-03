@@ -8,6 +8,8 @@ export const OPL_FOUNDRY_LAB_SOURCE_MODULE = {
 // Public cross-module surface generated from existing module consumers.
 export { buildAgentLabDomainFeedbackSelfEvolutionReadModel } from './agent-lab-control-read-models.ts';
 export { buildDeveloperModeAgentLabRepairRouteReadModel } from './agent-lab-developer-mode.ts';
+export { listDeveloperModeCloseoutReceipts, recordDeveloperModeCloseoutReceipts, verifyDeveloperModeCloseoutReceipt } from './developer-mode-closeout-ledger.ts';
+export type { DeveloperModeCloseoutReceipt, DeveloperModeCloseoutReceiptInput, DeveloperModeCloseoutReceiptVerifyInput } from './developer-mode-closeout-ledger.ts';
 export { buildFeedbackOpsReadModel } from './agent-lab-feedbackops.ts';
 export { hasVerifiedAgentLabRiskTierAutoPromotionReceiptRef } from './agent-lab-risk-tier-promotion-ledger.ts';
 export { buildAgentDefaultCallerReadinessForRepo, buildAgentDefaultCallerReadinessReport } from './agent-platform-surface-ownership.ts';

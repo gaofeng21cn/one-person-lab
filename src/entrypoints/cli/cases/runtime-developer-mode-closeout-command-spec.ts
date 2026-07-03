@@ -3,7 +3,7 @@ import {
   recordDeveloperModeCloseoutReceipts,
   verifyDeveloperModeCloseoutReceipt,
   type DeveloperModeCloseoutReceiptInput,
-} from '../../../modules/connect/developer-mode-closeout-ledger.ts';
+} from '../../../modules/foundry-lab/developer-mode-closeout-ledger.ts';
 import {
   readJsonObject,
   readOptionalString,
