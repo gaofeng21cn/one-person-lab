@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { assert, fs, os, path, repoRoot, runCli, test } from '../../helpers.ts';
 import { parseRegisteredFamilyRuntimeCommand } from '../../../../../src/modules/runway/family-runtime-command-parts/registry.ts';
 import {
+  buildRunwayReconcileProjection,
   buildRunwayRecoveryRepairProjection,
 } from '../../../../../src/modules/runway/family-runtime-control-loop.ts';
 
@@ -119,6 +120,7 @@ test('Runway control-loop sibling commands execute from the module surface', () 
   assert.equal(reconcile.selected_next_safe_action.action_id, 'repair_provider_liveness');
   assert.equal(reconcile.mutation_performed, false);
   assert.equal(reconcile.forbidden_next_actions.includes('sign_owner_receipt'), true);
+  assert.equal(reconcile.observed_state.queue_lifecycle_boundary.gate.status, 'pass');
 
   assert.equal(handoff.surface_kind, 'opl_runway_handoff_gates');
   assert.equal(handoff.accepted_owner_answer_refs.includes('domain_owner_receipt_ref'), true);
@@ -129,6 +131,115 @@ test('Runway control-loop sibling commands execute from the module surface', () 
   assert.equal(repair.repair_status, 'repair_action_available');
   assert.equal(repair.selected_repair_action.action_id, 'repair_provider_liveness');
   assert.equal(repair.authority_boundary.can_create_typed_blocker, false);
+});
+
+test('Runway reconcile projects competing local queue lifecycle as read-only observed status', () => {
+  const reconcile = buildRunwayReconcileProjection({
+    control_loop_status: 'attention_required',
+    desired_current_reconciliation: {
+      reconciler_id: 'runway_progress_reconciler',
+      desired_state_ref: 'current_owner_delta',
+      current_state_refs: [
+        'typed_family_queue',
+        'temporal_workflow_visibility',
+        'stage_attempt_ledger',
+        'provider_worker_lifecycle',
+        'scheduler_cadence',
+      ],
+      allowed_next_actions: ['observe_queue_lifecycle_boundary'],
+      selected_next_safe_action: {
+        action_id: 'observe_queue_lifecycle_boundary',
+        owner: 'opl_runway',
+        reason: 'local_sqlite_queue_lifecycle_competes_with_temporal',
+        command: 'opl family-runtime queue list --json',
+        mutation: false,
+        competing_task_count: 1,
+        blocks_runtime_execution: true,
+        blocks_domain_progress_claim: true,
+      },
+      forbidden_next_actions: [
+        'write_domain_truth',
+        'sign_owner_receipt',
+        'create_domain_typed_blocker',
+        'authorize_quality_verdict',
+        'claim_domain_ready',
+      ],
+    },
+    provider_runtime: {
+      substrate: 'temporal',
+      selected_provider: 'temporal',
+      selected_ready: true,
+      selected_status: 'ready',
+      degraded_reason: 'local_sqlite_queue_lifecycle_competes_with_temporal',
+      runtime_dependency: 'temporal_server_and_worker_required_for_live_workflows',
+      local_provider_role: 'dev_ci_offline_diagnostic_baseline_only_not_online_readiness_substitute',
+      live_workflow_execution_ready: false,
+    },
+    scheduler_cadence: {
+      substrate: 'temporal_scheduler',
+      status: 'ok',
+      schedule_id: 'opl-family-runtime-provider-scheduler',
+      health: null,
+      repair_action: null,
+    },
+    queue: { total: 1, by_status: { retry_waiting: 1 } },
+    queue_lifecycle_boundary: {
+      surface_kind: 'opl_family_runtime_queue_temporal_lifecycle_boundary',
+      selected_provider: 'temporal',
+      sqlite_role: 'projection_audit_cache_not_durable_lifecycle_truth',
+      temporal_role: 'durable_workflow_activity_retry_dead_letter_and_schedule_truth',
+      field_roles: {
+        projection_or_audit_when_temporal_selected: ['tasks.status'],
+        queue_intake_and_dedupe_fields: ['tasks.task_id'],
+        temporal_owned_lifecycle_when_temporal_selected: ['workflow_history'],
+      },
+      gate: {
+        status: 'attention_needed',
+        reason: 'local_sqlite_task_lifecycle_status_without_temporal_stage_attempt',
+        competing_statuses: ['running', 'retry_waiting', 'blocked', 'dead_letter', 'succeeded'], // reuse-first: allow legacy status fixture
+        competing_task_count: 1,
+        competing_tasks: [
+          {
+            task_id: 'frt_retry_waiting',
+            status: 'retry_waiting',
+            task_kind: 'stage-attempt/closeout',
+            dedupe_key: 'mag:test:temporal-queue-boundary',
+            stage_attempt_count: 0,
+            temporal_stage_attempt_count: 0,
+          },
+        ],
+        readiness_effect: 'full_online_ready_false_until_temporal_history_or_authority_projection_rebuilds_lifecycle',
+      },
+      authority_boundary: {
+        opl_sqlite_can_project_runtime_state: true,
+        opl_sqlite_can_own_temporal_durable_lifecycle: false,
+        temporal_owns_durable_lifecycle_when_selected: true,
+        domain: 'truth_quality_artifact_gate_owner',
+        can_write_domain_truth: false,
+        provider_completion_is_domain_ready: false,
+      },
+    },
+    stage_attempts: { total: 0, by_status: {} },
+    authority_boundary: {
+      can_execute_domain_action: false,
+      can_write_domain_truth: false,
+      can_write_domain_memory_body: false,
+      can_mutate_artifact_body: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_export_verdict: false,
+      provider_completion_is_domain_ready: false,
+    },
+  } as unknown as Parameters<typeof buildRunwayReconcileProjection>[0]);
+
+  assert.equal(reconcile.selected_next_safe_action.action_id, 'observe_queue_lifecycle_boundary');
+  assert.equal(reconcile.selected_next_safe_action.command, 'opl family-runtime queue list --json');
+  assert.equal(reconcile.selected_next_safe_action.mutation, false);
+  assert.equal(reconcile.apply_command, null);
+  assert.equal(reconcile.observed_state.queue_lifecycle_boundary.gate.status, 'attention_needed');
+  assert.equal(reconcile.observed_state.queue_lifecycle_boundary.authority_boundary.can_write_domain_truth, false);
 });
 
 test('Runway recovery-repair projection exposes blocked worker restart guard without authorizing mutation', () => {

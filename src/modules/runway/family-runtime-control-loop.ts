@@ -7,6 +7,7 @@ import {
 } from './family-runtime-providers.ts';
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import {
+  buildQueueTemporalLifecycleBoundary,
   familyRuntimePaths,
   queueSummary,
 } from './family-runtime-store.ts';
@@ -68,6 +69,7 @@ const FAILED_ATTEMPT_REPAIR_COMMAND = 'opl family-runtime attempt list --status 
 function readinessStatus(input: {
   providerReady: boolean;
   schedulerStatus: string | null;
+  queueLifecycleBoundaryGateStatus: string | null;
   queueTotal: number;
   attemptTotal: number;
 }) {
@@ -75,6 +77,9 @@ function readinessStatus(input: {
     return 'blocked_provider_not_ready';
   }
   if (input.schedulerStatus === 'attention_required' || input.schedulerStatus === 'blocked_provider_not_ready') {
+    return 'attention_required';
+  }
+  if (input.queueLifecycleBoundaryGateStatus === 'attention_needed') {
     return 'attention_required';
   }
   if (input.queueTotal > 0 || input.attemptTotal > 0) {
@@ -178,6 +183,7 @@ function buildNextSafeAction(input: {
   status: string;
   providerReady: boolean;
   schedulerStatus: string | null;
+  queueLifecycleBoundary: ReturnType<typeof buildQueueTemporalLifecycleBoundary>;
   queue: { total: number; by_status: Record<string, number> };
   attempts: { total: number; by_status: Record<string, number> };
 }) {
@@ -200,6 +206,19 @@ function buildNextSafeAction(input: {
       reason: 'temporal_scheduler_cadence_not_ready',
       command: 'opl family-runtime scheduler install --provider temporal --json',
       mutation: true,
+      blocks_runtime_execution: true,
+      blocks_domain_progress_claim: true,
+    };
+  }
+
+  if (input.queueLifecycleBoundary.gate.status === 'attention_needed') {
+    return {
+      action_id: 'observe_queue_lifecycle_boundary',
+      owner: 'opl_runway',
+      reason: 'local_sqlite_queue_lifecycle_competes_with_temporal',
+      command: 'opl family-runtime queue list --json',
+      mutation: false,
+      competing_task_count: input.queueLifecycleBoundary.gate.competing_task_count,
       blocks_runtime_execution: true,
       blocks_domain_progress_claim: true,
     };
@@ -310,10 +329,13 @@ export async function buildFamilyRuntimeControlLoopStatus(
     ? schedulerRecord.action as Record<string, unknown>
     : null;
   const queue = queueSummary(db);
+  const queueLifecycleBoundary = buildQueueTemporalLifecycleBoundary(db, providerKind);
+  const queueLifecycleCompetesWithTemporal = queueLifecycleBoundary.gate.status === 'attention_needed';
   const attempts = stageAttemptSummary(db);
   const status = readinessStatus({
     providerReady: selected.ready,
     schedulerStatus: typeof scheduler.status === 'string' ? scheduler.status : null,
+    queueLifecycleBoundaryGateStatus: queueLifecycleBoundary.gate.status,
     queueTotal: queue.total,
     attemptTotal: attempts.total,
   });
@@ -327,6 +349,7 @@ export async function buildFamilyRuntimeControlLoopStatus(
     status,
     providerReady: selected.ready,
     schedulerStatus,
+    queueLifecycleBoundary,
     queue,
     attempts,
   });
@@ -375,6 +398,7 @@ export async function buildFamilyRuntimeControlLoopStatus(
         'resume',
         'retry',
         'hold',
+        'observe_queue_lifecycle_boundary',
         'repair_provider_liveness',
         'escalate_typed_blocker',
         'wait_for_owner_answer',
@@ -394,10 +418,13 @@ export async function buildFamilyRuntimeControlLoopStatus(
       selected_provider: providerRuntime.selectedProvider,
       selected_ready: selected.ready,
       selected_status: selected.status,
-      degraded_reason: selected.degraded_reason,
+      degraded_reason: selected.degraded_reason
+        ?? (queueLifecycleCompetesWithTemporal ? 'local_sqlite_queue_lifecycle_competes_with_temporal' : null),
       runtime_dependency: selected.details.runtime_dependency ?? null,
+      local_provider_role: 'dev_ci_offline_diagnostic_baseline_only_not_online_readiness_substitute',
       live_workflow_execution_ready: selected.ready
-        && !schedulerNeedsRepair(schedulerStatus),
+        && !schedulerNeedsRepair(schedulerStatus)
+        && !queueLifecycleCompetesWithTemporal,
     },
     worker_supervisor_liveness: {
       substrate: 'temporal_worker_supervisor',
@@ -425,15 +452,17 @@ export async function buildFamilyRuntimeControlLoopStatus(
     },
     readiness: {
       readiness_status: status,
-      provider_backed_runtime_ready: selected.ready,
+      provider_backed_runtime_ready: selected.ready && !queueLifecycleCompetesWithTemporal,
       scheduler_cadence_ready: !schedulerNeedsRepair(schedulerStatus),
       live_workflow_execution_ready: selected.ready
-        && !schedulerNeedsRepair(schedulerStatus),
+        && !schedulerNeedsRepair(schedulerStatus)
+        && !queueLifecycleCompetesWithTemporal,
       domain_progress_claim_ready: false,
       production_l5_ready: false,
       next_safe_action: nextSafeAction,
     },
     queue,
+    queue_lifecycle_boundary: queueLifecycleBoundary,
     stage_attempts: attempts,
     handoff_gate: {
       accepted_owner_answer_refs: [
@@ -536,6 +565,7 @@ export function buildRunwayReadinessProjection(controlLoop: FamilyRuntimeControl
     live_workflow_execution_ready: controlLoop.readiness.live_workflow_execution_ready,
     next_safe_action: controlLoop.readiness.next_safe_action,
     queue: controlLoop.queue,
+    queue_lifecycle_boundary: controlLoop.queue_lifecycle_boundary,
     stage_attempts: controlLoop.stage_attempts,
     provider_runtime: controlLoop.provider_runtime,
     worker_supervisor_liveness: controlLoop.worker_supervisor_liveness,
@@ -565,6 +595,7 @@ export function buildRunwayReconcileProjection(controlLoop: FamilyRuntimeControl
       provider_ready: controlLoop.provider_runtime.selected_ready,
       scheduler_status: controlLoop.scheduler_cadence.status,
       queue: controlLoop.queue,
+      queue_lifecycle_boundary: controlLoop.queue_lifecycle_boundary,
       stage_attempts: controlLoop.stage_attempts,
     },
     reconcile_policy: 'read_only_desired_current_projection',
