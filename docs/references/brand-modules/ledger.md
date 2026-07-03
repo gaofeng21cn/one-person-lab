@@ -42,12 +42,15 @@ contracts/opl-framework/evidence-ledger-event.schema.json
 contracts/opl-framework/state-index-kernel-contract.json
 contracts/opl-framework/stage-artifact-runtime-contract.json
 contracts/opl-framework/role-artifact-ref.schema.json
+contracts/opl-framework/artifact-provenance-bundle.schema.json
 contracts/opl-framework/stage-owner-receipt.schema.json
 contracts/opl-framework/stage-typed-blocker.schema.json
 contracts/opl-framework/brand-module-registry.json#modules.ledger
 ```
 
 Ledger contract 的职责是表达 evidence event、refs-only locator、receipt/blocker refs、artifact lineage、restore proof、retention、no-regression 和 state-index projection 的 shape。它不表达 artifact body、memory body、paper/grant/visual body、domain quality verdict 或 owner acceptance。
+
+`artifact-provenance-bundle.schema.json` 是 Ledger 的通用 artifact provenance bundle 基座：只允许 `schema_version`、`bundle_id`、`artifact_ref`、`domain_id`、`artifact_type`、`created_at`、`refs`、`hashes` 和 `authority_boundary`。Ledger 可以登记 manifest ref/hash 与 index keys，但不能读取或保存 artifact body。
 
 ## 模块级 CLI Family
 
@@ -62,6 +65,11 @@ Ledger contract 的职责是表达 evidence event、refs-only locator、receipt/
 | `opl ledger interfaces --json` | 返回 CLI command specs、App action ids、read-model keys、descriptor delegates、contract refs、validation commands 和 status docs。 |
 | `opl ledger validate --json` | 静态验证 registry refs、contract refs、event schemas、artifact refs、receipt/blocker refs、state-index projection、authority flags 和 forbidden claims。 |
 | `opl ledger doctor --json` | 诊断 stale index、missing hash、orphan ref、body leakage risk、missing restore proof、missing no-regression ref 和 evidence foldback 缺口。 |
+| `opl ledger bundle validate --bundle <path> --json` | 验证 Artifact Provenance Bundle manifest 的 refs/hash/authority shape，不读取 artifact body。 |
+| `opl ledger bundle inspect --bundle <path> --json` | 读取 bundle manifest 并展示 refs、hashes、authority boundary 和 validation 结果，不读取 artifact body。 |
+| `opl ledger bundle record --bundle <path> --domain <id> --artifact <ref> --json` | 在 OPL 默认 state 登记 bundle manifest ref/hash、domain/artifact index 与 refs-only evidence，不保存 body。 |
+| `opl ledger bundle export --bundle <path> --format ro-crate --json` | 生成最小 RO-Crate metadata 投影，不新增依赖、不写 domain truth。 |
+| `opl ledger bundle doctor --bundle <path> --json` | 诊断 bundle manifest 缺字段、hash shape、refs-only authority 和 body field 风险。 |
 
 允许复用的底层现有 surface：
 

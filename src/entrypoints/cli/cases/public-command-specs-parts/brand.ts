@@ -22,6 +22,7 @@ import { buildBrandModuleSurfaceSpecs } from './brand-module-surfaces.ts';
 import { buildBrandOperatingModelCommandSpecs } from './brand-operating-model.ts';
 import { buildBrandPackCommandSpecs } from './brand-pack.ts';
 import { buildBrandRunwayCommandSpecs } from './brand-runway.ts';
+import { buildLedgerBundleCommandSpecs } from './ledger-bundle.ts';
 
 export function buildBrandCommandSpecs(
   getContracts: () => FrameworkContracts,
@@ -38,6 +39,7 @@ export function buildBrandCommandSpecs(
     ...buildBrandModuleSurfaceSpecs(getContracts, 'foundry-lab', 'brand-foundry-lab'),
     ...buildBrandModuleSurfaceSpecs(getContracts, 'connect', 'brand-connect'),
   };
+  const ledgerBundleCommandSpecs = buildLedgerBundleCommandSpecs();
   const vaultAliasSpecs = Object.fromEntries(
     Object.entries(brandModuleSurfaceSpecs)
       .filter(([command]) => command.startsWith('ledger '))
@@ -135,6 +137,7 @@ export function buildBrandCommandSpecs(
     },
     ...buildBrandOperatingModelCommandSpecs(getContracts),
     ...brandModuleSurfaceSpecs,
+    ...ledgerBundleCommandSpecs,
     ...vaultAliasSpecs,
     'agents modules list': {
       usage: 'opl agents modules list',

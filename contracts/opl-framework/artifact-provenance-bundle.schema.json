@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/artifact-provenance-bundle.schema.json",
+  "schema_id": "opl.artifact_provenance_bundle.v1",
+  "surface_kind": "opl_artifact_provenance_bundle_schema",
+  "owner": "one-person-lab",
+  "purpose": "Define the refs-only Artifact Provenance Bundle manifest shape consumed by OPL Ledger.",
+  "state": "active_contract",
+  "machine_boundary": "OPL Ledger reads and records manifest refs, hashes, and index keys only. It must not read or store artifact bodies, write domain truth, create owner receipts, mutate artifacts, or authorize domain, artifact, quality, export, or production readiness.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "bundle_id",
+    "artifact_ref",
+    "domain_id",
+    "artifact_type",
+    "created_at",
+    "refs",
+    "hashes",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "artifact-provenance-bundle.v1"
+    },
+    "bundle_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "refs": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/ref_list"
+        },
+        "inputs": {
+          "$ref": "#/$defs/ref_list"
+        },
+        "outputs": {
+          "$ref": "#/$defs/ref_list"
+        },
+        "environment": {
+          "$ref": "#/$defs/ref_list"
+        },
+        "agent_trace": {
+          "$ref": "#/$defs/ref_list"
+        },
+        "reviews": {
+          "$ref": "#/$defs/ref_list"
+        },
+        "replay": {
+          "$ref": "#/$defs/ref_list"
+        }
+      }
+    },
+    "hashes": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/sha256_hash"
+      },
+      "minProperties": 1
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ledger_refs_only",
+        "forbidden_claims"
+      ],
+      "properties": {
+        "ledger_refs_only": {
+          "const": true
+        },
+        "forbidden_claims": {
+          "$ref": "#/$defs/ref_list"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "ref_list": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "sha256_hash": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "sha256"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    }
+  },
+  "forbidden_body_fields": [
+    "body",
+    "artifact_body",
+    "artifact_content",
+    "artifact_payload",
+    "body_inline"
+  ],
+  "authority_boundary": {
+    "ledger_refs_only": true,
+    "can_read_artifact_body": false,
+    "can_store_artifact_body": false,
+    "can_mutate_artifact_body": false,
+    "can_write_domain_truth": false,
+    "can_create_owner_receipt": false,
+    "can_authorize_quality_verdict": false,
+    "can_claim_domain_ready": false,
+    "can_claim_artifact_ready": false,
+    "can_claim_production_ready": false
+  }
+}

@@ -6,6 +6,7 @@ export const OPL_LEDGER_SOURCE_MODULE = {
 } as const;
 
 // Public cross-module surface generated from existing module consumers.
+export { doctorArtifactProvenanceBundle, exportArtifactProvenanceBundle, inspectArtifactProvenanceBundle, recordArtifactProvenanceBundle, validateArtifactProvenanceBundle } from './artifact-provenance-bundle.ts';
 export { buildCurrentOwnerDeltaCacheRefreshRequiredReadModel, buildCurrentOwnerDeltaReadModel, buildDefaultNextActionFromCurrentOwnerDelta } from './current-owner-delta-projection.ts';
 export { readCurrentOwnerDeltaReadModelProjectionCache, writeCurrentOwnerDeltaReadModelProjectionCache } from './current-owner-delta-read-model-cache.ts';
 export { buildCurrentOwnerDeltaTopline } from './current-owner-delta-topline.ts';
