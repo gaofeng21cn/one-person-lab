@@ -1,10 +1,8 @@
+import { countValue } from '../../../kernel/json-record.ts';
+
 type EvidenceEnvelopeSummary = {
   blocked_envelope_count?: unknown;
 };
-
-function countValue(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
-}
 
 export function buildZeroOpenCompletionGuard(input: {
   openWorklistItemCount: number;

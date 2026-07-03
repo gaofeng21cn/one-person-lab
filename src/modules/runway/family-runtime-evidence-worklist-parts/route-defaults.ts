@@ -1,17 +1,6 @@
 import type { FamilyRuntimeProviderKind } from '../family-runtime-types.ts';
 import { canonicalOwnerId } from '../../ledger/index.ts';
-
-type JsonRecord = Record<string, unknown>;
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
+import { stringList, stringValue, type JsonRecord } from '../../../kernel/json-record.ts';
 
 export function readOnlyRouteMatchesDefaults(
   route: JsonRecord,
