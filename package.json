@@ -89,7 +89,8 @@
     "line-budget:strict": "node ./scripts/line-budget.mjs --strict",
     "fresh-install:smoke": "node ./scripts/fresh-install-smoke.mjs",
     "new-machine:codex-bootstrap:docker-smoke": "node ./scripts/new-machine-codex-bootstrap-docker-smoke.mjs",
-    "source:modules": "node ./scripts/source-module-boundary.mjs"
+    "source:modules": "node ./scripts/source-module-boundary.mjs",
+    "source:modules:public-imports": "node ./scripts/source-module-public-imports.mjs"
   },
   "dependencies": {
     "@temporalio/activity": "^1.18.1",
