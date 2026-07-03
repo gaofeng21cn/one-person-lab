@@ -41,6 +41,13 @@ import {
   type ProviderTransportRedriveTrigger,
 } from './family-runtime-redrive-parts/reasons.ts';
 import { createPaperMissionStageRouteAttemptForProviderRedrive } from './family-runtime-paper-mission-stage-route-runner.ts';
+import {
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS,
+  FAMILY_RUNTIME_TASK_COLUMNS,
+  FAMILY_RUNTIME_TASK_STATUS,
+  resetTaskForRedriveProjectionSql,
+  taskFailureProjectionSql,
+} from './family-runtime-queue-projection-boundary.ts';
 
 type StageAttemptPayload = ReturnType<typeof listStageAttemptsForTask>[number];
 type RedriveAdmission = ReturnType<typeof redriveAdmissionForTask>;
@@ -105,7 +112,7 @@ function redriveAdmissionEventPayload(admission: RedriveAdmission, redriveKind: 
 
 function providerRetryBudgetDeadLetterEvidenceKind(db: DatabaseSync, taskId: string) {
   const stageAttemptEvidence = listStageAttemptsForTask(db, taskId).some((attempt) => (
-    attempt.status === 'dead_lettered'
+    attempt.status === FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.deadLettered
     && attempt.blocked_reason === 'retry_budget_exhausted'
     && attempt.provider_kind === 'temporal'
     && attempt.executor_kind === 'codex_cli'
@@ -212,7 +219,7 @@ function terminalProviderTransportAttemptForRedrive(
 ) {
   const attempts = listStageAttemptsForTask(db, row.task_id).filter((attempt) => {
     return attempt.provider_kind === 'temporal'
-      && ['failed', 'blocked', 'dead_lettered'].includes(attempt.status)
+      && ['failed', 'blocked', FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.deadLettered].includes(attempt.status)
       && providerStageAttemptRedriveReasonAllowed(attempt, row, payload)
       && closeoutRefsAllowProviderTransportRedrive(attempt, row, payload)
       && attempt.closeout_receipt_status === null;
@@ -328,7 +335,7 @@ function redriveTerminalProviderTransportTask(
         {
           task_id: currentRow.task_id,
           status: currentRow.status,
-          required_stage_attempt_statuses: ['failed', 'blocked', 'dead_lettered'],
+          required_stage_attempt_statuses: ['failed', 'blocked', FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.deadLettered],
           allowed_blocked_reasons: paperMissionStageRouteRedriveAuthority(currentRow, currentPayload)
             ? [
                 ...PROVIDER_STAGE_ATTEMPT_REDRIVE_REASONS,
@@ -343,8 +350,7 @@ function redriveTerminalProviderTransportTask(
     const nextStatus = admission.nextStatus;
     const claim = db.prepare(`
       UPDATE tasks
-      SET status = ?, attempts = 0, requires_approval = ?, lease_owner = NULL, lease_expires_at = NULL,
-        last_error = ?, dead_letter_reason = NULL, updated_at = ?
+      SET ${resetTaskForRedriveProjectionSql()}
       WHERE task_id = ?
     `).run(nextStatus, admission.requiresApproval ? 1 : 0, admission.lastError, redrivenAt, currentRow.task_id);
     if (claim.changes === 0) {
@@ -366,7 +372,7 @@ function redriveTerminalProviderTransportTask(
     if (redrivenAttemptBlocker) {
       db.prepare(`
         UPDATE tasks
-        SET status = 'blocked', last_error = ?, dead_letter_reason = ?, updated_at = ?
+        SET status = 'blocked', ${taskFailureProjectionSql()}
         WHERE task_id = ?
       `).run(redrivenAttemptBlocker, redrivenAttemptBlocker, redrivenAt, currentRow.task_id);
     }
@@ -478,8 +484,7 @@ function redriveRefsOnlyCheckpointMissingLaunchAuthorizationTask(
     const nextStatus = admission.nextStatus;
     const claim = db.prepare(`
       UPDATE tasks
-      SET status = ?, attempts = 0, requires_approval = ?, lease_owner = NULL, lease_expires_at = NULL,
-        last_error = ?, dead_letter_reason = NULL, updated_at = ?
+      SET ${resetTaskForRedriveProjectionSql()}
       WHERE task_id = ? AND status = 'succeeded'
     `).run(nextStatus, admission.requiresApproval ? 1 : 0, admission.lastError, redrivenAt, currentRow.task_id);
     if (claim.changes === 0) {
@@ -610,9 +615,8 @@ export function redriveBlockedDefaultExecutorProviderTransportTask(
     const nextStatus = admission.nextStatus;
     const claim = db.prepare(`
       UPDATE tasks
-      SET status = ?, attempts = 0, requires_approval = ?, lease_owner = NULL, lease_expires_at = NULL,
-        last_error = ?, dead_letter_reason = NULL, updated_at = ?
-      WHERE task_id = ? AND status = 'blocked' AND dead_letter_reason = ?
+      SET ${resetTaskForRedriveProjectionSql()}
+      WHERE task_id = ? AND status = 'blocked' AND ${FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason} = ?
     `).run(
       nextStatus,
       admission.requiresApproval ? 1 : 0,
@@ -726,8 +730,8 @@ function redriveRetryBudgetDeadLetterDefaultExecutorProviderTask(
       });
     }
     if (
-      currentRow.status !== 'dead_letter'
-      || currentRow.dead_letter_reason !== 'retry_budget_exhausted'
+      currentRow.status !== FAMILY_RUNTIME_TASK_STATUS.deadLetter
+      || currentRow[FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason] !== 'retry_budget_exhausted'
     ) {
       db.exec('COMMIT');
       return {
@@ -749,8 +753,8 @@ function redriveRetryBudgetDeadLetterDefaultExecutorProviderTask(
         {
           task_id: currentRow.task_id,
           status: currentRow.status,
-          dead_letter_reason: currentRow.dead_letter_reason,
-          required_stage_attempt_status: 'dead_lettered',
+          dead_letter_reason: currentRow[FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason],
+          required_stage_attempt_status: FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.deadLettered,
           required_stage_attempt_blocked_reason: 'retry_budget_exhausted',
           accepted_task_event_type: 'task_auto_dead_lettered_after_provider_transport_retries',
         },
@@ -767,9 +771,8 @@ function redriveRetryBudgetDeadLetterDefaultExecutorProviderTask(
     const nextStatus = admission.nextStatus;
     const claim = db.prepare(`
       UPDATE tasks
-      SET status = ?, attempts = 0, requires_approval = ?, lease_owner = NULL, lease_expires_at = NULL,
-        last_error = ?, dead_letter_reason = NULL, updated_at = ?
-      WHERE task_id = ? AND status = 'dead_letter' AND dead_letter_reason = 'retry_budget_exhausted'
+      SET ${resetTaskForRedriveProjectionSql()}
+      WHERE task_id = ? AND status = '${FAMILY_RUNTIME_TASK_STATUS.deadLetter}' AND ${FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason} = 'retry_budget_exhausted'
     `).run(nextStatus, admission.requiresApproval ? 1 : 0, admission.lastError, redrivenAt, currentRow.task_id);
     if (claim.changes === 0) {
       const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(currentRow.task_id) as

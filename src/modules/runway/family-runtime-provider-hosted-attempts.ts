@@ -3,6 +3,11 @@ import type { DatabaseSync } from 'node:sqlite';
 import type { FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 import { insertEvent, nowIso, stableId } from './family-runtime-store.ts';
 import {
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS,
+  FAMILY_RUNTIME_TASK_COLUMNS,
+  FAMILY_RUNTIME_TASK_STATUS,
+} from './family-runtime-queue-projection-boundary.ts';
+import {
   MAS_DOMAIN_ROUTE_RECONCILE_APPLY_ACTION,
   isMasOwnerRouteTask,
   masOwnerRouteActionRef,
@@ -93,9 +98,23 @@ function isSameDefaultExecutorStudyActionStage(
     && sameStringField(left, right, 'action_type');
 }
 
-const DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate']);
-const DEFAULT_EXECUTOR_CROSS_TASK_STARTED_ATTEMPT_STATUSES = new Set(['running', 'checkpointed', 'human_gate']);
-const DEFAULT_EXECUTOR_CROSS_TASK_LIVE_TASK_STATUSES = new Set(['queued', 'running', 'retry_waiting', 'succeeded']);
+const DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES = new Set<string>([
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.queued,
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.running,
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.checkpointed,
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.humanGate,
+]);
+const DEFAULT_EXECUTOR_CROSS_TASK_STARTED_ATTEMPT_STATUSES = new Set<string>([
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.running,
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.checkpointed,
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.humanGate,
+]);
+const DEFAULT_EXECUTOR_CROSS_TASK_LIVE_TASK_STATUSES = new Set<string>([
+  FAMILY_RUNTIME_TASK_STATUS.queued,
+  FAMILY_RUNTIME_TASK_STATUS.running,
+  FAMILY_RUNTIME_TASK_STATUS.retryWaiting,
+  FAMILY_RUNTIME_TASK_STATUS.succeeded,
+]);
 const DEFAULT_EXECUTOR_TERMINAL_PROVIDER_STATUSES = new Set(['completed', 'failed', 'blocked', 'timed_out']);
 const DEFAULT_EXECUTOR_SUPERSEDED_REASON = 'mas_default_executor_superseded_by_current_source';
 const DEFAULT_EXECUTOR_TASK_LEASE_MS = 5 * 60 * 1000;
@@ -105,14 +124,19 @@ function hasActiveDefaultExecutorTaskLease(db: DatabaseSync, taskId: string | nu
     return false;
   }
   const row = db.prepare(`
-    SELECT status, lease_owner, lease_expires_at
+    SELECT status, ${FAMILY_RUNTIME_TASK_COLUMNS.leaseOwner}, ${FAMILY_RUNTIME_TASK_COLUMNS.leaseExpiresAt}
     FROM tasks
     WHERE task_id = ?
   `).get(taskId) as Pick<FamilyRuntimeTaskRow, 'status' | 'lease_owner' | 'lease_expires_at'> | undefined;
-  if (row?.status !== 'running' || !row.lease_owner || !row.lease_expires_at) {
+  const leaseExpiresAtText = row?.[FAMILY_RUNTIME_TASK_COLUMNS.leaseExpiresAt] ?? null;
+  if (
+    row?.status !== FAMILY_RUNTIME_TASK_STATUS.running
+    || !row[FAMILY_RUNTIME_TASK_COLUMNS.leaseOwner]
+    || !leaseExpiresAtText
+  ) {
     return false;
   }
-  const leaseExpiresAt = Date.parse(row.lease_expires_at);
+  const leaseExpiresAt = Date.parse(leaseExpiresAtText);
   return Number.isFinite(leaseExpiresAt) && leaseExpiresAt > Date.now();
 }
 
@@ -525,17 +549,22 @@ export function refreshDefaultExecutorLiveAttemptTaskLease(
     FROM tasks
     WHERE task_id = ?
   `).get(taskId) as FamilyRuntimeTaskRow | undefined;
-  if (!row || !['queued', 'retry_waiting', 'running'].includes(row.status)) {
+  const refreshableTaskStatuses = new Set<string>([
+    FAMILY_RUNTIME_TASK_STATUS.queued,
+    FAMILY_RUNTIME_TASK_STATUS.retryWaiting,
+    FAMILY_RUNTIME_TASK_STATUS.running,
+  ]);
+  if (!row || !refreshableTaskStatuses.has(row.status)) {
     return null;
   }
-  const leaseOwner = row.lease_owner || `opl-family-runtime:${process.pid}`;
+  const leaseOwner = row[FAMILY_RUNTIME_TASK_COLUMNS.leaseOwner] || `opl-family-runtime:${process.pid}`;
   const leaseExpiresAt = new Date(Date.now() + DEFAULT_EXECUTOR_TASK_LEASE_MS).toISOString();
   const refreshedAt = nowIso();
   const attemptCount = Math.max(row.attempts, input.attempt?.attempt_count ?? 0, 1);
   db.prepare(`
     UPDATE tasks
-    SET status = 'running', attempts = max(attempts, ?), lease_owner = ?,
-      lease_expires_at = ?, last_error = NULL, dead_letter_reason = NULL, updated_at = ?
+    SET status = 'running', attempts = max(attempts, ?), ${FAMILY_RUNTIME_TASK_COLUMNS.leaseOwner} = ?,
+      ${FAMILY_RUNTIME_TASK_COLUMNS.leaseExpiresAt} = ?, last_error = NULL, ${FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason} = NULL, updated_at = ?
     WHERE task_id = ? AND status IN ('queued', 'retry_waiting', 'running')
   `).run(attemptCount, leaseOwner, leaseExpiresAt, refreshedAt, taskId);
   insertEvent(db, {
@@ -548,10 +577,10 @@ export function refreshDefaultExecutorLiveAttemptTaskLease(
       stage_attempt_id: input.attempt?.stage_attempt_id ?? null,
       previous_status: row.status,
       next_status: 'running',
-      previous_lease_owner: row.lease_owner,
-      previous_lease_expires_at: row.lease_expires_at,
-      lease_owner: leaseOwner,
-      lease_expires_at: leaseExpiresAt,
+      previous_lease_owner: row[FAMILY_RUNTIME_TASK_COLUMNS.leaseOwner],
+      previous_lease_expires_at: row[FAMILY_RUNTIME_TASK_COLUMNS.leaseExpiresAt],
+      [FAMILY_RUNTIME_TASK_COLUMNS.leaseOwner]: leaseOwner,
+      [FAMILY_RUNTIME_TASK_COLUMNS.leaseExpiresAt]: leaseExpiresAt,
       authority_boundary: {
         opl: 'provider_transport_lease_refresh_only',
         domain: 'truth_quality_artifact_gate_owner',
@@ -566,8 +595,8 @@ export function refreshDefaultExecutorLiveAttemptTaskLease(
   });
   return {
     task_id: taskId,
-    lease_owner: leaseOwner,
-    lease_expires_at: leaseExpiresAt,
+    [FAMILY_RUNTIME_TASK_COLUMNS.leaseOwner]: leaseOwner,
+    [FAMILY_RUNTIME_TASK_COLUMNS.leaseExpiresAt]: leaseExpiresAt,
   };
 }
 

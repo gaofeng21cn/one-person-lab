@@ -42,6 +42,13 @@ import {
   MAS_PAPER_AUTONOMY_DOMAIN_HANDLER_CLOSEOUT_REQUIRED_REASON,
   MAS_PAPER_AUTONOMY_TASK_KINDS,
 } from './family-runtime-paper-autonomy.ts';
+import {
+  clearTaskLeaseProjectionSql,
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS,
+  FAMILY_RUNTIME_TASK_COLUMNS,
+  FAMILY_RUNTIME_TASK_STATUS,
+  taskFailureProjectionSql,
+} from './family-runtime-queue-projection-boundary.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import {
   record,
@@ -62,6 +69,14 @@ import {
 
 type TemporalProviderModule = Parameters<typeof startDefaultExecutorStageAttempt>[2]['temporalProviderModule'];
 type QueryTemporalStageAttemptReadModel = typeof queryTemporalStageAttemptReadModel;
+
+function blockTaskProjectionOnly(db: DatabaseSync, row: FamilyRuntimeTaskRow, reason: string, updatedAt: string) {
+  db.prepare(`
+    UPDATE tasks
+    SET status = 'blocked', ${taskFailureProjectionSql()}
+    WHERE task_id = ?
+  `).run(reason, reason, updatedAt, row.task_id);
+}
 
 function closeoutRefsFromDomainHandlerOutput(output: Record<string, unknown>) {
   return [
@@ -104,12 +119,7 @@ function blockProviderRequiredDefaultExecutorOwnerNotAdmitted(
 ) {
   const blockedAt = nowIso();
   const reason = 'default_executor_provider_admission_owner_not_admitted';
-  db.prepare(`
-    UPDATE tasks
-    SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
-      last_error = ?, dead_letter_reason = ?, updated_at = ?
-    WHERE task_id = ?
-  `).run(reason, reason, blockedAt, row.task_id);
+  blockTaskProjectionOnly(db, row, reason, blockedAt);
   insertEvent(db, {
     taskId: row.task_id,
     domainId: row.domain_id,
@@ -170,12 +180,7 @@ function blockTaskForStaleOwnerRoute(
 ) {
   const blockedAt = nowIso();
   const reason = PROGRESS_FIRST_OWNER_DELTA_REQUIRED_REASON;
-  db.prepare(`
-    UPDATE tasks
-    SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
-      last_error = ?, dead_letter_reason = ?, updated_at = ?
-    WHERE task_id = ?
-  `).run(reason, reason, blockedAt, row.task_id);
+  blockTaskProjectionOnly(db, row, reason, blockedAt);
   insertEvent(db, {
     taskId: row.task_id,
     domainId: row.domain_id,
@@ -251,12 +256,7 @@ function blockTaskForMissingDomainCloseout(
 ) {
   const blockedAt = nowIso();
   const reason = MAS_PAPER_AUTONOMY_DOMAIN_HANDLER_CLOSEOUT_REQUIRED_REASON;
-  db.prepare(`
-    UPDATE tasks
-    SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
-      last_error = ?, dead_letter_reason = ?, updated_at = ?
-    WHERE task_id = ?
-  `).run(reason, reason, blockedAt, row.task_id);
+  blockTaskProjectionOnly(db, row, reason, blockedAt);
   insertEvent(db, {
     taskId: row.task_id,
     domainId: row.domain_id,
@@ -324,8 +324,8 @@ function keepTaskOpenForOplAttemptAdmissionRequested(
   const updatedAt = nowIso();
   db.prepare(`
     UPDATE tasks
-    SET status = 'running', lease_owner = NULL, lease_expires_at = NULL,
-      last_error = ?, dead_letter_reason = NULL, updated_at = ?
+    SET status = 'running', ${clearTaskLeaseProjectionSql()},
+      last_error = ?, ${FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason} = NULL, updated_at = ?
     WHERE task_id = ?
   `).run(OPL_ATTEMPT_ADMISSION_REQUESTED_REASON, updatedAt, row.task_id);
   insertEvent(db, {
@@ -401,12 +401,7 @@ function blockTaskForObservedMasDomainOwnerAnswer(
   },
 ) {
   const updatedAt = nowIso();
-  db.prepare(`
-    UPDATE tasks
-    SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
-      last_error = ?, dead_letter_reason = ?, updated_at = ?
-    WHERE task_id = ?
-  `).run(input.observation.reason, input.observation.reason, updatedAt, row.task_id);
+  blockTaskProjectionOnly(db, row, input.observation.reason, updatedAt);
   insertEvent(db, {
     taskId: row.task_id,
     domainId: row.domain_id,
@@ -500,7 +495,7 @@ export async function dispatchFamilyRuntimeTask(
     const updatedAt = nowIso();
     db.prepare(`
       UPDATE tasks
-      SET status = 'blocked', last_error = ?, dead_letter_reason = ?, updated_at = ?
+      SET status = 'blocked', last_error = ?, ${FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason} = ?, updated_at = ?
       WHERE task_id = ?
     `).run(
       'Domain truth or artifact gate writes are forbidden through the OPL family runtime queue.',
@@ -566,7 +561,8 @@ export async function dispatchFamilyRuntimeTask(
   const runningAt = nowIso();
   db.prepare(`
     UPDATE tasks
-    SET status = 'running', attempts = ?, lease_owner = ?, lease_expires_at = ?, updated_at = ?
+    SET status = 'running', attempts = ?, ${FAMILY_RUNTIME_TASK_COLUMNS.leaseOwner} = ?,
+      ${FAMILY_RUNTIME_TASK_COLUMNS.leaseExpiresAt} = ?, updated_at = ?
     WHERE task_id = ? AND status IN ('queued', 'retry_waiting')
   `).run(attempt, leaseOwner, leaseExpiresAt, runningAt, row.task_id);
   insertEvent(db, {
@@ -574,7 +570,11 @@ export async function dispatchFamilyRuntimeTask(
     domainId: row.domain_id,
     eventType: 'task_dispatch_started',
     source: 'opl-family-runtime',
-    payload: { attempt, lease_owner: leaseOwner, lease_expires_at: leaseExpiresAt },
+    payload: {
+      attempt,
+      [FAMILY_RUNTIME_TASK_COLUMNS.leaseOwner]: leaseOwner,
+      [FAMILY_RUNTIME_TASK_COLUMNS.leaseExpiresAt]: leaseExpiresAt,
+    },
   });
   const runningStageAttempts = updateStageAttemptsForTask(db, {
     taskId: row.task_id,
@@ -655,7 +655,7 @@ export async function dispatchFamilyRuntimeTask(
     const completedAt = nowIso();
     db.prepare(`
       UPDATE tasks
-      SET status = 'succeeded', lease_owner = NULL, lease_expires_at = NULL, last_error = NULL, updated_at = ?
+      SET status = 'succeeded', ${clearTaskLeaseProjectionSql()}, last_error = NULL, updated_at = ?
       WHERE task_id = ?
     `).run(completedAt, row.task_id);
     insertEvent(db, {
@@ -734,23 +734,25 @@ export async function dispatchFamilyRuntimeTask(
       runningStageAttempts,
     });
   }
-  const nextStatus = attempt >= row.max_attempts ? 'dead_letter' : 'retry_waiting';
+  const nextStatus = attempt >= row[FAMILY_RUNTIME_TASK_COLUMNS.maxAttempts]
+    ? FAMILY_RUNTIME_TASK_STATUS.deadLetter
+    : FAMILY_RUNTIME_TASK_STATUS.retryWaiting;
   const failedAt = nowIso();
   db.prepare(`
     UPDATE tasks
-    SET status = ?, lease_owner = NULL, lease_expires_at = NULL, last_error = ?, dead_letter_reason = ?, updated_at = ?
+    SET status = ?, ${taskFailureProjectionSql()}
     WHERE task_id = ?
   `).run(
     nextStatus,
     errorMessage,
-    nextStatus === 'dead_letter' ? 'retry_budget_exhausted' : null,
+    nextStatus === FAMILY_RUNTIME_TASK_STATUS.deadLetter ? 'retry_budget_exhausted' : null,
     failedAt,
     row.task_id,
   );
   insertEvent(db, {
     taskId: row.task_id,
     domainId: row.domain_id,
-    eventType: nextStatus === 'dead_letter' ? 'task_dead_lettered' : 'task_retry_waiting',
+    eventType: nextStatus === FAMILY_RUNTIME_TASK_STATUS.deadLetter ? 'task_dead_lettered' : 'task_retry_waiting',
     source: 'opl-family-runtime',
     payload: {
       attempt,
@@ -765,19 +767,23 @@ export async function dispatchFamilyRuntimeTask(
   });
   insertNotification(db, {
     taskId: row.task_id,
-    severity: nextStatus === 'dead_letter' ? 'error' : 'warning',
-    title: nextStatus === 'dead_letter' ? 'Family runtime task dead-lettered' : 'Family runtime task queued for retry',
+    severity: nextStatus === FAMILY_RUNTIME_TASK_STATUS.deadLetter ? 'error' : 'warning',
+    title: nextStatus === FAMILY_RUNTIME_TASK_STATUS.deadLetter ? 'Family runtime task dead-lettered' : 'Family runtime task queued for retry',
     body: errorMessage,
-    payload: { attempt, max_attempts: row.max_attempts },
+    payload: { attempt, [FAMILY_RUNTIME_TASK_COLUMNS.maxAttempts]: row[FAMILY_RUNTIME_TASK_COLUMNS.maxAttempts] },
   });
   const stageAttempts = updateStageAttemptsForTask(db, {
     taskId: row.task_id,
     stageAttemptIds: activeStageAttemptIds,
-    status: nextStatus === 'dead_letter' ? 'dead_lettered' : 'failed',
-    blockedReason: nextStatus === 'dead_letter' ? 'retry_budget_exhausted' : errorMessage,
+    status: nextStatus === FAMILY_RUNTIME_TASK_STATUS.deadLetter
+      ? FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.deadLettered
+      : FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.failed,
+    blockedReason: nextStatus === FAMILY_RUNTIME_TASK_STATUS.deadLetter ? 'retry_budget_exhausted' : errorMessage,
     activityEvent: {
       activity_kind: 'domain_handler_dispatch_activity',
-      activity_status: nextStatus === 'dead_letter' ? 'dead_lettered' : 'failed',
+      activity_status: nextStatus === FAMILY_RUNTIME_TASK_STATUS.deadLetter
+        ? FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.deadLettered
+        : FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.failed,
       error: errorMessage,
     },
   });

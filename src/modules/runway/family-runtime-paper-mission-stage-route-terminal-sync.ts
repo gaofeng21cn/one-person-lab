@@ -19,6 +19,12 @@ import {
   stableId,
   type FamilyRuntimeTaskRow,
 } from './family-runtime-store.ts';
+import {
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS,
+  FAMILY_RUNTIME_TASK_COLUMNS,
+  FAMILY_RUNTIME_TASK_STATUS,
+  taskFailureProjectionSql,
+} from './family-runtime-queue-projection-boundary.ts';
 
 export const PAPER_MISSION_STAGE_ROUTE_TASK_KIND = 'paper_mission/stage-route';
 export const PAPER_MISSION_STAGE_ROUTE_RUNTIME_REQUEST_KIND = 'mas_paper_mission_stage_route';
@@ -47,7 +53,7 @@ const TERMINAL_STAGE_ATTEMPT_STATUSES = new Set<StageAttemptStatus>([
   'blocked',
   'completed',
   'failed',
-  'dead_lettered',
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.deadLettered,
 ]);
 const LIVE_STAGE_ATTEMPT_STATUSES = new Set<StageAttemptStatus>([
   'queued',
@@ -156,10 +162,10 @@ function paperMissionStageRouteTaskStatusForTerminalAttempt(attempt: StageAttemp
   const domainReadyVerdict = typeof routeImpact.domain_ready_verdict === 'string'
     ? routeImpact.domain_ready_verdict
     : null;
-  if (attempt.status === 'failed' || attempt.status === 'dead_lettered') {
+  if (attempt.status === 'failed' || attempt.status === FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.deadLettered) {
     const reason = attempt.blocked_reason ?? 'paper_mission_stage_route_provider_terminal_failure';
     return {
-      status: 'dead_letter' as const,
+      status: FAMILY_RUNTIME_TASK_STATUS.deadLetter,
       reason,
       deadLetterReason: reason,
     };
@@ -181,7 +187,7 @@ function transitionReceiptStatusForTerminalAttempt(
   terminalAttempt: StageAttemptPayload,
   nextTask: ReturnType<typeof paperMissionStageRouteTaskStatusForTerminalAttempt>,
 ) {
-  if (nextTask.status === 'dead_letter') {
+  if (nextTask.status === FAMILY_RUNTIME_TASK_STATUS.deadLetter) {
     return 'provider_terminal_blocked';
   }
   if (terminalAttempt.closeout_receipt_status === 'accepted_typed_closeout') {
@@ -229,13 +235,13 @@ function masImpactReceiptForTerminalAttempt(input: {
     ?? optionalString(input.payload.next_owner)
     ?? 'med-autoscience';
   const observedFailureClass = optionalString(routeImpact.observed_failure_class)
-    ?? (input.nextTask.status === 'dead_letter'
+    ?? (input.nextTask.status === FAMILY_RUNTIME_TASK_STATUS.deadLetter
       ? 'provider_terminal_failure'
       : input.nextTask.reason === PAPER_MISSION_STAGE_ROUTE_DOMAIN_GATE_PENDING_REASON
         ? 'mas_owner_route_pending_after_opl_terminal_closeout'
         : 'typed_runtime_blocker_observed');
   const missionArtifactImpact = optionalString(routeImpact.mission_artifact_impact)
-    ?? (input.nextTask.status === 'dead_letter'
+    ?? (input.nextTask.status === FAMILY_RUNTIME_TASK_STATUS.deadLetter
       ? 'target_artifact_not_unblocked_provider_terminal_failure'
       : 'target_artifact_not_advanced_mas_owner_consumption_required');
   const targetArtifactOrOwnerPath = optionalString(routeImpact.target_artifact_or_owner_path)
@@ -485,26 +491,26 @@ function enqueuePaperMissionStageRouteSuccessor(
     priority: input.row.priority,
     status: 'queued',
     attempts: 0,
-    max_attempts: DEFAULT_MAX_ATTEMPTS,
+    [FAMILY_RUNTIME_TASK_COLUMNS.maxAttempts]: DEFAULT_MAX_ATTEMPTS,
     source: input.source,
     requires_approval: 0,
     approved_at: null,
-    lease_owner: null,
-    lease_expires_at: null,
+    [FAMILY_RUNTIME_TASK_COLUMNS.leaseOwner]: null,
+    [FAMILY_RUNTIME_TASK_COLUMNS.leaseExpiresAt]: null,
     last_error: null,
-    dead_letter_reason: null,
+    [FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason]: null,
     created_at: input.queuedAt,
     updated_at: input.queuedAt,
   };
   const result = db.prepare(`
     INSERT OR IGNORE INTO tasks(
-      task_id, domain_id, task_kind, payload_json, dedupe_key, priority, status, attempts, max_attempts,
-      source, requires_approval, approved_at, lease_owner, lease_expires_at, last_error, dead_letter_reason,
+      task_id, domain_id, task_kind, payload_json, dedupe_key, priority, status, attempts, ${FAMILY_RUNTIME_TASK_COLUMNS.maxAttempts},
+      source, requires_approval, approved_at, ${FAMILY_RUNTIME_TASK_COLUMNS.leaseOwner}, ${FAMILY_RUNTIME_TASK_COLUMNS.leaseExpiresAt}, last_error, ${FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason},
       created_at, updated_at
     )
     VALUES (
-      @task_id, @domain_id, @task_kind, @payload_json, @dedupe_key, @priority, @status, @attempts, @max_attempts,
-      @source, @requires_approval, @approved_at, @lease_owner, @lease_expires_at, @last_error, @dead_letter_reason,
+      @task_id, @domain_id, @task_kind, @payload_json, @dedupe_key, @priority, @status, @attempts, @${FAMILY_RUNTIME_TASK_COLUMNS.maxAttempts},
+      @source, @requires_approval, @approved_at, @${FAMILY_RUNTIME_TASK_COLUMNS.leaseOwner}, @${FAMILY_RUNTIME_TASK_COLUMNS.leaseExpiresAt}, @last_error, @${FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason},
       @created_at, @updated_at
     )
   `).run(task);
@@ -599,7 +605,7 @@ function canReconcilePaperMissionStageRouteTask(
   if (row.status !== 'blocked') {
     return false;
   }
-  const reason = row.dead_letter_reason ?? row.last_error;
+  const reason = row[FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason] ?? row.last_error;
   const hasCloseoutRefs = terminalAttempt.closeout_refs.some(
     (entry) => typeof entry === 'string' && entry.trim().length > 0,
   );
@@ -625,7 +631,7 @@ function canReconcilePaperMissionStageRouteTask(
 }
 
 function hasSupersedableProviderBlocker(row: FamilyRuntimeTaskRow) {
-  const reason = row.dead_letter_reason ?? row.last_error;
+  const reason = row[FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason] ?? row.last_error;
   return typeof reason === 'string' && SUPERSEDABLE_PROVIDER_BLOCKERS.has(reason);
 }
 
@@ -634,7 +640,7 @@ function canBackfillBlockedTerminalSuccessor(
   payload: Record<string, unknown>,
   terminalAttempt: StageAttemptPayload,
 ) {
-  const reason = row.dead_letter_reason ?? row.last_error;
+  const reason = row[FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason] ?? row.last_error;
   return row.status === 'blocked'
     && typeof reason === 'string'
     && BACKFILLABLE_TERMINAL_ROUTE_BLOCKERS.has(reason)
@@ -697,8 +703,7 @@ function reconcilePaperMissionStageRouteTaskRowWithAttempt(
     && canBackfillBlockedTerminalSuccessor(row, payload, terminalAttempt);
   const result = db.prepare(`
     UPDATE tasks
-    SET status = ?, lease_owner = NULL, lease_expires_at = NULL,
-      last_error = ?, dead_letter_reason = ?, updated_at = ?
+    SET status = ?, ${taskFailureProjectionSql()}
     WHERE task_id = ? AND status = ?
   `).run(
     nextTask.status,
@@ -777,8 +782,8 @@ function reconcilePaperMissionStageRouteTaskRowWithAttempt(
   });
   insertNotification(db, {
     taskId: row.task_id,
-    severity: nextTask.status === 'dead_letter' ? 'error' : 'warning',
-    title: nextTask.status === 'dead_letter'
+    severity: nextTask.status === FAMILY_RUNTIME_TASK_STATUS.deadLetter ? 'error' : 'warning',
+    title: nextTask.status === FAMILY_RUNTIME_TASK_STATUS.deadLetter
       ? 'MAS PaperMission stage route provider terminal failure observed'
       : 'MAS PaperMission stage route waiting for MAS domain gate',
     body: `${row.domain_id}:${row.task_kind} ${nextTask.reason}`,

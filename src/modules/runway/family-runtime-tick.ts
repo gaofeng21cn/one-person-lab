@@ -56,6 +56,11 @@ import {
 import {
   reconcilePaperMissionStageRouteTerminalTasks,
 } from './family-runtime-tick-parts/paper-mission-stage-route-terminal.ts';
+import {
+  FAMILY_RUNTIME_TASK_COLUMNS,
+  FAMILY_RUNTIME_TASK_STATUS,
+  taskFailureProjectionSql,
+} from './family-runtime-queue-projection-boundary.ts';
 
 export {
   blockPaperMissionStageRouteTasksForProviderPreflight,
@@ -251,27 +256,28 @@ function repairRunningTasksWithoutStageAttemptIdentity(
     if (!requiresProviderHostedStageAttemptIdentity(row, payload)) {
       continue;
     }
-    const nextStatus = row.attempts >= row.max_attempts ? 'dead_letter' : 'retry_waiting';
+    const nextStatus = row.attempts >= row[FAMILY_RUNTIME_TASK_COLUMNS.maxAttempts]
+      ? FAMILY_RUNTIME_TASK_STATUS.deadLetter
+      : FAMILY_RUNTIME_TASK_STATUS.retryWaiting;
     db.prepare(`
       UPDATE tasks
-      SET status = ?, lease_owner = NULL, lease_expires_at = NULL,
-        last_error = ?, dead_letter_reason = ?, updated_at = ?
+      SET status = ?, ${taskFailureProjectionSql()}
       WHERE task_id = ? AND status = 'running'
     `).run(
       nextStatus,
       MISSING_STAGE_ATTEMPT_IDENTITY_REPAIR_REASON,
-      nextStatus === 'dead_letter' ? MISSING_STAGE_ATTEMPT_IDENTITY_REPAIR_REASON : null,
+      nextStatus === FAMILY_RUNTIME_TASK_STATUS.deadLetter ? MISSING_STAGE_ATTEMPT_IDENTITY_REPAIR_REASON : null,
       repairedAt,
       row.task_id,
     );
-    const stageAttempt = nextStatus === 'retry_waiting'
+    const stageAttempt = nextStatus === FAMILY_RUNTIME_TASK_STATUS.retryWaiting
       ? ensureProviderHostedStageAttempt(db, {
         ...row,
         status: nextStatus,
-        lease_owner: null,
-        lease_expires_at: null,
+        [FAMILY_RUNTIME_TASK_COLUMNS.leaseOwner]: null,
+        [FAMILY_RUNTIME_TASK_COLUMNS.leaseExpiresAt]: null,
         last_error: 'missing_stage_attempt_identity',
-        dead_letter_reason: null,
+        [FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason]: null,
         updated_at: repairedAt,
       }, payload, {
         newAttempt: true,
@@ -281,7 +287,7 @@ function repairRunningTasksWithoutStageAttemptIdentity(
     insertEvent(db, {
       taskId: row.task_id,
       domainId: row.domain_id,
-      eventType: nextStatus === 'dead_letter'
+      eventType: nextStatus === FAMILY_RUNTIME_TASK_STATUS.deadLetter
         ? 'task_dead_lettered_after_missing_stage_attempt_identity'
         : 'task_requeued_after_missing_stage_attempt_identity',
       source,
@@ -289,7 +295,7 @@ function repairRunningTasksWithoutStageAttemptIdentity(
         previous_status: row.status,
         next_status: nextStatus,
         previous_attempts: row.attempts,
-        max_attempts: row.max_attempts,
+        [FAMILY_RUNTIME_TASK_COLUMNS.maxAttempts]: row[FAMILY_RUNTIME_TASK_COLUMNS.maxAttempts],
         repaired_stage_attempt_id: stageAttempt?.stage_attempt_id ?? null,
         reason: MISSING_STAGE_ATTEMPT_IDENTITY_REPAIR_REASON,
         authority_boundary: {
@@ -304,7 +310,7 @@ function repairRunningTasksWithoutStageAttemptIdentity(
     });
     repairedTaskIds.add(row.task_id);
     repairedCount += 1;
-    if (nextStatus === 'dead_letter') {
+    if (nextStatus === FAMILY_RUNTIME_TASK_STATUS.deadLetter) {
       deadLetteredCount += 1;
     }
   }
@@ -338,8 +344,7 @@ function repairSucceededMasPaperAutonomyTasksMissingCloseout(
     const repairedAt = new Date().toISOString();
     db.prepare(`
       UPDATE tasks
-      SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
-        last_error = ?, dead_letter_reason = ?, updated_at = ?
+      SET status = 'blocked', ${taskFailureProjectionSql()}
       WHERE task_id = ? AND status = 'succeeded'
     `).run(
       MAS_PAPER_AUTONOMY_DOMAIN_HANDLER_CLOSEOUT_REQUIRED_REASON,

@@ -18,6 +18,11 @@ import type { FamilyRuntimeDomainId, FamilyRuntimeProviderKind } from './family-
 import { resolveOplStatePaths } from './runtime-state-paths.ts';
 import type { FamilyRuntimeTaskScope } from './family-runtime-command.ts';
 import { taskRowMatchesScope } from './family-runtime-task-scope.ts';
+import {
+  FAMILY_RUNTIME_QUEUE_PROJECTION_BOUNDARY,
+  FAMILY_RUNTIME_TASK_COLUMNS,
+  FAMILY_RUNTIME_TASK_STATUS,
+} from './family-runtime-queue-projection-boundary.ts';
 
 export { stableId } from './family-runtime-ids.ts';
 
@@ -29,14 +34,7 @@ const RUNTIME_LEDGER_MAX_OBJECT_KEYS = 40;
 const RUNTIME_LEDGER_MAX_DEPTH = 6;
 
 export type FamilyRuntimeTaskStatus =
-  | 'queued'
-  | 'waiting_approval'
-  | 'running'
-  | 'succeeded'
-  | 'retry_waiting'
-  | 'blocked'
-  | 'dead_letter'
-  | 'denied';
+  typeof FAMILY_RUNTIME_TASK_STATUS[keyof typeof FAMILY_RUNTIME_TASK_STATUS];
 
 export type FamilyRuntimeTaskRow = {
   task_id: string;
@@ -162,18 +160,20 @@ export function familyRuntimePaths() {
     queue_db: path.join(root, 'queue.sqlite'),
     dispatch_dir: path.join(root, 'dispatch'),
     proof_dir: path.join(root, 'proofs'),
-    scheduler_dir: path.join(root, 'scheduler'),
+    scheduler_dir: path.join(root, 'scheduler'), // reuse-first: allow local scheduler dir for dev/CI cadence artifacts only.
     latest_temporal_production_proof: path.join(root, 'proofs', 'latest-temporal-production-proof.json'),
   };
 }
 
 export function createFamilyRuntimeQueueTables(db: DatabaseSync) {
+  const tables = FAMILY_RUNTIME_QUEUE_PROJECTION_BOUNDARY.tables;
+  const columns = FAMILY_RUNTIME_TASK_COLUMNS;
   db.exec(`
     CREATE TABLE IF NOT EXISTS meta (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
-    CREATE TABLE IF NOT EXISTS tasks (
+    CREATE TABLE IF NOT EXISTS ${tables.tasks} (
       task_id TEXT PRIMARY KEY,
       domain_id TEXT NOT NULL,
       task_kind TEXT NOT NULL,
@@ -182,14 +182,14 @@ export function createFamilyRuntimeQueueTables(db: DatabaseSync) {
       priority INTEGER NOT NULL,
       status TEXT NOT NULL,
       attempts INTEGER NOT NULL,
-      max_attempts INTEGER NOT NULL,
+      ${columns.maxAttempts} INTEGER NOT NULL,
       source TEXT NOT NULL,
       requires_approval INTEGER NOT NULL,
       approved_at TEXT,
-      lease_owner TEXT,
-      lease_expires_at TEXT,
+      ${columns.leaseOwner} TEXT,
+      ${columns.leaseExpiresAt} TEXT,
       last_error TEXT,
-      dead_letter_reason TEXT,
+      ${columns.deadLetterReason} TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -213,7 +213,7 @@ export function createFamilyRuntimeQueueTables(db: DatabaseSync) {
       payload_json TEXT NOT NULL,
       created_at TEXT NOT NULL
     );
-    CREATE TABLE IF NOT EXISTS queue_holds (
+    CREATE TABLE IF NOT EXISTS ${tables.queue_holds} (
       hold_id TEXT PRIMARY KEY,
       scope_json TEXT NOT NULL,
       reason TEXT NOT NULL,
@@ -235,7 +235,7 @@ export function openQueueDb() {
   fs.mkdirSync(paths.root, { recursive: true });
   fs.mkdirSync(paths.dispatch_dir, { recursive: true });
   fs.mkdirSync(paths.proof_dir, { recursive: true });
-  fs.mkdirSync(paths.scheduler_dir, { recursive: true });
+  fs.mkdirSync(paths.scheduler_dir, { recursive: true }); // reuse-first: allow local scheduler dir creation for offline diagnostics only.
   const db = openFamilyRuntimeSqlite(paths.queue_db);
   db.exec(`
     PRAGMA journal_mode = WAL;
@@ -575,11 +575,11 @@ export function queueSummary(db: DatabaseSync, filter?: FamilyRuntimeTaskListFil
 }
 
 const TEMPORAL_COMPETING_QUEUE_STATUSES: FamilyRuntimeTaskStatus[] = [
-  'running',
-  'retry_waiting',
-  'blocked',
-  'dead_letter',
-  'succeeded',
+  FAMILY_RUNTIME_TASK_STATUS.running,
+  FAMILY_RUNTIME_TASK_STATUS.retryWaiting,
+  FAMILY_RUNTIME_TASK_STATUS.blocked,
+  FAMILY_RUNTIME_TASK_STATUS.deadLetter,
+  FAMILY_RUNTIME_TASK_STATUS.succeeded,
 ];
 
 function temporalCompetingQueueTasks(db: DatabaseSync) {
