@@ -109,6 +109,21 @@ test('family-runtime status exposes provider-backed stage attempt runtime and SQ
         .includes('tasks.dead_letter_reason'),
       true,
     );
+    assert.equal(
+      output.family_runtime.queue_lifecycle_boundary.field_roles.projection_or_audit_when_temporal_selected
+        .includes('tasks.max_attempts'), // reuse-first: allow local max_attempts vocabulary boundary.
+      true,
+    );
+    assert.equal(
+      output.family_runtime.queue_lifecycle_boundary.temporal_durable_lifecycle_handoff.readback_surfaces
+        .includes('opl family-runtime queue list --json'),
+      true,
+    );
+    assert.equal(
+      output.family_runtime.queue_lifecycle_boundary.temporal_durable_lifecycle_handoff.handoff_claims
+        .domain_progress_claim_allowed,
+      false,
+    );
     assert.equal(fs.existsSync(output.family_runtime.state.queue_db), true);
     assert.equal(output.family_runtime.domain_adapters.medautogrant.truth_owner, 'med-autogrant');
     assert.equal(output.family_runtime.stage_attempts.total, 0);
@@ -388,18 +403,40 @@ exit 1
         'workflow_id',
         'temporal_workflow_history_or_query_readback',
         'stage_attempt_identity',
+        'temporal_retry_policy_readback_for_attempt_budget',
+        'temporal_activity_failure_or_dead_letter_history', // reuse-first: allow Temporal-owned dead-letter evidence vocabulary.
         'authority_event_ref_or_projection_rebuild_ref',
+        'operator_projection_repair_or_retirement_receipt',
       ],
     );
+    assert.deepEqual(
+      queue.family_runtime_queue.queue_lifecycle_boundary.gate.allowed_readbacks,
+      [
+        'opl family-runtime queue list --json',
+        'opl family-runtime queue inspect <task_id> --json',
+        'opl runway reconcile --json',
+      ],
+    );
+    assert.equal(queue.family_runtime_queue.queue_lifecycle_boundary.gate.scheduler_mutation_allowed, false);
+    assert.equal(queue.family_runtime_queue.queue_lifecycle_boundary.gate.domain_progress_claim_allowed, false);
+    assert.equal(queue.family_runtime_queue.queue_lifecycle_boundary.gate.ready_claim_allowed, false);
     assert.equal(
       queue.family_runtime_queue.queue_lifecycle_boundary.temporal_durable_lifecycle_handoff.allowed_local_action,
       'read_projection_and_emit_operator_handoff_only',
     );
     assert.equal(queue.family_runtime_queue.queue_lifecycle_boundary.gate.competing_task_count, 1);
+    const competingTask = queue.family_runtime_queue.queue_lifecycle_boundary.gate.competing_tasks[0];
     assert.equal(
-      queue.family_runtime_queue.queue_lifecycle_boundary.gate.competing_tasks[0].status,
+      competingTask.status,
       'retry_waiting',
     );
+    assert.equal(typeof competingTask.attempts, 'number');
+    assert.equal(competingTask.max_attempts, 3); // reuse-first: allow local max_attempts vocabulary boundary.
+    assert.equal(competingTask.lease, null);
+    assert.equal(competingTask.dead_letter_reason, null); // reuse-first: allow local dead-letter vocabulary boundary.
+    assert.equal(competingTask.projection_handoff.allowed_local_action, 'read_projection_and_emit_operator_handoff_only');
+    assert.equal(competingTask.projection_handoff.scheduler_mutation_allowed, false);
+    assert.equal(competingTask.projection_handoff.domain_progress_claim_allowed, false);
     runCli([
       'family-runtime',
       'queue',

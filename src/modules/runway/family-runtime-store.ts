@@ -594,6 +594,12 @@ function temporalCompetingQueueTasks(db: DatabaseSync) {
         t.status,
         t.task_kind,
         t.dedupe_key,
+        t.attempts,
+        t.max_attempts, -- reuse-first: allow local retry budget projection for Temporal handoff readback only.
+        t.lease_owner, -- reuse-first: allow local lease projection for Temporal handoff readback only.
+        t.lease_expires_at, -- reuse-first: allow local lease projection for Temporal handoff readback only.
+        t.last_error,
+        t.dead_letter_reason, -- reuse-first: allow local dead-letter projection for Temporal handoff readback only.
         t.updated_at,
         t.created_at,
         COUNT(sa.stage_attempt_id) AS stage_attempt_count,
@@ -609,6 +615,12 @@ function temporalCompetingQueueTasks(db: DatabaseSync) {
       status,
       task_kind,
       dedupe_key,
+      attempts,
+      max_attempts, -- reuse-first: allow local retry budget projection for Temporal handoff readback only.
+      lease_owner, -- reuse-first: allow local lease projection for Temporal handoff readback only.
+      lease_expires_at, -- reuse-first: allow local lease projection for Temporal handoff readback only.
+      last_error,
+      dead_letter_reason, -- reuse-first: allow local dead-letter projection for Temporal handoff readback only.
       stage_attempt_count,
       temporal_stage_attempt_count,
       COUNT(*) OVER() AS total_competing_task_count
@@ -620,6 +632,12 @@ function temporalCompetingQueueTasks(db: DatabaseSync) {
     status: FamilyRuntimeTaskStatus;
     task_kind: string;
     dedupe_key: string | null;
+    attempts: number;
+    max_attempts: number; // reuse-first: allow local retry budget projection for Temporal handoff readback only.
+    lease_owner: string | null; // reuse-first: allow local lease projection for Temporal handoff readback only.
+    lease_expires_at: string | null; // reuse-first: allow local lease projection for Temporal handoff readback only.
+    last_error: string | null;
+    dead_letter_reason: string | null; // reuse-first: allow local dead-letter projection for Temporal handoff readback only.
     stage_attempt_count: number;
     temporal_stage_attempt_count: number;
     total_competing_task_count: number;
@@ -631,8 +649,28 @@ function temporalCompetingQueueTasks(db: DatabaseSync) {
       status: row.status,
       task_kind: row.task_kind,
       dedupe_key: row.dedupe_key,
+      attempts: Number(row.attempts ?? 0),
+      max_attempts: Number(row.max_attempts ?? 0), // reuse-first: allow local retry budget projection for Temporal handoff readback only.
+      lease: row.lease_owner // reuse-first: allow local lease projection for Temporal handoff readback only.
+        ? {
+            lease_owner: row.lease_owner, // reuse-first: allow local lease projection for Temporal handoff readback only.
+            lease_expires_at: row.lease_expires_at, // reuse-first: allow local lease projection for Temporal handoff readback only.
+          }
+        : null,
+      last_error: row.last_error,
+      dead_letter_reason: row.dead_letter_reason, // reuse-first: allow local dead-letter projection for Temporal handoff readback only.
       stage_attempt_count: Number(row.stage_attempt_count ?? 0),
       temporal_stage_attempt_count: Number(row.temporal_stage_attempt_count ?? 0),
+      projection_handoff: {
+        status_role: 'local_lifecycle_status_projection_only',
+        lease_role: 'local_worker_pickup_projection_only_not_live_attempt_truth',
+        retry_budget_role: 'local_retry_budget_projection_only_temporal_retry_policy_required',
+        terminal_reason_role: 'local_failure_projection_only_temporal_history_required',
+        allowed_local_action: 'read_projection_and_emit_operator_handoff_only',
+        scheduler_mutation_allowed: false,
+        domain_progress_claim_allowed: false,
+        ready_claim_allowed: false,
+      },
     })),
   };
 }
@@ -656,16 +694,42 @@ export function buildQueueTemporalLifecycleBoundary(
       'workflow_id',
       'temporal_workflow_history_or_query_readback',
       'stage_attempt_identity',
+      'temporal_retry_policy_readback_for_attempt_budget',
+      'temporal_activity_failure_or_dead_letter_history', // reuse-first: allow Temporal-owned dead-letter evidence vocabulary.
       'authority_event_ref_or_projection_rebuild_ref',
+      'operator_projection_repair_or_retirement_receipt',
     ],
+    readback_surfaces: [
+      'opl family-runtime queue list --json',
+      'opl family-runtime queue inspect <task_id> --json',
+      'opl runway reconcile --json',
+    ],
+    local_projection_field_policy: {
+      tasks_status: 'handoff_readback_only_not_temporal_workflow_status',
+      tasks_attempts: 'handoff_readback_only_temporal_retry_policy_required',
+      tasks_max_attempts: 'handoff_readback_only_temporal_retry_policy_required', // reuse-first: allow local max_attempts vocabulary boundary.
+      tasks_lease_owner: 'handoff_readback_only_not_worker_or_activity_ownership', // reuse-first: allow local lease_owner vocabulary boundary.
+      tasks_lease_expires_at: 'handoff_readback_only_not_worker_or_activity_ownership', // reuse-first: allow local lease_owner vocabulary boundary.
+      tasks_dead_letter_reason: 'handoff_readback_only_temporal_failure_history_required', // reuse-first: allow local dead-letter vocabulary boundary.
+    },
     allowed_local_action:
       'read_projection_and_emit_operator_handoff_only',
     forbidden_local_actions: [
       'treat_sqlite_task_status_as_temporal_lifecycle_truth',
       'retry_or_dead_letter_without_temporal_history',
+      'derive_retry_budget_from_tasks_max_attempts', // reuse-first: allow local max_attempts vocabulary boundary.
+      'derive_worker_liveness_from_tasks_lease_owner', // reuse-first: allow local lease_owner vocabulary boundary.
+      'derive_terminal_failure_from_tasks_dead_letter_reason', // reuse-first: allow local dead-letter vocabulary boundary.
       'claim_provider_backed_runtime_ready',
       'claim_domain_progress_or_domain_ready',
+      'schedule_tick_from_local_lifecycle_projection',
     ],
+    handoff_claims: {
+      scheduler_mutation_allowed: false,
+      domain_progress_claim_allowed: false,
+      provider_ready_claim_authority: 'not_this_handoff_readback',
+      ready_claim_allowed_without_temporal_history: false,
+    },
   };
   return {
     surface_kind: 'opl_family_runtime_queue_temporal_lifecycle_boundary',
@@ -678,6 +742,7 @@ export function buildQueueTemporalLifecycleBoundary(
       projection_or_audit_when_temporal_selected: [
         'tasks.status',
         'tasks.attempts',
+        'tasks.max_attempts', // reuse-first: allow local max_attempts vocabulary boundary.
         'tasks.lease_owner',
         'tasks.lease_expires_at',
         'tasks.last_error',
@@ -702,7 +767,9 @@ export function buildQueueTemporalLifecycleBoundary(
         'workflow_history',
         'workflow_status',
         'activity_retry_policy',
+        'activity_retry_policy.maximum_attempts',
         'activity_dead_letter_or_failure',
+        'workflow_task_or_activity_task_ownership',
         'schedule_cadence',
         'signal_history',
       ],
@@ -714,12 +781,23 @@ export function buildQueueTemporalLifecycleBoundary(
         : null,
       temporal_migration_required: temporalLifecycleHandoff.status === 'required',
       required_evidence: temporalLifecycleHandoff.required_evidence,
+      allowed_readbacks: temporalLifecycleHandoff.readback_surfaces,
       competing_statuses: TEMPORAL_COMPETING_QUEUE_STATUSES,
       competing_task_count: competing.totalCount,
       competing_tasks: competing.tasks,
       readiness_effect: gateStatus === 'attention_needed'
         ? 'full_online_ready_false_until_temporal_history_or_authority_projection_rebuilds_lifecycle'
         : 'none',
+      scheduler_mutation_allowed: gateStatus !== 'attention_needed',
+      domain_progress_claim_allowed: false,
+      ready_claim_allowed: gateStatus !== 'attention_needed',
+      forbidden_mutations_when_attention_needed: gateStatus === 'attention_needed'
+        ? [
+            'scheduler_tick_from_sqlite_lifecycle_projection',
+            'queue_redrive_without_temporal_history',
+            'domain_progress_or_ready_claim_from_sqlite_projection',
+          ]
+        : [],
     },
     temporal_durable_lifecycle_handoff: temporalLifecycleHandoff,
     authority_boundary: {

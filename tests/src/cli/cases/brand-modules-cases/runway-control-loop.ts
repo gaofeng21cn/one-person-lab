@@ -169,6 +169,16 @@ test('Runway control-loop status delegates to the family runtime control-loop su
   assert.equal(controlLoop.module_id, 'runway');
   assert.equal(controlLoop.provider_runtime.substrate, 'temporal');
   assert.equal(controlLoop.worker_supervisor_liveness.substrate, 'temporal_worker_supervisor');
+  assert.equal(
+    controlLoop.queue_lifecycle_boundary.temporal_durable_lifecycle_handoff.local_projection_field_policy
+      .tasks_max_attempts, // reuse-first: allow local max_attempts vocabulary boundary.
+    'handoff_readback_only_temporal_retry_policy_required',
+  );
+  assert.equal(
+    controlLoop.queue_lifecycle_boundary.temporal_durable_lifecycle_handoff.handoff_claims
+      .domain_progress_claim_allowed,
+    false,
+  );
   assert.equal(controlLoop.semantic_loop.provider_completion_is_semantic_progress, false);
 });
 
@@ -276,7 +286,15 @@ test('Runway reconcile projects competing local queue lifecycle as read-only obs
           'workflow_id',
           'temporal_workflow_history_or_query_readback',
           'stage_attempt_identity',
+          'temporal_retry_policy_readback_for_attempt_budget',
+          'temporal_activity_failure_or_dead_letter_history', // reuse-first: allow Temporal-owned dead-letter evidence vocabulary.
           'authority_event_ref_or_projection_rebuild_ref',
+          'operator_projection_repair_or_retirement_receipt',
+        ],
+        allowed_readbacks: [
+          'opl family-runtime queue list --json',
+          'opl family-runtime queue inspect <task_id> --json',
+          'opl runway reconcile --json',
         ],
         competing_statuses: ['running', 'retry_waiting', 'blocked', 'dead_letter', 'succeeded'], // reuse-first: allow legacy status fixture
         competing_task_count: 1,
@@ -286,11 +304,34 @@ test('Runway reconcile projects competing local queue lifecycle as read-only obs
             status: 'retry_waiting',
             task_kind: 'stage-attempt/closeout',
             dedupe_key: 'mag:test:temporal-queue-boundary',
+            attempts: 1,
+            max_attempts: 3, // reuse-first: allow local max_attempts vocabulary boundary.
+            lease: null,
+            last_error: 'planned local queue retry',
+            dead_letter_reason: null, // reuse-first: allow local dead-letter vocabulary boundary.
             stage_attempt_count: 0,
             temporal_stage_attempt_count: 0,
+            projection_handoff: {
+              status_role: 'local_lifecycle_status_projection_only',
+              lease_role: 'local_worker_pickup_projection_only_not_live_attempt_truth',
+              retry_budget_role: 'local_retry_budget_projection_only_temporal_retry_policy_required',
+              terminal_reason_role: 'local_failure_projection_only_temporal_history_required',
+              allowed_local_action: 'read_projection_and_emit_operator_handoff_only',
+              scheduler_mutation_allowed: false,
+              domain_progress_claim_allowed: false,
+              ready_claim_allowed: false,
+            },
           },
         ],
         readiness_effect: 'full_online_ready_false_until_temporal_history_or_authority_projection_rebuilds_lifecycle',
+        scheduler_mutation_allowed: false,
+        domain_progress_claim_allowed: false,
+        ready_claim_allowed: false,
+        forbidden_mutations_when_attention_needed: [
+          'scheduler_tick_from_sqlite_lifecycle_projection',
+          'queue_redrive_without_temporal_history',
+          'domain_progress_or_ready_claim_from_sqlite_projection',
+        ],
       },
       temporal_durable_lifecycle_handoff: {
         surface_kind: 'opl_temporal_durable_lifecycle_handoff',
@@ -302,15 +343,41 @@ test('Runway reconcile projects competing local queue lifecycle as read-only obs
           'workflow_id',
           'temporal_workflow_history_or_query_readback',
           'stage_attempt_identity',
+          'temporal_retry_policy_readback_for_attempt_budget',
+          'temporal_activity_failure_or_dead_letter_history', // reuse-first: allow Temporal-owned dead-letter evidence vocabulary.
           'authority_event_ref_or_projection_rebuild_ref',
+          'operator_projection_repair_or_retirement_receipt',
         ],
+        readback_surfaces: [
+          'opl family-runtime queue list --json',
+          'opl family-runtime queue inspect <task_id> --json',
+          'opl runway reconcile --json',
+        ],
+        local_projection_field_policy: {
+          tasks_status: 'handoff_readback_only_not_temporal_workflow_status',
+          tasks_attempts: 'handoff_readback_only_temporal_retry_policy_required',
+          tasks_max_attempts: 'handoff_readback_only_temporal_retry_policy_required', // reuse-first: allow local max_attempts vocabulary boundary.
+          tasks_lease_owner: 'handoff_readback_only_not_worker_or_activity_ownership', // reuse-first: allow local lease_owner vocabulary boundary.
+          tasks_lease_expires_at: 'handoff_readback_only_not_worker_or_activity_ownership', // reuse-first: allow local lease_owner vocabulary boundary.
+          tasks_dead_letter_reason: 'handoff_readback_only_temporal_failure_history_required', // reuse-first: allow local dead-letter vocabulary boundary.
+        },
         allowed_local_action: 'read_projection_and_emit_operator_handoff_only',
         forbidden_local_actions: [
           'treat_sqlite_task_status_as_temporal_lifecycle_truth',
           'retry_or_dead_letter_without_temporal_history',
+          'derive_retry_budget_from_tasks_max_attempts', // reuse-first: allow local max_attempts vocabulary boundary.
+          'derive_worker_liveness_from_tasks_lease_owner', // reuse-first: allow local lease_owner vocabulary boundary.
+          'derive_terminal_failure_from_tasks_dead_letter_reason', // reuse-first: allow local dead-letter vocabulary boundary.
           'claim_provider_backed_runtime_ready',
           'claim_domain_progress_or_domain_ready',
+          'schedule_tick_from_local_lifecycle_projection',
         ],
+        handoff_claims: {
+          scheduler_mutation_allowed: false,
+          domain_progress_claim_allowed: false,
+          provider_ready_claim_authority: 'not_this_handoff_readback',
+          ready_claim_allowed_without_temporal_history: false,
+        },
       },
       authority_boundary: {
         opl_sqlite_can_project_runtime_state: true,
@@ -341,6 +408,12 @@ test('Runway reconcile projects competing local queue lifecycle as read-only obs
   assert.equal(reconcile.selected_next_safe_action.mutation, false);
   assert.equal(reconcile.apply_command, null);
   assert.equal(reconcile.observed_state.queue_lifecycle_boundary.gate.status, 'attention_needed');
+  assert.equal(reconcile.observed_state.queue_lifecycle_boundary.gate.scheduler_mutation_allowed, false);
+  assert.equal(
+    reconcile.observed_state.queue_lifecycle_boundary.gate.competing_tasks[0].projection_handoff
+      .domain_progress_claim_allowed,
+    false,
+  );
   assert.equal(reconcile.observed_state.queue_lifecycle_boundary.authority_boundary.can_write_domain_truth, false);
 });
 
