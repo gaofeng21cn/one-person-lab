@@ -1,4 +1,4 @@
-import type { HandoffBundleResult } from '../../ledger/index.ts';
+import type { ProductEntryHandoffBundleResult } from '../product-entry-handoff-bundle.ts';
 import type {
   BoundaryExplanation,
   DomainAgentSelectionInput,
@@ -46,5 +46,5 @@ export type PreparedProductEntryAsk = {
   boundary: BoundaryExplanation;
   handoffPrompt: string;
   args: string[];
-  handoffBundle: HandoffBundleResult;
+  handoffBundle: ProductEntryHandoffBundleResult;
 };

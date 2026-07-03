@@ -22,8 +22,6 @@ export type { EvidenceRequirement } from './evidence-requirement.ts';
 export { listExternalEvidenceReceipts, parseExternalEvidenceApplyArgs, runExternalEvidenceApply } from './external-evidence-ledger.ts';
 export type { ExternalEvidenceReceipt } from './external-evidence-ledger.ts';
 export { classifyExternalEvidenceReceiptRefs } from './external-evidence-receipt-classification.ts';
-export { buildHandoffBundle } from './handoff-bundle.ts';
-export type { HandoffBundleResult } from './handoff-bundle-types.ts';
 export { assertMagManifestSustainedConsumptionReceiptInputReady, listMagManifestSustainedConsumptionReceipts, magManifestSustainedConsumptionTargetKey, preflightMagManifestSustainedConsumptionReceiptInput, recordMagManifestSustainedConsumptionReceipts, verifyMagManifestSustainedConsumptionReceipt } from './mag-manifest-sustained-consumption-ledger.ts';
 export type { MagManifestSustainedConsumptionReceipt, MagManifestSustainedConsumptionReceiptInput } from './mag-manifest-sustained-consumption-ledger.ts';
 export { buildMemoryArtifactLifecycleEvidenceProjection, memoryArtifactLifecycleEvidenceAuthorityBoundary } from './memory-artifact-lifecycle-evidence-ledger.ts';

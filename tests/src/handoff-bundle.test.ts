@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 
 import { loadFrameworkContracts } from '../../src/modules/charter/contracts.ts';
-import { buildHandoffBundle } from '../../src/modules/ledger/handoff-bundle.ts';
+import { buildProductEntryHandoffBundleView } from '../../src/modules/console/product-entry-handoff-bundle.ts';
 import type { BoundaryExplanation, ResolutionResult } from '../../src/kernel/types.ts';
 
 const contractsDir = path.join(process.cwd(), 'contracts', 'opl-framework');
@@ -26,7 +26,7 @@ type RuntimeSessionContract = {
   resume_mode: string;
 };
 
-type SelectedHandoffBundle = ReturnType<typeof buildHandoffBundle>['handoff_bundle'] & {
+type SelectedHandoffBundle = ReturnType<typeof buildProductEntryHandoffBundleView>['handoff_bundle'] & {
   runtime_session_contract: RuntimeSessionContract;
   return_surface_contract: {
     opl: {
@@ -49,7 +49,7 @@ type SelectedHandoffBundle = ReturnType<typeof buildHandoffBundle>['handoff_bund
   };
 };
 
-type LocatorOnlyHandoffBundle = ReturnType<typeof buildHandoffBundle>['handoff_bundle'] & {
+type LocatorOnlyHandoffBundle = ReturnType<typeof buildProductEntryHandoffBundleView>['handoff_bundle'] & {
   runtime_session_contract: RuntimeSessionContract;
 };
 
@@ -79,8 +79,8 @@ function selectedRedcubeBoundary(): BoundaryExplanation {
   };
 }
 
-test('buildHandoffBundle freezes OPL-owned product-entry transfer metadata for a selected domain', () => {
-  const bundle = buildHandoffBundle(loadFrameworkContracts(contractsDir), {
+test('buildProductEntryHandoffBundleView freezes OPL-owned product-entry transfer metadata for a selected domain', () => {
+  const bundle = buildProductEntryHandoffBundleView(loadFrameworkContracts(contractsDir), {
     mode: 'handoff',
     goal: 'Prepare a visual deliverable package.',
     intent: 'presentation_delivery',
@@ -141,8 +141,8 @@ test('buildHandoffBundle freezes OPL-owned product-entry transfer metadata for a
   );
 });
 
-test('buildHandoffBundle keeps unknown-domain transfer locator-only without domain authority context', () => {
-  const bundle = buildHandoffBundle(loadFrameworkContracts(contractsDir), {
+test('buildProductEntryHandoffBundleView keeps unknown-domain transfer locator-only without domain authority context', () => {
+  const bundle = buildProductEntryHandoffBundleView(loadFrameworkContracts(contractsDir), {
     mode: 'ask',
     goal: 'Organize a task outside admitted domain boundaries.',
     intent: 'general_task',

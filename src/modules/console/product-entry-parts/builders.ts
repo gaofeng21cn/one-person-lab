@@ -1,5 +1,5 @@
 import { findDomainOrThrow } from '../../charter/index.ts';
-import { buildHandoffBundle } from '../../ledger/index.ts';
+import { buildProductEntryHandoffBundleView } from '../product-entry-handoff-bundle.ts';
 import type {
   BoundaryExplanation,
   DomainAgentSelectionInput,
@@ -166,7 +166,7 @@ export function buildProductEntryHandoffBundle(
   boundary: BoundaryExplanation,
   sessionId?: string,
 ) {
-  return buildHandoffBundle(contracts, {
+  return buildProductEntryHandoffBundleView(contracts, {
     ...buildHandoffBundleInput(mode, input, stageSelection, boundary),
     sessionId,
   });

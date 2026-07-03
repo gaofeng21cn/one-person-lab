@@ -3,10 +3,26 @@ import { buildDomainManifestCatalog } from '../atlas/index.ts';
 import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from '../atlas/index.ts';
 import { resolveWorkspaceLocator } from '../workspace/index.ts';
 import { buildOplRuntimeEndpoints } from '../../kernel/opl-runtime-endpoints.ts';
-import type { HandoffBundleResult } from './handoff-bundle-types.ts';
 import type { BoundaryExplanation, FrameworkContracts, ResolutionResult } from '../../kernel/types.ts';
 
-type BuildHandoffBundleOptions = {
+export type ProductEntryHandoffBundleWorkspaceLocator = {
+  project_id: string | null;
+  requested_path: string | null;
+  absolute_path: string | null;
+  source: string;
+  binding_id: string | null;
+};
+
+export type ProductEntryHandoffBundleResult = {
+  handoff_bundle: {
+    surface_id: 'opl_family_handoff_bundle';
+    workspace_locator: ProductEntryHandoffBundleWorkspaceLocator;
+    domain_manifest_recommendation: Record<string, unknown> | null;
+    [key: string]: unknown;
+  };
+};
+
+type BuildProductEntryHandoffBundleOptions = {
   mode: string;
   goal: string;
   intent: string;
@@ -25,10 +41,10 @@ function resolveSelectedDomainId(stageSelection: ResolutionResult) {
   return null;
 }
 
-export function buildHandoffBundle(
+export function buildProductEntryHandoffBundleView(
   contracts: FrameworkContracts,
-  options: BuildHandoffBundleOptions,
-): HandoffBundleResult {
+  options: BuildProductEntryHandoffBundleOptions,
+): ProductEntryHandoffBundleResult {
   const targetDomainId = resolveSelectedDomainId(options.stageSelection);
   const domain = targetDomainId ? findDomainOrThrow(contracts, targetDomainId) : null;
   const workspaceLocator = targetDomainId
