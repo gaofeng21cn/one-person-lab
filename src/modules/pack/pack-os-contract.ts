@@ -48,6 +48,7 @@ const LOCK_REQUIRED_FIELDS = [
   'pack_kind',
   'descriptor_ref',
   'descriptor_sha256',
+  'descriptor_oci',
   'resolved_resources',
   'artifact_lifecycle',
   'review_transport',

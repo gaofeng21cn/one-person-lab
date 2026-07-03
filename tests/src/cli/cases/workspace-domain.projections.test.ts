@@ -113,6 +113,12 @@ test('workspace validate and doctor inspect generated workspace topology semanti
     assert.equal(validation.workspace_validation.canonical_topology.project_unit_kind, 'slide_deck');
     assert.equal(validation.workspace_validation.display_labels.project_collection, 'deliverables');
     assert.equal(validation.workspace_validation.shared_resources[1].role, 'brand_assets');
+    const firstSharedResource = validation.workspace_validation.shared_resources[0];
+    const sharedResourceManifest = readJsonFile(path.join(workspacePath, firstSharedResource.manifest_ref));
+    assert.equal(sharedResourceManifest.content_addressing_policy.digest_algorithm, 'sha256');
+    assert.equal(sharedResourceManifest.content_addressing_policy.body_ref_must_be_null, true);
+    const resourceInventory = readJsonFile(path.join(workspacePath, 'workspace_resource_inventory.json'));
+    assert.equal(resourceInventory.resources[0].content_addressing_policy.body_storage_allowed, false);
 
     const doctor = runCli(['workspace', 'doctor', '--workspace', workspacePath], {
       OPL_STATE_DIR: stateRoot,

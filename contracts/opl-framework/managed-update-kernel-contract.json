@@ -217,6 +217,25 @@
     "stale_after_seconds": 1800,
     "contention_policy": "report_in_progress_or_skip_without_parallel_stage_or_plugin_sync"
   },
+  "owner_route_contract": {
+    "required_fields": [
+      "owner",
+      "authority_surface",
+      "route_kind",
+      "readback_ref",
+      "apply_owner",
+      "package_manager_claim",
+      "forbidden_claims"
+    ],
+    "route_kinds": [
+      "projection_only",
+      "manual_owner_route",
+      "controlled_framework_executor",
+      "clean_managed_package_executor"
+    ],
+    "package_manager_claim_must_be_false": true,
+    "purpose": "Each managed update component must name the owner/readback route that owns truth and apply semantics so the kernel remains a projection/receipt surface, not a general package manager."
+  },
   "providers": [
     {
       "provider_id": "installation_carrier",

@@ -121,6 +121,13 @@ export function buildSharedResourceManifest(input: {
       may_record_staleness: true,
       body_storage_allowed: false,
     },
+    content_addressing_policy: {
+      digest_algorithm: 'sha256',
+      accepted_digest_prefixes: ['sha256:'],
+      checksum_field: 'checksum',
+      body_ref_must_be_null: true,
+      manifest_stores_body: false,
+    },
     resources: input.existingRecords ?? [],
     updated_at: input.updatedAt,
   };
@@ -499,6 +506,13 @@ export function buildWorkspaceResourceInventory(input: WorkspaceArtifactContext 
       domain_truth_owner: resource.domain_truth_owner,
       provenance_policy: 'manifest_records_source_refs_not_resource_body',
       checksum_policy: 'resource_entry_may_record_checksum_when_known',
+      content_addressing_policy: {
+        digest_algorithm: 'sha256',
+        accepted_digest_prefixes: ['sha256:'],
+        checksum_field: 'checksum',
+        body_ref_must_be_null: true,
+        body_storage_allowed: false,
+      },
       reuse_scope: input.profile.workspace_mode === 'portfolio' ? 'workspace_group' : 'workspace_group_or_project_series',
       staleness_policy: 'domain_agent_or_owner_updates_staleness',
       resource_record_count: (

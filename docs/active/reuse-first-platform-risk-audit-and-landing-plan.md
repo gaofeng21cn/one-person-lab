@@ -264,8 +264,8 @@ OpenTelemetry 给 OPL 的结论：可观测性不要继续扩张成多个私有 
 | 3 | CLI parser/command registry | 15% | `partial` | `opl` command surface 已存在，当前 lane 未引入 Commander/Yargs，避免在 schema seed 中扩大 CLI churn；parser/option/schema 仍分散。 | Phase 2 单独开 lane：先定义最小 command registry adapter，再决定 Commander/Yargs 是否真正减少代码。 |
 | 4 | Runway Temporal-first runtime | 40% | `partial` | Temporal SDK 已是一等依赖，docs 已声明 Temporal production substrate；但 SQLite queue/attempt/scheduler 仍厚。 | Phase 3：Temporal workflow/activity/schedule 接管 durable lifecycle。 |
 | 5 | Kubernetes-style reconciler | 45% | `partial` | docs/status 已写 desired/current safe action 方向；`runway reconcile` 等读面存在。 | Phase 4：把 scheduler/worker/App/domain helper mutation 收到 reconciler。 |
-| 6 | Managed update split | 35% | `partial` | App release channel 与 managed update plane 边界存在；kernel 仍过宽。 | Phase 5：按 owner 拆 updater/package/runtime/materializer/receipt projection。 |
-| 7 | Pack/Workspace standardization | 45% | `partial` | pack/workspace CLI 与 descriptors 已存在；OCI/content address 语义未成为统一 substrate。 | Phase 6：统一 descriptor/digest/lock/cache/distribution。 |
+| 6 | Managed update split | 45% | `partial` | App release channel 与 managed update plane 边界存在；Phase 5-6 first-slice candidate 在 `codex/reuse-first-update-pack-workspace-20260703` 增加 `owner_route_contract` 和组件级 `owner_route`，把 app binary / runtime substrate / capability packages 明确路由到 owner/readback/apply owner，并保留 no-package-manager forbidden claims。 | 主会话复核并吸收后，继续把 runner adapter / receipt projection 按 owner 拆薄。 |
+| 7 | Pack/Workspace standardization | 52% | `partial` | pack/workspace CLI 与 descriptors 已存在；Phase 5-6 first-slice candidate 给 Pack OS lock/cache/registry 增加 OCI descriptor/digest 字段，并给 Workspace shared-resource manifest/inventory 增加 sha256 content-addressing policy。 | 主会话复核并吸收后，继续统一 descriptor/digest/lock/cache/distribution，并把 workspace validate/doctor 的 hard blocker/repairable finding 口径收紧。 |
 | 8 | Domain private platform retirement | 55% | `partial` | MAS generic runtime 退役较深；MAG/RCA/OMA/BookForge 仍有默认 caller/helper tail。 | Phase 7：逐 repo tail matrix、replacement owner、no-active-caller、delete/tombstone gate。 |
 | 9 | App/Aion consumer-only | 60% | `partial` | App/Aion 边界已有合同和 release channel；local scheduler/read-model 仍需 no-truth guard。 | Phase 8：validator/contract 强制 consumer-only。 |
 | 10 | OpenTelemetry-style observability | 15% | `not_started` | OPL 有多个 ledger/readback/drilldown；尚未统一到 OTel vocabulary。 | Phase 9：定义 semantic conventions 和 exporter/collector strategy。 |
@@ -287,6 +287,15 @@ OpenTelemetry 给 OPL 的结论：可观测性不要继续扩张成多个私有 
 | `opl-bookforge` | book/manuscript domain pack、export authority。 | publication helper 不能演化成自持 runtime/update/workbench。 | OPL hosted surface + BookForge authority function split。 |
 | `opl-scholarskills` | refs-only capability package/gallery/judgment helper。 | 不应成为 standard domain agent、MAS truth 或 blocker authority。 | Pack/Connect channel + no-authority guard。 |
 | `homebrew-one-person-lab` | downstream distribution。 | 不应成为 App release/update truth。 | 只镜像 App release authority。 |
+
+## Phase 5-6 First-Slice Foldback
+
+`codex/reuse-first-update-pack-workspace-20260703` 是 Phase 5-6 的第一批收薄候选，不是 readiness、release、owner acceptance 或完整 platform closeout。
+
+- Managed update：新增 `owner_route_contract` 与组件级 `owner_route`，让 `installation_carrier` 显式走 App/host owner route，`runtime_substrate` 显式走 App-owned runtime materializer，`capability_packages` 显式走 OCI/content-addressed clean managed module channel；所有组件保留 `package_manager_claim=false` 和 forbidden claims，避免把 `opl update` 写成通用包管理器。
+- Pack OS：在已有 sha256/content-addressed cache 上补 `descriptor_oci` 与 resource `oci_descriptor`，registry/cache/distribution 继续是 refs-only manifest，不新增 distribution engine 或 package manager。
+- Workspace：shared-resource manifest 与 inventory 只增加 sha256 content-addressing policy；仍然 `body_ref=null`、不存 body、不关闭 stage、不写 domain truth。
+- Candidate evidence：focused managed-update / Pack OS / workspace projection tests pass，`npm run typecheck` pass，`git diff --check` pass；`contracts-entry.test.ts` 当前因既有 stable summary 缺 `standard-agent-principles` 失败，未作为本 lane 写集修复。
 
 ## Plan Completion Audit
 

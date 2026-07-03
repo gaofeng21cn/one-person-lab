@@ -54,6 +54,16 @@ export const REQUIRED_AUTHORITY_FALSE_FLAGS = [
 ] as const;
 
 export const MAS_DISPLAY_PACK_V2_SOURCE_CONTRACT_REF = 'med-autoscience:contracts/display-pack-contract.v2.json';
+export const PACK_OS_DESCRIPTOR_MEDIA_TYPE = 'application/vnd.opl.pack.descriptor.v1+json';
+export const PACK_OS_RESOURCE_MEDIA_TYPE = 'application/vnd.opl.pack.resource.v1';
+
+export function ociDescriptor(mediaType: string, sha256: string, size: number) {
+  return {
+    mediaType,
+    digest: `sha256:${sha256}`,
+    size,
+  };
+}
 
 export function shape(message: string, details: JsonRecord = {}) {
   return new FrameworkContractError('contract_shape_invalid', message, details);
@@ -160,6 +170,7 @@ function fileStateForRef(descriptorDir: string, ref: string) {
       ref_kind: 'external_ref',
       status: 'external_ref',
       sha256: null,
+      oci_descriptor: null,
     };
   }
 
@@ -174,6 +185,7 @@ function fileStateForRef(descriptorDir: string, ref: string) {
       ref_kind: 'local_file',
       status: 'missing',
       sha256: null,
+      oci_descriptor: null,
     };
   }
 
@@ -181,11 +193,13 @@ function fileStateForRef(descriptorDir: string, ref: string) {
   if (!stats.isFile()) {
     throw shape('Pack resource refs that resolve locally must point to files.', { ref });
   }
+  const sha256 = sha256File(absolutePath);
 
   return {
     ref_kind: 'local_file',
     status: 'present',
-    sha256: sha256File(absolutePath),
+    sha256,
+    oci_descriptor: ociDescriptor(PACK_OS_RESOURCE_MEDIA_TYPE, sha256, stats.size),
   };
 }
 
@@ -561,9 +575,11 @@ function normalizeGenericPackDescriptor(payload: JsonRecord, descriptorDir: stri
 export function loadGenericPackDescriptor(descriptorPath: string) {
   const resolvedPath = path.resolve(descriptorPath);
   const payload = readJsonFile(resolvedPath);
+  const descriptorSha256 = sha256File(resolvedPath);
   return {
     descriptor_path: resolvedPath,
-    descriptor_sha256: sha256File(resolvedPath),
+    descriptor_sha256: descriptorSha256,
+    descriptor_oci: ociDescriptor(PACK_OS_DESCRIPTOR_MEDIA_TYPE, descriptorSha256, fs.statSync(resolvedPath).size),
     descriptor: normalizeGenericPackDescriptor(payload, path.dirname(resolvedPath)),
   };
 }
@@ -573,6 +589,7 @@ export function loadGenericPackDescriptorFromRecord(descriptorPath: string, payl
   return {
     descriptor_path: resolvedPath,
     descriptor_sha256: descriptorSha256,
+    descriptor_oci: ociDescriptor(PACK_OS_DESCRIPTOR_MEDIA_TYPE, descriptorSha256, fs.statSync(resolvedPath).size),
     descriptor: normalizeGenericPackDescriptor(payload, path.dirname(resolvedPath)),
   };
 }

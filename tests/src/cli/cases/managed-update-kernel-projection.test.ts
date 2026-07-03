@@ -55,6 +55,11 @@ function readManagedUpdateKernelContract() {
         semantic_merge_required?: boolean;
       }>;
     };
+    owner_route_contract: {
+      required_fields: string[];
+      route_kinds: string[];
+      package_manager_claim_must_be_false: boolean;
+    };
     runner_result_shape: {
       adapter_post_apply_action_shape: { required_fields: string[]; status_values: string[] };
       adapter_status_detail_shape: {
@@ -96,6 +101,17 @@ test('managed update kernel contract keeps runtime and agent post-apply executio
     contract.update_plane_state_machine.component_routes.map((entry) => entry.component_class),
     contract.component_classes,
   );
+  assert.deepEqual(contract.owner_route_contract.required_fields, [
+    'owner',
+    'authority_surface',
+    'route_kind',
+    'readback_ref',
+    'apply_owner',
+    'package_manager_claim',
+    'forbidden_claims',
+  ]);
+  assert.equal(contract.owner_route_contract.package_manager_claim_must_be_false, true);
+  assert.equal(contract.owner_route_contract.route_kinds.includes('clean_managed_package_executor'), true);
 
   const routeByClass = new Map(
     contract.update_plane_state_machine.component_routes.map((entry) => [entry.component_class, entry]),
@@ -266,6 +282,15 @@ exit 2
           provider_id: string;
           adapter_id: string;
           policy_id: string;
+          owner_route: {
+            owner: string;
+            authority_surface: string;
+            route_kind: string;
+            readback_ref: string;
+            apply_owner: string;
+            package_manager_claim: boolean;
+            forbidden_claims: string[];
+          };
           state: string;
           conditions: Array<{ type: string; status: string; reason: string; message: string; observed_generation: number }>;
           plan: { action: string; command_refs: Array<{ command: string; mode: string; destructive: boolean }> };
@@ -401,6 +426,10 @@ exit 2
     assert.equal(installationCarrier.provider_id, 'installation_carrier');
     assert.equal(installationCarrier.adapter_id, 'installation_carrier_status_adapter');
     assert.equal(installationCarrier.policy_id, 'carrier_specific_status_with_host_update_route');
+    assert.equal(installationCarrier.owner_route.owner, 'one-person-lab-app');
+    assert.equal(installationCarrier.owner_route.route_kind, 'manual_owner_route');
+    assert.equal(installationCarrier.owner_route.package_manager_claim, false);
+    assert.equal(installationCarrier.owner_route.forbidden_claims.includes('opl_update_apply_updates_app_binary'), true);
     assert.equal(installationCarrier.state, 'skipped_manual_required');
     assert.equal(installationCarrier.auto_apply.mode, 'projection_only');
     assert.equal(installationCarrier.auto_apply.eligible, false);
@@ -487,6 +516,9 @@ exit 2
     assert.equal(runtime.provider_id, 'runtime_substrate');
     assert.equal(runtime.adapter_id, 'runtime_substrate_adapter');
     assert.equal(runtime.policy_id, 'silent_background_verified_stage_apply_on_next_restart');
+    assert.equal(runtime.owner_route.route_kind, 'controlled_framework_executor');
+    assert.equal(runtime.owner_route.readback_ref, 'opl system startup-maintenance --json');
+    assert.equal(runtime.owner_route.package_manager_claim, false);
     assert.equal(runtime.state, 'update_available');
     assert.equal(typeof runtime.current.current_pointer, 'string');
     assert.equal(typeof runtime.current.staged_root, 'string');
@@ -511,7 +543,18 @@ exit 2
     assert.equal(agents.provider_id, 'capability_packages');
     assert.equal(agents.adapter_id, 'capability_packages_adapter');
     assert.equal(agents.policy_id, 'ordinary_user_non_development_silent_background');
+    assert.equal(agents.owner_route.owner, 'one-person-lab-managed-modules');
+    assert.equal(agents.owner_route.route_kind, 'clean_managed_package_executor');
+    assert.match(agents.owner_route.authority_surface, /OCI\/content-addressed/);
+    assert.equal(agents.owner_route.package_manager_claim, false);
     assert.equal(agents.current.tag_role, 'selector_only');
+    assert.deepEqual(agents.current.oci_distribution, {
+      descriptor_media_type: 'application/vnd.opl.capability-package.channel.v1+json',
+      channel_ref: 'ghcr.io/gaofeng21cn/one-person-lab-manifest:stable',
+      tag_role: 'selector_only',
+      installed_receipt_must_record_digest: true,
+      digest_field: 'to_digest',
+    });
     assert.equal(agents.auto_apply.mode, 'auto_apply');
     assert.equal(agents.auto_apply.eligible, true);
     assert.equal(agents.auto_apply.app_background_safe, true);

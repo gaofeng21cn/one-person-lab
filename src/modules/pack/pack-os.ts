@@ -289,6 +289,7 @@ function buildPackOsLockFromLoaded(loaded: ReturnType<typeof loadGenericPackDesc
       owner: loaded.descriptor.owner,
       descriptor_ref: loaded.descriptor_path,
       descriptor_sha256: loaded.descriptor_sha256,
+      descriptor_oci: loaded.descriptor_oci,
       resolver: {
         resolver_owner: 'one-person-lab',
         resolver_role: 'generic_pack_descriptor_to_refs_only_lock',
@@ -359,6 +360,7 @@ function buildRegistryEntry(lock: ReturnType<typeof buildPackOsLockFromLoaded>['
     owner: lock.owner,
     descriptor_ref: lock.descriptor_ref,
     descriptor_sha256: lock.descriptor_sha256,
+    descriptor_oci: lock.descriptor_oci,
     lock_id: lock.lock_id,
     install_status: 'installed',
     installed_at: 'recorded_by_opl_pack_os',
@@ -455,6 +457,7 @@ function buildPackOsCacheFromLoaded(
       ref: resource.ref,
       source_path: sourcePath,
       sha256: resource.sha256,
+      oci_descriptor: resource.oci_descriptor,
       cache_ref: cacheRef,
       cache_path: cachePath,
       status: 'cached',

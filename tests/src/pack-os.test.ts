@@ -223,6 +223,9 @@ test('Pack OS builds refs-only locks with hashes and false-authority boundaries'
     const lock = buildPackOsLock(descriptorPath).pack_lock;
     assert.equal(lock.surface_kind, 'opl_generic_pack_lock');
     assert.equal(lock.lock_id, 'opl-pack-lock:mas.display.example@1.2.3');
+    assert.equal(lock.descriptor_oci.mediaType, 'application/vnd.opl.pack.descriptor.v1+json');
+    assert.equal(lock.descriptor_oci.digest, `sha256:${lock.descriptor_sha256}`);
+    assert.equal(typeof lock.descriptor_oci.size, 'number');
     assert.equal(lock.summary.present_resource_count, 2);
     assert.equal(lock.summary.receipt_ref_count, 1);
     assert.equal(lock.resolved_resources[0].status, 'present');
@@ -231,6 +234,9 @@ test('Pack OS builds refs-only locks with hashes and false-authority boundaries'
       assert.fail('present local resources must carry a sha256 hash');
     }
     assert.match(firstResourceSha256, /^[0-9a-f]{64}$/);
+    assert.equal(lock.resolved_resources[0].oci_descriptor.mediaType, 'application/vnd.opl.pack.resource.v1');
+    assert.equal(lock.resolved_resources[0].oci_descriptor.digest, `sha256:${firstResourceSha256}`);
+    assert.equal(typeof lock.resolved_resources[0].oci_descriptor.size, 'number');
     assert.equal(lock.resolved_resources[2].ref_kind, 'external_ref');
     assert.deepEqual(lock.not_claims.slice(0, 4), [
       'domain_ready',
@@ -275,6 +281,7 @@ test('Pack OS installs descriptors into registry and content-addressed cache wit
     assert.equal(registry.entries.length, 1);
     assert.equal(registry.entries[0].registry_key, 'mas.display.example@1.2.3');
     assert.equal(registry.entries[0].descriptor_sha256, install.registry_entry.descriptor_sha256);
+    assert.equal(registry.entries[0].descriptor_oci.digest, install.registry_entry.descriptor_oci.digest);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -293,6 +300,8 @@ test('Pack OS cache and distribution materialize refs-only manifests for pack as
     assert.equal(cache.summary.cached_resource_count, 2);
     assert.equal(cache.summary.skipped_resource_count, 1);
     assert.equal(cache.cached_resources.every((entry) => entry.status === 'cached'), true);
+    assert.equal(cache.cached_resources[0].oci_descriptor.mediaType, 'application/vnd.opl.pack.resource.v1');
+    assert.match(cache.cached_resources[0].oci_descriptor.digest, /^sha256:[0-9a-f]{64}$/);
     assert.equal(cache.skipped_resources[0].status, 'external_ref');
 
     const distribution = buildPackOsDistribution(descriptorPath, outputPath, cacheRoot).pack_os_distribution;

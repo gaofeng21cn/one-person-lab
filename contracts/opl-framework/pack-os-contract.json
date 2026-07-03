@@ -59,6 +59,15 @@
     "distribution_manifest_surface_kind": "opl_pack_os_distribution_manifest",
     "distribution_bundle_surface_kind": "opl_pack_os_distribution_bundle",
     "cache_layout": "sha256/<sha256>",
+    "oci_descriptor_fields": [
+      "mediaType",
+      "digest",
+      "size"
+    ],
+    "oci_media_types": {
+      "descriptor": "application/vnd.opl.pack.descriptor.v1+json",
+      "resource": "application/vnd.opl.pack.resource.v1"
+    },
     "registry_rule": "Registry entries are keyed by pack_id@version and store descriptor refs, descriptor hashes, lock ids, resource counts, cache refs, and false-authority boundaries. They do not store domain truth or artifact bodies.",
     "distribution_rule": "Distribution bundles contain pack locks, cache manifests, registry-entry shape, authority boundaries, and not_claims. They are refs-only manifests and do not become quality, publication, export, App release, or production readiness evidence."
   },
@@ -72,6 +81,7 @@
       "pack_kind",
       "descriptor_ref",
       "descriptor_sha256",
+      "descriptor_oci",
       "resolved_resources",
       "artifact_lifecycle",
       "review_transport",

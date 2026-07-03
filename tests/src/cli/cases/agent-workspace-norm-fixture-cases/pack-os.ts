@@ -74,6 +74,7 @@ export const MINIMAL_PACK_OS_CONTRACT: PackOsContract = {
       'pack_kind',
       'descriptor_ref',
       'descriptor_sha256',
+      'descriptor_oci',
       'resolved_resources',
       'artifact_lifecycle',
       'review_transport',
