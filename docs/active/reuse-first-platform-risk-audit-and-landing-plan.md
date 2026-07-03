@@ -260,8 +260,8 @@ OpenTelemetry 给 OPL 的结论：可观测性不要继续扩张成多个私有 
 | 顺序 | 工作项 | 当前完成度 | 状态 | 当前证据 | 下一步 |
 | --- | --- | ---: | --- | --- | --- |
 | 1 | Reuse-first governance gate | 65% | `partial` | 已落 `contracts/opl-framework/reuse-first-governance.json`、`scripts/reuse-first-scan.mjs`、`npm run reuse-first:scan` 和 `npm run reuse-first:scan:diff`；full scan 是历史风险盘点，diff scan 是新增行守门。 | 继续把 high-risk categories 绑定到 CI / review 入口，并按后续 phases 消化现有 findings。 |
-| 2 | Schema boundary consolidation | 10% | `not_started` | 依赖里没有 Zod/Ajv；大量 hand-written JSON/readback helper。 | Phase 1：选 schema engine，迁高风险 receipts/descriptors/readbacks。 |
-| 3 | CLI parser/command registry | 15% | `partial` | `opl` command surface 已存在，但 parser/option/schema 分散。 | Phase 2：引入 Commander/Yargs registry，迁 top commands。 |
+| 2 | Schema boundary consolidation | 15% | `partial` | Phase 1 seed lane 已引入 Ajv-backed `src/kernel/schema-registry.ts`，并用 `contracts/opl-framework/progress-delta-receipt.schema.json` 的 valid/invalid payload focused test 证明成熟 JSON Schema validator 可作为 shared adapter。大量 hand-written JSON/readback helper 仍未迁移。 | 继续把 runtime receipts、descriptors、readbacks 逐步接入 schema registry；禁止新增分散 validator。 |
+| 3 | CLI parser/command registry | 15% | `partial` | `opl` command surface 已存在，当前 lane 未引入 Commander/Yargs，避免在 schema seed 中扩大 CLI churn；parser/option/schema 仍分散。 | Phase 2 单独开 lane：先定义最小 command registry adapter，再决定 Commander/Yargs 是否真正减少代码。 |
 | 4 | Runway Temporal-first runtime | 40% | `partial` | Temporal SDK 已是一等依赖，docs 已声明 Temporal production substrate；但 SQLite queue/attempt/scheduler 仍厚。 | Phase 3：Temporal workflow/activity/schedule 接管 durable lifecycle。 |
 | 5 | Kubernetes-style reconciler | 45% | `partial` | docs/status 已写 desired/current safe action 方向；`runway reconcile` 等读面存在。 | Phase 4：把 scheduler/worker/App/domain helper mutation 收到 reconciler。 |
 | 6 | Managed update split | 35% | `partial` | App release channel 与 managed update plane 边界存在；kernel 仍过宽。 | Phase 5：按 owner 拆 updater/package/runtime/materializer/receipt projection。 |
