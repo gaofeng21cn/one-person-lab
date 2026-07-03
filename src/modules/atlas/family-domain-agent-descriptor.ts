@@ -3,7 +3,7 @@ import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts
 import type { DomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import type { ManifestCommandTimeoutPolicy } from './domain-manifest/resolver.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from './domain-manifest/types.ts';
-import { buildFamilyActionCatalogParity } from '../console/index.ts';
+import { buildFamilyActionCatalogParity } from '../../kernel/family-action-catalog-projection.ts';
 import { buildStandardDomainAgentSkeletonInspection } from '../foundry-lab/index.ts';
 import { pickSkillActivationProjection } from './family-domain-catalog.ts';
 import { buildFamilyStageControlPlaneParity } from '../stagecraft/index.ts';

@@ -2,7 +2,7 @@ import {
   buildFamilyActionCatalogParity,
   projectFamilyAction,
   projectFamilyActionCatalog,
-} from '../../console/index.ts';
+} from '../../../kernel/family-action-catalog-projection.ts';
 import type {
   FamilyActionCatalog,
   FamilyActionCatalogAction,

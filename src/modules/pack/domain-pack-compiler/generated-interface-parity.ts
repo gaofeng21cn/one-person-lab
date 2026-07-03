@@ -1,4 +1,4 @@
-import { projectFamilyAction } from '../../console/index.ts';
+import { projectFamilyAction } from '../../../kernel/family-action-catalog-projection.ts';
 import type {
   FamilyActionCatalog,
   FamilyActionCatalogAction,
