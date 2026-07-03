@@ -35,6 +35,20 @@ src/modules/connect
 
 当 fresh `source:modules -- --strict-imports` 输出 `status=ok`、十个 module entrypoint 全部存在、root-level `src/*.ts` 为 0、`deep_import_violations.count=0`、`forbidden_dependency_violations.count=0` 时，可以声明“源码模块结构边界已落地”。该声明覆盖源码组织与 import gate，不覆盖 runtime、release、domain readiness、Brand L5 或 production readiness。
 
+## 完成度审计面
+
+当前 `scripts/source-module-boundary.mjs` 已覆盖 `--strict-imports`、`--strict-cycles`、deep cross-module import、forbidden dependency 和 pair-count / cycle readback；本轮不新增运行时功能或 Nx / ESLint / Project References。
+
+| 审计项 | 当前状态 | Fresh evidence | 缺口或下一步 |
+| --- | --- | --- | --- |
+| 十模块物理归位 | `done` | `module_entrypoints.expected_count=10`，且 missing / mismatched / unexpected module roots 为空。 | 新增模块必须先改 `source-module-map.json` 和本 policy。 |
+| target source layout | `done` | `src/entrypoints/cli.ts` 存在，root-level `src/*.ts` 为 0。 | root-level `src/*.ts` 不再作为新 owner 接口。 |
+| deep cross-module import | `done` | `npm run source:modules -- --strict-imports` 下 `deep_import_violations.count=0`。 | 只能证明跨模块 import 路由合法，不能证明 public API 已经最小。 |
+| 第一批 forbidden dependency | `done` | `forbidden_dependency_violations.count=0`。 | 当前只覆盖 `module-dependency-policy.json` 已列出的方向约束。 |
+| dependency cycle | `partial` | 默认 readback 报告 SCC；`--strict-cycles` 将 advisory 升级为失败。 | 当前存在 public-entry-level cycle，不能把 strict import pass 外推为低耦合完成。 |
+| public entrypoint 收薄 | `partial` | `index.ts` / `public/**` 作为合法 public surface 被脚本识别。 | 多个模块 `index.ts` 仍是 broad re-export；下一步是按热点拆 thin public entry 或收窄 re-export。 |
+| 下一批 forbidden candidates | `partial` | `module-dependency-policy.json` 的 `next_forbidden_dependency_candidates` 记录候选方向。 | 先用 `pair_counts` 和人工 owner 判断确认迁移路径，再升级为 enforced `forbidden_dependencies`。 |
+
 ## Public Interface 规则
 
 模块 public interface 由三类入口组成：
@@ -93,7 +107,7 @@ Console / Runway / Ledger / Connect / Foundry Lab 的边界可按一句话记忆
 
 `module-dependency-policy.json` 也开始记录第一批方向约束：`ledger -> runway`、`stagecraft -> runway`、`workspace -> console` 与 Charter 对 operator / improvement / connector surfaces 的依赖都不允许出现。该约束用于保护 evidence、stage policy、workspace protocol 与 operator projection 的 owner 边界。
 
-后续治理重点是 public-level 依赖收薄和依赖方向治理。`source:modules` 的 `cross_module_imports.pair_counts` 可以暴露 public API 依赖热点；cycle audit 或人工架构审查可以定位需要调整的依赖方向。此类治理优先通过收窄 public API、拆 thin public entry、移动 brand-neutral primitive 到 `kernel/`、或重新划分调用方向来完成。它们是维护质量和耦合度改进，不改变“十个源码 owner 已归位”的结构结论。当前 dependency cycle 仍按 advisory 读法处理，不能把 strict import pass 外推为模块间已经完全低耦合。
+后续治理重点是 public-level 依赖收薄和依赖方向治理。`source:modules` 的 `cross_module_imports.pair_counts` 可以暴露 public API 依赖热点；cycle audit 或人工架构审查可以定位需要调整的依赖方向。此类治理优先通过收窄 public API、拆 thin public entry、移动 brand-neutral primitive 到 `kernel/`、或重新划分调用方向来完成。它们是维护质量和耦合度改进，不改变“十个源码 owner 已归位”的结构结论。当前 dependency cycle 仍按 advisory 读法处理，不能把 strict import pass 外推为模块间已经完全低耦合。当前 public entrypoint 也仍是合法性边界，不是最小 API 证明：模块 `index.ts` 可以是 broad re-export，只有迁移到更薄的 `public/**` 或明确 owner API 后，才能把对应依赖方向升级为更严格 forbidden policy。
 
 ## 维护流程
 
