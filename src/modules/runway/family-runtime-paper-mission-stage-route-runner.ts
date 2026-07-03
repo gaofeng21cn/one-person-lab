@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { stringValue as optionalString } from '../../kernel/json-record.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
 import { resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
 import { readLocalCodexDefaultsIfAvailable } from '../../kernel/local-codex-defaults.ts';
@@ -34,14 +35,6 @@ type TemporalProviderModule = () => Promise<{
     options: { paths: FamilyRuntimePaths },
   ) => Promise<Record<string, unknown>>;
 }>;
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function authorityBoundary(payload: Record<string, unknown>) {
   return isRecord(payload.authority_boundary) ? payload.authority_boundary : {};

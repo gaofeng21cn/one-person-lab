@@ -1,16 +1,11 @@
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { stringValue as trimmedString } from '../../kernel/json-record.ts';
 
 function exportOwnerFingerprint(payload: Record<string, unknown>) {
   const context = isRecord(payload.opl_domain_export_context) ? payload.opl_domain_export_context : null;
   return typeof context?.owner_fingerprint === 'string' && context.owner_fingerprint.trim()
     ? context.owner_fingerprint.trim()
     : null;
-}
-
-function trimmedString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function sourceFingerprint(payload: Record<string, unknown>) {

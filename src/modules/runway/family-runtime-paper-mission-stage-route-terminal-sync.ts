@@ -1,5 +1,10 @@
 import { DatabaseSync } from 'node:sqlite';
 
+import { parseJsonText } from '../../kernel/json-file.ts';
+import {
+  record as recordValue,
+  stringValue as optionalString,
+} from '../../kernel/json-record.ts';
 import {
   getStageAttemptRow,
   listStageAttemptsForTask,
@@ -65,17 +70,7 @@ const BACKFILLABLE_TERMINAL_RECEIPT_BLOCKERS = new Set([
 type StageAttemptPayload = ReturnType<typeof stageAttemptToPayload>;
 
 function payloadFromTask(row: FamilyRuntimeTaskRow) {
-  return JSON.parse(row.payload_json) as Record<string, unknown>;
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function recordValue(value: unknown) {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : {};
+  return parseJsonText(row.payload_json) as Record<string, unknown>;
 }
 
 export function paperMissionStageRouteIdentityValue(

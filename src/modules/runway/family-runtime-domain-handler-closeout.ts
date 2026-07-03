@@ -1,8 +1,5 @@
-type JsonRecord = Record<string, unknown>;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+import { isRecord } from '../../kernel/contract-validation.ts';
+import type { JsonRecord } from '../../kernel/json-record.ts';
 
 function firstRecord(...values: unknown[]) {
   return values.find(isRecord) as JsonRecord | undefined;

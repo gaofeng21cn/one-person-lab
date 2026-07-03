@@ -2,7 +2,8 @@ import { spawnSync, type SpawnSyncOptionsWithStringEncoding, type SpawnSyncRetur
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
 import {
   buildManagedShellCommandEnv,
   buildManagedShellEnvWithUvCacheRecovery,
@@ -89,16 +90,15 @@ function parseStructuredDomainHandlerError(stdout: string | undefined, label: st
     return null;
   }
   try {
-    const parsed = JSON.parse(trimmed) as unknown;
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    const parsed = parseJsonText(trimmed);
+    if (!isRecord(parsed)) {
       return null;
     }
-    const record = parsed as Record<string, unknown>;
     const parts = [
-      record.reason,
-      record.detail,
-      record.message,
-      record.blocked_reason,
+      parsed.reason,
+      parsed.detail,
+      parsed.message,
+      parsed.blocked_reason,
     ].filter((value): value is string => typeof value === 'string' && Boolean(value.trim()));
     if (parts.length === 0) {
       return null;

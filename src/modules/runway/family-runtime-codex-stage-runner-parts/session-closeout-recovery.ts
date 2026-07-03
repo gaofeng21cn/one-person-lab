@@ -2,6 +2,7 @@ import {
   parseCodexExecOutput,
   recoverCodexExecOutputFromSession,
 } from '../codex.ts';
+import { parseJsonText } from '../../../kernel/json-file.ts';
 import {
   normalizeTypedStageCloseoutPacket,
 } from './closeout-normalization.ts';
@@ -21,7 +22,7 @@ export function parseCloseoutFromCodexMessages(messages: string[]) {
       break;
     }
     try {
-      const parsed = JSON.parse(suffix.trim()) as unknown;
+      const parsed = parseJsonText(suffix.trim());
       return normalizeTypedStageCloseoutPacket(parsed);
     } catch {
       // Keep fail-closed: only an exact terminal JSON object is accepted.
