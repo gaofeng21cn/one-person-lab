@@ -8,6 +8,17 @@ export function readJsonFile(filePath) {
   return parseJsonText(fs.readFileSync(filePath, 'utf8'));
 }
 
+export function cloneJsonPayload(value) {
+  return parseJsonText(JSON.stringify(value));
+}
+
+export function parseJsonLines(text) {
+  return text
+    .split('\n')
+    .filter(Boolean)
+    .map(parseJsonText);
+}
+
 export function isJsonObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
+import { readJsonFile } from './script-json-boundary.mjs';
 
 import { parseRequiredValueOptions } from './required-value-options.mjs';
 
@@ -229,7 +230,7 @@ function validateWorkflow(manifest, manifestPath, failures) {
 
 function main() {
   const options = parseArgs(process.argv.slice(2));
-  const manifest = JSON.parse(fs.readFileSync(options.manifest, 'utf8'));
+  const manifest = readJsonFile(options.manifest);
   const failures = validateManifest(manifest);
   validateWorkflow(manifest, options.manifest, failures);
   if (failures.length > 0) {

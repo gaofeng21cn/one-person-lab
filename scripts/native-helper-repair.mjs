@@ -2,6 +2,7 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseJsonText } from './script-json-boundary.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(scriptDir, '..');
@@ -22,7 +23,7 @@ if (prebuildResult.stderr) {
 }
 if (prebuildResult.status === 0) {
   try {
-    const payload = JSON.parse(prebuildResult.stdout);
+    const payload = parseJsonText(prebuildResult.stdout);
     if (payload.status === 'installed') {
       const doctorResult = spawnSync(process.execPath, [path.join(scriptDir, 'native-helper-doctor.mjs')], {
         cwd: rootDir,

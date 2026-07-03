@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { buildOplPackageManifest } from '../src/modules/connect/package-distribution.ts';
+import { parseJsonText } from './script-json-boundary.mjs';
 
 function parseArgs(argv) {
   const parsed = {
@@ -67,7 +68,7 @@ function readPackageVersions(owner, packageName) {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean)
-    .map((line) => JSON.parse(line));
+    .map(parseJsonText);
 }
 
 function versionTags(version) {

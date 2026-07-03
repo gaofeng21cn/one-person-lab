@@ -28,7 +28,8 @@ opl connect skills --json >/tmp/opl-connect-skills.json
 
 node <<'NODE'
 const fs = require('fs');
-const list = JSON.parse(fs.readFileSync('/tmp/opl-connect-skills.json', 'utf8'));
+const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8')); // reuse-first: allow Docker inline smoke JSON boundary.
+const list = readJson('/tmp/opl-connect-skills.json');
 const packs = list.skill_catalog?.packs ?? [];
 const wanted = ['medautoscience', 'redcube'];
 
@@ -48,7 +49,7 @@ for (const id of wanted) {
   }
 }
 
-const sync = JSON.parse(fs.readFileSync('/tmp/opl-connect-sync-skills.json', 'utf8'));
+const sync = readJson('/tmp/opl-connect-sync-skills.json');
 const synced = (sync.skill_sync?.packs ?? [])
   .filter((entry) => wanted.includes(entry.domain_id) && entry.sync_status === 'synced');
 if (synced.length !== 2) {
@@ -105,8 +106,9 @@ node <<'NODE'
 const fs = require('fs');
 const path = require('path');
 const home = '/tmp/opl-flow-home';
-const install = JSON.parse(fs.readFileSync('/tmp/opl-flow-install.json', 'utf8'));
-const verify = JSON.parse(fs.readFileSync('/tmp/opl-flow-verify.json', 'utf8'));
+const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8')); // reuse-first: allow Docker inline smoke JSON boundary.
+const install = readJson('/tmp/opl-flow-install.json');
+const verify = readJson('/tmp/opl-flow-verify.json');
 if (!verify.ok) {
   throw new Error('opl-flow verify failed: ' + JSON.stringify(verify));
 }
@@ -129,7 +131,7 @@ if (missing.length) {
   throw new Error('missing opl-flow installed files: ' + missing.join(', '));
 }
 
-const marketplace = JSON.parse(fs.readFileSync(path.join(home, '.agents/plugins/marketplace.json'), 'utf8'));
+const marketplace = readJson(path.join(home, '.agents/plugins/marketplace.json'));
 if (!(marketplace.plugins ?? []).some((entry) => entry.name === 'opl-flow')) {
   throw new Error('marketplace missing opl-flow');
 }

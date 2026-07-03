@@ -4,6 +4,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { cloneJsonPayload, readJsonFile } from './script-json-boundary.mjs';
 
 export const SHARED_OWNER_RELEASE_CONTRACT_PATH = 'contracts/family-release/shared-owner-release.json';
 
@@ -40,7 +41,7 @@ export function resolveDefaultFamilyRoot({ repoRoot = repoRootFromImportMeta() }
 }
 
 function readJson(filePath) {
-  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  return readJsonFile(filePath);
 }
 
 function writeJson(filePath, value) {
@@ -199,7 +200,7 @@ function rewriteContractPackageLocator(locator, ownerCommit) {
 
 export function rewriteSharedOwnerReleaseContract(contract, ownerCommit) {
   const nextOwnerCommit = requireOwnerCommit(ownerCommit);
-  const nextContract = JSON.parse(JSON.stringify(contract));
+  const nextContract = cloneJsonPayload(contract);
   nextContract.owner_commit = nextOwnerCommit;
   if (nextContract.packages?.python?.git_locator) {
     nextContract.packages.python.git_locator = rewriteContractPackageLocator(

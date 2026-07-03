@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseJsonText } from './script-json-boundary.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '..');
@@ -296,7 +297,7 @@ function readJsonSurface(filePath, fileRef, group, errorsByGroup) {
     return null;
   }
   try {
-    return JSON.parse(raw);
+    return parseJsonText(raw);
   } catch (error) {
     pushVerificationError(errorsByGroup, group, {
       code: 'surface_json_invalid',
@@ -440,7 +441,7 @@ function invokeHelper(helperPath, helperId, input) {
 
   let payload;
   try {
-    payload = JSON.parse(result.stdout);
+    payload = parseJsonText(result.stdout);
   } catch (error) {
     return {
       ok: false,

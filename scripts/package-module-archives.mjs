@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { readJsonFile } from './script-json-boundary.mjs';
 
 import { parseRequiredValueOptions } from './required-value-options.mjs';
 import {
@@ -80,7 +81,7 @@ function readPreviousManifestVersion(manifestPath) {
   if (!manifestPath) {
     return null;
   }
-  const parsed = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const parsed = readJsonFile(manifestPath);
   const version = typeof parsed.opl_version === 'string' ? parsed.opl_version.trim() : '';
   if (!version) {
     throw new Error(`Previous manifest has no opl_version: ${manifestPath}`);

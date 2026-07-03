@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseJsonText } from './script-json-boundary.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cliPath = path.join(repoRoot, 'src', 'cli.ts');
@@ -57,7 +58,7 @@ function runOpl(commandArgs, env, expectedStatus = 0) {
   );
 
   const raw = expectedStatus === 0 ? result.stdout : result.stderr;
-  return JSON.parse(raw);
+  return parseJsonText(raw);
 }
 
 function createFakeCodex(root, version) {

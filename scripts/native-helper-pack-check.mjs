@@ -2,6 +2,7 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseJsonText } from './script-json-boundary.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(scriptDir, '..');
@@ -34,7 +35,7 @@ if (result.status !== 0) {
 
 let entries;
 try {
-  entries = JSON.parse(result.stdout);
+  entries = parseJsonText(result.stdout);
 } catch (error) {
   process.stderr.write(`native pack check could not parse npm output: ${error instanceof Error ? error.message : String(error)}\n`);
   process.exit(1);

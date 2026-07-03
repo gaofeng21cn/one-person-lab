@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseJsonText, readJsonFile } from './script-json-boundary.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(scriptDir, '..');
@@ -133,7 +134,7 @@ function checkPrebuild() {
     };
   }
 
-  const manifest = JSON.parse(fs.readFileSync(manifestPath(), 'utf8'));
+  const manifest = readJsonFile(manifestPath());
   const errors = [];
   if (manifest.target_triple !== targetTriple) {
     errors.push({
@@ -451,7 +452,7 @@ function fetchGhcrToken(imageRef) {
     };
   }
   try {
-    const payload = JSON.parse(result.stdout);
+    const payload = parseJsonText(result.stdout);
     const token = typeof payload.token === 'string' ? payload.token : '';
     if (!token) {
       throw new Error('missing token field');
@@ -494,7 +495,7 @@ function fetchOciManifest(imageRef, token) {
   try {
     return {
       status: 'ok',
-      manifest: JSON.parse(result.stdout),
+      manifest: parseJsonText(result.stdout),
     };
   } catch (error) {
     return {

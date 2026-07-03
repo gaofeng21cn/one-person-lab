@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import { readJsonFile } from './script-json-boundary.mjs';
 
 const defaultRepoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = parseArgs(process.argv.slice(2));
@@ -91,7 +92,7 @@ function readArgValue(argv, index, flag) {
 
 function readJson(file) {
   try {
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
+    return readJsonFile(file);
   } catch (error) {
     fail(`source module public imports: failed to read ${file}: ${error.message}`);
   }
