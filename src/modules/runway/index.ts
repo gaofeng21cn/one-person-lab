@@ -30,7 +30,8 @@ export { buildStageReplayMissingReceiptWorkorderPacket } from './family-runtime-
 
 // Public cross-module surface generated from existing module consumers.
 export { runAgentExecutor } from './agent-executor.ts';
-export { CodexExecEvent, buildCodexCliPreview, buildCodexExecArgs, parseCodexExecOutput, resolveCodexBinary, runCodexCommand, runCodexCommandStreaming } from './codex.ts';
+export { buildCodexCliPreview, buildCodexExecArgs, parseCodexExecOutput, resolveCodexBinary, runCodexCommand, runCodexCommandStreaming } from './codex.ts';
+export type { CodexExecEvent } from './codex.ts';
 export { listCodexAppRuntimeEvidenceReceipts } from './codex-app-runtime-evidence-ledger.ts';
 export { runFamilyRuntime } from './family-runtime.ts';
 export { DOMAIN_PROGRESS_POLICY_ADAPTER_CONTRACT, DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID, DOMAIN_PROGRESS_TRANSITION_RUNTIME_MODULE } from './family-runtime-domain-progress-transition-runtime.ts';
@@ -38,13 +39,15 @@ export { readFamilyRuntimeLifecycleApplyReceipts, readFamilyRuntimeLifecycleRefs
 export { MAS_DOMAIN_ROUTE_RECONCILE_APPLY, MAS_RUNTIME_OWNER_ROUTE_HANDOFF, OPL_RUNTIME_OWNER_ROUTE } from './family-runtime-mas-domain-route.ts';
 export { providerProofStatusIsCurrentlyProven } from './family-runtime-provider-continuous-proof.ts';
 export { inspectFamilyRuntimeProvider, inspectSelectedFamilyRuntimeProvidersWithLifecycle } from './family-runtime-providers.ts';
-export { ModelRouteCostProjection, StageAttemptUsageProjection, summarizeModelRouteCostProjections, summarizeStageAttemptUsageProjections } from './family-runtime-stage-attempt-usage.ts';
+export { summarizeModelRouteCostProjections, summarizeStageAttemptUsageProjections } from './family-runtime-stage-attempt-usage.ts';
+export type { ModelRouteCostProjection, StageAttemptUsageProjection } from './family-runtime-stage-attempt-usage.ts';
 export { listStageAttemptCloseouts, listStageAttempts } from './family-runtime-stage-attempts.ts';
-export { StageProgressLogProjection, summarizeStageProgressLogs } from './family-runtime-stage-progress-log.ts';
+export { summarizeStageProgressLogs } from './family-runtime-stage-progress-log.ts';
+export type { StageProgressLogProjection } from './family-runtime-stage-progress-log.ts';
 export { normalizeManagedRuntimeContract } from './managed-runtime-contract.ts';
-export { DEFAULT_NATIVE_HELPERS, buildNativeHelperHealthStatus, buildNativeHelperProjection, runNativeHelperRepairAction } from './native-helper-runtime.ts';
+export { buildNativeHelperHealthStatus, buildNativeHelperProjection, DEFAULT_NATIVE_HELPERS, runNativeHelperRepairAction } from './native-helper-runtime.ts';
 export { buildNativeIndexSummary } from './native-index-summary.ts';
-export { OplEndpoints } from './opl-runtime-paths.ts';
+export type { OplEndpoints } from './opl-runtime-paths.ts';
 export { buildOplRuntimeEndpoints } from './opl-runtime-paths/current.ts';
 export { buildRuntimeEnvironmentPrepareReadback, buildRuntimeEnvironmentRunContextReadback } from './runtime-environment-substrate.ts';
 export { runRuntimeOperatorActionExecute } from './runtime-operator-action-execution.ts';

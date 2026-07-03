@@ -12,6 +12,11 @@ const contract = readJson(contractPath);
 const physicalModuleRoot = contract.physical_module_root ?? 'src/modules';
 const modules = readModules(contract);
 const moduleIdSet = new Set(modules);
+for (const moduleId of args.sourceModules) {
+  if (!moduleIdSet.has(moduleId)) {
+    fail(`source module public imports: unknown source module ${moduleId}`);
+  }
+}
 const selectedSourceModules = args.sourceModules.length > 0 ? new Set(args.sourceModules) : null;
 const analysis = analyzeDeepImports();
 
@@ -77,11 +82,6 @@ function parseArgs(argv) {
     fail('source module public imports: --exports-only and --imports-only cannot be used together');
   }
   parsed.sourceModules = [...new Set(parsed.sourceModules.map((entry) => entry.trim()).filter(Boolean))];
-  for (const moduleId of parsed.sourceModules) {
-    if (!moduleIdSet.has(moduleId)) {
-      fail(`source module public imports: unknown source module ${moduleId}`);
-    }
-  }
   return parsed;
 }
 
@@ -150,13 +150,14 @@ function analyzeDeepImports() {
       const exportNames = readImportedOrReexportedNames(node);
       if (exportNames.length > 0) {
         const key = `${toModuleId}:${resolvedPath}`;
+        const exportedSymbolKinds = readExportedSymbolKinds(`${resolvedPath}.ts`);
         const current = exportsByTargetFile.get(key) ?? {
           toModuleId,
           resolvedPath,
-          symbols: new Set(),
+          symbols: new Map(),
         };
         for (const exportName of exportNames) {
-          current.symbols.add(exportName);
+          current.symbols.set(exportName.name, exportedSymbolKinds.get(exportName.name) ?? exportName.kind);
         }
         exportsByTargetFile.set(key, current);
       }
@@ -196,10 +197,18 @@ function readImportedOrReexportedNames(node) {
     if (!namedBindings || !ts.isNamedImports(namedBindings)) {
       return [];
     }
-    return namedBindings.elements.map((element) => (element.propertyName ?? element.name).text);
+    const importIsTypeOnly = node.importClause?.isTypeOnly ?? false;
+    return namedBindings.elements.map((element) => ({
+      name: (element.propertyName ?? element.name).text,
+      kind: importIsTypeOnly || element.isTypeOnly ? 'type' : 'value',
+    }));
   }
   if (ts.isExportDeclaration(node) && node.exportClause && ts.isNamedExports(node.exportClause)) {
-    return node.exportClause.elements.map((element) => (element.propertyName ?? element.name).text);
+    const exportIsTypeOnly = node.isTypeOnly ?? false;
+    return node.exportClause.elements.map((element) => ({
+      name: (element.propertyName ?? element.name).text,
+      kind: exportIsTypeOnly || element.isTypeOnly ? 'type' : 'value',
+    }));
   }
   return [];
 }
@@ -215,20 +224,29 @@ function applyPublicExports(analysisValue) {
   for (const [moduleId, additions] of additionsByModule) {
     const relativeIndex = `${physicalModuleRoot}/${moduleId}/index.ts`;
     const absoluteIndex = path.join(repoRoot, ...relativeIndex.split('/'));
-    const text = fs.readFileSync(absoluteIndex, 'utf8');
+    const originalText = fs.readFileSync(absoluteIndex, 'utf8');
+    const text = stripGeneratedPublicSurface(originalText);
     const existingExports = readExistingNamedExports(relativeIndex, text);
     const lines = [];
 
     for (const addition of additions.sort(compareExportEntries)) {
-      const names = [...addition.symbols]
-        .filter((symbol) => !existingExports.has(symbol))
-        .sort();
-      if (names.length === 0) {
-        continue;
-      }
       const fromSpecifier = toRelativeTsSpecifier(path.dirname(relativeIndex), `${addition.resolvedPath}.ts`);
-      lines.push(`export { ${names.join(', ')} } from '${fromSpecifier}';`);
-      for (const name of names) {
+      const symbols = [...addition.symbols.entries()]
+        .filter(([symbol]) => !existingExports.has(symbol))
+        .sort(([left], [right]) => left.localeCompare(right));
+      const valueNames = symbols
+        .filter(([, kind]) => kind === 'value')
+        .map(([name]) => name);
+      const typeNames = symbols
+        .filter(([, kind]) => kind === 'type')
+        .map(([name]) => name);
+      if (valueNames.length > 0) {
+        lines.push(`export { ${valueNames.join(', ')} } from '${fromSpecifier}';`);
+      }
+      if (typeNames.length > 0) {
+        lines.push(`export type { ${typeNames.join(', ')} } from '${fromSpecifier}';`);
+      }
+      for (const [name] of symbols) {
         existingExports.add(name);
       }
     }
@@ -246,6 +264,51 @@ function applyPublicExports(analysisValue) {
     fs.writeFileSync(absoluteIndex, `${prefix}${section}`);
     analysisValue.changedFiles.add(relativeIndex);
   }
+}
+
+function stripGeneratedPublicSurface(text) {
+  const marker = '\n// Public cross-module surface generated from existing module consumers.';
+  const index = text.indexOf(marker);
+  if (index === -1) {
+    return text;
+  }
+  return text.slice(0, index).replace(/\s+$/, '\n');
+}
+
+function readExportedSymbolKinds(relativeFile) {
+  const absoluteFile = path.join(repoRoot, ...relativeFile.split('/'));
+  if (!fs.existsSync(absoluteFile)) {
+    return new Map();
+  }
+  const sourceFile = ts.createSourceFile(
+    relativeFile,
+    fs.readFileSync(absoluteFile, 'utf8'),
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const kinds = new Map();
+  for (const node of sourceFile.statements) {
+    if (ts.isInterfaceDeclaration(node) && hasExportModifier(node) && node.name) {
+      kinds.set(node.name.text, 'type');
+    } else if (ts.isTypeAliasDeclaration(node) && hasExportModifier(node) && node.name) {
+      kinds.set(node.name.text, 'type');
+    } else if ((ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node) || ts.isEnumDeclaration(node))
+      && hasExportModifier(node)
+      && node.name) {
+      kinds.set(node.name.text, 'value');
+    } else if (ts.isVariableStatement(node) && hasExportModifier(node)) {
+      for (const declaration of node.declarationList.declarations) {
+        collectBindingNames(declaration.name, kinds, 'value');
+      }
+    } else if (ts.isExportDeclaration(node) && node.exportClause && ts.isNamedExports(node.exportClause)) {
+      const kind = node.isTypeOnly ? 'type' : 'value';
+      for (const element of node.exportClause.elements) {
+        kinds.set(element.name.text, element.isTypeOnly ? 'type' : kind);
+      }
+    }
+  }
+  return kinds;
 }
 
 function readExistingNamedExports(relativeFile, text) {
@@ -273,15 +336,19 @@ function hasExportModifier(node) {
   return Boolean(node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword));
 }
 
-function collectBindingNames(name, names) {
+function collectBindingNames(name, names, kind = 'value') {
   if (ts.isIdentifier(name)) {
-    names.add(name.text);
+    if (names instanceof Map) {
+      names.set(name.text, kind);
+    } else {
+      names.add(name.text);
+    }
     return;
   }
   if (ts.isObjectBindingPattern(name) || ts.isArrayBindingPattern(name)) {
     for (const element of name.elements) {
       if (ts.isBindingElement(element)) {
-        collectBindingNames(element.name, names);
+        collectBindingNames(element.name, names, kind);
       }
     }
   }

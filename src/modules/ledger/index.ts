@@ -5,7 +5,6 @@ export const OPL_LEDGER_SOURCE_MODULE = {
   physicalRoot: 'src/modules/ledger',
 } as const;
 
-
 // Public cross-module surface generated from existing module consumers.
 export { buildCurrentOwnerDeltaCacheRefreshRequiredReadModel, buildCurrentOwnerDeltaReadModel, buildDefaultNextActionFromCurrentOwnerDelta } from './current-owner-delta-projection.ts';
 export { readCurrentOwnerDeltaReadModelProjectionCache, writeCurrentOwnerDeltaReadModelProjectionCache } from './current-owner-delta-read-model-cache.ts';
@@ -14,16 +13,21 @@ export { buildDomainDispatchEvidenceIdentityGuidance, domainDispatchEvidenceIden
 export { assertDomainDispatchEvidencePayloadReady, preflightDomainDispatchEvidencePayload } from './domain-dispatch-evidence-payload-preflight.ts';
 export { domainDispatchEvidencePayloadRefs } from './domain-dispatch-evidence-payload-refs.ts';
 export { buildDomainDispatchEvidenceWorkorderPacket, compactDomainDispatchEvidenceWorkorderAttentionItems, compactDomainDispatchEvidenceWorkorderGroupAttentionItems } from './domain-dispatch-evidence-workorder-packet.ts';
-export { DomainOwnerPayloadSummaryReceipt, DomainOwnerPayloadSummaryReceiptInput, assertDomainOwnerPayloadSummaryReceiptInputReady, domainOwnerPayloadSummaryTargetKey, listDomainOwnerPayloadSummaryReceipts, preflightDomainOwnerPayloadSummaryReceiptInput, recordDomainOwnerPayloadSummaryReceipts, verifyDomainOwnerPayloadSummaryReceipt } from './domain-owner-payload-summary-ledger.ts';
+export { assertDomainOwnerPayloadSummaryReceiptInputReady, domainOwnerPayloadSummaryTargetKey, listDomainOwnerPayloadSummaryReceipts, preflightDomainOwnerPayloadSummaryReceiptInput, recordDomainOwnerPayloadSummaryReceipts, verifyDomainOwnerPayloadSummaryReceipt } from './domain-owner-payload-summary-ledger.ts';
+export type { DomainOwnerPayloadSummaryReceipt, DomainOwnerPayloadSummaryReceiptInput } from './domain-owner-payload-summary-ledger.ts';
 export { buildEvidenceEnvelopeProjection, canonicalOwnerId, compactEvidenceEnvelopeProjection, evidenceEnvelopeOpenCount, evidenceEnvelopeSummary } from './evidence-envelope.ts';
-export { EVIDENCE_REQUIREMENT_MODEL_VERSION, EvidenceRequirement, evidenceRequirementFromTailItem } from './evidence-requirement.ts';
-export { ExternalEvidenceReceipt, listExternalEvidenceReceipts, parseExternalEvidenceApplyArgs, runExternalEvidenceApply } from './external-evidence-ledger.ts';
+export { EVIDENCE_REQUIREMENT_MODEL_VERSION, evidenceRequirementFromTailItem } from './evidence-requirement.ts';
+export type { EvidenceRequirement } from './evidence-requirement.ts';
+export { listExternalEvidenceReceipts, parseExternalEvidenceApplyArgs, runExternalEvidenceApply } from './external-evidence-ledger.ts';
+export type { ExternalEvidenceReceipt } from './external-evidence-ledger.ts';
 export { classifyExternalEvidenceReceiptRefs } from './external-evidence-receipt-classification.ts';
 export { buildHandoffBundle } from './handoff-bundle.ts';
-export { HandoffBundleResult } from './handoff-bundle-types.ts';
-export { MagManifestSustainedConsumptionReceipt, MagManifestSustainedConsumptionReceiptInput, assertMagManifestSustainedConsumptionReceiptInputReady, listMagManifestSustainedConsumptionReceipts, magManifestSustainedConsumptionTargetKey, preflightMagManifestSustainedConsumptionReceiptInput, recordMagManifestSustainedConsumptionReceipts, verifyMagManifestSustainedConsumptionReceipt } from './mag-manifest-sustained-consumption-ledger.ts';
+export type { HandoffBundleResult } from './handoff-bundle-types.ts';
+export { assertMagManifestSustainedConsumptionReceiptInputReady, listMagManifestSustainedConsumptionReceipts, magManifestSustainedConsumptionTargetKey, preflightMagManifestSustainedConsumptionReceiptInput, recordMagManifestSustainedConsumptionReceipts, verifyMagManifestSustainedConsumptionReceipt } from './mag-manifest-sustained-consumption-ledger.ts';
+export type { MagManifestSustainedConsumptionReceipt, MagManifestSustainedConsumptionReceiptInput } from './mag-manifest-sustained-consumption-ledger.ts';
 export { buildMemoryArtifactLifecycleEvidenceProjection, memoryArtifactLifecycleEvidenceAuthorityBoundary } from './memory-artifact-lifecycle-evidence-ledger.ts';
 export { buildAppDrilldownProductionEvidenceTailLedger, buildConformanceProductionEvidenceTailLedger, buildProductionTailNextActionLedger } from './production-evidence-tail-ledger.ts';
-export { StageProgressDeltaClassification, buildProgressDeltaReceipt, progressDeltaReceiptDeltaClassFromStageClassification } from './progress-delta-receipt.ts';
+export { buildProgressDeltaReceipt, progressDeltaReceiptDeltaClassFromStageClassification } from './progress-delta-receipt.ts';
+export type { StageProgressDeltaClassification } from './progress-delta-receipt.ts';
 export { buildProviderLongSoakEvidenceProjection, listProviderLongSoakEvidenceReceipts } from './provider-long-soak-evidence-ledger.ts';
 export { listStandardAgentTemplateConsumptionReceipts } from './standard-agent-template-consumption-ledger.ts';

@@ -5,7 +5,6 @@ export const OPL_FOUNDRY_LAB_SOURCE_MODULE = {
   physicalRoot: 'src/modules/foundry-lab',
 } as const;
 
-
 // Public cross-module surface generated from existing module consumers.
 export { buildAgentLabDomainFeedbackSelfEvolutionReadModel } from './agent-lab-control-read-models.ts';
 export { buildDeveloperModeAgentLabRepairRouteReadModel } from './agent-lab-developer-mode.ts';
@@ -16,10 +15,12 @@ export { DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES, DEFAULT_CALLER_OW
 export { defaultCallerSurfaceGates } from './default-caller-surface-gates.ts';
 export { buildStandardDomainAgentSkeletonInspection, runFamilyAgentLegacyCleanupApply } from './family-domain-agent-skeleton.ts';
 export { splitOperatorAttentionCounts } from './framework-readiness-attention-counts.ts';
-export { FunctionalPrivatizationAudit, buildFunctionalPrivatizationAudit } from './functional-privatization-audit.ts';
+export { buildFunctionalPrivatizationAudit } from './functional-privatization-audit.ts';
+export type { FunctionalPrivatizationAudit } from './functional-privatization-audit.ts';
 export { buildFunctionalSourcePurityTailReadModel, compactFunctionalPrivatizationAuditEnvelope } from './functional-privatization-envelope.ts';
 export { OMA_PRODUCTION_CONSUMPTION_ACTION_ID, OMA_PRODUCTION_CONSUMPTION_ACTION_KIND, omaProductionConsumptionPayloadRefHints, omaProductionConsumptionPayloadTemplate, omaProductionConsumptionPayloadWorkorder, omaProductionConsumptionRuntimeActionExecuteCommand } from './oma-production-consumption-action.ts';
-export { OmaProductionConsumptionReceiptInput, recordOmaProductionConsumptionReceipts } from './oma-production-consumption-ledger.ts';
+export { recordOmaProductionConsumptionReceipts } from './oma-production-consumption-ledger.ts';
+export type { OmaProductionConsumptionReceiptInput } from './oma-production-consumption-ledger.ts';
 export { buildOplMetaAgentRegistryExtension, defaultOmaRepoDir } from './opl-meta-agent-consumption.ts';
 export { withOplMetaAgentDescriptorEntry } from './opl-meta-agent-descriptor-adapter.ts';
 export { omaProductionAcceptanceStageReplayReceipts, readOmaProductionAcceptance } from './opl-meta-agent-production-acceptance.ts';

@@ -5,7 +5,6 @@ export const OPL_WORKSPACE_SOURCE_MODULE = {
   physicalRoot: 'src/modules/workspace',
 } as const;
 
-
 // Public cross-module surface generated from existing module consumers.
 export { buildAgentWorkspaceNormChecks, buildAgentWorkspaceNormProjection } from './agent-workspace-norm.ts';
 export { validateAgentWorkspaceNorm } from './agent-workspace-norm-contract.ts';
@@ -13,4 +12,5 @@ export { resolveDefaultFamilyWorkspaceRoot, resolveFamilyWorkspaceRootFromRepoRo
 export { adoptWorkspace, doctorWorkspace, validateWorkspace } from './workspace-diagnostics.ts';
 export { ensureWorkspace, initializeWorkspace } from './workspace-initializer.ts';
 export { archiveWorkspaceProject, deleteWorkspaceProject, exportWorkspaceMap, inspectWorkspace, updateWorkspaceProjectLifecycle, upgradeWorkspace, workspaceFleetReport, workspaceHealth, workspaceInventory, workspaceReport } from './workspace-lifecycle.ts';
-export { WorkspaceBinding, buildWorkspaceCatalog, getActiveWorkspaceBinding, resolveWorkspaceLocator } from './workspace-registry.ts';
+export { buildWorkspaceCatalog, getActiveWorkspaceBinding, resolveWorkspaceLocator } from './workspace-registry.ts';
+export type { WorkspaceBinding } from './workspace-registry.ts';
