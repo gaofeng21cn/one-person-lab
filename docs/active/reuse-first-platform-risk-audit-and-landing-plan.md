@@ -505,6 +505,15 @@ Phase 1、Phase 7、Phase 9 的本轮收薄已吸收进 `main`，属于 schema b
 - Runtime snapshot provider：新增 `src/modules/runway/runtime-tray-snapshot-provider.ts`，Runway 的 evidence-worklist、runtime action execution 与 observability export 不再直接 import Console `buildRuntimeTraySnapshot`；CLI/App Console caller 显式注入 Console-owned snapshot provider。
 - Fresh evidence：focused `family-runtime-evidence-worklist` / `family-runtime` / `runtime-observability-export` / `app-action` tests 30/30 pass，`npm run typecheck` pass，`npm run reuse-first:scan:diff -- --strict` gate_status=ok，`git diff --check` pass，`npm run source:modules` status=ok；source-module readback 中 `runway -> console` pair 已消失，dependency cycle 仍是 advisory。该证据只证明 owner/import direction 收薄，不证明 runtime ready、Temporal live migration、domain ready、App release ready 或 production readiness。
 
+## Foundry Readiness Console Boundary Foldback 2026-07-03
+
+本 lane 继续收薄 source-module 方向依赖，把 Foundry Lab 的 readiness / maturity readout 从 Console implementation 前置依赖中拆出；不改变 App/operator projection owner、runtime truth、domain authority、owner receipt、typed blocker、release/currentness claim 或 production readiness。
+
+- Runtime snapshot provider：`framework readiness`、`framework readiness --detail compact` 和 `framework operating-maturity` 改为接收 `runtimeSnapshotProvider`；public CLI caller 显式注入 Console-owned `buildRuntimeTraySnapshot`，Foundry Lab 不再直接 import Console snapshot builder。
+- Evidence action projection：App release user-path evidence 的 payload template / ref hints / workorder helper 迁入 Ledger public surface；Foundry Lab 的 readiness next-safe-action 直接消费 Ledger payload helper 和 snapshot 中的 refs-only evidence，不再从 Console 读取 framework action helper。
+- Contract/docs：`module-dependency-policy.json` 新增 enforced `foundry-lab -> console` forbidden dependency；source-module reference 文档同步记录 Console 已从 dependency-cycle SCC 中退出。
+- Fresh evidence：`npm run source:modules -- --strict-imports` 返回 `status=ok`，`deep_import_violations=0`，`forbidden_dependency_violations=0`，`foundry-lab -> console` pair 消失，dependency-cycle SCC 从 10 模块 / edge_count 57 收薄到 9 模块 / edge_count 47；`npm run source:modules -- --strict-imports --strict-cycles` 仍按预期失败在剩余 SCC。Focused tests 17/17 pass，`npm run typecheck` pass。该证据只证明 Foundry / Console owner boundary 与 import gate 收薄，不证明 strict cycles 全部完成、App release ready、domain ready、owner acceptance 或 production readiness。
+
 ## OPL Connect Reference Verification Lane 2026-07-03
 
 本 lane 把引用 metadata 校验从领域 prompt / 手写脚本候选沉淀为 OPL Connect 的只读 provider receipt surface，不写 MAS truth，不签 owner receipt，不创建 typed blocker。
