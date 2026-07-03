@@ -1,33 +1,14 @@
-type JsonRecord = Record<string, unknown>;
+import {
+  countValue as numberValue,
+  type JsonRecord,
+  record,
+  recordList,
+  stringList,
+  stringValue,
+} from '../../kernel/json-record.ts';
 
 const DEFAULT_GROUPING_SEMANTICS =
   'domain_blocked_attention_refs_grouped_for_attention_only_raw_tail_counts_preserved';
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
-function numberValue(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
 
 function uniqueStrings(values: string[]) {
   return [...new Set(values)];

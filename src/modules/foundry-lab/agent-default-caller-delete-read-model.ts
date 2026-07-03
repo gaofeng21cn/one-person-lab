@@ -12,42 +12,22 @@ import {
   DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
 } from './default-caller-retirement-guard.ts';
 import { buildPrivatePlatformResidueDeletionGate } from './private-platform-residue-deletion-gate.ts';
-
-type JsonRecord = Record<string, unknown>;
+import {
+  countValue as numberValue,
+  type JsonRecord,
+  record,
+  recordList,
+  stringList,
+  stringValue as optionalString,
+} from '../../kernel/json-record.ts';
 
 interface DefaultCallerPhysicalDeleteAuthorityPolicy {
   physical_delete_blocked_by: string[];
   not_authorized_claims: string[];
 }
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
 function unique(values: string[]) {
   return [...new Set(values.filter(Boolean))];
-}
-
-function numberValue(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
 function statusIsObserved(section: unknown) {

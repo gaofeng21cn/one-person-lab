@@ -1,4 +1,11 @@
-type JsonRecord = Record<string, unknown>;
+import {
+  countValue as numberValue,
+  type JsonRecord,
+  record,
+  recordList,
+  stringList,
+  stringValue,
+} from '../../kernel/json-record.ts';
 
 export const OWNER_DELTA_HANDOFF_TAXONOMY =
   'first-class default summary of who owns the next delta or receipt, derived from owner_delta_first, owner_handoff_packet, and evidence_worklist without creating domain authority';
@@ -11,32 +18,6 @@ export function ownerDeltaHandoffFrameworkReadinessSection(input: {
     source_commands: input.sourceCommands,
     ...input.ownerDeltaHandoffSummary,
   };
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
-function numberValue(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
 }
 
 function firstString(...values: unknown[]) {

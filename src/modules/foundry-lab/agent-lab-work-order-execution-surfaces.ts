@@ -1,6 +1,9 @@
 import path from 'node:path';
 
-type JsonRecord = Record<string, unknown>;
+import {
+  type JsonRecord,
+  stringValue as optionalString,
+} from '../../kernel/json-record.ts';
 
 export type ExecutionSurfaceRef = {
   surface_kind: string;
@@ -16,10 +19,6 @@ type ExecutionCommandResult = {
 };
 
 export const OPL_WORK_ORDER_PRIMITIVE_OWNER = 'one-person-lab/OPL';
-
-function optionalString(value: unknown): string | null {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
 
 function mdInline(value: unknown): string {
   return `\`${String(value ?? 'null').replace(/`/g, '\\`')}\``;

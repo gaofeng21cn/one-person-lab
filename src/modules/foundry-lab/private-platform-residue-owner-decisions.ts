@@ -8,8 +8,13 @@ import type {
   DefaultCallerPrivatePlatformCleanupDisposition,
   DefaultCallerPrivatePlatformResidueTargetKind,
 } from './default-caller-retirement-guard.ts';
-
-type JsonRecord = Record<string, unknown>;
+import {
+  type JsonRecord,
+  record,
+  recordList,
+  stringList,
+  stringValue as optionalString,
+} from '../../kernel/json-record.ts';
 
 export const PRIVATE_PLATFORM_RESIDUE_OWNER_DECISION_CONTRACT_REF =
   'contracts/opl-framework/private-platform-residue-owner-decisions.json' as const;
@@ -35,28 +40,6 @@ const CLEANUP_DISPOSITION_TO_OWNER_DECISION: Record<
   tombstone: 'tombstone_gate',
   owner_typed_blocker: 'typed_blocker_gate',
 };
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
 
 function unique(values: string[]) {
   return [...new Set(values.filter(Boolean))];

@@ -9,20 +9,11 @@ import {
 } from './framework-readiness-static-surfaces.ts';
 import { buildCurrentOwnerDeltaReadModel } from '../ledger/index.ts';
 import { writeCurrentOwnerDeltaReadModelProjectionCache } from '../ledger/index.ts';
-
-type JsonRecord = Record<string, unknown>;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function numberValue(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
-}
+import {
+  countValue as numberValue,
+  type JsonRecord,
+  record,
+} from '../../kernel/json-record.ts';
 
 export function frameworkAttentionFirstPayload(input: {
   status: string;
