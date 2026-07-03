@@ -86,7 +86,7 @@ OPL 品牌模块的 L4 rollout 计划已退出 active path：当前十模块 `L4
 - `opl-family-development-reference.md`：OPL 系列项目开发主参考；固定全局计划放 OPL、单仓计划回各 repo、通用能力上收 OPL、过时兼容面直接退役、docs 目录按同名 canonical taxonomy 对齐。
 - `standard-agent-private-platform-inventory.md`：private-platform inventory；按 owner subdomain、agent、surface group 和 migration gate 分类，不记录逐日拆文件流水或 line-count ledger。
 - `opl-scholar-skills-capability-modules.md`：ScholarSkills capability package 支撑；说明 ScholarSkills 是 OPL Pack / Connect / Atlas 管理的 capability library，不是 standard domain agent、品牌模块或 MAS truth owner。
-- `opl-scholar-skills-artifact-engines.md`：ScholarSkills candidate artifact engine 支撑；说明十模块 OPL-generated candidate body 的 CLI、package shape 和 no-authority guard。
+- `opl-scholar-skills-artifact-engines.md`：ScholarSkills candidate artifact engine 支撑；说明八个 active module 的 OPL-generated candidate body、CLI、package shape 和 no-authority guard。
 - `opl-scholar-skills-display-gallery.md`：Scholar Display gallery 人审入口；只引用 MAS-owned Display Pack gallery refs 和 fresh readback 入口，不在 OPL active doc 冻结高漂移 gallery counters。
 - `development-document-portfolio.md`：开发文档组合整理入口；按内容判断旧文档应吸收、保留、降级、退役还是归档。
 
