@@ -89,6 +89,8 @@ Console / Runway / Ledger / Connect / Foundry Lab 的边界可按一句话记忆
 | stage replay missing receipt workorder | `stagecraft` |
 | stage-attempt generic projections 与 memory trace projection | `runway` |
 
+2026-07-03 的 Runway -> Console 收薄已移除 Runway 经由 Console public re-export 反向读取自身 generic projection 的调用。剩余 Runway -> Console 依赖集中在 `buildRuntimeTraySnapshot` 的三处 consumer：`family-runtime-evidence-worklist.ts`、`runtime-operator-action-execution.ts` 和 `observability-export.ts`。继续收薄需要先拆分 runtime tray snapshot 的 Console owner 投影与 Runway runtime 输入边界；不要在普通 import cleanup 中整体搬移该 snapshot builder。
+
 `module-dependency-policy.json` 也开始记录第一批方向约束：`ledger -> runway`、`stagecraft -> runway`、`workspace -> console` 与 Charter 对 operator / improvement / connector surfaces 的依赖都不允许出现。该约束用于保护 evidence、stage policy、workspace protocol 与 operator projection 的 owner 边界。
 
 后续治理重点是 public-level 依赖收薄和依赖方向治理。`source:modules` 的 `cross_module_imports.pair_counts` 可以暴露 public API 依赖热点；cycle audit 或人工架构审查可以定位需要调整的依赖方向。此类治理优先通过收窄 public API、拆 thin public entry、移动 brand-neutral primitive 到 `kernel/`、或重新划分调用方向来完成。它们是维护质量和耦合度改进，不改变“十个源码 owner 已归位”的结构结论。当前 dependency cycle 仍按 advisory 读法处理，不能把 strict import pass 外推为模块间已经完全低耦合。

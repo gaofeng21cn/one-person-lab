@@ -4,7 +4,7 @@ import type {
 } from './family-runtime-stage-attempt-usage.ts';
 import {
   buildMemoryTraceProjection,
-} from '../console/index.ts';
+} from './stage-attempt-projections/memory-locator-index.ts';
 import {
   buildTemporalStageAttemptVisibility,
   buildTemporalWebUiRef,

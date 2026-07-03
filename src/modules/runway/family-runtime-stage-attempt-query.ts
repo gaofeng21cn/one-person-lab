@@ -15,7 +15,7 @@ import {
   listStageAttemptSignals,
 } from './family-runtime-stage-attempt-ledger.ts';
 import { buildTemporalStageAttemptWorkflowContract, buildTemporalStageAttemptWorkflowInput } from './family-runtime-temporal.ts';
-import { buildAttemptGenericProjections } from '../console/index.ts';
+import { buildAttemptGenericProjections } from './stage-attempt-projections/stage-attempt-generic-projections.ts';
 import { buildAttemptHumanReviewBurdenBudget } from '../stagecraft/index.ts';
 import { buildStageProgressLog } from './family-runtime-stage-progress-log.ts';
 import { buildStageAttemptTruePathProof } from './family-runtime-stage-attempt-true-path-proof.ts';
