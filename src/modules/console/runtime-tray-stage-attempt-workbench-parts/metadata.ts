@@ -27,6 +27,8 @@ import {
 import type {
   StageAttemptGenericProjectionInput,
 } from '../../runway/index.ts';
+import { isRecord } from '../../../kernel/contract-validation.ts';
+import { recordList } from '../../../kernel/json-record.ts';
 import { optionalString } from '../runtime-tray-snapshot-utils.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 
@@ -49,12 +51,8 @@ type StageAttemptProjection = StageAttemptGenericProjectionInput & {
   human_review_burden_budget?: unknown;
 };
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
 function recordListFromUnknown(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
+  return recordList(value);
 }
 
 function stringListFrom(value: unknown) {

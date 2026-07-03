@@ -1,6 +1,8 @@
 import * as fs from 'fs';
 import type { DatabaseSync } from 'node:sqlite';
 
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
 import {
   buildEffectiveCurrentContextPacket,
   buildFamilyRuntimeControlledApplyContract,
@@ -64,8 +66,8 @@ const EMPTY_FAMILY_STALL_LINEAGE = buildFamilyStallLineage([]);
 
 function parseRecord(value: string): JsonRecord {
   try {
-    const parsed = JSON.parse(value) as unknown;
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as JsonRecord : {};
+    const parsed = parseJsonText(value);
+    return isRecord(parsed) ? parsed : {};
   } catch {
     return {};
   }
@@ -73,7 +75,7 @@ function parseRecord(value: string): JsonRecord {
 
 function parseList(value: string): unknown[] {
   try {
-    const parsed = JSON.parse(value) as unknown;
+    const parsed = parseJsonText(value);
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
@@ -102,10 +104,6 @@ function latestActivityByKind(events: JsonRecord[], eventKind: string) {
 
 function hasEntries(value: unknown) {
   return Array.isArray(value) && value.length > 0;
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 function stringListFrom(value: unknown) {

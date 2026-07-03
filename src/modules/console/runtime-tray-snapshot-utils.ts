@@ -1,11 +1,17 @@
-import * as fs from 'fs';
 import { fileSourceRef, sourceRef, uniqueByRef } from '../../kernel/source-ref.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { readJsonFileOrNull } from '../../kernel/json-file.ts';
+import {
+  recordList,
+  stringList as jsonStringList,
+  stringValue,
+} from '../../kernel/json-record.ts';
 import { type JsonRecord } from './runtime-tray-snapshot-types.ts';
 
 export { fileSourceRef, sourceRef, uniqueByRef };
 
 export function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+  return stringValue(value);
 }
 
 export function optionalBoolean(value: unknown) {
@@ -23,17 +29,13 @@ export function firstString(...values: unknown[]) {
 }
 
 export function readJsonRecord(filePath: string): JsonRecord | null {
-  try {
-    const value = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
-    return value && typeof value === 'object' && !Array.isArray(value) ? value as JsonRecord : null;
-  } catch {
-    return null;
-  }
+  const value = readJsonFileOrNull(filePath);
+  return isRecord(value) ? value : null;
 }
 
 export function nestedRecord(record: JsonRecord | null | undefined, key: string): JsonRecord | null {
   const value = record?.[key];
-  return value && typeof value === 'object' && !Array.isArray(value) ? value as JsonRecord : null;
+  return isRecord(value) ? value : null;
 }
 
 export function stringListFromRecords(value: unknown, key: string, limit = 5) {
@@ -42,23 +44,19 @@ export function stringListFromRecords(value: unknown, key: string, limit = 5) {
   }
 
   return value
-    .map((entry) => entry && typeof entry === 'object' && !Array.isArray(entry)
-      ? optionalString((entry as JsonRecord)[key])
+    .map((entry) => isRecord(entry)
+      ? optionalString(entry[key])
       : optionalString(entry))
     .filter((entry): entry is string => Boolean(entry))
     .slice(0, limit);
 }
 
 export function stringList(value: unknown, limit = 8) {
-  return Array.isArray(value)
-    ? value.map((entry) => optionalString(entry)).filter((entry): entry is string => Boolean(entry)).slice(0, limit)
-    : [];
+  return jsonStringList(value).slice(0, limit);
 }
 
 export function jsonRecordList(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is JsonRecord => Boolean(entry) && typeof entry === 'object' && !Array.isArray(entry))
-    : [];
+  return recordList(value);
 }
 
 export function firstStringFromList(values: string[]) {

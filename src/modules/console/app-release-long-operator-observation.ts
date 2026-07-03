@@ -2,6 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText, readJsonPayloadFile } from '../../kernel/json-file.ts';
+import { stringValue } from '../../kernel/json-record.ts';
+
 type StartInput = {
   cohort: string;
   minimumDurationMinutes: number;
@@ -29,14 +33,6 @@ const REQUIRED_EVENT_KINDS = [
 
 function nowIso() {
   return new Date().toISOString();
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
 function numberValue(value: unknown) {
@@ -83,7 +79,7 @@ function parseIso(value: string, label: string) {
 }
 
 function readJson(filePath: string) {
-  const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
+  const parsed = readJsonPayloadFile(filePath);
   if (!isRecord(parsed)) {
     throw new Error('App release long-operator workorder must be a JSON object.');
   }
@@ -100,7 +96,7 @@ function readOperatorEvents(filePath: string) {
     .filter((line) => line.length > 0)
     .map((line) => {
       try {
-        const parsed = JSON.parse(line) as unknown;
+        const parsed = parseJsonText(line);
         return isRecord(parsed) ? parsed : null;
       } catch {
         return null;

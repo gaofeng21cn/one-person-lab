@@ -1,14 +1,13 @@
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundary as refsOnlyAuthorityBoundary,
 } from './authority-boundary.ts';
+import type { JsonRecord } from '../../../kernel/json-record.ts';
 import {
   record,
   stringList,
   stringValue,
   uniqueStrings,
 } from './value-utils.ts';
-
-type JsonRecord = Record<string, unknown>;
 
 export function buildMemoryTraceProjection(workbench: JsonRecord) {
   const trace = record(workbench.memory_trace_projection);

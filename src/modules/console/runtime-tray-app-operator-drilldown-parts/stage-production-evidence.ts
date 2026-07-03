@@ -1,5 +1,12 @@
 import type { DomainManifestCatalogEntry } from '../../atlas/index.ts';
 import {
+  record,
+  recordList,
+  stringList,
+  stringValue,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
+import {
   buildFamilyStageAdmissionReview,
 } from '../../stagecraft/index.ts';
 import {
@@ -12,7 +19,6 @@ import {
   listExternalEvidenceReceipts,
 } from '../../ledger/index.ts';
 import type { FamilyStageSurfaceRef } from '../../stagecraft/index.ts';
-import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import {
   familyRuntimeCommandDomainId,
   stageProductionEvidenceRequestId,
@@ -35,28 +41,6 @@ type StageProductionEvidenceObligationStatus =
   | 'closed_by_observed_evidence'
   | 'blocked_by_domain_owned_typed_blocker'
   | 'open';
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
 
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];

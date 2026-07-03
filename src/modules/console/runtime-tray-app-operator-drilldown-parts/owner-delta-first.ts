@@ -1,34 +1,15 @@
-import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import { canonicalOwnerId } from '../../ledger/index.ts';
+import {
+  countValue as numberValue,
+  record,
+  recordList,
+  stringList,
+  stringValue,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundary,
 } from './authority-boundary.ts';
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
-function numberValue(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
-}
 
 function firstString(...values: unknown[]) {
   for (const value of values) {

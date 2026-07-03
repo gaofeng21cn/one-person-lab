@@ -1,4 +1,8 @@
-import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
+import {
+  countValue as numberValue,
+  record,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 import {
   appReleaseUserPathEvidenceSummary,
 } from './app-release-user-path.ts';
@@ -53,12 +57,6 @@ type AppOperatorDrilldownSummaryInput = {
   memoryArtifactLifecycleEvidenceProjection: JsonRecord;
 };
 
-function record(value: unknown): JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
-    ? value as JsonRecord
-    : {};
-}
-
 function list(value: unknown) {
   return Array.isArray(value) ? value : [];
 }
@@ -67,10 +65,6 @@ function stringList(value: unknown) {
   return Array.isArray(value)
     ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
     : [];
-}
-
-function numberValue(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
 function countBy(values: JsonRecord[], predicate: (value: JsonRecord) => boolean) {

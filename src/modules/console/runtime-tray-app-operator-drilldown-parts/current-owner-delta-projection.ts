@@ -1,17 +1,9 @@
 import { buildCurrentOwnerDeltaReadModel } from '../../ledger/index.ts';
-import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function numberValue(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
-}
+import {
+  countValue as numberValue,
+  record,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 
 export function buildAppDrilldownCurrentOwnerDeltaReadModel(input: {
   ownerDeltaFirst: JsonRecord;

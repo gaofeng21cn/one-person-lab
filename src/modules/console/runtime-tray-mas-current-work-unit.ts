@@ -2,6 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { spawn, spawnSync } from 'node:child_process';
 
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
 import type {
   JsonRecord,
   MasWorkspaceProjectionRef,
@@ -24,10 +26,6 @@ export type MasStudyProgressCurrentWorkUnitReadout = {
   source_refs: RuntimeTraySourceRef[];
   diagnostic: JsonRecord;
 };
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
 
 function numberFromEnv(value: unknown, fallback: number) {
   if (typeof value !== 'string' || value.trim().length === 0) {
@@ -204,7 +202,7 @@ function parseStudyProgressPayload(
   sourceRefs: RuntimeTraySourceRef[],
 ): { payload: JsonRecord } | MasStudyProgressCurrentWorkUnitReadout {
   try {
-    const parsed = JSON.parse(stdout) as unknown;
+    const parsed = parseJsonText(stdout);
     if (!isRecord(parsed)) {
       throw new Error('study_progress_stdout_not_object');
     }

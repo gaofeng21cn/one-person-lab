@@ -1,6 +1,4 @@
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
+import { stringValue as optionalString } from '../../kernel/json-record.ts';
 
 function normalizeStatusCode(status: string) {
   return status.trim().toLowerCase();

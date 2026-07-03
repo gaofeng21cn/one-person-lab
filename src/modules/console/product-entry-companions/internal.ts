@@ -9,18 +9,14 @@ import type {
   ProductEntryStartResumeSurface,
   ProductEntryStepInput,
 } from './types.ts';
+import { isRecord } from '../../../kernel/contract-validation.ts';
+import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import {
   validateFamilyDomainEntryContract as validateSharedFamilyDomainEntryContract,
   validateUserInteractionContract as validateSharedUserInteractionContract,
 } from '../../atlas/index.ts';
 
-export function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-export function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
+export { isRecord, optionalString };
 
 export function requireString(value: unknown, field: string) {
   const text = optionalString(value);

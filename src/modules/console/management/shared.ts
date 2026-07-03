@@ -2,7 +2,15 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import {
+  FrameworkContractError,
+  isRecord,
+} from '../../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../../kernel/json-file.ts';
+import {
+  stringList as jsonStringList,
+  stringValue as optionalString,
+} from '../../../kernel/json-record.ts';
 import { buildManagedShellCommandEnv, prepareManagedShellCommandCwd } from '../../connect/index.ts';
 import { normalizeCommandOutput } from '../../../kernel/terminal.ts';
 
@@ -137,22 +145,10 @@ export function uniqueStrings(values: Array<string | null | undefined>) {
   return [...new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value)))];
 }
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-export function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
+export { isRecord, optionalString };
 
 export function optionalStringList(value: unknown) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .map((entry) => optionalString(entry))
-    .filter((entry): entry is string => Boolean(entry));
+  return jsonStringList(value);
 }
 
 export function readOptionalJsonRecord(filePath: string | null) {
@@ -161,7 +157,7 @@ export function readOptionalJsonRecord(filePath: string | null) {
   }
 
   try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const parsed = parseJsonText(fs.readFileSync(filePath, 'utf8'));
     return isRecord(parsed) ? parsed : null;
   } catch {
     return null;
@@ -199,7 +195,7 @@ export function runJsonShellCommand(command: string | null, cwd: string) {
   }
 
   try {
-    const parsed = JSON.parse(result.stdout ?? '');
+    const parsed = parseJsonText(result.stdout ?? '');
     if (!isRecord(parsed)) {
       return {
         payload: null,

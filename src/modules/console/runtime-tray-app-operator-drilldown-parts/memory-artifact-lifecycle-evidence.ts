@@ -1,27 +1,13 @@
-import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
+import {
+  countValue as numberValue,
+  record,
+  stringList,
+  stringValue,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundary,
 } from './authority-boundary.ts';
-
-function record(value: unknown): JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
-    ? value as JsonRecord
-    : {};
-}
-
-function numberValue(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
 
 function readinessStatus(input: {
   observedRefCount: number;

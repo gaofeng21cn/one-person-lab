@@ -7,25 +7,13 @@ import {
   classifyExternalEvidenceReceiptRefs,
 } from '../ledger/index.ts';
 import { canonicalOwnerId } from '../ledger/index.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
+import {
+  recordList,
+  stringList,
+  stringValue,
+} from '../../kernel/json-record.ts';
 import type { JsonRecord } from './runtime-tray-snapshot-types.ts';
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
 
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];

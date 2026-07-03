@@ -1,3 +1,6 @@
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { stringValue as optionalString } from '../../kernel/json-record.ts';
+
 type JsonRecord = Record<string, unknown>;
 
 export interface ProgramCheckInput {
@@ -126,10 +129,6 @@ export interface PlatformTargetInput {
   not_yet?: string[];
 }
 
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
 function requireString(value: unknown, field: string) {
   const text = optionalString(value);
   if (!text) {
@@ -146,10 +145,10 @@ function requireBoolean(value: unknown, field: string) {
 }
 
 function requireRecord(value: unknown, field: string) {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+  if (!isRecord(value)) {
     throw new Error(`product entry program companion 缺少对象字段: ${field}`);
   }
-  return value as JsonRecord;
+  return value;
 }
 
 function readStringList(value: unknown, field: string) {
