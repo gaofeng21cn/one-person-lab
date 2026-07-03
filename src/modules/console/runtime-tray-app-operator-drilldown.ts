@@ -521,6 +521,10 @@ export function buildAppOperatorDrilldown(input: {
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/default_caller_deletion_evidence_refs', 'default_caller_deletion_evidence_refs'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/evidence_envelope', 'evidence_envelope'),
     sourceRef(
+      '/runtime_tray_snapshot/app_operator_drilldown/semantic_conventions',
+      'semantic_conventions',
+    ),
+    sourceRef(
       '/runtime_tray_snapshot/app_operator_drilldown/runtime_visualization_projection',
       'runtime_visualization_projection',
     ),
@@ -635,6 +639,7 @@ export function buildAppOperatorDrilldown(input: {
     domain_evidence_request_refs: evidenceRequests,
     production_evidence_tail_ledger: productionEvidenceTailLedger,
     evidence_envelope: evidenceEnvelope,
+    semantic_conventions: record(record(evidenceEnvelope).semantic_conventions),
     runtime_visualization_projection: runtimeVisualizationProjection,
     workstream_operating_loop: workstreamOperatingLoop,
     domain_current_work_unit_projection: domainCurrentWorkUnitProjection,

@@ -154,6 +154,14 @@ export function assertCoreAppOperatorDrilldownProjection(
   assert.equal(drilldown.summary.evidence_envelope_domain_ready_claim_count, 0);
   assert.equal(drilldown.summary.evidence_envelope_production_ready_claim_count, 0);
   assert.equal(drilldown.summary.evidence_envelope_artifact_authority_claim_count, 0);
+  const semanticConventions = drilldown.semantic_conventions; // reuse-first: allow existing drilldown readback under semantic conventions.
+  assert.equal(semanticConventions.surface_kind, 'opl_observability_export_readback_seed');
+  assert.equal(
+    semanticConventions.evidence_envelope_binding.source_surface,
+    'opl_evidence_envelope_projection',
+  );
+  assert.equal(semanticConventions.summary.body_included, false);
+  assert.equal(semanticConventions.authority_boundary.no_domain_ready_claim, true);
   assert.equal(Object.hasOwn(drilldown.summary, 'deprecated_alias_metadata'), false);
 
   assert.equal(drilldown.route_graph_refs.surface_kind, 'opl_app_drilldown_route_graph_refs');
