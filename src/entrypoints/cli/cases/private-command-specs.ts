@@ -14,6 +14,7 @@ import {
 } from '../../../modules/foundry-lab/standard-domain-agent-scaffold.ts';
 import { runFamilyAgentLegacyCleanupApply } from '../../../modules/foundry-lab/family-domain-agent-skeleton.ts';
 import { recordOmaProductionConsumptionReceipts } from '../../../modules/foundry-lab/oma-production-consumption-ledger.ts';
+import { repoTrackedOmaStageReplayMissingReceiptReceipts } from '../../../modules/foundry-lab/oma-stage-replay-receipts.ts';
 import { buildStandardDomainAgentScaffoldConsumptionEvidence } from '../../../modules/foundry-lab/standard-domain-agent-template-consumption.ts';
 import { runAgentExecutor, runAgentExecutorDoctor, runAgentExecutorRequestFile } from '../../../modules/runway/agent-executor.ts';
 import { launchDomainEntry } from '../../../modules/atlas/domain-launch.ts';
@@ -560,6 +561,7 @@ export function buildInternalCommandSpecs(
       handler: (args) => runFamilyRuntime(args, {
         runtimeSnapshotProvider: buildRuntimeTraySnapshot,
         dependencies: { resolveOplModuleExecCommand },
+        stageReplayMissingReceiptExtraReceipts: repoTrackedOmaStageReplayMissingReceiptReceipts(),
       }),
     },
     'stage-artifact': {

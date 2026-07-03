@@ -166,6 +166,9 @@ export async function runFamilyRuntime(
   options: {
     runtimeSnapshotProvider?: RuntimeTraySnapshotProvider;
     dependencies?: FamilyRuntimeDomainIntakeDependencies;
+    stageReplayMissingReceiptExtraReceipts?: Parameters<
+      typeof runFamilyRuntimeEvidenceWorklistCommand
+    >[0]['stageReplayMissingReceiptExtraReceipts'];
   } = {},
 ): Promise<Record<string, unknown>> {
   const parsed = parseFamilyRuntimeCommand(args);
@@ -413,7 +416,14 @@ export async function runFamilyRuntime(
       return runFamilyRuntimePaperAutonomySupervisorDecideCommand(parsed);
     }
     if (parsed.mode === 'evidence_worklist') {
-      return runFamilyRuntimeEvidenceWorklistCommand(parsed.input, {
+      const evidenceWorklistInput =
+        options.stageReplayMissingReceiptExtraReceipts
+          ? {
+              ...parsed.input,
+              stageReplayMissingReceiptExtraReceipts: options.stageReplayMissingReceiptExtraReceipts,
+            }
+          : parsed.input;
+      return runFamilyRuntimeEvidenceWorklistCommand(evidenceWorklistInput, {
         runtimeSnapshotProvider: options.runtimeSnapshotProvider,
       });
     }

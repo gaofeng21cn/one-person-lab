@@ -720,8 +720,12 @@ function buildDescriptor(entry: DomainManifestCatalogEntry) {
   };
 }
 
-function findDescriptorEntry(contracts: FrameworkContracts, domain: string) {
-  const catalog = buildDomainManifestCatalog(contracts).domain_manifests;
+function findDescriptorEntry(
+  contracts: FrameworkContracts,
+  domain: string,
+  options: { domainManifests?: DomainManifestCatalog } = {},
+) {
+  const catalog = options.domainManifests ?? buildDomainManifestCatalog(contracts).domain_manifests;
   const normalized = normalizeDomainSelection(domain);
   const entry = catalog.projects.find((candidate) => {
     const manifest = candidate.manifest;
@@ -962,9 +966,13 @@ export function buildFamilyAgentDescriptorList(
   };
 }
 
-export function buildFamilyAgentDescriptorInspect(contracts: FrameworkContracts, args: string[]) {
+export function buildFamilyAgentDescriptorInspect(
+  contracts: FrameworkContracts,
+  args: string[],
+  options: { domainManifests?: DomainManifestCatalog } = {},
+) {
   const { domain } = parseDescriptorArgs(args);
-  const entry = findDescriptorEntry(contracts, domain);
+  const entry = findDescriptorEntry(contracts, domain, options);
   const descriptor = buildDescriptor(entry);
   return {
     version: 'g2',

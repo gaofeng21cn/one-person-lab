@@ -21,6 +21,8 @@ import {
   buildFamilyAgentDescriptorInspect,
   buildFamilyAgentDescriptorList,
 } from '../../../modules/atlas/family-domain-agent-descriptor.ts';
+import { buildDomainManifestCatalog } from '../../../modules/atlas/domain-manifest/catalog-builder.ts';
+import { withOplMetaAgentDescriptorEntry } from '../../../modules/foundry-lab/opl-meta-agent-descriptor-adapter.ts';
 import {
   buildGeneratedAgentInterfaces,
   buildDomainPackCompilerInspect,
@@ -153,8 +155,14 @@ export function buildPublicCommandSpecs(
   const scholarSkillsCommandSpecs = buildScholarSkillsCommandSpecs(getContracts);
   const updateCommandSpecs = buildUpdateCommandSpecs(getContracts);
   const workspaceCommandSpecs = buildWorkspaceCommandSpecs(commandSpecs);
+  const buildAgentDescriptorManifests = (options: Parameters<typeof buildDomainManifestCatalog>[1] = {}) =>
+    withOplMetaAgentDescriptorEntry(buildDomainManifestCatalog(getContracts(), options).domain_manifests);
   const loadAgentDescriptorsForPackCompiler = () =>
     buildFamilyAgentDescriptorList(getContracts(), {
+      domainManifests: buildAgentDescriptorManifests({
+        manifestCommandTimeoutMs: 120_000,
+        manifestCommandTimeoutPolicy: 'fixed',
+      }),
       manifestCommandTimeoutMs: 120_000,
       manifestCommandTimeoutPolicy: 'fixed',
     }).family_agent_descriptors.descriptors as Record<string, unknown>[];
@@ -595,7 +603,9 @@ export function buildPublicCommandSpecs(
       group: 'domain',
       handler: (args) => {
         assertNoArgs(args, publicCommandSpecs['agents descriptors']);
-        return buildFamilyAgentDescriptorList(getContracts());
+        return buildFamilyAgentDescriptorList(getContracts(), {
+          domainManifests: buildAgentDescriptorManifests(),
+        });
       },
     },
     'agents descriptor': {
@@ -603,7 +613,9 @@ export function buildPublicCommandSpecs(
       summary: 'Inspect one unified domain-agent descriptor without embedding domain memory or instruction bodies.',
       examples: ['opl agents descriptor --domain mas'],
       group: 'domain',
-      handler: (args) => buildFamilyAgentDescriptorInspect(getContracts(), args),
+      handler: (args) => buildFamilyAgentDescriptorInspect(getContracts(), args, {
+        domainManifests: buildAgentDescriptorManifests(),
+      }),
     },
     'agents pack-compiler': {
       usage: 'opl agents pack-compiler [--family-defaults]',
