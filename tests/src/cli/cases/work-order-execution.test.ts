@@ -8,6 +8,7 @@ import {
   createOverlappingFakeCodexWorkOrderExecutor,
   createWorkOrderTargetRepo,
   readJson,
+  writeJson,
   writeExecutableWorkOrder,
   writeExecutableWorkOrderWithOwnerCloseoutHook,
   writePassingAgentLabSuite,
@@ -97,6 +98,40 @@ test('work-order execute dry-run plans without launching Codex or opening a targ
     const workOrderPath = path.join(fixtureRoot, 'developer-patch-work-order.json');
     createWorkOrderTargetRepo(targetRepo);
     writeExecutableWorkOrder(workOrderPath, targetRepo);
+    const workOrder = readJson(workOrderPath);
+    writeJson(workOrderPath, {
+      ...workOrder,
+      work_order_id: 'mas_figure_quality_work_order',
+      target_agent: {
+        domain_id: 'mas',
+        repo_dir: targetRepo,
+      },
+      capability_hits: [
+        {
+          capability_id: 'medical-figure-design',
+          canonical_target_paths: ['skills/medical-figure-design/SKILL.md'],
+          required_verification_refs: ['mas-scholar-skills:scripts/verify.sh'],
+          forbidden_surfaces: ['paper_truth', 'publication_readiness', 'owner_receipt_body'],
+          owner_closeout_boundary: {
+            owner: 'mas-scholar-skills',
+            required_return_shapes: ['owner_receipt_ref', 'typed_blocker_ref', 'human_gate_ref', 'route_back_ref'],
+            oma_can_write_owner_receipt_body: false,
+            agent_lab_can_create_typed_blocker: false,
+            target_owner_acceptance_required: true,
+          },
+        },
+      ],
+      canonical_target_paths: ['skills/medical-figure-design/SKILL.md'],
+      required_verification_refs: ['mas-scholar-skills:scripts/verify.sh'],
+      forbidden_surfaces: ['paper_truth', 'publication_readiness', 'owner_receipt_body'],
+      owner_closeout_boundary: {
+        owner: 'mas-scholar-skills',
+        required_return_shapes: ['owner_receipt_ref', 'typed_blocker_ref', 'human_gate_ref', 'route_back_ref'],
+        oma_can_write_owner_receipt_body: false,
+        agent_lab_can_create_typed_blocker: false,
+        target_owner_acceptance_required: true,
+      },
+    });
 
     const output = runCli([
       'work-order',
@@ -126,6 +161,19 @@ test('work-order execute dry-run plans without launching Codex or opening a targ
     assert.equal(fs.existsSync(output.work_order_execution.artifacts.dry_run_receipt_path), true);
     const receipt = readJson(output.work_order_execution.artifacts.dry_run_receipt_path);
     assert.equal(receipt.surface_kind, 'opl_work_order_codex_execution_dry_run_receipt');
+    assert.deepEqual(receipt.capability_resolution.canonical_target_paths, [
+      'skills/medical-figure-design/SKILL.md',
+    ]);
+    assert.equal(receipt.capability_resolution.capability_hits[0].capability_id, 'medical-figure-design');
+    assert.deepEqual(receipt.capability_resolution.forbidden_surfaces, [
+      'paper_truth',
+      'publication_readiness',
+      'owner_receipt_body',
+      'target_domain_truth',
+      'target_quality_or_export_verdict',
+    ]);
+    assert.equal(receipt.capability_resolution.owner_closeout_boundary.owner, 'mas-scholar-skills');
+    assert.equal(receipt.planned_closeout.closeout_requires_target_owner, true);
     assert.deepEqual(receipt.planned_verification.commands, [
       'test -f docs/efficiency.md',
       'git diff --check',

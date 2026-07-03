@@ -186,6 +186,50 @@ test('Self-evolution work order candidate binds failure evidence to capability h
   assert.equal(workOrder.authority_boundary.can_claim_production_ready, false);
 });
 
+test('Self-evolution non-live fixtures route MAS and RCA feedback tokens to capability owners', () => {
+  const masWorkOrder = buildSelfEvolutionWorkOrderCandidate({
+    targetAgentId: 'mas',
+    feedbackRef: 'user-feedback:mas/figure-quality',
+    failureEvidenceRefs: ['reviewer-evidence-ref:mas/figure-quality'],
+    failureTokens: ['figure_quality'],
+    capabilityHits: [
+      {
+        capabilityId: 'medical-figure-design',
+        canonicalTargetPaths: ['external_repo:mas-scholar-skills/skills/medical-figure-design/SKILL.md'],
+        requiredVerificationRefs: ['external_repo:mas-scholar-skills/scripts/verify.sh'],
+        forbiddenSurfaces: ['paper_truth', 'publication_readiness', 'owner_receipt_body'],
+        owner: 'mas-scholar-skills',
+      },
+    ],
+  });
+  const rcaWorkOrder = buildSelfEvolutionWorkOrderCandidate({
+    targetAgentId: 'rca',
+    feedbackRef: 'user-feedback:rca/ppt-visual-density',
+    failureEvidenceRefs: ['visual-review-ref:rca/contact-sheet-density'],
+    failureTokens: ['ppt_visual_density'],
+    capabilityHits: [
+      {
+        capabilityId: 'rca-ppt-visual-director',
+        canonicalTargetPaths: ['agent/professional_skills/rca-ppt-visual-director/SKILL.md'],
+        requiredVerificationRefs: ['tests/rca-ppt-three-route-agent-lab-suite.test.ts'],
+        forbiddenSurfaces: ['visual_truth_artifacts', 'owner_receipts', 'export_verdicts'],
+        owner: 'redcube-ai',
+      },
+    ],
+  });
+
+  assert.deepEqual(masWorkOrder.failure_tokens, ['figure_quality']);
+  assert.deepEqual(masWorkOrder.canonical_target_paths, [
+    'external_repo:mas-scholar-skills/skills/medical-figure-design/SKILL.md',
+  ]);
+  assert.equal(masWorkOrder.capability_hits[0].owner_closeout_boundary.owner, 'mas-scholar-skills');
+  assert.deepEqual(rcaWorkOrder.failure_tokens, ['ppt_visual_density']);
+  assert.deepEqual(rcaWorkOrder.canonical_target_paths, [
+    'agent/professional_skills/rca-ppt-visual-director/SKILL.md',
+  ]);
+  assert.equal(rcaWorkOrder.capability_hits[0].owner_closeout_boundary.owner, 'redcube-ai');
+});
+
 test('FeedbackOps contract declares universal trigger and no-authority boundary', () => {
   const contract = JSON.parse(fs.readFileSync(
     path.join(contractsDir, 'agent-lab-contract.json'),

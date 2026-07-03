@@ -613,6 +613,7 @@ function normalizeOutputDir(outputDir: string | null | undefined, workOrderId: s
 }
 
 function buildDryRunReceipt(input: {
+  workOrder: JsonRecord;
   workOrderId: string;
   workOrderPath: string;
   targetAgent: JsonRecord;
@@ -628,6 +629,17 @@ function buildDryRunReceipt(input: {
   executionSurfaces: ReturnType<typeof buildExecutionSurfaces>;
   presentation: WorkOrderExecutionPresentation;
 }) {
+  const implementationControls = isRecord(input.workOrder.implementation_controls)
+    ? input.workOrder.implementation_controls
+    : {};
+  const machineCloseoutRefs = isRecord(input.workOrder.machine_closeout_refs)
+    ? input.workOrder.machine_closeout_refs
+    : {};
+  const forbiddenSurfaces = [
+    ...stringList(input.workOrder.forbidden_surfaces),
+    ...stringList(implementationControls.forbidden_target_paths_or_surfaces),
+  ];
+  const canonicalTargetPaths = stringList(input.workOrder.canonical_target_paths);
   return {
     surface_kind: 'opl_work_order_codex_execution_dry_run_receipt',
     version: 'opl.work-order-execution.dry-run.v1',
@@ -650,6 +662,23 @@ function buildDryRunReceipt(input: {
     planned_verification: {
       commands: input.verificationCommands,
       required_verification_refs: input.requiredVerificationRefs,
+    },
+    capability_resolution: {
+      capability_hits: Array.isArray(input.workOrder.capability_hits) ? input.workOrder.capability_hits : [],
+      canonical_target_paths: canonicalTargetPaths.length > 0
+        ? canonicalTargetPaths
+        : stringList(input.workOrder.target_repo_file_hints),
+      required_verification_refs: input.requiredVerificationRefs,
+      forbidden_surfaces: [...new Set(forbiddenSurfaces)],
+      owner_closeout_boundary: isRecord(input.workOrder.owner_closeout_boundary)
+        ? input.workOrder.owner_closeout_boundary
+        : null,
+    },
+    planned_closeout: {
+      owner_route_refs: stringList(input.workOrder.owner_route_refs),
+      target_owner_receipt_or_typed_blocker_ref:
+        optionalString(machineCloseoutRefs.target_owner_receipt_or_typed_blocker_ref),
+      closeout_requires_target_owner: true,
     },
     no_executor_launch_proof: {
       codex_process_started: false,
@@ -786,6 +815,7 @@ async function executeDeveloperWorkOrder(
   }));
   if (options.dryRun === true) {
     const dryRunReceipt = buildDryRunReceipt({
+      workOrder,
       workOrderId,
       workOrderPath,
       targetAgent,

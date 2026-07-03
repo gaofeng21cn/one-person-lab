@@ -1,0 +1,103 @@
+import { spawnSync } from 'node:child_process';
+
+import { assert, fs, os, path, repoRoot, test } from '../helpers.ts';
+import { readJson } from './agent-lab-work-order-fixtures.ts';
+
+function writeJson(filePath: string, payload: unknown): void {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`);
+}
+
+function writeCapabilityRepo(root: string, overrides: Record<string, unknown> = {}) {
+  fs.mkdirSync(path.join(root, 'contracts'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'agent', 'professional_skills', 'demo'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'scripts'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'agent', 'professional_skills', 'demo', 'SKILL.md'), '---\nname: demo\n---\n');
+  fs.writeFileSync(path.join(root, 'scripts', 'verify.sh'), '#!/usr/bin/env bash\nexit 0\n');
+  writeJson(path.join(root, 'contracts', 'capability_map.json'), {
+    surface_kind: 'opl_standard_agent_capability_map',
+    schema_version: 'standard-agent-capability-map.v1',
+    domain_id: path.basename(root),
+    owner: 'demo-owner',
+    authority_boundary: {
+      can_write_domain_truth: false,
+    },
+    capabilities: [
+      {
+        capability_id: 'demo-professional-skill',
+        surface_role: 'professional_skill',
+        capability_kind: 'professional_skill',
+        canonical_owner: 'demo-owner',
+        canonical_target_paths: ['agent/professional_skills/demo/SKILL.md'],
+        verification_refs: ['scripts/verify.sh#demo'],
+        forbidden_surfaces: ['owner_receipts'],
+        owner_closeout_boundary_ref: 'contracts/capability_map.json#/owner_closeout_boundary',
+        ...overrides,
+      },
+    ],
+  });
+}
+
+test('capability-map audit passes valid cross-repo capability maps', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-capability-audit-'));
+  try {
+    const first = path.join(fixtureRoot, 'first-agent');
+    const second = path.join(fixtureRoot, 'second-agent');
+    writeCapabilityRepo(first);
+    writeCapabilityRepo(second);
+
+    const result = spawnSync('node', [
+      path.join(repoRoot, 'scripts', 'capability-map-audit.mjs'),
+      first,
+      second,
+      '--json',
+    ], { encoding: 'utf8' });
+
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    const payload = readJsonPayload(result.stdout);
+    assert.equal(payload.status, 'passed');
+    assert.equal(payload.checked_repo_count, 2);
+    assert.deepEqual(payload.results.map((entry: Record<string, unknown>) => entry.status), ['passed', 'passed']);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('capability-map audit blocks unresolved capability paths', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-capability-audit-bad-'));
+  try {
+    const repo = path.join(fixtureRoot, 'bad-agent');
+    writeCapabilityRepo(repo, {
+      canonical_target_paths: ['agent/professional_skills/missing/SKILL.md'],
+    });
+
+    const result = spawnSync('node', [
+      path.join(repoRoot, 'scripts', 'capability-map-audit.mjs'),
+      repo,
+      '--json',
+    ], { encoding: 'utf8' });
+
+    assert.notEqual(result.status, 0);
+    const payload = readJsonPayload(result.stdout);
+    assert.equal(payload.status, 'blocked');
+    assert.equal(
+      payload.results[0].blockers.includes(
+        'demo-professional-skill:missing_canonical_path:agent/professional_skills/missing/SKILL.md',
+      ),
+      true,
+    );
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+function readJsonPayload(stdout: string): Record<string, any> {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-capability-audit-output-'));
+  try {
+    const filePath = path.join(fixtureRoot, 'payload.json');
+    fs.writeFileSync(filePath, stdout);
+    return readJson(filePath);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+}
