@@ -281,6 +281,37 @@ test('reuse-first scan allows update rollback only as command registry metadata'
   assert.equal(output.findings[0].path, 'contracts/other/update-contract.json');
 });
 
+test('reuse-first scan allows managed update owner boundary metadata only in the owner boundary file', () => {
+  const fixture = makeFixture();
+  writeFixtureFile(
+    fixture,
+    'src/modules/connect/managed-update-owner-boundary.ts',
+    [
+      "export type ManagedUpdateOperation = 'status' | 'rollback';",
+      'const requiredFields = ["source_manifest_ref", "from_digest", "to_digest", "post_apply_hooks", "rollback_ref"];',
+      '',
+    ].join('\n'),
+  );
+  writeFixtureFile(
+    fixture,
+    'src/modules/connect/other-update.ts',
+    'const requiredFields = ["source_manifest_ref", "from_digest", "to_digest", "post_apply_hooks", "rollback_ref"];\n',
+  );
+
+  const result = spawnSync(process.execPath, [
+    script,
+    '--root',
+    fixture,
+    '--contract',
+    path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-governance.json'),
+  ], { encoding: 'utf8' });
+  const output = JSON.parse(result.stdout);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(output.finding_count, 1);
+  assert.equal(output.findings[0].path, 'src/modules/connect/other-update.ts');
+});
+
 function makeFixture() {
   const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-reuse-first-scan-'));
   const contractDir = path.join(fixture, 'contracts', 'opl-framework');

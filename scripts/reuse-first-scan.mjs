@@ -443,8 +443,28 @@ function findLineMatches(relativePath, lineNumber, line) {
 }
 
 function isAllowedMetadataLine(relativePath, line) {
-  return relativePath === 'contracts/opl-framework/cli-command-registry.json'
-    && line.includes('"update rollback"');
+  return (
+    relativePath === 'contracts/opl-framework/cli-command-registry.json'
+    && line.includes('"update rollback"')
+  )
+    || isAllowedManagedUpdateOwnerBoundaryLine(relativePath, line);
+}
+
+function isAllowedManagedUpdateOwnerBoundaryLine(relativePath, line) {
+  if (line.includes('managed-update-owner-boundary.ts')) {
+    return true;
+  }
+  if (relativePath !== 'src/modules/connect/managed-update-owner-boundary.ts') {
+    return false;
+  }
+  return [
+    'ManagedUpdateOperation',
+    'source_manifest_ref',
+    'from_digest',
+    'to_digest',
+    'post_apply_hooks',
+    'rollback_ref',
+  ].some((term) => line.includes(term));
 }
 
 function fail(message) {

@@ -5,7 +5,7 @@ import { isRecord } from '../../kernel/contract-validation.ts';
 import { optionalString, readJsonPayloadFile } from '../../kernel/json-file.ts';
 import { stringArrayValue } from '../../kernel/json-record.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
-import type { ManagedUpdateOperation, ManagedUpdateProviderAdapterId } from './managed-update-kernel.ts';
+import type { ManagedUpdateOperation, ManagedUpdateProviderAdapterId } from './managed-update-owner-boundary.ts';
 
 export type ManagedUpdateReceiptApplyMode =
   | 'projection_only'

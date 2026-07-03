@@ -6,7 +6,7 @@ import {
   isRecord,
 } from '../../kernel/contract-validation.ts';
 import { readJsonFileOrNull } from '../../kernel/json-file.ts';
-import type { ManagedUpdateOperation } from './managed-update-kernel.ts';
+import type { ManagedUpdateOperation } from './managed-update-owner-boundary.ts';
 import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 
 const MANAGED_UPDATE_KERNEL_ID = 'opl_managed_updater_kernel';

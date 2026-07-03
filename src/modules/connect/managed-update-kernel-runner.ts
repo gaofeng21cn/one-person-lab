@@ -17,10 +17,12 @@ import { isRecord } from '../../kernel/contract-validation.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import {
   buildManagedUpdateKernelProjection,
-  type ManagedUpdateKernelInput,
-  type ManagedUpdateOperation,
-  type ManagedUpdateProviderAdapterId,
 } from './managed-update-kernel.ts';
+import type {
+  ManagedUpdateKernelInput,
+  ManagedUpdateProviderAdapterId,
+} from './managed-update-owner-boundary.ts';
+import type { ManagedUpdateOperation } from './managed-update-owner-boundary.ts';
 import { resolveFrameworkUpdateTargetRoot, runOplFrameworkSelfRollback } from './system-installation/framework-self-update.ts';
 import { resolveProjectRoot } from './system-installation/shared.ts';
 import {
