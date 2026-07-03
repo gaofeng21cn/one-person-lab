@@ -1,0 +1,97 @@
+{
+  "contract_kind": "opl_reuse_first_governance.v1",
+  "surface_kind": "opl_reuse_first_governance",
+  "owner": "one-person-lab",
+  "purpose": "Keep OPL family platform work reuse-first: mature substrate, standard library, native platform, or already-owned helper before new hand-rolled generic runtime, schema, CLI, package, update, workspace, or observability machinery.",
+  "state": "active_contract",
+  "machine_boundary": "This contract feeds the advisory reuse-first scan. It does not prove release readiness, production readiness, domain readiness, owner acceptance, or physical delete authorization.",
+  "default_mode": "advisory",
+  "strict_mode": {
+    "intended_use": "diff_added_lines_only",
+    "default_diff_ref": "origin/main",
+    "failure_condition": "new finding on added lines without an inline reuse-first allow marker"
+  },
+  "allow_markers": [
+    "reuse-first: allow",
+    "reuse-first: exception",
+    "ponytail: allow"
+  ],
+  "scan": {
+    "roots": [
+      "src",
+      "scripts",
+      "tests",
+      "contracts"
+    ],
+    "extensions": [
+      ".ts",
+      ".mts",
+      ".js",
+      ".mjs",
+      ".json"
+    ],
+    "ignored_parts": [
+      "node_modules",
+      "dist",
+      "build",
+      "coverage",
+      ".git",
+      ".worktrees"
+    ],
+    "ignored_paths": [
+      "contracts/opl-framework/reuse-first-governance.json",
+      "scripts/reuse-first-scan.mjs",
+      "tests/src/reuse-first-scan.test.ts"
+    ]
+  },
+  "patterns": [
+    {
+      "id": "handwritten_json_boundary",
+      "severity": "medium",
+      "regex": "\\b(function|const)\\s+(isRecord|optionalString|parseArgs)\\b|JSON\\.parse\\(",
+      "reason": "Potential hand-written schema, JSON, or CLI boundary. Prefer a shared schema/CLI boundary or explain why stdlib/local helper is enough.",
+      "preferred_reuse": [
+        "shared schema registry",
+        "JSON Schema/Ajv when contract-first",
+        "Zod when TypeScript-first",
+        "central CLI parser/registry"
+      ]
+    },
+    {
+      "id": "custom_runtime_queue",
+      "severity": "high",
+      "regex": "\\b(CREATE TABLE IF NOT EXISTS (tasks|queue_holds)|lease_owner|dead_letter|scheduler_dir|max_attempts)\\b",
+      "reason": "Potential hand-rolled durable queue, retry, lease, scheduler, or dead-letter surface. Prefer Temporal durable workflow/task queue/retry/schedule and keep local stores projection-only.",
+      "preferred_reuse": [
+        "Temporal workflow history",
+        "Temporal task queue",
+        "Temporal retry policy",
+        "Temporal schedule"
+      ]
+    },
+    {
+      "id": "custom_update_or_package_manager",
+      "severity": "medium",
+      "regex": "\\b(ManagedUpdateOperation|rollback|post_apply_hooks|source_manifest_ref|to_digest|from_digest)\\b",
+      "reason": "Potential hand-rolled updater or package manager surface. Prefer owner-routed updater boundaries and content-addressed artifact descriptors.",
+      "preferred_reuse": [
+        "App-owned updater",
+        "OCI/content-addressed descriptor",
+        "owner-specific materializer",
+        "receipt projection"
+      ]
+    },
+    {
+      "id": "custom_observability_ledger",
+      "severity": "medium",
+      "regex": "\\b(evidence_ledger|receipt_ledger|attempt ledger|runtime ledger|drilldown)\\b",
+      "reason": "Potential private observability ledger. Prefer OpenTelemetry-style trace/metric/log/event vocabulary plus authority refs.",
+      "preferred_reuse": [
+        "OpenTelemetry semantic conventions",
+        "trace/span",
+        "metrics",
+        "append-only authority refs"
+      ]
+    }
+  ]
+}

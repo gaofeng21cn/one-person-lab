@@ -259,7 +259,7 @@ OpenTelemetry 给 OPL 的结论：可观测性不要继续扩张成多个私有 
 
 | 顺序 | 工作项 | 当前完成度 | 状态 | 当前证据 | 下一步 |
 | --- | --- | ---: | --- | --- | --- |
-| 1 | Reuse-first governance gate | 25% | `partial` | 本文落了审计/计划；现有 AGENTS 有“能复用别手搓”原则，但缺可扫描 gate。 | Phase 0：落 machine-readable inventory 和 lint/report。 |
+| 1 | Reuse-first governance gate | 65% | `partial` | 已落 `contracts/opl-framework/reuse-first-governance.json`、`scripts/reuse-first-scan.mjs`、`npm run reuse-first:scan` 和 `npm run reuse-first:scan:diff`；full scan 是历史风险盘点，diff scan 是新增行守门。 | 继续把 high-risk categories 绑定到 CI / review 入口，并按后续 phases 消化现有 findings。 |
 | 2 | Schema boundary consolidation | 10% | `not_started` | 依赖里没有 Zod/Ajv；大量 hand-written JSON/readback helper。 | Phase 1：选 schema engine，迁高风险 receipts/descriptors/readbacks。 |
 | 3 | CLI parser/command registry | 15% | `partial` | `opl` command surface 已存在，但 parser/option/schema 分散。 | Phase 2：引入 Commander/Yargs registry，迁 top commands。 |
 | 4 | Runway Temporal-first runtime | 40% | `partial` | Temporal SDK 已是一等依赖，docs 已声明 Temporal production substrate；但 SQLite queue/attempt/scheduler 仍厚。 | Phase 3：Temporal workflow/activity/schedule 接管 durable lifecycle。 |
@@ -297,7 +297,7 @@ OpenTelemetry 给 OPL 的结论：可观测性不要继续扩张成多个私有 
 | 吸收外部成熟工程经验 | `done` | 100% | 已引用 Temporal、Kubernetes、Zod/Ajv、Commander/Yargs、OCI、Backstage、OpenTelemetry 官方/一手文档。 | 未做 benchmark 或 PoC。 | Phase 1-6 中对候选模块做 ADR/PoC。 |
 | 给出理想态一步到位计划 | `done` | 100% | `一步到位落地计划` 给出 Phase 0-10、完成门和建议顺序。 | 计划尚未实现。 | 用户确认后按顺序开隔离 lanes。 |
 | 当前完成度和建议落地顺序 | `done` | 100% | `当前完成度与建议顺序` 表逐项给出百分比、状态、证据和下一步。 | 百分比是审计判断，不是 runtime/readiness evidence。 | 真正落地时每 phase 重新用 fresh evidence 校准。 |
-| 彻底解决所有代码风险 | `not_started` | 0% | 本轮写集限定在 `docs/active/**`；未触碰 source/contracts/tests/runtime data。 | 需要多 phase、跨 repo、隔离 worktree、owner route、验证和吸收。 | 从 Phase 0 开始执行；每个 phase 都有 source/contract/CLI/runtime verification gate。 |
+| 彻底解决所有代码风险 | `partial` | 10% | Phase 0 已新增可执行 reuse-first governance scan；`node --test tests/src/reuse-first-scan.test.ts`、`npm run reuse-first:scan -- --max-findings 5`、`npm run reuse-first:scan:diff -- --max-findings 20`、`npm run typecheck` 和 `git diff --check` 已通过/可读。 | Runway Temporal-first、schema/CLI registry、managed update split、pack/workspace standardization、domain/App boundary 和 observability 仍需代码/合同落地。 | 并行 lanes 继续推进 Phase 1-10；每条 lane 独立验证后吸收回 main。 |
 
 ## Forbidden Claims
 
