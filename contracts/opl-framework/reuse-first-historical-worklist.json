@@ -34,7 +34,7 @@
       "phase": "Phase 1/2",
       "action": "migrate_to_schema_registry_or_shared_json_boundary",
       "expiry": "2026-09-30",
-      "decision_ref": "docs/active/reuse-first-platform-risk-audit-and-landing-plan.md#phase-1-schema-boundary-consolidation",
+      "decision_ref": "human_doc:reuse-first-platform-risk-audit-and-landing-plan#phase-1-schema-boundary-consolidation",
       "false_ready_guard": [
         "accepted migration worklist means the historical finding still exists until migrated"
       ]
@@ -52,7 +52,7 @@
       "phase": "Phase 4/5",
       "action": "move_durable_lifecycle_to_temporal_and_keep_local_store_projection_only",
       "expiry": "2026-09-30",
-      "decision_ref": "docs/active/reuse-first-platform-risk-audit-and-landing-plan.md#phase-4-runway-temporal-first-runtime"
+      "decision_ref": "human_doc:reuse-first-platform-risk-audit-and-landing-plan#phase-4-runway-temporal-first-runtime"
     },
     {
       "id": "phase6-src-modules-update-package",
@@ -67,7 +67,7 @@
       "phase": "Phase 6/7",
       "action": "route_update_and_package_materialization_through_owner_boundary",
       "expiry": "2026-10-31",
-      "decision_ref": "docs/active/reuse-first-platform-risk-audit-and-landing-plan.md#phase-6-managed-update-split"
+      "decision_ref": "human_doc:reuse-first-platform-risk-audit-and-landing-plan#phase-6-managed-update-split"
     },
     {
       "id": "phase10-src-modules-observability",
@@ -82,7 +82,7 @@
       "phase": "Phase 10",
       "action": "map_private_ledger_readbacks_to_opentelemetry_semantic_conventions",
       "expiry": "2026-10-31",
-      "decision_ref": "docs/active/reuse-first-platform-risk-audit-and-landing-plan.md#phase-10-no-resurrection-governance"
+      "decision_ref": "human_doc:reuse-first-platform-risk-audit-and-landing-plan#phase-10-no-resurrection-governance"
     },
     {
       "id": "phase2-cli-entrypoint-boundaries",
@@ -99,7 +99,7 @@
       "phase": "Phase 2",
       "action": "move_cli_payload_parsing_to_command_registry_and_shared_json_boundary",
       "expiry": "2026-09-30",
-      "decision_ref": "docs/active/reuse-first-platform-risk-audit-and-landing-plan.md#phase-2-cli-parsercommand-registry"
+      "decision_ref": "human_doc:reuse-first-platform-risk-audit-and-landing-plan#phase-2-cli-parsercommand-registry"
     },
     {
       "id": "phase0-contract-provenance-boundaries",
@@ -133,7 +133,7 @@
       "phase": "Phase 0/10",
       "action": "keep_scripts_thin_or_move_reusable_logic_to_owned_module_before_expiry",
       "expiry": "2026-10-31",
-      "decision_ref": "docs/active/reuse-first-platform-risk-audit-and-landing-plan.md#phase-0-reuse-first-gate--inventory-freeze"
+      "decision_ref": "human_doc:reuse-first-platform-risk-audit-and-landing-plan#phase-0-reuse-first-gate-inventory-freeze"
     },
     {
       "id": "phase10-test-and-fixture-projections",
