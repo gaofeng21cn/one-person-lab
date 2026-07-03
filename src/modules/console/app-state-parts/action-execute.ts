@@ -794,8 +794,8 @@ async function executeDirectAppAction(
     const reload = settingsReloadCodexSurfacePayload(options.payload);
     return {
       delegatedSurface: reload.scope === 'workspace'
-        ? 'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <target_path>'
-        : 'opl connect sync-skills --domain scholarskills --scope quest --target-quest <target_path>',
+        ? 'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <target_path>'
+        : 'opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest <target_path>',
       result: options.dryRun
         ? buildSettingsControlCenterDryRun(options.actionId, options.payload)
         : syncFamilySkillPacks({
@@ -914,7 +914,7 @@ async function executeDirectAppAction(
   if (options.actionId === 'scholarskills_workspace_sync') {
     const workspaceRoot = scholarskillsWorkspaceRootPayload(options.payload);
     return {
-      delegatedSurface: 'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <workspace_root>',
+      delegatedSurface: 'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace_root>',
       result: options.dryRun
         ? {
             skill_sync: {
@@ -924,7 +924,7 @@ async function executeDirectAppAction(
               scope: 'workspace',
               target_workspace: workspaceRoot,
               target_skill_path: `${workspaceRoot}/.codex/skills/mas-scholar-skills`,
-              command: `opl connect sync-skills --domain scholarskills --scope workspace --target-workspace ${workspaceRoot} --json`,
+              command: `opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace ${workspaceRoot} --json`,
               authority_boundary: {
                 can_write_domain_truth: false,
                 can_sign_owner_receipt: false,
@@ -948,7 +948,7 @@ async function executeDirectAppAction(
   if (options.actionId === 'scholarskills_quest_sync') {
     const questRoot = scholarskillsQuestRootPayload(options.payload);
     return {
-      delegatedSurface: 'opl connect sync-skills --domain scholarskills --scope quest --target-quest <quest_root>',
+      delegatedSurface: 'opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest <quest_root>',
       result: options.dryRun
         ? {
             skill_sync: {
@@ -958,7 +958,7 @@ async function executeDirectAppAction(
               scope: 'quest',
               target_quest: questRoot,
               target_skill_path: `${questRoot}/.codex/skills/mas-scholar-skills`,
-              command: `opl connect sync-skills --domain scholarskills --scope quest --target-quest ${questRoot} --json`,
+              command: `opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest ${questRoot} --json`,
               authority_boundary: {
                 can_write_domain_truth: false,
                 can_sign_owner_receipt: false,

@@ -25,7 +25,7 @@ OPL family domain agent 默认不写入顶层 `[mcp_servers.*]` standalone serve
 
 这里的 generated surface 是 Codex 可见暴露面，不是默认 companion skill sync 清单。Full runtime 可以携带 OPL Meta Agent 或其他 skill/module payload，但随包存在不等于已经写入用户级 `~/.codex/skills`；是否写入由 `opl connect sync-skills`、startup maintenance 或显式 managed companion sync 决定。
 
-MAS Scholar Skills 采用 profile-driven 同步模型：MAS profile/overlay 决定 required/default pack，OPL Connect 只负责分发、安装、同步和发现。当前 `mas-scholar-skills` 总入口是 required/default pack；`medical-research-lit`、`medical-manuscript-writing`、`medical-manuscript-review`、`medical-figure-design`、`medical-statistical-review`、`medical-table-design`、`medical-submission-prep`、`medical-data-governance` 是默认 medical-paper professional specialist pack。MAS 的 `write`、`review`、`figure`、`data/cohort` 等 stage 主提示词留在 MAS 仓内，专业 Skill 从 MAS Scholar Skills 同步。source repo 未物化这些目录时，`opl connect skills --domain scholarskills --json` 和 `opl connect sync-skills --domain scholarskills ... --json` 必须显示 `available-but-not-materialized` 或 `source-missing`，不能把缺目录猜成已安装。Skill 包只是可同步能力源；MAS runtime 继续持有 owner gate、quality/domain truth、clinical data body/source readiness、owner receipt、typed blocker、runtime queue 与 publication/export readiness。
+MAS Scholar Skills 采用 profile-driven 同步模型：MAS profile/overlay 决定 required/default pack，OPL Connect 只负责分发、安装、同步和发现。当前 `mas-scholar-skills` 总入口是 required/default pack；`medical-research-lit`、`medical-manuscript-writing`、`medical-manuscript-review`、`medical-figure-design`、`medical-statistical-review`、`medical-table-design`、`medical-submission-prep`、`medical-data-governance` 是默认 medical-paper professional specialist pack。MAS 的 `write`、`review`、`figure`、`data/cohort` 等 stage 主提示词留在 MAS 仓内，专业 Skill 从 MAS Scholar Skills 同步。source repo 未物化这些目录时，`opl connect skills --domain mas-scholar-skills --json` 和 `opl connect sync-skills --domain mas-scholar-skills ... --json` 必须显示 `available-but-not-materialized` 或 `source-missing`，不能把缺目录猜成已安装。Skill 包只是可同步能力源；MAS runtime 继续持有 owner gate、quality/domain truth、clinical data body/source readiness、owner receipt、typed blocker、runtime queue 与 publication/export readiness。
 
 MDS 内部的 `scout`、`review`、`baseline`、`experiment`、`write` 等项目专用 skill 不属于 OPL 默认系统级生态。它们应该留在 MAS 控制下的项目目录或 domain runtime 内部，不升级为 OPL 默认 family skill。
 
@@ -41,7 +41,7 @@ MDS 内部的 `scout`、`review`、`baseline`、`experiment`、`write` 等项目
 | `src/system-installation/codex-plugin-registry.ts` | 在 `OPL_STATE_DIR/codex-plugin-marketplaces/*` 生成 OPL-owned marketplace wrapper，注册 `mas@mas-local`、`mag@mag-local`、`rca@rca-local` 和 `opl-meta-agent@opl-meta-agent-local`，并移除旧 family standalone MCP server blocks。 | 用户 config 当前内容、wrapper marketplace path 是否存在、wrapper plugin symlink target、实际移除数量。 |
 | `opl system initialize` | 投影 `recommended_skills`、GUI shell、runtime/tool readiness 等初始化读面。 | 当前 recommended skill status、tool readiness、App first-run result。 |
 
-`opl connect sync-skills --domain scholarskills --scope workspace|quest` 可由 OPL App action、MAS foreground workflow 或 CLI 直接调用，不依赖 Console。Console 只展示或投影结果；Runtime Fabric 提供通用资源底座，Connect 是其中的资源连接 / discovery 能力之一，但 Connect 的 CLI/App/runtime 调用面可单独执行。
+`opl connect sync-skills --domain mas-scholar-skills --scope workspace|quest` 可由 OPL App action、MAS foreground workflow 或 CLI 直接调用，不依赖 Console。Console 只展示或投影结果；Runtime Fabric 提供通用资源底座，Connect 是其中的资源连接 / discovery 能力之一，但 Connect 的 CLI/App/runtime 调用面可单独执行。
 
 ## Superpowers profile 边界
 

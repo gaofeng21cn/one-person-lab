@@ -146,7 +146,7 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.deepEqual(actions.get('scholarskills_workspace_sync')?.payload_fields, ['workspace_root']);
     assert.equal(
       actions.get('scholarskills_workspace_sync')?.delegated_surface,
-      'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <workspace_root>',
+      'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace_root>',
     );
     assert.equal(actions.get('scholarskills_workspace_sync')?.mutates, 'workspace_local_codex_skill');
     assert.equal(actions.get('scholarskills_workspace_sync')?.dry_run_supported, true);
@@ -155,7 +155,7 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.deepEqual(actions.get('scholarskills_quest_sync')?.payload_fields, ['quest_root']);
     assert.equal(
       actions.get('scholarskills_quest_sync')?.delegated_surface,
-      'opl connect sync-skills --domain scholarskills --scope quest --target-quest <quest_root>',
+      'opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest <quest_root>',
     );
     assert.equal(actions.get('scholarskills_quest_sync')?.mutates, 'quest_local_codex_skill');
     assert.equal(actions.get('scholarskills_quest_sync')?.dry_run_supported, true);
@@ -270,7 +270,7 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.equal(actions.get('settings_apply_opl_packages')?.delegated_surface, 'opl connect update --module <all-default-modules>');
     assert.equal(
       actions.get('settings_reload_codex_surface')?.delegated_surface,
-      'opl connect sync-skills --domain scholarskills --scope <workspace|quest>',
+      'opl connect sync-skills --domain mas-scholar-skills --scope <workspace|quest>',
     );
     assert.deepEqual(actions.get('settings_reload_codex_surface')?.payload_fields, ['scope', 'target_path']);
     assert.equal(actions.get('settings_reload_codex_surface')?.route_requires_domain_or_app_payload, true);
@@ -373,7 +373,7 @@ test('app action execute exposes ScholarSkills workspace sync as dry-run before 
     assert.equal(output.app_action_execution.dry_run, true);
     assert.equal(
       output.app_action_execution.delegated_surface,
-      'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <workspace_root>',
+      'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace_root>',
     );
     assert.equal(output.app_action_execution.result.skill_sync.status, 'dry_run');
     assert.equal(output.app_action_execution.result.skill_sync.domain_id, 'scholarskills');
@@ -385,7 +385,7 @@ test('app action execute exposes ScholarSkills workspace sync as dry-run before 
     );
     assert.equal(
       output.app_action_execution.result.skill_sync.command,
-      `opl connect sync-skills --domain scholarskills --scope workspace --target-workspace ${workspaceRoot} --json`,
+      `opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace ${workspaceRoot} --json`,
     );
     assert.deepEqual(output.app_action_execution.result.skill_sync.authority_boundary, {
       can_write_domain_truth: false,
@@ -1146,7 +1146,7 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
 
     assert.equal(
       settingsReload.delegated_surface,
-      'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <target_path>',
+      'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <target_path>',
     );
     assert.deepEqual(settingsReload.result.settings_control_center_action.payload_fields, ['scope', 'target_path']);
 

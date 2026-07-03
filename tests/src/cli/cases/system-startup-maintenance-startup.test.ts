@@ -153,11 +153,11 @@ test('system startup-maintenance installs clean managed modules and returns App 
     ]);
     assert.equal(
       output.system_action.details.capability_targets[0].workspace_sync_command_ref,
-      'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <workspace-root> --json',
+      'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace-root> --json',
     );
     assert.equal(
       output.system_action.details.capability_targets[0].quest_sync_command_ref,
-      'opl connect sync-skills --domain scholarskills --scope quest --target-quest <quest-root> --json',
+      'opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest <quest-root> --json',
     );
     assert.equal(
       output.system_action.details.capability_targets[0].managed_checkout_path,

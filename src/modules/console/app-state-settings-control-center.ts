@@ -316,7 +316,7 @@ export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
     section_id: 'codex_surface',
     task_kind: 'reload',
     taxonomy: 'settings.codex_surface.reload',
-    delegated_surface: 'opl connect sync-skills --domain scholarskills --scope <workspace|quest>',
+    delegated_surface: 'opl connect sync-skills --domain mas-scholar-skills --scope <workspace|quest>',
     payload_fields: ['scope', 'target_path'],
     mutates: 'opl_codex_visible_skill_projection',
     dry_run_supported: true,

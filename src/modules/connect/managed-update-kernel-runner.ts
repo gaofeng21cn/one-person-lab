@@ -281,8 +281,8 @@ function buildAgentPackagePostApplyActions(
           status: skillSyncPacks.some(isExpectedTargetBoundScholarSkillsSkip)
             ? 'awaiting_workspace_or_quest_target'
             : 'not_applicable',
-          workspace_command_ref: 'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <workspace-root> --json',
-          quest_command_ref: 'opl connect sync-skills --domain scholarskills --scope quest --target-quest <quest-root> --json',
+          workspace_command_ref: 'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace-root> --json',
+          quest_command_ref: 'opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest <quest-root> --json',
         },
       },
     },

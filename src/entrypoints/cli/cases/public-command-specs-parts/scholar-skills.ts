@@ -355,8 +355,8 @@ export function buildScholarSkillsCommandSpecs(
       usage: 'opl scholar-skills inspect --module <module_id>',
       summary: 'Inspect one MAS Scholar Skills capability module descriptor.',
       examples: [
-        'opl scholar-skills inspect --module opl.scholarskills.display --json',
-        'opl scholar-skills inspect --id opl.scholarskills.display --json',
+        'opl scholar-skills inspect --module mas-scholar-skills.display --json',
+        'opl scholar-skills inspect --id mas-scholar-skills.display --json',
       ],
       group: 'scholar-skills',
       handler: (args) => {
@@ -368,7 +368,7 @@ export function buildScholarSkillsCommandSpecs(
       usage: 'opl scholar-skills prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path>',
       summary: 'Build a refs-only dependency prepare envelope without installing dependencies or writing runtime state.',
       examples: [
-        'opl scholar-skills prepare --module opl.scholarskills.display --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --json',
+        'opl scholar-skills prepare --module mas-scholar-skills.display --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --json',
       ],
       group: 'scholar-skills',
       handler: (args) => buildScholarSkillsPrepareEnvelope(
@@ -380,7 +380,7 @@ export function buildScholarSkillsCommandSpecs(
       usage: 'opl scholar-skills runtime-prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]',
       summary: 'Invoke the OPL runtime environment substrate for one ScholarSkills module and return bounded dependency receipts.',
       examples: [
-        'opl scholar-skills runtime-prepare --module opl.scholarskills.display --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --apply --json',
+        'opl scholar-skills runtime-prepare --module mas-scholar-skills.display --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --apply --json',
       ],
       group: 'scholar-skills',
       handler: (args) => buildScholarSkillsRuntimePrepareReadback(
@@ -396,7 +396,7 @@ export function buildScholarSkillsCommandSpecs(
       usage: 'opl scholar-skills run-context --module <module_id> --profile <profile>',
       summary: 'Build a refs-only run-context envelope that cannot claim runtime readiness.',
       examples: [
-        'opl scholar-skills run-context --module opl.scholarskills.display --profile display --json',
+        'opl scholar-skills run-context --module mas-scholar-skills.display --profile display --json',
       ],
       group: 'scholar-skills',
       handler: (args) => buildScholarSkillsRunContextEnvelope(
@@ -408,7 +408,7 @@ export function buildScholarSkillsCommandSpecs(
       usage: 'opl scholar-skills runtime-run-context --module <module_id> --profile <profile> --platform <platform> --paper-root <path>',
       summary: 'Read the OPL prepared run-context for one ScholarSkills module and fail closed on missing or mismatched refs.',
       examples: [
-        'opl scholar-skills runtime-run-context --module opl.scholarskills.display --profile display --platform macos-arm64 --paper-root paper --json',
+        'opl scholar-skills runtime-run-context --module mas-scholar-skills.display --profile display --platform macos-arm64 --paper-root paper --json',
       ],
       group: 'scholar-skills',
       handler: (args) => {
@@ -428,7 +428,7 @@ export function buildScholarSkillsCommandSpecs(
       usage: 'opl scholar-skills invoke --module <module_id> --input-ref <ref> --artifact-root <ref>',
       summary: 'Build a refs-only invocation envelope with expected artifact refs and an unsigned receipt candidate.',
       examples: [
-        'opl scholar-skills invoke --module opl.scholarskills.display --input-ref mas:current_owner_delta/display-intent --artifact-root artifact-root:display-pack-candidates --json',
+        'opl scholar-skills invoke --module mas-scholar-skills.display --input-ref mas:current_owner_delta/display-intent --artifact-root artifact-root:display-pack-candidates --json',
       ],
       group: 'scholar-skills',
       handler: (args) => buildScholarSkillsInvocationEnvelope(
@@ -440,7 +440,7 @@ export function buildScholarSkillsCommandSpecs(
       usage: 'opl scholar-skills receipt --module <module_id> --input-ref <ref> --artifact-root <ref>',
       summary: 'Build an unsigned ScholarSkills execution receipt candidate without owner authority.',
       examples: [
-        'opl scholar-skills receipt --module opl.scholarskills.display --input-ref mas:current_owner_delta/display-intent --artifact-root artifact-root:display-pack-candidates --json',
+        'opl scholar-skills receipt --module mas-scholar-skills.display --input-ref mas:current_owner_delta/display-intent --artifact-root artifact-root:display-pack-candidates --json',
       ],
       group: 'scholar-skills',
       handler: (args) => buildScholarSkillsReceiptCandidate(
@@ -452,8 +452,8 @@ export function buildScholarSkillsCommandSpecs(
       usage: 'opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact-root <ref-or-path> --output-root <path> [--emit-candidate-artifacts (--payload-json <json>|--payload-file <path>)]',
       summary: 'Materialize a deterministic ScholarSkills candidate package under an explicit output root, with opt-in non-authoritative candidate artifact bodies.',
       examples: [
-        'opl scholar-skills materialize --module opl.scholarskills.display --input-ref mas:current_owner_delta/display-intent --artifact-root artifact-root:display-pack-candidates --output-root /tmp/scholarskills-candidate --json',
-        'opl scholar-skills materialize --module opl.scholarskills.display --input-ref mas:current_owner_delta/display-intent --artifact-root artifact-root:display-pack-candidates --output-root /tmp/scholarskills-candidate --emit-candidate-artifacts --payload-file payload.json --json',
+        'opl scholar-skills materialize --module mas-scholar-skills.display --input-ref mas:current_owner_delta/display-intent --artifact-root artifact-root:display-pack-candidates --output-root /tmp/scholarskills-candidate --json',
+        'opl scholar-skills materialize --module mas-scholar-skills.display --input-ref mas:current_owner_delta/display-intent --artifact-root artifact-root:display-pack-candidates --output-root /tmp/scholarskills-candidate --emit-candidate-artifacts --payload-file payload.json --json',
       ],
       group: 'scholar-skills',
       handler: (args) => buildScholarSkillsMaterializeSurface(

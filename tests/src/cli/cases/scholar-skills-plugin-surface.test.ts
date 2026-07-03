@@ -59,6 +59,7 @@ test('MAS Scholar Skills SKILL covers contract modules, commands, and authority 
     new Set(contract.modules.map((module) => module.module_id)).size,
     contract.modules.length,
   );
+  assert.equal(contract.modules.length, 8);
   for (const module of contract.modules) {
     assertContains(skill, module.module_id);
     assertContains(skill, module.display_name);
@@ -109,8 +110,8 @@ test('MAS Scholar Skills exposes a Display gallery human review entry without cl
   }
 
   for (const token of [
-    'docs/active/opl-scholar-skills-display-gallery.md',
-    'medical_display_gallery.pdf',
+    'gallery/medical-display/medical_display_gallery.pdf',
+    'gallery/medical-display/display_pack_gallery_quality_audit.md',
     'display_pack_gallery_quality_audit.md',
     'human review and visual-audit preview refs only',
   ]) {

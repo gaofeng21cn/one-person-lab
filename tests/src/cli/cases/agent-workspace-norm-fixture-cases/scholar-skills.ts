@@ -23,18 +23,18 @@ const AUTHORITY_BOUNDARY: ScholarSkillAuthorityBoundary = {
 };
 
 const MODULE_IDS = [
-  'opl.scholarskills.display',
-  'opl.scholarskills.tables',
-  'opl.scholarskills.stats',
-  'opl.scholarskills.lit',
-  'opl.scholarskills.write',
-  'opl.scholarskills.review',
-  'opl.scholarskills.submit',
-  'opl.scholarskills.data',
+  'mas-scholar-skills.display',
+  'mas-scholar-skills.tables',
+  'mas-scholar-skills.stats',
+  'mas-scholar-skills.lit',
+  'mas-scholar-skills.write',
+  'mas-scholar-skills.review',
+  'mas-scholar-skills.submit',
+  'mas-scholar-skills.data',
 ] as const satisfies readonly ScholarSkillModuleId[];
 
 function moduleFixture(moduleId: ScholarSkillModuleId): ScholarSkillCapabilityModuleDescriptor {
-  const profile = moduleId.replace('opl.scholarskills.', '');
+  const profile = moduleId.replace('mas-scholar-skills.', '');
   return {
     module_id: moduleId,
     brand_family: 'MAS Scholar Skills',
@@ -43,7 +43,7 @@ function moduleFixture(moduleId: ScholarSkillModuleId): ScholarSkillCapabilityMo
     input_schema_refs: [`fixture:${profile}:input`],
     output_schema_refs: [`fixture:${profile}:output`],
     dependency_profile_refs: [`runtime_env_dependency_profile:scholarskills_${profile}_fixture`],
-    run_context_refs: [`opl runtime env run-context --domain scholarskills --profile ${profile} --json`],
+    run_context_refs: [`opl runtime env run-context --domain mas-scholar-skills --profile ${profile} --json`],
     invocation_entries: [{
       entry_id: `scholar_${profile}_descriptor`,
       entry_kind: 'descriptor_readback',
@@ -85,10 +85,10 @@ export const MINIMAL_SCHOLAR_SKILLS_CAPABILITY_MODULES_CONTRACT: ScholarSkillsCa
     mode: 'refs_only',
     owner: 'OPL Framework',
     dependency_profile_owner_commands: [
-      'opl runtime env prepare --domain scholarskills --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> --json',
+      'opl runtime env prepare --domain mas-scholar-skills --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> --json',
     ],
     run_context_owner_commands: [
-      'opl runtime env run-context --domain scholarskills --profile <profile> --json',
+      'opl runtime env run-context --domain mas-scholar-skills --profile <profile> --json',
     ],
     can_write_runtime_state: false,
     can_claim_runtime_ready: false,

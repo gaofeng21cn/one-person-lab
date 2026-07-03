@@ -1,20 +1,20 @@
 import { assert, fs, loadFrameworkContracts, os, path, repoRoot, runCli, test } from '../helpers.ts';
 
 const expectedModuleIds = [
-  'opl.scholarskills.display',
-  'opl.scholarskills.tables',
-  'opl.scholarskills.stats',
-  'opl.scholarskills.lit',
-  'opl.scholarskills.write',
-  'opl.scholarskills.review',
-  'opl.scholarskills.submit',
-  'opl.scholarskills.data',
+  'mas-scholar-skills.display',
+  'mas-scholar-skills.tables',
+  'mas-scholar-skills.stats',
+  'mas-scholar-skills.lit',
+  'mas-scholar-skills.write',
+  'mas-scholar-skills.review',
+  'mas-scholar-skills.submit',
+  'mas-scholar-skills.data',
 ] as const;
 
 type ExpectedModuleId = typeof expectedModuleIds[number];
 
 const expectedReceiptRefFamiliesByModule = {
-  'opl.scholarskills.display': [
+  'mas-scholar-skills.display': [
     'input_fingerprint_ref',
     'dependency_profile_ref',
     'prepared_run_context_ref',
@@ -22,49 +22,49 @@ const expectedReceiptRefFamiliesByModule = {
     'artifact_manifest_ref',
     'visual_audit_or_gallery_preview_ref',
   ],
-  'opl.scholarskills.tables': [
+  'mas-scholar-skills.tables': [
     'input_fingerprint_ref',
     'dependency_profile_ref',
     'prepared_run_context_ref',
     'table_manifest_ref',
     'table_qc_ref',
   ],
-  'opl.scholarskills.stats': [
+  'mas-scholar-skills.stats': [
     'input_fingerprint_ref',
     'dependency_profile_ref',
     'prepared_run_context_ref',
     'analysis_manifest_ref',
     'reproducibility_check_ref',
   ],
-  'opl.scholarskills.lit': [
+  'mas-scholar-skills.lit': [
     'input_fingerprint_ref',
     'dependency_profile_ref',
     'prepared_run_context_ref',
     'evidence_map_ref',
     'citation_manifest_ref',
   ],
-  'opl.scholarskills.write': [
+  'mas-scholar-skills.write': [
     'input_fingerprint_ref',
     'dependency_profile_ref',
     'prepared_run_context_ref',
     'draft_section_manifest_ref',
     'source_trace_ref',
   ],
-  'opl.scholarskills.review': [
+  'mas-scholar-skills.review': [
     'input_fingerprint_ref',
     'dependency_profile_ref',
     'prepared_run_context_ref',
     'reviewer_report_ref',
     'route_back_ref',
   ],
-  'opl.scholarskills.submit': [
+  'mas-scholar-skills.submit': [
     'input_fingerprint_ref',
     'dependency_profile_ref',
     'prepared_run_context_ref',
     'package_manifest_ref',
     'submission_checklist_ref',
   ],
-  'opl.scholarskills.data': [
+  'mas-scholar-skills.data': [
     'input_fingerprint_ref',
     'dependency_profile_ref',
     'prepared_run_context_ref',
@@ -86,14 +86,14 @@ const expectedReceiptRefFamiliesByModule = {
 } satisfies Record<ExpectedModuleId, string[]>;
 
 const expectedArtifactRefFamiliesByModule = {
-  'opl.scholarskills.display': ['display_pack_agent_orchestration'],
-  'opl.scholarskills.tables': ['table_manifest', 'table_qc'],
-  'opl.scholarskills.stats': ['analysis_manifest', 'reproducibility_check'],
-  'opl.scholarskills.lit': ['evidence_map', 'citation_manifest'],
-  'opl.scholarskills.write': ['draft_section_manifest', 'source_trace'],
-  'opl.scholarskills.review': ['reviewer_report', 'route_back'],
-  'opl.scholarskills.submit': ['package_manifest', 'submission_checklist'],
-  'opl.scholarskills.data': [
+  'mas-scholar-skills.display': ['display_pack_agent_orchestration'],
+  'mas-scholar-skills.tables': ['table_manifest', 'table_qc'],
+  'mas-scholar-skills.stats': ['analysis_manifest', 'reproducibility_check'],
+  'mas-scholar-skills.lit': ['evidence_map', 'citation_manifest'],
+  'mas-scholar-skills.write': ['draft_section_manifest', 'source_trace'],
+  'mas-scholar-skills.review': ['reviewer_report', 'route_back'],
+  'mas-scholar-skills.submit': ['package_manifest', 'submission_checklist'],
+  'mas-scholar-skills.data': [
     'data_manifest',
     'dataset_manifest',
     'registry_lineage',
@@ -208,16 +208,16 @@ test('opl scholar-skills inspect returns Display dependency and run-context refs
     'scholar-skills',
     'inspect',
     '--module',
-    'opl.scholarskills.display',
+    'mas-scholar-skills.display',
     '--json',
   ]);
   const module = output.scholar_skill_module;
 
-  assert.equal(module.module_id, 'opl.scholarskills.display');
+  assert.equal(module.module_id, 'mas-scholar-skills.display');
   assert.equal(module.display_name, 'Scholar Display');
   assert.equal(module.dependency_profile_refs.includes('runtime_env_dependency_profile:scholarskills_display_v1'), true);
-  assert.equal(module.run_context_refs.includes('opl runtime env run-context --domain scholarskills --profile display --json'), true);
-  assert.equal(module.invocation_entries[0].command, 'opl scholar-skills inspect --module opl.scholarskills.display --json');
+  assert.equal(module.run_context_refs.includes('opl runtime env run-context --domain mas-scholar-skills --profile display --json'), true);
+  assert.equal(module.invocation_entries[0].command, 'opl scholar-skills inspect --module mas-scholar-skills.display --json');
   assert.equal(module.authority_boundary.can_write_domain_truth, false);
   assert.equal(module.authority_boundary.can_mutate_artifact_body, false);
   assert.equal(module.allowed_writes.length, 0);
@@ -236,7 +236,7 @@ test('opl scholar-skills exposes module-specific capability profiles for every S
     const profile = output.module_profile;
 
     assert.equal(profile.module_id, moduleId);
-    assert.equal(profile.profile_id, moduleId.replace('opl.scholarskills.', ''));
+    assert.equal(profile.profile_id, moduleId.replace('mas-scholar-skills.', ''));
     assert.deepEqual(
       profile.execution_receipt_ref_families.map((family: string) => `${family}_ref`),
       expectedReceiptRefFamiliesByModule[moduleId],
@@ -257,7 +257,7 @@ test('opl scholar-skills exposes module-specific capability profiles for every S
     assert.equal(output.execution_receipt_candidate.counts_as_owner_receipt, false);
     assert.equal(output.execution_receipt_candidate.can_authorize_publication_readiness, false);
     assert.equal(output.execution_receipt_candidate.authority_boundary.can_write_domain_truth, false);
-    if (moduleId === 'opl.scholarskills.data') {
+    if (moduleId === 'mas-scholar-skills.data') {
       assert.equal(profile.stage_fit.includes('storage_tier_review'), true);
       assert.equal(profile.stage_fit.includes('authoritative_body_boundary_review'), true);
       assert.equal(profile.stage_fit.includes('derived_copy_inventory_review'), true);
@@ -300,8 +300,8 @@ test('opl scholar-skills interfaces exposes JSON readback and runtime env bridge
   assert.equal(output.cli.commands.includes('opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact-root <ref-or-path> --output-root <path> --json'), true);
   assert.equal(output.cli.commands.includes('opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact-root <ref-or-path> --output-root <path> --emit-candidate-artifacts --payload-file <path> --json'), true);
   assert.equal(output.cli.commands.includes('opl scholar-skills validate --json'), true);
-  assert.equal(output.runtime_environment_bridge.commands.includes('opl runtime env prepare --domain scholarskills --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> --json'), true);
-  assert.equal(output.runtime_environment_bridge.commands.includes('opl runtime env run-context --domain scholarskills --profile <profile> --json'), true);
+  assert.equal(output.runtime_environment_bridge.commands.includes('opl runtime env prepare --domain mas-scholar-skills --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> --json'), true);
+  assert.equal(output.runtime_environment_bridge.commands.includes('opl runtime env run-context --domain mas-scholar-skills --profile <profile> --json'), true);
   assert.equal(output.authority_boundary.can_claim_runtime_ready, false);
 });
 
@@ -318,7 +318,7 @@ test('opl scholar-skills prepare returns a deterministic refs-only dependency en
         'scholar-skills',
         'prepare',
         '--module',
-        'opl.scholarskills.display',
+        'mas-scholar-skills.display',
         '--profile',
         'display',
         '--platform',
@@ -337,7 +337,7 @@ test('opl scholar-skills prepare returns a deterministic refs-only dependency en
     assert.equal(output.prepared, false);
     assert.equal(output.can_claim_runtime_ready, false);
     assert.equal(output.can_write_runtime_state, false);
-    assert.equal(output.runtime_owner_command, `opl runtime env prepare --domain scholarskills --profile display --platform macos-arm64 --requirement-profile refs/requirements/display.json --paper-root ${paperRoot} --json`);
+    assert.equal(output.runtime_owner_command, `opl runtime env prepare --domain mas-scholar-skills --profile display --platform macos-arm64 --requirement-profile refs/requirements/display.json --paper-root ${paperRoot} --json`);
     assert.equal(output.inputs.paper_root_ref, paperRoot);
     assert.equal(output.authority_boundary.can_write_runtime_state, false);
     assert.deepEqual(fs.readdirSync(stateRoot), []);
@@ -363,7 +363,7 @@ test('opl scholar-skills runtime-prepare invokes OPL runtime env substrate witho
         'scholar-skills',
         'runtime-prepare',
         '--module',
-        'opl.scholarskills.display',
+        'mas-scholar-skills.display',
         '--profile',
         'display',
         '--platform',
@@ -385,11 +385,11 @@ test('opl scholar-skills runtime-prepare invokes OPL runtime env substrate witho
 
     assert.equal(output.surface_kind, 'opl_scholarskills_runtime_prepare_bridge');
     assert.equal(output.status, 'prepared');
-    assert.equal(output.module_id, 'opl.scholarskills.display');
+    assert.equal(output.module_id, 'mas-scholar-skills.display');
     assert.equal(output.runtime_domain_id, 'scholarskills');
     assert.equal(output.apply_requested, true);
     assert.equal(output.requirement_profile_id, 'scholar_display_test_profile');
-    assert.equal(output.runtime_owner_command, `opl runtime env prepare --domain scholarskills --profile display --platform macos-arm64 --requirement-profile ${profilePath} --requirement-profile-id scholar_display_test_profile --paper-root ${paperRoot} --apply --json`);
+    assert.equal(output.runtime_owner_command, `opl runtime env prepare --domain mas-scholar-skills --profile display --platform macos-arm64 --requirement-profile ${profilePath} --requirement-profile-id scholar_display_test_profile --paper-root ${paperRoot} --apply --json`);
     assert.equal(output.dependency_lock_ref, 'paper/build/dependency_environment_lock.json');
     assert.equal(output.dependency_receipt_ref, 'paper/build/dependency_environment_receipt.json');
     assert.equal(output.dependency_run_context_ref, 'paper/build/dependency_run_context.json');
@@ -432,7 +432,7 @@ test('opl scholar-skills runtime-run-context reads prepared context and keeps fa
         'scholar-skills',
         'runtime-prepare',
         '--module',
-        'opl.scholarskills.display',
+        'mas-scholar-skills.display',
         '--profile',
         'display',
         '--platform',
@@ -452,7 +452,7 @@ test('opl scholar-skills runtime-run-context reads prepared context and keeps fa
         'scholar-skills',
         'runtime-run-context',
         '--module',
-        'opl.scholarskills.display',
+        'mas-scholar-skills.display',
         '--profile',
         'display',
         '--platform',
@@ -466,7 +466,7 @@ test('opl scholar-skills runtime-run-context reads prepared context and keeps fa
 
     assert.equal(output.surface_kind, 'opl_scholarskills_runtime_run_context_bridge');
     assert.equal(output.status, 'prepared');
-    assert.equal(output.module_id, 'opl.scholarskills.display');
+    assert.equal(output.module_id, 'mas-scholar-skills.display');
     assert.equal(output.run_context_ref, null);
     assert.equal(output.consumer_preflight.status, 'bound');
     assert.equal(output.can_consume_run_context, true);
@@ -477,7 +477,7 @@ test('opl scholar-skills runtime-run-context reads prepared context and keeps fa
     assert.equal(output.can_claim_app_release_ready, false);
     assert.equal(output.can_sign_owner_receipt, false);
     assert.equal(output.can_create_typed_blocker, false);
-    assert.equal(output.runtime_owner_command, `opl runtime env run-context --domain scholarskills --profile display --platform macos-arm64 --paper-root ${paperRoot} --json`);
+    assert.equal(output.runtime_owner_command, `opl runtime env run-context --domain mas-scholar-skills --profile display --platform macos-arm64 --paper-root ${paperRoot} --json`);
     assert.equal(output.runtime_environment.run_context.consumer_preflight.status, 'bound');
     assert.equal(output.runtime_environment.run_context.consumer_boundary.host_environment_fallback_allowed, false);
   } finally {
@@ -490,7 +490,7 @@ test('opl scholar-skills run-context returns refs-only context envelope that can
     'scholar-skills',
     'run-context',
     '--module',
-    'opl.scholarskills.display',
+    'mas-scholar-skills.display',
     '--profile',
     'display',
     '--json',
@@ -500,8 +500,8 @@ test('opl scholar-skills run-context returns refs-only context envelope that can
   assert.equal(output.status, 'run_context_ref_envelope');
   assert.equal(output.can_claim_runtime_ready, false);
   assert.equal(output.can_write_runtime_state, false);
-  assert.equal(output.runtime_owner_command, 'opl runtime env run-context --domain scholarskills --profile display --json');
-  assert.equal(output.run_context_refs.includes('opl runtime env run-context --domain scholarskills --profile display --json'), true);
+  assert.equal(output.runtime_owner_command, 'opl runtime env run-context --domain mas-scholar-skills --profile display --json');
+  assert.equal(output.run_context_refs.includes('opl runtime env run-context --domain mas-scholar-skills --profile display --json'), true);
   assert.equal(output.authority_boundary.can_claim_runtime_ready, false);
 });
 
@@ -510,7 +510,7 @@ test('opl scholar-skills invoke returns invocation envelope and unsigned executi
     'scholar-skills',
     'invoke',
     '--module',
-    'opl.scholarskills.display',
+    'mas-scholar-skills.display',
     '--input-ref',
     'mas:current_owner_delta/display-intent',
     '--artifact-root',
@@ -520,7 +520,7 @@ test('opl scholar-skills invoke returns invocation envelope and unsigned executi
 
   assert.equal(output.surface_kind, 'opl_scholarskills_invocation_ref_envelope');
   assert.equal(output.status, 'invocation_ref_envelope');
-  assert.equal(output.module_id, 'opl.scholarskills.display');
+  assert.equal(output.module_id, 'mas-scholar-skills.display');
   assert.equal(output.input_ref, 'mas:current_owner_delta/display-intent');
   assert.equal(output.artifact_root_ref, 'artifact-root:display-pack-candidates');
   assert.equal(output.can_mutate_artifact_body, false);
@@ -545,7 +545,7 @@ test('opl scholar-skills materialize writes a deterministic refs-only candidate 
       'scholar-skills',
       'materialize',
       '--module',
-      'opl.scholarskills.display',
+      'mas-scholar-skills.display',
       '--input-ref',
       'mas:current_owner_delta/display-intent',
       '--artifact-root',
@@ -558,7 +558,7 @@ test('opl scholar-skills materialize writes a deterministic refs-only candidate 
       'scholar-skills',
       'materialize',
       '--module',
-      'opl.scholarskills.display',
+      'mas-scholar-skills.display',
       '--input-ref',
       'mas:current_owner_delta/display-intent',
       '--artifact-root',
@@ -570,7 +570,7 @@ test('opl scholar-skills materialize writes a deterministic refs-only candidate 
 
     assert.equal(output.surface_kind, 'opl_scholarskills_materialized_candidate_package');
     assert.equal(output.status, 'materialized_candidate_package');
-    assert.equal(output.module_id, 'opl.scholarskills.display');
+    assert.equal(output.module_id, 'mas-scholar-skills.display');
     assert.equal(output.input_ref, 'mas:current_owner_delta/display-intent');
     assert.equal(output.artifact_root_ref, 'artifact-root:display-pack-candidates');
     assert.equal(output.output_root, outputRoot);
@@ -615,7 +615,7 @@ test('opl scholar-skills materialize writes a deterministic refs-only candidate 
     assert.equal(receipt.counts_as_paper_truth, false);
     assert.equal(moduleCandidate.surface_kind, 'opl_scholarskills_module_candidate_payload');
     assert.equal(moduleCandidate.status, 'module_candidate_refs_only');
-    assert.equal(moduleCandidate.module_id, 'opl.scholarskills.display');
+    assert.equal(moduleCandidate.module_id, 'mas-scholar-skills.display');
     assert.deepEqual(moduleCandidate.artifact_candidate_ref_families, ['display_pack_agent_orchestration']);
     assert.equal(moduleCandidate.quality_checklist.can_claim_quality_verdict, false);
     assert.equal(moduleCandidate.owner_consumption.required_for_paper_truth, true);
@@ -652,7 +652,7 @@ test('opl scholar-skills materialize writes module-specific candidate payloads f
       const moduleCandidate = JSON.parse(fs.readFileSync(output.module_candidate_path, 'utf8'));
 
       assert.equal(moduleCandidate.module_id, moduleId);
-      assert.equal(moduleCandidate.profile_id, moduleId.replace('opl.scholarskills.', ''));
+      assert.equal(moduleCandidate.profile_id, moduleId.replace('mas-scholar-skills.', ''));
       assert.deepEqual(
         moduleCandidate.artifact_candidate_ref_families,
         expectedArtifactRefFamiliesByModule[moduleId],
@@ -729,7 +729,7 @@ test('opl scholar-skills receipt builds the same execution receipt candidate wit
     'scholar-skills',
     'receipt',
     '--module',
-    'opl.scholarskills.display',
+    'mas-scholar-skills.display',
     '--input-ref',
     'mas:current_owner_delta/display-intent',
     '--artifact-root',
@@ -739,10 +739,10 @@ test('opl scholar-skills receipt builds the same execution receipt candidate wit
 
   assert.equal(output.surface_kind, 'opl_scholarskills_execution_receipt_candidate');
   assert.equal(output.status, 'receipt_candidate_unsigned');
-  assert.equal(output.module_id, 'opl.scholarskills.display');
+  assert.equal(output.module_id, 'mas-scholar-skills.display');
   assert.equal(
     output.execution_receipt_ref,
-    'opl://scholarskills/execution-receipt-candidates/opl.scholarskills.display/d846e00822301e2e549acda4d9ab761c8b465b089952e7d14bd5ed7e6f835b9e',
+    'opl://scholarskills/execution-receipt-candidates/mas-scholar-skills.display/187f2f4592ac23dcbe837e6ecc278dd434e2647135059d50a8acc00b2b5fc1c9',
   );
   assert.deepEqual(output.execution_receipt_refs, {
     input_fingerprint_ref: `${output.execution_receipt_ref}#input_fingerprint_ref`,

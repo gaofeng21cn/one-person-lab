@@ -107,7 +107,7 @@ function authorityBoundaryViolations(
 function runtimePrepareCommand(input: PrepareInput) {
   return [
     'opl runtime env prepare',
-    '--domain scholarskills',
+    '--domain mas-scholar-skills',
     `--profile ${input.profile}`,
     `--platform ${input.platform}`,
     `--requirement-profile ${input.requirementProfile}`,
@@ -121,7 +121,7 @@ function runtimePrepareCommand(input: PrepareInput) {
 function runtimeRunContextCommand(input: RunContextInput) {
   return [
     'opl runtime env run-context',
-    '--domain scholarskills',
+    '--domain mas-scholar-skills',
     `--profile ${input.profile}`,
     ...(input.platform ? [`--platform ${input.platform}`] : []),
     ...(input.paperRoot ? [`--paper-root ${input.paperRoot}`] : []),

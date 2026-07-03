@@ -66,12 +66,12 @@ export function resolveRepoRoot(spec: SkillPackSpec) {
     if (legacyRepoRoot) {
       return path.resolve(legacyRepoRoot);
     }
-    const managedRepoRoot = path.join(resolveManagedModulesRoot(), spec.project);
     const modulePathValue = normalizeOptionalString(process.env.OPL_MODULE_PATH_SCHOLARSKILLS)
       ?? normalizeOptionalString(process.env.OPL_MODULE_PATH_MAS_SCHOLAR_SKILLS);
     if (modulePathValue) {
       return path.resolve(modulePathValue);
     }
+    const managedRepoRoot = path.join(resolveManagedModulesRoot(), spec.project);
     const legacySiblingRepoRoot = path.join(resolveDefaultFamilyWorkspaceRoot(), 'opl-scholarskills');
     const legacyManagedRepoRoot = path.join(resolveManagedModulesRoot(), 'opl-scholarskills');
     if (developerModePrefersLocalCheckouts() && isDirectory(siblingRepoRoot)) {
@@ -82,6 +82,9 @@ export function resolveRepoRoot(spec: SkillPackSpec) {
     }
     if (isDirectory(managedRepoRoot)) {
       return managedRepoRoot;
+    }
+    if (isDirectory(siblingRepoRoot)) {
+      return siblingRepoRoot;
     }
     if (isDirectory(legacyManagedRepoRoot)) {
       return legacyManagedRepoRoot;
@@ -174,13 +177,16 @@ export function buildInstallerCommandPreview(
   repoRoot: string,
   _home?: string,
 ) {
+  const publicDomainId = spec.domain_id === 'scholarskills'
+    ? 'mas-scholar-skills'
+    : spec.domain_id;
   if (spec.domain_id === 'scholarskills') {
     return [
       'opl',
       'connect',
       'sync-skills',
       '--domain',
-      spec.domain_id,
+      publicDomainId,
       '--scope',
       'workspace',
       '--target-workspace',
@@ -188,5 +194,5 @@ export function buildInstallerCommandPreview(
     ];
   }
 
-  return ['opl', 'connect', 'sync-skills', '--domain', spec.domain_id];
+  return ['opl', 'connect', 'sync-skills', '--domain', publicDomainId];
 }

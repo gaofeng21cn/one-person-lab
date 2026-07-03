@@ -1,25 +1,25 @@
 import { assert, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
 
 const moduleIds = [
-  'opl.scholarskills.display',
-  'opl.scholarskills.tables',
-  'opl.scholarskills.stats',
-  'opl.scholarskills.lit',
-  'opl.scholarskills.write',
-  'opl.scholarskills.review',
-  'opl.scholarskills.submit',
-  'opl.scholarskills.data',
+  'mas-scholar-skills.display',
+  'mas-scholar-skills.tables',
+  'mas-scholar-skills.stats',
+  'mas-scholar-skills.lit',
+  'mas-scholar-skills.write',
+  'mas-scholar-skills.review',
+  'mas-scholar-skills.submit',
+  'mas-scholar-skills.data',
 ] as const;
 
 const expectedArtifactRefFamiliesByModule = {
-  'opl.scholarskills.display': ['display_pack_agent_orchestration'],
-  'opl.scholarskills.tables': ['table_manifest', 'table_qc'],
-  'opl.scholarskills.stats': ['analysis_manifest', 'reproducibility_check'],
-  'opl.scholarskills.lit': ['evidence_map', 'citation_manifest'],
-  'opl.scholarskills.write': ['draft_section_manifest', 'source_trace'],
-  'opl.scholarskills.review': ['reviewer_report', 'route_back'],
-  'opl.scholarskills.submit': ['package_manifest', 'submission_checklist'],
-  'opl.scholarskills.data': [
+  'mas-scholar-skills.display': ['display_pack_agent_orchestration'],
+  'mas-scholar-skills.tables': ['table_manifest', 'table_qc'],
+  'mas-scholar-skills.stats': ['analysis_manifest', 'reproducibility_check'],
+  'mas-scholar-skills.lit': ['evidence_map', 'citation_manifest'],
+  'mas-scholar-skills.write': ['draft_section_manifest', 'source_trace'],
+  'mas-scholar-skills.review': ['reviewer_report', 'route_back'],
+  'mas-scholar-skills.submit': ['package_manifest', 'submission_checklist'],
+  'mas-scholar-skills.data': [
     'data_manifest',
     'dataset_manifest',
     'registry_lineage',
@@ -38,60 +38,60 @@ const expectedArtifactRefFamiliesByModule = {
 } satisfies Record<typeof moduleIds[number], string[]>;
 
 const expectedEngineIdsByModule = {
-  'opl.scholarskills.display': 'scholar_display_candidate_visual_plan_engine',
-  'opl.scholarskills.tables': 'scholar_tables_candidate_table_manifest_engine',
-  'opl.scholarskills.stats': 'scholar_stats_candidate_analysis_engine',
-  'opl.scholarskills.lit': 'scholar_lit_candidate_evidence_map_engine',
-  'opl.scholarskills.write': 'scholar_write_candidate_section_engine',
-  'opl.scholarskills.review': 'scholar_review_candidate_report_engine',
-  'opl.scholarskills.submit': 'scholar_submit_candidate_package_engine',
-  'opl.scholarskills.data': 'scholar_data_candidate_lineage_engine',
+  'mas-scholar-skills.display': 'scholar_display_candidate_visual_plan_engine',
+  'mas-scholar-skills.tables': 'scholar_tables_candidate_table_manifest_engine',
+  'mas-scholar-skills.stats': 'scholar_stats_candidate_analysis_engine',
+  'mas-scholar-skills.lit': 'scholar_lit_candidate_evidence_map_engine',
+  'mas-scholar-skills.write': 'scholar_write_candidate_section_engine',
+  'mas-scholar-skills.review': 'scholar_review_candidate_report_engine',
+  'mas-scholar-skills.submit': 'scholar_submit_candidate_package_engine',
+  'mas-scholar-skills.data': 'scholar_data_candidate_lineage_engine',
 } satisfies Record<typeof moduleIds[number], string>;
 
 const expectedEngineSpecByModule = {
-  'opl.scholarskills.display': {
+  'mas-scholar-skills.display': {
     required: ['title', 'source_refs'],
     optional: ['variables', 'panel_plan', 'figure_type', 'cohort_ref', 'color_vision', 'grayscale', 'panel_to_code_review', 'source_preservation'],
     checks: ['visual_qa_preview', 'programmatic_figure_audit', 'final_size_inspection', 'color_vision/grayscale', 'panel_to_code_review', 'source_preservation', 'owner_gate_required'],
     sections: ['visual_qa_preview', 'programmatic_figure_audit', 'final_size_inspection', 'color_vision/grayscale', 'panel_to_code_review', 'source_preservation'],
   },
-  'opl.scholarskills.tables': {
+  'mas-scholar-skills.tables': {
     required: ['title', 'source_refs'],
     optional: ['title', 'columns', 'row_groups', 'footnotes', 'stat_refs', 'booktabs_or_minimal_ink', 'table_qc', 'claim_table_alignment', 'result_metric_registry', 'ai_table_verdict_candidate'],
     checks: ['table_shell', 'metric_extraction', 'booktabs_or_minimal_ink', 'table_qc', 'claim_table_alignment', 'result_metric_registry', 'ai_table_verdict_candidate', 'owner_gate_required'],
     sections: ['table_shell', 'metric_extraction', 'booktabs_or_minimal_ink', 'table_qc', 'claim_table_alignment', 'result_metric_registry', 'ai_table_verdict_candidate'],
   },
-  'opl.scholarskills.stats': {
+  'mas-scholar-skills.stats': {
     required: ['analysis_question', 'source_refs'],
     optional: ['analysis_question', 'model', 'variables', 'cohort_ref', 'sensitivity_checks', 'effect_size_or_metric_extraction', 'reproducibility_check', 'statistical_review', 'dataset_metric_benchmark', 'result_metric_registry', 'ai_statistical_verdict_candidate', 'no_statistical_conclusion_claim'],
     checks: ['analysis_plan', 'effect_size_or_metric_extraction', 'reproducibility_check', 'statistical_review', 'dataset_metric_benchmark', 'result_metric_registry', 'ai_statistical_verdict_candidate', 'no_statistical_conclusion_claim', 'owner_gate_required'],
     sections: ['analysis_plan', 'effect_size_or_metric_extraction', 'reproducibility_check', 'statistical_review', 'dataset_metric_benchmark', 'result_metric_registry', 'ai_statistical_verdict_candidate', 'no_statistical_conclusion_claim'],
   },
-  'opl.scholarskills.lit': {
+  'mas-scholar-skills.lit': {
     required: ['question', 'source_refs'],
     optional: ['question', 'databases', 'query_terms', 'inclusion_criteria', 'citation_refs', 'source_verification', 'citation_coverage', 'evidence_map', 'metadata_scrape', 'claim_support', 'systematic_review_protocol', 'inclusion_exclusion_criteria', 'data_extraction_schema', 'quality_appraisal', 'citation_graph_snowball', 'multi_source_paper_search', 'confirm_or_drop_source_verification', 'ai_literature_verdict_candidate'],
     checks: ['citation_manifest', 'source_verification', 'citation_coverage', 'evidence_map', 'metadata_scrape', 'claim_support', 'systematic_review_protocol', 'inclusion_exclusion_criteria', 'data_extraction_schema', 'quality_appraisal', 'citation_graph_snowball', 'multi_source_paper_search', 'confirm_or_drop_source_verification', 'ai_literature_verdict_candidate', 'owner_gate_required'],
     sections: ['citation_manifest', 'source_verification', 'citation_coverage', 'evidence_map', 'metadata_scrape', 'claim_support', 'systematic_review_protocol', 'inclusion_exclusion_criteria', 'data_extraction_schema', 'quality_appraisal', 'citation_graph_snowball', 'multi_source_paper_search', 'confirm_or_drop_source_verification', 'ai_literature_verdict_candidate'],
   },
-  'opl.scholarskills.write': {
+  'mas-scholar-skills.write': {
     required: ['section_goal', 'source_refs'],
     optional: ['section_goal', 'outline', 'claims', 'target_journal', 'tone', 'reverse_outline', 'claim_evidence_map', 'source_trace', 'unsupported_claim_route_back', 'confirm_or_drop_source_verification', 'ai_claim_support_verdict_candidate', 'continue_or_route_back_recommendation'],
     checks: ['section_outline', 'reverse_outline', 'claim_evidence_map', 'source_trace', 'unsupported_claim_route_back', 'confirm_or_drop_source_verification', 'ai_claim_support_verdict_candidate', 'continue_or_route_back_recommendation', 'owner_gate_required'],
     sections: ['section_outline', 'reverse_outline', 'claim_evidence_map', 'source_trace', 'unsupported_claim_route_back', 'confirm_or_drop_source_verification', 'ai_claim_support_verdict_candidate', 'continue_or_route_back_recommendation'],
   },
-  'opl.scholarskills.review': {
+  'mas-scholar-skills.review': {
     required: ['review_scope', 'source_refs'],
     optional: ['review_scope', 'rubric', 'concerns', 'acceptance_criteria', 'route_back_refs', 'revision_action', 'halt_or_revert_rule', 'route_back', 'residual_risk', 'systematic_review_protocol', 'quality_appraisal', 'confirm_or_drop_source_verification', 'ai_review_verdict_candidate', 'continue_or_route_back_recommendation'],
     checks: ['adversarial_review', 'revision_action', 'halt_or_revert_rule', 'route_back', 'residual_risk', 'systematic_review_protocol', 'quality_appraisal', 'confirm_or_drop_source_verification', 'ai_review_verdict_candidate', 'continue_or_route_back_recommendation', 'owner_gate_required'],
     sections: ['adversarial_review', 'revision_action', 'halt_or_revert_rule', 'route_back', 'residual_risk', 'systematic_review_protocol', 'quality_appraisal', 'confirm_or_drop_source_verification', 'ai_review_verdict_candidate', 'continue_or_route_back_recommendation'],
   },
-  'opl.scholarskills.submit': {
+  'mas-scholar-skills.submit': {
     required: ['submission_goal', 'source_refs'],
     optional: ['submission_goal', 'journal', 'required_files', 'cover_letter_points', 'compliance_checks', 'journal_rule', 'format_sanity', 'ai_disclosure', 'rebuttal_audit', 'no_publication_ready_authorization', 'ai_submission_sanity_verdict_candidate', 'continue_or_route_back_recommendation'],
     checks: ['submission_checklist', 'journal_rule', 'format_sanity', 'ai_disclosure', 'rebuttal_audit', 'no_publication_ready_authorization', 'ai_submission_sanity_verdict_candidate', 'continue_or_route_back_recommendation', 'owner_gate_required'],
     sections: ['submission_checklist', 'journal_rule', 'format_sanity', 'ai_disclosure', 'rebuttal_audit', 'no_publication_ready_authorization', 'ai_submission_sanity_verdict_candidate', 'continue_or_route_back_recommendation'],
   },
-  'opl.scholarskills.data': {
+  'mas-scholar-skills.data': {
     required: ['dataset_goal', 'source_refs'],
     optional: [
       'dataset_goal',
@@ -205,7 +205,7 @@ test('scholar-skills materialize emits non-authoritative candidate artifact bodi
       'scholar-skills',
       'materialize',
       '--module',
-      'opl.scholarskills.display',
+      'mas-scholar-skills.display',
       '--input-ref',
       'mas:current_owner_delta/display-intent',
       '--artifact-root',
@@ -221,7 +221,7 @@ test('scholar-skills materialize emits non-authoritative candidate artifact bodi
       'scholar-skills',
       'materialize',
       '--module',
-      'opl.scholarskills.display',
+      'mas-scholar-skills.display',
       '--input-ref',
       'mas:current_owner_delta/display-intent',
       '--artifact-root',
@@ -238,16 +238,16 @@ test('scholar-skills materialize emits non-authoritative candidate artifact bodi
     assert.equal(first.candidate_artifact_bodies.length, 1);
     assert.equal(first.candidate_artifact_bodies[0].body_format, 'svg');
     assert.equal(first.candidate_artifact_bodies[0].body_written, true);
-    assert.equal(first.candidate_artifact_bodies[0].engine_id, expectedEngineIdsByModule['opl.scholarskills.display']);
+    assert.equal(first.candidate_artifact_bodies[0].engine_id, expectedEngineIdsByModule['mas-scholar-skills.display']);
     assert.equal(first.candidate_artifact_bodies[0].validation_status, 'pass');
     assert.equal(first.candidate_artifact_bodies[0].input_requirements.required_artifact_root_ref, true);
     assert.deepEqual(
       first.candidate_artifact_bodies[0].input_requirements.required_payload_fields,
-      expectedEngineSpecByModule['opl.scholarskills.display'].required,
+      expectedEngineSpecByModule['mas-scholar-skills.display'].required,
     );
     assert.deepEqual(
       first.candidate_artifact_bodies[0].input_requirements.optional_payload_fields,
-      expectedEngineSpecByModule['opl.scholarskills.display'].optional,
+      expectedEngineSpecByModule['mas-scholar-skills.display'].optional,
     );
     assert.equal(first.candidate_artifact_bodies[0].kind, 'display_pack_agent_orchestration');
     assert.equal(first.candidate_artifact_bodies[0].ref, 'artifact-root:display-pack-candidates/display_pack_agent_orchestration');
@@ -298,7 +298,7 @@ test('scholar-skills materialize keeps refs-only behavior without candidate arti
       'scholar-skills',
       'materialize',
       '--module',
-      'opl.scholarskills.display',
+      'mas-scholar-skills.display',
       '--input-ref',
       'mas:current_owner_delta/display-intent',
       '--artifact-root',
@@ -401,7 +401,7 @@ test('scholar-skills materialize writes deterministic module-specific bodies for
           assert.deepEqual(candidate.missing_inputs, candidate.input_requirements.required_payload_fields.filter((field: string) => field !== 'source_refs'));
           assert.equal(candidate.body_carried_to_owner_request, false);
           assert.equal(candidate.authority_flags.can_sign_owner_receipt, false);
-          if (moduleId === 'opl.scholarskills.data') {
+          if (moduleId === 'mas-scholar-skills.data') {
             const sectionIds = candidate.candidate.sections.map((section: { section_id: string }) => section.section_id);
             assert.equal(sectionIds.includes('storage_tier'), true);
             assert.equal(sectionIds.includes('authoritative_body_boundary'), true);
@@ -435,7 +435,7 @@ test('scholar-skills materialize rejects payload without explicit candidate arti
     'scholar-skills',
     'materialize',
     '--module',
-    'opl.scholarskills.display',
+    'mas-scholar-skills.display',
     '--input-ref',
     'mas:current_owner_delta/display-intent',
     '--artifact-root',

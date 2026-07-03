@@ -1,12 +1,12 @@
 export type ScholarSkillModuleId =
-  | 'opl.scholarskills.display'
-  | 'opl.scholarskills.tables'
-  | 'opl.scholarskills.stats'
-  | 'opl.scholarskills.lit'
-  | 'opl.scholarskills.write'
-  | 'opl.scholarskills.review'
-  | 'opl.scholarskills.submit'
-  | 'opl.scholarskills.data';
+  | 'mas-scholar-skills.display'
+  | 'mas-scholar-skills.tables'
+  | 'mas-scholar-skills.stats'
+  | 'mas-scholar-skills.lit'
+  | 'mas-scholar-skills.write'
+  | 'mas-scholar-skills.review'
+  | 'mas-scholar-skills.submit'
+  | 'mas-scholar-skills.data';
 
 export interface ScholarSkillAuthorityBoundary {
   can_claim_domain_ready: false;

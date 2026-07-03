@@ -168,13 +168,13 @@ test('connect skills exposes MAS Scholar Skills as a framework-owned capability 
     assert.equal(pack.capability_plugin_distribution.project_scope_requires_explicit_request, true);
     assert.equal(
       pack.capability_plugin_distribution.connect_readback_commands.includes(
-        'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <workspace-root> --json',
+        'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace-root> --json',
       ),
       true,
     );
     assert.equal(
       pack.capability_plugin_distribution.connect_readback_commands.includes(
-        'opl connect sync-skills --domain scholarskills --scope quest --target-quest <quest-root> --json',
+        'opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest <quest-root> --json',
       ),
       true,
     );
@@ -232,6 +232,66 @@ test('connect skills exposes MAS Scholar Skills as a framework-owned capability 
     });
   } finally {
     fs.rmSync(sourceRoot, { recursive: true, force: true });
+  }
+});
+
+test('connect sync-skills finds canonical sibling MAS Scholar Skills checkout without env override', () => {
+  const familyRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mas-scholar-skills-family-root-'));
+  const sourceRoot = createScholarSkillsRepoFixture();
+  const siblingRoot = path.join(familyRoot, 'mas-scholar-skills');
+  const homeRoot = path.join(familyRoot, 'home');
+  const workspaceRoot = path.join(familyRoot, 'paper-workspace');
+  fs.mkdirSync(workspaceRoot, { recursive: true });
+  fs.renameSync(sourceRoot, siblingRoot);
+
+  try {
+    const output = runCli([
+      'connect',
+      'sync-skills',
+      '--domain',
+      'mas-scholar-skills',
+      '--scope',
+      'workspace',
+      '--target-workspace',
+      workspaceRoot,
+      '--home',
+      homeRoot,
+    ], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_FAMILY_WORKSPACE_ROOT: familyRoot,
+      OPL_MODULES_ROOT: path.join(homeRoot, 'missing-managed-modules'),
+      OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT: '',
+      OPL_SCHOLARSKILLS_REPO_ROOT: '',
+      OPL_MODULE_PATH_SCHOLARSKILLS: '',
+      OPL_MODULE_PATH_MAS_SCHOLAR_SKILLS: '',
+      OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+    }) as {
+      skill_sync: {
+        packs: Array<{
+          repo_root: string;
+          sync_status: string;
+          installer_result: {
+            workspace_or_quest_local_skill: {
+              install_receipt: {
+                source_repo_path: string;
+              };
+            };
+          };
+        }>;
+      };
+    };
+
+    const pack = output.skill_sync.packs[0];
+    assert.equal(fs.realpathSync(pack.repo_root), fs.realpathSync(siblingRoot));
+    assert.equal(pack.sync_status, 'synced');
+    assert.equal(
+      fs.realpathSync(pack.installer_result.workspace_or_quest_local_skill.install_receipt.source_repo_path),
+      fs.realpathSync(siblingRoot),
+    );
+    assert.equal(fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'mas-scholar-skills', 'SKILL.md')), true);
+  } finally {
+    fs.rmSync(familyRoot, { recursive: true, force: true });
   }
 });
 

@@ -7,7 +7,7 @@ Machine boundary: 本文是 Scholar Display 的人读审阅入口。Gallery arti
 
 ## 定位
 
-`opl.scholarskills.display` 复用 MAS Display Pack 作为当前人审 gallery。它的职责是让 MAS 或其他 OPL family agent 在调用 Scholar Display 前，能快速看到默认图件风格、模板覆盖、renderer policy、quality gate 和已知边界。
+`mas-scholar-skills.display` 复用 MAS Display Pack 作为当前人审 gallery。它的职责是让 MAS 或其他 OPL family agent 在调用 Scholar Display 前，能快速看到默认图件风格、模板覆盖、renderer policy、quality gate 和已知边界。
 
 Gallery 只能证明有人可审的可视样例和 manifest surface 存在；它不能证明真实论文 figure ready、visual parity 完成、owner accepted、publication ready、current package ready 或 artifact authority。
 These refs do not prove publication readiness.

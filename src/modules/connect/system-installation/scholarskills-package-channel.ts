@@ -36,6 +36,7 @@ type ScholarSkillsSourcePolicy = {
   configured_by:
     | 'agent_latest_package_channel'
     | 'developer_mode'
+    | 'sibling_checkout_fallback'
     | 'env_repo_root_override'
     | 'module_path_override';
   package_channel_auto_update: boolean;
@@ -94,7 +95,12 @@ export function resolveManagedScholarSkillsSourcePath() {
 }
 
 function buildSourcePolicy(configuredBy: ScholarSkillsSourcePolicy['configured_by']): ScholarSkillsSourcePolicy {
-  if (configuredBy === 'developer_mode' || configuredBy === 'env_repo_root_override' || configuredBy === 'module_path_override') {
+  if (
+    configuredBy === 'developer_mode'
+    || configuredBy === 'sibling_checkout_fallback'
+    || configuredBy === 'env_repo_root_override'
+    || configuredBy === 'module_path_override'
+  ) {
     return {
       effective_install_update_source: 'developer_git_checkout',
       configured_by: configuredBy,
@@ -256,8 +262,8 @@ function buildTarget(
     target_type: 'framework_capability_package',
     target_id: 'scholarskills',
     capability_plugin_id: 'mas-scholar-skills',
-    workspace_sync_command_ref: 'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <workspace-root> --json',
-    quest_sync_command_ref: 'opl connect sync-skills --domain scholarskills --scope quest --target-quest <quest-root> --json',
+    workspace_sync_command_ref: 'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace-root> --json',
+    quest_sync_command_ref: 'opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest <quest-root> --json',
     authority_boundary: {
       can_write_domain_truth: false,
       can_sign_owner_receipt: false,
@@ -378,8 +384,8 @@ export function runScholarSkillsSourceMaintenance(): ScholarSkillsSourceTarget {
         source_head_sha: gitAfter?.head_sha ?? null,
         package_channel_auto_update: true,
         app_managed_workspace_sync_required: true,
-        workspace_sync_command_ref: 'opl connect sync-skills --domain scholarskills --scope workspace --target-workspace <workspace-root> --json',
-        quest_sync_command_ref: 'opl connect sync-skills --domain scholarskills --scope quest --target-quest <quest-root> --json',
+        workspace_sync_command_ref: 'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace-root> --json',
+        quest_sync_command_ref: 'opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest <quest-root> --json',
       },
       error: null,
     });

@@ -241,6 +241,7 @@ exit 2
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: path.join(homeRoot, 'state'),
       OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
+      OPL_FAMILY_WORKSPACE_ROOT: path.join(homeRoot, 'family'),
       OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
       PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
     }) as {
@@ -615,6 +616,7 @@ exit 2
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: path.join(homeRoot, 'state'),
       OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
+      OPL_FAMILY_WORKSPACE_ROOT: path.join(homeRoot, 'family'),
       OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
       PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
     }) as {

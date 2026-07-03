@@ -8,14 +8,14 @@ import type {
 } from '../../../kernel/types.ts';
 
 export const MODULE_REQUIRED_ARTIFACT_REF_FAMILIES = {
-  'opl.scholarskills.display': ['display_pack_agent_orchestration'],
-  'opl.scholarskills.tables': ['table_manifest', 'table_qc'],
-  'opl.scholarskills.stats': ['analysis_manifest', 'reproducibility_check'],
-  'opl.scholarskills.lit': ['evidence_map', 'citation_manifest'],
-  'opl.scholarskills.write': ['draft_section_manifest', 'source_trace'],
-  'opl.scholarskills.review': ['reviewer_report', 'route_back'],
-  'opl.scholarskills.submit': ['package_manifest', 'submission_checklist'],
-  'opl.scholarskills.data': [
+  'mas-scholar-skills.display': ['display_pack_agent_orchestration'],
+  'mas-scholar-skills.tables': ['table_manifest', 'table_qc'],
+  'mas-scholar-skills.stats': ['analysis_manifest', 'reproducibility_check'],
+  'mas-scholar-skills.lit': ['evidence_map', 'citation_manifest'],
+  'mas-scholar-skills.write': ['draft_section_manifest', 'source_trace'],
+  'mas-scholar-skills.review': ['reviewer_report', 'route_back'],
+  'mas-scholar-skills.submit': ['package_manifest', 'submission_checklist'],
+  'mas-scholar-skills.data': [
     'data_manifest',
     'dataset_manifest',
     'registry_lineage',
@@ -34,7 +34,7 @@ export const MODULE_REQUIRED_ARTIFACT_REF_FAMILIES = {
 } as const satisfies Record<ScholarSkillModuleId, readonly string[]>;
 
 export const MODULE_EXECUTION_RECEIPT_REF_FAMILIES = {
-  'opl.scholarskills.display': [
+  'mas-scholar-skills.display': [
     'input_fingerprint',
     'dependency_profile',
     'prepared_run_context',
@@ -42,49 +42,49 @@ export const MODULE_EXECUTION_RECEIPT_REF_FAMILIES = {
     'artifact_manifest',
     'visual_audit_or_gallery_preview',
   ],
-  'opl.scholarskills.tables': [
+  'mas-scholar-skills.tables': [
     'input_fingerprint',
     'dependency_profile',
     'prepared_run_context',
     'table_manifest',
     'table_qc',
   ],
-  'opl.scholarskills.stats': [
+  'mas-scholar-skills.stats': [
     'input_fingerprint',
     'dependency_profile',
     'prepared_run_context',
     'analysis_manifest',
     'reproducibility_check',
   ],
-  'opl.scholarskills.lit': [
+  'mas-scholar-skills.lit': [
     'input_fingerprint',
     'dependency_profile',
     'prepared_run_context',
     'evidence_map',
     'citation_manifest',
   ],
-  'opl.scholarskills.write': [
+  'mas-scholar-skills.write': [
     'input_fingerprint',
     'dependency_profile',
     'prepared_run_context',
     'draft_section_manifest',
     'source_trace',
   ],
-  'opl.scholarskills.review': [
+  'mas-scholar-skills.review': [
     'input_fingerprint',
     'dependency_profile',
     'prepared_run_context',
     'reviewer_report',
     'route_back',
   ],
-  'opl.scholarskills.submit': [
+  'mas-scholar-skills.submit': [
     'input_fingerprint',
     'dependency_profile',
     'prepared_run_context',
     'package_manifest',
     'submission_checklist',
   ],
-  'opl.scholarskills.data': [
+  'mas-scholar-skills.data': [
     'input_fingerprint',
     'dependency_profile',
     'prepared_run_context',
@@ -123,7 +123,7 @@ export const AUTHORITY_FALSE_FIELDS = [
 ] as const satisfies readonly (keyof ScholarSkillAuthorityBoundary)[];
 
 export function moduleProfileId(module: ScholarSkillCapabilityModuleDescriptor) {
-  return module.module_id.replace('opl.scholarskills.', '');
+  return module.module_id.replace('mas-scholar-skills.', '');
 }
 
 export function moduleArtifactRefFamilies(module: ScholarSkillCapabilityModuleDescriptor) {

@@ -91,7 +91,7 @@ const AUTHORITY_FLAGS = {
 } satisfies ArtifactAuthorityFlags;
 
 const MODULE_ARTIFACT_ENGINES = {
-  'opl.scholarskills.display': {
+  'mas-scholar-skills.display': {
     engine_id: 'scholar_display_candidate_visual_plan_engine',
     engine_version: '2026-06-24',
     body_format: 'svg',
@@ -125,7 +125,7 @@ const MODULE_ARTIFACT_ENGINES = {
       'source_preservation',
     ],
   },
-  'opl.scholarskills.tables': {
+  'mas-scholar-skills.tables': {
     engine_id: 'scholar_tables_candidate_table_manifest_engine',
     engine_version: '2026-06-24',
     body_format: 'json',
@@ -163,7 +163,7 @@ const MODULE_ARTIFACT_ENGINES = {
       'ai_table_verdict_candidate',
     ],
   },
-  'opl.scholarskills.stats': {
+  'mas-scholar-skills.stats': {
     engine_id: 'scholar_stats_candidate_analysis_engine',
     engine_version: '2026-06-24',
     body_format: 'json',
@@ -205,7 +205,7 @@ const MODULE_ARTIFACT_ENGINES = {
       'no_statistical_conclusion_claim',
     ],
   },
-  'opl.scholarskills.lit': {
+  'mas-scholar-skills.lit': {
     engine_id: 'scholar_lit_candidate_evidence_map_engine',
     engine_version: '2026-06-24',
     body_format: 'json',
@@ -265,7 +265,7 @@ const MODULE_ARTIFACT_ENGINES = {
       'ai_literature_verdict_candidate',
     ],
   },
-  'opl.scholarskills.write': {
+  'mas-scholar-skills.write': {
     engine_id: 'scholar_write_candidate_section_engine',
     engine_version: '2026-06-24',
     body_format: 'markdown',
@@ -307,7 +307,7 @@ const MODULE_ARTIFACT_ENGINES = {
       'continue_or_route_back_recommendation',
     ],
   },
-  'opl.scholarskills.review': {
+  'mas-scholar-skills.review': {
     engine_id: 'scholar_review_candidate_report_engine',
     engine_version: '2026-06-24',
     body_format: 'markdown',
@@ -355,7 +355,7 @@ const MODULE_ARTIFACT_ENGINES = {
       'continue_or_route_back_recommendation',
     ],
   },
-  'opl.scholarskills.submit': {
+  'mas-scholar-skills.submit': {
     engine_id: 'scholar_submit_candidate_package_engine',
     engine_version: '2026-06-24',
     body_format: 'markdown',
@@ -397,7 +397,7 @@ const MODULE_ARTIFACT_ENGINES = {
       'continue_or_route_back_recommendation',
     ],
   },
-  'opl.scholarskills.data': {
+  'mas-scholar-skills.data': {
     engine_id: 'scholar_data_candidate_lineage_engine',
     engine_version: '2026-06-24',
     body_format: 'json',
