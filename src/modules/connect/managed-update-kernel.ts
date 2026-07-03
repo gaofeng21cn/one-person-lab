@@ -21,13 +21,15 @@ import {
 import { managedUpdateLockFilePath, MANAGED_UPDATE_LOCK_STALE_AFTER_SECONDS } from './managed-update-lock.ts';
 import {
   bindOwnerReceiptProjection,
-  COMPONENT_ALIASES,
   COMPONENT_RECEIPT_REQUIRED_FIELDS,
   componentReceipt,
   condition,
   controlledCommand,
+  filterManagedUpdateComponents,
   KERNEL_LIFECYCLE,
   MANAGED_UPDATE_KERNEL_ID,
+  managedUpdateOperationMode,
+  managedUpdateReceiptWritePolicy,
   manualCommand,
   noAutoApply,
   noReloadGuidance,
@@ -36,6 +38,7 @@ import {
   readOnlyCommand,
   STATE_VOCABULARY,
   statusDetail,
+  summarizeManagedUpdateComponents,
   type ManagedUpdateComponent,
   type ManagedUpdateComponentState,
   type ManagedUpdateCondition,
@@ -43,7 +46,6 @@ import {
   type ManagedUpdateKernelInput,
   type ManagedUpdateProviderId,
 } from './managed-update-owner-boundary.ts';
-import type { ManagedUpdateOperation } from './managed-update-owner-boundary.ts';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -1255,48 +1257,6 @@ function buildWorkflowProfileComponent(channel: string): ManagedUpdateComponent 
   };
 }
 
-function filterComponents(components: ManagedUpdateComponent[], componentId: string | undefined) {
-  if (!componentId) {
-    return components;
-  }
-  const requested = componentId.trim();
-  const normalized = COMPONENT_ALIASES[requested] ?? requested;
-  return components.filter((entry) => entry.component_id === normalized || entry.provider_id === normalized);
-}
-
-function summarize(components: ManagedUpdateComponent[]) {
-  return {
-    total_components_count: components.length,
-    current_components_count: components.filter((entry) => entry.state === 'current').length,
-    update_available_components_count: components.filter((entry) => entry.state === 'update_available').length,
-    staged_components_count: components.filter((entry) => entry.state === 'staged').length,
-    restart_required_components_count: components.filter((entry) => entry.state === 'needs_restart').length,
-    reload_required_components_count: components.filter((entry) => entry.state === 'needs_reload').length,
-    failed_with_repair_components_count: components.filter((entry) => entry.state === 'failed_with_repair').length,
-    skipped_manual_required_components_count: components.filter((entry) => entry.state === 'skipped_manual_required').length,
-  };
-}
-
-function operationMode(operation: ManagedUpdateOperation) {
-  if (operation === 'apply') {
-    return 'controlled_apply';
-  }
-  if (operation === 'repair') {
-    return 'controlled_repair';
-  }
-  if (operation === 'rollback') {
-    return 'controlled_rollback';
-  }
-  return 'read_only_projection';
-}
-
-function receiptWritePolicy(operation: ManagedUpdateOperation) {
-  if (operation === 'status' || operation === 'check' || operation === 'plan') {
-    return 'read_only';
-  }
-  return 'recorded_component_receipt';
-}
-
 export async function buildManagedUpdateKernelProjection(
   contracts: FrameworkContracts,
   input: ManagedUpdateKernelInput,
@@ -1314,7 +1274,7 @@ export async function buildManagedUpdateKernelProjection(
   const companionTools = buildCompanionToolsComponent(channel);
   const workflowProfile = buildWorkflowProfileComponent(channel);
   const installationCarrier = buildInstallationCarrierComponent(channel);
-  const selectedComponents = filterComponents(
+  const selectedComponents = filterManagedUpdateComponents(
     [installationCarrier, runtimeSubstrate, capabilityPackages, codexSurface, companionTools, workflowProfile],
     input.componentId,
   ).map(bindOwnerReceiptProjection);
@@ -1324,7 +1284,7 @@ export async function buildManagedUpdateKernelProjection(
     managed_update: {
       surface_id: MANAGED_UPDATE_KERNEL_ID,
       operation: input.operation,
-      operation_mode: operationMode(input.operation),
+      operation_mode: managedUpdateOperationMode(input.operation),
       update_channel: channel,
       workspace_root: readOplWorkspaceRoot(),
       requested_component_id: input.componentId ?? null,
@@ -1341,7 +1301,7 @@ export async function buildManagedUpdateKernelProjection(
         stale_after_seconds: MANAGED_UPDATE_LOCK_STALE_AFTER_SECONDS,
         contention_policy: 'report_in_progress_or_skip_without_parallel_stage_or_plugin_sync',
       },
-      summary: summarize(selectedComponents),
+      summary: summarizeManagedUpdateComponents(selectedComponents),
       components: selectedComponents,
       repair_actions: selectedComponents.flatMap((component) => component.plan.command_refs),
       receipts: {
@@ -1350,7 +1310,7 @@ export async function buildManagedUpdateKernelProjection(
         component_receipt_schema: 'opl_managed_update_component_receipt.v1',
         component_receipt_ledger_file: managedUpdateComponentReceiptLedgerFilePath(),
         required_fields: COMPONENT_RECEIPT_REQUIRED_FIELDS,
-        write_policy: receiptWritePolicy(input.operation),
+        write_policy: managedUpdateReceiptWritePolicy(input.operation),
       },
       authority_boundary: {
         can_mutate_app_owned_runtime_root: false,

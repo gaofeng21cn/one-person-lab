@@ -18,11 +18,19 @@ import type { FrameworkContracts } from '../../kernel/types.ts';
 import {
   buildManagedUpdateKernelProjection,
 } from './managed-update-kernel.ts';
-import type {
-  ManagedUpdateKernelInput,
-  ManagedUpdateProviderAdapterId,
+import {
+  bindOwnerExecutionResult,
+  managedUpdateComponentMatches,
+  managedUpdateComponentReceiptInput,
+  managedUpdatePostApplyStatus,
+  managedUpdateReloadStatus,
+  selectedManagedUpdateComponentIds,
+  type ManagedUpdateKernelInput,
+  type ManagedUpdateOwnerExecutionReceiptResult,
+  type ManagedUpdateOwnerExecutionStatus,
+  type ManagedUpdateOwnerPostApplyAction,
+  type ManagedUpdateProviderAdapterId,
 } from './managed-update-owner-boundary.ts';
-import type { ManagedUpdateOperation } from './managed-update-owner-boundary.ts';
 import { resolveFrameworkUpdateTargetRoot, runOplFrameworkSelfRollback } from './system-installation/framework-self-update.ts';
 import { resolveProjectRoot } from './system-installation/shared.ts';
 import {
@@ -33,37 +41,17 @@ import {
   managedUpdateComponentReceiptLedgerFilePath,
   recordManagedUpdateComponentReceipts,
   type ManagedUpdateComponentReceiptInput,
-  type ManagedUpdatePostApplyActionReceipt,
   type ManagedUpdateReceiptApplyMode,
   type ManagedUpdateReceiptStatusDetail,
   type ManagedUpdateReloadGuidance,
 } from './managed-update-component-receipts.ts';
 
 type ManagedUpdateProjection = Awaited<ReturnType<typeof buildManagedUpdateKernelProjection>>;
-type ManagedUpdateProjectionComponent = ManagedUpdateProjection['managed_update']['components'][number];
 
-type AdapterPostApplyAction = {
-  action_id: string;
-  command_ref: string;
-  status: 'completed' | 'skipped' | 'manual_required' | 'failed';
-  result_ref: string | null;
-  result: Record<string, unknown> | null;
-};
-
-type AdapterExecutionResult = {
-  component_id: string;
-  adapter_id: ManagedUpdateProviderAdapterId;
-  owner_route?: ManagedUpdateProjectionComponent['owner_route'];
-  owner_execution_boundary?: ManagedUpdateProjectionComponent['owner_execution_boundary'];
-  status: 'completed' | 'skipped' | 'manual_required' | 'failed';
+type AdapterExecutionResult = ManagedUpdateOwnerExecutionReceiptResult & {
   reason: string;
-  result_ref: string | null;
   result: Record<string, unknown> | null;
   error: Record<string, unknown> | null;
-  apply_mode?: ManagedUpdateReceiptApplyMode;
-  status_detail?: ManagedUpdateReceiptStatusDetail;
-  reload_guidance?: ManagedUpdateReloadGuidance;
-  post_apply_actions?: AdapterPostApplyAction[];
 };
 
 function stringValue(value: unknown) {
@@ -96,7 +84,7 @@ function isExpectedTargetBoundScholarSkillsSkip(entry: Record<string, unknown>) 
     && readSkipReason(entry) === 'workspace_or_quest_target_required';
 }
 
-function adapterResultRef(componentId: string, operation: ManagedUpdateOperation, payload: Record<string, unknown> | null) {
+function adapterResultRef(componentId: string, operation: ManagedUpdateKernelInput['operation'], payload: Record<string, unknown> | null) {
   const explicitRef = nestedString(payload, 'receipt_ref');
   if (explicitRef) {
     return explicitRef;
@@ -108,7 +96,7 @@ function adapterResultRef(componentId: string, operation: ManagedUpdateOperation
   return `opl://managed-update-adapter/${componentId}/${operation}/${new Date().toISOString()}`;
 }
 
-function runtimeAdapterReceiptRef(operation: ManagedUpdateOperation) {
+function runtimeAdapterReceiptRef(operation: ManagedUpdateKernelInput['operation']) {
   return adapterResultRef('runtime_substrate', operation, null);
 }
 
@@ -116,7 +104,7 @@ function runtimeRollbackRef(receiptRef: string) {
   return `opl://managed-update/runtime_substrate/rollback/${encodeURIComponent(receiptRef)}`;
 }
 
-function systemActionStatus(value: unknown): AdapterExecutionResult['status'] {
+function systemActionStatus(value: unknown): ManagedUpdateOwnerExecutionStatus {
   const status = nestedString(value, 'status');
   if (status === 'completed') {
     return 'completed';
@@ -140,28 +128,9 @@ function normalizeError(error: unknown) {
   };
 }
 
-function componentMatches(component: ManagedUpdateProjectionComponent, componentId: string) {
-  return component.component_id === componentId || component.provider_id === componentId;
-}
-
-function componentIsMutableForOperation(component: ManagedUpdateProjectionComponent, operation: ManagedUpdateOperation) {
-  if (operation === 'status' || operation === 'check' || operation === 'plan') {
-    return true;
-  }
-  return component.owner_execution_boundary.runner_can_execute
-    && component.owner_execution_boundary.allowed_operations.includes(operation);
-}
-
-function selectedComponentIds(input: ManagedUpdateKernelInput, projection: ManagedUpdateProjection) {
-  const ids = projection.managed_update.components
-    .filter((component) => componentIsMutableForOperation(component, input.operation))
-    .map((component) => component.component_id);
-  return input.componentId ? ids : ids.filter((id) => id !== 'companion_tools');
-}
-
 async function runRuntimeSubstrateAdapter(
   contracts: FrameworkContracts,
-  operation: ManagedUpdateOperation,
+  operation: ManagedUpdateKernelInput['operation'],
 ): Promise<AdapterExecutionResult> {
   const receiptRef = runtimeAdapterReceiptRef(operation);
   const rollbackRef = runtimeRollbackRef(receiptRef);
@@ -220,9 +189,9 @@ function moduleStatus(result: unknown) {
 }
 
 function buildAgentPackagePostApplyActions(
-  operation: ManagedUpdateOperation,
+  operation: ManagedUpdateKernelInput['operation'],
   reconcileResult: Record<string, unknown>,
-): AdapterPostApplyAction[] {
+): ManagedUpdateOwnerPostApplyAction[] {
   if (operation === 'rollback') {
     return [
       {
@@ -247,7 +216,7 @@ function buildAgentPackagePostApplyActions(
     .filter((entry) => !isExpectedTargetBoundScholarSkillsSkip(entry))
     .length;
   const syncedCount = Number(skillSyncSummary?.synced ?? 0);
-  const skillSyncStatus: AdapterPostApplyAction['status'] = unexpectedSkippedCount > 0 && syncedCount === 0
+  const skillSyncStatus: ManagedUpdateOwnerPostApplyAction['status'] = unexpectedSkippedCount > 0 && syncedCount === 0
           ? 'manual_required'
           : 'completed';
 
@@ -291,7 +260,10 @@ function buildAgentPackagePostApplyActions(
   ];
 }
 
-function agentPackageReloadGuidance(operation: ManagedUpdateOperation, status: AdapterExecutionResult['status']): ManagedUpdateReloadGuidance {
+function agentPackageReloadGuidance(
+  operation: ManagedUpdateKernelInput['operation'],
+  status: ManagedUpdateOwnerExecutionStatus,
+): ManagedUpdateReloadGuidance {
   if (status !== 'completed' || operation === 'rollback') {
     return {
       reload_required: false,
@@ -310,54 +282,14 @@ function agentPackageReloadGuidance(operation: ManagedUpdateOperation, status: A
   };
 }
 
-function postApplyActionReceipt(action: AdapterPostApplyAction): ManagedUpdatePostApplyActionReceipt {
-  return {
-    action_id: action.action_id,
-    status: action.status,
-    result_ref: action.result_ref,
-  };
-}
-
-function postApplyStatus(actions: AdapterPostApplyAction[], fallbackStatus: AdapterExecutionResult['status']): ManagedUpdateReceiptStatusDetail['post_apply_status'] {
-  if (fallbackStatus === 'failed') {
-    return 'failed';
-  }
-  if (fallbackStatus === 'manual_required') {
-    return 'manual_required';
-  }
-  if (actions.length === 0) {
-    return fallbackStatus === 'skipped' ? 'skipped' : 'not_run';
-  }
-  if (actions.some((entry) => entry.status === 'failed')) {
-    return 'failed';
-  }
-  if (actions.some((entry) => entry.status === 'manual_required')) {
-    return 'manual_required';
-  }
-  return 'completed';
-}
-
-function reloadStatus(guidance: ManagedUpdateReloadGuidance, fallbackStatus: AdapterExecutionResult['status']): ManagedUpdateReceiptStatusDetail['reload_status'] {
-  if (fallbackStatus === 'manual_required') {
-    return 'manual_required';
-  }
-  if (guidance.reload_required) {
-    return 'required';
-  }
-  if (guidance.reload_recommended) {
-    return 'recommended';
-  }
-  return 'not_required';
-}
-
 function buildAgentPackageStatusDetail(input: {
   componentState: string;
   applyMode: ManagedUpdateReceiptApplyMode;
   completedCount: number;
   manualCount: number;
-  postApplyActions: AdapterPostApplyAction[];
+  postApplyActions: ManagedUpdateOwnerPostApplyAction[];
   reloadGuidance: ManagedUpdateReloadGuidance;
-  status: AdapterExecutionResult['status'];
+  status: ManagedUpdateOwnerExecutionStatus;
 }): ManagedUpdateReceiptStatusDetail {
   return {
     component_state: input.componentState,
@@ -365,12 +297,12 @@ function buildAgentPackageStatusDetail(input: {
     app_background_safe: input.applyMode === 'auto_apply',
     clean_managed_targets_count: input.completedCount,
     manual_required_targets_count: input.manualCount,
-    post_apply_status: postApplyStatus(input.postApplyActions, input.status),
-    reload_status: reloadStatus(input.reloadGuidance, input.status),
+    post_apply_status: managedUpdatePostApplyStatus(input.postApplyActions, input.status),
+    reload_status: managedUpdateReloadStatus(input.reloadGuidance, input.status),
   };
 }
 
-function runAgentPackageAdapter(operation: ManagedUpdateOperation): AdapterExecutionResult {
+function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['operation']): AdapterExecutionResult {
   if (operation === 'rollback') {
     const modules = buildOplModules().modules.modules.filter((module) => module.default_install);
     const targets: Record<string, unknown>[] = [];
@@ -624,7 +556,7 @@ function runAgentPackageAdapter(operation: ManagedUpdateOperation): AdapterExecu
 
 async function runCapabilityExposureAdapter(
   contracts: FrameworkContracts,
-  operation: ManagedUpdateOperation,
+  operation: ManagedUpdateKernelInput['operation'],
 ): Promise<AdapterExecutionResult> {
   if (operation === 'rollback') {
     return {
@@ -691,7 +623,7 @@ function runWorkflowProfileAdapter(): AdapterExecutionResult {
 
 async function runAdapter(
   contracts: FrameworkContracts,
-  operation: ManagedUpdateOperation,
+  operation: ManagedUpdateKernelInput['operation'],
   componentId: string,
 ): Promise<AdapterExecutionResult> {
   try {
@@ -744,56 +676,6 @@ async function runAdapter(
       error: normalizeError(error),
     };
   }
-}
-
-function bindOwnerExecutionBoundary(
-  component: ManagedUpdateProjectionComponent,
-  result: AdapterExecutionResult,
-): AdapterExecutionResult {
-  return {
-    ...result,
-    owner_route: component.owner_route,
-    owner_execution_boundary: component.owner_execution_boundary,
-  };
-}
-
-function receiptInput(
-  operation: ManagedUpdateOperation,
-  component: ManagedUpdateProjectionComponent,
-  result: AdapterExecutionResult,
-): ManagedUpdateComponentReceiptInput {
-  const postApplyActions = result.post_apply_actions ?? [];
-  const reloadGuidance = result.reload_guidance ?? component.receipt.reload_guidance;
-  const statusDetail = result.status_detail ?? {
-    ...component.receipt.status_detail,
-    post_apply_status: postApplyStatus(postApplyActions, result.status),
-    reload_status: reloadStatus(reloadGuidance, result.status),
-  };
-  return {
-    operation,
-    component_id: component.component_id,
-    provider_id: component.provider_id,
-    adapter_id: component.adapter_id,
-    source_manifest_ref: component.receipt.source_manifest_ref,
-    from_version: component.receipt.from_version,
-    from_digest: component.receipt.from_digest,
-    to_version: component.receipt.to_version,
-    to_digest: component.receipt.to_digest,
-    verify_result: result.status === 'failed' ? 'failed' : result.status === 'manual_required' ? 'unknown' : 'passed',
-    post_apply_hooks: component.post_apply_hooks,
-    rollback_ref: result.status === 'completed'
-      ? `opl://managed-update/${component.component_id}/rollback/${encodeURIComponent(result.result_ref ?? 'previous')}`
-      : component.receipt.rollback_ref,
-    repair_action: result.status === 'failed' || result.status === 'manual_required'
-      ? component.receipt.repair_action ?? component.plan.command_refs[0]?.action_id ?? null
-      : component.receipt.repair_action,
-    adapter_result_ref: result.result_ref,
-    apply_mode: result.apply_mode ?? component.receipt.apply_mode,
-    owner_projection: result.owner_route ?? component.owner_route,
-    status_detail: statusDetail,
-    post_apply_action_statuses: postApplyActions.map(postApplyActionReceipt),
-    reload_guidance: reloadGuidance,
-  };
 }
 
 function executionStatus(results: AdapterExecutionResult[]) {
@@ -906,7 +788,7 @@ export async function runManagedUpdateKernelOperation(
     receiptId: input.receiptId,
   });
   try {
-    const componentIds = selectedComponentIds(input, initialProjection);
+    const componentIds = selectedManagedUpdateComponentIds(input, initialProjection.managed_update.components);
     const results: AdapterExecutionResult[] = [];
     const componentsById = new Map(
       initialProjection.managed_update.components.map((component) => [component.component_id, component]),
@@ -914,12 +796,16 @@ export async function runManagedUpdateKernelOperation(
     for (const componentId of componentIds) {
       const component = componentsById.get(componentId);
       const result = await runAdapter(contracts, input.operation, componentId);
-      results.push(component ? bindOwnerExecutionBoundary(component, result) : result);
+      results.push(component ? bindOwnerExecutionResult(component, result) : result);
     }
     const receipts = results
       .map((result) => {
         const component = componentsById.get(result.component_id);
-        return component ? receiptInput(input.operation, component, result) : null;
+        return component ? managedUpdateComponentReceiptInput({
+          operation: input.operation,
+          component,
+          result,
+        }) : null;
       })
       .filter((receipt): receipt is ManagedUpdateComponentReceiptInput => Boolean(receipt));
     const receiptRecord = recordManagedUpdateComponentReceipts(receipts);
@@ -928,7 +814,7 @@ export async function runManagedUpdateKernelOperation(
     const selectedIds = new Set(componentIds);
     const selectedComponents = refreshedProjection.managed_update.components.filter((component) =>
       selectedIds.has(component.component_id)
-      || (input.componentId ? componentMatches(component, input.componentId) : false)
+      || (input.componentId ? managedUpdateComponentMatches(component, input.componentId) : false)
     );
     return applyExecutionToProjection(
       {

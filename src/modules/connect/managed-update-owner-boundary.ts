@@ -1,5 +1,6 @@
 import {
   findLatestManagedUpdateReceipt,
+  type ManagedUpdateComponentReceiptInput,
   type ManagedUpdateOwnerReceiptProjection,
   type ManagedUpdatePostApplyActionReceipt,
   type ManagedUpdateReceiptApplyMode,
@@ -147,6 +148,29 @@ export type ManagedUpdateKernelInput = {
   operation: ManagedUpdateOperation;
   componentId?: string;
   receiptId?: string;
+};
+
+export type ManagedUpdateOwnerExecutionStatus = 'completed' | 'skipped' | 'manual_required' | 'failed';
+
+export type ManagedUpdateOwnerPostApplyAction = {
+  action_id: string;
+  command_ref: string;
+  status: ManagedUpdateOwnerExecutionStatus;
+  result_ref: string | null;
+  result: Record<string, unknown> | null;
+};
+
+export type ManagedUpdateOwnerExecutionReceiptResult = {
+  component_id: string;
+  adapter_id: ManagedUpdateProviderAdapterId;
+  owner_route?: ManagedUpdateOwnerRoute;
+  owner_execution_boundary?: ManagedUpdateOwnerExecutionBoundary;
+  status: ManagedUpdateOwnerExecutionStatus;
+  result_ref: string | null;
+  apply_mode?: ManagedUpdateReceiptApplyMode;
+  status_detail?: ManagedUpdateReceiptStatusDetail;
+  reload_guidance?: ManagedUpdateReloadGuidance;
+  post_apply_actions?: ManagedUpdateOwnerPostApplyAction[];
 };
 
 export const COMPONENT_ALIASES: Record<string, string> = {
@@ -331,6 +355,188 @@ export function componentReceipt(options: {
     status_detail: latestReceipt?.status_detail ?? options.status_detail,
     post_apply_action_statuses: latestActionStatuses,
     reload_guidance: latestReceipt?.reload_guidance ?? options.reload_guidance,
+  };
+}
+
+export function managedUpdateComponentMatches(component: ManagedUpdateComponent, componentId: string) {
+  return component.component_id === componentId || component.provider_id === componentId;
+}
+
+export function filterManagedUpdateComponents(
+  components: ManagedUpdateComponent[],
+  componentId: string | undefined,
+) {
+  if (!componentId) {
+    return components;
+  }
+  const requested = componentId.trim();
+  const normalized = COMPONENT_ALIASES[requested] ?? requested;
+  return components.filter((entry) => managedUpdateComponentMatches(entry, normalized));
+}
+
+export function summarizeManagedUpdateComponents(components: ManagedUpdateComponent[]) {
+  return {
+    total_components_count: components.length,
+    current_components_count: components.filter((entry) => entry.state === 'current').length,
+    update_available_components_count: components.filter((entry) => entry.state === 'update_available').length,
+    staged_components_count: components.filter((entry) => entry.state === 'staged').length,
+    restart_required_components_count: components.filter((entry) => entry.state === 'needs_restart').length,
+    reload_required_components_count: components.filter((entry) => entry.state === 'needs_reload').length,
+    failed_with_repair_components_count: components.filter((entry) => entry.state === 'failed_with_repair').length,
+    skipped_manual_required_components_count: components.filter((entry) => entry.state === 'skipped_manual_required').length,
+  };
+}
+
+export function managedUpdateOperationMode(operation: ManagedUpdateOperation) {
+  if (operation === 'apply') {
+    return 'controlled_apply';
+  }
+  if (operation === 'repair') {
+    return 'controlled_repair';
+  }
+  if (operation === 'rollback') { // reuse-first: allow owner-routed operation vocabulary.
+    return 'controlled_rollback';
+  }
+  return 'read_only_projection';
+}
+
+export function managedUpdateReceiptWritePolicy(operation: ManagedUpdateOperation) {
+  if (operation === 'status' || operation === 'check' || operation === 'plan') {
+    return 'read_only';
+  }
+  return 'recorded_component_receipt';
+}
+
+export function managedUpdateComponentCanRunOperation(
+  component: ManagedUpdateComponent,
+  operation: ManagedUpdateOperation,
+) {
+  if (operation === 'status' || operation === 'check' || operation === 'plan') {
+    return true;
+  }
+  return component.owner_execution_boundary.runner_can_execute
+    && component.owner_execution_boundary.allowed_operations.includes(operation);
+}
+
+export function selectedManagedUpdateComponentIds(
+  input: ManagedUpdateKernelInput,
+  components: ManagedUpdateComponent[],
+) {
+  const ids = components
+    .filter((component) => managedUpdateComponentCanRunOperation(component, input.operation))
+    .map((component) => component.component_id);
+  return input.componentId ? ids : ids.filter((id) => id !== 'companion_tools');
+}
+
+export function bindOwnerExecutionResult<T extends {
+  owner_route?: ManagedUpdateOwnerRoute;
+  owner_execution_boundary?: ManagedUpdateOwnerExecutionBoundary;
+}>(
+  component: ManagedUpdateComponent,
+  result: T,
+): T & {
+  owner_route: ManagedUpdateOwnerRoute;
+  owner_execution_boundary: ManagedUpdateOwnerExecutionBoundary;
+} {
+  return {
+    ...result,
+    owner_route: component.owner_route,
+    owner_execution_boundary: component.owner_execution_boundary,
+  };
+}
+
+export function managedUpdatePostApplyStatus(
+  actions: ManagedUpdateOwnerPostApplyAction[],
+  fallbackStatus: ManagedUpdateOwnerExecutionStatus,
+): ManagedUpdateReceiptStatusDetail['post_apply_status'] {
+  if (fallbackStatus === 'failed') {
+    return 'failed';
+  }
+  if (fallbackStatus === 'manual_required') {
+    return 'manual_required';
+  }
+  if (actions.length === 0) {
+    return fallbackStatus === 'skipped' ? 'skipped' : 'not_run';
+  }
+  if (actions.some((entry) => entry.status === 'failed')) {
+    return 'failed';
+  }
+  if (actions.some((entry) => entry.status === 'manual_required')) {
+    return 'manual_required';
+  }
+  return 'completed';
+}
+
+export function managedUpdateReloadStatus(
+  guidance: ManagedUpdateReloadGuidance,
+  fallbackStatus: ManagedUpdateOwnerExecutionStatus,
+): ManagedUpdateReceiptStatusDetail['reload_status'] {
+  if (fallbackStatus === 'manual_required') {
+    return 'manual_required';
+  }
+  if (guidance.reload_required) {
+    return 'required';
+  }
+  if (guidance.reload_recommended) {
+    return 'recommended';
+  }
+  return 'not_required';
+}
+
+function postApplyActionReceipt(
+  action: ManagedUpdateOwnerPostApplyAction,
+): ManagedUpdatePostApplyActionReceipt {
+  return {
+    action_id: action.action_id,
+    status: action.status,
+    result_ref: action.result_ref,
+  };
+}
+
+function componentExecutionRollbackRef(componentId: string, resultRef: string | null) {
+  return `opl://managed-update/${componentId}/rollback/${encodeURIComponent(resultRef ?? 'previous')}`; // reuse-first: allow owner-routed receipt ref.
+}
+
+export function managedUpdateComponentReceiptInput(input: {
+  operation: ManagedUpdateOperation;
+  component: ManagedUpdateComponent;
+  result: ManagedUpdateOwnerExecutionReceiptResult;
+}): ManagedUpdateComponentReceiptInput {
+  const postApplyActions = input.result.post_apply_actions ?? [];
+  const reloadGuidance = input.result.reload_guidance ?? input.component.receipt.reload_guidance;
+  const statusDetail = input.result.status_detail ?? {
+    ...input.component.receipt.status_detail,
+    post_apply_status: managedUpdatePostApplyStatus(postApplyActions, input.result.status),
+    reload_status: managedUpdateReloadStatus(reloadGuidance, input.result.status),
+  };
+  return {
+    operation: input.operation,
+    component_id: input.component.component_id,
+    provider_id: input.component.provider_id,
+    adapter_id: input.component.adapter_id,
+    source_manifest_ref: input.component.receipt.source_manifest_ref,
+    from_version: input.component.receipt.from_version,
+    from_digest: input.component.receipt.from_digest,
+    to_version: input.component.receipt.to_version,
+    to_digest: input.component.receipt.to_digest,
+    verify_result: input.result.status === 'failed'
+      ? 'failed'
+      : input.result.status === 'manual_required'
+        ? 'unknown'
+        : 'passed',
+    post_apply_hooks: input.component.post_apply_hooks,
+    rollback_ref: input.result.status === 'completed'
+      ? componentExecutionRollbackRef(input.component.component_id, input.result.result_ref)
+      : input.component.receipt.rollback_ref,
+    repair_action: input.result.status === 'failed' || input.result.status === 'manual_required'
+      ? input.component.receipt.repair_action ?? input.component.plan.command_refs[0]?.action_id ?? null
+      : input.component.receipt.repair_action,
+    adapter_result_ref: input.result.result_ref,
+    apply_mode: input.result.apply_mode ?? input.component.receipt.apply_mode,
+    owner_projection: input.result.owner_route ?? input.component.owner_route,
+    status_detail: statusDetail,
+    post_apply_action_statuses: postApplyActions.map(postApplyActionReceipt),
+    reload_guidance: reloadGuidance,
   };
 }
 
