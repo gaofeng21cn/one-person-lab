@@ -1,4 +1,4 @@
-import type { JsonRecord } from '../../console/index.ts';
+import type { JsonRecord } from '../../../kernel/types.ts';
 import {
   refsOnlyAuthorityBoundary,
   uniqueStringList,

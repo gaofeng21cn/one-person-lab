@@ -1,3 +1,5 @@
+export type JsonRecord = Record<string, unknown>;
+
 export interface WorkstreamContract {
   workstream_id: string;
   label: string;

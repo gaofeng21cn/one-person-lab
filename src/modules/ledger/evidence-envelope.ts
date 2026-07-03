@@ -1,4 +1,4 @@
-import type { JsonRecord } from '../console/index.ts';
+import type { JsonRecord } from '../../kernel/types.ts';
 export { canonicalOwnerId } from '../connect/index.ts';
 import { canonicalOwnerId } from '../connect/index.ts';
 

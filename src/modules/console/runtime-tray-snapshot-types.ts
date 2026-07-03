@@ -1,4 +1,7 @@
+import type { JsonRecord } from '../../kernel/types.ts';
 import type { RuntimeTrayActionKind, RuntimeTrayActionOwner } from './runtime-tray-action.ts';
+
+export type { JsonRecord };
 
 export type RuntimeTrayHealthStatus = 'offline' | 'needs_attention' | 'running' | 'idle';
 export type RuntimeTrayLane = 'running' | 'attention' | 'recent';
@@ -16,8 +19,6 @@ export type RuntimeTrayCommand = {
   surface_kind: string;
   command: string;
 };
-
-export type JsonRecord = Record<string, unknown>;
 
 export type RuntimeTrayItem = {
   item_id: string;

@@ -1,4 +1,4 @@
-import type { JsonRecord } from '../console/index.ts';
+import type { JsonRecord } from '../../kernel/types.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);

@@ -1,7 +1,7 @@
 import { FrameworkContractError } from '../charter/index.ts';
 import { domainDispatchEvidencePayloadRefs } from './domain-dispatch-evidence-payload-refs.ts';
 import { listStageRunExecutionAuthorizationReceipts } from '../stagecraft/index.ts';
-import type { JsonRecord } from '../console/index.ts';
+import type { JsonRecord } from '../../kernel/types.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 

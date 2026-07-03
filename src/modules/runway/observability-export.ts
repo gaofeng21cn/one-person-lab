@@ -1,6 +1,5 @@
 import { buildRuntimeTraySnapshot } from '../console/index.ts';
-import type { JsonRecord } from '../console/index.ts';
-import type { FrameworkContracts } from '../../kernel/types.ts';
+import type { FrameworkContracts, JsonRecord } from '../../kernel/types.ts';
 import {
   OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS,
   buildObservabilitySemanticConventionExportSeed,

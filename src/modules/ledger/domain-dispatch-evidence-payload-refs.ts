@@ -1,4 +1,4 @@
-import type { JsonRecord } from '../console/index.ts';
+import type { JsonRecord } from '../../kernel/types.ts';
 
 function stringValue(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
