@@ -11,6 +11,7 @@ import {
   runCli,
   test,
 } from '../helpers.ts';
+import { buildRuntimeTraySnapshot } from '../../../../src/modules/console/runtime-tray-snapshot.ts';
 import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/modules/runway/family-runtime-evidence-worklist.ts';
 import {
   createFamilyWorkspaceFixture,
@@ -432,6 +433,7 @@ test('family-runtime evidence-worklist uses manifest projection cache for replay
         providerKind: 'temporal',
         executorKind: 'codex_cli',
         detailLevel: 'full',
+        runtimeSnapshotProvider: buildRuntimeTraySnapshot,
       })).family_runtime_evidence_worklist as JsonRecord;
       const packet = worklist.stage_replay_missing_receipt_workorder_packet as JsonRecord;
       const packetSummary = packet.summary as JsonRecord;

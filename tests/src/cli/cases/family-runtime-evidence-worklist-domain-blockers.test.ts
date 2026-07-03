@@ -22,6 +22,7 @@ import {
   buildProductionTailNextActionLedger,
 } from '../../../../src/modules/ledger/production-evidence-tail-ledger.ts';
 import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/modules/runway/family-runtime-evidence-worklist.ts';
+import { buildRuntimeTraySnapshot } from '../../../../src/modules/console/runtime-tray-snapshot.ts';
 import { openQueueDb } from '../../../../src/modules/runway/family-runtime-store.ts';
 import {
   createStageAttempt,
@@ -241,6 +242,7 @@ test('family-runtime evidence-worklist syncs terminal Temporal closeout before e
         providerKind: 'temporal',
         executorKind: 'codex_cli',
         detailLevel: 'full',
+        runtimeSnapshotProvider: buildRuntimeTraySnapshot,
         queryTemporalStageAttemptReadModel: async (attempt: { stage_attempt_id: string; workflow_id: string }) => {
           queryCount += 1;
           assert.equal(attempt.stage_attempt_id, stageAttemptId);
@@ -319,6 +321,7 @@ test('family-runtime evidence-worklist exposes active attempt progress-first sup
         providerKind: 'temporal',
         executorKind: 'codex_cli',
         detailLevel: 'full',
+        runtimeSnapshotProvider: buildRuntimeTraySnapshot,
         queryTemporalStageAttemptReadModel: async () => null,
       },
     )).family_runtime_evidence_worklist;
