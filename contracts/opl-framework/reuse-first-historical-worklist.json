@@ -40,6 +40,24 @@
       ]
     },
     {
+      "id": "phase1-kernel-shared-json-boundary-helper",
+      "status": "allowed_projection_boundary",
+      "categories": [
+        "handwritten_json_boundary"
+      ],
+      "path_prefixes": [
+        "src/kernel"
+      ],
+      "owner": "OPL Framework Schema/CLI",
+      "phase": "Phase 1/2",
+      "action": "keep_as_shared_schema_registry_json_boundary_helper",
+      "expiry": "2026-12-31",
+      "decision_ref": "src/kernel/contract-validation.ts",
+      "false_ready_guard": [
+        "central helper classification permits the shared boundary implementation only; module-local validators remain migration worklist items"
+      ]
+    },
+    {
       "id": "phase4-src-modules-runtime-queue",
       "status": "must_migrate",
       "categories": [
