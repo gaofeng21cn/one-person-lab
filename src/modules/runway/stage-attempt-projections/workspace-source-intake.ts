@@ -1,4 +1,8 @@
-import type { JsonRecord } from '../../../kernel/types.ts';
+import {
+  recordList,
+  stringValue as optionalString,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 
 type WorkspaceSourceIntakeAttempt = {
   stage_attempt_id: string;
@@ -9,20 +13,6 @@ type WorkspaceSourceIntakeAttempt = {
   checkpoint_refs: string[];
 };
 
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-    : [];
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
 function refStrings(value: unknown): string[] {
   if (typeof value === 'string' && value.trim()) {
     return [value.trim()];
@@ -30,12 +20,13 @@ function refStrings(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value.flatMap(refStrings);
   }
-  if (isRecord(value)) {
+  const recordValue = recordList([value])[0];
+  if (recordValue) {
     return [
-      optionalString(value.ref),
-      optionalString(value.ref_id),
-      optionalString(value.path),
-      optionalString(value.uri),
+      optionalString(recordValue.ref),
+      optionalString(recordValue.ref_id),
+      optionalString(recordValue.path),
+      optionalString(recordValue.uri),
     ].filter((entry): entry is string => Boolean(entry));
   }
   return [];

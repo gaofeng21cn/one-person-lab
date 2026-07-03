@@ -1,4 +1,7 @@
-import type { JsonRecord } from '../../../kernel/types.ts';
+import {
+  stringValue as optionalString,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 
 type RouteGraphAttempt = {
   stage_attempt_id: string;
@@ -11,10 +14,6 @@ type RouteGraphAttempt = {
   writeback_receipt_refs: string[];
   closeout_refs: string[];
 };
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
 
 function routeDecisionValue(routeImpact: JsonRecord) {
   return optionalString(routeImpact.decision)

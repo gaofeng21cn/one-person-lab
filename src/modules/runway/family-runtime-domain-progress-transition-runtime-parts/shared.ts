@@ -1,3 +1,5 @@
+import { isRecord } from '../../../kernel/contract-validation.ts';
+import { stringList, stringValue as optionalString } from '../../../kernel/json-record.ts';
 import { stableId } from '../family-runtime-ids.ts';
 
 export const DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID = 'opl_domain_progress_transition_runtime';
@@ -61,13 +63,7 @@ export type DomainProgressTransitionRuntimeLog = {
   entries: Array<Record<string, unknown>>;
 };
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-export function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
+export { isRecord, optionalString, stringList };
 
 export function optionalScalarString(value: unknown) {
   if (typeof value === 'string' && value.trim()) {
@@ -85,12 +81,6 @@ export function booleanTrue(value: unknown) {
 
 export function numberValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
-}
-
-export function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map((item) => optionalString(item)).filter((item): item is string => Boolean(item))
-    : [];
 }
 
 export function transitionKind(command: Record<string, unknown>) {

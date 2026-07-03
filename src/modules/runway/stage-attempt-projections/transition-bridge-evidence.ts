@@ -1,4 +1,9 @@
-import type { JsonRecord } from '../../../kernel/types.ts';
+import {
+  record,
+  recordList,
+  stringValue as optionalString,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 
 type TransitionBridgeAttempt = {
   stage_attempt_id: string;
@@ -6,14 +11,6 @@ type TransitionBridgeAttempt = {
   stage_id: string;
   workspace_locator: JsonRecord;
 };
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
 
 function optionalBoolean(value: unknown) {
   return typeof value === 'boolean' ? value : null;
@@ -29,20 +26,16 @@ function stringList(value: unknown) {
     : [];
 }
 
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
 
 function transitionBridge(workspaceLocator: JsonRecord) {
-  return isRecord(workspaceLocator.transition_bridge) ? workspaceLocator.transition_bridge : null;
+  return recordList([workspaceLocator.transition_bridge])[0] ?? null;
 }
 
 function transitionEvidence(bridge: JsonRecord) {
-  return isRecord(bridge.evidence) ? bridge.evidence : {};
+  return record(bridge.evidence);
 }
 
 function authorityBoundary() {
@@ -81,7 +74,7 @@ export function buildAttemptTransitionBridgeEvidence(attempt: TransitionBridgeAt
     current_state: optionalString(bridge.current_state),
     next_state: optionalString(bridge.next_state),
     event: optionalString(bridge.event),
-    owner_route: isRecord(bridge.owner_route) ? bridge.owner_route : null,
+    owner_route: recordList([bridge.owner_route])[0] ?? null,
     domain_owner_receipt_required: optionalBoolean(bridge.domain_owner_receipt_required) ?? true,
     evidence: {
       receipt_refs: receiptRefs,

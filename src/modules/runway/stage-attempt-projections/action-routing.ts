@@ -1,4 +1,8 @@
-import type { JsonRecord } from '../../../kernel/types.ts';
+import {
+  recordList,
+  stringValue as optionalString,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 
 type ActionRoutingAttempt = {
   stage_attempt_id: string;
@@ -23,14 +27,6 @@ type OperatorActionRoute = {
   execution_policy: 'route_only_no_execution' | 'opl_safe_action_shell';
   execution_surface?: string;
 };
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function stringList(value: unknown) {
   return Array.isArray(value)
@@ -121,7 +117,8 @@ function providerSignalRoutes(attempt: ActionRoutingAttempt): OperatorActionRout
   }));
   const resumeRoutes = attempt.resume_ledger
     .map((entry) => entry.payload)
-    .filter((payload): payload is JsonRecord => Boolean(payload) && typeof payload === 'object' && !Array.isArray(payload))
+    .map((payload) => recordList([payload])[0] ?? null)
+    .filter((payload): payload is JsonRecord => Boolean(payload))
     .map((payload) => optionalString(payload.resume_token))
     .filter((entry): entry is string => Boolean(entry))
     .map((ref, index) => ({
@@ -156,8 +153,8 @@ function domainOwnerRoute(attempt: ActionRoutingAttempt): OperatorActionRoute[] 
 }
 
 function transitionBridgeEvidenceRoute(attempt: ActionRoutingAttempt): OperatorActionRoute[] {
-  if (!isRecord(attempt.transition_bridge_evidence)
-    || attempt.transition_bridge_evidence.availability !== 'transition_bridge_observed') {
+  const transitionBridgeEvidence = recordList([attempt.transition_bridge_evidence])[0];
+  if (transitionBridgeEvidence?.availability !== 'transition_bridge_observed') {
     return [];
   }
   return [appSurfaceRoute(

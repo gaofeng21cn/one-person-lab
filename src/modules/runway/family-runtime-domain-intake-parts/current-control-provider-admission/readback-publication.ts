@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { parseJsonText } from '../../../../kernel/json-file.ts';
 import { validCompleteTransitionRuntimeLiveReadback } from '../../family-runtime-domain-progress-transition-runtime-parts/live-readback-validation.ts';
 
 import {
@@ -235,7 +236,7 @@ function payloadMatchesTransitionPendingCandidate(
 
 function parseExistingTaskPayload(row: CurrentControlExistingTaskRow) {
   try {
-    const payload = JSON.parse(row.payload_json) as unknown;
+    const payload = parseJsonText(row.payload_json);
     return isRecord(payload) ? payload : null;
   } catch {
     return null;

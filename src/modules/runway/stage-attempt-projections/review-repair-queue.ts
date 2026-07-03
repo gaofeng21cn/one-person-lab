@@ -1,4 +1,8 @@
-import type { JsonRecord } from '../../../kernel/types.ts';
+import {
+  record,
+  recordList,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 
 type ReviewRepairAttempt = {
   stage_attempt_id: string;
@@ -15,18 +19,10 @@ type ReviewRepairAttempt = {
   lifecycle_primitives: JsonRecord;
 };
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function stringList(value: unknown) {
   return Array.isArray(value)
     ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
     : [];
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
 }
 
 function uniqueStrings(values: string[]) {
@@ -56,19 +52,21 @@ function controlledApplyBlockers(attempt: ReviewRepairAttempt) {
 }
 
 function lifecycleBlockers(attempt: ReviewRepairAttempt) {
-  const guardedApply = isRecord(attempt.lifecycle_primitives.guarded_apply_proof)
-    ? attempt.lifecycle_primitives.guarded_apply_proof
-    : {};
+  const guardedApply = record(attempt.lifecycle_primitives.guarded_apply_proof);
   return recordList(guardedApply.actions)
-    .filter((action) => isRecord(action.blocker))
-    .map((action, index) => ({
+    .map((action) => ({
+      action,
+      blocker: recordList([action.blocker])[0] ?? null,
+    }))
+    .filter((entry): entry is { action: JsonRecord; blocker: JsonRecord } => Boolean(entry.blocker))
+    .map(({ action, blocker }, index) => ({
       item_kind: 'lifecycle_blocker',
       item_id: `repair:${attempt.stage_attempt_id}:lifecycle:${index}`,
       stage_attempt_id: attempt.stage_attempt_id,
       domain_id: attempt.domain_id,
       stage_id: attempt.stage_id,
       next_owner: attempt.next_owner,
-      blocker: action.blocker,
+      blocker,
       repair_target: `opl family-runtime attempt query ${attempt.stage_attempt_id}`,
     }));
 }
@@ -76,11 +74,10 @@ function lifecycleBlockers(attempt: ReviewRepairAttempt) {
 function humanGateItems(attempt: ReviewRepairAttempt) {
   const refs = uniqueStrings([
     ...attempt.human_gate_refs,
-    ...attempt.human_gate_ledger.map((entry) =>
-      isRecord(entry.payload)
-        ? firstString(entry.payload.human_gate_ref, entry.payload.gate_ref, entry.payload.resume_token)
-        : null
-    ),
+    ...attempt.human_gate_ledger.map((entry) => {
+      const payload = record(entry.payload);
+      return firstString(payload.human_gate_ref, payload.gate_ref, payload.resume_token);
+    }),
   ].filter((entry): entry is string => Boolean(entry)));
   if (!attempt.attention_flags.includes('human_gate') && refs.length === 0) {
     return [];

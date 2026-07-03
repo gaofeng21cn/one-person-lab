@@ -1,6 +1,7 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
+import { parseJsonText } from '../../../kernel/json-file.ts';
 import { stableId } from '../family-runtime-ids.ts';
 import { auditDomainProgressTransitionReplay } from './replay-audit.ts';
 import {
@@ -231,7 +232,7 @@ export function readDomainProgressTransitionRuntimeLogJsonl(
     if (!trimmed) {
       continue;
     }
-    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+    const parsed = parseJsonText(trimmed) as Record<string, unknown>;
     if (parsed.surface_kind !== 'opl_domain_progress_transition_log_entry') {
       throw new Error(
         `Unexpected domain progress transition log surface at line ${index + 1}: ${String(parsed.surface_kind)}`,

@@ -1,4 +1,7 @@
-import type { JsonRecord } from '../../../kernel/types.ts';
+import {
+  stringValue as optionalString,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 
 type PackageExportAttempt = {
   stage_attempt_id: string;
@@ -7,10 +10,6 @@ type PackageExportAttempt = {
   route_impact: JsonRecord;
   artifact_refs: string[];
 };
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
 
 function stringList(value: unknown) {
   return Array.isArray(value)

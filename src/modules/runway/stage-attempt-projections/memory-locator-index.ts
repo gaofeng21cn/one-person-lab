@@ -1,4 +1,8 @@
-import type { JsonRecord } from '../../../kernel/types.ts';
+import {
+  recordList,
+  stringValue,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 
 type MemoryLocatorAttempt = {
   stage_attempt_id: string;
@@ -11,20 +15,8 @@ type MemoryLocatorAttempt = {
   workspace_locator?: JsonRecord;
 };
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function recordList(value: unknown): JsonRecord[] {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
 function uniqueStrings(values: string[]): string[] {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
-}
-
-function stringValue(value: unknown): string | null {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
 function stringList(value: unknown): string[] {
@@ -34,12 +26,13 @@ function stringList(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value.flatMap(stringList);
   }
-  if (isRecord(value)) {
+  const recordValue = recordList([value])[0];
+  if (recordValue) {
     return [
-      stringValue(value.ref),
-      stringValue(value.ref_id),
-      stringValue(value.path),
-      stringValue(value.uri),
+      stringValue(recordValue.ref),
+      stringValue(recordValue.ref_id),
+      stringValue(recordValue.path),
+      stringValue(recordValue.uri),
     ].filter((ref): ref is string => Boolean(ref));
   }
   return [];

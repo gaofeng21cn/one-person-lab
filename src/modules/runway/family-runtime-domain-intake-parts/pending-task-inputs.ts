@@ -1,4 +1,10 @@
 import {
+  record,
+  recordList,
+  stringList,
+  stringValue as optionalString,
+} from '../../../kernel/json-record.ts';
+import {
   FAMILY_RUNTIME_DOMAIN_IDS,
   type EnqueueInput,
   type FamilyRuntimeDomainId,
@@ -9,14 +15,6 @@ export type PendingTaskExportContext = {
   source: string;
   owner_fingerprint: string;
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
 
 function isFamilyRuntimeDomainId(value: string): value is FamilyRuntimeDomainId {
   return FAMILY_RUNTIME_DOMAIN_IDS.includes(value as FamilyRuntimeDomainId);
@@ -52,27 +50,20 @@ function canonicalFamilyRuntimeDomainId(value: unknown): FamilyRuntimeDomainId |
 }
 
 function taskPayloadFrom(item: Record<string, unknown>) {
-  return isRecord(item.payload) ? item.payload : {};
+  return record(item.payload);
 }
 
 function taskPayloadBlockedByForbiddenWrite(payload: Record<string, unknown>) {
   return payload.domain_truth_write === true || payload.artifact_gate_override === true;
 }
 
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value
-        .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-        .map((entry) => entry.trim())
-    : [];
-}
-
 function explicitRefFromRecord(value: unknown) {
-  if (!isRecord(value)) {
+  const recordValue = recordList([value])[0];
+  if (!recordValue) {
     return null;
   }
   for (const key of ['ref', 'route_ref', 'owner_route_ref', 'handoff_ref']) {
-    const ref = optionalString(value[key]);
+    const ref = optionalString(recordValue[key]);
     if (ref) {
       return ref;
     }
@@ -89,11 +80,9 @@ function ownerRouteRefsFrom(item: Record<string, unknown>) {
 }
 
 function handoffPayloadFrom(item: Record<string, unknown>) {
-  const handoff = isRecord(item.opl_runtime_owner_route_handoff)
-    ? item.opl_runtime_owner_route_handoff
-    : isRecord(item.owner_route_handoff)
-      ? item.owner_route_handoff
-      : null;
+  const handoff = recordList([item.opl_runtime_owner_route_handoff])[0]
+    ?? recordList([item.owner_route_handoff])[0]
+    ?? null;
   if (!handoff) {
     return {};
   }
@@ -103,8 +92,9 @@ function handoffPayloadFrom(item: Record<string, unknown>) {
 }
 
 function domainDispatchEvidencePayloadFrom(item: Record<string, unknown>) {
-  return isRecord(item.domain_dispatch_evidence_record_payload)
-    ? { domain_dispatch_evidence_record_payload: item.domain_dispatch_evidence_record_payload }
+  const payload = recordList([item.domain_dispatch_evidence_record_payload])[0];
+  return payload
+    ? { domain_dispatch_evidence_record_payload: payload }
     : {};
 }
 
@@ -169,11 +159,12 @@ export function toPendingTaskInputs(
   const inputs: EnqueueInput[] = [];
   const blocked: Array<{ reason: string; task: unknown }> = [];
   for (const task of tasks) {
-    if (!isRecord(task)) {
+    const taskRecord = recordList([task])[0];
+    if (!taskRecord) {
       blocked.push({ reason: 'invalid_pending_task', task });
       continue;
     }
-    const result = pendingTaskInputFrom(domainId, task, source, exportContext);
+    const result = pendingTaskInputFrom(domainId, taskRecord, source, exportContext);
     if (result.input) {
       inputs.push(result.input);
     } else if (result.blocked) {

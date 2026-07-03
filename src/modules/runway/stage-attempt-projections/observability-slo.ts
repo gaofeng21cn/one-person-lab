@@ -1,4 +1,7 @@
-import type { JsonRecord } from '../../../kernel/types.ts';
+import {
+  stringValue as optionalString,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 
 type ObservabilitySloAttempt = {
   stage_attempt_id: string;
@@ -7,10 +10,6 @@ type ObservabilitySloAttempt = {
   route_impact: JsonRecord;
   current_provider_readiness: JsonRecord | null;
 };
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
 
 function stringList(value: unknown) {
   return Array.isArray(value)

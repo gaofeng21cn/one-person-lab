@@ -1,3 +1,4 @@
+import { record, recordList, stringValue as optionalString } from '../../../kernel/json-record.ts';
 import {
   DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
   type DomainProgressTransitionRuntimeLog,
@@ -22,21 +23,13 @@ type LiveReadbackProjectionMetadata = Record<string, unknown> & {
   source_read_model_projection_metadata?: Record<string, unknown>;
 };
 
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function logEntryPayload(entry: Record<string, unknown> | undefined) {
-  return entry && isRecord(entry.payload) ? entry.payload : null;
+  return entry ? recordList([entry.payload])[0] ?? null : null;
 }
 
 function logEntryTransactionId(entry: Record<string, unknown> | undefined) {
   return optionalString(entry?.transaction_id)
-    ?? (isRecord(entry?.payload) ? optionalString(entry.payload.transaction_id) : null);
+    ?? optionalString(logEntryPayload(entry)?.transaction_id);
 }
 
 function entryByKindAndTransaction(
@@ -58,9 +51,7 @@ function liveReadbackProjectionMetadata(input: {
   latestEventId: string | null;
   replayAudit: Record<string, unknown>;
 }): LiveReadbackProjectionMetadata {
-  const readModelProjectionMetadata = isRecord(input.readModelProjectionMetadata)
-    ? input.readModelProjectionMetadata
-    : {};
+  const readModelProjectionMetadata = record(input.readModelProjectionMetadata);
   if (input.transactionComplete) {
     return {
       ...readModelProjectionMetadata,

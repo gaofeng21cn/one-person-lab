@@ -1,4 +1,9 @@
-import type { JsonRecord } from '../../../kernel/types.ts';
+import {
+  record,
+  recordList,
+  stringValue,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 
 type ArtifactGalleryAttempt = {
   stage_attempt_id: string;
@@ -11,10 +16,6 @@ type ArtifactGalleryAttempt = {
   lifecycle_primitives: JsonRecord;
 };
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function stringList(value: unknown) {
   return Array.isArray(value)
     ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
@@ -25,20 +26,12 @@ function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
 
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
 function nestedRef(value: unknown) {
-  return isRecord(value) && typeof value.ref === 'string' && value.ref.trim().length > 0
-    ? value.ref.trim()
-    : null;
+  return stringValue(record(value).ref);
 }
 
 function lifecycleApplyActions(attempt: ArtifactGalleryAttempt) {
-  const guardedApply = isRecord(attempt.lifecycle_primitives.guarded_apply_proof)
-    ? attempt.lifecycle_primitives.guarded_apply_proof
-    : {};
+  const guardedApply = record(attempt.lifecycle_primitives.guarded_apply_proof);
   return recordList(guardedApply.actions);
 }
 
@@ -59,9 +52,7 @@ function lifecycleDomainReceiptRefs(attempt: ArtifactGalleryAttempt) {
 }
 
 function galleryRefs(attempt: ArtifactGalleryAttempt) {
-  const locatorIndex = isRecord(attempt.lifecycle_primitives.artifact_locator_index)
-    ? attempt.lifecycle_primitives.artifact_locator_index
-    : {};
+  const locatorIndex = record(attempt.lifecycle_primitives.artifact_locator_index);
   const lifecycleRefs = [
     ...lifecycleRestoreRefs(attempt),
     ...lifecycleDomainReceiptRefs(attempt),
@@ -94,9 +85,7 @@ function galleryItems(attempt: ArtifactGalleryAttempt) {
 }
 
 export function buildAttemptArtifactGallery(attempt: ArtifactGalleryAttempt) {
-  const locatorIndex = isRecord(attempt.lifecycle_primitives.artifact_locator_index)
-    ? attempt.lifecycle_primitives.artifact_locator_index
-    : {};
+  const locatorIndex = record(attempt.lifecycle_primitives.artifact_locator_index);
   const restoreRefs = lifecycleRestoreRefs(attempt);
   const domainReceiptRefs = lifecycleDomainReceiptRefs(attempt);
   const items = galleryItems(attempt);

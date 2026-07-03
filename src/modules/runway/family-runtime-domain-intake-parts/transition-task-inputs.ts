@@ -1,16 +1,13 @@
 import {
+  record,
+  recordList,
+  stringValue as optionalString,
+} from '../../../kernel/json-record.ts';
+import {
   FAMILY_RUNTIME_DOMAIN_IDS,
   type EnqueueInput,
   type FamilyRuntimeDomainId,
 } from '../family-runtime-command.ts';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
 
 function isFamilyRuntimeDomainId(value: string): value is FamilyRuntimeDomainId {
   return FAMILY_RUNTIME_DOMAIN_IDS.includes(value as FamilyRuntimeDomainId);
@@ -46,11 +43,12 @@ function canonicalFamilyRuntimeDomainId(value: unknown): FamilyRuntimeDomainId |
 }
 
 function familyTransitionMatrixResult(output: Record<string, unknown>) {
-  const matrix = isRecord(output.family_transition_matrix_result)
-    ? output.family_transition_matrix_result
-    : output.surface_kind === 'family_transition_matrix_result'
-      ? output
-      : null;
+  const matrix = recordList([output.family_transition_matrix_result])[0]
+    ?? (
+      output.surface_kind === 'family_transition_matrix_result'
+        ? output
+        : null
+    );
   if (!matrix) {
     return null;
   }
@@ -58,7 +56,7 @@ function familyTransitionMatrixResult(output: Record<string, unknown>) {
 }
 
 function ownerRouteOwnerFrom(result: Record<string, unknown>) {
-  const ownerRoute = isRecord(result.owner_route) ? result.owner_route : null;
+  const ownerRoute = record(result.owner_route);
   return optionalString(ownerRoute?.owner);
 }
 
@@ -68,12 +66,13 @@ function transitionTaskInputFromMatrixEntry(
   entry: unknown,
   source: string,
 ): { input?: EnqueueInput; blocked?: { reason: string; task: unknown } } {
-  if (!isRecord(entry)) {
+  const entryRecord = recordList([entry])[0];
+  if (!entryRecord) {
     return { blocked: { reason: 'invalid_transition_matrix_entry', task: entry } };
   }
-  const result = isRecord(entry.result) ? entry.result : null;
+  const result = recordList([entryRecord.result])[0] ?? null;
   const specId = optionalString(matrix.spec_id);
-  const caseId = optionalString(entry.case_id);
+  const caseId = optionalString(entryRecord.case_id);
   const transitionId = optionalString(result?.transition_id);
   if (!result || result.surface_kind !== 'family_transition_result' || !specId || !caseId || !transitionId) {
     return { blocked: { reason: 'invalid_transition_matrix_result', task: entry } };

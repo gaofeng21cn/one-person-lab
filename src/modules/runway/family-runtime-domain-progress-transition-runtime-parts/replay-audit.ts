@@ -1,3 +1,4 @@
+import { record, recordList, stringValue as optionalString } from '../../../kernel/json-record.ts';
 import { stableId } from '../family-runtime-ids.ts';
 
 const STABLE_OUTCOMES = new Set([
@@ -28,14 +29,6 @@ const STAGE_RUN_IDENTITY_COMPARISON_FIELDS = [
   'source_generation',
 ] as const;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
 function optionalScalarString(value: unknown) {
   if (typeof value === 'string' && value.trim()) {
     return value.trim();
@@ -65,25 +58,23 @@ function aggregateIdentityMatches(left: Record<string, unknown>, right: Record<s
 }
 
 function logEntryPayload(entry: Record<string, unknown> | undefined) {
-  return entry && isRecord(entry.payload) ? entry.payload : null;
+  return entry ? recordList([entry.payload])[0] ?? null : null;
 }
 
 function logEntryTransactionId(entry: Record<string, unknown> | undefined) {
   return optionalString(entry?.transaction_id)
-    ?? (isRecord(entry?.payload) ? optionalString(entry.payload.transaction_id) : null);
+    ?? optionalString(logEntryPayload(entry)?.transaction_id);
 }
 
 function logEntryAggregateIdentity(entry: Record<string, unknown>) {
-  return isRecord(entry.aggregate_identity)
-    ? entry.aggregate_identity
-    : isRecord(entry.payload) && isRecord(entry.payload.aggregate_identity)
-      ? entry.payload.aggregate_identity
-      : null;
+  return recordList([entry.aggregate_identity])[0]
+    ?? recordList([logEntryPayload(entry)?.aggregate_identity])[0]
+    ?? null;
 }
 
 function logEntryVersion(entry: Record<string, unknown> | undefined) {
   return numberValue(entry?.aggregate_version)
-    ?? (isRecord(entry?.payload) ? numberValue(entry.payload.aggregate_version) : null);
+    ?? numberValue(logEntryPayload(entry)?.aggregate_version);
 }
 
 function entryByKindAndTransaction(
@@ -117,7 +108,7 @@ function latestTransitionEventEntries(input: {
 }
 
 function stageRunIdentityRecord(value?: Record<string, unknown> | null) {
-  return value && isRecord(value.stage_run_identity) ? value.stage_run_identity : null;
+  return value ? recordList([value.stage_run_identity])[0] ?? null : null;
 }
 
 function stageRunIdentityComparisonKey(identity: Record<string, unknown> | null) {
@@ -184,7 +175,7 @@ function outcomeKind(event: Record<string, unknown> | null) {
   if (!event) {
     return null;
   }
-  const outcome = isRecord(event.outcome) ? event.outcome : {};
+  const outcome = record(event.outcome);
   return optionalString(outcome.kind)
     ?? optionalString(outcome.status)
     ?? optionalString(event.transition_kind)
@@ -197,7 +188,7 @@ function exactlyOneOutcome(input: {
   transactionComplete: boolean;
   failClosedReason: string | null;
 }) {
-  const outcome = input.event && isRecord(input.event.outcome) ? input.event.outcome : {};
+  const outcome = input.event ? record(input.event.outcome) : {};
   const selectedOutcomeKind = outcomeKind(input.event);
   const transitionKind = input.event ? optionalString(input.event.transition_kind) : null;
   const nonAdvancingApply =

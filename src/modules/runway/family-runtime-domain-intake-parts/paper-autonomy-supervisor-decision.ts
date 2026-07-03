@@ -1,5 +1,6 @@
 import path from 'node:path';
 
+import { record, recordList, stringValue as optionalString } from '../../../kernel/json-record.ts';
 import type { EnqueueInput } from '../family-runtime-command.ts';
 import type { familyRuntimePaths } from '../family-runtime-store.ts';
 import {
@@ -45,14 +46,6 @@ type PaperAutonomySupervisorDecisionBlocked = {
   task: unknown;
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
 function stringList(value: unknown) {
   return Array.isArray(value)
     ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
@@ -68,23 +61,24 @@ function ledgerPaths(paths: ReturnType<typeof familyRuntimePaths>) {
 }
 
 function stageRunIdentityFrom(value: unknown): PaperAutonomyStageRunIdentity | null {
-  if (!isRecord(value)) {
+  const identityValue = recordList([value])[0];
+  if (!identityValue) {
     return null;
   }
   const identity = {
-    stage_run_id: optionalString(value.stage_run_id),
-    route_identity_key: optionalString(value.route_identity_key),
-    attempt_idempotency_key: optionalString(value.attempt_idempotency_key),
-    selected_dispatch_ref: optionalString(value.selected_dispatch_ref),
-    stage_packet_ref: optionalString(value.stage_packet_ref),
-    stage_packet_refs: stringList(value.stage_packet_refs),
-    provider_attempt_ref: optionalString(value.provider_attempt_ref),
-    attempt_lease_ref: optionalString(value.attempt_lease_ref),
-    workflow_ref: optionalString(value.workflow_ref),
-    source_fingerprint: optionalString(value.source_fingerprint),
-    truth_epoch: optionalString(value.truth_epoch),
-    runtime_health_epoch: optionalString(value.runtime_health_epoch),
-    work_unit_fingerprint: optionalString(value.work_unit_fingerprint),
+    stage_run_id: optionalString(identityValue.stage_run_id),
+    route_identity_key: optionalString(identityValue.route_identity_key),
+    attempt_idempotency_key: optionalString(identityValue.attempt_idempotency_key),
+    selected_dispatch_ref: optionalString(identityValue.selected_dispatch_ref),
+    stage_packet_ref: optionalString(identityValue.stage_packet_ref),
+    stage_packet_refs: stringList(identityValue.stage_packet_refs),
+    provider_attempt_ref: optionalString(identityValue.provider_attempt_ref),
+    attempt_lease_ref: optionalString(identityValue.attempt_lease_ref),
+    workflow_ref: optionalString(identityValue.workflow_ref),
+    source_fingerprint: optionalString(identityValue.source_fingerprint),
+    truth_epoch: optionalString(identityValue.truth_epoch),
+    runtime_health_epoch: optionalString(identityValue.runtime_health_epoch),
+    work_unit_fingerprint: optionalString(identityValue.work_unit_fingerprint),
   };
   if (
     !identity.stage_run_id
@@ -107,27 +101,26 @@ function stageRunIdentityFrom(value: unknown): PaperAutonomyStageRunIdentity | n
 }
 
 function validAuthorityBoundary(value: unknown) {
-  if (!isRecord(value)) {
+  const boundary = recordList([value])[0];
+  if (!boundary) {
     return false;
   }
-  return value.request_owner === 'med-autoscience'
-    && value.decision_engine_owner === 'one-person-lab'
-    && value.recovery_obligation_store_owner === 'one-person-lab'
-    && value.decision_authority === false
-    && value.mas_can_run_supervisor_decision_engine === false
-    && value.mas_can_store_recovery_obligation === false
-    && value.opl_can_write_mas_truth === false
-    && value.opl_can_create_domain_owner_receipt === false
-    && value.opl_can_create_domain_typed_blocker === false;
+  return boundary.request_owner === 'med-autoscience'
+    && boundary.decision_engine_owner === 'one-person-lab'
+    && boundary.recovery_obligation_store_owner === 'one-person-lab'
+    && boundary.decision_authority === false
+    && boundary.mas_can_run_supervisor_decision_engine === false
+    && boundary.mas_can_store_recovery_obligation === false
+    && boundary.opl_can_write_mas_truth === false
+    && boundary.opl_can_create_domain_owner_receipt === false
+    && boundary.opl_can_create_domain_typed_blocker === false;
 }
 
 function requestFrom(input: EnqueueInput) {
   if (input.domainId !== 'medautoscience' || input.taskKind !== 'paper_autonomy/supervisor-decision') {
     return null;
   }
-  const request = isRecord(input.payload.paper_autonomy_supervisor_decision_request)
-    ? input.payload.paper_autonomy_supervisor_decision_request
-    : null;
+  const request = recordList([input.payload.paper_autonomy_supervisor_decision_request])[0] ?? null;
   if (!request || request.surface_kind !== 'mas_opl_paper_autonomy_supervisor_decision_request') {
     return null;
   }
@@ -171,9 +164,7 @@ function consumeSupervisorDecisionRequest(input: {
   }
   const obligationId = optionalString(request.obligation_id);
   const currentIdentity = stageRunIdentityFrom(request.current_identity);
-  const recommendedEvidence = isRecord(request.recommended_decision_evidence)
-    ? request.recommended_decision_evidence
-    : {};
+  const recommendedEvidence = record(request.recommended_decision_evidence);
   const typedBlockerRef = optionalString(recommendedEvidence.typed_blocker_ref);
   const ownerReceiptRef = optionalString(recommendedEvidence.owner_receipt_ref);
   const humanGateRef = optionalString(recommendedEvidence.human_gate_ref);

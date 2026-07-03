@@ -1,5 +1,10 @@
 import path from 'node:path';
 
+import {
+  recordList,
+  stringValue as optionalString,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 import type { EnqueueInput } from '../family-runtime-command.ts';
 
 const HANDOFF_SURFACE_KIND = 'mas_paper_mission_opl_route_handoff_record';
@@ -57,8 +62,6 @@ const FORBIDDEN_CLAIM_FLAGS = [
   'can_claim_paper_progress',
   'can_claim_runtime_ready',
 ] as const;
-
-type JsonRecord = Record<string, unknown>;
 
 type SupportedCommandKind = typeof SUPPORTED_COMMAND_KINDS[number];
 
@@ -178,20 +181,16 @@ export type MasPaperMissionRouteHandoffExportReadback = {
   };
 };
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
 function booleanTrue(value: unknown) {
   return value === true;
 }
 
+function asRecord(value: unknown) {
+  return recordList([value])[0] ?? null;
+}
+
 function nestedRecord(value: JsonRecord, key: string) {
-  return isRecord(value[key]) ? value[key] : null;
+  return asRecord(value[key]);
 }
 
 function routeCommandKind(handoff: JsonRecord) {
@@ -782,21 +781,25 @@ function handoffFromTask(task: JsonRecord) {
   ) {
     return task;
   }
-  if (isRecord(task.opl_route_handoff)) {
-    return task.opl_route_handoff;
+  const routeHandoff = asRecord(task.opl_route_handoff);
+  if (routeHandoff) {
+    return routeHandoff;
   }
-  if (isRecord(task.opl_route_handoff_record)) {
-    return task.opl_route_handoff_record;
+  const routeHandoffRecord = asRecord(task.opl_route_handoff_record);
+  if (routeHandoffRecord) {
+    return routeHandoffRecord;
   }
-  if (isRecord(task.opl_runtime_owner_route_handoff)
-    && task.opl_runtime_owner_route_handoff.surface_kind === HANDOFF_SURFACE_KIND) {
-    return task.opl_runtime_owner_route_handoff;
+  const runtimeOwnerRouteHandoff = asRecord(task.opl_runtime_owner_route_handoff);
+  if (runtimeOwnerRouteHandoff?.surface_kind === HANDOFF_SURFACE_KIND) {
+    return runtimeOwnerRouteHandoff;
   }
-  if (isRecord(task.paper_mission)) {
-    return handoffFromTask(task.paper_mission);
+  const paperMission = asRecord(task.paper_mission);
+  if (paperMission) {
+    return handoffFromTask(paperMission);
   }
-  if (isRecord(task.payload)) {
-    return handoffFromTask(task.payload);
+  const payload = asRecord(task.payload);
+  if (payload) {
+    return handoffFromTask(payload);
   }
   return null;
 }
@@ -820,14 +823,17 @@ function sourceTasks(output: JsonRecord): {
     };
   }
   if (Array.isArray(output.pending_family_tasks)) {
-    const explicitHandoffTasks = output.pending_family_tasks.filter((task) =>
-      isRecord(task)
-      && (
-        task.surface_kind === HANDOFF_SURFACE_KIND
-        || task.surface_kind === MATERIALIZED_READBACK_SURFACE_KIND
-        || handoffFromTask(task) !== null
-      )
-    );
+    const explicitHandoffTasks = output.pending_family_tasks.filter((task) => {
+      const taskRecord = asRecord(task);
+      return Boolean(
+        taskRecord
+        && (
+          taskRecord.surface_kind === HANDOFF_SURFACE_KIND
+          || taskRecord.surface_kind === MATERIALIZED_READBACK_SURFACE_KIND
+          || handoffFromTask(taskRecord) !== null
+        ),
+      );
+    });
     if (explicitHandoffTasks.length === 0) {
       return { sourcePath: 'not_found', tasks: [], legacyConsidered: false };
     }
@@ -844,20 +850,21 @@ export function intakeMasPaperMissionRouteHandoff(
   payload: unknown,
   options: IntakeOptions = {},
 ): MasPaperMissionRouteHandoffIntakeReadback {
-  if (!isRecord(payload)) {
+  const payloadRecord = asRecord(payload);
+  if (!payloadRecord) {
     return baseReadback(null, [{
       reason: 'invalid_handoff_payload',
       detail: 'Expected MAS paper mission route handoff JSON object.',
     }]);
   }
 
-  const surfaceKind = optionalString(payload.surface_kind);
+  const surfaceKind = optionalString(payloadRecord.surface_kind);
   const handoff = surfaceKind === MATERIALIZED_READBACK_SURFACE_KIND
-    ? materializedReadbackToHandoff(payload)
-    : payload;
+    ? materializedReadbackToHandoff(payloadRecord)
+    : payloadRecord;
   const normalizedSurfaceKind = optionalString(handoff.surface_kind);
   if (normalizedSurfaceKind !== HANDOFF_SURFACE_KIND) {
-    return baseReadback(payload, [{
+    return baseReadback(payloadRecord, [{
       reason: 'unknown_surface_kind',
       field: 'surface_kind',
       value: surfaceKind,
@@ -972,7 +979,8 @@ export function intakeMasPaperMissionRouteHandoffsFromExport(
   output: unknown,
   options: IntakeOptions = {},
 ): MasPaperMissionRouteHandoffExportReadback {
-  if (!isRecord(output)) {
+  const outputRecord = asRecord(output);
+  if (!outputRecord) {
     return {
       surface_kind: 'opl_mas_paper_mission_route_handoff_export_intake_readback',
       schema_version: 1,
@@ -982,14 +990,15 @@ export function intakeMasPaperMissionRouteHandoffsFromExport(
       authority_boundary: exportAuthorityBoundary(),
     };
   }
-  const selected = sourceTasks(output);
+  const selected = sourceTasks(outputRecord);
   const readbacks = selected.tasks
     .map((task) => {
-      if (!isRecord(task)) {
+      const taskRecord = asRecord(task);
+      if (!taskRecord) {
         return intakeMasPaperMissionRouteHandoff(task, options);
       }
       return intakeMasPaperMissionRouteHandoff(
-        task.surface_kind === HANDOFF_SURFACE_KIND ? task : handoffFromTask(task),
+        taskRecord.surface_kind === HANDOFF_SURFACE_KIND ? taskRecord : handoffFromTask(taskRecord),
         options,
       );
     })

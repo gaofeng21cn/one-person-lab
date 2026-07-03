@@ -1,3 +1,5 @@
+import { recordList, stringValue as optionalString } from '../../../kernel/json-record.ts';
+
 const DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID = 'opl_domain_progress_transition_runtime';
 
 const ALLOWED_POLICY_ADAPTER_SURFACES = new Set([
@@ -53,14 +55,6 @@ type PolicyAdapterBlocked = {
   task: unknown;
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
 function firstString(...values: unknown[]) {
   return values.map(optionalString).find((value): value is string => Boolean(value)) ?? null;
 }
@@ -70,11 +64,12 @@ function booleanTrue(value: unknown) {
 }
 
 function recordField(value: Record<string, unknown>, field: string) {
-  return isRecord(value[field]) ? value[field] : null;
+  return recordList([value[field]])[0] ?? null;
 }
 
 function recordValue(value: unknown, field: string) {
-  return isRecord(value) ? value[field] : null;
+  const valueRecord = recordList([value])[0];
+  return valueRecord ? valueRecord[field] : null;
 }
 
 function routeCommandTransitionKind(value: Record<string, unknown>) {
