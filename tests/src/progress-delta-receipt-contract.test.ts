@@ -9,6 +9,7 @@ import {
   PROGRESS_DELTA_RECEIPT_DELTA_CLASSES,
   validateProgressDeltaReceipt,
 } from '../../src/modules/ledger/progress-delta-receipt.ts';
+import { FrameworkContractError } from '../../src/modules/charter/index.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -89,11 +90,49 @@ test('progress delta receipt helper normalizes refs and rejects missing required
   assert.equal(receipt.authority_boundary.platform_repair_counts_as_deliverable_progress, false);
   assert.deepEqual(validateProgressDeltaReceipt(receipt), receipt);
 
+  let invalidRefsError: FrameworkContractError | null = null;
+  try {
+    validateProgressDeltaReceipt({
+      ...receipt,
+      produced_refs: [],
+    });
+    assert.fail('invalid produced_refs unexpectedly passed schema validation');
+  } catch (error) {
+    assert.ok(error instanceof FrameworkContractError);
+    invalidRefsError = error;
+  }
+  assert.ok(invalidRefsError);
+  assert.equal(
+    (invalidRefsError.details?.errors as Array<{ instance_path?: string }>).some(
+      (error) => error.instance_path === '/produced_refs',
+    ),
+    true,
+  );
+});
+
+test('progress delta receipt validator rejects false-authority drift at the JSON boundary', () => {
+  const receipt = buildProgressDeltaReceipt({
+    receipt_id: 'pdr:mas:dm003:false-authority-drift',
+    domain_id: 'med-autoscience',
+    task_or_study_ref: 'study:DM003',
+    stage_ref: 'analysis_pack',
+    producer: 'codex_cli',
+    delta_classification: 'platform_repair_delta',
+    changed_surfaces: ['runtime/currentness'],
+    produced_refs: ['opl://attempt/sat_123/progress-delta'],
+    consumed_refs: ['current_owner_delta:dm003'],
+    next_owner: 'med-autoscience',
+    next_required_delta: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+  });
+
   assert.throws(
     () => validateProgressDeltaReceipt({
       ...receipt,
-      produced_refs: [],
+      authority_boundary: {
+        ...receipt.authority_boundary,
+        can_sign_owner_receipt: true,
+      },
     }),
-    /produced_refs/,
+    FrameworkContractError,
   );
 });

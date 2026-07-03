@@ -1,6 +1,5 @@
-import { FrameworkContractError } from '../charter/index.ts';
-
-type JsonRecord = Record<string, unknown>;
+import progressDeltaReceiptSchema from '../../../contracts/opl-framework/progress-delta-receipt.schema.json' with { type: 'json' };
+import { assertJsonSchemaPayload } from '../../kernel/schema-registry.ts';
 
 export const PROGRESS_DELTA_RECEIPT_DELTA_CLASSES = [
   'paper_progress_delta',
@@ -44,56 +43,18 @@ export type StageProgressDeltaClassification =
   | 'human_gate'
   | 'stop_loss';
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
+const PROGRESS_DELTA_RECEIPT_SCHEMA_ENTRY = {
+  schemaId: 'opl.progress_delta_receipt.v1',
+  schema: progressDeltaReceiptSchema,
+  sourceRef: 'contracts/opl-framework/progress-delta-receipt.schema.json',
+};
 
-function nonEmptyString(value: unknown, field: string) {
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new FrameworkContractError('contract_shape_invalid', `ProgressDeltaReceipt requires ${field}.`, {
-      field,
-    });
-  }
+function canonicalString(value: string) {
   return value.trim();
 }
 
-function stringList(value: unknown, field: string) {
-  if (!Array.isArray(value)) {
-    throw new FrameworkContractError('contract_shape_invalid', `ProgressDeltaReceipt requires ${field}.`, {
-      field,
-    });
-  }
-  const refs = [
-    ...new Set(
-      value
-        .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-        .map((entry) => entry.trim()),
-    ),
-  ];
-  if (refs.length === 0) {
-    throw new FrameworkContractError('contract_shape_invalid', `ProgressDeltaReceipt requires non-empty ${field}.`, {
-      field,
-    });
-  }
-  return refs;
-}
-
-function deltaClass(value: unknown) {
-  if (
-    typeof value !== 'string'
-    || !PROGRESS_DELTA_RECEIPT_DELTA_CLASSES.includes(value as ProgressDeltaReceiptDeltaClass)
-  ) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'ProgressDeltaReceipt requires a known delta_classification.',
-      {
-        field: 'delta_classification',
-        expected: [...PROGRESS_DELTA_RECEIPT_DELTA_CLASSES],
-        actual: value,
-      },
-    );
-  }
-  return value as ProgressDeltaReceiptDeltaClass;
+function canonicalRefList(value: string[]) {
+  return [...new Set(value.map((entry) => entry.trim()).filter(Boolean))];
 }
 
 function progressDeltaReceiptAuthorityBoundary() {
@@ -132,53 +93,38 @@ export function buildProgressDeltaReceipt(input: ProgressDeltaReceiptInput): Pro
   return validateProgressDeltaReceipt({
     surface_kind: 'opl_progress_delta_receipt',
     schema_version: 'progress-delta-receipt.v1',
-    receipt_id: input.receipt_id,
-    domain_id: input.domain_id,
-    task_or_study_ref: input.task_or_study_ref,
-    stage_ref: input.stage_ref,
-    producer: input.producer,
+    receipt_id: canonicalString(input.receipt_id),
+    domain_id: canonicalString(input.domain_id),
+    task_or_study_ref: canonicalString(input.task_or_study_ref),
+    stage_ref: canonicalString(input.stage_ref),
+    producer: canonicalString(input.producer),
     delta_classification: input.delta_classification,
-    changed_surfaces: input.changed_surfaces,
-    produced_refs: input.produced_refs,
-    consumed_refs: input.consumed_refs,
-    next_owner: input.next_owner,
-    next_required_delta: input.next_required_delta,
+    changed_surfaces: canonicalRefList(input.changed_surfaces),
+    produced_refs: canonicalRefList(input.produced_refs),
+    consumed_refs: canonicalRefList(input.consumed_refs),
+    next_owner: canonicalString(input.next_owner),
+    next_required_delta: canonicalString(input.next_required_delta),
     authority_boundary: progressDeltaReceiptAuthorityBoundary(),
   });
 }
 
 export function validateProgressDeltaReceipt(value: unknown): ProgressDeltaReceipt {
-  if (!isRecord(value)) {
-    throw new FrameworkContractError('contract_shape_invalid', 'ProgressDeltaReceipt must be an object.');
-  }
-  const surfaceKind = nonEmptyString(value.surface_kind, 'surface_kind');
-  if (surfaceKind !== 'opl_progress_delta_receipt') {
-    throw new FrameworkContractError('contract_shape_invalid', 'ProgressDeltaReceipt surface_kind must be canonical.', {
-      field: 'surface_kind',
-      actual: surfaceKind,
-    });
-  }
-  const schemaVersion = nonEmptyString(value.schema_version, 'schema_version');
-  if (schemaVersion !== 'progress-delta-receipt.v1') {
-    throw new FrameworkContractError('contract_shape_invalid', 'ProgressDeltaReceipt schema_version must be canonical.', {
-      field: 'schema_version',
-      actual: schemaVersion,
-    });
-  }
+  assertJsonSchemaPayload(PROGRESS_DELTA_RECEIPT_SCHEMA_ENTRY, value);
+  const receipt = value as ProgressDeltaReceipt;
   return {
     surface_kind: 'opl_progress_delta_receipt',
     schema_version: 'progress-delta-receipt.v1',
-    receipt_id: nonEmptyString(value.receipt_id, 'receipt_id'),
-    domain_id: nonEmptyString(value.domain_id, 'domain_id'),
-    task_or_study_ref: nonEmptyString(value.task_or_study_ref, 'task_or_study_ref'),
-    stage_ref: nonEmptyString(value.stage_ref, 'stage_ref'),
-    producer: nonEmptyString(value.producer, 'producer'),
-    delta_classification: deltaClass(value.delta_classification),
-    changed_surfaces: stringList(value.changed_surfaces, 'changed_surfaces'),
-    produced_refs: stringList(value.produced_refs, 'produced_refs'),
-    consumed_refs: stringList(value.consumed_refs, 'consumed_refs'),
-    next_owner: nonEmptyString(value.next_owner, 'next_owner'),
-    next_required_delta: nonEmptyString(value.next_required_delta, 'next_required_delta'),
+    receipt_id: canonicalString(receipt.receipt_id),
+    domain_id: canonicalString(receipt.domain_id),
+    task_or_study_ref: canonicalString(receipt.task_or_study_ref),
+    stage_ref: canonicalString(receipt.stage_ref),
+    producer: canonicalString(receipt.producer),
+    delta_classification: receipt.delta_classification,
+    changed_surfaces: canonicalRefList(receipt.changed_surfaces),
+    produced_refs: canonicalRefList(receipt.produced_refs),
+    consumed_refs: canonicalRefList(receipt.consumed_refs),
+    next_owner: canonicalString(receipt.next_owner),
+    next_required_delta: canonicalString(receipt.next_required_delta),
     authority_boundary: progressDeltaReceiptAuthorityBoundary(),
   };
 }
