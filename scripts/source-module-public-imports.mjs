@@ -402,7 +402,7 @@ function moduleIdFromPath(relativePath) {
 
 function isPublicModuleEntrypoint(relativePath, moduleId) {
   const rest = relativePath.slice(`${physicalModuleRoot}/${moduleId}`.length).replace(/^\//, '');
-  return rest === '' || rest === 'index' || rest === 'index.ts';
+  return rest === '' || rest === 'index' || rest === 'index.ts' || rest.startsWith('public/');
 }
 
 function toRelativeTsSpecifier(fromDir, targetFile) {
