@@ -263,7 +263,7 @@ OpenTelemetry 给 OPL 的结论：可观测性不要继续扩张成多个私有 
 | --- | --- | ---: | --- | --- | --- |
 | 1 | Reuse-first governance gate | 85% | `partial` | 已落 `contracts/opl-framework/reuse-first-governance.json`、`scripts/reuse-first-scan.mjs`、`npm run reuse-first:scan`、`npm run reuse-first:scan:diff` 与 `./scripts/verify.sh reuse-first`；GitHub Verify 的 lint/structure job 会跑 strict diff gate。 | 继续按后续 phases 消化 full-scan historical findings；不要把 clean diff gate 当作全仓历史风险已清零。 |
 | 2 | Schema boundary consolidation | 20% | `partial` | Phase 1 seed lane 已引入 Ajv-backed `src/kernel/schema-registry.ts`；`ProgressDeltaReceipt` 已从局部手写 shape validator 迁到 `contracts/opl-framework/progress-delta-receipt.schema.json` + shared schema registry，并有 valid/invalid focused test 覆盖 false-authority drift。大量 hand-written JSON/readback helper 仍未迁移。 | 继续把 runtime receipts、descriptors、readbacks 逐步接入 schema registry；禁止新增分散 validator。 |
-| 3 | CLI parser/command registry | 35% | `partial` | 已落最小 `CommandSpec.registry` 与 `validateCommandRegistryCoverage` adapter，`connect pubmed search` 以及 `connect install/update/reinstall/remove` module actions 都进入 registry；help/readback 可读出 parser、options、schema ref 与 false-authority boundary。 | 继续把高频 public commands 纳入 registry；只有当 Commander/Yargs 能减少现有 parser 分散度时再引入依赖。 |
+| 3 | CLI parser/command registry | 42% | `partial` | 已落最小 `CommandSpec.registry` 与 `validateCommandRegistryCoverage` adapter，`connect pubmed search`、`connect install/update/reinstall/remove` module actions，以及 `status workspace/runtime/dashboard` 都进入 registry；help/readback 可读出 parser、options、schema ref 与 false-authority boundary，status 三命令已复用 registry parser adapter。 | 继续把高频 public commands 纳入 registry；只有当 Commander/Yargs 能减少现有 parser 分散度时再引入依赖。 |
 | 4 | Runway Temporal-first runtime | 52% | `partial` | Temporal SDK 已是一等依赖，docs 已声明 Temporal production substrate；`family-runtime status/queue list` 已暴露 `queue_lifecycle_boundary`；Runway control-loop 现在把 competing SQLite queue lifecycle 纳入 Temporal readiness 降级，并显式标记 `local_provider_role=dev_ci_offline_diagnostic_baseline_only_not_online_readiness_substitute`。 | 继续把 stage attempt durable lifecycle 从 SQLite mutation path 迁到 Temporal workflow/activity/schedule/history；local provider 保持 dev/CI/offline diagnostic。 |
 | 5 | Kubernetes-style reconciler | 58% | `partial` | `family-runtime lifecycle reconcile` 已输出 desired_state / observed_state / reconcile_decision / next_safe_action，mutation 只允许进入 lifecycle apply receipt projection，禁止写 domain truth、artifact body、owner receipt 或 typed blocker；`opl runway reconcile --json` 现在把 `queue_lifecycle_boundary` 作为 observed_state，在 local SQLite lifecycle 与 Temporal 竞争时只输出 `observe_queue_lifecycle_boundary` readback，不给 scheduler tick mutation。 | 继续把 worker/App/domain helper mutation 收到统一 Reconciler safe-action source。 |
 | 6 | Managed update split | 50% | `partial` | App release channel 与 managed update plane 边界存在；已增加 `owner_route_contract` 和组件级 `owner_route`，把 app binary / runtime substrate / capability packages 明确路由到 owner/readback/apply owner，并保留 no-package-manager forbidden claims。 | 继续把 runner adapter / receipt projection 按 owner 拆薄。 |
@@ -316,6 +316,15 @@ Phase 1、Phase 7、Phase 9 的本轮收薄已吸收进 `main`，属于 schema b
 - Domain private tail：新增 `contracts/opl-framework/domain-private-platform-tail-matrix.json`，把 MAS/MAG/RCA/OMA/BookForge/ScholarSkills 的 private tail class、replacement primitive、retained authority、delete/tombstone gate、forbidden claims 和 verification surface 固定为 machine-readable seed；该 seed 不授权物理删除、owner acceptance、domain ready 或 production ready。
 - Observability：新增 refs-only JSON / OpenMetrics export seed，按 trace、metric、log/event signal grouping 输出 OpenTelemetry-style projection；不保存 payload body，不创建私有 ledger UI，不声明 runtime/domain/artifact/production readiness。
 - Fresh evidence：合并后 focused tests 22/22 pass，`npm run typecheck` pass，`npm run build` pass，`npm test` smoke 72/72 pass，`npm run reuse-first:scan:diff` gate_status=ok。Full reuse-first scan 仍有历史 findings，不能把 clean diff gate 说成全仓历史风险清零。
+
+## Phase 2 Status Command Registry Lane
+
+本 lane 只扩展 CLI command registry 覆盖，不声明完整 parser 统一、CLI tree closeout、runtime readiness 或 owner acceptance。
+
+- Status registry coverage：`status workspace`、`status runtime`、`status dashboard` 已进入 `CommandSpec.registry`、`contracts/opl-framework/cli-command-registry.json` required command set 与 `validateCommandRegistryCoverage` protected `status` 前缀。
+- Parser risk reduction：status 三命令的 handler 不再走各自 hand-written status parser，改用既有 `parseRegisteredCommandOptions` / `node_util_parse_args` adapter，并保留原输出行为。
+- Fresh evidence：`node --test --experimental-strip-types tests/src/cli/cases/cli-command-registry.test.ts` 6/6 pass，`npm run typecheck` pass，`npm run reuse-first:scan:diff` gate_status=ok。
+- Residual boundary：大量 runtime、pack、workspace、agents 命令仍未进入 registry；本 lane 不引入 Commander/Yargs，也不迁移 provider/runtime mutation path。
 
 ## Plan Completion Audit
 

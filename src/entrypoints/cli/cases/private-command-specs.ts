@@ -65,7 +65,7 @@ import {
 import { buildRuntimeEnvironmentCommandSpecs } from './runtime-environment-command-spec.ts';
 import { buildWorkspaceInitializeCommandSpecs } from './workspace-initialize-command-spec.ts';
 import { parseAgentsScaffoldArgs } from './private-command-specs-parts/agents-scaffold.ts';
-import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseDashboardArgs, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseObservabilityExportArgs, parseProductEntryArgs, parseRuntimeAppOperatorDrilldownArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseObservabilityExportArgs, parseProductEntryArgs, parseRegisteredCommandOptions, parseRuntimeAppOperatorDrilldownArgs, parseRuntimeManagerActionArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, printJson, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
 
 export function buildInternalCommandSpecs(
@@ -244,15 +244,66 @@ export function buildInternalCommandSpecs(
         'opl status workspace',
         'opl status workspace --path /Users/gaofeng/workspace/redcube-ai',
       ],
-      handler: (args) => buildWorkspaceStatus(parseWorkspaceStatusArgs(args, commandSpecs['status workspace'])),
+      registry: {
+        command_id: 'status workspace',
+        parser_adapter: 'node_util_parse_args',
+        options: [
+          {
+            name: 'path',
+            flag: '--path',
+            value_kind: 'string',
+            summary: 'Workspace path to inspect.',
+          },
+        ],
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/status_workspace/output_schema',
+        authority_boundary: {
+          owner: 'OPL Console',
+          surface: 'workspace_status_readback',
+          can_write_domain_truth: false,
+          can_create_owner_receipt: false,
+          can_claim_domain_ready: false,
+          can_claim_production_ready: false,
+        },
+      },
+      handler: (args) => {
+        const parsed = parseRegisteredCommandOptions('status workspace', args, commandSpecs['status workspace']);
+        return buildWorkspaceStatus({ workspacePath: parsed.path as string | undefined });
+      },
     },
     'status runtime': {
       usage: 'opl status runtime [--limit <n>]',
       summary: 'Show configured family runtime provider status and the OPL-managed session ledger.',
       examples: ['opl status runtime', 'opl status runtime --limit 10'],
+      registry: {
+        command_id: 'status runtime',
+        parser_adapter: 'node_util_parse_args',
+        options: [
+          {
+            name: 'limit',
+            flag: '--limit',
+            value_kind: 'integer',
+            summary: 'Maximum managed session ledger entries to include.',
+            allowed_range: {
+              min: 1,
+              max: 500,
+            },
+          },
+        ],
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/status_runtime/output_schema',
+        authority_boundary: {
+          owner: 'OPL Runway',
+          surface: 'runtime_status_readback',
+          can_write_domain_truth: false,
+          can_create_owner_receipt: false,
+          can_claim_domain_ready: false,
+          can_claim_production_ready: false,
+        },
+      },
       handler: (args) => {
-        const parsed = parseRuntimeStatusArgs(args, commandSpecs['status runtime']);
-        return buildRuntimeStatus({ sessionsLimit: parsed.limit });
+        const parsed = parseRegisteredCommandOptions('status runtime', args, commandSpecs['status runtime']);
+        return buildRuntimeStatus({ sessionsLimit: parsed.limit as number | undefined });
       },
     },
     'runtime manager': {
@@ -550,7 +601,45 @@ export function buildInternalCommandSpecs(
         'opl status dashboard',
         'opl status dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
       ],
-      handler: (args) => buildOplDashboard(getContracts(), parseDashboardArgs(args, commandSpecs.dashboard)),
+      registry: {
+        command_id: 'status dashboard',
+        parser_adapter: 'node_util_parse_args',
+        options: [
+          {
+            name: 'path',
+            flag: '--path',
+            value_kind: 'string',
+            summary: 'Workspace path to project into the dashboard readback.',
+          },
+          {
+            name: 'sessions-limit',
+            flag: '--sessions-limit',
+            value_kind: 'integer',
+            summary: 'Maximum managed session ledger entries to include.',
+            allowed_range: {
+              min: 1,
+              max: 500,
+            },
+          },
+        ],
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/status_dashboard/output_schema',
+        authority_boundary: {
+          owner: 'OPL Console',
+          surface: 'product_runtime_dashboard_readback',
+          can_write_domain_truth: false,
+          can_create_owner_receipt: false,
+          can_claim_domain_ready: false,
+          can_claim_production_ready: false,
+        },
+      },
+      handler: (args) => {
+        const parsed = parseRegisteredCommandOptions('status dashboard', args, commandSpecs.dashboard);
+        return buildOplDashboard(getContracts(), {
+          workspacePath: parsed.path as string | undefined,
+          sessionsLimit: parsed['sessions-limit'] as number | undefined,
+        });
+      },
     },
     start: {
       usage: 'opl start --project <project_id> [--mode <mode_id>]',

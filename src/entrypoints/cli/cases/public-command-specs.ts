@@ -62,7 +62,7 @@ import {
   buildPublicEngineActionPayload,
   buildPublicTurnkeyInstallPayload,
 } from '../modules/public-payloads.ts';
-import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, cloneCommandSpec, parseOplEngineArgs, parseResumeArgs, parseTurnkeyInstallArgs, printJson, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, cloneCommandSpec, parseOplEngineArgs, parseResumeArgs, parseTurnkeyInstallArgs, printJson, validateCommandRegistryCoverage, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 import { buildBrandCommandSpecs } from './public-command-specs-parts/brand.ts';
 import { buildConnectCommandSpecs } from './public-command-specs-parts/connect.ts';
@@ -833,6 +833,10 @@ export function buildPublicCommandSpecs(
   };
 
   validateStageDerivedLensCommandSpecs(publicCommandSpecs);
+  validateCommandRegistryCoverage(publicCommandSpecs, {
+    protectedCommandPrefixes: ['status'],
+    requiredCommandIds: ['status workspace', 'status runtime', 'status dashboard'],
+  });
 
   return publicCommandSpecs;
 }

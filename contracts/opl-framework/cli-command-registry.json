@@ -6,14 +6,18 @@
   "state": "active_contract",
   "machine_boundary": "This registry describes command metadata and output schemas. It does not execute commands, write domain truth, create owner receipts, create typed blockers, or claim domain, artifact, App, production, release, or L5 readiness.",
   "protected_command_prefixes": [
-    "connect pubmed"
+    "connect pubmed",
+    "status"
   ],
   "required_command_ids": [
     "connect pubmed search",
     "connect install",
     "connect update",
     "connect reinstall",
-    "connect remove"
+    "connect remove",
+    "status workspace",
+    "status runtime",
+    "status dashboard"
   ],
   "commands": {
     "connect_install": {
@@ -401,6 +405,161 @@
                 }
               }
             }
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "status_workspace": {
+      "command_id": "status workspace",
+      "owner": "OPL Console",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "path",
+          "flag": "--path",
+          "value_kind": "string",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "workspace"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "workspace": {
+            "type": "object",
+            "required": [
+              "requested_path",
+              "absolute_path",
+              "kind",
+              "git"
+            ],
+            "additionalProperties": true,
+            "properties": {
+              "requested_path": {
+                "type": "string"
+              },
+              "absolute_path": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "git": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "status_runtime": {
+      "command_id": "status runtime",
+      "owner": "OPL Runway",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "limit",
+          "flag": "--limit",
+          "value_kind": "integer",
+          "required": false,
+          "allowed_range": {
+            "min": 1,
+            "max": 500
+          }
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "runtime_status"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "runtime_status": {
+            "type": "object",
+            "required": [
+              "runtime_substrate",
+              "configured_provider",
+              "managed_session_ledger"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "status_dashboard": {
+      "command_id": "status dashboard",
+      "owner": "OPL Console",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "path",
+          "flag": "--path",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "sessions-limit",
+          "flag": "--sessions-limit",
+          "value_kind": "integer",
+          "required": false,
+          "allowed_range": {
+            "min": 1,
+            "max": 500
+          }
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "dashboard"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "dashboard": {
+            "type": "object",
+            "required": [
+              "gui_runtime",
+              "runtime_status"
+            ],
+            "additionalProperties": true
           }
         }
       },
