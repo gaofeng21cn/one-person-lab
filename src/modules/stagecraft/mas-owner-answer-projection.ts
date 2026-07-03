@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import type {
   StageRunExecutionAuthorizationReceipt,
-} from '../stagecraft/index.ts';
+} from './stage-run-execution-authorization-ledger.ts';
 import { getActiveWorkspaceBinding } from '../workspace/index.ts';
 
 type JsonRecord = Record<string, unknown>;

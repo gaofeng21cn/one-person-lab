@@ -1,14 +1,14 @@
-import { evaluateStageRunAdmission, evaluateStageRunExecutionAuthorization } from '../stagecraft/index.ts';
+import { evaluateStageRunAdmission, evaluateStageRunExecutionAuthorization } from './stage-run-kernel.ts';
 import {
   latestStageRunExecutionAuthorizationCloseoutReceiptForStageAttempt,
   latestStageRunExecutionAuthorizationCloseoutReceiptForStageRun,
   latestStageRunExecutionAuthorizationReceiptForStageAttemptAnyRun,
   latestStageRunExecutionAuthorizationReceiptForStageAttempt,
   latestStageRunExecutionAuthorizationReceiptForStageRun,
-} from '../stagecraft/index.ts';
+} from './stage-run-execution-authorization-ledger.ts';
 import {
   findMasPublicationHandoffOwnerAnswerProjection,
-} from './app-state-mas-owner-answer-projection.ts';
+} from './mas-owner-answer-projection.ts';
 
 type JsonRecord = Record<string, unknown>;
 

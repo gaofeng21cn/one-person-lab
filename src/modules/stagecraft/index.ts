@@ -30,4 +30,6 @@ export { listStageReplayMissingReceiptReceipts, stageReplayMissingReceiptTargetK
 export type { StageReplayMissingReceiptReceipt } from './stage-replay-missing-receipt-ledger.ts';
 export { latestStageRunExecutionAuthorizationCloseoutReceiptForStageAttempt, latestStageRunExecutionAuthorizationCloseoutReceiptForStageRun, latestStageRunExecutionAuthorizationReceiptForStageAttempt, latestStageRunExecutionAuthorizationReceiptForStageAttemptAnyRun, latestStageRunExecutionAuthorizationReceiptForStageRun, listStageRunExecutionAuthorizationReceipts, recordStageRunExecutionAuthorizationReceipts } from './stage-run-execution-authorization-ledger.ts';
 export type { StageRunExecutionAuthorizationReceipt } from './stage-run-execution-authorization-ledger.ts';
+export { buildAppStageRunCockpit } from './stage-run-cockpit.ts';
+export { findMasPublicationHandoffOwnerAnswerProjection } from './mas-owner-answer-projection.ts';
 export { evaluateStageRunAdmission, evaluateStageRunExecutionAuthorization } from './stage-run-kernel.ts';

@@ -1,7 +1,7 @@
 import type { JsonRecord } from '../../kernel/types.ts';
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundary,
-} from '../console/index.ts';
+} from '../../kernel/refs-only-authority-boundary.ts';
 
 function record(value: unknown): JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value)

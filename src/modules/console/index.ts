@@ -8,7 +8,7 @@ export const OPL_CONSOLE_SOURCE_MODULE = {
 // Public cross-module surface generated from existing module consumers.
 export { appReleaseUserPathEvidencePayloadPreflight, recordAppReleaseUserPathEvidenceReceipts, verifyAppReleaseUserPathEvidenceReceipt } from './app-release-user-path-evidence-ledger.ts';
 export type { AppReleaseUserPathEvidenceReceiptInput } from './app-release-user-path-evidence-ledger.ts';
-export { buildAppStageRunCockpit } from './app-state-stage-run-cockpit.ts';
+export { buildAppStageRunCockpit } from '../stagecraft/index.ts';
 export { buildFamilyActionCatalogParity, projectFamilyAction, projectFamilyActionCatalog } from './family-action-catalog.ts';
 export { normalizeFamilyActionCatalog } from './family-action-catalog-contract.ts';
 export type { FamilyActionCatalog, FamilyActionCatalogAction, FamilyActionExportFormat } from './family-action-catalog-contract.ts';
