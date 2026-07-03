@@ -10,6 +10,7 @@ import {
   prepareManagedShellCommandCwd,
   recordManagedShellUvCacheRecovery,
 } from '../../connect/index.ts';
+import { parseJsonText } from '../../../kernel/json-file.ts';
 import { materializeFamilyTransitionSurfaces } from './family-transition-materializer.ts';
 import { normalizeManifest } from './normalizers.ts';
 import { isRecord } from './shared-utils.ts';
@@ -155,7 +156,7 @@ function buildResolvedManifestEntry(
 }
 
 function parseManifestPayload(stdout: string) {
-  const parsed = JSON.parse(stdout);
+  const parsed = parseJsonText(stdout);
   if (!isRecord(parsed)) {
     throw new Error('Manifest payload must be a JSON object.');
   }

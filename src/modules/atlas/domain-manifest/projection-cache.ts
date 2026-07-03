@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 
+import { isRecord } from '../../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../../kernel/json-file.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from './types.ts';
-
-type JsonRecord = Record<string, unknown>;
 
 type CachedManifestProjection = {
   project_id: string;
@@ -20,10 +20,6 @@ type ManifestProjectionCacheFile = {
   projections: CachedManifestProjection[];
 };
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
 function readCacheFile(): ManifestProjectionCacheFile {
   const paths = resolveOplStatePaths();
   if (!fs.existsSync(paths.domain_manifest_projection_cache_file)) {
@@ -31,7 +27,7 @@ function readCacheFile(): ManifestProjectionCacheFile {
   }
 
   try {
-    const parsed = JSON.parse(fs.readFileSync(paths.domain_manifest_projection_cache_file, 'utf8'));
+    const parsed = parseJsonText(fs.readFileSync(paths.domain_manifest_projection_cache_file, 'utf8'));
     if (!isRecord(parsed) || parsed.version !== 'g2' || !Array.isArray(parsed.projections)) {
       return { version: 'g2', projections: [] };
     }
