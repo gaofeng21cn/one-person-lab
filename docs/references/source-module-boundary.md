@@ -45,7 +45,7 @@ src/modules/connect
 | target source layout | `done` | `src/entrypoints/cli.ts` 存在，root-level `src/*.ts` 为 0。 | root-level `src/*.ts` 不再作为新 owner 接口。 |
 | deep cross-module import | `done` | `npm run source:modules -- --strict-imports` 下 `deep_import_violations.count=0`。 | 只能证明跨模块 import 路由合法，不能证明 public API 已经最小。 |
 | 第一批 forbidden dependency | `done` | `forbidden_dependency_violations.count=0`。 | 当前只覆盖 `module-dependency-policy.json` 已列出的方向约束。 |
-| dependency cycle | `partial` | 默认 readback 报告 SCC；`--strict-cycles` 将 advisory 升级为失败；当前 SCC 不含 Console，edge_count 为 44。 | 当前存在 public-entry-level cycle，不能把 strict import pass 外推为低耦合完成。 |
+| dependency cycle | `partial` | 默认 readback 报告 SCC；`--strict-cycles` 将 advisory 升级为失败；当前 SCC 不含 Console / Workspace，edge_count 为 35。 | 当前存在 public-entry-level cycle，不能把 strict import pass 外推为低耦合完成。 |
 | public entrypoint 收薄 | `partial` | `index.ts` / `public/**` 作为合法 public surface 被脚本识别。 | 多个模块 `index.ts` 仍是 broad re-export；下一步是按热点拆 thin public entry 或收窄 re-export。 |
 | 下一批 forbidden candidates | `partial` | `module-dependency-policy.json` 的 `next_forbidden_dependency_candidates` 记录候选方向。 | 先用 `pair_counts` 和人工 owner 判断确认迁移路径，再升级为 enforced `forbidden_dependencies`。 |
 
@@ -114,6 +114,8 @@ Console / Runway / Ledger / Connect / Foundry Lab 的边界可按一句话记忆
 2026-07-03 的 family action catalog 收薄已把 action catalog contract 从 Console 实现面迁到 `src/kernel/family-action-catalog-contract.ts`。Console 只保留 thin re-export facade；Atlas、Connect、Foundry Lab、Pack 和 Stagecraft 等消费者直接从 kernel shared contract 读取。该口径只证明 shared contract owner 与 import direction 更清楚，不改变 domain truth、owner receipt、typed blocker、runtime DB/provider queues 或 release artifacts。
 
 2026-07-03 的 Charter error boundary 收薄把跨模块常用的 `FrameworkContractError` 调整为 `src/kernel/contract-validation.ts` 的 brand-neutral shared primitive。模块实现不再为了抛出统一合同 / CLI 错误而依赖 `charter` public index；`charter` 仍保留对外 re-export，服务旧的 public import surface 和 contract loader 语义。当前 fresh `source:modules -- --strict-imports` readback 中 `stagecraft -> charter`、`workspace -> charter`、`pack -> charter` 这些仅由错误类型造成的 pair 已消失，剩余 SCC edge_count 从 47 收薄到 44。该口径只证明错误 vocabulary 不再放大模块依赖图，不改变 `Charter` 对合同语言与 forbidden claim 的 owner 身份，也不声明 strict cycle 已完成。
+
+2026-07-03 的 Workspace topology 收薄把 `workspace_topology_profile` 从 Foundry Agent series 内联常量迁回 Workspace owner，Foundry Lab 只消费 Workspace public contract。Owner id normalization 也从 Connect public entrypoint 收回到 `kernel` shared primitive，Ledger / Foundry Lab 不再为了通用 owner alias normalization 依赖 Connect。当前 fresh `source:modules` readback 中 `workspace -> foundry-lab` pair 已消失，Workspace 不再进入 dependency-cycle SCC，剩余 SCC 覆盖 `atlas`、`charter`、`connect`、`foundry-lab`、`ledger`、`pack`、`runway`、`stagecraft` 八个模块，edge_count 从 44 收薄到 35。该口径只证明 Workspace topology / Project Unit / Stage Artifact Unit 的合同 owner 回到 Workspace、通用 owner id vocabulary 回到 kernel，不改变 Foundry Lab 对 agent scaffold / work order / canary 的 owner 身份，也不声明 strict cycle 已完成。
 
 `module-dependency-policy.json` 也开始记录第一批方向约束：`ledger -> runway`、`stagecraft -> runway`、`workspace -> console`、`foundry-lab -> console` 与 Charter 对 operator / improvement / connector surfaces 的依赖都不允许出现。该约束用于保护 evidence、stage policy、workspace protocol、Foundry improvement readout 与 operator projection 的 owner 边界。
 

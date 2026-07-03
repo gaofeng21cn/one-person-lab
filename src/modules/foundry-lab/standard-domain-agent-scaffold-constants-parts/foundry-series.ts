@@ -2,6 +2,7 @@ import { STANDARD_PROGRESS_DELTA_POLICY } from './progress-delta.ts';
 import { STANDARD_STAGE_COMPLETION_POLICY } from './stage-completion.ts';
 import { STANDARD_TYPED_BLOCKER_LINEAGE_POLICY } from './typed-blocker.ts';
 import { STANDARD_USER_STAGE_LOG_CONTRACT } from './user-stage-log.ts';
+import { WORKSPACE_TOPOLOGY_PROFILE_CONTRACT } from '../../workspace/index.ts';
 
 export const FOUNDRY_AGENT_SERIES_POLICY_RELEASE_REF =
   'contracts/opl-framework/foundry-agent-series-policy-release.json';
@@ -98,111 +99,7 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
       domain_owns_input_truth_and_output_authority: true,
     },
   },
-  workspace_topology_profile: {
-    surface_kind: 'opl_workspace_topology_profile',
-    version: 'workspace-topology-profile.v1',
-    profile_id: 'opl.workspace_topology_profile.v1',
-    topology_model: [
-      'workspace_group',
-      'project_unit',
-      'stage_artifact_unit',
-      'owner_receipt_or_typed_blocker',
-    ],
-    workspace_modes: ['one_off', 'series', 'portfolio'],
-    default_project_stage_outputs_root: 'artifacts/stage_outputs',
-    default_profiles: {
-      one_off: {
-        workspace_mode: 'one_off',
-        project_collection_path: 'projects',
-        series_capable_skeleton: true,
-        shared_resource_roots: ['shared/sources', 'shared/memory', 'shared/style_system'],
-        project_stage_outputs_root: 'artifacts/stage_outputs',
-      },
-      rca_series: {
-        workspace_mode: 'series',
-        project_collection_path: 'projects',
-        shared_resource_roots: [
-          'shared/sources',
-          'shared/brand',
-          'shared/visual_memory',
-          'shared/style_system',
-          'shared/material_inventory',
-        ],
-        project_stage_outputs_root: 'artifacts/stage_outputs',
-      },
-      mas_portfolio: {
-        workspace_mode: 'portfolio',
-        project_collection_path: 'projects',
-        shared_resource_roots: ['data', 'literature', 'memory', 'shared/sources'],
-        project_stage_outputs_root: 'artifacts/stage_outputs',
-      },
-    },
-    domain_profile_defaults: {
-      mas: 'mas_portfolio',
-      mag: 'one_off',
-      rca: 'rca_series',
-      oma: 'one_off',
-      bookforge: 'one_off',
-    },
-    default_user_inspection_surface: {
-      ordinary_user_default_surface: 'workspace_local_project_stage_outputs',
-      project_stage_outputs_pattern: '<project-root>/artifacts/stage_outputs/<stage-id>/',
-      runtime_state_is_default_user_surface: false,
-      product_views_are_stage_outputs: false,
-    },
-    runtime_state_boundary: {
-      role: 'provider_backing_provenance_restore_audit',
-      runtime_state_can_be_canonical_project_root: false,
-      runtime_state_can_close_stage: false,
-      runtime_state_can_replace_owner_receipt_or_typed_blocker: false,
-    },
-    authority_boundary: {
-      opl_can_define_topology_contract: true,
-      opl_can_project_workspace_refs: true,
-      opl_can_write_domain_truth: false,
-      opl_can_mutate_artifact_body: false,
-      opl_can_create_owner_receipt: false,
-      opl_can_create_typed_blocker: false,
-      runtime_state_counts_as_user_default_surface: false,
-    },
-    workspace_initialization_policy: {
-      default_workspace_mode: 'one_off',
-      default_project_collection_path: 'projects',
-      legacy_project_collection_aliases: ['deliverables', 'studies'],
-      infer_series_when_user_requests_multiple_related_deliverables: true,
-      infer_portfolio_when_user_requests_shared_research_workspace_with_multiple_studies: true,
-      upgrading_one_off_to_series_must_not_move_existing_project_roots: true,
-      explicit_workspace_mode_declaration_preferred: true,
-    },
-    example_project_layouts: {
-      one_off: {
-        project_collection_path: 'projects',
-        project_root_pattern: 'projects/<project-id>',
-        project_stage_outputs_pattern: 'projects/<project-id>/artifacts/stage_outputs/<stage-id>/',
-        legacy_project_collection_aliases: ['deliverables'],
-      },
-      rca_series: {
-        shared_roots: [
-          'shared/sources',
-          'shared/brand',
-          'shared/visual_memory',
-          'shared/style_system',
-          'shared/material_inventory',
-        ],
-        project_collection_path: 'projects',
-        project_root_pattern: 'projects/<deck-id>',
-        project_stage_outputs_pattern: 'projects/<deck-id>/artifacts/stage_outputs/<stage-id>/',
-        legacy_project_collection_aliases: ['deliverables'],
-      },
-      mas_portfolio: {
-        shared_roots: ['data', 'literature', 'memory'],
-        project_collection_path: 'projects',
-        project_root_pattern: 'projects/<study-id>',
-        project_stage_outputs_pattern: 'projects/<study-id>/artifacts/stage_outputs/<stage-id>/',
-        legacy_project_collection_aliases: ['studies'],
-      },
-    },
-  },
+  workspace_topology_profile: WORKSPACE_TOPOLOGY_PROFILE_CONTRACT,
   framework_brand_taxonomy_policy: {
     surface_kind: 'opl_framework_brand_taxonomy_agent_cli_policy',
     version: 'framework-brand-taxonomy-agent-cli.v1',

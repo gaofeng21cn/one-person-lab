@@ -1,6 +1,6 @@
 import type { JsonRecord } from '../../kernel/types.ts';
-export { canonicalOwnerId } from '../connect/index.ts';
-import { canonicalOwnerId } from '../connect/index.ts';
+export { canonicalOwnerId } from '../../kernel/owner-id.ts';
+import { canonicalOwnerId } from '../../kernel/owner-id.ts';
 
 type EvidenceEnvelopeStatus = 'open' | 'closed' | 'blocked' | 'superseded';
 
