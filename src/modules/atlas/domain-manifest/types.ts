@@ -3,7 +3,7 @@ import type {
   FamilySharedHandoffSurface,
   UserInteractionContractSurface,
 } from '../family-entry-contracts.ts';
-import type { FamilyActionCatalog } from '../../console/index.ts';
+import type { FamilyActionCatalog } from '../../../kernel/family-action-catalog-contract.ts';
 import type { FamilyDomainMemoryRef } from '../family-domain-memory-contract.ts';
 import type { FamilyStageControlPlane } from '../../stagecraft/index.ts';
 import type {

@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { buildFamilyStageAdmissionReview } from '../../src/modules/stagecraft/family-stage-admission.ts';
-import type { FamilyActionCatalog } from '../../src/modules/console/family-action-catalog-contract.ts';
+import type { FamilyActionCatalog } from '../../src/kernel/family-action-catalog-contract.ts';
 import {
   normalizeFamilyStageControlPlane,
   type FamilyStageContract,

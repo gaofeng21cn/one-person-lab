@@ -3,7 +3,7 @@ import {
   validateUserInteractionContract,
   validateSharedHandoff,
 } from '../family-entry-contracts.ts';
-import { normalizeFamilyActionCatalog } from '../../console/index.ts';
+import { normalizeFamilyActionCatalog } from '../../../kernel/family-action-catalog-contract.ts';
 import { normalizeFamilyStageControlPlane } from '../../stagecraft/index.ts';
 import { normalizeFamilyDomainMemoryRef } from '../family-domain-memory-contract.ts';
 import { normalizeManagedRuntimeContract } from '../../runway/index.ts';

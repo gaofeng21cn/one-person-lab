@@ -5,7 +5,7 @@ import {
   buildGeneratedInterfaceBundle,
   selectGeneratedInterfaceBundleFormat,
 } from '../../pack/index.ts';
-import { normalizeFamilyActionCatalog } from '../../console/index.ts';
+import { normalizeFamilyActionCatalog } from '../../../kernel/family-action-catalog-contract.ts';
 import { normalizeFamilyStageControlPlane } from '../../stagecraft/index.ts';
 import { buildFunctionalPrivatizationAudit } from '../../foundry-lab/index.ts';
 import {

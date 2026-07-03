@@ -2,7 +2,7 @@ import { projectFamilyAction } from '../../console/index.ts';
 import type {
   FamilyActionCatalog,
   FamilyActionCatalogAction,
-} from '../../console/index.ts';
+} from '../../../kernel/family-action-catalog-contract.ts';
 
 type GeneratedSurfaceId =
   | 'cli'

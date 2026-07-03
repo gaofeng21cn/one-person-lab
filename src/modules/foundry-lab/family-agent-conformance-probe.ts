@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError, loadFrameworkContracts } from '../charter/index.ts';
 import { buildGeneratedAgentInterfaces } from '../pack/index.ts';
-import { normalizeFamilyActionCatalog } from '../console/index.ts';
+import { normalizeFamilyActionCatalog } from '../../kernel/family-action-catalog-contract.ts';
 import { normalizeFamilyStageControlPlane } from '../stagecraft/index.ts';
 import {
   isRecord,

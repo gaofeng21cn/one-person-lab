@@ -1,4 +1,4 @@
-import type { FamilyActionCatalog, FamilyActionCatalogAction } from '../console/index.ts';
+import type { FamilyActionCatalog, FamilyActionCatalogAction } from '../../kernel/family-action-catalog-contract.ts';
 import type {
   FamilyStageControlPlane,
   FamilyStageDescriptor,

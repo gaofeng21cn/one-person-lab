@@ -7,7 +7,7 @@ import type {
   FamilyActionCatalog,
   FamilyActionCatalogAction,
   FamilyActionExportFormat,
-} from '../../console/index.ts';
+} from '../../../kernel/family-action-catalog-contract.ts';
 import { buildGeneratedDirectParityProof } from './generated-interface-parity.ts';
 import type { FamilyStageControlPlane } from '../../stagecraft/index.ts';
 import { buildToolAffordanceBoundaryRoute } from './stage-route-tool-affordance.ts';

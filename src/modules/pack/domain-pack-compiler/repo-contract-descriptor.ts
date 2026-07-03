@@ -4,7 +4,7 @@ import path from 'node:path';
 import { FrameworkContractError } from '../../charter/index.ts';
 import {
   normalizeFamilyActionCatalog,
-} from '../../console/index.ts';
+} from '../../../kernel/family-action-catalog-contract.ts';
 import {
   normalizeFamilyStageControlPlane,
 } from '../../stagecraft/index.ts';

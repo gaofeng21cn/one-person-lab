@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { FamilyActionCatalog } from '../../src/modules/console/family-action-catalog-contract.ts';
+import type { FamilyActionCatalog } from '../../src/kernel/family-action-catalog-contract.ts';
 import type { FamilyStageContract, FamilyStageControlPlane } from '../../src/modules/stagecraft/family-stage-control-plane-contract.ts';
 import { buildFamilyStageProofBundle } from '../../src/modules/stagecraft/family-stage-proof-bundle.ts';
 import {

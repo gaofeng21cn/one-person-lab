@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import type { FamilyActionCatalog } from '../console/index.ts';
+import type { FamilyActionCatalog } from '../../kernel/family-action-catalog-contract.ts';
 import {
   buildFamilyStageAdmissionReview,
 } from './family-stage-admission.ts';
