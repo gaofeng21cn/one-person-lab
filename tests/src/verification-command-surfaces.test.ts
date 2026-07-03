@@ -292,6 +292,16 @@ test('target architecture policy contracts keep progress, guardrail, and wrapper
       physical_delete_authorized_by_opl: boolean;
       required_owner_decision_shapes: string[];
     };
+    first_batch_owner_route_tail_matrix: {
+      row_policy: string;
+      rows: Array<{
+        repo_id: string;
+        tail_classes: string[];
+        app_aion_policy: string;
+        forbidden_claims: string[];
+      }>;
+      authority_boundary: Record<string, boolean>;
+    };
     forbidden_retirement_shortcuts: string[];
     generated_default_caller_readiness_can_authorize_physical_delete: boolean;
     physical_delete_blocked_by_default: string[];
@@ -385,6 +395,38 @@ test('target architecture policy contracts keep progress, guardrail, and wrapper
     'keep_as_authority_adapter_ref',
     'typed_blocker_ref',
   ]);
+  const firstBatchRows = Object.fromEntries(
+    wrapperRetirement.first_batch_owner_route_tail_matrix.rows.map((row) => [row.repo_id, row]),
+  );
+  assert.deepEqual(Object.keys(firstBatchRows), [
+    'med-autoscience',
+    'med-autogrant',
+    'redcube-ai',
+    'opl-meta-agent',
+    'opl-bookforge',
+    'mas-scholar-skills',
+  ]);
+  assert.deepEqual(firstBatchRows['mas-scholar-skills']?.tail_classes, [
+    'update',
+    'status_shell',
+  ]);
+  assert.equal(
+    firstBatchRows['mas-scholar-skills']?.forbidden_claims.includes('typed_blocker_authority'),
+    true,
+  );
+  assert.equal(
+    firstBatchRows['med-autoscience']?.app_aion_policy.includes('must not expose MAS private runtime'),
+    true,
+  );
+  assert.equal(
+    wrapperRetirement.first_batch_owner_route_tail_matrix.authority_boundary
+      .matrix_can_authorize_physical_delete,
+    false,
+  );
+  assert.equal(
+    wrapperRetirement.first_batch_owner_route_tail_matrix.authority_boundary.matrix_can_write_domain_truth,
+    false,
+  );
   assert.equal(wrapperRetirement.forbidden_retirement_shortcuts.includes('descriptor_ready_only'), true);
   assert.equal(
     wrapperRetirement.forbidden_retirement_shortcuts.includes('generated_default_caller_readiness_only'),
@@ -411,6 +453,45 @@ test('target architecture policy contracts keep progress, guardrail, and wrapper
   assert.equal(wrapperRetirement.opl_apply_boundary.family_runtime_lifecycle_apply_can_delete_domain_repo_files, false);
   assert.equal(wrapperRetirement.authority_boundary.opl_can_ignore_active_caller, false);
   assert.equal(wrapperRetirement.authority_boundary.opl_can_skip_tombstone_or_provenance, false);
+});
+
+test('Settings Control Center contract keeps App and Aion consumer-only', () => {
+  const settingsControlCenter = readJson<{
+    consumer_only_enforcement: {
+      truth_owner_matrix: Array<{
+        surface: string;
+        local_truth_allowed: boolean;
+        required_visible_refs: string[];
+      }>;
+      local_scheduler_policy: {
+        aion_local_scheduler_allowed_roles: string[];
+        forbidden_roles: string[];
+      };
+      required_user_visible_boundary_fields: string[];
+      authority_boundary: Record<string, boolean>;
+    };
+  }>('contracts/opl-framework/settings-control-center-action-read-model-contract.json');
+
+  const consumerOnly = settingsControlCenter.consumer_only_enforcement;
+  assert.equal(
+    consumerOnly.truth_owner_matrix.every((row) => row.local_truth_allowed === false),
+    true,
+  );
+  assert.equal(
+    consumerOnly.truth_owner_matrix.find((row) => row.surface === 'runtime_provider_and_stage_status')
+      ?.required_visible_refs.includes('owner_route_ref'),
+    true,
+  );
+  assert.deepEqual(consumerOnly.local_scheduler_policy.aion_local_scheduler_allowed_roles, [
+    'refresh_trigger',
+    'ui_maintenance',
+    'poll_existing_read_model',
+  ]);
+  assert.equal(consumerOnly.local_scheduler_policy.forbidden_roles.includes('write_release_truth'), true);
+  assert.equal(consumerOnly.required_user_visible_boundary_fields.includes('delegated_action_id'), true);
+  assert.equal(consumerOnly.authority_boundary.app_aion_can_write_runtime_truth, false);
+  assert.equal(consumerOnly.authority_boundary.app_aion_can_create_owner_receipt, false);
+  assert.equal(consumerOnly.authority_boundary.app_aion_can_claim_app_release_ready, false);
 });
 
 test('stage artifact runtime contract freezes folder truth and CLI boundaries', () => {

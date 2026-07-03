@@ -98,6 +98,223 @@
     "classification_counts_as_domain_ready": false,
     "classification_counts_as_production_ready": false
   },
+  "first_batch_owner_route_tail_matrix": {
+    "surface_kind": "opl_domain_private_platform_tail_owner_route_matrix.v1",
+    "source_phase": "reuse_first_platform_risk_audit_phase_7",
+    "purpose": "Make the first batch of domain repo private scheduler, queue, session, workbench, update, and status tails explicit before any delete, tombstone, or App exposure claim.",
+    "row_policy": "Rows are owner-route and delete-gate inputs only. They classify tails and name replacement owners; they do not authorize domain repo physical deletes, domain readiness, production readiness, quality verdicts, or App release readiness.",
+    "tail_classes": [
+      "scheduler",
+      "queue",
+      "session_store",
+      "workbench",
+      "update",
+      "status_shell"
+    ],
+    "required_row_fields": [
+      "repo_id",
+      "tail_classes",
+      "replacement_owner",
+      "domain_retained_authority",
+      "owner_route",
+      "app_aion_policy",
+      "accepted_decision_shapes",
+      "forbidden_claims"
+    ],
+    "rows": [
+      {
+        "repo_id": "med-autoscience",
+        "tail_classes": [
+          "scheduler",
+          "queue",
+          "session_store",
+          "workbench",
+          "status_shell"
+        ],
+        "replacement_owner": "one-person-lab Runway/StageRun/Temporal/App operator read model",
+        "domain_retained_authority": [
+          "study_truth",
+          "publication_quality_verdict",
+          "artifact_package_authority",
+          "owner_receipt",
+          "typed_blocker"
+        ],
+        "owner_route": "fresh MAS contract/source/readback plus OPL default-callers/conformance; former generic runtime remains tombstone/provenance only",
+        "app_aion_policy": "App/Aion may display OPL read-model refs only and must not expose MAS private runtime as a user action source",
+        "accepted_decision_shapes": [
+          "physical_delete_authorization_ref",
+          "keep_as_authority_adapter_ref",
+          "typed_blocker_ref"
+        ],
+        "forbidden_claims": [
+          "live_readiness_from_structure",
+          "domain_ready",
+          "publication_ready",
+          "physical_delete_authorized_by_opl"
+        ]
+      },
+      {
+        "repo_id": "med-autogrant",
+        "tail_classes": [
+          "scheduler",
+          "queue",
+          "session_store",
+          "workbench",
+          "update",
+          "status_shell"
+        ],
+        "replacement_owner": "one-person-lab generated product/status/workbench surface plus Runway lifecycle primitives",
+        "domain_retained_authority": [
+          "fundability_verdict",
+          "grant_strategy_memory_body",
+          "package_authority",
+          "transition_oracle",
+          "owner_receipt",
+          "typed_blocker"
+        ],
+        "owner_route": "MAG repo-native readback identifies retained authority functions versus OPL replacement; default-caller readback supplies no-active-caller and owner-decision gates",
+        "app_aion_policy": "App/Aion consumes OPL generated status/action refs and cannot call MAG product/status/user-loop shells as local truth",
+        "accepted_decision_shapes": [
+          "physical_delete_authorization_ref",
+          "keep_as_authority_adapter_ref",
+          "typed_blocker_ref"
+        ],
+        "forbidden_claims": [
+          "grant_ready",
+          "private_status_shell_as_owner",
+          "app_projection_as_owner_receipt",
+          "physical_delete_authorized_by_opl"
+        ]
+      },
+      {
+        "repo_id": "redcube-ai",
+        "tail_classes": [
+          "scheduler",
+          "queue",
+          "session_store",
+          "workbench",
+          "status_shell"
+        ],
+        "replacement_owner": "one-person-lab generated domain action/status/workbench surfaces plus RCA minimal authority functions",
+        "domain_retained_authority": [
+          "visual_direction",
+          "review_export_verdict",
+          "artifact_authority",
+          "visual_memory_accept_reject",
+          "native_helper_implementation",
+          "owner_receipt",
+          "typed_blocker"
+        ],
+        "owner_route": "RCA repo-native readback plus no-regression/no-forbidden-write proof decides keep/delete/blocker; OPL only projects refs",
+        "app_aion_policy": "App/Aion consumes generated RCA refs and cannot treat route-run/session/status shells as runtime truth",
+        "accepted_decision_shapes": [
+          "physical_delete_authorization_ref",
+          "keep_as_authority_adapter_ref",
+          "typed_blocker_ref"
+        ],
+        "forbidden_claims": [
+          "visual_ready",
+          "export_ready",
+          "session_shell_as_owner",
+          "physical_delete_authorized_by_opl"
+        ]
+      },
+      {
+        "repo_id": "opl-meta-agent",
+        "tail_classes": [
+          "scheduler",
+          "queue",
+          "session_store",
+          "workbench",
+          "status_shell"
+        ],
+        "replacement_owner": "one-person-lab Agent Lab/Runway/promotion gate read model",
+        "domain_retained_authority": [
+          "agent_building_semantics",
+          "candidate_package_refs",
+          "work_order_refs",
+          "proposal_materialization_refs",
+          "target_agent_typed_blocker_refs"
+        ],
+        "owner_route": "OMA source-structure and script-to-pack readback decides helper versus private runner; target owner receipt or typed blocker closes promotion",
+        "app_aion_policy": "App/Aion may show Agent Lab workbench refs only and cannot promote or launch target-agent runners from shell-local state",
+        "accepted_decision_shapes": [
+          "physical_delete_authorization_ref",
+          "keep_as_authority_adapter_ref",
+          "typed_blocker_ref"
+        ],
+        "forbidden_claims": [
+          "target_agent_ready",
+          "agent_lab_suite_pass_as_owner_acceptance",
+          "materializer_as_private_runner",
+          "physical_delete_authorized_by_opl"
+        ]
+      },
+      {
+        "repo_id": "opl-bookforge",
+        "tail_classes": [
+          "session_store",
+          "workbench",
+          "update",
+          "status_shell"
+        ],
+        "replacement_owner": "one-person-lab hosted/generated surface plus BookForge authority functions",
+        "domain_retained_authority": [
+          "manuscript_domain_pack",
+          "export_authority",
+          "domain_specific_build_helper",
+          "owner_receipt_or_typed_blocker"
+        ],
+        "owner_route": "BookForge repo-native readback classifies helper/materializer as authority function or migration residue before OPL default-caller cutover",
+        "app_aion_policy": "App/Aion consumes OPL package/workbench refs and cannot turn BookForge helpers into shell-owned runtime/update truth",
+        "accepted_decision_shapes": [
+          "physical_delete_authorization_ref",
+          "keep_as_authority_adapter_ref",
+          "typed_blocker_ref"
+        ],
+        "forbidden_claims": [
+          "book_export_ready",
+          "helper_as_private_runtime",
+          "app_projection_as_export_authority",
+          "physical_delete_authorized_by_opl"
+        ]
+      },
+      {
+        "repo_id": "mas-scholar-skills",
+        "tail_classes": [
+          "update",
+          "status_shell"
+        ],
+        "replacement_owner": "one-person-lab Pack/Connect package channel and refs-only conformance",
+        "domain_retained_authority": [
+          "capability_descriptor_refs",
+          "candidate_artifact_engine_refs",
+          "no_authority_boundary"
+        ],
+        "owner_route": "Pack/Connect readback keeps ScholarSkills outside standard domain-agent default-caller delete gates and outside MAS truth",
+        "app_aion_policy": "App/Aion consumes package/channel refs only and cannot expose ScholarSkills as MAS truth or typed blocker authority",
+        "accepted_decision_shapes": [
+          "keep_as_authority_adapter_ref",
+          "typed_blocker_ref"
+        ],
+        "forbidden_claims": [
+          "standard_domain_agent",
+          "mas_truth",
+          "typed_blocker_authority",
+          "publication_ready"
+        ]
+      }
+    ],
+    "authority_boundary": {
+      "matrix_can_authorize_physical_delete": false,
+      "matrix_can_claim_domain_ready": false,
+      "matrix_can_claim_app_release_ready": false,
+      "matrix_can_claim_production_ready": false,
+      "matrix_can_write_domain_truth": false,
+      "matrix_can_create_owner_receipt": false,
+      "matrix_can_create_typed_blocker": false
+    }
+  },
   "retirement_target_classes": [
     "legacy_reconcile_compensation_path",
     "legacy_materialize_compensation_path",

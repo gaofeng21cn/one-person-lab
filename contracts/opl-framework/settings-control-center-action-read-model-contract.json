@@ -212,6 +212,117 @@
     "runtime_roots_cleanup": "dry_run_plan_only_no_delete",
     "docker_webui": "delegates_to_existing_install_configure_startup_maintenance_doctor_routes_without_secret_payloads_or_release_runtime_ready_claims"
   },
+  "consumer_only_enforcement": {
+    "surface_kind": "opl_app_aion_consumer_only_boundary.v1",
+    "source_phase": "reuse_first_platform_risk_audit_phase_8",
+    "applies_to": [
+      "one-person-lab-app",
+      "opl-aion-shell"
+    ],
+    "purpose": "Keep App and Aion as GUI/product consumers of App-owned contracts and OPL read/action surfaces, not truth owners for runtime, update, settings, or domain private-platform state.",
+    "truth_owner_matrix": [
+      {
+        "surface": "settings_policy",
+        "truth_owner": "one-person-lab framework settings_control_center contract plus one-person-lab-app product contract",
+        "app_aion_role": "render read model and route listed actions",
+        "local_truth_allowed": false,
+        "required_visible_refs": [
+          "source_ref",
+          "delegated_action_id"
+        ]
+      },
+      {
+        "surface": "app_release_and_installer",
+        "truth_owner": "one-person-lab-app release owner",
+        "app_aion_role": "display release owner status, blocker, or receipt ref",
+        "local_truth_allowed": false,
+        "required_visible_refs": [
+          "app_owner_receipt_ref_or_typed_blocker_ref",
+          "current_source_ref",
+          "blocked_reason"
+        ]
+      },
+      {
+        "surface": "runtime_provider_and_stage_status",
+        "truth_owner": "one-person-lab Runway, StageRun, Temporal provider, and current_owner_delta read model",
+        "app_aion_role": "consume opl app state fast/full or explicit operator drilldown",
+        "local_truth_allowed": false,
+        "required_visible_refs": [
+          "current_owner_delta_ref",
+          "runtime_status_source_ref",
+          "owner_route_ref"
+        ]
+      },
+      {
+        "surface": "managed_module_and_capability_packages",
+        "truth_owner": "one-person-lab Pack/Connect package channel and managed update receipt projection",
+        "app_aion_role": "show package source, owner, action, and receipt/blocker refs",
+        "local_truth_allowed": false,
+        "required_visible_refs": [
+          "package_descriptor_ref",
+          "receipt_ref_or_typed_blocker_ref",
+          "delegated_action_id"
+        ]
+      },
+      {
+        "surface": "domain_private_platform_residue",
+        "truth_owner": "wrapper-retirement-gate-policy private_platform_cleanup_lane plus domain owner decision",
+        "app_aion_role": "developer/operator detail only; never default Settings or first-screen truth",
+        "local_truth_allowed": false,
+        "required_visible_refs": [
+          "cleanup_lane_ref",
+          "domain_owner_decision_ref_or_typed_blocker_ref"
+        ]
+      }
+    ],
+    "local_scheduler_policy": {
+      "aion_local_scheduler_allowed_roles": [
+        "refresh_trigger",
+        "ui_maintenance",
+        "poll_existing_read_model"
+      ],
+      "forbidden_roles": [
+        "write_policy_truth",
+        "write_currentness_truth",
+        "write_runtime_truth",
+        "write_release_truth",
+        "write_domain_private_platform_truth",
+        "create_owner_receipt",
+        "create_typed_blocker"
+      ],
+      "scheduler_must_delegate_to": [
+        "opl app state --profile fast|full --json",
+        "opl app action execute --json",
+        "one-person-lab-app release owner receipt or typed blocker"
+      ]
+    },
+    "forbidden_truth_only_paths": [
+      "aion_shell_settings_store_as_policy_truth",
+      "aion_local_scheduler_as_update_truth",
+      "app_local_read_model_as_runtime_truth_without_opl_source_ref",
+      "shell_docker_probe_as_runtime_ready_claim",
+      "gui_release_status_without_app_owner_receipt_or_typed_blocker",
+      "private_platform_cleanup_lane_as_ordinary_settings_status"
+    ],
+    "required_user_visible_boundary_fields": [
+      "owner",
+      "current_source_ref",
+      "blocked_reason",
+      "receipt_ref_or_typed_blocker_ref",
+      "delegated_action_id"
+    ],
+    "authority_boundary": {
+      "app_aion_can_write_policy_truth": false,
+      "app_aion_can_write_runtime_truth": false,
+      "app_aion_can_write_release_truth": false,
+      "app_aion_can_write_domain_truth": false,
+      "app_aion_can_create_owner_receipt": false,
+      "app_aion_can_create_typed_blocker": false,
+      "app_aion_can_authorize_private_platform_cleanup": false,
+      "app_aion_can_claim_app_release_ready": false,
+      "app_aion_can_claim_production_ready": false
+    }
+  },
   "authority_boundary": {
     "framework_owner": "one-person-lab",
     "app_repo_owner": "one-person-lab-app_gui_product_truth_only",
