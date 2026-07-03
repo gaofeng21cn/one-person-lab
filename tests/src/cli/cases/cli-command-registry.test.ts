@@ -1,4 +1,4 @@
-import { assert, fs, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
+import { assert, fs, os, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
 import { FrameworkContractError } from '../../../../src/modules/charter/contracts.ts';
 import type { CommandSpec } from '../../../../src/entrypoints/cli/modules/support.ts';
 import { validateCommandRegistryCoverage } from '../../../../src/entrypoints/cli/modules/command-registry.ts';
@@ -146,13 +146,53 @@ test('status commands expose registry metadata in command help', () => {
 });
 
 test('status command options are parsed through the registry adapter', () => {
-  assert.equal(runCli(['status', 'workspace', '--path', repoRoot]).workspace.requested_path, repoRoot);
-  assert.equal(runCli(['status', 'runtime', '--limit', '1']).runtime_status.managed_session_ledger.entries.length, 1);
-  assert.equal(runCli(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1']).dashboard.workspace.requested_path, repoRoot);
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-status-registry-'));
 
-  const invalid = runCliFailure(['status', 'runtime', '--limit', '0']);
-  assert.equal(invalid.payload.error.code, 'cli_usage_error');
-  assert.match(invalid.payload.error.message, /must be an integer from 1 to 500/);
+  try {
+    fs.writeFileSync(
+      path.join(stateRoot, 'session-ledger.json'),
+      `${JSON.stringify({
+        version: 'g2',
+        entries: [
+          {
+            ledger_id: 'ledger-newer',
+            recorded_at: '2026-07-03T00:00:01.000Z',
+            session_id: 'session-newer',
+            mode: 'resume',
+            source_surface: 'test_fixture',
+            domain_id: null,
+            workstream_id: null,
+            goal_preview: null,
+            workspace_locator: null,
+            resource_sample: { status: 'unavailable', reason: 'test fixture' },
+          },
+          {
+            ledger_id: 'ledger-older',
+            recorded_at: '2026-07-03T00:00:00.000Z',
+            session_id: 'session-older',
+            mode: 'start',
+            source_surface: 'test_fixture',
+            domain_id: null,
+            workstream_id: null,
+            goal_preview: null,
+            workspace_locator: null,
+            resource_sample: { status: 'unavailable', reason: 'test fixture' },
+          },
+        ],
+      }, null, 2)}\n`,
+    );
+    const env = { OPL_STATE_DIR: stateRoot };
+
+    assert.equal(runCli(['status', 'workspace', '--path', repoRoot], env).workspace.requested_path, repoRoot);
+    assert.equal(runCli(['status', 'runtime', '--limit', '1'], env).runtime_status.managed_session_ledger.entries.length, 1);
+    assert.equal(runCli(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'], env).dashboard.workspace.requested_path, repoRoot);
+
+    const invalid = runCliFailure(['status', 'runtime', '--limit', '0'], env);
+    assert.equal(invalid.payload.error.code, 'cli_usage_error');
+    assert.match(invalid.payload.error.message, /must be an integer from 1 to 500/);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
 });
 
 test('protected command prefixes cannot bypass registry metadata', () => {
