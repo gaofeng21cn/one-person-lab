@@ -2,9 +2,10 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
-import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText, readJsonPayloadFile, writeJsonPayloadFile } from '../../kernel/json-file.ts';
+import { stringValue, uniqueStringList } from '../../kernel/json-record.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import { buildArtifactProvenanceLedgerEvent as buildLedgerEvent } from './artifact-provenance-ledger-event.ts';
 
 const SCHEMA_VERSION = 'artifact-provenance-bundle.v1';
@@ -173,16 +174,8 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
 function uniqueStrings(values: string[]) {
-  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
+  return uniqueStringList(values.map(stringValue));
 }
 
 function uniqueIssues(issues: ArtifactProvenanceBundleIssue[]) {
@@ -198,12 +191,12 @@ function uniqueIssues(issues: ArtifactProvenanceBundleIssue[]) {
 }
 
 function stringList(value: unknown) {
-  const scalar = optionalString(value);
+  const scalar = stringValue(value);
   if (scalar) {
     return [scalar];
   }
   return Array.isArray(value)
-    ? uniqueStrings(value.map(optionalString).filter((entry): entry is string => Boolean(entry)))
+    ? uniqueStringList(value.map(stringValue))
     : [];
 }
 
@@ -257,7 +250,7 @@ function normalizeHashEntry(value: unknown): HashEntry | null {
   if (!isRecord(value) || value.algorithm !== 'sha256') {
     return null;
   }
-  const hashValue = optionalString(value.value);
+  const hashValue = stringValue(value.value);
   return hashValue && /^[a-f0-9]{64}$/i.test(hashValue)
     ? { algorithm: 'sha256', value: hashValue.toLowerCase() }
     : null;
@@ -384,19 +377,19 @@ function normalizeDeclaredTypedIssues(value: unknown): ArtifactProvenanceBundleI
     if (!isRecord(entry)) {
       return [];
     }
-    const code = optionalString(entry.code);
+    const code = stringValue(entry.code);
     if (!code) {
       return [];
     }
-    const rawSeverity = optionalString(entry.severity);
+    const rawSeverity = stringValue(entry.severity);
     const severity: IssueSeverity = rawSeverity === 'error' || rawSeverity === 'info' ? rawSeverity : 'warning';
     return [
       typedIssue(
         code,
         severity,
-        optionalString(entry.ref) ?? optionalString(entry.label) ?? optionalString(entry.section) ?? `typed_issues[${index}]`,
-        optionalString(entry.message) ?? `Bundle manifest declares typed issue ${code}.`,
-        optionalString(entry.action) ?? 'Route this typed provenance issue through the owning domain or repair the referenced provenance section.',
+        stringValue(entry.ref) ?? stringValue(entry.label) ?? stringValue(entry.section) ?? `typed_issues[${index}]`,
+        stringValue(entry.message) ?? `Bundle manifest declares typed issue ${code}.`,
+        stringValue(entry.action) ?? 'Route this typed provenance issue through the owning domain or repair the referenced provenance section.',
       ),
     ];
   });
@@ -414,10 +407,10 @@ function invalidTypedIssueFields(value: unknown) {
       return [`typed_issues[${index}]`];
     }
     const invalidFields: string[] = [];
-    if (!optionalString(entry.code)) {
+    if (!stringValue(entry.code)) {
       invalidFields.push(`typed_issues[${index}].code`);
     }
-    const severity = optionalString(entry.severity);
+    const severity = stringValue(entry.severity);
     if (severity && !['error', 'warning', 'info'].includes(severity)) {
       invalidFields.push(`typed_issues[${index}].severity`);
     }
@@ -429,7 +422,7 @@ function isStrictHashEntry(value: unknown) {
   if (!isRecord(value) || value.algorithm !== 'sha256') {
     return false;
   }
-  const hashValue = optionalString(value.value);
+  const hashValue = stringValue(value.value);
   return hashValue !== null
     && /^[a-f0-9]{64}$/.test(hashValue)
     && unknownFields(value, ALLOWED_HASH_ENTRY_FIELDS, '').length === 0;
@@ -449,11 +442,11 @@ function normalizeIssue(value: unknown): ArtifactProvenanceBundleIssue | null {
   if (!isRecord(value)) {
     return null;
   }
-  const code = optionalString(value.code);
+  const code = stringValue(value.code);
   const severity = value.severity === 'error' || value.severity === 'warning' ? value.severity : null;
-  const ref = optionalString(value.ref);
-  const message = optionalString(value.message);
-  const action = optionalString(value.action);
+  const ref = stringValue(value.ref);
+  const message = stringValue(value.message);
+  const action = stringValue(value.action);
   return code && severity && ref && message && action
     ? { code, severity, ref, message, action }
     : null;
@@ -519,7 +512,7 @@ function readBundle(bundlePath: string): LoadedBundle {
   const manifestText = fs.readFileSync(manifestPath, 'utf8');
   let parsed: unknown;
   try {
-    parsed = JSON.parse(manifestText);
+    parsed = parseJsonText(manifestText);
   } catch (error) {
     throw new FrameworkContractError('contract_shape_invalid', 'Artifact provenance bundle manifest must be valid JSON.', {
       manifest_path: manifestPath,
@@ -541,11 +534,11 @@ function normalizeManifest(value: unknown): ArtifactProvenanceBundleManifest {
   const metadata = isRecord(record.metadata) ? { ...record.metadata } : undefined;
   return {
     schema_version: SCHEMA_VERSION,
-    bundle_id: optionalString(record.bundle_id) ?? '',
-    artifact_ref: optionalString(record.artifact_ref) ?? '',
-    domain_id: optionalString(record.domain_id) ?? '',
-    artifact_type: optionalString(record.artifact_type) ?? '',
-    created_at: optionalString(record.created_at) ?? '',
+    bundle_id: stringValue(record.bundle_id) ?? '',
+    artifact_ref: stringValue(record.artifact_ref) ?? '',
+    domain_id: stringValue(record.domain_id) ?? '',
+    artifact_type: stringValue(record.artifact_type) ?? '',
+    created_at: stringValue(record.created_at) ?? '',
     refs: normalizeRefs(record.refs),
     hashes: normalizeHashes(record.hashes),
     authority_boundary: authorityBoundary(stringList(rawAuthority.forbidden_claims)),
@@ -576,12 +569,12 @@ function validationForLoadedBundle(loaded: LoadedBundle): BundleValidation {
   const restrictedRefEntries = declaredRefIssueEntries(record.restricted_refs, 'restricted_refs');
   const sections = sectionsForRefs(loaded.manifest.refs, missingRefEntries, restrictedRefEntries);
   const requiredFields: Array<[string, string | null]> = [
-    ['schema_version', optionalString(record.schema_version)],
-    ['bundle_id', optionalString(record.bundle_id)],
-    ['artifact_ref', optionalString(record.artifact_ref)],
-    ['domain_id', optionalString(record.domain_id)],
-    ['artifact_type', optionalString(record.artifact_type)],
-    ['created_at', optionalString(record.created_at)],
+    ['schema_version', stringValue(record.schema_version)],
+    ['bundle_id', stringValue(record.bundle_id)],
+    ['artifact_ref', stringValue(record.artifact_ref)],
+    ['domain_id', stringValue(record.domain_id)],
+    ['artifact_type', stringValue(record.artifact_type)],
+    ['created_at', stringValue(record.created_at)],
     ['refs', isRecord(record.refs) ? 'refs' : null],
     ['hashes', isRecord(record.hashes) ? 'hashes' : null],
     ['authority_boundary', isRecord(record.authority_boundary) ? 'authority_boundary' : null],
@@ -670,7 +663,7 @@ function validationForLoadedBundle(loaded: LoadedBundle): BundleValidation {
 
   return {
     surface_kind: 'opl_artifact_provenance_bundle_validation',
-    schema_version: optionalString(record.schema_version) === SCHEMA_VERSION ? SCHEMA_VERSION : null,
+    schema_version: stringValue(record.schema_version) === SCHEMA_VERSION ? SCHEMA_VERSION : null,
     status,
     bundle_id: loaded.manifest.bundle_id || null,
     artifact_ref: loaded.manifest.artifact_ref || null,
@@ -720,12 +713,12 @@ function normalizeRecord(value: unknown): ArtifactProvenanceBundleRecord | null 
   if (!isRecord(value)) {
     return null;
   }
-  const recordRef = optionalString(value.record_ref);
-  const bundleId = optionalString(value.bundle_id);
-  const domainId = optionalString(value.domain_id);
-  const artifactRef = optionalString(value.artifact_ref);
-  const artifactType = optionalString(value.artifact_type);
-  const manifestRef = optionalString(value.bundle_manifest_ref);
+  const recordRef = stringValue(value.record_ref);
+  const bundleId = stringValue(value.bundle_id);
+  const domainId = stringValue(value.domain_id);
+  const artifactRef = stringValue(value.artifact_ref);
+  const artifactType = stringValue(value.artifact_type);
+  const manifestRef = stringValue(value.bundle_manifest_ref);
   const bundleManifestHash = normalizeHashEntry(value.bundle_manifest_hash);
   if (!recordRef || !bundleId || !domainId || !artifactRef || !artifactType || !manifestRef || !bundleManifestHash) {
     return null;
@@ -735,7 +728,7 @@ function normalizeRecord(value: unknown): ArtifactProvenanceBundleRecord | null 
   return {
     surface_kind: 'opl_artifact_provenance_bundle_record',
     record_ref: recordRef,
-    recorded_at: optionalString(value.recorded_at) ?? nowIso(),
+    recorded_at: stringValue(value.recorded_at) ?? nowIso(),
     bundle_id: bundleId,
     domain_id: domainId,
     artifact_ref: artifactRef,
@@ -765,7 +758,7 @@ function readLedger(): ArtifactProvenanceBundleLedger {
     return emptyLedger();
   }
   try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
+    const parsed = readJsonPayloadFile(file);
     if (!isRecord(parsed) || !Array.isArray(parsed.records)) {
       return emptyLedger();
     }
@@ -782,7 +775,7 @@ function readLedger(): ArtifactProvenanceBundleLedger {
 
 function writeLedger(ledger: ArtifactProvenanceBundleLedger) {
   ensureOplStateDir();
-  fs.writeFileSync(ledgerPath(), `${JSON.stringify(ledger, null, 2)}\n`);
+  writeJsonPayloadFile(ledgerPath(), ledger);
 }
 
 function assertValidBundle(loaded: LoadedBundle) {
@@ -847,7 +840,7 @@ export function inspectArtifactProvenanceBundle(input: string | {
 }) {
   const bundlePath = typeof input === 'string' ? input : input.bundlePath;
   if (!bundlePath) {
-    const artifactRef = typeof input === 'string' ? null : optionalString(input.artifactRef);
+    const artifactRef = typeof input === 'string' ? null : stringValue(input.artifactRef);
     if (!artifactRef) {
       throw new FrameworkContractError('cli_usage_error', 'Artifact provenance bundle inspect requires --bundle or --artifact.', {});
     }
