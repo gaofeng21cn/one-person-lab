@@ -207,7 +207,8 @@ function validateSelectedExecutor(stageId: string, selectedExecutor: unknown) {
     return [`stage_pack_v2_missing_executor_kind:${stageId}`];
   }
   if (executorKind === 'codex_cli') {
-    return selectedExecutor.default_executor === true && executorBindingRef === DEFAULT_STAGE_EXECUTOR_BINDING_REF
+    return typeof selectedExecutor.default_executor === 'boolean'
+      && executorBindingRef === DEFAULT_STAGE_EXECUTOR_BINDING_REF
       ? []
       : [`stage_pack_v2_invalid_default_executor_binding:${stageId}`];
   }

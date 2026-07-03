@@ -73,6 +73,31 @@ test('agents conformance exposes the frozen Standard Agent Pack ABI baseline', (
   assert.equal(stage.l5_entry_gate_status, 'declared');
 });
 
+test('agents conformance accepts Codex CLI variant stages with explicit non-default binding', () => {
+  const repoDir = buildScaffoldRepo();
+  const stageControlPlanePath = path.join(repoDir, 'contracts/stage_control_plane.json');
+  const stageControlPlane = JSON.parse(fs.readFileSync(stageControlPlanePath, 'utf8'));
+  const variantStage = JSON.parse(JSON.stringify(stageControlPlane.stages[0]));
+  variantStage.stage_id = 'domain_review_variant';
+  variantStage.selected_executor.default_executor = false;
+  variantStage.selected_executor.lane_kind = 'variant';
+  stageControlPlane.stages.push(variantStage);
+  writeJson(stageControlPlanePath, stageControlPlane);
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+
+  const validation = report.reports[0].scaffold_validation.stage_pack_v2_validation;
+  assert.equal(validation.status, 'passed');
+  assert.deepEqual(validation.blockers, []);
+  assert.equal(validation.stage_statuses[1].stage_id, 'domain_review_variant');
+  assert.equal(validation.stage_statuses[1].executor_binding_ref, 'default_codex_cli');
+});
+
 test('agents conformance blocks generated scaffold repos missing stage pack v2 obligations', () => {
   const repoDir = buildScaffoldRepo();
   const stageControlPlanePath = path.join(repoDir, 'contracts/stage_control_plane.json');
