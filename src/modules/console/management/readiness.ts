@@ -1,10 +1,10 @@
 import {
   buildDomainEntryParity,
   buildRecommendedEntrySurfaces,
-} from '../../atlas/family-domain-catalog.ts';
-import { buildOplRuntimeEndpoints } from '../../runway/opl-runtime-paths/current.ts';
-import type { buildWorkspaceCatalog } from '../../workspace/workspace-registry.ts';
-import type { DomainManifestCatalogEntry } from '../../atlas/domain-manifest/types.ts';
+} from '../../atlas/index.ts';
+import { buildOplRuntimeEndpoints } from '../../runway/index.ts';
+import type { buildWorkspaceCatalog } from '../../workspace/index.ts';
+import type { DomainManifestCatalogEntry } from '../../atlas/index.ts';
 
 type WorkspaceCatalog = ReturnType<typeof buildWorkspaceCatalog>['workspace_catalog'];
 

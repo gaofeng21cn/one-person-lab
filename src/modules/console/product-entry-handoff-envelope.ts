@@ -4,7 +4,7 @@ import {
   buildDomainAgentSelectionInput,
 } from './product-entry-parts/builders.ts';
 import type { ProductEntryCliInput } from './product-entry-parts/types.ts';
-import { explainDomainBoundary, selectDomainAgentEntry } from '../atlas/resolver.ts';
+import { explainDomainBoundary, selectDomainAgentEntry } from '../atlas/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 
 export function buildProductEntryHandoffEnvelope(

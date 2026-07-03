@@ -10,9 +10,9 @@ import {
   familyRuntimePaths,
   listEvents,
 } from '../runway/index.ts';
-import { buildDomainManifestCatalog } from '../atlas/domain-manifest/catalog-builder.ts';
-import type { DomainManifestCatalog } from '../atlas/domain-manifest/catalog-builder.ts';
-import type { DomainManifestCatalogEntry, NormalizedDomainManifest, NormalizedSurfaceRef } from '../atlas/domain-manifest/types.ts';
+import { buildDomainManifestCatalog } from '../atlas/index.ts';
+import type { DomainManifestCatalog } from '../atlas/index.ts';
+import type { DomainManifestCatalogEntry, NormalizedDomainManifest, NormalizedSurfaceRef } from '../atlas/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { actionContext, actionCountsForItems, noActionContext, runningActionContext } from './runtime-tray-action.ts';
 import { humanizeStatusLabel, liveRouteStatusLabel, localizeRuntimeDisplayList, localizeRuntimeDisplayText, masPublicationActionSummary, masPublicationNextActionSummary } from './runtime-tray-display.ts';
@@ -20,7 +20,7 @@ import { buildMasPortalItems } from './runtime-tray-mas-portal.ts';
 import { readMasStudyProgressCurrentWorkUnitAsync } from './runtime-tray-mas-current-work-unit.ts';
 import type { JsonRecord, MasWorkspaceProjectionRef, RuntimeTrayCommand, RuntimeTrayHealthStatus, RuntimeTrayItem, RuntimeTrayLane, RuntimeTraySourceRef } from './runtime-tray-snapshot-types.ts';
 import { fileSourceRef, firstString, firstStringFromList, nestedRecord, normalizeStatusCode, optionalBoolean, optionalString, readJsonRecord, shellArgument, sourceRef, stringListFromRecords, uniqueByRef, uniqueStrings } from './runtime-tray-snapshot-utils.ts';
-import { buildFamilyStageControlPlaneParity } from '../stagecraft/family-stage-control-plane.ts';
+import { buildFamilyStageControlPlaneParity } from '../stagecraft/index.ts';
 import { buildStageAttemptWorkbench } from './runtime-tray-stage-attempt-workbench.ts';
 import { buildStageAttemptTrayItems } from './runtime-tray-stage-attempt-items.ts';
 import { buildProviderProofTrayItem } from './runtime-tray-provider-proof-items.ts';
@@ -30,7 +30,7 @@ import {
   buildAppOperatorDrilldown,
   type AppOperatorDrilldownDetailLevel,
 } from './runtime-tray-app-operator-drilldown.ts';
-import { withOplMetaAgentDescriptorEntry } from '../foundry-lab/opl-meta-agent-descriptor-adapter.ts';
+import { withOplMetaAgentDescriptorEntry } from '../foundry-lab/index.ts';
 
 const PROJECT_LABELS: Record<string, string> = {
   medautoscience: 'MAS',

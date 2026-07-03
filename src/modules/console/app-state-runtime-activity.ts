@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { getActiveWorkspaceBinding } from '../workspace/workspace-registry.ts';
+import { getActiveWorkspaceBinding } from '../workspace/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 

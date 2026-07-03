@@ -34,7 +34,7 @@ import {
   validateUserInteractionContractShape,
   validateOptionalFamilyReferenceRef,
 } from './internal.ts';
-import { validateSharedHandoff } from '../../atlas/family-entry-contracts.ts';
+import { validateSharedHandoff } from '../../atlas/index.ts';
 import { buildProductEntryResumeSurface } from './resume-surface.ts';
 import { validateFamilyProductEntrySurfaces } from './shell-surfaces.ts';
 

@@ -2,7 +2,7 @@ import {
   readFamilyRuntimeLifecycleApplyReceipts,
   readFamilyRuntimeLifecycleRefs,
   reconcileFamilyRuntimeLifecycleRefs,
-} from '../../runway/family-runtime-lifecycle-index.ts';
+} from '../../runway/index.ts';
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundary,
 } from './authority-boundary.ts';

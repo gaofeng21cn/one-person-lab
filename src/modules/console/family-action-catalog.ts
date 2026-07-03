@@ -1,10 +1,10 @@
 import type { FrameworkContracts } from '../../kernel/types.ts';
-import { buildDomainManifestCatalog } from '../atlas/domain-manifest/catalog-builder.ts';
+import { buildDomainManifestCatalog } from '../atlas/index.ts';
 import type {
   DomainManifestCatalogEntry,
   NormalizedDomainManifest,
-} from '../atlas/domain-manifest/types.ts';
-import { FrameworkContractError } from '../charter/contracts.ts';
+} from '../atlas/index.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 import type {
   FamilyActionCatalog,
   FamilyActionCatalogAction,

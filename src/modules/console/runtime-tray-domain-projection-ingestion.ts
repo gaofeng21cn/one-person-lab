@@ -1,4 +1,4 @@
-import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from '../atlas/domain-manifest/types.ts';
+import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from '../atlas/index.ts';
 import type { JsonRecord, RuntimeTraySourceRef } from './runtime-tray-snapshot-types.ts';
 import { sourceRef, uniqueByRef } from './runtime-tray-snapshot-utils.ts';
 

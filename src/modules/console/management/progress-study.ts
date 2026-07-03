@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { buildWorkspaceCatalog } from '../../workspace/workspace-registry.ts';
+import { buildWorkspaceCatalog } from '../../workspace/index.ts';
 import {
   humanizeProgressCode,
   readStatusNarrationContract,
@@ -28,11 +28,11 @@ import {
 } from './shared.ts';
 import {
   buildDomainManifestCatalog,
-} from '../../atlas/domain-manifest/catalog-builder.ts';
+} from '../../atlas/index.ts';
 import type {
   DomainManifestCatalogEntry,
   NormalizedDomainManifest,
-} from '../../atlas/domain-manifest/types.ts';
+} from '../../atlas/index.ts';
 
 function buildPaperFacingSnapshot(options: {
   studyRoot: string | null;

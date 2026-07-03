@@ -1,11 +1,11 @@
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import {
   listExternalEvidenceReceipts,
-} from '../../ledger/external-evidence-ledger.ts';
-import { canonicalOwnerId } from '../../ledger/evidence-envelope.ts';
+} from '../../ledger/index.ts';
+import { canonicalOwnerId } from '../../ledger/index.ts';
 import {
   listStageRunExecutionAuthorizationReceipts,
-} from '../../stagecraft/stage-run-execution-authorization-ledger.ts';
+} from '../../stagecraft/index.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);

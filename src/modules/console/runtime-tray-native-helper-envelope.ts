@@ -1,4 +1,4 @@
-import { buildNativeIndexSummary } from '../runway/native-index-summary.ts';
+import { buildNativeIndexSummary } from '../runway/index.ts';
 
 type NativeIndexSummaryOutput = ReturnType<typeof buildNativeIndexSummary>;
 

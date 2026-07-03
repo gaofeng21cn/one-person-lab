@@ -1,4 +1,4 @@
-import type { DomainManifestCatalogEntry } from '../../atlas/domain-manifest/types.ts';
+import type { DomainManifestCatalogEntry } from '../../atlas/index.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 
 function isRecord(value: unknown): value is JsonRecord {

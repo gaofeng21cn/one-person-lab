@@ -1,4 +1,4 @@
-import { validateSharedHandoff, validateSharedHandoffBuilder } from '../../atlas/family-entry-contracts.ts';
+import { validateSharedHandoff, validateSharedHandoffBuilder } from '../../atlas/index.ts';
 import type {
   BuildFamilyProductEntrySurfacesInput,
   BuildOperatorLoopActionInput,

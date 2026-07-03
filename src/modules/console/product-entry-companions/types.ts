@@ -5,7 +5,7 @@ import {
   validateUserInteractionContract as validateSharedUserInteractionContract,
   validateSharedHandoff,
   validateSharedHandoffBuilder,
-} from '../../atlas/family-entry-contracts.ts';
+} from '../../atlas/index.ts';
 
 export type JsonRecord = Record<string, unknown>;
 

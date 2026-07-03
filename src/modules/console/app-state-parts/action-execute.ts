@@ -1,18 +1,18 @@
-import { FrameworkContractError } from '../../charter/contracts.ts';
-import { runRuntimeOperatorActionExecute } from '../../runway/runtime-operator-action-execution.ts';
-import { runOplModuleAction } from '../../connect/system-installation/modules.ts';
-import { runOplSystemAction } from '../../connect/system-installation/system-actions.ts';
-import { writeOplWorkspaceRootSurface } from '../../connect/system-installation/workspace-root.ts';
+import { FrameworkContractError } from '../../charter/index.ts';
+import { runRuntimeOperatorActionExecute } from '../../runway/index.ts';
+import { runOplModuleAction } from '../../connect/index.ts';
+import { runOplSystemAction } from '../../connect/index.ts';
+import { writeOplWorkspaceRootSurface } from '../../connect/index.ts';
 import type { OplUpdateChannel } from '../system-preferences.ts';
-import { runFamilyRuntime } from '../../runway/family-runtime.ts';
-import { runOplEngineAction } from '../../connect/system-installation/engine-actions.ts';
-import { type OplEngineAction, type OplModuleAction, type OplModuleId } from '../../connect/system-installation/shared.ts';
+import { runFamilyRuntime } from '../../runway/index.ts';
+import { runOplEngineAction } from '../../connect/index.ts';
+import { type OplEngineAction, type OplModuleAction, type OplModuleId } from '../../connect/index.ts';
 import { executeWorkspaceAppAction } from '../app-state-workspace-actions.ts';
-import { syncFamilySkillPacks } from '../../connect/opl-skills.ts';
+import { syncFamilySkillPacks } from '../../connect/index.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import { settingsControlCenterActionById } from '../app-state-settings-control-center.ts';
-import { buildOplDockerWebuiDoctor } from '../../connect/system-installation/docker-webui-doctor.ts';
-import { runOplTurnkeyInstall } from '../../connect/system-installation/turnkey.ts';
+import { buildOplDockerWebuiDoctor } from '../../connect/index.ts';
+import { runOplTurnkeyInstall } from '../../connect/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 

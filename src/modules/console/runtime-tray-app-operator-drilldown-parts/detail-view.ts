@@ -3,7 +3,7 @@ import {
   buildDomainDispatchEvidenceWorkorderPacket,
   compactDomainDispatchEvidenceWorkorderAttentionItems,
   compactDomainDispatchEvidenceWorkorderGroupAttentionItems,
-} from '../../ledger/domain-dispatch-evidence-workorder-packet.ts';
+} from '../../ledger/index.ts';
 import { buildOwnerHandoffPacket } from './owner-handoff-packet.ts';
 import {
   buildOmaProductionConsumptionFollowthroughAttention,
@@ -34,7 +34,7 @@ import { buildAppOperatorOwnerDeltaTopline } from './owner-delta-topline.ts';
 import { buildOwnerPayloadWorkorder } from './owner-payload-workorder.ts';
 import { buildOwnerDeltaFirstProjection } from './owner-delta-first.ts';
 import { ownerDeltaAvailable } from './owner-delta-availability.ts';
-import { splitOperatorAttentionCounts } from '../../foundry-lab/framework-readiness-attention-counts.ts';
+import { splitOperatorAttentionCounts } from '../../foundry-lab/index.ts';
 import {
   LAZY_LOAD_TARGETS,
   SUMMARY_DRILLDOWN_KEYS,

@@ -1,10 +1,10 @@
-import { findDomainOrThrow, FrameworkContractError } from '../../charter/contracts.ts';
-import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from '../../atlas/family-domain-catalog.ts';
-import { buildOplRuntimeEndpoints } from '../../runway/opl-runtime-paths/current.ts';
+import { findDomainOrThrow, FrameworkContractError } from '../../charter/index.ts';
+import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from '../../atlas/index.ts';
+import { buildOplRuntimeEndpoints } from '../../runway/index.ts';
 import { readOplRuntimeModes } from '../runtime-modes.ts';
-import { buildWorkspaceCatalog, getActiveWorkspaceBinding } from '../../workspace/workspace-registry.ts';
+import { buildWorkspaceCatalog, getActiveWorkspaceBinding } from '../../workspace/index.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
-import { buildDomainManifestCatalog } from '../../atlas/domain-manifest/catalog-builder.ts';
+import { buildDomainManifestCatalog } from '../../atlas/index.ts';
 
 import type { DashboardOptions, StartSurfaceOptions } from './types.ts';
 import { buildCurrentDashboardSurfaceRefs } from './readiness.ts';

@@ -27,17 +27,17 @@ import {
   buildFamilyConflictSubject,
   buildStageAttemptConflictOrBlockerEnvelopes,
   canonicalOutcomeForStageAttempt,
-} from '../stagecraft/family-conflict-envelope.ts';
+} from '../stagecraft/index.ts';
 import {
   buildAttemptGenericProjections,
 } from './runtime-tray-stage-attempt-generic-projections.ts';
 import {
   buildAttemptHumanReviewBurdenBudget,
-} from '../stagecraft/family-human-review-budget.ts';
+} from '../stagecraft/index.ts';
 import {
   buildStageAttemptCloseoutRefsOnlyContract,
   buildStageAttemptLaunchEnvelope,
-} from '../stagecraft/cognitive-kernel-boundary.ts';
+} from '../stagecraft/index.ts';
 import { fileSourceRef, optionalString } from './runtime-tray-snapshot-utils.ts';
 import type { JsonRecord, RuntimeTraySourceRef } from './runtime-tray-snapshot-types.ts';
 import {

@@ -1,9 +1,9 @@
-import type { OplStatePaths } from '../runway/runtime-state-paths.ts';
-import { readCurrentOwnerDeltaReadModelProjectionCache } from '../ledger/current-owner-delta-read-model-cache.ts';
+import type { OplStatePaths } from '../runway/index.ts';
+import { readCurrentOwnerDeltaReadModelProjectionCache } from '../ledger/index.ts';
 import {
   buildCurrentOwnerDeltaCacheRefreshRequiredReadModel,
   buildCurrentOwnerDeltaReadModel,
-} from '../ledger/current-owner-delta-projection.ts';
+} from '../ledger/index.ts';
 
 const APP_CURRENT_OWNER_DELTA_CACHE_MAX_AGE_MS = 5 * 60 * 1000;
 

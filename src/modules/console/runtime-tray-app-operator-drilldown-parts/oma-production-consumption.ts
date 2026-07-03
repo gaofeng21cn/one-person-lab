@@ -6,7 +6,7 @@ import {
   omaProductionConsumptionPayloadRefHints,
   omaProductionConsumptionPayloadTemplate,
   omaProductionConsumptionRuntimeActionExecuteCommand,
-} from '../../foundry-lab/oma-production-consumption-action.ts';
+} from '../../foundry-lab/index.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);

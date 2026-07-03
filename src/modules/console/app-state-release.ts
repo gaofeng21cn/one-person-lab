@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
-import { buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from '../connect/opl-release.ts';
+import { FrameworkContractError } from '../charter/index.ts';
+import { buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from '../connect/index.ts';
 import { readOplUpdateChannel } from './system-preferences.ts';
 
 type JsonRecord = Record<string, unknown>;

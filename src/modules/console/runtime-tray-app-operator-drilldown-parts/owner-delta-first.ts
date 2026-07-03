@@ -1,5 +1,5 @@
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
-import { canonicalOwnerId } from '../../ledger/evidence-envelope.ts';
+import { canonicalOwnerId } from '../../ledger/index.ts';
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundary,
 } from './authority-boundary.ts';

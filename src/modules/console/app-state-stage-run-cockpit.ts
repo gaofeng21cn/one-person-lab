@@ -1,11 +1,11 @@
-import { evaluateStageRunAdmission, evaluateStageRunExecutionAuthorization } from '../stagecraft/stage-run-kernel.ts';
+import { evaluateStageRunAdmission, evaluateStageRunExecutionAuthorization } from '../stagecraft/index.ts';
 import {
   latestStageRunExecutionAuthorizationCloseoutReceiptForStageAttempt,
   latestStageRunExecutionAuthorizationCloseoutReceiptForStageRun,
   latestStageRunExecutionAuthorizationReceiptForStageAttemptAnyRun,
   latestStageRunExecutionAuthorizationReceiptForStageAttempt,
   latestStageRunExecutionAuthorizationReceiptForStageRun,
-} from '../stagecraft/stage-run-execution-authorization-ledger.ts';
+} from '../stagecraft/index.ts';
 import {
   findMasPublicationHandoffOwnerAnswerProjection,
 } from './app-state-mas-owner-answer-projection.ts';

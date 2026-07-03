@@ -10,7 +10,7 @@ import {
 } from './developer-mode-live-closeout.ts';
 import {
   listDomainOwnerPayloadSummaryReceipts,
-} from '../../ledger/domain-owner-payload-summary-ledger.ts';
+} from '../../ledger/index.ts';
 
 type AppOperatorDrilldownSummaryInput = {
   attempts: unknown[];

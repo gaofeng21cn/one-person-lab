@@ -1,4 +1,4 @@
-import type { HandoffBundleResult } from '../../ledger/handoff-bundle-types.ts';
+import type { HandoffBundleResult } from '../../ledger/index.ts';
 import type {
   BoundaryExplanation,
   DomainAgentSelectionInput,

@@ -1,7 +1,7 @@
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import {
   listCodexAppRuntimeEvidenceReceipts,
-} from '../../runway/codex-app-runtime-evidence-ledger.ts';
+} from '../../runway/index.ts';
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundary,
 } from './authority-boundary.ts';

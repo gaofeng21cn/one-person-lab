@@ -1,9 +1,9 @@
 import {
   buildStandardDomainAgentTemplateConsumptionReadModel,
-} from '../../foundry-lab/standard-domain-agent-scaffold.ts';
+} from '../../foundry-lab/index.ts';
 import {
   listStandardAgentTemplateConsumptionReceipts,
-} from '../../ledger/standard-agent-template-consumption-ledger.ts';
+} from '../../ledger/index.ts';
 
 export function buildStandardAgentTemplateConsumptionProjection() {
   const receipts = listStandardAgentTemplateConsumptionReceipts();

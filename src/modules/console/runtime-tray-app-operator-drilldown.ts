@@ -1,9 +1,9 @@
-import type { DomainManifestCatalogEntry } from '../atlas/domain-manifest/types.ts';
+import type { DomainManifestCatalogEntry } from '../atlas/index.ts';
 import {
   buildDomainEvidenceRequestRefs,
 } from './runtime-tray-domain-evidence-requests.ts';
 import type { JsonRecord, RuntimeTraySourceRef } from './runtime-tray-snapshot-types.ts';
-import { buildAppDrilldownProductionEvidenceTailLedger } from '../ledger/production-evidence-tail-ledger.ts';
+import { buildAppDrilldownProductionEvidenceTailLedger } from '../ledger/index.ts';
 import { sourceRef, uniqueByRef } from './runtime-tray-snapshot-utils.ts';
 import {
   applyAppOperatorDrilldownDetail,
@@ -68,10 +68,10 @@ import {
 } from './runtime-tray-app-operator-drilldown-parts/summary.ts';
 import {
   buildOplMetaAgentRegistryExtension,
-} from '../foundry-lab/opl-meta-agent-consumption.ts';
+} from '../foundry-lab/index.ts';
 import {
   buildEvidenceEnvelopeProjection,
-} from '../ledger/evidence-envelope.ts';
+} from '../ledger/index.ts';
 import {
   functionalPrivatizationAuditRefs,
   functionalPrivatizationSummary,
@@ -96,7 +96,7 @@ import {
 } from './runtime-tray-app-operator-drilldown-parts/memory-artifact-lifecycle-evidence.ts';
 import {
   buildMemoryArtifactLifecycleEvidenceProjection,
-} from '../ledger/memory-artifact-lifecycle-evidence-ledger.ts';
+} from '../ledger/index.ts';
 import {
   currentControlStateProjection,
   safeActionRefs,
@@ -119,7 +119,7 @@ import {
 } from './runtime-tray-app-operator-drilldown-parts/memory-trace-projection.ts';
 import {
   buildDeveloperModeAgentLabRepairRouteReadModel,
-} from '../foundry-lab/agent-lab-developer-mode.ts';
+} from '../foundry-lab/index.ts';
 import {
   artifactGalleryRefs,
   attemptTruePathProofs,

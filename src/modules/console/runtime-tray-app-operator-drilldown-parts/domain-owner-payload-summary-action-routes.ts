@@ -2,7 +2,7 @@ import {
   domainOwnerPayloadSummaryTargetKey,
   listDomainOwnerPayloadSummaryReceipts,
   type DomainOwnerPayloadSummaryReceipt,
-} from '../../ledger/domain-owner-payload-summary-ledger.ts';
+} from '../../ledger/index.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import { record, recordList, stringList, stringValue } from './value-utils.ts';
 

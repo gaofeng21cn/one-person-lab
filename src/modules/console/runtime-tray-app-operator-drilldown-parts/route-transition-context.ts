@@ -1,11 +1,11 @@
-import type { DomainManifestCatalogEntry } from '../../atlas/domain-manifest/types.ts';
+import type { DomainManifestCatalogEntry } from '../../atlas/index.ts';
 import {
   buildStandardDomainAgentSkeletonInspection,
-} from '../../foundry-lab/family-domain-agent-skeleton.ts';
+} from '../../foundry-lab/index.ts';
 import type {
   ProviderContinuousProof,
-} from '../../atlas/family-domain-agent-provider-closure.ts';
-import { buildMasDomainRouteSupportProjection } from '../../runway/family-runtime-mas-domain-route.ts';
+} from '../../atlas/index.ts';
+import { buildMasDomainRouteSupportProjection } from '../../runway/index.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundary as refsOnlyAuthorityBoundary,

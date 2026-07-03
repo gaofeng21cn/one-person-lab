@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { ensureOplStateDir, resolveOplStatePaths } from '../runway/runtime-state-paths.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from '../runway/index.ts';
 
 type AppReleaseUserPathEvidenceReceipt = {
   surface_kind: 'opl_app_release_user_path_evidence_receipt';

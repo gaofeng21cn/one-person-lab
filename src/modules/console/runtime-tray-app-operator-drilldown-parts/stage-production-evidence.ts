@@ -1,17 +1,17 @@
-import type { DomainManifestCatalogEntry } from '../../atlas/domain-manifest/types.ts';
+import type { DomainManifestCatalogEntry } from '../../atlas/index.ts';
 import {
   buildFamilyStageAdmissionReview,
-} from '../../stagecraft/family-stage-admission.ts';
+} from '../../stagecraft/index.ts';
 import {
   buildFamilyStageCohortLoopProjection,
-} from '../../stagecraft/family-stage-cohort-loop.ts';
+} from '../../stagecraft/index.ts';
 import {
   buildFamilyStageProofBundle,
-} from '../../stagecraft/family-stage-proof-bundle.ts';
+} from '../../stagecraft/index.ts';
 import {
   listExternalEvidenceReceipts,
-} from '../../ledger/external-evidence-ledger.ts';
-import type { FamilyStageSurfaceRef } from '../../stagecraft/family-stage-control-plane-contract.ts';
+} from '../../ledger/index.ts';
+import type { FamilyStageSurfaceRef } from '../../stagecraft/index.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import {
   familyRuntimeCommandDomainId,

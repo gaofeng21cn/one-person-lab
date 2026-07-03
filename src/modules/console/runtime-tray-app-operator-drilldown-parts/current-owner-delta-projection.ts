@@ -1,4 +1,4 @@
-import { buildCurrentOwnerDeltaReadModel } from '../../ledger/current-owner-delta-projection.ts';
+import { buildCurrentOwnerDeltaReadModel } from '../../ledger/index.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 
 function isRecord(value: unknown): value is JsonRecord {

@@ -1,9 +1,9 @@
-import { FrameworkContractError, loadFrameworkContracts } from '../charter/contracts.ts';
+import { FrameworkContractError, loadFrameworkContracts } from '../charter/index.ts';
 import {
   readBundledCodexDefaultProfile,
   readLocalCodexAccessState,
   readLocalCodexDefaultsIfAvailable,
-} from '../connect/local-codex-defaults.ts';
+} from '../connect/index.ts';
 import {
   buildOplEndpoints,
   ensureOplStateDir,
@@ -16,12 +16,12 @@ import {
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { buildDeveloperModeLiveCloseoutEvidenceSummary } from './app-state-developer-mode-closeout.ts';
 import { buildReleaseState } from './app-state-release.ts';
-import { buildOplDeveloperModeSurface } from '../connect/system-installation/developer-mode.ts';
-import { resolveCodexVersion } from '../connect/system-installation/engine-helpers.ts';
-import { buildOplModules } from '../connect/system-installation/modules.ts';
+import { buildOplDeveloperModeSurface } from '../connect/index.ts';
+import { resolveCodexVersion } from '../connect/index.ts';
+import { buildOplModules } from '../connect/index.ts';
 import { readOplWorkspaceRoot } from './system-preferences.ts';
 import path from 'node:path';
-import { resolveDefaultFamilyWorkspaceRoot } from '../connect/opl-skills.ts';
+import { resolveDefaultFamilyWorkspaceRoot } from '../connect/index.ts';
 import { buildActionCatalog } from './app-state-action-catalog.ts';
 import { buildSettingsControlCenter } from './app-state-settings-control-center.ts';
 import { parseAppStateProfile, type AppStateProfile } from './app-state-profile.ts';
@@ -29,8 +29,8 @@ import { buildAppStateRuntimeActivityItems } from './app-state-runtime-activity.
 import { buildOplAppOperatorViewModel } from './app-state-view-model.ts';
 import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
 import { selectAppStateCurrentOwnerDeltaReadModel } from './app-state-current-owner-delta.ts';
-import { buildAgentLabDomainFeedbackSelfEvolutionReadModel } from '../foundry-lab/agent-lab-control-read-models.ts';
-import { buildFeedbackOpsReadModel } from '../foundry-lab/agent-lab-feedbackops.ts';
+import { buildAgentLabDomainFeedbackSelfEvolutionReadModel } from '../foundry-lab/index.ts';
+import { buildFeedbackOpsReadModel } from '../foundry-lab/index.ts';
 
 export { parseAppActionExecuteArgs, runOplAppActionExecute } from './app-state-parts/action-execute.ts';
 

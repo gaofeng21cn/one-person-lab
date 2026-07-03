@@ -1,5 +1,5 @@
-import { findDomainOrThrow } from '../../charter/contracts.ts';
-import { buildHandoffBundle } from '../../ledger/handoff-bundle.ts';
+import { findDomainOrThrow } from '../../charter/index.ts';
+import { buildHandoffBundle } from '../../ledger/index.ts';
 import type {
   BoundaryExplanation,
   DomainAgentSelectionInput,

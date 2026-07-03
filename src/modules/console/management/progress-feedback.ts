@@ -1,5 +1,5 @@
 import { humanizeProgressCode, readStatusNarrationContract, statusNarrationLatestUpdate, statusNarrationNextStep, statusNarrationStageSummary, statusNarrationSummary } from '../status-narration.ts';
-import type { NormalizedDomainManifest } from '../../atlas/domain-manifest/types.ts';
+import type { NormalizedDomainManifest } from '../../atlas/index.ts';
 
 import { buildStudyProgressSurface } from './progress-study.ts';
 import {

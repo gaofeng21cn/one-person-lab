@@ -12,7 +12,7 @@ import {
   STAGE_PRODUCTION_EVIDENCE_COVERAGE_PAYLOAD_REFS,
   STAGE_PRODUCTION_EVIDENCE_OPTIONAL_PAYLOAD_REFS,
   STAGE_PRODUCTION_EVIDENCE_REQUIRED_PAYLOAD_REFS,
-} from '../../stagecraft/stage-production-evidence-payload-preflight.ts';
+} from '../../stagecraft/index.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);

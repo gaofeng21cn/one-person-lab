@@ -1,9 +1,9 @@
-import { FrameworkContractError } from '../charter/contracts.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 import {
   adoptWorkspace,
   doctorWorkspace,
   validateWorkspace,
-} from '../workspace/workspace-diagnostics.ts';
+} from '../workspace/index.ts';
 import {
   archiveWorkspaceProject,
   deleteWorkspaceProject,
@@ -15,8 +15,8 @@ import {
   workspaceHealth,
   workspaceInventory,
   workspaceReport,
-} from '../workspace/workspace-lifecycle.ts';
-import { ensureWorkspace, initializeWorkspace } from '../workspace/workspace-initializer.ts';
+} from '../workspace/index.ts';
+import { ensureWorkspace, initializeWorkspace } from '../workspace/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 
 type JsonRecord = Record<string, unknown>;

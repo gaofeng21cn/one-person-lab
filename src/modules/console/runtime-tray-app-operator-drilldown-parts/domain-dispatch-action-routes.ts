@@ -4,7 +4,7 @@ import {
 } from './authority-boundary.ts';
 import {
   buildDomainDispatchEvidenceIdentityGuidance,
-} from '../../ledger/domain-dispatch-evidence-identity-guidance.ts';
+} from '../../ledger/index.ts';
 import {
   buildDomainDispatchRecordPayloadArtifacts,
   DOMAIN_DISPATCH_RECORD_REQUIRED_PAYLOAD_REFS,

@@ -4,8 +4,8 @@ import {
   buildCodexExecArgs,
   parseCodexExecOutput,
   runCodexCommand,
-} from '../runway/codex.ts';
-import { runAgentExecutor } from '../runway/agent-executor.ts';
+} from '../runway/index.ts';
+import { runAgentExecutor } from '../runway/index.ts';
 import { isInteractiveShell } from '../../kernel/terminal.ts';
 import type { ProductEntryExecInput } from './product-entry-parts/types.ts';
 import {

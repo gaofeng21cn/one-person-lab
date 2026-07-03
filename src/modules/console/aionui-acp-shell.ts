@@ -1,4 +1,4 @@
-import type { LocalCodexDefaults } from '../connect/local-codex-defaults.ts';
+import type { LocalCodexDefaults } from '../connect/index.ts';
 
 export const OPL_ENTRY_APP_TITLE = 'OPL';
 export const OPL_ENTRY_AGENT_LABEL = 'OPL Agent';

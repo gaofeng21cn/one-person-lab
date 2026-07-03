@@ -1,12 +1,12 @@
-import type { DomainManifestCatalogEntry } from '../atlas/domain-manifest/types.ts';
+import type { DomainManifestCatalogEntry } from '../atlas/index.ts';
 import {
   listExternalEvidenceReceipts,
   type ExternalEvidenceReceipt,
-} from '../ledger/external-evidence-ledger.ts';
+} from '../ledger/index.ts';
 import {
   classifyExternalEvidenceReceiptRefs,
-} from '../ledger/external-evidence-receipt-classification.ts';
-import { canonicalOwnerId } from '../ledger/evidence-envelope.ts';
+} from '../ledger/index.ts';
+import { canonicalOwnerId } from '../ledger/index.ts';
 import type { JsonRecord } from './runtime-tray-snapshot-types.ts';
 
 function isRecord(value: unknown): value is JsonRecord {

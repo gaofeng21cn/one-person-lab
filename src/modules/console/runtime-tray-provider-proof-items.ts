@@ -4,7 +4,7 @@ import { sourceRef } from './runtime-tray-snapshot-utils.ts';
 import {
   providerProofStatusIsCurrentlyProven,
   type buildProviderContinuousProof,
-} from '../runway/family-runtime-provider-continuous-proof.ts';
+} from '../runway/index.ts';
 
 type ProviderContinuousProof = ReturnType<typeof buildProviderContinuousProof>;
 

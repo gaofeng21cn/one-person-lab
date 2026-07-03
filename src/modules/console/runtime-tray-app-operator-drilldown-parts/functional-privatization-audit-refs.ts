@@ -1,8 +1,8 @@
-import type { DomainManifestCatalogEntry } from '../../atlas/domain-manifest/types.ts';
+import type { DomainManifestCatalogEntry } from '../../atlas/index.ts';
 import {
   compactFunctionalPrivatizationAuditEnvelope,
   buildFunctionalSourcePurityTailReadModel,
-} from '../../foundry-lab/functional-privatization-envelope.ts';
+} from '../../foundry-lab/index.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundary,

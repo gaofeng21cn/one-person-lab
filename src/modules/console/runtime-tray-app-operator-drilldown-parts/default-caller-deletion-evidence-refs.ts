@@ -1,14 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from '../../atlas/domain-manifest/types.ts';
+import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from '../../atlas/index.ts';
 import {
   buildGeneratedInterfaceBundle,
-} from '../../pack/domain-pack-compiler/generated-interface-read-model.ts';
+} from '../../pack/index.ts';
 import {
   buildAgentDefaultCallerReadinessForRepo,
-} from '../../foundry-lab/agent-platform-surface-ownership.ts';
-import { defaultCallerSurfaceGates } from '../../foundry-lab/default-caller-surface-gates.ts';
+} from '../../foundry-lab/index.ts';
+import { defaultCallerSurfaceGates } from '../../foundry-lab/index.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundary,
@@ -21,7 +21,7 @@ import {
   DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
   DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
   DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
-} from '../../foundry-lab/default-caller-retirement-guard.ts';
+} from '../../foundry-lab/index.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);

@@ -1,4 +1,4 @@
-import { buildCurrentOwnerDeltaTopline } from '../ledger/current-owner-delta-topline.ts';
+import { buildCurrentOwnerDeltaTopline } from '../ledger/index.ts';
 import { buildTaskRunProjectionV2 } from './app-state-task-run-projection.ts';
 
 type JsonRecord = Record<string, unknown>;

@@ -12,7 +12,7 @@ import type {
 import {
   validateFamilyDomainEntryContract as validateSharedFamilyDomainEntryContract,
   validateUserInteractionContract as validateSharedUserInteractionContract,
-} from '../../atlas/family-entry-contracts.ts';
+} from '../../atlas/index.ts';
 
 export function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

@@ -1,6 +1,6 @@
-import { buildWorkspaceCatalog } from '../../workspace/workspace-registry.ts';
+import { buildWorkspaceCatalog } from '../../workspace/index.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
-import { buildDomainManifestCatalog } from '../../atlas/domain-manifest/catalog-builder.ts';
+import { buildDomainManifestCatalog } from '../../atlas/index.ts';
 
 import {
   buildConfiguredHumanGates,

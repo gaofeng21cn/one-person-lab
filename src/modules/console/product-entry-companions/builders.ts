@@ -29,7 +29,7 @@ import {
   requireRecord,
   requireString,
 } from './internal.ts';
-import { validateSharedHandoff } from '../../atlas/family-entry-contracts.ts';
+import { validateSharedHandoff } from '../../atlas/index.ts';
 import {
   buildFamilyProductEntrySurfaces,
   validateFamilyProductEntrySurfaces,
