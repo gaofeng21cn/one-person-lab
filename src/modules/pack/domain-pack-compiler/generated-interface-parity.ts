@@ -3,6 +3,8 @@ import type {
   FamilyActionCatalog,
   FamilyActionCatalogAction,
 } from '../../../kernel/family-action-catalog-contract.ts';
+import { isRecord } from '../../../kernel/contract-validation.ts';
+import { optionalString } from '../../../kernel/json-file.ts';
 
 type GeneratedSurfaceId =
   | 'cli'
@@ -20,14 +22,6 @@ const GENERATED_DESCRIPTOR_SURFACES: GeneratedSurfaceId[] = [
   'openai_tool',
   'ai_sdk',
 ];
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function sourceActionId(action: FamilyActionCatalogAction) {
   return action.source_of_work?.source_action_id ?? action.action_id;

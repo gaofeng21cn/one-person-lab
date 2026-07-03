@@ -25,6 +25,12 @@ import {
   DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
   DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
 } from '../../foundry-lab/index.ts';
+import { isRecord } from '../../../kernel/contract-validation.ts';
+import {
+  recordList,
+  stringList,
+} from '../../../kernel/json-record.ts';
+import { optionalString } from '../../../kernel/json-file.ts';
 
 type JsonRecord = Record<string, unknown>;
 export type GeneratedInterfaceFormat = FamilyActionExportFormat | 'product-entry';
@@ -187,27 +193,6 @@ const SUPPORTED_DERIVED_SURFACES = [
     source_catalogs: ['family_stage_control_plane', 'domain_memory_descriptor', 'runtime_surfaces'],
   },
 ] as const;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value
-    .map((entry) => optionalString(entry))
-    .filter((entry): entry is string => Boolean(entry));
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
 
 function buildDefaultEntryPolicy() {
   return {

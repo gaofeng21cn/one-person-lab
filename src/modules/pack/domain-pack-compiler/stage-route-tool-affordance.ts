@@ -1,19 +1,10 @@
 import type { FamilyStageControlPlane } from '../../stagecraft/index.ts';
+import { isRecord } from '../../../kernel/contract-validation.ts';
+import { recordList } from '../../../kernel/json-record.ts';
+import { optionalString } from '../../../kernel/json-file.ts';
 
 type JsonRecord = Record<string, unknown>;
 type StageDescriptor = FamilyStageControlPlane['stages'][number];
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
 
 function refCount(value: unknown) {
   return recordList(value).length;

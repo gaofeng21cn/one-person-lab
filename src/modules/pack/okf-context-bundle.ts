@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from '../charter/index.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
 import {
   conceptIdFromFile,
   conceptPathFromId,
@@ -256,7 +257,7 @@ export interface OkfNativeFrontmatterInspection {
 const CONTRACT_REF = 'contracts/opl-framework/okf-context-bundle-contract.json';
 const CONTRACT_PATH = fileURLToPath(new URL(`../../../${CONTRACT_REF}`, import.meta.url));
 
-export const OKF_CONTEXT_BUNDLE_CONTRACT = JSON.parse(
+export const OKF_CONTEXT_BUNDLE_CONTRACT = parseJsonText(
   fs.readFileSync(CONTRACT_PATH, 'utf8'),
 ) as OkfContextBundleContract;
 

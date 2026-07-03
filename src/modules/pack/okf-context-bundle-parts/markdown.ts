@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../../charter/index.ts';
+import { parseJsonText } from '../../../kernel/json-file.ts';
 
 export type OkfJsonPrimitive = string | number | boolean | null;
 export type OkfJsonValue = OkfJsonPrimitive | OkfJsonValue[] | { [key: string]: OkfJsonValue };
@@ -108,7 +109,7 @@ export function frontmatterRecord(value: unknown): OkfJsonRecord | undefined {
 export function readJsonRecordFile(filePath: string) {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    parsed = parseJsonText(fs.readFileSync(filePath, 'utf8'));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       throw new FrameworkContractError('contract_file_missing', `OKF source JSON file is missing: ${filePath}.`, {

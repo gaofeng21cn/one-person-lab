@@ -11,25 +11,14 @@ import {
 import {
   buildFunctionalPrivatizationAudit,
 } from '../../foundry-lab/index.ts';
+import { isRecord } from '../../../kernel/contract-validation.ts';
+import { stringList } from '../../../kernel/json-record.ts';
+import {
+  optionalString,
+  parseJsonText,
+} from '../../../kernel/json-file.ts';
 
 type JsonRecord = Record<string, unknown>;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value
-    .map((entry) => optionalString(entry))
-    .filter((entry): entry is string => Boolean(entry));
-}
 
 function statusOf(value: unknown) {
   return isRecord(value) ? optionalString(value.status) : null;
@@ -54,7 +43,7 @@ function readRepoJson(repoDir: string, relativePath: string) {
     return null;
   }
   try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    return parseJsonText(fs.readFileSync(filePath, 'utf8'));
   } catch (error) {
     throw new FrameworkContractError('contract_json_invalid', `Invalid JSON in ${relativePath}.`, {
       repo_dir: repoDir,
