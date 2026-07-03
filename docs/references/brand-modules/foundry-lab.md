@@ -34,6 +34,12 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 Agent L
 | `target_agent_handoff` | 给目标 agent/domain owner 的交接。 |
 | `owner_acceptance_ref` | target domain owner 的独立采纳/拒绝 refs；Foundry Lab 只能引用，不能签发。 |
 
+## Capability map / pack
+
+标准 Foundry Agent scaffold 生成 `contracts/capability_map.json`，并由 `contracts/opl-framework/standard-agent-capability-map.schema.json` 固定形状。它是 OMA / Agent Lab / Pack compiler 的 resolver 索引，用来定位 stage prompt、professional skill、tool connector、knowledge pack、quality gate 和 eval suite。
+
+`capability_map` 只保存 refs 和 authority boundary，不复制 prompt / skill / knowledge body，不执行能力，不写 domain truth，不签 owner receipt / typed blocker，也不把 quality gate 或 eval suite 通过升级成 domain ready、artifact authority、production ready 或 owner acceptance。
+
 Workspace 级 L4 的 Foundry Lab 对象模型必须像 Workspace 一样有自己的 schema、CLI、App/read-model、validate/doctor、测试和状态折返。最低模型如下：
 
 | 对象 | L4 验收含义 |

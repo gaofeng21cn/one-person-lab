@@ -384,6 +384,7 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     'authority_functions_source_ref',
     'functional_privatization_audit_source_ref',
     'generated_surface_handoff_source_ref',
+    'capability_map_source_ref',
   ]);
   assert.equal(scaffold.domain_retained_thin_surfaces.includes('domain_truth'), true);
   assert.equal(

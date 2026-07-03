@@ -18,12 +18,79 @@ interface ScaffoldValidateInput {
   repoDir: string;
 }
 
+const REQUIRED_CAPABILITY_MAP_SURFACE_ROLES = [
+  'stage_prompt',
+  'professional_skill',
+  'tool_connector',
+  'knowledge_pack',
+  'quality_gate',
+  'eval_suite',
+] as const;
+
 function readJsonFile(filePath: string) {
   try {
     return JSON.parse(fs.readFileSync(filePath, 'utf8'));
   } catch {
     return null;
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function optionalString(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function validateCapabilityMap(capabilityMap: unknown) {
+  if (!isRecord(capabilityMap)) {
+    return {
+      status: 'missing',
+      observed_roles: [],
+      missing_roles: REQUIRED_CAPABILITY_MAP_SURFACE_ROLES,
+      blockers: [],
+    };
+  }
+  const capabilities = Array.isArray(capabilityMap.capabilities)
+    ? capabilityMap.capabilities.filter(isRecord)
+    : [];
+  const observedRoles = [...new Set(capabilities
+    .map((entry) => optionalString(entry.surface_role))
+    .filter((entry): entry is string => Boolean(entry)))];
+  const missingRoles = REQUIRED_CAPABILITY_MAP_SURFACE_ROLES.filter((role) => !observedRoles.includes(role));
+  const authority = isRecord(capabilityMap.authority_boundary) ? capabilityMap.authority_boundary : {};
+  const blockers = [
+    optionalString(capabilityMap.surface_kind) === 'opl_standard_agent_capability_map'
+      ? null
+      : 'capability_map_surface_kind_invalid',
+    optionalString(capabilityMap.schema_version) === 'standard-agent-capability-map.v1'
+      ? null
+      : 'capability_map_schema_version_invalid',
+    optionalString(capabilityMap.schema_ref) === 'contracts/opl-framework/standard-agent-capability-map.schema.json'
+      ? null
+      : 'capability_map_schema_ref_invalid',
+    optionalString(capabilityMap.resolver_policy) === 'resolver_index_only_no_domain_truth'
+      ? null
+      : 'capability_map_resolver_policy_invalid',
+    ...missingRoles.map((role) => `capability_map_missing_role:${role}`),
+    authority.can_write_domain_truth === false ? null : 'capability_map_can_write_domain_truth_must_be_false',
+    authority.can_write_memory_body === false ? null : 'capability_map_can_write_memory_body_must_be_false',
+    authority.can_mutate_artifact_body === false ? null : 'capability_map_can_mutate_artifact_body_must_be_false',
+    authority.can_sign_owner_receipt === false ? null : 'capability_map_can_sign_owner_receipt_must_be_false',
+    authority.can_create_typed_blocker === false ? null : 'capability_map_can_create_typed_blocker_must_be_false',
+    authority.can_authorize_quality_or_export === false
+      ? null
+      : 'capability_map_can_authorize_quality_or_export_must_be_false',
+    authority.can_claim_domain_ready === false ? null : 'capability_map_can_claim_domain_ready_must_be_false',
+    authority.can_claim_production_ready === false ? null : 'capability_map_can_claim_production_ready_must_be_false',
+  ].filter((entry): entry is string => Boolean(entry));
+  return {
+    status: blockers.length === 0 ? 'passed' : 'blocked',
+    observed_roles: observedRoles,
+    missing_roles: missingRoles,
+    blockers,
+  };
 }
 
 export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput) {
@@ -41,6 +108,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     'contracts/owner_receipt_contract.json',
     'contracts/foundry_agent_series.json',
     'contracts/standard-agent-principles-adoption.json',
+    'contracts/capability_map.json',
     'contracts/stage_operating_principles.json',
     'contracts/functional_privatization_audit.json',
     'contracts/private_functional_surface_policy.json',
@@ -56,6 +124,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
   const authority = descriptor?.authority_boundary || {};
   const packCompilerInput = readJsonFile(path.join(repoDir, 'contracts/pack_compiler_input.json'));
   const generatedSurfaceHandoff = readJsonFile(path.join(repoDir, 'contracts/generated_surface_handoff.json'));
+  const capabilityMap = readJsonFile(path.join(repoDir, 'contracts/capability_map.json'));
   const foundryAgentSeries = readJsonFile(path.join(repoDir, 'contracts/foundry_agent_series.json'));
   const stageControlPlane = readJsonFile(path.join(repoDir, 'contracts/stage_control_plane.json'));
   const stagePackV2Required = requiresStagePackV2(packCompilerInput, stageControlPlane);
@@ -63,6 +132,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
   const stageRefValidation = validateStageRefs(repoDir, stageControlPlane, stagePackV2Required);
   const userStageLogValidation = validateUserStageLogContracts(stageControlPlane);
   const foundryAgentSeriesValidation = validateFoundryAgentSeriesContract(foundryAgentSeries, stagePackV2Required);
+  const capabilityMapValidation = validateCapabilityMap(capabilityMap);
   const stagePackV2Validation = validateStagePackV2(stageControlPlane, packCompilerInput, stagePackV2Required, {
     repoDir,
   });
@@ -93,6 +163,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     ...stageRefValidation.blockers,
     ...userStageLogValidation.blockers,
     ...foundryAgentSeriesValidation.blockers,
+    ...capabilityMapValidation.blockers,
     ...stagePackV2Validation.blockers,
   ];
   const advisoryFindings = [
@@ -119,6 +190,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
       stage_ref_validation: stageRefValidation,
       user_stage_log_validation: userStageLogValidation,
       foundry_agent_series_validation: foundryAgentSeriesValidation,
+      capability_map_validation: capabilityMapValidation,
       stage_pack_v2_validation: stagePackV2Validation,
       functional_privatization_audit_required: true,
       blockers,

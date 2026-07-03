@@ -76,6 +76,7 @@ export const PACK_COMPILER_CONTRACT = {
     'no_forbidden_write_assertions',
     'standard_stage_pack_v2_cross_refs',
     'standard_agent_pack_abi',
+    'capability_map',
   ],
   required_source_refs: [
     'stage_graph_source_ref',
@@ -85,6 +86,7 @@ export const PACK_COMPILER_CONTRACT = {
     'authority_functions_source_ref',
     'functional_privatization_audit_source_ref',
     'generated_surface_handoff_source_ref',
+    'capability_map_source_ref',
   ],
   generated_surfaces: OPL_GENERATED_SURFACES.map((surface) => surface.surface_id),
 } as const;
@@ -215,6 +217,7 @@ export const AGENT_PACK_CONTRACT = {
   required_domain_pack_paths_field: 'contracts/pack_compiler_input.json#/required_domain_pack_paths',
   standard_agent_pack_abi: STANDARD_AGENT_PACK_ABI,
   stage_ref_requirements: [
+    'capability_map:contracts/capability_map.json resolver index',
     'prompt_refs:agent/prompts/*',
     'skills:agent/skills/* or skill_id',
     'tool_refs:agent/tools/* affordance catalog refs',

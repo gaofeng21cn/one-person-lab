@@ -40,6 +40,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 - 标准能力必须按 [OPL 标准智能体能力管理规范](./policies/standard-agent-capability-management-policy.md) 声明 `capability_kind`、`canonical_owner`、`physical_source`、`runtime_projection`、`sync_policy`、`authority_boundary` 和 `externalization_reason`。
 - `capability_kind` 固定六类：`stage_prompt`、`stage_projection/runtime_projection`、`professional_skill`、`tool_connector`、`reference_pack`、`contract_module`。
+- 标准 scaffold 必须生成 `contracts/capability_map.json`，作为 OMA / Agent Lab / Pack compiler 定位 stage prompt、professional skill、tool connector、knowledge pack、quality gate 和 eval suite 的 refs-only resolver 索引；它不是 domain truth、owner receipt、typed blocker、quality verdict 或 readiness 证据。
 - 默认归属是内置在 domain agent；只有跨 workspace 复用、体量大、引用/模板/脚本多、独立版本维护、多个 stage 反复调用或需要 Codex 原生 discovery 时，才外置为专业 pack、reference pack 或 connector。
 - Connector 只负责资源访问、source refs、invocation refs 和 receipt，不承接专业判断；contract module 只负责机器边界，不伪装成 true Skill。
 - MAS stage prompt / projection 继续归 MAS；八个医学论文 professional specialist skills 归 `mas-scholar-skills` 并通过 OPL Connect 同步；source / intake / omics 不作为 active 外置合同，按各自 owner 内置或后续稳定后再评估。

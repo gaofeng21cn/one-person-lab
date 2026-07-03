@@ -822,6 +822,7 @@ test('standard domain-agent scaffold contract forbids domain-owned generic frame
     'agent/quality_gates',
   ]);
   assert.deepEqual(scaffold.agent_pack_contract.stage_ref_requirements, [
+    'capability_map:contracts/capability_map.json resolver index',
     'prompt_refs:agent/prompts/*',
     'skills:agent/skills/* or skill_id',
     'tool_refs:agent/tools/* affordance catalog refs',

@@ -1,0 +1,222 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/standard-agent-capability-map.schema.json",
+  "schema_id": "opl.standard_agent_capability_map.v1",
+  "surface_kind": "opl_standard_agent_capability_map_schema",
+  "owner": "one-person-lab",
+  "purpose": "Define the standard Foundry Agent capability map resolver index that locates stage prompts, professional skills, tool connectors, knowledge packs, quality gates, and eval suites from one scaffolded contract.",
+  "state": "active_contract",
+  "machine_boundary": "The capability map is a resolver index over repo-owned capability refs. It does not copy domain truth, execute capabilities, sign owner receipts, create typed blockers, or authorize quality/export/domain readiness.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "domain_id",
+    "capability_pack",
+    "capabilities",
+    "resolver_policy",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_standard_agent_capability_map"
+    },
+    "schema_version": {
+      "const": "standard-agent-capability-map.v1"
+    },
+    "domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "domain_label": {
+      "type": "string"
+    },
+    "schema_ref": {
+      "const": "contracts/opl-framework/standard-agent-capability-map.schema.json"
+    },
+    "resolver_policy": {
+      "const": "resolver_index_only_no_domain_truth"
+    },
+    "capability_pack": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "pack_id",
+        "pack_root_ref",
+        "map_ref",
+        "pack_role",
+        "capability_pack_can_claim_domain_ready"
+      ],
+      "properties": {
+        "pack_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pack_root_ref": {
+          "const": "agent/"
+        },
+        "map_ref": {
+          "const": "contracts/capability_map.json"
+        },
+        "pack_role": {
+          "const": "declarative_domain_capability_pack"
+        },
+        "capability_pack_can_claim_domain_ready": {
+          "const": false
+        }
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 6,
+      "items": {
+        "$ref": "#/$defs/capability_entry"
+      }
+    },
+    "authority_boundary": {
+      "$ref": "#/$defs/authority_boundary"
+    }
+  },
+  "$defs": {
+    "capability_kind": {
+      "enum": [
+        "stage_prompt",
+        "stage_projection",
+        "runtime_projection",
+        "professional_skill",
+        "tool_connector",
+        "reference_pack",
+        "contract_module"
+      ]
+    },
+    "surface_role": {
+      "enum": [
+        "stage_prompt",
+        "professional_skill",
+        "tool_connector",
+        "knowledge_pack",
+        "quality_gate",
+        "eval_suite"
+      ]
+    },
+    "ref": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "ref_kind",
+        "ref",
+        "role"
+      ],
+      "properties": {
+        "ref_kind": {
+          "enum": [
+            "repo_path",
+            "contract_ref",
+            "external_capability_ref"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "capability_entry": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "capability_id",
+        "surface_role",
+        "capability_kind",
+        "canonical_owner",
+        "physical_source_ref",
+        "runtime_projection_refs",
+        "sync_policy",
+        "externalization_reason",
+        "authority_boundary"
+      ],
+      "properties": {
+        "capability_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "surface_role": {
+          "$ref": "#/$defs/surface_role"
+        },
+        "capability_kind": {
+          "$ref": "#/$defs/capability_kind"
+        },
+        "canonical_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "physical_source_ref": {
+          "$ref": "#/$defs/ref"
+        },
+        "runtime_projection_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/ref"
+          }
+        },
+        "sync_policy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "externalization_reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authority_boundary": {
+          "$ref": "#/$defs/authority_boundary"
+        }
+      }
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "can_write_domain_truth",
+        "can_write_memory_body",
+        "can_mutate_artifact_body",
+        "can_sign_owner_receipt",
+        "can_create_typed_blocker",
+        "can_authorize_quality_or_export",
+        "can_claim_domain_ready",
+        "can_claim_production_ready"
+      ],
+      "properties": {
+        "can_write_domain_truth": {
+          "const": false
+        },
+        "can_write_memory_body": {
+          "const": false
+        },
+        "can_mutate_artifact_body": {
+          "const": false
+        },
+        "can_sign_owner_receipt": {
+          "const": false
+        },
+        "can_create_typed_blocker": {
+          "const": false
+        },
+        "can_authorize_quality_or_export": {
+          "const": false
+        },
+        "can_claim_domain_ready": {
+          "const": false
+        },
+        "can_claim_production_ready": {
+          "const": false
+        }
+      }
+    }
+  }
+}

@@ -1,4 +1,5 @@
-import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import { validateJsonSchemaPayload } from '../../../../src/kernel/schema-registry.ts';
+import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
 
 test('agents scaffold can generate and validate a declarative pack domain-agent skeleton', () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-agent-'));
@@ -39,6 +40,7 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/pack_compiler_input.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/generated_surface_handoff.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/standard-agent-principles-adoption.json')), true);
+    assert.equal(fs.existsSync(path.join(targetDir, 'contracts/capability_map.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/functional_privatization_audit.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/private_functional_surface_policy.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/workspace_lifecycle_policy.json')), true);
@@ -78,6 +80,7 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       descriptor.standard_contract_refs.standard_agent_principles_adoption,
       'contracts/standard-agent-principles-adoption.json',
     );
+    assert.equal(descriptor.standard_contract_refs.capability_map, 'contracts/capability_map.json');
     assert.equal(descriptor.authority_boundary.opl_can_write_domain_truth, false);
     const foundryAgentSeries = JSON.parse(
       fs.readFileSync(path.join(targetDir, 'contracts/foundry_agent_series.json'), 'utf8'),
@@ -226,12 +229,14 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       executor_policy_source_ref: 'contracts/stage_control_plane.json#/stages/0/selected_executor',
       owner_receipt_schema_source_ref: 'contracts/owner_receipt_contract.json',
       authority_functions_source_ref: 'runtime/authority_functions/README.md',
-      functional_privatization_audit_source_ref: 'contracts/functional_privatization_audit.json',
-      generated_surface_handoff_source_ref: 'contracts/generated_surface_handoff.json',
-      standard_agent_principles_source_ref: 'contracts/opl-framework/standard-agent-principles.json',
-      standard_agent_principles_adoption_source_ref:
-        'contracts/standard-agent-principles-adoption.json',
-    });
+          functional_privatization_audit_source_ref: 'contracts/functional_privatization_audit.json',
+          generated_surface_handoff_source_ref: 'contracts/generated_surface_handoff.json',
+          capability_map_source_ref: 'contracts/capability_map.json',
+          standard_agent_principles_source_ref: 'contracts/opl-framework/standard-agent-principles.json',
+          standard_agent_principles_adoption_source_ref:
+            'contracts/standard-agent-principles-adoption.json',
+        });
+    assert.equal(packCompilerInput.capability_map_ref, 'contracts/capability_map.json');
     assert.deepEqual(packCompilerInput.standard_stage_pack_conformance, {
       version: 'standard-stage-pack.v2',
       required: true,
@@ -259,6 +264,13 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(stageControlPlane.stage_pack_conformance_version, 'standard-stage-pack.v2');
     assert.equal(stageControlPlane.stages.length, 1);
     assert.equal(stageControlPlane.stages[0].stage_pack_conformance_version, 'standard-stage-pack.v2');
+    assert.deepEqual(stageControlPlane.stages[0].capability_map_refs, [
+      {
+        ref_kind: 'repo_path',
+        ref: 'contracts/capability_map.json',
+        role: 'stage_capability_resolver_index',
+      },
+    ]);
     assert.deepEqual(stageControlPlane.stages[0].selected_executor, {
       executor_kind: 'codex_cli',
       default_executor: true,
@@ -382,6 +394,41 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       stageControlPlane.stages[0].stage_contract.typed_blocker_lineage_policy.surface_kind,
       'family-stall-lineage.v1',
     );
+    const capabilityMap = JSON.parse(
+      fs.readFileSync(path.join(targetDir, 'contracts/capability_map.json'), 'utf8'),
+    );
+    const capabilityMapSchema = JSON.parse(
+      fs.readFileSync(
+        path.join(repoRoot, 'contracts/opl-framework/standard-agent-capability-map.schema.json'),
+        'utf8',
+      ),
+    );
+    const capabilityMapValidation = validateJsonSchemaPayload(
+      {
+        schemaId: 'opl.standard_agent_capability_map.v1',
+        schema: capabilityMapSchema,
+        sourceRef: 'contracts/opl-framework/standard-agent-capability-map.schema.json',
+      },
+      capabilityMap,
+    );
+    assert.equal(capabilityMapValidation.ok, true);
+    assert.deepEqual(
+      capabilityMap.capabilities.map((entry: { surface_role: string }) => entry.surface_role),
+      [
+        'stage_prompt',
+        'professional_skill',
+        'tool_connector',
+        'knowledge_pack',
+        'quality_gate',
+        'eval_suite',
+      ],
+    );
+    assert.equal(capabilityMap.resolver_policy, 'resolver_index_only_no_domain_truth');
+    assert.equal(capabilityMap.capability_pack.pack_root_ref, 'agent/');
+    assert.equal(capabilityMap.authority_boundary.map_is_resolver_index_only, true);
+    assert.equal(capabilityMap.authority_boundary.can_write_domain_truth, false);
+    assert.equal(capabilityMap.authority_boundary.can_sign_owner_receipt, false);
+    assert.equal(capabilityMap.authority_boundary.can_create_typed_blocker, false);
     const generatedSurfaceHandoff = JSON.parse(
       fs.readFileSync(path.join(targetDir, 'contracts/generated_surface_handoff.json'), 'utf8'),
     );
@@ -524,6 +571,12 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       validated.validation.required_contract_files.includes('contracts/standard-agent-principles-adoption.json'),
       true,
     );
+    assert.equal(
+      validated.validation.required_contract_files.includes('contracts/capability_map.json'),
+      true,
+    );
+    assert.equal(validated.validation.capability_map_validation.status, 'passed');
+    assert.deepEqual(validated.validation.capability_map_validation.missing_roles, []);
     assert.deepEqual(validated.validation.blockers, []);
   } finally {
     fs.rmSync(targetDir, { recursive: true, force: true });

@@ -35,6 +35,7 @@ export {
 } from './standard-domain-agent-scaffold-validation.ts';
 import {
   buildScaffoldFiles,
+  STANDARD_AGENT_CAPABILITY_MAP_CONTRACT,
   type ScaffoldFile,
 } from './standard-domain-agent-scaffold-template.ts';
 
@@ -324,6 +325,7 @@ export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
       pack_compiler_contract: PACK_COMPILER_CONTRACT,
       generated_surface_contract: GENERATED_SURFACE_CONTRACT,
       agent_pack_contract: AGENT_PACK_CONTRACT,
+      capability_map_contract: STANDARD_AGENT_CAPABILITY_MAP_CONTRACT,
       default_runtime_policy: STANDARD_AGENT_DEFAULT_RUNTIME_POLICY,
       stage_completion_policy: STANDARD_STAGE_COMPLETION_POLICY,
       user_stage_log_contract: STANDARD_USER_STAGE_LOG_CONTRACT,
@@ -506,6 +508,7 @@ export function buildStandardDomainAgentTemplateConsumptionReadModel() {
     },
     consumed_surface_refs: [
       'contracts/opl-framework/standard-domain-agent-skeleton-contract.json',
+      'contracts/capability_map.json',
       'contracts/pack_compiler_input.json',
       'contracts/generated_surface_handoff.json',
       'contracts/stage_control_plane.json',

@@ -1,5 +1,6 @@
 export const DECLARATIVE_DOMAIN_PACK = [
   'domain_truth_schema',
+  'capability_map_refs',
   'stage_descriptors',
   'transition_table',
   'action_metadata',
