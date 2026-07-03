@@ -3,6 +3,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
+import { isRecord } from '../../../kernel/contract-validation.ts';
+import { readJsonFileOrNull } from '../../../kernel/json-file.ts';
 import { resolveCodexBinary } from '../../runway/index.ts';
 
 import {
@@ -514,11 +516,8 @@ function readPackageJson(packageRoot: string) {
   if (!fs.existsSync(packageJsonPath)) {
     return null;
   }
-  try {
-    return JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')) as Record<string, unknown>;
-  } catch (_) {
-    return null;
-  }
+  const packageJson = readJsonFileOrNull(packageJsonPath);
+  return isRecord(packageJson) ? packageJson : null;
 }
 
 function normalizePackageBinEntry(packageJson: Record<string, unknown> | null, binName: string) {
@@ -526,10 +525,10 @@ function normalizePackageBinEntry(packageJson: Record<string, unknown> | null, b
   if (typeof bin === 'string') {
     return binName === 'codex' ? bin : null;
   }
-  if (!bin || typeof bin !== 'object') {
+  if (!isRecord(bin)) {
     return null;
   }
-  const entry = (bin as Record<string, unknown>)[binName];
+  const entry = bin[binName];
   return typeof entry === 'string' && entry.trim().length > 0
     ? entry
     : null;
@@ -539,10 +538,10 @@ function resolveInstalledCodexPlatformSpec(packageRoot: string) {
   const target = resolveCodexPlatformTarget();
   const packageJson = readPackageJson(packageRoot);
   const optionalDependencies = packageJson?.optionalDependencies;
-  if (!optionalDependencies || typeof optionalDependencies !== 'object') {
+  if (!isRecord(optionalDependencies)) {
     return null;
   }
-  const spec = (optionalDependencies as Record<string, unknown>)[target.packageName];
+  const spec = optionalDependencies[target.packageName];
   return typeof spec === 'string' && spec.trim().length > 0
     ? `${target.packageName}@${spec}`
     : null;

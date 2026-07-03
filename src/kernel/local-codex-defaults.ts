@@ -159,7 +159,6 @@ function resolveBundledCodexDefaultProfilePath() {
     path.dirname(fileURLToPath(import.meta.url)),
     '..',
     '..',
-    '..',
     'contracts',
     'opl-framework',
     'codex-default-profile.json',

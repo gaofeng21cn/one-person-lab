@@ -319,7 +319,7 @@ export function normalizeOptionalString(value: string | null | undefined) {
 }
 
 export function resolveProjectRoot() {
-  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
 }
 
 export function resolveSiblingWorkspaceRoot() {

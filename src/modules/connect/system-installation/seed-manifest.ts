@@ -2,6 +2,9 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import path from 'node:path';
 
+import { isRecord } from '../../../kernel/contract-validation.ts';
+import { readJsonFileOrNull } from '../../../kernel/json-file.ts';
+import { stringValue } from '../../../kernel/json-record.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import { resolveCodexVersion } from './engine-helpers.ts';
 import { resolveProjectRoot } from './shared.ts';
@@ -123,14 +126,6 @@ function optionalEnv(name: string) {
   return value && value.length > 0 ? value : null;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
 function optionalNumber(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
@@ -138,14 +133,14 @@ function optionalNumber(value: unknown) {
 function firstManifestString(manifest: Record<string, unknown> | null, keys: string[]) {
   if (!manifest) return null;
   for (const key of keys) {
-    const value = optionalString(manifest[key]);
+    const value = stringValue(manifest[key]);
     if (value) return value;
   }
   return null;
 }
 
 function normalizeComponentId(value: unknown): SeedComponentId | null {
-  const componentId = optionalString(value);
+  const componentId = stringValue(value);
   switch (componentId) {
     case 'opl_framework':
     case 'framework_install_dir':
@@ -172,7 +167,7 @@ function normalizeSeedStrategy(value: unknown, metadataOnlyAllowed: boolean): {
   status: 'accepted' | 'pending' | 'blocked';
   reason: string;
 } {
-  const strategy = optionalString(value);
+  const strategy = stringValue(value);
   if (strategy === 'payload_manifest' || strategy === 'payload_preheated') {
     return { strategy, status: 'accepted', reason: `${strategy}_accepted` };
   }
@@ -189,12 +184,8 @@ function normalizeSeedStrategy(value: unknown, metadataOnlyAllowed: boolean): {
 
 function readJsonRecord(file: string | null) {
   if (!file || !fs.existsSync(file)) return null;
-  try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
-    return isRecord(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
+  const parsed = readJsonFileOrNull(file);
+  return isRecord(parsed) ? parsed : null;
 }
 
 function readImageManifest(manifestPath: string | null) {
@@ -210,18 +201,11 @@ function readImageManifest(manifestPath: string | null) {
       manifest: null,
     };
   }
-  try {
-    const parsed = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as unknown;
-    return {
-      status: isRecord(parsed) ? 'found' as const : 'invalid' as const,
-      manifest: isRecord(parsed) ? parsed : null,
-    };
-  } catch {
-    return {
-      status: 'invalid' as const,
-      manifest: null,
-    };
-  }
+  const parsed = readJsonFileOrNull(manifestPath);
+  return {
+    status: isRecord(parsed) ? 'found' as const : 'invalid' as const,
+    manifest: isRecord(parsed) ? parsed : null,
+  };
 }
 
 function ensureDirectory(directory: string | null, created: string[], existing: string[]) {
@@ -365,12 +349,8 @@ export function readOplSeedInstallManifest() {
   if (!fs.existsSync(file)) {
     return null;
   }
-  try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
-    return isRecord(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
+  const parsed = readJsonFileOrNull(file);
+  return isRecord(parsed) ? parsed : null;
 }
 
 function readPreviousManifestStatus(dataDir: string | null) {
@@ -433,13 +413,13 @@ function readSeedComponentContract(metadataManifest: Record<string, unknown> | n
 }
 
 function resolvePayloadPath(seedDir: string | null, component: Record<string, unknown> | null) {
-  const payload = optionalString(component?.payload_path);
+  const payload = stringValue(component?.payload_path);
   if (!payload) return null;
   return path.isAbsolute(payload) ? payload : path.resolve(seedDir ?? '.', payload);
 }
 
 function resolveSeedMaterializationMode(metadataManifest: Record<string, unknown> | null): SeedMaterializationMode {
-  return optionalString(metadataManifest?.strategy) === 'payload_preheated'
+  return stringValue(metadataManifest?.strategy) === 'payload_preheated'
     ? 'preheated_in_image'
     : 'copy_to_data_volume';
 }
@@ -511,7 +491,7 @@ function buildOperationReceipt(input: {
 function previousComponentVersion(previousManifest: Record<string, unknown> | null, componentId: string) {
   const components = Array.isArray(previousManifest?.components) ? previousManifest.components : [];
   const component = components.find((entry) => isRecord(entry) && entry.component_id === componentId);
-  return isRecord(component) ? optionalString(component.version) : null;
+  return isRecord(component) ? stringValue(component.version) : null;
 }
 
 export async function applyOplSeedManifest(): Promise<{
@@ -560,8 +540,8 @@ export async function applyOplSeedManifest(options: OplSeedApplyOptions = {}): P
   ]);
   const seedStrategy = normalizeSeedStrategy(
     firstManifestString(imageManifest.manifest, ['seed_strategy']),
-    optionalString(imageManifest.manifest?.image_profile) === 'slim'
-      || optionalString(imageManifest.manifest?.profile) === 'slim',
+    stringValue(imageManifest.manifest?.image_profile) === 'slim'
+      || stringValue(imageManifest.manifest?.profile) === 'slim',
   );
   const codexToolchain = readCodexToolchainVersion();
   const modulesRoot = optionalEnv('OPL_MODULES_ROOT');
@@ -613,20 +593,20 @@ export async function applyOplSeedManifest(options: OplSeedApplyOptions = {}): P
           ? 'framework_dir_found'
           : 'framework_dir_missing',
       component_kind: frameworkMaterialized ? 'image_seed' : 'managed_update',
-      source: optionalString(frameworkSeed?.source) ?? 'process_entrypoint',
-      source_ref: optionalString(frameworkSeed?.source) ?? 'process_entrypoint',
+      source: stringValue(frameworkSeed?.source) ?? 'process_entrypoint',
+      source_ref: stringValue(frameworkSeed?.source) ?? 'process_entrypoint',
       path: frameworkMaterialized ?? frameworkInstallDir,
-      version: optionalString(frameworkSeed?.version),
-      digest: optionalString(frameworkSeed?.sha256)
-        ?? optionalString(frameworkSeed?.checksum_sha256)
-        ?? optionalString(frameworkSeed?.source_fingerprint)
+      version: stringValue(frameworkSeed?.version),
+      digest: stringValue(frameworkSeed?.sha256)
+        ?? stringValue(frameworkSeed?.checksum_sha256)
+        ?? stringValue(frameworkSeed?.source_fingerprint)
         ?? digestPayload(frameworkPayload),
-      receipt_kind: optionalString(frameworkSeed?.receipt_kind),
+      receipt_kind: stringValue(frameworkSeed?.receipt_kind),
       payload_path: frameworkPayload,
       materialized_path: frameworkMaterialized,
-      sha256: optionalString(frameworkSeed?.sha256) ?? optionalString(frameworkSeed?.checksum_sha256) ?? digestPayload(frameworkPayload),
-      checksum_sha256: optionalString(frameworkSeed?.sha256) ?? optionalString(frameworkSeed?.checksum_sha256) ?? digestPayload(frameworkPayload),
-      source_fingerprint: optionalString(frameworkSeed?.source_fingerprint),
+      sha256: stringValue(frameworkSeed?.sha256) ?? stringValue(frameworkSeed?.checksum_sha256) ?? digestPayload(frameworkPayload),
+      checksum_sha256: stringValue(frameworkSeed?.sha256) ?? stringValue(frameworkSeed?.checksum_sha256) ?? digestPayload(frameworkPayload),
+      source_fingerprint: stringValue(frameworkSeed?.source_fingerprint),
       size_bytes: optionalNumber(frameworkSeed?.size_bytes) ?? directorySizeBytes(frameworkPayload) ?? sizeBytes(frameworkPayload),
     }),
     buildComponent({
@@ -639,20 +619,20 @@ export async function applyOplSeedManifest(options: OplSeedApplyOptions = {}): P
           ? 'codex_cli_detected'
           : 'codex_cli_not_detected',
       component_kind: codexMaterialized ? 'image_seed' : 'managed_update',
-      source: optionalString(codexSeed?.source) ?? codexToolchain.binary_path,
-      source_ref: optionalString(codexSeed?.source) ?? codexToolchain.binary_path,
+      source: stringValue(codexSeed?.source) ?? codexToolchain.binary_path,
+      source_ref: stringValue(codexSeed?.source) ?? codexToolchain.binary_path,
       path: codexMaterialized ?? codexToolchain.binary_path,
-      version: optionalString(codexSeed?.version) ?? codexToolchain.version,
-      digest: optionalString(codexSeed?.sha256)
-        ?? optionalString(codexSeed?.checksum_sha256)
-        ?? optionalString(codexSeed?.source_fingerprint)
+      version: stringValue(codexSeed?.version) ?? codexToolchain.version,
+      digest: stringValue(codexSeed?.sha256)
+        ?? stringValue(codexSeed?.checksum_sha256)
+        ?? stringValue(codexSeed?.source_fingerprint)
         ?? digestPayload(codexPayload),
-      receipt_kind: optionalString(codexSeed?.receipt_kind),
+      receipt_kind: stringValue(codexSeed?.receipt_kind),
       payload_path: codexPayload,
       materialized_path: codexMaterialized,
-      sha256: optionalString(codexSeed?.sha256) ?? optionalString(codexSeed?.checksum_sha256) ?? digestPayload(codexPayload),
-      checksum_sha256: optionalString(codexSeed?.sha256) ?? optionalString(codexSeed?.checksum_sha256) ?? digestPayload(codexPayload),
-      source_fingerprint: optionalString(codexSeed?.source_fingerprint),
+      sha256: stringValue(codexSeed?.sha256) ?? stringValue(codexSeed?.checksum_sha256) ?? digestPayload(codexPayload),
+      checksum_sha256: stringValue(codexSeed?.sha256) ?? stringValue(codexSeed?.checksum_sha256) ?? digestPayload(codexPayload),
+      source_fingerprint: stringValue(codexSeed?.source_fingerprint),
       size_bytes: optionalNumber(codexSeed?.size_bytes) ?? directorySizeBytes(codexPayload) ?? sizeBytes(codexPayload),
     }),
     buildComponent({
@@ -665,20 +645,20 @@ export async function applyOplSeedManifest(options: OplSeedApplyOptions = {}): P
           ? 'packaged_skills_root_found'
           : 'no_companion_skills_seed_detected',
       component_kind: skillsMaterialized ? 'image_seed' : 'managed_update',
-      source: optionalString(skillsSeed?.source) ?? skillsRoot,
-      source_ref: optionalString(skillsSeed?.source) ?? skillsRoot,
+      source: stringValue(skillsSeed?.source) ?? skillsRoot,
+      source_ref: stringValue(skillsSeed?.source) ?? skillsRoot,
       path: skillsMaterialized ?? skillsRoot,
-      version: optionalString(skillsSeed?.version),
-      digest: optionalString(skillsSeed?.sha256)
-        ?? optionalString(skillsSeed?.checksum_sha256)
-        ?? optionalString(skillsSeed?.source_fingerprint)
+      version: stringValue(skillsSeed?.version),
+      digest: stringValue(skillsSeed?.sha256)
+        ?? stringValue(skillsSeed?.checksum_sha256)
+        ?? stringValue(skillsSeed?.source_fingerprint)
         ?? digestPayload(skillsPayload),
-      receipt_kind: optionalString(skillsSeed?.receipt_kind),
+      receipt_kind: stringValue(skillsSeed?.receipt_kind),
       payload_path: skillsPayload,
       materialized_path: skillsMaterialized,
-      sha256: optionalString(skillsSeed?.sha256) ?? optionalString(skillsSeed?.checksum_sha256) ?? digestPayload(skillsPayload),
-      checksum_sha256: optionalString(skillsSeed?.sha256) ?? optionalString(skillsSeed?.checksum_sha256) ?? digestPayload(skillsPayload),
-      source_fingerprint: optionalString(skillsSeed?.source_fingerprint),
+      sha256: stringValue(skillsSeed?.sha256) ?? stringValue(skillsSeed?.checksum_sha256) ?? digestPayload(skillsPayload),
+      checksum_sha256: stringValue(skillsSeed?.sha256) ?? stringValue(skillsSeed?.checksum_sha256) ?? digestPayload(skillsPayload),
+      source_fingerprint: stringValue(skillsSeed?.source_fingerprint),
       size_bytes: optionalNumber(skillsSeed?.size_bytes) ?? directorySizeBytes(skillsPayload) ?? sizeBytes(skillsPayload),
     }),
     buildComponent({
@@ -691,20 +671,20 @@ export async function applyOplSeedManifest(options: OplSeedApplyOptions = {}): P
           ? 'modules_root_found'
           : 'no_domain_modules_seed_detected',
       component_kind: modulesMaterialized ? 'image_seed' : 'managed_update',
-      source: optionalString(modulesSeed?.source) ?? seedDir ?? modulesRoot ?? skillsRoot,
-      source_ref: optionalString(modulesSeed?.source) ?? seedDir ?? modulesRoot ?? skillsRoot,
+      source: stringValue(modulesSeed?.source) ?? seedDir ?? modulesRoot ?? skillsRoot,
+      source_ref: stringValue(modulesSeed?.source) ?? seedDir ?? modulesRoot ?? skillsRoot,
       path: modulesMaterialized ?? modulesRoot,
-      version: optionalString(modulesSeed?.version),
-      digest: optionalString(modulesSeed?.sha256)
-        ?? optionalString(modulesSeed?.checksum_sha256)
-        ?? optionalString(modulesSeed?.source_fingerprint)
+      version: stringValue(modulesSeed?.version),
+      digest: stringValue(modulesSeed?.sha256)
+        ?? stringValue(modulesSeed?.checksum_sha256)
+        ?? stringValue(modulesSeed?.source_fingerprint)
         ?? digestPayload(modulesPayload),
-      receipt_kind: optionalString(modulesSeed?.receipt_kind),
+      receipt_kind: stringValue(modulesSeed?.receipt_kind),
       payload_path: modulesPayload,
       materialized_path: modulesMaterialized,
-      sha256: optionalString(modulesSeed?.sha256) ?? optionalString(modulesSeed?.checksum_sha256) ?? digestPayload(modulesPayload),
-      checksum_sha256: optionalString(modulesSeed?.sha256) ?? optionalString(modulesSeed?.checksum_sha256) ?? digestPayload(modulesPayload),
-      source_fingerprint: optionalString(modulesSeed?.source_fingerprint),
+      sha256: stringValue(modulesSeed?.sha256) ?? stringValue(modulesSeed?.checksum_sha256) ?? digestPayload(modulesPayload),
+      checksum_sha256: stringValue(modulesSeed?.sha256) ?? stringValue(modulesSeed?.checksum_sha256) ?? digestPayload(modulesPayload),
+      source_fingerprint: stringValue(modulesSeed?.source_fingerprint),
       size_bytes: optionalNumber(modulesSeed?.size_bytes) ?? directorySizeBytes(modulesPayload) ?? sizeBytes(modulesPayload),
     }),
     buildComponent({

@@ -1,4 +1,8 @@
-import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import {
+  FrameworkContractError,
+  isRecord,
+} from '../../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../../kernel/json-file.ts';
 import { syncFamilySkillPackFromRepoRoot } from '../opl-skills.ts';
 import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import {
@@ -66,15 +70,11 @@ function maybeParseJsonRecord(raw: string) {
   }
 
   try {
-    const parsed = JSON.parse(trimmed) as unknown;
-    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-      return parsed as Record<string, unknown>;
-    }
+    const parsed = parseJsonText(trimmed);
+    return isRecord(parsed) ? parsed : null;
   } catch {
     return null;
   }
-
-  return null;
 }
 
 function runModuleStep(

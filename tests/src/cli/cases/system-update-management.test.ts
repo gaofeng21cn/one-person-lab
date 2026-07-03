@@ -4,6 +4,8 @@ import { assert, createCodexConfigFixture, createFakeCodexFixture, createGitModu
 import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
 import { writeFakeBookForgeGeneratedSurfacePack } from '../../cli-codex-default-shell-helpers.ts';
 
+const frameworkRuntimeSentinel = path.join('src', 'modules', 'runway', 'family-runtime-provider-hosted-attempts.ts');
+
 function writeFrameworkFixtureRoot(root: string, marker: string) {
   fs.mkdirSync(path.join(root, 'src'), { recursive: true });
   fs.mkdirSync(path.join(root, 'bin'), { recursive: true });
@@ -433,8 +435,9 @@ test('system update refreshes a non-git managed OPL Framework runtime from an ex
   fs.cpSync(path.join(repoRoot, 'src'), path.join(runtimeRoot, 'src'), { recursive: true });
   fs.copyFileSync(path.join(repoRoot, 'package.json'), path.join(runtimeRoot, 'package.json'));
   fs.copyFileSync(path.join(repoRoot, 'package-lock.json'), path.join(runtimeRoot, 'package-lock.json'));
+  fs.mkdirSync(path.dirname(path.join(runtimeRoot, frameworkRuntimeSentinel)), { recursive: true });
   fs.writeFileSync(
-    path.join(runtimeRoot, 'src', 'family-runtime-provider-hosted-attempts.ts'),
+    path.join(runtimeRoot, frameworkRuntimeSentinel),
     '// stale managed runtime source\n',
     'utf8',
   );
@@ -471,8 +474,8 @@ test('system update refreshes a non-git managed OPL Framework runtime from an ex
     assert.equal(frameworkTarget?.status, 'completed');
     assert.equal(frameworkTarget?.reason, 'framework_runtime_source_refreshed');
     assert.equal(
-      fs.readFileSync(path.join(runtimeRoot, 'src', 'family-runtime-provider-hosted-attempts.ts'), 'utf8'),
-      fs.readFileSync(path.join(repoRoot, 'src', 'family-runtime-provider-hosted-attempts.ts'), 'utf8'),
+      fs.readFileSync(path.join(runtimeRoot, frameworkRuntimeSentinel), 'utf8'),
+      fs.readFileSync(path.join(repoRoot, frameworkRuntimeSentinel), 'utf8'),
     );
     assert.equal(fs.existsSync(path.join(runtimeRoot, '.opl-framework-source.json')), true);
   } finally {

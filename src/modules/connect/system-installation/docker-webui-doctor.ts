@@ -2,6 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
+import { isRecord } from '../../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../../kernel/json-file.ts';
+import { recordList, stringValue } from '../../../kernel/json-record.ts';
 import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import { readLocalCodexDefaultsIfAvailable } from '../local-codex-defaults.ts';
 import { readOplSeedInstallManifest } from './seed-manifest.ts';
@@ -56,22 +59,16 @@ function normalizePath(candidate: string | null) {
 }
 
 function readString(value: unknown, key: string) {
-  if (!value || typeof value !== 'object' || !(key in value)) return null;
-  const nested = (value as Record<string, unknown>)[key];
-  return typeof nested === 'string' && nested.trim().length > 0 ? nested.trim() : null;
+  return isRecord(value) ? stringValue(value[key]) : null;
 }
 
 function readRecord(value: unknown, key: string) {
-  if (!value || typeof value !== 'object' || !(key in value)) return null;
-  const nested = (value as Record<string, unknown>)[key];
-  return nested && typeof nested === 'object' && !Array.isArray(nested)
-    ? nested as Record<string, unknown>
-    : null;
+  return isRecord(value) && isRecord(value[key]) ? value[key] : null;
 }
 
 function readArray(value: unknown, key: string) {
-  if (!value || typeof value !== 'object' || !(key in value)) return [];
-  const nested = (value as Record<string, unknown>)[key];
+  if (!isRecord(value)) return [];
+  const nested = value[key];
   return Array.isArray(nested) ? nested : [];
 }
 
@@ -96,10 +93,8 @@ function runDockerReadback(args: string[]): DockerCommandReadback {
 
 function parseDockerJson(stdout: string): Record<string, unknown> | null {
   try {
-    const parsed = JSON.parse(stdout);
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-      ? parsed as Record<string, unknown>
-      : null;
+    const parsed = parseJsonText(stdout);
+    return isRecord(parsed) ? parsed : null;
   } catch {
     return null;
   }
@@ -144,15 +139,13 @@ function buildDockerRuntimeReadback(input: {
   let inspectPayload: Record<string, unknown> | null = null;
   if (inspect.status === 'ok') {
     try {
-      const parsed = JSON.parse(inspect.stdout);
-      inspectPayload = Array.isArray(parsed) && parsed[0] && typeof parsed[0] === 'object'
-        ? parsed[0] as Record<string, unknown>
-        : null;
+      const parsed = parseJsonText(inspect.stdout);
+      inspectPayload = Array.isArray(parsed) && isRecord(parsed[0]) ? parsed[0] : null;
     } catch {
       inspectPayload = null;
     }
   }
-  const mounts = Array.isArray(inspectPayload?.Mounts) ? inspectPayload.Mounts as Array<Record<string, unknown>> : [];
+  const mounts = recordList(inspectPayload?.Mounts);
   const dataMount = mounts.find((entry) => readString(entry, 'Destination') === '/data') ?? null;
   const projectsMount = mounts.find((entry) => readString(entry, 'Destination') === '/projects') ?? null;
   const networkSettings = readRecord(inspectPayload, 'NetworkSettings');

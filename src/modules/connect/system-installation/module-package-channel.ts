@@ -3,7 +3,16 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import {
+  FrameworkContractError,
+  isRecord,
+} from '../../../kernel/contract-validation.ts';
+import {
+  parseJsonText,
+  readJsonFileOrNull,
+  readJsonPayloadFile,
+} from '../../../kernel/json-file.ts';
+import { stringValue } from '../../../kernel/json-record.ts';
 import { PACKAGED_MODULE_MARKER_FILE } from '../packaged-module-marker.ts';
 import {
   type DomainModuleSpec,
@@ -151,14 +160,15 @@ function fetchGhcrToken(imageRef: OciImageRef) {
   const scope = `repository:${imageRef.repository}:pull`;
   const tokenUrl = `https://${imageRef.registry}/token?service=${encodeURIComponent(imageRef.registry)}&scope=${encodeURIComponent(scope)}`;
   const payload = runCurl(['-fsSL', tokenUrl], 'ghcr_token', { image: imageRef.image, tag: imageRef.tag });
-  const parsed = JSON.parse(payload) as { token?: string };
-  if (!parsed.token) {
+  const parsed = parseJsonText(payload);
+  const token = isRecord(parsed) ? stringValue(parsed.token) : null;
+  if (!token) {
     throw new FrameworkContractError('contract_shape_invalid', 'GHCR token response is missing token.', {
       image: imageRef.image,
       tag: imageRef.tag,
     });
   }
-  return parsed.token;
+  return token;
 }
 
 function fetchOciManifest(imageRef: OciImageRef, token: string) {
@@ -171,7 +181,8 @@ function fetchOciManifest(imageRef: OciImageRef, token: string) {
     'Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json',
     manifestUrl,
   ], 'oci_manifest', { image: imageRef.image, tag: imageRef.tag });
-  return JSON.parse(payload) as { layers?: OciLayer[] };
+  const parsed = parseJsonText(payload);
+  return isRecord(parsed) ? parsed as { layers?: OciLayer[] } : {};
 }
 
 function fetchOciBlob(imageRef: OciImageRef, token: string, digest: string, targetPath: string) {
@@ -238,10 +249,6 @@ export function computePackageChannelTreeSha256(rootPath: string) {
   return hash.digest('hex');
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
 function optionalRecord(value: unknown) {
   return isRecord(value) ? value : null;
 }
@@ -267,12 +274,7 @@ function readMarkerRecord(repoPath: string, spec: DomainModuleSpec) {
   if (!fs.existsSync(file) || !fs.statSync(file).isFile()) {
     return null;
   }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
-  } catch {
-    return null;
-  }
+  const parsed = readJsonFileOrNull(file);
   if (!isRecord(parsed) || parsed.module_id !== spec.module_id || parsed.repo_name !== spec.repo_name) {
     return null;
   }
@@ -484,7 +486,8 @@ function readChannelManifest() {
   try {
     const manifestPath = path.join(tempRoot, 'opl-channel-manifest.json');
     fetchOciBlob(imageRef, token, layer.digest, manifestPath);
-    return JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as OplChannelManifest;
+    const parsed = readJsonPayloadFile(manifestPath);
+    return isRecord(parsed) ? parsed as OplChannelManifest : {};
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

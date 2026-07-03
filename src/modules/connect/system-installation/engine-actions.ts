@@ -1,4 +1,8 @@
-import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import {
+  FrameworkContractError,
+  isRecord,
+} from '../../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../../kernel/json-file.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 
 import { resolveEngineActionSpec } from './engine-helpers.ts';
@@ -12,11 +16,12 @@ function parseRuntimeUpdateReceipt(raw: string) {
     return null;
   }
   try {
-    const parsed = JSON.parse(normalized) as Record<string, unknown>;
+    const parsed = parseJsonText(normalized);
+    if (!isRecord(parsed)) {
+      return null;
+    }
     const receipt = parsed.opl_runtime_codex_update;
-    return receipt && typeof receipt === 'object'
-      ? receipt as Record<string, unknown>
-      : null;
+    return isRecord(receipt) ? receipt : null;
   } catch (_) {
     return null;
   }

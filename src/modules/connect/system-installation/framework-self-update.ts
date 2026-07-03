@@ -3,7 +3,15 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
-import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import {
+  FrameworkContractError,
+  isRecord,
+} from '../../../kernel/contract-validation.ts';
+import {
+  parseJsonText,
+  readJsonPayloadFile,
+} from '../../../kernel/json-file.ts';
+import { stringValue } from '../../../kernel/json-record.ts';
 import {
   assertGitSuccess,
   normalizeOptionalString,
@@ -106,7 +114,10 @@ function isGitRepo(repoPath: string) {
 
 function isOplFrameworkRoot(repoPath: string) {
   return fs.existsSync(path.join(repoPath, 'package.json'))
-    && fs.existsSync(path.join(repoPath, 'src', 'cli.ts'))
+    && (
+      fs.existsSync(path.join(repoPath, 'src', 'entrypoints', 'cli.ts'))
+      || fs.existsSync(path.join(repoPath, 'src', 'cli.ts'))
+    )
     && fs.existsSync(path.join(repoPath, 'bin', 'opl'));
 }
 
@@ -181,14 +192,15 @@ function fetchGhcrToken(imageRef: OciImageRef) {
   const scope = `repository:${imageRef.repository}:pull`;
   const tokenUrl = `https://${imageRef.registry}/token?service=${encodeURIComponent(imageRef.registry)}&scope=${encodeURIComponent(scope)}`;
   const payload = runCurl(['-fsSL', tokenUrl], 'ghcr_token', { image: imageRef.image, tag: imageRef.tag });
-  const parsed = JSON.parse(payload) as { token?: string };
-  if (!parsed.token) {
+  const parsed = parseJsonText(payload);
+  const token = isRecord(parsed) ? stringValue(parsed.token) : null;
+  if (!token) {
     throw new FrameworkContractError('contract_shape_invalid', 'GHCR token response is missing token.', {
       image: imageRef.image,
       tag: imageRef.tag,
     });
   }
-  return parsed.token;
+  return token;
 }
 
 function fetchOciManifest(imageRef: OciImageRef, token: string) {
@@ -201,7 +213,8 @@ function fetchOciManifest(imageRef: OciImageRef, token: string) {
     'Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json',
     manifestUrl,
   ], 'oci_manifest', { image: imageRef.image, tag: imageRef.tag });
-  return JSON.parse(payload) as { layers?: OciLayer[] };
+  const parsed = parseJsonText(payload);
+  return isRecord(parsed) ? parsed as { layers?: OciLayer[] } : {};
 }
 
 function fetchOciBlob(imageRef: OciImageRef, token: string, digest: string, targetPath: string) {
@@ -240,7 +253,8 @@ function readFrameworkChannelEntry() {
   try {
     const manifestPath = path.join(tempRoot, 'opl-channel-manifest.json');
     fetchOciBlob(imageRef, token, layer.digest, manifestPath);
-    const channelManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as {
+    const parsedChannelManifest = readJsonPayloadFile(manifestPath);
+    const channelManifest = (isRecord(parsedChannelManifest) ? parsedChannelManifest : {}) as {
       opl_version?: string;
       packages?: {
         framework_core?: {

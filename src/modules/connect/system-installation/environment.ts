@@ -1,4 +1,5 @@
 import { ensureOplStateDir, resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
+import { isRecord } from '../../../kernel/contract-validation.ts';
 import { familyRuntimePaths } from '../../runway/index.ts';
 import { readMasManagedProviderProjection } from '../../runway/index.ts';
 import {
@@ -241,8 +242,4 @@ export async function buildOplEnvironment(
       ],
     },
   };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }

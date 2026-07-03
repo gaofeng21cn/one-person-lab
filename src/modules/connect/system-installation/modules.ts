@@ -4,7 +4,11 @@ import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import {
   fileURLToPath } from 'node:url';
 
-import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import {
+  FrameworkContractError,
+  isRecord,
+} from '../../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../../kernel/json-file.ts';
 import { ensureOplStateDir } from '../../../kernel/runtime-state-paths.ts';
 import { resolveDefaultFamilyWorkspaceRoot } from '../opl-skills.ts';
 import { developerModePrefersLocalCheckouts } from '../developer-mode-source-policy.ts';
@@ -593,15 +597,11 @@ function maybeParseJsonRecord(raw: string) {
   }
 
   try {
-    const parsed = JSON.parse(trimmed) as unknown;
-    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-      return parsed as Record<string, unknown>;
-    }
+    const parsed = parseJsonText(trimmed);
+    return isRecord(parsed) ? parsed : null;
   } catch {
     return null;
   }
-
-  return null;
 }
 
 export function runOplModuleAction(

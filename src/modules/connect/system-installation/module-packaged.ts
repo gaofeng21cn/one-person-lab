@@ -1,7 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import {
+  FrameworkContractError,
+  isRecord,
+} from '../../../kernel/contract-validation.ts';
+import { readJsonFileOrNull } from '../../../kernel/json-file.ts';
 import { PACKAGED_MODULE_MARKER_FILE } from '../packaged-module-marker.ts';
 import type {
   DomainModuleSpec,
@@ -26,10 +30,8 @@ function readPackagedModuleMarkerRecord(repoPath: string, spec: DomainModuleSpec
     return null;
   }
 
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = JSON.parse(fs.readFileSync(markerPath, 'utf8')) as Record<string, unknown>;
-  } catch {
+  const parsed = readJsonFileOrNull(markerPath);
+  if (!isRecord(parsed)) {
     return null;
   }
 
