@@ -10,20 +10,14 @@ import type {
   AcpUpdateEventView,
   JsonRecord,
 } from './opl-acp-types.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { stringValue as optionalString } from '../../kernel/json-record.ts';
 
 export class AcpBridgePayloadError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'AcpBridgePayloadError';
   }
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
 function requiredRecord(value: unknown, field: string) {
