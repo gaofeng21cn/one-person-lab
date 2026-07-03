@@ -25,6 +25,7 @@ type ContractFixtureInput = {
 
 type DependencyPolicyFixtureInput = {
   deepImportFailureMode?: 'advisory' | 'strict';
+  dependencyCycleFailureMode?: 'advisory' | 'strict';
   forbiddenDependencies?: Array<{
     from_module_id: string;
     to_module_id: string;
@@ -52,6 +53,8 @@ type BoundarySummary = {
       source_scan_scope: string;
       deep_import_failure_mode: string;
       strict_imports_requested: boolean;
+      dependency_cycle_failure_mode: string;
+      strict_cycles_requested: boolean;
     };
     pair_counts: Array<{
       from_module_id: string;
@@ -65,6 +68,15 @@ type BoundarySummary = {
     };
     forbidden_dependency_violations: {
       count: number;
+    };
+    dependency_cycles: {
+      count: number;
+      failure_mode: string;
+      enforced: boolean;
+      components: Array<{
+        module_ids: string[];
+        edge_count: number;
+      }>;
     };
   };
   failures: string[];
@@ -159,6 +171,11 @@ function policyFor(input: DependencyPolicyFixtureInput = {}) {
       failure_mode: input.deepImportFailureMode ?? 'advisory',
       strict_flag: '--strict-imports',
     },
+    module_dependency_cycles: {
+      failure_mode: input.dependencyCycleFailureMode ?? 'advisory',
+      strict_flag: '--strict-cycles',
+      detection: 'directed_scc_from_cross_module_import_pair_graph',
+    },
     dependency_policy: {
       forbidden_dependencies: input.forbiddenDependencies ?? [],
     },
@@ -211,9 +228,13 @@ test('source module boundary reports current repo cross-module import summary', 
   assert.equal(summary.cross_module_imports.policy.source_scan_scope, 'all_module_ts_files');
   assert.equal(summary.cross_module_imports.policy.deep_import_failure_mode, 'strict');
   assert.equal(summary.cross_module_imports.policy.strict_imports_requested, false);
+  assert.equal(summary.cross_module_imports.policy.dependency_cycle_failure_mode, 'advisory');
+  assert.equal(summary.cross_module_imports.policy.strict_cycles_requested, false);
   assert.equal(summary.cross_module_imports.deep_import_violations.enforced, true);
   assert.equal(summary.cross_module_imports.deep_import_violations.count, 0);
   assert.equal(summary.cross_module_imports.forbidden_dependency_violations.count, 0);
+  assert.equal(summary.cross_module_imports.dependency_cycles.enforced, false);
+  assert.ok(summary.cross_module_imports.dependency_cycles.count > 0);
   assert.equal(summary.module_entrypoints.unexpected_module_roots.length, 0);
   assert.ok(summary.cross_module_imports.pair_counts.length > 0);
 });
@@ -414,6 +435,83 @@ test('source module boundary fails forbidden module dependency pairs', () => {
     assert.equal(summary.cross_module_imports.deep_import_violations.count, 0);
     assert.equal(summary.cross_module_imports.forbidden_dependency_violations.count, 1);
     assert.equal(summary.failures.some((failure) => failure.includes('charter->atlas')), true);
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('source module boundary reports dependency cycles as advisory by default', () => {
+  const fixture = writeFixture([
+    'src/modules/charter/index.ts',
+    'src/modules/charter/feature.ts',
+    'src/modules/atlas/index.ts',
+    'src/modules/atlas/feature.ts',
+    'src/cli.ts',
+  ]);
+  fs.writeFileSync(
+    path.join(fixture.root, 'src', 'modules', 'charter', 'feature.ts'),
+    "import { atlasValue } from '../atlas/index.ts';\nexport const charterFeature = atlasValue;\n",
+  );
+  fs.writeFileSync(
+    path.join(fixture.root, 'src', 'modules', 'atlas', 'feature.ts'),
+    "import { charterValue } from '../charter/index.ts';\nexport const atlasFeature = charterValue;\n",
+  );
+  fs.writeFileSync(
+    path.join(fixture.root, 'src', 'modules', 'charter', 'index.ts'),
+    "export const charterValue = 'charter';\nexport { charterFeature } from './feature.ts';\n",
+  );
+  fs.writeFileSync(
+    path.join(fixture.root, 'src', 'modules', 'atlas', 'index.ts'),
+    "export const atlasValue = 'atlas';\nexport { atlasFeature } from './feature.ts';\n",
+  );
+
+  try {
+    const result = runBoundary(fixture.root, fixture.contractPath);
+    const summary = parseSummary(result);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(summary.cross_module_imports.dependency_cycles.count, 1);
+    assert.equal(summary.cross_module_imports.dependency_cycles.failure_mode, 'advisory');
+    assert.equal(summary.cross_module_imports.dependency_cycles.enforced, false);
+    assert.deepEqual(summary.cross_module_imports.dependency_cycles.components[0].module_ids, ['atlas', 'charter']);
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('source module boundary fails dependency cycles in strict mode', () => {
+  const fixture = writeFixture([
+    'src/modules/charter/index.ts',
+    'src/modules/charter/feature.ts',
+    'src/modules/atlas/index.ts',
+    'src/modules/atlas/feature.ts',
+    'src/cli.ts',
+  ]);
+  fs.writeFileSync(
+    path.join(fixture.root, 'src', 'modules', 'charter', 'feature.ts'),
+    "import { atlasValue } from '../atlas/index.ts';\nexport const charterFeature = atlasValue;\n",
+  );
+  fs.writeFileSync(
+    path.join(fixture.root, 'src', 'modules', 'atlas', 'feature.ts'),
+    "import { charterValue } from '../charter/index.ts';\nexport const atlasFeature = charterValue;\n",
+  );
+  fs.writeFileSync(
+    path.join(fixture.root, 'src', 'modules', 'charter', 'index.ts'),
+    "export const charterValue = 'charter';\nexport { charterFeature } from './feature.ts';\n",
+  );
+  fs.writeFileSync(
+    path.join(fixture.root, 'src', 'modules', 'atlas', 'index.ts'),
+    "export const atlasValue = 'atlas';\nexport { atlasFeature } from './feature.ts';\n",
+  );
+
+  try {
+    const result = runBoundary(fixture.root, fixture.contractPath, ['--strict-cycles']);
+    const summary = parseSummary(result);
+
+    assert.equal(result.status, 1);
+    assert.equal(summary.cross_module_imports.dependency_cycles.enforced, true);
+    assert.equal(summary.cross_module_imports.dependency_cycles.count, 1);
+    assert.equal(summary.failures.some((failure) => failure.includes('module_dependency_cycles')), true);
   } finally {
     fs.rmSync(fixture.root, { recursive: true, force: true });
   }

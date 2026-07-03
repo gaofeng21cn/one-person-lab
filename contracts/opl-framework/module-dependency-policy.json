@@ -28,6 +28,12 @@
     "strict_flag": "--strict-imports",
     "reason": "Cross-module imports must use the target module public index or a thin public entry under public/**. The previous transition baseline has been migrated, so new internal cross-module imports fail the default source module boundary check."
   },
+  "module_dependency_cycles": {
+    "failure_mode": "advisory",
+    "strict_flag": "--strict-cycles",
+    "detection": "directed_scc_from_cross_module_import_pair_graph",
+    "reason": "The current Framework source has public-entry-level module cycles. The checker reports strongly connected module components by default and fails only when this field or --strict-cycles asks for strict enforcement."
+  },
   "dependency_policy": {
     "forbidden_dependencies": [
       {

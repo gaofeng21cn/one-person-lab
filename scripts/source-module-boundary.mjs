@@ -103,6 +103,9 @@ if (crossModuleImports.forbidden_dependency_violations.count > 0) {
     `${entry.from_module_id}->${entry.to_module_id}: forbidden module dependency used by ${entry.count} import(s)`
   ));
 }
+if (crossModuleImports.dependency_cycles.enforced && crossModuleImports.dependency_cycles.count > 0) {
+  failures.push(`module_dependency_cycles: ${crossModuleImports.dependency_cycles.count} cyclic module component(s) violate dependency cycle policy`);
+}
 const summary = {
   status: failures.length === 0 ? 'ok' : 'failed',
   contract: relativeFromRoot(contractPath),
@@ -153,6 +156,7 @@ function parseArgs(argv) {
     policy: null,
     enforceTarget: false,
     strictImports: false,
+    strictCycles: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
@@ -175,6 +179,8 @@ function parseArgs(argv) {
       parsed.enforceTarget = true;
     } else if (value === '--strict-imports') {
       parsed.strictImports = true;
+    } else if (value === '--strict-cycles') {
+      parsed.strictCycles = true;
     } else {
       process.stderr.write(`source module boundary: unknown argument ${value}\n`);
       process.exit(1);
@@ -312,6 +318,7 @@ function readModuleDependencyPolicy(policyValue, modulesValue, layoutValue) {
     },
     source_scan_scope: 'all_module_ts_files',
     deep_import_failure_mode: args.strictImports ? 'strict' : 'advisory',
+    dependency_cycle_failure_mode: args.strictCycles ? 'strict' : 'advisory',
     forbiddenPairs: new Map(),
   };
   if (!policyValue) {
@@ -346,6 +353,12 @@ function readModuleDependencyPolicy(policyValue, modulesValue, layoutValue) {
   if (!isRecord(policyValue.deep_cross_module_imports)) {
     failures.push('module_dependency_policy.deep_cross_module_imports: expected object');
   }
+  const dependencyCyclePolicy = isRecord(policyValue.module_dependency_cycles)
+    ? policyValue.module_dependency_cycles
+    : {};
+  if (!isRecord(policyValue.module_dependency_cycles)) {
+    failures.push('module_dependency_policy.module_dependency_cycles: expected object');
+  }
 
   return {
     path: relativeFromRoot(policyPath),
@@ -374,6 +387,12 @@ function readModuleDependencyPolicy(policyValue, modulesValue, layoutValue) {
       : readFailureMode(
         deepImportPolicy.failure_mode,
         'module_dependency_policy.deep_cross_module_imports.failure_mode',
+      ),
+    dependency_cycle_failure_mode: args.strictCycles
+      ? 'strict'
+      : readFailureMode(
+        dependencyCyclePolicy.failure_mode,
+        'module_dependency_policy.module_dependency_cycles.failure_mode',
       ),
     forbiddenPairs: readForbiddenPairs(dependencyPolicy.forbidden_dependencies, knownModuleIdSet),
   };
@@ -474,6 +493,7 @@ function inspectCrossModuleImports(contractValue, modulesValue, layoutValue, pol
     })
     .sort(compareModulePairEntries);
   const forbiddenItems = summarizeImportViolations(forbiddenImports);
+  const dependencyCycles = findDependencyCycles(sortedPairCounts);
   return {
     policy: {
       module_count: policyValue.module_ids.length,
@@ -481,6 +501,8 @@ function inspectCrossModuleImports(contractValue, modulesValue, layoutValue, pol
       public_entrypoint_rule: policyValue.public_entrypoint_rule.cross_module_imports,
       deep_import_failure_mode: policyValue.deep_import_failure_mode,
       strict_imports_requested: args.strictImports,
+      dependency_cycle_failure_mode: policyValue.dependency_cycle_failure_mode,
+      strict_cycles_requested: args.strictCycles,
     },
     pair_counts: sortedPairCounts,
     deep_import_violations: {
@@ -492,6 +514,12 @@ function inspectCrossModuleImports(contractValue, modulesValue, layoutValue, pol
     forbidden_dependency_violations: {
       count: forbiddenItems.reduce((sum, entry) => sum + entry.count, 0),
       items: forbiddenItems,
+    },
+    dependency_cycles: {
+      count: dependencyCycles.length,
+      failure_mode: policyValue.dependency_cycle_failure_mode,
+      enforced: policyValue.dependency_cycle_failure_mode === 'strict',
+      components: dependencyCycles,
     },
     source_files_scanned: moduleSourceFiles.length,
   };
@@ -548,6 +576,85 @@ function summarizeImportViolations(violations) {
       };
     })
     .sort(compareModulePairEntries);
+}
+
+function findDependencyCycles(pairCountEntries) {
+  const graph = new Map();
+  for (const entry of pairCountEntries) {
+    if (!graph.has(entry.from_module_id)) {
+      graph.set(entry.from_module_id, new Set());
+    }
+    if (!graph.has(entry.to_module_id)) {
+      graph.set(entry.to_module_id, new Set());
+    }
+    graph.get(entry.from_module_id).add(entry.to_module_id);
+  }
+
+  const indexByModule = new Map();
+  const lowlinkByModule = new Map();
+  const stack = [];
+  const onStack = new Set();
+  const components = [];
+  let nextIndex = 0;
+
+  for (const moduleId of [...graph.keys()].sort()) {
+    if (!indexByModule.has(moduleId)) {
+      visit(moduleId);
+    }
+  }
+
+  return components
+    .filter((moduleIds) => moduleIds.length > 1 || graph.get(moduleIds[0])?.has(moduleIds[0]))
+    .map((moduleIds) => {
+      const moduleIdSet = new Set(moduleIds);
+      const edges = pairCountEntries.filter((entry) =>
+        moduleIdSet.has(entry.from_module_id) && moduleIdSet.has(entry.to_module_id)
+      );
+      return {
+        module_ids: moduleIds.sort(),
+        edge_count: edges.length,
+        edges,
+      };
+    })
+    .sort((left, right) => left.module_ids.join(',').localeCompare(right.module_ids.join(',')));
+
+  function visit(moduleId) {
+    indexByModule.set(moduleId, nextIndex);
+    lowlinkByModule.set(moduleId, nextIndex);
+    nextIndex += 1;
+    stack.push(moduleId);
+    onStack.add(moduleId);
+
+    for (const targetModuleId of [...(graph.get(moduleId) ?? [])].sort()) {
+      if (!indexByModule.has(targetModuleId)) {
+        visit(targetModuleId);
+        lowlinkByModule.set(
+          moduleId,
+          Math.min(lowlinkByModule.get(moduleId), lowlinkByModule.get(targetModuleId)),
+        );
+      } else if (onStack.has(targetModuleId)) {
+        lowlinkByModule.set(
+          moduleId,
+          Math.min(lowlinkByModule.get(moduleId), indexByModule.get(targetModuleId)),
+        );
+      }
+    }
+
+    if (lowlinkByModule.get(moduleId) !== indexByModule.get(moduleId)) {
+      return;
+    }
+
+    const component = [];
+    while (stack.length > 0) {
+      const currentModuleId = stack.pop();
+      onStack.delete(currentModuleId);
+      component.push(currentModuleId);
+      if (currentModuleId === moduleId) {
+        break;
+      }
+    }
+    components.push(component);
+  }
 }
 
 function compareModulePairEntries(left, right) {
