@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../../kernel/json-file.ts';
 import {
   FAMILY_RUNTIME_DOMAIN_IDS,
   FAMILY_RUNTIME_PROVIDER_KINDS,
@@ -12,7 +13,7 @@ import {
 } from '../family-runtime-types.ts';
 
 export function parsePayload(value: string): Record<string, unknown> {
-  const parsed = JSON.parse(value);
+  const parsed = parseJsonText(value);
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     throw new FrameworkContractError('cli_usage_error', 'Task payload must be a JSON object.', {
       payload: value,
