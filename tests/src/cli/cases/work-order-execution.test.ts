@@ -89,6 +89,52 @@ test('retired agent-lab execute-work-order alias is not retained', () => {
   assert.equal(failure.payload.error.details.command, 'agent-lab');
 });
 
+test('work-order execute dry-run plans without launching Codex or opening a target worktree', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-work-order-dry-run-'));
+  try {
+    const targetRepo = path.join(fixtureRoot, 'target-agent');
+    const outputDir = path.join(fixtureRoot, 'output');
+    const workOrderPath = path.join(fixtureRoot, 'developer-patch-work-order.json');
+    createWorkOrderTargetRepo(targetRepo);
+    writeExecutableWorkOrder(workOrderPath, targetRepo);
+
+    const output = runCli([
+      'work-order',
+      'execute',
+      '--work-order',
+      workOrderPath,
+      '--target-agent-dir',
+      targetRepo,
+      '--output-dir',
+      outputDir,
+      '--verification-command',
+      'test -f docs/efficiency.md',
+      '--dry-run',
+      '--json',
+    ]);
+
+    assert.equal(output.version, 'g2');
+    assert.equal(output.work_order_execution.status, 'dry_run_ready');
+    assert.equal(output.work_order_execution.dry_run, true);
+    assert.equal(output.work_order_execution.receipt.no_executor_launch_proof.codex_process_started, false);
+    assert.equal(output.work_order_execution.receipt.no_executor_launch_proof.target_worktree_opened, false);
+    assert.equal(output.work_order_execution.receipt.no_executor_launch_proof.absorption_attempted, false);
+    assert.equal(output.work_order_execution.receipt.authority_boundary.can_apply_owner_gated_source_patch, false);
+    assert.equal(fs.existsSync(path.join(targetRepo, '.worktrees')), false);
+    assert.equal(fs.existsSync(path.join(targetRepo, 'docs', 'efficiency.md')), false);
+    assert.equal(fs.existsSync(output.work_order_execution.artifacts.execution_plan_path), true);
+    assert.equal(fs.existsSync(output.work_order_execution.artifacts.dry_run_receipt_path), true);
+    const receipt = readJson(output.work_order_execution.artifacts.dry_run_receipt_path);
+    assert.equal(receipt.surface_kind, 'opl_work_order_codex_execution_dry_run_receipt');
+    assert.deepEqual(receipt.planned_verification.commands, [
+      'test -f docs/efficiency.md',
+      'git diff --check',
+    ]);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('work-order execute runs Codex CLI in a target worktree then absorbs and cleans it', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-work-order-exec-'));
   try {

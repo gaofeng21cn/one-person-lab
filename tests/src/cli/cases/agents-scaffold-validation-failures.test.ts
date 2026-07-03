@@ -1,4 +1,5 @@
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import { parseJsonText } from '../../../../src/kernel/json-file.ts';
 
 test('agents scaffold validation blocks missing stage operating principles policy', () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-scaffold-stage-policy-missing-'));
@@ -139,6 +140,66 @@ test('agents scaffold validation blocks legacy pack roots and README-only requir
     );
     assert.equal(
       validated.validation.blockers.includes('required_domain_pack_path_must_not_be_readme:agent/README.md'),
+      true,
+    );
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
+test('agents scaffold validation blocks capability maps that cannot route self-evolution work orders', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-capability-map-self-evolution-missing-'));
+
+  try {
+    runCli([
+      'agents',
+      'scaffold',
+      '--target-dir',
+      targetDir,
+      '--domain-id',
+      'capability-map-gap',
+    ]);
+    const capabilityMapPath = path.join(targetDir, 'contracts', 'capability_map.json');
+    const capabilityMap = parseJsonText(fs.readFileSync(capabilityMapPath, 'utf8')) as {
+      capabilities: Array<Record<string, unknown>>;
+    };
+    delete capabilityMap.capabilities[1].canonical_target_paths;
+    delete capabilityMap.capabilities[1].verification_refs;
+    delete capabilityMap.capabilities[1].forbidden_surfaces;
+    delete capabilityMap.capabilities[1].owner_closeout_boundary;
+    fs.writeFileSync(capabilityMapPath, `${JSON.stringify(capabilityMap, null, 2)}\n`);
+
+    const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
+    assert.equal(validated.mode, 'validate');
+    assert.equal(validated.state, 'validation_blocked');
+    assert.equal(validated.validation.status, 'blocked');
+    assert.equal(validated.validation.capability_map_validation.status, 'blocked');
+    assert.equal(
+      validated.validation.capability_map_validation.self_evolution_routing_validation.status,
+      'blocked',
+    );
+    assert.equal(
+      validated.validation.blockers.includes(
+        'capability_map_missing_canonical_target_paths:capability-map-gap.domain_execution.professional_skill',
+      ),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.includes(
+        'capability_map_missing_verification_refs:capability-map-gap.domain_execution.professional_skill',
+      ),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.includes(
+        'capability_map_missing_forbidden_surfaces:capability-map-gap.domain_execution.professional_skill',
+      ),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.includes(
+        'capability_map_missing_owner_closeout_boundary:capability-map-gap.domain_execution.professional_skill',
+      ),
       true,
     );
   } finally {

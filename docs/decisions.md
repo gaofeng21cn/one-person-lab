@@ -41,6 +41,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 标准能力必须按 [OPL 标准智能体能力管理规范](./policies/standard-agent-capability-management-policy.md) 声明 `capability_kind`、`canonical_owner`、`physical_source`、`runtime_projection`、`sync_policy`、`authority_boundary` 和 `externalization_reason`。
 - `capability_kind` 固定六类：`stage_prompt`、`stage_projection/runtime_projection`、`professional_skill`、`tool_connector`、`reference_pack`、`contract_module`。
 - 标准 scaffold 必须生成 `contracts/capability_map.json`，作为 OMA / Agent Lab / Pack compiler 定位 stage prompt、professional skill、tool connector、knowledge pack、quality gate 和 eval suite 的 refs-only resolver 索引；它不是 domain truth、owner receipt、typed blocker、quality verdict 或 readiness 证据。
+- `capability_map` 还必须为每个能力声明 `improvement_tokens`、`canonical_target_paths`、`verification_refs`、`forbidden_surfaces` 和 owner closeout boundary。这样 OMA / Agent Lab 可以把反馈和 suite failure 路由到单源文件与验证入口；命中不到时返回 developer work-order / typed blocker 路径，而不是靠宽泛关键词猜 patch target。
 - 默认归属是内置在 domain agent；只有跨 workspace 复用、体量大、引用/模板/脚本多、独立版本维护、多个 stage 反复调用或需要 Codex 原生 discovery 时，才外置为专业 pack、reference pack 或 connector。
 - Connector 只负责资源访问、source refs、invocation refs 和 receipt，不承接专业判断；contract module 只负责机器边界，不伪装成 true Skill。
 - MAS stage prompt / projection 继续归 MAS；八个医学论文 professional specialist skills 归 `mas-scholar-skills` 并通过 OPL Connect 同步；source / intake / omics 不作为 active 外置合同，按各自 owner 内置或后续稳定后再评估。
@@ -105,6 +106,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `contracts/opl-framework/agent-lab-contract.json#domain_feedback_self_evolution_surface` 固定机器边界：输入只接受 domain feedback external suite refs、developer work-order candidate refs、completion refs 和 domain-owned blocker refs；输出只投影 work-order status shape。
 - `src/agent-lab-control-read-models.ts` 的 `buildAgentLabDomainFeedbackSelfEvolutionReadModel` 是 canonical builder；`agent-lab complete`、`agent-lab workbench` 和 `opl app state` 只消费同一 read-model。
 - `runnable` 只表示已有 developer work-order candidate 可交给现有 `opl work-order execute` 原语；Agent Lab 不新增 runner/queue，不写 runtime DB/provider queue，不执行 MAS truth mutation。
+- `opl work-order execute --dry-run` 只做 no-write 计划与形状检查，输出 execution plan / dry-run receipt，不打开 target worktree、不启动 Codex、不吸收 patch；它用于 operator/OMA 在真实执行前确认 target repo、verification command、forbidden surface 和 closeout boundary。
 - `completed_or_blocker` 只携带 completion ref 或 domain-owned typed blocker ref；OPL 不创建 owner receipt、typed blocker body、human gate body、quality/export verdict、paper progress 或 domain-ready claim。
 
 ## 2026-07-01

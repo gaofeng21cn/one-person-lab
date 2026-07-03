@@ -11,6 +11,7 @@ function parseWorkOrderExecuteArgs(args: string[], spec: CommandSpec, commandLab
     verificationCommands: string[];
     codexBin: string | null;
     codexTimeoutMs: number | null;
+    dryRun: boolean;
   } = {
     workOrderPath: null,
     targetAgentDir: null,
@@ -19,6 +20,7 @@ function parseWorkOrderExecuteArgs(args: string[], spec: CommandSpec, commandLab
     verificationCommands: [],
     codexBin: null,
     codexTimeoutMs: null,
+    dryRun: false,
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -88,6 +90,10 @@ function parseWorkOrderExecuteArgs(args: string[], spec: CommandSpec, commandLab
       }
       parsed.codexTimeoutMs = numeric;
       index += 1;
+      continue;
+    }
+    if (token === '--dry-run') {
+      parsed.dryRun = true;
       continue;
     }
     throw buildUsageError(`Unknown option for ${commandLabel}: ${token}.`, spec, { option: token });

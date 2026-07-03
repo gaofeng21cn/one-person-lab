@@ -277,7 +277,7 @@ Runway control-loop runtime 的当前人读方向是：scheduler 只制造 recon
 - `opl stages readiness --family-defaults --json` 是 stage readiness family drilldown 入口；单仓诊断继续使用 `opl stages readiness --domain <domain> --json`。
 - `opl runtime app-operator-drilldown --json` 与 `opl runtime app-operator-drilldown --detail full --json` 是 App/operator drilldown 入口。
 - `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json` 是 runtime safe-action evidence worklist、stage evidence workorder packet、stage replay missing receipt attention packet 与 domain-dispatch evidence workorder packet 入口；cache-derived attention 仍不授权 domain truth、owner receipt、artifact authority 或 production ready。`framework production-closeout` 与 `family-runtime production-closeout` 均已退役，不再是 active interface 或兼容 alias。
-- `opl work-order execute --work-order <developer-patch-work-order.json> --json` 是 owner-gated developer patch work order 的唯一 canonical OPL 执行原语；Agent Lab 只消费该原语产出的 execution receipt、execution plan/report refs 与 re-evaluation refs，旧 `opl agent-lab execute-work-order` 兼容 alias 已退役。
+- `opl work-order execute --work-order <developer-patch-work-order.json> --json` 是 owner-gated developer patch work order 的唯一 canonical OPL 执行原语；Agent Lab 只消费该原语产出的 execution receipt、execution plan/report refs 与 re-evaluation refs，旧 `opl agent-lab execute-work-order` 兼容 alias 已退役。`--dry-run` 只做 no-write execution plan / dry-run receipt，不打开 target worktree、不启动 Codex、不吸收 patch。
 
 ## 当前不能声明
 

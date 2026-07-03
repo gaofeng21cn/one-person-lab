@@ -429,6 +429,21 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(capabilityMap.authority_boundary.can_write_domain_truth, false);
     assert.equal(capabilityMap.authority_boundary.can_sign_owner_receipt, false);
     assert.equal(capabilityMap.authority_boundary.can_create_typed_blocker, false);
+    for (const capability of capabilityMap.capabilities) {
+      assert.equal(capability.improvement_tokens.length > 0, true);
+      assert.equal(capability.canonical_target_paths.length > 0, true);
+      assert.equal(capability.verification_refs.length > 0, true);
+      assert.equal(capability.forbidden_surfaces.length > 0, true);
+      assert.equal(capability.owner_closeout_boundary.owner, 'award-foundry');
+      assert.deepEqual(capability.owner_closeout_boundary.required_return_shapes, [
+        'owner_receipt_ref',
+        'typed_blocker_ref',
+        'human_gate_ref',
+        'route_back_ref',
+      ]);
+      assert.equal(capability.owner_closeout_boundary.can_write_owner_receipt_body, false);
+      assert.equal(capability.owner_closeout_boundary.can_create_typed_blocker, false);
+    }
     const generatedSurfaceHandoff = JSON.parse(
       fs.readFileSync(path.join(targetDir, 'contracts/generated_surface_handoff.json'), 'utf8'),
     );
@@ -577,6 +592,10 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     );
     assert.equal(validated.validation.capability_map_validation.status, 'passed');
     assert.deepEqual(validated.validation.capability_map_validation.missing_roles, []);
+    assert.equal(validated.validation.capability_map_validation
+      .self_evolution_routing_validation.status, 'passed');
+    assert.equal(validated.validation.capability_map_validation
+      .self_evolution_routing_validation.self_evolution_ready_capability_count, 6);
     assert.deepEqual(validated.validation.blockers, []);
   } finally {
     fs.rmSync(targetDir, { recursive: true, force: true });

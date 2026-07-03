@@ -90,6 +90,48 @@ function contractRef(ref: string, role: string) {
   };
 }
 
+const SELF_EVOLUTION_FORBIDDEN_SURFACES = [
+  'domain_truth',
+  'memory_body',
+  'artifact_body',
+  'owner_receipt_body',
+  'typed_blocker_body',
+  'human_gate_body',
+  'runtime_queue',
+  'quality_or_export_verdict',
+  'domain_readiness_claim',
+] as const;
+
+function capabilityOwnerCloseoutBoundary(owner: string) {
+  return {
+    owner,
+    required_return_shapes: [
+      'owner_receipt_ref',
+      'typed_blocker_ref',
+      'human_gate_ref',
+      'route_back_ref',
+    ],
+    can_write_owner_receipt_body: false,
+    can_create_typed_blocker: false,
+  };
+}
+
+function selfEvolutionRoutingFields(input: {
+  targetPath: string;
+  improvementTokens: string[];
+  verificationRefs?: string[];
+  forbiddenSurfaces?: readonly string[];
+  owner: string;
+}) {
+  return {
+    improvement_tokens: input.improvementTokens,
+    canonical_target_paths: [input.targetPath],
+    verification_refs: input.verificationRefs ?? ['opl:agents-scaffold-validate'],
+    forbidden_surfaces: [...(input.forbiddenSurfaces ?? SELF_EVOLUTION_FORBIDDEN_SURFACES)],
+    owner_closeout_boundary: capabilityOwnerCloseoutBoundary(input.owner),
+  };
+}
+
 function standardCapabilityMap(domainId: string, domainLabel: string) {
   const stageRef = 'contracts/stage_control_plane.json#/stages/0';
   return {
@@ -125,6 +167,14 @@ function standardCapabilityMap(domainId: string, domainLabel: string) {
         ],
         sync_policy: 'domain_agent_builtin',
         externalization_reason: 'domain_agent_builtin',
+        ...selfEvolutionRoutingFields({
+          targetPath: `agent/prompts/${STARTER_STAGE_ID}.md`,
+          improvementTokens: [
+            'stage_path_quality',
+            'stage_prompt_quality',
+          ],
+          owner: domainId,
+        }),
         authority_boundary: capabilityAuthorityBoundary(),
       },
       {
@@ -139,6 +189,14 @@ function standardCapabilityMap(domainId: string, domainLabel: string) {
         ],
         sync_policy: 'domain_agent_builtin',
         externalization_reason: 'domain_agent_builtin',
+        ...selfEvolutionRoutingFields({
+          targetPath: 'agent/skills/domain_execution.md',
+          improvementTokens: [
+            'professional_skill_quality',
+            'domain_execution_quality',
+          ],
+          owner: domainId,
+        }),
         authority_boundary: capabilityAuthorityBoundary(),
       },
       {
@@ -154,6 +212,14 @@ function standardCapabilityMap(domainId: string, domainLabel: string) {
         ],
         sync_policy: 'domain_agent_builtin_or_opl_connect_when_externalized',
         externalization_reason: 'domain_agent_builtin',
+        ...selfEvolutionRoutingFields({
+          targetPath: 'agent/tools/domain_affordances.md',
+          improvementTokens: [
+            'tool_connector_quality',
+            'external_resource_routing',
+          ],
+          owner: domainId,
+        }),
         authority_boundary: capabilityAuthorityBoundary(),
       },
       {
@@ -168,6 +234,14 @@ function standardCapabilityMap(domainId: string, domainLabel: string) {
         ],
         sync_policy: 'domain_agent_builtin_refs_only',
         externalization_reason: 'domain_agent_builtin',
+        ...selfEvolutionRoutingFields({
+          targetPath: 'agent/knowledge/domain_boundary.md',
+          improvementTokens: [
+            'knowledge_pack_quality',
+            'domain_boundary_traceability',
+          ],
+          owner: domainId,
+        }),
         authority_boundary: capabilityAuthorityBoundary(),
       },
       {
@@ -183,6 +257,14 @@ function standardCapabilityMap(domainId: string, domainLabel: string) {
         ],
         sync_policy: 'domain_agent_builtin_refs_only',
         externalization_reason: 'domain_agent_builtin',
+        ...selfEvolutionRoutingFields({
+          targetPath: 'agent/quality_gates/domain_acceptance.md',
+          improvementTokens: [
+            'quality_gate_precision',
+            'owner_acceptance_traceability',
+          ],
+          owner: domainId,
+        }),
         authority_boundary: capabilityAuthorityBoundary(),
       },
       {
@@ -197,6 +279,14 @@ function standardCapabilityMap(domainId: string, domainLabel: string) {
         ],
         sync_policy: 'domain_agent_builtin_refs_only',
         externalization_reason: 'domain_agent_builtin',
+        ...selfEvolutionRoutingFields({
+          targetPath: 'runtime/fixtures/README.md',
+          improvementTokens: [
+            'eval_suite_coverage',
+            'failure_token_traceability',
+          ],
+          owner: domainId,
+        }),
         authority_boundary: capabilityAuthorityBoundary(),
       },
     ],

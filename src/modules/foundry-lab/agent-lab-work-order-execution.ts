@@ -36,6 +36,7 @@ export type AgentLabWorkOrderExecutionOptions = {
   verificationCommands?: string[];
   codexBin?: string | null;
   codexTimeoutMs?: number | null;
+  dryRun?: boolean;
 };
 
 type WorkOrderExecutionPresentation = {
@@ -611,6 +612,66 @@ function normalizeOutputDir(outputDir: string | null | undefined, workOrderId: s
   return fs.mkdtempSync(path.join(process.env.TMPDIR ?? '/tmp', `opl-work-order-${shortId(workOrderId)}-`));
 }
 
+function buildDryRunReceipt(input: {
+  workOrderId: string;
+  workOrderPath: string;
+  targetAgent: JsonRecord;
+  targetAgentDir: string;
+  worktreePath: string;
+  branchName: string;
+  baseBranch: string;
+  baseHead: string;
+  verificationCommands: string[];
+  requiredVerificationRefs: string[];
+  targetDirtyStatusBeforeOpen: string[];
+  targetDirtyFilesBeforeOpen: string[];
+  executionSurfaces: ReturnType<typeof buildExecutionSurfaces>;
+  presentation: WorkOrderExecutionPresentation;
+}) {
+  return {
+    surface_kind: 'opl_work_order_codex_execution_dry_run_receipt',
+    version: 'opl.work-order-execution.dry-run.v1',
+    status: 'dry_run_ready',
+    primitive_owner: OPL_WORK_ORDER_PRIMITIVE_OWNER,
+    command_surface: input.presentation.commandSurface,
+    dry_run: true,
+    work_order_id: input.workOrderId,
+    target_agent: input.targetAgent,
+    source_work_order_path: input.workOrderPath,
+    planned_target_worktree: {
+      target_agent_dir: input.targetAgentDir,
+      worktree_path: input.worktreePath,
+      branch_name: input.branchName,
+      base_branch: input.baseBranch,
+      base_head: input.baseHead,
+      target_dirty_status_before_open: input.targetDirtyStatusBeforeOpen,
+      target_dirty_files_before_open: input.targetDirtyFilesBeforeOpen,
+    },
+    planned_verification: {
+      commands: input.verificationCommands,
+      required_verification_refs: input.requiredVerificationRefs,
+    },
+    no_executor_launch_proof: {
+      codex_process_started: false,
+      target_worktree_opened: false,
+      absorption_attempted: false,
+      cleanup_needed: false,
+      reason: 'dry_run',
+    },
+    execution_plan: input.executionSurfaces.executionPlan,
+    execution_refs: input.executionSurfaces.executionRefs,
+    authority_boundary: {
+      ...AGENT_LAB_AUTHORITY_BOUNDARY,
+      can_apply_owner_gated_source_patch: false,
+      can_write_domain_truth: false,
+      can_write_owner_receipt: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_export_verdict: false,
+      can_mutate_domain_artifact: false,
+    },
+  };
+}
+
 function cleanupTargetWorktree(input: {
   targetAgentDir: string;
   worktreePath: string;
@@ -723,6 +784,43 @@ async function executeDeveloperWorkOrder(
       : []),
     targetDirtyStatusBeforeOpen,
   }));
+  if (options.dryRun === true) {
+    const dryRunReceipt = buildDryRunReceipt({
+      workOrderId,
+      workOrderPath,
+      targetAgent,
+      targetAgentDir,
+      worktreePath,
+      branchName,
+      baseBranch,
+      baseHead,
+      verificationCommands,
+      requiredVerificationRefs: stringList(workOrder.required_verification_refs),
+      targetDirtyStatusBeforeOpen,
+      targetDirtyFilesBeforeOpen,
+      executionSurfaces,
+      presentation,
+    });
+    const dryRunReceiptPath = path.join(outputDir, 'work-order-dry-run-receipt.json');
+    writeJson(dryRunReceiptPath, dryRunReceipt);
+    return {
+      version: 'g2',
+      [presentation.envelopeKey]: {
+        surface_id: presentation.resultSurfaceId,
+        primitive_owner: OPL_WORK_ORDER_PRIMITIVE_OWNER,
+        command_surface: presentation.commandSurface,
+        status: 'dry_run_ready',
+        dry_run: true,
+        work_order_path: workOrderPath,
+        artifacts: {
+          execution_plan_path: executionSurfaces.executionPlan.path,
+          dry_run_receipt_path: dryRunReceiptPath,
+        },
+        receipt: dryRunReceipt,
+        authority_boundary: dryRunReceipt.authority_boundary,
+      },
+    };
+  }
   let executionReportWritten = false;
   if (fs.existsSync(worktreePath)) {
     throw new FrameworkContractError(

@@ -32,10 +32,84 @@ const REQUIRED_CAPABILITY_MAP_SURFACE_ROLES = [
 ] as const;
 
 type CapabilityMapPayload = {
-  capabilities: Array<{
-    surface_role: string;
-  }>;
+  capabilities: JsonCapabilityEntry[];
 };
+
+type JsonCapabilityEntry = {
+  capability_id?: unknown;
+  surface_role: string;
+  improvement_tokens?: unknown;
+  canonical_target_paths?: unknown;
+  verification_refs?: unknown;
+  forbidden_surfaces?: unknown;
+  owner_closeout_boundary?: unknown;
+};
+
+function stringList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return [...new Set(value
+    .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    .map((entry) => entry.trim()))];
+}
+
+function capabilityId(entry: JsonCapabilityEntry, index: number) {
+  return typeof entry.capability_id === 'string' && entry.capability_id.trim()
+    ? entry.capability_id.trim()
+    : `capability_index_${index}`;
+}
+
+function validateOwnerCloseoutBoundary(entry: JsonCapabilityEntry, id: string) {
+  if (!isRecord(entry.owner_closeout_boundary)) {
+    return [`capability_map_missing_owner_closeout_boundary:${id}`];
+  }
+  const boundary = entry.owner_closeout_boundary;
+  const requiredShapes = stringList(boundary.required_return_shapes);
+  return [
+    typeof boundary.owner === 'string' && boundary.owner.trim()
+      ? null
+      : `capability_map_owner_closeout_missing_owner:${id}`,
+    requiredShapes.length > 0
+      ? null
+      : `capability_map_owner_closeout_missing_return_shapes:${id}`,
+    boundary.can_write_owner_receipt_body === false
+      ? null
+      : `capability_map_owner_closeout_can_write_owner_receipt_body_must_be_false:${id}`,
+    boundary.can_create_typed_blocker === false
+      ? null
+      : `capability_map_owner_closeout_can_create_typed_blocker_must_be_false:${id}`,
+  ].filter((blocker): blocker is string => Boolean(blocker));
+}
+
+function validateSelfEvolutionRoutingFields(capabilities: JsonCapabilityEntry[]) {
+  const blockers = capabilities.flatMap((entry, index) => {
+    const id = capabilityId(entry, index);
+    return [
+      stringList(entry.improvement_tokens).length > 0
+        ? null
+        : `capability_map_missing_improvement_tokens:${id}`,
+      stringList(entry.canonical_target_paths).length > 0
+        ? null
+        : `capability_map_missing_canonical_target_paths:${id}`,
+      stringList(entry.verification_refs).length > 0
+        ? null
+        : `capability_map_missing_verification_refs:${id}`,
+      stringList(entry.forbidden_surfaces).length > 0
+        ? null
+        : `capability_map_missing_forbidden_surfaces:${id}`,
+      ...validateOwnerCloseoutBoundary(entry, id),
+    ].filter((blocker): blocker is string => Boolean(blocker));
+  });
+  return {
+    status: blockers.length === 0 ? 'passed' : 'blocked',
+    checked_capability_count: capabilities.length,
+    self_evolution_ready_capability_count: capabilities.length - new Set(blockers.map((blocker) =>
+      blocker.split(':').slice(-1)[0]
+    )).size,
+    blockers,
+  };
+}
 
 function validateCapabilityMap(capabilityMap: unknown) {
   if (capabilityMap === null || capabilityMap === undefined) {
@@ -43,6 +117,12 @@ function validateCapabilityMap(capabilityMap: unknown) {
       status: 'missing',
       observed_roles: [],
       missing_roles: REQUIRED_CAPABILITY_MAP_SURFACE_ROLES,
+      self_evolution_routing_validation: {
+        status: 'missing',
+        checked_capability_count: 0,
+        self_evolution_ready_capability_count: 0,
+        blockers: [],
+      },
       blockers: [],
     };
   }
@@ -59,6 +139,12 @@ function validateCapabilityMap(capabilityMap: unknown) {
       status: 'blocked',
       observed_roles: [],
       missing_roles: REQUIRED_CAPABILITY_MAP_SURFACE_ROLES,
+      self_evolution_routing_validation: {
+        status: 'blocked',
+        checked_capability_count: 0,
+        self_evolution_ready_capability_count: 0,
+        blockers: [],
+      },
       blockers: schemaValidation.errors.map((error) =>
         `capability_map_schema_invalid:${error.instance_path || '/'}:${error.keyword}`
       ),
@@ -68,13 +154,16 @@ function validateCapabilityMap(capabilityMap: unknown) {
   const observedRoles = [...new Set(capabilities
     .map((entry) => entry.surface_role))];
   const missingRoles = REQUIRED_CAPABILITY_MAP_SURFACE_ROLES.filter((role) => !observedRoles.includes(role));
+  const selfEvolutionRoutingValidation = validateSelfEvolutionRoutingFields(capabilities);
   const blockers = [
     ...missingRoles.map((role) => `capability_map_missing_role:${role}`),
+    ...selfEvolutionRoutingValidation.blockers,
   ].filter((entry): entry is string => Boolean(entry));
   return {
     status: blockers.length === 0 ? 'passed' : 'blocked',
     observed_roles: observedRoles,
     missing_roles: missingRoles,
+    self_evolution_routing_validation: selfEvolutionRoutingValidation,
     blockers,
   };
 }
