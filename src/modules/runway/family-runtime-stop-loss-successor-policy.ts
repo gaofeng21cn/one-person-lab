@@ -1,11 +1,15 @@
 import type { DatabaseSync } from 'node:sqlite';
 
+import { parseJsonText } from '../../kernel/json-file.ts';
+import {
+  record,
+  stringValue,
+  type JsonRecord,
+} from '../../kernel/json-record.ts';
 import {
   isMasDomainProgressRef,
   masDomainProgressRefsFromRecord,
 } from './family-runtime-mas-domain-progress-refs.ts';
-
-type JsonRecord = Record<string, unknown>;
 
 const ANTI_LOOP_BUDGET_EXHAUSTED_BLOCKER_CODE = 'anti_loop_budget_exhausted';
 const PROGRESS_FIRST_OWNER_DELTA_REQUIRED_REASON = 'progress_first_owner_delta_required';
@@ -22,18 +26,6 @@ type StopLossTask = {
   last_error: string | null;
   dead_letter_reason: string | null;
 };
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
 
 function stringList(value: unknown): string[] {
   if (typeof value === 'string' && value.trim()) {
@@ -254,7 +246,7 @@ function domainProgressRefs(payload: JsonRecord) {
 
 function safeJsonRecord(value: string) {
   try {
-    return record(JSON.parse(value));
+    return record(parseJsonText(value));
   } catch {
     return {};
   }
@@ -291,7 +283,7 @@ function stopLossAttemptDomainProgress(
     if (!sameStopLossLineage(input.previousIdentity, attemptIdentity)) {
       continue;
     }
-    const closeoutRefs = stringList(JSON.parse(row.closeout_refs_json));
+    const closeoutRefs = stringList(parseJsonText(row.closeout_refs_json));
     const routeImpact = safeJsonRecord(row.route_impact_json);
     const attemptProgressRefs = uniqueStrings([
       ...closeoutRefs,
@@ -415,7 +407,7 @@ export function findAntiLoopStopLossSuccessorAdmission(
     if (!isAntiLoopStopLossBlockedTask(row) || !row.payload_json) {
       continue;
     }
-    const payload = JSON.parse(row.payload_json) as JsonRecord;
+    const payload = record(parseJsonText(row.payload_json));
     const policyRows = db.prepare(`
       SELECT payload_json
       FROM events
@@ -424,7 +416,7 @@ export function findAntiLoopStopLossSuccessorAdmission(
     `).all(row.task_id) as Array<{ payload_json: string }>;
     const successorAllowed = policyRows.some((event) => {
       try {
-        return stopLossPolicyAllowsSuccessor(JSON.parse(event.payload_json));
+        return stopLossPolicyAllowsSuccessor(parseJsonText(event.payload_json));
       } catch {
         return false;
       }
