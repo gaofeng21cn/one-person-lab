@@ -65,6 +65,48 @@
     "formats": ["json", "openmetrics"],
     "source_readback": "opl_observability_semantic_conventions_readback",
     "semantic_conventions_ref": "contracts/opl-framework/observability-semantic-conventions-contract.json",
+    "exporter_signal_mapping": {
+      "traces": {
+        "otel_signal": "trace",
+        "exporter_signal": "trace_span_seed",
+        "source_mapping": "signal_mappings.trace_span",
+        "payload_body_exported": false
+      },
+      "metrics": {
+        "otel_signal": "metric",
+        "exporter_signal": "openmetrics_gauge_seed",
+        "source_mapping": "signal_mappings.metric",
+        "payload_body_exported": false
+      },
+      "logs": {
+        "otel_signal": "log",
+        "exporter_signal": "event_ref_seed",
+        "source_mapping": "signal_mappings.log_event",
+        "payload_body_exported": false
+      }
+    },
+    "collector_export_boundary": {
+      "boundary_kind": "collector_export_boundary",
+      "collector_kind": "not_configured",
+      "external_collector_connected": false,
+      "exporter_seed_only": true,
+      "payload_body_exported": false,
+      "payload_body_stored": false,
+      "can_create_private_ledger_ui": false,
+      "can_write_domain_truth": false,
+      "can_create_owner_receipt": false,
+      "can_create_typed_blocker": false,
+      "runtime_ready_claim": "not_claimed",
+      "domain_ready_claim": "not_claimed",
+      "production_ready_claim": "not_claimed"
+    },
+    "forbidden_body_fields": [
+      "body",
+      "artifact_body",
+      "artifact_content",
+      "payload_body",
+      "memory_body"
+    ],
     "signal_groups": {
       "traces": {
         "span_name": "opl.stage_attempt",

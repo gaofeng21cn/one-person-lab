@@ -301,6 +301,8 @@ function buildRuntimeSemanticConventionProjection(input: {
         'provider_continuous_proof',
       ],
       app_operator_drilldown_ref: 'opl runtime app-operator-drilldown --detail full --json', // reuse-first: allow existing operator drilldown as a source ref, not a private observability UI.
+      exporter_signal_mapping_ref: 'semantic_conventions.exporter_signal_mapping',
+      collector_export_boundary_ref: 'semantic_conventions.collector_export_boundary',
       selected_stage_attempt_id: stringValue(attempt.stage_attempt_id),
       selected_domain_id: stringValue(attempt.domain_id),
       selected_status: attemptStatus(attempt),

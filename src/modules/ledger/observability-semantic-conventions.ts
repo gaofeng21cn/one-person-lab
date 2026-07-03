@@ -21,6 +21,43 @@ const METRIC_INSTRUMENTS = [
   'error_count',
 ] as const;
 
+const EXPORTER_SIGNAL_MAPPING = {
+  traces: {
+    otel_signal: 'trace',
+    exporter_signal: 'trace_span_seed',
+    source_mapping: 'signal_mappings.trace_span',
+    payload_body_exported: false,
+  },
+  metrics: {
+    otel_signal: 'metric',
+    exporter_signal: 'openmetrics_gauge_seed',
+    source_mapping: 'signal_mappings.metric',
+    payload_body_exported: false,
+  },
+  logs: {
+    otel_signal: 'log',
+    exporter_signal: 'event_ref_seed',
+    source_mapping: 'signal_mappings.log_event',
+    payload_body_exported: false,
+  },
+} as const;
+
+const COLLECTOR_EXPORT_BOUNDARY = {
+  boundary_kind: 'collector_export_boundary',
+  collector_kind: 'not_configured',
+  external_collector_connected: false,
+  exporter_seed_only: true,
+  payload_body_exported: false,
+  payload_body_stored: false,
+  can_create_private_ledger_ui: false,
+  can_write_domain_truth: false,
+  can_create_owner_receipt: false,
+  can_create_typed_blocker: false,
+  runtime_ready_claim: 'not_claimed',
+  domain_ready_claim: 'not_claimed',
+  production_ready_claim: 'not_claimed',
+} as const;
+
 type ObservabilityFieldId = typeof FIELD_IDS[number];
 type ObservabilityMetricInstrument = typeof METRIC_INSTRUMENTS[number];
 type CanonicalAttributes = Partial<Record<ObservabilityFieldId, string | number>>;
@@ -93,6 +130,9 @@ const OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS = {
       ],
     },
   },
+  exporter_signal_mapping: EXPORTER_SIGNAL_MAPPING,
+  collector_export_boundary: COLLECTOR_EXPORT_BOUNDARY,
+  forbidden_body_fields: FORBIDDEN_BODY_FIELDS,
   authority_boundary: {
     ledger_refs_only: true,
     can_create_private_ledger_ui: false,
@@ -206,6 +246,9 @@ function buildObservabilitySemanticConventionReadback(input: ObservabilitySemant
         ref_fields: ['route_ref', 'receipt_ref', 'typed_blocker_ref'],
       },
     },
+    exporter_signal_mapping: OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS.exporter_signal_mapping,
+    collector_export_boundary: OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS.collector_export_boundary,
+    forbidden_body_fields: OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS.forbidden_body_fields,
     forbidden_body_fields_present: forbiddenBodyFieldsPresent(input),
     authority_boundary: OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS.authority_boundary,
   };
@@ -231,6 +274,8 @@ function buildObservabilitySemanticConventionExportSeed(input: ObservabilitySema
     schema_version: readback.schema_version,
     source_readback: readback.surface_kind,
     semantic_conventions_ref: 'contracts/opl-framework/observability-semantic-conventions-contract.json',
+    exporter_signal_mapping: readback.exporter_signal_mapping,
+    collector_export_boundary: readback.collector_export_boundary,
     signal_groups: {
       traces: [
         {
@@ -254,9 +299,11 @@ function buildObservabilitySemanticConventionExportSeed(input: ObservabilitySema
       metric_instrument_count: metrics.length,
       observed_metric_count: metrics.filter((metric) => metric.value_observed).length,
       log_event_count: 1,
+      collector_export_boundary: 'seed_only_no_external_collector',
       body_policy: 'refs_only_no_payload_body',
       readiness_claim: 'not_claimed',
     },
+    forbidden_body_fields: readback.forbidden_body_fields,
     forbidden_body_fields_present: readback.forbidden_body_fields_present,
     authority_boundary: readback.authority_boundary,
   };
@@ -283,6 +330,24 @@ function renderObservabilitySemanticConventionOpenMetrics(
       can_claim_runtime_ready: String(exportSeed.authority_boundary.can_claim_runtime_ready),
       can_claim_domain_ready: String(exportSeed.authority_boundary.can_claim_domain_ready),
       can_claim_production_ready: String(exportSeed.authority_boundary.can_claim_production_ready),
+    }),
+    '# HELP opl_observability_exporter_signal_mapping Constant guard for OpenTelemetry-style trace metric log signal vocabulary.',
+    '# TYPE opl_observability_exporter_signal_mapping gauge',
+    openMetricsLine('opl_observability_exporter_signal_mapping', 1, {
+      traces: exportSeed.exporter_signal_mapping.traces.exporter_signal,
+      metrics: exportSeed.exporter_signal_mapping.metrics.exporter_signal,
+      logs: exportSeed.exporter_signal_mapping.logs.exporter_signal,
+    }),
+    '# HELP opl_observability_collector_export_boundary Constant guard showing this is an exporter seed without external collector or body export.',
+    '# TYPE opl_observability_collector_export_boundary gauge',
+    openMetricsLine('opl_observability_collector_export_boundary', 1, {
+      collector_kind: exportSeed.collector_export_boundary.collector_kind,
+      external_collector_connected: String(exportSeed.collector_export_boundary.external_collector_connected),
+      exporter_seed_only: String(exportSeed.collector_export_boundary.exporter_seed_only),
+      payload_body_exported: String(exportSeed.collector_export_boundary.payload_body_exported),
+      runtime_ready_claim: exportSeed.collector_export_boundary.runtime_ready_claim,
+      domain_ready_claim: exportSeed.collector_export_boundary.domain_ready_claim,
+      production_ready_claim: exportSeed.collector_export_boundary.production_ready_claim,
     }),
     '# EOF',
   ].join('\n')}\n`;

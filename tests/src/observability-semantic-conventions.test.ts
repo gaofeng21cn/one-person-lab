@@ -82,6 +82,29 @@ test('observability semantic conventions freeze the OPL vocabulary and signal ma
   );
   assert.equal(semanticContract.export_readback_seed.surface_kind, 'opl_observability_export_readback_seed');
   assert.deepEqual(semanticContract.export_readback_seed.formats, ['json', 'openmetrics']);
+  assert.deepEqual(semanticContract.export_readback_seed.forbidden_body_fields, [
+    'body',
+    'artifact_body',
+    'artifact_content',
+    'payload_body',
+    'memory_body',
+  ]);
+  assert.equal(
+    (semanticContract.export_readback_seed.exporter_signal_mapping as any).metrics.exporter_signal,
+    'openmetrics_gauge_seed',
+  );
+  assert.equal(
+    (semanticContract.export_readback_seed.collector_export_boundary as any).external_collector_connected,
+    false,
+  );
+  assert.equal(
+    (semanticContract.export_readback_seed.collector_export_boundary as any).exporter_seed_only,
+    true,
+  );
+  assert.equal(
+    (semanticContract.export_readback_seed.collector_export_boundary as any).runtime_ready_claim,
+    'not_claimed',
+  );
   assert.equal(semanticContract.export_readback_seed.readiness_claim, 'not_claimed');
   assert.equal(semanticContract.authority_boundary.ledger_refs_only, true);
   assert.equal(semanticContract.authority_boundary.can_create_private_ledger_ui, false);
@@ -115,6 +138,16 @@ test('observability readback projects current owner refs without becoming a ledg
   assert.equal(readback.authority_boundary.can_create_private_ledger_ui, false);
   assert.equal(readback.authority_boundary.can_store_payload_body, false);
   assert.deepEqual(readback.forbidden_body_fields_present, ['artifact_body']);
+  assert.deepEqual(readback.forbidden_body_fields, [
+    'body',
+    'artifact_body',
+    'artifact_content',
+    'payload_body',
+    'memory_body',
+  ]);
+  assert.equal(readback.exporter_signal_mapping.traces.otel_signal, 'trace');
+  assert.equal(readback.collector_export_boundary.can_create_private_ledger_ui, false);
+  assert.equal(readback.collector_export_boundary.payload_body_exported, false);
   assert.deepEqual(readback.canonical_attributes, {
     stage_run_id: 'stage-run:mas:review',
     attempt_id: 'sat_123',
@@ -162,7 +195,13 @@ test('observability export seed groups trace metric and log signals without payl
 
   assert.equal(seed.surface_kind, 'opl_observability_export_readback_seed');
   assert.equal(seed.summary.readiness_claim, 'not_claimed');
+  assert.equal(seed.summary.collector_export_boundary, 'seed_only_no_external_collector');
   assert.equal(seed.summary.observed_metric_count, 2);
+  assert.equal(seed.collector_export_boundary.collector_kind, 'not_configured');
+  assert.equal(seed.collector_export_boundary.external_collector_connected, false);
+  assert.equal(seed.collector_export_boundary.exporter_seed_only, true);
+  assert.equal(seed.collector_export_boundary.payload_body_exported, false);
+  assert.equal(seed.exporter_signal_mapping.metrics.exporter_signal, 'openmetrics_gauge_seed');
   assert.equal(seed.authority_boundary.can_store_payload_body, false);
   assert.equal(seed.authority_boundary.can_claim_runtime_ready, false);
   assert.deepEqual(seed.forbidden_body_fields_present, ['payload_body']);
@@ -177,6 +216,12 @@ test('observability export seed groups trace metric and log signals without payl
   assert.match(openmetrics, /# TYPE opl_queue_length gauge/);
   assert.match(openmetrics, /opl_queue_length\{[^}]*opl_domain_id="medautoscience"[^}]*\} 7/);
   assert.match(openmetrics, /opl_latency_ms\{[^}]*opl_task_queue="opl-family-runtime"[^}]*\} 1200/);
+  assert.match(openmetrics, /# TYPE opl_observability_exporter_signal_mapping gauge/);
+  assert.match(openmetrics, /opl_observability_exporter_signal_mapping\{[^}]*metrics="openmetrics_gauge_seed"[^}]*\} 1/);
+  assert.match(openmetrics, /# TYPE opl_observability_collector_export_boundary gauge/);
+  assert.match(openmetrics, /opl_observability_collector_export_boundary\{[^}]*external_collector_connected="false"[^}]*\} 1/);
+  assert.match(openmetrics, /opl_observability_collector_export_boundary\{[^}]*payload_body_exported="false"[^}]*\} 1/);
+  assert.match(openmetrics, /opl_observability_collector_export_boundary\{[^}]*runtime_ready_claim="not_claimed"[^}]*\} 1/);
   assert.match(openmetrics, /can_claim_runtime_ready="false"/);
   assert.equal(openmetrics.includes('must-not-leak'), false);
 });
