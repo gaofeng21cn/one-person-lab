@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { sourceRef, uniqueByRef } from '../console/index.ts';
+import { sourceRef, uniqueByRef } from '../../kernel/source-ref.ts';
 import { listManagedInstallUpdateReceipts } from '../connect/index.ts';
 import { omaProductionConsumptionRecordAction } from './oma-production-consumption-action.ts';
 import { listOmaAppLivePathReceipts } from './oma-app-live-path-ledger.ts';

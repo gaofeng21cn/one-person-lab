@@ -1,5 +1,8 @@
 import * as fs from 'fs';
-import { type JsonRecord, type RuntimeTraySourceRef } from './runtime-tray-snapshot-types.ts';
+import { fileSourceRef, sourceRef, uniqueByRef } from '../../kernel/source-ref.ts';
+import { type JsonRecord } from './runtime-tray-snapshot-types.ts';
+
+export { fileSourceRef, sourceRef, uniqueByRef };
 
 export function optionalString(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
@@ -66,18 +69,6 @@ export function normalizeStatusCode(status: string) {
   return status.trim().toLowerCase();
 }
 
-export function uniqueByRef(refs: RuntimeTraySourceRef[]) {
-  const seen = new Set<string>();
-  return refs.filter((ref) => {
-    const key = `${ref.ref_kind}:${ref.ref}:${ref.role}`;
-    if (seen.has(key)) {
-      return false;
-    }
-    seen.add(key);
-    return true;
-  });
-}
-
 export function uniqueStrings(values: string[]) {
   const seen = new Set<string>();
   return values.filter((value) => {
@@ -88,24 +79,6 @@ export function uniqueStrings(values: string[]) {
     seen.add(normalized);
     return true;
   });
-}
-
-export function sourceRef(ref: string, role: string, label?: string): RuntimeTraySourceRef {
-  return {
-    ref_kind: 'json_pointer',
-    ref,
-    role,
-    label,
-  };
-}
-
-export function fileSourceRef(ref: string, role: string, label?: string): RuntimeTraySourceRef {
-  return {
-    ref_kind: 'file',
-    ref,
-    role,
-    label,
-  };
 }
 
 export function shellArgument(value: string) {
