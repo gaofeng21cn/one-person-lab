@@ -202,6 +202,9 @@ jobs:
       - name: Lint and line budget
         run: ./scripts/verify.sh lint
 
+      - name: Verify reuse-first diff gate
+        run: ./scripts/verify.sh reuse-first
+
       - name: Verify local structural quality gate
         env:
           OPL_QUALITY_DETAILS_TIMEOUT_SECONDS: '240'

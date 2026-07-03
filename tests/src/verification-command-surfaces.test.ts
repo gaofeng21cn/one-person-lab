@@ -693,6 +693,7 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
   assert.match(verifyScript, /node scripts\/line-budget\.mjs/);
   assert.match(verifyScript, /node scripts\/line-budget\.mjs --strict/);
   assert.match(verifyScript, /OPL_STRUCTURAL_QUALITY_STRICT=1/);
+  assert.match(verifyScript, /npm run reuse-first:scan:diff -- --strict/);
   assert.equal(
     (verifyScript.match(/node scripts\/line-budget\.mjs/g) ?? []).length,
     4,
@@ -720,5 +721,5 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
   assert.match(verifyScript, /npm run native:cache/);
   assert.match(verifyScript, /npm run native:family-smoke/);
   assert.match(verifyScript, /\.\/scripts\/run-structural-quality-gate\.sh/);
-  assert.match(verifyScript, /smoke\|fast\|regression\|integration\|structure\|structure:strict\|family\|meta\|fresh-install\|artifact\|native\|full\|lint\|line-budget\|line-budget:strict\|typecheck/);
+  assert.match(verifyScript, /smoke\|fast\|regression\|integration\|structure\|structure:strict\|reuse-first\|family\|meta\|fresh-install\|artifact\|native\|full\|lint\|line-budget\|line-budget:strict\|typecheck/);
 });
