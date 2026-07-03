@@ -1,6 +1,14 @@
 import { buildRuntimeTraySnapshot } from '../console/index.ts';
 import type { JsonRecord } from '../console/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
+import {
+  OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS,
+  buildObservabilitySemanticConventionExportSeed,
+  buildObservabilitySemanticConventionReadback,
+  renderObservabilitySemanticConventionOpenMetrics,
+  type ObservabilityMetricInstrument,
+  type ObservabilitySemanticConventionInput,
+} from '../ledger/observability-semantic-conventions.ts';
 
 export type ObservabilityExportFormat = 'json' | 'openmetrics';
 
@@ -28,6 +36,10 @@ function recordList(value: unknown) {
 
 function stringValue(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function firstString(...values: unknown[]) {
+  return values.map(stringValue).find((value) => value !== null) ?? null;
 }
 
 function numberValue(value: unknown) {
@@ -167,6 +179,176 @@ function sourceRefs(snapshot: JsonRecord) {
   }));
 }
 
+function stringList(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    : [];
+}
+
+function selectedSemanticAttempt(snapshot: JsonRecord, attempts: JsonRecord[]) {
+  const appDrilldown = record(snapshot.app_operator_drilldown);
+  const attentionPayload = record(appDrilldown.attention_first_payload);
+  const currentOwnerDelta = record(attentionPayload.current_owner_delta);
+  const selectedAttemptId = firstString(
+    currentOwnerDelta.stage_attempt_id,
+    record(appDrilldown.current_owner_delta).stage_attempt_id,
+  );
+  return {
+    currentOwnerDelta,
+    attempt: attempts.find((attempt) => stringValue(attempt.stage_attempt_id) === selectedAttemptId)
+      ?? attempts.find((attempt) => attemptHasFlag(attempt, 'human_gate') || attemptHasFlag(attempt, 'blocked'))
+      ?? attempts[0]
+      ?? {},
+  };
+}
+
+function firstRouteRef(currentOwnerDelta: JsonRecord, attempt: JsonRecord) {
+  const auditRefs = record(currentOwnerDelta.audit_refs);
+  const controlLoop = record(attempt.control_loop_summary);
+  const actionRoute = record(controlLoop.action_route);
+  return firstString(
+    currentOwnerDelta.route_ref,
+    currentOwnerDelta.live_attempt_ref,
+    auditRefs.audit_next_safe_action_ref,
+    stringList(actionRoute.route_refs)[0],
+    record(attempt.route_impact).route_ref,
+  );
+}
+
+function firstReceiptRef(currentOwnerDelta: JsonRecord, attempt: JsonRecord) {
+  const controlLoopReceipts = record(record(attempt.control_loop_summary).receipts);
+  return firstString(
+    currentOwnerDelta.receipt_ref,
+    currentOwnerDelta.latest_owner_answer_ref,
+    stringList(controlLoopReceipts.receipt_refs)[0],
+    stringList(attempt.closeout_refs)[0],
+    stringList(attempt.writeback_receipt_refs)[0],
+  );
+}
+
+function firstTypedBlockerRef(currentOwnerDelta: JsonRecord, attempt: JsonRecord) {
+  const latestOwnerAnswerKind = stringValue(currentOwnerDelta.latest_owner_answer_kind);
+  const latestOwnerAnswerRef = stringValue(currentOwnerDelta.latest_owner_answer_ref);
+  return firstString(
+    currentOwnerDelta.typed_blocker_ref,
+    latestOwnerAnswerKind?.includes('typed_blocker') ? latestOwnerAnswerRef : null,
+    stringList(attempt.typed_blocker_refs)[0],
+    stringList(record(attempt.conflict_or_blocker_envelopes).typed_blocker_refs)[0],
+  );
+}
+
+function metricValueOrUndefined(value: number) {
+  return Number.isFinite(value) ? value : undefined;
+}
+
+function semanticMetricValues(input: {
+  stageAttempts: ReturnType<typeof buildStageAttemptExport>;
+  gatesAndBlockers: ReturnType<typeof buildGatesAndBlockersExport>;
+  memoryWriteback: ReturnType<typeof buildMemoryWritebackExport>;
+  attempts: JsonRecord[];
+}) {
+  const retryCount = input.attempts.reduce((sum, attempt) => {
+    const retryBudget = record(record(attempt.usage_projection).retry_budget);
+    return sum + numberValue(retryBudget.used_attempts);
+  }, 0);
+  const observedDurations = input.attempts
+    .map((attempt) => record(record(attempt.usage_projection).duration).duration_ms_observed)
+    .filter((duration): duration is number => typeof duration === 'number' && Number.isFinite(duration));
+  const latencyMs = observedDurations.length > 0
+    ? observedDurations.reduce((sum, duration) => sum + duration, 0)
+    : undefined;
+  return {
+    queue_length: metricValueOrUndefined(input.stageAttempts.total),
+    retry_count: metricValueOrUndefined(retryCount),
+    dead_letter_count: metricValueOrUndefined(input.gatesAndBlockers.dead_letter_count),
+    latency_ms: latencyMs,
+    error_count: metricValueOrUndefined(
+      input.gatesAndBlockers.blocker_count
+      + input.gatesAndBlockers.dead_letter_count
+      + input.memoryWriteback.rejected_write_count,
+    ),
+  } satisfies Partial<Record<ObservabilityMetricInstrument, number | undefined>>;
+}
+
+function buildRuntimeSemanticConventionProjection(input: {
+  snapshot: JsonRecord;
+  attempts: JsonRecord[];
+  stageAttempts: ReturnType<typeof buildStageAttemptExport>;
+  gatesAndBlockers: ReturnType<typeof buildGatesAndBlockersExport>;
+  memoryWriteback: ReturnType<typeof buildMemoryWritebackExport>;
+}) {
+  const { currentOwnerDelta, attempt } = selectedSemanticAttempt(input.snapshot, input.attempts);
+  const hardGate = record(currentOwnerDelta.hard_gate);
+  const semanticInput: ObservabilitySemanticConventionInput = {
+    current_owner_delta: {
+      stage_run_id: firstString(
+        currentOwnerDelta.stage_run_id,
+        hardGate.owner_answer_stage_run_id,
+        hardGate.closeout_receipt_stage_run_id,
+      ) ?? undefined,
+      current_owner: firstString(currentOwnerDelta.current_owner, currentOwnerDelta.owner, attempt.next_owner)
+        ?? undefined,
+      domain_id: firstString(currentOwnerDelta.domain_id, currentOwnerDelta.domain, attempt.domain_id) ?? undefined,
+      route_ref: firstRouteRef(currentOwnerDelta, attempt) ?? undefined,
+      receipt_ref: firstReceiptRef(currentOwnerDelta, attempt) ?? undefined,
+      typed_blocker_ref: firstTypedBlockerRef(currentOwnerDelta, attempt) ?? undefined,
+      source_fingerprint: firstString(currentOwnerDelta.source_fingerprint, attempt.source_fingerprint) ?? undefined,
+    },
+    stage_attempt: {
+      stage_attempt_id: stringValue(attempt.stage_attempt_id) ?? undefined,
+      attempt_id: firstString(attempt.attempt_id, attempt.stage_attempt_id) ?? undefined,
+      generation: typeof currentOwnerDelta.generation === 'number' ? currentOwnerDelta.generation : undefined,
+    },
+    provider_attempt: {
+      workflow_id: stringValue(attempt.workflow_id) ?? undefined,
+      task_queue: firstString(attempt.task_queue, record(attempt.provider_run).task_queue) ?? undefined,
+    },
+    metric_values: semanticMetricValues(input),
+  };
+  const readback = buildObservabilitySemanticConventionReadback(semanticInput);
+  const seed = buildObservabilitySemanticConventionExportSeed(semanticInput);
+  return {
+    ...seed,
+    runtime_export_binding: {
+      source_export_schema_version: 'observability_export.v1',
+      source_surfaces: [
+        'runtime_tray_snapshot',
+        'stage_attempt_workbench',
+        'app_operator_drilldown_current_owner_delta',
+        'provider_continuous_proof',
+      ],
+      app_operator_drilldown_ref: 'opl runtime app-operator-drilldown --detail full --json', // reuse-first: allow existing operator drilldown as a source ref, not a private observability UI.
+      selected_stage_attempt_id: stringValue(attempt.stage_attempt_id),
+      selected_domain_id: stringValue(attempt.domain_id),
+      selected_status: attemptStatus(attempt),
+      binding_policy: 'runtime_export_refs_only_no_payload_body_no_ready_claim',
+    },
+    canonical_fields: OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS.fields,
+    canonical_attributes: readback.canonical_attributes,
+    signal_mappings: OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS.signal_mappings,
+    forbidden_body_policy: {
+      body_included: false,
+      body_policy: seed.summary.body_policy,
+      forbidden_body_fields_present: readback.forbidden_body_fields_present,
+    },
+    summary: {
+      ...seed.summary,
+      semantic_convention_status: 'runtime_export_bound',
+      body_included: false,
+      domain_authority_claim: 'not_claimed',
+      runtime_ready_claim: 'not_claimed',
+      production_ready_claim: 'not_claimed',
+    },
+    authority_boundary: {
+      ...seed.authority_boundary,
+      no_domain_authority: true,
+      no_runtime_ready_claim: true,
+      no_domain_ready_claim: true,
+      no_production_ready_claim: true,
+    },
+  };
+}
+
 export async function buildObservabilityExport(
   contracts: FrameworkContracts,
   options: { format?: ObservabilityExportFormat } = {},
@@ -175,6 +357,11 @@ export async function buildObservabilityExport(
   const snapshot = record(payload.runtime_tray_snapshot);
   const workbench = record(snapshot.stage_attempt_workbench);
   const attempts = recordList(workbench.attempts);
+  const provider = buildProviderExport(snapshot);
+  const stageAttempts = buildStageAttemptExport(workbench, attempts);
+  const gatesAndBlockers = buildGatesAndBlockersExport(workbench, attempts);
+  const memoryWriteback = buildMemoryWritebackExport(workbench);
+  const sloReceiptHistory = buildSloReceiptHistoryExport(snapshot);
   return {
     surface_kind: 'opl_runtime_observability_export',
     schema_version: 'observability_export.v1',
@@ -185,13 +372,22 @@ export async function buildObservabilityExport(
       'temporal_provider_proof_receipts',
       'runtime_tray_snapshot',
       'stage_attempt_workbench',
+      'app_operator_drilldown_current_owner_delta',
+      'observability_semantic_conventions_contract',
       'domain_owned_projection_refs',
     ],
-    provider: buildProviderExport(snapshot),
-    stage_attempts: buildStageAttemptExport(workbench, attempts),
-    gates_and_blockers: buildGatesAndBlockersExport(workbench, attempts),
-    memory_writeback: buildMemoryWritebackExport(workbench),
-    slo_receipt_history: buildSloReceiptHistoryExport(snapshot),
+    provider,
+    stage_attempts: stageAttempts,
+    gates_and_blockers: gatesAndBlockers,
+    memory_writeback: memoryWriteback,
+    slo_receipt_history: sloReceiptHistory,
+    semantic_conventions: buildRuntimeSemanticConventionProjection({
+      snapshot,
+      attempts,
+      stageAttempts,
+      gatesAndBlockers,
+      memoryWriteback,
+    }),
     source_refs: sourceRefs(snapshot),
     authority_boundary: AUTHORITY_BOUNDARY,
   };
@@ -233,6 +429,10 @@ function linesForDomainStatus(values: Record<string, Record<string, number>>) {
 export function renderObservabilityOpenMetrics(exportPayload: Awaited<ReturnType<typeof buildObservabilityExport>>) {
   const providerKind = exportPayload.provider.readiness.provider_kind ?? 'unknown';
   const providerReady = exportPayload.provider.readiness.provider_ready === true ? 1 : 0;
+  const semanticConventionLines = renderObservabilitySemanticConventionOpenMetrics(exportPayload.semantic_conventions)
+    .trimEnd()
+    .split('\n')
+    .filter((line) => line !== '# EOF');
   const lines = [
     '# HELP opl_provider_ready Current configured family runtime provider readiness from the OPL read model.',
     '# TYPE opl_provider_ready gauge',
@@ -270,6 +470,7 @@ export function renderObservabilityOpenMetrics(exportPayload: Awaited<ReturnType
     }),
     metricLine('opl_provider_slo_receipts_executed_total', exportPayload.slo_receipt_history.executed_count),
     metricLine('opl_provider_slo_receipts_skipped_total', exportPayload.slo_receipt_history.skipped_count),
+    ...semanticConventionLines,
     '# HELP opl_authority_boundary Constant guard showing this export is read-only and non-authoritative.',
     '# TYPE opl_authority_boundary gauge',
     metricLine('opl_authority_boundary', 1, {

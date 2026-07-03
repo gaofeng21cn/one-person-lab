@@ -175,6 +175,15 @@ db.close();`,
     assert.equal(observability.slo_receipt_history.event_count, 1);
     assert.equal(observability.slo_receipt_history.executed_count, 1);
     assert.equal(observability.slo_receipt_history.proven_count, 1);
+    assert.equal(observability.semantic_conventions.surface_kind, 'opl_observability_export_readback_seed');
+    assert.equal(observability.semantic_conventions.summary.semantic_convention_status, 'runtime_export_bound');
+    assert.equal(observability.semantic_conventions.summary.body_included, false);
+    assert.equal(
+      observability.semantic_conventions.runtime_export_binding.binding_policy,
+      'runtime_export_refs_only_no_payload_body_no_ready_claim',
+    );
+    assert.equal(observability.semantic_conventions.authority_boundary.no_runtime_ready_claim, true);
+    assert.equal(observability.semantic_conventions.authority_boundary.no_domain_ready_claim, true);
     assert.equal(observability.authority_boundary.can_execute_repair, false);
     assert.equal(observability.authority_boundary.can_write_domain_truth, false);
     assert.equal(observability.authority_boundary.can_authorize_quality_verdict, false);
@@ -194,6 +203,9 @@ db.close();`,
     assert.match(openMetrics.stdout, /opl_memory_writeback_receipts_total 1/);
     assert.match(openMetrics.stdout, /opl_memory_writeback_rejected_total 1/);
     assert.match(openMetrics.stdout, /opl_provider_slo_receipts_total\{receipt_status="proven"\} 1/);
+    assert.match(openMetrics.stdout, /# TYPE opl_queue_length gauge/);
+    assert.match(openMetrics.stdout, /opl_queue_length(?:\{[^}]*\})? 3/);
+    assert.match(openMetrics.stdout, /# TYPE opl_observability_export_boundary gauge/);
     assert.match(openMetrics.stdout, /opl_authority_boundary\{can_execute_repair="false",can_write_domain_truth="false",can_authorize_quality_verdict="false",can_authorize_ready_verdict="false"\} 1/);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
