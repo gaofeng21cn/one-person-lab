@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { stdin as input, stdout as output } from 'node:process';
 import { createInterface } from 'node:readline';
 
+import { parseJsonText } from '../../kernel/json-file.ts';
 import {
   AcpBridgePayloadError,
   translateArtifactsPayload,
@@ -899,7 +900,7 @@ export async function runAcpStdioBridge(
 
     let request: AcpStdioRequest | JsonRpcRequest;
     try {
-      request = JSON.parse(trimmed) as AcpStdioRequest | JsonRpcRequest;
+      request = parseJsonText(trimmed) as AcpStdioRequest | JsonRpcRequest;
     } catch (error) {
       writable.write(
         `${JSON.stringify(

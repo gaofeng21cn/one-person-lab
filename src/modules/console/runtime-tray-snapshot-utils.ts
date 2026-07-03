@@ -9,10 +9,7 @@ import {
 import { type JsonRecord } from './runtime-tray-snapshot-types.ts';
 
 export { fileSourceRef, sourceRef, uniqueByRef };
-
-export function optionalString(value: unknown) {
-  return stringValue(value);
-}
+export { stringValue as optionalString } from '../../kernel/json-record.ts';
 
 export function optionalBoolean(value: unknown) {
   return typeof value === 'boolean' ? value : null;
@@ -20,7 +17,7 @@ export function optionalBoolean(value: unknown) {
 
 export function firstString(...values: unknown[]) {
   for (const value of values) {
-    const normalized = optionalString(value);
+    const normalized = stringValue(value);
     if (normalized) {
       return normalized;
     }
@@ -45,8 +42,8 @@ export function stringListFromRecords(value: unknown, key: string, limit = 5) {
 
   return value
     .map((entry) => isRecord(entry)
-      ? optionalString(entry[key])
-      : optionalString(entry))
+      ? stringValue(entry[key])
+      : stringValue(entry))
     .filter((entry): entry is string => Boolean(entry))
     .slice(0, limit);
 }

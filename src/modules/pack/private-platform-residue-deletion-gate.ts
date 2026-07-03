@@ -9,6 +9,11 @@ import type {
   DefaultCallerPrivatePlatformCleanupDisposition,
   DefaultCallerPrivatePlatformResidueTargetKind,
 } from '../../kernel/default-caller-retirement-guard.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
+import {
+  stringList,
+  stringValue,
+} from '../../kernel/json-record.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -25,22 +30,8 @@ type PrivatePlatformResidueGateSource = {
   } | null;
 };
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
 function residueKind(value: unknown): DefaultCallerPrivatePlatformResidueTargetKind | null {
-  const text = optionalString(value);
+  const text = stringValue(value);
   return text
     && (DEFAULT_CALLER_PRIVATE_PLATFORM_RESIDUE_TARGET_KINDS as readonly string[]).includes(text)
     ? text as DefaultCallerPrivatePlatformResidueTargetKind
@@ -48,7 +39,7 @@ function residueKind(value: unknown): DefaultCallerPrivatePlatformResidueTargetK
 }
 
 function cleanupDisposition(value: unknown): DefaultCallerPrivatePlatformCleanupDisposition | null {
-  const text = optionalString(value);
+  const text = stringValue(value);
   return text
     && (DEFAULT_CALLER_PRIVATE_PLATFORM_CLEANUP_ALLOWED_DISPOSITIONS as readonly string[]).includes(text)
     ? text as DefaultCallerPrivatePlatformCleanupDisposition
@@ -121,13 +112,13 @@ export function buildPrivatePlatformResidueDeletionGate(
       return [];
     }
     return [{
-      module_id: optionalString(source.module_id) ?? 'unknown_private_platform_residue',
+      module_id: stringValue(source.module_id) ?? 'unknown_private_platform_residue',
       residue_kind: gate.residue_kind,
       disposition: gate.disposition,
       code_paths: stringList(source.code_paths),
       active_callers: stringList(source.active_callers),
-      active_caller_status: optionalString(source.active_caller_status),
-      migration_action: optionalString(source.migration_action),
+      active_caller_status: stringValue(source.active_caller_status),
+      migration_action: stringValue(source.migration_action),
       bridge_exit_gate: gate.bridge_exit_gate,
     }];
   });

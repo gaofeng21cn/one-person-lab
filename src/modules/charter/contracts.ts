@@ -21,6 +21,7 @@ import {
   isRecord,
   type ErrorCode,
 } from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
 import { validateAgentWorkspaceNorm } from './contract-validators/agent-workspace-norm-contract.ts';
 import {
   validateBrandCliGovernance,
@@ -94,7 +95,7 @@ function parseJsonFile(filePath: string): unknown {
   }
 
   try {
-    return JSON.parse(raw);
+    return parseJsonText(raw);
   } catch (error) {
     throw new FrameworkContractError(
       'contract_json_invalid',

@@ -1,17 +1,13 @@
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from '../atlas/index.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import type { JsonRecord, RuntimeTraySourceRef } from './runtime-tray-snapshot-types.ts';
-import { sourceRef, uniqueByRef } from './runtime-tray-snapshot-utils.ts';
+import { optionalString, sourceRef, uniqueByRef } from './runtime-tray-snapshot-utils.ts';
 
 type DomainProjectionSource = {
   source_surface: string;
   pointer: string;
   projection: JsonRecord | null;
 };
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value : null;
-}
 
 function uniqueStrings(values: string[]) {
   return [...new Set(values)];

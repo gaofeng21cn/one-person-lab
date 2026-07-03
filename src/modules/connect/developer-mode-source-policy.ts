@@ -1,5 +1,7 @@
 import { spawnSync } from 'node:child_process';
 
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
 import type { OplDeveloperSupervisorConfigFile } from '../../kernel/system-preferences.ts';
 import { readOplDeveloperSupervisorConfig } from '../../kernel/system-preferences.ts';
 
@@ -41,8 +43,8 @@ function parseJsonRecord(raw: string | null | undefined) {
   }
 
   try {
-    const parsed = JSON.parse(trimmed) as unknown;
-    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+    const parsed = parseJsonText(trimmed);
+    if (isRecord(parsed)) {
       return parsed as Record<string, unknown>;
     }
   } catch {

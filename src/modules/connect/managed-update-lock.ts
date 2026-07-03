@@ -1,7 +1,11 @@
 import fs from 'node:fs';
 
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import {
+  FrameworkContractError,
+  isRecord,
+} from '../../kernel/contract-validation.ts';
+import { readJsonFileOrNull } from '../../kernel/json-file.ts';
 import type { ManagedUpdateOperation } from './managed-update-kernel.ts';
 import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 
@@ -37,11 +41,8 @@ function isStaleLock(file: string) {
 }
 
 function readLockFile(file: string) {
-  try {
-    return JSON.parse(fs.readFileSync(file, 'utf8')) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
+  const payload = readJsonFileOrNull(file);
+  return isRecord(payload) ? payload : null;
 }
 
 function createLockFile(file: string, receipt: ManagedUpdateLockReceipt) {

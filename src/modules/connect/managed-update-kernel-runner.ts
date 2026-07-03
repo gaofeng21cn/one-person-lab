@@ -13,6 +13,7 @@ import {
   runScholarSkillsSourceMaintenance,
   scholarSkillsStateForAgentPackageChannel,
 } from './system-installation/scholarskills-package-channel.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import {
   buildManagedUpdateKernelProjection,
@@ -62,10 +63,6 @@ type AdapterExecutionResult = {
   reload_guidance?: ManagedUpdateReloadGuidance;
   post_apply_actions?: AdapterPostApplyAction[];
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
 
 function stringValue(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;

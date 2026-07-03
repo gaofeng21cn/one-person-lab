@@ -4,15 +4,12 @@ import path from 'node:path';
 import {
   buildRepoGeneratedInterfaceBundle,
 } from '../../pack/index.ts';
+import { isRecord } from '../../../kernel/contract-validation.ts';
 import {
   resolveCodexHome,
   resolveGeneratedPluginRootForName,
 } from './paths.ts';
 import type { InspectFamilySkillPack, SkillPackSpec } from './registry.ts';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function recordList(value: unknown): Array<Record<string, unknown>> {
   return Array.isArray(value) ? value.filter(isRecord) : [];
