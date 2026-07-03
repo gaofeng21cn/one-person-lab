@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 
+import { optionalString, readJsonPayloadFile, writeJsonPayloadFile } from '../../kernel/json-file.ts';
+import { record, stringList } from '../../kernel/json-record.ts';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
@@ -114,22 +116,12 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
+function stringListValue(value: unknown) {
   const scalar = optionalString(value);
   if (scalar) {
     return [scalar];
   }
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
+  return stringList(value);
 }
 
 function uniqueStrings(values: string[]) {
@@ -189,7 +181,7 @@ function successRefs(input: MagManifestSustainedConsumptionReceiptInput) {
 }
 
 export function magManifestSustainedConsumptionTargetKey(value: unknown) {
-  const target = isRecord(value) ? value : {};
+  const target = record(value);
   const explicit = optionalString(target.target_key);
   if (explicit) {
     return explicit;
@@ -229,10 +221,7 @@ function forbiddenPayloadFields(
   value: unknown,
   pathParts: string[] = [],
 ): ForbiddenPayloadField[] {
-  if (!isRecord(value)) {
-    return [];
-  }
-  return Object.entries(value).flatMap(([key, child]) => {
+  return Object.entries(record(value)).flatMap(([key, child]) => {
     const pathValue = [...pathParts, key].join('.');
     const normalized = normalizedKey(key);
     return [
@@ -255,7 +244,7 @@ function forbiddenPayloadFields(
               'mag_manifest_sustained_consumption_payload_must_not_carry_ready_or_soak_claims',
           }]
         : []),
-      ...(isRecord(child) ? forbiddenPayloadFields(child, [...pathParts, key]) : []),
+      ...forbiddenPayloadFields(child, [...pathParts, key]),
       ...(Array.isArray(child)
         ? child.flatMap((entry, index) =>
             forbiddenPayloadFields(entry, [...pathParts, `${key}[${index}]`])
@@ -266,16 +255,13 @@ function forbiddenPayloadFields(
 }
 
 function unknownTopLevelPayloadFields(value: unknown) {
-  if (!isRecord(value)) {
-    return [];
-  }
-  return Object.keys(value)
+  return Object.keys(record(value))
     .filter((key) => !ALLOWED_OPERATOR_PAYLOAD_FIELDS.has(key))
     .sort();
 }
 
 function normalizeTargetIdentity(value: unknown) {
-  const target = isRecord(value) ? value : {};
+  const target = record(value);
   const targetKey = magManifestSustainedConsumptionTargetKey(target);
   return {
     ...target,
@@ -284,40 +270,38 @@ function normalizeTargetIdentity(value: unknown) {
 }
 
 function normalizeReceipt(value: unknown): MagManifestSustainedConsumptionReceipt | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-  const receipt_ref = optionalString(value.receipt_ref);
+  const source = record(value);
+  const receipt_ref = optionalString(source.receipt_ref);
   if (
     !receipt_ref
-    || value.source_surface !== 'opl_mag_manifest_sustained_consumption_followthrough_refs'
+    || source.source_surface !== 'opl_mag_manifest_sustained_consumption_followthrough_refs'
   ) {
     return null;
   }
   const receipt = {
     surface_kind: 'opl_mag_manifest_sustained_consumption_followthrough_receipt',
     receipt_ref,
-    receipt_status: value.receipt_status === 'verified' ? 'verified' : 'recorded',
-    recorded_at: optionalString(value.recorded_at) ?? nowIso(),
-    target_identity: normalizeTargetIdentity(value.target_identity),
-    payload_path: value.payload_path === 'typed_blocker_path'
+    receipt_status: source.receipt_status === 'verified' ? 'verified' : 'recorded',
+    recorded_at: optionalString(source.recorded_at) ?? nowIso(),
+    target_identity: normalizeTargetIdentity(source.target_identity),
+    payload_path: source.payload_path === 'typed_blocker_path'
       ? 'typed_blocker_path'
       : 'sustained_consumption_refs_path',
-    app_operator_consumption_refs: uniqueStrings(stringList(value.app_operator_consumption_refs)),
+    app_operator_consumption_refs: uniqueStrings(stringListValue(source.app_operator_consumption_refs)),
     default_caller_consumption_refs: uniqueStrings(
-      stringList(value.default_caller_consumption_refs),
+      stringListValue(source.default_caller_consumption_refs),
     ),
-    owner_payload_response_refs: uniqueStrings(stringList(value.owner_payload_response_refs)),
+    owner_payload_response_refs: uniqueStrings(stringListValue(source.owner_payload_response_refs)),
     workspace_receipt_scaleout_evidence_refs: uniqueStrings(
-      stringList(value.workspace_receipt_scaleout_evidence_refs),
+      stringListValue(source.workspace_receipt_scaleout_evidence_refs),
     ),
-    no_forbidden_write_refs: uniqueStrings(stringList(value.no_forbidden_write_refs)),
+    no_forbidden_write_refs: uniqueStrings(stringListValue(source.no_forbidden_write_refs)),
     long_soak_or_typed_blocker_refs: uniqueStrings(
-      stringList(value.long_soak_or_typed_blocker_refs),
+      stringListValue(source.long_soak_or_typed_blocker_refs),
     ),
-    typed_blocker_refs: uniqueStrings(stringList(value.typed_blocker_refs)),
+    typed_blocker_refs: uniqueStrings(stringListValue(source.typed_blocker_refs)),
     source_surface: 'opl_mag_manifest_sustained_consumption_followthrough_refs',
-    source_ref: optionalString(value.source_ref),
+    source_ref: optionalString(source.source_ref),
     authority_boundary: refsOnlyAuthorityBoundary(),
   } satisfies MagManifestSustainedConsumptionReceipt;
   return allEvidenceRefs(receipt).length > 0 ? receipt : null;
@@ -345,8 +329,8 @@ function readMagManifestSustainedConsumptionLedger(): MagManifestSustainedConsum
     return emptyLedger();
   }
   try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
-    if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
+    const parsed = record(readJsonPayloadFile(file));
+    if (!Array.isArray(parsed.receipts)) {
       return emptyLedger();
     }
     return {
@@ -368,10 +352,7 @@ function writeMagManifestSustainedConsumptionLedger(
   ledger: MagManifestSustainedConsumptionLedger,
 ) {
   const paths = ensureOplStateDir();
-  fs.writeFileSync(
-    paths.mag_manifest_sustained_consumption_ledger_file,
-    `${JSON.stringify(ledger, null, 2)}\n`,
-  );
+  writeJsonPayloadFile(paths.mag_manifest_sustained_consumption_ledger_file, ledger);
 }
 
 export function preflightMagManifestSustainedConsumptionReceiptInput(

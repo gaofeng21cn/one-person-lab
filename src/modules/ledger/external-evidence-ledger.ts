@@ -2,13 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { readJsonPayloadFile, writeJsonPayloadFile } from '../../kernel/json-file.ts';
+import { record, recordList } from '../../kernel/json-record.ts';
 import {
   normalizeExternalEvidenceReceiptSemantics,
   type ExternalEvidenceReceiptSemantics,
 } from './external-evidence-receipt-classification.ts';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
-
-type JsonRecord = Record<string, unknown>;
 
 export type ExternalEvidenceApplyMode = 'record' | 'verify';
 
@@ -77,10 +77,6 @@ type ExternalEvidenceLedger = {
 
 function nowIso() {
   return new Date().toISOString();
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function normalizeText(value: string | null | undefined, field: string) {
@@ -192,13 +188,13 @@ function readLedger(): ExternalEvidenceLedger {
   if (!fs.existsSync(file)) {
     return emptyLedger();
   }
-  const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
-  if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
+  const parsed = record(readJsonPayloadFile(file));
+  if (!Array.isArray(parsed.receipts)) {
     return emptyLedger();
   }
   return {
     ...emptyLedger(),
-    receipts: parsed.receipts.filter(isRecord).map((receipt) => ({
+    receipts: recordList(parsed.receipts).map((receipt) => ({
       surface_kind: 'opl_external_evidence_receipt',
       receipt_ref: normalizeText(String(receipt.receipt_ref ?? ''), 'receipt_ref'),
       receipt_status: receipt.receipt_status === 'verified' ? 'verified' : 'recorded',
@@ -231,7 +227,7 @@ function writeLedger(ledger: ExternalEvidenceLedger) {
   const file = ledgerPath();
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const tempFile = `${file}.${process.pid}.${Date.now()}.tmp`;
-  fs.writeFileSync(tempFile, `${JSON.stringify(ledger, null, 2)}\n`);
+  writeJsonPayloadFile(tempFile, ledger);
   fs.renameSync(tempFile, file);
 }
 

@@ -1,4 +1,6 @@
 import fs from 'node:fs';
+import { optionalString, readJsonPayloadFile, writeJsonPayloadFile } from '../../kernel/json-file.ts';
+import { record, stringList } from '../../kernel/json-record.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 
 export type ProviderLongSoakEvidenceReceipt = {
@@ -60,20 +62,6 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
@@ -130,27 +118,25 @@ function receiptRef(input: ProviderLongSoakEvidenceReceiptInput) {
 }
 
 function normalizeReceipt(value: unknown): ProviderLongSoakEvidenceReceipt | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-  const receipt_ref = optionalString(value.receipt_ref);
-  if (!receipt_ref || value.target_surface !== 'provider_long_soak') {
+  const source = record(value);
+  const receipt_ref = optionalString(source.receipt_ref);
+  if (!receipt_ref || source.target_surface !== 'provider_long_soak') {
     return null;
   }
   const receipt = {
     surface_kind: 'opl_provider_long_soak_evidence_receipt',
     receipt_ref,
-    receipt_status: value.receipt_status === 'verified' ? 'verified' : 'recorded',
-    recorded_at: optionalString(value.recorded_at) ?? nowIso(),
+    receipt_status: source.receipt_status === 'verified' ? 'verified' : 'recorded',
+    recorded_at: optionalString(source.recorded_at) ?? nowIso(),
     target_surface: 'provider_long_soak',
     provider_kind: 'temporal',
-    long_soak_refs: uniqueStrings(stringList(value.long_soak_refs)),
-    recovery_refs: uniqueStrings(stringList(value.recovery_refs)),
-    dead_letter_refs: uniqueStrings(stringList(value.dead_letter_refs)),
-    provider_blocker_refs: uniqueStrings(stringList(value.provider_blocker_refs)),
-    typed_blocker_refs: uniqueStrings(stringList(value.typed_blocker_refs)),
-    owner_acceptance_refs: uniqueStrings(stringList(value.owner_acceptance_refs)),
-    capability_requirement_ids: uniqueStrings(stringList(value.capability_requirement_ids)),
+    long_soak_refs: uniqueStrings(stringList(source.long_soak_refs)),
+    recovery_refs: uniqueStrings(stringList(source.recovery_refs)),
+    dead_letter_refs: uniqueStrings(stringList(source.dead_letter_refs)),
+    provider_blocker_refs: uniqueStrings(stringList(source.provider_blocker_refs)),
+    typed_blocker_refs: uniqueStrings(stringList(source.typed_blocker_refs)),
+    owner_acceptance_refs: uniqueStrings(stringList(source.owner_acceptance_refs)),
+    capability_requirement_ids: uniqueStrings(stringList(source.capability_requirement_ids)),
     source_surface: 'opl_provider_long_soak_evidence',
     authority_boundary: providerLongSoakEvidenceAuthorityBoundary(),
   } satisfies ProviderLongSoakEvidenceReceipt;
@@ -163,8 +149,8 @@ function readProviderLongSoakEvidenceLedger(): ProviderLongSoakEvidenceLedger {
     return emptyLedger();
   }
   try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
-    if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
+    const parsed = record(readJsonPayloadFile(file));
+    if (!Array.isArray(parsed.receipts)) {
       return emptyLedger();
     }
     return {
@@ -180,10 +166,7 @@ function readProviderLongSoakEvidenceLedger(): ProviderLongSoakEvidenceLedger {
 
 function writeProviderLongSoakEvidenceLedger(ledger: ProviderLongSoakEvidenceLedger) {
   const paths = ensureOplStateDir();
-  fs.writeFileSync(
-    paths.provider_long_soak_evidence_ledger_file,
-    `${JSON.stringify(ledger, null, 2)}\n`,
-  );
+  writeJsonPayloadFile(paths.provider_long_soak_evidence_ledger_file, ledger);
 }
 
 function normalizeInput(

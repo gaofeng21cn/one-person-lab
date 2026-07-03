@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 
+import { optionalString, readJsonPayloadFile, writeJsonPayloadFile } from '../../kernel/json-file.ts';
+import { record, stringList } from '../../kernel/json-record.ts';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
@@ -138,22 +140,12 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
+function stringListValue(value: unknown) {
   const scalar = optionalString(value);
   if (scalar) {
     return [scalar];
   }
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
+  return stringList(value);
 }
 
 function uniqueStrings(values: string[]) {
@@ -211,7 +203,7 @@ function allEvidenceRefs(input: DomainOwnerPayloadSummaryReceiptInput) {
 }
 
 export function domainOwnerPayloadSummaryTargetKey(value: unknown) {
-  const target = isRecord(value) ? value : {};
+  const target = record(value);
   const explicit = optionalString(target.target_key);
   if (explicit) {
     return explicit;
@@ -255,7 +247,7 @@ function successRefs(input: DomainOwnerPayloadSummaryReceiptInput, targetIdentit
 }
 
 function selectedPayloadPath(input: DomainOwnerPayloadSummaryReceiptInput): PayloadPath | null {
-  const targetIdentity = isRecord(input.target_identity) ? input.target_identity : {};
+  const targetIdentity = record(input.target_identity);
   const typedBlockerRefs = input.typed_blocker_refs ?? [];
   if (typedBlockerRefs.length > 0) {
     return 'typed_blocker_path';
@@ -275,10 +267,7 @@ function forbiddenPayloadFields(value: unknown, pathParts: string[] = []): {
   forbidden_value: unknown;
   reason: string;
 }[] {
-  if (!isRecord(value)) {
-    return [];
-  }
-  return Object.entries(value).flatMap(([key, child]) => {
+  return Object.entries(record(value)).flatMap(([key, child]) => {
     const path = [...pathParts, key].join('.');
     const bodyFieldPresent = FORBIDDEN_BODY_FIELDS.has(key)
       && child !== null
@@ -302,7 +291,7 @@ function forbiddenPayloadFields(value: unknown, pathParts: string[] = []): {
               'domain_owner_payload_summary_payload_must_not_carry_readiness_or_artifact_authority_claims',
           }]
         : []),
-      ...(isRecord(child) ? forbiddenPayloadFields(child, [...pathParts, key]) : []),
+      ...forbiddenPayloadFields(child, [...pathParts, key]),
       ...(Array.isArray(child)
         ? child.flatMap((entry, index) =>
             forbiddenPayloadFields(entry, [...pathParts, `${key}[${index}]`])
@@ -313,7 +302,7 @@ function forbiddenPayloadFields(value: unknown, pathParts: string[] = []): {
 }
 
 function normalizeTargetIdentity(value: unknown): Record<string, unknown> {
-  const target = isRecord(value) ? value : {};
+  const target = record(value);
   const targetKey = domainOwnerPayloadSummaryTargetKey(target);
   return {
     ...target,
@@ -322,35 +311,33 @@ function normalizeTargetIdentity(value: unknown): Record<string, unknown> {
 }
 
 function normalizeReceipt(value: unknown): DomainOwnerPayloadSummaryReceipt | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-  const receipt_ref = optionalString(value.receipt_ref);
-  if (!receipt_ref || value.source_surface !== 'opl_domain_owner_payload_summary_refs') {
+  const source = record(value);
+  const receipt_ref = optionalString(source.receipt_ref);
+  if (!receipt_ref || source.source_surface !== 'opl_domain_owner_payload_summary_refs') {
     return null;
   }
   const receipt = {
     surface_kind: 'opl_domain_owner_payload_summary_receipt',
     receipt_ref,
-    receipt_status: value.receipt_status === 'verified' ? 'verified' : 'recorded',
-    recorded_at: optionalString(value.recorded_at) ?? nowIso(),
-    target_identity: normalizeTargetIdentity(value.target_identity),
-    payload_path: value.payload_path === 'typed_blocker_path'
+    receipt_status: source.receipt_status === 'verified' ? 'verified' : 'recorded',
+    recorded_at: optionalString(source.recorded_at) ?? nowIso(),
+    target_identity: normalizeTargetIdentity(source.target_identity),
+    payload_path: source.payload_path === 'typed_blocker_path'
       ? 'typed_blocker_path'
       : 'success_refs_path',
-    domain_owner_receipt_refs: uniqueStrings(stringList(value.domain_owner_receipt_refs)),
-    domain_receipt_refs: uniqueStrings(stringList(value.domain_receipt_refs)),
-    no_regression_evidence_refs: uniqueStrings(stringList(value.no_regression_evidence_refs)),
-    owner_chain_refs: uniqueStrings(stringList(value.owner_chain_refs)),
-    human_gate_refs: uniqueStrings(stringList(value.human_gate_refs)),
-    quality_or_export_receipt_refs: uniqueStrings(stringList(value.quality_or_export_receipt_refs)),
-    reviewer_receipt_refs: uniqueStrings(stringList(value.reviewer_receipt_refs)),
-    long_soak_refs: uniqueStrings(stringList(value.long_soak_refs)),
-    monitor_freshness_refs: uniqueStrings(stringList(value.monitor_freshness_refs)),
-    runtime_event_refs: uniqueStrings(stringList(value.runtime_event_refs)),
-    typed_blocker_refs: uniqueStrings(stringList(value.typed_blocker_refs)),
+    domain_owner_receipt_refs: uniqueStrings(stringListValue(source.domain_owner_receipt_refs)),
+    domain_receipt_refs: uniqueStrings(stringListValue(source.domain_receipt_refs)),
+    no_regression_evidence_refs: uniqueStrings(stringListValue(source.no_regression_evidence_refs)),
+    owner_chain_refs: uniqueStrings(stringListValue(source.owner_chain_refs)),
+    human_gate_refs: uniqueStrings(stringListValue(source.human_gate_refs)),
+    quality_or_export_receipt_refs: uniqueStrings(stringListValue(source.quality_or_export_receipt_refs)),
+    reviewer_receipt_refs: uniqueStrings(stringListValue(source.reviewer_receipt_refs)),
+    long_soak_refs: uniqueStrings(stringListValue(source.long_soak_refs)),
+    monitor_freshness_refs: uniqueStrings(stringListValue(source.monitor_freshness_refs)),
+    runtime_event_refs: uniqueStrings(stringListValue(source.runtime_event_refs)),
+    typed_blocker_refs: uniqueStrings(stringListValue(source.typed_blocker_refs)),
     source_surface: 'opl_domain_owner_payload_summary_refs',
-    source_ref: optionalString(value.source_ref),
+    source_ref: optionalString(source.source_ref),
     authority_boundary: refsOnlyAuthorityBoundary(),
   } satisfies DomainOwnerPayloadSummaryReceipt;
   return allEvidenceRefs(receipt).length > 0 ? receipt : null;
@@ -378,8 +365,8 @@ function readDomainOwnerPayloadSummaryLedger(): DomainOwnerPayloadSummaryLedger 
     return emptyLedger();
   }
   try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
-    if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
+    const parsed = record(readJsonPayloadFile(file));
+    if (!Array.isArray(parsed.receipts)) {
       return emptyLedger();
     }
     return {
@@ -397,10 +384,7 @@ function readDomainOwnerPayloadSummaryLedger(): DomainOwnerPayloadSummaryLedger 
 
 function writeDomainOwnerPayloadSummaryLedger(ledger: DomainOwnerPayloadSummaryLedger) {
   const paths = ensureOplStateDir();
-  fs.writeFileSync(
-    paths.domain_owner_payload_summary_ledger_file,
-    `${JSON.stringify(ledger, null, 2)}\n`,
-  );
+  writeJsonPayloadFile(paths.domain_owner_payload_summary_ledger_file, ledger);
 }
 
 export function preflightDomainOwnerPayloadSummaryReceiptInput(

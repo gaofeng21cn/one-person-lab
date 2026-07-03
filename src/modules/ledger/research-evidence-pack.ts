@@ -1,4 +1,10 @@
-type JsonRecord = Record<string, unknown>;
+import {
+  record,
+  recordList,
+  stringList,
+  stringValue as optionalString,
+  type JsonRecord,
+} from '../../kernel/json-record.ts';
 
 type ChecksumStatus = 'verified' | 'missing' | 'mismatch' | 'unchecked';
 type RestoreStatus = 'restore_ready' | 'restore_pending' | 'restored' | 'restore_blocked' | 'not_required';
@@ -95,29 +101,12 @@ const AUTHORITY_BOUNDARY = {
   can_mutate_artifact_body: false,
 } as const;
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
-function stringList(value: unknown) {
-  if (typeof value === 'string' && value.trim().length > 0) {
-    return [value];
+function stringListValue(value: unknown) {
+  const scalar = optionalString(value);
+  if (scalar) {
+    return [scalar];
   }
-  return Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-    : [];
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value : null;
+  return stringList(value);
 }
 
 function validationError(
@@ -133,10 +122,11 @@ function collectForbiddenBodyErrors(value: unknown, path: string, errors: Resear
     value.forEach((entry, index) => collectForbiddenBodyErrors(entry, `${path}[${index}]`, errors));
     return;
   }
-  if (!isRecord(value)) {
+  const source = record(value);
+  if (source !== value) {
     return;
   }
-  for (const [key, entry] of Object.entries(value)) {
+  for (const [key, entry] of Object.entries(source)) {
     const childPath = path === '$' ? `$.${key}` : `${path}.${key}`;
     if (key === 'domain_body') {
       errors.push(validationError(
@@ -181,23 +171,25 @@ function validateAuthorityBoundary(value: unknown, errors: ResearchEvidencePackV
 
 export function validateResearchEvidencePack(value: unknown): ResearchEvidencePackValidation {
   const errors: ResearchEvidencePackValidationError[] = [];
-  if (!isRecord(value)) {
+  const pack = record(value);
+  if (pack !== value) {
     return {
       valid: false,
       errors: [validationError('root_not_object', '$', 'Research evidence pack must be an object.')],
     };
   }
 
-  if (value.surface_kind !== 'research_evidence_pack') {
+  if (pack.surface_kind !== 'research_evidence_pack') {
     errors.push(validationError('surface_kind_invalid', '$.surface_kind', 'surface_kind must be research_evidence_pack.'));
   }
-  if (value.version !== 'research_evidence_pack.v1') {
+  if (pack.version !== 'research_evidence_pack.v1') {
     errors.push(validationError('version_invalid', '$.version', 'version must be research_evidence_pack.v1.'));
   }
 
   for (const [field, surfaceKind, version] of REQUIRED_SURFACES) {
-    const surface = value[field];
-    if (!isRecord(surface)) {
+    const surfaceValue = pack[field];
+    const surface = record(surfaceValue);
+    if (surface !== surfaceValue) {
       errors.push(validationError('surface_missing', `$.${field}`, `${field} must be an object.`));
       continue;
     }
@@ -210,8 +202,8 @@ export function validateResearchEvidencePack(value: unknown): ResearchEvidencePa
     }
   }
 
-  validateAuthorityBoundary(value.authority_boundary, errors);
-  collectForbiddenBodyErrors(value, '$', errors);
+  validateAuthorityBoundary(pack.authority_boundary, errors);
+  collectForbiddenBodyErrors(pack, '$', errors);
 
   return { valid: errors.length === 0, errors };
 }
@@ -263,7 +255,7 @@ function refSummary(sourceSurface: string, ref: JsonRecord): ResearchEvidencePac
 }
 
 function scalarRefSummaries(sourceSurface: string, values: unknown, role: string) {
-  return stringList(values).map((ref) => ({
+  return stringListValue(values).map((ref) => ({
     ref,
     source_surface: sourceSurface,
     ref_id: null,
@@ -419,10 +411,10 @@ function missingRefs(refs: Array<{ source_surface: string; ref: JsonRecord }>): 
 }
 
 function replayStageReady(stage: JsonRecord) {
-  return stringList(stage.append_only_event_log_refs).length > 0
-    && stringList(stage.attempt_ledger_refs).length > 0
-    && stringList(stage.recorded_runtime_event_refs).length > 0
-    && stringList(stage.closeout_receipt_refs).length > 0;
+  return stringListValue(stage.append_only_event_log_refs).length > 0
+    && stringListValue(stage.attempt_ledger_refs).length > 0
+    && stringListValue(stage.recorded_runtime_event_refs).length > 0
+    && stringListValue(stage.closeout_receipt_refs).length > 0;
 }
 
 function stageReplayReadiness(pack: JsonRecord) {
@@ -465,7 +457,7 @@ export function summarizeResearchEvidencePack(value: unknown): ResearchEvidenceP
     failed_path_count: recordList(ledger.failed_paths).length,
     negative_result_count: recordList(ledger.negative_results).length,
     decision_trace_refs: unique(decisionTraceRefs),
-    next_owner_refs: unique([...stringList(decisions.next_owner_refs), ...decisionOwnerRefs]),
+    next_owner_refs: unique([...stringListValue(decisions.next_owner_refs), ...decisionOwnerRefs]),
     stage_replay_readiness: stageReplayReadiness(pack),
     authority_boundary: { ...AUTHORITY_BOUNDARY },
   };

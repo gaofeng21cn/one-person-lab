@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { optionalString, readJsonPayloadFile, writeJsonPayloadFile } from '../../kernel/json-file.ts';
+import { record, stringList, type JsonRecord } from '../../kernel/json-record.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
-
-type JsonRecord = Record<string, unknown>;
 
 export type StandardAgentTemplateConsumptionReceipt = {
   surface_kind: 'opl_standard_agent_template_consumption_receipt';
@@ -81,22 +81,12 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
+function stringListValue(value: unknown) {
   const scalar = optionalString(value);
   if (scalar) {
     return [scalar];
   }
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
+  return stringList(value);
 }
 
 function uniqueStrings(values: string[]) {
@@ -192,38 +182,36 @@ function blockedReceipt(
 }
 
 function normalizeReceipt(value: unknown): StandardAgentTemplateConsumptionReceipt | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-  const receipt_ref = optionalString(value.receipt_ref);
-  const evidence_ref = optionalString(value.evidence_ref);
-  const evidence_fingerprint = optionalString(value.evidence_fingerprint);
-  const cohort_evidence_ref = optionalString(value.cohort_evidence_ref);
-  const cohort_evidence_fingerprint = optionalString(value.cohort_evidence_fingerprint);
+  const source = record(value);
+  const receipt_ref = optionalString(source.receipt_ref);
+  const evidence_ref = optionalString(source.evidence_ref);
+  const evidence_fingerprint = optionalString(source.evidence_fingerprint);
+  const cohort_evidence_ref = optionalString(source.cohort_evidence_ref);
+  const cohort_evidence_fingerprint = optionalString(source.cohort_evidence_fingerprint);
   if (
     !receipt_ref
     || !evidence_ref
     || !evidence_fingerprint
     || !cohort_evidence_ref
     || !cohort_evidence_fingerprint
-    || value.target_surface !== 'standard_agent_template_consumption'
+    || source.target_surface !== 'standard_agent_template_consumption'
   ) {
     return null;
   }
   return {
     surface_kind: 'opl_standard_agent_template_consumption_receipt',
     receipt_ref,
-    receipt_status: value.receipt_status === 'verified' ? 'verified' : 'recorded',
-    recorded_at: optionalString(value.recorded_at) ?? nowIso(),
+    receipt_status: source.receipt_status === 'verified' ? 'verified' : 'recorded',
+    recorded_at: optionalString(source.recorded_at) ?? nowIso(),
     target_surface: 'standard_agent_template_consumption',
     evidence_ref,
     evidence_fingerprint,
     cohort_evidence_ref,
     cohort_evidence_fingerprint,
-    sample_evidence_refs: uniqueStrings(stringList(value.sample_evidence_refs)),
-    sample_evidence_fingerprints: uniqueStrings(stringList(value.sample_evidence_fingerprints)),
-    consumed_surface_refs: uniqueStrings(stringList(value.consumed_surface_refs)),
-    replay_command_ref: optionalString(value.replay_command_ref)
+    sample_evidence_refs: uniqueStrings(stringListValue(source.sample_evidence_refs)),
+    sample_evidence_fingerprints: uniqueStrings(stringListValue(source.sample_evidence_fingerprints)),
+    consumed_surface_refs: uniqueStrings(stringListValue(source.consumed_surface_refs)),
+    replay_command_ref: optionalString(source.replay_command_ref)
       ?? 'opl agents scaffold --consumption-evidence',
     source_surface: 'opl_standard_agent_template_consumption_evidence',
     evidence_ref_policy:
@@ -238,8 +226,8 @@ export function readStandardAgentTemplateConsumptionLedger(): StandardAgentTempl
     return emptyLedger();
   }
   try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
-    if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
+    const parsed = record(readJsonPayloadFile(file));
+    if (!Array.isArray(parsed.receipts)) {
       return emptyLedger();
     }
     return {
@@ -259,10 +247,7 @@ function writeStandardAgentTemplateConsumptionLedger(
   ledger: StandardAgentTemplateConsumptionLedger,
 ) {
   const paths = ensureOplStateDir();
-  fs.writeFileSync(
-    paths.standard_agent_template_consumption_ledger_file,
-    `${JSON.stringify(ledger, null, 2)}\n`,
-  );
+  writeJsonPayloadFile(paths.standard_agent_template_consumption_ledger_file, ledger);
 }
 
 function normalizeInput(

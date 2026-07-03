@@ -1,4 +1,6 @@
 import fs from 'node:fs';
+import { optionalString, readJsonPayloadFile, writeJsonPayloadFile } from '../../kernel/json-file.ts';
+import { record, stringList } from '../../kernel/json-record.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 
 export type MemoryArtifactLifecycleEvidenceReceipt = {
@@ -66,20 +68,6 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
@@ -143,37 +131,35 @@ function receiptRef(input: MemoryArtifactLifecycleEvidenceReceiptInput) {
 }
 
 function normalizeReceipt(value: unknown): MemoryArtifactLifecycleEvidenceReceipt | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-  const receipt_ref = optionalString(value.receipt_ref);
-  if (!receipt_ref || value.target_surface !== 'memory_artifact_lifecycle') {
+  const source = record(value);
+  const receipt_ref = optionalString(source.receipt_ref);
+  if (!receipt_ref || source.target_surface !== 'memory_artifact_lifecycle') {
     return null;
   }
   const receipt = {
     surface_kind: 'opl_memory_artifact_lifecycle_evidence_receipt',
     receipt_ref,
-    receipt_status: value.receipt_status === 'verified' ? 'verified' : 'recorded',
-    recorded_at: optionalString(value.recorded_at) ?? nowIso(),
+    receipt_status: source.receipt_status === 'verified' ? 'verified' : 'recorded',
+    recorded_at: optionalString(source.recorded_at) ?? nowIso(),
     target_surface: 'memory_artifact_lifecycle',
-    memory_receipt_refs: uniqueStrings(stringList(value.memory_receipt_refs)),
+    memory_receipt_refs: uniqueStrings(stringList(source.memory_receipt_refs)),
     memory_writeback_receipt_refs: uniqueStrings(
-      stringList(value.memory_writeback_receipt_refs),
+      stringList(source.memory_writeback_receipt_refs),
     ),
     artifact_mutation_receipt_refs: uniqueStrings(
-      stringList(value.artifact_mutation_receipt_refs),
+      stringList(source.artifact_mutation_receipt_refs),
     ),
     package_lifecycle_receipt_refs: uniqueStrings(
-      stringList(value.package_lifecycle_receipt_refs),
+      stringList(source.package_lifecycle_receipt_refs),
     ),
     export_lifecycle_receipt_refs: uniqueStrings(
-      stringList(value.export_lifecycle_receipt_refs),
+      stringList(source.export_lifecycle_receipt_refs),
     ),
     cleanup_restore_retention_receipt_refs: uniqueStrings(
-      stringList(value.cleanup_restore_retention_receipt_refs),
+      stringList(source.cleanup_restore_retention_receipt_refs),
     ),
-    typed_blocker_refs: uniqueStrings(stringList(value.typed_blocker_refs)),
-    owner_acceptance_refs: uniqueStrings(stringList(value.owner_acceptance_refs)),
+    typed_blocker_refs: uniqueStrings(stringList(source.typed_blocker_refs)),
+    owner_acceptance_refs: uniqueStrings(stringList(source.owner_acceptance_refs)),
     source_surface: 'opl_memory_artifact_lifecycle_evidence',
     authority_boundary: memoryArtifactLifecycleEvidenceAuthorityBoundary(),
   } satisfies MemoryArtifactLifecycleEvidenceReceipt;
@@ -186,8 +172,8 @@ function readMemoryArtifactLifecycleEvidenceLedger(): MemoryArtifactLifecycleEvi
     return emptyLedger();
   }
   try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
-    if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
+    const parsed = record(readJsonPayloadFile(file));
+    if (!Array.isArray(parsed.receipts)) {
       return emptyLedger();
     }
     return {
@@ -205,10 +191,7 @@ function writeMemoryArtifactLifecycleEvidenceLedger(
   ledger: MemoryArtifactLifecycleEvidenceLedger,
 ) {
   const paths = ensureOplStateDir();
-  fs.writeFileSync(
-    paths.memory_artifact_lifecycle_evidence_ledger_file,
-    `${JSON.stringify(ledger, null, 2)}\n`,
-  );
+  writeJsonPayloadFile(paths.memory_artifact_lifecycle_evidence_ledger_file, ledger);
 }
 
 function normalizeInput(
