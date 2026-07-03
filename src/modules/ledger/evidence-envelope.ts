@@ -8,6 +8,7 @@ import {
   stringValue,
   type JsonRecord,
 } from '../../kernel/json-record.ts';
+import { buildObservabilitySemanticConventionExportSeed } from './observability-semantic-conventions.ts';
 
 type EvidenceEnvelopeStatus = 'open' | 'closed' | 'blocked' | 'superseded';
 
@@ -190,12 +191,12 @@ function routeRef(route: JsonRecord | undefined) {
       : null);
 }
 
-function stageEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) {
+function stageEnvelopes(operatorReadback: JsonRecord, routes: JsonRecord[]) {
   const routeMap = actionByStage(routes.filter((route) =>
     stringValue(route.action_kind)?.startsWith('stage_production_evidence_')
     || stringValue(route.action_kind) === 'stage_production_attempt_request'
   ));
-  return recordList(record(drilldown.stage_production_evidence).stages).map((stage) => {
+  return recordList(record(operatorReadback.stage_production_evidence).stages).map((stage) => {
     const sourceDomainId = firstString(stage.target_domain_id, stage.domain_id, stage.project_id) ?? 'domain';
     const domainId = canonicalOwnerId(sourceDomainId);
     const stageId = stringValue(stage.stage_id) ?? 'stage';
@@ -236,10 +237,10 @@ function stageEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) {
   });
 }
 
-function domainDispatchEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) {
+function domainDispatchEnvelopes(operatorReadback: JsonRecord, routes: JsonRecord[]) {
   const routeMap = actionByRequest(routes
     .filter((route) => stringValue(route.action_kind)?.startsWith('domain_dispatch_evidence_')));
-  return recordList(record(drilldown.domain_dispatch_evidence).attempts).map((attempt) => {
+  return recordList(record(operatorReadback.domain_dispatch_evidence).attempts).map((attempt) => {
     const sourceDomainId = stringValue(attempt.domain_id) ?? 'domain';
     const domainId = canonicalOwnerId(sourceDomainId);
     const attemptId = stringValue(attempt.stage_attempt_id) ?? 'attempt';
@@ -289,12 +290,12 @@ function domainDispatchEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) {
   });
 }
 
-function externalEvidenceEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) {
+function externalEvidenceEnvelopes(operatorReadback: JsonRecord, routes: JsonRecord[]) {
   const routeMap = actionByRequest(routes.filter((route) =>
     stringValue(route.action_kind)?.startsWith('external_evidence_')
     || stringValue(route.action_kind)?.startsWith('evidence_gate_')
   ));
-  const domainEvidence = record(drilldown.domain_evidence_request_refs);
+  const domainEvidence = record(operatorReadback.domain_evidence_request_refs);
   const externalRequests = recordList(domainEvidence.external_requests).map((request) => {
     const sourceDomainId = stringValue(request.domain_id) ?? 'domain';
     const domainId = canonicalOwnerId(sourceDomainId);
@@ -385,11 +386,11 @@ function externalEvidenceEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) 
   return [...externalRequests, ...evidenceGates, ...receiptItems];
 }
 
-function legacyCleanupEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) {
+function legacyCleanupEnvelopes(operatorReadback: JsonRecord, routes: JsonRecord[]) {
   const routeMap = new Map(routes
     .filter((route) => stringValue(route.action_kind)?.startsWith('legacy_cleanup_'))
     .map((route) => [stringValue(route.source_ref) ?? stringValue(route.domain_id) ?? '', route]));
-  return recordList(record(drilldown.domain_legacy_cleanup_plan_refs).refs).map((plan) => {
+  return recordList(record(operatorReadback.domain_legacy_cleanup_plan_refs).refs).map((plan) => {
     const sourceRef = stringValue(plan.ref);
     const sourceDomainId = stringValue(plan.command_domain_id) ?? stringValue(plan.domain_id) ?? 'domain';
     const domainId = canonicalOwnerId(sourceDomainId);
@@ -508,34 +509,92 @@ function ownerAliasDiagnostics(items: ReturnType<typeof envelope>[]) {
   };
 }
 
+function primaryObservabilityEnvelope(items: ReturnType<typeof envelope>[]) {
+  return items.find((item) => item.status === 'blocked')
+    ?? items.find((item) => item.status === 'open')
+    ?? items[0]
+    ?? null;
+}
+
+function buildEvidenceEnvelopeSemanticConventions(
+  items: ReturnType<typeof envelope>[],
+  summary: ReturnType<typeof summarize>,
+) {
+  const primary = primaryObservabilityEnvelope(items);
+  const primaryScope = record(primary?.scope);
+  const seed = buildObservabilitySemanticConventionExportSeed({
+    current_owner_delta: primary
+      ? {
+          current_owner: primary.owner,
+          domain_id: stringValue(primaryScope.domain_id) ?? primary.owner,
+          route_ref: stringValue(primary.next_route) ?? undefined,
+          receipt_ref: primary.receipt_refs[0],
+          typed_blocker_ref: primary.typed_blocker_refs[0],
+          source_fingerprint:
+            `evidence_envelope:${summary.envelope_count}:${summary.open_envelope_count}:${summary.blocked_envelope_count}`,
+        }
+      : {
+          source_fingerprint: 'evidence_envelope:empty',
+        },
+    metric_values: {
+      queue_length: summary.open_envelope_count,
+      error_count: summary.blocked_envelope_count,
+    },
+  });
+
+  return {
+    ...seed,
+    evidence_envelope_binding: {
+      source_surface: 'opl_evidence_envelope_projection',
+      binding_policy: 'evidence_envelope_refs_only_trace_metric_log_event_model',
+      selected_envelope_id: primary?.envelope_id ?? null,
+      selected_status: primary?.status ?? null,
+    },
+    summary: {
+      ...seed.summary,
+      semantic_convention_status: 'evidence_envelope_projection_bound',
+      body_included: false,
+      readiness_claim: 'not_claimed',
+    },
+    authority_boundary: {
+      ...seed.authority_boundary,
+      can_create_private_ledger_ui: false,
+      no_domain_ready_claim: true,
+      no_production_ready_claim: true,
+    },
+  };
+}
+
 export function buildEvidenceEnvelopeProjection(input: {
   appOperatorDrilldown: JsonRecord;
   operatorRoutes?: JsonRecord[];
 }) {
-  const drilldown = input.appOperatorDrilldown;
+  const operatorReadback = input.appOperatorDrilldown;
   const routes = input.operatorRoutes ?? [
-    ...recordList(record(drilldown.operator_action_routing_refs).refs),
-    ...recordList(record(drilldown.app_execution_bridge).safe_action_routes),
+    ...recordList(record(operatorReadback.operator_action_routing_refs).refs),
+    ...recordList(record(operatorReadback.app_execution_bridge).safe_action_routes),
   ];
   const envelopes = [
-    ...stageEnvelopes(drilldown, routes),
-    ...externalEvidenceEnvelopes(drilldown, routes),
-    ...domainDispatchEnvelopes(drilldown, routes),
-    ...legacyCleanupEnvelopes(drilldown, routes),
+    ...stageEnvelopes(operatorReadback, routes),
+    ...externalEvidenceEnvelopes(operatorReadback, routes),
+    ...domainDispatchEnvelopes(operatorReadback, routes),
+    ...legacyCleanupEnvelopes(operatorReadback, routes),
   ];
+  const summary = summarize(envelopes);
   return {
     surface_kind: 'opl_evidence_envelope_projection',
     model_version: 'evidence_envelope.v1',
     projection_policy:
       'single_refs_only_claim_reading_over_stage_external_domain_dispatch_and_cleanup_evidence',
     source_refs: [
-      '/runtime_tray_snapshot/app_operator_drilldown/stage_production_evidence',
-      '/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs',
-      '/runtime_tray_snapshot/app_operator_drilldown/domain_dispatch_evidence',
-      '/runtime_tray_snapshot/app_operator_drilldown/domain_legacy_cleanup_plan_refs',
-      '/runtime_tray_snapshot/app_operator_drilldown/operator_action_routing_refs',
+      '/runtime_tray_snapshot/app_operator_drilldown/stage_production_evidence', // reuse-first: allow existing operator source ref; semantic_conventions exports refs-only signals.
+      '/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs', // reuse-first: allow existing operator source ref; semantic_conventions exports refs-only signals.
+      '/runtime_tray_snapshot/app_operator_drilldown/domain_dispatch_evidence', // reuse-first: allow existing operator source ref; semantic_conventions exports refs-only signals.
+      '/runtime_tray_snapshot/app_operator_drilldown/domain_legacy_cleanup_plan_refs', // reuse-first: allow existing operator source ref; semantic_conventions exports refs-only signals.
+      '/runtime_tray_snapshot/app_operator_drilldown/operator_action_routing_refs', // reuse-first: allow existing operator source ref; semantic_conventions exports refs-only signals.
     ],
-    summary: summarize(envelopes),
+    summary,
+    semantic_conventions: buildEvidenceEnvelopeSemanticConventions(envelopes, summary),
     owner_alias_diagnostics: ownerAliasDiagnostics(envelopes),
     envelopes,
     authority_boundary: authorityBoundary(),

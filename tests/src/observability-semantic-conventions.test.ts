@@ -8,6 +8,7 @@ import {
   buildObservabilitySemanticConventionReadback,
   renderObservabilitySemanticConventionOpenMetrics,
 } from '../../src/modules/ledger/observability-semantic-conventions.ts';
+import { buildEvidenceEnvelopeProjection } from '../../src/modules/ledger/evidence-envelope.ts';
 
 const expectedFields = [
   'stage_run_id',
@@ -178,4 +179,68 @@ test('observability export seed groups trace metric and log signals without payl
   assert.match(openmetrics, /opl_latency_ms\{[^}]*opl_task_queue="opl-family-runtime"[^}]*\} 1200/);
   assert.match(openmetrics, /can_claim_runtime_ready="false"/);
   assert.equal(openmetrics.includes('must-not-leak'), false);
+});
+
+test('evidence envelope projection binds operator readback to semantic convention signals', () => {
+  const projection = buildEvidenceEnvelopeProjection({
+    appOperatorDrilldown: {
+      operator_action_routing_refs: {
+        refs: [
+          {
+            action_kind: 'stage_production_evidence_record',
+            domain_id: 'medautoscience',
+            stage_id: 'review',
+            action_ref: 'route:stage-evidence',
+          },
+        ],
+      },
+      app_execution_bridge: { safe_action_routes: [] },
+      stage_production_evidence: {
+        stages: [
+          {
+            target_domain_id: 'medautoscience',
+            stage_id: 'review',
+            owner: 'medautoscience',
+            missing_production_evidence: ['owner_receipt'],
+            domain_owned_typed_blocker_refs: ['typed-blocker:stage'],
+            stage_evidence_receipt_refs: [],
+            ref: 'stage-evidence:review',
+          },
+        ],
+      },
+      domain_evidence_request_refs: {},
+      domain_dispatch_evidence: {},
+      domain_legacy_cleanup_plan_refs: {},
+    },
+  });
+
+  const semanticConventions = projection.semantic_conventions;
+  assert.equal(semanticConventions.surface_kind, 'opl_observability_export_readback_seed');
+  assert.equal(
+    semanticConventions.summary.semantic_convention_status,
+    'evidence_envelope_projection_bound',
+  );
+  assert.equal(
+    semanticConventions.evidence_envelope_binding.binding_policy,
+    'evidence_envelope_refs_only_trace_metric_log_event_model',
+  );
+  assert.equal(
+    semanticConventions.signal_groups.traces[0].attributes['opl.domain_id'],
+    'med-autoscience',
+  );
+  assert.equal(
+    semanticConventions.signal_groups.logs[0].attributes['opl.typed_blocker_ref'],
+    'typed-blocker:stage',
+  );
+  assert.equal(
+    semanticConventions.signal_groups.metrics.find((metric) => metric.instrument === 'queue_length')?.value,
+    0,
+  );
+  assert.equal(
+    semanticConventions.signal_groups.metrics.find((metric) => metric.instrument === 'error_count')?.value,
+    1,
+  );
+  assert.equal(semanticConventions.authority_boundary.can_create_private_ledger_ui, false);
+  assert.equal(semanticConventions.authority_boundary.no_domain_ready_claim, true);
+  assert.equal(semanticConventions.summary.body_included, false);
 });
