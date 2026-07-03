@@ -8,7 +8,7 @@ import {
   renderObservabilitySemanticConventionOpenMetrics,
   type ObservabilityMetricInstrument,
   type ObservabilitySemanticConventionInput,
-} from '../ledger/observability-semantic-conventions.ts';
+} from '../ledger/index.ts';
 
 export type ObservabilityExportFormat = 'json' | 'openmetrics';
 
