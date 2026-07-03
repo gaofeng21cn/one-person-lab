@@ -122,7 +122,7 @@ test('family-runtime temporal terminal failure is projected into local attempt q
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
       taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
       activities: {
         ...activities,
         codexStageActivity: async () => {

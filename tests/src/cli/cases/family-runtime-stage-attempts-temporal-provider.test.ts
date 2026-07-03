@@ -258,7 +258,7 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
       taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
       activities: {
         ...activities,
         codexStageActivity: async () => ({
@@ -464,7 +464,7 @@ test('family-runtime queue inspect syncs a completed MAS default executor Tempor
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
       taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
       activities: {
         ...activities,
         codexStageActivity: async () => ({
@@ -757,7 +757,7 @@ test('family-runtime temporal attempt query reads managed local service state wh
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
       taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
       activities,
     });
     process.env.OPL_STATE_DIR = stateRoot;
@@ -903,7 +903,7 @@ test('family-runtime temporal attempt start uses managed worker task queue for e
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
       taskQueue: managedTaskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
       activities,
     });
     process.env.OPL_STATE_DIR = stateRoot;

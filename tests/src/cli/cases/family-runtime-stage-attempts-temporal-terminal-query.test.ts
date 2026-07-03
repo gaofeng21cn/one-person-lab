@@ -117,7 +117,7 @@ test('family-runtime temporal terminal failure syncs even when terminal workflow
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
       taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
       activities: {
         ...activities,
         codexStageActivity: async () => {
@@ -460,7 +460,7 @@ test('family-runtime temporal completed workflow syncs from result when query re
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
       taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
       activities,
     });
     const result = await currentWorker.runUntil(

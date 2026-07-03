@@ -191,7 +191,7 @@ test('Temporal StageAttemptWorkflow acks operator actions through Updates', asyn
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
       taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
       activities,
     });
 
@@ -247,7 +247,7 @@ test('Temporal StageAttemptWorkflow rejects invalid operator Updates before muta
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
       taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
       activities,
     });
 
@@ -295,7 +295,7 @@ test('Temporal StageAttemptWorkflow retries short idempotent activities without 
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
       taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
       activities: {
         ...activities,
         codexStageActivity: async (input: TemporalStageAttemptWorkflowInput) => {
@@ -361,7 +361,7 @@ test('Temporal StageAttemptWorkflow exposes activity state, signals, and complet
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
       taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
       activities,
     });
 
@@ -429,7 +429,7 @@ test('Temporal replay gate replays completed StageAttemptWorkflow history with t
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
       taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
       activities,
     });
     const workflowId = `wf-temporal-replay-test-${Date.now()}`;
@@ -546,7 +546,7 @@ test('Temporal StageAttemptWorkflow blocks provider completion when typed closeo
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
       taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
       activities,
     });
 
@@ -585,7 +585,7 @@ test('Temporal StageAttemptWorkflow surfaces Codex runner protocol blockers befo
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
       taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
       activities: {
         ...activities,
         codexStageActivity: async (input: TemporalStageAttemptWorkflowInput) => ({
@@ -659,7 +659,7 @@ test('Temporal StageAttemptWorkflow preserves MAS stage-route user stage log on 
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
       taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
       activities: {
         ...activities,
         codexStageActivity: async (input: TemporalStageAttemptWorkflowInput) => ({
@@ -746,7 +746,7 @@ test('Temporal Codex activity result stored in history is refs-only by default',
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
       taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
       activities,
     });
 
@@ -788,7 +788,7 @@ test('Temporal StageAttemptWorkflow stores refs-only Codex activity summaries in
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
       taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
       activities: {
         ...activities,
         codexStageActivity: async (input: TemporalStageAttemptWorkflowInput) => ({
@@ -879,7 +879,7 @@ test('Temporal StageAttemptWorkflow consumes Codex activity typed closeout for p
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
       taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
       activities: {
         ...activities,
         codexStageActivity: async (input: TemporalStageAttemptWorkflowInput) => ({
@@ -931,7 +931,7 @@ test('Temporal StageAttemptWorkflow keeps OPL provider-runtime closeout as block
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
       taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
       activities: {
         ...activities,
         codexStageActivity: async (input: TemporalStageAttemptWorkflowInput) => ({
@@ -1015,7 +1015,7 @@ test('Temporal StageAttemptWorkflow rejects Codex activity closeout for a differ
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
       taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
       activities: {
         ...activities,
         codexStageActivity: async (input: TemporalStageAttemptWorkflowInput) => ({
