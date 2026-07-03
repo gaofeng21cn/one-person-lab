@@ -1,4 +1,4 @@
-import { firstRef, stringList, stringValue, type JsonRecord } from './json-utils.ts';
+import { firstRef, stringList, stringValue, type JsonRecord } from '../../../kernel/json-record.ts';
 
 export function freshnessRef(route: JsonRecord) {
   return stringValue(route.evidence_source_ref)

@@ -18,7 +18,7 @@ import { buildReleaseState } from './app-state-release.ts';
 import { buildOplDeveloperModeSurface } from '../connect/index.ts';
 import { resolveCodexVersion } from '../connect/index.ts';
 import { buildOplModules } from '../connect/index.ts';
-import { readOplWorkspaceRoot } from './system-preferences.ts';
+import { readOplWorkspaceRoot } from '../../kernel/system-preferences.ts';
 import path from 'node:path';
 import { resolveDefaultFamilyWorkspaceRoot } from '../connect/index.ts';
 import { buildActionCatalog } from './app-state-action-catalog.ts';

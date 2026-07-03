@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from '../charter/index.ts';
 import { buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from '../connect/index.ts';
-import { readOplUpdateChannel } from './system-preferences.ts';
+import { readOplUpdateChannel } from '../../kernel/system-preferences.ts';
 
 type JsonRecord = Record<string, unknown>;
 

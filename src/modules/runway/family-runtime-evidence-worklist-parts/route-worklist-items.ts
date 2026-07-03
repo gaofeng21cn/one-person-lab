@@ -19,7 +19,7 @@ import {
   stringList,
   stringValue,
   type JsonRecord,
-} from './json-utils.ts';
+} from '../../../kernel/json-record.ts';
 import { worklistOwnerId } from './owner-normalization.ts';
 import { payloadHandoffProjection } from './operator-route-handoff.ts';
 import { freshnessRef, readOnlyExpectedRefs } from './worklist-route-refs.ts';

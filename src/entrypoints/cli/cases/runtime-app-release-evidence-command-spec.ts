@@ -4,7 +4,7 @@ import {
   recordAppReleaseUserPathEvidenceReceipts,
   verifyAppReleaseUserPathEvidenceReceipt,
   type AppReleaseUserPathEvidenceReceiptInput,
-} from '../../../modules/console/app-release-user-path-evidence-ledger.ts';
+} from '../../../modules/ledger/app-release-user-path-evidence-ledger.ts';
 import {
   finishAppReleaseLongOperatorObservation,
   recordAppReleaseLongOperatorObservationEvent,

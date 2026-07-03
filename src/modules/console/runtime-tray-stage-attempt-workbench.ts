@@ -30,7 +30,7 @@ import {
 } from '../stagecraft/index.ts';
 import {
   buildAttemptGenericProjections,
-} from './runtime-tray-stage-attempt-generic-projections.ts';
+} from '../runway/index.ts';
 import {
   buildAttemptHumanReviewBurdenBudget,
 } from '../stagecraft/index.ts';

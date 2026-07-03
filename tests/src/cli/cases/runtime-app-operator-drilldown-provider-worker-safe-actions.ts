@@ -15,7 +15,7 @@ import {
 } from '../../../../src/modules/console/runtime-tray-app-operator-drilldown-parts/detail-view.ts';
 import {
   recordAppReleaseUserPathEvidenceReceipts,
-} from '../../../../src/modules/console/app-release-user-path-evidence-ledger.ts';
+} from '../../../../src/modules/ledger/app-release-user-path-evidence-ledger.ts';
 import {
   buildProviderWorkerActionRoutes,
 } from '../../../../src/modules/console/runtime-tray-app-operator-drilldown-parts/provider-worker-action-routes.ts';

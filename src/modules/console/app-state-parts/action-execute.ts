@@ -3,7 +3,7 @@ import { runRuntimeOperatorActionExecute } from '../../runway/index.ts';
 import { runOplModuleAction } from '../../connect/index.ts';
 import { runOplSystemAction } from '../../connect/index.ts';
 import { writeOplWorkspaceRootSurface } from '../../connect/index.ts';
-import type { OplUpdateChannel } from '../system-preferences.ts';
+import type { OplUpdateChannel } from '../../../kernel/system-preferences.ts';
 import { runFamilyRuntime } from '../../runway/index.ts';
 import { runOplEngineAction } from '../../connect/index.ts';
 import { type OplEngineAction, type OplModuleAction, type OplModuleId } from '../../connect/index.ts';

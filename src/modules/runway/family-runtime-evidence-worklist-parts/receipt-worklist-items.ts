@@ -12,7 +12,7 @@ import {
   stringValue,
   uniqueStringList,
   type JsonRecord,
-} from './json-utils.ts';
+} from '../../../kernel/json-record.ts';
 
 export function externalEvidenceReceiptWorklistItems(drilldown: JsonRecord) {
   const domainEvidence = record(drilldown.domain_evidence_request_refs);

@@ -2,12 +2,12 @@ import {
   listStageReplayMissingReceiptReceipts,
   stageReplayMissingReceiptTargetKey,
   type StageReplayMissingReceiptReceipt,
-} from '../../stagecraft/index.ts';
-import { defaultOmaRepoDir } from '../../foundry-lab/index.ts';
+} from './stage-replay-missing-receipt-ledger.ts';
+import { defaultOmaRepoDir } from '../foundry-lab/index.ts';
 import {
   omaProductionAcceptanceStageReplayReceipts,
   readOmaProductionAcceptance,
-} from '../../foundry-lab/index.ts';
+} from '../foundry-lab/index.ts';
 import {
   record,
   recordList,
@@ -15,7 +15,7 @@ import {
   stringValue,
   uniqueStringList,
   type JsonRecord,
-} from './json-utils.ts';
+} from '../../kernel/json-record.ts';
 
 function countByString<T>(
   values: T[],

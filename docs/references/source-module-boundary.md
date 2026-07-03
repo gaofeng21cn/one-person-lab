@@ -80,7 +80,18 @@ Console / Runway / Ledger / Connect / Foundry Lab 的边界可按一句话记忆
 
 这个口径由 `source-module-map.json`、`module-dependency-policy.json` 和 fresh `npm run source:modules -- --strict-imports` 共同支撑。它说明源码 owner、public entrypoint 和 strict import gate 已经进入可执行维护状态。
 
-后续治理重点是 public-level 依赖收薄和依赖方向治理。`source:modules` 的 `cross_module_imports.pair_counts` 可以暴露 public API 依赖热点；cycle audit 或人工架构审查可以定位需要调整的依赖方向。此类治理优先通过收窄 public API、拆 thin public entry、移动 brand-neutral primitive 到 `kernel/`、或重新划分调用方向来完成。它们是维护质量和耦合度改进，不改变“十个源码 owner 已归位”的结构结论。
+第一批 owner-alignment 已经把四类容易造成语义穿透的实现归位：
+
+| 调整 | 新 owner |
+| --- | --- |
+| brand-neutral JSON record / runtime endpoint / system preference helper | `kernel` |
+| App release / user-path evidence ledger | `ledger` |
+| stage replay missing receipt workorder | `stagecraft` |
+| stage-attempt generic projections 与 memory trace projection | `runway` |
+
+`module-dependency-policy.json` 也开始记录第一批方向约束：`ledger -> runway`、`stagecraft -> runway`、`workspace -> console` 与 Charter 对 operator / improvement / connector surfaces 的依赖都不允许出现。该约束用于保护 evidence、stage policy、workspace protocol 与 operator projection 的 owner 边界。
+
+后续治理重点是 public-level 依赖收薄和依赖方向治理。`source:modules` 的 `cross_module_imports.pair_counts` 可以暴露 public API 依赖热点；cycle audit 或人工架构审查可以定位需要调整的依赖方向。此类治理优先通过收窄 public API、拆 thin public entry、移动 brand-neutral primitive 到 `kernel/`、或重新划分调用方向来完成。它们是维护质量和耦合度改进，不改变“十个源码 owner 已归位”的结构结论。当前 dependency cycle 仍按 advisory 读法处理，不能把 strict import pass 外推为模块间已经完全低耦合。
 
 ## 维护流程
 

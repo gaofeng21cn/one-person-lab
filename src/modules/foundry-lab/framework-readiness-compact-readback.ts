@@ -6,7 +6,7 @@ import {
   buildFamilyStageReadinessInspect,
   buildFamilyStagesList,
 } from '../stagecraft/index.ts';
-import { buildStageReplayMissingReceiptWorkorderPacket } from '../runway/index.ts';
+import { buildStageReplayMissingReceiptWorkorderPacket } from '../stagecraft/index.ts';
 import {
   frameworkStatusFromAttentionCounts,
   openSafeActionPayloadCounts,

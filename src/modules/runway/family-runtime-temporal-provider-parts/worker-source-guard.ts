@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import type { TemporalWorkerPaths } from '../family-runtime-temporal-client.ts';
-import { readOplDeveloperSupervisorConfig } from '../../console/index.ts';
+import { readOplDeveloperSupervisorConfig } from '../../../kernel/system-preferences.ts';
 
 function normalize(value: string) {
   try {

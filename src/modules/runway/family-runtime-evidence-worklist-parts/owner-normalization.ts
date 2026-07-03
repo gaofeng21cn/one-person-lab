@@ -1,5 +1,5 @@
 import { canonicalOwnerId } from '../../ledger/index.ts';
-import { record, stringValue, type JsonRecord } from './json-utils.ts';
+import { record, stringValue, type JsonRecord } from '../../../kernel/json-record.ts';
 
 export function worklistOwnerId(value: unknown) {
   return typeof value === 'string' && canonicalOwnerId(value) === 'one-person-lab' ? 'opl' : value;

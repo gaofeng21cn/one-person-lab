@@ -16,7 +16,7 @@ import { operatorRoutesByActionId, routeWithOperatorHandoff } from './family-run
 import { readOnlyRouteMatchesDefaults } from './family-runtime-evidence-worklist-parts/route-defaults.ts';
 import {
   countValue, record, recordList, stringValue, type JsonRecord,
-} from './family-runtime-evidence-worklist-parts/json-utils.ts';
+} from '../../kernel/json-record.ts';
 import { normalizeWorklistOwnerFields } from './family-runtime-evidence-worklist-parts/owner-normalization.ts';
 import { buildStageEvidenceWorkorderPacket, compactStageEvidenceWorkorderAttentionItems } from './family-runtime-evidence-worklist-parts/stage-evidence-workorders.ts';
 import {
@@ -28,7 +28,7 @@ import {
   buildStageReplayMissingReceiptWorkorderPacket,
   compactStageReplayMissingReceiptWorkorderAttentionSummary,
   compactStageReplayMissingReceiptWorkorderAttentionItems,
-} from './family-runtime-evidence-worklist-parts/stage-replay-missing-receipt-workorders.ts';
+} from '../stagecraft/index.ts';
 import { familyRuntimeEvidenceWorklistAuthorityBoundary } from './family-runtime-evidence-worklist-parts/authority-boundary.ts';
 import { buildWorklistOwnerDeltaActionProjection } from './family-runtime-evidence-worklist-parts/current-owner-delta-projection.ts';
 import { buildProgressFirstOperatorSummary } from './family-runtime-evidence-worklist-parts/progress-first-operator-summary.ts';

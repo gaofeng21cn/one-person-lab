@@ -4,7 +4,7 @@ import {
   recordAppReleaseUserPathEvidenceReceipts,
   verifyAppReleaseUserPathEvidenceReceipt,
   type AppReleaseUserPathEvidenceReceiptInput,
-} from '../../console/index.ts';
+} from '../../ledger/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 

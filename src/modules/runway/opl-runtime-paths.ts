@@ -1,7 +1,7 @@
 import {
   buildOplRuntimeEndpoints,
   type OplRuntimeEndpoints,
-} from './opl-runtime-paths/current.ts';
+} from '../../kernel/opl-runtime-endpoints.ts';
 
 export type OplEndpoints = OplRuntimeEndpoints;
 

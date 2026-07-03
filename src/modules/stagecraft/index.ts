@@ -28,6 +28,7 @@ export { commitStageArtifactAttemptRuntime, conformanceStageArtifactRuntime, exp
 export { assertStageProductionEvidencePayloadReady, buildStageProductionEvidencePayloadWorkorder, preflightStageProductionEvidencePayload, STAGE_PRODUCTION_EVIDENCE_COVERAGE_PAYLOAD_REFS, STAGE_PRODUCTION_EVIDENCE_OPTIONAL_PAYLOAD_REFS, STAGE_PRODUCTION_EVIDENCE_REQUIRED_PAYLOAD_REFS } from './stage-production-evidence-payload-preflight.ts';
 export { listStageReplayMissingReceiptReceipts, stageReplayMissingReceiptTargetKey } from './stage-replay-missing-receipt-ledger.ts';
 export type { StageReplayMissingReceiptReceipt } from './stage-replay-missing-receipt-ledger.ts';
+export { buildStageReplayMissingReceiptWorkorderPacket, compactStageReplayMissingReceiptWorkorderAttentionItems, compactStageReplayMissingReceiptWorkorderAttentionSummary } from './stage-replay-missing-receipt-workorders.ts';
 export { latestStageRunExecutionAuthorizationCloseoutReceiptForStageAttempt, latestStageRunExecutionAuthorizationCloseoutReceiptForStageRun, latestStageRunExecutionAuthorizationReceiptForStageAttempt, latestStageRunExecutionAuthorizationReceiptForStageAttemptAnyRun, latestStageRunExecutionAuthorizationReceiptForStageRun, listStageRunExecutionAuthorizationReceipts, recordStageRunExecutionAuthorizationReceipts } from './stage-run-execution-authorization-ledger.ts';
 export type { StageRunExecutionAuthorizationReceipt } from './stage-run-execution-authorization-ledger.ts';
 export { buildAppStageRunCockpit } from './stage-run-cockpit.ts';

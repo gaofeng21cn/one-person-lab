@@ -1,44 +1,44 @@
 import {
   buildAttemptArtifactGallery,
   buildWorkbenchArtifactGallery,
-} from './runtime-tray-artifact-gallery.ts';
+} from './artifact-gallery.ts';
 import {
   buildAttemptOperatorActionRouting,
   buildWorkbenchOperatorActionRouting,
-} from './runtime-tray-action-routing.ts';
+} from './action-routing.ts';
 import {
   buildAttemptMemoryLocatorIndex,
   buildWorkbenchMemoryLocatorIndex,
-} from './runtime-tray-memory-locator-index.ts';
+} from './memory-locator-index.ts';
 import {
   buildAttemptObservabilitySlo,
   buildWorkbenchObservabilitySlo,
-} from './runtime-tray-observability-slo.ts';
+} from './observability-slo.ts';
 import {
   buildAttemptPackageExportLifecycle,
   buildWorkbenchPackageExportLifecycle,
-} from './runtime-tray-package-export-lifecycle.ts';
+} from './package-export-lifecycle.ts';
 import {
   buildAttemptQualityReadiness,
   buildWorkbenchQualityReadiness,
-} from './runtime-tray-quality-readiness.ts';
+} from './quality-readiness.ts';
 import {
   buildAttemptReviewRepairQueue,
   buildWorkbenchReviewRepairQueue,
-} from './runtime-tray-review-repair-queue.ts';
+} from './review-repair-queue.ts';
 import {
   buildAttemptRouteDecisionGraph,
   buildWorkbenchRouteDecisionGraph,
-} from './runtime-tray-route-decision-graph.ts';
+} from './route-decision-graph.ts';
 import {
   buildAttemptTransitionBridgeEvidence,
   buildWorkbenchTransitionBridgeEvidence,
-} from './runtime-tray-transition-bridge-evidence.ts';
+} from './transition-bridge-evidence.ts';
 import {
   buildAttemptWorkspaceSourceIntake,
   buildWorkbenchWorkspaceSourceIntake,
-} from './runtime-tray-workspace-source-intake.ts';
-import type { JsonRecord } from './runtime-tray-snapshot-types.ts';
+} from './workspace-source-intake.ts';
+import type { JsonRecord } from '../../../kernel/types.ts';
 
 export type StageAttemptGenericProjectionInput = {
   stage_attempt_id: string;

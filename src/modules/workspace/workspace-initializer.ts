@@ -6,7 +6,7 @@ import {
   AGENT_WORKSPACE_NORM_CONTRACT_REF,
   buildAgentWorkspaceNormProjection,
 } from './agent-workspace-norm.ts';
-import { readOplWorkspaceRoot } from '../console/index.ts';
+import { readOplWorkspaceRoot } from '../../kernel/system-preferences.ts';
 import type { AgentWorkspaceNormContract, FrameworkContracts } from '../../kernel/types.ts';
 import {
   buildWorkspaceLifecycle,

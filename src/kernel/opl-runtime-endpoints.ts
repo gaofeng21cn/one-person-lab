@@ -1,6 +1,15 @@
-import { normalizeBasePath } from './shared.ts';
+function normalizeBasePath(basePath?: string) {
+  const trimmed = (basePath ?? '').trim();
 
-export type OplRuntimeEndpoints = {
+  if (!trimmed || trimmed === '/') {
+    return '';
+  }
+
+  const withLeadingSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  return withLeadingSlash.replace(/\/+$/, '');
+}
+
+export type OplEndpoints = {
   health: string;
   project_progress: string;
   domain_manifests: string;
@@ -31,7 +40,9 @@ export type OplRuntimeEndpoints = {
   logs: string;
 };
 
-export function buildOplRuntimeEndpoints(basePath = ''): OplRuntimeEndpoints {
+export type OplRuntimeEndpoints = OplEndpoints;
+
+export function buildOplEndpoints(basePath = ''): OplEndpoints {
   const prefix = normalizeBasePath(basePath);
   const apiBase = `${prefix}/api`;
   const oplBase = `${apiBase}/opl`;
@@ -67,3 +78,5 @@ export function buildOplRuntimeEndpoints(basePath = ''): OplRuntimeEndpoints {
     logs: `${oplBase}/sessions/logs`,
   };
 }
+
+export const buildOplRuntimeEndpoints = buildOplEndpoints;

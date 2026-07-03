@@ -26,7 +26,10 @@ export { buildProviderContinuousProof } from './family-runtime-provider-continuo
 export { runFamilyRuntimeEvidenceWorklist } from './family-runtime-evidence-worklist.ts';
 export { buildMasDomainRouteSupportProjection } from './family-runtime-mas-domain-route.ts';
 export { runFamilyRuntimeLifecycleApply, type LifecycleApplyMode } from './family-runtime-lifecycle-index.ts';
-export { buildStageReplayMissingReceiptWorkorderPacket } from './family-runtime-evidence-worklist-parts/stage-replay-missing-receipt-workorders.ts';
+export { buildAttemptGenericProjections, buildWorkbenchGenericProjections } from './stage-attempt-projections/stage-attempt-generic-projections.ts';
+export type { StageAttemptGenericProjectionInput } from './stage-attempt-projections/stage-attempt-generic-projections.ts';
+export { buildMemoryTraceProjection, summarizeMemoryTraceProjections } from './stage-attempt-projections/memory-locator-index.ts';
+export type { MemoryTraceProjection } from './stage-attempt-projections/memory-locator-index.ts';
 
 // Public cross-module surface generated from existing module consumers.
 export { runAgentExecutor } from './agent-executor.ts';
@@ -48,7 +51,7 @@ export { normalizeManagedRuntimeContract } from './managed-runtime-contract.ts';
 export { buildNativeHelperHealthStatus, buildNativeHelperProjection, DEFAULT_NATIVE_HELPERS, runNativeHelperRepairAction } from './native-helper-runtime.ts';
 export { buildNativeIndexSummary } from './native-index-summary.ts';
 export type { OplEndpoints } from './opl-runtime-paths.ts';
-export { buildOplRuntimeEndpoints } from './opl-runtime-paths/current.ts';
+export { buildOplRuntimeEndpoints } from '../../kernel/opl-runtime-endpoints.ts';
 export { buildRuntimeEnvironmentPrepareReadback, buildRuntimeEnvironmentRunContextReadback } from './runtime-environment-substrate.ts';
 export { runRuntimeOperatorActionExecute } from './runtime-operator-action-execution.ts';
 export { buildSessionLedger, recordSessionLedgerEntry } from './session-ledger.ts';

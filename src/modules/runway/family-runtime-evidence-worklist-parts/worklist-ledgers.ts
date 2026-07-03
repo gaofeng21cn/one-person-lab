@@ -13,7 +13,7 @@ import {
   stringValue,
   uniqueStringList,
   type JsonRecord,
-} from './json-utils.ts';
+} from '../../../kernel/json-record.ts';
 
 export function worklistCounts(
   worklistItems: JsonRecord[],

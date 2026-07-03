@@ -1,12 +1,12 @@
 import { buildAgentDefaultCallerReadinessReport } from '../../foundry-lab/index.ts';
-import type { JsonRecord } from './json-utils.ts';
+import type { JsonRecord } from '../../../kernel/json-record.ts';
 import {
   countValue,
   record,
   recordList,
   stringList,
   stringValue,
-} from './json-utils.ts';
+} from '../../../kernel/json-record.ts';
 
 type EvidenceWorklistFamilyScopeInput = {
   familyDefaults: boolean;

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from '../../charter/index.ts';
-import type { OplUpdateChannel } from '../../console/index.ts';
+import type { OplUpdateChannel } from '../../../kernel/system-preferences.ts';
 
 export type OplModuleId =
   | 'medautoscience'

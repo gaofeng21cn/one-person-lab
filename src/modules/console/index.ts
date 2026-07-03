@@ -6,8 +6,8 @@ export const OPL_CONSOLE_SOURCE_MODULE = {
 } as const;
 
 // Public cross-module surface generated from existing module consumers.
-export { appReleaseUserPathEvidencePayloadPreflight, recordAppReleaseUserPathEvidenceReceipts, verifyAppReleaseUserPathEvidenceReceipt } from './app-release-user-path-evidence-ledger.ts';
-export type { AppReleaseUserPathEvidenceReceiptInput } from './app-release-user-path-evidence-ledger.ts';
+export { appReleaseUserPathEvidencePayloadPreflight, recordAppReleaseUserPathEvidenceReceipts, verifyAppReleaseUserPathEvidenceReceipt } from '../ledger/index.ts';
+export type { AppReleaseUserPathEvidenceReceiptInput } from '../ledger/index.ts';
 export { buildAppStageRunCockpit } from '../stagecraft/index.ts';
 export { buildFamilyActionCatalogParity, projectFamilyAction, projectFamilyActionCatalog } from './family-action-catalog.ts';
 export { normalizeFamilyActionCatalog } from './family-action-catalog-contract.ts';
@@ -17,10 +17,10 @@ export { readOplRuntimeModes } from './runtime-modes.ts';
 export { buildAppReleaseUserPathEvidence, frameworkAppReleaseUserPathNextSafeAction } from './runtime-tray-app-operator-drilldown-parts/app-release-user-path.ts';
 export { buildAppDrilldownRefsOnlyAuthorityBoundary } from './runtime-tray-app-operator-drilldown-parts/authority-boundary.ts';
 export { frameworkDeveloperModeLiveCloseoutNextSafeAction } from './runtime-tray-app-operator-drilldown-parts/developer-mode-live-closeout.ts';
-export { buildMemoryTraceProjection } from './runtime-tray-memory-locator-index.ts';
+export { buildMemoryTraceProjection } from '../runway/index.ts';
 export { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
 export type { JsonRecord } from './runtime-tray-snapshot-types.ts';
 export { sourceRef, uniqueByRef } from './runtime-tray-snapshot-utils.ts';
-export { buildAttemptGenericProjections } from './runtime-tray-stage-attempt-generic-projections.ts';
-export { buildOplWorkspaceRootStatus, readOplDeveloperSupervisorConfig, readOplUpdateChannel, readOplWorkspaceRoot, writeOplDeveloperSupervisorConfig, writeOplUpdateChannel, writeOplWorkspaceRoot } from './system-preferences.ts';
-export type { OplDeveloperSupervisorConfigFile, OplUpdateChannel } from './system-preferences.ts';
+export { buildAttemptGenericProjections } from '../runway/index.ts';
+export { buildOplWorkspaceRootStatus, readOplDeveloperSupervisorConfig, readOplUpdateChannel, readOplWorkspaceRoot, writeOplDeveloperSupervisorConfig, writeOplUpdateChannel, writeOplWorkspaceRoot } from '../../kernel/system-preferences.ts';
+export type { OplDeveloperSupervisorConfigFile, OplUpdateChannel } from '../../kernel/system-preferences.ts';

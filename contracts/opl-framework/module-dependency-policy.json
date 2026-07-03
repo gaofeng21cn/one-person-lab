@@ -50,6 +50,21 @@
         "from_module_id": "charter",
         "to_module_id": "connect",
         "reason": "Charter must not depend on distribution or connector surfaces."
+      },
+      {
+        "from_module_id": "ledger",
+        "to_module_id": "runway",
+        "reason": "Ledger is the refs-only evidence owner; it must not depend on execution, queue, worker, or recovery surfaces."
+      },
+      {
+        "from_module_id": "stagecraft",
+        "to_module_id": "runway",
+        "reason": "Stagecraft designs stage policy and work orders; Runway consumes them for execution rather than becoming a Stagecraft prerequisite."
+      },
+      {
+        "from_module_id": "workspace",
+        "to_module_id": "console",
+        "reason": "Workspace owns protocol and file lifecycle projection; Console consumes workspace projections for operator surfaces."
       }
     ]
   },

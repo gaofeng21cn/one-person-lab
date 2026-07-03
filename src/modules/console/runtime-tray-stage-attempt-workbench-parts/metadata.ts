@@ -14,19 +14,19 @@ import type {
 } from '../../runway/index.ts';
 import {
   summarizeMemoryTraceProjections,
-} from '../runtime-tray-memory-locator-index.ts';
+} from '../../runway/index.ts';
 import type {
   MemoryTraceProjection,
-} from '../runtime-tray-memory-locator-index.ts';
+} from '../../runway/index.ts';
 import {
   buildFamilyHumanReviewBurdenBudget,
 } from '../../stagecraft/index.ts';
 import {
   buildWorkbenchGenericProjections,
-} from '../runtime-tray-stage-attempt-generic-projections.ts';
+} from '../../runway/index.ts';
 import type {
   StageAttemptGenericProjectionInput,
-} from '../runtime-tray-stage-attempt-generic-projections.ts';
+} from '../../runway/index.ts';
 import { optionalString } from '../runtime-tray-snapshot-utils.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 

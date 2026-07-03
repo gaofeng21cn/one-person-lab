@@ -2,7 +2,7 @@ import { findDomainOrThrow } from '../charter/index.ts';
 import { buildDomainManifestCatalog } from '../atlas/index.ts';
 import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from '../atlas/index.ts';
 import { resolveWorkspaceLocator } from '../workspace/index.ts';
-import { buildOplRuntimeEndpoints } from '../runway/index.ts';
+import { buildOplRuntimeEndpoints } from '../../kernel/opl-runtime-endpoints.ts';
 import type { HandoffBundleResult } from './handoff-bundle-types.ts';
 import type { BoundaryExplanation, FrameworkContracts, ResolutionResult } from '../../kernel/types.ts';
 

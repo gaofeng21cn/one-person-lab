@@ -2,7 +2,7 @@ import { buildOplEndpoints } from '../../runway/index.ts';
 import {
   readOplUpdateChannel,
   readOplWorkspaceRoot,
-} from '../../console/index.ts';
+} from '../../../kernel/system-preferences.ts';
 import { readOplRuntimeModes } from '../../console/index.ts';
 import { buildOplGuiShellSurface, buildOplRecommendedSkills } from '../install-companions.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';

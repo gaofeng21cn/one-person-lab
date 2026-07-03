@@ -2,7 +2,7 @@ import {
   DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS,
   DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
 } from '../../foundry-lab/index.ts';
-import type { JsonRecord } from './json-utils.ts';
+import type { JsonRecord } from '../../../kernel/json-record.ts';
 
 export function defaultCallerDeletionEvidenceCounts(worklistItems: JsonRecord[]) {
   const defaultCallerItems = worklistItems.filter((item) =>

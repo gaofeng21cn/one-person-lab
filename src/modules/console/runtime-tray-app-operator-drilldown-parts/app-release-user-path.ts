@@ -2,7 +2,7 @@ import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import { sourceRef } from '../runtime-tray-snapshot-utils.ts';
 import {
   listAppReleaseUserPathEvidenceReceipts,
-} from '../app-release-user-path-evidence-ledger.ts';
+} from '../../ledger/index.ts';
 import {
   buildAppReleaseUserPathCohortGuard,
   buildAppReleaseUserPathEvidenceGates,

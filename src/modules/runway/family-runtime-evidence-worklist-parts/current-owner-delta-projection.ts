@@ -2,7 +2,7 @@ import {
   buildCurrentOwnerDeltaReadModel,
   buildDefaultNextActionFromCurrentOwnerDelta,
 } from '../../ledger/index.ts';
-import { countValue, record, type JsonRecord } from './json-utils.ts';
+import { countValue, record, type JsonRecord } from '../../../kernel/json-record.ts';
 import { worklistOwnerId } from './owner-normalization.ts';
 
 function normalizeWorklistDefaultNextActionOwner(action: JsonRecord): JsonRecord {

@@ -1,4 +1,4 @@
-import type { JsonRecord } from './runtime-tray-snapshot-types.ts';
+import type { JsonRecord } from '../../../kernel/types.ts';
 
 type PackageExportAttempt = {
   stage_attempt_id: string;

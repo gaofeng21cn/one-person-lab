@@ -1,4 +1,4 @@
-import { readOplUpdateChannel, readOplWorkspaceRoot } from '../../console/index.ts';
+import { readOplUpdateChannel, readOplWorkspaceRoot } from '../../../kernel/system-preferences.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import { recordManagedInstallUpdateReceipts } from '../managed-install-update-ledger.ts';
 
