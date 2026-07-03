@@ -1,6 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { readJsonPayloadFile } from '../../kernel/json-file.ts';
+import { record, stringValue } from '../../kernel/json-record.ts';
 import type {
   StageRunExecutionAuthorizationReceipt,
 } from './stage-run-execution-authorization-ledger.ts';
@@ -8,21 +11,9 @@ import { getActiveWorkspaceBinding } from '../workspace/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function text(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
 function readJsonRecord(filePath: string) {
   try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
+    const parsed = readJsonPayloadFile(filePath);
     return isRecord(parsed) ? parsed : null;
   } catch {
     return null;
@@ -46,8 +37,8 @@ function workspaceRootFromProfileRef(profileRef: string | null) {
 function workspaceRootCandidates() {
   const binding = getActiveWorkspaceBinding('medautoscience');
   const locator = binding?.direct_entry.workspace_locator;
-  const workspaceRoot = text(locator?.workspace_root) ?? text(binding?.workspace_path);
-  const profileRef = text(locator?.profile_ref);
+  const workspaceRoot = stringValue(locator?.workspace_root) ?? stringValue(binding?.workspace_path);
+  const profileRef = stringValue(locator?.profile_ref);
   return [...new Set([
     workspaceRootFromProfileRef(profileRef),
     workspaceRoot,
@@ -83,13 +74,13 @@ function bindingMatchesReceipt(
 ) {
   const closeoutBinding = record(projection.closeout_binding);
   return closeoutBinding.trusted_opl_execution_authorization === true
-    && text(closeoutBinding.provider_attempt_ref) === receipt.provider_attempt_ref
-    && text(closeoutBinding.attempt_lease_ref) === receipt.attempt_lease_ref
-    && text(closeoutBinding.attempt_lease_status) === receipt.attempt_lease_status
-    && text(closeoutBinding.execution_authorization_decision_ref)
+    && stringValue(closeoutBinding.provider_attempt_ref) === receipt.provider_attempt_ref
+    && stringValue(closeoutBinding.attempt_lease_ref) === receipt.attempt_lease_ref
+    && stringValue(closeoutBinding.attempt_lease_status) === receipt.attempt_lease_status
+    && stringValue(closeoutBinding.execution_authorization_decision_ref)
       === receipt.execution_authorization_decision_ref
-    && text(closeoutBinding.source_fingerprint) === receipt.source_fingerprint
-    && text(closeoutBinding.idempotency_key) === receipt.idempotency_key;
+    && stringValue(closeoutBinding.source_fingerprint) === receipt.source_fingerprint
+    && stringValue(closeoutBinding.idempotency_key) === receipt.idempotency_key;
 }
 
 export function findMasPublicationHandoffOwnerAnswerProjection(input: {

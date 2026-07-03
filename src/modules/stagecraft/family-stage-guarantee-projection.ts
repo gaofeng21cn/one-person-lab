@@ -1,3 +1,4 @@
+import { optionalString } from '../../kernel/json-file.ts';
 import type { FamilyStageDescriptor } from './family-stage-control-plane-contract.ts';
 
 export type FamilyStageGuaranteeMode =
@@ -7,10 +8,6 @@ export type FamilyStageGuaranteeMode =
   | 'observability_only';
 
 type JsonRecord = Record<string, unknown>;
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
 
 function readBoolean(record: JsonRecord, key: string) {
   return typeof record[key] === 'boolean' ? record[key] as boolean : null;

@@ -2,7 +2,8 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText, readJsonPayloadFile, writeJsonPayloadFile } from '../../kernel/json-file.ts';
 import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 
 export type JsonRecord = Record<string, unknown>;
@@ -113,10 +114,6 @@ export const RETENTION_POLICY = {
   restore_does_not_declare_domain_truth_or_quality: true,
 } as const;
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 export function safeText(value: unknown, fallback = '') {
   const text = String(value ?? '').trim();
   return text || fallback;
@@ -145,7 +142,7 @@ export function readJsonFile(file: string): JsonRecord | null {
     return null;
   }
   try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf-8'));
+    const parsed = readJsonPayloadFile(file);
     return isRecord(parsed) ? parsed : null;
   } catch {
     return null;
@@ -154,7 +151,7 @@ export function readJsonFile(file: string): JsonRecord | null {
 
 export function writeJsonFile(file: string, payload: unknown) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, `${JSON.stringify(payload, null, 2)}\n`, 'utf-8');
+  writeJsonPayloadFile(file, payload);
 }
 
 export function listDirNames(dir: string) {
@@ -331,7 +328,7 @@ export function readLineageEvents(root: string) {
     .filter(Boolean)
     .flatMap((line) => {
       try {
-        const parsed = JSON.parse(line);
+        const parsed = parseJsonText(line);
         return isRecord(parsed) ? [parsed] : [];
       } catch {
         return [];

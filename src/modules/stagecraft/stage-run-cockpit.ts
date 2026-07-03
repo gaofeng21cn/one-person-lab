@@ -1,3 +1,4 @@
+import { record, stringValue, type JsonRecord } from '../../kernel/json-record.ts';
 import { evaluateStageRunAdmission, evaluateStageRunExecutionAuthorization } from './stage-run-kernel.ts';
 import {
   latestStageRunExecutionAuthorizationCloseoutReceiptForStageAttempt,
@@ -10,38 +11,26 @@ import {
   findMasPublicationHandoffOwnerAnswerProjection,
 } from './mas-owner-answer-projection.ts';
 
-type JsonRecord = Record<string, unknown>;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function text(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
 function strings(value: unknown) {
   return Array.isArray(value)
-    ? [...new Set(value.map(text).filter((entry): entry is string => Boolean(entry)))]
+    ? [...new Set(value.map(stringValue).filter((entry): entry is string => Boolean(entry)))]
     : [];
 }
 
 function stringRefs(...values: unknown[]) {
-  return [...new Set(values.flatMap((value) => Array.isArray(value) ? strings(value) : [text(value)].filter(Boolean) as string[]))];
+  return [...new Set(values.flatMap((value) => (
+    Array.isArray(value) ? strings(value) : [stringValue(value)].filter(Boolean) as string[]
+  )))];
 }
 
 function currentOwnerDeltaStageId(currentOwnerDelta: JsonRecord) {
-  return text(currentOwnerDelta.stage_id) ?? text(currentOwnerDelta.stage_ref);
+  return stringValue(currentOwnerDelta.stage_id) ?? stringValue(currentOwnerDelta.stage_ref);
 }
 
 function stageRunId(currentOwnerDelta: JsonRecord) {
   return [
     'app-stage-run',
-    text(currentOwnerDelta.domain) ?? text(currentOwnerDelta.current_owner) ?? 'one-person-lab',
+    stringValue(currentOwnerDelta.domain) ?? stringValue(currentOwnerDelta.current_owner) ?? 'one-person-lab',
     currentOwnerDeltaStageId(currentOwnerDelta) ?? 'current-owner-delta',
   ]
     .map((entry) => entry.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'unknown')
@@ -49,7 +38,7 @@ function stageRunId(currentOwnerDelta: JsonRecord) {
 }
 
 function stageAttemptIdFromRef(value: unknown) {
-  const ref = text(value);
+  const ref = stringValue(value);
   if (!ref) {
     return null;
   }
@@ -119,18 +108,18 @@ const BLOCKER_REASON_REF_MAP: Record<string, string[]> = {
 
 function ownerAnswerRef(currentOwnerDelta: JsonRecord) {
   const hardGate = record(currentOwnerDelta.hard_gate);
-  return text(currentOwnerDelta.latest_owner_answer_ref)
-    ?? text(currentOwnerDelta.latest_owner_receipt_ref)
-    ?? text(currentOwnerDelta.latest_typed_blocker_ref)
-    ?? text(hardGate.owner_answer_ref)
-    ?? text(hardGate.closeout_receipt_ref)
-    ?? text(hardGate.typed_blocker_ref);
+  return stringValue(currentOwnerDelta.latest_owner_answer_ref)
+    ?? stringValue(currentOwnerDelta.latest_owner_receipt_ref)
+    ?? stringValue(currentOwnerDelta.latest_typed_blocker_ref)
+    ?? stringValue(hardGate.owner_answer_ref)
+    ?? stringValue(hardGate.closeout_receipt_ref)
+    ?? stringValue(hardGate.typed_blocker_ref);
 }
 
 function ownerAnswerKind(currentOwnerDelta: JsonRecord) {
   const hardGate = record(currentOwnerDelta.hard_gate);
-  const explicitKind = text(hardGate.owner_answer_kind) ?? text(currentOwnerDelta.latest_owner_answer_kind);
-  if (explicitKind === 'typed_blocker' || text(currentOwnerDelta.latest_typed_blocker_ref) || text(hardGate.typed_blocker_ref)) {
+  const explicitKind = stringValue(hardGate.owner_answer_kind) ?? stringValue(currentOwnerDelta.latest_owner_answer_kind);
+  if (explicitKind === 'typed_blocker' || stringValue(currentOwnerDelta.latest_typed_blocker_ref) || stringValue(hardGate.typed_blocker_ref)) {
     return 'typed_blocker';
   }
   if (explicitKind === 'quality_gate_receipt' || explicitKind === 'human_gate' || explicitKind === 'route_back_evidence') {
@@ -145,16 +134,16 @@ function numberValue(value: unknown) {
 
 function ownerAnswerRefFromProjection(projection: JsonRecord) {
   const hardGate = record(projection.hard_gate);
-  return text(hardGate.owner_answer_ref)
-    ?? text(projection.latest_owner_answer_ref)
-    ?? text(projection.latest_owner_receipt_ref)
-    ?? text(projection.latest_typed_blocker_ref);
+  return stringValue(hardGate.owner_answer_ref)
+    ?? stringValue(projection.latest_owner_answer_ref)
+    ?? stringValue(projection.latest_owner_receipt_ref)
+    ?? stringValue(projection.latest_typed_blocker_ref);
 }
 
 function ownerAnswerKindFromProjection(projection: JsonRecord) {
   const hardGate = record(projection.hard_gate);
-  const explicitKind = text(hardGate.owner_answer_kind) ?? text(projection.latest_owner_answer_kind);
-  if (explicitKind === 'typed_blocker' || text(projection.latest_typed_blocker_ref)) {
+  const explicitKind = stringValue(hardGate.owner_answer_kind) ?? stringValue(projection.latest_owner_answer_kind);
+  if (explicitKind === 'typed_blocker' || stringValue(projection.latest_typed_blocker_ref)) {
     return 'typed_blocker';
   }
   if (explicitKind === 'quality_gate_receipt' || explicitKind === 'human_gate' || explicitKind === 'route_back_evidence') {
@@ -183,14 +172,14 @@ function buildExecutionAuthorizationNextAction(input: {
   executionAuthorization: JsonRecord;
 }) {
   const hardGate = record(input.currentOwnerDelta.hard_gate);
-  const desiredDeltaKind = text(input.currentOwnerDelta.desired_delta_kind) ?? 'none';
-  const hardGateState = text(hardGate.state) ?? 'none';
+  const desiredDeltaKind = stringValue(input.currentOwnerDelta.desired_delta_kind) ?? 'none';
+  const hardGateState = stringValue(hardGate.state) ?? 'none';
   if (desiredDeltaKind === 'none' && hardGateState === 'none') {
     return null;
   }
   const blocker = record(input.executionAuthorization.opl_runtime_blocker);
   const reasons = strings(blocker.blocker_reasons);
-  if (text(input.executionAuthorization.status) !== 'blocked' || reasons.length === 0) {
+  if (stringValue(input.executionAuthorization.status) !== 'blocked' || reasons.length === 0) {
     return null;
   }
   const missingRefs = missingRefsFromBlockerReasons(reasons);
@@ -200,17 +189,17 @@ function buildExecutionAuthorizationNextAction(input: {
   const domainOwnerAnswerMissing = !executionAuthorizationMissing
     && CLOSEOUT_BINDING_REQUIRED_REFS.some((ref) => missingRefs.includes(ref));
   const currentDomainOwner =
-    text(input.currentOwnerDelta.current_owner)
-    ?? text(input.currentOwnerDelta.owner)
+    stringValue(input.currentOwnerDelta.current_owner)
+    ?? stringValue(input.currentOwnerDelta.owner)
     ?? input.domainId;
   const nextRequiredOwner = domainOwnerAnswerMissing ? currentDomainOwner : 'one-person-lab';
   const nextRequiredAction = domainOwnerAnswerMissing
-    ? text(input.currentOwnerDelta.desired_delta_description)
-      ?? text(input.currentOwnerDelta.payload_requirement)
+    ? stringValue(input.currentOwnerDelta.desired_delta_description)
+      ?? stringValue(input.currentOwnerDelta.payload_requirement)
       ?? 'domain_owner_receipt_quality_gate_or_typed_blocker_required'
     : 'record_opl_provider_attempt_lease_authorization_and_closeout_receipt_binding_refs';
   const payloadRequirement = domainOwnerAnswerMissing
-    ? text(input.currentOwnerDelta.payload_requirement)
+    ? stringValue(input.currentOwnerDelta.payload_requirement)
       ?? 'domain_owner_receipt_quality_gate_or_typed_blocker_required'
     : 'opl_execution_authorization_and_closeout_binding_refs_required';
   const acceptedAnswerShape = domainOwnerAnswerMissing
@@ -251,7 +240,7 @@ function buildExecutionAuthorizationNextAction(input: {
     accepted_answer_shape: acceptedAnswerShape,
     required_return_shapes: acceptedAnswerShape,
     blocked_authority: strings(blocker.blocked_authority),
-    blocker_code: text(blocker.blocker_code) ?? 'stage_run_execution_authorization_blocked',
+    blocker_code: stringValue(blocker.blocker_code) ?? 'stage_run_execution_authorization_blocked',
     blocker_reasons: reasons,
     missing_input_refs: missingRefs,
     required_ref_shape: {
@@ -284,7 +273,7 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
   const currentOwnerDeltaRunId = stageRunId(currentOwnerDelta);
   const generation = 0;
   const currentOwnerDeltaDomainId =
-    text(currentOwnerDelta.domain) ?? text(currentOwnerDelta.current_owner) ?? 'one-person-lab';
+    stringValue(currentOwnerDelta.domain) ?? stringValue(currentOwnerDelta.current_owner) ?? 'one-person-lab';
   const currentOwnerDeltaStageIdValue = currentOwnerDeltaStageId(currentOwnerDelta) ?? 'current-owner-delta';
   const currentStageAttemptId = currentOwnerDeltaStageAttemptId(currentOwnerDelta);
   const latestExecutionAuthorization =
@@ -357,23 +346,23 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
   const launchAdmission = evaluateStageRunAdmission({
     ...common,
     phase: 'launch',
-    owner: text(currentOwnerDelta.current_owner) ?? domainId,
+    owner: stringValue(currentOwnerDelta.current_owner) ?? domainId,
     scope_refs: stringRefs(
-      text(currentOwnerDelta.task_or_study_ref),
-      text(currentOwnerDelta.lineage_ref),
-      text(currentOwnerDelta.source_fingerprint),
+      stringValue(currentOwnerDelta.task_or_study_ref),
+      stringValue(currentOwnerDelta.lineage_ref),
+      stringValue(currentOwnerDelta.source_fingerprint),
     ),
     selected_executor: 'codex_cli',
     expected_receipt_or_blocker_shape: 'owner_receipt_or_typed_blocker',
     input_refs: stringRefs(
-      text(currentOwnerDelta.task_or_study_ref),
-      text(currentOwnerDelta.lineage_ref),
-      text(currentOwnerDelta.source_fingerprint),
+      stringValue(currentOwnerDelta.task_or_study_ref),
+      stringValue(currentOwnerDelta.lineage_ref),
+      stringValue(currentOwnerDelta.source_fingerprint),
     ),
     replay_audit_refs: stringRefs(
-      text(record(currentOwnerDelta.audit_refs).app_operator_drilldown_ref),
-      text(record(currentOwnerDelta.audit_refs).framework_readiness_ref),
-      text(currentOwnerDelta.source_fingerprint),
+      stringValue(record(currentOwnerDelta.audit_refs).app_operator_drilldown_ref),
+      stringValue(record(currentOwnerDelta.audit_refs).framework_readiness_ref),
+      stringValue(currentOwnerDelta.source_fingerprint),
     ),
     missing_strategy_refs: [
       'prompt_refs',
@@ -400,12 +389,12 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
       ? stringRefs(effectiveOwnerAnswerRef)
       : [],
     content_hashes: stringRefs(
-      text(ownerAnswerProjection.source_fingerprint),
-      text(ownerAnswerProjectionCloseoutBinding.source_fingerprint),
+      stringValue(ownerAnswerProjection.source_fingerprint),
+      stringValue(ownerAnswerProjectionCloseoutBinding.source_fingerprint),
     ),
     lineage_refs: stringRefs(
-      text(currentOwnerDelta.lineage_ref),
-      text(currentOwnerDelta.source_fingerprint),
+      stringValue(currentOwnerDelta.lineage_ref),
+      stringValue(currentOwnerDelta.source_fingerprint),
     ),
     provider_completed: true,
     read_model_refreshed: true,
@@ -415,33 +404,33 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
     phase: 'closeout',
     selected_executor: 'codex_cli',
     source_fingerprint:
-      latestExecutionAuthorization?.source_fingerprint ?? text(currentOwnerDelta.source_fingerprint),
+      latestExecutionAuthorization?.source_fingerprint ?? stringValue(currentOwnerDelta.source_fingerprint),
     idempotency_key:
-      latestExecutionAuthorization?.idempotency_key ?? text(currentOwnerDelta.delta_id) ?? runId,
+      latestExecutionAuthorization?.idempotency_key ?? stringValue(currentOwnerDelta.delta_id) ?? runId,
     provider_attempt_ref:
-      latestExecutionAuthorization?.provider_attempt_ref ?? text(currentOwnerDelta.live_attempt_ref),
+      latestExecutionAuthorization?.provider_attempt_ref ?? stringValue(currentOwnerDelta.live_attempt_ref),
     attempt_lease_ref:
-      latestExecutionAuthorization?.attempt_lease_ref ?? text(record(currentOwnerDelta.hard_gate).attempt_lease_ref),
+      latestExecutionAuthorization?.attempt_lease_ref ?? stringValue(record(currentOwnerDelta.hard_gate).attempt_lease_ref),
     attempt_lease_status:
       latestExecutionAuthorization?.attempt_lease_status
-      ?? text(record(currentOwnerDelta.hard_gate).attempt_lease_status)
+      ?? stringValue(record(currentOwnerDelta.hard_gate).attempt_lease_status)
       ?? 'active',
     execution_authorization_decision_ref:
       latestExecutionAuthorization?.execution_authorization_decision_ref
-      ?? text(record(currentOwnerDelta.hard_gate).execution_authorization_decision_ref),
+      ?? stringValue(record(currentOwnerDelta.hard_gate).execution_authorization_decision_ref),
     workspace_scope_ref:
       latestExecutionAuthorization?.workspace_scope_ref
-      ?? text(record(currentOwnerDelta.audit_refs).workspace_scope_ref)
-      ?? text(currentOwnerDelta.task_or_study_ref),
+      ?? stringValue(record(currentOwnerDelta.audit_refs).workspace_scope_ref)
+      ?? stringValue(currentOwnerDelta.task_or_study_ref),
     artifact_scope_ref:
       latestExecutionAuthorization?.artifact_scope_ref
-      ?? text(record(currentOwnerDelta.audit_refs).artifact_scope_ref)
-      ?? text(currentOwnerDelta.lineage_ref),
+      ?? stringValue(record(currentOwnerDelta.audit_refs).artifact_scope_ref)
+      ?? stringValue(currentOwnerDelta.lineage_ref),
     forbidden_write_required: false,
     owner_answer_ref: effectiveOwnerAnswerRef,
     owner_answer_kind: effectiveOwnerAnswerKind,
-    owner_answer_stage_run_id: text(record(currentOwnerDelta.hard_gate).owner_answer_stage_run_id)
-      ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_stage_run_id)
+    owner_answer_stage_run_id: stringValue(record(currentOwnerDelta.hard_gate).owner_answer_stage_run_id)
+      ?? stringValue(record(currentOwnerDelta.hard_gate).closeout_receipt_stage_run_id)
       ?? latestExecutionAuthorization?.owner_answer_stage_run_id
       ?? (bridgedOwnerAnswerRef ? runId : null),
     owner_answer_generation: record(currentOwnerDelta.hard_gate).owner_answer_generation
@@ -449,42 +438,42 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
       ?? latestExecutionAuthorization?.owner_answer_generation
       ?? numberValue(ownerAnswerProjectionHardGate.owner_answer_generation)
       ?? numberValue(ownerAnswerProjectionCloseoutBinding.generation),
-    owner_answer_manifest_ref: text(record(currentOwnerDelta.hard_gate).owner_answer_manifest_ref)
-      ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_manifest_ref)
+    owner_answer_manifest_ref: stringValue(record(currentOwnerDelta.hard_gate).owner_answer_manifest_ref)
+      ?? stringValue(record(currentOwnerDelta.hard_gate).closeout_receipt_manifest_ref)
       ?? latestExecutionAuthorization?.owner_answer_manifest_ref
-      ?? text(ownerAnswerProjectionHardGate.owner_answer_manifest_ref)
-      ?? text(ownerAnswerProjectionCloseoutBinding.stage_manifest_ref),
-    stage_manifest_ref: text(record(currentOwnerDelta.hard_gate).stage_manifest_ref)
-      ?? text(ownerAnswerProjectionHardGate.stage_manifest_ref)
-      ?? text(ownerAnswerProjection.stage_manifest_ref)
-      ?? text(ownerAnswerProjectionCloseoutBinding.stage_manifest_ref)
+      ?? stringValue(ownerAnswerProjectionHardGate.owner_answer_manifest_ref)
+      ?? stringValue(ownerAnswerProjectionCloseoutBinding.stage_manifest_ref),
+    stage_manifest_ref: stringValue(record(currentOwnerDelta.hard_gate).stage_manifest_ref)
+      ?? stringValue(ownerAnswerProjectionHardGate.stage_manifest_ref)
+      ?? stringValue(ownerAnswerProjection.stage_manifest_ref)
+      ?? stringValue(ownerAnswerProjectionCloseoutBinding.stage_manifest_ref)
       ?? latestExecutionAuthorization?.stage_manifest_ref,
-    owner_answer_current_pointer_ref: text(record(currentOwnerDelta.hard_gate).owner_answer_current_pointer_ref)
-      ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_current_pointer_ref)
+    owner_answer_current_pointer_ref: stringValue(record(currentOwnerDelta.hard_gate).owner_answer_current_pointer_ref)
+      ?? stringValue(record(currentOwnerDelta.hard_gate).closeout_receipt_current_pointer_ref)
       ?? latestExecutionAuthorization?.owner_answer_current_pointer_ref
-      ?? text(ownerAnswerProjectionHardGate.owner_answer_current_pointer_ref)
-      ?? text(ownerAnswerProjectionCloseoutBinding.current_pointer_ref),
-    current_pointer_ref: text(record(currentOwnerDelta.hard_gate).current_pointer_ref)
-      ?? text(ownerAnswerProjectionHardGate.current_pointer_ref)
-      ?? text(ownerAnswerProjection.current_pointer_ref)
-      ?? text(ownerAnswerProjectionCloseoutBinding.current_pointer_ref)
+      ?? stringValue(ownerAnswerProjectionHardGate.owner_answer_current_pointer_ref)
+      ?? stringValue(ownerAnswerProjectionCloseoutBinding.current_pointer_ref),
+    current_pointer_ref: stringValue(record(currentOwnerDelta.hard_gate).current_pointer_ref)
+      ?? stringValue(ownerAnswerProjectionHardGate.current_pointer_ref)
+      ?? stringValue(ownerAnswerProjection.current_pointer_ref)
+      ?? stringValue(ownerAnswerProjectionCloseoutBinding.current_pointer_ref)
       ?? latestExecutionAuthorization?.current_pointer_ref,
-    owner_answer_source_fingerprint: text(record(currentOwnerDelta.hard_gate).owner_answer_source_fingerprint)
-      ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_source_fingerprint)
+    owner_answer_source_fingerprint: stringValue(record(currentOwnerDelta.hard_gate).owner_answer_source_fingerprint)
+      ?? stringValue(record(currentOwnerDelta.hard_gate).closeout_receipt_source_fingerprint)
       ?? latestExecutionAuthorization?.owner_answer_source_fingerprint
-      ?? text(ownerAnswerProjectionHardGate.owner_answer_source_fingerprint)
-      ?? text(ownerAnswerProjection.source_fingerprint)
-      ?? text(ownerAnswerProjectionCloseoutBinding.source_fingerprint),
-    owner_answer_idempotency_key: text(record(currentOwnerDelta.hard_gate).owner_answer_idempotency_key)
-      ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_idempotency_key)
+      ?? stringValue(ownerAnswerProjectionHardGate.owner_answer_source_fingerprint)
+      ?? stringValue(ownerAnswerProjection.source_fingerprint)
+      ?? stringValue(ownerAnswerProjectionCloseoutBinding.source_fingerprint),
+    owner_answer_idempotency_key: stringValue(record(currentOwnerDelta.hard_gate).owner_answer_idempotency_key)
+      ?? stringValue(record(currentOwnerDelta.hard_gate).closeout_receipt_idempotency_key)
       ?? latestExecutionAuthorization?.owner_answer_idempotency_key
-      ?? text(ownerAnswerProjectionHardGate.owner_answer_idempotency_key)
-      ?? text(ownerAnswerProjection.delta_id)
-      ?? text(ownerAnswerProjectionCloseoutBinding.idempotency_key),
-    quality_gate_attempt_ref: text(record(currentOwnerDelta.hard_gate).quality_gate_attempt_ref)
+      ?? stringValue(ownerAnswerProjectionHardGate.owner_answer_idempotency_key)
+      ?? stringValue(ownerAnswerProjection.delta_id)
+      ?? stringValue(ownerAnswerProjectionCloseoutBinding.idempotency_key),
+    quality_gate_attempt_ref: stringValue(record(currentOwnerDelta.hard_gate).quality_gate_attempt_ref)
       ?? latestExecutionAuthorization?.quality_gate_attempt_ref
-      ?? text(ownerAnswerProjectionHardGate.quality_gate_attempt_ref)
-      ?? text(ownerAnswerProjectionCloseoutBinding.quality_gate_attempt_ref),
+      ?? stringValue(ownerAnswerProjectionHardGate.quality_gate_attempt_ref)
+      ?? stringValue(ownerAnswerProjectionCloseoutBinding.quality_gate_attempt_ref),
   });
   const nextRequiredOwnerAction = buildExecutionAuthorizationNextAction({
     stageRunId: runId,
@@ -493,9 +482,9 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
     currentOwnerDelta,
     executionAuthorization,
   });
-  const currentOwnerDeltaOwner = text(currentOwnerDelta.current_owner) ?? domainId;
+  const currentOwnerDeltaOwner = stringValue(currentOwnerDelta.current_owner) ?? domainId;
   const stageRunCurrentOwner =
-    text(nextRequiredOwnerAction?.next_required_owner)
+    stringValue(nextRequiredOwnerAction?.next_required_owner)
     ?? currentOwnerDeltaOwner;
 
   return {
@@ -512,7 +501,7 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
       stage_id: stageId,
       current_owner: stageRunCurrentOwner,
       current_owner_delta_owner: currentOwnerDeltaOwner,
-      required_delta: text(currentOwnerDelta.desired_delta_description)
+      required_delta: stringValue(currentOwnerDelta.desired_delta_description)
         ?? 'no_opl_operator_actionable_delta_required',
       accepted_return_shapes: acceptedReturnShapes.length > 0 ? acceptedReturnShapes : ['typed_blocker_ref'],
       hard_gate: record(currentOwnerDelta.hard_gate),
@@ -532,15 +521,15 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
             workspace_root: ownerAnswerProjectionMatch.workspace_root,
             study_id: ownerAnswerProjectionMatch.study_id,
             source_stage_run_id:
-              text(ownerAnswerProjection.stage_run_id)
-              ?? text(ownerAnswerProjectionCloseoutBinding.stage_run_id),
+              stringValue(ownerAnswerProjection.stage_run_id)
+              ?? stringValue(ownerAnswerProjectionCloseoutBinding.stage_run_id),
             source_owner_answer_stage_run_id:
-              text(ownerAnswerProjectionHardGate.owner_answer_stage_run_id),
+              stringValue(ownerAnswerProjectionHardGate.owner_answer_stage_run_id),
             bridged_stage_run_id: runId,
             closeout_binding_source: 'mas_publication_handoff_current_owner_delta',
             match_policy:
               'trusted_opl_execution_authorization_provider_attempt_lease_decision_source_idempotency_match',
-            reason: text(ownerAnswerProjection.reason),
+            reason: stringValue(ownerAnswerProjection.reason),
             authority_boundary: ownerAnswerProjectionMatch.authority_boundary,
           }
         : null,

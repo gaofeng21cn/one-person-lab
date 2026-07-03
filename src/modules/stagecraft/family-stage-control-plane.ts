@@ -1,6 +1,7 @@
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { withOplMetaAgentStageAttemptEntry } from './family-stage-control-plane-oma.ts';
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { optionalString } from '../../kernel/json-file.ts';
 import type {
   FamilyStageDomainManifest,
   FamilyStageDomainManifestCatalog,
@@ -158,14 +159,6 @@ export interface FamilyStageLaunchAdmissionGate {
     can_authorize_quality_verdict: false;
     can_mutate_artifact_body: false;
   };
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function refsCount(refs: FamilyStageSurfaceRef[] | undefined) {

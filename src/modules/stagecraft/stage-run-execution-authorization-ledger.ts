@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { optionalString, readJsonPayloadFile } from '../../kernel/json-file.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import {
   evaluateStageRunExecutionAuthorization,
@@ -153,14 +155,6 @@ const STRICT_SCHEMA_REQUIRED_IDENTITY_FIELDS = [
 
 function nowIso() {
   return new Date().toISOString();
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
 function stringList(value: unknown) {
@@ -474,7 +468,7 @@ function readLedgerInspection(): StageRunExecutionAuthorizationLedgerInspection 
     return emptyLedgerInspection({ file, exists: false });
   }
   try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
+    const parsed = readJsonPayloadFile(file);
     if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
       return emptyLedgerInspection({
         file,

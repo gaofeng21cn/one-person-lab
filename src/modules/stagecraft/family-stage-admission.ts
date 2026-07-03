@@ -1,4 +1,6 @@
 import type { FamilyActionCatalog, FamilyActionCatalogAction } from '../../kernel/family-action-catalog-contract.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { optionalString } from '../../kernel/json-file.ts';
 import type {
   FamilyStageControlPlane,
   FamilyStageDescriptor,
@@ -139,10 +141,6 @@ const FORBIDDEN_AUTHORITY_FLAGS = [
   'can_accept_or_reject_memory_writeback',
 ];
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function readStringList(value: unknown) {
   if (!Array.isArray(value)) {
     return [];
@@ -244,10 +242,6 @@ function inspectProgressFirstPolicies(stage: FamilyStageDescriptor, findings: Fa
       });
     }
   }
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function pushFinding(

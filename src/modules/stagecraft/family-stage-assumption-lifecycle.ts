@@ -1,3 +1,5 @@
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { optionalString } from '../../kernel/json-file.ts';
 import type {
   FamilyStageControlPlane,
   FamilyStageDescriptor,
@@ -55,14 +57,6 @@ export interface FamilyStageAssumptionLifecycleProjection {
     can_authorize_quality_verdict: false;
     can_mutate_artifact_body: false;
   };
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function readStringList(value: unknown) {

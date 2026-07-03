@@ -1,3 +1,6 @@
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { optionalString } from '../../kernel/json-file.ts';
+
 type JsonRecord = Record<string, unknown>;
 
 export type FamilyStageKind =
@@ -126,14 +129,6 @@ export interface FamilyStageControlPlane {
   stage_pack_conformance_version?: string | null;
   stages: FamilyStageDescriptor[];
   notes: string[];
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function requireString(value: unknown, field: string) {

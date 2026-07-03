@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { parseJsonText } from '../../../kernel/json-file.ts';
 import type { FunctionFinding, SourceFileInfo } from './types.ts';
 
 type PythonFunctionMetric = {
@@ -206,7 +207,7 @@ function analyzePythonFiles(files: SourceFileInfo[]) {
     throw new Error(`Python AST analyzer failed with ${pythonExecutable}: ${result.stderr || result.stdout}`);
   }
 
-  const parsed = JSON.parse(result.stdout) as PythonFileMetric[];
+  const parsed = parseJsonText(result.stdout) as PythonFileMetric[];
   const metricsByFile = new Map(parsed.map((entry) => [entry.file, entry]));
   const functions: FunctionFinding[] = [];
 

@@ -1,3 +1,5 @@
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { optionalString } from '../../kernel/json-file.ts';
 import type {
   FamilyStageControlPlane,
   FamilyStageDescriptor,
@@ -67,14 +69,6 @@ const REQUIRED_TOOL_AFFORDANCE_FALSE_FLAGS = [
   'tool_catalog_can_override_stage_goal',
   'tool_catalog_can_authorize_forbidden_write',
 ];
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
 
 function readStringList(value: unknown) {
   if (!Array.isArray(value)) {

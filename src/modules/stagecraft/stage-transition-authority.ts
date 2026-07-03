@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { optionalString, readJsonPayloadFile } from '../../kernel/json-file.ts';
 import { stableId } from '../../kernel/stable-id.ts';
 import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 
@@ -216,10 +217,6 @@ const FORBIDDEN_AUTHORITY_FIELDS = new Set([
   'stage_run_terminal_state_written_by_producer',
 ]);
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function requiredString(value: unknown, field: string) {
   if (typeof value !== 'string' || value.trim().length === 0) {
     throw new FrameworkContractError(
@@ -279,10 +276,6 @@ function requireIntentAuthorityBoundary(value: unknown) {
   }
 
   return value;
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
 function refs(value: unknown) {
@@ -667,7 +660,7 @@ function readLedgerInspection(): StageTransitionAuthorityLedgerInspection {
     return emptyLedgerInspection({ file, exists: false });
   }
   try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
+    const parsed = readJsonPayloadFile(file);
     if (!isRecord(parsed) || !Array.isArray(parsed.events)) {
       return emptyLedgerInspection({
         file,

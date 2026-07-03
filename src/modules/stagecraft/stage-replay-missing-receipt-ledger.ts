@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { optionalString, readJsonPayloadFile } from '../../kernel/json-file.ts';
 import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -74,14 +75,6 @@ const ALLOWED_PAYLOAD_FIELDS = new Set([
 
 function nowIso() {
   return new Date().toISOString();
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
 function stringList(value: unknown) {
@@ -403,7 +396,7 @@ function readStageReplayMissingReceiptLedger(): StageReplayMissingReceiptLedger 
     return emptyLedger();
   }
   try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
+    const parsed = readJsonPayloadFile(file);
     if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
       return emptyLedger();
     }

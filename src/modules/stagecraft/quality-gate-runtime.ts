@@ -1,4 +1,4 @@
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -38,10 +38,6 @@ export type QualityGateRuntimeBindingInput = Omit<
   QualityGateRuntimeBinding,
   'surface_kind' | 'schema_version' | 'owner_answer_kind' | 'binding_status' | 'authority_boundary'
 >;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
 
 function nonEmptyString(value: unknown, field: string) {
   if (typeof value !== 'string' || value.trim().length === 0) {

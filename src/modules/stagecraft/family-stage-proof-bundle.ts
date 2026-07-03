@@ -1,5 +1,7 @@
 import crypto from 'node:crypto';
 import type { FamilyActionCatalog } from '../../kernel/family-action-catalog-contract.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { optionalString } from '../../kernel/json-file.ts';
 import {
   buildFamilyStageAdmissionReview,
 } from './family-stage-admission.ts';
@@ -204,19 +206,11 @@ export interface BuildFamilyStageProofBundleOptions {
   admissionReview?: FamilyStageAdmissionReview | null;
 }
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function readStringList(value: unknown) {
   if (!Array.isArray(value)) {
     return [];
   }
   return value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function stableValue(value: unknown): unknown {

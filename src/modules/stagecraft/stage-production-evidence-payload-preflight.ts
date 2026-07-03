@@ -1,4 +1,5 @@
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { stringValue } from '../../kernel/json-record.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -61,14 +62,6 @@ const FORBIDDEN_PAYLOAD_FIELDS = [
   'domain_ready',
   'production_ready',
 ] as const;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
 
 function stringList(value: unknown) {
   if (typeof value === 'string' && value.trim().length > 0) {

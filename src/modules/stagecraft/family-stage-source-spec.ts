@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { isRecord } from '../../kernel/contract-validation.ts';
 
 import type { FamilyStageAssumptionLifecycleProjection } from './family-stage-assumption-lifecycle.ts';
 import type { FamilyStageCohortLoopProjection } from './family-stage-cohort-loop.ts';
@@ -85,10 +86,6 @@ export interface BuildFamilyStagePackSourceSpecInput {
 
 function stagePackBaseRef(proofBundle: FamilyStageProofBundle) {
   return `opl://stage-packs/${proofBundle.identity.stage_pack_id}`;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function stableValue(value: unknown): unknown {

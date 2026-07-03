@@ -1,3 +1,4 @@
+import { isRecord } from '../../kernel/contract-validation.ts';
 import type {
   FamilyStageControlPlane,
   FamilyStageDescriptor,
@@ -65,10 +66,6 @@ export interface FamilyStageRuntimeBudgetProjection {
     can_authorize_quality_verdict: false;
     can_mutate_artifact_body: false;
   };
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function readStringList(value: unknown) {

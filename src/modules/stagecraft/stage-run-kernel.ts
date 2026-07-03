@@ -1,4 +1,4 @@
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -173,10 +173,6 @@ const FORBIDDEN_AUTHORITY_FIELDS = new Set([
   'owner_receipt_signed_by_opl',
   'typed_blocker_created_by_opl',
 ]);
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function requiredString(value: unknown, field: string) {
   if (typeof value !== 'string' || value.trim().length === 0) {

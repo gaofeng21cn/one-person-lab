@@ -1,35 +1,24 @@
-type JsonRecord = Record<string, unknown>;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { record, stringValue, type JsonRecord } from '../../kernel/json-record.ts';
 
 function stringList(value: unknown) {
   if (typeof value === 'string' && value.trim()) {
     return [value.trim()];
   }
   return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
+    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
     : [];
 }
 
 function refFromAffordance(value: unknown) {
   if (typeof value === 'string') {
-    return optionalString(value);
+    return stringValue(value);
   }
   const affordance = record(value);
-  return optionalString(affordance.affordance_ref)
-    ?? optionalString(affordance.tool_ref)
-    ?? optionalString(affordance.ref)
-    ?? optionalString(affordance.id);
+  return stringValue(affordance.affordance_ref)
+    ?? stringValue(affordance.tool_ref)
+    ?? stringValue(affordance.ref)
+    ?? stringValue(affordance.id);
 }
 
 function affordanceRefs(value: unknown) {
@@ -88,8 +77,8 @@ export function buildStageAttemptLaunchEnvelope(input: {
     stage_id: input.stageId,
     source_fingerprint: input.sourceFingerprint ?? null,
     envelope_semantics: boundary.envelope_semantics,
-    stage_goal: optionalString(workspaceLocator.stage_goal)
-      ?? optionalString(workspaceLocator.goal)
+    stage_goal: stringValue(workspaceLocator.stage_goal)
+      ?? stringValue(workspaceLocator.goal)
       ?? `${input.domainId}/${input.stageId}`,
     context_refs: refsFromRecord(workspaceLocator, [
       'context_refs',

@@ -1,3 +1,4 @@
+import { optionalString } from '../../kernel/json-file.ts';
 import { stableId } from '../../kernel/stable-id.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -182,10 +183,6 @@ const DEFAULT_AUTHORITY_BOUNDARY = {
   opl: 'transition_runner_transport_projection_only',
   domain: 'truth_quality_artifact_gate_owner',
 };
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
 
 function stringList(value: unknown) {
   return Array.isArray(value)
