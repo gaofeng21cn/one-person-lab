@@ -271,6 +271,13 @@ test('Runway reconcile projects competing local queue lifecycle as read-only obs
       gate: {
         status: 'attention_needed',
         reason: 'local_sqlite_task_lifecycle_status_without_temporal_stage_attempt',
+        temporal_migration_required: true,
+        required_evidence: [
+          'workflow_id',
+          'temporal_workflow_history_or_query_readback',
+          'stage_attempt_identity',
+          'authority_event_ref_or_projection_rebuild_ref',
+        ],
         competing_statuses: ['running', 'retry_waiting', 'blocked', 'dead_letter', 'succeeded'], // reuse-first: allow legacy status fixture
         competing_task_count: 1,
         competing_tasks: [
@@ -284,6 +291,26 @@ test('Runway reconcile projects competing local queue lifecycle as read-only obs
           },
         ],
         readiness_effect: 'full_online_ready_false_until_temporal_history_or_authority_projection_rebuilds_lifecycle',
+      },
+      temporal_durable_lifecycle_handoff: {
+        surface_kind: 'opl_temporal_durable_lifecycle_handoff',
+        mature_substrate: 'Temporal workflow history/task queue/retry policy/schedule',
+        status: 'required',
+        owner: 'opl_runway',
+        migration_policy: 'rebuild_or_link_lifecycle_from_temporal_history_before_runtime_ready_claim',
+        required_evidence: [
+          'workflow_id',
+          'temporal_workflow_history_or_query_readback',
+          'stage_attempt_identity',
+          'authority_event_ref_or_projection_rebuild_ref',
+        ],
+        allowed_local_action: 'read_projection_and_emit_operator_handoff_only',
+        forbidden_local_actions: [
+          'treat_sqlite_task_status_as_temporal_lifecycle_truth',
+          'retry_or_dead_letter_without_temporal_history',
+          'claim_provider_backed_runtime_ready',
+          'claim_domain_progress_or_domain_ready',
+        ],
       },
       authority_boundary: {
         opl_sqlite_can_project_runtime_state: true,

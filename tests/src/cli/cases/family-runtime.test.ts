@@ -99,6 +99,11 @@ test('family-runtime status exposes provider-backed stage attempt runtime and SQ
       'projection_audit_cache_not_durable_lifecycle_truth',
     );
     assert.equal(output.family_runtime.queue_lifecycle_boundary.gate.status, 'pass');
+    assert.equal(output.family_runtime.queue_lifecycle_boundary.gate.temporal_migration_required, false);
+    assert.equal(
+      output.family_runtime.queue_lifecycle_boundary.temporal_durable_lifecycle_handoff.status,
+      'not_required',
+    );
     assert.equal(
       output.family_runtime.queue_lifecycle_boundary.field_roles.projection_or_audit_when_temporal_selected
         .includes('tasks.dead_letter_reason'),
@@ -376,6 +381,20 @@ exit 1
 
     assert.equal(queue.family_runtime_queue.queue.by_status.retry_waiting, 1);
     assert.equal(queue.family_runtime_queue.queue_lifecycle_boundary.gate.status, 'attention_needed');
+    assert.equal(queue.family_runtime_queue.queue_lifecycle_boundary.gate.temporal_migration_required, true);
+    assert.deepEqual(
+      queue.family_runtime_queue.queue_lifecycle_boundary.gate.required_evidence,
+      [
+        'workflow_id',
+        'temporal_workflow_history_or_query_readback',
+        'stage_attempt_identity',
+        'authority_event_ref_or_projection_rebuild_ref',
+      ],
+    );
+    assert.equal(
+      queue.family_runtime_queue.queue_lifecycle_boundary.temporal_durable_lifecycle_handoff.allowed_local_action,
+      'read_projection_and_emit_operator_handoff_only',
+    );
     assert.equal(queue.family_runtime_queue.queue_lifecycle_boundary.gate.competing_task_count, 1);
     assert.equal(
       queue.family_runtime_queue.queue_lifecycle_boundary.gate.competing_tasks[0].status,

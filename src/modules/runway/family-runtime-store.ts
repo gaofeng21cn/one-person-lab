@@ -645,6 +645,28 @@ export function buildQueueTemporalLifecycleBoundary(
     ? temporalCompetingQueueTasks(db)
     : { totalCount: 0, tasks: [] };
   const gateStatus = competing.totalCount > 0 ? 'attention_needed' : 'pass';
+  const temporalLifecycleHandoff = {
+    surface_kind: 'opl_temporal_durable_lifecycle_handoff',
+    mature_substrate: 'Temporal workflow history/task queue/retry policy/schedule',
+    status: gateStatus === 'attention_needed' ? 'required' : 'not_required',
+    owner: 'opl_runway',
+    migration_policy:
+      'rebuild_or_link_lifecycle_from_temporal_history_before_runtime_ready_claim',
+    required_evidence: [
+      'workflow_id',
+      'temporal_workflow_history_or_query_readback',
+      'stage_attempt_identity',
+      'authority_event_ref_or_projection_rebuild_ref',
+    ],
+    allowed_local_action:
+      'read_projection_and_emit_operator_handoff_only',
+    forbidden_local_actions: [
+      'treat_sqlite_task_status_as_temporal_lifecycle_truth',
+      'retry_or_dead_letter_without_temporal_history',
+      'claim_provider_backed_runtime_ready',
+      'claim_domain_progress_or_domain_ready',
+    ],
+  };
   return {
     surface_kind: 'opl_family_runtime_queue_temporal_lifecycle_boundary',
     selected_provider: selectedProvider,
@@ -690,6 +712,8 @@ export function buildQueueTemporalLifecycleBoundary(
       reason: gateStatus === 'attention_needed'
         ? 'local_sqlite_task_lifecycle_status_without_temporal_stage_attempt'
         : null,
+      temporal_migration_required: temporalLifecycleHandoff.status === 'required',
+      required_evidence: temporalLifecycleHandoff.required_evidence,
       competing_statuses: TEMPORAL_COMPETING_QUEUE_STATUSES,
       competing_task_count: competing.totalCount,
       competing_tasks: competing.tasks,
@@ -697,6 +721,7 @@ export function buildQueueTemporalLifecycleBoundary(
         ? 'full_online_ready_false_until_temporal_history_or_authority_projection_rebuilds_lifecycle'
         : 'none',
     },
+    temporal_durable_lifecycle_handoff: temporalLifecycleHandoff,
     authority_boundary: {
       opl_sqlite_can_project_runtime_state: true,
       opl_sqlite_can_own_temporal_durable_lifecycle: false,
