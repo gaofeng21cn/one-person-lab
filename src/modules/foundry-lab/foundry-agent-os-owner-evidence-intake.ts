@@ -2,6 +2,10 @@ import path from 'node:path';
 
 import { listBrandModuleL5EvidenceReceipts } from '../charter/index.ts';
 import { readJsonPayloadFile } from '../../kernel/json-file.ts';
+import {
+  stringList,
+  uniqueStringList,
+} from '../../kernel/json-record.ts';
 import { listDomainOwnerPayloadSummaryReceipts } from '../ledger/index.ts';
 import {
   listProviderLongSoakEvidenceReceipts,
@@ -92,16 +96,6 @@ function emptyCounts(): RefCounts {
   };
 }
 
-function unique(values: string[]) {
-  return [...new Set(values.filter((value) => value.trim().length > 0))];
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-    : [];
-}
-
 function refShapes(counts: RefCounts) {
   return [
     counts.domain_owner_receipt_ref_count > 0 ? 'domain_owner_receipt_ref' : null,
@@ -176,7 +170,7 @@ function addDomainEvidence(
   };
   entry.recorded_receipt_count += input.recordedReceiptCount ?? 0;
   entry.verified_receipt_count += input.verifiedReceiptCount ?? 0;
-  entry.observed_receipt_refs = unique([
+  entry.observed_receipt_refs = uniqueStringList([
     ...entry.observed_receipt_refs,
     ...input.receiptRefs,
   ]);
@@ -289,14 +283,14 @@ function magRepoTrackedEvidence(
     const closureEvidence = record(evidence.closure_evidence);
     const externalEvidenceLedger = record(evidence.external_evidence_receipt_ledger);
     const grantReceiptChain = record(evidence.grant_receipt_chain);
-    const domainOwnerReceiptRefs = unique([
+    const domainOwnerReceiptRefs = uniqueStringList([
       ...stringList(refs.grant_owner_receipt_refs),
       ...stringList(refs.owner_receipt_refs),
       ...stringList(refs.acceptance_receipt_refs),
       stringValue(closureEvidence.owner_receipt_ref) ?? '',
     ]);
-    const typedBlockerRefs = unique(stringList(refs.typed_blocker_refs));
-    const ownerChainRefs = unique([
+    const typedBlockerRefs = uniqueStringList(stringList(refs.typed_blocker_refs));
+    const ownerChainRefs = uniqueStringList([
       stringValue(externalEvidenceLedger.ledger_ref) ?? '',
       booleanValue(grantReceiptChain.production_like_grant_receipt_chain_present) === true
         ? stringValue(grantReceiptChain.chain_status) ?? 'grant_receipt_chain_present'
@@ -315,7 +309,7 @@ function magRepoTrackedEvidence(
       typed_blocker_ref_count: typedBlockerRefs.length,
       owner_chain_ref_count: ownerChainRefs.length > 0 ? 1 : 0,
     };
-    const observedReceiptRefs = unique([
+    const observedReceiptRefs = uniqueStringList([
       repoTrackedContractRef(repoDir, evidencePath),
       ...domainOwnerReceiptRefs,
       ...typedBlockerRefs,
@@ -356,16 +350,16 @@ function rcaRepoTrackedEvidence(
     const evidence = record(readJsonPayloadFile(evidencePath));
     const liveCanary = record(evidence.live_visual_owner_chain_canary);
     const ownerActionCanary = record(evidence.rca_owned_owner_action_canary);
-    const ownerReceiptRefs = unique([
+    const ownerReceiptRefs = uniqueStringList([
       ...stringList(liveCanary.observed_owner_receipt_refs),
       stringValue(ownerActionCanary.observed_owner_receipt_ref) ?? '',
     ]);
-    const domainReceiptRefs = unique(stringList(liveCanary.observed_review_export_receipt_refs));
-    const typedBlockerRefs = unique([
+    const domainReceiptRefs = uniqueStringList(stringList(liveCanary.observed_review_export_receipt_refs));
+    const typedBlockerRefs = uniqueStringList([
       ...stringList(liveCanary.observed_typed_blocker_refs),
       stringValue(ownerActionCanary.observed_typed_blocker_ref) ?? '',
     ]);
-    const noRegressionRefs = unique([
+    const noRegressionRefs = uniqueStringList([
       stringValue(ownerActionCanary.observed_no_regression_evidence_ref) ?? '',
     ]);
     if (
@@ -385,7 +379,7 @@ function rcaRepoTrackedEvidence(
       typed_blocker_ref_count: typedBlockerRefs.length,
       owner_chain_ref_count: 1,
     };
-    const observedReceiptRefs = unique([
+    const observedReceiptRefs = uniqueStringList([
       repoTrackedContractRef(repoDir, evidencePath),
       ...ownerReceiptRefs,
       ...domainReceiptRefs,
@@ -437,7 +431,7 @@ function omaRepoTrackedEvidence(
       no_regression_ref_count: noRegressionRefs.length,
       owner_chain_ref_count: 1,
     };
-    const observedReceiptRefs = unique([
+    const observedReceiptRefs = uniqueStringList([
       repoTrackedContractRef(repoDir, evidencePath),
       ...typedBlockerRefs,
       ...noRegressionRefs,
@@ -483,7 +477,7 @@ function domainOwnerChainProjection(input: {
     };
     entry.recorded_receipt_count += receipt.receipt_status === 'recorded' ? 1 : 0;
     entry.verified_receipt_count += receipt.receipt_status === 'verified' ? 1 : 0;
-    entry.observed_receipt_refs = unique([
+    entry.observed_receipt_refs = uniqueStringList([
       ...entry.observed_receipt_refs,
       receipt.receipt_ref,
       ...receipt.human_gate_refs,
@@ -609,7 +603,7 @@ function domainOwnerChainProjection(input: {
         (total, evidence) => total + evidence.verified_receipt_count,
         0,
       ),
-    observed_receipt_refs: unique([
+    observed_receipt_refs: uniqueStringList([
       ...receipts.map((receipt) => receipt.receipt_ref),
       ...receipts.flatMap((receipt) => [
         ...receipt.human_gate_refs,
@@ -669,7 +663,7 @@ function appReleaseProjection(appReleaseEvidence: Record<string, unknown>): Owne
     releaseOwnerVerdict.observed_owner_acceptance_refs,
   );
   const typedBlockerRefs = stringList(appReleaseEvidence.typed_blocker_refs);
-  const ledgerReceiptRefs = unique([
+  const ledgerReceiptRefs = uniqueStringList([
     ...stringList(appReleaseEvidence.verified_ledger_receipt_refs),
     ...stringList(appReleaseEvidence.recorded_ledger_receipt_refs),
   ]);
@@ -693,7 +687,7 @@ function appReleaseProjection(appReleaseEvidence: Record<string, unknown>): Owne
     ...status,
     recorded_receipt_count: recordedReceiptCount,
     verified_receipt_count: verifiedReceiptCount,
-    observed_receipt_refs: unique([
+    observed_receipt_refs: uniqueStringList([
       ...ledgerReceiptRefs,
       ...releaseOwnerReceiptRefs,
       ...installEvidenceRefs,
@@ -735,12 +729,12 @@ function providerLongSoakProjection(): OwnerEvidenceProjection {
     ...status,
     recorded_receipt_count: recordedReceiptCount,
     verified_receipt_count: verifiedReceiptCount,
-    observed_receipt_refs: unique([
+    observed_receipt_refs: uniqueStringList([
       ...receipts.map((receipt) => receipt.receipt_ref),
       ...receipts.flatMap((receipt) => receipt.owner_acceptance_refs),
     ]),
     observed_ref_counts: counts,
-    owner_acceptance_refs: unique(receipts.flatMap((receipt) => receipt.owner_acceptance_refs)),
+    owner_acceptance_refs: uniqueStringList(receipts.flatMap((receipt) => receipt.owner_acceptance_refs)),
     evidence_route: 'opl runtime provider-long-soak-evidence list --json',
   };
 }
@@ -758,7 +752,7 @@ function privatePlatformRetirementProjection(
     ? numberValue(physicalDeleteAuthority.deletion_evidence_worklist_count)
     : 0;
   const observedReceiptRefs = prerequisitesObserved
-    ? unique([
+    ? uniqueStringList([
       `refs-only-read-model:agents-default-callers/deletion-evidence-worklist:${observedRefCount}`,
       ownerDecisionObserved
         ? 'refs-only-read-model:agents-default-callers/owner-decision-observed-not-delete-authorized'
@@ -794,7 +788,7 @@ function memoryArtifactLifecycleProjection(
   const candidateRefs = stringList(latestHandoff.candidate_refs);
   const receiptRef = stringValue(latestHandoff.receipt_ref);
   const observedRefCount = numberValue(lifecycleEvidence.observed_ref_count);
-  const observedReceiptRefs = unique([
+  const observedReceiptRefs = uniqueStringList([
     ...(receiptRef ? [receiptRef] : []),
     ...typedBlockerRefs,
     ...handoffRefs,
