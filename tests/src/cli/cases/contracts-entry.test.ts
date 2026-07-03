@@ -14,6 +14,11 @@ test('loadFrameworkContracts returns the active framework registries', () => {
     contracts.publicSurfaceIndex.scope,
     'opl_framework_public_surface_index',
   );
+  assert.equal(contracts.cliCommandRegistry.contract_kind, 'opl_cli_command_registry.v1');
+  assert.equal(
+    contracts.observabilitySemanticConventions.schema_version,
+    'opl_observability_semantic_conventions.v1',
+  );
 });
 
 test('readJsonLine removes transient error listeners after each parsed line', async () => {
@@ -234,9 +239,27 @@ test('validateFrameworkContracts returns a stable summary for the required contr
         status: 'valid',
       },
       {
+        contract_id: 'cli_command_registry',
+        file: path.join(contractsDir, 'cli-command-registry.json'),
+        schema_version: contracts.cliCommandRegistry.contract_kind,
+        status: 'valid',
+      },
+      {
         contract_id: 'target_operating_architecture',
         file: path.join(contractsDir, 'target-operating-architecture-contract.json'),
         schema_version: contracts.targetOperatingArchitecture.schema_version,
+        status: 'valid',
+      },
+      {
+        contract_id: 'observability_semantic_conventions',
+        file: path.join(contractsDir, 'observability-semantic-conventions-contract.json'),
+        schema_version: contracts.observabilitySemanticConventions.schema_version,
+        status: 'valid',
+      },
+      {
+        contract_id: 'standard_agent_principles',
+        file: path.join(contractsDir, 'standard-agent-principles.json'),
+        schema_version: contracts.standardAgentPrinciples.version,
         status: 'valid',
       },
       {
@@ -345,9 +368,27 @@ test('contract validate returns a stable machine-readable contract summary', () 
           status: 'valid',
         },
         {
+          contract_id: 'cli_command_registry',
+          file: path.join(contractsDir, 'cli-command-registry.json'),
+          schema_version: contracts.cliCommandRegistry.contract_kind,
+          status: 'valid',
+        },
+        {
           contract_id: 'target_operating_architecture',
           file: path.join(contractsDir, 'target-operating-architecture-contract.json'),
           schema_version: contracts.targetOperatingArchitecture.schema_version,
+          status: 'valid',
+        },
+        {
+          contract_id: 'observability_semantic_conventions',
+          file: path.join(contractsDir, 'observability-semantic-conventions-contract.json'),
+          schema_version: contracts.observabilitySemanticConventions.schema_version,
+          status: 'valid',
+        },
+        {
+          contract_id: 'standard_agent_principles',
+          file: path.join(contractsDir, 'standard-agent-principles.json'),
+          schema_version: contracts.standardAgentPrinciples.version,
           status: 'valid',
         },
         {

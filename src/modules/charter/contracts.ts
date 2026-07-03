@@ -51,7 +51,9 @@ const REQUIRED_CONTRACT_FILE_NAMES = [
   'brand-module-l5-operating-evidence.json',
   'brand-system-profile.json',
   'source-module-map.json',
+  'cli-command-registry.json',
   'target-operating-architecture-contract.json',
+  'observability-semantic-conventions-contract.json',
   'standard-agent-principles.json',
   'scholar-skills-capability-modules.json',
   'pack-bundle-contract.json',
@@ -160,6 +162,101 @@ function validateWorkstreamsRegistry(
         notes: expectString(entry.notes, 'notes', filePath),
       };
     }),
+  };
+}
+
+function validateCliCommandRegistry(filePath: string, value: unknown) {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'cli-command-registry.json must contain an object root.',
+      { file: filePath },
+    );
+  }
+  if (expectString(value.contract_kind, 'contract_kind', filePath) !== 'opl_cli_command_registry.v1') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'cli-command-registry.json must be opl_cli_command_registry.v1.',
+      { file: filePath, field: 'contract_kind' },
+    );
+  }
+  if (!isRecord(value.commands)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'cli-command-registry.json commands must be an object.',
+      { file: filePath, field: 'commands' },
+    );
+  }
+  return {
+    contract_kind: expectString(value.contract_kind, 'contract_kind', filePath),
+    surface_kind: expectString(value.surface_kind, 'surface_kind', filePath),
+    owner: expectString(value.owner, 'owner', filePath),
+    purpose: expectString(value.purpose, 'purpose', filePath),
+    state: expectString(value.state, 'state', filePath),
+    machine_boundary: expectString(value.machine_boundary, 'machine_boundary', filePath),
+    protected_command_prefixes: expectStringArray(
+      value.protected_command_prefixes,
+      'protected_command_prefixes',
+      filePath,
+    ),
+    commands: value.commands,
+  };
+}
+
+function validateObservabilitySemanticConventions(filePath: string, value: unknown) {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'observability-semantic-conventions-contract.json must contain an object root.',
+      { file: filePath },
+    );
+  }
+  if (
+    expectString(value.schema_version, 'schema_version', filePath)
+    !== 'opl_observability_semantic_conventions.v1'
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'observability semantic conventions must be opl_observability_semantic_conventions.v1.',
+      { file: filePath, field: 'schema_version' },
+    );
+  }
+  if (!Array.isArray(value.fields)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'observability semantic conventions fields must be an array.',
+      { file: filePath, field: 'fields' },
+    );
+  }
+  if (!isRecord(value.signal_mappings) || !isRecord(value.authority_boundary)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'observability semantic conventions must define signal_mappings and authority_boundary objects.',
+      { file: filePath },
+    );
+  }
+  return {
+    schema_version: expectString(value.schema_version, 'schema_version', filePath),
+    surface_kind: expectString(value.surface_kind, 'surface_kind', filePath),
+    owner: expectString(value.owner, 'owner', filePath),
+    purpose: expectString(value.purpose, 'purpose', filePath),
+    state: expectString(value.state, 'state', filePath),
+    machine_boundary: expectString(value.machine_boundary, 'machine_boundary', filePath),
+    fields: value.fields.map((entry, index) => {
+      if (!isRecord(entry)) {
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'Each observability semantic convention field must be an object.',
+          { file: filePath, index },
+        );
+      }
+      return {
+        id: expectString(entry.id, 'fields.id', filePath),
+        otel_attribute: expectString(entry.otel_attribute, 'fields.otel_attribute', filePath),
+      };
+    }),
+    signal_mappings: value.signal_mappings,
+    authority_boundary: value.authority_boundary,
   };
 }
 
@@ -863,9 +960,19 @@ const REQUIRED_CONTRACT_FILES = [
     schema_version: (contracts: FrameworkContracts) => contracts.sourceModuleMap.version,
   },
   {
+    contract_id: 'cli_command_registry',
+    file_name: 'cli-command-registry.json',
+    schema_version: (contracts: FrameworkContracts) => contracts.cliCommandRegistry.contract_kind,
+  },
+  {
     contract_id: 'target_operating_architecture',
     file_name: 'target-operating-architecture-contract.json',
     schema_version: (contracts: FrameworkContracts) => contracts.targetOperatingArchitecture.schema_version,
+  },
+  {
+    contract_id: 'observability_semantic_conventions',
+    file_name: 'observability-semantic-conventions-contract.json',
+    schema_version: (contracts: FrameworkContracts) => contracts.observabilitySemanticConventions.schema_version,
   },
   {
     contract_id: 'standard_agent_principles',
@@ -965,9 +1072,17 @@ export function loadFrameworkContracts(
         path.join(contractsDir, 'source-module-map.json'),
         parseJsonFile(path.join(contractsDir, 'source-module-map.json')),
       ),
+      cliCommandRegistry: validateCliCommandRegistry(
+        path.join(contractsDir, 'cli-command-registry.json'),
+        parseJsonFile(path.join(contractsDir, 'cli-command-registry.json')),
+      ),
       targetOperatingArchitecture: validateTargetOperatingArchitecture(
         path.join(contractsDir, 'target-operating-architecture-contract.json'),
         parseJsonFile(path.join(contractsDir, 'target-operating-architecture-contract.json')),
+      ),
+      observabilitySemanticConventions: validateObservabilitySemanticConventions(
+        path.join(contractsDir, 'observability-semantic-conventions-contract.json'),
+        parseJsonFile(path.join(contractsDir, 'observability-semantic-conventions-contract.json')),
       ),
       standardAgentPrinciples: validateStandardAgentPrinciples(
         path.join(contractsDir, 'standard-agent-principles.json'),

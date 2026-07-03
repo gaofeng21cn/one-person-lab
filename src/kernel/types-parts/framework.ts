@@ -52,11 +52,39 @@ export interface FrameworkContracts {
   brandModuleL5OperatingEvidence: BrandModuleL5OperatingEvidenceContract;
   brandSystemProfile: BrandSystemProfileContract;
   sourceModuleMap: SourceModuleMapContract;
+  cliCommandRegistry: CliCommandRegistryContract;
   targetOperatingArchitecture: TargetOperatingArchitectureContract;
+  observabilitySemanticConventions: ObservabilitySemanticConventionsContract;
   packOs: PackOsContract;
   packBundle: PackBundleContract;
   scholarSkillsCapabilityModules: ScholarSkillsCapabilityModulesContract;
   standardAgentPrinciples: StandardAgentPrinciplesContract;
+}
+
+export interface CliCommandRegistryContract {
+  contract_kind: string;
+  surface_kind: string;
+  owner: string;
+  purpose: string;
+  state: string;
+  machine_boundary: string;
+  protected_command_prefixes: string[];
+  commands: Record<string, unknown>;
+}
+
+export interface ObservabilitySemanticConventionsContract {
+  schema_version: string;
+  surface_kind: string;
+  owner: string;
+  purpose: string;
+  state: string;
+  machine_boundary: string;
+  fields: Array<{
+    id: string;
+    otel_attribute: string;
+  }>;
+  signal_mappings: Record<string, unknown>;
+  authority_boundary: Record<string, unknown>;
 }
 
 export interface StandardAgentPrinciplesContract {
@@ -91,7 +119,9 @@ export interface ContractValidationEntry {
     | 'brand_module_l5_operating_evidence'
     | 'brand_system_profile'
     | 'source_module_map'
+    | 'cli_command_registry'
     | 'target_operating_architecture'
+    | 'observability_semantic_conventions'
     | 'pack_os'
     | 'pack_bundle'
     | 'scholarskills_capability_modules'

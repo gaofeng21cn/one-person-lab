@@ -12,3 +12,26 @@ export {
   MINIMAL_BRAND_SYSTEM_PROFILE_CONTRACT,
   MINIMAL_SOURCE_MODULE_MAP_CONTRACT,
 } from './agent-workspace-norm-fixture-cases/brand-contracts.ts';
+
+export const MINIMAL_CLI_COMMAND_REGISTRY_CONTRACT = {
+  contract_kind: 'opl_cli_command_registry.v1',
+  surface_kind: 'opl_cli_command_registry',
+  owner: 'one-person-lab',
+  purpose: 'fixture',
+  state: 'active_contract',
+  machine_boundary: 'fixture',
+  protected_command_prefixes: [],
+  commands: {},
+};
+
+export const MINIMAL_OBSERVABILITY_SEMANTIC_CONVENTIONS_CONTRACT = {
+  schema_version: 'opl_observability_semantic_conventions.v1',
+  surface_kind: 'opl_observability_semantic_conventions_contract',
+  owner: 'OPL Ledger',
+  purpose: 'fixture',
+  state: 'active_contract',
+  machine_boundary: 'fixture',
+  fields: [],
+  signal_mappings: {},
+  authority_boundary: {},
+};
