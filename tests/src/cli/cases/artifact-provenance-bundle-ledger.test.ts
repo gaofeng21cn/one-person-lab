@@ -173,6 +173,14 @@ test('ledger artifact provenance bundle preserves typed issues for recorded arti
       restricted_refs: {
         inputs: ['workspace://restricted/input-body'],
       },
+      typed_issues: [
+        {
+          code: 'missing_replay_command',
+          severity: 'error',
+          section: 'replay',
+          message: 'Replay command is missing from the domain bundle.',
+        },
+      ],
       hashes: {
         artifact: { algorithm: 'sha256', value: HASH_ONE },
       },
@@ -192,7 +200,8 @@ test('ledger artifact provenance bundle preserves typed issues for recorded arti
     bundlePath,
   ], env).artifact_provenance_bundle_validation;
   assert.equal(validation.status, 'valid');
-  assert.equal(validation.issue_count, 3);
+  assert.equal(validation.issue_count, 4);
+  assert.equal(validation.issues.some((issue: BundleIssue) => issue.code === 'missing_replay_command'), true);
   assert.equal(validation.issues.filter((issue: BundleIssue) => issue.code === 'missing_ref').length, 2);
   assert.equal(validation.issues.some((issue: BundleIssue) => issue.code === 'restricted_ref'), true);
   assert.deepEqual(validation.sections.find((section: BundleSection) => section.section_key === 'agent_trace').missing_refs, [
@@ -210,7 +219,7 @@ test('ledger artifact provenance bundle preserves typed issues for recorded arti
     '--artifact',
     'artifact://mas/needs-review',
   ], env).artifact_provenance_bundle_record;
-  assert.equal(record.record.issue_count, 3);
+  assert.equal(record.record.issue_count, 4);
   assert.equal(
     record.record.sections.find((section: BundleSection) => section.section_key === 'inputs').restricted_refs[0],
     'workspace://restricted/input-body',
@@ -224,7 +233,7 @@ test('ledger artifact provenance bundle preserves typed issues for recorded arti
     'artifact://mas/needs-review',
   ], env).artifact_provenance_bundle_inspection;
   assert.equal(artifactInspection.status, 'found');
-  assert.equal(artifactInspection.issue_count, 3);
+  assert.equal(artifactInspection.issue_count, 4);
   assert.equal(
     artifactInspection.record.issues.some((issue: BundleIssue) => issue.ref === 'review:independent/visual-audit'),
     true,

@@ -34,6 +34,7 @@ const ALLOWED_MANIFEST_FIELDS = new Set<string>([
   'metadata',
   'missing_refs',
   'restricted_refs',
+  'typed_issues',
 ]);
 const ALLOWED_REF_FIELDS = new Set<string>(REF_KEYS);
 const ALLOWED_AUTHORITY_FIELDS = new Set<string>([
@@ -60,7 +61,7 @@ type HashEntry = {
   algorithm: 'sha256';
   value: string;
 };
-type IssueSeverity = 'error' | 'warning';
+type IssueSeverity = 'error' | 'warning' | 'info';
 type ArtifactProvenanceBundleIssue = {
   code: string;
   severity: IssueSeverity;
@@ -374,6 +375,55 @@ function typedIssue(
   return { code, severity, ref, message, action };
 }
 
+function normalizeDeclaredTypedIssues(value: unknown): ArtifactProvenanceBundleIssue[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((entry, index): ArtifactProvenanceBundleIssue[] => {
+    if (!isRecord(entry)) {
+      return [];
+    }
+    const code = optionalString(entry.code);
+    if (!code) {
+      return [];
+    }
+    const rawSeverity = optionalString(entry.severity);
+    const severity: IssueSeverity = rawSeverity === 'error' || rawSeverity === 'info' ? rawSeverity : 'warning';
+    return [
+      typedIssue(
+        code,
+        severity,
+        optionalString(entry.ref) ?? optionalString(entry.label) ?? optionalString(entry.section) ?? `typed_issues[${index}]`,
+        optionalString(entry.message) ?? `Bundle manifest declares typed issue ${code}.`,
+        optionalString(entry.action) ?? 'Route this typed provenance issue through the owning domain or repair the referenced provenance section.',
+      ),
+    ];
+  });
+}
+
+function invalidTypedIssueFields(value: unknown) {
+  if (value === undefined) {
+    return [];
+  }
+  if (!Array.isArray(value)) {
+    return ['typed_issues'];
+  }
+  return value.flatMap((entry, index) => {
+    if (!isRecord(entry)) {
+      return [`typed_issues[${index}]`];
+    }
+    const invalidFields: string[] = [];
+    if (!optionalString(entry.code)) {
+      invalidFields.push(`typed_issues[${index}].code`);
+    }
+    const severity = optionalString(entry.severity);
+    if (severity && !['error', 'warning', 'info'].includes(severity)) {
+      invalidFields.push(`typed_issues[${index}].severity`);
+    }
+    return invalidFields;
+  });
+}
+
 function isStrictHashEntry(value: unknown) {
   if (!isRecord(value) || value.algorithm !== 'sha256') {
     return false;
@@ -545,6 +595,7 @@ function validationForLoadedBundle(loaded: LoadedBundle): BundleValidation {
     isRecord(record.hashes) && Object.keys(loaded.manifest.hashes).length > 0 ? null : 'hashes',
     ...invalidDeclaredRefIssueFields(record.missing_refs, 'missing_refs'),
     ...invalidDeclaredRefIssueFields(record.restricted_refs, 'restricted_refs'),
+    ...invalidTypedIssueFields(record.typed_issues),
     ...invalidAuthorityFields(rawAuthority),
     ...unknownFields(record, ALLOWED_MANIFEST_FIELDS, ''),
   ].filter((field): field is string => Boolean(field)));
@@ -557,6 +608,7 @@ function validationForLoadedBundle(loaded: LoadedBundle): BundleValidation {
   const forbiddenBodyFields = collectForbiddenBodyFields(record);
   const invalidHashes = invalidHashFields(record.hashes);
   const issues = uniqueIssues([
+    ...normalizeDeclaredTypedIssues(record.typed_issues),
     ...missingRefEntries.map((entry) => typedIssue(
       'missing_ref',
       'warning',

@@ -51,7 +51,7 @@ contracts/opl-framework/brand-module-registry.json#modules.ledger
 
 Ledger contract 的职责是表达 evidence event、refs-only locator、receipt/blocker refs、artifact lineage、restore proof、retention、no-regression 和 state-index projection 的 shape。它不表达 artifact body、memory body、paper/grant/visual body、domain quality verdict 或 owner acceptance。
 
-`artifact-provenance-bundle.schema.json` 是 Ledger 的通用 artifact provenance bundle 基座：只允许 `schema_version`、`bundle_id`、`artifact_ref`、`domain_id`、`artifact_type`、`created_at`、`refs`、`missing_refs`、`restricted_refs`、`hashes` 和 `authority_boundary`。Ledger 可以登记 manifest ref/hash、section refs、typed issues 与 index keys，但不能读取或保存 artifact body。
+`artifact-provenance-bundle.schema.json` 是 Ledger 的通用 artifact provenance bundle 基座：只允许 `schema_version`、`bundle_id`、`artifact_ref`、`domain_id`、`artifact_type`、`created_at`、`refs`、`missing_refs`、`restricted_refs`、`typed_issues`、`hashes` 和 `authority_boundary`。Ledger 可以登记 manifest ref/hash、section refs、typed issues 与 index keys，但不能读取或保存 artifact body。
 
 `artifact-provenance-ledger-event.schema.json` 约束 `record / inspect / doctor / export` 这四类 bundle 事件。事件只保存 bundle ref、manifest hash、section refs、typed issues 和 refs-only authority boundary；不得写 artifact body、domain truth、owner receipt、typed blocker、quality verdict、artifact ready、domain ready、export ready、production ready 或 release ready claim。
 

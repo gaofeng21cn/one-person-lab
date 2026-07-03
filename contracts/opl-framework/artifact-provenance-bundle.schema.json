@@ -78,6 +78,12 @@
     "restricted_refs": {
       "$ref": "#/$defs/ref_issue_map"
     },
+    "typed_issues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/typed_issue"
+      }
+    },
     "hashes": {
       "type": "object",
       "additionalProperties": {
@@ -122,6 +128,35 @@
           }
         }
       ]
+    },
+    "typed_issue": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "code"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "severity": {
+          "enum": [
+            "error",
+            "warning",
+            "info"
+          ]
+        },
+        "ref": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        }
+      }
     },
     "sha256_hash": {
       "type": "object",
