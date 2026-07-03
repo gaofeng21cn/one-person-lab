@@ -5,6 +5,11 @@ import {
   type MagManifestSustainedConsumptionReceiptInput,
 } from '../../../modules/ledger/mag-manifest-sustained-consumption-ledger.ts';
 import {
+  readJsonObject,
+  readOptionalString,
+  readStringList,
+} from '../modules/json-boundary.ts';
+import {
   assertNoArgs,
   assertSinglePayloadSource,
   buildUsageError,
@@ -12,41 +17,15 @@ import {
 } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  const scalar = optionalString(value);
-  if (scalar) {
-    return [scalar];
-  }
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
 function parseJsonObject(
   value: string,
   message: string,
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch (error) {
-    throw buildUsageError(message, spec, {
-      parse_error: error instanceof Error ? error.message : String(error),
-    });
-  }
-  if (!isRecord(parsed)) {
-    throw buildUsageError(message, spec);
-  }
-  return parsed;
+  return readJsonObject(value, spec, {
+    parseErrorMessage: message,
+    objectErrorMessage: message,
+  });
 }
 
 function payloadInput(
@@ -55,28 +34,28 @@ function payloadInput(
 ): MagManifestSustainedConsumptionReceiptInput {
   return {
     target_identity: targetIdentity,
-    source_ref: optionalString(payload.source_ref),
-    app_operator_consumption_refs: stringList(
+    source_ref: readOptionalString(payload.source_ref),
+    app_operator_consumption_refs: readStringList(
       payload.app_operator_consumption_refs ?? payload.app_operator_consumption_ref,
     ),
-    default_caller_consumption_refs: stringList(
+    default_caller_consumption_refs: readStringList(
       payload.default_caller_consumption_refs ?? payload.default_caller_consumption_ref,
     ),
-    owner_payload_response_refs: stringList(
+    owner_payload_response_refs: readStringList(
       payload.owner_payload_response_refs ?? payload.owner_payload_response_ref,
     ),
-    workspace_receipt_scaleout_evidence_refs: stringList(
+    workspace_receipt_scaleout_evidence_refs: readStringList(
       payload.workspace_receipt_scaleout_evidence_refs
         ?? payload.workspace_receipt_scaleout_evidence_ref,
     ),
-    no_forbidden_write_refs: stringList(
+    no_forbidden_write_refs: readStringList(
       payload.no_forbidden_write_refs ?? payload.no_forbidden_write_ref,
     ),
-    long_soak_or_typed_blocker_refs: stringList(
+    long_soak_or_typed_blocker_refs: readStringList(
       payload.long_soak_or_typed_blocker_refs ?? payload.long_soak_or_typed_blocker_ref,
     ),
-    typed_blocker_refs: stringList(payload.typed_blocker_refs ?? payload.typed_blocker_ref),
-    receipt_ref: optionalString(payload.receipt_ref),
+    typed_blocker_refs: readStringList(payload.typed_blocker_refs ?? payload.typed_blocker_ref),
+    receipt_ref: readOptionalString(payload.receipt_ref),
   };
 }
 

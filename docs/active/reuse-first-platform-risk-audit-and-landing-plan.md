@@ -345,6 +345,15 @@ Phase 1、Phase 7、Phase 9 的本轮收薄已吸收进 `main`，属于 schema b
 - Fresh evidence：`node --test --experimental-strip-types tests/src/cli/cases/cli-command-registry.test.ts` 6/6 pass，`npm run typecheck` pass，`npm run reuse-first:scan:diff` gate_status=ok。
 - Residual boundary：大量 runtime、pack、workspace、agents 命令仍未进入 registry；本 lane 不引入 Commander/Yargs，也不迁移 provider/runtime mutation path。
 
+## Phase 1/2 Runtime CLI JSON Boundary Lane 2026-07-03
+
+本 lane 只收敛 runtime CLI command spec 的局部 JSON/readback helper，不改变命令语义、ledger 写入语义或 JSON output shape，也不声明 CLI parser 统一完成。
+
+- Source：`runtime developer-mode-closeout`、`runtime domain-owner-payload-summary`、`runtime mag-manifest-sustained-consumption`、`runtime memory-artifact-lifecycle-evidence` 四个 command spec 删除局部 `isRecord` / `optionalString` / `stringList` / `JSON.parse` helper，统一复用 `src/entrypoints/cli/modules/json-boundary.ts`；该 helper 复用 `src/kernel/contract-validation.ts` 的 `isRecord`，只保留一个带 reuse-first allow marker 的 stdlib `JSON.parse` CLI usage-error wrapper。
+- Boundary：错误消息、payload key alias、refs-only authority boundary、record / verify / list output shape 均保持原 command spec 行为；未触碰 Runway runtime/provider queue、managed update、pack/workspace lane、domain truth、owner receipts、typed blockers 或 release artifacts。
+- Fresh evidence：`node --test --experimental-strip-types tests/src/cli/cases/runtime-developer-mode-closeout-ledger.test.ts` 12/12 pass；`node --test --experimental-strip-types tests/src/cli/cases/runtime-app-operator-drilldown-mas-payload-summary.test.ts tests/src/cli/cases/runtime-app-operator-drilldown-mag-payload-summary.test.ts` 8/8 pass；`node --test --experimental-strip-types tests/src/cli/cases/runtime-app-operator-drilldown-lifecycle.test.ts` 9/9 pass；`npm run typecheck` pass；`npm run reuse-first:scan:diff` gate_status=ok；`git diff --check` pass。
+- Residual boundary：其他 runtime CLI command specs 仍有历史 `handwritten_json_boundary` findings；本 lane 只消化四个低冲突 command specs，不把 diff gate clean 说成 full scan 清零。
+
 ## Post-Absorption Evidence 2026-07-03
 
 本轮四条并行 lanes 已由主会话 cherry-pick 吸收到 `main`，随后执行合并后验证。该证据证明本轮切片在 Framework main 上可编译、可测试、未新增 reuse-first diff 违规；不证明 OPL production ready、domain ready、App release ready、owner acceptance 或历史风险清零。

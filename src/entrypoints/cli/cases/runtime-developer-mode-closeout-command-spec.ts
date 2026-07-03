@@ -4,59 +4,39 @@ import {
   verifyDeveloperModeCloseoutReceipt,
   type DeveloperModeCloseoutReceiptInput,
 } from '../../../modules/connect/developer-mode-closeout-ledger.ts';
+import {
+  readJsonObject,
+  readOptionalString,
+  readStringList,
+} from '../modules/json-boundary.ts';
 import { assertNoArgs, buildUsageError } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  const scalar = optionalString(value);
-  if (scalar) {
-    return [scalar];
-  }
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
 
 function parseRuntimeDeveloperModeCloseoutPayload(
   value: string,
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): DeveloperModeCloseoutReceiptInput {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch (error) {
-    throw buildUsageError('runtime developer-mode-closeout record payload must be valid JSON.', spec, {
-      parse_error: error instanceof Error ? error.message : String(error),
-    });
-  }
-  if (!isRecord(parsed)) {
-    throw buildUsageError('runtime developer-mode-closeout record payload must be a JSON object.', spec);
-  }
+  const parsed = readJsonObject(value, spec, {
+    parseErrorMessage: 'runtime developer-mode-closeout record payload must be valid JSON.',
+    objectErrorMessage: 'runtime developer-mode-closeout record payload must be a JSON object.',
+  });
   return {
-    target_repo_id: optionalString(parsed.target_repo_id ?? parsed.target_repo),
-    route_decision: optionalString(parsed.route_decision),
-    route_eligibility: optionalString(parsed.route_eligibility),
-    patrol_observation_ref: optionalString(parsed.patrol_observation_ref),
-    diff_ref: optionalString(parsed.diff_ref),
-    verification_refs: stringList(parsed.verification_refs ?? parsed.verification_ref),
-    no_forbidden_write_ref: optionalString(parsed.no_forbidden_write_ref),
-    commit_ref: optionalString(parsed.commit_ref),
-    fork_repo_ref: optionalString(parsed.fork_repo_ref),
-    pr_review_ref: optionalString(parsed.pr_review_ref),
-    owner_acceptance_ref: optionalString(parsed.owner_acceptance_ref),
-    route_repetition_refs: stringList(parsed.route_repetition_refs ?? parsed.route_repetition_ref),
+    target_repo_id: readOptionalString(parsed.target_repo_id ?? parsed.target_repo),
+    route_decision: readOptionalString(parsed.route_decision),
+    route_eligibility: readOptionalString(parsed.route_eligibility),
+    patrol_observation_ref: readOptionalString(parsed.patrol_observation_ref),
+    diff_ref: readOptionalString(parsed.diff_ref),
+    verification_refs: readStringList(parsed.verification_refs ?? parsed.verification_ref),
+    no_forbidden_write_ref: readOptionalString(parsed.no_forbidden_write_ref),
+    commit_ref: readOptionalString(parsed.commit_ref),
+    fork_repo_ref: readOptionalString(parsed.fork_repo_ref),
+    pr_review_ref: readOptionalString(parsed.pr_review_ref),
+    owner_acceptance_ref: readOptionalString(parsed.owner_acceptance_ref),
+    route_repetition_refs: readStringList(parsed.route_repetition_refs ?? parsed.route_repetition_ref),
     risk_tier_auto_promotion_refs:
-      stringList(parsed.risk_tier_auto_promotion_refs ?? parsed.risk_tier_auto_promotion_ref),
-    app_patrol_mount_refs: stringList(parsed.app_patrol_mount_refs ?? parsed.app_patrol_mount_ref),
-    receipt_ref: optionalString(parsed.receipt_ref),
+      readStringList(parsed.risk_tier_auto_promotion_refs ?? parsed.risk_tier_auto_promotion_ref),
+    app_patrol_mount_refs: readStringList(parsed.app_patrol_mount_refs ?? parsed.app_patrol_mount_ref),
+    receipt_ref: readOptionalString(parsed.receipt_ref),
   };
 }
 

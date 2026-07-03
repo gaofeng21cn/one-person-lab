@@ -5,6 +5,11 @@ import {
   type DomainOwnerPayloadSummaryReceiptInput,
 } from '../../../modules/ledger/domain-owner-payload-summary-ledger.ts';
 import {
+  readJsonObject,
+  readOptionalString,
+  readStringList,
+} from '../modules/json-boundary.ts';
+import {
   assertNoArgs,
   assertSinglePayloadSource,
   buildUsageError,
@@ -12,41 +17,15 @@ import {
 } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  const scalar = optionalString(value);
-  if (scalar) {
-    return [scalar];
-  }
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
 function parseJsonObject(
   value: string,
   message: string,
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch (error) {
-    throw buildUsageError(message, spec, {
-      parse_error: error instanceof Error ? error.message : String(error),
-    });
-  }
-  if (!isRecord(parsed)) {
-    throw buildUsageError(message, spec);
-  }
-  return parsed;
+  return readJsonObject(value, spec, {
+    parseErrorMessage: message,
+    objectErrorMessage: message,
+  });
 }
 
 function payloadInput(
@@ -55,34 +34,34 @@ function payloadInput(
 ): DomainOwnerPayloadSummaryReceiptInput {
   return {
     target_identity: targetIdentity,
-    source_ref: optionalString(payload.source_ref),
-    domain_owner_receipt_refs: stringList(
+    source_ref: readOptionalString(payload.source_ref),
+    domain_owner_receipt_refs: readStringList(
       payload.domain_owner_receipt_refs ?? payload.domain_owner_receipt_ref,
     ),
-    domain_receipt_refs: stringList(
+    domain_receipt_refs: readStringList(
       payload.domain_receipt_refs ?? payload.domain_receipt_ref ?? payload.receipt_refs,
     ),
-    no_regression_evidence_refs: stringList(
+    no_regression_evidence_refs: readStringList(
       payload.no_regression_evidence_refs ?? payload.no_regression_evidence_ref
         ?? payload.no_regression_refs ?? payload.no_regression_ref,
     ),
-    owner_chain_refs: stringList(payload.owner_chain_refs ?? payload.owner_chain_ref),
-    human_gate_refs: stringList(payload.human_gate_refs ?? payload.human_gate_ref),
-    quality_or_export_receipt_refs: stringList(
+    owner_chain_refs: readStringList(payload.owner_chain_refs ?? payload.owner_chain_ref),
+    human_gate_refs: readStringList(payload.human_gate_refs ?? payload.human_gate_ref),
+    quality_or_export_receipt_refs: readStringList(
       payload.quality_or_export_receipt_refs ?? payload.quality_or_export_receipt_ref
         ?? payload.quality_gate_receipt_refs ?? payload.quality_gate_receipt_ref
         ?? payload.export_receipt_refs ?? payload.export_receipt_ref,
     ),
-    reviewer_receipt_refs: stringList(
+    reviewer_receipt_refs: readStringList(
       payload.reviewer_receipt_refs ?? payload.reviewer_receipt_ref,
     ),
-    long_soak_refs: stringList(payload.long_soak_refs ?? payload.long_soak_ref),
-    monitor_freshness_refs: stringList(
+    long_soak_refs: readStringList(payload.long_soak_refs ?? payload.long_soak_ref),
+    monitor_freshness_refs: readStringList(
       payload.monitor_freshness_refs ?? payload.monitor_freshness_ref,
     ),
-    runtime_event_refs: stringList(payload.runtime_event_refs ?? payload.runtime_event_ref),
-    typed_blocker_refs: stringList(payload.typed_blocker_refs ?? payload.typed_blocker_ref),
-    receipt_ref: optionalString(payload.receipt_ref),
+    runtime_event_refs: readStringList(payload.runtime_event_refs ?? payload.runtime_event_ref),
+    typed_blocker_refs: readStringList(payload.typed_blocker_refs ?? payload.typed_blocker_ref),
+    receipt_ref: readOptionalString(payload.receipt_ref),
   };
 }
 
