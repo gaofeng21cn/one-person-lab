@@ -1,4 +1,5 @@
-import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
+import { optionalString, parseJsonText } from '../../../kernel/json-file.ts';
 import { runRuntimeOperatorActionExecute } from '../../runway/index.ts';
 import { runOplModuleAction } from '../../connect/index.ts';
 import { runOplSystemAction } from '../../connect/index.ts';
@@ -23,12 +24,8 @@ export type AppActionExecuteOptions = {
   dryRun: boolean;
 };
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
 function parseJsonObject(value: string, context: string): JsonRecord {
-  const parsed = JSON.parse(value);
+  const parsed = parseJsonText(value);
   if (!isRecord(parsed)) {
     throw new FrameworkContractError('cli_usage_error', `${context} must be a JSON object.`, {
       context,
@@ -120,8 +117,7 @@ function buildDryRunUnresolvedAction(options: AppActionExecuteOptions) {
 }
 
 function stringPayloadField(payload: JsonRecord, field: string) {
-  const value = payload[field];
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+  return optionalString(payload[field]);
 }
 
 function releaseChannelPayload(payload: JsonRecord) {
