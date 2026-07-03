@@ -9,6 +9,8 @@ import {
   buildModelRouteCostProjection,
   buildStageAttemptUsageProjection,
 } from './family-runtime-stage-attempt-usage.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
+import { record } from '../../kernel/json-record.ts';
 
 export type StageAttemptStatus =
   | 'queued'
@@ -65,14 +67,11 @@ export type StageAttemptCloseoutRow = {
 };
 
 function parseJsonObject(value: string) {
-  const parsed = JSON.parse(value);
-  return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-    ? parsed as Record<string, unknown>
-    : {};
+  return record(parseJsonText(value));
 }
 
 function parseJsonList(value: string) {
-  const parsed = JSON.parse(value);
+  const parsed = parseJsonText(value);
   return Array.isArray(parsed) ? parsed : [];
 }
 

@@ -1,12 +1,14 @@
 import path from 'node:path';
 
-export function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
+import { isRecord } from '../../../kernel/contract-validation.ts';
+import {
+  recordList as sharedRecordList,
+  stringList as sharedStringList,
+  stringValue as optionalString,
+  uniqueStringList,
+} from '../../../kernel/json-record.ts';
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+export { isRecord, optionalString };
 
 export function exportOwnerFingerprint(payload: Record<string, unknown>) {
   const context = isRecord(payload.opl_domain_export_context) ? payload.opl_domain_export_context : null;
@@ -30,17 +32,15 @@ export function masDefaultExecutorCurrentnessBasis(payload: Record<string, unkno
 }
 
 export function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
+  return sharedRecordList(value);
 }
 
 export function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-    : [];
+  return sharedStringList(value);
 }
 
 export function uniqueStrings(values: Array<string | null>) {
-  return [...new Set(values.filter((entry): entry is string => Boolean(entry)))];
+  return uniqueStringList(values);
 }
 
 export function sameStringField(left: Record<string, unknown>, right: Record<string, unknown>, key: string) {

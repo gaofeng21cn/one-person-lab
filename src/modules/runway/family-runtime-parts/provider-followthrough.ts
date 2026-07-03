@@ -9,29 +9,23 @@ import {
   type FamilyRuntimeTaskRow,
 } from '../family-runtime-store.ts';
 import { isPaperMissionStageRouteProviderRedriveTask } from '../family-runtime-redrive.ts';
+import { isRecord } from '../../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../../kernel/json-file.ts';
+import { record } from '../../../kernel/json-record.ts';
 
 async function temporalProviderModule() {
   return await import('../family-runtime-temporal-provider.ts');
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 export function providerPreflightBlockedReason(value: unknown) {
-  if (typeof value !== 'object' || value === null) {
+  if (!isRecord(value)) {
     return 'provider_not_ready';
   }
-  const record = value as Record<string, unknown>;
-  const queueTick = typeof record.queue_tick === 'object' && record.queue_tick !== null
-    ? record.queue_tick as Record<string, unknown>
-    : {};
+  const queueTick = record(value.queue_tick);
   if (typeof queueTick.dispatch_blocked_reason === 'string' && queueTick.dispatch_blocked_reason.trim()) {
     return queueTick.dispatch_blocked_reason;
   }
-  const providerBlocker = typeof record.provider_blocker === 'object' && record.provider_blocker !== null
-    ? record.provider_blocker as Record<string, unknown>
-    : {};
+  const providerBlocker = record(value.provider_blocker);
   if (typeof providerBlocker.blocker_id === 'string' && providerBlocker.blocker_id.trim()) {
     return providerBlocker.blocker_id;
   }
@@ -75,7 +69,7 @@ export async function paperMissionRedriveProviderFollowthrough(
       provider_started: false,
     };
   }
-  const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
+  const payload = record(parseJsonText(row.payload_json));
   if (!isPaperMissionStageRouteProviderRedriveTask(row, payload)) {
     return {
       status: 'not_applicable',
