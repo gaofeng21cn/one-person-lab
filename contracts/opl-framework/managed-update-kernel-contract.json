@@ -236,6 +236,37 @@
     "package_manager_claim_must_be_false": true,
     "purpose": "Each managed update component must name the owner/readback route that owns truth and apply semantics so the kernel remains a projection/receipt surface, not a general package manager."
   },
+  "owner_execution_boundary_contract": {
+    "required_fields": [
+      "owner_executor_id",
+      "executor_kind",
+      "runner_can_execute",
+      "allowed_operations",
+      "readback_ref",
+      "receipt_projection",
+      "diagnostic_only",
+      "package_manager_claim",
+      "notes"
+    ],
+    "executor_kinds": [
+      "none",
+      "diagnostic_readback",
+      "manual_owner_route",
+      "controlled_framework_executor",
+      "clean_managed_package_executor"
+    ],
+    "receipt_projection_values": [
+      "read_only_projection",
+      "component_receipt_with_owner_route",
+      "external_owner_receipt_required"
+    ],
+    "runner_can_execute_only_for": [
+      "runtime_substrate",
+      "capability_packages"
+    ],
+    "package_manager_claim_must_be_false": true,
+    "purpose": "reuse-first: allow owner-routed managed update boundary. The runner must name the owner executor and readback boundary per component before apply/repair/rollback, so prompt-only and projection-only components remain receipt/readback projections instead of generic package-manager targets."
+  },
   "providers": [
     {
       "provider_id": "installation_carrier",
@@ -490,6 +521,16 @@
       "manual_required",
       "failed"
     ],
+    "adapter_result_owner_boundary_shape": {
+      "required_fields": [
+        "owner_route",
+        "owner_execution_boundary"
+      ],
+      "runner_can_execute_only_for": [
+        "runtime_substrate",
+        "capability_packages"
+      ]
+    },
     "adapter_post_apply_action_shape": {
       "required_fields": [
         "action_id",
@@ -570,6 +611,7 @@
       "rollback_ref",
       "repair_action",
       "apply_mode",
+      "owner_projection",
       "status_detail",
       "post_apply_action_statuses",
       "reload_guidance"

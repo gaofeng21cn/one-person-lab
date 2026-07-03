@@ -560,6 +560,16 @@ exit 2
           status: string;
           adapter_results: Array<{
             adapter_id: string;
+            owner_route: {
+              owner: string;
+              apply_owner: string;
+              package_manager_claim: boolean;
+            };
+            owner_execution_boundary: {
+              owner_executor_id: string;
+              runner_can_execute: boolean;
+              package_manager_claim: boolean;
+            };
             status: string;
             reason: string;
             apply_mode: string;
@@ -638,6 +648,11 @@ exit 2
     assert.equal(output.managed_update.execution.adapter_results[0].adapter_id, 'capability_packages_adapter');
     assert.equal(output.managed_update.execution.adapter_results[0].status, 'completed');
     assert.equal(output.managed_update.execution.adapter_results[0].reason, 'managed_modules_reconciled_and_codex_surface_synced');
+    assert.equal(output.managed_update.execution.adapter_results[0].owner_route.apply_owner, 'opl_connect_managed_module_reconciler');
+    assert.equal(output.managed_update.execution.adapter_results[0].owner_route.package_manager_claim, false);
+    assert.equal(output.managed_update.execution.adapter_results[0].owner_execution_boundary.owner_executor_id, 'opl_connect_managed_module_reconciler');
+    assert.equal(output.managed_update.execution.adapter_results[0].owner_execution_boundary.runner_can_execute, true);
+    assert.equal(output.managed_update.execution.adapter_results[0].owner_execution_boundary.package_manager_claim, false);
     assert.equal(output.managed_update.execution.adapter_results[0].apply_mode, 'auto_apply');
     assert.equal(output.managed_update.execution.adapter_results[0].status_detail.auto_apply_eligible, true);
     assert.equal(output.managed_update.execution.adapter_results[0].status_detail.app_background_safe, true);
@@ -694,6 +709,11 @@ exit 2
         authority_boundary: { can_write_domain_truth: boolean };
         adapter_result_ref: string | null;
         apply_mode: string;
+        owner_projection: {
+          owner: string;
+          apply_owner: string;
+          package_manager_claim: boolean;
+        };
         status_detail: {
           auto_apply_eligible: boolean | null;
           app_background_safe: boolean | null;
@@ -719,6 +739,9 @@ exit 2
     assert.equal(typeof receiptLedger.receipts[0].activated_at, 'string');
     assert.equal(receiptLedger.receipts[0].post_apply_hooks.includes('sync_skills'), true);
     assert.equal(receiptLedger.receipts[0].apply_mode, 'auto_apply');
+    assert.equal(receiptLedger.receipts[0].owner_projection.owner, 'one-person-lab-managed-modules');
+    assert.equal(receiptLedger.receipts[0].owner_projection.apply_owner, 'opl_connect_managed_module_reconciler');
+    assert.equal(receiptLedger.receipts[0].owner_projection.package_manager_claim, false);
     assert.equal(receiptLedger.receipts[0].status_detail.auto_apply_eligible, true);
     assert.equal(receiptLedger.receipts[0].status_detail.app_background_safe, true);
     assert.equal(receiptLedger.receipts[0].status_detail.clean_managed_targets_count, 6);

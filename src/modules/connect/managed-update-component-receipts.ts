@@ -34,6 +34,16 @@ export type ManagedUpdateReceiptStatusDetail = {
   reload_status: 'not_required' | 'recommended' | 'required' | 'manual_required' | 'unknown';
 };
 
+export type ManagedUpdateOwnerReceiptProjection = {
+  owner: string;
+  authority_surface: string;
+  route_kind: string;
+  readback_ref: string;
+  apply_owner: string;
+  package_manager_claim: false;
+  forbidden_claims: string[];
+};
+
 export type ManagedUpdateComponentReceipt = {
   surface_kind: 'opl_managed_update_component_receipt';
   schema_version: 'opl_managed_update_component_receipt.v1';
@@ -56,6 +66,7 @@ export type ManagedUpdateComponentReceipt = {
   repair_action: string | null;
   adapter_result_ref: string | null;
   apply_mode: ManagedUpdateReceiptApplyMode;
+  owner_projection: ManagedUpdateOwnerReceiptProjection;
   status_detail: ManagedUpdateReceiptStatusDetail;
   post_apply_action_statuses: ManagedUpdatePostApplyActionReceipt[];
   reload_guidance: ManagedUpdateReloadGuidance;
@@ -85,6 +96,7 @@ export type ManagedUpdateComponentReceiptInput = {
   repair_action?: string | null;
   adapter_result_ref?: string | null;
   apply_mode: ManagedUpdateReceiptApplyMode;
+  owner_projection: ManagedUpdateOwnerReceiptProjection;
   status_detail: ManagedUpdateReceiptStatusDetail;
   post_apply_action_statuses: ManagedUpdatePostApplyActionReceipt[];
   reload_guidance: ManagedUpdateReloadGuidance;
@@ -155,6 +167,44 @@ function normalizeApplyMode(value: unknown): ManagedUpdateReceiptApplyMode {
     || value === 'projection_only'
     ? value
     : 'projection_only';
+}
+
+function defaultOwnerProjection(
+  componentId: string,
+  providerId: string,
+): ManagedUpdateOwnerReceiptProjection {
+  return {
+    owner: providerId,
+    authority_surface: 'legacy_managed_update_component_receipt_without_owner_projection',
+    route_kind: 'projection_only',
+    readback_ref: `legacy://managed-update/${componentId}`,
+    apply_owner: 'none',
+    package_manager_claim: false,
+    forbidden_claims: ['managed_update_kernel_is_package_manager'],
+  };
+}
+
+function normalizeOwnerProjection(
+  value: unknown,
+  componentId: string,
+  providerId: string,
+): ManagedUpdateOwnerReceiptProjection {
+  if (!isRecord(value)) {
+    return defaultOwnerProjection(componentId, providerId);
+  }
+  const forbiddenClaims = optionalStringArray(value.forbidden_claims);
+  return {
+    owner: optionalString(value.owner) ?? providerId,
+    authority_surface: optionalString(value.authority_surface)
+      ?? 'legacy_managed_update_component_receipt_without_owner_projection',
+    route_kind: optionalString(value.route_kind) ?? 'projection_only',
+    readback_ref: optionalString(value.readback_ref) ?? `legacy://managed-update/${componentId}`,
+    apply_owner: optionalString(value.apply_owner) ?? 'none',
+    package_manager_claim: false,
+    forbidden_claims: forbiddenClaims.length > 0
+      ? forbiddenClaims
+      : ['managed_update_kernel_is_package_manager'],
+  };
 }
 
 function defaultStatusDetail(): ManagedUpdateReceiptStatusDetail {
@@ -337,6 +387,7 @@ function normalizeReceipt(value: unknown): ManagedUpdateComponentReceipt | null 
     repair_action: optionalString(value.repair_action),
     adapter_result_ref: optionalString(value.adapter_result_ref),
     apply_mode: normalizeApplyMode(value.apply_mode),
+    owner_projection: normalizeOwnerProjection(value.owner_projection, componentId, providerId),
     status_detail: normalizeStatusDetail(value.status_detail),
     post_apply_action_statuses: normalizePostApplyActionStatuses(value.post_apply_action_statuses),
     reload_guidance: normalizeReloadGuidance(value.reload_guidance),
@@ -385,6 +436,10 @@ function normalizeInput(input: ManagedUpdateComponentReceiptInput): ManagedUpdat
     repair_action: input.repair_action ?? null,
     adapter_result_ref: input.adapter_result_ref ?? null,
     apply_mode: input.apply_mode,
+    owner_projection: {
+      ...input.owner_projection,
+      forbidden_claims: [...input.owner_projection.forbidden_claims],
+    },
     status_detail: input.status_detail,
     post_apply_action_statuses: input.post_apply_action_statuses.map((entry) => ({ ...entry })),
     reload_guidance: {

@@ -16,6 +16,7 @@ import { scholarSkillsStateForAgentPackageChannel } from './system-installation/
 import {
   findLatestManagedUpdateReceipt,
   managedUpdateComponentReceiptLedgerFilePath,
+  type ManagedUpdateOwnerReceiptProjection,
   type ManagedUpdatePostApplyActionReceipt,
   type ManagedUpdateReceiptApplyMode,
   type ManagedUpdateReceiptStatusDetail,
@@ -79,6 +80,26 @@ type ManagedUpdateOwnerRoute = {
   forbidden_claims: string[];
 };
 
+type ManagedUpdateOwnerExecutionBoundary = {
+  owner_executor_id: string;
+  executor_kind:
+    | 'none'
+    | 'diagnostic_readback'
+    | 'manual_owner_route'
+    | 'controlled_framework_executor'
+    | 'clean_managed_package_executor';
+  runner_can_execute: boolean;
+  allowed_operations: ManagedUpdateOperation[]; // reuse-first: allow owner-specific operation vocabulary, not a generic package manager.
+  readback_ref: string;
+  receipt_projection:
+    | 'read_only_projection'
+    | 'component_receipt_with_owner_route'
+    | 'external_owner_receipt_required';
+  diagnostic_only: boolean;
+  package_manager_claim: false;
+  notes: string[];
+};
+
 type ManagedUpdateComponent = {
   component_id: string;
   provider_id: ManagedUpdateProviderId;
@@ -86,6 +107,7 @@ type ManagedUpdateComponent = {
   component_class: ManagedUpdateComponentClass;
   policy_id: string;
   owner_route: ManagedUpdateOwnerRoute;
+  owner_execution_boundary: ManagedUpdateOwnerExecutionBoundary;
   label: string;
   state: ManagedUpdateComponentState;
   channel: string;
@@ -129,6 +151,7 @@ type ManagedUpdateComponent = {
     repair_action: string | null;
     content_identity_fields: string[];
     apply_mode: ManagedUpdateReceiptApplyMode;
+    owner_projection?: ManagedUpdateOwnerReceiptProjection;
     status_detail: ManagedUpdateReceiptStatusDetail;
     post_apply_action_statuses: ManagedUpdatePostApplyActionReceipt[];
     reload_guidance: ManagedUpdateReloadGuidance;
@@ -198,6 +221,7 @@ const COMPONENT_RECEIPT_REQUIRED_FIELDS = [
   'rollback_ref',
   'repair_action',
   'apply_mode',
+  'owner_projection',
   'status_detail',
   'post_apply_action_statuses',
   'reload_guidance',
@@ -253,6 +277,39 @@ function ownerRoute(input: Omit<ManagedUpdateOwnerRoute, 'package_manager_claim'
   return {
     ...input,
     package_manager_claim: false,
+  };
+}
+
+function ownerReceiptProjection(route: ManagedUpdateOwnerRoute): ManagedUpdateOwnerReceiptProjection {
+  return {
+    owner: route.owner,
+    authority_surface: route.authority_surface,
+    route_kind: route.route_kind,
+    readback_ref: route.readback_ref,
+    apply_owner: route.apply_owner,
+    package_manager_claim: false,
+    forbidden_claims: [...route.forbidden_claims],
+  };
+}
+
+function ownerExecutionBoundary(
+  route: ManagedUpdateOwnerRoute,
+  input: Omit<ManagedUpdateOwnerExecutionBoundary, 'readback_ref' | 'package_manager_claim'>,
+): ManagedUpdateOwnerExecutionBoundary {
+  return {
+    ...input,
+    readback_ref: route.readback_ref,
+    package_manager_claim: false,
+  };
+}
+
+function bindOwnerReceiptProjection(component: ManagedUpdateComponent): ManagedUpdateComponent {
+  return {
+    ...component,
+    receipt: {
+      ...component.receipt,
+      owner_projection: ownerReceiptProjection(component.owner_route),
+    },
   };
 }
 
@@ -496,6 +553,18 @@ function buildInstallationCarrierComponent(channel: string): ManagedUpdateCompon
     command_ref: null,
     reason: 'Installation carrier replacement happens through the host carrier route, not opl update apply.',
   };
+  const route = ownerRoute({
+    owner: 'one-person-lab-app',
+    authority_surface: 'App installation carrier and host update route',
+    route_kind: 'manual_owner_route',
+    readback_ref: 'contracts/opl-framework/managed-update-kernel-contract.json#providers/installation_carrier',
+    apply_owner: 'host_carrier_owner',
+    forbidden_claims: [
+      'opl_update_apply_updates_app_binary',
+      'opl_update_apply_replaces_docker_webui_image',
+      'managed_update_kernel_is_package_manager',
+    ],
+  });
 
   return {
     component_id: 'installation_carrier',
@@ -503,16 +572,16 @@ function buildInstallationCarrierComponent(channel: string): ManagedUpdateCompon
     adapter_id: 'installation_carrier_status_adapter',
     component_class: 'installation_carrier',
     policy_id: 'carrier_specific_status_with_host_update_route',
-    owner_route: ownerRoute({
-      owner: 'one-person-lab-app',
-      authority_surface: 'App installation carrier and host update route',
-      route_kind: 'manual_owner_route',
-      readback_ref: 'contracts/opl-framework/managed-update-kernel-contract.json#providers/installation_carrier',
-      apply_owner: 'host_carrier_owner',
-      forbidden_claims: [
-        'opl_update_apply_updates_app_binary',
-        'opl_update_apply_replaces_docker_webui_image',
-        'managed_update_kernel_is_package_manager',
+    owner_route: route,
+    owner_execution_boundary: ownerExecutionBoundary(route, {
+      owner_executor_id: 'host_carrier_owner',
+      executor_kind: 'manual_owner_route',
+      runner_can_execute: false,
+      allowed_operations: [],
+      receipt_projection: 'external_owner_receipt_required',
+      diagnostic_only: false,
+      notes: [
+        'Framework status may project carrier routes, but host/App owner executes and reads back carrier replacement.',
       ],
     }),
     label: 'Installation carrier',
@@ -669,6 +738,18 @@ function buildRuntimeSubstrateComponent(systemEnvironment: Record<string, unknow
     post_apply_status: state === 'current' ? 'skipped' : 'not_run',
   });
   const reloadGuidance = noReloadGuidance();
+  const route = ownerRoute({
+    owner: 'one-person-lab-app-and-opl-framework',
+    authority_surface: 'App-owned runtime root and OPL framework runtime artifact channel',
+    route_kind: 'controlled_framework_executor',
+    readback_ref: 'opl system startup-maintenance --json',
+    apply_owner: 'opl_runtime_substrate_materializer',
+    forbidden_claims: [
+      'runtime_substrate_update_is_app_binary_update',
+      'runtime_substrate_update_mutates_global_toolchain',
+      'managed_update_kernel_is_package_manager',
+    ],
+  });
 
   return {
     component_id: 'runtime_substrate',
@@ -676,16 +757,16 @@ function buildRuntimeSubstrateComponent(systemEnvironment: Record<string, unknow
     adapter_id: 'runtime_substrate_adapter',
     component_class: 'runtime_substrate',
     policy_id: 'silent_background_verified_stage_apply_on_next_restart',
-    owner_route: ownerRoute({
-      owner: 'one-person-lab-app-and-opl-framework',
-      authority_surface: 'App-owned runtime root and OPL framework runtime artifact channel',
-      route_kind: 'controlled_framework_executor',
-      readback_ref: 'opl system startup-maintenance --json',
-      apply_owner: 'opl_runtime_substrate_materializer',
-      forbidden_claims: [
-        'runtime_substrate_update_is_app_binary_update',
-        'runtime_substrate_update_mutates_global_toolchain',
-        'managed_update_kernel_is_package_manager',
+    owner_route: route,
+    owner_execution_boundary: ownerExecutionBoundary(route, {
+      owner_executor_id: 'opl_runtime_substrate_materializer',
+      executor_kind: 'controlled_framework_executor',
+      runner_can_execute: true,
+      allowed_operations: ['apply', 'repair', 'rollback'], // reuse-first: allow App-owned runtime materializer operations.
+      receipt_projection: 'component_receipt_with_owner_route',
+      diagnostic_only: false,
+      notes: [
+        'Runner may only mutate App-owned runtime roots and must keep system package managers and global toolchains read-only.',
       ],
     }),
     label: 'App-owned runtime substrate',
@@ -919,6 +1000,18 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
     post_apply_status: action === 'none' ? 'skipped' : 'not_run',
     reload_status: reloadRecommended ? 'recommended' : manualCount > 0 ? 'manual_required' : 'not_required',
   });
+  const route = ownerRoute({
+    owner: 'one-person-lab-managed-modules',
+    authority_surface: 'OCI/content-addressed capability package channel and clean managed module roots',
+    route_kind: 'clean_managed_package_executor',
+    readback_ref: 'opl connect modules --json',
+    apply_owner: 'opl_connect_managed_module_reconciler',
+    forbidden_claims: [
+      'capability_package_currentness_is_domain_ready',
+      'capability_package_channel_signs_owner_receipt',
+      'managed_update_kernel_is_package_manager',
+    ],
+  });
 
   return {
     component_id: 'capability_packages',
@@ -926,16 +1019,16 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
     adapter_id: 'capability_packages_adapter',
     component_class: 'capability_packages',
     policy_id: 'ordinary_user_non_development_silent_background',
-    owner_route: ownerRoute({
-      owner: 'one-person-lab-managed-modules',
-      authority_surface: 'OCI/content-addressed capability package channel and clean managed module roots',
-      route_kind: 'clean_managed_package_executor',
-      readback_ref: 'opl connect modules --json',
-      apply_owner: 'opl_connect_managed_module_reconciler',
-      forbidden_claims: [
-        'capability_package_currentness_is_domain_ready',
-        'capability_package_channel_signs_owner_receipt',
-        'managed_update_kernel_is_package_manager',
+    owner_route: route,
+    owner_execution_boundary: ownerExecutionBoundary(route, {
+      owner_executor_id: 'opl_connect_managed_module_reconciler',
+      executor_kind: 'clean_managed_package_executor',
+      runner_can_execute: true,
+      allowed_operations: ['apply', 'repair', 'rollback'], // reuse-first: allow clean content-addressed module roots only.
+      receipt_projection: 'component_receipt_with_owner_route',
+      diagnostic_only: false,
+      notes: [
+        'Runner is limited to clean managed module roots with digest/source identity; it does not own domain truth or package-manager semantics.',
       ],
     }),
     label: 'OPL managed capability packages',
@@ -1089,22 +1182,34 @@ function buildCodexSurfaceComponent(capabilityPackages: ManagedUpdateComponent, 
     post_apply_status: needsReload ? 'not_run' : 'skipped',
     reload_status: needsReload ? 'recommended' : 'not_required',
   });
+  const route = ownerRoute({
+    owner: 'one-person-lab-connect',
+    authority_surface: 'Codex plugin registry and skill projection derived from capability packages',
+    route_kind: 'projection_only',
+    readback_ref: 'opl connect skills --json',
+    apply_owner: 'capability_packages_post_apply_projection',
+    forbidden_claims: [
+      'codex_surface_is_package_channel_truth',
+      'codex_surface_writes_domain_truth',
+      'managed_update_kernel_is_package_manager',
+    ],
+  });
   return {
     component_id: 'codex_surface',
     provider_id: 'codex_surface',
     adapter_id: 'codex_surface_status_adapter',
     component_class: 'codex_surface',
     policy_id: 'display_visibility_and_repair_actions_without_duplicate_semantics',
-    owner_route: ownerRoute({
-      owner: 'one-person-lab-connect',
-      authority_surface: 'Codex plugin registry and skill projection derived from capability packages',
-      route_kind: 'projection_only',
-      readback_ref: 'opl connect skills --json',
-      apply_owner: 'capability_packages_post_apply_projection',
-      forbidden_claims: [
-        'codex_surface_is_package_channel_truth',
-        'codex_surface_writes_domain_truth',
-        'managed_update_kernel_is_package_manager',
+    owner_route: route,
+    owner_execution_boundary: ownerExecutionBoundary(route, {
+      owner_executor_id: 'capability_packages_post_apply_projection',
+      executor_kind: 'diagnostic_readback',
+      runner_can_execute: false,
+      allowed_operations: [],
+      receipt_projection: 'read_only_projection',
+      diagnostic_only: true,
+      notes: [
+        'Codex surface status is read back from Connect projection; apply runs only as a capability package post-apply action.',
       ],
     }),
     label: 'Codex plugin and skill surface',
@@ -1255,6 +1360,18 @@ function buildCompanionToolsComponent(channel: string): ManagedUpdateComponent {
     post_apply_status: state === 'current' ? 'skipped' : 'not_run',
   });
   const reloadGuidance = noReloadGuidance();
+  const route = ownerRoute({
+    owner: 'one-person-lab-companion-tools',
+    authority_surface: 'Companion tool availability and explicit companion skill apply route',
+    route_kind: 'manual_owner_route',
+    readback_ref: 'opl skill companion status --json',
+    apply_owner: 'companion_skill_route',
+    forbidden_claims: [
+      'companion_tool_status_is_runtime_substrate_truth',
+      'companion_tool_status_is_domain_ready',
+      'managed_update_kernel_is_package_manager',
+    ],
+  });
 
   return {
     component_id: 'companion_tools',
@@ -1262,16 +1379,16 @@ function buildCompanionToolsComponent(channel: string): ManagedUpdateComponent {
     adapter_id: 'companion_tools_status_adapter',
     component_class: 'companion_tools',
     policy_id: 'recommended_companion_tools_observe_or_managed_install',
-    owner_route: ownerRoute({
-      owner: 'one-person-lab-companion-tools',
-      authority_surface: 'Companion tool availability and explicit companion skill apply route',
-      route_kind: 'manual_owner_route',
-      readback_ref: 'opl skill companion status --json',
-      apply_owner: 'companion_skill_route',
-      forbidden_claims: [
-        'companion_tool_status_is_runtime_substrate_truth',
-        'companion_tool_status_is_domain_ready',
-        'managed_update_kernel_is_package_manager',
+    owner_route: route,
+    owner_execution_boundary: ownerExecutionBoundary(route, {
+      owner_executor_id: 'companion_skill_route',
+      executor_kind: 'manual_owner_route',
+      runner_can_execute: false,
+      allowed_operations: [],
+      receipt_projection: 'external_owner_receipt_required',
+      diagnostic_only: false,
+      notes: [
+        'Companion tools are surfaced as guidance; the companion skill route owns install/apply decisions.',
       ],
     }),
     label: 'Recommended companion tools',
@@ -1374,6 +1491,18 @@ function buildWorkflowProfileComponent(channel: string): ManagedUpdateComponent 
     reload_status: 'not_required',
   });
   const reloadGuidance = noReloadGuidance();
+  const route = ownerRoute({
+    owner: 'opl-flow',
+    authority_surface: 'OPL Flow profile pointer and Codex semantic merge packet',
+    route_kind: 'projection_only',
+    readback_ref: 'contracts/opl-native-profile.json',
+    apply_owner: 'codex_semantic_merge_owner',
+    forbidden_claims: [
+      'workflow_profile_can_be_silently_overwritten',
+      'workflow_profile_update_is_package_manager_apply',
+      'managed_update_kernel_is_package_manager',
+    ],
+  });
 
   return {
     component_id: 'workflow_profile',
@@ -1381,16 +1510,16 @@ function buildWorkflowProfileComponent(channel: string): ManagedUpdateComponent 
     adapter_id: 'workflow_profile_adapter',
     component_class: 'workflow_profile',
     policy_id: 'semantic_merge_required_no_silent_overwrite',
-    owner_route: ownerRoute({
-      owner: 'opl-flow',
-      authority_surface: 'OPL Flow profile pointer and Codex semantic merge packet',
-      route_kind: 'projection_only',
-      readback_ref: 'contracts/opl-native-profile.json',
-      apply_owner: 'codex_semantic_merge_owner',
-      forbidden_claims: [
-        'workflow_profile_can_be_silently_overwritten',
-        'workflow_profile_update_is_package_manager_apply',
-        'managed_update_kernel_is_package_manager',
+    owner_route: route,
+    owner_execution_boundary: ownerExecutionBoundary(route, {
+      owner_executor_id: 'codex_semantic_merge_owner',
+      executor_kind: 'manual_owner_route',
+      runner_can_execute: false,
+      allowed_operations: [],
+      receipt_projection: 'external_owner_receipt_required',
+      diagnostic_only: false,
+      notes: [
+        'Workflow profile deltas require Codex semantic merge; managed update only projects current profile pointers.',
       ],
     }),
     label: 'OPL Flow workflow profile',
@@ -1535,7 +1664,7 @@ export async function buildManagedUpdateKernelProjection(
   const selectedComponents = filterComponents(
     [installationCarrier, runtimeSubstrate, capabilityPackages, codexSurface, companionTools, workflowProfile],
     input.componentId,
-  );
+  ).map(bindOwnerReceiptProjection);
 
   return {
     version: 'g2',

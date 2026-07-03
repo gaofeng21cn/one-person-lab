@@ -60,7 +60,18 @@ function readManagedUpdateKernelContract() {
       route_kinds: string[];
       package_manager_claim_must_be_false: boolean;
     };
+    owner_execution_boundary_contract: {
+      required_fields: string[];
+      executor_kinds: string[];
+      receipt_projection_values: string[];
+      runner_can_execute_only_for: string[];
+      package_manager_claim_must_be_false: boolean;
+    };
     runner_result_shape: {
+      adapter_result_owner_boundary_shape: {
+        required_fields: string[];
+        runner_can_execute_only_for: string[];
+      };
       adapter_post_apply_action_shape: { required_fields: string[]; status_values: string[] };
       adapter_status_detail_shape: {
         required_fields: string[];
@@ -112,6 +123,26 @@ test('managed update kernel contract keeps runtime and agent post-apply executio
   ]);
   assert.equal(contract.owner_route_contract.package_manager_claim_must_be_false, true);
   assert.equal(contract.owner_route_contract.route_kinds.includes('clean_managed_package_executor'), true);
+  assert.deepEqual(contract.owner_execution_boundary_contract.required_fields, [
+    'owner_executor_id',
+    'executor_kind',
+    'runner_can_execute',
+    'allowed_operations',
+    'readback_ref',
+    'receipt_projection',
+    'diagnostic_only',
+    'package_manager_claim',
+    'notes',
+  ]);
+  assert.deepEqual(contract.owner_execution_boundary_contract.runner_can_execute_only_for, [
+    'runtime_substrate',
+    'capability_packages',
+  ]);
+  assert.equal(contract.owner_execution_boundary_contract.package_manager_claim_must_be_false, true);
+  assert.deepEqual(contract.runner_result_shape.adapter_result_owner_boundary_shape.required_fields, [
+    'owner_route',
+    'owner_execution_boundary',
+  ]);
 
   const routeByClass = new Map(
     contract.update_plane_state_machine.component_routes.map((entry) => [entry.component_class, entry]),
@@ -291,6 +322,17 @@ exit 2
             package_manager_claim: boolean;
             forbidden_claims: string[];
           };
+          owner_execution_boundary: {
+            owner_executor_id: string;
+            executor_kind: string;
+            runner_can_execute: boolean;
+            allowed_operations: string[];
+            readback_ref: string;
+            receipt_projection: string;
+            diagnostic_only: boolean;
+            package_manager_claim: boolean;
+            notes: string[];
+          };
           state: string;
           conditions: Array<{ type: string; status: string; reason: string; message: string; observed_generation: number }>;
           plan: { action: string; command_refs: Array<{ command: string; mode: string; destructive: boolean }> };
@@ -302,6 +344,15 @@ exit 2
             content_identity_fields: string[];
             repair_action: string | null;
             apply_mode: string;
+            owner_projection: {
+              owner: string;
+              authority_surface: string;
+              route_kind: string;
+              readback_ref: string;
+              apply_owner: string;
+              package_manager_claim: boolean;
+              forbidden_claims: string[];
+            };
             status_detail: {
               component_state: string | null;
               auto_apply_eligible: boolean | null;
@@ -391,6 +442,7 @@ exit 2
       'rollback_ref',
       'repair_action',
       'apply_mode',
+      'owner_projection',
       'status_detail',
       'post_apply_action_statuses',
       'reload_guidance',
@@ -430,6 +482,11 @@ exit 2
     assert.equal(installationCarrier.owner_route.route_kind, 'manual_owner_route');
     assert.equal(installationCarrier.owner_route.package_manager_claim, false);
     assert.equal(installationCarrier.owner_route.forbidden_claims.includes('opl_update_apply_updates_app_binary'), true);
+    assert.equal(installationCarrier.owner_execution_boundary.owner_executor_id, 'host_carrier_owner');
+    assert.equal(installationCarrier.owner_execution_boundary.runner_can_execute, false);
+    assert.deepEqual(installationCarrier.owner_execution_boundary.allowed_operations, []);
+    assert.equal(installationCarrier.owner_execution_boundary.receipt_projection, 'external_owner_receipt_required');
+    assert.equal(installationCarrier.owner_execution_boundary.package_manager_claim, false);
     assert.equal(installationCarrier.state, 'skipped_manual_required');
     assert.equal(installationCarrier.auto_apply.mode, 'projection_only');
     assert.equal(installationCarrier.auto_apply.eligible, false);
@@ -497,6 +554,8 @@ exit 2
       true,
     );
     assert.equal(installationCarrier.receipt.apply_mode, 'projection_only');
+    assert.equal(installationCarrier.receipt.owner_projection.owner, 'one-person-lab-app');
+    assert.equal(installationCarrier.receipt.owner_projection.package_manager_claim, false);
     assert.equal(installationCarrier.receipt.status_detail.manual_required_targets_count, 2);
     assert.equal(installationCarrier.receipt.content_identity_fields.includes('carrier_type'), true);
     assert.equal(installationCarrier.receipt.content_identity_fields.includes('image_ref'), true);
@@ -519,6 +578,10 @@ exit 2
     assert.equal(runtime.owner_route.route_kind, 'controlled_framework_executor');
     assert.equal(runtime.owner_route.readback_ref, 'opl system startup-maintenance --json');
     assert.equal(runtime.owner_route.package_manager_claim, false);
+    assert.equal(runtime.owner_execution_boundary.owner_executor_id, 'opl_runtime_substrate_materializer');
+    assert.equal(runtime.owner_execution_boundary.runner_can_execute, true);
+    assert.deepEqual(runtime.owner_execution_boundary.allowed_operations, ['apply', 'repair', 'rollback']); // reuse-first: allow owner-routed runtime materializer operations.
+    assert.equal(runtime.owner_execution_boundary.package_manager_claim, false);
     assert.equal(runtime.state, 'update_available');
     assert.equal(typeof runtime.current.current_pointer, 'string');
     assert.equal(typeof runtime.current.staged_root, 'string');
@@ -532,6 +595,8 @@ exit 2
     assert.equal(runtime.receipt.schema_version, 'opl_managed_update_component_receipt.v1');
     assert.equal(runtime.receipt.source_manifest_ref, 'app-runtime-update-channel.json');
     assert.equal(runtime.receipt.verify_result, 'not_run_projection_only');
+    assert.equal(runtime.receipt.owner_projection.apply_owner, 'opl_runtime_substrate_materializer');
+    assert.equal(runtime.receipt.owner_projection.package_manager_claim, false);
     assert.deepEqual(runtime.receipt.post_apply_hooks, ['startup_smoke', 'apply_opl_framework_runtime', 'swap_runtime_current_pointer_with_rollback']);
     assert.equal(runtime.receipt.content_identity_fields.includes('opl_framework_runtime'), true);
     assert.equal(runtime.authority_boundary.can_mutate_opl_framework_runtime, true);
@@ -547,6 +612,10 @@ exit 2
     assert.equal(agents.owner_route.route_kind, 'clean_managed_package_executor');
     assert.match(agents.owner_route.authority_surface, /OCI\/content-addressed/);
     assert.equal(agents.owner_route.package_manager_claim, false);
+    assert.equal(agents.owner_execution_boundary.owner_executor_id, 'opl_connect_managed_module_reconciler');
+    assert.equal(agents.owner_execution_boundary.runner_can_execute, true);
+    assert.deepEqual(agents.owner_execution_boundary.allowed_operations, ['apply', 'repair', 'rollback']); // reuse-first: allow clean content-addressed module roots only.
+    assert.equal(agents.owner_execution_boundary.package_manager_claim, false);
     assert.equal(agents.current.tag_role, 'selector_only');
     assert.deepEqual(agents.current.oci_distribution, {
       descriptor_media_type: 'application/vnd.opl.capability-package.channel.v1+json',
@@ -567,6 +636,9 @@ exit 2
     assert.equal(agents.post_apply_guidance.reload_guidance.reload_recommended, true);
     assert.equal(agents.receipt.source_manifest_ref, 'ghcr.io/gaofeng21cn/one-person-lab-manifest:stable');
     assert.equal(agents.receipt.apply_mode, 'auto_apply');
+    assert.equal(agents.receipt.owner_projection.owner, 'one-person-lab-managed-modules');
+    assert.equal(agents.receipt.owner_projection.apply_owner, 'opl_connect_managed_module_reconciler');
+    assert.equal(agents.receipt.owner_projection.package_manager_claim, false);
     assert.equal(agents.receipt.status_detail.auto_apply_eligible, true);
     assert.equal(agents.receipt.status_detail.manual_required_targets_count, 0);
     assert.equal(agents.receipt.reload_guidance.reload_recommended, true);
@@ -587,6 +659,9 @@ exit 2
     const exposure = output.managed_update.components.find((entry) => entry.component_id === 'codex_surface');
     assert.ok(exposure);
     assert.equal(exposure.adapter_id, 'codex_surface_status_adapter');
+    assert.equal(exposure.owner_execution_boundary.executor_kind, 'diagnostic_readback');
+    assert.equal(exposure.owner_execution_boundary.runner_can_execute, false);
+    assert.equal(exposure.owner_execution_boundary.diagnostic_only, true);
     assert.equal(exposure.auto_apply.mode, 'projection_only');
     assert.equal(exposure.auto_apply.eligible, false);
     assert.equal(exposure.auto_apply.app_background_safe, false);
@@ -604,12 +679,16 @@ exit 2
     const companionTools = output.managed_update.components.find((entry) => entry.component_id === 'companion_tools');
     assert.ok(companionTools);
     assert.equal(companionTools.adapter_id, 'companion_tools_status_adapter');
+    assert.equal(companionTools.owner_execution_boundary.owner_executor_id, 'companion_skill_route');
+    assert.equal(companionTools.owner_execution_boundary.runner_can_execute, false);
     assert.equal(companionTools.current.source, 'opl_companion_skill_sync_tools');
 
     const workflowProfile = output.managed_update.components.find((entry) => entry.component_id === 'workflow_profile');
     assert.ok(workflowProfile);
     assert.equal(workflowProfile.adapter_id, 'workflow_profile_adapter');
     assert.equal(workflowProfile.policy_id, 'semantic_merge_required_no_silent_overwrite');
+    assert.equal(workflowProfile.owner_execution_boundary.owner_executor_id, 'codex_semantic_merge_owner');
+    assert.equal(workflowProfile.owner_execution_boundary.runner_can_execute, false);
     assert.equal(workflowProfile.state, 'current');
     assert.equal(workflowProfile.auto_apply.mode, 'projection_only');
     assert.equal(workflowProfile.auto_apply.eligible, false);
@@ -837,6 +916,64 @@ exit 2
     assert.equal(output.managed_update.components[0].auto_apply.eligible, false);
     assert.equal(output.managed_update.components[0].auto_apply.app_background_safe, false);
     assert.equal(output.managed_update.components[0].auto_apply.command_ref, null);
+    assert.deepEqual(output.managed_update.execution.adapter_results, []);
+    assert.deepEqual(output.managed_update.execution.receipt_record.receipts, []);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('update apply does not execute companion tools through the managed update kernel', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-update-companion-tools-apply-'));
+  const codexFixture = createFakeCodexFixture(`
+if [ "$1" = "--version" ]; then
+  echo "codex-cli 0.134.0"
+  exit 0
+fi
+echo "Unsupported codex fixture command: $*" >&2
+exit 2
+`);
+
+  try {
+    const output = runCli(['update', 'apply', '--component', 'companion_tools'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_STATE_DIR: path.join(homeRoot, 'state'),
+      OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
+      OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
+      PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+    }) as {
+      managed_update: {
+        operation: string;
+        operation_mode: string;
+        requested_component_id: string;
+        summary: { execution_status: string };
+        components: Array<{
+          component_id: string;
+          owner_execution_boundary: {
+            owner_executor_id: string;
+            runner_can_execute: boolean;
+            allowed_operations: string[];
+          };
+        }>;
+        execution: {
+          status: string;
+          adapter_results: unknown[];
+          receipt_record: { receipts: unknown[] };
+        };
+      };
+    };
+
+    assert.equal(output.managed_update.operation, 'apply');
+    assert.equal(output.managed_update.operation_mode, 'controlled_apply');
+    assert.equal(output.managed_update.requested_component_id, 'companion_tools');
+    assert.equal(output.managed_update.summary.execution_status, 'skipped');
+    assert.equal(output.managed_update.components.length, 1);
+    assert.equal(output.managed_update.components[0].component_id, 'companion_tools');
+    assert.equal(output.managed_update.components[0].owner_execution_boundary.owner_executor_id, 'companion_skill_route');
+    assert.equal(output.managed_update.components[0].owner_execution_boundary.runner_can_execute, false);
+    assert.deepEqual(output.managed_update.components[0].owner_execution_boundary.allowed_operations, []);
     assert.deepEqual(output.managed_update.execution.adapter_results, []);
     assert.deepEqual(output.managed_update.execution.receipt_record.receipts, []);
   } finally {

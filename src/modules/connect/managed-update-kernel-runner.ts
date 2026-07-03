@@ -50,6 +50,8 @@ type AdapterPostApplyAction = {
 type AdapterExecutionResult = {
   component_id: string;
   adapter_id: ManagedUpdateProviderAdapterId;
+  owner_route?: ManagedUpdateProjectionComponent['owner_route'];
+  owner_execution_boundary?: ManagedUpdateProjectionComponent['owner_execution_boundary'];
   status: 'completed' | 'skipped' | 'manual_required' | 'failed';
   reason: string;
   result_ref: string | null;
@@ -147,7 +149,8 @@ function componentIsMutableForOperation(component: ManagedUpdateProjectionCompon
   if (operation === 'status' || operation === 'check' || operation === 'plan') {
     return true;
   }
-  return component.auto_apply.mode !== 'projection_only';
+  return component.owner_execution_boundary.runner_can_execute
+    && component.owner_execution_boundary.allowed_operations.includes(operation);
 }
 
 function selectedComponentIds(input: ManagedUpdateKernelInput, projection: ManagedUpdateProjection) {
@@ -744,6 +747,17 @@ async function runAdapter(
   }
 }
 
+function bindOwnerExecutionBoundary(
+  component: ManagedUpdateProjectionComponent,
+  result: AdapterExecutionResult,
+): AdapterExecutionResult {
+  return {
+    ...result,
+    owner_route: component.owner_route,
+    owner_execution_boundary: component.owner_execution_boundary,
+  };
+}
+
 function receiptInput(
   operation: ManagedUpdateOperation,
   component: ManagedUpdateProjectionComponent,
@@ -776,6 +790,7 @@ function receiptInput(
       : component.receipt.repair_action,
     adapter_result_ref: result.result_ref,
     apply_mode: result.apply_mode ?? component.receipt.apply_mode,
+    owner_projection: result.owner_route ?? component.owner_route,
     status_detail: statusDetail,
     post_apply_action_statuses: postApplyActions.map(postApplyActionReceipt),
     reload_guidance: reloadGuidance,
@@ -894,12 +909,14 @@ export async function runManagedUpdateKernelOperation(
   try {
     const componentIds = selectedComponentIds(input, initialProjection);
     const results: AdapterExecutionResult[] = [];
-    for (const componentId of componentIds) {
-      results.push(await runAdapter(contracts, input.operation, componentId));
-    }
     const componentsById = new Map(
       initialProjection.managed_update.components.map((component) => [component.component_id, component]),
     );
+    for (const componentId of componentIds) {
+      const component = componentsById.get(componentId);
+      const result = await runAdapter(contracts, input.operation, componentId);
+      results.push(component ? bindOwnerExecutionBoundary(component, result) : result);
+    }
     const receipts = results
       .map((result) => {
         const component = componentsById.get(result.component_id);
