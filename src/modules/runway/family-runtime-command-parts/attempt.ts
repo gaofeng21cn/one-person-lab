@@ -152,7 +152,7 @@ function parseAttemptSignalArgs(rest: string[]): FamilyRuntimeCommandInput {
   const stageAttemptId = rest[1];
   if (!stageAttemptId) {
     throw new FrameworkContractError('cli_usage_error', 'family-runtime attempt signal requires one attempt id.', {
-      usage: 'opl family-runtime attempt signal <stage_attempt_id> --kind human_gate|user_instruction|resume --payload <json>',
+      usage: 'opl family-runtime attempt signal <stage_attempt_id> --kind human_gate|owner_receipt|user_instruction|resume --payload <json>',
     });
   }
   let signalKind: TemporalStageAttemptSignalKind | undefined;

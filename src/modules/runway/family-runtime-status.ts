@@ -6,6 +6,7 @@ import {
   resolveFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
 import { buildTemporalWorkerLifecycleContract } from './family-runtime-temporal-readiness.ts';
+import { buildTemporalFirstRuntimeContract } from './family-runtime-temporal.ts';
 import { buildTemporalProviderLivenessBlocker } from './family-runtime-provider-liveness-blocker.ts';
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import {
@@ -83,6 +84,9 @@ export async function buildFamilyRuntimeStatusPayload(
         selected: provider,
         temporal_worker_lifecycle: selectedProvider === 'temporal'
           ? buildTemporalWorkerLifecycleContract()
+          : null,
+        temporal_first_runtime_contract: selectedProvider === 'temporal'
+          ? buildTemporalFirstRuntimeContract()
           : null,
       },
       periodic_execution: {

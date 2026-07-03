@@ -703,3 +703,5 @@ export async function schedulerTickActivity(input: {
     family_runtime_scheduler_tick: compactSchedulerTickForTemporalResult(tick),
   };
 }
+
+export const StageAttemptActivity = codexStageActivity;

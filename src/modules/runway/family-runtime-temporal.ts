@@ -24,6 +24,11 @@ export const SCHEDULER_TICK_WORKFLOW_NAME = 'SchedulerTickWorkflow';
 export const CODEX_STAGE_ACTIVITY_NAME = 'CodexStageActivity';
 export const DOMAIN_HANDLER_DISPATCH_ACTIVITY_NAME = 'DomainHandlerDispatchActivity';
 export const SCHEDULER_TICK_ACTIVITY_NAME = 'SchedulerTickActivity';
+export const STAGE_RUN_WORKFLOW_NAME = 'StageRunWorkflow';
+export const STAGE_ATTEMPT_ACTIVITY_NAME = 'StageAttemptActivity';
+export const RECONCILE_WORKFLOW_NAME = 'ReconcileWorkflow';
+export const HUMAN_GATE_SIGNAL_NAME = 'HumanGateSignal';
+export const OWNER_RECEIPT_SIGNAL_NAME = 'OwnerReceiptSignal';
 export const DEFAULT_TEMPORAL_TASK_QUEUE = 'opl-stage-attempts';
 export const TEMPORAL_MAX_INLINE_PAYLOAD_BYTES = 128 * 1024;
 
@@ -40,7 +45,8 @@ export const TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTE_NAMES = [
 ] as const;
 
 export const TEMPORAL_STAGE_ATTEMPT_SIGNALS = [
-  'HumanGateSignal',
+  HUMAN_GATE_SIGNAL_NAME,
+  OWNER_RECEIPT_SIGNAL_NAME,
   'UserInstructionSignal',
   'ResumeSignal',
 ] as const;
@@ -171,6 +177,7 @@ export type TemporalStageAttemptWorkflowState = {
   next_owner: string | null;
   route_impact: Record<string, unknown>;
   human_gate_refs: string[];
+  owner_receipt_refs?: string[];
   signals: TemporalStageAttemptSignalPayload[];
   closeout_packet: Record<string, unknown> | null;
   completion_boundary: {
@@ -212,6 +219,7 @@ export function buildTemporalStageAttemptWorkflowContract() {
   return {
     provider_kind: 'temporal',
     workflow_name: STAGE_ATTEMPT_WORKFLOW_NAME,
+    temporal_first_runtime_contract: buildTemporalFirstRuntimeContract(),
     scheduler_tick_workflow_name: SCHEDULER_TICK_WORKFLOW_NAME,
     activity_names: {
       codex_stage_activity: CODEX_STAGE_ACTIVITY_NAME,
@@ -271,6 +279,135 @@ export function buildTemporalStageAttemptWorkflowContract() {
     },
     payload_history_policy: temporalPayloadHistoryPolicy(),
   };
+}
+
+export function buildTemporalFirstRuntimeContract() {
+  return {
+    surface_kind: 'opl_temporal_first_runtime_contract',
+    contract_id: 'opl_family_runtime_temporal_first_contract',
+    contract_ref: 'contracts/opl-framework/family-runtime-temporal-first-contract.json',
+    provider_kind: 'temporal',
+    production_substrate: 'temporal_required_for_live_workflow_execution',
+    readback_policy: 'contract_projection_only_no_live_temporal_service_started',
+    workflow_activity_signal_mapping: {
+      stage_run_workflow: {
+        contract_name: STAGE_RUN_WORKFLOW_NAME,
+        temporal_kind: 'workflow',
+        current_workflow_type: STAGE_ATTEMPT_WORKFLOW_NAME,
+        role: 'durable_stage_run_and_stage_attempt_lifecycle_envelope',
+        task_queue: 'domain_runtime_lane_task_queue',
+        event_history_role: 'durable_lifecycle_attempt_retry_signal_and_closeout_transport_history',
+        sqlite_role: 'projection_audit_cache_not_durable_lifecycle_truth',
+      },
+      stage_attempt_activity: {
+        contract_name: STAGE_ATTEMPT_ACTIVITY_NAME,
+        temporal_kind: 'activity',
+        current_activity_types: [
+          CODEX_STAGE_ACTIVITY_NAME,
+          DOMAIN_HANDLER_DISPATCH_ACTIVITY_NAME,
+        ],
+        role: 'execute_codex_or_domain_handler_attempt_and_return_refs_only_closeout_transport',
+        retry_policy_owner: 'temporal_activity_retry_policy',
+        dead_letter_role: 'temporal_failure_history_plus_opl_operator_projection_only',
+      },
+      reconcile_workflow: {
+        contract_name: RECONCILE_WORKFLOW_NAME,
+        temporal_kind: 'workflow',
+        current_workflow_type: SCHEDULER_TICK_WORKFLOW_NAME,
+        current_activity_type: SCHEDULER_TICK_ACTIVITY_NAME,
+        role: 'scheduled_desired_current_reconciliation_and_next_safe_action_projection',
+        schedule_id: 'opl-family-runtime-provider-scheduler',
+        scheduler_role: 'trigger_reconcile_cadence_only_not_domain_terminal_state_writer',
+      },
+      human_gate_signal: {
+        contract_name: HUMAN_GATE_SIGNAL_NAME,
+        temporal_kind: 'signal',
+        signal_kind: 'human_gate',
+        role: 'append_human_gate_ref_to_workflow_history_and_projection',
+        closes_stage: false,
+      },
+      owner_receipt_signal: {
+        contract_name: OWNER_RECEIPT_SIGNAL_NAME,
+        temporal_kind: 'signal',
+        signal_kind: 'owner_receipt',
+        role: 'append_domain_owner_receipt_ref_to_workflow_history_and_projection',
+        owner_receipt_is_ref_only: true,
+        opl_can_sign_owner_receipt: false,
+        closes_stage_without_domain_authority: false,
+      },
+    },
+    task_queue_mapping: {
+      default_task_queue: DEFAULT_TEMPORAL_TASK_QUEUE,
+      resolver: 'resolveTemporalWorkerTaskQueue(paths)',
+      grouping_policy: 'family_runtime_root_and_domain_runtime_lane',
+      priority_and_rate_policy: 'temporal_or_worker_level_policy_only_not_sqlite_queue_truth',
+    },
+    retry_mapping: {
+      codex_stage_activity: {
+        maximum_attempts: 1,
+        reason: 'codex_cli_subprocess_must_not_be_duplicated_by_temporal_retry',
+      },
+      short_idempotent_activities: {
+        maximum_attempts: 3,
+        reason: 'projection_or_dispatch_activity_retry_owned_by_temporal',
+      },
+      opl_dead_letter_role: 'authority_ref_and_operator_projection_only',
+    },
+    schedule_mapping: {
+      schedule_id: 'opl-family-runtime-provider-scheduler',
+      workflow_type: SCHEDULER_TICK_WORKFLOW_NAME,
+      target_contract_workflow: RECONCILE_WORKFLOW_NAME,
+      cadence_owner: 'temporal_schedule',
+      scheduler_may_enqueue_domain_work_directly: false,
+      scheduler_may_write_terminal_state: false,
+    },
+    event_history_mapping: {
+      temporal_history_is_durable_lifecycle_truth: true,
+      required_history_refs: [
+        'WorkflowExecutionStarted',
+        'ActivityTaskScheduled',
+        'ActivityTaskCompleted',
+        'WorkflowExecutionSignaled',
+        'WorkflowExecutionCompleted',
+        'WorkflowExecutionFailed',
+      ],
+      sqlite_projection_only_fields: [
+        'tasks.status',
+        'stage_attempts.status',
+        'stage_attempt_signals.payload_json',
+      ],
+      local_provider_role: 'dev_ci_offline_diagnostic_baseline_only_not_online_readiness_substitute',
+    },
+    false_ready_boundary: {
+      live_workflow_execution_ready_requires: [
+        'temporal_service_reachable',
+        'temporal_worker_ready',
+        'scheduler_cadence_ready',
+        'temporal_history_or_authority_projection_rebuilds_lifecycle',
+      ],
+      not_proven_by: [
+        'contract_readback',
+        'sqlite_projection_clean',
+        'local_provider_pass',
+        'focused_tests_pass',
+        'provider_completion',
+      ],
+      forbidden_claims: [
+        'production_ready',
+        'domain_ready',
+        'owner_acceptance',
+        'provider_completion_is_domain_completion',
+        'sqlite_queue_is_durable_lifecycle_truth',
+      ],
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_authorize_domain_ready: false,
+      provider_completion_is_domain_ready: false,
+    },
+  } as const;
 }
 
 export function temporalPayloadHistoryPolicy() {

@@ -1,5 +1,6 @@
 import {
   DEFAULT_TEMPORAL_TASK_QUEUE,
+  buildTemporalFirstRuntimeContract,
   resolveTemporalAddress,
   resolveTemporalNamespace,
   resolveTemporalTaskQueue,
@@ -282,6 +283,7 @@ export function buildTemporalWorkerLifecycleContract() {
     surface_kind: 'temporal_worker_lifecycle_contract',
     provider_kind: 'temporal',
     workflow_name: 'StageAttemptWorkflow',
+    temporal_first_runtime_contract: buildTemporalFirstRuntimeContract(),
     task_queue: resolveTemporalTaskQueue(),
     default_task_queue: DEFAULT_TEMPORAL_TASK_QUEUE,
     namespace: resolveTemporalNamespace(),

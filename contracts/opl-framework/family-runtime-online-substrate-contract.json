@@ -42,9 +42,18 @@
       "external_runtime_required": true,
       "production_required": true,
       "workflow_mapping": {
-        "workflow": "stage_attempt",
-        "activity": "codex_cli_stage_execution_or_domain_handler_dispatch",
-        "signal": "human_gate_user_modification_intake_or_resume",
+        "contract_ref": "contracts/opl-framework/family-runtime-temporal-first-contract.json",
+        "stage_run_workflow": "StageRunWorkflow",
+        "current_stage_run_workflow_adapter": "StageAttemptWorkflow",
+        "stage_attempt_activity": "StageAttemptActivity",
+        "current_stage_attempt_activity_adapters": [
+          "CodexStageActivity",
+          "DomainHandlerDispatchActivity"
+        ],
+        "reconcile_workflow": "ReconcileWorkflow",
+        "current_reconcile_workflow_adapter": "SchedulerTickWorkflow",
+        "human_gate_signal": "HumanGateSignal",
+        "owner_receipt_signal": "OwnerReceiptSignal",
         "query": "operator_progress_projection",
         "history": "durable_replay_and_audit"
       },

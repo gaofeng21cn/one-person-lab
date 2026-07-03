@@ -6,6 +6,6 @@ export const FAMILY_RUNTIME_PROVIDER_KINDS = ['local_sqlite', 'temporal'] as con
 
 export type FamilyRuntimeProviderKind = typeof FAMILY_RUNTIME_PROVIDER_KINDS[number];
 
-export const TEMPORAL_STAGE_ATTEMPT_SIGNAL_KINDS = ['human_gate', 'user_instruction', 'resume'] as const;
+export const TEMPORAL_STAGE_ATTEMPT_SIGNAL_KINDS = ['human_gate', 'owner_receipt', 'user_instruction', 'resume'] as const;
 
 export type TemporalStageAttemptSignalKind = typeof TEMPORAL_STAGE_ATTEMPT_SIGNAL_KINDS[number];

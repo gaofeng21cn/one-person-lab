@@ -327,6 +327,15 @@ Phase 3-4 的本轮收薄是 Runway control-loop / reconciler 的 safe-action re
 - Local provider boundary：Runway control-loop provider readback 明确 `local_provider_role=dev_ci_offline_diagnostic_baseline_only_not_online_readiness_substitute`；local SQLite 仍只能作为 dev/CI/offline diagnostic baseline。
 - Fresh evidence：`node --test --experimental-strip-types tests/src/cli/cases/brand-modules-cases/runway-control-loop.ts` 11/11 pass，`npm run typecheck` pass。该证据只证明 control-loop / reconciler projection 切片和类型检查，不证明 production readiness、Temporal live history 接管、owner acceptance 或 release readiness。
 
+## Phase 3 Temporal-First Contract Readback Foldback
+
+本 lane 只落 Runway Temporal-first workflow / activity / signal contract readback，不启动真实 Temporal service，不写 runtime DB / provider queue data，不声明 live workflow execution ready。
+
+- Contract：新增 `contracts/opl-framework/family-runtime-temporal-first-contract.json`，把目标 `StageRunWorkflow`、`StageAttemptActivity`、`ReconcileWorkflow`、`HumanGateSignal`、`OwnerReceiptSignal` 映射到当前 Temporal adapter（`StageAttemptWorkflow`、`CodexStageActivity` / `DomainHandlerDispatchActivity`、`SchedulerTickWorkflow` / `SchedulerTickActivity`），并显式写出 task queue、retry、schedule、event history、SQLite projection-only 与 local provider diagnostic-only 角色。
+- Source readback：`buildTemporalFirstRuntimeContract()` 进入 `family-runtime status`、Runway control-loop provider_runtime 与 Temporal worker lifecycle projection；`OwnerReceiptSignal` 作为 refs-only signal/update payload 进入 workflow signal contract，`owner_receipt_ref` 只进入 workflow history/projection，不授权 OPL 签 owner receipt。
+- False-ready boundary：contract/readback 明确 `contract_readback`、`sqlite_projection_clean`、`local_provider_pass`、`focused_tests_pass` 和 provider completion 都不能证明 production ready、domain ready、owner acceptance 或 live workflow execution ready。
+- Fresh evidence：2026-07-03 lane verification 为 `node --test --experimental-strip-types tests/src/cli/cases/brand-modules-cases/runway-control-loop.ts` 12/12 pass、`npm run typecheck` pass、`npm run reuse-first:scan:diff` gate_status=ok、`git diff --check` pass；该证据只证明 OPL 本仓 contract/readback 切片可执行，不证明真实 Temporal service、production readiness、owner receipt consumption 或 domain ready。
+
 ## Phase 1 / 7 / 9 First-Slice Foldback
 
 Phase 1、Phase 7、Phase 9 的本轮收薄已吸收进 `main`，属于 schema boundary、domain-tail matrix 与 observability exporter/readback seed，不是完整 platform closeout。

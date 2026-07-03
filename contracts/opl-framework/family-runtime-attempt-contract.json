@@ -164,6 +164,10 @@
   },
   "provider_lifecycle_contract": {
     "temporal": {
+      "temporal_first_contract_ref": "contracts/opl-framework/family-runtime-temporal-first-contract.json",
+      "stage_run_workflow_name": "StageRunWorkflow",
+      "stage_attempt_activity_name": "StageAttemptActivity",
+      "reconcile_workflow_name": "ReconcileWorkflow",
       "workflow_name": "StageAttemptWorkflow",
       "activity_names": [
         "CodexStageActivity",
@@ -171,6 +175,7 @@
       ],
       "signals": [
         "HumanGateSignal",
+        "OwnerReceiptSignal",
         "UserInstructionSignal",
         "ResumeSignal"
       ],

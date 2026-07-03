@@ -6,6 +6,12 @@ import {
   buildRunwayReconcileProjection,
   buildRunwayRecoveryRepairProjection,
 } from '../../../../../src/modules/runway/family-runtime-control-loop.ts';
+import {
+  buildTemporalFirstRuntimeContract,
+} from '../../../../../src/modules/runway/family-runtime-temporal.ts';
+import {
+  TEMPORAL_STAGE_ATTEMPT_SIGNAL_KINDS,
+} from '../../../../../src/modules/runway/family-runtime-types.ts';
 
 const runwayControlLoopStateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runway-control-loop-test-'));
 
@@ -68,6 +74,41 @@ test('family-runtime control-loop status distinguishes substrate liveness from s
   assert.equal(controlLoop.surface_kind, 'opl_family_runtime_control_loop_status');
   assert.equal(controlLoop.provider_kind, 'temporal');
   assert.equal(controlLoop.provider_runtime.substrate, 'temporal');
+  assert.equal(
+    controlLoop.provider_runtime.temporal_first_runtime_contract.workflow_activity_signal_mapping
+      .stage_run_workflow.contract_name,
+    'StageRunWorkflow',
+  );
+  assert.equal(
+    controlLoop.provider_runtime.temporal_first_runtime_contract.workflow_activity_signal_mapping
+      .stage_attempt_activity.contract_name,
+    'StageAttemptActivity',
+  );
+  assert.equal(
+    controlLoop.provider_runtime.temporal_first_runtime_contract.workflow_activity_signal_mapping
+      .reconcile_workflow.contract_name,
+    'ReconcileWorkflow',
+  );
+  assert.equal(
+    controlLoop.provider_runtime.temporal_first_runtime_contract.workflow_activity_signal_mapping
+      .owner_receipt_signal.contract_name,
+    'OwnerReceiptSignal',
+  );
+  assert.equal(
+    controlLoop.provider_runtime.temporal_first_runtime_contract.event_history_mapping
+      .temporal_history_is_durable_lifecycle_truth,
+    true,
+  );
+  assert.equal(
+    controlLoop.provider_runtime.temporal_first_runtime_contract.event_history_mapping
+      .local_provider_role,
+    'dev_ci_offline_diagnostic_baseline_only_not_online_readiness_substitute',
+  );
+  assert.equal(
+    controlLoop.provider_runtime.temporal_first_runtime_contract.false_ready_boundary
+      .not_proven_by.includes('focused_tests_pass'),
+    true,
+  );
   assert.equal(controlLoop.worker_supervisor_liveness.substrate, 'temporal_worker_supervisor');
   assert.equal(controlLoop.scheduler_cadence.substrate, 'temporal_scheduler');
   assert.equal(controlLoop.semantic_loop.progress_reconciler_id, 'runway_progress_reconciler');
@@ -76,6 +117,40 @@ test('family-runtime control-loop status distinguishes substrate liveness from s
   assert.equal(controlLoop.authority_boundary.can_sign_owner_receipt, false);
   assert.equal(controlLoop.authority_boundary.can_create_typed_blocker, false);
   assert.equal(controlLoop.authority_boundary.can_authorize_domain_ready, false);
+});
+
+test('Runway Temporal-first contract readback maps workflows activities signals and false-ready boundary', () => {
+  const contract = buildTemporalFirstRuntimeContract();
+  const contractPath = path.join(repoRoot, 'contracts/opl-framework/family-runtime-temporal-first-contract.json');
+
+  assert.equal(contract.surface_kind, 'opl_temporal_first_runtime_contract');
+  assert.equal(contract.contract_ref, 'contracts/opl-framework/family-runtime-temporal-first-contract.json');
+  assert.equal(fs.existsSync(contractPath), true);
+  assert.equal(contract.workflow_activity_signal_mapping.stage_run_workflow.current_workflow_type, 'StageAttemptWorkflow');
+  assert.equal(contract.workflow_activity_signal_mapping.stage_attempt_activity.contract_name, 'StageAttemptActivity');
+  assert.deepEqual(contract.workflow_activity_signal_mapping.stage_attempt_activity.current_activity_types, [
+    'CodexStageActivity',
+    'DomainHandlerDispatchActivity',
+  ]);
+  assert.equal(contract.workflow_activity_signal_mapping.reconcile_workflow.contract_name, 'ReconcileWorkflow');
+  assert.equal(contract.schedule_mapping.scheduler_may_write_terminal_state, false);
+  assert.equal(contract.task_queue_mapping.default_task_queue, 'opl-stage-attempts');
+  assert.equal(contract.retry_mapping.codex_stage_activity.maximum_attempts, 1);
+  assert.equal(contract.retry_mapping.short_idempotent_activities.maximum_attempts, 3);
+  assert.equal(contract.event_history_mapping.temporal_history_is_durable_lifecycle_truth, true);
+  assert.equal(contract.event_history_mapping.sqlite_projection_only_fields.includes('tasks.status'), true);
+  assert.equal(
+    contract.event_history_mapping.local_provider_role,
+    'dev_ci_offline_diagnostic_baseline_only_not_online_readiness_substitute',
+  );
+  assert.equal(contract.workflow_activity_signal_mapping.human_gate_signal.contract_name, 'HumanGateSignal');
+  assert.equal(contract.workflow_activity_signal_mapping.owner_receipt_signal.contract_name, 'OwnerReceiptSignal');
+  assert.equal(TEMPORAL_STAGE_ATTEMPT_SIGNAL_KINDS.includes('owner_receipt'), true);
+  assert.equal(contract.workflow_activity_signal_mapping.owner_receipt_signal.opl_can_sign_owner_receipt, false);
+  assert.equal(contract.false_ready_boundary.not_proven_by.includes('contract_readback'), true);
+  assert.equal(contract.false_ready_boundary.forbidden_claims.includes('production_ready'), true);
+  assert.equal(contract.authority_boundary.can_write_domain_truth, false);
+  assert.equal(contract.authority_boundary.can_sign_owner_receipt, false);
 });
 
 test('Runway control-loop status delegates to the family runtime control-loop surface', () => {

@@ -13,6 +13,7 @@ import {
 } from './family-runtime-store.ts';
 import { stageAttemptSummary } from './family-runtime-stage-attempts.ts';
 import { runTemporalSchedulerCadenceCommand } from './family-runtime-scheduler.ts';
+import { buildTemporalFirstRuntimeContract } from './family-runtime-temporal.ts';
 import {
   inspectTemporalWorkerRestartGuardForLifecycle,
   type WorkerRestartGuard,
@@ -425,6 +426,7 @@ export async function buildFamilyRuntimeControlLoopStatus(
       live_workflow_execution_ready: selected.ready
         && !schedulerNeedsRepair(schedulerStatus)
         && !queueLifecycleCompetesWithTemporal,
+      temporal_first_runtime_contract: buildTemporalFirstRuntimeContract(),
     },
     worker_supervisor_liveness: {
       substrate: 'temporal_worker_supervisor',

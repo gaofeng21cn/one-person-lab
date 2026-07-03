@@ -983,6 +983,7 @@
         "canonical_contract_refs": [
           "contracts/opl-framework/runtime-manager-contract.json",
           "contracts/opl-framework/family-runtime-attempt-contract.json",
+          "contracts/opl-framework/family-runtime-temporal-first-contract.json",
           "contracts/opl-framework/family-runtime-online-substrate-contract.json",
           "contracts/opl-framework/stage-route-scheduler-contract.json",
           "contracts/opl-framework/current-owner-delta.schema.json",
@@ -997,7 +998,8 @@
           "opl runway reconcile --json",
           "opl runway control-loop status --json",
           "opl runway handoff-gates --json",
-          "opl runway recovery-repair --json"
+          "opl runway recovery-repair --json",
+          "contracts/opl-framework/family-runtime-temporal-first-contract.json"
         ]
       },
       "native_cli_family": {
@@ -1099,6 +1101,7 @@
           "opl runway interfaces --json",
           "contracts/opl-framework/runtime-manager-contract.json",
           "contracts/opl-framework/family-runtime-attempt-contract.json",
+          "contracts/opl-framework/family-runtime-temporal-first-contract.json",
           "contracts/opl-framework/current-owner-delta.schema.json",
           "contracts/opl-framework/capability-registry-resolver.schema.json#/$defs/capability_invocation_lifecycle_policy",
           "contracts/opl-framework/brand-module-registry.json#modules.runway",
@@ -1134,6 +1137,7 @@
         "required_refs": [
           "contracts/opl-framework/brand-module-surfaces.json#modules.runway",
           "contracts/opl-framework/brand-module-registry.json#modules.runway",
+          "contracts/opl-framework/family-runtime-temporal-first-contract.json",
           "contracts/opl-framework/current-owner-delta.schema.json",
           "contracts/opl-framework/capability-registry-resolver.schema.json#/$defs/capability_invocation_lifecycle_policy",
           "contracts/opl-framework/target-operating-architecture-contract.json#resource_model.resource_kinds.RunwayControlLoop",
@@ -1181,7 +1185,8 @@
           "opl runway reconcile --json",
           "opl runway control-loop status --json",
           "opl runway handoff-gates --json",
-          "opl runway recovery-repair --json"
+          "opl runway recovery-repair --json",
+          "contracts/opl-framework/family-runtime-temporal-first-contract.json"
         ],
         "not_claims": [
           "domain_owner_closeout_generated_by_opl",

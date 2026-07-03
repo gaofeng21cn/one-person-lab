@@ -79,6 +79,24 @@ export function signalStageAttempt(
       createdAt,
       input.stageAttemptId,
     );
+  } else if (input.signalKind === 'owner_receipt') {
+    db.prepare(`
+      UPDATE stage_attempts
+      SET provider_run_json = ?, updated_at = ?
+      WHERE stage_attempt_id = ?
+    `).run(
+      JSON.stringify({
+        ...attempt.provider_run,
+        last_owner_receipt_signal_id: signal.signal_id,
+        last_owner_receipt_ref: typeof input.payload.owner_receipt_ref === 'string'
+          ? input.payload.owner_receipt_ref
+          : null,
+        last_owner_receipt_at: createdAt,
+        owner_receipt_signal_is_ref_only: true,
+      }),
+      createdAt,
+      input.stageAttemptId,
+    );
   }
 
   return {

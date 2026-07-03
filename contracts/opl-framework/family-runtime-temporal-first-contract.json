@@ -1,0 +1,127 @@
+{
+  "version": "v1",
+  "contract_id": "opl_family_runtime_temporal_first_contract",
+  "surface_kind": "opl_temporal_first_runtime_contract",
+  "provider_kind": "temporal",
+  "scope": "Runway Temporal-first workflow/activity/signal mapping readback for Phase 3 contract projection",
+  "production_substrate": "temporal_required_for_live_workflow_execution",
+  "readback_policy": "contract_projection_only_no_live_temporal_service_started",
+  "workflow_activity_signal_mapping": {
+    "stage_run_workflow": {
+      "contract_name": "StageRunWorkflow",
+      "temporal_kind": "workflow",
+      "current_workflow_type": "StageAttemptWorkflow",
+      "role": "durable_stage_run_and_stage_attempt_lifecycle_envelope",
+      "task_queue": "domain_runtime_lane_task_queue",
+      "event_history_role": "durable_lifecycle_attempt_retry_signal_and_closeout_transport_history",
+      "sqlite_role": "projection_audit_cache_not_durable_lifecycle_truth"
+    },
+    "stage_attempt_activity": {
+      "contract_name": "StageAttemptActivity",
+      "temporal_kind": "activity",
+      "current_activity_types": [
+        "CodexStageActivity",
+        "DomainHandlerDispatchActivity"
+      ],
+      "role": "execute_codex_or_domain_handler_attempt_and_return_refs_only_closeout_transport",
+      "retry_policy_owner": "temporal_activity_retry_policy",
+      "dead_letter_role": "temporal_failure_history_plus_opl_operator_projection_only"
+    },
+    "reconcile_workflow": {
+      "contract_name": "ReconcileWorkflow",
+      "temporal_kind": "workflow",
+      "current_workflow_type": "SchedulerTickWorkflow",
+      "current_activity_type": "SchedulerTickActivity",
+      "role": "scheduled_desired_current_reconciliation_and_next_safe_action_projection",
+      "schedule_id": "opl-family-runtime-provider-scheduler",
+      "scheduler_role": "trigger_reconcile_cadence_only_not_domain_terminal_state_writer"
+    },
+    "human_gate_signal": {
+      "contract_name": "HumanGateSignal",
+      "temporal_kind": "signal",
+      "signal_kind": "human_gate",
+      "role": "append_human_gate_ref_to_workflow_history_and_projection",
+      "closes_stage": false
+    },
+    "owner_receipt_signal": {
+      "contract_name": "OwnerReceiptSignal",
+      "temporal_kind": "signal",
+      "signal_kind": "owner_receipt",
+      "role": "append_domain_owner_receipt_ref_to_workflow_history_and_projection",
+      "owner_receipt_is_ref_only": true,
+      "opl_can_sign_owner_receipt": false,
+      "closes_stage_without_domain_authority": false
+    }
+  },
+  "task_queue_mapping": {
+    "default_task_queue": "opl-stage-attempts",
+    "resolver": "resolveTemporalWorkerTaskQueue(paths)",
+    "grouping_policy": "family_runtime_root_and_domain_runtime_lane",
+    "priority_and_rate_policy": "temporal_or_worker_level_policy_only_not_sqlite_queue_truth"
+  },
+  "retry_mapping": {
+    "codex_stage_activity": {
+      "maximum_attempts": 1,
+      "reason": "codex_cli_subprocess_must_not_be_duplicated_by_temporal_retry"
+    },
+    "short_idempotent_activities": {
+      "maximum_attempts": 3,
+      "reason": "projection_or_dispatch_activity_retry_owned_by_temporal"
+    },
+    "opl_dead_letter_role": "authority_ref_and_operator_projection_only"
+  },
+  "schedule_mapping": {
+    "schedule_id": "opl-family-runtime-provider-scheduler",
+    "workflow_type": "SchedulerTickWorkflow",
+    "target_contract_workflow": "ReconcileWorkflow",
+    "cadence_owner": "temporal_schedule",
+    "scheduler_may_enqueue_domain_work_directly": false,
+    "scheduler_may_write_terminal_state": false
+  },
+  "event_history_mapping": {
+    "temporal_history_is_durable_lifecycle_truth": true,
+    "required_history_refs": [
+      "WorkflowExecutionStarted",
+      "ActivityTaskScheduled",
+      "ActivityTaskCompleted",
+      "WorkflowExecutionSignaled",
+      "WorkflowExecutionCompleted",
+      "WorkflowExecutionFailed"
+    ],
+    "sqlite_projection_only_fields": [
+      "tasks.status",
+      "stage_attempts.status",
+      "stage_attempt_signals.payload_json"
+    ],
+    "local_provider_role": "dev_ci_offline_diagnostic_baseline_only_not_online_readiness_substitute"
+  },
+  "false_ready_boundary": {
+    "live_workflow_execution_ready_requires": [
+      "temporal_service_reachable",
+      "temporal_worker_ready",
+      "scheduler_cadence_ready",
+      "temporal_history_or_authority_projection_rebuilds_lifecycle"
+    ],
+    "not_proven_by": [
+      "contract_readback",
+      "sqlite_projection_clean",
+      "local_provider_pass",
+      "focused_tests_pass",
+      "provider_completion"
+    ],
+    "forbidden_claims": [
+      "production_ready",
+      "domain_ready",
+      "owner_acceptance",
+      "provider_completion_is_domain_completion",
+      "sqlite_queue_is_durable_lifecycle_truth"
+    ]
+  },
+  "authority_boundary": {
+    "can_write_domain_truth": false,
+    "can_sign_owner_receipt": false,
+    "can_create_typed_blocker": false,
+    "can_authorize_domain_ready": false,
+    "provider_completion_is_domain_ready": false
+  }
+}

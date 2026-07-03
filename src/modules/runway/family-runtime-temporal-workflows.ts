@@ -38,6 +38,7 @@ type StageAttemptActivities = {
 export const stageAttemptQuery = defineQuery<TemporalStageAttemptWorkflowState>('StageAttemptQuery');
 export const schedulerTickQuery = defineQuery<TemporalSchedulerTickWorkflowState>('SchedulerTickQuery');
 export const humanGateSignal = defineSignal<[TemporalStageAttemptSignalPayload]>('HumanGateSignal');
+export const ownerReceiptSignal = defineSignal<[TemporalStageAttemptSignalPayload]>('OwnerReceiptSignal');
 export const userInstructionSignal = defineSignal<[TemporalStageAttemptSignalPayload]>('UserInstructionSignal');
 export const resumeSignal = defineSignal<[TemporalStageAttemptSignalPayload]>('ResumeSignal');
 export const stageAttemptOperatorUpdate = defineUpdate<
@@ -148,6 +149,14 @@ function validateOperatorActionPayload(signal: TemporalStageAttemptSignalPayload
       throw new Error('human_gate update requires payload.human_gate_ref');
     }
   }
+  if (signal.signal_kind === 'owner_receipt') {
+    const ownerReceiptRef = typeof signal.payload.owner_receipt_ref === 'string'
+      ? signal.payload.owner_receipt_ref.trim()
+      : '';
+    if (!ownerReceiptRef) {
+      throw new Error('owner_receipt update requires payload.owner_receipt_ref');
+    }
+  }
   if (signal.signal_kind === 'user_instruction') {
     const instructionRef = typeof signal.payload.instruction_ref === 'string'
       ? signal.payload.instruction_ref.trim()
@@ -217,6 +226,7 @@ export async function StageAttemptWorkflow(
     next_owner: null,
     route_impact: asRecord(input.route_impact),
     human_gate_refs: [],
+    owner_receipt_refs: [],
     signals: [],
     closeout_packet: null,
     completion_boundary: {
@@ -252,6 +262,9 @@ export async function StageAttemptWorkflow(
       human_gate_refs: signal.signal_kind === 'human_gate' && typeof signal.payload.human_gate_ref === 'string'
         ? [...new Set([...state.human_gate_refs, signal.payload.human_gate_ref])]
         : state.human_gate_refs,
+      owner_receipt_refs: signal.signal_kind === 'owner_receipt' && typeof signal.payload.owner_receipt_ref === 'string'
+        ? [...new Set([...(state.owner_receipt_refs ?? []), signal.payload.owner_receipt_ref])]
+        : state.owner_receipt_refs,
     };
     updateVisibility(signal.signal_kind === 'human_gate' ? 'human_gate' : 'operator_update');
   };
@@ -269,6 +282,7 @@ export async function StageAttemptWorkflow(
 
   setHandler(stageAttemptQuery, () => state);
   setHandler(humanGateSignal, recordSignal);
+  setHandler(ownerReceiptSignal, recordSignal);
   setHandler(userInstructionSignal, recordSignal);
   setHandler(resumeSignal, recordResume);
   setHandler(
@@ -499,3 +513,6 @@ export async function SchedulerTickWorkflow(
 
   return state;
 }
+
+export const StageRunWorkflow = StageAttemptWorkflow;
+export const ReconcileWorkflow = SchedulerTickWorkflow;
