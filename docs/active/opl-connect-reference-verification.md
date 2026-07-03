@@ -14,7 +14,7 @@ evidence。它服务 MAS、Workspace、本机 OPL App 和 CLI 的同一条引用
 ## 命令面
 
 ```bash
-opl connect references verify --references-file references.json --providers crossref,pubmed,openalex,semantic-scholar,crossmark --cache-root .cache/opl-connect --max-retries 1 --json
+opl connect references verify --references-file references.json --providers crossref,pubmed,openalex,semantic-scholar,crossmark,publisher --cache-root .cache/opl-connect --max-retries 1 --json
 ```
 
 输入文件可以是数组，也可以是：
