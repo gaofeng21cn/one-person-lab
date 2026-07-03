@@ -1,12 +1,12 @@
 import type { FrameworkContracts } from '../../../kernel/types.ts';
-import { getActiveWorkspaceBinding } from '../../workspace/workspace-registry.ts';
+import { getActiveWorkspaceBinding } from '../../workspace/index.ts';
 import type { ManifestCommandTimeoutPolicy } from './resolver.ts';
 import { resolveBindingManifest } from './resolver.ts';
 import {
   hydrateDomainManifestCatalogFromProjectionCache,
   writeResolvedDomainManifestProjectionCache,
 } from './projection-cache.ts';
-import { buildOplMetaAgentRegistryExtension } from '../../foundry-lab/opl-meta-agent-consumption.ts';
+import { buildOplMetaAgentRegistryExtension } from '../../foundry-lab/index.ts';
 import type { DomainManifestCatalogEntry } from './types.ts';
 
 type DomainManifestCurrentnessOwnerAction = Record<string, unknown>;

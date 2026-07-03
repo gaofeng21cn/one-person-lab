@@ -4,9 +4,9 @@ import {
   readOplWorkspaceRoot,
   writeOplDeveloperSupervisorConfig,
   writeOplUpdateChannel,
-} from '../../console/system-preferences.ts';
-import { buildOplEndpoints } from '../../runway/opl-runtime-paths.ts';
-import { runNativeHelperRepairAction } from '../../runway/native-helper-runtime.ts';
+} from '../../console/index.ts';
+import { buildOplEndpoints } from '../../runway/index.ts';
+import { runNativeHelperRepairAction } from '../../runway/index.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 
 import { runOplEngineAction } from './engine-actions.ts';

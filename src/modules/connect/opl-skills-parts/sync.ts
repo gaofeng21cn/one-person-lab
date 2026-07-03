@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-import { resolveDefaultFamilyWorkspaceRoot } from '../../workspace/family-workspace-root.ts';
+import { resolveDefaultFamilyWorkspaceRoot } from '../../workspace/index.ts';
 import { PACKAGED_MODULE_MARKER_FILE } from '../packaged-module-marker.ts';
 import {
   buildMasScholarSkillsProfileManifest,

@@ -1,12 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 import {
   normalizeExternalEvidenceReceiptSemantics,
   type ExternalEvidenceReceiptSemantics,
 } from './external-evidence-receipt-classification.ts';
-import { resolveOplStatePaths } from '../runway/runtime-state-paths.ts';
+import { resolveOplStatePaths } from '../runway/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 

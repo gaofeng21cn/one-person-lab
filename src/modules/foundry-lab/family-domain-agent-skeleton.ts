@@ -1,7 +1,7 @@
-import { FrameworkContractError } from '../charter/contracts.ts';
-import { buildDomainManifestCatalog } from '../atlas/domain-manifest/catalog-builder.ts';
-import type { DomainManifestCatalog } from '../atlas/domain-manifest/catalog-builder.ts';
-import type { DomainManifestCatalogEntry } from '../atlas/domain-manifest/types.ts';
+import { FrameworkContractError } from '../charter/index.ts';
+import { buildDomainManifestCatalog } from '../atlas/index.ts';
+import type { DomainManifestCatalog } from '../atlas/index.ts';
+import type { DomainManifestCatalogEntry } from '../atlas/index.ts';
 import {
   runFamilyRuntimeLifecycleApply,
   type LifecycleApplyMode,
@@ -12,7 +12,7 @@ import {
   providerResidencyGapStatus,
   readProviderContinuousProof,
   type ProviderContinuousProof,
-} from '../atlas/family-domain-agent-provider-closure.ts';
+} from '../atlas/index.ts';
 import { buildPhysicalSkeletonFollowThroughGate } from './family-domain-agent-skeleton-parts/legacy-cleanup-evidence.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 

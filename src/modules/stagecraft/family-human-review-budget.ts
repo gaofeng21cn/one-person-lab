@@ -1,4 +1,4 @@
-import type { FamilyActionCatalog } from '../console/family-action-catalog-contract.ts';
+import type { FamilyActionCatalog } from '../console/index.ts';
 import type { FamilyStageControlPlane, FamilyStageDescriptor } from './family-stage-control-plane-contract.ts';
 
 type JsonRecord = Record<string, unknown>;

@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { buildAgentReadinessSummary } from './agent-readiness.ts';
-import { loadFrameworkContracts } from '../charter/contracts.ts';
+import { loadFrameworkContracts } from '../charter/index.ts';
 import { buildStandardDomainAgentConformanceReport } from './standard-domain-agent-conformance.ts';
 import {
   DEFAULT_TEMPLATE_CONSUMPTION_SAMPLE_DOMAINS,

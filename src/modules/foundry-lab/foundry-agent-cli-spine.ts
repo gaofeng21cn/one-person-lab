@@ -1,11 +1,11 @@
 import fs from 'node:fs';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 import {
   STANDARD_AGENT_REGISTRY,
   STANDARD_AGENT_REGISTRY_REF,
   resolveStandardAgent,
-} from '../atlas/standard-agent-registry.ts';
+} from '../atlas/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 

@@ -2,14 +2,14 @@ import {
   buildFamilyActionCatalogParity,
   projectFamilyAction,
   projectFamilyActionCatalog,
-} from '../../console/family-action-catalog.ts';
+} from '../../console/index.ts';
 import type {
   FamilyActionCatalog,
   FamilyActionCatalogAction,
   FamilyActionExportFormat,
-} from '../../console/family-action-catalog-contract.ts';
+} from '../../console/index.ts';
 import { buildGeneratedDirectParityProof } from './generated-interface-parity.ts';
-import type { FamilyStageControlPlane } from '../../stagecraft/family-stage-control-plane-contract.ts';
+import type { FamilyStageControlPlane } from '../../stagecraft/index.ts';
 import { buildToolAffordanceBoundaryRoute } from './stage-route-tool-affordance.ts';
 import {
   blockStatusIsReady,
@@ -18,13 +18,13 @@ import {
   handoffSurfaceFor,
 } from './generated-interface-active-caller-proof.ts';
 import { buildGeneratedSurfaceConsumptionBundle } from './generated-surface-consumption.ts';
-import { defaultCallerSurfaceGates } from '../../foundry-lab/default-caller-surface-gates.ts';
+import { defaultCallerSurfaceGates } from '../../foundry-lab/index.ts';
 import {
   DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES,
   DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
   DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
   DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
-} from '../../foundry-lab/default-caller-retirement-guard.ts';
+} from '../../foundry-lab/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 export type GeneratedInterfaceFormat = FamilyActionExportFormat | 'product-entry';

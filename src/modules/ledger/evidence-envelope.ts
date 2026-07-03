@@ -1,6 +1,6 @@
-import type { JsonRecord } from '../console/runtime-tray-snapshot-types.ts';
-export { canonicalOwnerId } from '../connect/owner-id.ts';
-import { canonicalOwnerId } from '../connect/owner-id.ts';
+import type { JsonRecord } from '../console/index.ts';
+export { canonicalOwnerId } from '../connect/index.ts';
+import { canonicalOwnerId } from '../connect/index.ts';
 
 type EvidenceEnvelopeStatus = 'open' | 'closed' | 'blocked' | 'superseded';
 

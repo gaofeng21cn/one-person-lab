@@ -1,7 +1,7 @@
-import type { JsonRecord } from '../console/runtime-tray-snapshot-types.ts';
+import type { JsonRecord } from '../console/index.ts';
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundary,
-} from '../console/runtime-tray-app-operator-drilldown-parts/authority-boundary.ts';
+} from '../console/index.ts';
 
 function record(value: unknown): JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value)

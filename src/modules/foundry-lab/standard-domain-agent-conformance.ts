@@ -1,11 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError, loadFrameworkContracts } from '../charter/contracts.ts';
+import { FrameworkContractError, loadFrameworkContracts } from '../charter/index.ts';
 import {
   buildAgentWorkspaceNormChecks,
   buildAgentWorkspaceNormProjection,
-} from '../workspace/agent-workspace-norm.ts';
+} from '../workspace/index.ts';
 import { buildAgentPlatformSurfaceOwnershipForRepo } from './agent-platform-surface-ownership.ts';
 import { buildFunctionalPrivatizationAudit } from './functional-privatization-audit.ts';
 import { buildPrivatePlatformResidueDeletionGate } from './private-platform-residue-deletion-gate.ts';
@@ -13,7 +13,7 @@ import {
   defaultFamilyRepoInputs,
   DEFAULT_FAMILY_REPOS,
 } from './standard-domain-agent-family-repos.ts';
-import { resolveStandardAgent } from '../atlas/standard-agent-registry.ts';
+import { resolveStandardAgent } from '../atlas/index.ts';
 import {
   buildStageArtifactKernelAdoptionChecks,
   buildStageRunCanaryEvidenceChecks,

@@ -2,7 +2,7 @@ import { unique } from './standard-domain-agent-conformance-utils.ts';
 import {
   STANDARD_AGENT_REGISTRY_REF,
   resolveStandardAgent,
-} from '../atlas/standard-agent-registry.ts';
+} from '../atlas/index.ts';
 import type {
   FrameworkCapabilityPackageConformanceReport,
   RepoConformanceReport,

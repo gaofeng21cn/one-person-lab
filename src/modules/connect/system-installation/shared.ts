@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { FrameworkContractError } from '../../charter/contracts.ts';
-import type { OplUpdateChannel } from '../../console/system-preferences.ts';
+import { FrameworkContractError } from '../../charter/index.ts';
+import type { OplUpdateChannel } from '../../console/index.ts';
 
 export type OplModuleId =
   | 'medautoscience'

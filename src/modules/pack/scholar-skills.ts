@@ -1,9 +1,9 @@
 import path from 'node:path';
-import { FrameworkContractError } from '../charter/contracts.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 import {
   buildRuntimeEnvironmentPrepareReadback,
   buildRuntimeEnvironmentRunContextReadback,
-} from '../runway/runtime-environment-substrate.ts';
+} from '../runway/index.ts';
 import { materializeCandidateArtifactBodies } from './scholar-skills-parts/artifact-engines.ts';
 import { SCHOLAR_SKILL_MODULE_IDS } from './scholar-skills-contract.ts';
 import {

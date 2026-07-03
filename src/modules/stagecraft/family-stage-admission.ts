@@ -1,10 +1,10 @@
-import type { FamilyActionCatalog, FamilyActionCatalogAction } from '../console/family-action-catalog-contract.ts';
+import type { FamilyActionCatalog, FamilyActionCatalogAction } from '../console/index.ts';
 import type {
   FamilyStageControlPlane,
   FamilyStageDescriptor,
   FamilyStageTrustLane,
 } from './family-stage-control-plane-contract.ts';
-import type { NormalizedDomainManifest } from '../atlas/domain-manifest/types.ts';
+import type { NormalizedDomainManifest } from '../atlas/index.ts';
 import {
   buildFamilyStageAssumptionLifecycleProjection,
 } from './family-stage-assumption-lifecycle.ts';

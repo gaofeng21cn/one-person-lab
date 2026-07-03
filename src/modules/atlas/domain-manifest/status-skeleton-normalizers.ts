@@ -1,4 +1,4 @@
-import { normalizeGrantTransitionOracle } from '../../stagecraft/family-transition-oracle-ingestion.ts';
+import { normalizeGrantTransitionOracle } from '../../stagecraft/index.ts';
 import {
   isRecord,
   optionalString,

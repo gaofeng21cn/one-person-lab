@@ -2,8 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { developerModePrefersLocalCheckouts } from '../developer-mode-source-policy.ts';
-import { resolveDefaultFamilyWorkspaceRoot } from '../../workspace/family-workspace-root.ts';
-import { resolveOplStatePaths } from '../../runway/runtime-state-paths.ts';
+import { resolveDefaultFamilyWorkspaceRoot } from '../../workspace/index.ts';
+import { resolveOplStatePaths } from '../../runway/index.ts';
 import type { SkillPackSpec } from './registry.ts';
 
 export function normalizeOptionalString(value: string | undefined | null) {

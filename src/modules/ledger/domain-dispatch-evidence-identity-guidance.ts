@@ -1,4 +1,4 @@
-import type { JsonRecord } from '../console/runtime-tray-snapshot-types.ts';
+import type { JsonRecord } from '../console/index.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);

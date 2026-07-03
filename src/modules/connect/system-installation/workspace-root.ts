@@ -1,7 +1,7 @@
 import {
   buildOplWorkspaceRootStatus,
   writeOplWorkspaceRoot,
-} from '../../console/system-preferences.ts';
+} from '../../console/index.ts';
 
 export function buildOplWorkspaceRootSurface() {
   return buildOplWorkspaceRootStatus();

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../../charter/contracts.ts';
+import { FrameworkContractError } from '../../charter/index.ts';
 
 export type OkfJsonPrimitive = string | number | boolean | null;
 export type OkfJsonValue = OkfJsonPrimitive | OkfJsonValue[] | { [key: string]: OkfJsonValue };

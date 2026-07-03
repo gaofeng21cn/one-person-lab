@@ -1,9 +1,9 @@
-import { buildOplEndpoints } from '../../runway/opl-runtime-paths.ts';
+import { buildOplEndpoints } from '../../runway/index.ts';
 import {
   readOplUpdateChannel,
   readOplWorkspaceRoot,
-} from '../../console/system-preferences.ts';
-import { readOplRuntimeModes } from '../../console/runtime-modes.ts';
+} from '../../console/index.ts';
+import { readOplRuntimeModes } from '../../console/index.ts';
 import { buildOplGuiShellSurface, buildOplRecommendedSkills } from '../install-companions.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 

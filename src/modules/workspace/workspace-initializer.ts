@@ -1,12 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 import {
   AGENT_WORKSPACE_NORM_CONTRACT_REF,
   buildAgentWorkspaceNormProjection,
 } from './agent-workspace-norm.ts';
-import { readOplWorkspaceRoot } from '../console/system-preferences.ts';
+import { readOplWorkspaceRoot } from '../console/index.ts';
 import type { AgentWorkspaceNormContract, FrameworkContracts } from '../../kernel/types.ts';
 import {
   buildWorkspaceLifecycle,

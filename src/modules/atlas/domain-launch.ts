@@ -1,8 +1,8 @@
 import { spawn, spawnSync } from 'node:child_process';
 
-import { findDomainOrThrow, FrameworkContractError } from '../charter/contracts.ts';
+import { findDomainOrThrow, FrameworkContractError } from '../charter/index.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
-import { resolveWorkspaceLocator } from '../workspace/workspace-registry.ts';
+import { resolveWorkspaceLocator } from '../workspace/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 
 export type DomainLaunchStrategy = 'auto' | 'open_url' | 'spawn_command';

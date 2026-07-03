@@ -1,5 +1,5 @@
 import type { DomainManifestCatalogEntry } from './domain-manifest/types.ts';
-import { getActiveWorkspaceBinding, type WorkspaceBinding } from '../workspace/workspace-registry.ts';
+import { getActiveWorkspaceBinding, type WorkspaceBinding } from '../workspace/index.ts';
 
 type BuildFamilyDomainCatalogOptions = {
   resolveActiveWorkspaceBinding?: (projectId: string) => WorkspaceBinding | null;

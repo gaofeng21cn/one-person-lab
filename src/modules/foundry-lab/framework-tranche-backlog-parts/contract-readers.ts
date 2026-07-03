@@ -4,7 +4,7 @@ import path from 'node:path';
 import {
   buildDomainPackCompilerList,
   buildGeneratedAgentInterfaces,
-} from '../../pack/domain-pack-compiler.ts';
+} from '../../pack/index.ts';
 import {
   FrameworkContractError,
   expectBoolean,

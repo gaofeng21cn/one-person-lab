@@ -1,4 +1,4 @@
-import type { JsonRecord } from '../console/runtime-tray-snapshot-types.ts';
+import type { JsonRecord } from '../console/index.ts';
 
 function stringValue(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;

@@ -1,5 +1,5 @@
-import type { OplDeveloperSupervisorConfigFile } from '../console/system-preferences.ts';
-import { readOplDeveloperSupervisorConfig } from '../console/system-preferences.ts';
+import type { OplDeveloperSupervisorConfigFile } from '../console/index.ts';
+import { readOplDeveloperSupervisorConfig } from '../console/index.ts';
 import { listDefaultOplDomainModuleSpecs } from './system-installation/modules.ts';
 import {
   type DeveloperModeGhFixture,

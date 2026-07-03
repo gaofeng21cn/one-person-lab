@@ -1,8 +1,8 @@
-import { findDomainOrThrow } from '../charter/contracts.ts';
-import { buildDomainManifestCatalog } from '../atlas/domain-manifest/catalog-builder.ts';
-import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from '../atlas/family-domain-catalog.ts';
-import { resolveWorkspaceLocator } from '../workspace/workspace-registry.ts';
-import { buildOplRuntimeEndpoints } from '../runway/opl-runtime-paths/current.ts';
+import { findDomainOrThrow } from '../charter/index.ts';
+import { buildDomainManifestCatalog } from '../atlas/index.ts';
+import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from '../atlas/index.ts';
+import { resolveWorkspaceLocator } from '../workspace/index.ts';
+import { buildOplRuntimeEndpoints } from '../runway/index.ts';
 import type { HandoffBundleResult } from './handoff-bundle-types.ts';
 import type { BoundaryExplanation, FrameworkContracts, ResolutionResult } from '../../kernel/types.ts';
 

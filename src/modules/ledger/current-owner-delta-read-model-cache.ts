@@ -5,7 +5,7 @@ import {
   ensureOplStateDir,
   resolveOplStatePaths,
   type OplStatePaths,
-} from '../runway/runtime-state-paths.ts';
+} from '../runway/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 

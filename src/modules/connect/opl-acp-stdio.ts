@@ -17,10 +17,10 @@ import {
   type CodexExecEvent,
   parseCodexExecOutput,
   runCodexCommandStreaming,
-} from '../runway/codex.ts';
-import { loadFrameworkContracts } from '../charter/contracts.ts';
-import { buildSessionLedger, recordSessionLedgerEntry } from '../runway/session-ledger.ts';
-import { buildWorkspaceCatalog } from '../workspace/workspace-registry.ts';
+} from '../runway/index.ts';
+import { loadFrameworkContracts } from '../charter/index.ts';
+import { buildSessionLedger, recordSessionLedgerEntry } from '../runway/index.ts';
+import { buildWorkspaceCatalog } from '../workspace/index.ts';
 
 type AcpStdioCommand =
   | 'initialize'

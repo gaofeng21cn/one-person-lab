@@ -5,7 +5,7 @@ import {
   record,
   stringValue,
 } from '../framework-readiness-values.ts';
-import { buildAppReleaseUserPathEvidence } from '../../console/runtime-tray-app-operator-drilldown-parts/app-release-user-path.ts';
+import { buildAppReleaseUserPathEvidence } from '../../console/index.ts';
 
 export function stringListValue(value: unknown) {
   return Array.isArray(value)

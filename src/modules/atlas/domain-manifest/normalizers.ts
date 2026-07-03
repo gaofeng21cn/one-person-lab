@@ -3,10 +3,10 @@ import {
   validateUserInteractionContract,
   validateSharedHandoff,
 } from '../family-entry-contracts.ts';
-import { normalizeFamilyActionCatalog } from '../../console/family-action-catalog-contract.ts';
-import { normalizeFamilyStageControlPlane } from '../../stagecraft/family-stage-control-plane-contract.ts';
+import { normalizeFamilyActionCatalog } from '../../console/index.ts';
+import { normalizeFamilyStageControlPlane } from '../../stagecraft/index.ts';
 import { normalizeFamilyDomainMemoryRef } from '../family-domain-memory-contract.ts';
-import { normalizeManagedRuntimeContract } from '../../runway/managed-runtime-contract.ts';
+import { normalizeManagedRuntimeContract } from '../../runway/index.ts';
 import { normalizeFamilyTransitionSurfaces } from './family-transition-normalizer.ts';
 import {
   normalizeArtifactInventory,

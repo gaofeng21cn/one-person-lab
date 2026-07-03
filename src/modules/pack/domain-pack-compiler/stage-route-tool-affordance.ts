@@ -1,4 +1,4 @@
-import type { FamilyStageControlPlane } from '../../stagecraft/family-stage-control-plane-contract.ts';
+import type { FamilyStageControlPlane } from '../../stagecraft/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 type StageDescriptor = FamilyStageControlPlane['stages'][number];

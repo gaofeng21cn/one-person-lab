@@ -1,9 +1,9 @@
 import {
   frameworkAppReleaseUserPathNextSafeAction,
-} from '../console/runtime-tray-app-operator-drilldown-parts/app-release-user-path.ts';
+} from '../console/index.ts';
 import {
   frameworkDeveloperModeLiveCloseoutNextSafeAction,
-} from '../console/runtime-tray-app-operator-drilldown-parts/developer-mode-live-closeout.ts';
+} from '../console/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 

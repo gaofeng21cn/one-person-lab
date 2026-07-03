@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import type { WorkspaceProjectIndexEntry } from './workspace-topology.ts';
 import { writeJsonArtifact } from './workspace-artifacts.ts';

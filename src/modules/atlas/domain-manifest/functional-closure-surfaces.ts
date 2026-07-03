@@ -4,7 +4,7 @@ import {
 } from './shared-utils.ts';
 import {
   buildFunctionalPrivatizationAudit,
-} from '../../foundry-lab/functional-privatization-audit.ts';
+} from '../../foundry-lab/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 

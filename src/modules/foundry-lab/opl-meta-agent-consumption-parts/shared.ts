@@ -1,4 +1,4 @@
-import type { JsonRecord } from '../../console/runtime-tray-snapshot-types.ts';
+import type { JsonRecord } from '../../console/index.ts';
 import {
   refsOnlyAuthorityBoundary,
   uniqueStringList,

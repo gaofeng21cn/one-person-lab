@@ -4,7 +4,7 @@ import path from 'node:path';
 import {
   stageReplayMissingReceiptTargetKey,
   type StageReplayMissingReceiptReceipt,
-} from '../stagecraft/stage-replay-missing-receipt-ledger.ts';
+} from '../stagecraft/index.ts';
 import type { OmaProductionConsumptionReceipt } from './oma-production-consumption-ledger.ts';
 
 type JsonRecord = Record<string, unknown>;

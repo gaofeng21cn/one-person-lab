@@ -2,10 +2,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { resolveOplStatePaths } from '../../runway/runtime-state-paths.ts';
+import { resolveOplStatePaths } from '../../runway/index.ts';
 import {
   FrameworkContractError,
-} from '../../charter/contracts.ts';
+} from '../../charter/index.ts';
 import {
   assertGitSuccess,
   normalizeOptionalString,

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 import {
   ensureOplStateDir,
   resolveOplStatePaths,

@@ -1,23 +1,23 @@
-import { FrameworkContractError } from '../charter/contracts.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import type { DomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import type { ManifestCommandTimeoutPolicy } from './domain-manifest/resolver.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from './domain-manifest/types.ts';
-import { buildFamilyActionCatalogParity } from '../console/family-action-catalog.ts';
-import { buildStandardDomainAgentSkeletonInspection } from '../foundry-lab/family-domain-agent-skeleton.ts';
+import { buildFamilyActionCatalogParity } from '../console/index.ts';
+import { buildStandardDomainAgentSkeletonInspection } from '../foundry-lab/index.ts';
 import { pickSkillActivationProjection } from './family-domain-catalog.ts';
-import { buildFamilyStageControlPlaneParity } from '../stagecraft/family-stage-control-plane.ts';
+import { buildFamilyStageControlPlaneParity } from '../stagecraft/index.ts';
 import {
   buildFunctionalSourcePurityTailReadModel,
-} from '../foundry-lab/functional-privatization-envelope.ts';
+} from '../foundry-lab/index.ts';
 import {
   adaptGrantTransitionOracleToFamilyTransitionSpec,
   buildGrantTransitionOracleMatrixCases,
-} from '../stagecraft/family-transition-oracle-ingestion.ts';
+} from '../stagecraft/index.ts';
 import {
   runFamilyTransitionMatrix,
-} from '../stagecraft/family-transition-runner.ts';
-import { withOplMetaAgentDescriptorEntry } from '../foundry-lab/opl-meta-agent-descriptor-adapter.ts';
+} from '../stagecraft/index.ts';
+import { withOplMetaAgentDescriptorEntry } from '../foundry-lab/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 
 type JsonRecord = Record<string, unknown>;

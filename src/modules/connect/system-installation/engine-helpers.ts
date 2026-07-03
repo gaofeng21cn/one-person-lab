@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-import { resolveCodexBinary } from '../../runway/codex.ts';
+import { resolveCodexBinary } from '../../runway/index.ts';
 
 import {
   type OplEngineAction,

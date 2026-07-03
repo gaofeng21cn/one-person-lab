@@ -2,8 +2,8 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
-import { ensureOplStateDir } from '../runway/runtime-state-paths.ts';
+import { FrameworkContractError } from '../charter/index.ts';
+import { ensureOplStateDir } from '../runway/index.ts';
 
 export type JsonRecord = Record<string, unknown>;
 

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { resolveFamilyWorkspaceRootFromRepoRoot } from '../../workspace/family-workspace-root.ts';
+import { resolveFamilyWorkspaceRootFromRepoRoot } from '../../workspace/index.ts';
 import { buildOplGuiArtifactName, buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from '../opl-release.ts';
 import type { OplGuiShellSurface } from '../install-companions.ts';
 

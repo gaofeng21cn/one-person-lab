@@ -3,8 +3,8 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
-import { ensureOplStateDir, resolveOplStatePaths } from '../runway/runtime-state-paths.ts';
+import { FrameworkContractError } from '../charter/index.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from '../runway/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { OPL_WORKSPACE_AGENT_PROFILES } from './workspace-agent-defaults.ts';
 

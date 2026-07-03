@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { resolveFamilyWorkspaceRootFromRepoRoot } from '../workspace/family-workspace-root.ts';
+import { resolveFamilyWorkspaceRootFromRepoRoot } from '../workspace/index.ts';
 
 interface StandardDomainAgentRepoInput {
   requested_agent_id: string | null;

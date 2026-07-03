@@ -3,8 +3,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
-import { resolveOplStatePaths } from '../runway/runtime-state-paths.ts';
+import { FrameworkContractError } from '../charter/index.ts';
+import { resolveOplStatePaths } from '../runway/index.ts';
 
 type FrameworkLocatorSource =
   | 'OPL_FRAMEWORK_ROOT'

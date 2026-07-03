@@ -7,8 +7,8 @@ import { FRAMEWORK_READINESS_SOURCE_COMMANDS as SOURCE_COMMANDS } from './framew
 import {
   frameworkDiagnosticDrilldowns,
 } from './framework-readiness-static-surfaces.ts';
-import { buildCurrentOwnerDeltaReadModel } from '../ledger/current-owner-delta-projection.ts';
-import { writeCurrentOwnerDeltaReadModelProjectionCache } from '../ledger/current-owner-delta-read-model-cache.ts';
+import { buildCurrentOwnerDeltaReadModel } from '../ledger/index.ts';
+import { writeCurrentOwnerDeltaReadModelProjectionCache } from '../ledger/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 

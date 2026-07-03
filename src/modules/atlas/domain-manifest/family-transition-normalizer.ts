@@ -2,12 +2,12 @@ import {
   runFamilyTransitionMatrix,
   type FamilyTransitionMatrixCase,
   type FamilyTransitionSpec,
-} from '../../stagecraft/family-transition-runner.ts';
+} from '../../stagecraft/index.ts';
 import {
   adaptVisualTransitionSpecToFamilyTransitionSpec,
   buildVisualTransitionMatrixCases,
   normalizeVisualTransitionSpec,
-} from '../../stagecraft/family-transition-visual-ingestion.ts';
+} from '../../stagecraft/index.ts';
 import type { NormalizedFamilyTransitionProjection } from './types.ts';
 import {
   isRecord,

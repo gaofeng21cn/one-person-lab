@@ -1,4 +1,4 @@
-import { FrameworkContractError } from '../charter/contracts.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 
 export function frameworkReadinessDiagnosticFailure(
   sourceId: string,

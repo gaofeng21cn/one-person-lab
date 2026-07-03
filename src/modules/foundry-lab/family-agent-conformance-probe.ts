@@ -2,10 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { FrameworkContractError, loadFrameworkContracts } from '../charter/contracts.ts';
-import { buildGeneratedAgentInterfaces } from '../pack/domain-pack-compiler.ts';
-import { normalizeFamilyActionCatalog } from '../console/family-action-catalog-contract.ts';
-import { normalizeFamilyStageControlPlane } from '../stagecraft/family-stage-control-plane-contract.ts';
+import { FrameworkContractError, loadFrameworkContracts } from '../charter/index.ts';
+import { buildGeneratedAgentInterfaces } from '../pack/index.ts';
+import { normalizeFamilyActionCatalog } from '../console/index.ts';
+import { normalizeFamilyStageControlPlane } from '../stagecraft/index.ts';
 import {
   isRecord,
   optionalString,

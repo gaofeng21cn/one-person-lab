@@ -1,4 +1,4 @@
-import { FrameworkContractError } from '../../charter/contracts.ts';
+import { FrameworkContractError } from '../../charter/index.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 
 import { resolveEngineActionSpec } from './engine-helpers.ts';

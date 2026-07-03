@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 
-import { ensureOplStateDir, resolveOplStatePaths } from '../../runway/runtime-state-paths.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from '../../runway/index.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from './types.ts';
 
 type JsonRecord = Record<string, unknown>;

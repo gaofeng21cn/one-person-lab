@@ -1,4 +1,4 @@
-import type { DomainManifestCatalogEntry } from '../atlas/domain-manifest/types.ts';
+import type { DomainManifestCatalogEntry } from '../atlas/index.ts';
 import {
   buildFamilyStageAdmissionReview,
   buildFamilyStageModeTags,

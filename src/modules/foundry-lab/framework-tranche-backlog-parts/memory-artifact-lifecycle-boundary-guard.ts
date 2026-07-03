@@ -1,6 +1,6 @@
 import {
   memoryArtifactLifecycleEvidenceAuthorityBoundary,
-} from '../../ledger/memory-artifact-lifecycle-evidence-ledger.ts';
+} from '../../ledger/index.ts';
 import {
   MEMORY_ARTIFACT_LIFECYCLE_REF_SHAPES,
   NO_SECOND_TRUTH_AUTHORITY_BOUNDARY,

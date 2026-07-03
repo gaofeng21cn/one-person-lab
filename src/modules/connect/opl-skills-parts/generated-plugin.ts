@@ -4,10 +4,10 @@ import path from 'node:path';
 import {
   buildGeneratedInterfaceBundle,
   selectGeneratedInterfaceBundleFormat,
-} from '../../pack/domain-pack-compiler/generated-interface-read-model.ts';
-import { normalizeFamilyActionCatalog } from '../../console/family-action-catalog-contract.ts';
-import { normalizeFamilyStageControlPlane } from '../../stagecraft/family-stage-control-plane-contract.ts';
-import { buildFunctionalPrivatizationAudit } from '../../foundry-lab/functional-privatization-audit.ts';
+} from '../../pack/index.ts';
+import { normalizeFamilyActionCatalog } from '../../console/index.ts';
+import { normalizeFamilyStageControlPlane } from '../../stagecraft/index.ts';
+import { buildFunctionalPrivatizationAudit } from '../../foundry-lab/index.ts';
 import {
   normalizeOptionalString,
   resolveCodexHome,

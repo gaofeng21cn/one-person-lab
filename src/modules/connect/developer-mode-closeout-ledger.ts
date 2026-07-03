@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 
-import { hasVerifiedAgentLabRiskTierAutoPromotionReceiptRef } from '../foundry-lab/agent-lab-risk-tier-promotion-ledger.ts';
-import { ensureOplStateDir, resolveOplStatePaths } from '../runway/runtime-state-paths.ts';
+import { hasVerifiedAgentLabRiskTierAutoPromotionReceiptRef } from '../foundry-lab/index.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from '../runway/index.ts';
 
 type DeveloperModeCloseoutRouteDecision = 'direct-fix' | 'fork-PR' | 'observe-only';
 

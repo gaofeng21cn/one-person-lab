@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 
-import type { OplDeveloperSupervisorConfigFile } from '../console/system-preferences.ts';
-import { readOplDeveloperSupervisorConfig } from '../console/system-preferences.ts';
+import type { OplDeveloperSupervisorConfigFile } from '../console/index.ts';
+import { readOplDeveloperSupervisorConfig } from '../console/index.ts';
 
 export type DeveloperModeGithubIdentityStatus = 'ready' | 'unavailable' | 'skipped';
 export type DeveloperModeGithubIdentitySource = 'gh_cli' | 'env_fixture' | 'not_checked';

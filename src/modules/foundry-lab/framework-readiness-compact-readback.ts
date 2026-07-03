@@ -1,11 +1,11 @@
 import { buildAgentReadinessSummary } from './agent-readiness.ts';
-import { buildCurrentOwnerDeltaTopline } from '../ledger/current-owner-delta-topline.ts';
-import { buildDomainManifestCatalog } from '../atlas/domain-manifest/catalog-builder.ts';
-import { buildDomainPackCompilerList } from '../pack/domain-pack-compiler.ts';
+import { buildCurrentOwnerDeltaTopline } from '../ledger/index.ts';
+import { buildDomainManifestCatalog } from '../atlas/index.ts';
+import { buildDomainPackCompilerList } from '../pack/index.ts';
 import {
   buildFamilyStageReadinessInspect,
   buildFamilyStagesList,
-} from '../stagecraft/family-stage-control-plane.ts';
+} from '../stagecraft/index.ts';
 import { buildStageReplayMissingReceiptWorkorderPacket } from '../runway/index.ts';
 import {
   frameworkStatusFromAttentionCounts,
@@ -26,7 +26,7 @@ import {
   stringValue,
 } from './framework-readiness-values.ts';
 import { buildOplFrameworkSemanticHygieneAudit } from './framework-semantic-hygiene.ts';
-import { buildRuntimeTraySnapshot } from '../console/runtime-tray-snapshot.ts';
+import { buildRuntimeTraySnapshot } from '../console/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 
 type FrameworkReadinessCompactInput = {

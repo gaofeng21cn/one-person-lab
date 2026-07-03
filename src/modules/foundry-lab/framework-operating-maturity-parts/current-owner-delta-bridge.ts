@@ -1,7 +1,7 @@
 import {
   domainOwnerPayloadSummaryTargetKey,
   listDomainOwnerPayloadSummaryReceipts,
-} from '../../ledger/domain-owner-payload-summary-ledger.ts';
+} from '../../ledger/index.ts';
 import {
   record,
   stringValue,

@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import os from 'node:os';
 
-import { readOplUpdateChannel, readOplWorkspaceRoot } from '../console/system-preferences.ts';
+import { readOplUpdateChannel, readOplWorkspaceRoot } from '../console/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import {
   resolveMineruOpenApiTool,

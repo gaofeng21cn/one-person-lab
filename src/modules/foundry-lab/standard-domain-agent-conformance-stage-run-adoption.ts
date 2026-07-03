@@ -1,4 +1,4 @@
-import { canonicalOwnerId } from '../connect/owner-id.ts';
+import { canonicalOwnerId } from '../connect/index.ts';
 import {
   isRecord,
   optionalString,

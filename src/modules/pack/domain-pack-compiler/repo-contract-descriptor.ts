@@ -1,16 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../../charter/contracts.ts';
+import { FrameworkContractError } from '../../charter/index.ts';
 import {
   normalizeFamilyActionCatalog,
-} from '../../console/family-action-catalog-contract.ts';
+} from '../../console/index.ts';
 import {
   normalizeFamilyStageControlPlane,
-} from '../../stagecraft/family-stage-control-plane-contract.ts';
+} from '../../stagecraft/index.ts';
 import {
   buildFunctionalPrivatizationAudit,
-} from '../../foundry-lab/functional-privatization-audit.ts';
+} from '../../foundry-lab/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 

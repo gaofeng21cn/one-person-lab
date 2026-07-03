@@ -1,8 +1,8 @@
-import { projectFamilyAction } from '../../console/family-action-catalog.ts';
+import { projectFamilyAction } from '../../console/index.ts';
 import type {
   FamilyActionCatalog,
   FamilyActionCatalogAction,
-} from '../../console/family-action-catalog-contract.ts';
+} from '../../console/index.ts';
 
 type GeneratedSurfaceId =
   | 'cli'

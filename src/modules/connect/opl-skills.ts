@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 import { syncOplCompanionSkills, type OplCompanionSkillApplyMode, type OplSuperpowersProfile } from './install-companions.ts';
 import {
   registerOplFamilyCodexPlugins,
@@ -10,7 +10,7 @@ import {
 import {
   resolveDefaultFamilyWorkspaceRoot as resolveDefaultFamilyWorkspaceRootImpl,
   resolveFamilyWorkspaceRootFromRepoRoot as resolveFamilyWorkspaceRootFromRepoRootImpl,
-} from '../workspace/family-workspace-root.ts';
+} from '../workspace/index.ts';
 import {
   inspectGeneratedSkillSurface,
   writeOplGeneratedPluginSurface,
@@ -40,7 +40,7 @@ import { runSkillPackInstaller } from './opl-skills-parts/sync.ts';
 import {
   STANDARD_AGENT_REGISTRY_REF,
   resolveStandardAgentByCanonicalPluginName,
-} from '../atlas/standard-agent-registry.ts';
+} from '../atlas/index.ts';
 
 export const resolveDefaultFamilyWorkspaceRoot = resolveDefaultFamilyWorkspaceRootImpl;
 export const resolveFamilyWorkspaceRootFromRepoRoot = resolveFamilyWorkspaceRootFromRepoRootImpl;

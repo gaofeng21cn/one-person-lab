@@ -3,19 +3,19 @@ import type {
   FamilySharedHandoffSurface,
   UserInteractionContractSurface,
 } from '../family-entry-contracts.ts';
-import type { FamilyActionCatalog } from '../../console/family-action-catalog-contract.ts';
+import type { FamilyActionCatalog } from '../../console/index.ts';
 import type { FamilyDomainMemoryRef } from '../family-domain-memory-contract.ts';
-import type { FamilyStageControlPlane } from '../../stagecraft/family-stage-control-plane-contract.ts';
+import type { FamilyStageControlPlane } from '../../stagecraft/index.ts';
 import type {
   FamilyTransitionMatrixCase,
   FamilyTransitionMatrixResult,
   FamilyTransitionSpec,
-} from '../../stagecraft/family-transition-runner.ts';
+} from '../../stagecraft/index.ts';
 import type {
   FunctionalPrivatizationAudit,
-} from '../../foundry-lab/functional-privatization-audit.ts';
-import type { GrantTransitionOracle } from '../../stagecraft/family-transition-oracle-ingestion.ts';
-import type { VisualTransitionSpec } from '../../stagecraft/family-transition-visual-ingestion.ts';
+} from '../../foundry-lab/index.ts';
+import type { GrantTransitionOracle } from '../../stagecraft/index.ts';
+import type { VisualTransitionSpec } from '../../stagecraft/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 

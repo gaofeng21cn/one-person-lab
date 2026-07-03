@@ -1,4 +1,4 @@
-import { cognitiveKernelBoundary } from '../../stagecraft/cognitive-kernel-boundary.ts';
+import { cognitiveKernelBoundary } from '../../stagecraft/index.ts';
 import {
   type JsonRecord,
   firstString,

@@ -1,4 +1,4 @@
-import { findDomainOrThrow, findWorkstreamOrThrow } from '../charter/contracts.ts';
+import { findDomainOrThrow, findWorkstreamOrThrow } from '../charter/index.ts';
 import type {
   BoundaryExplanation,
   FrameworkContracts,

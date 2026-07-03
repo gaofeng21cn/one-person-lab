@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
-import { ensureOplStateDir, resolveOplStatePaths } from '../runway/runtime-state-paths.ts';
+import { FrameworkContractError } from '../charter/index.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from '../runway/index.ts';
 
 export type MagManifestSustainedConsumptionReceipt = {
   surface_kind: 'opl_mag_manifest_sustained_consumption_followthrough_receipt';

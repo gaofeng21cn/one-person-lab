@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import path from 'node:path';
 
-import { ensureOplStateDir, resolveOplStatePaths } from '../../runway/runtime-state-paths.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from '../../runway/index.ts';
 import { resolveCodexVersion } from './engine-helpers.ts';
 import { resolveProjectRoot } from './shared.ts';
 

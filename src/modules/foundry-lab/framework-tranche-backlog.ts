@@ -12,7 +12,7 @@ import {
   buildStandardAgentLandingAcceptanceGuardReadback,
 } from './framework-tranche-backlog-parts/guard-readbacks.ts';
 import { buildOperatorCompactReadbackGuard } from './framework-tranche-backlog-parts/operator-compact-readback-guard.ts';
-import { buildSourceStructureOperatorReadback } from '../charter/source-structure-operator-readback.ts';
+import { buildSourceStructureOperatorReadback } from '../charter/index.ts';
 import {
   APP_SHELL_CONVERGENCE_STRUCTURE_READBACK,
   CROSS_REPO_REF_INTEGRITY_GUARD,

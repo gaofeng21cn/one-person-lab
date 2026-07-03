@@ -2,7 +2,7 @@ import { AGENT_LAB_AUTHORITY_BOUNDARY } from './agent-lab-authority.ts';
 import {
   listDeveloperModeCloseoutReceipts,
   type DeveloperModeCloseoutReceipt,
-} from '../connect/developer-mode-closeout-ledger.ts';
+} from '../connect/index.ts';
 import { stableId } from '../runway/index.ts';
 
 type JsonRecord = Record<string, unknown>;

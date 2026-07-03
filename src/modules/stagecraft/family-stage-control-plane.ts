@@ -1,8 +1,8 @@
 import type { FrameworkContracts } from '../../kernel/types.ts';
-import { buildDomainManifestCatalog } from '../atlas/domain-manifest/catalog-builder.ts';
-import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from '../atlas/domain-manifest/types.ts';
+import { buildDomainManifestCatalog } from '../atlas/index.ts';
+import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from '../atlas/index.ts';
 import { withOplMetaAgentStageAttemptEntry } from './family-stage-control-plane-oma.ts';
-import { FrameworkContractError } from '../charter/contracts.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 import type {
   FamilyStageControlPlane,
   FamilyStageDescriptor,
@@ -47,7 +47,7 @@ import {
   buildFamilyStageGuaranteeProjection,
   type FamilyStageGuaranteeMode,
 } from './family-stage-guarantee-projection.ts';
-import type { ManifestCommandTimeoutPolicy } from '../atlas/domain-manifest/resolver.ts';
+import type { ManifestCommandTimeoutPolicy } from '../atlas/index.ts';
 import type {
   FamilyStageAdmissionReview,
   FamilyStageAdmissionStageResult,

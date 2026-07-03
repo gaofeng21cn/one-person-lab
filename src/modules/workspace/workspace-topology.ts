@@ -1,7 +1,7 @@
 import path from 'node:path';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
-import { STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT } from '../foundry-lab/standard-domain-agent-scaffold-constants-parts/foundry-series.ts';
+import { FrameworkContractError } from '../charter/index.ts';
+import { STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT } from '../foundry-lab/index.ts';
 import type { AgentWorkspaceNormContract } from '../../kernel/types.ts';
 import type { WorkspaceAgentProfile } from './workspace-agent-defaults.ts';
 

@@ -1,6 +1,6 @@
 import { buildAgentDefaultCallerReadinessReport } from './agent-platform-surface-ownership.ts';
-import { buildBrandModuleL5Status } from '../charter/brand-module-l5-evidence.ts';
-import { FrameworkContractError } from '../charter/contracts.ts';
+import { buildBrandModuleL5Status } from '../charter/index.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 import { buildFoundryAgentOsOwnerEvidenceIntake } from './foundry-agent-os-owner-evidence-intake.ts';
 import { FRAMEWORK_READINESS_SOURCE_COMMANDS as SOURCE_COMMANDS } from './framework-readiness-source-commands.ts';
 import {
@@ -23,7 +23,7 @@ import {
   stringListValue,
   unique,
 } from './framework-operating-maturity-parts/evidence-lanes.ts';
-import { buildRuntimeTraySnapshot } from '../console/runtime-tray-snapshot.ts';
+import { buildRuntimeTraySnapshot } from '../console/index.ts';
 import { buildStandardDomainAgentConformanceReport } from './standard-domain-agent-conformance.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 

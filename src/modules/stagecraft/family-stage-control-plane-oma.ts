@@ -1,7 +1,7 @@
 import type {
   DomainManifestCatalogEntry,
   NormalizedDomainManifest,
-} from '../atlas/domain-manifest/types.ts';
+} from '../atlas/index.ts';
 import type {
   FamilyStageControlPlane,
   FamilyStageSurfaceRef,
@@ -9,7 +9,7 @@ import type {
 import {
   STANDARD_PROGRESS_DELTA_POLICY,
   STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
-} from '../foundry-lab/standard-domain-agent-scaffold-constants.ts';
+} from '../foundry-lab/index.ts';
 
 type DomainManifestCatalog = {
   summary: {

@@ -2,14 +2,14 @@ import { spawnSync } from 'node:child_process';
 import type { SpawnSyncReturns } from 'node:child_process';
 import fs from 'node:fs';
 
-import type { WorkspaceBinding } from '../../workspace/workspace-registry.ts';
+import type { WorkspaceBinding } from '../../workspace/index.ts';
 import {
   buildManagedShellEnvWithUvCacheRecovery,
   buildManagedShellRecoveryTmpRoot,
   buildManagedShellCommandEnv,
   prepareManagedShellCommandCwd,
   recordManagedShellUvCacheRecovery,
-} from '../../connect/managed-shell-command-env.ts';
+} from '../../connect/index.ts';
 import { materializeFamilyTransitionSurfaces } from './family-transition-materializer.ts';
 import { normalizeManifest } from './normalizers.ts';
 import { isRecord } from './shared-utils.ts';

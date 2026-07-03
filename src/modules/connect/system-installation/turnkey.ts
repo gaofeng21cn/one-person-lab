@@ -5,9 +5,9 @@ import path from 'node:path';
 import { buildOplGuiArtifactName, buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from '../opl-release.ts';
 import { buildOplGuiShellSurface, syncOplCompanionSkills } from '../install-companions.ts';
 import { bootstrapLocalCodexDefaults } from '../local-codex-defaults.ts';
-import { runNativeHelperRepairAction } from '../../runway/native-helper-runtime.ts';
-import { runRuntimeManagerAction } from '../../console/runtime-manager.ts';
-import { runFamilyRuntime } from '../../runway/family-runtime.ts';
+import { runNativeHelperRepairAction } from '../../runway/index.ts';
+import { runRuntimeManagerAction } from '../../console/index.ts';
+import { runFamilyRuntime } from '../../runway/index.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 
 import { runOplEngineAction } from './engine-actions.ts';

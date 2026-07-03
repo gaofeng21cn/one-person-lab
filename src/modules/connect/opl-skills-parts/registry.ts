@@ -1,10 +1,10 @@
 import path from 'node:path';
 
-import { FrameworkContractError } from '../../charter/contracts.ts';
+import { FrameworkContractError } from '../../charter/index.ts';
 import {
   STANDARD_AGENT_REGISTRY,
   standardAgentDomainAliasEntries,
-} from '../../atlas/standard-agent-registry.ts';
+} from '../../atlas/index.ts';
 
 export type SkillPackInstallerKind = 'bash' | 'node';
 export type SkillPackSourceKind = 'repo_plugin_installer' | 'opl_generated_plugin_surface';

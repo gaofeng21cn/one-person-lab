@@ -1,4 +1,4 @@
-import { buildConformanceProductionEvidenceTailLedger } from '../ledger/production-evidence-tail-ledger.ts';
+import { buildConformanceProductionEvidenceTailLedger } from '../ledger/index.ts';
 import { buildStandardDomainAgentConformanceReport } from './standard-domain-agent-conformance.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 

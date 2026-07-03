@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 
 export type PubMedSearchInput = {
   query: string;

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 
 import { FrameworkContractError } from './contracts.ts';
-import { ensureOplStateDir, resolveOplStatePaths } from '../runway/runtime-state-paths.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from '../runway/index.ts';
 import type {
   BrandModuleId,
   BrandModuleL5EvidenceClassId,

@@ -1,15 +1,15 @@
 import crypto from 'node:crypto';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
-import type { DomainManifestCatalog } from '../atlas/domain-manifest/catalog-builder.ts';
-import { buildFamilyAgentDescriptorList } from '../atlas/family-domain-agent-descriptor.ts';
+import { FrameworkContractError } from '../charter/index.ts';
+import type { DomainManifestCatalog } from '../atlas/index.ts';
+import { buildFamilyAgentDescriptorList } from '../atlas/index.ts';
 import {
   defaultStandardDomainAgentRepoInputs,
   DEFAULT_STANDARD_DOMAIN_AGENT_REPOS,
-} from '../foundry-lab/standard-domain-agent-family-repos.ts';
+} from '../foundry-lab/index.ts';
 import {
   STANDARD_AGENT_PACK_ABI,
-} from '../foundry-lab/standard-domain-agent-scaffold-constants.ts';
+} from '../foundry-lab/index.ts';
 import {
   buildGeneratedInterfaceBundle,
   GENERATED_INTERFACE_SOURCE_REFS,

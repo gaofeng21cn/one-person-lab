@@ -1,5 +1,5 @@
 import { buildOplDeveloperModeProjection } from '../developer-mode.ts';
-import type { OplEndpoints } from '../../runway/opl-runtime-paths.ts';
+import type { OplEndpoints } from '../../runway/index.ts';
 
 import type { OplInitializeActionDescriptor } from './shared.ts';
 

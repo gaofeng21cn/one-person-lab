@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../charter/contracts.ts';
+import { FrameworkContractError } from '../charter/index.ts';
 import { stableId } from '../runway/index.ts';
 
 const AGENT_LAB_WORKFLOW_TEMPLATE_ALLOWED_OUTPUTS = [

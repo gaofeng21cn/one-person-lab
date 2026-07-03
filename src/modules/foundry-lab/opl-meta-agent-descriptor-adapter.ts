@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type { DomainManifestCatalog } from '../atlas/domain-manifest/catalog-builder.ts';
-import { normalizeManifest } from '../atlas/domain-manifest/normalizers.ts';
-import type { DomainManifestCatalogEntry } from '../atlas/domain-manifest/types.ts';
+import type { DomainManifestCatalog } from '../atlas/index.ts';
+import { normalizeManifest } from '../atlas/index.ts';
+import type { DomainManifestCatalogEntry } from '../atlas/index.ts';
 import { buildOplMetaAgentRegistryExtension } from './opl-meta-agent-consumption.ts';
 
 type JsonRecord = Record<string, unknown>;

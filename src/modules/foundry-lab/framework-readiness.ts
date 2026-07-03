@@ -1,8 +1,8 @@
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { buildAgentReadinessSummary } from './agent-readiness.ts';
-import { FrameworkContractError } from '../charter/contracts.ts';
-import { buildDomainManifestCatalog } from '../atlas/domain-manifest/catalog-builder.ts';
-import { buildDomainPackCompilerList } from '../pack/domain-pack-compiler.ts';
+import { FrameworkContractError } from '../charter/index.ts';
+import { buildDomainManifestCatalog } from '../atlas/index.ts';
+import { buildDomainPackCompilerList } from '../pack/index.ts';
 import {
   buildMasDomainRouteSupportProjection,
   runFamilyRuntimeEvidenceWorklist,
@@ -10,13 +10,13 @@ import {
 import {
   buildFamilyStageReadinessInspect,
   buildFamilyStagesList,
-} from '../stagecraft/family-stage-control-plane.ts';
+} from '../stagecraft/index.ts';
 import { buildOplFrameworkSemanticHygieneAudit } from './framework-semantic-hygiene.ts';
-import { buildRuntimeTraySnapshot } from '../console/runtime-tray-snapshot.ts';
+import { buildRuntimeTraySnapshot } from '../console/index.ts';
 import {
   evidenceEnvelopeOpenCount,
   evidenceEnvelopeSummary,
-} from '../ledger/evidence-envelope.ts';
+} from '../ledger/index.ts';
 import { frameworkAttentionFirstPayload } from './framework-readiness-attention-first-payload.ts';
 import { frameworkDiagnosticDrilldowns, frameworkKernelFloor } from './framework-readiness-static-surfaces.ts';
 import {
@@ -30,7 +30,7 @@ import {
 import { FRAMEWORK_READINESS_SOURCE_COMMANDS as SOURCE_COMMANDS } from './framework-readiness-source-commands.ts';
 import { domainBlockedTypedBlockerAttention } from './framework-readiness-typed-blocker-attention.ts';
 import { buildOwnerDeltaHandoffSummaryFromFrameworkReadiness, OWNER_DELTA_HANDOFF_TAXONOMY, ownerDeltaHandoffFrameworkReadinessSection } from './framework-readiness-owner-delta-handoff-summary.ts';
-import { buildCurrentOwnerDeltaTopline } from '../ledger/current-owner-delta-topline.ts';
+import { buildCurrentOwnerDeltaTopline } from '../ledger/index.ts';
 import {
   booleanValue,
   countValue,

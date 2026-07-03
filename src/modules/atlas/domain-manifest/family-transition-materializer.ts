@@ -3,8 +3,8 @@ import { spawnSync } from 'node:child_process';
 import {
   buildManagedShellCommandEnv,
   prepareManagedShellCommandCwd,
-} from '../../connect/managed-shell-command-env.ts';
-import type { WorkspaceBinding } from '../../workspace/workspace-registry.ts';
+} from '../../connect/index.ts';
+import type { WorkspaceBinding } from '../../workspace/index.ts';
 import { unwrapManifestPayload } from './entry-surfaces.ts';
 import { isRecord, optionalString } from './shared-utils.ts';
 

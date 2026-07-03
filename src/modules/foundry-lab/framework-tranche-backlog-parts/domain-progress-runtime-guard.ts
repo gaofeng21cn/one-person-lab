@@ -2,7 +2,7 @@ import {
   DOMAIN_PROGRESS_POLICY_ADAPTER_CONTRACT,
   DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
   DOMAIN_PROGRESS_TRANSITION_RUNTIME_MODULE,
-} from '../../runway/family-runtime-domain-progress-transition-runtime.ts';
+} from '../../runway/index.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import {
   readDomainProgressRuntimeFirstSliceContract,

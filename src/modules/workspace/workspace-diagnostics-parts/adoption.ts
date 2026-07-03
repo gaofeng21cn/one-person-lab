@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../../charter/contracts.ts';
+import { FrameworkContractError } from '../../charter/index.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import { initializeWorkspace } from '../workspace-initializer.ts';
 import { normalizeWorkspaceProjectEntry } from '../workspace-artifacts.ts';

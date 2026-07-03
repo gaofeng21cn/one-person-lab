@@ -2,8 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { sourceRef, uniqueByRef } from '../console/runtime-tray-snapshot-utils.ts';
-import { listManagedInstallUpdateReceipts } from '../connect/managed-install-update-ledger.ts';
+import { sourceRef, uniqueByRef } from '../console/index.ts';
+import { listManagedInstallUpdateReceipts } from '../connect/index.ts';
 import { omaProductionConsumptionRecordAction } from './oma-production-consumption-action.ts';
 import { listOmaAppLivePathReceipts } from './oma-app-live-path-ledger.ts';
 import {
@@ -33,7 +33,7 @@ import {
   uniqueStringList,
   type JsonRecord,
 } from './opl-meta-agent-consumption-parts/shared.ts';
-import { buildOplModules } from '../connect/system-installation/modules.ts';
+import { buildOplModules } from '../connect/index.ts';
 
 export { refsOnlyAuthorityBoundary } from './opl-meta-agent-consumption-boundary.ts';
 
