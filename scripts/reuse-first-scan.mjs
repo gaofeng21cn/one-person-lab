@@ -409,7 +409,7 @@ function shouldScanPath(relativePath) {
 }
 
 function findLineMatches(relativePath, lineNumber, line) {
-  if (allowMarkers.some((marker) => line.includes(marker))) {
+  if (allowMarkers.some((marker) => line.includes(marker)) || isAllowedMetadataLine(relativePath, line)) {
     return [];
   }
   const findings = [];
@@ -440,6 +440,11 @@ function findLineMatches(relativePath, lineNumber, line) {
     });
   }
   return findings;
+}
+
+function isAllowedMetadataLine(relativePath, line) {
+  return relativePath === 'contracts/opl-framework/cli-command-registry.json'
+    && line.includes('"update rollback"');
 }
 
 function fail(message) {

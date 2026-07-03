@@ -881,8 +881,18 @@ export function buildPublicCommandSpecs(
 
   validateStageDerivedLensCommandSpecs(publicCommandSpecs);
   validateCommandRegistryCoverage(publicCommandSpecs, {
-    protectedCommandPrefixes: ['status'],
-    requiredCommandIds: ['status workspace', 'status runtime', 'status dashboard'],
+    protectedCommandPrefixes: ['status', 'update'],
+    requiredCommandIds: [
+      'status workspace',
+      'status runtime',
+      'status dashboard',
+      'update status',
+      'update check',
+      'update plan',
+      'update apply',
+      'update repair',
+      'update rollback', // reuse-first: allow owner-routed update command registry metadata.
+    ],
   });
 
   return publicCommandSpecs;

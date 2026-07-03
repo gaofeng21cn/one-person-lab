@@ -254,6 +254,33 @@ test('reuse-first diff gate ignores broad historical worklist decisions', () => 
   assert.equal(output.findings[0].historical_decision, undefined);
 });
 
+test('reuse-first scan allows update rollback only as command registry metadata', () => {
+  const fixture = makeFixture();
+  const contractPath = path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-governance.json');
+  const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
+  contract.scan.roots = ['contracts'];
+  fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`);
+  writeFixtureFile(
+    fixture,
+    'contracts/opl-framework/cli-command-registry.json',
+    '{ "required_command_ids": ["update rollback"] }\n',
+  );
+  writeFixtureFile(fixture, 'contracts/other/update-contract.json', '{ "command": "update rollback" }\n');
+
+  const result = spawnSync(process.execPath, [
+    script,
+    '--root',
+    fixture,
+    '--contract',
+    contractPath,
+  ], { encoding: 'utf8' });
+  const output = JSON.parse(result.stdout);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(output.finding_count, 1);
+  assert.equal(output.findings[0].path, 'contracts/other/update-contract.json');
+});
+
 function makeFixture() {
   const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-reuse-first-scan-'));
   const contractDir = path.join(fixture, 'contracts', 'opl-framework');

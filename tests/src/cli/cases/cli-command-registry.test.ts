@@ -195,6 +195,61 @@ test('status command options are parsed through the registry adapter', () => {
   }
 });
 
+test('update commands expose registry metadata and parse options through the registry adapter', () => {
+  const contract = JSON.parse( // reuse-first: allow contract fixture parser
+    fs.readFileSync(
+    path.join(repoRoot, 'contracts', 'opl-framework', 'cli-command-registry.json'),
+    'utf8',
+    ),
+  );
+  const commands = [
+    ['status', ['component']],
+    ['check', ['component']],
+    ['plan', ['component']],
+    ['apply', ['component']],
+    ['repair', ['component', 'receipt']],
+    ['rollback', ['component']], // reuse-first: allow owner-routed update command registry metadata.
+  ] as const;
+
+  assert.equal(contract.protected_command_prefixes.includes('update'), true);
+  for (const [operation, optionNames] of commands) {
+    const command = `update ${operation}`;
+    const contractKey = `update_${operation}`;
+    assert.equal(contract.required_command_ids.includes(command), true);
+
+    const help = runCli(['help', 'update', operation]).help;
+    const contractCommand = contract.commands[contractKey];
+    assert.equal(help.registry.command_id, command);
+    assert.equal(contractCommand.command_id, help.registry.command_id);
+    assert.equal(help.registry.parser_adapter, 'node_util_parse_args');
+    assert.deepEqual(
+      help.registry.options.map((option: { name: string }) => option.name),
+      optionNames,
+    );
+    assert.equal(
+      help.registry.json_output_schema_ref,
+      `contracts/opl-framework/cli-command-registry.json#/commands/${contractKey}/output_schema`,
+    );
+    assert.equal(help.registry.authority_boundary.can_write_domain_truth, false);
+    assert.equal(help.registry.authority_boundary.can_create_owner_receipt, false);
+    assert.equal(help.registry.authority_boundary.can_claim_domain_ready, false);
+    assert.equal(help.registry.authority_boundary.can_claim_production_ready, false);
+  }
+
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-update-registry-'));
+  try {
+    const status = runCli(['update', 'status', '--component', 'capability_packages'], { OPL_STATE_DIR: stateRoot });
+    assert.equal(status.managed_update.operation, 'status');
+    assert.equal(status.managed_update.requested_component_id, 'capability_packages');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+
+  const invalid = runCliFailure(['update', 'status', '--receipt', 'receipt-001']);
+  assert.equal(invalid.payload.error.code, 'cli_usage_error');
+  assert.match(invalid.payload.error.message, /Unknown option/);
+});
+
 test('protected command prefixes cannot bypass registry metadata', () => {
   const specs: Record<string, CommandSpec> = {
     'connect pubmed search': {

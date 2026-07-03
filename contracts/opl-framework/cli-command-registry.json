@@ -9,6 +9,7 @@
     "connect pubmed",
     "connect references",
     "connect external-skills",
+    "update",
     "status"
   ],
   "required_command_ids": [
@@ -18,6 +19,12 @@
     "connect update",
     "connect reinstall",
     "connect remove",
+    "update status",
+    "update check",
+    "update plan",
+    "update apply",
+    "update repair",
+    "update rollback",
     "status workspace",
     "status runtime",
     "status dashboard"
@@ -931,6 +938,234 @@
               "trigger_policy",
               "authority_boundary"
             ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "update_status": {
+      "command_id": "update status",
+      "owner": "OPL Managed Update / Pack owners",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "component",
+          "flag": "--component",
+          "value_kind": "string",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "managed_update"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "managed_update": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "update_check": {
+      "command_id": "update check",
+      "owner": "OPL Managed Update / Pack owners",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "component",
+          "flag": "--component",
+          "value_kind": "string",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "managed_update"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "managed_update": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "update_plan": {
+      "command_id": "update plan",
+      "owner": "OPL Managed Update / Pack owners",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "component",
+          "flag": "--component",
+          "value_kind": "string",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "managed_update"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "managed_update": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "update_apply": {
+      "command_id": "update apply",
+      "owner": "OPL Managed Update / Pack owners",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "component",
+          "flag": "--component",
+          "value_kind": "string",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "managed_update"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "managed_update": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "update_repair": {
+      "command_id": "update repair",
+      "owner": "OPL Managed Update / Pack owners",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "component",
+          "flag": "--component",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "receipt",
+          "flag": "--receipt",
+          "value_kind": "string",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "managed_update"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "managed_update": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "update_rollback": {
+      "command_id": "update rollback",
+      "owner": "OPL Managed Update / Pack owners",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "component",
+          "flag": "--component",
+          "value_kind": "string",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "managed_update"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "managed_update": {
+            "type": "object",
             "additionalProperties": true
           }
         }

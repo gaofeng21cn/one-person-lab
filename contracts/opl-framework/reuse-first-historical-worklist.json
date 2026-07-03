@@ -103,6 +103,50 @@
       "decision_ref": "human_doc:reuse-first-platform-risk-audit-and-landing-plan#phase-10-no-resurrection-governance"
     },
     {
+      "id": "phase2-update-command-registry-projection",
+      "status": "allowed_projection_boundary",
+      "categories": [
+        "custom_update_or_package_manager"
+      ],
+      "path_prefixes": [
+        "src/entrypoints/cli/cases/public-command-specs-parts/update.ts",
+        "src/entrypoints/cli/cases/runtime-environment-command-spec.ts",
+        "src/entrypoints/cli/cases/runtime-public-command-specs.ts",
+        "src/entrypoints/cli/cases/agent-lab-public-command-specs.ts"
+      ],
+      "owner": "OPL CLI",
+      "phase": "Phase 2/6",
+      "action": "keep_owner_routed_update_and_rollback_terms_as_command_registry_projection",
+      "expiry": "2026-12-31",
+      "decision_ref": "contracts/opl-framework/cli-command-registry.json",
+      "false_ready_guard": [
+        "update command registry projection does not prove managed update split complete, App release ready, production ready, or owner acceptance"
+      ]
+    },
+    {
+      "id": "phase2-diagnostic-drilldown-command-projection",
+      "status": "allowed_projection_boundary",
+      "categories": [
+        "custom_observability_ledger"
+      ],
+      "path_prefixes": [
+        "src/entrypoints/cli/cases/private-command-specs.ts",
+        "src/entrypoints/cli/cases/runtime-public-command-specs.ts",
+        "src/entrypoints/cli/cases/public-command-specs-parts/stages.ts",
+        "src/entrypoints/cli/cases/public-command-specs.ts",
+        "src/entrypoints/cli/modules/help-output.ts",
+        "src/entrypoints/cli/modules/request-parsers.ts"
+      ],
+      "owner": "OPL CLI",
+      "phase": "Phase 2/9",
+      "action": "keep_diagnostic_drilldown_terms_as_refs_only_command_projection",
+      "expiry": "2026-12-31",
+      "decision_ref": "contracts/opl-framework/cli-command-registry.json",
+      "false_ready_guard": [
+        "diagnostic drilldown command projection does not prove OpenTelemetry collector/exporter consumption or production observability complete"
+      ]
+    },
+    {
       "id": "phase2-cli-entrypoint-boundaries",
       "status": "accepted_migration_worklist",
       "categories": [

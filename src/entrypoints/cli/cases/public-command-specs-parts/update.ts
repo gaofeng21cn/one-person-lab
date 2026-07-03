@@ -1,39 +1,47 @@
 import { buildManagedUpdateKernelProjection, type ManagedUpdateOperation } from '../../../../modules/connect/managed-update-kernel.ts';
 import { runManagedUpdateKernelOperation } from '../../../../modules/connect/managed-update-kernel-runner.ts';
 import type { FrameworkContracts } from '../../../../kernel/types.ts';
-import { buildUsageError } from '../../modules/support.ts';
+import { parseRegisteredCommandOptions } from '../../modules/support.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 
-type ParsedUpdateArgs = {
-  componentId?: string;
-  receiptId?: string;
-};
+const UPDATE_COMMAND_AUTHORITY_BOUNDARY = {
+  owner: 'OPL Managed Update / Pack owners',
+  surface: 'managed_update_command_projection',
+  can_write_domain_truth: false,
+  can_create_owner_receipt: false,
+  can_claim_domain_ready: false,
+  can_claim_production_ready: false,
+} as const;
 
-function parseUpdateArgs(args: string[], spec: CommandSpec): ParsedUpdateArgs {
-  const parsed: ParsedUpdateArgs = {};
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
-    if (arg === '--component') {
-      const value = args[index + 1];
-      if (!value || value.startsWith('--')) {
-        throw buildUsageError('Missing value for --component.', spec, { option: '--component' });
-      }
-      parsed.componentId = value;
-      index += 1;
-      continue;
-    }
-    if (arg === '--receipt') {
-      const value = args[index + 1];
-      if (!value || value.startsWith('--')) {
-        throw buildUsageError('Missing value for --receipt.', spec, { option: '--receipt' });
-      }
-      parsed.receiptId = value;
-      index += 1;
-      continue;
-    }
-    throw buildUsageError(`Unknown update option: ${arg}.`, spec, { option: arg });
+function buildUpdateRegistry(
+  commandId: string,
+  operation: ManagedUpdateOperation, // reuse-first: allow owner-routed update command registry metadata.
+): NonNullable<CommandSpec['registry']> {
+  const options: NonNullable<CommandSpec['registry']>['options'] = [
+    {
+      name: 'component',
+      flag: '--component',
+      value_kind: 'string',
+      summary: 'Managed update component id to project.',
+    },
+  ];
+  if (operation === 'repair') {
+    options.push({
+      name: 'receipt',
+      flag: '--receipt',
+      value_kind: 'string',
+      summary: 'Managed update receipt id to repair.',
+    });
   }
-  return parsed;
+
+  return {
+    command_id: commandId,
+    parser_adapter: 'node_util_parse_args',
+    options,
+    json_output_schema_ref:
+      `contracts/opl-framework/cli-command-registry.json#/commands/update_${operation}/output_schema`,
+    authority_boundary: UPDATE_COMMAND_AUTHORITY_BOUNDARY,
+  };
 }
 
 function buildUpdateSpec(
@@ -43,17 +51,19 @@ function buildUpdateSpec(
   examples: string[],
   getContracts: () => FrameworkContracts,
 ): CommandSpec {
+  const commandId = `update ${operation}`;
   const spec: CommandSpec = {
     usage,
     summary,
     examples,
     group: 'update',
+    registry: buildUpdateRegistry(commandId, operation),
     handler: async (args) => {
-      const parsed = parseUpdateArgs(args, spec);
+      const parsed = parseRegisteredCommandOptions(commandId, args, spec);
       const input = {
         operation,
-        componentId: parsed.componentId,
-        receiptId: parsed.receiptId,
+        componentId: parsed.component as string | undefined,
+        receiptId: parsed.receipt as string | undefined,
       };
       if (operation === 'apply' || operation === 'repair' || operation === 'rollback') {
         return runManagedUpdateKernelOperation(getContracts(), input);
