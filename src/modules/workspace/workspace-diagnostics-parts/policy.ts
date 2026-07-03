@@ -1,4 +1,7 @@
+import { isRecord } from '../../../kernel/contract-validation.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
+
+export { isRecord };
 
 export type WorkspaceDiagnosticSeverity = 'hard_blocker' | 'repairable' | 'advisory';
 
@@ -216,10 +219,6 @@ export function addBlocker(
 
 export function sameJson(left: unknown, right: unknown) {
   return JSON.stringify(left) === JSON.stringify(right);
-}
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 export function normalizeOptionalString(value: string | undefined) {

@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../../charter/index.ts';
+import { parseJsonText } from '../../../kernel/json-file.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import { initializeWorkspace } from '../workspace-initializer.ts';
 import { normalizeWorkspaceProjectEntry } from '../workspace-artifacts.ts';
@@ -82,7 +83,7 @@ function normalizeProjectEntry(project: Record<string, unknown>): WorkspaceProje
 
 function readWorkspaceIndex(indexPath: string) {
   try {
-    const parsed = JSON.parse(fs.readFileSync(indexPath, 'utf8')) as unknown;
+    const parsed = parseJsonText(fs.readFileSync(indexPath, 'utf8'));
     if (!isRecord(parsed)) {
       return null;
     }

@@ -6,6 +6,8 @@ import {
 import { pathToFileURL } from 'node:url';
 
 import { FrameworkContractError } from '../charter/index.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
 import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { OPL_WORKSPACE_AGENT_PROFILES } from './workspace-agent-defaults.ts';
@@ -78,10 +80,6 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function normalizeOptionalString(value?: string | null) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
@@ -123,7 +121,7 @@ function readWorkspaceRegistryFile(): WorkspaceRegistryFile {
   }
 
   try {
-    const parsed = JSON.parse(fs.readFileSync(paths.workspace_registry_file, 'utf8')) as Partial<WorkspaceRegistryFile>;
+    const parsed = parseJsonText(fs.readFileSync(paths.workspace_registry_file, 'utf8')) as Partial<WorkspaceRegistryFile>;
     if (parsed.version !== 'g2' || !Array.isArray(parsed.bindings)) {
       throw new Error('Invalid workspace registry shape.');
     }

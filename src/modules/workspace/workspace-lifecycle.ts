@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../charter/index.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import {
   doctorWorkspace,
@@ -50,10 +52,6 @@ import {
   workspaceFleetReportSummary,
 } from './workspace-lifecycle-parts/fleet-report.ts';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function normalizeOptionalString(value: string | undefined | null) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
@@ -75,7 +73,7 @@ function doctorFindingsForArtifacts(doctor: {
 
 function readWorkspaceIndex(indexPath: string) {
   try {
-    const parsed = JSON.parse(fs.readFileSync(indexPath, 'utf8')) as unknown;
+    const parsed = parseJsonText(fs.readFileSync(indexPath, 'utf8'));
     if (!isRecord(parsed)) {
       return { index: null, blocker: 'workspace_index_shape_invalid' };
     }

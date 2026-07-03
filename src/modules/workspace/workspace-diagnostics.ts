@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../charter/index.ts';
+import { parseJsonText, readJsonFileOrNull } from '../../kernel/json-file.ts';
 import { buildAgentWorkspaceNormProjection } from './agent-workspace-norm.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import {
@@ -147,7 +148,7 @@ function agentFromIndex(index: Record<string, unknown>): WorkspaceAgentProfile |
 
 function readWorkspaceIndex(indexPath: string) {
   try {
-    const parsed = JSON.parse(fs.readFileSync(indexPath, 'utf8')) as unknown;
+    const parsed = parseJsonText(fs.readFileSync(indexPath, 'utf8'));
     if (!isRecord(parsed)) {
       return { index: null, blocker: 'workspace_index_shape_invalid' };
     }
@@ -165,12 +166,8 @@ function readWorkspaceIndex(indexPath: string) {
 }
 
 function readJsonRecord(filePath: string) {
-  try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
-    return isRecord(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
+  const parsed = readJsonFileOrNull(filePath);
+  return isRecord(parsed) ? parsed : null;
 }
 
 function indexWorkspaceId(index: Record<string, unknown>, workspacePath: string) {

@@ -2,12 +2,9 @@ import {
   currentStagePointerRef,
   STAGE_LIFECYCLE_STATUSES,
 } from './workspace-artifacts.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
 import type { WorkspaceAgentProfile } from './workspace-agent-defaults.ts';
 import type { WorkspaceProjectIndexEntry } from './workspace-topology.ts';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function sameJson(left: unknown, right: unknown) {
   return JSON.stringify(left) === JSON.stringify(right);

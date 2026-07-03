@@ -6,6 +6,8 @@ import {
   AGENT_WORKSPACE_NORM_CONTRACT_REF,
   buildAgentWorkspaceNormProjection,
 } from './agent-workspace-norm.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
 import { readOplWorkspaceRoot } from '../../kernel/system-preferences.ts';
 import type { AgentWorkspaceNormContract, FrameworkContracts } from '../../kernel/types.ts';
 import {
@@ -64,10 +66,6 @@ export type WorkspaceInitializeOptions = {
 };
 
 export type WorkspaceEnsureOptions = WorkspaceInitializeOptions;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function normalizeRequiredSegment(value: string, field: string) {
   const trimmed = value.trim();
@@ -161,7 +159,7 @@ function readExistingWorkspaceIndex(filePath: string) {
     return null;
   }
   try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as Record<string, unknown>;
+    const parsed = parseJsonText(fs.readFileSync(filePath, 'utf8')) as Record<string, unknown>;
     if (parsed.surface_kind !== 'opl_workspace_index' || !Array.isArray(parsed.projects)) {
       throw new Error('Invalid OPL workspace_index shape.');
     }

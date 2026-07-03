@@ -3,6 +3,8 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 
 import { FrameworkContractError } from '../charter/index.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { readJsonFileOrNull } from '../../kernel/json-file.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import type { WorkspaceProjectIndexEntry } from './workspace-topology.ts';
 import { writeJsonArtifact } from './workspace-artifacts.ts';
@@ -51,10 +53,6 @@ type ReviewRepairTransportBlocker = {
   reason: string;
 };
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function normalizeOptionalString(value: string | undefined | null) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
@@ -78,11 +76,7 @@ function stringArray(value: unknown) {
 }
 
 function safeReadJson(filePath: string) {
-  try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
-  } catch {
-    return null;
-  }
+  return readJsonFileOrNull(filePath);
 }
 
 function hashFile(filePath: string) {

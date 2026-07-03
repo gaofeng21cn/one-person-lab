@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { isRecord } from '../../../kernel/contract-validation.ts';
+import { readJsonFileOrNull } from '../../../kernel/json-file.ts';
 import {
   buildSharedResources,
   OPL_GENERATED_ROOT,
@@ -533,10 +535,6 @@ export function buildWorkspaceResourceInventory(input: WorkspaceArtifactContext 
   };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function normalizeSharedResourceRecord(value: unknown): SharedResourceRecord | null {
   if (!isRecord(value) || typeof value.resource_id !== 'string' || !value.resource_id.trim()) {
     return null;
@@ -558,17 +556,13 @@ export function readExistingSharedResourceRecords(manifestPath: string) {
   if (!fs.existsSync(manifestPath) || !fs.statSync(manifestPath).isFile()) {
     return [];
   }
-  try {
-    const parsed = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as unknown;
-    if (!isRecord(parsed) || !Array.isArray(parsed.resources)) {
-      return [];
-    }
-    return parsed.resources
-      .map(normalizeSharedResourceRecord)
-      .filter((entry): entry is SharedResourceRecord => Boolean(entry));
-  } catch {
+  const parsed = readJsonFileOrNull(manifestPath);
+  if (!isRecord(parsed) || !Array.isArray(parsed.resources)) {
     return [];
   }
+  return parsed.resources
+    .map(normalizeSharedResourceRecord)
+    .filter((entry): entry is SharedResourceRecord => Boolean(entry));
 }
 
 function projectLifecycleCounts(projects: WorkspaceProjectIndexEntry[]) {

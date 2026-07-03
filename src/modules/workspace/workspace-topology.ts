@@ -1,6 +1,7 @@
 import path from 'node:path';
 
 import { FrameworkContractError } from '../charter/index.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
 import { STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT } from '../foundry-lab/index.ts';
 import type { AgentWorkspaceNormContract } from '../../kernel/types.ts';
 import type { WorkspaceAgentProfile } from './workspace-agent-defaults.ts';
@@ -124,10 +125,6 @@ const PROJECT_COLLECTION_DISPLAY_LABELS: Record<WorkspaceAgentProfile['agent_id'
   oma: 'deliverables',
   bookforge: 'books',
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function topologyContract() {
   const value = STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT.workspace_topology_profile;
