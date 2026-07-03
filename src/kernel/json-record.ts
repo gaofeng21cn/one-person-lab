@@ -22,6 +22,12 @@ export function stringList(value: unknown) {
     : [];
 }
 
+export function stringArrayValue(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string')
+    : [];
+}
+
 export function countValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }

@@ -1,6 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { optionalString, readJsonPayloadFile } from '../../kernel/json-file.ts';
+import { stringArrayValue } from '../../kernel/json-record.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import type { ManagedUpdateOperation, ManagedUpdateProviderAdapterId } from './managed-update-kernel.ts';
 
@@ -112,20 +115,6 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function optionalStringArray(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === 'string')
-    : [];
-}
-
 function optionalBoolean(value: unknown) {
   return typeof value === 'boolean' ? value : null;
 }
@@ -192,7 +181,7 @@ function normalizeOwnerProjection(
   if (!isRecord(value)) {
     return defaultOwnerProjection(componentId, providerId);
   }
-  const forbiddenClaims = optionalStringArray(value.forbidden_claims);
+  const forbiddenClaims = stringArrayValue(value.forbidden_claims);
   return {
     owner: optionalString(value.owner) ?? providerId,
     authority_surface: optionalString(value.authority_surface)
@@ -300,7 +289,7 @@ function normalizeReloadGuidance(value: unknown): ManagedUpdateReloadGuidance {
   return {
     reload_required: value.reload_required === true,
     reload_recommended: value.reload_recommended === true,
-    reload_targets: optionalStringArray(value.reload_targets),
+    reload_targets: stringArrayValue(value.reload_targets),
     command_ref: optionalString(value.command_ref),
     reason: optionalString(value.reason),
   };
@@ -382,7 +371,7 @@ function normalizeReceipt(value: unknown): ManagedUpdateComponentReceipt | null 
     to_digest: optionalString(value.to_digest),
     verify_result: normalizeVerifyResult(value.verify_result),
     activated_at: activatedAt,
-    post_apply_hooks: optionalStringArray(value.post_apply_hooks),
+    post_apply_hooks: stringArrayValue(value.post_apply_hooks), // reuse-first: allow owner-routed receipt projection field.
     rollback_ref: optionalString(value.rollback_ref),
     repair_action: optionalString(value.repair_action),
     adapter_result_ref: optionalString(value.adapter_result_ref),
@@ -459,7 +448,7 @@ export function readManagedUpdateComponentReceiptLedger(): ManagedUpdateComponen
     return emptyLedger();
   }
   try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
+    const parsed = readJsonPayloadFile(file);
     if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
       return emptyLedger();
     }
