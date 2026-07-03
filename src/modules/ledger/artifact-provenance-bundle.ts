@@ -4,10 +4,10 @@ import path from 'node:path';
 
 import { FrameworkContractError } from '../charter/index.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../runway/index.ts';
+import { buildArtifactProvenanceLedgerEvent as buildLedgerEvent } from './artifact-provenance-ledger-event.ts';
 
 const SCHEMA_VERSION = 'artifact-provenance-bundle.v1';
 const LEDGER_VERSION = 'opl-artifact-provenance-bundle-ledger.v1';
-const LEDGER_EVENT_SCHEMA_VERSION = 'artifact-provenance-ledger-event.v1';
 const REF_KEYS = [
   'code',
   'inputs',
@@ -165,27 +165,6 @@ type ArtifactProvenanceBundleLedger = {
   surface_kind: 'opl_artifact_provenance_bundle_ledger';
   version: typeof LEDGER_VERSION;
   records: ArtifactProvenanceBundleRecord[];
-};
-type ArtifactProvenanceLedgerEventKind = 'record' | 'inspect' | 'doctor' | 'export';
-type ArtifactProvenanceLedgerEvent = {
-  surface_kind: 'opl_artifact_provenance_ledger_event';
-  schema_version: typeof LEDGER_EVENT_SCHEMA_VERSION;
-  event_id: string;
-  event_kind: ArtifactProvenanceLedgerEventKind;
-  event_ref: string;
-  occurred_at: string;
-  bundle_id: string | null;
-  domain_id: string | null;
-  artifact_ref: string | null;
-  bundle_manifest_ref: string | null;
-  bundle_manifest_hash: HashEntry | null;
-  ledger_file: string | null;
-  artifact_body_read: false;
-  refs: BundleRefs;
-  sections: ArtifactProvenanceBundleSection[];
-  issues: ArtifactProvenanceBundleIssue[];
-  issue_count: number;
-  authority_boundary: ArtifactProvenanceBundleAuthorityBoundary;
 };
 
 function nowIso() {
@@ -761,51 +740,6 @@ function assertValidBundle(loaded: LoadedBundle) {
     });
   }
   return validation;
-}
-
-function buildLedgerEvent(input: {
-  eventKind: ArtifactProvenanceLedgerEventKind;
-  bundleId: string | null;
-  domainId: string | null;
-  artifactRef: string | null;
-  bundleManifestRef: string | null;
-  bundleManifestHash: HashEntry | null;
-  ledgerFile: string | null;
-  refs: BundleRefs;
-  sections: ArtifactProvenanceBundleSection[];
-  issues: ArtifactProvenanceBundleIssue[];
-  authorityBoundary: ArtifactProvenanceBundleAuthorityBoundary;
-}): ArtifactProvenanceLedgerEvent {
-  const occurredAt = nowIso();
-  const eventSeed = [
-    input.eventKind,
-    input.bundleId ?? '',
-    input.artifactRef ?? '',
-    input.bundleManifestRef ?? '',
-    input.bundleManifestHash?.value ?? '',
-    occurredAt,
-  ].join('\n');
-  const eventId = crypto.createHash('sha256').update(eventSeed).digest('hex').slice(0, 24);
-  return {
-    surface_kind: 'opl_artifact_provenance_ledger_event',
-    schema_version: LEDGER_EVENT_SCHEMA_VERSION,
-    event_id: eventId,
-    event_kind: input.eventKind,
-    event_ref: `opl://artifact-provenance-ledger-event/${input.eventKind}/${eventId}`,
-    occurred_at: occurredAt,
-    bundle_id: input.bundleId,
-    domain_id: input.domainId,
-    artifact_ref: input.artifactRef,
-    bundle_manifest_ref: input.bundleManifestRef,
-    bundle_manifest_hash: input.bundleManifestHash,
-    ledger_file: input.ledgerFile,
-    artifact_body_read: false,
-    refs: input.refs,
-    sections: input.sections,
-    issues: input.issues,
-    issue_count: input.issues.length,
-    authority_boundary: input.authorityBoundary,
-  };
 }
 
 function inspectRecordedArtifactProvenanceBundle(artifactRef: string) {
