@@ -58,6 +58,7 @@ OPL 品牌模块的 L4 rollout 计划已退出 active path：当前十模块 `L4
 | `opl-scholar-skills-artifact-engines.md` | ScholarSkills candidate engine 支撑 | 不维护 domain artifact authority。 | OPL-generated candidate bodies 只作为 owner-gate 输入；artifact truth、quality verdict 和 publication readiness 回 domain owner。 |
 | `opl-scholar-skills-display-gallery.md` | Scholar Display gallery 人审入口 | 不冻结 MAS Display Pack audit counters。 | OPL 只记录 MAS-owned gallery refs 和 fresh readback 命令；gallery truth、figure readiness 和 publication claim 回 MAS Display Pack / MAS owner。 |
 | `development-document-portfolio.md` | 文档组合治理支撑 | 不维护执行顺序。 | 只管文档归位、降级、归档规则；当前 active 缺口回唯一 active owner。 |
+| `standard-agent-repo-structure-audit.md` | 标准智能体 repo 结构审计支撑 | 不维护第二 active backlog。 | 只记录 MAS/MAG/RCA/OBF/OMA 的结构符合度、Stage Pack v2 advisory gap 和迁移建议；当前事实仍回 fresh conformance、owner repo source/contracts/tests/readback。 |
 
 因此，“active 规划未落地”只能按唯一 active owner 的非 live 功能/结构 gap 读取；domain owner answer / typed blocker、Brand L5 真实运营证据、provider long-soak、App release verdict、memory/artifact lifecycle receipt、private-platform physical-delete owner decision 等归独立 Live Evidence 维护入口或 owner repo evidence surface。support 文档里残留的 P0-P5、W0-W7、audit lanes、rollout phases、matrix rows 或 external-practice checklist 都不是第二 backlog。
 
@@ -93,6 +94,7 @@ OPL 品牌模块的 L4 rollout 计划已退出 active path：当前十模块 `L4
 - `opl-scholar-skills-artifact-engines.md`：ScholarSkills candidate artifact engine 支撑；说明八个 active module 的 OPL-generated candidate body、CLI、package shape 和 no-authority guard。
 - `opl-scholar-skills-display-gallery.md`：Scholar Display gallery 人审入口；只引用 MAS-owned Display Pack gallery refs 和 fresh readback 入口，不在 OPL active doc 冻结高漂移 gallery counters。
 - `development-document-portfolio.md`：开发文档组合整理入口；按内容判断旧文档应吸收、保留、降级、退役还是归档。
+- `standard-agent-repo-structure-audit.md`：标准智能体 repo 结构审计；按统一目录规范检查 MAS/MAG/RCA/OBF/OMA，明确 OBF 可作为 Stage Pack v2 模板，MAS/MAG/RCA/OMA 仍有 advisory 迁移 gap。
 
 当前 runtime 命名与边界说明在 [runtime/](../runtime/README.md)。
 Domain onboarding、shared runtime/domain contract 等当前规格支撑在 [specs/](../specs/README.md)。

@@ -17,6 +17,7 @@ OPL 标准智能体采用 AI-first 原则包：AI 负责阶段内的开放式理
 - 标准智能体 adoption：`contracts/standard-agent-principles-adoption.json`
 - OPL 投影文档：`agent/principles/opl-standard-agent-principles.md`
 - 领域特化文档：`agent/principles/domain-specialization.md`
+- Repo 结构规范：`docs/policies/standard-agent-repo-structure.md`
 
 这些路径只定义原则、映射和 false-authority 边界；它们不能宣称 domain ready、production ready、owner accepted、quality accepted 或 artifact ready。
 
