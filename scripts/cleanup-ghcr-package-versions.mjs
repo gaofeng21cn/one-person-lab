@@ -10,7 +10,7 @@ function parseCliOptions(argv) {
     owner: process.env.OPL_PACKAGES_OWNER || 'gaofeng21cn',
     execute: false,
     summaryPath: process.env.OPL_GHCR_CLEANUP_SUMMARY_PATH || '',
-    rollbackTags: [],
+    extraProtectedTags: [],
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -31,7 +31,7 @@ function parseCliOptions(argv) {
     index += 1;
     if (token === '--owner') parsed.owner = value;
     else if (token === '--summary-path') parsed.summaryPath = path.resolve(value);
-    else if (token === '--rollback-tag') parsed.rollbackTags.push(value);
+    else if (token === '--protected-tag') parsed.extraProtectedTags.push(value);
     else throw new Error(`Unknown argument: ${token}`);
   }
   return parsed;
@@ -89,9 +89,9 @@ function nativeHelperTag(tags) {
   return tags.find((tag) => /^[a-z0-9_.-]+-[a-z0-9_.-]+-[0-9]+\.[0-9]+\.[0-9]+/.test(tag));
 }
 
-function protectedIdsForPackage(versions, packageKind, retainVersions, rollbackTags, protectedTags) {
+function protectedIdsForPackage(versions, packageKind, retainVersions, extraProtectedTags, protectedTags) {
   const protectedIds = new Set();
-  const explicitlyProtectedTags = new Set([...rollbackTags, ...protectedTags]);
+  const explicitlyProtectedTags = new Set([...extraProtectedTags, ...protectedTags]);
 
   for (const version of versions) {
     if (!Number.isFinite(version.id)) continue;
@@ -196,7 +196,7 @@ function cleanup(options) {
       versions,
       target.package_kind,
       target.retain_versions,
-      options.rollbackTags,
+      options.extraProtectedTags,
       target.protected_tags,
     );
     const candidates = versions
@@ -234,7 +234,7 @@ function cleanup(options) {
     status: options.execute ? 'deleted' : 'dry_run',
     owner: options.owner,
     execute: options.execute,
-    rollback_tags: options.rollbackTags,
+    extra_protected_tags: options.extraProtectedTags,
     packages,
     deleted_versions: deletedVersions,
   };

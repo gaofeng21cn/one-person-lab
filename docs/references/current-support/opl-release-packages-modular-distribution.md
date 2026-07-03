@@ -98,7 +98,7 @@ npm run packages:manifest -- --version <opl_version>
 npm run packages:daily-check -- --candidate-manifest dist/opl-packages/opl-channel-manifest.json --current-manifest <stable-channel-manifest.json> --version <opl_version>
 npm run packages:release-discipline -- --manifest dist/opl-packages/opl-release-manifest.json
 npm run packages:cleanup-ghcr -- --summary-path ghcr-package-cleanup.json
-npm run packages:cleanup-ghcr -- --rollback-tag <version> --execute
+npm run packages:cleanup-ghcr -- --protected-tag <tag> --execute
 ```
 
 Fresh 读法按机器入口分层：
@@ -108,7 +108,7 @@ Fresh 读法按机器入口分层：
 | `src/package-distribution.ts` / `opl connect packages manifest` | 定义 package manifest shape、module / capability package ids、GHCR 坐标、Codex default profile 投影、install/update source 和 `package_consumption_status`。 | 当前版本号、生成时间、owner、release channel、Codex profile 字段值和 package 坐标的实际输出。 |
 | `scripts/package-module-archives.mjs` | 用 package source checkout 的 `git archive --format=tar.gz HEAD` 生成 source tarball，写出 `opl-release-manifest.json`、`opl-channel-manifest.json` 和 `SHA256SUMS`。 | archive size、sha256、source branch、source head SHA 和本机输出路径。 |
 | `scripts/package-release-discipline.mjs` | 校验 manifest 声明 package-channel current source、channel manifest output、checksum、rollback 和 retention policy。 | 某次 release 的 previous manifest、retain count、失败列表和实际 gate 输出。 |
-| `scripts/cleanup-ghcr-package-versions.mjs` | 按 manifest 的 native-helper active policy 与 active modules/manifest lifecycle 做 GHCR retention dry-run；只有 `--execute` 才删除候选 package versions。 | 当前远端 package version 列表、候选删除列表、rollback tag、实际删除结果。 |
+| `scripts/cleanup-ghcr-package-versions.mjs` | 按 manifest 的 native-helper active policy 与 active modules/manifest lifecycle 做 GHCR retention dry-run；只有 `--execute` 才删除候选 package versions。 | 当前远端 package version 列表、候选删除列表、显式 protected tag、实际删除结果。 |
 | `.github/workflows/release-package-channel.yml` | GitHub Release `published` 后自动调用 packages reusable workflow；手工 `workflow_dispatch` 可作为 release gate 修复入口。 | release event、caller workflow run、被调用 packages workflow run。 |
 | `.github/workflows/daily-package-channel.yml` | 每天调度 package-channel change detector；候选 manifest 相对 `one-person-lab-manifest:stable` 有 module / capability package source fingerprint 变化时，默认发布当前 UTC `<YY.M.D>-nightly` 并移动 channel tag；无变化跳过发布。 | 当天调度 run、候选 manifest、当前 stable manifest、change detector summary、是否实际调用 packages workflow。 |
 | `.github/workflows/packages.yml` | 通过 reusable `workflow_call` 构建 package source archive、运行 release-discipline gate、发布 package archive / release manifest 到 GHCR，并上传 release manifest / channel manifest / checksum artifact；直接 `workflow_dispatch` 仅保留为人工修复入口；不构建或发布 WebUI image。 | workflow run 状态、artifact URL、远端 package 可见性和本机 package build 结果。 |
@@ -132,7 +132,7 @@ Fresh 读法按机器入口分层：
 - Daily package channel 只响应 module / capability package source fingerprint 变化。仅 `generated_at` 或 artifact tag 变化不触发发布；这样避免无内容变化时制造无意义 package versions。
 - Daily package channel 的 `workflow_dispatch.force_publish=true` 只用于明确的修复/迁移场景，例如 tag 模板调整后需要把相同 module fingerprint 重新发布到当前 UTC `<YY.M.D>-nightly` 或显式 override 版本；常规每日调度继续按 fingerprint 无变化跳过。
 - 每个制品必须有版本、来源、校验和、回滚目标和安装策略。
-- 旧版本清理不靠手工记忆：package workflow 的 manifest 必须声明 `retain_latest_n_versions_and_declared_rollbacks`，并且 cleanup 只能是 `dry_run_first_explicit_execute_required`。`latest`、`stable`、`nightly` 这类 moving tags 和显式 rollback tag 始终受保护；后续 GHCR retention/cleanup job 只消费这个策略，不重新解释模块状态；真正删除 package version 需要显式执行与 package admin / `delete:packages` 权限，不在普通 release workflow 中隐式发生。
+- 旧版本清理不靠手工记忆：package workflow 的 manifest 必须声明 `retain_latest_n_versions_and_declared_rollbacks`，并且 cleanup 只能是 `dry_run_first_explicit_execute_required`。`latest`、`stable`、`nightly` 这类 moving tags 和显式 protected tag 始终受保护；后续 GHCR retention/cleanup job 只消费这个策略，不重新解释模块状态；真正删除 package version 需要显式执行与 package admin / `delete:packages` 权限，不在普通 release workflow 中隐式发生。
 - `MDS` 不进入默认 manifest / Full payload；如 MAS 需要 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 或 parity oracle，只能通过 MAS 明确声明的可选 companion 路径读取。
 - `OPL Meta Agent` 与 `MAS Scholar Skills` 当前源码已纳入 Framework package manifest 的 active package 集合；实际可拉取性以 workflow 发布结果和 GHCR package 可见性为准。`opl-flow` 不属于这个集合，它走 Codex workflow plugin/profile 安装边界。
 - 若后续改变 package channel、override 语义或重新引入 Framework WebUI reference，先改 `src/package-distribution.ts`、release discipline、workflow 和相关测试，再更新本文。

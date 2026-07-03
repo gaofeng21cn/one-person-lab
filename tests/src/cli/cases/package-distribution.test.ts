@@ -671,7 +671,7 @@ test('GHCR package cleanup dry-runs active native helper and active package-chan
       { id: 11, updated_at: '2026-05-06T00:00:00Z', metadata: { container: { tags: ['26.5.6'] } } },
       { id: 12, updated_at: '2026-05-02T00:00:00Z', metadata: { container: { tags: ['26.5.2-a'] } } },
       { id: 13, updated_at: '2026-05-01T00:00:00Z', metadata: { container: { tags: ['26.5.1'] } } },
-      { id: 14, updated_at: '2026-04-30T00:00:00Z', metadata: { container: { tags: ['26.4.30'] } } },
+      { id: 14, updated_at: '2026-04-30T00:00:00Z', metadata: { container: { tags: ['26.4.30', 'manual-keep'] } } },
       { id: 15, updated_at: '2026-04-29T00:00:00Z', metadata: { container: { tags: ['stable'] } } },
     ],
     'one-person-lab-modules/med-autogrant': [],
@@ -700,6 +700,8 @@ test('GHCR package cleanup dry-runs active native helper and active package-chan
     'owner',
     '--summary-path',
     summaryPath,
+    '--protected-tag',
+    'manual-keep',
   ], {
     cwd: repoRoot,
     encoding: 'utf8',
@@ -714,6 +716,7 @@ test('GHCR package cleanup dry-runs active native helper and active package-chan
   const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
   assert.match(result, /opl_framework_ghcr_package_cleanup\.v1/);
   assert.equal(summary.status, 'dry_run');
+  assert.deepEqual(summary.extra_protected_tags, ['manual-keep']);
   assert.equal(fs.existsSync(logPath), false);
   const nativeHelper = summary.packages.find((entry: { package_name: string }) => entry.package_name === 'one-person-lab-native-helper');
   assert.deepEqual(nativeHelper.protected_version_ids, [1, 2, 3, 5]);
@@ -721,8 +724,8 @@ test('GHCR package cleanup dry-runs active native helper and active package-chan
   const mas = summary.packages.find((entry: { package_name: string }) => entry.package_name === 'one-person-lab-modules/med-autoscience');
   assert.equal(mas.package_kind, 'active_module_package');
   assert.equal(mas.lifecycle_status, 'active_release_channel');
-  assert.deepEqual(mas.protected_version_ids, [11, 12, 13, 15]);
-  assert.deepEqual(mas.candidates.map((candidate: { id: number }) => candidate.id), [14]);
+  assert.deepEqual(mas.protected_version_ids, [11, 12, 13, 14, 15]);
+  assert.deepEqual(mas.candidates.map((candidate: { id: number }) => candidate.id), []);
   const manifest = summary.packages.find((entry: { package_name: string }) => entry.package_name === 'one-person-lab-manifest');
   assert.equal(manifest.package_kind, 'active_channel_manifest');
   assert.equal(manifest.lifecycle_status, 'active_release_channel');
