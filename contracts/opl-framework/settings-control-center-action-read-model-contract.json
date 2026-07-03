@@ -14,6 +14,7 @@
     "required_fields": [
       "settings_ia",
       "app_settings_read_model",
+      "app_aion_consumer_only_readback",
       "control_center_groups",
       "action_sections",
       "issue_queue",
@@ -54,6 +55,7 @@
       "capability_task_awareness_refs",
       "docker_webui",
       "local_environment",
+      "consumer_only_readback",
       "action_policy"
     ],
     "source_refs": [
@@ -214,6 +216,8 @@
   },
   "consumer_only_enforcement": {
     "surface_kind": "opl_app_aion_consumer_only_boundary.v1",
+    "readback_surface": "app_state.settings_control_center.app_aion_consumer_only_readback",
+    "app_settings_read_model_ref": "app_state.settings_control_center.app_settings_read_model.consumer_only_readback",
     "source_phase": "reuse_first_platform_risk_audit_phase_8",
     "applies_to": [
       "one-person-lab-app",
@@ -311,6 +315,11 @@
       "receipt_ref_or_typed_blocker_ref",
       "delegated_action_id"
     ],
+    "validator_status_codes": [
+      "pass",
+      "attention_required"
+    ],
+    "validator_finding_policy": "missing_required_visible_boundary_fields_must_surface_as_validator_findings_before_settings_can_imply_truth",
     "authority_boundary": {
       "app_aion_can_write_policy_truth": false,
       "app_aion_can_write_runtime_truth": false,

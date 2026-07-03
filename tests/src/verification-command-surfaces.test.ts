@@ -457,7 +457,11 @@ test('target architecture policy contracts keep progress, guardrail, and wrapper
 
 test('Settings Control Center contract keeps App and Aion consumer-only', () => {
   const settingsControlCenter = readJson<{
+    settings_ia: { required_fields: string[] };
+    app_settings_read_model: { required_fields: string[] };
     consumer_only_enforcement: {
+      readback_surface: string;
+      app_settings_read_model_ref: string;
       truth_owner_matrix: Array<{
         surface: string;
         local_truth_allowed: boolean;
@@ -468,11 +472,29 @@ test('Settings Control Center contract keeps App and Aion consumer-only', () => 
         forbidden_roles: string[];
       };
       required_user_visible_boundary_fields: string[];
+      validator_status_codes: string[];
+      validator_finding_policy: string;
       authority_boundary: Record<string, boolean>;
     };
   }>('contracts/opl-framework/settings-control-center-action-read-model-contract.json');
 
   const consumerOnly = settingsControlCenter.consumer_only_enforcement;
+  assert.equal(
+    settingsControlCenter.settings_ia.required_fields.includes('app_aion_consumer_only_readback'),
+    true,
+  );
+  assert.equal(
+    settingsControlCenter.app_settings_read_model.required_fields.includes('consumer_only_readback'),
+    true,
+  );
+  assert.equal(
+    consumerOnly.readback_surface,
+    'app_state.settings_control_center.app_aion_consumer_only_readback',
+  );
+  assert.equal(
+    consumerOnly.app_settings_read_model_ref,
+    'app_state.settings_control_center.app_settings_read_model.consumer_only_readback',
+  );
   assert.equal(
     consumerOnly.truth_owner_matrix.every((row) => row.local_truth_allowed === false),
     true,
@@ -489,6 +511,11 @@ test('Settings Control Center contract keeps App and Aion consumer-only', () => 
   ]);
   assert.equal(consumerOnly.local_scheduler_policy.forbidden_roles.includes('write_release_truth'), true);
   assert.equal(consumerOnly.required_user_visible_boundary_fields.includes('delegated_action_id'), true);
+  assert.deepEqual(consumerOnly.validator_status_codes, ['pass', 'attention_required']);
+  assert.equal(
+    consumerOnly.validator_finding_policy,
+    'missing_required_visible_boundary_fields_must_surface_as_validator_findings_before_settings_can_imply_truth',
+  );
   assert.equal(consumerOnly.authority_boundary.app_aion_can_write_runtime_truth, false);
   assert.equal(consumerOnly.authority_boundary.app_aion_can_create_owner_receipt, false);
   assert.equal(consumerOnly.authority_boundary.app_aion_can_claim_app_release_ready, false);

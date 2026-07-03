@@ -852,6 +852,78 @@ exit 1
       output.app_state.settings_control_center.capability_task_awareness_refs,
     );
     assert.equal(
+      output.app_state.settings_control_center.app_aion_consumer_only_readback.surface_kind,
+      'opl_app_aion_consumer_only_readback.v1',
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_aion_consumer_only_readback.validation_status,
+      'attention_required',
+    );
+    assert.deepEqual(
+      output.app_state.settings_control_center.app_settings_read_model.consumer_only_readback,
+      output.app_state.settings_control_center.app_aion_consumer_only_readback,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_aion_consumer_only_readback.truth_surfaces.every(
+        (entry: AppStateListEntry) => entry.local_truth_allowed === false
+          && typeof entry.owner === 'string'
+          && typeof entry.current_source_ref === 'string',
+      ),
+      true,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_aion_consumer_only_readback.truth_surfaces.find(
+        (entry: AppStateListEntry) => entry.surface === 'settings_policy',
+      )?.delegated_action_id,
+      'app_state.settings_control_center.allowed_action_ids',
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_aion_consumer_only_readback.truth_surfaces.find(
+        (entry: AppStateListEntry) => entry.surface === 'app_release_and_installer',
+      )?.blocked_reason,
+      'app_owner_receipt_or_typed_blocker_required_before_release_currentness_claim',
+    );
+    assert.deepEqual(
+      output.app_state.settings_control_center.app_aion_consumer_only_readback.local_scheduler_policy
+        .observed_local_scheduler_roles,
+      [
+        'refresh_trigger',
+        'ui_maintenance',
+        'poll_existing_read_model',
+      ],
+    );
+    assert.deepEqual(
+      output.app_state.settings_control_center.app_aion_consumer_only_readback.local_scheduler_policy
+        .forbidden_roles_enabled,
+      [],
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_aion_consumer_only_readback.forbidden_truth_only_paths.includes(
+        'aion_local_scheduler_as_update_truth',
+      ),
+      true,
+    );
+    assert.deepEqual(
+      output.app_state.settings_control_center.app_aion_consumer_only_readback.validator_findings.map(
+        (entry: AppStateListEntry) => [entry.surface, entry.missing_field],
+      ),
+      [
+        ['app_release_and_installer', 'app_owner_receipt_ref_or_typed_blocker_ref'],
+        ['managed_module_and_capability_packages', 'receipt_ref_or_typed_blocker_ref'],
+        ['domain_private_platform_residue', 'domain_owner_decision_ref_or_typed_blocker_ref'],
+      ],
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_aion_consumer_only_readback.authority_boundary
+        .app_aion_can_write_release_truth,
+      false,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_aion_consumer_only_readback.authority_boundary
+        .app_aion_can_create_owner_receipt,
+      false,
+    );
+    assert.equal(
       output.app_state.settings_control_center.app_settings_read_model.shell_policy
         .shell_must_not_rewrite_model_or_reasoning_policy,
       true,
