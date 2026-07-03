@@ -1,14 +1,6 @@
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { stringValue as optionalString, type JsonRecord } from '../../kernel/json-record.ts';
 import { preflightGitCheckoutCurrentness } from './family-runtime-domain-handler-process.ts';
-
-type JsonRecord = Record<string, unknown>;
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
-}
 
 function normalizedDomainId(value: unknown) {
   const raw = optionalString(value);

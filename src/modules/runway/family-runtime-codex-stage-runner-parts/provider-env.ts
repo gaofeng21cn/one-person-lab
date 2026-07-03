@@ -1,12 +1,4 @@
-type JsonRecord = Record<string, unknown>;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
+import { isRecord, optionalString, type JsonRecord } from './shared.ts';
 
 function readRecordList(value: unknown) {
   if (!Array.isArray(value)) {

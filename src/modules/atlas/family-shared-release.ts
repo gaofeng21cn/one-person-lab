@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { readJsonPayloadFile } from '../../kernel/json-file.ts';
 
 export const SHARED_OWNER_RELEASE_CONTRACT_PATH = 'contracts/family-release/shared-owner-release.json';
 
@@ -97,7 +98,7 @@ export function loadSharedOwnerReleaseContract({
 } = {}) {
   const resolvedOwnerRepoRoot = resolveOwnerRepoRoot({ repoRoot, ownerRepoRoot, ownerRepo });
   const contractPath = path.join(resolvedOwnerRepoRoot, SHARED_OWNER_RELEASE_CONTRACT_PATH);
-  const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8')) as FamilySharedOwnerReleaseContract;
+  const contract = readJsonPayloadFile(contractPath) as FamilySharedOwnerReleaseContract;
   if (!/^[0-9a-f]{40}$/.test(contract.owner_commit)) {
     throw new Error(`shared owner release contract has invalid owner_commit: ${contract.owner_commit}`);
   }

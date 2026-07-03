@@ -1,4 +1,5 @@
 import type { DomainManifestCatalogEntry } from './domain-manifest/types.ts';
+import { record, stringList, stringValue, type JsonRecord } from '../../kernel/json-record.ts';
 import { getActiveWorkspaceBinding, type WorkspaceBinding } from '../workspace/index.ts';
 
 type BuildFamilyDomainCatalogOptions = {
@@ -25,35 +26,27 @@ type SkillActivationProjection = {
   runtime_continuity: Record<string, unknown> | null;
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+const asRecord = (value: unknown): JsonRecord | null => {
+  const payload = record(value);
+  return payload === value ? payload : null;
+};
 
 function hasResolvedCommand(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0;
+  return Boolean(stringValue(value));
 }
 
 function normalizeOptionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value : null;
-}
-
-function readStringList(value: unknown) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .map((entry) => normalizeOptionalString(entry))
-    .filter((entry): entry is string => typeof entry === 'string');
+  return stringValue(value);
 }
 
 function readSkillActivationShellCommands(value: unknown) {
-  if (!isRecord(value)) {
+  const commands = asRecord(value);
+  if (!commands) {
     return null;
   }
 
   const shellCommands: Record<string, SkillActivationShellCommand> = {};
-  for (const [shellKey, descriptor] of Object.entries(value)) {
+  for (const [shellKey, descriptor] of Object.entries(commands)) {
     const normalizedShellKey = normalizeOptionalString(shellKey);
     if (!normalizedShellKey) {
       continue;
@@ -65,12 +58,13 @@ function readSkillActivationShellCommands(value: unknown) {
       };
       continue;
     }
-    if (!isRecord(descriptor)) {
+    const descriptorRecord = asRecord(descriptor);
+    if (!descriptorRecord) {
       continue;
     }
     shellCommands[normalizedShellKey] = {
-      command: normalizeOptionalString(descriptor.command),
-      target_surface_kind: normalizeOptionalString(descriptor.target_surface_kind),
+      command: normalizeOptionalString(descriptorRecord.command),
+      target_surface_kind: normalizeOptionalString(descriptorRecord.target_surface_kind),
     };
   }
 
@@ -81,11 +75,12 @@ function buildManifestShellCommands(manifest: DomainManifestCatalogEntry['manife
   const shellCommands: Record<string, SkillActivationShellCommand> = {};
   const pushShellCommand = (shellKey: unknown, descriptor: unknown) => {
     const normalizedShellKey = normalizeOptionalString(shellKey);
-    if (!normalizedShellKey || !isRecord(descriptor)) {
+    const descriptorRecord = asRecord(descriptor);
+    if (!normalizedShellKey || !descriptorRecord) {
       return;
     }
-    const command = normalizeOptionalString(descriptor.command);
-    const targetSurfaceKind = normalizeOptionalString(descriptor.surface_kind);
+    const command = normalizeOptionalString(descriptorRecord.command);
+    const targetSurfaceKind = normalizeOptionalString(descriptorRecord.surface_kind);
     if (!command && !targetSurfaceKind) {
       return;
     }
@@ -176,16 +171,15 @@ export function pickSkillActivationProjection(manifest: DomainManifestCatalogEnt
   let bestScore = -1;
 
   for (const skill of skills) {
-    if (!isRecord(skill)) {
+    const skillRecord = asRecord(skill);
+    if (!skillRecord) {
       continue;
     }
-    const domainProjection = isRecord(skill.domain_projection) ? skill.domain_projection : null;
-    const runtimeContinuity = domainProjection && isRecord(domainProjection.runtime_continuity)
-      ? domainProjection.runtime_continuity
+    const domainProjection = asRecord(skillRecord.domain_projection);
+    const runtimeContinuity = domainProjection ? asRecord(domainProjection.runtime_continuity) : null;
+    const activationSurface = domainProjection
+      ? asRecord(domainProjection.skill_activation) ?? domainProjection
       : null;
-    const activationSurface = domainProjection && isRecord(domainProjection.skill_activation)
-      ? domainProjection.skill_activation
-      : domainProjection;
     const shellCommands =
       readSkillActivationShellCommands(activationSurface?.shell_commands)
       ?? manifestShellCommands;
@@ -193,12 +187,12 @@ export function pickSkillActivationProjection(manifest: DomainManifestCatalogEnt
       ?? normalizeOptionalString(activationSurface?.skill_entry)
       ?? normalizeOptionalString(activationSurface?.recommended_shell);
     const entryCommand = normalizeOptionalString(activationSurface?.entry_command)
-      ?? normalizeOptionalString(skill.command)
+      ?? normalizeOptionalString(skillRecord.command)
       ?? (entryShellKey ? shellCommands[entryShellKey]?.command ?? null : null)
       ?? productEntryCommand
       ?? recommendedCommand;
     const supportingShellKeys = [...new Set([
-      ...readStringList(activationSurface?.supporting_shell_keys),
+      ...stringList(activationSurface?.supporting_shell_keys),
       ...Object.keys(shellCommands).filter((shellKey) => shellKey !== entryShellKey),
     ])];
     const hasActivationHints = Boolean(
@@ -207,10 +201,10 @@ export function pickSkillActivationProjection(manifest: DomainManifestCatalogEnt
       || normalizeOptionalString(activationSurface?.activation_kind)
       || entryShellKey
       || normalizeOptionalString(activationSurface?.entry_command)
-      || readStringList(activationSurface?.supporting_shell_keys).length > 0
+      || stringList(activationSurface?.supporting_shell_keys).length > 0
       || Object.keys(shellCommands).length > 0,
     );
-    const targetSurfaceKind = normalizeOptionalString(skill.target_surface_kind);
+    const targetSurfaceKind = normalizeOptionalString(skillRecord.target_surface_kind);
     const score =
       (hasActivationHints ? 10 : 0)
       + (runtimeContinuity ? 5 : 0)
@@ -223,9 +217,9 @@ export function pickSkillActivationProjection(manifest: DomainManifestCatalogEnt
     }
 
     bestProjection = {
-      skill_id: normalizeOptionalString(skill.skill_id),
-      title: normalizeOptionalString(skill.title),
-      description: normalizeOptionalString(skill.description),
+      skill_id: normalizeOptionalString(skillRecord.skill_id),
+      title: normalizeOptionalString(skillRecord.title),
+      description: normalizeOptionalString(skillRecord.description),
       target_surface_kind: targetSurfaceKind,
       plugin_name: normalizeOptionalString(activationSurface?.plugin_name),
       skill_semantics: normalizeOptionalString(activationSurface?.skill_semantics),

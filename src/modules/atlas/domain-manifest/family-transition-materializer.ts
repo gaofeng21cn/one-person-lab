@@ -4,6 +4,7 @@ import {
   buildManagedShellCommandEnv,
   prepareManagedShellCommandCwd,
 } from '../../connect/index.ts';
+import { parseJsonText } from '../../../kernel/json-file.ts';
 import type { WorkspaceBinding } from '../../workspace/index.ts';
 import { unwrapManifestPayload } from './entry-surfaces.ts';
 import { isRecord, optionalString } from './shared-utils.ts';
@@ -322,7 +323,7 @@ export function materializeFamilyTransitionSurfaces(
   }
 
   try {
-    const output = JSON.parse(result.stdout ?? '');
+    const output = parseJsonText(result.stdout ?? '');
     if (!isRecord(output)) {
       throw new Error('study_state_matrix output must be a JSON object.');
     }

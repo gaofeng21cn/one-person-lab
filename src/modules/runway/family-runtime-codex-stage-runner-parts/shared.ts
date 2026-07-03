@@ -1,12 +1,7 @@
-export type JsonRecord = Record<string, unknown>;
+import { isRecord } from '../../../kernel/contract-validation.ts';
+import { stringValue as optionalString, type JsonRecord } from '../../../kernel/json-record.ts';
 
-export function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-export function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
+export { isRecord, optionalString, type JsonRecord };
 
 export function readStringList(value: unknown) {
   if (!Array.isArray(value)) {
