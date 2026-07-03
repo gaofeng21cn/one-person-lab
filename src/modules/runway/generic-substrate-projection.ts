@@ -1,4 +1,6 @@
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
+import { recordList, stringValue as optionalString, type JsonRecord } from '../../kernel/json-record.ts';
 import { buildDomainManifestCatalog } from '../atlas/index.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from '../atlas/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
@@ -6,22 +8,6 @@ import {
   runFamilyRuntimeDomainHandlerCommand,
   domainHandlerResultErrorMessage,
 } from './family-runtime-domain-handler-process.ts';
-
-type JsonRecord = Record<string, unknown>;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is JsonRecord => isRecord(entry))
-    : [];
-}
 
 function normalizeDomainSelection(value: string) {
   const key = value.trim().toLowerCase();
@@ -188,7 +174,7 @@ function readDomainHandlerSubstrateAdapter(entry: DomainManifestCatalogEntry) {
       };
     }
     try {
-      const parsed = JSON.parse(result.stdout ?? '') as unknown;
+      const parsed = parseJsonText(result.stdout ?? '');
       const adapter = findSubstrateAdapter(parsed);
       return {
         status: adapter ? 'resolved' : 'missing',

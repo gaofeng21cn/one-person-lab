@@ -1,5 +1,8 @@
 import type { DatabaseSync } from 'node:sqlite';
 
+import { isRecord } from '../../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../../kernel/json-file.ts';
+import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import type { EnqueueInput } from '../family-runtime-command.ts';
 import {
   insertEvent,
@@ -19,14 +22,6 @@ const CURRENT_CONTROL_PROVIDER_ADMISSION_IDENTITY_BLOCKERS = new Set([
   'current_control_provider_admission_attempt_idempotency_key_missing',
   'current_control_transition_non_advancing_apply_recorded',
 ]);
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
 
 function currentControlAdmissionStudyIds(inputs: EnqueueInput[]) {
   return new Set(inputs
@@ -109,7 +104,7 @@ function executableOwnerFromPendingTask(input: EnqueueInput) {
 }
 
 function payloadFromTask(row: FamilyRuntimeTaskRow) {
-  return JSON.parse(row.payload_json) as Record<string, unknown>;
+  return parseJsonText(row.payload_json) as Record<string, unknown>;
 }
 
 function sourceFingerprint(payload: Record<string, unknown>) {

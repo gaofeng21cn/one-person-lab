@@ -1,7 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { isRecord } from '../../../../kernel/contract-validation.ts';
+import { readJsonPayloadFile } from '../../../../kernel/json-file.ts';
+import { stringList, stringValue as optionalString } from '../../../../kernel/json-record.ts';
 import type { EnqueueInput } from '../../family-runtime-command.ts';
+
+export { isRecord, optionalString, stringList };
 
 export type CurrentControlProviderAdmissionExportContext = {
   cwd: string;
@@ -109,14 +114,6 @@ export type ExistingCurrentControlReadbackPublication = {
   source: 'existing_terminal_queue_readback';
 };
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-export function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
 export function optionalScalarString(value: unknown) {
   if (typeof value === 'string' && value.trim()) {
     return value.trim();
@@ -130,14 +127,6 @@ export function optionalScalarString(value: unknown) {
 export function recoveryObligationId(value: Record<string, unknown> | null | undefined) {
   return optionalString(value?.recovery_obligation_id)
     ?? optionalString(value?.paper_recovery_obligation_id);
-}
-
-export function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value
-        .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-        .map((entry) => entry.trim())
-    : [];
 }
 
 export function uniqueStrings(values: Array<string | null>) {
@@ -189,7 +178,7 @@ export function domainProgressTransitionRuntimeLogPath(workspaceRoot: string | n
 
 export function readJsonRecord(filePath: string) {
   try {
-    const payload = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
+    const payload = readJsonPayloadFile(filePath);
     return isRecord(payload) ? payload : null;
   } catch {
     return null;

@@ -1,6 +1,9 @@
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
 import path from 'node:path';
 
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
+import { stringValue as optionalString } from '../../kernel/json-record.ts';
 import { DOMAIN_ADAPTERS } from './family-runtime-command.ts';
 
 type DomainDispatchCommand = {
@@ -30,14 +33,6 @@ export type OplModuleExecCommandResolver = (
 export type FamilyRuntimeDispatchDependencies = {
   resolveOplModuleExecCommand?: OplModuleExecCommandResolver;
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
 
 function medAutoScienceWorkspaceBindingDispatchCommand(payload: Record<string, unknown>, taskPath: string) {
   const context = isRecord(payload.opl_domain_export_context) ? payload.opl_domain_export_context : null;
@@ -123,7 +118,7 @@ export function parseDispatchOutput(stdout: string) {
     return {};
   }
   try {
-    return JSON.parse(trimmed) as Record<string, unknown>;
+    return parseJsonText(trimmed) as Record<string, unknown>;
   } catch {
     return { raw_stdout: trimmed };
   }

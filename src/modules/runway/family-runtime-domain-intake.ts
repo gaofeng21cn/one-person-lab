@@ -2,6 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
+import { stringValue as optionalString } from '../../kernel/json-record.ts';
 import {
   type EnqueueInput,
   FAMILY_RUNTIME_DOMAIN_IDS,
@@ -88,18 +91,14 @@ type IntakeBlocked = {
   repair_action?: Record<string, unknown>;
 };
 
-function optionalPublicationString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
 function currentControlPublicationKey(publication: Record<string, unknown>) {
-  const studyId = optionalPublicationString(publication.study_id);
-  const idempotencyKey = optionalPublicationString(publication.idempotency_key);
+  const studyId = optionalString(publication.study_id);
+  const idempotencyKey = optionalString(publication.idempotency_key);
   return studyId && idempotencyKey ? `${studyId}::${idempotencyKey}` : null;
 }
 
 function currentControlPublicationRank(publication: Record<string, unknown>) {
-  const status = optionalPublicationString(publication.status);
+  const status = optionalString(publication.status);
   if (status === 'provider_admission_terminal_consumed') {
     return 3;
   }
@@ -300,18 +299,10 @@ function parseDispatchOutput(stdout: string) {
     return {};
   }
   try {
-    return JSON.parse(trimmed) as Record<string, unknown>;
+    return parseJsonText(trimmed) as Record<string, unknown>;
   } catch {
     return { raw_stdout: trimmed };
   }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function isPaperMissionDefaultTaskQueuePresent(output: Record<string, unknown>) {

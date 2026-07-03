@@ -1,6 +1,8 @@
 import type { DatabaseSync } from 'node:sqlite';
 
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
+import { stringArrayValue, stringValue } from '../../kernel/json-record.ts';
 import {
   DEFAULT_EXECUTOR_DISPATCH_TASK_KIND,
   ensureProviderHostedStageAttempt,
@@ -44,7 +46,7 @@ type StageAttemptPayload = ReturnType<typeof listStageAttemptsForTask>[number];
 type RedriveAdmission = ReturnType<typeof redriveAdmissionForTask>;
 
 function parsePayload(row: FamilyRuntimeTaskRow) {
-  return JSON.parse(row.payload_json) as Record<string, unknown>;
+  return parseJsonText(row.payload_json) as Record<string, unknown>;
 }
 
 function redriveAdmissionForTask(
@@ -101,20 +103,6 @@ function redriveAdmissionEventPayload(admission: RedriveAdmission, redriveKind: 
   };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-    : [];
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
 function providerRetryBudgetDeadLetterEvidenceKind(db: DatabaseSync, taskId: string) {
   const stageAttemptEvidence = listStageAttemptsForTask(db, taskId).some((attempt) => (
     attempt.status === 'dead_lettered'
@@ -135,7 +123,7 @@ function providerRetryBudgetDeadLetterEvidenceKind(db: DatabaseSync, taskId: str
   if (!event) {
     return null;
   }
-  const payload = JSON.parse(event.payload_json) as Record<string, unknown>;
+  const payload = parseJsonText(event.payload_json) as Record<string, unknown>;
   const previousReason = typeof payload.previous_dead_letter_reason === 'string'
     ? payload.previous_dead_letter_reason
     : null;
@@ -204,7 +192,8 @@ function closeoutRefsAllowProviderTransportRedrive(
   row: FamilyRuntimeTaskRow,
   payload: Record<string, unknown>,
 ) {
-  const closeoutRefs = stringList(attempt.closeout_refs);
+  const closeoutRefs = stringArrayValue(attempt.closeout_refs)
+    .filter((entry) => entry.trim().length > 0);
   if (closeoutRefs.length === 0) {
     return true;
   }

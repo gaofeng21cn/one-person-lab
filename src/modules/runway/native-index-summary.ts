@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { parseJsonText, readJsonPayloadFile } from '../../kernel/json-file.ts';
 import { resolveOplStatePaths } from './runtime-state-paths.ts';
 
 const SOURCE_OF_TRUTH_RULE =
@@ -252,7 +253,7 @@ function compactChangedField(field: string) {
 
 function readJson(filePath: string): Record<string, unknown> | null {
   try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8')) as Record<string, unknown>;
+    return readJsonPayloadFile(filePath) as Record<string, unknown>;
   } catch {
     return null;
   }
@@ -264,7 +265,7 @@ function readJsonl(filePath: string): Array<Record<string, unknown>> {
       .split('\n')
       .map((line) => line.trim())
       .filter(Boolean)
-      .map((line) => JSON.parse(line) as Record<string, unknown>);
+      .map((line) => parseJsonText(line) as Record<string, unknown>);
   } catch {
     return [];
   }

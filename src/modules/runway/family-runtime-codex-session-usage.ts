@@ -1,9 +1,10 @@
 import crypto from 'node:crypto';
 import path from 'node:path';
 
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
+import { stringValue as optionalString, type JsonRecord } from '../../kernel/json-record.ts';
 import type { CodexSessionRecoveryResult } from './codex.ts';
-
-type JsonRecord = Record<string, unknown>;
 
 export type CodexSessionUsageRef = {
   session_ref: string;
@@ -22,14 +23,6 @@ export type CodexSessionUsageRef = {
   billing_boundary: 'refs_only_absolute_cumulative_total_delta';
   ignored_usage_fields: string[];
 };
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
 
 function tokenUsageTotals(value: unknown) {
   if (!isRecord(value)) {
@@ -51,7 +44,7 @@ function tokenUsageTotals(value: unknown) {
 
 function parseJsonLineRecord(line: string) {
   try {
-    const parsed = JSON.parse(line) as unknown;
+    const parsed = parseJsonText(line);
     return isRecord(parsed) ? parsed : null;
   } catch {
     return null;

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonText, readJsonPayloadFile } from '../../kernel/json-file.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 import {
   type NativeStateIndexPersistence,
@@ -454,7 +455,7 @@ function invokeNativeHelper(
 
   let payload: Record<string, unknown>;
   try {
-    payload = JSON.parse(result.stdout.trim()) as Record<string, unknown>;
+    payload = parseJsonText(result.stdout.trim()) as Record<string, unknown>;
   } catch (error) {
     return invocationError(
       helper,
@@ -636,7 +637,7 @@ function pathExists(candidate: string) {
 
 function packageJsonFiles(packageRoot: string): string[] {
   try {
-    const packageJson = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8')) as {
+    const packageJson = readJsonPayloadFile(path.join(packageRoot, 'package.json')) as {
       files?: unknown;
     };
     if (!Array.isArray(packageJson.files)) {

@@ -1,4 +1,5 @@
-type JsonRecord = Record<string, unknown>;
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { stringValue as optionalString, type JsonRecord } from '../../kernel/json-record.ts';
 
 interface FamilyReference {
   ref_kind: string;
@@ -213,14 +214,6 @@ interface BuildArtifactInventoryInput {
   artifact_surface?: ReturnType<typeof buildTaskSurfaceDescriptor> | null;
   inspect_paths?: string[];
   domain_projection?: JsonRecord | null;
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function requireString(value: unknown, field: string) {

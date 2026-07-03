@@ -1,4 +1,6 @@
 import fs from 'node:fs';
+import { readJsonPayloadFile, writeJsonPayloadFile } from '../../kernel/json-file.ts';
+import { record, stringList, stringValue as optionalString } from '../../kernel/json-record.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 
 type CodexAppRuntimeEvidenceReceipt = {
@@ -49,20 +51,6 @@ type CodexAppRuntimeEvidenceLedger = {
 
 function nowIso() {
   return new Date().toISOString();
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
 }
 
 function uniqueStrings(values: string[]) {
@@ -118,25 +106,23 @@ function receiptRef(input: CodexAppRuntimeEvidenceReceiptInput) {
 }
 
 function normalizeReceipt(value: unknown): CodexAppRuntimeEvidenceReceipt | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-  const receipt_ref = optionalString(value.receipt_ref);
-  if (!receipt_ref || value.target_surface !== 'codex_app_runtime_role') {
+  const source = record(value);
+  const receipt_ref = optionalString(source.receipt_ref);
+  if (!receipt_ref || source.target_surface !== 'codex_app_runtime_role') {
     return null;
   }
   const receipt = {
     surface_kind: 'opl_codex_app_runtime_evidence_receipt',
     receipt_ref,
-    receipt_status: value.receipt_status === 'verified' ? 'verified' : 'recorded',
-    recorded_at: optionalString(value.recorded_at) ?? nowIso(),
+    receipt_status: source.receipt_status === 'verified' ? 'verified' : 'recorded',
+    recorded_at: optionalString(source.recorded_at) ?? nowIso(),
     target_surface: 'codex_app_runtime_role',
     temporal_hosted_long_soak_refs: uniqueStrings(
-      stringList(value.temporal_hosted_long_soak_refs),
+      stringList(source.temporal_hosted_long_soak_refs),
     ),
-    provider_state_linkage_refs: uniqueStrings(stringList(value.provider_state_linkage_refs)),
-    operator_evidence_refs: uniqueStrings(stringList(value.operator_evidence_refs)),
-    typed_blocker_refs: uniqueStrings(stringList(value.typed_blocker_refs)),
+    provider_state_linkage_refs: uniqueStrings(stringList(source.provider_state_linkage_refs)),
+    operator_evidence_refs: uniqueStrings(stringList(source.operator_evidence_refs)),
+    typed_blocker_refs: uniqueStrings(stringList(source.typed_blocker_refs)),
     source_surface: 'opl_codex_app_runtime_evidence',
     authority_boundary: refsOnlyAuthorityBoundary(),
   } satisfies CodexAppRuntimeEvidenceReceipt;
@@ -149,8 +135,8 @@ function readCodexAppRuntimeEvidenceLedger(): CodexAppRuntimeEvidenceLedger {
     return emptyLedger();
   }
   try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
-    if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
+    const parsed = record(readJsonPayloadFile(file));
+    if (!Array.isArray(parsed.receipts)) {
       return emptyLedger();
     }
     return {
@@ -166,10 +152,7 @@ function readCodexAppRuntimeEvidenceLedger(): CodexAppRuntimeEvidenceLedger {
 
 function writeCodexAppRuntimeEvidenceLedger(ledger: CodexAppRuntimeEvidenceLedger) {
   const paths = ensureOplStateDir();
-  fs.writeFileSync(
-    paths.codex_app_runtime_evidence_ledger_file,
-    `${JSON.stringify(ledger, null, 2)}\n`,
-  );
+  writeJsonPayloadFile(paths.codex_app_runtime_evidence_ledger_file, ledger);
 }
 
 function normalizeInput(
