@@ -218,6 +218,8 @@ test('Pack OS builds refs-only locks with hashes and false-authority boundaries'
     assert.equal(inspection.pack_os.surface_kind, 'opl_pack_os_inspection');
     assert.equal(inspection.pack_os.status, 'resolved');
     assert.equal(inspection.pack_os.pack_kind, 'display_pack');
+    assert.equal(inspection.pack_os.descriptor_oci.digest, `sha256:${inspection.pack_os.descriptor_sha256}`);
+    assert.equal(inspection.pack_os.content_addressed_lock_policy.registry_push_pull_implemented, false);
     assert.equal(inspection.pack_os.authority_boundary.can_authorize_publication_readiness, false);
 
     const lock = buildPackOsLock(descriptorPath).pack_lock;
@@ -226,6 +228,11 @@ test('Pack OS builds refs-only locks with hashes and false-authority boundaries'
     assert.equal(lock.descriptor_oci.mediaType, 'application/vnd.opl.pack.descriptor.v1+json');
     assert.equal(lock.descriptor_oci.digest, `sha256:${lock.descriptor_sha256}`);
     assert.equal(typeof lock.descriptor_oci.size, 'number');
+    assert.equal(lock.content_addressed_lock_policy.policy_id, 'opl.pack_os.content_addressed_lock.v1');
+    assert.equal(lock.content_addressed_lock_policy.lock_records_refs_only, true);
+    assert.equal(lock.content_addressed_lock_policy.stores_artifact_body, false);
+    assert.equal(lock.content_addressed_lock_policy.closes_stage, false);
+    assert.equal(lock.content_addressed_lock_policy.writes_domain_truth, false);
     assert.equal(lock.summary.present_resource_count, 2);
     assert.equal(lock.summary.receipt_ref_count, 1);
     assert.equal(lock.resolved_resources[0].status, 'present');
@@ -248,6 +255,11 @@ test('Pack OS builds refs-only locks with hashes and false-authority boundaries'
     const validation = buildPackOsValidation(descriptorPath).pack_os_validation;
     assert.equal(validation.status, 'valid');
     assert.equal(validation.checks.every((entry) => entry.status === 'pass'), true);
+    assert.equal(
+      validation.checks.some((entry) => entry.check_id === 'content_addressed_lock_policy_refs_only'),
+      true,
+    );
+    assert.equal(validation.content_addressed_lock_policy.registry_push_pull_implemented, false);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -282,6 +294,8 @@ test('Pack OS installs descriptors into registry and content-addressed cache wit
     assert.equal(registry.entries[0].registry_key, 'mas.display.example@1.2.3');
     assert.equal(registry.entries[0].descriptor_sha256, install.registry_entry.descriptor_sha256);
     assert.equal(registry.entries[0].descriptor_oci.digest, install.registry_entry.descriptor_oci.digest);
+    assert.equal(registry.entries[0].content_addressed_lock_policy.lock_records_refs_only, true);
+    assert.equal(registry.content_addressed_lock_policy.external_refs_cached, false);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -300,6 +314,7 @@ test('Pack OS cache and distribution materialize refs-only manifests for pack as
     assert.equal(cache.summary.cached_resource_count, 2);
     assert.equal(cache.summary.skipped_resource_count, 1);
     assert.equal(cache.cached_resources.every((entry) => entry.status === 'cached'), true);
+    assert.equal(cache.content_addressed_lock_policy.present_local_resource_digest_required, true);
     assert.equal(cache.cached_resources[0].oci_descriptor.mediaType, 'application/vnd.opl.pack.resource.v1');
     assert.match(cache.cached_resources[0].oci_descriptor.digest, /^sha256:[0-9a-f]{64}$/);
     assert.equal(cache.skipped_resources[0].status, 'external_ref');
@@ -310,6 +325,7 @@ test('Pack OS cache and distribution materialize refs-only manifests for pack as
     assert.equal(distribution.output.path, outputPath);
     assert.match(distribution.output.sha256, /^[0-9a-f]{64}$/);
     assert.equal(distribution.bundle.pack_lock.lock_id, 'opl-pack-lock:mas.display.example@1.2.3');
+    assert.equal(distribution.bundle.content_addressed_lock_policy.registry_push_pull_implemented, false);
     assert.equal(distribution.bundle.cache_manifest.summary.cached_resource_count, 2);
     assert.equal(distribution.bundle.not_claims.includes('publication_ready'), true);
 

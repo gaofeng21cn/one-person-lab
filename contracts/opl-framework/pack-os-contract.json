@@ -82,6 +82,7 @@
       "descriptor_ref",
       "descriptor_sha256",
       "descriptor_oci",
+      "content_addressed_lock_policy",
       "resolved_resources",
       "artifact_lifecycle",
       "review_transport",
@@ -89,7 +90,21 @@
       "provenance"
     ],
     "content_hash_algorithm": "sha256",
-    "lock_projection_rule": "The lock is derived from a descriptor and refs. It records paths, refs, hashes, lifecycle states, and review receipt transport status. It does not copy artifact bodies or convert review receipts into domain verdicts."
+    "lock_projection_rule": "The lock is derived from a descriptor and refs. It records paths, refs, hashes, lifecycle states, and review receipt transport status. It does not copy artifact bodies or convert review receipts into domain verdicts.",
+    "content_addressed_lock_policy": {
+      "policy_id": "opl.pack_os.content_addressed_lock.v1",
+      "digest_algorithm": "sha256",
+      "descriptor_media_type": "application/vnd.opl.pack.descriptor.v1+json",
+      "resource_media_type": "application/vnd.opl.pack.resource.v1",
+      "descriptor_digest_required": true,
+      "present_local_resource_digest_required": true,
+      "external_refs_cached": false,
+      "lock_records_refs_only": true,
+      "registry_push_pull_implemented": false,
+      "stores_artifact_body": false,
+      "closes_stage": false,
+      "writes_domain_truth": false
+    }
   },
   "lifecycle_model": {
     "allowed_states": [

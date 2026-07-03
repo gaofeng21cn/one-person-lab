@@ -301,6 +301,14 @@ Phase 5-6 的第一批收薄已吸收进 `main`，不是 readiness、release、o
 - Workspace：shared-resource manifest 与 inventory 只增加 sha256 content-addressing policy；仍然 `body_ref=null`、不存 body、不关闭 stage、不写 domain truth。
 - Fresh evidence：focused managed-update / Pack OS / workspace projection tests pass，`npm run typecheck` pass，`git diff --check` pass；这只证明 first-slice 行为和类型检查，不证明 release/currentness/owner acceptance。
 
+## Phase 6 Content-Addressed Lock Policy Foldback
+
+本轮继续收薄 Pack OS，只把 OCI descriptor / digest / media type / lock policy 固定成 machine-readable contract 和 CLI/readback 字段；不实现 registry push/pull，不新增包管理器，不关闭 stage，不写 domain truth。
+
+- Contract：`pack-os-contract.json` 的 lock required fields 增加 `content_addressed_lock_policy`，并要求 descriptor/resource media type、`sha256` digest、present local resource digest、external refs 不进 cache、refs-only lock、no registry push/pull、no body storage、no stage close、no domain truth write。
+- Source/readback：`pack os inspect/validate/lock/install/registry/cache/distribute` 现在都投影同一套 content-addressed lock policy；validation 增加 descriptor digest 与 refs-only lock policy checks，registry/cache/distribution 继续只记录 refs、digest、cache ref 和 forbidden claims。
+- Fresh evidence：`node --experimental-strip-types --test tests/src/pack-os.test.ts tests/src/cli/cases/pack-os-command-surface.test.ts tests/src/cli/cases/workspace-domain-initializer-cases/validation-and-doctor.ts` 17/17 pass，`npm run typecheck` pass，`npm run reuse-first:scan:diff` gate_status=ok，`git diff --check` pass。该证据只证明本切片 contract/source/readback/focused tests，不证明 install/release/currentness ready、外部 registry 可用、domain owner acceptance 或 production readiness。
+
 ## Phase 5 Owner-Execution Boundary Foldback
 
 本轮继续收薄 Managed update split，只落 Framework 本仓 owner route / runner / receipt projection 边界，不实现真实 App updater、host installer 或 release/currentness ready claim。

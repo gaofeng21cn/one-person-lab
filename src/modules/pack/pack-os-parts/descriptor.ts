@@ -56,6 +56,20 @@ export const REQUIRED_AUTHORITY_FALSE_FLAGS = [
 export const MAS_DISPLAY_PACK_V2_SOURCE_CONTRACT_REF = 'med-autoscience:contracts/display-pack-contract.v2.json';
 export const PACK_OS_DESCRIPTOR_MEDIA_TYPE = 'application/vnd.opl.pack.descriptor.v1+json';
 export const PACK_OS_RESOURCE_MEDIA_TYPE = 'application/vnd.opl.pack.resource.v1';
+export const PACK_OS_CONTENT_ADDRESSED_LOCK_POLICY = {
+  policy_id: 'opl.pack_os.content_addressed_lock.v1',
+  digest_algorithm: 'sha256',
+  descriptor_media_type: PACK_OS_DESCRIPTOR_MEDIA_TYPE,
+  resource_media_type: PACK_OS_RESOURCE_MEDIA_TYPE,
+  descriptor_digest_required: true,
+  present_local_resource_digest_required: true,
+  external_refs_cached: false,
+  lock_records_refs_only: true,
+  registry_push_pull_implemented: false,
+  stores_artifact_body: false,
+  closes_stage: false,
+  writes_domain_truth: false,
+} as const;
 
 export function ociDescriptor(mediaType: string, sha256: string, size: number) {
   return {

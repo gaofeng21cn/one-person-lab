@@ -8,6 +8,7 @@ import {
   loadGenericPackDescriptorFromRecord,
   MAS_DISPLAY_PACK_V2_SOURCE_CONTRACT_REF,
   normalizeRelativeRef,
+  PACK_OS_CONTENT_ADDRESSED_LOCK_POLICY,
   readJsonFile,
   REQUIRED_AUTHORITY_FALSE_FLAGS,
   sha256File,
@@ -257,6 +258,8 @@ export function buildPackOsInspection(descriptorPath: string) {
       contract_ref: 'contracts/opl-framework/pack-os-contract.json',
       descriptor_path: loaded.descriptor_path,
       descriptor_sha256: loaded.descriptor_sha256,
+      descriptor_oci: loaded.descriptor_oci,
+      content_addressed_lock_policy: PACK_OS_CONTENT_ADDRESSED_LOCK_POLICY,
       pack_id: loaded.descriptor.pack_id,
       pack_kind: loaded.descriptor.pack_kind,
       pack_version: loaded.descriptor.version,
@@ -290,6 +293,7 @@ function buildPackOsLockFromLoaded(loaded: ReturnType<typeof loadGenericPackDesc
       descriptor_ref: loaded.descriptor_path,
       descriptor_sha256: loaded.descriptor_sha256,
       descriptor_oci: loaded.descriptor_oci,
+      content_addressed_lock_policy: PACK_OS_CONTENT_ADDRESSED_LOCK_POLICY,
       resolver: {
         resolver_owner: 'one-person-lab',
         resolver_role: 'generic_pack_descriptor_to_refs_only_lock',
@@ -361,6 +365,7 @@ function buildRegistryEntry(lock: ReturnType<typeof buildPackOsLockFromLoaded>['
     descriptor_ref: lock.descriptor_ref,
     descriptor_sha256: lock.descriptor_sha256,
     descriptor_oci: lock.descriptor_oci,
+    content_addressed_lock_policy: lock.content_addressed_lock_policy,
     lock_id: lock.lock_id,
     install_status: 'installed',
     installed_at: 'recorded_by_opl_pack_os',
@@ -380,6 +385,7 @@ function emptyPackOsRegistry(registryPath: string) {
     registry_owner: 'one-person-lab',
     registry_path: registryPath,
     entries: [] as JsonRecord[],
+    content_addressed_lock_policy: PACK_OS_CONTENT_ADDRESSED_LOCK_POLICY,
     authority_boundary: {
       can_write_domain_truth: false,
       can_mutate_artifact_body: false,
@@ -473,6 +479,8 @@ function buildPackOsCacheFromLoaded(
     pack_kind: loaded.descriptor.pack_kind,
     descriptor_ref: loaded.descriptor_path,
     descriptor_sha256: loaded.descriptor_sha256,
+    descriptor_oci: loaded.descriptor_oci,
+    content_addressed_lock_policy: PACK_OS_CONTENT_ADDRESSED_LOCK_POLICY,
     cache_root: resolvedCacheRoot,
     status: cachedResources.length > 0 ? 'cached' : 'refs_only_no_local_files_cached',
     cached_resources: cachedResources,
@@ -566,6 +574,7 @@ export function buildPackOsDistribution(descriptorPath: string, outputPath: stri
     surface_kind: 'opl_pack_os_distribution_bundle',
     contract_ref: 'contracts/opl-framework/pack-os-contract.json',
     bundle_role: 'refs_only_pack_distribution_manifest',
+    content_addressed_lock_policy: lock.content_addressed_lock_policy,
     pack_lock: lock,
     cache_manifest: cacheManifest,
     registry_entry: buildRegistryEntry(lock),
@@ -607,6 +616,23 @@ export function buildPackOsValidation(descriptorPath: string) {
       missing_resource_count: lock.summary.missing_resource_count,
     },
     {
+      check_id: 'descriptor_oci_digest_matches_sha256',
+      status: lock.descriptor_oci.digest === `sha256:${lock.descriptor_sha256}` ? 'pass' : 'fail',
+      descriptor_media_type: lock.descriptor_oci.mediaType,
+      descriptor_digest: lock.descriptor_oci.digest,
+    },
+    {
+      check_id: 'content_addressed_lock_policy_refs_only',
+      status: lock.content_addressed_lock_policy.lock_records_refs_only
+        && lock.content_addressed_lock_policy.registry_push_pull_implemented === false
+        && lock.content_addressed_lock_policy.stores_artifact_body === false
+        && lock.content_addressed_lock_policy.closes_stage === false
+        && lock.content_addressed_lock_policy.writes_domain_truth === false
+        ? 'pass'
+        : 'fail',
+      policy: lock.content_addressed_lock_policy,
+    },
+    {
       check_id: 'review_transport_is_refs_only',
       status: lock.review_transport.receipt_transport_only ? 'pass' : 'fail',
       receipt_transport_only: lock.review_transport.receipt_transport_only,
@@ -625,6 +651,7 @@ export function buildPackOsValidation(descriptorPath: string) {
       pack_id: lock.pack_id,
       pack_kind: lock.pack_kind,
       checks,
+      content_addressed_lock_policy: lock.content_addressed_lock_policy,
       authority_boundary: lock.authority_boundary,
       not_claims: lock.not_claims,
     },

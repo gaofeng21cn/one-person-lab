@@ -49,11 +49,51 @@ const LOCK_REQUIRED_FIELDS = [
   'descriptor_ref',
   'descriptor_sha256',
   'descriptor_oci',
+  'content_addressed_lock_policy',
   'resolved_resources',
   'artifact_lifecycle',
   'review_transport',
   'authority_boundary',
   'provenance',
+] as const;
+
+const OCI_DESCRIPTOR_FIELDS = [
+  'mediaType',
+  'digest',
+  'size',
+] as const;
+
+const PACK_OS_CONTENT_ADDRESSED_LOCK_POLICY = {
+  policy_id: 'opl.pack_os.content_addressed_lock.v1',
+  digest_algorithm: 'sha256',
+  descriptor_media_type: 'application/vnd.opl.pack.descriptor.v1+json',
+  resource_media_type: 'application/vnd.opl.pack.resource.v1',
+  descriptor_digest_required: true,
+  present_local_resource_digest_required: true,
+  external_refs_cached: false,
+  lock_records_refs_only: true,
+  registry_push_pull_implemented: false,
+  stores_artifact_body: false,
+  closes_stage: false,
+  writes_domain_truth: false,
+} as const;
+
+const LOCK_POLICY_STRING_FIELDS = [
+  'policy_id',
+  'digest_algorithm',
+  'descriptor_media_type',
+  'resource_media_type',
+] as const;
+
+const LOCK_POLICY_BOOLEAN_FIELDS = [
+  'descriptor_digest_required',
+  'present_local_resource_digest_required',
+  'external_refs_cached',
+  'lock_records_refs_only',
+  'registry_push_pull_implemented',
+  'stores_artifact_body',
+  'closes_stage',
+  'writes_domain_truth',
 ] as const;
 
 const LIFECYCLE_STATES = [
@@ -258,6 +298,7 @@ function validateDescriptorContract(section: Record<string, unknown>, filePath: 
 }
 
 function validateLockContract(section: Record<string, unknown>, filePath: string) {
+  const policy = requireSection(section, 'content_addressed_lock_policy', filePath);
   return {
     surface_kind: expectExactString(
       section.surface_kind,
@@ -288,10 +329,16 @@ function validateLockContract(section: Record<string, unknown>, filePath: string
       'lock_contract.lock_projection_rule',
       filePath,
     ),
+    content_addressed_lock_policy: validateContentAddressedLockPolicy(
+      policy,
+      'lock_contract.content_addressed_lock_policy',
+      filePath,
+    ),
   };
 }
 
 function validateRegistryCacheDistributionContract(section: Record<string, unknown>, filePath: string) {
+  const mediaTypes = requireSection(section, 'oci_media_types', filePath);
   return {
     registry_surface_kind: expectExactString(
       section.registry_surface_kind,
@@ -329,6 +376,26 @@ function validateRegistryCacheDistributionContract(section: Record<string, unkno
       'registry_cache_distribution_contract.cache_layout',
       filePath,
     ),
+    oci_descriptor_fields: exactStringArray(
+      section.oci_descriptor_fields,
+      OCI_DESCRIPTOR_FIELDS,
+      'registry_cache_distribution_contract.oci_descriptor_fields',
+      filePath,
+    ),
+    oci_media_types: {
+      descriptor: expectExactString(
+        mediaTypes.descriptor,
+        PACK_OS_CONTENT_ADDRESSED_LOCK_POLICY.descriptor_media_type,
+        'registry_cache_distribution_contract.oci_media_types.descriptor',
+        filePath,
+      ),
+      resource: expectExactString(
+        mediaTypes.resource,
+        PACK_OS_CONTENT_ADDRESSED_LOCK_POLICY.resource_media_type,
+        'registry_cache_distribution_contract.oci_media_types.resource',
+        filePath,
+      ),
+    },
     registry_rule: expectString(
       section.registry_rule,
       'registry_cache_distribution_contract.registry_rule',
@@ -340,6 +407,31 @@ function validateRegistryCacheDistributionContract(section: Record<string, unkno
       filePath,
     ),
   };
+}
+
+function validateContentAddressedLockPolicy(
+  section: Record<string, unknown>,
+  fieldPrefix: string,
+  filePath: string,
+) {
+  const result: Record<string, string | boolean> = {};
+  for (const field of LOCK_POLICY_STRING_FIELDS) {
+    result[field] = expectExactString(
+      section[field],
+      PACK_OS_CONTENT_ADDRESSED_LOCK_POLICY[field],
+      `${fieldPrefix}.${field}`,
+      filePath,
+    );
+  }
+  for (const field of LOCK_POLICY_BOOLEAN_FIELDS) {
+    result[field] = expectExactBoolean(
+      section[field],
+      PACK_OS_CONTENT_ADDRESSED_LOCK_POLICY[field],
+      `${fieldPrefix}.${field}`,
+      filePath,
+    );
+  }
+  return result as PackOsContract['lock_contract']['content_addressed_lock_policy'];
 }
 
 function validateLifecycleModel(section: Record<string, unknown>, filePath: string) {

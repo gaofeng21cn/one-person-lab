@@ -30,6 +30,11 @@ export interface PackOsContract {
     distribution_manifest_surface_kind: string;
     distribution_bundle_surface_kind: string;
     cache_layout: string;
+    oci_descriptor_fields: string[];
+    oci_media_types: {
+      descriptor: string;
+      resource: string;
+    };
     registry_rule: string;
     distribution_rule: string;
   };
@@ -39,6 +44,20 @@ export interface PackOsContract {
     required_fields: string[];
     content_hash_algorithm: string;
     lock_projection_rule: string;
+    content_addressed_lock_policy: {
+      policy_id: string;
+      digest_algorithm: string;
+      descriptor_media_type: string;
+      resource_media_type: string;
+      descriptor_digest_required: boolean;
+      present_local_resource_digest_required: boolean;
+      external_refs_cached: boolean;
+      lock_records_refs_only: boolean;
+      registry_push_pull_implemented: boolean;
+      stores_artifact_body: boolean;
+      closes_stage: boolean;
+      writes_domain_truth: boolean;
+    };
   };
   lifecycle_model: {
     allowed_states: string[];

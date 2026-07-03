@@ -195,16 +195,20 @@ test('pack os CLI inspects validates and writes refs-only locks', () => {
     assert.equal(inspect.surface_kind, 'opl_pack_os_inspection');
     assert.equal(inspect.pack_id, 'mas.display.cli');
     assert.equal(inspect.status, 'resolved');
+    assert.equal(inspect.descriptor_oci.digest, `sha256:${inspect.descriptor_sha256}`);
+    assert.equal(inspect.content_addressed_lock_policy.registry_push_pull_implemented, false);
     assert.equal(inspect.authority_boundary.can_authorize_publication_readiness, false);
 
     const validation = runCli(['pack', 'os', 'validate', '--descriptor', descriptorPath]).pack_os_validation;
     assert.equal(validation.status, 'valid');
     assert.equal(validation.checks.every((entry: { status: string }) => entry.status === 'pass'), true);
+    assert.equal(validation.content_addressed_lock_policy.lock_records_refs_only, true);
 
     const outputPath = path.join(root, 'build', 'pack-lock.json');
     const lockPayload = runCli(['pack', 'os', 'lock', '--descriptor', descriptorPath, '--output', outputPath]);
     assert.equal(lockPayload.pack_lock.surface_kind, 'opl_generic_pack_lock');
     assert.equal(lockPayload.pack_lock.summary.present_resource_count, 2);
+    assert.equal(lockPayload.pack_lock.content_addressed_lock_policy.stores_artifact_body, false);
     assert.equal(lockPayload.pack_lock_output.status, 'written');
     assert.match(lockPayload.pack_lock_output.sha256, /^[0-9a-f]{64}$/);
     const written = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
@@ -238,6 +242,7 @@ test('pack os CLI installs lists caches and distributes generic packs', () => {
     assert.equal(install.status, 'installed');
     assert.equal(install.registry_entry.registry_key, 'mas.display.cli@2.0.0');
     assert.equal(install.cache_manifest.summary.cached_resource_count, 2);
+    assert.equal(install.cache_manifest.content_addressed_lock_policy.external_refs_cached, false);
     assert.equal(install.registry_entry.authority_boundary.can_write_domain_truth, false);
 
     const registry = runCli(['pack', 'os', 'registry', '--registry', registryPath]).pack_os_registry;
@@ -245,6 +250,7 @@ test('pack os CLI installs lists caches and distributes generic packs', () => {
     assert.equal(registry.status, 'available');
     assert.equal(registry.entries.length, 1);
     assert.equal(registry.entries[0].registry_key, 'mas.display.cli@2.0.0');
+    assert.equal(registry.entries[0].content_addressed_lock_policy.writes_domain_truth, false);
 
     const cache = runCli([
       'pack',
@@ -257,6 +263,7 @@ test('pack os CLI installs lists caches and distributes generic packs', () => {
     ]).pack_os_cache;
     assert.equal(cache.surface_kind, 'opl_pack_os_cache_manifest');
     assert.equal(cache.summary.cached_resource_count, 2);
+    assert.equal(cache.content_addressed_lock_policy.present_local_resource_digest_required, true);
     assert.equal(cache.cached_resources.every((entry: { cache_ref: string }) => /^sha256\//.test(entry.cache_ref)), true);
 
     const distribution = runCli([
@@ -273,6 +280,7 @@ test('pack os CLI installs lists caches and distributes generic packs', () => {
     assert.equal(distribution.surface_kind, 'opl_pack_os_distribution_manifest');
     assert.equal(distribution.status, 'written');
     assert.equal(distribution.bundle.pack_lock.lock_id, 'opl-pack-lock:mas.display.cli@2.0.0');
+    assert.equal(distribution.bundle.content_addressed_lock_policy.closes_stage, false);
     assert.equal(distribution.bundle.cache_manifest.summary.cached_resource_count, 2);
     assert.equal(distribution.bundle.not_claims.includes('quality_verdict'), true);
 
