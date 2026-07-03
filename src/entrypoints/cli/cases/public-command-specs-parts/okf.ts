@@ -10,6 +10,7 @@ import {
   validateOkfContextBundle,
   writeOkfContextBundleProjection,
 } from '../../../../modules/pack/okf-context-bundle.ts';
+import type { OkfDomainPackCompilerInput } from '../../../../modules/pack/okf-context-bundle.ts';
 import { buildUsageError } from '../../modules/support.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 
@@ -304,7 +305,7 @@ export function buildOkfCommandSpecs(): Record<string, CommandSpec> {
         const parsed = parseOkfProjectPackArgs(args, okfCommandSpecs['okf project-pack']);
         const packInput = parseJsonText(
           readFileSync(resolve(parsed.packPath), 'utf8'),
-        );
+        ) as OkfDomainPackCompilerInput;
         const projection = buildOkfContextBundleFromDomainPack(packInput, {
           bundleId: parsed.bundleId,
           sourceRootRef: parsed.sourceRootRef,
