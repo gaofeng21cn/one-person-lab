@@ -5,7 +5,7 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
-const modulePath = 'src/stage-run-kernel.ts';
+const modulePath = 'src/modules/stagecraft/stage-run-kernel.ts';
 
 test('StageRun read model keeps read-model and worklist signals from advancing or regressing lifecycle status', async () => {
   const module = await import(pathToFileURL(path.join(repoRoot, modulePath)).href);

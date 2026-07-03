@@ -813,6 +813,7 @@ test('standard domain-agent scaffold contract forbids domain-owned generic frame
   );
   assert.equal(scaffold.agent_pack_contract.canonical_semantic_pack_root, 'agent/');
   assert.deepEqual(scaffold.agent_pack_contract.required_sections, [
+    'agent/principles',
     'agent/prompts',
     'agent/stages',
     'agent/skills',

@@ -122,7 +122,7 @@ test('functional agent runtime harness contract is active and exported as an OPL
   assert.equal(contract.contract_kind, 'opl_functional_agent_runtime_harness_contract.v1');
   assert.equal(contract.surface_kind, 'opl_functional_agent_runtime_harness_contract');
   assert.equal(contract.contract_version, 'opl-functional-agent-runtime-harness.v1');
-  assert.equal(packageJson.exports['./functional-agent-runtime-harness'], './dist/functional-agent-runtime-harness.js');
+  assert.equal(packageJson.exports['./functional-agent-runtime-harness'], './dist/modules/runway/functional-agent-runtime-harness.js');
   assert.equal(contract.live_soak_boundary.claims_live_soak_complete, false);
   assert.equal(contract.live_soak_boundary.can_authorize_domain_ready, false);
 

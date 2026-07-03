@@ -428,7 +428,7 @@ test('family transition runner contract keeps generic execution in OPL and domai
   assert.equal(contract.contract_kind, 'opl_family_transition_runner_contract.v1');
   assert.equal(contract.runner_model, 'domain_declared_transition_table');
   assert.equal(contract.contract_version, 'family-transition-runner.v1');
-  assert.equal(packageJson.exports['./family-transition-runner'], './dist/family-transition-runner.js');
+  assert.equal(packageJson.exports['./family-transition-runner'], './dist/modules/stagecraft/family-transition-runner.js');
   assert.deepEqual(contract.oracle_ingestion.supported_surfaces, ['mag_grant_transition_oracle']);
   assert.ok((contract.oracle_ingestion.adapter_boundary.opl as string[]).includes('adapt oracle fixtures into matrix cases'));
   assert.ok((contract.oracle_ingestion.adapter_boundary.domain_agent as string[]).includes('fundability verdict'));

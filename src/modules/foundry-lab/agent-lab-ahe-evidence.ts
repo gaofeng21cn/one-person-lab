@@ -1,6 +1,6 @@
 import { AGENT_LAB_AUTHORITY_BOUNDARY } from './agent-lab-authority.ts';
 import type { AgentLabSuite, AgentLabTaskManifest } from './agent-lab.ts';
-import { stableId } from '../runway/family-runtime-ids.ts';
+import { stableId } from '../runway/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 

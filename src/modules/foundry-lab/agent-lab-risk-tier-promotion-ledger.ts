@@ -2,7 +2,7 @@ import fs from 'node:fs';
 
 import { assessIndependentAiReviewReceipt } from './agent-lab.ts';
 import { AGENT_LAB_PROMOTION_AUTHORITY_BOUNDARY } from './agent-lab-promotion.ts';
-import { ensureOplStateDir, resolveOplStatePaths } from '../runway/runtime-state-paths.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from '../runway/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 

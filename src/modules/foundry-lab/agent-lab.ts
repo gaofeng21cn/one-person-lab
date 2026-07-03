@@ -1,4 +1,4 @@
-import { stableId } from '../runway/family-runtime-ids.ts';
+import { stableId } from '../runway/index.ts';
 import { AGENT_LAB_AUTHORITY_BOUNDARY, FORBIDDEN_TRUE_AUTHORITY_FLAGS } from './agent-lab-authority.ts';
 import {
   isFixtureReviewReceipt,

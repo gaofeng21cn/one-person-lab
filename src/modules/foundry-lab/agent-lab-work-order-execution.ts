@@ -16,7 +16,7 @@ import {
   runCodexCommandStreaming,
 } from '../runway/codex.ts';
 import { FrameworkContractError } from '../charter/contracts.ts';
-import { stableId } from '../runway/family-runtime-ids.ts';
+import { stableId } from '../runway/index.ts';
 import {
   buildExecutionPlanMarkdown,
   buildExecutionReportMarkdown,

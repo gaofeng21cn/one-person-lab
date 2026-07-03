@@ -5,7 +5,7 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..', '..');
-const modulePath = 'src/stage-run-kernel.ts';
+const modulePath = 'src/modules/stagecraft/stage-run-kernel.ts';
 
 test('StageRun read model rejects wrong producer receipt as terminal authority', async () => {
   const module = await import(pathToFileURL(path.join(repoRoot, modulePath)).href);

@@ -56,7 +56,7 @@ test('native helper prebuild script handles platform executable names', () => {
   const prebuildScript = read('scripts/native-helper-prebuild.mjs');
   const cacheScript = read('scripts/native-helper-cache.mjs');
   const smokeScript = read('scripts/native-helper-family-smoke.mjs');
-  const runtime = read('src/native-helper-runtime.ts');
+  const runtime = read('src/modules/runway/native-helper-runtime.ts');
 
   assert.match(prebuildScript, /targetTriple\.startsWith\('win32-'\)/);
   assert.match(prebuildScript, /--force-local/);
@@ -69,13 +69,13 @@ test('native helper prebuild script handles platform executable names', () => {
 
 test('package.json exposes the canonical family shared release maintenance command', () => {
   assert.equal(packageJson.scripts?.['family:shared-release'], 'node ./scripts/family-shared-release.mjs');
-  assert.equal(packageJson.exports?.['./family-shared-release'], './dist/family-shared-release.js');
+  assert.equal(packageJson.exports?.['./family-shared-release'], './dist/modules/atlas/family-shared-release.js');
   assert.equal(
     fs.existsSync(path.join(repoRoot, 'scripts/family-shared-release.mjs')),
     true,
   );
   assert.equal(
-    fs.existsSync(path.join(repoRoot, 'src/family-shared-release.ts')),
+    fs.existsSync(path.join(repoRoot, 'src/modules/atlas/family-shared-release.ts')),
     true,
   );
 });
@@ -83,10 +83,10 @@ test('package.json exposes the canonical family shared release maintenance comma
 test('package.json exports the unified domain-agent descriptor read model', () => {
   assert.equal(
     packageJson.exports?.['./family-domain-agent-descriptor'],
-    './dist/family-domain-agent-descriptor.js',
+    './dist/modules/atlas/family-domain-agent-descriptor.js',
   );
   assert.equal(
-    fs.existsSync(path.join(repoRoot, 'src/family-domain-agent-descriptor.ts')),
+    fs.existsSync(path.join(repoRoot, 'src/modules/atlas/family-domain-agent-descriptor.ts')),
     true,
   );
 });
@@ -94,10 +94,10 @@ test('package.json exports the unified domain-agent descriptor read model', () =
 test('package.json exports the OPL functional agent runtime harness', () => {
   assert.equal(
     packageJson.exports?.['./functional-agent-runtime-harness'],
-    './dist/functional-agent-runtime-harness.js',
+    './dist/modules/runway/functional-agent-runtime-harness.js',
   );
   assert.equal(
-    fs.existsSync(path.join(repoRoot, 'src/functional-agent-runtime-harness.ts')),
+    fs.existsSync(path.join(repoRoot, 'src/modules/runway/functional-agent-runtime-harness.ts')),
     true,
   );
 });

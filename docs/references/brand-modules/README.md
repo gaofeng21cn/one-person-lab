@@ -75,6 +75,8 @@ OPL Charter
 
 Agent Tool Arsenal / Capability Invocation OS 不新增品牌模块。它以 `OPL Pack` 为 ABI owner；合同是生成/校验材料，Agent ordinary path 只消费 Pack 派生的 execution view、operational card 和 result envelope。`Atlas`、`Stagecraft`、`Console`、`Connect` 分别消费 catalog、use-policy、current-owner projection / ordinary execution view 和 descriptor/export 边界；`Runway` / `Ledger` 只承运执行与 refs evidence。
 
+`OPL Fabric` 属于 Cloud / Product 层的资源底座语义，不新增 Framework 第 11 个源码模块。Fabric 能力由当前十模块组合实现：`Connect` 负责连接、分发和可调用 surface，`Runway` 负责 durable execution / queue / retry-dead-letter，`Pack` 负责 ABI、descriptor 和 generated surface，`Workspace` 负责可检查物理落点，`Ledger` 负责 refs-only evidence / receipt / lineage。`Console` 把这些能力组织成治理、投影、current owner、next action 和 drilldown 页面。
+
 ## 当前完成度对照
 
 以 `OPL Workspace` 为基线的现状评估见 [OPL 品牌模块完成度对照](./current-maturity-against-workspace.md)。
@@ -107,3 +109,5 @@ src/modules/connect
 ```
 
 App / Cloud 产品语义可以把这些模块组合成面向用户的能力、页面、任务入口或托管产品面；Framework 实现仍以这十个目录为源码 owner。`contracts/opl-framework/source-module-map.json` 负责归属校验和历史 root 文件 readback，不替代模块目录。`entrypoints/` 和 `kernel/` 是非品牌技术层：`entrypoints/` 负责 CLI / App / Cloud / adapter 启动连接，`kernel/` 负责共享 runtime primitive；它们不拥有品牌模块，不直接接管产品语义。新代码进入 owning module，跨模块从 owning module `index.ts` 或 `src/modules/index.ts` public exports 走；历史 root 文件归位后，原 root path 不再作为新入口。
+
+源码迁移的下一步以 public interface 收敛为准：模块内代码保持在同一 owning module 内聚，优先使用相对 import；跨模块使用 owning module public index 或 `src/modules/index.ts` 聚合出口；历史 deep import 作为 transition debt 记录到 module dependency policy，带 owner、目标 public entry、迁移门和删除门。物理目录已经归位只能证明 owner 落点清晰，后续模块化质量由 public entry 使用率、deep import debt 收敛和跨模块依赖图共同证明。

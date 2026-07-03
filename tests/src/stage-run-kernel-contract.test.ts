@@ -9,8 +9,8 @@ import './stage-run-kernel-contract-cases/read-model-identity-binding.ts';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const contractPath = 'contracts/opl-framework/stage-run-kernel-contract.json';
-const modulePath = 'src/stage-run-kernel.ts';
-const cockpitModulePath = 'src/app-state-stage-run-cockpit.ts';
+const modulePath = 'src/modules/stagecraft/stage-run-kernel.ts';
+const cockpitModulePath = 'src/modules/console/app-state-stage-run-cockpit.ts';
 
 function readJson<T>(relativePath: string): T {
   return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as T;

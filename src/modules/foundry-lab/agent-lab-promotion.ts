@@ -3,7 +3,7 @@ import {
   type AgentLabIndependentAiReviewAssessment,
 } from './agent-lab.ts';
 import { AGENT_LAB_AUTHORITY_BOUNDARY } from './agent-lab-authority.ts';
-import { stableId } from '../runway/family-runtime-ids.ts';
+import { stableId } from '../runway/index.ts';
 
 export const AGENT_LAB_PROMOTION_AUTHORITY_BOUNDARY = {
   ...AGENT_LAB_AUTHORITY_BOUNDARY,

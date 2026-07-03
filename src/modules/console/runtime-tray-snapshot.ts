@@ -3,7 +3,13 @@ import * as path from 'path';
 import {
   inspectFamilyRuntimeProviderWithLifecycle,
   resolveFamilyRuntimeProviderKind,
-} from '../runway/family-runtime-providers.ts';
+  readMasManagedProviderProjection,
+  projectionFromMasManifestEntry,
+  buildProviderContinuousProof,
+  openFamilyRuntimeSqlite,
+  familyRuntimePaths,
+  listEvents,
+} from '../runway/index.ts';
 import { buildDomainManifestCatalog } from '../atlas/domain-manifest/catalog-builder.ts';
 import type { DomainManifestCatalog } from '../atlas/domain-manifest/catalog-builder.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest, NormalizedSurfaceRef } from '../atlas/domain-manifest/types.ts';
@@ -17,12 +23,7 @@ import { fileSourceRef, firstString, firstStringFromList, nestedRecord, normaliz
 import { buildFamilyStageControlPlaneParity } from '../stagecraft/family-stage-control-plane.ts';
 import { buildStageAttemptWorkbench } from './runtime-tray-stage-attempt-workbench.ts';
 import { buildStageAttemptTrayItems } from './runtime-tray-stage-attempt-items.ts';
-import { readMasManagedProviderProjection } from '../runway/family-runtime-mas-managed-provider-projection.ts';
-import { projectionFromMasManifestEntry } from '../runway/family-runtime-mas-managed-provider-projection.ts';
-import { buildProviderContinuousProof } from '../runway/family-runtime-provider-continuous-proof.ts';
 import { buildProviderProofTrayItem } from './runtime-tray-provider-proof-items.ts';
-import { openFamilyRuntimeSqlite } from '../runway/family-runtime-sqlite.ts';
-import { familyRuntimePaths, listEvents } from '../runway/family-runtime-store.ts';
 import { buildNativeHelperExecutionEnvelope } from './runtime-tray-native-helper-envelope.ts';
 import { buildDomainProjectionIngestion } from './runtime-tray-domain-projection-ingestion.ts';
 import {

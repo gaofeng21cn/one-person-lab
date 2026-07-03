@@ -1,0 +1,54 @@
+{
+  "version": "module-dependency-policy.v1",
+  "scope": "opl_framework_module_dependency_policy",
+  "owner": "OPL Framework",
+  "purpose": "Machine-readable dependency policy for the ten OPL Framework source modules under src/modules.",
+  "state": "active_contract",
+  "machine_boundary": "This contract governs physical source-module imports only. It does not define runtime truth, domain truth, owner receipts, typed blockers, release readiness, product packaging, or a new Framework module.",
+  "source_module_map": "contracts/opl-framework/source-module-map.json",
+  "module_set_policy": {
+    "physical_module_root": "src/modules",
+    "extra_physical_module_roots": "strict",
+    "new_module_requires_source_module_map_update": true
+  },
+  "public_entrypoint_rule": {
+    "module_entrypoint_pattern": "src/modules/<module_id>/index.ts",
+    "aggregate_entrypoint": "src/modules/index.ts",
+    "cross_module_imports": "public_entrypoint",
+    "same_module_deep_imports": "allowed"
+  },
+  "source_scan_scope": {
+    "checker_scope": "all_module_ts_files",
+    "included": "src/modules/<module_id>/**/*.ts",
+    "excluded": "none"
+  },
+  "deep_cross_module_imports": {
+    "failure_mode": "advisory",
+    "strict_flag": "--strict-imports",
+    "reason": "Existing cross-module deep imports are reported for ratcheting. New enforcement can be enabled explicitly without breaking the current transition baseline."
+  },
+  "dependency_policy": {
+    "forbidden_dependencies": [
+      {
+        "from_module_id": "charter",
+        "to_module_id": "console",
+        "reason": "Charter is the framework naming and contract owner; it must not depend on operator projection surfaces."
+      },
+      {
+        "from_module_id": "charter",
+        "to_module_id": "foundry-lab",
+        "reason": "Charter must not depend on agent-improvement surfaces."
+      },
+      {
+        "from_module_id": "charter",
+        "to_module_id": "connect",
+        "reason": "Charter must not depend on distribution or connector surfaces."
+      }
+    ]
+  },
+  "authority_boundary": {
+    "does_not_create_eleventh_module": true,
+    "does_not_move_domain_truth": true,
+    "does_not_authorize_runtime_or_release_readiness": true
+  }
+}

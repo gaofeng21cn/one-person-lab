@@ -16,7 +16,7 @@ import {
   reviewReceiptRef,
 } from './agent-lab-promotion.ts';
 import { buildAgentLabVariantComparisonReadModel } from './agent-lab-variant-comparison.ts';
-import { stableId } from '../runway/family-runtime-ids.ts';
+import { stableId } from '../runway/index.ts';
 
 const AUTHORITY_BOUNDARY = {
   ...AGENT_LAB_AUTHORITY_BOUNDARY,

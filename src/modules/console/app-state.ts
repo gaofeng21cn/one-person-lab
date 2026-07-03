@@ -4,17 +4,21 @@ import {
   readLocalCodexAccessState,
   readLocalCodexDefaultsIfAvailable,
 } from '../connect/local-codex-defaults.ts';
-import { resolveOplStatePaths, ensureOplStateDir } from '../runway/runtime-state-paths.ts';
-import { inspectFamilyRuntimeProviderWithLifecycle, resolveFamilyRuntimeProviderKind } from '../runway/family-runtime-providers.ts';
-import { readMasManagedProviderProjection } from '../runway/family-runtime-mas-managed-provider-projection.ts';
-import { familyRuntimePaths } from '../runway/family-runtime-store.ts';
+import {
+  buildOplEndpoints,
+  ensureOplStateDir,
+  familyRuntimePaths,
+  inspectFamilyRuntimeProviderWithLifecycle,
+  readMasManagedProviderProjection,
+  resolveFamilyRuntimeProviderKind,
+  resolveOplStatePaths,
+} from '../runway/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { buildDeveloperModeLiveCloseoutEvidenceSummary } from './app-state-developer-mode-closeout.ts';
 import { buildReleaseState } from './app-state-release.ts';
 import { buildOplDeveloperModeSurface } from '../connect/system-installation/developer-mode.ts';
 import { resolveCodexVersion } from '../connect/system-installation/engine-helpers.ts';
 import { buildOplModules } from '../connect/system-installation/modules.ts';
-import { buildOplEndpoints } from '../runway/opl-runtime-paths.ts';
 import { readOplWorkspaceRoot } from './system-preferences.ts';
 import path from 'node:path';
 import { resolveDefaultFamilyWorkspaceRoot } from '../connect/opl-skills.ts';

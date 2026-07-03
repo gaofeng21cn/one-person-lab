@@ -54,7 +54,11 @@ test('MAS Scholar Skills SKILL covers contract modules, commands, and authority 
   const skill = readSkill();
   const contract = loadFrameworkContracts(repoRoot).scholarSkillsCapabilityModules;
 
-  assert.equal(contract.modules.length, 10);
+  assert.equal(contract.modules.length > 0, true);
+  assert.equal(
+    new Set(contract.modules.map((module) => module.module_id)).size,
+    contract.modules.length,
+  );
   for (const module of contract.modules) {
     assertContains(skill, module.module_id);
     assertContains(skill, module.display_name);

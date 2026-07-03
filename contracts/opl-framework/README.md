@@ -24,7 +24,7 @@ It is repo-tracked because the current framework needs stable machine-readable i
 - operating-loop adoption governance that maps external Codex work-loop patterns into OPL workstream/thread continuity, goal oracle, heartbeat/steering, artifact-first review, memory refs, receipt, and read-model boundaries without importing an external runtime or authority
 - OPL Flow completion-audit closeout governance for thorough-landing / complete-execution claims, so plan items, lane mappings, fresh executable evidence, missing refs, and `can_claim_complete` are machine-readable before any final completion claim
 - brand-module governance that keeps Charter, Atlas, Workspace, Pack, Stagecraft, Runway, Ledger, Console, Foundry Lab, and Connect at the Workspace-level structural baseline through one registry, one command-surface governance contract, one module-surface contract, native per-module CLI/read-model families, validation/doctor gates, and false-authority boundary
-- source-module governance that keeps the ten Framework brand modules visible as physical `src/modules/<module_id>/` entrypoints and maps legacy root-level `src/` files to their module owner
+- source-module governance that keeps the ten Framework brand modules visible as physical `src/modules/<module_id>/` entrypoints, maps legacy root-level `src/` files to their module owner, and reports cross-module dependency direction / public-entrypoint drift
 - generic Pack OS governance for refs-only capability-pack descriptor intake, install registry entries, content-addressed cache manifests, distribution bundles, resolver/lock projection, artifact lifecycle refs, and review receipt transport without moving domain truth, quality verdicts, publication readiness, artifact body ownership, owner receipt signing, or production maturity into OPL
 - owner-delta-first readiness projection that lets default App/operator surfaces answer current safe action, waiting owner, required delta / receipt / typed blocker, and readiness blocker before exposing raw refs-only audit counters
 - target operating architecture governance that freezes the ideal resource model, single Stage Transition Authority, declarative Domain Pack / authority ABI, surface lanes, small reconciler loops, Atlas/Ledger telemetry, thin App Console default, and Agent Lab improvement boundary without over-specifying diagnostic detail
@@ -131,6 +131,7 @@ These schema files are the machine-readable OPL target architecture surface. The
 - `brand-module-l5-operating-evidence.json`
 - `brand-system-profile.json`
 - `source-module-map.json`
+- `module-dependency-policy.json`
 - `target-operating-architecture-contract.json`
 - `advisory-knowledge-boundary-contract.json`
 - `okf-context-bundle-contract.json`

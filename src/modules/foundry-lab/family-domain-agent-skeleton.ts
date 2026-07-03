@@ -5,7 +5,7 @@ import type { DomainManifestCatalogEntry } from '../atlas/domain-manifest/types.
 import {
   runFamilyRuntimeLifecycleApply,
   type LifecycleApplyMode,
-} from '../runway/family-runtime-lifecycle-index.ts';
+} from '../runway/index.ts';
 import {
   applyProviderClosureEvidence,
   providerClosureEvidence,

@@ -634,10 +634,19 @@ function resolveContractsDirFromCliEntrypoint(): string | null {
     return null;
   }
 
-  const cliEntryRealPath = fs.realpathSync.native(cliEntry);
-  const projectRoot = path.resolve(path.dirname(cliEntryRealPath), '..');
-  const contractsRoot = path.join(projectRoot, 'contracts', 'opl-framework');
-  return hasRequiredContractFiles(contractsRoot) ? contractsRoot : null;
+  let cursor = path.dirname(fs.realpathSync.native(cliEntry));
+  while (true) {
+    const contractsRoot = path.join(cursor, 'contracts', 'opl-framework');
+    if (hasRequiredContractFiles(contractsRoot)) {
+      return contractsRoot;
+    }
+
+    const parent = path.dirname(cursor);
+    if (parent === cursor) {
+      return null;
+    }
+    cursor = parent;
+  }
 }
 
 function resolveExplicitContractsDir(

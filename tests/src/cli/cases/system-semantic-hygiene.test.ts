@@ -85,7 +85,7 @@ test('system semantic hygiene exposes ten machine gates without production or do
   assert.equal(parserGate.status, 'guarded');
   assert.equal(
     parserGate.source_evidence?.some((evidence) =>
-      evidence.ref === 'src/family-runtime-command-parts/registry.ts'
+      evidence.ref === 'src/modules/runway/family-runtime-command-parts/registry.ts'
     ),
     true,
   );

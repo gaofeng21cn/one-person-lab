@@ -5,7 +5,7 @@ import path from 'node:path';
 
 import { AGENT_LAB_AUTHORITY_BOUNDARY } from './agent-lab-authority.ts';
 import { FrameworkContractError } from '../charter/contracts.ts';
-import { stableId } from '../runway/family-runtime-ids.ts';
+import { stableId } from '../runway/index.ts';
 
 const RHO_AUTHORITY_BOUNDARY = {
   ...AGENT_LAB_AUTHORITY_BOUNDARY,

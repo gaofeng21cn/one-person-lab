@@ -29,7 +29,7 @@ const scannedFiles = [
   'docs/references/operating-governance/family-domain-memory-governance.md',
   'docs/references/runtime-substrate/temporal-family-runtime-provider-plan.md',
   'docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md',
-  'src/cli/modules/help-output.ts',
+  'src/entrypoints/cli/modules/help-output.ts',
 ];
 
 const legacyGateway = ['Gate', 'way'].join('');
@@ -182,7 +182,7 @@ test('active baton live-readout hints match current CLI envelopes and existing s
 });
 
 test('root help fast-start examples stay on the current Codex-default path', () => {
-  const helpOutput = read('src/cli/modules/help-output.ts');
+  const helpOutput = read('src/entrypoints/cli/modules/help-output.ts');
 
   assert.match(helpOutput, /default Codex engine/);
   assert.match(helpOutput, /default Codex runtime/);
