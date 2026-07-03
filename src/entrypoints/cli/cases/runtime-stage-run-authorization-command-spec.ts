@@ -11,25 +11,12 @@ import {
   buildUsageError,
   readPayloadFileText,
 } from '../modules/support.ts';
+import {
+  readJsonObject,
+  readOptionalString,
+  readStringList,
+} from '../modules/json-boundary.ts';
 import type { CommandSpec } from '../modules/support.ts';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  const scalar = optionalString(value);
-  if (scalar) {
-    return [scalar];
-  }
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
 
 function optionalGeneration(value: unknown) {
   return Number.isInteger(value) && Number(value) >= 0 ? Number(value) : null;
@@ -46,7 +33,9 @@ function optionalOwnerAnswerKind(value: unknown) {
 }
 
 function optionalRecord(value: unknown) {
-  return isRecord(value) ? value : null;
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
 }
 
 function parseJsonObject(
@@ -54,62 +43,58 @@ function parseJsonObject(
   message: string,
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch (error) {
-    throw buildUsageError(message, spec, {
-      parse_error: error instanceof Error ? error.message : String(error),
-    });
-  }
-  if (!isRecord(parsed)) {
-    throw buildUsageError(message, spec);
-  }
-  return parsed;
+  return readJsonObject(value, spec, {
+    parseErrorMessage: message,
+    objectErrorMessage: message,
+  });
 }
 
 function payloadInput(payload: Record<string, unknown>): StageRunExecutionAuthorizationInput {
   return {
-    stage_run_id: optionalString(payload.stage_run_id),
-    domain_id: optionalString(payload.domain_id),
-    study_id: optionalString(payload.study_id),
+    stage_run_id: readOptionalString(payload.stage_run_id),
+    domain_id: readOptionalString(payload.domain_id),
+    study_id: readOptionalString(payload.study_id),
     domain_context: optionalRecord(payload.domain_context),
-    stage_id: optionalString(payload.stage_id),
+    stage_id: readOptionalString(payload.stage_id),
     generation: optionalGeneration(payload.generation),
     phase: payload.phase === 'closeout' ? 'closeout' : 'launch',
-    selected_executor: optionalString(payload.selected_executor),
-    provider_attempt_ref: optionalString(payload.provider_attempt_ref),
-    stage_attempt_id: optionalString(payload.stage_attempt_id),
-    attempt_lease_ref: optionalString(payload.attempt_lease_ref),
-    attempt_lease_status: optionalString(payload.attempt_lease_status),
-    action_type: optionalString(payload.action_type),
-    work_unit_id: optionalString(payload.work_unit_id),
-    work_unit_fingerprint: optionalString(payload.work_unit_fingerprint),
-    decision: optionalString(payload.decision),
-    reason: optionalString(payload.reason),
-    operator: optionalString(payload.operator),
-    execution_authorization_decision_ref: optionalString(
+    selected_executor: readOptionalString(payload.selected_executor),
+    provider_attempt_ref: readOptionalString(payload.provider_attempt_ref),
+    stage_attempt_id: readOptionalString(payload.stage_attempt_id),
+    attempt_lease_ref: readOptionalString(payload.attempt_lease_ref),
+    attempt_lease_status: readOptionalString(payload.attempt_lease_status),
+    action_type: readOptionalString(payload.action_type),
+    work_unit_id: readOptionalString(payload.work_unit_id),
+    work_unit_fingerprint: readOptionalString(payload.work_unit_fingerprint),
+    decision: readOptionalString(payload.decision),
+    reason: readOptionalString(payload.reason),
+    operator: readOptionalString(payload.operator),
+    execution_authorization_decision_ref: readOptionalString(
       payload.execution_authorization_decision_ref,
     ),
-    workspace_scope_ref: optionalString(payload.workspace_scope_ref),
-    artifact_scope_ref: optionalString(payload.artifact_scope_ref),
-    source_fingerprint: optionalString(payload.source_fingerprint),
-    idempotency_key: optionalString(payload.idempotency_key),
-    current_pointer_ref: optionalString(payload.current_pointer_ref),
-    stage_manifest_ref: optionalString(payload.stage_manifest_ref),
-    owner_answer_ref: optionalString(payload.owner_answer_ref),
+    workspace_scope_ref: readOptionalString(payload.workspace_scope_ref),
+    artifact_scope_ref: readOptionalString(payload.artifact_scope_ref),
+    source_fingerprint: readOptionalString(payload.source_fingerprint),
+    idempotency_key: readOptionalString(payload.idempotency_key),
+    current_pointer_ref: readOptionalString(payload.current_pointer_ref),
+    stage_manifest_ref: readOptionalString(payload.stage_manifest_ref),
+    owner_answer_ref: readOptionalString(payload.owner_answer_ref),
     owner_answer_kind: optionalOwnerAnswerKind(payload.owner_answer_kind),
-    closeout_receipt_ref: optionalString(payload.closeout_receipt_ref),
-    owner_answer_stage_run_id: optionalString(payload.owner_answer_stage_run_id),
+    closeout_receipt_ref: readOptionalString(payload.closeout_receipt_ref),
+    owner_answer_stage_run_id: readOptionalString(payload.owner_answer_stage_run_id),
     owner_answer_generation: optionalGeneration(payload.owner_answer_generation),
-    owner_answer_manifest_ref: optionalString(payload.owner_answer_manifest_ref),
-    owner_answer_current_pointer_ref: optionalString(payload.owner_answer_current_pointer_ref),
-    owner_answer_source_fingerprint: optionalString(payload.owner_answer_source_fingerprint),
-    owner_answer_idempotency_key: optionalString(payload.owner_answer_idempotency_key),
-    quality_gate_attempt_ref: optionalString(payload.quality_gate_attempt_ref),
-    owner_answer_attempt_ref: optionalString(payload.owner_answer_attempt_ref),
-    closeout_refs: stringList(payload.closeout_refs ?? payload.closeout_ref),
-    receipt_ref: optionalString(payload.receipt_ref),
+    owner_answer_manifest_ref: readOptionalString(payload.owner_answer_manifest_ref),
+    owner_answer_current_pointer_ref: readOptionalString(
+      payload.owner_answer_current_pointer_ref,
+    ),
+    owner_answer_source_fingerprint: readOptionalString(
+      payload.owner_answer_source_fingerprint,
+    ),
+    owner_answer_idempotency_key: readOptionalString(payload.owner_answer_idempotency_key),
+    quality_gate_attempt_ref: readOptionalString(payload.quality_gate_attempt_ref),
+    owner_answer_attempt_ref: readOptionalString(payload.owner_answer_attempt_ref),
+    closeout_refs: readStringList(payload.closeout_refs ?? payload.closeout_ref),
+    receipt_ref: readOptionalString(payload.receipt_ref),
   };
 }
 

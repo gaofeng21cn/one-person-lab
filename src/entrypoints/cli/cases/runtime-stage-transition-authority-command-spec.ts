@@ -12,24 +12,18 @@ import {
   buildUsageError,
   readPayloadFileText,
 } from '../modules/support.ts';
+import { readJsonObject } from '../modules/json-boundary.ts';
 import type { CommandSpec } from '../modules/support.ts';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
 
 function parseJsonValue(
   value: string,
   message: string,
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  try {
-    return JSON.parse(value) as unknown;
-  } catch (error) {
-    throw buildUsageError(message, spec, {
-      parse_error: error instanceof Error ? error.message : String(error),
-    });
-  }
+  return readJsonObject(`{"value":${value}}`, spec, {
+    parseErrorMessage: message,
+    objectErrorMessage: message,
+  }).value;
 }
 
 function parsePayloadArg(
@@ -86,13 +80,13 @@ function parseIntentPayload(
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
   const payload = parsePayloadArg(args, spec, 'runtime stage-transition-authority evaluate');
-  if (!isRecord(payload)) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
     throw buildUsageError(
       'runtime stage-transition-authority evaluate payload must be a JSON object.',
       spec,
     );
   }
-  return payload;
+  return payload as Record<string, unknown>;
 }
 
 function parseIntentListPayload(
@@ -102,16 +96,18 @@ function parseIntentListPayload(
   const payload = parsePayloadArg(args, spec, 'runtime stage-transition-authority read-model');
   const intents = Array.isArray(payload)
     ? payload
-    : isRecord(payload)
-      ? payload.intents
+    : payload && typeof payload === 'object' && !Array.isArray(payload)
+      ? (payload as Record<string, unknown>).intents
       : null;
-  if (!Array.isArray(intents) || !intents.every(isRecord)) {
+  if (!Array.isArray(intents)
+    || !intents.every((intent) =>
+      Boolean(intent) && typeof intent === 'object' && !Array.isArray(intent))) {
     throw buildUsageError(
       'runtime stage-transition-authority read-model payload must be a JSON array or {"intents":[...]} object.',
       spec,
     );
   }
-  return intents;
+  return intents as Array<Record<string, unknown>>;
 }
 
 function parseRecordArgs(

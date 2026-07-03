@@ -7,21 +7,19 @@ import {
   buildUsageError,
   readPayloadFileText,
 } from '../modules/support.ts';
+import { readJsonObject } from '../modules/json-boundary.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
 function parseJsonPayload(
   value: string,
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  try {
-    return JSON.parse(value) as unknown;
-  } catch (error) {
-    throw buildUsageError(
+  return readJsonObject(`{"payload":${value}}`, spec, {
+    parseErrorMessage:
       'runtime research-hypothesis-portfolio summary payload must be valid JSON.',
-      spec,
-      { parse_error: error instanceof Error ? error.message : String(error) },
-    );
-  }
+    objectErrorMessage:
+      'runtime research-hypothesis-portfolio summary payload must be valid JSON.',
+  }).payload;
 }
 
 function parseRuntimeResearchHypothesisPortfolioSummaryArgs(
