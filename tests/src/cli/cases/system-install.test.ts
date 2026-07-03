@@ -240,7 +240,7 @@ test('managed companion sync writes materialized skills with readable permission
   } finally {
     fs.chmodSync(mineruSkillPath, 0o644);
     fs.chmodSync(mineruMetaPath, 0o644);
-    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
   }
 });
 
@@ -311,7 +311,7 @@ test('recommended companion skills require their skill payloads and companion bi
     }
     assert.equal(readyById.get('mineru-document-extractor'), 'ready');
   } finally {
-    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
   }
 });
 
@@ -552,7 +552,7 @@ printf 'native repair completed\\n'
     assert.equal(output.install.system_initialize.native_helpers.runtime.status, 'available');
     assert.equal(output.install.system_initialize.native_helpers.health_status, 'ready');
   } finally {
-    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
   }
 });
 
@@ -646,6 +646,62 @@ test('system initialize blocks launch when compatible Codex CLI lacks configured
     assert.equal(codexConfigItem?.action_command_ref, 'opl system configure-codex --api-key-stdin');
     assert.equal(output.system_initialize.core_engines.codex.config_status, 'not_detected');
     assert.equal(output.system_initialize.core_engines.codex.api_key_present, false);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('system initialize accepts existing Codex login without OPL Gateway API key', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-codex-login-home-'));
+  const codexHome = path.join(homeRoot, 'codex-home');
+  const codexFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-codex-login-bin-'));
+  const codexPath = path.join(codexFixtureRoot, 'codex');
+  fs.mkdirSync(codexHome, { recursive: true });
+  fs.writeFileSync(codexPath, '#!/usr/bin/env bash\necho "codex-cli 0.125.0"\n', { mode: 0o755 });
+  fs.writeFileSync(
+    path.join(codexHome, 'auth.json'),
+    JSON.stringify({ auth_mode: 'chatgpt', tokens: { access_token: 'redacted-test-token' } }),
+    'utf8',
+  );
+
+  try {
+    const output = runCli(['system', 'initialize'], {
+      HOME: homeRoot,
+      CODEX_HOME: codexHome,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      PATH: `${codexFixtureRoot}:/usr/bin:/bin`,
+    }) as {
+      system_initialize: {
+        setup_flow: {
+          ready_to_launch: boolean;
+          blocking_items: string[];
+        };
+        checklist: Array<{
+          item_id: string;
+          blocking: boolean;
+          detail_summary: string;
+        }>;
+        core_engines: {
+          codex: {
+            api_key_present: boolean;
+            opl_gateway_configured: boolean;
+            model_access_ready: boolean;
+            model_access_source: string;
+          };
+        };
+      };
+    };
+
+    assert.equal(output.system_initialize.setup_flow.ready_to_launch, true);
+    assert.equal(output.system_initialize.setup_flow.blocking_items.includes('codex_config'), false);
+    const codexConfigItem = output.system_initialize.checklist.find((entry) => entry.item_id === 'codex_config');
+    assert.equal(codexConfigItem?.blocking, false);
+    assert.match(codexConfigItem?.detail_summary ?? '', /Using existing Codex model access/);
+    assert.equal(output.system_initialize.core_engines.codex.api_key_present, false);
+    assert.equal(output.system_initialize.core_engines.codex.opl_gateway_configured, false);
+    assert.equal(output.system_initialize.core_engines.codex.model_access_ready, true);
+    assert.equal(output.system_initialize.core_engines.codex.model_access_source, 'codex_login');
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(codexFixtureRoot, { recursive: true, force: true });

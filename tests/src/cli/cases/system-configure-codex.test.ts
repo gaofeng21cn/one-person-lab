@@ -97,6 +97,60 @@ test('system configure-codex keeps environment overrides over bundled model prof
   }
 });
 
+test('system configure-codex switches an existing custom provider to OPL Gateway when the user submits a key', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-switch-home-'));
+  const codexHome = path.join(homeRoot, 'codex-home');
+
+  try {
+    fs.mkdirSync(codexHome, { recursive: true });
+    fs.writeFileSync(
+      path.join(codexHome, 'config.toml'),
+      [
+        'model_provider = "custom"',
+        'model = "custom-model"',
+        '',
+        '[model_providers.custom]',
+        'name = "custom"',
+        'base_url = "https://custom-provider.example.test/v1"',
+        'experimental_bearer_token = "existing-custom-key"',
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const output = runCliWithStdin(
+      ['system', 'configure-codex', '--api-key-stdin'],
+      'opl-gateway-key\n',
+      {
+        HOME: homeRoot,
+        CODEX_HOME: codexHome,
+        OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      },
+    ) as {
+      codex_config: {
+        status: string;
+        config_path: string;
+        bootstrap: {
+          provider_base_url: string;
+          api_key_present: boolean;
+        };
+      };
+    };
+
+    assert.equal(output.codex_config.status, 'completed');
+    assert.equal(output.codex_config.bootstrap.provider_base_url, 'https://gflabtoken.cn/v1');
+    assert.equal(output.codex_config.bootstrap.api_key_present, true);
+
+    const config = fs.readFileSync(output.codex_config.config_path, 'utf8');
+    assert.match(config, /model_provider = "gflab"/);
+    assert.match(config, /base_url = "https:\/\/gflabtoken\.cn\/v1"/);
+    assert.match(config, /experimental_bearer_token = "opl-gateway-key"/);
+    assert.match(config, /\[model_providers\.custom\]/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('system configure-codex completes a plugin-only Codex config created during first-run install', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-plugin-home-'));
   const codexHome = path.join(homeRoot, 'codex-home');

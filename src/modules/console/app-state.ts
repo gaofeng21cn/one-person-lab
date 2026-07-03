@@ -1,5 +1,9 @@
 import { FrameworkContractError, loadFrameworkContracts } from '../charter/contracts.ts';
-import { readBundledCodexDefaultProfile, readLocalCodexDefaultsIfAvailable } from '../connect/local-codex-defaults.ts';
+import {
+  readBundledCodexDefaultProfile,
+  readLocalCodexAccessState,
+  readLocalCodexDefaultsIfAvailable,
+} from '../connect/local-codex-defaults.ts';
 import { resolveOplStatePaths, ensureOplStateDir } from '../runway/runtime-state-paths.ts';
 import { inspectFamilyRuntimeProviderWithLifecycle, resolveFamilyRuntimeProviderKind } from '../runway/family-runtime-providers.ts';
 import { readMasManagedProviderProjection } from '../runway/family-runtime-mas-managed-provider-projection.ts';
@@ -173,6 +177,7 @@ async function buildProviderState(profile: AppStateProfile) {
 function buildCoreState(profile: AppStateProfile) {
   const defaultProfile = readBundledCodexDefaultProfile();
   const localDefaults = readLocalCodexDefaultsIfAvailable();
+  const codexAccess = readLocalCodexAccessState();
   const codex = resolveCodexVersion({ skipLatestLookup: profile === 'fast' });
   return {
     executor: {
@@ -197,6 +202,12 @@ function buildCoreState(profile: AppStateProfile) {
       provider_base_url: localDefaults?.provider_base_url ?? defaultProfile.base_url,
       config_path: localDefaults?.config_path ?? null,
       api_key_present: Boolean(localDefaults?.provider_api_key),
+      opl_gateway_configured: codexAccess.opl_gateway_configured,
+      model_access_ready: codexAccess.model_access_ready,
+      model_access_status: codexAccess.model_access_ready ? 'ready' : 'missing',
+      model_access_source: codexAccess.model_access_source,
+      codex_login_present: codexAccess.codex_login_present,
+      env_api_key_present: codexAccess.env_api_key_present,
     },
   };
 }

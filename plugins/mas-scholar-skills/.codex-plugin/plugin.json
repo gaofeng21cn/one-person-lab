@@ -1,7 +1,7 @@
 {
   "name": "mas-scholar-skills",
   "version": "0.1.0",
-  "description": "Repo-tracked Codex plugin for MAS Scholar Skills capability modules and refs-only skill entry.",
+  "description": "Repo-tracked Codex plugin for MAS Scholar Skills capability modules, medical-paper specialist skills, and refs-only skill entry.",
   "author": {
     "name": "One Person Lab"
   },
@@ -15,8 +15,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "MAS Scholar Skills",
-    "shortDescription": "Codex skill entry for refs-only scholarly capability modules.",
-    "longDescription": "Provides a Codex skill entry for the ten MAS Scholar Skills capability modules, standard opl scholar-skills CLI readbacks, refs-only materialized candidate packages, and MAS owner-gated authority boundaries.",
+    "shortDescription": "Codex skill entry for MAS medical-paper specialist capabilities.",
+    "longDescription": "Provides a Codex skill entry for the ten MAS Scholar Skills capability modules, the eight MAS medical-paper specialist skills including medical data governance, standard opl scholar-skills CLI readbacks, refs-only materialized candidate packages, and MAS owner-gated authority boundaries.",
     "developerName": "One Person Lab",
     "category": "Productivity",
     "capabilities": [
@@ -25,7 +25,7 @@
       "Research"
     ],
     "defaultPrompt": [
-      "Use MAS Scholar Skills to inspect scholarly capability modules.",
+      "Use MAS Scholar Skills to inspect MAS medical-paper capability modules.",
       "Materialize a refs-only ScholarSkills candidate package.",
       "Check ScholarSkills authority boundaries before a MAS handoff."
     ],

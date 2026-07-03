@@ -67,4 +67,4 @@ opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact
 
 `artifact_body_written=true` 只表示当前 `output-root` 内写了非权威 candidate body 文件；它不改变 `can_mutate_artifact_body=false`，也不授权任何 domain-owned artifact mutation。
 
-Candidate engine 与七个 `medical-*` 专业 Skill 是两层：engine 提供 deterministic refs-only body 和 receipt metadata；`medical-manuscript-writing`、`medical-manuscript-review`、`medical-figure-design`、`medical-research-lit`、`medical-statistical-review`、`medical-table-design`、`medical-submission-prep` 提供 Codex 可执行的专业 playbook。OPL Connect 负责把这些 Skill 同步到 workspace / quest discovery path；MAS 负责消费、采纳或 route-back。
+Candidate engine 与八个专业 Skill 是两层：engine 提供 deterministic refs-only body 和 receipt metadata；`medical-manuscript-writing`、`medical-manuscript-review`、`medical-figure-design`、`medical-research-lit`、`medical-statistical-review`、`medical-table-design`、`medical-submission-prep`、`medical-data-governance` 提供 Codex 可执行的专业 playbook。`medical-data-governance` 消费 Data engine 产生的候选 lineage / manifest / lifecycle refs，并把临床数据治理问题交回 MAS owner gate。OPL Connect 负责把这些 Skill 同步到 workspace / quest discovery path；MAS 负责消费、采纳或 route-back。

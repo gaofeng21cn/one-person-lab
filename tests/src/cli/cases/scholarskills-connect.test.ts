@@ -9,6 +9,7 @@ const MAS_MEDICAL_PROFESSIONAL_SKILL_PACK_IDS = [
   'medical-statistical-review',
   'medical-table-design',
   'medical-submission-prep',
+  'medical-data-governance',
 ] as const;
 const MAS_MEDICAL_SPECIALIST_SKILL_PACK_IDS = MAS_MEDICAL_PROFESSIONAL_SKILL_PACK_IDS.slice(1);
 

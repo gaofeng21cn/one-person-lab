@@ -99,6 +99,15 @@ export const MAS_SCHOLAR_SKILLS_PROFILE_PACKS: MasScholarSkillsPack[] = [
     default_by_profile: true,
     missing_source_status: 'source-missing',
   },
+  {
+    pack_id: 'medical-data-governance',
+    skill_dir: 'medical-data-governance',
+    label: 'Medical data governance specialist',
+    role: 'specialist_entry',
+    required_by_profile: false,
+    default_by_profile: true,
+    missing_source_status: 'source-missing',
+  },
 ];
 
 function sourceSkillEntryPath(pluginSourcePath: string, skillDir: string) {

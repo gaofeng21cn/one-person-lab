@@ -5,7 +5,11 @@ import {
   inspectFamilyRuntimeProviderWithLifecycle,
   resolveFamilyRuntimeProviderKind,
 } from '../../runway/family-runtime-providers.ts';
-import { readBundledCodexDefaultProfile, readLocalCodexDefaultsIfAvailable } from '../local-codex-defaults.ts';
+import {
+  readBundledCodexDefaultProfile,
+  readLocalCodexAccessState,
+  readLocalCodexDefaultsIfAvailable,
+} from '../local-codex-defaults.ts';
 import { buildNativeHelperHealthStatus } from '../../runway/native-helper-runtime.ts';
 import { buildOplEndpoints } from '../../runway/opl-runtime-paths.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
@@ -34,6 +38,7 @@ export async function buildOplEnvironment(
   const statePaths = ensureOplStateDir(resolveOplStatePaths());
   const seedInstallManifest = readOplSeedInstallManifest();
   const codexDefaults = readLocalCodexDefaultsIfAvailable();
+  const codexAccess = readLocalCodexAccessState();
   const codexDefaultProfile = readBundledCodexDefaultProfile();
   const codexBinary = await withOplSystemInitializeEventPhase(
     events,
@@ -103,6 +108,7 @@ export async function buildOplEnvironment(
       ? 'detected'
       : 'api_key_missing'
     : 'not_detected';
+  const codexModelAccessStatus = codexAccess.model_access_ready ? 'ready' : 'missing';
   const codexHealthStatus =
     codexBinary.installed
       && codexBinary.version_status === 'compatible'
@@ -145,6 +151,12 @@ export async function buildOplEnvironment(
           health_status: codexHealthStatus,
           config_status: codexConfigStatus,
           api_key_present: Boolean(codexDefaults?.provider_api_key),
+          opl_gateway_configured: codexAccess.opl_gateway_configured,
+          model_access_ready: codexAccess.model_access_ready,
+          model_access_status: codexModelAccessStatus,
+          model_access_source: codexAccess.model_access_source,
+          codex_login_present: codexAccess.codex_login_present,
+          env_api_key_present: codexAccess.env_api_key_present,
           issues: codexIssues,
         },
         family_runtime_provider: {
@@ -196,6 +208,8 @@ export async function buildOplEnvironment(
         manifest_file: statePaths.install_manifest_file,
         api_key_status: codexConfigStatus,
         api_key_present: Boolean(codexDefaults?.provider_api_key),
+        model_access_status: codexModelAccessStatus,
+        model_access_ready: codexAccess.model_access_ready,
         readiness_claim: 'not_claimed',
         can_claim_ready_or_current: false,
       } : {
@@ -210,6 +224,8 @@ export async function buildOplEnvironment(
         manifest_file: statePaths.install_manifest_file,
         api_key_status: codexConfigStatus,
         api_key_present: Boolean(codexDefaults?.provider_api_key),
+        model_access_status: codexModelAccessStatus,
+        model_access_ready: codexAccess.model_access_ready,
         readiness_claim: 'not_claimed',
         can_claim_ready_or_current: false,
       },

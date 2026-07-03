@@ -18,6 +18,18 @@ OPL Framework 只负责通用 workspace/source intake shell：
 
 OPL 不判断医学来源、基金材料、视觉素材、引用质量、研究路线、fundability、visual direction 或任何 domain source truth。真实 source body、workspace state、work-in-progress 和运行输入应位于外部 workspace root；developer checkout 不承载这些运行状态。
 
+## 临床数据治理使用方式
+
+`medical-data-governance` 可以直接消费 OPL 基座的通用 lifecycle 能力，但只把它们当作 locator、index、projection 和 receipt transport：
+
+- workspace/source locator refs 定位数据资产、机构存储、外部 bucket、数据库或文献来源；
+- memory/data-asset registry refs 帮助 MAS 找到数据资产索引、manifest、dictionary、codebook、lineage 和 study binding；
+- artifact lifecycle refs 表达数据派生物、stage output、candidate package、archive、restore proof 和 tombstone candidate；
+- retention / restore / provenance refs 说明数据保留、冷存储、恢复证明和清理候选；
+- refs-only ledger / owner-gate handoff refs 把治理发现交回 MAS 或下游 domain owner。
+
+OPL 基座不接管临床数据 body、临床语义映射、source readiness verdict、清洗/归一化接受、study binding 接受、不可逆物理删除、owner receipt、typed blocker、human gate 或 publication readiness。这些判断由 MAS 或对应 Health / domain owner 消费 `medical-data-governance` 的 refs 后签发。
+
 ## 动态证据入口
 
 | source/workspace 面 | 稳定读法 | 当前机器入口 |

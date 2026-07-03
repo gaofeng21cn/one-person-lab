@@ -1,11 +1,11 @@
 ---
 name: mas-scholar-skills
-description: "Operate MAS Scholar Skills as a Codex skill pack for repo-tracked scholarly capability modules, standard opl scholar-skills CLI readbacks, refs-only materialized candidate packages, and MAS owner-gated authority boundaries. Use when Codex needs ScholarSkills module guidance without claiming runtime, domain, quality, artifact, owner receipt, or production authority."
+description: "Operate MAS Scholar Skills as a Codex skill pack for MAS medical-paper capability modules, syncable professional specialist skills, standard opl scholar-skills CLI readbacks, refs-only materialized candidate packages, and MAS owner-gated authority boundaries. Use when Codex needs ScholarSkills module guidance without claiming runtime, domain, quality, artifact, owner receipt, typed blocker, publication readiness, or production authority."
 ---
 
 # MAS Scholar Skills
 
-Use MAS Scholar Skills as a repo-tracked Codex entry for scholarly capability modules. Treat `contracts/opl-framework/scholar-skills-capability-modules.json` and `src/scholar-skills.ts` as the source of truth.
+Use MAS Scholar Skills as a repo-tracked Codex entry for MAS medical-paper capability modules and syncable professional specialist skills. Treat `contracts/opl-framework/scholar-skills-capability-modules.json` and the OPL Framework `scholar-skills` builders as the source of truth for OPL CLI/readback behavior; treat the external `mas-scholar-skills` repo as the source for the specialist Skill bodies.
 
 ## Boundary
 
@@ -25,8 +25,21 @@ The ten MAS Scholar Skills modules are:
 - `opl.scholarskills.write` - Scholar Write
 - `opl.scholarskills.review` - Scholar Review
 - `opl.scholarskills.submit` - Scholar Submit
-- `opl.scholarskills.data` - Scholar Data
+- `opl.scholarskills.data` - Medical Data Governance legacy descriptor
 - `opl.scholarskills.intake` - Scholar Intake
+
+The default syncable professional specialist skills are:
+
+- `medical-research-lit`
+- `medical-manuscript-writing`
+- `medical-manuscript-review`
+- `medical-figure-design`
+- `medical-statistical-review`
+- `medical-table-design`
+- `medical-submission-prep`
+- `medical-data-governance`
+
+Use `medical-data-governance` for clinical cohort data asset manifests, data dictionaries, cleaning/normalization readiness, version impact, study data binding, privacy/access tier, retention/lifecycle guardrails, and refs-only source-readiness route-back. The legacy `opl.scholarskills.data` module id remains a readback compatibility key; new human-facing guidance should foreground `medical-data-governance`.
 
 ## CLI
 

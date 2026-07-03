@@ -157,7 +157,7 @@ export async function buildOplInitialize(
   const codex = environment.core_engines.codex;
   const familyRuntimeProvider = environment.core_engines.family_runtime_provider;
   const codexCliReady = codex.health_status === 'ready';
-  const codexConfigReady = codex.config_status === 'detected' && codex.api_key_present === true;
+  const codexConfigReady = codex.model_access_ready === true;
   const providerReady = familyRuntimeProvider.health_status === 'ready';
   const recommendedSkillsStatus = buildRecommendedSkillsStatus(recommendedSkills);
   const coreReady =
@@ -197,8 +197,8 @@ export async function buildOplInitialize(
   });
   const configureCodexAction = buildInitializeActionDescriptor({
     action_id: 'configure_codex_api_key',
-    label: 'Configure Codex API key',
-    description: 'Write the local Codex provider config from the product default endpoint, current initial model profile, and the user-provided API key.',
+    label: 'Configure OPL Gateway',
+    description: 'Write the local Codex provider config from the OPL Gateway endpoint, current initial model profile, and the user-provided access key.',
     section_id: 'environment',
     endpoint: endpoints.system_action,
     method: 'POST',
@@ -309,8 +309,8 @@ export async function buildOplInitialize(
     }),
     buildInitializeChecklistItem({
       item_id: 'codex_config',
-      label: 'Codex API Configuration',
-      status: codexConfigReady ? 'ready' : codex.config_status,
+      label: 'Model Access',
+      status: codexConfigReady ? 'ready' : codex.model_access_status ?? codex.config_status,
       required: true,
       blocking: !codexConfigReady,
       readiness_layer: 'core_launch',
@@ -318,18 +318,24 @@ export async function buildOplInitialize(
       user_action_required: !codexConfigReady,
       auto_action_available: false,
       action_command_ref: actionCommandRef(codexConfigReady ? openEnvironmentAction : configureCodexAction),
-      last_attempt: lastAttempt(codexConfigReady ? 'ready' : codex.config_status, {
+      last_attempt: lastAttempt(codexConfigReady ? 'ready' : codex.model_access_status ?? codex.config_status, {
         config_path: codex.config_path ?? null,
         api_key_present: codex.api_key_present,
+        opl_gateway_configured: codex.opl_gateway_configured === true,
+        model_access_source: codex.model_access_source ?? null,
         provider_base_url: codex.provider_base_url ?? null,
       }),
       next_visible_step: codexConfigReady
-        ? 'Core readiness is available.'
-        : 'Enter a Codex API key; the product default provider endpoint and model profile stay App-managed.',
+        ? codex.opl_gateway_configured === true
+          ? 'Core readiness is available through OPL Gateway.'
+          : 'Existing Codex model access is available; OPL Gateway can be configured later from Settings.'
+        : 'Enter an OPL Gateway access key, or configure Codex model access before continuing.',
       section_id: 'environment',
       detail_summary: codexConfigReady
-        ? `Codex provider is configured for ${codex.default_model ?? 'the local default model'}.`
-        : 'Enter your Codex API key; OPL will use the product default provider endpoint and the current maintainer initial model profile.',
+        ? codex.opl_gateway_configured === true
+          ? `OPL Gateway is configured for ${codex.default_model ?? 'the local default model'}.`
+          : 'Using existing Codex model access; this skips OPL Gateway setup for first launch only.'
+        : 'Enter your OPL Gateway access key; OPL will use the product default provider endpoint and the current maintainer initial model profile.',
       endpoint: endpoints.system_environment,
       action_endpoint: endpoints.system_action,
       action: codexConfigReady ? openEnvironmentAction : configureCodexAction,

@@ -668,11 +668,11 @@ function buildCapabilityTaskAwarenessRefs(input: BuildSettingsControlCenterInput
 function actionState(action: SettingsAction, input: BuildSettingsControlCenterInput) {
   if (action.action_id === 'settings_repair_model_access') {
     const codex = asRecord(asRecord(input.core).codex);
-    return codex.api_key_present === true ? 'ready' : 'attention_needed';
+    return codex.model_access_ready === true ? 'ready' : 'attention_needed';
   }
   if (action.action_id === 'settings_configure_webui_api_key') {
     const codex = asRecord(asRecord(input.core).codex);
-    return codex.api_key_present === true ? 'ready' : 'attention_needed';
+    return codex.opl_gateway_configured === true ? 'ready' : 'attention_needed';
   }
   if (action.action_id === 'settings_sync_capabilities' || action.action_id === 'settings_apply_opl_packages') {
     const summary = asRecord(asRecord(input.modules).summary);
@@ -790,7 +790,8 @@ function buildAppSettingsReadModel(
   const temporal = asRecord(asRecord(input.provider).temporal);
   const workspaceRoot = asRecord(input.paths.workspace_root);
   const familyWorkspaceRoot = asRecord(input.paths.family_workspace_root);
-  const modelAccessStatus = codex.api_key_present === true ? 'ready' : 'attention_needed';
+  const modelAccessReady = codex.model_access_ready === true;
+  const modelAccessStatus = modelAccessReady ? 'ready' : 'attention_needed';
   const temporalStatus = asString(temporal.health_status) ?? asString(temporal.status);
   const moduleHealth = `${moduleSummary.healthy_default_modules_count ?? 0}/${moduleSummary.default_modules_count ?? 0}`;
   const capabilityTaskAwarenessRefs = buildCapabilityTaskAwarenessRefs(input);
@@ -844,14 +845,20 @@ function buildAppSettingsReadModel(
       config_path: asString(codex.config_path),
       profile_source: codex.config_path ? 'local_codex_config' : 'bundled_opl_default_profile',
       api_key_present: codex.api_key_present === true,
+      opl_gateway_configured: codex.opl_gateway_configured === true,
+      model_access_ready: modelAccessReady,
+      model_access_source: asString(codex.model_access_source) ?? 'missing',
       access_status: modelAccessStatus,
       repair_action_id: 'settings_repair_model_access',
       shell_must_not_rewrite_policy: true,
     },
     access_api_key: {
-      source_ref: 'app_state.core.codex.api_key_present',
+      source_ref: 'app_state.core.codex.model_access_ready',
       status: modelAccessStatus,
       api_key_present: codex.api_key_present === true,
+      opl_gateway_configured: codex.opl_gateway_configured === true,
+      model_access_ready: modelAccessReady,
+      model_access_source: asString(codex.model_access_source) ?? 'missing',
       config_path: asString(codex.config_path),
       required_for: 'agent_tasks_from_settings',
       repair_action_id: 'settings_repair_model_access',
@@ -949,14 +956,14 @@ function buildIssueQueue(input: BuildSettingsControlCenterInput) {
   const moduleItems = asList(input.modules.items);
   const temporal = asRecord(asRecord(input.provider).temporal);
 
-  if (codex.api_key_present !== true) {
+  if (codex.model_access_ready !== true) {
     issues.push({
       issue_id: 'model_access_manual_required',
       status_code: 'manual_required',
       label: 'Model access is not configured',
-      user_message: 'Codex model access is missing or unreadable. Configure the API key before running WebUI or agent tasks from Settings.',
+      user_message: 'Codex model access is missing or unreadable. Configure OPL Gateway before running WebUI or agent tasks from Settings.',
       severity: 'warning',
-      source_ref: 'app_state.core.codex.api_key_present',
+      source_ref: 'app_state.core.codex.model_access_ready',
       recommended_action_id: 'settings_configure_webui_api_key',
       route: issueRoute('settings_configure_webui_api_key'),
     });
@@ -1066,7 +1073,7 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
     action_surface: 'opl app action execute --json',
     allowed_action_ids: [...SETTINGS_CONTROL_CENTER_ACTION_IDS],
     status_summary: {
-      model_access: codex.api_key_present === true ? 'ready' : 'attention_needed',
+      model_access: codex.model_access_ready === true ? 'ready' : 'attention_needed',
       codex_version: asString(codex.parsed_version) ?? asString(codex.version) ?? 'missing',
       module_health: `${moduleSummary.healthy_default_modules_count ?? 0}/${moduleSummary.default_modules_count ?? 0}`,
       temporal_provider: statusTone(asString(temporal.status) ?? asString(temporal.health_status)),

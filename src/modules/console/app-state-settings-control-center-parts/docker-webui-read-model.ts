@@ -55,7 +55,8 @@ export function buildDockerWebuiSettingsReadModel(
   issueQueue: Array<Record<string, unknown>>,
 ) {
   const codex = asRecord(asRecord(input.core).codex);
-  const apiKeyPresent = codex.api_key_present === true;
+  const modelAccessReady = codex.model_access_ready === true;
+  const oplGatewayConfigured = codex.opl_gateway_configured === true;
   const dockerActionIds = [
     'settings_install_docker_webui',
     'settings_configure_webui_api_key',
@@ -64,9 +65,10 @@ export function buildDockerWebuiSettingsReadModel(
     'settings_open_docker_webui',
     'settings_diagnose_docker_webui',
   ];
-  const nextActionIds = apiKeyPresent
+  const nextActionIds = modelAccessReady
     ? [
         'settings_install_docker_webui',
+        'settings_configure_webui_api_key',
         'settings_select_webui_seed',
         'settings_run_webui_startup_maintenance',
         'settings_diagnose_docker_webui',
@@ -85,12 +87,15 @@ export function buildDockerWebuiSettingsReadModel(
     source_ref: 'app_state.settings_control_center.action_catalog + app_state.core.codex',
     doctor_surface: 'opl system docker-webui doctor --json',
     doctor_read_model_ref: 'docker_webui_doctor',
-    ordinary_status: apiKeyPresent ? 'action_available' : 'attention_needed',
+    ordinary_status: modelAccessReady ? 'action_available' : 'attention_needed',
     one_click_install: settingsTaskRef(taskEntries, 'settings_install_docker_webui'),
     api_key_configuration: {
       ...settingsTaskRef(taskEntries, 'settings_configure_webui_api_key'),
-      status: apiKeyPresent ? 'ready' : 'attention_needed',
-      api_key_present: apiKeyPresent,
+      status: oplGatewayConfigured ? 'ready' : 'attention_needed',
+      api_key_present: codex.api_key_present === true,
+      opl_gateway_configured: oplGatewayConfigured,
+      model_access_ready: modelAccessReady,
+      model_access_source: asString(codex.model_access_source) ?? 'missing',
       config_path: asString(codex.config_path),
       secret_payload_policy: 'stdin_only_never_json_or_logs',
       write_surface: 'opl system configure-codex --api-key-stdin --json',

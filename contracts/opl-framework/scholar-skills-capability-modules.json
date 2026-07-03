@@ -719,12 +719,18 @@
     {
       "module_id": "opl.scholarskills.data",
       "brand_family": "MAS Scholar Skills",
-      "display_name": "Scholar Data",
+      "display_name": "Medical Data Governance",
+      "specialist_skill_id": "medical-data-governance",
+      "legacy_module_descriptor": true,
+      "legacy_module_id_policy": "opl.scholarskills.data_remains_descriptor_and_readback_compatibility_key; active_specialist_work_uses_medical-data-governance",
       "stage_fit": [
         "source_data_profile",
         "data_dictionary",
         "analysis_dataset_handoff",
+        "data_asset_manifest_review",
         "data_asset_contract_review",
+        "cleaning_normalization_readiness_review",
+        "version_diff_impact_review",
         "semantic_readiness_review",
         "study_data_binding_review",
         "privacy_access_tier_review",
@@ -751,7 +757,7 @@
       ],
       "invocation_entries": [
         {
-          "entry_id": "scholar_data_descriptor",
+          "entry_id": "medical_data_governance_descriptor",
           "entry_kind": "descriptor_readback",
           "command": "opl scholar-skills inspect --module opl.scholarskills.data --json",
           "mutation": false,
@@ -762,7 +768,7 @@
         {
           "ref_id": "scholarskills_data_candidate_refs",
           "ref_kind": "candidate_artifact_ref",
-          "role": "data_profile_candidate_output",
+          "role": "medical_data_governance_candidate_output",
           "body_policy": "body_owned_by_domain_artifact_surface"
         }
       ],
@@ -777,21 +783,22 @@
       "quality_evidence": {
         "evidence_kind": "candidate_data_quality_refs",
         "required_ref_shapes": [
-          "source_data_ref",
-          "dictionary_ref",
-          "data_qc_ref",
+          "data_asset_manifest_ref",
+          "data_dictionary_ref",
+          "codebook_ref",
+          "cleaning_normalization_readiness_ref",
+          "derived_variable_registry_ref",
+          "source_lineage_ref",
+          "source_readiness_receipt_ref",
+          "cohort_definition_lock_ref",
+          "version_diff_impact_ref",
           "dataset_manifest_ref",
-          "registry_lineage_ref",
-          "semantic_readiness_ref",
           "study_binding_ref",
           "privacy_access_tier_ref",
           "retention_guardrail_ref",
           "storage_tier_ref",
-          "authoritative_body_boundary_ref",
-          "derived_copy_inventory_ref",
-          "analytical_format_strategy_ref",
-          "cold_restore_proof_ref",
-          "read_model_boundary_ref"
+          "lifecycle_catalog_ref",
+          "owner_gate_handoff_ref"
         ],
         "can_claim_quality_verdict": false
       },

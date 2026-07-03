@@ -13,6 +13,31 @@ export type LocalCodexDefaults = {
   provider_name: string | null;
   provider_base_url: string | null;
   provider_api_key: string | null;
+  opl_gateway_configured: boolean;
+  selected_provider_api_key_present: boolean;
+};
+
+export type LocalCodexModelAccessSource =
+  | 'opl_gateway'
+  | 'codex_login'
+  | 'custom_provider'
+  | 'env_api_key'
+  | 'missing';
+
+export type LocalCodexAccessState = {
+  config_path: string;
+  auth_path: string;
+  config_found: boolean;
+  auth_found: boolean;
+  api_key_present: boolean;
+  opl_gateway_configured: boolean;
+  codex_login_present: boolean;
+  env_api_key_present: boolean;
+  model_access_ready: boolean;
+  model_access_source: LocalCodexModelAccessSource;
+  provider_base_url: string | null;
+  model: string | null;
+  reasoning_effort: string | null;
 };
 
 export type BootstrapLocalCodexDefaultsInput = Partial<{
@@ -38,9 +63,15 @@ export type CodexDefaultProfile = {
   profile_generated_at: string;
 };
 
+export const OPL_GATEWAY_BASE_URL = 'https://gflabtoken.cn/v1';
+
 function normalizeOptionalString(value: string | null | undefined) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function stripTomlInlineComment(line: string) {
@@ -97,11 +128,26 @@ function parseTomlValue(rawValue: string) {
   return trimmed;
 }
 
-function resolveLocalCodexConfigPath() {
+function resolveLocalCodexHome() {
   const explicitCodexHome = normalizeOptionalString(process.env.CODEX_HOME);
   const homeDir = normalizeOptionalString(process.env.HOME) ?? os.homedir();
-  const codexHome = explicitCodexHome ?? path.join(homeDir, '.codex');
-  return path.join(codexHome, 'config.toml');
+  return explicitCodexHome ?? path.join(homeDir, '.codex');
+}
+
+function resolveLocalCodexConfigPath() {
+  return path.join(resolveLocalCodexHome(), 'config.toml');
+}
+
+function resolveLocalCodexAuthPath() {
+  return path.join(resolveLocalCodexHome(), 'auth.json');
+}
+
+function normalizeBaseUrl(value: string | null | undefined) {
+  return normalizeOptionalString(value)?.replace(/\/+$/, '') ?? null;
+}
+
+function isOplGatewayBaseUrl(value: string | null | undefined) {
+  return normalizeBaseUrl(value) === OPL_GATEWAY_BASE_URL;
 }
 
 function quoteTomlString(value: string) {
@@ -111,6 +157,8 @@ function quoteTomlString(value: string) {
 function resolveBundledCodexDefaultProfilePath() {
   return path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
+    '..',
+    '..',
     '..',
     'contracts',
     'opl-framework',
@@ -341,6 +389,7 @@ function readBootstrapInputFromEnv(): BootstrapLocalCodexDefaultsInput {
 
 export function bootstrapLocalCodexDefaults(input: BootstrapLocalCodexDefaultsInput = {}) {
   const defaultProfile = readBundledCodexDefaultProfile();
+  const explicitProviderApiKey = normalizeOptionalString(input.provider_api_key);
   const merged = {
     ...buildBootstrapInputFromProfile(defaultProfile),
     ...compactBootstrapInput(readBootstrapInputFromEnv()),
@@ -353,7 +402,7 @@ export function bootstrapLocalCodexDefaults(input: BootstrapLocalCodexDefaultsIn
   const configPath = resolveLocalCodexConfigPath();
   const existing = readCompleteExistingCodexDefaultsForBootstrap(configPath);
 
-  if (existing?.provider_api_key && !merged.overwrite_existing) {
+  if (existing?.provider_api_key && !explicitProviderApiKey && !merged.overwrite_existing) {
     return {
       status: 'skipped_existing_config' as const,
       config_path: configPath,
@@ -415,8 +464,7 @@ export function bootstrapLocalCodexDefaults(input: BootstrapLocalCodexDefaultsIn
   };
 }
 
-function readLocalCodexDefaults(): LocalCodexDefaults {
-  const configPath = resolveLocalCodexConfigPath();
+function readLocalCodexConfigValues(configPath: string) {
   if (!fs.existsSync(configPath) || !fs.statSync(configPath).isFile()) {
     throw new FrameworkContractError(
       'surface_not_found',
@@ -469,6 +517,12 @@ function readLocalCodexDefaults(): LocalCodexDefaults {
     }
   }
 
+  return { rootValues, providerValues };
+}
+
+function readLocalCodexDefaults(): LocalCodexDefaults {
+  const configPath = resolveLocalCodexConfigPath();
+  const { rootValues, providerValues } = readLocalCodexConfigValues(configPath);
   const model = normalizeOptionalString(rootValues.get('model'));
   if (!model) {
     throw new FrameworkContractError(
@@ -482,6 +536,12 @@ function readLocalCodexDefaults(): LocalCodexDefaults {
 
   const providerId = normalizeOptionalString(rootValues.get('model_provider'));
   const providerEntry = providerId ? providerValues.get(providerId) ?? null : null;
+  const providerBaseUrl = normalizeOptionalString(providerEntry?.get('base_url'));
+  const providerApiKey = normalizeOptionalString(providerEntry?.get('experimental_bearer_token'));
+  const oplGatewayConfigured = [...providerValues.values()].some((entry) => (
+    isOplGatewayBaseUrl(entry.get('base_url'))
+    && Boolean(normalizeOptionalString(entry.get('experimental_bearer_token')))
+  ));
 
   return {
     config_path: configPath,
@@ -489,8 +549,10 @@ function readLocalCodexDefaults(): LocalCodexDefaults {
     model,
     reasoning_effort: normalizeOptionalString(rootValues.get('model_reasoning_effort')),
     provider_name: normalizeOptionalString(providerEntry?.get('name')),
-    provider_base_url: normalizeOptionalString(providerEntry?.get('base_url')),
-    provider_api_key: normalizeOptionalString(providerEntry?.get('experimental_bearer_token')),
+    provider_base_url: providerBaseUrl,
+    provider_api_key: providerApiKey,
+    opl_gateway_configured: oplGatewayConfigured,
+    selected_provider_api_key_present: Boolean(providerApiKey),
   };
 }
 
@@ -500,4 +562,78 @@ export function readLocalCodexDefaultsIfAvailable() {
   } catch {
     return null;
   }
+}
+
+function readCodexAuthState(authPath: string) {
+  if (!fs.existsSync(authPath) || !fs.statSync(authPath).isFile()) {
+    return {
+      auth_found: false,
+      codex_login_present: false,
+      auth_api_key_present: false,
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(fs.readFileSync(authPath, 'utf8')) as unknown;
+    const record = isRecord(parsed) ? parsed : {};
+    const authMode = normalizeOptionalString(typeof record.auth_mode === 'string' ? record.auth_mode : undefined);
+    const tokensPresent = record.tokens !== undefined && record.tokens !== null;
+    const authApiKeyPresent = Boolean(
+      normalizeOptionalString(typeof record.OPENAI_API_KEY === 'string' ? record.OPENAI_API_KEY : undefined),
+    );
+
+    return {
+      auth_found: true,
+      codex_login_present: authMode === 'chatgpt' && tokensPresent,
+      auth_api_key_present: authApiKeyPresent,
+    };
+  } catch {
+    return {
+      auth_found: true,
+      codex_login_present: false,
+      auth_api_key_present: false,
+    };
+  }
+}
+
+export function readLocalCodexAccessState(): LocalCodexAccessState {
+  const configPath = resolveLocalCodexConfigPath();
+  const authPath = resolveLocalCodexAuthPath();
+  const defaults = readLocalCodexDefaultsIfAvailable();
+  const auth = readCodexAuthState(authPath);
+  const envApiKeyPresent = Boolean(
+    normalizeOptionalString(process.env.OPL_CODEX_API_KEY)
+    ?? normalizeOptionalString(process.env.CODEX_API_KEY)
+    ?? normalizeOptionalString(process.env.OPENAI_API_KEY),
+  );
+  const selectedOplGateway = Boolean(
+    defaults?.selected_provider_api_key_present
+    && isOplGatewayBaseUrl(defaults.provider_base_url),
+  );
+  const customProviderReady = Boolean(defaults?.selected_provider_api_key_present && !selectedOplGateway);
+  const modelAccessSource: LocalCodexModelAccessSource = selectedOplGateway
+    ? 'opl_gateway'
+    : auth.codex_login_present
+      ? 'codex_login'
+      : customProviderReady || auth.auth_api_key_present
+        ? 'custom_provider'
+        : envApiKeyPresent
+          ? 'env_api_key'
+          : 'missing';
+
+  return {
+    config_path: configPath,
+    auth_path: authPath,
+    config_found: Boolean(defaults),
+    auth_found: auth.auth_found,
+    api_key_present: Boolean(defaults?.provider_api_key),
+    opl_gateway_configured: Boolean(defaults?.opl_gateway_configured),
+    codex_login_present: auth.codex_login_present,
+    env_api_key_present: envApiKeyPresent,
+    model_access_ready: modelAccessSource !== 'missing',
+    model_access_source: modelAccessSource,
+    provider_base_url: defaults?.provider_base_url ?? null,
+    model: defaults?.model ?? null,
+    reasoning_effort: defaults?.reasoning_effort ?? null,
+  };
 }
