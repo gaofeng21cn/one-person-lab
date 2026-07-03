@@ -1,5 +1,12 @@
 import type { FrameworkContracts, JsonRecord } from '../../kernel/types.ts';
 import {
+  countValue as numberValue,
+  record,
+  recordList,
+  stringList,
+  stringValue,
+} from '../../kernel/json-record.ts';
+import {
   OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS,
   buildObservabilitySemanticConventionExportSeed,
   buildObservabilitySemanticConventionReadback,
@@ -24,28 +31,8 @@ const AUTHORITY_BOUNDARY = {
   can_authorize_artifact_export: false,
 };
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
 function firstString(...values: unknown[]) {
   return values.map(stringValue).find((value) => value !== null) ?? null;
-}
-
-function numberValue(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
 function booleanValue(value: unknown) {
@@ -179,12 +166,6 @@ function sourceRefs(snapshot: JsonRecord) {
     role: stringValue(ref.role),
     label: stringValue(ref.label),
   }));
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-    : [];
 }
 
 function selectedSemanticAttempt(snapshot: JsonRecord, attempts: JsonRecord[]) {

@@ -14,6 +14,7 @@ import type {
 import type { FamilyStageCohortLoopStage } from '../stagecraft/index.ts';
 import type { FamilyStageControlPlane } from '../stagecraft/index.ts';
 import type { FamilyStageDescriptor } from '../stagecraft/index.ts';
+import { stringValue as optionalString } from '../../kernel/json-record.ts';
 import {
   insertEvent,
   insertNotification,
@@ -90,10 +91,6 @@ function domainAliases(domainId: FamilyRuntimeDomainId) {
     return new Set(['medautogrant', 'med-autogrant', 'mag']);
   }
   return new Set(['redcube', 'redcube-ai', 'rca']);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function resolvePlane(entry: DomainManifestCatalogEntry): FamilyStageControlPlane | null {

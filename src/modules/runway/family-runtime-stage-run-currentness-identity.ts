@@ -1,13 +1,14 @@
+import { isRecord } from '../../kernel/contract-validation.ts';
+import {
+  stringList,
+  stringValue as optionalString,
+  uniqueStringList,
+} from '../../kernel/json-record.ts';
+
 type JsonRecord = Record<string, unknown>;
 
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
 function recordValue(value: unknown): JsonRecord | null {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? value as JsonRecord
-    : null;
+  return isRecord(value) ? value : null;
 }
 
 function nestedRecord(source: JsonRecord, ...keys: string[]) {
@@ -22,15 +23,8 @@ function firstRecord(...values: Array<JsonRecord | null>) {
   return values.find((value): value is JsonRecord => Boolean(value)) ?? {};
 }
 
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-      .map((entry) => entry.trim())
-    : [];
-}
-
-function uniqueSortedStrings(values: Array<string | null>) {
-  return [...new Set(values.filter((value): value is string => Boolean(value)))].sort();
+function uniqueSortedStrings(values: Array<string | null | undefined>) {
+  return uniqueStringList(values).sort();
 }
 
 export type StageRunCurrentnessIdentity = {

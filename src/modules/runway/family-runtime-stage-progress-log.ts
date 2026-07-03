@@ -16,6 +16,13 @@ import {
   type StageProgressDeltaClassification,
 } from '../ledger/index.ts';
 import { buildStageAttemptRuntimeCurrentness } from './family-runtime-stage-attempt-runtime-currentness.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
+import {
+  recordList as sharedRecordList,
+  stringList as sharedStringList,
+  stringValue,
+  uniqueStringList,
+} from '../../kernel/json-record.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -58,30 +65,17 @@ export type StageProgressLogInput = {
 export type StageProgressLogProjection = ReturnType<typeof buildStageProgressLog>;
 export type StageProgressLogSummary = ReturnType<typeof summarizeStageProgressLogs>;
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value : null;
-}
-
 function numberValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
 function uniqueStrings(values: string[]) {
-  return [...new Set(values.filter((value) => value.trim().length > 0))];
+  return uniqueStringList(values);
 }
 
 function stringList(value: unknown) {
-  if (typeof value === 'string' && value.trim()) {
-    return [value.trim()];
-  }
-  if (Array.isArray(value)) {
-    return value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0);
-  }
-  return [];
+  const scalar = stringValue(value);
+  return scalar ? [scalar] : sharedStringList(value);
 }
 
 function refsFromUnknown(value: unknown): string[] {
@@ -110,7 +104,7 @@ function refsFromRecord(record: JsonRecord | null | undefined, keys: string[]) {
 }
 
 function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
+  return sharedRecordList(value);
 }
 
 function firstRecordFrom(record: JsonRecord | null | undefined, keys: string[]) {

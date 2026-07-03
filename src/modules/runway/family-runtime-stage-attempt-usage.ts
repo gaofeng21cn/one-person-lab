@@ -1,3 +1,9 @@
+import { isRecord } from '../../kernel/contract-validation.ts';
+import {
+  stringValue,
+  uniqueStringList,
+} from '../../kernel/json-record.ts';
+
 type JsonRecord = Record<string, unknown>;
 
 export type StageAttemptUsageProjection = ReturnType<typeof buildStageAttemptUsageProjection>;
@@ -22,20 +28,12 @@ type ModelRouteCostProjectionInput = StageAttemptUsageInput & {
   usageProjection: StageAttemptUsageProjection;
 };
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
 function numberValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value : null;
-}
-
 function uniqueStrings(values: string[]) {
-  return [...new Set(values.filter((value) => value.trim().length > 0))];
+  return uniqueStringList(values);
 }
 
 function refsFromUnknown(value: unknown): string[] {

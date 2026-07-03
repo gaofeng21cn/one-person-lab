@@ -1,4 +1,10 @@
 import { stableId } from './family-runtime-ids.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
+import {
+  stringList,
+  stringValue,
+  uniqueStringList as unique,
+} from '../../kernel/json-record.ts';
 import {
   runFamilyTransitionMatrix,
   type FamilyTransitionInput,
@@ -108,24 +114,6 @@ const HARNESS_AUTHORITY_BOUNDARY = {
   can_execute_domain_action: false,
   provider_completion_is_domain_ready: false,
 };
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-    : [];
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function unique(values: string[]) {
-  return [...new Set(values)];
-}
 
 function expectedStatus(entry: FamilyTransitionMatrixCase) {
   return isRecord(entry.context) ? stringValue(entry.context.expected_status) : null;

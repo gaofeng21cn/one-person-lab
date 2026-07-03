@@ -1,12 +1,7 @@
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { stringValue } from '../../kernel/json-record.ts';
+
 type JsonRecord = Record<string, unknown>;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value : null;
-}
 
 export function buildStageAttemptTruePathProof(input: {
   stageAttemptId: string;

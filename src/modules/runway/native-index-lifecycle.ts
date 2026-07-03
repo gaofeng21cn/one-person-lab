@@ -1,6 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { isRecord } from '../../kernel/contract-validation.ts';
+import {
+  formatJsonPayload,
+  parseJsonText,
+} from '../../kernel/json-file.ts';
+
 export const NATIVE_INDEX_TTL_MS = 86_400_000;
 export const NATIVE_INDEX_MAX_HISTORY_ENTRIES = 50;
 
@@ -177,8 +183,8 @@ export function persistNativeStateIndex(input: {
   let gc = projectedGc;
   try {
     fs.mkdirSync(path.dirname(paths.indexFile), { recursive: true });
-    fs.writeFileSync(paths.indexFile, `${JSON.stringify(payload, null, 2)}\n`);
-    fs.writeFileSync(paths.lastSuccessFile, `${JSON.stringify(payload, null, 2)}\n`);
+    fs.writeFileSync(paths.indexFile, formatJsonPayload(payload));
+    fs.writeFileSync(paths.lastSuccessFile, formatJsonPayload(payload));
     appendJsonLine(paths.historyFile, {
       generated_at: payload.generated_at,
       index_file: paths.indexFile,
@@ -373,11 +379,11 @@ function changedEntryFields(
 }
 
 function summarizeNativeIndexMap(value: unknown): Record<string, NativeIndexSnapshot> {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+  if (!isRecord(value)) {
     return {};
   }
   return Object.fromEntries(
-    Object.entries(value as Record<string, unknown>).map(([indexKey, entry]) => [
+    Object.entries(value).map(([indexKey, entry]) => [
       indexKey,
       summarizeNativeIndexEntry(entry),
     ]),
@@ -385,10 +391,8 @@ function summarizeNativeIndexMap(value: unknown): Record<string, NativeIndexSnap
 }
 
 function summarizeNativeIndexEntry(value: unknown): NativeIndexSnapshot {
-  const entry = value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
-  const result = entry.result && typeof entry.result === 'object' && !Array.isArray(entry.result)
-    ? entry.result as Record<string, unknown>
-    : {};
+  const entry = isRecord(value) ? value : {};
+  const result = isRecord(entry.result) ? entry.result : {};
   return {
     helper_id: stringValueOrNull(entry.helper_id),
     status: stringValueOrNull(entry.status) ?? 'unknown',
@@ -538,10 +542,10 @@ function readOnlyNativeIndexFreshness(
 
 function readLastSuccessExpiresAt(lastSuccess: Record<string, unknown> | null) {
   const lifecycle = lastSuccess?.lifecycle;
-  if (typeof lifecycle !== 'object' || lifecycle === null) {
+  if (!isRecord(lifecycle)) {
     return null;
   }
-  const expiresAt = (lifecycle as Record<string, unknown>).expires_at;
+  const expiresAt = lifecycle.expires_at;
   return typeof expiresAt === 'string' ? expiresAt : null;
 }
 
@@ -629,7 +633,8 @@ function gcReportForCount(historyCountBeforeGc: number, maxEntries: number): Nat
 
 function readPreviousNativeIndex(indexFile: string): Record<string, unknown> | null {
   try {
-    return JSON.parse(fs.readFileSync(indexFile, 'utf8')) as Record<string, unknown>;
+    const parsed = parseJsonText(fs.readFileSync(indexFile, 'utf8'));
+    return isRecord(parsed) ? parsed : null;
   } catch {
     return null;
   }

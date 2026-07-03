@@ -42,6 +42,12 @@ import {
   MAS_PAPER_AUTONOMY_DOMAIN_HANDLER_CLOSEOUT_REQUIRED_REASON,
   MAS_PAPER_AUTONOMY_TASK_KINDS,
 } from './family-runtime-paper-autonomy.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
+import {
+  record,
+  stringList as cleanStringList,
+  stringValue as cleanOptionalString,
+} from '../../kernel/json-record.ts';
 import { PROGRESS_FIRST_OWNER_DELTA_REQUIRED_REASON } from './family-runtime-progress-first-anti-spin-gate.ts';
 import {
   domainRouteOplAttemptAdmissionNeedsProviderFollowthrough,
@@ -56,16 +62,6 @@ import {
 
 type TemporalProviderModule = Parameters<typeof startDefaultExecutorStageAttempt>[2]['temporalProviderModule'];
 type QueryTemporalStageAttemptReadModel = typeof queryTemporalStageAttemptReadModel;
-
-function cleanStringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
-    : [];
-}
-
-function cleanOptionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
 
 function closeoutRefsFromDomainHandlerOutput(output: Record<string, unknown>) {
   return [
@@ -499,7 +495,7 @@ export async function dispatchFamilyRuntimeTask(
     resolveOplModuleExecCommand?: OplModuleExecCommandResolver;
   },
 ) {
-  const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
+  const payload = record(parseJsonText(row.payload_json));
   if (payload.domain_truth_write === true || payload.artifact_gate_override === true) {
     const updatedAt = nowIso();
     db.prepare(`

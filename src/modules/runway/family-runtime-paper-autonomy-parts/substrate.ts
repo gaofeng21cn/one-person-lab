@@ -1,5 +1,6 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { parseJsonText } from '../../../kernel/json-file.ts';
 import type {
   PaperAutonomyRecoveryObligation,
   PaperAutonomyStageRunIdentity,
@@ -530,7 +531,7 @@ function readPaperAutonomyJsonlLedger(
     if (!trimmed) {
       continue;
     }
-    const parsed = JSON.parse(trimmed) as Partial<PaperAutonomyJsonlLedgerEntry>;
+    const parsed = parseJsonText(trimmed) as Partial<PaperAutonomyJsonlLedgerEntry>;
     if (parsed.surface_kind !== expectedSurfaceKind) {
       throw new Error(
         `Unexpected paper autonomy JSONL surface at line ${index + 1}: ${String(parsed.surface_kind)}`,

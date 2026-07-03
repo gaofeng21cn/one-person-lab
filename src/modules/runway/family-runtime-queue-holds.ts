@@ -3,6 +3,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import type { FamilyRuntimeTaskScope } from './family-runtime-command.ts';
 import { stableId } from './family-runtime-ids.ts';
 import { nowIso } from './family-runtime-store.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
 import {
   normalizeTaskScopeForStorage,
   taskInputMatchesScope,
@@ -31,7 +32,7 @@ type QueueHoldRow = {
 function rowToHold(row: QueueHoldRow): ActiveFamilyRuntimeQueueHold {
   return {
     hold_id: row.hold_id,
-    scope: JSON.parse(row.scope_json) as FamilyRuntimeTaskScope,
+    scope: parseJsonText(row.scope_json) as FamilyRuntimeTaskScope,
     reason: row.reason,
     source: row.source,
     status: row.status,
