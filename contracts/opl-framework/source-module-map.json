@@ -4,7 +4,7 @@
   "owner": "OPL Framework",
   "purpose": "Canonical source-organization map that aligns the OPL Framework codebase with the ten brand modules and the final physical source layout.",
   "state": "active_contract",
-  "machine_boundary": "This contract maps source ownership and physical module entrypoints. It does not move runtime truth, domain truth, artifact bodies, owner receipts, typed blockers, or production readiness into brand modules.",
+  "machine_boundary": "This contract maps OPL Framework source ownership and physical module entrypoints. Product labels such as OPL Cloud, One Person Lab App, online OPL Workspace, OPL Console, or OPL Gateway can consume these modules, but they do not redefine source ownership or move runtime truth, domain truth, artifact bodies, owner receipts, typed blockers, or production readiness into brand modules.",
   "source_root": "src",
   "physical_module_root": "src/modules",
   "alignment_rules": [
@@ -14,6 +14,8 @@
     "New module-owned source starts under the owning src/modules/<module_id>/ directory.",
     "src/entrypoints contains CLI and other non-brand executable entrypoints; it does not own brand semantics.",
     "src/kernel contains shared technical types and helpers; every kernel surface must stay brand-neutral.",
+    "Product packaging, App/Cloud pages, and online workspace language must not redefine module source ownership.",
+    "OPL Connect may expose directly callable connectors and distribution surfaces without routing through OPL Console; OPL Console projects, governs, and integrates management views.",
     "Cross-module implementation imports should prefer public module entrypoints when the imported surface is part of another module contract."
   ],
   "modules": [
@@ -52,7 +54,7 @@
         "src/modules/workspace/**"
       ],
       "shared_source_globs": [],
-      "owner_note": "Workspace owns project topology, inspectable workspace structure, user files, shared materials, and workspace validation."
+      "owner_note": "Workspace owns the Framework workspace protocol, project topology, inspectable workspace structure, user files, shared materials, and workspace validation; it is not the online OPL Workspace product authority."
     },
     {
       "module_id": "pack",
@@ -98,7 +100,7 @@
         "src/modules/ledger/**"
       ],
       "shared_source_globs": [],
-      "owner_note": "Ledger owns refs-only evidence records, receipts, provenance, lineage, restore references, and audit trails."
+      "owner_note": "Ledger owns refs-only evidence records, receipt/blocker references, provenance, lineage, restore references, and audit trails; it does not own artifact bodies or domain verdicts."
     },
     {
       "module_id": "console",
@@ -109,7 +111,7 @@
         "src/modules/console/**"
       ],
       "shared_source_globs": [],
-      "owner_note": "Console owns App/operator projections, action catalog, status narration, drilldown, and human-facing operating surfaces."
+      "owner_note": "Console owns App/operator projections, action catalog, status narration, drilldown, and human-facing management surfaces; it is not a private backend for Connect or a domain authority owner."
     },
     {
       "module_id": "foundry-lab",
@@ -131,7 +133,7 @@
         "src/modules/connect/**"
       ],
       "shared_source_globs": [],
-      "owner_note": "Connect owns external descriptors, adapters, install/update distribution, plugin/skill sync, and connector surfaces."
+      "owner_note": "Connect owns directly callable external descriptors, adapters, source connectors, install/update distribution, plugin/skill sync, and connector surfaces; it is not limited to Console-mediated calls and does not own semantic/domain verdicts."
     }
   ],
   "shared_kernel": [

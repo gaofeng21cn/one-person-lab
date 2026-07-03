@@ -5,6 +5,20 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-07-03
+
+### 决策：OPL Cloud 产品语义消费 Framework 模块，不重划物理源码 owner
+
+原因：物理模块化后，Framework 已经有 `src/modules/<module_id>/`、`entrypoints/` 和 `kernel/` 三层源码组织；同时产品叙事里又出现 `OPL Cloud`、在线 `OPL Workspace`、Console、Gateway / API 和 Fabric 等用户可见或资源底座语义。如果把这些产品名反向写成源码模块 owner，会让维护者误以为 Cloud / Workspace 产品、Console 页面、Connect connector 和 Ledger evidence 是同一层事实，进而制造第二 source of truth。
+
+影响：
+
+- `OPL Cloud` 是 App / online / managed workspace / Gateway 等用户可见产品能力的包装层，不是当前十个 Framework 品牌模块之外的第 11 个源码模块。
+- `src/modules/<module_id>/` 是 Framework 源码 owner；`src/entrypoints/` 只承接 CLI / product / adapter 启动面，`src/kernel/` 只承接 brand-neutral shared runtime primitive。二者都不拥有独立品牌模块或产品语义。
+- 在线 `OPL Workspace` 产品体验可以消费多个 Framework 模块；Framework `workspace` 模块只持有 workspace protocol、Project Unit、Stage Artifact Unit 和文件生命周期投影，不持有 Cloud product truth、artifact body、quality verdict 或 owner receipt。
+- `OPL Connect` 是 Fabric 上可独立调用的连接 / 分发能力，不是 Console 私有后端；`OPL Console` 负责治理、投影、action catalog 和 operator 管理集成；`OPL Ledger` 只保存 refs-only evidence、receipt/blocker refs、lineage 和 provenance。
+- `contracts/opl-framework/source-module-map.json` 只记录源码归属 metadata 和物理入口；更新 owner note 不改变 runtime truth、domain truth、owner receipt、typed blocker、release verdict 或 production readiness。
+
 ## 2026-07-02
 
 ### 决策：标准 OPL Agent 用 Stage 主提示词承载阶段策略，不把 stage 定义成专业 Skill
