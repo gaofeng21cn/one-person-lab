@@ -108,6 +108,6 @@ src/modules/foundry-lab
 src/modules/connect
 ```
 
-App / Cloud 产品语义可以把这些模块组合成面向用户的能力、页面、任务入口或托管产品面；Framework 实现仍以这十个目录为源码 owner。`contracts/opl-framework/source-module-map.json` 负责归属校验和历史 root 文件 readback，不替代模块目录。`entrypoints/` 和 `kernel/` 是非品牌技术层：`entrypoints/` 负责 CLI / App / Cloud / adapter 启动连接，`kernel/` 负责共享 runtime primitive；它们不拥有品牌模块，不直接接管产品语义。新代码进入 owning module，跨模块从 owning module `index.ts` public exports 走；需要总入口时使用 `src/modules/index.ts` 的模块身份常量或命名空间聚合，避免把不同模块的同名 API 压成一个无边界 barrel。
+App / Cloud 产品语义可以把这些模块组合成面向用户的能力、页面、任务入口或托管产品面；Framework 实现仍以这十个目录为源码 owner。`contracts/opl-framework/source-module-map.json` 负责归属校验和历史 root 文件 readback，不替代模块目录。`entrypoints/` 和 `kernel/` 是非品牌技术层：`entrypoints/` 负责 CLI / App / Cloud / adapter 启动连接，`kernel/` 负责共享 runtime primitive；它们不拥有品牌模块，不直接接管产品语义。新代码进入 owning module，跨模块从 owning module `index.ts` public exports 或 `public/**` 薄入口走；需要总入口时使用 `src/modules/index.ts` 的模块身份常量或命名空间聚合，避免把不同模块的同名 API 压成一个无边界 barrel。
 
-源码边界的默认门已经切到 public interface：模块内代码保持在同一 owning module 内聚，优先使用相对 import；跨模块使用 owning module public index。跨模块内部文件 import 不再作为迁移债存在，`npm run source:modules` 默认按 strict policy 失败。若一个内部符号确实需要被其他模块消费，先把它加入目标模块 `index.ts`，再迁移调用方。
+源码边界的默认门已经切到 public interface：模块内代码保持在同一 owning module 内聚，优先使用相对 import；跨模块使用 owning module public index 或 `public/**` 薄入口。薄入口用于高频、低依赖、容易被多个模块消费的稳定 API，避免大 index eager-load 造成初始化循环。跨模块内部文件 import 不再作为迁移债存在，`npm run source:modules` 默认按 strict policy 失败。若一个内部符号确实需要被其他模块消费，先把它加入目标模块 `index.ts` 或 `public/**` 薄入口，再迁移调用方。

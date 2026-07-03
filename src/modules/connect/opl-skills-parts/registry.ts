@@ -4,7 +4,7 @@ import { FrameworkContractError } from '../../charter/index.ts';
 import {
   STANDARD_AGENT_REGISTRY,
   standardAgentDomainAliasEntries,
-} from '../../atlas/standard-agent-registry.ts';
+} from '../../atlas/public/standard-agent-registry.ts';
 
 export type SkillPackInstallerKind = 'bash' | 'node';
 export type SkillPackSourceKind = 'repo_plugin_installer' | 'opl_generated_plugin_surface';

@@ -40,7 +40,7 @@ import { runSkillPackInstaller } from './opl-skills-parts/sync.ts';
 import {
   STANDARD_AGENT_REGISTRY_REF,
   resolveStandardAgentByCanonicalPluginName,
-} from '../atlas/index.ts';
+} from '../atlas/public/standard-agent-registry.ts';
 
 export const resolveDefaultFamilyWorkspaceRoot = resolveDefaultFamilyWorkspaceRootImpl;
 export const resolveFamilyWorkspaceRootFromRepoRoot = resolveFamilyWorkspaceRootFromRepoRootImpl;

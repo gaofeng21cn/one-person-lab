@@ -13,8 +13,9 @@
   },
   "public_entrypoint_rule": {
     "module_entrypoint_pattern": "src/modules/<module_id>/index.ts",
+    "thin_public_entry_pattern": "src/modules/<module_id>/public/**/*.ts",
     "aggregate_entrypoint": "src/modules/index.ts",
-    "cross_module_imports": "public_entrypoint",
+    "cross_module_imports": "public_entrypoint_or_thin_public_entry",
     "same_module_deep_imports": "allowed"
   },
   "source_scan_scope": {
@@ -25,7 +26,7 @@
   "deep_cross_module_imports": {
     "failure_mode": "strict",
     "strict_flag": "--strict-imports",
-    "reason": "Cross-module imports must use the target module public entrypoint. The previous transition baseline has been migrated, so new deep cross-module imports fail the default source module boundary check."
+    "reason": "Cross-module imports must use the target module public index or a thin public entry under public/**. The previous transition baseline has been migrated, so new internal cross-module imports fail the default source module boundary check."
   },
   "dependency_policy": {
     "forbidden_dependencies": [

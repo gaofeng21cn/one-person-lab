@@ -307,7 +307,8 @@ function readModuleDependencyPolicy(policyValue, modulesValue, layoutValue) {
     aggregate_entrypoint: 'src/modules/index.ts',
     public_entrypoint_rule: {
       module_entrypoint_pattern: layoutValue.moduleEntrypointPattern,
-      cross_module_imports: 'public_entrypoint',
+      thin_public_entry_pattern: 'src/modules/<module_id>/public/**/*.ts',
+      cross_module_imports: 'public_entrypoint_or_thin_public_entry',
     },
     source_scan_scope: 'all_module_ts_files',
     deep_import_failure_mode: args.strictImports ? 'strict' : 'advisory',
@@ -355,6 +356,10 @@ function readModuleDependencyPolicy(policyValue, modulesValue, layoutValue) {
     ),
     public_entrypoint_rule: {
       module_entrypoint_pattern: policyEntrypointPattern,
+      thin_public_entry_pattern: readString(
+        publicEntrypointRule.thin_public_entry_pattern,
+        'module_dependency_policy.public_entrypoint_rule.thin_public_entry_pattern',
+      ),
       cross_module_imports: readString(
         publicEntrypointRule.cross_module_imports,
         'module_dependency_policy.public_entrypoint_rule.cross_module_imports',
@@ -448,6 +453,10 @@ function inspectCrossModuleImports(contractValue, modulesValue, layoutValue, pol
         imported_specifier: importRef.specifier,
         resolved_path: resolved,
         expected_public_entrypoint: moduleEntrypoints.get(toModuleId),
+        allowed_public_surface_patterns: [
+          moduleEntrypoints.get(toModuleId),
+          dependencyPolicy.public_entrypoint_rule.thin_public_entry_pattern.replace('<module_id>', toModuleId),
+        ],
       };
       if (!isPublicModuleEntrypoint(resolved, toModuleId, physicalModuleRoot)) {
         deepImportExamples.push(importEntry);
@@ -518,7 +527,7 @@ function moduleIdFromPath(relativePath, physicalModuleRoot) {
 
 function isPublicModuleEntrypoint(relativePath, moduleId, physicalModuleRoot) {
   const rest = relativePath.slice(`${physicalModuleRoot}/${moduleId}`.length).replace(/^\//, '');
-  return rest === '' || rest === 'index' || rest === 'index.ts';
+  return rest === '' || rest === 'index' || rest === 'index.ts' || rest.startsWith('public/');
 }
 
 function addImportViolation(violations, pairKey, importEntry) {

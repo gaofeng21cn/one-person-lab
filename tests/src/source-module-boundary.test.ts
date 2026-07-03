@@ -145,8 +145,9 @@ function policyFor(input: DependencyPolicyFixtureInput = {}) {
     },
     public_entrypoint_rule: {
       module_entrypoint_pattern: 'src/modules/<module_id>/index.ts',
+      thin_public_entry_pattern: 'src/modules/<module_id>/public/**/*.ts',
       aggregate_entrypoint: 'src/modules/index.ts',
-      cross_module_imports: 'public_entrypoint',
+      cross_module_imports: 'public_entrypoint_or_thin_public_entry',
       same_module_deep_imports: 'allowed',
     },
     source_scan_scope: {
@@ -338,6 +339,42 @@ test('source module boundary fails deep cross-module imports in strict mode', ()
     assert.equal(summary.cross_module_imports.deep_import_violations.enforced, true);
     assert.equal(summary.cross_module_imports.deep_import_violations.count, 1);
     assert.equal(summary.failures.some((failure) => failure.includes('deep cross-module import')), true);
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('source module boundary accepts thin public entries in strict mode', () => {
+  const fixture = writeFixture([
+    'src/modules/charter/index.ts',
+    'src/modules/charter/feature.ts',
+    'src/modules/atlas/index.ts',
+    'src/modules/atlas/public/detail.ts',
+    'src/modules/atlas/detail.ts',
+    'src/cli.ts',
+  ]);
+  fs.writeFileSync(
+    path.join(fixture.root, 'src', 'modules', 'charter', 'feature.ts'),
+    "import { atlasDetail } from '../atlas/public/detail.ts';\nexport const charterFeature = atlasDetail;\n",
+  );
+  fs.writeFileSync(
+    path.join(fixture.root, 'src', 'modules', 'atlas', 'public', 'detail.ts'),
+    "export { atlasDetail } from '../detail.ts';\n",
+  );
+  fs.writeFileSync(
+    path.join(fixture.root, 'src', 'modules', 'atlas', 'detail.ts'),
+    "export const atlasDetail = 'atlas';\n",
+  );
+
+  try {
+    const result = runBoundary(fixture.root, fixture.contractPath, ['--strict-imports']);
+    const summary = parseSummary(result);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(summary.cross_module_imports.pair_counts, [
+      { from_module_id: 'charter', to_module_id: 'atlas', count: 1 },
+    ]);
+    assert.equal(summary.cross_module_imports.deep_import_violations.count, 0);
   } finally {
     fs.rmSync(fixture.root, { recursive: true, force: true });
   }

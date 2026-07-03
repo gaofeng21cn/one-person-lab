@@ -1,17 +1,19 @@
 import {
   inspectSelectedFamilyRuntimeProvidersWithLifecycle,
   resolveFamilyRuntimeProviderKind,
-} from '../runway/family-runtime-providers.ts';
+} from '../runway/public/runtime-manager-support.ts';
 import {
   MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
   MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
   OPL_RUNTIME_OWNER_ROUTE,
   buildMasDomainRouteSupportProjection,
-} from '../runway/family-runtime-mas-domain-route.ts';
-import { readMasManagedProviderProjection } from '../runway/family-runtime-mas-managed-provider-projection.ts';
-import { familyRuntimePaths } from '../runway/family-runtime-store.ts';
-import { DEFAULT_NATIVE_HELPERS, buildNativeHelperProjection, runNativeHelperRepairAction } from '../runway/native-helper-runtime.ts';
-import { buildStandardDomainAgentScaffold } from '../foundry-lab/standard-domain-agent-scaffold.ts';
+  readMasManagedProviderProjection,
+  familyRuntimePaths,
+  DEFAULT_NATIVE_HELPERS,
+  buildNativeHelperProjection,
+  runNativeHelperRepairAction,
+} from '../runway/public/runtime-manager-support.ts';
+import { buildStandardDomainAgentScaffold } from '../foundry-lab/public/standard-domain-agent-scaffold.ts';
 
 const ADMITTED_DOMAIN_OWNERS = [
   {
