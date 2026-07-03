@@ -41,6 +41,7 @@ type ProviderEvidence = {
   error?: {
     code: string;
     message: string;
+    details?: Record<string, unknown>;
   };
   normalized: {
     doi: string | null;
@@ -54,6 +55,7 @@ type ProviderEvidence = {
   };
   retry_attempts: RetryAttempt[];
 };
+type ProviderEvidenceError = NonNullable<ProviderEvidence['error']>;
 type ProviderEvidenceDraft = Omit<ProviderEvidence, 'receipt_ref'>;
 
 const DEFAULT_CROSSREF_API_BASE = 'https://api.crossref.org';
@@ -183,6 +185,7 @@ async function fetchWithRetry(
           provider_id: providerId,
           status: response.status,
           url: url.toString(),
+          retry_attempts: retryAttempts,
         });
       }
       retryAttempts.push({ attempt, status: 'success', http_status: response.status });
@@ -258,6 +261,54 @@ function deferredEvidence(reference: ReferenceRecord, providerId: ProviderId, re
     },
     retry_attempts: [],
   };
+}
+
+function providerErrorEvidence(reference: ReferenceRecord, providerId: ProviderId, error: unknown): ProviderEvidenceDraft {
+  const payload = providerErrorPayload(error);
+  return {
+    reference_id: reference.id,
+    provider: providerName(providerId),
+    provider_id: providerId,
+    lookup_status: 'error',
+    status: 'deferred',
+    deferred_reason: payload.message,
+    match_basis: 'none',
+    matched_identifiers: identifiersFromReference(reference),
+    metadata: metadataFromReference(reference),
+    retraction_or_update_flags: {},
+    error: payload,
+    normalized: {
+      doi: reference.doi,
+      pmid: reference.pmid,
+      title: reference.title,
+    },
+    cache: {
+      status: 'disabled',
+      write_status: 'skipped',
+      cache_ref: null,
+    },
+    retry_attempts: retryAttemptsFromError(error),
+  };
+}
+
+function providerErrorPayload(error: unknown): ProviderEvidenceError {
+  if (error instanceof FrameworkContractError) {
+    return {
+      code: typeof error.details?.status === 'number' ? 'provider_non_ok_status' : 'provider_request_failed',
+      message: error.message,
+      ...(error.details ? { details: error.details } : {}),
+    };
+  }
+  return {
+    code: 'provider_request_failed',
+    message: error instanceof Error ? error.message : String(error),
+    ...(error instanceof Error ? { details: { error_name: error.name } } : {}),
+  };
+}
+
+function retryAttemptsFromError(error: unknown): RetryAttempt[] {
+  const attempts = error instanceof FrameworkContractError ? error.details?.retry_attempts : null;
+  return Array.isArray(attempts) ? attempts as RetryAttempt[] : [];
 }
 
 async function verifyCrossref(reference: ReferenceRecord, maxRetries: number, timeout: number): Promise<ProviderEvidenceDraft> {
@@ -533,7 +584,7 @@ async function verifyPublisher(reference: ReferenceRecord, maxRetries: number, t
     }),
     retraction_or_update_flags: {
       publisher_landing_resolved: true,
-      publisher_lookup_source: 'doi_resolver_landing_page',
+      publisher_lookup_source: 'doi_resolver_landing_metadata',
       full_text_body_verified: false,
       ...(contentType ? { content_type: contentType } : {}),
     },
@@ -587,7 +638,9 @@ async function verifyProviderWithCache(
       retry_attempts: [],
     };
   }
-  const evidence = withReceiptRef(await verifyProvider(reference, providerId, input.maxRetries, timeoutMs(input.timeoutMs)));
+  const evidence = withReceiptRef(await verifyProvider(reference, providerId, input.maxRetries, timeoutMs(input.timeoutMs)).catch((error) =>
+    providerErrorEvidence(reference, providerId, error)
+  ));
   const writeStatus = evidence.status === 'matched'
     ? writeCache(cachePath, {
         ...evidence,

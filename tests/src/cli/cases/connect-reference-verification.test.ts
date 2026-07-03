@@ -73,6 +73,12 @@ async function startFakeReferenceProviderServer() {
       return;
     }
 
+    if (url.pathname.startsWith('/rate-limited-openalex/works/')) {
+      response.statusCode = 429;
+      response.end(JSON.stringify({ error: 'rate_limited' }));
+      return;
+    }
+
     if (url.pathname.startsWith('/semantic/paper/')) {
       response.end(JSON.stringify({
         paperId: 'S2-987654',
@@ -312,8 +318,79 @@ test('connect references verify covers OpenAlex, Semantic Scholar, Crossmark, an
     const publisher = result.provider_evidence[3];
     assert.equal(publisher.matched_identifiers.publisher_landing_url.includes('/doi/'), true);
     assert.equal(publisher.metadata.title, 'Publisher landing page title');
+    assert.equal(publisher.retraction_or_update_flags.publisher_lookup_source, 'doi_resolver_landing_metadata');
     assert.equal(publisher.retraction_or_update_flags.full_text_body_verified, false);
     assert.equal(result.provider_receipts.every((entry) => entry.status === 'matched'), true);
+  } finally {
+    await fakeProviders.close();
+  }
+});
+
+test('connect references verify defers one failed provider while matched providers keep receipts', async () => {
+  const fakeProviders = await startFakeReferenceProviderServer();
+  try {
+    const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-reference-verification-provider-error-'));
+    const referencesFile = path.join(fixtureRoot, 'references.json');
+    fs.writeFileSync(referencesFile, JSON.stringify([
+      {
+        id: 'ref-1',
+        doi: '10.1234/example',
+        pmid: '987654',
+        title: 'Provider receipt cache and retry evidence',
+      },
+    ]), 'utf8');
+
+    const output = await runCliAsync([
+      'connect',
+      'references',
+      'verify',
+      '--references-file',
+      referencesFile,
+      '--providers',
+      'pubmed,openalex',
+      '--max-retries',
+      '0',
+    ], {
+      OPL_CONNECT_PUBMED_API_BASE: `${fakeProviders.baseUrl}/pubmed`,
+      OPL_CONNECT_OPENALEX_API_BASE: `${fakeProviders.baseUrl}/rate-limited-openalex`,
+    }) as {
+      opl_connect_reference_verification: {
+        status: string;
+        provider_evidence: Array<{
+          provider_id: string;
+          lookup_status: string;
+          status: string;
+          receipt_ref: string;
+          error?: { code: string; message: string; details?: Record<string, unknown> };
+          retry_attempts: Array<{ attempt: number; status: string; http_status: number | null }>;
+        }>;
+        provider_receipts: Array<{ provider_id: string; status: string; receipt_ref: string }>;
+        deferred_provider_receipt_requirements: Array<{ provider_id: string; status: string; reason: string }>;
+        retry_attempts: Array<{ provider_id: string; status: string; http_status: number | null }>;
+      };
+    };
+
+    const result = output.opl_connect_reference_verification;
+    assert.equal(result.status, 'completed');
+
+    const pubmed = result.provider_evidence.find((entry) => entry.provider_id === 'pubmed');
+    const openalex = result.provider_evidence.find((entry) => entry.provider_id === 'openalex');
+    assert.ok(pubmed);
+    assert.ok(openalex);
+    assert.equal(pubmed.status, 'matched');
+    assert.equal(openalex.status, 'deferred');
+    assert.equal(openalex.lookup_status, 'error');
+    assert.equal(openalex.error?.details?.status, 429);
+    assert.deepEqual(openalex.retry_attempts, [{ attempt: 0, status: 'failed', http_status: 429 }]);
+    assert.deepEqual(result.provider_receipts.map((entry) => [entry.provider_id, entry.status]), [
+      ['pubmed', 'matched'],
+    ]);
+    assert.equal(result.provider_receipts[0].receipt_ref, pubmed.receipt_ref);
+    assert.deepEqual(result.deferred_provider_receipt_requirements.map((entry) => [entry.provider_id, entry.status]), [
+      ['openalex', 'deferred'],
+    ]);
+    assert.equal(result.deferred_provider_receipt_requirements[0].reason.includes('Reference provider returned a non-OK status'), true);
+    assert.equal(result.retry_attempts.some((entry) => entry.provider_id === 'openalex' && entry.http_status === 429), true);
   } finally {
     await fakeProviders.close();
   }

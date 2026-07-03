@@ -43,9 +43,15 @@ landing page 命中写成 reference truth。
 
 - `provider_evidence`：每个 reference / provider 的 matched 或 deferred 结果；
 - `provider_receipts`：matched 结果的 `opl://connect/references/verify/...` receipt candidate；
+- `deferred_provider_receipt_requirements`：缺少 DOI / PMID / title、provider 429 / 403 或网络失败等未形成 receipt 的 provider requirement；
 - `cache`：cache root、hit / miss / write 状态；
 - `retry_attempts`：provider 失败重试记录；
 - `no_authority_boundary`：只读、不得写 domain truth、owner receipt、typed blocker 或 reference truth。
+
+单个 provider 失败不会让整批引用校验失败；失败 provider 会被收口为
+`lookup_status=error` / `status=deferred` 的 evidence，matched provider 继续
+返回 receipt candidate。Publisher 只返回 DOI resolver landing metadata，并显式
+保留 `full_text_body_verified=false`。
 
 ## MAS 使用方式
 
