@@ -1,6 +1,6 @@
-export type AdvisoryGateIntent = 'context' | 'advisory_check' | 'claim_gate' | 'authority_gate';
+import { stringValue, type JsonRecord } from '../../kernel/json-record.ts';
 
-type JsonRecord = Record<string, unknown>;
+export type AdvisoryGateIntent = 'context' | 'advisory_check' | 'claim_gate' | 'authority_gate';
 
 export type AdvisoryKnowledgeSignal = {
   signal_id?: string;
@@ -65,12 +65,8 @@ const HARD_GATE_REQUIRED_FIELDS = [
   'owner_ref_or_authority_ref',
 ] as const;
 
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
 function normalizeIntent(value: unknown): AdvisoryGateIntent {
-  const candidate = optionalString(value) as AdvisoryGateIntent | null;
+  const candidate = stringValue(value) as AdvisoryGateIntent | null;
   return candidate && KNOWN_INTENTS.has(candidate) ? candidate : 'context';
 }
 
@@ -78,28 +74,28 @@ function stringList(value: unknown) {
   if (!Array.isArray(value)) {
     return [];
   }
-  return [...new Set(value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0))];
+  return [...new Set(value.filter((entry): entry is string => typeof entry === 'string' && stringValue(entry) !== null))];
 }
 
 function normalizeItem(signal: AdvisoryKnowledgeSignal, index: number): AdvisoryKnowledgeProjectionItem {
   const gateIntent = normalizeIntent(signal.gate_intent);
   const item: AdvisoryKnowledgeProjectionItem = {
-    signal_id: optionalString(signal.signal_id) ?? `advisory-signal-${index}`,
+    signal_id: stringValue(signal.signal_id) ?? `advisory-signal-${index}`,
     gate_intent: gateIntent,
-    role: optionalString(signal.role) ?? gateIntent,
-    title: optionalString(signal.title) ?? optionalString(signal.signal_id) ?? `Advisory signal ${index + 1}`,
-    source_ref: optionalString(signal.source_ref),
+    role: stringValue(signal.role) ?? gateIntent,
+    title: stringValue(signal.title) ?? stringValue(signal.signal_id) ?? `Advisory signal ${index + 1}`,
+    source_ref: stringValue(signal.source_ref),
     refs: stringList(signal.refs),
-    ...(optionalString(signal.blocking_claim) ? { blocking_claim: optionalString(signal.blocking_claim)! } : {}),
-    ...(optionalString(signal.owner_ref_or_authority_ref)
-      ? { owner_ref_or_authority_ref: optionalString(signal.owner_ref_or_authority_ref)! }
+    ...(stringValue(signal.blocking_claim) ? { blocking_claim: stringValue(signal.blocking_claim)! } : {}),
+    ...(stringValue(signal.owner_ref_or_authority_ref)
+      ? { owner_ref_or_authority_ref: stringValue(signal.owner_ref_or_authority_ref)! }
       : {}),
     ...(signal.metadata && typeof signal.metadata === 'object' && !Array.isArray(signal.metadata)
       ? { metadata: { ...signal.metadata } }
       : {}),
   };
   if (gateIntent === 'claim_gate' || gateIntent === 'authority_gate') {
-    const missing = HARD_GATE_REQUIRED_FIELDS.filter((field) => !optionalString(signal[field]));
+    const missing = HARD_GATE_REQUIRED_FIELDS.filter((field) => !stringValue(signal[field]));
     if (missing.length > 0) {
       item.missing_required_fields = missing;
     }
