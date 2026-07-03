@@ -5,14 +5,15 @@ import { buildDomainManifestCatalog } from '../atlas/index.ts';
 import { buildDomainPackCompilerList } from '../pack/index.ts';
 import {
   buildMasDomainRouteSupportProjection,
+  requireRuntimeTraySnapshotProvider,
   runFamilyRuntimeEvidenceWorklist,
+  type RuntimeTraySnapshotProvider,
 } from '../runway/index.ts';
 import {
   buildFamilyStageReadinessInspect,
   buildFamilyStagesList,
 } from '../stagecraft/index.ts';
 import { buildOplFrameworkSemanticHygieneAudit } from './framework-semantic-hygiene.ts';
-import { buildRuntimeTraySnapshot } from '../console/index.ts';
 import {
   evidenceEnvelopeOpenCount,
   evidenceEnvelopeSummary,
@@ -48,6 +49,10 @@ import { guardedProviderSloOpenTailCount } from './framework-readiness-provider-
 
 type FrameworkReadinessInput = {
   familyDefaults: boolean;
+};
+
+type FrameworkReadinessOptions = {
+  runtimeSnapshotProvider?: RuntimeTraySnapshotProvider;
 };
 
 const FRAMEWORK_READINESS_MANIFEST_COMMAND_TIMEOUT_MS = 5_000;
@@ -211,7 +216,12 @@ function buildAgentReadinessDiagnostic() {
 export async function buildFrameworkReadinessSummary(
   contracts: FrameworkContracts,
   input: FrameworkReadinessInput,
+  options: FrameworkReadinessOptions = {},
 ) {
+  const runtimeSnapshotProvider = requireRuntimeTraySnapshotProvider(
+    options.runtimeSnapshotProvider,
+    'framework readiness',
+  );
   const semanticHygiene = buildOplFrameworkSemanticHygieneAudit(contracts);
   const agentReadinessDiagnostic = buildAgentReadinessDiagnostic();
   const agentReadiness = agentReadinessDiagnostic.readiness;
@@ -240,7 +250,7 @@ export async function buildFrameworkReadinessSummary(
     mag: stageReadinessDiagnostics.mag.readiness,
     rca: stageReadinessDiagnostics.rca.readiness,
   };
-  const runtimeSnapshot = await buildRuntimeTraySnapshot(contracts, {
+  const runtimeSnapshot = await runtimeSnapshotProvider(contracts, {
     appOperatorDrilldownDetailLevel: 'full',
     domainManifests,
     providerKind: 'temporal',

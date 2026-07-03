@@ -23,12 +23,19 @@ import {
   stringListValue,
   unique,
 } from './framework-operating-maturity-parts/evidence-lanes.ts';
-import { buildRuntimeTraySnapshot } from '../console/index.ts';
 import { buildStandardDomainAgentConformanceReport } from './standard-domain-agent-conformance.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
+import {
+  requireRuntimeTraySnapshotProvider,
+  type RuntimeTraySnapshotProvider,
+} from '../runway/index.ts';
 
 type OperatingMaturityArgs = {
   familyDefaults: boolean;
+};
+
+type OperatingMaturityOptions = {
+  runtimeSnapshotProvider?: RuntimeTraySnapshotProvider;
 };
 
 const AUTHORITY_BOUNDARY = {
@@ -341,6 +348,7 @@ function unresolvedOwnerGates(input: {
 export async function buildFrameworkOperatingMaturityReadout(
   contracts: FrameworkContracts,
   args: OperatingMaturityArgs,
+  options: OperatingMaturityOptions = {},
 ) {
   if (!args.familyDefaults) {
     throw new FrameworkContractError(
@@ -364,7 +372,11 @@ export async function buildFrameworkOperatingMaturityReadout(
     buildBrandModuleL5Status(contracts).brand_module_l5_status,
   );
   const defaultCallers = buildAgentDefaultCallerReadinessReport(['--family-defaults']);
-  const runtimeSnapshot = await buildRuntimeTraySnapshot(contracts, {
+  const runtimeSnapshotProvider = requireRuntimeTraySnapshotProvider(
+    options.runtimeSnapshotProvider,
+    'framework operating-maturity',
+  );
+  const runtimeSnapshot = await runtimeSnapshotProvider(contracts, {
     appOperatorDrilldownDetailLevel: 'summary',
     providerKind: 'temporal',
   });
@@ -372,16 +384,18 @@ export async function buildFrameworkOperatingMaturityReadout(
     record(runtimeSnapshot.runtime_tray_snapshot).app_operator_drilldown,
   );
   const ownerDeltaBridge = currentOwnerDeltaBridge(appOperatorDrilldown);
-  const appReleaseUserPath = appReleaseUserPathMaturity();
+  const appEvidenceAfterContract = record(
+    record(appOperatorDrilldown.attention_first_payload).evidence_after_contract,
+  );
+  const appReleaseUserPath = appReleaseUserPathMaturity(
+    record(appEvidenceAfterContract.app_release_user_path_evidence),
+  );
   const ownerEvidenceIntake = buildFoundryAgentOsOwnerEvidenceIntake({
     contracts,
     appReleaseEvidence: appReleaseUserPath.evidence,
     domainOwnerChain,
     physicalDeleteAuthority: record(defaultCallers.physical_delete_authority_read_model),
-    lifecycleEvidence: record(
-      record(record(appOperatorDrilldown.attention_first_payload).evidence_after_contract)
-        .memory_artifact_lifecycle_evidence,
-    ),
+    lifecycleEvidence: record(appEvidenceAfterContract.memory_artifact_lifecycle_evidence),
   });
   const drilldownMaturity = appOperatorDrilldownMaturity(appOperatorDrilldown);
   const physicalDeleteAuthority = record(defaultCallers.physical_delete_authority_read_model);

@@ -65,7 +65,7 @@ test('framework readiness keeps domain manifest live refresh bounded and uses pr
     try {
       const readiness = (await buildFrameworkReadinessSummary(loadFrameworkContracts(), {
         familyDefaults: true,
-      })).framework_readiness;
+      }, { runtimeSnapshotProvider: buildRuntimeTraySnapshot })).framework_readiness;
       assert.equal(readiness.surface_kind, 'opl_framework_readiness_summary');
       assert.equal(readiness.summary.domain_manifest_projection_cache_used_count, 1);
       assert.deepEqual(readiness.summary.domain_manifest_live_failed_project_ids, ['medautoscience']);

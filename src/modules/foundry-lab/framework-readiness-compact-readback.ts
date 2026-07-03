@@ -26,8 +26,11 @@ import {
   stringValue,
 } from './framework-readiness-values.ts';
 import { buildOplFrameworkSemanticHygieneAudit } from './framework-semantic-hygiene.ts';
-import { buildRuntimeTraySnapshot } from '../console/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
+import {
+  requireRuntimeTraySnapshotProvider,
+  type RuntimeTraySnapshotProvider,
+} from '../runway/index.ts';
 
 type FrameworkReadinessCompactInput = {
   familyDefaults: boolean;
@@ -38,6 +41,10 @@ type FrameworkReadinessCoreModel = {
   frameworkStatus: string;
   summary: JsonRecord;
   ownerDeltaTopline: JsonRecord;
+};
+
+type FrameworkReadinessCompactOptions = {
+  runtimeSnapshotProvider?: RuntimeTraySnapshotProvider;
 };
 
 const FRAMEWORK_READINESS_MANIFEST_COMMAND_TIMEOUT_MS = 5_000;
@@ -95,7 +102,12 @@ function buildAgentReadinessDiagnostic() {
 async function buildFrameworkReadinessCompactCoreModel(
   contracts: FrameworkContracts,
   input: FrameworkReadinessCompactInput,
+  options: FrameworkReadinessCompactOptions = {},
 ): Promise<FrameworkReadinessCoreModel> {
+  const runtimeSnapshotProvider = requireRuntimeTraySnapshotProvider(
+    options.runtimeSnapshotProvider,
+    'framework readiness compact',
+  );
   const semanticHygiene = buildOplFrameworkSemanticHygieneAudit(contracts);
   const agentReadinessDiagnostic = buildAgentReadinessDiagnostic();
   const agentReadiness = agentReadinessDiagnostic.readiness;
@@ -116,7 +128,7 @@ async function buildFrameworkReadinessCompactCoreModel(
     ['--family-defaults', '--detail', 'full'],
     { domainManifests },
   ).family_stage_readiness);
-  const runtimeSnapshot = await buildRuntimeTraySnapshot(contracts, {
+  const runtimeSnapshot = await runtimeSnapshotProvider(contracts, {
     appOperatorDrilldownDetailLevel: 'summary',
     domainManifests,
     providerKind: 'temporal',
@@ -460,8 +472,9 @@ function buildFrameworkReadinessCompactReadbackFromCore(
 export async function buildFrameworkReadinessCompactReadback(
   contracts: FrameworkContracts,
   input: FrameworkReadinessCompactInput,
+  options: FrameworkReadinessCompactOptions = {},
 ) {
   return buildFrameworkReadinessCompactReadbackFromCore(
-    await buildFrameworkReadinessCompactCoreModel(contracts, input),
+    await buildFrameworkReadinessCompactCoreModel(contracts, input, options),
   );
 }

@@ -5,7 +5,6 @@ import {
   record,
   stringValue,
 } from '../framework-readiness-values.ts';
-import { buildAppReleaseUserPathEvidence } from '../../console/index.ts';
 
 export function stringListValue(value: unknown) {
   return Array.isArray(value)
@@ -86,8 +85,8 @@ function providerCapabilityChecklist(
   });
 }
 
-export function appReleaseUserPathMaturity() {
-  const evidence = record(buildAppReleaseUserPathEvidence({}));
+export function appReleaseUserPathMaturity(appReleaseUserPathEvidence: unknown) {
+  const evidence = record(appReleaseUserPathEvidence);
   const releaseOwnerVerdictHandoff = record(evidence.release_owner_verdict_handoff);
   const productionUserPathReady = evidence.production_user_path_ready === true;
   const pendingVerifyCount = numberValue(evidence.pending_verify_receipt_ref_count);

@@ -9,6 +9,7 @@ import { buildFrameworkReadinessSummary } from '../../../modules/foundry-lab/fra
 import { buildFrameworkTrancheBacklogReadback } from '../../../modules/foundry-lab/framework-tranche-backlog.ts';
 import { buildSourceStructureOperatorReadback } from '../../../modules/charter/source-structure-operator-readback.ts';
 import { buildOplAppState, parseAppActionExecuteArgs, parseAppStateArgs, runOplAppActionExecute } from '../../../modules/console/app-state.ts';
+import { buildRuntimeTraySnapshot } from '../../../modules/console/runtime-tray-snapshot.ts';
 import { runOplEngineAction } from '../../../modules/connect/system-installation/engine-actions.ts';
 import { runOplTurnkeyInstall } from '../../../modules/connect/system-installation/turnkey.ts';
 import {
@@ -268,9 +269,17 @@ export function buildPublicCommandSpecs(
           'framework readiness',
         );
         if (detail === 'compact') {
-          return await buildFrameworkReadinessCompactReadback(getContracts(), { familyDefaults: true });
+          return await buildFrameworkReadinessCompactReadback(
+            getContracts(),
+            { familyDefaults: true },
+            { runtimeSnapshotProvider: buildRuntimeTraySnapshot },
+          );
         }
-        return await buildFrameworkReadinessSummary(getContracts(), { familyDefaults: true });
+        return await buildFrameworkReadinessSummary(
+          getContracts(),
+          { familyDefaults: true },
+          { runtimeSnapshotProvider: buildRuntimeTraySnapshot },
+        );
       },
     },
     'framework operating-maturity': {
@@ -288,7 +297,11 @@ export function buildPublicCommandSpecs(
           publicCommandSpecs['framework operating-maturity'],
           'framework operating-maturity',
         );
-        const output = await buildFrameworkOperatingMaturityReadout(getContracts(), { familyDefaults: true });
+        const output = await buildFrameworkOperatingMaturityReadout(
+          getContracts(),
+          { familyDefaults: true },
+          { runtimeSnapshotProvider: buildRuntimeTraySnapshot },
+        );
         if (detail === 'compact') {
           return buildFrameworkOperatingMaturityCompactReadback(output.framework_operating_maturity);
         }

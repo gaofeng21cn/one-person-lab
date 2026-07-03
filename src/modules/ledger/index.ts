@@ -36,3 +36,4 @@ export { buildProviderLongSoakEvidenceProjection, listProviderLongSoakEvidenceRe
 export { listStandardAgentTemplateConsumptionReceipts } from './standard-agent-template-consumption-ledger.ts';
 export { appReleaseUserPathEvidencePayloadPreflight, listAppReleaseUserPathEvidenceReceipts, recordAppReleaseUserPathEvidenceReceipts, verifyAppReleaseUserPathEvidenceReceipt } from './app-release-user-path-evidence-ledger.ts';
 export type { AppReleaseUserPathEvidenceReceiptInput } from './app-release-user-path-evidence-ledger.ts';
+export { appReleaseUserPathPayloadRefHints, appReleaseUserPathPayloadTemplate, appReleaseUserPathPayloadWorkorder } from './app-release-user-path-evidence-payload.ts';

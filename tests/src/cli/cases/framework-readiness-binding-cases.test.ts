@@ -8,6 +8,7 @@ import {
   test,
 } from '../helpers.ts';
 import { buildFrameworkReadinessSummary } from '../../../../src/modules/foundry-lab/framework-readiness.ts';
+import { buildRuntimeTraySnapshot } from '../../../../src/modules/console/runtime-tray-snapshot.ts';
 import { createFamilyWorkspaceFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
 function restoreEnvVar(name: string, previousValue: string | undefined): void {
@@ -48,7 +49,7 @@ test('framework readiness treats stale domain workspace bindings as registry att
     try {
       const readiness = (await buildFrameworkReadinessSummary(loadFrameworkContracts(), {
         familyDefaults: true,
-      })).framework_readiness;
+      }, { runtimeSnapshotProvider: buildRuntimeTraySnapshot })).framework_readiness;
       assert.equal(readiness.summary.domain_manifest_stale_binding_count, 1);
       assert.deepEqual(readiness.summary.domain_manifest_stale_binding_project_ids, ['redcube']);
       assert.equal(readiness.summary.domain_manifest_currentness_owner_action_packet_count, 1);
@@ -117,7 +118,7 @@ test('framework readiness treats missing manifest commands as config attention, 
     try {
       const readiness = (await buildFrameworkReadinessSummary(loadFrameworkContracts(), {
         familyDefaults: true,
-      })).framework_readiness;
+      }, { runtimeSnapshotProvider: buildRuntimeTraySnapshot })).framework_readiness;
       assert.equal(readiness.summary.domain_manifest_not_configured_count, 1);
       assert.deepEqual(readiness.summary.domain_manifest_not_configured_project_ids, ['medautogrant']);
       assert.equal(readiness.summary.domain_manifest_currentness_owner_action_packet_count, 1);
