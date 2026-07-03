@@ -99,12 +99,13 @@ Console / Runway / Ledger / Connect / Foundry Lab 的边界可按一句话记忆
 | 调整 | 新 owner |
 | --- | --- |
 | brand-neutral JSON record / runtime endpoint / system preference helper | `kernel` |
+| source-ref normalization helper | `kernel` |
 | App release / user-path evidence ledger | `ledger` |
 | stage replay missing receipt workorder | `stagecraft` |
 | stage-attempt generic projections 与 memory trace projection | `runway` |
 | family action catalog contract 与 shared schema normalization | `kernel` |
 
-2026-07-03 的 Runway -> Console 收薄已移除 Runway 经由 Console public re-export 反向读取自身 generic projection 的调用。剩余 Runway -> Console 依赖集中在 `buildRuntimeTraySnapshot` 的三处 consumer：`family-runtime-evidence-worklist.ts`、`runtime-operator-action-execution.ts` 和 `observability-export.ts`。继续收薄需要先拆分 runtime tray snapshot 的 Console owner 投影与 Runway runtime 输入边界；不要在普通 import cleanup 中整体搬移该 snapshot builder。
+2026-07-03 的 Runway -> Console 收薄已分两步完成：先移除 Runway 经由 Console public re-export 反向读取自身 generic projection 的调用，再通过 `runtime-tray-snapshot-provider.ts` 把 `family-runtime-evidence-worklist.ts`、`runtime-operator-action-execution.ts` 和 `observability-export.ts` 改成由 CLI/App/Console caller 显式注入 Console-owned `buildRuntimeTraySnapshot`。当前 fresh `source:modules` readback 中 `runway -> console` pair 已消失。该口径只证明源码依赖方向更清楚，不改变 Console 仍拥有 App/operator snapshot projection 的事实，也不声明 runtime ready、Temporal live migration、domain ready 或 production readiness。
 
 2026-07-03 的 family action catalog 收薄已把 action catalog contract 从 Console 实现面迁到 `src/kernel/family-action-catalog-contract.ts`。Console 只保留 thin re-export facade；Atlas、Connect、Foundry Lab、Pack 和 Stagecraft 等消费者直接从 kernel shared contract 读取。该口径只证明 shared contract owner 与 import direction 更清楚，不改变 domain truth、owner receipt、typed blocker、runtime DB/provider queues 或 release artifacts。
 
