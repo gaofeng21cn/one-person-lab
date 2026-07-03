@@ -1,4 +1,5 @@
 import { buildDockerWebuiSettingsReadModel } from './app-state-settings-control-center-parts/docker-webui-read-model.ts';
+import { resolveSettingsCodexAccess } from './app-state-settings-control-center-parts/codex-access-read-model.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -667,12 +668,10 @@ function buildCapabilityTaskAwarenessRefs(input: BuildSettingsControlCenterInput
 
 function actionState(action: SettingsAction, input: BuildSettingsControlCenterInput) {
   if (action.action_id === 'settings_repair_model_access') {
-    const codex = asRecord(asRecord(input.core).codex);
-    return codex.model_access_ready === true ? 'ready' : 'attention_needed';
+    return resolveSettingsCodexAccess(input.core).model_access_status;
   }
   if (action.action_id === 'settings_configure_webui_api_key') {
-    const codex = asRecord(asRecord(input.core).codex);
-    return codex.opl_gateway_configured === true ? 'ready' : 'attention_needed';
+    return resolveSettingsCodexAccess(input.core).opl_gateway_status;
   }
   if (action.action_id === 'settings_sync_capabilities' || action.action_id === 'settings_apply_opl_packages') {
     const summary = asRecord(asRecord(input.modules).summary);
@@ -790,8 +789,7 @@ function buildAppSettingsReadModel(
   const temporal = asRecord(asRecord(input.provider).temporal);
   const workspaceRoot = asRecord(input.paths.workspace_root);
   const familyWorkspaceRoot = asRecord(input.paths.family_workspace_root);
-  const modelAccessReady = codex.model_access_ready === true;
-  const modelAccessStatus = modelAccessReady ? 'ready' : 'attention_needed';
+  const codexAccess = resolveSettingsCodexAccess(input.core);
   const temporalStatus = asString(temporal.health_status) ?? asString(temporal.status);
   const moduleHealth = `${moduleSummary.healthy_default_modules_count ?? 0}/${moduleSummary.default_modules_count ?? 0}`;
   const capabilityTaskAwarenessRefs = buildCapabilityTaskAwarenessRefs(input);
@@ -844,22 +842,22 @@ function buildAppSettingsReadModel(
       provider_base_url: asString(codex.provider_base_url) ?? asString(defaultProfile.base_url),
       config_path: asString(codex.config_path),
       profile_source: codex.config_path ? 'local_codex_config' : 'bundled_opl_default_profile',
-      api_key_present: codex.api_key_present === true,
-      opl_gateway_configured: codex.opl_gateway_configured === true,
-      model_access_ready: modelAccessReady,
-      model_access_source: asString(codex.model_access_source) ?? 'missing',
-      access_status: modelAccessStatus,
+      api_key_present: codexAccess.api_key_present,
+      opl_gateway_configured: codexAccess.opl_gateway_configured,
+      model_access_ready: codexAccess.model_access_ready,
+      model_access_source: codexAccess.model_access_source,
+      access_status: codexAccess.model_access_status,
       repair_action_id: 'settings_repair_model_access',
       shell_must_not_rewrite_policy: true,
     },
     access_api_key: {
       source_ref: 'app_state.core.codex.model_access_ready',
-      status: modelAccessStatus,
-      api_key_present: codex.api_key_present === true,
-      opl_gateway_configured: codex.opl_gateway_configured === true,
-      model_access_ready: modelAccessReady,
-      model_access_source: asString(codex.model_access_source) ?? 'missing',
-      config_path: asString(codex.config_path),
+      status: codexAccess.model_access_status,
+      api_key_present: codexAccess.api_key_present,
+      opl_gateway_configured: codexAccess.opl_gateway_configured,
+      model_access_ready: codexAccess.model_access_ready,
+      model_access_source: codexAccess.model_access_source,
+      config_path: codexAccess.config_path,
       required_for: 'agent_tasks_from_settings',
       repair_action_id: 'settings_repair_model_access',
       repair_route: routeFor('settings_repair_model_access'),
@@ -950,13 +948,13 @@ function issueRoute(actionId: string | null) {
 
 function buildIssueQueue(input: BuildSettingsControlCenterInput) {
   const issues: Array<Record<string, unknown>> = [];
-  const codex = asRecord(asRecord(input.core).codex);
+  const codexAccess = resolveSettingsCodexAccess(input.core);
   const developerProfile = asRecord(asRecord(input.developerMode).developer_profile);
   const developerEffectiveState = asString(input.developerMode.effective_state);
   const moduleItems = asList(input.modules.items);
   const temporal = asRecord(asRecord(input.provider).temporal);
 
-  if (codex.model_access_ready !== true) {
+  if (!codexAccess.model_access_ready) {
     issues.push({
       issue_id: 'model_access_manual_required',
       status_code: 'manual_required',
@@ -1052,6 +1050,7 @@ export type BuildSettingsControlCenterInput = {
 
 export function buildSettingsControlCenter(input: BuildSettingsControlCenterInput) {
   const codex = asRecord(asRecord(input.core).codex);
+  const codexAccess = resolveSettingsCodexAccess(input.core);
   const temporal = asRecord(asRecord(input.provider).temporal);
   const releaseChannel = asString(input.release.channel) ?? 'unknown';
   const moduleSummary = asRecord(asRecord(input.modules).summary);
@@ -1073,7 +1072,7 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
     action_surface: 'opl app action execute --json',
     allowed_action_ids: [...SETTINGS_CONTROL_CENTER_ACTION_IDS],
     status_summary: {
-      model_access: codex.model_access_ready === true ? 'ready' : 'attention_needed',
+      model_access: codexAccess.model_access_status,
       codex_version: asString(codex.parsed_version) ?? asString(codex.version) ?? 'missing',
       module_health: `${moduleSummary.healthy_default_modules_count ?? 0}/${moduleSummary.default_modules_count ?? 0}`,
       temporal_provider: statusTone(asString(temporal.status) ?? asString(temporal.health_status)),

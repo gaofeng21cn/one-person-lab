@@ -1,3 +1,5 @@
+import { resolveSettingsCodexAccess } from './codex-access-read-model.ts';
+
 type JsonRecord = Record<string, unknown>;
 
 type SettingsTaskEntry = {
@@ -16,10 +18,6 @@ type SettingsTaskEntry = {
 type DockerWebuiReadModelInput = {
   core: JsonRecord;
 };
-
-function asRecord(value: unknown): JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value) ? value as JsonRecord : {};
-}
 
 function asString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
@@ -54,9 +52,7 @@ export function buildDockerWebuiSettingsReadModel(
   taskEntries: SettingsTaskEntry[],
   issueQueue: Array<Record<string, unknown>>,
 ) {
-  const codex = asRecord(asRecord(input.core).codex);
-  const modelAccessReady = codex.model_access_ready === true;
-  const oplGatewayConfigured = codex.opl_gateway_configured === true;
+  const codexAccess = resolveSettingsCodexAccess(input.core);
   const dockerActionIds = [
     'settings_install_docker_webui',
     'settings_configure_webui_api_key',
@@ -65,7 +61,7 @@ export function buildDockerWebuiSettingsReadModel(
     'settings_open_docker_webui',
     'settings_diagnose_docker_webui',
   ];
-  const nextActionIds = modelAccessReady
+  const nextActionIds = codexAccess.model_access_ready
     ? [
         'settings_install_docker_webui',
         'settings_configure_webui_api_key',
@@ -87,16 +83,16 @@ export function buildDockerWebuiSettingsReadModel(
     source_ref: 'app_state.settings_control_center.action_catalog + app_state.core.codex',
     doctor_surface: 'opl system docker-webui doctor --json',
     doctor_read_model_ref: 'docker_webui_doctor',
-    ordinary_status: modelAccessReady ? 'action_available' : 'attention_needed',
+    ordinary_status: codexAccess.model_access_ready ? 'action_available' : 'attention_needed',
     one_click_install: settingsTaskRef(taskEntries, 'settings_install_docker_webui'),
     api_key_configuration: {
       ...settingsTaskRef(taskEntries, 'settings_configure_webui_api_key'),
-      status: oplGatewayConfigured ? 'ready' : 'attention_needed',
-      api_key_present: codex.api_key_present === true,
-      opl_gateway_configured: oplGatewayConfigured,
-      model_access_ready: modelAccessReady,
-      model_access_source: asString(codex.model_access_source) ?? 'missing',
-      config_path: asString(codex.config_path),
+      status: codexAccess.opl_gateway_status,
+      api_key_present: codexAccess.api_key_present,
+      opl_gateway_configured: codexAccess.opl_gateway_configured,
+      model_access_ready: codexAccess.model_access_ready,
+      model_access_source: codexAccess.model_access_source,
+      config_path: codexAccess.config_path,
       secret_payload_policy: 'stdin_only_never_json_or_logs',
       write_surface: 'opl system configure-codex --api-key-stdin --json',
     },

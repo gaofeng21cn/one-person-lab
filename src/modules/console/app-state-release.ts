@@ -1,10 +1,10 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from '../charter/contracts.ts';
 import { buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from '../connect/opl-release.ts';
-import { resolveProjectRoot } from '../connect/system-installation/shared.ts';
 import { readOplUpdateChannel } from './system-preferences.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -13,13 +13,17 @@ function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
+function resolveConsoleProjectRoot() {
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+}
+
 function readOplFrameworkPackageVersion() {
   const override = process.env.OPL_FRAMEWORK_VERSION?.trim();
   if (override) {
     return override;
   }
 
-  const packageJsonPath = path.join(resolveProjectRoot(), 'package.json');
+  const packageJsonPath = path.join(resolveConsoleProjectRoot(), 'package.json');
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   const version = typeof packageJson.version === 'string' ? packageJson.version.trim() : '';
   if (!version) {
@@ -36,7 +40,7 @@ function shortCommit(commit: string) {
 }
 
 function readPackagedFrameworkRevision(): string | null {
-  const projectRoot = resolveProjectRoot();
+  const projectRoot = resolveConsoleProjectRoot();
   const manifestPaths = [
     path.join(projectRoot, '..', 'manifest', 'full-package-manifest.json'),
     path.join(projectRoot, '..', '..', 'manifest', 'full-package-manifest.json'),
@@ -60,7 +64,7 @@ function readPackagedFrameworkRevision(): string | null {
 
 function readGitFrameworkRevision(): string | null {
   const result = spawnSync('git', ['rev-parse', '--short=12', 'HEAD'], {
-    cwd: resolveProjectRoot(),
+    cwd: resolveConsoleProjectRoot(),
     encoding: 'utf8',
     stdio: 'pipe',
   });
@@ -88,7 +92,7 @@ function readOplFrameworkRevision() {
     return { value: dateOverride, source: 'build_date' };
   }
 
-  const packageJsonPath = path.join(resolveProjectRoot(), 'package.json');
+  const packageJsonPath = path.join(resolveConsoleProjectRoot(), 'package.json');
   const packageDate = fs.statSync(packageJsonPath).mtime.toISOString().slice(0, 10);
   return { value: packageDate, source: 'package_json_mtime' };
 }

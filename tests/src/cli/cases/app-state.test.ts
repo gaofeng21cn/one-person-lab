@@ -882,6 +882,18 @@ exit 1
       output.app_state.core.codex.api_key_present,
     );
     assert.equal(
+      output.app_state.settings_control_center.status_summary.model_access,
+      output.app_state.core.codex.model_access_ready ? 'ready' : 'attention_needed',
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.codex_model_policy.model_access_ready,
+      output.app_state.core.codex.model_access_ready,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.access_api_key.model_access_source,
+      output.app_state.core.codex.model_access_source,
+    );
+    assert.equal(
       output.app_state.settings_control_center.app_settings_read_model.access_api_key.repair_action_id,
       'settings_repair_model_access',
     );
@@ -916,6 +928,14 @@ exit 1
     assert.equal(
       output.app_state.settings_control_center.app_settings_read_model.docker_webui.api_key_configuration.status,
       'attention_needed',
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.docker_webui.api_key_configuration.model_access_ready,
+      output.app_state.core.codex.model_access_ready,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.docker_webui.api_key_configuration.model_access_source,
+      output.app_state.core.codex.model_access_source,
     );
     assert.equal(
       output.app_state.settings_control_center.app_settings_read_model.docker_webui.api_key_configuration.secret_payload_policy,
