@@ -23,9 +23,9 @@
     "excluded": "none"
   },
   "deep_cross_module_imports": {
-    "failure_mode": "advisory",
+    "failure_mode": "strict",
     "strict_flag": "--strict-imports",
-    "reason": "Existing cross-module deep imports are reported for ratcheting. New enforcement can be enabled explicitly without breaking the current transition baseline."
+    "reason": "Cross-module imports must use the target module public entrypoint. The previous transition baseline has been migrated, so new deep cross-module imports fail the default source module boundary check."
   },
   "dependency_policy": {
     "forbidden_dependencies": [

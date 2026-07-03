@@ -23,10 +23,6 @@ const analysis = analyzeDeepImports();
 if (args.apply && !args.importsOnly) {
   applyPublicExports(analysis);
 }
-if (args.apply && !args.exportsOnly) {
-  applyImportRewrites(analysis);
-}
-
 const summary = {
   status: 'ok',
   mode: args.apply ? 'apply' : 'inspect',
