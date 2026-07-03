@@ -7,6 +7,10 @@ import {
   runOplConnectExternalSkillsSync,
 } from '../../../../modules/connect/opl-connect-external-skills.ts';
 import { runOplConnectPubMedSearch } from '../../../../modules/connect/opl-connect-pubmed.ts';
+import {
+  runOplConnectReferenceVerification,
+  type ReferenceVerificationInput,
+} from '../../../../modules/connect/opl-connect-reference-verification.ts';
 import { buildOplModules, runOplModuleAction, runOplModuleExec } from '../../../../modules/connect/system-installation/modules.ts';
 import {
   buildPublicModuleActionPayload,
@@ -30,6 +34,8 @@ type PubMedSearchArgs = {
   query: string;
   limit: number;
 };
+
+type ReferenceVerificationArgs = ReferenceVerificationInput;
 
 type ExternalSkillsBaseArgs = {
   source?: string;
@@ -75,6 +81,35 @@ function parsePubMedSearchArgs(args: string[], spec: CommandSpec): PubMedSearchA
   }
 
   return { query, limit: Number(parsed.limit) };
+}
+
+function parseReferenceProviders(raw: string, spec: CommandSpec): ReferenceVerificationInput['providers'] {
+  const providers = raw.split(',').map((entry) => entry.trim()).filter(Boolean);
+  const allowed = new Set(['crossref', 'pubmed', 'openalex', 'semantic-scholar']);
+  const invalid = providers.filter((provider) => !allowed.has(provider));
+  if (providers.length === 0 || invalid.length > 0) {
+    throw buildUsageError('connect references verify requires --providers crossref,pubmed,openalex,semantic-scholar.', spec, {
+      providers,
+      invalid,
+    });
+  }
+  return providers as ReferenceVerificationInput['providers'];
+}
+
+function parseReferenceVerificationArgs(args: string[], spec: CommandSpec): ReferenceVerificationArgs {
+  const parsed = parseRegisteredCommandOptions('connect references verify', args, spec);
+  const referencesFile = String(parsed['references-file'] ?? '').trim();
+  if (referencesFile.length === 0) {
+    throw buildUsageError('connect references verify requires --references-file.', spec, {
+      required: ['--references-file'],
+    });
+  }
+  return {
+    referencesFile,
+    providers: parseReferenceProviders(String(parsed.providers ?? 'crossref,pubmed'), spec),
+    cacheRoot: readOptionalString(parsed['cache-root']) ?? undefined,
+    maxRetries: Number(parsed['max-retries']),
+  };
 }
 
 function parseExternalSkillsBase(command: string, args: string[], spec: CommandSpec): ExternalSkillsBaseArgs {
@@ -374,6 +409,67 @@ export function buildConnectCommandSpecs(
           parsePubMedSearchArgs(args, connectCommandSpecs['connect pubmed search']),
         ),
     },
+    'connect references verify': {
+      usage: 'opl connect references verify --references-file <json> [--providers crossref,pubmed] [--cache-root <path>] [--max-retries <n>]',
+      summary: 'Verify literature reference metadata through read-only OPL Connect provider receipts.',
+      examples: [
+        'opl connect references verify --references-file references.json --providers crossref,pubmed --cache-root .cache/opl-connect --max-retries 1 --json',
+      ],
+      group: 'connect',
+      help_surface: 'default',
+      registry: {
+        command_id: 'connect references verify',
+        parser_adapter: 'node_util_parse_args',
+        options: [
+          {
+            name: 'references-file',
+            flag: '--references-file',
+            value_kind: 'string',
+            summary: 'JSON file containing references as an array or { references: [...] }.',
+            required: true,
+          },
+          {
+            name: 'providers',
+            flag: '--providers',
+            value_kind: 'string',
+            summary: 'Comma-separated provider ids: crossref,pubmed,openalex,semantic-scholar.',
+            default: 'crossref,pubmed',
+          },
+          {
+            name: 'cache-root',
+            flag: '--cache-root',
+            value_kind: 'string',
+            summary: 'Optional cache root for provider evidence receipts.',
+            required: false,
+          },
+          {
+            name: 'max-retries',
+            flag: '--max-retries',
+            value_kind: 'integer',
+            summary: 'Retry count for retryable provider failures.',
+            default: 1,
+            allowed_range: {
+              min: 0,
+              max: 5,
+            },
+          },
+        ],
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/connect_references_verify/output_schema',
+        authority_boundary: {
+          owner: 'OPL Connect',
+          surface: 'read_only_reference_verification_connector',
+          can_write_domain_truth: false,
+          can_create_owner_receipt: false,
+          can_claim_domain_ready: false,
+          can_claim_production_ready: false,
+        },
+      },
+      handler: async (args) =>
+        runOplConnectReferenceVerification(
+          parseReferenceVerificationArgs(args, connectCommandSpecs['connect references verify']),
+        ),
+    },
     'connect external-skills list': {
       usage: 'opl connect external-skills list [--source <source_id>] [--source-root <path>] [--registry-root <path>]',
       summary: 'List registered external scientific skill libraries and their available skill cards.',
@@ -597,8 +693,8 @@ export function buildConnectCommandSpecs(
   };
 
   validateCommandRegistryCoverage(connectCommandSpecs, {
-    protectedCommandPrefixes: ['connect pubmed', 'connect external-skills'],
-    requiredCommandIds: ['connect pubmed search', ...MODULE_ACTION_COMMANDS],
+    protectedCommandPrefixes: ['connect pubmed', 'connect references', 'connect external-skills'],
+    requiredCommandIds: ['connect pubmed search', 'connect references verify', ...MODULE_ACTION_COMMANDS],
   });
 
   return connectCommandSpecs;

@@ -7,11 +7,13 @@
   "machine_boundary": "This registry describes command metadata and output schemas. It does not execute commands, write domain truth, create owner receipts, create typed blockers, or claim domain, artifact, App, production, release, or L5 readiness.",
   "protected_command_prefixes": [
     "connect pubmed",
+    "connect references",
     "connect external-skills",
     "status"
   ],
   "required_command_ids": [
     "connect pubmed search",
+    "connect references verify",
     "connect install",
     "connect update",
     "connect reinstall",
@@ -401,6 +403,179 @@
                     "const": false
                   },
                   "can_claim_publication_readiness": {
+                    "const": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_references_verify": {
+      "command_id": "connect references verify",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "references-file",
+          "flag": "--references-file",
+          "value_kind": "string",
+          "required": true
+        },
+        {
+          "name": "providers",
+          "flag": "--providers",
+          "value_kind": "string",
+          "default": "crossref,pubmed"
+        },
+        {
+          "name": "cache-root",
+          "flag": "--cache-root",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "max-retries",
+          "flag": "--max-retries",
+          "value_kind": "integer",
+          "default": 1,
+          "allowed_range": {
+            "min": 0,
+            "max": 5
+          }
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_connect_reference_verification"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_connect_reference_verification": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "connector_id",
+              "status",
+              "request",
+              "provider_evidence",
+              "provider_receipts",
+              "cache",
+              "retry_attempts",
+              "no_authority_boundary"
+            ],
+            "additionalProperties": true,
+            "properties": {
+              "surface_kind": {
+                "const": "opl_connect_reference_verification_readonly"
+              },
+              "connector_id": {
+                "const": "reference_verification"
+              },
+              "status": {
+                "enum": [
+                  "completed"
+                ]
+              },
+              "request": {
+                "type": "object",
+                "required": [
+                  "references_file",
+                  "reference_count",
+                  "providers",
+                  "max_retries"
+                ],
+                "additionalProperties": true
+              },
+              "provider_evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "reference_id",
+                    "provider_id",
+                    "status",
+                    "match_basis",
+                    "normalized",
+                    "cache",
+                    "retry_attempts",
+                    "receipt_ref"
+                  ],
+                  "additionalProperties": true
+                }
+              },
+              "provider_receipts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "reference_id",
+                    "provider_id",
+                    "status",
+                    "receipt_ref",
+                    "authority"
+                  ],
+                  "additionalProperties": true
+                }
+              },
+              "cache": {
+                "type": "object",
+                "required": [
+                  "enabled",
+                  "root",
+                  "entries"
+                ],
+                "additionalProperties": true
+              },
+              "retry_attempts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "provider_id",
+                    "operation",
+                    "attempt",
+                    "status"
+                  ],
+                  "additionalProperties": true
+                }
+              },
+              "no_authority_boundary": {
+                "type": "object",
+                "required": [
+                  "read_only",
+                  "can_write_domain_truth",
+                  "can_create_owner_receipt",
+                  "can_create_typed_blocker",
+                  "can_claim_reference_truth"
+                ],
+                "properties": {
+                  "read_only": {
+                    "const": true
+                  },
+                  "can_write_domain_truth": {
+                    "const": false
+                  },
+                  "can_create_owner_receipt": {
+                    "const": false
+                  },
+                  "can_create_typed_blocker": {
+                    "const": false
+                  },
+                  "can_claim_reference_truth": {
                     "const": false
                   }
                 }
