@@ -26,6 +26,8 @@ OPL Framework current_owner_delta root
 
 `ordinary-progress-spine-and-audit-sidecar-plan.md` 是 active_support 完整治理规划：把 MAS/OPL 当前卡住问题收敛为普通推进主干与审计证据旁路分层，定义 `ProgressDeltaReceipt`、artifact tiering、readiness JIT、sidecar hard-gate upgrade 条件和 P0-P5 实施顺序。它不维护 live counters 或第二 backlog；当前 gap、next action 和完成口径仍回 `current-state-vs-ideal-gap.md`。
 
+`reuse-first-platform-risk-audit-and-landing-plan.md` 是 active_support 复用优先风险审计与落地计划：把 OPL family 内通用平台能力手搓过厚的风险，映射到 Temporal-first runtime、Kubernetes-style reconciler、schema/CLI 标准化、OCI/content-addressed package、OpenTelemetry-style telemetry 和 domain private-platform retirement 的理想路线。它不维护第二 active backlog；当前执行顺序仍回 `current-state-vs-ideal-gap.md` 或后续 fresh lane owner。
+
 `foundry-agent-os-family-target-implementation-plan.md` 是 active_support family-level 目标实施规划：把 MAS 的 Agent OS 方案抽象为 `OPL Agent OS + Domain Declarative Pack + Domain Minimal Authority Kernel + Domain Capability Registry`，并说明十个品牌模块、Capability Registry、MAS/MAG/RCA/OMA target delta 和 cross-agent conformance gate 如何落地。它不维护第二 active backlog；当前执行顺序仍回 `current-state-vs-ideal-gap.md`。
 
 `opl-family-ideal-operating-model-redesign.md` 是 active_reference / north-star 标准：后续审计只按 `meets_target`、`needs_demotion`、`needs_retirement` 判断。2026-06-10 refresh 把 MAS/OPL 理想态重设为 `multi-plane operating system`：ordinary progress、durable runtime、Stage Artifact Unit、authority decision、telemetry、reconciler、App cockpit 和 improvement 平面分离；这只提供设计标准和外部成熟模式吸收分类，不维护第二 active backlog。`opl-foundry-agent-target-operating-architecture.md` 是该标准的目标架构支撑。路线图、production closure matrix、purpose-first audit 和 private-platform inventory 都必须折回唯一 active owner，不再像平行计划一样追加 long list 或 dated proof。
@@ -41,6 +43,7 @@ OPL 品牌模块的 L4 rollout 计划已退出 active path：当前十模块 `L4
 | 文档 | 当前角色 | 是否仍有未落地规划 | 缺口归位 |
 | --- | --- | --- | --- |
 | `current-state-vs-ideal-gap.md` | 唯一 active owner / gap register | 是，但只维护当前功能/结构 gap，不维护 dated closeout 或 ready/release evidence worklist。 | 本文的 `Active Planning Gap Register`、`Ready / Release 声明边界`、`Next-Round Agent Prompt`。 |
+| `reuse-first-platform-risk-audit-and-landing-plan.md` | 复用优先风险审计与理想落地计划支撑 | 不作为独立 backlog。Phase 0-10 只作 reuse-first 审计标准、风险排序和 future lane seed。 | 真实落地状态必须回 `current-state-vs-ideal-gap.md`、source/contracts/CLI/runtime evidence 或对应 owner repo lane。 |
 | `ordinary-progress-spine-and-audit-sidecar-plan.md` | ordinary/audit 分层目标规划支撑 | 不作为独立 backlog。P0-P5 只作设计标准和验收词表。 | 已落地与未落地状态折回 `current-state-vs-ideal-gap.md` 的 operating-model / functional-structure gap；live evidence 指向独立维护入口。 |
 | `foundry-agent-os-family-target-implementation-plan.md` | Foundry Agent OS family target 支撑 | 不作为独立 backlog。W0-W6 structural landing 已折回；W7 live owner evidence / production evidence 后置。 | 非 live 缺口回 `current-state-vs-ideal-gap.md#active-planning-gap-register`；live evidence 回独立维护入口。 |
 | `opl-family-ideal-operating-model-redesign.md` | north-star / audit standard | 不作为 active backlog。 | 用 `meets_target` / `needs_demotion` / `needs_retirement` 审计；当前缺口只由唯一 active owner 维护。 |
@@ -75,6 +78,7 @@ OPL 品牌模块的 L4 rollout 计划已退出 active path：当前十模块 `L4
 ## 内容
 
 - `current-state-vs-ideal-gap.md`：唯一 active owner；维护当前目标、完成进度、功能/结构差距、active-goal baton 和验证入口；承接 Stage Native Kernel rollout 的当前落地状态和仍未闭合的 App/domain canary/cleanup tail。
+- `reuse-first-platform-risk-audit-and-landing-plan.md`：active_support 复用优先风险审计与落地计划；说明 OPL family 哪里存在手搓通用平台能力风险、应吸收哪些成熟工程模式、理想目标态、Phase 0-10 落地顺序、当前完成度和 forbidden claims。
 - `ordinary-progress-spine-and-audit-sidecar-plan.md`：active_support 完整治理规划；定义 ordinary progress spine、audit sidecar、artifact tiering、readiness JIT、MDS / DeepScientist smoothness learning、OPL 基座优化和 P0-P5 验收门；不声明 implementation landed。
 - `foundry-agent-os-family-target-implementation-plan.md`：active_support 目标实施规划；把 MAS Agent OS 方案提升为 family-level Foundry Agent OS pattern，固定 OPL / domain 分权、Capability Registry 边界、cross-agent target delta 和后续实施 lanes；不声明 domain ready、Brand L5 或 production ready。
 - `opl-family-ideal-operating-model-redesign.md`：active_reference / north-star 标准；提供 `目的反推必要性，MVP 检查阻碍性` 的统一 operating model、`multi-plane operating system` 顶层重设、外部成熟工程经验吸收分类和三类审计结论。
