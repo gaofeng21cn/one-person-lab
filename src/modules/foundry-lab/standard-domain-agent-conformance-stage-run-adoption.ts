@@ -219,8 +219,15 @@ function collectLiveProgressRefs(payload: unknown) {
     }
     return [{ ref, shape }];
   });
-  return unique([...shapeRefs, ...itemRefs].map((entry) => JSON.stringify(entry)))
-    .map((entry) => JSON.parse(entry) as { ref: string; shape: string });
+  const seen = new Set<string>();
+  return [...shapeRefs, ...itemRefs].filter((entry) => {
+    const key = `${entry.ref}\0${entry.shape}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
 }
 
 function countShapes(refs: Array<{ shape: string }>) {

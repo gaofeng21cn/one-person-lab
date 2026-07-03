@@ -1,12 +1,17 @@
-import fs from 'node:fs';
-
-import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
+import {
+  optionalString,
+  readJsonFileOrNull,
+  writeJsonPayloadFile,
+} from '../../kernel/json-file.ts';
+import {
+  stringList as arrayStringList,
+  type JsonRecord,
+} from '../../kernel/json-record.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import {
   assessIndependentAiReviewReceipt } from './agent-lab.ts';
 import { AGENT_LAB_PROMOTION_AUTHORITY_BOUNDARY } from './agent-lab-promotion.ts';
-import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
-
-type JsonRecord = Record<string, unknown>;
 
 type AgentLabRiskTier = 'low_risk' | 'medium_risk';
 
@@ -85,22 +90,12 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
+function stringArrayOrScalar(value: unknown) {
   const scalar = optionalString(value);
   if (scalar) {
     return [scalar];
   }
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
+  return arrayStringList(value);
 }
 
 function uniqueStrings(values: string[]) {
@@ -263,14 +258,14 @@ function normalizeReceipt(value: unknown): AgentLabRiskTierAutoPromotionReceipt 
     target_repo_id: optionalString(value.target_repo_id),
     mechanism_candidate_ref: optionalString(value.mechanism_candidate_ref),
     risk_tier: optionalString(value.risk_tier),
-    failure_delta_refs: stringList(value.failure_delta_refs),
+    failure_delta_refs: stringArrayOrScalar(value.failure_delta_refs),
     independent_ai_review_receipt_ref: optionalString(value.independent_ai_review_receipt_ref),
     independent_ai_review_receipt: value.independent_ai_review_receipt,
-    promotion_receipt_refs: stringList(value.promotion_receipt_refs),
-    rollback_target_refs: stringList(value.rollback_target_refs),
-    canary_observation_refs: stringList(value.canary_observation_refs),
-    no_forbidden_write_refs: stringList(value.no_forbidden_write_refs),
-    verification_refs: stringList(value.verification_refs),
+    promotion_receipt_refs: stringArrayOrScalar(value.promotion_receipt_refs),
+    rollback_target_refs: stringArrayOrScalar(value.rollback_target_refs),
+    canary_observation_refs: stringArrayOrScalar(value.canary_observation_refs),
+    no_forbidden_write_refs: stringArrayOrScalar(value.no_forbidden_write_refs),
+    verification_refs: stringArrayOrScalar(value.verification_refs),
     receipt_ref: optionalString(value.receipt_ref),
   };
   const normalized = normalizeInput(input);
@@ -287,35 +282,25 @@ function normalizeReceipt(value: unknown): AgentLabRiskTierAutoPromotionReceipt 
 function readAgentLabRiskTierAutoPromotionLedger():
   AgentLabRiskTierAutoPromotionLedger {
   const file = ledgerPath();
-  if (!fs.existsSync(file)) {
+  const parsed = readJsonFileOrNull(file);
+  if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
     return emptyLedger();
   }
-  try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
-    if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
-      return emptyLedger();
-    }
-    return {
-      ...emptyLedger(),
-      receipts: parsed.receipts
-        .map(normalizeReceipt)
-        .filter((receipt): receipt is AgentLabRiskTierAutoPromotionReceipt =>
-          Boolean(receipt)
-        ),
-    };
-  } catch {
-    return emptyLedger();
-  }
+  return {
+    ...emptyLedger(),
+    receipts: parsed.receipts
+      .map(normalizeReceipt)
+      .filter((receipt): receipt is AgentLabRiskTierAutoPromotionReceipt =>
+        Boolean(receipt)
+      ),
+  };
 }
 
 function writeAgentLabRiskTierAutoPromotionLedger(
   ledger: AgentLabRiskTierAutoPromotionLedger,
 ) {
   const paths = ensureOplStateDir();
-  fs.writeFileSync(
-    paths.agent_lab_risk_tier_auto_promotion_ledger_file,
-    `${JSON.stringify(ledger, null, 2)}\n`,
-  );
+  writeJsonPayloadFile(paths.agent_lab_risk_tier_auto_promotion_ledger_file, ledger);
 }
 
 export function recordAgentLabRiskTierAutoPromotionReceipts(

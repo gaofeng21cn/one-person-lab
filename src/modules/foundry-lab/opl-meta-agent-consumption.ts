@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { readJsonPayloadFile } from '../../kernel/json-file.ts';
 import { sourceRef, uniqueByRef } from '../../kernel/source-ref.ts';
 import { listManagedInstallUpdateReceipts } from '../connect/index.ts';
 import { omaProductionConsumptionRecordAction } from './oma-production-consumption-action.ts';
@@ -152,7 +153,7 @@ function readJson(repoDir: string, relativePath: string) {
       ref: relativePath,
       absolute_path: absolutePath,
       status: 'resolved',
-      payload: JSON.parse(fs.readFileSync(absolutePath, 'utf8')) as unknown,
+      payload: readJsonPayloadFile(absolutePath),
       error: null,
     };
   } catch (error) {

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { loadFrameworkContracts } from '../charter/index.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
 import { buildGeneratedAgentInterfaces } from '../pack/index.ts';
 import { normalizeFamilyActionCatalog } from '../../kernel/family-action-catalog-contract.ts';
 import { normalizeFamilyStageControlPlane } from '../stagecraft/index.ts';
@@ -120,7 +121,7 @@ function readJsonAt(filePath: string) {
     throw error;
   }
   try {
-    return JSON.parse(raw) as unknown;
+    return parseJsonText(raw);
   } catch (error) {
     throw new FrameworkContractError('contract_json_invalid', `Could not read JSON contract: ${filePath}`, {
       file: filePath,

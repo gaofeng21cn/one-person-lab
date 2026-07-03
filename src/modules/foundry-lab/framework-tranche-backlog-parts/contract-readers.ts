@@ -1,10 +1,10 @@
-import fs from 'node:fs';
 import path from 'node:path';
 
 import {
   buildDomainPackCompilerList,
   buildGeneratedAgentInterfaces,
 } from '../../pack/index.ts';
+import { readJsonPayloadFile } from '../../../kernel/json-file.ts';
 import {
   FrameworkContractError,
   expectBoolean,
@@ -84,7 +84,7 @@ export function sameStringSet(left: string[], right: string[]) {
 function readJsonObject(filePath: string, label: string): JsonRecord {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
+    parsed = readJsonPayloadFile(filePath);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       throw new FrameworkContractError(

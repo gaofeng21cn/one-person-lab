@@ -1,13 +1,18 @@
-import fs from 'node:fs';
-
+import { isRecord } from '../../kernel/contract-validation.ts';
+import {
+  optionalString,
+  readJsonFileOrNull,
+  writeJsonPayloadFile,
+} from '../../kernel/json-file.ts';
+import {
+  stringList as arrayStringList,
+} from '../../kernel/json-record.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import {
   hasVerifiedAgentLabRiskTierAutoPromotionReceiptRef,
 } from './agent-lab-risk-tier-promotion-ledger.ts';
 
 type DeveloperModeCloseoutRouteDecision = 'direct-fix' | 'fork-PR' | 'observe-only';
-
-type JsonRecord = Record<string, unknown>;
 
 export type DeveloperModeCloseoutReceipt = {
   surface_kind: 'opl_developer_mode_closeout_receipt';
@@ -94,22 +99,12 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
+function stringArrayOrScalar(value: unknown) {
   const scalar = optionalString(value);
   if (scalar) {
     return [scalar];
   }
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
+  return arrayStringList(value);
 }
 
 function uniqueStrings(values: string[]) {
@@ -410,15 +405,15 @@ function normalizeReceipt(value: unknown): DeveloperModeCloseoutReceipt | null {
     route_eligibility: optionalString(value.route_eligibility),
     patrol_observation_ref: optionalString(value.patrol_observation_ref),
     diff_ref: optionalString(value.diff_ref),
-    verification_refs: stringList(value.verification_refs),
+    verification_refs: stringArrayOrScalar(value.verification_refs),
     no_forbidden_write_ref: optionalString(value.no_forbidden_write_ref),
     commit_ref: optionalString(value.commit_ref),
     fork_repo_ref: optionalString(value.fork_repo_ref),
     pr_review_ref: optionalString(value.pr_review_ref),
     owner_acceptance_ref: ownerAcceptanceRef,
-    route_repetition_refs: stringList(value.route_repetition_refs),
-    risk_tier_auto_promotion_refs: stringList(value.risk_tier_auto_promotion_refs),
-    app_patrol_mount_refs: stringList(value.app_patrol_mount_refs),
+    route_repetition_refs: stringArrayOrScalar(value.route_repetition_refs),
+    risk_tier_auto_promotion_refs: stringArrayOrScalar(value.risk_tier_auto_promotion_refs),
+    app_patrol_mount_refs: stringArrayOrScalar(value.app_patrol_mount_refs),
     receipt_ref: receiptRefValue,
   };
   const normalized = normalizeReceiptInput(input);
@@ -434,31 +429,21 @@ function normalizeReceipt(value: unknown): DeveloperModeCloseoutReceipt | null {
 
 function readDeveloperModeCloseoutLedger(): DeveloperModeCloseoutLedger {
   const file = ledgerPath();
-  if (!fs.existsSync(file)) {
+  const parsed = readJsonFileOrNull(file);
+  if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
     return emptyLedger();
   }
-  try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
-    if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
-      return emptyLedger();
-    }
-    return {
-      ...emptyLedger(),
-      receipts: parsed.receipts
-        .map(normalizeReceipt)
-        .filter((receipt): receipt is DeveloperModeCloseoutReceipt => Boolean(receipt)),
-    };
-  } catch {
-    return emptyLedger();
-  }
+  return {
+    ...emptyLedger(),
+    receipts: parsed.receipts
+      .map(normalizeReceipt)
+      .filter((receipt): receipt is DeveloperModeCloseoutReceipt => Boolean(receipt)),
+  };
 }
 
 function writeDeveloperModeCloseoutLedger(ledger: DeveloperModeCloseoutLedger) {
   const paths = ensureOplStateDir();
-  fs.writeFileSync(
-    paths.developer_mode_closeout_ledger_file,
-    `${JSON.stringify(ledger, null, 2)}\n`,
-  );
+  writeJsonPayloadFile(paths.developer_mode_closeout_ledger_file, ledger);
 }
 
 export function recordDeveloperModeCloseoutReceipts(

@@ -2,7 +2,11 @@ import fs from 'node:fs';
 
 import { resolveOplStatePaths, type OplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import { stableId } from '../../kernel/stable-id.ts';
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import {
+  readJsonPayloadFile,
+  writeJsonPayloadFile,
+} from '../../kernel/json-file.ts';
 import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -68,10 +72,6 @@ const SELF_EVOLUTION_AUTHORITY_BOUNDARY = {
   can_claim_domain_ready: false,
   can_claim_production_ready: false,
 };
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
 
 function asString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
@@ -258,7 +258,7 @@ export function readFeedbackOpsEvents(paths: OplStatePaths = resolveOplStatePath
   if (!fs.existsSync(paths.agent_lab_feedbackops_event_ledger_file)) {
     return [];
   }
-  const parsed = JSON.parse(fs.readFileSync(paths.agent_lab_feedbackops_event_ledger_file, 'utf8'));
+  const parsed = readJsonPayloadFile(paths.agent_lab_feedbackops_event_ledger_file);
   if (!Array.isArray(parsed)) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
@@ -273,11 +273,7 @@ export function readFeedbackOpsEvents(paths: OplStatePaths = resolveOplStatePath
 
 function writeFeedbackOpsEvents(events: JsonRecord[], paths: OplStatePaths) {
   ensureOplStateDir(paths);
-  fs.writeFileSync(
-    paths.agent_lab_feedbackops_event_ledger_file,
-    `${JSON.stringify(events, null, 2)}\n`,
-    'utf8',
-  );
+  writeJsonPayloadFile(paths.agent_lab_feedbackops_event_ledger_file, events);
 }
 
 export function submitDeliveryFeedbackEvent(

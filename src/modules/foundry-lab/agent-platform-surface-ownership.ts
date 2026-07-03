@@ -3,7 +3,16 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 import { buildGeneratedAgentInterfaces } from '../pack/index.ts';
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { readJsonFileResult } from '../../kernel/json-file.ts';
+import {
+  record,
+  recordList,
+  stringList,
+  stringValue as optionalString,
+  uniqueStringList,
+  type JsonRecord,
+} from '../../kernel/json-record.ts';
 import {
   defaultStandardDomainAgentRepoInputs,
   DEFAULT_STANDARD_DOMAIN_AGENT_REPOS,
@@ -27,8 +36,6 @@ import {
 } from './default-caller-surface-gates.ts';
 import { buildDomainPrivatePlatformTailMatrixReadback } from './domain-private-platform-tail-matrix.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
-
-type JsonRecord = Record<string, unknown>;
 
 interface RepoInput {
   requested_agent_id: string | null;
@@ -103,60 +110,15 @@ const RETAINED_DOMAIN_AUTHORITY = [
   'domain_specific_policy_rubric_or_quality_gate',
 ] as const;
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value
-    .map((entry) => optionalString(entry))
-    .filter((entry): entry is string => Boolean(entry));
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
-function unique(values: string[]) {
-  return [...new Set(values.filter(Boolean))];
-}
-
 function readJsonFile(repoDir: string, relativePath: string) {
   const absolutePath = path.join(repoDir, relativePath);
-  if (!fs.existsSync(absolutePath)) {
-    return {
-      path: relativePath,
-      status: 'missing',
-      payload: null,
-      error: null,
-    };
-  }
-  try {
-    return {
-      path: relativePath,
-      status: 'resolved',
-      payload: JSON.parse(fs.readFileSync(absolutePath, 'utf8')),
-      error: null,
-    };
-  } catch (error) {
-    return {
-      path: relativePath,
-      status: 'invalid_json',
-      payload: null,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
+  const result = readJsonFileResult(absolutePath);
+  return {
+    path: relativePath,
+    status: result.status,
+    payload: result.payload,
+    error: result.error,
+  };
 }
 
 function normalizeDomainSelection(value: string) {
@@ -369,7 +331,7 @@ function diagnosticRefsForSubdomain(repoDir: string, aliases: readonly string[])
       }
     })
     .slice(0, 12);
-  return unique([
+  return uniqueStringList([
     ...filenameRefs.slice(0, 8),
     ...contractRefs.slice(0, 8),
     ...proseRefs.slice(0, 8),

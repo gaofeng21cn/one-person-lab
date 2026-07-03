@@ -1,7 +1,7 @@
-import fs from 'node:fs';
 import path from 'node:path';
 
 import { listBrandModuleL5EvidenceReceipts } from '../charter/index.ts';
+import { readJsonPayloadFile } from '../../kernel/json-file.ts';
 import { listDomainOwnerPayloadSummaryReceipts } from '../ledger/index.ts';
 import {
   listProviderLongSoakEvidenceReceipts,
@@ -100,12 +100,6 @@ function stringList(value: unknown) {
   return Array.isArray(value)
     ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
     : [];
-}
-
-function recordValue(value: unknown) {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : {};
 }
 
 function refShapes(counts: RefCounts) {
@@ -290,11 +284,11 @@ function magRepoTrackedEvidence(
     'mag-production-acceptance.json',
   );
   try {
-    const evidence = recordValue(JSON.parse(fs.readFileSync(evidencePath, 'utf8')));
-    const refs = recordValue(evidence.refs);
-    const closureEvidence = recordValue(evidence.closure_evidence);
-    const externalEvidenceLedger = recordValue(evidence.external_evidence_receipt_ledger);
-    const grantReceiptChain = recordValue(evidence.grant_receipt_chain);
+    const evidence = record(readJsonPayloadFile(evidencePath));
+    const refs = record(evidence.refs);
+    const closureEvidence = record(evidence.closure_evidence);
+    const externalEvidenceLedger = record(evidence.external_evidence_receipt_ledger);
+    const grantReceiptChain = record(evidence.grant_receipt_chain);
     const domainOwnerReceiptRefs = unique([
       ...stringList(refs.grant_owner_receipt_refs),
       ...stringList(refs.owner_receipt_refs),
@@ -359,9 +353,9 @@ function rcaRepoTrackedEvidence(
   }
   const evidencePath = path.join(repoDir, 'contracts', 'owner_chain_live_progress_evidence.json');
   try {
-    const evidence = recordValue(JSON.parse(fs.readFileSync(evidencePath, 'utf8')));
-    const liveCanary = recordValue(evidence.live_visual_owner_chain_canary);
-    const ownerActionCanary = recordValue(evidence.rca_owned_owner_action_canary);
+    const evidence = record(readJsonPayloadFile(evidencePath));
+    const liveCanary = record(evidence.live_visual_owner_chain_canary);
+    const ownerActionCanary = record(evidence.rca_owned_owner_action_canary);
     const ownerReceiptRefs = unique([
       ...stringList(liveCanary.observed_owner_receipt_refs),
       stringValue(ownerActionCanary.observed_owner_receipt_ref) ?? '',
@@ -430,8 +424,8 @@ function omaRepoTrackedEvidence(
   }
   const evidencePath = path.join(repoDir, 'contracts', 'target_agent_owner_chain_evidence.json');
   try {
-    const evidence = recordValue(JSON.parse(fs.readFileSync(evidencePath, 'utf8')));
-    const blockerClosure = recordValue(evidence.stage_replay_human_gate_blocker_closure);
+    const evidence = record(readJsonPayloadFile(evidencePath));
+    const blockerClosure = record(evidence.stage_replay_human_gate_blocker_closure);
     const typedBlockerRefs = stringList(blockerClosure.typed_blocker_refs);
     const noRegressionRefs = stringList(blockerClosure.no_regression_refs);
     if (typedBlockerRefs.length === 0 && noRegressionRefs.length === 0) {

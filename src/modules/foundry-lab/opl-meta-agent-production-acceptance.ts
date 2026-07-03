@@ -1,41 +1,29 @@
-import fs from 'node:fs';
 import path from 'node:path';
 
+import {
+  optionalString,
+  readJsonFileResult,
+} from '../../kernel/json-file.ts';
+import {
+  record,
+  stringList as arrayStringList,
+  uniqueStringList,
+} from '../../kernel/json-record.ts';
 import {
   stageReplayMissingReceiptTargetKey,
   type StageReplayMissingReceiptReceipt,
 } from '../stagecraft/index.ts';
 import type { OmaProductionConsumptionReceipt } from './oma-production-consumption-ledger.ts';
 
-type JsonRecord = Record<string, unknown>;
-
 export const OMA_PRODUCTION_ACCEPTANCE_RELATIVE_REF =
   'contracts/production_acceptance/meta-agent-production-acceptance.json';
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
+function stringArrayOrScalar(value: unknown) {
   const scalar = optionalString(value);
   if (scalar) {
     return [scalar];
   }
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
-function uniqueStringList(values: string[]) {
-  return [...new Set(values.filter((value) => value.trim().length > 0))];
+  return arrayStringList(value);
 }
 
 function refsOnlyStageReplayAuthorityBoundary(): StageReplayMissingReceiptReceipt['authority_boundary'] {
@@ -78,23 +66,14 @@ function refsOnlyOmaProductionConsumptionAuthorityBoundary():
 
 export function readOmaProductionAcceptance(repoDir: string) {
   const absolutePath = path.join(repoDir, OMA_PRODUCTION_ACCEPTANCE_RELATIVE_REF);
-  try {
-    return {
-      ref: OMA_PRODUCTION_ACCEPTANCE_RELATIVE_REF,
-      absolute_path: absolutePath,
-      status: 'resolved',
-      payload: JSON.parse(fs.readFileSync(absolutePath, 'utf8')) as unknown,
-      error: null,
-    };
-  } catch (error) {
-    return {
-      ref: OMA_PRODUCTION_ACCEPTANCE_RELATIVE_REF,
-      absolute_path: absolutePath,
-      status: fs.existsSync(absolutePath) ? 'invalid_json' : 'missing',
-      payload: null,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
+  const result = readJsonFileResult(absolutePath);
+  return {
+    ref: OMA_PRODUCTION_ACCEPTANCE_RELATIVE_REF,
+    absolute_path: absolutePath,
+    status: result.status,
+    payload: result.payload,
+    error: result.error,
+  };
 }
 
 export function omaProductionAcceptanceStageReplayReceipts(
@@ -105,7 +84,7 @@ export function omaProductionAcceptanceStageReplayReceipts(
   if (summary.payload_path !== 'typed_blocker_path') {
     return [];
   }
-  const typedBlockerRefs = uniqueStringList(stringList(summary.typed_blocker_refs));
+  const typedBlockerRefs = uniqueStringList(stringArrayOrScalar(summary.typed_blocker_refs));
   if (typedBlockerRefs.length === 0) {
     return [];
   }
@@ -144,16 +123,16 @@ export function omaProductionAcceptanceConsumptionReceipts(
   const refs = record(acceptance.refs);
   const followthrough = record(acceptance.production_consumption_followthrough);
   const longSoakRefs = uniqueStringList([
-    ...stringList(refs.long_soak_refs),
-    ...stringList(followthrough.long_soak_refs),
+    ...stringArrayOrScalar(refs.long_soak_refs),
+    ...stringArrayOrScalar(followthrough.long_soak_refs),
   ]);
   const verifiedReceiptRefs = uniqueStringList([
-    ...stringList(refs.production_consumption_receipt_refs),
-    ...stringList(followthrough.verified_receipt_refs),
+    ...stringArrayOrScalar(refs.production_consumption_receipt_refs),
+    ...stringArrayOrScalar(followthrough.verified_receipt_refs),
   ]);
   const historicalTypedBlockerRefs = uniqueStringList([
-    ...stringList(refs.historical_typed_blocker_refs),
-    ...stringList(followthrough.historical_typed_blocker_refs),
+    ...stringArrayOrScalar(refs.historical_typed_blocker_refs),
+    ...stringArrayOrScalar(followthrough.historical_typed_blocker_refs),
   ]);
   if (
     longSoakRefs.length === 0

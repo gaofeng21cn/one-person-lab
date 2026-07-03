@@ -1,7 +1,7 @@
-import fs from 'node:fs';
 import path from 'node:path';
 
 import { isRecord } from '../../../kernel/contract-validation.ts';
+import { readJsonPayloadFile } from '../../../kernel/json-file.ts';
 import { buildPrivatePlatformResidueOwnerDecisionLedger } from '../private-platform-residue-owner-decisions.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import type { JsonRecord } from './shared.ts';
@@ -18,9 +18,7 @@ const PRIVATE_RESIDUE_CONTRACT_REF =
   'contracts/opl-framework/private-platform-residue-owner-decisions.json';
 
 function readJsonObject(contractsDir: string, ref: string): JsonRecord {
-  const parsed = JSON.parse(
-    fs.readFileSync(path.join(contractsDir, ref.replace('contracts/opl-framework/', '')), 'utf8'),
-  ) as unknown;
+  const parsed = readJsonPayloadFile(path.join(contractsDir, ref.replace('contracts/opl-framework/', '')));
   return isRecord(parsed) ? parsed : {};
 }
 

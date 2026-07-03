@@ -1,13 +1,13 @@
 import fs from 'node:fs';
 
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
+import type { JsonRecord } from '../../kernel/json-record.ts';
 import {
   STANDARD_AGENT_REGISTRY,
   STANDARD_AGENT_REGISTRY_REF,
   resolveStandardAgent,
 } from '../atlas/index.ts';
-
-type JsonRecord = Record<string, unknown>;
 
 export const FOUNDRY_AGENT_OPERATIONS = [
   'status',
@@ -41,10 +41,6 @@ function buildPeerSeriesSummary(peer: FoundryAgentPeer) {
     work_alias: peer.work_alias,
     ordinary_golden_path: peer.ordinary_golden_path,
   };
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function readString(value: unknown, field: string) {
@@ -105,7 +101,7 @@ function readBoolean(value: unknown, field: string) {
 }
 
 function readFoundryAgentSeriesContract() {
-  const contract = JSON.parse(fs.readFileSync(FOUNDRY_AGENT_SERIES_CONTRACT_URL, 'utf8')) as unknown;
+  const contract = parseJsonText(fs.readFileSync(FOUNDRY_AGENT_SERIES_CONTRACT_URL, 'utf8'));
   if (!isRecord(contract)) {
     throw new FrameworkContractError(
       'contract_shape_invalid',

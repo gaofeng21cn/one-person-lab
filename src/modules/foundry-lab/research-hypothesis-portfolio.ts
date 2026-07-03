@@ -1,4 +1,10 @@
-type JsonRecord = Record<string, unknown>;
+import { isRecord } from '../../kernel/contract-validation.ts';
+import {
+  record,
+  recordList,
+  stringValue as optionalString,
+  type JsonRecord,
+} from '../../kernel/json-record.ts';
 
 export interface ResearchHypothesisPortfolioValidationError {
   code:
@@ -139,18 +145,6 @@ const ADVISORY_METRICS_AUTHORITY_BOUNDARY = {
   can_rank_as_domain_truth: false,
 } as const;
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
 function stringList(value: unknown) {
   if (typeof value === 'string' && value.trim().length > 0) {
     return [value];
@@ -158,10 +152,6 @@ function stringList(value: unknown) {
   return Array.isArray(value)
     ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
     : [];
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value : null;
 }
 
 function validationError(

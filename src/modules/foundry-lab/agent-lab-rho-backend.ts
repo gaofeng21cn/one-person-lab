@@ -5,6 +5,11 @@ import path from 'node:path';
 
 import { AGENT_LAB_AUTHORITY_BOUNDARY } from './agent-lab-authority.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import {
+  parseJsonText,
+  optionalString,
+  writeJsonPayloadFile,
+} from '../../kernel/json-file.ts';
 import { stableId } from '../../kernel/stable-id.ts';
 
 const RHO_AUTHORITY_BOUNDARY = {
@@ -89,7 +94,7 @@ function walkSessionFiles(root: string): string[] {
 
 function safeJsonParse(value: string): Record<string, unknown> | null {
   try {
-    const parsed = JSON.parse(value);
+    const parsed = parseJsonText(value);
     return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
       ? parsed as Record<string, unknown>
       : null;
@@ -102,10 +107,6 @@ function nestedRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {};
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
 function extractMessage(payload: Record<string, unknown>): string | null {
@@ -200,7 +201,7 @@ function sha(value: string) {
 
 function writeJsonArtifact(file: string, value: unknown) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+  writeJsonPayloadFile(file, value);
 }
 
 function buildTrajectoryDigest(trajectory: ParsedTrajectory, index: number, runRefPrefix: string) {
