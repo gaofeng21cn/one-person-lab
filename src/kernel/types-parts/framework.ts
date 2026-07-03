@@ -56,6 +56,25 @@ export interface FrameworkContracts {
   packOs: PackOsContract;
   packBundle: PackBundleContract;
   scholarSkillsCapabilityModules: ScholarSkillsCapabilityModulesContract;
+  standardAgentPrinciples: StandardAgentPrinciplesContract;
+}
+
+export interface StandardAgentPrinciplesContract {
+  surface_kind: string;
+  version: string;
+  owner: string;
+  state: string;
+  purpose: string;
+  machine_boundary: string;
+  principle_ids: string[];
+  principles: Array<{
+    principle_id: string;
+    owner: string;
+    summary: string;
+  }>;
+  module_organization: Record<string, unknown>;
+  adoption_contract: Record<string, unknown>;
+  false_authority_boundary: Record<string, unknown>;
 }
 
 export interface ContractValidationEntry {
@@ -75,7 +94,8 @@ export interface ContractValidationEntry {
     | 'target_operating_architecture'
     | 'pack_os'
     | 'pack_bundle'
-    | 'scholarskills_capability_modules';
+    | 'scholarskills_capability_modules'
+    | 'standard_agent_principles';
   file: string;
   schema_version: string;
   status: 'valid';

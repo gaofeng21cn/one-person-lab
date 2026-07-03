@@ -204,6 +204,7 @@ export const GENERATED_SURFACE_CONTRACT = {
 export const AGENT_PACK_CONTRACT = {
   canonical_semantic_pack_root: 'agent/',
   required_sections: [
+    'agent/principles',
     'agent/prompts',
     'agent/stages',
     'agent/skills',

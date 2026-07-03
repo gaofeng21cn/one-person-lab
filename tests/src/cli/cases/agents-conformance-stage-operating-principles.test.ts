@@ -23,6 +23,48 @@ test('agents conformance blocks missing stage operating principle policy', () =>
   );
 });
 
+test('agents conformance blocks missing standard agent principles adoption', () => {
+  const repoDir = buildReadyAgentRepo();
+  fs.rmSync(path.join(repoDir, 'contracts', 'standard-agent-principles-adoption.json'));
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(report.reports[0].standard_agent_principle_checks.status, 'blocked');
+  assert.equal(
+    report.reports[0].blockers.includes('standard_agent_principles_adoption_not_declared'),
+    true,
+  );
+});
+
+test('agents conformance blocks domain intake as standalone skill in standard principles adoption', () => {
+  const repoDir = buildReadyAgentRepo();
+  const adoptionPath = path.join(repoDir, 'contracts', 'standard-agent-principles-adoption.json');
+  const adoption = JSON.parse(fs.readFileSync(adoptionPath, 'utf8'));
+  adoption.domain_mapping.domain_intake.is_standalone_skill = true;
+  writeJson(adoptionPath, adoption);
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+
+  const checks = report.reports[0].standard_agent_principle_checks;
+  assert.equal(report.status, 'blocked');
+  assert.equal(checks.status, 'blocked');
+  assert.equal(
+    checks.blockers.includes('standard_agent_domain_intake_must_not_be_standalone_skill'),
+    true,
+  );
+});
+
 test('agents conformance blocks stage policies that slow ordinary owner-delta progress', () => {
   const repoDir = buildReadyAgentRepo();
   const policyPath = path.join(repoDir, 'contracts', 'stage_operating_principles.json');

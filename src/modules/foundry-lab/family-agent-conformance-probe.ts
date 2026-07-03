@@ -53,13 +53,14 @@ type ProbeObservation = {
 };
 
 const SOURCE_DIR = path.dirname(fileURLToPath(import.meta.url));
-const OPL_REPO_ROOT = path.resolve(SOURCE_DIR, '..');
+const OPL_REPO_ROOT = path.resolve(SOURCE_DIR, '../../..');
 const STANDARD_AGENT_ADMISSION_GATES_REF =
   'contracts/opl-framework/standard-agent-admission-gates.json';
 
 const GATE_OBSERVATION_IDS: Record<string, string[]> = {
   identity: ['scaffold_validation', 'action_catalog', 'stage_plane'],
   domain_truth_owner: [
+    'standard_agent_principle_checks',
     'private_surface_checks',
     'platform_surface_ownership_checks',
   ],
@@ -75,14 +76,16 @@ const GATE_OBSERVATION_IDS: Record<string, string[]> = {
     'action_catalog',
     'stage_plane',
     'scaffold_validation',
+    'standard_agent_principle_checks',
   ],
   stage_artifact_contract: [
     'stage_artifact_kernel_adoption_checks',
     'stage_run_kernel_profile_checks',
     'stage_run_canary_evidence_checks',
   ],
-  execution_model: ['stage_operating_principle_checks'],
+  execution_model: ['stage_operating_principle_checks', 'standard_agent_principle_checks'],
   authority_boundary: [
+    'standard_agent_principle_checks',
     'private_surface_checks',
     'legacy_runtime_residue_guard',
     'platform_surface_ownership_checks',
@@ -350,6 +353,7 @@ function buildObservations(
     stage_run_kernel_profile_checks: observationFromReport(report, 'stage_run_kernel_profile_checks'),
     stage_run_canary_evidence_checks: observationFromReport(report, 'stage_run_canary_evidence_checks'),
     stage_operating_principle_checks: observationFromReport(report, 'stage_operating_principle_checks'),
+    standard_agent_principle_checks: observationFromReport(report, 'standard_agent_principle_checks'),
     state_index_kernel_adoption_checks: observationFromReport(report, 'state_index_kernel_adoption_checks'),
     golden_path_default_surface_budget_checks: observationFromReport(report, 'golden_path_default_surface_budget_checks'),
     workspace_norm_checks: observationFromReport(report, 'workspace_norm_checks'),

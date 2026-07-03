@@ -1,0 +1,118 @@
+{
+  "surface_kind": "opl_standard_agent_principles",
+  "version": "standard-agent-principles.v1",
+  "owner": "one-person-lab",
+  "state": "active_contract",
+  "purpose": "Define the AI-first standard-agent principle pack that every OPL-compatible domain agent adopts before specialization.",
+  "machine_boundary": "Framework-level principle ids, organization roles, and false-authority requirements only. Domain truth, quality verdicts, artifact authority, memory bodies, owner receipts, typed blockers, and production readiness remain domain-owned.",
+  "principle_ids": [
+    "ai_first_execution",
+    "contract_backed_boundary",
+    "domain_truth_authority",
+    "stage_prompt_skill_tool_separation",
+    "domain_intake_mapping",
+    "workspace_source_intake_shell",
+    "owner_delta_progress",
+    "parallel_executor_autonomy",
+    "module_organization"
+  ],
+  "principles": [
+    {
+      "principle_id": "ai_first_execution",
+      "owner": "one-person-lab",
+      "summary": "AI handles open-ended understanding, comparison, creation, review, diagnosis, and revision inside a bounded stage attempt."
+    },
+    {
+      "principle_id": "contract_backed_boundary",
+      "owner": "one-person-lab",
+      "summary": "Contracts, schemas, tests, and readbacks guard identity, authority, inputs, outputs, evidence, and recovery boundaries instead of scripting AI cognition."
+    },
+    {
+      "principle_id": "domain_truth_authority",
+      "owner": "domain_agent",
+      "summary": "The domain agent owns domain truth, quality/export verdicts, artifact body authority, memory body accept/reject decisions, owner receipts, and typed blockers."
+    },
+    {
+      "principle_id": "stage_prompt_skill_tool_separation",
+      "owner": "one-person-lab",
+      "summary": "Stage prompts define the current goal and accepted answer shape; professional skills carry domain methods; tool catalogs declare affordances, permissions, side effects, and forbidden authority without prescribing strategy."
+    },
+    {
+      "principle_id": "domain_intake_mapping",
+      "owner": "domain_agent",
+      "summary": "domain_intake is the standard starter-stage and owner-handoff pattern, not a standalone Skill. Each domain maps it to its own intake stage, source refs, receipt, or typed blocker surface."
+    },
+    {
+      "principle_id": "workspace_source_intake_shell",
+      "owner": "one-person-lab",
+      "summary": "OPL owns the generic workspace/source intake transport and locator shell; domain source semantics, readiness, provenance, and study/task truth stay with the domain agent."
+    },
+    {
+      "principle_id": "owner_delta_progress",
+      "owner": "one-person-lab",
+      "summary": "A stage moves by deliverable delta, owner receipt, typed blocker, human gate, route-back, or handoff packet; structural conformance cannot claim domain ready or production ready."
+    },
+    {
+      "principle_id": "parallel_executor_autonomy",
+      "owner": "one-person-lab",
+      "summary": "Executors may choose order, tools, substitutions, and safe parallelism inside the declared boundary and must stop at authority, permission, human, safety, or irreversible-write gates."
+    },
+    {
+      "principle_id": "module_organization",
+      "owner": "one-person-lab",
+      "summary": "OPL brand modules hold framework primitives above domain agents; standard agents are declarative domain packs plus minimal authority functions, and capability packs stay separate from domain intake."
+    }
+  ],
+  "module_organization": {
+    "framework_module_registry_ref": "contracts/opl-framework/brand-module-registry.json",
+    "framework_modules": [
+      "charter",
+      "atlas",
+      "workspace",
+      "pack",
+      "stagecraft",
+      "runway",
+      "ledger",
+      "console",
+      "foundry-lab",
+      "connect"
+    ],
+    "standard_domain_agent_shape": "declarative_domain_pack_plus_minimal_authority_functions",
+    "capability_pack_shape": "professional_capability_modules_without_domain_truth_or_runtime_authority"
+  },
+  "adoption_contract": {
+    "required_contract_ref": "contracts/standard-agent-principles-adoption.json",
+    "required_projection_ref": "agent/principles/opl-standard-agent-principles.md",
+    "required_domain_specialization_ref": "agent/principles/domain-specialization.md",
+    "adopted_principle_ids": [
+      "ai_first_execution",
+      "contract_backed_boundary",
+      "domain_truth_authority",
+      "stage_prompt_skill_tool_separation",
+      "domain_intake_mapping",
+      "workspace_source_intake_shell",
+      "owner_delta_progress",
+      "parallel_executor_autonomy",
+      "module_organization"
+    ],
+    "domain_intake_is_standalone_skill": false,
+    "authority_false_flags": [
+      "adoption_can_claim_domain_ready",
+      "adoption_can_claim_production_ready",
+      "opl_can_write_domain_truth",
+      "opl_can_write_memory_body",
+      "opl_can_authorize_quality_or_export",
+      "opl_can_create_owner_receipt",
+      "opl_can_create_typed_blocker"
+    ]
+  },
+  "false_authority_boundary": {
+    "adoption_can_claim_domain_ready": false,
+    "adoption_can_claim_production_ready": false,
+    "opl_can_write_domain_truth": false,
+    "opl_can_write_memory_body": false,
+    "opl_can_authorize_quality_or_export": false,
+    "opl_can_create_owner_receipt": false,
+    "opl_can_create_typed_blocker": false
+  }
+}

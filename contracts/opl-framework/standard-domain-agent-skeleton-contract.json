@@ -104,6 +104,7 @@
       "artifact_locator_contract",
       "owner_receipt_contract",
       "foundry_agent_series_contract",
+      "standard_agent_principles_adoption",
       "user_stage_log_contract",
       "progress_delta_policy",
       "typed_blocker_lineage_policy",
@@ -213,6 +214,7 @@
     ],
     "declarative_domain_pack": [
       "domain_truth_schema",
+      "principle_adoption_refs",
       "stage_descriptors",
       "transition_table",
       "action_metadata",
@@ -250,7 +252,8 @@
         "owner_receipt_schema",
         "no_forbidden_write_assertions",
         "standard_stage_pack_v2_cross_refs",
-        "standard_agent_pack_abi"
+        "standard_agent_pack_abi",
+        "standard_agent_principles_adoption"
       ],
       "required_source_refs": [
         "stage_graph_source_ref",
@@ -259,7 +262,9 @@
         "owner_receipt_schema_source_ref",
         "authority_functions_source_ref",
         "functional_privatization_audit_source_ref",
-        "generated_surface_handoff_source_ref"
+        "generated_surface_handoff_source_ref",
+        "standard_agent_principles_source_ref",
+        "standard_agent_principles_adoption_source_ref"
       ],
       "generated_surfaces": [
         "cli",
@@ -298,6 +303,7 @@
     "agent_pack_contract": {
       "canonical_semantic_pack_root": "agent/",
       "required_sections": [
+        "agent/principles",
         "agent/prompts",
         "agent/stages",
         "agent/skills",

@@ -23,6 +23,9 @@ import {
   WORKSPACE_FILE_LIFECYCLE_POLICY,
 } from './standard-domain-agent-scaffold-constants.ts';
 import { buildStageRunCanaryEvidence } from './standard-domain-agent-scaffold-stage-run-canary.ts';
+import {
+  buildStandardAgentPrinciplesAdoption,
+} from './standard-agent-principles.ts';
 import { STAGE_OPERATING_PRINCIPLES_POLICY } from './standard-domain-agent-stage-operating-principles.ts';
 
 export interface ScaffoldFile {
@@ -297,6 +300,18 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
   const json = (payload: unknown) => `${JSON.stringify(payload, null, 2)}\n`;
   return [
     {
+      path: 'agent/principles/README.md',
+      content: `# ${domainLabel} Principles\n\nDeclare how this domain adopts OPL standard agent principles and where domain specialization begins. OPL owns the generic principles; this repo owns the domain mapping and authority boundaries.\n`,
+    },
+    {
+      path: 'agent/principles/opl-standard-agent-principles.md',
+      content: `# OPL Standard Agent Principles\n\nThis domain adopts the OPL Standard Agent AI-first Principle Pack from \`contracts/opl-framework/standard-agent-principles.json\`.\n\n- AI performs open-ended understanding, comparison, creation, review, diagnosis, and revision inside bounded stage attempts.\n- Contracts, schemas, tests, and readbacks guard identity, authority, inputs, outputs, evidence, and recovery.\n- Domain truth, quality verdicts, artifact bodies, memory bodies, owner receipts, and typed blockers stay domain-owned.\n- Stage prompts define goals and accepted answer shapes; professional skills carry domain methods; tool catalogs describe affordances and limits without prescribing executor strategy.\n- \`domain_intake\` is a starter-stage owner-handoff pattern, not an independent Skill.\n`,
+    },
+    {
+      path: 'agent/principles/domain-specialization.md',
+      content: `# ${domainLabel} Domain Specialization\n\nMap OPL standard principles to this domain's actual stage, source, receipt, blocker, quality, memory, and artifact authority surfaces.\n\nThe starter \`domain_intake\` stage captures domain intent, source refs, authority boundary, and next-stage recommendation. It must return a domain owner receipt, typed blocker, human gate, or route-back ref before any generated or hosted OPL surface can present progress.\n`,
+    },
+    {
       path: 'agent/stages/README.md',
       content: `# ${domainLabel} Stages\n\nOPL-facing stage descriptors live here. Domain stage semantics, quality gates, and owner receipts stay domain-owned.\n`,
     },
@@ -362,6 +377,8 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
           stage_control_plane: 'contracts/stage_control_plane.json',
           pack_compiler_input: 'contracts/pack_compiler_input.json',
           generated_surface_handoff: 'contracts/generated_surface_handoff.json',
+          standard_agent_principles: 'contracts/opl-framework/standard-agent-principles.json',
+          standard_agent_principles_adoption: 'contracts/standard-agent-principles-adoption.json',
         },
         authority_boundary: {
           opl_can_write_domain_truth: false,
@@ -376,6 +393,10 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
       content: json(foundryAgentSeriesContract(domainId, domainLabel)),
     },
     {
+      path: 'contracts/standard-agent-principles-adoption.json',
+      content: json(buildStandardAgentPrinciplesAdoption(domainId, domainLabel)),
+    },
+    {
       path: 'contracts/pack_compiler_input.json',
       content: json({
         surface_kind: 'opl_domain_pack_compiler_input',
@@ -385,6 +406,8 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
         canonical_semantic_pack_root: 'agent/',
         canonical_semantic_pack_role: 'repo_source_declarative_domain_pack',
         required_domain_pack_paths: [
+          'agent/principles/opl-standard-agent-principles.md',
+          'agent/principles/domain-specialization.md',
           `agent/prompts/${STARTER_STAGE_ID}.md`,
           `agent/stages/${STARTER_STAGE_ID}.md`,
           'agent/skills/domain_execution.md',
@@ -400,6 +423,10 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
           authority_functions_source_ref: 'runtime/authority_functions/README.md',
           functional_privatization_audit_source_ref: 'contracts/functional_privatization_audit.json',
           generated_surface_handoff_source_ref: 'contracts/generated_surface_handoff.json',
+          standard_agent_principles_source_ref:
+            'contracts/opl-framework/standard-agent-principles.json',
+          standard_agent_principles_adoption_source_ref:
+            'contracts/standard-agent-principles-adoption.json',
         },
         standard_stage_pack_conformance: {
           version: STANDARD_STAGE_PACK_CONFORMANCE_VERSION,

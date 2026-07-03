@@ -9,6 +9,7 @@ import type {
   PackOsContract,
   PublicSurfaceIndexContract,
   StageSelectionVocabularyContract,
+  StandardAgentPrinciplesContract,
   TaskTopologyContract,
   WorkstreamsRegistry,
 } from '../../kernel/types.ts';
@@ -51,6 +52,7 @@ const REQUIRED_CONTRACT_FILE_NAMES = [
   'brand-system-profile.json',
   'source-module-map.json',
   'target-operating-architecture-contract.json',
+  'standard-agent-principles.json',
   'scholar-skills-capability-modules.json',
   'pack-bundle-contract.json',
   'pack-os-contract.json',
@@ -341,6 +343,67 @@ function validateTaskTopology(
         notes: expectString(entry.notes, 'notes', filePath),
       };
     }),
+  };
+}
+
+function validateStandardAgentPrinciples(
+  filePath: string,
+  value: unknown,
+): StandardAgentPrinciplesContract {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'standard-agent-principles.json must contain an object root.',
+      { file: filePath },
+    );
+  }
+
+  const principlesRaw = value.principles;
+  if (!Array.isArray(principlesRaw)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'standard-agent-principles.json must contain a principles array.',
+      { file: filePath, field: 'principles' },
+    );
+  }
+
+  const moduleOrganization = value.module_organization;
+  const adoptionContract = value.adoption_contract;
+  const falseAuthorityBoundary = value.false_authority_boundary;
+  if (!isRecord(moduleOrganization) || !isRecord(adoptionContract) || !isRecord(falseAuthorityBoundary)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'standard-agent-principles.json must declare module_organization, adoption_contract, and false_authority_boundary objects.',
+      { file: filePath },
+    );
+  }
+
+  return {
+    surface_kind: expectString(value.surface_kind, 'surface_kind', filePath),
+    version: expectString(value.version, 'version', filePath),
+    owner: expectString(value.owner, 'owner', filePath),
+    state: expectString(value.state, 'state', filePath),
+    purpose: expectString(value.purpose, 'purpose', filePath),
+    machine_boundary: expectString(value.machine_boundary, 'machine_boundary', filePath),
+    principle_ids: expectStringArray(value.principle_ids, 'principle_ids', filePath),
+    principles: principlesRaw.map((entry, index) => {
+      if (!isRecord(entry)) {
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'Each standard-agent principle entry must be an object.',
+          { file: filePath, index },
+        );
+      }
+
+      return {
+        principle_id: expectString(entry.principle_id, 'principle_id', filePath),
+        owner: expectString(entry.owner, 'owner', filePath),
+        summary: expectString(entry.summary, 'summary', filePath),
+      };
+    }),
+    module_organization: moduleOrganization,
+    adoption_contract: adoptionContract,
+    false_authority_boundary: falseAuthorityBoundary,
   };
 }
 
@@ -796,6 +859,11 @@ const REQUIRED_CONTRACT_FILES = [
     schema_version: (contracts: FrameworkContracts) => contracts.targetOperatingArchitecture.schema_version,
   },
   {
+    contract_id: 'standard_agent_principles',
+    file_name: 'standard-agent-principles.json',
+    schema_version: (contracts: FrameworkContracts) => contracts.standardAgentPrinciples.version,
+  },
+  {
     contract_id: 'scholarskills_capability_modules',
     file_name: 'scholar-skills-capability-modules.json',
     schema_version: (contracts: FrameworkContracts) => String(contracts.scholarSkillsCapabilityModules.schema_version),
@@ -891,6 +959,10 @@ export function loadFrameworkContracts(
       targetOperatingArchitecture: validateTargetOperatingArchitecture(
         path.join(contractsDir, 'target-operating-architecture-contract.json'),
         parseJsonFile(path.join(contractsDir, 'target-operating-architecture-contract.json')),
+      ),
+      standardAgentPrinciples: validateStandardAgentPrinciples(
+        path.join(contractsDir, 'standard-agent-principles.json'),
+        parseJsonFile(path.join(contractsDir, 'standard-agent-principles.json')),
       ),
       scholarSkillsCapabilityModules: validateScholarSkillsCapabilityModules(
         path.join(contractsDir, 'scholar-skills-capability-modules.json'),

@@ -32,6 +32,38 @@ test('agents scaffold validation blocks missing stage operating principles polic
   }
 });
 
+test('agents scaffold validation blocks missing standard agent principles adoption contract', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-scaffold-principles-missing-'));
+  try {
+    runCli([
+      'agents',
+      'scaffold',
+      '--target-dir',
+      targetDir,
+      '--domain-id',
+      'award-foundry',
+      '--domain-label',
+      'Award Foundry',
+    ]);
+    fs.rmSync(path.join(targetDir, 'contracts', 'standard-agent-principles-adoption.json'));
+
+    const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
+    assert.equal(validated.mode, 'validate');
+    assert.equal(validated.state, 'validation_blocked');
+    assert.equal(validated.validation.status, 'blocked');
+    assert.equal(
+      validated.validation.missing_contract_files.includes('contracts/standard-agent-principles-adoption.json'),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.includes('missing_contract:contracts/standard-agent-principles-adoption.json'),
+      true,
+    );
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
 test('agents scaffold validation blocks empty or unreferenced agent directories', () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-empty-agent-'));
 

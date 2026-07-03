@@ -22,7 +22,7 @@ export const DEFAULT_STANDARD_DOMAIN_AGENT_REPOS = DEFAULT_FAMILY_REPOS.filter((
 );
 
 const SOURCE_DIR = path.dirname(fileURLToPath(import.meta.url));
-const OPL_REPO_ROOT = path.resolve(SOURCE_DIR, '..');
+const OPL_REPO_ROOT = path.resolve(SOURCE_DIR, '../../..');
 
 function unique<T>(items: T[]): T[] {
   return Array.from(new Set(items));

@@ -32,6 +32,7 @@ export const REQUIRED_CONTRACT_SURFACES = [
   'artifact_locator_contract',
   'owner_receipt_contract',
   'foundry_agent_series_contract',
+  'standard_agent_principles_adoption',
   'user_stage_log_contract',
   'progress_delta_policy',
   'typed_blocker_lineage_policy',
@@ -66,12 +67,14 @@ export const REQUIRED_VERIFICATION = [
   'workspace_file_lifecycle_policy_declared',
   'stage_artifact_kernel_adoption_declared',
   'stage_operating_principles_declared',
+  'standard_agent_principles_adopted',
   'stage_run_kernel_profile_declared',
   'stage_run_controlled_canary_evidence_declared',
   'state_index_kernel_adoption_declared',
 ] as const;
 
 export const REQUIRED_AGENT_PACK_SECTIONS = [
+  { section: 'principles', prefix: 'agent/principles/' },
   { section: 'prompts', prefix: 'agent/prompts/' },
   { section: 'stages', prefix: 'agent/stages/' },
   { section: 'skills', prefix: 'agent/skills/' },

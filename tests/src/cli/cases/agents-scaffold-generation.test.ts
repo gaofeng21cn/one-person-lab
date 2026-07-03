@@ -38,10 +38,14 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/foundry_agent_series.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/pack_compiler_input.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/generated_surface_handoff.json')), true);
+    assert.equal(fs.existsSync(path.join(targetDir, 'contracts/standard-agent-principles-adoption.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/functional_privatization_audit.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/private_functional_surface_policy.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/workspace_lifecycle_policy.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/state_index_kernel_adoption.json')), true);
+    assert.equal(fs.existsSync(path.join(targetDir, 'agent/principles/README.md')), true);
+    assert.equal(fs.existsSync(path.join(targetDir, 'agent/principles/opl-standard-agent-principles.md')), true);
+    assert.equal(fs.existsSync(path.join(targetDir, 'agent/principles/domain-specialization.md')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'agent/stages/README.md')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'agent/stages/domain_intake.md')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'agent/prompts/domain_intake.md')), true);
@@ -65,6 +69,14 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(
       descriptor.standard_contract_refs.foundry_agent_series_policy_release,
       'contracts/opl-framework/foundry-agent-series-policy-release.json',
+    );
+    assert.equal(
+      descriptor.standard_contract_refs.standard_agent_principles,
+      'contracts/opl-framework/standard-agent-principles.json',
+    );
+    assert.equal(
+      descriptor.standard_contract_refs.standard_agent_principles_adoption,
+      'contracts/standard-agent-principles-adoption.json',
     );
     assert.equal(descriptor.authority_boundary.opl_can_write_domain_truth, false);
     const foundryAgentSeries = JSON.parse(
@@ -216,6 +228,9 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       authority_functions_source_ref: 'runtime/authority_functions/README.md',
       functional_privatization_audit_source_ref: 'contracts/functional_privatization_audit.json',
       generated_surface_handoff_source_ref: 'contracts/generated_surface_handoff.json',
+      standard_agent_principles_source_ref: 'contracts/opl-framework/standard-agent-principles.json',
+      standard_agent_principles_adoption_source_ref:
+        'contracts/standard-agent-principles-adoption.json',
     });
     assert.deepEqual(packCompilerInput.standard_stage_pack_conformance, {
       version: 'standard-stage-pack.v2',
@@ -228,6 +243,8 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       ['agent/', 'contracts/', 'runtime/authority_functions/'],
     );
     assert.deepEqual(packCompilerInput.required_domain_pack_paths, [
+      'agent/principles/opl-standard-agent-principles.md',
+      'agent/principles/domain-specialization.md',
       'agent/prompts/domain_intake.md',
       'agent/stages/domain_intake.md',
       'agent/skills/domain_execution.md',
@@ -422,18 +439,28 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(stageOperatingPrinciples.default_read_surface.root, 'current_owner_delta');
     assert.equal(stageOperatingPrinciples.default_read_surface.raw_worklist_default, false);
     assert.equal(stageOperatingPrinciples.default_read_surface.readiness_default, false);
+    const principleAdoption = JSON.parse(
+      fs.readFileSync(path.join(targetDir, 'contracts/standard-agent-principles-adoption.json'), 'utf8'),
+    );
+    assert.equal(principleAdoption.surface_kind, 'opl_standard_agent_principles_adoption');
+    assert.equal(principleAdoption.adopted_principle_pack_ref, 'contracts/opl-framework/standard-agent-principles.json');
+    assert.equal(principleAdoption.domain_mapping.domain_intake.is_standalone_skill, false);
+    assert.equal(principleAdoption.module_organization.domain_pack_root, 'agent/');
+    assert.equal(principleAdoption.module_organization.capability_pack_is_not_domain_intake, true);
+    assert.equal(principleAdoption.authority_boundary.adoption_can_claim_domain_ready, false);
 
     const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
     assert.equal(validated.mode, 'validate');
     assert.equal(validated.state, 'validated');
     assert.equal(validated.validation.status, 'passed');
     assert.equal(validated.validation.functional_privatization_audit_required, true);
-    assert.equal(validated.validation.agent_pack_validation.semantic_listed_path_count, 6);
+    assert.equal(validated.validation.agent_pack_validation.semantic_listed_path_count, 8);
     assert.deepEqual(
       validated.validation.agent_pack_validation.section_status.map((
         item: { section: string; status: string },
       ) => [item.section, item.status]),
       [
+        ['principles', 'ok'],
         ['prompts', 'ok'],
         ['stages', 'ok'],
         ['skills', 'ok'],
@@ -491,6 +518,10 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.deepEqual(validated.validation.stage_pack_v2_validation.blockers, []);
     assert.equal(
       validated.validation.required_contract_files.includes('contracts/stage_operating_principles.json'),
+      true,
+    );
+    assert.equal(
+      validated.validation.required_contract_files.includes('contracts/standard-agent-principles-adoption.json'),
       true,
     );
     assert.deepEqual(validated.validation.blockers, []);

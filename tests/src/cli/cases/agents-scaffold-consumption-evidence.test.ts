@@ -31,7 +31,7 @@ test('agents scaffold consumption evidence generates and validates an ephemeral 
   );
   assert.equal(evidence.validation_summary.validation_status, 'passed');
   assert.equal(evidence.validation_summary.blocker_count, 0);
-  assert.equal(evidence.validation_summary.consumed_pack_path_count, 6);
+  assert.equal(evidence.validation_summary.consumed_pack_path_count, 8);
   assert.equal(evidence.validation_summary.consumed_stage_count, 1);
   assert.equal(evidence.validation_summary.selected_executor_binding_observed_count, 1);
   assert.equal(evidence.validation_summary.default_codex_executor_binding_count, 1);

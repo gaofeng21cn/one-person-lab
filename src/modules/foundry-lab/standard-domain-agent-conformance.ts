@@ -22,6 +22,7 @@ import {
   buildWorkspaceFileLifecycleChecks,
 } from './standard-domain-agent-conformance-adoption.ts';
 import { buildStageOperatingPrincipleChecks } from './standard-domain-agent-stage-operating-principles.ts';
+import { buildStandardAgentPrincipleAdoptionChecks } from './standard-agent-principles.ts';
 import { buildEvidenceTailClassification } from './standard-domain-agent-conformance-evidence-tail.ts';
 import { buildFamilyAgentLiveConformanceProbe } from './family-agent-conformance-probe.ts';
 import { buildGeneratedInterfaceCheck } from './standard-domain-agent-conformance-generated-interfaces.ts';
@@ -311,6 +312,7 @@ function buildRepoConformance(input: RepoInput, contracts: FrameworkContracts) {
   const stageRunKernelProfileChecks = buildStageRunKernelProfileChecks(repoDir);
   const stageRunCanaryEvidenceChecks = buildStageRunCanaryEvidenceChecks(repoDir);
   const stageOperatingPrincipleChecks = buildStageOperatingPrincipleChecks(repoDir);
+  const standardAgentPrincipleChecks = buildStandardAgentPrincipleAdoptionChecks(repoDir);
   const stateIndexKernelAdoptionChecks = buildStateIndexKernelAdoptionChecks(repoDir);
   const goldenPathDefaultSurfaceBudgetChecks = buildGoldenPathDefaultSurfaceBudgetChecks(repoDir);
   const workspaceNormChecks = buildAgentWorkspaceNormChecks(contracts.agentWorkspaceNorm);
@@ -333,6 +335,7 @@ function buildRepoConformance(input: RepoInput, contracts: FrameworkContracts) {
     ...stageRunKernelProfileChecks.blockers,
     ...stageRunCanaryEvidenceChecks.blockers,
     ...stageOperatingPrincipleChecks.blockers,
+    ...standardAgentPrincipleChecks.blockers,
     ...stateIndexKernelAdoptionChecks.blockers,
     ...goldenPathDefaultSurfaceBudgetChecks.blockers,
     ...workspaceNormChecks.blockers,
@@ -362,6 +365,7 @@ function buildRepoConformance(input: RepoInput, contracts: FrameworkContracts) {
     stage_run_kernel_profile_checks: stageRunKernelProfileChecks,
     stage_run_canary_evidence_checks: stageRunCanaryEvidenceChecks,
     stage_operating_principle_checks: stageOperatingPrincipleChecks,
+    standard_agent_principle_checks: standardAgentPrincipleChecks,
     state_index_kernel_adoption_checks: stateIndexKernelAdoptionChecks,
     golden_path_default_surface_budget_checks: goldenPathDefaultSurfaceBudgetChecks,
     workspace_norm_checks: workspaceNormChecks,
