@@ -172,7 +172,9 @@ test('connect external-skills sync copies only the selected skill into workspace
     assert.equal(fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'scanpy', 'SKILL.md')), true);
     assert.equal(fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'scanpy', 'references', 'guide.md')), true);
     assert.equal(fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'scientific-writing')), false);
-    const receipt = JSON.parse(fs.readFileSync(synced.install_receipt_path, 'utf8')) as {
+    const receipt = JSON.parse( // reuse-first: allow receipt fixture parser
+      fs.readFileSync(synced.install_receipt_path, 'utf8'),
+    ) as {
       receipt_kind: string;
       sync_policy: string;
       authority_boundary: { can_install_all_skills_by_default: boolean };

@@ -19,6 +19,7 @@ import {
   parseOplModuleExecArgs,
   validateCommandRegistryCoverage,
 } from '../../modules/support.ts';
+import { readOptionalString } from '../../modules/json-boundary.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 import { buildNoArgSpec, commandActionSummary } from './shared.ts';
 
@@ -69,15 +70,11 @@ function parsePubMedSearchArgs(args: string[], spec: CommandSpec): PubMedSearchA
   return { query, limit: Number(parsed.limit) };
 }
 
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
-}
-
 function parseExternalSkillsBase(command: string, args: string[], spec: CommandSpec): ExternalSkillsBaseArgs {
   const parsed = parseRegisteredCommandOptions(command, args, spec);
   return {
-    source: optionalString(parsed.source),
-    sourceRoot: optionalString(parsed['source-root']),
+    source: readOptionalString(parsed.source) ?? undefined,
+    sourceRoot: readOptionalString(parsed['source-root']) ?? undefined,
   };
 }
 
@@ -90,8 +87,8 @@ function parseExternalSkillsSearchArgs(args: string[], spec: CommandSpec): Exter
     });
   }
   return {
-    source: optionalString(parsed.source),
-    sourceRoot: optionalString(parsed['source-root']),
+    source: readOptionalString(parsed.source) ?? undefined,
+    sourceRoot: readOptionalString(parsed['source-root']) ?? undefined,
     query,
     limit: Number(parsed.limit),
   };
@@ -106,8 +103,8 @@ function parseExternalSkillsInspectArgs(args: string[], spec: CommandSpec): Exte
     });
   }
   return {
-    source: optionalString(parsed.source),
-    sourceRoot: optionalString(parsed['source-root']),
+    source: readOptionalString(parsed.source) ?? undefined,
+    sourceRoot: readOptionalString(parsed['source-root']) ?? undefined,
     skill,
   };
 }
@@ -127,13 +124,13 @@ function parseExternalSkillsSyncArgs(args: string[], spec: CommandSpec): Externa
     });
   }
   return {
-    source: optionalString(parsed.source),
-    sourceRoot: optionalString(parsed['source-root']),
+    source: readOptionalString(parsed.source) ?? undefined,
+    sourceRoot: readOptionalString(parsed['source-root']) ?? undefined,
     skill,
     scope,
-    targetWorkspace: optionalString(parsed['target-workspace']),
-    targetQuest: optionalString(parsed['target-quest']),
-    targetRoot: optionalString(parsed['target-root']),
+    targetWorkspace: readOptionalString(parsed['target-workspace']) ?? undefined,
+    targetQuest: readOptionalString(parsed['target-quest']) ?? undefined,
+    targetRoot: readOptionalString(parsed['target-root']) ?? undefined,
   };
 }
 

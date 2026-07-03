@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { FrameworkContractError } from '../charter/index.ts';
 import { resolveDefaultFamilyWorkspaceRoot } from '../workspace/index.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
 
 type ExternalSkillSourceId = 'kdense-scientific-agent-skills';
 type ExternalSkillScope = 'workspace' | 'quest';
@@ -127,7 +128,7 @@ function extractStringList(frontmatter: string, key: string) {
   if (!lineValue) return [];
   if (lineValue.startsWith('[')) {
     try {
-      const parsed = JSON.parse(lineValue);
+      const parsed = parseJsonText(lineValue);
       return Array.isArray(parsed)
         ? parsed.map((entry) => typeof entry === 'string' ? entry : null).filter((entry): entry is string => Boolean(entry))
         : [];
@@ -142,7 +143,7 @@ function extractRequiredEnvironmentVariables(frontmatter: string) {
   const lineValue = firstYamlString(frontmatter, 'required_environment_variables');
   if (!lineValue.startsWith('[')) return [];
   try {
-    const parsed = JSON.parse(lineValue) as Array<{ name?: unknown }>;
+    const parsed = parseJsonText(lineValue) as Array<{ name?: unknown }>;
     return Array.isArray(parsed)
       ? parsed.map((entry) => typeof entry.name === 'string' ? entry.name : null).filter((entry): entry is string => Boolean(entry))
       : [];
