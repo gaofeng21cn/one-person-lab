@@ -57,6 +57,21 @@ const KDENSE_SOURCE = {
   env_root: 'OPL_CONNECT_KDENSE_SCIENTIFIC_AGENT_SKILLS_ROOT',
 };
 
+const EXTERNAL_SKILL_TRIGGER_POLICY = {
+  policy_kind: 'opl_connect_external_skill_trigger_policy',
+  default_mas_pack_remains_primary: true,
+  external_skill_requires_explicit_selection: true,
+  applies_when: 'default_mas_medical_paper_pack_does_not_cover_specialist_task',
+  coarse_entry_policy: 'ask_connect_before_loading_external_skill_library',
+  context_loading_policy: 'do_not_bulk_load_external_skill_library',
+  trigger_signals: [
+    'explicit_tool_package_database_or_workflow_name',
+    'default_professional_skill_route_back',
+    'mas_stage_detects_capability_outside_default_eight_skills',
+    'governed_external_resource_or_environment_requirement',
+  ],
+};
+
 type ExternalSkillSourceRegistration = {
   source_id: ExternalSkillSourceId;
   repo_url: string;
@@ -161,6 +176,9 @@ function resolveSource(input: ExternalSkillInput = {}) {
     status: available ? 'available' : 'source_missing',
     install_policy: 'selective_sync_only',
     default_install: false,
+    can_install_all_skills_by_default: false,
+    default_mas_pack_remains_primary: true,
+    external_skill_requires_explicit_selection: true,
     discovery_policy: 'manifest_index_then_explicit_skill_sync',
     next_action: available
       ? null
@@ -337,6 +355,8 @@ function authorityBoundary() {
     can_create_typed_blocker: false,
     can_claim_publication_readiness: false,
     can_install_all_skills_by_default: false,
+    default_mas_pack_remains_primary: true,
+    external_skill_requires_explicit_selection: true,
   };
 }
 
@@ -379,12 +399,17 @@ export function runOplConnectExternalSkillsList(input: ExternalSkillInput = {}) 
         registered: source.registered,
         status: source.status,
         default_install: source.default_install,
+        can_install_all_skills_by_default: source.can_install_all_skills_by_default,
+        default_mas_pack_remains_primary: source.default_mas_pack_remains_primary,
+        external_skill_requires_explicit_selection: source.external_skill_requires_explicit_selection,
         install_policy: source.install_policy,
         discovery_policy: source.discovery_policy,
+        trigger_policy: EXTERNAL_SKILL_TRIGGER_POLICY,
         skill_count: cards.length,
         next_action: source.next_action,
       }],
       skills: cards,
+      trigger_policy: EXTERNAL_SKILL_TRIGGER_POLICY,
       authority_boundary: authorityBoundary(),
     },
   };
@@ -409,6 +434,7 @@ export function runOplConnectExternalSkillsSearch(input: ExternalSkillSearchInpu
       query: input.query,
       results,
       result_skill_ids: results.map((entry) => entry.skill_id),
+      trigger_policy: EXTERNAL_SKILL_TRIGGER_POLICY,
       authority_boundary: authorityBoundary(),
     },
   };
@@ -439,6 +465,7 @@ export function runOplConnectExternalSkillsInspect(input: ExternalSkillInspectIn
         external_skill_source_ref: `opl://connect/external-skills/${source.source_id}/${skillId}`,
         ledger_receipt_candidate_ref: `opl://ledger/connect/external-skills/${sourceDigest(source.source_id, skillId, source.source_root!)}`,
       },
+      trigger_policy: EXTERNAL_SKILL_TRIGGER_POLICY,
       authority_boundary: authorityBoundary(),
     },
   };
@@ -472,6 +499,7 @@ export function runOplConnectExternalSkillsSync(input: ExternalSkillSyncInput) {
     target_root: targetRoot,
     skill_root: targetSkillRoot,
     sync_policy: 'single_skill_selected_by_user_or_mas_route',
+    trigger_policy: EXTERNAL_SKILL_TRIGGER_POLICY,
     authority_boundary: authorityBoundary(),
   };
   const receiptPath = path.join(targetSkillRoot, '.opl-install-receipt.json');
@@ -495,6 +523,7 @@ export function runOplConnectExternalSkillsSync(input: ExternalSkillSyncInput) {
       receipt_refs: {
         external_skill_sync_ref: `opl://connect/external-skills/${source.source_id}/${skillId}/sync/${sourceDigest(source.source_id, skillId, source.source_root!)}`,
       },
+      trigger_policy: EXTERNAL_SKILL_TRIGGER_POLICY,
       authority_boundary: authorityBoundary(),
     },
   };

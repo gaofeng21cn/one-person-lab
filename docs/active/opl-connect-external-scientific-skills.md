@@ -44,7 +44,7 @@ external skill 写入：
 ```
 
 同步时会在目标 skill 目录写入 `.opl-install-receipt.json`，记录 source、
-pin、target scope 和 no-authority boundary。
+pin、target scope、trigger policy 和 no-authority boundary。
 
 ## MAS 使用方式
 
@@ -62,6 +62,11 @@ MAS 优先使用默认医学论文专业 Skill 包：
 外部科学 Skill 用于默认包覆盖不到的专科任务，例如 `scanpy`、`pydeseq2`、
 `pathway-enrichment`、`nextflow`、`rdkit` 或 `pyhealth`。
 
+粗入口 Skill 或聚合入口看到罕见专科能力时，先问 OPL Connect：
+`list/search/inspect` 读取 source index、skill card 和 `trigger_policy`，
+确认确实超出默认 MAS medical-paper pack 后，再选择单个 skill 做 `sync`。
+不要把 K-Dense 全库塞进上下文，也不要把外部库当作 MAS 默认能力包的一部分。
+
 有效触发方式：
 
 - 用户明确命名外部工具、软件包、数据库或工作流；
@@ -78,3 +83,6 @@ authority。
 
 默认策略是 `selective_sync_only`。MAS 热路径只同步被明确选中的单个外部
 Skill，默认包能力仍由 MAS / `mas-scholar-skills` 的专业 Skill 维护。
+机器读面同时暴露 `default_mas_pack_remains_primary=true`、
+`external_skill_requires_explicit_selection=true`、`default_install=false` 和
+`can_install_all_skills_by_default=false`。

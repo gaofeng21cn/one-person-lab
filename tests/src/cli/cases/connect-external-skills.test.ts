@@ -22,6 +22,31 @@ function createExternalSkillsFixture() {
   return root;
 }
 
+type ExternalSkillTriggerPolicy = {
+  policy_kind: string;
+  default_mas_pack_remains_primary: boolean;
+  external_skill_requires_explicit_selection: boolean;
+  applies_when: string;
+  coarse_entry_policy: string;
+  context_loading_policy: string;
+  trigger_signals: string[];
+};
+
+function assertExternalSkillTriggerPolicy(policy: ExternalSkillTriggerPolicy) {
+  assert.equal(policy.policy_kind, 'opl_connect_external_skill_trigger_policy');
+  assert.equal(policy.default_mas_pack_remains_primary, true);
+  assert.equal(policy.external_skill_requires_explicit_selection, true);
+  assert.equal(policy.applies_when, 'default_mas_medical_paper_pack_does_not_cover_specialist_task');
+  assert.equal(policy.coarse_entry_policy, 'ask_connect_before_loading_external_skill_library');
+  assert.equal(policy.context_loading_policy, 'do_not_bulk_load_external_skill_library');
+  assert.deepEqual(policy.trigger_signals, [
+    'explicit_tool_package_database_or_workflow_name',
+    'default_professional_skill_route_back',
+    'mas_stage_detects_capability_outside_default_eight_skills',
+    'governed_external_resource_or_environment_requirement',
+  ]);
+}
+
 test('connect external-skills list exposes approved source and skill cards', () => {
   const sourceRoot = createExternalSkillsFixture();
   try {
@@ -39,13 +64,20 @@ test('connect external-skills list exposes approved source and skill cards', () 
           source_id: string;
           status: string;
           default_install: boolean;
+          can_install_all_skills_by_default: boolean;
+          default_mas_pack_remains_primary: boolean;
+          external_skill_requires_explicit_selection: boolean;
           install_policy: string;
+          trigger_policy: ExternalSkillTriggerPolicy;
           skill_count: number;
         }>;
         skills: Array<{ skill_id: string; description: string }>;
+        trigger_policy: ExternalSkillTriggerPolicy;
         authority_boundary: {
           selective_sync_only: boolean;
           can_install_all_skills_by_default: boolean;
+          default_mas_pack_remains_primary: boolean;
+          external_skill_requires_explicit_selection: boolean;
           can_write_domain_truth: boolean;
         };
       };
@@ -56,7 +88,12 @@ test('connect external-skills list exposes approved source and skill cards', () 
     assert.equal(output.opl_connect_external_skills.sources[0].source_id, 'kdense-scientific-agent-skills');
     assert.equal(output.opl_connect_external_skills.sources[0].status, 'available');
     assert.equal(output.opl_connect_external_skills.sources[0].default_install, false);
+    assert.equal(output.opl_connect_external_skills.sources[0].can_install_all_skills_by_default, false);
+    assert.equal(output.opl_connect_external_skills.sources[0].default_mas_pack_remains_primary, true);
+    assert.equal(output.opl_connect_external_skills.sources[0].external_skill_requires_explicit_selection, true);
     assert.equal(output.opl_connect_external_skills.sources[0].install_policy, 'selective_sync_only');
+    assertExternalSkillTriggerPolicy(output.opl_connect_external_skills.sources[0].trigger_policy);
+    assertExternalSkillTriggerPolicy(output.opl_connect_external_skills.trigger_policy);
     assert.equal(output.opl_connect_external_skills.sources[0].skill_count, 2);
     assert.deepEqual(
       output.opl_connect_external_skills.skills.map((entry) => entry.skill_id),
@@ -70,6 +107,8 @@ test('connect external-skills list exposes approved source and skill cards', () 
       can_create_typed_blocker: false,
       can_claim_publication_readiness: false,
       can_install_all_skills_by_default: false,
+      default_mas_pack_remains_primary: true,
+      external_skill_requires_explicit_selection: true,
     });
   } finally {
     fs.rmSync(sourceRoot, { recursive: true, force: true });
@@ -171,6 +210,7 @@ test('connect external-skills search and inspect return selected skill metadata'
         status: string;
         result_skill_ids: string[];
         results: Array<{ skill_id: string; match_score: number }>;
+        trigger_policy: ExternalSkillTriggerPolicy;
       };
     };
 
@@ -178,6 +218,7 @@ test('connect external-skills search and inspect return selected skill metadata'
     assert.equal(search.opl_connect_external_skills.status, 'completed');
     assert.deepEqual(search.opl_connect_external_skills.result_skill_ids, ['scanpy']);
     assert.equal(search.opl_connect_external_skills.results[0].match_score > 0, true);
+    assertExternalSkillTriggerPolicy(search.opl_connect_external_skills.trigger_policy);
 
     const inspect = runCli([
       'connect',
@@ -196,6 +237,7 @@ test('connect external-skills search and inspect return selected skill metadata'
           required_environment_variables: string[];
         };
         sync_command_ref: string;
+        trigger_policy: ExternalSkillTriggerPolicy;
       };
     };
 
@@ -204,6 +246,7 @@ test('connect external-skills search and inspect return selected skill metadata'
     assert.equal(inspect.opl_connect_external_skills.skill.has_references, true);
     assert.deepEqual(inspect.opl_connect_external_skills.skill.required_environment_variables, ['TEST_API_KEY']);
     assert.match(inspect.opl_connect_external_skills.sync_command_ref, /connect external-skills sync/);
+    assertExternalSkillTriggerPolicy(inspect.opl_connect_external_skills.trigger_policy);
   } finally {
     fs.rmSync(sourceRoot, { recursive: true, force: true });
   }
@@ -236,6 +279,7 @@ test('connect external-skills sync copies only the selected skill into workspace
         target_root: string;
         target_skill_root: string;
         install_receipt_path: string;
+        trigger_policy: ExternalSkillTriggerPolicy;
       };
     };
 
@@ -248,6 +292,7 @@ test('connect external-skills sync copies only the selected skill into workspace
     assert.equal(synced.target_scope, 'workspace');
     assert.equal(synced.target_root, workspaceRoot);
     assert.equal(synced.target_skill_root, path.join(workspaceRoot, '.codex', 'skills', 'scanpy'));
+    assertExternalSkillTriggerPolicy(synced.trigger_policy);
     assert.equal(fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'scanpy', 'SKILL.md')), true);
     assert.equal(fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'scanpy', 'references', 'guide.md')), true);
     assert.equal(fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'scientific-writing')), false);
@@ -256,10 +301,12 @@ test('connect external-skills sync copies only the selected skill into workspace
     ) as {
       receipt_kind: string;
       sync_policy: string;
+      trigger_policy: ExternalSkillTriggerPolicy;
       authority_boundary: { can_install_all_skills_by_default: boolean };
     };
     assert.equal(receipt.receipt_kind, 'opl_connect_external_skill_sync_receipt');
     assert.equal(receipt.sync_policy, 'single_skill_selected_by_user_or_mas_route');
+    assertExternalSkillTriggerPolicy(receipt.trigger_policy);
     assert.equal(receipt.authority_boundary.can_install_all_skills_by_default, false);
   } finally {
     fs.rmSync(sourceRoot, { recursive: true, force: true });

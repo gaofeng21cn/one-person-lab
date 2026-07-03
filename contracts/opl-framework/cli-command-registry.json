@@ -633,6 +633,7 @@
               "surface_kind",
               "status",
               "sources",
+              "trigger_policy",
               "authority_boundary"
             ],
             "additionalProperties": true
@@ -774,6 +775,7 @@
               "source_id",
               "query",
               "results",
+              "trigger_policy",
               "authority_boundary"
             ],
             "additionalProperties": true
@@ -836,6 +838,7 @@
               "status",
               "source_id",
               "skill",
+              "trigger_policy",
               "authority_boundary"
             ],
             "additionalProperties": true
@@ -925,6 +928,7 @@
               "target_scope",
               "target_root",
               "target_skill_root",
+              "trigger_policy",
               "authority_boundary"
             ],
             "additionalProperties": true
