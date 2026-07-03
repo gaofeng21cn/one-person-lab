@@ -1,5 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
 import {
   insertEvent,
   insertNotification,
@@ -123,10 +125,8 @@ function canSucceedFromTypedCloseout(task: LinkedTask) {
 
 function parseTaskPayload(task: LinkedTask) {
   try {
-    const parsed = JSON.parse(task.payload_json);
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-      ? parsed as Record<string, unknown>
-      : {};
+    const parsed = parseJsonText(task.payload_json);
+    return isRecord(parsed) ? parsed : {};
   } catch {
     return {};
   }

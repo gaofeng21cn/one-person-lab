@@ -1,23 +1,14 @@
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { optionalString } from '../../kernel/json-file.ts';
+import { stringList, uniqueStringList } from '../../kernel/json-record.ts';
 import { defaultExecutorDomainSourceFingerprint } from './family-runtime-provider-hosted-attempts.ts';
 
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
 function recordValue(value: unknown) {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map((item) => optionalString(item)).filter((item): item is string => Boolean(item))
-    : [];
+  return isRecord(value) ? value : null;
 }
 
 function uniqueSortedStrings(values: string[]) {
-  return [...new Set(values)].sort();
+  return uniqueStringList(values).sort();
 }
 
 function currentnessSourceFingerprint(payload: Record<string, unknown>) {

@@ -7,8 +7,15 @@ import {
 import {
   queryTemporalStageAttemptReadModel as defaultQueryTemporalStageAttemptReadModel,
 } from '../family-runtime-temporal-query.ts';
-
-type JsonRecord = Record<string, unknown>;
+import { isRecord } from '../../../kernel/contract-validation.ts';
+import {
+  record,
+  recordList as stringRecordList,
+  stringList,
+  stringValue,
+  uniqueStringList,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 
 export type EvidenceWorklistTemporalQuery = typeof defaultQueryTemporalStageAttemptReadModel;
 
@@ -26,22 +33,6 @@ const TEMPORAL_TERMINAL_SYNC_LIVE_STATUSES = new Set([
   'human_gate',
 ]);
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function uniqueStringList(values: Array<string | null | undefined>) {
-  return [...new Set(values.filter((entry): entry is string => Boolean(entry)))];
-}
-
-function stringRecordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
 export function domainDispatchRecordRouteAttemptIds(runtimeSnapshot: unknown) {
   const drilldown = record(record(record(runtimeSnapshot).runtime_tray_snapshot).app_operator_drilldown);
   const bridge = record(drilldown.app_execution_bridge);
@@ -51,16 +42,6 @@ export function domainDispatchRecordRouteAttemptIds(runtimeSnapshot: unknown) {
       && route.route_requires_domain_or_app_payload === true
     )
     .map((route) => stringValue(route.stage_attempt_id)));
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
 }
 
 function stageAttemptSignature(attempt: JsonRecord) {

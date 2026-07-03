@@ -1,9 +1,6 @@
+import { optionalString } from '../../kernel/json-file.ts';
 import { getActiveWorkspaceBinding } from '../workspace/index.ts';
 import type { FamilyRuntimeDomainProfiles } from './family-runtime-command.ts';
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
 
 export function activeMedautoscienceWorkspaceProfile() {
   const binding = getActiveWorkspaceBinding('medautoscience');

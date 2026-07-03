@@ -1,28 +1,19 @@
-type JsonRecord = Record<string, unknown>;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
+import {
+  stringList as sharedStringList,
+  stringValue,
+  uniqueStringList,
+  type JsonRecord,
+} from '../../kernel/json-record.ts';
 
 function stringList(value: unknown): string[] {
   if (typeof value === 'string' && value.trim()) {
     return [value.trim()];
   }
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
-function uniqueStrings(values: Array<string | null>) {
-  return [...new Set(values.filter((entry): entry is string => Boolean(entry)))];
+  return sharedStringList(value);
 }
 
 function refsFrom(recordValue: JsonRecord, keys: string[]) {
-  return uniqueStrings(keys.flatMap((key) => stringList(recordValue[key])));
+  return uniqueStringList(keys.flatMap((key) => stringList(recordValue[key])));
 }
 
 export function isMasDomainProgressRef(ref: string) {

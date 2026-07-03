@@ -1,7 +1,12 @@
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { optionalString } from '../../kernel/json-file.ts';
+import { stringList } from '../../kernel/json-record.ts';
+
 export const OPL_ATTEMPT_ADMISSION_REQUESTED_REASON = 'opl_attempt_admission_requested';
 export const OPL_ATTEMPT_ADMISSION_PROVIDER_START_PENDING_REASON = 'provider_attempt_start_pending';
 export const MAS_DOMAIN_OWNER_ANSWER_OBSERVED_REASON = 'mas_domain_owner_answer_observed';
 export const MAS_DOMAIN_TYPED_BLOCKER_OBSERVED_REASON = 'mas_owner_answer_typed_blocker_observed';
+export { optionalString };
 
 export type MasDomainOwnerAnswerObservation = {
   reason: typeof MAS_DOMAIN_OWNER_ANSWER_OBSERVED_REASON | typeof MAS_DOMAIN_TYPED_BLOCKER_OBSERVED_REASON;
@@ -62,20 +67,8 @@ const OWNER_ANSWER_CONTAINER_KEYS = [
   'opl_runtime_action_execute_payload',
 ];
 
-export function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
 export function recordValue(value: unknown) {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
+  return isRecord(value) ? value : null;
 }
 
 function normalizeOwnerAnswerKind(value: unknown) {

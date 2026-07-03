@@ -1,8 +1,7 @@
 import { buildDomainManifestCatalog } from '../../atlas/index.ts';
 import { buildFamilyStageReadinessInspect } from '../../stagecraft/index.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
-
-type JsonRecord = Record<string, unknown>;
+import { record, type JsonRecord } from '../../../kernel/json-record.ts';
 
 export type DomainManifestCatalog = ReturnType<typeof buildDomainManifestCatalog>['domain_manifests'];
 
@@ -13,14 +12,6 @@ type StageReadinessWorklistInput = {
 };
 
 const EVIDENCE_WORKLIST_MANIFEST_COMMAND_TIMEOUT_MS = 5_000;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
 
 export function domainManifestsForWorklist(
   contracts: FrameworkContracts,
