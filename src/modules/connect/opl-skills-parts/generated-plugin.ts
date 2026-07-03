@@ -2,14 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
-  buildGeneratedInterfaceBundle,
-  selectGeneratedInterfaceBundleFormat,
+  buildRepoGeneratedInterfaceBundle,
 } from '../../pack/index.ts';
-import { normalizeFamilyActionCatalog } from '../../../kernel/family-action-catalog-contract.ts';
-import { normalizeFamilyStageControlPlane } from '../../stagecraft/index.ts';
-import { buildFunctionalPrivatizationAudit } from '../../foundry-lab/index.ts';
 import {
-  normalizeOptionalString,
   resolveCodexHome,
   resolveGeneratedPluginRootForName,
 } from './paths.ts';
@@ -23,84 +18,6 @@ function recordList(value: unknown): Array<Record<string, unknown>> {
   return Array.isArray(value) ? value.filter(isRecord) : [];
 }
 
-function readRepoJson(repoRoot: string, relativePath: string) {
-  const filePath = path.join(repoRoot, relativePath);
-  if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
-    return null;
-  }
-  return JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
-}
-
-function buildRepoGeneratedSkillBundle(repoRoot: string) {
-  const domainDescriptor = readRepoJson(repoRoot, path.join('contracts', 'domain_descriptor.json'));
-  const actionCatalog = normalizeFamilyActionCatalog(
-    readRepoJson(repoRoot, path.join('contracts', 'action_catalog.json')),
-  );
-  const stageControlPlane = normalizeFamilyStageControlPlane(
-    readRepoJson(repoRoot, path.join('contracts', 'stage_control_plane.json')),
-  );
-  const functionalAuditRaw = readRepoJson(repoRoot, path.join('contracts', 'functional_privatization_audit.json'));
-  const generatedSurfaceHandoff = readRepoJson(repoRoot, path.join('contracts', 'generated_surface_handoff.json'));
-  const functionalAudit = buildFunctionalPrivatizationAudit({
-    target_domain_id:
-      actionCatalog?.target_domain_id
-      ?? stageControlPlane?.target_domain_id
-      ?? (isRecord(domainDescriptor) ? normalizeOptionalString(String(domainDescriptor.domain_id ?? '')) : null)
-      ?? path.basename(repoRoot),
-    functional_privatization_audit: isRecord(functionalAuditRaw) ? functionalAuditRaw : undefined,
-  });
-  const blockerReasons = [
-    actionCatalog ? null : 'missing_contract:contracts/action_catalog.json',
-    stageControlPlane ? null : 'missing_or_invalid_contract:contracts/stage_control_plane.json',
-    functionalAudit.summary.opl_owned_replacement_count > 0
-      || functionalAudit.summary.temporary_migration_bridge_count > 0
-      || functionalAudit.summary.retire_tombstone_count > 0
-      || functionalAudit.summary.active_private_generic_residue_count > 0
-      || functionalAudit.summary.blocker_count > 0
-      ? 'functional_privatization_audit_has_generic_residue_or_blocker'
-      : null,
-  ].filter((reason): reason is string => Boolean(reason));
-  const status = blockerReasons.length === 0 ? 'ready' : 'blocked';
-  const targetDomainId =
-    actionCatalog?.target_domain_id
-    ?? stageControlPlane?.target_domain_id
-    ?? (isRecord(domainDescriptor) ? normalizeOptionalString(String(domainDescriptor.domain_id ?? '')) : null)
-    ?? path.basename(repoRoot);
-  const descriptor = {
-    project_id: targetDomainId,
-    project: isRecord(domainDescriptor)
-      ? normalizeOptionalString(String(domainDescriptor.domain_label ?? '')) ?? targetDomainId
-      : targetDomainId,
-    target_domain_id: targetDomainId,
-    agent_id: isRecord(domainDescriptor)
-      ? normalizeOptionalString(String(domainDescriptor.domain_id ?? '')) ?? targetDomainId
-      : targetDomainId,
-    family_action_catalog: {
-      status: actionCatalog ? 'resolved' : 'missing',
-      raw_descriptor: actionCatalog,
-    },
-    family_stage_control_plane: {
-      status: stageControlPlane ? 'resolved' : 'missing',
-      raw_descriptor: stageControlPlane,
-    },
-    generated_surface_handoff_contract: generatedSurfaceHandoff,
-    functional_privatization_audit: {
-      status: functionalAudit.status,
-      summary: functionalAudit.summary,
-      modules: functionalAudit.modules,
-    },
-  };
-  const bundle = selectGeneratedInterfaceBundleFormat(
-    buildGeneratedInterfaceBundle(descriptor, status, 'skill') as Record<string, unknown>,
-    'skill',
-  );
-  return {
-    bundle,
-    status,
-    blocker_reasons: blockerReasons,
-  };
-}
-
 export function inspectGeneratedSkillSurface(spec: SkillPackSpec, repoRoot: string) {
   if (spec.source_kind !== 'opl_generated_plugin_surface') {
     return {
@@ -109,7 +26,7 @@ export function inspectGeneratedSkillSurface(spec: SkillPackSpec, repoRoot: stri
     };
   }
   try {
-    const generated = buildRepoGeneratedSkillBundle(repoRoot);
+    const generated = buildRepoGeneratedInterfaceBundle(repoRoot, 'skill');
     const skillBlock = isRecord(generated.bundle.skill) ? generated.bundle.skill : null;
     return {
       ready:
@@ -436,7 +353,7 @@ export function writeOplGeneratedPluginSurface(inspected: InspectFamilySkillPack
     return null;
   }
 
-  const generated = buildRepoGeneratedSkillBundle(inspected.repo_root);
+  const generated = buildRepoGeneratedInterfaceBundle(inspected.repo_root, 'skill');
   const pluginSpec = generatedCodexPluginSpec(inspected);
   const skillBlock = isRecord(generated.bundle.skill) ? generated.bundle.skill : null;
   const descriptors = recordList(skillBlock?.descriptors);

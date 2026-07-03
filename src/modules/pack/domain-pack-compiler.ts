@@ -655,19 +655,32 @@ export function buildDomainPackCompilerInspect(
   };
 }
 
+export function buildRepoGeneratedInterfaceBundle(
+  repoDir: string,
+  format: GeneratedInterfaceFormat | 'all' = 'all',
+) {
+  const repoProjection = buildRepoContractDescriptor(repoDir);
+  const bundle = {
+    ...buildGeneratedInterfaceBundle(repoProjection.descriptor, repoProjection.status, format),
+    source_kind: 'standard_agent_repo_contracts',
+    repo_dir: repoProjection.repoDir,
+    blocker_reasons: repoProjection.blockerReasons,
+  };
+  return {
+    bundle: selectGeneratedInterfaceBundleFormat(bundle as JsonRecord, format),
+    status: repoProjection.status,
+    blocker_reasons: repoProjection.blockerReasons,
+    repo_dir: repoProjection.repoDir,
+  };
+}
+
 export function buildGeneratedAgentInterfaces(contracts: FrameworkContracts, args: string[]) {
   const { domain, repoDir, familyDefaults, format } = parseInterfaceArgs(args);
   if (repoDir) {
-    const repoProjection = buildRepoContractDescriptor(repoDir);
-    const bundle = {
-      ...buildGeneratedInterfaceBundle(repoProjection.descriptor, repoProjection.status, format),
-      source_kind: 'standard_agent_repo_contracts',
-      repo_dir: repoProjection.repoDir,
-      blocker_reasons: repoProjection.blockerReasons,
-    };
+    const generated = buildRepoGeneratedInterfaceBundle(repoDir, format);
     return {
       version: 'g2',
-      generated_agent_interfaces: selectGeneratedInterfaceBundleFormat(bundle as JsonRecord, format),
+      generated_agent_interfaces: generated.bundle,
     };
   }
 
@@ -681,22 +694,16 @@ export function buildGeneratedAgentInterfaces(contracts: FrameworkContracts, arg
       });
     }
     const reports = repos.map((repo) => {
-      const repoProjection = buildRepoContractDescriptor(repo.repo_dir);
-      const bundle = {
-        ...buildGeneratedInterfaceBundle(repoProjection.descriptor, repoProjection.status, format),
-        source_kind: 'standard_agent_repo_contracts',
-        repo_dir: repoProjection.repoDir,
-        blocker_reasons: repoProjection.blockerReasons,
-      };
-      const selected = selectGeneratedInterfaceBundleFormat(bundle as JsonRecord, format);
+      const generated = buildRepoGeneratedInterfaceBundle(repo.repo_dir, format);
+      const selected = generated.bundle;
       return {
         requested_agent_id: repo.requested_agent_id,
-        repo_dir: repoProjection.repoDir,
+        repo_dir: generated.repo_dir,
         project_id: selected.project_id,
         target_domain_id: selected.target_domain_id,
         agent_id: selected.agent_id,
-        compiler_status: repoProjection.status,
-        blocker_reasons: repoProjection.blockerReasons,
+        compiler_status: generated.status,
+        blocker_reasons: generated.blocker_reasons,
         generated_agent_interfaces: selected,
       };
     });

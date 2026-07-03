@@ -119,7 +119,7 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
         'connect',
         'sync-skills',
         '--domain',
-        'scholarskills',
+        'mas-scholar-skills',
         '--scope',
         'workspace',
         '--target-workspace',

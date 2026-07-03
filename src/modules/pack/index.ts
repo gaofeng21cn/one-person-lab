@@ -6,7 +6,11 @@ export const OPL_PACK_SOURCE_MODULE = {
 } as const;
 
 // Public cross-module surface generated from existing module consumers.
-export { buildDomainPackCompilerList, buildGeneratedAgentInterfaces } from './domain-pack-compiler.ts';
+export {
+  buildDomainPackCompilerList,
+  buildGeneratedAgentInterfaces,
+  buildRepoGeneratedInterfaceBundle,
+} from './domain-pack-compiler.ts';
 export { buildGeneratedInterfaceBundle, selectGeneratedInterfaceBundleFormat } from './domain-pack-compiler/generated-interface-read-model.ts';
 export { validatePackBundleContract } from './pack-bundle-contract.ts';
 export { validatePackOsContract } from './pack-os-contract.ts';

@@ -108,7 +108,7 @@ test('opl connect skills discovers the family plugin packs through the configure
       'connect',
       'sync-skills',
       '--domain',
-      'scholarskills',
+      'mas-scholar-skills',
       '--scope',
       'workspace',
       '--target-workspace',
@@ -336,7 +336,14 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.equal(scholarSkillsPack.target_project, null);
     assert.equal(scholarSkillsPack.target_root, null);
     assert.equal(scholarSkillsPack.registry_repo_root, null);
-    assert.equal(scholarSkillsPack.installer_result, null);
+    assert.equal(scholarSkillsPack.installer_result.source, 'workspace_or_quest_local_codex_skill');
+    assert.equal(scholarSkillsPack.installer_result.workspace_or_quest_local_skill.status, 'skipped');
+    assert.equal(
+      scholarSkillsPack.installer_result.workspace_or_quest_local_skill.skip_reason,
+      'workspace_or_quest_target_required',
+    );
+    assert.equal(scholarSkillsPack.installer_result.workspace_or_quest_local_skill.target_scope, 'workspace');
+    assert.equal(scholarSkillsPack.installer_result.workspace_or_quest_local_skill.target_root, null);
     assert.equal(
       fs.existsSync(path.join(workspaceRoot, 'med-autoscience', 'plugins', 'mas-scholar-skills', 'skills', 'mas-scholar-skills', 'SKILL.md')),
       false,
