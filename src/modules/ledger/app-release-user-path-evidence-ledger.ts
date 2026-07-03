@@ -1,4 +1,6 @@
 import fs from 'node:fs';
+import { readJsonPayloadFile, optionalString } from '../../kernel/json-file.ts';
+import { record, stringList } from '../../kernel/json-record.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 
 type AppReleaseUserPathEvidenceReceipt = {
@@ -63,20 +65,6 @@ type AppReleaseUserPathEvidenceLedger = {
 
 function nowIso() {
   return new Date().toISOString();
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
 }
 
 function uniqueStrings(values: string[]) {
@@ -237,43 +225,44 @@ function receiptRef(input: AppReleaseUserPathEvidenceReceiptInput) {
 }
 
 function normalizeReceipt(value: unknown): AppReleaseUserPathEvidenceReceipt | null {
-  if (!isRecord(value)) {
+  const source = record(value);
+  if (source !== value) {
     return null;
   }
-  const receipt_ref = optionalString(value.receipt_ref);
-  if (!receipt_ref || value.target_surface !== 'one_person_lab_app_release_user_path') {
+  const receipt_ref = optionalString(source.receipt_ref);
+  if (!receipt_ref || source.target_surface !== 'one_person_lab_app_release_user_path') {
     return null;
   }
   const receipt = {
     surface_kind: 'opl_app_release_user_path_evidence_receipt',
     receipt_ref,
-    receipt_status: value.receipt_status === 'verified' ? 'verified' : 'recorded',
-    receipt_path: value.receipt_path === 'release_owner_verdict_path'
+    receipt_status: source.receipt_status === 'verified' ? 'verified' : 'recorded',
+    receipt_path: source.receipt_path === 'release_owner_verdict_path'
       ? 'release_owner_verdict_path'
-      : value.receipt_path === 'release_owner_typed_blocker_path'
+      : source.receipt_path === 'release_owner_typed_blocker_path'
         ? 'release_owner_typed_blocker_path'
-        : value.receipt_path === 'release_owner_acceptance_path'
+        : source.receipt_path === 'release_owner_acceptance_path'
           ? 'release_owner_acceptance_path'
-        : stringList(value.release_owner_receipt_refs).length > 0
+        : stringList(source.release_owner_receipt_refs).length > 0
           ? 'release_owner_verdict_path'
-          : stringList(value.owner_acceptance_refs).length > 0
+          : stringList(source.owner_acceptance_refs).length > 0
             ? 'release_owner_acceptance_path'
-          : stringList(value.typed_blocker_refs).length > 0
+          : stringList(source.typed_blocker_refs).length > 0
             ? 'release_owner_typed_blocker_path'
             : 'same_cohort_release_user_path_refs_path',
-    recorded_at: optionalString(value.recorded_at) ?? nowIso(),
+    recorded_at: optionalString(source.recorded_at) ?? nowIso(),
     target_surface: 'one_person_lab_app_release_user_path',
-    release_package_refs: uniqueStrings(stringList(value.release_package_refs)),
-    screenshot_refs: uniqueStrings(stringList(value.screenshot_refs)),
+    release_package_refs: uniqueStrings(stringList(source.release_package_refs)),
+    screenshot_refs: uniqueStrings(stringList(source.screenshot_refs)),
     reload_prompt_user_path_refs: uniqueStrings(
-      stringList(value.reload_prompt_user_path_refs),
+      stringList(source.reload_prompt_user_path_refs),
     ),
-    provider_state_linkage_refs: uniqueStrings(stringList(value.provider_state_linkage_refs)),
-    long_operator_evidence_refs: uniqueStrings(stringList(value.long_operator_evidence_refs)),
-    release_owner_receipt_refs: uniqueStrings(stringList(value.release_owner_receipt_refs)),
-    install_evidence_refs: uniqueStrings(stringList(value.install_evidence_refs)),
-    typed_blocker_refs: uniqueStrings(stringList(value.typed_blocker_refs)),
-    owner_acceptance_refs: uniqueStrings(stringList(value.owner_acceptance_refs)),
+    provider_state_linkage_refs: uniqueStrings(stringList(source.provider_state_linkage_refs)),
+    long_operator_evidence_refs: uniqueStrings(stringList(source.long_operator_evidence_refs)),
+    release_owner_receipt_refs: uniqueStrings(stringList(source.release_owner_receipt_refs)),
+    install_evidence_refs: uniqueStrings(stringList(source.install_evidence_refs)),
+    typed_blocker_refs: uniqueStrings(stringList(source.typed_blocker_refs)),
+    owner_acceptance_refs: uniqueStrings(stringList(source.owner_acceptance_refs)),
     source_surface: 'opl_app_release_user_path_evidence',
     authority_boundary: refsOnlyAuthorityBoundary(),
   } satisfies AppReleaseUserPathEvidenceReceipt;
@@ -286,8 +275,8 @@ function readAppReleaseUserPathEvidenceLedger(): AppReleaseUserPathEvidenceLedge
     return emptyLedger();
   }
   try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
-    if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
+    const parsed = record(readJsonPayloadFile(file));
+    if (!Array.isArray(parsed.receipts)) {
       return emptyLedger();
     }
     return {

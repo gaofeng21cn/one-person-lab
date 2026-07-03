@@ -1,3 +1,5 @@
+import { record, stringValue } from '../../kernel/json-record.ts';
+
 export type JsonRecord = Record<string, unknown>;
 
 export type DomainEntryCommandContract = JsonRecord & {
@@ -169,16 +171,8 @@ export const DEFAULT_FAMILY_ENTRY_SHARED_HANDOFF_ENVELOPE = [
   'return_surface_contract',
 ] as const;
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
 function requireString(value: unknown, field: string) {
-  const text = optionalString(value);
+  const text = stringValue(value);
   if (!text) {
     throw new Error(`family entry contract 缺少字符串字段: ${field}`);
   }
@@ -193,10 +187,11 @@ function requireBoolean(value: unknown, field: string) {
 }
 
 function requireRecord(value: unknown, field: string) {
-  if (!isRecord(value)) {
+  const payload = record(value);
+  if (payload !== value) {
     throw new Error(`family entry contract 缺少对象字段: ${field}`);
   }
-  return value;
+  return payload;
 }
 
 function readStringList(value: unknown, field: string) {
@@ -292,7 +287,7 @@ export function validateDomainAgentEntrySpec(
   const payload = requireRecord(value, field);
   return {
     ...payload,
-    surface_kind: optionalString(payload.surface_kind) ?? 'domain_agent_entry_spec',
+    surface_kind: stringValue(payload.surface_kind) ?? 'domain_agent_entry_spec',
     agent_id: requireString(payload.agent_id, `${field}.agent_id`),
     title: requireString(payload.title, `${field}.title`),
     description: requireString(payload.description, `${field}.description`),
@@ -316,7 +311,7 @@ export function buildDomainAgentEntrySpec(
   return validateDomainAgentEntrySpec(
     mergeExtraPayload(
       {
-        surface_kind: optionalString(input.surface_kind) ?? 'domain_agent_entry_spec',
+        surface_kind: stringValue(input.surface_kind) ?? 'domain_agent_entry_spec',
         agent_id: requireString(input.agent_id, 'agent_id'),
         title: requireString(input.title, 'title'),
         description: requireString(input.description, 'description'),
@@ -386,7 +381,7 @@ export function validateFamilyDomainEntryContract(
   if (supportedEntryModes !== undefined) {
     normalized.supported_entry_modes = supportedEntryModes;
   }
-  const productEntryKind = optionalString(payload.product_entry_kind);
+  const productEntryKind = stringValue(payload.product_entry_kind);
   if (productEntryKind) {
     normalized.product_entry_kind = productEntryKind;
   }
@@ -439,7 +434,7 @@ export function buildFamilyDomainEntryContract(
   if (supportedEntryModes !== undefined) {
     base.supported_entry_modes = supportedEntryModes;
   }
-  const productEntryKind = optionalString(input.product_entry_kind);
+  const productEntryKind = stringValue(input.product_entry_kind);
   if (productEntryKind) {
     base.product_entry_kind = productEntryKind;
   }
@@ -493,7 +488,7 @@ export function buildUserInteractionContract(
   return validateUserInteractionContract(
     mergeExtraPayload(
       {
-        surface_kind: optionalString(input.surface_kind) ?? 'user_interaction_contract',
+        surface_kind: stringValue(input.surface_kind) ?? 'user_interaction_contract',
         entry_owner: requireString(input.entry_owner, 'entry_owner'),
         user_interaction_mode: requireString(input.user_interaction_mode, 'user_interaction_mode'),
         user_commands_required: requireBoolean(
@@ -534,8 +529,8 @@ export function buildFamilyUserInteractionContract(
     ]),
   );
   return buildUserInteractionContract({
-    entry_owner: optionalString(input.entry_owner) ?? 'opl_framework_or_domain_app',
-    user_interaction_mode: optionalString(input.user_interaction_mode) ?? 'natural_language_entry',
+    entry_owner: stringValue(input.entry_owner) ?? 'opl_framework_or_domain_app',
+    user_interaction_mode: stringValue(input.user_interaction_mode) ?? 'natural_language_entry',
     user_commands_required: input.user_commands_required ?? false,
     command_surfaces_for_agent_consumption_only:
       input.command_surfaces_for_agent_consumption_only ?? true,
@@ -544,7 +539,7 @@ export function buildFamilyUserInteractionContract(
       'shared_downstream_entry',
     ),
     shared_handoff_envelope: sharedHandoffEnvelope,
-    surface_kind: optionalString(input.surface_kind),
+    surface_kind: stringValue(input.surface_kind),
     extra_payload: input.extra_payload,
   });
 }
@@ -559,7 +554,7 @@ export function validateSharedHandoffBuilder(
     command: requireString(payload.command, `${field}.command`),
     entry_mode: requireString(payload.entry_mode, `${field}.entry_mode`),
   };
-  const surfaceKind = optionalString(payload.surface_kind);
+  const surfaceKind = stringValue(payload.surface_kind);
   if (surfaceKind) {
     normalized.surface_kind = surfaceKind;
   }
@@ -574,8 +569,8 @@ export function buildSharedHandoffBuilder(
       {
         command: requireString(input.command, 'command'),
         entry_mode: requireString(input.entry_mode, 'entry_mode'),
-        ...(optionalString(input.surface_kind)
-          ? { surface_kind: optionalString(input.surface_kind) }
+        ...(stringValue(input.surface_kind)
+          ? { surface_kind: stringValue(input.surface_kind) }
           : {}),
       },
       input.extra_payload,
@@ -687,14 +682,14 @@ export function buildFamilyDirectOplSharedHandoff(
         input.direct_entry_builder_command,
         'direct_entry_builder_command',
       ),
-      entry_mode: optionalString(input.direct_entry_mode) ?? 'direct',
+      entry_mode: stringValue(input.direct_entry_mode) ?? 'direct',
     }),
     opl_handoff_builder: buildSharedHandoffBuilder({
       command: requireString(
         input.opl_handoff_builder_command,
         'opl_handoff_builder_command',
       ),
-      entry_mode: optionalString(input.opl_handoff_entry_mode) ?? 'opl-handoff',
+      entry_mode: stringValue(input.opl_handoff_entry_mode) ?? 'opl-handoff',
     }),
     extra_payload: input.extra_payload,
   });

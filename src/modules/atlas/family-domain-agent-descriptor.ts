@@ -19,16 +19,7 @@ import {
 } from '../stagecraft/index.ts';
 import { withOplMetaAgentDescriptorEntry } from '../foundry-lab/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
-
-type JsonRecord = Record<string, unknown>;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
+import { record, stringValue, type JsonRecord } from '../../kernel/json-record.ts';
 
 function normalizeDomainSelection(value: string) {
   const key = value.trim().toLowerCase();
@@ -543,7 +534,7 @@ function buildRuntimeProjection(manifest: NormalizedDomainManifest | null, entry
 }
 
 function buildReadinessSummary(parts: Array<{ status: unknown }>) {
-  const statuses = parts.map((part) => optionalString(part.status));
+  const statuses = parts.map((part) => stringValue(part.status));
   if (statuses.some((status) => status === 'blocked_by_manifest_status')) {
     return 'blocked_by_manifest_status';
   }
@@ -635,14 +626,15 @@ function findDescriptorEntry(contracts: FrameworkContracts, domain: string) {
   const entry = catalog.projects.find((candidate) => {
     const manifest = candidate.manifest;
     const descriptor = buildDescriptor(candidate);
+    const domainMemoryDescriptor = record(manifest?.domain_memory_descriptor);
     return candidate.project_id === normalized
       || candidate.project === normalized
       || manifest?.target_domain_id === domain
       || manifest?.target_domain_id === normalized
       || descriptor.agent_id === domain
       || descriptor.agent_id === normalized
-      || (isRecord(manifest?.domain_memory_descriptor) && manifest.domain_memory_descriptor.target_domain_id === domain)
-      || (isRecord(manifest?.domain_memory_descriptor) && manifest.domain_memory_descriptor.target_domain_id === normalized);
+      || domainMemoryDescriptor.target_domain_id === domain
+      || domainMemoryDescriptor.target_domain_id === normalized;
   });
   if (!entry) {
     throw new FrameworkContractError('cli_usage_error', `Unknown family domain agent descriptor domain: ${domain}.`, {
@@ -656,7 +648,7 @@ function findDescriptorEntry(contracts: FrameworkContracts, domain: string) {
 function descriptorProviderResidencyGapStatus(descriptors: ReturnType<typeof buildDescriptor>[]) {
   const firstStatus = descriptors
     .map((descriptor) =>
-      optionalString(
+      stringValue(
         descriptor.standard_domain_agent_skeleton.provider_closure_evidence
           ?.external_temporal_production_residency_proof
           ?.status,

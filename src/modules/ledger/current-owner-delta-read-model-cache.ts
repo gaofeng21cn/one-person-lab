@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { readJsonPayloadFile } from '../../kernel/json-file.ts';
+import { record, stringValue, type JsonRecord } from '../../kernel/json-record.ts';
 import { ensureOplStateDir, resolveOplStatePaths, type OplStatePaths } from '../../kernel/runtime-state-paths.ts';
-
-type JsonRecord = Record<string, unknown>;
 
 type CurrentOwnerDeltaReadModelCacheInput = {
   readModel: unknown;
@@ -20,30 +20,16 @@ type CurrentOwnerDeltaReadModelCacheReadInput = {
   maxAgeMs?: number;
 };
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
 function numberValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
 function currentnessIdentityFrom(value: unknown) {
-  const readModel = isRecord(value) ? value : {};
-  const delta = isRecord(readModel.current_owner_delta) ? readModel.current_owner_delta : {};
-  const basis = isRecord(delta.owner_route_currentness_basis)
-    ? delta.owner_route_currentness_basis
-    : {};
-  const envelope = isRecord(readModel.current_execution_envelope)
-    ? readModel.current_execution_envelope
-    : {};
-  const explicit = isRecord(readModel.currentness_identity)
-    ? readModel.currentness_identity
-    : {};
+  const readModel = record(value);
+  const delta = record(readModel.current_owner_delta);
+  const basis = record(delta.owner_route_currentness_basis);
+  const envelope = record(readModel.current_execution_envelope);
+  const explicit = record(readModel.currentness_identity);
   const identity = {
     delta_id: stringValue(delta.delta_id) ?? stringValue(readModel.delta_id) ?? stringValue(explicit.delta_id),
     domain_id:
@@ -101,7 +87,7 @@ function currentnessIdentityFrom(value: unknown) {
 function mergedCurrentnessIdentity(readModel: unknown, sourceCurrentnessIdentity: unknown) {
   return {
     ...currentnessIdentityFrom(readModel),
-    ...(isRecord(sourceCurrentnessIdentity) ? currentnessIdentityFrom(sourceCurrentnessIdentity) : {}),
+    ...currentnessIdentityFrom(sourceCurrentnessIdentity),
   };
 }
 
@@ -110,10 +96,10 @@ function hasCurrentnessIdentity(value: unknown) {
 }
 
 function currentnessIdentityMatches(cached: unknown, expected: unknown) {
-  if (!isRecord(expected)) {
+  if (record(expected) !== expected) {
     return true;
   }
-  const cachedIdentity = isRecord(cached) ? cached : {};
+  const cachedIdentity = record(cached);
   return Object.entries(currentnessIdentityFrom(expected)).every(([key, value]) =>
     stringValue(cachedIdentity[key]) === value
   );
@@ -132,18 +118,20 @@ function cacheIsFreshEnough(cachedAt: unknown, maxAgeMs: unknown) {
 }
 
 function readModelIsUsable(value: unknown): value is JsonRecord {
-  if (!isRecord(value)) {
+  const readModel = record(value);
+  if (readModel !== value) {
     return false;
   }
-  if (value.surface_kind !== 'opl_current_owner_delta_read_model') {
+  if (readModel.surface_kind !== 'opl_current_owner_delta_read_model') {
     return false;
   }
-  if (!isRecord(value.current_owner_delta)) {
+  const delta = record(readModel.current_owner_delta);
+  if (delta !== readModel.current_owner_delta) {
     return false;
   }
-  return stringValue(value.current_owner) !== null
-    && stringValue(value.required_delta) !== null
-    && value.current_owner_delta.surface_kind === 'opl_current_owner_delta';
+  return stringValue(readModel.current_owner) !== null
+    && stringValue(readModel.required_delta) !== null
+    && delta.surface_kind === 'opl_current_owner_delta';
 }
 
 function cacheAuthorityBoundary() {
@@ -217,12 +205,9 @@ export function readCurrentOwnerDeltaReadModelProjectionCache(
 ) {
   const paths = input.paths ?? resolveOplStatePaths();
   try {
-    const parsed = JSON.parse(
-      fs.readFileSync(paths.current_owner_delta_read_model_cache_file, 'utf8'),
-    );
+    const parsed = record(readJsonPayloadFile(paths.current_owner_delta_read_model_cache_file));
     if (
-      !isRecord(parsed)
-      || parsed.version !== 'g1'
+      parsed.version !== 'g1'
       || parsed.surface_kind !== 'opl_current_owner_delta_read_model_projection_cache'
       || !readModelIsUsable(parsed.current_owner_delta_read_model)
     ) {
