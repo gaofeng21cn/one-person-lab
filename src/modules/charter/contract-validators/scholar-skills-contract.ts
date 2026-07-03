@@ -11,17 +11,8 @@ import {
   expectStringArray,
   isRecord,
 } from '../../../kernel/contract-validation.ts';
-
-export const SCHOLAR_SKILL_MODULE_IDS = [
-  'mas-scholar-skills.display',
-  'mas-scholar-skills.tables',
-  'mas-scholar-skills.stats',
-  'mas-scholar-skills.lit',
-  'mas-scholar-skills.write',
-  'mas-scholar-skills.review',
-  'mas-scholar-skills.submit',
-  'mas-scholar-skills.data',
-] as const satisfies readonly ScholarSkillModuleId[];
+import { SCHOLAR_SKILL_MODULE_IDS } from '../../../kernel/scholar-skill-module-ids.ts';
+export { SCHOLAR_SKILL_MODULE_IDS } from '../../../kernel/scholar-skill-module-ids.ts';
 
 const SCHOLAR_SKILL_AUTHORITY_FIELDS = [
   'can_claim_domain_ready',

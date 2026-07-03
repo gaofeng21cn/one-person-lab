@@ -8,7 +8,7 @@ import {
   buildManagedShellEnvWithUvCacheRecovery,
   buildManagedShellRecoveryTmpRoot,
   recordManagedShellUvCacheRecovery,
-} from '../connect/index.ts';
+} from '../../kernel/managed-shell-command-env.ts';
 
 const DEFAULT_DOMAIN_HANDLER_DISPATCH_TIMEOUT_MS = 120_000;
 const DEFAULT_DOMAIN_HANDLER_EXPORT_TIMEOUT_MS = 600_000;

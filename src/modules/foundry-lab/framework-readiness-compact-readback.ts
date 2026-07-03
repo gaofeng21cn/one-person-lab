@@ -19,6 +19,7 @@ import {
 import { buildOwnerDeltaHandoffSummaryFromFrameworkReadiness } from './framework-readiness-owner-delta-handoff-summary.ts';
 import { guardedProviderSloOpenTailCount } from './framework-readiness-provider-slo.ts';
 import { FRAMEWORK_READINESS_SOURCE_COMMANDS as SOURCE_COMMANDS } from './framework-readiness-source-commands.ts';
+import { repoTrackedOmaStageReplayMissingReceiptReceipts } from './oma-stage-replay-receipts.ts';
 import {
   type JsonRecord,
   numberValue,
@@ -140,7 +141,9 @@ async function buildFrameworkReadinessCompactCoreModel(
   const stagesSummary = record(familyStages.summary);
   const appSummary = record(appOperatorDrilldown.summary);
   const stageReplayMissingReceiptPacket =
-    buildStageReplayMissingReceiptWorkorderPacket(familyStageReadiness);
+    buildStageReplayMissingReceiptWorkorderPacket(familyStageReadiness, {
+      extraReceipts: repoTrackedOmaStageReplayMissingReceiptReceipts(),
+    });
   const stageReplayMissingReceiptSummary =
     record(stageReplayMissingReceiptPacket.summary);
   const readinessEvidenceEnvelopeOpenCount =

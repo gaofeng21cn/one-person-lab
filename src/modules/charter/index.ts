@@ -15,3 +15,5 @@ export { validatePackOsContract } from './contract-validators/pack-os-contract.t
 export { SCHOLAR_SKILL_MODULE_IDS, validateScholarSkillsCapabilityModules } from './contract-validators/scholar-skills-contract.ts';
 export { findDomainOrThrow, findWorkstreamOrThrow, FrameworkContractError, loadFrameworkContracts } from './contracts.ts';
 export { buildSourceStructureOperatorReadback } from './source-structure-operator-readback.ts';
+export { listStandardDomainAgentIds, resolveStandardAgent, resolveStandardAgentByCanonicalPluginName, STANDARD_AGENT_REGISTRY, STANDARD_AGENT_REGISTRY_REF, standardAgentDomainAliasEntries } from './standard-agent-registry.ts';
+export type { StandardAgentRegistryEntry, StandardAgentSeriesMembership } from './standard-agent-registry.ts';

@@ -4,7 +4,7 @@ import type {
   FamilyStageDescriptor,
   FamilyStageTrustLane,
 } from './family-stage-control-plane-contract.ts';
-import type { NormalizedDomainManifest } from '../atlas/index.ts';
+import type { FamilyStageDomainManifest } from './family-stage-domain-manifest.ts';
 import {
   buildFamilyStageAssumptionLifecycleProjection,
 } from './family-stage-assumption-lifecycle.ts';
@@ -806,7 +806,7 @@ function stageResult(stage: FamilyStageDescriptor, findings: FamilyStageAdmissio
 
 export function buildFamilyStageAdmissionReview(
   plane: FamilyStageControlPlane,
-  manifest: Pick<NormalizedDomainManifest, 'family_action_catalog'> | null = null,
+  manifest: Pick<FamilyStageDomainManifest, 'family_action_catalog'> | null = null,
 ): FamilyStageAdmissionReview {
   const findings: FamilyStageAdmissionFinding[] = [];
   const actionsById = actionMap(manifest?.family_action_catalog);

@@ -9,7 +9,7 @@ import {
   buildManagedShellCommandEnv,
   prepareManagedShellCommandCwd,
   recordManagedShellUvCacheRecovery,
-} from '../../connect/index.ts';
+} from '../../../kernel/managed-shell-command-env.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import { materializeFamilyTransitionSurfaces } from './family-transition-materializer.ts';
 import { normalizeManifest } from './normalizers.ts';

@@ -11,6 +11,7 @@ export { buildDuplicateTaskEnvelope, buildFamilyConflictOrBlockerEnvelope, build
 export { buildAttemptHumanReviewBurdenBudget, buildFamilyHumanReviewBurdenBudget } from './family-human-review-budget.ts';
 export { buildFamilyStageAdmissionReview } from './family-stage-admission.ts';
 export type { FamilyStageAdmissionReview, FamilyStageAdmissionStageResult } from './family-stage-admission.ts';
+export type { FamilyStageDomainManifest, FamilyStageDomainManifestCatalog, FamilyStageDomainManifestCatalogEntry, ManifestCommandTimeoutPolicy } from './family-stage-domain-manifest.ts';
 export { buildFamilyStageCohortLoopProjection } from './family-stage-cohort-loop.ts';
 export type { FamilyStageCohortLoopStage } from './family-stage-cohort-loop.ts';
 export { buildFamilyStageControlPlaneParity, buildFamilyStageLaunchAdmissionGate, buildFamilyStageReadinessInspect, buildFamilyStagesList } from './family-stage-control-plane.ts';
@@ -34,3 +35,5 @@ export type { StageRunExecutionAuthorizationReceipt } from './stage-run-executio
 export { buildAppStageRunCockpit } from './stage-run-cockpit.ts';
 export { findMasPublicationHandoffOwnerAnswerProjection } from './mas-owner-answer-projection.ts';
 export { evaluateStageRunAdmission, evaluateStageRunExecutionAuthorization } from './stage-run-kernel.ts';
+export { STANDARD_PROGRESS_DELTA_POLICY } from './standard-progress-delta-policy.ts';
+export { STANDARD_TYPED_BLOCKER_LINEAGE_POLICY } from './standard-typed-blocker-lineage-policy.ts';

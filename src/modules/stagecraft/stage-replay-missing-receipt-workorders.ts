@@ -3,11 +3,6 @@ import {
   stageReplayMissingReceiptTargetKey,
   type StageReplayMissingReceiptReceipt,
 } from './stage-replay-missing-receipt-ledger.ts';
-import { defaultOmaRepoDir } from '../foundry-lab/index.ts';
-import {
-  omaProductionAcceptanceStageReplayReceipts,
-  readOmaProductionAcceptance,
-} from '../foundry-lab/index.ts';
 import {
   record,
   recordList,
@@ -164,28 +159,24 @@ function readinessDomains(stageReadiness: JsonRecord) {
   return [stageReadiness];
 }
 
-function repoTrackedStageReplayMissingReceiptReceipts() {
-  const omaRepoDir = defaultOmaRepoDir();
-  if (!omaRepoDir) {
-    return [];
-  }
-  const productionAcceptance = readOmaProductionAcceptance(omaRepoDir);
-  if (productionAcceptance.status !== 'resolved') {
-    return [];
-  }
-  return omaProductionAcceptanceStageReplayReceipts(productionAcceptance.payload);
-}
+type StageReplayMissingReceiptWorkorderPacketOptions = {
+  extraReceipts?: StageReplayMissingReceiptReceipt[];
+};
 
-function stageReplayMissingReceiptReceipts() {
+function stageReplayMissingReceiptReceipts(
+  options: StageReplayMissingReceiptWorkorderPacketOptions = {},
+) {
   return [
     ...listStageReplayMissingReceiptReceipts(),
-    ...repoTrackedStageReplayMissingReceiptReceipts(),
+    ...(options.extraReceipts ?? []),
   ];
 }
 
-function replayMissingReceiptWorkorderItems(stageReadiness: JsonRecord) {
+function replayMissingReceiptWorkorderItems(
+  stageReadiness: JsonRecord,
+  receipts: StageReplayMissingReceiptReceipt[],
+) {
   const seen = new Set<string>();
-  const receipts = stageReplayMissingReceiptReceipts();
   return readinessDomains(stageReadiness).flatMap((domain) => {
     const warnings = [
       ...recordList(domain.hard_blockers),
@@ -279,15 +270,18 @@ function replayMissingReceiptWorkorderItems(stageReadiness: JsonRecord) {
   });
 }
 
-export function buildStageReplayMissingReceiptWorkorderPacket(stageReadiness: JsonRecord) {
-  const receipts = stageReplayMissingReceiptReceipts();
+export function buildStageReplayMissingReceiptWorkorderPacket(
+  stageReadiness: JsonRecord,
+  options: StageReplayMissingReceiptWorkorderPacketOptions = {},
+) {
+  const receipts = stageReplayMissingReceiptReceipts(options);
   const verifiedSuccessReceiptCount = receipts.filter((receipt) =>
     receipt.receipt_status === 'verified' && receipt.payload_path === 'success_refs_path'
   ).length;
   const verifiedTypedBlockerReceiptCount = receipts.filter((receipt) =>
     receipt.receipt_status === 'verified' && receipt.payload_path === 'typed_blocker_path'
   ).length;
-  const workorders = replayMissingReceiptWorkorderItems(stageReadiness);
+  const workorders = replayMissingReceiptWorkorderItems(stageReadiness, receipts);
   const domainIds = uniqueStringList(workorders.map((item) => item.domain_id));
   const stageIds = uniqueStringList(workorders.map((item) =>
     item.domain_id && item.stage_id ? `${item.domain_id}:${item.stage_id}` : null

@@ -18,13 +18,13 @@ import {
   handoffSurfaceFor,
 } from './generated-interface-active-caller-proof.ts';
 import { buildGeneratedSurfaceConsumptionBundle } from './generated-surface-consumption.ts';
-import { defaultCallerSurfaceGates } from '../../foundry-lab/index.ts';
+import { defaultCallerSurfaceGates } from '../../../kernel/default-caller-surface-gates.ts';
 import {
   DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES,
   DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
   DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
   DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
-} from '../../foundry-lab/index.ts';
+} from '../../../kernel/default-caller-retirement-guard.ts';
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import {
   recordList,

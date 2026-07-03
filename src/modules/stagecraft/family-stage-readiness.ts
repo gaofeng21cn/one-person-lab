@@ -1,4 +1,4 @@
-import type { DomainManifestCatalogEntry } from '../atlas/index.ts';
+import type { FamilyStageDomainManifestCatalogEntry } from './family-stage-domain-manifest.ts';
 import type {
   FamilyStageControlPlane,
 } from './family-stage-control-plane-contract.ts';
@@ -199,7 +199,7 @@ function issueFromAdmissionFinding(
 }
 
 export function buildStageReadinessSummary(
-  entry: DomainManifestCatalogEntry,
+  entry: FamilyStageDomainManifestCatalogEntry,
   plane: FamilyStageControlPlane,
   domain: string,
 ): FamilyStageReadinessSummary {

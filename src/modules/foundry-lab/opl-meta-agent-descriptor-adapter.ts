@@ -61,8 +61,12 @@ function ref(refKind: string, refValue: string, role?: string) {
   };
 }
 
-function repoDirFromRegistry(registry: ReturnType<typeof buildOplMetaAgentRegistryExtension>) {
+function repoDirFromRegistry(registry: JsonRecord) {
   return optionalString(registry.repo_dir);
+}
+
+function registrySummary(registry: JsonRecord) {
+  return isRecord(registry.summary) ? registry.summary : {};
 }
 
 function domainLabel(domainDescriptor: JsonRecord) {
@@ -254,15 +258,16 @@ function buildDomainMemoryDescriptor(memoryDescriptor: JsonRecord | null, stageC
   };
 }
 
-function buildRuntimeSurfaces(repoDir: string, registry: ReturnType<typeof buildOplMetaAgentRegistryExtension>) {
+function buildRuntimeSurfaces(repoDir: string, registry: JsonRecord) {
+  const summary = registrySummary(registry);
   const registryStatus = optionalString(registry.status) ?? 'resolved';
   const appWorkbenchSections =
-    typeof registry.summary.app_workbench_section_count === 'number'
-      ? registry.summary.app_workbench_section_count
+    typeof summary.app_workbench_section_count === 'number'
+      ? summary.app_workbench_section_count
       : 0;
   const openGateCount =
-    typeof registry.summary.production_consumption_followthrough_open_gate_count === 'number'
-      ? registry.summary.production_consumption_followthrough_open_gate_count
+    typeof summary.production_consumption_followthrough_open_gate_count === 'number'
+      ? summary.production_consumption_followthrough_open_gate_count
       : 0;
   return {
     runtime_inventory: {
@@ -325,7 +330,7 @@ function buildRuntimeSurfaces(repoDir: string, registry: ReturnType<typeof build
       },
       attention_items: openGateCount === 0 ? [] : ['oma_production_consumption_followthrough_open'],
       human_gate_ids: ['oma_production_consumption_followthrough'],
-      domain_projection: registry.summary,
+      domain_projection: summary,
     },
     artifact_inventory: {
       surface_kind: 'artifact_inventory',
@@ -405,7 +410,7 @@ function buildTransitionDescriptor() {
   };
 }
 
-function buildRawManifest(repoDir: string, registry: ReturnType<typeof buildOplMetaAgentRegistryExtension>) {
+function buildRawManifest(repoDir: string, registry: JsonRecord) {
   const domainDescriptor = readJson(repoDir, OMA_CONTRACTS.domainDescriptor) ?? {};
   const actionCatalog = readJson(repoDir, OMA_CONTRACTS.actionCatalog);
   const stageControlPlane = readJson(repoDir, OMA_CONTRACTS.stageControlPlane);
@@ -473,7 +478,7 @@ function buildRawManifest(repoDir: string, registry: ReturnType<typeof buildOplM
 }
 
 function buildOplMetaAgentDescriptorEntry(
-  registry: ReturnType<typeof buildOplMetaAgentRegistryExtension>,
+  registry: JsonRecord,
 ): DomainManifestCatalogEntry | null {
   const repoDir = repoDirFromRegistry(registry);
   if (!repoDir) {

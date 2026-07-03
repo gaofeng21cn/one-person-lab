@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import {
   buildManagedShellCommandEnv,
   prepareManagedShellCommandCwd,
-} from '../../connect/index.ts';
+} from '../../../kernel/managed-shell-command-env.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import type { WorkspaceBinding } from '../../workspace/index.ts';
 import { unwrapManifestPayload } from './entry-surfaces.ts';

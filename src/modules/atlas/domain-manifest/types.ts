@@ -13,7 +13,7 @@ import type {
 } from '../../stagecraft/index.ts';
 import type {
   FunctionalPrivatizationAudit,
-} from '../../foundry-lab/index.ts';
+} from '../../pack/index.ts';
 import type { GrantTransitionOracle } from '../../stagecraft/index.ts';
 import type { VisualTransitionSpec } from '../../stagecraft/index.ts';
 

@@ -12,7 +12,7 @@ import {
 } from './brand-module-contracts.ts';
 import {
   STANDARD_AGENT_REGISTRY_REF,
-} from '../atlas/public/standard-agent-registry.ts';
+} from './standard-agent-registry.ts';
 import {
   TARGET_ARCHITECTURE_EXPERIENCE_AXIS_IDS,
   TARGET_ARCHITECTURE_FLAGSHIP_CONTRACT_SURFACES,

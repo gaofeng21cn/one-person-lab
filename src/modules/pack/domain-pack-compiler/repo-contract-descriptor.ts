@@ -10,7 +10,7 @@ import {
 } from '../../stagecraft/index.ts';
 import {
   buildFunctionalPrivatizationAudit,
-} from '../../foundry-lab/index.ts';
+} from '../functional-privatization-audit.ts';
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import { stringList } from '../../../kernel/json-record.ts';
 import {

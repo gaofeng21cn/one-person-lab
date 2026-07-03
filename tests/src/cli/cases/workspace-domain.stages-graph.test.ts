@@ -1,4 +1,5 @@
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, shellSingleQuote, test } from '../helpers.ts';
+import { buildDomainManifestCatalog } from '../../../../src/modules/atlas/index.ts';
 import { buildFamilyStagesList } from '../../../../src/modules/stagecraft/family-stage-control-plane.ts';
 import { loadFrameworkContracts } from '../../../../src/modules/charter/contracts.ts';
 import {
@@ -930,6 +931,8 @@ test('family stage proof bundle uses the extended stage manifest discovery budge
       process.env.OPL_STATE_DIR = stateRoot;
       shortTimeoutList = buildFamilyStagesList(loadFrameworkContracts(), {
         manifestCommandTimeoutMs: 100,
+        loadDomainManifests: (contracts, options) =>
+          buildDomainManifestCatalog(contracts, options).domain_manifests,
       });
     } finally {
       if (previousContractsDir === undefined) {

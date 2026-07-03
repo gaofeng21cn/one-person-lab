@@ -1,4 +1,4 @@
-import type { DomainManifestCatalogEntry } from '../atlas/index.ts';
+import type { FamilyStageDomainManifestCatalogEntry } from './family-stage-domain-manifest.ts';
 import type { FamilyStageControlPlane } from './family-stage-control-plane-contract.ts';
 import {
   buildStageReadinessSummary,
@@ -7,7 +7,7 @@ import {
 
 export type FamilyStageReadinessDetail = 'summary' | 'full';
 
-function resolvePlaneFromEntry(entry: DomainManifestCatalogEntry): FamilyStageControlPlane | null {
+function resolvePlaneFromEntry(entry: FamilyStageDomainManifestCatalogEntry): FamilyStageControlPlane | null {
   return entry.status === 'resolved' ? entry.manifest?.family_stage_control_plane ?? null : null;
 }
 
@@ -22,7 +22,7 @@ function familyStageReadinessStatus(summaries: FamilyStageReadinessSummary[]) {
 }
 
 export function buildFamilyDefaultsStageReadiness(
-  entries: DomainManifestCatalogEntry[],
+  entries: FamilyStageDomainManifestCatalogEntry[],
   detail: FamilyStageReadinessDetail,
 ) {
   const summaries = entries.flatMap((entry) => {

@@ -75,6 +75,7 @@ import { queryTemporalStageAttemptReadModel } from './family-runtime-temporal-qu
 import { reconcileFamilyRuntimeLifecycleRefs, runFamilyRuntimeLifecycleApply } from './family-runtime-lifecycle-index.ts';
 import { buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-gate.ts';
 import { buildFamilyStageLaunchAdmissionGate } from '../stagecraft/index.ts';
+import { buildDomainManifestCatalog } from '../atlas/index.ts';
 import { runFamilyRuntimeEvidenceWorklistCommand } from './family-runtime-evidence-worklist-command.ts';
 import { runFamilyRuntimeStageArtifactCommand } from './family-runtime-stage-artifact-command.ts';
 import { buildFamilyRuntimeControlLoopStatus } from './family-runtime-control-loop.ts';
@@ -654,6 +655,9 @@ export async function runFamilyRuntime(
       const defaultStageLaunchAdmissionGate = buildFamilyStageLaunchAdmissionGate(loadFrameworkContracts(), {
         domainId: parsed.input.domainId,
         stageId: parsed.input.stageId,
+      }, {
+        loadDomainManifests: (contracts, options) =>
+          buildDomainManifestCatalog(contracts, options).domain_manifests,
       });
       const requiredStageAdmissionGate = parsed.input.requireStageAdmission
         ? buildStageAdmissionLaunchGate({

@@ -5,7 +5,7 @@ import {
   buildRuntimeEnvironmentRunContextReadback,
 } from '../runway/index.ts';
 import { materializeCandidateArtifactBodies } from './scholar-skills-parts/artifact-engines.ts';
-import { SCHOLAR_SKILL_MODULE_IDS } from '../charter/index.ts';
+import { SCHOLAR_SKILL_MODULE_IDS } from '../../kernel/scholar-skill-module-ids.ts';
 import {
   AUTHORITY_FALSE_FIELDS,
   MODULE_REQUIRED_ARTIFACT_REF_FAMILIES,

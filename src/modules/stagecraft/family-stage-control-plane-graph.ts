@@ -1,4 +1,4 @@
-import type { DomainManifestCatalogEntry } from '../atlas/index.ts';
+import type { FamilyStageDomainManifestCatalogEntry } from './family-stage-domain-manifest.ts';
 import {
   buildFamilyStageAdmissionReview,
   buildFamilyStageModeTags,
@@ -139,7 +139,7 @@ function buildGraphNode(
 }
 
 export function buildFamilyStageGraphProjection(
-  entry: DomainManifestCatalogEntry,
+  entry: FamilyStageDomainManifestCatalogEntry,
   plane: FamilyStageControlPlane,
 ): FamilyStageGraphProjection {
   const admission = buildFamilyStageAdmissionReview(plane, entry.manifest);

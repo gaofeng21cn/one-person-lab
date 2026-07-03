@@ -1,15 +1,17 @@
 import type {
-  DomainManifestCatalogEntry,
-  NormalizedDomainManifest,
-} from '../atlas/index.ts';
+  FamilyStageDomainManifest,
+  FamilyStageDomainManifestCatalogEntry,
+} from './family-stage-domain-manifest.ts';
 import type {
   FamilyStageControlPlane,
   FamilyStageSurfaceRef,
 } from './family-stage-control-plane-contract.ts';
 import {
   STANDARD_PROGRESS_DELTA_POLICY,
+} from './standard-progress-delta-policy.ts';
+import {
   STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
-} from '../foundry-lab/index.ts';
+} from './standard-typed-blocker-lineage-policy.ts';
 
 type DomainManifestCatalog = {
   summary: {
@@ -17,7 +19,7 @@ type DomainManifestCatalog = {
     resolved_count: number;
     [key: string]: unknown;
   };
-  projects: DomainManifestCatalogEntry[];
+  projects: FamilyStageDomainManifestCatalogEntry[];
   notes: string[];
   [key: string]: unknown;
 };
@@ -34,7 +36,7 @@ function ref(refKind: string, refValue: string, role?: string): FamilyStageSurfa
   };
 }
 
-function resolvePlaneFromEntry(entry: DomainManifestCatalogEntry) {
+function resolvePlaneFromEntry(entry: FamilyStageDomainManifestCatalogEntry) {
   return entry.status === 'resolved' ? entry.manifest?.family_stage_control_plane ?? null : null;
 }
 
@@ -227,7 +229,7 @@ function buildOplMetaAgentActionCatalog() {
   };
 }
 
-function buildOplMetaAgentManifestEntry(): DomainManifestCatalogEntry {
+function buildOplMetaAgentManifestEntry(): FamilyStageDomainManifestCatalogEntry {
   return {
     project_id: 'opl-meta-agent',
     project: 'OPL Meta Agent',
@@ -244,7 +246,7 @@ function buildOplMetaAgentManifestEntry(): DomainManifestCatalogEntry {
           agent_id: 'opl-meta-agent',
         },
       },
-    } as unknown as NormalizedDomainManifest,
+    } as unknown as FamilyStageDomainManifest,
     error: null,
   };
 }

@@ -1,8 +1,12 @@
 import type { FrameworkContracts } from '../../kernel/types.ts';
-import { buildDomainManifestCatalog } from '../atlas/index.ts';
-import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from '../atlas/index.ts';
 import { withOplMetaAgentStageAttemptEntry } from './family-stage-control-plane-oma.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import type {
+  FamilyStageDomainManifest,
+  FamilyStageDomainManifestCatalog,
+  FamilyStageDomainManifestCatalogEntry,
+  ManifestCommandTimeoutPolicy,
+} from './family-stage-domain-manifest.ts';
 import type {
   FamilyStageControlPlane,
   FamilyStageDescriptor,
@@ -47,7 +51,6 @@ import {
   buildFamilyStageGuaranteeProjection,
   type FamilyStageGuaranteeMode,
 } from './family-stage-guarantee-projection.ts';
-import type { ManifestCommandTimeoutPolicy } from '../atlas/index.ts';
 import type {
   FamilyStageAdmissionReview,
   FamilyStageAdmissionStageResult,
@@ -190,13 +193,13 @@ function normalizeDomainSelection(value: string) {
   return aliases[key] ?? key;
 }
 
-function resolvePlaneFromEntry(entry: DomainManifestCatalogEntry) {
+function resolvePlaneFromEntry(entry: FamilyStageDomainManifestCatalogEntry) {
   return entry.status === 'resolved' ? entry.manifest?.family_stage_control_plane ?? null : null;
 }
 
 export function buildFamilyStageControlPlaneParity(
   plane: FamilyStageControlPlane,
-  manifest: Pick<NormalizedDomainManifest, 'family_action_catalog'> | null = null,
+  manifest: Pick<FamilyStageDomainManifest, 'family_action_catalog'> | null = null,
 ) {
   const issues: string[] = [];
   const actionIds = new Set(manifest?.family_action_catalog?.actions.map((action) => action.action_id) ?? []);
@@ -223,7 +226,7 @@ export function buildFamilyStageControlPlaneParity(
 }
 
 function buildFamilyStageListEntry(
-  entry: DomainManifestCatalogEntry,
+  entry: FamilyStageDomainManifestCatalogEntry,
   plane: FamilyStageControlPlane,
   stage: FamilyStageDescriptor,
   admissionStage: FamilyStageAdmissionStageResult | null = null,
@@ -254,22 +257,40 @@ function buildFamilyStageListEntry(
   };
 }
 
-type DomainManifestCatalog = ReturnType<typeof buildDomainManifestCatalog>['domain_manifests'];
 const STAGE_MANIFEST_COMMAND_TIMEOUT_MS = 120_000;
 
 type ManifestCatalogOptions = {
   manifestCommandTimeoutMs?: number;
   manifestCommandTimeoutPolicy?: ManifestCommandTimeoutPolicy;
-  domainManifests?: DomainManifestCatalog;
+  domainManifests?: FamilyStageDomainManifestCatalog;
+  loadDomainManifests?: (
+    contracts: FrameworkContracts,
+    options: {
+      manifestCommandTimeoutMs: number;
+      manifestCommandTimeoutPolicy: ManifestCommandTimeoutPolicy;
+      useProjectionCacheOnFailure?: boolean;
+    },
+  ) => FamilyStageDomainManifestCatalog;
   useProjectionCacheOnFailure?: boolean;
 };
 
 function buildStageIndex(contracts: FrameworkContracts, options: ManifestCatalogOptions = {}) {
-  const baseCatalog = options.domainManifests ?? buildDomainManifestCatalog(contracts, {
+  const manifestOptions = {
     manifestCommandTimeoutMs: options.manifestCommandTimeoutMs ?? STAGE_MANIFEST_COMMAND_TIMEOUT_MS,
     manifestCommandTimeoutPolicy: options.manifestCommandTimeoutPolicy ?? 'fixed',
     useProjectionCacheOnFailure: options.useProjectionCacheOnFailure,
-  }).domain_manifests;
+  };
+  const baseCatalog = options.domainManifests
+    ?? options.loadDomainManifests?.(contracts, manifestOptions)
+    ?? {
+      summary: {
+        total_projects_count: 0,
+        resolved_count: 0,
+        manifest_catalog_status: 'not_injected',
+      },
+      projects: [],
+      notes: ['domain_manifest_catalog_not_injected'],
+    };
   const catalog = withOplMetaAgentStageAttemptEntry(baseCatalog);
   const domains = catalog.projects.map((entry) => {
     const plane = resolvePlaneFromEntry(entry);
@@ -537,9 +558,9 @@ function parseStageReadinessArgs(args: string[]): StageReadinessArgs {
   };
 }
 
-export function buildFamilyStageInspect(contracts: FrameworkContracts, args: string[]) {
+export function buildFamilyStageInspect(contracts: FrameworkContracts, args: string[], options: ManifestCatalogOptions = {}) {
   const { parsed } = parseOptionArgs(args, ['domain', 'stage']);
-  const { entry, plane } = findDomainEntry(contracts, parsed.domain);
+  const { entry, plane } = findDomainEntry(contracts, parsed.domain, options);
   const stage = findStage(plane, parsed.stage);
   const admission: FamilyStageAdmissionReview = buildFamilyStageAdmissionReview(plane, entry.manifest);
   const assumptionLifecycle = buildFamilyStageAssumptionLifecycleProjection(plane);
@@ -600,9 +621,9 @@ export function buildFamilyStageInspect(contracts: FrameworkContracts, args: str
   };
 }
 
-export function buildFamilyStageProofBundleInspect(contracts: FrameworkContracts, args: string[]) {
+export function buildFamilyStageProofBundleInspect(contracts: FrameworkContracts, args: string[], options: ManifestCatalogOptions = {}) {
   const { parsed } = parseOptionArgs(args, ['domain']);
-  const { entry, plane } = findDomainEntry(contracts, parsed.domain);
+  const { entry, plane } = findDomainEntry(contracts, parsed.domain, options);
   const admission = buildFamilyStageAdmissionReview(plane, entry.manifest);
   return {
     version: 'g2',
@@ -617,9 +638,9 @@ export function buildFamilyStageProofBundleInspect(contracts: FrameworkContracts
   };
 }
 
-export function buildFamilyStageGraphInspect(contracts: FrameworkContracts, args: string[]) {
+export function buildFamilyStageGraphInspect(contracts: FrameworkContracts, args: string[], options: ManifestCatalogOptions = {}) {
   const { parsed } = parseOptionArgs(args, ['domain']);
-  const { entry, plane } = findDomainEntry(contracts, parsed.domain);
+  const { entry, plane } = findDomainEntry(contracts, parsed.domain, options);
   return {
     version: 'g2',
     family_stage_graph: buildFamilyStageGraphProjection(entry, plane),
@@ -654,9 +675,9 @@ export function buildFamilyStageReadinessInspect(contracts: FrameworkContracts, 
   };
 }
 
-export function buildFamilyStageAssumptionsInspect(contracts: FrameworkContracts, args: string[]) {
+export function buildFamilyStageAssumptionsInspect(contracts: FrameworkContracts, args: string[], options: ManifestCatalogOptions = {}) {
   const { parsed } = parseOptionArgs(args, ['domain']);
-  const { entry, plane } = findDomainEntry(contracts, parsed.domain);
+  const { entry, plane } = findDomainEntry(contracts, parsed.domain, options);
   return {
     version: 'g2',
     family_stage_assumption_lifecycle: {
@@ -667,9 +688,9 @@ export function buildFamilyStageAssumptionsInspect(contracts: FrameworkContracts
   };
 }
 
-export function buildFamilyStageCohortLoopInspect(contracts: FrameworkContracts, args: string[]) {
+export function buildFamilyStageCohortLoopInspect(contracts: FrameworkContracts, args: string[], options: ManifestCatalogOptions = {}) {
   const { parsed } = parseOptionArgs(args, ['domain']);
-  const { entry, plane } = findDomainEntry(contracts, parsed.domain);
+  const { entry, plane } = findDomainEntry(contracts, parsed.domain, options);
   return {
     version: 'g2',
     family_stage_cohort_loop: {
@@ -680,9 +701,9 @@ export function buildFamilyStageCohortLoopInspect(contracts: FrameworkContracts,
   };
 }
 
-export function buildFamilyStageRuntimeBudgetInspect(contracts: FrameworkContracts, args: string[]) {
+export function buildFamilyStageRuntimeBudgetInspect(contracts: FrameworkContracts, args: string[], options: ManifestCatalogOptions = {}) {
   const { parsed } = parseOptionArgs(args, ['domain']);
-  const { entry, plane } = findDomainEntry(contracts, parsed.domain);
+  const { entry, plane } = findDomainEntry(contracts, parsed.domain, options);
   return {
     version: 'g2',
     family_stage_runtime_budget: {
@@ -693,9 +714,9 @@ export function buildFamilyStageRuntimeBudgetInspect(contracts: FrameworkContrac
   };
 }
 
-export function buildFamilyStagePackRegistryInspect(contracts: FrameworkContracts, args: string[]) {
+export function buildFamilyStagePackRegistryInspect(contracts: FrameworkContracts, args: string[], options: ManifestCatalogOptions = {}) {
   const { parsed, repeated } = parseRepeatedOptionArgs(args, ['domain'], ['reused-by-ref']);
-  const { entry, plane } = findDomainEntry(contracts, parsed.domain);
+  const { entry, plane } = findDomainEntry(contracts, parsed.domain, options);
   const admission = buildFamilyStageAdmissionReview(plane, entry.manifest);
   const proofBundle = buildFamilyStageProofBundle(plane, {
     actionCatalog: entry.manifest?.family_action_catalog ?? null,
@@ -732,7 +753,7 @@ export function buildFamilyStagePackRegistryInspect(contracts: FrameworkContract
   };
 }
 
-export function buildFamilyStagePackSourceSpecInspect(contracts: FrameworkContracts, args: string[]) {
+export function buildFamilyStagePackSourceSpecInspect(contracts: FrameworkContracts, args: string[], options: ManifestCatalogOptions = {}) {
   const { parsed, repeated } = parseRepeatedOptionArgs(args, ['domain'], [
     'append-only-event-log-ref',
     'attempt-ledger-ref',
@@ -740,7 +761,7 @@ export function buildFamilyStagePackSourceSpecInspect(contracts: FrameworkContra
     'closeout-receipt-ref',
     'reused-by-ref',
   ]);
-  const { entry, plane } = findDomainEntry(contracts, parsed.domain);
+  const { entry, plane } = findDomainEntry(contracts, parsed.domain, options);
   const admission = buildFamilyStageAdmissionReview(plane, entry.manifest);
   const proofBundle = buildFamilyStageProofBundle(plane, {
     actionCatalog: entry.manifest?.family_action_catalog ?? null,
@@ -781,14 +802,14 @@ export function buildFamilyStagePackSourceSpecInspect(contracts: FrameworkContra
   };
 }
 
-export function buildFamilyStageReplayCertificationInspect(contracts: FrameworkContracts, args: string[]) {
+export function buildFamilyStageReplayCertificationInspect(contracts: FrameworkContracts, args: string[], options: ManifestCatalogOptions = {}) {
   const { parsed, repeated } = parseRepeatedOptionArgs(args, ['domain'], [
     'append-only-event-log-ref',
     'attempt-ledger-ref',
     'recorded-runtime-event-ref',
     'closeout-receipt-ref',
   ]);
-  const { entry, plane } = findDomainEntry(contracts, parsed.domain);
+  const { entry, plane } = findDomainEntry(contracts, parsed.domain, options);
   const admission = buildFamilyStageAdmissionReview(plane, entry.manifest);
   const proofBundle = buildFamilyStageProofBundle(plane, {
     actionCatalog: entry.manifest?.family_action_catalog ?? null,

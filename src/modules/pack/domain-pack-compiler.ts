@@ -6,10 +6,10 @@ import { buildFamilyAgentDescriptorList } from '../atlas/index.ts';
 import {
   defaultStandardDomainAgentRepoInputs,
   DEFAULT_STANDARD_DOMAIN_AGENT_REPOS,
-} from '../foundry-lab/index.ts';
+} from '../../kernel/standard-domain-agent-family-repos.ts';
 import {
   STANDARD_AGENT_PACK_ABI,
-} from '../foundry-lab/index.ts';
+} from './standard-agent-pack-abi.ts';
 import {
   buildGeneratedInterfaceBundle,
   GENERATED_INTERFACE_SOURCE_REFS,

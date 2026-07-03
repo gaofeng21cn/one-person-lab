@@ -26,6 +26,7 @@ export type { OmaProductionConsumptionReceiptInput } from './oma-production-cons
 export { buildOplMetaAgentRegistryExtension, defaultOmaRepoDir } from './opl-meta-agent-consumption.ts';
 export { withOplMetaAgentDescriptorEntry } from './opl-meta-agent-descriptor-adapter.ts';
 export { omaProductionAcceptanceStageReplayReceipts, readOmaProductionAcceptance } from './opl-meta-agent-production-acceptance.ts';
+export { repoTrackedOmaStageReplayMissingReceiptReceipts } from './oma-stage-replay-receipts.ts';
 export { DEFAULT_STANDARD_DOMAIN_AGENT_REPOS, defaultStandardDomainAgentRepoInputs } from './standard-domain-agent-family-repos.ts';
 export { buildStandardDomainAgentScaffold, buildStandardDomainAgentTemplateConsumptionReadModel } from './standard-domain-agent-scaffold.ts';
 export { STANDARD_AGENT_PACK_ABI, STANDARD_PROGRESS_DELTA_POLICY, STANDARD_TYPED_BLOCKER_LINEAGE_POLICY } from './standard-domain-agent-scaffold-constants.ts';

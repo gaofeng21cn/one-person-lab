@@ -6,7 +6,6 @@ import {
   hydrateDomainManifestCatalogFromProjectionCache,
   writeResolvedDomainManifestProjectionCache,
 } from './projection-cache.ts';
-import { buildOplMetaAgentRegistryExtension } from '../../foundry-lab/index.ts';
 import type { DomainManifestCatalogEntry } from './types.ts';
 
 type DomainManifestCurrentnessOwnerAction = Record<string, unknown>;
@@ -36,7 +35,7 @@ export type DomainManifestCatalog = {
     items: DomainManifestCurrentnessOwnerAction[];
     authority_boundary: Record<string, unknown>;
   };
-  opl_meta_agent_registry?: ReturnType<typeof buildOplMetaAgentRegistryExtension>;
+  opl_meta_agent_registry?: Record<string, unknown>;
   notes: string[];
 };
 
@@ -258,11 +257,10 @@ export function buildDomainManifestCatalog(
       },
       projects: projectsWithCurrentnessOwnerAction,
       currentness_owner_action_packet: currentnessOwnerActionPacket,
-      opl_meta_agent_registry: buildOplMetaAgentRegistryExtension(),
       notes: [
         'This surface executes the domain-owned manifest_command for active admitted-domain bindings only.',
         '`opl workspace list` remains the non-executing registry; `opl domain manifests` is the sibling discovery surface that resolves machine-readable product-entry manifests.',
-        '`opl_meta_agent_registry` is a refs-only registry/App projection extension and does not expand production domain truth or readiness authority.',
+        'OPL Meta Agent registry extension is composed by Foundry Lab consumers and does not expand production domain truth or readiness authority.',
       ],
     } satisfies DomainManifestCatalog,
   };

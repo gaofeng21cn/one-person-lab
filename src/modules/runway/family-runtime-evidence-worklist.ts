@@ -28,6 +28,7 @@ import {
   compactStageReplayMissingReceiptWorkorderAttentionSummary,
   compactStageReplayMissingReceiptWorkorderAttentionItems,
 } from '../stagecraft/index.ts';
+import type { StageReplayMissingReceiptReceipt } from '../stagecraft/index.ts';
 import { familyRuntimeEvidenceWorklistAuthorityBoundary } from './family-runtime-evidence-worklist-parts/authority-boundary.ts';
 import { buildWorklistOwnerDeltaActionProjection } from './family-runtime-evidence-worklist-parts/current-owner-delta-projection.ts';
 import { buildProgressFirstOperatorSummary } from './family-runtime-evidence-worklist-parts/progress-first-operator-summary.ts';
@@ -69,6 +70,7 @@ type EvidenceWorklistInput = {
   runtimeSnapshot?: RuntimeTraySnapshotEnvelope;
   runtimeSnapshotProvider?: RuntimeTraySnapshotProvider;
   stageReadiness?: JsonRecord;
+  stageReplayMissingReceiptExtraReceipts?: StageReplayMissingReceiptReceipt[];
   domainManifests?: DomainManifestCatalog;
   queryTemporalStageAttemptReadModel?: EvidenceWorklistTemporalQuery;
 };
@@ -165,7 +167,9 @@ export async function runFamilyRuntimeEvidenceWorklist(
   const stageEvidenceWorkorderAttentionItems =
     compactStageEvidenceWorkorderAttentionItems(stageEvidenceWorkorderPacket);
   const stageReplayMissingReceiptWorkorderPacket =
-    buildStageReplayMissingReceiptWorkorderPacket(stageReadiness);
+    buildStageReplayMissingReceiptWorkorderPacket(stageReadiness, {
+      extraReceipts: input.stageReplayMissingReceiptExtraReceipts,
+    });
   const stageReplayMissingReceiptWorkorderSummary =
     record(stageReplayMissingReceiptWorkorderPacket.summary);
   const stageReplayMissingReceiptWorkorderAttentionItems =
