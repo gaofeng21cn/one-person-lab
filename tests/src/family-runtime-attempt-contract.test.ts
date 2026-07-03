@@ -164,6 +164,7 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
   assert.equal((contract.provider_lifecycle_contract as Record<string, any>).temporal.workflow_name, 'StageAttemptWorkflow');
   assert.deepEqual((contract.provider_lifecycle_contract as Record<string, any>).temporal.signals, [
     'HumanGateSignal',
+    'OwnerReceiptSignal',
     'UserInstructionSignal',
     'ResumeSignal',
   ]);
