@@ -10,52 +10,27 @@ import type {
   FrameworkContracts,
 } from '../../../kernel/types.ts';
 import {
+  readJsonObject,
+  readOptionalString,
+  readStringList,
+} from '../modules/json-boundary.ts';
+import {
   assertSinglePayloadSource,
   buildUsageError,
   readPayloadFileText,
 } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  const scalar = optionalString(value);
-  if (scalar) {
-    return [scalar];
-  }
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
 function parseRuntimeBrandModuleL5EvidencePayload(
   value: string,
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): BrandModuleL5EvidenceReceiptInput {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch (error) {
-    throw buildUsageError(
-      'runtime brand-module-l5-evidence record payload must be valid JSON.',
-      spec,
-      { parse_error: error instanceof Error ? error.message : String(error) },
-    );
-  }
-  if (!isRecord(parsed)) {
-    throw buildUsageError(
-      'runtime brand-module-l5-evidence record payload must be a JSON object.',
-      spec,
-    );
-  }
-  const moduleId = optionalString(parsed.module_id ?? parsed.module);
-  const evidenceClassId = optionalString(parsed.evidence_class_id ?? parsed.class_id ?? parsed.class);
+  const parsed = readJsonObject(value, spec, {
+    parseErrorMessage: 'runtime brand-module-l5-evidence record payload must be valid JSON.',
+    objectErrorMessage: 'runtime brand-module-l5-evidence record payload must be a JSON object.',
+  });
+  const moduleId = readOptionalString(parsed.module_id ?? parsed.module);
+  const evidenceClassId = readOptionalString(parsed.evidence_class_id ?? parsed.class_id ?? parsed.class);
   if (!moduleId || !evidenceClassId) {
     throw buildUsageError(
       'runtime brand-module-l5-evidence record payload requires module_id and evidence_class_id.',
@@ -66,13 +41,13 @@ function parseRuntimeBrandModuleL5EvidencePayload(
   return {
     module_id: moduleId as BrandModuleId,
     evidence_class_id: evidenceClassId as BrandModuleL5EvidenceClassId,
-    evidence_refs: stringList(parsed.evidence_refs ?? parsed.evidence_ref),
-    typed_blocker_refs: stringList(parsed.typed_blocker_refs ?? parsed.typed_blocker_ref),
-    owner_acceptance_refs: stringList(
+    evidence_refs: readStringList(parsed.evidence_refs ?? parsed.evidence_ref),
+    typed_blocker_refs: readStringList(parsed.typed_blocker_refs ?? parsed.typed_blocker_ref),
+    owner_acceptance_refs: readStringList(
       parsed.owner_acceptance_refs ?? parsed.owner_acceptance_ref,
     ),
-    no_regression_refs: stringList(parsed.no_regression_refs ?? parsed.no_regression_ref),
-    receipt_ref: optionalString(parsed.receipt_ref),
+    no_regression_refs: readStringList(parsed.no_regression_refs ?? parsed.no_regression_ref),
+    receipt_ref: readOptionalString(parsed.receipt_ref),
   };
 }
 

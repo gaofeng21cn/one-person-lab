@@ -10,6 +10,10 @@ import {
   startOmaLongSoakObservation,
 } from '../../../modules/foundry-lab/oma-long-soak-observation.ts';
 import {
+  readJsonObject,
+  readStringList,
+} from '../modules/json-boundary.ts';
+import {
   assertNoArgs,
   assertSinglePayloadSource,
   buildUsageError,
@@ -17,50 +21,25 @@ import {
 } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  const scalar = optionalString(value);
-  if (scalar) {
-    return [scalar];
-  }
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
 function parseRuntimeOmaProductionConsumptionPayload(
   value: string,
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): OmaProductionConsumptionReceiptInput {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch (error) {
-    throw buildUsageError('runtime oma-production-consumption record payload must be valid JSON.', spec, {
-      parse_error: error instanceof Error ? error.message : String(error),
-    });
-  }
-  if (!isRecord(parsed)) {
-    throw buildUsageError('runtime oma-production-consumption record payload must be a JSON object.', spec);
-  }
+  const parsed = readJsonObject(value, spec, {
+    parseErrorMessage: 'runtime oma-production-consumption record payload must be valid JSON.',
+    objectErrorMessage: 'runtime oma-production-consumption record payload must be a JSON object.',
+  });
   return {
     long_soak_refs: [
-      ...stringList(parsed.long_soak_refs ?? parsed.long_soak_ref),
-      ...stringList(parsed.operator_long_soak_refs ?? parsed.operator_long_soak_ref),
-      ...stringList(parsed.production_soak_refs ?? parsed.production_soak_ref),
-      ...stringList(
+      ...readStringList(parsed.long_soak_refs ?? parsed.long_soak_ref),
+      ...readStringList(parsed.operator_long_soak_refs ?? parsed.operator_long_soak_ref),
+      ...readStringList(parsed.production_soak_refs ?? parsed.production_soak_ref),
+      ...readStringList(
         parsed.agent_lab_rerun_long_soak_refs ?? parsed.agent_lab_rerun_long_soak_ref,
       ),
     ],
-    typed_blocker_refs: stringList(parsed.typed_blocker_refs ?? parsed.typed_blocker_ref),
-    operator_evidence_refs: stringList(
+    typed_blocker_refs: readStringList(parsed.typed_blocker_refs ?? parsed.typed_blocker_ref),
+    operator_evidence_refs: readStringList(
       parsed.operator_evidence_refs ?? parsed.operator_evidence_ref,
     ),
   };

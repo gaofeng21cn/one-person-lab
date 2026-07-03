@@ -5,6 +5,11 @@ import {
   type StandardAgentTemplateConsumptionReceiptInput,
 } from '../../../modules/ledger/standard-agent-template-consumption-ledger.ts';
 import {
+  readJsonObject,
+  readOptionalString,
+  readStringList,
+} from '../modules/json-boundary.ts';
+import {
   assertNoArgs,
   assertSinglePayloadSource,
   buildUsageError,
@@ -12,57 +17,29 @@ import {
 } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  const scalar = optionalString(value);
-  if (scalar) {
-    return [scalar];
-  }
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
 function parseRuntimeStandardAgentTemplateConsumptionPayload(
   value: string,
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): StandardAgentTemplateConsumptionReceiptInput & Record<string, unknown> {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch (error) {
-    throw buildUsageError(
+  const parsed = readJsonObject(value, spec, {
+    parseErrorMessage:
       'runtime standard-agent-template-consumption record payload must be valid JSON.',
-      spec,
-      { parse_error: error instanceof Error ? error.message : String(error) },
-    );
-  }
-  if (!isRecord(parsed)) {
-    throw buildUsageError(
+    objectErrorMessage:
       'runtime standard-agent-template-consumption record payload must be a JSON object.',
-      spec,
-    );
-  }
+  });
   return {
     ...parsed,
-    evidence_ref: optionalString(parsed.evidence_ref),
-    evidence_fingerprint: optionalString(parsed.evidence_fingerprint),
-    cohort_evidence_ref: optionalString(parsed.cohort_evidence_ref),
-    cohort_evidence_fingerprint: optionalString(parsed.cohort_evidence_fingerprint),
-    sample_evidence_refs: stringList(parsed.sample_evidence_refs ?? parsed.sample_evidence_ref),
-    sample_evidence_fingerprints: stringList(
+    evidence_ref: readOptionalString(parsed.evidence_ref),
+    evidence_fingerprint: readOptionalString(parsed.evidence_fingerprint),
+    cohort_evidence_ref: readOptionalString(parsed.cohort_evidence_ref),
+    cohort_evidence_fingerprint: readOptionalString(parsed.cohort_evidence_fingerprint),
+    sample_evidence_refs: readStringList(parsed.sample_evidence_refs ?? parsed.sample_evidence_ref),
+    sample_evidence_fingerprints: readStringList(
       parsed.sample_evidence_fingerprints ?? parsed.sample_evidence_fingerprint,
     ),
-    consumed_surface_refs: stringList(parsed.consumed_surface_refs ?? parsed.consumed_surface_ref),
-    replay_command_ref: optionalString(parsed.replay_command_ref),
-    receipt_ref: optionalString(parsed.receipt_ref),
+    consumed_surface_refs: readStringList(parsed.consumed_surface_refs ?? parsed.consumed_surface_ref),
+    replay_command_ref: readOptionalString(parsed.replay_command_ref),
+    receipt_ref: readOptionalString(parsed.receipt_ref),
   };
 }
 

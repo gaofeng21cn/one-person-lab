@@ -7,6 +7,11 @@ import {
   type ProviderLongSoakEvidenceReceiptInput,
 } from '../../../modules/ledger/provider-long-soak-evidence-ledger.ts';
 import {
+  readJsonObject,
+  readOptionalString,
+  readStringList,
+} from '../modules/json-boundary.ts';
+import {
   assertNoArgs,
   assertSinglePayloadSource,
   buildUsageError,
@@ -14,59 +19,29 @@ import {
 } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  const scalar = optionalString(value);
-  if (scalar) {
-    return [scalar];
-  }
-  return Array.isArray(value)
-    ? value.map(optionalString).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
 function parseProviderLongSoakEvidencePayload(
   value: string,
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): ProviderLongSoakEvidenceReceiptInput {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch (error) {
-    throw buildUsageError(
-      'runtime provider-long-soak-evidence record payload must be valid JSON.',
-      spec,
-      { parse_error: error instanceof Error ? error.message : String(error) },
-    );
-  }
-  if (!isRecord(parsed)) {
-    throw buildUsageError(
-      'runtime provider-long-soak-evidence record payload must be a JSON object.',
-      spec,
-    );
-  }
+  const parsed = readJsonObject(value, spec, {
+    parseErrorMessage: 'runtime provider-long-soak-evidence record payload must be valid JSON.',
+    objectErrorMessage: 'runtime provider-long-soak-evidence record payload must be a JSON object.',
+  });
   return {
-    long_soak_refs: stringList(parsed.long_soak_refs ?? parsed.long_soak_ref),
-    recovery_refs: stringList(parsed.recovery_refs ?? parsed.recovery_ref),
-    dead_letter_refs: stringList(parsed.dead_letter_refs ?? parsed.dead_letter_ref),
-    provider_blocker_refs: stringList(
+    long_soak_refs: readStringList(parsed.long_soak_refs ?? parsed.long_soak_ref),
+    recovery_refs: readStringList(parsed.recovery_refs ?? parsed.recovery_ref),
+    dead_letter_refs: readStringList(parsed.dead_letter_refs ?? parsed.dead_letter_ref),
+    provider_blocker_refs: readStringList(
       parsed.provider_blocker_refs ?? parsed.provider_blocker_ref,
     ),
-    typed_blocker_refs: stringList(parsed.typed_blocker_refs ?? parsed.typed_blocker_ref),
-    owner_acceptance_refs: stringList(
+    typed_blocker_refs: readStringList(parsed.typed_blocker_refs ?? parsed.typed_blocker_ref),
+    owner_acceptance_refs: readStringList(
       parsed.owner_acceptance_refs ?? parsed.owner_acceptance_ref,
     ),
-    capability_requirement_ids: stringList(
+    capability_requirement_ids: readStringList(
       parsed.capability_requirement_ids ?? parsed.capability_requirement_id,
     ),
-    receipt_ref: optionalString(parsed.receipt_ref),
+    receipt_ref: readOptionalString(parsed.receipt_ref),
   };
 }
 
