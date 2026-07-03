@@ -2,6 +2,39 @@ import type { FrameworkContractsLoadOptions } from '../../../kernel/types.ts';
 
 type CommandHandler = (args: string[]) => unknown | Promise<unknown>;
 
+type CommandOptionValueKind = 'string' | 'integer' | 'boolean';
+
+type CommandOptionMetadata = {
+  name: string;
+  flag: string;
+  value_kind: CommandOptionValueKind;
+  summary: string;
+  required?: boolean;
+  multiple?: boolean;
+  default?: string | number | boolean;
+  allowed_range?: {
+    min: number;
+    max: number;
+  };
+};
+
+type CommandAuthorityBoundary = {
+  owner: string;
+  surface: string;
+  can_write_domain_truth: false;
+  can_create_owner_receipt: false;
+  can_claim_domain_ready: false;
+  can_claim_production_ready: false;
+};
+
+type CommandRegistryMetadata = {
+  command_id: string;
+  parser_adapter: 'node_util_parse_args';
+  options: CommandOptionMetadata[];
+  json_output_schema_ref: string;
+  authority_boundary: CommandAuthorityBoundary;
+};
+
 type CommandSpec = {
   usage: string;
   summary: string;
@@ -14,6 +47,7 @@ type CommandSpec = {
     usage: string;
     summary: string;
   }>;
+  registry?: CommandRegistryMetadata;
 };
 
 type DomainLaunchStrategy = 'auto' | 'open_url' | 'spawn_command';
@@ -266,7 +300,11 @@ type AgentExecutorCliInput = {
 
 export type {
   AgentExecutorCliInput,
+  CommandAuthorityBoundary,
   CommandHandler,
+  CommandOptionMetadata,
+  CommandOptionValueKind,
+  CommandRegistryMetadata,
   CommandSpec,
   DashboardCliInput,
   DeveloperSupervisorCliInput,

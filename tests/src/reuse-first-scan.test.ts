@@ -89,6 +89,67 @@ test('reuse-first diff scan includes untracked files', () => {
   assert.equal(output.findings[0].path, 'src/new-boundary.ts');
 });
 
+test('reuse-first strict diff fails only hard gate categories with decision metadata', () => {
+  const fixture = makeCommittedFixture();
+  const targetFile = path.join(fixture, 'src', 'new-schema-boundary.ts');
+  fs.mkdirSync(path.dirname(targetFile), { recursive: true });
+  fs.writeFileSync(targetFile, 'const parsed = JSON.parse("{}");\n');
+
+  const result = spawnSync(process.execPath, [
+    script,
+    '--root',
+    fixture,
+    '--contract',
+    path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-governance.json'),
+    '--mode',
+    'diff',
+    '--diff-ref',
+    'HEAD',
+    '--strict',
+  ], { encoding: 'utf8' });
+  const output = JSON.parse(result.stdout);
+  const finding = output.findings[0];
+
+  assert.equal(result.status, 1);
+  assert.equal(output.gate_status, 'hard_fail');
+  assert.equal(output.hard_gate_finding_count, 1);
+  assert.equal(output.advisory_finding_count, 0);
+  assert.equal(finding.gate_mode, 'hard');
+  assert.ok(finding.risk_categories.includes('private_schema_validator'));
+  assert.equal(finding.refusal_or_adoption_decision_required, true);
+  assert.equal(typeof finding.mature_module_candidate, 'string');
+  assert.equal(typeof finding.owner, 'string');
+  assert.match(finding.review_date, /^\d{4}-\d{2}-\d{2}$/);
+});
+
+test('reuse-first strict diff keeps advisory categories non-blocking', () => {
+  const fixture = makeCommittedFixture();
+  const targetFile = path.join(fixture, 'src', 'new-observability.ts');
+  fs.mkdirSync(path.dirname(targetFile), { recursive: true });
+  fs.writeFileSync(targetFile, 'const ledgerName = "evidence_ledger";\n');
+
+  const result = spawnSync(process.execPath, [
+    script,
+    '--root',
+    fixture,
+    '--contract',
+    path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-governance.json'),
+    '--mode',
+    'diff',
+    '--diff-ref',
+    'HEAD',
+    '--strict',
+  ], { encoding: 'utf8' });
+  const output = JSON.parse(result.stdout);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(output.gate_status, 'advisory_attention');
+  assert.equal(output.hard_gate_finding_count, 0);
+  assert.equal(output.advisory_finding_count, 1);
+  assert.equal(output.findings[0].gate_mode, 'advisory');
+  assert.ok(output.findings[0].risk_categories.includes('observability_ledger'));
+});
+
 function makeFixture() {
   const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-reuse-first-scan-'));
   const contractDir = path.join(fixture, 'contracts', 'opl-framework');
@@ -102,6 +163,16 @@ function makeFixture() {
     path.join(contractDir, 'reuse-first-governance.json'),
     `${JSON.stringify(contract, null, 2)}\n`,
   );
+  return fixture;
+}
+
+function makeCommittedFixture() {
+  const fixture = makeFixture();
+  runGit(fixture, ['init']);
+  runGit(fixture, ['config', 'user.email', 'test@example.com']);
+  runGit(fixture, ['config', 'user.name', 'Test User']);
+  runGit(fixture, ['add', 'contracts/opl-framework/reuse-first-governance.json']);
+  runGit(fixture, ['commit', '-m', 'baseline']);
   return fixture;
 }
 

@@ -9,8 +9,10 @@ import {
 import {
   buildUsageError,
   cloneCommandSpec,
+  parseRegisteredCommandOptions,
   parseOplModuleArgs,
   parseOplModuleExecArgs,
+  validateCommandRegistryCoverage,
 } from '../../modules/support.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 import { buildNoArgSpec, commandActionSummary } from './shared.ts';
@@ -23,54 +25,15 @@ type PubMedSearchArgs = {
 };
 
 function parsePubMedSearchArgs(args: string[], spec: CommandSpec): PubMedSearchArgs {
-  let query: string | null = null;
-  let limit = 10;
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (token === '--json') continue;
-    if (token === '--query') {
-      const value = args[index + 1];
-      if (!value) {
-        throw buildUsageError('connect pubmed search requires a value for --query.', spec, {
-          option: '--query',
-        });
-      }
-      query = value.trim();
-      index += 1;
-      continue;
-    }
-    if (token === '--limit') {
-      const value = args[index + 1];
-      if (!value) {
-        throw buildUsageError('connect pubmed search requires a value for --limit.', spec, {
-          option: '--limit',
-        });
-      }
-      const parsed = Number(value);
-      if (!Number.isInteger(parsed) || parsed < 1 || parsed > 50) {
-        throw buildUsageError('connect pubmed search --limit must be an integer from 1 to 50.', spec, {
-          option: '--limit',
-          value,
-          allowed_range: '1..50',
-        });
-      }
-      limit = parsed;
-      index += 1;
-      continue;
-    }
-    throw buildUsageError(`Unknown connect pubmed search option: ${token}.`, spec, {
-      option: token,
-    });
-  }
-
-  if (!query) {
+  const parsed = parseRegisteredCommandOptions('connect pubmed search', args, spec);
+  const query = String(parsed.query ?? '').trim();
+  if (query.length === 0) {
     throw buildUsageError('connect pubmed search requires --query.', spec, {
       required: ['--query'],
     });
   }
 
-  return { query, limit };
+  return { query, limit: Number(parsed.limit) };
 }
 
 function buildModuleActionSpec(
@@ -177,6 +140,40 @@ export function buildConnectCommandSpecs(
       ],
       group: 'connect',
       help_surface: 'default',
+      registry: {
+        command_id: 'connect pubmed search',
+        parser_adapter: 'node_util_parse_args',
+        options: [
+          {
+            name: 'query',
+            flag: '--query',
+            value_kind: 'string',
+            summary: 'PubMed search query.',
+            required: true,
+          },
+          {
+            name: 'limit',
+            flag: '--limit',
+            value_kind: 'integer',
+            summary: 'Maximum number of normalized literature refs to return.',
+            default: 10,
+            allowed_range: {
+              min: 1,
+              max: 50,
+            },
+          },
+        ],
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/connect_pubmed_search/output_schema',
+        authority_boundary: {
+          owner: 'OPL Connect',
+          surface: 'read_only_literature_connector',
+          can_write_domain_truth: false,
+          can_create_owner_receipt: false,
+          can_claim_domain_ready: false,
+          can_claim_production_ready: false,
+        },
+      },
       handler: async (args) =>
         runOplConnectPubMedSearch(
           parsePubMedSearchArgs(args, connectCommandSpecs['connect pubmed search']),
@@ -215,6 +212,11 @@ export function buildConnectCommandSpecs(
       group: 'connect',
     }),
   };
+
+  validateCommandRegistryCoverage(connectCommandSpecs, {
+    protectedCommandPrefixes: ['connect pubmed'],
+    requiredCommandIds: ['connect pubmed search'],
+  });
 
   return connectCommandSpecs;
 }

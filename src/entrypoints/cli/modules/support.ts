@@ -14,6 +14,10 @@ export {
   withContractsContext,
 } from './help-output.ts';
 export {
+  parseRegisteredCommandOptions,
+  validateCommandRegistryCoverage,
+} from './command-registry.ts';
+export {
   buildUsageError,
   printJson,
   runCodexPassthroughHandled,
@@ -62,7 +66,11 @@ export {
   parseWorkspaceRootArgs,
 } from './system-action-parsers.ts';
 export type {
+  CommandAuthorityBoundary,
   CommandHandler,
+  CommandOptionMetadata,
+  CommandOptionValueKind,
+  CommandRegistryMetadata,
   CommandSpec,
   DashboardCliInput,
   DeveloperSupervisorCliInput,

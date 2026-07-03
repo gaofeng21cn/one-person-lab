@@ -16,20 +16,31 @@ const patterns = contract.patterns.map((entry) => ({
   compiled: new RegExp(entry.regex),
 }));
 const allowMarkers = contract.allow_markers ?? [];
+const strictHardCategories = new Set(contract.strict_mode?.hard_categories ?? []);
 
 const findings = args.mode === 'diff'
   ? scanDiffAddedLines()
   : scanFiles();
 const visibleFindings = findings.slice(0, args.maxFindings);
+const hardGateFindingCount = findings.filter((finding) => finding.gate_mode === 'hard').length;
+const advisoryFindingCount = findings.length - hardGateFindingCount;
+const gateStatus = findings.length === 0
+  ? 'ok'
+  : hardGateFindingCount > 0
+    ? 'hard_fail'
+    : 'advisory_attention';
 
 const summary = {
   surface_kind: 'opl_reuse_first_scan',
   status: findings.length === 0 ? 'ok' : 'attention',
+  gate_status: gateStatus,
   mode: args.mode,
   strict: args.strict,
   diff_ref: args.mode === 'diff' ? args.diffRef : null,
   contract: path.relative(root, contractPath),
   finding_count: findings.length,
+  hard_gate_finding_count: hardGateFindingCount,
+  advisory_finding_count: advisoryFindingCount,
   returned_finding_count: visibleFindings.length,
   omitted_finding_count: findings.length - visibleFindings.length,
   findings: visibleFindings,
@@ -41,7 +52,7 @@ const summary = {
 
 process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
 
-if (args.strict && findings.length > 0) {
+if (args.strict && hardGateFindingCount > 0) {
   process.exit(1);
 }
 
@@ -247,14 +258,25 @@ function findLineMatches(relativePath, lineNumber, line) {
     if (!match) {
       continue;
     }
+    const riskCategories = pattern.risk_categories ?? [pattern.id];
+    const gateMode = riskCategories.some((category) => strictHardCategories.has(category))
+      ? 'hard'
+      : 'advisory';
     findings.push({
       path: relativePath,
       line: lineNumber,
       category: pattern.id,
       severity: pattern.severity,
+      gate_mode: gateMode,
+      risk_categories: riskCategories,
       match: match[0],
       reason: pattern.reason,
       preferred_reuse: pattern.preferred_reuse,
+      mature_module_candidate: pattern.preferred_reuse?.[0] ?? 'existing shared platform primitive',
+      refusal_or_adoption_decision_required: gateMode === 'hard',
+      owner: contract.owner,
+      review_date: new Date().toISOString().slice(0, 10),
+      decision_ref: `${path.relative(root, contractPath)}#patterns.${pattern.id}`,
     });
   }
   return findings;

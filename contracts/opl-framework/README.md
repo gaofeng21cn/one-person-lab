@@ -94,6 +94,8 @@ These schema files are the machine-readable OPL target architecture surface. The
 ### Evidence Ledger
 
 - `evidence-ledger-event.schema.json`: passive audit-only event envelope for raw evidence, provider trace, replay, receipt ledger, typed blocker groups, soak, no-regression, cleanup, and diagnostic refs.
+- `observability-semantic-conventions-contract.json`: shared OPL Ledger / Runway / Console semantic vocabulary for trace, metric, and log/event readbacks. It freezes refs-only fields such as `stage_run_id`, `attempt_id`, `domain_id`, `owner_id`, `route_ref`, `receipt_ref`, `typed_blocker_ref`, `workflow_id`, `task_queue`, `generation`, and `source_fingerprint`; it cannot create a private ledger UI, store payload bodies, write domain truth, create owner receipts, create typed blockers, or claim readiness.
+- `cli-command-registry.json`: protected CLI command metadata registry for parser adapters, options, output schema refs, and authority-boundary flags. The first protected command is `connect pubmed search`; the registry is descriptive and does not execute commands or claim readiness.
 
 ### Golden Path
 
@@ -132,7 +134,9 @@ These schema files are the machine-readable OPL target architecture surface. The
 - `brand-system-profile.json`
 - `source-module-map.json`
 - `module-dependency-policy.json`
+- `cli-command-registry.json`
 - `target-operating-architecture-contract.json`
+- `observability-semantic-conventions-contract.json`
 - `advisory-knowledge-boundary-contract.json`
 - `okf-context-bundle-contract.json`
 - `agent-lab-contract.json`

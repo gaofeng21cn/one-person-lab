@@ -1,0 +1,74 @@
+{
+  "schema_version": "opl_observability_semantic_conventions.v1",
+  "surface_kind": "opl_observability_semantic_conventions_contract",
+  "owner": "OPL Ledger",
+  "purpose": "Freeze the OPL observability vocabulary used by Ledger, Runway and Console readbacks so trace, metric and log/event projections share the same refs-only language.",
+  "state": "active_contract",
+  "machine_boundary": "This contract defines semantic field names and readback mappings. It does not store artifact or memory bodies, write domain truth, create owner receipts, create typed blockers, or claim runtime, domain, artifact, production or L5 readiness.",
+  "fields": [
+    { "id": "stage_run_id", "otel_attribute": "opl.stage_run_id" },
+    { "id": "attempt_id", "otel_attribute": "opl.attempt_id" },
+    { "id": "domain_id", "otel_attribute": "opl.domain_id" },
+    { "id": "owner_id", "otel_attribute": "opl.owner_id" },
+    { "id": "route_ref", "otel_attribute": "opl.route_ref" },
+    { "id": "receipt_ref", "otel_attribute": "opl.receipt_ref" },
+    { "id": "typed_blocker_ref", "otel_attribute": "opl.typed_blocker_ref" },
+    { "id": "workflow_id", "otel_attribute": "opl.workflow_id" },
+    { "id": "task_queue", "otel_attribute": "opl.task_queue" },
+    { "id": "generation", "otel_attribute": "opl.generation" },
+    { "id": "source_fingerprint", "otel_attribute": "opl.source_fingerprint" }
+  ],
+  "signal_mappings": {
+    "trace_span": {
+      "canonical_fields": [
+        "stage_run_id",
+        "attempt_id",
+        "domain_id",
+        "owner_id",
+        "route_ref",
+        "workflow_id",
+        "task_queue",
+        "generation",
+        "source_fingerprint"
+      ]
+    },
+    "metric": {
+      "canonical_fields": [
+        "domain_id",
+        "owner_id",
+        "task_queue",
+        "generation"
+      ],
+      "instruments": [
+        "queue_length",
+        "retry_count",
+        "dead_letter_count",
+        "latency_ms",
+        "error_count"
+      ]
+    },
+    "log_event": {
+      "canonical_fields": [
+        "stage_run_id",
+        "attempt_id",
+        "domain_id",
+        "owner_id",
+        "route_ref",
+        "receipt_ref",
+        "typed_blocker_ref",
+        "source_fingerprint"
+      ]
+    }
+  },
+  "authority_boundary": {
+    "ledger_refs_only": true,
+    "can_create_private_ledger_ui": false,
+    "can_store_payload_body": false,
+    "can_write_domain_truth": false,
+    "can_create_owner_receipt": false,
+    "can_create_typed_blocker": false,
+    "can_claim_domain_ready": false,
+    "can_claim_artifact_ready": false,
+    "can_claim_production_ready": false
+  }
+}

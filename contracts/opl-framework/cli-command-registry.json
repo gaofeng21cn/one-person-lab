@@ -1,0 +1,145 @@
+{
+  "contract_kind": "opl_cli_command_registry.v1",
+  "surface_kind": "opl_cli_command_registry",
+  "owner": "one-person-lab",
+  "purpose": "Freeze protected CLI command metadata so parser adapters, option shapes, output schemas and authority boundaries are visible from the command surface instead of staying implicit in ad-hoc parsers.",
+  "state": "active_contract",
+  "machine_boundary": "This registry describes command metadata and output schemas. It does not execute commands, write domain truth, create owner receipts, create typed blockers, or claim domain, artifact, App, production, release, or L5 readiness.",
+  "protected_command_prefixes": [
+    "connect pubmed"
+  ],
+  "commands": {
+    "connect_pubmed_search": {
+      "command_id": "connect pubmed search",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "query",
+          "flag": "--query",
+          "value_kind": "string",
+          "required": true
+        },
+        {
+          "name": "limit",
+          "flag": "--limit",
+          "value_kind": "integer",
+          "default": 10,
+          "allowed_range": {
+            "min": 1,
+            "max": 50
+          }
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_connect_pubmed"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_connect_pubmed": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "connector_id",
+              "status",
+              "request",
+              "normalized_results",
+              "receipt_refs",
+              "authority_boundary"
+            ],
+            "additionalProperties": true,
+            "properties": {
+              "surface_kind": {
+                "const": "opl_connect_pubmed_readonly_search"
+              },
+              "connector_id": {
+                "const": "pubmed"
+              },
+              "status": {
+                "enum": [
+                  "completed"
+                ]
+              },
+              "request": {
+                "type": "object",
+                "required": [
+                  "query",
+                  "limit"
+                ],
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 50
+                  }
+                }
+              },
+              "normalized_results": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "source_ref",
+                    "source_kind",
+                    "source_provider",
+                    "pmid",
+                    "title",
+                    "source_urls"
+                  ],
+                  "additionalProperties": true
+                }
+              },
+              "receipt_refs": {
+                "type": "object",
+                "required": [
+                  "connector_invocation_ref",
+                  "ledger_receipt_candidate_ref"
+                ]
+              },
+              "authority_boundary": {
+                "type": "object",
+                "required": [
+                  "read_only",
+                  "can_write_domain_truth",
+                  "can_sign_owner_receipt",
+                  "can_claim_publication_readiness"
+                ],
+                "properties": {
+                  "read_only": {
+                    "const": true
+                  },
+                  "can_write_domain_truth": {
+                    "const": false
+                  },
+                  "can_sign_owner_receipt": {
+                    "const": false
+                  },
+                  "can_claim_publication_readiness": {
+                    "const": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    }
+  }
+}

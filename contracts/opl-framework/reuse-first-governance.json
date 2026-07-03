@@ -9,7 +9,16 @@
   "strict_mode": {
     "intended_use": "diff_added_lines_only",
     "default_diff_ref": "origin/main",
-    "failure_condition": "new finding on added lines without an inline reuse-first allow marker"
+    "failure_condition": "new hard-gate finding on added lines without an inline reuse-first allow marker",
+    "hard_categories": [
+      "private_schema_validator",
+      "custom_cli_parser",
+      "private_runtime_queue",
+      "private_update_or_package_manager"
+    ],
+    "advisory_categories": [
+      "observability_ledger"
+    ]
   },
   "allow_markers": [
     "reuse-first: allow",
@@ -55,6 +64,10 @@
         "JSON Schema/Ajv when contract-first",
         "Zod when TypeScript-first",
         "central CLI parser/registry"
+      ],
+      "risk_categories": [
+        "private_schema_validator",
+        "custom_cli_parser"
       ]
     },
     {
@@ -67,6 +80,9 @@
         "Temporal task queue",
         "Temporal retry policy",
         "Temporal schedule"
+      ],
+      "risk_categories": [
+        "private_runtime_queue"
       ]
     },
     {
@@ -79,6 +95,9 @@
         "OCI/content-addressed descriptor",
         "owner-specific materializer",
         "receipt projection"
+      ],
+      "risk_categories": [
+        "private_update_or_package_manager"
       ]
     },
     {
@@ -91,6 +110,9 @@
         "trace/span",
         "metrics",
         "append-only authority refs"
+      ],
+      "risk_categories": [
+        "observability_ledger"
       ]
     }
   ]

@@ -275,6 +275,7 @@ function buildCommandHelp(command: string, spec: CommandSpec) {
       summary: spec.summary,
       examples: spec.examples,
       ...(spec.subcommands ? { subcommands: spec.subcommands } : {}),
+      ...(spec.registry ? { registry: spec.registry } : {}),
     },
   };
 }

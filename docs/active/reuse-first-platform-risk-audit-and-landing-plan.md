@@ -259,17 +259,17 @@ OpenTelemetry 给 OPL 的结论：可观测性不要继续扩张成多个私有 
 
 | 顺序 | 工作项 | 当前完成度 | 状态 | 当前证据 | 下一步 |
 | --- | --- | ---: | --- | --- | --- |
-| 1 | Reuse-first governance gate | 65% | `partial` | 已落 `contracts/opl-framework/reuse-first-governance.json`、`scripts/reuse-first-scan.mjs`、`npm run reuse-first:scan` 和 `npm run reuse-first:scan:diff`；full scan 是历史风险盘点，diff scan 是新增行守门。 | 继续把 high-risk categories 绑定到 CI / review 入口，并按后续 phases 消化现有 findings。 |
+| 1 | Reuse-first governance gate | 75% | `partial` | 已落 `contracts/opl-framework/reuse-first-governance.json`、`scripts/reuse-first-scan.mjs`、`npm run reuse-first:scan` 和 `npm run reuse-first:scan:diff`；strict diff 现在区分 hard gate 与 advisory，hard finding 带 mature module candidate、owner、review date 和 adoption/refusal decision metadata。 | 继续把 high-risk categories 接入默认 review/CI 入口，并按后续 phases 消化现有 findings。 |
 | 2 | Schema boundary consolidation | 15% | `partial` | Phase 1 seed lane 已引入 Ajv-backed `src/kernel/schema-registry.ts`，并用 `contracts/opl-framework/progress-delta-receipt.schema.json` 的 valid/invalid payload focused test 证明成熟 JSON Schema validator 可作为 shared adapter。大量 hand-written JSON/readback helper 仍未迁移。 | 继续把 runtime receipts、descriptors、readbacks 逐步接入 schema registry；禁止新增分散 validator。 |
-| 3 | CLI parser/command registry | 15% | `partial` | `opl` command surface 已存在，当前 lane 未引入 Commander/Yargs，避免在 schema seed 中扩大 CLI churn；parser/option/schema 仍分散。 | Phase 2 单独开 lane：先定义最小 command registry adapter，再决定 Commander/Yargs 是否真正减少代码。 |
-| 4 | Runway Temporal-first runtime | 40% | `partial` | Temporal SDK 已是一等依赖，docs 已声明 Temporal production substrate；但 SQLite queue/attempt/scheduler 仍厚。 | Phase 3：Temporal workflow/activity/schedule 接管 durable lifecycle。 |
-| 5 | Kubernetes-style reconciler | 45% | `partial` | docs/status 已写 desired/current safe action 方向；`runway reconcile` 等读面存在。 | Phase 4：把 scheduler/worker/App/domain helper mutation 收到 reconciler。 |
-| 6 | Managed update split | 45% | `partial` | App release channel 与 managed update plane 边界存在；Phase 5-6 first-slice candidate 在 `codex/reuse-first-update-pack-workspace-20260703` 增加 `owner_route_contract` 和组件级 `owner_route`，把 app binary / runtime substrate / capability packages 明确路由到 owner/readback/apply owner，并保留 no-package-manager forbidden claims。 | 主会话复核并吸收后，继续把 runner adapter / receipt projection 按 owner 拆薄。 |
-| 7 | Pack/Workspace standardization | 52% | `partial` | pack/workspace CLI 与 descriptors 已存在；Phase 5-6 first-slice candidate 给 Pack OS lock/cache/registry 增加 OCI descriptor/digest 字段，并给 Workspace shared-resource manifest/inventory 增加 sha256 content-addressing policy。 | 主会话复核并吸收后，继续统一 descriptor/digest/lock/cache/distribution，并把 workspace validate/doctor 的 hard blocker/repairable finding 口径收紧。 |
+| 3 | CLI parser/command registry | 30% | `partial` | 已落最小 `CommandSpec.registry` 与 `validateCommandRegistryCoverage` adapter，`opl help connect pubmed search --json` 可读出 parser、options、schema ref 与 false-authority boundary。 | 继续把高频 public commands 纳入 registry；只有当 Commander/Yargs 能减少现有 parser 分散度时再引入依赖。 |
+| 4 | Runway Temporal-first runtime | 50% | `partial` | Temporal SDK 已是一等依赖，docs 已声明 Temporal production substrate；`family-runtime status/queue list` 已暴露 `queue_lifecycle_boundary`，在 Temporal provider 下若 SQLite 本地 queue lifecycle 与 Temporal 竞争 truth，会降级 readiness。 | 继续把 stage attempt durable lifecycle 从 SQLite mutation path 迁到 Temporal workflow/activity/schedule/history；local provider 保持 dev/CI/offline diagnostic。 |
+| 5 | Kubernetes-style reconciler | 55% | `partial` | `family-runtime lifecycle reconcile` 已输出 desired_state / observed_state / reconcile_decision / next_safe_action，mutation 只允许进入 lifecycle apply receipt projection，禁止写 domain truth、artifact body、owner receipt 或 typed blocker。 | 继续把 scheduler/worker/App/domain helper mutation 收到统一 Reconciler safe-action source。 |
+| 6 | Managed update split | 50% | `partial` | App release channel 与 managed update plane 边界存在；已增加 `owner_route_contract` 和组件级 `owner_route`，把 app binary / runtime substrate / capability packages 明确路由到 owner/readback/apply owner，并保留 no-package-manager forbidden claims。 | 继续把 runner adapter / receipt projection 按 owner 拆薄。 |
+| 7 | Pack/Workspace standardization | 57% | `partial` | pack/workspace CLI 与 descriptors 已存在；Pack OS lock/cache/registry 已增加 OCI descriptor/digest 字段，Workspace shared-resource manifest/inventory 已增加 sha256 content-addressing policy。 | 继续统一 descriptor/digest/lock/cache/distribution，并把 workspace validate/doctor 的 hard blocker/repairable finding 口径收紧。 |
 | 8 | Domain private platform retirement | 55% | `partial` | MAS generic runtime 退役较深；MAG/RCA/OMA/BookForge 仍有默认 caller/helper tail。 | Phase 7：逐 repo tail matrix、replacement owner、no-active-caller、delete/tombstone gate。 |
 | 9 | App/Aion consumer-only | 60% | `partial` | App/Aion 边界已有合同和 release channel；local scheduler/read-model 仍需 no-truth guard。 | Phase 8：validator/contract 强制 consumer-only。 |
-| 10 | OpenTelemetry-style observability | 15% | `not_started` | OPL 有多个 ledger/readback/drilldown；尚未统一到 OTel vocabulary。 | Phase 9：定义 semantic conventions 和 exporter/collector strategy。 |
-| 11 | No-resurrection scan | 20% | `partial` | 文档规则和 active owner guard 存在；缺针对 reuse-first 的自动扫描。 | Phase 10：新增 scan、CI/report、decision expiry。 |
+| 10 | OpenTelemetry-style observability | 35% | `partial` | 已落 `contracts/opl-framework/observability-semantic-conventions-contract.json` 与 `src/modules/ledger/observability-semantic-conventions.ts`，把 current owner delta / stage attempt / provider attempt 投影到 trace、metric、log/event vocabulary，且保持 refs-only / no-body / no-ready-claim boundary。 | 继续接入 operator drilldown、exporter/collector strategy 和现有 ledger/readback 消费面。 |
+| 11 | No-resurrection scan | 45% | `partial` | `reuse-first-scan` 已支持 strict diff hard/advisory gate，新增 schema/CLI/runtime/update/package 类 hard finding 会失败，observability ledger 类先进入 advisory。 | 继续把 scan 接入 review/CI，并为成熟模块采用或拒绝补 decision record / expiry。 |
 
 建议落地顺序是 `0 -> 1 -> 2 -> 3 -> 4 -> 5 -> 7 -> 8 -> 6 -> 9 -> 10`。原因：先把 schema/CLI boundary 收敛，能降低后续 runtime/update/pack 迁移时的 drift；再切 Runway/managed update 这两个最大风险；domain tail 和 App consumer-only 依赖 OPL replacement surface；Pack/Workspace 与 Observability 可并行但不应抢在 authority/runtime 之前。
 
@@ -290,12 +290,12 @@ OpenTelemetry 给 OPL 的结论：可观测性不要继续扩张成多个私有 
 
 ## Phase 5-6 First-Slice Foldback
 
-`codex/reuse-first-update-pack-workspace-20260703` 是 Phase 5-6 的第一批收薄候选，不是 readiness、release、owner acceptance 或完整 platform closeout。
+Phase 5-6 的第一批收薄已吸收进 `main`，不是 readiness、release、owner acceptance 或完整 platform closeout。
 
 - Managed update：新增 `owner_route_contract` 与组件级 `owner_route`，让 `installation_carrier` 显式走 App/host owner route，`runtime_substrate` 显式走 App-owned runtime materializer，`capability_packages` 显式走 OCI/content-addressed clean managed module channel；所有组件保留 `package_manager_claim=false` 和 forbidden claims，避免把 `opl update` 写成通用包管理器。
 - Pack OS：在已有 sha256/content-addressed cache 上补 `descriptor_oci` 与 resource `oci_descriptor`，registry/cache/distribution 继续是 refs-only manifest，不新增 distribution engine 或 package manager。
 - Workspace：shared-resource manifest 与 inventory 只增加 sha256 content-addressing policy；仍然 `body_ref=null`、不存 body、不关闭 stage、不写 domain truth。
-- Candidate evidence：focused managed-update / Pack OS / workspace projection tests pass，`npm run typecheck` pass，`git diff --check` pass；`contracts-entry.test.ts` 当前因既有 stable summary 缺 `standard-agent-principles` 失败，未作为本 lane 写集修复。
+- Fresh evidence：focused managed-update / Pack OS / workspace projection tests pass，`npm run typecheck` pass，`git diff --check` pass；这只证明 first-slice 行为和类型检查，不证明 release/currentness/owner acceptance。
 
 ## Plan Completion Audit
 
@@ -304,9 +304,9 @@ OpenTelemetry 给 OPL 的结论：可观测性不要继续扩张成多个私有 
 | 按实际情况落复用优先审计文档 | `done` | 100% | 本文位于 `docs/active/reuse-first-platform-risk-audit-and-landing-plan.md`，声明 owner/purpose/state/machine boundary。 | 无。 | 由 `docs/active/README.md` 索引为 active_support。 |
 | 讲清风险点和优化方向 | `done` | 100% | `风险清单` 覆盖 Runway、schema/CLI、managed update、pack/workspace、App/Aion、domain private tails、observability。 | 代码级风险仍未消除。 | 按 phase 拆 lanes 执行。 |
 | 吸收外部成熟工程经验 | `done` | 100% | 已引用 Temporal、Kubernetes、Zod/Ajv、Commander/Yargs、OCI、Backstage、OpenTelemetry 官方/一手文档。 | 未做 benchmark 或 PoC。 | Phase 1-6 中对候选模块做 ADR/PoC。 |
-| 给出理想态一步到位计划 | `done` | 100% | `一步到位落地计划` 给出 Phase 0-10、完成门和建议顺序。 | 计划尚未实现。 | 用户确认后按顺序开隔离 lanes。 |
-| 当前完成度和建议落地顺序 | `done` | 100% | `当前完成度与建议顺序` 表逐项给出百分比、状态、证据和下一步。 | 百分比是审计判断，不是 runtime/readiness evidence。 | 真正落地时每 phase 重新用 fresh evidence 校准。 |
-| 彻底解决所有代码风险 | `partial` | 10% | Phase 0 已新增可执行 reuse-first governance scan；`node --test tests/src/reuse-first-scan.test.ts`、`npm run reuse-first:scan -- --max-findings 5`、`npm run reuse-first:scan:diff -- --max-findings 20`、`npm run typecheck` 和 `git diff --check` 已通过/可读。 | Runway Temporal-first、schema/CLI registry、managed update split、pack/workspace standardization、domain/App boundary 和 observability 仍需代码/合同落地。 | 并行 lanes 继续推进 Phase 1-10；每条 lane 独立验证后吸收回 main。 |
+| 给出理想态一步到位计划 | `done` | 100% | `一步到位落地计划` 给出 Phase 0-10、完成门和建议顺序。 | 计划本身已落；目标态实现仍是长期工程。 | 继续按本文完成度表推进剩余 partial / not-started 项。 |
+| 当前完成度和建议落地顺序 | `done` | 100% | `当前完成度与建议顺序` 表逐项给出百分比、状态、证据和下一步，已按本轮 first-slice 代码/合同吸收结果更新。 | 百分比是审计判断，不是 runtime/readiness evidence。 | 后续每轮都用 fresh evidence 校准。 |
+| 彻底解决所有代码风险 | `partial` | 25% | Phase 0/1/2/5/6/8/9/10 都已有 first-slice 代码或合同托底：schema registry seed、CLI registry seed、Runway lifecycle reconcile/readiness guard、managed update owner routes、Pack/Workspace descriptor/digest、App/Aion consumer-only contract、artifact provenance bundle、observability semantic conventions 与 reuse-first hard/advisory gate。 | Runway durable lifecycle 仍未完全迁到 Temporal；大量手写 schema/parser/readback helper 未迁移；domain private tail、App release/live evidence、exporter/collector、CI 默认 gate 仍需后续 owner lane。 | 继续按 runtime、schema/CLI 扩面、domain tail、observability exporter 和 CI gate 顺序推进；不得把 first-slice 测试绿包装成 production ready。 |
 
 ## Forbidden Claims
 
