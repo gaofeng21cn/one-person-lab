@@ -1,13 +1,5 @@
 import { buildCurrentOwnerDeltaTopline } from '../../ledger/index.ts';
-import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
+import { record, type JsonRecord } from '../../../kernel/json-record.ts';
 
 export function buildAppOperatorOwnerDeltaTopline(input: {
   attentionFirstPayload: JsonRecord;

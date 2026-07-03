@@ -1,4 +1,10 @@
-import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
+import {
+  record,
+  recordList,
+  stringList,
+  stringValue,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundaryCore,
 } from './authority-boundary.ts';
@@ -11,28 +17,6 @@ import {
   DOMAIN_DISPATCH_REQUIRED_RETURN_SHAPES,
   DOMAIN_DISPATCH_SUPPLEMENTAL_PAYLOAD_REFS,
 } from './domain-dispatch-payload-artifacts.ts';
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
 
 function uniqueRefs<T extends { ref: string; role?: string | null }>(values: T[]) {
   const seen = new Set<string>();

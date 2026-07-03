@@ -1,31 +1,20 @@
 import type { DomainManifestCatalogEntry } from '../../atlas/index.ts';
-import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
+import {
+  countValue as numberValue,
+  record,
+  recordList,
+  stringList,
+  stringValue,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-export function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-export function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
-export function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-export function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
-export function numberValue(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
-}
+export {
+  numberValue,
+  record,
+  recordList,
+  stringList,
+  stringValue,
+};
 
 export function booleanValue(value: unknown) {
   return typeof value === 'boolean' ? value : null;

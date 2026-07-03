@@ -1,4 +1,11 @@
-import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
+import { isRecord } from '../../../kernel/contract-validation.ts';
+import {
+  countValue as numberValue,
+  record,
+  stringList,
+  stringValue,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 import {
   listCodexAppRuntimeEvidenceReceipts,
 } from '../../runway/index.ts';
@@ -6,30 +13,8 @@ import {
   buildAppDrilldownRefsOnlyAuthorityBoundary,
 } from './authority-boundary.ts';
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
-}
-
-function numberValue(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
 function codexAppRuntimeEvidencePayloadTemplate() {

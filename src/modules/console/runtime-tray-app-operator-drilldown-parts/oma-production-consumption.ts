@@ -1,4 +1,11 @@
-import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
+import {
+  countValue as numberValue,
+  record,
+  recordList,
+  stringList,
+  stringValue,
+  type JsonRecord,
+} from '../../../kernel/json-record.ts';
 import {
   OMA_PRODUCTION_CONSUMPTION_ACTION_ID,
   OMA_PRODUCTION_CONSUMPTION_ACTION_KIND,
@@ -7,32 +14,6 @@ import {
   omaProductionConsumptionPayloadTemplate,
   omaProductionConsumptionRuntimeActionExecuteCommand,
 } from '../../foundry-lab/index.ts';
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
-function numberValue(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
-}
 
 function commandRef(args: string[]) {
   return `opl ${args.map((arg) => (
