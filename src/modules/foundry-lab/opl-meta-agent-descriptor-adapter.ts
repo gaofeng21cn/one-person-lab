@@ -515,6 +515,7 @@ export function withOplMetaAgentDescriptorEntry<T extends DomainManifestCatalog>
 
   return {
     ...catalog,
+    opl_meta_agent_registry: registry,
     summary: {
       ...catalog.summary,
       total_projects_count: catalog.summary.total_projects_count + 1,
@@ -525,6 +526,18 @@ export function withOplMetaAgentDescriptorEntry<T extends DomainManifestCatalog>
     notes: [
       ...catalog.notes,
       'OPL Meta Agent descriptor is generated from standard repo contracts by an OPL-hosted refs-only descriptor adapter.',
+    ],
+  };
+}
+
+export function withOplMetaAgentRegistryExtension<T extends DomainManifestCatalog>(catalog: T): T {
+  const registry = catalog.opl_meta_agent_registry ?? buildOplMetaAgentRegistryExtension();
+  return {
+    ...catalog,
+    opl_meta_agent_registry: registry,
+    notes: [
+      ...catalog.notes,
+      'OPL Meta Agent registry extension is composed by Foundry Lab consumers and does not expand production domain truth or readiness authority.',
     ],
   };
 }

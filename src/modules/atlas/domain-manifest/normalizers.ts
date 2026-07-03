@@ -744,6 +744,10 @@ function normalizeProgressProjection(
 export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   const manifest = unwrapManifestPayload(payload);
   const manifestWrapper = isRecord(payload.product_entry_manifest) ? payload : {};
+  const manifestWithWrapperSidecars = {
+    ...manifestWrapper,
+    ...manifest,
+  };
   const recordFromManifestOrWrapper = (key: string) => (
     isRecord(manifest[key])
       ? manifest[key]
@@ -809,14 +813,14 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
   const domainMemoryDescriptor = normalizeFamilyDomainMemoryRef(manifest.domain_memory_descriptor);
   const skeletonCandidateFields = ['standard_domain_agent_skeleton'];
   const directSkeletonSourceField =
-    skeletonCandidateFields.find((field) => isRecord(manifest[field])) ?? null;
+    skeletonCandidateFields.find((field) => isRecord(manifestWithWrapperSidecars[field])) ?? null;
   const providerReadyContract = isRecord(manifest.opl_provider_ready_contract)
     ? manifest.opl_provider_ready_contract
     : null;
   const standardDomainAgentSkeletonSourceField =
     directSkeletonSourceField;
   const standardDomainAgentSkeleton = buildStandardDomainAgentSkeletonCandidate(
-    manifest,
+    manifestWithWrapperSidecars,
     directSkeletonSourceField,
     providerReadyContract,
   );

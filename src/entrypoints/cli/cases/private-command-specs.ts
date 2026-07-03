@@ -13,6 +13,7 @@ import {
   buildStandardDomainAgentScaffoldValidation,
 } from '../../../modules/foundry-lab/standard-domain-agent-scaffold.ts';
 import { runFamilyAgentLegacyCleanupApply } from '../../../modules/foundry-lab/family-domain-agent-skeleton.ts';
+import { withOplMetaAgentRegistryExtension } from '../../../modules/foundry-lab/opl-meta-agent-descriptor-adapter.ts';
 import { recordOmaProductionConsumptionReceipts } from '../../../modules/foundry-lab/oma-production-consumption-ledger.ts';
 import { repoTrackedOmaStageReplayMissingReceiptReceipts } from '../../../modules/foundry-lab/oma-stage-replay-receipts.ts';
 import { buildStandardDomainAgentScaffoldConsumptionEvidence } from '../../../modules/foundry-lab/standard-domain-agent-template-consumption.ts';
@@ -795,7 +796,11 @@ export function buildInternalCommandSpecs(
       examples: ['opl domain manifests'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['domain manifests']);
-        return buildDomainManifestCatalog(getContracts());
+        const catalog = buildDomainManifestCatalog(getContracts());
+        return {
+          ...catalog,
+          domain_manifests: withOplMetaAgentRegistryExtension(catalog.domain_manifests),
+        };
       },
     },
     'session runtime': {

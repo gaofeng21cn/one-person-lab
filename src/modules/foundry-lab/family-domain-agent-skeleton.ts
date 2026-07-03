@@ -524,6 +524,40 @@ export function buildStandardDomainAgentSkeletonInspection(
   };
 }
 
+export function withStandardDomainAgentSkeletonInspection<T extends DomainManifestCatalog>(catalog: T): T {
+  const providerContinuousProof = readProviderContinuousProof();
+  return {
+    ...catalog,
+    projects: catalog.projects.map((entry) => {
+      if (!entry.manifest?.standard_domain_agent_skeleton) {
+        return entry;
+      }
+      const inspection = buildStandardDomainAgentSkeletonInspection(entry, providerContinuousProof);
+      const skeleton = isRecord(entry.manifest.standard_domain_agent_skeleton)
+        ? entry.manifest.standard_domain_agent_skeleton
+        : {};
+      return {
+        ...entry,
+        manifest: {
+          ...entry.manifest,
+          standard_domain_agent_skeleton: {
+            ...skeleton,
+            physical_skeleton_layout_audit: inspection.physical_skeleton_layout_audit,
+            physical_skeleton_evidence: inspection.physical_skeleton_evidence,
+            physical_skeleton_follow_through:
+              inspection.physical_skeleton_follow_through_gate
+              ?? skeleton.physical_skeleton_follow_through,
+            production_closure_gaps: inspection.production_closure_gaps,
+            provider_closure_evidence: inspection.provider_closure_evidence,
+            artifact_boundary: inspection.artifact_boundary ?? skeleton.artifact_boundary,
+            contracts: inspection.contract_refs ?? skeleton.contracts,
+          },
+        },
+      };
+    }),
+  };
+}
+
 type ManifestCatalogOptions = {
   manifestCommandTimeoutMs?: number;
   domainManifests?: DomainManifestCatalog;

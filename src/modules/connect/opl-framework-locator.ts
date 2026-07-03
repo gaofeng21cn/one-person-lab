@@ -37,7 +37,7 @@ function normalizeOptionalString(value: string | undefined | null) {
 }
 
 function currentSourceRoot() {
-  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 }
 
 function resolveFamilyWorkspaceRootFromRepoRoot(repoRoot: string) {

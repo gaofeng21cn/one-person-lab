@@ -43,6 +43,7 @@ import {
   buildFamilyAgentInspect,
   buildFamilyAgentsList,
   runFamilyAgentLegacyCleanupApply,
+  withStandardDomainAgentSkeletonInspection,
 } from '../../../modules/foundry-lab/family-domain-agent-skeleton.ts';
 import {
   buildFamilyDomainMemoryInspect,
@@ -156,7 +157,9 @@ export function buildPublicCommandSpecs(
   const updateCommandSpecs = buildUpdateCommandSpecs(getContracts);
   const workspaceCommandSpecs = buildWorkspaceCommandSpecs(commandSpecs);
   const buildAgentDescriptorManifests = (options: Parameters<typeof buildDomainManifestCatalog>[1] = {}) =>
-    withOplMetaAgentDescriptorEntry(buildDomainManifestCatalog(getContracts(), options).domain_manifests);
+    withStandardDomainAgentSkeletonInspection(
+      withOplMetaAgentDescriptorEntry(buildDomainManifestCatalog(getContracts(), options).domain_manifests),
+    );
   const loadAgentDescriptorsForPackCompiler = () =>
     buildFamilyAgentDescriptorList(getContracts(), {
       domainManifests: buildAgentDescriptorManifests({

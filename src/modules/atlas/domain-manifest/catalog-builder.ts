@@ -260,7 +260,6 @@ export function buildDomainManifestCatalog(
       notes: [
         'This surface executes the domain-owned manifest_command for active admitted-domain bindings only.',
         '`opl workspace list` remains the non-executing registry; `opl domain manifests` is the sibling discovery surface that resolves machine-readable product-entry manifests.',
-        'OPL Meta Agent registry extension is composed by Foundry Lab consumers and does not expand production domain truth or readiness authority.',
       ],
     } satisfies DomainManifestCatalog,
   };

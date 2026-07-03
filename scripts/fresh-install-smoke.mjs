@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { parseJsonText } from './script-json-boundary.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const cliPath = path.join(repoRoot, 'src', 'cli.ts');
+const cliPath = path.join(repoRoot, 'src', 'entrypoints', 'cli.ts');
 const args = new Set(process.argv.slice(2));
 
 function writeJson(payload) {
