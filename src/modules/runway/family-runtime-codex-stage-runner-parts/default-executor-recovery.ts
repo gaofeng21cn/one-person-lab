@@ -1,6 +1,6 @@
-import fs from 'node:fs';
 import path from 'node:path';
 
+import { readJsonFileOrNull } from '../../../kernel/json-file.ts';
 import {
   normalizeTypedStageCloseoutPacket,
   type TypedStageCloseoutPacket,
@@ -14,12 +14,8 @@ import {
 } from './shared.ts';
 
 function readJsonRecordFile(filePath: string): JsonRecord | null {
-  try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
-    return isRecord(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
+  const parsed = readJsonFileOrNull(filePath);
+  return isRecord(parsed) ? parsed : null;
 }
 
 function defaultExecutorExecutionRefFromStagePacketRef(stagePacketRef: string) {
