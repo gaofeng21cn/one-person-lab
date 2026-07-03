@@ -1,10 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
+import {
+  randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 
 import { FrameworkContractError } from '../charter/index.ts';
-import { ensureOplStateDir, resolveOplStatePaths } from '../runway/index.ts';
+import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { OPL_WORKSPACE_AGENT_PROFILES } from './workspace-agent-defaults.ts';
 

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-import { resolveOplStatePaths } from '../../runway/index.ts';
+import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import { readLocalCodexDefaultsIfAvailable } from '../local-codex-defaults.ts';
 import { readOplSeedInstallManifest } from './seed-manifest.ts';
 

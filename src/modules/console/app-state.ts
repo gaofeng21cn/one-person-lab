@@ -1,18 +1,5 @@
-import { FrameworkContractError, loadFrameworkContracts } from '../charter/index.ts';
-import {
-  readBundledCodexDefaultProfile,
-  readLocalCodexAccessState,
-  readLocalCodexDefaultsIfAvailable,
-} from '../connect/index.ts';
-import {
-  buildOplEndpoints,
-  ensureOplStateDir,
-  familyRuntimePaths,
-  inspectFamilyRuntimeProviderWithLifecycle,
-  readMasManagedProviderProjection,
-  resolveFamilyRuntimeProviderKind,
-  resolveOplStatePaths,
-} from '../runway/index.ts';
+import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
+import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts'; import { FrameworkContractError, loadFrameworkContracts } from '../charter/index.ts'; import { readBundledCodexDefaultProfile, readLocalCodexAccessState, readLocalCodexDefaultsIfAvailable, } from '../connect/index.ts'; import { buildOplEndpoints, familyRuntimePaths, inspectFamilyRuntimeProviderWithLifecycle, readMasManagedProviderProjection, resolveFamilyRuntimeProviderKind } from '../runway/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { buildDeveloperModeLiveCloseoutEvidenceSummary } from './app-state-developer-mode-closeout.ts';
 import { buildReleaseState } from './app-state-release.ts';

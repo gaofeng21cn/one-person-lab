@@ -38,7 +38,7 @@ import { buildAgentLabStageExecutorPolicyReadModel } from './agent-lab-stage-exe
 export { buildAgentLabStageExecutorPolicyReadModel } from './agent-lab-stage-executor-policy.ts';
 export { buildAgentLabEfficiencyNonRegressionReadModel } from './agent-lab-efficiency-nonregression.ts';
 import { buildAgentLabEfficiencyNonRegressionReadModel } from './agent-lab-efficiency-nonregression.ts';
-import { stableId } from '../runway/index.ts';
+import { stableId } from '../../kernel/stable-id.ts';
 import {
   AUTOMATIC_DEFAULT_AGENT_PROMOTION_READY,
   buildIndependentAiReviewReceipt,

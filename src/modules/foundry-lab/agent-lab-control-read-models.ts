@@ -1,5 +1,5 @@
 import { AGENT_LAB_AUTHORITY_BOUNDARY } from './agent-lab-authority.ts';
-import { stableId } from '../runway/index.ts';
+import { stableId } from '../../kernel/stable-id.ts';
 
 const AGENT_LAB_CONTROL_AUTHORITY_BOUNDARY = {
   ...AGENT_LAB_AUTHORITY_BOUNDARY,

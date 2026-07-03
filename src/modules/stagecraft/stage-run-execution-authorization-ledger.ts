@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 
-import { ensureOplStateDir, resolveOplStatePaths } from '../runway/index.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import {
   evaluateStageRunExecutionAuthorization,
   type StageRunExecutionAuthorizationReport,

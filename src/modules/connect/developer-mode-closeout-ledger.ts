@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 
-import { hasVerifiedAgentLabRiskTierAutoPromotionReceiptRef } from '../foundry-lab/index.ts';
-import { ensureOplStateDir, resolveOplStatePaths } from '../runway/index.ts';
+import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
+import {
+  hasVerifiedAgentLabRiskTierAutoPromotionReceiptRef } from '../foundry-lab/index.ts';
+import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 
 type DeveloperModeCloseoutRouteDecision = 'direct-fix' | 'fork-PR' | 'observe-only';
 

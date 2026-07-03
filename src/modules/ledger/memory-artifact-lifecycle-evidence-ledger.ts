@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { ensureOplStateDir, resolveOplStatePaths } from '../runway/index.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 
 export type MemoryArtifactLifecycleEvidenceReceipt = {
   surface_kind: 'opl_memory_artifact_lifecycle_evidence_receipt';

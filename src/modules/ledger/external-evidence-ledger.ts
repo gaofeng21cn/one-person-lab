@@ -6,7 +6,7 @@ import {
   normalizeExternalEvidenceReceiptSemantics,
   type ExternalEvidenceReceiptSemantics,
 } from './external-evidence-receipt-classification.ts';
-import { resolveOplStatePaths } from '../runway/index.ts';
+import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 
 type JsonRecord = Record<string, unknown>;
 

@@ -1,6 +1,6 @@
 import { FrameworkContractError } from '../../charter/index.ts';
 import { syncFamilySkillPackFromRepoRoot } from '../opl-skills.ts';
-import { resolveOplStatePaths } from '../../runway/index.ts';
+import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import {
   type DomainModuleSpec,
   type GitRepoSnapshot,

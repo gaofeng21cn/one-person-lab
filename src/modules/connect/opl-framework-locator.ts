@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from '../charter/index.ts';
-import { resolveOplStatePaths } from '../runway/index.ts';
+import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 
 type FrameworkLocatorSource =
   | 'OPL_FRAMEWORK_ROOT'

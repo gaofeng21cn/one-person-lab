@@ -1,8 +1,10 @@
 import fs from 'node:fs';
 
-import { assessIndependentAiReviewReceipt } from './agent-lab.ts';
+import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
+import {
+  assessIndependentAiReviewReceipt } from './agent-lab.ts';
 import { AGENT_LAB_PROMOTION_AUTHORITY_BOUNDARY } from './agent-lab-promotion.ts';
-import { ensureOplStateDir, resolveOplStatePaths } from '../runway/index.ts';
+import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 
 type JsonRecord = Record<string, unknown>;
 

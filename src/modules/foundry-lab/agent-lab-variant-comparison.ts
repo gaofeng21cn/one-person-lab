@@ -1,5 +1,5 @@
 import { AGENT_LAB_AUTHORITY_BOUNDARY } from './agent-lab-authority.ts';
-import { stableId } from '../runway/index.ts';
+import { stableId } from '../../kernel/stable-id.ts';
 
 type AgentLabSuiteResult = {
   result_id: string;

@@ -1,8 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../charter/index.ts';
-import { ensureOplStateDir, resolveOplStatePaths } from '../runway/index.ts';
+import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
+import {
+  FrameworkContractError } from '../charter/index.ts';
+import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 
 export type OplUpdateChannel = 'stable' | 'preview';
 export type OplDeveloperSupervisorEnabled = 'auto' | 'on' | 'off';

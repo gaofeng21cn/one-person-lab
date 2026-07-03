@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../charter/index.ts';
-import { ensureOplStateDir } from '../runway/index.ts';
+import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 
 export type JsonRecord = Record<string, unknown>;
 

@@ -2,8 +2,10 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../charter/index.ts';
-import { ensureOplStateDir, resolveOplStatePaths } from '../runway/index.ts';
+import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
+import {
+  FrameworkContractError } from '../charter/index.ts';
+import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 import { buildArtifactProvenanceLedgerEvent as buildLedgerEvent } from './artifact-provenance-ledger-event.ts';
 
 const SCHEMA_VERSION = 'artifact-provenance-bundle.v1';

@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { ensureOplStateDir, resolveOplStatePaths } from '../runway/index.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 
 export type ProviderLongSoakEvidenceReceipt = {
   surface_kind: 'opl_provider_long_soak_evidence_receipt';

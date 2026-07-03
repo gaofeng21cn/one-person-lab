@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { resolveOplStatePaths } from '../../runway/index.ts';
+import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import {
   FrameworkContractError,
 } from '../../charter/index.ts';

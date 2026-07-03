@@ -1,4 +1,4 @@
-import type { OplStatePaths } from '../runway/index.ts';
+import type { OplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import { readCurrentOwnerDeltaReadModelProjectionCache } from '../ledger/index.ts';
 import {
   buildCurrentOwnerDeltaCacheRefreshRequiredReadModel,

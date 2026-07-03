@@ -1,4 +1,4 @@
-import { stableId } from '../runway/index.ts';
+import { stableId } from '../../kernel/stable-id.ts';
 
 type JsonRecord = Record<string, unknown>;
 

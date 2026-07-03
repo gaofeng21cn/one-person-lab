@@ -1,8 +1,10 @@
 import fs from 'node:fs';
 
-import { FrameworkContractError } from '../charter/index.ts';
+import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
+import {
+  FrameworkContractError } from '../charter/index.ts';
 import type { ManagedUpdateOperation } from './managed-update-kernel.ts';
-import { ensureOplStateDir, resolveOplStatePaths } from '../runway/index.ts';
+import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 
 const MANAGED_UPDATE_KERNEL_ID = 'opl_managed_updater_kernel';
 const STALE_AFTER_SECONDS = 1800;

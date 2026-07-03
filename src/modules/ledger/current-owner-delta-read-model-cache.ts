@@ -1,11 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {
-  ensureOplStateDir,
-  resolveOplStatePaths,
-  type OplStatePaths,
-} from '../runway/index.ts';
+import { ensureOplStateDir, resolveOplStatePaths, type OplStatePaths } from '../../kernel/runtime-state-paths.ts';
 
 type JsonRecord = Record<string, unknown>;
 

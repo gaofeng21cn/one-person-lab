@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../charter/index.ts';
-import { stableId } from '../runway/index.ts';
+import { stableId } from '../../kernel/stable-id.ts';
 
 const AGENT_LAB_WORKFLOW_TEMPLATE_ALLOWED_OUTPUTS = [
   'suite_topology_ref',

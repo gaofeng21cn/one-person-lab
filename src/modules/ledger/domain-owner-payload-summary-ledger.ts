@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 
-import { FrameworkContractError } from '../charter/index.ts';
-import { ensureOplStateDir, resolveOplStatePaths } from '../runway/index.ts';
+import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
+import {
+  FrameworkContractError } from '../charter/index.ts';
+import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 
 export type DomainOwnerPayloadSummaryReceipt = {
   surface_kind: 'opl_domain_owner_payload_summary_receipt';

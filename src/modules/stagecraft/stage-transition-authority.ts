@@ -1,8 +1,10 @@
 import fs from 'node:fs';
 
-import { FrameworkContractError } from '../charter/index.ts';
-import { stableId } from '../runway/index.ts';
-import { ensureOplStateDir, resolveOplStatePaths } from '../runway/index.ts';
+import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
+import {
+  FrameworkContractError } from '../charter/index.ts';
+import { stableId } from '../../kernel/stable-id.ts';
+import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 
 type JsonRecord = Record<string, unknown>;
 

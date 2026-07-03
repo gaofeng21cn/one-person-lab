@@ -1,9 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { developerModePrefersLocalCheckouts } from '../developer-mode-source-policy.ts';
+import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
+import {
+  developerModePrefersLocalCheckouts } from '../developer-mode-source-policy.ts';
 import { resolveDefaultFamilyWorkspaceRoot } from '../../workspace/index.ts';
-import { ensureOplStateDir, resolveOplStatePaths } from '../../runway/index.ts';
+import { ensureOplStateDir } from '../../../kernel/runtime-state-paths.ts';
 import {
   normalizeOptionalString,
   type DomainModuleSpec,
