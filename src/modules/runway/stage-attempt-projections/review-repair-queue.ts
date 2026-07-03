@@ -3,6 +3,7 @@ import {
   recordList,
   type JsonRecord,
 } from '../../../kernel/json-record.ts';
+import { FAMILY_RUNTIME_QUEUE_PROJECTION_FIELDS } from '../family-runtime-queue-projection-boundary.ts';
 
 type ReviewRepairAttempt = {
   stage_attempt_id: string;
@@ -14,7 +15,7 @@ type ReviewRepairAttempt = {
   human_gate_ledger: JsonRecord[];
   resume_ledger: JsonRecord[];
   rejected_writes: unknown[];
-  dead_letter: JsonRecord | null;
+  [FAMILY_RUNTIME_QUEUE_PROJECTION_FIELDS.deadLetter]: JsonRecord | null;
   controlled_apply_contract: JsonRecord;
   lifecycle_primitives: JsonRecord;
 };
@@ -108,7 +109,8 @@ function rejectedWriteItems(attempt: ReviewRepairAttempt) {
 }
 
 function deadLetterItems(attempt: ReviewRepairAttempt) {
-  if (!attempt.attention_flags.includes('dead_lettered') && !attempt.dead_letter) {
+  const deadLetter = attempt[FAMILY_RUNTIME_QUEUE_PROJECTION_FIELDS.deadLetter];
+  if (!attempt.attention_flags.includes('dead_lettered') && !deadLetter) {
     return [];
   }
   return [{
@@ -118,7 +120,7 @@ function deadLetterItems(attempt: ReviewRepairAttempt) {
     domain_id: attempt.domain_id,
     stage_id: attempt.stage_id,
     next_owner: attempt.next_owner,
-    dead_letter: attempt.dead_letter,
+    [FAMILY_RUNTIME_QUEUE_PROJECTION_FIELDS.deadLetter]: deadLetter,
     repair_target: `opl family-runtime attempt query ${attempt.stage_attempt_id}`,
   }];
 }

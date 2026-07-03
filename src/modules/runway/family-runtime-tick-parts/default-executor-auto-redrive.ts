@@ -13,6 +13,11 @@ import {
   currentDefaultExecutorTasksByStudyAction,
   payloadFromTask,
 } from './default-executor-currentness.ts';
+import {
+  FAMILY_RUNTIME_TASK_COLUMNS,
+  FAMILY_RUNTIME_TASK_STATUS,
+  taskFailureProjectionSql,
+} from '../family-runtime-queue-projection-boundary.ts';
 
 const PROVIDER_TRANSPORT_REDRIVE_REASONS = new Set([
   'temporal_stage_attempt_start_failed',
@@ -139,14 +144,14 @@ export function autoRedriveBlockedDefaultExecutorProviderTasks(
       });
       continue;
     }
+    const maxAttempts = row[FAMILY_RUNTIME_TASK_COLUMNS.maxAttempts];
     const usedAttempts = attemptCountForTaskCurrentSource(db, row.task_id, sourceFingerprint);
-    if (usedAttempts >= row.max_attempts) {
+    if (usedAttempts >= maxAttempts) {
       db.prepare(`
         UPDATE tasks
-        SET status = 'dead_letter', lease_owner = NULL, lease_expires_at = NULL,
-          last_error = ?, dead_letter_reason = ?, updated_at = ?
+        SET status = ?, ${taskFailureProjectionSql()}
         WHERE task_id = ?
-      `).run('retry_budget_exhausted', 'retry_budget_exhausted', redrivenAt, row.task_id);
+      `).run(FAMILY_RUNTIME_TASK_STATUS.deadLetter, 'retry_budget_exhausted', 'retry_budget_exhausted', redrivenAt, row.task_id);
       insertEvent(db, {
         taskId: row.task_id,
         domainId: row.domain_id,
@@ -156,7 +161,7 @@ export function autoRedriveBlockedDefaultExecutorProviderTasks(
           previous_status: row.status,
           previous_dead_letter_reason: row.dead_letter_reason,
           used_attempts: usedAttempts,
-          max_attempts: row.max_attempts,
+          [FAMILY_RUNTIME_TASK_COLUMNS.maxAttempts]: maxAttempts,
           authority_boundary: {
             opl: 'provider_transport_retry_budget_only',
             domain: 'truth_quality_artifact_gate_owner',
@@ -174,7 +179,7 @@ export function autoRedriveBlockedDefaultExecutorProviderTasks(
       trigger: 'auto',
       source,
       usedAttempts,
-      maxAttempts: row.max_attempts,
+      maxAttempts,
       redrivenAt,
     });
     const providerRedriveStarted = 'provider_redrive_started' in redrive

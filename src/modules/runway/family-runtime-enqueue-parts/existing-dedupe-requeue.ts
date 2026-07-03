@@ -8,6 +8,10 @@ import {
   type FamilyRuntimeTaskRow,
   type FamilyRuntimeTaskStatus,
 } from '../family-runtime-store.ts';
+import {
+  clearTaskLeaseProjectionSql,
+  FAMILY_RUNTIME_TASK_COLUMNS,
+} from '../family-runtime-queue-projection-boundary.ts';
 
 export function applyExistingDedupeRequeue(
   db: DatabaseSync,
@@ -57,8 +61,8 @@ export function applyExistingDedupeRequeue(
       UPDATE tasks
       SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
         attempts = 0, source = ?, requires_approval = ?, approved_at = NULL,
-        lease_owner = NULL, lease_expires_at = NULL, last_error = ?,
-        dead_letter_reason = NULL, updated_at = ?
+        ${clearTaskLeaseProjectionSql()}, last_error = ?,
+        ${FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason} = NULL, updated_at = ?
       WHERE task_id = ?
     `).run(
       input.domainId,
@@ -76,8 +80,8 @@ export function applyExistingDedupeRequeue(
     db.prepare(`
       UPDATE tasks
       SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
-        source = ?, requires_approval = ?, approved_at = NULL, lease_owner = NULL,
-        lease_expires_at = NULL, last_error = ?, dead_letter_reason = NULL, updated_at = ?
+        source = ?, requires_approval = ?, approved_at = NULL, ${clearTaskLeaseProjectionSql()},
+        last_error = ?, ${FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason} = NULL, updated_at = ?
       WHERE task_id = ?
     `).run(
       input.domainId,

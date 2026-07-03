@@ -7,6 +7,11 @@ import {
   taskToPayload,
   type FamilyRuntimeTaskRow,
 } from '../family-runtime-store.ts';
+import {
+  clearTaskLeaseProjectionSql,
+  FAMILY_RUNTIME_TASK_COLUMNS,
+  FAMILY_RUNTIME_TASK_STATUS,
+} from '../family-runtime-queue-projection-boundary.ts';
 
 export function recordResolvedMissingStageNativeOwnerAnswerDedupeNoop(
   db: DatabaseSync,
@@ -34,16 +39,17 @@ export function recordResolvedMissingStageNativeOwnerAnswerDedupeNoop(
 
   db.prepare(`
     UPDATE tasks
-    SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = 'succeeded',
+    SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
       source = ?, requires_approval = ?, approved_at = NULL,
-      lease_owner = NULL, lease_expires_at = NULL, last_error = NULL,
-      dead_letter_reason = NULL, updated_at = ?
+      ${clearTaskLeaseProjectionSql()}, last_error = NULL,
+      ${FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason} = NULL, updated_at = ?
     WHERE task_id = ?
   `).run(
     input.domainId,
     taskKind,
     exportedPayloadJson,
     input.priority ?? 0,
+    FAMILY_RUNTIME_TASK_STATUS.succeeded,
     input.source ?? 'opl-cli',
     requiresApproval ? 1 : 0,
     createdAt,

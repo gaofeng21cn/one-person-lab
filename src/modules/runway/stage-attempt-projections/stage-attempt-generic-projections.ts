@@ -39,6 +39,7 @@ import {
   buildWorkbenchWorkspaceSourceIntake,
 } from './workspace-source-intake.ts';
 import type { JsonRecord } from '../../../kernel/types.ts';
+import { FAMILY_RUNTIME_QUEUE_PROJECTION_FIELDS } from '../family-runtime-queue-projection-boundary.ts';
 
 export type StageAttemptGenericProjectionInput = {
   stage_attempt_id: string;
@@ -59,7 +60,7 @@ export type StageAttemptGenericProjectionInput = {
   human_gate_refs: string[];
   human_gate_ledger: JsonRecord[];
   resume_ledger: JsonRecord[];
-  dead_letter: JsonRecord | null;
+  [FAMILY_RUNTIME_QUEUE_PROJECTION_FIELDS.deadLetter]: JsonRecord | null;
   domain_ready_verdict: string | null;
   controlled_apply_contract: JsonRecord;
   lifecycle_primitives: JsonRecord;
@@ -68,6 +69,7 @@ export type StageAttemptGenericProjectionInput = {
 };
 
 export function buildAttemptGenericProjections(input: StageAttemptGenericProjectionInput) {
+  const deadLetter = input[FAMILY_RUNTIME_QUEUE_PROJECTION_FIELDS.deadLetter];
   const transitionBridgeEvidence = buildAttemptTransitionBridgeEvidence({
     stage_attempt_id: input.stage_attempt_id,
     domain_id: input.domain_id,
@@ -110,7 +112,7 @@ export function buildAttemptGenericProjections(input: StageAttemptGenericProject
       human_gate_ledger: input.human_gate_ledger,
       resume_ledger: input.resume_ledger,
       rejected_writes: input.rejected_writes,
-      dead_letter: input.dead_letter,
+      [FAMILY_RUNTIME_QUEUE_PROJECTION_FIELDS.deadLetter]: deadLetter,
       controlled_apply_contract: input.controlled_apply_contract,
       lifecycle_primitives: input.lifecycle_primitives,
     }),

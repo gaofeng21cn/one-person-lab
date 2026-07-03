@@ -11,6 +11,11 @@ import {
   type FamilyRuntimeTaskRow,
   type FamilyRuntimeTaskStatus,
 } from '../family-runtime-store.ts';
+import {
+  clearTaskLeaseProjectionSql,
+  FAMILY_RUNTIME_TASK_COLUMNS,
+  FAMILY_RUNTIME_TASK_STATUS,
+} from '../family-runtime-queue-projection-boundary.ts';
 import { antiLoopStopLossSameLineageDecision } from '../family-runtime-stop-loss-successor-policy.ts';
 import type { ActiveFamilyRuntimeQueueHold } from '../family-runtime-queue-holds.ts';
 import {
@@ -237,10 +242,10 @@ export function reconcileExistingDedupeTask(
   if (runningTerminalCurrentControlAdmissionNoop) {
     db.prepare(`
       UPDATE tasks
-      SET status = 'succeeded', lease_owner = NULL, lease_expires_at = NULL,
-        last_error = NULL, dead_letter_reason = NULL, updated_at = ?
+      SET status = ?, ${clearTaskLeaseProjectionSql()},
+        last_error = NULL, ${FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason} = NULL, updated_at = ?
       WHERE task_id = ?
-    `).run(createdAt, existing.task_id);
+    `).run(FAMILY_RUNTIME_TASK_STATUS.succeeded, createdAt, existing.task_id);
     const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
     insertEvent(db, {
       taskId: refreshed.task_id,
@@ -928,7 +933,7 @@ export function reconcileExistingDedupeTask(
       task: taskToPayload(existing),
     };
   }
-  if (existing.status === 'dead_letter' && exportedTaskChanged && deadLetterRedrive) {
+  if (existing.status === FAMILY_RUNTIME_TASK_STATUS.deadLetter && exportedTaskChanged && deadLetterRedrive) {
     const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
     return applyExistingDedupeRequeue(db, {
       input,

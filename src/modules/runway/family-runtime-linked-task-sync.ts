@@ -7,6 +7,12 @@ import {
   insertNotification,
   type FamilyRuntimeTaskRow,
 } from './family-runtime-store.ts';
+import {
+  clearTaskLeaseProjectionSql,
+  FAMILY_RUNTIME_TASK_COLUMNS,
+  FAMILY_RUNTIME_TASK_STATUS,
+  taskFailureProjectionSql,
+} from './family-runtime-queue-projection-boundary.ts';
 import type { StageAttemptRow } from './family-runtime-stage-attempt-ledger.ts';
 import {
   MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
@@ -148,10 +154,10 @@ function blockMissingStageNativeOwnerAnswer(
 ) {
   db.prepare(`
     UPDATE tasks
-    SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
-      last_error = ?, dead_letter_reason = ?, updated_at = ?
+    SET status = ?, ${taskFailureProjectionSql()}
     WHERE task_id = ?
   `).run(
+    FAMILY_RUNTIME_TASK_STATUS.blocked,
     MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
     MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
     input.observedAt,
@@ -218,10 +224,10 @@ export function markLinkedDefaultExecutorTaskCompleted(
   }
   db.prepare(`
     UPDATE tasks
-    SET status = 'succeeded', lease_owner = NULL, lease_expires_at = NULL,
-      last_error = NULL, dead_letter_reason = NULL, updated_at = ?
+    SET status = ?, ${clearTaskLeaseProjectionSql()},
+      last_error = NULL, ${FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason} = NULL, updated_at = ?
     WHERE task_id = ?
-  `).run(input.observedAt, input.row.task_id);
+  `).run(FAMILY_RUNTIME_TASK_STATUS.succeeded, input.observedAt, input.row.task_id);
   insertEvent(db, {
     taskId: input.row.task_id,
     domainId: input.row.domain_id,
@@ -283,10 +289,9 @@ export function blockLinkedDefaultExecutorTask(
   }
   db.prepare(`
     UPDATE tasks
-    SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
-      last_error = ?, dead_letter_reason = ?, updated_at = ?
+    SET status = ?, ${taskFailureProjectionSql()}
     WHERE task_id = ?
-  `).run(input.reason, input.taskDeadLetterReason, input.observedAt, input.row.task_id);
+  `).run(FAMILY_RUNTIME_TASK_STATUS.blocked, input.reason, input.taskDeadLetterReason, input.observedAt, input.row.task_id);
   insertEvent(db, {
     taskId: input.row.task_id,
     domainId: input.row.domain_id,

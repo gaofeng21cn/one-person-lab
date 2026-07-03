@@ -11,9 +11,28 @@ import {
   type FamilyRuntimeTaskRow,
 } from './family-runtime-store.ts';
 import { normalizeTaskScopeForStorage, taskRowMatchesScope } from './family-runtime-task-scope.ts';
+import {
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS,
+  FAMILY_RUNTIME_TASK_STATUS,
+  taskFailureProjectionSql,
+  taskStatusProjectionSqlList,
+} from './family-runtime-queue-projection-boundary.ts';
 
-const RETIRABLE_TASK_STATUSES = new Set(['queued', 'retry_waiting', 'waiting_approval', 'blocked', 'dead_letter']);
-const RETIRABLE_ATTEMPT_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate', 'blocked']);
+const RETIRABLE_TASK_STATUSES = [
+  FAMILY_RUNTIME_TASK_STATUS.queued,
+  FAMILY_RUNTIME_TASK_STATUS.retryWaiting,
+  FAMILY_RUNTIME_TASK_STATUS.waitingApproval,
+  FAMILY_RUNTIME_TASK_STATUS.blocked,
+  FAMILY_RUNTIME_TASK_STATUS.deadLetter,
+] as const;
+const RETIRABLE_TASK_STATUS_SET = new Set<string>(RETIRABLE_TASK_STATUSES);
+const RETIRABLE_ATTEMPT_STATUSES = new Set<string>([
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.queued,
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.running,
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.checkpointed,
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.humanGate,
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.blocked,
+]);
 
 function scopeHasSelector(taskScope: FamilyRuntimeTaskScope) {
   return Boolean(taskScope.domainId || taskScope.taskKind || (taskScope.payloadMatches?.length ?? 0) > 0);
@@ -48,7 +67,7 @@ export function retireFamilyRuntimeQueueResidue(
   const blockedReason = retireReason(reason);
   const candidates = (db.prepare(`
     SELECT * FROM tasks
-    WHERE status IN ('queued', 'retry_waiting', 'waiting_approval', 'blocked', 'dead_letter')
+    WHERE status IN (${taskStatusProjectionSqlList(RETIRABLE_TASK_STATUSES)})
     ORDER BY priority DESC, created_at ASC
   `).all() as FamilyRuntimeTaskRow[]).filter((row) => taskRowMatchesScope(row, taskScope));
 
@@ -57,7 +76,7 @@ export function retireFamilyRuntimeQueueResidue(
     const retiredTaskIds: string[] = [];
     const retiredStageAttemptIds: string[] = [];
     for (const row of candidates) {
-      if (!RETIRABLE_TASK_STATUSES.has(row.status)) {
+      if (!RETIRABLE_TASK_STATUS_SET.has(row.status)) {
         continue;
       }
       if (row.status === 'blocked' && row.dead_letter_reason === blockedReason) {
@@ -65,11 +84,10 @@ export function retireFamilyRuntimeQueueResidue(
       }
       const result = db.prepare(`
         UPDATE tasks
-        SET status = 'blocked', requires_approval = 0, approved_at = NULL,
-          lease_owner = NULL, lease_expires_at = NULL, last_error = ?,
-          dead_letter_reason = ?, updated_at = ?
-        WHERE task_id = ? AND status IN ('queued', 'retry_waiting', 'waiting_approval', 'blocked', 'dead_letter')
-      `).run(blockedReason, blockedReason, retiredAt, row.task_id);
+        SET status = ?, requires_approval = 0, approved_at = NULL,
+          ${taskFailureProjectionSql()}
+        WHERE task_id = ? AND status IN (${taskStatusProjectionSqlList(RETIRABLE_TASK_STATUSES)})
+      `).run(FAMILY_RUNTIME_TASK_STATUS.blocked, blockedReason, blockedReason, retiredAt, row.task_id);
       if (result.changes <= 0) {
         continue;
       }
@@ -81,7 +99,7 @@ export function retireFamilyRuntimeQueueResidue(
         ? updateStageAttemptsForTask(db, {
             taskId: row.task_id,
             stageAttemptIds: retireAttemptIds,
-            status: 'blocked',
+            status: FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.blocked,
             blockedReason,
             activityEvent: {
               activity_kind: 'operator_retired_stale_runtime_residue',

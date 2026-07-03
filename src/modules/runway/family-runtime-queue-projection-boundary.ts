@@ -29,6 +29,10 @@ export const FAMILY_RUNTIME_TASK_COLUMNS = {
   deadLetterReason: 'dead_letter_reason', // reuse-first: allow local failure reason projection column; Temporal failure history is the target owner.
 } as const;
 
+export const FAMILY_RUNTIME_QUEUE_PROJECTION_FIELDS = {
+  deadLetter: QUEUE_PROJECTION_VOCABULARY.deadLetter,
+} as const;
+
 const TASKS_TABLE = 'tasks';
 const QUEUE_HOLDS_TABLE = 'queue_holds';
 
@@ -53,6 +57,10 @@ export const FAMILY_RUNTIME_QUEUE_PROJECTION_BOUNDARY = {
 export function clearTaskLeaseProjectionSql() {
   const columns = FAMILY_RUNTIME_TASK_COLUMNS;
   return `${columns.leaseOwner} = NULL, ${columns.leaseExpiresAt} = NULL`;
+}
+
+export function taskStatusProjectionSqlList(statuses: readonly string[]) {
+  return statuses.map((status) => `'${status.replaceAll("'", "''")}'`).join(', ');
 }
 
 export function taskLeaseProjectionPayload(

@@ -24,6 +24,12 @@ import {
   PAPER_MISSION_STAGE_ROUTE_TASK_KIND,
   paperMissionStageRouteIdentityValue,
 } from './family-runtime-paper-mission-stage-route-terminal-sync.ts';
+import {
+  clearTaskLeaseProjectionSql,
+  FAMILY_RUNTIME_TASK_COLUMNS,
+  FAMILY_RUNTIME_TASK_STATUS,
+  taskFailureProjectionSql,
+} from './family-runtime-queue-projection-boundary.ts';
 
 export { isPaperMissionStageRouteTask };
 
@@ -496,10 +502,9 @@ export async function dispatchPaperMissionStageRouteTask(
   if (blockedReason) {
     db.prepare(`
       UPDATE tasks
-      SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
-        last_error = ?, dead_letter_reason = ?, updated_at = ?
+      SET status = ?, ${taskFailureProjectionSql()}
       WHERE task_id = ?
-    `).run(blockedReason, blockedReason, startedAt, row.task_id);
+    `).run(FAMILY_RUNTIME_TASK_STATUS.blocked, blockedReason, blockedReason, startedAt, row.task_id);
     insertEvent(db, {
       taskId: row.task_id,
       domainId: row.domain_id,
@@ -562,10 +567,9 @@ export async function dispatchPaperMissionStageRouteTask(
       }`;
     db.prepare(`
       UPDATE tasks
-      SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
-        last_error = ?, dead_letter_reason = ?, updated_at = ?
+      SET status = ?, ${taskFailureProjectionSql()}
       WHERE task_id = ?
-    `).run(executorPolicy.blockedReason, executorPolicy.blockedReason, startedAt, row.task_id);
+    `).run(FAMILY_RUNTIME_TASK_STATUS.blocked, executorPolicy.blockedReason, executorPolicy.blockedReason, startedAt, row.task_id);
     insertEvent(db, {
       taskId: row.task_id,
       domainId: row.domain_id,
@@ -675,8 +679,8 @@ export async function dispatchPaperMissionStageRouteTask(
   });
   db.prepare(`
     UPDATE tasks
-    SET status = ?, lease_owner = NULL, lease_expires_at = NULL,
-      last_error = ?, dead_letter_reason = ?, updated_at = ?
+    SET status = ?, ${clearTaskLeaseProjectionSql()},
+      last_error = ?, ${FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason} = ?, updated_at = ?
     WHERE task_id = ?
   `).run(status, reason, status === 'blocked' ? reason : null, updatedAt, row.task_id);
   insertEvent(db, {

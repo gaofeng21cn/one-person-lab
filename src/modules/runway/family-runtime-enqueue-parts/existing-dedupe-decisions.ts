@@ -21,6 +21,12 @@ import {
   isTransportOnlyDefaultExecutorAdmissionCheckpoint,
 } from '../family-runtime-provider-hosted-attempts.ts';
 import {
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS,
+  FAMILY_RUNTIME_TASK_STATUS,
+  taskLeaseProjectionPayload,
+  taskRetryBudgetProjection,
+} from '../family-runtime-queue-projection-boundary.ts';
+import {
   providerAdmissionCurrentnessIdentity,
   sameProviderAdmissionCurrentnessIdentity,
 } from '../family-runtime-mas-current-control-admission-currentness.ts';
@@ -34,7 +40,12 @@ const MAS_PAPER_AUTONOMY_STALE_DEAD_LETTER_MARKERS = [
 ] as const;
 const OPERATOR_RETIRED_STALE_RESIDUE_PREFIX = 'operator_retired_stale_runtime_residue:';
 const DEFAULT_EXECUTOR_SUPERSEDED_REASON = 'mas_default_executor_superseded_by_current_source';
-const TERMINAL_STAGE_ATTEMPT_STATUSES = new Set(['blocked', 'completed', 'dead_lettered', 'failed']);
+const TERMINAL_STAGE_ATTEMPT_STATUSES = new Set<string>([
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.blocked,
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.completed,
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.deadLettered,
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.failed,
+]);
 
 export function sourceFingerprint(payload: Record<string, unknown>) {
   return defaultExecutorDomainSourceFingerprint(payload);
@@ -84,12 +95,11 @@ export function defaultExecutorCandidateRow(input: {
     priority: input.priority ?? 0,
     status: input.requiresApproval ? 'waiting_approval' : 'queued',
     attempts: 0,
-    max_attempts: DEFAULT_MAX_ATTEMPTS,
+    ...taskRetryBudgetProjection(DEFAULT_MAX_ATTEMPTS),
     source: input.source ?? 'opl-cli',
     requires_approval: input.requiresApproval ? 1 : 0,
     approved_at: null,
-    lease_owner: null,
-    lease_expires_at: null,
+    ...taskLeaseProjectionPayload(null, null),
     last_error: null,
     dead_letter_reason: null,
     created_at: input.createdAt,
@@ -637,7 +647,7 @@ function defaultExecutorResolvedMissingStageNativeOwnerAnswerDecision(
 function masPaperAutonomyDeadLetterCurrentnessBlock(existing: FamilyRuntimeTaskRow) {
   if (
     existing.domain_id !== 'medautoscience'
-    || existing.status !== 'dead_letter'
+    || existing.status !== FAMILY_RUNTIME_TASK_STATUS.deadLetter
     || !MAS_PAPER_AUTONOMY_TASK_KINDS.has(existing.task_kind)
   ) {
     return null;

@@ -27,6 +27,11 @@ import {
   buildStageAttemptCloseoutRefsOnlyContract,
   buildStageAttemptLaunchEnvelope,
 } from '../stagecraft/index.ts';
+import {
+  FAMILY_RUNTIME_QUEUE_PROJECTION_FIELDS,
+  FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS,
+  FAMILY_RUNTIME_TASK_COLUMNS,
+} from './family-runtime-queue-projection-boundary.ts';
 
 type QueryStageAttemptOptions = {
   temporalVisibilityReadiness?: TemporalStageAttemptVisibilityReadiness | null;
@@ -53,13 +58,13 @@ function signalPayloadsByKind(db: DatabaseSync, stageAttemptId: string, signalKi
 }
 
 function taskDeadLetterForAttempt(db: DatabaseSync, attempt: NonNullable<ReturnType<typeof inspectStageAttemptPayload>>) {
-  if (attempt.status !== 'dead_lettered') {
+  if (attempt.status !== FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.deadLettered) {
     return null;
   }
   const taskId = typeof attempt.task_id === 'string' ? attempt.task_id : null;
   const task = taskId
     ? db.prepare(`
-      SELECT task_id, domain_id, task_kind, status, attempts, max_attempts, last_error, dead_letter_reason, updated_at
+      SELECT task_id, domain_id, task_kind, status, attempts, ${FAMILY_RUNTIME_TASK_COLUMNS.maxAttempts}, last_error, dead_letter_reason, updated_at
       FROM tasks
       WHERE task_id = ?
     `).get(taskId) as Record<string, unknown> | undefined
@@ -158,14 +163,16 @@ export function queryStageAttempt(
         ? 'human_gate'
         : null,
       resumeLedger.length > 0 ? 'resume_available' : null,
-      attempt.status === 'dead_lettered' ? 'dead_lettered' : null,
+      attempt.status === FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.deadLettered
+        ? FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS.deadLettered
+        : null,
       attempt.blocked_reason ? 'blocked' : null,
       rejectedWrites.length > 0 ? 'rejected_writes' : null,
     ].filter((flag): flag is string => Boolean(flag)),
     human_gate_refs: stringListFrom(attempt.human_gate_refs),
     human_gate_ledger: humanGateLedger,
     resume_ledger: resumeLedger,
-    dead_letter: taskDeadLetterForAttempt(db, attempt),
+    [FAMILY_RUNTIME_QUEUE_PROJECTION_FIELDS.deadLetter]: taskDeadLetterForAttempt(db, attempt),
     domain_ready_verdict: domainReadyVerdict,
     controlled_apply_contract: controlledApplyContract,
     lifecycle_primitives: lifecyclePrimitives,
@@ -335,7 +342,7 @@ export function queryStageAttempt(
         resume_ledger: resumeLedger,
         user_instructions: userInstructionLedger,
         resume_signals: resumeLedger,
-        dead_letter: taskDeadLetterForAttempt(db, attempt),
+        [FAMILY_RUNTIME_QUEUE_PROJECTION_FIELDS.deadLetter]: taskDeadLetterForAttempt(db, attempt),
         canonical_outcome: canonicalOutcome,
         operator_conflicts: conflictOrBlockerEnvelopes,
         usage_projection: attempt.usage_projection,
