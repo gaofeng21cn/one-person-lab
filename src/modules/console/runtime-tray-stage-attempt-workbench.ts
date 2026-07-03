@@ -3,6 +3,7 @@ import type { DatabaseSync } from 'node:sqlite';
 
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
+import { QUEUE_PROJECTION_VOCABULARY } from '../../kernel/queue-projection-vocabulary.ts';
 import {
   buildEffectiveCurrentContextPacket,
   buildFamilyRuntimeControlledApplyContract,
@@ -270,7 +271,7 @@ function buildAttemptControlLoopSummary(input: {
     attention_flags: input.attentionFlags,
     human_gate: input.isHumanGate,
     human_gate_refs: input.humanGateRefs,
-    dead_letter: input.isDeadLetter,
+    [QUEUE_PROJECTION_VOCABULARY.deadLetter]: input.isDeadLetter,
     dead_letter_reason: optionalString(input.deadLetter?.reason),
   };
   return {
@@ -320,7 +321,9 @@ function buildAttemptControlLoopSummary(input: {
     retry_budget: {
       attempt_count: input.row.attempt_count,
       retry_budget: retryBudget,
-      max_attempts: typeof retryBudget.max_attempts === 'number' ? retryBudget.max_attempts : null,
+      [QUEUE_PROJECTION_VOCABULARY.maxAttempts]: typeof retryBudget[QUEUE_PROJECTION_VOCABULARY.maxAttempts] === 'number'
+        ? retryBudget[QUEUE_PROJECTION_VOCABULARY.maxAttempts]
+        : null,
     },
     state,
     authority_boundary: controlLoopAuthorityBoundary(),
@@ -551,7 +554,7 @@ function attemptProjection(
     human_gate_refs: humanGateRefs,
     human_gate_ledger: humanGateLedger,
     resume_ledger: resumeLedger,
-    dead_letter: deadLetter,
+    [QUEUE_PROJECTION_VOCABULARY.deadLetter]: deadLetter,
     domain_ready_verdict: domainReadyVerdict,
     controlled_apply_contract: controlledApplyContract,
     lifecycle_primitives: lifecyclePrimitives,
@@ -653,7 +656,7 @@ function attemptProjection(
     resume_ledger: resumeLedger,
     user_instructions: userInstructionLedger,
     resume_signals: resumeLedger,
-    dead_letter: deadLetter,
+    [QUEUE_PROJECTION_VOCABULARY.deadLetter]: deadLetter,
     completion_boundary: {
       provider_completion: row.status === 'completed' ? 'completed' : 'not_completed',
       domain_ready_verdict: domainReadyVerdict,

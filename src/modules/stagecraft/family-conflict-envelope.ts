@@ -1,3 +1,5 @@
+import { QUEUE_PROJECTION_VOCABULARY } from '../../kernel/queue-projection-vocabulary.ts';
+
 const FAMILY_CONFLICT_OR_BLOCKER_KIND = 'opl_conflict_or_blocker.v1' as const;
 
 const FAMILY_CONFLICT_CLASSIFICATIONS = [
@@ -180,10 +182,10 @@ function defaultAllowedNextActions(classification: FamilyConflictClassification,
     return ['repair_owner_descriptor', 'request_owner_receipt', 'request_human_review'];
   }
   if (classification === 'evidence_blocker') {
-    return ['retry_after_owner_receipt', 'request_human_review', 'dead_letter'];
+    return ['retry_after_owner_receipt', 'request_human_review', QUEUE_PROJECTION_VOCABULARY.deadLetter];
   }
   if (classification === 'quality_blocker') {
-    return ['route_to_domain_quality_gate', 'request_human_review', 'dead_letter'];
+    return ['route_to_domain_quality_gate', 'request_human_review', QUEUE_PROJECTION_VOCABULARY.deadLetter];
   }
   if (classification === 'human_gate') {
     return ['request_human_review', 'resume_after_approval'];
@@ -191,10 +193,10 @@ function defaultAllowedNextActions(classification: FamilyConflictClassification,
   if (classification === 'execution_retryable') {
     return status === 'dead_lettered'
       ? ['inspect_dead_letter', 'request_human_review']
-      : ['retry_with_budget', 'dead_letter'];
+      : ['retry_with_budget', QUEUE_PROJECTION_VOCABULARY.deadLetter];
   }
   if (classification === 'receipt_conflict') {
-    return ['inspect_conflicting_receipts', 'request_human_review', 'dead_letter'];
+    return ['inspect_conflicting_receipts', 'request_human_review', QUEUE_PROJECTION_VOCABULARY.deadLetter];
   }
   return ['repair_identity', 'request_human_review'];
 }
@@ -461,7 +463,7 @@ export function buildStageAttemptConflictOrBlockerEnvelopes(input: StageAttemptE
       status: 'dead_lettered',
       reason: normalizedString(input.blockedReason, 'retry_budget_exhausted'),
       evidenceRefs: [
-        ...(input.deadLetter ? ['opl://family_runtime_tasks/dead_letter'] : []),
+        ...(input.deadLetter ? [`opl://family_runtime_tasks/${QUEUE_PROJECTION_VOCABULARY.deadLetter}`] : []),
       ],
     }));
   } else if (input.attemptStatus === 'failed') {

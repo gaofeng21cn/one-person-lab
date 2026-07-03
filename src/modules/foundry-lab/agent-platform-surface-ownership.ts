@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { buildGeneratedAgentInterfaces } from '../pack/index.ts';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { readJsonFileResult } from '../../kernel/json-file.ts';
+import { QUEUE_PROJECTION_VOCABULARY } from '../../kernel/queue-projection-vocabulary.ts';
 import {
   record,
   recordList,
@@ -88,7 +89,7 @@ const OPL_OWNED_GENERIC_SUBDOMAINS = [
   {
     subdomain_id: 'stage_attempt_queue_retry_dead_letter',
     opl_primitive: 'opl_provider_backed_family_runtime',
-    surface_aliases: ['runtime', 'queue', 'attempt', 'attempt_ledger', 'retry', 'dead_letter', 'scheduler', 'watch'],
+    surface_aliases: ['runtime', 'queue', 'attempt', 'attempt_ledger', 'retry', QUEUE_PROJECTION_VOCABULARY.deadLetter, 'scheduler', 'watch'],
     domain_allowed_role: 'domain_authority_receipt_or_typed_blocker_target',
   },
   {

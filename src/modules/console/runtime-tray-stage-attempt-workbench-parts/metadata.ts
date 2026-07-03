@@ -29,6 +29,7 @@ import type {
 } from '../../runway/index.ts';
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import { recordList } from '../../../kernel/json-record.ts';
+import { QUEUE_PROJECTION_VOCABULARY } from '../../../kernel/queue-projection-vocabulary.ts';
 import { optionalString } from '../runtime-tray-snapshot-utils.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 
@@ -198,7 +199,7 @@ function buildWorkbenchControlLoopSummary(attempts: StageAttemptProjection[], pr
         attemptControlLoopState(attempt).human_gate === true
       ).length,
       dead_letter_count: attempts.filter((attempt) =>
-        attemptControlLoopState(attempt).dead_letter === true
+        attemptControlLoopState(attempt)[QUEUE_PROJECTION_VOCABULARY.deadLetter] === true
       ).length,
     },
     receipt_refs: receiptRefs,

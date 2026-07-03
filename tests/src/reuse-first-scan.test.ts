@@ -312,6 +312,45 @@ test('reuse-first scan allows managed update owner boundary metadata only in the
   assert.equal(output.findings[0].path, 'src/modules/connect/other-update.ts');
 });
 
+test('reuse-first scan allows queue projection vocabulary only in the kernel vocabulary file', () => {
+  const fixture = makeFixture();
+  const deadLetter = ['dead', 'letter'].join('_');
+  const leaseOwner = ['lease', 'owner'].join('_');
+  const maxAttempts = ['max', 'attempts'].join('_');
+  writeFixtureFile(
+    fixture,
+    'src/kernel/queue-projection-vocabulary.ts',
+    `export const terms = ['${deadLetter}', '${leaseOwner}', '${maxAttempts}'];\n`,
+  );
+  writeFixtureFile(
+    fixture,
+    'src/modules/runway/private-queue.ts',
+    [
+      `export const deadLetter = '${deadLetter}';`,
+      `export const leaseOwner = '${leaseOwner}';`,
+      `export const maxAttempts = '${maxAttempts}';`,
+      '',
+    ].join('\n'),
+  );
+
+  const result = spawnSync(process.execPath, [
+    script,
+    '--root',
+    fixture,
+    '--contract',
+    path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-governance.json'),
+  ], { encoding: 'utf8' });
+  const output = JSON.parse(result.stdout);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(output.finding_count, 3);
+  assert.deepEqual(output.findings.map((finding: { path: string }) => finding.path), [
+    'src/modules/runway/private-queue.ts',
+    'src/modules/runway/private-queue.ts',
+    'src/modules/runway/private-queue.ts',
+  ]);
+});
+
 function makeFixture() {
   const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-reuse-first-scan-'));
   const contractDir = path.join(fixture, 'contracts', 'opl-framework');

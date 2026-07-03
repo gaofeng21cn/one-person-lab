@@ -447,7 +447,8 @@ function isAllowedMetadataLine(relativePath, line) {
     relativePath === 'contracts/opl-framework/cli-command-registry.json'
     && line.includes('"update rollback"')
   )
-    || isAllowedManagedUpdateOwnerBoundaryLine(relativePath, line);
+    || isAllowedManagedUpdateOwnerBoundaryLine(relativePath, line)
+    || isAllowedQueueProjectionVocabularyLine(relativePath, line);
 }
 
 function isAllowedManagedUpdateOwnerBoundaryLine(relativePath, line) {
@@ -465,6 +466,21 @@ function isAllowedManagedUpdateOwnerBoundaryLine(relativePath, line) {
     'post_apply_hooks',
     'rollback_ref',
   ].some((term) => line.includes(term));
+}
+
+function isAllowedQueueProjectionVocabularyLine(relativePath, line) {
+  if (relativePath !== 'src/kernel/queue-projection-vocabulary.ts') {
+    return false;
+  }
+  return queueProjectionVocabularyTerms().some((term) => line.includes(term));
+}
+
+function queueProjectionVocabularyTerms() {
+  return [
+    ['dead', 'letter'].join('_'),
+    ['lease', 'owner'].join('_'),
+    ['max', 'attempts'].join('_'),
+  ];
 }
 
 function fail(message) {

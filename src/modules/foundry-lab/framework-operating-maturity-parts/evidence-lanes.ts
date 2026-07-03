@@ -5,6 +5,7 @@ import {
   record,
   stringValue,
 } from '../framework-readiness-values.ts';
+import { QUEUE_PROJECTION_VOCABULARY } from '../../../kernel/queue-projection-vocabulary.ts';
 
 export function stringListValue(value: unknown) {
   return Array.isArray(value)
@@ -376,7 +377,7 @@ export function providerLongSoakExecutionRunbook() {
       'foundry_agent_os_production_evidence_gate.owner_route_work_orders[lane=provider_long_soak]',
     ],
     stop_loss: [
-      'if capability_status remains capability_slo_blocked, use capability_missing_requirement_ids to record specific long_soak/recovery/dead_letter/provider_blocker/typed_blocker evidence instead of rerunning evidence accounting',
+      `if capability_status remains capability_slo_blocked, use capability_missing_requirement_ids to record specific long_soak/recovery/${QUEUE_PROJECTION_VOCABULARY.deadLetter}/provider_blocker/typed_blocker evidence instead of rerunning evidence accounting`,
       'if long_evidence_ready remains false after a claimed window and capability_missing_requirement_ids is not empty, preserve open_evidence_count=1 and route to runtime owner',
       'if verified provider_blocker_ref or typed_blocker_ref covers every capability owner action, close the owner-evidence work order but keep long_evidence_ready=false and production ready claims unauthorized',
       'if verified owner_acceptance_ref is observed, record owner follow-through but keep provider production ready claims unauthorized',

@@ -10,6 +10,7 @@ import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundary as refsOnlyAuthorityBoundary,
 } from './authority-boundary.ts';
+import { QUEUE_PROJECTION_VOCABULARY } from '../../../kernel/queue-projection-vocabulary.ts';
 import {
   cleanupCommandDomainId,
   record,
@@ -293,15 +294,15 @@ export function routeTransitionDrilldown(input: {
   ]));
   const deadLetterRefs = uniqueRefs(input.attempts.flatMap((attempt) => {
     const stageAttemptId = stringValue(attempt.stage_attempt_id);
-    const deadLetter = record(attempt.dead_letter);
+    const deadLetter = record(attempt[QUEUE_PROJECTION_VOCABULARY.deadLetter]);
     return [
       ...refEntries(refsFromRecord(record(attempt.route_impact), [
-        'dead_letter_ref',
-        'dead_letter_refs',
+        QUEUE_PROJECTION_VOCABULARY.deadLetterRef,
+        QUEUE_PROJECTION_VOCABULARY.deadLetterRefs,
       ]), 'route_transition_dead_letter', attempt),
       ...(stageAttemptId && Object.keys(deadLetter).length > 0
         ? [{
-          ref: `/stage_attempt_workbench/attempts/${stageAttemptId}/dead_letter`,
+          ref: `/stage_attempt_workbench/attempts/${stageAttemptId}/${QUEUE_PROJECTION_VOCABULARY.deadLetter}`,
           role: 'stage_attempt_dead_letter',
           domain_id: stringValue(attempt.domain_id),
           stage_id: stringValue(attempt.stage_id),

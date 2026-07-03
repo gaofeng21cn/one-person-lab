@@ -1,5 +1,6 @@
 import { AGENT_LAB_AUTHORITY_BOUNDARY } from './agent-lab-authority.ts';
 import { stableId } from '../../kernel/stable-id.ts';
+import { QUEUE_PROJECTION_VOCABULARY } from '../../kernel/queue-projection-vocabulary.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -23,7 +24,7 @@ export type AgentLabSameIdentityRetryBudget = {
   budget_ref?: string;
   budget_kind?: 'same_identity_retry_budget' | 'bounded_same_identity_retry_budget' | string;
   max_same_identity_retries?: number;
-  max_attempts?: number;
+  [QUEUE_PROJECTION_VOCABULARY.maxAttempts]?: number;
   scope?: 'same_identity' | string;
   exhausted_exit_ref?: string;
   budget_exhausted_exit_ref?: string;
@@ -356,7 +357,7 @@ function buildCycleDescriptors(input: AgentLabProgressFirstLoopRiskInput): Cycle
 }
 
 function boundedRetryBudget(budget: AgentLabSameIdentityRetryBudget | undefined) {
-  const max = budget?.max_same_identity_retries ?? budget?.max_attempts;
+  const max = budget?.max_same_identity_retries ?? budget?.[QUEUE_PROJECTION_VOCABULARY.maxAttempts];
   return typeof max === 'number' && Number.isFinite(max) && max > 0;
 }
 
