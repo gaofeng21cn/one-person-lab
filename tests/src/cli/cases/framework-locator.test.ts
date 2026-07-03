@@ -69,6 +69,33 @@ test('framework locate honors OPL_FRAMEWORK_ROOT before other locator candidates
   });
 });
 
+test('framework locate accepts the modular source entrypoint without built dist output', () => {
+  const frameworkRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-modular-root-'));
+  try {
+    fs.mkdirSync(path.join(frameworkRoot, 'contracts', 'opl-framework'), { recursive: true });
+    fs.mkdirSync(path.join(frameworkRoot, 'bin'), { recursive: true });
+    fs.mkdirSync(path.join(frameworkRoot, 'src', 'entrypoints'), { recursive: true });
+    fs.writeFileSync(path.join(frameworkRoot, 'contracts', 'opl-framework', 'public-surface-index.json'), '{}\n');
+    fs.writeFileSync(path.join(frameworkRoot, 'bin', 'opl'), '#!/usr/bin/env bash\n');
+    fs.chmodSync(path.join(frameworkRoot, 'bin', 'opl'), 0o755);
+    fs.writeFileSync(path.join(frameworkRoot, 'src', 'entrypoints', 'cli.ts'), 'export {};\n');
+
+    const output = runCli(['framework', 'locate'], {
+      OPL_FRAMEWORK_ROOT: frameworkRoot,
+      OPL_STATE_DIR: path.join(frameworkRoot, 'state'),
+    });
+
+    assert.equal(output.framework_locator.resolved.source, 'OPL_FRAMEWORK_ROOT');
+    assert.equal(output.framework_locator.resolved.root, fs.realpathSync.native(frameworkRoot));
+    assert.equal(
+      output.framework_locator.resolved.source_dir,
+      path.join(fs.realpathSync.native(frameworkRoot), 'src'),
+    );
+  } finally {
+    fs.rmSync(frameworkRoot, { recursive: true, force: true });
+  }
+});
+
 test('framework locate fails closed when OPL_FRAMEWORK_ROOT points outside an OPL Framework root', () => {
   const invalidRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-invalid-root-'));
   try {

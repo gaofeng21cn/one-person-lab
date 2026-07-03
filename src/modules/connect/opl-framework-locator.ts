@@ -90,8 +90,8 @@ function hasFrameworkShape(rootPath: string) {
     fs.existsSync(path.join(rootPath, 'contracts', 'opl-framework', 'public-surface-index.json'))
     && fs.existsSync(path.join(rootPath, 'bin', 'opl'))
     && (
-      fs.existsSync(path.join(rootPath, 'src', 'cli.ts'))
-      || fs.existsSync(path.join(rootPath, 'dist', 'cli.js'))
+      fs.existsSync(path.join(rootPath, 'src', 'entrypoints', 'cli.ts'))
+      || fs.existsSync(path.join(rootPath, 'dist', 'entrypoints', 'cli.js'))
     )
   );
 }

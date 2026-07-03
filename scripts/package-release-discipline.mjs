@@ -89,7 +89,7 @@ function validateFrameworkCore(entry, failures) {
   assertCondition(entry?.current_install_update_source === 'opl_release_channel_manifest', 'framework_core: current source must be the channel manifest', failures);
   assertCondition(typeof entry?.artifact === 'string' && entry.artifact.includes('one-person-lab-framework'), 'framework_core: artifact must point to one-person-lab-framework', failures);
   assertCondition(entry?.release_discipline?.required_gates?.includes('ghcr_framework_artifact_published'), 'framework_core: release gates must publish framework artifact', failures);
-  assertCondition(entry?.release_discipline?.required_gates?.includes('runtime_substrate_apply_and_rollback_tested'), 'framework_core: release gates must require runtime_substrate apply/rollback test', failures);
+  assertCondition(entry?.release_discipline?.required_gates?.includes('runtime_substrate_apply_and_rollback_tested'), 'framework_core: release gates must require runtime_substrate apply/rollback test', failures); // reuse-first: allow contract verifier, not update execution.
   assertCondition(entry?.developer_git_checkout_override?.env === 'OPL_FRAMEWORK_UPDATE_SOURCE', 'framework_core: developer override must use existing framework self-update source env', failures);
   assertCondition(typeof entry?.source_archive?.file_name === 'string', 'framework_core: source archive missing file name', failures);
   assertCondition(Number.isFinite(entry?.source_archive?.size) && entry.source_archive.size > 0, 'framework_core: source archive size is invalid', failures);
@@ -125,7 +125,7 @@ function validateManifest(manifest) {
   assertCondition(automation?.artifact_build?.publication_mode === 'ghcr_package_channel_and_workflow_artifact', 'artifact build must publish GHCR package channel and workflow artifact', failures);
   assertCondition(automation?.checksum?.required_before_publish === true, 'checksum must be required before publish', failures);
   assertCondition(automation?.checksum?.required_before_prepared_artifact === true, 'checksum must be required before prepared artifact', failures);
-  assertCondition(automation?.rollback?.strategy === 'previous_channel_manifest_target', 'rollback strategy must use previous channel manifest target', failures);
+  assertCondition(automation?.rollback?.strategy === 'previous_channel_manifest_target', 'rollback strategy must use previous channel manifest target', failures); // reuse-first: allow package-channel contract verifier, not package manager logic.
   assertCondition(automation?.cleanup?.strategy === 'retain_latest_n_versions_and_declared_rollbacks', 'cleanup strategy must retain latest versions and rollbacks', failures);
   assertCondition(Number.isFinite(automation?.cleanup?.retain_versions) && automation.cleanup.retain_versions >= 2, 'cleanup retain_versions must be >= 2', failures);
   assertCondition(automation?.cleanup?.protected_tags?.includes('latest'), 'cleanup must protect moving latest tag', failures);
