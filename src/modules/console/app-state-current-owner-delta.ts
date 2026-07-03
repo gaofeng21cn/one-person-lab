@@ -1,4 +1,6 @@
 import type { OplStatePaths } from '../../kernel/runtime-state-paths.ts';
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { stringValue, type JsonRecord } from '../../kernel/json-record.ts';
 import { readCurrentOwnerDeltaReadModelProjectionCache } from '../ledger/index.ts';
 import {
   buildCurrentOwnerDeltaCacheRefreshRequiredReadModel,
@@ -6,16 +8,6 @@ import {
 } from '../ledger/index.ts';
 
 const APP_CURRENT_OWNER_DELTA_CACHE_MAX_AGE_MS = 5 * 60 * 1000;
-
-type JsonRecord = Record<string, unknown>;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
 
 function ownerDeltaReadModelFromRuntimeActivity(items: JsonRecord[]) {
   const selected = items.find((item) => stringValue(item.lane) === 'attention')

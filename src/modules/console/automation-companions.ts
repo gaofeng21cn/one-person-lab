@@ -1,4 +1,5 @@
-type JsonRecord = Record<string, unknown>;
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { stringValue as optionalString, type JsonRecord } from '../../kernel/json-record.ts';
 
 interface BuildAutomationDescriptorInput {
   automation_id: string;
@@ -18,14 +19,6 @@ interface BuildAutomationCatalogInput {
   summary: string;
   automations: ReturnType<typeof buildAutomationDescriptor>[];
   readiness_summary?: string | null;
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function requireString(value: unknown, field: string) {

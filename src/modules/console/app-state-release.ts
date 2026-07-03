@@ -4,14 +4,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { readJsonPayloadFile } from '../../kernel/json-file.ts';
+import { record } from '../../kernel/json-record.ts';
 import { buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from '../connect/index.ts';
 import { readOplUpdateChannel } from '../../kernel/system-preferences.ts';
-
-type JsonRecord = Record<string, unknown>;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
 
 function resolveConsoleProjectRoot() {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
@@ -24,7 +20,7 @@ function readOplFrameworkPackageVersion() {
   }
 
   const packageJsonPath = path.join(resolveConsoleProjectRoot(), 'package.json');
-  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  const packageJson = record(readJsonPayloadFile(packageJsonPath));
   const version = typeof packageJson.version === 'string' ? packageJson.version.trim() : '';
   if (!version) {
     throw new FrameworkContractError('contract_shape_invalid', 'OPL Framework package.json is missing version.', {
@@ -49,9 +45,9 @@ function readPackagedFrameworkRevision(): string | null {
   for (const manifestPath of manifestPaths) {
     if (!fs.existsSync(manifestPath)) continue;
     try {
-      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as JsonRecord;
-      const components = isRecord(manifest.components) ? manifest.components : {};
-      const opl = isRecord(components.opl) ? components.opl : {};
+      const manifest = record(readJsonPayloadFile(manifestPath));
+      const components = record(manifest.components);
+      const opl = record(components.opl);
       const commit = typeof opl.git_commit === 'string' ? opl.git_commit.trim() : '';
       if (commit) return shortCommit(commit);
     } catch {

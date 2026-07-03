@@ -1,6 +1,7 @@
 import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import { loadFrameworkContracts } from '../charter/index.ts';
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import type { JsonRecord } from '../../kernel/json-record.ts';
 import {
   readBundledCodexDefaultProfile,
   readLocalCodexAccessState,
@@ -34,14 +35,8 @@ import { buildFeedbackOpsReadModel } from '../foundry-lab/index.ts';
 
 export { parseAppActionExecuteArgs, runOplAppActionExecute } from './app-state-parts/action-execute.ts';
 
-type JsonRecord = Record<string, unknown>;
-
 function nowIso() {
   return new Date().toISOString();
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 export function parseAppStateArgs(args: string[]): { profile: AppStateProfile } {

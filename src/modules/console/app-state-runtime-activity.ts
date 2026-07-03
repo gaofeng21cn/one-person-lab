@@ -1,23 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { isRecord } from '../../kernel/contract-validation.ts';
+import { readJsonFileOrNull } from '../../kernel/json-file.ts';
+import { recordList, stringValue as optionalString, type JsonRecord } from '../../kernel/json-record.ts';
 import { getActiveWorkspaceBinding } from '../workspace/index.ts';
-
-type JsonRecord = Record<string, unknown>;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is JsonRecord => isRecord(entry))
-    : [];
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
 
 function firstString(...values: unknown[]) {
   for (const value of values) {
@@ -31,15 +18,6 @@ function firstString(...values: unknown[]) {
 
 function normalizeStatus(value: unknown) {
   return optionalString(value)?.trim().toLowerCase().replace(/\s+/g, '_') ?? '';
-}
-
-function readJsonRecord(filePath: string) {
-  try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    return isRecord(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
 }
 
 function sourceRef(filePath: string, role: string, label: string) {
@@ -237,8 +215,10 @@ function buildFromStudyRuntimeFiles(workspaceRoot: string, profileRef: string | 
     const studyRoot = path.join(studiesDir, studyId);
     const supervisionPath = path.join(studyRoot, 'artifacts', 'runtime', 'runtime_supervision', 'latest.json');
     const statusPath = path.join(studyRoot, 'artifacts', 'runtime', 'runtime_status_summary.json');
-    const supervision = readJsonRecord(supervisionPath);
-    const status = readJsonRecord(statusPath);
+    const supervisionPayload = readJsonFileOrNull(supervisionPath);
+    const statusPayload = readJsonFileOrNull(statusPath);
+    const supervision = isRecord(supervisionPayload) ? supervisionPayload : null;
+    const status = isRecord(statusPayload) ? statusPayload : null;
     if (!supervision && !status) {
       return [];
     }
@@ -276,8 +256,8 @@ export function buildAppStateRuntimeActivityItems() {
   const profileRef = locator?.profile_ref ?? null;
   for (const candidateRoot of workspaceRootCandidates(workspaceRoot, profileRef)) {
     const portalPath = portalPayloadPath(candidateRoot);
-    const portalPayload = readJsonRecord(portalPath);
-    if (portalPayload) {
+    const portalPayload = readJsonFileOrNull(portalPath);
+    if (isRecord(portalPayload)) {
       return buildFromPortalPayload(candidateRoot, profileRef, portalPath, portalPayload);
     }
   }
