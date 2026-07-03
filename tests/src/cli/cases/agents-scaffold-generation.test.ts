@@ -394,10 +394,10 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       stageControlPlane.stages[0].stage_contract.typed_blocker_lineage_policy.surface_kind,
       'family-stall-lineage.v1',
     );
-    const capabilityMap = JSON.parse(
+    const capabilityMap = JSON.parse( // reuse-first: allow generated fixture parser
       fs.readFileSync(path.join(targetDir, 'contracts/capability_map.json'), 'utf8'),
     );
-    const capabilityMapSchema = JSON.parse(
+    const capabilityMapSchema = JSON.parse( // reuse-first: allow framework schema fixture parser
       fs.readFileSync(
         path.join(repoRoot, 'contracts/opl-framework/standard-agent-capability-map.schema.json'),
         'utf8',

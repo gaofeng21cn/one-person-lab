@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import standardAgentCapabilityMapSchema from '../../../contracts/opl-framework/standard-agent-capability-map.schema.json' with { type: 'json' };
+import { validateJsonSchemaPayload } from '../../kernel/schema-registry.ts';
 import {
   FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
   REQUIRED_REPO_SOURCE_DIRS,
@@ -27,6 +29,12 @@ const REQUIRED_CAPABILITY_MAP_SURFACE_ROLES = [
   'eval_suite',
 ] as const;
 
+type CapabilityMapPayload = {
+  capabilities: Array<{
+    surface_role: string;
+  }>;
+};
+
 function readJsonFile(filePath: string) {
   try {
     return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -35,16 +43,8 @@ function readJsonFile(filePath: string) {
   }
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
 function validateCapabilityMap(capabilityMap: unknown) {
-  if (!isRecord(capabilityMap)) {
+  if (capabilityMap === null || capabilityMap === undefined) {
     return {
       status: 'missing',
       observed_roles: [],
@@ -52,38 +52,30 @@ function validateCapabilityMap(capabilityMap: unknown) {
       blockers: [],
     };
   }
-  const capabilities = Array.isArray(capabilityMap.capabilities)
-    ? capabilityMap.capabilities.filter(isRecord)
-    : [];
+  const schemaValidation = validateJsonSchemaPayload(
+    {
+      schemaId: 'opl.standard_agent_capability_map.v1',
+      schema: standardAgentCapabilityMapSchema,
+      sourceRef: 'contracts/opl-framework/standard-agent-capability-map.schema.json',
+    },
+    capabilityMap,
+  );
+  if (!schemaValidation.ok) {
+    return {
+      status: 'blocked',
+      observed_roles: [],
+      missing_roles: REQUIRED_CAPABILITY_MAP_SURFACE_ROLES,
+      blockers: schemaValidation.errors.map((error) =>
+        `capability_map_schema_invalid:${error.instance_path || '/'}:${error.keyword}`
+      ),
+    };
+  }
+  const capabilities = (capabilityMap as CapabilityMapPayload).capabilities;
   const observedRoles = [...new Set(capabilities
-    .map((entry) => optionalString(entry.surface_role))
-    .filter((entry): entry is string => Boolean(entry)))];
+    .map((entry) => entry.surface_role))];
   const missingRoles = REQUIRED_CAPABILITY_MAP_SURFACE_ROLES.filter((role) => !observedRoles.includes(role));
-  const authority = isRecord(capabilityMap.authority_boundary) ? capabilityMap.authority_boundary : {};
   const blockers = [
-    optionalString(capabilityMap.surface_kind) === 'opl_standard_agent_capability_map'
-      ? null
-      : 'capability_map_surface_kind_invalid',
-    optionalString(capabilityMap.schema_version) === 'standard-agent-capability-map.v1'
-      ? null
-      : 'capability_map_schema_version_invalid',
-    optionalString(capabilityMap.schema_ref) === 'contracts/opl-framework/standard-agent-capability-map.schema.json'
-      ? null
-      : 'capability_map_schema_ref_invalid',
-    optionalString(capabilityMap.resolver_policy) === 'resolver_index_only_no_domain_truth'
-      ? null
-      : 'capability_map_resolver_policy_invalid',
     ...missingRoles.map((role) => `capability_map_missing_role:${role}`),
-    authority.can_write_domain_truth === false ? null : 'capability_map_can_write_domain_truth_must_be_false',
-    authority.can_write_memory_body === false ? null : 'capability_map_can_write_memory_body_must_be_false',
-    authority.can_mutate_artifact_body === false ? null : 'capability_map_can_mutate_artifact_body_must_be_false',
-    authority.can_sign_owner_receipt === false ? null : 'capability_map_can_sign_owner_receipt_must_be_false',
-    authority.can_create_typed_blocker === false ? null : 'capability_map_can_create_typed_blocker_must_be_false',
-    authority.can_authorize_quality_or_export === false
-      ? null
-      : 'capability_map_can_authorize_quality_or_export_must_be_false',
-    authority.can_claim_domain_ready === false ? null : 'capability_map_can_claim_domain_ready_must_be_false',
-    authority.can_claim_production_ready === false ? null : 'capability_map_can_claim_production_ready_must_be_false',
   ].filter((entry): entry is string => Boolean(entry));
   return {
     status: blockers.length === 0 ? 'passed' : 'blocked',
