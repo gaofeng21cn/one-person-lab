@@ -2,7 +2,12 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import {
+  FrameworkContractError,
+  isRecord,
+} from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
+import { stringValue } from '../../kernel/json-record.ts';
 import {
   buildCodexCliPreview,
   buildCodexExecArgs,
@@ -87,14 +92,6 @@ function envOf(env?: Record<string, string | undefined>) {
   return env ?? process.env;
 }
 
-function text(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function normalizeExecutorKind(value: string | null): AgentExecutorKind | null {
   if (!value) {
     return null;
@@ -111,11 +108,11 @@ function normalizeExecutorKind(value: string | null): AgentExecutorKind | null {
 
 function resolveAgentExecutorKind(input: ResolveInput): AgentExecutorKind {
   const env = envOf(input.env);
-  return normalizeExecutorKind(text(input.explicitExecutor))
-    ?? normalizeExecutorKind(text(input.stageAttemptExecutor))
-    ?? normalizeExecutorKind(text(input.requestExecutorPolicy?.executor_kind))
-    ?? normalizeExecutorKind(text(input.stageAttemptExecutorPolicy?.executor_kind))
-    ?? normalizeExecutorKind(text(env.OPL_EXECUTOR_KIND))
+  return normalizeExecutorKind(stringValue(input.explicitExecutor))
+    ?? normalizeExecutorKind(stringValue(input.stageAttemptExecutor))
+    ?? normalizeExecutorKind(stringValue(input.requestExecutorPolicy?.executor_kind))
+    ?? normalizeExecutorKind(stringValue(input.stageAttemptExecutorPolicy?.executor_kind))
+    ?? normalizeExecutorKind(stringValue(env.OPL_EXECUTOR_KIND))
     ?? 'codex_cli';
 }
 
@@ -124,15 +121,15 @@ function resolvePolicyValue(
   requestPolicyValue: string | null | undefined,
   stagePolicyValue: string | null | undefined,
 ) {
-  return text(explicitValue) ?? text(requestPolicyValue) ?? text(stagePolicyValue);
+  return stringValue(explicitValue) ?? stringValue(requestPolicyValue) ?? stringValue(stagePolicyValue);
 }
 
 function selectedPolicyFor(request: AgentExecutionRequest, executorKind: AgentExecutorKind) {
-  const requestPolicyKind = normalizeExecutorKind(text(request.request_executor_policy?.executor_kind));
+  const requestPolicyKind = normalizeExecutorKind(stringValue(request.request_executor_policy?.executor_kind));
   if (requestPolicyKind === executorKind) {
     return { policy: request.request_executor_policy, policy_kind: 'request_executor_policy' };
   }
-  const stagePolicyKind = normalizeExecutorKind(text(request.stage_attempt_executor_policy?.executor_kind));
+  const stagePolicyKind = normalizeExecutorKind(stringValue(request.stage_attempt_executor_policy?.executor_kind));
   if (stagePolicyKind === executorKind) {
     return { policy: request.stage_attempt_executor_policy, policy_kind: 'stage_attempt_executor_policy' };
   }
@@ -147,7 +144,7 @@ function assertNonDefaultPolicyBinding(request: AgentExecutionRequest, executorK
   if (!selectedPolicy.policy) {
     return;
   }
-  const executorBindingRef = text(selectedPolicy.policy.executor_binding_ref);
+  const executorBindingRef = stringValue(selectedPolicy.policy.executor_binding_ref);
   if (executorBindingRef) {
     return;
   }
@@ -192,7 +189,7 @@ function resolveBinary(input: {
   env: Record<string, string | undefined>;
 }) {
   if (input.kind === 'codex_cli') {
-    const envPath = text(input.env.OPL_CODEX_BIN);
+    const envPath = stringValue(input.env.OPL_CODEX_BIN);
     if (executableCandidate(envPath)) {
       return { path: envPath, source: 'OPL_CODEX_BIN' };
     }
@@ -200,10 +197,10 @@ function resolveBinary(input: {
     return pathCandidate ? { path: pathCandidate, source: 'PATH' } : null;
   }
   if (input.kind === 'hermes_agent') {
-    const envPath = text(input.env.OPL_HERMES_AGENT_EXECUTOR_BIN);
+    const envPath = stringValue(input.env.OPL_HERMES_AGENT_EXECUTOR_BIN);
     return executableCandidate(envPath) ? { path: envPath, source: 'OPL_HERMES_AGENT_EXECUTOR_BIN' } : null;
   }
-  const envPath = text(input.env.OPL_CLAUDE_CODE_BIN);
+  const envPath = stringValue(input.env.OPL_CLAUDE_CODE_BIN);
   if (input.kind === 'claude_code') {
     if (executableCandidate(envPath)) {
       return { path: envPath, source: 'OPL_CLAUDE_CODE_BIN' };
@@ -211,7 +208,7 @@ function resolveBinary(input: {
     const pathCandidate = findExecutableInPath('claude', input.env);
     return pathCandidate ? { path: pathCandidate, source: 'PATH' } : null;
   }
-  const antigravityEnvPath = text(input.env.OPL_ANTIGRAVITY_CLI_BIN);
+  const antigravityEnvPath = stringValue(input.env.OPL_ANTIGRAVITY_CLI_BIN);
   if (executableCandidate(antigravityEnvPath)) {
     return { path: antigravityEnvPath, source: 'OPL_ANTIGRAVITY_CLI_BIN' };
   }
@@ -314,7 +311,7 @@ function normalizeTimeoutMs(value: unknown) {
 function parseOptionalCloseout(stdout: string): JsonRecord | null {
   for (const line of stdout.split(/\r?\n/).filter(Boolean).reverse()) {
     try {
-      const parsed = JSON.parse(line) as unknown;
+      const parsed = parseJsonText(line);
       if (isRecord(parsed) && typeof parsed.surface_kind === 'string') {
         return parsed;
       }
@@ -329,7 +326,7 @@ function parseReceiptPayload(stdout: string, executorKind: AgentExecutorKind) {
   let parseError: string | null = null;
   for (const line of stdout.split(/\r?\n/).filter(Boolean).reverse()) {
     try {
-      const parsed = JSON.parse(line) as unknown;
+      const parsed = parseJsonText(line);
       if (isRecord(parsed) && parsed.surface_kind === 'opl_agent_execution_receipt') {
         return parsed;
       }
@@ -407,13 +404,13 @@ function normalizeReceipt(value: unknown, fallback: {
   return {
     surface_kind: 'opl_agent_execution_receipt',
     executor_kind: fallback.kind,
-    mode: text(payload.mode) ?? fallback.mode,
-    cwd: text(payload.cwd) ?? fallback.cwd,
-    prompt_preview: text(payload.prompt_preview) ?? preview(fallback.prompt, 240),
-    session_id: text(payload.session_id),
+    mode: stringValue(payload.mode) ?? fallback.mode,
+    cwd: stringValue(payload.cwd) ?? fallback.cwd,
+    prompt_preview: stringValue(payload.prompt_preview) ?? preview(fallback.prompt, 240),
+    session_id: stringValue(payload.session_id),
     event_summary: eventSummary,
-    stdout_preview: text(payload.stdout_preview) ?? '',
-    stderr_preview: text(payload.stderr_preview) ?? '',
+    stdout_preview: stringValue(payload.stdout_preview) ?? '',
+    stderr_preview: stringValue(payload.stderr_preview) ?? '',
     exit_code: typeof payload.exit_code === 'number' ? payload.exit_code : 0,
     closeout_packet: isRecord(payload.closeout_packet) ? payload.closeout_packet : null,
     executor_contract: isRecord(payload.executor_contract) ? payload.executor_contract : null,
@@ -431,7 +428,7 @@ function normalizeReceipt(value: unknown, fallback: {
 function runCodexExecutor(request: AgentExecutionRequest, executorKind: AgentExecutorKind): AgentExecutionReceipt {
   const json = request.json ?? true;
   const codexBinary = resolveCodexBinary();
-  const codexHome = text(process.env.CODEX_HOME);
+  const codexHome = stringValue(process.env.CODEX_HOME);
   const model = resolvePolicyValue(
     request.model,
     request.request_executor_policy?.model,
@@ -648,27 +645,27 @@ export function runAgentExecutorDoctor(args: {
 }
 
 export function runAgentExecutorRequestFile(requestPath: string) {
-  const payload = JSON.parse(fs.readFileSync(requestPath, 'utf8')) as unknown;
+  const payload = parseJsonText(fs.readFileSync(requestPath, 'utf8'));
   if (!isRecord(payload)) {
     throw new FrameworkContractError('cli_usage_error', 'Agent executor request file must contain a JSON object.', {
       request: requestPath,
     });
   }
   const receipt = runAgentExecutor({
-    executor_kind: text(payload.executor_kind) as AgentExecutorKind | null,
-    stage_attempt_executor_kind: text(payload.stage_attempt_executor_kind) as AgentExecutorKind | null,
+    executor_kind: stringValue(payload.executor_kind) as AgentExecutorKind | null,
+    stage_attempt_executor_kind: stringValue(payload.stage_attempt_executor_kind) as AgentExecutorKind | null,
     request_executor_policy: isRecord(payload.request_executor_policy) ? payload.request_executor_policy : null,
     stage_attempt_executor_policy: isRecord(payload.stage_attempt_executor_policy) ? payload.stage_attempt_executor_policy : null,
-    mode: text(payload.mode),
-    prompt: text(payload.prompt) ?? '',
-    cwd: text(payload.cwd),
+    mode: stringValue(payload.mode),
+    prompt: stringValue(payload.prompt) ?? '',
+    cwd: stringValue(payload.cwd),
     timeout_ms: typeof payload.timeout_ms === 'number' ? payload.timeout_ms : null,
     context_refs: Array.isArray(payload.context_refs)
       ? payload.context_refs.filter((entry): entry is string => typeof entry === 'string')
       : [],
-    model: text(payload.model),
-    provider: text(payload.provider),
-    reasoning_effort: text(payload.reasoning_effort),
+    model: stringValue(payload.model),
+    provider: stringValue(payload.provider),
+    reasoning_effort: stringValue(payload.reasoning_effort),
     json: payload.json !== false,
     domain_payload: isRecord(payload.domain_payload) ? payload.domain_payload : null,
   });
