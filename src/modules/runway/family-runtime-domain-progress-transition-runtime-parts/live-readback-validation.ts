@@ -1,4 +1,20 @@
-const DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID = 'opl_domain_progress_transition_runtime';
+import domainProgressTransitionRuntimeLiveReadbackSchema from '../../../../contracts/opl-framework/domain-progress-transition-runtime-live-readback.schema.json' with { type: 'json' };
+import {
+  validateJsonSchemaPayload,
+  type JsonSchemaRegistryEntry,
+} from '../../../kernel/schema-registry.ts';
+import {
+  DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,
+  isRecord,
+  optionalString,
+} from './shared.ts';
+
+const DOMAIN_PROGRESS_TRANSITION_RUNTIME_LIVE_READBACK_SCHEMA_ENTRY: JsonSchemaRegistryEntry = {
+  schemaId: 'opl.domain_progress_transition_runtime_live_readback.v1',
+  schema: domainProgressTransitionRuntimeLiveReadbackSchema,
+  sourceRef: 'contracts/opl-framework/domain-progress-transition-runtime-live-readback.schema.json',
+};
+
 const STAGE_RUN_IDENTITY_REQUIRED_FIELDS = [
   'stage_run_id',
   'route_identity_key',
@@ -6,14 +22,6 @@ const STAGE_RUN_IDENTITY_REQUIRED_FIELDS = [
   'provider_attempt_ref',
   'attempt_lease_ref',
 ] as const;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
 
 function samePresentString(left: string | null, right: string | null) {
   return Boolean(left && right && left === right);
@@ -129,6 +137,12 @@ function sameStageRunIdentity(input: {
 }
 
 export function validCompleteTransitionRuntimeLiveReadback(value: Record<string, unknown>) {
+  if (!validateJsonSchemaPayload(
+    DOMAIN_PROGRESS_TRANSITION_RUNTIME_LIVE_READBACK_SCHEMA_ENTRY,
+    value,
+  ).ok) {
+    return false;
+  }
   const latestTransactionReadback = isRecord(value.latest_transaction_readback)
     ? value.latest_transaction_readback
     : null;

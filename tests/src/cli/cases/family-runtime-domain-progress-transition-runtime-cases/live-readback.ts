@@ -15,6 +15,9 @@ import {
 import {
   reconcileDomainProgressTransitionFixedPoint,
 } from '../../../../../src/modules/runway/family-runtime-domain-progress-transition-runtime-parts/fixed-point-replay.ts';
+import {
+  validCompleteTransitionRuntimeLiveReadback,
+} from '../../../../../src/modules/runway/family-runtime-domain-progress-transition-runtime-parts/live-readback-validation.ts';
 
 test('DomainProgressTransitionRuntime live readback rebuilds complete physical transaction state from JSONL', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-progress-transition-live-readback-'));
@@ -51,6 +54,7 @@ test('DomainProgressTransitionRuntime live readback rebuilds complete physical t
     assert.equal(readback.surface_kind, 'opl_domain_progress_transition_runtime_live_readback');
     assert.equal(readback.runtime_readback_status, 'complete_transaction');
     assert.equal(readback.transaction_complete, true);
+    assert.equal(validCompleteTransitionRuntimeLiveReadback(readback), true);
     assert.equal(readback.append_only_log_entry_count, 3);
     assert.equal(readback.identity.latest_event_id, append.result.transition_event.event_id);
     assert.equal(readback.identity.latest_outbox_item_id, append.result.transactional_outbox_item.outbox_item_id);
@@ -89,6 +93,26 @@ test('DomainProgressTransitionRuntime live readback rebuilds complete physical t
     assert.ok(stageRunIdentityReadback);
     assert.equal(stageRunIdentityReadback.same_stage_run_identity, true);
     assert.equal(latestTransactionIdentity.transaction_complete, true);
+    assert.equal(
+      validCompleteTransitionRuntimeLiveReadback({
+        ...readback,
+        authority_boundary: {
+          ...readback.authority_boundary,
+          opl_can_create_domain_owner_receipt: true,
+        },
+      }),
+      false,
+    );
+    assert.equal(
+      validCompleteTransitionRuntimeLiveReadback({
+        ...readback,
+        latest_transaction_readback: {
+          ...readback.latest_transaction_readback,
+          same_transaction_event_and_outbox: false,
+        },
+      }),
+      false,
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

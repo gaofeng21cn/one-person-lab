@@ -22,6 +22,7 @@ test('target architecture schema contracts keep owner delta root and audit tail 
     'contracts/opl-framework/stage-typed-blocker.schema.json',
     'contracts/opl-framework/stage-artifact-unit.schema.json',
     'contracts/opl-framework/progress-delta-receipt.schema.json',
+    'contracts/opl-framework/domain-progress-transition-runtime-live-readback.schema.json',
     'contracts/opl-framework/owner-answer.schema.json',
     'contracts/opl-framework/evidence-ledger-event.schema.json',
     'contracts/opl-framework/golden-path-profile.schema.json',
