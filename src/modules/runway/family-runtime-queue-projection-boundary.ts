@@ -55,6 +55,23 @@ export function clearTaskLeaseProjectionSql() {
   return `${columns.leaseOwner} = NULL, ${columns.leaseExpiresAt} = NULL`;
 }
 
+export function taskLeaseProjectionPayload(
+  leaseOwner: string | null,
+  leaseExpiresAt: string | null,
+) {
+  const columns = FAMILY_RUNTIME_TASK_COLUMNS;
+  return {
+    [columns.leaseOwner]: leaseOwner,
+    [columns.leaseExpiresAt]: leaseExpiresAt,
+  };
+}
+
+export function taskRetryBudgetProjection(maxAttempts: number) {
+  return {
+    [FAMILY_RUNTIME_TASK_COLUMNS.maxAttempts]: maxAttempts,
+  };
+}
+
 export function taskFailureProjectionSql() {
   return `${clearTaskLeaseProjectionSql()}, last_error = ?, ${FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason} = ?, updated_at = ?`;
 }

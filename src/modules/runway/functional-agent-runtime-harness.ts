@@ -13,6 +13,7 @@ import {
   type FamilyTransitionResult,
   type FamilyTransitionSpec,
 } from '../stagecraft/index.ts';
+import { taskRetryBudgetProjection } from './family-runtime-queue-projection-boundary.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -638,7 +639,10 @@ function constructedHarnessAttempts(): FunctionalAgentRuntimeHarnessAttempt[] {
       task_id: 'task_constructed_queue',
       status: 'running',
       attempt_count: 1,
-      retry_budget: { max_attempts: 3, cadence_ref: 'cadence:constructed-domain' },
+      retry_budget: {
+        ...taskRetryBudgetProjection(3),
+        cadence_ref: 'cadence:constructed-domain',
+      },
       authority_boundary: HARNESS_AUTHORITY_BOUNDARY,
     },
     {
@@ -647,7 +651,7 @@ function constructedHarnessAttempts(): FunctionalAgentRuntimeHarnessAttempt[] {
       task_id: 'task_constructed_closeout',
       status: 'completed',
       attempt_count: 1,
-      retry_budget: { max_attempts: 3 },
+      retry_budget: taskRetryBudgetProjection(3),
       closeout_refs: ['closeout:constructed-domain/typed-closeout'],
       consumed_refs: ['source:constructed-domain/input'],
       consumed_memory_refs: ['memory:constructed-domain/prior-plan'],
@@ -665,7 +669,7 @@ function constructedHarnessAttempts(): FunctionalAgentRuntimeHarnessAttempt[] {
       task_id: 'task_constructed_memory_receipt',
       status: 'completed',
       attempt_count: 1,
-      retry_budget: { max_attempts: 3 },
+      retry_budget: taskRetryBudgetProjection(3),
       writeback_receipt_refs: ['memory-writeback-receipt:constructed-domain/accepted-by-owner'],
       owner_receipt_refs: ['owner-receipt:constructed-domain/memory-apply'],
       authority_boundary: HARNESS_AUTHORITY_BOUNDARY,
@@ -676,7 +680,7 @@ function constructedHarnessAttempts(): FunctionalAgentRuntimeHarnessAttempt[] {
       task_id: 'task_constructed_human_gate',
       status: 'human_gate',
       attempt_count: 1,
-      retry_budget: { max_attempts: 3 },
+      retry_budget: taskRetryBudgetProjection(3),
       human_gate_refs: ['human-gate:constructed-domain-decision'],
       typed_blocker_refs: ['domain-blocker:human-decision-required'],
       authority_boundary: HARNESS_AUTHORITY_BOUNDARY,
@@ -687,7 +691,7 @@ function constructedHarnessAttempts(): FunctionalAgentRuntimeHarnessAttempt[] {
       task_id: 'task_constructed_retry',
       status: 'retry_queued',
       attempt_count: 1,
-      retry_budget: { max_attempts: 3 },
+      retry_budget: taskRetryBudgetProjection(3),
       typed_blocker_refs: ['provider-failure:retryable'],
       authority_boundary: HARNESS_AUTHORITY_BOUNDARY,
     },
@@ -697,7 +701,7 @@ function constructedHarnessAttempts(): FunctionalAgentRuntimeHarnessAttempt[] {
       task_id: 'task_constructed_dead_letter',
       status: 'dead_lettered',
       attempt_count: 3,
-      retry_budget: { max_attempts: 3 },
+      retry_budget: taskRetryBudgetProjection(3),
       dead_letter_refs: ['provider-failure:retry-budget-exhausted'],
       authority_boundary: HARNESS_AUTHORITY_BOUNDARY,
     },
@@ -707,7 +711,7 @@ function constructedHarnessAttempts(): FunctionalAgentRuntimeHarnessAttempt[] {
       task_id: 'task_constructed_repair',
       status: 'repair_queued',
       attempt_count: 1,
-      retry_budget: { max_attempts: 3 },
+      retry_budget: taskRetryBudgetProjection(3),
       repair_action_refs: ['repair-action:constructed-domain/rerun-owner-stage'],
       owner_receipt_refs: ['owner-receipt:constructed-domain/repair-requested'],
       authority_boundary: HARNESS_AUTHORITY_BOUNDARY,

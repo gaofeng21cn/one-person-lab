@@ -9,6 +9,11 @@ import {
   nowIso,
 } from './family-runtime-store.ts';
 import {
+  FAMILY_RUNTIME_TASK_COLUMNS,
+  taskFailureProjectionSql,
+  taskLeaseProjectionPayload,
+} from './family-runtime-queue-projection-boundary.ts';
+import {
   inspectStageAttempt,
   listStageAttemptsForTask,
   syncStageAttemptFromMaterializedCloseout,
@@ -94,8 +99,9 @@ function terminalTaskResultAfterProviderSync(
   row: FamilyRuntimeTaskRow,
   stageAttempts: StageAttemptPayload[],
 ) {
+  const taskColumns = FAMILY_RUNTIME_TASK_COLUMNS;
   const refreshed = db.prepare(`
-    SELECT status, last_error, dead_letter_reason
+    SELECT status, last_error, ${taskColumns.deadLetterReason}
     FROM tasks
     WHERE task_id = ?
   `).get(row.task_id) as Pick<FamilyRuntimeTaskRow, 'status' | 'last_error' | 'dead_letter_reason'> | undefined;
@@ -178,8 +184,7 @@ function blockTaskForTemporalStartFailure(
   const blockedAt = nowIso();
   db.prepare(`
     UPDATE tasks
-    SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
-      last_error = ?, dead_letter_reason = ?, updated_at = ?
+    SET status = 'blocked', ${taskFailureProjectionSql()}
     WHERE task_id = ?
   `).run(input.errorMessage, 'temporal_stage_attempt_start_failed', blockedAt, input.row.task_id);
   insertEvent(db, {
@@ -207,8 +212,7 @@ function blockTaskForCheckoutCurrentnessFailure(
   const blockedAt = nowIso();
   db.prepare(`
     UPDATE tasks
-    SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
-      last_error = ?, dead_letter_reason = ?, updated_at = ?
+    SET status = 'blocked', ${taskFailureProjectionSql()}
     WHERE task_id = ?
   `).run(reason, reason, blockedAt, input.row.task_id);
   const blockedStageAttempts = updateStageAttemptsForTask(db, {
@@ -261,11 +265,13 @@ function claimDefaultExecutorTask(
 ) {
   const leaseOwner = `opl-family-runtime:${process.pid}`;
   const leaseExpiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+  const leaseProjection = taskLeaseProjectionPayload(leaseOwner, leaseExpiresAt);
+  const taskColumns = FAMILY_RUNTIME_TASK_COLUMNS;
   const attempt = row.attempts + 1;
   const claimedAt = nowIso();
   const result = db.prepare(`
     UPDATE tasks
-    SET status = 'running', attempts = ?, lease_owner = ?, lease_expires_at = ?, updated_at = ?
+    SET status = 'running', attempts = ?, ${taskColumns.leaseOwner} = ?, ${taskColumns.leaseExpiresAt} = ?, updated_at = ?
     WHERE task_id = ? AND status IN ('queued', 'retry_waiting')
   `).run(attempt, leaseOwner, leaseExpiresAt, claimedAt, row.task_id);
   if (result.changes === 0) {
@@ -278,14 +284,12 @@ function claimDefaultExecutorTask(
     source: 'opl-family-runtime',
     payload: {
       attempt,
-      lease_owner: leaseOwner,
-      lease_expires_at: leaseExpiresAt,
+      ...leaseProjection,
     },
   });
   return {
     attempt,
-    lease_owner: leaseOwner,
-    lease_expires_at: leaseExpiresAt,
+    ...leaseProjection,
   };
 }
 
@@ -518,7 +522,7 @@ export async function startDefaultExecutorStageAttempt(
 
   db.prepare(`
     UPDATE tasks
-    SET status = 'running', last_error = NULL, dead_letter_reason = NULL
+    SET status = 'running', last_error = NULL, ${FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason} = NULL
     WHERE task_id = ?
   `).run(row.task_id);
   insertEvent(db, {

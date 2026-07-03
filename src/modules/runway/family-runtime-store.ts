@@ -36,7 +36,14 @@ const RUNTIME_LEDGER_MAX_DEPTH = 6;
 export type FamilyRuntimeTaskStatus =
   typeof FAMILY_RUNTIME_TASK_STATUS[keyof typeof FAMILY_RUNTIME_TASK_STATUS];
 
-export type FamilyRuntimeTaskRow = {
+type FamilyRuntimeTaskProjectionColumns = {
+  [FAMILY_RUNTIME_TASK_COLUMNS.maxAttempts]: number;
+  [FAMILY_RUNTIME_TASK_COLUMNS.leaseOwner]: string | null;
+  [FAMILY_RUNTIME_TASK_COLUMNS.leaseExpiresAt]: string | null;
+  [FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason]: string | null;
+};
+
+export type FamilyRuntimeTaskRow = FamilyRuntimeTaskProjectionColumns & {
   task_id: string;
   domain_id: FamilyRuntimeDomainId;
   task_kind: string;
@@ -45,14 +52,10 @@ export type FamilyRuntimeTaskRow = {
   priority: number;
   status: FamilyRuntimeTaskStatus;
   attempts: number;
-  max_attempts: number;
   source: string;
   requires_approval: 0 | 1;
   approved_at: string | null;
-  lease_owner: string | null;
-  lease_expires_at: string | null;
   last_error: string | null;
-  dead_letter_reason: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -250,6 +253,7 @@ export function openQueueDb() {
 
 export function taskToPayload(row: FamilyRuntimeTaskRow) {
   const payload = parseJsonText(row.payload_json) as Record<string, any>;
+  const columns = FAMILY_RUNTIME_TASK_COLUMNS;
   return {
     task_id: row.task_id,
     domain_id: row.domain_id,
@@ -261,18 +265,18 @@ export function taskToPayload(row: FamilyRuntimeTaskRow) {
     priority: row.priority,
     status: row.status,
     attempts: row.attempts,
-    max_attempts: row.max_attempts,
+    [columns.maxAttempts]: row[columns.maxAttempts],
     source: row.source,
     requires_approval: Boolean(row.requires_approval),
     approved_at: row.approved_at,
-    lease: row.lease_owner
+    lease: row[columns.leaseOwner]
       ? {
-          lease_owner: row.lease_owner,
-          lease_expires_at: row.lease_expires_at,
+          [columns.leaseOwner]: row[columns.leaseOwner],
+          [columns.leaseExpiresAt]: row[columns.leaseExpiresAt],
         }
       : null,
     last_error: row.last_error,
-    dead_letter_reason: row.dead_letter_reason,
+    [columns.deadLetterReason]: row[columns.deadLetterReason],
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -583,6 +587,7 @@ const TEMPORAL_COMPETING_QUEUE_STATUSES: FamilyRuntimeTaskStatus[] = [
 ];
 
 function temporalCompetingQueueTasks(db: DatabaseSync) {
+  const taskColumns = FAMILY_RUNTIME_TASK_COLUMNS;
   const placeholders = TEMPORAL_COMPETING_QUEUE_STATUSES.map(() => '?').join(', ');
   const rows = db.prepare(`
     WITH competing_tasks AS (
@@ -592,11 +597,11 @@ function temporalCompetingQueueTasks(db: DatabaseSync) {
         t.task_kind,
         t.dedupe_key,
         t.attempts,
-        t.max_attempts, -- reuse-first: allow local retry budget projection for Temporal handoff readback only.
-        t.lease_owner, -- reuse-first: allow local lease projection for Temporal handoff readback only.
-        t.lease_expires_at, -- reuse-first: allow local lease projection for Temporal handoff readback only.
+        t.${taskColumns.maxAttempts},
+        t.${taskColumns.leaseOwner},
+        t.${taskColumns.leaseExpiresAt},
         t.last_error,
-        t.dead_letter_reason, -- reuse-first: allow local dead-letter projection for Temporal handoff readback only.
+        t.${taskColumns.deadLetterReason},
         t.updated_at,
         t.created_at,
         COUNT(sa.stage_attempt_id) AS stage_attempt_count,
@@ -613,11 +618,11 @@ function temporalCompetingQueueTasks(db: DatabaseSync) {
       task_kind,
       dedupe_key,
       attempts,
-      max_attempts, -- reuse-first: allow local retry budget projection for Temporal handoff readback only.
-      lease_owner, -- reuse-first: allow local lease projection for Temporal handoff readback only.
-      lease_expires_at, -- reuse-first: allow local lease projection for Temporal handoff readback only.
+      ${taskColumns.maxAttempts},
+      ${taskColumns.leaseOwner},
+      ${taskColumns.leaseExpiresAt},
       last_error,
-      dead_letter_reason, -- reuse-first: allow local dead-letter projection for Temporal handoff readback only.
+      ${taskColumns.deadLetterReason},
       stage_attempt_count,
       temporal_stage_attempt_count,
       COUNT(*) OVER() AS total_competing_task_count
@@ -630,11 +635,11 @@ function temporalCompetingQueueTasks(db: DatabaseSync) {
     task_kind: string;
     dedupe_key: string | null;
     attempts: number;
-    max_attempts: number; // reuse-first: allow local retry budget projection for Temporal handoff readback only.
-    lease_owner: string | null; // reuse-first: allow local lease projection for Temporal handoff readback only.
-    lease_expires_at: string | null; // reuse-first: allow local lease projection for Temporal handoff readback only.
+    [FAMILY_RUNTIME_TASK_COLUMNS.maxAttempts]: number;
+    [FAMILY_RUNTIME_TASK_COLUMNS.leaseOwner]: string | null;
+    [FAMILY_RUNTIME_TASK_COLUMNS.leaseExpiresAt]: string | null;
     last_error: string | null;
-    dead_letter_reason: string | null; // reuse-first: allow local dead-letter projection for Temporal handoff readback only.
+    [FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason]: string | null;
     stage_attempt_count: number;
     temporal_stage_attempt_count: number;
     total_competing_task_count: number;
@@ -647,15 +652,15 @@ function temporalCompetingQueueTasks(db: DatabaseSync) {
       task_kind: row.task_kind,
       dedupe_key: row.dedupe_key,
       attempts: Number(row.attempts ?? 0),
-      max_attempts: Number(row.max_attempts ?? 0), // reuse-first: allow local retry budget projection for Temporal handoff readback only.
-      lease: row.lease_owner // reuse-first: allow local lease projection for Temporal handoff readback only.
+      [taskColumns.maxAttempts]: Number(row[taskColumns.maxAttempts] ?? 0),
+      lease: row[taskColumns.leaseOwner]
         ? {
-            lease_owner: row.lease_owner, // reuse-first: allow local lease projection for Temporal handoff readback only.
-            lease_expires_at: row.lease_expires_at, // reuse-first: allow local lease projection for Temporal handoff readback only.
+            [taskColumns.leaseOwner]: row[taskColumns.leaseOwner],
+            [taskColumns.leaseExpiresAt]: row[taskColumns.leaseExpiresAt],
           }
         : null,
       last_error: row.last_error,
-      dead_letter_reason: row.dead_letter_reason, // reuse-first: allow local dead-letter projection for Temporal handoff readback only.
+      [taskColumns.deadLetterReason]: row[taskColumns.deadLetterReason],
       stage_attempt_count: Number(row.stage_attempt_count ?? 0),
       temporal_stage_attempt_count: Number(row.temporal_stage_attempt_count ?? 0),
       projection_handoff: {
@@ -676,6 +681,7 @@ export function buildQueueTemporalLifecycleBoundary(
   db: DatabaseSync,
   selectedProvider: FamilyRuntimeProviderKind,
 ) {
+  const taskColumns = FAMILY_RUNTIME_TASK_COLUMNS;
   const competing = selectedProvider === 'temporal'
     ? temporalCompetingQueueTasks(db)
     : { totalCount: 0, tasks: [] };
@@ -739,11 +745,11 @@ export function buildQueueTemporalLifecycleBoundary(
       projection_or_audit_when_temporal_selected: [
         'tasks.status',
         'tasks.attempts',
-        'tasks.max_attempts', // reuse-first: allow local max_attempts vocabulary boundary.
-        'tasks.lease_owner',
-        'tasks.lease_expires_at',
+        `${FAMILY_RUNTIME_QUEUE_PROJECTION_BOUNDARY.tables.tasks}.${taskColumns.maxAttempts}`,
+        `${FAMILY_RUNTIME_QUEUE_PROJECTION_BOUNDARY.tables.tasks}.${taskColumns.leaseOwner}`,
+        `${FAMILY_RUNTIME_QUEUE_PROJECTION_BOUNDARY.tables.tasks}.${taskColumns.leaseExpiresAt}`,
         'tasks.last_error',
-        'tasks.dead_letter_reason',
+        `${FAMILY_RUNTIME_QUEUE_PROJECTION_BOUNDARY.tables.tasks}.${taskColumns.deadLetterReason}`,
         'stage_attempts.status',
         'stage_attempts.provider_run_json',
         'stage_attempts.activity_events_json',

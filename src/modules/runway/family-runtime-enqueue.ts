@@ -20,6 +20,10 @@ import {
 import { findAntiLoopStopLossSuccessorAdmission } from './family-runtime-stop-loss-successor-policy.ts';
 import { activeQueueHoldForTaskInput } from './family-runtime-queue-holds.ts';
 import {
+  FAMILY_RUNTIME_TASK_COLUMNS,
+  taskLeaseProjectionPayload,
+} from './family-runtime-queue-projection-boundary.ts';
+import {
   defaultExecutorCandidateRow,
   isDedupeUniqueConstraintError,
   isDefaultExecutorDispatchInput,
@@ -149,6 +153,7 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput): EnqueueTaskR
     admittedPayload,
     createdAt,
   ]);
+  const taskColumns = FAMILY_RUNTIME_TASK_COLUMNS;
   const task = {
     task_id: taskId,
     domain_id: input.domainId,
@@ -158,14 +163,13 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput): EnqueueTaskR
     priority: input.priority ?? 0,
     status: initialStatus,
     attempts: 0,
-    max_attempts: DEFAULT_MAX_ATTEMPTS,
+    [taskColumns.maxAttempts]: DEFAULT_MAX_ATTEMPTS,
     source: input.source ?? 'opl-cli',
     requires_approval: requiresApproval ? 1 : 0,
     approved_at: null,
-    lease_owner: null,
-    lease_expires_at: null,
+    ...taskLeaseProjectionPayload(null, null),
     last_error: initialLastError,
-    dead_letter_reason: null,
+    [taskColumns.deadLetterReason]: null,
     created_at: createdAt,
     updated_at: createdAt,
   };
@@ -173,13 +177,13 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput): EnqueueTaskR
   try {
     db.prepare(`
       INSERT INTO tasks(
-        task_id, domain_id, task_kind, payload_json, dedupe_key, priority, status, attempts, max_attempts,
-        source, requires_approval, approved_at, lease_owner, lease_expires_at, last_error, dead_letter_reason,
+        task_id, domain_id, task_kind, payload_json, dedupe_key, priority, status, attempts, ${taskColumns.maxAttempts},
+        source, requires_approval, approved_at, ${taskColumns.leaseOwner}, ${taskColumns.leaseExpiresAt}, last_error, ${taskColumns.deadLetterReason},
         created_at, updated_at
       )
       VALUES (
-        @task_id, @domain_id, @task_kind, @payload_json, @dedupe_key, @priority, @status, @attempts, @max_attempts,
-        @source, @requires_approval, @approved_at, @lease_owner, @lease_expires_at, @last_error, @dead_letter_reason,
+        @task_id, @domain_id, @task_kind, @payload_json, @dedupe_key, @priority, @status, @attempts, @${taskColumns.maxAttempts},
+        @source, @requires_approval, @approved_at, @${taskColumns.leaseOwner}, @${taskColumns.leaseExpiresAt}, @last_error, @${taskColumns.deadLetterReason},
         @created_at, @updated_at
       )
     `).run(task);
