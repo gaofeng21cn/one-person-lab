@@ -137,6 +137,24 @@
       "decision_ref": "contracts/opl-framework/reuse-first-governance.json"
     },
     {
+      "id": "phase0-test-lane-registry-file-catalog",
+      "status": "allowed_projection_boundary",
+      "categories": [
+        "custom_observability_ledger"
+      ],
+      "path_prefixes": [
+        "scripts/test-lanes.mjs"
+      ],
+      "owner": "OPL Test Harness",
+      "phase": "Phase 0/10",
+      "action": "keep_test_lane_registry_as_file_catalog_not_observability_ledger",
+      "expiry": "2026-12-31",
+      "decision_ref": "scripts/test-lanes.mjs",
+      "false_ready_guard": [
+        "test lane file-name classification does not waive production observability or operator drilldown migration findings"
+      ]
+    },
+    {
       "id": "phase0-maintenance-script-boundaries",
       "status": "owner_decision_required",
       "categories": [
