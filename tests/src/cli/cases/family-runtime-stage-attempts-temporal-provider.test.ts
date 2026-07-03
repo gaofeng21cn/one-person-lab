@@ -16,6 +16,7 @@ import { buildTemporalStageAttemptWorkflowInput } from '../../../../src/modules/
 import { runFamilyRuntime } from '../../../../src/modules/runway/family-runtime.ts';
 import {
   assert,
+  cliPath,
   buildManifestCommand,
   createFamilyContractsFixtureRoot,
   fs,
@@ -102,7 +103,7 @@ test('family-runtime temporal attempt start fails closed when Temporal address i
     });
     const result = spawnSync(process.execPath, [
       '--experimental-strip-types',
-      path.join(repoRoot, 'src', 'cli.ts'),
+      cliPath,
       'family-runtime',
       'attempt',
       'create',
@@ -677,7 +678,7 @@ test('family-runtime Temporal start fails closed when visibility cannot be inspe
     const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
     const start = spawnSync(process.execPath, [
       '--experimental-strip-types',
-      path.join(repoRoot, 'src', 'cli.ts'),
+      cliPath,
       'family-runtime',
       'attempt',
       'start',

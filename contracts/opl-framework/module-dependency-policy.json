@@ -34,6 +34,19 @@
     "detection": "directed_scc_from_cross_module_import_pair_graph",
     "reason": "The current Framework source has public-entry-level module cycles. The checker reports strongly connected module components by default and fails only when this field or --strict-cycles asks for strict enforcement."
   },
+  "completion_audit_policy": {
+    "done_evidence_fields": [
+      "module_entrypoints.expected_count=10 with no missing, mismatched, or unexpected module roots",
+      "root_ts.top_level_count=0 and target CLI entrypoint exists",
+      "cross_module_imports.deep_import_violations.count=0 under --strict-imports",
+      "cross_module_imports.forbidden_dependency_violations.count=0 for configured forbidden_dependencies"
+    ],
+    "partial_gaps": [
+      "cross_module_imports.dependency_cycles remains advisory until --strict-cycles passes",
+      "module public index files are still broad public re-export surfaces; strict imports prove import route legality, not minimal API shape",
+      "next_forbidden_dependency_candidates are advisory until each pair has a migration path and zero accepted callers"
+    ]
+  },
   "dependency_policy": {
     "forbidden_dependencies": [
       {
@@ -65,6 +78,38 @@
         "from_module_id": "workspace",
         "to_module_id": "console",
         "reason": "Workspace owns protocol and file lifecycle projection; Console consumes workspace projections for operator surfaces."
+      }
+    ],
+    "next_forbidden_dependency_candidates": [
+      {
+        "from_module_id": "runway",
+        "to_module_id": "console",
+        "reason": "Runway owns durable execution and runtime state; Console should consume Runway projections rather than becoming a runtime prerequisite.",
+        "promotion_gate": "Split runtime tray/operator projection inputs before enforcing this direction."
+      },
+      {
+        "from_module_id": "stagecraft",
+        "to_module_id": "console",
+        "reason": "Stagecraft owns stage policy and handoff design; Console should project stage readiness rather than feed Stagecraft behavior.",
+        "promotion_gate": "Move any operator narration or drilldown shape behind Stagecraft-owned public output or Console-owned consumer code."
+      },
+      {
+        "from_module_id": "connect",
+        "to_module_id": "console",
+        "reason": "Connect owns directly callable connector and distribution surfaces; it must not require Console implementation to expose connector capability.",
+        "promotion_gate": "Keep connector descriptors and install/sync surfaces callable through Connect public entries without Console imports."
+      },
+      {
+        "from_module_id": "ledger",
+        "to_module_id": "connect",
+        "reason": "Ledger owns refs-only evidence and lineage; connector lookup or distribution behavior should not be a Ledger prerequisite.",
+        "promotion_gate": "Confirm evidence records store refs only and route connector/provider work through Connect callers."
+      },
+      {
+        "from_module_id": "pack",
+        "to_module_id": "console",
+        "reason": "Pack owns declarative ABI and generated surfaces; operator presentation should consume Pack outputs rather than shape Pack internals.",
+        "promotion_gate": "Extract any operator-only rendering or narration into Console consumers before enforcing this pair."
       }
     ]
   },

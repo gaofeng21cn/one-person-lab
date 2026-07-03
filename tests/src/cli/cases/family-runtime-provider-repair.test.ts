@@ -4,6 +4,7 @@ import { TestWorkflowEnvironment } from '@temporalio/testing';
 
 import {
   assert,
+  cliPath,
   fs,
   os,
   path,
@@ -33,7 +34,7 @@ test('family-runtime provider repair uses managed Temporal service state without
 
     const result = spawnSync(process.execPath, [
       '--experimental-strip-types',
-      path.join(repoRoot, 'src', 'cli.ts'),
+      cliPath,
       'family-runtime',
       'provider',
       'repair',

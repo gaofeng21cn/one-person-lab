@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const repoRoot = path.resolve(__dirname, '..', '..');
-const cliPath = path.join(repoRoot, 'src', 'cli.ts');
+const cliPath = path.join(repoRoot, 'src', 'entrypoints', 'cli.ts');
 export const binPath = path.join(repoRoot, 'bin', 'opl');
 
 export function runCli(args: string[], envOverrides: Record<string, string> = {}) {

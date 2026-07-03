@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 import {
   assert,
+  cliPath,
   createGitModuleRemoteFixture,
   fs,
   os,
@@ -40,7 +41,7 @@ test('family-runtime temporal attempt signal fails closed when Temporal address 
     const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
     const result = spawnSync(process.execPath, [
       '--experimental-strip-types',
-      path.join(repoRoot, 'src', 'cli.ts'),
+      cliPath,
       'family-runtime',
       'attempt',
       'signal',
@@ -138,7 +139,7 @@ test('family-runtime temporal attempt cancel fails closed when Temporal address 
     const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
     const result = spawnSync(process.execPath, [
       '--experimental-strip-types',
-      path.join(repoRoot, 'src', 'cli.ts'),
+      cliPath,
       'family-runtime',
       'attempt',
       'cancel',
@@ -186,7 +187,7 @@ test('family-runtime temporal attempt cancel refuses non-temporal attempts', () 
     ], familyRuntimeEnv(stateRoot));
     const result = spawnSync(process.execPath, [
       '--experimental-strip-types',
-      path.join(repoRoot, 'src', 'cli.ts'),
+      cliPath,
       'family-runtime',
       'attempt',
       'cancel',
@@ -336,7 +337,7 @@ test('family-runtime temporal attempt start refuses non-temporal attempts', () =
     ], familyRuntimeEnv(stateRoot));
     const result = spawnSync(process.execPath, [
       '--experimental-strip-types',
-      path.join(repoRoot, 'src', 'cli.ts'),
+      cliPath,
       'family-runtime',
       'attempt',
       'start',

@@ -3,6 +3,7 @@ import net from 'node:net';
 
 import {
   assert,
+  cliPath,
   createFakeCodexFixture,
   fs,
   os,
@@ -274,7 +275,7 @@ test('family-runtime worker start fails closed when Temporal is not configured o
   try {
     const missing = spawnSync(process.execPath, [
       '--experimental-strip-types',
-      path.join(repoRoot, 'src', 'cli.ts'),
+      cliPath,
       'family-runtime',
       'worker',
       'start',
@@ -296,7 +297,7 @@ test('family-runtime worker start fails closed when Temporal is not configured o
 
     const unreachable = spawnSync(process.execPath, [
       '--experimental-strip-types',
-      path.join(repoRoot, 'src', 'cli.ts'),
+      cliPath,
       'family-runtime',
       'worker',
       'start',
@@ -700,7 +701,7 @@ test('family-runtime residency proof rejects conflicting live and production mod
   try {
     const result = spawnSync(process.execPath, [
       '--experimental-strip-types',
-      path.join(repoRoot, 'src', 'cli.ts'),
+      cliPath,
       'family-runtime',
       'residency',
       'proof',

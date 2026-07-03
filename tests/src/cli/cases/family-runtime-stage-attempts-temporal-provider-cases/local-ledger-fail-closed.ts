@@ -9,6 +9,7 @@ import {
 } from '../../../../../src/modules/runway/family-runtime-temporal-constants.ts';
 import {
   assert,
+  cliPath,
   fs,
   os,
   path,
@@ -45,7 +46,7 @@ test('family-runtime temporal attempt start blocks live Codex without stage pack
     ], familyRuntimeEnv(stateRoot)) as TemporalStageAttemptCreateOutput;
     const failure = spawnSync(process.execPath, [
       '--experimental-strip-types',
-      path.join(repoRoot, 'src', 'cli.ts'),
+      cliPath,
       'family-runtime',
       'attempt',
       'start',
