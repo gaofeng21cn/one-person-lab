@@ -1,11 +1,5 @@
 import {
   findLatestManagedUpdateReceipt,
-  type ManagedUpdateComponentReceiptInput,
-  type ManagedUpdateOwnerReceiptProjection,
-  type ManagedUpdatePostApplyActionReceipt,
-  type ManagedUpdateReceiptApplyMode,
-  type ManagedUpdateReceiptStatusDetail,
-  type ManagedUpdateReloadGuidance,
 } from './managed-update-component-receipts.ts';
 
 export type ManagedUpdateOperation = 'status' | 'check' | 'plan' | 'apply' | 'repair' | 'rollback';
@@ -23,6 +17,105 @@ export type ManagedUpdateProviderAdapterId =
   | 'codex_surface_status_adapter'
   | 'companion_tools_status_adapter'
   | 'workflow_profile_adapter';
+
+export type ManagedUpdateReceiptApplyMode =
+  | 'projection_only'
+  | 'auto_apply'
+  | 'controlled_apply'
+  | 'manual_required';
+
+export type ManagedUpdatePostApplyActionReceipt = {
+  action_id: string;
+  status: 'completed' | 'skipped' | 'manual_required' | 'failed';
+  result_ref: string | null;
+};
+
+export type ManagedUpdateReloadGuidance = {
+  reload_required: boolean;
+  reload_recommended: boolean;
+  reload_targets: string[];
+  command_ref: string | null;
+  reason: string | null;
+};
+
+export type ManagedUpdateReceiptStatusDetail = {
+  component_state: string | null;
+  auto_apply_eligible: boolean | null;
+  app_background_safe: boolean | null;
+  clean_managed_targets_count: number | null;
+  manual_required_targets_count: number | null;
+  post_apply_status: 'not_run' | 'completed' | 'manual_required' | 'failed' | 'skipped' | 'unknown';
+  reload_status: 'not_required' | 'recommended' | 'required' | 'manual_required' | 'unknown';
+};
+
+export type ManagedUpdateOwnerReceiptProjection = {
+  owner: string;
+  authority_surface: string;
+  route_kind: string;
+  readback_ref: string;
+  apply_owner: string;
+  package_manager_claim: false;
+  forbidden_claims: string[];
+};
+
+export type ManagedUpdateComponentReceipt = {
+  surface_kind: 'opl_managed_update_component_receipt';
+  schema_version: 'opl_managed_update_component_receipt.v1';
+  receipt_ref: string;
+  receipt_status: 'recorded';
+  recorded_at: string;
+  operation: ManagedUpdateOperation;
+  component_id: string;
+  provider_id: string;
+  adapter_id: ManagedUpdateProviderAdapterId;
+  source_manifest_ref: string | null;
+  from_version: string | null;
+  from_digest: string | null;
+  to_version: string | null;
+  to_digest: string | null;
+  verify_result: 'passed' | 'failed' | 'unknown';
+  activated_at: string;
+  post_apply_hooks: string[];
+  rollback_ref: string | null;
+  repair_action: string | null;
+  adapter_result_ref: string | null;
+  apply_mode: ManagedUpdateReceiptApplyMode;
+  owner_projection: ManagedUpdateOwnerReceiptProjection;
+  status_detail: ManagedUpdateReceiptStatusDetail;
+  post_apply_action_statuses: ManagedUpdatePostApplyActionReceipt[];
+  reload_guidance: ManagedUpdateReloadGuidance;
+  authority_boundary: {
+    can_write_domain_truth: false;
+    can_write_domain_memory_body: false;
+    can_mutate_domain_artifact_body: false;
+    can_create_owner_receipt: false;
+    can_claim_quality_or_export_verdict: false;
+  };
+};
+
+export type ManagedUpdateComponentReceiptInput = {
+  operation: ManagedUpdateOperation;
+  component_id: string;
+  provider_id: string;
+  adapter_id: ManagedUpdateProviderAdapterId;
+  source_manifest_ref: string | null;
+  from_version: string | null;
+  from_digest: string | null;
+  to_version: string | null;
+  to_digest: string | null;
+  verify_result: 'passed' | 'failed' | 'unknown';
+  activated_at?: string | null;
+  post_apply_hooks: string[];
+  rollback_ref?: string | null;
+  repair_action?: string | null;
+  adapter_result_ref?: string | null;
+  apply_mode: ManagedUpdateReceiptApplyMode;
+  owner_projection: ManagedUpdateOwnerReceiptProjection;
+  status_detail: ManagedUpdateReceiptStatusDetail;
+  post_apply_action_statuses: ManagedUpdatePostApplyActionReceipt[];
+  reload_guidance: ManagedUpdateReloadGuidance;
+};
+
 export type ManagedUpdateComponentClass = ManagedUpdateProviderId;
 export type ManagedUpdateConditionStatus = 'True' | 'False' | 'Unknown';
 export type ManagedUpdateComponentState =

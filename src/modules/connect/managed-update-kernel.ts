@@ -15,8 +15,6 @@ import { resolveProjectRoot } from './system-installation/shared.ts';
 import { scholarSkillsStateForAgentPackageChannel } from './system-installation/scholarskills-package-channel.ts';
 import {
   managedUpdateComponentReceiptLedgerFilePath,
-  type ManagedUpdateReceiptStatusDetail,
-  type ManagedUpdateReloadGuidance,
 } from './managed-update-component-receipts.ts';
 import { managedUpdateLockFilePath, MANAGED_UPDATE_LOCK_STALE_AFTER_SECONDS } from './managed-update-lock.ts';
 import {
@@ -45,6 +43,8 @@ import {
   type ManagedUpdateConditionStatus,
   type ManagedUpdateKernelInput,
   type ManagedUpdateProviderId,
+  type ManagedUpdateReceiptStatusDetail,
+  type ManagedUpdateReloadGuidance,
 } from './managed-update-owner-boundary.ts';
 
 function asRecord(value: unknown): Record<string, unknown> | null {

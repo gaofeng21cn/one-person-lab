@@ -25,11 +25,15 @@ import {
   managedUpdatePostApplyStatus,
   managedUpdateReloadStatus,
   selectedManagedUpdateComponentIds,
+  type ManagedUpdateComponentReceiptInput,
   type ManagedUpdateKernelInput,
   type ManagedUpdateOwnerExecutionReceiptResult,
   type ManagedUpdateOwnerExecutionStatus,
   type ManagedUpdateOwnerPostApplyAction,
   type ManagedUpdateProviderAdapterId,
+  type ManagedUpdateReceiptApplyMode,
+  type ManagedUpdateReceiptStatusDetail,
+  type ManagedUpdateReloadGuidance,
 } from './managed-update-owner-boundary.ts';
 import { resolveFrameworkUpdateTargetRoot, runOplFrameworkSelfRollback } from './system-installation/framework-self-update.ts';
 import { resolveProjectRoot } from './system-installation/shared.ts';
@@ -40,10 +44,6 @@ import {
 import {
   managedUpdateComponentReceiptLedgerFilePath,
   recordManagedUpdateComponentReceipts,
-  type ManagedUpdateComponentReceiptInput,
-  type ManagedUpdateReceiptApplyMode,
-  type ManagedUpdateReceiptStatusDetail,
-  type ManagedUpdateReloadGuidance,
 } from './managed-update-component-receipts.ts';
 
 type ManagedUpdateProjection = Awaited<ReturnType<typeof buildManagedUpdateKernelProjection>>;
