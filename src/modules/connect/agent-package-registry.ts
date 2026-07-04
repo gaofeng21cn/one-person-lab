@@ -625,6 +625,39 @@ function assertTrustTierAssigned(
   }
 }
 
+function assertManifestMatchesRegistrySelection(
+  manifest: AgentPackageManifest,
+  selection: {
+    packageId: string | null;
+    registryEntry: AgentPackageRegistryEntry | null;
+    registryUrl: string | null;
+    manifestUrl: string;
+  },
+) {
+  if (!selection.registryEntry) {
+    return;
+  }
+  if (selection.packageId && manifest.package_id !== selection.packageId) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package registry entry and manifest package_id must match.', {
+      registry_url: selection.registryUrl,
+      manifest_url: selection.manifestUrl,
+      registry_package_id: selection.packageId,
+      manifest_package_id: manifest.package_id,
+      failure_code: 'registry_manifest_package_id_mismatch',
+    });
+  }
+  if (manifest.version !== selection.registryEntry.latest_version) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package registry entry and manifest version must match.', {
+      registry_url: selection.registryUrl,
+      manifest_url: selection.manifestUrl,
+      package_id: manifest.package_id,
+      registry_latest_version: selection.registryEntry.latest_version,
+      manifest_version: manifest.version,
+      failure_code: 'registry_manifest_version_mismatch',
+    });
+  }
+}
+
 function buildLock(input: {
   manifest: AgentPackageManifest;
   manifestUrl: string;
@@ -696,6 +729,7 @@ export async function runOplAgentPackageManifestValidate(input: AgentPackageMani
   const selection = await resolveManifestSelection(input);
   const fetched = await fetchJsonSource(selection.manifestUrl);
   const manifest = normalizeManifest(fetched.payload, selection.manifestUrl);
+  assertManifestMatchesRegistrySelection(manifest, selection);
   const effectiveTrustTier = stringValue(input.trustTier) ?? selection.trustTier;
   const sourceKind = normalizeSourceKind(input.sourceKind, selection.manifestUrl);
   const receipt = lifecycleReceipt({
@@ -749,6 +783,7 @@ export async function runOplAgentPackageInstall(input: AgentPackageInstallInput)
   const selection = await resolveManifestSelection(input);
   const fetched = await fetchJsonSource(selection.manifestUrl);
   const manifest = normalizeManifest(fetched.payload, selection.manifestUrl);
+  assertManifestMatchesRegistrySelection(manifest, selection);
   const trustTier = stringValue(input.trustTier) ?? selection.trustTier;
   assertTrustTierAssigned(trustTier, selection.manifestUrl);
   const sourceKind = normalizeSourceKind(input.sourceKind, selection.manifestUrl);

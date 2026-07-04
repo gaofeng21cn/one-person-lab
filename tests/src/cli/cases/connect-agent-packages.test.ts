@@ -274,6 +274,53 @@ test('app action execute routes install_from_manifest_url to Framework package l
   }
 });
 
+test('connect agent-packages rejects registry manifest identity drift before writing locks', () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-drift-state-'));
+  const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-drift-'));
+  try {
+    const manifestPath = path.join(fixtureDir, 'manifest.json');
+    const registryPath = path.join(fixtureDir, 'registry.json');
+    fs.writeFileSync(
+      manifestPath,
+      formatJsonPayload({
+        ...agentPackageManifest(),
+        package_id: 'different.package',
+      }),
+      'utf8',
+    );
+    fs.writeFileSync(
+      registryPath,
+      formatJsonPayload({
+        ...registryPayload(pathToFileURL(fixtureDir).href),
+        entries: [
+          {
+            ...registryPayload(pathToFileURL(fixtureDir).href).entries[0],
+            manifest_url: pathToFileURL(manifestPath).href,
+          },
+        ],
+      }),
+      'utf8',
+    );
+    const failure = runCliFailure([
+      'connect',
+      'agent-packages',
+      'install',
+      '--registry-url',
+      pathToFileURL(registryPath).href,
+      '--package-id',
+      'third.party.research',
+    ], { OPL_STATE_DIR: stateDir });
+
+    assert.equal(failure.payload.error.code, 'contract_shape_invalid');
+    assert.equal(failure.payload.error.details.failure_code, 'registry_manifest_package_id_mismatch');
+    assert.equal(fs.existsSync(path.join(stateDir, 'agent-package-locks.json')), false);
+    assert.equal(fs.existsSync(path.join(stateDir, 'agent-package-lifecycle-ledger.json')), false);
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(fixtureDir, { recursive: true, force: true });
+  }
+});
+
 test('connect agent-packages rejects invalid manifests before writing locks', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-invalid-state-'));
   const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-invalid-'));

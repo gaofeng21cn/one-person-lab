@@ -125,6 +125,7 @@ const fastTestFiles = [
   'tests/src/cli/cases/connect-pubmed.test.ts',
   'tests/src/cli/cases/connect-reference-verification.test.ts',
   'tests/src/cli/cases/connect-external-skills.test.ts',
+  'tests/src/cli/cases/connect-agent-packages.test.ts',
   'tests/src/cli/cases/cli-command-registry.test.ts',
   'tests/src/cli/cases/runtime-research-evidence-pack-read-model.test.ts',
   'tests/src/cli/cases/runtime-research-hypothesis-portfolio-read-model.test.ts',
