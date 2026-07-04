@@ -9,6 +9,7 @@ export const OPL_CONNECT_SOURCE_MODULE = {
 export { readBundledCodexDefaultProfile, readLocalCodexAccessState, readLocalCodexDefaultsIfAvailable } from './local-codex-defaults.ts';
 export type { LocalCodexDefaults } from './local-codex-defaults.ts';
 export { listManagedInstallUpdateReceipts } from './managed-install-update-ledger.ts';
+export { MANAGED_UPDATE_OWNER_ACTIONS, managedUpdateCommand } from './managed-update-owner-boundary.ts';
 export { buildManagedShellCommandEnv, buildManagedShellEnvWithUvCacheRecovery, buildManagedShellRecoveryTmpRoot, prepareManagedShellCommandCwd, recordManagedShellUvCacheRecovery } from '../../kernel/managed-shell-command-env.ts';
 export { buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from './opl-release.ts';
 export { resolveDefaultFamilyWorkspaceRoot, syncFamilySkillPacks } from './opl-skills.ts';

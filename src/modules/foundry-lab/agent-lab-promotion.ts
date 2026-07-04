@@ -16,6 +16,7 @@ export const MECHANISM_REF = 'mechanism:agent-lab/default-stage-led-agent-mechan
 export const MECHANISM_VERSION = 'opl-agent-lab-mechanism.v1';
 export const NEXT_MECHANISM_VERSION = 'opl-agent-lab-mechanism.v1.canary.1';
 export const ROLLBACK_TARGET_REF = `mechanism-version-ref:${MECHANISM_VERSION}`;
+const MECHANISM_REVERT_COMMAND_REF = 'command-ref:opl-agent-lab/mechanism-rollback'; // reuse-first: allow Agent Lab recovery command ref, not updater/package manager.
 
 export type AgentLabPromotionRiskTier = 'low_risk' | 'medium_risk' | 'high_risk';
 
@@ -183,7 +184,7 @@ export function buildMechanismRollback(sourceRefs: string[] = []) {
   return {
     rollback_ref: stableId('oalmrb', [MECHANISM_REF, MECHANISM_VERSION, NEXT_MECHANISM_VERSION, sourceRefs]),
     rollback_target_ref: ROLLBACK_TARGET_REF,
-    rollback_command_ref: 'command-ref:opl-agent-lab/mechanism-rollback',
+    rollback_command_ref: MECHANISM_REVERT_COMMAND_REF,
     rollback_available: true,
     restores_version: MECHANISM_VERSION,
   };

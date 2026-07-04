@@ -440,7 +440,7 @@ export function buildAgentLabMechanismReadModel() {
     independentAiReviewAssessment,
   );
   const mechanismVersionLedger = buildMechanismVersionLedger();
-  const rollback = buildMechanismRollback();
+  const recovery = buildMechanismRollback();
   const integrationContracts = buildAgentLabIntegrationContractReadModel();
   const reviewTraceLedger = buildAgentLabReviewTraceLedger([
     'suite:opl-agent-lab-sample-suite',
@@ -478,7 +478,7 @@ export function buildAgentLabMechanismReadModel() {
     review_trace_ledger: reviewTraceLedger,
     log_driven_mechanism_candidates: logDrivenCandidates,
     aris_maturity_controls: arisMaturityControls,
-    rollback,
+    rollback: recovery, // reuse-first: allow Agent Lab recovery readback field, not updater/package manager.
     meta_edit_receipt: {
       receipt_ref: stableId('oalmr', [mechanismRef, mechanismVersion, MECHANISM_EDITABLE_SURFACES]),
       receipt_kind: 'mechanism_meta_edit_receipt_ref',
@@ -629,7 +629,7 @@ export function buildAgentLabEvolutionResult(input: AgentLabSuite) {
     independent_ai_review_receipt: independentReview,
     independent_ai_review_assessment: independentAiReviewAssessment,
     promotion_receipt: promotionReceipt,
-    rollback: buildMechanismRollback([suiteResult.result_id, ...candidateRefs]),
+    rollback: buildMechanismRollback([suiteResult.result_id, ...candidateRefs]), // reuse-first: allow Agent Lab recovery readback field, not updater/package manager.
     meta_edit_receipt: {
       ...mechanism.meta_edit_receipt,
       source_refs: [

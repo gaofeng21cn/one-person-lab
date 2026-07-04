@@ -31,6 +31,7 @@ const CODEX_ATTEMPT_TRACE_FLYWHEEL_AUTHORITY_BOUNDARY = {
 };
 
 const DEFAULT_REPLAY_FORK_VARIANT_COUNT = 3;
+const CODEX_ATTEMPT_TRACE_FALLBACK_TARGET_REF = 'rollback-target-ref'; // reuse-first: allow Agent Lab recovery proof ref, not updater/package manager.
 
 function unique(values: string[]) {
   return [...new Set(values.map((value) => value.trim()).filter((value) => value.length > 0))];
@@ -196,7 +197,7 @@ function forkCandidates(input: {
           'independent-ai-review-receipt-ref',
           'no-forbidden-write-proof-ref',
           'promotion-receipt-ref',
-          'rollback-target-ref',
+          CODEX_ATTEMPT_TRACE_FALLBACK_TARGET_REF,
           'canary-observation-ref',
         ],
         can_authorize_domain_ready: false,

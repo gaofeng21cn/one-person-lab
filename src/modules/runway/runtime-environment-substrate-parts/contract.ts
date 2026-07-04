@@ -30,9 +30,11 @@ export interface RuntimeEnvironmentTargetInput {
   paperRoot?: string;
 }
 
+export const RUNTIME_ENVIRONMENT_FALLBACK_POINTER = 'rollback'; // reuse-first: allow runtime-environment fallback pointer, not updater/package manager.
+
 export interface RuntimeEnvironmentMaterializeInput extends RuntimeEnvironmentTargetInput {
   apply?: boolean;
-  targetPointer?: 'current' | 'rollback' | 'staged';
+  targetPointer?: 'current' | typeof RUNTIME_ENVIRONMENT_FALLBACK_POINTER | 'staged';
 }
 
 export interface RuntimeEnvironmentCachePruneInput {

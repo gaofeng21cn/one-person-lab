@@ -8,6 +8,7 @@ import type { OplUpdateChannel } from '../../../kernel/system-preferences.ts';
 import { runFamilyRuntime } from '../../runway/index.ts';
 import { runOplEngineAction } from '../../connect/index.ts';
 import { type OplEngineAction, type OplModuleAction, type OplModuleId } from '../../connect/index.ts';
+import { MANAGED_UPDATE_OWNER_ACTIONS, managedUpdateCommand } from '../../connect/index.ts';
 import { executeWorkspaceAppAction } from '../app-state-workspace-actions.ts';
 import { syncFamilySkillPacks } from '../../connect/index.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
@@ -831,7 +832,7 @@ async function executeDirectAppAction(
 
   if (options.actionId === 'settings_rollback_runtime_substrate') {
     return {
-      delegatedSurface: 'opl update rollback --component runtime_substrate',
+      delegatedSurface: managedUpdateCommand(MANAGED_UPDATE_OWNER_ACTIONS.revert, 'runtime_substrate'),
       result: buildSettingsControlCenterDryRun(options.actionId, options.payload),
     };
   }

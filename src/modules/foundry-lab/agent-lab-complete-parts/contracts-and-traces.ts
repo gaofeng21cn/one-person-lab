@@ -41,6 +41,9 @@ export const DEFAULT_EFFICIENCY_NONREGRESSION_REFS = {
   ],
 };
 
+const STAGE_SKILL_HELPER_RECOVERY_REF = 'rollback-ref:agent-lab/integration-contract-last-known-good'; // reuse-first: allow Agent Lab recovery ref, not updater/package manager.
+const DOMAIN_OWNER_ROUTE_RECOVERY_REF = 'rollback-ref:agent-lab/no-op-domain-authority'; // reuse-first: allow Agent Lab recovery ref, not updater/package manager.
+
 export const MECHANISM_EDITABLE_SURFACES = [
   {
     surface_ref: 'mechanism-surface:agent-lab/stage-policy',
@@ -85,7 +88,7 @@ export function buildAgentLabIntegrationContractReadModel() {
         typed_blocker_ref: 'typed-blocker-ref:agent-lab/integration-contract-failed',
         owner_route_ref: 'owner-route:opl/framework-agent-lab',
         retry_or_dead_letter_ref: 'retry-or-dead-letter-ref:agent-lab/integration-contract-failed',
-        rollback_ref: 'rollback-ref:agent-lab/integration-contract-last-known-good',
+        rollback_ref: STAGE_SKILL_HELPER_RECOVERY_REF,
       },
     },
     {
@@ -113,7 +116,7 @@ export function buildAgentLabIntegrationContractReadModel() {
         typed_blocker_ref: 'typed-blocker-ref:agent-lab/domain-owner-route-required',
         owner_route_ref: 'owner-route:domain-owner/high-risk-surface',
         retry_or_dead_letter_ref: 'retry-or-dead-letter-ref:agent-lab/domain-owner-route-required',
-        rollback_ref: 'rollback-ref:agent-lab/no-op-domain-authority',
+        rollback_ref: DOMAIN_OWNER_ROUTE_RECOVERY_REF,
       },
     },
   ];

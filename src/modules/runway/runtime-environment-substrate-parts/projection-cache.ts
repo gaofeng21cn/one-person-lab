@@ -7,6 +7,7 @@ import {
   cachePolicy,
   CONTRACT_REF,
   materializationPolicy,
+  RUNTIME_ENVIRONMENT_FALLBACK_POINTER,
   RUNTIME_ENVIRONMENT_SUBSTRATE_CONTRACT,
 } from './contract.ts';
 import {
@@ -247,7 +248,7 @@ export function cacheInventoryProjection() {
       ],
       protected_pointer_refs: pointerRefs,
       current_pointer_ref: pointerRefs.find((entry) => entry.pointer_kind === 'current')?.pointer_ref ?? null,
-      rollback_pointer_ref: pointerRefs.find((entry) => entry.pointer_kind === 'rollback')?.pointer_ref ?? null,
+      rollback_pointer_ref: pointerRefs.find((entry) => entry.pointer_kind === RUNTIME_ENVIRONMENT_FALLBACK_POINTER)?.pointer_ref ?? null,
       stale_layer_count: staleRuntimeRoots.length,
       stale_runtime_root_count: staleRuntimeRoots.length,
       materialized_runtime_roots: materializedRoots,

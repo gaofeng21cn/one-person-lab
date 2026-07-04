@@ -568,7 +568,7 @@ function developerModeScaleoutFollowthrough(verifiedReceipts: DeveloperModeClose
       route_repetition_refs_should_cover:
         'repeat direct-fix or fork-PR closeout receipts across more than one target repo or patrol observation',
       risk_tier_auto_promotion_refs_should_cover:
-        'verified Agent Lab risk-tier-promotion ledger receipt refs with independent AI review, rollback, canary, no-forbidden-write, and verification refs',
+        'verified Agent Lab risk-tier-promotion ledger receipt refs with independent AI review, recovery target, canary, no-forbidden-write, and verification refs',
       app_patrol_mount_refs_should_cover:
         'App/default caller patrol mounting refs showing Developer Mode patrol surfaces are visible without full drilldown',
       typed_blocker_refs_may_explain_missing_scaleout: true,

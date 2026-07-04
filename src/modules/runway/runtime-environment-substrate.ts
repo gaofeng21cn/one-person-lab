@@ -26,6 +26,7 @@ import {
   requirementProfileIdentity,
   resolveBinary,
   runtimeEnvironmentConsumerBoundary,
+  RUNTIME_ENVIRONMENT_FALLBACK_POINTER,
   runtimeLockProjection,
   runtimeRootForBundle,
   safeSegment,
@@ -510,7 +511,7 @@ export function buildRuntimeEnvironmentMaterializeReadback(input: RuntimeEnviron
     authority_boundary: authorityBoundary(),
   };
   writeJsonFile(receiptPath, receipt);
-  if (targetPointer === 'current' || targetPointer === 'rollback') {
+  if (targetPointer === 'current' || targetPointer === RUNTIME_ENVIRONMENT_FALLBACK_POINTER) {
     writePointer(target, targetPointer, {
       surface_kind: 'opl_runtime_environment_pointer',
       version: 'opl-runtime-environment-pointer.v1',
@@ -544,7 +545,7 @@ export function buildRuntimeEnvironmentMaterializeReadback(input: RuntimeEnviron
       env_ref: stateRef(envPath),
       writes_runtime_root: true,
       updates_current_pointer: targetPointer === 'current',
-      updates_rollback_pointer: targetPointer === 'rollback',
+      updates_rollback_pointer: targetPointer === RUNTIME_ENVIRONMENT_FALLBACK_POINTER,
       protects_current_pointer: true,
       protects_rollback_pointer: true,
       apply_blocker_ref: null,

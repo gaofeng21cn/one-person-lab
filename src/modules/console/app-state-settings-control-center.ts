@@ -1,14 +1,26 @@
 import { buildDockerWebuiSettingsReadModel } from './app-state-settings-control-center-parts/docker-webui-read-model.ts';
 import { resolveSettingsCodexAccess } from './app-state-settings-control-center-parts/codex-access-read-model.ts';
+import { MANAGED_UPDATE_OWNER_ACTIONS, managedUpdateCommand } from '../connect/index.ts';
 
 type JsonRecord = Record<string, unknown>;
+type SettingsActionTaskKind =
+  | 'read'
+  | 'repair'
+  | 'sync'
+  | 'apply'
+  | 'reload'
+  | 'cleanup_plan'
+  | 'configure'
+  | 'verify'
+  | 'check'
+  | typeof MANAGED_UPDATE_OWNER_ACTIONS.revert;
 
 type SettingsAction = {
   action_id: string;
   stable_id: string;
   label: string;
   section_id: string;
-  task_kind: 'read' | 'repair' | 'sync' | 'apply' | 'reload' | 'cleanup_plan' | 'configure' | 'verify' | 'check' | 'rollback';
+  task_kind: SettingsActionTaskKind;
   taxonomy: string;
   delegated_surface: string;
   payload_fields: string[];
@@ -372,7 +384,7 @@ const SETTINGS_CONTROL_CENTER_ACTION_SECTIONS: SettingsSection[] = [
   {
     section_id: 'updates',
     label: 'Updates',
-    description: 'App update checks, managed update projection, reload guidance, and explicit rollback planning.',
+    description: 'App update checks, managed update projection, reload guidance, and explicit previous-version planning.',
     state: 'available',
     source_ref: 'opl update status/check + app_state.release',
   },
@@ -513,17 +525,17 @@ export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
   {
     action_id: 'settings_rollback_runtime_substrate',
     stable_id: 'rollback_runtime_substrate',
-    label: 'Plan runtime substrate rollback',
+    label: 'Plan runtime substrate restore',
     section_id: 'updates',
-    task_kind: 'rollback',
+    task_kind: MANAGED_UPDATE_OWNER_ACTIONS.revert,
     taxonomy: 'settings.updates.rollback_runtime_substrate',
-    delegated_surface: 'opl update rollback --component runtime_substrate',
+    delegated_surface: managedUpdateCommand(MANAGED_UPDATE_OWNER_ACTIONS.revert, 'runtime_substrate'),
     payload_fields: ['receipt_ref'],
     mutates: 'none_read_only',
     dry_run_supported: true,
     confirmation_required: true,
     danger_level: 'high',
-    impact: 'Projects the explicit runtime substrate rollback route; actual pointer rollback stays behind the managed update authority.',
+    impact: 'Projects the explicit previous-runtime restore route; actual pointer restore stays behind the managed update authority.',
     follow_up_action_ids: ['settings_check_app_update', 'settings_reload_codex_surface'],
     verify_action_id: 'settings_check_app_update',
   },
