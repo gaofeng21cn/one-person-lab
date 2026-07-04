@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { parseJsonText } from '../../src/kernel/json-file.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -44,7 +45,7 @@ test('native helper prebuild script packs and installs platform binaries into th
       encoding: 'utf8',
     });
     assert.equal(pack.status, 0, pack.stderr);
-    const packOutput = JSON.parse(pack.stdout);
+    const packOutput = parseJsonText(pack.stdout) as any;
     assert.equal(packOutput.status, 'packed');
     assert.equal(packOutput.target_triple, targetTriple);
     assert.equal(packOutput.crate_version, crateVersion);
@@ -62,7 +63,7 @@ test('native helper prebuild script packs and installs platform binaries into th
       encoding: 'utf8',
     });
     assert.equal(install.status, 0, install.stderr);
-    const installOutput = JSON.parse(install.stdout);
+    const installOutput = parseJsonText(install.stdout) as any;
     assert.equal(installOutput.status, 'installed');
     assert.equal(
       installOutput.cache_dir,
@@ -110,7 +111,7 @@ test('native helper prebuild script restores release archive assets before insta
       encoding: 'utf8',
     });
     assert.equal(archive.status, 0, archive.stderr);
-    const archiveOutput = JSON.parse(archive.stdout);
+    const archiveOutput = parseJsonText(archive.stdout) as any;
     assert.equal(archiveOutput.status, 'archived');
     assert.match(archiveOutput.archive_name, /^opl-native-helper-.+\.tar\.gz$/);
 
@@ -128,7 +129,7 @@ test('native helper prebuild script restores release archive assets before insta
       encoding: 'utf8',
     });
     assert.equal(install.status, 0, install.stderr);
-    const installOutput = JSON.parse(install.stdout);
+    const installOutput = parseJsonText(install.stdout) as any;
     assert.equal(installOutput.status, 'installed');
     assert.equal(installOutput.restore_attempts[0].status, 'restored_release_archive');
     assert.equal(fs.existsSync(path.join(installOutput.cache_dir, 'opl-state-indexer')), true);
@@ -176,7 +177,7 @@ test('native helper prebuild script restores GHCR OCI archive assets before inst
       encoding: 'utf8',
     });
     assert.equal(archive.status, 0, archive.stderr);
-    const archiveOutput = JSON.parse(archive.stdout) as { archive_file: string; sha256: string; bytes: number };
+    const archiveOutput = parseJsonText(archive.stdout) as { archive_file: string; sha256: string; bytes: number };
     const manifest = {
       schemaVersion: 2,
       mediaType: 'application/vnd.oci.image.manifest.v1+json',
@@ -228,7 +229,7 @@ test('native helper prebuild script restores GHCR OCI archive assets before inst
       },
     });
     assert.equal(install.status, 0, install.stderr);
-    const installOutput = JSON.parse(install.stdout);
+    const installOutput = parseJsonText(install.stdout) as any;
     assert.equal(installOutput.status, 'installed');
     assert.equal(installOutput.restore_attempts[0].status, 'restored_oci_archive');
     assert.equal(installOutput.restore_attempts[0].tag, `${targetTriple}-${crateVersion}`);
@@ -275,7 +276,7 @@ test('native helper prebuild script rejects binaries that do not match the manif
       encoding: 'utf8',
     });
     assert.equal(check.status, 1);
-    const checkOutput = JSON.parse(check.stdout);
+    const checkOutput = parseJsonText(check.stdout) as any;
     assert.equal(checkOutput.status, 'invalid_prebuild');
     assert.equal(
       checkOutput.errors.some((entry: { code?: string }) => entry.code === 'prebuild_binary_checksum_mismatch'),
@@ -313,7 +314,7 @@ test('native helper prebuild script preserves Windows executable names for relea
       encoding: 'utf8',
     });
     assert.equal(pack.status, 0, pack.stderr);
-    const packOutput = JSON.parse(pack.stdout);
+    const packOutput = parseJsonText(pack.stdout) as any;
     assert.equal(packOutput.target_triple, windowsTarget);
     assert.equal(packOutput.binaries[0].binary, 'opl-sysprobe');
     assert.equal(packOutput.binaries[0].file_name, 'opl-sysprobe.exe');
@@ -336,7 +337,7 @@ test('native helper prebuild script preserves Windows executable names for relea
       encoding: 'utf8',
     });
     assert.equal(install.status, 0, install.stderr);
-    const installOutput = JSON.parse(install.stdout);
+    const installOutput = parseJsonText(install.stdout) as any;
     assert.equal(fs.existsSync(path.join(installOutput.cache_dir, 'opl-state-indexer.exe')), true);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
