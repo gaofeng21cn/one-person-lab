@@ -1,5 +1,9 @@
 import { validateJsonSchemaPayload } from '../../../../src/kernel/schema-registry.ts';
-import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, repoRoot, runCli, test } from '../helpers.ts';
+
+function readJsonFile<T = any>(filePath: string): T {
+  return parseJsonText(fs.readFileSync(filePath, 'utf8')) as T;
+}
 
 test('agents scaffold can generate and validate a declarative pack domain-agent skeleton', () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-agent-'));
@@ -60,9 +64,7 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(fs.existsSync(path.join(targetDir, 'runtime/fixtures/README.md')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'runtime/sidecar/README.md')), false);
 
-    const descriptor = JSON.parse(
-      fs.readFileSync(path.join(targetDir, 'contracts/domain_descriptor.json'), 'utf8'),
-    );
+    const descriptor = readJsonFile(path.join(targetDir, 'contracts/domain_descriptor.json'));
     assert.equal(descriptor.domain_id, 'award-foundry');
     assert.equal(
       descriptor.standard_contract_refs.foundry_agent_series,
@@ -82,9 +84,7 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     );
     assert.equal(descriptor.standard_contract_refs.capability_map, 'contracts/capability_map.json');
     assert.equal(descriptor.authority_boundary.opl_can_write_domain_truth, false);
-    const foundryAgentSeries = JSON.parse(
-      fs.readFileSync(path.join(targetDir, 'contracts/foundry_agent_series.json'), 'utf8'),
-    );
+    const foundryAgentSeries = readJsonFile(path.join(targetDir, 'contracts/foundry_agent_series.json'));
     assert.equal(foundryAgentSeries.surface_kind, 'opl_foundry_agent_series_contract');
     assert.equal(foundryAgentSeries.version, 'foundry-agent-series.v1');
     assert.equal(
@@ -216,9 +216,7 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       foundryAgentSeries.app_projection_policy.app_consumes_shared_progress_projection_only,
       true,
     );
-    const packCompilerInput = JSON.parse(
-      fs.readFileSync(path.join(targetDir, 'contracts/pack_compiler_input.json'), 'utf8'),
-    );
+    const packCompilerInput = readJsonFile(path.join(targetDir, 'contracts/pack_compiler_input.json'));
     assert.equal(packCompilerInput.surface_kind, 'opl_domain_pack_compiler_input');
     assert.equal(packCompilerInput.generated_surface_owner, 'one-person-lab');
     assert.equal(packCompilerInput.domain_pack_owner, 'award-foundry');
@@ -257,9 +255,7 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       'agent/knowledge/domain_boundary.md',
       'agent/quality_gates/domain_acceptance.md',
     ]);
-    const stageControlPlane = JSON.parse(
-      fs.readFileSync(path.join(targetDir, 'contracts/stage_control_plane.json'), 'utf8'),
-    );
+    const stageControlPlane = readJsonFile(path.join(targetDir, 'contracts/stage_control_plane.json'));
     assert.equal(stageControlPlane.surface_kind, 'family_stage_control_plane');
     assert.equal(stageControlPlane.stage_pack_conformance_version, 'standard-stage-pack.v2');
     assert.equal(stageControlPlane.stages.length, 1);
@@ -394,14 +390,9 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       stageControlPlane.stages[0].stage_contract.typed_blocker_lineage_policy.surface_kind,
       'family-stall-lineage.v1',
     );
-    const capabilityMap = JSON.parse( // reuse-first: allow generated fixture parser
-      fs.readFileSync(path.join(targetDir, 'contracts/capability_map.json'), 'utf8'),
-    );
-    const capabilityMapSchema = JSON.parse( // reuse-first: allow framework schema fixture parser
-      fs.readFileSync(
-        path.join(repoRoot, 'contracts/opl-framework/standard-agent-capability-map.schema.json'),
-        'utf8',
-      ),
+    const capabilityMap = readJsonFile(path.join(targetDir, 'contracts/capability_map.json'));
+    const capabilityMapSchema = readJsonFile(
+      path.join(repoRoot, 'contracts/opl-framework/standard-agent-capability-map.schema.json'),
     );
     const capabilityMapValidation = validateJsonSchemaPayload(
       {
@@ -444,15 +435,11 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       assert.equal(capability.owner_closeout_boundary.can_write_owner_receipt_body, false);
       assert.equal(capability.owner_closeout_boundary.can_create_typed_blocker, false);
     }
-    const generatedSurfaceHandoff = JSON.parse(
-      fs.readFileSync(path.join(targetDir, 'contracts/generated_surface_handoff.json'), 'utf8'),
-    );
+    const generatedSurfaceHandoff = readJsonFile(path.join(targetDir, 'contracts/generated_surface_handoff.json'));
     assert.equal(generatedSurfaceHandoff.surface_kind, 'opl_generated_surface_handoff');
     assert.equal(generatedSurfaceHandoff.generated_surface_owner, 'one-person-lab');
     assert.equal(generatedSurfaceHandoff.domain_repo_can_own_generated_surface, false);
-    const functionalAudit = JSON.parse(
-      fs.readFileSync(path.join(targetDir, 'contracts/functional_privatization_audit.json'), 'utf8'),
-    );
+    const functionalAudit = readJsonFile(path.join(targetDir, 'contracts/functional_privatization_audit.json'));
     assert.equal(functionalAudit.surface_kind, 'functional_privatization_audit');
     assert.equal(
       functionalAudit.private_functional_surface_admission_policy.default_posture,
@@ -472,18 +459,14 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       'provenance_or_fixture',
     ]);
     assert.equal(functionalAudit.authority_boundary.domain_can_claim_generic_runtime_owner, false);
-    const privateSurfacePolicy = JSON.parse(
-      fs.readFileSync(path.join(targetDir, 'contracts/private_functional_surface_policy.json'), 'utf8'),
-    );
+    const privateSurfacePolicy = readJsonFile(path.join(targetDir, 'contracts/private_functional_surface_policy.json'));
     assert.equal(privateSurfacePolicy.surface_kind, 'opl_domain_private_functional_surface_admission_policy');
     assert.equal(privateSurfacePolicy.domain_id, 'award-foundry');
     assert.equal(
       privateSurfacePolicy.forbidden_private_surface_classes.includes('generic_cli_mcp_product_wrapper'),
       true,
     );
-    const workspaceLifecyclePolicy = JSON.parse(
-      fs.readFileSync(path.join(targetDir, 'contracts/workspace_lifecycle_policy.json'), 'utf8'),
-    );
+    const workspaceLifecyclePolicy = readJsonFile(path.join(targetDir, 'contracts/workspace_lifecycle_policy.json'));
     assert.equal(
       workspaceLifecyclePolicy.repo_source_boundaries.runtime_artifacts_live_in_source_repo,
       false,
@@ -492,18 +475,14 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       workspaceLifecyclePolicy.authority_boundary.policy_can_claim_domain_ready_or_artifact_authority,
       false,
     );
-    const stageOperatingPrinciples = JSON.parse(
-      fs.readFileSync(path.join(targetDir, 'contracts/stage_operating_principles.json'), 'utf8'),
-    );
+    const stageOperatingPrinciples = readJsonFile(path.join(targetDir, 'contracts/stage_operating_principles.json'));
     assert.equal(stageOperatingPrinciples.surface_kind, 'opl_standard_agent_stage_operating_principles');
     assert.equal(stageOperatingPrinciples.domain_id, 'award-foundry');
     assert.equal(stageOperatingPrinciples.management_boundary.stage_unit, 'coarse_grained_stage_attempt');
     assert.equal(stageOperatingPrinciples.default_read_surface.root, 'current_owner_delta');
     assert.equal(stageOperatingPrinciples.default_read_surface.raw_worklist_default, false);
     assert.equal(stageOperatingPrinciples.default_read_surface.readiness_default, false);
-    const principleAdoption = JSON.parse(
-      fs.readFileSync(path.join(targetDir, 'contracts/standard-agent-principles-adoption.json'), 'utf8'),
-    );
+    const principleAdoption = readJsonFile(path.join(targetDir, 'contracts/standard-agent-principles-adoption.json'));
     assert.equal(principleAdoption.surface_kind, 'opl_standard_agent_principles_adoption');
     assert.equal(principleAdoption.adopted_principle_pack_ref, 'contracts/opl-framework/standard-agent-principles.json');
     assert.equal(principleAdoption.domain_mapping.domain_intake.is_standalone_skill, false);
