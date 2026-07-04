@@ -21,7 +21,6 @@ import {
 } from '../../kernel/contract-validation.ts';
 import {
   parseJsonText,
-  writeJsonPayloadFile,
 } from '../../kernel/json-file.ts';
 import {
   stringList,
@@ -37,6 +36,17 @@ import {
   OPL_WORK_ORDER_PRIMITIVE_OWNER,
   type ExecutionSurfaceRef,
 } from './agent-lab-work-order-execution-surfaces.ts';
+import {
+  buildCommandResult,
+  gitRawOutput,
+  readJson,
+  runCommand,
+  runShellVerification,
+  writeJson,
+  writeMarkdown,
+  type CommandResult,
+} from './agent-lab-work-order-execution-parts/io.ts';
+import { buildCodexPrompt } from './agent-lab-work-order-execution-parts/prompt.ts';
 
 export type AgentLabWorkOrderExecutionOptions = {
   workOrderPath: string;
@@ -55,14 +65,6 @@ type WorkOrderExecutionPresentation = {
   receiptSurfaceKind: string;
   receiptVersion: string;
   commandSurface: 'work-order execute';
-};
-
-type CommandResult = {
-  command: string;
-  cwd: string;
-  exit_code: number;
-  stdout_tail: string[];
-  stderr_tail: string[];
 };
 
 type OwnerCloseoutResult = {
@@ -86,111 +88,6 @@ const WORK_ORDER_EXECUTION_PRESENTATION: WorkOrderExecutionPresentation = {
   receiptVersion: 'opl.work-order-execution.v1',
   commandSurface: 'work-order execute',
 };
-
-function readJson(filePath: string): JsonRecord {
-  try {
-    return parseJsonText(fs.readFileSync(filePath, 'utf8')) as JsonRecord;
-  } catch (error) {
-    throw new FrameworkContractError(
-      'contract_json_invalid',
-      `JSON file could not be read: ${filePath}`,
-      {
-        file: filePath,
-        cause: error instanceof Error ? error.message : String(error),
-      },
-    );
-  }
-}
-
-function writeJson(filePath: string, payload: unknown): void {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  writeJsonPayloadFile(filePath, payload);
-}
-
-function writeMarkdown(filePath: string, content: string): void {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${content.trimEnd()}\n`);
-}
-
-function runCommand(command: string, args: string[], cwd: string, options: {
-  env?: NodeJS.ProcessEnv;
-  allowFailure?: boolean;
-} = {}): CommandResult {
-  const result = spawnSync(command, args, {
-    cwd,
-    encoding: 'utf8',
-    maxBuffer: 16 * 1024 * 1024,
-    env: {
-      ...process.env,
-      GIT_AUTHOR_NAME: 'OPL Agent Lab',
-      GIT_AUTHOR_EMAIL: 'agent-lab@example.invalid',
-      GIT_COMMITTER_NAME: 'OPL Agent Lab',
-      GIT_COMMITTER_EMAIL: 'agent-lab@example.invalid',
-      ...options.env,
-    },
-  });
-  const commandString = [command, ...args].join(' ');
-  const output = {
-    command: commandString,
-    cwd,
-    exit_code: result.status ?? 1,
-    stdout_tail: (result.stdout ?? '').split(/\r?\n/).filter(Boolean).slice(-20),
-    stderr_tail: (result.stderr ?? '').split(/\r?\n/).filter(Boolean).slice(-20),
-  };
-  if (!options.allowFailure && output.exit_code !== 0) {
-    throw new FrameworkContractError(
-      'build_command_failed',
-      `Agent Lab work order command failed: ${commandString}`,
-      output,
-    );
-  }
-  return output;
-}
-
-function runShellVerification(command: string, cwd: string): CommandResult {
-  return {
-    ...runCommand('/bin/bash', ['-lc', command], cwd, { allowFailure: true }),
-    command,
-  };
-}
-
-function buildCommandResult(command: string, cwd: string, result: ReturnType<typeof spawnSync>): CommandResult {
-  const stdout = typeof result.stdout === 'string' ? result.stdout : result.stdout?.toString('utf8') ?? '';
-  const stderr = typeof result.stderr === 'string' ? result.stderr : result.stderr?.toString('utf8') ?? '';
-  return {
-    command,
-    cwd,
-    exit_code: result.status ?? 1,
-    stdout_tail: stdout.split(/\r?\n/).filter(Boolean).slice(-20),
-    stderr_tail: stderr.split(/\r?\n/).filter(Boolean).slice(-20),
-  };
-}
-
-function gitOutput(args: string[], cwd: string): string {
-  const result = runCommand('git', args, cwd);
-  return result.stdout_tail.join('\n').trim();
-}
-
-function gitRawOutput(args: string[], cwd: string): string {
-  const result = spawnSync('git', args, {
-    cwd,
-    encoding: 'utf8',
-    maxBuffer: 16 * 1024 * 1024,
-  });
-  if ((result.status ?? 1) !== 0) {
-    throw new FrameworkContractError(
-      'build_command_failed',
-      `Agent Lab work order git command failed: git ${args.join(' ')}`,
-      {
-        command: `git ${args.join(' ')}`,
-        cwd,
-        exit_code: result.status ?? 1,
-        stderr_tail: (result.stderr ?? '').split(/\r?\n/).filter(Boolean).slice(-20),
-      },
-    );
-  }
-  return result.stdout ?? '';
-}
 
 function assertWorktreeDirIgnored(targetAgentDir: string): void {
   const result = spawnSync('git', ['check-ignore', '-q', '.worktrees/agent-lab-ignore-probe'], {
@@ -257,37 +154,6 @@ function verificationCommandsFor(workOrder: JsonRecord, explicitCommands: string
     .map(commandInferredFromVerificationRef)
     .filter((entry): entry is string => Boolean(entry));
   return [...new Set([...explicitCommands, ...inferred, 'git diff --check'])];
-}
-
-function buildCodexPrompt(input: {
-  workOrderPath: string;
-  workOrder: JsonRecord;
-  targetAgentDir: string;
-  worktreePath: string;
-  outputDir: string;
-}): string {
-  return [
-    'You are Codex CLI executing an OPL work-order developer patch primitive.',
-    `Developer work order JSON: ${input.workOrderPath}`,
-    `Target worktree: ${input.worktreePath}`,
-    `Target source repo: ${input.targetAgentDir}`,
-    `OPL work-order output directory: ${input.outputDir}`,
-    `Work order id: ${stringValue(input.workOrder.work_order_id) ?? 'unknown'}`,
-    `Allowed editable surfaces: ${JSON.stringify(stringList(input.workOrder.allowed_editable_surfaces))}`,
-    `Target repo file hints: ${JSON.stringify(stringList(input.workOrder.target_repo_file_hints))}`,
-    `Required verification refs: ${JSON.stringify(stringList(input.workOrder.required_verification_refs))}`,
-    `Forbidden target surfaces: ${JSON.stringify(stringList(
-      isRecord(input.workOrder.implementation_controls)
-        ? input.workOrder.implementation_controls.forbidden_target_paths_or_surfaces
-        : [],
-    ))}`,
-    '',
-    'Read the target repository context before editing. Implement the smallest source/test/docs patch that satisfies the work order.',
-    'Keep changes inside the target worktree. Do not commit, merge, push, or clean worktrees; Agent Lab owns absorb and cleanup.',
-    'Do not write target domain truth, memory body, artifact body, visual truth, quality verdict, export verdict, owner receipt, or default promotion claims.',
-    'Do not lower review/export gates or replace target owner authority.',
-    'If the work order cannot be executed safely, write a refs-only typed blocker to the Agent Lab output directory as typed-blocker.json, then stop without fabricating success.',
-  ].join('\n');
 }
 
 function assertExecutableWorkOrder(workOrder: JsonRecord): void {
