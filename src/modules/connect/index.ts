@@ -9,6 +9,7 @@ export const OPL_CONNECT_SOURCE_MODULE = {
 export {
   listOplAgentPackages,
   runOplAgentPackageExposureAction,
+  runOplAgentPackageHomeShortcutPreferencesSet,
   runOplAgentPackageInstall,
   runOplAgentPackageManifestValidate,
   runOplAgentPackageRegistryRefresh,
@@ -19,6 +20,7 @@ export {
   runOplAgentPackageUpdate,
 } from './agent-package-registry.ts';
 export type {
+  AgentPackageHomeShortcutPreferencesSetInput,
   AgentPackageInstallInput,
   AgentPackageManifestValidateInput,
   AgentPackagePackageActionInput,

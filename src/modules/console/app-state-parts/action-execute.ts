@@ -3,6 +3,7 @@ import { parseJsonText } from '../../../kernel/json-file.ts';
 import { runRuntimeOperatorActionExecute } from '../../runway/index.ts';
 import {
   runOplAgentPackageExposureAction,
+  runOplAgentPackageHomeShortcutPreferencesSet,
   runOplAgentPackageInstall,
   runOplAgentPackageRegistryRefresh,
   runOplAgentPackageRepair,
@@ -406,6 +407,25 @@ function agentPackageIdPayload(actionId: string, payload: JsonRecord) {
   return { packageId };
 }
 
+function agentPackageHomeShortcutPreferencePayload(payload: JsonRecord) {
+  const { packageId } = agentPackageIdPayload('agent_package_home_shortcut_preferences_set', payload);
+  const shortcutId = stringPayloadField(payload, 'shortcut_id')
+    ?? stringPayloadField(payload, 'shortcutId');
+  if (!shortcutId) {
+    throw new FrameworkContractError('cli_usage_error', 'agent_package_home_shortcut_preferences_set action requires payload.shortcut_id.', {
+      action_id: 'agent_package_home_shortcut_preferences_set',
+      required: ['shortcut_id'],
+    });
+  }
+  const visible = typeof payload.visible === 'boolean' ? payload.visible : undefined;
+  const sortOrder = typeof payload.sort_order === 'number' && Number.isFinite(payload.sort_order)
+    ? payload.sort_order
+    : typeof payload.sortOrder === 'number' && Number.isFinite(payload.sortOrder)
+      ? payload.sortOrder
+      : undefined;
+  return { packageId, shortcutId, visible, sortOrder };
+}
+
 function buildDockerWebuiSettingsManualAction(actionId: string, commandPreview: string[], payload: JsonRecord) {
   const action = settingsControlCenterActionById(actionId);
   return {
@@ -774,6 +794,16 @@ async function executeDirectAppAction(
       delegatedSurface: `opl connect agent-packages ${action} --package-id <package_id>`,
       result: runOplAgentPackageExposureAction(action, {
         ...agentPackageIdPayload(options.actionId, options.payload),
+        dryRun: options.dryRun,
+      }),
+    };
+  }
+
+  if (options.actionId === 'agent_package_home_shortcut_preferences_set') {
+    return {
+      delegatedSurface: 'opl connect agent-packages home-shortcut-preferences set --package-id <package_id> --shortcut-id <shortcut_id>',
+      result: runOplAgentPackageHomeShortcutPreferencesSet({
+        ...agentPackageHomeShortcutPreferencePayload(options.payload),
         dryRun: options.dryRun,
       }),
     };

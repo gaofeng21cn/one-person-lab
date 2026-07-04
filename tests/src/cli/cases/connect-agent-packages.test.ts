@@ -5,10 +5,9 @@ import { pathToFileURL } from 'node:url';
 import { assert, fs, os, path, runCli, runCliAsync, runCliFailure, test } from '../helpers.ts';
 import { formatJsonPayload, parseJsonText } from '../../../../src/kernel/json-file.ts';
 
-function createPluginSourceFixture() {
+function createPluginSourceFixture(input: { includeRequiredSkill?: boolean } = {}) {
   const pluginSourcePath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-plugin-source-'));
   fs.mkdirSync(path.join(pluginSourcePath, '.codex-plugin'), { recursive: true });
-  fs.mkdirSync(path.join(pluginSourcePath, 'skills', 'third-party-research'), { recursive: true });
   fs.writeFileSync(
     path.join(pluginSourcePath, '.codex-plugin', 'plugin.json'),
     formatJsonPayload({
@@ -19,11 +18,14 @@ function createPluginSourceFixture() {
     }),
     'utf8',
   );
-  fs.writeFileSync(
-    path.join(pluginSourcePath, 'skills', 'third-party-research', 'SKILL.md'),
-    '# Third Party Research\n\nUse for fixture package materialization tests.\n',
-    'utf8',
-  );
+  if (input.includeRequiredSkill !== false) {
+    fs.mkdirSync(path.join(pluginSourcePath, 'skills', 'third-party-research'), { recursive: true });
+    fs.writeFileSync(
+      path.join(pluginSourcePath, 'skills', 'third-party-research', 'SKILL.md'),
+      '# Third Party Research\n\nUse for fixture package materialization tests.\n',
+      'utf8',
+    );
+  }
   return pluginSourcePath;
 }
 
@@ -212,17 +214,21 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
             rollback_ref: string;
             bundled_required_skill_ids: string[];
             physical_surface: {
-              status: string;
-              codex_plugin_cache_path: string;
-              marketplace_path: string;
-              codex_config_path: string;
-            };
+            status: string;
+            codex_plugin_cache_path: string;
+            marketplace_path: string;
+            codex_config_path: string;
+            materialized_required_skill_ids: string[];
+            materialized_required_skill_paths: string[];
           };
+        };
           physical_surface: {
             status: string;
             codex_plugin_cache_path: string;
             marketplace_path: string;
             codex_config_path: string;
+            materialized_required_skill_ids: string[];
+            materialized_required_skill_paths: string[];
           };
           lifecycle_receipt: {
             receipt_ref: string;
@@ -254,11 +260,24 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       assert.equal(install.opl_agent_package_install.physical_surface.status, 'materialized');
       assert.equal(install.opl_agent_package_install.package_lock.physical_surface.status, 'materialized');
       assert.equal(install.opl_agent_package_install.lifecycle_receipt.physical_surface.status, 'materialized');
+      assert.deepEqual(
+        install.opl_agent_package_install.physical_surface.materialized_required_skill_ids,
+        ['third-party-research'],
+      );
       assert.equal(fs.existsSync(path.join(
         install.opl_agent_package_install.physical_surface.codex_plugin_cache_path,
         '.codex-plugin',
         'plugin.json',
       )), true);
+      assert.equal(
+        install.opl_agent_package_install.physical_surface.materialized_required_skill_paths[0],
+        path.join(
+          install.opl_agent_package_install.physical_surface.codex_plugin_cache_path,
+          'skills',
+          'third-party-research',
+          'SKILL.md',
+        ),
+      );
       assert.equal(fs.existsSync(path.join(
         install.opl_agent_package_install.physical_surface.codex_plugin_cache_path,
         'skills',
@@ -284,6 +303,14 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
         opl_agent_packages: {
           installed_package_count: number;
           installed_packages: Array<{ package_id: string; physical_surface: { status: string } }>;
+          home_shortcut_preferences: Array<{
+            package_id: string;
+            shortcut_id: string;
+            visible: boolean;
+            sort_order: number | null;
+            source: string;
+            installed: boolean;
+          }>;
           lifecycle_receipt_count: number;
           registry_cache: { entry_count: number };
         };
@@ -292,6 +319,19 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       assert.equal(list.opl_agent_packages.installed_package_count, 1);
       assert.equal(list.opl_agent_packages.installed_packages[0].package_id, 'third.party.research');
       assert.equal(list.opl_agent_packages.installed_packages[0].physical_surface.status, 'materialized');
+      assert.deepEqual(list.opl_agent_packages.home_shortcut_preferences.map((entry) => ({
+        package_id: entry.package_id,
+        shortcut_id: entry.shortcut_id,
+        visible: entry.visible,
+        source: entry.source,
+        installed: entry.installed,
+      })), [{
+        package_id: 'third.party.research',
+        shortcut_id: 'research',
+        visible: true,
+        source: 'default',
+        installed: true,
+      }]);
       assert.equal(list.opl_agent_packages.lifecycle_receipt_count, 3);
       assert.equal(list.opl_agent_packages.registry_cache.entry_count, 1);
 
@@ -430,11 +470,13 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
         opl_agent_package_status: {
           status: string;
           installed_package_count: number;
+          home_shortcut_preferences: Array<{ shortcut_id: string; visible: boolean; sort_order: number | null; source: string }>;
           lifecycle_receipts: Array<{ action: string }>;
         };
       };
       assert.equal(status.opl_agent_package_status.status, 'available');
       assert.equal(status.opl_agent_package_status.installed_package_count, 1);
+      assert.equal(status.opl_agent_package_status.home_shortcut_preferences[0].shortcut_id, 'research');
       assert.deepEqual(
         status.opl_agent_package_status.lifecycle_receipts.map((receipt) => receipt.action),
         ['rollback', 'enable', 'disable', 'unhide', 'hide', 'repair', 'update', 'install', 'manifest_validate'],
@@ -489,6 +531,34 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
     fs.rmSync(stateDir, { recursive: true, force: true });
     fs.rmSync(homeDir, { recursive: true, force: true });
     fs.rmSync(pluginSourcePath, { recursive: true, force: true });
+  }
+});
+
+test('connect agent-packages rejects local package payloads missing bundled required skills', () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-missing-skill-state-'));
+  const pluginSourcePath = createPluginSourceFixture({ includeRequiredSkill: false });
+  const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-missing-skill-'));
+  try {
+    const manifestPath = path.join(fixtureDir, 'manifest.json');
+    fs.writeFileSync(manifestPath, formatJsonPayload(agentPackageManifest({ pluginSourcePath })), 'utf8');
+    const failure = runCliFailure([
+      'connect',
+      'agent-packages',
+      'install',
+      '--manifest-url',
+      pathToFileURL(manifestPath).href,
+      '--trust-tier',
+      'third_party_verified',
+    ], { OPL_STATE_DIR: stateDir });
+
+    assert.equal(failure.payload.error.code, 'contract_shape_invalid');
+    assert.equal(failure.payload.error.details.failure_code, 'agent_package_required_skill_missing');
+    assert.deepEqual(failure.payload.error.details.missing_required_skill_ids, ['third-party-research']);
+    assert.equal(fs.existsSync(path.join(stateDir, 'agent-package-locks.json')), false);
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(pluginSourcePath, { recursive: true, force: true });
+    fs.rmSync(fixtureDir, { recursive: true, force: true });
   }
 });
 
@@ -551,6 +621,65 @@ test('app action execute routes install_from_manifest_url to Framework package l
     assert.equal(repair.app_action_execution.delegated_surface, 'opl connect agent-packages repair --package-id <package_id>');
     assert.equal(repair.app_action_execution.result.opl_agent_package_repair.status, 'repaired');
     assert.equal(repair.app_action_execution.result.opl_agent_package_repair.lifecycle_receipt.action, 'repair');
+
+    const shortcutPreference = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'agent_package_home_shortcut_preferences_set',
+      '--payload',
+      JSON.stringify({
+        package_id: 'third.party.research',
+        shortcut_id: 'research',
+        visible: false,
+        sort_order: 9,
+      }),
+    ], { OPL_STATE_DIR: stateDir }) as {
+      app_action_execution: {
+        delegated_surface: string;
+        result: {
+          opl_agent_package_home_shortcut_preferences: {
+            status: string;
+            preference: { shortcut_id: string; visible: boolean; sort_order: number };
+            lifecycle_receipt: { action: string; writes_performed: boolean };
+          };
+        };
+      };
+    };
+    assert.equal(
+      shortcutPreference.app_action_execution.delegated_surface,
+      'opl connect agent-packages home-shortcut-preferences set --package-id <package_id> --shortcut-id <shortcut_id>',
+    );
+    assert.equal(shortcutPreference.app_action_execution.result.opl_agent_package_home_shortcut_preferences.status, 'preferences_updated');
+    assert.equal(shortcutPreference.app_action_execution.result.opl_agent_package_home_shortcut_preferences.preference.shortcut_id, 'research');
+    assert.equal(shortcutPreference.app_action_execution.result.opl_agent_package_home_shortcut_preferences.preference.visible, false);
+    assert.equal(shortcutPreference.app_action_execution.result.opl_agent_package_home_shortcut_preferences.preference.sort_order, 9);
+    assert.equal(
+      shortcutPreference.app_action_execution.result.opl_agent_package_home_shortcut_preferences.lifecycle_receipt.action,
+      'home_shortcut_preferences_set',
+    );
+
+    const list = runCli(['connect', 'agent-packages', 'list'], { OPL_STATE_DIR: stateDir }) as {
+      opl_agent_packages: {
+        home_shortcut_preferences: Array<{ package_id: string; shortcut_id: string; visible: boolean; sort_order: number; source: string }>;
+        files: { home_shortcut_preferences_file: string };
+      };
+    };
+    assert.deepEqual(list.opl_agent_packages.home_shortcut_preferences.map((entry) => ({
+      package_id: entry.package_id,
+      shortcut_id: entry.shortcut_id,
+      visible: entry.visible,
+      sort_order: entry.sort_order,
+      source: entry.source,
+    })), [{
+      package_id: 'third.party.research',
+      shortcut_id: 'research',
+      visible: false,
+      sort_order: 9,
+      source: 'user_preference',
+    }]);
+    assert.equal(fs.existsSync(list.opl_agent_packages.files.home_shortcut_preferences_file), true);
 
     const rollback = runCli([
       'app',

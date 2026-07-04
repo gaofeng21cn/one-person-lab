@@ -43,7 +43,8 @@ type AgentPackageLifecycleAction =
   | 'hide'
   | 'unhide'
   | 'enable'
-  | 'disable';
+  | 'disable'
+  | 'home_shortcut_preferences_set';
 
 export type AgentPackageRegistryRefreshInput = {
   registryUrl: string;
@@ -63,6 +64,14 @@ export type AgentPackageInstallInput = AgentPackageManifestValidateInput & {
 
 export type AgentPackagePackageActionInput = {
   packageId: string;
+  dryRun?: boolean;
+};
+
+export type AgentPackageHomeShortcutPreferencesSetInput = {
+  packageId: string;
+  shortcutId: string;
+  visible?: boolean | null;
+  sortOrder?: number | null;
   dryRun?: boolean;
 };
 
@@ -128,6 +137,8 @@ type AgentPackagePhysicalSurface = {
   marketplace_root: string | null;
   marketplace_path: string | null;
   marketplace_plugin_path: string | null;
+  materialized_required_skill_ids: string[];
+  materialized_required_skill_paths: string[];
   removed_paths: string[];
   writes_performed: boolean;
   reload_required: boolean;
@@ -179,6 +190,23 @@ type AgentPackageLifecycleReceipt = {
   source_surface: 'opl_connect_agent_package_registry';
   authority_boundary: ReturnType<typeof refsOnlyAuthorityBoundary>;
   physical_surface?: AgentPackagePhysicalSurface;
+};
+
+type AgentPackageHomeShortcutPreference = {
+  shortcut_id: string;
+  package_id: string;
+  visible: boolean;
+  sort_order: number | null;
+  source: 'default' | 'user_preference';
+  updated_at: string;
+  installed: boolean;
+};
+
+type AgentPackageHomeShortcutPreferenceFile = {
+  surface_kind: 'opl_agent_package_home_shortcut_preferences';
+  version: 'g1';
+  updated_at: string;
+  preferences: AgentPackageHomeShortcutPreference[];
 };
 
 type AgentPackageRegistryCache = {
@@ -623,6 +651,36 @@ function copyDirectory(source: string, target: string) {
   fs.cpSync(source, target, { recursive: true });
 }
 
+function requiredSkillPath(pluginSourcePath: string, skillId: string) {
+  const normalized = skillId.trim();
+  if (!normalized || normalized.includes('/') || normalized.includes('\\') || normalized === '.' || normalized === '..') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package required skill id must be a safe path segment.', {
+      required_skill_id: skillId,
+      failure_code: 'agent_package_required_skill_id_invalid',
+    });
+  }
+  return path.join(pluginSourcePath, 'skills', normalized, 'SKILL.md');
+}
+
+function validateMaterializedRequiredSkills(manifest: AgentPackageManifest, pluginSourcePath: string) {
+  const requiredSkillPaths = manifest.required_skill_ids.map((skillId) => ({
+    skillId,
+    skillPath: requiredSkillPath(pluginSourcePath, skillId),
+  }));
+  const missing = requiredSkillPaths.filter((entry) => !fs.existsSync(entry.skillPath));
+  if (missing.length > 0) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package plugin source must contain bundled required skill files before physical materialization.', {
+      package_id: manifest.package_id,
+      plugin_id: manifest.plugin_id,
+      plugin_source_path: pluginSourcePath,
+      missing_required_skill_ids: missing.map((entry) => entry.skillId),
+      missing_required_skill_paths: missing.map((entry) => entry.skillPath),
+      failure_code: 'agent_package_required_skill_missing',
+    });
+  }
+  return requiredSkillPaths;
+}
+
 function materializePhysicalCodexSurface(
   manifest: AgentPackageManifest,
   dryRun: boolean,
@@ -644,6 +702,8 @@ function materializePhysicalCodexSurface(
       marketplace_root: null,
       marketplace_path: null,
       marketplace_plugin_path: null,
+      materialized_required_skill_ids: [],
+      materialized_required_skill_paths: [],
       removed_paths: [],
       writes_performed: false,
       reload_required: false,
@@ -663,6 +723,7 @@ function materializePhysicalCodexSurface(
       failure_code: 'agent_package_plugin_manifest_missing',
     });
   }
+  const materializedRequiredSkills = validateMaterializedRequiredSkills(manifest, pluginSourcePath);
 
   if (!dryRun) {
     copyDirectory(pluginSourcePath, paths.codexPluginCachePath!);
@@ -692,6 +753,10 @@ function materializePhysicalCodexSurface(
     marketplace_root: paths.marketplaceRoot,
     marketplace_path: paths.marketplacePath,
     marketplace_plugin_path: paths.marketplacePluginPath,
+    materialized_required_skill_ids: materializedRequiredSkills.map((entry) => entry.skillId),
+    materialized_required_skill_paths: materializedRequiredSkills.map((entry) =>
+      dryRun ? entry.skillPath : path.join(paths.codexPluginCachePath!, 'skills', entry.skillId, 'SKILL.md')
+    ),
     removed_paths: [],
     writes_performed: !dryRun,
     reload_required: !dryRun,
@@ -733,6 +798,8 @@ function removePhysicalCodexSurface(
     marketplace_root: surface?.marketplace_root ?? null,
     marketplace_path: surface?.marketplace_path ?? null,
     marketplace_plugin_path: surface?.marketplace_plugin_path ?? null,
+    materialized_required_skill_ids: surface?.materialized_required_skill_ids ?? [],
+    materialized_required_skill_paths: surface?.materialized_required_skill_paths ?? [],
     removed_paths: removedPaths,
     writes_performed: !dryRun,
     reload_required: !dryRun && removedPaths.length > 0,
@@ -760,6 +827,8 @@ function rematerializePhysicalCodexSurfaceFromLock(
       marketplace_root: lock.physical_surface?.marketplace_root ?? null,
       marketplace_path: lock.physical_surface?.marketplace_path ?? null,
       marketplace_plugin_path: lock.physical_surface?.marketplace_plugin_path ?? null,
+      materialized_required_skill_ids: lock.physical_surface?.materialized_required_skill_ids ?? [],
+      materialized_required_skill_paths: lock.physical_surface?.materialized_required_skill_paths ?? [],
       removed_paths: [],
       writes_performed: false,
       reload_required: false,
@@ -824,9 +893,105 @@ function packageActionStatus(action: AgentPackageLifecycleAction) {
     unhide: 'visible',
     enable: 'enabled',
     disable: 'disabled',
+    home_shortcut_preferences_set: 'preferences_updated',
     registry_refresh: 'refreshed',
     manifest_validate: 'valid',
   }[action];
+}
+
+function emptyHomeShortcutPreferenceFile(): AgentPackageHomeShortcutPreferenceFile {
+  return {
+    surface_kind: 'opl_agent_package_home_shortcut_preferences',
+    version: 'g1',
+    updated_at: nowIso(),
+    preferences: [],
+  };
+}
+
+function readHomeShortcutPreferenceFile(): AgentPackageHomeShortcutPreferenceFile {
+  const parsed = readJsonFileOrNull(resolveOplStatePaths().agent_package_home_shortcut_preferences_file);
+  if (!isRecord(parsed) || !Array.isArray(parsed.preferences)) return emptyHomeShortcutPreferenceFile();
+  return {
+    surface_kind: 'opl_agent_package_home_shortcut_preferences',
+    version: 'g1',
+    updated_at: stringValue(parsed.updated_at) ?? nowIso(),
+    preferences: recordList(parsed.preferences).flatMap((entry) => {
+      const shortcutId = stringValue(entry.shortcut_id);
+      const packageId = stringValue(entry.package_id);
+      if (!shortcutId || !packageId) return [];
+      const sortOrder = typeof entry.sort_order === 'number' && Number.isFinite(entry.sort_order)
+        ? entry.sort_order
+        : null;
+      return [{
+        shortcut_id: shortcutId,
+        package_id: packageId,
+        visible: entry.visible !== false,
+        sort_order: sortOrder,
+        source: 'user_preference' as const,
+        updated_at: stringValue(entry.updated_at) ?? nowIso(),
+        installed: entry.installed === true,
+      }];
+    }),
+  };
+}
+
+function writeHomeShortcutPreferenceFile(file: AgentPackageHomeShortcutPreferenceFile) {
+  const paths = ensureOplStateDir();
+  writeJsonPayloadFile(paths.agent_package_home_shortcut_preferences_file, file);
+}
+
+function defaultHomeShortcutPreferences(
+  registryCache: unknown,
+  lockIndex: AgentPackageLockIndex,
+): AgentPackageHomeShortcutPreference[] {
+  const entries = isRecord(registryCache) ? recordList(registryCache.entries) : [];
+  const installedIds = new Set(lockIndex.packages.map((entry) => entry.package_id));
+  const timestamp = nowIso();
+  return entries.flatMap((entry, entryIndex) => {
+    const packageId = stringValue(entry.package_id);
+    if (!packageId) return [];
+    return stringList(entry.home_shortcut_ids).map((shortcutId, shortcutIndex) => ({
+      shortcut_id: shortcutId,
+      package_id: packageId,
+      visible: true,
+      sort_order: entryIndex * 100 + shortcutIndex,
+      source: 'default' as const,
+      updated_at: timestamp,
+      installed: installedIds.has(packageId),
+    }));
+  });
+}
+
+function mergedHomeShortcutPreferences(
+  registryCache: unknown,
+  lockIndex: AgentPackageLockIndex,
+): AgentPackageHomeShortcutPreference[] {
+  const installedIds = new Set(lockIndex.packages.map((entry) => entry.package_id));
+  const merged = new Map<string, AgentPackageHomeShortcutPreference>();
+  for (const entry of defaultHomeShortcutPreferences(registryCache, lockIndex)) {
+    merged.set(`${entry.package_id}\n${entry.shortcut_id}`, entry);
+  }
+  for (const entry of readHomeShortcutPreferenceFile().preferences) {
+    merged.set(`${entry.package_id}\n${entry.shortcut_id}`, {
+      ...entry,
+      source: 'user_preference',
+      installed: installedIds.has(entry.package_id),
+    });
+  }
+  return [...merged.values()].sort((a, b) =>
+    (a.sort_order ?? Number.MAX_SAFE_INTEGER) - (b.sort_order ?? Number.MAX_SAFE_INTEGER)
+      || a.package_id.localeCompare(b.package_id)
+      || a.shortcut_id.localeCompare(b.shortcut_id)
+  );
+}
+
+function homeShortcutPreferenceSourceSha256(input: AgentPackageHomeShortcutPreferencesSetInput) {
+  return sha256Text([
+    input.packageId,
+    input.shortcutId,
+    input.visible === false ? 'hidden' : 'visible',
+    input.sortOrder ?? '',
+  ].join('\n'));
 }
 
 function requirePackageId(packageId: string | null | undefined, action: AgentPackageLifecycleAction) {
@@ -1410,13 +1575,76 @@ export function runOplAgentPackageExposureAction(
   };
 }
 
+export function runOplAgentPackageHomeShortcutPreferencesSet(input: AgentPackageHomeShortcutPreferencesSetInput) {
+  const packageId = requirePackageId(input.packageId, 'home_shortcut_preferences_set');
+  const shortcutId = stringValue(input.shortcutId);
+  if (!shortcutId) {
+    throw new FrameworkContractError('cli_usage_error', 'Agent package Home shortcut preference requires shortcut_id.', {
+      package_id: packageId,
+      required: ['shortcut_id'],
+    });
+  }
+  const lockIndex = readLockIndex();
+  requireInstalledPackage(lockIndex, packageId, 'home_shortcut_preferences_set');
+  const stored = readHomeShortcutPreferenceFile();
+  const updatedAt = nowIso();
+  const nextEntry: AgentPackageHomeShortcutPreference = {
+    shortcut_id: shortcutId,
+    package_id: packageId,
+    visible: input.visible !== false,
+    sort_order: typeof input.sortOrder === 'number' && Number.isFinite(input.sortOrder) ? input.sortOrder : null,
+    source: 'user_preference',
+    updated_at: updatedAt,
+    installed: true,
+  };
+  const nextPreferences = [
+    nextEntry,
+    ...stored.preferences.filter((entry) => !(entry.package_id === packageId && entry.shortcut_id === shortcutId)),
+  ];
+  const nextFile: AgentPackageHomeShortcutPreferenceFile = {
+    surface_kind: 'opl_agent_package_home_shortcut_preferences',
+    version: 'g1',
+    updated_at: updatedAt,
+    preferences: nextPreferences,
+  };
+  const receipt = lifecycleReceipt({
+    action: 'home_shortcut_preferences_set',
+    actionStatus: input.dryRun ? 'validated' : 'completed',
+    packageId,
+    sourceKind: 'manifest_import',
+    trustTier: null,
+    sourceSha256: homeShortcutPreferenceSourceSha256(input),
+    writesPerformed: !input.dryRun,
+  });
+  if (!input.dryRun) {
+    writeHomeShortcutPreferenceFile(nextFile);
+    appendReceipt(receipt);
+  }
+  return {
+    version: 'g2',
+    opl_agent_package_home_shortcut_preferences: {
+      surface_kind: 'opl_agent_package_home_shortcut_preferences_set',
+      status: input.dryRun ? 'validated_no_write' : 'preferences_updated',
+      dry_run: input.dryRun === true,
+      preference: nextEntry,
+      preferences_file: resolveOplStatePaths().agent_package_home_shortcut_preferences_file,
+      lifecycle_receipt: receipt,
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    },
+  };
+}
+
 export function runOplAgentPackageStatus(input: { packageId?: string | null } = {}) {
   const packageId = stringValue(input.packageId);
   const lockIndex = readLockIndex();
   const lifecycleLedger = readLifecycleLedger();
+  const paths = resolveOplStatePaths();
+  const registryCache = readJsonFileOrNull(paths.agent_package_registry_cache_file);
   const installedPackages = packageId
     ? lockIndex.packages.filter((entry) => entry.package_id === packageId)
     : lockIndex.packages;
+  const homeShortcutPreferences = mergedHomeShortcutPreferences(registryCache, lockIndex)
+    .filter((entry) => !packageId || entry.package_id === packageId);
   return {
     version: 'g2',
     opl_agent_package_status: {
@@ -1425,7 +1653,11 @@ export function runOplAgentPackageStatus(input: { packageId?: string | null } = 
       package_id: packageId ?? null,
       installed_package_count: installedPackages.length,
       installed_packages: installedPackages,
+      home_shortcut_preferences: homeShortcutPreferences,
       lifecycle_receipts: lifecycleLedger.receipts.filter((receipt) => !packageId || receipt.package_id === packageId),
+      files: {
+        home_shortcut_preferences_file: paths.agent_package_home_shortcut_preferences_file,
+      },
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
   };
@@ -1436,6 +1668,7 @@ export function listOplAgentPackages() {
   const registryCache = readJsonFileOrNull(paths.agent_package_registry_cache_file);
   const lockIndex = readLockIndex();
   const lifecycleLedger = readLifecycleLedger();
+  const homeShortcutPreferences = mergedHomeShortcutPreferences(registryCache, lockIndex);
   return {
     version: 'g2',
     opl_agent_packages: {
@@ -1444,12 +1677,14 @@ export function listOplAgentPackages() {
       registry_cache: isRecord(registryCache) ? registryCache : null,
       installed_package_count: lockIndex.packages.length,
       installed_packages: lockIndex.packages,
+      home_shortcut_preferences: homeShortcutPreferences,
       lifecycle_receipt_count: lifecycleLedger.receipts.length,
       lifecycle_receipts: lifecycleLedger.receipts,
       files: {
         registry_cache_file: paths.agent_package_registry_cache_file,
         package_lock_file: paths.agent_package_lock_file,
         lifecycle_ledger_file: paths.agent_package_lifecycle_ledger_file,
+        home_shortcut_preferences_file: paths.agent_package_home_shortcut_preferences_file,
       },
       authority_boundary: refsOnlyAuthorityBoundary(),
     },

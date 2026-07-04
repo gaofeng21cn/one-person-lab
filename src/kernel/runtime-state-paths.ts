@@ -16,6 +16,7 @@ export type OplStatePaths = {
   agent_package_registry_cache_file: string;
   agent_package_lock_file: string;
   agent_package_lifecycle_ledger_file: string;
+  agent_package_home_shortcut_preferences_file: string;
   managed_install_update_ledger_file: string;
   managed_update_component_receipt_ledger_file: string;
   managed_update_kernel_lock_file: string;
@@ -74,6 +75,7 @@ export function resolveOplStatePaths(input: { dataDir?: string | null } = {}): O
     agent_package_registry_cache_file: path.join(stateDir, 'agent-package-registry-cache.json'),
     agent_package_lock_file: path.join(stateDir, 'agent-package-locks.json'),
     agent_package_lifecycle_ledger_file: path.join(stateDir, 'agent-package-lifecycle-ledger.json'),
+    agent_package_home_shortcut_preferences_file: path.join(stateDir, 'agent-package-home-shortcut-preferences.json'),
     managed_install_update_ledger_file: path.join(stateDir, 'managed-install-update-ledger.json'),
     managed_update_component_receipt_ledger_file: path.join(
       stateDir,
