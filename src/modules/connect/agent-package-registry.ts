@@ -105,6 +105,29 @@ type AgentPackageManifest = {
   codex_visible_entry: string;
   required_skill_ids: string[];
   optional_skill_refs: string[];
+  plugin_id: string | null;
+  plugin_source_path: string | null;
+};
+
+type AgentPackagePhysicalSurface = {
+  surface_kind: 'opl_agent_package_physical_codex_surface';
+  status: 'not_requested' | 'validated_no_write' | 'materialized' | 'removed';
+  package_id: string;
+  plugin_id: string | null;
+  marketplace_id: string | null;
+  codex_home: string;
+  codex_config_path: string;
+  plugin_source_path: string | null;
+  plugin_manifest_path: string | null;
+  codex_plugin_cache_path: string | null;
+  marketplace_root: string | null;
+  marketplace_path: string | null;
+  marketplace_plugin_path: string | null;
+  removed_paths: string[];
+  writes_performed: boolean;
+  reload_required: boolean;
+  note: string | null;
+  authority_boundary: ReturnType<typeof refsOnlyAuthorityBoundary>;
 };
 
 type AgentPackageLock = {
@@ -127,6 +150,7 @@ type AgentPackageLock = {
   manifest_url: string;
   manifest_sha256: string;
   lock_ref: string;
+  physical_surface?: AgentPackagePhysicalSurface;
   exposure_state?: 'visible' | 'hidden' | 'enabled' | 'disabled';
   exposure_updated_at?: string;
 };
@@ -149,6 +173,7 @@ type AgentPackageLifecycleReceipt = {
   writes_performed: boolean;
   source_surface: 'opl_connect_agent_package_registry';
   authority_boundary: ReturnType<typeof refsOnlyAuthorityBoundary>;
+  physical_surface?: AgentPackagePhysicalSurface;
 };
 
 type AgentPackageRegistryCache = {
@@ -233,6 +258,54 @@ function refsOnlyAuthorityBoundary() {
     can_claim_domain_ready: false,
     can_claim_production_ready: false,
   };
+}
+
+function resolveHomeDir() {
+  return process.env.HOME?.trim() || process.env.USERPROFILE?.trim() || process.cwd();
+}
+
+function resolveCodexHome(home = resolveHomeDir()) {
+  return process.env.CODEX_HOME?.trim() || path.join(home, '.codex');
+}
+
+function resolveCodexConfigPath(codexHome = resolveCodexHome()) {
+  return path.join(codexHome, 'config.toml');
+}
+
+function safePathSegment(value: string) {
+  return value.replace(/[^A-Za-z0-9._-]/g, '-');
+}
+
+function escapeTomlString(value: string) {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+function removeTomlTable(text: string, tableHeader: string) {
+  const lines = text.split('\n');
+  const kept: string[] = [];
+  let skipping = false;
+
+  for (const line of lines) {
+    if (/^\[[^\]]+\]/.test(line.trim())) {
+      skipping = line.trim() === tableHeader;
+    }
+    if (!skipping) {
+      kept.push(line);
+    }
+  }
+
+  return kept.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd();
+}
+
+function upsertTomlTable(text: string, tableHeader: string, bodyLines: string[]) {
+  const withoutTable = removeTomlTable(text, tableHeader);
+  const table = [tableHeader, ...bodyLines].join('\n');
+  return `${withoutTable.trimEnd()}\n\n${table}\n`;
+}
+
+function writeJsonFile(filePath: string, value: unknown) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 }
 
 function normalizeSourceKind(value: string | null | undefined, manifestUrl: string): AgentPackageSourceKind {
@@ -443,7 +516,11 @@ function normalizeManifest(payload: unknown, manifestUrl: string): AgentPackageM
       failure_code: 'invalid_package_manifest',
     });
   }
-  const codexVisibleEntry = stringList(payload.codex_surface.plugin_ids)[0]
+  const pluginId = stringList(payload.codex_surface.plugin_ids)[0] ?? null;
+  const pluginSourcePath = stringValue(payload.codex_surface.plugin_source_path)
+    ?? stringValue(payload.codex_surface.local_plugin_source_path)
+    ?? stringValue(payload.codex_surface.plugin_root);
+  const codexVisibleEntry = pluginId
     ?? stringValue(payload.codex_surface.codex_visible_entry)
     ?? stringValue(payload.agent_id)!;
   return {
@@ -466,6 +543,8 @@ function normalizeManifest(payload: unknown, manifestUrl: string): AgentPackageM
       ...stringList(payload.codex_surface.optional_skill_ids),
       ...normalizeSkillPackRefs(skillPacks.filter((pack) => stringValue(pack.install_mode) !== 'bundled_required')),
     ]),
+    plugin_id: pluginId,
+    plugin_source_path: pluginSourcePath,
   };
 }
 
@@ -538,6 +617,259 @@ function appendReceipt(receipt: AgentPackageLifecycleReceipt) {
     ledger.receipts.unshift(receipt);
   }
   writeLifecycleLedger(ledger);
+}
+
+function resolveLocalPath(value: string) {
+  return value.startsWith('file:') ? fileURLToPath(value) : path.resolve(value);
+}
+
+function buildPhysicalSurfacePaths(manifest: AgentPackageManifest) {
+  const codexHome = resolveCodexHome();
+  const marketplaceId = `opl-agent-${safePathSegment(manifest.package_id)}-local`;
+  const pluginId = manifest.plugin_id;
+  const marketplaceRoot = path.join(resolveOplStatePaths().state_dir, 'codex-plugin-marketplaces', marketplaceId);
+  const marketplacePath = path.join(marketplaceRoot, '.agents', 'plugins', 'marketplace.json');
+  const marketplacePluginPath = pluginId ? path.join(marketplaceRoot, 'plugins', pluginId) : null;
+  const codexPluginCachePath = pluginId
+    ? path.join(codexHome, 'plugins', 'cache', marketplaceId, pluginId, manifest.version)
+    : null;
+  return {
+    codexHome,
+    codexConfigPath: resolveCodexConfigPath(codexHome),
+    marketplaceId,
+    marketplaceRoot,
+    marketplacePath,
+    marketplacePluginPath,
+    codexPluginCachePath,
+  };
+}
+
+function copyDirectory(source: string, target: string) {
+  fs.rmSync(target, { recursive: true, force: true });
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.cpSync(source, target, { recursive: true });
+}
+
+function refreshSourceSymlink(linkPath: string, targetPath: string) {
+  fs.mkdirSync(path.dirname(linkPath), { recursive: true });
+  fs.rmSync(linkPath, { recursive: true, force: true });
+  fs.symlinkSync(targetPath, linkPath, 'dir');
+}
+
+function registerPhysicalCodexSurface(configPath: string, marketplaceId: string, marketplaceRoot: string, pluginId: string) {
+  fs.mkdirSync(path.dirname(configPath), { recursive: true });
+  let text = fs.existsSync(configPath) ? fs.readFileSync(configPath, 'utf8') : '';
+  text = upsertTomlTable(text, `[marketplaces.${marketplaceId}]`, [
+    'source_type = "local"',
+    `source = "${escapeTomlString(marketplaceRoot)}"`,
+  ]);
+  text = upsertTomlTable(text, `[plugins."${escapeTomlString(`${pluginId}@${marketplaceId}`)}"]`, [
+    'enabled = true',
+  ]);
+  fs.writeFileSync(configPath, text, 'utf8');
+}
+
+function unregisterPhysicalCodexSurface(configPath: string, marketplaceId: string | null, pluginId: string | null) {
+  if (!marketplaceId || !pluginId || !fs.existsSync(configPath)) {
+    return;
+  }
+  let text = fs.readFileSync(configPath, 'utf8');
+  text = removeTomlTable(text, `[plugins."${escapeTomlString(`${pluginId}@${marketplaceId}`)}"]`);
+  text = removeTomlTable(text, `[marketplaces.${marketplaceId}]`);
+  fs.writeFileSync(configPath, `${text.trimEnd()}\n`, 'utf8');
+}
+
+function writeMarketplaceWrapper(input: {
+  marketplacePath: string;
+  marketplaceId: string;
+  pluginId: string;
+  displayName: string;
+}) {
+  writeJsonFile(input.marketplacePath, {
+    name: input.marketplaceId,
+    interface: {
+      displayName: input.displayName,
+    },
+    plugins: [
+      {
+        name: input.pluginId,
+        source: {
+          source: 'local',
+          path: `./plugins/${input.pluginId}`,
+        },
+        policy: {
+          installation: 'AVAILABLE',
+          authentication: 'ON_INSTALL',
+        },
+        category: 'Productivity',
+      },
+    ],
+  });
+}
+
+function materializePhysicalCodexSurface(
+  manifest: AgentPackageManifest,
+  dryRun: boolean,
+): AgentPackagePhysicalSurface {
+  const paths = buildPhysicalSurfacePaths(manifest);
+  const pluginSourceInput = manifest.plugin_source_path;
+  if (!pluginSourceInput || !manifest.plugin_id) {
+    return {
+      surface_kind: 'opl_agent_package_physical_codex_surface',
+      status: 'not_requested',
+      package_id: manifest.package_id,
+      plugin_id: manifest.plugin_id,
+      marketplace_id: null,
+      codex_home: paths.codexHome,
+      codex_config_path: paths.codexConfigPath,
+      plugin_source_path: pluginSourceInput,
+      plugin_manifest_path: null,
+      codex_plugin_cache_path: null,
+      marketplace_root: null,
+      marketplace_path: null,
+      marketplace_plugin_path: null,
+      removed_paths: [],
+      writes_performed: false,
+      reload_required: false,
+      note: 'Manifest did not request Codex plugin materialization with codex_surface.plugin_source_path and codex_surface.plugin_ids.',
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    };
+  }
+
+  const pluginSourcePath = resolveLocalPath(pluginSourceInput);
+  const pluginManifestPath = path.join(pluginSourcePath, '.codex-plugin', 'plugin.json');
+  if (!fs.existsSync(pluginManifestPath)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package plugin source must contain .codex-plugin/plugin.json before physical materialization.', {
+      package_id: manifest.package_id,
+      plugin_id: manifest.plugin_id,
+      plugin_source_path: pluginSourcePath,
+      plugin_manifest_path: pluginManifestPath,
+      failure_code: 'agent_package_plugin_manifest_missing',
+    });
+  }
+
+  if (!dryRun) {
+    copyDirectory(pluginSourcePath, paths.codexPluginCachePath!);
+    refreshSourceSymlink(paths.marketplacePluginPath!, paths.codexPluginCachePath!);
+    writeMarketplaceWrapper({
+      marketplacePath: paths.marketplacePath,
+      marketplaceId: paths.marketplaceId,
+      pluginId: manifest.plugin_id,
+      displayName: manifest.display_name,
+    });
+    registerPhysicalCodexSurface(paths.codexConfigPath, paths.marketplaceId, paths.marketplaceRoot, manifest.plugin_id);
+  }
+
+  return {
+    surface_kind: 'opl_agent_package_physical_codex_surface',
+    status: dryRun ? 'validated_no_write' : 'materialized',
+    package_id: manifest.package_id,
+    plugin_id: manifest.plugin_id,
+    marketplace_id: paths.marketplaceId,
+    codex_home: paths.codexHome,
+    codex_config_path: paths.codexConfigPath,
+    plugin_source_path: pluginSourcePath,
+    plugin_manifest_path: dryRun ? pluginManifestPath : path.join(paths.codexPluginCachePath!, '.codex-plugin', 'plugin.json'),
+    codex_plugin_cache_path: paths.codexPluginCachePath,
+    marketplace_root: paths.marketplaceRoot,
+    marketplace_path: paths.marketplacePath,
+    marketplace_plugin_path: paths.marketplacePluginPath,
+    removed_paths: [],
+    writes_performed: !dryRun,
+    reload_required: !dryRun,
+    note: null,
+    authority_boundary: refsOnlyAuthorityBoundary(),
+  };
+}
+
+function removePhysicalCodexSurface(
+  surface: AgentPackagePhysicalSurface | undefined,
+  dryRun: boolean,
+  packageId?: string,
+): AgentPackagePhysicalSurface {
+  const codexHome = resolveCodexHome();
+  const codexConfigPath = surface?.codex_config_path ?? resolveCodexConfigPath(codexHome);
+  const removedPaths = [
+    surface?.marketplace_root,
+    surface?.codex_plugin_cache_path,
+  ].flatMap((value) => value ? [value] : []);
+
+  if (!dryRun) {
+    unregisterPhysicalCodexSurface(codexConfigPath, surface?.marketplace_id ?? null, surface?.plugin_id ?? null);
+    for (const pathToRemove of removedPaths) {
+      fs.rmSync(pathToRemove, { recursive: true, force: true });
+    }
+  }
+
+  return {
+    surface_kind: 'opl_agent_package_physical_codex_surface',
+    status: dryRun ? 'validated_no_write' : 'removed',
+    package_id: surface?.package_id ?? packageId ?? '',
+    plugin_id: surface?.plugin_id ?? null,
+    marketplace_id: surface?.marketplace_id ?? null,
+    codex_home: surface?.codex_home ?? codexHome,
+    codex_config_path: codexConfigPath,
+    plugin_source_path: surface?.plugin_source_path ?? null,
+    plugin_manifest_path: surface?.plugin_manifest_path ?? null,
+    codex_plugin_cache_path: surface?.codex_plugin_cache_path ?? null,
+    marketplace_root: surface?.marketplace_root ?? null,
+    marketplace_path: surface?.marketplace_path ?? null,
+    marketplace_plugin_path: surface?.marketplace_plugin_path ?? null,
+    removed_paths: removedPaths,
+    writes_performed: !dryRun,
+    reload_required: !dryRun && removedPaths.length > 0,
+    note: surface ? null : 'Installed package lock did not contain a physical Codex surface.',
+    authority_boundary: refsOnlyAuthorityBoundary(),
+  };
+}
+
+function rematerializePhysicalCodexSurfaceFromLock(
+  lock: AgentPackageLock,
+  dryRun: boolean,
+): AgentPackagePhysicalSurface {
+  if (!lock.physical_surface?.plugin_source_path || !lock.physical_surface.plugin_id) {
+    return {
+      surface_kind: 'opl_agent_package_physical_codex_surface',
+      status: 'not_requested',
+      package_id: lock.package_id,
+      plugin_id: lock.physical_surface?.plugin_id ?? null,
+      marketplace_id: lock.physical_surface?.marketplace_id ?? null,
+      codex_home: lock.physical_surface?.codex_home ?? resolveCodexHome(),
+      codex_config_path: lock.physical_surface?.codex_config_path ?? resolveCodexConfigPath(),
+      plugin_source_path: lock.physical_surface?.plugin_source_path ?? null,
+      plugin_manifest_path: lock.physical_surface?.plugin_manifest_path ?? null,
+      codex_plugin_cache_path: lock.physical_surface?.codex_plugin_cache_path ?? null,
+      marketplace_root: lock.physical_surface?.marketplace_root ?? null,
+      marketplace_path: lock.physical_surface?.marketplace_path ?? null,
+      marketplace_plugin_path: lock.physical_surface?.marketplace_plugin_path ?? null,
+      removed_paths: [],
+      writes_performed: false,
+      reload_required: false,
+      note: 'Installed package lock did not request physical Codex surface repair.',
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    };
+  }
+
+  return materializePhysicalCodexSurface({
+    package_id: lock.package_id,
+    agent_id: lock.agent_id,
+    display_name: lock.display_name,
+    publisher: lock.publisher,
+    version: lock.package_version,
+    source: '',
+    codex_surface: {},
+    skill_packs: [],
+    entrypoints: [],
+    health_check: {},
+    permissions: [],
+    update_channel: '',
+    rollback_ref: lock.rollback_ref,
+    codex_visible_entry: lock.codex_visible_entry,
+    required_skill_ids: lock.bundled_required_skill_ids,
+    optional_skill_refs: lock.optional_skill_refs,
+    plugin_id: lock.physical_surface.plugin_id,
+    plugin_source_path: lock.physical_surface.plugin_source_path,
+  }, dryRun);
 }
 
 function packageReceiptRef(input: {
@@ -616,8 +948,9 @@ function lifecycleReceipt(input: {
   trustTier?: string | null;
   sourceSha256: string;
   writesPerformed: boolean;
+  physicalSurface?: AgentPackagePhysicalSurface;
 }): AgentPackageLifecycleReceipt {
-  return {
+  const receipt: AgentPackageLifecycleReceipt = {
     surface_kind: 'opl_agent_package_lifecycle_receipt',
     receipt_ref: packageReceiptRef({
       action: input.action,
@@ -640,6 +973,10 @@ function lifecycleReceipt(input: {
     source_surface: 'opl_connect_agent_package_registry',
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
+  if (input.physicalSurface) {
+    receipt.physical_surface = input.physicalSurface;
+  }
+  return receipt;
 }
 
 async function resolveManifestSelection(input: AgentPackageManifestValidateInput) {
@@ -737,6 +1074,7 @@ function buildLock(input: {
   sourceKind: AgentPackageSourceKind;
   trustTier: string;
   receiptRef: string;
+  physicalSurface: AgentPackagePhysicalSurface;
   previousLock?: AgentPackageLock | null;
 }): AgentPackageLock {
   const timestamp = nowIso();
@@ -760,9 +1098,33 @@ function buildLock(input: {
     manifest_url: input.manifestUrl,
     manifest_sha256: input.manifestSha256,
     lock_ref: packageLockRef(input.manifest.package_id, input.manifest.version, input.manifestSha256),
+    physical_surface: input.physicalSurface,
     exposure_state: input.previousLock?.exposure_state ?? 'visible',
     exposure_updated_at: input.previousLock?.exposure_updated_at ?? timestamp,
   };
+}
+
+function cleanupPreviousPhysicalSurface(
+  previous: AgentPackagePhysicalSurface | undefined,
+  current: AgentPackagePhysicalSurface,
+) {
+  if (!previous || previous.status === 'not_requested') {
+    return;
+  }
+
+  if (
+    previous.plugin_id
+    && previous.marketplace_id
+    && (previous.plugin_id !== current.plugin_id || previous.marketplace_id !== current.marketplace_id)
+  ) {
+    unregisterPhysicalCodexSurface(previous.codex_config_path, previous.marketplace_id, previous.plugin_id);
+  }
+
+  for (const oldPath of [previous.codex_plugin_cache_path, previous.marketplace_plugin_path]) {
+    if (oldPath && oldPath !== current.codex_plugin_cache_path && oldPath !== current.marketplace_plugin_path) {
+      fs.rmSync(oldPath, { recursive: true, force: true });
+    }
+  }
 }
 
 async function applyManifestPackageLock(
@@ -802,6 +1164,7 @@ async function applyManifestPackageLock(
     });
   }
   const previousLock = existingIndex >= 0 ? index.packages[existingIndex] : null;
+  const physicalSurface = materializePhysicalCodexSurface(manifest, input.dryRun === true);
   const receipt = lifecycleReceipt({
     action,
     actionStatus: input.dryRun ? 'validated' : 'completed',
@@ -815,6 +1178,7 @@ async function applyManifestPackageLock(
     trustTier,
     sourceSha256: fetched.source_sha256,
     writesPerformed: !input.dryRun,
+    physicalSurface,
   });
   const lock = buildLock({
     manifest,
@@ -823,10 +1187,12 @@ async function applyManifestPackageLock(
     sourceKind,
     trustTier,
     receiptRef: receipt.receipt_ref,
+    physicalSurface,
     previousLock,
   });
 
   if (!input.dryRun) {
+    cleanupPreviousPhysicalSurface(previousLock?.physical_surface, physicalSurface);
     if (existingIndex >= 0) {
       index.packages[existingIndex] = lock;
     } else {
@@ -841,6 +1207,7 @@ async function applyManifestPackageLock(
     lock,
     receipt,
     registryEntry: selection.registryEntry,
+    physicalSurface,
   };
 }
 
@@ -943,6 +1310,7 @@ export async function runOplAgentPackageInstall(input: AgentPackageInstallInput)
       status: result.status,
       dry_run: input.dryRun === true,
       package_lock: result.lock,
+      physical_surface: result.physicalSurface,
       lifecycle_receipt: result.receipt,
       lock_file: resolveOplStatePaths().agent_package_lock_file,
       lifecycle_ledger_file: resolveOplStatePaths().agent_package_lifecycle_ledger_file,
@@ -961,6 +1329,7 @@ export async function runOplAgentPackageUpdate(input: AgentPackageInstallInput) 
       status: result.status,
       dry_run: input.dryRun === true,
       package_lock: result.lock,
+      physical_surface: result.physicalSurface,
       lifecycle_receipt: result.receipt,
       lock_file: resolveOplStatePaths().agent_package_lock_file,
       lifecycle_ledger_file: resolveOplStatePaths().agent_package_lifecycle_ledger_file,
@@ -979,6 +1348,7 @@ export async function runOplAgentPackageRollback(input: AgentPackageRollbackInpu
       status: result.status,
       dry_run: input.dryRun === true,
       package_lock: result.lock,
+      physical_surface: result.physicalSurface,
       lifecycle_receipt: result.receipt,
       lock_file: resolveOplStatePaths().agent_package_lock_file,
       lifecycle_ledger_file: resolveOplStatePaths().agent_package_lifecycle_ledger_file,
@@ -992,6 +1362,7 @@ export function runOplAgentPackageRepair(input: AgentPackagePackageActionInput) 
   const packageId = requirePackageId(input.packageId, 'repair');
   const index = readLockIndex();
   const { lockIndex, lock } = requireInstalledPackage(index, packageId, 'repair');
+  const physicalSurface = rematerializePhysicalCodexSurfaceFromLock(lock, input.dryRun === true);
   const receipt = lifecycleReceipt({
     action: 'repair',
     actionStatus: input.dryRun ? 'validated' : 'completed',
@@ -1004,11 +1375,13 @@ export function runOplAgentPackageRepair(input: AgentPackagePackageActionInput) 
     trustTier: lock.trust_tier,
     sourceSha256: packageActionSourceSha256('repair', lock),
     writesPerformed: !input.dryRun,
+    physicalSurface,
   });
   const repairedLock = {
     ...lock,
     updated_at: input.dryRun ? lock.updated_at : nowIso(),
     action_receipt_id: receipt.receipt_ref,
+    physical_surface: physicalSurface.status === 'not_requested' ? lock.physical_surface : physicalSurface,
   };
   if (!input.dryRun) {
     index.packages[lockIndex] = repairedLock;
@@ -1022,6 +1395,7 @@ export function runOplAgentPackageRepair(input: AgentPackagePackageActionInput) 
       status: input.dryRun ? 'validated_no_write' : 'repaired',
       dry_run: input.dryRun === true,
       package_lock: repairedLock,
+      physical_surface: physicalSurface,
       lifecycle_receipt: receipt,
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
@@ -1032,6 +1406,7 @@ export function runOplAgentPackageUninstall(input: AgentPackagePackageActionInpu
   const packageId = requirePackageId(input.packageId, 'uninstall');
   const index = readLockIndex();
   const { lockIndex, lock } = requireInstalledPackage(index, packageId, 'uninstall');
+  const physicalSurface = removePhysicalCodexSurface(lock.physical_surface, input.dryRun === true, packageId);
   const receipt = lifecycleReceipt({
     action: 'uninstall',
     actionStatus: input.dryRun ? 'validated' : 'completed',
@@ -1044,6 +1419,7 @@ export function runOplAgentPackageUninstall(input: AgentPackagePackageActionInpu
     trustTier: lock.trust_tier,
     sourceSha256: packageActionSourceSha256('uninstall', lock),
     writesPerformed: !input.dryRun,
+    physicalSurface,
   });
   if (!input.dryRun) {
     index.packages.splice(lockIndex, 1);
@@ -1057,6 +1433,7 @@ export function runOplAgentPackageUninstall(input: AgentPackagePackageActionInpu
       status: input.dryRun ? 'validated_no_write' : 'uninstalled',
       dry_run: input.dryRun === true,
       removed_package_lock: lock,
+      physical_surface: physicalSurface,
       lifecycle_receipt: receipt,
       authority_boundary: refsOnlyAuthorityBoundary(),
     },

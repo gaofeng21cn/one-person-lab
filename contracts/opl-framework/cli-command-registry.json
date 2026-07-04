@@ -1147,6 +1147,7 @@
               "status",
               "dry_run",
               "package_lock",
+              "physical_surface",
               "lifecycle_receipt",
               "authority_boundary"
             ],
@@ -1910,6 +1911,8 @@
               "surface_kind",
               "status",
               "dry_run",
+              "package_lock",
+              "physical_surface",
               "lifecycle_receipt",
               "authority_boundary"
             ],
@@ -1960,6 +1963,8 @@
               "surface_kind",
               "status",
               "dry_run",
+              "package_lock",
+              "physical_surface",
               "lifecycle_receipt",
               "authority_boundary"
             ],
@@ -2034,6 +2039,8 @@
               "surface_kind",
               "status",
               "dry_run",
+              "package_lock",
+              "physical_surface",
               "lifecycle_receipt",
               "authority_boundary"
             ],
@@ -2084,6 +2091,8 @@
               "surface_kind",
               "status",
               "dry_run",
+              "removed_package_lock",
+              "physical_surface",
               "lifecycle_receipt",
               "authority_boundary"
             ],

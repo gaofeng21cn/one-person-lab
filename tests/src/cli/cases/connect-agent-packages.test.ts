@@ -5,7 +5,29 @@ import { pathToFileURL } from 'node:url';
 import { assert, fs, os, path, runCli, runCliAsync, runCliFailure, test } from '../helpers.ts';
 import { formatJsonPayload, parseJsonText } from '../../../../src/kernel/json-file.ts';
 
-function agentPackageManifest() {
+function createPluginSourceFixture() {
+  const pluginSourcePath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-plugin-source-'));
+  fs.mkdirSync(path.join(pluginSourcePath, '.codex-plugin'), { recursive: true });
+  fs.mkdirSync(path.join(pluginSourcePath, 'skills', 'third-party-research'), { recursive: true });
+  fs.writeFileSync(
+    path.join(pluginSourcePath, '.codex-plugin', 'plugin.json'),
+    formatJsonPayload({
+      name: 'third-party-research',
+      version: '1.2.3',
+      displayName: 'Third Party Research',
+      description: 'Fixture third-party OPL agent package plugin.',
+    }),
+    'utf8',
+  );
+  fs.writeFileSync(
+    path.join(pluginSourcePath, 'skills', 'third-party-research', 'SKILL.md'),
+    '# Third Party Research\n\nUse for fixture package materialization tests.\n',
+    'utf8',
+  );
+  return pluginSourcePath;
+}
+
+function agentPackageManifest(input: { pluginSourcePath?: string } = {}) {
   return {
     package_id: 'third.party.research',
     agent_id: 'third-party-research',
@@ -17,6 +39,7 @@ function agentPackageManifest() {
       plugin_ids: ['third-party-research'],
       required_skill_ids: ['third-party-research'],
       optional_skill_ids: ['officecli-docx'],
+      ...(input.pluginSourcePath ? { plugin_source_path: input.pluginSourcePath } : {}),
     },
     skill_packs: [
       {
@@ -71,12 +94,13 @@ function registryPayload(baseUrl: string) {
 
 async function withAgentPackageServer(
   run: (baseUrl: string) => Promise<void>,
+  manifest = agentPackageManifest(),
 ) {
   const server = http.createServer((request, response) => {
     const url = new URL(request.url ?? '/', 'http://127.0.0.1');
     if (url.pathname === '/manifest.json') {
       response.writeHead(200, { 'content-type': 'application/json' });
-      response.end(formatJsonPayload(agentPackageManifest()));
+      response.end(formatJsonPayload(manifest));
       return;
     }
     if (url.pathname === '/registry.json') {
@@ -105,6 +129,14 @@ async function withAgentPackageServer(
 
 test('connect agent-packages fetches registry URL, validates manifest, and writes lock receipt', async () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-packages-state-'));
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-packages-home-'));
+  const codexHome = path.join(homeDir, '.codex');
+  const pluginSourcePath = createPluginSourceFixture();
+  const env = {
+    OPL_STATE_DIR: stateDir,
+    HOME: homeDir,
+    CODEX_HOME: codexHome,
+  };
   try {
     await withAgentPackageServer(async (baseUrl) => {
       const registryUrl = `${baseUrl}/registry.json`;
@@ -115,7 +147,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
         'refresh',
         '--registry-url',
         registryUrl,
-      ], { OPL_STATE_DIR: stateDir }) as {
+      ], env) as {
         opl_agent_package_registry: {
           status: string;
           registry_url: string;
@@ -145,7 +177,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
         registryUrl,
         '--package-id',
         'third.party.research',
-      ], { OPL_STATE_DIR: stateDir }) as {
+      ], env) as {
         opl_agent_package_manifest: {
           status: string;
           package_id: string;
@@ -169,7 +201,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
         registryUrl,
         '--package-id',
         'third.party.research',
-      ], { OPL_STATE_DIR: stateDir }) as {
+      ], env) as {
         opl_agent_package_install: {
           status: string;
           package_lock: {
@@ -179,12 +211,25 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
             action_receipt_id: string;
             rollback_ref: string;
             bundled_required_skill_ids: string[];
+            physical_surface: {
+              status: string;
+              codex_plugin_cache_path: string;
+              marketplace_path: string;
+              codex_config_path: string;
+            };
+          };
+          physical_surface: {
+            status: string;
+            codex_plugin_cache_path: string;
+            marketplace_path: string;
+            codex_config_path: string;
           };
           lifecycle_receipt: {
             receipt_ref: string;
             action: string;
             package_lock_ref: string;
             writes_performed: boolean;
+            physical_surface: { status: string };
           };
           lock_file: string;
           lifecycle_ledger_file: string;
@@ -206,17 +251,39 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       );
       assert.equal(install.opl_agent_package_install.lifecycle_receipt.action, 'install');
       assert.equal(install.opl_agent_package_install.lifecycle_receipt.writes_performed, true);
+      assert.equal(install.opl_agent_package_install.physical_surface.status, 'materialized');
+      assert.equal(install.opl_agent_package_install.package_lock.physical_surface.status, 'materialized');
+      assert.equal(install.opl_agent_package_install.lifecycle_receipt.physical_surface.status, 'materialized');
+      assert.equal(fs.existsSync(path.join(
+        install.opl_agent_package_install.physical_surface.codex_plugin_cache_path,
+        '.codex-plugin',
+        'plugin.json',
+      )), true);
+      assert.equal(fs.existsSync(path.join(
+        install.opl_agent_package_install.physical_surface.codex_plugin_cache_path,
+        'skills',
+        'third-party-research',
+        'SKILL.md',
+      )), true);
+      assert.equal(fs.existsSync(install.opl_agent_package_install.physical_surface.marketplace_path), true);
+      assert.match(
+        fs.readFileSync(install.opl_agent_package_install.physical_surface.codex_config_path, 'utf8'),
+        /\[plugins\."third-party-research@opl-agent-third.party.research-local"\]/,
+      );
       assert.equal(fs.existsSync(install.opl_agent_package_install.lock_file), true);
       assert.equal(fs.existsSync(install.opl_agent_package_install.lifecycle_ledger_file), true);
+      const installedCachePath = install.opl_agent_package_install.physical_surface.codex_plugin_cache_path;
+      const installedMarketplacePath = install.opl_agent_package_install.physical_surface.marketplace_path;
+      const installedConfigPath = install.opl_agent_package_install.physical_surface.codex_config_path;
 
       const list = runCli([
         'connect',
         'agent-packages',
         'list',
-      ], { OPL_STATE_DIR: stateDir }) as {
+      ], env) as {
         opl_agent_packages: {
           installed_package_count: number;
-          installed_packages: Array<{ package_id: string }>;
+          installed_packages: Array<{ package_id: string; physical_surface: { status: string } }>;
           lifecycle_receipt_count: number;
           registry_cache: { entry_count: number };
         };
@@ -224,6 +291,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
 
       assert.equal(list.opl_agent_packages.installed_package_count, 1);
       assert.equal(list.opl_agent_packages.installed_packages[0].package_id, 'third.party.research');
+      assert.equal(list.opl_agent_packages.installed_packages[0].physical_surface.status, 'materialized');
       assert.equal(list.opl_agent_packages.lifecycle_receipt_count, 3);
       assert.equal(list.opl_agent_packages.registry_cache.entry_count, 1);
 
@@ -235,16 +303,19 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
         registryUrl,
         '--package-id',
         'third.party.research',
-      ], { OPL_STATE_DIR: stateDir }) as {
+      ], env) as {
         opl_agent_package_update: {
           status: string;
-          package_lock: { package_id: string };
-          lifecycle_receipt: { action: string; writes_performed: boolean };
+          package_lock: { package_id: string; physical_surface: { status: string } };
+          physical_surface: { status: string };
+          lifecycle_receipt: { action: string; writes_performed: boolean; physical_surface: { status: string } };
         };
       };
 
       assert.equal(update.opl_agent_package_update.status, 'updated');
       assert.equal(update.opl_agent_package_update.package_lock.package_id, 'third.party.research');
+      assert.equal(update.opl_agent_package_update.physical_surface.status, 'materialized');
+      assert.equal(update.opl_agent_package_update.lifecycle_receipt.physical_surface.status, 'materialized');
       assert.equal(update.opl_agent_package_update.lifecycle_receipt.action, 'update');
       assert.equal(update.opl_agent_package_update.lifecycle_receipt.writes_performed, true);
 
@@ -254,14 +325,17 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
         'repair',
         '--package-id',
         'third.party.research',
-      ], { OPL_STATE_DIR: stateDir }) as {
+      ], env) as {
         opl_agent_package_repair: {
           status: string;
-          package_lock: { package_id: string };
-          lifecycle_receipt: { action: string; writes_performed: boolean };
+          package_lock: { package_id: string; physical_surface: { status: string } };
+          physical_surface: { status: string };
+          lifecycle_receipt: { action: string; writes_performed: boolean; physical_surface: { status: string } };
         };
       };
       assert.equal(repair.opl_agent_package_repair.status, 'repaired');
+      assert.equal(repair.opl_agent_package_repair.physical_surface.status, 'materialized');
+      assert.equal(repair.opl_agent_package_repair.lifecycle_receipt.physical_surface.status, 'materialized');
       assert.equal(repair.opl_agent_package_repair.lifecycle_receipt.action, 'repair');
 
       const hide = runCli([
@@ -270,7 +344,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
         'hide',
         '--package-id',
         'third.party.research',
-      ], { OPL_STATE_DIR: stateDir }) as {
+      ], env) as {
         opl_agent_package_exposure: {
           status: string;
           action: string;
@@ -289,7 +363,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
         'unhide',
         '--package-id',
         'third.party.research',
-      ], { OPL_STATE_DIR: stateDir }) as {
+      ], env) as {
         opl_agent_package_exposure: {
           status: string;
           action: string;
@@ -306,7 +380,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
         'disable',
         '--package-id',
         'third.party.research',
-      ], { OPL_STATE_DIR: stateDir }) as {
+      ], env) as {
         opl_agent_package_exposure: { status: string; package_lock: { exposure_state: string } };
       };
       assert.equal(disable.opl_agent_package_exposure.status, 'disabled');
@@ -318,7 +392,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
         'enable',
         '--package-id',
         'third.party.research',
-      ], { OPL_STATE_DIR: stateDir }) as {
+      ], env) as {
         opl_agent_package_exposure: { status: string; package_lock: { exposure_state: string } };
       };
       assert.equal(enable.opl_agent_package_exposure.status, 'enabled');
@@ -332,15 +406,17 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
         registryUrl,
         '--package-id',
         'third.party.research',
-      ], { OPL_STATE_DIR: stateDir }) as {
+      ], env) as {
         opl_agent_package_rollback: {
           status: string;
           package_lock: { package_id: string };
-          lifecycle_receipt: { action: string; writes_performed: boolean };
+          physical_surface: { status: string };
+          lifecycle_receipt: { action: string; writes_performed: boolean; physical_surface: { status: string } };
         };
       };
       assert.equal(rollback.opl_agent_package_rollback.status, 'rolled_back');
       assert.equal(rollback.opl_agent_package_rollback.package_lock.package_id, 'third.party.research');
+      assert.equal(rollback.opl_agent_package_rollback.physical_surface.status, 'materialized');
       assert.equal(rollback.opl_agent_package_rollback.lifecycle_receipt.action, 'rollback');
       assert.equal(rollback.opl_agent_package_rollback.lifecycle_receipt.writes_performed, true);
 
@@ -350,7 +426,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
         'status',
         '--package-id',
         'third.party.research',
-      ], { OPL_STATE_DIR: stateDir }) as {
+      ], env) as {
         opl_agent_package_status: {
           status: string;
           installed_package_count: number;
@@ -370,17 +446,27 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
         'uninstall',
         '--package-id',
         'third.party.research',
-      ], { OPL_STATE_DIR: stateDir }) as {
+      ], env) as {
         opl_agent_package_uninstall: {
           status: string;
           removed_package_lock: { package_id: string };
-          lifecycle_receipt: { action: string; writes_performed: boolean };
+          physical_surface: { status: string; removed_paths: string[] };
+          lifecycle_receipt: { action: string; writes_performed: boolean; physical_surface: { status: string } };
         };
       };
       assert.equal(uninstall.opl_agent_package_uninstall.status, 'uninstalled');
       assert.equal(uninstall.opl_agent_package_uninstall.removed_package_lock.package_id, 'third.party.research');
+      assert.equal(uninstall.opl_agent_package_uninstall.physical_surface.status, 'removed');
+      assert.equal(uninstall.opl_agent_package_uninstall.lifecycle_receipt.physical_surface.status, 'removed');
+      assert.equal(uninstall.opl_agent_package_uninstall.physical_surface.removed_paths.includes(installedCachePath), true);
       assert.equal(uninstall.opl_agent_package_uninstall.lifecycle_receipt.action, 'uninstall');
       assert.equal(uninstall.opl_agent_package_uninstall.lifecycle_receipt.writes_performed, true);
+      assert.equal(fs.existsSync(installedCachePath), false);
+      assert.equal(fs.existsSync(path.dirname(path.dirname(path.dirname(installedMarketplacePath)))), false);
+      assert.equal(
+        fs.readFileSync(installedConfigPath, 'utf8').includes('third-party-research@opl-agent-third.party.research-local'),
+        false,
+      );
 
       const afterUninstall = runCli([
         'connect',
@@ -388,7 +474,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
         'status',
         '--package-id',
         'third.party.research',
-      ], { OPL_STATE_DIR: stateDir }) as {
+      ], env) as {
         opl_agent_package_status: {
           status: string;
           installed_package_count: number;
@@ -398,9 +484,11 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       assert.equal(afterUninstall.opl_agent_package_status.status, 'not_installed');
       assert.equal(afterUninstall.opl_agent_package_status.installed_package_count, 0);
       assert.equal(afterUninstall.opl_agent_package_status.lifecycle_receipts[0].action, 'uninstall');
-    });
+    }, agentPackageManifest({ pluginSourcePath }));
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(homeDir, { recursive: true, force: true });
+    fs.rmSync(pluginSourcePath, { recursive: true, force: true });
   }
 });
 
