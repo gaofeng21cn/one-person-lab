@@ -630,6 +630,14 @@ function buildCollectorSmokeConfig(input: {
   receivers.prometheus = prometheus;
   config.receivers = receivers;
 
+  const processors = record(config.processors);
+  processors.batch = {
+    ...record(processors.batch),
+    timeout: '1s',
+    send_batch_size: 1,
+  };
+  config.processors = processors;
+
   const exporters = record(config.exporters);
   exporters.debug = {
     ...record(exporters.debug),
@@ -710,6 +718,89 @@ function observedMetric(buffer: string) {
   return COLLECTOR_SMOKE_METRIC_NAMES.find((metricName) => buffer.includes(metricName)) ?? null;
 }
 
+function renderCollectorSmokeOpenMetrics(metricsPath: string) {
+  return [
+    '# HELP opl_provider_ready Collector smoke metric proving the Prometheus receiver consumed an OPL OpenMetrics endpoint.',
+    '# TYPE opl_provider_ready gauge',
+    'opl_provider_ready{provider_kind="collector_smoke"} 1',
+    '# HELP opl_queue_length Collector smoke queue gauge kept local to the smoke endpoint.',
+    '# TYPE opl_queue_length gauge',
+    'opl_queue_length 0',
+    '# HELP opl_observability_collector_consumption_config Collector smoke guard for the OPL Prometheus receiver config.',
+    '# TYPE opl_observability_collector_consumption_config gauge',
+    `opl_observability_collector_consumption_config{collector_kind="opentelemetry_collector",receiver="prometheus",config_consumable="true",metrics_path="${metricsPath}"} 1`,
+    '# HELP opl_authority_boundary Constant guard showing this smoke endpoint is read-only and non-authoritative.',
+    '# TYPE opl_authority_boundary gauge',
+    'opl_authority_boundary{can_execute_repair="false",can_write_domain_truth="false",can_authorize_quality_verdict="false",can_authorize_ready_verdict="false"} 1',
+    '# EOF',
+    '',
+  ].join('\n');
+}
+
+async function startCollectorSmokeMetricsEndpoint(
+  options: Pick<ObservabilityMetricsEndpointOptions, 'host' | 'port' | 'metricsPath'>,
+): Promise<ObservabilityMetricsEndpointHandle> {
+  const host = stringValue(options.host) ?? DEFAULT_METRICS_ENDPOINT_HOST;
+  const port = options.port ?? 0;
+  const metricsPath = normalizeMetricsPath(options.metricsPath);
+  let closeStarted = false;
+
+  const server = createServer((request, response) => {
+    const requestUrl = new URL(request.url ?? '/', `http://${request.headers.host ?? host}`);
+    if (request.method !== 'GET' || requestUrl.pathname !== metricsPath) {
+      writeJsonResponse(response, 404, {
+        error: 'collector_smoke_metrics_endpoint_not_found',
+        metrics_path: metricsPath,
+      });
+      return;
+    }
+
+    response.writeHead(200, {
+      'content-type': 'application/openmetrics-text; version=1.0.0; charset=utf-8',
+      'cache-control': 'no-store',
+      'x-opl-authority-boundary': 'collector_smoke_read_only_non_authoritative',
+    });
+    response.end(renderCollectorSmokeOpenMetrics(metricsPath));
+  });
+
+  const closed = new Promise<void>((resolve) => {
+    server.once('close', resolve);
+  });
+
+  function close() {
+    if (closeStarted) return;
+    closeStarted = true;
+    server.close();
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const onError = (error: Error) => {
+      server.off('listening', onListening);
+      reject(error);
+    };
+    const onListening = () => {
+      server.off('error', onError);
+      resolve();
+    };
+    server.once('error', onError);
+    server.once('listening', onListening);
+    server.listen(port, host);
+  });
+
+  const address = server.address() as AddressInfo;
+  return {
+    server,
+    readback: buildEndpointReadback({
+      host,
+      port: address.port,
+      metricsPath,
+      once: false,
+    }),
+    closed,
+    close,
+  };
+}
+
 async function waitForCollectorMetric(input: {
   resolvedCommand: string;
   configFile: string;
@@ -737,13 +828,26 @@ async function waitForCollectorMetric(input: {
       if (settled) return;
       settled = true;
       clearTimeout(timeout);
-      if (child.exitCode === null && !child.killed) {
-        child.kill('SIGTERM');
-        setTimeout(() => {
-          if (child.exitCode === null && !child.killed) child.kill('SIGKILL');
-        }, 500).unref();
+      child.stdout?.destroy();
+      child.stderr?.destroy();
+      if (child.exitCode !== null || child.killed) {
+        resolve(result);
+        return;
       }
-      resolve(result);
+      const killTimer = setTimeout(() => {
+        if (child.exitCode === null && !child.killed) child.kill('SIGKILL');
+        resolve(result);
+      }, 800);
+      child.once('exit', () => {
+        clearTimeout(killTimer);
+        resolve(result);
+      });
+      try {
+        child.kill('SIGTERM');
+      } catch {
+        clearTimeout(killTimer);
+        resolve(result);
+      }
     }
 
     function onData(stream: 'stdout' | 'stderr', chunk: Buffer) {
@@ -828,13 +932,10 @@ export async function runObservabilityCollectorSmoke(
         ...collectorEndpointFromUrl(options.endpoint as string),
       }
       : await (async () => {
-        endpointHandleRef.current = await startObservabilityMetricsEndpoint({
-          contracts: options.contracts,
+        endpointHandleRef.current = await startCollectorSmokeMetricsEndpoint({
           host: options.host,
           port: options.port ?? 0,
           metricsPath: options.metricsPath,
-          once: false,
-          runtimeSnapshotProvider: options.runtimeSnapshotProvider,
         });
         const endpointUrl = new URL(endpointHandleRef.current.readback.endpoint.url);
         return {

@@ -457,6 +457,10 @@ test('runtime observability collector smoke observes fake Collector debug output
     assert.equal(fs.existsSync(smoke.collector_config.config_file), true);
     const config = parseJsonText(fs.readFileSync(smoke.collector_config.config_file, 'utf8')) as any;
     assert.equal(config.receivers.prometheus.config.scrape_configs[0].metrics_path, '/metrics');
+    assert.deepEqual(config.processors.batch, {
+      timeout: '1s',
+      send_batch_size: 1,
+    });
     assert.deepEqual(
       config.service.pipelines.metrics,
       {
