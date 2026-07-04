@@ -1,11 +1,11 @@
-import { assert, fs, os, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
 
 function readSchemaExample() {
   const schemaPath = path.join(
     repoRoot,
     'contracts/family-orchestration/research-evidence-pack.schema.json',
   );
-  const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8')) as {
+  const schema = parseJsonText(fs.readFileSync(schemaPath, 'utf8')) as {
     examples: Array<Record<string, unknown>>;
   };
   return schema.examples[0];

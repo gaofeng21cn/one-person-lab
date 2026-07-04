@@ -1,4 +1,4 @@
-import { assert, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCli, runCliFailure, test } from '../helpers.ts';
 
 const moduleIds = [
   'mas-scholar-skills.display',
@@ -209,7 +209,7 @@ const expectedEngineSpecByModule = {
 }>;
 
 function readJson(filePath: string) {
-  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  return parseJsonText(fs.readFileSync(filePath, 'utf8'));
 }
 
 test('scholar-skills materialize emits non-authoritative candidate artifact bodies only with explicit payload opt-in', () => {
