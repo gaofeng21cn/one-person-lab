@@ -62,13 +62,6 @@
   },
   "reviewed_baselines": [
     {
-      "path": "src/entrypoints/cli/cases/private-command-specs.ts",
-      "limit": 1293,
-      "owner": "OPL Console / CLI entrypoints",
-      "reason": "Private command registry is a stable CLI specification surface; current module refactor keeps source modules under budget while leaving this entrypoint spec as a reviewed strict-ratchet baseline.",
-      "intended_boundary": "Split by private command family when the CLI entrypoint registry becomes the active refactor target; no new private command family should grow this file without moving to a case part."
-    },
-    {
       "path": "tests/src/cli/cases/app-action.test.ts",
       "limit": 1297,
       "owner": "OPL Console tests",
