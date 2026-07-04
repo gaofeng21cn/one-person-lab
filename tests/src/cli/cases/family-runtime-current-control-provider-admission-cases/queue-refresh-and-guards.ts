@@ -21,6 +21,11 @@ import {
   writeJsonEmitterScript,
 } from './shared.ts';
 import type { FamilyRuntimeTaskRow } from './shared.ts';
+import { parseJsonText } from '../../../../../src/kernel/json-file.ts';
+
+function parseJsonRecord(raw: string): any {
+  return parseJsonText(raw) as any;
+}
 
 test('family-runtime rehydrates terminal MAS current-control admission only when currentness identity is fresh', () => {
   const db = new DatabaseSync(':memory:');
@@ -63,7 +68,7 @@ test('family-runtime rehydrates terminal MAS current-control admission only when
       WHERE task_id = ? AND event_type = 'task_requeued_from_mas_current_control_provider_admission'
       LIMIT 1
     `).get(taskId) as { payload_json: string } | undefined;
-    const payload = JSON.parse(task.payload_json);
+    const payload = parseJsonRecord(task.payload_json);
 
     assert.equal(identical.accepted, false);
     assert.equal(identical.idempotent_noop, true);
@@ -78,7 +83,7 @@ test('family-runtime rehydrates terminal MAS current-control admission only when
     assert.equal(payload.owner_route_currentness_basis.truth_epoch, 'truth-event-02');
     assert.ok(requeueEvent);
     assert.equal(
-      JSON.parse(requeueEvent.payload_json).reason,
+      parseJsonRecord(requeueEvent.payload_json).reason,
       'mas_current_control_provider_admission_fresh_after_succeeded',
     );
   } finally {
@@ -150,7 +155,7 @@ test('family-runtime rehydrates succeeded MAS current-control admission when pro
       WHERE task_id = ? AND event_type = 'task_requeued_from_mas_current_control_provider_admission'
       LIMIT 1
     `).get(taskId) as { payload_json: string } | undefined;
-    const eventPayload = event ? JSON.parse(event.payload_json) : null;
+    const eventPayload = event ? parseJsonRecord(event.payload_json) : null;
 
     assert.equal(result.accepted, true);
     assert.equal(result.requeued_from_terminal, true);
@@ -298,8 +303,8 @@ test('family-runtime requeues succeeded MAS admission when complete command read
       WHERE task_id = ? AND event_type = 'task_requeued_from_mas_current_control_provider_admission'
       LIMIT 1
     `).get(taskId) as { payload_json: string } | undefined;
-    const payload = JSON.parse(task.payload_json);
-    const eventPayload = event ? JSON.parse(event.payload_json) : null;
+    const payload = parseJsonRecord(task.payload_json);
+    const eventPayload = event ? parseJsonRecord(event.payload_json) : null;
 
     assert.equal(result.accepted, true);
     assert.equal(result.requeued_from_terminal, true);
@@ -374,8 +379,8 @@ test('family-runtime rehydrates terminal MAS current-control admission when stag
       WHERE task_id = ? AND event_type = 'task_requeued_from_mas_current_control_provider_admission'
       LIMIT 1
     `).get(taskId) as { payload_json: string } | undefined;
-    const payload = JSON.parse(task.payload_json);
-    const eventPayload = requeueEvent ? JSON.parse(requeueEvent.payload_json) : null;
+    const payload = parseJsonRecord(task.payload_json);
+    const eventPayload = requeueEvent ? parseJsonRecord(requeueEvent.payload_json) : null;
 
     assert.equal(result.accepted, true);
     assert.equal(result.requeued_from_terminal, true);
@@ -519,7 +524,7 @@ test('family-runtime consumes terminal MAS current-control admission when only v
       WHERE task_id = ? AND event_type = 'task_current_control_provider_admission_already_consumed'
       LIMIT 1
     `).get(taskId) as { payload_json: string } | undefined;
-    const eventPayload = consumedEvent ? JSON.parse(consumedEvent.payload_json) : null;
+    const eventPayload = consumedEvent ? parseJsonRecord(consumedEvent.payload_json) : null;
 
     assert.equal(result.accepted, false);
     assert.equal(result.idempotent_noop, true);
@@ -527,7 +532,7 @@ test('family-runtime consumes terminal MAS current-control admission when only v
     assert.equal(result.task?.status, 'succeeded');
     assert.equal(task.status, 'succeeded');
     assert.equal(task.attempts, 0);
-    assert.equal(JSON.parse(task.payload_json).owner_route_currentness_basis.runtime_health_epoch, 'runtime-health-event-01');
+    assert.equal(parseJsonRecord(task.payload_json).owner_route_currentness_basis.runtime_health_epoch, 'runtime-health-event-01');
     assert.equal(requeueEvent, undefined);
     assert.ok(consumedEvent);
     assert.equal(eventPayload.reason, 'terminal_stage_attempt_consumed_same_transition_identity');
@@ -621,7 +626,7 @@ test('family-runtime rehydrates blocked MAS current-control admission when termi
       WHERE task_id = ? AND event_type = 'task_requeued_from_mas_current_control_provider_admission'
       LIMIT 1
     `).get(taskId) as { payload_json: string } | undefined;
-    const eventPayload = requeueEvent ? JSON.parse(requeueEvent.payload_json) : null;
+    const eventPayload = requeueEvent ? parseJsonRecord(requeueEvent.payload_json) : null;
 
     assert.equal(result.accepted, true);
     assert.equal(result.requeued_from_terminal, true);
@@ -714,8 +719,8 @@ test('family-runtime enqueue replaces stale queued MAS current-control admission
       WHERE task_id = ? AND event_type = 'task_requeued_from_mas_current_control_provider_admission'
       LIMIT 1
     `).get(taskId) as { payload_json: string } | undefined;
-    const payload = JSON.parse(task.payload_json);
-    const eventPayload = requeueEvent ? JSON.parse(requeueEvent.payload_json) : null;
+    const payload = parseJsonRecord(task.payload_json);
+    const eventPayload = requeueEvent ? parseJsonRecord(requeueEvent.payload_json) : null;
 
     assert.equal(result.accepted, true);
     assert.equal(result.requeued_from_terminal, false);
@@ -820,8 +825,8 @@ test('family-runtime enqueue replaces same-fingerprint MAS current-control admis
       WHERE task_id = ? AND event_type = 'task_requeued_from_mas_current_control_provider_admission'
       LIMIT 1
     `).get(taskId) as { payload_json: string } | undefined;
-    const payload = JSON.parse(task.payload_json);
-    const eventPayload = requeueEvent ? JSON.parse(requeueEvent.payload_json) : null;
+    const payload = parseJsonRecord(task.payload_json);
+    const eventPayload = requeueEvent ? parseJsonRecord(requeueEvent.payload_json) : null;
 
     assert.equal(result.accepted, true);
     assert.equal(result.requeued_from_terminal, false);
