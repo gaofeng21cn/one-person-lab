@@ -5,6 +5,7 @@ import {
   fs,
   masDomainProgressTransitionRequest,
   os,
+  parseJsonText,
   path,
   providerObservationBoundary,
   runCli,
@@ -167,7 +168,7 @@ test('family-runtime replays existing complete transition readback when MAS expo
       const taskRow = db.prepare('SELECT task_id, payload_json FROM tasks WHERE dedupe_key = ?').get(
         attemptIdempotencyKey,
       ) as { task_id: string; payload_json: string };
-      const payload = JSON.parse(taskRow.payload_json);
+      const payload = parseJsonText(taskRow.payload_json);
       const createdAt = new Date().toISOString();
       db.prepare(`
         INSERT INTO stage_attempts(
@@ -227,7 +228,7 @@ test('family-runtime replays existing complete transition readback when MAS expo
       '--task-kind',
       'domain_owner/default-executor-dispatch',
     ], env);
-    const refreshedCurrentControl = JSON.parse(fs.readFileSync(currentControlPath, 'utf8'));
+    const refreshedCurrentControl = parseJsonText(fs.readFileSync(currentControlPath, 'utf8'));
     const queue = runCli([
       'family-runtime',
       'queue',

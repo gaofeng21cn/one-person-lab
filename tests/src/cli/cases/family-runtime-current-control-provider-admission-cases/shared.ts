@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 
-import { assert, fs, os, path, runCli, shellSingleQuote, test } from '../../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCli, shellSingleQuote, test } from '../../helpers.ts';
 import { enqueueTask } from '../../../../../src/modules/runway/family-runtime-enqueue.ts';
 import { ensureProviderHostedStageAttempt } from '../../../../../src/modules/runway/family-runtime-provider-hosted-attempts.ts';
 import type { FamilyRuntimeTaskRow } from '../../../../../src/modules/runway/family-runtime-store.ts';
@@ -17,6 +17,8 @@ export function familyRuntimeEnv(stateRoot: string, extra: Record<string, string
     ...extra,
   };
 }
+
+export { parseJsonText };
 
 function jsString(value: string) {
   return JSON.stringify(value);

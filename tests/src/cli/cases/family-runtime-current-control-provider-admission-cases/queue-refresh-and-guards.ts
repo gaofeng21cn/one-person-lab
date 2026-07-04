@@ -13,6 +13,7 @@ import {
   insertQueuedTask,
   insertSucceededTask,
   os,
+  parseJsonText,
   path,
   providerObservationBoundary,
   record,
@@ -21,7 +22,6 @@ import {
   writeJsonEmitterScript,
 } from './shared.ts';
 import type { FamilyRuntimeTaskRow } from './shared.ts';
-import { parseJsonText } from '../../../../../src/kernel/json-file.ts';
 
 function parseJsonRecord(raw: string): any {
   return parseJsonText(raw) as any;

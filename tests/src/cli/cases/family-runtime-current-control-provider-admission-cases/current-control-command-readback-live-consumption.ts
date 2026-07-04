@@ -5,6 +5,7 @@ import {
   currentControlCommandOutboxRecord,
   enqueueTask,
   insertSucceededTask,
+  parseJsonText,
   test,
 } from './shared.ts';
 
@@ -272,8 +273,8 @@ test('family-runtime requeues transport-only MAS admission when live readback is
       WHERE task_id = ? AND event_type = 'task_requeued_from_mas_current_control_provider_admission'
       LIMIT 1
     `).get(taskId) as { payload_json: string } | undefined;
-    const payload = JSON.parse(task.payload_json);
-    const eventPayload = event ? JSON.parse(event.payload_json) : null;
+    const payload = parseJsonText(task.payload_json);
+    const eventPayload = event ? parseJsonText(event.payload_json) : null;
 
     assert.equal(result.accepted, true);
     assert.equal(result.requeued_from_terminal, true);

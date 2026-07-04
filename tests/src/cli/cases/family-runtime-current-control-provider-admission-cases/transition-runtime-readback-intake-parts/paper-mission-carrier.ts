@@ -4,6 +4,7 @@ import {
   fs,
   masPaperMissionOplRuntimeCarrier,
   os,
+  parseJsonText,
   path,
   providerObservationBoundary,
   runCli,
@@ -130,7 +131,7 @@ test('family-runtime intake consumes MAS PaperMissionTransaction opl_runtime_car
     ], env);
     const queue = runCli(['family-runtime', 'queue', 'list'], env);
     const tasks = queue.family_runtime_queue.tasks;
-    const refreshedCurrentControl = JSON.parse(fs.readFileSync(currentControlPath, 'utf8'));
+    const refreshedCurrentControl = parseJsonText(fs.readFileSync(currentControlPath, 'utf8'));
 
     assert.equal(intake.family_runtime_intake.enqueued_count, 1);
     assert.equal(intake.family_runtime_intake.suppressed_count, 1);

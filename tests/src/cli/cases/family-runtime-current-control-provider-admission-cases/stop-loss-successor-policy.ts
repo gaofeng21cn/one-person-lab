@@ -5,10 +5,10 @@ import {
   currentControlAdmissionPayload,
   enqueueTask,
   insertQueuedTask,
+  parseJsonText,
   record,
   test,
 } from './shared.ts';
-import { parseJsonText } from '../../../../../src/kernel/json-file.ts';
 
 function stopLossDm002Payload(input: {
   actionType?: string;

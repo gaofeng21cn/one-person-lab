@@ -6,6 +6,7 @@ import {
   fs,
   masDomainProgressTransitionRequest,
   os,
+  parseJsonText,
   path,
   providerObservationBoundary,
   runCli,
@@ -104,7 +105,7 @@ test('family-runtime refuses to publish provider admission readback from incompl
         task: { payload },
       },
     });
-    const currentControl = JSON.parse(fs.readFileSync(currentControlPath, 'utf8'));
+    const currentControl = parseJsonText(fs.readFileSync(currentControlPath, 'utf8'));
 
     assert.equal(published.published, false);
     assert.equal(published.reason, 'transition_runtime_live_readback_incomplete');
@@ -251,7 +252,7 @@ test('family-runtime intake consumes terminal OPL provider admission instead of 
         WHERE dedupe_key = ?
       `).get(attemptIdempotencyKey) as any;
       assert.ok(task);
-      const taskPayload = JSON.parse(task.payload_json);
+      const taskPayload = parseJsonText(task.payload_json);
       const attempt = ensureProviderHostedStageAttempt(db, task, taskPayload, {
         eventSource: 'test-terminal-consumed-readback',
       });
@@ -293,7 +294,7 @@ test('family-runtime intake consumes terminal OPL provider admission instead of 
       '--task-kind',
       'domain_owner/default-executor-dispatch',
     ], env);
-    const refreshedCurrentControl = JSON.parse(fs.readFileSync(currentControlPath, 'utf8'));
+    const refreshedCurrentControl = parseJsonText(fs.readFileSync(currentControlPath, 'utf8'));
     const queue = runCli([
       'family-runtime',
       'queue',

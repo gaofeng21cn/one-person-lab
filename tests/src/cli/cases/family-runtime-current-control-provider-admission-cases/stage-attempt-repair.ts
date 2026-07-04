@@ -7,6 +7,7 @@ import {
   ensureProviderHostedStageAttempt,
   insertCompletedCurrentControlStageAttempt,
   insertQueuedTask,
+  parseJsonText,
   test,
 } from './shared.ts';
 import type { FamilyRuntimeTaskRow } from './shared.ts';
@@ -83,7 +84,7 @@ test('family-runtime clears stale running MAS current-control admission when lin
       WHERE task_id = ? AND event_type = 'task_running_current_control_terminal_attempt_noop'
       LIMIT 1
     `).get(taskId) as { payload_json: string } | undefined;
-    const eventPayload = event ? JSON.parse(event.payload_json) : null;
+    const eventPayload = event ? parseJsonText(event.payload_json) : null;
 
     assert.equal(result.accepted, false);
     assert.equal(result.idempotent_noop, true);
@@ -183,7 +184,7 @@ test('family-runtime repairs queued MAS current-control admission when linked st
       ORDER BY created_at DESC
       LIMIT 1
     `).get(taskId) as { payload_json: string } | undefined;
-    const eventPayload = event ? JSON.parse(event.payload_json) : null;
+    const eventPayload = event ? parseJsonText(event.payload_json) : null;
 
     assert.equal(result.accepted, false);
     assert.equal(result.idempotent_noop, true);

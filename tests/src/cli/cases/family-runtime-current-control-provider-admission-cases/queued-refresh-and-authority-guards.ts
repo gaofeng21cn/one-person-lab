@@ -9,6 +9,7 @@ import {
   insertQueuedTask,
   insertSucceededTask,
   os,
+  parseJsonText,
   path,
   providerObservationBoundary,
   runCli,
@@ -85,8 +86,8 @@ test('family-runtime enqueue keeps stale queued MAS current-control admission be
       WHERE task_id = ? AND event_type = 'task_requeued_from_mas_current_control_provider_admission'
       LIMIT 1
     `).get(taskId) as { payload_json: string } | undefined;
-    const payload = JSON.parse(task.payload_json);
-    const eventPayload = requeueEvent ? JSON.parse(requeueEvent.payload_json) : null;
+    const payload = parseJsonText(task.payload_json);
+    const eventPayload = requeueEvent ? parseJsonText(requeueEvent.payload_json) : null;
 
     assert.equal(result.accepted, true);
     assert.equal(result.requeued_from_terminal, false);
@@ -201,7 +202,7 @@ test('family-runtime enqueue treats concurrent dedupe-key insert as idempotent n
     assert.equal(result.task?.status, 'succeeded');
     assert.ok(event);
     assert.equal(
-      JSON.parse(event.payload_json).reason,
+      parseJsonText(event.payload_json).reason,
       'concurrent_enqueue_dedupe_key_won_by_existing_task',
     );
   } finally {

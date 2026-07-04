@@ -4,6 +4,7 @@ import {
   fs,
   masDomainProgressTransitionRequest,
   os,
+  parseJsonText,
   path,
   providerObservationBoundary,
   runCli,
@@ -184,7 +185,7 @@ test('family-runtime intake promotes MAS transition request-only task into OPL r
     );
     assert.equal(tasks[0].payload.current_control_command.idempotency_key, attemptIdempotencyKey);
     assert.equal(tasks[0].payload.current_control_command.runtime_kind, 'DomainProgressTransitionRuntime');
-    const refreshedCurrentControl = JSON.parse(fs.readFileSync(currentControlPath, 'utf8'));
+    const refreshedCurrentControl = parseJsonText(fs.readFileSync(currentControlPath, 'utf8'));
     assert.equal(
       refreshedCurrentControl.current_control_refresh_source,
       'opl_transition_runtime_readback_provider_admission',
@@ -390,7 +391,7 @@ test('family-runtime intake consumes MAS current-control transition_request_cand
       tasks[0].payload.opl_domain_progress_transition_runtime_live_readback.runtime_readback_status,
       'complete_transaction',
     );
-    const refreshedCurrentControl = JSON.parse(fs.readFileSync(currentControlPath, 'utf8'));
+    const refreshedCurrentControl = parseJsonText(fs.readFileSync(currentControlPath, 'utf8'));
     assert.equal(refreshedCurrentControl.provider_admission_pending_count, 1);
     assert.equal(refreshedCurrentControl.transition_request_pending_count, 0);
     assert.equal(
@@ -566,8 +567,8 @@ test('family-runtime records NonAdvancingApply when authorized stage packet lack
       'domain_owner/default-executor-dispatch',
     ], env);
     const queue = runCli(['family-runtime', 'queue', 'list'], env);
-    const refreshedCurrentControl = JSON.parse(fs.readFileSync(currentControlPath, 'utf8'));
-    const logEntries = fs.readFileSync(runtimeLogPath, 'utf8').trim().split(/\r?\n/u).map((line) => JSON.parse(line));
+    const refreshedCurrentControl = parseJsonText(fs.readFileSync(currentControlPath, 'utf8'));
+    const logEntries = fs.readFileSync(runtimeLogPath, 'utf8').trim().split(/\r?\n/u).map((line) => parseJsonText(line));
 
     assert.equal(intake.family_runtime_intake.enqueued_count, 0);
     assert.equal(intake.family_runtime_intake.suppressed_count, 1);
