@@ -13,6 +13,7 @@ import {
   withIsolatedFamilyRuntimeEnv,
 } from './mas-default-executor-current-source-helpers.ts';
 
+import { parseJsonText } from '../../../../../src/kernel/json-file.ts';
 import { runFamilyRuntimeQueueTick } from '../../../../../src/modules/runway/family-runtime-tick.ts';
 import { enqueueTask } from '../../../../../src/modules/runway/family-runtime-enqueue.ts';
 import { familyRuntimePaths, type FamilyRuntimeTaskRow } from '../../../../../src/modules/runway/family-runtime-store.ts';
@@ -52,7 +53,7 @@ test('family-runtime tick selects the current MAS default executor source and sk
         enqueueTask: () => ({ accepted: false }),
         dispatchTask: (_db, _paths, row: FamilyRuntimeTaskRow) => ({
           task_id: row.task_id,
-          source_fingerprint: JSON.parse(row.payload_json).source_fingerprint,
+          source_fingerprint: (parseJsonText(row.payload_json) as any).source_fingerprint,
         }),
       });
 
@@ -81,7 +82,7 @@ test('family-runtime tick selects the current MAS default executor source and sk
       assert.equal(staleTask.last_error, 'mas_default_executor_superseded_by_current_source');
       assert.equal(staleTask.dead_letter_reason, 'mas_default_executor_superseded_by_current_source');
       assert.ok(staleEvent);
-      const stalePayload = JSON.parse(staleEvent.payload_json);
+      const stalePayload = parseJsonText(staleEvent.payload_json) as any;
       assert.equal(stalePayload.reason, 'same_dispatch_newer_source_exists');
       assert.equal(stalePayload.current_task_id, 'task-mas-default-source-current');
       assert.equal(stalePayload.current_source_fingerprint, 'source-after');
@@ -159,7 +160,7 @@ test('family-runtime tick blocks domain owner rows without source fingerprint be
       assert.equal(blockedTask.last_error, 'progress_first_owner_delta_required');
       assert.equal(blockedTask.dead_letter_reason, 'progress_first_owner_delta_required');
       assert.ok(event);
-      const eventPayload = JSON.parse(event.payload_json);
+      const eventPayload = parseJsonText(event.payload_json) as any;
       assert.equal(eventPayload.lineage.reason, 'progress_first_source_fingerprint_required');
       assert.equal(eventPayload.lineage.next_forced_delta, 'source_fingerprint_or_fresh_owner_delta_required');
       assert.equal(eventPayload.authority_boundary.provider_stage_attempt_started, false);
@@ -245,9 +246,12 @@ test('family-runtime requeues superseded MAS current-control provider admission 
       assert.equal(row.attempts, 0);
       assert.equal(row.last_error, null);
       assert.equal(row.dead_letter_reason, null);
-      assert.equal(JSON.parse(row.payload_json).provider_admission_identity.status, 'provider_admission_pending');
+      assert.equal(
+        (parseJsonText(row.payload_json) as any).provider_admission_identity.status,
+        'provider_admission_pending',
+      );
       assert.ok(event);
-      const eventPayload = JSON.parse(event.payload_json);
+      const eventPayload = parseJsonText(event.payload_json) as any;
       assert.equal(eventPayload.reason, 'mas_current_control_provider_admission_after_superseded_blocker');
       assert.equal(eventPayload.authority_boundary.domain_truth_mutation, false);
     });
@@ -451,9 +455,9 @@ test('family-runtime requeues superseded MAS current owner-route admission witho
       assert.equal(row.attempts, 0);
       assert.equal(row.last_error, null);
       assert.equal(row.dead_letter_reason, null);
-      assert.equal(JSON.parse(row.payload_json).work_unit_fingerprint, workUnitFingerprint);
+      assert.equal((parseJsonText(row.payload_json) as any).work_unit_fingerprint, workUnitFingerprint);
       assert.ok(event);
-      const eventPayload = JSON.parse(event.payload_json);
+      const eventPayload = parseJsonText(event.payload_json) as any;
       assert.equal(eventPayload.reason, 'mas_current_owner_route_admission_after_superseded_blocker');
       assert.equal(eventPayload.next_currentness_identity.work_unit_fingerprint, workUnitFingerprint);
       assert.equal(eventPayload.authority_boundary.domain_truth_mutation, false);
@@ -566,7 +570,7 @@ test('family-runtime tick prefers MAS current-control provider admission over ne
       assert.equal(staleTask.last_error, 'mas_default_executor_superseded_by_current_source');
       assert.equal(staleTask.dead_letter_reason, 'mas_default_executor_superseded_by_current_source');
       assert.ok(supersededEvent);
-      const eventPayload = JSON.parse(supersededEvent.payload_json);
+      const eventPayload = parseJsonText(supersededEvent.payload_json) as any;
       assert.equal(eventPayload.reason, 'same_study_action_newer_source_exists');
       assert.equal(eventPayload.current_task_id, 'task-mas-current-control-admission');
       assert.equal(eventPayload.current_source_fingerprint, 'domain-transition::route-back-current');

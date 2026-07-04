@@ -8,6 +8,7 @@ import {
   record,
   test,
 } from './shared.ts';
+import { parseJsonText } from '../../../../../src/kernel/json-file.ts';
 
 function stopLossDm002Payload(input: {
   actionType?: string;
@@ -186,14 +187,14 @@ test('family-runtime enqueue keeps anti-loop stop-loss same work-unit redrive bl
       WHERE task_id = ? AND event_type = 'task_stop_loss_successor_admission_blocked'
       LIMIT 1
     `).get('task-dm002-stop-loss-same-lineage') as { payload_json: string } | undefined;
-    const eventPayload = event ? JSON.parse(event.payload_json) : null;
+    const eventPayload = event ? parseJsonText(event.payload_json) as any : null;
 
     assert.equal(result.accepted, false);
     assert.equal(result.idempotent_noop, true);
     assert.equal(result.task?.status, 'blocked');
     assert.equal(task.status, 'blocked');
     assert.equal(task.dead_letter_reason, 'anti_loop_budget_exhausted');
-    assert.deepEqual(JSON.parse(task.payload_json), payload);
+    assert.deepEqual(parseJsonText(task.payload_json), payload);
     assert.ok(eventPayload);
     assert.equal(eventPayload.reason, 'anti_loop_stop_loss_same_work_unit_redrive_blocked');
     assert.equal(eventPayload.same_work_unit_redrive_allowed, false);
@@ -265,7 +266,7 @@ test('family-runtime enqueue releases same-lineage stop-loss when MAS domain pro
       WHERE task_id = ? AND event_type = 'task_stop_loss_successor_admission_blocked'
       LIMIT 1
     `).get('task-dm003-stop-loss-same-lineage-domain-progress') as { payload_json: string } | undefined;
-    const eventPayload = releasedEvent ? JSON.parse(releasedEvent.payload_json) : null;
+    const eventPayload = releasedEvent ? parseJsonText(releasedEvent.payload_json) as any : null;
 
     assert.equal(result.accepted, true);
     assert.equal(result.idempotent_noop, false);
@@ -326,14 +327,14 @@ test('family-runtime enqueue preserves same-lineage typed blocker as legal anti-
       WHERE task_id = ? AND event_type = 'task_stop_loss_successor_admission_blocked'
       LIMIT 1
     `).get('task-dm002-stop-loss-same-lineage-typed-blocker') as { payload_json: string } | undefined;
-    const eventPayload = terminalEvent ? JSON.parse(terminalEvent.payload_json) : null;
+    const eventPayload = terminalEvent ? parseJsonText(terminalEvent.payload_json) as any : null;
 
     assert.equal(result.accepted, false);
     assert.equal(result.idempotent_noop, true);
     assert.equal(result.task?.status, 'blocked');
     assert.equal(task.status, 'blocked');
     assert.equal(task.dead_letter_reason, 'anti_loop_budget_exhausted');
-    assert.deepEqual(JSON.parse(task.payload_json), payload);
+    assert.deepEqual(parseJsonText(task.payload_json), payload);
     assert.ok(terminalEvent);
     assert.equal(blockedEvent, undefined);
     assert.equal(eventPayload.reason, 'anti_loop_stop_loss_terminal_path_observed');
@@ -391,8 +392,8 @@ test('family-runtime enqueue admits identity-different anti-loop stop-loss succe
       WHERE task_id = ? AND event_type = 'task_stop_loss_successor_admitted'
       LIMIT 1
     `).get(row.task_id) as { payload_json: string } | undefined;
-    const payload = JSON.parse(row.payload_json);
-    const eventPayload = event ? JSON.parse(event.payload_json) : null;
+    const payload = parseJsonText(row.payload_json) as any;
+    const eventPayload = event ? parseJsonText(event.payload_json) as any : null;
 
     assert.equal(result.accepted, true);
     assert.equal(result.idempotent_noop, false);
@@ -466,7 +467,7 @@ test('family-runtime enqueue preserves human gate as legal anti-loop stop-loss t
       WHERE task_id = ? AND event_type = 'task_stop_loss_successor_admitted'
       LIMIT 1
     `).get(row.task_id) as { payload_json: string } | undefined;
-    const eventPayload = event ? JSON.parse(event.payload_json) : null;
+    const eventPayload = event ? parseJsonText(event.payload_json) as any : null;
 
     assert.equal(result.accepted, true);
     assert.equal(result.task?.status, 'waiting_approval');
