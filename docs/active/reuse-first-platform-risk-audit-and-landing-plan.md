@@ -807,7 +807,7 @@ Phase 1、Phase 7、Phase 9 的本轮收薄已吸收进 `main`，属于 schema b
 
 - Source：`managed-runtime-contract.ts` 与 `default-caller-surface-gates.ts` 复用 `contract-validation.ts` / `json-file.ts` 的 `isRecord`、`optionalString`，不再维护局部 JSON boundary helper。
 - Test fixture：runtime App/operator drilldown 相关测试只做内部命名收敛，断言内容、CLI 命令、fixture 数据、authority boundary 与 owner receipt / typed blocker 语义不变。
-- Fresh evidence：focused runtime App/operator drilldown tests 71/71 pass，`npm run typecheck` pass，`npm run source:modules -- --strict-imports --strict-cycles` status=ok，`npm run reuse-first:scan:diff -- --diff-ref main --strict` exit 0 且 hard finding 为 0；full scan 当前为 `finding_count=1276`、`hard_gate_finding_count=740`、`advisory_finding_count=536`、`handwritten_json_boundary=472`、`phase1-kernel-shared-json-boundary-helper=13`、`phase10-test-and-fixture-projections=1115`。该证据只证明 helper 复用和测试投影命名收敛，不证明 runtime ready、domain ready、production ready 或 owner acceptance。
+- Fresh evidence：focused runtime App/operator drilldown / reuse-first scan tests 154/154 pass，`npm run typecheck` pass，`npm run source:modules -- --strict-imports --strict-cycles` status=ok，`npm run reuse-first:scan:diff -- --diff-ref main --strict` exit 0 且 hard finding 为 0；full scan 当前为 `finding_count=1276`、`hard_gate_finding_count=740`、`advisory_finding_count=536`、`handwritten_json_boundary=472`、`phase1-kernel-shared-json-boundary-helper=13`、`phase10-test-and-fixture-projections=1115`。该证据只证明 helper 复用和测试投影命名收敛，不证明 runtime ready、domain ready、production ready 或 owner acceptance。
 
 ## Phase 5 Managed Update Execution Helper Foldback 2026-07-04
 
