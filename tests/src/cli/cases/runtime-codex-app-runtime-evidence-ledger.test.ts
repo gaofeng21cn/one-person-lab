@@ -2,6 +2,7 @@ import {
   assert,
   fs,
   os,
+  parseJsonText,
   path,
   runCli,
   runCliFailure,
@@ -547,7 +548,7 @@ test('runtime Codex App runtime evidence long-soak finish materializes a record 
       OPL_STATE_DIR: stateRoot,
     }).codex_app_runtime_long_soak_observation_start;
 
-    const workorder = JSON.parse(fs.readFileSync(startOutput.workorder_file, 'utf8'));
+    const workorder = parseJsonText(fs.readFileSync(startOutput.workorder_file, 'utf8')) as any;
     fs.writeFileSync(
       startOutput.workorder_file,
       `${JSON.stringify({
@@ -618,7 +619,7 @@ test('runtime Codex App runtime evidence long-soak finish materializes a record 
     assert.equal(finishOutput.authority_boundary.can_close_long_soak, false);
     assert.equal(finishOutput.authority_boundary.can_claim_production_ready, false);
 
-    const payload = JSON.parse(fs.readFileSync(finishOutput.record_payload_file, 'utf8'));
+    const payload = parseJsonText(fs.readFileSync(finishOutput.record_payload_file, 'utf8')) as any;
     assert.deepEqual(payload.temporal_hosted_long_soak_refs, finishOutput.temporal_hosted_long_soak_refs);
     assert.deepEqual(payload.provider_state_linkage_refs, finishOutput.provider_state_linkage_refs);
     assert.deepEqual(payload.operator_evidence_refs, finishOutput.operator_evidence_refs);

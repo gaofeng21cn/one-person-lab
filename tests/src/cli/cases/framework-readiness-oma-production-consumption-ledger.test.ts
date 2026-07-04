@@ -1,4 +1,4 @@
-import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
 import { recordManagedInstallUpdateReceipts } from '../../../../src/modules/connect/managed-install-update-ledger.ts';
 import { recordOmaAppLivePathReceipts } from '../../../../src/modules/foundry-lab/oma-app-live-path-ledger.ts';
 import {
@@ -635,7 +635,7 @@ test('runtime oma-production-consumption long-soak finish materializes a record 
       OPL_STATE_DIR: stateRoot,
     }).oma_long_soak_observation_start;
 
-    const workorder = JSON.parse(fs.readFileSync(startOutput.workorder_file, 'utf8'));
+    const workorder = parseJsonText(fs.readFileSync(startOutput.workorder_file, 'utf8')) as any;
     fs.writeFileSync(
       startOutput.workorder_file,
       `${JSON.stringify({
@@ -705,7 +705,7 @@ test('runtime oma-production-consumption long-soak finish materializes a record 
     assert.equal(finishOutput.authority_boundary.can_claim_production_ready, false);
     assert.equal(finishOutput.authority_boundary.can_create_domain_owner_receipt, false);
 
-    const payload = JSON.parse(fs.readFileSync(finishOutput.record_payload_file, 'utf8'));
+    const payload = parseJsonText(fs.readFileSync(finishOutput.record_payload_file, 'utf8')) as any;
     assert.deepEqual(payload.long_soak_refs, finishOutput.long_soak_refs);
 
     const recordOutput = runCli([
@@ -785,7 +785,7 @@ test('runtime oma-production-consumption long-soak event records constrained ope
     const operatorLog = fs.readFileSync(startOutput.operator_log_file, 'utf8')
       .split('\n')
       .filter((line) => line.trim().length > 0)
-      .map((line) => JSON.parse(line));
+      .map((line) => parseJsonText(line) as any);
     assert.deepEqual(operatorLog.map((event) => event.event_kind), eventKinds);
     assert.deepEqual(operatorLog.map((event) => event.evidence_ref), eventKinds.map(
       (eventKind) => `operator-evidence:oma/${eventKind}`,
