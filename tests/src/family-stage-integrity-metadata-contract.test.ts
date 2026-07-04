@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 type JsonRecord = Record<string, unknown>;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -11,7 +13,7 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const schemaPath = 'contracts/family-orchestration/family-stage-integrity-metadata.schema.json';
 
 function readJson(relativePath: string): JsonRecord {
-  return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as JsonRecord;
+  return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as JsonRecord;
 }
 
 function firstExample(schema: JsonRecord): JsonRecord {

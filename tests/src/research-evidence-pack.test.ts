@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 type JsonRecord = Record<string, unknown>;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -12,7 +14,7 @@ const schemaPath = 'contracts/family-orchestration/research-evidence-pack.schema
 
 function readJson(relativePath: string): JsonRecord {
   assert.equal(fs.existsSync(path.join(repoRoot, relativePath)), true, `${relativePath} should exist`);
-  return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as JsonRecord;
+  return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as JsonRecord;
 }
 
 function record(value: unknown): JsonRecord {

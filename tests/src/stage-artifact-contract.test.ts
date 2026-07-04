@@ -4,13 +4,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const stageArtifactRuntimeContractPath = 'contracts/opl-framework/stage-artifact-runtime-contract.json';
 const stageArtifactUnitSchemaPath = 'contracts/opl-framework/stage-artifact-unit.schema.json';
 
 function readJson<T>(relativePath: string): T {
-  return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as T;
+  return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as T;
 }
 
 test('Stage Artifact contracts bind false-authority outputs away from owner gates', () => {

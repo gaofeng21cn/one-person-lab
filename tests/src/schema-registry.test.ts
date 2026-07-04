@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 import {
   assertJsonSchemaPayload,
   validateJsonSchemaPayload,
@@ -16,7 +18,7 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const schemaRef = 'contracts/opl-framework/progress-delta-receipt.schema.json';
 
 function readJson(relativePath: string): Record<string, unknown> {
-  return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Record<string, unknown>;
+  return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Record<string, unknown>;
 }
 
 function progressDeltaReceiptSchema(): JsonSchemaRegistryEntry {

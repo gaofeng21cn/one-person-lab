@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 import {
   buildQualityGateRuntimeBinding,
   QUALITY_GATE_RUNTIME_ALLOWED_RECEIPT_KINDS,
@@ -20,7 +22,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 
 function readJson<T>(relativePath: string): T {
-  return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as T;
+  return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as T;
 }
 
 test('quality gate runtime contract is refs-only and cannot authorize quality or export', () => {
