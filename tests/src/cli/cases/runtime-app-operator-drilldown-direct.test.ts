@@ -45,13 +45,13 @@ test('runtime app-operator-drilldown keeps wrapper-only readout fields', () => {
     assert.equal(output.summary, undefined);
     assert.equal(output.attention_first_payload, undefined);
 
-    const drilldown = output.app_operator_drilldown;
-    assert.equal(drilldown.surface_kind, 'opl_app_operator_drilldown_read_model');
-    assert.equal(typeof drilldown.summary, 'object');
-    assert.equal(typeof drilldown.current_owner_delta_read_model, 'object');
-    assert.equal(typeof drilldown.attention_first_payload.current_owner_delta_read_model, 'object');
+    const projection = output.app_operator_drilldown;
+    assert.equal(projection.surface_kind, 'opl_app_operator_drilldown_read_model');
+    assert.equal(typeof projection.summary, 'object');
+    assert.equal(typeof projection.current_owner_delta_read_model, 'object');
+    assert.equal(typeof projection.attention_first_payload.current_owner_delta_read_model, 'object');
     assert.equal(
-      drilldown.current_owner_delta_read_model.current_owner_delta.stop_loss_state.status,
+      projection.current_owner_delta_read_model.current_owner_delta.stop_loss_state.status,
       'not_triggered',
     );
   } finally {

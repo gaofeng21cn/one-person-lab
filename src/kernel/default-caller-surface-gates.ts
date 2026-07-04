@@ -7,6 +7,8 @@ import {
   DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
   DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
 } from './default-caller-retirement-guard.ts';
+import { isRecord } from './contract-validation.ts';
+import { optionalString } from './json-file.ts';
 
 export type JsonRecord = Record<string, unknown>;
 
@@ -40,14 +42,6 @@ const DEFAULT_CALLER_CANONICAL_TARGET_IDS: Record<string, string[]> = {
   domain_handler: ['domain_action_adapter_export_dispatch', 'domain_action_adapter', 'domain_handler'],
   workbench: ['workbench', 'workbench_drilldown'],
 };
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
 
 function stringList(value: unknown) {
   if (!Array.isArray(value)) {

@@ -36,7 +36,7 @@ test('runtime App drilldown keeps blocked transport redrive behind MAS owner han
       can_claim_production_ready: false,
     },
   };
-  const drilldown = applyAppOperatorDrilldownDetail({
+  const projection = applyAppOperatorDrilldownDetail({
     operator_action_routing_refs: {
       refs: [
         ownerHandoffRecordRoute,
@@ -80,7 +80,7 @@ test('runtime App drilldown keeps blocked transport redrive behind MAS owner han
       can_claim_production_ready: false,
     },
   }, 'full');
-  const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
+  const nextSafeAction = projection.attention_first_payload.next_safe_action;
   assert.ok(nextSafeAction);
 
   assert.equal(nextSafeAction.action_id, 'domain_dispatch:medautoscience:attempt-1:record');
@@ -88,11 +88,11 @@ test('runtime App drilldown keeps blocked transport redrive behind MAS owner han
   assert.equal(nextSafeAction.route_requires_domain_or_app_payload, true);
   assert.equal(nextSafeAction.can_close_without_domain_or_app_payload, false);
   const ownerDeltaNextAction =
-    drilldown.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none;
+    projection.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none;
   assert.ok(ownerDeltaNextAction);
   assert.equal(ownerDeltaNextAction.default_planning_root, 'current_owner_delta');
   assert.equal(
-    drilldown.attention_first_payload.owner_delta_first.next_owner,
+    projection.attention_first_payload.owner_delta_first.next_owner,
     'domain_repository_or_app_live_operator',
   );
   assert.deepEqual(nextSafeAction.submit_args, [
@@ -108,7 +108,7 @@ test('runtime App drilldown keeps blocked transport redrive behind MAS owner han
   assert.equal(nextSafeAction.authority_split.mas_publication_quality_owner, true);
   assert.equal(nextSafeAction.can_execute_domain_action_directly, false);
   assert.equal(
-    drilldown.operator_action_routing_refs.refs.some(
+    projection.operator_action_routing_refs.refs.some(
       (ref: { action_id: string; action_kind: string }) =>
         ref.action_id === 'family-runtime-queue:task-dm002:redrive'
         && ref.action_kind === 'blocked_transport_redrive',
@@ -186,7 +186,7 @@ test('runtime App drilldown keeps provider worker repair audit-only when MAS own
       mas_closes_owner_receipt: true,
     },
   };
-  const drilldown = applyAppOperatorDrilldownDetail({
+  const projection = applyAppOperatorDrilldownDetail({
     operator_action_routing_refs: {
       refs: [
         ownerHandoffRoute,
@@ -207,23 +207,23 @@ test('runtime App drilldown keeps provider worker repair audit-only when MAS own
     },
   }, 'full');
 
-  const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
+  const nextSafeAction = projection.attention_first_payload.next_safe_action;
   assert.ok(nextSafeAction);
   assert.equal(nextSafeAction.action_id, 'domain_dispatch:medautoscience:attempt-1:record');
   assert.equal(nextSafeAction.action_kind, 'domain_dispatch_evidence_receipt_record');
   assert.equal(nextSafeAction.can_execute_domain_action_directly, false);
   assert.equal(nextSafeAction.can_submit_to_safe_action_shell, true);
-  assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 0);
-  assert.equal(drilldown.app_execution_bridge.safe_action_routes.length, 3);
+  assert.equal(projection.attention_first_payload.additional_safe_action_count, 0);
+  assert.equal(projection.app_execution_bridge.safe_action_routes.length, 3);
   const ownerDeltaNextAction =
-    drilldown.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none;
+    projection.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none;
   assert.ok(ownerDeltaNextAction);
   assert.equal(
     ownerDeltaNextAction.default_planning_root,
     'current_owner_delta',
   );
   assert.equal(
-    drilldown.attention_first_payload.owner_delta_first.next_owner,
+    projection.attention_first_payload.owner_delta_first.next_owner,
     'med-autoscience',
   );
   assert.equal(
@@ -235,7 +235,7 @@ test('runtime App drilldown keeps provider worker repair audit-only when MAS own
     'current_owner_delta',
   );
   assert.equal(
-    drilldown.operator_action_routing_refs.refs.some(
+    projection.operator_action_routing_refs.refs.some(
       (ref: { action_id: string; action_kind: string }) =>
         ref.action_id === 'provider-worker:temporal:restart'
         && ref.action_kind === 'provider_worker_restart',
@@ -243,7 +243,7 @@ test('runtime App drilldown keeps provider worker repair audit-only when MAS own
     true,
   );
   assert.equal(
-    drilldown.app_execution_bridge.safe_action_routes.some(
+    projection.app_execution_bridge.safe_action_routes.some(
       (ref: { action_id: string; action_kind: string }) =>
         ref.action_id === 'family-runtime:redrive:mas-default-executor:task-1'
         && ref.action_kind === 'blocked_transport_redrive',
@@ -251,7 +251,7 @@ test('runtime App drilldown keeps provider worker repair audit-only when MAS own
     true,
   );
   assert.equal(
-    drilldown.app_execution_bridge.safe_action_routes.some(
+    projection.app_execution_bridge.safe_action_routes.some(
       (ref: { action_id: string; action_kind: string }) =>
         ref.action_id === 'domain_dispatch:medautoscience:attempt-1:record'
         && ref.action_kind === 'domain_dispatch_evidence_receipt_record',

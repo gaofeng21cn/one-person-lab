@@ -98,9 +98,9 @@ test('domain dispatch evidence defaults to latest actionable attempt while prese
       JSON.stringify(closeoutPacket),
     ], env);
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+    const projection = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
       .app_operator_drilldown;
-    const attempts = drilldown.domain_dispatch_evidence.attempts.filter(
+    const attempts = projection.domain_dispatch_evidence.attempts.filter(
       (attempt: { stage_id: string; workspace_locator: { dispatch_ref?: string } }) =>
         attempt.stage_id === 'domain_owner/default-executor-dispatch'
         && attempt.workspace_locator.dispatch_ref === workspaceLocator.dispatch_ref,
@@ -131,15 +131,15 @@ test('domain dispatch evidence defaults to latest actionable attempt while prese
       superseded.superseded_reason,
       'newer_stage_attempt_with_same_domain_dispatch_identity',
     );
-    assert.equal(drilldown.domain_dispatch_evidence.summary.attempt_count, 2);
-    assert.equal(drilldown.domain_dispatch_evidence.summary.dispatch_identity_group_count, 1);
+    assert.equal(projection.domain_dispatch_evidence.summary.attempt_count, 2);
+    assert.equal(projection.domain_dispatch_evidence.summary.dispatch_identity_group_count, 1);
     assert.equal(
-      drilldown.domain_dispatch_evidence.summary.current_default_actionable_attempt_count,
+      projection.domain_dispatch_evidence.summary.current_default_actionable_attempt_count,
       1,
     );
-    assert.equal(drilldown.domain_dispatch_evidence.summary.superseded_attempt_count, 1);
+    assert.equal(projection.domain_dispatch_evidence.summary.superseded_attempt_count, 1);
 
-    const recordRoutes = drilldown.operator_action_routing_refs.refs.filter(
+    const recordRoutes = projection.operator_action_routing_refs.refs.filter(
       (route: { action_kind: string }) =>
         route.action_kind === 'domain_dispatch_evidence_receipt_record',
     );
@@ -153,19 +153,19 @@ test('domain dispatch evidence defaults to latest actionable attempt while prese
       ),
       false,
     );
-    assert.equal(drilldown.summary.domain_dispatch_evidence_receipt_action_route_count, 1);
+    assert.equal(projection.summary.domain_dispatch_evidence_receipt_action_route_count, 1);
     assert.equal(
-      drilldown.summary.domain_dispatch_evidence_receipt_record_requires_domain_or_app_payload_count,
+      projection.summary.domain_dispatch_evidence_receipt_record_requires_domain_or_app_payload_count,
       1,
     );
-    assert.equal(drilldown.summary.evidence_envelope_open_count, 1);
-    assert.equal(drilldown.summary.evidence_envelope_superseded_count, 1);
+    assert.equal(projection.summary.evidence_envelope_open_count, 1);
+    assert.equal(projection.summary.evidence_envelope_superseded_count, 1);
 
-    const latestEnvelope = drilldown.evidence_envelope.envelopes.find(
+    const latestEnvelope = projection.evidence_envelope.envelopes.find(
       (envelope: { envelope_id: string }) =>
         envelope.envelope_id === `domain_dispatch:med-autoscience:${latest.stage_attempt_id}`,
     );
-    const supersededEnvelope = drilldown.evidence_envelope.envelopes.find(
+    const supersededEnvelope = projection.evidence_envelope.envelopes.find(
       (envelope: { envelope_id: string }) =>
         envelope.envelope_id === `domain_dispatch:med-autoscience:${superseded.stage_attempt_id}`,
     );
@@ -404,9 +404,9 @@ test('domain dispatch evidence compacts superseded attempts across dispatch auth
       JSON.stringify(closeoutPacket),
     ], env);
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+    const projection = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
       .app_operator_drilldown;
-    const attempts = drilldown.domain_dispatch_evidence.attempts.filter(
+    const attempts = projection.domain_dispatch_evidence.attempts.filter(
       (attempt: { stage_id: string; workspace_locator: { dispatch_ref?: string } }) =>
         attempt.stage_id === 'domain_owner/default-executor-dispatch'
         && attempt.workspace_locator.dispatch_ref === dispatchRef,
@@ -428,17 +428,17 @@ test('domain dispatch evidence compacts superseded attempts across dispatch auth
       'newer_stage_attempt_with_same_domain_dispatch_supersession_identity',
     );
     assert.equal(
-      drilldown.domain_dispatch_evidence.summary.current_default_actionable_attempt_count,
+      projection.domain_dispatch_evidence.summary.current_default_actionable_attempt_count,
       1,
     );
-    assert.equal(drilldown.domain_dispatch_evidence.summary.dispatch_identity_group_count, 2);
+    assert.equal(projection.domain_dispatch_evidence.summary.dispatch_identity_group_count, 2);
     assert.equal(
-      drilldown.domain_dispatch_evidence.summary.dispatch_supersession_identity_group_count,
+      projection.domain_dispatch_evidence.summary.dispatch_supersession_identity_group_count,
       1,
     );
-    assert.equal(drilldown.domain_dispatch_evidence.summary.superseded_attempt_count, 1);
+    assert.equal(projection.domain_dispatch_evidence.summary.superseded_attempt_count, 1);
 
-    const recordRoutes = drilldown.operator_action_routing_refs.refs.filter(
+    const recordRoutes = projection.operator_action_routing_refs.refs.filter(
       (route: { action_kind: string }) =>
         route.action_kind === 'domain_dispatch_evidence_receipt_record',
     );
@@ -454,9 +454,9 @@ test('domain dispatch evidence compacts superseded attempts across dispatch auth
       ),
       false,
     );
-    assert.equal(drilldown.summary.domain_dispatch_evidence_receipt_action_route_count, 1);
-    assert.equal(drilldown.summary.evidence_envelope_open_count, 1);
-    assert.equal(drilldown.summary.evidence_envelope_superseded_count, 1);
+    assert.equal(projection.summary.domain_dispatch_evidence_receipt_action_route_count, 1);
+    assert.equal(projection.summary.evidence_envelope_open_count, 1);
+    assert.equal(projection.summary.evidence_envelope_superseded_count, 1);
 
     const worklist = runCli([
       'family-runtime',
@@ -611,9 +611,9 @@ test('domain dispatch evidence compacts MAS default executor immutable dispatch 
       JSON.stringify(closeoutPacket),
     ], env);
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+    const projection = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
       .app_operator_drilldown;
-    const attempts = drilldown.domain_dispatch_evidence.attempts.filter(
+    const attempts = projection.domain_dispatch_evidence.attempts.filter(
       (attempt: { stage_id: string; workspace_locator: { study_id?: string } }) =>
         attempt.stage_id === 'domain_owner/default-executor-dispatch'
         && attempt.workspace_locator.study_id === baseLocator.study_id,
@@ -649,10 +649,10 @@ test('domain dispatch evidence compacts MAS default executor immutable dispatch 
       stalePublicationHandoffEvidence.superseded_by_stage_attempt_id,
       currentPublicationHandoff.stage_attempt_id,
     );
-    assert.equal(drilldown.summary.domain_dispatch_evidence_current_default_actionable_attempt_count, 1);
-    assert.equal(drilldown.summary.domain_dispatch_evidence_receipt_action_route_count, 1);
+    assert.equal(projection.summary.domain_dispatch_evidence_current_default_actionable_attempt_count, 1);
+    assert.equal(projection.summary.domain_dispatch_evidence_receipt_action_route_count, 1);
 
-    const recordRoutes = drilldown.operator_action_routing_refs.refs.filter(
+    const recordRoutes = projection.operator_action_routing_refs.refs.filter(
       (route: { action_kind: string }) =>
         route.action_kind === 'domain_dispatch_evidence_receipt_record',
     );

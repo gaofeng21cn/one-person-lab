@@ -281,73 +281,73 @@ export function createFamilyWorkspaceFixture(
   };
 }
 
-export function assertMasLifecycleDrilldownProjection(drilldown: any) {
-  assert.equal(drilldown.authority_boundary.can_write_domain_truth, false);
-  assert.equal(drilldown.authority_boundary.can_read_memory_body, false);
-  assert.equal(drilldown.authority_boundary.can_read_artifact_body, false);
-  assert.equal(drilldown.summary.owner_receipt_ref_count, 4);
-  assert.equal(drilldown.summary.typed_blocker_count, 3);
-  assert.equal(drilldown.summary.domain_dispatch_evidence_domain_count, 1);
-  assert.equal(drilldown.summary.domain_dispatch_evidence_attempt_count, 1);
-  assert.equal(drilldown.summary.domain_dispatch_evidence_owner_receipt_ref_count, 3);
-  assert.equal(drilldown.summary.domain_dispatch_evidence_typed_blocker_ref_count, 2);
-  assert.equal(drilldown.summary.domain_dispatch_evidence_no_regression_ref_count, 1);
-  assert.equal(drilldown.summary.domain_dispatch_evidence_memory_writeback_ref_count, 1);
-  assert.equal(drilldown.summary.domain_dispatch_evidence_domain_ready_claim_count, 0);
-  assert.equal(drilldown.summary.lifecycle_index_ref_count, 2);
-  assert.equal(drilldown.summary.lifecycle_restore_proof_ref_count, 2);
-  assert.equal(drilldown.summary.lifecycle_reconcile_missing_ref_count, 0);
-  assert.equal(drilldown.summary.lifecycle_reconcile_extra_ref_count, 0);
-  assert.equal(drilldown.summary.lifecycle_reconcile_stale_ref_count, 0);
-  assert.equal(drilldown.summary.lifecycle_domain_physical_delete_requires_owner_receipt, true);
-  assert.equal(drilldown.summary.lifecycle_domain_physical_delete_can_execute, false);
-  assert.equal(drilldown.summary.lifecycle_opl_cleanup_apply_can_execute, true);
-  assert.equal(drilldown.summary.safe_action_ref_count >= 2, true);
-  assert.equal(drilldown.summary.freshness_signal_count >= 1, true);
+export function assertMasLifecycleDrilldownProjection(projection: any) {
+  assert.equal(projection.authority_boundary.can_write_domain_truth, false);
+  assert.equal(projection.authority_boundary.can_read_memory_body, false);
+  assert.equal(projection.authority_boundary.can_read_artifact_body, false);
+  assert.equal(projection.summary.owner_receipt_ref_count, 4);
+  assert.equal(projection.summary.typed_blocker_count, 3);
+  assert.equal(projection.summary.domain_dispatch_evidence_domain_count, 1);
+  assert.equal(projection.summary.domain_dispatch_evidence_attempt_count, 1);
+  assert.equal(projection.summary.domain_dispatch_evidence_owner_receipt_ref_count, 3);
+  assert.equal(projection.summary.domain_dispatch_evidence_typed_blocker_ref_count, 2);
+  assert.equal(projection.summary.domain_dispatch_evidence_no_regression_ref_count, 1);
+  assert.equal(projection.summary.domain_dispatch_evidence_memory_writeback_ref_count, 1);
+  assert.equal(projection.summary.domain_dispatch_evidence_domain_ready_claim_count, 0);
+  assert.equal(projection.summary.lifecycle_index_ref_count, 2);
+  assert.equal(projection.summary.lifecycle_restore_proof_ref_count, 2);
+  assert.equal(projection.summary.lifecycle_reconcile_missing_ref_count, 0);
+  assert.equal(projection.summary.lifecycle_reconcile_extra_ref_count, 0);
+  assert.equal(projection.summary.lifecycle_reconcile_stale_ref_count, 0);
+  assert.equal(projection.summary.lifecycle_domain_physical_delete_requires_owner_receipt, true);
+  assert.equal(projection.summary.lifecycle_domain_physical_delete_can_execute, false);
+  assert.equal(projection.summary.lifecycle_opl_cleanup_apply_can_execute, true);
+  assert.equal(projection.summary.safe_action_ref_count >= 2, true);
+  assert.equal(projection.summary.freshness_signal_count >= 1, true);
   assert.equal(
-    drilldown.owner_receipt_refs.refs.some((ref: { ref: string }) =>
+    projection.owner_receipt_refs.refs.some((ref: { ref: string }) =>
       ref.ref === 'mas-owner-receipt:guarded-apply'
     ),
     true,
   );
   assert.equal(
-    drilldown.owner_receipt_refs.refs.some((ref: { ref: string }) =>
+    projection.owner_receipt_refs.refs.some((ref: { ref: string }) =>
       ref.ref === 'mas-owner-receipt:transition'
     ),
     true,
   );
   assert.equal(
-    drilldown.typed_blocker_refs.refs.some((ref: { ref: string }) =>
+    projection.typed_blocker_refs.refs.some((ref: { ref: string }) =>
       ref.ref === 'mas-blocker:publication-currentness'
     ),
     true,
   );
   assert.equal(
-    drilldown.typed_blocker_refs.blockers.some((blocker: { blocker_id: string }) =>
+    projection.typed_blocker_refs.blockers.some((blocker: { blocker_id: string }) =>
       blocker.blocker_id === 'domain_owned_lifecycle_receipt_required'
     ),
     true,
   );
-  assert.equal(drilldown.domain_dispatch_evidence.surface_kind, 'opl_app_drilldown_domain_dispatch_evidence');
-  assert.equal(drilldown.domain_dispatch_evidence.summary.domain_count, 1);
-  assert.equal(drilldown.domain_dispatch_evidence.by_domain.medautoscience.attempt_count, 1);
-  assert.equal(drilldown.domain_dispatch_evidence.by_domain.medautoscience.domain_ready_claim_count, 0);
+  assert.equal(projection.domain_dispatch_evidence.surface_kind, 'opl_app_drilldown_domain_dispatch_evidence');
+  assert.equal(projection.domain_dispatch_evidence.summary.domain_count, 1);
+  assert.equal(projection.domain_dispatch_evidence.by_domain.medautoscience.attempt_count, 1);
+  assert.equal(projection.domain_dispatch_evidence.by_domain.medautoscience.domain_ready_claim_count, 0);
   assert.equal(
-    drilldown.domain_dispatch_evidence.attempts[0].authority_boundary.provider_completion_is_domain_ready,
+    projection.domain_dispatch_evidence.attempts[0].authority_boundary.provider_completion_is_domain_ready,
     false,
   );
-  assert.deepEqual(drilldown.domain_dispatch_evidence.attempts[0].no_regression_evidence_refs, [
+  assert.deepEqual(projection.domain_dispatch_evidence.attempts[0].no_regression_evidence_refs, [
     'mas-no-regression:package',
   ]);
-  assert.deepEqual(drilldown.domain_dispatch_evidence.attempts[0].writeback_receipt_refs, [
+  assert.deepEqual(projection.domain_dispatch_evidence.attempts[0].writeback_receipt_refs, [
     'memory-writeback:receipt-1',
   ]);
-  assert.deepEqual(drilldown.memory_writeback_refs.writeback_receipt_refs, [
+  assert.deepEqual(projection.memory_writeback_refs.writeback_receipt_refs, [
     'memory-writeback:receipt-1',
     'mas://memory/writeback/receipt.json',
   ]);
   assert.equal(
-    drilldown.runtime_visualization_projection.graph.nodes.some(
+    projection.runtime_visualization_projection.graph.nodes.some(
       (node: { node_kind: string; ref: string }) =>
         node.node_kind === 'memory_writeback_receipt'
         && node.ref === 'mas://memory/writeback/receipt.json',
@@ -355,54 +355,54 @@ export function assertMasLifecycleDrilldownProjection(drilldown: any) {
     true,
   );
   assert.equal(
-    drilldown.freshness_refs.refs.some((ref: { source_fingerprint: string }) =>
+    projection.freshness_refs.refs.some((ref: { source_fingerprint: string }) =>
       ref.source_fingerprint === 'sha256:mas-drilldown-source'
     ),
     true,
   );
   assert.equal(
-    drilldown.ref_family_refs.source_refs.refs.some((ref: { ref: string }) =>
+    projection.ref_family_refs.source_refs.refs.some((ref: { ref: string }) =>
       ref.ref === 'source:dataset'
     ),
     true,
   );
   assert.equal(
-    drilldown.ref_family_refs.artifact_refs.refs.some((ref: { ref: string }) =>
+    projection.ref_family_refs.artifact_refs.refs.some((ref: { ref: string }) =>
       ref.ref === 'artifact:table'
     ),
     true,
   );
   assert.equal(
-    drilldown.ref_family_refs.memory_refs.refs.some((ref: { ref: string }) =>
+    projection.ref_family_refs.memory_refs.refs.some((ref: { ref: string }) =>
       ref.ref === 'memory:route-policy'
     ),
     true,
   );
   assert.equal(
-    drilldown.safe_action_refs.refs.some((ref: { role: string; ref: string }) =>
+    projection.safe_action_refs.refs.some((ref: { role: string; ref: string }) =>
       ref.role === 'lifecycle_cleanup_receipt_ref'
         && ref.ref.startsWith('opl://family-runtime/lifecycle-apply/medautoscience')
     ),
     true,
   );
-  assert.deepEqual(drilldown.lifecycle_ledger_refs.restore_proof_refs, [
+  assert.deepEqual(projection.lifecycle_ledger_refs.restore_proof_refs, [
     'restore-proof:mas-index',
     'restore-proof:mas-package',
   ]);
-  assert.equal(drilldown.lifecycle_ledger_refs.reconcile_projection.status, 'reconciled');
+  assert.equal(projection.lifecycle_ledger_refs.reconcile_projection.status, 'reconciled');
   assert.equal(
-    drilldown.lifecycle_ledger_refs.reconcile_projection.delete_ready_proof.can_execute_delete,
+    projection.lifecycle_ledger_refs.reconcile_projection.delete_ready_proof.can_execute_delete,
     false,
   );
   assert.equal(
-    drilldown.lifecycle_ledger_refs.reconcile_projection.delete_ready_proof.opl_cleanup_apply_ready,
+    projection.lifecycle_ledger_refs.reconcile_projection.delete_ready_proof.opl_cleanup_apply_ready,
     true,
   );
-  assert.equal(drilldown.lifecycle_ledger_refs.authority_boundary.can_write_domain_truth, false);
+  assert.equal(projection.lifecycle_ledger_refs.authority_boundary.can_write_domain_truth, false);
 }
 
-export function assertEvidenceTailAndDomainRefs(drilldown: any, snapshot: any) {
-  const stageTailItem = drilldown.production_evidence_tail_ledger.tail_items.find(
+export function assertEvidenceTailAndDomainRefs(projection: any, snapshot: any) {
+  const stageTailItem = projection.production_evidence_tail_ledger.tail_items.find(
     (item: { claim_scope: string; tail_id: string }) =>
       item.claim_scope === 'stage_production_caller_executor_receipt_monitor'
       && item.tail_id.includes(':review:'),
@@ -424,14 +424,14 @@ export function assertEvidenceTailAndDomainRefs(drilldown: any, snapshot: any) {
     stageTailItem.next_verification_command,
     'opl runtime app-operator-drilldown --detail full --json',
   );
-  const nextActionLedger = drilldown.production_evidence_tail_ledger.next_action_ledger;
+  const nextActionLedger = projection.production_evidence_tail_ledger.next_action_ledger;
   assert.equal(
     nextActionLedger.surface_kind,
     'opl_app_drilldown_production_tail_next_action_ledger',
   );
   assert.equal(
     nextActionLedger.summary.open_tail_item_count,
-    drilldown.production_evidence_tail_ledger.summary.open_tail_item_count,
+    projection.production_evidence_tail_ledger.summary.open_tail_item_count,
   );
   assert.equal(nextActionLedger.authority_boundary.reads_declared_refs_only, true);
   assert.equal(nextActionLedger.authority_boundary.can_read_memory_body, false);
@@ -469,45 +469,45 @@ export function assertEvidenceTailAndDomainRefs(drilldown: any, snapshot: any) {
     ),
     true,
   );
-  assert.equal(drilldown.app_execution_bridge.authority_boundary.can_write_domain_truth, false);
+  assert.equal(projection.app_execution_bridge.authority_boundary.can_write_domain_truth, false);
   assert.equal(
-    drilldown.operator_action_routing_refs.refs.some(
+    projection.operator_action_routing_refs.refs.some(
       (ref: { owner: string; route_target_kind: string }) =>
         ref.owner === 'opl' && ref.route_target_kind === 'app_surface',
     ),
     true,
   );
-  assert.equal(drilldown.functional_privatization_audit_summary.total_module_count >= 0, true);
-  assert.equal(typeof drilldown.functional_privatization_audit_summary.by_migration_class, 'object');
+  assert.equal(projection.functional_privatization_audit_summary.total_module_count >= 0, true);
+  assert.equal(typeof projection.functional_privatization_audit_summary.by_migration_class, 'object');
   assert.equal(
-    drilldown.functional_privatization_audit_summary.by_migration_class.temporary_migration_bridge_count >= 0,
+    projection.functional_privatization_audit_summary.by_migration_class.temporary_migration_bridge_count >= 0,
     true,
   );
   assert.equal(
-    drilldown.functional_privatization_audit_summary.by_migration_class.domain_authority_count >= 0,
+    projection.functional_privatization_audit_summary.by_migration_class.domain_authority_count >= 0,
     true,
   );
   assert.equal(
-    drilldown.functional_privatization_audit_summary.by_migration_class.refs_only_domain_adapter_count >= 0,
+    projection.functional_privatization_audit_summary.by_migration_class.refs_only_domain_adapter_count >= 0,
     true,
   );
-  assert.equal(drilldown.functional_privatization_audit_summary.default_watchlist_count, 0);
-  assert.equal(drilldown.summary.functional_privatization_action_required_count, 0);
+  assert.equal(projection.functional_privatization_audit_summary.default_watchlist_count, 0);
+  assert.equal(projection.summary.functional_privatization_action_required_count, 0);
   assert.equal(
-    drilldown.summary.functional_privatization_hidden_cleared_count,
-    drilldown.functional_privatization_audit_summary.default_hidden_cleared_count,
+    projection.summary.functional_privatization_hidden_cleared_count,
+    projection.functional_privatization_audit_summary.default_hidden_cleared_count,
   );
   assert.equal(
-    drilldown.summary.functional_privatization_audit_default_policy,
+    projection.summary.functional_privatization_audit_default_policy,
     'audit_action_required_first_full_inventory_via_explicit_drilldown',
   );
-  assert.equal(drilldown.functional_privatization_audit_summary.semantic_equivalence_review_count, 0);
+  assert.equal(projection.functional_privatization_audit_summary.semantic_equivalence_review_count, 0);
   assert.equal(
-    drilldown.functional_privatization_audit_refs.summary.active_private_generic_residue_count,
-    drilldown.functional_privatization_audit_summary.active_private_generic_residue_count,
+    projection.functional_privatization_audit_refs.summary.active_private_generic_residue_count,
+    projection.functional_privatization_audit_summary.active_private_generic_residue_count,
   );
   assert.equal(
-    drilldown.functional_privatization_audit_refs.domains.some(
+    projection.functional_privatization_audit_refs.domains.some(
       (domain: { domain_id: string; module_refs: { module_id: string }[] }) =>
         domain.domain_id === 'medautoscience'
         && domain.module_refs.some((module) => module.module_id === 'package_lifecycle_adapter'),
@@ -515,20 +515,20 @@ export function assertEvidenceTailAndDomainRefs(drilldown: any, snapshot: any) {
     true,
   );
   assert.equal(
-    drilldown.functional_privatization_audit_refs.domains.every(
+    projection.functional_privatization_audit_refs.domains.every(
       (domain: { authority_boundary: { can_write_domain_truth: boolean } }) =>
         domain.authority_boundary.can_write_domain_truth === false,
     ),
     true,
   );
   assert.equal(
-    drilldown.domain_projection_refs.refs.some(
+    projection.domain_projection_refs.refs.some(
       (ref: { ref: string }) => ref.ref === 'mas://runtime/control/latest.json',
     ),
     true,
   );
   assert.equal(
-    drilldown.domain_evidence_request_refs.external_requests.some(
+    projection.domain_evidence_request_refs.external_requests.some(
       (ref: {
         request_id: string;
         required_return_shapes: string[];
@@ -541,7 +541,7 @@ export function assertEvidenceTailAndDomainRefs(drilldown: any, snapshot: any) {
     true,
   );
   assert.equal(
-    drilldown.domain_evidence_request_refs.external_receipts.some(
+    projection.domain_evidence_request_refs.external_receipts.some(
       (ref: { ref: string; receipt_status: string; domain_receipt_refs: string[] }) =>
         ref.ref === 'opl://external-evidence/medautoscience/app_workbench_package_ref_consumption'
         && ref.receipt_status === 'verified'
@@ -550,13 +550,13 @@ export function assertEvidenceTailAndDomainRefs(drilldown: any, snapshot: any) {
     true,
   );
   assert.equal(
-    drilldown.domain_evidence_request_refs.evidence_gates.some(
+    projection.domain_evidence_request_refs.evidence_gates.some(
       (ref: { ref: string }) => ref.ref === 'real_package_lifecycle_receipt',
     ),
     false,
   );
   assert.equal(
-    drilldown.domain_evidence_request_refs.evidence_gate_receipts.some(
+    projection.domain_evidence_request_refs.evidence_gate_receipts.some(
       (ref: {
         ref: string;
         gate_id: string;
@@ -575,7 +575,7 @@ export function assertEvidenceTailAndDomainRefs(drilldown: any, snapshot: any) {
     true,
   );
   assert.equal(
-    drilldown.domain_evidence_request_refs.replacement_expectations.some(
+    projection.domain_evidence_request_refs.replacement_expectations.some(
       (ref: { ref: string; state: string }) =>
         ref.ref === 'artifact_package_lifecycle_shell'
         && ref.state === 'external_replacement_contract_expected',
@@ -583,7 +583,7 @@ export function assertEvidenceTailAndDomainRefs(drilldown: any, snapshot: any) {
     true,
   );
   assert.equal(
-    drilldown.domain_evidence_request_refs.remaining_bridge_modules.some(
+    projection.domain_evidence_request_refs.remaining_bridge_modules.some(
       (ref: {
         ref: string;
         module_id: string;

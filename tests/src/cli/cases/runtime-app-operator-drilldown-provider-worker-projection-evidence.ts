@@ -60,7 +60,7 @@ test('runtime App drilldown keeps active attempts with missing progress signals 
       ],
     },
   });
-  const drilldown = applyAppOperatorDrilldownDetail({
+  const projection = applyAppOperatorDrilldownDetail({
     operator_action_routing_refs: {
       refs: progressFirstRoutes,
     },
@@ -72,11 +72,11 @@ test('runtime App drilldown keeps active attempts with missing progress signals 
       can_claim_production_ready: false,
     },
   }, 'summary');
-  const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
+  const nextSafeAction = projection.attention_first_payload.next_safe_action;
   assert.ok(nextSafeAction);
   assert.equal(nextSafeAction.action_id, 'provider-worker:temporal:start');
   assert.equal(nextSafeAction.action_kind, 'provider_worker_start');
-  assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 0);
+  assert.equal(projection.attention_first_payload.additional_safe_action_count, 0);
 
   const progressAction = progressFirstRoutes.find((route: { action_kind: string }) =>
     route.action_kind === 'progress_first_attempt_supervision'

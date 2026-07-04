@@ -69,9 +69,9 @@ test('domain dispatch evidence does not expose unbound attempts as default recor
       JSON.stringify(closeoutPacket),
     ], env);
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+    const projection = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
       .app_operator_drilldown;
-    const evidence = drilldown.domain_dispatch_evidence.attempts.find(
+    const evidence = projection.domain_dispatch_evidence.attempts.find(
       (entry: { stage_attempt_id: string }) => entry.stage_attempt_id === attempt.stage_attempt_id,
     );
     assert.equal(evidence.dispatch_identity_key, null);
@@ -79,24 +79,24 @@ test('domain dispatch evidence does not expose unbound attempts as default recor
     assert.equal(evidence.default_actionable, false);
     assert.equal(evidence.default_actionability_status, 'not_actionable_unbound_dispatch_identity');
 
-    const recordRoutes = drilldown.operator_action_routing_refs.refs.filter(
+    const recordRoutes = projection.operator_action_routing_refs.refs.filter(
       (route: { action_kind: string }) =>
         route.action_kind === 'domain_dispatch_evidence_receipt_record',
     );
     assert.equal(recordRoutes.length, 0);
     assert.equal(
-      drilldown.summary.domain_dispatch_evidence_current_default_actionable_attempt_count,
+      projection.summary.domain_dispatch_evidence_current_default_actionable_attempt_count,
       0,
     );
-    assert.equal(drilldown.summary.domain_dispatch_evidence_receipt_action_route_count, 0);
+    assert.equal(projection.summary.domain_dispatch_evidence_receipt_action_route_count, 0);
     assert.equal(
-      drilldown.summary.domain_dispatch_evidence_receipt_record_requires_domain_or_app_payload_count,
+      projection.summary.domain_dispatch_evidence_receipt_record_requires_domain_or_app_payload_count,
       0,
     );
-    assert.equal(drilldown.summary.evidence_envelope_open_count, 0);
-    assert.equal(drilldown.summary.evidence_envelope_blocked_count, 1);
+    assert.equal(projection.summary.evidence_envelope_open_count, 0);
+    assert.equal(projection.summary.evidence_envelope_blocked_count, 1);
 
-    const envelope = drilldown.evidence_envelope.envelopes.find(
+    const envelope = projection.evidence_envelope.envelopes.find(
       (entry: { envelope_id: string }) =>
         entry.envelope_id === `domain_dispatch:med-autoscience:${attempt.stage_attempt_id}`,
     );
@@ -182,9 +182,9 @@ test('domain dispatch evidence waits for accepted typed closeout before exposing
       attempt.stage_attempt_id,
     ], env);
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+    const projection = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
       .app_operator_drilldown;
-    const evidence = drilldown.domain_dispatch_evidence.attempts.find(
+    const evidence = projection.domain_dispatch_evidence.attempts.find(
       (entry: { stage_attempt_id: string }) => entry.stage_attempt_id === attempt.stage_attempt_id,
     );
 
@@ -195,22 +195,22 @@ test('domain dispatch evidence waits for accepted typed closeout before exposing
     assert.equal(evidence.default_actionability_status, 'not_actionable_stage_attempt_not_closed');
     assert.equal(evidence.default_actionability_blocker, 'stage_attempt_closeout_required_before_domain_dispatch_evidence_record');
     assert.equal(
-      drilldown.summary.domain_dispatch_evidence_current_default_actionable_attempt_count,
+      projection.summary.domain_dispatch_evidence_current_default_actionable_attempt_count,
       0,
     );
-    assert.equal(drilldown.summary.domain_dispatch_evidence_receipt_action_route_count, 0);
+    assert.equal(projection.summary.domain_dispatch_evidence_receipt_action_route_count, 0);
     assert.equal(
-      drilldown.summary.domain_dispatch_evidence_receipt_record_requires_domain_or_app_payload_count,
+      projection.summary.domain_dispatch_evidence_receipt_record_requires_domain_or_app_payload_count,
       0,
     );
 
-    const recordRoutes = drilldown.operator_action_routing_refs.refs.filter(
+    const recordRoutes = projection.operator_action_routing_refs.refs.filter(
       (route: { action_kind: string }) =>
         route.action_kind === 'domain_dispatch_evidence_receipt_record',
     );
     assert.equal(recordRoutes.length, 0);
 
-    const envelope = drilldown.evidence_envelope.envelopes.find(
+    const envelope = projection.evidence_envelope.envelopes.find(
       (entry: { envelope_id: string }) =>
         entry.envelope_id === `domain_dispatch:med-autoscience:${attempt.stage_attempt_id}`,
     );
@@ -331,9 +331,9 @@ test('domain dispatch evidence keeps older unclosed attempts as superseded prove
       JSON.stringify(closeoutPacket),
     ], env);
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+    const projection = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
       .app_operator_drilldown;
-    const attempts = drilldown.domain_dispatch_evidence.attempts.filter(
+    const attempts = projection.domain_dispatch_evidence.attempts.filter(
       (entry: { stage_id: string; workspace_locator: { dispatch_ref?: string } }) =>
         entry.stage_id === 'domain_owner/default-executor-dispatch'
         && entry.workspace_locator.dispatch_ref === workspaceLocator.dispatch_ref,
@@ -355,12 +355,12 @@ test('domain dispatch evidence keeps older unclosed attempts as superseded prove
     assert.equal(currentEvidence.default_actionable, true);
     assert.equal(currentEvidence.default_actionability_status, 'current');
     assert.equal(
-      drilldown.summary.domain_dispatch_evidence_current_default_actionable_attempt_count,
+      projection.summary.domain_dispatch_evidence_current_default_actionable_attempt_count,
       1,
     );
-    assert.equal(drilldown.summary.evidence_envelope_superseded_count, 1);
+    assert.equal(projection.summary.evidence_envelope_superseded_count, 1);
 
-    const olderEnvelope = drilldown.evidence_envelope.envelopes.find(
+    const olderEnvelope = projection.evidence_envelope.envelopes.find(
       (entry: { envelope_id: string }) =>
         entry.envelope_id === `domain_dispatch:med-autoscience:${older.stage_attempt_id}`,
     );
@@ -438,10 +438,10 @@ test('domain dispatch evidence counts only explicit positive domain ready verdic
       ], env);
     }
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+    const projection = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
       .app_operator_drilldown;
     const evidenceByVerdict = new Map<string, { domain_ready_claimed: boolean }>(
-      drilldown.domain_dispatch_evidence.attempts.map(
+      projection.domain_dispatch_evidence.attempts.map(
         (entry: { domain_ready_verdict: string; domain_ready_claimed: boolean }) => [
           entry.domain_ready_verdict,
           entry,
@@ -456,11 +456,11 @@ test('domain dispatch evidence counts only explicit positive domain ready verdic
       assert.equal(evidenceByVerdict.get(verdict)?.domain_ready_claimed, true, verdict);
     }
     assert.equal(
-      drilldown.domain_dispatch_evidence.by_domain.medautoscience.domain_ready_claim_count,
+      projection.domain_dispatch_evidence.by_domain.medautoscience.domain_ready_claim_count,
       positiveVerdicts.length,
     );
     assert.equal(
-      drilldown.domain_dispatch_evidence.summary.domain_ready_claim_count,
+      projection.domain_dispatch_evidence.summary.domain_ready_claim_count,
       positiveVerdicts.length,
     );
   } finally {

@@ -83,12 +83,12 @@ test('runtime action execute can apply and verify legacy cleanup plans from App 
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const projection = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     }).app_operator_drilldown;
     assert.equal(
-      drilldown.operator_action_routing_refs.refs.some(
+      projection.operator_action_routing_refs.refs.some(
         (ref: { action_id: string; action_kind: string }) =>
           ref.action_id === 'legacy-cleanup:medautoscience:apply'
           && ref.action_kind === 'legacy_cleanup_apply',
@@ -96,7 +96,7 @@ test('runtime action execute can apply and verify legacy cleanup plans from App 
       true,
     );
     assert.equal(
-      drilldown.app_execution_bridge.safe_action_routes.some(
+      projection.app_execution_bridge.safe_action_routes.some(
         (ref: { action_id: string; can_submit_to_safe_action_shell: boolean }) =>
           ref.action_id === 'legacy-cleanup:medautoscience:apply'
           && ref.can_submit_to_safe_action_shell,
@@ -201,13 +201,13 @@ test('runtime action execute records MAS paper-line owner-chain results as refs-
     });
 
     const recordActionId = `domain_dispatch:medautoscience:${attemptId}:record`;
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const projection = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_PROVIDER_PROOF_WINDOW_SECONDS: '86400',
     }).app_operator_drilldown;
     assert.equal(
-      drilldown.operator_action_routing_refs.refs.some(
+      projection.operator_action_routing_refs.refs.some(
         (ref: { action_id: string; action_kind: string }) =>
           ref.action_id === recordActionId
           && ref.action_kind === 'domain_dispatch_evidence_receipt_record',

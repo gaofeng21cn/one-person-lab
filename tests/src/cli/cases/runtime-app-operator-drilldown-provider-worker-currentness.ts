@@ -10,7 +10,7 @@ import {
 } from '../../../../src/modules/console/runtime-tray-app-operator-drilldown-parts/provider-worker-action-routes.ts';
 
 test('runtime App drilldown selects provider worker repair before provider proof when worker source is stale', () => {
-  const drilldown = applyAppOperatorDrilldownDetail({
+  const projection = applyAppOperatorDrilldownDetail({
     operator_action_routing_refs: {
       refs: [
         {
@@ -68,7 +68,7 @@ test('runtime App drilldown selects provider worker repair before provider proof
       can_claim_production_ready: false,
     },
   }, 'full');
-  const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
+  const nextSafeAction = projection.attention_first_payload.next_safe_action;
   assert.ok(nextSafeAction);
 
   assert.equal(nextSafeAction.action_id, 'provider-worker:temporal:restart');

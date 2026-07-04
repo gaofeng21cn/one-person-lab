@@ -7,7 +7,7 @@ import {
 } from '../../../../src/modules/console/runtime-tray-app-operator-drilldown.ts';
 
 test('runtime App drilldown projects a refs-only workstream operating loop for artifact-first steering', () => {
-  const drilldown = buildAppOperatorDrilldown({
+  const projection = buildAppOperatorDrilldown({
     stageAttemptWorkbench: {
       attempts: [
         {
@@ -77,7 +77,7 @@ test('runtime App drilldown projects a refs-only workstream operating loop for a
     detailLevel: 'full',
   }) as any;
 
-  const loop = drilldown.workstream_operating_loop;
+  const loop = projection.workstream_operating_loop;
   assert.equal(loop.surface_kind, 'opl_workstream_operating_loop_projection');
   assert.equal(loop.projection_policy, 'refs_only_operator_steering_no_domain_truth_or_artifact_body');
   assert.equal(loop.summary.workstream_count, 1);
@@ -115,50 +115,50 @@ test('runtime App drilldown projects a refs-only workstream operating loop for a
   assert.equal(item.next_steering_action.can_claim_domain_ready, false);
 
   assert.equal(
-    drilldown.attention_first_payload.workstream_operating_loop.surface_kind,
+    projection.attention_first_payload.workstream_operating_loop.surface_kind,
     'opl_workstream_operating_loop_projection',
   );
   assert.equal(
-    drilldown.attention_first_payload.workstream_operating_loop.summary.workstream_count,
+    projection.attention_first_payload.workstream_operating_loop.summary.workstream_count,
     1,
   );
   assert.equal(
-    drilldown.attention_first_payload.owner_delta_first.surface_kind,
+    projection.attention_first_payload.owner_delta_first.surface_kind,
     'opl_owner_delta_first_projection',
   );
   assert.equal(
-    drilldown.attention_first_payload.owner_delta_first.projection_policy,
+    projection.attention_first_payload.owner_delta_first.projection_policy,
     'default_operator_surface_prioritizes_next_owner_delta_raw_refs_only_counters_are_drilldown',
   );
-  assert.equal(drilldown.attention_first_payload.owner_delta_first.next_owner, 'med-autoscience');
+  assert.equal(projection.attention_first_payload.owner_delta_first.next_owner, 'med-autoscience');
   assert.equal(
-    drilldown.attention_first_payload.owner_delta_first.next_required_delta,
+    projection.attention_first_payload.owner_delta_first.next_required_delta,
     'artifact_review_or_domain_owner_receipt_required',
   );
   assert.equal(
-    drilldown.attention_first_payload.owner_delta_first.primary_item.source,
+    projection.attention_first_payload.owner_delta_first.primary_item.source,
     'workstream_operating_loop',
   );
   assert.equal(
-    drilldown.attention_first_payload.owner_delta_first.raw_attention_default_policy,
+    projection.attention_first_payload.owner_delta_first.raw_attention_default_policy,
     'blocked_refs_only_envelopes_stage_replay_packets_and_ledger_counters_are_full_detail_drilldown_not_primary_operator_next_step',
   );
   assert.equal(
-    drilldown.attention_first_payload.owner_delta_first.authority_boundary.can_create_owner_receipt,
+    projection.attention_first_payload.owner_delta_first.authority_boundary.can_create_owner_receipt,
     false,
   );
   assert.equal(
-    drilldown.attention_first_payload.owner_delta_first.authority_boundary.can_claim_production_ready,
+    projection.attention_first_payload.owner_delta_first.authority_boundary.can_claim_production_ready,
     false,
   );
   assert.equal(
-    drilldown.summary.workstream_operating_loop_artifact_first_review_available_count,
+    projection.summary.workstream_operating_loop_artifact_first_review_available_count,
     1,
   );
 });
 
 test('workstream operating loop separates platform repair from deliverable progress and fails closed without goal oracle', () => {
-  const drilldown = buildAppOperatorDrilldown({
+  const projection = buildAppOperatorDrilldown({
     stageAttemptWorkbench: {
       attempts: [
         {
@@ -189,34 +189,34 @@ test('workstream operating loop separates platform repair from deliverable progr
     detailLevel: 'full',
   }) as any;
 
-  const item = drilldown.workstream_operating_loop.workstreams[0];
+  const item = projection.workstream_operating_loop.workstreams[0];
   assert.equal(item.operating_loop_status, 'needs_goal_oracle_or_owner_receipt');
   assert.equal(item.goal_oracle_status, 'missing');
   assert.equal(item.progress_classification, 'platform_repair');
   assert.deepEqual(item.artifact_review_refs, []);
   assert.equal(item.next_steering_action.action_id, 'provide_goal_oracle_or_owner_receipt');
   assert.equal(
-    drilldown.attention_first_payload.owner_delta_first.status,
+    projection.attention_first_payload.owner_delta_first.status,
     'owner_delta_required',
   );
   assert.equal(
-    drilldown.attention_first_payload.owner_delta_first.next_required_delta,
+    projection.attention_first_payload.owner_delta_first.next_required_delta,
     'domain_owner_receipt_quality_gate_or_typed_blocker_required',
   );
   assert.equal(
-    drilldown.attention_first_payload.owner_delta_first.summary.workstream_goal_oracle_missing_count,
+    projection.attention_first_payload.owner_delta_first.summary.workstream_goal_oracle_missing_count,
     1,
   );
   assert.equal(
-    drilldown.workstream_operating_loop.summary.platform_repair_only_workstream_count,
+    projection.workstream_operating_loop.summary.platform_repair_only_workstream_count,
     1,
   );
-  assert.equal(drilldown.workstream_operating_loop.summary.goal_oracle_missing_count, 1);
-  assert.equal(drilldown.workstream_operating_loop.summary.artifact_first_review_available_count, 0);
+  assert.equal(projection.workstream_operating_loop.summary.goal_oracle_missing_count, 1);
+  assert.equal(projection.workstream_operating_loop.summary.artifact_first_review_available_count, 0);
 });
 
 test('workstream operating loop anchors missing completion oracle to current owner delta and stage target refs', () => {
-  const drilldown = buildAppOperatorDrilldown({
+  const projection = buildAppOperatorDrilldown({
     stageAttemptWorkbench: {
       attempts: [
         {
@@ -263,7 +263,7 @@ test('workstream operating loop anchors missing completion oracle to current own
     detailLevel: 'full',
   }) as any;
 
-  const loop = drilldown.workstream_operating_loop;
+  const loop = projection.workstream_operating_loop;
   const item = loop.workstreams[0];
   assert.equal(item.goal_oracle_status, 'target_anchor_observed_owner_or_gate_needed');
   assert.equal(item.operating_loop_status, 'needs_owner_oracle_for_target_anchor');
@@ -297,23 +297,23 @@ test('workstream operating loop anchors missing completion oracle to current own
   assert.equal(loop.summary.deliverable_target_ref_observed_count, 1);
   assert.equal(loop.summary.goal_oracle_advisory_count, 1);
   assert.equal(
-    drilldown.summary.workstream_operating_loop_goal_oracle_target_anchor_observed_count,
+    projection.summary.workstream_operating_loop_goal_oracle_target_anchor_observed_count,
     1,
   );
   assert.equal(
-    drilldown.summary.workstream_operating_loop_deliverable_target_ref_observed_count,
+    projection.summary.workstream_operating_loop_deliverable_target_ref_observed_count,
     1,
   );
   assert.equal(
-    drilldown.summary.workstream_operating_loop_goal_oracle_advisory_count,
+    projection.summary.workstream_operating_loop_goal_oracle_advisory_count,
     1,
   );
   assert.equal(
-    drilldown.attention_first_payload.owner_delta_first.next_required_delta,
+    projection.attention_first_payload.owner_delta_first.next_required_delta,
     'domain_owner_receipt_quality_gate_or_typed_blocker_required',
   );
   assert.equal(
-    drilldown.attention_first_payload.owner_delta_first.summary.workstream_goal_oracle_missing_count,
+    projection.attention_first_payload.owner_delta_first.summary.workstream_goal_oracle_missing_count,
     0,
   );
 });
@@ -321,7 +321,7 @@ test('workstream operating loop anchors missing completion oracle to current own
 test('workstream operating loop treats current gate replay receipt as owner answer without ready claim', () => {
   const gateReceiptRef =
     'runtime/quests/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/reports/publishability_gate/2026-06-07T015349Z.json';
-  const drilldown = buildAppOperatorDrilldown({
+  const projection = buildAppOperatorDrilldown({
     stageAttemptWorkbench: {
       attempts: [
         {
@@ -364,7 +364,7 @@ test('workstream operating loop treats current gate replay receipt as owner answ
     detailLevel: 'full',
   }) as any;
 
-  const workstream = drilldown.workstream_operating_loop.workstreams[0];
+  const workstream = projection.workstream_operating_loop.workstreams[0];
   assert.equal(workstream.goal_oracle_status, 'observed');
   assert.deepEqual(workstream.quality_gate_refs, [gateReceiptRef]);
   assert.equal(workstream.latest_owner_answer_ref, gateReceiptRef);
@@ -372,7 +372,7 @@ test('workstream operating loop treats current gate replay receipt as owner answ
   assert.equal(workstream.latest_owner_answer_is_domain_ready_verdict, false);
 
   const currentOwnerDelta =
-    drilldown.attention_first_payload.current_owner_delta_read_model.current_owner_delta;
+    projection.attention_first_payload.current_owner_delta_read_model.current_owner_delta;
   assert.equal(currentOwnerDelta.lineage_ref, 'sat-current-gate-replay');
   assert.equal(currentOwnerDelta.latest_owner_answer_ref, gateReceiptRef);
   assert.equal(currentOwnerDelta.latest_owner_answer_kind, 'quality_gate_receipt');
@@ -380,13 +380,13 @@ test('workstream operating loop treats current gate replay receipt as owner answ
   assert.equal(currentOwnerDelta.hard_gate.human_or_domain_owner_required, false);
   assert.equal(currentOwnerDelta.hard_gate.domain_ready_authorized, false);
   assert.equal(
-    drilldown.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none,
+    projection.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none,
     null,
   );
 });
 
 test('owner delta first prefers the latest current domain dispatch workstream', () => {
-  const drilldown = buildAppOperatorDrilldown({
+  const projection = buildAppOperatorDrilldown({
     stageAttemptWorkbench: {
       attempts: [
         {
@@ -463,27 +463,27 @@ test('owner delta first prefers the latest current domain dispatch workstream', 
     detailLevel: 'full',
   }) as any;
 
-  const [oldWorkstream, currentWorkstream] = drilldown.workstream_operating_loop.workstreams;
+  const [oldWorkstream, currentWorkstream] = projection.workstream_operating_loop.workstreams;
   assert.equal(oldWorkstream.default_actionability_status, 'current');
   assert.equal(oldWorkstream.superseded_by_stage_attempt_id, null);
   assert.equal(currentWorkstream.default_actionability_status, 'current');
 
   assert.equal(
-    drilldown.attention_first_payload.owner_delta_first.primary_item.stage_attempt_id,
+    projection.attention_first_payload.owner_delta_first.primary_item.stage_attempt_id,
     'sat-current-dm003',
   );
   assert.equal(
-    drilldown.attention_first_payload.current_owner_delta_read_model.current_owner_delta.lineage_ref,
+    projection.attention_first_payload.current_owner_delta_read_model.current_owner_delta.lineage_ref,
     'sat-current-dm003',
   );
   assert.equal(
-    drilldown.attention_first_payload.owner_delta_first.workstream_item.stage_attempt_id,
+    projection.attention_first_payload.owner_delta_first.workstream_item.stage_attempt_id,
     'sat-current-dm003',
   );
 });
 
 test('owner delta first skips superseded domain dispatch workstreams', () => {
-  const drilldown = buildAppOperatorDrilldown({
+  const projection = buildAppOperatorDrilldown({
     stageAttemptWorkbench: {
       attempts: [
         {
@@ -560,23 +560,23 @@ test('owner delta first skips superseded domain dispatch workstreams', () => {
     detailLevel: 'full',
   }) as any;
 
-  const [oldWorkstream, currentWorkstream] = drilldown.workstream_operating_loop.workstreams;
+  const [oldWorkstream, currentWorkstream] = projection.workstream_operating_loop.workstreams;
   assert.equal(oldWorkstream.default_actionability_status, 'superseded');
   assert.equal(oldWorkstream.superseded_by_stage_attempt_id, 'sat-current-dm003-retry');
   assert.equal(currentWorkstream.default_actionability_status, 'current');
 
   assert.equal(
-    drilldown.attention_first_payload.owner_delta_first.primary_item.stage_attempt_id,
+    projection.attention_first_payload.owner_delta_first.primary_item.stage_attempt_id,
     'sat-current-dm003-retry',
   );
   assert.equal(
-    drilldown.attention_first_payload.current_owner_delta_read_model.current_owner_delta.lineage_ref,
+    projection.attention_first_payload.current_owner_delta_read_model.current_owner_delta.lineage_ref,
     'sat-current-dm003-retry',
   );
 });
 
 test('owner delta first keeps unbound dispatch workstreams as provenance, not current owner pointer', () => {
-  const drilldown = buildAppOperatorDrilldown({
+  const projection = buildAppOperatorDrilldown({
     stageAttemptWorkbench: {
       attempts: [
         {
@@ -623,7 +623,7 @@ test('owner delta first keeps unbound dispatch workstreams as provenance, not cu
     detailLevel: 'full',
   }) as any;
 
-  const workstream = drilldown.workstream_operating_loop.workstreams[0];
+  const workstream = projection.workstream_operating_loop.workstreams[0];
   assert.equal(workstream.heartbeat_status, 'closed');
   assert.equal(workstream.default_actionable, false);
   assert.equal(
@@ -635,7 +635,7 @@ test('owner delta first keeps unbound dispatch workstreams as provenance, not cu
     'record_owner_or_gate_for_target_anchor',
   );
 
-  const ownerDeltaFirst = drilldown.attention_first_payload.owner_delta_first;
+  const ownerDeltaFirst = projection.attention_first_payload.owner_delta_first;
   assert.notEqual(
     ownerDeltaFirst.primary_item.stage_attempt_id,
     'sat-stale-unbound-paper-autonomy',
@@ -647,7 +647,7 @@ test('owner delta first keeps unbound dispatch workstreams as provenance, not cu
     /^(domain_or_app_owner_payload_ref_or_typed_blocker_required|app_release_user_path_evidence_open)$/,
   );
   assert.equal(
-    drilldown.attention_first_payload.current_owner_delta_read_model
+    projection.attention_first_payload.current_owner_delta_read_model
       .current_owner_delta.lineage_ref,
     null,
   );
@@ -684,7 +684,7 @@ test('owner delta first projects MAS current work unit ahead of stale unbound di
       can_claim_production_ready: false,
     },
   };
-  const drilldown = buildAppOperatorDrilldown({
+  const projection = buildAppOperatorDrilldown({
     stageAttemptWorkbench: {
       attempts: [
         {
@@ -732,7 +732,7 @@ test('owner delta first projects MAS current work unit ahead of stale unbound di
     detailLevel: 'full',
   }) as any;
 
-  const ownerDeltaFirst = drilldown.attention_first_payload.owner_delta_first;
+  const ownerDeltaFirst = projection.attention_first_payload.owner_delta_first;
   assert.equal(ownerDeltaFirst.primary_item.source, 'domain_current_work_unit');
   assert.equal(ownerDeltaFirst.primary_item.status, 'executable_owner_action');
   assert.equal(ownerDeltaFirst.primary_item.domain_id, 'medautoscience');
@@ -757,7 +757,7 @@ test('owner delta first projects MAS current work unit ahead of stale unbound di
   );
   assert.equal(ownerDeltaFirst.workstream_item, null);
 
-  const readModel = drilldown.attention_first_payload.current_owner_delta_read_model;
+  const readModel = projection.attention_first_payload.current_owner_delta_read_model;
   assert.equal(readModel.current_owner, 'write');
   assert.equal(readModel.current_owner_delta.domain_id, 'medautoscience');
   assert.equal(readModel.current_owner_delta.stage_id, 'publication_supervision');
@@ -833,7 +833,7 @@ test('owner delta first prioritizes OPL-owned MAS current work-unit blockers ove
       },
     },
   };
-  const drilldown = buildAppOperatorDrilldown({
+  const projection = buildAppOperatorDrilldown({
     stageAttemptWorkbench: { attempts: [] },
     providerContinuousProof: {},
     domainProjectionIngestion: {},
@@ -842,7 +842,7 @@ test('owner delta first prioritizes OPL-owned MAS current work-unit blockers ove
     detailLevel: 'full',
   }) as any;
 
-  const ownerDeltaFirst = drilldown.attention_first_payload.owner_delta_first;
+  const ownerDeltaFirst = projection.attention_first_payload.owner_delta_first;
   assert.equal(ownerDeltaFirst.primary_item.source, 'domain_current_work_unit');
   assert.equal(ownerDeltaFirst.primary_item.status, 'typed_blocker');
   assert.equal(ownerDeltaFirst.primary_item.owner, 'one-person-lab');
@@ -861,7 +861,7 @@ test('owner delta first prioritizes OPL-owned MAS current work-unit blockers ove
   assert.equal(ownerDeltaFirst.summary.domain_current_work_unit_count, 2);
 
   const currentOwnerDelta =
-    drilldown.attention_first_payload.current_owner_delta_read_model.current_owner_delta;
+    projection.attention_first_payload.current_owner_delta_read_model.current_owner_delta;
   assert.equal(
     currentOwnerDelta.latest_owner_answer_ref,
     'mas://typed-blockers/dm004/truth-snapshot-c275cc9ec942575e291388ff',
@@ -877,7 +877,7 @@ test('owner delta first prioritizes OPL-owned MAS current work-unit blockers ove
 });
 
 test('owner delta first does not promote unclosed running attempts over closed owner target', () => {
-  const drilldown = buildAppOperatorDrilldown({
+  const projection = buildAppOperatorDrilldown({
     stageAttemptWorkbench: {
       attempts: [
         {
@@ -950,7 +950,7 @@ test('owner delta first does not promote unclosed running attempts over closed o
     detailLevel: 'full',
   }) as any;
 
-  const [closedWorkstream, runningWorkstream] = drilldown.workstream_operating_loop.workstreams;
+  const [closedWorkstream, runningWorkstream] = projection.workstream_operating_loop.workstreams;
   assert.equal(closedWorkstream.heartbeat_status, 'closed');
   assert.equal(runningWorkstream.heartbeat_status, 'running');
   assert.equal(runningWorkstream.default_actionable, false);
@@ -959,11 +959,11 @@ test('owner delta first does not promote unclosed running attempts over closed o
     'not_actionable_stage_attempt_not_closed',
   );
   assert.equal(
-    drilldown.attention_first_payload.owner_delta_first.primary_item.stage_attempt_id,
+    projection.attention_first_payload.owner_delta_first.primary_item.stage_attempt_id,
     'sat-closed-owner-target',
   );
   assert.equal(
-    drilldown.attention_first_payload.current_owner_delta_read_model.current_owner_delta.lineage_ref,
+    projection.attention_first_payload.current_owner_delta_read_model.current_owner_delta.lineage_ref,
     'sat-closed-owner-target',
   );
 });

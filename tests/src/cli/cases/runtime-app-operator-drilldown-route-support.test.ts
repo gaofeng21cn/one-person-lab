@@ -39,7 +39,7 @@ test('runtime App drilldown exposes MAS route support as refs-only runtime-manag
     'ai_reviewer_recheck_execute_dispatch',
   ]);
 
-  const drilldown = buildAppOperatorDrilldown({
+  const projection = buildAppOperatorDrilldown({
     stageAttemptWorkbench: { attempts: [] },
     providerContinuousProof: {},
     domainProjectionIngestion: {},
@@ -48,25 +48,25 @@ test('runtime App drilldown exposes MAS route support as refs-only runtime-manag
   });
 
   assert.equal(
-    drilldown.runtime_manager_route_support.surface_kind,
+    projection.runtime_manager_route_support.surface_kind,
     'opl_app_drilldown_runtime_manager_route_support',
   );
   assert.deepEqual(
-    drilldown.runtime_manager_route_support.mas_domain_route_projection.supported_task_kinds,
+    projection.runtime_manager_route_support.mas_domain_route_projection.supported_task_kinds,
     supportProjection.supported_task_kinds,
   );
   assert.deepEqual(
-    drilldown.runtime_manager_route_support.mas_domain_route_projection.action_refs,
+    projection.runtime_manager_route_support.mas_domain_route_projection.action_refs,
     supportProjection.action_refs,
   );
-  assert.equal(drilldown.summary.runtime_manager_mas_route_support_task_kind_count, 3);
-  assert.equal(drilldown.summary.runtime_manager_mas_aftercare_route_support_count, 2);
-  assert.equal(drilldown.summary.runtime_manager_mas_route_support_action_ref_count, 2);
-  assert.equal(drilldown.runtime_manager_route_support.authority_boundary.can_write_domain_truth, false);
-  assert.equal(drilldown.runtime_manager_route_support.authority_boundary.can_claim_domain_ready, false);
-  assert.equal(drilldown.runtime_manager_route_support.authority_boundary.can_close_owner_chain, false);
-  assert.equal(drilldown.runtime_manager_route_support.authority_boundary.can_record_owner_receipt, false);
-  assert.equal(drilldown.runtime_manager_route_support.authority_boundary.can_authorize_publication_aftercare, false);
+  assert.equal(projection.summary.runtime_manager_mas_route_support_task_kind_count, 3);
+  assert.equal(projection.summary.runtime_manager_mas_aftercare_route_support_count, 2);
+  assert.equal(projection.summary.runtime_manager_mas_route_support_action_ref_count, 2);
+  assert.equal(projection.runtime_manager_route_support.authority_boundary.can_write_domain_truth, false);
+  assert.equal(projection.runtime_manager_route_support.authority_boundary.can_claim_domain_ready, false);
+  assert.equal(projection.runtime_manager_route_support.authority_boundary.can_close_owner_chain, false);
+  assert.equal(projection.runtime_manager_route_support.authority_boundary.can_record_owner_receipt, false);
+  assert.equal(projection.runtime_manager_route_support.authority_boundary.can_authorize_publication_aftercare, false);
 
   const summaryDrilldown = buildAppOperatorDrilldown({
     stageAttemptWorkbench: { attempts: [] },
@@ -194,7 +194,7 @@ test('runtime App drilldown exposes MAS route support as refs-only runtime-manag
 });
 
 test('runtime App drilldown exposes route-as-transition refs in one operator projection', () => {
-  const drilldown = buildAppOperatorDrilldown({
+  const projection = buildAppOperatorDrilldown({
     stageAttemptWorkbench: {
       attempts: [
         {
@@ -240,60 +240,60 @@ test('runtime App drilldown exposes route-as-transition refs in one operator pro
   });
 
   assert.equal(
-    drilldown.route_transition_drilldown.surface_kind,
+    projection.route_transition_drilldown.surface_kind,
     'opl_app_drilldown_route_transition_drilldown',
   );
   assert.equal(
-    drilldown.route_transition_drilldown.projection_policy,
+    projection.route_transition_drilldown.projection_policy,
     'refs_only_no_domain_truth_or_owner_receipt_generation',
   );
   assert.deepEqual(
-    drilldown.route_transition_drilldown.mas_route_support.supported_task_kinds,
+    projection.route_transition_drilldown.mas_route_support.supported_task_kinds,
     buildMasDomainRouteSupportProjection().supported_task_kinds,
   );
   assert.deepEqual(
-    drilldown.route_transition_drilldown.transition_spec_refs.map((ref: { ref: string }) => ref.ref),
+    projection.route_transition_drilldown.transition_spec_refs.map((ref: { ref: string }) => ref.ref),
     ['contracts/medautoscience.transition.json'],
   );
   assert.deepEqual(
-    drilldown.route_transition_drilldown.materialization_refs.map((ref: { ref: string }) => ref.ref),
+    projection.route_transition_drilldown.materialization_refs.map((ref: { ref: string }) => ref.ref),
     ['contract-materialization:mas/transition', 'matrix:mas/transition'],
   );
   assert.deepEqual(
-    drilldown.route_transition_drilldown.stage_attempt_refs.map((ref: { ref: string }) => ref.ref),
+    projection.route_transition_drilldown.stage_attempt_refs.map((ref: { ref: string }) => ref.ref),
     ['/stage_attempt_workbench/attempts/sat_mas_route_transition/route_impact'],
   );
   assert.deepEqual(
-    drilldown.route_transition_drilldown.owner_route_refs.map((ref: { ref: string }) => ref.ref),
+    projection.route_transition_drilldown.owner_route_refs.map((ref: { ref: string }) => ref.ref),
     ['owner-route:mas/DM002/ai-reviewer-refresh'],
   );
   assert.deepEqual(
-    drilldown.route_transition_drilldown.human_gate_refs.map((ref: { ref: string }) => ref.ref),
+    projection.route_transition_drilldown.human_gate_refs.map((ref: { ref: string }) => ref.ref),
     [
       'human-gate:mas/DM002/release-gate',
       'human-gate:mas/DM002/physician-decision',
     ],
   );
   assert.deepEqual(
-    drilldown.route_transition_drilldown.dead_letter_refs.map((ref: { ref: string }) => ref.ref),
+    projection.route_transition_drilldown.dead_letter_refs.map((ref: { ref: string }) => ref.ref),
     [
       'dead-letter:mas/DM002/retry-budget-exhausted',
       '/stage_attempt_workbench/attempts/sat_mas_route_transition/dead_letter',
     ],
   );
   assert.deepEqual(
-    drilldown.route_transition_drilldown.typed_blocker_refs.map((ref: { ref: string }) => ref.ref),
+    projection.route_transition_drilldown.typed_blocker_refs.map((ref: { ref: string }) => ref.ref),
     ['typed-blocker:mas/DM002/reviewer-refresh-required'],
   );
   assert.deepEqual(
-    drilldown.route_transition_drilldown.owner_receipt_refs.map((ref: { ref: string }) => ref.ref),
+    projection.route_transition_drilldown.owner_receipt_refs.map((ref: { ref: string }) => ref.ref),
     ['owner-receipt:mas/DM002/reviewer-feedback-intake'],
   );
-  assert.equal(drilldown.route_transition_drilldown.authority_boundary.can_write_domain_truth, false);
-  assert.equal(drilldown.route_transition_drilldown.authority_boundary.can_record_owner_receipt, false);
-  assert.equal(drilldown.route_transition_drilldown.authority_boundary.can_close_owner_chain, false);
-  assert.equal(drilldown.summary.route_transition_drilldown_stage_attempt_count, 1);
-  assert.equal(drilldown.summary.route_transition_drilldown_owner_route_ref_count, 1);
-  assert.equal(drilldown.summary.route_transition_drilldown_human_gate_ref_count, 2);
-  assert.equal(drilldown.summary.route_transition_drilldown_dead_letter_ref_count, 2);
+  assert.equal(projection.route_transition_drilldown.authority_boundary.can_write_domain_truth, false);
+  assert.equal(projection.route_transition_drilldown.authority_boundary.can_record_owner_receipt, false);
+  assert.equal(projection.route_transition_drilldown.authority_boundary.can_close_owner_chain, false);
+  assert.equal(projection.summary.route_transition_drilldown_stage_attempt_count, 1);
+  assert.equal(projection.summary.route_transition_drilldown_owner_route_ref_count, 1);
+  assert.equal(projection.summary.route_transition_drilldown_human_gate_ref_count, 2);
+  assert.equal(projection.summary.route_transition_drilldown_dead_letter_ref_count, 2);
 });

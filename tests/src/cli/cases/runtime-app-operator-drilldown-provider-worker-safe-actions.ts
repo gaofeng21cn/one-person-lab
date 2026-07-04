@@ -30,7 +30,7 @@ test('runtime App drilldown exposes provider worker start route when Temporal se
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const temporalAddress = `127.0.0.1:${(server.address() as net.AddressInfo).port}`;
   try {
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const projection = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
@@ -39,7 +39,7 @@ test('runtime App drilldown exposes provider worker start route when Temporal se
       OPL_TEMPORAL_TASK_QUEUE: 'opl-worker-start-route',
     }).app_operator_drilldown;
 
-    const startRoute = drilldown.operator_action_routing_refs.refs.find(
+    const startRoute = projection.operator_action_routing_refs.refs.find(
       (ref: { action_id: string }) => ref.action_id === 'provider-worker:temporal:start',
     );
     assert.equal(startRoute.action_kind, 'provider_worker_start');
@@ -50,7 +50,7 @@ test('runtime App drilldown exposes provider worker start route when Temporal se
     assert.equal(startRoute.provider_worker_repair_action_id, 'start_temporal_worker');
     assert.deepEqual(startRoute.opl_cli_args, ['worker', 'start', '--provider', 'temporal']);
     assert.equal(
-      drilldown.app_execution_bridge.safe_action_routes.some(
+      projection.app_execution_bridge.safe_action_routes.some(
         (ref: { action_id: string; can_submit_to_safe_action_shell: boolean }) =>
           ref.action_id === 'provider-worker:temporal:start'
           && ref.can_submit_to_safe_action_shell,
@@ -89,7 +89,7 @@ test('runtime App drilldown exposes provider worker start route when Temporal se
 });
 
 test('runtime App drilldown selects provider worker start when worker is not ready', () => {
-  const drilldown = applyAppOperatorDrilldownDetail({
+  const projection = applyAppOperatorDrilldownDetail({
     operator_action_routing_refs: {
       refs: [
         {
@@ -124,7 +124,7 @@ test('runtime App drilldown selects provider worker start when worker is not rea
       can_claim_production_ready: false,
     },
   }, 'full');
-  const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
+  const nextSafeAction = projection.attention_first_payload.next_safe_action;
   assert.ok(nextSafeAction);
 
   assert.equal(nextSafeAction.action_id, 'provider-worker:temporal:start');
@@ -153,7 +153,7 @@ test('runtime App drilldown detail overlay does not synthesize App release owner
         release_package_refs: ['release:package/app-v0.1.0.dmg'],
       },
     ]);
-    const drilldown = applyAppOperatorDrilldownDetail({
+    const projection = applyAppOperatorDrilldownDetail({
       operator_action_routing_refs: {
         refs: [
           {
@@ -189,9 +189,9 @@ test('runtime App drilldown detail overlay does not synthesize App release owner
       },
     }, 'full');
 
-    assert.equal(drilldown.attention_first_payload.evidence_next_steps.total_count, 0);
+    assert.equal(projection.attention_first_payload.evidence_next_steps.total_count, 0);
     assert.equal(
-      drilldown.attention_first_payload.next_safe_action?.action_id,
+      projection.attention_first_payload.next_safe_action?.action_id,
       'provider-worker:temporal:start',
     );
   } finally {
@@ -205,7 +205,7 @@ test('runtime App drilldown detail overlay does not synthesize App release owner
 });
 
 test('runtime App drilldown keeps provider worker start out of the default next step when owner delta is open', () => {
-  const drilldown = applyAppOperatorDrilldownDetail({
+  const projection = applyAppOperatorDrilldownDetail({
     operator_action_routing_refs: {
       refs: [
         {
@@ -267,26 +267,26 @@ test('runtime App drilldown keeps provider worker start out of the default next 
     },
   }, 'full');
 
-  const providerWorkerRoute = drilldown.operator_action_routing_refs.refs.find(
+  const providerWorkerRoute = projection.operator_action_routing_refs.refs.find(
     (ref: { action_id: string }) => ref.action_id === 'provider-worker:temporal:start',
   );
   assert.ok(providerWorkerRoute);
   assert.equal(providerWorkerRoute.action_kind, 'provider_worker_start');
-  assert.equal(drilldown.attention_first_payload.next_safe_action, null);
+  assert.equal(projection.attention_first_payload.next_safe_action, null);
   assert.equal(
-    drilldown.attention_first_payload.owner_delta_first.next_owner,
+    projection.attention_first_payload.owner_delta_first.next_owner,
     'med-autoscience',
   );
   assert.equal(
-    drilldown.attention_first_payload.owner_delta_first.primary_item.source,
+    projection.attention_first_payload.owner_delta_first.primary_item.source,
     'workstream_operating_loop',
   );
   assert.equal(
-    drilldown.attention_first_payload.current_owner_delta_read_model.default_summary.default_path_root,
+    projection.attention_first_payload.current_owner_delta_read_model.default_summary.default_path_root,
     'current_owner_delta',
   );
   const ownerDeltaNextAction =
-    drilldown.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none;
+    projection.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none;
   assert.ok(ownerDeltaNextAction);
   assert.equal(
     ownerDeltaNextAction.action_kind,
@@ -324,7 +324,7 @@ test('runtime App drilldown does not select developer-checkout shared-state work
       },
     },
   });
-  const drilldown = applyAppOperatorDrilldownDetail({
+  const projection = applyAppOperatorDrilldownDetail({
     operator_action_routing_refs: {
       refs: workerRoutes,
     },
@@ -337,15 +337,15 @@ test('runtime App drilldown does not select developer-checkout shared-state work
     },
   }, 'full');
 
-  const route = drilldown.operator_action_routing_refs.refs[0];
+  const route = projection.operator_action_routing_refs.refs[0];
   assert.equal(route.action_id, 'provider-worker:temporal:start');
   assert.equal(route.route_status, 'blocked_by_provider_worker_mutation_guard');
   assert.equal(route.default_actionable, false);
   assert.equal(route.can_submit_to_safe_action_shell, false);
   assert.equal(route.provider_worker_mutation_guard.allowed, false);
-  assert.equal(drilldown.attention_first_payload.next_safe_action, null);
+  assert.equal(projection.attention_first_payload.next_safe_action, null);
   assert.equal(
-    drilldown.app_execution_bridge.safe_action_routes.some(
+    projection.app_execution_bridge.safe_action_routes.some(
       (ref: { action_id: string; can_submit_to_safe_action_shell: boolean }) =>
         ref.action_id === 'provider-worker:temporal:start'
         && ref.can_submit_to_safe_action_shell,
@@ -389,7 +389,7 @@ test('runtime App drilldown blocks provider SLO proof when worker repair is muta
       can_execute: false,
     }],
   }, { providerWorkerActionRoutes: workerRoutes });
-  const drilldown = applyAppOperatorDrilldownDetail({
+  const projection = applyAppOperatorDrilldownDetail({
     operator_action_routing_refs: {
       refs: [
         ...workerRoutes,
@@ -405,7 +405,7 @@ test('runtime App drilldown blocks provider SLO proof when worker repair is muta
     },
   }, 'full');
 
-  const providerSloRoute = drilldown.operator_action_routing_refs.refs.find(
+  const providerSloRoute = projection.operator_action_routing_refs.refs.find(
     (ref: { action_id: string }) => ref.action_id === 'provider-slo:temporal:production-proof',
   ) as JsonRecord | undefined;
   assert.ok(providerSloRoute);
@@ -413,9 +413,9 @@ test('runtime App drilldown blocks provider SLO proof when worker repair is muta
   assert.equal(providerSloRoute.default_actionable, false);
   assert.equal(providerSloRoute.can_submit_to_safe_action_shell, false);
   assert.equal(providerSloRoute.provider_worker_blocked_action_id, 'provider-worker:temporal:start');
-  assert.equal(drilldown.attention_first_payload.next_safe_action, null);
+  assert.equal(projection.attention_first_payload.next_safe_action, null);
   assert.equal(
-    drilldown.app_execution_bridge.safe_action_routes.some(
+    projection.app_execution_bridge.safe_action_routes.some(
       (ref: { action_id: string; can_submit_to_safe_action_shell: boolean }) =>
         ref.action_id === 'provider-slo:temporal:production-proof'
         && ref.can_submit_to_safe_action_shell,

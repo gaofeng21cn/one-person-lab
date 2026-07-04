@@ -53,13 +53,13 @@ test('runtime action execute records and verifies external evidence request rout
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const projection = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     }).app_operator_drilldown;
-    assert.equal(drilldown.summary.domain_open_evidence_request_count, 1);
-    assert.equal(drilldown.summary.external_evidence_action_route_count, 1);
-    const recordRoute = drilldown.operator_action_routing_refs.refs.find(
+    assert.equal(projection.summary.domain_open_evidence_request_count, 1);
+    assert.equal(projection.summary.external_evidence_action_route_count, 1);
+    const recordRoute = projection.operator_action_routing_refs.refs.find(
       (ref: { action_id: string }) =>
         ref.action_id === 'external_evidence_request:medautoscience:app_workbench_package_ref_consumption:record',
     );
@@ -299,35 +299,35 @@ test('standalone verified external evidence receipts feed memory artifact lifecy
       });
     }
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const projection = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     }).app_operator_drilldown;
 
-    assert.equal(drilldown.summary.domain_external_evidence_request_count, 0);
-    assert.equal(drilldown.summary.domain_external_evidence_receipt_count, 1);
-    assert.equal(drilldown.summary.domain_external_verified_evidence_receipt_count, 1);
-    assert.equal(drilldown.summary.domain_external_verified_memory_writeback_receipt_ref_count, 1);
-    assert.equal(drilldown.summary.domain_external_verified_artifact_mutation_receipt_ref_count, 1);
-    assert.equal(drilldown.summary.domain_external_verified_package_lifecycle_receipt_ref_count, 1);
-    assert.equal(drilldown.summary.domain_external_verified_lifecycle_receipt_ref_count, 1);
-    assert.equal(drilldown.summary.domain_external_verified_restore_proof_ref_count, 1);
-    assert.equal(drilldown.summary.memory_writeback_ref_count, 1);
+    assert.equal(projection.summary.domain_external_evidence_request_count, 0);
+    assert.equal(projection.summary.domain_external_evidence_receipt_count, 1);
+    assert.equal(projection.summary.domain_external_verified_evidence_receipt_count, 1);
+    assert.equal(projection.summary.domain_external_verified_memory_writeback_receipt_ref_count, 1);
+    assert.equal(projection.summary.domain_external_verified_artifact_mutation_receipt_ref_count, 1);
+    assert.equal(projection.summary.domain_external_verified_package_lifecycle_receipt_ref_count, 1);
+    assert.equal(projection.summary.domain_external_verified_lifecycle_receipt_ref_count, 1);
+    assert.equal(projection.summary.domain_external_verified_restore_proof_ref_count, 1);
+    assert.equal(projection.summary.memory_writeback_ref_count, 1);
     assert.deepEqual(
-      drilldown.memory_writeback_refs.writeback_receipt_refs,
+      projection.memory_writeback_refs.writeback_receipt_refs,
       ['mas://memory/writeback/live-receipt.json'],
     );
     assert.equal(
-      drilldown.memory_writeback_refs.authority_boundary.can_read_memory_body,
+      projection.memory_writeback_refs.authority_boundary.can_read_memory_body,
       false,
     );
     assert.equal(
-      drilldown.memory_writeback_refs.authority_boundary.can_accept_or_reject_memory_writeback,
+      projection.memory_writeback_refs.authority_boundary.can_accept_or_reject_memory_writeback,
       false,
     );
-    assert.equal(drilldown.ref_family_refs.summary.memory_ref_count, 1);
+    assert.equal(projection.ref_family_refs.summary.memory_ref_count, 1);
     assert.equal(
-      drilldown.runtime_visualization_projection.graph.nodes.some(
+      projection.runtime_visualization_projection.graph.nodes.some(
         (node: { node_kind: string; ref: string }) =>
           node.node_kind === 'memory_writeback_receipt'
           && node.ref === 'mas://memory/writeback/live-receipt.json',
@@ -335,27 +335,27 @@ test('standalone verified external evidence receipts feed memory artifact lifecy
       true,
     );
     assert.equal(
-      drilldown.domain_evidence_request_refs.external_receipts[0].role,
+      projection.domain_evidence_request_refs.external_receipts[0].role,
       'standalone_external_evidence_receipt',
     );
     assert.equal(
-      drilldown.domain_evidence_request_refs.external_receipts[0].domain_id,
+      projection.domain_evidence_request_refs.external_receipts[0].domain_id,
       'medautoscience',
     );
     assert.equal(
-      drilldown.domain_evidence_request_refs.external_receipts[0].authority_boundary.can_write_domain_truth,
+      projection.domain_evidence_request_refs.external_receipts[0].authority_boundary.can_write_domain_truth,
       false,
     );
     assert.equal(
-      drilldown.domain_evidence_request_refs.external_receipts[0].authority_boundary.can_read_memory_body,
+      projection.domain_evidence_request_refs.external_receipts[0].authority_boundary.can_read_memory_body,
       false,
     );
     assert.equal(
-      drilldown.domain_evidence_request_refs.external_receipts[0].authority_boundary.can_read_artifact_body,
+      projection.domain_evidence_request_refs.external_receipts[0].authority_boundary.can_read_artifact_body,
       false,
     );
     assert.equal(
-      drilldown.domain_evidence_request_refs.external_receipts.some(
+      projection.domain_evidence_request_refs.external_receipts.some(
         (receipt: { request_id: string }) =>
           receipt.request_id.startsWith('domain_dispatch:')
           || receipt.request_id.startsWith('stage_production_evidence:'),
@@ -435,17 +435,17 @@ test('standalone verified no-regression receipts remain visible without readines
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const projection = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     }).app_operator_drilldown;
 
-    assert.equal(drilldown.summary.domain_external_evidence_request_count, 0);
-    assert.equal(drilldown.summary.domain_external_evidence_receipt_count, 1);
-    assert.equal(drilldown.summary.domain_external_verified_evidence_receipt_count, 1);
-    assert.equal(drilldown.summary.domain_external_verified_no_regression_ref_count, 4);
-    assert.equal(drilldown.summary.domain_external_verified_memory_writeback_receipt_ref_count, 0);
-    const receipt = drilldown.domain_evidence_request_refs.external_receipts.find(
+    assert.equal(projection.summary.domain_external_evidence_request_count, 0);
+    assert.equal(projection.summary.domain_external_evidence_receipt_count, 1);
+    assert.equal(projection.summary.domain_external_verified_evidence_receipt_count, 1);
+    assert.equal(projection.summary.domain_external_verified_no_regression_ref_count, 4);
+    assert.equal(projection.summary.domain_external_verified_memory_writeback_receipt_ref_count, 0);
+    const receipt = projection.domain_evidence_request_refs.external_receipts.find(
       (entry: { ref: string }) => entry.ref === receiptRef,
     );
     assert.ok(receipt);
@@ -574,19 +574,19 @@ test('RCA workspace receipt scaleout projects workspace memory and lifecycle ref
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const projection = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     }).app_operator_drilldown;
 
-    assert.equal(drilldown.summary.domain_external_evidence_receipt_count, 1);
-    assert.equal(drilldown.summary.domain_external_verified_evidence_receipt_count, 1);
-    assert.equal(drilldown.summary.domain_external_verified_memory_writeback_receipt_ref_count, 12);
-    assert.equal(drilldown.summary.domain_external_verified_lifecycle_receipt_ref_count, 18);
-    assert.equal(drilldown.summary.domain_external_verified_restore_proof_ref_count, 6);
-    assert.equal(drilldown.summary.domain_external_verified_no_regression_ref_count, 0);
-    assert.equal(drilldown.summary.memory_writeback_ref_count, 12);
-    const receipt = drilldown.domain_evidence_request_refs.external_receipts.find(
+    assert.equal(projection.summary.domain_external_evidence_receipt_count, 1);
+    assert.equal(projection.summary.domain_external_verified_evidence_receipt_count, 1);
+    assert.equal(projection.summary.domain_external_verified_memory_writeback_receipt_ref_count, 12);
+    assert.equal(projection.summary.domain_external_verified_lifecycle_receipt_ref_count, 18);
+    assert.equal(projection.summary.domain_external_verified_restore_proof_ref_count, 6);
+    assert.equal(projection.summary.domain_external_verified_no_regression_ref_count, 0);
+    assert.equal(projection.summary.memory_writeback_ref_count, 12);
+    const receipt = projection.domain_evidence_request_refs.external_receipts.find(
       (entry: { ref: string }) => entry.ref === receiptRef,
     );
     assert.ok(receipt);
@@ -687,13 +687,13 @@ test('runtime action execute records functional semantic equivalence refs throug
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const projection = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     }).app_operator_drilldown;
     const actionId =
       'functional_privatization_semantic_equivalence:redcube:codex_executor_adapter:record';
-    const route = drilldown.operator_action_routing_refs.refs.find(
+    const route = projection.operator_action_routing_refs.refs.find(
       (ref: { action_id: string }) => ref.action_id === actionId,
     );
     assert.equal(route.action_kind, 'functional_privatization_semantic_equivalence_receipt_record');

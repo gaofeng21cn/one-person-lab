@@ -201,129 +201,129 @@ test('runtime app-operator-drilldown reconciles MAS refs-only payload with OPL l
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
-    const drilldown = output.app_operator_drilldown;
+    const projection = output.app_operator_drilldown;
 
-    assert.equal(drilldown.authority_boundary.can_write_domain_truth, false);
-    assert.equal(drilldown.authority_boundary.can_read_memory_body, false);
-    assert.equal(drilldown.authority_boundary.can_read_artifact_body, false);
-    assert.equal(drilldown.summary.owner_receipt_ref_count, 4);
-    assert.equal(drilldown.summary.typed_blocker_count, 3);
-    assert.equal(drilldown.summary.domain_dispatch_evidence_domain_count, 1);
-    assert.equal(drilldown.summary.domain_dispatch_evidence_attempt_count, 1);
-    assert.equal(drilldown.summary.domain_dispatch_evidence_owner_receipt_ref_count, 3);
-    assert.equal(drilldown.summary.domain_dispatch_evidence_typed_blocker_ref_count, 2);
-    assert.equal(drilldown.summary.domain_dispatch_evidence_no_regression_ref_count, 1);
-    assert.equal(drilldown.summary.domain_dispatch_evidence_memory_writeback_ref_count, 1);
-    assert.equal(drilldown.summary.domain_dispatch_evidence_domain_ready_claim_count, 0);
-    assert.equal(drilldown.summary.current_control_state_count, 1);
-    assert.equal(drilldown.summary.current_control_state_blocked_count, 1);
-    assert.equal(drilldown.summary.lifecycle_index_ref_count, 2);
-    assert.equal(drilldown.summary.lifecycle_restore_proof_ref_count, 2);
-    assert.equal(drilldown.summary.lifecycle_reconcile_missing_ref_count, 0);
-    assert.equal(drilldown.summary.lifecycle_reconcile_extra_ref_count, 0);
-    assert.equal(drilldown.summary.lifecycle_reconcile_stale_ref_count, 0);
-    assert.equal(drilldown.summary.lifecycle_domain_physical_delete_requires_owner_receipt, true);
-    assert.equal(drilldown.summary.lifecycle_domain_physical_delete_can_execute, false);
-    assert.equal(drilldown.summary.lifecycle_opl_cleanup_apply_can_execute, true);
-    assert.equal(drilldown.summary.safe_action_ref_count >= 2, true);
-    assert.equal(drilldown.summary.freshness_signal_count >= 1, true);
+    assert.equal(projection.authority_boundary.can_write_domain_truth, false);
+    assert.equal(projection.authority_boundary.can_read_memory_body, false);
+    assert.equal(projection.authority_boundary.can_read_artifact_body, false);
+    assert.equal(projection.summary.owner_receipt_ref_count, 4);
+    assert.equal(projection.summary.typed_blocker_count, 3);
+    assert.equal(projection.summary.domain_dispatch_evidence_domain_count, 1);
+    assert.equal(projection.summary.domain_dispatch_evidence_attempt_count, 1);
+    assert.equal(projection.summary.domain_dispatch_evidence_owner_receipt_ref_count, 3);
+    assert.equal(projection.summary.domain_dispatch_evidence_typed_blocker_ref_count, 2);
+    assert.equal(projection.summary.domain_dispatch_evidence_no_regression_ref_count, 1);
+    assert.equal(projection.summary.domain_dispatch_evidence_memory_writeback_ref_count, 1);
+    assert.equal(projection.summary.domain_dispatch_evidence_domain_ready_claim_count, 0);
+    assert.equal(projection.summary.current_control_state_count, 1);
+    assert.equal(projection.summary.current_control_state_blocked_count, 1);
+    assert.equal(projection.summary.lifecycle_index_ref_count, 2);
+    assert.equal(projection.summary.lifecycle_restore_proof_ref_count, 2);
+    assert.equal(projection.summary.lifecycle_reconcile_missing_ref_count, 0);
+    assert.equal(projection.summary.lifecycle_reconcile_extra_ref_count, 0);
+    assert.equal(projection.summary.lifecycle_reconcile_stale_ref_count, 0);
+    assert.equal(projection.summary.lifecycle_domain_physical_delete_requires_owner_receipt, true);
+    assert.equal(projection.summary.lifecycle_domain_physical_delete_can_execute, false);
+    assert.equal(projection.summary.lifecycle_opl_cleanup_apply_can_execute, true);
+    assert.equal(projection.summary.safe_action_ref_count >= 2, true);
+    assert.equal(projection.summary.freshness_signal_count >= 1, true);
 
     assert.equal(
-      drilldown.owner_receipt_refs.refs.some((ref: { ref: string }) =>
+      projection.owner_receipt_refs.refs.some((ref: { ref: string }) =>
         ref.ref === 'mas-owner-receipt:guarded-apply'
       ),
       true,
     );
     assert.equal(
-      drilldown.owner_receipt_refs.refs.some((ref: { ref: string }) =>
+      projection.owner_receipt_refs.refs.some((ref: { ref: string }) =>
         ref.ref === 'mas-owner-receipt:transition'
       ),
       true,
     );
     assert.equal(
-      drilldown.typed_blocker_refs.refs.some((ref: { ref: string }) =>
+      projection.typed_blocker_refs.refs.some((ref: { ref: string }) =>
         ref.ref === 'mas-blocker:publication-currentness'
       ),
       true,
     );
     assert.equal(
-      drilldown.typed_blocker_refs.blockers.some((blocker: { blocker_id: string }) =>
+      projection.typed_blocker_refs.blockers.some((blocker: { blocker_id: string }) =>
         blocker.blocker_id === 'domain_owned_lifecycle_receipt_required'
       ),
       true,
     );
-    assert.equal(drilldown.domain_dispatch_evidence.surface_kind, 'opl_app_drilldown_domain_dispatch_evidence');
-    assert.equal(drilldown.domain_dispatch_evidence.summary.domain_count, 1);
-    assert.equal(drilldown.domain_dispatch_evidence.by_domain.medautoscience.attempt_count, 1);
+    assert.equal(projection.domain_dispatch_evidence.surface_kind, 'opl_app_drilldown_domain_dispatch_evidence');
+    assert.equal(projection.domain_dispatch_evidence.summary.domain_count, 1);
+    assert.equal(projection.domain_dispatch_evidence.by_domain.medautoscience.attempt_count, 1);
     assert.equal(
-      drilldown.domain_dispatch_evidence.by_domain.medautoscience.domain_ready_claim_count,
+      projection.domain_dispatch_evidence.by_domain.medautoscience.domain_ready_claim_count,
       0,
     );
     assert.equal(
-      drilldown.domain_dispatch_evidence.attempts[0].authority_boundary.provider_completion_is_domain_ready,
+      projection.domain_dispatch_evidence.attempts[0].authority_boundary.provider_completion_is_domain_ready,
       false,
     );
-    assert.equal(drilldown.current_control_state.surface_kind, 'opl_app_drilldown_current_control_state_projection');
-    assert.equal(drilldown.current_control_state.summary.current_control_state_count, 1);
-    assert.equal(drilldown.current_control_state.states[0].reconciliation_status, 'blocked_missing_identity');
-    assert.equal(drilldown.current_control_state.authority_boundary.reads_domain_latest_or_dispatch_latest, false);
-    assert.equal(drilldown.current_control_state.authority_boundary.provider_completion_is_domain_ready, false);
-    assert.equal(Object.hasOwn(drilldown.current_control_state.states[0], 'domain_ready'), false);
-    assert.equal(Object.hasOwn(drilldown.current_control_state.states[0], 'publication_ready'), false);
-    assert.equal(Object.hasOwn(drilldown.current_control_state.states[0], 'artifact_ready'), false);
+    assert.equal(projection.current_control_state.surface_kind, 'opl_app_drilldown_current_control_state_projection');
+    assert.equal(projection.current_control_state.summary.current_control_state_count, 1);
+    assert.equal(projection.current_control_state.states[0].reconciliation_status, 'blocked_missing_identity');
+    assert.equal(projection.current_control_state.authority_boundary.reads_domain_latest_or_dispatch_latest, false);
+    assert.equal(projection.current_control_state.authority_boundary.provider_completion_is_domain_ready, false);
+    assert.equal(Object.hasOwn(projection.current_control_state.states[0], 'domain_ready'), false);
+    assert.equal(Object.hasOwn(projection.current_control_state.states[0], 'publication_ready'), false);
+    assert.equal(Object.hasOwn(projection.current_control_state.states[0], 'artifact_ready'), false);
     assert.deepEqual(
-      drilldown.domain_dispatch_evidence.attempts[0].no_regression_evidence_refs,
+      projection.domain_dispatch_evidence.attempts[0].no_regression_evidence_refs,
       ['mas-no-regression:package'],
     );
     assert.deepEqual(
-      drilldown.domain_dispatch_evidence.attempts[0].writeback_receipt_refs,
+      projection.domain_dispatch_evidence.attempts[0].writeback_receipt_refs,
       ['memory-writeback:receipt-1'],
     );
     assert.equal(
-      drilldown.freshness_refs.refs.some((ref: { source_fingerprint: string }) =>
+      projection.freshness_refs.refs.some((ref: { source_fingerprint: string }) =>
         ref.source_fingerprint === 'sha256:mas-drilldown-source'
       ),
       true,
     );
     assert.equal(
-      drilldown.ref_family_refs.source_refs.refs.some((ref: { ref: string }) =>
+      projection.ref_family_refs.source_refs.refs.some((ref: { ref: string }) =>
         ref.ref === 'source:dataset'
       ),
       true,
     );
     assert.equal(
-      drilldown.ref_family_refs.artifact_refs.refs.some((ref: { ref: string }) =>
+      projection.ref_family_refs.artifact_refs.refs.some((ref: { ref: string }) =>
         ref.ref === 'artifact:table'
       ),
       true,
     );
     assert.equal(
-      drilldown.ref_family_refs.memory_refs.refs.some((ref: { ref: string }) =>
+      projection.ref_family_refs.memory_refs.refs.some((ref: { ref: string }) =>
         ref.ref === 'memory:route-policy'
       ),
       true,
     );
     assert.equal(
-      drilldown.safe_action_refs.refs.some((ref: { role: string; ref: string }) =>
+      projection.safe_action_refs.refs.some((ref: { role: string; ref: string }) =>
         ref.role === 'lifecycle_cleanup_receipt_ref'
           && ref.ref.startsWith('opl://family-runtime/lifecycle-apply/medautoscience')
       ),
       true,
     );
-    assert.deepEqual(drilldown.lifecycle_ledger_refs.restore_proof_refs, [
+    assert.deepEqual(projection.lifecycle_ledger_refs.restore_proof_refs, [
       'restore-proof:mas-index',
       'restore-proof:mas-package',
     ]);
-    assert.equal(drilldown.lifecycle_ledger_refs.reconcile_projection.status, 'reconciled');
+    assert.equal(projection.lifecycle_ledger_refs.reconcile_projection.status, 'reconciled');
     assert.equal(
-      drilldown.lifecycle_ledger_refs.reconcile_projection.delete_ready_proof.can_execute_delete,
+      projection.lifecycle_ledger_refs.reconcile_projection.delete_ready_proof.can_execute_delete,
       false,
     );
     assert.equal(
-      drilldown.lifecycle_ledger_refs.reconcile_projection.delete_ready_proof.opl_cleanup_apply_ready,
+      projection.lifecycle_ledger_refs.reconcile_projection.delete_ready_proof.opl_cleanup_apply_ready,
       true,
     );
-    assert.equal(drilldown.lifecycle_ledger_refs.authority_boundary.can_write_domain_truth, false);
+    assert.equal(projection.lifecycle_ledger_refs.authority_boundary.can_write_domain_truth, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -451,19 +451,19 @@ test('runtime app-operator-drilldown projects OPL NonAdvancingApply current-cont
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
-    const drilldown = output.app_operator_drilldown;
-    const projection = drilldown.current_control_state;
-    const readbackState = projection.states[0];
+    const appProjection = output.app_operator_drilldown;
+    const currentControlProjection = appProjection.current_control_state;
+    const readbackState = currentControlProjection.states[0];
 
-    assert.equal(projection.summary.current_control_state_count, 1);
-    assert.equal(projection.summary.non_advancing_apply_readback_count, 1);
-    assert.equal(projection.summary.non_advancing_apply_consumable_count, 1);
-    assert.equal(projection.summary.non_advancing_apply_provider_admission_allowed_count, 0);
+    assert.equal(currentControlProjection.summary.current_control_state_count, 1);
+    assert.equal(currentControlProjection.summary.non_advancing_apply_readback_count, 1);
+    assert.equal(currentControlProjection.summary.non_advancing_apply_consumable_count, 1);
+    assert.equal(currentControlProjection.summary.non_advancing_apply_provider_admission_allowed_count, 0);
     assert.equal(
-      projection.summary.non_advancing_apply_current_executable_owner_action_allowed_count,
+      currentControlProjection.summary.non_advancing_apply_current_executable_owner_action_allowed_count,
       0,
     );
-    assert.equal(projection.summary.non_advancing_apply_paper_progress_delta_count, 0);
+    assert.equal(currentControlProjection.summary.non_advancing_apply_paper_progress_delta_count, 0);
     assert.equal(readbackState.reconciliation_status, 'transition_non_advancing_apply_recorded');
     assert.equal(readbackState.non_advancing_apply, true);
     assert.equal(readbackState.provider_admission_allowed, false);
@@ -478,10 +478,10 @@ test('runtime app-operator-drilldown projects OPL NonAdvancingApply current-cont
         .runtime_readback_status,
       'complete_transaction',
     );
-    assert.equal(projection.authority_boundary.can_execute_domain_action, false);
-    assert.equal(projection.authority_boundary.can_claim_domain_ready, false);
-    assert.equal(projection.authority_boundary.can_claim_publication_ready, false);
-    assert.equal(projection.authority_boundary.can_claim_artifact_ready, false);
+    assert.equal(currentControlProjection.authority_boundary.can_execute_domain_action, false);
+    assert.equal(currentControlProjection.authority_boundary.can_claim_domain_ready, false);
+    assert.equal(currentControlProjection.authority_boundary.can_claim_publication_ready, false);
+    assert.equal(currentControlProjection.authority_boundary.can_claim_artifact_ready, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
@@ -526,48 +526,48 @@ test('runtime app-operator-drilldown projects lifecycle handoff apply attempts f
     assert.equal(result.status, 'blocked');
     assert.equal(result.summary.unsafe_action_count, 2);
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown'], {
+    const projection = runCli(['runtime', 'app-operator-drilldown'], {
       OPL_STATE_DIR: stateRoot,
     }).app_operator_drilldown;
     const readback = runCli(['runtime', 'memory-artifact-lifecycle'], {
       OPL_STATE_DIR: stateRoot,
     }).memory_artifact_lifecycle_readback;
     assert.equal(
-      drilldown.memory_artifact_lifecycle.surface_kind,
+      projection.memory_artifact_lifecycle.surface_kind,
       'opl_app_drilldown_memory_artifact_lifecycle_evidence',
     );
     assert.equal(
-      drilldown.memory_artifact_lifecycle.readiness_status,
+      projection.memory_artifact_lifecycle.readiness_status,
       'typed_blocker_work_order_required_not_ready',
     );
-    assert.equal(drilldown.memory_artifact_lifecycle.ready_claim_authorized, false);
+    assert.equal(projection.memory_artifact_lifecycle.ready_claim_authorized, false);
     assert.equal(
-      drilldown.memory_artifact_lifecycle.open_count_zero_is_not_memory_or_artifact_ready,
+      projection.memory_artifact_lifecycle.open_count_zero_is_not_memory_or_artifact_ready,
       true,
     );
     assert.equal(
-      drilldown.memory_artifact_lifecycle.lifecycle_owner_work_order.status,
+      projection.memory_artifact_lifecycle.lifecycle_owner_work_order.status,
       'typed_blocker_work_order_required_not_ready',
     );
     assert.equal(
-      drilldown.memory_artifact_lifecycle.lifecycle_owner_work_order.accepted_refs_only_result_shapes
+      projection.memory_artifact_lifecycle.lifecycle_owner_work_order.accepted_refs_only_result_shapes
         .includes('typed_blocker_ref'),
       true,
     );
     assert.equal(
-      drilldown.memory_artifact_lifecycle.authority_boundary.can_write_memory_body,
+      projection.memory_artifact_lifecycle.authority_boundary.can_write_memory_body,
       false,
     );
     assert.equal(
-      drilldown.memory_artifact_lifecycle.authority_boundary.can_mutate_artifact_body,
+      projection.memory_artifact_lifecycle.authority_boundary.can_mutate_artifact_body,
       false,
     );
     assert.equal(
-      drilldown.memory_artifact_lifecycle.authority_boundary.can_authorize_export_readiness,
+      projection.memory_artifact_lifecycle.authority_boundary.can_authorize_export_readiness,
       false,
     );
     assert.equal(
-      drilldown.memory_artifact_lifecycle.authority_boundary.can_execute_domain_physical_delete,
+      projection.memory_artifact_lifecycle.authority_boundary.can_execute_domain_physical_delete,
       false,
     );
     assert.equal(readback.surface_kind, 'opl_memory_artifact_lifecycle_readback');
@@ -575,7 +575,7 @@ test('runtime app-operator-drilldown projects lifecycle handoff apply attempts f
     assert.equal(readback.ready_claim_authorized, false);
     assert.equal(
       readback.status,
-      drilldown.memory_artifact_lifecycle.readiness_status,
+      projection.memory_artifact_lifecycle.readiness_status,
     );
     assert.equal(
       readback.next_required_owner_action,
@@ -592,7 +592,7 @@ test('runtime app-operator-drilldown projects lifecycle handoff apply attempts f
     );
     assert.equal(
       readback.summary.observed_ref_count,
-      drilldown.memory_artifact_lifecycle.observed_ref_count,
+      projection.memory_artifact_lifecycle.observed_ref_count,
     );
     assert.equal(readback.summary.lifecycle_apply_handoff_attempt_count, 1);
     assert.equal(readback.summary.lifecycle_apply_handoff_blocked_decision_count, 2);
@@ -624,7 +624,7 @@ test('runtime app-operator-drilldown projects lifecycle handoff apply attempts f
       true,
     );
     const evidence =
-      drilldown.attention_first_payload.evidence_after_contract.memory_artifact_lifecycle_evidence;
+      projection.attention_first_payload.evidence_after_contract.memory_artifact_lifecycle_evidence;
 
     assert.equal(evidence.lifecycle_apply_handoff_attempt_count, 1);
     assert.equal(evidence.lifecycle_apply_handoff_blocked_decision_count, 2);
@@ -802,25 +802,25 @@ test('runtime memory artifact lifecycle evidence ledger records refs-only owner 
     assert.equal(projection.verified_refs_only_ledger_counts_as_package_ready, false);
     assert.equal(projection.verified_refs_only_ledger_counts_as_export_ready, false);
 
-    const drilldown = runCli([
+    const appProjection = runCli([
       'runtime',
       'app-operator-drilldown',
       '--detail',
       'full',
     ], env).app_operator_drilldown;
-    const lifecycle = drilldown.memory_artifact_lifecycle;
+    const lifecycle = appProjection.memory_artifact_lifecycle;
 
-    assert.equal(drilldown.summary.memory_artifact_lifecycle_evidence_ledger_receipt_ref_count, 1);
-    assert.equal(drilldown.summary.memory_artifact_lifecycle_evidence_verified_ledger_receipt_ref_count, 1);
-    assert.equal(drilldown.summary.memory_artifact_lifecycle_evidence_pending_verify_receipt_ref_count, 0);
-    assert.equal(drilldown.summary.memory_artifact_lifecycle_evidence_typed_blocker_ref_count, 1);
-    assert.equal(drilldown.summary.memory_artifact_lifecycle_evidence_owner_acceptance_ref_count, 1);
+    assert.equal(appProjection.summary.memory_artifact_lifecycle_evidence_ledger_receipt_ref_count, 1);
+    assert.equal(appProjection.summary.memory_artifact_lifecycle_evidence_verified_ledger_receipt_ref_count, 1);
+    assert.equal(appProjection.summary.memory_artifact_lifecycle_evidence_pending_verify_receipt_ref_count, 0);
+    assert.equal(appProjection.summary.memory_artifact_lifecycle_evidence_typed_blocker_ref_count, 1);
+    assert.equal(appProjection.summary.memory_artifact_lifecycle_evidence_owner_acceptance_ref_count, 1);
     assert.equal(
-      drilldown.summary.memory_artifact_lifecycle_evidence_verified_refs_only_ledger_counts_as_memory_ready,
+      appProjection.summary.memory_artifact_lifecycle_evidence_verified_refs_only_ledger_counts_as_memory_ready,
       false,
     );
     assert.equal(
-      drilldown.summary.memory_artifact_lifecycle_evidence_verified_refs_only_ledger_counts_as_artifact_ready,
+      appProjection.summary.memory_artifact_lifecycle_evidence_verified_refs_only_ledger_counts_as_artifact_ready,
       false,
     );
     assert.equal(lifecycle.evidence_ledger_status, 'ledger_refs_verified');
@@ -851,7 +851,7 @@ test('runtime memory artifact lifecycle evidence ledger records refs-only owner 
     );
 
     const attentionLifecycle =
-      drilldown.attention_first_payload.evidence_after_contract
+      appProjection.attention_first_payload.evidence_after_contract
         .memory_artifact_lifecycle_evidence;
     assert.equal(attentionLifecycle.ledger_verified_receipt_ref_count, 1);
     assert.equal(attentionLifecycle.ledger_owner_acceptance_ref_count, 1);

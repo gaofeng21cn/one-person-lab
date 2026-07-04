@@ -244,15 +244,15 @@ test('runtime app-operator-drilldown does not count stale MAS work-unit live att
       db.close();
     }
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const projection = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
     }).app_operator_drilldown;
-    const staleState = drilldown.current_control_state.states.find((state: Record<string, unknown>) =>
+    const staleState = projection.current_control_state.states.find((state: Record<string, unknown>) =>
       state.current_stage_attempt_id === staleAttempt.stage_attempt_id
     );
 
-    assert.equal(drilldown.summary.current_control_state_running_provider_attempt_count, 0);
-    assert.equal(drilldown.current_control_state.summary.running_provider_attempt_count, 0);
+    assert.equal(projection.summary.current_control_state_running_provider_attempt_count, 0);
+    assert.equal(projection.current_control_state.summary.running_provider_attempt_count, 0);
     assert.ok(staleState);
     assert.equal(staleState.reconciliation_status, 'blocked_stale_work_unit');
     assert.equal(staleState.running_provider_attempt, false);

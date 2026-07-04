@@ -103,21 +103,21 @@ test('runtime action execute records and verifies domain dispatch evidence recei
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const projection = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     }).app_operator_drilldown;
     const recordActionId = `domain_dispatch:medautoscience:${attemptId}:record`;
     const verifyActionId = `domain_dispatch:medautoscience:${attemptId}:verify`;
-    const recordRoute = drilldown.operator_action_routing_refs.refs.find(
+    const recordRoute = projection.operator_action_routing_refs.refs.find(
       (ref: { action_id: string }) => ref.action_id === recordActionId,
     );
-    assert.equal(drilldown.summary.domain_dispatch_evidence_receipt_action_route_count, 1);
+    assert.equal(projection.summary.domain_dispatch_evidence_receipt_action_route_count, 1);
     assert.equal(
-      drilldown.summary.domain_dispatch_evidence_receipt_record_requires_domain_or_app_payload_count,
+      projection.summary.domain_dispatch_evidence_receipt_record_requires_domain_or_app_payload_count,
       1,
     );
-    assert.equal(drilldown.summary.domain_dispatch_evidence_receipt_record_payload_template_count, 1);
+    assert.equal(projection.summary.domain_dispatch_evidence_receipt_record_payload_template_count, 1);
     assert.equal(recordRoute.action_kind, 'domain_dispatch_evidence_receipt_record');
     assert.equal(recordRoute.request_id, `domain_dispatch:medautoscience:${attemptId}`);
     assert.equal(recordRoute.request_pack_id, 'medautoscience.domain_dispatch_evidence');
@@ -215,13 +215,13 @@ test('runtime action execute records and verifies domain dispatch evidence recei
       },
     });
 
-    const openEnvelope = drilldown.evidence_envelope.envelopes.find(
+    const openEnvelope = projection.evidence_envelope.envelopes.find(
       (envelope: { envelope_id: string }) =>
         envelope.envelope_id === `domain_dispatch:med-autoscience:${attemptId}`,
     );
     assert.equal(openEnvelope.status, 'open');
     assert.equal(openEnvelope.next_route, recordRoute.ref);
-    const bridgeRecordRoute = drilldown.app_execution_bridge.safe_action_routes.find(
+    const bridgeRecordRoute = projection.app_execution_bridge.safe_action_routes.find(
       (ref: { action_id: string }) => ref.action_id === recordActionId,
     );
     assert.equal(bridgeRecordRoute.action_kind, 'domain_dispatch_evidence_receipt_record');
